@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Compass script: integrate.sh  -  LAND THE WORKTREES BACK TOGETHER
+# Compass script: integrate.sh  -  MERGE THE WORKTREES BACK TOGETHER
 # =============================================================================
-# The ship-stage counterpart to multiagent.sh. It merges the per-subtask branches
+# The integration counterpart to multiagent.sh, run at the end of breakdown,
+# once per wave, before /compass:verify. It merges the per-subtask branches
 # back into the base branch in a coordinated order, runs the project's test
 # command for combined regression, reports any conflicts for the `orchestrator`
 # to resolve, and cleans up the worktrees on success. Only the `orchestrator`
-# agent runs this (the lead builder on a pair) - see CLAUDE.md and the
-# worktree-multiagent skill.
+# agent runs this - the session that owns the issue, whatever the number of
+# subtasks; see docs/multiagent-protocol.md. It does not land the issue:
+# only ship-commit does (ADR-026).
 #
 # USAGE
 #   scripts/integrate.sh <issue-slug>             # integrate every subtask
@@ -46,7 +48,7 @@
 # COMBINED REGRESSION
 #   After all subtasks merge cleanly, the project's test command runs once
 #   against the integrated result. Per-subtask green does not imply integrated
-#   green - proving the combination is the whole point of ship. If combined
+#   green - proving the combination is the whole point of integration. If combined
 #   regression fails, worktrees are NOT cleaned up (you will need them) and the
 #   script exits non-zero.
 #
@@ -173,7 +175,7 @@ done < "$MAP"
 
 if [ "${#SUBTASKS[@]}" -eq 0 ]; then
   echo "integrate.sh: no subtasks in distribution-map.md. If the route is solo," >&2
-  echo "              ship integrates with a plain commit - integrate.sh is not needed." >&2
+  echo "              the issue lands with ship-commit - integrate.sh is not needed." >&2
   exit 1
 fi
 
@@ -390,7 +392,9 @@ fi
 echo ""
 echo "Combined regression across the integrated result:"
 echo "----------------------------------------------------------------"
+REGRESSION_RAN=0
 if [ -n "$TEST_CMD" ]; then
+  REGRESSION_RAN=1
   if ( cd "$PROJECT_DIR" && eval "$TEST_CMD" ); then
     echo "----------------------------------------------------------------"
     echo "Combined regression GREEN. Paste the run above into verification-report.md."
@@ -404,7 +408,7 @@ if [ -n "$TEST_CMD" ]; then
   fi
 else
   echo "No test command resolved (set 'test_command:' in .compass/config.yml)."
-  echo "Combined regression MUST still be run by hand before ship closes -"
+  echo "No regression ran. Run the combined regression by hand before /compass:verify -"
   echo "per-subtask green does not imply integrated green."
 fi
 
@@ -439,7 +443,11 @@ else
 fi
 
 echo ""
-echo "Wave integrated for '$TASK_SLUG'; the combined regression above is green."
+if [ "$REGRESSION_RAN" -eq 1 ]; then
+  echo "Wave integrated for '$TASK_SLUG'; the combined regression above is green."
+else
+  echo "Wave integrated for '$TASK_SLUG'; no regression ran - no test command resolved."
+fi
 echo "The issue is not landed yet. Next, whichever this wave was:"
 echo "  - a wave before the last: provision the next wave -"
 echo "    scripts/multiagent.sh $TASK_SLUG --wave <n>"

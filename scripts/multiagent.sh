@@ -641,8 +641,8 @@ for entry in "${LAUNCH_PLAN[@]}"; do
 done
 echo "----------------------------------------------------------------"
 # The map's total decides this, not SUBTASK_COUNT - on a staged map that is
-# one wave's count, and a 7-subtask map staged in waves of 3 must not print
-# "no dedicated orchestrator" on every wave.
+# one wave's count, and a 7-subtask map staged in waves of 3 must print the
+# message for its whole size, not for one wave's.
 if [ "$MAP_TOTAL_SUBTASKS" -ge 4 ]; then
   echo "MULTIAGENT, 4+ subtasks: the session that owns the issue orchestrates -"
   echo "it writes no feature code, watches for subtasks converging on shared surface,"
@@ -655,8 +655,9 @@ fi
 echo ""
 [ "$DRY_RUN" -eq 1 ] && echo "(dry run - nothing was created)"
 if [ -n "$NEXT_WAVE" ]; then
-  echo "Next wave: $NEXT_WAVE of $WAVE_MAX - run:"
+  echo "Next wave: $NEXT_WAVE of $WAVE_MAX - after this wave integrates, run:"
   echo "  scripts/multiagent.sh $TASK_SLUG --wave $NEXT_WAVE"
 fi
-echo "When every subtask is independently green, land them with:"
-echo "  scripts/integrate.sh $TASK_SLUG"
+echo "When every subtask in this wave is green, integrate them with:"
+echo "  scripts/integrate.sh $TASK_SLUG              # a wave before the last"
+echo "  scripts/integrate.sh $TASK_SLUG --no-clean   # the last wave"

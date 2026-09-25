@@ -254,6 +254,117 @@ def test_derive_and_commit_living_spec_excludes_a_stray_staged_file(tmp_path):
                                    "--name-only").stdout
 
 
+def _commit_issue_at_head(repo: Path, slug: str, *, gates_pass: bool = True,
+                          changed_files=None, file_name: str = "feature.txt",
+                          scenarios=None) -> Path:
+    """Commit an issue's manifest and declared file straight to HEAD, so
+    nothing is staged afterwards - the shape a multiagent wave leaves
+    behind: `integrate.sh` has already merged every subtask branch."""
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    if changed_files is None:
+        changed_files = [{"path": file_name, "scenarios": ["DPR-7"]}]
+    body = _task(slug, gates_pass=gates_pass, scenarios=scenarios,
+                 changed_files=changed_files)
+    (task_dir / "manifest.yml").write_text(
+        yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
+    (repo / file_name).write_text("issue work\n", encoding="utf-8")
+    _git(repo, "add", "--", file_name, f".compass/work/{slug}/manifest.yml")
+    _git(repo, "commit", "-q", "-m", "integrate: merge " + slug)
+    return task_dir
+
+
+def test_ship_commit_lands_work_already_committed_at_head(cli_path, tmp_path):
+    """DPR-7's last line: when every file the issue changed is already
+    committed and nothing is staged, ship-commit lands the issue at HEAD -
+    no new commit, HEAD itself recorded as land_commit - and still derives
+    the living spec."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_repo(repo)
+    slug = "already-committed"
+    task_dir = _commit_issue_at_head(repo, slug)
+    head = _head(repo)
+    assert _git(repo, "diff", "--cached", "--quiet").returncode == 0, (
+        "nothing should be staged before ship-commit runs")
+
+    r = _run_ship_commit(cli_path, repo, "-m", "land it", "--issue", slug)
+    assert r.returncode == 0, r.stdout + r.stderr
+
+    # The land itself adds no commit - only the spec derivation that follows
+    # a normal land does, exactly as it would for a fresh commit.
+    subjects = _log_subjects(repo, since=head)
+    assert "land it" not in subjects, subjects
+    assert subjects == [f"Re-derive the living spec after {slug} landed"], subjects
+
+    manifest = yaml.safe_load((task_dir / "manifest.yml").read_text())
+    assert manifest["status"] == "landed", manifest
+    assert manifest["land_commit"] == head, manifest
+    assert "land_timestamp" in manifest, manifest
+
+    spec_path = repo / "docs" / "system-spec.md"
+    assert spec_path.is_file(), "docs/system-spec.md was not derived"
+    assert slug in spec_path.read_text(encoding="utf-8")
+
+
+def test_ship_commit_refuses_when_a_gate_has_not_passed_and_nothing_is_staged(cli_path, tmp_path):
+    """The already-committed path only fires once every gate has passed -
+    otherwise ship-commit refuses and names the gate."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_repo(repo)
+    slug = "gate-pending-at-head"
+    task_dir = _commit_issue_at_head(repo, slug, gates_pass=False)
+    head = _head(repo)
+
+    r = _run_ship_commit(cli_path, repo, "-m", "land it", "--issue", slug)
+    assert r.returncode != 0, r.stdout + r.stderr
+    combined = (r.stdout + r.stderr).lower()
+    assert "nothing staged" in combined, r
+    assert "gate" in combined and "verify.correctness" in combined, r
+
+    manifest = yaml.safe_load((task_dir / "manifest.yml").read_text())
+    assert manifest.get("status") != "landed", manifest
+    assert _head(repo) == head, r
+
+
+def test_ship_commit_refuses_a_changed_file_with_an_uncommitted_edit(cli_path, tmp_path):
+    """A changed file the issue declares must actually be at HEAD, clean -
+    an unstaged edit to it refuses the land and names the file."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_repo(repo)
+    slug = "dirty-changed-file"
+    task_dir = _commit_issue_at_head(repo, slug)
+    head = _head(repo)
+    (repo / "feature.txt").write_text("edited after the commit\n", encoding="utf-8")
+
+    r = _run_ship_commit(cli_path, repo, "-m", "land it", "--issue", slug)
+    assert r.returncode != 0, r.stdout + r.stderr
+    combined = (r.stdout + r.stderr).lower()
+    assert "nothing staged" in combined, r
+    assert "feature.txt" in combined, r
+
+    manifest = yaml.safe_load((task_dir / "manifest.yml").read_text())
+    assert manifest.get("status") != "landed", manifest
+    assert _head(repo) == head, r
+
+
+def test_ship_commit_still_refuses_nothing_staged_with_no_issue(run_cli, tmp_path):
+    """No `--issue` at all: refuse exactly as before - unchanged behaviour."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_repo(repo)
+    h0 = _head(repo)
+
+    r = run_cli("ship-commit", "-m", "nothing", cwd=repo)
+    assert r.returncode != 0, r
+    combined = (r.stdout + r.stderr).lower()
+    assert "nothing staged" in combined, r
+    assert "no issue" in combined or "--issue" in combined, r
+    assert _head(repo) == h0, r
+
+
 def test_ship_commit_skips_the_spec_commit_when_derivation_is_unchanged(cli_path, tmp_path):
     """A second land whose scenarios add nothing new derives an unchanged
     file - and an unchanged file gets no commit."""

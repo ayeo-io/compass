@@ -153,12 +153,69 @@ def cmd_land_commit(args):
     for f in files:
         _git(["add", "--", f], cwd)
 
-    # Nothing staged → explicit error, never a retry loop.
+    # Nothing staged. A multiagent issue reaches ship time with every file it
+    # changed already committed by the integration merges - by DPR-7's last
+    # line, that is not an error: land it at HEAD, with no new commit, once
+    # its gates have passed and its declared files are genuinely there,
+    # clean. Every other case refuses as before, naming which condition
+    # failed.
     if _git(["diff", "--cached", "--quiet"], cwd).returncode == 0:
-        raise CompassError(
-            "compass ship-commit: nothing staged to land. Stage the artifacts "
-            "first (e.g. `git add <paths>`), then re-run."
+        if not getattr(args, "task", None):
+            raise CompassError(
+                "compass ship-commit: nothing staged to land, and no issue "
+                "was named. Stage the artifacts first (e.g. `git add "
+                "<paths>`), then re-run - or pass --issue <slug> if that "
+                "issue's work is already committed."
+            )
+        try:
+            head_task_dir = resolve_issue_dir(args.task)
+            head_task_path = manifest_path(head_task_dir)
+            head_task = normalize_spine(load_yaml(head_task_path))
+        except CompassError as exc:
+            raise CompassError(
+                f"compass ship-commit: nothing staged to land, and issue "
+                f"'{args.task}' could not be resolved ({exc})."
+            )
+        head_slug = os.path.basename(str(head_task_dir).rstrip("/"))
+        unmet = [g.get("id", "?") for g in (head_task.get("gates") or [])
+                 if isinstance(g, dict) and g.get("status") != "pass"]
+        if unmet:
+            raise CompassError(
+                f"compass ship-commit: nothing staged to land, and "
+                f"{len(unmet)} gate(s) on '{head_slug}' have not passed "
+                f"({', '.join(unmet)})."
+            )
+        declared = [cf.get("path") for cf in (head_task.get("changed_files") or [])
+                    if isinstance(cf, dict) and cf.get("path")]
+        dirty_or_missing = []
+        for path in declared:
+            status = _git(["status", "--porcelain", "--", path], cwd).stdout.strip()
+            if status:
+                dirty_or_missing.append(path)
+                continue
+            in_head = _git(["cat-file", "-e", f"HEAD:{path}"], cwd).returncode == 0
+            if not in_head:
+                dirty_or_missing.append(path)
+        if dirty_or_missing:
+            raise CompassError(
+                f"compass ship-commit: nothing staged to land, and "
+                f"{len(dirty_or_missing)} of '{head_slug}'s changed file(s) "
+                "are uncommitted or missing from HEAD:\n  "
+                + "\n  ".join(dirty_or_missing)
+            )
+
+        head_id = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
+        head_task["status"] = "landed"
+        head_task["land_timestamp"] = now_iso()
+        head_task["land_commit"] = head_id
+        save_manifest(head_task, head_task_path)
+        landed_note = _derive_and_commit_living_spec(cwd, head_slug)
+        print(
+            f"compass ship-commit: every file '{head_slug}' changed is "
+            f"already committed - landed at HEAD {head_id[:8]}, no new "
+            "commit made." + landed_note
         )
+        return 0
 
     # The issue's declared scope. Everything below re-stages against this
     # rather than against the whole tree: a ship commit must contain what the

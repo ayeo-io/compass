@@ -31,10 +31,13 @@ prints and records; the host launches the agents.
 - `compass issue subtask` writes the record: each subtask's brief, base
   commit, model, budget, status, how many tries it took, review rounds and
   findings.
-- The check `multiagent-run-recorded` fails a multiagent issue created from
-  2026-09-25 whose run left no complete record.
+- The check `multiagent-run-recorded` fails a multiagent issue whose run
+  left no complete record: one that records subtasks, or one created from
+  2026-09-26 on.
 
-## Why not launch
+## Alternatives considered
+
+**Compass launches the builders.** Rejected:
 
 - A launcher is specific to one host. Claude Code starts agents with its
   Agent tool; another host does it another way. Compass runs on the
@@ -50,7 +53,17 @@ prints and records; the host launches the agents.
 - A run is only as good as the session that follows the protocol, and the
   check reads what was recorded, not what happened. It cannot tell a review
   round that was recorded from one that was run.
-- Issues created before 2026-09-25 are not checked. Their runs followed prose
-  that had no record to read.
+- Issues created before 2026-09-26 that record no subtasks are not checked.
+  Their runs followed prose that had no record to read.
 - If recorded runs show the same step improvised again and again, that step
   is the one to automate first. The run records say which.
+
+## References
+
+- `docs/multiagent-protocol.md` - the protocol this decision makes the
+  interface.
+- `cli/compass_pkg/subtasks.py` - `compass issue subtask`, which writes the
+  record.
+- `cli/compass_pkg/multiagent_check.py` - the check `multiagent-run-recorded`.
+- `docs/compass/2026-08-27-sdd-loop-spike.md` - the spike that asked whether
+  Compass should launch agents.

@@ -58,8 +58,9 @@ Fill every {{PLACEHOLDER}}.
 
 <!-- Optional Wave column. Add it only when the subtasks cannot all start at
      once - a dependent unit whose foundation must land first, or a count
-     over the worktree cap - by giving the table a fifth column, "Wave",
-     with a wave number on every row:
+     over the worktree cap - by giving the table a "Wave" column, with a
+     positive whole number on every row. `scripts/multiagent.sh` finds the
+     column by its header, so it can sit anywhere in the table:
 
      | Subtask | Owns work unit(s) | Owns scenario ids | Branch name | Wave |
      |---|---|---|---|---|

@@ -10,14 +10,15 @@
 # shell and the resolver never come to disagree about where a document is.
 #
 # `issue_doc_path <slug> <kind>` prints the path and returns 0, or prints
-# nothing and returns 1 when the document is not there.
+# nothing, reports why on stderr, and returns 1 when the document is not
+# there.
 #
 # SOURCING THIS FILE HAS NO SIDE EFFECT - it only defines the function below.
 # =============================================================================
 
 issue_doc_path() {
   local slug="$1" kind="$2"
-  local lib_dir compass_home project_dir out fallback
+  local lib_dir compass_home project_dir out err_file err fallback
 
   lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   compass_home="$(cd "$lib_dir/../.." && pwd)"
@@ -28,22 +29,47 @@ issue_doc_path() {
 
   # The resolver itself, run through compass_python rather than a bare
   # `compass`: a bare command can resolve to an installed plugin copy that
-  # knows nothing about this project's worktree.
+  # knows nothing about this project's worktree. Its stderr is captured,
+  # not discarded - a reader that could not start and a reader that ran and
+  # found nothing are different failures, and only the second is silent.
+  err_file="$(mktemp 2>/dev/null || printf '%s' "/tmp/issue-doc-path.$$")"
   if out="$(cd "$project_dir" && compass_python "$compass_home/cli/compass" \
-      issue artifact-path "$kind" --issue "$slug" 2>/dev/null)"; then
+      issue artifact-path "$kind" --issue "$slug" 2>"$err_file")"; then
+    rm -f "$err_file"
     printf '%s\n' "$out"
     return 0
   fi
+  err="$(cat "$err_file" 2>/dev/null)"
+  rm -f "$err_file"
 
-  # An issue whose documents predate the artifact registry keeps them flat
-  # under .compass/work/<slug>/. The resolver above already tries that
-  # layout first; this is a second, independent check for the same file, so
-  # a caller never trusts one broken read as the only word on where a
-  # document is.
-  fallback="$project_dir/.compass/work/$slug/$kind.md"
-  if [ -f "$fallback" ]; then
-    printf '%s\n' "$fallback"
-    return 0
+  # The resolver ran to a definitive answer of the shape
+  # "compass: <kind>: <state> (<reason>)" - see resolve_artifact() in
+  # cli/compass_pkg/core.py. Only ABSENT - no registry entry for this kind,
+  # and the resolver's own flat-file check already found nothing either -
+  # gets a second, independent look at the flat layout below. REFUSED,
+  # OMITTED and UNRESOLVABLE all mean a registry entry exists and the
+  # resolver has already ruled on it; rescuing those here with the file
+  # beside the manifest would mean the ruling only ever fires when a
+  # fallback already agrees there is nothing to find - a check that cannot
+  # fail.
+  case "$err" in
+    "compass: $kind: absent "*)
+      fallback="$project_dir/.compass/work/$slug/$kind.md"
+      if [ -f "$fallback" ]; then
+        printf '%s\n' "$fallback"
+        return 0
+      fi
+      ;;
+  esac
+
+  # Anything else - refused, omitted, unresolvable, or the resolver could
+  # not even run (a Python traceback, not a CompassError) - is reported to
+  # the caller, not swallowed. A crash reported as "not there" blames the
+  # wrong stage.
+  if [ -n "$err" ]; then
+    echo "issue_doc_path: $err" >&2
+  else
+    echo "issue_doc_path: the resolver for '$kind' produced no output." >&2
   fi
   return 1
 }

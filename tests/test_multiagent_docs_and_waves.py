@@ -18,7 +18,9 @@ Spec: dispatch-protocol/acceptance-criteria.md (`DPR-2`, `DPR-3`).
 """
 from __future__ import annotations
 
+import os
 import pathlib
+import shutil
 import subprocess
 
 import pytest
@@ -65,6 +67,43 @@ def _manifest(*, artifacts=None):
     if artifacts:
         body["artifacts"] = artifacts
     return yaml.safe_dump(body, sort_keys=False)
+
+
+def _fake_python3(tmp_path, *, on_compass_call=None, log_artifact_path_to=None):
+    """A `python3` stand-in placed first on PATH, so a test can watch or
+    break the one process multiagent.sh cannot avoid starting: the resolver
+    it runs through `compass_python`. Every other call - reading
+    manifest.yml, the cap - is passed straight to the real interpreter, so
+    only the behaviour under test differs from an ordinary run.
+
+    `on_compass_call` - shell snippet run (before delegating) whenever the
+    first argument is `cli/compass`; a crash is simulated by exiting there.
+    `log_artifact_path_to` - a file every `issue artifact-path <kind>` call
+    appends its kind to, so a test can count resolver starts.
+    """
+    real_python3 = shutil.which("python3")
+    fakebin = tmp_path / "fakebin"
+    fakebin.mkdir(exist_ok=True)
+    wrapper = fakebin / "python3"
+    lines = ["#!/bin/bash", 'is_compass=0',
+             'case "$(basename "$1" 2>/dev/null)" in compass) is_compass=1 ;; esac']
+    if log_artifact_path_to is not None:
+        lines.append(
+            f'if [ "$is_compass" = "1" ] && [ "$2" = "issue" ] && '
+            f'[ "$3" = "artifact-path" ]; then echo "$4" >> "{log_artifact_path_to}"; fi'
+        )
+    if on_compass_call is not None:
+        lines.append(f'if [ "$is_compass" = "1" ]; then {on_compass_call}; fi')
+    lines.append(f'exec "{real_python3}" "$@"')
+    wrapper.write_text("\n".join(lines) + "\n")
+    wrapper.chmod(0o755)
+    return fakebin
+
+
+def _env_with_fake_python3(fakebin):
+    env = dict(os.environ)
+    env["PATH"] = f"{fakebin}{os.pathsep}{env.get('PATH', '')}"
+    return env
 
 
 # ---------------------------------------------------------------------------
@@ -143,6 +182,139 @@ def test_dpr2_legacy_flat_layout_still_works(tmp_path):
     wt = tmp_path / "wt" / f"{slug}-subtask-1"
     assert (wt / ".compass" / "work" / slug / "distribution-map.md").is_file()
     assert (wt / ".compass" / "work" / slug / "delivery-approach.md").is_file()
+
+
+def test_dpr2_refused_registry_entry_is_not_rescued_by_the_flat_file(tmp_path):
+    """A registered path that resolves outside the project is REFUSED by the
+    resolver. A flat distribution-map.md sitting beside the manifest must
+    not rescue it - the refusal exists for exactly this case."""
+    repo = _init_repo(tmp_path)
+    slug = "refused-demo"
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    (task_dir / "manifest.yml").write_text(_manifest(artifacts=[
+        {"id": "ART-1", "kind": "distribution-map", "status": "approved",
+         "path": "../outside.md"},
+    ]))
+    (task_dir / "delivery-approach.md").write_text(f"# Delivery approach - {slug}\n")
+    (task_dir / "distribution-map.md").write_text(
+        "# Distribution Map - refused-demo\n\n"
+        "## 3. Scenario-group -> subtask mapping\n\n"
+        "| Subtask | Owns work unit(s) | Owns scenario ids | Branch name |\n"
+        "|---|---|---|---|\n"
+        f"| subtask-1 | U1 | S1 | compass/{slug}/subtask-1 |\n"
+    )
+    (repo / "outside.md").write_text("# outside\n")
+
+    result = _run_multiagent(repo, slug, "--dry-run")
+    assert result.returncode != 0, result.stdout + result.stderr
+    assert "subtask-1" not in result.stdout
+
+
+def test_dpr2_omitted_registry_entry_is_not_rescued_by_the_flat_file(tmp_path):
+    """A registry entry recorded `status: omitted` is a decision, not an
+    absence. A flat distribution-map.md beside the manifest must not
+    override that decision."""
+    repo = _init_repo(tmp_path)
+    slug = "omitted-demo"
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    (task_dir / "manifest.yml").write_text(_manifest(artifacts=[
+        {"id": "ART-1", "kind": "distribution-map", "status": "omitted",
+         "reason": "solo route, no parallel work"},
+    ]))
+    (task_dir / "delivery-approach.md").write_text(f"# Delivery approach - {slug}\n")
+    (task_dir / "distribution-map.md").write_text(
+        "# Distribution Map - omitted-demo\n\n"
+        "## 3. Scenario-group -> subtask mapping\n\n"
+        "| Subtask | Owns work unit(s) | Owns scenario ids | Branch name |\n"
+        "|---|---|---|---|\n"
+        f"| subtask-1 | U1 | S1 | compass/{slug}/subtask-1 |\n"
+    )
+
+    result = _run_multiagent(repo, slug, "--dry-run")
+    assert result.returncode != 0, result.stdout + result.stderr
+    assert "subtask-1" not in result.stdout
+
+
+def test_dpr2_resolver_crash_shows_its_own_error(tmp_path):
+    """When the resolver cannot even run - the way an interpreter too old
+    to import cli/compass fails - the script must show that error, not the
+    generic "the design stage must produce it first" message a genuine
+    absence gets."""
+    repo = _init_repo(tmp_path)
+    slug = "crash-demo"
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    (task_dir / "manifest.yml").write_text(_manifest())
+    (task_dir / "delivery-approach.md").write_text(f"# Delivery approach - {slug}\n")
+    (task_dir / "distribution-map.md").write_text(
+        "# Distribution Map - crash-demo\n\n"
+        "## 3. Scenario-group -> subtask mapping\n\n"
+        "| Subtask | Owns work unit(s) | Owns scenario ids | Branch name |\n"
+        "|---|---|---|---|\n"
+        f"| subtask-1 | U1 | S1 | compass/{slug}/subtask-1 |\n"
+    )
+
+    fakebin = _fake_python3(
+        tmp_path,
+        on_compass_call=(
+            'echo "Traceback (most recent call last):" >&2; '
+            'echo "ImportError: simulated - this interpreter cannot run '
+            'cli/compass" >&2; exit 1'
+        ),
+    )
+    env = _env_with_fake_python3(fakebin)
+    result = subprocess.run(
+        ["bash", str(MULTIAGENT), slug, "--dry-run"],
+        cwd=str(repo), capture_output=True, text=True, timeout=120, env=env,
+    )
+    assert result.returncode != 0, result.stdout + result.stderr
+    out = result.stdout + result.stderr
+    assert "ImportError" in out
+
+
+def test_dpr2_resolves_each_kind_once_not_once_per_worktree(tmp_path):
+    """Every registered document kind is resolved once for the whole run,
+    not once per worktree - two subtasks must not start the resolver twice
+    for the same kind."""
+    repo = _init_repo(tmp_path)
+    slug = "resolve-once"
+    docs_dir = repo / "docs" / "compass" / "2026-09-25-resolve-once"
+    docs_dir.mkdir(parents=True)
+    (docs_dir / "distribution-map.md").write_text(
+        "# Distribution Map - resolve-once\n\n"
+        "## 3. Scenario-group -> subtask mapping\n\n"
+        "| Subtask | Owns work unit(s) | Owns scenario ids | Branch name |\n"
+        "|---|---|---|---|\n"
+        f"| subtask-1 | U1 | S1 | compass/{slug}/subtask-1 |\n"
+        f"| subtask-2 | U2 | S2 | compass/{slug}/subtask-2 |\n"
+    )
+    (docs_dir / "delivery-approach.md").write_text(f"# Delivery approach - {slug}\n")
+    (docs_dir / "threat-model.md").write_text("# Threat model\n")
+
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    (task_dir / "manifest.yml").write_text(_manifest(artifacts=[
+        {"id": "ART-1", "kind": "distribution-map", "status": "approved",
+         "path": "docs/compass/2026-09-25-resolve-once/distribution-map.md"},
+        {"id": "ART-2", "kind": "delivery-approach", "status": "approved",
+         "path": "docs/compass/2026-09-25-resolve-once/delivery-approach.md"},
+        {"id": "ART-3", "kind": "threat-model", "status": "approved",
+         "path": "docs/compass/2026-09-25-resolve-once/threat-model.md"},
+    ]))
+
+    log_file = tmp_path / "resolver-calls.log"
+    fakebin = _fake_python3(tmp_path, log_artifact_path_to=log_file)
+    env = _env_with_fake_python3(fakebin)
+    result = subprocess.run(
+        ["bash", str(MULTIAGENT), slug],
+        cwd=str(repo), capture_output=True, text=True, timeout=120, env=env,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+
+    calls = log_file.read_text().splitlines() if log_file.exists() else []
+    assert calls.count("threat-model") == 1, calls
 
 
 # ---------------------------------------------------------------------------
@@ -242,3 +414,168 @@ def test_dpr3_map_without_wave_column_behaves_as_before(tmp_path):
     assert result.returncode == 0, result.stdout + result.stderr
     assert "subtask-1" in result.stdout
     assert "subtask-2" in result.stdout
+
+
+def test_dpr3_wave_with_no_matching_rows_is_refused_naming_the_maps_waves(tmp_path):
+    """--wave 2 on a map whose waves are 1 and 3 must be refused, the same
+    way on bash 3.2 and bash 5, naming the waves the map actually has."""
+    repo = _init_repo(tmp_path)
+    slug = "wave-gap"
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    (task_dir / "manifest.yml").write_text(_manifest())
+    (task_dir / "delivery-approach.md").write_text(f"# Delivery approach - {slug}\n")
+    (task_dir / "distribution-map.md").write_text(
+        "# Distribution Map - wave-gap\n\n"
+        "## 3. Scenario-group -> subtask mapping\n\n"
+        "| Subtask | Owns work unit(s) | Owns scenario ids | Branch name | Wave |\n"
+        "|---|---|---|---|---|\n"
+        f"| subtask-1 | U1 | S1 | compass/{slug}/subtask-1 | 1 |\n"
+        f"| subtask-2 | U2 | S2 | compass/{slug}/subtask-2 | 3 |\n"
+    )
+
+    result = _run_multiagent(repo, slug, "--wave", "2", "--dry-run")
+    assert result.returncode != 0, result.stdout + result.stderr
+    out = result.stdout + result.stderr
+    assert "unbound variable" not in out, "a crash is not a refusal"
+    assert "has no rows" in out
+    assert "1, 3" in out
+
+
+def test_dpr3_wave_zero_is_refused(tmp_path):
+    """--wave 0 is refused the same way on bash 3.2 and bash 5, with a clear
+    message - not an unbound-variable crash on 3.2 or an empty launch plan
+    on 5."""
+    repo = _init_repo(tmp_path)
+    slug = "wave-zero"
+    _staged_task(repo, slug)
+
+    result = _run_multiagent(repo, slug, "--wave", "0", "--dry-run")
+    assert result.returncode != 0, result.stdout + result.stderr
+    out = result.stdout + result.stderr
+    assert "unbound variable" not in out, "a crash is not a refusal"
+    assert "has no rows" in out
+
+
+def test_dpr3_blank_or_non_numeric_wave_cell_is_refused_naming_the_row(tmp_path):
+    """A row whose Wave cell is blank or not a number must refuse the whole
+    map, naming the row - not silently drop it from every wave."""
+    repo = _init_repo(tmp_path)
+    slug = "wave-bad-cell"
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    (task_dir / "manifest.yml").write_text(_manifest())
+    (task_dir / "delivery-approach.md").write_text(f"# Delivery approach - {slug}\n")
+    (task_dir / "distribution-map.md").write_text(
+        "# Distribution Map - wave-bad-cell\n\n"
+        "## 3. Scenario-group -> subtask mapping\n\n"
+        "| Subtask | Owns work unit(s) | Owns scenario ids | Branch name | Wave |\n"
+        "|---|---|---|---|---|\n"
+        f"| subtask-1 | U1 | S1 | compass/{slug}/subtask-1 | 1 |\n"
+        f"| subtask-2 | U2 | S2 | compass/{slug}/subtask-2 |  |\n"
+        f"| subtask-3 | U3 | S3 | compass/{slug}/subtask-3 | x |\n"
+        f"| subtask-4 | U4 | S4 | compass/{slug}/subtask-4 | 2 |\n"
+    )
+
+    result = _run_multiagent(repo, slug, "--wave", "1", "--dry-run")
+    assert result.returncode != 0, result.stdout + result.stderr
+    assert "subtask-2" in (result.stdout + result.stderr)
+
+
+def test_dpr3_branch_is_read_by_header_when_wave_is_not_the_last_column(tmp_path):
+    """Q3 says Wave can sit anywhere in the table. The branch must be read
+    by its own header, not by position 4."""
+    repo = _init_repo(tmp_path)
+    slug = "wave-mid"
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    (task_dir / "manifest.yml").write_text(_manifest())
+    (task_dir / "delivery-approach.md").write_text(f"# Delivery approach - {slug}\n")
+    (task_dir / "distribution-map.md").write_text(
+        "# Distribution Map - wave-mid\n\n"
+        "## 3. Scenario-group -> subtask mapping\n\n"
+        "| Subtask | Wave | Owns work unit(s) | Owns scenario ids | Branch name |\n"
+        "|---|---|---|---|---|\n"
+        f"| subtask-1 | 1 | U1 | S1 | compass/{slug}/subtask-1 |\n"
+    )
+
+    result = _run_multiagent(repo, slug, "--dry-run")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert f"compass/{slug}/subtask-1" in result.stdout
+    assert "on branch S1" not in result.stdout
+
+
+def test_dpr3_wave_flag_with_no_value_reports_why(tmp_path):
+    """A trailing --wave with nothing after it must say why it refused, not
+    exit silently."""
+    repo = _init_repo(tmp_path)
+    slug = "wave-trailing"
+    _staged_task(repo, slug)
+
+    result = _run_multiagent(repo, slug, "--dry-run", "--wave")
+    assert result.returncode != 0
+    out = result.stdout + result.stderr
+    assert out.strip() != ""
+    assert "--wave" in out
+
+
+def test_dpr3_wave_number_compares_numerically_not_as_a_string(tmp_path):
+    """--wave 02 must match a row whose Wave cell is 2."""
+    repo = _init_repo(tmp_path)
+    slug = "wave-leading-zero"
+    _staged_task(repo, slug)
+
+    result = _run_multiagent(repo, slug, "--wave", "02", "--dry-run")
+    assert result.returncode == 0, result.stdout + result.stderr
+    for i in (4, 5):
+        assert f"subtask-{i}" in result.stdout
+
+
+def test_dpr3_wave_header_in_another_table_is_ignored(tmp_path):
+    """A `Wave` header in some other table in the map must not turn on wave
+    mode for a subtask table that has no Wave column of its own."""
+    repo = _init_repo(tmp_path)
+    slug = "wave-elsewhere"
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    (task_dir / "manifest.yml").write_text(_manifest())
+    (task_dir / "delivery-approach.md").write_text(f"# Delivery approach - {slug}\n")
+    (task_dir / "distribution-map.md").write_text(
+        "# Distribution Map - wave-elsewhere\n\n"
+        "## 2. Independence analysis\n\n"
+        "| Unit | Wave |\n"
+        "|---|---|\n"
+        "| U1 | 1 |\n\n"
+        "## 3. Scenario-group -> subtask mapping\n\n"
+        "| Subtask | Owns work unit(s) | Owns scenario ids | Branch name |\n"
+        "|---|---|---|---|\n"
+        f"| subtask-1 | U1 | S1 | compass/{slug}/subtask-1 |\n"
+        f"| subtask-2 | U2 | S2 | compass/{slug}/subtask-2 |\n"
+    )
+
+    result = _run_multiagent(repo, slug, "--dry-run")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "subtask-1" in result.stdout
+    assert "subtask-2" in result.stdout
+
+
+def test_dpr3_wave_over_the_worktree_ceiling_is_refused_naming_the_wave(tmp_path):
+    """The scenario's ceiling is the worktree cap (4, from _init_repo), not
+    the map's highest wave. Wave 1 here has 5 rows - over the cap - while
+    the map's highest wave (2) is well under it, so only the chosen wave's
+    row count can be what refuses this. The message names the wave, not the
+    map's total."""
+    repo = _init_repo(tmp_path)
+    slug = "wave-cap"
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    (task_dir / "manifest.yml").write_text(_manifest())
+    (task_dir / "delivery-approach.md").write_text(f"# Delivery approach - {slug}\n")
+    waves = [1, 1, 1, 1, 1, 2]
+    (task_dir / "distribution-map.md").write_text(_staged_map(slug, 6, waves))
+
+    result = _run_multiagent(repo, slug, "--dry-run")
+    assert result.returncode != 0, result.stdout + result.stderr
+    out = (result.stdout + result.stderr).lower()
+    assert "wave 1" in out
+    assert "cap is 4" in out

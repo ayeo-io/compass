@@ -52,6 +52,17 @@ PROJECT_DIR="$(git -C "$(pwd)" rev-parse --show-toplevel 2>/dev/null || pwd)"
 source "$SCRIPT_DIR/lib/compass-python.sh"
 source "$SCRIPT_DIR/lib/issue-docs.sh"
 
+# Strip leading zeros from an already-validated numeric string, so "02" and
+# "2" compare and print alike, and $(( )) never misreads a wave number as
+# octal (bash treats a leading-zero literal as octal in arithmetic context,
+# and "008" is not valid octal).
+_norm_wave() {
+  local v="$1"
+  v="${v#"${v%%[!0]*}"}"
+  [ -n "$v" ] || v="0"
+  printf '%s' "$v"
+}
+
 # --- args -------------------------------------------------------------------
 TASK_SLUG=""
 DRY_RUN=0
@@ -59,7 +70,9 @@ WAVE_ARG=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY_RUN=1 ;;
-    --wave) WAVE_ARG="${2:-}"; shift ;;
+    --wave)
+      [ $# -ge 2 ] || { echo "multiagent.sh: --wave needs a value - a whole number naming the wave to provision." >&2; exit 1; }
+      WAVE_ARG="$2"; shift ;;
     -h|--help) grep -E '^# (USAGE|  scripts)' "$0" | sed 's/^# //'; exit 0 ;;
     -*) echo "multiagent.sh: unknown flag: $1" >&2; exit 1 ;;
     *)  TASK_SLUG="$1" ;;
@@ -147,22 +160,48 @@ esac
 # Never exceed the config ceiling regardless.
 [ "$CAP" -gt "$MAX_WORKTREES" ] && CAP="$MAX_WORKTREES"
 
-# --- find an optional Wave column in the map's header row -------------------
-# A staged map's §3 table carries one extra column, named "Wave" (an exact
-# cell match on the header row). Its position - 0 when absent - tells the
-# row-parsing loop below which cell, if any, to read as a row's wave number.
-WAVE_COL=0
+# --- find the subtask table's own header row ---------------------------------
+# A map can carry more than one markdown table (§1, §2, §3...); only the
+# table whose rows carry a subtask id (current or retired spelling, see the
+# row-parsing loop below) governs provisioning, so "Wave" and "Branch name"
+# must be read from THAT table's header, not any other table's. A table is
+# a header row immediately followed by a "|---|" separator row;
+# PENDING_HEADER tracks the most recent header-shaped row seen, and is
+# handed to SUBTASK_HEADER the first time a subtask row appears.
+PENDING_HEADER=""
+SUBTASK_HEADER=""
 while IFS= read -r line; do
   case "$line" in \|*) ;; *) continue ;; esac
-  IFS='|' read -r -a _hdr_cells <<<"$line"
+  # A separator row (only |, -, : and spaces) belongs to the table
+  # PENDING_HEADER already names - skip it without disturbing PENDING_HEADER.
+  case "$(echo "$line" | tr -d '|:- ')" in '') continue ;; esac
+  case "$line" in
+    \|*subtask-*|\|*stream-*)  # vocabulary-scan: allow - reads the retired spelling for back-compat (ADR-006)
+      [ -n "$SUBTASK_HEADER" ] || SUBTASK_HEADER="$PENDING_HEADER"
+      ;;
+    *)
+      PENDING_HEADER="$line"
+      ;;
+  esac
+done < "$MAP"
+
+# --- Wave and Branch name, read by header from the subtask table only -------
+# Position 0 means absent for WAVE_COL (never a real column: the leading
+# "|" makes cell 0 empty). BRANCH_COL defaults to the template's usual
+# position 4, for a hand-filled map whose header text does not match
+# "Branch name" exactly.
+WAVE_COL=0
+BRANCH_COL=4
+if [ -n "$SUBTASK_HEADER" ]; then
+  IFS='|' read -r -a _hdr_cells <<<"$SUBTASK_HEADER"
   for _idx in "${!_hdr_cells[@]}"; do
     _cell="$(echo "${_hdr_cells[$_idx]}" | xargs 2>/dev/null || true)"
-    if [ "$_cell" = "Wave" ]; then
-      WAVE_COL="$_idx"
-      break 2
-    fi
+    case "$_cell" in
+      Wave) WAVE_COL="$_idx" ;;
+      "Branch name") BRANCH_COL="$_idx" ;;
+    esac
   done
-done < "$MAP"
+fi
 
 # --- parse subtasks from the distribution map --------------------------------
 # The map's §3 table has rows like:
@@ -195,13 +234,30 @@ while IFS= read -r line; do
   # (`compass/<slug>/subtask-N`) or bold (**...**); the parser must treat the
   # cell as a clean git ref, not the literal-with-markdown string. Bare names
   # round-trip unchanged. Markdown *inside* a ref name is out of scope -
-  # git ref-validation rejects such names anyway.
-  branch="$(echo "${_row_cells[4]:-}" | xargs 2>/dev/null | sed -E 's/^[`*]+//; s/[`*]+$//' || true)"
+  # git ref-validation rejects such names anyway. BRANCH_COL is found by the
+  # "Branch name" header above, not a fixed position - Q3 says Wave can sit
+  # anywhere in the table, so a fixed cell 4 would read the wrong column.
+  branch="$(echo "${_row_cells[$BRANCH_COL]:-}" | xargs 2>/dev/null | sed -E 's/^[`*]+//; s/[`*]+$//' || true)"
   case "$sid" in subtask-*|stream-*) ;; *) continue ;; esac  # vocabulary-scan: allow - reads the retired spelling for back-compat (ADR-006)
   # default branch name if the map left it blank
   [ -n "$branch" ] || branch="compass/$TASK_SLUG/$sid"
   wave=""
-  [ "$WAVE_COL" -gt 0 ] && wave="$(echo "${_row_cells[$WAVE_COL]:-}" | xargs 2>/dev/null || true)"
+  if [ "$WAVE_COL" -gt 0 ]; then
+    wave="$(echo "${_row_cells[$WAVE_COL]:-}" | xargs 2>/dev/null || true)"
+    # Q3 says the Wave cell holds a positive whole number. A blank or
+    # non-numeric cell must refuse the map, naming the row - not drop the
+    # row from every wave silently.
+    case "$wave" in
+      ''|*[!0-9]*)
+        echo "multiagent.sh: distribution-map.md's Wave cell for $sid is '$wave' - it must be a positive whole number." >&2
+        exit 1 ;;
+    esac
+    if [ "$wave" -lt 1 ]; then
+      echo "multiagent.sh: distribution-map.md's Wave cell for $sid is '$wave' - it must be a positive whole number." >&2
+      exit 1
+    fi
+    wave="$(_norm_wave "$wave")"
+  fi
   SUBTASKS+=("$sid")
   BRANCHES+=("$branch")
   WAVES+=("$wave")
@@ -218,15 +274,19 @@ fi
 NEXT_WAVE=""
 WAVE_REQUESTED=""
 if [ "$WAVE_COL" -gt 0 ]; then
+  # Every WAVES[i] is already a validated, leading-zero-free positive
+  # integer (the row-parsing loop above refuses anything else), so a plain
+  # numeric scan is enough here.
   WAVE_MAX=0
   for w in "${WAVES[@]}"; do
-    case "$w" in ''|*[!0-9]*) continue ;; esac
     [ "$w" -gt "$WAVE_MAX" ] && WAVE_MAX="$w"
   done
   WAVE_REQUESTED="${WAVE_ARG:-1}"
   case "$WAVE_REQUESTED" in
     ''|*[!0-9]*) echo "multiagent.sh: --wave needs a whole number, got '$WAVE_ARG'." >&2; exit 1 ;;
   esac
+  # Numbers, not strings: "02" must match a row whose Wave cell is 2.
+  WAVE_REQUESTED="$(_norm_wave "$WAVE_REQUESTED")"
   if [ "$WAVE_REQUESTED" -gt "$WAVE_MAX" ]; then
     echo "multiagent.sh: wave $WAVE_REQUESTED is above the map's highest wave ($WAVE_MAX)." >&2
     exit 1
@@ -234,18 +294,28 @@ if [ "$WAVE_COL" -gt 0 ]; then
   WAVE_SUBTASKS=()
   WAVE_BRANCHES=()
   for i in "${!SUBTASKS[@]}"; do
-    [ "${WAVES[$i]:-}" = "$WAVE_REQUESTED" ] || continue
+    [ "${WAVES[$i]}" -eq "$WAVE_REQUESTED" ] || continue
     WAVE_SUBTASKS+=("${SUBTASKS[$i]}")
     WAVE_BRANCHES+=("${BRANCHES[$i]}")
   done
-  # Bash 3.2 (macOS's /bin/bash) treats "${ARR[@]}" on a zero-element array
-  # as an unbound variable under `set -u` - guarded rather than expanded
-  # unconditionally, so a wave number with no matching rows empties the
-  # arrays instead of aborting the script.
-  SUBTASKS=()
-  BRANCHES=()
-  [ "${#WAVE_SUBTASKS[@]}" -gt 0 ] && SUBTASKS=("${WAVE_SUBTASKS[@]}")
-  [ "${#WAVE_BRANCHES[@]}" -gt 0 ] && BRANCHES=("${WAVE_BRANCHES[@]}")
+  # A wave number with no matching rows - --wave 0, or a wave number between
+  # the map's staged ones - is refused with a clear message, the same way
+  # on bash 3.2 and bash 5, naming the waves the map actually has. This also
+  # sidesteps bash 3.2's "unbound variable" on expanding an empty array
+  # under `set -u`: the empty case exits before either array is expanded.
+  if [ "${#WAVE_SUBTASKS[@]}" -eq 0 ]; then
+    _seen=""
+    WAVE_LIST=""
+    for w in "${WAVES[@]}"; do
+      case " $_seen " in *" $w "*) continue ;; esac
+      _seen="$_seen $w"
+      WAVE_LIST="${WAVE_LIST:+$WAVE_LIST, }$w"
+    done
+    echo "multiagent.sh: wave $WAVE_REQUESTED has no rows; the map's waves are $WAVE_LIST." >&2
+    exit 1
+  fi
+  SUBTASKS=("${WAVE_SUBTASKS[@]}")
+  BRANCHES=("${WAVE_BRANCHES[@]}")
   SUBTASK_COUNT="${#SUBTASKS[@]}"
   [ "$WAVE_REQUESTED" -lt "$WAVE_MAX" ] && NEXT_WAVE="$((WAVE_REQUESTED + 1))"
 elif [ -n "$WAVE_ARG" ]; then
@@ -256,9 +326,15 @@ fi
 # --- enforce the cap --------------------------------------------------------
 # Measured against the chosen wave's row count on a staged map, and against
 # the map's total otherwise - a map staged over several waves must not be
-# refused for a total it is never asked to provision in one pass.
+# refused for a total it is never asked to provision in one pass. The
+# message names the wave when one is chosen, not the map's total, so a
+# reader is not sent to fold the wrong count.
 if [ "$SUBTASK_COUNT" -gt "$CAP" ]; then
-  echo "multiagent.sh: the distribution map has $SUBTASK_COUNT subtasks but the cap is $CAP." >&2
+  if [ -n "$WAVE_REQUESTED" ]; then
+    echo "multiagent.sh: wave $WAVE_REQUESTED has $SUBTASK_COUNT subtasks but the cap is $CAP." >&2
+  else
+    echo "multiagent.sh: the distribution map has $SUBTASK_COUNT subtasks but the cap is $CAP." >&2
+  fi
   echo "          The cap wins. Do not over-provision worktrees - go back to" >&2
   echo "          distribution-map.md and fold or sequence subtasks down to $CAP," >&2
   echo "          recording it as cap-driven (not as a de-scope). Then re-run." >&2
@@ -299,6 +375,18 @@ for a in (arts or []):
         print(a["kind"])
 PY
 )
+
+# Resolve each kind's path ONCE here, not once per worktree below: the
+# resolver starts a fresh `cli/compass` process, and for N worktrees and M
+# kinds that was M*N Python starts for an answer that cannot change between
+# them. An empty entry means "not found" and the seeding loop below skips it.
+ARTIFACT_PATHS=()
+if [ "${#ARTIFACT_KINDS[@]}" -gt 0 ]; then
+  for _kind in "${ARTIFACT_KINDS[@]}"; do
+    _resolved="$(issue_doc_path "$TASK_SLUG" "$_kind" || true)"
+    ARTIFACT_PATHS+=("$_resolved")
+  done
+fi
 
 # --- create the worktrees ---------------------------------------------------
 mkdir -p "$WORKTREE_ROOT"
@@ -368,10 +456,13 @@ for i in "${!SUBTASKS[@]}"; do
     # docs/compass/<created>-<slug>/ has not: `git worktree add` brings
     # across only what git tracks, and an untracked issue directory is not
     # on that path either. NON-DESTRUCTIVE, same as the copy above: an
-    # existing file in the worktree is left as it is.
+    # existing file in the worktree is left as it is. Each kind's path was
+    # already resolved once, above the worktree loop - read it here rather
+    # than asking the resolver again for every worktree.
     if [ "${#ARTIFACT_KINDS[@]}" -gt 0 ]; then
-      for _kind in "${ARTIFACT_KINDS[@]}"; do
-        _doc_path="$(issue_doc_path "$TASK_SLUG" "$_kind" || true)"
+      for _ai in "${!ARTIFACT_KINDS[@]}"; do
+        _kind="${ARTIFACT_KINDS[$_ai]}"
+        _doc_path="${ARTIFACT_PATHS[$_ai]}"
         [ -n "$_doc_path" ] && [ -f "$_doc_path" ] || continue
         case "$_doc_path" in
           "$TASK_DIR"/*) continue ;;  # already carried by the copy above

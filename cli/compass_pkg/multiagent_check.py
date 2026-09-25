@@ -62,14 +62,14 @@ def _ready(task):
 def _last_round_passed(subtask):
     """Does the subtask's LAST recorded review round show `verdict: pass`?
 
-    Takes the last entry of the raw list, before dropping anything that is
-    not a mapping - filtering first let a malformed trailing entry fall
-    away and an earlier pass stand in as "last" for it. The last entry is
-    the last word on the subtask (the requirements review's Q1), so a
-    malformed one must read as a fail, not be skipped.
+    Reads the last entry of the raw list, whatever its type, because the
+    last entry is the last word on the subtask (the requirements review's
+    Q1): a malformed one, or a `review_rounds:` value that is not a list at
+    all, must read as a fail, not raise an error or let an earlier entry
+    stand in for it.
     """
     rounds = subtask.get("review_rounds") or []
-    if not rounds:
+    if not isinstance(rounds, list) or not rounds:
         return False
     last = rounds[-1]
     return isinstance(last, dict) and last.get("verdict") == "pass"
@@ -116,16 +116,20 @@ def _check_multiagent_run_recorded(task, task_dir):
             "record yet")
 
     subtasks = task.get("subtasks")
-    if not isinstance(subtasks, list) or not subtasks:
+    if subtasks is None or (isinstance(subtasks, list) and not subtasks):
         return False, (
             "the manifest has no `subtasks:` recorded for a multiagent run - "
             "record each one with `compass issue subtask add` and `update` "
             "as it completes")
+    if not isinstance(subtasks, list):
+        return False, (
+            "`subtasks:` is not a list (it is %s) - record each subtask "
+            "with `compass issue subtask add` and `update` as it completes"
+            % type(subtasks).__name__)
 
     # Every entry is judged, in the order the manifest holds it. A subtask
     # entry that is not a mapping cannot be a passing one, so it is named by
-    # its position and counted as not done; it is not dropped from the list
-    # before judgement, the way a filter-first read would drop it.
+    # its position and counted as not done.
     not_done = []
     no_pass = []
     for index, entry in enumerate(subtasks):

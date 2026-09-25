@@ -255,9 +255,9 @@ def test_guardrails_gains_no_mechanism_on_this_branch():
 
     Compares the parsed structure with main. Prose can change; mechanism
     must not grow unless declared. A check declared in BASELINE_CHECKS
-    passes, because ADR-002 caps guardrails at five and permits new checks
-    under an existing guardrail. Gates, evidence types and rules must match
-    main.
+    passes, because the decision record that caps guardrails at five and
+    permits new checks under an existing guardrail (ADR-002) allows it.
+    Gates, evidence types and rules must match main.
     """
     import yaml
 

@@ -2,12 +2,10 @@
 (`G4`): a multiagent issue's manifest shows the run that built it completed
 - every subtask done, with a passing last review round.
 
-Before this check, nothing read the `subtasks:` record back: an issue could
-land with no subtask ever marked done, or with one still failing its last
-review round, and `compass check` would say nothing. `multiagent-run-recorded`
-closes that gap for an issue created on or after 2026-09-25, the day
-`docs/multiagent-protocol.md` landed (ADR-006: a new mechanism no-ops for
-issues that predate it).
+These tests check every row of the check's condition table: which issues it
+reads (a multiagent issue, created on or after 2026-09-25, ready to judge),
+what makes it fail (no `subtasks:`, an entry not done, a last review round
+that did not pass), what it names in a fail, and what makes it pass.
 
 Table of conditions: `technical-design.md` section 3 of the issue
 `dispatch-protocol`. Scenario id: `DPR-1`.
@@ -138,10 +136,20 @@ def test_row_4_missing_subtasks_key_fails():
     assert "subtasks" in detail.lower()
 
 
+def test_row_4_a_subtasks_mapping_fails_and_says_it_is_not_a_list():
+    """A `subtasks:` value that is a mapping - the key is present, so the
+    message must say the value is the wrong type, not that nothing is
+    recorded."""
+    task = _task(subtasks={"s1": {"status": "done"}})
+    passed, detail = _check_multiagent_run_recorded(task, TASK_DIR)
+    assert passed is False
+    assert "not a list" in detail.lower()
+
+
 def test_row_4_a_subtask_entry_that_is_not_a_mapping_fails_named_by_position():
-    """Blocker: a bare string entry was dropped before the list was judged,
-    so `subtask-9` here was never judged and the manifest passed. It must
-    fail instead, named by its position."""
+    """A `subtasks:` entry that is not a mapping - a bare string in place
+    of the record - fails, named by its position, rather than being
+    dropped from the list before judgement."""
     task = _task(subtasks=[
         "subtask-9",
         {"id": "s1", "status": "done",
@@ -190,8 +198,9 @@ def test_row_6_a_subtask_whose_last_round_failed_fails_and_names_it():
 
 
 def test_row_6_a_later_failing_round_after_a_pass_still_fails():
-    """Q1: the subtask passes on its LAST round's verdict, so a later fail
-    after an earlier pass is still the last word on it."""
+    """The requirements review's rule (Q1): the subtask passes on its LAST
+    round's verdict, so a later fail after an earlier pass is still the
+    last word on it."""
     task = _task(subtasks=[
         {"id": "subtask-1", "status": "done",
          "review_rounds": [{"round": 1, "verdict": "pass"},
@@ -213,10 +222,9 @@ def test_row_6_a_later_passing_round_after_a_fail_clears_it():
 
 
 def test_row_6_a_malformed_trailing_round_is_not_a_pass():
-    """Blocker: `review_rounds` filtered out anything that was not a mapping
-    before taking the last entry, so a malformed last round let an earlier
-    pass stand in for it. The last entry, filtered or not, is the one that
-    must carry `verdict: pass`."""
+    """The last entry of `review_rounds`, whatever its type, is the one
+    that must carry `verdict: pass` - a malformed last round does not let
+    an earlier pass stand in for it."""
     task = _task(subtasks=[
         {"id": "subtask-1", "status": "done",
          "review_rounds": [{"round": 1, "verdict": "pass"}, "fail"]},
@@ -227,18 +235,43 @@ def test_row_6_a_malformed_trailing_round_is_not_a_pass():
 
 
 def test_a_subtask_id_that_is_not_a_string_does_not_error():
-    """Issue: YAML loads an unquoted `id: 3` as an int, and joining it into
-    the message with a string list used to raise `TypeError`."""
+    """The requirements review's rule that YAML types stay readable
+    (Q1): an unquoted `id: 3` loads as an int, and joining it into the
+    message with a string list must not raise `TypeError`."""
     task = _task(subtasks=[{"id": 3, "status": "reviewing"}])
     passed, detail = _check_multiagent_run_recorded(task, TASK_DIR)
     assert passed is False
     assert "3" in detail
 
 
+def test_a_review_rounds_value_that_is_a_mapping_fails_named_not_errors():
+    """A `review_rounds:` value that is not a list - a mapping in place of
+    the list, an easy hand-edit mistake - must fail the subtask by name,
+    not raise `KeyError` out of the check."""
+    task = _task(subtasks=[
+        {"id": "subtask-1", "status": "done",
+         "review_rounds": {"round": 1, "verdict": "pass"}},
+    ])
+    passed, detail = _check_multiagent_run_recorded(task, TASK_DIR)
+    assert passed is False
+    assert "subtask-1" in detail
+
+
+def test_a_review_rounds_value_that_is_a_number_fails_named_not_errors():
+    """A `review_rounds:` value that is not a list - a bare number - must
+    fail the subtask by name, not raise `TypeError` out of the check."""
+    task = _task(subtasks=[
+        {"id": "subtask-1", "status": "done", "review_rounds": 5},
+    ])
+    passed, detail = _check_multiagent_run_recorded(task, TASK_DIR)
+    assert passed is False
+    assert "subtask-1" in detail
+
+
 def test_not_done_and_a_failed_round_on_a_different_subtask_are_both_named():
-    """Suggestion: report every problem found in one run, rather than
-    stopping at the first category and making the reader run again to learn
-    about the next one."""
+    """Every problem is reported in one run, rather than stopping at the
+    first category and making the reader run again to learn about the
+    next one."""
     task = _task(subtasks=[
         {"id": "subtask-1", "status": "reviewing",
          "review_rounds": [{"round": 1, "verdict": "pass"}]},

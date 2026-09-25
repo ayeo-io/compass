@@ -112,7 +112,7 @@ CHECK_GUIDANCE = {
     },
     "multiagent-run-recorded": {
         "why": "A multiagent run splits into subtasks that `compass issue subtask` records. Without this check, an issue could clear every gate and land with a subtask never marked done, or one still failing its last review round, and nothing would say so.",
-        "fix": "Record each subtask's progress with `compass issue subtask update`: `--status done` once it is merged, and `--round pass` once its last review passes. The check names any subtask that is missing, not done, or without a passing last round.",
+        "fix": "Record each subtask's progress with `compass issue subtask update`: `--status done` once it is merged, and `--round pass` once its last review passes. The check reports an empty `subtasks:` list, and names any subtask not done or without a passing last round.",
         "do": 'Record each named subtask done, with a passing round, via `compass issue subtask update`.',
     },
     "no-trusted-rerun": {

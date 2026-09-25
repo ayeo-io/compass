@@ -225,7 +225,7 @@ while IFS= read -r line; do
   case "$line" in \|*) ;; *) continue ;; esac
   # A separator row (only |, -, : and spaces) belongs to the table
   # PENDING_HEADER already names - skip it without disturbing PENDING_HEADER.
-  case "$(echo "$line" | tr -d '|:- ')" in '') continue ;; esac
+  case "$(echo "$line" | tr -d '|: -')" in '') continue ;; esac
   # A row belongs to the subtask table only when its FIRST cell is a
   # subtask id - the same test the row-parsing loop below applies to
   # `sid`. Matching "subtask-" anywhere in the line would also catch a

@@ -129,7 +129,7 @@ PENDING_HEADER=""
 SUBTASK_HEADER=""
 while IFS= read -r line; do
   case "$line" in \|*) ;; *) continue ;; esac
-  case "$(echo "$line" | tr -d '|:- ')" in '') continue ;; esac
+  case "$(echo "$line" | tr -d '|: -')" in '') continue ;; esac
   IFS='|' read -r -a _hdr_cells <<<"$line"
   _hdr_cell1="$(echo "${_hdr_cells[1]:-}" | xargs 2>/dev/null || true)"
   case "$_hdr_cell1" in

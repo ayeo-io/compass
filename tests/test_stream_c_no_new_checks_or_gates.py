@@ -77,8 +77,9 @@ BASELINE_CHECKS = {
     "scenarios-are-executable",
     # Added by dispatch-protocol. A multiagent issue's manifest must show the
     # run that built it completed - every subtask done, with a last review
-    # round that passed. Joins `G4` rather than becoming a sixth guardrail
-    # (ADR-002).
+    # round that passed. Joins the evidence-not-assertion guardrail (`G4`)
+    # rather than becoming a sixth guardrail: ADR-002 caps guardrails at
+    # five and grows the framework through new checks instead.
     "multiagent-run-recorded",
 }
 

@@ -132,6 +132,7 @@ checks:
 
   command-passes:
     description: "Runs the project guardrail's declared `command:` via subprocess and checks it exits 0. On success: emits a command-output evidence entry. On failure: emits a command-output evidence entry with exit code + stderr. When verify.architecture is in the gate set and zero project guardrails declare command-passes, it passes without checking anything (no declarations means there are no architecture checks to run)."
+
   multiagent-run-recorded:
     description: >
       A multiagent issue's manifest shows the run that built it completed:

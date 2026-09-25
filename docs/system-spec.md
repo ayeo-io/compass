@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### A later add keeps the earlier scenarios
+### A green with nothing changed is still a re-run
 
-- **Scenario id:** `CKS-2`
+- **Scenario id:** `RSE-2`
 - **Intent:** `INT-1`
-- **Source issue:** `changed-file-keeps-one-scenario`
+- **Source issue:** `rerun-check-misses-script-changes`
 - **Landed:** 2026-09-25
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -8769,4 +8769,18 @@
 - **Scenario id:** `CKS-1`
 - **Intent:** `INT-1`
 - **Source issue:** `changed-file-keeps-one-scenario`
+- **Landed:** 2026-09-25
+
+### A later add keeps the earlier scenarios _(archived)_
+
+- **Scenario id:** `CKS-2`
+- **Intent:** `INT-1`
+- **Source issue:** `changed-file-keeps-one-scenario`
+- **Landed:** 2026-09-25
+
+### A green after a script edit is not a re-run _(archived)_
+
+- **Scenario id:** `RSE-1`
+- **Intent:** `INT-1`
+- **Source issue:** `rerun-check-misses-script-changes`
 - **Landed:** 2026-09-25

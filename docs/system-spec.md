@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### A runner that writes no report is marked exit-code
+### A relative path is judged by where it resolves; the no-project message names the devlog
 
-- **Scenario id:** `DSW-3`
+- **Scenario id:** `DLO-3`
 - **Intent:** `INT-1`
-- **Source issue:** `red-through-a-shell-wrapper`
+- **Source issue:** `devlog-logs-edits-outside-the-project`
 - **Landed:** 2026-09-25
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -8685,4 +8685,25 @@
 - **Scenario id:** `DSW-2`
 - **Intent:** `INT-1`
 - **Source issue:** `red-through-a-shell-wrapper`
+- **Landed:** 2026-09-25
+
+### A runner that writes no report is marked exit-code _(archived)_
+
+- **Scenario id:** `DSW-3`
+- **Intent:** `INT-1`
+- **Source issue:** `red-through-a-shell-wrapper`
+- **Landed:** 2026-09-25
+
+### An edit outside the project is not logged _(archived)_
+
+- **Scenario id:** `DLO-1`
+- **Intent:** `INT-1`
+- **Source issue:** `devlog-logs-edits-outside-the-project`
+- **Landed:** 2026-09-25
+
+### An edit inside the project is logged relative to it _(archived)_
+
+- **Scenario id:** `DLO-2`
+- **Intent:** `INT-1`
+- **Source issue:** `devlog-logs-edits-outside-the-project`
 - **Landed:** 2026-09-25

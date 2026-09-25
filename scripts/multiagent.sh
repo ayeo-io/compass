@@ -9,9 +9,21 @@
 # worktree-multiagent skill).
 #
 # USAGE
-#   scripts/multiagent.sh <issue-slug>            # read .compass/work/<slug>/distribution-map.md
-#   scripts/multiagent.sh <issue-slug> --dry-run  # show the plan, create nothing
+#   scripts/multiagent.sh <issue-slug>              # read the issue's distribution map
+#   scripts/multiagent.sh <issue-slug> --dry-run    # show the plan, create nothing
+#   scripts/multiagent.sh <issue-slug> --wave N     # provision one staged wave only
 #   scripts/multiagent.sh --help
+#
+# The map, the approach record and the other issue documents are found
+# through the artifact registry - docs/compass/<created>-<slug>/ when the
+# manifest registers a document there, .compass/work/<slug>/ for an issue
+# whose documents predate the registry. See scripts/lib/issue-docs.sh.
+#
+# WAVES
+#   A map whose subtask table carries a Wave column is staged: --wave N
+#   provisions that wave's rows only, and the cap is measured against that
+#   wave's row count, not the map's total. Without --wave, wave 1 runs and
+#   the next wave is named. A map with no Wave column ignores waves.
 #
 # WHAT IT RESPECTS
 #   - .compass/config.yml  multiagent.worktree_root   (default ../.compass-worktrees)
@@ -38,13 +50,16 @@ PROJECT_DIR="$(git -C "$(pwd)" rev-parse --show-toplevel 2>/dev/null || pwd)"
 
 # shellcheck source=lib/compass-python.sh
 source "$SCRIPT_DIR/lib/compass-python.sh"
+source "$SCRIPT_DIR/lib/issue-docs.sh"
 
 # --- args -------------------------------------------------------------------
 TASK_SLUG=""
 DRY_RUN=0
+WAVE_ARG=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY_RUN=1 ;;
+    --wave) WAVE_ARG="${2:-}"; shift ;;
     -h|--help) grep -E '^# (USAGE|  scripts)' "$0" | sed 's/^# //'; exit 0 ;;
     -*) echo "multiagent.sh: unknown flag: $1" >&2; exit 1 ;;
     *)  TASK_SLUG="$1" ;;
@@ -54,14 +69,21 @@ done
 [ -n "$TASK_SLUG" ] || { echo "multiagent.sh: need an issue slug. See --help." >&2; exit 1; }
 
 TASK_DIR="$PROJECT_DIR/.compass/work/$TASK_SLUG"
-MAP="$TASK_DIR/distribution-map.md"
-ROUTE="$TASK_DIR/delivery-approach.md"
-# vocabulary-scan: allow - reads the retired artifact name for old archives
-[ -f "$ROUTE" ] || ROUTE="$TASK_DIR/route.md"
 TASK_YML="$TASK_DIR/manifest.yml"
 CONFIG="$PROJECT_DIR/.compass/config.yml"
 
-[ -f "$MAP" ]   || { echo "multiagent.sh: no distribution-map.md for issue '$TASK_SLUG' - the design stage must produce it first." >&2; exit 1; }
+# The map and the approach record are found through the artifact registry,
+# so an issue whose documents moved to docs/compass/<created>-<slug>/ still
+# resolves, and an issue whose documents are still flat under
+# .compass/work/<slug>/ works exactly as before.
+MAP="$(issue_doc_path "$TASK_SLUG" "distribution-map" || true)"
+[ -n "$MAP" ] && [ -f "$MAP" ] || { echo "multiagent.sh: no distribution-map.md for issue '$TASK_SLUG' - the design stage must produce it first." >&2; exit 1; }
+
+ROUTE="$(issue_doc_path "$TASK_SLUG" "delivery-approach" || true)"
+if [ -z "$ROUTE" ] || [ ! -f "$ROUTE" ]; then
+  # vocabulary-scan: allow - reads the retired artifact name for old archives
+  ROUTE="$TASK_DIR/route.md"
+fi
 [ -f "$ROUTE" ] || { echo "multiagent.sh: no delivery-approach.md for issue '$TASK_SLUG' - triage must run first." >&2; exit 1; }
 [ -f "$TASK_YML" ] || { echo "multiagent.sh: no manifest.yml for issue '$TASK_SLUG' - the worktree cap is read from structured assessment, not delivery-approach.md prose. Run /compass:assess." >&2; exit 1; }
 
@@ -125,6 +147,23 @@ esac
 # Never exceed the config ceiling regardless.
 [ "$CAP" -gt "$MAX_WORKTREES" ] && CAP="$MAX_WORKTREES"
 
+# --- find an optional Wave column in the map's header row -------------------
+# A staged map's §3 table carries one extra column, named "Wave" (an exact
+# cell match on the header row). Its position - 0 when absent - tells the
+# row-parsing loop below which cell, if any, to read as a row's wave number.
+WAVE_COL=0
+while IFS= read -r line; do
+  case "$line" in \|*) ;; *) continue ;; esac
+  IFS='|' read -r -a _hdr_cells <<<"$line"
+  for _idx in "${!_hdr_cells[@]}"; do
+    _cell="$(echo "${_hdr_cells[$_idx]}" | xargs 2>/dev/null || true)"
+    if [ "$_cell" = "Wave" ]; then
+      WAVE_COL="$_idx"
+      break 2
+    fi
+  done
+done < "$MAP"
+
 # --- parse subtasks from the distribution map --------------------------------
 # The map's §3 table has rows like:
 #   | subtask-1 | U1 | PBW-A1, PBW-A2 | compass/<slug>/subtask-1 |
@@ -133,6 +172,7 @@ esac
 # still parses.
 SUBTASKS=()
 BRANCHES=()
+WAVES=()
 while IFS= read -r line; do
   # row must look like a markdown table row mentioning a subtask id
   case "$line" in
@@ -148,20 +188,23 @@ while IFS= read -r line; do
     *"not a parallel worktree"*|*"not a worktree"*|*"non-provisioning"*|*"integration/verify"*) continue ;;
   esac
   # split on '|', trim each cell
-  IFS='|' read -r _ c1 c2 c3 c4 _rest <<<"$line"
-  sid="$(echo "${c1:-}" | xargs 2>/dev/null || true)"
+  IFS='|' read -r -a _row_cells <<<"$line"
+  sid="$(echo "${_row_cells[1]:-}" | xargs 2>/dev/null || true)"
   # Trim whitespace AND strip leading/trailing markdown punctuation (`, *).
   # The map's branch-name cell is often wrapped in backticks for readability
   # (`compass/<slug>/subtask-N`) or bold (**...**); the parser must treat the
   # cell as a clean git ref, not the literal-with-markdown string. Bare names
   # round-trip unchanged. Markdown *inside* a ref name is out of scope -
   # git ref-validation rejects such names anyway.
-  branch="$(echo "${c4:-}" | xargs 2>/dev/null | sed -E 's/^[`*]+//; s/[`*]+$//' || true)"
+  branch="$(echo "${_row_cells[4]:-}" | xargs 2>/dev/null | sed -E 's/^[`*]+//; s/[`*]+$//' || true)"
   case "$sid" in subtask-*|stream-*) ;; *) continue ;; esac  # vocabulary-scan: allow - reads the retired spelling for back-compat (ADR-006)
   # default branch name if the map left it blank
   [ -n "$branch" ] || branch="compass/$TASK_SLUG/$sid"
+  wave=""
+  [ "$WAVE_COL" -gt 0 ] && wave="$(echo "${_row_cells[$WAVE_COL]:-}" | xargs 2>/dev/null || true)"
   SUBTASKS+=("$sid")
   BRANCHES+=("$branch")
+  WAVES+=("$wave")
 done < "$MAP"
 
 SUBTASK_COUNT="${#SUBTASKS[@]}"
@@ -171,7 +214,49 @@ if [ "$SUBTASK_COUNT" -eq 0 ]; then
   exit 1
 fi
 
+# --- waves: a staged map is provisioned one wave at a time -------------------
+NEXT_WAVE=""
+WAVE_REQUESTED=""
+if [ "$WAVE_COL" -gt 0 ]; then
+  WAVE_MAX=0
+  for w in "${WAVES[@]}"; do
+    case "$w" in ''|*[!0-9]*) continue ;; esac
+    [ "$w" -gt "$WAVE_MAX" ] && WAVE_MAX="$w"
+  done
+  WAVE_REQUESTED="${WAVE_ARG:-1}"
+  case "$WAVE_REQUESTED" in
+    ''|*[!0-9]*) echo "multiagent.sh: --wave needs a whole number, got '$WAVE_ARG'." >&2; exit 1 ;;
+  esac
+  if [ "$WAVE_REQUESTED" -gt "$WAVE_MAX" ]; then
+    echo "multiagent.sh: wave $WAVE_REQUESTED is above the map's highest wave ($WAVE_MAX)." >&2
+    exit 1
+  fi
+  WAVE_SUBTASKS=()
+  WAVE_BRANCHES=()
+  for i in "${!SUBTASKS[@]}"; do
+    [ "${WAVES[$i]:-}" = "$WAVE_REQUESTED" ] || continue
+    WAVE_SUBTASKS+=("${SUBTASKS[$i]}")
+    WAVE_BRANCHES+=("${BRANCHES[$i]}")
+  done
+  # Bash 3.2 (macOS's /bin/bash) treats "${ARR[@]}" on a zero-element array
+  # as an unbound variable under `set -u` - guarded rather than expanded
+  # unconditionally, so a wave number with no matching rows empties the
+  # arrays instead of aborting the script.
+  SUBTASKS=()
+  BRANCHES=()
+  [ "${#WAVE_SUBTASKS[@]}" -gt 0 ] && SUBTASKS=("${WAVE_SUBTASKS[@]}")
+  [ "${#WAVE_BRANCHES[@]}" -gt 0 ] && BRANCHES=("${WAVE_BRANCHES[@]}")
+  SUBTASK_COUNT="${#SUBTASKS[@]}"
+  [ "$WAVE_REQUESTED" -lt "$WAVE_MAX" ] && NEXT_WAVE="$((WAVE_REQUESTED + 1))"
+elif [ -n "$WAVE_ARG" ]; then
+  echo "multiagent.sh: --wave given but the map has no Wave column." >&2
+  exit 1
+fi
+
 # --- enforce the cap --------------------------------------------------------
+# Measured against the chosen wave's row count on a staged map, and against
+# the map's total otherwise - a map staged over several waves must not be
+# refused for a total it is never asked to provision in one pass.
 if [ "$SUBTASK_COUNT" -gt "$CAP" ]; then
   echo "multiagent.sh: the distribution map has $SUBTASK_COUNT subtasks but the cap is $CAP." >&2
   echo "          The cap wins. Do not over-provision worktrees - go back to" >&2
@@ -189,7 +274,31 @@ echo "Compass multiagent - issue '$TASK_SLUG'"
 echo "  base branch:    $BASE_BRANCH"
 echo "  worktree root:  $WORKTREE_ROOT"
 echo "  subtasks:        $SUBTASK_COUNT   (config max $MAX_WORKTREES, route cap $CAP)"
+[ -n "$WAVE_REQUESTED" ] && echo "  wave:            $WAVE_REQUESTED of $WAVE_MAX"
 echo ""
+
+# --- the kinds the issue's registry names, read once -------------------------
+# Every kind manifest.yml's `artifacts:` list carries is a document the
+# worktree may need at its registered path - the map and the approach record
+# above are two of these, read individually because the script also needs
+# their content; the rest are read here, generically, purely to be seeded.
+ARTIFACT_KINDS=()
+while IFS= read -r _kind; do
+  [ -n "$_kind" ] && ARTIFACT_KINDS+=("$_kind")
+done < <(compass_python - "$TASK_YML" <<'PY'
+import sys
+import compass_pkg
+import yaml
+try:
+    d = yaml.safe_load(open(sys.argv[1])) or {}
+except Exception:
+    d = {}
+arts = d.get("artifacts") if isinstance(d, dict) else None
+for a in (arts or []):
+    if isinstance(a, dict) and a.get("kind"):
+        print(a["kind"])
+PY
+)
 
 # --- create the worktrees ---------------------------------------------------
 mkdir -p "$WORKTREE_ROOT"
@@ -252,6 +361,32 @@ for i in "${!SUBTASKS[@]}"; do
     # builder work in it to lose, and a stale pointer is worse than none.
     mkdir -p "$wt_path/.compass"
     printf '%s\n' "$TASK_SLUG" > "$wt_path/.compass/current-task"
+
+    # --- seed every registered document at its registered path -------------
+    # A document still flat under .compass/work/<slug>/ already arrived with
+    # the copy above. One the registry moved to
+    # docs/compass/<created>-<slug>/ has not: `git worktree add` brings
+    # across only what git tracks, and an untracked issue directory is not
+    # on that path either. NON-DESTRUCTIVE, same as the copy above: an
+    # existing file in the worktree is left as it is.
+    if [ "${#ARTIFACT_KINDS[@]}" -gt 0 ]; then
+      for _kind in "${ARTIFACT_KINDS[@]}"; do
+        _doc_path="$(issue_doc_path "$TASK_SLUG" "$_kind" || true)"
+        [ -n "$_doc_path" ] && [ -f "$_doc_path" ] || continue
+        case "$_doc_path" in
+          "$TASK_DIR"/*) continue ;;  # already carried by the copy above
+        esac
+        case "$_doc_path" in
+          "$PROJECT_DIR"/*) _rel="${_doc_path#"$PROJECT_DIR"/}" ;;
+          *) continue ;;  # outside the project - resolve_artifact refuses this itself
+        esac
+        _dest="$wt_path/$_rel"
+        [ -f "$_dest" ] && continue
+        mkdir -p "$(dirname "$_dest")"
+        cp "$_doc_path" "$_dest"
+        echo "      seeded $_rel"
+      done
+    fi
   fi
 
   LAUNCH_PLAN+=("$sid|$branch|$wt_path")
@@ -281,5 +416,9 @@ else
 fi
 echo ""
 [ "$DRY_RUN" -eq 1 ] && echo "(dry run - nothing was created)"
+if [ -n "$NEXT_WAVE" ]; then
+  echo "Next wave: $NEXT_WAVE of $WAVE_MAX - run:"
+  echo "  scripts/multiagent.sh $TASK_SLUG --wave $NEXT_WAVE"
+fi
 echo "When every subtask is independently green, land them with:"
 echo "  scripts/integrate.sh $TASK_SLUG"

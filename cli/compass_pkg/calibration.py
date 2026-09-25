@@ -32,7 +32,7 @@ import re as _re
 
 import fnmatch
 import re as _re
-from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, normalize_spine, resolve_issue_dir, save_manifest
+from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, migrate_map_section, normalize_spine, resolve_issue_dir, save_manifest
 
 
 
@@ -545,10 +545,18 @@ def cmd_calibration(args):
     weights = {}
     try:
         policy = load_yaml(os.path.join(find_governance(), "routing-policy.yml"))
-        weights = {r: s.get("weight", 0)
-                   for r, s in (policy.get("route_shapes") or {}).items()}
+        weights = {r: s.get("weight")
+                   for r, s in (policy.get("route_shapes") or {}).items()
+                   if isinstance(s, dict) and isinstance(s.get("weight"), int)}
     except CompassError:
         pass
+    # Manifests record the current route names; the policy's keys may still
+    # be the machine names. The migration table maps one to the other, so a
+    # route weighs the same by either name.
+    for machine, name in (migrate_map_section("values", {})
+                          .get("delivery_approach") or {}).items():
+        if machine in weights and name not in weights:
+            weights[name] = weights[machine]
 
     tasks = []
     if os.path.isdir(work):
@@ -580,6 +588,7 @@ def cmd_calibration(args):
 
     reframed_tasks, total = 0, 0
     ups = downs = sideways = 0
+    unweighed = {}
     transitions = {}
     for slug, t in tasks:
         rfs = t.get("reassessments") or []
@@ -589,8 +598,12 @@ def cmd_calibration(args):
             total += 1
             fr, to = rf.get("from_route"), rf.get("to_route")
             transitions[f"{fr} -> {to}"] = transitions.get(f"{fr} -> {to}", 0) + 1
-            wf, wt = weights.get(fr, 0), weights.get(to, 0)
-            if wt > wf:
+            wf, wt = weights.get(fr), weights.get(to)
+            if wf is None or wt is None:
+                # A route with no weight has no direction to count.
+                key = f"{fr} -> {to}"
+                unweighed[key] = unweighed.get(key, 0) + 1
+            elif wt > wf:
                 ups += 1
             elif wt < wf:
                 downs += 1
@@ -618,13 +631,14 @@ def cmd_calibration(args):
                  % (len(tasks), reframed_tasks, pct_head, _signal))
     _rep.data(issues=len(tasks), reframed=reframed_tasks,
               reframe_pct=pct_head, up=ups, down=downs, sideways=sideways,
+              unweighed=sum(unweighed.values()),
               distribution=dict(dist), no_route=list(no_route),
               transitions=dict(transitions))
     _buf = _io.StringIO()
     _ctx = _cl.redirect_stdout(_buf)
     _ctx.__enter__()
     print("Route distribution:")
-    for r in sorted(dist, key=lambda x: weights.get(x, 99)):
+    for r in sorted(dist, key=lambda x: (weights.get(x, 99), x)):
         print(f"  {r:<12}: {dist[r]}")
     if no_route:
         print(f"  (no route)  : {len(no_route)}  <- triage did not complete: "
@@ -636,10 +650,15 @@ def cmd_calibration(args):
     print(f"  total re-frames      : {total}")
     if total:
         print("  direction:")
-        print(f"    up   (Needle under-sized) : {ups}")
-        print(f"    down (Needle over-sized)  : {downs}")
+        print(f"    up   (assessment under-sized) : {ups}")
+        print(f"    down (assessment over-sized)  : {downs}")
         if sideways:
-            print(f"    sideways                  : {sideways}")
+            print(f"    sideways                      : {sideways}")
+        if unweighed:
+            print(f"    unweighed (a route with no weight in routing-policy.yml): "
+                  f"{sum(unweighed.values())}")
+            for k, v in sorted(unweighed.items()):
+                print(f"      {k} : {v}")
         print("  transitions:")
         for k, v in sorted(transitions.items(), key=lambda x: -x[1]):
             print(f"    {k} : {v}")
@@ -655,7 +674,7 @@ def cmd_calibration(args):
         print("  delivery-approach reference docs.")
     elif downs >= 2 and downs > ups * 2:
         print(f"  {downs} down-reframes vs {ups} up - a lean toward OVER-sizing.")
-        print("  The Needle is reading risk high; the routes may be heavier")
+        print("  Assessment is reading risk high; the routes may be heavier")
         print("  than the work warrants. Review routing-policy.yml.")
     else:
         print(f"  {ups} up / {downs} down - roughly balanced, re-frame rate "

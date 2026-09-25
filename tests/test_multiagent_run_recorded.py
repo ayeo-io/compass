@@ -3,9 +3,10 @@
 - every subtask done, with a passing last review round.
 
 These tests check every row of the check's condition table: which issues it
-reads (a multiagent issue, created on or after 2026-09-25, ready to judge),
-what makes it fail (no `subtasks:`, an entry not done, a last review round
-that did not pass), what it names in a fail, and what makes it pass.
+reads (a multiagent issue, ready to judge, that either already records a
+`subtasks:` key or was created on or after 2026-09-26), what makes it fail
+(no `subtasks:`, an entry not done, a last review round that did not pass),
+what it names in a fail, and what makes it pass.
 
 Table of conditions: `technical-design.md` section 3 of the issue
 `dispatch-protocol`. Scenario id: `DPR-1`.
@@ -56,42 +57,82 @@ def test_row_1_no_stages_at_all_is_nothing_to_check():
     assert passed is NOTHING_TO_CHECK, detail
 
 
-# --- row 2: created is before the start date, or missing --------------------
+# --- row 2: no `subtasks:` key, and created is before the cutoff or missing -
+#
+# The requirements review's correction (Q2): an issue that already records a
+# `subtasks:` key is judged on it whatever its date. An issue with no
+# `subtasks:` key is judged only if created on or after 2026-09-26 - the
+# case `evidence-binding` raised at integration, an issue created
+# 2026-09-25 whose breakdown ran without a subtask record, is nothing to
+# check.
 
-def test_row_2_created_before_the_start_date_is_nothing_to_check():
-    assert RUN_RECORD_REQUIRED_FROM.isoformat() == "2026-09-25"
-    task = _task(created="2026-09-24", subtasks=[])  # would otherwise fail
+def test_row_2_no_subtasks_key_before_the_cutoff_is_nothing_to_check():
+    assert RUN_RECORD_REQUIRED_FROM.isoformat() == "2026-09-26"
+    task = _task(created="2026-09-24")  # would otherwise fail
+    del task["subtasks"]
     passed, detail = _check_multiagent_run_recorded(task, TASK_DIR)
     assert passed is NOTHING_TO_CHECK, detail
 
 
-def test_row_2_missing_created_is_nothing_to_check():
-    task = _task(subtasks=[])
+def test_row_2_no_subtasks_key_created_2026_09_25_is_nothing_to_check():
+    """`evidence-binding`'s own case: created the day the protocol landed,
+    with no `subtasks:` key, is nothing to check - the day before the
+    cutoff."""
+    task = _task(created="2026-09-25")  # would otherwise fail
+    del task["subtasks"]
+    passed, detail = _check_multiagent_run_recorded(task, TASK_DIR)
+    assert passed is NOTHING_TO_CHECK, detail
+
+
+def test_row_2_no_subtasks_key_missing_created_is_nothing_to_check():
+    task = _task()
+    del task["subtasks"]
     del task["created"]
     passed, detail = _check_multiagent_run_recorded(task, TASK_DIR)
     assert passed is NOTHING_TO_CHECK, detail
 
 
-def test_row_2_created_as_a_date_object_before_the_cutoff_is_nothing_to_check():
-    """YAML loads an unquoted `created: 2026-09-24` as a `datetime.date`, not
+def test_row_2_no_subtasks_key_created_as_a_date_object_before_the_cutoff_is_nothing_to_check():
+    """YAML loads an unquoted `created: 2026-09-25` as a `datetime.date`, not
     a string."""
-    task = _task(created=datetime.date(2026, 9, 24), subtasks=[])
+    task = _task(created=datetime.date(2026, 9, 25))
+    del task["subtasks"]
     passed, detail = _check_multiagent_run_recorded(task, TASK_DIR)
     assert passed is NOTHING_TO_CHECK, detail
 
 
-def test_row_2_created_as_a_date_object_on_the_cutoff_applies():
-    task = _task(created=datetime.date(2026, 9, 25), subtasks=[])
+def test_row_2_no_subtasks_key_created_as_a_date_object_on_the_cutoff_applies():
+    task = _task(created=datetime.date(2026, 9, 26))
+    del task["subtasks"]
     passed, detail = _check_multiagent_run_recorded(task, TASK_DIR)
     assert passed is False, detail
 
 
-def test_row_2_created_as_a_non_date_string_is_treated_as_in_scope():
+def test_row_2_no_subtasks_key_created_as_a_non_date_string_is_treated_as_in_scope():
     """A `created:` present but not an ISO date is not trusted to mean 'this
     issue predates the protocol', so the check still applies to it."""
-    task = _task(created="recently", subtasks=[])
+    task = _task(created="recently")
+    del task["subtasks"]
     passed, detail = _check_multiagent_run_recorded(task, TASK_DIR)
     assert passed is False, detail
+
+
+def test_row_2_a_subtasks_key_created_2026_09_25_with_a_complete_record_passes():
+    """An issue that already records a `subtasks:` key is judged on it
+    whatever its date - even the day before the cutoff."""
+    task = _task(created="2026-09-25")
+    passed, detail = _check_multiagent_run_recorded(task, TASK_DIR)
+    assert passed is True, detail
+
+
+def test_row_2_a_subtasks_key_created_2026_09_25_with_an_incomplete_record_fails():
+    task = _task(created="2026-09-25", subtasks=[
+        {"id": "subtask-1", "status": "reviewing",
+         "review_rounds": [{"round": 1, "verdict": "pass"}]},
+    ])
+    passed, detail = _check_multiagent_run_recorded(task, TASK_DIR)
+    assert passed is False, detail
+    assert "subtask-1" in detail
 
 
 # --- row 3: still in flight ---------------------------------------------------
@@ -129,7 +170,9 @@ def test_row_4_no_subtasks_fails():
 
 
 def test_row_4_missing_subtasks_key_fails():
-    task = _task()
+    """An issue created on or after the cutoff, with no `subtasks:` key,
+    fails - it did not predate the protocol, so it is judged."""
+    task = _task(created="2026-09-26")
     del task["subtasks"]
     passed, detail = _check_multiagent_run_recorded(task, TASK_DIR)
     assert passed is False

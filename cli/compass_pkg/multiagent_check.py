@@ -9,10 +9,12 @@
 # not pass. It reads the manifest and fails a multiagent issue whose run left
 # no complete record.
 #
-# It reads only an issue created on or after the date the protocol landed:
-# an issue built before that recorded its run however the process of the day
-# required, and this check must not start failing it retroactively
-# (ADR-006: a new mechanism no-ops for issues that predate it).
+# An issue that already records a `subtasks:` key is judged on it, whatever
+# its date. An issue with no `subtasks:` key is judged only if it was
+# created on or after 2026-09-26, the first full day the protocol existed -
+# one built before that recorded its run however the process of the day
+# required, and a new mechanism must not judge work that predates it
+# (ADR-006).
 #
 # DEPENDENCY: standard library (datetime) and compass_pkg.check_results.
 # =============================================================================
@@ -24,17 +26,18 @@ import datetime
 
 from compass_pkg.check_results import NOTHING_TO_CHECK
 
-#: Issues created on or after this date are read by the check. An earlier
-#: issue is left alone, as `RED_REQUIRED_FROM` leaves earlier issues alone in
+#: An issue with no `subtasks:` key is read by the check only if created on
+#: or after this date; an issue that already has the key is read whatever
+#: its date (the requirements review's Q2). As `RED_REQUIRED_FROM` does in
 #: red_first.py.
-RUN_RECORD_REQUIRED_FROM = datetime.date(2026, 9, 25)
+RUN_RECORD_REQUIRED_FROM = datetime.date(2026, 9, 26)
 
 
 def _applies_from(created):
-    """Was the issue created on or after the cutoff? A missing or blank
-    `created:` does not apply - an issue with no date at all predates the
-    field. A value present but not an ISO date is not trusted to mean "old",
-    so the check still applies to it."""
+    """For an issue with no `subtasks:` key, was it created on or after the
+    cutoff? A missing or blank `created:` does not apply - an issue with no
+    date at all predates the field. A value present but not an ISO date is
+    not trusted to mean "old", so the check still applies to it."""
     if isinstance(created, datetime.datetime):
         created = created.date()
     if isinstance(created, datetime.date):
@@ -89,12 +92,16 @@ def _check_multiagent_run_recorded(task, task_dir):
     """multiagent-run-recorded: `subtasks:` records a complete run.
 
     Declines to check for an issue whose breakdown stage is not multiagent,
-    one created before the protocol's start date (or with no `created:` at
-    all), or one still in flight - not every gate has passed and the issue
-    has not landed. Once the issue is ready it fails on a manifest with no
-    `subtasks:`, a subtask that is not `done`, or a subtask whose last review
-    round is missing or `fail` (a later verdict is the last word on it, so a
-    fail after an earlier pass still fails - the requirements review's Q1).
+    or one still in flight - not every gate has passed and the issue has
+    not landed. An issue that already records a `subtasks:` key is judged
+    on it whatever its date; one with no `subtasks:` key is declined too,
+    unless it was created on or after the protocol's start date (the
+    requirements review's Q2 - a new mechanism must not judge work that
+    predates it, ADR-006). Once the issue is ready it fails on a manifest
+    with no `subtasks:`, a subtask that is not `done`, or a subtask whose
+    last review round is missing or `fail` (a later verdict is the last
+    word on it, so a fail after an earlier pass still fails - the
+    requirements review's Q1).
     """
     stages = task.get("stages")
     breakdown = stages.get("breakdown") if isinstance(stages, dict) else None
@@ -103,10 +110,10 @@ def _check_multiagent_run_recorded(task, task_dir):
             "breakdown stage is %r, not multiagent - this check only reads a "
             "multiagent run" % (breakdown,))
 
-    if not _applies_from(task.get("created")):
+    if "subtasks" not in task and not _applies_from(task.get("created")):
         return NOTHING_TO_CHECK, (
-            "created %r is before %s, or missing - this issue predates the "
-            "protocol the check reads"
+            "no `subtasks:` key, and created %r is before %s, or missing - "
+            "this issue predates the protocol the check reads"
             % (task.get("created"), RUN_RECORD_REQUIRED_FROM.isoformat()))
 
     if not _ready(task):

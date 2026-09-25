@@ -34,7 +34,7 @@ import re as _re
 import fnmatch
 import re as _re
 from compass_pkg.terminal import say
-from compass_pkg.core import CompassError, find_governance, load_manifest, load_yaml, manifest_path, normalize_spine, now_iso, resolve_issue_dir, save_manifest
+from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, normalize_spine, now_iso, resolve_issue_dir, save_manifest
 
 
 
@@ -85,6 +85,52 @@ def _out_of_scope(staged, owned, artifact_dir):
         and p not in FRAMEWORK_OWNED_PATHS
         and not p.startswith(artifact_dir)
     )
+
+
+# --- living system spec derivation (ADR-026) --------------------------------
+# `ship-commit` is the one step that lands an issue and re-derives the living
+# spec: only once an issue is actually marked landed, in a commit of its own,
+# so the land commit itself stays bisectable and revertable on its own. A
+# staged multiagent run integrates each wave through `integrate.sh` without
+# landing the issue (ADR-025); `ship-commit` alone marks it landed, so
+# deriving here - and only here - keeps a staged run from re-deriving the
+# spec once per wave, ahead of verify.
+
+
+def _derive_and_commit_living_spec(cwd, slug):
+    """Re-derive docs/system-spec.md after `slug` has just landed, and
+    commit it alone if it changed.
+
+    Runs the same derivation as `compass _derive-system-spec --internal`
+    (ADR-008). A derivation failure is reported in the returned note and
+    does not undo the land - the land's own commit has already succeeded.
+    """
+    from compass_pkg.flow import derive_system_spec
+
+    try:
+        project_root = os.path.dirname(find_compass_dir())
+    except CompassError:
+        project_root = cwd
+
+    try:
+        derive_system_spec(project_root)
+    except Exception as exc:
+        return f"\n  living spec NOT re-derived: {exc}"
+
+    spec_path = os.path.join(project_root, "docs", "system-spec.md")
+    rel_spec = os.path.relpath(spec_path, cwd)
+    changed = _git(["status", "--porcelain", "--", rel_spec], cwd).stdout.strip()
+    if not changed:
+        return "\n  living spec re-derived (no change)."
+
+    _git(["add", "--", rel_spec], cwd)
+    commit = _git(
+        ["commit", "-m", f"Re-derive the living spec after {slug} landed"], cwd
+    )
+    if commit.returncode != 0:
+        log = ((commit.stdout or "") + (commit.stderr or ""))[-800:]
+        return f"\n  living spec derived but its commit failed:\n{log}"
+    return "\n  living spec re-derived and committed."
 
 
 def cmd_land_commit(args):
@@ -243,6 +289,11 @@ def cmd_land_commit(args):
                         task["land_commit"] = head_after
                         save_manifest(task, task_path)
                         landed_note = "\n  issue marked landed."
+                        # ADR-026: ship-commit is the one step that derives
+                        # the living spec, and only for an issue it has just
+                        # marked landed.
+                        landed_note += _derive_and_commit_living_spec(
+                            cwd, os.path.basename(str(task_dir).rstrip("/")))
         except CompassError:
             pass  # status update is best-effort; the commit already succeeded
 

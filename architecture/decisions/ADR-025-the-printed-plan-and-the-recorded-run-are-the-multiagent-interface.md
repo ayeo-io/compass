@@ -15,7 +15,7 @@ session reads the plan and starts the builders itself. Everything after that -
 the briefs, the reviews, the order of integration - was prose that a session
 followed or did not, and nothing could tell the two apart.
 
-Two ways out were open:
+There were two options:
 
 - **Compass launches the builders.** It would own the dispatch loop.
 - **The printed plan stays the interface,** with a written protocol around it
@@ -33,7 +33,8 @@ prints and records; the host launches the agents.
   findings.
 - The check `multiagent-run-recorded` fails a multiagent issue whose run
   left no complete record: one that records subtasks, or one created from
-  2026-09-26 on.
+  2026-09-26 on. It judges only once every gate has passed or the issue has
+  landed, because a run in flight has no final record yet.
 
 ## Alternatives considered
 
@@ -43,7 +44,8 @@ prints and records; the host launches the agents.
   Agent tool; another host does it another way. Compass runs on the
   project's side of that boundary.
 - One recorded run was the evidence when this was first asked. A launcher
-  sized from one run would encode that run's accidents.
+  sized from one run would build in choices that suited that one run
+  only.
 - The failure that mattered was not the manual launch. It was that a run
   which skipped the protocol looked the same as one that followed it. The
   record and the check answer that without a launcher.
@@ -51,7 +53,9 @@ prints and records; the host launches the agents.
 ## Consequences
 
 - A run is only as good as the session that follows the protocol, and the
-  check reads what was recorded, not what happened. It cannot tell a review
+  check reads what was recorded, not what happened. It judges only the
+  subtasks the manifest records; a subtask the map names but nobody
+  recorded is not yet compared. It cannot tell a review
   round that was recorded from one that was run.
 - Issues created before 2026-09-26 that record no subtasks are not checked.
   Their runs followed prose that had no record to read.

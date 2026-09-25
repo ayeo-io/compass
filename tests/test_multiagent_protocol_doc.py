@@ -62,6 +62,27 @@ def test_dpr_5_the_protocol_answers_the_rehearsal_gaps():
         assert risk in text
 
 
+def test_dpr_5_every_command_it_gives_runs_as_written():
+    text = _flat(PROTOCOL)
+    # Registering a document needs a status.
+    assert "compass issue artifact <kind> --status draft --path <path>" in text
+    # A repeated --finding keeps only the last, so each gets its own call.
+    assert "one call per finding" in text
+    # Only --attempt counts a try.
+    assert "--brief <new brief> --attempt" in text
+    # A brief is handed by its absolute path.
+    assert "absolute" in text
+
+
+def test_dpr_5_it_states_the_order_of_waves_and_a_failed_regression():
+    headings = " | ".join(_headings(PROTOCOL))
+    assert "the order of a run" in headings
+    text = _flat(PROTOCOL).lower()
+    assert "only after the wave before it has integrated" in text
+    assert "the combined regression fails" in text
+    assert "does not mark the issue landed" in text
+
+
 def test_dpr_5_every_queued_multiagent_issue_has_a_fate():
     text = _flat(PROTOCOL)
     for slug in ("swarm-dispatch-is-a-protocol-not-a-script",
@@ -90,3 +111,7 @@ def test_dpr_6_run_1_is_recorded_with_its_cost():
     text = _flat(runs[0]).lower()
     for needed in ("wall-clock", "tokens", "conflicts", "rework", "improvis"):
         assert needed in text, needed
+    # A published record carries no unfilled placeholder.
+    raw = runs[0].read_text(encoding="utf-8")
+    for placeholder in ("END_TIME", "FINAL_RESULT", "{{", "TODO", "TBD"):
+        assert placeholder not in raw, placeholder

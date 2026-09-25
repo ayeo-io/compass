@@ -72,8 +72,9 @@ its own checked-out branch, its own files, sharing one `.git`. That isolation
 is what lets a builder run a full red→green TDD cycle, including a failing
 suite, without destabilising siblings.
 
-- `scripts/multiagent.sh` creates one worktree per subtask and launches one `builder`
-  agent in each. Only the `orchestrator` runs it.
+- `scripts/multiagent.sh` creates one worktree per subtask and prints the
+  launch plan; it launches nothing. The orchestrator starts one `builder`
+  agent per worktree. Only the `orchestrator` runs the script.
 - `scripts/integrate.sh` lands the worktrees back together. Only the
   `orchestrator` runs it.
 - A builder lives inside exactly one worktree for the life of the subtask.
@@ -107,9 +108,10 @@ detection, and integration:
   an interface another subtask owns" is an orchestrator message, never a reach
   across.
 - Runs full TDD inside its worktree (see `tdd-discipline`).
-- Spawns no subagents, and writes its report to `result.md` beside its
-  brief. Not `report.md`: Claude Code tells a subagent not to write a file
-  named like a report.
+- Spawns no subagents, and writes its report to `result.md` at its
+  worktree root, uncommitted; the orchestrator copies it beside the brief.
+  Not `report.md`: Claude Code tells a subagent not to write a file named
+  like a report.
 
 **Review frequency follows the assessed risk.** `trivial` and `contained`:
 one review of the integrated result. `cross-cutting`: a review of each

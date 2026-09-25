@@ -100,13 +100,13 @@ proves. It does not prove:
 
 Each record does name the tree it ran on, with two git tree ids: `tree_id`,
 the tracked files on disk plus the issue's own new files, and `changes_id`,
-the issue's changed files alone. `compass check` judges the issue's newest
-record:
+the issue's changed files and the test files its scenarios declare.
+`compass check` judges the issue's newest record:
 
 - in flight, once every gate has passed, it fails if the tree has changed
   since the record was made
-- landed, it fails if the issue's changed files in the commit that landed it
-  are not the files that were tested
+- landed, it fails if the issue's changed files and declared tests in the
+  commit that landed it are not the files that were tested
 
 The ids show which tree a record claims; they do not prove that a trusted
 runner produced the record, and an older record is not judged. A record

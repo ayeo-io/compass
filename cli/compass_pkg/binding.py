@@ -15,10 +15,13 @@
 # edit makes the record stale. It is built from a copy of the real index, so
 # git re-hashes only the files that changed.
 #
-# `changes_id` is a tree of the issue's changed files alone. A landed issue is
-# judged by it: the commit that landed the issue also carries its artifacts,
-# and HEAD moves on afterwards, but the issue's own files in that commit must
-# be the files that were tested. Re-running the suite on any checkout where
+# `changes_id` is a tree of the issue's own files: its `changed_files` and the
+# test files its scenarios declare, which a record marks with
+# `changes_scope`. A landed issue is judged by it: the commit that landed the
+# issue also carries its artifacts, and HEAD moves on afterwards, but the
+# issue's own files in that commit must be the files that were tested. A
+# declared test counts even when `changed_files` does not list it, because
+# the green stood on it. Re-running the suite on any checkout where
 # they are the same clears a mismatch.
 #
 # WHAT IT DOES NOT PROVE. The ids are written by the process that ran the test
@@ -162,6 +165,46 @@ def claimed_paths(task):
             if isinstance(e, dict) and isinstance(e.get("path"), str)]
 
 
+#: The `changes_scope` of a record whose `changes_id` covers the declared
+#: tests too. A record without it was built from `changed_files` alone.
+CHANGES_SCOPE = "changed-files-and-declared-tests"
+
+
+def declared_test_paths(task):
+    """The test files the issue's scenarios declare, as relative paths.
+
+    A scenario names a test as `path::name`; the file is the part before
+    `::`. An absolute path, or one that climbs out with `..`, is left out.
+    """
+    paths = []
+    for scenario in task.get("scenarios") or []:
+        if not isinstance(scenario, dict):
+            continue
+        for test in scenario.get("tests") or []:
+            if not isinstance(test, str):
+                continue
+            path = test.split("::", 1)[0].strip()
+            parts = path.replace("\\", "/").split("/")
+            if path and not os.path.isabs(path) and ".." not in parts:
+                paths.append(path)
+    return paths
+
+
+def changes_paths(task, record=None):
+    """The files `changes_id` covers: `changed_files` and the declared tests,
+    or, for a record built without `changes_scope`, `changed_files` alone."""
+    claimed = claimed_paths(task)
+    if record is not None and record.get("changes_scope") != CHANGES_SCOPE:
+        return claimed
+    seen, paths = set(), []
+    for path in claimed + declared_test_paths(task):
+        if path not in seen and not any(
+                path == d or path.startswith(d + "/") for d in _OUTSIDE_THE_TREE):
+            seen.add(path)
+            paths.append(path)
+    return paths
+
+
 def ids_for(task_dir):
     """The two ids a record written for this issue now should carry, as a
     dict with only the ids git could name."""
@@ -172,10 +215,13 @@ def ids_for(task_dir):
         task, _ = load_manifest(task_dir)
     except (CompassError, OSError, ValueError):
         task = {}
-    claimed = claimed_paths(task if isinstance(task, dict) else {})
-    ids = {"tree_id": work_tree_id(root, claimed),
-           "changes_id": changes_id(root, claimed)}
-    return {k: v for k, v in ids.items() if v}
+    task = task if isinstance(task, dict) else {}
+    ids = {"tree_id": work_tree_id(root, claimed_paths(task)),
+           "changes_id": changes_id(root, changes_paths(task))}
+    ids = {k: v for k, v in ids.items() if v}
+    if "changes_id" in ids:
+        ids["changes_scope"] = CHANGES_SCOPE
+    return ids
 
 
 def _newest_bound_record(task, task_dir):
@@ -216,7 +262,7 @@ def _check_landed(task, root, path, record):
     if not record.get("changes_id"):
         return NOTHING_TO_CHECK, ("%s carries no changes_id, so the issue's "
                                   "own files cannot be compared" % path)
-    landed = _changes_id_at(root, land, claimed_paths(task))
+    landed = _changes_id_at(root, land, changes_paths(task, record))
     if landed is None:
         return False, ("the files this issue changed could not be read from "
                        "land_commit %s" % land[:12])

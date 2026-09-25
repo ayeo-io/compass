@@ -60,7 +60,6 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COMPASS_HOME="$(cd "$SCRIPT_DIR/.." && pwd)"
 PROJECT_DIR="$(git -C "$(pwd)" rev-parse --show-toplevel 2>/dev/null || pwd)"
 
 # shellcheck source=lib/compass-python.sh
@@ -117,14 +116,51 @@ case "$WORKTREE_ROOT_REL" in
   *)  WORKTREE_ROOT="$PROJECT_DIR/$WORKTREE_ROOT_REL" ;;
 esac
 
+# --- find the subtask table's own header row (same shape as multiagent.sh) --
+# A map can carry more than one markdown table; only the table whose rows
+# carry a subtask id governs merging, so "Branch name" must be read from
+# THAT table's header, not any other table's or a fixed cell position - a
+# Wave column placed ahead of it (multiagent.sh's staged-map columns) would
+# otherwise shift what this script reads as the branch and silently skip
+# the subtask (see multiagent.sh's own header-finding block for why).
+PENDING_HEADER=""
+SUBTASK_HEADER=""
+while IFS= read -r line; do
+  case "$line" in \|*) ;; *) continue ;; esac
+  case "$(echo "$line" | tr -d '|:- ')" in '') continue ;; esac
+  IFS='|' read -r -a _hdr_cells <<<"$line"
+  _hdr_cell1="$(echo "${_hdr_cells[1]:-}" | xargs 2>/dev/null || true)"
+  case "$_hdr_cell1" in
+    subtask-*|stream-*)  # vocabulary-scan: allow - reads the retired spelling for back-compat (ADR-006)
+      [ -n "$SUBTASK_HEADER" ] || SUBTASK_HEADER="$PENDING_HEADER"
+      ;;
+    *)
+      PENDING_HEADER="$line"
+      ;;
+  esac
+done < "$MAP"
+
+# Position 4 is the template's usual "Branch name" cell, kept as the
+# default for a hand-filled map whose header text does not match exactly.
+BRANCH_COL=4
+if [ -n "$SUBTASK_HEADER" ]; then
+  IFS='|' read -r -a _hdr_cells <<<"$SUBTASK_HEADER"
+  for _idx in "${!_hdr_cells[@]}"; do
+    _cell="$(echo "${_hdr_cells[$_idx]}" | xargs 2>/dev/null || true)"
+    case "$_cell" in
+      "Branch name") BRANCH_COL="$_idx" ;;
+    esac
+  done
+fi
+
 # --- parse subtasks + branches (same parser shape as multiagent.sh) ---------------
 SUBTASKS=(); BRANCHES=()
 while IFS= read -r line; do
   # A map written before ADR-023 says stream-N. Read both (ADR-006).  # vocabulary-scan: allow - reads the retired spelling for back-compat (ADR-006)
   case "$line" in \|*subtask-*|\|*stream-*) ;; *) continue ;; esac  # vocabulary-scan: allow - reads the retired spelling for back-compat (ADR-006)
-  IFS='|' read -r _ c1 c2 c3 c4 _rest <<<"$line"
-  sid="$(echo "${c1:-}" | xargs 2>/dev/null || true)"
-  branch="$(echo "${c4:-}" | xargs 2>/dev/null || true)"
+  IFS='|' read -r -a _row_cells <<<"$line"
+  sid="$(echo "${_row_cells[1]:-}" | xargs 2>/dev/null || true)"
+  branch="$(echo "${_row_cells[$BRANCH_COL]:-}" | xargs 2>/dev/null | sed -E 's/^[`*]+//; s/[`*]+$//' || true)"
   case "$sid" in subtask-*|stream-*) ;; *) continue ;; esac  # vocabulary-scan: allow - reads the retired spelling for back-compat (ADR-006)
   [ -n "$branch" ] || branch="compass/$TASK_SLUG/$sid"
   SUBTASKS+=("$sid"); BRANCHES+=("$branch")
@@ -173,6 +209,32 @@ _all_paths_are_compass_records() {
   [ "$all_compass" -eq 1 ]
 }
 
+# A conflicted path under .compass/ or docs/compass/ can still be the
+# DESTINATION of a rename whose SOURCE sat outside both - a builder who
+# moved source code into the records tree and edited it, while the base
+# branch edited the original path too. git reports the conflict at the
+# destination, which would otherwise read as records-only. Renames are
+# looked up in both directions - either side of the merge can be the one
+# that moved the file - filtered to R (git diff's rename status); the
+# threshold is git's default (-M with no percentage). A match whose
+# source is itself outside .compass/ and docs/compass/ means the
+# conflicting work began outside the records tree, so the whole conflict
+# must abort like any other cross-subtask one, not resolve on the spot.
+_rename_into_records_has_outside_source() {
+  local dest="$1" range status old new
+  for range in "HEAD...MERGE_HEAD" "MERGE_HEAD...HEAD"; do
+    while IFS=$'\t' read -r status old new; do
+      case "$status" in R*) ;; *) continue ;; esac
+      [ "$new" = "$dest" ] || continue
+      case "$old" in
+        .compass/*|docs/compass/*) ;;
+        *) return 0 ;;
+      esac
+    done < <(git -C "$PROJECT_DIR" diff --name-status -M "$range" 2>/dev/null || true)
+  done
+  return 1
+}
+
 # --- merge each subtask in order ---------------------------------------------
 MERGED=()
 for i in "${!SUBTASKS[@]}"; do
@@ -219,7 +281,19 @@ for i in "${!SUBTASKS[@]}"; do
     exit 1
   fi
 
+  RECORDS_ONLY=0
   if printf '%s\n' "${CONFLICTS[@]}" | _all_paths_are_compass_records; then
+    RECORDS_ONLY=1
+    for f in "${CONFLICTS[@]}"; do
+      [ -n "$f" ] || continue
+      if _rename_into_records_has_outside_source "$f"; then
+        RECORDS_ONLY=0
+        break
+      fi
+    done
+  fi
+
+  if [ "$RECORDS_ONLY" -eq 1 ]; then
     # Confined to Compass's own records - keep the base branch's side of
     # each conflicted file (a deletion on the base branch counts as its
     # side too) and complete the merge. The builder's own record of its own
@@ -306,50 +380,15 @@ else
   echo "per-subtask green does not imply integrated green."
 fi
 
-# --- write status: landed and derive the living system spec -----------------
-echo ""
-echo "Writing status: landed to manifest.yml and deriving living system spec..."
-
-TASK_YML="$TASK_DIR/manifest.yml"
-if [ -f "$TASK_YML" ]; then
-  # Parenthesised into its own subshell: this call - unlike the ones above
-  # that already sit inside `$(...)` - is a plain statement, not a captured
-  # substitution. compass_python forks python3; it does not replace the
-  # calling shell, so worktree cleanup and the final summary below still run
-  # whatever this block does.
-  ( compass_python - <<PYEOF
-import compass_pkg
-import yaml, datetime, sys
-path = "$TASK_YML"
-try:
-    with open(path, 'r', encoding='utf-8') as f:
-        task = yaml.safe_load(f) or {}
-    if not isinstance(task, dict):
-        task = {}
-    task['status'] = 'landed'
-    task['land_timestamp'] = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds')
-    with open(path, 'w', encoding='utf-8') as f:
-        yaml.safe_dump(task, f, sort_keys=False, default_flow_style=False)
-    print("  manifest.yml: status=landed, land_timestamp written.")
-except Exception as exc:
-    print(f"WARNING: could not write status: landed to {path}: {exc}", file=sys.stderr)
-PYEOF
-  )
-else
-  echo "  WARNING: no manifest.yml found at $TASK_YML - skipping status write."
-fi
-
-COMPASS_CLI="$COMPASS_HOME/cli/compass"
-if [ -x "$COMPASS_CLI" ] || [ -f "$COMPASS_CLI" ]; then
-  if ( cd "$PROJECT_DIR" && python3 "$COMPASS_CLI" _derive-system-spec --internal ); then
-    echo "  docs/system-spec.md updated (living spec derived)."
-  else
-    echo "  WARNING: living spec derivation failed - docs/system-spec.md may be stale."
-    echo "  Re-run: python3 cli/compass _derive-system-spec --internal"
-  fi
-else
-  echo "  WARNING: compass CLI not found at $COMPASS_CLI - skipping derivation."
-fi
+# integrate.sh does NOT write status: landed or derive docs/system-spec.md.
+# It runs before the verify stage, and on a staged (multi-wave) map it can
+# run more than once for the same issue - writing landed here marked the
+# issue landed after wave 1, and even on a single-wave run marked it
+# landed before the verify stage ever ran. `ship-commit` alone marks an
+# issue landed, once HEAD has actually moved and the gates have passed
+# (manifest.py); living-spec derivation reads only landed issues, so
+# deriving it here was a
+# no-op ahead of that point in any case.
 
 # --- clean up the worktrees -------------------------------------------------
 echo ""
@@ -377,3 +416,5 @@ echo "  - pasting the combined-regression run into verification-report.md"
 echo "  - updating living docs"
 echo "  - resolving every outstanding follow-up in delivery-approach.md"
 echo "  - writing the final devlog.md entry"
+echo ""
+echo "Next: \`/compass:verify\`, then \`ship-commit\` - only ship-commit marks '$TASK_SLUG' landed."

@@ -118,8 +118,6 @@ def test_dpr4_conflict_confined_to_manifest_completes_merge_and_names_it(tmp_pat
     assert rel in out, out
     assert "kept" in out.lower(), out
 
-    # The merge commit itself, not the working tree (a later, uncommitted
-    # step rewrites manifest.yml's status to "landed"), shows which side won.
     committed = _git(repo, "show", f"HEAD:{rel}").stdout
     assert committed == "status: subtask-1-done\n", committed
 
@@ -269,9 +267,6 @@ def test_dpr4_base_deleted_record_file_still_completes_merge(tmp_path):
     assert rel in out, out
     assert "removed" in out.lower(), out
     assert not (task_dir / "notes.md").exists()
-    # The merge commit itself, not the working tree (a later, uncommitted
-    # step rewrites manifest.yml's status to "landed"), shows the deletion
-    # is what survived.
     log = _git(repo, "log", "--oneline", "main").stdout
     assert "subtask-1" in log and "subtask-2" in log, log
 
@@ -396,10 +391,103 @@ def test_dpr4_conflict_only_under_docs_compass_completes_merge(tmp_path):
     assert result.returncode == 0, out
     rel = f"docs/compass/2026-09-25-{slug}/notes.md"
     assert rel in out, out
-    # Tracked files only: a successful run also derives docs/system-spec.md,
-    # left untracked on purpose - see integrate.sh's own final steps.
     status = _git(repo, "status", "--porcelain", "--untracked-files=no").stdout
     assert status == "", status
+
+
+def test_integrate_does_not_mark_the_issue_landed_or_derive_the_living_spec(tmp_path):
+    """integrate.sh runs before the verify stage, and on a staged
+    (multi-wave) map it can run more than once for the same issue - it
+    must not write status: landed or land_timestamp into manifest.yml, and
+    must not derive docs/system-spec.md (which only ever reads landed
+    issues). Only `ship-commit` marks an issue landed, once the verify stage
+    has passed - integrate.sh must name that as the next step instead."""
+    repo = _init_repo(tmp_path)
+    slug = "no-early-landed-demo"
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    manifest_before = "status: created\nassessment:\n  risk: contained\n"
+    (task_dir / "manifest.yml").write_text(manifest_before)
+    branch1 = f"compass/{slug}/subtask-1"
+    (task_dir / "distribution-map.md").write_text(
+        _map_text([("subtask-1", branch1)]))
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "add manifest and map")
+
+    _git(repo, "checkout", "-q", "-b", branch1)
+    (repo / "feature.txt").write_text("feature work\n")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "subtask-1 adds feature.txt")
+
+    _git(repo, "checkout", "-q", "main")
+
+    result = _run_integrate(repo, slug)
+    out = result.stdout + result.stderr
+    assert result.returncode == 0, out
+
+    assert (task_dir / "manifest.yml").read_text() == manifest_before
+    assert not (repo / "docs" / "system-spec.md").exists()
+    assert "status: landed" not in out
+    assert "land_timestamp" not in out
+
+    # The next step is named explicitly, in order: /compass:verify, then
+    # ship-commit.
+    verify_at = out.lower().index("verify")
+    ship_commit_at = out.lower().index("ship-commit")
+    assert verify_at < ship_commit_at, out
+
+
+def test_dpr4_rename_from_outside_records_into_docs_compass_still_aborts(tmp_path):
+    """The security review found that a builder renames source code into
+    docs/compass/ and edits it, while the base branch edits the original
+    path differently. The conflicted path git reports is the rename's
+    destination, inside docs/compass/ - but the conflicting work began
+    outside the record directories, so this must abort like any other
+    cross-subtask conflict, not resolve as records-only and drop the
+    builder's edit."""
+    repo = _init_repo(tmp_path)
+    slug = "rename-escape-demo"
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    (task_dir / "manifest.yml").write_text("status: created\n")
+    src = repo / "src"
+    src.mkdir()
+    app = src / "app.py"
+    # 40 lines: git's default rename-detection similarity threshold needs
+    # enough content to tell a one-line edit from an unrelated new file.
+    original = "\n".join(f"line{i}" for i in range(1, 41)) + "\n"
+    app.write_text(original)
+    branch1 = f"compass/{slug}/subtask-1"
+    (task_dir / "distribution-map.md").write_text(
+        _map_text([("subtask-1", branch1)]))
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "add app.py and map")
+
+    _git(repo, "checkout", "-q", "-b", branch1)
+    dest_dir = repo / "docs" / "compass"
+    dest_dir.mkdir(parents=True)
+    dest = dest_dir / "app.py"
+    _git(repo, "mv", "src/app.py", "docs/compass/app.py")
+    lines = original.splitlines()
+    lines[19] = "line20-subtask"
+    dest.write_text("\n".join(lines) + "\n")
+    _git(repo, "commit", "-q", "-am", "subtask-1 renames app.py into docs/compass and edits it")
+
+    _git(repo, "checkout", "-q", "main")
+    lines = original.splitlines()
+    lines[19] = "line20-base"
+    app.write_text("\n".join(lines) + "\n")
+    _git(repo, "commit", "-q", "-am", "base edits src/app.py differently")
+
+    result = _run_integrate(repo, slug)
+    out = result.stdout + result.stderr
+    assert result.returncode == 2, out
+    assert "kept" not in out.lower(), out
+    status = _git(repo, "status", "--porcelain").stdout
+    assert status == "", status
+    # The merge must not have landed - neither app.py's content is chosen
+    # silently, and MERGE_HEAD is gone (the abort left the repo clean).
+    assert not (repo / ".git" / "MERGE_HEAD").exists()
 
 
 # ---------------------------------------------------------------------------
@@ -462,3 +550,43 @@ def test_dpr2_integrate_flat_map_still_works(tmp_path):
     result = _run_integrate(repo, slug)
     assert result.returncode == 0, result.stdout + result.stderr
     assert (repo / "feature.txt").is_file()
+
+
+def test_dpr2_integrate_reads_branch_column_by_header_not_position(tmp_path):
+    """A Wave column placed before Branch name must not shift which cell
+    integrate.sh reads as the branch - it reads the subtask table's own
+    header, as scripts/multiagent.sh does, not a fixed cell position. A map
+    with no Wave column (the fixture default in _map_text) already covers
+    the plain, unstaged case; this covers a staged map."""
+    repo = _init_repo(tmp_path)
+    slug = "wave-header-demo"
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    (task_dir / "manifest.yml").write_text("status: created\n")
+    branch1 = f"compass/{slug}/subtask-1"
+    map_text = "\n".join([
+        "# Distribution Map",
+        "",
+        "## 3. Scenario-group -> subtask mapping",
+        "",
+        "| Subtask | Wave | Owns work unit(s) | Owns scenario ids | Branch name |",
+        "|---|---|---|---|---|",
+        f"| subtask-1 | 1 | U1 | S1 | {branch1} |",
+    ]) + "\n"
+    (task_dir / "distribution-map.md").write_text(map_text)
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "add manifest and staged map")
+
+    _git(repo, "checkout", "-q", "-b", branch1)
+    (repo / "feature.txt").write_text("feature work\n")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "subtask-1 work")
+    _git(repo, "checkout", "-q", "main")
+
+    result = _run_integrate(repo, slug)
+    out = result.stdout + result.stderr
+    assert result.returncode == 0, out
+    assert "skipping" not in out.lower(), out
+    assert (repo / "feature.txt").is_file()
+    log = _git(repo, "log", "--oneline", "main").stdout
+    assert "subtask-1" in log, log

@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### With no map the check judges the record as before
+### The protocol's landing command runs as written
 
-- **Scenario id:** `CRM-3`
+- **Scenario id:** `DSS-4`
 - **Intent:** `INT-1`
-- **Source issue:** `check-does-not-compare-record-with-map`
+- **Source issue:** `multiagent-scripts-still-say-ship`
 - **Landed:** 2026-09-25
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -8839,4 +8839,32 @@
 - **Scenario id:** `CRM-2`
 - **Intent:** `INT-1`
 - **Source issue:** `check-does-not-compare-record-with-map`
+- **Landed:** 2026-09-25
+
+### With no map the check judges the record as before _(archived)_
+
+- **Scenario id:** `CRM-3`
+- **Intent:** `INT-1`
+- **Source issue:** `check-does-not-compare-record-with-map`
+- **Landed:** 2026-09-25
+
+### No script says integration lands or happens at ship _(archived)_
+
+- **Scenario id:** `DSS-1`
+- **Intent:** `INT-1`
+- **Source issue:** `multiagent-scripts-still-say-ship`
+- **Landed:** 2026-09-25
+
+### multiagent.sh names the order of waves and --no-clean _(archived)_
+
+- **Scenario id:** `DSS-2`
+- **Intent:** `INT-1`
+- **Source issue:** `multiagent-scripts-still-say-ship`
+- **Landed:** 2026-09-25
+
+### integrate.sh says no regression ran when none did _(archived)_
+
+- **Scenario id:** `DSS-3`
+- **Intent:** `INT-1`
+- **Source issue:** `multiagent-scripts-still-say-ship`
 - **Landed:** 2026-09-25

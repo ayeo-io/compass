@@ -68,7 +68,7 @@ def test_dpr_5_every_command_it_gives_runs_as_written():
     assert "compass issue artifact <kind> --status draft --path <path>" in text
     # A repeated --finding keeps only the last, so each gets its own call.
     assert "one call per finding" in text
-    # Only --attempt counts a try.
+    # Only the try flag counts a try.
     assert "--brief <new brief> --attempt" in text
     # A brief is handed by its absolute path.
     assert "absolute" in text

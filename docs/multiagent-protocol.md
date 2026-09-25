@@ -137,7 +137,7 @@ The orchestrator may review a round itself, by running the previous
 reviewer's cases against the new commit; it records that round the same way.
 
 A failed round goes back to the builder for another try, with the findings
-in a new brief. The earlier brief is kept, and `--attempt` counts the try:
+in a new brief. The earlier brief is kept, and the command counts the try:
 
 ```
 compass issue subtask update <id> --brief <new brief> --attempt --status dispatched
@@ -170,7 +170,7 @@ already merged, then runs the combined regression. It does not mark the
 issue landed: that is `ship-commit`'s alone.
 
 - **Green.** The worktrees are removed. Mark each subtask done, then go on
-  to the next wave, or, after the last, to verify:
+  to the next wave, or, after the last, to `/compass:verify`:
 
   ```
   compass issue subtask update <id> --status done
@@ -203,7 +203,7 @@ issue landed: that is `ship-commit`'s alone.
 | 5 | `subtask package` | the review package's path |
 | 5 | `subtask update --reviewed --round` | the commit reviewed, the round's verdict |
 | 5 | `subtask update --finding` | one finding per call |
-| 5 | `subtask update --brief --attempt` | a new brief, the earlier one kept, and the try counted |
+| 5 | `subtask update --brief`, with the try flag | a new brief, the earlier one kept, and the try counted |
 | 5 | `subtask update --resolve` | a finding marked resolved |
 | 6 | `subtask update --status done` | status `done` |
 

@@ -13,6 +13,10 @@ superseded_by: ''
 > `task.yml` is now `manifest.yml`; the *lens* is now the **role**. The
 > record keeps the words it was decided in; only the names have moved.
 
+> **Amended by ADR-026 (2026-09-25):** the derivation now runs in
+> `ship-commit`, after it marks an issue landed, and `integrate.sh` no longer
+> derives or marks anything landed. Rules 2 to 4 below stand.
+
 ## Context
 
 Every artifact Compass produces today is **per-task**: `route.md`, `spec.feature.md`, `plan.md`, `verification-report.md`, `task.yml`, and so on all live under a single `.compass/work/<task>/` directory and describe one task's slice of work. The framework has no first-class concept of a **cross-task** artifact - a single document derived from many tasks' outputs.

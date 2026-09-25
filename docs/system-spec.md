@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### A relative path is judged by where it resolves; the no-project message names the devlog
+### The protocol document answers every step
 
-- **Scenario id:** `DLO-3`
+- **Scenario id:** `DPR-5`
 - **Intent:** `INT-1`
-- **Source issue:** `devlog-logs-edits-outside-the-project`
+- **Source issue:** `dispatch-protocol`
 - **Landed:** 2026-09-25
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -43,32 +43,32 @@
 - **Source issue:** `framework-field-feedback`
 - **Landed:** 2026-06-23
 
-### A dispatch records its subtask
+### A multiagent issue must record its run
 
-- **Scenario id:** `OLH-1`
+- **Scenario id:** `DPR-1`
 - **Intent:** `INT-2`
-- **Source issue:** `orchestrator-loop-hardening`
+- **Source issue:** `dispatch-protocol`
 - **Landed:** 2026-09-25
 
-### A coaching reviewer brief is refused
+### The scripts find an issue's documents through the registry
 
-- **Scenario id:** `OLH-6`
+- **Scenario id:** `DPR-2`
 - **Intent:** `INT-3`
-- **Source issue:** `orchestrator-loop-hardening`
+- **Source issue:** `dispatch-protocol`
 - **Landed:** 2026-09-25
 
-### The safety contract states the boundary
+### A staged map is provisioned one wave at a time
 
-- **Scenario id:** `EVB-7`
+- **Scenario id:** `DPR-3`
 - **Intent:** `INT-4`
-- **Source issue:** `evidence-binding`
+- **Source issue:** `dispatch-protocol`
 - **Landed:** 2026-09-25
 
-### A rehearsal interrupted mid-review and mid-integration resumes
+### Only ship-commit marks an issue landed
 
-- **Scenario id:** `OLH-8`
+- **Scenario id:** `DPR-7`
 - **Intent:** `INT-5`
-- **Source issue:** `orchestrator-loop-hardening`
+- **Source issue:** `dispatch-protocol`
 - **Landed:** 2026-09-25
 
 ### the hook still blocks a code file inside the project
@@ -85,11 +85,11 @@
 - **Source issue:** `field-feedback-hook-scope-and-restage`
 - **Landed:** 2026-08-14
 
-### Each half of the review catches its own seeded defect
+### Run 1 is recorded
 
-- **Scenario id:** `OLH-9`
+- **Scenario id:** `DPR-6`
 - **Intent:** `INT-6`
-- **Source issue:** `orchestrator-loop-hardening`
+- **Source issue:** `dispatch-protocol`
 - **Landed:** 2026-09-25
 
 ### A budget overrun is a finding
@@ -8575,6 +8575,20 @@
 - **Source issue:** `evidence-binding`
 - **Landed:** 2026-09-25
 
+### The safety contract states the boundary _(archived)_
+
+- **Scenario id:** `EVB-7`
+- **Intent:** `INT-4`
+- **Source issue:** `evidence-binding`
+- **Landed:** 2026-09-25
+
+### A dispatch records its subtask _(archived)_
+
+- **Scenario id:** `OLH-1`
+- **Intent:** `INT-2`
+- **Source issue:** `orchestrator-loop-hardening`
+- **Landed:** 2026-09-25
+
 ### A subtask's progress is recorded _(archived)_
 
 - **Scenario id:** `OLH-2`
@@ -8593,6 +8607,27 @@
 
 - **Scenario id:** `OLH-5`
 - **Intent:** `INT-1`
+- **Source issue:** `orchestrator-loop-hardening`
+- **Landed:** 2026-09-25
+
+### A coaching reviewer brief is refused _(archived)_
+
+- **Scenario id:** `OLH-6`
+- **Intent:** `INT-3`
+- **Source issue:** `orchestrator-loop-hardening`
+- **Landed:** 2026-09-25
+
+### A rehearsal interrupted mid-review and mid-integration resumes _(archived)_
+
+- **Scenario id:** `OLH-8`
+- **Intent:** `INT-5`
+- **Source issue:** `orchestrator-loop-hardening`
+- **Landed:** 2026-09-25
+
+### Each half of the review catches its own seeded defect _(archived)_
+
+- **Scenario id:** `OLH-9`
+- **Intent:** `INT-6`
 - **Source issue:** `orchestrator-loop-hardening`
 - **Landed:** 2026-09-25
 
@@ -8706,4 +8741,18 @@
 - **Scenario id:** `DLO-2`
 - **Intent:** `INT-1`
 - **Source issue:** `devlog-logs-edits-outside-the-project`
+- **Landed:** 2026-09-25
+
+### A relative path is judged by where it resolves; the no-project message names the devlog _(archived)_
+
+- **Scenario id:** `DLO-3`
+- **Intent:** `INT-1`
+- **Source issue:** `devlog-logs-edits-outside-the-project`
+- **Landed:** 2026-09-25
+
+### A conflict in Compass's records does not stop integration _(archived)_
+
+- **Scenario id:** `DPR-4`
+- **Intent:** `INT-5`
+- **Source issue:** `dispatch-protocol`
 - **Landed:** 2026-09-25

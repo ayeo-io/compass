@@ -60,7 +60,9 @@ ceiling applies to each wave.
 
 The orchestrator writes one brief file per subtask, in the issue's documents
 directory in the main checkout:
-`docs/compass/<created>-<slug>/subtasks/<id>/briefing.md`. A brief states:
+`docs/compass/<created>-<slug>/subtasks/<id>/briefing.md`. A later try gets
+`briefing-<try>.md` beside it, so the earlier brief stays readable. A brief
+states:
 
 - the subtask's scenarios, by id, and the files it owns;
 - the worktree path, and that the builder works only there;
@@ -124,7 +126,10 @@ prints it:
 | cross-cutting | each subtask's package before integration, and the integrated result after |
 | contained, trivial | the integrated result, once |
 
-**A subtask's package.** Write it, and register the reviewer's brief:
+**A subtask's package.** Write the reviewer's brief to
+`subtasks/<id>/review-brief-<round>.md`, telling the reviewer to write its
+report to `subtasks/<id>/review-<round>.md`. Then write the package, and
+register the brief:
 
 ```
 compass issue subtask package <id> --head <branch>
@@ -155,8 +160,10 @@ A finding answered by a later try, or one the orchestrator decides not to act
 on, is marked resolved with `--resolve <n>`. The reason for each one not
 acted on is listed at the end of the run as a decision taken for the user.
 
-**The integrated result.** After integration, write the whole change since
-the first wave's base to a file, and review it the same way:
+**The integrated result.** After the last wave integrates (Step 6), write
+the whole change since the first wave's base to a file, and review it the
+same way, with the brief and report named `integrated-review-brief-<round>.md`
+and `integrated-review-<round>.md` in the issue's documents directory:
 
 ```
 git diff <first base>..HEAD > docs/compass/<created>-<slug>/integrated.diff
@@ -164,7 +171,8 @@ git diff <first base>..HEAD > docs/compass/<created>-<slug>/integrated.diff
 
 Record the round against each subtask whose work it covers, with
 `--reviewed <HEAD> --round pass|fail`, and each finding against the subtask
-it concerns.
+it concerns. A failed round sends that subtask back for another try, in the
+worktree the last wave kept (Step 6); integrate again after it.
 
 ## Step 6 - integrate
 
@@ -173,15 +181,23 @@ compass issue subtask update <id> --status integrating
 scripts/integrate.sh <slug>
 ```
 
-`integrate.sh` merges the wave's subtasks in the map's order, skipping any
+The session that owns the issue orchestrates, whatever the number of
+subtasks. `integrate.sh` merges the wave's subtasks in the map's order, skipping any
 already merged, then runs the combined regression. It does not mark the
 issue landed: that is `ship-commit`'s alone.
 
-- **Green.** The worktrees are removed. Mark each subtask done, then go on
-  to the next wave, or, after the last, to `/compass:verify`:
+- **Green, on a wave before the last.** The wave's worktrees are removed.
+  Mark each of its subtasks done, then provision the next wave.
+- **Green, on the last wave.** Run the last wave with `--no-clean`, so its
+  worktrees stay: the integrated result is reviewed next (Step 5), and a
+  failed review needs a worktree to send a subtask back to. Once that review
+  passes, mark every subtask done, remove the worktrees, and go on to
+  `/compass:verify`:
 
   ```
+  scripts/integrate.sh <slug> --no-clean     # the last wave
   compass issue subtask update <id> --status done
+  git worktree remove <worktree>             # each, after the review passes
   ```
 
 - **The combined regression fails.** The worktrees are kept. Find what broke

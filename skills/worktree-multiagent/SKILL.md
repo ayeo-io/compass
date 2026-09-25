@@ -75,7 +75,7 @@ suite, without destabilising siblings.
 - `scripts/multiagent.sh` creates one worktree per subtask and prints the
   launch plan; it launches nothing. The orchestrator starts one `builder`
   agent per worktree. Only the `orchestrator` runs the script.
-- `scripts/integrate.sh` lands the worktrees back together. Only the
+- `scripts/integrate.sh` merges the worktrees back together. Only the
   `orchestrator` runs it.
 - A builder lives inside exactly one worktree for the life of the subtask.
 
@@ -127,7 +127,7 @@ subtask marked `done` is never dispatched again. Where the project gitignores
 `docs/compass/`, a worktree does not carry the brief: name it by its path in
 the main checkout.
 
-## Integration discipline (ship)
+## Integration discipline (before `/compass:verify`)
 
 1. Confirm every subtask is independently green - the `verifier` has per-subtask
    evidence.
@@ -137,7 +137,8 @@ the main checkout.
 4. **Run combined regression across the integrated result.** This is
    non-negotiable on initiative. Per-subtask green does not imply integrated
    green; proving the combination is the entire reason the orchestrator owns
-   ship. Record the run and link the record.
+   integration. Record the run and link the record. Integration does not land
+   the issue: only `ship-commit` does (ADR-026).
 5. Resolve every owed follow-up, update living docs, write the integration
    devlog entry.
 

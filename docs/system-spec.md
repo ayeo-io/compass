@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### A green with nothing changed is still a re-run
+### A branch git would not accept is refused
 
-- **Scenario id:** `RSE-2`
+- **Scenario id:** `MCC-2`
 - **Intent:** `INT-1`
-- **Source issue:** `rerun-check-misses-script-changes`
+- **Source issue:** `map-cells-reach-git-unchecked`
 - **Landed:** 2026-09-25
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -8783,4 +8783,18 @@
 - **Scenario id:** `RSE-1`
 - **Intent:** `INT-1`
 - **Source issue:** `rerun-check-misses-script-changes`
+- **Landed:** 2026-09-25
+
+### A green with nothing changed is still a re-run _(archived)_
+
+- **Scenario id:** `RSE-2`
+- **Intent:** `INT-1`
+- **Source issue:** `rerun-check-misses-script-changes`
+- **Landed:** 2026-09-25
+
+### A subtask id that could leave the worktree root is refused _(archived)_
+
+- **Scenario id:** `MCC-1`
+- **Intent:** `INT-1`
+- **Source issue:** `map-cells-reach-git-unchecked`
 - **Landed:** 2026-09-25

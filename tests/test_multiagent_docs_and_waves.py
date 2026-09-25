@@ -282,6 +282,176 @@ def test_dpr2_resolver_crash_shows_its_own_error(tmp_path):
         "a crashed resolver is not a missing map")
 
 
+def test_dpr2_seeding_skips_a_destination_that_resolves_outside_the_worktree(tmp_path):
+    """A branch whose checked-out tree makes a path component a symlink to
+    outside the worktree must not have documents seeded through it - the
+    destination is resolved and skipped, with a note, unless it lands
+    inside the worktree (finding 1 of the dispatch-protocol security
+    review)."""
+    repo = _init_repo(tmp_path)
+    slug = "evil-demo"
+    created = "2026-09-25"
+    docs_dir = repo / "docs" / "compass" / f"{created}-{slug}"
+    docs_dir.mkdir(parents=True)
+    (docs_dir / "distribution-map.md").write_text(
+        "# Distribution Map - evil-demo\n\n"
+        "## 3. Scenario-group -> subtask mapping\n\n"
+        "| Subtask | Owns work unit(s) | Owns scenario ids | Branch name |\n"
+        "|---|---|---|---|\n"
+        "| subtask-1 | U1 | S1 | evil |\n"
+    )
+    (docs_dir / "delivery-approach.md").write_text(f"# Delivery approach - {slug}\n")
+    (docs_dir / "acceptance-criteria.md").write_text("# Spec - evil-demo\n")
+    # The registered docs must be TRACKED on main, or checking back to main
+    # after the evil branch destroys the real docs/ directory loses them.
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "add evil-demo docs")
+
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    _git(repo, "checkout", "-q", "-b", "evil")
+    shutil.rmtree(repo / "docs")
+    (repo / "docs").symlink_to(outside)
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "docs is a symlink to outside the worktree")
+    _git(repo, "checkout", "-q", "main")
+
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    (task_dir / "manifest.yml").write_text(_manifest(artifacts=[
+        {"id": "ART-1", "kind": "distribution-map", "status": "approved",
+         "path": f"docs/compass/{created}-{slug}/distribution-map.md"},
+        {"id": "ART-2", "kind": "delivery-approach", "status": "approved",
+         "path": f"docs/compass/{created}-{slug}/delivery-approach.md"},
+        {"id": "ART-3", "kind": "acceptance-criteria", "status": "approved",
+         "path": f"docs/compass/{created}-{slug}/acceptance-criteria.md"},
+    ]))
+
+    result = _run_multiagent(repo, slug)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert not (outside / "compass").exists(), (
+        "seeding must not create anything under a symlinked path component")
+
+
+def test_dpr2_seeding_skips_a_dangling_symlink_already_at_the_destination(tmp_path):
+    """A branch that tracks a registered document's exact path as a symlink
+    to a file that does not exist must not have that destination written
+    through - `cp` would otherwise create the missing target outside the
+    worktree (finding 1, case E2, dispatch-protocol security review)."""
+    repo = _init_repo(tmp_path)
+    slug = "evil2-demo"
+    created = "2026-09-25"
+    docs_dir = repo / "docs" / "compass" / f"{created}-{slug}"
+    docs_dir.mkdir(parents=True)
+    (docs_dir / "distribution-map.md").write_text(
+        "# Distribution Map - evil2-demo\n\n"
+        "## 3. Scenario-group -> subtask mapping\n\n"
+        "| Subtask | Owns work unit(s) | Owns scenario ids | Branch name |\n"
+        "|---|---|---|---|\n"
+        "| subtask-1 | U1 | S1 | evil2 |\n"
+    )
+    (docs_dir / "delivery-approach.md").write_text(f"# Delivery approach - {slug}\n")
+    (docs_dir / "acceptance-criteria.md").write_text("# Spec - evil2-demo\n")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "add evil2-demo docs")
+
+    outside_target = tmp_path / "outside2" / "target.md"
+
+    _git(repo, "checkout", "-q", "-b", "evil2")
+    (docs_dir / "acceptance-criteria.md").unlink()
+    (docs_dir / "acceptance-criteria.md").symlink_to(outside_target)
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "acceptance-criteria.md is a dangling symlink")
+    _git(repo, "checkout", "-q", "main")
+
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    (task_dir / "manifest.yml").write_text(_manifest(artifacts=[
+        {"id": "ART-1", "kind": "distribution-map", "status": "approved",
+         "path": f"docs/compass/{created}-{slug}/distribution-map.md"},
+        {"id": "ART-2", "kind": "delivery-approach", "status": "approved",
+         "path": f"docs/compass/{created}-{slug}/delivery-approach.md"},
+        {"id": "ART-3", "kind": "acceptance-criteria", "status": "approved",
+         "path": f"docs/compass/{created}-{slug}/acceptance-criteria.md"},
+    ]))
+
+    result = _run_multiagent(repo, slug)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert not outside_target.exists(), (
+        "seeding must not write through a dangling symlink at the destination")
+
+
+def test_dpr2_registered_document_that_is_a_symlink_is_not_seeded(tmp_path):
+    """A registered document that is itself a symlink is not copied in - its
+    target was never vetted and can sit outside the project (finding 7 of
+    the dispatch-protocol security review)."""
+    repo = _init_repo(tmp_path)
+    slug = "symlink-doc"
+    created = "2026-09-25"
+    docs_dir = repo / "docs" / "compass" / f"{created}-{slug}"
+    docs_dir.mkdir(parents=True)
+    (docs_dir / "distribution-map.md").write_text(
+        "# Distribution Map - symlink-doc\n\n"
+        "## 3. Scenario-group -> subtask mapping\n\n"
+        "| Subtask | Owns work unit(s) | Owns scenario ids | Branch name |\n"
+        "|---|---|---|---|\n"
+        f"| subtask-1 | U1 | S1 | compass/{slug}/subtask-1 |\n"
+    )
+    (docs_dir / "delivery-approach.md").write_text(f"# Delivery approach - {slug}\n")
+    outside = tmp_path / "outside-secret.md"
+    outside.write_text("TOP SECRET\n")
+    (docs_dir / "notes.md").symlink_to(outside)
+
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    (task_dir / "manifest.yml").write_text(_manifest(artifacts=[
+        {"id": "ART-1", "kind": "distribution-map", "status": "approved",
+         "path": f"docs/compass/{created}-{slug}/distribution-map.md"},
+        {"id": "ART-2", "kind": "delivery-approach", "status": "approved",
+         "path": f"docs/compass/{created}-{slug}/delivery-approach.md"},
+        {"id": "ART-3", "kind": "notes", "status": "approved",
+         "path": f"docs/compass/{created}-{slug}/notes.md"},
+    ]))
+
+    result = _run_multiagent(repo, slug)
+    assert result.returncode == 0, result.stdout + result.stderr
+
+    wt = tmp_path / "wt" / f"{slug}-subtask-1"
+    seeded = wt / "docs" / "compass" / f"{created}-{slug}" / "notes.md"
+    assert not seeded.exists(), "a symlinked source must not be copied in"
+
+
+def test_dpr2_artifact_kind_that_is_not_lower_case_letters_and_hyphens_is_skipped(tmp_path):
+    """A document kind from manifest.yml's artifacts: list that is not made
+    of lower-case letters and hyphens is skipped, not resolved and not used
+    to build a worktree path (finding 8 of the dispatch-protocol security
+    review)."""
+    repo = _init_repo(tmp_path)
+    slug = "bad-kind-demo"
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    (task_dir / "manifest.yml").write_text(_manifest(artifacts=[
+        {"id": "ART-1", "kind": "../../../../outside", "status": "approved",
+         "path": "../../../../outside.md"},
+    ]))
+    (task_dir / "delivery-approach.md").write_text(f"# Delivery approach - {slug}\n")
+    (task_dir / "distribution-map.md").write_text(
+        "# Distribution Map - bad-kind-demo\n\n"
+        "## 3. Scenario-group -> subtask mapping\n\n"
+        "| Subtask | Owns work unit(s) | Owns scenario ids | Branch name |\n"
+        "|---|---|---|---|\n"
+        f"| subtask-1 | U1 | S1 | compass/{slug}/subtask-1 |\n"
+    )
+    (repo / "outside.md").write_text("# outside\n")
+
+    result = _run_multiagent(repo, slug)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "not lower-case letters and hyphens" in (result.stdout + result.stderr)
+
+    wt = tmp_path / "wt" / f"{slug}-subtask-1"
+    assert not (wt / "outside.md").exists()
+
+
 def test_dpr2_resolves_each_kind_once_not_once_per_worktree(tmp_path):
     """Every registered document kind is resolved once for the whole run,
     not once per worktree - two subtasks must not start the resolver twice
@@ -355,6 +525,57 @@ def _staged_task(repo, slug):
     waves = [1, 1, 1, 2, 2, 3, 3]
     (task_dir / "distribution-map.md").write_text(_staged_map(slug, 7, waves))
     return task_dir
+
+
+def test_dpr3_wave_cell_too_long_is_refused_naming_the_row(tmp_path):
+    """A Wave cell of more than a few digits is refused, naming the row -
+    not left to hang the wave-counting arithmetic or silently overflow it
+    (finding 2 of the dispatch-protocol security review)."""
+    repo = _init_repo(tmp_path)
+    slug = "wave-too-long"
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    (task_dir / "manifest.yml").write_text(_manifest())
+    (task_dir / "delivery-approach.md").write_text(f"# Delivery approach - {slug}\n")
+    (task_dir / "distribution-map.md").write_text(
+        "# Distribution Map - wave-too-long\n\n"
+        "## 3. Scenario-group -> subtask mapping\n\n"
+        "| Subtask | Owns work unit(s) | Owns scenario ids | Branch name | Wave |\n"
+        "|---|---|---|---|---|\n"
+        f"| subtask-1 | U1 | S1 | compass/{slug}/subtask-1 | 1 |\n"
+        f"| subtask-2 | U2 | S2 | compass/{slug}/subtask-2 | 20000 |\n"
+    )
+
+    result = _run_multiagent(repo, slug, "--dry-run")
+    assert result.returncode != 0, result.stdout + result.stderr
+    assert "subtask-2" in (result.stdout + result.stderr)
+
+
+def test_dpr3_distinct_waves_built_from_values_present_not_by_counting_up(tmp_path):
+    """The waves a staged map has are read from the values themselves - via
+    `sort -nu` - not by counting from 1 up to the highest value, which would
+    take as long as the highest wave number names (finding 2)."""
+    repo = _init_repo(tmp_path)
+    slug = "wave-big-gap"
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    (task_dir / "manifest.yml").write_text(_manifest())
+    (task_dir / "delivery-approach.md").write_text(f"# Delivery approach - {slug}\n")
+    (task_dir / "distribution-map.md").write_text(
+        "# Distribution Map - wave-big-gap\n\n"
+        "## 3. Scenario-group -> subtask mapping\n\n"
+        "| Subtask | Owns work unit(s) | Owns scenario ids | Branch name | Wave |\n"
+        "|---|---|---|---|---|\n"
+        f"| subtask-1 | U1 | S1 | compass/{slug}/subtask-1 | 1 |\n"
+        f"| subtask-2 | U2 | S2 | compass/{slug}/subtask-2 | 999 |\n"
+    )
+
+    result = subprocess.run(
+        ["bash", str(MULTIAGENT), slug, "--wave", "999", "--dry-run"],
+        cwd=str(repo), capture_output=True, text=True, timeout=20,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "subtask-2" in result.stdout
 
 
 def test_dpr3_wave_flag_provisions_only_that_wave(tmp_path):

@@ -63,6 +63,28 @@ _norm_wave() {
   printf '%s' "$v"
 }
 
+# A seeded document's destination can resolve outside the worktree even when
+# the destination itself does not yet exist: the branch just checked out can
+# make a PATH COMPONENT (e.g. "docs") a symlink to outside the worktree, and
+# `mkdir -p` plus `cp` would then create real files under that outside
+# target. Python's realpath() resolves every symlink already on disk - the
+# checked-out branch's own files - and leaves any NOT-YET-CREATED trailing
+# component untouched, which is exactly the containment check needed before
+# a single directory is made. See finding 1 of the dispatch-protocol
+# security review.
+_seed_dest_is_inside_worktree() {
+  local dest="$1" wt="$2"
+  compass_python - "$dest" "$wt" <<'PY' 2>/dev/null
+import os
+import sys
+dest, wt = sys.argv[1], sys.argv[2]
+rp_dest = os.path.realpath(dest)
+rp_wt = os.path.realpath(wt)
+inside = rp_dest == rp_wt or rp_dest.startswith(rp_wt + os.sep)
+sys.exit(0 if inside else 1)
+PY
+}
+
 # --- args -------------------------------------------------------------------
 TASK_SLUG=""
 DRY_RUN=0
@@ -290,6 +312,14 @@ while IFS= read -r line; do
         echo "multiagent.sh: distribution-map.md's Wave cell for $sid is '$wave' - it must be a positive whole number." >&2
         exit 1 ;;
     esac
+    # A Wave cell this long either hangs the wave-counting arithmetic below
+    # or overflows bash's integer comparisons outright, which silently drops
+    # the row from every wave (finding 2, dispatch-protocol security
+    # review). Three digits covers any map this project stages.
+    if [ "${#wave}" -gt 3 ]; then
+      echo "multiagent.sh: distribution-map.md's Wave cell for $sid is '$wave' - refuse a wave number longer than 3 digits." >&2
+      exit 1
+    fi
     if [ "$wave" -lt 1 ]; then
       echo "multiagent.sh: distribution-map.md's Wave cell for $sid is '$wave' - it must be a positive whole number." >&2
       exit 1
@@ -327,18 +357,15 @@ if [ "$WAVE_COL" -gt 0 ]; then
   # waves must be consecutive, so "the next wave" and "the waves the map
   # has" are both read from this list rather than assumed from WAVE_MAX -
   # a map staged 1, 3 has no wave 2, and naming one that does not exist
-  # would send the reader to a run that is then refused.
+  # would send the reader to a run that is then refused. Built from the
+  # VALUES PRESENT, via `sort -nu` - not by counting up to the highest one,
+  # which takes as long as the highest wave number names (finding 2,
+  # dispatch-protocol security review: a Wave cell of 20000 took over a
+  # second to count to, and the trend does not stop there).
   DISTINCT_WAVES=()
-  _dw=1
-  while [ "$_dw" -le "$WAVE_MAX" ]; do
-    for w in "${WAVES[@]}"; do
-      if [ "$w" -eq "$_dw" ]; then
-        DISTINCT_WAVES+=("$_dw")
-        break
-      fi
-    done
-    _dw=$((_dw + 1))
-  done
+  while IFS= read -r _dw; do
+    [ -n "$_dw" ] && DISTINCT_WAVES+=("$_dw")
+  done < <(printf '%s\n' "${WAVES[@]}" | sort -nu)
   WAVE_REQUESTED="${WAVE_ARG:-1}"
   case "$WAVE_REQUESTED" in
     ''|*[!0-9]*) echo "multiagent.sh: --wave needs a whole number, got '$WAVE_ARG'." >&2; exit 1 ;;
@@ -423,7 +450,17 @@ echo ""
 # their content; the rest are read here, generically, purely to be seeded.
 ARTIFACT_KINDS=()
 while IFS= read -r _kind; do
-  [ -n "$_kind" ] && ARTIFACT_KINDS+=("$_kind")
+  [ -n "$_kind" ] || continue
+  # A kind comes straight from manifest.yml's artifacts: list and is used to
+  # build a worktree-relative path below. Accept only lower-case letters and
+  # hyphens - never a path segment such as "../../../../outside" or an
+  # absolute path (finding 8, dispatch-protocol security review).
+  case "$_kind" in
+    *[!a-z-]*)
+      echo "multiagent.sh: manifest.yml names an artifact kind '$_kind' that is not lower-case letters and hyphens - skipped." >&2
+      continue ;;
+  esac
+  ARTIFACT_KINDS+=("$_kind")
 done < <(compass_python - "$TASK_YML" <<'PY'
 import sys
 import compass_pkg                      # noqa: F401 - puts vendor on sys.path
@@ -547,6 +584,14 @@ for i in "${!SUBTASKS[@]}"; do
         _kind="${ARTIFACT_KINDS[$_ai]}"
         _doc_path="${ARTIFACT_PATHS[$_ai]}"
         [ -n "$_doc_path" ] && [ -f "$_doc_path" ] || continue
+        # A registered document that is itself a symlink can point at
+        # content outside the project - [ -f ] is true for it, but the
+        # CONTENT it names was never checked. Copy only a real file
+        # (finding 7, dispatch-protocol security review).
+        if [ -L "$_doc_path" ]; then
+          echo "      note - $_kind's registered path is a symlink, not seeded" >&2
+          continue
+        fi
         case "$_doc_path" in
           "$TASK_DIR"/*) continue ;;  # already carried by the copy above
         esac
@@ -556,6 +601,16 @@ for i in "${!SUBTASKS[@]}"; do
         esac
         _dest="$wt_path/$_rel"
         [ -f "$_dest" ] && continue
+        # The worktree's own checked-out branch can make a PATH COMPONENT of
+        # _dest a symlink to outside the worktree, or track _dest itself as
+        # a dangling symlink - neither is caught by [ -f "$_dest" ] above,
+        # because in both cases the check is false. Resolve where _dest
+        # would really land and refuse anything outside the worktree, and
+        # refuse an existing symlink at the destination itself (finding 1).
+        if [ -L "$_dest" ] || ! _seed_dest_is_inside_worktree "$_dest" "$wt_path"; then
+          echo "      skipped $_rel - it resolves outside the worktree" >&2
+          continue
+        fi
         mkdir -p "$(dirname "$_dest")"
         cp "$_doc_path" "$_dest"
         echo "      seeded $_rel"

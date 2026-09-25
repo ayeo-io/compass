@@ -123,9 +123,14 @@ def _derive_and_commit_living_spec(cwd, slug):
     if not changed:
         return "\n  living spec re-derived (no change)."
 
+    # `-- rel_spec` scopes the commit to the spec alone. A plain `git commit`
+    # commits everything staged - so anything else staged at this moment (a
+    # hook's own side effect, or a leftover from elsewhere in the same tree)
+    # would otherwise land in this commit too.
     _git(["add", "--", rel_spec], cwd)
     commit = _git(
-        ["commit", "-m", f"Re-derive the living spec after {slug} landed"], cwd
+        ["commit", "-m", f"Re-derive the living spec after {slug} landed",
+         "--", rel_spec], cwd
     )
     if commit.returncode != 0:
         log = ((commit.stdout or "") + (commit.stderr or ""))[-800:]

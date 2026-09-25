@@ -26,6 +26,8 @@ import pathlib
 import subprocess
 import sys
 
+import yaml
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
 
@@ -33,6 +35,14 @@ CLI = ROOT / "cli" / "compass"
 def _git(args, cwd):
     return subprocess.run(["git", *args], cwd=str(cwd), capture_output=True,
                           text=True, timeout=60)
+
+
+def _land_commit(root):
+    """The commit ship-commit made, by the `land_commit` the manifest
+    records - not HEAD, which a following spec commit can move past."""
+    manifest = yaml.safe_load(
+        (root / ".compass" / "work" / "demo" / "manifest.yml").read_text())
+    return manifest["land_commit"]
 
 
 def _repo(tmp_path):
@@ -108,7 +118,10 @@ def test_ff_3_restage_does_not_widen_the_commit(tmp_path):
     r = _ship(root)
     assert r.returncode == 0, f"{r.stdout}{r.stderr}"
 
-    committed = _git(["show", "--name-only", "--pretty=format:", "HEAD"],
+    # Read the land commit by the `land_commit` the manifest records, not
+    # HEAD - a spec commit follows the land commit when it lands the issue.
+    land_commit = _land_commit(root)
+    committed = _git(["show", "--name-only", "--pretty=format:", land_commit],
                      root).stdout.split()
 
     assert "src/steps.py" in committed, (
@@ -118,6 +131,14 @@ def test_ff_3_restage_does_not_widen_the_commit(tmp_path):
         f"src/registration.py was staged for a LATER commit and is now in "
         f"this one, which makes this commit reference code it does not "
         f"contain: {committed}")
+
+    head = _git(["rev-parse", "HEAD"], root).stdout.strip()
+    assert head != land_commit, "no spec commit followed the land commit"
+    spec_committed = _git(
+        ["show", "--name-only", "--pretty=format:", head], root).stdout.split()
+    assert spec_committed == ["docs/system-spec.md"], (
+        f"the spec commit that follows the land commit must hold only "
+        f"docs/system-spec.md: {spec_committed}")
 
 
 def test_ff_4_artifacts_are_still_restaged(tmp_path):
@@ -131,7 +152,10 @@ def test_ff_4_artifacts_are_still_restaged(tmp_path):
     r = _ship(root)
     assert r.returncode == 0, f"{r.stdout}{r.stderr}"
 
-    committed = _git(["show", "--name-only", "--pretty=format:", "HEAD"],
+    # Read the land commit by the `land_commit` the manifest records, not
+    # HEAD - a spec commit follows the land commit when it lands the issue.
+    land_commit = _land_commit(root)
+    committed = _git(["show", "--name-only", "--pretty=format:", land_commit],
                      root).stdout
     assert ".compass/work/demo" in committed, (
         f"the issue's artifact directory is missing from the commit:\n"

@@ -200,13 +200,19 @@ def test_evb_5_a_landed_issue_is_checked_against_its_land_commit(repo):
 
 
 def test_evb_5_ship_commit_records_the_commit_it_made(repo):
+    # HEAD is no longer the land commit once a spec commit follows it -
+    # `land_commit` is, so read the commit ship-commit made by that field,
+    # not by assuming it is HEAD.
+    head_before = _git(repo, "rev-parse", "HEAD")
     (repo / "src" / "new.py").write_text("y = 2\n")
     _git(repo, "add", "src/new.py")
     result = _cli(repo, "ship-commit", "--issue", SLUG, "-m", "land it")
     assert result.returncode == 0, result.stderr
     manifest = yaml.safe_load((repo / ".compass" / "work" / SLUG /
                                "manifest.yml").read_text())
-    assert manifest.get("land_commit") == _git(repo, "rev-parse", "HEAD")
+    land_commit = manifest.get("land_commit")
+    assert land_commit and land_commit != head_before
+    assert _git(repo, "log", "-1", "--format=%s", land_commit) == "land it"
 
 
 def test_evb_6_records_without_a_tree_are_not_judged(repo):

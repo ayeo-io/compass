@@ -8,6 +8,8 @@ the combined regression - `tests/derive/test_integrate_sh_status.py` and
 """
 from __future__ import annotations
 
+import contextlib
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -18,6 +20,20 @@ import yaml
 def _git(cwd: Path, *args: str) -> subprocess.CompletedProcess:
     return subprocess.run(["git", *args], cwd=str(cwd),
                           capture_output=True, text=True)
+
+
+@contextlib.contextmanager
+def _chdir(path: Path):
+    """`_derive_and_commit_living_spec` resolves the project root from
+    `os.getcwd()`, not from the `cwd` argument it is handed - true of every
+    caller that goes through `ship-commit`'s own subprocess, but not of a
+    direct, in-process call, which needs this instead."""
+    before = os.getcwd()
+    os.chdir(str(path))
+    try:
+        yield
+    finally:
+        os.chdir(before)
 
 
 def _init_repo(d: Path) -> None:
@@ -179,6 +195,63 @@ def test_ship_commit_does_not_derive_when_a_gate_has_not_passed(cli_path, tmp_pa
         "not marked landed")
     subjects = _log_subjects(repo, since=h0)
     assert not any(s.startswith("Re-derive the living spec") for s in subjects), subjects
+
+
+def test_derive_and_commit_living_spec_excludes_a_stray_staged_file(tmp_path):
+    """`_derive_and_commit_living_spec`'s own commit is
+    `git commit -m <message> -- <spec path>`, not a plain `git commit` - a
+    plain `git commit` commits everything staged, not only the spec. A file
+    staged before the land derives the spec, outside the issue's own scope,
+    must land in neither the land commit nor the spec commit.
+
+    `cmd_land_commit`'s own scope check already keeps a stray staged file out
+    of the land commit itself (`tests/test_hotfix_181_land_scope.py`); this
+    proves the same for the spec commit that follows it, calling the helper
+    directly so the stray file can be staged in the one window that matters -
+    after the land commit has already been made, and before the spec is
+    committed."""
+    from compass_pkg.manifest import _derive_and_commit_living_spec
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_repo(repo)
+    slug = "spec-commit-scope"
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    body = _task(slug)
+    body["status"] = "landed"
+    body["land_timestamp"] = "2026-09-25T00:00:00"
+    (task_dir / "manifest.yml").write_text(
+        yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
+    (repo / "feature.txt").write_text("issue work\n", encoding="utf-8")
+    _git(repo, "add", "--", "feature.txt",
+         f".compass/work/{slug}/manifest.yml")
+    _git(repo, "commit", "-q", "-m", "land it")
+    land_commit = _head(repo)
+
+    # Staged before the spec is derived, and outside this issue's scope -
+    # for instance a concurrent edit staged by someone else in the same tree.
+    (repo / "unrelated.txt").write_text("not part of this issue\n",
+                                        encoding="utf-8")
+    _git(repo, "add", "--", "unrelated.txt")
+
+    with _chdir(repo):
+        note = _derive_and_commit_living_spec(str(repo), slug)
+    assert "committed" in note, note
+
+    spec_commit = _head(repo)
+    assert spec_commit != land_commit, "no spec commit was made"
+    land_files = _git(repo, "show", "--name-only", "--pretty=format:",
+                      land_commit).stdout.split()
+    assert "unrelated.txt" not in land_files, land_files
+    spec_files = _git(repo, "show", "--name-only", "--pretty=format:",
+                      spec_commit).stdout.split()
+    assert spec_files == ["docs/system-spec.md"], spec_files
+
+    # The stray file is untouched by either commit - still staged, waiting
+    # for whoever staged it.
+    assert "unrelated.txt" in _git(repo, "diff", "--cached",
+                                   "--name-only").stdout
 
 
 def test_ship_commit_skips_the_spec_commit_when_derivation_is_unchanged(cli_path, tmp_path):

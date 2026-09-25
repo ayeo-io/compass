@@ -17,7 +17,7 @@ without the parallelism costing more than it saves.
 | Orchestration | Subtasks | Setup | Who integrates |
 |---|---|---|---|
 | **Solo** | 1 | No worktree; current branch. Breakdown is a no-op. | The builder, trivially. |
-| **Pair** | 2–3 | One worktree per subtask; one `builder` each; no dedicated orchestrator. | The lead builder. |
+| **Pair** | 2–3 | One worktree per subtask; one `builder` each; no separate orchestrator agent. | The session that owns the issue, as orchestrator. |
 | **Multiagent** | 4+ | One worktree per subtask; one `builder` each; plus one `orchestrator`. | The orchestrator. |
 
 The assessment's size and risk values set the default orchestration; the

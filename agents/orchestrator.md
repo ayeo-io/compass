@@ -77,8 +77,9 @@ cross-subtask needs through you.
 Integration runs at the end of breakdown, before `/compass:verify`, once per
 wave; `docs/multiagent-protocol.md` gives each command.
 
-1. Confirm every subtask in the wave has its result and a passing review
-   round.
+1. Confirm every subtask in the wave has its result, and, at cross-cutting
+   or critical risk, a passing review round. At contained or trivial risk the
+   review comes after integration.
 2. Run `scripts/integrate.sh` to merge the wave's worktrees in the map's
    order. On the last wave, run it with `--no-clean`, so the worktrees stay
    until the integrated result has passed its review.

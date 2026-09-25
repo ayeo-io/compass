@@ -15,12 +15,12 @@ subtasks in four waves, run by real builder and reviewer agents.
 | Subtasks | 5, in 4 waves; waves 3 and 4 were added during `/compass:verify` |
 | Builder dispatches | 14 (subtask-1: 4, subtask-2: 4, subtask-3: 3, subtask-4: 2, subtask-5: 1) |
 | Subtask review rounds | 14: 5 by reviewer agents, 9 by the orchestrator |
-| Reviews of the integrated change | 3 by reviewer agents before this record: security; clarity and claims, twice. A third clarity and claims review reads this record, and its cost is not in it. |
+| Reviews of the integrated change | 4 by reviewer agents: security; clarity and claims, three times. The orchestrator checked the fixes for the third. |
 | Tokens, builders | 2,278,406 |
-| Tokens, reviewers | 764,010 (350,554 on subtasks, 413,456 on the integrated change) |
+| Tokens, reviewers | 906,467 (350,554 on subtasks, 555,913 on the integrated change) |
 | Tokens, orchestrator | not measured - the orchestrating session's own use is not reported per step |
 | Merge conflicts | 0, across the five runs of `integrate.sh` that merged a subtask |
-| Combined regression | green on the final integrated tree, in the last wave's run of `integrate.sh` (15:56). The issue's own green run for `/compass:verify` is recorded after this record. |
+| Combined regression | green on the integrated tree at `aa03110`, in the last wave's run of `integrate.sh` (15:56, local time). Later commits change documents only; the issue's own green run for `/compass:verify` is recorded on the final tree. |
 
 All builders ran on Sonnet, each handed only its brief file's path. Budget
 per dispatch: 600,000 tokens, 300,000 for subtask-5. No dispatch exceeded it.
@@ -63,8 +63,10 @@ agent reviewed it.
   `integrate.sh`, lands an issue (ADR-026). Its first try passed its own tests and broke four others
   that assumed the land commit is HEAD.
 
-Each of these passed its own tests. The code-quality and security reviews
-found them by running cases the tests did not cover.
+Each of these passed its own tests. Reviews found most of them, by running
+cases the tests did not cover. The combined regression found subtask-2's
+fourth try, and the orchestrator's run of the suite found subtask-4's
+second.
 
 ## Steps that needed improvising
 
@@ -91,12 +93,15 @@ found them by running cases the tests did not cover.
 8. The map copy was replaced with the full map before the final integration
    of waves 1 and 2, because the old `integrate.sh` still read the copy.
 9. After subtask-1's and subtask-3's fixes merged, the combined regression
-   was stopped at 3%: it was failing on tests subtask-4 was about to replace,
+   was stopped after 10%, its failures already shown in the first 3%: it was failing on tests subtask-4 was about to replace,
    and on this record's unfilled figures.
 10. The orchestrator reviewed nine rounds itself: five by replaying the
     previous reviewer's cases, four by reading the diff and running the
-    tests. It wrote no package for those tries. The protocol now allows this
-    and says how to record it.
+    tests. It wrote no package for those tries. The protocol allows the
+    first kind. The second kind is not a review of each subtask's package,
+    which cross-cutting risk calls for: subtask-4 and subtask-5 had no
+    reviewer agent of their own, and only the reviews of the integrated
+    change read their work.
 11. Wave 1's briefs were written to `briefs/<id>.md` and results to
     `results/`; the skill already named `subtasks/<id>/briefing.md`. Wave 3
     used the skill's path, which the protocol now gives.
@@ -109,11 +114,21 @@ found them by running cases the tests did not cover.
     subtasks they covered. The protocol now says to record them that way.
 14. A green integration removed every worktree before the integrated
     change was reviewed, so a failed review had nowhere to send a subtask.
-    Run 1 recovered only because the combined regression had failed and kept
-    the worktrees. The protocol now runs the last wave with `--no-clean`.
+    The first time, run 1 recovered only because the combined regression had
+    failed and kept the worktrees. The protocol now runs the last wave with
+    `--no-clean`.
+15. The second time, at 15:11, the worktrees were gone, so the second
+    clarity review's findings in the scripts went to a new subtask,
+    subtask-5, in a new wave 4. The protocol now names that route for any
+    subtask of an earlier wave.
+16. Two builder commits, `a67a18c` and `525641d`, carried a
+    `Co-Authored-By:` trailer naming an agent, against the project's rule.
+    Their messages were rewritten before the branch was pushed. The protocol
+    now tells each builder so, and has the orchestrator check before
+    integration.
 
 Steps 1 to 3, 6 and 8 are defects this issue fixes. Steps 4, 5, 7 and 10 to
-14 were gaps in the protocol, corrected during the run.
+16 were gaps in the protocol, corrected during the run.
 
 ## Decisions taken for the user
 

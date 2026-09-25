@@ -72,6 +72,8 @@ states:
   committed - a committed result would merge into the codebase;
 - what not to touch: another subtask's files, and the shared fixtures the map
   names as the orchestrator's;
+- that no commit message carries a line crediting an agent, such as a
+  `Co-Authored-By:` trailer;
 - every other document it cites, by absolute path.
 
 A brief never tells a builder or a reviewer what not to flag.
@@ -99,7 +101,14 @@ check; it says in `result.md` what the check reported.
 ## Step 4 - take the result
 
 A builder's `result.md` is in its worktree, not in the main checkout. The
-orchestrator copies it beside the brief, one file per try so a retry does not
+orchestrator first checks the builder's commit messages, and sends back any
+that credit an agent:
+
+```
+git log --format=%B <base>..<branch> | grep -i 'co-authored'
+```
+
+Then it copies the result beside the brief, one file per try so a retry does not
 overwrite the last, and records the tokens the dispatch used:
 
 ```
@@ -171,14 +180,23 @@ git diff <first base>..HEAD > docs/compass/<created>-<slug>/integrated.diff
 
 Record the round against each subtask whose work it covers, with
 `--reviewed <HEAD> --round pass|fail`, and each finding against the subtask
-it concerns. A failed round sends that subtask back for another try, in the
-worktree the last wave kept (Step 6); integrate again after it.
+it concerns. A failed round sends the work back:
+
+- **A subtask of the last wave** goes back to its builder for another try,
+  in the worktree the last wave kept (Step 6). Integrate again after it.
+- **A subtask of an earlier wave** has no worktree left, and is done. Add a
+  new subtask that owns the fix, in a new wave, to the map; provision it
+  (Step 1) from the issue branch's HEAD; and run it through Steps 2 to 6.
 
 ## Step 6 - integrate
 
+On the **last** wave, add `--no-clean`, so its worktrees stay until the
+integrated result has passed its review. On an earlier wave, leave it off.
+
 ```
 compass issue subtask update <id> --status integrating
-scripts/integrate.sh <slug>
+scripts/integrate.sh <slug>                  # a wave before the last
+scripts/integrate.sh <slug> --no-clean       # the last wave
 ```
 
 The session that owns the issue orchestrates, whatever the number of
@@ -188,16 +206,15 @@ issue landed: that is `ship-commit`'s alone.
 
 - **Green, on a wave before the last.** The wave's worktrees are removed.
   Mark each of its subtasks done, then provision the next wave.
-- **Green, on the last wave.** Run the last wave with `--no-clean`, so its
-  worktrees stay: the integrated result is reviewed next (Step 5), and a
-  failed review needs a worktree to send a subtask back to. Once that review
-  passes, mark every subtask done, remove the worktrees, and go on to
-  `/compass:verify`:
+- **Green, on the last wave.** The worktrees stay: the integrated result is
+  reviewed next (Step 5), and a failed review needs a worktree to send a
+  subtask back to. Once that review passes, mark every subtask done, remove
+  the worktrees, and go on to `/compass:verify`. `--force` is needed because
+  each worktree still holds its uncommitted `result.md`, already copied:
 
   ```
-  scripts/integrate.sh <slug> --no-clean     # the last wave
   compass issue subtask update <id> --status done
-  git worktree remove <worktree>             # each, after the review passes
+  git worktree remove --force <worktree>       # each, after the review passes
   ```
 
 - **The combined regression fails.** The worktrees are kept. Find what broke

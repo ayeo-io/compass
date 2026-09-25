@@ -51,7 +51,8 @@ A brief states:
 - the CLI to run, as a full path: the project's own `bin/compass` or
   `cli/compass` inside the worktree when the project pins one, never a bare
   `compass` that may resolve to an installed plugin;
-- where to write the result: `result.md` at the worktree root, committed;
+- where to write the result: `result.md` at the worktree root, **not**
+  committed - a committed result would merge into the codebase;
 - what not to touch: another subtask's files, and the shared fixtures the map
   names as the orchestrator's.
 
@@ -70,17 +71,20 @@ This records the base commit (HEAD), the model, the budget and status
 
 One builder per subtask, handed only the brief file's path. Builders in the
 same wave run at once. A builder spawns no subagents. It runs the red-green
-cycle through the CLI its brief names, commits on its branch, and writes
-`result.md`.
+cycle through the CLI its brief names, commits its work on its branch, and
+writes `result.md` without committing it. It records each scenario's green once,
+after its last edit: a second green on an unchanged tree fails
+`no-trusted-rerun`. A builder never deletes or edits a record to clear a
+check; it says in `result.md` what the check reported.
 
 ## Step 4 - take the result
 
-A builder's `result.md` is on its branch, not in the main checkout. The
-orchestrator copies it:
+A builder's `result.md` is in its worktree, not in the main checkout. The
+orchestrator copies it, and records the tokens the dispatch used:
 
 ```
-git show <branch>:result.md > docs/compass/<created>-<slug>/results/<id>.md
-compass issue subtask update <id> --status reported --report <that path>
+cp <worktree>/result.md docs/compass/<created>-<slug>/results/<id>.md
+compass issue subtask update <id> --status reported --report <that path> --cost <tokens>
 ```
 
 ## Step 5 - review

@@ -51,8 +51,10 @@ def test_dpr_5_the_protocol_answers_the_rehearsal_gaps():
     text = _flat(PROTOCOL)
     # The builder's CLI is named as a full path, not a bare `compass`.
     assert "full path" in text and "bin/compass" in text
-    # A result on a branch reaches the main checkout by a stated command.
-    assert "git show <branch>:result.md" in text
+    # A result reaches the main checkout by a stated command, and is never
+    # committed, so it cannot merge into the codebase.
+    assert "cp <worktree>/result.md" in text
+    assert "not** committed" in text
     # Conflicts confined to Compass's records do not stop integration.
     assert "keeps the base branch's copy" in text
     # Review frequency follows the risk.

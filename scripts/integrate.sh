@@ -21,10 +21,20 @@
 #   has what they need.
 #
 # CONFLICTS
-#   This script does NOT auto-resolve conflicts. If a merge conflicts, it
-#   aborts that merge, leaves the repo clean, reports exactly which subtask and
-#   which files conflicted, and stops. Resolving cross-subtask conflicts is the
-#   orchestrator's job and no one else's - the script just surfaces them.
+#   A conflict confined to Compass's own records - any path under .compass/
+#   or docs/compass/ - is resolved on the spot: the base branch's copy wins,
+#   the merge completes, and the script names which file it kept. Any other
+#   conflict is NOT auto-resolved: the merge aborts, the repo is left clean,
+#   and the script reports exactly which subtask and which files conflicted,
+#   then stops. Resolving a cross-subtask conflict outside Compass's own
+#   records is the orchestrator's job and no one else's - the script just
+#   surfaces it.
+#
+# STARTING CLEAN
+#   integrate.sh refuses to start when a tracked file has an uncommitted
+#   change. An untracked file does not block the start - git itself already
+#   refuses a merge that would overwrite one, so this script does not
+#   duplicate that check.
 #
 # COMBINED REGRESSION
 #   After all subtasks merge cleanly, the project's test command runs once
@@ -48,6 +58,7 @@ PROJECT_DIR="$(git -C "$(pwd)" rev-parse --show-toplevel 2>/dev/null || pwd)"
 
 # shellcheck source=lib/compass-python.sh
 source "$SCRIPT_DIR/lib/compass-python.sh"
+source "$SCRIPT_DIR/lib/issue-docs.sh"
 
 # --- args -------------------------------------------------------------------
 TASK_SLUG=""
@@ -64,15 +75,24 @@ done
 [ -n "$TASK_SLUG" ] || { echo "integrate.sh: need an issue slug. See --help." >&2; exit 1; }
 
 TASK_DIR="$PROJECT_DIR/.compass/work/$TASK_SLUG"
-MAP="$TASK_DIR/distribution-map.md"
 CONFIG="$PROJECT_DIR/.compass/config.yml"
-[ -f "$MAP" ] || { echo "integrate.sh: no distribution-map.md for '$TASK_SLUG'." >&2; exit 1; }
+
+# The map is found through the artifact registry, so an issue whose
+# documents moved to docs/compass/<created>-<slug>/ still resolves, and an
+# issue whose map is still flat under .compass/work/<slug>/ works as before.
+# issue_doc_path already reports WHY a lookup failed on stderr.
+MAP="$(issue_doc_path "$TASK_SLUG" distribution-map)" \
+  && [ -f "$MAP" ] \
+  || { echo "integrate.sh: no distribution-map.md for '$TASK_SLUG'." >&2; exit 1; }
 
 # --- repo sanity: must start clean ------------------------------------------
 git -C "$PROJECT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
   || { echo "integrate.sh: $PROJECT_DIR is not a git repository." >&2; exit 1; }
-if [ -n "$(git -C "$PROJECT_DIR" status --porcelain)" ]; then
-  echo "integrate.sh: working tree is dirty - commit or stash before integrating." >&2
+# Tracked files only - an untracked file does not block the start. Git
+# itself already refuses a merge that would overwrite one, and that is the
+# only case an untracked file needs to matter for.
+if [ -n "$(git -C "$PROJECT_DIR" status --porcelain --untracked-files=no)" ]; then
+  echo "integrate.sh: working tree has uncommitted changes - commit or stash before integrating." >&2
   exit 1
 fi
 BASE_BRANCH="$(git -C "$PROJECT_DIR" rev-parse --abbrev-ref HEAD)"
@@ -126,6 +146,21 @@ echo "  subtasks:       ${#SUBTASKS[@]}  (merged in map order)"
 echo "  test command:  ${TEST_CMD:-<none resolved - combined regression cannot run automatically>}"
 echo ""
 
+# Every conflicted path is one of Compass's own records - Q4 of
+# requirements-review.md: anything under .compass/ or docs/compass/, and
+# nothing else. Reads the list from stdin, one path per line.
+_all_paths_are_compass_records() {
+  local line all_compass=1
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    case "$line" in
+      .compass/*|docs/compass/*) ;;
+      *) all_compass=0 ;;
+    esac
+  done
+  [ "$all_compass" -eq 1 ]
+}
+
 # --- merge each subtask in order ---------------------------------------------
 MERGED=()
 for i in "${!SUBTASKS[@]}"; do
@@ -149,21 +184,43 @@ for i in "${!SUBTASKS[@]}"; do
         -m "compass($TASK_SLUG): integrate $sid" "$branch" >/dev/null 2>&1; then
     echo "         merged cleanly."
     MERGED+=("$sid")
-  else
-    # Conflict. Capture the conflicted files, abort, report, stop.
-    CONFLICTS="$(git -C "$PROJECT_DIR" diff --name-only --diff-filter=U || true)"
-    git -C "$PROJECT_DIR" merge --abort || true
-    echo ""
-    echo "  CONFLICT integrating $sid ($branch)."
-    echo "  Conflicted files:"
-    echo "$CONFLICTS" | sed 's/^/    - /'
-    echo ""
-    echo "  The merge was aborted; the repo is clean again. This is the"
-    echo "  orchestrator's call to resolve - re-cut the boundary, re-sequence,"
-    echo "  or escalate to a re-frame. No one else may resolve a cross-subtask"
-    echo "  conflict. Subtasks merged so far: ${MERGED[*]:-none}."
-    exit 2
+    continue
   fi
+
+  # Conflict (or a merge git refused to even start, such as one that would
+  # overwrite an untracked file - that case shows no conflicted path below).
+  CONFLICTS="$(git -C "$PROJECT_DIR" diff --name-only --diff-filter=U || true)"
+
+  if [ -n "$CONFLICTS" ] && printf '%s\n' "$CONFLICTS" | _all_paths_are_compass_records; then
+    # Confined to Compass's own records - keep the base branch's copy of
+    # each conflicted file and complete the merge. The builder's own record
+    # of its own subtask stays on its branch; only the base's copy, the one
+    # the orchestrator has been updating, survives.
+    echo "         conflict confined to Compass's own records; kept the base branch's copy of:"
+    while IFS= read -r f; do
+      [ -n "$f" ] || continue
+      git -C "$PROJECT_DIR" checkout --ours -- "$f"
+      git -C "$PROJECT_DIR" add -- "$f"
+      echo "           - $f"
+    done <<<"$CONFLICTS"
+    git -C "$PROJECT_DIR" commit --no-edit >/dev/null
+    echo "         merged."
+    MERGED+=("$sid")
+    continue
+  fi
+
+  # Any other conflict is not auto-resolved: abort, report, stop.
+  git -C "$PROJECT_DIR" merge --abort || true
+  echo ""
+  echo "  CONFLICT integrating $sid ($branch)."
+  echo "  Conflicted files:"
+  echo "$CONFLICTS" | sed 's/^/    - /'
+  echo ""
+  echo "  The merge was aborted; the repo is clean again. This is the"
+  echo "  orchestrator's call to resolve - re-cut the boundary, re-sequence,"
+  echo "  or escalate to a re-frame. No one else may resolve a cross-subtask"
+  echo "  conflict. Subtasks merged so far: ${MERGED[*]:-none}."
+  exit 2
 done
 
 if [ "${#MERGED[@]}" -eq 0 ]; then

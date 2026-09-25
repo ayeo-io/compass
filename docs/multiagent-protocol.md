@@ -105,6 +105,14 @@ cp <worktree>/result.md docs/compass/<created>-<slug>/subtasks/<id>/result-<try>
 compass issue subtask update <id> --status reported --report <that path> --cost <tokens>
 ```
 
+It also copies the builder's records - its reds and greens - because
+`integrate.sh` removes the worktree, and them with it, once the combined
+regression is green:
+
+```
+cp -R <worktree>/.compass/work/<slug>/evidence docs/compass/<created>-<slug>/subtasks/<id>/evidence-<try>
+```
+
 ## Step 5 - review
 
 Review frequency follows the issue's risk, as `compass issue subtask next`

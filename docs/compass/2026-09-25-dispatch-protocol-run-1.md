@@ -95,9 +95,13 @@ found them by running cases the tests did not cover.
 11. Wave 1's briefs were written to `briefs/<id>.md` and results to
     `results/`; the skill already named `subtasks/<id>/briefing.md`. Wave 3
     used the skill's path, which the protocol now gives.
+12. The builders' own reds and greens lived in their worktrees, and
+    `integrate.sh` removed the worktrees at the end, so those records are
+    gone. Each builder's result states the commands and output. The
+    protocol now says to copy a builder's records with its result.
 
-Steps 1 to 3, 6 and 8 are defects this issue fixes. Steps 4, 5, 7, 10 and 11
-were gaps in the protocol, corrected during the run.
+Steps 1 to 3, 6 and 8 are defects this issue fixes. Steps 4, 5, 7, 10, 11
+and 12 were gaps in the protocol, corrected during the run.
 
 ## Decisions taken for the user
 

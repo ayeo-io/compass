@@ -301,6 +301,11 @@ while IFS= read -r line; do
   case "$sid" in subtask-*|stream-*) ;; *) continue ;; esac  # vocabulary-scan: allow - reads the retired spelling for back-compat (ADR-006)
   # default branch name if the map left it blank
   [ -n "$branch" ] || branch="compass/$TASK_SLUG/$sid"
+  _row_problem="$(map_row_problem "$sid" "$branch")"
+  if [ -n "$_row_problem" ]; then
+    echo "multiagent.sh: distribution-map.md's row is refused: $_row_problem. Nothing was created." >&2
+    exit 1
+  fi
   wave=""
   if [ "$WAVE_COL" -gt 0 ]; then
     wave="$(echo "${_row_cells[$WAVE_COL]:-}" | xargs 2>/dev/null || true)"

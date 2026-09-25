@@ -209,6 +209,9 @@ def test_dpr2_refused_registry_entry_is_not_rescued_by_the_flat_file(tmp_path):
     result = _run_multiagent(repo, slug, "--dry-run")
     assert result.returncode != 0, result.stdout + result.stderr
     assert "subtask-1" not in result.stdout
+    out = result.stdout + result.stderr
+    assert "the design stage must produce it first" not in out, (
+        "a refused entry is not a missing map")
 
 
 def test_dpr2_omitted_registry_entry_is_not_rescued_by_the_flat_file(tmp_path):
@@ -235,6 +238,9 @@ def test_dpr2_omitted_registry_entry_is_not_rescued_by_the_flat_file(tmp_path):
     result = _run_multiagent(repo, slug, "--dry-run")
     assert result.returncode != 0, result.stdout + result.stderr
     assert "subtask-1" not in result.stdout
+    out = result.stdout + result.stderr
+    assert "the design stage must produce it first" not in out, (
+        "an omitted entry is a recorded decision, not a missing map")
 
 
 def test_dpr2_resolver_crash_shows_its_own_error(tmp_path):
@@ -272,6 +278,8 @@ def test_dpr2_resolver_crash_shows_its_own_error(tmp_path):
     assert result.returncode != 0, result.stdout + result.stderr
     out = result.stdout + result.stderr
     assert "ImportError" in out
+    assert "the design stage must produce it first" not in out, (
+        "a crashed resolver is not a missing map")
 
 
 def test_dpr2_resolves_each_kind_once_not_once_per_worktree(tmp_path):
@@ -579,3 +587,99 @@ def test_dpr3_wave_over_the_worktree_ceiling_is_refused_naming_the_wave(tmp_path
     out = (result.stdout + result.stderr).lower()
     assert "wave 1" in out
     assert "cap is 4" in out
+
+
+def test_dpr3_subtask_id_in_an_earlier_table_does_not_steal_the_wave_header(tmp_path):
+    """A staged map's independence table (section 2) may mention a subtask
+    id in prose - "subtask-3 waits for subtask-1" - without being the
+    subtask table. Only a row whose FIRST cell is a subtask id names the
+    subtask table's own header, so the real Wave column downstream must
+    still be found and still govern provisioning."""
+    repo = _init_repo(tmp_path)
+    slug = "wave-mentioned-earlier"
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    (task_dir / "manifest.yml").write_text(_manifest())
+    (task_dir / "delivery-approach.md").write_text(f"# Delivery approach - {slug}\n")
+    (task_dir / "distribution-map.md").write_text(
+        "# Distribution Map - wave-mentioned-earlier\n\n"
+        "## 2. Independence analysis\n\n"
+        "| Unit pair | Verdict |\n"
+        "|---|---|\n"
+        "| U1 and U3 | shared surface - subtask-3 waits for subtask-1 |\n\n"
+        "## 3. Scenario-group -> subtask mapping\n\n"
+        "| Subtask | Owns work unit(s) | Owns scenario ids | Branch name | Wave |\n"
+        "|---|---|---|---|---|\n"
+        f"| subtask-1 | U1 | S1 | compass/{slug}/subtask-1 | 1 |\n"
+        f"| subtask-2 | U2 | S2 | compass/{slug}/subtask-2 | 1 |\n"
+        f"| subtask-3 | U3 | S3 | compass/{slug}/subtask-3 | 2 |\n"
+    )
+
+    result = _run_multiagent(repo, slug, "--dry-run")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "subtask-1" in result.stdout
+    assert "subtask-2" in result.stdout
+    assert "subtask-3:" not in result.stdout, (
+        "wave 1 only - subtask-3 is wave 2 and must not be planned yet")
+    assert "next wave: 2" in result.stdout.lower()
+
+
+def test_dpr3_wave_header_in_an_earlier_table_with_a_subtask_id_is_still_ignored(tmp_path):
+    """The reverse of the case above: an earlier table has its own Wave
+    column and a row that mentions a subtask id in prose. The real subtask
+    table has no Wave column of its own, so waves stay off - the map is
+    not refused for a Wave cell that belongs to the wrong table."""
+    repo = _init_repo(tmp_path)
+    slug = "wave-elsewhere-with-id"
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    (task_dir / "manifest.yml").write_text(_manifest())
+    (task_dir / "delivery-approach.md").write_text(f"# Delivery approach - {slug}\n")
+    (task_dir / "distribution-map.md").write_text(
+        "# Distribution Map - wave-elsewhere-with-id\n\n"
+        "## 2. Independence analysis\n\n"
+        "| Unit | Wave | Notes |\n"
+        "|---|---|---|\n"
+        "| U1 | 1 | feeds subtask-2 |\n\n"
+        "## 3. Scenario-group -> subtask mapping\n\n"
+        "| Subtask | Owns work unit(s) | Owns scenario ids | Branch name |\n"
+        "|---|---|---|---|\n"
+        f"| subtask-1 | U1 | S1 | compass/{slug}/subtask-1 |\n"
+        f"| subtask-2 | U2 | S2 | compass/{slug}/subtask-2 |\n"
+    )
+
+    result = _run_multiagent(repo, slug, "--dry-run")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "subtask-1" in result.stdout
+    assert "subtask-2" in result.stdout
+
+
+def test_dpr3_next_wave_named_is_one_the_map_actually_has(tmp_path):
+    """Waves 1 and 3, with a gap at 2: without --wave, wave 1 is
+    provisioned and the next wave named must be 3, the wave the map has -
+    not 2, which would then be refused for having no rows."""
+    repo = _init_repo(tmp_path)
+    slug = "wave-gap-next"
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    (task_dir / "manifest.yml").write_text(_manifest())
+    (task_dir / "delivery-approach.md").write_text(f"# Delivery approach - {slug}\n")
+    (task_dir / "distribution-map.md").write_text(
+        "# Distribution Map - wave-gap-next\n\n"
+        "## 3. Scenario-group -> subtask mapping\n\n"
+        "| Subtask | Owns work unit(s) | Owns scenario ids | Branch name | Wave |\n"
+        "|---|---|---|---|---|\n"
+        f"| subtask-1 | U1 | S1 | compass/{slug}/subtask-1 | 1 |\n"
+        f"| subtask-2 | U2 | S2 | compass/{slug}/subtask-2 | 3 |\n"
+    )
+
+    result = _run_multiagent(repo, slug, "--dry-run")
+    assert result.returncode == 0, result.stdout + result.stderr
+    out = result.stdout.lower()
+    assert "next wave: 3" in out
+    assert "next wave: 2" not in out
+
+    # The named wave is not itself refused when run.
+    result2 = _run_multiagent(repo, slug, "--wave", "3", "--dry-run")
+    assert result2.returncode == 0, result2.stdout + result2.stderr
+    assert "subtask-2" in result2.stdout

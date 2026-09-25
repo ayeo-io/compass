@@ -89,8 +89,37 @@ CONFIG="$PROJECT_DIR/.compass/config.yml"
 # so an issue whose documents moved to docs/compass/<created>-<slug>/ still
 # resolves, and an issue whose documents are still flat under
 # .compass/work/<slug>/ works exactly as before.
-MAP="$(issue_doc_path "$TASK_SLUG" "distribution-map" || true)"
-[ -n "$MAP" ] && [ -f "$MAP" ] || { echo "multiagent.sh: no distribution-map.md for issue '$TASK_SLUG' - the design stage must produce it first." >&2; exit 1; }
+#
+# issue_doc_path already reports WHY a lookup failed - refused, omitted,
+# unresolvable, or a resolver that could not even run - on stderr.
+# multiagent.sh's own follow-up line ("the design stage must produce it
+# first") is right only for a genuine ABSENT; adding it after every other
+# reason blames the wrong stage for a document that IS there but refused,
+# or deliberately omitted, or that crashed while being read.
+_required_doc() {
+  local kind="$1" out err_file err
+  err_file="$(mktemp 2>/dev/null || printf '%s' "/tmp/multiagent-doc-err.$$")"
+  if out="$(issue_doc_path "$TASK_SLUG" "$kind" 2>"$err_file")" && [ -n "$out" ] && [ -f "$out" ]; then
+    rm -f "$err_file"
+    printf '%s\n' "$out"
+    return 0
+  fi
+  err="$(cat "$err_file" 2>/dev/null)"
+  rm -f "$err_file"
+  [ -n "$err" ] && echo "$err" >&2
+  case "$err" in
+    *"$kind: absent "*) return 2 ;;  # true absence - the design-stage message applies
+    *) return 1 ;;                    # refused/omitted/unresolvable/crash - already reported above
+  esac
+}
+
+if MAP="$(_required_doc distribution-map)"; then
+  :
+else
+  _map_rc=$?
+  [ "$_map_rc" -eq 2 ] && echo "multiagent.sh: no distribution-map.md for issue '$TASK_SLUG' - the design stage must produce it first." >&2
+  exit 1
+fi
 
 ROUTE="$(issue_doc_path "$TASK_SLUG" "delivery-approach" || true)"
 if [ -z "$ROUTE" ] || [ ! -f "$ROUTE" ]; then
@@ -175,8 +204,17 @@ while IFS= read -r line; do
   # A separator row (only |, -, : and spaces) belongs to the table
   # PENDING_HEADER already names - skip it without disturbing PENDING_HEADER.
   case "$(echo "$line" | tr -d '|:- ')" in '') continue ;; esac
-  case "$line" in
-    \|*subtask-*|\|*stream-*)  # vocabulary-scan: allow - reads the retired spelling for back-compat (ADR-006)
+  # A row belongs to the subtask table only when its FIRST cell is a
+  # subtask id - the same test the row-parsing loop below applies to
+  # `sid`. Matching "subtask-" anywhere in the line would also catch a
+  # note in some OTHER table's cell (an independence table's Verdict
+  # saying "subtask-3 waits for subtask-1"), which would pick that
+  # table's header instead and the real subtask table's Wave column
+  # would never be read.
+  IFS='|' read -r -a _hdr_cells <<<"$line"
+  _hdr_cell1="$(echo "${_hdr_cells[1]:-}" | xargs 2>/dev/null || true)"
+  case "$_hdr_cell1" in
+    subtask-*|stream-*)  # vocabulary-scan: allow - reads the retired spelling for back-compat (ADR-006)
       [ -n "$SUBTASK_HEADER" ] || SUBTASK_HEADER="$PENDING_HEADER"
       ;;
     *)
@@ -269,6 +307,10 @@ if [ "$SUBTASK_COUNT" -eq 0 ]; then
   echo "          If the route is solo, breakdown is a no-op - do not run multiagent.sh." >&2
   exit 1
 fi
+# The map's total, kept apart from SUBTASK_COUNT: the wave block below
+# narrows SUBTASK_COUNT to one wave's rows, but the orchestrator-agent
+# decision at the end of the run is about the whole map, not one wave.
+MAP_TOTAL_SUBTASKS="$SUBTASK_COUNT"
 
 # --- waves: a staged map is provisioned one wave at a time -------------------
 NEXT_WAVE=""
@@ -280,6 +322,22 @@ if [ "$WAVE_COL" -gt 0 ]; then
   WAVE_MAX=0
   for w in "${WAVES[@]}"; do
     [ "$w" -gt "$WAVE_MAX" ] && WAVE_MAX="$w"
+  done
+  # The distinct waves the map actually has, ascending. Q3 does not say
+  # waves must be consecutive, so "the next wave" and "the waves the map
+  # has" are both read from this list rather than assumed from WAVE_MAX -
+  # a map staged 1, 3 has no wave 2, and naming one that does not exist
+  # would send the reader to a run that is then refused.
+  DISTINCT_WAVES=()
+  _dw=1
+  while [ "$_dw" -le "$WAVE_MAX" ]; do
+    for w in "${WAVES[@]}"; do
+      if [ "$w" -eq "$_dw" ]; then
+        DISTINCT_WAVES+=("$_dw")
+        break
+      fi
+    done
+    _dw=$((_dw + 1))
   done
   WAVE_REQUESTED="${WAVE_ARG:-1}"
   case "$WAVE_REQUESTED" in
@@ -304,11 +362,8 @@ if [ "$WAVE_COL" -gt 0 ]; then
   # sidesteps bash 3.2's "unbound variable" on expanding an empty array
   # under `set -u`: the empty case exits before either array is expanded.
   if [ "${#WAVE_SUBTASKS[@]}" -eq 0 ]; then
-    _seen=""
     WAVE_LIST=""
-    for w in "${WAVES[@]}"; do
-      case " $_seen " in *" $w "*) continue ;; esac
-      _seen="$_seen $w"
+    for w in "${DISTINCT_WAVES[@]}"; do
       WAVE_LIST="${WAVE_LIST:+$WAVE_LIST, }$w"
     done
     echo "multiagent.sh: wave $WAVE_REQUESTED has no rows; the map's waves are $WAVE_LIST." >&2
@@ -317,7 +372,15 @@ if [ "$WAVE_COL" -gt 0 ]; then
   SUBTASKS=("${WAVE_SUBTASKS[@]}")
   BRANCHES=("${WAVE_BRANCHES[@]}")
   SUBTASK_COUNT="${#SUBTASKS[@]}"
-  [ "$WAVE_REQUESTED" -lt "$WAVE_MAX" ] && NEXT_WAVE="$((WAVE_REQUESTED + 1))"
+  # The next wave named is the smallest the map actually has above the one
+  # just provisioned - not WAVE_REQUESTED + 1, which can name a gap (waves
+  # 1, 3 have no 2) that a later run would then refuse for having no rows.
+  for w in "${DISTINCT_WAVES[@]}"; do
+    if [ "$w" -gt "$WAVE_REQUESTED" ]; then
+      NEXT_WAVE="$w"
+      break
+    fi
+  done
 elif [ -n "$WAVE_ARG" ]; then
   echo "multiagent.sh: --wave given but the map has no Wave column." >&2
   exit 1
@@ -363,11 +426,13 @@ while IFS= read -r _kind; do
   [ -n "$_kind" ] && ARTIFACT_KINDS+=("$_kind")
 done < <(compass_python - "$TASK_YML" <<'PY'
 import sys
-import compass_pkg
+import compass_pkg                      # noqa: F401 - puts vendor on sys.path
 import yaml
 try:
     d = yaml.safe_load(open(sys.argv[1])) or {}
-except Exception:
+except Exception as e:
+    sys.stderr.write(
+        "multiagent.sh: could not read manifest.yml's artifacts: %s\n" % e)
     d = {}
 arts = d.get("artifacts") if isinstance(d, dict) else None
 for a in (arts or []):
@@ -383,7 +448,25 @@ PY
 ARTIFACT_PATHS=()
 if [ "${#ARTIFACT_KINDS[@]}" -gt 0 ]; then
   for _kind in "${ARTIFACT_KINDS[@]}"; do
-    _resolved="$(issue_doc_path "$TASK_SLUG" "$_kind" || true)"
+    _kind_err_file="$(mktemp 2>/dev/null || printf '%s' "/tmp/multiagent-kind-err.$$")"
+    if _resolved="$(issue_doc_path "$TASK_SLUG" "$_kind" 2>"$_kind_err_file")"; then
+      rm -f "$_kind_err_file"
+    else
+      _kind_err="$(cat "$_kind_err_file" 2>/dev/null)"
+      rm -f "$_kind_err_file"
+      _resolved=""
+      case "$_kind_err" in
+        *"$_kind: omitted "*)
+          # A recorded decision, not a fault - a note, not the resolver's
+          # error text. Each kind is resolved once for the whole run (see
+          # above), so this prints once, not once per worktree.
+          echo "multiagent.sh: note - $_kind is omitted for this issue, not seeded." >&2
+          ;;
+        *)
+          [ -n "$_kind_err" ] && echo "$_kind_err" >&2
+          ;;
+      esac
+    fi
     ARTIFACT_PATHS+=("$_resolved")
   done
 fi
@@ -497,7 +580,10 @@ for entry in "${LAUNCH_PLAN[@]}"; do
   echo ""
 done
 echo "----------------------------------------------------------------"
-if [ "$SUBTASK_COUNT" -ge 4 ]; then
+# The map's total decides this, not SUBTASK_COUNT - on a staged map that is
+# one wave's count, and a 7-subtask map staged in waves of 3 must not print
+# "no dedicated orchestrator" on every wave.
+if [ "$MAP_TOTAL_SUBTASKS" -ge 4 ]; then
   echo "MULTIAGENT, 4+ subtasks: an 'orchestrator' agent must also run -"
   echo "it writes no feature code, watches for subtasks converging on shared surface,"
   echo "and owns integration at ship via scripts/integrate.sh."

@@ -5,7 +5,8 @@ description: How parallel subtasks are created, isolated and integrated across g
 
 # Worktree Multiagent
 
-Parallelism in Compass is **decided in Plan** (the distribution map) and
+The step-by-step run is `docs/multiagent-protocol.md`: follow it from top to
+bottom. Parallelism in Compass is **decided in Plan** (the distribution map) and
 **carried out in breakdown** (the worktree orchestration). This skill covers both
 halves: how to decompose work correctly, and how to run and land the multiagent
 orchestration

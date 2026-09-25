@@ -265,6 +265,21 @@ does not appear in it: read the remaining waves from the map.
   in it, so a project that keeps issue directories private can publish it.
 - The verification report lists the decisions taken for the user.
 
+## Landing
+
+After `/compass:verify` passes every gate, land the issue:
+
+```
+compass ship-commit --issue <slug>
+```
+
+By then every file the issue changed is committed by the integration merges,
+so nothing is staged. `ship-commit` then makes no commit: it checks that
+every gate has passed and every changed file is in HEAD with no uncommitted
+edit, records HEAD as the issue's `land_commit`, marks it landed, and
+derives the living spec (ADR-026). It refuses, naming the reason, if any of
+those does not hold.
+
 ## Issues this protocol closes
 
 | Queued issue | Closed by |

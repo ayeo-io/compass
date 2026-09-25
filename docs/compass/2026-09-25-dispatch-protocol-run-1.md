@@ -4,26 +4,26 @@
 > protocol and fixes the two multiagent scripts · **Protocol:**
 > `docs/multiagent-protocol.md`, corrected during the run
 
-The first recorded run under the protocol: the issue's own build, five
-subtasks in four waves, run by real builder and reviewer agents.
+The first recorded run under the protocol: the issue's own build, six
+subtasks in five waves, run by real builder and reviewer agents.
 
 ## The result
 
 | Measure | Value |
 |---|---|
-| Wall-clock time | 5 h 13 min, from provisioning wave 1 (10:43) to the end of the last combined regression (15:56) |
-| Subtasks | 5, in 4 waves; waves 3 and 4 were added during `/compass:verify` |
-| Builder dispatches | 14 (subtask-1: 4, subtask-2: 4, subtask-3: 3, subtask-4: 2, subtask-5: 1) |
-| Subtask review rounds | 14: 5 by reviewer agents, 9 by the orchestrator |
+| Wall-clock time | 6 h 17 min, from provisioning wave 1 (10:43) to the end of the last combined regression (17:00) |
+| Subtasks | 6, in 5 waves; waves 3 and 4 were added during `/compass:verify`, wave 5 at ship |
+| Builder dispatches | 15 (subtask-1: 4, subtask-2: 4, subtask-3: 3, subtask-4: 2, subtask-5: 1, subtask-6: 1) |
+| Subtask review rounds | 15: 5 by reviewer agents, 10 by the orchestrator |
 | Reviews of the integrated change | 4 by reviewer agents: security; clarity and claims, three times. The orchestrator checked the fixes for the third. |
-| Tokens, builders | 2,278,406 |
+| Tokens, builders | 2,371,083 |
 | Tokens, reviewers | 906,467 (350,554 on subtasks, 555,913 on the integrated change) |
 | Tokens, orchestrator | not measured - the orchestrating session's own use is not reported per step |
-| Merge conflicts | 0, across the five runs of `integrate.sh` that merged a subtask |
-| Combined regression | green on the integrated tree after subtask-5 merged, in the last wave's run of `integrate.sh` (15:56, local time). Later commits change documents only; the issue's own green run for `/compass:verify` is recorded on the final tree. |
+| Merge conflicts | 0, across the six runs of `integrate.sh` that merged a subtask |
+| Combined regression | green on the integrated tree after subtask-6 merged, in the last wave's run of `integrate.sh` (17:00, local time). Later commits change documents only; the issue's own green run for `/compass:verify` is recorded on the final tree. |
 
 All builders ran on Sonnet, each handed only its brief file's path. Budget
-per dispatch: 600,000 tokens, 300,000 for subtask-5. No dispatch exceeded it.
+per dispatch: 600,000 tokens, 300,000 for subtask-5 and subtask-6. No dispatch exceeded it.
 
 ## Each subtask
 
@@ -34,11 +34,13 @@ per dispatch: 600,000 tokens, 300,000 for subtask-5. No dispatch exceeded it.
 | subtask-3 | `integrate.sh`: registry, record conflicts | 3 | fail, pass, pass | 541,462 + 59,304 | 61 min |
 | subtask-4 | `ship-commit` lands and derives the spec | 2 | fail, pass | 310,468 + 0 | 32 min |
 | subtask-5 | the two scripts' printed guidance | 1 | pass | 112,168 + 0 | 12 min |
+| subtask-6 | `ship-commit` lands work already committed | 1 | pass | 92,677 + 0 | 6 min |
 
 A try after a passing round answered findings that round left open, or came
-from integration or from a review of the integrated change. subtask-4 and
-subtask-5 were reviewed by the orchestrator and by the reviews of the
-integrated change, not by a reviewer agent of their own.
+from integration or from a review of the integrated change. subtask-4,
+subtask-5 and subtask-6 were reviewed by the orchestrator, not by a reviewer
+agent of their own; the reviews of the integrated change read subtask-4's
+and subtask-5's work, and none read subtask-6's.
 
 ## Rework
 
@@ -95,13 +97,12 @@ second.
 9. After subtask-1's and subtask-3's fixes merged, the combined regression
    was stopped after 10%, its failures already shown in the first 3%: it was failing on tests subtask-4 was about to replace,
    and on this record's unfilled figures.
-10. The orchestrator reviewed nine rounds itself: five by replaying the
-    previous reviewer's cases, four by reading the diff and running the
+10. The orchestrator reviewed ten rounds itself: five by replaying the
+    previous reviewer's cases, five by reading the diff and running the
     tests. It wrote no package for those tries. The protocol allows the
     first kind. The second kind is not a review of each subtask's package,
-    which cross-cutting risk calls for: subtask-4 and subtask-5 had no
-    reviewer agent of their own, and only the reviews of the integrated
-    change read their work.
+    which cross-cutting risk calls for: subtask-4, subtask-5 and subtask-6
+    had no reviewer agent of their own.
 11. Wave 1's briefs were written to `briefs/<id>.md` and results to
     `results/`; the skill already named `subtasks/<id>/briefing.md`. Wave 3
     used the skill's path, which the protocol now gives.
@@ -127,8 +128,13 @@ second.
     now tells each builder so, and has the orchestrator check before
     integration.
 
+17. At ship, `ship-commit` refused to land: every file the issue changed was
+    already committed by the integration merges, and nothing was staged.
+    subtask-6, in a new wave 5, taught it to land work already committed at
+    HEAD. The protocol now ends with that step.
+
 Steps 1 to 3, 6 and 8 are defects this issue fixes. Steps 4, 5, 7 and 10 to
-16 were gaps in the protocol, corrected during the run.
+17 were gaps in the protocol, corrected during the run.
 
 ## Decisions taken for the user
 

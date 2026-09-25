@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### A record built before the change is judged as built
+### Retro prints no retired name for assessment
 
-- **Scenario id:** `CUF-3`
+- **Scenario id:** `RWC-3`
 - **Intent:** `INT-1`
-- **Source issue:** `changes-id-misses-unlisted-files`
+- **Source issue:** `retro-weighs-only-retired-route-names`
 - **Landed:** 2026-09-25
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -8643,4 +8643,25 @@
 - **Scenario id:** `CUF-2`
 - **Intent:** `INT-1`
 - **Source issue:** `changes-id-misses-unlisted-files`
+- **Landed:** 2026-09-25
+
+### A record built before the change is judged as built _(archived)_
+
+- **Scenario id:** `CUF-3`
+- **Intent:** `INT-1`
+- **Source issue:** `changes-id-misses-unlisted-files`
+- **Landed:** 2026-09-25
+
+### Current route names count up and down, and weigh the same as retired ones _(archived)_
+
+- **Scenario id:** `RWC-1`
+- **Intent:** `INT-1`
+- **Source issue:** `retro-weighs-only-retired-route-names`
+- **Landed:** 2026-09-25
+
+### A route with no weight is unweighed, not sideways _(archived)_
+
+- **Scenario id:** `RWC-2`
+- **Intent:** `INT-1`
+- **Source issue:** `retro-weighs-only-retired-route-names`
 - **Landed:** 2026-09-25

@@ -639,12 +639,13 @@ echo "----------------------------------------------------------------"
 # one wave's count, and a 7-subtask map staged in waves of 3 must not print
 # "no dedicated orchestrator" on every wave.
 if [ "$MAP_TOTAL_SUBTASKS" -ge 4 ]; then
-  echo "MULTIAGENT, 4+ subtasks: an 'orchestrator' agent must also run -"
+  echo "MULTIAGENT, 4+ subtasks: the session that owns the issue orchestrates -"
   echo "it writes no feature code, watches for subtasks converging on shared surface,"
-  echo "and owns integration at ship via scripts/integrate.sh."
+  echo "and integrates before /compass:verify via scripts/integrate.sh."
 else
-  echo "MULTIAGENT, 2-3 subtasks: no dedicated orchestrator - the lead"
-  echo "builder integrates at ship via scripts/integrate.sh."
+  echo "MULTIAGENT, 2-3 subtasks: the session that owns the issue orchestrates,"
+  echo "the same as on a larger map, and integrates before /compass:verify via"
+  echo "scripts/integrate.sh."
 fi
 echo ""
 [ "$DRY_RUN" -eq 1 ] && echo "(dry run - nothing was created)"

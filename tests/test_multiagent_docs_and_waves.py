@@ -904,3 +904,68 @@ def test_dpr3_next_wave_named_is_one_the_map_actually_has(tmp_path):
     result2 = _run_multiagent(repo, slug, "--wave", "3", "--dry-run")
     assert result2.returncode == 0, result2.stdout + result2.stderr
     assert "subtask-2" in result2.stdout
+
+
+# ---------------------------------------------------------------------------
+# DPR-5 - the orchestrator message agrees with the protocol
+# ---------------------------------------------------------------------------
+
+def _plain_map(slug, n_subtasks):
+    rows = [
+        f"# Distribution Map - {slug}",
+        "",
+        "## 3. Scenario-group -> subtask mapping",
+        "",
+        "| Subtask | Owns work unit(s) | Owns scenario ids | Branch name |",
+        "|---|---|---|---|",
+    ]
+    for i in range(1, n_subtasks + 1):
+        rows.append(f"| subtask-{i} | U{i} | S{i} | compass/{slug}/subtask-{i} |")
+    return "\n".join(rows) + "\n"
+
+
+def _plain_task(repo, slug, n_subtasks):
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    (task_dir / "manifest.yml").write_text(_manifest())
+    (task_dir / "delivery-approach.md").write_text(f"# Delivery approach - {slug}\n")
+    (task_dir / "distribution-map.md").write_text(_plain_map(slug, n_subtasks))
+    return task_dir
+
+
+def test_dpr5_two_to_three_subtasks_orchestrator_line_agrees_with_the_protocol(tmp_path):
+    """docs/multiagent-protocol.md says the session that owns the issue
+    orchestrates, whatever the number of subtasks, and that integration
+    runs before /compass:verify. The old "no dedicated orchestrator - the
+    lead builder integrates at ship" line contradicted both: it denied an
+    orchestrator exists at all on a 2-3 subtask map, and it pointed
+    integration at ship rather than before verify."""
+    repo = _init_repo(tmp_path)
+    slug = "pair-demo"
+    _plain_task(repo, slug, 2)
+
+    result = _run_multiagent(repo, slug, "--dry-run")
+    out = result.stdout + result.stderr
+    assert result.returncode == 0, out
+
+    assert "no dedicated orchestrator" not in out.lower(), out
+    assert "integrates at ship" not in out.lower(), out
+    assert "the session that owns the issue orchestrates" in out, out
+    assert "/compass:verify" in out, out
+
+
+def test_dpr5_four_plus_subtasks_orchestrator_line_agrees_with_the_protocol(tmp_path):
+    """The same protocol statement must hold on a 4+ subtask map: the old
+    "owns integration at ship" wording pointed integration at ship, when
+    ADR-026 moved it to before /compass:verify."""
+    repo = _init_repo(tmp_path)
+    slug = "multiagent-demo"
+    _plain_task(repo, slug, 4)
+
+    result = _run_multiagent(repo, slug, "--dry-run")
+    out = result.stdout + result.stderr
+    assert result.returncode == 0, out
+
+    assert "owns integration at ship" not in out.lower(), out
+    assert "the session that owns the issue orchestrates" in out, out
+    assert "/compass:verify" in out, out

@@ -411,10 +411,10 @@ else
 fi
 
 echo ""
-echo "Integration complete for '$TASK_SLUG'. Back in /compass:ship, finish by:"
-echo "  - pasting the combined-regression run into verification-report.md"
-echo "  - updating living docs"
-echo "  - resolving every outstanding follow-up in delivery-approach.md"
-echo "  - writing the final devlog.md entry"
+echo "Wave integrated for '$TASK_SLUG'; the combined regression above is green."
+echo "The issue is not landed yet. Next, whichever this wave was:"
+echo "  - a wave before the last: provision the next wave -"
+echo "    scripts/multiagent.sh $TASK_SLUG --wave <n>"
+echo "  - the last wave: review the integrated result, then \`/compass:verify\`"
 echo ""
 echo "Next: \`/compass:verify\`, then \`ship-commit\` - only ship-commit marks '$TASK_SLUG' landed."

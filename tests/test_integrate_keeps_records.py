@@ -437,6 +437,45 @@ def test_integrate_does_not_mark_the_issue_landed_or_derive_the_living_spec(tmp_
     assert verify_at < ship_commit_at, out
 
 
+def test_integrate_closing_message_names_the_next_wave_and_the_last_wave(tmp_path):
+    """DPR-5: since ADR-026, integrate.sh runs before /compass:verify and
+    never lands the issue - a wave's worktrees are what get provisioned or
+    reviewed next, not a return to a ship stage that no longer follows it.
+    integrate.sh cannot tell a wave before the last from the last wave (it
+    reads no Wave column), so its closing message must name both next
+    steps: provisioning the next wave, and reviewing the integrated result
+    before /compass:verify. The old "Back in /compass:ship, finish by"
+    wording - which sent the reader to steps ship no longer owns - must be
+    gone."""
+    repo = _init_repo(tmp_path)
+    slug = "closing-message-demo"
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    (task_dir / "manifest.yml").write_text("status: created\n")
+    branch1 = f"compass/{slug}/subtask-1"
+    (task_dir / "distribution-map.md").write_text(
+        _map_text([("subtask-1", branch1)]))
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "add manifest and map")
+
+    _git(repo, "checkout", "-q", "-b", branch1)
+    (repo / "feature.txt").write_text("feature work\n")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "subtask-1 adds feature.txt")
+
+    _git(repo, "checkout", "-q", "main")
+
+    result = _run_integrate(repo, slug)
+    out = result.stdout + result.stderr
+    assert result.returncode == 0, out
+
+    assert "Back in /compass:ship, finish by" not in out, out
+    assert "multiagent.sh" in out and "--wave" in out, out
+    assert "review" in out.lower(), out
+    assert "/compass:verify" in out, out
+    assert f"only ship-commit marks '{slug}' landed" in out, out
+
+
 def test_dpr4_rename_from_outside_records_into_docs_compass_still_aborts(tmp_path):
     """The security review found that a builder renames source code into
     docs/compass/ and edits it, while the base branch edits the original

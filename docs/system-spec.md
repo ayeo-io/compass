@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### The protocol's landing command runs as written
+### No tr set in the scripts reads differently on Linux
 
-- **Scenario id:** `DSS-4`
+- **Scenario id:** `DTR-1`
 - **Intent:** `INT-1`
-- **Source issue:** `multiagent-scripts-still-say-ship`
+- **Source issue:** `tr-range-fails-on-linux`
 - **Landed:** 2026-09-25
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -8865,6 +8865,13 @@
 ### integrate.sh says no regression ran when none did _(archived)_
 
 - **Scenario id:** `DSS-3`
+- **Intent:** `INT-1`
+- **Source issue:** `multiagent-scripts-still-say-ship`
+- **Landed:** 2026-09-25
+
+### The protocol's landing command runs as written _(archived)_
+
+- **Scenario id:** `DSS-4`
 - **Intent:** `INT-1`
 - **Source issue:** `multiagent-scripts-still-say-ship`
 - **Landed:** 2026-09-25

@@ -222,8 +222,184 @@ def test_dpr4_untracked_file_a_merge_would_overwrite_still_stops_git(tmp_path):
     (repo / "feature.txt").write_text("local, uncommitted, in the way\n")
 
     result = _run_integrate(repo, slug)
-    assert result.returncode != 0, result.stdout + result.stderr
+    out = result.stdout + result.stderr
+    assert result.returncode != 0, out
     assert (repo / "feature.txt").read_text() == "local, uncommitted, in the way\n"
+    # The merge never started, so there is nothing to abort and no conflict
+    # to name - the report must say so, name the file git refused over, and
+    # must not claim a conflict happened or try (and fail) to abort one.
+    assert "feature.txt" in out, out
+    assert "no merge to abort" not in out.lower(), out
+    assert "Conflicted files:\n    - \n" not in out, out
+
+
+def test_dpr4_base_deleted_record_file_still_completes_merge(tmp_path):
+    """The base branch deletes a record file that a later subtask still
+    changes - a delete/modify conflict. It is confined to Compass's own
+    records, so the merge must still complete: the base's side (the
+    deletion) wins, and the file is named as removed."""
+    repo = _init_repo(tmp_path)
+    slug = "delete-modify-demo"
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    (task_dir / "manifest.yml").write_text("status: created\n")
+    (task_dir / "notes.md").write_text("subtask-1 will delete this\n")
+    branch1 = f"compass/{slug}/subtask-1"
+    branch2 = f"compass/{slug}/subtask-2"
+    (task_dir / "distribution-map.md").write_text(
+        _map_text([("subtask-1", branch1), ("subtask-2", branch2)]))
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "add manifest, notes and map")
+
+    _git(repo, "checkout", "-q", "-b", branch2)
+    (task_dir / "notes.md").write_text("subtask-2 still edits notes\n")
+    _git(repo, "commit", "-q", "-am", "subtask-2 edits notes.md")
+
+    _git(repo, "checkout", "-q", "main")
+    _git(repo, "checkout", "-q", "-b", branch1)
+    _git(repo, "rm", "-q", str((task_dir / "notes.md").relative_to(repo)))
+    _git(repo, "commit", "-q", "-m", "subtask-1 removes notes.md")
+
+    _git(repo, "checkout", "-q", "main")
+
+    result = _run_integrate(repo, slug)
+    out = result.stdout + result.stderr
+    assert result.returncode == 0, out
+    rel = f".compass/work/{slug}/notes.md"
+    assert rel in out, out
+    assert "removed" in out.lower(), out
+    assert not (task_dir / "notes.md").exists()
+    # The merge commit itself, not the working tree (a later, uncommitted
+    # step rewrites manifest.yml's status to "landed"), shows the deletion
+    # is what survived.
+    log = _git(repo, "log", "--oneline", "main").stdout
+    assert "subtask-1" in log and "subtask-2" in log, log
+
+
+def test_dpr4_resolve_failure_aborts_and_leaves_repo_clean(tmp_path):
+    """If any step of resolving a records-only conflict fails - here, a
+    commit hook rejects the resolving commit - integrate.sh must abort the
+    merge, leave the repository clean, and exit non-zero saying so, instead
+    of leaving the merge half done."""
+    repo = _init_repo(tmp_path)
+    slug = "resolve-failure-demo"
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    (task_dir / "manifest.yml").write_text("status: created\n")
+    branch1 = f"compass/{slug}/subtask-1"
+    branch2 = f"compass/{slug}/subtask-2"
+    (task_dir / "distribution-map.md").write_text(
+        _map_text([("subtask-1", branch1), ("subtask-2", branch2)]))
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "add manifest and map")
+
+    _git(repo, "checkout", "-q", "-b", branch1)
+    (task_dir / "manifest.yml").write_text("status: subtask-1-done\n")
+    _git(repo, "commit", "-q", "-am", "subtask-1 updates manifest")
+
+    _git(repo, "checkout", "-q", "main")
+    _git(repo, "checkout", "-q", "-b", branch2)
+    (task_dir / "manifest.yml").write_text("status: subtask-2-done\n")
+    _git(repo, "commit", "-q", "-am", "subtask-2 updates manifest")
+
+    _git(repo, "checkout", "-q", "main")
+
+    hooks_dir = repo / ".githooks"
+    hooks_dir.mkdir()
+    hook = hooks_dir / "pre-commit"
+    hook.write_text("#!/bin/sh\necho 'pre-commit: refused' >&2\nexit 1\n")
+    hook.chmod(0o755)
+    _git(repo, "config", "core.hooksPath", ".githooks")
+
+    result = _run_integrate(repo, slug)
+    out = result.stdout + result.stderr
+    assert result.returncode != 0, out
+    assert (repo / ".git" / "MERGE_HEAD").exists() is False
+    status = _git(repo, "status", "--porcelain", "--untracked-files=no").stdout
+    assert status == "", status
+
+
+# ---------------------------------------------------------------------------
+# DPR-4 - the two rules that matter most, pinned directly
+# ---------------------------------------------------------------------------
+
+def test_dpr4_mixed_conflict_one_record_one_code_file_still_aborts(tmp_path):
+    """A conflict spanning one record file and one code file must abort as a
+    whole - resolving the record and silently discarding the code file's
+    conflict would be the most dangerous way this script could break."""
+    repo = _init_repo(tmp_path)
+    slug = "mixed-demo"
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    (task_dir / "manifest.yml").write_text("status: created\n")
+    app = repo / "app.py"
+    app.write_text("value = 1\n")
+    branch1 = f"compass/{slug}/subtask-1"
+    branch2 = f"compass/{slug}/subtask-2"
+    (task_dir / "distribution-map.md").write_text(
+        _map_text([("subtask-1", branch1), ("subtask-2", branch2)]))
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "add manifest, app and map")
+
+    _git(repo, "checkout", "-q", "-b", branch1)
+    (task_dir / "manifest.yml").write_text("status: subtask-1-done\n")
+    app.write_text("value = 2\n")
+    _git(repo, "commit", "-q", "-am", "subtask-1 changes manifest and app")
+
+    _git(repo, "checkout", "-q", "main")
+    _git(repo, "checkout", "-q", "-b", branch2)
+    (task_dir / "manifest.yml").write_text("status: subtask-2-done\n")
+    app.write_text("value = 3\n")
+    _git(repo, "commit", "-q", "-am", "subtask-2 changes manifest and app")
+
+    _git(repo, "checkout", "-q", "main")
+
+    result = _run_integrate(repo, slug)
+    out = result.stdout + result.stderr
+    assert result.returncode == 2, out
+    assert "app.py" in out, out
+    assert f".compass/work/{slug}/manifest.yml" in out, out
+    status = _git(repo, "status", "--porcelain").stdout
+    assert status == "", status
+
+
+def test_dpr4_conflict_only_under_docs_compass_completes_merge(tmp_path):
+    """A conflict confined to docs/compass/ - the moved-document half of
+    Compass's records, not just .compass/ - must also complete the merge."""
+    repo = _init_repo(tmp_path)
+    slug = "docs-compass-demo"
+    docs_dir = repo / "docs" / "compass" / f"2026-09-25-{slug}"
+    docs_dir.mkdir(parents=True)
+    (docs_dir / "notes.md").write_text("created\n")
+    task_dir = repo / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True)
+    branch1 = f"compass/{slug}/subtask-1"
+    branch2 = f"compass/{slug}/subtask-2"
+    (task_dir / "distribution-map.md").write_text(
+        _map_text([("subtask-1", branch1), ("subtask-2", branch2)]))
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "add docs note and map")
+
+    _git(repo, "checkout", "-q", "-b", branch1)
+    (docs_dir / "notes.md").write_text("subtask-1 notes\n")
+    _git(repo, "commit", "-q", "-am", "subtask-1 edits notes")
+
+    _git(repo, "checkout", "-q", "main")
+    _git(repo, "checkout", "-q", "-b", branch2)
+    (docs_dir / "notes.md").write_text("subtask-2 notes\n")
+    _git(repo, "commit", "-q", "-am", "subtask-2 edits notes")
+
+    _git(repo, "checkout", "-q", "main")
+
+    result = _run_integrate(repo, slug)
+    out = result.stdout + result.stderr
+    assert result.returncode == 0, out
+    rel = f"docs/compass/2026-09-25-{slug}/notes.md"
+    assert rel in out, out
+    # Tracked files only: a successful run also derives docs/system-spec.md,
+    # left untracked on purpose - see integrate.sh's own final steps.
+    status = _git(repo, "status", "--porcelain", "--untracked-files=no").stdout
+    assert status == "", status
 
 
 # ---------------------------------------------------------------------------

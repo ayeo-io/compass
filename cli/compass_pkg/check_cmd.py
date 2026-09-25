@@ -38,6 +38,7 @@ from compass_pkg.checks import NOTHING_TO_CHECK, _check_backfills_paid, _check_c
 from compass_pkg.borrowed_docs import _check_borrowed_documents_answered
 from compass_pkg.dashboard import _check_dashboard_current
 from compass_pkg.binding import _check_evidence_matches_tree
+from compass_pkg.multiagent_check import _check_multiagent_run_recorded
 from compass_pkg.core import FRAMEWORK_ROOT, exit_for_mode, find_governance, load_mode, load_manifest, load_yaml, mode_banner, reading_matches, resolve_issue_dir
 
 
@@ -64,6 +65,7 @@ CHECK_FNS = {
     "evidence-matches-tree": _check_evidence_matches_tree,
     "dashboard-current": _check_dashboard_current,
     "borrowed-documents-answered": _check_borrowed_documents_answered,
+    "multiagent-run-recorded": _check_multiagent_run_recorded,
 }
 
 # Per-check guidance for structured failure messages. Each entry has the
@@ -107,6 +109,11 @@ CHECK_GUIDANCE = {
         "why": "A green proves a command passed on the tree it ran on. Once that tree changes, the record says nothing about the code that is about to ship - or, for a landed issue, about the commit that landed it.",
         "fix": "Re-run the suite through `compass tdd-green -- <test command>` on the tree you intend to ship, so the newest record names it. For a landed issue, the files the commit landed are not the files that were tested: check out a tree whose changed files match the landing commit, re-run the suite through `compass tdd-green`, and the newest record will name them.",
         "do": "Re-run the suite with `compass tdd-green` on the tree you ship.",
+    },
+    "multiagent-run-recorded": {
+        "why": "A multiagent run splits into subtasks that `compass issue subtask` records. Without this check, an issue could clear every gate and land with a subtask never marked done, or one still failing its last review round, and nothing would say so.",
+        "fix": "Record each subtask's progress with `compass issue subtask update`: `--status done` once it is merged, and `--round pass` once its last review passes. The check names any subtask that is missing, not done, or without a passing last round.",
+        "do": 'Record each named subtask done, with a passing round, via `compass issue subtask update`.',
     },
     "no-trusted-rerun": {
         "why": "A green recorded from a run nobody observed is an assertion wearing evidence's clothes. The tested-before-ship guardrail wants the run, not a note about it.",

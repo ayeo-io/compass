@@ -75,6 +75,11 @@ BASELINE_CHECKS = {
     # and no-ops entirely for a project that has set no project.bdd_runner,
     # which is nearly all of them.
     "scenarios-are-executable",
+    # Added by dispatch-protocol. A multiagent issue's manifest must show the
+    # run that built it completed - every subtask done, with a last review
+    # round that passed. Joins `G4` rather than becoming a sixth guardrail
+    # (ADR-002).
+    "multiagent-run-recorded",
 }
 
 # The legitimate set of gate names in gate_evidence_requirements after landing.

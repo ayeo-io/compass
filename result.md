@@ -12,16 +12,15 @@
 - **`scripts/multiagent.sh`**.
   - `MAP` and `ROUTE` are now resolved through `issue_doc_path` instead of a
     hard-coded flat path, so an issue whose documents are registered under
-    `docs/compass/<created>-<slug>/` is found there. The retired
-    `route.md` fallback for `delivery-approach` is kept as a local
-    second-chance check, because the artifact resolver does not know that
-    old name (out of scope to change - it lives in `cli/compass_pkg/`, a
-    file this subtask does not own).
+    `docs/compass/<created>-<slug>/` is found there. `delivery-approach`'s
+    pre-rename filename is kept as a local second-chance check, because the
+    artifact resolver does not know that old name (out of scope to change -
+    it lives in `cli/compass_pkg/`, a file this subtask does not own).
   - Seeding now also reads every kind the manifest's `artifacts:` list
     names, resolves each through `issue_doc_path`, and copies any that
     resolve outside `.compass/work/<slug>/` into the worktree at the same
     path relative to the project root - non-destructive, same as the
-    existing task-directory copy.
+    existing issue-directory copy.
   - A `Wave` column in the map's header row is detected by exact cell match.
     `--wave N` provisions that wave's rows only; without it, wave 1 runs and
     the output names the next wave. The cap is measured against the chosen
@@ -101,20 +100,20 @@ one red before each scenario's code changed:
   (`"multiagent.sh: --wave given but the map has no Wave column."`) rather
   than silently ignored - not specified by DPR-3, but a wave number a map
   cannot honour is a real mistake, not a no-op.
-- **The retired `route.md` fallback** for `delivery-approach` stays as a
-  literal flat-path check in `multiagent.sh` itself, because the artifact
+- **`delivery-approach`'s pre-rename filename** stays as a literal
+  flat-path check in `multiagent.sh` itself, because the artifact
   resolver's rename table (`cli/compass_pkg/core.py`) does not carry that
   pairing and is outside this subtask's files.
-- **Dropped the `# shellcheck source=lib/issue-docs.sh` directive** rather
-  than adding a named exemption to `tests/test_writing_style.py`'s `PBW-A8`
-  rule (which flags the directive's repo-root-relative path resolution,
-  same as the existing `compass-python.sh` directive already has an
-  exemption for) - that test file is not one this subtask owns. The
+- **Dropped the `# shellcheck source=scripts/lib/issue-docs.sh` directive**
+  rather than adding a named exemption to `tests/test_writing_style.py`'s
+  `PBW-A8` rule (which flags the directive's repo-root-relative path
+  resolution, same as the existing `compass-python.sh` directive already
+  has an exemption for) - that test file is not one this subtask owns. The
   `source` line works identically without the hint; shellcheck simply
   cannot follow it at lint time, same as it already cannot follow
   `compass-python.sh`.
 - **Fixed a bug found while implementing**: `issue_doc_path` first computed
   `compass_home` one directory too shallow, and Bash 3.2 (macOS's
   `/bin/bash`) raises "unbound variable" on `"${arr[@]}"` over a
-  zero-element array under `set -u` - both are described in
-  `.compass/work/dispatch-protocol/devlog.md`.
+  zero-element array under `set -u` - both are described in this
+  worktree's local devlog, not committed with the code.

@@ -20,7 +20,7 @@ subtasks in four waves, run by real builder and reviewer agents.
 | Tokens, reviewers | 906,467 (350,554 on subtasks, 555,913 on the integrated change) |
 | Tokens, orchestrator | not measured - the orchestrating session's own use is not reported per step |
 | Merge conflicts | 0, across the five runs of `integrate.sh` that merged a subtask |
-| Combined regression | green on the integrated tree at `aa03110`, in the last wave's run of `integrate.sh` (15:56, local time). Later commits change documents only; the issue's own green run for `/compass:verify` is recorded on the final tree. |
+| Combined regression | green on the integrated tree after subtask-5 merged, in the last wave's run of `integrate.sh` (15:56, local time). Later commits change documents only; the issue's own green run for `/compass:verify` is recorded on the final tree. |
 
 All builders ran on Sonnet, each handed only its brief file's path. Budget
 per dispatch: 600,000 tokens, 300,000 for subtask-5. No dispatch exceeded it.
@@ -121,7 +121,7 @@ second.
     clarity review's findings in the scripts went to a new subtask,
     subtask-5, in a new wave 4. The protocol now names that route for any
     subtask of an earlier wave.
-16. Two builder commits, `a67a18c` and `525641d`, carried a
+16. Two builder commits, subtask-1's second try and subtask-4's first, carried a
     `Co-Authored-By:` trailer naming an agent, against the project's rule.
     Their messages were rewritten before the branch was pushed. The protocol
     now tells each builder so, and has the orchestrator check before

@@ -4,26 +4,26 @@
 > protocol and fixes the two multiagent scripts · **Protocol:**
 > `docs/multiagent-protocol.md`, corrected during the run
 
-The first recorded run under the protocol: the issue's own build, four
-subtasks in three waves, run by real builder and reviewer agents.
+The first recorded run under the protocol: the issue's own build, five
+subtasks in four waves, run by real builder and reviewer agents.
 
 ## The result
 
 | Measure | Value |
 |---|---|
-| Wall-clock time | 4 h 4 min, from provisioning wave 1 (10:43) to the last subtask review (14:47) |
-| Subtasks | 4, in 3 waves; the third wave was added during `/compass:verify` |
-| Builder dispatches | 13 (subtask-1: 4, subtask-2: 4, subtask-3: 3, subtask-4: 2) |
-| Subtask review rounds | 13: 5 by reviewer agents, 8 by the orchestrator |
-| Reviews of the integrated change | 2 reviewer agents: security; clarity and claims |
-| Tokens, builders | 2,166,238 |
-| Tokens, reviewers | 632,850 (350,554 on subtasks, 282,296 on the integrated change) |
+| Wall-clock time | 5 h 13 min, from provisioning wave 1 (10:43) to the end of the last combined regression (15:56) |
+| Subtasks | 5, in 4 waves; waves 3 and 4 were added during `/compass:verify` |
+| Builder dispatches | 14 (subtask-1: 4, subtask-2: 4, subtask-3: 3, subtask-4: 2, subtask-5: 1) |
+| Subtask review rounds | 14: 5 by reviewer agents, 9 by the orchestrator |
+| Reviews of the integrated change | 3 by reviewer agents before this record: security; clarity and claims, twice. A third clarity and claims review reads this record, and its cost is not in it. |
+| Tokens, builders | 2,278,406 |
+| Tokens, reviewers | 764,010 (350,554 on subtasks, 413,456 on the integrated change) |
 | Tokens, orchestrator | not measured - the orchestrating session's own use is not reported per step |
-| Merge conflicts | 0, across four runs of `integrate.sh` |
-| Combined regression | the full suite on the final integrated tree is the issue's recorded green run |
+| Merge conflicts | 0, across the five runs of `integrate.sh` that merged a subtask |
+| Combined regression | green on the final integrated tree, in the last wave's run of `integrate.sh` (15:56). The issue's own green run for `/compass:verify` is recorded after this record. |
 
 All builders ran on Sonnet, each handed only its brief file's path. Budget
-per dispatch: 600,000 tokens. No dispatch exceeded it.
+per dispatch: 600,000 tokens, 300,000 for subtask-5. No dispatch exceeded it.
 
 ## Each subtask
 
@@ -33,14 +33,18 @@ per dispatch: 600,000 tokens. No dispatch exceeded it.
 | subtask-2 | the check `multiagent-run-recorded` | 4 | fail, pass, pass, pass | 499,954 + 114,864 | 55 min |
 | subtask-3 | `integrate.sh`: registry, record conflicts | 3 | fail, pass, pass | 541,462 + 59,304 | 61 min |
 | subtask-4 | `ship-commit` lands and derives the spec | 2 | fail, pass | 310,468 + 0 | 32 min |
+| subtask-5 | the two scripts' printed guidance | 1 | pass | 112,168 + 0 | 12 min |
 
-A try after a passing round came from a later review: the review of the
-integrated change, or a decision at integration.
+A try after a passing round answered findings that round left open, or came
+from integration or from a review of the integrated change. subtask-4 and
+subtask-5 were reviewed by the orchestrator and by the reviews of the
+integrated change, not by a reviewer agent of their own.
 
 ## Rework
 
-Every subtask failed its first review, and every failure was in code
-quality. Acceptance passed every time.
+Every subtask that a reviewer agent reviewed failed its first review, and
+every failure was in code quality. Acceptance passed every time a reviewer
+agent reviewed it.
 
 - **subtask-1** behaved differently under bash 3.2 and bash 5 on an empty
   wave, and dropped a subtask with a blank wave number. In round 2 a map lost
@@ -89,9 +93,10 @@ found them by running cases the tests did not cover.
 9. After subtask-1's and subtask-3's fixes merged, the combined regression
    was stopped at 3%: it was failing on tests subtask-4 was about to replace,
    and on this record's unfilled figures.
-10. The orchestrator reviewed eight rounds itself, by replaying the previous
-    reviewer's cases, and wrote no package for those tries. The protocol now
-    allows this and says how to record it.
+10. The orchestrator reviewed nine rounds itself: five by replaying the
+    previous reviewer's cases, four by reading the diff and running the
+    tests. It wrote no package for those tries. The protocol now allows this
+    and says how to record it.
 11. Wave 1's briefs were written to `briefs/<id>.md` and results to
     `results/`; the skill already named `subtasks/<id>/briefing.md`. Wave 3
     used the skill's path, which the protocol now gives.
@@ -100,8 +105,15 @@ found them by running cases the tests did not cover.
     gone. Each builder's result states the commands and output. The
     protocol now says to copy a builder's records with its result.
 
-Steps 1 to 3, 6 and 8 are defects this issue fixes. Steps 4, 5, 7, 10, 11
-and 12 were gaps in the protocol, corrected during the run.
+13. The reviews of the integrated change were not recorded as rounds on the
+    subtasks they covered. The protocol now says to record them that way.
+14. A green integration removed every worktree before the integrated
+    change was reviewed, so a failed review had nowhere to send a subtask.
+    Run 1 recovered only because the combined regression had failed and kept
+    the worktrees. The protocol now runs the last wave with `--no-clean`.
+
+Steps 1 to 3, 6 and 8 are defects this issue fixes. Steps 4, 5, 7 and 10 to
+14 were gaps in the protocol, corrected during the run.
 
 ## Decisions taken for the user
 
@@ -113,11 +125,13 @@ and 12 were gaps in the protocol, corrected during the run.
 - The spec-derivation helper in `ship-commit` finds the project root from
   the current directory, which is the directory `ship-commit` runs in. A test
   that calls it directly must change directory first.
+- The comment above `multiagent.sh`'s orchestrator message still quotes the
+  old wording; the message itself is correct.
 - The maintainer, asked, decided that `ship-commit` lands every issue and
   derives the living spec (ADR-026). That decision was the user's, not the
   orchestrator's.
 
-## Found outside this issue, filed as their own specs
+## Found outside this issue, each recorded as a defect to fix next
 
 - `compass changed-file add` keeps only the last `--scenario` when the flag is
   repeated.

@@ -1,11 +1,9 @@
-"""Unit conversion using an external factor table.
+"""Shipping cost conversion between freight zones.
 
-The factor table lives in the data directory, in a file named
-factors.json. This seed does not ship that file: the project it comes
-from generates it at deploy time from a feed it does not have the rights
-to redistribute here. No edit inside the source or test directories can
-give it, so a test that needs it stays failing however this module is
-changed.
+The conversion factor between two zones comes from the carrier's rate
+card, in the data directory, in a file named tariffs.json. The carrier
+updates that file directly under a data-sharing agreement that does not
+extend to this repository.
 """
 
 from __future__ import annotations
@@ -13,15 +11,16 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-FACTORS_PATH = Path(__file__).resolve().parent.parent / "data" / "factors.json"
+TARIFFS_PATH = Path(__file__).resolve().parent.parent / "data" / "tariffs.json"
 
 
-def _load_factors() -> dict:
-    return json.loads(FACTORS_PATH.read_text(encoding="utf-8"))
+def _load_tariffs() -> dict:
+    return json.loads(TARIFFS_PATH.read_text(encoding="utf-8"))
 
 
-def convert(value: float, from_unit: str, to_unit: str) -> float:
-    """Convert value from from_unit to to_unit using the factor table."""
-    factors = _load_factors()
-    key = f"{from_unit}->{to_unit}"
-    return value * factors[key]
+def convert(value: float, from_zone: str, to_zone: str) -> float:
+    """Convert a shipping cost in from_zone to its equivalent in to_zone,
+    using the carrier's rate card."""
+    tariffs = _load_tariffs()
+    key = f"{from_zone}->{to_zone}"
+    return value * tariffs[key]

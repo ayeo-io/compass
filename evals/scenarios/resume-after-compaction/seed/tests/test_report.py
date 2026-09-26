@@ -1,7 +1,6 @@
 """Tests for the expense report helpers already built.
 
-Nothing here covers category limits - the next piece of work the in-flight
-record names.
+Nothing here covers category limits yet.
 """
 
 from src.report import parse_expenses, summarize

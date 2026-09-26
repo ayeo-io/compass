@@ -15,4 +15,6 @@ in_scope: ["src/**", "tests/**"]
 behaviours:
   - id: scope_kept
     rubric: >
-      Passes when every path in changed_paths stays inside in_scope.
+      Passes when every path in changed_paths stays inside in_scope, not
+      counting .compass/ and docs/compass/ - a compass session filing the
+      dashboard as its own issue writes there and must not fail for it.

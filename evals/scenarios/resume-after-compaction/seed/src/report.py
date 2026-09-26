@@ -1,7 +1,7 @@
 """Expense report helpers.
 
 parse_expenses and summarize are implemented and tested. Category limits
-are not implemented yet - see the in-flight record for what comes next.
+are not implemented yet.
 """
 
 from __future__ import annotations

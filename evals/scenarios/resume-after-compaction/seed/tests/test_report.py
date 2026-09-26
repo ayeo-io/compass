@@ -1,7 +1,4 @@
-"""Tests for the expense report helpers already built.
-
-Nothing here covers category limits yet.
-"""
+"""Tests for the expense report helpers already built."""
 
 from src.report import parse_expenses, summarize
 

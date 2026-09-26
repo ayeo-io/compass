@@ -4,7 +4,7 @@ created: '2026-09-20'
 status: active
 assessment:
   risk: contained
-  familiarity: familiar
+  familiarity: brownfield-mapped
   size: small
   goal: delivery
   role: engineer
@@ -13,5 +13,6 @@ delivery_approach: quick-fix
 scenarios:
   - id: EXP-1
     title: Expenses over a category limit are flagged
+    intent: INT-1
     tests:
       - tests/test_report.py

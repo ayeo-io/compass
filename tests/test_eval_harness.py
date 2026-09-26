@@ -121,6 +121,12 @@ def main():
         with open(escape_path, "a", encoding="utf-8") as fh:
             fh.write("reached from outside the temporary repository\\n")
 
+    if config.get("create_pyc"):
+        pycache_dir = os.path.join(cwd, "src", "__pycache__")
+        os.makedirs(pycache_dir, exist_ok=True)
+        with open(os.path.join(pycache_dir, "inventory.cpython-311.pyc"), "wb") as fh:
+            fh.write(b"\\x00\\x01compiled")
+
     cost = float(config.get("cost", 0.02))
     session_id = "fake-session-0001"
     deny_tool = config.get("deny_tool")
@@ -688,6 +694,81 @@ def test_module_docstring_does_not_explain_by_how_the_issue_split_its_work():
     text = (harness.__doc__ or "").lower()
     assert "sibling" not in text
     assert "this issue" not in text
+
+
+def test_no_bare_defect_id_cited_without_its_meaning():
+    """`integrated-review-2.md` (suggestion, `evals/harness.py:55`): say what
+    the rule is, not an id nobody outside the review can look up."""
+    source = Path(harness.__file__).read_text(encoding="utf-8")
+    assert "DD-2" not in source
+    assert "compass_pkg.core.load_yaml" in source
+
+
+# --- 9. a session's own .pyc files never reach changed_paths ----------------
+
+def test_session_pyc_files_are_excluded_from_changed_paths(
+    tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
+):
+    """`integrated-review-2.md` (blocker): a session that runs its tests
+    leaves `__pycache__/*.pyc` files that `git add -A` would otherwise stage,
+    which made the judge unable to place the first code edit. The harness
+    writes `.git/info/exclude` before the seed commit so they never appear."""
+    _, record, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "bare", monkeypatch,
+        plugin_source_dir, out_suffix="-pyc",
+        extra_config={"create_pyc": True},
+    )
+    assert not any(path.endswith(".pyc") for path in record["changed_paths"])
+    assert not any("__pycache__" in path for path in record["changed_paths"])
+    assert "src/__pycache__/inventory.cpython-311.pyc" not in record["diff"]
+
+
+# --- 10. no MCP server reaches the session -----------------------------------
+
+def test_no_mcp_server_reaches_the_session(
+    tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
+):
+    """`integrated-review-2.md` (suggestion): a real session listed the
+    maintainer's own Slack and Drive connectors among its tools. Both
+    conditions must load none."""
+    for condition in ("compass", "bare"):
+        calls, _, _ = _run_condition(
+            tmp_path, scenario_dir, fake_claude, condition, monkeypatch,
+            plugin_source_dir, out_suffix=f"-mcp-{condition}",
+        )
+        assert "--strict-mcp-config" in calls[0]["args"]
+
+
+# --- 11. no temporary directory name says which condition it is -------------
+
+def test_temporary_directory_names_do_not_name_the_condition(
+    tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
+):
+    """`integrated-review-2.md` (issue): the repository directory and the
+    plugin copy shared no naming rule, and the repository directory spelled
+    the condition into its own name. Both must use one neutral prefix."""
+    compass_calls, compass_record, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "compass", monkeypatch,
+        plugin_source_dir, out_suffix="-naming",
+    )
+    bare_calls, bare_record, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "bare", monkeypatch,
+        plugin_source_dir, out_suffix="-naming",
+    )
+
+    expected_prefix = f"compass-eval-{compass_record['scenario']}-"
+    compass_repo_name = Path(compass_record["cwd"]).name
+    bare_repo_name = Path(bare_record["cwd"]).name
+    assert compass_repo_name.startswith(expected_prefix)
+    assert bare_repo_name.startswith(expected_prefix)
+    assert "compass" not in compass_repo_name[len(expected_prefix):]
+    assert "bare" not in bare_repo_name[len(expected_prefix):]
+
+    plugin_dir_arg = compass_calls[0]["args"][
+        compass_calls[0]["args"].index("--plugin-dir") + 1
+    ]
+    plugin_copy_name = Path(plugin_dir_arg).name
+    assert plugin_copy_name.startswith(expected_prefix)
 
 
 # --- scenario.yml is read through the shared loader (compass_pkg.core.load_yaml) --

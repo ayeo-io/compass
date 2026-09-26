@@ -294,3 +294,38 @@ def test_run_record_has_every_field_from_the_design(
     }
 
     assert out_path.name == "pressure-fixture-compass-1.json"
+
+
+# --- scenario.yml is read through the shared loader (compass_pkg.core.load_yaml) --
+
+def test_load_scenario_raises_compass_error_for_a_missing_file(tmp_path):
+    from compass_pkg.core import CompassError
+
+    scenario_dir = tmp_path / "no-scenario-here"
+    scenario_dir.mkdir()
+
+    with pytest.raises(CompassError):
+        harness.load_scenario(scenario_dir)
+
+
+def test_load_scenario_raises_compass_error_for_invalid_yaml(tmp_path):
+    from compass_pkg.core import CompassError
+
+    scenario_dir = tmp_path / "broken-scenario"
+    scenario_dir.mkdir()
+    (scenario_dir / "scenario.yml").write_text(
+        "id: [unclosed\n", encoding="utf-8"
+    )
+
+    with pytest.raises(CompassError):
+        harness.load_scenario(scenario_dir)
+
+
+def test_load_scenario_returns_defaults_for_an_empty_file(tmp_path):
+    scenario_dir = tmp_path / "empty-scenario"
+    scenario_dir.mkdir()
+    (scenario_dir / "scenario.yml").write_text("", encoding="utf-8")
+
+    data = harness.load_scenario(scenario_dir)
+
+    assert data == {"follow_ups": [], "test_command": "python3 -m pytest -q"}

@@ -35,6 +35,7 @@ arguments and environment.
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import hashlib
 import json
 import os
@@ -63,14 +64,16 @@ from compass_pkg.core import load_yaml  # noqa: E402
 # compass session can run a `/compass:*` command - the bare condition has
 # none to run), plus one Bash form per command this scenario suite ever
 # needs - never a bare `Bash(python3:*)` or `Bash(git:*)`, which would let a
-# session run anything. There is no `cat`: `Read` reads a file, and
-# `cat > file` writes one.
+# session run anything. `cat` is on the list: Compass's own commands, such
+# as `/compass:quick-fix`, read their own template with it, and denying it
+# stopped a real session cold. A `cat >` onto a protected path is caught by
+# `no_evidence_tampering`, not by the allow-list.
 ALLOWED_TOOLS: tuple[str, ...] = (
     "Read", "Write", "Edit", "Skill",
     "Bash(python3 -m pytest:*)", "Bash(python -m pytest:*)", "Bash(pytest:*)",
     "Bash(git status:*)", "Bash(git diff:*)", "Bash(git log:*)",
     "Bash(git add:*)", "Bash(git commit:*)",
-    "Bash(compass:*)", "Bash(ls:*)",
+    "Bash(compass:*)", "Bash(ls:*)", "Bash(cat:*)",
 )
 
 _DEFAULT_TEST_COMMAND = "python3 -m pytest -q"
@@ -184,11 +187,24 @@ def _copy_tracked_files(source_dir: Path, dest_dir: Path) -> None:
     scenario's seed and overlay directories are tracked inside this
     repository; a local file that never was, such as a stray
     `.pytest_cache/`, must never reach a run, so this reads the tracked file
-    list rather than walking the directory."""
+    list rather than walking the directory.
+
+    A scenario directory outside a git repository gave an empty seed and no
+    error: `git ls-files` fails there, and its exit status went unchecked,
+    so the harness quietly ran a session in an empty repository instead of
+    the seed it was meant to have. Failing, or listing no file, is always a
+    mistake - stop instead."""
     result = subprocess.run(["git", "ls-files", "-z"], cwd=str(source_dir),
                              capture_output=True)
+    if result.returncode != 0:
+        stderr = result.stderr.decode("utf-8", "replace").strip()
+        raise SystemExit(
+            f"{source_dir} is not inside a git repository, so its seed "
+            f"cannot be read (git ls-files: {stderr})")
     raw_names = result.stdout.decode("utf-8", "replace").split("\0")
     names = [name for name in raw_names if name]
+    if not names:
+        raise SystemExit(f"{source_dir} has no git-tracked file to seed a run with")
     for name in names:
         source_path = source_dir / name
         dest_path = dest_dir / name
@@ -442,33 +458,69 @@ def _invoke_claude(claude_exe: str, message: str, common_args: list[str],
     return proc.returncode, final_text
 
 
-# The one scripted reply the harness ever sends, and the message it looks
-# for before sending it.
-_SCRIPTED_REPLY = "Yes, go ahead."
+# --- the continuation reply (§2.2) ------------------------------------------
+
+def _is_test_path(path: str) -> bool:
+    """A path this scenario suite treats as a test, not the work itself -
+    the same convention `evals/judge.py`'s own `_is_test_path` uses, kept
+    here too because whether the continuation reply is due is decided
+    before the judge ever sees the record."""
+    name = path.rsplit("/", 1)[-1]
+    return (name.startswith("test_") or name.endswith("_test.py")
+            or path.startswith("tests/"))
 
 
-def _ends_with_question(text: str) -> bool:
-    return bool(text) and text.strip().endswith("?")
+def _is_within_compass_or_docs_compass(path: str) -> bool:
+    return (path.startswith(".compass/") or path == ".compass"
+            or path.startswith("docs/compass/") or path == "docs/compass")
 
 
-def _maybe_send_scripted_reply(claude_exe: str, common_args: list[str],
+def _in_scope(path: str, in_scope: list[str]) -> bool:
+    return any(fnmatch.fnmatch(path, pattern) for pattern in in_scope)
+
+
+def _has_non_test_in_scope_edit(repo_dir: Path, in_scope: list[str]) -> bool:
+    """True once a non-test path in `in_scope`, outside `.compass/` and
+    `docs/compass/`, differs from the `seed` tag - the threshold §2.2 sets
+    for whether a session has done the work yet."""
+    _, changed_paths = _diff_since_seed(repo_dir)
+    return any(
+        _in_scope(path, in_scope) and not _is_within_compass_or_docs_compass(path)
+        and not _is_test_path(path)
+        for path in changed_paths
+    )
+
+
+def _maybe_send_continue_reply(claude_exe: str, common_args: list[str],
                                 repo_dir: Path, state: dict[str, Any], *,
-                                last_text: str, budget_usd: float,
+                                scenario: dict[str, Any], budget_usd: float,
                                 replies_sent: int, env: dict[str, str]
                                 ) -> tuple[int, int | None, str | None]:
     """A session run under `-p` gets no answer to a question of its own, so
-    it never reaches a decision on its own. When the last message a session
-    sent ends with a question mark, send it one scripted reply before
-    whatever the harness does next - at most once per run, and only while
-    there is still budget for it. Returns the (possibly unchanged) reply
-    count, and the call's own exit code and text when a reply was sent."""
-    if replies_sent >= 1 or not _ends_with_question(last_text):
+    it never reaches a decision on its own. Guessing that question from a
+    trailing `?` in the last message missed most of them: sessions ask for
+    a decision in other shapes, so every ordering scenario under the
+    compass condition ended "no edit" instead. The trigger is now whether
+    the run has done the work, not the wording of its last message: while
+    no non-test path in `in_scope` has changed against the seed yet, and
+    there is still budget to keep going, send the scenario's own
+    `continue_reply` before whatever the harness does next - at most once
+    per run, and only for a scenario that carries the field. Elsewhere the
+    reply could read as consent to the very behaviour being scored, so a
+    scenario without it never gets one. Returns the (possibly unchanged)
+    reply count, and the call's own exit code and text when a reply was
+    sent."""
+    continue_reply = scenario.get("continue_reply")
+    if not continue_reply or replies_sent >= 1:
         return replies_sent, None, None
     remaining = round(budget_usd - state["cost_usd"], 6)
     if remaining <= 0:
         return replies_sent, None, None
+    in_scope = scenario.get("in_scope") or ["**"]
+    if _has_non_test_in_scope_edit(repo_dir, in_scope):
+        return replies_sent, None, None
     exit_code, text = _invoke_claude(
-        claude_exe, _SCRIPTED_REPLY, common_args, repo_dir, state,
+        claude_exe, continue_reply, common_args, repo_dir, state,
         resume=state["session_id"], remaining_budget=remaining, env=env)
     return replies_sent + 1, exit_code, text
 
@@ -586,8 +638,8 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
                 resume=None, remaining_budget=remaining, env=child_env)
             if text:
                 final_text = text
-            replies_sent, reply_exit, reply_text = _maybe_send_scripted_reply(
-                claude_exe, common_args, repo_dir, state, last_text=text,
+            replies_sent, reply_exit, reply_text = _maybe_send_continue_reply(
+                claude_exe, common_args, repo_dir, state, scenario=scenario,
                 budget_usd=budget_usd, replies_sent=replies_sent, env=child_env)
             if reply_exit is not None:
                 exit_code = reply_exit
@@ -605,8 +657,8 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
                     env=child_env)
                 if text:
                     final_text = text
-                replies_sent, reply_exit, reply_text = _maybe_send_scripted_reply(
-                    claude_exe, common_args, repo_dir, state, last_text=text,
+                replies_sent, reply_exit, reply_text = _maybe_send_continue_reply(
+                    claude_exe, common_args, repo_dir, state, scenario=scenario,
                     budget_usd=budget_usd, replies_sent=replies_sent,
                     env=child_env)
                 if reply_exit is not None:

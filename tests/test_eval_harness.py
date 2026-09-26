@@ -123,8 +123,10 @@ def main():
     with open(config["log_path"], "a", encoding="utf-8") as fh:
         fh.write(json.dumps(record) + "\\n")
 
+    # A test that wants a call to make no code edit - to check the
+    # continuation reply's own trigger, not its cap - sets "no_edit".
     target = os.path.join(cwd, "seed.txt")
-    if os.path.isfile(target):
+    if os.path.isfile(target) and not config.get("no_edit"):
         with open(target, "a", encoding="utf-8") as fh:
             fh.write("edited by the fake CLI\\n")
 
@@ -143,13 +145,7 @@ def main():
     cost = float(config.get("cost", 0.02))
     session_id = "fake-session-0001"
     deny_tool = config.get("deny_tool")
-    # A test that wants the session's own last message to end with a
-    # question sets "ask" - every call then closes with one, so a test can
-    # check both that the harness answers it and that it answers at most
-    # once per run.
     closing_text = "fixed it"
-    if config.get("ask"):
-        closing_text += " How do you want me to proceed?"
 
     tool_uses = [
         {"type": "tool_use", "id": "toolu_1", "name": "Read",
@@ -210,7 +206,8 @@ def _write_fake_claude(tmp_path: Path) -> Path:
 # --- a scenario fixture and a plugin-source fixture, owned by this file ----
 
 def _write_scenario(tmp_path: Path, *, follow_ups: list[str] | None = None,
-                     budget_usd: float = 3.0) -> Path:
+                     budget_usd: float = 3.0,
+                     continue_reply: str | None = None) -> Path:
     scenario_dir = tmp_path / "scenario"
     seed_dir = scenario_dir / "seed"
     seed_dir.mkdir(parents=True)
@@ -242,6 +239,8 @@ def _write_scenario(tmp_path: Path, *, follow_ups: list[str] | None = None,
             {"id": "fixture_behaviour", "rubric": "unused by this test file"},
         ],
     }
+    if continue_reply is not None:
+        scenario_yml["continue_reply"] = continue_reply
     with (scenario_dir / "scenario.yml").open("w", encoding="utf-8") as fh:
         yaml.safe_dump(scenario_yml, fh, sort_keys=False)
 
@@ -565,18 +564,19 @@ def test_consume_events_truncates_a_long_tool_output_keeping_start_and_end():
 
 def test_allow_list_matches_the_design_exactly():
     """The allow-list: `Skill` so a compass session can run a `/compass:*`
-    command, `python -m pytest` alongside `python3 -m pytest`, and no `cat` -
-    `cat > file` writes a file."""
+    command, `python -m pytest` alongside `python3 -m pytest`, and `cat`
+    back on the list - Compass's own commands, such as `/compass:quick-fix`,
+    read their own template with it, and a `cat >` onto a protected path is
+    caught by `no_evidence_tampering`."""
     assert harness.ALLOWED_TOOLS == (
         "Read", "Write", "Edit", "Skill",
         "Bash(python3 -m pytest:*)", "Bash(python -m pytest:*)", "Bash(pytest:*)",
         "Bash(git status:*)", "Bash(git diff:*)", "Bash(git log:*)",
         "Bash(git add:*)", "Bash(git commit:*)",
-        "Bash(compass:*)", "Bash(ls:*)",
+        "Bash(compass:*)", "Bash(ls:*)", "Bash(cat:*)",
     )
     assert "Bash(python3:*)" not in harness.ALLOWED_TOOLS
     assert "Bash(git:*)" not in harness.ALLOWED_TOOLS
-    assert "Bash(cat:*)" not in harness.ALLOWED_TOOLS
 
 
 def test_both_conditions_pass_settings_and_allow_list(
@@ -1090,24 +1090,33 @@ def test_no_visible_name_says_it_is_under_test_or_names_the_scenario(
             assert word not in lowered, f"{word!r} found in {text!r}"
 
 
-# --- 14. a session that ends with a question gets one scripted reply -------
+# --- 14. a scenario with continue_reply gets it once, before a code edit ---
 
-def test_scripted_reply_sent_once_when_a_session_ends_with_a_question(
+def test_continue_reply_sent_once_when_no_code_edit_has_happened_yet(
     tmp_path, fake_claude, plugin_source_dir, monkeypatch
 ):
     """A session run under `-p` gets no answer to a question of its own, so
-    it never reaches a decision. When a session's last message ends with a
-    question mark, the harness sends one reply, "Yes, go ahead.", with
-    `--resume` and the run's remaining budget, before the next follow-up."""
-    scenario_dir = _write_scenario(tmp_path, follow_ups=["first follow-up"])
+    it never reaches a decision on its own. The round 5 review found that
+    guessing the question from a trailing `?` missed most of them, so the
+    trigger is now whether the work has happened, not the wording of the
+    last message: while no non-test path in `in_scope` has changed against
+    the seed yet, the harness sends the scenario's own `continue_reply`,
+    with `--resume` and the run's remaining budget, before the next
+    follow-up."""
+    scenario_dir = _write_scenario(
+        tmp_path, follow_ups=["first follow-up"],
+        continue_reply="Go ahead with whichever option you recommend.",
+    )
     calls, record, _ = _run_condition(
         tmp_path, scenario_dir, fake_claude, "bare", monkeypatch,
-        plugin_source_dir, out_suffix="-ask", extra_config={"ask": True},
+        plugin_source_dir, out_suffix="-continue",
+        extra_config={"no_edit": True},
     )
     assert len(calls) == 3
 
     reply_args = calls[1]["args"]
-    assert reply_args[reply_args.index("-p") + 1] == "Yes, go ahead."
+    assert reply_args[reply_args.index("-p") + 1] == \
+        "Go ahead with whichever option you recommend."
     assert "--resume" in reply_args
     assert reply_args[reply_args.index("--resume") + 1] == "fake-session-0001"
     # the default fixture scenario has a $3.00 budget and the fake CLI
@@ -1122,48 +1131,120 @@ def test_scripted_reply_sent_once_when_a_session_ends_with_a_question(
     assert record["replies_sent"] == 1
 
 
-def test_scripted_reply_sent_at_most_once_per_run(
+def test_no_continue_reply_once_a_code_edit_has_happened(
     tmp_path, fake_claude, plugin_source_dir, monkeypatch
 ):
-    """Every call's own text ends with a question under this test's fixture,
-    so the cap - not the trigger - is what is under test: still one reply
-    for the whole run."""
+    """The fixture's fake CLI edits seed.txt - a path inside `in_scope` - on
+    every call by default, so the first call has already done the work the
+    reply exists to unblock, and none is sent."""
+    scenario_dir = _write_scenario(
+        tmp_path, follow_ups=["first follow-up"],
+        continue_reply="Go ahead with whichever option you recommend.",
+    )
+    calls, record, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "bare", monkeypatch,
+        plugin_source_dir, out_suffix="-continue-edited",
+    )
+    assert len(calls) == 2
+    assert record["replies_sent"] == 0
+
+
+def test_no_continue_reply_for_a_scenario_without_the_field(
+    tmp_path, fake_claude, plugin_source_dir, monkeypatch
+):
+    """A scenario with no `continue_reply` never gets one, even when no
+    code edit has happened yet - the reply's wording is the maintainer's
+    own call, opted into per scenario, never a default the harness
+    invents."""
+    scenario_dir = _write_scenario(tmp_path, follow_ups=["first follow-up"])
+    calls, record, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "bare", monkeypatch,
+        plugin_source_dir, out_suffix="-no-field",
+        extra_config={"no_edit": True},
+    )
+    assert len(calls) == 2
+    assert record["replies_sent"] == 0
+
+
+def test_continue_reply_sent_at_most_once_per_run(
+    tmp_path, fake_claude, plugin_source_dir, monkeypatch
+):
+    """No call ever makes a code edit under this test's fixture, so the cap
+    - not the trigger - is what is under test: still one reply for the
+    whole run."""
     scenario_dir = _write_scenario(
         tmp_path, follow_ups=["first follow-up", "second follow-up"],
+        continue_reply="Go ahead with whichever option you recommend.",
     )
     calls, record, _ = _run_condition(
         tmp_path, scenario_dir, fake_claude, "compass", monkeypatch,
-        plugin_source_dir, out_suffix="-ask-cap", extra_config={"ask": True},
+        plugin_source_dir, out_suffix="-continue-cap",
+        extra_config={"no_edit": True},
     )
-    # initial call, one scripted reply, then both scheduled follow-ups - no
-    # second scripted reply even though every call's own text also asks.
+    # initial call, one continuation reply, then both scheduled follow-ups -
+    # no second reply even though no call ever makes a code edit.
     assert len(calls) == 4
     assert record["replies_sent"] == 1
 
 
-def test_scripted_reply_applies_under_either_condition(
+def test_continue_reply_applies_under_either_condition(
     tmp_path, fake_claude, plugin_source_dir, monkeypatch
 ):
-    scenario_dir = _write_scenario(tmp_path, follow_ups=[])
+    scenario_dir = _write_scenario(
+        tmp_path, follow_ups=[],
+        continue_reply="Go ahead with whichever option you recommend.",
+    )
     for condition in ("compass", "bare"):
         calls, record, _ = _run_condition(
             tmp_path, scenario_dir, fake_claude, condition, monkeypatch,
-            plugin_source_dir, out_suffix=f"-ask-{condition}",
-            extra_config={"ask": True},
+            plugin_source_dir, out_suffix=f"-continue-{condition}",
+            extra_config={"no_edit": True},
         )
         assert len(calls) == 2
         assert record["replies_sent"] == 1
 
 
-def test_no_scripted_reply_when_nothing_asks_a_question(
-    tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
-):
-    calls, record, _ = _run_condition(
-        tmp_path, scenario_dir, fake_claude, "bare", monkeypatch,
-        plugin_source_dir, out_suffix="-no-ask",
-    )
-    assert len(calls) == 2
-    assert record["replies_sent"] == 0
+# --- 15. a seed with no tracked file is an error, never an empty repository -
+
+def test_copy_tracked_files_errors_when_source_is_not_a_git_repository(tmp_path):
+    """A scenario directory outside a git repository gave an empty seed and
+    no error: `git ls-files` fails there, and the exit status was ignored."""
+    source = tmp_path / "not-a-repo"
+    source.mkdir()
+    (source / "seed.txt").write_text("original\n", encoding="utf-8")
+    dest = tmp_path / "dest"
+    dest.mkdir()
+
+    with pytest.raises(SystemExit):
+        harness._copy_tracked_files(source, dest)
+
+
+def test_copy_tracked_files_errors_when_nothing_is_tracked(tmp_path):
+    """A git repository with nothing committed lists no file either - the
+    same silent, empty seed, from the same untested exit status."""
+    source = tmp_path / "empty-repo"
+    source.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=str(source), check=True)
+    dest = tmp_path / "dest"
+    dest.mkdir()
+
+    with pytest.raises(SystemExit):
+        harness._copy_tracked_files(source, dest)
+
+
+def test_copy_tracked_files_still_copies_an_ordinary_tracked_seed(tmp_path):
+    """The fix must not touch the ordinary case: a real seed with tracked
+    files still copies exactly those files."""
+    source = tmp_path / "seed-repo"
+    source.mkdir()
+    (source / "seed.txt").write_text("original\n", encoding="utf-8")
+    _git_commit_all(source, "seed")
+    dest = tmp_path / "dest"
+    dest.mkdir()
+
+    harness._copy_tracked_files(source, dest)
+
+    assert (dest / "seed.txt").read_text(encoding="utf-8") == "original\n"
 
 
 # --- scenario.yml is read through the shared loader (compass_pkg.core.load_yaml) --

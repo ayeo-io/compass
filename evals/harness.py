@@ -15,7 +15,8 @@ temporary repository - to `<out>/<scenario id>-<condition>-<run number>.json`.
 
 Under the `compass` condition the session never sees the real checkout: it
 gets a read-only copy of `--plugin-source`'s tracked files at `HEAD` (this
-repository, unless a test points it elsewhere), and that copy's own
+repository, unless a test points it elsewhere), with `evals/` left out so no
+session can read a scenario's own rubric, and that copy's own
 `bin/compass init` runs in the fresh repository before the seed commit. The
 child process gets a built environment, not an inherited one - no
 `CLAUDE*` variable and no installed plugin's `bin/` reach it - so a run
@@ -60,15 +61,18 @@ sys.path.insert(0, str(REPO_ROOT / "cli"))
 from compass_pkg.core import load_yaml  # noqa: E402
 
 # The allow-list a session runs under, exactly (technical-design.md section
-# 2.2 step 5): the three file tools, plus one Bash form per command this
-# scenario suite ever needs - never a bare `Bash(python3:*)` or
-# `Bash(git:*)`, which would let a session run anything.
+# 2.2 step 5): the three file tools, `Skill` (so a compass session can run a
+# `/compass:*` command - the bare condition has none to run), plus one Bash
+# form per command this scenario suite ever needs - never a bare
+# `Bash(python3:*)` or `Bash(git:*)`, which would let a session run
+# anything. There is no `cat`: `Read` reads a file, and `cat > file` writes
+# one.
 ALLOWED_TOOLS: tuple[str, ...] = (
-    "Read", "Write", "Edit",
-    "Bash(python3 -m pytest:*)", "Bash(pytest:*)",
+    "Read", "Write", "Edit", "Skill",
+    "Bash(python3 -m pytest:*)", "Bash(python -m pytest:*)", "Bash(pytest:*)",
     "Bash(git status:*)", "Bash(git diff:*)", "Bash(git log:*)",
     "Bash(git add:*)", "Bash(git commit:*)",
-    "Bash(compass:*)", "Bash(ls:*)", "Bash(cat:*)",
+    "Bash(compass:*)", "Bash(ls:*)",
 )
 
 _DEFAULT_TEST_COMMAND = "python3 -m pytest -q"
@@ -77,13 +81,15 @@ _DEFAULT_TEST_COMMAND = "python3 -m pytest -q"
 # crashed, not the whole of it.
 _TAIL_LIMIT = 2000
 
-# A fixed identity for the one commit the harness itself makes, so a machine
-# with no git identity configured still gets a fresh repository.
+# An ordinary identity for the one commit the harness itself makes, so a
+# machine with no git identity configured still gets a fresh repository, and
+# an allowed `git log` shows nothing a session could read as a sign it is
+# under test (technical-design.md section 2.2).
 _GIT_ENV_EXTRA = {
-    "GIT_AUTHOR_NAME": "compass-eval-harness",
-    "GIT_AUTHOR_EMAIL": "eval-harness@compass.invalid",
-    "GIT_COMMITTER_NAME": "compass-eval-harness",
-    "GIT_COMMITTER_EMAIL": "eval-harness@compass.invalid",
+    "GIT_AUTHOR_NAME": "Sam Taylor",
+    "GIT_AUTHOR_EMAIL": "sam@example.com",
+    "GIT_COMMITTER_NAME": "Sam Taylor",
+    "GIT_COMMITTER_EMAIL": "sam@example.com",
 }
 
 # The wording Claude Code uses when a tool call was refused rather than run -
@@ -121,13 +127,18 @@ def load_scenario(scenario_dir: Path) -> dict[str, Any]:
 # --- the plugin copy (technical-design.md section 2.2, steps 1 and 2) ------
 
 def _make_plugin_copy(source: Path, dest: Path) -> None:
-    """Archive `source`'s tracked files at `HEAD` into `dest` and make every
-    path inside it read-only, so no session - real or fake - can change this
+    """Archive `source`'s tracked files at `HEAD` into `dest`, leave out
+    `evals/` - it holds every scenario's own rubric, one `Read` away from a
+    compass session otherwise (integrated-review-3.md) - and make every
+    remaining path read-only, so no session - real or fake - can change this
     checkout, or the fixture standing in for it under test."""
     dest.mkdir(parents=True, exist_ok=True)
     archive = subprocess.run(["git", "archive", "HEAD"], cwd=str(source),
                               capture_output=True, check=True)
     subprocess.run(["tar", "-x"], cwd=str(dest), input=archive.stdout, check=True)
+    evals_dir = dest / "evals"
+    if evals_dir.is_dir():
+        shutil.rmtree(evals_dir)
     _make_read_only(dest)
 
 
@@ -419,30 +430,24 @@ def _compass_files(repo_dir: Path) -> list[str]:
 # --- containment (technical-design.md section 2.2, step 7) -----------------
 
 def _checkout_fingerprint(root: Path) -> dict[str, str]:
-    return {
-        "head": _git(["rev-parse", "HEAD"], root).stdout.strip(),
-        "status": _git(["status", "--porcelain"], root).stdout,
-        "diff": _git(["diff"], root).stdout,
-    }
-
-
-def _status_map(status_text: str) -> dict[str, str]:
-    mapping: dict[str, str] = {}
-    for line in status_text.splitlines():
-        if line:
-            mapping[line[3:].strip()] = line[:2]
-    return mapping
-
-
-def _checkout_changed_paths(before: dict[str, str], after: dict[str, str]
-                             ) -> list[str]:
-    before_status = _status_map(before["status"])
-    after_status = _status_map(after["status"])
-    changed = {path for path in before_status.keys() | after_status.keys()
-               if before_status.get(path) != after_status.get(path)}
-    if before["head"] != after["head"]:
-        changed.add("HEAD")
-    return sorted(changed)
+    """Hash every tracked file's content, plus every untracked one. A status
+    code, such as `git status --porcelain`'s `M`, does not change between two
+    different edits to the same already-changed file, and collapses a whole
+    new directory to one `??` line - so a further edit, or a change inside a
+    new directory, would pass unseen. `git ls-files --others` lists the files
+    inside an untracked directory itself, so the hash catches both
+    (integrated-review-3.md)."""
+    tracked = _git(["ls-files", "-z"], root).stdout.split("\0")
+    untracked = _git(["ls-files", "-z", "--others", "--exclude-standard"],
+                      root).stdout.split("\0")
+    snapshot: dict[str, str] = {}
+    for rel in [*tracked, *untracked]:
+        if not rel:
+            continue
+        path = root / rel
+        if path.is_file():
+            snapshot[rel] = hashlib.sha256(path.read_bytes()).hexdigest()
+    return snapshot
 
 
 def _dir_snapshot(root: Path) -> dict[str, str]:
@@ -481,14 +486,13 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
     plugin_copy_dir: Path | None = None
     record_cwd: str | None = None
 
-    # One neutral prefix for every temporary directory this run makes - the
-    # repository and the plugin copy alike - so no directory name says which
-    # condition it belongs to (technical-design.md section 2.2).
-    temp_dir_prefix = f"compass-eval-{scenario['id']}-"
-
     try:
         if condition == "compass":
-            plugin_copy_dir = Path(tempfile.mkdtemp(prefix=temp_dir_prefix))
+            # The system's default temporary name - no prefix - so a
+            # session that can see its own working directory learns
+            # neither the scenario nor the condition from its name
+            # (technical-design.md section 2.2).
+            plugin_copy_dir = Path(tempfile.mkdtemp())
             _make_plugin_copy(plugin_source, plugin_copy_dir)
 
         child_env = _build_child_env(condition, plugin_copy_dir)
@@ -496,7 +500,7 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
         checkout_before = _checkout_fingerprint(plugin_source)
         plugin_before = _dir_snapshot(plugin_copy_dir) if plugin_copy_dir else None
 
-        with tempfile.TemporaryDirectory(prefix=temp_dir_prefix) as tmp:
+        with tempfile.TemporaryDirectory() as tmp:
             repo_dir = Path(tmp)
             _materialise_repo(scenario_dir, condition, repo_dir,
                                plugin_copy_dir, child_env)
@@ -536,7 +540,7 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
         plugin_after = _dir_snapshot(plugin_copy_dir) if plugin_copy_dir else None
 
         escaped_paths = [f"checkout:{path}" for path in
-                          _checkout_changed_paths(checkout_before, checkout_after)]
+                          _dir_snapshot_changed_paths(checkout_before, checkout_after)]
         if plugin_copy_dir is not None:
             escaped_paths += [f"plugin:{path}" for path in
                                _dir_snapshot_changed_paths(plugin_before, plugin_after)]
@@ -547,6 +551,12 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
 
     stop_reason, finished = _stop_reason_and_finished(
         state["subtypes"], skipped_for_budget)
+    # The CLI checks --max-budget-usd between turns, not within one, so a
+    # single turn can spend past what was left while the invocation still
+    # ends success. `finished` follows the result subtype regardless; this
+    # flag says the cost passed the budget either way
+    # (technical-design.md section 2.2; integrated-review-3.md, issue).
+    over_budget = round(state["cost_usd"], 6) > budget_usd
 
     return {
         "scenario": scenario["id"],
@@ -573,6 +583,7 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
         "contained": contained,
         "escaped_paths": escaped_paths,
         "stderr_tail": _tail(state["stderr"]),
+        "over_budget": over_budget,
     }
 
 

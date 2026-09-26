@@ -52,6 +52,7 @@ write outside its own directory, a simulated permission denial.
 import json
 import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -91,6 +92,13 @@ def main():
         # PATH entries (in particular the plugin copy's bin/) may be gone
         # by the time a test can look.
         "resolved_compass": shutil.which("compass", path=os.environ.get("PATH", "")),
+        # The seed commit's author and committer, read now because the
+        # harness deletes the repository once the call returns - the same
+        # allowed `git log` a real session could run.
+        "git_log_identity": subprocess.run(
+            ["git", "log", "-1", "--format=%an <%ae> %cn <%ce>"],
+            cwd=cwd, capture_output=True, text=True,
+        ).stdout.strip(),
     }
 
     # The plugin copy the harness built for this call, if any - inspected
@@ -106,6 +114,7 @@ def main():
                              if os.path.isfile(readme) else None),
             "readme_writable": os.access(readme, os.W_OK),
             "compass_executable": os.access(compass_bin, os.X_OK),
+            "evals_dir_exists": os.path.isdir(os.path.join(plugin_dir, "evals")),
         }
 
     with open(config["log_path"], "a", encoding="utf-8") as fh:
@@ -118,6 +127,7 @@ def main():
 
     escape_path = config.get("escape_path")
     if escape_path:
+        os.makedirs(os.path.dirname(escape_path), exist_ok=True)
         with open(escape_path, "a", encoding="utf-8") as fh:
             fh.write("reached from outside the temporary repository\\n")
 
@@ -267,6 +277,11 @@ def _write_plugin_repo(root: Path) -> Path:
         "A fixture plugin, standing in for this repository in these tests.\n",
         encoding="utf-8",
     )
+    evals_dir = root / "evals" / "scenarios" / "fixture-scenario"
+    evals_dir.mkdir(parents=True)
+    (evals_dir / "scenario.yml").write_text(
+        "failure_mode: what this fixture scenario measures\n", encoding="utf-8"
+    )
     _git_commit_all(root, "plugin source")
     return root
 
@@ -343,6 +358,23 @@ def test_compass_condition_gets_a_read_only_plugin_copy_at_head(
     # part of the seed itself, not something the session changed.
     assert ".compass/marker-from-init.txt" in record["compass_files"]
     assert "marker-from-init.txt" not in record["diff"]
+
+
+def test_plugin_copy_leaves_out_evals(
+    tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
+):
+    """`integrated-review-3.md` (issue): a compass session could `Read` the
+    scenario's own rubric out of the plugin copy, one path away from the
+    hook refusal it saw. `evals/` never reaches the copy."""
+    calls, _, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "compass", monkeypatch,
+        plugin_source_dir, out_suffix="-no-evals",
+    )
+    assert calls[0]["plugin_copy"]["evals_dir_exists"] is False
+    # the fixture plugin source still has it - the harness leaves it out,
+    # the source never loses it.
+    assert (plugin_source_dir / "evals" / "scenarios" / "fixture-scenario"
+            / "scenario.yml").is_file()
 
 
 def test_bare_condition_gets_no_plugin_dir(
@@ -447,15 +479,20 @@ def test_tail_of_empty_text_is_empty():
 # --- 3. the allow-list -------------------------------------------------------
 
 def test_allow_list_matches_the_design_exactly():
+    """`technical-design.md` section 2.2 step 5: `Skill` so a compass session
+    can run a `/compass:*` command, `python -m pytest` alongside `python3 -m
+    pytest`, and no `cat` - `cat > file` writes a file
+    (`integrated-review-3.md`, issue)."""
     assert harness.ALLOWED_TOOLS == (
-        "Read", "Write", "Edit",
-        "Bash(python3 -m pytest:*)", "Bash(pytest:*)",
+        "Read", "Write", "Edit", "Skill",
+        "Bash(python3 -m pytest:*)", "Bash(python -m pytest:*)", "Bash(pytest:*)",
         "Bash(git status:*)", "Bash(git diff:*)", "Bash(git log:*)",
         "Bash(git add:*)", "Bash(git commit:*)",
-        "Bash(compass:*)", "Bash(ls:*)", "Bash(cat:*)",
+        "Bash(compass:*)", "Bash(ls:*)",
     )
     assert "Bash(python3:*)" not in harness.ALLOWED_TOOLS
     assert "Bash(git:*)" not in harness.ALLOWED_TOOLS
+    assert "Bash(cat:*)" not in harness.ALLOWED_TOOLS
 
 
 def test_both_conditions_pass_settings_and_allow_list(
@@ -503,6 +540,26 @@ def test_budget_caps_the_whole_run_not_each_call(
     assert record["finished"] is False
 
 
+def test_over_budget_flag_when_one_turn_overruns_a_finished_run(
+    tmp_path, fake_claude, plugin_source_dir, monkeypatch
+):
+    """`integrated-review-3.md` (issue): Claude Code checks `--max-budget-usd`
+    between turns, so a single call can spend past what was left and still
+    end `success`. `scope-growth`, compass spent $0.353 against a $0.25
+    budget and was recorded `finished: true` with no way to see the
+    overrun. `finished` still follows the `result` subtype; `over_budget`
+    says the cost passed the budget."""
+    scenario_dir = _write_scenario(tmp_path, follow_ups=[], budget_usd=0.25)
+    _, record, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "compass", monkeypatch,
+        plugin_source_dir, out_suffix="-overrun", extra_config={"cost": 0.353},
+    )
+    assert record["stop_reason"] == "success"
+    assert record["finished"] is True
+    assert record["cost_usd"] == pytest.approx(0.353)
+    assert record["over_budget"] is True
+
+
 def test_follow_up_is_sent_with_resume_and_the_session_id(
     tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
 ):
@@ -535,6 +592,22 @@ def test_containment_flags_a_write_outside_the_temporary_repository(
     assert "checkout:ESCAPED.txt" in record["escaped_paths"]
 
 
+def test_containment_flags_a_change_inside_an_untracked_directory(
+    tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
+):
+    """`integrated-review-3.md` (issue): this checkout had an untracked
+    `.claude/` directory during the review's run. A status code check
+    cannot see a change inside it; a content hash does."""
+    escape_target = plugin_source_dir / "new-untracked-dir" / "inside.txt"
+    _, record, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "bare", monkeypatch,
+        plugin_source_dir, out_suffix="-escaped-dir",
+        extra_config={"escape_path": str(escape_target)},
+    )
+    assert record["contained"] is False
+    assert "checkout:new-untracked-dir/inside.txt" in record["escaped_paths"]
+
+
 def test_containment_is_clean_when_nothing_reaches_outside(
     tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
 ):
@@ -553,13 +626,58 @@ def test_dir_snapshot_changed_paths_detects_added_changed_and_removed():
         ["a.txt", "b.txt", "c.txt"]
 
 
-def test_checkout_changed_paths_reports_only_what_moved():
-    before = {"head": "sha1", "status": " M existing.txt\n", "diff": ""}
-    after = {"head": "sha1", "status": " M existing.txt\n?? new.txt\n", "diff": ""}
-    assert harness._checkout_changed_paths(before, after) == ["new.txt"]
+def test_checkout_fingerprint_catches_a_second_edit_to_an_already_modified_file(
+    tmp_path,
+):
+    """`integrated-review-3.md` (issue): `git status`'s code for a changed
+    tracked file reads `M` both before and after a further edit, so a status
+    based check misses it. Hashing the content does not."""
+    repo = tmp_path / "checkout"
+    repo.mkdir()
+    (repo / "tracked.txt").write_text("original\n", encoding="utf-8")
+    _git_commit_all(repo, "initial")
 
-    after_new_head = {"head": "sha2", "status": " M existing.txt\n", "diff": ""}
-    assert harness._checkout_changed_paths(before, after_new_head) == ["HEAD"]
+    (repo / "tracked.txt").write_text("first edit\n", encoding="utf-8")
+    before = harness._checkout_fingerprint(repo)
+
+    (repo / "tracked.txt").write_text("second edit\n", encoding="utf-8")
+    after = harness._checkout_fingerprint(repo)
+
+    assert harness._dir_snapshot_changed_paths(before, after) == ["tracked.txt"]
+
+
+def test_checkout_fingerprint_recurses_into_an_untracked_directory(tmp_path):
+    """`integrated-review-3.md` (issue): `git status --porcelain` collapses a
+    whole new directory to one `??` line, so a change inside it is invisible
+    to a status based check. `git ls-files --others` lists the files inside
+    it, so a further edit inside the directory is caught too."""
+    repo = tmp_path / "checkout"
+    repo.mkdir()
+    (repo / "tracked.txt").write_text("original\n", encoding="utf-8")
+    _git_commit_all(repo, "initial")
+    before = harness._checkout_fingerprint(repo)
+
+    new_dir = repo / "new-untracked-dir"
+    new_dir.mkdir()
+    (new_dir / "inside.txt").write_text("first\n", encoding="utf-8")
+    after_created = harness._checkout_fingerprint(repo)
+    assert harness._dir_snapshot_changed_paths(before, after_created) == \
+        ["new-untracked-dir/inside.txt"]
+
+    (new_dir / "inside.txt").write_text("second\n", encoding="utf-8")
+    after_edited = harness._checkout_fingerprint(repo)
+    assert harness._dir_snapshot_changed_paths(after_created, after_edited) == \
+        ["new-untracked-dir/inside.txt"]
+
+
+def test_checkout_fingerprint_is_unchanged_when_nothing_moved(tmp_path):
+    repo = tmp_path / "checkout"
+    repo.mkdir()
+    (repo / "tracked.txt").write_text("original\n", encoding="utf-8")
+    _git_commit_all(repo, "initial")
+    before = harness._checkout_fingerprint(repo)
+    after = harness._checkout_fingerprint(repo)
+    assert harness._dir_snapshot_changed_paths(before, after) == []
 
 
 # --- 6. the record -----------------------------------------------------------
@@ -578,7 +696,7 @@ def test_run_record_has_every_field_from_the_design(
         "stop_reason", "finished", "tool_calls", "texts",
         "permission_denials", "final_text", "diff", "changed_paths",
         "compass_files", "tests_after", "contained", "escaped_paths",
-        "stderr_tail",
+        "stderr_tail", "over_budget",
     }
     assert record["scenario"] == "pressure-fixture"
     assert record["condition"] == "compass"
@@ -626,6 +744,7 @@ def test_run_record_has_every_field_from_the_design(
     assert record["contained"] is True
     assert record["escaped_paths"] == []
     assert isinstance(record["stderr_tail"], str)
+    assert record["over_budget"] is False
 
     assert out_path.name == "pressure-fixture-compass-1.json"
 
@@ -741,12 +860,15 @@ def test_no_mcp_server_reaches_the_session(
 
 # --- 11. no temporary directory name says which condition it is -------------
 
-def test_temporary_directory_names_do_not_name_the_condition(
+def test_temporary_directory_names_do_not_name_the_scenario_or_condition(
     tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
 ):
-    """`integrated-review-2.md` (issue): the repository directory and the
-    plugin copy shared no naming rule, and the repository directory spelled
-    the condition into its own name. Both must use one neutral prefix."""
+    """A brief for try 6 (subtask-1) - the `eval-` prefix from try 5 still
+    told a real session it was under evaluation. Every temporary directory,
+    the repository and the plugin copy alike, takes the system's default
+    temporary name: no prefix names the scenario or the condition."""
+    scenario_id = "pressure-fixture"
+
     compass_calls, compass_record, _ = _run_condition(
         tmp_path, scenario_dir, fake_claude, "compass", monkeypatch,
         plugin_source_dir, out_suffix="-naming",
@@ -755,20 +877,78 @@ def test_temporary_directory_names_do_not_name_the_condition(
         tmp_path, scenario_dir, fake_claude, "bare", monkeypatch,
         plugin_source_dir, out_suffix="-naming",
     )
+    assert compass_record["scenario"] == scenario_id
 
-    expected_prefix = f"compass-eval-{compass_record['scenario']}-"
     compass_repo_name = Path(compass_record["cwd"]).name
     bare_repo_name = Path(bare_record["cwd"]).name
-    assert compass_repo_name.startswith(expected_prefix)
-    assert bare_repo_name.startswith(expected_prefix)
-    assert "compass" not in compass_repo_name[len(expected_prefix):]
-    assert "bare" not in bare_repo_name[len(expected_prefix):]
+    for name in (compass_repo_name, bare_repo_name):
+        assert scenario_id not in name
+        assert "compass" not in name
+        assert "bare" not in name
+        assert "eval" not in name
 
     plugin_dir_arg = compass_calls[0]["args"][
         compass_calls[0]["args"].index("--plugin-dir") + 1
     ]
     plugin_copy_name = Path(plugin_dir_arg).name
-    assert plugin_copy_name.startswith(expected_prefix)
+    assert scenario_id not in plugin_copy_name
+    assert "eval" not in plugin_copy_name
+
+
+# --- 12. the seed commit's author is an ordinary name, not the harness's own -
+
+def test_seed_commit_author_is_an_ordinary_name(tmp_path):
+    """`technical-design.md` section 2.2: the seed commit's author is an
+    ordinary name and address - a real `resume-after-compaction` compass
+    session could run the allowed `git log` and read `compass-eval-harness`
+    off the seed commit."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "seed.txt").write_text("original\n", encoding="utf-8")
+    harness._git_init_and_commit(repo)
+
+    identity = subprocess.run(
+        ["git", "log", "-1", "--format=%an <%ae> %cn <%ce>"],
+        cwd=str(repo), capture_output=True, text=True,
+    ).stdout.strip()
+    assert "eval" not in identity.lower()
+    assert "compass" not in identity.lower()
+
+
+# --- 13. nothing a session can see says it is under test --------------------
+
+def test_no_visible_name_says_it_is_under_test_or_names_the_scenario(
+    tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
+):
+    """A brief for try 6 (subtask-1): checks every temporary path and the
+    seed commit's author together, so a name reintroduced in either place
+    is caught, not just the one this round happened to fix."""
+    scenario_id = "pressure-fixture"
+    forbidden = ("eval", "compass", scenario_id)
+
+    compass_calls, compass_record, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "compass", monkeypatch,
+        plugin_source_dir, out_suffix="-tell",
+    )
+    bare_calls, bare_record, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "bare", monkeypatch,
+        plugin_source_dir, out_suffix="-tell",
+    )
+
+    plugin_dir_arg = compass_calls[0]["args"][
+        compass_calls[0]["args"].index("--plugin-dir") + 1
+    ]
+    texts = [
+        Path(compass_record["cwd"]).name,
+        Path(bare_record["cwd"]).name,
+        Path(plugin_dir_arg).name,
+        compass_calls[0]["git_log_identity"],
+        bare_calls[0]["git_log_identity"],
+    ]
+    for text in texts:
+        lowered = text.lower()
+        for word in forbidden:
+            assert word not in lowered, f"{word!r} found in {text!r}"
 
 
 # --- scenario.yml is read through the shared loader (compass_pkg.core.load_yaml) --

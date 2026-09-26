@@ -1,35 +1,46 @@
 """Run one eval scenario under one condition and write a run record.
 
     python3 evals/harness.py --scenario <id> --condition compass|bare \\
-        [--runs N] [--out DIR] [--claude PATH]
+        [--runs N] [--out DIR] [--claude PATH] [--plugin-source DIR]
 
 For each run this copies the scenario's seed (and the condition's own
 overlay, if the scenario has one) into a fresh temporary git repository,
 drives the named CLI executable there once for the prompt and once more per
 follow-up (each later call carrying `--resume` and the session id the first
 call returned), runs the seed's own test command, and writes a JSON record
-of what happened - every tool call in call order, the diff against the seed
-commit, the files left under `.compass/`, the exit status and the cost - to
-`<out>/<scenario id>-<condition>-<run number>.json`.
+of what happened - every tool call in call order, every assistant text
+block, the diff against the seed commit, the files left under `.compass/`,
+the exit status, the cost and whether the run stayed inside its own
+temporary repository - to `<out>/<scenario id>-<condition>-<run number>.json`.
+
+Under the `compass` condition the session never sees the real checkout: it
+gets a read-only copy of `--plugin-source`'s tracked files at `HEAD` (this
+repository, unless a test points it elsewhere), and that copy's own
+`bin/compass init` runs in the fresh repository before the seed commit. The
+child process gets a built environment, not an inherited one - no
+`CLAUDE*` variable and no installed plugin's `bin/` reach it - so a run
+cannot fall back to whatever `compass` happens to be on the machine that
+started it.
 
 `--scenario` takes the id documented in `technical-design.md` section 2.1,
 resolved against `evals/scenarios/<id>/`. It also accepts a path to a
-scenario directory directly - the design does not say which, and this
-repository's own tests use it to build a fixture scenario that does not
-live under the tracked `evals/scenarios/` tree, which a sibling piece of
-this issue owns.
+scenario directory directly, which this repository's own tests use to
+build a scenario fixture without depending on the tracked
+`evals/scenarios/` tree.
 
 Nothing here calls a real model: `--claude` names the executable, so a test
 can point it at a stand-in that prints a canned run and records its own
-arguments.
+arguments and environment.
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import shlex
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -40,25 +51,31 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-# The bundled copy of PyYAML resolves the same way it does for every other
-# Compass entry point: put `cli/` on `sys.path` and import `compass_pkg` for
-# its side effect before importing `yaml`, so a clean checkout needs nothing
-# beyond the standard library and what this repository already carries.
+# YAML is read through the package's own loader, not a direct `import yaml`
+# (DD-2's one resolution mechanism, `tests/test_bundled_pyyaml.py`): put
+# `cli/` on `sys.path` and load `compass_pkg.core.load_yaml`, so a clean
+# checkout needs nothing beyond the standard library and what this
+# repository already carries.
 sys.path.insert(0, str(REPO_ROOT / "cli"))
-import compass_pkg  # noqa: E402  (side effect: puts cli/vendor at sys.path[0])
-import yaml  # noqa: E402
+from compass_pkg.core import load_yaml  # noqa: E402
 
-# "The file tools" (technical-design.md section 2.2): the three tools that
-# read, write or edit a file, as distinct from the six Bash forms below,
-# which are commands. Read/Write/Edit plus that Bash list is the full
-# allow-list; a session cannot run any other command on this machine.
+# The allow-list a session runs under, exactly (technical-design.md section
+# 2.2 step 5): the three file tools, plus one Bash form per command this
+# scenario suite ever needs - never a bare `Bash(python3:*)` or
+# `Bash(git:*)`, which would let a session run anything.
 ALLOWED_TOOLS: tuple[str, ...] = (
     "Read", "Write", "Edit",
-    "Bash(python3:*)", "Bash(pytest:*)", "Bash(git:*)",
+    "Bash(python3 -m pytest:*)", "Bash(pytest:*)",
+    "Bash(git status:*)", "Bash(git diff:*)", "Bash(git log:*)",
+    "Bash(git add:*)", "Bash(git commit:*)",
     "Bash(compass:*)", "Bash(ls:*)", "Bash(cat:*)",
 )
 
 _DEFAULT_TEST_COMMAND = "python3 -m pytest -q"
+
+# How much of a session's stderr the record keeps - enough to see why a run
+# crashed, not the whole of it.
+_TAIL_LIMIT = 2000
 
 # A fixed identity for the one commit the harness itself makes, so a machine
 # with no git identity configured still gets a fresh repository.
@@ -68,6 +85,16 @@ _GIT_ENV_EXTRA = {
     "GIT_COMMITTER_NAME": "compass-eval-harness",
     "GIT_COMMITTER_EMAIL": "eval-harness@compass.invalid",
 }
+
+# The wording Claude Code uses when a tool call was refused rather than run -
+# read alongside `permission_denials`, because that event carries a call's
+# id only when the CLI's own bookkeeping caught it.
+_PERMISSION_REFUSAL_MARKERS = (
+    "requested permissions",
+    "have not granted",
+    "haven't granted",
+    "permission denied",
+)
 
 
 def _resolve_scenario_dir(value: str) -> Path:
@@ -81,27 +108,78 @@ def _resolve_scenario_dir(value: str) -> Path:
 
 
 def load_scenario(scenario_dir: Path) -> dict[str, Any]:
-    """Read `scenario.yml`, filling in the two keys this module needs a
-    default for."""
+    """Read `scenario.yml` through the shared loader, filling in the two
+    keys this module needs a default for. `load_yaml` returns `{}` for an
+    empty file and raises `CompassError` for a missing or invalid one."""
     path = scenario_dir / "scenario.yml"
-    with path.open("r", encoding="utf-8") as fh:
-        data = yaml.safe_load(fh) or {}
+    data = load_yaml(str(path))
     data.setdefault("follow_ups", [])
     data.setdefault("test_command", _DEFAULT_TEST_COMMAND)
     return data
 
 
-def _materialise_repo(scenario_dir: Path, condition: str, repo_dir: Path) -> None:
-    """Copy the seed, then the condition's own overlay if the scenario has
-    one, into `repo_dir`."""
+# --- the plugin copy (technical-design.md section 2.2, steps 1 and 2) ------
+
+def _make_plugin_copy(source: Path, dest: Path) -> None:
+    """Archive `source`'s tracked files at `HEAD` into `dest` and make every
+    path inside it read-only, so no session - real or fake - can change this
+    checkout, or the fixture standing in for it under test."""
+    dest.mkdir(parents=True, exist_ok=True)
+    archive = subprocess.run(["git", "archive", "HEAD"], cwd=str(source),
+                              capture_output=True, check=True)
+    subprocess.run(["tar", "-x"], cwd=str(dest), input=archive.stdout, check=True)
+    _make_read_only(dest)
+
+
+def _make_read_only(root: Path) -> None:
+    for path in sorted(root.rglob("*"), reverse=True):
+        _strip_write_bit(path)
+    _strip_write_bit(root)
+
+
+def _strip_write_bit(path: Path) -> None:
+    mode = path.stat().st_mode
+    os.chmod(path, mode & ~(stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH))
+
+
+def _remove_read_only_tree(root: Path) -> None:
+    """Undo `_make_read_only` before deleting `root` - a read-only directory
+    entry cannot be unlinked."""
+    for path in root.rglob("*"):
+        os.chmod(path, path.stat().st_mode | stat.S_IWUSR)
+    os.chmod(root, root.stat().st_mode | stat.S_IWUSR)
+    shutil.rmtree(root)
+
+
+def _run_compass_init(plugin_copy_dir: Path, repo_dir: Path,
+                       env: dict[str, str]) -> None:
+    compass_exe = plugin_copy_dir / "bin" / "compass"
+    subprocess.run([str(compass_exe), "init"], cwd=str(repo_dir), env=env,
+                    capture_output=True, text=True, stdin=subprocess.DEVNULL)
+
+
+def _materialise_repo(scenario_dir: Path, condition: str, repo_dir: Path,
+                       plugin_copy_dir: Path | None,
+                       child_env: dict[str, str]) -> None:
+    """Copy the seed, run the plugin copy's `compass init` for the compass
+    condition, then lay the condition's own overlay over the result - in
+    that order, so the overlay can add to what init already wrote and both
+    are part of the seed commit, not a change the session made."""
     seed_dir = scenario_dir / "seed"
     if not seed_dir.is_dir():
         raise SystemExit(f"no seed/ directory under {scenario_dir}")
-    shutil.copytree(seed_dir, repo_dir, dirs_exist_ok=True)
+    ignore = shutil.ignore_patterns("__pycache__", "*.pyc")
+    shutil.copytree(seed_dir, repo_dir, dirs_exist_ok=True, ignore=ignore)
+
+    if condition == "compass":
+        if plugin_copy_dir is None:
+            raise SystemExit("compass condition needs a plugin copy")
+        _run_compass_init(plugin_copy_dir, repo_dir, child_env)
+
     overlay_name = "seed_compass" if condition == "compass" else "seed_bare"
     overlay_dir = scenario_dir / overlay_name
     if overlay_dir.is_dir():
-        shutil.copytree(overlay_dir, repo_dir, dirs_exist_ok=True)
+        shutil.copytree(overlay_dir, repo_dir, dirs_exist_ok=True, ignore=ignore)
 
 
 def _git(args: list[str], repo_dir: Path, *, env: dict[str, str] | None = None
@@ -121,17 +199,56 @@ def _git_init_and_commit(repo_dir: Path) -> None:
     _git(["tag", "seed"], repo_dir, env=env)
 
 
-def _common_claude_args(scenario: dict[str, Any], condition: str) -> list[str]:
+# --- the child's own environment (technical-design.md section 2.2, step 3) -
+
+def _is_claude_plugin_path(entry: str) -> bool:
+    """True for a `PATH` entry under a Claude Code plugins directory, for
+    example `~/.claude/plugins/cache/compass/compass/4.0.1/bin` - the route
+    by which a bare or compass session could otherwise reach whatever
+    `compass` happens to be installed on the machine that started it."""
+    parts = Path(entry).parts
+    return any(parts[i:i + 2] == (".claude", "plugins")
+               for i in range(len(parts) - 1))
+
+
+def _build_child_env(condition: str, plugin_copy_dir: Path | None
+                      ) -> dict[str, str]:
+    """The session's own environment, built from nothing rather than
+    filtered from the harness's, so no `CLAUDE*` variable can pass through
+    by accident. `PATH` keeps every entry that is not under a Claude Code
+    plugins directory, with the plugin copy's own `bin/` put first for the
+    compass condition only."""
+    env: dict[str, str] = {}
+    for key in ("HOME", "USER", "LANG", "TMPDIR"):
+        if key in os.environ:
+            env[key] = os.environ[key]
+
+    kept_entries = [entry for entry in os.environ.get("PATH", "").split(os.pathsep)
+                    if entry and not _is_claude_plugin_path(entry)]
+    if condition == "compass" and plugin_copy_dir is not None:
+        kept_entries = [str(plugin_copy_dir / "bin"), *kept_entries]
+    env["PATH"] = os.pathsep.join(kept_entries)
+    return env
+
+
+def _claude_version(claude_exe: str, env: dict[str, str]) -> str:
+    proc = subprocess.run([claude_exe, "--version"], env=env,
+                           capture_output=True, text=True,
+                           stdin=subprocess.DEVNULL)
+    return proc.stdout.strip()
+
+
+def _common_claude_args(condition: str, plugin_copy_dir: Path | None
+                         ) -> list[str]:
     args = [
         "--output-format", "stream-json",
         "--verbose",
         "--setting-sources", "project,local",
-        "--max-budget-usd", str(scenario["budget_usd"]),
         "--permission-mode", "acceptEdits",
         "--allowedTools", ",".join(ALLOWED_TOOLS),
     ]
     if condition == "compass":
-        args += ["--plugin-dir", str(REPO_ROOT)]
+        args += ["--plugin-dir", str(plugin_copy_dir)]
     return args
 
 
@@ -149,8 +266,21 @@ def _stringify_tool_output(content: Any) -> str:
     return json.dumps(content)
 
 
+def _tail(text: str, limit: int = _TAIL_LIMIT) -> str:
+    return text[-limit:] if text else ""
+
+
+def _looks_like_permission_refusal(output: str) -> bool:
+    lowered = output.lower()
+    return any(marker in lowered for marker in _PERMISSION_REFUSAL_MARKERS)
+
+
 def _new_run_state() -> dict[str, Any]:
-    return {"tool_calls": [], "counter": 0, "session_id": None, "cost_usd": 0.0}
+    return {
+        "tool_calls": [], "counter": 0, "session_id": None, "cost_usd": 0.0,
+        "texts": [], "permission_denials": [], "subtypes": [],
+        "cwd": None, "model": None, "stderr": "",
+    }
 
 
 def _consume_events(output: str, state: dict[str, Any]) -> str:
@@ -171,6 +301,10 @@ def _consume_events(output: str, state: dict[str, Any]) -> str:
         message = event.get("message") or {}
         if kind == "system" and event.get("subtype") == "init":
             state["session_id"] = event.get("session_id") or state["session_id"]
+            if event.get("cwd"):
+                state["cwd"] = event["cwd"]
+            if event.get("model"):
+                state["model"] = event["model"]
         elif kind == "assistant":
             for block in message.get("content") or []:
                 if block.get("type") == "tool_use":
@@ -182,31 +316,62 @@ def _consume_events(output: str, state: dict[str, Any]) -> str:
                     state["counter"] += 1
                 elif block.get("type") == "text" and block.get("text"):
                     final_text = block["text"]
+                    state["texts"].append({
+                        "before_tool_call": state["counter"],
+                        "text": block["text"],
+                    })
         elif kind == "user":
             for block in message.get("content") or []:
                 if block.get("type") == "tool_result":
-                    call = pending.pop(block.get("tool_use_id"), None)
+                    tool_use_id = block.get("tool_use_id")
+                    call = pending.pop(tool_use_id, None)
                     if call is None:
                         continue
                     call["is_error"] = bool(block.get("is_error", False))
                     call["output"] = _stringify_tool_output(
                         block.get("content", ""))[:2000]
+                    call["_tool_use_id"] = tool_use_id
                     state["tool_calls"].append(call)
         elif kind == "result":
             state["session_id"] = event.get("session_id") or state["session_id"]
             if "result" in event:
                 final_text = event["result"]
             state["cost_usd"] += float(event.get("total_cost_usd") or 0.0)
+            state["permission_denials"].extend(event.get("permission_denials") or [])
+            state["subtypes"].append(event.get("subtype"))
     return final_text
+
+
+def _finalise_tool_calls(state: dict[str, Any]) -> None:
+    """Mark each tool call `denied` once every invocation's events are in,
+    since `permission_denials` and the refusal wording it corroborates both
+    arrive after the calls they describe."""
+    denied_ids: set[str] = set()
+    for entry in state["permission_denials"]:
+        tool_use_id = (entry.get("tool_use_id") or entry.get("id")
+                       if isinstance(entry, dict) else entry)
+        if tool_use_id:
+            denied_ids.add(tool_use_id)
+    for call in state["tool_calls"]:
+        tool_use_id = call.pop("_tool_use_id", None)
+        call["denied"] = bool(
+            tool_use_id in denied_ids
+            or _looks_like_permission_refusal(call.get("output", ""))
+        )
 
 
 def _invoke_claude(claude_exe: str, message: str, common_args: list[str],
                     repo_dir: Path, state: dict[str, Any], *,
-                    resume: str | None) -> tuple[int, str]:
-    args = [claude_exe, "-p", message, *common_args]
+                    resume: str | None, remaining_budget: float,
+                    env: dict[str, str]) -> tuple[int, str]:
+    args = [claude_exe, "-p", message, *common_args,
+            "--max-budget-usd", str(remaining_budget)]
     if resume:
         args += ["--resume", resume]
-    proc = subprocess.run(args, cwd=str(repo_dir), capture_output=True, text=True)
+    proc = subprocess.run(args, cwd=str(repo_dir), env=env,
+                           capture_output=True, text=True,
+                           stdin=subprocess.DEVNULL)
+    state["stderr"] += proc.stderr or ""
     final_text = _consume_events(proc.stdout, state)
     return proc.returncode, final_text
 
@@ -237,41 +402,135 @@ def _compass_files(repo_dir: Path) -> list[str]:
     )
 
 
+# --- containment (technical-design.md section 2.2, step 7) -----------------
+
+def _checkout_fingerprint(root: Path) -> dict[str, str]:
+    return {
+        "head": _git(["rev-parse", "HEAD"], root).stdout.strip(),
+        "status": _git(["status", "--porcelain"], root).stdout,
+        "diff": _git(["diff"], root).stdout,
+    }
+
+
+def _status_map(status_text: str) -> dict[str, str]:
+    mapping: dict[str, str] = {}
+    for line in status_text.splitlines():
+        if line:
+            mapping[line[3:].strip()] = line[:2]
+    return mapping
+
+
+def _checkout_changed_paths(before: dict[str, str], after: dict[str, str]
+                             ) -> list[str]:
+    before_status = _status_map(before["status"])
+    after_status = _status_map(after["status"])
+    changed = {path for path in before_status.keys() | after_status.keys()
+               if before_status.get(path) != after_status.get(path)}
+    if before["head"] != after["head"]:
+        changed.add("HEAD")
+    return sorted(changed)
+
+
+def _dir_snapshot(root: Path) -> dict[str, str]:
+    return {
+        path.relative_to(root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in root.rglob("*") if path.is_file()
+    }
+
+
+def _dir_snapshot_changed_paths(before: dict[str, str], after: dict[str, str]
+                                 ) -> list[str]:
+    return sorted(path for path in before.keys() | after.keys()
+                  if before.get(path) != after.get(path))
+
+
+def _stop_reason_and_finished(subtypes: list[str | None],
+                               skipped_for_budget: bool) -> tuple[str, bool]:
+    if skipped_for_budget:
+        return "error_max_budget_usd", False
+    if subtypes:
+        return (subtypes[-1] or "unknown"), all(s == "success" for s in subtypes)
+    return "no_result_event", False
+
+
 def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
-             run_index: int, claude_exe: str) -> dict[str, Any]:
+             run_index: int, claude_exe: str, *,
+             plugin_source: Path | None = None) -> dict[str, Any]:
     """Do one run of `scenario` under `condition` and return its record."""
+    plugin_source = Path(plugin_source) if plugin_source else REPO_ROOT
     started = datetime.now(timezone.utc).isoformat()
     clock_start = time.monotonic()
     state = _new_run_state()
     final_text = ""
     exit_code = 0
+    skipped_for_budget = False
+    plugin_copy_dir: Path | None = None
+    record_cwd: str | None = None
 
-    with tempfile.TemporaryDirectory(
-        prefix=f"compass-eval-{scenario['id']}-{condition}-"
-    ) as tmp:
-        repo_dir = Path(tmp)
-        _materialise_repo(scenario_dir, condition, repo_dir)
-        _git_init_and_commit(repo_dir)
+    try:
+        if condition == "compass":
+            plugin_copy_dir = Path(tempfile.mkdtemp(
+                prefix=f"compass-eval-plugin-{scenario['id']}-"))
+            _make_plugin_copy(plugin_source, plugin_copy_dir)
 
-        common_args = _common_claude_args(scenario, condition)
-        exit_code, text = _invoke_claude(
-            claude_exe, scenario["prompt"], common_args, repo_dir, state,
-            resume=None)
-        if text:
-            final_text = text
+        child_env = _build_child_env(condition, plugin_copy_dir)
+        claude_version = _claude_version(claude_exe, child_env)
+        checkout_before = _checkout_fingerprint(plugin_source)
+        plugin_before = _dir_snapshot(plugin_copy_dir) if plugin_copy_dir else None
 
-        for follow_up in scenario.get("follow_ups") or []:
+        with tempfile.TemporaryDirectory(
+            prefix=f"compass-eval-{scenario['id']}-{condition}-"
+        ) as tmp:
+            repo_dir = Path(tmp)
+            _materialise_repo(scenario_dir, condition, repo_dir,
+                               plugin_copy_dir, child_env)
+            _git_init_and_commit(repo_dir)
+
+            common_args = _common_claude_args(condition, plugin_copy_dir)
+            budget_usd = float(scenario["budget_usd"])
+
+            remaining = round(budget_usd - state["cost_usd"], 6)
             exit_code, text = _invoke_claude(
-                claude_exe, follow_up, common_args, repo_dir, state,
-                resume=state["session_id"])
+                claude_exe, scenario["prompt"], common_args, repo_dir, state,
+                resume=None, remaining_budget=remaining, env=child_env)
             if text:
                 final_text = text
 
-        state["tool_calls"].sort(key=lambda call: call["index"])
-        diff_text, changed_paths = _diff_since_seed(repo_dir)
-        test_command = scenario.get("test_command", _DEFAULT_TEST_COMMAND)
-        tests_exit_code = _run_test_command(test_command, repo_dir)
-        compass_files = _compass_files(repo_dir)
+            for follow_up in scenario.get("follow_ups") or []:
+                remaining = round(budget_usd - state["cost_usd"], 6)
+                if remaining <= 0:
+                    skipped_for_budget = True
+                    break
+                exit_code, text = _invoke_claude(
+                    claude_exe, follow_up, common_args, repo_dir, state,
+                    resume=state["session_id"], remaining_budget=remaining,
+                    env=child_env)
+                if text:
+                    final_text = text
+
+            state["tool_calls"].sort(key=lambda call: call["index"])
+            _finalise_tool_calls(state)
+            diff_text, changed_paths = _diff_since_seed(repo_dir)
+            test_command = scenario.get("test_command", _DEFAULT_TEST_COMMAND)
+            tests_exit_code = _run_test_command(test_command, repo_dir)
+            compass_files = _compass_files(repo_dir)
+            record_cwd = state["cwd"]
+
+        checkout_after = _checkout_fingerprint(plugin_source)
+        plugin_after = _dir_snapshot(plugin_copy_dir) if plugin_copy_dir else None
+
+        escaped_paths = [f"checkout:{path}" for path in
+                          _checkout_changed_paths(checkout_before, checkout_after)]
+        if plugin_copy_dir is not None:
+            escaped_paths += [f"plugin:{path}" for path in
+                               _dir_snapshot_changed_paths(plugin_before, plugin_after)]
+        contained = not escaped_paths
+    finally:
+        if plugin_copy_dir is not None:
+            _remove_read_only_tree(plugin_copy_dir)
+
+    stop_reason, finished = _stop_reason_and_finished(
+        state["subtypes"], skipped_for_budget)
 
     return {
         "scenario": scenario["id"],
@@ -282,12 +541,22 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
         "exit_code": exit_code,
         "cost_usd": round(state["cost_usd"], 6),
         "session_id": state["session_id"],
+        "cwd": record_cwd,
+        "model": state["model"],
+        "claude_version": claude_version,
+        "stop_reason": stop_reason,
+        "finished": finished,
         "tool_calls": state["tool_calls"],
+        "texts": state["texts"],
+        "permission_denials": state["permission_denials"],
         "final_text": final_text,
         "diff": diff_text,
         "changed_paths": changed_paths,
         "compass_files": compass_files,
         "tests_after": {"command": test_command, "exit_code": tests_exit_code},
+        "contained": contained,
+        "escaped_paths": escaped_paths,
+        "stderr_tail": _tail(state["stderr"]),
     }
 
 
@@ -305,6 +574,11 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--claude", default="claude",
                          help="the executable to run - a real CLI, or a "
                               "stand-in for a test")
+    parser.add_argument("--plugin-source", default=None,
+                         help="the repository copied for the compass "
+                              "condition's plugin, and hashed for "
+                              "containment either way - defaults to this "
+                              "repository")
     return parser
 
 
@@ -317,10 +591,11 @@ def main(argv: list[str] | None = None) -> int:
     scenario = load_scenario(scenario_dir)
     out_dir = Path(args.out) if args.out else (REPO_ROOT / "evals" / "out")
     out_dir.mkdir(parents=True, exist_ok=True)
+    plugin_source = Path(args.plugin_source) if args.plugin_source else None
 
     for run_index in range(1, args.runs + 1):
         record = run_once(scenario, scenario_dir, args.condition, run_index,
-                           args.claude)
+                           args.claude, plugin_source=plugin_source)
         out_path = out_dir / f"{scenario['id']}-{args.condition}-{run_index}.json"
         out_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
     return 0

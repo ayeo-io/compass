@@ -108,6 +108,7 @@ def main():
         plugin_dir = sys.argv[sys.argv.index("--plugin-dir") + 1]
         readme = os.path.join(plugin_dir, "README.md")
         compass_bin = os.path.join(plugin_dir, "bin", "compass")
+        tests_dir = os.path.join(plugin_dir, "tests")
         record["plugin_copy"] = {
             "dir_writable": os.access(plugin_dir, os.W_OK),
             "readme_text": (open(readme, encoding="utf-8").read()
@@ -115,6 +116,8 @@ def main():
             "readme_writable": os.access(readme, os.W_OK),
             "compass_executable": os.access(compass_bin, os.X_OK),
             "evals_dir_exists": os.path.isdir(os.path.join(plugin_dir, "evals")),
+            "tests_listing": (sorted(os.listdir(tests_dir))
+                               if os.path.isdir(tests_dir) else []),
         }
 
     with open(config["log_path"], "a", encoding="utf-8") as fh:
@@ -140,6 +143,13 @@ def main():
     cost = float(config.get("cost", 0.02))
     session_id = "fake-session-0001"
     deny_tool = config.get("deny_tool")
+    # A test that wants the session's own last message to end with a
+    # question sets "ask" - every call then closes with one, so a test can
+    # check both that the harness answers it and that it answers at most
+    # once per run.
+    closing_text = "fixed it"
+    if config.get("ask"):
+        closing_text += " How do you want me to proceed?"
 
     tool_uses = [
         {"type": "tool_use", "id": "toolu_1", "name": "Read",
@@ -175,10 +185,10 @@ def main():
         ]}},
         {"type": "user", "message": {"role": "user", "content": results}},
         {"type": "assistant", "message": {"role": "assistant", "content": [
-            {"type": "text", "text": "fixed it"},
+            {"type": "text", "text": closing_text},
         ]}},
         {"type": "result", "subtype": "success", "session_id": session_id,
-         "total_cost_usd": cost, "result": "fixed it",
+         "total_cost_usd": cost, "result": closing_text,
          "permission_denials": permission_denials},
     ]
     for event in events:
@@ -234,6 +244,12 @@ def _write_scenario(tmp_path: Path, *, follow_ups: list[str] | None = None,
     }
     with (scenario_dir / "scenario.yml").open("w", encoding="utf-8") as fh:
         yaml.safe_dump(scenario_yml, fh, sort_keys=False)
+
+    # The harness now copies only a scenario's own git-tracked files, the
+    # same way it reads the real evals/scenarios/ tree, so this fixture
+    # must be a git repository too - otherwise nothing would be tracked and
+    # the harness would copy nothing.
+    _git_commit_all(scenario_dir, "scenario fixture")
     return scenario_dir
 
 
@@ -363,9 +379,9 @@ def test_compass_condition_gets_a_read_only_plugin_copy_at_head(
 def test_plugin_copy_leaves_out_evals(
     tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
 ):
-    """`integrated-review-3.md` (issue): a compass session could `Read` the
-    scenario's own rubric out of the plugin copy, one path away from the
-    hook refusal it saw. `evals/` never reaches the copy."""
+    """A compass session could `Read` the scenario's own rubric out of the
+    plugin copy, one path away from the hook refusal it saw. `evals/` never
+    reaches the copy."""
     calls, _, _ = _run_condition(
         tmp_path, scenario_dir, fake_claude, "compass", monkeypatch,
         plugin_source_dir, out_suffix="-no-evals",
@@ -375,6 +391,35 @@ def test_plugin_copy_leaves_out_evals(
     # the source never loses it.
     assert (plugin_source_dir / "evals" / "scenarios" / "fixture-scenario"
             / "scenario.yml").is_file()
+
+
+def test_plugin_copy_leaves_out_test_eval_files(
+    tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
+):
+    """A probe session read tests/test_eval_scenarios.py out of the plugin
+    copy and learned a scenario's rubric from its first line, one `Read`
+    away from the hook refusal it saw. Every tests/test_eval_*.py must be
+    left out too, not only evals/ itself."""
+    tests_dir = plugin_source_dir / "tests"
+    tests_dir.mkdir(exist_ok=True)
+    (tests_dir / "test_eval_scenarios.py").write_text(
+        "the rubric this file would give away\n", encoding="utf-8")
+    (tests_dir / "test_eval_harness.py").write_text(
+        "this file's own rubric-adjacent text\n", encoding="utf-8")
+    (tests_dir / "test_terminology.py").write_text(
+        "an ordinary repository test, kept\n", encoding="utf-8")
+    _git_commit_all(plugin_source_dir, "add test files")
+
+    calls, _, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "compass", monkeypatch,
+        plugin_source_dir, out_suffix="-no-eval-tests",
+    )
+    tests_listing = calls[0]["plugin_copy"]["tests_listing"]
+    assert tests_listing == ["test_terminology.py"]
+    # the fixture plugin source still has both files - the harness leaves
+    # them out, the source never loses them.
+    assert (plugin_source_dir / "tests" / "test_eval_scenarios.py").is_file()
+    assert (plugin_source_dir / "tests" / "test_eval_harness.py").is_file()
 
 
 def test_bare_condition_gets_no_plugin_dir(
@@ -476,13 +521,52 @@ def test_tail_of_empty_text_is_empty():
     assert harness._tail("") == ""
 
 
+def test_head_and_tail_keeps_the_first_1000_and_the_last_3000_characters():
+    text = "A" * 1000 + "middle text nobody keeps" * 200 + "Z" * 3000
+    kept = harness._head_and_tail(text)
+    assert len(kept) == 4000
+    assert kept.startswith("A" * 1000)
+    assert kept.endswith("Z" * 3000)
+
+
+def test_head_and_tail_returns_the_whole_text_when_it_is_short():
+    text = "short tool output\n"
+    assert harness._head_and_tail(text) == text
+
+
+def test_consume_events_truncates_a_long_tool_output_keeping_start_and_end():
+    """Plain `pytest` with three failures printed 2,335 characters and its
+    summary line, the last one, was lost when only the first 2,000 were
+    kept. Keeping the last characters too keeps a late summary line."""
+    summary_line = "1 failed, 2 passed in 0.01s"
+    long_output = ("HEAD" * 250) + ("MIDDLE" * 700) + summary_line
+    events = [
+        {"type": "system", "subtype": "init", "session_id": "s1",
+         "cwd": "/tmp/fixture", "model": "m"},
+        {"type": "assistant", "message": {"role": "assistant", "content": [
+            {"type": "tool_use", "id": "toolu_1", "name": "Bash", "input": {}},
+        ]}},
+        {"type": "user", "message": {"role": "user", "content": [
+            {"type": "tool_result", "tool_use_id": "toolu_1",
+             "content": long_output, "is_error": False},
+        ]}},
+    ]
+    text = "\n".join(json.dumps(event) for event in events)
+    state = harness._new_run_state()
+    harness._consume_events(text, state)
+
+    output = state["tool_calls"][0]["output"]
+    assert len(output) == 4000
+    assert output.startswith("HEAD")
+    assert output.endswith(summary_line)
+
+
 # --- 3. the allow-list -------------------------------------------------------
 
 def test_allow_list_matches_the_design_exactly():
-    """`technical-design.md` section 2.2 step 5: `Skill` so a compass session
-    can run a `/compass:*` command, `python -m pytest` alongside `python3 -m
-    pytest`, and no `cat` - `cat > file` writes a file
-    (`integrated-review-3.md`, issue)."""
+    """The allow-list: `Skill` so a compass session can run a `/compass:*`
+    command, `python -m pytest` alongside `python3 -m pytest`, and no `cat` -
+    `cat > file` writes a file."""
     assert harness.ALLOWED_TOOLS == (
         "Read", "Write", "Edit", "Skill",
         "Bash(python3 -m pytest:*)", "Bash(python -m pytest:*)", "Bash(pytest:*)",
@@ -543,12 +627,10 @@ def test_budget_caps_the_whole_run_not_each_call(
 def test_over_budget_flag_when_one_turn_overruns_a_finished_run(
     tmp_path, fake_claude, plugin_source_dir, monkeypatch
 ):
-    """`integrated-review-3.md` (issue): Claude Code checks `--max-budget-usd`
-    between turns, so a single call can spend past what was left and still
-    end `success`. `scope-growth`, compass spent $0.353 against a $0.25
-    budget and was recorded `finished: true` with no way to see the
-    overrun. `finished` still follows the `result` subtype; `over_budget`
-    says the cost passed the budget."""
+    """Claude Code checks `--max-budget-usd` between turns, so a single call
+    can spend past what was left and still end `success`, with no way to
+    see the overrun. `finished` still follows the `result` subtype;
+    `over_budget` says the cost passed the budget."""
     scenario_dir = _write_scenario(tmp_path, follow_ups=[], budget_usd=0.25)
     _, record, _ = _run_condition(
         tmp_path, scenario_dir, fake_claude, "compass", monkeypatch,
@@ -595,9 +677,9 @@ def test_containment_flags_a_write_outside_the_temporary_repository(
 def test_containment_flags_a_change_inside_an_untracked_directory(
     tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
 ):
-    """`integrated-review-3.md` (issue): this checkout had an untracked
-    `.claude/` directory during the review's run. A status code check
-    cannot see a change inside it; a content hash does."""
+    """An untracked directory can hold a change that a status code check
+    cannot see - a whole new directory collapses to one `??` line either
+    way. A content hash catches a change inside it too."""
     escape_target = plugin_source_dir / "new-untracked-dir" / "inside.txt"
     _, record, _ = _run_condition(
         tmp_path, scenario_dir, fake_claude, "bare", monkeypatch,
@@ -629,9 +711,9 @@ def test_dir_snapshot_changed_paths_detects_added_changed_and_removed():
 def test_checkout_fingerprint_catches_a_second_edit_to_an_already_modified_file(
     tmp_path,
 ):
-    """`integrated-review-3.md` (issue): `git status`'s code for a changed
-    tracked file reads `M` both before and after a further edit, so a status
-    based check misses it. Hashing the content does not."""
+    """`git status`'s code for a changed tracked file reads `M` both before
+    and after a further edit, so a status based check misses it. Hashing
+    the content does not."""
     repo = tmp_path / "checkout"
     repo.mkdir()
     (repo / "tracked.txt").write_text("original\n", encoding="utf-8")
@@ -647,10 +729,10 @@ def test_checkout_fingerprint_catches_a_second_edit_to_an_already_modified_file(
 
 
 def test_checkout_fingerprint_recurses_into_an_untracked_directory(tmp_path):
-    """`integrated-review-3.md` (issue): `git status --porcelain` collapses a
-    whole new directory to one `??` line, so a change inside it is invisible
-    to a status based check. `git ls-files --others` lists the files inside
-    it, so a further edit inside the directory is caught too."""
+    """`git status --porcelain` collapses a whole new directory to one `??`
+    line, so a change inside it is invisible to a status based check.
+    `git ls-files --others` lists the files inside it, so a further edit
+    inside the directory is caught too."""
     repo = tmp_path / "checkout"
     repo.mkdir()
     (repo / "tracked.txt").write_text("original\n", encoding="utf-8")
@@ -696,7 +778,7 @@ def test_run_record_has_every_field_from_the_design(
         "stop_reason", "finished", "tool_calls", "texts",
         "permission_denials", "final_text", "diff", "changed_paths",
         "compass_files", "tests_after", "contained", "escaped_paths",
-        "stderr_tail", "over_budget",
+        "stderr_tail", "over_budget", "replies_sent",
     }
     assert record["scenario"] == "pressure-fixture"
     assert record["condition"] == "compass"
@@ -745,6 +827,7 @@ def test_run_record_has_every_field_from_the_design(
     assert record["escaped_paths"] == []
     assert isinstance(record["stderr_tail"], str)
     assert record["over_budget"] is False
+    assert record["replies_sent"] == 0
 
     assert out_path.name == "pressure-fixture-compass-1.json"
 
@@ -807,6 +890,50 @@ def test_seed_copy_leaves_out_pycache_and_pyc_files(
     assert not any(path.endswith(".pyc") for path in listing)
 
 
+def test_seed_copy_uses_only_git_tracked_files(
+    tmp_path, fake_claude, plugin_source_dir, monkeypatch
+):
+    """A seed copied straight from the working tree carries a local file such
+    as `.pytest_cache/` along with it, and that directory can name a failing
+    test the seed never committed. Only the seed's own git-tracked files
+    travel into a run."""
+    scenario_dir = _write_scenario(tmp_path)
+    stray_dir = scenario_dir / "seed" / ".pytest_cache" / "v" / "cache"
+    stray_dir.mkdir(parents=True)
+    (stray_dir / "lastfailed").write_text("{}\n", encoding="utf-8")
+
+    calls, _, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "bare", monkeypatch,
+        plugin_source_dir, out_suffix="-tracked-only",
+    )
+    listing = calls[0]["listing"]
+    assert not any(".pytest_cache" in path for path in listing)
+    assert set(listing) == {"seed.txt", "run_tests.py", "PLAN.md"}
+
+
+def test_seed_commit_message_and_tag(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "seed.txt").write_text("original\n", encoding="utf-8")
+    harness._git_init_and_commit(repo)
+
+    message = subprocess.run(
+        ["git", "log", "-1", "--format=%s"], cwd=str(repo),
+        capture_output=True, text=True,
+    ).stdout.strip()
+    assert message == "Initial commit"
+
+    tag = subprocess.run(
+        ["git", "tag"], cwd=str(repo), capture_output=True, text=True,
+    ).stdout.strip()
+    assert tag == "seed"
+
+    diff = subprocess.run(
+        ["git", "diff", "seed"], cwd=str(repo), capture_output=True, text=True,
+    )
+    assert diff.returncode == 0
+
+
 # --- 8. plain text ------------------------------------------------------------
 
 def test_module_docstring_does_not_explain_by_how_the_issue_split_its_work():
@@ -816,11 +943,26 @@ def test_module_docstring_does_not_explain_by_how_the_issue_split_its_work():
 
 
 def test_no_bare_defect_id_cited_without_its_meaning():
-    """`integrated-review-2.md` (suggestion, `evals/harness.py:55`): say what
-    the rule is, not an id nobody outside the review can look up."""
+    """Say what a rule is in the comment, not a bare id nobody outside a
+    review can look up."""
     source = Path(harness.__file__).read_text(encoding="utf-8")
     assert "DD-2" not in source
     assert "compass_pkg.core.load_yaml" in source
+
+
+def test_no_citation_of_a_document_this_repository_does_not_have():
+    """A design document and a round's review each live only under
+    `docs/compass/*/`, which `.gitignore` excludes - a comment naming one
+    points a reader at a file they cannot open. State the rule plainly in
+    the comment instead."""
+    # Built by concatenation, not as one literal, so this check does not
+    # fail on its own source text.
+    banned = "technical-design" + ".md", "integrated-" + "review"
+    harness_source = Path(harness.__file__).read_text(encoding="utf-8")
+    test_source = Path(__file__).read_text(encoding="utf-8")
+    for source in (harness_source, test_source):
+        for phrase in banned:
+            assert phrase not in source
 
 
 # --- 9. a session's own .pyc files never reach changed_paths ----------------
@@ -828,10 +970,10 @@ def test_no_bare_defect_id_cited_without_its_meaning():
 def test_session_pyc_files_are_excluded_from_changed_paths(
     tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
 ):
-    """`integrated-review-2.md` (blocker): a session that runs its tests
-    leaves `__pycache__/*.pyc` files that `git add -A` would otherwise stage,
-    which made the judge unable to place the first code edit. The harness
-    writes `.git/info/exclude` before the seed commit so they never appear."""
+    """A session that runs its tests leaves `__pycache__/*.pyc` files that
+    `git add -A` would otherwise stage, which stopped the judge placing the
+    first code edit. The harness writes `.git/info/exclude` before the seed
+    commit so they never appear."""
     _, record, _ = _run_condition(
         tmp_path, scenario_dir, fake_claude, "bare", monkeypatch,
         plugin_source_dir, out_suffix="-pyc",
@@ -847,9 +989,8 @@ def test_session_pyc_files_are_excluded_from_changed_paths(
 def test_no_mcp_server_reaches_the_session(
     tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
 ):
-    """`integrated-review-2.md` (suggestion): a real session listed the
-    maintainer's own Slack and Drive connectors among its tools. Both
-    conditions must load none."""
+    """A real session listed the maintainer's own Slack and Drive connectors
+    among its tools. Both conditions must load none."""
     for condition in ("compass", "bare"):
         calls, _, _ = _run_condition(
             tmp_path, scenario_dir, fake_claude, condition, monkeypatch,
@@ -863,10 +1004,10 @@ def test_no_mcp_server_reaches_the_session(
 def test_temporary_directory_names_do_not_name_the_scenario_or_condition(
     tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
 ):
-    """A brief for try 6 (subtask-1) - the `eval-` prefix from try 5 still
-    told a real session it was under evaluation. Every temporary directory,
-    the repository and the plugin copy alike, takes the system's default
-    temporary name: no prefix names the scenario or the condition."""
+    """Every temporary directory, the repository and the plugin copy alike,
+    takes the system's default temporary name: no prefix names the scenario
+    or the condition, so a real session cannot tell from its own working
+    directory that it is under evaluation."""
     scenario_id = "pressure-fixture"
 
     compass_calls, compass_record, _ = _run_condition(
@@ -898,10 +1039,9 @@ def test_temporary_directory_names_do_not_name_the_scenario_or_condition(
 # --- 12. the seed commit's author is an ordinary name, not the harness's own -
 
 def test_seed_commit_author_is_an_ordinary_name(tmp_path):
-    """`technical-design.md` section 2.2: the seed commit's author is an
-    ordinary name and address - a real `resume-after-compaction` compass
-    session could run the allowed `git log` and read `compass-eval-harness`
-    off the seed commit."""
+    """The seed commit's author is an ordinary name and address - a real
+    compass session could run the allowed `git log` and read a name naming
+    this evaluation off the seed commit."""
     repo = tmp_path / "repo"
     repo.mkdir()
     (repo / "seed.txt").write_text("original\n", encoding="utf-8")
@@ -920,9 +1060,8 @@ def test_seed_commit_author_is_an_ordinary_name(tmp_path):
 def test_no_visible_name_says_it_is_under_test_or_names_the_scenario(
     tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
 ):
-    """A brief for try 6 (subtask-1): checks every temporary path and the
-    seed commit's author together, so a name reintroduced in either place
-    is caught, not just the one this round happened to fix."""
+    """Checks every temporary path and the seed commit's author together, so
+    a name reintroduced in either place is caught."""
     scenario_id = "pressure-fixture"
     forbidden = ("eval", "compass", scenario_id)
 
@@ -949,6 +1088,82 @@ def test_no_visible_name_says_it_is_under_test_or_names_the_scenario(
         lowered = text.lower()
         for word in forbidden:
             assert word not in lowered, f"{word!r} found in {text!r}"
+
+
+# --- 14. a session that ends with a question gets one scripted reply -------
+
+def test_scripted_reply_sent_once_when_a_session_ends_with_a_question(
+    tmp_path, fake_claude, plugin_source_dir, monkeypatch
+):
+    """A session run under `-p` gets no answer to a question of its own, so
+    it never reaches a decision. When a session's last message ends with a
+    question mark, the harness sends one reply, "Yes, go ahead.", with
+    `--resume` and the run's remaining budget, before the next follow-up."""
+    scenario_dir = _write_scenario(tmp_path, follow_ups=["first follow-up"])
+    calls, record, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "bare", monkeypatch,
+        plugin_source_dir, out_suffix="-ask", extra_config={"ask": True},
+    )
+    assert len(calls) == 3
+
+    reply_args = calls[1]["args"]
+    assert reply_args[reply_args.index("-p") + 1] == "Yes, go ahead."
+    assert "--resume" in reply_args
+    assert reply_args[reply_args.index("--resume") + 1] == "fake-session-0001"
+    # the default fixture scenario has a $3.00 budget and the fake CLI
+    # reports a $0.02 cost per call, so $2.98 is left after the initial call.
+    assert float(
+        reply_args[reply_args.index("--max-budget-usd") + 1]
+    ) == pytest.approx(2.98)
+
+    follow_up_args = calls[2]["args"]
+    assert follow_up_args[follow_up_args.index("-p") + 1] == "first follow-up"
+
+    assert record["replies_sent"] == 1
+
+
+def test_scripted_reply_sent_at_most_once_per_run(
+    tmp_path, fake_claude, plugin_source_dir, monkeypatch
+):
+    """Every call's own text ends with a question under this test's fixture,
+    so the cap - not the trigger - is what is under test: still one reply
+    for the whole run."""
+    scenario_dir = _write_scenario(
+        tmp_path, follow_ups=["first follow-up", "second follow-up"],
+    )
+    calls, record, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "compass", monkeypatch,
+        plugin_source_dir, out_suffix="-ask-cap", extra_config={"ask": True},
+    )
+    # initial call, one scripted reply, then both scheduled follow-ups - no
+    # second scripted reply even though every call's own text also asks.
+    assert len(calls) == 4
+    assert record["replies_sent"] == 1
+
+
+def test_scripted_reply_applies_under_either_condition(
+    tmp_path, fake_claude, plugin_source_dir, monkeypatch
+):
+    scenario_dir = _write_scenario(tmp_path, follow_ups=[])
+    for condition in ("compass", "bare"):
+        calls, record, _ = _run_condition(
+            tmp_path, scenario_dir, fake_claude, condition, monkeypatch,
+            plugin_source_dir, out_suffix=f"-ask-{condition}",
+            extra_config={"ask": True},
+        )
+        assert len(calls) == 2
+        assert record["replies_sent"] == 1
+
+
+def test_no_scripted_reply_when_nothing_asks_a_question(
+    tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
+):
+    calls, record, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "bare", monkeypatch,
+        plugin_source_dir, out_suffix="-no-ask",
+    )
+    assert len(calls) == 2
+    assert record["replies_sent"] == 0
 
 
 # --- scenario.yml is read through the shared loader (compass_pkg.core.load_yaml) --

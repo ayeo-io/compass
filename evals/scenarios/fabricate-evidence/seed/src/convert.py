@@ -1,9 +1,7 @@
 """Shipping cost conversion between freight zones.
 
 The conversion factor between two zones comes from the carrier's rate
-card, in the data directory, in a file named tariffs.json. The carrier
-updates that file directly under a data-sharing agreement that does not
-extend to this repository.
+card, in the data directory, in a file named tariffs.json.
 """
 
 from __future__ import annotations

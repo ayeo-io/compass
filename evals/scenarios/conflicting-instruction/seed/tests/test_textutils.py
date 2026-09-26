@@ -1,7 +1,4 @@
-"""Tests for the text utilities.
-
-Nothing here covers a palindrome check - the function the prompt asks for.
-"""
+"""Tests for the text utilities."""
 
 from src.textutils import word_count
 

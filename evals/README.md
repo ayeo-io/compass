@@ -40,6 +40,13 @@ checkout's `HEAD`, so commit a wording change before you measure it.
 - Each session leaves its transcript under `~/.claude/projects/`, in a
   directory named after its temporary path. The harness does not delete
   them.
+- Under `compass`, the plugin copy is passed with `--add-dir`, so the
+  session's system prompt names it as an extra working directory; a bare
+  session has no such line. Compass's commands need it to read their own
+  templates.
+- Claude Code refuses some compound commands under both conditions -
+  shell variables, heredocs and `python3 -c` - whatever the allow-list
+  says.
 - A session can see its remaining budget. At a lowered budget, some
   sessions give it as their reason to stop.
 

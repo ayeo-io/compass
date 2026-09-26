@@ -213,7 +213,9 @@ Before the change is merged:
    the comparison in the PR.
 
 A change that lowers a behaviour's pass rate against the baseline does not
-merge without a written reason. `evals/README.md` says which scenarios each
+merge without a written reason. This blocks only when both reports have at
+least five runs per scenario and condition: with fewer, one flipped result
+can be chance, so the comparison goes in the PR and does not block. `evals/README.md` says which scenarios each
 text serves, and what a run costs.
 
 ---

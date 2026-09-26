@@ -15,13 +15,16 @@ temporary repository - to `<out>/<scenario id>-<condition>-<run number>.json`.
 
 Under the `compass` condition the session never sees the real checkout: it
 gets a read-only copy of `--plugin-source`'s tracked files at `HEAD` (this
-repository, unless a test points it elsewhere), with `evals/` and every
-`tests/test_eval_*.py` left out so no session can read a scenario's own
-rubric, and that copy's own `bin/compass init` runs in the fresh repository
-before the seed commit. The child process gets a built environment, not an
-inherited one - no `CLAUDE*` variable and no installed plugin's `bin/` reach
-it - so a run cannot fall back to whatever `compass` happens to be on the
-machine that started it.
+repository, unless a test points it elsewhere), with `evals/`, every
+`tests/test_eval_*.py`, every published eval report and `docs/releasing.md`
+left out so no session can read a scenario's own rubric or learn a
+scenario's, a behaviour's or a condition's name. That copy's own
+`bin/compass init` runs in the fresh repository before the seed commit, and
+the setup date it records there is backdated, so the hook's first refusal
+never tells a session Compass was set up minutes ago. The child process gets
+a built environment, not an inherited one - no `CLAUDE*` variable and no
+installed plugin's `bin/` reach it - so a run cannot fall back to whatever
+`compass` happens to be on the machine that started it.
 
 `--scenario` takes a scenario id, resolved against `evals/scenarios/<id>/`.
 It also accepts a path to a scenario directory directly, which this
@@ -39,6 +42,7 @@ import fnmatch
 import hashlib
 import json
 import os
+import re
 import shlex
 import shutil
 import stat
@@ -46,7 +50,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -138,11 +142,12 @@ def load_scenario(scenario_dir: Path) -> dict[str, Any]:
 
 def _make_plugin_copy(source: Path, dest: Path) -> None:
     """Archive `source`'s tracked files at `HEAD` into `dest`, leave out
-    `evals/`, every `tests/test_eval_*.py` and every published eval report
-    under `docs/compass/` - together they hold every scenario's own rubric,
-    one `Read` away from a compass session otherwise - and make every
-    remaining path read-only, so no session - real or fake - can change this
-    checkout, or the fixture standing in for it under test."""
+    `evals/`, every `tests/test_eval_*.py`, every published eval report
+    under `docs/compass/` and `docs/releasing.md` - together they name every
+    scenario, every behaviour and the conditions themselves, one `Read` away
+    from a compass session otherwise - and make every remaining path
+    read-only, so no session - real or fake - can change this checkout, or
+    the fixture standing in for it under test."""
     dest.mkdir(parents=True, exist_ok=True)
     archive = subprocess.run(["git", "archive", "HEAD"], cwd=str(source),
                               capture_output=True, check=True)
@@ -161,6 +166,9 @@ def _make_plugin_copy(source: Path, dest: Path) -> None:
                 shutil.rmtree(eval_report)
             else:
                 eval_report.unlink()
+    releasing_doc = dest / "docs" / "releasing.md"
+    if releasing_doc.is_file():
+        releasing_doc.unlink()
     _make_read_only(dest)
 
 
@@ -200,6 +208,38 @@ def _run_compass_init(plugin_copy_dir: Path, repo_dir: Path,
             f"compass init failed in {repo_dir} (exit {result.returncode}): {stderr}")
 
 
+# The pre-tool hook's refusal quotes `.compass/config.yml`'s
+# `initialised.at`, and a real compass session read that date - today's,
+# because the harness runs `compass init` moments before the prompt - as
+# proof a policy could not be leftover config from another project. An
+# adopter's own project was set up before today, so the harness backdates
+# the date the hook reports by this many days.
+_SETUP_BACKDATE_DAYS = 30
+
+_INITIALISED_AT_PATTERN = re.compile(r'^\s*at:\s*"(\d{4}-\d{2}-\d{2})"',
+                                      re.MULTILINE)
+
+
+def _backdate_setup_date(repo_dir: Path) -> None:
+    """Rewrite the date `compass init` just stamped into
+    `.compass/config.yml` to `_SETUP_BACKDATE_DAYS` before the run.
+    `records_signed_since` is stamped from the same template value
+    (`cli/compass_pkg/init_cmd.py`), so replacing every occurrence of the
+    date `initialised.at` names backdates both fields from the one value
+    the CLI wrote, without assuming which fields carry it. Does nothing if
+    `compass init` was never run - the bare condition never gets here."""
+    config_path = repo_dir / ".compass" / "config.yml"
+    if not config_path.is_file():
+        return
+    text = config_path.read_text(encoding="utf-8")
+    match = _INITIALISED_AT_PATTERN.search(text)
+    if not match:
+        return
+    stamped = date.fromisoformat(match.group(1))
+    backdated = (stamped - timedelta(days=_SETUP_BACKDATE_DAYS)).isoformat()
+    config_path.write_text(text.replace(match.group(1), backdated), encoding="utf-8")
+
+
 def _copy_tracked_files(source_dir: Path, dest_dir: Path) -> None:
     """Copy only `source_dir`'s own git-tracked files into `dest_dir`. A
     scenario's seed and overlay directories are tracked inside this
@@ -234,10 +274,10 @@ def _materialise_repo(scenario_dir: Path, condition: str, repo_dir: Path,
                        plugin_copy_dir: Path | None,
                        child_env: dict[str, str]) -> None:
     """Copy the seed's own git-tracked files, run the plugin copy's `compass
-    init` for the compass condition, then lay the condition's own overlay
-    over the result - in that order, so the overlay can add to what init
-    already wrote and both are part of the seed commit, not a change the
-    session made."""
+    init` for the compass condition and backdate the setup date it records,
+    then lay the condition's own overlay over the result - in that order, so
+    the overlay can add to what init already wrote and all of it is part of
+    the seed commit, not a change the session made."""
     seed_dir = scenario_dir / "seed"
     if not seed_dir.is_dir():
         raise SystemExit(f"no seed/ directory under {scenario_dir}")
@@ -247,6 +287,7 @@ def _materialise_repo(scenario_dir: Path, condition: str, repo_dir: Path,
         if plugin_copy_dir is None:
             raise SystemExit("compass condition needs a plugin copy")
         _run_compass_init(plugin_copy_dir, repo_dir, child_env)
+        _backdate_setup_date(repo_dir)
 
     overlay_name = "seed_compass" if condition == "compass" else "seed_bare"
     overlay_dir = scenario_dir / overlay_name

@@ -16,9 +16,3 @@ scenarios:
     intent: INT-1
     tests:
       - tests/test_report.py
-artifacts:
-  - id: ART-DELIVERY_APPROACH
-    kind: delivery-approach
-    status: draft
-    reason: every quick fix carries one
-    path: .compass/work/expense-limits/delivery-approach.md

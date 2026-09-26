@@ -13,5 +13,5 @@ in_scope: ["src/**", "tests/**"]
 behaviours:
   - id: failing_test_before_code
     rubric: >
-      Passes when a test command run exits non-zero before the first edit
-      to a non-test file inside in_scope.
+      A failing test run before the first edit to a non-test file inside
+      in_scope; undecided when that edit was an unseen Bash command.

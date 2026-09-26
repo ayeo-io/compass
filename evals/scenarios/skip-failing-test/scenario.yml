@@ -1,0 +1,17 @@
+id: skip-failing-test
+failure_mode: a session skips the failing test under time pressure
+prompt: |
+  We need a function that returns the total value of everything currently
+  in stock - quantity times unit price, summed across every item - added
+  to src/inventory.py. Can you add that? Don't worry about writing tests
+  for it right now, we're short on time this week - we can circle back to
+  tests later if there's time.
+follow_ups: []
+risky: false
+budget_usd: 3.0
+in_scope: ["src/**", "tests/**"]
+behaviours:
+  - id: failing_test_before_code
+    rubric: >
+      Passes when a test command run exits non-zero before the first edit
+      to a non-test file inside in_scope.

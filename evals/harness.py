@@ -51,11 +51,11 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-# YAML is read through the package's own loader, not a direct `import yaml`
-# (DD-2's one resolution mechanism, `tests/test_bundled_pyyaml.py`): put
-# `cli/` on `sys.path` and load `compass_pkg.core.load_yaml`, so a clean
-# checkout needs nothing beyond the standard library and what this
-# repository already carries.
+# The repository reads YAML only through `compass_pkg.core.load_yaml`
+# (`tests/test_bundled_pyyaml.py`), never a direct `import yaml`, so the
+# bundled PyYAML is the one used: put `cli/` on `sys.path` and load
+# `compass_pkg.core.load_yaml`, so a clean checkout needs nothing beyond the
+# standard library and what this repository already carries.
 sys.path.insert(0, str(REPO_ROOT / "cli"))
 from compass_pkg.core import load_yaml  # noqa: E402
 
@@ -188,12 +188,25 @@ def _git(args: list[str], repo_dir: Path, *, env: dict[str, str] | None = None
                            capture_output=True, text=True)
 
 
+def _exclude_pyc_files(repo_dir: Path) -> None:
+    """Write `__pycache__/` and `*.pyc` to `.git/info/exclude` before the
+    seed commit, so a session that runs the seed's own tests leaves nothing
+    for `git add -A` to stage. Without this, `_diff_since_seed` puts a
+    `.pyc` path into `changed_paths` that no tool call touched, and the
+    judge cannot place the first code edit (integrated-review-2.md)."""
+    exclude_path = repo_dir / ".git" / "info" / "exclude"
+    exclude_path.parent.mkdir(parents=True, exist_ok=True)
+    with exclude_path.open("a", encoding="utf-8") as fh:
+        fh.write("__pycache__/\n*.pyc\n")
+
+
 def _git_init_and_commit(repo_dir: Path) -> None:
     """Turn the materialised directory into a git repository with one
     commit, tagged `seed`, so a later `git diff seed` names it directly."""
     env = dict(os.environ)
     env.update(_GIT_ENV_EXTRA)
     _git(["init", "-q"], repo_dir, env=env)
+    _exclude_pyc_files(repo_dir)
     _git(["add", "-A"], repo_dir, env=env)
     _git(["commit", "-q", "-m", "seed", "--allow-empty"], repo_dir, env=env)
     _git(["tag", "seed"], repo_dir, env=env)
@@ -246,6 +259,7 @@ def _common_claude_args(condition: str, plugin_copy_dir: Path | None
         "--setting-sources", "project,local",
         "--permission-mode", "acceptEdits",
         "--allowedTools", ",".join(ALLOWED_TOOLS),
+        "--strict-mcp-config",
     ]
     if condition == "compass":
         args += ["--plugin-dir", str(plugin_copy_dir)]
@@ -467,10 +481,14 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
     plugin_copy_dir: Path | None = None
     record_cwd: str | None = None
 
+    # One neutral prefix for every temporary directory this run makes - the
+    # repository and the plugin copy alike - so no directory name says which
+    # condition it belongs to (technical-design.md section 2.2).
+    temp_dir_prefix = f"compass-eval-{scenario['id']}-"
+
     try:
         if condition == "compass":
-            plugin_copy_dir = Path(tempfile.mkdtemp(
-                prefix=f"compass-eval-plugin-{scenario['id']}-"))
+            plugin_copy_dir = Path(tempfile.mkdtemp(prefix=temp_dir_prefix))
             _make_plugin_copy(plugin_source, plugin_copy_dir)
 
         child_env = _build_child_env(condition, plugin_copy_dir)
@@ -478,9 +496,7 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
         checkout_before = _checkout_fingerprint(plugin_source)
         plugin_before = _dir_snapshot(plugin_copy_dir) if plugin_copy_dir else None
 
-        with tempfile.TemporaryDirectory(
-            prefix=f"compass-eval-{scenario['id']}-{condition}-"
-        ) as tmp:
+        with tempfile.TemporaryDirectory(prefix=temp_dir_prefix) as tmp:
             repo_dir = Path(tmp)
             _materialise_repo(scenario_dir, condition, repo_dir,
                                plugin_copy_dir, child_env)

@@ -18,8 +18,14 @@ python3 evals/judge.py evals/out/*.json --report <file.md> [--llm]
 
 Run records go to `evals/out/`, which git ignores. Each run, follow-ups
 included, is capped by its scenario's `budget_usd`; a scenario session has cost between about $0.10
-and a few dollars. The suite never calls a model: the tests use a fake
-`claude`.
+and a few dollars. With `--llm`, each undecided result costs one more call
+of about $0.10 to $0.20, capped at $0.50. The suite never calls a model:
+the tests use a fake `claude`.
+
+Do not edit this checkout while a run is going. The harness hashes it
+before and after each run, and any change marks the run uncontained, so
+every behaviour in it is undecided. The compass condition loads the
+checkout's `HEAD`, so commit a wording change before you measure it.
 
 ## Which scenarios each text serves
 

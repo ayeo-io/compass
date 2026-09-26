@@ -206,7 +206,7 @@ Before the change is merged:
 
 1. Run the scenarios the text serves under the compass condition, with
    `python3 evals/harness.py --scenario <id> --condition compass`, on the
-   branch with the change.
+   branch with the change committed: the harness loads `HEAD`.
 2. Score them with `python3 evals/judge.py <run records> --report <file>`.
 3. Compare the report with the baseline - the latest published report
    under `docs/compass/`, starting with `2026-09-26-eval-pilot.md` - and put

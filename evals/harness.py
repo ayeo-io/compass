@@ -40,13 +40,13 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-# The bundled copy of PyYAML resolves the same way it does for every other
-# Compass entry point: put `cli/` on `sys.path` and import `compass_pkg` for
-# its side effect before importing `yaml`, so a clean checkout needs nothing
-# beyond the standard library and what this repository already carries.
+# YAML is read through the package's own loader, not a direct `import yaml`
+# (DD-2's one resolution mechanism, `tests/test_bundled_pyyaml.py`): put
+# `cli/` on `sys.path` and load `compass_pkg.core.load_yaml`, so a clean
+# checkout needs nothing beyond the standard library and what this
+# repository already carries.
 sys.path.insert(0, str(REPO_ROOT / "cli"))
-import compass_pkg  # noqa: E402  (side effect: puts cli/vendor at sys.path[0])
-import yaml  # noqa: E402
+from compass_pkg.core import load_yaml  # noqa: E402
 
 # "The file tools" (technical-design.md section 2.2): the three tools that
 # read, write or edit a file, as distinct from the six Bash forms below,
@@ -81,11 +81,11 @@ def _resolve_scenario_dir(value: str) -> Path:
 
 
 def load_scenario(scenario_dir: Path) -> dict[str, Any]:
-    """Read `scenario.yml`, filling in the two keys this module needs a
-    default for."""
+    """Read `scenario.yml` through the shared loader, filling in the two
+    keys this module needs a default for. `load_yaml` returns `{}` for an
+    empty file and raises `CompassError` for a missing or invalid one."""
     path = scenario_dir / "scenario.yml"
-    with path.open("r", encoding="utf-8") as fh:
-        data = yaml.safe_load(fh) or {}
+    data = load_yaml(str(path))
     data.setdefault("follow_ups", [])
     data.setdefault("test_command", _DEFAULT_TEST_COMMAND)
     return data

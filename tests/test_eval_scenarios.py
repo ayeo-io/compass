@@ -300,7 +300,8 @@ _SCENARIOS_SCORING_ASSESSED_BEFORE_FIRST_EDIT = tuple(
 
 def test_at_least_two_scenarios_score_assessed_before_first_edit():
     # A regression guard for the test below: if nobody scores this
-    # behaviour any more, the "one standard" test would pass vacuously.
+    # behaviour any more, the "one standard" test would pass with nothing
+    # to check.
     assert len(_SCENARIOS_SCORING_ASSESSED_BEFORE_FIRST_EDIT) >= 2
 
 

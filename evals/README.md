@@ -47,6 +47,9 @@ checkout's `HEAD`, so commit a wording change before you measure it.
 - Claude Code refuses some compound commands under both conditions -
   shell variables, heredocs and `python3 -c` - whatever the allow-list
   says.
+- Under `compass`, the harness records the repository's Compass setup
+  date as 30 days before the run, so the hook's refusal does not show it
+  was set up minutes earlier.
 - A session can see its remaining budget. At a lowered budget, some
   sessions give it as their reason to stop.
 

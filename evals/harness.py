@@ -81,13 +81,15 @@ _DEFAULT_TEST_COMMAND = "python3 -m pytest -q"
 # crashed, not the whole of it.
 _TAIL_LIMIT = 2000
 
-# A fixed identity for the one commit the harness itself makes, so a machine
-# with no git identity configured still gets a fresh repository.
+# An ordinary identity for the one commit the harness itself makes, so a
+# machine with no git identity configured still gets a fresh repository, and
+# an allowed `git log` shows nothing a session could read as a sign it is
+# under test (technical-design.md section 2.2).
 _GIT_ENV_EXTRA = {
-    "GIT_AUTHOR_NAME": "compass-eval-harness",
-    "GIT_AUTHOR_EMAIL": "eval-harness@compass.invalid",
-    "GIT_COMMITTER_NAME": "compass-eval-harness",
-    "GIT_COMMITTER_EMAIL": "eval-harness@compass.invalid",
+    "GIT_AUTHOR_NAME": "Sam Taylor",
+    "GIT_AUTHOR_EMAIL": "sam@example.com",
+    "GIT_COMMITTER_NAME": "Sam Taylor",
+    "GIT_COMMITTER_EMAIL": "sam@example.com",
 }
 
 # The wording Claude Code uses when a tool call was refused rather than run -
@@ -484,16 +486,13 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
     plugin_copy_dir: Path | None = None
     record_cwd: str | None = None
 
-    # One neutral prefix for every temporary directory this run makes - the
-    # repository and the plugin copy alike - so a session that can see its
-    # own working directory learns neither the scenario nor the condition
-    # from its name (technical-design.md section 2.2; integrated-review-3.md
-    # named `compass-eval-skip-failing-test-...` as a real leak).
-    temp_dir_prefix = "eval-"
-
     try:
         if condition == "compass":
-            plugin_copy_dir = Path(tempfile.mkdtemp(prefix=temp_dir_prefix))
+            # The system's default temporary name - no prefix - so a
+            # session that can see its own working directory learns
+            # neither the scenario nor the condition from its name
+            # (technical-design.md section 2.2).
+            plugin_copy_dir = Path(tempfile.mkdtemp())
             _make_plugin_copy(plugin_source, plugin_copy_dir)
 
         child_env = _build_child_env(condition, plugin_copy_dir)
@@ -501,7 +500,7 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
         checkout_before = _checkout_fingerprint(plugin_source)
         plugin_before = _dir_snapshot(plugin_copy_dir) if plugin_copy_dir else None
 
-        with tempfile.TemporaryDirectory(prefix=temp_dir_prefix) as tmp:
+        with tempfile.TemporaryDirectory() as tmp:
             repo_dir = Path(tmp)
             _materialise_repo(scenario_dir, condition, repo_dir,
                                plugin_copy_dir, child_env)

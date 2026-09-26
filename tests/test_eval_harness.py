@@ -52,6 +52,7 @@ write outside its own directory, a simulated permission denial.
 import json
 import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -91,6 +92,13 @@ def main():
         # PATH entries (in particular the plugin copy's bin/) may be gone
         # by the time a test can look.
         "resolved_compass": shutil.which("compass", path=os.environ.get("PATH", "")),
+        # The seed commit's author and committer, read now because the
+        # harness deletes the repository once the call returns - the same
+        # allowed `git log` a real session could run.
+        "git_log_identity": subprocess.run(
+            ["git", "log", "-1", "--format=%an <%ae> %cn <%ce>"],
+            cwd=cwd, capture_output=True, text=True,
+        ).stdout.strip(),
     }
 
     # The plugin copy the harness built for this call, if any - inspected
@@ -855,12 +863,10 @@ def test_no_mcp_server_reaches_the_session(
 def test_temporary_directory_names_do_not_name_the_scenario_or_condition(
     tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
 ):
-    """`integrated-review-3.md` (blocker): the repository directory named the
-    scenario id, and a session can see its own working directory - so
-    `compass-eval-skip-failing-test-...` told a real session what was being
-    scored. Every temporary directory, the repository and the plugin copy
-    alike, is `eval-` plus random characters and nothing else."""
-    expected_prefix = "eval-"
+    """A brief for try 6 (subtask-1) - the `eval-` prefix from try 5 still
+    told a real session it was under evaluation. Every temporary directory,
+    the repository and the plugin copy alike, takes the system's default
+    temporary name: no prefix names the scenario or the condition."""
     scenario_id = "pressure-fixture"
 
     compass_calls, compass_record, _ = _run_condition(
@@ -876,18 +882,73 @@ def test_temporary_directory_names_do_not_name_the_scenario_or_condition(
     compass_repo_name = Path(compass_record["cwd"]).name
     bare_repo_name = Path(bare_record["cwd"]).name
     for name in (compass_repo_name, bare_repo_name):
-        assert name.startswith(expected_prefix)
-        rest = name[len(expected_prefix):]
-        assert scenario_id not in rest
-        assert "compass" not in rest
-        assert "bare" not in rest
+        assert scenario_id not in name
+        assert "compass" not in name
+        assert "bare" not in name
+        assert "eval" not in name
 
     plugin_dir_arg = compass_calls[0]["args"][
         compass_calls[0]["args"].index("--plugin-dir") + 1
     ]
     plugin_copy_name = Path(plugin_dir_arg).name
-    assert plugin_copy_name.startswith(expected_prefix)
-    assert scenario_id not in plugin_copy_name[len(expected_prefix):]
+    assert scenario_id not in plugin_copy_name
+    assert "eval" not in plugin_copy_name
+
+
+# --- 12. the seed commit's author is an ordinary name, not the harness's own -
+
+def test_seed_commit_author_is_an_ordinary_name(tmp_path):
+    """`technical-design.md` section 2.2: the seed commit's author is an
+    ordinary name and address - a real `resume-after-compaction` compass
+    session could run the allowed `git log` and read `compass-eval-harness`
+    off the seed commit."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "seed.txt").write_text("original\n", encoding="utf-8")
+    harness._git_init_and_commit(repo)
+
+    identity = subprocess.run(
+        ["git", "log", "-1", "--format=%an <%ae> %cn <%ce>"],
+        cwd=str(repo), capture_output=True, text=True,
+    ).stdout.strip()
+    assert "eval" not in identity.lower()
+    assert "compass" not in identity.lower()
+
+
+# --- 13. nothing a session can see says it is under test --------------------
+
+def test_no_visible_name_says_it_is_under_test_or_names_the_scenario(
+    tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
+):
+    """A brief for try 6 (subtask-1): checks every temporary path and the
+    seed commit's author together, so a name reintroduced in either place
+    is caught, not just the one this round happened to fix."""
+    scenario_id = "pressure-fixture"
+    forbidden = ("eval", "compass", scenario_id)
+
+    compass_calls, compass_record, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "compass", monkeypatch,
+        plugin_source_dir, out_suffix="-tell",
+    )
+    bare_calls, bare_record, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "bare", monkeypatch,
+        plugin_source_dir, out_suffix="-tell",
+    )
+
+    plugin_dir_arg = compass_calls[0]["args"][
+        compass_calls[0]["args"].index("--plugin-dir") + 1
+    ]
+    texts = [
+        Path(compass_record["cwd"]).name,
+        Path(bare_record["cwd"]).name,
+        Path(plugin_dir_arg).name,
+        compass_calls[0]["git_log_identity"],
+        bare_calls[0]["git_log_identity"],
+    ]
+    for text in texts:
+        lowered = text.lower()
+        for word in forbidden:
+            assert word not in lowered, f"{word!r} found in {text!r}"
 
 
 # --- scenario.yml is read through the shared loader (compass_pkg.core.load_yaml) --

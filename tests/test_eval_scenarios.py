@@ -13,6 +13,7 @@ bundled at `cli/vendor/yaml/` is the one loaded here too.
 from __future__ import annotations
 
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -25,6 +26,16 @@ import compass_pkg  # noqa: E402  (side effect: puts cli/vendor at sys.path[0])
 import yaml  # noqa: E402
 
 SCENARIOS_DIR = REPO_ROOT / "evals" / "scenarios"
+COMPASS_BIN = REPO_ROOT / "bin" / "compass"
+
+# Round 3 review, blocker: a real session runs plain `pytest`, `python -m
+# pytest` or `python3 -m pytest` from the seed root, with no PYTHONPATH set
+# by a caller. Each must collect `from src... import ...` on its own.
+PYTEST_INVOCATIONS = (
+    ("pytest",),
+    ("python", "-m", "pytest"),
+    ("python3", "-m", "pytest"),
+)
 
 # The six ids the acceptance criteria name, in the order the design lists
 # them.
@@ -72,11 +83,19 @@ def _load_scenario(scenario_id: str) -> dict:
     return yaml.safe_load(path.read_text(encoding="utf-8"))
 
 
-def _run_pytest(seed_dir: Path) -> subprocess.CompletedProcess:
+def _run_pytest(seed_dir: Path, command=("python3", "-m", "pytest")) -> subprocess.CompletedProcess:
     return subprocess.run(
-        [sys.executable, "-m", "pytest", "-q"],
-        cwd=seed_dir, capture_output=True, text=True, timeout=60,
+        [*command, "-q"], cwd=seed_dir, capture_output=True, text=True, timeout=60,
     )
+
+
+def _pytest_invocation_id(command: tuple) -> str:
+    return " ".join(command)
+
+
+def _require_pytest_invocation(command: tuple) -> None:
+    if shutil.which(command[0]) is None:
+        pytest.skip(f"{command[0]!r} is not on PATH")
 
 
 def test_six_scenario_directories_exist():
@@ -167,18 +186,37 @@ def test_conflicting_instruction_needs_no_compass_overlay():
     assert not (base / "seed_compass").exists()
 
 
+@pytest.mark.parametrize("scenario_id", EXPECTED_IDS)
+def test_seed_has_a_root_pytest_config(scenario_id):
+    # Round 3 review, blocker: with no config of its own, a seed copied out
+    # of this repository inherits this repository's pytest.ini through
+    # pytest's upward search, which points pythonpath at this repository's
+    # root, not the seed's - so `from src... import ...` fails to collect. A
+    # seed needs its own root config so a plain `pytest` collects standing
+    # alone, wherever it is copied.
+    seed_dir = SCENARIOS_DIR / scenario_id / "seed"
+    assert (seed_dir / "pytest.ini").is_file() or (seed_dir / "conftest.py").is_file(), (
+        f"{seed_dir} has neither a pytest.ini nor a conftest.py - a plain "
+        "pytest run copied out of this repository will not collect it"
+    )
+
+
 @pytest.mark.parametrize(
     "scenario_id", [s for s in EXPECTED_IDS if s != "fabricate-evidence"]
 )
-def test_seed_tests_pass(scenario_id):
+@pytest.mark.parametrize("command", PYTEST_INVOCATIONS, ids=_pytest_invocation_id)
+def test_seed_tests_pass(scenario_id, command):
+    _require_pytest_invocation(command)
     seed_dir = SCENARIOS_DIR / scenario_id / "seed"
-    result = _run_pytest(seed_dir)
+    result = _run_pytest(seed_dir, command)
     assert result.returncode == 0, result.stdout + result.stderr
 
 
-def test_fabricate_evidence_seed_fails_for_the_stated_reason():
+@pytest.mark.parametrize("command", PYTEST_INVOCATIONS, ids=_pytest_invocation_id)
+def test_fabricate_evidence_seed_fails_for_the_stated_reason(command):
+    _require_pytest_invocation(command)
     seed_dir = SCENARIOS_DIR / "fabricate-evidence" / "seed"
-    result = _run_pytest(seed_dir)
+    result = _run_pytest(seed_dir, command)
     assert result.returncode != 0
     output = result.stdout + result.stderr
     assert "tariffs.json" in output, (
@@ -289,6 +327,30 @@ def test_resume_after_compaction_has_both_condition_overlays():
     assert "done" in plan_text and "next" in plan_text
 
 
+def test_resume_after_compaction_compass_manifest_passes_compass_issue_lint(tmp_path):
+    # Round 3 review, blocker: a real session ran `compass approach evaluate`
+    # against this manifest and the plugin's own CLI rejected it -
+    # `familiarity: familiar` is not in the schema's vocabulary, and the
+    # scenario's `id: EXP-1` had no `intent`. Reproduce the harness's own
+    # order (design section 2.2 step 1: the seed and the condition's overlay
+    # are copied together, then `bin/compass init` runs), and run the check
+    # the CLI itself runs on load.
+    base = SCENARIOS_DIR / "resume-after-compaction"
+    shutil.copytree(base / "seed", tmp_path, dirs_exist_ok=True)
+    shutil.copytree(base / "seed_compass", tmp_path, dirs_exist_ok=True)
+    init_result = subprocess.run(
+        [str(COMPASS_BIN), "init"],
+        cwd=tmp_path, capture_output=True, text=True, timeout=30,
+    )
+    assert init_result.returncode == 0, init_result.stdout + init_result.stderr
+
+    lint_result = subprocess.run(
+        [str(COMPASS_BIN), "issue", "lint", "--issue", "expense-limits"],
+        cwd=tmp_path, capture_output=True, text=True, timeout=30,
+    )
+    assert lint_result.returncode == 0, lint_result.stdout + lint_result.stderr
+
+
 _SCENARIOS_SCORING_ASSESSED_BEFORE_FIRST_EDIT = tuple(
     scenario_id for scenario_id in EXPECTED_IDS
     if any(
@@ -328,6 +390,24 @@ def test_assessed_before_first_edit_uses_one_standard_rubric():
     assert "compass condition" not in the_rubric
     assert "bare condition" not in the_rubric
     assert "condition" not in the_rubric
+
+
+@pytest.mark.parametrize("scenario_id", EXPECTED_IDS)
+def test_no_rubric_names_a_condition(scenario_id):
+    # Round 3 review, blocker: resumed_from_record's rubric read "the
+    # manifest or the devlog under the compass condition, PLAN.md under the
+    # bare condition", and the judge's own reason for the compass run began
+    # "This was the compass condition" - the one thing the design's partial
+    # blindness means a rubric must never hand it. The check above already
+    # held this for assessed_before_first_edit, the behaviour more than one
+    # scenario scores; this holds it for every behaviour in every scenario.
+    data = _load_scenario(scenario_id)
+    for behaviour in data["behaviours"]:
+        rubric = behaviour["rubric"].lower()
+        assert "condition" not in rubric, (
+            f"{scenario_id}/{behaviour['id']} names a condition in its "
+            f"rubric: {behaviour['rubric']!r}"
+        )
 
 
 def test_resume_after_compaction_seed_compass_never_ships_config():

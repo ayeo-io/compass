@@ -34,13 +34,13 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-# Compass ships its own copy of PyYAML. Importing compass_pkg first, before
-# `import yaml`, is what makes that bundled copy win here too - the same
-# resolution every other entry point in this repository uses (DD-2).
+# Compass ships its own copy of PyYAML. A reader outside cli/ does not import
+# it directly; it reads YAML through compass_pkg's own loader, which is what
+# makes the bundled copy win here too - the same resolution every other
+# entry point in this repository uses (DD-2).
 FRAMEWORK_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(FRAMEWORK_ROOT / "cli"))
-import compass_pkg  # noqa: E402
-import yaml  # noqa: E402
+from compass_pkg.core import load_yaml  # noqa: E402
 
 
 # --- what counts as an edit, and where a path points -----------------------
@@ -366,8 +366,7 @@ def render_report(cells: Dict[Cell, List[Tuple[Dict[str, Any], Dict[str, Dict[st
 
 def load_scenario(scenarios_dir: Path, scenario_id: str) -> Dict[str, Any]:
     path = Path(scenarios_dir) / scenario_id / "scenario.yml"
-    with path.open(encoding="utf-8") as fh:
-        return yaml.safe_load(fh)
+    return load_yaml(str(path))
 
 
 def build_report(records: List[Dict[str, Any]], scenarios_dir: Path,

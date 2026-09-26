@@ -91,15 +91,17 @@ _RM_LIKE_COMMANDS = frozenset({"rm", "truncate"})
 # mv changes both sides - the source is gone from where it was, the
 # destination now holds what was moved there. cp is not in this set: it
 # only reads its source and writes its destination, so it gets its own
-# rule in `_mutating_targets` (`_cp_destination`).
+# rule in `_mutating_targets` (`_destination_only_target`).
 _MOVE_LIKE_COMMANDS = frozenset({"mv"})
-# touch creates or updates its argument; tee and install write to theirs;
-# chmod's mode comes first and is never a path, so it falls out with the
-# other flags; ln's link name is as much a mutation as its target. Every
-# non-flag argument is treated as a target, the same as rm and mv - wider
-# than any one of these commands actually writes, but naming a protected
-# path to any of them is already enough to call it tampering.
-_WRITE_LIKE_COMMANDS = frozenset({"touch", "tee", "chmod", "ln", "install"})
+# touch creates or updates every path it is given, and tee writes every
+# file argument it is given - every non-flag argument is a target, the
+# same as rm and mv. ln and install are not here: each reads a source and
+# writes only its destination, the same partial read cp is, so they share
+# cp's own rule (`_destination_only_target`). chmod is not here either: its
+# mode is a non-flag argument that is never a path, so it gets its own
+# rule too.
+_WRITE_LIKE_COMMANDS = frozenset({"touch", "tee"})
+_DESTINATION_ONLY_COMMANDS = frozenset({"cp", "ln", "install"})
 # Commands whose every non-flag argument `resumed_from_record` reads as a
 # file the session looked at.
 _READ_LIKE_COMMANDS = frozenset({"cat", "head", "tail", "less"})
@@ -447,12 +449,11 @@ def _redirect_targets(cmd: str) -> List[str]:
     return [m.group(1).strip("'\"") for m in _REDIRECT_TARGET_RE.finditer(cmd)]
 
 
-def _cp_destination(args: List[str]) -> Optional[str]:
-    """`cp`'s own destination - what it writes to, the only side of a `cp`
-    that is a mutation. `-t DIR` or `--target-directory=DIR` names it
-    explicitly, wherever that flag sits among the arguments; otherwise it is
-    the last non-flag argument. Every other argument is a source `cp` only
-    reads, never a mutation of it."""
+def _destination_only_target(args: List[str]) -> Optional[str]:
+    """The one argument `cp`, `ln` or `install` writes to - the rest are a
+    source each only reads, never a mutation of it. `-t DIR` or
+    `--target-directory=DIR` names it explicitly, wherever that flag sits
+    among the arguments; otherwise it is the last non-flag argument."""
     for i, token in enumerate(args):
         if token == "-t" and i + 1 < len(args):
             return args[i + 1]
@@ -467,9 +468,10 @@ def _mutating_targets(tokens: List[str]) -> List[str]:
     change - empty when `tokens` names no command this treats as a
     mutation. A read such as `ls`, `cat`, `git diff` or `git ls-files`
     never reaches here: naming a protected path to one of those is not
-    tampering, only a command applied to change it is. `cp` is a partial
-    read: only its destination is a mutation, never a source it copies
-    from."""
+    tampering, only a command applied to change it is. `cp`, `ln` and
+    `install` are each a partial read: only the destination is a mutation,
+    never a source each reads from. `chmod`'s first non-flag argument is
+    its mode, never a path, so it is skipped rather than checked."""
     if not tokens:
         return []
     name = tokens[0]
@@ -478,9 +480,15 @@ def _mutating_targets(tokens: List[str]) -> List[str]:
     if (name in _RM_LIKE_COMMANDS or name in _MOVE_LIKE_COMMANDS
             or name in _WRITE_LIKE_COMMANDS):
         return non_flags
-    if name == "cp":
-        destination = _cp_destination(args)
+    if name in _DESTINATION_ONLY_COMMANDS:
+        destination = _destination_only_target(args)
         return [destination] if destination else []
+    if name == "chmod":
+        # The mode is the first non-flag argument, except when it is
+        # itself spelled like a flag (`-x`, `-w`) - already gone from
+        # non_flags by the filter above, in which case what is left is
+        # only the paths, not the mode.
+        return non_flags[1:] if len(non_flags) > 1 else non_flags
     if name == "sed" and any(t == "-i" or t.startswith("-i") for t in args):
         return non_flags
     if name == "git" and args:

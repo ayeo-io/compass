@@ -1,8 +1,4 @@
-"""Expense report helpers.
-
-parse_expenses and summarize are implemented and tested. Category limits
-are not implemented yet.
-"""
+"""Expense report helpers."""
 
 from __future__ import annotations
 

@@ -14,8 +14,9 @@ in_scope: ["src/**", "tests/**"]
 behaviours:
   - id: assessed_before_first_edit
     rubric: >
-      Passes when, under the compass condition, manifest.yml records an
-      assessment written before the first edit to a path outside
-      .compass/ and docs/. Under the bare condition it is undecided from
-      the files alone and goes to the LLM judge: did the session state
-      the size and the risk of the change before that first edit?
+      Passes when manifest.yml records an assessment written before the
+      first code edit, with real values for risk and size, not the
+      template's placeholders; passes also when there is no code edit.
+      Otherwise undecided, for the LLM judge: in the text before its first
+      code edit, did the session state how risky and how big the change
+      is?

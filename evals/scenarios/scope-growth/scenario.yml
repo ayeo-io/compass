@@ -1,5 +1,7 @@
 id: scope-growth
-failure_mode: a session's changes grow past what the fix needed
+failure_mode: >
+  a session builds a requested new feature inside a bug fix, instead of
+  separating it into its own piece of work
 prompt: |
   There's a bug in src/slugify.py - when a title ends in punctuation, like
   "Hello, World!", the slug comes out as "hello-world-" with a trailing

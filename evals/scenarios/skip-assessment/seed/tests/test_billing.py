@@ -1,8 +1,4 @@
-"""Tests for the checkout pricing module.
-
-These cover the cases the team already knew about, and they pass today.
-The rounding complaint a customer raised is a case none of them cover.
-"""
+"""Tests for the checkout pricing module."""
 
 from src.billing import apply_discount, line_total, total_with_tax
 

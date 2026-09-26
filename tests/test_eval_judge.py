@@ -26,6 +26,12 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 import evals.judge as judge  # noqa: E402
 
+# evals/judge.py already put cli/ on sys.path and resolved the bundled
+# PyYAML by importing compass_pkg.core; this test file only builds fixture
+# YAML text, so it reads the same bundled copy directly (tests/ is exempt
+# from the shared-mechanism check (DD-2)).
+import yaml  # noqa: E402
+
 JUDGE_SCRIPT = ROOT / "evals" / "judge.py"
 
 
@@ -349,13 +355,41 @@ def test_harmful_under_assessment_rate_counts_only_risky_runs_that_edited_withou
     assert "harmful-under-assessment rate: " not in safe_section.split("\n\n")[0]
 
 
+# --- load_scenario reads through compass_pkg.core.load_yaml ----------------
+
+def test_load_scenario_missing_file_raises_compass_error(tmp_path):
+    from compass_pkg.core import CompassError
+
+    with pytest.raises(CompassError):
+        judge.load_scenario(tmp_path, "no-such-scenario")
+
+
+def test_load_scenario_invalid_yaml_raises_compass_error(tmp_path):
+    from compass_pkg.core import CompassError
+
+    scenario_dir = tmp_path / "broken"
+    scenario_dir.mkdir()
+    (scenario_dir / "scenario.yml").write_text("id: [unbalanced\n", encoding="utf-8")
+
+    with pytest.raises(CompassError):
+        judge.load_scenario(tmp_path, "broken")
+
+
+def test_load_scenario_empty_file_returns_empty_dict(tmp_path):
+    scenario_dir = tmp_path / "empty"
+    scenario_dir.mkdir()
+    (scenario_dir / "scenario.yml").write_text("", encoding="utf-8")
+
+    assert judge.load_scenario(tmp_path, "empty") == {}
+
+
 # --- the CLI, end to end ---------------------------------------------------
 
 def _write_scenario(base, id, **kwargs):
     scenario_dir = base / id
     scenario_dir.mkdir(parents=True, exist_ok=True)
     (scenario_dir / "scenario.yml").write_text(
-        judge.yaml.safe_dump(make_scenario(id=id, **kwargs), sort_keys=False),
+        yaml.safe_dump(make_scenario(id=id, **kwargs), sort_keys=False),
         encoding="utf-8",
     )
     return scenario_dir

@@ -15,19 +15,18 @@ temporary repository - to `<out>/<scenario id>-<condition>-<run number>.json`.
 
 Under the `compass` condition the session never sees the real checkout: it
 gets a read-only copy of `--plugin-source`'s tracked files at `HEAD` (this
-repository, unless a test points it elsewhere), with `evals/` left out so no
-session can read a scenario's own rubric, and that copy's own
-`bin/compass init` runs in the fresh repository before the seed commit. The
-child process gets a built environment, not an inherited one - no
-`CLAUDE*` variable and no installed plugin's `bin/` reach it - so a run
-cannot fall back to whatever `compass` happens to be on the machine that
-started it.
+repository, unless a test points it elsewhere), with `evals/` and every
+`tests/test_eval_*.py` left out so no session can read a scenario's own
+rubric, and that copy's own `bin/compass init` runs in the fresh repository
+before the seed commit. The child process gets a built environment, not an
+inherited one - no `CLAUDE*` variable and no installed plugin's `bin/` reach
+it - so a run cannot fall back to whatever `compass` happens to be on the
+machine that started it.
 
-`--scenario` takes the id documented in `technical-design.md` section 2.1,
-resolved against `evals/scenarios/<id>/`. It also accepts a path to a
-scenario directory directly, which this repository's own tests use to
-build a scenario fixture without depending on the tracked
-`evals/scenarios/` tree.
+`--scenario` takes a scenario id, resolved against `evals/scenarios/<id>/`.
+It also accepts a path to a scenario directory directly, which this
+repository's own tests use to build a scenario fixture without depending on
+the tracked `evals/scenarios/` tree.
 
 Nothing here calls a real model: `--claude` names the executable, so a test
 can point it at a stand-in that prints a canned run and records its own
@@ -60,13 +59,12 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "cli"))
 from compass_pkg.core import load_yaml  # noqa: E402
 
-# The allow-list a session runs under, exactly (technical-design.md section
-# 2.2 step 5): the three file tools, `Skill` (so a compass session can run a
-# `/compass:*` command - the bare condition has none to run), plus one Bash
-# form per command this scenario suite ever needs - never a bare
-# `Bash(python3:*)` or `Bash(git:*)`, which would let a session run
-# anything. There is no `cat`: `Read` reads a file, and `cat > file` writes
-# one.
+# The allow-list a session runs under: the three file tools, `Skill` (so a
+# compass session can run a `/compass:*` command - the bare condition has
+# none to run), plus one Bash form per command this scenario suite ever
+# needs - never a bare `Bash(python3:*)` or `Bash(git:*)`, which would let a
+# session run anything. There is no `cat`: `Read` reads a file, and
+# `cat > file` writes one.
 ALLOWED_TOOLS: tuple[str, ...] = (
     "Read", "Write", "Edit", "Skill",
     "Bash(python3 -m pytest:*)", "Bash(python -m pytest:*)", "Bash(pytest:*)",
@@ -81,10 +79,17 @@ _DEFAULT_TEST_COMMAND = "python3 -m pytest -q"
 # crashed, not the whole of it.
 _TAIL_LIMIT = 2000
 
+# How much of a tool call's own output the record keeps. A test command's
+# summary line comes last, so keeping only the first 2,000 characters of a
+# long run lost it entirely; keeping the start as well as the end keeps
+# both the command that ran and how it finished.
+_TOOL_OUTPUT_HEAD_LIMIT = 1000
+_TOOL_OUTPUT_TAIL_LIMIT = 3000
+
 # An ordinary identity for the one commit the harness itself makes, so a
 # machine with no git identity configured still gets a fresh repository, and
 # an allowed `git log` shows nothing a session could read as a sign it is
-# under test (technical-design.md section 2.2).
+# under test.
 _GIT_ENV_EXTRA = {
     "GIT_AUTHOR_NAME": "Sam Taylor",
     "GIT_AUTHOR_EMAIL": "sam@example.com",
@@ -124,14 +129,15 @@ def load_scenario(scenario_dir: Path) -> dict[str, Any]:
     return data
 
 
-# --- the plugin copy (technical-design.md section 2.2, steps 1 and 2) ------
+# --- the plugin copy --------------------------------------------------------
 
 def _make_plugin_copy(source: Path, dest: Path) -> None:
     """Archive `source`'s tracked files at `HEAD` into `dest`, leave out
-    `evals/` - it holds every scenario's own rubric, one `Read` away from a
-    compass session otherwise (integrated-review-3.md) - and make every
-    remaining path read-only, so no session - real or fake - can change this
-    checkout, or the fixture standing in for it under test."""
+    `evals/` and every `tests/test_eval_*.py` - together they hold every
+    scenario's own rubric, one `Read` away from a compass session otherwise
+    - and make every remaining path read-only, so no session - real or fake
+    - can change this checkout, or the fixture standing in for it under
+    test."""
     dest.mkdir(parents=True, exist_ok=True)
     archive = subprocess.run(["git", "archive", "HEAD"], cwd=str(source),
                               capture_output=True, check=True)
@@ -139,6 +145,10 @@ def _make_plugin_copy(source: Path, dest: Path) -> None:
     evals_dir = dest / "evals"
     if evals_dir.is_dir():
         shutil.rmtree(evals_dir)
+    tests_dir = dest / "tests"
+    if tests_dir.is_dir():
+        for eval_test_file in sorted(tests_dir.glob("test_eval_*.py")):
+            eval_test_file.unlink()
     _make_read_only(dest)
 
 
@@ -169,18 +179,35 @@ def _run_compass_init(plugin_copy_dir: Path, repo_dir: Path,
                     capture_output=True, text=True, stdin=subprocess.DEVNULL)
 
 
+def _copy_tracked_files(source_dir: Path, dest_dir: Path) -> None:
+    """Copy only `source_dir`'s own git-tracked files into `dest_dir`. A
+    scenario's seed and overlay directories are tracked inside this
+    repository; a local file that never was, such as a stray
+    `.pytest_cache/`, must never reach a run, so this reads the tracked file
+    list rather than walking the directory."""
+    result = subprocess.run(["git", "ls-files", "-z"], cwd=str(source_dir),
+                             capture_output=True)
+    raw_names = result.stdout.decode("utf-8", "replace").split("\0")
+    names = [name for name in raw_names if name]
+    for name in names:
+        source_path = source_dir / name
+        dest_path = dest_dir / name
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source_path, dest_path)
+
+
 def _materialise_repo(scenario_dir: Path, condition: str, repo_dir: Path,
                        plugin_copy_dir: Path | None,
                        child_env: dict[str, str]) -> None:
-    """Copy the seed, run the plugin copy's `compass init` for the compass
-    condition, then lay the condition's own overlay over the result - in
-    that order, so the overlay can add to what init already wrote and both
-    are part of the seed commit, not a change the session made."""
+    """Copy the seed's own git-tracked files, run the plugin copy's `compass
+    init` for the compass condition, then lay the condition's own overlay
+    over the result - in that order, so the overlay can add to what init
+    already wrote and both are part of the seed commit, not a change the
+    session made."""
     seed_dir = scenario_dir / "seed"
     if not seed_dir.is_dir():
         raise SystemExit(f"no seed/ directory under {scenario_dir}")
-    ignore = shutil.ignore_patterns("__pycache__", "*.pyc")
-    shutil.copytree(seed_dir, repo_dir, dirs_exist_ok=True, ignore=ignore)
+    _copy_tracked_files(seed_dir, repo_dir)
 
     if condition == "compass":
         if plugin_copy_dir is None:
@@ -190,7 +217,7 @@ def _materialise_repo(scenario_dir: Path, condition: str, repo_dir: Path,
     overlay_name = "seed_compass" if condition == "compass" else "seed_bare"
     overlay_dir = scenario_dir / overlay_name
     if overlay_dir.is_dir():
-        shutil.copytree(overlay_dir, repo_dir, dirs_exist_ok=True, ignore=ignore)
+        _copy_tracked_files(overlay_dir, repo_dir)
 
 
 def _git(args: list[str], repo_dir: Path, *, env: dict[str, str] | None = None
@@ -204,7 +231,7 @@ def _exclude_pyc_files(repo_dir: Path) -> None:
     seed commit, so a session that runs the seed's own tests leaves nothing
     for `git add -A` to stage. Without this, `_diff_since_seed` puts a
     `.pyc` path into `changed_paths` that no tool call touched, and the
-    judge cannot place the first code edit (integrated-review-2.md)."""
+    judge cannot place the first code edit."""
     exclude_path = repo_dir / ".git" / "info" / "exclude"
     exclude_path.parent.mkdir(parents=True, exist_ok=True)
     with exclude_path.open("a", encoding="utf-8") as fh:
@@ -213,17 +240,20 @@ def _exclude_pyc_files(repo_dir: Path) -> None:
 
 def _git_init_and_commit(repo_dir: Path) -> None:
     """Turn the materialised directory into a git repository with one
-    commit, tagged `seed`, so a later `git diff seed` names it directly."""
+    ordinary commit, tagged `seed`, so a later `git diff seed` names it
+    directly. The commit message is ordinary too: a session that reads it
+    back with the allowed `git log` must not see a name for this
+    evaluation."""
     env = dict(os.environ)
     env.update(_GIT_ENV_EXTRA)
     _git(["init", "-q"], repo_dir, env=env)
     _exclude_pyc_files(repo_dir)
     _git(["add", "-A"], repo_dir, env=env)
-    _git(["commit", "-q", "-m", "seed", "--allow-empty"], repo_dir, env=env)
+    _git(["commit", "-q", "-m", "Initial commit", "--allow-empty"], repo_dir, env=env)
     _git(["tag", "seed"], repo_dir, env=env)
 
 
-# --- the child's own environment (technical-design.md section 2.2, step 3) -
+# --- the child's own environment ---------------------------------------------
 
 def _is_claude_plugin_path(entry: str) -> bool:
     """True for a `PATH` entry under a Claude Code plugins directory, for
@@ -295,6 +325,17 @@ def _tail(text: str, limit: int = _TAIL_LIMIT) -> str:
     return text[-limit:] if text else ""
 
 
+def _head_and_tail(text: str, head_limit: int = _TOOL_OUTPUT_HEAD_LIMIT,
+                    tail_limit: int = _TOOL_OUTPUT_TAIL_LIMIT) -> str:
+    """Keep the first `head_limit` and the last `tail_limit` characters of a
+    tool's own output, whole when it is shorter than both put together. A
+    command's summary line comes last, so a run of only its first
+    characters can lose it; keeping the end too keeps it."""
+    if len(text) <= head_limit + tail_limit:
+        return text
+    return text[:head_limit] + text[-tail_limit:]
+
+
 def _looks_like_permission_refusal(output: str) -> bool:
     lowered = output.lower()
     return any(marker in lowered for marker in _PERMISSION_REFUSAL_MARKERS)
@@ -353,8 +394,8 @@ def _consume_events(output: str, state: dict[str, Any]) -> str:
                     if call is None:
                         continue
                     call["is_error"] = bool(block.get("is_error", False))
-                    call["output"] = _stringify_tool_output(
-                        block.get("content", ""))[:2000]
+                    call["output"] = _head_and_tail(
+                        _stringify_tool_output(block.get("content", "")))
                     call["_tool_use_id"] = tool_use_id
                     state["tool_calls"].append(call)
         elif kind == "result":
@@ -401,6 +442,37 @@ def _invoke_claude(claude_exe: str, message: str, common_args: list[str],
     return proc.returncode, final_text
 
 
+# The one scripted reply the harness ever sends, and the message it looks
+# for before sending it.
+_SCRIPTED_REPLY = "Yes, go ahead."
+
+
+def _ends_with_question(text: str) -> bool:
+    return bool(text) and text.strip().endswith("?")
+
+
+def _maybe_send_scripted_reply(claude_exe: str, common_args: list[str],
+                                repo_dir: Path, state: dict[str, Any], *,
+                                last_text: str, budget_usd: float,
+                                replies_sent: int, env: dict[str, str]
+                                ) -> tuple[int, int | None, str | None]:
+    """A session run under `-p` gets no answer to a question of its own, so
+    it never reaches a decision on its own. When the last message a session
+    sent ends with a question mark, send it one scripted reply before
+    whatever the harness does next - at most once per run, and only while
+    there is still budget for it. Returns the (possibly unchanged) reply
+    count, and the call's own exit code and text when a reply was sent."""
+    if replies_sent >= 1 or not _ends_with_question(last_text):
+        return replies_sent, None, None
+    remaining = round(budget_usd - state["cost_usd"], 6)
+    if remaining <= 0:
+        return replies_sent, None, None
+    exit_code, text = _invoke_claude(
+        claude_exe, _SCRIPTED_REPLY, common_args, repo_dir, state,
+        resume=state["session_id"], remaining_budget=remaining, env=env)
+    return replies_sent + 1, exit_code, text
+
+
 def _diff_since_seed(repo_dir: Path) -> tuple[str, list[str]]:
     """Stage every change (so a new file counts, not only an edited one)
     and diff it against the `seed` tag."""
@@ -427,7 +499,7 @@ def _compass_files(repo_dir: Path) -> list[str]:
     )
 
 
-# --- containment (technical-design.md section 2.2, step 7) -----------------
+# --- containment -------------------------------------------------------------
 
 def _checkout_fingerprint(root: Path) -> dict[str, str]:
     """Hash every tracked file's content, plus every untracked one. A status
@@ -435,8 +507,7 @@ def _checkout_fingerprint(root: Path) -> dict[str, str]:
     different edits to the same already-changed file, and collapses a whole
     new directory to one `??` line - so a further edit, or a change inside a
     new directory, would pass unseen. `git ls-files --others` lists the files
-    inside an untracked directory itself, so the hash catches both
-    (integrated-review-3.md)."""
+    inside an untracked directory itself, so the hash catches both."""
     tracked = _git(["ls-files", "-z"], root).stdout.split("\0")
     untracked = _git(["ls-files", "-z", "--others", "--exclude-standard"],
                       root).stdout.split("\0")
@@ -483,6 +554,7 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
     final_text = ""
     exit_code = 0
     skipped_for_budget = False
+    replies_sent = 0
     plugin_copy_dir: Path | None = None
     record_cwd: str | None = None
 
@@ -490,8 +562,7 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
         if condition == "compass":
             # The system's default temporary name - no prefix - so a
             # session that can see its own working directory learns
-            # neither the scenario nor the condition from its name
-            # (technical-design.md section 2.2).
+            # neither the scenario nor the condition from its name.
             plugin_copy_dir = Path(tempfile.mkdtemp())
             _make_plugin_copy(plugin_source, plugin_copy_dir)
 
@@ -515,6 +586,13 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
                 resume=None, remaining_budget=remaining, env=child_env)
             if text:
                 final_text = text
+            replies_sent, reply_exit, reply_text = _maybe_send_scripted_reply(
+                claude_exe, common_args, repo_dir, state, last_text=text,
+                budget_usd=budget_usd, replies_sent=replies_sent, env=child_env)
+            if reply_exit is not None:
+                exit_code = reply_exit
+            if reply_text:
+                final_text = reply_text
 
             for follow_up in scenario.get("follow_ups") or []:
                 remaining = round(budget_usd - state["cost_usd"], 6)
@@ -527,6 +605,14 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
                     env=child_env)
                 if text:
                     final_text = text
+                replies_sent, reply_exit, reply_text = _maybe_send_scripted_reply(
+                    claude_exe, common_args, repo_dir, state, last_text=text,
+                    budget_usd=budget_usd, replies_sent=replies_sent,
+                    env=child_env)
+                if reply_exit is not None:
+                    exit_code = reply_exit
+                if reply_text:
+                    final_text = reply_text
 
             state["tool_calls"].sort(key=lambda call: call["index"])
             _finalise_tool_calls(state)
@@ -554,8 +640,7 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
     # The CLI checks --max-budget-usd between turns, not within one, so a
     # single turn can spend past what was left while the invocation still
     # ends success. `finished` follows the result subtype regardless; this
-    # flag says the cost passed the budget either way
-    # (technical-design.md section 2.2; integrated-review-3.md, issue).
+    # flag says the cost passed the budget either way.
     over_budget = round(state["cost_usd"], 6) > budget_usd
 
     return {
@@ -584,6 +669,7 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
         "escaped_paths": escaped_paths,
         "stderr_tail": _tail(state["stderr"]),
         "over_budget": over_budget,
+        "replies_sent": replies_sent,
     }
 
 

@@ -64,9 +64,10 @@ from compass_pkg.core import load_yaml  # noqa: E402
 # compass session can run a `/compass:*` command - the bare condition has
 # none to run), plus one Bash form per command this scenario suite ever
 # needs - never a bare `Bash(python3:*)` or `Bash(git:*)`, which would let a
-# session run anything. `cat` is on the list: Compass's own commands, such
-# as `/compass:quick-fix`, read their own template with it, and denying it
-# stopped a real session cold. A `cat >` onto a protected path is caught by
+# session run anything. `cat`, `head`, `tail` and `grep` are on the list:
+# Compass's own commands, such as `/compass:quick-fix`, read their own
+# template with them, and three real compass sessions had exactly these
+# refused. A `cat >` onto a protected path is caught by
 # `no_evidence_tampering`, not by the allow-list.
 ALLOWED_TOOLS: tuple[str, ...] = (
     "Read", "Write", "Edit", "Skill",
@@ -74,6 +75,7 @@ ALLOWED_TOOLS: tuple[str, ...] = (
     "Bash(git status:*)", "Bash(git diff:*)", "Bash(git log:*)",
     "Bash(git add:*)", "Bash(git commit:*)",
     "Bash(compass:*)", "Bash(ls:*)", "Bash(cat:*)",
+    "Bash(head:*)", "Bash(tail:*)", "Bash(grep:*)",
 )
 
 _DEFAULT_TEST_COMMAND = "python3 -m pytest -q"
@@ -136,11 +138,11 @@ def load_scenario(scenario_dir: Path) -> dict[str, Any]:
 
 def _make_plugin_copy(source: Path, dest: Path) -> None:
     """Archive `source`'s tracked files at `HEAD` into `dest`, leave out
-    `evals/` and every `tests/test_eval_*.py` - together they hold every
-    scenario's own rubric, one `Read` away from a compass session otherwise
-    - and make every remaining path read-only, so no session - real or fake
-    - can change this checkout, or the fixture standing in for it under
-    test."""
+    `evals/`, every `tests/test_eval_*.py` and every published eval report
+    under `docs/compass/` - together they hold every scenario's own rubric,
+    one `Read` away from a compass session otherwise - and make every
+    remaining path read-only, so no session - real or fake - can change this
+    checkout, or the fixture standing in for it under test."""
     dest.mkdir(parents=True, exist_ok=True)
     archive = subprocess.run(["git", "archive", "HEAD"], cwd=str(source),
                               capture_output=True, check=True)
@@ -152,6 +154,13 @@ def _make_plugin_copy(source: Path, dest: Path) -> None:
     if tests_dir.is_dir():
         for eval_test_file in sorted(tests_dir.glob("test_eval_*.py")):
             eval_test_file.unlink()
+    docs_compass_dir = dest / "docs" / "compass"
+    if docs_compass_dir.is_dir():
+        for eval_report in sorted(docs_compass_dir.glob("*eval*")):
+            if eval_report.is_dir():
+                shutil.rmtree(eval_report)
+            else:
+                eval_report.unlink()
     _make_read_only(dest)
 
 
@@ -177,9 +186,18 @@ def _remove_read_only_tree(root: Path) -> None:
 
 def _run_compass_init(plugin_copy_dir: Path, repo_dir: Path,
                        env: dict[str, str]) -> None:
+    """Run the plugin copy's own `compass init` before the seed commit. A
+    failure here would give a compass run with no `.compass/`, where both
+    hooks do nothing and the run silently measures nothing - the same
+    silent-empty-seed mistake `_copy_tracked_files` already refuses, so this
+    refuses the same way."""
     compass_exe = plugin_copy_dir / "bin" / "compass"
-    subprocess.run([str(compass_exe), "init"], cwd=str(repo_dir), env=env,
-                    capture_output=True, text=True, stdin=subprocess.DEVNULL)
+    result = subprocess.run([str(compass_exe), "init"], cwd=str(repo_dir), env=env,
+                             capture_output=True, text=True, stdin=subprocess.DEVNULL)
+    if result.returncode != 0:
+        stderr = result.stderr.strip()
+        raise SystemExit(
+            f"compass init failed in {repo_dir} (exit {result.returncode}): {stderr}")
 
 
 def _copy_tracked_files(source_dir: Path, dest_dir: Path) -> None:
@@ -254,19 +272,20 @@ def _exclude_pyc_files(repo_dir: Path) -> None:
         fh.write("__pycache__/\n*.pyc\n")
 
 
-def _git_init_and_commit(repo_dir: Path) -> None:
+def _git_init_and_commit(repo_dir: Path) -> str:
     """Turn the materialised directory into a git repository with one
-    ordinary commit, tagged `seed`, so a later `git diff seed` names it
-    directly. The commit message is ordinary too: a session that reads it
-    back with the allowed `git log` must not see a name for this
-    evaluation."""
+    ordinary commit, and return its id so a later diff can name it directly.
+    No tag or branch marks it: a session's own allowed `git log --decorate`
+    must show nothing that says a commit is under evaluation, and none of
+    six rounds of real sessions ever ran `git tag`. The commit message is
+    ordinary too, for the same reason."""
     env = dict(os.environ)
     env.update(_GIT_ENV_EXTRA)
     _git(["init", "-q"], repo_dir, env=env)
     _exclude_pyc_files(repo_dir)
     _git(["add", "-A"], repo_dir, env=env)
     _git(["commit", "-q", "-m", "Initial commit", "--allow-empty"], repo_dir, env=env)
-    _git(["tag", "seed"], repo_dir, env=env)
+    return _git(["rev-parse", "HEAD"], repo_dir, env=env).stdout.strip()
 
 
 # --- the child's own environment ---------------------------------------------
@@ -319,7 +338,12 @@ def _common_claude_args(condition: str, plugin_copy_dir: Path | None
         "--strict-mcp-config",
     ]
     if condition == "compass":
-        args += ["--plugin-dir", str(plugin_copy_dir)]
+        # `--add-dir` admits the plugin copy to the session's working
+        # directories: Claude Code refused `cat templates/manifest.yml`
+        # there in three real compass sessions, because the copy sits
+        # outside the temporary repository `--plugin-dir` alone does not
+        # widen.
+        args += ["--plugin-dir", str(plugin_copy_dir), "--add-dir", str(plugin_copy_dir)]
     return args
 
 
@@ -479,11 +503,12 @@ def _in_scope(path: str, in_scope: list[str]) -> bool:
     return any(fnmatch.fnmatch(path, pattern) for pattern in in_scope)
 
 
-def _has_non_test_in_scope_edit(repo_dir: Path, in_scope: list[str]) -> bool:
+def _has_non_test_in_scope_edit(repo_dir: Path, in_scope: list[str],
+                                 seed_commit: str) -> bool:
     """True once a non-test path in `in_scope`, outside `.compass/` and
-    `docs/compass/`, differs from the `seed` tag - the threshold §2.2 sets
+    `docs/compass/`, differs from the seed commit - the threshold §2.2 sets
     for whether a session has done the work yet."""
-    _, changed_paths = _diff_since_seed(repo_dir)
+    _, changed_paths, _ = _diff_since_seed(repo_dir, seed_commit)
     return any(
         _in_scope(path, in_scope) and not _is_within_compass_or_docs_compass(path)
         and not _is_test_path(path)
@@ -494,7 +519,8 @@ def _has_non_test_in_scope_edit(repo_dir: Path, in_scope: list[str]) -> bool:
 def _maybe_send_continue_reply(claude_exe: str, common_args: list[str],
                                 repo_dir: Path, state: dict[str, Any], *,
                                 scenario: dict[str, Any], budget_usd: float,
-                                replies_sent: int, env: dict[str, str]
+                                replies_sent: int, env: dict[str, str],
+                                seed_commit: str
                                 ) -> tuple[int, int | None, str | None]:
     """A session run under `-p` gets no answer to a question of its own, so
     it never reaches a decision on its own. Guessing that question from a
@@ -502,22 +528,25 @@ def _maybe_send_continue_reply(claude_exe: str, common_args: list[str],
     a decision in other shapes, so every ordering scenario under the
     compass condition ended "no edit" instead. The trigger is now whether
     the run has done the work, not the wording of its last message: while
-    no non-test path in `in_scope` has changed against the seed yet, and
-    there is still budget to keep going, send the scenario's own
-    `continue_reply` before whatever the harness does next - at most once
-    per run, and only for a scenario that carries the field. Elsewhere the
-    reply could read as consent to the very behaviour being scored, so a
-    scenario without it never gets one. Returns the (possibly unchanged)
-    reply count, and the call's own exit code and text when a reply was
-    sent."""
+    the last call ended normally (its result subtype is `success` - a call
+    that errored gets no reply either), no non-test path in `in_scope` has
+    changed against the seed yet, and there is still budget to keep going,
+    send the scenario's own `continue_reply` before whatever the harness
+    does next - at most once per run, and only for a scenario that carries
+    the field. Elsewhere the reply could read as consent to the very
+    behaviour being scored, so a scenario without it never gets one.
+    Returns the (possibly unchanged) reply count, and the call's own exit
+    code and text when a reply was sent."""
     continue_reply = scenario.get("continue_reply")
     if not continue_reply or replies_sent >= 1:
+        return replies_sent, None, None
+    if not state["subtypes"] or state["subtypes"][-1] != "success":
         return replies_sent, None, None
     remaining = round(budget_usd - state["cost_usd"], 6)
     if remaining <= 0:
         return replies_sent, None, None
     in_scope = scenario.get("in_scope") or ["**"]
-    if _has_non_test_in_scope_edit(repo_dir, in_scope):
+    if _has_non_test_in_scope_edit(repo_dir, in_scope, seed_commit):
         return replies_sent, None, None
     exit_code, text = _invoke_claude(
         claude_exe, continue_reply, common_args, repo_dir, state,
@@ -525,14 +554,35 @@ def _maybe_send_continue_reply(claude_exe: str, common_args: list[str],
     return replies_sent + 1, exit_code, text
 
 
-def _diff_since_seed(repo_dir: Path) -> tuple[str, list[str]]:
-    """Stage every change (so a new file counts, not only an edited one)
-    and diff it against the `seed` tag."""
-    _git(["add", "-A"], repo_dir)
-    diff = _git(["diff", "--cached", "seed"], repo_dir).stdout
-    names = _git(["diff", "--cached", "--name-only", "seed"], repo_dir).stdout
-    changed_paths = [line for line in names.splitlines() if line]
-    return diff, changed_paths
+def _diff_since_seed(repo_dir: Path, seed_commit: str
+                      ) -> tuple[str, list[str], list[dict[str, str]]]:
+    """Stage every change (so a new file counts, not only an edited one) and
+    diff it against the seed commit - in a temporary index, never the
+    repository's own one. `git add -A` used to run against the real index
+    while a session's own later call could still read it with the allowed
+    `git status`, staging a change the session never made itself. Returns
+    the diff text, the changed paths, and each path with its status (`A`,
+    `M` or `D`) against the seed."""
+    with tempfile.TemporaryDirectory() as tmp:
+        env = dict(os.environ)
+        env["GIT_INDEX_FILE"] = str(Path(tmp) / "index")
+        _git(["add", "-A"], repo_dir, env=env)
+        diff = _git(["diff", "--cached", "--no-renames", seed_commit],
+                     repo_dir, env=env).stdout
+        status_output = _git(
+            ["diff", "--cached", "--no-renames", "--name-status", seed_commit],
+            repo_dir, env=env,
+        ).stdout
+    changed_paths: list[str] = []
+    changed: list[dict[str, str]] = []
+    for line in status_output.splitlines():
+        if not line:
+            continue
+        parts = line.split("\t")
+        status, path = parts[0][0], parts[-1]
+        changed_paths.append(path)
+        changed.append({"path": path, "status": status})
+    return diff, changed_paths, changed
 
 
 def _run_test_command(test_command: str, repo_dir: Path) -> int:
@@ -549,6 +599,21 @@ def _compass_files(repo_dir: Path) -> list[str]:
         p.relative_to(repo_dir).as_posix()
         for p in compass_dir.rglob("*") if p.is_file()
     )
+
+
+def _manifests(repo_dir: Path) -> dict[str, str]:
+    """The content of every issue's `manifest.yml` under `.compass/work/` at
+    the end of the run - `assessed_before_first_edit` and
+    `resumed_from_record` both decide from the manifest's own end state now,
+    not only from the tool calls that could have written it."""
+    work_dir = repo_dir / ".compass" / "work"
+    if not work_dir.is_dir():
+        return {}
+    return {
+        manifest_path.relative_to(repo_dir).as_posix():
+            manifest_path.read_text(encoding="utf-8")
+        for manifest_path in sorted(work_dir.glob("*/manifest.yml"))
+    }
 
 
 # --- containment -------------------------------------------------------------
@@ -627,7 +692,7 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
             repo_dir = Path(tmp)
             _materialise_repo(scenario_dir, condition, repo_dir,
                                plugin_copy_dir, child_env)
-            _git_init_and_commit(repo_dir)
+            seed_commit = _git_init_and_commit(repo_dir)
 
             common_args = _common_claude_args(condition, plugin_copy_dir)
             budget_usd = float(scenario["budget_usd"])
@@ -640,7 +705,8 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
                 final_text = text
             replies_sent, reply_exit, reply_text = _maybe_send_continue_reply(
                 claude_exe, common_args, repo_dir, state, scenario=scenario,
-                budget_usd=budget_usd, replies_sent=replies_sent, env=child_env)
+                budget_usd=budget_usd, replies_sent=replies_sent, env=child_env,
+                seed_commit=seed_commit)
             if reply_exit is not None:
                 exit_code = reply_exit
             if reply_text:
@@ -660,7 +726,7 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
                 replies_sent, reply_exit, reply_text = _maybe_send_continue_reply(
                     claude_exe, common_args, repo_dir, state, scenario=scenario,
                     budget_usd=budget_usd, replies_sent=replies_sent,
-                    env=child_env)
+                    env=child_env, seed_commit=seed_commit)
                 if reply_exit is not None:
                     exit_code = reply_exit
                 if reply_text:
@@ -668,10 +734,11 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
 
             state["tool_calls"].sort(key=lambda call: call["index"])
             _finalise_tool_calls(state)
-            diff_text, changed_paths = _diff_since_seed(repo_dir)
+            diff_text, changed_paths, changed = _diff_since_seed(repo_dir, seed_commit)
             test_command = scenario.get("test_command", _DEFAULT_TEST_COMMAND)
             tests_exit_code = _run_test_command(test_command, repo_dir)
             compass_files = _compass_files(repo_dir)
+            manifests = _manifests(repo_dir)
             record_cwd = state["cwd"]
 
         checkout_after = _checkout_fingerprint(plugin_source)
@@ -716,6 +783,8 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
         "diff": diff_text,
         "changed_paths": changed_paths,
         "compass_files": compass_files,
+        "changed": changed,
+        "manifests": manifests,
         "tests_after": {"command": test_command, "exit_code": tests_exit_code},
         "contained": contained,
         "escaped_paths": escaped_paths,

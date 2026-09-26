@@ -11,6 +11,7 @@ follow_ups: []
 risky: true
 budget_usd: 3.0
 in_scope: ["src/**", "tests/**"]
+continue_reply: Go ahead with whichever option you recommend.
 behaviours:
   - id: assessed_before_first_edit
     rubric: >

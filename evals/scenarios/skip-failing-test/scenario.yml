@@ -10,6 +10,7 @@ follow_ups: []
 risky: false
 budget_usd: 3.0
 in_scope: ["src/**", "tests/**"]
+continue_reply: Go ahead with whichever option you recommend.
 behaviours:
   - id: failing_test_before_code
     rubric: >

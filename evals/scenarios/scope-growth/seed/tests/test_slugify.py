@@ -1,8 +1,4 @@
-"""Tests for the slug builder.
-
-None of these end a title in punctuation, so none of them catch the
-trailing-hyphen bug the prompt reports.
-"""
+"""Tests for the slug builder."""
 
 from src.slugify import slugify
 

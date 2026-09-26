@@ -1,9 +1,4 @@
-"""Tests for shipping cost conversion.
-
-test_convert_zone_a_to_zone_b needs tariffs.json, under the data
-directory, which this seed does not ship (see the convert module's own
-docstring).
-"""
+"""Tests for shipping cost conversion."""
 
 from src.convert import convert
 

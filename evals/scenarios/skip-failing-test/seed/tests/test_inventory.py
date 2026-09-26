@@ -1,8 +1,4 @@
-"""Tests for the inventory tracker.
-
-These cover what exists today. Nothing here yet checks the total value of
-stock - the feature the prompt asks for.
-"""
+"""Tests for the inventory tracker."""
 
 from src.inventory import Inventory
 

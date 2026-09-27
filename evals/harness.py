@@ -50,6 +50,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import types
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
@@ -144,11 +145,10 @@ def load_scenario(scenario_dir: Path) -> dict[str, Any]:
 # protocol.allow=never` on every call: a session's own `.git/config` can
 # still name `core.fsmonitor` as a script the harness never chose, and
 # `core.hooksPath` is pointed at `/dev/null`, where no hook can exist, so
-# a hooks path the session's config names is never used.
-# `protocol.allow=never`, together with `GIT_NO_LAZY_FETCH=1` below, stops
-# a partial clone's own `remote.<name>.uploadpack` running when a missing
-# object is fetched lazily - the same route a `core.fsmonitor` or
-# `diff.external` script takes, one config key over. `--no-ext-diff
+# a hooks path the session's config names is never used. `protocol.allow=
+# never` is a default only: a session's own config can still name a more
+# specific `protocol.<name>.allow` that beats it, so it is not on its own
+# what stops a remote - `GIT_ALLOW_PROTOCOL=none` below is. `--no-ext-diff
 # --no-textconv` are added only to a `diff` subcommand, since only some
 # calls are diffs.
 _GIT_SAFE_CONFIG_ARGS = ("-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null",
@@ -164,20 +164,30 @@ def _run_git(args: list[str], cwd: Path, env: dict[str, str], *,
     (`tests/test_eval_harness.py::test_every_new_process_starts_through_a_named_function`
     reads this file's own source and fails on a call that starts a new
     process anywhere else). Always adds `GIT_CONFIG_GLOBAL=/dev/null`,
-    `GIT_CONFIG_NOSYSTEM=1` and `GIT_NO_LAZY_FETCH=1` to `env`, so neither
-    the operator's own `~/.gitconfig` nor a machine-wide config is read at
-    all - a filter or driver named only there finds no definition - and a
-    partial clone's own promisor remote never fetches a missing object
-    lazily, and `_GIT_SAFE_CONFIG_ARGS`, so a setting a repository's own
-    `.git/config` still carries cannot point `core.fsmonitor` at a script,
-    name a real `core.hooksPath`, or reach a remote at all. A `diff`
-    subcommand also gets `_GIT_DIFF_SAFE_ARGS`, skipping any the caller
-    already passed, so a filter or textconv driver named in a tracked
-    `.gitattributes` cannot run either."""
+    `GIT_CONFIG_NOSYSTEM=1`, `GIT_NO_LAZY_FETCH=1` and
+    `GIT_ALLOW_PROTOCOL=none` to `env`, so neither the operator's own
+    `~/.gitconfig` nor a machine-wide config is read at all - a filter or
+    driver named only there finds no definition - a partial clone's own
+    promisor remote never fetches a missing object lazily, and no remote of
+    any protocol is reached at all: git documents `GIT_ALLOW_PROTOCOL` as
+    overriding every `protocol.allow` and `protocol.<name>.allow` setting,
+    so a repository's own config cannot defeat it the way it can defeat the
+    `-c protocol.allow=never` argument below with a more specific
+    `protocol.<name>.allow`. Either `GIT_NO_LAZY_FETCH=1` or
+    `GIT_ALLOW_PROTOCOL=none` alone already stops a lazy fetch from a
+    planted promisor remote; both are set because each answers a different
+    question - whether a fetch happens at all, and whether a remote of any
+    protocol is reachable - not because one depends on the other.
+    `_GIT_SAFE_CONFIG_ARGS`, so a setting a repository's own `.git/config`
+    still carries cannot point `core.fsmonitor` at a script or name a real
+    `core.hooksPath`. A `diff` subcommand also gets `_GIT_DIFF_SAFE_ARGS`,
+    skipping any the caller already passed, so a filter or textconv driver
+    named in a tracked `.gitattributes` cannot run either."""
     call_env = dict(env)
     call_env["GIT_CONFIG_GLOBAL"] = "/dev/null"
     call_env["GIT_CONFIG_NOSYSTEM"] = "1"
     call_env["GIT_NO_LAZY_FETCH"] = "1"
+    call_env["GIT_ALLOW_PROTOCOL"] = "none"
     subcommand = args[0] if args else ""
     rest = list(args[1:])
     if subcommand == "diff":
@@ -448,7 +458,7 @@ def _restore_tampered_git_config(repo_dir: Path,
 def _run_guarded_git(args: list[str], repo_dir: Path, env: dict[str, str],
                       seed_git_snapshot: dict[str, bytes | None],
                       tampered_paths: list[str]
-                      ) -> subprocess.CompletedProcess:
+                      ) -> subprocess.CompletedProcess | types.SimpleNamespace:
     """One git command against the session's own repository: restores what
     changed among `_TAMPER_WATCHED_RELATIVE_PATHS` to the seed's own state
     first (`_restore_tampered_git_config`), then runs through `_run_git` -
@@ -457,8 +467,23 @@ def _run_guarded_git(args: list[str], repo_dir: Path, env: dict[str, str],
     arguments every call gets. A planted `diff.external` in `.git/config`
     must never run: the restore puts the seed's own copy back before this
     call, and `_run_git`'s own safe arguments and environment close the
-    other routes a session's own repository could still name."""
+    other routes a session's own repository could still name.
+
+    If `repo_dir/.git` is no longer a real directory - a plain file or a
+    symlink to one, the shape a gitfile takes - the restore above cannot
+    see what it points at, and running git here would run whatever that
+    path names: a gitfile can point at a git directory carrying its own
+    planted `filter.*.clean` or `core.hooksPath`, and `--no-ext-diff
+    --no-textconv` do not stop a clean filter. So no git command runs at
+    all in that case; this returns an empty stand-in result, carrying only
+    the `.stdout` a caller reads, and the caller's own tampered-path
+    bookkeeping already records the run as not contained, since
+    `.git/config` no longer reads back as the seed left it."""
     tampered_paths.extend(_restore_tampered_git_config(repo_dir, seed_git_snapshot))
+    git_path = repo_dir / ".git"
+    if git_path.exists() and not git_path.is_dir():
+        return types.SimpleNamespace(args=["git", *args], returncode=1,
+                                      stdout="", stderr="")
     return _run_git(args, repo_dir, env)
 
 

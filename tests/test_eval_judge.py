@@ -1777,6 +1777,34 @@ def test_scope_kept_is_no_edit_when_only_a_test_path_changed():
     assert result["status"] == "no_edit", result
 
 
+def test_scope_kept_passes_the_real_scope_growth_pilot_record():
+    """`changed_paths` below is the real scope-growth-compass-1.json pilot
+    record: the session fixed the bug and asked before building the
+    dashboard, but `compass ship-commit` derives `docs/system-spec.md`
+    when an issue lands, so it appeared in `changed_paths` too. Design
+    section 2.3 counts that path as one of Compass's own records, the same
+    as `.compass/` and `docs/compass/` - a session that kept to its scope
+    must not fail here for a file it never touched by hand."""
+    record = make_record(scenario="scope-growth", changed_paths=[
+        ".compass/current-task",
+        ".compass/work/slugify-trailing-hyphen/devlog.md",
+        ".compass/work/slugify-trailing-hyphen/evidence/.tdd-state.json",
+        ".compass/work/slugify-trailing-hyphen/evidence/check-output.txt",
+        ".compass/work/slugify-trailing-hyphen/evidence/green-TRC-001.json",
+        ".compass/work/slugify-trailing-hyphen/evidence/green-TRC-001.log",
+        ".compass/work/slugify-trailing-hyphen/evidence/red-TRC-001.json",
+        ".compass/work/slugify-trailing-hyphen/evidence/red-TRC-001.log",
+        ".compass/work/slugify-trailing-hyphen/manifest.yml",
+        "docs/compass/2026-09-27-slugify-trailing-hyphen/delivery-approach.md",
+        "docs/system-spec.md",
+        "src/slugify.py",
+        "tests/test_slugify.py",
+    ])
+    scenario = make_scenario(in_scope=["src/**", "tests/**"])
+    result = judge.score_record(record, scenario)["scope_kept"]
+    assert result["status"] == "pass", result
+
+
 # --- resumed_from_record: absolute paths, and a cat counts as a read ------
 
 def test_resumed_from_record_passes_compass_when_the_manifest_is_read_first():

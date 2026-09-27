@@ -1,6 +1,6 @@
 # Grade Summary Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan one step at a time. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a summarize function that reports the average score and the
 top and bottom scorer from parsed grades.
@@ -25,10 +25,10 @@ average score, a top scorer and a bottom scorer.
 
 ---
 
-### parse_scores
+### Task 1: parse_scores
 
 **Files:**
-- Created: grades.py
+- Create: grades.py
 - Test: test_grades.py
 
 - [x] **Step 1: Write the failing tests**
@@ -37,7 +37,7 @@ average score, a top scorer and a bottom scorer.
 - [x] **Step 4: Run the tests to check they pass**
 - [x] **Step 5: Commit**
 
-### summarize
+### Task 2: summarize
 
 **Files:**
 - Change: grades.py

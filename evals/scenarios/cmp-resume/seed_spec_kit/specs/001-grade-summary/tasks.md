@@ -1,4 +1,4 @@
-# Work Items: Grade Summary
+# Tasks: Grade Summary
 
 **Input**: Design documents from `specs/001-grade-summary/`
 

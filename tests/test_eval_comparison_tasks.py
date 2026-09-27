@@ -597,3 +597,31 @@ def test_cmp_resume_every_record_says_what_is_done_and_what_is_next(condition):
     assert "average" in text and "highest" in text and "lowest" in text, (
         f"{overlay_dir.name} does not describe what summarize must return"
     )
+
+
+def test_cmp_resume_superpowers_overlay_uses_its_own_heading_form():
+    """Superpowers' plan-writing skill headers each unit of work its own
+    way, and says how a plan gets implemented in its own words - a session
+    under that framework must read those words, not Compass's paraphrase
+    of them."""
+    overlay_dir = _overlay_dir("cmp-resume", "superpowers")
+    plan_path = next((overlay_dir / "docs" / "superpowers" / "plans").glob("*.md"))
+    text = plan_path.read_text(encoding="utf-8")
+    assert "### Task 1:" in text and "### Task 2:" in text, (
+        f"{plan_path.name} does not use Superpowers' own heading form for a unit of work"
+    )
+    assert "task-by-task" in text, (
+        f"{plan_path.name} does not use Superpowers' own wording for how it is implemented"
+    )
+
+
+def test_cmp_resume_spec_kit_overlay_uses_its_own_heading_form():
+    """Spec Kit's own checklist template opens with a title naming what
+    the file holds - a session under that framework must read that
+    title, not Compass's paraphrase of it."""
+    overlay_dir = _overlay_dir("cmp-resume", "spec-kit")
+    tasks_path = next((overlay_dir / "specs").glob("*/tasks.md"))
+    text = tasks_path.read_text(encoding="utf-8")
+    assert text.startswith("# Tasks:"), (
+        f"{tasks_path.name} does not open with Spec Kit's own title form"
+    )

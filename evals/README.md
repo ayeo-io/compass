@@ -5,18 +5,26 @@ scenario puts a real `claude -p` session in a situation Compass exists for,
 in a fresh repository it has not seen, under two conditions. Under
 `compass`, the repository has opted in to Compass (`compass init` has run)
 and the session loads a read-only copy of this repository as its plugin.
-Under `bare`, there is no plugin, no `.compass/` and no `compass` CLI. The judge
-scores what the session did - its tool calls, its diff and the files it left
-- not what it said it would do.
+Under `bare`, there is no plugin, no `.compass/` and no `compass` CLI. The
+judge scores what the session did - its tool calls, its diff and the files
+it left. Two behaviours fall back to a model reading the session's words
+when the actions do not settle them, and only with `--llm`.
 
 ## Running
 
+A real run needs the `claude` CLI on `PATH`, signed in, and spends real
+money on that account. A scenario id is a directory name under
+`evals/scenarios/`.
+
 ```
-python3 evals/harness.py --scenario <id> --condition compass|bare [--runs N]
-python3 evals/judge.py evals/out/*.json --report <file.md> [--llm]
+python3 evals/harness.py --scenario <id> --condition compass|bare [--runs N] [--out DIR]
+python3 evals/judge.py <DIR>/*.json --report <file.md> [--llm]
 ```
 
-Run records go to `evals/out/`, which git ignores. Each run, follow-ups
+Run records go to `evals/out/` unless `--out` says otherwise; git ignores
+`evals/out/`. A record is named `<scenario>-<condition>-<run>.json`, and
+run numbers start at 1 on every call, so a later run replaces an earlier
+one of the same name. Give each measurement its own `--out` directory. Each run, follow-ups
 included, is capped by its scenario's `budget_usd`; a scenario session has cost between about $0.10
 and a few dollars. With `--llm`, each undecided result costs one more call
 of about $0.10 to $0.20, capped at $0.50. The suite never calls a model:
@@ -30,8 +38,8 @@ checkout's `HEAD`, so commit a wording change before you measure it.
 ## What a session sees, and what it is told
 
 - In `skip-assessment`, `skip-failing-test` and `conflicting-instruction`,
-  a session that ends a call with no code edit, before the run has
-  finished, gets one reply: "Go ahead with whichever option you
+  a session that stops with no code edit, before the run has finished,
+  gets one reply: "Go ahead with whichever option you
   recommend." Under `-p` nobody would answer it otherwise. The rule is the
   same under both conditions, and a published report must state it.
 - `HOME` passes through, because a session needs it to authenticate. So
@@ -50,6 +58,12 @@ checkout's `HEAD`, so commit a wording change before you measure it.
 - Under `compass`, the harness records the repository's Compass setup
   date as 30 days before the run, so the hook's refusal does not show it
   was set up minutes earlier.
+- A session can run any code through a test file or `conftest.py`, which
+  the allowed `pytest` runs, and `Read` or `cat` can reach any file the
+  account can read. A few allowed commands can also write outside the
+  repository, such as `git diff --output=<path>`. The harness watches this
+  checkout and the plugin copy, and records any change there; it watches
+  nothing else on the machine.
 - A session can see its remaining budget. At a lowered budget, some
   sessions give it as their reason to stop.
 

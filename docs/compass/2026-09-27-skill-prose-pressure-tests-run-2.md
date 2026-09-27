@@ -1,24 +1,26 @@
 # Run 2 of the multiagent protocol - skill-prose-pressure-tests
 
 > **Date:** 2026-09-26 to 2026-09-27 · **Issue:** `skill-prose-pressure-tests`,
-> which builds the eval harness, six scenarios and the judge (spec B4) ·
+> which builds the eval harness, six scenarios and the judge ·
 > **Protocol:** `docs/multiagent-protocol.md`
 
-The second recorded run under the protocol: three subtasks in one wave,
-then a fourth in a second wave, run by real builder and reviewer agents.
+The second recorded run under the protocol; the first is
+`docs/compass/2026-09-25-dispatch-protocol-run-1.md`. Three subtasks ran in
+one wave, a fourth in a second wave and a fifth in a third, by real
+builder and reviewer agents.
 
 ## The result
 
 | Measure | Value |
 |---|---|
 | Wall-clock time | 17 h 15 min, from provisioning wave 1 (09:48) to the last integrated review (03:03 the next day) |
-| Subtasks | 4, in 2 waves; wave 2 was added after the pilot was scored |
-| Builder dispatches | 34 (subtask-1: 11, subtask-2: 10, subtask-3: 12, subtask-4: 1) |
+| Subtasks | 5, in 3 waves; wave 2 was added after the pilot was scored, wave 3 after the security review at `/compass:verify` |
+| Builder tries | 34 up to wave 2 (subtask-1: 11, subtask-2: 10, subtask-3: 12, subtask-4: 1), from 28 new dispatches and 6 messages to a builder already running |
 | Reviews of the integrated change | 10, by reviewer agents; rounds 1 to 8 failed, 9 and 10 passed |
 | Tokens, builders | 4,329,881 |
 | Tokens, reviewers | 1,609,539 |
 | Tokens, orchestrator | not measured - the orchestrating session's own use is not reported per step |
-| Real model spend | $20.58 in reviews, which ran real sessions at a lowered budget; $6.89 for the pilot and the wording measurement |
+| Real model spend | about $20.58 in reviews, nine of which ran real sessions at a lowered budget; $6.89 for the pilot and the wording measurement, plus scoring calls that were not recorded |
 | Merge conflicts | 0, across 12 runs of `integrate.sh` |
 | Combined regression | green on the integrated tree after wave 2, except the pilot report's own test, which passed once the report was written |
 
@@ -43,24 +45,38 @@ the same each time. Every builder tested against a fake `claude`, as the
 briefs required, so no builder saw what a real session writes. Each review
 ran real sessions and found the next thing a fake could not show:
 
-1. absolute paths, the installed CLI on `PATH`, no contract in five
-   compass scenarios;
-2. a schema passed as a path, `.pyc` files hiding the order of edits;
-3. `/compass:*` commands denied, a directory name naming the scenario;
-4. Compass's own red step not counted, a resume seed with no approach;
-5. the reply to a stopped session missing most real questions;
-6. templates unreadable, and shell spellings the command parser missed;
-7. a manifest path holding a shell variable;
-8. an unbound `red.json`.
+1. Real sessions write absolute paths, which the judge did not match.
+   Both conditions could run the installed Compass CLI. In five of six
+   scenarios the compass session never received Compass's injected
+   instructions, because its repository had not opted in.
+2. The judge handed the model a file path where it needed the JSON schema
+   itself, so model judging never ran. Compiled `.pyc` files from test
+   runs looked like code edits and hid their order.
+3. The compass sessions were refused every `/compass:*` command, and the
+   working directory's name told the session which scenario it was in.
+4. The judge did not count Compass's own red step, `compass tdd-red`, as
+   a failing test, and the resume scenario's record had no delivery
+   approach, so the hook refused its edits.
+5. The reply to a session that stopped to ask fired only when its last
+   message ended with a question mark, and most real questions did not.
+6. Compass sessions could not read the plugin's templates, and the judge
+   missed shell commands spelt in ways its parser did not list.
+7. The judge missed a manifest written to a path holding a shell
+   variable, such as `.compass/work/$S/manifest.yml`.
+8. The judge did not count a red record written without a scenario name,
+   `red.json`, as a failing test.
 
 From round 6 the design moved the judge from parsing commands to reading
 the repository's end state, and from round 7 each brief handed the builder
 the last review's real records to test against. Rounds 9 and 10 passed.
+At `/compass:verify`, the security review then found that the harness ran
+session-written code with its own environment, and that its containment
+check could not see ignored files or `.git/`: wave 3 fixed both.
 
 ## Steps that needed improvising
 
 - The design changed after most reviews. The protocol has no step for
-  amending the contract mid-run; the orchestrator rewrote it and copied it
+  amending the shared design mid-run; the orchestrator rewrote it and copied it
   into each worktree by hand.
 - Each worktree was fast-forwarded to the integrated branch before a new
   try, so a builder saw the other two files. The protocol does not say to.
@@ -68,15 +84,18 @@ the last review's real records to test against. Rounds 9 and 10 passed.
   new dispatch. Their token counts came back as the agent's running total,
   and each try's figure is that total less the last.
 - A builder ran `git stash`, picked up another piece of work's stash
-  shared by every worktree, and reset. Nothing was lost. Later briefs
+  shared by every worktree, and reset its own worktree to its last commit.
+  Nothing was lost. Later briefs
   forbid `git stash`.
 - The issue had no `devlog.md`: the assess stage did not start one, and
   the post-tool hook appends only to one that exists. The orchestrator
   wrote it late, from its notes.
 - `compass issue subtask update --cost` keeps only the last try's cost,
-  so the totals above are summed from the orchestrator's notes.
+  so the totals above are summed by hand from each agent's reported
+  tokens, in the orchestrator's notes and its session transcript. Neither
+  is published.
 
-## Decisions taken for the user
+## Decisions about how the runs were set up
 
 - "With Compass" means a repository that has opted in, with `compass init`
   run and a read-only copy of this repository as its plugin. A repository
@@ -94,15 +113,18 @@ the last review's real records to test against. Rounds 9 and 10 passed.
 
 ## Found outside this issue, each recorded as a defect to fix next
 
-- D28: the source-tree hash skips every nested `.compass/` directory.
-- D29: a red from a command that runs no test unlocks code edits.
-- D30: nine gaps the passing review left open in the judge and the
-  scenarios.
-- D31: a subtask's recorded cost keeps only the last try.
+- The CLI's source-tree hash skips every nested `.compass/` directory, so
+  an edit under one looks like no change.
+- A red from a command that runs no test, such as
+  `compass tdd-red -- false`, unlocks code edits.
+- Nine known gaps remain in the judge, the harness and the scenarios'
+  rubrics; none changed a pilot result.
+- A subtask's recorded cost keeps only the last try.
 
 ## What this run does not show
 
 - Whether one agent building the three files in sequence, testing against
   real sessions from the start, would have cost less. No such build ran.
-- That the protocol caused the rework. The rework came from tests that
-  could not see real output, which a single agent would share.
+- That the protocol caused the rework. In the orchestrator's judgement,
+  the rework came from tests that could not see real output, which a
+  single agent would share; no build ran to test that.

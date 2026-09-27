@@ -1299,27 +1299,39 @@ def test_planted_partial_clone_remote_stays_blocked_with_one_defence_stripped(
 
 def test_allow_list_matches_the_documented_tools_exactly():
     """The allow-list: `Skill` so a compass session can run a `/compass:*`
-    command, `python -m pytest` alongside `python3 -m pytest`, `cat` on the
-    list - Compass's own commands, such as `/compass:quick-fix`, read their
-    own template with it, and a `cat >` onto a protected path is caught by
-    `no_evidence_tampering` - and `head`, `tail` and `grep`, the other
-    read-only commands those same commands use against the plugin copy.
-    `.specify/scripts/bash/*` gives Spec Kit's own installed skills the
-    same standing (review blocker 2)."""
+    command, `Agent` for a subagent Superpowers' own
+    `subagent-driven-development` or Compass's own `implement` stage
+    dispatches, `python -m pytest` alongside `python3 -m pytest`, `cat` on
+    the list - Compass's own commands, such as `/compass:quick-fix`, read
+    their own template with it, and a `cat >` onto a protected path is
+    caught by `no_evidence_tampering` - and `head`, `tail` and `grep`, the
+    other read-only commands those same commands use against the plugin
+    copy. `.specify/scripts/bash/*` gives Spec Kit's own installed skills
+    standing, `${CLAUDE_PLUGIN_ROOT}/skills/.../scripts/*` gives
+    Superpowers' own the same, and `git checkout -b`/`git switch -c` let a
+    session start the feature branch `executing-plans` asks for before
+    working on the seed's own default branch."""
     assert harness.ALLOWED_TOOLS == (
-        "Read", "Write", "Edit", "Skill",
+        "Read", "Write", "Edit", "Skill", "Agent",
         "Bash(python3 -m pytest:*)", "Bash(python -m pytest:*)", "Bash(pytest:*)",
         "Bash(git status:*)", "Bash(git diff:*)", "Bash(git log:*)",
         "Bash(git add:*)", "Bash(git commit:*)",
+        "Bash(git checkout -b:*)", "Bash(git switch -c:*)",
         "Bash(compass:*)", "Bash(ls:*)", "Bash(cat:*)",
         "Bash(head:*)", "Bash(tail:*)", "Bash(grep:*)",
         "Bash(.specify/scripts/bash/check-prerequisites.sh:*)",
         "Bash(.specify/scripts/bash/setup-plan.sh:*)",
         "Bash(.specify/scripts/bash/setup-tasks.sh:*)",
         "Bash(.specify/scripts/bash/resolve-template.sh:*)",
+        "Bash(${CLAUDE_PLUGIN_ROOT}/skills/subagent-driven-development/scripts/sdd-workspace:*)",
+        "Bash(${CLAUDE_PLUGIN_ROOT}/skills/subagent-driven-development/scripts/task-brief:*)",
+        "Bash(${CLAUDE_PLUGIN_ROOT}/skills/subagent-driven-development/scripts/review-package:*)",
+        "Bash(${CLAUDE_PLUGIN_ROOT}/skills/executing-plans/scripts/task-start:*)",
+        "Bash(${CLAUDE_PLUGIN_ROOT}/skills/executing-plans/scripts/task-done:*)",
     )
     assert "Bash(python3:*)" not in harness.ALLOWED_TOOLS
     assert "Bash(git:*)" not in harness.ALLOWED_TOOLS
+    assert "Bash(git checkout:*)" not in harness.ALLOWED_TOOLS
 
 
 def test_both_conditions_pass_settings_and_allow_list(
@@ -2903,7 +2915,6 @@ def test_bare_and_compass_conditions_never_call_uvx(
 
 
 # --- 20b. the clone allows HTTPS for one call only, and the commit is checked --
-# (review blocker 1: the harness could not clone either pinned framework)
 
 def _stub_subprocess_run(calls_log):
     def _stub(args, **kwargs):
@@ -3024,7 +3035,9 @@ def test_commit_mismatch_stops_the_whole_harness_call(
     assert not list(out_dir.glob("*.json"))
 
 
-# --- 20c. tool fairness across conditions (review blocker 2) ----------------
+# --- 20c. every condition gets the same, wider allow-list -------------------
+# (the technical design's own "Tools" rule: a tool one framework needs is
+# allowed for all, never for one alone)
 
 def test_allow_list_gives_spec_kit_its_own_bundled_scripts():
     """Spec Kit's own installed skills start with one of its bundled
@@ -3038,6 +3051,73 @@ def test_allow_list_gives_spec_kit_its_own_bundled_scripts():
     for script in ("check-prerequisites.sh", "setup-plan.sh",
                    "setup-tasks.sh", "resolve-template.sh"):
         assert f"Bash(.specify/scripts/bash/{script}:*)" in harness.ALLOWED_TOOLS
+
+
+def test_allow_list_gives_superpowers_its_own_bundled_scripts():
+    """`subagent-driven-development` runs `sdd-workspace`, `review-package`
+    <!-- vocabulary-scan: allow - names Superpowers' own real scripts, not a retired word --> and `task-brief`; `executing-plans` runs `task-start` and `task-done` -
+    read from both skills' own `SKILL.md` at the pinned commit. Each script
+    runs from an absolute path under the plugin's own root, which sits at
+    a different, freshly built location every run, so the entry names it
+    under `${CLAUDE_PLUGIN_ROOT}` - Claude Code's own name for that root -
+    the same variable Compass's own `hooks/hooks.json` already relies on
+    for the same reason."""
+    for skill, script in (
+        ("subagent-driven-development", "sdd-workspace"),
+        ("subagent-driven-development", "task-brief"),
+        ("subagent-driven-development", "review-package"),
+        ("executing-plans", "task-start"),
+        ("executing-plans", "task-done"),
+    ):
+        assert (f"Bash(${{CLAUDE_PLUGIN_ROOT}}/skills/{skill}/scripts/{script}:*)"
+                in harness.ALLOWED_TOOLS)
+
+
+def test_allow_list_lets_a_session_start_a_feature_branch():
+    """`executing-plans` asks before working directly on the seed's own
+    default branch; a session that follows that instruction needs the
+    tool to act on the answer, under either the old or the new git
+    syntax."""
+    assert "Bash(git checkout -b:*)" in harness.ALLOWED_TOOLS
+    assert "Bash(git switch -c:*)" in harness.ALLOWED_TOOLS
+
+
+def test_allow_list_gives_every_condition_the_agent_tool():
+    """`subagent-driven-development` dispatches an implementer and a
+    reviewer subagent; Compass's own `implement` stage dispatches one too
+    - both need the `Agent` tool, and every condition gets the same list,
+    so it is on regardless of which condition is running."""
+    assert "Agent" in harness.ALLOWED_TOOLS
+
+
+def test_every_conditions_allow_list_is_identical(
+    tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
+):
+    """`ALLOWED_TOOLS` is the one list every condition passes through
+    `_common_claude_args` unconditionally - this runs all four and reads
+    each one's own `--allowedTools` argument back, so the claim is proved
+    against what the harness actually sends, not only against the shared
+    constant every condition happens to read from today."""
+    framework_source = _write_framework_repo(tmp_path / "identical-source")
+    commit = _framework_repo_head(framework_source)
+    frameworks_config = _write_frameworks_config_yaml(tmp_path, {
+        "superpowers": {"repo": "https://example.invalid/superpowers", "commit": commit},
+        "spec-kit": {"repo": "https://example.invalid/spec-kit", "commit": commit},
+    }, name="frameworks-identical.yml")
+    fake_uvx = _write_fake_uvx(tmp_path)
+
+    allow_lists = {}
+    for condition in ("bare", "compass", "superpowers", "spec-kit"):
+        calls, _, _ = _run_condition(
+            tmp_path, scenario_dir, fake_claude, condition, monkeypatch,
+            plugin_source_dir, out_suffix=f"-identical-{condition}",
+            framework_source=framework_source, uvx_exe=fake_uvx,
+            frameworks_config=frameworks_config,
+        )
+        args = calls[0]["args"]
+        allow_lists[condition] = args[args.index("--allowedTools") + 1]
+
+    assert len(set(allow_lists.values())) == 1, allow_lists
 
 
 def test_superpowers_condition_gets_add_dir_for_its_framework_copy():

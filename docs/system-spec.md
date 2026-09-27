@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### EJG-8
+### A second cost for the same try replaces it
 
-- **Scenario id:** `EJG-8`
+- **Scenario id:** `SCT-2`
 - **Intent:** `INT-1`
-- **Source issue:** `eval-judge-gaps`
+- **Source issue:** `subtask-cost-keeps-last-try-only`
 - **Landed:** 2026-09-27
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -8993,4 +8993,18 @@
 - **Scenario id:** `EJG-7`
 - **Intent:** `INT-1`
 - **Source issue:** `eval-judge-gaps`
+- **Landed:** 2026-09-27
+
+### EJG-8 _(archived)_
+
+- **Scenario id:** `EJG-8`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-judge-gaps`
+- **Landed:** 2026-09-27
+
+### Two tries keep both costs and their total _(archived)_
+
+- **Scenario id:** `SCT-1`
+- **Intent:** `INT-1`
+- **Source issue:** `subtask-cost-keeps-last-try-only`
 - **Landed:** 2026-09-27

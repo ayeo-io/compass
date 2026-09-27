@@ -5,16 +5,22 @@ file scan exist in one place, not three copies that can drift apart.
 
 A delivery design and a set of dated reviews live only under
 `docs/compass/*/`, which `.gitignore` excludes: unopenable outside this
-issue's own checkout. A comment, a docstring or a test name in the eval
-harness, the judge, or the three files that test them must never point a
-cold reader at one of those.
+issue's own checkout. A comment or a docstring in the eval harness, the
+judge, or the three files that test them must never point a cold reader at
+one of those. A test's own name is not scanned - only its comments and its
+docstring are (see "Only a `.py` file's own comments and docstrings" below)
+- so `def test_the_fix_from_verify_security_3_md_section_4():` passes.
 
 This guard catches four things it can name exactly, and nothing else:
 
 - a bare, hyphenated `.md` file name - the shape a delivery document or a
   dated review takes in this project (`verify-security-2.md`,
   `integrated-review-8.md`) - that names no `.md` file this repository's
-  git index tracks under that exact name;
+  git index tracks under that exact name. A delivery document whose name a
+  tracked template shares - `acceptance-criteria.md`, `technical-design.md`,
+  `delivery-approach.md`, `requirements-review.md` - passes: the base name
+  is tracked, under `templates/` or `examples/`, even though this issue's
+  own copy is not;
 - a path naming a dated issue directory under `docs/compass/`
   (`docs/compass/2026-09-26-some-issue/`) - always ignored, per
   `.gitignore`, unlike a flat report such as `docs/compass/2026-09-26-
@@ -23,13 +29,26 @@ This guard catches four things it can name exactly, and nothing else:
 - "review" or "round" directly before a digit, with a space or a hyphen
   between them (`round 5`, `round-5`, `review 3`).
 
-It does **not** catch a citation that uses none of these forms - a bare
-"the review found this", "per the audit", "the plan's second point", a
-number spelled as a word, or a single-word file name such as `report.md`
-or `PLAN.md` that a test builds as an ordinary output path, not a
-citation. Those pass. A human reviewer is the check for them, the same as
-for any prose a regular expression cannot safely tell apart from a
-citation.
+It does **not** catch:
+
+- a citation that uses none of these forms - a bare "the review found
+  this", "per the audit", "the plan's second point", or a number spelled as
+  a word ("section two");
+- a single-word file name such as `report.md` or `PLAN.md` - built as an
+  ordinary output path in most tests, but also the shape a real, untracked
+  gate document elsewhere in this project can take;
+- a section or round number split from its word by a line wrap
+  ("the threshold in section\n2.2 sets it");
+- an upper-case extension, such as `verify-security-3.MD`;
+- a delivery document whose name a tracked template shares, listed above.
+
+Those pass. A human reviewer is the check for them, the same as for any
+prose a regular expression cannot safely tell apart from a citation. The
+trade-off runs the other way too: `section N` and `round N` also catch
+ordinary sentences that are not a citation at all - "round 2 decimal
+places", "see section 3 of evals/README.md" (a tracked file), "the pull
+request fixes review 2 comments". A line like this needs `ALLOW_MARKER`,
+the same as a line that legitimately needs one of the banned words.
 
 Only a `.py` file's own comments and docstrings are scanned - never its
 executable code - because a realistic test fixture routinely carries a
@@ -41,18 +60,16 @@ all - has no code around it to separate it from.
 
 `CITATION_PATTERNS` is the one set used for every scanned file: the eval
 harness, the judge, the three test files that test them, and a scenario's
-own data files alike. An earlier version banned "design", "review" and
-"brief" as bare words for the first five and dropped them for scenario
-files only, which rejected ordinary sentences such as "designed to
-handle" or "keep it brief" - and still missed a citation that named
-neither word. Precision over the same rule for every file is safer than
-narrowing to be nice about one class of file.
+own data files alike - the same patterns for every file, rather than one
+set loosened for a class of file that turns out to need it.
 
 The five scanned files themselves must not contain a citation this module
 bans, except on a line carrying `ALLOW_MARKER` with a reason after it -
 for the rare case where the word is needed for an ordinary purpose
-unrelated to citing either document. This module is not one of those five
-files, so it is free to name what it bans.
+unrelated to citing either document. The reason itself is checked against
+every pattern above: a reason that is itself a citation is not an ordinary
+purpose, so the line is still reported rather than exempted. This module is
+not one of those five files, so it is free to name what it bans.
 """
 from __future__ import annotations
 
@@ -83,13 +100,18 @@ CITATION_PATTERNS: tuple[re.Pattern[str], ...] = tuple(
 # meant at all.
 _HYPHENATED_MD_FILENAME = re.compile(r"\b[\w]+(?:-[\w]+)+\.md\b")
 
-# A line ending with this marker, with a reason after the colon, is exempt
-# from every pattern above - for the rare line that needs one of the
-# banned forms for an ordinary reason. Matched against the line with its
-# trailing whitespace stripped, so the marker and its reason must be the
-# last thing on the line, not merely present somewhere in it.
+# A line ending with this marker, with a reason after the colon, exempts
+# the line from every pattern above, unless the reason itself names an
+# unopenable document - checked by `cited_unopenable_document` below,
+# which is what makes this an exemption for an ordinary reason and not a
+# way to carry a citation past the guard inside its own reason. Matched
+# against the line with its trailing whitespace stripped, so the marker
+# and its reason must be the last thing on the line, not merely present
+# somewhere in it.
 ALLOW_MARKER = "citation-guard-allow:"
-_ALLOW_MARKER_WITH_REASON = re.compile(re.escape(ALLOW_MARKER) + r"\s*\S.*$")
+_ALLOW_MARKER_WITH_REASON = re.compile(
+    re.escape(ALLOW_MARKER) + r"\s*(?P<reason>\S.*)$"
+)
 
 
 @lru_cache(maxsize=1)
@@ -97,8 +119,11 @@ def _tracked_markdown_basenames() -> frozenset[str]:
     """Every `.md` file this repository's git index tracks, by its bare
     name only - read once per process with `git ls-files`, so checking one
     citation never walks the tree. Empty, rather than raising, if git
-    cannot be run here - a name this misses then passes unflagged, the
-    same as any other name this module cannot check."""
+    cannot be run here - every hyphenated `.md` name then fails the check
+    tracked names would otherwise pass, since none is tracked: this fails
+    closed, not open. In a copy with no `.git` at all - a `git archive`
+    export - the four citation scan tests then fail on names that are
+    genuinely tracked in the source repository."""
     try:
         result = subprocess.run(
             ["git", "ls-files", "*.md"], cwd=REPO_ROOT,
@@ -114,6 +139,21 @@ def _cites_a_hyphenated_md_file_this_repository_does_not_track(line: str) -> boo
     return any(name not in tracked for name in _HYPHENATED_MD_FILENAME.findall(line))
 
 
+def _matched_citation(
+    line: str, patterns: tuple[re.Pattern[str], ...]
+) -> str | None:
+    """`line` against every pattern, then the hyphenated-`.md`-file check -
+    the one thing `cited_unopenable_document` reports for a line, and the
+    one thing checked against a marker's own reason so a citation cannot
+    hide there instead."""
+    for pattern in patterns:
+        if pattern.search(line):
+            return pattern.pattern
+    if _cites_a_hyphenated_md_file_this_repository_does_not_track(line):
+        return "a hyphenated .md file name this repository does not track"
+    return None
+
+
 def cited_unopenable_document(
     text: str, patterns: tuple[re.Pattern[str], ...] = CITATION_PATTERNS
 ) -> str | None:
@@ -122,15 +162,17 @@ def cited_unopenable_document(
     hyphenated-`.md`-file check, which needs a lookup a regular expression
     cannot do alone - or `None`. Checked line by line, so a line carrying
     `ALLOW_MARKER` with a reason after it is skipped whole, while the rest
-    of `text` is still checked."""
+    of `text` is still checked - unless that reason is itself a citation,
+    in which case the line is checked in full like any other, rather than
+    exempted on the strength of the very thing it is citing."""
     for line in text.splitlines():
-        if _ALLOW_MARKER_WITH_REASON.search(line.rstrip()):
+        stripped = line.rstrip()
+        marker_match = _ALLOW_MARKER_WITH_REASON.search(stripped)
+        if marker_match and _matched_citation(marker_match.group("reason"), patterns) is None:
             continue
-        for pattern in patterns:
-            if pattern.search(line):
-                return pattern.pattern
-        if _cites_a_hyphenated_md_file_this_repository_does_not_track(line):
-            return "a hyphenated .md file name this repository does not track"
+        hit = _matched_citation(line, patterns)
+        if hit is not None:
+            return hit
     return None
 
 

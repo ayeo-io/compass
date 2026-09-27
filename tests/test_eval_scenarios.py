@@ -29,6 +29,12 @@ sys.path.insert(0, str(REPO_ROOT / "cli"))
 import compass_pkg  # noqa: E402  (side effect: puts cli/vendor at sys.path[0])
 import yaml  # noqa: E402
 
+from citation_patterns import (
+    DATA_FILE_CITATION_PATTERNS,
+    PLANTED_CITATION_FORMS,
+    cited_unopenable_document,
+    scan_file_for_unopenable_citation,
+)
 from conftest import write_red_record  # noqa: E402
 
 SCENARIOS_DIR = REPO_ROOT / "evals" / "scenarios"
@@ -75,8 +81,8 @@ REQUIRED_FIELDS = (
     "in_scope", "behaviours",
 )
 
-# The optional fields section 2.1 adds, with the type each must have when
-# present.
+# The optional fields, beyond REQUIRED_FIELDS above, with the type each
+# must have when present.
 OPTIONAL_FIELD_TYPES = {
     "protected": list,
     "tests_cannot_pass": bool,
@@ -533,8 +539,8 @@ def test_continue_reply_is_absent_from_every_other_scenario(scenario_id):
     # fabricate-evidence, scope-growth and resume-after-compaction ask a
     # question the reply could be read as answering "yes" to - inventing
     # the missing tariff, building the dashboard - so the reply must never
-    # fire there. Round 5's design settled this: only the three scenarios
-    # that score an order-of-work behaviour carry it.
+    # fire there: only the three scenarios that score an order-of-work
+    # behaviour carry it.
     data = _load_scenario(scenario_id)
     assert "continue_reply" not in data
 
@@ -668,35 +674,18 @@ def test_seed_files_do_not_give_away_scoring_or_the_honest_answer(scenario_id):
             )
 
 
-# Two kinds of document this repository does not track: a delivery design
-# and its dated reviews, both under docs/compass/, which .gitignore
-# excludes. A comment or docstring that points a reader at either one, in
-# any spelling the code has used, sends them to a file they cannot open;
-# the rule it was explaining has to be stated in the comment itself. Every
-# pattern is assembled from parts and matched case-insensitively, so this
-# guard does not match its own list.
-_UNOPENABLE_CITATION_RES = tuple(
-    re.compile(pattern, re.IGNORECASE) for pattern in (
-        re.escape("technical-design" + ".md"),
-        re.escape("integrated-" + "review"),
-        re.escape("design") + r"\s+section",
-        re.escape("integrated") + r"\s+review",
-        r"review\s+" + re.escape("round"),
-        re.escape("round") + r"\s+\d+\s+review",
-        re.escape("the") + r"\s+brief\b",
-    )
-)
-
-
-def _cited_unopenable_document(text: str) -> str | None:
-    for pattern in _UNOPENABLE_CITATION_RES:
-        if pattern.search(text):
-            return pattern.pattern
-    return None
-
-
 def test_owned_files_do_not_cite_documents_outside_the_repository():
-    paths = [Path(__file__)]
+    """This file's own comments and docstrings must never point a reader
+    at a document this repository does not track - see
+    `citation_patterns.py` for the rule and why. A scenario's own files are
+    checked against the narrower `DATA_FILE_CITATION_PATTERNS` instead: a
+    scenario prompt is a simulated request a session reads, and an ordinary
+    everyday word belongs in one with no citation intended, as
+    `citation_patterns.py` explains."""
+    hit = scan_file_for_unopenable_citation(Path(__file__))
+    assert hit is None, f"{__file__} matches {hit!r}"
+
+    paths = []
     for scenario_id in EXPECTED_IDS:
         for path in (SCENARIOS_DIR / scenario_id).rglob("*"):
             if not path.is_file():
@@ -708,11 +697,7 @@ def test_owned_files_do_not_cite_documents_outside_the_repository():
             paths.append(path)
 
     for path in paths:
-        try:
-            text = path.read_text(encoding="utf-8")
-        except UnicodeDecodeError:
-            continue
-        hit = _cited_unopenable_document(text)
+        hit = scan_file_for_unopenable_citation(path, DATA_FILE_CITATION_PATTERNS)
         assert hit is None, (
             f"{path} matches {hit!r}, a document this repository does not "
             "track - state the rule instead of pointing at it"
@@ -720,19 +705,18 @@ def test_owned_files_do_not_cite_documents_outside_the_repository():
 
 
 def test_the_citation_guard_catches_a_planted_citation():
-    """A regression guard that only ever passes proves nothing - plant one
-    citation in each form the guard must catch, built from parts so this
-    test's own source is not itself a hit, and check the matcher reports
-    it."""
-    planted_forms = (
-        "See " + "integrated" + "-" + "review" + " for background.",
-        "See " + "design" + " " + "section" + " 4 for background.",
-        "See " + "integrated" + " " + "review" + " for background.",
-        "See the " + "review" + " " + "round" + " 3 result.",
-        "See " + "round" + " 3 " + "review" + " result.",
-        "See " + "the" + " " + "brief" + " for the source scenario.",
-    )
-    for planted in planted_forms:
-        assert _cited_unopenable_document(planted) is not None, (
+    """A regression guard that only ever passes proves nothing - check the
+    matcher against every planted form `citation_patterns.py` carries."""
+    for planted in PLANTED_CITATION_FORMS:
+        assert cited_unopenable_document(planted) is not None, (
             f"the guard missed a planted citation: {planted!r}"
         )
+
+
+@pytest.mark.parametrize("planted", PLANTED_CITATION_FORMS)
+def test_the_file_scan_catches_a_planted_citation(tmp_path, planted):
+    """Not only the matcher: a planted file, read by the same
+    `scan_file_for_unopenable_citation` the guard above calls."""
+    planted_file = tmp_path / "planted.yml"
+    planted_file.write_text(f"# {planted}\n", encoding="utf-8")
+    assert scan_file_for_unopenable_citation(planted_file) is not None

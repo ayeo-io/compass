@@ -96,6 +96,22 @@ from compass_pkg.core import load_yaml  # noqa: E402
 # template with them, and three real compass sessions had exactly these
 # refused. A `cat >` onto a protected path is caught by
 # `no_evidence_tampering`, not by the allow-list.
+#
+# Every condition gets the same list (review blocker 2): `Bash(compass:*)`
+# gives Compass's own commands standing, and `.specify/scripts/bash/*`
+# gives Spec Kit's the same. `specify init` installs its skills to run one
+# of `check-prerequisites.sh` first - `speckit-implement`,
+# `speckit-checklist`, `speckit-clarify`, `speckit-converge` and
+# `speckit-taskstoissues` among them - or `setup-plan.sh` for
+# `speckit-plan`, or `resolve-template.sh` for `speckit-constitution`, as
+# their own first step. Two more real names of its own, quoted here for
+# the same reason and not a retired word either: `speckit-analyze`, and
+# <!-- vocabulary-scan: allow - names Spec Kit's own real script and command, not a retired word --> `setup-tasks.sh` for `speckit-tasks`.
+# Read from Spec Kit's own command templates
+# (`templates/commands/*.md`, `scripts.sh:` in each one's frontmatter) at
+# the pinned commit. Without an entry here, a Spec Kit session that
+# follows its own documented workflow is refused at step one, the same
+# way a compass session without `Bash(compass:*)` would be.
 ALLOWED_TOOLS: tuple[str, ...] = (
     "Read", "Write", "Edit", "Skill",
     "Bash(python3 -m pytest:*)", "Bash(python -m pytest:*)", "Bash(pytest:*)",
@@ -103,6 +119,10 @@ ALLOWED_TOOLS: tuple[str, ...] = (
     "Bash(git add:*)", "Bash(git commit:*)",
     "Bash(compass:*)", "Bash(ls:*)", "Bash(cat:*)",
     "Bash(head:*)", "Bash(tail:*)", "Bash(grep:*)",
+    "Bash(.specify/scripts/bash/check-prerequisites.sh:*)",
+    "Bash(.specify/scripts/bash/setup-plan.sh:*)",
+    "Bash(.specify/scripts/bash/setup-tasks.sh:*)",
+    "Bash(.specify/scripts/bash/resolve-template.sh:*)",
 )
 
 _DEFAULT_TEST_COMMAND = "python3 -m pytest -q"
@@ -192,7 +212,8 @@ _GIT_DIFF_SAFE_ARGS = ("--no-ext-diff", "--no-textconv")
 
 
 def _run_git(args: list[str], cwd: Path, env: dict[str, str], *,
-              text: bool = True) -> subprocess.CompletedProcess:
+              text: bool = True, allow_protocol: str = "none"
+              ) -> subprocess.CompletedProcess:
     """The one function every git call in this module makes - in this
     checkout, in a scenario's own seed or overlay directory, and in a
     session's temporary repository alike
@@ -236,12 +257,20 @@ def _run_git(args: list[str], cwd: Path, env: dict[str, str], *,
     still carries cannot point `core.fsmonitor` at a script or name a real
     `core.hooksPath`. A `diff` subcommand also gets `_GIT_DIFF_SAFE_ARGS`,
     skipping any the caller already passed, so a filter or textconv driver
-    named in a tracked `.gitattributes` cannot run either."""
+    named in a tracked `.gitattributes` cannot run either.
+
+    `allow_protocol` sets `GIT_ALLOW_PROTOCOL` and defaults to `none` - the
+    refusal above - for every call in this module but one:
+    `_framework_source_dir`'s own clone of a pinned framework, which passes
+    `"https"` because it cannot reach its own pin any other way (review
+    blocker 1). Every other safeguard here - the config isolation, the
+    ceiling, the safe arguments - stays exactly as strict for that call
+    too; only the protocol allowance widens, and only for it."""
     call_env = dict(env)
     call_env["GIT_CONFIG_GLOBAL"] = "/dev/null"
     call_env["GIT_CONFIG_NOSYSTEM"] = "1"
     call_env["GIT_NO_LAZY_FETCH"] = "1"
-    call_env["GIT_ALLOW_PROTOCOL"] = "none"
+    call_env["GIT_ALLOW_PROTOCOL"] = allow_protocol
     if (Path(cwd) / ".git").exists():
         call_env["GIT_CEILING_DIRECTORIES"] = str(Path(cwd).resolve().parent)
     subcommand = args[0] if args else ""
@@ -408,8 +437,12 @@ def _framework_source_dir(condition: str, framework_source_override: Path | None
     if not entry:
         raise SystemExit(f"no {condition!r} entry in evals/frameworks.yml")
     clone_dir = Path(tempfile.mkdtemp())
+    # The one clone in this module that needs the network - `allow_protocol
+    # ="https"` widens `_run_git`'s own protocol lock for this call alone
+    # (review blocker 1); every other call in this function, and every
+    # other call in this module, keeps the default refusal.
     clone_result = _run_git(["clone", "--quiet", entry["repo"], str(clone_dir)],
-                             REPO_ROOT, env)
+                             REPO_ROOT, env, allow_protocol="https")
     if clone_result.returncode != 0:
         shutil.rmtree(clone_dir, ignore_errors=True)
         raise SystemExit(
@@ -423,6 +456,25 @@ def _framework_source_dir(condition: str, framework_source_override: Path | None
     return clone_dir, True
 
 
+def _check_framework_commit_pin(condition: str, commit: str,
+                                 frameworks_config: dict[str, Any]) -> None:
+    """Stop the run if `commit` - the framework copy's own resolved `HEAD`,
+    from a fresh clone or from `--framework-source` alike - is not the
+    commit `evals/frameworks.yml` pins for `condition` (review blocker 1).
+    A `--framework-source` a test or an operator points elsewhere is
+    exactly as able to drift from the pin as a clone racing a force-push
+    upstream, so both go through this one check, not only the clone path."""
+    entry = frameworks_config.get(condition)
+    pinned = entry.get("commit") if entry else None
+    if not pinned:
+        raise SystemExit(f"no {condition!r} entry in evals/frameworks.yml "
+                          f"to check {commit} against")
+    if commit != pinned:
+        raise SystemExit(
+            f"{condition} framework is at commit {commit}, not the commit "
+            f"evals/frameworks.yml pins ({pinned})")
+
+
 def _prepare_framework_copy(condition: str, framework_source_override: Path | None,
                              frameworks_config: dict[str, Any], env: dict[str, str]
                              ) -> tuple[Path | None, str | None]:
@@ -434,13 +486,16 @@ def _prepare_framework_copy(condition: str, framework_source_override: Path | No
     from. `superpowers` passes the copy on as `--plugin-dir`
     (`_common_claude_args`); `spec-kit` runs `specify init` from it
     (`_run_specify_init`); the run record carries the commit either way
-    (`framework: {name, commit}`)."""
+    (`framework: {name, commit}`). `_check_framework_commit_pin` runs
+    before the copy is built, so a framework at the wrong commit - cloned
+    or given by `--framework-source` - never reaches a session at all."""
     if condition not in ("superpowers", "spec-kit"):
         return None, None
     source_dir, is_temporary = _framework_source_dir(
         condition, framework_source_override, frameworks_config, env)
     try:
         commit = _run_git(["rev-parse", "HEAD"], source_dir, env).stdout.strip()
+        _check_framework_commit_pin(condition, commit, frameworks_config)
         copy_dir = Path(tempfile.mkdtemp())
         _copy_git_tree_read_only(source_dir, copy_dir, env)
     finally:
@@ -753,6 +808,14 @@ def _claude_version(claude_exe: str, env: dict[str, str]) -> str:
     return proc.stdout.strip()
 
 
+# One model id, passed to every condition, so the four conditions' costs
+# and token counts compare against the same model rather than whatever the
+# account default happens to be on a given day (the review's real run used
+# `claude-opus-5-5` for all four; nothing held it there across further
+# sessions until this pin).
+_PINNED_CLAUDE_MODEL = "claude-opus-5-5"
+
+
 def _common_claude_args(condition: str, plugin_copy_dir: Path | None,
                          framework_copy_dir: Path | None = None
                          ) -> list[str]:
@@ -763,6 +826,7 @@ def _common_claude_args(condition: str, plugin_copy_dir: Path | None,
         "--permission-mode", "acceptEdits",
         "--allowedTools", ",".join(ALLOWED_TOOLS),
         "--strict-mcp-config",
+        "--model", _PINNED_CLAUDE_MODEL,
     ]
     if condition == "compass":
         # `--add-dir` admits the plugin copy to the session's working
@@ -774,8 +838,13 @@ def _common_claude_args(condition: str, plugin_copy_dir: Path | None,
     elif condition == "superpowers":
         # Superpowers passes as `--plugin-dir` directly - the copy carries
         # its own `.claude-plugin/plugin.json` at its root, the same shape
-        # `--plugin-dir` already expects for the compass condition.
-        args += ["--plugin-dir", str(framework_copy_dir)]
+        # `--plugin-dir` already expects for the compass condition. It
+        # gets the same `--add-dir` the compass copy does (review blocker
+        # 2): without it, a `cat` of one of Superpowers' own files sits
+        # outside the working directory `--plugin-dir` alone does not
+        # widen, the same refusal `--add-dir` already fixes for compass.
+        args += ["--plugin-dir", str(framework_copy_dir),
+                  "--add-dir", str(framework_copy_dir)]
     return args
 
 
@@ -1521,6 +1590,13 @@ def _build_arg_parser() -> argparse.ArgumentParser:
                          help="the executable to run spec-kit's own "
                               "specify init through - a real uvx, or a "
                               "stand-in for a test")
+    parser.add_argument("--frameworks-config", default=None,
+                         help="the frameworks.yml-shaped file the "
+                              "superpowers or spec-kit condition checks "
+                              "its own commit against, whether cloned or "
+                              "given by --framework-source - defaults to "
+                              "evals/frameworks.yml; a test points this at "
+                              "a fixture pinning its own fixture commit")
     return parser
 
 
@@ -1559,8 +1635,11 @@ def main(argv: list[str] | None = None) -> int:
     framework_copy_dir: Path | None = None
     framework_commit: str | None = None
     if args.condition in ("superpowers", "spec-kit"):
-        frameworks_config = (
-            {} if framework_source_override is not None else load_frameworks_config())
+        # Loaded whether or not `--framework-source` is given: a cloned
+        # framework and one a test or an operator points at directly are
+        # checked against the same pin (review blocker 1).
+        frameworks_config = load_frameworks_config(
+            Path(args.frameworks_config) if args.frameworks_config else None)
         framework_copy_dir, framework_commit = _prepare_framework_copy(
             args.condition, framework_source_override, frameworks_config, child_env)
     try:

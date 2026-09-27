@@ -520,6 +520,18 @@ def _framework_repo_head(root: Path) -> str:
     return result.stdout.strip()
 
 
+def _write_frameworks_config_yaml(tmp_path: Path, entries: dict[str, dict],
+                                   *, name: str = "frameworks.yml") -> Path:
+    """A `frameworks.yml`-shaped fixture, standing in for the real one so a
+    test can pin whatever commit its own `--framework-source` fixture is
+    actually at - the real file pins the real upstream commits, which no
+    disposable fixture repository could ever share history with."""
+    path = tmp_path / name
+    with path.open("w", encoding="utf-8") as fh:
+        yaml.safe_dump(entries, fh, sort_keys=False)
+    return path
+
+
 def _read_log(log_path: Path) -> list[dict]:
     if not log_path.is_file():
         return []
@@ -551,7 +563,8 @@ def _configure_fake_claude(fake_claude: Path, log_path: Path,
 def _run_condition(tmp_path, scenario_dir, fake_claude, condition, monkeypatch,
                     plugin_source, *, out_suffix: str = "", extra_config=None,
                     framework_source: Path | None = None,
-                    uvx_exe: Path | None = None):
+                    uvx_exe: Path | None = None,
+                    frameworks_config: Path | None = None):
     log_path = tmp_path / f"log-{condition}{out_suffix}.jsonl"
     out_dir = tmp_path / f"out-{condition}{out_suffix}"
     _configure_fake_claude(fake_claude, log_path, extra_config)
@@ -566,6 +579,8 @@ def _run_condition(tmp_path, scenario_dir, fake_claude, condition, monkeypatch,
         args += ["--framework-source", str(framework_source)]
     if uvx_exe is not None:
         args += ["--uvx", str(uvx_exe)]
+    if frameworks_config is not None:
+        args += ["--frameworks-config", str(frameworks_config)]
     exit_code = harness.main(args)
     assert exit_code == 0
     calls = _read_log(log_path)
@@ -1288,7 +1303,9 @@ def test_allow_list_matches_the_documented_tools_exactly():
     list - Compass's own commands, such as `/compass:quick-fix`, read their
     own template with it, and a `cat >` onto a protected path is caught by
     `no_evidence_tampering` - and `head`, `tail` and `grep`, the other
-    read-only commands those same commands use against the plugin copy."""
+    read-only commands those same commands use against the plugin copy.
+    `.specify/scripts/bash/*` gives Spec Kit's own installed skills the
+    same standing (review blocker 2)."""
     assert harness.ALLOWED_TOOLS == (
         "Read", "Write", "Edit", "Skill",
         "Bash(python3 -m pytest:*)", "Bash(python -m pytest:*)", "Bash(pytest:*)",
@@ -1296,6 +1313,10 @@ def test_allow_list_matches_the_documented_tools_exactly():
         "Bash(git add:*)", "Bash(git commit:*)",
         "Bash(compass:*)", "Bash(ls:*)", "Bash(cat:*)",
         "Bash(head:*)", "Bash(tail:*)", "Bash(grep:*)",
+        "Bash(.specify/scripts/bash/check-prerequisites.sh:*)",
+        "Bash(.specify/scripts/bash/setup-plan.sh:*)",
+        "Bash(.specify/scripts/bash/setup-tasks.sh:*)",
+        "Bash(.specify/scripts/bash/resolve-template.sh:*)",
     )
     assert "Bash(python3:*)" not in harness.ALLOWED_TOOLS
     assert "Bash(git:*)" not in harness.ALLOWED_TOOLS
@@ -2792,10 +2813,15 @@ def test_superpowers_condition_passes_a_read_only_framework_copy_as_plugin_dir(
     the network."""
     framework_source = _write_framework_repo(tmp_path / "superpowers-source")
     expected_commit = _framework_repo_head(framework_source)
+    frameworks_config = _write_frameworks_config_yaml(tmp_path, {
+        "superpowers": {"repo": "https://example.invalid/superpowers",
+                         "commit": expected_commit},
+    })
 
     calls, record, _ = _run_condition(
         tmp_path, scenario_dir, fake_claude, "superpowers", monkeypatch,
         plugin_source_dir, framework_source=framework_source,
+        frameworks_config=frameworks_config,
     )
 
     args = calls[0]["args"]
@@ -2804,6 +2830,8 @@ def test_superpowers_condition_passes_a_read_only_framework_copy_as_plugin_dir(
     assert plugin_dir != framework_source
     assert plugin_copy["listing"] == ["MARKER.md"]
     assert plugin_copy["dir_writable"] is False, "the framework copy must be read-only"
+    assert "--add-dir" in args
+    assert args[args.index("--add-dir") + 1] == str(plugin_dir)
 
     assert record["framework"] == {"name": "superpowers", "commit": expected_commit}
 
@@ -2821,10 +2849,15 @@ def test_spec_kit_condition_runs_specify_init_before_the_seed_commit(
         tmp_path / "spec-kit-source", marker_name="pyproject.toml")
     expected_commit = _framework_repo_head(framework_source)
     fake_uvx = _write_fake_uvx(tmp_path)
+    frameworks_config = _write_frameworks_config_yaml(tmp_path, {
+        "spec-kit": {"repo": "https://example.invalid/spec-kit",
+                     "commit": expected_commit},
+    }, name="frameworks-spec-kit.yml")
 
     calls, record, _ = _run_condition(
         tmp_path, scenario_dir, fake_claude, "spec-kit", monkeypatch,
         plugin_source_dir, framework_source=framework_source, uvx_exe=fake_uvx,
+        frameworks_config=frameworks_config,
     )
 
     uvx_calls = _read_fake_uvx_log(fake_uvx)
@@ -2867,6 +2900,170 @@ def test_bare_and_compass_conditions_never_call_uvx(
             tmp_path, scenario_dir, fake_claude, condition, monkeypatch,
             plugin_source_dir, out_suffix=f"-{condition}", uvx_exe=fake_uvx,
         )
+
+
+# --- 20b. the clone allows HTTPS for one call only, and the commit is checked --
+# (review blocker 1: the harness could not clone either pinned framework)
+
+def _stub_subprocess_run(calls_log):
+    def _stub(args, **kwargs):
+        calls_log.append({"args": list(args), "env": kwargs.get("env")})
+        return subprocess.CompletedProcess(list(args), 0, stdout="", stderr="")
+    return _stub
+
+
+def test_run_git_protocol_lock_defaults_to_none_and_widens_only_when_told(monkeypatch):
+    """`_run_git`'s own `GIT_ALLOW_PROTOCOL` stays `none` on every call
+    unless a caller names one - only `_framework_source_dir`'s own clone
+    ever does."""
+    calls_log: list[dict] = []
+    monkeypatch.setattr(harness.subprocess, "run", _stub_subprocess_run(calls_log))
+
+    harness._run_git(["status"], Path("."), {})
+    assert calls_log[-1]["env"]["GIT_ALLOW_PROTOCOL"] == "none"
+
+    harness._run_git(["clone", "https://example.invalid/x", "y"], Path("."), {},
+                      allow_protocol="https")
+    assert calls_log[-1]["env"]["GIT_ALLOW_PROTOCOL"] == "https"
+    # Every other safeguard stays exactly as strict for the widened call.
+    assert calls_log[-1]["env"]["GIT_CONFIG_GLOBAL"] == "/dev/null"
+    assert calls_log[-1]["env"]["GIT_CONFIG_NOSYSTEM"] == "1"
+
+
+def test_framework_source_dir_clone_call_uses_https_and_checkout_does_not(
+    monkeypatch, tmp_path
+):
+    """`_framework_source_dir`'s own clone is the one call in this module
+    that widens the protocol lock; its own later checkout, run against the
+    clone it just made, keeps the default."""
+    recorded: list[dict] = []
+    real_write_framework_repo = _write_framework_repo
+
+    def _fake_run_git(args, cwd, env, *, text=True, allow_protocol="none"):
+        recorded.append({"args": list(args), "allow_protocol": allow_protocol})
+        if args[0] == "clone":
+            # Stands in for a real clone (never reaching the network): a
+            # small git repository materialises at the destination the
+            # real `git clone` would have used.
+            real_write_framework_repo(Path(args[-1]))
+            return subprocess.CompletedProcess(["git", *args], 0, stdout="", stderr="")
+        return subprocess.CompletedProcess(["git", *args], 0, stdout="", stderr="")
+
+    monkeypatch.setattr(harness, "_run_git", _fake_run_git)
+    frameworks_config = {"superpowers": {"repo": "https://example.invalid/superpowers",
+                                          "commit": "deadbeef"}}
+    source_dir, is_temporary = harness._framework_source_dir(
+        "superpowers", None, frameworks_config, {})
+    try:
+        assert is_temporary is True
+        clone_call = next(c for c in recorded if c["args"][0] == "clone")
+        assert clone_call["allow_protocol"] == "https"
+        checkout_call = next(c for c in recorded if c["args"][0] == "checkout")
+        assert checkout_call["allow_protocol"] == "none"
+    finally:
+        shutil.rmtree(source_dir, ignore_errors=True)
+
+
+def test_framework_commit_matching_the_pin_is_accepted(tmp_path):
+    framework_source = _write_framework_repo(tmp_path / "matching-source")
+    commit = _framework_repo_head(framework_source)
+    frameworks_config = {"superpowers": {"repo": "https://example.invalid/x",
+                                          "commit": commit}}
+    harness._check_framework_commit_pin("superpowers", commit, frameworks_config)
+
+
+def test_framework_commit_mismatch_raises():
+    frameworks_config = {"superpowers": {"repo": "https://example.invalid/x",
+                                          "commit": "0" * 40}}
+    with pytest.raises(SystemExit):
+        harness._check_framework_commit_pin("superpowers", "1" * 40, frameworks_config)
+
+
+def test_framework_source_override_at_the_wrong_commit_stops_prepare_framework_copy(
+    tmp_path
+):
+    """`--framework-source` must be at the commit `evals/frameworks.yml`
+    pins, the same as a fresh clone must be - a fixture at any other
+    commit stops the run rather than silently comparing an unpinned
+    framework."""
+    framework_source = _write_framework_repo(tmp_path / "wrong-commit-source")
+    frameworks_config = {"superpowers": {"repo": "https://example.invalid/x",
+                                          "commit": "0" * 40}}
+    with pytest.raises(SystemExit):
+        harness._prepare_framework_copy(
+            "superpowers", framework_source, frameworks_config, dict(os.environ))
+
+
+def test_commit_mismatch_stops_the_whole_harness_call(
+    tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
+):
+    """Wiring: `main()` itself refuses to write a run record for a
+    framework at the wrong commit, not only the function that checks it."""
+    framework_source = _write_framework_repo(tmp_path / "e2e-wrong-commit")
+    frameworks_config = _write_frameworks_config_yaml(tmp_path, {
+        "superpowers": {"repo": "https://example.invalid/superpowers",
+                         "commit": "0" * 40},
+    }, name="frameworks-mismatch.yml")
+    log_path = tmp_path / "log-mismatch.jsonl"
+    out_dir = tmp_path / "out-mismatch"
+    _configure_fake_claude(fake_claude, log_path, None)
+    # Matched against the exception's own text, not only its type: an
+    # unrecognized `--frameworks-config` argument also raises `SystemExit`,
+    # and would pass a bare `pytest.raises(SystemExit)` for the wrong
+    # reason entirely.
+    with pytest.raises(SystemExit, match="commit"):
+        harness.main([
+            "--scenario", str(scenario_dir),
+            "--condition", "superpowers",
+            "--claude", str(fake_claude),
+            "--out", str(out_dir),
+            "--plugin-source", str(plugin_source_dir),
+            "--framework-source", str(framework_source),
+            "--frameworks-config", str(frameworks_config),
+        ])
+    assert not list(out_dir.glob("*.json"))
+
+
+# --- 20c. tool fairness across conditions (review blocker 2) ----------------
+
+def test_allow_list_gives_spec_kit_its_own_bundled_scripts():
+    """Spec Kit's own installed skills start with one of its bundled
+    scripts under `.specify/scripts/bash/` - `speckit-plan` with
+    `setup-plan.sh`, `speckit-constitution` with `resolve-template.sh`,
+    <!-- vocabulary-scan: allow - names Spec Kit's own real script and command, not a retired word --> `speckit-tasks` with `setup-tasks.sh`,
+    and `speckit-implement`, `speckit-analyze`, `speckit-checklist`,
+    `speckit-clarify`, `speckit-converge` and `speckit-taskstoissues` all
+    with `check-prerequisites.sh` - the same way Compass's own commands
+    start with `compass`, already on this list."""
+    for script in ("check-prerequisites.sh", "setup-plan.sh",
+                   "setup-tasks.sh", "resolve-template.sh"):
+        assert f"Bash(.specify/scripts/bash/{script}:*)" in harness.ALLOWED_TOOLS
+
+
+def test_superpowers_condition_gets_add_dir_for_its_framework_copy():
+    """Compass's own plugin copy gets `--add-dir`
+    (`test_compass_condition_also_gets_add_dir_for_the_plugin_copy`) so a
+    `cat` of one of its own files is not refused. Superpowers' copy needs
+    the same standing - `_common_claude_args` is the one function that
+    builds this list, so a unit test against it is enough; the end-to-end
+    check lives in the superpowers condition test above."""
+    args = harness._common_claude_args("superpowers", None, Path("/tmp/framework-copy"))
+    assert "--add-dir" in args
+    assert args[args.index("--add-dir") + 1] == str(Path("/tmp/framework-copy"))
+
+
+# --- 20d. the model is pinned for every condition (the model pin) -----------
+
+def test_every_condition_pins_the_same_model():
+    for condition, plugin_copy_dir, framework_copy_dir in (
+        ("bare", None, None),
+        ("compass", Path("/tmp/plugin-copy"), None),
+        ("superpowers", None, Path("/tmp/framework-copy")),
+        ("spec-kit", None, Path("/tmp/framework-copy")),
+    ):
+        args = harness._common_claude_args(condition, plugin_copy_dir, framework_copy_dir)
+        assert "--model" in args, condition
+        assert args[args.index("--model") + 1] == harness._PINNED_CLAUDE_MODEL
 
 
 # --- 21. hidden tests and regressions (CMP-2) --------------------------------

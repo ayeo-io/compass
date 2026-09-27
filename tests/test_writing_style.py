@@ -1861,6 +1861,17 @@ _register(Rule(
                    "the same evidence-id-prefix machine identifier as the "
                    "ADR-007 exemption above, truncated mid-token by the "
                    "docstring it illustrates."),
+        # The same no-op case as the ADR-007 exemption above: Spec Kit's own
+        # real command name, hyphenated, so the backtick right before the
+        # match opens two segments earlier and the identifier is not caught.
+        Exemption("evals/harness.py",
+                   "`speckit-analyze`",
+                   "Spec Kit's own real command name, a machine identifier "
+                   "- same case as the ADR-007 exemption above."),
+        Exemption("tests/test_eval_harness.py",
+                   "`speckit-implement`, `speckit-analyze`",
+                   "Spec Kit's own real command name, a machine identifier "
+                   "- same case as the ADR-007 exemption above."),
     ),
 ))
 

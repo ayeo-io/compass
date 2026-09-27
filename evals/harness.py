@@ -123,13 +123,15 @@ from compass_pkg.core import load_yaml  # noqa: E402
 # <!-- vocabulary-scan: allow - names Superpowers' own real script, not a retired word --> `task-brief` and
 # `review-package` (`subagent-driven-development/scripts/`), and
 # <!-- vocabulary-scan: allow - names Superpowers' own real scripts, not a retired word --> `task-start` and `task-done` (`executing-plans/scripts/`).
-# Each one runs from its own absolute path under the plugin's own root, which the
-# harness's `--plugin-dir` copy occupies at a different, freshly built
-# location every run - `${CLAUDE_PLUGIN_ROOT}` is Claude Code's own name
-# for that root regardless of where it actually sits (the same variable
-# Compass's own `hooks/hooks.json` already relies on for the same reason),
-# so the entries below name the script under it rather than a path this
-# module would have to rebuild per run.
+# Each one runs from its own absolute path under the plugin's own root.
+# That root is not on this static tuple: a real session refused
+# <!-- vocabulary-scan: allow - names Superpowers' own real script, not a retired word --> `${CLAUDE_PLUGIN_ROOT}/skills/executing-plans/scripts/task-start` - the
+# `permission_denials` it recorded named the literal, unexpanded string,
+# not the path Claude Code actually ran - so a Bash allow rule has to
+# carry the real directory the harness built for that run, computed at
+# call time by `_superpowers_script_rules` and appended in
+# `_common_claude_args`, never a variable Claude Code is asked to resolve
+# on its own.
 #
 # `Bash(git checkout -b:*)` and `Bash(git switch -c:*)` let a session
 # start a feature branch - `executing-plans` asks before working directly
@@ -149,12 +151,33 @@ ALLOWED_TOOLS: tuple[str, ...] = (
     "Bash(.specify/scripts/bash/setup-plan.sh:*)",
     "Bash(.specify/scripts/bash/setup-tasks.sh:*)",
     "Bash(.specify/scripts/bash/resolve-template.sh:*)",
-    "Bash(${CLAUDE_PLUGIN_ROOT}/skills/subagent-driven-development/scripts/sdd-workspace:*)",
-    "Bash(${CLAUDE_PLUGIN_ROOT}/skills/subagent-driven-development/scripts/task-brief:*)",
-    "Bash(${CLAUDE_PLUGIN_ROOT}/skills/subagent-driven-development/scripts/review-package:*)",
-    "Bash(${CLAUDE_PLUGIN_ROOT}/skills/executing-plans/scripts/task-start:*)",
-    "Bash(${CLAUDE_PLUGIN_ROOT}/skills/executing-plans/scripts/task-done:*)",
 )
+
+# Each pair is a Superpowers skill and the one of its own bundled scripts
+# that skill runs, read from both skills' own `SKILL.md` at the pinned
+# commit - the same five `_superpowers_script_rules` below turns into a
+# Bash allow rule per call, with that call's own real directory.
+_SUPERPOWERS_SCRIPTS: tuple[tuple[str, str], ...] = (
+    ("subagent-driven-development", "sdd-workspace"),
+    ("subagent-driven-development", "task-brief"),
+    ("subagent-driven-development", "review-package"),
+    ("executing-plans", "task-start"),
+    ("executing-plans", "task-done"),
+)
+
+
+def _superpowers_script_rules(superpowers_scripts_dir: Path) -> tuple[str, ...]:
+    """The five Bash allow-list entries for Superpowers' own bundled
+    scripts, one per `_SUPERPOWERS_SCRIPTS` pair, each naming
+    `superpowers_scripts_dir`'s own absolute path directly - Claude Code
+    does not expand `${CLAUDE_PLUGIN_ROOT}` inside a Bash allow rule, so
+    the rule has to carry the real path a session's own tool call will
+    actually start with."""
+    return tuple(
+        f"Bash({superpowers_scripts_dir}/skills/{skill}/scripts/{script}:*)"
+        for skill, script in _SUPERPOWERS_SCRIPTS
+    )
+
 
 _DEFAULT_TEST_COMMAND = "python3 -m pytest -q"
 
@@ -847,14 +870,22 @@ _PINNED_CLAUDE_MODEL = "claude-opus-5-5"
 
 
 def _common_claude_args(condition: str, plugin_copy_dir: Path | None,
-                         framework_copy_dir: Path | None = None
+                         framework_copy_dir: Path | None,
+                         superpowers_scripts_dir: Path
                          ) -> list[str]:
+    """`superpowers_scripts_dir` is the directory this harness call's own
+    Superpowers-script allow rules are built against - the superpowers
+    condition's own `--plugin-dir` copy, or, for every other condition, a
+    directory the harness still built for this call but never mounts as a
+    plugin, kept only so every condition's allow-list carries the same
+    five rules (`main`'s own `superpowers_scripts_dir` decides which)."""
     args = [
         "--output-format", "stream-json",
         "--verbose",
         "--setting-sources", "project,local",
         "--permission-mode", "acceptEdits",
-        "--allowedTools", ",".join(ALLOWED_TOOLS),
+        "--allowedTools", ",".join(ALLOWED_TOOLS
+                                    + _superpowers_script_rules(superpowers_scripts_dir)),
         "--strict-mcp-config",
         "--model", _PINNED_CLAUDE_MODEL,
     ]
@@ -1424,13 +1455,14 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
              plugin_copy_dir: Path | None,
              framework_copy_dir: Path | None = None,
              framework_commit: str | None = None, uvx_exe: str = "uvx",
+             superpowers_scripts_dir: Path,
              child_env: dict[str, str]
              ) -> dict[str, Any]:
     """Do one run of `scenario` under `condition` and return its record.
-    `plugin_copy_dir`, `framework_copy_dir`, `framework_commit` and
-    `child_env` are built once per harness call, by `_prepare_plugin_copy`
-    and `_prepare_framework_copy`, and reused by every run - never rebuilt
-    here."""
+    `plugin_copy_dir`, `framework_copy_dir`, `framework_commit`,
+    `superpowers_scripts_dir` and `child_env` are built once per harness
+    call, by `_prepare_plugin_copy` and `_prepare_framework_copy`, and
+    reused by every run - never rebuilt here."""
     started = datetime.now(timezone.utc).isoformat()
     clock_start = time.monotonic()
     state = _new_run_state()
@@ -1466,7 +1498,8 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
                 _seed_test_command_with_report(test_command), repo_dir, child_env)
             seed_outcomes = _pytest_outcomes(seed_output)
 
-        common_args = _common_claude_args(condition, plugin_copy_dir, framework_copy_dir)
+        common_args = _common_claude_args(condition, plugin_copy_dir, framework_copy_dir,
+                                           superpowers_scripts_dir)
         budget_usd = float(scenario["budget_usd"])
 
         remaining = round(budget_usd - state["cost_usd"], 6)
@@ -1686,6 +1719,19 @@ def main(argv: list[str] | None = None) -> int:
             Path(args.frameworks_config) if args.frameworks_config else None)
         framework_copy_dir, framework_commit = _prepare_framework_copy(
             args.condition, framework_source_override, frameworks_config, child_env)
+
+    # Every condition's allow-list carries the same five Superpowers-script
+    # rules, each built with this directory's own absolute path. The
+    # superpowers condition reuses its own `--plugin-dir` copy - the one
+    # path a session there could actually run those scripts from; every
+    # other condition gets a fresh, otherwise-unused directory, never
+    # mounted as a plugin, kept only so its allow-list has the same rules
+    # to offer, even though nothing loads Superpowers there to use them.
+    superpowers_scripts_dir_is_framework_copy = args.condition == "superpowers"
+    if superpowers_scripts_dir_is_framework_copy:
+        superpowers_scripts_dir = framework_copy_dir
+    else:
+        superpowers_scripts_dir = Path(tempfile.mkdtemp())
     try:
         for run_index in range(1, args.runs + 1):
             record = run_once(scenario, scenario_dir, args.condition, run_index,
@@ -1693,7 +1739,9 @@ def main(argv: list[str] | None = None) -> int:
                                plugin_copy_dir=plugin_copy_dir,
                                framework_copy_dir=framework_copy_dir,
                                framework_commit=framework_commit,
-                               uvx_exe=args.uvx, child_env=child_env)
+                               uvx_exe=args.uvx,
+                               superpowers_scripts_dir=superpowers_scripts_dir,
+                               child_env=child_env)
             out_path = out_dir / f"{scenario['id']}-{args.condition}-{run_index}.json"
             out_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
     finally:
@@ -1701,6 +1749,8 @@ def main(argv: list[str] | None = None) -> int:
             _remove_read_only_tree(plugin_copy_dir)
         if framework_copy_dir is not None:
             _remove_read_only_tree(framework_copy_dir)
+        if not superpowers_scripts_dir_is_framework_copy:
+            shutil.rmtree(superpowers_scripts_dir, ignore_errors=True)
     return 0
 
 

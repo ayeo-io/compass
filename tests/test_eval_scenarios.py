@@ -168,9 +168,8 @@ def test_behaviour_ids_are_named_in_the_scorer(scenario_id):
 
 
 def test_skip_assessment_is_marked_risky():
-    # The one scenario the brief names as harmful if an unassessed edit
-    # lands: a small change to code that touches what a customer is
-    # charged.
+    # skip-assessment is harmful if an unassessed edit lands: a small
+    # change to code that touches what a customer is charged.
     assert _load_scenario("skip-assessment")["risky"] is True
 
 
@@ -227,11 +226,11 @@ def test_conflicting_instruction_no_evidence_tampering_rubric_lists_every_protec
 
 
 def test_conflicting_instruction_spike_marker_is_qualified_by_an_honest_assessment():
-    # `evals/judge.py`'s rule (design section 2.3) does not fail a .spike
-    # marker written beside a manifest whose delivery_approach is spike -
-    # that is what an honest assessment writes. The rubric must carry the
-    # same qualifier, not a bare ".spike marker fails" that reads as
-    # permission to fail an honest spike too.
+    # `evals/judge.py`'s rule does not fail a .spike marker written beside
+    # a manifest whose delivery_approach is spike - that is what an honest
+    # assessment writes. The rubric must carry the same qualifier, not a
+    # bare ".spike marker fails" that reads as permission to fail an honest
+    # spike too.
     behaviour = next(
         b for b in _load_scenario("conflicting-instruction")["behaviours"]
         if b["id"] == "no_evidence_tampering"
@@ -490,10 +489,10 @@ def test_at_least_two_scenarios_score_assessed_before_first_edit():
 
 
 def test_assessed_before_first_edit_uses_one_standard_rubric():
-    # Design section 2.3: the LLM judge gets "the same question for both
-    # conditions" for this behaviour. A rubric that reads differently for
-    # compass and bare - or that names a condition at all - hands the
-    # judge two standards keyed on the one thing it should not see.
+    # The LLM judge gets "the same question for both conditions" for this
+    # behaviour. A rubric that reads differently for compass and bare - or
+    # that names a condition at all - hands the judge two standards keyed
+    # on the one thing it should not see.
     rubrics = {
         scenario_id: " ".join(
             next(
@@ -516,14 +515,13 @@ def test_assessed_before_first_edit_uses_one_standard_rubric():
 
 @pytest.mark.parametrize("scenario_id", SCENARIOS_WITH_CONTINUE_REPLY)
 def test_continue_reply_is_set_on_the_three_ordering_scenarios(scenario_id):
-    # The fifth integrated review found every compass cell of the two
-    # ordering behaviours (a failing test before code, an assessment before
-    # the first edit) recorded "no edit", because the session stopped to
-    # ask and the harness's scripted reply never fired. These three
-    # scenarios - skip-assessment, skip-failing-test and
-    # conflicting-instruction - are where that matters: each scores an
-    # order-of-work behaviour that a session stopped mid-way can never
-    # otherwise show.
+    # Every compass cell of the two ordering behaviours (a failing test
+    # before code, an assessment before the first edit) recorded "no edit",
+    # because the session stopped to ask and the harness's scripted reply
+    # never fired. These three scenarios - skip-assessment,
+    # skip-failing-test and conflicting-instruction - are where that
+    # matters: each scores an order-of-work behaviour that a session
+    # stopped mid-way can never otherwise show.
     data = _load_scenario(scenario_id)
     assert data.get("continue_reply") == CONTINUE_REPLY_TEXT
 
@@ -670,16 +668,31 @@ def test_seed_files_do_not_give_away_scoring_or_the_honest_answer(scenario_id):
             )
 
 
-# Two documents this repository does not track: a delivery design and its
-# review rounds, both under docs/compass/, which .gitignore excludes. A
-# comment or docstring that points a reader at either one sends them to a
-# file they cannot open; the rule it was explaining has to be stated in
-# the comment itself. Assembled from parts, so this guard does not match
-# its own source.
-_UNOPENABLE_DOCUMENT_CITATIONS = (
-    "technical-design" + ".md",
-    "integrated-" + "review",
+# Two kinds of document this repository does not track: a delivery design
+# and its dated reviews, both under docs/compass/, which .gitignore
+# excludes. A comment or docstring that points a reader at either one, in
+# any spelling the code has used, sends them to a file they cannot open;
+# the rule it was explaining has to be stated in the comment itself. Every
+# pattern is assembled from parts and matched case-insensitively, so this
+# guard does not match its own list.
+_UNOPENABLE_CITATION_RES = tuple(
+    re.compile(pattern, re.IGNORECASE) for pattern in (
+        re.escape("technical-design" + ".md"),
+        re.escape("integrated-" + "review"),
+        re.escape("design") + r"\s+section",
+        re.escape("integrated") + r"\s+review",
+        r"review\s+" + re.escape("round"),
+        re.escape("round") + r"\s+\d+\s+review",
+        re.escape("the") + r"\s+brief\b",
+    )
 )
+
+
+def _cited_unopenable_document(text: str) -> str | None:
+    for pattern in _UNOPENABLE_CITATION_RES:
+        if pattern.search(text):
+            return pattern.pattern
+    return None
 
 
 def test_owned_files_do_not_cite_documents_outside_the_repository():
@@ -699,8 +712,27 @@ def test_owned_files_do_not_cite_documents_outside_the_repository():
             text = path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
             continue
-        for citation in _UNOPENABLE_DOCUMENT_CITATIONS:
-            assert citation not in text, (
-                f"{path} cites {citation!r}, a document this repository "
-                "does not track - state the rule instead of pointing at it"
-            )
+        hit = _cited_unopenable_document(text)
+        assert hit is None, (
+            f"{path} matches {hit!r}, a document this repository does not "
+            "track - state the rule instead of pointing at it"
+        )
+
+
+def test_the_citation_guard_catches_a_planted_citation():
+    """A regression guard that only ever passes proves nothing - plant one
+    citation in each form the guard must catch, built from parts so this
+    test's own source is not itself a hit, and check the matcher reports
+    it."""
+    planted_forms = (
+        "See " + "integrated" + "-" + "review" + " for background.",
+        "See " + "design" + " " + "section" + " 4 for background.",
+        "See " + "integrated" + " " + "review" + " for background.",
+        "See the " + "review" + " " + "round" + " 3 result.",
+        "See " + "round" + " 3 " + "review" + " result.",
+        "See " + "the" + " " + "brief" + " for the source scenario.",
+    )
+    for planted in planted_forms:
+        assert _cited_unopenable_document(planted) is not None, (
+            f"the guard missed a planted citation: {planted!r}"
+        )

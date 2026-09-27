@@ -13,10 +13,15 @@
 
 No policy rule fired. The candidate is a quick fix.
 
+## The intent
+
+- `INT-1`: the issue description - summarize should return a dict with
+  the average score, and the top and bottom scorer by name.
+
 ## The scenario
 
-- `GRD-1`: summarize reports the average score and the top and bottom
-  scorer, tested in the grades module's own test file.
+- `TRC-A1`: summarize returns a dict with the average score, and the
+  top and bottom scorer, tested in the grades module's own test file.
 
 ## De-scope ledger
 

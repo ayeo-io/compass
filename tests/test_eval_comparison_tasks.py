@@ -10,6 +10,7 @@ the CMP-3 contract for all six.
 """
 from __future__ import annotations
 
+import json
 import re
 import shlex
 import shutil
@@ -625,3 +626,133 @@ def test_cmp_resume_spec_kit_overlay_uses_its_own_heading_form():
     assert text.startswith("# Tasks:"), (
         f"{tasks_path.name} does not open with Spec Kit's own title form"
     )
+
+
+# ---------------------------------------------------------------------------
+# cmp-resume, round 4: Spec Kit's own first step, equal records, and the
+# review's other follow-ups against this subtask's files.
+# ---------------------------------------------------------------------------
+
+# The three hidden tests for cmp-resume, by name - no record may quote or
+# name one, or a session reading it would be told what is graded.
+HIDDEN_RESUME_TEST_NAMES = (
+    "test_summarize_reports_average_highest_and_lowest",
+    "test_a_tie_goes_to_whichever_student_comes_first",
+    "test_empty_scores_raises_value_error",
+)
+
+
+def _spec_kit_feature_dir(overlay_dir: Path) -> Path:
+    feature_json = json.loads((overlay_dir / ".specify" / "feature.json").read_text(encoding="utf-8"))
+    return overlay_dir / feature_json["feature_directory"]
+
+
+def test_cmp_resume_spec_kit_overlay_has_what_its_own_first_step_needs():
+    """Spec Kit's own check-prerequisites script, the first step of
+    speckit-implement, reads the feature-tracking file for the feature
+    directory, then needs a plan document there always, and a checklist
+    there when one is asked for. This checks every file that script
+    reads is present, the fallback the brief allows when a test cannot
+    reach a real, pinned Spec Kit offline."""
+    overlay_dir = _overlay_dir("cmp-resume", "spec-kit")
+    feature_json_path = overlay_dir / ".specify" / "feature.json"
+    assert feature_json_path.is_file(), "seed_spec_kit has no .specify/feature.json"
+    feature_dir = _spec_kit_feature_dir(overlay_dir)
+    assert feature_dir.is_dir(), (
+        f"{feature_json_path} names a feature_directory that does not exist under seed_spec_kit"
+    )
+    for name in ("spec.md", "plan.md", "tasks.md"):
+        assert (feature_dir / name).is_file(), (
+            f"seed_spec_kit's feature directory has no {name}, which "
+            f"check-prerequisites.sh requires"
+        )
+
+
+def test_cmp_resume_spec_kit_overlay_has_story_labels_and_paths():
+    tasks_path = _spec_kit_feature_dir(_overlay_dir("cmp-resume", "spec-kit")) / "tasks.md"
+    text = tasks_path.read_text(encoding="utf-8")
+    assert "[US1]" in text, "tasks.md has no story label, which its own template asks for"
+    assert "src/grades.py" in text and "tests/test_grades.py" in text, (
+        "tasks.md does not give exact paths, which its own template asks for"
+    )
+
+
+def test_cmp_resume_superpowers_overlay_names_files_with_their_directories():
+    plan_path = next((_overlay_dir("cmp-resume", "superpowers") / "docs" / "superpowers" / "plans").glob("*.md"))
+    text = plan_path.read_text(encoding="utf-8")
+    assert "src/grades.py" in text and "tests/test_grades.py" in text, (
+        f"{plan_path.name} does not give exact paths"
+    )
+    for match in re.finditer(r"[\w./]*\bgrades\.py\b", text):
+        assert match.group(0) == "src/grades.py", (
+            f"{plan_path.name} names a file without its directory: {match.group(0)!r}"
+        )
+    for match in re.finditer(r"[\w./]*\btest_grades\.py\b", text):
+        assert match.group(0) == "tests/test_grades.py", (
+            f"{plan_path.name} names a file without its directory: {match.group(0)!r}"
+        )
+
+
+def test_cmp_resume_superpowers_overlay_does_not_quote_a_hidden_test():
+    plan_path = next((_overlay_dir("cmp-resume", "superpowers") / "docs" / "superpowers" / "plans").glob("*.md"))
+    text = plan_path.read_text(encoding="utf-8")
+    for name in HIDDEN_RESUME_TEST_NAMES:
+        assert name not in text, f"{plan_path.name} quotes the hidden test {name}"
+
+
+def test_cmp_resume_compass_overlay_does_not_name_a_hidden_test():
+    overlay_dir = _overlay_dir("cmp-resume", "compass")
+    text = _overlay_markdown_text(overlay_dir)
+    for name in HIDDEN_RESUME_TEST_NAMES:
+        assert name not in text, f"the compass record names the hidden test {name}"
+
+
+def test_cmp_resume_compass_overlay_devlog_names_the_return_keys():
+    """Every hidden test reads result["average"], result["highest"] or
+    result["lowest"] - the devlog must say summarize returns a dict with
+    those three keys, the same as the bare, Superpowers and Spec Kit
+    records already do, not just describe the value in words."""
+    devlog_path = (
+        _overlay_dir("cmp-resume", "compass") / ".compass" / "work"
+        / "grade-summary" / "devlog.md"
+    )
+    text = devlog_path.read_text(encoding="utf-8")
+    assert "dict" in text.lower(), "devlog.md does not say summarize returns a dict"
+    for key in ('"average"', '"highest"', '"lowest"'):
+        assert key in text, f"devlog.md does not name the {key} key"
+
+
+def test_cmp_resume_compass_overlay_manifest_has_gates_and_a_traceability_id():
+    manifest_path = next(
+        (_overlay_dir("cmp-resume", "compass") / ".compass" / "work").rglob("manifest.yml")
+    )
+    data = load_yaml(str(manifest_path))
+    assert data.get("gates"), (
+        "seed_compass's manifest has no gates - compass check reports "
+        '"no gates in manifest.yml - has the route been evaluated?"'
+    )
+    scenario_id = data["scenarios"][0]["id"]
+    assert scenario_id.startswith("TRC-"), (
+        f"seed_compass's manifest scenario id {scenario_id!r} is not the "
+        f"TRC- form Compass now issues"
+    )
+
+
+_SPIKE_TIME_TIME_FINDINGS = (
+    "Yes - store the expiry timestamp per key with time.time() when "
+    "set() is called, and check it in get(), dropping the entry once "
+    "that timestamp has passed.\n"
+)
+
+
+def test_cmp_spike_hidden_tests_accept_a_finding_naming_only_time_time(tmp_path):
+    """A finding that names time.time(), a correct approach, must pass on
+    its own technical merit - not only because it happens to repeat the
+    prompt's own words "standard library"."""
+    _require_python3()
+    _prepare_seed("cmp-spike", tmp_path)
+    _copy_hidden_tests("cmp-spike", tmp_path)
+    (tmp_path / "FINDINGS.md").write_text(_SPIKE_TIME_TIME_FINDINGS, encoding="utf-8")
+
+    result = _run_hidden_command("cmp-spike", tmp_path)
+    assert result.returncode == 0, result.stdout + result.stderr

@@ -135,5 +135,5 @@ changed that one cell and nothing else.
 |---|---|
 | The twelve pilot sessions | $5.64 |
 | The two wording-change sessions | $1.25 |
-| Scoring with the model judge: eight calls over two scorings | not recorded; each is capped at $0.50, and such calls cost $0.09 to $0.18 in the reviews |
+| Scoring with the model judge: eight calls over two scorings, and one later call to check judging works with no tools | not recorded; each is capped at $0.50, and such calls cost $0.09 to $0.18 in the reviews |
 | Getting the harness right: ten reviews, nine of them with real runs at a lowered budget | about $20.58, a lower bound |

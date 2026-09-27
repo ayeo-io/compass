@@ -17,7 +17,7 @@
 # framework for everyone - see routing-policy.md.
 # =============================================================================
 
-version: 2.12.1
+version: 2.12.2
 # -----------------------------------------------------------------------------
 # ROUTING STRATEGIES - soft. They BIAS the candidate delivery approach. The evaluator uses
 # them in composition (step 1); a later rule can override the result.
@@ -249,7 +249,8 @@ route_shapes:
     stages: { assess: full, define: full, refine: light, plan: full, breakdown: multiagent, implement: full, verify: full, ship: full }
     gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.clarity, verify.security]
     subtask_ceiling: 2
-    artifacts: { acceptance-criteria: full, technical-design: full, verification-report: full }
+    # A multiagent breakdown reads a distribution map, so this route earns one.
+    artifacts: { acceptance-criteria: full, technical-design: full, distribution-map: light, verification-report: full }
   hotfix:
     weight: 3
     # `full-plus-backfill` below is a stage-weight enum the evaluator

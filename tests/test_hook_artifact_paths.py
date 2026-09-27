@@ -86,7 +86,7 @@ def _project(tmp_path, *, documents=True, register=True, red=True,
         # lives.
         r = subprocess.run(
             [sys.executable, str(COMPASS_CLI), "tdd-red", "--issue", SLUG,
-             "--quiet", "--", sys.executable, "-c", "raise SystemExit(1)"],
+             "--quiet", "--", sys.executable, "-c", "print('1 failed'); raise SystemExit(1)"],
             capture_output=True, text=True, timeout=120, cwd=str(tmp_path))
         assert (work / ".red").is_file(), (
             "the fixture could not record a red:\n" + r.stdout + r.stderr)

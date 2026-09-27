@@ -177,7 +177,7 @@ class TestTddGreenRerunDetection:
         r = run_cli(
             "tdd-red", "--issue", "rerun-test",
             "--scenario", "SCN-001",
-            "--", sys.executable, "-c", "import sys; sys.exit(1)",
+            "--", sys.executable, "-c", "print('1 failed'); import sys; sys.exit(1)",
         )
         assert r.returncode == 0, r
 

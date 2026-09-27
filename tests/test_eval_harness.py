@@ -3169,3 +3169,18 @@ def test_a_scenario_without_hidden_tests_gets_no_hidden_or_regressions_measure(
     )
     assert record["hidden"] is None
     assert record["regressions"] is None
+
+
+def test_pytest_summary_counts_reads_only_the_final_summary_line():
+    """`_pytest_summary_counts` must read pytest's own final summary line,
+    not every line that happens to contain a number followed by "passed"
+    or "failed" - a hidden test can print exactly that as its own output,
+    or as part of an assertion message, without it meaning what the
+    function's docstring promises."""
+    output = (
+        "tests/test_thing.py::test_one PASSED\n"
+        "the answer was 2 failed, 9000 passed - a decoy printed by the test itself\n"
+        "tests/test_thing.py::test_two FAILED\n"
+        "=================== 1 failed, 1 passed in 0.03s ===================\n"
+    )
+    assert harness._pytest_summary_counts(output) == (1, 1)

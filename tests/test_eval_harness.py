@@ -19,6 +19,7 @@ import os
 import stat
 import subprocess
 import sys
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -110,6 +111,7 @@ def main():
         compass_bin = os.path.join(plugin_dir, "bin", "compass")
         tests_dir = os.path.join(plugin_dir, "tests")
         docs_compass_dir = os.path.join(plugin_dir, "docs", "compass")
+        docs_releasing = os.path.join(plugin_dir, "docs", "releasing.md")
         record["plugin_copy"] = {
             "dir_writable": os.access(plugin_dir, os.W_OK),
             "readme_text": (open(readme, encoding="utf-8").read()
@@ -121,6 +123,7 @@ def main():
                                if os.path.isdir(tests_dir) else []),
             "docs_compass_listing": (sorted(os.listdir(docs_compass_dir))
                                       if os.path.isdir(docs_compass_dir) else []),
+            "docs_releasing_exists": os.path.isfile(docs_releasing),
         }
 
     with open(config["log_path"], "a", encoding="utf-8") as fh:
@@ -297,15 +300,28 @@ def _git_commit_all(repo: Path, message: str) -> None:
                     env=env, check=True)
 
 
-def _write_plugin_repo(root: Path, *, init_exit_code: int = 0) -> Path:
+def _write_plugin_repo(root: Path, *, init_exit_code: int = 0,
+                        write_config_yml: bool = False) -> Path:
     """A small git repository standing in for this checkout - the compass
     condition's plugin source, so a test never archives the real one.
     `init_exit_code` lets a test give this fixture's own `compass init` a
-    failure, without touching the real CLI."""
+    failure, without touching the real CLI. `write_config_yml` makes that
+    same `init` also stamp `.compass/config.yml` with today's date, the way
+    the real CLI's own template does, for a test that checks the harness
+    backdates it."""
     root.mkdir(parents=True, exist_ok=True)
     bin_dir = root / "bin"
     bin_dir.mkdir()
     compass_script = bin_dir / "compass"
+    config_yml_block = (
+        "    import datetime\n"
+        "    _stamp = datetime.date.today().isoformat()\n"
+        "    with open(os.path.join('.compass', 'config.yml'), 'w',\n"
+        "              encoding='utf-8') as cfg:\n"
+        "        cfg.write('initialised:\\n  by: \"compass init\"\\n  at: \"'"
+        " + _stamp + '\"\\n')\n"
+        "        cfg.write(\"records_signed_since: '\" + _stamp + \"'\\n\")\n"
+    ) if write_config_yml else ""
     compass_script.write_text(
         "#!/usr/bin/env python3\n"
         "import os\n"
@@ -319,6 +335,7 @@ def _write_plugin_repo(root: Path, *, init_exit_code: int = 0) -> Path:
         "    with open(os.path.join('.compass', 'marker-from-init.txt'), 'w',\n"
         "              encoding='utf-8') as handle:\n"
         "        handle.write('the plugin copy ran compass init here\\n')\n"
+        f"{config_yml_block}"
         "elif sys.argv[1:2] == ['--version']:\n"
         "    print('fixture-compass 9.9.9')\n",
         encoding="utf-8",
@@ -521,6 +538,29 @@ def test_plugin_copy_leaves_out_docs_compass_eval_reports(
     # the fixture plugin source still has both - the harness leaves the
     # report out, the source never loses it.
     assert (docs_compass_dir / "2026-09-26-eval-pilot.md").is_file()
+
+
+def test_plugin_copy_leaves_out_the_releasing_guide(
+    tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
+):
+    """`docs/releasing.md` names the harness and the two conditions by name,
+    the same kind of leak the eval reports under `docs/compass/` are left
+    out for. A compass session must not read it inside the plugin copy."""
+    docs_dir = plugin_source_dir / "docs"
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    (docs_dir / "releasing.md").write_text(
+        "how a release runs the eval scenarios before merging\n",
+        encoding="utf-8")
+    _git_commit_all(plugin_source_dir, "add docs/releasing.md")
+
+    calls, _, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "compass", monkeypatch,
+        plugin_source_dir, out_suffix="-no-releasing-doc",
+    )
+    assert calls[0]["plugin_copy"]["docs_releasing_exists"] is False
+    # the fixture plugin source still has it - the harness leaves it out,
+    # the source never loses it.
+    assert (docs_dir / "releasing.md").is_file()
 
 
 # --- 2. the child environment ------------------------------------------------
@@ -891,6 +931,7 @@ def test_run_record_has_every_field_from_the_design(
     for call in record["tool_calls"]:
         assert set(call.keys()) == {
             "index", "name", "input", "is_error", "denied", "output",
+            "tool_use_id",
         }
         assert call["denied"] is False
     assert record["tool_calls"][0]["name"] == "Read"
@@ -980,6 +1021,31 @@ def test_denied_flag_from_permission_denials_and_from_a_refusal_message(
     assert by_name["Edit"]["is_error"] is True
     assert by_name["Read"]["denied"] is False
     assert record["permission_denials"]
+
+
+def test_tool_calls_carry_the_tool_use_id_the_fake_claude_gave_them(
+    tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
+):
+    """The judge matches a permission denial to its tool call by
+    `tool_use_id`, never by position - so the id `_consume_events` reads off
+    each `tool_result` event must reach the record, not be dropped once
+    `_finalise_tool_calls` has used it to set `denied`."""
+    _, record, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "bare", monkeypatch,
+        plugin_source_dir, out_suffix="-tool-use-id",
+        extra_config={"deny_tool": "Edit"},
+    )
+    by_name = {call["name"]: call for call in record["tool_calls"]}
+    assert by_name["Read"]["tool_use_id"] == "toolu_1"
+    assert by_name["Edit"]["tool_use_id"] == "toolu_2"
+
+    denied_call = by_name["Edit"]
+    assert denied_call["denied"] is True
+    denial_ids = {
+        (entry.get("tool_use_id") if isinstance(entry, dict) else entry)
+        for entry in record["permission_denials"]
+    }
+    assert denied_call["tool_use_id"] in denial_ids
 
 
 def test_each_run_starts_from_a_fresh_repository_with_only_the_seed(
@@ -1441,6 +1507,67 @@ def test_run_compass_init_does_not_raise_on_success(tmp_path):
     assert (repo_dir / ".compass" / "marker-from-init.txt").is_file()
 
 
+# --- the compass condition's setup date is backdated -------------------------
+
+def test_backdate_setup_date_rewrites_every_occurrence_of_the_stamped_date(
+    tmp_path
+):
+    """The hook's own refusal quotes `initialised.at`, and a real compass
+    session read today's date there as proof a policy could not be leftover
+    config from another project. `compass init` stamps the same date into
+    `records_signed_since` from the one template value it filled in, so
+    rewriting every occurrence of the stamped date backdates both fields
+    from that one value."""
+    repo_dir = tmp_path / "repo"
+    compass_dir = repo_dir / ".compass"
+    compass_dir.mkdir(parents=True)
+    (compass_dir / "config.yml").write_text(
+        "version: 1.0.0\n"
+        "mode: enforced\n"
+        "initialised:\n"
+        "  by: \"compass init\"\n"
+        "  at: \"2026-09-27\"\n"
+        "records_signed_since: '2026-09-27'\n",
+        encoding="utf-8",
+    )
+
+    harness._backdate_setup_date(repo_dir)
+
+    text = (compass_dir / "config.yml").read_text(encoding="utf-8")
+    assert 'at: "2026-08-28"' in text
+    assert "records_signed_since: '2026-08-28'" in text
+    assert "2026-09-27" not in text
+
+
+def test_backdate_setup_date_does_nothing_without_a_config_file(tmp_path):
+    repo_dir = tmp_path / "repo"
+    repo_dir.mkdir()
+    harness._backdate_setup_date(repo_dir)  # must not raise
+    assert not (repo_dir / ".compass").exists()
+
+
+def test_materialise_repo_backdates_the_setup_date_for_the_compass_condition(
+    tmp_path
+):
+    """Wiring: the compass condition's own `compass init` runs, then the
+    date it just stamped is rewritten, before the seed commit - so the
+    backdated value is what a session's first hook refusal ever sees."""
+    plugin_copy = _write_plugin_repo(tmp_path / "plugin-copy-dated",
+                                      write_config_yml=True)
+    scenario_dir = _write_scenario(tmp_path)
+    repo_dir = tmp_path / "repo"
+    repo_dir.mkdir()
+
+    harness._materialise_repo(scenario_dir, "compass", repo_dir, plugin_copy,
+                               dict(os.environ))
+
+    config_text = (repo_dir / ".compass" / "config.yml").read_text(encoding="utf-8")
+    today = date.today()
+    backdated = (today - timedelta(days=30)).isoformat()
+    assert f'at: "{backdated}"' in config_text
+    assert f'at: "{today.isoformat()}"' not in config_text
+
+
 # --- 18. the continuation reply follows only a call that ended `success` ----
 
 def test_no_continue_reply_after_a_call_that_did_not_end_in_success(
@@ -1495,3 +1622,44 @@ def test_load_scenario_returns_defaults_for_an_empty_file(tmp_path):
     data = harness.load_scenario(scenario_dir)
 
     assert data == {"follow_ups": [], "test_command": "python3 -m pytest -q"}
+
+
+# --- 19. the plugin copy names nothing a scenario or a behaviour would give away --
+
+def test_plugin_copy_of_the_real_checkout_names_no_scenario_or_behaviour(
+    tmp_path
+):
+    """Every other test in this file stands a fixture in for this checkout,
+    on purpose, so nothing depends on its tracked tree. This one is the
+    exception: only the real checkout carries real scenario ids and
+    behaviour ids to check against, and only its own copy shows whether a
+    file outside `evals/` still names one by accident."""
+    scenario_ids = sorted(
+        p.parent.name
+        for p in (REPO_ROOT / "evals" / "scenarios").glob("*/scenario.yml")
+    )
+    assert scenario_ids
+
+    from evals import judge  # local: only this test needs the behaviour ids
+    behaviour_ids = sorted(judge.BEHAVIOURS.keys())
+    assert behaviour_ids
+
+    forbidden = [*scenario_ids, *behaviour_ids, "compass condition", "bare condition"]
+
+    dest = tmp_path / "real-plugin-copy"
+    harness._make_plugin_copy(REPO_ROOT, dest)
+    try:
+        offences = []
+        for path in dest.rglob("*"):
+            if not path.is_file():
+                continue
+            try:
+                text = path.read_text(encoding="utf-8")
+            except (UnicodeDecodeError, OSError):
+                continue
+            for term in forbidden:
+                if term in text:
+                    offences.append((path.relative_to(dest).as_posix(), term))
+        assert offences == []
+    finally:
+        harness._remove_read_only_tree(dest)

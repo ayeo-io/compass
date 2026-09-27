@@ -13,20 +13,21 @@ builder and reviewer agents.
 
 | Measure | Value |
 |---|---|
-| Wall-clock time | 17 h 15 min, from provisioning wave 1 (09:48) to the last integrated review (03:03 the next day) |
+| Wall-clock time | 23 h 21 min, from provisioning wave 1 (09:48) to the last review at `/compass:verify` (09:09 the next day) |
 | Subtasks | 5, in 3 waves; wave 2 was added after the pilot was scored, wave 3 after the security review at `/compass:verify` |
-| Builder tries | 34 up to wave 2 (subtask-1: 11, subtask-2: 10, subtask-3: 12, subtask-4: 1), from 28 new dispatches and 6 messages to a builder already running |
+| Builder tries | 38 (subtask-1: 11, subtask-2: 10, subtask-3: 12, subtask-4: 1, subtask-5: 4), from 32 new dispatches and 6 messages to a builder already running |
 | Reviews of the integrated change | 10, by reviewer agents; rounds 1 to 8 failed, 9 and 10 passed |
-| Tokens, builders | 4,329,881 |
-| Tokens, reviewers | 1,609,539 |
+| Reviews at `/compass:verify` | 9, by reviewer agents: security three times, clarity three times, claims once, and two final checks of wave 3 |
+| Tokens, builders | 5,603,063 |
+| Tokens, reviewers | 2,449,891: 1,609,539 on the ten integrated reviews, 840,352 at `/compass:verify` |
 | Tokens, orchestrator | not measured - the orchestrating session's own use is not reported per step |
 | Real model spend | about $20.58 in reviews, nine of which ran real sessions at a lowered budget; $6.89 for the pilot and the wording measurement, plus scoring calls that were not recorded |
-| Merge conflicts | 0, across 12 runs of `integrate.sh` |
-| Combined regression | green on the integrated tree after wave 2, except the pilot report's own test, which passed once the report was written |
+| Merge conflicts | 0, across 16 runs of `integrate.sh` |
+| Combined regression | green on the integrated tree after wave 3's last try |
 
 All builders ran on Sonnet, each handed only its brief file's path. Budget
-per dispatch: 600,000 tokens, 250,000 for subtask-4. No dispatch exceeded
-it; the largest used 261,595.
+per dispatch: 600,000 tokens, 250,000 for subtask-4 and 400,000 for
+subtask-5. No dispatch exceeded it; the largest used 358,410.
 
 ## Each subtask
 
@@ -36,6 +37,7 @@ it; the largest used 261,595.
 | subtask-2 | `evals/scenarios/`: the six scenarios and their seeds | 10 | 901,305 |
 | subtask-3 | `evals/judge.py`: scores behaviours from actions and files | 12 | 1,965,341 |
 | subtask-4 | one definition of Compass's own records, in the judge and the harness | 1 | 137,612 |
+| subtask-5 | the security fixes and the citation guard from `/compass:verify` | 4 | 1,273,182 |
 
 ## Rework
 
@@ -71,7 +73,16 @@ the repository's end state, and from round 7 each brief handed the builder
 the last review's real records to test against. Rounds 9 and 10 passed.
 At `/compass:verify`, the security review then found that the harness ran
 session-written code with its own environment, and that its containment
-check could not see ignored files or `.git/`: wave 3 fixed both.
+check could not see ignored files or `.git/`. Wave 3 took four tries. Its
+first closed the named cases and left others of the same kind open, so
+the second review failed on members of the same class. The later tries
+fixed each class: one helper for every git call, with a test that no
+other process start exists, and a citation guard that names what it
+catches and lists what it does not. The last try closed a regression the
+third try had introduced. The design now states where the security
+requirement stops: nothing a session controls may run with more than the
+session's own minimal environment, and a further route that stays within
+it is recorded for later, not a blocker.
 
 ## Steps that needed improvising
 
@@ -90,6 +101,12 @@ check could not see ignored files or `.git/`: wave 3 fixed both.
 - The issue had no `devlog.md`: the assess stage did not start one, and
   the post-tool hook appends only to one that exists. The orchestrator
   wrote it late, from its notes.
+- Builders broke three rules and each disclosed it. One rewrote comments
+  through a Bash script before recording a red; the hook stopped its next
+  edit. One ran `git stash` against its brief and popped it at once; the
+  shared stash was intact. Twice a builder started a red after editing;
+  the CLI refused each, and the builder redid it. For one red, a builder
+  reverted to its own draft to make a test fail.
 - `compass issue subtask update --cost` keeps only the last try's cost,
   so the totals above are summed by hand from each agent's reported
   tokens, in the orchestrator's notes and its session transcript. Neither

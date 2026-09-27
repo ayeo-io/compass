@@ -301,6 +301,78 @@ def _git(args: list[str], repo_dir: Path, *, env: dict[str, str] | None = None
                            capture_output=True, text=True)
 
 
+# The two files that let a git command in the session's own repository run
+# arbitrary code the session wrote: `.git/config` (`diff.external`,
+# `core.fsmonitor`, a `filter.*.clean` driver) and `.git/info/attributes`
+# (which selects a filter or a driver by path). Snapshotted once, right
+# after the seed commit, so a later git call can tell a session's own
+# change from the seed's own state and put the seed's copy back before it
+# runs.
+_TAMPER_WATCHED_RELATIVE_PATHS = (".git/config", ".git/info/attributes")
+
+# Turns off the two settings a session's own `.git/config` could still use
+# to name a program the harness never chose: `core.fsmonitor` (a hook
+# script) and `core.hooksPath` (redirected to a directory with nothing in
+# it). `--no-ext-diff` and `--no-textconv` are added at each diff call
+# instead, since only some of the guarded calls are diffs.
+_GIT_SAFE_CONFIG_ARGS = ("-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null")
+
+
+def _read_bytes_or_none(path: Path) -> bytes | None:
+    try:
+        return path.read_bytes()
+    except FileNotFoundError:
+        return None
+
+
+def _snapshot_git_config(repo_dir: Path) -> dict[str, bytes | None]:
+    """`.git/config` and `.git/info/attributes` as the seed commit left
+    them - `None` for one the seed never wrote. Taken once, right after
+    `_git_init_and_commit` returns, before any session call runs."""
+    return {rel: _read_bytes_or_none(repo_dir / rel)
+            for rel in _TAMPER_WATCHED_RELATIVE_PATHS}
+
+
+def _restore_tampered_git_config(repo_dir: Path,
+                                  seed_git_snapshot: dict[str, bytes | None]
+                                  ) -> list[str]:
+    """Compare `.git/config` and `.git/info/attributes` against
+    `seed_git_snapshot`; put the seed's own copy back for any that changed,
+    and return the changed paths - so the git command that runs right after
+    never reads a session's own settings, and the caller can record the run
+    as not contained, naming the file."""
+    tampered: list[str] = []
+    for rel, seed_bytes in seed_git_snapshot.items():
+        path = repo_dir / rel
+        current_bytes = _read_bytes_or_none(path)
+        if current_bytes == seed_bytes:
+            continue
+        tampered.append(rel)
+        if seed_bytes is None:
+            if path.exists():
+                path.unlink()
+        else:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(seed_bytes)
+    return tampered
+
+
+def _run_guarded_git(args: list[str], repo_dir: Path, env: dict[str, str],
+                      seed_git_snapshot: dict[str, bytes | None],
+                      tampered_paths: list[str]
+                      ) -> subprocess.CompletedProcess:
+    """One git command against the session's own repository: restores
+    `.git/config` and `.git/info/attributes` to the seed's own copy first,
+    if either changed (`_restore_tampered_git_config`), runs with the
+    environment built for the session, never `os.environ`, and disables
+    `core.fsmonitor` and `core.hooksPath`. The fix for the review's first
+    blocker, confirmed by planting a `diff.external` that writes a marker
+    file: the marker must never appear."""
+    tampered_paths.extend(_restore_tampered_git_config(repo_dir, seed_git_snapshot))
+    return subprocess.run(["git", *_GIT_SAFE_CONFIG_ARGS, *args], cwd=str(repo_dir),
+                           env=env, capture_output=True, text=True)
+
+
 def _exclude_pyc_files(repo_dir: Path) -> None:
     """Write `__pycache__/` and `*.pyc` to `.git/info/exclude` before the
     seed commit, so a session that runs the seed's own tests leaves nothing
@@ -313,20 +385,22 @@ def _exclude_pyc_files(repo_dir: Path) -> None:
         fh.write("__pycache__/\n*.pyc\n")
 
 
-def _git_init_and_commit(repo_dir: Path) -> str:
+def _git_init_and_commit(repo_dir: Path, env: dict[str, str]) -> str:
     """Turn the materialised directory into a git repository with one
     ordinary commit, and return its id so a later diff can name it directly.
     No tag or branch marks it: a session's own allowed `git log --decorate`
     must show nothing that says a commit is under evaluation, and none of
     six rounds of real sessions ever ran `git tag`. The commit message is
-    ordinary too, for the same reason."""
-    env = dict(os.environ)
-    env.update(_GIT_ENV_EXTRA)
-    _git(["init", "-q"], repo_dir, env=env)
+    ordinary too, for the same reason. Runs with the environment built for
+    the session, never `os.environ` - this is the repository a session's
+    own code, and later the harness's own diff, run inside."""
+    call_env = dict(env)
+    call_env.update(_GIT_ENV_EXTRA)
+    _git(["init", "-q"], repo_dir, env=call_env)
     _exclude_pyc_files(repo_dir)
-    _git(["add", "-A"], repo_dir, env=env)
-    _git(["commit", "-q", "-m", "Initial commit", "--allow-empty"], repo_dir, env=env)
-    return _git(["rev-parse", "HEAD"], repo_dir, env=env).stdout.strip()
+    _git(["add", "-A"], repo_dir, env=call_env)
+    _git(["commit", "-q", "-m", "Initial commit", "--allow-empty"], repo_dir, env=call_env)
+    return _git(["rev-parse", "HEAD"], repo_dir, env=call_env).stdout.strip()
 
 
 # --- the child's own environment ---------------------------------------------
@@ -536,11 +610,11 @@ def _is_test_path(path: str) -> bool:
             or path.startswith("tests/"))
 
 
-# Design section 2.3: Compass's own records are every path under
-# `.compass/` and `docs/compass/`, and `docs/system-spec.md`, which
-# `compass ship-commit` derives when an issue lands. Put once here, the
-# same way `evals/judge.py` keeps its own copy of the same definition in
-# one place, so no caller repeats the list.
+# Compass's own records are every path under `.compass/` and
+# `docs/compass/`, and `docs/system-spec.md`, which `compass ship-commit`
+# derives when an issue lands. Put once here, the same way `evals/judge.py`
+# keeps its own copy of the same definition in one place, so no caller
+# repeats the list.
 _COMPASS_OWN_RECORD_PATHS = frozenset({"docs/system-spec.md"})
 
 
@@ -556,11 +630,14 @@ def _in_scope(path: str, in_scope: list[str]) -> bool:
 
 
 def _has_non_test_in_scope_edit(repo_dir: Path, in_scope: list[str],
-                                 seed_commit: str) -> bool:
+                                 seed_commit: str, env: dict[str, str],
+                                 seed_git_snapshot: dict[str, bytes | None],
+                                 tampered_paths: list[str]) -> bool:
     """True once a non-test path in `in_scope`, not one of Compass's own
     records (`_is_compass_own_record`), differs from the seed commit - the
     threshold §2.2 sets for whether a session has done the work yet."""
-    _, changed_paths, _ = _diff_since_seed(repo_dir, seed_commit)
+    _, changed_paths, _ = _diff_since_seed(
+        repo_dir, seed_commit, env, seed_git_snapshot, tampered_paths)
     return any(
         _in_scope(path, in_scope) and not _is_compass_own_record(path)
         and not _is_test_path(path)
@@ -572,7 +649,9 @@ def _maybe_send_continue_reply(claude_exe: str, common_args: list[str],
                                 repo_dir: Path, state: dict[str, Any], *,
                                 scenario: dict[str, Any], budget_usd: float,
                                 replies_sent: int, env: dict[str, str],
-                                seed_commit: str
+                                seed_commit: str,
+                                seed_git_snapshot: dict[str, bytes | None],
+                                tampered_paths: list[str]
                                 ) -> tuple[int, int | None, str | None]:
     """A session run under `-p` gets no answer to a question of its own, so
     it never reaches a decision on its own. Guessing that question from a
@@ -598,7 +677,8 @@ def _maybe_send_continue_reply(claude_exe: str, common_args: list[str],
     if remaining <= 0:
         return replies_sent, None, None
     in_scope = scenario.get("in_scope") or ["**"]
-    if _has_non_test_in_scope_edit(repo_dir, in_scope, seed_commit):
+    if _has_non_test_in_scope_edit(repo_dir, in_scope, seed_commit, env,
+                                    seed_git_snapshot, tampered_paths):
         return replies_sent, None, None
     exit_code, text = _invoke_claude(
         claude_exe, continue_reply, common_args, repo_dir, state,
@@ -606,25 +686,34 @@ def _maybe_send_continue_reply(claude_exe: str, common_args: list[str],
     return replies_sent + 1, exit_code, text
 
 
-def _diff_since_seed(repo_dir: Path, seed_commit: str
+def _diff_since_seed(repo_dir: Path, seed_commit: str, env: dict[str, str],
+                      seed_git_snapshot: dict[str, bytes | None],
+                      tampered_paths: list[str]
                       ) -> tuple[str, list[str], list[dict[str, str]]]:
     """Stage every change (so a new file counts, not only an edited one) and
     diff it against the seed commit - in a temporary index, never the
     repository's own one. `git add -A` used to run against the real index
     while a session's own later call could still read it with the allowed
-    `git status`, staging a change the session never made itself. Returns
-    the diff text, the changed paths, and each path with its status (`A`,
-    `M` or `D`) against the seed."""
+    `git status`, staging a change the session never made itself. Every git
+    call here runs with the environment built for the session, never
+    `os.environ`, restores a tampered `.git/config` or
+    `.git/info/attributes` first (`_run_guarded_git`), and each diff adds
+    `--no-ext-diff --no-textconv` so a planted `diff.external` or textconv
+    driver never runs. Returns the diff text, the changed paths, and each
+    path with its status (`A`, `M` or `D`) against the seed."""
     with tempfile.TemporaryDirectory() as tmp:
-        env = dict(os.environ)
-        env["GIT_INDEX_FILE"] = str(Path(tmp) / "index")
-        _git(["add", "-A"], repo_dir, env=env)
-        diff = _git(["diff", "--cached", "--no-renames", seed_commit],
-                     repo_dir, env=env).stdout
-        status_output = _git(
-            ["diff", "--cached", "--no-renames", "--name-status", seed_commit],
-            repo_dir, env=env,
-        ).stdout
+        call_env = dict(env)
+        call_env["GIT_INDEX_FILE"] = str(Path(tmp) / "index")
+        _run_guarded_git(["add", "-A"], repo_dir, call_env,
+                          seed_git_snapshot, tampered_paths)
+        diff = _run_guarded_git(
+            ["diff", "--cached", "--no-renames", "--no-ext-diff", "--no-textconv",
+             seed_commit],
+            repo_dir, call_env, seed_git_snapshot, tampered_paths).stdout
+        status_output = _run_guarded_git(
+            ["diff", "--cached", "--no-renames", "--no-ext-diff", "--no-textconv",
+             "--name-status", seed_commit],
+            repo_dir, call_env, seed_git_snapshot, tampered_paths).stdout
     changed_paths: list[str] = []
     changed: list[dict[str, str]] = []
     for line in status_output.splitlines():
@@ -637,8 +726,11 @@ def _diff_since_seed(repo_dir: Path, seed_commit: str
     return diff, changed_paths, changed
 
 
-def _run_test_command(test_command: str, repo_dir: Path) -> int:
-    proc = subprocess.run(shlex.split(test_command), cwd=str(repo_dir),
+def _run_test_command(test_command: str, repo_dir: Path, env: dict[str, str]) -> int:
+    """Runs with the environment built for the session, never `os.environ` -
+    this command runs the seed's own tests plus anything a session edited or
+    added, such as a `conftest.py`."""
+    proc = subprocess.run(shlex.split(test_command), cwd=str(repo_dir), env=env,
                            capture_output=True, text=True)
     return proc.returncode
 
@@ -670,16 +762,27 @@ def _manifests(repo_dir: Path) -> dict[str, str]:
 
 # --- containment -------------------------------------------------------------
 
+# Never listed by `git ls-files`, whatever its flags - hashed separately so
+# a session's own conftest.py cannot rewrite this checkout's hooks or
+# config unseen.
+_CHECKOUT_ALWAYS_WATCHED_RELATIVE_PATHS = (".git/config", ".git/hooks", ".git/info")
+
+
 def _checkout_fingerprint(root: Path) -> dict[str, str]:
-    """Hash every tracked file's content, plus every untracked one. A status
+    """Hash every tracked file's content, every untracked one - ignored
+    included - and `.git/config`, `.git/hooks/` and `.git/info/`. A status
     code, such as `git status --porcelain`'s `M`, does not change between two
     different edits to the same already-changed file, and collapses a whole
     new directory to one `??` line - so a further edit, or a change inside a
     new directory, would pass unseen. `git ls-files --others` lists the files
-    inside an untracked directory itself, so the hash catches both."""
+    inside an untracked directory itself, so the hash catches both.
+    `--exclude-standard` used to drop every ignored path - `evals/out/`,
+    `.compass/work/` and `docs/compass/*/` in this repository - and `git
+    ls-files` never lists anything under `.git/` at all, so a rewritten
+    `evals/out/*.json` or a written `.git/hooks/pre-commit` both passed as
+    contained; neither is dropped nor left unlisted now."""
     tracked = _git(["ls-files", "-z"], root).stdout.split("\0")
-    untracked = _git(["ls-files", "-z", "--others", "--exclude-standard"],
-                      root).stdout.split("\0")
+    untracked = _git(["ls-files", "-z", "--others"], root).stdout.split("\0")
     snapshot: dict[str, str] = {}
     for rel in [*tracked, *untracked]:
         if not rel:
@@ -687,6 +790,15 @@ def _checkout_fingerprint(root: Path) -> dict[str, str]:
         path = root / rel
         if path.is_file():
             snapshot[rel] = hashlib.sha256(path.read_bytes()).hexdigest()
+    for rel in _CHECKOUT_ALWAYS_WATCHED_RELATIVE_PATHS:
+        path = root / rel
+        if path.is_file():
+            snapshot[rel] = hashlib.sha256(path.read_bytes()).hexdigest()
+        elif path.is_dir():
+            for sub in sorted(path.rglob("*")):
+                if sub.is_file():
+                    snapshot[sub.relative_to(root).as_posix()] = \
+                        hashlib.sha256(sub.read_bytes()).hexdigest()
     return snapshot
 
 
@@ -744,7 +856,9 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
             repo_dir = Path(tmp)
             _materialise_repo(scenario_dir, condition, repo_dir,
                                plugin_copy_dir, child_env)
-            seed_commit = _git_init_and_commit(repo_dir)
+            seed_commit = _git_init_and_commit(repo_dir, child_env)
+            seed_git_snapshot = _snapshot_git_config(repo_dir)
+            tampered_paths: list[str] = []
 
             common_args = _common_claude_args(condition, plugin_copy_dir)
             budget_usd = float(scenario["budget_usd"])
@@ -758,7 +872,8 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
             replies_sent, reply_exit, reply_text = _maybe_send_continue_reply(
                 claude_exe, common_args, repo_dir, state, scenario=scenario,
                 budget_usd=budget_usd, replies_sent=replies_sent, env=child_env,
-                seed_commit=seed_commit)
+                seed_commit=seed_commit, seed_git_snapshot=seed_git_snapshot,
+                tampered_paths=tampered_paths)
             if reply_exit is not None:
                 exit_code = reply_exit
             if reply_text:
@@ -778,7 +893,9 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
                 replies_sent, reply_exit, reply_text = _maybe_send_continue_reply(
                     claude_exe, common_args, repo_dir, state, scenario=scenario,
                     budget_usd=budget_usd, replies_sent=replies_sent,
-                    env=child_env, seed_commit=seed_commit)
+                    env=child_env, seed_commit=seed_commit,
+                    seed_git_snapshot=seed_git_snapshot,
+                    tampered_paths=tampered_paths)
                 if reply_exit is not None:
                     exit_code = reply_exit
                 if reply_text:
@@ -786,9 +903,10 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
 
             state["tool_calls"].sort(key=lambda call: call["index"])
             _finalise_tool_calls(state)
-            diff_text, changed_paths, changed = _diff_since_seed(repo_dir, seed_commit)
+            diff_text, changed_paths, changed = _diff_since_seed(
+                repo_dir, seed_commit, child_env, seed_git_snapshot, tampered_paths)
             test_command = scenario.get("test_command", _DEFAULT_TEST_COMMAND)
-            tests_exit_code = _run_test_command(test_command, repo_dir)
+            tests_exit_code = _run_test_command(test_command, repo_dir, child_env)
             compass_files = _compass_files(repo_dir)
             manifests = _manifests(repo_dir)
             record_cwd = state["cwd"]
@@ -801,6 +919,7 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
         if plugin_copy_dir is not None:
             escaped_paths += [f"plugin:{path}" for path in
                                _dir_snapshot_changed_paths(plugin_before, plugin_after)]
+        escaped_paths += [f"git-config:{path}" for path in sorted(set(tampered_paths))]
         contained = not escaped_paths
     finally:
         if plugin_copy_dir is not None:

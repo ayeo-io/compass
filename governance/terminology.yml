@@ -848,6 +848,13 @@ scan:
     # concept's rename slice lands.
     - templates/architecture/decisions/ADR-0
     - templates/architecture/decisions/README.md
+    # Other frameworks' own records, reproduced in their own words so an
+    # eval session under that framework reads what the framework writes.
+    # An allow marker would appear in the text the session reads and tell
+    # it it is under test, so these files are listed instead.
+    - evals/scenarios/cmp-resume/seed_superpowers/docs/superpowers/plans/2026-09-27-grade-summary.md
+    - evals/scenarios/cmp-resume/seed_spec_kit/specs/001-grade-summary/spec.md
+    - evals/scenarios/cmp-resume/seed_spec_kit/specs/001-grade-summary/tasks.md
   # Line ranges inside a scanned file where naming a retired term IS the job.
   # A region rather than a whole-file exemption: exempting terminology.yml
   # outright would stop scanning the glossary's prose, which is the half that

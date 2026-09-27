@@ -1,6 +1,6 @@
 id: cmp-resume
 prompt: |
-  Please pick this back up from where it was left off - see NOTES.md
-  in the repository root for what is done and what is still needed.
+  Let's pick the grade summary work back up from where it was left
+  off, and finish it.
 budget_usd: 4.0
 hidden_command: python3 -m pytest tests/test_hidden_resume.py -q

@@ -165,15 +165,33 @@ def main():
         with open(os.path.join(cwd, ".git", "config"), "a", encoding="utf-8") as fh:
             fh.write("[diff]\\n\\texternal = " + script_path + "\\n")
 
-    # A test that wants `.git` replaced with a plain file - the shape a
-    # linked worktree's own `.git` takes - sets "replace_git_with_file":
-    # every lookup under `.git` then raises `NotADirectoryError`, not
-    # `FileNotFoundError`.
+    # A test that wants `.git` replaced with a gitfile - the shape a linked
+    # worktree's own `.git` takes - sets "replace_git_with_file": every
+    # lookup under `.git` then raises `NotADirectoryError`, not
+    # `FileNotFoundError`. The gitfile points at the real git directory,
+    # moved aside, so it still resolves - unlike a gitfile naming a path
+    # that does not exist, which cannot show whether the harness runs a git
+    # command against a directory the session chose before it notices `.git`
+    # is not a directory. "git_filter_marker" plants a clean filter in that
+    # moved directory's own config, tagged onto every file with
+    # `.gitattributes`: the marker the filter would touch if the harness's
+    # own `git add -A` or `git diff` ever ran it.
     if config.get("replace_git_with_file"):
         git_dir = os.path.join(cwd, ".git")
-        shutil.rmtree(git_dir)
+        evil_dir = os.path.join(cwd, "evil-gitdir")
+        shutil.move(git_dir, evil_dir)
         with open(git_dir, "w", encoding="utf-8") as fh:
-            fh.write("gitdir: /nonexistent\\n")
+            fh.write("gitdir: " + evil_dir + "\\n")
+        filter_marker = config.get("git_filter_marker")
+        if filter_marker:
+            filter_script = os.path.join(cwd, "planted-clean-filter.sh")
+            with open(filter_script, "w", encoding="utf-8") as fh:
+                fh.write("#!/bin/sh\\ntouch " + filter_marker + "\\ncat\\n")
+            os.chmod(filter_script, 0o755)
+            with open(os.path.join(evil_dir, "config"), "a", encoding="utf-8") as fh:
+                fh.write('[filter "x"]\\n\\tclean = ' + filter_script + '\\n')
+            with open(os.path.join(cwd, ".gitattributes"), "w", encoding="utf-8") as fh:
+                fh.write("* filter=x\\n")
 
     if config.get("create_pyc"):
         pycache_dir = os.path.join(cwd, "src", "__pycache__")
@@ -882,16 +900,24 @@ def test_diff_external_planted_in_git_config_never_runs(
 def test_git_replaced_by_a_plain_file_is_recorded_as_not_contained(
     tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
 ):
-    """A session that deletes the temporary repository's own `.git/` and
-    replaces it with a plain file - the shape a linked worktree's own
-    `.git` takes - turns every lookup under it into `NotADirectoryError`,
-    not `FileNotFoundError`. The restore that runs before the harness's own
-    diff must record the run as not contained instead of raising."""
+    """A session that replaces the temporary repository's own `.git/` with a
+    gitfile pointing at the real git directory, moved aside - the shape a
+    linked worktree's own `.git` takes - turns every lookup under `.git`
+    into `NotADirectoryError`, not `FileNotFoundError`. The moved directory
+    also carries a planted clean filter, tagged onto every file with
+    `.gitattributes`: the harness's own `git add -A` and `git diff` must run
+    no git command against it at all, so the filter never runs, and the run
+    is recorded as not contained instead of raising or staging a diff."""
+    filter_marker = tmp_path / "git-filter-marker.txt"
     _, record, _ = _run_condition(
         tmp_path, scenario_dir, fake_claude, "bare", monkeypatch,
         plugin_source_dir, out_suffix="-gitfile",
-        extra_config={"replace_git_with_file": True},
+        extra_config={
+            "replace_git_with_file": True,
+            "git_filter_marker": str(filter_marker),
+        },
     )
+    assert not filter_marker.exists()
     assert record["contained"] is False
     assert "git-config:.git/config" in record["escaped_paths"]
 
@@ -933,11 +959,16 @@ def test_planted_partial_clone_remote_never_fetches_a_missing_blob(tmp_path):
     blob` - the call `_make_plugin_copy` makes for every tracked file -
     lazily fetches the missing object from that remote, running whatever
     program `uploadpack` names. Planted in the plugin source's own git
-    config before the copy is built, the same route the security review's
-    reproduction used against this checkout's own `.git/config`. Blocking
-    the fetch also means the object stays genuinely missing, so
-    `_make_plugin_copy` is allowed to fail here - the one thing that must
-    never happen is the planted program running."""
+    config before the copy is built. `[protocol "file"] allow = always` is
+    planted alongside it: that per-protocol setting beats the harness's own
+    `-c protocol.allow=never`, so this checks the harness's other two
+    defences - `GIT_NO_LAZY_FETCH=1` and `GIT_ALLOW_PROTOCOL=none` - not a
+    setting the plant itself already defeats.
+    `test_planted_partial_clone_remote_stays_blocked_with_one_defence_stripped`
+    below checks that either of those two, alone, is what actually stops
+    it. Blocking the fetch also means the object stays genuinely missing,
+    so `_make_plugin_copy` is allowed to fail here - the one thing that
+    must never happen is the planted program running."""
     source = tmp_path / "plugin-source-promisor"
     _write_plugin_repo(source)
     marker = tmp_path / "uploadpack-marker.txt"
@@ -957,6 +988,7 @@ def test_planted_partial_clone_remote_never_fetches_a_missing_blob(tmp_path):
             "[extensions]\n\tpartialClone = origin\n"
             "[remote \"origin\"]\n\turl = " + str(source)
             + "\n\tpromisor = true\n\tuploadpack = " + str(script_path) + "\n"
+            + "[protocol \"file\"]\n\tallow = always\n"
         )
     subprocess.run(
         ["git", "config", "core.repositoryformatversion", "1"],
@@ -964,6 +996,71 @@ def test_planted_partial_clone_remote_never_fetches_a_missing_blob(tmp_path):
     )
 
     dest = tmp_path / "plugin-copy-promisor"
+    try:
+        harness._make_plugin_copy(source, dest, dict(os.environ))
+    except SystemExit:
+        pass
+    else:
+        harness._remove_read_only_tree(dest)
+    assert not marker.exists()
+
+
+@pytest.mark.parametrize(
+    "env_var_stripped_from_the_git_call",
+    ["GIT_NO_LAZY_FETCH", "GIT_ALLOW_PROTOCOL"],
+)
+def test_planted_partial_clone_remote_stays_blocked_with_one_defence_stripped(
+    tmp_path, monkeypatch, env_var_stripped_from_the_git_call
+):
+    """`_run_git` sets both `GIT_NO_LAZY_FETCH=1`, which stops a lazy fetch
+    outright, and `GIT_ALLOW_PROTOCOL=none`, which git documents as
+    overriding every `protocol.<name>.allow` setting - including the
+    `protocol.file.allow=always` planted above, which already defeats `-c
+    protocol.allow=never`. Either one alone stops the plant. This strips one
+    of the two from every git call's own environment, at the point
+    `subprocess.run` is called, to prove the *other* one - still set by
+    `_run_git` itself - is what actually stops it here, not an assumption
+    this test never checks. Stripping `GIT_NO_LAZY_FETCH` while
+    `GIT_ALLOW_PROTOCOL` was not yet set would have let the plant run."""
+    source = tmp_path / f"plugin-source-promisor-{env_var_stripped_from_the_git_call}"
+    _write_plugin_repo(source)
+    marker = tmp_path / f"uploadpack-marker-{env_var_stripped_from_the_git_call}.txt"
+    script_path = source / "planted-uploadpack.sh"
+    script_path.write_text(
+        "#!/bin/sh\ntouch " + str(marker) + "\n", encoding="utf-8",
+    )
+    script_path.chmod(script_path.stat().st_mode | stat.S_IEXEC)
+
+    blob = subprocess.run(
+        ["git", "rev-parse", "HEAD:README.md"], cwd=str(source),
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    (source / ".git" / "objects" / blob[:2] / blob[2:]).unlink()
+    with (source / ".git" / "config").open("a", encoding="utf-8") as fh:
+        fh.write(
+            "[extensions]\n\tpartialClone = origin\n"
+            "[remote \"origin\"]\n\turl = " + str(source)
+            + "\n\tpromisor = true\n\tuploadpack = " + str(script_path) + "\n"
+            + "[protocol \"file\"]\n\tallow = always\n"
+        )
+    subprocess.run(
+        ["git", "config", "core.repositoryformatversion", "1"],
+        cwd=str(source), check=True,
+    )
+
+    real_run = harness.subprocess.run
+
+    def strip_one_env_var(args, *a, **kw):
+        env = kw.get("env")
+        if env is not None and env_var_stripped_from_the_git_call in env:
+            kw = dict(kw)
+            kw["env"] = {k: v for k, v in env.items()
+                         if k != env_var_stripped_from_the_git_call}
+        return real_run(args, *a, **kw)
+
+    monkeypatch.setattr(harness.subprocess, "run", strip_one_env_var)
+
+    dest = tmp_path / f"plugin-copy-promisor-{env_var_stripped_from_the_git_call}"
     try:
         harness._make_plugin_copy(source, dest, dict(os.environ))
     except SystemExit:
@@ -1584,6 +1681,20 @@ def test_the_citation_guard_catches_a_planted_citation():
         )
 
 
+def test_the_allow_marker_cannot_launder_a_citation_as_its_own_reason():
+    """`ALLOW_MARKER` exempts a line for the rare case a banned word is
+    needed for an ordinary purpose unrelated to citing either document. A
+    reason that itself names an unopenable document is not that: it is the
+    citation, carried past the guard by the marker meant to explain it
+    away. The line must still be reported."""
+    from citation_patterns import ALLOW_MARKER
+
+    smuggled = "# " + ALLOW_MARKER + " see verify-security-3.md for the attack"
+    assert cited_unopenable_document(smuggled) is not None, (
+        "a citation in the allow marker's own reason passed unreported"
+    )
+
+
 @pytest.mark.parametrize("planted", PLANTED_CITATION_FORMS)
 def test_the_file_scan_catches_a_planted_citation(tmp_path, planted):
     """Not only the matcher: a planted file, read by the same
@@ -1595,8 +1706,11 @@ def test_the_file_scan_catches_a_planted_citation(tmp_path, planted):
 
 
 # Every function in `evals/harness.py` that is allowed to start a new
-# process at all - `_run_git` for git, and the four that each start the one
-# non-git program named in their own name.
+# process at all - `_run_git` for git, and the four others that between
+# them start `compass init`, `claude --version`, `claude` itself and the
+# scenario's own test command. `test_every_new_process_starts_through_a_
+# named_function` below checks each one actually starts a process, not
+# that it starts the specific program its own name suggests.
 _ALLOWED_TO_START_A_PROCESS = (
     "_run_git", "_run_compass_init", "_claude_version",
     "_invoke_claude", "_run_test_command",
@@ -1684,8 +1798,12 @@ def test_every_new_process_starts_through_a_named_function():
     seed directory, and in a session's own temporary repository, and starts
     the test command and `claude` in that same temporary repository. Every
     one of those must go through one of `_ALLOWED_TO_START_A_PROCESS`; a
-    process started anywhere else is the class of defect this test exists
-    to catch, whatever form the call takes."""
+    process started anywhere else, in any of the call shapes
+    `_process_starts_by_function` recognises, is the class of defect this
+    test exists to catch. It cannot see a call shape it does not recognise
+    - `os.spawnv`, `os.posix_spawn`, `getattr(subprocess, "run")(...)`,
+    `asyncio.create_subprocess_exec`, `pty.spawn` - or a git call added
+    inside a function `_ALLOWED_TO_START_A_PROCESS` already names."""
     source = Path(harness.__file__).read_text(encoding="utf-8")
     calls = _process_starts_by_function(source)
     offenders = sorted(name for name in calls if name not in _ALLOWED_TO_START_A_PROCESS)
@@ -1698,8 +1816,10 @@ def test_every_new_process_starts_through_a_named_function():
         assert name in calls, f"{name} is allowed to start a process but does not"
 
 
-# One planted bypass per form the security review used to show the earlier,
-# literal-list-only check missed everything but the first.
+# One planted bypass per call shape `_process_starts_by_function` looks
+# for beyond a literal `subprocess.run(["git", ...])` list: a variable, a
+# list built by concatenation, an imported name, and `os.system` called
+# directly.
 _PLANTED_PROCESS_START_BYPASSES = {
     "literal list": 'import subprocess\ndef _new_helper():\n    return subprocess.run(["git", "status"])\n',
     "list in a variable": 'import subprocess\ndef _new_helper(args):\n    cmd = ["git", *args]\n    return subprocess.run(cmd)\n',
@@ -1711,9 +1831,11 @@ _PLANTED_PROCESS_START_BYPASSES = {
 
 @pytest.mark.parametrize("bypass", sorted(_PLANTED_PROCESS_START_BYPASSES))
 def test_the_process_start_guard_catches_each_planted_bypass(bypass):
-    """Each of the five forms a real bypass could take, planted as a new
-    function appended to `evals/harness.py`'s own source - not one of them
-    may pass unnoticed."""
+    """Each of the five call shapes `_PLANTED_PROCESS_START_BYPASSES` lists,
+    planted as a new function appended to `evals/harness.py`'s own source -
+    not one of them may pass unnoticed. This is not every shape a bypass
+    could take; see `test_every_new_process_starts_through_a_named_function`
+    for what the guard cannot see."""
     source = (Path(harness.__file__).read_text(encoding="utf-8") + "\n"
               + _PLANTED_PROCESS_START_BYPASSES[bypass])
     calls = _process_starts_by_function(source)

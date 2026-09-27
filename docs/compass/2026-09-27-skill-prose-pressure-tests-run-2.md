@@ -21,7 +21,7 @@ builder and reviewer agents.
 | Tokens, builders | 5,603,063 |
 | Tokens, reviewers | 2,449,891: 1,609,539 on the ten integrated reviews, 840,352 at `/compass:verify` |
 | Tokens, orchestrator | not measured - the orchestrating session's own use is not reported per step |
-| Real model spend | about $20.58 in reviews, nine of which ran real sessions at a lowered budget; $6.89 for the pilot and the wording measurement, plus scoring calls that were not recorded |
+| Real model spend | about $20.58 in reviews, a lower bound, nine of which ran real sessions at a lowered budget; $6.89 for the pilot and the wording measurement; about $0.15 for the orchestrator's sandbox probe; plus scoring calls that were not recorded |
 | Merge conflicts | 0, across 16 runs of `integrate.sh` |
 | Combined regression | green on the integrated tree after wave 3's last try |
 
@@ -76,8 +76,9 @@ session-written code with its own environment, and that its containment
 check could not see ignored files or `.git/`. Wave 3 took four tries. Its
 first closed the named cases and left others of the same kind open, so
 the second review failed on members of the same class. The later tries
-fixed each class: one helper for every git call, with a test that no
-other process start exists, and a citation guard that names what it
+fixed each class: one helper for every git call, with a test that fails
+on the common ways of starting a process outside a named list of
+functions, and a citation guard that names what it
 catches and lists what it does not. The last try closed a regression the
 third try had introduced. The design now states where the security
 requirement stops: nothing a session controls may run with more than the
@@ -101,11 +102,12 @@ it is recorded for later, not a blocker.
 - The issue had no `devlog.md`: the assess stage did not start one, and
   the post-tool hook appends only to one that exists. The orchestrator
   wrote it late, from its notes.
-- Builders broke three rules and each disclosed it. One rewrote comments
+- Builders broke a rule four times, and disclosed each. One rewrote comments
   through a Bash script before recording a red; the hook stopped its next
   edit. One ran `git stash` against its brief and popped it at once; the
-  shared stash was intact. Twice a builder started a red after editing;
-  the CLI refused each, and the builder redid it. For one red, a builder
+  shared stash was intact. Twice a builder started a refactor
+  acceptance record after editing; the CLI refused each, and the builder
+  redid it. For one red, a builder
   reverted to its own draft to make a test fail.
 - `compass issue subtask update --cost` keeps only the last try's cost,
   so the totals above are summed by hand from each agent's reported
@@ -134,8 +136,8 @@ it is recorded for later, not a blocker.
   an edit under one looks like no change.
 - A red from a command that runs no test, such as
   `compass tdd-red -- false`, unlocks code edits.
-- Nine known gaps remain in the judge, the harness and the scenarios'
-  rubrics; none changed a pilot result.
+- Known gaps remain in the judge, the harness, its guards and the
+  scenarios' rubrics; none changed a pilot result.
 - A subtask's recorded cost keeps only the last try.
 
 ## What this run does not show

@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Reds that print or name a declared test still record
+### EJG-8
 
-- **Scenario id:** `RWT-2`
+- **Scenario id:** `EJG-8`
 - **Intent:** `INT-1`
-- **Source issue:** `red-without-a-test-unlocks-edits`
+- **Source issue:** `eval-judge-gaps`
 - **Landed:** 2026-09-27
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -8937,4 +8937,60 @@
 - **Scenario id:** `RWT-1`
 - **Intent:** `INT-1`
 - **Source issue:** `red-without-a-test-unlocks-edits`
+- **Landed:** 2026-09-27
+
+### Reds that print or name a declared test still record _(archived)_
+
+- **Scenario id:** `RWT-2`
+- **Intent:** `INT-1`
+- **Source issue:** `red-without-a-test-unlocks-edits`
+- **Landed:** 2026-09-27
+
+### EJG-1 _(archived)_
+
+- **Scenario id:** `EJG-1`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-judge-gaps`
+- **Landed:** 2026-09-27
+
+### EJG-2 _(archived)_
+
+- **Scenario id:** `EJG-2`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-judge-gaps`
+- **Landed:** 2026-09-27
+
+### EJG-3 _(archived)_
+
+- **Scenario id:** `EJG-3`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-judge-gaps`
+- **Landed:** 2026-09-27
+
+### EJG-4 _(archived)_
+
+- **Scenario id:** `EJG-4`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-judge-gaps`
+- **Landed:** 2026-09-27
+
+### EJG-5 _(archived)_
+
+- **Scenario id:** `EJG-5`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-judge-gaps`
+- **Landed:** 2026-09-27
+
+### EJG-6 _(archived)_
+
+- **Scenario id:** `EJG-6`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-judge-gaps`
+- **Landed:** 2026-09-27
+
+### EJG-7 _(archived)_
+
+- **Scenario id:** `EJG-7`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-judge-gaps`
 - **Landed:** 2026-09-27

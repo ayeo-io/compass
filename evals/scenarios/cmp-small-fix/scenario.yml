@@ -1,0 +1,8 @@
+id: cmp-small-fix
+prompt: |
+  A few customers have flagged wrong dates on receipts generated around
+  the years 1900 and 2000 - looks like a bug in is_leap_year in
+  src/calendar_utils.py. Can you fix it so the year checks come out
+  right?
+budget_usd: 2.0
+hidden_command: python3 -m pytest tests/test_hidden_small_fix.py -q

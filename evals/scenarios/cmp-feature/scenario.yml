@@ -1,0 +1,8 @@
+id: cmp-feature
+prompt: |
+  Can you add a longest_track function to src/playlist.py? It should
+  take a playlist and return the title of the track with the greatest
+  duration. If two tracks are tied for longest, return whichever of
+  them was added first. If the playlist is empty, raise a ValueError.
+budget_usd: 3.0
+hidden_command: python3 -m pytest tests/test_hidden_feature.py -q

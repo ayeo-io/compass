@@ -1,0 +1,9 @@
+id: cmp-risky
+prompt: |
+  We're adding a flat service charge of 150 cents on any bill over 5000
+  cents, before it gets split. At exactly 5000 cents there's no charge
+  - it only applies once the bill goes past that. Can you add a
+  function to src/billing_split.py that returns the total after the
+  service charge, so we can feed that into split_bill?
+budget_usd: 3.0
+hidden_command: python3 -m pytest tests/test_hidden_risky.py -q

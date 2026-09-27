@@ -1414,6 +1414,27 @@ def test_continue_reply_applies_under_either_condition(
         assert record["replies_sent"] == 1
 
 
+def test_continue_reply_still_sent_when_only_compass_own_record_changed(
+    tmp_path, fake_claude, plugin_source_dir, monkeypatch
+):
+    """`compass ship-commit` derives `docs/system-spec.md` when an issue
+    lands (design section 2.3), and this scenario's own `in_scope` is
+    `["**"]` - wide enough to catch that path too. A call that wrote only
+    that file, and not seed.txt, has still done none of the scenario's own
+    work, so the continuation reply must still be sent."""
+    scenario_dir = _write_scenario(
+        tmp_path, follow_ups=["first follow-up"],
+        continue_reply="Go ahead with whichever option you recommend.",
+    )
+    calls, record, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "compass", monkeypatch,
+        plugin_source_dir, out_suffix="-continue-system-spec",
+        extra_config={"no_edit": True, "add_path": "docs/system-spec.md"},
+    )
+    assert len(calls) == 3
+    assert record["replies_sent"] == 1
+
+
 # --- 15. a seed with no tracked file is an error, never an empty repository -
 
 def test_copy_tracked_files_errors_when_source_is_not_a_git_repository(tmp_path):

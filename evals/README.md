@@ -39,7 +39,13 @@ Run the harness from a shell that holds no API key or token you would not
 hand to a session. Code a session writes can run before the harness sees
 it, and although the harness gives every command it runs a minimal
 environment, a leak it has not found would reach whatever that shell
-holds. The compass condition loads the
+holds.
+
+If a run is recorded as not contained, read `escaped_paths` in its record
+before you run any git command in this checkout. If it names anything
+under `.git/`, check `.git/config`, `.git/hooks/` and `.git/info/`, and put
+back what the session changed: a setting planted there runs on your next
+`git status`, with your shell's full environment. The compass condition loads the
 checkout's `HEAD`, so commit a wording change before you measure it.
 
 ## What a session sees, and what it is told

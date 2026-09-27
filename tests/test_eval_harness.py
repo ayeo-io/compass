@@ -14,9 +14,10 @@ repository's tracked tree.
 """
 from __future__ import annotations
 
+import ast
 import json
 import os
-import re
+import shutil
 import stat
 import subprocess
 import sys
@@ -24,6 +25,12 @@ from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
+
+from citation_patterns import (  # noqa: E402
+    PLANTED_CITATION_FORMS,
+    cited_unopenable_document,
+    scan_file_for_unopenable_citation,
+)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -144,9 +151,9 @@ def main():
             fh.write("reached from outside the temporary repository\\n")
 
     # A test that wants a diff.external planted in the temporary
-    # repository's own .git/config, the review's own reproduction for
-    # session-written code running with the harness's environment, sets
-    # "tamper_marker" to a path outside the repository - the marker a
+    # repository's own .git/config - the shape a session's own conftest.py
+    # could use to run code with the harness's own environment - sets
+    # "tamper_marker" to a path outside the repository: the marker a
     # planted script would write, if the harness's later git diff calls
     # ever ran it.
     tamper_marker = config.get("tamper_marker")
@@ -594,6 +601,66 @@ def test_plugin_copy_leaves_out_the_releasing_guide(
     assert (docs_dir / "releasing.md").is_file()
 
 
+def test_smudge_filter_planted_in_the_plugin_source_never_runs(tmp_path):
+    """The plugin copy is built from `git ls-tree` and `git cat-file blob`,
+    never `git archive` or a checkout of a working tree - a smudge filter
+    named in the source's own `.git/info/attributes` and `.git/config`
+    must never run, and the copy must carry the blob exactly as stored."""
+    source = tmp_path / "plugin-source-smudge"
+    _write_plugin_repo(source)
+    marker = tmp_path / "smudge-marker.txt"
+    script_path = source / "planted-smudge.sh"
+    script_path.write_text("#!/bin/sh\ncat > " + str(marker) + "\n", encoding="utf-8")
+    script_path.chmod(script_path.stat().st_mode | stat.S_IEXEC)
+    (source / ".git" / "info" / "attributes").write_text(
+        "README.md filter=smudgy\n", encoding="utf-8")
+    with (source / ".git" / "config").open("a", encoding="utf-8") as fh:
+        fh.write(
+            "[filter \"smudgy\"]\n\tsmudge = " + str(script_path)
+            + "\n\trequired = false\n")
+
+    dest = tmp_path / "plugin-copy-smudge"
+    harness._make_plugin_copy(source, dest, dict(os.environ))
+    try:
+        assert not marker.exists()
+        assert (dest / "README.md").read_text(encoding="utf-8") == (
+            "A fixture plugin, standing in for this repository in these "
+            "tests.\n"
+        )
+    finally:
+        harness._remove_read_only_tree(dest)
+
+
+def test_plugin_copy_is_built_once_per_harness_call_not_once_per_run(
+    tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
+):
+    """`--runs 3` must build the plugin copy once, before the first run, and
+    every run must reuse the same one - not archive or read the source's
+    git objects again for each run."""
+    calls_made: list[Path] = []
+    real_make_plugin_copy = harness._make_plugin_copy
+
+    def spy(source, dest, env):
+        calls_made.append(Path(dest))
+        return real_make_plugin_copy(source, dest, env)
+
+    monkeypatch.setattr(harness, "_make_plugin_copy", spy)
+    log_path = tmp_path / "log-multi-run.jsonl"
+    out_dir = tmp_path / "out-multi-run"
+    _configure_fake_claude(fake_claude, log_path, None)
+    exit_code = harness.main([
+        "--scenario", str(scenario_dir),
+        "--condition", "compass",
+        "--claude", str(fake_claude),
+        "--out", str(out_dir),
+        "--plugin-source", str(plugin_source_dir),
+        "--runs", "3",
+    ])
+    assert exit_code == 0
+    assert len(calls_made) == 1
+    assert len(sorted(out_dir.glob("*.json"))) == 3
+
+
 # --- 2. the child environment ------------------------------------------------
 
 def test_child_environment_drops_claude_variables_and_plugin_bin_paths(
@@ -785,13 +852,12 @@ def test_git_calls_in_the_session_repository_never_inherit_os_environ(
 def test_diff_external_planted_in_git_config_never_runs(
     tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
 ):
-    """The review's own reproduction: a session's own code appends
-    `diff.external` to the temporary repository's `.git/config`, naming a
-    script. Before the fix, the harness's own `git diff` calls - run with
-    `dict(os.environ)` and no `--no-ext-diff` - ran that script with every
-    variable in the maintainer's shell. The marker it would have written
-    must never appear, and the tampered `.git/config` must be restored and
-    the run recorded as not contained."""
+    """A session's own code appends `diff.external` to the temporary
+    repository's `.git/config`, naming a script - the shape a `conftest.py`
+    could use to run code with the harness's own environment. The marker
+    that script would write must never appear, and the tampered
+    `.git/config` must be restored and the run recorded as not
+    contained."""
     marker = tmp_path / "diff-external-marker.txt"
     _, record, _ = _run_condition(
         tmp_path, scenario_dir, fake_claude, "bare", monkeypatch,
@@ -803,9 +869,39 @@ def test_diff_external_planted_in_git_config_never_runs(
     assert "git-config:.git/config" in record["escaped_paths"]
 
 
+def test_planted_fsmonitor_and_env_probe_never_run_across_a_harness_run(
+    tmp_path, scenario_dir, fake_claude, monkeypatch
+):
+    """`core.fsmonitor`, planted in `--plugin-source`'s own `.git/config`
+    before the run starts, names a script that would record a probe
+    variable from `os.environ` if it ever ran. `git ls-files` reads
+    `core.fsmonitor` on every call this module makes against that checkout -
+    building the plugin copy, copying the scenario's own seed, and
+    fingerprinting the checkout twice - so this exercises all of them in one
+    real harness run, not one function in isolation."""
+    monkeypatch.setenv("CLAUDE_PROBE", "must-not-reach-a-planted-script")
+    plugin_source = tmp_path / "plugin-source-fsmonitor"
+    _write_plugin_repo(plugin_source)
+    marker = tmp_path / "fsmonitor-marker.txt"
+    script_path = plugin_source / "planted-fsmonitor.sh"
+    script_path.write_text(
+        "#!/bin/sh\necho \"$CLAUDE_PROBE\" > " + str(marker) + "\n",
+        encoding="utf-8",
+    )
+    script_path.chmod(script_path.stat().st_mode | stat.S_IEXEC)
+    with (plugin_source / ".git" / "config").open("a", encoding="utf-8") as fh:
+        fh.write("[core]\n\tfsmonitor = " + str(script_path) + "\n")
+
+    _run_condition(
+        tmp_path, scenario_dir, fake_claude, "compass", monkeypatch,
+        plugin_source, out_suffix="-fsmonitor-plant",
+    )
+    assert not marker.exists()
+
+
 # --- 3. the allow-list -------------------------------------------------------
 
-def test_allow_list_matches_the_design_exactly():
+def test_allow_list_matches_the_documented_tools_exactly():
     """The allow-list: `Skill` so a compass session can run a `/compass:*`
     command, `python -m pytest` alongside `python3 -m pytest`, `cat` on the
     list - Compass's own commands, such as `/compass:quick-fix`, read their
@@ -965,10 +1061,10 @@ def test_checkout_fingerprint_catches_a_second_edit_to_an_already_modified_file(
     _git_commit_all(repo, "initial")
 
     (repo / "tracked.txt").write_text("first edit\n", encoding="utf-8")
-    before = harness._checkout_fingerprint(repo)
+    before = harness._checkout_fingerprint(repo, dict(os.environ))
 
     (repo / "tracked.txt").write_text("second edit\n", encoding="utf-8")
-    after = harness._checkout_fingerprint(repo)
+    after = harness._checkout_fingerprint(repo, dict(os.environ))
 
     assert harness._dir_snapshot_changed_paths(before, after) == ["tracked.txt"]
 
@@ -982,17 +1078,17 @@ def test_checkout_fingerprint_recurses_into_an_untracked_directory(tmp_path):
     repo.mkdir()
     (repo / "tracked.txt").write_text("original\n", encoding="utf-8")
     _git_commit_all(repo, "initial")
-    before = harness._checkout_fingerprint(repo)
+    before = harness._checkout_fingerprint(repo, dict(os.environ))
 
     new_dir = repo / "new-untracked-dir"
     new_dir.mkdir()
     (new_dir / "inside.txt").write_text("first\n", encoding="utf-8")
-    after_created = harness._checkout_fingerprint(repo)
+    after_created = harness._checkout_fingerprint(repo, dict(os.environ))
     assert harness._dir_snapshot_changed_paths(before, after_created) == \
         ["new-untracked-dir/inside.txt"]
 
     (new_dir / "inside.txt").write_text("second\n", encoding="utf-8")
-    after_edited = harness._checkout_fingerprint(repo)
+    after_edited = harness._checkout_fingerprint(repo, dict(os.environ))
     assert harness._dir_snapshot_changed_paths(after_created, after_edited) == \
         ["new-untracked-dir/inside.txt"]
 
@@ -1002,32 +1098,32 @@ def test_checkout_fingerprint_is_unchanged_when_nothing_moved(tmp_path):
     repo.mkdir()
     (repo / "tracked.txt").write_text("original\n", encoding="utf-8")
     _git_commit_all(repo, "initial")
-    before = harness._checkout_fingerprint(repo)
-    after = harness._checkout_fingerprint(repo)
+    before = harness._checkout_fingerprint(repo, dict(os.environ))
+    after = harness._checkout_fingerprint(repo, dict(os.environ))
     assert harness._dir_snapshot_changed_paths(before, after) == []
 
 
 def test_checkout_fingerprint_catches_an_ignored_file_and_a_written_git_hook(
     tmp_path,
 ):
-    """The review's own reproduction: `--exclude-standard` dropped every
-    ignored path - `evals/out/`, `.compass/work/` and `docs/compass/*/` in
-    the real checkout are exactly the paths a session's own `conftest.py`
-    could rewrite unseen - and `git ls-files` never lists anything under
-    `.git/` at all, so a written `.git/hooks/pre-commit` passed unseen too.
-    Both must show as a change now."""
+    """`--exclude-standard` used to drop every ignored path - `evals/out/`,
+    `.compass/work/` and `docs/compass/*/` in the real checkout are exactly
+    the paths a session's own `conftest.py` could rewrite unseen - and `git
+    ls-files` never lists anything under `.git/` at all, so a written
+    `.git/hooks/pre-commit` passed unseen too. Both must show as a change
+    now."""
     repo = tmp_path / "checkout"
     repo.mkdir()
     (repo / "tracked.txt").write_text("original\n", encoding="utf-8")
     (repo / ".gitignore").write_text("ignored.txt\n", encoding="utf-8")
     _git_commit_all(repo, "initial")
-    before = harness._checkout_fingerprint(repo)
+    before = harness._checkout_fingerprint(repo, dict(os.environ))
 
     (repo / "ignored.txt").write_text("planted\n", encoding="utf-8")
     (repo / ".git" / "hooks" / "pre-commit").write_text(
         "#!/bin/sh\necho hi\n", encoding="utf-8")
 
-    after = harness._checkout_fingerprint(repo)
+    after = harness._checkout_fingerprint(repo, dict(os.environ))
     changed = harness._dir_snapshot_changed_paths(before, after)
     assert "ignored.txt" in changed
     assert ".git/hooks/pre-commit" in changed
@@ -1065,9 +1161,76 @@ def test_containment_flags_a_written_git_hook_in_the_checkout(
     assert "checkout:.git/hooks/pre-commit" in record["escaped_paths"]
 
 
+def test_checkout_fingerprint_catches_head_moved_between_two_fingerprints(tmp_path):
+    """A session's own code could point a branch at a commit it wrote and
+    move `HEAD` to it - `git ls-files` shows no change either way, since
+    the working tree is untouched. Hashing `.git/HEAD` catches the move."""
+    repo = tmp_path / "checkout"
+    repo.mkdir()
+    (repo / "tracked.txt").write_text("original\n", encoding="utf-8")
+    _git_commit_all(repo, "initial")
+    env = dict(os.environ)
+    before = harness._checkout_fingerprint(repo, env)
+
+    subprocess.run(["git", "checkout", "-q", "-b", "other-branch"],
+                    cwd=str(repo), check=True, capture_output=True, text=True)
+
+    after = harness._checkout_fingerprint(repo, env)
+    changed = harness._dir_snapshot_changed_paths(before, after)
+    assert any(path.endswith("HEAD") for path in changed)
+
+
+def test_checkout_fingerprint_sees_a_hook_written_in_a_linked_worktrees_main_repo(
+    tmp_path,
+):
+    """A linked worktree's own `.git` is a file, not a directory - its
+    hooks and config live in the main repository's `.git`, resolved with
+    `git rev-parse --git-common-dir`. A hook written there must still show
+    as a change, even though nothing under the worktree itself moved."""
+    main_repo = tmp_path / "main"
+    main_repo.mkdir()
+    (main_repo / "tracked.txt").write_text("original\n", encoding="utf-8")
+    _git_commit_all(main_repo, "initial")
+    subprocess.run(
+        ["git", "worktree", "add", "-q", str(tmp_path / "wt"), "-b", "wt-branch"],
+        cwd=str(main_repo), check=True, capture_output=True, text=True,
+    )
+    worktree = tmp_path / "wt"
+    env = dict(os.environ)
+    before = harness._checkout_fingerprint(worktree, env)
+
+    (main_repo / ".git" / "hooks" / "pre-commit").write_text(
+        "#!/bin/sh\necho hi\n", encoding="utf-8")
+
+    after = harness._checkout_fingerprint(worktree, env)
+    changed = harness._dir_snapshot_changed_paths(before, after)
+    assert any(path.endswith("pre-commit") for path in changed)
+
+
+def test_checkout_fingerprint_records_a_change_when_git_is_a_file_with_no_target(
+    tmp_path,
+):
+    """A session that replaces `.git` with a plain file must never crash
+    the fingerprint - `git rev-parse` fails there, and the snapshot then
+    carries a marker a resolvable checkout's own never does, so the
+    comparison still shows a change instead of raising."""
+    repo = tmp_path / "checkout"
+    repo.mkdir()
+    (repo / "tracked.txt").write_text("original\n", encoding="utf-8")
+    _git_commit_all(repo, "initial")
+    env = dict(os.environ)
+    before = harness._checkout_fingerprint(repo, env)
+
+    shutil.rmtree(repo / ".git")
+    (repo / ".git").write_text("gitdir: /nonexistent-path\n", encoding="utf-8")
+
+    after = harness._checkout_fingerprint(repo, env)  # must not raise
+    assert harness._dir_snapshot_changed_paths(before, after) != []
+
+
 # --- 6. the record -----------------------------------------------------------
 
-def test_run_record_has_every_field_from_the_design(
+def test_run_record_has_every_documented_field(
     tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
 ):
     calls, record, out_path = _run_condition(
@@ -1322,62 +1485,95 @@ def test_module_docstring_does_not_explain_by_how_the_issue_split_its_work():
 
 
 def test_no_bare_defect_id_cited_without_its_meaning():
-    """Say what a rule is in the comment, not a bare id nobody outside a
-    review can look up."""
+    """Say what a rule is in the comment, not a bare id nobody outside
+    this issue can look up."""
     source = Path(harness.__file__).read_text(encoding="utf-8")
     assert "DD-2" not in source
     assert "compass_pkg.core.load_yaml" in source
 
 
-_UNOPENABLE_CITATION_RES = tuple(
-    re.compile(pattern, re.IGNORECASE) for pattern in (
-        re.escape("technical-design" + ".md"),
-        re.escape("integrated-" + "review"),
-        re.escape("design") + r"\s+section",
-        re.escape("integrated") + r"\s+review",
-        r"review\s+" + re.escape("round"),
-        re.escape("round") + r"\s+\d+\s+review",
-    )
-)
-
-
-def _cited_unopenable_document(text: str) -> str | None:
-    for pattern in _UNOPENABLE_CITATION_RES:
-        if pattern.search(text):
-            return pattern.pattern
-    return None
-
-
 def test_no_citation_of_a_document_this_repository_does_not_have():
-    """A design document and a dated review each live only under
-    `docs/compass/*/`, which `.gitignore` excludes - a comment naming one,
-    in any spelling the code has used, points a reader at a file they
-    cannot open. State the rule plainly in the comment instead. Every
-    pattern is assembled from parts and matched case-insensitively, so this
-    check does not fail on its own list."""
-    harness_source = Path(harness.__file__).read_text(encoding="utf-8")
-    test_source = Path(__file__).read_text(encoding="utf-8")
-    for source in (harness_source, test_source):
-        hit = _cited_unopenable_document(source)
-        assert hit is None, f"matches {hit!r}"
+    """Neither `evals/harness.py` nor this file may point a reader at a
+    document this repository does not track - see `citation_patterns.py`
+    for the rule and why."""
+    for path in (Path(harness.__file__), Path(__file__)):
+        hit = scan_file_for_unopenable_citation(path)
+        assert hit is None, f"{path} matches {hit!r}"
 
 
 def test_the_citation_guard_catches_a_planted_citation():
-    """A regression guard that only ever passes proves nothing - plant one
-    citation in each form the guard must catch, built from parts so this
-    test's own source is not itself a hit, and check the matcher reports
-    it."""
-    planted_forms = (
-        "See " + "integrated" + "-" + "review" + " for background.",
-        "See " + "design" + " " + "section" + " 4 for background.",
-        "See " + "integrated" + " " + "review" + " for background.",
-        "See the " + "review" + " " + "round" + " 3 result.",
-        "See " + "round" + " 3 " + "review" + " result.",
-    )
-    for planted in planted_forms:
-        assert _cited_unopenable_document(planted) is not None, (
+    """A regression guard that only ever passes proves nothing - check the
+    matcher against every planted form `citation_patterns.py` carries."""
+    for planted in PLANTED_CITATION_FORMS:
+        assert cited_unopenable_document(planted) is not None, (
             f"the guard missed a planted citation: {planted!r}"
         )
+
+
+@pytest.mark.parametrize("planted", PLANTED_CITATION_FORMS)
+def test_the_file_scan_catches_a_planted_citation(tmp_path, planted):
+    """Not only the matcher: a planted file, read by the same
+    `scan_file_for_unopenable_citation` the guard above calls - so a guard
+    that read the wrong file, or none at all, could not pass by accident."""
+    planted_file = tmp_path / "planted.py"
+    planted_file.write_text(f"# {planted}\n", encoding="utf-8")
+    assert scan_file_for_unopenable_citation(planted_file) is not None
+
+
+def _git_calls_bypassing_the_one_helper(source: str, helper_name: str) -> list[str]:
+    """The name of every function, in `source`, that calls
+    `subprocess.run`/`Popen`/`call`/`check_call`/`check_output` with a
+    literal argument list whose first element is `"git"`, outside
+    `helper_name` itself - so a git call that bypasses the one function
+    every other git call in the module goes through is named, not just
+    flagged."""
+    tree = ast.parse(source)
+    offenders: list[str] = []
+
+    class Visitor(ast.NodeVisitor):
+        def __init__(self) -> None:
+            self.current = "<module>"
+
+        def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+            previous, self.current = self.current, node.name
+            self.generic_visit(node)
+            self.current = previous
+
+        def visit_Call(self, node: ast.Call) -> None:
+            func = node.func
+            is_subprocess_call = (
+                isinstance(func, ast.Attribute)
+                and func.attr in ("run", "Popen", "call", "check_call", "check_output")
+                and isinstance(func.value, ast.Name) and func.value.id == "subprocess"
+            )
+            if is_subprocess_call and self.current != helper_name:
+                first_arg = node.args[0] if node.args else None
+                if (isinstance(first_arg, (ast.List, ast.Tuple)) and first_arg.elts
+                        and isinstance(first_arg.elts[0], ast.Constant)
+                        and first_arg.elts[0].value == "git"):
+                    offenders.append(self.current)
+            self.generic_visit(node)
+
+    Visitor().visit(tree)
+    return offenders
+
+
+def test_every_git_call_runs_through_the_one_helper():
+    """`evals/harness.py` runs `git` in this checkout, in a scenario's own
+    seed directory, and in a session's own temporary repository - every one
+    of those must go through `_run_git`, the one function that adds the
+    environment and the safe arguments every git call needs. A
+    `subprocess.run(["git", ...])` written anywhere else in the file is the
+    class of defect this test exists to catch."""
+    source = Path(harness.__file__).read_text(encoding="utf-8")
+    offenders = _git_calls_bypassing_the_one_helper(source, "_run_git")
+    assert offenders == [], f"a git call bypasses _run_git in: {offenders}"
+    # The helper itself must still be the one place that actually calls
+    # subprocess with "git" - otherwise the check above would pass simply
+    # because the module made no git call at all.
+    tree = ast.parse(source)
+    names = [node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)]
+    assert "_run_git" in names
 
 
 # --- 9. a session's own .pyc files never reach changed_paths ----------------
@@ -1651,7 +1847,7 @@ def test_copy_tracked_files_errors_when_source_is_not_a_git_repository(tmp_path)
     dest.mkdir()
 
     with pytest.raises(SystemExit):
-        harness._copy_tracked_files(source, dest)
+        harness._copy_tracked_files(source, dest, dict(os.environ))
 
 
 def test_copy_tracked_files_errors_when_nothing_is_tracked(tmp_path):
@@ -1664,7 +1860,7 @@ def test_copy_tracked_files_errors_when_nothing_is_tracked(tmp_path):
     dest.mkdir()
 
     with pytest.raises(SystemExit):
-        harness._copy_tracked_files(source, dest)
+        harness._copy_tracked_files(source, dest, dict(os.environ))
 
 
 def test_copy_tracked_files_still_copies_an_ordinary_tracked_seed(tmp_path):
@@ -1677,7 +1873,7 @@ def test_copy_tracked_files_still_copies_an_ordinary_tracked_seed(tmp_path):
     dest = tmp_path / "dest"
     dest.mkdir()
 
-    harness._copy_tracked_files(source, dest)
+    harness._copy_tracked_files(source, dest, dict(os.environ))
 
     assert (dest / "seed.txt").read_text(encoding="utf-8") == "original\n"
 
@@ -1742,6 +1938,59 @@ def test_diff_since_seed_restores_a_tampered_git_config_and_reports_it(tmp_path)
 
     assert tampered_paths == [".git/config"]
     assert (repo / ".git" / "config").read_bytes() == original_config
+
+
+def test_diff_since_seed_removes_a_planted_git_commondir_and_reports_it(tmp_path):
+    """A `.git/commondir` the seed never had moves every later git call in
+    the session's own repository to a config outside it -
+    `_diff_since_seed` must remove it, the same way a tampered
+    `.git/config` is put back, and name it in `tampered_paths`."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "seed.txt").write_text("original\n", encoding="utf-8")
+    env = dict(os.environ)
+    seed_commit = harness._git_init_and_commit(repo, env)
+    seed_git_snapshot = harness._snapshot_git_config(repo)
+
+    other_git_dir = tmp_path / "other-git-dir"
+    other_git_dir.mkdir()
+    (repo / ".git" / "commondir").write_text(str(other_git_dir) + "\n", encoding="utf-8")
+
+    tampered_paths: list[str] = []
+    harness._diff_since_seed(repo, seed_commit, env, seed_git_snapshot, tampered_paths)
+
+    assert tampered_paths == [".git/commondir"]
+    assert not (repo / ".git" / "commondir").exists()
+
+
+def test_global_gitconfig_filter_never_runs_in_the_session_repository(tmp_path):
+    """A filter named only in `$HOME/.gitconfig`, selected by a
+    `.gitattributes` the session's own repository carries - the harness
+    must never read `$HOME/.gitconfig` for a git call it makes there, so a
+    driver named only there is never found."""
+    fake_home = tmp_path / "fake-home"
+    fake_home.mkdir()
+    marker = tmp_path / "filter-marker.txt"
+    script_path = tmp_path / "planted-filter.sh"
+    script_path.write_text("#!/bin/sh\ncat > " + str(marker) + "\n", encoding="utf-8")
+    script_path.chmod(script_path.stat().st_mode | stat.S_IEXEC)
+    (fake_home / ".gitconfig").write_text(
+        "[filter \"y\"]\n\tclean = " + str(script_path) + "\n", encoding="utf-8")
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "seed.txt").write_text("original\n", encoding="utf-8")
+    (repo / ".gitattributes").write_text("seed.txt filter=y\n", encoding="utf-8")
+    env = dict(os.environ)
+    env["HOME"] = str(fake_home)
+    seed_commit = harness._git_init_and_commit(repo, env)
+    seed_git_snapshot = harness._snapshot_git_config(repo)
+    (repo / "seed.txt").write_text("changed\n", encoding="utf-8")
+
+    tampered_paths: list[str] = []
+    harness._diff_since_seed(repo, seed_commit, env, seed_git_snapshot, tampered_paths)
+
+    assert not marker.exists()
 
 
 # --- 17. a failed `compass init` is an error, never a silent empty run ------
@@ -1828,7 +2077,7 @@ def test_materialise_repo_backdates_the_setup_date_for_the_compass_condition(
 def test_no_continue_reply_after_a_call_that_did_not_end_in_success(
     tmp_path, fake_claude, plugin_source_dir, monkeypatch
 ):
-    """Design: the reply follows only a call whose result subtype is
+    """The rule: the reply follows only a call whose result subtype is
     `success`. A call that ended `error_during_execution` gets none, even
     with budget left and no code edit yet."""
     scenario_dir = _write_scenario(
@@ -1902,7 +2151,7 @@ def test_plugin_copy_of_the_real_checkout_names_no_scenario_or_behaviour(
     forbidden = [*scenario_ids, *behaviour_ids, "compass condition", "bare condition"]
 
     dest = tmp_path / "real-plugin-copy"
-    harness._make_plugin_copy(REPO_ROOT, dest)
+    harness._make_plugin_copy(REPO_ROOT, dest, dict(os.environ))
     try:
         offences = []
         for path in dest.rglob("*"):

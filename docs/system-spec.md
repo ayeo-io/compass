@@ -29,12 +29,12 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### No tr set in the scripts reads differently on Linux
+### A run is recorded under either condition
 
-- **Scenario id:** `DTR-1`
+- **Scenario id:** `SPT-1`
 - **Intent:** `INT-1`
-- **Source issue:** `tr-range-fails-on-linux`
-- **Landed:** 2026-09-25
+- **Source issue:** `skill-prose-pressure-tests`
+- **Landed:** 2026-09-27
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
 
@@ -43,33 +43,33 @@
 - **Source issue:** `framework-field-feedback`
 - **Landed:** 2026-06-23
 
-### A multiagent issue must record its run
+### Six scenarios cover the failure modes
 
-- **Scenario id:** `DPR-1`
+- **Scenario id:** `SPT-2`
 - **Intent:** `INT-2`
-- **Source issue:** `dispatch-protocol`
-- **Landed:** 2026-09-25
+- **Source issue:** `skill-prose-pressure-tests`
+- **Landed:** 2026-09-27
 
-### The scripts find an issue's documents through the registry
+### Behaviours are scored from actions and artifacts
 
-- **Scenario id:** `DPR-2`
+- **Scenario id:** `SPT-3`
 - **Intent:** `INT-3`
-- **Source issue:** `dispatch-protocol`
-- **Landed:** 2026-09-25
+- **Source issue:** `skill-prose-pressure-tests`
+- **Landed:** 2026-09-27
 
-### A staged map is provisioned one wave at a time
+### The releasing guide requires a run
 
-- **Scenario id:** `DPR-3`
+- **Scenario id:** `SPT-4`
 - **Intent:** `INT-4`
-- **Source issue:** `dispatch-protocol`
-- **Landed:** 2026-09-25
+- **Source issue:** `skill-prose-pressure-tests`
+- **Landed:** 2026-09-27
 
-### Only ship-commit marks an issue landed
+### The pilot and one measured change are on record
 
-- **Scenario id:** `DPR-7`
+- **Scenario id:** `SPT-5`
 - **Intent:** `INT-5`
-- **Source issue:** `dispatch-protocol`
-- **Landed:** 2026-09-25
+- **Source issue:** `skill-prose-pressure-tests`
+- **Landed:** 2026-09-27
 
 ### the hook still blocks a code file inside the project
 
@@ -8750,6 +8750,27 @@
 - **Source issue:** `devlog-logs-edits-outside-the-project`
 - **Landed:** 2026-09-25
 
+### A multiagent issue must record its run _(archived)_
+
+- **Scenario id:** `DPR-1`
+- **Intent:** `INT-2`
+- **Source issue:** `dispatch-protocol`
+- **Landed:** 2026-09-25
+
+### The scripts find an issue's documents through the registry _(archived)_
+
+- **Scenario id:** `DPR-2`
+- **Intent:** `INT-3`
+- **Source issue:** `dispatch-protocol`
+- **Landed:** 2026-09-25
+
+### A staged map is provisioned one wave at a time _(archived)_
+
+- **Scenario id:** `DPR-3`
+- **Intent:** `INT-4`
+- **Source issue:** `dispatch-protocol`
+- **Landed:** 2026-09-25
+
 ### A conflict in Compass's records does not stop integration _(archived)_
 
 - **Scenario id:** `DPR-4`
@@ -8761,6 +8782,13 @@
 
 - **Scenario id:** `DPR-5`
 - **Intent:** `INT-1`
+- **Source issue:** `dispatch-protocol`
+- **Landed:** 2026-09-25
+
+### Only ship-commit marks an issue landed _(archived)_
+
+- **Scenario id:** `DPR-7`
+- **Intent:** `INT-5`
 - **Source issue:** `dispatch-protocol`
 - **Landed:** 2026-09-25
 
@@ -8874,4 +8902,11 @@
 - **Scenario id:** `DSS-4`
 - **Intent:** `INT-1`
 - **Source issue:** `multiagent-scripts-still-say-ship`
+- **Landed:** 2026-09-25
+
+### No tr set in the scripts reads differently on Linux _(archived)_
+
+- **Scenario id:** `DTR-1`
+- **Intent:** `INT-1`
+- **Source issue:** `tr-range-fails-on-linux`
 - **Landed:** 2026-09-25

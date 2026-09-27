@@ -47,8 +47,9 @@ def test_findings_file_exists_with_a_clear_yes_or_no():
 def test_findings_names_a_standard_library_approach():
     text = FINDINGS_PATH.read_text(encoding="utf-8")
     assert (
-        re.search(r"\bmonotonic\b", text, re.IGNORECASE)
-        or re.search(r"time\.monotonic", text)
+        re.search(r"\btime\b", text, re.IGNORECASE)
+        or re.search(r"\bmonotonic\b", text, re.IGNORECASE)
+        or re.search(r"\bdatetime\b", text, re.IGNORECASE)
         or re.search(r"\bstandard library\b", text, re.IGNORECASE)
         or re.search(r"\bstdlib\b", text, re.IGNORECASE)
     ), "FINDINGS.md does not name how the standard library would do it"

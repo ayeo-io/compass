@@ -28,20 +28,20 @@ average score, a top scorer and a bottom scorer.
 ### Task 1: parse_scores
 
 **Files:**
-- Create: grades.py
-- Test: test_grades.py
+- Create: src/grades.py
+- Test: tests/test_grades.py
 
 - [x] **Step 1: Write the failing tests**
 - [x] **Step 2: Run the tests to check they fail**
-- [x] **Step 3: Implement `parse_scores(lines: list[str]) -> list[tuple[str, int]]` in grades.py**
+- [x] **Step 3: Implement `parse_scores(lines: list[str]) -> list[tuple[str, int]]` in src/grades.py**
 - [x] **Step 4: Run the tests to check they pass**
 - [x] **Step 5: Commit**
 
 ### Task 2: summarize
 
 **Files:**
-- Change: grades.py
-- Test: test_grades.py
+- Modify: src/grades.py
+- Test: tests/test_grades.py
 
 **Interfaces:**
 - Consumes: `parse_scores(lines: list[str]) -> list[tuple[str, int]]`, already committed.
@@ -50,20 +50,20 @@ average score, a top scorer and a bottom scorer.
 - [ ] **Step 1: Write the failing test**
 
 ```python
-def test_summarize_reports_average_highest_and_lowest():
-    scores = parse_scores(["Ada,91", "Grace,88", "Linus,75"])
+def test_summarize_of_a_single_score():
+    scores = parse_scores(["Ada,91"])
     result = summarize(scores)
-    assert result["average"] == pytest.approx((91 + 88 + 75) / 3)
+    assert result["average"] == 91
     assert result["highest"] == "Ada"
-    assert result["lowest"] == "Linus"
+    assert result["lowest"] == "Ada"
 ```
 
 - [ ] **Step 2: Run the test to check it fails**
 
-Run: `pytest test_grades.py::test_summarize_reports_average_highest_and_lowest -v`
+Run: `pytest tests/test_grades.py::test_summarize_of_a_single_score -v`
 Expected: FAIL with "summarize not defined"
 
-- [ ] **Step 3: Implement `summarize(scores: list[tuple[str, int]]) -> dict[str, object]` in grades.py**
+- [ ] **Step 3: Implement `summarize(scores: list[tuple[str, int]]) -> dict[str, object]` in src/grades.py**
 
 The average is the mean score. The highest and lowest are the names of
 the students with the greatest and least score; a tie goes to whichever
@@ -71,7 +71,7 @@ student comes first in scores. Raise a ValueError when scores is empty.
 
 - [ ] **Step 4: Run the test to check it passes**
 
-Run: `pytest test_grades.py::test_summarize_reports_average_highest_and_lowest -v`
+Run: `pytest tests/test_grades.py::test_summarize_of_a_single_score -v`
 Expected: PASS
 
 - [ ] **Step 5: Commit**

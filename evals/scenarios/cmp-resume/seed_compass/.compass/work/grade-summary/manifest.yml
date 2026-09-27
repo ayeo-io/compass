@@ -9,10 +9,50 @@ assessment:
   goal: delivery
   role: engineer
   labels: []
-delivery_approach: quick-fix
 scenarios:
-  - id: GRD-1
-    title: summarize reports the average score and the top and bottom scorer
+  - id: TRC-A1
+    title: summarize returns a dict with the average score, and the top and bottom scorer
     intent: INT-1
     tests:
       - tests/test_grades.py
+changed_files: []
+evidence: []
+follow_ups: []
+evaluated_assessment:
+  risk: contained
+  familiarity: brownfield-mapped
+  size: small
+  goal: delivery
+  role: engineer
+  labels: []
+delivery_approach: quick-fix
+policy_rules_fired: []
+stages:
+  assess: full
+  define: light
+  refine: collapsed
+  plan: collapsed
+  breakdown: skipped
+  implement: full
+  verify: light
+  ship: light
+gates:
+  # accepts: ['test-run']
+  - id: verify.correctness
+    status: pending
+    evidence: []
+  # accepts: ['command-output', 'manual-review', 'artifact']
+  - id: verify.governance
+    status: pending
+    evidence: []
+  # accepts: ['command-output', 'artifact']
+  - id: verify.traceability
+    status: pending
+    evidence: []
+artifacts:
+  - id: ART-DELIVERY_APPROACH
+    kind: delivery-approach
+    status: draft
+    depth: light
+    reason: every quick fix carries a light one
+subtask_ceiling: 1

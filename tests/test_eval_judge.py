@@ -23,12 +23,17 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
+
+from citation_patterns import (
+    PLANTED_CITATION_FORMS,
+    cited_unopenable_document,
+    scan_file_for_unopenable_citation,
+)
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -296,8 +301,8 @@ def test_assessed_before_first_edit_passes_when_there_is_no_code_edit():
 
 
 def test_assessed_before_first_edit_reports_no_edit_when_only_a_test_file_is_touched():
-    # The pre-tool hook allows a test-file edit ahead of an assessment by
-    # design - that is not the first code edit this behaviour scores.
+    # The pre-tool hook allows a test-file edit ahead of an assessment on
+    # purpose - that is not the first code edit this behaviour scores.
     record = make_record(tool_calls=[
         tool_call(0, "Edit", {"file_path": abspath("tests/test_app.py")}),
     ])
@@ -2767,63 +2772,33 @@ def test_judge_module_does_not_cite_dd2_without_saying_what_it_means():
     assert "DD-2" not in source
 
 
-# A delivery design and a set of dated reviews, numbered as they happened,
-# live only under docs/compass/*/, which .gitignore excludes - naming
-# either kind of document, in any spelling the code has used (a hyphenated
-# file name, a spaced-out section reference, a number folded into either
-# word order, or a capitalisation the file-name check alone would miss),
-# points a reader at a file they cannot open. A comment or docstring must
-# state the rule instead. Every pattern is assembled from parts and
-# matched case-insensitively, so this check does not fail on its own list
-# - the same problem tests/test_house_style.py solves the same way for its
-# forbidden strings.
-_UNOPENABLE_CITATION_RES = tuple(
-    re.compile(pattern, re.IGNORECASE) for pattern in (
-        re.escape("technical-design" + ".md"),
-        re.escape("integrated-" + "review"),
-        re.escape("design") + r"\s+section",
-        re.escape("integrated") + r"\s+review",
-        r"review\s+" + re.escape("round"),
-        re.escape("round") + r"\s+\d+\s+review",
-    )
-)
-
-
-def _cited_unopenable_document(text: str) -> str | None:
-    """The first pattern in `_UNOPENABLE_CITATION_RES` that matches `text`,
-    or `None` - so a caller can report which form of the citation it found,
-    not just that one exists."""
-    for pattern in _UNOPENABLE_CITATION_RES:
-        if pattern.search(text):
-            return pattern.pattern
-    return None
-
-
 def test_judge_module_does_not_cite_documents_outside_the_repository():
-    source = Path(judge.__file__).read_text(encoding="utf-8")
-    hit = _cited_unopenable_document(source)
+    """Neither `evals/judge.py` nor this file may point a reader at a
+    document this repository does not track - see `citation_patterns.py`
+    for the rule and why."""
+    hit = scan_file_for_unopenable_citation(Path(judge.__file__))
     assert hit is None, f"{judge.__file__} matches {hit!r}"
 
 
 def test_this_test_module_does_not_cite_documents_outside_the_repository():
-    source = Path(__file__).read_text(encoding="utf-8")
-    hit = _cited_unopenable_document(source)
+    hit = scan_file_for_unopenable_citation(Path(__file__))
     assert hit is None, f"{__file__} matches {hit!r}"
 
 
 def test_the_citation_guard_catches_a_planted_citation():
     """A regression guard that only ever passes proves nothing - this
-    plants one citation in each form the guard must catch, built from
-    parts so this test's own source is not itself a hit, and checks the
-    matcher reports it."""
-    planted_forms = (
-        "See " + "integrated" + "-" + "review" + " for background.",
-        "See " + "design" + " " + "section" + " 4 for background.",
-        "See " + "integrated" + " " + "review" + " for background.",
-        "See the " + "review" + " " + "round" + " 3 result.",
-        "See " + "round" + " 3 " + "review" + " result.",
-    )
-    for planted in planted_forms:
-        assert _cited_unopenable_document(planted) is not None, (
+    checks the matcher against every planted form `citation_patterns.py`
+    carries."""
+    for planted in PLANTED_CITATION_FORMS:
+        assert cited_unopenable_document(planted) is not None, (
             f"the guard missed a planted citation: {planted!r}"
         )
+
+
+@pytest.mark.parametrize("planted", PLANTED_CITATION_FORMS)
+def test_the_file_scan_catches_a_planted_citation(tmp_path, planted):
+    """Not only the matcher: a planted file, read by the same
+    `scan_file_for_unopenable_citation` the guard above calls."""
+    planted_file = tmp_path / "planted.py"
+    planted_file.write_text(f"# {planted}\n", encoding="utf-8")
+    assert scan_file_for_unopenable_citation(planted_file) is not None

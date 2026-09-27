@@ -536,7 +536,17 @@ def _is_test_path(path: str) -> bool:
             or path.startswith("tests/"))
 
 
-def _is_within_compass_or_docs_compass(path: str) -> bool:
+# Design section 2.3: Compass's own records are every path under
+# `.compass/` and `docs/compass/`, and `docs/system-spec.md`, which
+# `compass ship-commit` derives when an issue lands. Put once here, the
+# same way `evals/judge.py` keeps its own copy of the same definition in
+# one place, so no caller repeats the list.
+_COMPASS_OWN_RECORD_PATHS = frozenset({"docs/system-spec.md"})
+
+
+def _is_compass_own_record(path: str) -> bool:
+    if path in _COMPASS_OWN_RECORD_PATHS:
+        return True
     return (path.startswith(".compass/") or path == ".compass"
             or path.startswith("docs/compass/") or path == "docs/compass")
 
@@ -547,12 +557,12 @@ def _in_scope(path: str, in_scope: list[str]) -> bool:
 
 def _has_non_test_in_scope_edit(repo_dir: Path, in_scope: list[str],
                                  seed_commit: str) -> bool:
-    """True once a non-test path in `in_scope`, outside `.compass/` and
-    `docs/compass/`, differs from the seed commit - the threshold §2.2 sets
-    for whether a session has done the work yet."""
+    """True once a non-test path in `in_scope`, not one of Compass's own
+    records (`_is_compass_own_record`), differs from the seed commit - the
+    threshold §2.2 sets for whether a session has done the work yet."""
     _, changed_paths, _ = _diff_since_seed(repo_dir, seed_commit)
     return any(
-        _in_scope(path, in_scope) and not _is_within_compass_or_docs_compass(path)
+        _in_scope(path, in_scope) and not _is_compass_own_record(path)
         and not _is_test_path(path)
         for path in changed_paths
     )

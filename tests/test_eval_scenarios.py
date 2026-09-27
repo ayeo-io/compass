@@ -1,12 +1,12 @@
 """Checks over the six pressure-test scenarios under evals/scenarios/.
 
-This is SPT-2 - "Six scenarios cover the failure modes" - in
-acceptance-criteria.md. Each scenario pairs a `scenario.yml` - the fixed
-set of fields: id, failure_mode, prompt, follow_ups, risky, budget_usd,
-in_scope, behaviours, and the optional protected, tests_cannot_pass,
-test_command and continue_reply - with a small seed project of its own.
-This module checks the contract on disk, not what the harness or the
-scorer do with it - those are covered by their own tests.
+SPT-2 - "Six scenarios cover the failure modes": each of the six must
+exist, with the fields a scenario needs to run and be scored: id,
+failure_mode, prompt, follow_ups, risky, budget_usd, in_scope, behaviours,
+and the optional protected, tests_cannot_pass, test_command and
+continue_reply - paired with a small seed project of its own. This module
+checks the contract on disk, not what the harness or the scorer do with
+it - those are covered by their own tests.
 
 Getting the bundled PyYAML the same way every other entry point does: put
 `cli/` on `sys.path` and import `compass_pkg` before `yaml`, so the copy
@@ -30,7 +30,6 @@ import compass_pkg  # noqa: E402  (side effect: puts cli/vendor at sys.path[0])
 import yaml  # noqa: E402
 
 from citation_patterns import (
-    DATA_FILE_CITATION_PATTERNS,
     PLANTED_CITATION_FORMS,
     cited_unopenable_document,
     scan_file_for_unopenable_citation,
@@ -675,13 +674,10 @@ def test_seed_files_do_not_give_away_scoring_or_the_honest_answer(scenario_id):
 
 
 def test_owned_files_do_not_cite_documents_outside_the_repository():
-    """This file's own comments and docstrings must never point a reader
-    at a document this repository does not track - see
-    `citation_patterns.py` for the rule and why. A scenario's own files are
-    checked against the narrower `DATA_FILE_CITATION_PATTERNS` instead: a
-    scenario prompt is a simulated request a session reads, and an ordinary
-    everyday word belongs in one with no citation intended, as
-    `citation_patterns.py` explains."""
+    """This file's own comments and docstrings, and a scenario's own files,
+    must never point a reader at a document this repository does not track
+    - see `citation_patterns.py` for the one pattern set every scanned file
+    is checked against, and why."""
     hit = scan_file_for_unopenable_citation(Path(__file__))
     assert hit is None, f"{__file__} matches {hit!r}"
 
@@ -697,11 +693,28 @@ def test_owned_files_do_not_cite_documents_outside_the_repository():
             paths.append(path)
 
     for path in paths:
-        hit = scan_file_for_unopenable_citation(path, DATA_FILE_CITATION_PATTERNS)
+        hit = scan_file_for_unopenable_citation(path)
         assert hit is None, (
             f"{path} matches {hit!r}, a document this repository does not "
             "track - state the rule instead of pointing at it"
         )
+
+
+def test_the_real_scenario_scan_catches_a_citation_the_owned_file_scan_catches(
+    tmp_path,
+):
+    """The scenario-file scan above uses the same `CITATION_PATTERNS` every
+    other scanned file is checked against, not a narrower set of its own -
+    so a citation the owned-file scan would catch is caught here too, the
+    exact hyphenated report name an earlier scenario-file citation used
+    among them."""
+    planted_file = tmp_path / "planted.yml"
+    planted_file.write_text(
+        "# see " + "integrated" + "-" + "review" + "-8.md for background\n",
+        encoding="utf-8",
+    )
+    hit = scan_file_for_unopenable_citation(planted_file)
+    assert hit is not None, "the scenario-file scan missed a planted citation"
 
 
 def test_the_citation_guard_catches_a_planted_citation():

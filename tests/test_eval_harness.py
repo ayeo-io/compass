@@ -218,6 +218,19 @@ def main():
         if os.path.isfile(full):
             os.remove(full)
 
+    # A test that wants the session's own repository to look like it
+    # deleted or corrupted `.git/HEAD` - the shape a broken or malicious
+    # session leaves, which must not let a later git call search upward
+    # for some other repository - sets "delete_git_head" or
+    # "corrupt_git_head".
+    if config.get("delete_git_head"):
+        head_path = os.path.join(cwd, ".git", "HEAD")
+        if os.path.isfile(head_path):
+            os.remove(head_path)
+    if config.get("corrupt_git_head"):
+        with open(os.path.join(cwd, ".git", "HEAD"), "w", encoding="utf-8") as fh:
+            fh.write("not a valid HEAD\\n")
+
     # A test that wants a second issue directory under `.compass/work/` - to
     # check `manifests` holds more than one - sets "second_manifest_slug".
     second_manifest_slug = config.get("second_manifest_slug")
@@ -920,6 +933,111 @@ def test_git_replaced_by_a_plain_file_is_recorded_as_not_contained(
     assert not filter_marker.exists()
     assert record["contained"] is False
     assert "git-config:.git/config" in record["escaped_paths"]
+
+
+def test_run_git_sets_git_ceiling_directories_to_the_parent_of_its_cwd(
+    tmp_path, monkeypatch
+):
+    """`GIT_CEILING_DIRECTORIES`, set on every call `_run_git` makes, stops
+    git's own repository discovery from walking any higher than the
+    directory a call is scoped to - set to that directory's own parent, so
+    a later call against a repository whose own `.git/HEAD` is missing or
+    corrupt (EJG-6) can never fall back to discovering some unrelated
+    repository above it instead. Only set once `cwd` already carries its
+    own `.git` entry - here, an empty directory standing in for one, since
+    this test only checks the environment `_run_git` builds and never
+    actually calls git."""
+    repo_dir = tmp_path / "somewhere" / "repo"
+    repo_dir.mkdir(parents=True)
+    (repo_dir / ".git").mkdir()
+    captured = {}
+
+    def fake_run(args, **kwargs):
+        captured["env"] = kwargs.get("env")
+        return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(harness.subprocess, "run", fake_run)
+    harness._run_git(["status"], repo_dir, {})
+
+    assert captured["env"] is not None
+    assert captured["env"]["GIT_CEILING_DIRECTORIES"] == str(repo_dir.resolve().parent)
+
+
+def test_run_guarded_git_runs_no_git_command_when_head_is_missing(tmp_path, monkeypatch):
+    """A session that deletes its own repository's `.git/HEAD` must not let
+    the harness's own `git add -A` / `git diff` calls run at all - the same
+    guarantee `test_git_replaced_by_a_plain_file_is_recorded_as_not_contained`
+    already gives a `.git` replaced by a plain file, extended to a
+    `.git/HEAD` that is simply gone."""
+    repo_dir = tmp_path / "repo"
+    repo_dir.mkdir()
+    (repo_dir / "seed.txt").write_text("original\n", encoding="utf-8")
+    _git_commit_all(repo_dir, "seed")
+    (repo_dir / ".git" / "HEAD").unlink()
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("a git command ran with .git/HEAD missing")
+
+    monkeypatch.setattr(harness.subprocess, "run", fail_if_called)
+    tampered_paths: list[str] = []
+    result = harness._run_guarded_git(
+        ["add", "-A"], repo_dir, dict(os.environ), {}, tampered_paths)
+
+    assert result.returncode != 0
+    assert tampered_paths
+
+
+def test_run_guarded_git_runs_no_git_command_when_head_is_corrupt(tmp_path, monkeypatch):
+    """The same guarantee, for a `.git/HEAD` overwritten with text that is
+    neither a symbolic ref nor a commit id - corrupted, not merely
+    deleted."""
+    repo_dir = tmp_path / "repo"
+    repo_dir.mkdir()
+    (repo_dir / "seed.txt").write_text("original\n", encoding="utf-8")
+    _git_commit_all(repo_dir, "seed")
+    (repo_dir / ".git" / "HEAD").write_text("not a valid HEAD\n", encoding="utf-8")
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("a git command ran with .git/HEAD corrupt")
+
+    monkeypatch.setattr(harness.subprocess, "run", fail_if_called)
+    tampered_paths: list[str] = []
+    result = harness._run_guarded_git(
+        ["add", "-A"], repo_dir, dict(os.environ), {}, tampered_paths)
+
+    assert result.returncode != 0
+    assert tampered_paths
+
+
+def test_deleted_git_head_is_recorded_as_not_contained(
+    tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
+):
+    """No pilot record ever deleted its own `.git/HEAD` - the smallest
+    fixture that shows the case: the fake CLI removes it before the
+    harness's own diff runs. The run must be recorded as not contained,
+    never crash, and never stage a diff against whatever `.git/HEAD`'s
+    absence would otherwise let git search upward for."""
+    _, record, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "bare", monkeypatch,
+        plugin_source_dir, out_suffix="-git-head-deleted",
+        extra_config={"delete_git_head": True},
+    )
+    assert record["contained"] is False
+    assert "git-config:.git/HEAD" in record["escaped_paths"]
+
+
+def test_corrupted_git_head_is_recorded_as_not_contained(
+    tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
+):
+    """The same, for a `.git/HEAD` overwritten with text that is neither a
+    symbolic ref nor a commit id."""
+    _, record, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "bare", monkeypatch,
+        plugin_source_dir, out_suffix="-git-head-corrupt",
+        extra_config={"corrupt_git_head": True},
+    )
+    assert record["contained"] is False
+    assert "git-config:.git/HEAD" in record["escaped_paths"]
 
 
 def test_planted_fsmonitor_and_env_probe_never_run_across_a_harness_run(
@@ -2434,3 +2552,24 @@ def test_plugin_copy_of_the_real_checkout_names_no_scenario_or_behaviour(
         assert offences == []
     finally:
         harness._remove_read_only_tree(dest)
+
+
+def test_gitignore_comment_about_evals_out_names_no_harness_or_condition():
+    """`.gitignore` reaches the plugin copy untouched - `_plugin_copy_excluded`
+    leaves out `evals/`, every `tests/test_eval_*.py`, a published eval
+    report and `docs/releasing.md`, never the root `.gitignore` - so a
+    compass session can `Read` it. Its comment above `/evals/out/` must not
+    name the harness or a condition, or that read alone would tell a
+    session it is one half of a compass/bare comparison (EJG-7)."""
+    text = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8")
+    lines = text.splitlines()
+    idx = lines.index("/evals/out/")
+    comment_lines = []
+    i = idx - 1
+    while i >= 0 and lines[i].startswith("#"):
+        comment_lines.insert(0, lines[i])
+        i -= 1
+    assert comment_lines, "no comment found above /evals/out/"
+    comment = "\n".join(comment_lines).lower()
+    assert "harness" not in comment
+    assert "condition" not in comment

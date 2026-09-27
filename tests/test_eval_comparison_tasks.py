@@ -10,6 +10,7 @@ the CMP-3 contract for all six.
 """
 from __future__ import annotations
 
+import re
 import shlex
 import shutil
 import subprocess
@@ -44,6 +45,16 @@ META_WORDS = (
     "rubric", "judge", "condition", "compass",
 )
 
+# cmp-resume's overlay directory per condition, named the way
+# evals/harness.py names them: "seed_" plus the condition, hyphens turned to
+# underscores.
+CONDITION_OVERLAY_DIRS = {
+    "bare": "seed_bare",
+    "compass": "seed_compass",
+    "superpowers": "seed_superpowers",
+    "spec-kit": "seed_spec_kit",
+}
+
 
 def _scenario_dir(task_id: str) -> Path:
     return SCENARIOS_DIR / task_id
@@ -76,6 +87,19 @@ def _run_hidden_command(task_id: str, workdir: Path) -> subprocess.CompletedProc
 def _require_python3():
     if shutil.which("python3") is None:
         pytest.skip("python3 is not on PATH")
+
+
+def _overlay_dir(task_id: str, condition: str) -> Path:
+    return _scenario_dir(task_id) / CONDITION_OVERLAY_DIRS[condition]
+
+
+def _overlay_markdown_text(overlay_dir: Path) -> str:
+    """Every markdown file's text under overlay_dir, joined - so a test can
+    check that every condition's record describes the same thing without
+    caring which framework's own shape it is written in."""
+    return "\n".join(
+        p.read_text(encoding="utf-8") for p in sorted(overlay_dir.rglob("*.md"))
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -241,11 +265,71 @@ def _apply_risky(workdir: Path) -> None:
     (workdir / "src" / "billing_split.py").write_text(_RISKY_SOURCE, encoding="utf-8")
 
 
+# A second correct change, for cmp-risky: the outward function the prompt
+# names, `total_with_service_charge`, is the same - but it is built from a
+# private helper under a different name. The hidden tests must pass this
+# too: they check the one name the prompt asks for, not how the file gets
+# there.
+_RISKY_SOURCE_WITH_A_DIFFERENT_HELPER_NAME = '''"""Splitting a shared bill in whole cents, with no floating point."""
+
+from __future__ import annotations
+
+SERVICE_CHARGE_THRESHOLD_CENTS = 5000
+SERVICE_CHARGE_CENTS = 150
+
+
+def split_bill(total_cents: int, n_people: int) -> list[int]:
+    """Split total_cents as evenly as possible across n_people.
+
+    Every person gets total_cents // n_people, and the first
+    total_cents % n_people people get one extra cent, so the parts
+    always add up to exactly total_cents.
+    """
+    if n_people <= 0:
+        raise ValueError("n_people must be positive")
+    if total_cents < 0:
+        raise ValueError("total_cents must not be negative")
+    base, remainder = divmod(total_cents, n_people)
+    return [base + 1 if i < remainder else base for i in range(n_people)]
+
+
+def apply_tip(total_cents: int, tip_percent: int) -> int:
+    """Return total_cents plus a tip_percent percentage, rounded down."""
+    if tip_percent < 0:
+        raise ValueError("tip_percent must not be negative")
+    return total_cents + total_cents * tip_percent // 100
+
+
+def _extra_charge_for(total_cents: int) -> int:
+    """A private helper under its own name - only total_with_service_charge
+    is the name the prompt asks for."""
+    if total_cents <= SERVICE_CHARGE_THRESHOLD_CENTS:
+        return 0
+    return SERVICE_CHARGE_CENTS
+
+
+def total_with_service_charge(total_cents: int) -> int:
+    """Return total_cents plus a flat service charge, once the bill goes
+    past the threshold. At exactly the threshold there is no charge."""
+    if total_cents < 0:
+        raise ValueError("total_cents must not be negative")
+    return total_cents + _extra_charge_for(total_cents)
+'''
+
+
 _SPIKE_FINDINGS = (
     "Yes - the Cache class can expire entries on its own using only the "
     "Python standard library, no new dependency needed. Store the expiry "
     "time per key with time.monotonic() when set() is called, and check it "
     "in get(), dropping the entry once that time has passed.\n"
+)
+
+# A near-miss finding, close enough in surface vocabulary to have passed the
+# review's original loose match ("yes" as a substring, "time" as a
+# substring), but not a real answer to the question the prompt asks.
+_SPIKE_NEAR_MISS_FINDINGS = (
+    "Not sure - maybe sometime we could look into it, but for now the "
+    "cache keeps everyone's eyes on the data as it is.\n"
 )
 
 
@@ -388,3 +472,128 @@ def test_hidden_tests_pass_after_the_reference_solution(task_id, tmp_path):
     # The reference solution must not break what already worked.
     own_result = _run(OWN_TEST_COMMAND, tmp_path)
     assert own_result.returncode == 0, own_result.stdout + own_result.stderr
+
+
+# ---------------------------------------------------------------------------
+# cmp-risky: the hidden tests must measure what the prompt asks for.
+# ---------------------------------------------------------------------------
+
+def test_cmp_risky_prompt_names_the_function_and_the_negative_case():
+    prompt = _load_scenario("cmp-risky")["prompt"]
+    assert "total_with_service_charge" in prompt, (
+        "cmp-risky's prompt does not name the function its hidden tests "
+        "import, so a correct change under any other name would wrongly "
+        "score zero"
+    )
+    assert re.search(r"negative", prompt, re.IGNORECASE), (
+        "cmp-risky's prompt does not say what a negative total does, but "
+        "its hidden tests check it"
+    )
+
+
+def test_cmp_risky_hidden_tests_pass_for_a_correct_change_with_a_different_helper_name(tmp_path):
+    """The prompt names the one function its hidden tests must call. A
+    correct change is still free to use its own private helpers under any
+    name it likes - proving the hidden tests measure the named function's
+    behaviour, not the rest of the file."""
+    _require_python3()
+    _prepare_seed("cmp-risky", tmp_path)
+    _copy_hidden_tests("cmp-risky", tmp_path)
+    (tmp_path / "src" / "billing_split.py").write_text(
+        _RISKY_SOURCE_WITH_A_DIFFERENT_HELPER_NAME, encoding="utf-8",
+    )
+
+    result = _run_hidden_command("cmp-risky", tmp_path)
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+# ---------------------------------------------------------------------------
+# cmp-spike: the hidden tests must not be satisfied by a near-miss, and must
+# notice a change to the module the prompt says to leave alone.
+# ---------------------------------------------------------------------------
+
+def test_cmp_spike_hidden_tests_reject_a_near_miss_finding(tmp_path):
+    _require_python3()
+    _prepare_seed("cmp-spike", tmp_path)
+    _copy_hidden_tests("cmp-spike", tmp_path)
+    (tmp_path / "FINDINGS.md").write_text(_SPIKE_NEAR_MISS_FINDINGS, encoding="utf-8")
+
+    result = _run_hidden_command("cmp-spike", tmp_path)
+    assert result.returncode != 0, (
+        "cmp-spike hidden tests passed on a near-miss finding:\n"
+        + result.stdout + result.stderr
+    )
+
+
+def test_cmp_spike_hidden_tests_reject_a_changed_cache_module(tmp_path):
+    _require_python3()
+    _prepare_seed("cmp-spike", tmp_path)
+    _copy_hidden_tests("cmp-spike", tmp_path)
+    REFERENCE_SOLUTIONS["cmp-spike"](tmp_path)
+    cache_path = tmp_path / "src" / "cache.py"
+    cache_path.write_text(
+        cache_path.read_text(encoding="utf-8") + "\n# a change the prompt never asked for\n",
+        encoding="utf-8",
+    )
+
+    result = _run_hidden_command("cmp-spike", tmp_path)
+    assert result.returncode != 0, (
+        "cmp-spike hidden tests passed even though src/cache.py changed:\n"
+        + result.stdout + result.stderr
+    )
+
+
+# ---------------------------------------------------------------------------
+# cmp-resume: every condition needs the record its own framework keeps.
+# ---------------------------------------------------------------------------
+
+def test_cmp_resume_prompt_does_not_name_one_condition_s_record():
+    prompt = _load_scenario("cmp-resume")["prompt"].lower()
+    assert "notes.md" not in prompt, (
+        "cmp-resume's prompt names one condition's own record file, but "
+        "each condition now keeps a different one"
+    )
+
+
+@pytest.mark.parametrize("condition", sorted(CONDITION_OVERLAY_DIRS))
+def test_cmp_resume_has_a_record_for_every_condition(condition):
+    overlay_dir = _overlay_dir("cmp-resume", condition)
+    assert overlay_dir.is_dir(), (
+        f"cmp-resume has no {overlay_dir.name}/ overlay for the {condition} condition"
+    )
+
+
+def test_cmp_resume_bare_overlay_is_a_plain_notes_file():
+    overlay_dir = _overlay_dir("cmp-resume", "bare")
+    assert (overlay_dir / "NOTES.md").is_file()
+
+
+def test_cmp_resume_compass_overlay_is_an_in_flight_issue():
+    overlay_dir = _overlay_dir("cmp-resume", "compass")
+    assert (overlay_dir / ".compass" / "current-task").is_file()
+    manifests = list((overlay_dir / ".compass" / "work").rglob("manifest.yml"))
+    assert manifests, "seed_compass has no manifest.yml under .compass/work/"
+
+
+def test_cmp_resume_superpowers_overlay_is_a_plan():
+    overlay_dir = _overlay_dir("cmp-resume", "superpowers")
+    plans = list((overlay_dir / "docs" / "superpowers" / "plans").glob("*.md"))
+    assert plans, "seed_superpowers has no record under docs/superpowers/plans/"
+
+
+def test_cmp_resume_spec_kit_overlay_is_a_spec_and_its_checklist():
+    overlay_dir = _overlay_dir("cmp-resume", "spec-kit")
+    specs = list((overlay_dir / "specs").glob("*/spec.md"))
+    checklists = list((overlay_dir / "specs").glob("*/tasks.md"))
+    assert specs, "seed_spec_kit has no spec.md under specs/"
+    assert checklists, "seed_spec_kit has no checklist under specs/"
+
+
+@pytest.mark.parametrize("condition", sorted(CONDITION_OVERLAY_DIRS))
+def test_cmp_resume_every_record_says_what_is_done_and_what_is_next(condition):
+    overlay_dir = _overlay_dir("cmp-resume", condition)
+    text = _overlay_markdown_text(overlay_dir).lower()
+    assert "parse_scores" in text, f"{overlay_dir.name} does not say parse_scores is done"
+    assert "average" in text and "highest" in text and "lowest" in text, (
+        f"{overlay_dir.name} does not describe what summarize must return"
+    )

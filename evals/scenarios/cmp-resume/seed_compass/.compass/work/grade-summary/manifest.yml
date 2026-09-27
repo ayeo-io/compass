@@ -1,0 +1,18 @@
+schema_version: '2.0'
+issue: grade-summary
+created: '2026-09-27'
+status: active
+assessment:
+  risk: contained
+  familiarity: brownfield-mapped
+  size: small
+  goal: delivery
+  role: engineer
+  labels: []
+delivery_approach: quick-fix
+scenarios:
+  - id: GRD-1
+    title: summarize reports the average score and the top and bottom scorer
+    intent: INT-1
+    tests:
+      - tests/test_grades.py

@@ -429,8 +429,9 @@ def _source_tree_hash(project_root):
     """Compute a stable SHA-256 of the source tree under project_root.
 
     Covers all *.py, *.md, *.yml, *.yaml, *.json, *.toml files, ordered by
-    their relative path (deterministic). Excludes .compass/, .git/,
-    __pycache__/, .venv/, node_modules/, and evidence/ directories.
+    their relative path (deterministic). Excludes the project root's own
+    .compass/, and .git/, __pycache__/, .venv/, node_modules/ and evidence/
+    directories at any depth.
 
     Returns a hex digest string. Performance target: < 200 ms on typical
     project trees (< 100 MB of source files).
@@ -438,15 +439,21 @@ def _source_tree_hash(project_root):
     Hash is content + path, deterministic. Used by cmd_tdd_green to
     detect whether any source file changed between two invocations.
     """
-    _EXCLUDED_DIRS = {".compass", ".git", "__pycache__", ".venv",
-                      "node_modules", "evidence"}
+    # `.compass/` is left out only at the project root, where it holds this
+    # project's own records. One anywhere else - a worked example, a test
+    # fixture, an eval seed - is source, and an edit to it is a change.
+    _EXCLUDED_DIRS = {".git", "__pycache__", ".venv", "node_modules",
+                      "evidence"}
+    _EXCLUDED_AT_ROOT = {".compass"}
     _INCLUDED_EXTS = {".py", ".md", ".yml", ".yaml", ".json", ".toml"}
 
     h = hashlib.sha256()
     # Walk the tree in sorted order to be deterministic across file systems
     for root, dirs, files in os.walk(project_root):
         # Prune excluded directories in-place so os.walk skips them
-        dirs[:] = sorted(d for d in dirs if d not in _EXCLUDED_DIRS)
+        at_root = root == project_root   # os.walk yields the root first, as given
+        dirs[:] = sorted(d for d in dirs if d not in _EXCLUDED_DIRS
+                         and not (at_root and d in _EXCLUDED_AT_ROOT))
         for fname in sorted(files):
             ext = os.path.splitext(fname)[1].lower()
             if ext not in _INCLUDED_EXTS:

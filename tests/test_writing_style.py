@@ -380,16 +380,17 @@ def _is_excluded(rel: str) -> bool:
 
 _FIXTURE_PREFIX = "tests/fixtures/writing-style/"
 
-# Other frameworks' own records, which the eval scenario `cmp-resume` gives a
-# session under Superpowers or Spec Kit in the words that framework writes.
-# Compass's writing rules must not rewrite them, and an allow marker would
-# appear in the text the session reads, so they are left out by name.
-_OTHER_FRAMEWORKS_RECORDS = (
-    "evals/scenarios/cmp-resume/seed_superpowers/docs/superpowers/plans/"
-    "2026-09-27-grade-summary.md",
-    "evals/scenarios/cmp-resume/seed_spec_kit/specs/001-grade-summary/spec.md",
-    "evals/scenarios/cmp-resume/seed_spec_kit/specs/001-grade-summary/tasks.md",
-)
+# Other frameworks' own records. An eval scenario lays a `seed_superpowers/`
+# or `seed_spec_kit/` overlay over its seed for a session under that
+# framework, in the words that framework writes. Compass's writing rules must
+# not rewrite them, and an allow marker would appear in the text the session
+# reads, so every file in such an overlay is left out.
+_OTHER_FRAMEWORKS_OVERLAYS = ("/seed_superpowers/", "/seed_spec_kit/")
+
+
+def _is_other_frameworks_record(rel: str) -> bool:
+    return rel.startswith("evals/scenarios/") and any(
+        part in rel for part in _OTHER_FRAMEWORKS_OVERLAYS)
 
 
 def scanned_paths() -> list[Path]:
@@ -401,7 +402,7 @@ def scanned_paths() -> list[Path]:
     return [REPO_ROOT / rel for rel in _git_ls_files()
             if not _is_excluded(rel)
             and not rel.startswith(_FIXTURE_PREFIX)
-            and rel not in _OTHER_FRAMEWORKS_RECORDS]
+            and not _is_other_frameworks_record(rel)]
 
 
 # ---------------------------------------------------------------------------
@@ -4860,12 +4861,12 @@ def test_pbw_c4_the_stage_key_rename_block_has_a_marker():
 
 
 def test_other_frameworks_records_are_left_out_and_nothing_else_is():
-    """The three records `cmp-resume` gives Superpowers and Spec Kit are in
-    those frameworks' own words, so no Compass writing rule reads them; every
-    other file under `evals/scenarios/` is still scanned."""
+    """Files in another framework's overlay under `evals/scenarios/` are in
+    that framework's own words, so no Compass writing rule reads them; every
+    other file under `evals/scenarios/` is still scanned, and at least one
+    overlay file exists, so the rule is not checking nothing."""
     scanned = {str(p.relative_to(REPO_ROOT)) for p in scanned_paths()}
-    for rel in _OTHER_FRAMEWORKS_RECORDS:
-        assert rel not in scanned, rel
     tracked = [r for r in _git_ls_files() if r.startswith("evals/scenarios/")]
-    left_out = [r for r in tracked if r not in scanned]
-    assert sorted(left_out) == sorted(_OTHER_FRAMEWORKS_RECORDS), left_out
+    overlays = [r for r in tracked if _is_other_frameworks_record(r)]
+    assert overlays, "no other framework's record is tracked"
+    assert sorted(r for r in tracked if r not in scanned) == sorted(overlays)

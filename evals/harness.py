@@ -1097,14 +1097,28 @@ def _run_test_command(test_command: str, repo_dir: Path, env: dict[str, str]
 # reads to decide only whether a run failed at all.
 _PYTEST_SUMMARY_COUNT_RE = re.compile(r"\b(\d+) (passed|failed|error|errors)\b")
 
+# The final summary line itself, so counts are read from that one line, not
+# from anywhere in the output a hidden test's own printed text, or an
+# assertion message, could say "2 failed" without meaning pytest found two
+# failures. Pytest always closes its real summary line with "in N.NNs" (the
+# run's own duration); a decoy inside a test's output has no reason to
+# carry that suffix too.
+_PYTEST_SUMMARY_LINE_RE = re.compile(
+    r"^.*\b\d+ (?:passed|failed|error|errors)\b.*\bin [\d.]+s\b.*$", re.MULTILINE)
+
 
 def _pytest_summary_counts(output: str) -> tuple[int, int]:
     """`(passed, failed)` read from pytest's own final summary line in
-    `output`. An error counts as a failure: a fixture error stops a test
-    running under whatever name pytest would otherwise report it failed
-    under, so the harness has no finer distinction to make here."""
+    `output` - the last line matching `_PYTEST_SUMMARY_LINE_RE`, never any
+    other line that happens to contain the same words. An error counts as
+    a failure: a fixture error stops a test running under whatever name
+    pytest would otherwise report it failed under, so the harness has no
+    finer distinction to make here."""
+    summary_lines = _PYTEST_SUMMARY_LINE_RE.findall(output or "")
+    if not summary_lines:
+        return 0, 0
     passed = failed = 0
-    for count_str, label in _PYTEST_SUMMARY_COUNT_RE.findall(output or ""):
+    for count_str, label in _PYTEST_SUMMARY_COUNT_RE.findall(summary_lines[-1]):
         count = int(count_str)
         if label == "passed":
             passed = count

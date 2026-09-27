@@ -126,24 +126,32 @@ def test_records_lacking_a_field_show_it_as_not_recorded_never_zero():
     report = compare.build_report([record])
 
     assert "0/1" in report  # completed: absent hidden, so not confirmed complete
+    headers = cells = None
     for line in report.splitlines():
+        if line.startswith("| Condition"):
+            headers = [c.strip() for c in line.split("|")][1:-1]
         if line.startswith("| spec-kit"):
-            cells = [c.strip() for c in line.split("|")][1:-1]
+            cells = dict(zip(headers, [c.strip() for c in line.split("|")][1:-1]))
             break
-    else:
-        raise AssertionError("no spec-kit row in the report")
-    # Condition, Runs and Completed are always given; the other five
-    # measures, with nothing on the one record to read, all read "not
-    # recorded" - never "0" or "0%", which would claim a clean run nobody
-    # actually measured.
-    assert cells[3:] == ["not recorded"] * 5
+    assert cells, "no spec-kit row in the report"
+    # No field on the one record behind this cell was ever carried, for any
+    # column - never "0", "0%" or a silently blank cell, any of which
+    # would claim a clean run, or an agreed value, nobody actually checked.
+    for column in ("Model", "Framework commit", "Hidden-test pass rate",
+                   "Regressions", "Replies sent", "Wall time", "Tokens"):
+        assert cells[column] == "not recorded", column
 
 
 def test_summary_table_lists_condition_totals_side_by_side():
     """The summary pools every scenario's records by condition and reports
     each condition's own totals - it does not rank the conditions against
     one another, so no ordering word or score appears, and the condition
-    columns stay in the order the records first name them."""
+    columns stay in the order the records first name them. Every pooled
+    measure is a total (a sum) or a pooled rate, plainly labelled as such -
+    never the "lowest and highest" spread the per-cell tables use, because
+    a spread there would run across different scenarios, not across
+    repeated executions of the same one, and would read as the same
+    statistic when it is not."""
     records = [
         make_record(scenario="cmp-small-fix", condition="bare",
                     hidden=hidden(passed=1, failed=0), regressions=[],
@@ -165,8 +173,73 @@ def test_summary_table_lists_condition_totals_side_by_side():
     assert "one run" in summary  # compass: pooled to a single run
     assert "1/2" in summary     # bare: one of its two runs completed
     assert "1/1" in summary     # compass: its one run completed
+
+    # bare pools cmp-small-fix (1 passed, 0 failed) and cmp-feature (0
+    # passed, 1 failed) into one pooled rate, not a "0%-100%" spread that
+    # would read as variance across repeated runs of one scenario.
+    assert "50% (pooled)" in summary
+    assert "100% (pooled)" in summary    # compass: its only scenario's rate
+    assert "0%-100%" not in summary
+
+    # wall time and tokens sum across bare's two scenarios (5.0s + 15.0s,
+    # $0.10 + $0.30) rather than spreading across them.
+    assert "20.0s (total)" in summary
+    assert "$0.4000 (total)" in summary
+    assert "5.0s-15.0s" not in summary
+    assert "$0.1000-$0.3000" not in summary
+
+    assert "1 (total)" in summary   # bare: one regressed test, from cmp-feature
     for word in ("rank", "best", "winner", "worst"):
         assert word not in summary.lower()
+
+
+def test_cell_shows_model_and_framework_commit():
+    """A reader comparing conditions needs to know which model, and which
+    framework commit, actually produced a cell's numbers - nothing else in
+    the report says so."""
+    record = make_record(condition="superpowers", model="claude-opus-5-5",
+                          framework={"name": "superpowers",
+                                     "commit": "8ca22dba9a94f28898bbce59f2537ff4d87c747d"})
+    report = compare.build_report([record])
+
+    assert "claude-opus-5-5" in report
+    assert "8ca22dba9a94f28898bbce59f2537ff4d87c747d" in report
+
+
+def test_cell_says_mixed_when_runs_disagree_on_model_or_commit():
+    """Two runs of the same cell that used a different model, or a
+    different framework commit, must not silently report only the first
+    one's value - "mixed" says the cell is not the apples-to-apples
+    comparison it looks like."""
+    first = make_record(condition="spec-kit", model="claude-opus-5-5",
+                         framework={"name": "spec-kit", "commit": "3b895d1"})
+    second = make_record(condition="spec-kit", run=2, model="claude-sonnet-5",
+                          framework={"name": "spec-kit", "commit": "3b895d1"})
+    report = compare.build_report([first, second])
+
+    assert "mixed" in report
+    assert "claude-opus-5-5" not in report
+    assert "claude-sonnet-5" not in report
+    assert "3b895d1" in report  # the commit agrees, so it is not "mixed"
+
+
+def test_cell_reports_no_framework_as_not_recorded():
+    """`bare` and `compass` carry no framework at all -
+    `evals/harness.py` writes `framework: null` for both - so the Model
+    and Framework commit columns read the same "not recorded" any other
+    field a record never carried does."""
+    record = make_record(condition="bare", framework=None)
+    report = compare.build_report([record])
+
+    for line in report.splitlines():
+        if line.startswith("| Condition"):
+            headers = [c.strip() for c in line.split("|")][1:-1]
+        if line.startswith("| bare"):
+            cells = dict(zip(headers, [c.strip() for c in line.split("|")][1:-1]))
+            break
+    else:
+        raise AssertionError("no bare row in the report")
+    assert cells["Framework commit"] == "not recorded"
 
 
 def test_tokens_prefers_an_explicit_token_count_over_cost():

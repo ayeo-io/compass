@@ -1023,7 +1023,7 @@ def test_deleted_git_head_is_recorded_as_not_contained(
         extra_config={"delete_git_head": True},
     )
     assert record["contained"] is False
-    assert "git-config:.git/HEAD" in record["escaped_paths"]
+    assert "git-state:.git/HEAD" in record["escaped_paths"]
 
 
 def test_corrupted_git_head_is_recorded_as_not_contained(
@@ -1037,7 +1037,7 @@ def test_corrupted_git_head_is_recorded_as_not_contained(
         extra_config={"corrupt_git_head": True},
     )
     assert record["contained"] is False
-    assert "git-config:.git/HEAD" in record["escaped_paths"]
+    assert "git-state:.git/HEAD" in record["escaped_paths"]
 
 
 def test_planted_fsmonitor_and_env_probe_never_run_across_a_harness_run(
@@ -2348,6 +2348,62 @@ def test_diff_since_seed_removes_a_planted_git_commondir_and_reports_it(tmp_path
     assert not (repo / ".git" / "commondir").exists()
 
 
+# --- EGA-1: a failed guarded git call is recorded as not contained ---------
+# No pilot record ever left `.git/HEAD` pointing at a ref that does not
+# exist, or deleted `.git/objects` - the smallest fixture for each, built
+# directly against `_diff_since_seed` the way the tampered-config tests
+# above already are. `_git_head_is_valid` accepts `.git/HEAD` here because
+# it only checks the line starts with `ref:`, so `_run_guarded_git` lets
+# the real git call through in both cases; only its exit code shows the
+# repository is unusable.
+
+def test_diff_since_seed_records_a_head_pointing_nowhere_as_not_contained(tmp_path):
+    """`.git/HEAD` reads `ref: garbage` - a line that starts with `ref:`, so
+    `_git_head_is_valid` calls it fine, but git itself refuses every call
+    against it. `_diff_since_seed` read only `.stdout` before this change,
+    so a refused `git add -A` and `git diff` left `changed_paths` empty and
+    the run passed as contained instead of failing it."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "seed.txt").write_text("original\n", encoding="utf-8")
+    env = dict(os.environ)
+    seed_commit = harness._git_init_and_commit(repo, env)
+    seed_git_snapshot = harness._snapshot_git_config(repo)
+    (repo / ".git" / "HEAD").write_text("ref: garbage\n", encoding="utf-8")
+
+    tampered_paths: list[str] = []
+    diff, changed_paths, changed = harness._diff_since_seed(
+        repo, seed_commit, env, seed_git_snapshot, tampered_paths)
+
+    assert tampered_paths
+    assert changed_paths == []
+    assert changed == []
+    assert diff == ""
+
+
+def test_diff_since_seed_records_deleted_git_objects_as_not_contained(tmp_path):
+    """`.git/HEAD` is untouched and valid; `.git/objects` is gone. Every
+    guarded git call in `_diff_since_seed` fails for that reason alone, and
+    the run must be recorded as not contained the same way a broken
+    `.git/HEAD` already is."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "seed.txt").write_text("original\n", encoding="utf-8")
+    env = dict(os.environ)
+    seed_commit = harness._git_init_and_commit(repo, env)
+    seed_git_snapshot = harness._snapshot_git_config(repo)
+    shutil.rmtree(repo / ".git" / "objects")
+
+    tampered_paths: list[str] = []
+    diff, changed_paths, changed = harness._diff_since_seed(
+        repo, seed_commit, env, seed_git_snapshot, tampered_paths)
+
+    assert tampered_paths
+    assert changed_paths == []
+    assert changed == []
+    assert diff == ""
+
+
 def test_global_gitconfig_filter_never_runs_in_the_session_repository(tmp_path):
     """A filter named only in `$HOME/.gitconfig`, selected by a
     `.gitattributes` the session's own repository carries - the harness
@@ -2376,6 +2432,30 @@ def test_global_gitconfig_filter_never_runs_in_the_session_repository(tmp_path):
     harness._diff_since_seed(repo, seed_commit, env, seed_git_snapshot, tampered_paths)
 
     assert not marker.exists()
+
+
+# --- EGA-5: .git/HEAD is a git-state label, and the None-path is safe ------
+
+def test_is_compass_own_record_returns_false_for_none():
+    """`evals/judge.py` imports this function rather than keeping its own
+    copy (EJG-5); every caller there already guards a falsy path before
+    calling it, but a future one that passes `None` straight through must
+    not crash - it names no record of anything, so the answer is `False`."""
+    assert harness._is_compass_own_record(None) is False
+
+
+# --- EGA-6: a comment states the rule, not the module's own history -------
+
+def test_compass_own_record_paths_comment_says_the_judge_imports_it():
+    """The comment above `_COMPASS_OWN_RECORD_PATHS` said `evals/judge.py`
+    "keeps its own copy of the same definition" - untrue since EJG-5 made
+    the judge import this module's function instead of defining its own.
+    It must say this is the one definition and that the judge imports
+    it."""
+    source = Path(harness.__file__).read_text(encoding="utf-8")
+    assert "keeps its own copy" not in source
+    assert "the one definition" in source
+    assert "imports it" in source
 
 
 # --- 17. a failed `compass init` is an error, never a silent empty run ------

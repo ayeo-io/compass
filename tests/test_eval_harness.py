@@ -17,6 +17,7 @@ from __future__ import annotations
 import ast
 import json
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -1307,10 +1308,12 @@ def test_allow_list_matches_the_documented_tools_exactly():
     caught by `no_evidence_tampering` - and `head`, `tail` and `grep`, the
     other read-only commands those same commands use against the plugin
     copy. `.specify/scripts/bash/*` gives Spec Kit's own installed skills
-    standing, `${CLAUDE_PLUGIN_ROOT}/skills/.../scripts/*` gives
-    Superpowers' own the same, and `git checkout -b`/`git switch -c` let a
-    session start the feature branch `executing-plans` asks for before
-    working on the seed's own default branch."""
+    standing, and `git checkout -b`/`git switch -c` let a session start
+    the feature branch `executing-plans` asks for before working on the
+    seed's own default branch. Superpowers' own five script rules are not
+    on this static list - `_common_claude_args` builds them at run time
+    with that run's own real directory, read by
+    `test_allow_list_gives_superpowers_its_own_bundled_scripts`."""
     assert harness.ALLOWED_TOOLS == (
         "Read", "Write", "Edit", "Skill", "Agent",
         "Bash(python3 -m pytest:*)", "Bash(python -m pytest:*)", "Bash(pytest:*)",
@@ -1323,11 +1326,6 @@ def test_allow_list_matches_the_documented_tools_exactly():
         "Bash(.specify/scripts/bash/setup-plan.sh:*)",
         "Bash(.specify/scripts/bash/setup-tasks.sh:*)",
         "Bash(.specify/scripts/bash/resolve-template.sh:*)",
-        "Bash(${CLAUDE_PLUGIN_ROOT}/skills/subagent-driven-development/scripts/sdd-workspace:*)",
-        "Bash(${CLAUDE_PLUGIN_ROOT}/skills/subagent-driven-development/scripts/task-brief:*)",
-        "Bash(${CLAUDE_PLUGIN_ROOT}/skills/subagent-driven-development/scripts/review-package:*)",
-        "Bash(${CLAUDE_PLUGIN_ROOT}/skills/executing-plans/scripts/task-start:*)",
-        "Bash(${CLAUDE_PLUGIN_ROOT}/skills/executing-plans/scripts/task-done:*)",
     )
     assert "Bash(python3:*)" not in harness.ALLOWED_TOOLS
     assert "Bash(git:*)" not in harness.ALLOWED_TOOLS
@@ -3056,12 +3054,15 @@ def test_allow_list_gives_spec_kit_its_own_bundled_scripts():
 def test_allow_list_gives_superpowers_its_own_bundled_scripts():
     """`subagent-driven-development` runs `sdd-workspace`, `review-package`
     <!-- vocabulary-scan: allow - names Superpowers' own real scripts, not a retired word --> and `task-brief`; `executing-plans` runs `task-start` and `task-done` -
-    read from both skills' own `SKILL.md` at the pinned commit. Each script
-    runs from an absolute path under the plugin's own root, which sits at
-    a different, freshly built location every run, so the entry names it
-    under `${CLAUDE_PLUGIN_ROOT}` - Claude Code's own name for that root -
-    the same variable Compass's own `hooks/hooks.json` already relies on
-    for the same reason."""
+    read from both skills' own `SKILL.md` at the pinned commit. A real
+    session refused `${CLAUDE_PLUGIN_ROOT}` inside a Bash allow rule -
+    Claude Code does not expand it there - so each rule is built at run
+    time with the real absolute path of the directory the harness made
+    for that run, named `superpowers_scripts_dir` after the parameter
+    `_common_claude_args` reads it from."""
+    scripts_dir = Path("/tmp/this-runs-own-superpowers-directory")
+    args = harness._common_claude_args("bare", None, None, scripts_dir)
+    allow_list = args[args.index("--allowedTools") + 1].split(",")
     for skill, script in (
         ("subagent-driven-development", "sdd-workspace"),
         ("subagent-driven-development", "task-brief"),
@@ -3069,8 +3070,7 @@ def test_allow_list_gives_superpowers_its_own_bundled_scripts():
         ("executing-plans", "task-start"),
         ("executing-plans", "task-done"),
     ):
-        assert (f"Bash(${{CLAUDE_PLUGIN_ROOT}}/skills/{skill}/scripts/{script}:*)"
-                in harness.ALLOWED_TOOLS)
+        assert f"Bash({scripts_dir}/skills/{skill}/scripts/{script}:*)" in allow_list
 
 
 def test_allow_list_lets_a_session_start_a_feature_branch():
@@ -3090,14 +3090,32 @@ def test_allow_list_gives_every_condition_the_agent_tool():
     assert "Agent" in harness.ALLOWED_TOOLS
 
 
+# Every framework-script rule's own absolute path, replaced with one fixed
+# placeholder - a fresh directory the harness builds for the run, real and
+# distinct every time (`tempfile.mkdtemp()`, or the superpowers condition's
+# own `--plugin-dir` copy), is the one part of the allow-list this file
+# documents as allowed to differ from run to run and condition to
+# condition.
+_SUPERPOWERS_SCRIPT_RULE_RE = re.compile(
+    r"Bash\([^,]*?/skills/(subagent-driven-development|executing-plans)/scripts/")
+
+
+def _normalise_superpowers_script_paths(allow_list: str) -> str:
+    return _SUPERPOWERS_SCRIPT_RULE_RE.sub(r"Bash(<DIR>/skills/\1/scripts/", allow_list)
+
+
 def test_every_conditions_allow_list_is_identical(
     tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
 ):
-    """`ALLOWED_TOOLS` is the one list every condition passes through
-    `_common_claude_args` unconditionally - this runs all four and reads
-    each one's own `--allowedTools` argument back, so the claim is proved
-    against what the harness actually sends, not only against the shared
-    constant every condition happens to read from today."""
+    """Every condition passes through `_common_claude_args` unconditionally
+    - this runs all four and reads each one's own `--allowedTools`
+    argument back, so the claim is proved against what the harness
+    actually sends, not only against a shared constant. The five
+    Superpowers-script rules carry that run's own real directory - a
+    different one for every condition, none of them Superpowers' own
+    `--plugin-dir` copy except the superpowers condition's - so those five
+    are normalised to one placeholder before the comparison; everything
+    else must already be byte-identical."""
     framework_source = _write_framework_repo(tmp_path / "identical-source")
     commit = _framework_repo_head(framework_source)
     frameworks_config = _write_frameworks_config_yaml(tmp_path, {
@@ -3115,9 +3133,48 @@ def test_every_conditions_allow_list_is_identical(
             frameworks_config=frameworks_config,
         )
         args = calls[0]["args"]
-        allow_lists[condition] = args[args.index("--allowedTools") + 1]
+        raw = args[args.index("--allowedTools") + 1]
+        # The raw lists must actually differ - otherwise the placeholder
+        # substitution below is proving nothing.
+        allow_lists[f"{condition}-raw"] = raw
+        allow_lists[condition] = _normalise_superpowers_script_paths(raw)
 
-    assert len(set(allow_lists.values())) == 1, allow_lists
+    raw_values = {v for k, v in allow_lists.items() if k.endswith("-raw")}
+    assert len(raw_values) > 1, "the raw allow-lists were already identical"
+    normalised_values = {v for k, v in allow_lists.items() if not k.endswith("-raw")}
+    assert len(normalised_values) == 1, allow_lists
+
+
+def test_superpowers_runs_rules_name_its_own_plugin_copys_absolute_path(
+    tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
+):
+    """The superpowers condition's five Superpowers-script rules must name
+    the exact directory passed as `--plugin-dir` - not a placeholder, and
+    not some other run's own directory - since that is the one path Claude
+    Code will actually resolve `scripts/sdd-workspace` and the rest
+    against."""
+    framework_source = _write_framework_repo(tmp_path / "own-path-source")
+    commit = _framework_repo_head(framework_source)
+    frameworks_config = _write_frameworks_config_yaml(tmp_path, {
+        "superpowers": {"repo": "https://example.invalid/superpowers", "commit": commit},
+    }, name="frameworks-own-path.yml")
+
+    calls, _, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "superpowers", monkeypatch,
+        plugin_source_dir, framework_source=framework_source,
+        frameworks_config=frameworks_config,
+    )
+    args = calls[0]["args"]
+    plugin_dir = args[args.index("--plugin-dir") + 1]
+    allow_list = args[args.index("--allowedTools") + 1].split(",")
+    for skill, script in (
+        ("subagent-driven-development", "sdd-workspace"),
+        ("subagent-driven-development", "task-brief"),
+        ("subagent-driven-development", "review-package"),
+        ("executing-plans", "task-start"),
+        ("executing-plans", "task-done"),
+    ):
+        assert f"Bash({plugin_dir}/skills/{skill}/scripts/{script}:*)" in allow_list
 
 
 def test_superpowers_condition_gets_add_dir_for_its_framework_copy():
@@ -3127,7 +3184,8 @@ def test_superpowers_condition_gets_add_dir_for_its_framework_copy():
     the same standing - `_common_claude_args` is the one function that
     builds this list, so a unit test against it is enough; the end-to-end
     check lives in the superpowers condition test above."""
-    args = harness._common_claude_args("superpowers", None, Path("/tmp/framework-copy"))
+    args = harness._common_claude_args(
+        "superpowers", None, Path("/tmp/framework-copy"), Path("/tmp/framework-copy"))
     assert "--add-dir" in args
     assert args[args.index("--add-dir") + 1] == str(Path("/tmp/framework-copy"))
 
@@ -3135,13 +3193,15 @@ def test_superpowers_condition_gets_add_dir_for_its_framework_copy():
 # --- 20d. the model is pinned for every condition (the model pin) -----------
 
 def test_every_condition_pins_the_same_model():
+    scripts_dir = Path("/tmp/model-test-superpowers-scripts")
     for condition, plugin_copy_dir, framework_copy_dir in (
         ("bare", None, None),
         ("compass", Path("/tmp/plugin-copy"), None),
         ("superpowers", None, Path("/tmp/framework-copy")),
         ("spec-kit", None, Path("/tmp/framework-copy")),
     ):
-        args = harness._common_claude_args(condition, plugin_copy_dir, framework_copy_dir)
+        args = harness._common_claude_args(
+            condition, plugin_copy_dir, framework_copy_dir, scripts_dir)
         assert "--model" in args, condition
         assert args[args.index("--model") + 1] == harness._PINNED_CLAUDE_MODEL
 

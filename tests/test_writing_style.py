@@ -380,6 +380,17 @@ def _is_excluded(rel: str) -> bool:
 
 _FIXTURE_PREFIX = "tests/fixtures/writing-style/"
 
+# Other frameworks' own records, which the eval scenario `cmp-resume` gives a
+# session under Superpowers or Spec Kit in the words that framework writes.
+# Compass's writing rules must not rewrite them, and an allow marker would
+# appear in the text the session reads, so they are left out by name.
+_OTHER_FRAMEWORKS_RECORDS = (
+    "evals/scenarios/cmp-resume/seed_superpowers/docs/superpowers/plans/"
+    "2026-09-27-grade-summary.md",
+    "evals/scenarios/cmp-resume/seed_spec_kit/specs/001-grade-summary/spec.md",
+    "evals/scenarios/cmp-resume/seed_spec_kit/specs/001-grade-summary/tasks.md",
+)
+
 
 def scanned_paths() -> list[Path]:
     """Every tracked path, minus `EXCLUDED_PATHS`, minus this mechanism's own
@@ -389,7 +400,8 @@ def scanned_paths() -> list[Path]:
     a real, unfixed finding."""
     return [REPO_ROOT / rel for rel in _git_ls_files()
             if not _is_excluded(rel)
-            and not rel.startswith(_FIXTURE_PREFIX)]
+            and not rel.startswith(_FIXTURE_PREFIX)
+            and rel not in _OTHER_FRAMEWORKS_RECORDS]
 
 
 # ---------------------------------------------------------------------------
@@ -4834,3 +4846,15 @@ def test_pbw_c4_the_stage_key_rename_block_has_a_marker():
         "the stage-key rename block's opening phrase must be a named "
         "marker, the same as the vocabulary-rename block's")
 
+
+
+def test_other_frameworks_records_are_left_out_and_nothing_else_is():
+    """The three records `cmp-resume` gives Superpowers and Spec Kit are in
+    those frameworks' own words, so no Compass writing rule reads them; every
+    other file under `evals/scenarios/` is still scanned."""
+    scanned = {str(p.relative_to(REPO_ROOT)) for p in scanned_paths()}
+    for rel in _OTHER_FRAMEWORKS_RECORDS:
+        assert rel not in scanned, rel
+    tracked = [r for r in _git_ls_files() if r.startswith("evals/scenarios/")]
+    left_out = [r for r in tracked if r not in scanned]
+    assert sorted(left_out) == sorted(_OTHER_FRAMEWORKS_RECORDS), left_out

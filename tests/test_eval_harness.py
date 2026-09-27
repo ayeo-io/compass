@@ -931,6 +931,7 @@ def test_run_record_has_every_field_from_the_design(
     for call in record["tool_calls"]:
         assert set(call.keys()) == {
             "index", "name", "input", "is_error", "denied", "output",
+            "tool_use_id",
         }
         assert call["denied"] is False
     assert record["tool_calls"][0]["name"] == "Read"
@@ -1020,6 +1021,31 @@ def test_denied_flag_from_permission_denials_and_from_a_refusal_message(
     assert by_name["Edit"]["is_error"] is True
     assert by_name["Read"]["denied"] is False
     assert record["permission_denials"]
+
+
+def test_tool_calls_carry_the_tool_use_id_the_fake_claude_gave_them(
+    tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
+):
+    """The judge matches a permission denial to its tool call by
+    `tool_use_id`, never by position - so the id `_consume_events` reads off
+    each `tool_result` event must reach the record, not be dropped once
+    `_finalise_tool_calls` has used it to set `denied`."""
+    _, record, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "bare", monkeypatch,
+        plugin_source_dir, out_suffix="-tool-use-id",
+        extra_config={"deny_tool": "Edit"},
+    )
+    by_name = {call["name"]: call for call in record["tool_calls"]}
+    assert by_name["Read"]["tool_use_id"] == "toolu_1"
+    assert by_name["Edit"]["tool_use_id"] == "toolu_2"
+
+    denied_call = by_name["Edit"]
+    assert denied_call["denied"] is True
+    denial_ids = {
+        (entry.get("tool_use_id") if isinstance(entry, dict) else entry)
+        for entry in record["permission_denials"]
+    }
+    assert denied_call["tool_use_id"] in denial_ids
 
 
 def test_each_run_starts_from_a_fresh_repository_with_only_the_seed(

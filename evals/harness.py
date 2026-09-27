@@ -477,7 +477,7 @@ def _consume_events(output: str, state: dict[str, Any]) -> str:
                     call["is_error"] = bool(block.get("is_error", False))
                     call["output"] = _head_and_tail(
                         _stringify_tool_output(block.get("content", "")))
-                    call["_tool_use_id"] = tool_use_id
+                    call["tool_use_id"] = tool_use_id
                     state["tool_calls"].append(call)
         elif kind == "result":
             state["session_id"] = event.get("session_id") or state["session_id"]
@@ -492,7 +492,8 @@ def _consume_events(output: str, state: dict[str, Any]) -> str:
 def _finalise_tool_calls(state: dict[str, Any]) -> None:
     """Mark each tool call `denied` once every invocation's events are in,
     since `permission_denials` and the refusal wording it corroborates both
-    arrive after the calls they describe."""
+    arrive after the calls they describe. `tool_use_id` stays on the call:
+    the judge matches a denial to its call by that id, never by position."""
     denied_ids: set[str] = set()
     for entry in state["permission_denials"]:
         tool_use_id = (entry.get("tool_use_id") or entry.get("id")
@@ -500,7 +501,7 @@ def _finalise_tool_calls(state: dict[str, Any]) -> None:
         if tool_use_id:
             denied_ids.add(tool_use_id)
     for call in state["tool_calls"]:
-        tool_use_id = call.pop("_tool_use_id", None)
+        tool_use_id = call.get("tool_use_id")
         call["denied"] = bool(
             tool_use_id in denied_ids
             or _looks_like_permission_refusal(call.get("output", ""))

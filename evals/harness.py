@@ -1,7 +1,9 @@
 """Run one eval scenario under one condition and write a run record.
 
-    python3 evals/harness.py --scenario <id> --condition compass|bare \\
-        [--runs N] [--out DIR] [--claude PATH] [--plugin-source DIR]
+    python3 evals/harness.py --scenario <id> \\
+        --condition compass|bare|superpowers|spec-kit \\
+        [--runs N] [--out DIR] [--claude PATH] [--plugin-source DIR] \\
+        [--framework-source DIR] [--uvx PATH]
 
 For each run this copies the scenario's seed (and the condition's own
 overlay, if the scenario has one) into a fresh temporary git repository,
@@ -26,6 +28,25 @@ a built environment, not an inherited one - no `CLAUDE*` variable and no
 installed plugin's `bin/` reach it - so a run cannot fall back to whatever
 `compass` happens to be on the machine that started it.
 
+Under the `superpowers` condition the session loads a read-only copy of
+`evals/frameworks.yml`'s pinned Superpowers commit as `--plugin-dir` - built
+fresh, once per harness call, from a clone of that pin, or from
+`--framework-source`, a local directory a test points here instead so no
+call here ever reaches the network. Under the `spec-kit` condition the same
+kind of copy's own `specify init` seeds the repository for Claude, through
+`uvx`, before the seed commit - the same position `compass init` runs
+`bin/compass init` in for the compass condition. Either way the run
+record's `framework` field names the condition and the commit the copy was
+actually built from; for `compass` and `bare` it is `None`.
+
+A scenario that holds `hidden_tests/` gets it copied into the repository
+only once the session has ended - never before, so a session can never read
+it - and the scenario's own `hidden_command` run against it, recorded as
+`hidden: {command, exit_code, passed, failed}`. The seed's own test command
+runs again at that point too, once more than usual, and every test it
+names that passed before the session ran and does not pass now is recorded
+in `regressions`. A scenario with no `hidden_tests/` gets `None` for both.
+
 `--scenario` takes a scenario id, resolved against `evals/scenarios/<id>/`.
 It also accepts a path to a scenario directory directly, which this
 repository's own tests use to build a scenario fixture without depending on
@@ -33,7 +54,8 @@ the tracked `evals/scenarios/` tree.
 
 Nothing here calls a real model: `--claude` names the executable, so a test
 can point it at a stand-in that prints a canned run and records its own
-arguments and environment.
+arguments and environment. `--uvx` names spec-kit's own installer the same
+way.
 """
 from __future__ import annotations
 
@@ -53,7 +75,7 @@ import time
 import types
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -136,7 +158,20 @@ def load_scenario(scenario_dir: Path) -> dict[str, Any]:
     data = load_yaml(str(path))
     data.setdefault("follow_ups", [])
     data.setdefault("test_command", _DEFAULT_TEST_COMMAND)
+    # A scenario that carries `hidden_tests/` without naming its own
+    # `hidden_command` runs the same command its seed's own tests do,
+    # against whatever `hidden_tests/` added.
+    data.setdefault("hidden_command", data["test_command"])
     return data
+
+
+def load_frameworks_config(path: Path | None = None) -> dict[str, Any]:
+    """`evals/frameworks.yml` through the shared loader - each condition
+    name (`superpowers`, `spec-kit`) mapped to its own pinned `repo` and
+    `commit`. Never called for a run that names `--framework-source`
+    instead: a test that never reaches the network points there and never
+    reaches this function at all."""
+    return load_yaml(str(path or (REPO_ROOT / "evals" / "frameworks.yml")))
 
 
 # --- the one function every git call in this module runs through -----------
@@ -243,18 +278,22 @@ def _plugin_copy_excluded(rel_path: str) -> bool:
     return False
 
 
-def _make_plugin_copy(source: Path, dest: Path, env: dict[str, str]) -> None:
-    """Build the plugin copy from `source`'s own git objects at `HEAD` -
-    `git ls-tree -r HEAD` for the tracked list, `git cat-file blob` for
-    each file's own bytes - never `git archive` or a checkout of a working
-    tree, so a smudge filter named in `source`'s own `.gitattributes` and
+def _copy_git_tree_read_only(source: Path, dest: Path, env: dict[str, str], *,
+                              excluded: Callable[[str], bool] = lambda rel_path: False
+                              ) -> None:
+    """Build `dest` from `source`'s own git objects at `HEAD` - `git ls-tree
+    -r HEAD` for the tracked list, `git cat-file blob` for each file's own
+    bytes - never `git archive` or a checkout of a working tree, so a
+    smudge filter named in `source`'s own `.gitattributes` and
     `.git/config` never runs: `cat-file blob` returns the object exactly as
-    git stored it, with no filter applied. Leaves out the paths
-    `_plugin_copy_excluded` names, and makes every remaining path
-    read-only, so no session - real or fake - can change this copy, or the
-    fixture standing in for it under test. A session can still change this
-    checkout itself, through its own code such as a planted `conftest.py`;
-    only the copy handed to it is protected here."""
+    git stored it, with no filter applied. Leaves out every path `excluded`
+    names, and makes every remaining path read-only, so no session - real
+    or fake - can change the copy, or the fixture standing in for one
+    under test. A session can still change `source` itself, through its
+    own code such as a planted `conftest.py`; only the copy handed to it
+    is protected here. `_make_plugin_copy` and `_prepare_framework_copy`
+    are this function's own two callers, one per kind of read-only copy
+    this module builds."""
     dest.mkdir(parents=True, exist_ok=True)
     listing = _run_git(["ls-tree", "-r", "-z", "--full-tree", "HEAD"], source, env)
     if listing.returncode != 0:
@@ -264,7 +303,7 @@ def _make_plugin_copy(source: Path, dest: Path, env: dict[str, str]) -> None:
         if not entry:
             continue
         meta, rel_path = entry.split("\t", 1)
-        if _plugin_copy_excluded(rel_path):
+        if excluded(rel_path):
             continue
         mode, obj_type, sha = meta.split(" ")
         if obj_type != "blob":
@@ -281,6 +320,12 @@ def _make_plugin_copy(source: Path, dest: Path, env: dict[str, str]) -> None:
             dest_path.chmod(dest_path.stat().st_mode
                              | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
     _make_read_only(dest)
+
+
+def _make_plugin_copy(source: Path, dest: Path, env: dict[str, str]) -> None:
+    """The compass condition's own plugin copy: `_copy_git_tree_read_only`,
+    leaving out the paths `_plugin_copy_excluded` names."""
+    _copy_git_tree_read_only(source, dest, env, excluded=_plugin_copy_excluded)
 
 
 def _make_read_only(root: Path) -> None:
@@ -317,6 +362,91 @@ def _run_compass_init(plugin_copy_dir: Path, repo_dir: Path,
         stderr = result.stderr.strip()
         raise SystemExit(
             f"compass init failed in {repo_dir} (exit {result.returncode}): {stderr}")
+
+
+def _run_specify_init(uvx_exe: str, framework_copy_dir: Path, repo_dir: Path,
+                       env: dict[str, str]) -> None:
+    """Run Spec Kit's own `specify init` for Claude in the seed, through
+    `uvx` from the pinned commit's read-only copy - before the seed commit,
+    the same position `_run_compass_init` runs `compass init` in for the
+    compass condition. `--here` targets `repo_dir` itself rather than
+    creating a new one inside it; `--non-interactive --force
+    --ignore-agent-tools` make it run to completion with no prompt and no
+    check for a real `claude` binary, which the harness's own `--claude`
+    may not even be. A failure here would give a spec-kit run seeded with
+    nothing spec-kit itself wrote, where the condition silently measures
+    the bare condition instead - the same silent-empty-seed mistake
+    `_run_compass_init` already refuses, so this refuses the same way."""
+    result = subprocess.run(
+        [uvx_exe, "--from", str(framework_copy_dir), "specify", "init",
+         "--here", "--integration", "claude", "--non-interactive", "--force",
+         "--ignore-agent-tools"],
+        cwd=str(repo_dir), env=env, capture_output=True, text=True,
+        stdin=subprocess.DEVNULL)
+    if result.returncode != 0:
+        stderr = result.stderr.strip()
+        raise SystemExit(
+            f"specify init failed in {repo_dir} (exit {result.returncode}): {stderr}")
+
+
+# --- the framework copy (superpowers, spec-kit) -----------------------------
+
+def _framework_source_dir(condition: str, framework_source_override: Path | None,
+                           frameworks_config: dict[str, Any], env: dict[str, str]
+                           ) -> tuple[Path, bool]:
+    """The directory holding `condition`'s framework at its own `HEAD` -
+    `framework_source_override` directly, when a test gave one, so nothing
+    here ever reaches the network; otherwise a fresh clone of
+    `evals/frameworks.yml`'s pinned repository and commit for `condition`,
+    through `_run_git`, into a temporary directory the caller must remove.
+    Returns the directory and whether it is this call's own temporary clone
+    (`True`, the caller's to remove) or the caller's own override (`False`,
+    never removed here)."""
+    if framework_source_override is not None:
+        return framework_source_override, False
+    entry = frameworks_config.get(condition)
+    if not entry:
+        raise SystemExit(f"no {condition!r} entry in evals/frameworks.yml")
+    clone_dir = Path(tempfile.mkdtemp())
+    clone_result = _run_git(["clone", "--quiet", entry["repo"], str(clone_dir)],
+                             REPO_ROOT, env)
+    if clone_result.returncode != 0:
+        shutil.rmtree(clone_dir, ignore_errors=True)
+        raise SystemExit(
+            f"git clone failed for {entry['repo']}: {clone_result.stderr.strip()}")
+    checkout_result = _run_git(["checkout", "--quiet", entry["commit"]], clone_dir, env)
+    if checkout_result.returncode != 0:
+        shutil.rmtree(clone_dir, ignore_errors=True)
+        raise SystemExit(
+            f"git checkout {entry['commit']} failed in {clone_dir}: "
+            f"{checkout_result.stderr.strip()}")
+    return clone_dir, True
+
+
+def _prepare_framework_copy(condition: str, framework_source_override: Path | None,
+                             frameworks_config: dict[str, Any], env: dict[str, str]
+                             ) -> tuple[Path | None, str | None]:
+    """Once per harness call: `(None, None)` for a condition that loads no
+    framework; otherwise a read-only copy of that framework at its own
+    `HEAD`, outside this checkout (`_copy_git_tree_read_only`, with no path
+    excluded - a framework carries none of this repository's own scenario
+    or behaviour names to protect), and the commit the copy was built
+    from. `superpowers` passes the copy on as `--plugin-dir`
+    (`_common_claude_args`); `spec-kit` runs `specify init` from it
+    (`_run_specify_init`); the run record carries the commit either way
+    (`framework: {name, commit}`)."""
+    if condition not in ("superpowers", "spec-kit"):
+        return None, None
+    source_dir, is_temporary = _framework_source_dir(
+        condition, framework_source_override, frameworks_config, env)
+    try:
+        commit = _run_git(["rev-parse", "HEAD"], source_dir, env).stdout.strip()
+        copy_dir = Path(tempfile.mkdtemp())
+        _copy_git_tree_read_only(source_dir, copy_dir, env)
+    finally:
+        if is_temporary:
+            shutil.rmtree(source_dir, ignore_errors=True)
+    return copy_dir, commit
 
 
 # The pre-tool hook's refusal quotes `.compass/config.yml`'s
@@ -384,12 +514,15 @@ def _copy_tracked_files(source_dir: Path, dest_dir: Path, env: dict[str, str]) -
 
 def _materialise_repo(scenario_dir: Path, condition: str, repo_dir: Path,
                        plugin_copy_dir: Path | None,
+                       framework_copy_dir: Path | None, uvx_exe: str,
                        child_env: dict[str, str]) -> None:
-    """Copy the seed's own git-tracked files, run the plugin copy's `compass
-    init` for the compass condition and backdate the setup date it records,
-    then lay the condition's own overlay over the result - in that order, so
-    the overlay can add to what init already wrote and all of it is part of
-    the seed commit, not a change the session made."""
+    """Copy the seed's own git-tracked files, then seed the condition's own
+    state before the seed commit - the compass condition runs the plugin
+    copy's `compass init` and backdates the setup date it records; the
+    spec-kit condition runs the framework copy's own `specify init` - then
+    lay the condition's own overlay over the result. In that order, so the
+    overlay can add to what init already wrote and all of it is part of the
+    seed commit, not a change the session made."""
     seed_dir = scenario_dir / "seed"
     if not seed_dir.is_dir():
         raise SystemExit(f"no seed/ directory under {scenario_dir}")
@@ -400,8 +533,15 @@ def _materialise_repo(scenario_dir: Path, condition: str, repo_dir: Path,
             raise SystemExit("compass condition needs a plugin copy")
         _run_compass_init(plugin_copy_dir, repo_dir, child_env)
         _backdate_setup_date(repo_dir)
+    elif condition == "spec-kit":
+        if framework_copy_dir is None:
+            raise SystemExit("spec-kit condition needs a framework copy")
+        _run_specify_init(uvx_exe, framework_copy_dir, repo_dir, child_env)
 
-    overlay_name = "seed_compass" if condition == "compass" else "seed_bare"
+    # One overlay directory per condition - "seed_compass", "seed_bare",
+    # "seed_superpowers", "seed_spec_kit" - each optional; a scenario that
+    # carries none for a condition seeds it from `seed/` alone.
+    overlay_name = f"seed_{condition.replace('-', '_')}"
     overlay_dir = scenario_dir / overlay_name
     if overlay_dir.is_dir():
         _copy_tracked_files(overlay_dir, repo_dir, child_env)
@@ -613,7 +753,8 @@ def _claude_version(claude_exe: str, env: dict[str, str]) -> str:
     return proc.stdout.strip()
 
 
-def _common_claude_args(condition: str, plugin_copy_dir: Path | None
+def _common_claude_args(condition: str, plugin_copy_dir: Path | None,
+                         framework_copy_dir: Path | None = None
                          ) -> list[str]:
     args = [
         "--output-format", "stream-json",
@@ -630,6 +771,11 @@ def _common_claude_args(condition: str, plugin_copy_dir: Path | None
         # outside the temporary repository `--plugin-dir` alone does not
         # widen.
         args += ["--plugin-dir", str(plugin_copy_dir), "--add-dir", str(plugin_copy_dir)]
+    elif condition == "superpowers":
+        # Superpowers passes as `--plugin-dir` directly - the copy carries
+        # its own `.claude-plugin/plugin.json` at its root, the same shape
+        # `--plugin-dir` already expects for the compass condition.
+        args += ["--plugin-dir", str(framework_copy_dir)]
     return args
 
 
@@ -670,9 +816,23 @@ def _looks_like_permission_refusal(output: str) -> bool:
 def _new_run_state() -> dict[str, Any]:
     return {
         "tool_calls": [], "counter": 0, "session_id": None, "cost_usd": 0.0,
-        "texts": [], "permission_denials": [], "subtypes": [],
+        "tokens": 0, "texts": [], "permission_denials": [], "subtypes": [],
         "cwd": None, "model": None, "stderr": "",
     }
+
+
+# The four `usage` fields a `result` event's own accounting carries - input,
+# output, and the two cache categories - summed into the run's own `tokens`
+# total. Every one of them, not just input and output: a cache write or a
+# cache read is still a token the call spent.
+_USAGE_TOKEN_FIELDS = (
+    "input_tokens", "output_tokens",
+    "cache_creation_input_tokens", "cache_read_input_tokens",
+)
+
+
+def _usage_tokens(usage: dict[str, Any]) -> int:
+    return sum(int(usage.get(field) or 0) for field in _USAGE_TOKEN_FIELDS)
 
 
 def _consume_events(output: str, state: dict[str, Any]) -> str:
@@ -729,6 +889,7 @@ def _consume_events(output: str, state: dict[str, Any]) -> str:
             if "result" in event:
                 final_text = event["result"]
             state["cost_usd"] += float(event.get("total_cost_usd") or 0.0)
+            state["tokens"] += _usage_tokens(event.get("usage") or {})
             state["permission_denials"].extend(event.get("permission_denials") or [])
             state["subtypes"].append(event.get("subtype"))
     return final_text
@@ -915,13 +1076,82 @@ def _diff_since_seed(repo_dir: Path, seed_commit: str, env: dict[str, str],
     return diff, changed_paths, changed
 
 
-def _run_test_command(test_command: str, repo_dir: Path, env: dict[str, str]) -> int:
+def _run_test_command(test_command: str, repo_dir: Path, env: dict[str, str]
+                       ) -> tuple[int, str]:
     """Runs with the environment built for the session, never `os.environ` -
     this command runs the seed's own tests plus anything a session edited or
-    added, such as a `conftest.py`."""
+    added, such as a `conftest.py`. Returns the exit code and the command's
+    own combined stdout and stderr - `_pytest_summary_counts` and
+    `_pytest_outcomes` (CMP-2) read the output; a caller that wants only the
+    exit code discards it."""
     proc = subprocess.run(shlex.split(test_command), cwd=str(repo_dir), env=env,
                            capture_output=True, text=True)
-    return proc.returncode
+    return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
+
+
+# --- hidden tests and regressions (CMP-2) ------------------------------------
+
+# pytest's own final summary line, for example "1 failed, 4 passed in
+# 0.12s" - read here for the hidden test run's own `passed`/`failed`
+# counts, the same line `evals/judge.py`'s `_PYTEST_SUMMARY_FAIL_RE` already
+# reads to decide only whether a run failed at all.
+_PYTEST_SUMMARY_COUNT_RE = re.compile(r"\b(\d+) (passed|failed|error|errors)\b")
+
+
+def _pytest_summary_counts(output: str) -> tuple[int, int]:
+    """`(passed, failed)` read from pytest's own final summary line in
+    `output`. An error counts as a failure: a fixture error stops a test
+    running under whatever name pytest would otherwise report it failed
+    under, so the harness has no finer distinction to make here."""
+    passed = failed = 0
+    for count_str, label in _PYTEST_SUMMARY_COUNT_RE.findall(output or ""):
+        count = int(count_str)
+        if label == "passed":
+            passed = count
+        else:
+            failed += count
+    return passed, failed
+
+
+# pytest's own short test summary line, printed once per test when `-rA`
+# asks for every outcome rather than only a failure's - for example
+# "PASSED test_seed::test_a" or "FAILED test_seed::test_b - AssertionError".
+# Read only from a command `_seed_test_command_with_report` augmented: an
+# ordinary `-q` run never prints these lines, so `_pytest_outcomes` reads
+# nothing from one.
+_PYTEST_SHORT_SUMMARY_RE = re.compile(r"^(PASSED|FAILED|ERROR)\s+(\S+)", re.MULTILINE)
+
+
+def _pytest_outcomes(output: str) -> dict[str, str]:
+    """Every test node id pytest's own `-rA` short summary names in
+    `output`, mapped to its outcome - the identity `_seed_regressions`
+    compares before and after the session ran."""
+    return dict((name, outcome)
+                for outcome, name in _PYTEST_SHORT_SUMMARY_RE.findall(output or ""))
+
+
+def _seed_test_command_with_report(test_command: str) -> str:
+    """`test_command` with `-rA` appended, so pytest's own short summary
+    names every test's outcome - the form `_pytest_outcomes` reads - not
+    only a failure's. Left unchanged when `pytest` does not name the
+    runner: `_pytest_outcomes` then reads no outcome from its output, so a
+    scenario naming another runner gets an empty regression list instead of
+    a broken command."""
+    if "pytest" not in test_command:
+        return test_command
+    return f"{test_command} -rA"
+
+
+def _seed_regressions(seed_outcomes: dict[str, str], after_outcomes: dict[str, str]
+                       ) -> list[str]:
+    """Every test node id that passed at the seed and does not pass now -
+    CMP-2's own definition of a regression. A test the session's own edits
+    removed passed at the seed and is simply absent from `after_outcomes`,
+    which counts the same way: it no longer passes."""
+    return sorted(
+        name for name, outcome in seed_outcomes.items()
+        if outcome == "PASSED" and after_outcomes.get(name) != "PASSED"
+    )
 
 
 def _compass_files(repo_dir: Path) -> list[str]:
@@ -1078,11 +1308,16 @@ def _stop_reason_and_finished(subtypes: list[str | None],
 
 def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
              run_index: int, claude_exe: str, *, plugin_source: Path,
-             plugin_copy_dir: Path | None, child_env: dict[str, str]
+             plugin_copy_dir: Path | None,
+             framework_copy_dir: Path | None = None,
+             framework_commit: str | None = None, uvx_exe: str = "uvx",
+             child_env: dict[str, str]
              ) -> dict[str, Any]:
     """Do one run of `scenario` under `condition` and return its record.
-    `plugin_copy_dir` and `child_env` are built once per harness call, by
-    `_prepare_plugin_copy`, and reused by every run - never rebuilt here."""
+    `plugin_copy_dir`, `framework_copy_dir`, `framework_commit` and
+    `child_env` are built once per harness call, by `_prepare_plugin_copy`
+    and `_prepare_framework_copy`, and reused by every run - never rebuilt
+    here."""
     started = datetime.now(timezone.utc).isoformat()
     clock_start = time.monotonic()
     state = _new_run_state()
@@ -1099,12 +1334,26 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
     with tempfile.TemporaryDirectory() as tmp:
         repo_dir = Path(tmp)
         _materialise_repo(scenario_dir, condition, repo_dir,
-                           plugin_copy_dir, child_env)
+                           plugin_copy_dir, framework_copy_dir, uvx_exe,
+                           child_env)
         seed_commit = _git_init_and_commit(repo_dir, child_env)
         seed_git_snapshot = _snapshot_git_config(repo_dir)
         tampered_paths: list[str] = []
 
-        common_args = _common_claude_args(condition, plugin_copy_dir)
+        test_command = scenario.get("test_command", _DEFAULT_TEST_COMMAND)
+        hidden_tests_dir = scenario_dir / "hidden_tests"
+        has_hidden_tests = hidden_tests_dir.is_dir()
+        seed_outcomes: dict[str, str] = {}
+        if has_hidden_tests:
+            # The baseline for CMP-2's own `regressions`: which of the
+            # seed's own tests pass before the session runs, taken now -
+            # before `hidden_tests/` is copied in, so a hidden test never
+            # counts as a "regression" simply for having no earlier result.
+            _, seed_output = _run_test_command(
+                _seed_test_command_with_report(test_command), repo_dir, child_env)
+            seed_outcomes = _pytest_outcomes(seed_output)
+
+        common_args = _common_claude_args(condition, plugin_copy_dir, framework_copy_dir)
         budget_usd = float(scenario["budget_usd"])
 
         remaining = round(budget_usd - state["cost_usd"], 6)
@@ -1149,8 +1398,29 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
         _finalise_tool_calls(state)
         diff_text, changed_paths, changed = _diff_since_seed(
             repo_dir, seed_commit, child_env, seed_git_snapshot, tampered_paths)
-        test_command = scenario.get("test_command", _DEFAULT_TEST_COMMAND)
-        tests_exit_code = _run_test_command(test_command, repo_dir, child_env)
+
+        hidden_record: dict[str, Any] | None = None
+        regressions: list[str] | None = None
+        if has_hidden_tests:
+            # Copied in only now, after the session has ended - a session
+            # can never read `hidden_tests/`, never mind the rubric inside
+            # it (CMP-2).
+            _copy_tracked_files(hidden_tests_dir, repo_dir, child_env)
+            hidden_command = scenario["hidden_command"]
+            hidden_exit, hidden_output = _run_test_command(
+                hidden_command, repo_dir, child_env)
+            hidden_passed, hidden_failed = _pytest_summary_counts(hidden_output)
+            hidden_record = {
+                "command": hidden_command, "exit_code": hidden_exit,
+                "passed": hidden_passed, "failed": hidden_failed,
+            }
+            tests_exit_code, after_output = _run_test_command(
+                _seed_test_command_with_report(test_command), repo_dir, child_env)
+            regressions = _seed_regressions(seed_outcomes, _pytest_outcomes(after_output))
+        else:
+            tests_exit_code, _tests_output = _run_test_command(
+                test_command, repo_dir, child_env)
+
         compass_files = _compass_files(repo_dir)
         manifests = _manifests(repo_dir)
         record_cwd = state["cwd"]
@@ -1190,6 +1460,7 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
         "seconds": round(time.monotonic() - clock_start, 3),
         "exit_code": exit_code,
         "cost_usd": round(state["cost_usd"], 6),
+        "tokens": state["tokens"],
         "session_id": state["session_id"],
         "cwd": record_cwd,
         "model": state["model"],
@@ -1206,6 +1477,10 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
         "changed": changed,
         "manifests": manifests,
         "tests_after": {"command": test_command, "exit_code": tests_exit_code},
+        "hidden": hidden_record,
+        "regressions": regressions,
+        "framework": ({"name": condition, "commit": framework_commit}
+                       if framework_copy_dir is not None else None),
         "contained": contained,
         "escaped_paths": escaped_paths,
         "stderr_tail": _tail(state["stderr"]),
@@ -1221,7 +1496,8 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--scenario", required=True,
                          help="a scenario id under evals/scenarios/, or a "
                               "path to a scenario directory")
-    parser.add_argument("--condition", required=True, choices=["compass", "bare"])
+    parser.add_argument("--condition", required=True,
+                         choices=["compass", "bare", "superpowers", "spec-kit"])
     parser.add_argument("--runs", type=int, default=1)
     parser.add_argument("--out", default=None,
                          help="defaults to evals/out/ under this repository")
@@ -1233,6 +1509,18 @@ def _build_arg_parser() -> argparse.ArgumentParser:
                               "condition's plugin, and hashed for "
                               "containment either way - defaults to this "
                               "repository")
+    parser.add_argument("--framework-source", default=None,
+                         help="a local directory already checked out at a "
+                              "framework's own commit, used for the "
+                              "superpowers or spec-kit condition instead of "
+                              "cloning evals/frameworks.yml's pinned "
+                              "repository - what a test points at a "
+                              "fixture with, so it never reaches the "
+                              "network")
+    parser.add_argument("--uvx", default="uvx",
+                         help="the executable to run spec-kit's own "
+                              "specify init through - a real uvx, or a "
+                              "stand-in for a test")
     return parser
 
 
@@ -1264,18 +1552,32 @@ def main(argv: list[str] | None = None) -> int:
     out_dir = Path(args.out) if args.out else (REPO_ROOT / "evals" / "out")
     out_dir.mkdir(parents=True, exist_ok=True)
     plugin_source = Path(args.plugin_source) if args.plugin_source else REPO_ROOT
+    framework_source_override = (
+        Path(args.framework_source) if args.framework_source else None)
 
     plugin_copy_dir, child_env = _prepare_plugin_copy(args.condition, plugin_source)
+    framework_copy_dir: Path | None = None
+    framework_commit: str | None = None
+    if args.condition in ("superpowers", "spec-kit"):
+        frameworks_config = (
+            {} if framework_source_override is not None else load_frameworks_config())
+        framework_copy_dir, framework_commit = _prepare_framework_copy(
+            args.condition, framework_source_override, frameworks_config, child_env)
     try:
         for run_index in range(1, args.runs + 1):
             record = run_once(scenario, scenario_dir, args.condition, run_index,
                                args.claude, plugin_source=plugin_source,
-                               plugin_copy_dir=plugin_copy_dir, child_env=child_env)
+                               plugin_copy_dir=plugin_copy_dir,
+                               framework_copy_dir=framework_copy_dir,
+                               framework_commit=framework_commit,
+                               uvx_exe=args.uvx, child_env=child_env)
             out_path = out_dir / f"{scenario['id']}-{args.condition}-{run_index}.json"
             out_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
     finally:
         if plugin_copy_dir is not None:
             _remove_read_only_tree(plugin_copy_dir)
+        if framework_copy_dir is not None:
+            _remove_read_only_tree(framework_copy_dir)
     return 0
 
 

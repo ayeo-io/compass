@@ -167,16 +167,28 @@ _SUPERPOWERS_SCRIPTS: tuple[tuple[str, str], ...] = (
 
 
 def _superpowers_script_rules(superpowers_scripts_dir: Path) -> tuple[str, ...]:
-    """The five Bash allow-list entries for Superpowers' own bundled
-    scripts, one per `_SUPERPOWERS_SCRIPTS` pair, each naming
-    `superpowers_scripts_dir`'s own absolute path directly - Claude Code
-    does not expand `${CLAUDE_PLUGIN_ROOT}` inside a Bash allow rule, so
-    the rule has to carry the real path a session's own tool call will
-    actually start with."""
-    return tuple(
-        f"Bash({superpowers_scripts_dir}/skills/{skill}/scripts/{script}:*)"
-        for skill, script in _SUPERPOWERS_SCRIPTS
-    )
+    """Three Bash allow-list entries per `_SUPERPOWERS_SCRIPTS` pair.
+    `executing-plans`' own `SKILL.md` runs a script bare, by its own
+    absolute path, which the first entry covers - Claude Code does not
+    expand `${CLAUDE_PLUGIN_ROOT}` inside a Bash allow rule, so the rule
+    has to carry the real path a session's own tool call will actually
+    start with. `subagent-driven-development`'s own `SKILL.md` instead
+    runs every one of its scripts with a `bash` prefix
+    (`bash scripts/sdd-workspace PLAN_FILE`, and the same shape for the
+    other two) - a rule anchored to the script's own path does not match
+    a command that starts with `bash`, so the second entry repeats the
+    same absolute path with `bash` in front, and the third names the
+    relative form the skill's own text writes, resolved against the
+    skill's own directory rather than the plugin's root. Every script
+    gets all three, not only the ones `subagent-driven-development` owns,
+    so this function has one shape to test rather than two."""
+    rules: list[str] = []
+    for skill, script in _SUPERPOWERS_SCRIPTS:
+        script_path = f"{superpowers_scripts_dir}/skills/{skill}/scripts/{script}"
+        rules.append(f"Bash({script_path}:*)")
+        rules.append(f"Bash(bash {script_path}:*)")
+        rules.append(f"Bash(bash scripts/{script}:*)")
+    return tuple(rules)
 
 
 _DEFAULT_TEST_COMMAND = "python3 -m pytest -q"

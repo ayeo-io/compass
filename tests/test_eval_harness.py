@@ -3073,6 +3073,32 @@ def test_allow_list_gives_superpowers_its_own_bundled_scripts():
         assert f"Bash({scripts_dir}/skills/{skill}/scripts/{script}:*)" in allow_list
 
 
+def test_allow_list_gives_subagent_driven_developments_own_bash_prefixed_form():
+    """`subagent-driven-development`'s own `SKILL.md`, at the pinned
+    commit, tells a session to run every one of its scripts with a `bash`
+    prefix - `bash scripts/sdd-workspace PLAN_FILE` (line 137),
+    <!-- vocabulary-scan: allow - names Superpowers' own real script, not a retired word --> `bash scripts/task-brief PLAN_FILE N` (line 252), `bash scripts/review-
+    package PLAN_FILE BASE HEAD` (line 290 and elsewhere) - never the
+    bare, executable-bit form `executing-plans` uses. A rule that starts
+    with the script's own absolute path does not match a command that
+    starts with `bash`, so each script gets two more rules: the same
+    absolute path with `bash` in front, and the relative form the skill's
+    own text writes, resolved against the skill's own directory rather
+    than the plugin's root."""
+    scripts_dir = Path("/tmp/this-runs-own-superpowers-directory")
+    args = harness._common_claude_args("bare", None, None, scripts_dir)
+    allow_list = args[args.index("--allowedTools") + 1].split(",")
+    for skill, script in (
+        ("subagent-driven-development", "sdd-workspace"),
+        ("subagent-driven-development", "task-brief"),
+        ("subagent-driven-development", "review-package"),
+        ("executing-plans", "task-start"),
+        ("executing-plans", "task-done"),
+    ):
+        assert f"Bash(bash {scripts_dir}/skills/{skill}/scripts/{script}:*)" in allow_list
+        assert f"Bash(bash scripts/{script}:*)" in allow_list
+
+
 def test_allow_list_lets_a_session_start_a_feature_branch():
     """`executing-plans` asks before working directly on the seed's own
     default branch; a session that follows that instruction needs the
@@ -3097,11 +3123,11 @@ def test_allow_list_gives_every_condition_the_agent_tool():
 # documents as allowed to differ from run to run and condition to
 # condition.
 _SUPERPOWERS_SCRIPT_RULE_RE = re.compile(
-    r"Bash\([^,]*?/skills/(subagent-driven-development|executing-plans)/scripts/")
+    r"Bash\((bash )?[^,]*?/skills/(subagent-driven-development|executing-plans)/scripts/")
 
 
 def _normalise_superpowers_script_paths(allow_list: str) -> str:
-    return _SUPERPOWERS_SCRIPT_RULE_RE.sub(r"Bash(<DIR>/skills/\1/scripts/", allow_list)
+    return _SUPERPOWERS_SCRIPT_RULE_RE.sub(r"Bash(\1<DIR>/skills/\2/scripts/", allow_list)
 
 
 def test_every_conditions_allow_list_is_identical(
@@ -3175,6 +3201,10 @@ def test_superpowers_runs_rules_name_its_own_plugin_copys_absolute_path(
         ("executing-plans", "task-done"),
     ):
         assert f"Bash({plugin_dir}/skills/{skill}/scripts/{script}:*)" in allow_list
+        # `subagent-driven-development`'s own SKILL.md runs every one of
+        # its scripts with a `bash` prefix - this run's own bash-prefixed
+        # rule must name the same real directory, not a placeholder.
+        assert f"Bash(bash {plugin_dir}/skills/{skill}/scripts/{script}:*)" in allow_list
 
 
 def test_superpowers_condition_gets_add_dir_for_its_framework_copy():

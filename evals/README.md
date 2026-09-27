@@ -30,9 +30,16 @@ and a few dollars. With `--llm`, each undecided result costs one more call
 of about $0.10 to $0.20, capped at $0.50. The suite never calls a model:
 the tests use a fake `claude`.
 
-Do not edit this checkout while a run is going. The harness hashes it
-before and after each run, and any change marks the run uncontained, so
-every behaviour in it is undecided. The compass condition loads the
+Do not edit this checkout, run its tests or run a Compass command in it
+while a run is going. The harness hashes it before and after each run,
+ignored files and git's own settings included, and any change marks the
+run uncontained, so every behaviour in it is undecided.
+
+Run the harness from a shell that holds no API key or token you would not
+hand to a session. Code a session writes can run before the harness sees
+it, and although the harness gives every command it runs a minimal
+environment, a leak it has not found would reach whatever that shell
+holds. The compass condition loads the
 checkout's `HEAD`, so commit a wording change before you measure it.
 
 ## What a session sees, and what it is told

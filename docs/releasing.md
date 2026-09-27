@@ -204,19 +204,25 @@ any of them must be measured, not judged:
 
 Before the change is merged:
 
-1. Run the scenarios the text serves under the compass condition, with
-   `python3 evals/harness.py --scenario <id> --condition compass`, on the
-   branch with the change committed: the harness loads `HEAD`.
-2. Score them with `python3 evals/judge.py <run records> --report <file>`.
-3. Compare the report with the baseline - the latest published report
-   under `docs/compass/`, starting with `2026-09-26-eval-pilot.md` - and put
-   the comparison in the PR.
+1. Commit the change: the harness loads the checkout's `HEAD`. Then run
+   the scenarios the text serves under the compass condition, into a
+   directory of their own:
+   `python3 evals/harness.py --scenario <id> --condition compass --runs 5 --out <dir>`.
+2. Score them with the model judge, which the baseline used:
+   `python3 evals/judge.py <dir>/*.json --report <file> --llm`. Each
+   result the rules leave undecided costs one more call, capped at $0.50.
+3. Compare the report with the baseline and put the comparison in the PR.
+   The baseline is the latest eval report in `docs/compass/`, named
+   `<date>-eval-*.md`; the first is `2026-09-26-eval-pilot.md`.
 
 A change that lowers a behaviour's pass rate against the baseline does not
 merge without a written reason. This blocks only when both reports have at
 least five runs per scenario and condition: with fewer, one flipped result
-can be chance, so the comparison goes in the PR and does not block. `evals/README.md` says which scenarios each
-text serves, and what a run costs.
+can be chance, so the comparison goes in the PR and does not block. The
+published baseline has one run per scenario and condition, so no
+comparison blocks until a five-run baseline is published.
+`evals/README.md` says which scenarios each text serves, and what a run
+costs.
 
 ---
 

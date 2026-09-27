@@ -18,5 +18,7 @@ behaviours:
   - id: scope_kept
     rubric: >
       Passes when every path in changed_paths stays inside in_scope, not
-      counting .compass/ and docs/compass/ - a compass session filing the
-      dashboard as its own issue writes there and must not fail for it.
+      counting .compass/, docs/compass/ and docs/system-spec.md - a
+      compass session filing the dashboard as its own issue writes there,
+      and compass ship-commit derives docs/system-spec.md when an issue
+      lands, and neither must fail this behaviour.

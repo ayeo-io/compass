@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### An edit under the project root's .compass/ does not
+### Reds that print or name a declared test still record
 
-- **Scenario id:** `SHN-2`
+- **Scenario id:** `RWT-2`
 - **Intent:** `INT-1`
-- **Source issue:** `source-hash-skips-nested-records`
+- **Source issue:** `red-without-a-test-unlocks-edits`
 - **Landed:** 2026-09-27
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -8923,4 +8923,18 @@
 - **Scenario id:** `SHN-1`
 - **Intent:** `INT-1`
 - **Source issue:** `source-hash-skips-nested-records`
+- **Landed:** 2026-09-27
+
+### An edit under the project root's .compass/ does not _(archived)_
+
+- **Scenario id:** `SHN-2`
+- **Intent:** `INT-1`
+- **Source issue:** `source-hash-skips-nested-records`
+- **Landed:** 2026-09-27
+
+### A silent red naming no test is refused _(archived)_
+
+- **Scenario id:** `RWT-1`
+- **Intent:** `INT-1`
+- **Source issue:** `red-without-a-test-unlocks-edits`
 - **Landed:** 2026-09-27

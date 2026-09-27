@@ -97,32 +97,63 @@ from compass_pkg.core import load_yaml  # noqa: E402
 # refused. A `cat >` onto a protected path is caught by
 # `no_evidence_tampering`, not by the allow-list.
 #
-# Every condition gets the same list (review blocker 2): `Bash(compass:*)`
-# gives Compass's own commands standing, and `.specify/scripts/bash/*`
-# gives Spec Kit's the same. `specify init` installs its skills to run one
-# of `check-prerequisites.sh` first - `speckit-implement`,
-# `speckit-checklist`, `speckit-clarify`, `speckit-converge` and
-# `speckit-taskstoissues` among them - or `setup-plan.sh` for
-# `speckit-plan`, or `resolve-template.sh` for `speckit-constitution`, as
-# their own first step. Two more real names of its own, quoted here for
-# the same reason and not a retired word either: `speckit-analyze`, and
+# Every condition gets the same list, wide enough for each framework to
+# run its own workflow - the technical design's own rule for this list: a
+# tool one framework needs is allowed for all, never for one alone. Giving
+# only Compass `Bash(compass:*)` measured Compass's own commands against
+# frameworks that could not run theirs, not the same session on four equal
+# footings.
+#
+# `Bash(compass:*)` gives Compass's own commands standing, and
+# `.specify/scripts/bash/*` gives Spec Kit's the same. `specify init`
+# installs its skills to run one of `check-prerequisites.sh` first -
+# `speckit-implement`, `speckit-checklist`, `speckit-clarify`,
+# `speckit-converge` and `speckit-taskstoissues` among them - or
+# `setup-plan.sh` for `speckit-plan`, or `resolve-template.sh` for
+# `speckit-constitution`, as their own first step. Two more real names of
+# its own, quoted here for the same reason and not a retired word either:
+# `speckit-analyze`, and
 # <!-- vocabulary-scan: allow - names Spec Kit's own real script and command, not a retired word --> `setup-tasks.sh` for `speckit-tasks`.
-# Read from Spec Kit's own command templates
-# (`templates/commands/*.md`, `scripts.sh:` in each one's frontmatter) at
-# the pinned commit. Without an entry here, a Spec Kit session that
-# follows its own documented workflow is refused at step one, the same
-# way a compass session without `Bash(compass:*)` would be.
+# Read from Spec Kit's own command templates (`templates/commands/*.md`,
+# `scripts.sh:` in each one's frontmatter) at the pinned commit.
+#
+# Superpowers' own `subagent-driven-development` and `executing-plans`
+# skills run five of its own bundled scripts, read from those two skills'
+# own `SKILL.md` at the pinned commit: `sdd-workspace`,
+# <!-- vocabulary-scan: allow - names Superpowers' own real script, not a retired word --> `task-brief` and
+# `review-package` (`subagent-driven-development/scripts/`), and
+# <!-- vocabulary-scan: allow - names Superpowers' own real scripts, not a retired word --> `task-start` and `task-done` (`executing-plans/scripts/`).
+# Each one runs from its own absolute path under the plugin's own root, which the
+# harness's `--plugin-dir` copy occupies at a different, freshly built
+# location every run - `${CLAUDE_PLUGIN_ROOT}` is Claude Code's own name
+# for that root regardless of where it actually sits (the same variable
+# Compass's own `hooks/hooks.json` already relies on for the same reason),
+# so the entries below name the script under it rather than a path this
+# module would have to rebuild per run.
+#
+# `Bash(git checkout -b:*)` and `Bash(git switch -c:*)` let a session
+# start a feature branch - `executing-plans` asks before working directly
+# on the seed's own default branch, and a session that follows that
+# instruction needs the tool to act on the answer. The `Agent` tool runs a
+# subagent, which both `subagent-driven-development` and Compass's own
+# `implement` stage dispatch.
 ALLOWED_TOOLS: tuple[str, ...] = (
-    "Read", "Write", "Edit", "Skill",
+    "Read", "Write", "Edit", "Skill", "Agent",
     "Bash(python3 -m pytest:*)", "Bash(python -m pytest:*)", "Bash(pytest:*)",
     "Bash(git status:*)", "Bash(git diff:*)", "Bash(git log:*)",
     "Bash(git add:*)", "Bash(git commit:*)",
+    "Bash(git checkout -b:*)", "Bash(git switch -c:*)",
     "Bash(compass:*)", "Bash(ls:*)", "Bash(cat:*)",
     "Bash(head:*)", "Bash(tail:*)", "Bash(grep:*)",
     "Bash(.specify/scripts/bash/check-prerequisites.sh:*)",
     "Bash(.specify/scripts/bash/setup-plan.sh:*)",
     "Bash(.specify/scripts/bash/setup-tasks.sh:*)",
     "Bash(.specify/scripts/bash/resolve-template.sh:*)",
+    "Bash(${CLAUDE_PLUGIN_ROOT}/skills/subagent-driven-development/scripts/sdd-workspace:*)",
+    "Bash(${CLAUDE_PLUGIN_ROOT}/skills/subagent-driven-development/scripts/task-brief:*)",
+    "Bash(${CLAUDE_PLUGIN_ROOT}/skills/subagent-driven-development/scripts/review-package:*)",
+    "Bash(${CLAUDE_PLUGIN_ROOT}/skills/executing-plans/scripts/task-start:*)",
+    "Bash(${CLAUDE_PLUGIN_ROOT}/skills/executing-plans/scripts/task-done:*)",
 )
 
 _DEFAULT_TEST_COMMAND = "python3 -m pytest -q"
@@ -262,9 +293,9 @@ def _run_git(args: list[str], cwd: Path, env: dict[str, str], *,
     `allow_protocol` sets `GIT_ALLOW_PROTOCOL` and defaults to `none` - the
     refusal above - for every call in this module but one:
     `_framework_source_dir`'s own clone of a pinned framework, which passes
-    `"https"` because it cannot reach its own pin any other way (review
-    blocker 1). Every other safeguard here - the config isolation, the
-    ceiling, the safe arguments - stays exactly as strict for that call
+    `"https"` because it cannot reach its own pin any other way. Every
+    other safeguard here - the config isolation, the ceiling, the safe
+    arguments - stays exactly as strict for that call
     too; only the protocol allowance widens, and only for it."""
     call_env = dict(env)
     call_env["GIT_CONFIG_GLOBAL"] = "/dev/null"
@@ -438,9 +469,9 @@ def _framework_source_dir(condition: str, framework_source_override: Path | None
         raise SystemExit(f"no {condition!r} entry in evals/frameworks.yml")
     clone_dir = Path(tempfile.mkdtemp())
     # The one clone in this module that needs the network - `allow_protocol
-    # ="https"` widens `_run_git`'s own protocol lock for this call alone
-    # (review blocker 1); every other call in this function, and every
-    # other call in this module, keeps the default refusal.
+    # ="https"` widens `_run_git`'s own protocol lock for this call alone;
+    # every other call in this function, and every other call in this
+    # module, keeps the default refusal.
     clone_result = _run_git(["clone", "--quiet", entry["repo"], str(clone_dir)],
                              REPO_ROOT, env, allow_protocol="https")
     if clone_result.returncode != 0:
@@ -460,8 +491,8 @@ def _check_framework_commit_pin(condition: str, commit: str,
                                  frameworks_config: dict[str, Any]) -> None:
     """Stop the run if `commit` - the framework copy's own resolved `HEAD`,
     from a fresh clone or from `--framework-source` alike - is not the
-    commit `evals/frameworks.yml` pins for `condition` (review blocker 1).
-    A `--framework-source` a test or an operator points elsewhere is
+    commit `evals/frameworks.yml` pins for `condition`. A
+    `--framework-source` a test or an operator points elsewhere is
     exactly as able to drift from the pin as a clone racing a force-push
     upstream, so both go through this one check, not only the clone path."""
     entry = frameworks_config.get(condition)
@@ -810,9 +841,8 @@ def _claude_version(claude_exe: str, env: dict[str, str]) -> str:
 
 # One model id, passed to every condition, so the four conditions' costs
 # and token counts compare against the same model rather than whatever the
-# account default happens to be on a given day (the review's real run used
-# `claude-opus-5-5` for all four; nothing held it there across further
-# sessions until this pin).
+# account default happens to be on a given day - nothing held that default
+# steady across sessions before this pin.
 _PINNED_CLAUDE_MODEL = "claude-opus-5-5"
 
 
@@ -839,10 +869,10 @@ def _common_claude_args(condition: str, plugin_copy_dir: Path | None,
         # Superpowers passes as `--plugin-dir` directly - the copy carries
         # its own `.claude-plugin/plugin.json` at its root, the same shape
         # `--plugin-dir` already expects for the compass condition. It
-        # gets the same `--add-dir` the compass copy does (review blocker
-        # 2): without it, a `cat` of one of Superpowers' own files sits
-        # outside the working directory `--plugin-dir` alone does not
-        # widen, the same refusal `--add-dir` already fixes for compass.
+        # gets the same `--add-dir`: without it, a `cat` of one of
+        # Superpowers' own files sits outside the working directory
+        # `--plugin-dir` alone does not widen, the same refusal `--add-dir`
+        # already fixes for compass.
         args += ["--plugin-dir", str(framework_copy_dir),
                   "--add-dir", str(framework_copy_dir)]
     return args
@@ -1651,7 +1681,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.condition in ("superpowers", "spec-kit"):
         # Loaded whether or not `--framework-source` is given: a cloned
         # framework and one a test or an operator points at directly are
-        # checked against the same pin (review blocker 1).
+        # checked against the same pin.
         frameworks_config = load_frameworks_config(
             Path(args.frameworks_config) if args.frameworks_config else None)
         framework_copy_dir, framework_commit = _prepare_framework_copy(

@@ -92,7 +92,7 @@ def test_tdd_red_records_red_on_real_failure(run_cli, make_task, project):
     task_dir = make_task("tdd-real-red", _baseline_body())
     r = run_cli("tdd-red", "--issue", "tdd-real-red",
                 "--scenario", "SCN-001",
-                "--", sys.executable, "-c", "import sys; sys.exit(2)")
+                "--", sys.executable, "-c", "print('1 failed'); import sys; sys.exit(2)")
     assert r.returncode == 0, r
     # The record and the .red marker on disk. The record's path follows the
     # binding: this red was recorded --scenario SCN-001, so it is that
@@ -378,7 +378,7 @@ def test_verified_by_typecheck_records_red(run_cli, make_task):
     """A red checked by typecheck records the guard with its kind (`TRC-R8-2`)."""
     task_dir = make_task("r8-vb", _r2_body())
     r = run_cli("tdd-red", "--issue", "r8-vb", "--scenario", "SCN-001",
-                "--verified-by", "typecheck", "--", "bash", "-c", "exit 1")
+                "--verified-by", "typecheck", "--", "bash", "-c", "echo '1 error'; exit 1")
     assert r.returncode == 0, r
     red = json.loads((_rec(task_dir, "red")).read_text())
     assert red.get("verified_by") == "typecheck", r

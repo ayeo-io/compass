@@ -1020,7 +1020,7 @@ _TAIL_ARGV = {
     "bdd extract": ["bdd", "extract"],
     "acceptance start": ["acceptance", "start", "--kind", "validation",
                          "--", "true"],
-    "tdd-red": ["tdd-red", "--scenario", "TRC-1", "--", "false"],
+    "tdd-red": ["tdd-red", "--scenario", "TRC-1", "--", "sh", "-c", "echo '1 failed'; exit 1"],
     "tdd-green": ["tdd-green", "--scenario", "TRC-1", "--", "true"],
 }
 

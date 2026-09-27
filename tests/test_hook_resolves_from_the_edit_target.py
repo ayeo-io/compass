@@ -69,7 +69,7 @@ def _tree(root, slug="t", *, red=False):
         # A real red carries a record beside the marker; the hook reads both.
         subprocess.run(
             [str(REPO_ROOT / "cli" / "compass"), "tdd-red", "--",
-             "python3", "-c", "import sys; sys.exit(1)"],
+             "python3", "-c", "print('1 failed'); import sys; sys.exit(1)"],
             capture_output=True, text=True, cwd=str(root), timeout=120)
     return root
 

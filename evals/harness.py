@@ -140,12 +140,19 @@ def load_scenario(scenario_dir: Path) -> dict[str, Any]:
 
 # --- the one function every git call in this module runs through -----------
 
-# `-c core.fsmonitor=false -c core.hooksPath=/dev/null` on every call: a
-# session's own `.git/config` can still name both, and each names a program
-# the harness never chose - a hook script, or a directory the harness picked
-# for `core.hooksPath` that holds nothing. `--no-ext-diff --no-textconv` are
-# added only to a `diff` subcommand, since only some calls are diffs.
-_GIT_SAFE_CONFIG_ARGS = ("-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null")
+# `-c core.fsmonitor=false -c core.hooksPath=/dev/null -c
+# protocol.allow=never` on every call: a session's own `.git/config` can
+# still name `core.fsmonitor` as a script the harness never chose, and
+# `core.hooksPath` is pointed at `/dev/null`, where no hook can exist, so
+# a hooks path the session's config names is never used.
+# `protocol.allow=never`, together with `GIT_NO_LAZY_FETCH=1` below, stops
+# a partial clone's own `remote.<name>.uploadpack` running when a missing
+# object is fetched lazily - the same route a `core.fsmonitor` or
+# `diff.external` script takes, one config key over. `--no-ext-diff
+# --no-textconv` are added only to a `diff` subcommand, since only some
+# calls are diffs.
+_GIT_SAFE_CONFIG_ARGS = ("-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null",
+                         "-c", "protocol.allow=never")
 _GIT_DIFF_SAFE_ARGS = ("--no-ext-diff", "--no-textconv")
 
 
@@ -154,20 +161,23 @@ def _run_git(args: list[str], cwd: Path, env: dict[str, str], *,
     """The one function every git call in this module makes - in this
     checkout, in a scenario's own seed or overlay directory, and in a
     session's temporary repository alike
-    (`tests/test_eval_harness.py::test_every_git_call_runs_through_the_one_helper`
-    reads this file's own source and fails on a `subprocess` call that runs
-    `git` any other way). Always adds `GIT_CONFIG_GLOBAL=/dev/null` and
-    `GIT_CONFIG_NOSYSTEM=1` to `env`, so neither the operator's own
-    `~/.gitconfig` nor a machine-wide config is read at all - a filter or
-    driver named only there finds no definition - and
-    `_GIT_SAFE_CONFIG_ARGS`, so a setting a repository's own `.git/config`
-    still carries cannot point `core.fsmonitor` or `core.hooksPath` at a
-    script. A `diff` subcommand also gets `_GIT_DIFF_SAFE_ARGS`, skipping
-    any the caller already passed, so a filter or textconv driver named in
-    a tracked `.gitattributes` cannot run either."""
+    (`tests/test_eval_harness.py::test_every_new_process_starts_through_a_named_function`
+    reads this file's own source and fails on a call that starts a new
+    process anywhere else). Always adds `GIT_CONFIG_GLOBAL=/dev/null`,
+    `GIT_CONFIG_NOSYSTEM=1` and `GIT_NO_LAZY_FETCH=1` to `env`, so neither
+    the operator's own `~/.gitconfig` nor a machine-wide config is read at
+    all - a filter or driver named only there finds no definition - and a
+    partial clone's own promisor remote never fetches a missing object
+    lazily, and `_GIT_SAFE_CONFIG_ARGS`, so a setting a repository's own
+    `.git/config` still carries cannot point `core.fsmonitor` at a script,
+    name a real `core.hooksPath`, or reach a remote at all. A `diff`
+    subcommand also gets `_GIT_DIFF_SAFE_ARGS`, skipping any the caller
+    already passed, so a filter or textconv driver named in a tracked
+    `.gitattributes` cannot run either."""
     call_env = dict(env)
     call_env["GIT_CONFIG_GLOBAL"] = "/dev/null"
     call_env["GIT_CONFIG_NOSYSTEM"] = "1"
+    call_env["GIT_NO_LAZY_FETCH"] = "1"
     subcommand = args[0] if args else ""
     rest = list(args[1:])
     if subcommand == "diff":
@@ -185,8 +195,7 @@ def _plugin_copy_excluded(rel_path: str) -> bool:
     `evals/`, every `tests/test_eval_*.py`, a published eval report under
     `docs/compass/`, and the releasing guide - together they would name
     every scenario, every behaviour and the conditions themselves, one
-    `Read` away from a compass session otherwise. Matches
-    `_make_plugin_copy`'s previous, tar-based exclusions path for path:
+    `Read` away from a compass session otherwise. Matches by path exactly:
     `tests/test_eval_*.py` only directly under `tests/`, and
     `docs/compass/*eval*` only as a direct child of `docs/compass/`."""
     if rel_path == "docs/releasing.md":
@@ -211,8 +220,10 @@ def _make_plugin_copy(source: Path, dest: Path, env: dict[str, str]) -> None:
     `.git/config` never runs: `cat-file blob` returns the object exactly as
     git stored it, with no filter applied. Leaves out the paths
     `_plugin_copy_excluded` names, and makes every remaining path
-    read-only, so no session - real or fake - can change this checkout, or
-    the fixture standing in for it under test."""
+    read-only, so no session - real or fake - can change this copy, or the
+    fixture standing in for it under test. A session can still change this
+    checkout itself, through its own code such as a planted `conftest.py`;
+    only the copy handed to it is protected here."""
     dest.mkdir(parents=True, exist_ok=True)
     listing = _run_git(["ls-tree", "-r", "-z", "--full-tree", "HEAD"], source, env)
     if listing.returncode != 0:
@@ -379,9 +390,14 @@ _TAMPER_WATCHED_RELATIVE_PATHS = (".git/config", ".git/info/attributes", ".git/c
 
 
 def _read_bytes_or_none(path: Path) -> bytes | None:
+    """`path`'s own bytes, or `None` if there is nothing there to read -
+    including when an ancestor that must be a directory, most often `.git`
+    itself, has been replaced by a plain file. That turns every lookup
+    below it into `NotADirectoryError`, not `FileNotFoundError`, so both
+    are read the same way: nothing here, not a crash."""
     try:
         return path.read_bytes()
-    except FileNotFoundError:
+    except (FileNotFoundError, NotADirectoryError):
         return None
 
 
@@ -417,6 +433,12 @@ def _restore_tampered_git_config(repo_dir: Path,
         if seed_bytes is None:
             if path.exists():
                 path.unlink()
+        elif path.parent.exists() and not path.parent.is_dir():
+            # `.git` itself (or another ancestor) is now a plain file, not
+            # a directory - there is nothing under it to write the seed's
+            # copy back into. `rel` is already in `tampered`, so the
+            # caller still records the run as not contained.
+            continue
         else:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(seed_bytes)
@@ -867,11 +889,10 @@ def _hash_file(path: Path) -> str:
 def _record_checkout_hash(root: Path, base_dir: Path, path: Path, label: str,
                            snapshot: dict[str, str]) -> None:
     """The snapshot key for `path`, hashed under `base_dir`: the path
-    relative to `root` when `path` is inside it (so an ordinary checkout
-    keeps the same key names, such as `.git/config`, this module has always
-    used), or `label` plus the path relative to `base_dir` when it is not -
-    a linked worktree's common directory, living in the main repository
-    elsewhere."""
+    relative to `root` when `path` is inside it, so an ordinary checkout
+    keeps the key `.git/config` for that file, or `label` plus the path
+    relative to `base_dir` when it is not - a linked worktree's common
+    directory, living in the main repository elsewhere."""
     try:
         key = path.relative_to(root).as_posix()
     except ValueError:
@@ -901,17 +922,18 @@ def _checkout_fingerprint(root: Path, env: dict[str, str]) -> dict[str, str]:
     same already-changed file, and collapses a whole new directory to one
     `??` line - so a further edit, or a change inside a new directory,
     would pass unseen. `git ls-files --others` lists the files inside an
-    untracked directory itself, so the hash catches both.
-    `--exclude-standard` used to drop every ignored path - `evals/out/`,
-    `.compass/work/` and `docs/compass/*/` in this repository - and `git
-    ls-files` never lists anything under a git directory at all, so a
-    rewritten `evals/out/*.json`, a written hook, a moved `HEAD` or a
-    rewritten `refs/` all passed as contained before; none of them does
-    now, and neither does a change made only in a linked worktree's main
-    repository. If `root`'s own git directory cannot be resolved - `.git` a
-    plain file with no valid target, for instance - the snapshot carries a
-    marker a resolvable checkout's own never does, so the comparison still
-    shows a change instead of raising."""
+    untracked directory itself, so the hash catches both. No
+    `--exclude-standard` is passed, so an ignored path - `evals/out/`,
+    `.compass/work/` and `docs/compass/*/` in this repository - is hashed
+    the same as any other untracked file: a session can rewrite one of
+    those unseen otherwise. `git ls-files` never lists anything under a
+    git directory at all, so `_hash_watched_git_dir_paths` covers a written
+    hook, a moved `HEAD` and a rewritten `refs/` directly, and the same for
+    a change made only in a linked worktree's main repository. If `root`'s
+    own git directory cannot be resolved - `.git` a plain file with no
+    valid target, for instance - the snapshot carries a marker a
+    resolvable checkout's own never does, so the comparison still shows a
+    change instead of raising."""
     tracked = _run_git(["ls-files", "-z"], root, env).stdout.split("\0")
     untracked = _run_git(["ls-files", "-z", "--others"], root, env).stdout.split("\0")
     snapshot: dict[str, str] = {}

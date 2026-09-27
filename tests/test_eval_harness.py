@@ -165,6 +165,16 @@ def main():
         with open(os.path.join(cwd, ".git", "config"), "a", encoding="utf-8") as fh:
             fh.write("[diff]\\n\\texternal = " + script_path + "\\n")
 
+    # A test that wants `.git` replaced with a plain file - the shape a
+    # linked worktree's own `.git` takes - sets "replace_git_with_file":
+    # every lookup under `.git` then raises `NotADirectoryError`, not
+    # `FileNotFoundError`.
+    if config.get("replace_git_with_file"):
+        git_dir = os.path.join(cwd, ".git")
+        shutil.rmtree(git_dir)
+        with open(git_dir, "w", encoding="utf-8") as fh:
+            fh.write("gitdir: /nonexistent\\n")
+
     if config.get("create_pyc"):
         pycache_dir = os.path.join(cwd, "src", "__pycache__")
         os.makedirs(pycache_dir, exist_ok=True)
@@ -869,6 +879,23 @@ def test_diff_external_planted_in_git_config_never_runs(
     assert "git-config:.git/config" in record["escaped_paths"]
 
 
+def test_git_replaced_by_a_plain_file_is_recorded_as_not_contained(
+    tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
+):
+    """A session that deletes the temporary repository's own `.git/` and
+    replaces it with a plain file - the shape a linked worktree's own
+    `.git` takes - turns every lookup under it into `NotADirectoryError`,
+    not `FileNotFoundError`. The restore that runs before the harness's own
+    diff must record the run as not contained instead of raising."""
+    _, record, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "bare", monkeypatch,
+        plugin_source_dir, out_suffix="-gitfile",
+        extra_config={"replace_git_with_file": True},
+    )
+    assert record["contained"] is False
+    assert "git-config:.git/config" in record["escaped_paths"]
+
+
 def test_planted_fsmonitor_and_env_probe_never_run_across_a_harness_run(
     tmp_path, scenario_dir, fake_claude, monkeypatch
 ):
@@ -896,6 +923,53 @@ def test_planted_fsmonitor_and_env_probe_never_run_across_a_harness_run(
         tmp_path, scenario_dir, fake_claude, "compass", monkeypatch,
         plugin_source, out_suffix="-fsmonitor-plant",
     )
+    assert not marker.exists()
+
+
+def test_planted_partial_clone_remote_never_fetches_a_missing_blob(tmp_path):
+    """A partial clone's own git config names a program through
+    `remote.<name>.uploadpack`: with `extensions.partialClone` set and a
+    tracked blob's own object file deleted, an ordinary `git cat-file
+    blob` - the call `_make_plugin_copy` makes for every tracked file -
+    lazily fetches the missing object from that remote, running whatever
+    program `uploadpack` names. Planted in the plugin source's own git
+    config before the copy is built, the same route the security review's
+    reproduction used against this checkout's own `.git/config`. Blocking
+    the fetch also means the object stays genuinely missing, so
+    `_make_plugin_copy` is allowed to fail here - the one thing that must
+    never happen is the planted program running."""
+    source = tmp_path / "plugin-source-promisor"
+    _write_plugin_repo(source)
+    marker = tmp_path / "uploadpack-marker.txt"
+    script_path = source / "planted-uploadpack.sh"
+    script_path.write_text(
+        "#!/bin/sh\ntouch " + str(marker) + "\n", encoding="utf-8",
+    )
+    script_path.chmod(script_path.stat().st_mode | stat.S_IEXEC)
+
+    blob = subprocess.run(
+        ["git", "rev-parse", "HEAD:README.md"], cwd=str(source),
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    (source / ".git" / "objects" / blob[:2] / blob[2:]).unlink()
+    with (source / ".git" / "config").open("a", encoding="utf-8") as fh:
+        fh.write(
+            "[extensions]\n\tpartialClone = origin\n"
+            "[remote \"origin\"]\n\turl = " + str(source)
+            + "\n\tpromisor = true\n\tuploadpack = " + str(script_path) + "\n"
+        )
+    subprocess.run(
+        ["git", "config", "core.repositoryformatversion", "1"],
+        cwd=str(source), check=True,
+    )
+
+    dest = tmp_path / "plugin-copy-promisor"
+    try:
+        harness._make_plugin_copy(source, dest, dict(os.environ))
+    except SystemExit:
+        pass
+    else:
+        harness._remove_read_only_tree(dest)
     assert not marker.exists()
 
 
@@ -1106,12 +1180,12 @@ def test_checkout_fingerprint_is_unchanged_when_nothing_moved(tmp_path):
 def test_checkout_fingerprint_catches_an_ignored_file_and_a_written_git_hook(
     tmp_path,
 ):
-    """`--exclude-standard` used to drop every ignored path - `evals/out/`,
-    `.compass/work/` and `docs/compass/*/` in the real checkout are exactly
-    the paths a session's own `conftest.py` could rewrite unseen - and `git
-    ls-files` never lists anything under `.git/` at all, so a written
-    `.git/hooks/pre-commit` passed unseen too. Both must show as a change
-    now."""
+    """An ignored path - `evals/out/`, `.compass/work/` and
+    `docs/compass/*/` in the real checkout are exactly the paths a
+    session's own `conftest.py` could rewrite - is hashed the same as any
+    other untracked file, and `git ls-files` never lists anything under
+    `.git/` at all, so a written `.git/hooks/pre-commit` is hashed
+    directly. Both must show as a change."""
     repo = tmp_path / "checkout"
     repo.mkdir()
     (repo / "tracked.txt").write_text("original\n", encoding="utf-8")
@@ -1520,60 +1594,131 @@ def test_the_file_scan_catches_a_planted_citation(tmp_path, planted):
     assert scan_file_for_unopenable_citation(planted_file) is not None
 
 
-def _git_calls_bypassing_the_one_helper(source: str, helper_name: str) -> list[str]:
-    """The name of every function, in `source`, that calls
-    `subprocess.run`/`Popen`/`call`/`check_call`/`check_output` with a
-    literal argument list whose first element is `"git"`, outside
-    `helper_name` itself - so a git call that bypasses the one function
-    every other git call in the module goes through is named, not just
-    flagged."""
+# Every function in `evals/harness.py` that is allowed to start a new
+# process at all - `_run_git` for git, and the four that each start the one
+# non-git program named in their own name.
+_ALLOWED_TO_START_A_PROCESS = (
+    "_run_git", "_run_compass_init", "_claude_version",
+    "_invoke_claude", "_run_test_command",
+)
+
+
+def _process_starts_by_function(source: str) -> dict[str, list[str]]:
+    """Map each function name, anywhere in `source`, to the process-starting
+    calls it makes directly - `subprocess.run`/`Popen`/`call`/`check_call`/
+    `check_output`, `os.system`, `os.popen`, or an `os.exec*` variant -
+    however the module or the one name was imported: `import subprocess`,
+    `import subprocess as sp`, `from subprocess import run`, `from
+    subprocess import run as _r`, and the same shapes for `os`. Earlier,
+    this only recognised `subprocess.run(["git", ...])` written as a
+    literal list - missed a call built from a variable, a list
+    concatenation, an imported name, or `os.system` outright. A reference
+    to `subprocess.CompletedProcess` as a type, or `subprocess.DEVNULL` as
+    a constant, is not a call, so neither is ever counted."""
     tree = ast.parse(source)
-    offenders: list[str] = []
+
+    subprocess_modules: set[str] = set()
+    subprocess_members: set[str] = set()
+    os_modules: set[str] = set()
+    os_restricted_members: set[str] = set()
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                bound = alias.asname or alias.name
+                if alias.name == "subprocess":
+                    subprocess_modules.add(bound)
+                elif alias.name == "os":
+                    os_modules.add(bound)
+        elif isinstance(node, ast.ImportFrom):
+            if node.module == "subprocess":
+                for alias in node.names:
+                    subprocess_members.add(alias.asname or alias.name)
+            elif node.module == "os":
+                for alias in node.names:
+                    if alias.name == "system" or alias.name == "popen" or alias.name.startswith("exec"):
+                        os_restricted_members.add(alias.asname or alias.name)
+
+    calls: dict[str, list[str]] = {}
 
     class Visitor(ast.NodeVisitor):
         def __init__(self) -> None:
             self.current = "<module>"
 
-        def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        def _enter(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
             previous, self.current = self.current, node.name
             self.generic_visit(node)
             self.current = previous
 
+        def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+            self._enter(node)
+
+        def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+            self._enter(node)
+
         def visit_Call(self, node: ast.Call) -> None:
             func = node.func
-            is_subprocess_call = (
-                isinstance(func, ast.Attribute)
-                and func.attr in ("run", "Popen", "call", "check_call", "check_output")
-                and isinstance(func.value, ast.Name) and func.value.id == "subprocess"
-            )
-            if is_subprocess_call and self.current != helper_name:
-                first_arg = node.args[0] if node.args else None
-                if (isinstance(first_arg, (ast.List, ast.Tuple)) and first_arg.elts
-                        and isinstance(first_arg.elts[0], ast.Constant)
-                        and first_arg.elts[0].value == "git"):
-                    offenders.append(self.current)
+            hit: str | None = None
+            if isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name):
+                if func.value.id in subprocess_modules:
+                    hit = f"subprocess.{func.attr}"
+                elif (func.value.id in os_modules
+                      and (func.attr == "system" or func.attr == "popen"
+                           or func.attr.startswith("exec"))):
+                    hit = f"os.{func.attr}"
+            elif isinstance(func, ast.Name):
+                if func.id in subprocess_members:
+                    hit = f"subprocess member {func.id!r}"
+                elif func.id in os_restricted_members:
+                    hit = f"os member {func.id!r}"
+            if hit is not None:
+                calls.setdefault(self.current, []).append(hit)
             self.generic_visit(node)
 
     Visitor().visit(tree)
-    return offenders
+    return calls
 
 
-def test_every_git_call_runs_through_the_one_helper():
-    """`evals/harness.py` runs `git` in this checkout, in a scenario's own
-    seed directory, and in a session's own temporary repository - every one
-    of those must go through `_run_git`, the one function that adds the
-    environment and the safe arguments every git call needs. A
-    `subprocess.run(["git", ...])` written anywhere else in the file is the
-    class of defect this test exists to catch."""
+def test_every_new_process_starts_through_a_named_function():
+    """`evals/harness.py` starts git in this checkout, in a scenario's own
+    seed directory, and in a session's own temporary repository, and starts
+    the test command and `claude` in that same temporary repository. Every
+    one of those must go through one of `_ALLOWED_TO_START_A_PROCESS`; a
+    process started anywhere else is the class of defect this test exists
+    to catch, whatever form the call takes."""
     source = Path(harness.__file__).read_text(encoding="utf-8")
-    offenders = _git_calls_bypassing_the_one_helper(source, "_run_git")
-    assert offenders == [], f"a git call bypasses _run_git in: {offenders}"
-    # The helper itself must still be the one place that actually calls
-    # subprocess with "git" - otherwise the check above would pass simply
-    # because the module made no git call at all.
-    tree = ast.parse(source)
-    names = [node.name for node in ast.walk(tree) if isinstance(node, ast.FunctionDef)]
-    assert "_run_git" in names
+    calls = _process_starts_by_function(source)
+    offenders = sorted(name for name in calls if name not in _ALLOWED_TO_START_A_PROCESS)
+    assert offenders == [], f"a process starts outside the allowed functions: {offenders}"
+    # Each named function must still be the one that actually starts a
+    # process, not just a name on the allow-list - so a refactor that
+    # renames the call away, leaving the function empty, is caught here
+    # rather than assumed.
+    for name in _ALLOWED_TO_START_A_PROCESS:
+        assert name in calls, f"{name} is allowed to start a process but does not"
+
+
+# One planted bypass per form the security review used to show the earlier,
+# literal-list-only check missed everything but the first.
+_PLANTED_PROCESS_START_BYPASSES = {
+    "literal list": 'import subprocess\ndef _new_helper():\n    return subprocess.run(["git", "status"])\n',
+    "list in a variable": 'import subprocess\ndef _new_helper(args):\n    cmd = ["git", *args]\n    return subprocess.run(cmd)\n',
+    "list concatenation": 'import subprocess\ndef _new_helper(args):\n    return subprocess.run(["git"] + args)\n',
+    "imported run": 'from subprocess import run\ndef _new_helper():\n    return run(["git", "status"])\n',
+    "os.system": 'import os\ndef _new_helper():\n    return os.system("git status")\n',
+}
+
+
+@pytest.mark.parametrize("bypass", sorted(_PLANTED_PROCESS_START_BYPASSES))
+def test_the_process_start_guard_catches_each_planted_bypass(bypass):
+    """Each of the five forms a real bypass could take, planted as a new
+    function appended to `evals/harness.py`'s own source - not one of them
+    may pass unnoticed."""
+    source = (Path(harness.__file__).read_text(encoding="utf-8") + "\n"
+              + _PLANTED_PROCESS_START_BYPASSES[bypass])
+    calls = _process_starts_by_function(source)
+    offenders = sorted(name for name in calls if name not in _ALLOWED_TO_START_A_PROCESS)
+    assert "_new_helper" in offenders, f"the guard missed: {bypass}"
 
 
 # --- 9. a session's own .pyc files never reach changed_paths ----------------

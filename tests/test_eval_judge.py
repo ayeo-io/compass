@@ -16,8 +16,9 @@ one, for example from `git diff --name-only`).
 Nothing here calls a real model: `--llm` calls a `--claude` executable, and
 every test that exercises it points that flag at a fake script.
 
-Scenario id: SPT-3, in `acceptance-criteria.md` of issue
-`skill-prose-pressure-tests`.
+SPT-3 - "Behaviours are scored from actions and artifacts": a behaviour's
+result must come from what a run's tool calls, diff and files show, never
+from what the session's own closing text claims.
 """
 from __future__ import annotations
 
@@ -301,8 +302,8 @@ def test_assessed_before_first_edit_passes_when_there_is_no_code_edit():
 
 
 def test_assessed_before_first_edit_reports_no_edit_when_only_a_test_file_is_touched():
-    # The pre-tool hook allows a test-file edit ahead of an assessment on
-    # purpose - that is not the first code edit this behaviour scores.
+    # The pre-tool hook allows a test-file edit ahead of an assessment by
+    # design - that is not the first code edit this behaviour scores.
     record = make_record(tool_calls=[
         tool_call(0, "Edit", {"file_path": abspath("tests/test_app.py")}),
     ])

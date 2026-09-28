@@ -29,12 +29,12 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### EGA-7
+### CMP-6
 
-- **Scenario id:** `EGA-7`
+- **Scenario id:** `CMP-6`
 - **Intent:** `INT-1`
-- **Source issue:** `eval-gaps-after-d30`
-- **Landed:** 2026-09-27
+- **Source issue:** `comparison-suite`
+- **Landed:** 2026-09-28
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
 
@@ -9071,3 +9071,45 @@
 - **Intent:** `INT-1`
 - **Source issue:** `eval-gaps-after-d30`
 - **Landed:** 2026-09-27
+
+### EGA-7 _(archived)_
+
+- **Scenario id:** `EGA-7`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d30`
+- **Landed:** 2026-09-27
+
+### CMP-1 _(archived)_
+
+- **Scenario id:** `CMP-1`
+- **Intent:** `INT-1`
+- **Source issue:** `comparison-suite`
+- **Landed:** 2026-09-28
+
+### CMP-2 _(archived)_
+
+- **Scenario id:** `CMP-2`
+- **Intent:** `INT-1`
+- **Source issue:** `comparison-suite`
+- **Landed:** 2026-09-28
+
+### CMP-3 _(archived)_
+
+- **Scenario id:** `CMP-3`
+- **Intent:** `INT-1`
+- **Source issue:** `comparison-suite`
+- **Landed:** 2026-09-28
+
+### CMP-4 _(archived)_
+
+- **Scenario id:** `CMP-4`
+- **Intent:** `INT-1`
+- **Source issue:** `comparison-suite`
+- **Landed:** 2026-09-28
+
+### CMP-5 _(archived)_
+
+- **Scenario id:** `CMP-5`
+- **Intent:** `INT-1`
+- **Source issue:** `comparison-suite`
+- **Landed:** 2026-09-28

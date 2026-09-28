@@ -168,15 +168,19 @@ def test_summary_table_lists_condition_totals_side_by_side():
     a spread there would run across different scenarios, not across
     repeated executions of the same one, and would read as the same
     statistic when it is not."""
+    # Scenario ids with no `evals/scenarios/` directory of their own -
+    # `build_report`'s default `scenarios_dir` then finds no `hidden_tests/`
+    # to check the counts below against (EGB-4), so they stand exactly as
+    # given, the way this test's own numbers assume.
     records = [
-        make_record(scenario="cmp-small-fix", condition="bare",
+        make_record(scenario="fixture-small-fix", condition="bare",
                     hidden=hidden(passed=1, failed=0), regressions=[],
                     replies_sent=0, seconds=5.0, cost_usd=0.10),
-        make_record(scenario="cmp-feature", condition="bare", run=2,
+        make_record(scenario="fixture-feature", condition="bare", run=2,
                     hidden=hidden(passed=0, failed=1),
                     regressions=["tests/test_x.py::test_y"],
                     replies_sent=1, seconds=15.0, cost_usd=0.30),
-        make_record(scenario="cmp-small-fix", condition="compass",
+        make_record(scenario="fixture-small-fix", condition="compass",
                     hidden=hidden(passed=1, failed=0), regressions=[],
                     replies_sent=0, seconds=3.0, cost_usd=0.05),
     ]
@@ -290,6 +294,73 @@ def test_grouping_keeps_each_scenario_and_condition_cell_separate():
     assert "9 (one run)" not in small_fix_section
     assert "9 (one run)" in feature_section
     assert "compass" not in feature_section  # cmp-feature has no compass row
+
+
+def _write_hidden_tests_scenario(tmp_path: Path, scenario_id: str, count: int) -> Path:
+    """A `scenarios_dir` fixture holding one scenario whose `hidden_tests/`
+    defines `count` `test_` functions, in one file - what
+    `evals/harness.py::hidden_tests_defined_count` (EGB-4) counts, the
+    same function `evals/compare.py` reuses rather than keeping a second
+    copy."""
+    hidden_dir = tmp_path / scenario_id / "hidden_tests" / "tests"
+    hidden_dir.mkdir(parents=True)
+    body = "\n\n".join(f"def test_{i}():\n    assert True" for i in range(count))
+    (hidden_dir / "test_hidden.py").write_text(body + "\n", encoding="utf-8")
+    return tmp_path
+
+
+def _cell(report: str, row_label: str) -> dict:
+    headers = None
+    for line in report.splitlines():
+        if line.startswith("| Condition"):
+            headers = [c.strip() for c in line.split("|")][1:-1]
+        if line.startswith(f"| {row_label}"):
+            return dict(zip(headers, [c.strip() for c in line.split("|")][1:-1]))
+    raise AssertionError(f"no {row_label!r} row in the report")
+
+
+def test_hidden_pass_rate_corrects_a_collection_error_against_the_scenarios_own_definition( # noqa: E501
+        tmp_path):
+    """EGB-4/EGB-7: a hidden test file that failed to import reports one
+    error, whatever it defines - B6's own `cmp-risky-compass-1` read `1 of
+    1 failed` where the file holds five. Given only the stored record (no
+    raw pytest output to re-read), the scenario's own `hidden_tests/` on
+    disk is what tells the report every one of those five failed, not the
+    one pytest's own summary line counted."""
+    scenarios_dir = _write_hidden_tests_scenario(tmp_path, "cmp-risky", 5)
+    record = make_record(scenario="cmp-risky", condition="compass",
+                          hidden=hidden(passed=0, failed=1, exit_code=2))
+
+    report = compare.build_report([record], scenarios_dir=scenarios_dir)
+
+    assert _cell(report, "compass")["Hidden-test pass rate"] == "0% (one run)"
+
+
+def test_hidden_pass_rate_leaves_a_genuine_result_alone(tmp_path):
+    """A record whose reported total already reaches every test the
+    scenario's `hidden_tests/` defines is a genuine per-test result, not a
+    collection error - it must not be touched."""
+    scenarios_dir = _write_hidden_tests_scenario(tmp_path, "cmp-risky", 5)
+    record = make_record(scenario="cmp-risky", condition="compass",
+                          hidden=hidden(passed=4, failed=1, exit_code=1))
+
+    report = compare.build_report([record], scenarios_dir=scenarios_dir)
+
+    assert _cell(report, "compass")["Hidden-test pass rate"] == "80% (one run)"
+
+
+def test_hidden_pass_rate_is_unchanged_for_a_scenario_with_no_hidden_tests_on_disk(
+        tmp_path):
+    """A scenario id the given `scenarios_dir` carries no `hidden_tests/`
+    for - an unknown scenario, or a stale one - leaves a record's own
+    counts exactly as reported, never crashes."""
+    scenarios_dir = tmp_path  # empty: no scenario directories under it
+    record = make_record(scenario="cmp-risky", condition="compass",
+                          hidden=hidden(passed=3, failed=1, exit_code=1))
+
+    report = compare.build_report([record], scenarios_dir=scenarios_dir)
+
+    assert _cell(report, "compass")["Hidden-test pass rate"] == "75% (one run)"
 
 
 def test_cli_writes_the_report_file():

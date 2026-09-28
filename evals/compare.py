@@ -179,7 +179,7 @@ MEASURE_COLUMNS = (
     ("completed", "Completed"),
     ("hidden_pass_rate", "Hidden-test pass rate"),
     ("regressions", "Regressions"),
-    ("replies_sent", "Replies sent"),
+    ("replies_sent", "Interventions (replies sent)"),
     ("wall_time", "Wall time"),
     ("tokens", "Tokens"),
 )
@@ -306,6 +306,13 @@ def _pool_by_condition(cells: Dict[Cell, List[Dict[str, Any]]],
 def render_report(cells: Dict[Cell, List[Dict[str, Any]]],
                    scenario_order: List[str], condition_order: List[str]) -> str:
     lines = ["# Comparison report", ""]
+    lines.append(
+        "An intervention is the harness sending the scenario's own "
+        "`continue_reply` because the session stopped to ask - the one "
+        "reply a real user would give, not a step the condition took on "
+        "its own. \"Interventions (replies sent)\" below counts how many "
+        "a condition needed.")
+    lines.append("")
     for scenario in scenario_order:
         lines.append(f"## {scenario}")
         lines.append("")

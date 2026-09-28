@@ -4,3 +4,4 @@ prompt: |
   off, and finish it.
 budget_usd: 4.0
 hidden_command: python3 -m pytest tests/test_hidden_resume.py -q
+continue_reply: Go ahead with whichever option you recommend.

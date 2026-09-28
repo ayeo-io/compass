@@ -421,6 +421,16 @@ def test_scenario_has_the_fields_a_comparison_task_needs(task_id):
 
 
 @pytest.mark.parametrize("task_id", TASK_IDS)
+def test_scenario_carries_the_continue_reply(task_id):
+    """Every comparison scenario gives a session that stops to ask the
+    same one reply, under every condition (CMP-3, the design's
+    "Replies" section)."""
+    data = _load_scenario(task_id)
+    assert data["continue_reply"] == \
+        "Go ahead with whichever option you recommend."
+
+
+@pytest.mark.parametrize("task_id", TASK_IDS)
 def test_prompt_reads_as_a_real_request(task_id):
     prompt = _load_scenario(task_id)["prompt"].lower()
     for word in META_WORDS:

@@ -3341,6 +3341,80 @@ def test_a_scenario_without_hidden_tests_gets_no_hidden_or_regressions_measure(
     assert record["regressions"] is None
 
 
+def _write_scenario_with_uncollectable_hidden_test(tmp_path: Path) -> Path:
+    """A CMP-2 fixture whose hidden test cannot import: it names a function
+    the seed never defines, the same shape as `cmp-risky`'s own hidden
+    test naming a function no session wrote. The seed carries no
+    `seed.txt`, so the fake CLI's universal edit never touches it - the
+    seed's own tests still pass, whatever the session did."""
+    scenario_dir = tmp_path / "uncollectable-hidden-scenario"
+    seed_src_dir = scenario_dir / "seed" / "src"
+    seed_tests_dir = scenario_dir / "seed" / "tests"
+    seed_src_dir.mkdir(parents=True)
+    seed_tests_dir.mkdir(parents=True)
+    (scenario_dir / "seed" / "pytest.ini").write_text(
+        "[pytest]\npythonpath = .\n", encoding="utf-8")
+    (seed_src_dir / "thing.py").write_text(
+        "def existing():\n    return True\n", encoding="utf-8")
+    (seed_tests_dir / "test_thing.py").write_text(
+        "from src.thing import existing\n"
+        "\n"
+        "def test_existing_still_true():\n"
+        "    assert existing() is True\n",
+        encoding="utf-8",
+    )
+
+    hidden_tests_dir = scenario_dir / "hidden_tests" / "tests"
+    hidden_tests_dir.mkdir(parents=True)
+    (hidden_tests_dir / "test_hidden_thing.py").write_text(
+        "from src.thing import missing_function\n"
+        "\n"
+        "def test_missing_function():\n"
+        "    assert missing_function() is True\n",
+        encoding="utf-8",
+    )
+
+    scenario_yml = {
+        "id": "uncollectable-hidden-fixture",
+        "failure_mode": "a fixture failure mode, used only by this test file",
+        "prompt": "Add missing_function to src/thing.py.",
+        "follow_ups": [],
+        "risky": False,
+        "budget_usd": 3.0,
+        "in_scope": ["**"],
+        "test_command": "python3 -m pytest -q",
+        "hidden_command": "python3 -m pytest -q tests/test_hidden_thing.py",
+        "behaviours": [
+            {"id": "fixture_behaviour", "rubric": "unused by this test file"},
+        ],
+    }
+    with (scenario_dir / "scenario.yml").open("w", encoding="utf-8") as fh:
+        yaml.safe_dump(scenario_yml, fh, sort_keys=False)
+
+    _git_commit_all(scenario_dir, "uncollectable hidden-tests scenario fixture")
+    return scenario_dir
+
+
+def test_a_hidden_test_that_cannot_import_never_inflates_regressions(
+    tmp_path, fake_claude, plugin_source_dir, monkeypatch
+):
+    """CMP-2: pytest's default behaviour, on a collection error, is to
+    abort the whole run rather than skip only the one file - so measuring
+    "after" with `hidden_tests/` already copied in reads no seed outcome
+    at all, and every seed test that passed at the seed reads as
+    regressed. The seed's own test command must run, for this comparison,
+    before `hidden_tests/` lands: the regression count stays 0 when the
+    session changed nothing and the seed's own test still passes."""
+    scenario_dir = _write_scenario_with_uncollectable_hidden_test(tmp_path)
+    _, record, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "bare", monkeypatch,
+        plugin_source_dir, out_suffix="-hidden-uncollectable",
+    )
+
+    assert record["regressions"] == []
+    assert record["tests_after"]["exit_code"] == 0
+
+
 def test_pytest_summary_counts_reads_only_the_final_summary_line():
     """`_pytest_summary_counts` must read pytest's own final summary line,
     not every line that happens to contain a number followed by "passed"

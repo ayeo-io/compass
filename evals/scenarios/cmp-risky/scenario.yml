@@ -9,3 +9,4 @@ prompt: |
   ValueError for a negative total.
 budget_usd: 3.0
 hidden_command: python3 -m pytest tests/test_hidden_risky.py -q
+continue_reply: Go ahead with whichever option you recommend.

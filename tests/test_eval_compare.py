@@ -138,8 +138,24 @@ def test_records_lacking_a_field_show_it_as_not_recorded_never_zero():
     # column - never "0", "0%" or a silently blank cell, any of which
     # would claim a clean run, or an agreed value, nobody actually checked.
     for column in ("Model", "Framework commit", "Hidden-test pass rate",
-                   "Regressions", "Replies sent", "Wall time", "Tokens"):
+                   "Regressions", "Interventions (replies sent)",
+                   "Wall time", "Tokens"):
         assert cells[column] == "not recorded", column
+
+
+def test_replies_sent_column_is_named_interventions_and_explained():
+    """CMP-4: the column already showing replies sent is named
+    "Interventions (replies sent)", and the report says what an
+    intervention is - the harness sending the scenario's own
+    `continue_reply` because the session stopped to ask, the one reply a
+    real user would give."""
+    record = make_record(replies_sent=2)
+    report = compare.build_report([record])
+
+    assert "Interventions (replies sent)" in report
+    assert "Replies sent" not in report
+    assert "continue_reply" in report
+    assert "intervention" in report.lower()
 
 
 def test_summary_table_lists_condition_totals_side_by_side():

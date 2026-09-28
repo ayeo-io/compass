@@ -232,13 +232,19 @@ def cmd_subtask_update(args):
 
 
 def cmd_subtask_next(args):
-    _, task, _, subtasks = _load(args)
+    task_dir, task, _, subtasks = _load(args)
     risk = (task.get("assessment") or {}).get("risk")
-    if not subtasks:
+    # A subtask the map names but nobody recorded - a wave not yet
+    # dispatched - is listed too, so a resumed run cannot miss it.
+    from compass_pkg.multiagent_check import mapped_subtask_ids
+    recorded = {s.get("id") for s in subtasks if isinstance(s, dict)}
+    unrecorded = [sid for sid in (mapped_subtask_ids(task_dir) or [])
+                  if sid not in recorded]
+    if not subtasks and not unrecorded:
         print("compass issue subtask next: no subtask is recorded yet.")
         return 0
     open_ = [s for s in subtasks if s.get("status") != "done"]
-    if not open_:
+    if not open_ and not unrecorded:
         print("compass issue subtask next: every subtask is done.")
         return 0
     # Work already under way resumes before work not yet started.
@@ -261,6 +267,8 @@ def cmd_subtask_next(args):
         for f in s.get("findings") or []:
             if not f.get("resolved"):
                 print(f"      unresolved: {f.get('text')}")
+    for sid in unrecorded:
+        print(f"  {sid}  not yet dispatched  (named in the distribution map)")
     return 0
 
 

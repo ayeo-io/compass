@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### A same-size edit in the same second changes the tree id
+### With no map the check judges the record as before
 
-- **Scenario id:** `TSE-1`
+- **Scenario id:** `CRM-3`
 - **Intent:** `INT-1`
-- **Source issue:** `tree-id-misses-a-same-second-edit`
+- **Source issue:** `check-does-not-compare-record-with-map`
 - **Landed:** 2026-09-25
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -8818,4 +8818,25 @@
 - **Scenario id:** `MIR-2`
 - **Intent:** `INT-1`
 - **Source issue:** `merge-overwrites-an-ignored-record`
+- **Landed:** 2026-09-25
+
+### A same-size edit in the same second changes the tree id _(archived)_
+
+- **Scenario id:** `TSE-1`
+- **Intent:** `INT-1`
+- **Source issue:** `tree-id-misses-a-same-second-edit`
+- **Landed:** 2026-09-25
+
+### A mapped subtask the record lacks fails the check _(archived)_
+
+- **Scenario id:** `CRM-1`
+- **Intent:** `INT-1`
+- **Source issue:** `check-does-not-compare-record-with-map`
+- **Landed:** 2026-09-25
+
+### subtask next lists a mapped subtask not yet dispatched _(archived)_
+
+- **Scenario id:** `CRM-2`
+- **Intent:** `INT-1`
+- **Source issue:** `check-does-not-compare-record-with-map`
 - **Landed:** 2026-09-25

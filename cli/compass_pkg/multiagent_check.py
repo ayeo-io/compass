@@ -25,6 +25,7 @@ from __future__ import annotations
 import datetime
 
 from compass_pkg.check_results import NOTHING_TO_CHECK
+from compass_pkg.core import FOUND, resolve_artifact
 
 #: An issue with no `subtasks:` key is read by the check only if created on
 #: or after this date; an issue that already has the key is read whatever
@@ -86,6 +87,52 @@ def _subtask_label(entry, index):
     if isinstance(entry, dict):
         return str(entry.get("id", "?"))
     return "subtasks[%d]" % index
+
+
+#: A row the scripts do not provision, so it is no subtask to record.
+_NOT_A_WORKTREE = ("not a parallel worktree", "not a worktree",
+                   "non-provisioning", "integration/verify")
+
+
+def mapped_subtask_ids(task_dir):
+    """The subtask ids the issue's distribution map names, in its order, or
+    None when no map is found.
+
+    The map is found through the artifact registry, as the scripts find it.
+    Only the table whose header's first cell is `Subtask` is read, and only
+    rows whose first cell is a subtask id, so a note in another table that
+    mentions a subtask does not count. A row marked as not a worktree is
+    skipped, as `multiagent.sh` skips it.
+    """
+    try:
+        state, path, _ = resolve_artifact(str(task_dir), "distribution-map")
+    except Exception:
+        return None
+    if state != FOUND or not path:
+        return None
+    try:
+        with open(path, encoding="utf-8") as fh:
+            lines = fh.read().splitlines()
+    except OSError:
+        return None
+    ids, in_table = [], False
+    for line in lines:
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            in_table = False
+            continue
+        cells = [c.strip().strip("`*").strip() for c in stripped.strip("|").split("|")]
+        first = cells[0] if cells else ""
+        if first.lower() == "subtask":
+            in_table = True
+            continue
+        if not in_table or set(first) <= set("-: "):
+            continue
+        if any(marker in stripped for marker in _NOT_A_WORKTREE):
+            continue
+        if first.startswith(("subtask-", "stream-")):  # vocabulary-scan: allow - reads the retired spelling for back-compat (ADR-006)
+            ids.append(first)
+    return ids
 
 
 def _check_multiagent_run_recorded(task, task_dir):
@@ -156,6 +203,16 @@ def _check_multiagent_run_recorded(task, task_dir):
             "subtask(s) with an incomplete run record - %s. Record status "
             "with `compass issue subtask update --status done`, and a "
             "passing round with `--round pass`." % "; ".join(problems))
+
+    mapped = mapped_subtask_ids(task_dir)
+    if mapped:
+        recorded = {str(e.get("id")) for e in subtasks if isinstance(e, dict)}
+        unrecorded = [sid for sid in mapped if sid not in recorded]
+        if unrecorded:
+            return False, (
+                "the distribution map names subtask(s) the manifest does not "
+                "record: %s. Dispatch and record each with `compass issue "
+                "subtask add`, or take it out of the map." % ", ".join(unrecorded))
 
     return True, ("every subtask is done with a passing review round (%d "
                   "subtask(s))" % len(subtasks))

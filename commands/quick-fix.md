@@ -1,5 +1,5 @@
 ---
-description: The whole light path for a small, safe change - assess to ship, in one file
+description: The whole light path for a small, safe change
 argument-hint: "<what needs fixing>"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 ---

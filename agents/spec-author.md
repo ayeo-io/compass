@@ -1,6 +1,6 @@
 ---
 name: spec-author
-description: "Owns define and refine: writes the Given/When/Then scenarios that double as the acceptance suite, and QAs them against governance."
+description: "Owns define and refine: writes and checks the Given/When/Then acceptance scenarios."
 tools: Read, Glob, Grep, Write, Edit
 model: opus
 ---

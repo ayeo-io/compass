@@ -1,6 +1,6 @@
 ---
 name: flow-management
-description: How work is prioritised across issues, the blocker protocol, and the periodic digest. Load when a question spans more than one issue.
+description: Priorities across issues, blockers and the digest. Load when a question spans issues.
 ---
 
 # Flow Management

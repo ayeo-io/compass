@@ -1,6 +1,6 @@
 ---
 name: evidence-gates
-description: What counts as evidence for a gate, and how to clear one. Load at the verify stage.
+description: What counts as gate evidence, and how to clear a gate. Load at the verify stage.
 ---
 
 # Evidence Gates

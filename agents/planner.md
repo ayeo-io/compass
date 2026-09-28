@@ -1,6 +1,6 @@
 ---
 name: planner
-description: "Owns the plan stage: writes the technical design, runs the governance check, and decides the parallel orchestration."
+description: "Owns the plan stage: technical design, governance check, parallel orchestration."
 tools: Read, Glob, Grep, Write, Edit
 model: opus
 ---

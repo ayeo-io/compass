@@ -1,6 +1,6 @@
 ---
 name: builder
-description: Runs the red-green-refactor cycle inside one assigned worktree, or on the current branch when the work is solo, implementing exactly the scenarios in its assignment. Never touches a sibling worktree.
+description: Runs red-green-refactor for its assigned scenarios in one worktree, or solo; never touches a sibling worktree.
 tools: Read, Glob, Grep, Write, Edit, Bash
 model: sonnet
 ---

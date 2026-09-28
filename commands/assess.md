@@ -1,5 +1,5 @@
 ---
-description: Assess the work - risk, familiarity, size, goal - and compute the delivery approach
+description: Assess risk, familiarity, size and goal, and compute the delivery approach
 argument-hint: "<issue description> [--reassess]"
 allowed-tools: Read, Write, Edit, Glob, Grep
 ---

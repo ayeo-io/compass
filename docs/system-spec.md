@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### A run that hides a collection error, or where no test failed, is refused; the skill names the import red
+### A record built before the change is judged as built
 
-- **Scenario id:** `RSF-4`
+- **Scenario id:** `CUF-3`
 - **Intent:** `INT-1`
-- **Source issue:** `red-for-a-module-not-yet-written`
+- **Source issue:** `changes-id-misses-unlisted-files`
 - **Landed:** 2026-09-25
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -8622,4 +8622,25 @@
 - **Scenario id:** `RSF-3`
 - **Intent:** `INT-1`
 - **Source issue:** `red-for-a-module-not-yet-written`
+- **Landed:** 2026-09-25
+
+### A run that hides a collection error, or where no test failed, is refused; the skill names the import red _(archived)_
+
+- **Scenario id:** `RSF-4`
+- **Intent:** `INT-1`
+- **Source issue:** `red-for-a-module-not-yet-written`
+- **Landed:** 2026-09-25
+
+### A declared test changed after the green fails the landed check _(archived)_
+
+- **Scenario id:** `CUF-1`
+- **Intent:** `INT-1`
+- **Source issue:** `changes-id-misses-unlisted-files`
+- **Landed:** 2026-09-25
+
+### The tested files landing pass, whatever HEAD does next _(archived)_
+
+- **Scenario id:** `CUF-2`
+- **Intent:** `INT-1`
+- **Source issue:** `changes-id-misses-unlisted-files`
 - **Landed:** 2026-09-25

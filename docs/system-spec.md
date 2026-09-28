@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Triggering tests pass unchanged
+### the breakdown gives calls and tokens by step
 
-- **Scenario id:** `RFD-2`
+- **Scenario id:** `QFO-8`
 - **Intent:** `INT-1`
-- **Source issue:** `resident-footprint-diet`
+- **Source issue:** `quick-fix-overhead`
 - **Landed:** 2026-09-28
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -9182,4 +9182,60 @@
 - **Scenario id:** `RFD-1`
 - **Intent:** `INT-1`
 - **Source issue:** `resident-footprint-diet`
+- **Landed:** 2026-09-28
+
+### Triggering tests pass unchanged _(archived)_
+
+- **Scenario id:** `RFD-2`
+- **Intent:** `INT-1`
+- **Source issue:** `resident-footprint-diet`
+- **Landed:** 2026-09-28
+
+### start records the whole assessment in one call _(archived)_
+
+- **Scenario id:** `QFO-1`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-overhead`
+- **Landed:** 2026-09-28
+
+### start stops when the approach is not a quick fix _(archived)_
+
+- **Scenario id:** `QFO-2`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-overhead`
+- **Landed:** 2026-09-28
+
+### start refuses an unreasoned or unknown dimension _(archived)_
+
+- **Scenario id:** `QFO-3`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-overhead`
+- **Landed:** 2026-09-28
+
+### finish traces, checks, passes the three gates and lands _(archived)_
+
+- **Scenario id:** `QFO-4`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-overhead`
+- **Landed:** 2026-09-28
+
+### finish refuses and passes nothing on any unmet condition _(archived)_
+
+- **Scenario id:** `QFO-5`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-overhead`
+- **Landed:** 2026-09-28
+
+### the command and skill teach the two verbs _(archived)_
+
+- **Scenario id:** `QFO-6`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-overhead`
+- **Landed:** 2026-09-28
+
+### a re-run costs at most twice Superpowers _(archived)_
+
+- **Scenario id:** `QFO-7`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-overhead`
 - **Landed:** 2026-09-28

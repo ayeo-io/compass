@@ -258,6 +258,29 @@ for i in "${!SUBTASKS[@]}"; do
     continue
   fi
 
+  # A builder commits no records. If the project ignores `.compass/` or
+  # `docs/compass/` paths, the main checkout's copies are untracked, and a
+  # clean merge of a branch that force-added one would replace the
+  # orchestrator's record without a conflict. Refuse that branch first.
+  _mb="$(git -C "$PROJECT_DIR" merge-base "$BASE_BRANCH" "$branch" 2>/dev/null || true)"
+  _ignored_records=()
+  if [ -n "$_mb" ]; then
+    while IFS= read -r -d '' _rec; do
+      if git -C "$PROJECT_DIR" check-ignore -q --no-index -- "$_rec" 2>/dev/null; then
+        _ignored_records+=("$_rec")
+      fi
+    done < <(git -C "$PROJECT_DIR" diff -z --name-only "$_mb" "$branch" -- .compass docs/compass)
+  fi
+  if [ "${#_ignored_records[@]}" -gt 0 ]; then
+    echo "" >&2
+    echo "  integrate.sh: $sid ($branch) committed records this project ignores:" >&2
+    for _rec in "${_ignored_records[@]}"; do echo "    - $_rec" >&2; done
+    echo "  Merging it would overwrite the main checkout's copies without a" >&2
+    echo "  conflict. Remove them from the branch, then run integrate.sh again." >&2
+    echo "  Subtasks merged so far: ${MERGED[*]:-none}." >&2
+    exit 1
+  fi
+
   echo "  $sid: merging $branch -> $BASE_BRANCH ..."
   if MERGE_OUTPUT="$(git -C "$PROJECT_DIR" merge --no-ff --no-edit \
         -m "compass($TASK_SLUG): integrate $sid" "$branch" 2>&1)"; then

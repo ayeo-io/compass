@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### A branch git would not accept is refused
+### A branch with no ignored record merges
 
-- **Scenario id:** `MCC-2`
+- **Scenario id:** `MIR-2`
 - **Intent:** `INT-1`
-- **Source issue:** `map-cells-reach-git-unchecked`
+- **Source issue:** `merge-overwrites-an-ignored-record`
 - **Landed:** 2026-09-25
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -8797,4 +8797,18 @@
 - **Scenario id:** `MCC-1`
 - **Intent:** `INT-1`
 - **Source issue:** `map-cells-reach-git-unchecked`
+- **Landed:** 2026-09-25
+
+### A branch git would not accept is refused _(archived)_
+
+- **Scenario id:** `MCC-2`
+- **Intent:** `INT-1`
+- **Source issue:** `map-cells-reach-git-unchecked`
+- **Landed:** 2026-09-25
+
+### A branch that committed an ignored record is refused _(archived)_
+
+- **Scenario id:** `MIR-1`
+- **Intent:** `INT-1`
+- **Source issue:** `merge-overwrites-an-ignored-record`
 - **Landed:** 2026-09-25

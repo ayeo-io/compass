@@ -6,3 +6,4 @@ prompt: |
   them was added first. If the playlist is empty, raise a ValueError.
 budget_usd: 3.0
 hidden_command: python3 -m pytest tests/test_hidden_feature.py -q
+continue_reply: Go ahead with whichever option you recommend.

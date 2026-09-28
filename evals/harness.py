@@ -1560,6 +1560,18 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
         hidden_record: dict[str, Any] | None = None
         regressions: list[str] | None = None
         if has_hidden_tests:
+            # Run the seed's own test command once more, after the
+            # session's edits but still before `hidden_tests/` lands.
+            # Pytest's default behaviour on a collection error is to
+            # abort the whole run, not only skip the one file that failed
+            # to import - so measuring "after" with the hidden test
+            # already sitting beside the seed's own tests would count
+            # every seed test as regressed the moment a hidden test names
+            # a function the session never wrote (CMP-2).
+            tests_exit_code, after_output = _run_test_command(
+                _seed_test_command_with_report(test_command), repo_dir, child_env)
+            regressions = _seed_regressions(seed_outcomes, _pytest_outcomes(after_output))
+
             # Copied in only now, after the session has ended - a session
             # can never read `hidden_tests/`, never mind the rubric inside
             # it (CMP-2).
@@ -1572,9 +1584,6 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
                 "command": hidden_command, "exit_code": hidden_exit,
                 "passed": hidden_passed, "failed": hidden_failed,
             }
-            tests_exit_code, after_output = _run_test_command(
-                _seed_test_command_with_report(test_command), repo_dir, child_env)
-            regressions = _seed_regressions(seed_outcomes, _pytest_outcomes(after_output))
         else:
             tests_exit_code, _tests_output = _run_test_command(
                 test_command, repo_dir, child_env)

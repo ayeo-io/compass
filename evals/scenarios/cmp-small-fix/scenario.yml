@@ -6,3 +6,4 @@ prompt: |
   right?
 budget_usd: 2.0
 hidden_command: python3 -m pytest tests/test_hidden_small_fix.py -q
+continue_reply: Go ahead with whichever option you recommend.

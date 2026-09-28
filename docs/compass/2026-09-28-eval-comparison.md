@@ -6,12 +6,13 @@
 
 Six scenarios, each run twice under four conditions: 48 sessions. Every
 condition got the same prompt, model, budget, allow-list and reply rule,
-and the same seed repository, except that in `cmp-resume` each condition
-got the record its own framework keeps. The frameworks were pinned:
-Superpowers at `8ca22dba` (tag v6.4.2), Spec Kit at `3b895d16` (tag
-v1.0.9), and Compass at `99dfa86`, this checkout's `HEAD` throughout the
-runs; the run records do not store Compass's commit. Correctness is measured by hidden tests the session never sees,
-copied in after it ends.
+and the same seed repository, except in `cmp-resume`. There each framework
+got the record it keeps for work in flight, and the condition with no
+framework got a plain `NOTES.md`. The frameworks were pinned: Superpowers
+at `8ca22dba` (tag v6.4.2), Spec Kit at `3b895d16` (tag v1.0.9), and
+Compass at `99dfa86`, this checkout's `HEAD` throughout the runs; the run
+records do not store Compass's commit. Correctness is measured by hidden
+tests the session never sees, copied in after it ends.
 
 ## What the comparison found
 
@@ -43,10 +44,15 @@ copied in after it ends.
 | Hidden tests passed | all | 33 of 38 | all | all |
 | Regressions | 0 | 0 | 0 | 0 |
 | Interventions (replies sent) | 0 | 1 | 0 | 0 |
-| Commands Claude Code refused | 2 | 25 | 4 | 14 |
+| Tool calls refused | 2 | 25 | 4 | 14 |
 | Wall time, total | 290 s | 1,126 s | 409 s | 760 s |
 | Tokens, total | 952,569 | 7,190,804 | 1,271,088 | 2,210,882 |
 | Cost, total | $1.43 | $6.49 | $1.84 | $2.76 |
+
+Every refused tool call was a Bash command Claude Code refused, because
+it was outside the allow-list or beyond its parser, except one of
+Compass's 25: Compass's own pre-tool hook blocked an edit until the
+issue's delivery approach existed.
 
 Tokens count every token each call reported: input, output, and the
 tokens read from and written to the prompt cache. Cost is the cost each
@@ -89,8 +95,9 @@ The two executions agreed on every correctness result except Compass on
   accounts for 58% of its tokens and 65% of its time. Spec Kit's workflow
   starts when a person runs its commands; every condition got the same
   plain prompt, and one Spec Kit session, in `cmp-resume`, ran its
-  implement step. Claude Code refuses, under every condition, commands it
-  cannot parse; it refused Compass most often.
+  implement step. Claude Code refuses, under every condition, commands
+  outside the allow-list or beyond its parser; it refused Compass most
+  often.
 - **A clean home directory.** Every session could see the account's email
   address and git user name, as in the earlier pilot,
   `docs/compass/2026-09-26-eval-pilot.md`.

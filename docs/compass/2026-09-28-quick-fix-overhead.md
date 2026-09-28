@@ -3,7 +3,7 @@
 On each scenario's mean, a quick fix under Compass now costs 1.4 to 1.9
 times what it costs under Superpowers, down from 6.6 to 8.6 times. Every
 session after the change passed its hidden tests and its three gates. Before it, two of the four
-Compass sessions ended with their gates still pending.
+Compass sessions ended with at least one gate still pending.
 
 ## Results
 
@@ -47,16 +47,23 @@ the command had already shown it.
 ## Calls by step
 
 A model call re-reads the whole context, so a session's cost is about its
-calls times its context. Each call is counted under its first tool.
+calls times its context. The table gives each step's calls per session
+and its mean tokens across the four Compass sessions. A call that does
+several things counts under the furthest step it reached, in the order
+of the table: a call that runs `compass quick-fix start` and reads the
+code counts as assessing.
 
-| Step | Before, calls per session | After, calls per session |
-|---|---|---|
-| Read the code | 0 to 2 | 0 |
-| Load a command or skill | 1 to 2 | 1 |
-| Assess and record the approach | 7 to 9 | 2 to 3 |
-| Test and code | 2 to 6 | 1 to 3 |
-| Check, evidence, gates, trace, devlog, commit | 4 to 8 | 0 to 1 |
-| Final reply | 1 | 1 |
+| Step | Calls before | Tokens before | Calls after | Tokens after |
+|---|---|---|---|---|
+| Read the code | 1 to 3 | 73,221 | 0 | 0 |
+| Load a command | 1 to 2 | 28,565 | 1 | 18,905 |
+| Assess and record | 4 to 7 | 168,592 | 2 to 3 | 49,563 |
+| Test and code | 4 to 6 | 187,413 | 1 to 2 | 40,389 |
+| Check, gates and commit | 2 to 8 | 246,649 | 1 | 25,154 |
+| Final reply | 1 | 48,450 | 1 | 25,881 |
+
+After the change, sessions still read the code, but in the same call as
+`quick-fix start`, so the table counts it there.
 
 Before, the agent drove each mechanical step itself: it read the manifest
 and approach templates in full (about 19,500 characters, re-read by every
@@ -64,9 +71,9 @@ later call), wrote the manifest, evaluated, wrote and registered the
 record, traced files, ran the check, recorded it, passed three gates,
 wrote the devlog and committed. After, `compass quick-fix start` does the
 first half in one call and `compass quick-fix finish` the second half in
-one call, usually the same call as the fix. `/compass:assess`, which a
-session opens first, carries the three commands, so the session does not
-load a second command.
+one call. The feature sessions opened `/compass:assess`, which now carries
+the three commands, so they did not load a second command; the small-fix
+sessions opened `/compass:quick-fix`.
 
 ## What this does not show
 
@@ -75,8 +82,8 @@ load a second command.
 - The rival figures are from the B6 run, not re-run alongside.
 - `finish` ran with `--no-commit` in every session after, because no
   session was asked for a commit. The commit path is tested, not measured.
-- Three earlier versions of the change were run and replaced as the
-  design changed. Their records show why: a session that stopped before
+- Two earlier versions of the change, at `4b9ed53` and `246210a`, were
+  run and replaced as the design changed. Their records show why: a session that stopped before
   `finish` because it would commit, sessions that loaded both commands,
   and one that never learned `finish` existed.
 - Only these two scenarios. The heavier routes are unchanged.

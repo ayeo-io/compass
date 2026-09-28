@@ -69,3 +69,25 @@ def test_qfo_8_the_breakdown_gives_calls_before_and_after_with_its_limits():
     assert "## What this does not show" in raw
     for placeholder in ("TODO", "TBD", "{{"):
         assert placeholder not in raw, placeholder
+
+
+STEP_ROW = re.compile(
+    r"^\| ([A-Za-z ,]+?) \| (\d+(?: to \d+)?) \| ([\d,]+) \| "
+    r"(\d+(?: to \d+)?) \| ([\d,]+) \|$")
+
+
+def test_qfo_8_the_steps_add_up_to_each_condition_mean():
+    """Calls and tokens by step, and the tokens in each column sum to the
+    mean of that condition's four sessions in the results table."""
+    steps = [STEP_ROW.match(l.strip()) for l in
+             REPORT.read_text(encoding="utf-8").splitlines()]
+    steps = [m for m in steps if m]
+    assert len(steps) >= 5, "the calls-by-step table gives no tokens"
+    before = sum(int(m.group(3).replace(",", "")) for m in steps)
+    after = sum(int(m.group(5).replace(",", "")) for m in steps)
+    rows = _rows()
+    for condition, total in (("compass before", before),
+                             ("compass after", after)):
+        got = [r["tokens"] for r in rows if r["condition"] == condition]
+        mean = sum(got) / len(got)
+        assert abs(total - mean) <= len(steps), (condition, total, mean)

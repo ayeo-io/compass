@@ -237,6 +237,73 @@ def test_qfo4_finish_traces_checks_passes_the_three_gates_and_lands(repo):
     assert any(e["id"] in devlog for e in manifest["evidence"])
 
 
+def test_qfo4_finish_leaves_bytecode_caches_out_and_the_land_checks_clean(repo):
+    # A Python fix leaves `__pycache__/` behind whenever the project has no
+    # .gitignore for it. A cache is not a change: traced and committed, it
+    # makes the landed files differ from the tested ones, and `compass
+    # check` then fails the issue it has just landed.
+    slug = "add-fix"
+    (repo / "pytest.ini").write_text("[pytest]\npythonpath = .\n")
+    (repo / "calc.py").write_text("def add(a, b):\n    return a - b\n")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "calc")
+    start = _start(repo, slug, test="tests/test_calc.py::test_add")
+    assert start.returncode == 0, start.stderr
+    (repo / "tests").mkdir()
+    (repo / "tests" / "test_calc.py").write_text(
+        "from calc import add\n\n\ndef test_add():\n    assert add(2, 3) == 5\n")
+    cmd = ["--", "python3", "-m", "pytest", "-q", "tests/test_calc.py"]
+    red = _run(repo, "tdd-red", "--issue", slug, "--scenario", "TRC-001", *cmd)
+    assert red.returncode == 0, red.stderr
+    # A different size from the broken line, so Python does not reuse the
+    # bytecode it cached for that line within the same second.
+    (repo / "calc.py").write_text("def add(a, b):\n    total = a + b\n    return total\n")
+    green = _run(repo, "tdd-green", "--issue", slug, "--scenario", "TRC-001", *cmd)
+    assert green.returncode == 0, green.stderr
+    assert list(repo.rglob("*.pyc")), "the test run should leave a cache"
+
+    finish = _run(repo, "quick-fix", "finish", "--issue", slug, "-m", "Fix add")
+    assert finish.returncode == 0, finish.stderr
+
+    changed = {cf["path"] for cf in _manifest(repo, slug)["changed_files"]}
+    assert not [p for p in changed if "__pycache__" in p or p.endswith(".pyc")]
+    committed = _git(repo, "show", "--name-only", "--format=", "HEAD~1")
+    assert "__pycache__" not in committed
+    check = _run(repo, "check", "--issue", slug)
+    assert check.returncode == 0, check.stdout + check.stderr
+
+
+def test_qfo4_finish_lands_clean_when_every_changed_file_was_tracked(repo):
+    # The test file exists before the fix, so tracing at finish adds no new
+    # file to the git tree - only to the set of files the green covers. The
+    # green finish re-runs over that set is a new assertion, not a retry of
+    # a flaky test, and the landed issue must check clean.
+    slug = "add-tracked"
+    (repo / "pytest.ini").write_text("[pytest]\npythonpath = .\n")
+    (repo / "calc.py").write_text("def add(a, b):\n    return a - b\n")
+    (repo / "tests").mkdir()
+    (repo / "tests" / "test_calc.py").write_text(
+        "from calc import add\n\n\ndef test_zero():\n    assert add(0, 0) == 0\n")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "calc")
+    start = _start(repo, slug, test="tests/test_calc.py::test_add")
+    assert start.returncode == 0, start.stderr
+    with open(repo / "tests" / "test_calc.py", "a") as fh:
+        fh.write("\n\ndef test_add():\n    assert add(2, 3) == 5\n")
+    cmd = ["--", "python3", "-m", "pytest", "-q", "tests/test_calc.py"]
+    red = _run(repo, "tdd-red", "--issue", slug, "--scenario", "TRC-001", *cmd)
+    assert red.returncode == 0, red.stderr
+    (repo / "calc.py").write_text(
+        "def add(a, b):\n    total = a + b\n    return total\n")
+    green = _run(repo, "tdd-green", "--issue", slug, "--scenario", "TRC-001", *cmd)
+    assert green.returncode == 0, green.stderr
+
+    finish = _run(repo, "quick-fix", "finish", "--issue", slug, "-m", "Fix add")
+    assert finish.returncode == 0, finish.stdout + finish.stderr
+    check = _run(repo, "check", "--issue", slug)
+    assert check.returncode == 0, check.stdout + check.stderr
+
+
 # --- QFO-5 ---------------------------------------------------------------
 
 def test_qfo5_finish_refuses_when_check_fails(repo):

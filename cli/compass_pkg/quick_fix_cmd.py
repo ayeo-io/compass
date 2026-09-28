@@ -31,7 +31,9 @@ import argparse
 import contextlib
 import datetime
 import io
+import json
 import os
+import shlex
 import subprocess
 
 from compass_pkg.check_cmd import cmd_check
@@ -46,6 +48,7 @@ from compass_pkg.manifest import (
     cmd_scenario_add,
 )
 from compass_pkg.routing import cmd_route_evaluate, evaluate_route
+from compass_pkg.tdd import cmd_tdd_green
 from compass_pkg.terminal import say
 
 #: The three gates a quick fix ever clears (route_shapes.express.gates in
@@ -283,6 +286,21 @@ def cmd_quick_fix_start(args):
     )
 
 
+# Directories a test run or an interpreter writes, never a person. A
+# project with no .gitignore for them still shows them as untracked, and
+# they change between the green and the commit: traced and committed, they
+# make the landed files differ from the tested ones and fail the check on
+# the issue just landed.
+_GENERATED_DIRS = {"__pycache__", ".pytest_cache", ".mypy_cache",
+                   ".ruff_cache", ".tox", ".nox"}
+
+
+def _is_generated(path):
+    parts = path.split("/")
+    return (any(p in _GENERATED_DIRS for p in parts[:-1])
+            or path.endswith((".pyc", ".pyo")))
+
+
 def _git_changed_paths(cwd):
     out = subprocess.run(
         ["git", "status", "--porcelain", "--untracked-files=all"],
@@ -295,8 +313,38 @@ def _git_changed_paths(cwd):
         rest = line[3:]
         if " -> " in rest:
             rest = rest.split(" -> ", 1)[-1]
-        paths.append(rest.strip().strip('"'))
+        path = rest.strip().strip('"')
+        if not _is_generated(path):
+            paths.append(path)
     return paths
+
+
+def _regreen(task_dir, slug, scenario_ids):
+    """Re-run each scenario's newest green command through `tdd-green`."""
+    task, _ = load_manifest(task_dir)
+    for sid in scenario_ids:
+        runs = [e for e in (task.get("evidence") or [])
+                if isinstance(e, dict) and e.get("type") == "test-run"
+                and e.get("scenario") == sid and e.get("path")]
+        if not runs:
+            continue
+        with open(os.path.join(task_dir, runs[-1]["path"]),
+                  encoding="utf-8") as fh:
+            command = json.load(fh).get("command")
+        if not command:
+            raise CompassError(
+                f"compass quick-fix finish: the green for {sid} does not "
+                f"record its command, so it cannot be re-run on the traced "
+                f"files. Run `compass tdd-green --scenario {sid} -- <test "
+                f"command>` again, then re-run finish.")
+        try:
+            _quiet_run(cmd_tdd_green, task=slug, scenario=sid,
+                       verified_by=None, command=shlex.split(command))
+        except CompassError as exc:
+            raise CompassError(
+                f"compass quick-fix finish: re-running the green for {sid} "
+                f"on the traced files failed - no gate passed and nothing "
+                f"was committed.\n{exc}")
 
 
 def cmd_quick_fix_finish(args):
@@ -346,6 +394,7 @@ def cmd_quick_fix_finish(args):
     artifact_paths = [p for p in all_paths if p.startswith(doc_prefix)]
     existing_traced = {cf.get("path") for cf in (task.get("changed_files") or [])
                        if isinstance(cf, dict)}
+    before_tracing = set(existing_traced)
 
     if len(scenarios) > 1:
         untraced = [p for p in production_paths if p not in existing_traced]
@@ -369,6 +418,13 @@ def cmd_quick_fix_finish(args):
             _quiet_run(cmd_changed_file_add, task=slug, path=p,
                       scenario=list(scenario_ids))
             existing_traced.add(p)
+
+    # A green covers the files traced when it ran. Tracing just added files,
+    # so the newest green no longer covers what is about to land, and the
+    # check on the landed issue would fail. Re-run each scenario's own green
+    # command on the traced tree, so the newest record names what lands.
+    if existing_traced != before_tracing:
+        _regreen(task_dir, slug, scenario_ids)
 
     evidence_path_rel = "evidence/check-output.txt"
     evidence_path_abs = os.path.join(task_dir, evidence_path_rel)

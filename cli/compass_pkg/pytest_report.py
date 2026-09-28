@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import os
 import re
+import shlex
 import tempfile
 import xml.etree.ElementTree as ET
 
@@ -35,22 +36,46 @@ _TEST_FILE = re.compile(r"^(test_.*|.*_test|conftest)\.py$")
 
 
 def with_report(command):
-    """(command, report path, is ours): the command set to write a JUnit report.
+    """(extra environment, report path, is ours, mtime before the run).
 
-    A command that already names a report keeps it, and Compass reads that
-    one. Otherwise `--junitxml` is added, pointing at a temporary file.
+    A command that names its own report keeps it, and Compass reads that
+    one. Otherwise `--junitxml` goes in `PYTEST_ADDOPTS`, added to any value
+    already set, pointing at a temporary file. pytest reads that variable
+    wherever it starts - called directly, as `py.test`, or inside a
+    `bash -c` string or a `make` target - so a wrapper still writes the
+    report. A runner that is not pytest ignores it.
     """
     words = [str(c) for c in command]
     for i, word in enumerate(words):
         for flag in _REPORT_FLAGS:
+            path = None
             if word.startswith(flag + "="):
-                return list(command), word.split("=", 1)[1], False
-            if word == flag and i + 1 < len(words):
-                return list(command), words[i + 1], False
+                path = word.split("=", 1)[1]
+            elif word == flag and i + 1 < len(words):
+                path = words[i + 1]
+            if path:
+                return None, path, False, _mtime(path)
     fd, path = tempfile.mkstemp(prefix="compass-red-", suffix=".xml")
     os.close(fd)
     os.remove(path)   # pytest writes it; its absence afterwards means it did not
-    return list(command) + ["--junitxml=" + path], path, True
+    addopts = os.environ.get("PYTEST_ADDOPTS", "").strip()
+    flag = "--junitxml=" + shlex.quote(path)
+    return ({"PYTEST_ADDOPTS": (addopts + " " + flag).strip()},
+            path, True, None)
+
+
+def _mtime(path):
+    try:
+        return os.path.getmtime(path)
+    except OSError:
+        return None
+
+
+def written(path, mtime_before):
+    """Did this run write the report? A report the command names can be
+    left over from an earlier run, so it must be new or changed."""
+    after = _mtime(path)
+    return after is not None and after != mtime_before
 
 
 def _is_package(path):
@@ -97,6 +122,8 @@ def in_project(module, project_root):
 
 def _read(report_path):
     """(failed, collection errors as [(where, missing module or None)]), or None."""
+    if not report_path:
+        return None
     try:
         root = ET.parse(report_path).getroot()
     except (OSError, ET.ParseError):

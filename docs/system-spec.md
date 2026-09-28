@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Retro prints no retired name for assessment
+### A runner that writes no report is marked exit-code
 
-- **Scenario id:** `RWC-3`
+- **Scenario id:** `DSW-3`
 - **Intent:** `INT-1`
-- **Source issue:** `retro-weighs-only-retired-route-names`
+- **Source issue:** `red-through-a-shell-wrapper`
 - **Landed:** 2026-09-25
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -8664,4 +8664,25 @@
 - **Scenario id:** `RWC-2`
 - **Intent:** `INT-1`
 - **Source issue:** `retro-weighs-only-retired-route-names`
+- **Landed:** 2026-09-25
+
+### Retro prints no retired name for assessment _(archived)_
+
+- **Scenario id:** `RWC-3`
+- **Intent:** `INT-1`
+- **Source issue:** `retro-weighs-only-retired-route-names`
+- **Landed:** 2026-09-25
+
+### py.test is recognised and gets the pytest rule _(archived)_
+
+- **Scenario id:** `DSW-1`
+- **Intent:** `INT-1`
+- **Source issue:** `red-through-a-shell-wrapper`
+- **Landed:** 2026-09-25
+
+### A bash -c pipeline around pytest is judged by pytest's report _(archived)_
+
+- **Scenario id:** `DSW-2`
+- **Intent:** `INT-1`
+- **Source issue:** `red-through-a-shell-wrapper`
 - **Landed:** 2026-09-25

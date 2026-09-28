@@ -103,7 +103,7 @@ def _output_fail_token(out):
     return None
 
 
-def _run_test(cmd):
+def _run_test(cmd, env=None):
     """Run a test command and return (exit_code, combined_output, warnings).
 
     Hardens against pipeline exit-code masking (R2): pipefail is injected into
@@ -125,7 +125,8 @@ def _run_test(cmd):
             )
         if shell in _PIPEFAIL_SHELLS and "pipefail" not in script:
             run_cmd[idx] = "set -o pipefail\n" + script
-    proc = subprocess.run(run_cmd, capture_output=True, text=True)
+    proc = subprocess.run(run_cmd, capture_output=True, text=True,
+                          env={**os.environ, **env} if env else None)
     out = (proc.stdout or "") + (proc.stderr or "")
     return proc.returncode, out, warnings
 
@@ -230,7 +231,7 @@ def _is_pytest_command(cmd):
     if not cmd:
         return False
     base = os.path.basename(str(cmd[0]))
-    return base.startswith("pytest") or "pytest" in cmd
+    return base.startswith(("pytest", "py.test")) or "pytest" in cmd
 
 
 def _pytest_cov_available():
@@ -337,25 +338,29 @@ def cmd_tdd_red(args):
                            "`compass tdd-red --scenario TRC-A1 -- pytest tests/test_x.py`"
                            " (or set project.test_micro_command in .compass/config.yml)")
     command = _neutralise_coverage(command)
-    report = None
-    if _is_pytest_command(command):
-        # pytest's own report says which tests failed; see pytest_report.
-        command, report, ours = pytest_report.with_report(command)
+    # pytest's own report says which tests failed, however pytest is
+    # started; see pytest_report.
+    env, report, ours, before = pytest_report.with_report(command)
     tree_ids = ids_for(task_dir)   # the tree the test runs on, named before it runs
-    code, out, warnings = _run_test(command)
+    code, out, warnings = _run_test(command, env)
     for w in warnings:
         sys.stderr.write(f"compass tdd-red: warning - {w}\n")
     excerpt = "\n".join(out.splitlines()[-25:])
     red_kind, heading, rejection = None, None, None
-    if report and code != 0:
+    ran_pytest = pytest_report.written(report, before)
+    if code != 0 and (ran_pytest or _is_pytest_command(command)):
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(
             os.path.abspath(task_dir))))
         red_kind, heading, rejection = pytest_report.judge(
-            report, code, project_root, _NO_TEST_RAN_EXITS)
+            report if ran_pytest else None, code, project_root,
+            _NO_TEST_RAN_EXITS)
     elif code != 0:
+        # A runner Compass does not recognise, and no pytest report: the
+        # exit code is all there is to go on, and the record says so.
         rejection = _red_rejection_reason(code, command)
         heading = pytest_report.DID_NOT_RUN if rejection else None
-    if report and ours:
+        red_kind = None if rejection else "exit-code"
+    if ours:
         try:
             os.remove(report)
         except OSError:
@@ -408,9 +413,12 @@ def cmd_tdd_red(args):
     open(os.path.join(task_dir, ".red"), "w").close()  # the hook reads this
     payload.pop("_full_log", None)
     bound = f" (bound to {scenario})" if scenario else " (unbound - consider --scenario)"
+    judged = ([("judged by exit code only: Compass does not recognise this "
+                "runner, and it wrote no pytest report")]
+              if red_kind == "exit-code" else [])
     return say(args,
                f"compass tdd-red: failing test recorded (exit {code}){bound}.",
-               detail=[f"evidence : {ev_path}",
+               detail=judged + [f"evidence : {ev_path}",
                        f"marker   : {os.path.join(task_dir, '.red')}",
                        "           the pre-tool hook will now allow code edits."],
                scenario=scenario, exit_code=code, evidence=ev_path,

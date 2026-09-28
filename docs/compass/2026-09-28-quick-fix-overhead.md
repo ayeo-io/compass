@@ -1,8 +1,8 @@
 # Quick-fix cost - before and after `compass quick-fix`
 
 On each scenario's mean, a quick fix under Compass now costs 1.4 to 1.9
-times what it costs under Superpowers, down from 6.6 to 8.6 times. Every session after the change
-passed its hidden tests and its three gates. Before it, two of the four
+times what it costs under Superpowers, down from 6.6 to 8.6 times. Every
+session after the change passed its hidden tests and its three gates. Before it, two of the four
 Compass sessions ended with their gates still pending.
 
 ## Results

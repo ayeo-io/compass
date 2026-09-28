@@ -133,8 +133,16 @@
           },
           "cost": {
             "type": "integer",
-            "description": "Tokens the dispatch used. Over the budget adds a finding.",
+            "description": "Tokens every try used, the sum of `costs`. A try over the budget adds a finding.",
             "minimum": 0
+          },
+          "costs": {
+            "type": "object",
+            "description": "Tokens each try used, keyed by the try's number. A second cost for the same try replaces it.",
+            "patternProperties": {
+              "^[1-9][0-9]*$": {"type": "integer", "minimum": 0}
+            },
+            "additionalProperties": false
           },
           "status": {
             "enum": [

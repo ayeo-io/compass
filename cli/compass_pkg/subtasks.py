@@ -216,7 +216,12 @@ def cmd_subtask_update(args):
         rounds.append({"round": len(rounds) + 1, "verdict": args.round,
                        "at": now_iso()})
     if args.cost is not None:
-        s["cost"] = _count(args.cost, "cost")
+        # One cost per try, keyed by the try, and `cost` their total: a
+        # subtask sent back for another try keeps what the earlier tries
+        # used. A second cost for the same try replaces that try's figure.
+        costs = s.setdefault("costs", {})
+        costs[str(int(s.get("attempts") or 1))] = _count(args.cost, "cost")
+        s["cost"] = sum(costs.values())
         budget = s.get("budget")
         if isinstance(budget, int) and args.cost > budget:
             # An overrun is recorded, not stopped: the run goes on, and the

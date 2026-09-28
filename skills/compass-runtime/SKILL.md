@@ -1,6 +1,6 @@
 ---
 name: compass-runtime
-description: "The stage-to-command map: which command runs each pipeline stage, what it writes, which agent owns it, and where issue state lives on disk. Load when a Compass issue begins."
+description: Which command runs each stage, which agent owns it, where issue state lives. Load when an issue begins.
 ---
 
 # Compass - the stage map

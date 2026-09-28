@@ -1,5 +1,5 @@
 ---
-description: The cross-issue view - blockers, owed follow-ups, and the periodic digest
+description: Cross-issue view - blockers, owed follow-ups, the digest
 argument-hint: "[--digest]"
 allowed-tools: Read, Write, Bash, Glob, Grep
 ---

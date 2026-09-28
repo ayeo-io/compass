@@ -1,6 +1,6 @@
 ---
 name: governance-check
-description: How to check a finished design against the guardrails and strategies in force. Load at the plan stage.
+description: Checking a design against the guardrails and strategies in force. Load at plan.
 ---
 
 # Governance Check

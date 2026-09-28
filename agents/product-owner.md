@@ -1,6 +1,6 @@
 ---
 name: product-owner
-description: "The product owner's perspective: checks the spec against `intent.md` for intent fidelity, and gates the plan stage until it has."
+description: "Product owner perspective: checks the spec against `intent.md` and gates the plan stage."
 tools: Read, Glob, Grep, Write, Edit
 model: sonnet
 ---

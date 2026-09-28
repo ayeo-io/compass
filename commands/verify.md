@@ -1,5 +1,5 @@
 ---
-description: Test and review - run the scenarios, apply the review dimensions, check the gates
+description: Run the scenarios, apply the review, check the gates
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 

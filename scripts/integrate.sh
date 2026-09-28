@@ -163,6 +163,11 @@ while IFS= read -r line; do
   branch="$(echo "${_row_cells[$BRANCH_COL]:-}" | xargs 2>/dev/null | sed -E 's/^[`*]+//; s/[`*]+$//' || true)"
   case "$sid" in subtask-*|stream-*) ;; *) continue ;; esac  # vocabulary-scan: allow - reads the retired spelling for back-compat (ADR-006)
   [ -n "$branch" ] || branch="compass/$TASK_SLUG/$sid"
+  _row_problem="$(map_row_problem "$sid" "$branch")"
+  if [ -n "$_row_problem" ]; then
+    echo "integrate.sh: distribution-map.md's row is refused: $_row_problem. Nothing was merged." >&2
+    exit 1
+  fi
   SUBTASKS+=("$sid"); BRANCHES+=("$branch")
 done < "$MAP"
 

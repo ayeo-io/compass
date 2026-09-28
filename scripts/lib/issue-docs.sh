@@ -73,3 +73,33 @@ issue_doc_path() {
   fi
   return 1
 }
+
+# `map_row_problem <subtask id> <branch>` prints why a distribution map's row
+# must be refused, or nothing when it is fine. Both scripts build a worktree
+# path from the id and pass the branch to git, so neither may carry a path
+# separator, a `..`, or a leading `-` that git would read as an option.
+map_row_problem() {
+  local sid="$1" branch="$2"
+  case "$sid" in
+    subtask-*|stream-*) ;;  # vocabulary-scan: allow - reads the retired spelling for back-compat (ADR-006)
+    *) echo "subtask id '$sid' is not subtask-<name>"; return 0 ;;
+  esac
+  # After the prefix: letters, digits, spaces, `.`, `_`, `(`, `)` and `-`,
+  # and never `..` - an id such as `subtask-1`, `subtask-A-docs` or
+  # `subtask-1 (wave 2)`, as maps already in use write them. Paths built from
+  # it are quoted, so a space is safe; a `/` or `..` would leave the
+  # worktree root.
+  local rest="${sid#*-}"
+  case "$rest" in
+    ''|*..*|*[!A-Za-z0-9\ ._\(\)-]*)
+      echo "subtask id '$sid' is not subtask-<name>, with letters, digits, spaces, '.', '_', '(', ')' or '-' after it and no '..'"
+      return 0 ;;
+  esac
+  case "$branch" in
+    -*) echo "branch '$branch' for $sid starts with '-', which git reads as an option"; return 0 ;;
+  esac
+  if ! git check-ref-format --branch "$branch" >/dev/null 2>&1; then
+    echo "branch '$branch' for $sid is not a name git accepts for a branch"
+  fi
+  return 0
+}

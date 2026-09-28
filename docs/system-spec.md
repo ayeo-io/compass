@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### the breakdown gives calls and tokens by step
+### the safety contract states both limits
 
-- **Scenario id:** `QFO-8`
+- **Scenario id:** `QFG-4`
 - **Intent:** `INT-1`
-- **Source issue:** `quick-fix-overhead`
+- **Source issue:** `quick-fix-finish-gaps`
 - **Landed:** 2026-09-28
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -9238,4 +9238,32 @@
 - **Scenario id:** `QFO-7`
 - **Intent:** `INT-1`
 - **Source issue:** `quick-fix-overhead`
+- **Landed:** 2026-09-28
+
+### the breakdown gives calls and tokens by step _(archived)_
+
+- **Scenario id:** `QFO-8`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-overhead`
+- **Landed:** 2026-09-28
+
+### a second finish reuses the covering green and commits _(archived)_
+
+- **Scenario id:** `QFG-1`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-finish-gaps`
+- **Landed:** 2026-09-28
+
+### finish works from a subdirectory _(archived)_
+
+- **Scenario id:** `QFG-2`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-finish-gaps`
+- **Landed:** 2026-09-28
+
+### ship-commit refuses a stale green for the issue's files _(archived)_
+
+- **Scenario id:** `QFG-3`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-finish-gaps`
 - **Landed:** 2026-09-28

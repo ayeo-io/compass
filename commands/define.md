@@ -1,5 +1,5 @@
 ---
-description: Write acceptance criteria as BDD scenarios every role reads
+description: Acceptance criteria as BDD scenarios every role reads
 allowed-tools: Read, Write, Edit, Glob, Grep
 ---
 

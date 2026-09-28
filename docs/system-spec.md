@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### CMP-6
+### EGB-8
 
-- **Scenario id:** `CMP-6`
+- **Scenario id:** `EGB-8`
 - **Intent:** `INT-1`
-- **Source issue:** `comparison-suite`
+- **Source issue:** `eval-gaps-after-d33`
 - **Landed:** 2026-09-28
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -9112,4 +9112,60 @@
 - **Scenario id:** `CMP-5`
 - **Intent:** `INT-1`
 - **Source issue:** `comparison-suite`
+- **Landed:** 2026-09-28
+
+### CMP-6 _(archived)_
+
+- **Scenario id:** `CMP-6`
+- **Intent:** `INT-1`
+- **Source issue:** `comparison-suite`
+- **Landed:** 2026-09-28
+
+### EGB-1 _(archived)_
+
+- **Scenario id:** `EGB-1`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d33`
+- **Landed:** 2026-09-28
+
+### EGB-2 _(archived)_
+
+- **Scenario id:** `EGB-2`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d33`
+- **Landed:** 2026-09-28
+
+### EGB-3 _(archived)_
+
+- **Scenario id:** `EGB-3`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d33`
+- **Landed:** 2026-09-28
+
+### EGB-4 _(archived)_
+
+- **Scenario id:** `EGB-4`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d33`
+- **Landed:** 2026-09-28
+
+### EGB-5 _(archived)_
+
+- **Scenario id:** `EGB-5`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d33`
+- **Landed:** 2026-09-28
+
+### EGB-6 _(archived)_
+
+- **Scenario id:** `EGB-6`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d33`
+- **Landed:** 2026-09-28
+
+### EGB-7 _(archived)_
+
+- **Scenario id:** `EGB-7`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d33`
 - **Landed:** 2026-09-28

@@ -1,6 +1,6 @@
 ---
 name: quick-fix
-description: Scoring the four dimensions, red-green-refactor, and what clears a gate - the light path only. Load with /compass:quick-fix.
+description: "The light path: dimensions, red-green-refactor, gates. Load with /compass:quick-fix."
 ---
 
 # Quick fix

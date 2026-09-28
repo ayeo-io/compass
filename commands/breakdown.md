@@ -1,5 +1,5 @@
 ---
-description: Break the work into independent subtasks and set up a worktree for each
+description: Split the work into independent subtasks, one worktree each
 allowed-tools: Read, Write, Edit, Bash, Glob
 ---
 

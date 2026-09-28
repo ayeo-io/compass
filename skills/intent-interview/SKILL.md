@@ -1,6 +1,6 @@
 ---
 name: intent-interview
-description: How to draw a usable `intent.md` out of a conversation - the questions to ask, and what a good answer looks like. Load before acceptance criteria exist.
+description: Drawing `intent.md` out of a conversation. Load before acceptance criteria exist.
 ---
 
 # Intent interview

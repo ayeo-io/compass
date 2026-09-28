@@ -1,5 +1,5 @@
 ---
-description: Product owner entry point - capture intent, upstream of the acceptance criteria
+description: Product owner entry point - capture intent before acceptance criteria
 argument-hint: "<what you want and why>"
 allowed-tools: Read, Write, Edit, Glob, Grep
 ---

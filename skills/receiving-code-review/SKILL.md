@@ -1,6 +1,6 @@
 ---
 name: receiving-code-review
-description: "How to answer review comments: check each against the code before acting, push back with reasoning rather than preference, and record what you did with each one."
+description: "Answering review comments: check each against the code, push back with reasons, record the outcome."
 ---
 
 # Receiving Code Review

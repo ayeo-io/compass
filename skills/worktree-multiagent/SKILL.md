@@ -1,6 +1,6 @@
 ---
 name: worktree-multiagent
-description: How parallel subtasks are created, isolated and integrated across git worktrees. Load at breakdown on a multiagent orchestration.
+description: Creating, isolating and integrating parallel subtasks in git worktrees. Load at a multiagent breakdown.
 ---
 
 # Worktree Multiagent

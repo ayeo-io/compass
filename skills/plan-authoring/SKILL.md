@@ -1,6 +1,6 @@
 ---
 name: plan-authoring
-description: "How to write a technical design: which optional sections earn a place, and the self-review owed before handing it over. Load at the plan stage."
+description: Writing a technical design and its self-review. Load at the plan stage.
 ---
 
 # Plan Authoring

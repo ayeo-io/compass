@@ -1,5 +1,5 @@
 ---
-description: Ship - integrate worktrees, run regression, update living docs, settle owed follow-ups
+description: Integrate, run regression, update living docs, settle follow-ups
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 

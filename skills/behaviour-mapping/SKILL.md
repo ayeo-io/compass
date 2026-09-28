@@ -1,6 +1,6 @@
 ---
 name: behaviour-mapping
-description: How to reverse-engineer existing behaviour into scenarios before changing it. Load on brownfield work whose behaviour is not written down.
+description: Capturing existing behaviour as scenarios before changing it. Load on brownfield work with no written behaviour.
 ---
 
 # Behaviour mapping

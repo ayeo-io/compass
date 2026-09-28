@@ -28,7 +28,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 # The success signals from intent.md, in words.
-RESIDENT_CEILING = 1200
+RESIDENT_CEILING = 900
 QUICK_FIX_CEILING = 12000
 SKILL_LINE_CEILING = 200
 

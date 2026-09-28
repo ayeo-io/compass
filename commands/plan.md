@@ -1,5 +1,5 @@
 ---
-description: Turn the spec into a technical design and check it against governance
+description: Write the technical design and check it against governance
 allowed-tools: Read, Write, Edit, Glob, Grep
 ---
 

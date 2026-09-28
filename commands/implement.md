@@ -1,5 +1,5 @@
 ---
-description: Write the code, driving red-green-refactor through the CLI
+description: Write the code, red-green-refactor through the CLI
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 

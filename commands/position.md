@@ -69,8 +69,8 @@ The `product-marketer` role (see the delivery-approach rubric and the
 routing policy's `role_rules`) adds the `positioning.md` /
 `launch-readiness.md` artifacts, turns on the `claims` review dimension,
 and **blocks shipping** until every claim in `positioning.md` traces to a
-passing scenario. `verify.claims` is an immovable gate - no delivery
-approach removes it.
+passing scenario. `verify.claims` is a blocking role gate - the role rule
+adds it on every delivery approach while a marketer is in play.
 
 ## Gate
 

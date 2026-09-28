@@ -6,8 +6,8 @@ Role in the pipeline: the marketer's GATE artifact. The routing-policy
 role_rule for `product-marketer` needs this file and blocks shipping until
 every claim in positioning.md traces to a PASSING scenario. This is where
 the claims→scenario chain is proven before anything ships publicly. The
-`claims` review dimension and the `verify.claims` immovable gate both read
-this file.
+`claims` review dimension and the `verify.claims` gate, which the role rule
+adds while a marketer is in play, both read this file.
 
 Fill every {{PLACEHOLDER}}. A claim with no passing scenario is a no-go -
 ship refuses to close on it.
@@ -17,7 +17,7 @@ ship refuses to close on it.
 
 > **Author:** {{PRODUCT MARKETER NAME}} · **Date:** {{DATE}} · **Owning agent:** `product-marketer`
 > **Reads from:** positioning.md (the claims), verification-report.md (the scenario results)
-> **Gates:** ship - per the routing-policy.md role_rule and the `verify.claims` immovable gate.
+> **Gates:** ship - the routing-policy.md role rule adds the blocking `verify.claims` gate.
 
 ---
 

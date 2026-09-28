@@ -114,12 +114,64 @@ def test_fdg_2_the_immovable_list_and_never_skip_match_the_policy():
         assert [s.strip() for s in match.split(",")] == floor["never_skip"]
 
 
+def _blocks(text):
+    """Paragraphs and list items, each with its whitespace collapsed, so a
+    claim split across lines or across two sentences stays together."""
+    block, out = [], []
+    for line in text.splitlines():
+        starts_item = re.match(r"^\s*(?:[-*]|\d+\.)\s", line)
+        if not line.strip() or starts_item:
+            if block:
+                out.append(" ".join(" ".join(block).split()))
+            block = [line] if line.strip() else []
+        else:
+            block.append(line)
+    if block:
+        out.append(" ".join(" ".join(block).split()))
+    return out
+
+
+def _calls_claims_immovable(block):
+    """Does the block say the claims gate is immovable? "Immovable" must be
+    attached to it - `verify.claims` is (an) immovable, or a claims block
+    that says "this/it is an immovable gate" - so a block that lists the
+    real immovable gates and mentions claims elsewhere is not counted."""
+    low = block.lower()
+    if re.search(r"\b(neither|not|never)\b[^.;]*\bimmovable", low):
+        return False
+    return bool(re.search(r"verify\.claims`?\s+(?:is\s+)?(?:an\s+)?immovable", low)
+                or (re.search(r"\bclaims?\b", low) and re.search(
+                    r"\b(?:this|it)\s+is\s+an?\s+immovable", low)))
+
+
+def _shipped_markdown():
+    files = subprocess.run(["git", "ls-files", "*.md"], cwd=ROOT,
+                           capture_output=True, text=True, check=True).stdout
+    return [f for f in files.split()
+            if not re.match(r"docs/compass/[^/]+/", f)
+            and f != "docs/system-spec.md"]
+
+
 def test_fdg_2_no_document_calls_verify_claims_immovable():
+    """`verify.claims` is role-scoped, not immovable. The claim stood in the
+    deep dive and, after that was fixed, in six more files, because this
+    check named four documents. It now reads every tracked Markdown file
+    outside the issue records and the derived spec."""
     assert "verify.claims" not in [g["gate"] for g in POLICY["immovable_gates"]]
-    for doc in ("docs/routing-deep-dive.md", "README.md", "docs/five-minutes.md",
-                "docs/safety-contract.md"):
-        text = " ".join((ROOT / doc).read_text(encoding="utf-8").split())
-        assert not re.search(r"verify\.claims`? is immovable", text), doc
+    hits = []
+    for rel in _shipped_markdown():
+        for block in _blocks((ROOT / rel).read_text(encoding="utf-8")):
+            if _calls_claims_immovable(block):
+                hits.append(f"{rel}: {block[:100]}")
+    assert not hits, "\n".join(hits)
+
+
+def test_fdg_2_the_scan_finds_a_planted_claim_and_passes_a_negation():
+    assert _calls_claims_immovable(
+        "- **claims** - does every claim trace? This is an immovable gate.")
+    assert _calls_claims_immovable("`verify.claims` is an immovable gate")
+    assert not _calls_claims_immovable(
+        "`verify.claims` by the role in play, so neither is immovable.")
 
 
 def test_fdg_3_the_contract_names_the_clis_document_home():

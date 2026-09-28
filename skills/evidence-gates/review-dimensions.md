@@ -51,8 +51,8 @@ artifact communicate a decision, or does it narrate the pipeline? Run
 This check applies to every issue - the calibration sample it is read
 against is named in `governance/strategies.md` (`S8`).
 
-**claims** - When the product-marketer role is in play (`verify.claims` is
-an immovable gate, so it applies whenever the marketer takes part): does every
+**claims** - When the product-marketer role is in play (the role rule adds
+the blocking `verify.claims` gate whenever the marketer takes part): does every
 public claim trace to a *passing* scenario? Evidence is `launch-readiness.md`
 with no red rows.
 

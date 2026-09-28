@@ -370,8 +370,8 @@ audience - reads the voice & positioning strategies in
 
 The `product-marketer` entry point turns on the `claims` review dimension and -
 per the `role_rules` - **blocks shipping until every claim in `positioning.md`
-traces to a passing scenario**. `verify.claims` is an immovable gate; no
-delivery approach removes it.
+traces to a passing scenario**. `verify.claims` is a blocking role gate: the
+role rule adds it on every delivery approach while a marketer is in play.
 
 So the marketer's gate applies right up to the end. At `/compass:ship`, the
 `product-marketer` agent walks `launch-readiness.md`. Every row must be green: a

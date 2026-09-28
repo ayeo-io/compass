@@ -31,8 +31,8 @@ and that is a no-pass at the verify stage.
 
 - Every public claim - launch copy, docs, marketing, a sentence in the
   changelog - traces down to a scenario that, when it passes, makes the claim
-  true. This is the marketer's `launch-readiness.md` ledger and it is an
-  immovable gate at ship time.
+  true. This is the marketer's `launch-readiness.md` ledger, and
+  `verify.claims` blocks shipping on it while a marketer is in play.
 
 ## How to maintain it continuously
 
@@ -64,7 +64,7 @@ at the end is a chain that was guessed.
 - **Orphan claim** - a public claim with no scenario below it. The marketer's
   three moves: file the missing scenario, soften the claim until a real
   scenario backs it, or cut the claim. It never ships orphaned - `verify.claims`
-  is immovable.
+  blocks it.
 - **Stale link** - a scenario was rewritten and the code above it now traces to
   a scenario that no longer says what the code does. Re-point the link; a link
   to the wrong place is worse than a missing one because it lies.

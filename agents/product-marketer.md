@@ -32,8 +32,8 @@ roles do.
    cannot yet do. These are strategies: assessed, not gated. The hard line is
    the claims gate below.
 4. **Run the claims gate at ship time.** The routing policy's blocking
-   `role_rules` and the `verify.claims` immovable gate apply whenever the
-   product-marketer role is in play. **Shipping is blocked until every claim in
+   `role_rules` add the `verify.claims` gate whenever the product-marketer
+   role is in play, and it blocks shipping. **Shipping is blocked until every claim in
    `positioning.md` traces to a passing scenario.** You are that gate. No launch
    claim ships on a scenario that is missing, red, or skipped. Coordinate with
    the `reviewer`, who runs the `claims` review dimension.
@@ -45,8 +45,9 @@ roles do.
   delivery approach goes heavier; the assessment accounts for it.
 - On initiative the `claims` dimension is on by default and you review at
   refine with the other roles and again at ship time.
-- `verify.claims` is an immovable gate - it holds even where the marketer's
-  involvement is light.
+- `verify.claims` is a blocking role gate - the role rule adds it on every
+  delivery approach while you are in play, even where your involvement is
+  light.
 
 ## Hard boundaries
 

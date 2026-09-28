@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### A review package is a file cut from the base commit
+### No shipped Markdown file calls verify.claims immovable
 
-- **Scenario id:** `OLH-5`
+- **Scenario id:** `CCI-1`
 - **Intent:** `INT-1`
-- **Source issue:** `orchestrator-loop-hardening`
+- **Source issue:** `claims-called-immovable-elsewhere`
 - **Landed:** 2026-09-25
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -8586,5 +8586,12 @@
 
 - **Scenario id:** `OLH-3`
 - **Intent:** `INT-5`
+- **Source issue:** `orchestrator-loop-hardening`
+- **Landed:** 2026-09-25
+
+### A review package is a file cut from the base commit _(archived)_
+
+- **Scenario id:** `OLH-5`
+- **Intent:** `INT-1`
 - **Source issue:** `orchestrator-loop-hardening`
 - **Landed:** 2026-09-25

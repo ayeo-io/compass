@@ -75,7 +75,7 @@ def test_dsw_2_a_wrapped_genuine_failure_is_a_red(red):
 
 
 def test_dsw_3_a_runner_that_writes_no_report_is_marked_exit_code(red):
-    result, record = red(FAIL, "false")
+    result, record = red(FAIL, "sh", "-c", "echo '1 failed'; exit 1")
     assert result.returncode == 0, result.combined
     assert record["red_kind"] == "exit-code"
     assert "exit code only" in result.combined.lower(), result.combined

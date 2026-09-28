@@ -117,7 +117,7 @@ def test_evb_1_a_green_names_the_tree_it_ran_on(repo):
 
 def test_evb_1_a_red_and_an_acceptance_name_their_tree(repo):
     red = _cli(repo, "tdd-red", "--issue", SLUG, "--", sys.executable, "-c",
-               "import sys; sys.exit(1)")
+               "print('1 failed'); import sys; sys.exit(1)")
     assert red.returncode == 0, red.stderr
     assert _record(repo, "red").get("tree_id")
     start = _cli(repo, "acceptance", "start", "--issue", SLUG, "--kind",

@@ -43,7 +43,7 @@ def _cli(root, *args):
 @pytest.fixture
 def repo(tmp_path):
     """A git repository with a tracked, unclaimed file, and an issue that
-    claims `src/new.py`, gates already passed."""
+    claims a new source file, gates already passed."""
     root = tmp_path / "repo"
     root.mkdir()
     _git(root, "init", "-q")

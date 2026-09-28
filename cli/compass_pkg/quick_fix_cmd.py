@@ -31,13 +31,15 @@ import argparse
 import contextlib
 import datetime
 import io
+import json
 import os
 import subprocess
 
+from compass_pkg.binding import ids_for
 from compass_pkg.check_cmd import cmd_check
 from compass_pkg.core import (
     CompassError, _one_segment, display_shape, display_stage, docs_dir,
-    find_governance,
+    find_governance, find_upwards,
     load_manifest, load_yaml, manifest_path, resolve_issue_dir, save_manifest,
 )
 from compass_pkg.dashboard import cmd_issue_artifact
@@ -47,7 +49,7 @@ from compass_pkg.manifest import (
     cmd_scenario_add,
 )
 from compass_pkg.routing import cmd_route_evaluate, evaluate_route
-from compass_pkg.tdd import cmd_tdd_green
+from compass_pkg.tdd import _neutralise_coverage, cmd_tdd_green
 from compass_pkg.terminal import say
 
 #: The three gates a quick fix ever clears (route_shapes.express.gates in
@@ -318,10 +320,15 @@ def _is_generated(path):
             or path.endswith((".pyc", ".pyo")))
 
 
-def _git_changed_paths(cwd):
+def _git_changed_paths(root):
+    """Every changed path git sees, as a path relative to `root` - the
+    project root (QFG-2). `git status` already reports paths relative to the
+    repository top, so running it with `root` as the subprocess's directory
+    and normalising defensively against `root` keeps tracing correct however
+    `finish` itself was invoked."""
     out = subprocess.run(
         ["git", "status", "--porcelain", "--untracked-files=all"],
-        cwd=cwd, capture_output=True, text=True, check=True,
+        cwd=root, capture_output=True, text=True, check=True,
     ).stdout
     paths = []
     for line in out.splitlines():
@@ -330,10 +337,74 @@ def _git_changed_paths(cwd):
         rest = line[3:]
         if " -> " in rest:
             rest = rest.split(" -> ", 1)[-1]
-        path = rest.strip().strip('"')
-        if not _is_generated(path):
-            paths.append(path)
+        raw = rest.strip().strip('"')
+        abs_path = os.path.normpath(os.path.join(root, raw))
+        rel = os.path.relpath(abs_path, root)
+        if rel == os.pardir or rel.startswith(os.pardir + os.sep):
+            continue  # outside the project root - not this issue's to trace
+        rel = rel.replace(os.sep, "/")
+        if not _is_generated(rel):
+            paths.append(rel)
     return paths
+
+
+@contextlib.contextmanager
+def _at_project_root(root):
+    """Change directory to the project root for the wrapped steps, and back
+    afterwards (QFG-2). `git status` names paths relative to the repository
+    top regardless of the caller's directory, but `git add` - run inside
+    `compass check` and `compass ship-commit` - resolves paths relative to
+    the process's own working directory, so tracing, checking and staging
+    must run from the root even when `finish` itself was invoked from a
+    subdirectory."""
+    prior = os.getcwd()
+    os.chdir(root)
+    try:
+        yield
+    finally:
+        os.chdir(prior)
+
+
+def _reusable_green(task_dir, scenario, command, tree_ids):
+    """The newest bound green already on record for `scenario`, reused
+    rather than re-run, when it covers exactly what is being asked now
+    (QFG-1): the same command, on the same tree, with the same files traced.
+    A second `finish` with nothing new to assert must not record a rerun of
+    an unchanged tree - `compass check`'s no-trusted-rerun guardrail refuses
+    that, and the taught recovery ("run it again") cannot clear it.
+    """
+    if not command:
+        return False
+    try:
+        task, _ = load_manifest(task_dir)
+    except CompassError:
+        return False
+    record_path = None
+    for e in (task.get("evidence") or []):
+        if (isinstance(e, dict) and e.get("type") == "test-run"
+                and e.get("scenario") == scenario and e.get("path")):
+            record_path = e["path"]  # upserted per scenario - last one wins
+    if not record_path:
+        return False
+    full_path = os.path.join(task_dir, record_path)
+    try:
+        with open(full_path, "r", encoding="utf-8") as fh:
+            record = json.load(fh)
+    except (OSError, ValueError):
+        return False
+    if not isinstance(record, dict):
+        return False
+    # `tdd-green` stores the command after neutralising a coverage floor for
+    # a recognised pytest micro-run (`tdd._neutralise_coverage`); compare
+    # against the same form, or an identical command would look changed.
+    stored_command = " ".join(_neutralise_coverage(list(command)))
+    if record.get("command") != stored_command:
+        return False
+    old_tree, old_changes = record.get("tree_id"), record.get("changes_id")
+    new_tree, new_changes = tree_ids.get("tree_id"), tree_ids.get("changes_id")
+    if not (old_tree and old_changes and new_tree and new_changes):
+        return False
+    return old_tree == new_tree and old_changes == new_changes
 
 
 def cmd_quick_fix_finish(args):
@@ -375,45 +446,60 @@ def cmd_quick_fix_finish(args):
             f"- quick-fix start writes one before this can run.")
     scenario_ids = [s.get("id") for s in scenarios]
 
-    cwd = os.getcwd()
-    all_paths = _git_changed_paths(cwd)
-    doc_prefix = docs_dir(task_dir) + "/"
-    production_paths = [p for p in all_paths
-                        if not p.startswith(".compass/")
-                        and not p.startswith(doc_prefix)]
-    artifact_paths = [p for p in all_paths if p.startswith(doc_prefix)]
-    existing_traced = {cf.get("path") for cf in (task.get("changed_files") or [])
-                       if isinstance(cf, dict)}
+    # The project root - the directory holding .compass/ - not necessarily
+    # where the agent ran `finish` from (QFG-2). Tracing, `compass check` and
+    # staging run from there; the test command runs where it was given,
+    # because its own paths are relative to that directory.
+    invoked_from = os.getcwd()
+    project_root = find_upwards(task_dir, ".compass") or invoked_from
 
-    if len(scenarios) > 1:
-        untraced = [p for p in production_paths if p not in existing_traced]
-        if untraced:
-            raise CompassError(
-                f"compass quick-fix finish: '{slug}' has {len(scenarios)} "
-                f"scenarios and {len(untraced)} changed path(s) are not "
-                f"yet traced to one: {', '.join(untraced)}. Run `compass "
-                f"changed-file add <path> --scenario <id>` for each, then "
-                f"re-run.")
-    else:
-        sole = scenario_ids[0]
-        for p in production_paths:
+    with _at_project_root(project_root):
+        all_paths = _git_changed_paths(project_root)
+        doc_prefix = docs_dir(task_dir) + "/"
+        production_paths = [p for p in all_paths
+                            if not p.startswith(".compass/")
+                            and not p.startswith(doc_prefix)]
+        artifact_paths = [p for p in all_paths if p.startswith(doc_prefix)]
+        existing_traced = {cf.get("path") for cf in (task.get("changed_files") or [])
+                           if isinstance(cf, dict)}
+
+        if len(scenarios) > 1:
+            untraced = [p for p in production_paths if p not in existing_traced]
+            if untraced:
+                raise CompassError(
+                    f"compass quick-fix finish: '{slug}' has {len(scenarios)} "
+                    f"scenarios and {len(untraced)} changed path(s) are not "
+                    f"yet traced to one: {', '.join(untraced)}. Run `compass "
+                    f"changed-file add <path> --scenario <id>` for each, then "
+                    f"re-run.")
+        else:
+            sole = scenario_ids[0]
+            for p in production_paths:
+                if p not in existing_traced:
+                    _quiet_run(cmd_changed_file_add, task=slug, path=p,
+                              scenario=[sole])
+                    existing_traced.add(p)
+
+        for p in artifact_paths:
             if p not in existing_traced:
                 _quiet_run(cmd_changed_file_add, task=slug, path=p,
-                          scenario=[sole])
+                          scenario=list(scenario_ids))
                 existing_traced.add(p)
 
-    for p in artifact_paths:
-        if p not in existing_traced:
-            _quiet_run(cmd_changed_file_add, task=slug, path=p,
-                      scenario=list(scenario_ids))
-            existing_traced.add(p)
-
     # The green runs here, on every call, after the files are traced and
-    # with the command exactly as the agent gave it. A green covers the files
-    # traced when it ran, so one recorded before tracing would not cover what
-    # lands; and a refused call leaves its traces saved, so a later call that
-    # skipped the green would ship on the earlier, failed one.
+    # with the command exactly as the agent gave it, in the directory the
+    # agent ran `finish` from (QFG-2) - the command's own paths are relative
+    # to there. A green covers the files traced when it ran, so one recorded
+    # before tracing would not cover what lands; and a refused call leaves
+    # its traces saved, so a later call that skipped the green would ship on
+    # the earlier, failed one. A scenario whose newest green already covers
+    # this exact command on this exact tree is reused instead of re-run, so
+    # a second `finish` with nothing new to assert is not recorded as a
+    # rerun of an unchanged tree (QFG-1).
+    tree_ids_now = ids_for(task_dir)
     for sid in scenario_ids:
+        if _reusable_green(task_dir, sid, command, tree_ids_now):
+            continue
         try:
             _quiet_run(cmd_tdd_green, task=slug, scenario=sid,
                        verified_by=None, command=list(command))
@@ -422,76 +508,77 @@ def cmd_quick_fix_finish(args):
                 f"compass quick-fix finish: the green for {sid} failed - no "
                 f"gate passed and nothing was committed.\n{exc}")
 
-    evidence_path_rel = "evidence/check-output.txt"
-    evidence_path_abs = os.path.join(task_dir, evidence_path_rel)
-    check_out, check_code = _quiet_run(
-        cmd_check, mode="summary", task=slug, evidence_out=evidence_path_abs)
-    if check_code != 0:
-        raise CompassError(
-            f"compass quick-fix finish: `compass check` failed - no gate "
-            f"passed and nothing was committed. Full output: "
-            f"{evidence_path_abs}\n{check_out.strip()[-1500:]}")
+    with _at_project_root(project_root):
+        evidence_path_rel = "evidence/check-output.txt"
+        evidence_path_abs = os.path.join(task_dir, evidence_path_rel)
+        check_out, check_code = _quiet_run(
+            cmd_check, mode="summary", task=slug, evidence_out=evidence_path_abs)
+        if check_code != 0:
+            raise CompassError(
+                f"compass quick-fix finish: `compass check` failed - no gate "
+                f"passed and nothing was committed. Full output: "
+                f"{evidence_path_abs}\n{check_out.strip()[-1500:]}")
 
-    task, _ = load_manifest(task_dir)
-    existing_ids = {e.get("id") for e in (task.get("evidence") or [])
-                    if isinstance(e, dict)}
-    n = 1
-    while f"EV-CHECK-{n}" in existing_ids:
-        n += 1
-    check_ev_id = f"EV-CHECK-{n}"
-    _quiet_run(cmd_evidence_add, task=slug, evidence_id=check_ev_id,
-              type="command-output", path=evidence_path_rel, scenario=None)
+        task, _ = load_manifest(task_dir)
+        existing_ids = {e.get("id") for e in (task.get("evidence") or [])
+                        if isinstance(e, dict)}
+        n = 1
+        while f"EV-CHECK-{n}" in existing_ids:
+            n += 1
+        check_ev_id = f"EV-CHECK-{n}"
+        _quiet_run(cmd_evidence_add, task=slug, evidence_id=check_ev_id,
+                  type="command-output", path=evidence_path_rel, scenario=None)
 
-    task, _ = load_manifest(task_dir)
-    correctness_ids = sorted({
-        e.get("id") for e in (task.get("evidence") or [])
-        if isinstance(e, dict) and e.get("type") == "test-run"
-        and e.get("scenario") in scenario_ids
-    })
-    _quiet_run(cmd_gate_pass, task=slug, gate_id="verify.correctness",
-              evidence=correctness_ids)
-    _quiet_run(cmd_gate_pass, task=slug, gate_id="verify.governance",
-              evidence=[check_ev_id])
-    _quiet_run(cmd_gate_pass, task=slug, gate_id="verify.traceability",
-              evidence=[check_ev_id])
+        task, _ = load_manifest(task_dir)
+        correctness_ids = sorted({
+            e.get("id") for e in (task.get("evidence") or [])
+            if isinstance(e, dict) and e.get("type") == "test-run"
+            and e.get("scenario") in scenario_ids
+        })
+        _quiet_run(cmd_gate_pass, task=slug, gate_id="verify.correctness",
+                  evidence=correctness_ids)
+        _quiet_run(cmd_gate_pass, task=slug, gate_id="verify.governance",
+                  evidence=[check_ev_id])
+        _quiet_run(cmd_gate_pass, task=slug, gate_id="verify.traceability",
+                  evidence=[check_ev_id])
 
-    devlog_path = os.path.join(task_dir, "devlog.md")
-    if not os.path.isfile(devlog_path):
-        with open(devlog_path, "w", encoding="utf-8") as fh:
-            fh.write(f"# Devlog - {slug}\n\n")
-    evidence_ids = correctness_ids + [check_ev_id]
-    message_first_line = (args.message or "").splitlines()[0] if args.message else ""
-    with open(devlog_path, "a", encoding="utf-8") as fh:
-        fh.write(f"- {datetime.date.today().isoformat()}: "
-                f"{message_first_line} (evidence: {', '.join(evidence_ids)})\n")
+        devlog_path = os.path.join(task_dir, "devlog.md")
+        if not os.path.isfile(devlog_path):
+            with open(devlog_path, "w", encoding="utf-8") as fh:
+                fh.write(f"# Devlog - {slug}\n\n")
+        evidence_ids = correctness_ids + [check_ev_id]
+        message_first_line = (args.message or "").splitlines()[0] if args.message else ""
+        with open(devlog_path, "a", encoding="utf-8") as fh:
+            fh.write(f"- {datetime.date.today().isoformat()}: "
+                    f"{message_first_line} (evidence: {', '.join(evidence_ids)})\n")
 
-    detail = [f"gates    : {', '.join(THREE_GATES)} -> pass",
-              f"evidence : {', '.join(evidence_ids)}"]
+        detail = [f"gates    : {', '.join(THREE_GATES)} -> pass",
+                  f"evidence : {', '.join(evidence_ids)}"]
 
-    # A commit is the user's to ask for. With --no-commit the gates and
-    # records are complete and the change is left in the working tree.
-    if getattr(args, "no_commit", False):
+        # A commit is the user's to ask for. With --no-commit the gates and
+        # records are complete and the change is left in the working tree.
+        if getattr(args, "no_commit", False):
+            return say(
+                args,
+                f"compass quick-fix finish: '{slug}' checked, not committed.",
+                detail=detail + [
+                    f"commit   : when asked, `compass ship-commit --issue {slug} "
+                    f"-m \"<message>\"` after staging the traced files"],
+                decision=True, gates=list(THREE_GATES), evidence=evidence_ids,
+                committed=False,
+            )
+
+        stage_paths = sorted(set(production_paths) | set(artifact_paths)
+                             | {f".compass/work/{slug}"})
+        ship_out, _ = _quiet_run(cmd_land_commit, task=slug, message=args.message,
+                                 files=stage_paths)
+        ship_tail_lines = [ln for ln in ship_out.strip().splitlines() if ln.strip()]
+        ship_tail = ship_tail_lines[-1] if ship_tail_lines else "commit recorded"
+
         return say(
             args,
-            f"compass quick-fix finish: '{slug}' checked, not committed.",
-            detail=detail + [
-                f"commit   : when asked, `compass ship-commit --issue {slug} "
-                f"-m \"<message>\"` after staging the traced files"],
+            f"compass quick-fix finish: '{slug}' shipped.",
+            detail=detail + [ship_tail],
             decision=True, gates=list(THREE_GATES), evidence=evidence_ids,
-            committed=False,
+            committed=True,
         )
-
-    stage_paths = sorted(set(production_paths) | set(artifact_paths)
-                         | {f".compass/work/{slug}"})
-    ship_out, _ = _quiet_run(cmd_land_commit, task=slug, message=args.message,
-                             files=stage_paths)
-    ship_tail_lines = [ln for ln in ship_out.strip().splitlines() if ln.strip()]
-    ship_tail = ship_tail_lines[-1] if ship_tail_lines else "commit recorded"
-
-    return say(
-        args,
-        f"compass quick-fix finish: '{slug}' shipped.",
-        detail=detail + [ship_tail],
-        decision=True, gates=list(THREE_GATES), evidence=evidence_ids,
-        committed=True,
-    )

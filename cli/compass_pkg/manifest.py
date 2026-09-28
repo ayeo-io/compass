@@ -453,15 +453,16 @@ def cmd_changed_file_add(args):
     cfs = task.setdefault("changed_files", [])
     existing = next((c for c in cfs
                      if isinstance(c, dict) and c.get("path") == args.path), None)
+    # `--scenario` may be repeated: a file often serves several scenarios, and
+    # every one given is recorded, merged with those already traced.
+    given = args.scenario if isinstance(args.scenario, list) else [args.scenario]
     if existing:
-        scns = set(existing.get("scenarios") or [])
-        scns.add(args.scenario)
-        existing["scenarios"] = sorted(scns)
+        existing["scenarios"] = sorted(set(existing.get("scenarios") or []) | set(given))
     else:
-        cfs.append({"path": args.path, "scenarios": [args.scenario]})
+        cfs.append({"path": args.path, "scenarios": sorted(set(given))})
     save_manifest(task, task_path)
-    return say(args, f"compass changed-file add: {args.path} -> {args.scenario}.",
-               path=args.path, scenario=args.scenario)
+    return say(args, f"compass changed-file add: {args.path} -> {', '.join(given)}.",
+               path=args.path, scenario=given[-1], scenarios=given)
 
 
 def cmd_evidence_add(args):

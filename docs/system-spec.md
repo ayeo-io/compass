@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### The protocol document answers every step
+### A later add keeps the earlier scenarios
 
-- **Scenario id:** `DPR-5`
+- **Scenario id:** `CKS-2`
 - **Intent:** `INT-1`
-- **Source issue:** `dispatch-protocol`
+- **Source issue:** `changed-file-keeps-one-scenario`
 - **Landed:** 2026-09-25
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -8755,4 +8755,18 @@
 - **Scenario id:** `DPR-4`
 - **Intent:** `INT-5`
 - **Source issue:** `dispatch-protocol`
+- **Landed:** 2026-09-25
+
+### The protocol document answers every step _(archived)_
+
+- **Scenario id:** `DPR-5`
+- **Intent:** `INT-1`
+- **Source issue:** `dispatch-protocol`
+- **Landed:** 2026-09-25
+
+### A repeated scenario flag records every value _(archived)_
+
+- **Scenario id:** `CKS-1`
+- **Intent:** `INT-1`
+- **Source issue:** `changed-file-keeps-one-scenario`
 - **Landed:** 2026-09-25

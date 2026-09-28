@@ -426,7 +426,8 @@ def build_parser():
     pcfa = pcfs.add_parser("add", help="trace a changed production file to a scenario")
     pcfa.add_argument("path", help="production file path")
     issue_arg(pcfa)
-    pcfa.add_argument("--scenario", required=True, help="scenario id it traces to")
+    pcfa.add_argument("--scenario", required=True, action="append",
+                      help="scenario id it traces to (repeatable)")
     pcfa.set_defaults(func=cmd_changed_file_add, output_kind="hand-off")
 
     pev = sub.add_parser("evidence", help="issue evidence-registry tools")

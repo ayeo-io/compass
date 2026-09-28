@@ -15,7 +15,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-REPORT = ROOT / "docs" / "compass" / "2026-09-28-quick-fix-overhead.md"
+REPORT = ROOT / "docs" / "compass" / "2026-09-28-quick-fix-evaluation-cost.md"
 
 # | scenario | condition | session | tokens | calls | hidden | gates |
 ROW = re.compile(

@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### EGB-8
+### Triggering tests pass unchanged
 
-- **Scenario id:** `EGB-8`
+- **Scenario id:** `RFD-2`
 - **Intent:** `INT-1`
-- **Source issue:** `eval-gaps-after-d33`
+- **Source issue:** `resident-footprint-diet`
 - **Landed:** 2026-09-28
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -9168,4 +9168,18 @@
 - **Scenario id:** `EGB-7`
 - **Intent:** `INT-1`
 - **Source issue:** `eval-gaps-after-d33`
+- **Landed:** 2026-09-28
+
+### EGB-8 _(archived)_
+
+- **Scenario id:** `EGB-8`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d33`
+- **Landed:** 2026-09-28
+
+### Resident text at or under 900 words _(archived)_
+
+- **Scenario id:** `RFD-1`
+- **Intent:** `INT-1`
+- **Source issue:** `resident-footprint-diet`
 - **Landed:** 2026-09-28

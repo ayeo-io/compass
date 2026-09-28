@@ -51,7 +51,7 @@ else
     _search="$(dirname "$_search")"
   done
   if [ -z "$PROJECT_DIR" ]; then
-    echo "Compass: could not locate a Compass project at or above $INVOKED_FROM - no end-of-session check ran." >&2
+    echo "Compass: could not locate a Compass project at or above $INVOKED_FROM - no devlog line was written." >&2
     exit 0
   fi
 fi
@@ -75,6 +75,23 @@ fi
 # the record of it, and the devlog logs the work.
 case "$TARGET" in
   *.compass/*|*/.compass/*) exit 0 ;;
+esac
+
+# Log only an edit inside the project, named relative to it. The devlog is
+# the record a later session reads to pick the issue up; a scratch file or a
+# worktree of another branch is not this issue's work. `cd` and `pwd -P`
+# resolve a relative path, `..` and symlinks, so the comparison is between
+# real directories. The target's directory exists: the tool just wrote it.
+case "$TARGET" in
+  /*) ABS_TARGET="$TARGET" ;;
+  *)  ABS_TARGET="$INVOKED_FROM/$TARGET" ;;
+esac
+TARGET_DIR="$(cd "$(dirname "$ABS_TARGET")" 2>/dev/null && pwd -P)" || exit 0
+REAL_ROOT="$(cd "$PROJECT_DIR" 2>/dev/null && pwd -P)" || exit 0
+ABS_TARGET="$TARGET_DIR/$(basename "$ABS_TARGET")"
+case "$ABS_TARGET" in
+  "$REAL_ROOT"/*) TARGET="${ABS_TARGET#"$REAL_ROOT"/}" ;;
+  *) exit 0 ;;
 esac
 
 # --- find the current issue (pointer first, most-recent as fallback) --------

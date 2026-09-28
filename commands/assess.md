@@ -46,8 +46,9 @@ compass quick-fix finish -m "<commit message>" --no-commit -- <test command>
 
 `finish` records the green, runs the checks and passes the gates. Leave out
 `--no-commit` only if the user asked for a commit. If `start` says the
-approach is heavier than a quick fix, the assessment is recorded: continue
-below from step 4 of the procedure.
+approach is heavier than a quick fix, the manifest holds the values and
+the approach: continue below from step 4, and give each value its reason
+there.
 
 ## First: make sure this is a Compass project
 

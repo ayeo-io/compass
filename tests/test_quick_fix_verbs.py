@@ -107,10 +107,19 @@ def _write_greeting_test(root):
     )
 
 
+GREET_CMD = ["--", "python3", "-m", "pytest", "-q",
+             "tests/test_greeting.py::test_greeting_says_hello"]
+
+
+def _finish(root, slug, *extra, command=GREET_CMD):
+    return _run(root, "quick-fix", "finish", "--issue", slug, "-m",
+                "Say hello properly", *extra, *command)
+
+
 def _ready_to_finish(root, slug, scenario_id="TRC-001"):
-    """A started quick fix with a red and a green on record, not yet
-    finished - the state every QFO-5 refusal test starts from before it
-    breaks exactly one condition."""
+    """A started quick fix with a red on record and the fix written, not yet
+    finished - `finish` records the green itself. The state every QFO-5
+    refusal test starts from before it breaks exactly one condition."""
     _write_greeting(root, "Hi, %s!")
     _write_greeting_test(root)
     start = _start(root, slug, scenario_id=scenario_id)
@@ -122,11 +131,6 @@ def _ready_to_finish(root, slug, scenario_id="TRC-001"):
     assert red.returncode == 0, red.stderr
 
     _write_greeting(root, "Hello, %s!")
-
-    green = _run(root, "tdd-green", "--issue", slug, "--scenario",
-                 scenario_id, "--", "python3", "-m", "pytest", "-q",
-                 "tests/test_greeting.py::test_greeting_says_hello")
-    assert green.returncode == 0, green.stderr
 
 
 # --- QFO-1 -------------------------------------------------------------
@@ -182,6 +186,25 @@ def test_qfo2_start_stops_when_the_approach_is_not_a_quick_fix(repo):
 
     heard = result.stdout + result.stderr
     assert "/compass:assess" in heard
+    # The pointer stays where it was: nothing was started.
+    assert not (repo / ".compass" / "current-task").is_file() or (
+        (repo / ".compass" / "current-task").read_text().strip()
+        != "bigger-change")
+
+
+def test_qfo3_start_refuses_a_slug_that_is_not_one_segment(repo):
+    result = _start(repo, "../../escaped")
+    assert result.returncode != 0
+    assert "one path segment" in (result.stdout + result.stderr)
+    assert not (repo.parent.parent / "escaped").exists()
+    assert not (repo / ".compass" / "current-task").is_file()
+
+
+def test_qfo1_start_says_when_it_creates_a_directory(repo):
+    result = _start(repo, "greet-new")
+    assert result.returncode == 0, result.stderr
+    assert ".compass/" in result.stdout
+    assert "docs/compass/" in result.stdout
 
 
 # --- QFO-3 -------------------------------------------------------------
@@ -207,8 +230,7 @@ def test_qfo4_finish_traces_checks_passes_the_three_gates_and_lands(repo):
     _ready_to_finish(repo, slug)
     head_before = _git(repo, "rev-parse", "HEAD")
 
-    finish = _run(repo, "quick-fix", "finish", "--issue", slug, "-m",
-                 "Say hello properly")
+    finish = _finish(repo, slug)
     assert finish.returncode == 0, finish.stderr
 
     head_after = _git(repo, "rev-parse", "HEAD")
@@ -262,7 +284,7 @@ def test_qfo4_finish_leaves_bytecode_caches_out_and_the_land_checks_clean(repo):
     assert green.returncode == 0, green.stderr
     assert list(repo.rglob("*.pyc")), "the test run should leave a cache"
 
-    finish = _run(repo, "quick-fix", "finish", "--issue", slug, "-m", "Fix add")
+    finish = _run(repo, "quick-fix", "finish", "--issue", slug, "-m", "Fix add", *cmd)
     assert finish.returncode == 0, finish.stderr
 
     changed = {cf["path"] for cf in _manifest(repo, slug)["changed_files"]}
@@ -298,7 +320,7 @@ def test_qfo4_finish_lands_clean_when_every_changed_file_was_tracked(repo):
     green = _run(repo, "tdd-green", "--issue", slug, "--scenario", "TRC-001", *cmd)
     assert green.returncode == 0, green.stderr
 
-    finish = _run(repo, "quick-fix", "finish", "--issue", slug, "-m", "Fix add")
+    finish = _run(repo, "quick-fix", "finish", "--issue", slug, "-m", "Fix add", *cmd)
     assert finish.returncode == 0, finish.stdout + finish.stderr
     check = _run(repo, "check", "--issue", slug)
     assert check.returncode == 0, check.stdout + check.stderr
@@ -310,19 +332,19 @@ def test_qfo5_finish_refuses_when_check_fails(repo):
     slug = "greet-ghost"
     _ready_to_finish(repo, slug)
     manifest = _manifest(repo, slug)
-    # A green is bound to `TRC-001` (finish's own precondition is satisfied),
-    # but its evidence file does not resolve - `compass check`'s
-    # `suite-passed` guardrail catches that, independently of the four
-    # conditions `finish` itself checks before running it.
-    for e in manifest["evidence"]:
-        if e.get("type") == "test-run" and e.get("scenario") == "TRC-001":
-            e["path"] = "evidence/does-not-exist.json"
+    # A changed file traced to a scenario the issue does not have: the
+    # green passes, and `compass check`'s traceability guardrail fails.
+    manifest.setdefault("changed_files", []).append(
+        {"path": "data/greeting.txt", "scenarios": ["TRC-999"]})
     _save_manifest(repo, slug, manifest)
     before = _gate_statuses(repo, slug)
     head_before = _git(repo, "rev-parse", "HEAD")
 
-    finish = _run(repo, "quick-fix", "finish", "--issue", slug, "-m", "x")
+    finish = _finish(repo, slug)
     assert finish.returncode != 0
+    heard = finish.stdout + finish.stderr
+    assert "`compass check` failed" in heard, heard
+    assert "Traceback" not in heard
 
     assert _gate_statuses(repo, slug) == before
     assert _git(repo, "rev-parse", "HEAD") == head_before
@@ -338,7 +360,7 @@ def test_qfo5_finish_refuses_when_another_gate_is_pending(repo):
     before = _gate_statuses(repo, slug)
     head_before = _git(repo, "rev-parse", "HEAD")
 
-    finish = _run(repo, "quick-fix", "finish", "--issue", slug, "-m", "x")
+    finish = _finish(repo, slug)
     assert finish.returncode != 0
     assert "verify.clarity" in (finish.stdout + finish.stderr)
 
@@ -346,21 +368,81 @@ def test_qfo5_finish_refuses_when_another_gate_is_pending(repo):
     assert _git(repo, "rev-parse", "HEAD") == head_before
 
 
-def test_qfo5_finish_refuses_when_no_green_is_bound_to_the_scenario(repo):
-    slug = "greet-no-green"
+def test_qfo5_finish_refuses_when_no_red_is_on_record(repo):
+    slug = "greet-no-red"
     _write_greeting(repo, "Hi, %s!")
     _write_greeting_test(repo)
     start = _start(repo, slug)
     assert start.returncode == 0, start.stderr
+    _write_greeting(repo, "Hello, %s!")
     before = _gate_statuses(repo, slug)
     head_before = _git(repo, "rev-parse", "HEAD")
 
-    finish = _run(repo, "quick-fix", "finish", "--issue", slug, "-m", "x")
+    finish = _finish(repo, slug)
     assert finish.returncode != 0
     assert "TRC-001" in (finish.stdout + finish.stderr)
 
     assert _gate_statuses(repo, slug) == before
     assert _git(repo, "rev-parse", "HEAD") == head_before
+
+
+def test_qfo5_finish_refuses_without_a_test_command(repo):
+    slug = "greet-no-cmd"
+    _ready_to_finish(repo, slug)
+    before = _gate_statuses(repo, slug)
+
+    finish = _finish(repo, slug, command=[])
+    assert finish.returncode != 0
+    assert "--" in (finish.stdout + finish.stderr)
+    assert _gate_statuses(repo, slug) == before
+
+
+def test_qfo5_finish_refuses_again_after_a_failed_green(repo):
+    # A refused call leaves its traces saved. A second call must still run
+    # the green, and refuse again while the code is still broken.
+    slug = "greet-twice"
+    _ready_to_finish(repo, slug)
+    _write_greeting(repo, "Still wrong, %s!")
+    head_before = _git(repo, "rev-parse", "HEAD")
+
+    first = _finish(repo, slug)
+    assert first.returncode != 0
+    second = _finish(repo, slug)
+    assert second.returncode != 0
+    assert "green" in (second.stdout + second.stderr)
+
+    assert all(s != "pass" for s in _gate_statuses(repo, slug).values())
+    assert _git(repo, "rev-parse", "HEAD") == head_before
+
+
+def test_qfo5_finish_runs_the_command_exactly_as_given(repo):
+    # A quoted `bash -c` command must run whole. Joined and split again it
+    # would run `bash -c python3`, which passes without running a test.
+    slug = "greet-quoted"
+    _ready_to_finish(repo, slug)
+    _write_greeting(repo, "Still wrong, %s!")
+    head_before = _git(repo, "rev-parse", "HEAD")
+
+    finish = _finish(repo, slug, command=[
+        "--", "bash", "-c",
+        "python3 -m pytest -q tests/test_greeting.py::test_greeting_says_hello"])
+    assert finish.returncode != 0
+    assert _git(repo, "rev-parse", "HEAD") == head_before
+
+
+def test_qfo4_finish_no_commit_passes_the_gates_and_leaves_the_change(repo):
+    slug = "greet-no-commit"
+    _ready_to_finish(repo, slug)
+    head_before = _git(repo, "rev-parse", "HEAD")
+
+    finish = _finish(repo, slug, "--no-commit")
+    assert finish.returncode == 0, finish.stdout + finish.stderr
+    assert "not committed" in finish.stdout
+
+    assert set(_gate_statuses(repo, slug).values()) == {"pass"}
+    assert _git(repo, "rev-parse", "HEAD") == head_before
+    assert "data/greeting.txt" in _git(repo, "status", "--porcelain",
+                                       "--untracked-files=all")
 
 
 def test_qfo5_finish_refuses_an_untraced_path_with_several_scenarios(repo):
@@ -382,7 +464,7 @@ def test_qfo5_finish_refuses_an_untraced_path_with_several_scenarios(repo):
     before = _gate_statuses(repo, slug)
     head_before = _git(repo, "rev-parse", "HEAD")
 
-    finish = _run(repo, "quick-fix", "finish", "--issue", slug, "-m", "x")
+    finish = _finish(repo, slug)
     assert finish.returncode != 0
     assert "data/greeting.txt" in (finish.stdout + finish.stderr)
 

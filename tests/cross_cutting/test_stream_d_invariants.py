@@ -119,6 +119,13 @@ EXPECTED_PUBLIC_SUBCOMMANDS = {
                                   # so later BDD work (a scenarios-are-executable
                                   # check) adds `compass bdd <thing>` rather than
                                   # another top-level verb.
+    "quick-fix",                  # quick-fix-overhead: `compass quick-fix
+                                  # start|finish` - the mechanical steps of a
+                                  # quick fix (init, assess, evaluate, record,
+                                  # trace, check, gate, ship) in two calls
+                                  # instead of a dozen, through the same code
+                                  # each step already used. A GROUP, so a
+                                  # later quick-fix verb has a home.
 }
 
 

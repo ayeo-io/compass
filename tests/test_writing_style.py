@@ -1181,12 +1181,6 @@ _register(Rule(
             "the verb, and singling it out with \"the verify stage\" would "
             "break the list's parallel form."),
         Exemption(
-            "commands/quick-fix.md", "## 4. Verify",
-            "a step heading naming the verify stage, parallel to \"## 1. "
-            "Assess\" and \"## 5. Ship\" two headings over - those two "
-            "escape only because \"assess\" and \"ship\" are not in the "
-            "word table, not because a bare stage-name heading is wrong."),
-        Exemption(
             "skills/adaptive-routing/composition.md", "**Verify** - which "
             "review dimensions",
             "one label in a parallel bulleted list of pipeline-stage names "

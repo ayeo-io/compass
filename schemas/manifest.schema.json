@@ -78,6 +78,133 @@
       "type": "string",
       "description": "The commit ship-commit made when it marked the issue landed. evidence-matches-tree compares the newest green's tree_id with this commit's tree."
     },
+    "subtasks": {
+      "type": "array",
+      "description": "The subtasks of a multiagent run, written only by `compass issue subtask`. Each records the files that crossed a boundary, the base commit, model, budget and cost, and the progress a resume needs. Optional: a manifest without it loads.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "brief",
+          "base_sha",
+          "status"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+          },
+          "brief": {
+            "type": "string",
+            "description": "The brief file the builder was handed."
+          },
+          "earlier_briefs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The briefs of earlier dispatches of this subtask, kept when a later one records its own."
+          },
+          "report": {
+            "type": "string",
+            "description": "The result file the builder returned (named result.md; a subagent is refused a file named like a report)."
+          },
+          "review_brief": {
+            "type": "string",
+            "description": "The reviewer's brief. Refused when registered if it matches a fixed list of phrases that say what not to flag."
+          },
+          "package": {
+            "type": "string",
+            "description": "The latest review package: the diff from base_sha, one file per dispatch."
+          },
+          "base_sha": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$",
+            "description": "The full id of the commit the builder started from."
+          },
+          "model": {
+            "type": "string"
+          },
+          "budget": {
+            "type": "integer",
+            "description": "Tokens the dispatch may use.",
+            "minimum": 0
+          },
+          "cost": {
+            "type": "integer",
+            "description": "Tokens the dispatch used. Over the budget adds a finding.",
+            "minimum": 0
+          },
+          "status": {
+            "enum": [
+              "dispatched",
+              "reported",
+              "reviewing",
+              "integrating",
+              "done"
+            ]
+          },
+          "attempts": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "dispatched_at": {
+            "type": "string"
+          },
+          "reviewed_revision": {
+            "type": "string",
+            "description": "The commit the latest review read.",
+            "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$"
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "text",
+                "resolved"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "resolved": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "review_rounds": {
+            "type": "array",
+            "description": "Every review round, appended. The fix-round cap is sized from these later.",
+            "items": {
+              "type": "object",
+              "required": [
+                "round",
+                "verdict"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "round": {
+                  "type": "integer"
+                },
+                "verdict": {
+                  "enum": [
+                    "pass",
+                    "fail"
+                  ]
+                },
+                "at": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "assessment": {
       "type": "object",
       "description": "The four-dimension assessment the assess stage produces.",

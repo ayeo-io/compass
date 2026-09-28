@@ -44,14 +44,16 @@ policy `caps`):
    worktrees at 1 - an initiative can be heavy *and* solo. If the cap and
    the map disagree, the cap wins; record it as cap-driven.
 2. **Create the worktrees.** Run `scripts/multiagent.sh` - it creates one git
-   worktree per subtask under the configured `worktree_root` and launches a
-   `builder` agent in each. Each worktree is an isolated checkout so a
-   builder can run a full red-to-green cycle without destabilising siblings.
-3. **Assign.** Give each builder its scenario set from the distribution map.
-   A builder works *only* inside its assigned worktree and never touches a
-   sibling's.
-4. **Record** the orchestration - subtask-to-worktree-to-scenario assignment - in
-   the `devlog.md`.
+   worktree per subtask under the configured `worktree_root`. Each worktree
+   is an isolated checkout so a builder can run a full red-to-green cycle
+   without destabilising siblings.
+3. **Assign by file.** Write each builder's assignment - its worktree, its
+   scenario set from the distribution map, its slice of the plan - to
+   `docs/compass/<created>-<slug>/subtasks/<id>/briefing.md`. A builder works
+   *only* inside its assigned worktree and never touches a sibling's.
+4. **Record, then launch.** Record each dispatch with `compass issue subtask
+   add <id> --brief <path> --model <model> --budget <tokens>`, then launch one
+   `builder` agent per worktree, naming only its brief file.
 
 ## Gate
 

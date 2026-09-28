@@ -63,6 +63,7 @@ import re as _re
 
 from compass_pkg import core as _core  # noqa: F401
 from compass_pkg._all import *  # noqa: F401,F403
+from compass_pkg.subtasks import register as register_subtask_parser  # noqa: E402
 
 # Declared literally here as well as in compass_pkg.core: this file is
 # what `compass --version` and the release-consistency test read, and a
@@ -273,6 +274,7 @@ def build_parser():
 
     ptap = pts.add_parser("artifact-path", help="print where one of an issue's documents is; non-zero when it is not there")
     ptap.add_argument("kind", help="document kind, e.g. delivery-approach"); issue_arg(ptap); ptap.set_defaults(func=cmd_issue_artifact_path, output_kind="hand-off")
+    register_subtask_parser(pts, issue_arg)
     ptss = pts.add_parser("set-status",
                           help="set an issue's lifecycle status (queued|active|parked|landed|abandoned)")
     ptss.add_argument("status", help="the new status")

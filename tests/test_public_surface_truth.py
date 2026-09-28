@@ -361,7 +361,13 @@ def test_d2_repairs_change_only_retired_names():
     worktree, and `evidence-binding` for the two ways a record's tree is
     judged.
 
-    The other 49 are untouched, and a NEW structural change to any of the 59
+    Two were re-baselined by `orchestrator-loop-hardening`, which adopted the
+    multiagent loop's rules: `agents/orchestrator.md` gained a
+    "Briefing a reviewer" section and two numbered steps, and
+    `skills/worktree-multiagent/SKILL.md` gained the brief-file, budget,
+    batching and no-subagent rules as list items.
+
+    The other 47 are untouched, and a NEW structural change to any of the 59
     still fails.
     """
     import json

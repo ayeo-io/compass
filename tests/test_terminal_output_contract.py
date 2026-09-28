@@ -972,6 +972,9 @@ _TAIL_EXEMPT = {
     # hooks read it in a command substitution, and a hand-off tail in the
     # middle of that would end up in the variable.
     "issue artifact-path": "prints a bare path for a shell caller to consume",
+    "issue subtask add": "needs a git repository and a brief file the fixture does not create; test_subtask_record.py runs it, without measuring its output against this contract",
+    "issue subtask update": "needs a recorded subtask the fixture does not create; test_subtask_record.py runs it, without measuring its output against this contract",
+    "issue subtask package": "needs a git history to diff, which the fixture does not have; test_subtask_record.py runs it, without measuring its output against this contract",
     "plan lint": "needs a design with placeholders to say anything",
     "next": "advisory pointer; its own suite covers it",
     "rework-scan": "its own suite covers it",
@@ -999,6 +1002,7 @@ _TAIL_ARGV = {
     "approach evaluate": ["approach", "evaluate"],
     "issue dashboard": ["issue", "dashboard"],
     "issue set-status": ["issue", "set-status", "active"],
+    "issue subtask next": ["issue", "subtask", "next"],
     # The artifact set is computed by the evaluator, so the fixture runs
     # `approach evaluate --write` first and this names a document the
     # assessment actually earned.

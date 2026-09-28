@@ -75,6 +75,27 @@ verifier gathered, `acceptance-criteria.md`, `technical-design.md`, the `governa
 they are the default guardrails in review form. The delivery approach can add dimensions;
 it can never remove those three or any `immovable_gate`.
 
+## Reviewing a subtask on a multiagent
+
+Read the subtask's review package, the file `compass issue subtask package`
+wrote, not a diff you derive yourself. Answer two questions separately, in
+two sections of your report, and never let one answer lean on the other:
+
+```markdown
+## Acceptance
+Does the change meet each scenario in the brief? One line per scenario.
+
+## Code quality
+Is the code sound - correct at its edges, legible, safe - whatever the scenarios say?
+```
+
+A change can pass one and fail the other, and the report must show which.
+Write your findings in the report and nothing else: the orchestrator records
+the round and each finding from it, so each round is counted once. At the
+final review of the integrated result, read the manifest's `follow_ups`
+ledger too: a finding deferred from a subtask review is owed there, not
+forgotten.
+
 ## How you write a comment
 
 Open every comment with a plain-word label saying what kind of comment it is -

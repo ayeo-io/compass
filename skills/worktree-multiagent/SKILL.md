@@ -82,8 +82,16 @@ suite, without destabilising siblings.
 **The orchestrator** writes no feature code. Its job is coordination, collision
 detection, and integration:
 
-- Hands each builder an assignment: its worktree, its scenario group, its slice of
-  the plan.
+- Hands each builder an assignment as a file: its worktree, its scenario group,
+  its slice of the plan, written to
+  `docs/compass/<created>-<slug>/subtasks/<id>/briefing.md`. The dispatch names
+  the path; a paste has no bound on what it drags in.
+- States the model and the budget for each dispatch, scaled to the work, and
+  records every step with `compass issue subtask` - `add` at dispatch,
+  `update` for the report, the review and the cost, `package` for the review
+  diff. A cost over the budget becomes a finding.
+- Batches small same-shape work - five renames, three one-line guards - into
+  one dispatch rather than five subtasks of setup each.
 - Monitors subtasks during implementation for convergence on shared surface - shared
   files, shared interfaces, a scenario whose implementation reaches outside its
   group.
@@ -98,6 +106,23 @@ detection, and integration:
   an interface another subtask owns" is an orchestrator message, never a reach
   across.
 - Runs full TDD inside its worktree (see `tdd-discipline`).
+- Spawns no subagents, and writes its report to `result.md` beside its
+  brief. Not `report.md`: Claude Code tells a subagent not to write a file
+  named like a report.
+
+**Review frequency follows the assessed risk.** `trivial` and `contained`:
+one review of the integrated result. `cross-cutting`: a review of each
+subtask's package before integration, and one after. `critical`: the same,
+with a second reviewer on each subtask. The reviewer answers acceptance and
+code quality in separate sections; see `agents/reviewer.md`.
+
+**Resuming.** A run stopped part-way resumes from `compass issue subtask
+next` alone: it names each unfinished subtask, its status (`dispatched`,
+`reported`, `reviewing`, `integrating`), its files, the revision last reviewed
+and its unresolved findings, and the review cadence the risk calls for. A
+subtask marked `done` is never dispatched again. Where the project gitignores
+`docs/compass/`, a worktree does not carry the brief: name it by its path in
+the main checkout.
 
 ## Integration discipline (ship)
 

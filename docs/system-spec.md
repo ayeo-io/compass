@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### A test record names the tree it ran on
+### A review package is a file cut from the base commit
 
-- **Scenario id:** `EVB-1`
+- **Scenario id:** `OLH-5`
 - **Intent:** `INT-1`
-- **Source issue:** `evidence-binding`
+- **Source issue:** `orchestrator-loop-hardening`
 - **Landed:** 2026-09-25
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -43,18 +43,18 @@
 - **Source issue:** `framework-field-feedback`
 - **Landed:** 2026-06-23
 
-### An edit to an ignored path does not make a green stale
+### A dispatch records its subtask
 
-- **Scenario id:** `EVB-4`
+- **Scenario id:** `OLH-1`
 - **Intent:** `INT-2`
-- **Source issue:** `evidence-binding`
+- **Source issue:** `orchestrator-loop-hardening`
 - **Landed:** 2026-09-25
 
-### Records without a tree are not judged
+### A coaching reviewer brief is refused
 
-- **Scenario id:** `EVB-6`
+- **Scenario id:** `OLH-6`
 - **Intent:** `INT-3`
-- **Source issue:** `evidence-binding`
+- **Source issue:** `orchestrator-loop-hardening`
 - **Landed:** 2026-09-25
 
 ### The safety contract states the boundary
@@ -64,12 +64,12 @@
 - **Source issue:** `evidence-binding`
 - **Landed:** 2026-09-25
 
-### A CLI module's header describes that module
+### A rehearsal interrupted mid-review and mid-integration resumes
 
-- **Scenario id:** `PBW-C3`
+- **Scenario id:** `OLH-8`
 - **Intent:** `INT-5`
-- **Source issue:** `prose-breaks-the-writing-style`
-- **Landed:** 2026-09-23
+- **Source issue:** `orchestrator-loop-hardening`
+- **Landed:** 2026-09-25
 
 ### the hook still blocks a code file inside the project
 
@@ -85,26 +85,26 @@
 - **Source issue:** `field-feedback-hook-scope-and-restage`
 - **Landed:** 2026-08-14
 
-### A batch that does not record its changed files is refused
+### Each half of the review catches its own seeded defect
 
-- **Scenario id:** `PBW-F9`
+- **Scenario id:** `OLH-9`
 - **Intent:** `INT-6`
-- **Source issue:** `prose-breaks-the-writing-style`
-- **Landed:** 2026-09-23
+- **Source issue:** `orchestrator-loop-hardening`
+- **Landed:** 2026-09-25
 
-### A batch that cannot show its sweeps ran is refused
+### A budget overrun is a finding
 
-- **Scenario id:** `PBW-F6`
+- **Scenario id:** `OLH-4`
 - **Intent:** `INT-7`
-- **Source issue:** `prose-breaks-the-writing-style`
-- **Landed:** 2026-09-23
+- **Source issue:** `orchestrator-loop-hardening`
+- **Landed:** 2026-09-25
 
-### A verified-by guard that does not actually fail is rejected
+### The agent and skill prose state each adopted rule
 
-- **Scenario id:** `TRC-R8-6`
+- **Scenario id:** `OLH-7`
 - **Intent:** `INT-8`
-- **Source issue:** `framework-field-feedback`
-- **Landed:** 2026-06-23
+- **Source issue:** `orchestrator-loop-hardening`
+- **Landed:** 2026-09-25
 
 ### compass gate pass is the shared R6/R9 command and is schema-valid
 
@@ -2355,6 +2355,13 @@
 ### --verified-by rejects an unrecognised kind _(archived)_
 
 - **Scenario id:** `TRC-R8-5`
+- **Intent:** `INT-8`
+- **Source issue:** `framework-field-feedback`
+- **Landed:** 2026-06-23
+
+### A verified-by guard that does not actually fail is rejected _(archived)_
+
+- **Scenario id:** `TRC-R8-6`
 - **Intent:** `INT-8`
 - **Source issue:** `framework-field-feedback`
 - **Landed:** 2026-06-23
@@ -7966,6 +7973,13 @@
 - **Source issue:** `prose-breaks-the-writing-style`
 - **Landed:** 2026-09-23
 
+### A CLI module's header describes that module _(archived)_
+
+- **Scenario id:** `PBW-C3`
+- **Intent:** `INT-5`
+- **Source issue:** `prose-breaks-the-writing-style`
+- **Landed:** 2026-09-23
+
 ### A copied block is fixed the same way in every file that holds it _(archived)_
 
 - **Scenario id:** `PBW-C4`
@@ -8127,6 +8141,13 @@
 - **Source issue:** `prose-breaks-the-writing-style`
 - **Landed:** 2026-09-23
 
+### A batch that cannot show its sweeps ran is refused _(archived)_
+
+- **Scenario id:** `PBW-F6`
+- **Intent:** `INT-7`
+- **Source issue:** `prose-breaks-the-writing-style`
+- **Landed:** 2026-09-23
+
 ### A rewritten instruction still instructs the same behaviour _(archived)_
 
 - **Scenario id:** `PBW-F7`
@@ -8152,6 +8173,13 @@
 
 - **Scenario id:** `PBW-F8`
 - **Intent:** `INT-3`
+- **Source issue:** `prose-breaks-the-writing-style`
+- **Landed:** 2026-09-23
+
+### A batch that does not record its changed files is refused _(archived)_
+
+- **Scenario id:** `PBW-F9`
+- **Intent:** `INT-6`
 - **Source issue:** `prose-breaks-the-writing-style`
 - **Landed:** 2026-09-23
 
@@ -8505,6 +8533,13 @@
 - **Source issue:** `facts-drift-guard`
 - **Landed:** 2026-09-25
 
+### A test record names the tree it ran on _(archived)_
+
+- **Scenario id:** `EVB-1`
+- **Intent:** `INT-1`
+- **Source issue:** `evidence-binding`
+- **Landed:** 2026-09-25
+
 ### A green for a changed tree fails at ship _(archived)_
 
 - **Scenario id:** `EVB-2`
@@ -8519,9 +8554,37 @@
 - **Source issue:** `evidence-binding`
 - **Landed:** 2026-09-25
 
+### An edit to an ignored path does not make a green stale _(archived)_
+
+- **Scenario id:** `EVB-4`
+- **Intent:** `INT-2`
+- **Source issue:** `evidence-binding`
+- **Landed:** 2026-09-25
+
 ### A landed issue is checked against the commit that landed it _(archived)_
 
 - **Scenario id:** `EVB-5`
 - **Intent:** `INT-3`
 - **Source issue:** `evidence-binding`
+- **Landed:** 2026-09-25
+
+### Records without a tree are not judged _(archived)_
+
+- **Scenario id:** `EVB-6`
+- **Intent:** `INT-3`
+- **Source issue:** `evidence-binding`
+- **Landed:** 2026-09-25
+
+### A subtask's progress is recorded _(archived)_
+
+- **Scenario id:** `OLH-2`
+- **Intent:** `INT-1`
+- **Source issue:** `orchestrator-loop-hardening`
+- **Landed:** 2026-09-25
+
+### An interrupted run resumes losing nothing _(archived)_
+
+- **Scenario id:** `OLH-3`
+- **Intent:** `INT-5`
+- **Source issue:** `orchestrator-loop-hardening`
 - **Landed:** 2026-09-25

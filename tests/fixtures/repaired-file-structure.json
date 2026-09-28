@@ -7,9 +7,10 @@
       2,
       2,
       2,
+      2,
       2
     ],
-    "list_items": 15,
+    "list_items": 17,
     "table_rows": 0
   },
   "agents/planner.md": {
@@ -888,7 +889,7 @@
       2,
       2
     ],
-    "list_items": 26,
+    "list_items": 29,
     "table_rows": 5
   },
   "templates/acceptance-criteria.md": {

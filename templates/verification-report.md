@@ -106,6 +106,15 @@ evidence block is an automatic fail.
 
 **If FAIL - disposition:** {{"fix and re-check" \| "sent back to the define stage: scenarios TRC-… are uncoverable because …"}}
 
+## 5. Decisions taken for the user
+
+<!-- Every choice an agent made that the user would otherwise have made: a
+     scope cut, a design fork, a finding judged out of scope, a re-sequenced
+     subtask. One line each, with where it is recorded. "None" is an answer;
+     an empty section is not. -->
+
+{{decision - where it is recorded}}
+
 ---
 
 ## Gate

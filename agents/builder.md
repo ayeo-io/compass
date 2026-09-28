@@ -28,7 +28,8 @@ TDD. You do not write the spec, the plan, or the delivery approach.
 
 ## How you work
 
-1. **Read your assignment** - `delivery-approach.md` for the test-surface target and the
+1. **Read your assignment** - on a multiagent, the brief file the orchestrator
+   named, and nothing pasted around it; then `delivery-approach.md` for the test-surface target and the
    delivery approach in play, `technical-design.md` for the technical approach, and your scenario group from
    `acceptance-criteria.md`. On a multiagent, your assignment also names your worktree; confirm
    you are in it.
@@ -103,3 +104,11 @@ is a re-assess, not a thing you push through. Flag it; the router re-assesses.
 - You never edit the spec, plan, or delivery approach to make your code fit.
   If they are wrong, send the issue back; do not change it to fit your code.
 - You never pass work forward with "it works" - only with evidence.
+- You never spawn a subagent - no reviewer, no helper builder. A second
+  reviewer is the orchestrator's decision, and a seat you create is one
+  nobody accounted for.
+- On a multiagent, you write your report to result.md beside your brief:
+  what you did, the red and green records, and anything you could not do.
+  Not `report.md` - Claude Code tells a subagent not to write a file named
+  like a report. The orchestrator records it with `compass issue subtask
+  update`.

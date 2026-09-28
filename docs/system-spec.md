@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### the safety contract states both limits
+### Given HOME points at an empty directory, when the quick-fix verb tests run, then every finish test commits and passes
 
-- **Scenario id:** `QFG-4`
+- **Scenario id:** `QGI-1`
 - **Intent:** `INT-1`
-- **Source issue:** `quick-fix-finish-gaps`
+- **Source issue:** `quick-fix-tests-need-a-git-identity`
 - **Landed:** 2026-09-28
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -9264,6 +9264,13 @@
 ### ship-commit refuses a stale green for the issue's files _(archived)_
 
 - **Scenario id:** `QFG-3`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-finish-gaps`
+- **Landed:** 2026-09-28
+
+### the safety contract states both limits _(archived)_
+
+- **Scenario id:** `QFG-4`
 - **Intent:** `INT-1`
 - **Source issue:** `quick-fix-finish-gaps`
 - **Landed:** 2026-09-28

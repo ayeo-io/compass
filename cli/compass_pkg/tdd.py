@@ -632,6 +632,11 @@ def cmd_tdd_green(args):
     current_hash = _source_tree_hash(project_root)
     if tree_ids.get("tree_id"):
         current_hash = "%s+%s" % (tree_ids["tree_id"], current_hash)
+    # The files the record covers are part of what it asserts. After a file
+    # is traced to the issue, the same command over the same tree covers
+    # more files: a new assertion, not a retry of a flaky test.
+    if tree_ids.get("changes_id"):
+        current_hash = "%s+%s" % (current_hash, tree_ids["changes_id"])
     prior_state = _load_tdd_state(task_dir, scenario)
     prior_hash = prior_state.get("tree_hash")
     prior_attempts = prior_state.get("attempts") or 0

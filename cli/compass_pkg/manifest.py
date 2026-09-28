@@ -90,9 +90,14 @@ def _out_of_scope(staged, owned, artifact_dir):
 
 def _refuse_stale_green(task, task_dir, slug, root, at_commit=None):
     """Refuse `ship-commit` if a file the issue changed, or a test it
-    declares, was edited after the newest bound green - reusing the same
+    declares, was edited after the newest bound green. It reuses the
     comparison `compass check` uses for a landed issue
-    (`binding._check_landed`), so ship-commit and check never disagree.
+    (`binding._check_landed`). It reads the files on disk, not the staged
+    copies, so a partial stage can still differ from what it judged; a
+    `compass check` after the land catches that case.
+
+    A landed issue is not judged: its green was judged when it landed, and
+    a later edit to one of its files belongs to later work.
 
     Judges only once every gate has passed, and only when the newest record
     carries a `changes_id`; a record without one, or an issue with no bound
@@ -102,6 +107,8 @@ def _refuse_stale_green(task, task_dir, slug, root, at_commit=None):
     ship-commit is about to make, or a commit id to read them as that commit
     holds them, for the files a multiagent land already committed.
     """
+    if task.get("status") == "landed":
+        return
     gates = [g for g in task.get("gates") or [] if isinstance(g, dict)]
     if not gates or not all(g.get("status") == "pass" for g in gates):
         return

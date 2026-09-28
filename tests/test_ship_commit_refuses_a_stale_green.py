@@ -120,6 +120,26 @@ def test_qfg3_a_matching_green_commits(repo):
     assert _git(repo, "rev-parse", "HEAD") != head_before
 
 
+def test_qfg3_a_landed_issue_does_not_block_a_later_ship(repo):
+    """A landed issue's green was judged when it landed. A later edit to
+    one of its files belongs to later work, which the pointer may still
+    name, so it must not be refused as this issue's stale green."""
+    (repo / "src" / "new.py").write_text("y = 1\n")
+    _green(repo)
+    path = repo / ".compass" / "work" / SLUG / "manifest.yml"
+    data = yaml.safe_load(path.read_text())
+    data["status"] = "landed"
+    path.write_text(yaml.safe_dump(data, sort_keys=False))
+    (repo / "src" / "new.py").write_text("y = 3\n")   # later work
+    _git(repo, "add", "src/new.py")
+    head_before = _git(repo, "rev-parse", "HEAD")
+
+    result = _cli(repo, "ship-commit", "--issue", SLUG, "-m", "later work")
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert _git(repo, "rev-parse", "HEAD") != head_before
+
+
 def test_qfg4_the_safety_contract_states_the_limits():
     text = " ".join((ROOT / "docs" / "safety-contract.md")
                     .read_text(encoding="utf-8").split())

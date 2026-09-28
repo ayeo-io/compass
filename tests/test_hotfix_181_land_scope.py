@@ -96,9 +96,15 @@ def _land(repo, *extra):
     )
 
 
-def _committed_files(repo):
-    out = _git(repo, "show", "--name-only", "--pretty=format:", "HEAD").stdout
+def _committed_files(repo, commit="HEAD"):
+    out = _git(repo, "show", "--name-only", "--pretty=format:", commit).stdout
     return {line.strip() for line in out.splitlines() if line.strip()}
+
+
+def _land_commit(repo):
+    manifest = yaml.safe_load(
+        (repo / ".compass" / "work" / SLUG / "manifest.yml").read_text())
+    return manifest["land_commit"]
 
 
 def test_scn_b1_unrelated_dirty_file_is_not_swept_into_the_land_commit(repo):
@@ -111,11 +117,20 @@ def test_scn_b1_unrelated_dirty_file_is_not_swept_into_the_land_commit(repo):
     result = _land(repo)
     assert result.returncode == 0, f"{result.stdout}\n{result.stderr}"
 
-    committed = _committed_files(repo)
+    # Read the land commit by the `land_commit` the manifest records, not
+    # HEAD - a spec commit follows the land commit when it lands the issue.
+    land_commit = _land_commit(repo)
+    committed = _committed_files(repo, land_commit)
     assert "src/owned.py" in committed, committed
     assert "src/other.py" not in committed, (
         f"land-commit swept an unrelated modified file into the commit: {committed}"
     )
+
+    head = _git(repo, "rev-parse", "HEAD").stdout.strip()
+    assert head != land_commit, "no spec commit followed the land commit"
+    assert _committed_files(repo, head) == {"docs/system-spec.md"}, (
+        "the spec commit that follows the land commit must hold only "
+        "docs/system-spec.md")
 
 
 def test_scn_b1_untracked_scratch_is_not_swept_in(repo):

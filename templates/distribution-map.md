@@ -56,6 +56,22 @@ Fill every {{PLACEHOLDER}}.
 | subtask-1 | {{U1}} | {{`TRC-A1`, `TRC-A2`}} | {{compass/<issue-slug>/subtask-1}} |
 | subtask-2 | {{U2}} | {{`TRC-B1`}} | {{compass/<issue-slug>/subtask-2}} |
 
+<!-- Optional Wave column. Add it only when the subtasks cannot all start at
+     once - a dependent unit whose foundation must land first, or a count
+     over the worktree cap - by giving the table a "Wave" column, with a
+     positive whole number on every row. `scripts/multiagent.sh` finds the
+     column by its header, so it can sit anywhere in the table:
+
+     | Subtask | Owns work unit(s) | Owns scenario ids | Branch name | Wave |
+     |---|---|---|---|---|
+     | subtask-1 | U1 | `TRC-A1` | compass/<issue-slug>/subtask-1 | 1 |
+     | subtask-2 | U2 | `TRC-B1` | compass/<issue-slug>/subtask-2 | 2 |
+
+     `scripts/multiagent.sh` then provisions one wave at a time: `--wave N`
+     creates that wave's worktrees only, and the cap is measured against
+     that wave's row count rather than the map's total. With no Wave column,
+     as above, every subtask is one wave. -->
+
 ## 4. Proposed worktree orchestration
 
 - Proposed orchestration: {{solo \| pair (2–3) \| multiagent (4+)}}

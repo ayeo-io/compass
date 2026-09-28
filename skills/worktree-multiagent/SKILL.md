@@ -5,7 +5,8 @@ description: How parallel subtasks are created, isolated and integrated across g
 
 # Worktree Multiagent
 
-Parallelism in Compass is **decided in Plan** (the distribution map) and
+The step-by-step run is `docs/multiagent-protocol.md`: follow it from top to
+bottom. Parallelism in Compass is **decided in Plan** (the distribution map) and
 **carried out in breakdown** (the worktree orchestration). This skill covers both
 halves: how to decompose work correctly, and how to run and land the multiagent
 orchestration
@@ -16,7 +17,7 @@ without the parallelism costing more than it saves.
 | Orchestration | Subtasks | Setup | Who integrates |
 |---|---|---|---|
 | **Solo** | 1 | No worktree; current branch. Breakdown is a no-op. | The builder, trivially. |
-| **Pair** | 2–3 | One worktree per subtask; one `builder` each; no dedicated orchestrator. | The lead builder. |
+| **Pair** | 2–3 | One worktree per subtask; one `builder` each; no separate orchestrator agent. | The session that owns the issue, as orchestrator. |
 | **Multiagent** | 4+ | One worktree per subtask; one `builder` each; plus one `orchestrator`. | The orchestrator. |
 
 The assessment's size and risk values set the default orchestration; the
@@ -71,9 +72,10 @@ its own checked-out branch, its own files, sharing one `.git`. That isolation
 is what lets a builder run a full red→green TDD cycle, including a failing
 suite, without destabilising siblings.
 
-- `scripts/multiagent.sh` creates one worktree per subtask and launches one `builder`
-  agent in each. Only the `orchestrator` runs it.
-- `scripts/integrate.sh` lands the worktrees back together. Only the
+- `scripts/multiagent.sh` creates one worktree per subtask and prints the
+  launch plan; it launches nothing. The orchestrator starts one `builder`
+  agent per worktree. Only the `orchestrator` runs the script.
+- `scripts/integrate.sh` merges the worktrees back together. Only the
   `orchestrator` runs it.
 - A builder lives inside exactly one worktree for the life of the subtask.
 
@@ -106,9 +108,10 @@ detection, and integration:
   an interface another subtask owns" is an orchestrator message, never a reach
   across.
 - Runs full TDD inside its worktree (see `tdd-discipline`).
-- Spawns no subagents, and writes its report to `result.md` beside its
-  brief. Not `report.md`: Claude Code tells a subagent not to write a file
-  named like a report.
+- Spawns no subagents, and writes its report to `result.md` at its
+  worktree root, uncommitted; the orchestrator copies it beside the brief.
+  Not `report.md`: Claude Code tells a subagent not to write a file named
+  like a report.
 
 **Review frequency follows the assessed risk.** `trivial` and `contained`:
 one review of the integrated result. `cross-cutting`: a review of each
@@ -124,7 +127,7 @@ subtask marked `done` is never dispatched again. Where the project gitignores
 `docs/compass/`, a worktree does not carry the brief: name it by its path in
 the main checkout.
 
-## Integration discipline (ship)
+## Integration discipline (before `/compass:verify`)
 
 1. Confirm every subtask is independently green - the `verifier` has per-subtask
    evidence.
@@ -134,7 +137,8 @@ the main checkout.
 4. **Run combined regression across the integrated result.** This is
    non-negotiable on initiative. Per-subtask green does not imply integrated
    green; proving the combination is the entire reason the orchestrator owns
-   ship. Record the run and link the record.
+   integration. Record the run and link the record. Integration does not land
+   the issue: only `ship-commit` does (ADR-026).
 5. Resolve every owed follow-up, update living docs, write the integration
    devlog entry.
 

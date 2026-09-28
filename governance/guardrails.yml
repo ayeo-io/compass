@@ -27,7 +27,7 @@
 # schemas/guardrails.schema.json.
 # =============================================================================
 
-version: 1.24.0
+version: 1.25.0
 # -----------------------------------------------------------------------------
 # Named checks - the mechanical checks `compass check` knows how to run. Each
 # guardrail below references one or more of these by name. The check reads
@@ -132,6 +132,19 @@ checks:
 
   command-passes:
     description: "Runs the project guardrail's declared `command:` via subprocess and checks it exits 0. On success: emits a command-output evidence entry. On failure: emits a command-output evidence entry with exit code + stderr. When verify.architecture is in the gate set and zero project guardrails declare command-passes, it passes without checking anything (no declarations means there are no architecture checks to run)."
+
+  multiagent-run-recorded:
+    description: >
+      A multiagent issue's manifest shows the run that built it completed:
+      every entry in `subtasks:` is `done`, with a last review round whose
+      verdict is `pass`. Declines to check an issue whose breakdown stage is
+      not multiagent, or one still in flight - not every gate has passed and
+      it has not landed. An issue that already records a `subtasks:` key is
+      judged on it whatever its date; one with no `subtasks:` key is judged
+      only if created on or after 2026-09-26 - a missing `created:` never
+      qualifies on the date alone. Once ready, fails on a manifest with no
+      `subtasks:`, a subtask that is not `done`, or a subtask whose last
+      review round is missing or `fail`.
 
 # -----------------------------------------------------------------------------
 # Evidence types - what KINDS of evidence a gate can be cleared with. Without
@@ -244,7 +257,7 @@ defaults:
       reference typed evidence or a filed follow-up - narrative notes never clear it.
     checks: [gate-evidence-present, dod-evidence-typed, consistency-check-passes, no-trusted-rerun, command-passes,
              evidence-identity-matches, evidence-matches-tree, dashboard-current,
-             borrowed-documents-answered]
+             borrowed-documents-answered, multiagent-run-recorded]
     checked_at: [verify, land]
 
   - id: G5

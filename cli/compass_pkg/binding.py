@@ -94,7 +94,12 @@ def _in_temp_index(top, steps, seed=None):
     with tempfile.TemporaryDirectory() as tmp:
         index = os.path.join(tmp, "index")
         if seed and os.path.isfile(seed):
-            shutil.copyfile(seed, index)
+            # copy2 keeps the index's timestamp. Git re-reads a file whose
+            # entry is as new as the index - its guard for an edit made in
+            # the second the index was written - and a fresh timestamp on
+            # the copy would switch that guard off, so a same-size edit in
+            # that second would go unseen.
+            shutil.copy2(seed, index)
         env = dict(os.environ, GIT_INDEX_FILE=index)
         for args, required in steps:
             done = _git(args, top, env)

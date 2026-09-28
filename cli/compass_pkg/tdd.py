@@ -594,7 +594,14 @@ def cmd_tdd_green(args):
     # Find the project root: walk up from the task_dir to the directory that
     # contains .compass/ - that is the project root the hash covers.
     project_root = find_upwards(task_dir, ".compass") or task_dir
+    # The tree's identity is its git tree id - every tracked file, whatever
+    # its type - with the source-file hash beside it, which also sees
+    # untracked source files. The hash alone read only a few extensions, so
+    # an edit to a shell script looked like no change at all. Outside git
+    # there is no tree id, and the hash alone decides.
     current_hash = _source_tree_hash(project_root)
+    if tree_ids.get("tree_id"):
+        current_hash = "%s+%s" % (tree_ids["tree_id"], current_hash)
     prior_state = _load_tdd_state(task_dir, scenario)
     prior_hash = prior_state.get("tree_hash")
     prior_attempts = prior_state.get("attempts") or 0

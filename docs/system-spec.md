@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Every multiagent route earns the map
+### EGA-7
 
-- **Scenario id:** `FRM-2`
+- **Scenario id:** `EGA-7`
 - **Intent:** `INT-1`
-- **Source issue:** `feature-route-omits-the-map`
+- **Source issue:** `eval-gaps-after-d30`
 - **Landed:** 2026-09-27
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -9021,4 +9021,53 @@
 - **Scenario id:** `FRM-1`
 - **Intent:** `INT-1`
 - **Source issue:** `feature-route-omits-the-map`
+- **Landed:** 2026-09-27
+
+### Every multiagent route earns the map _(archived)_
+
+- **Scenario id:** `FRM-2`
+- **Intent:** `INT-1`
+- **Source issue:** `feature-route-omits-the-map`
+- **Landed:** 2026-09-27
+
+### EGA-1 _(archived)_
+
+- **Scenario id:** `EGA-1`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d30`
+- **Landed:** 2026-09-27
+
+### EGA-2 _(archived)_
+
+- **Scenario id:** `EGA-2`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d30`
+- **Landed:** 2026-09-27
+
+### EGA-3 _(archived)_
+
+- **Scenario id:** `EGA-3`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d30`
+- **Landed:** 2026-09-27
+
+### EGA-4 _(archived)_
+
+- **Scenario id:** `EGA-4`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d30`
+- **Landed:** 2026-09-27
+
+### EGA-5 _(archived)_
+
+- **Scenario id:** `EGA-5`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d30`
+- **Landed:** 2026-09-27
+
+### EGA-6 _(archived)_
+
+- **Scenario id:** `EGA-6`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d30`
 - **Landed:** 2026-09-27

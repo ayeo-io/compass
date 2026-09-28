@@ -367,7 +367,11 @@ def test_d2_repairs_change_only_retired_names():
     `skills/worktree-multiagent/SKILL.md` gained the brief-file, budget,
     batching and no-subagent rules as list items.
 
-    The other 47 are untouched, and a NEW structural change to any of the 59
+    One was re-baselined by `dispatch-protocol`: `templates/distribution-map.md`
+    (table_rows 13 -> 17), which gained a four-row example table, in a
+    comment, showing the optional `Wave` column.
+
+    The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """
     import json

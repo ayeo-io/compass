@@ -34,7 +34,7 @@ import re as _re
 import fnmatch
 import re as _re
 from compass_pkg.terminal import say
-from compass_pkg.core import CompassError, find_governance, load_manifest, load_yaml, manifest_path, normalize_spine, now_iso, resolve_issue_dir, save_manifest
+from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, normalize_spine, now_iso, resolve_issue_dir, save_manifest
 
 
 
@@ -87,6 +87,57 @@ def _out_of_scope(staged, owned, artifact_dir):
     )
 
 
+# --- living system spec derivation (ADR-026) --------------------------------
+# `ship-commit` is the one step that lands an issue and re-derives the living
+# spec: only once an issue is actually marked landed, in a commit of its own,
+# so the land commit itself stays bisectable and revertable on its own. A
+# staged multiagent run integrates each wave through `integrate.sh` without
+# landing the issue (ADR-025); `ship-commit` alone marks it landed, so
+# deriving here - and only here - keeps a staged run from re-deriving the
+# spec once per wave, ahead of verify.
+
+
+def _derive_and_commit_living_spec(cwd, slug):
+    """Re-derive docs/system-spec.md after `slug` has just landed, and
+    commit it alone if it changed.
+
+    Runs the same derivation as `compass _derive-system-spec --internal`
+    (ADR-008). A derivation failure is reported in the returned note and
+    does not undo the land - the land's own commit has already succeeded.
+    """
+    from compass_pkg.flow import derive_system_spec
+
+    try:
+        project_root = os.path.dirname(find_compass_dir())
+    except CompassError:
+        project_root = cwd
+
+    try:
+        derive_system_spec(project_root)
+    except Exception as exc:
+        return f"\n  living spec NOT re-derived: {exc}"
+
+    spec_path = os.path.join(project_root, "docs", "system-spec.md")
+    rel_spec = os.path.relpath(spec_path, cwd)
+    changed = _git(["status", "--porcelain", "--", rel_spec], cwd).stdout.strip()
+    if not changed:
+        return "\n  living spec re-derived (no change)."
+
+    # `-- rel_spec` scopes the commit to the spec alone. A plain `git commit`
+    # commits everything staged - so anything else staged at this moment (a
+    # hook's own side effect, or a leftover from elsewhere in the same tree)
+    # would otherwise land in this commit too.
+    _git(["add", "--", rel_spec], cwd)
+    commit = _git(
+        ["commit", "-m", f"Re-derive the living spec after {slug} landed",
+         "--", rel_spec], cwd
+    )
+    if commit.returncode != 0:
+        log = ((commit.stdout or "") + (commit.stderr or ""))[-800:]
+        return f"\n  living spec derived but its commit failed:\n{log}"
+    return "\n  living spec re-derived and committed."
+
+
 def cmd_land_commit(args):
     import shutil
     cwd = os.getcwd()
@@ -102,12 +153,69 @@ def cmd_land_commit(args):
     for f in files:
         _git(["add", "--", f], cwd)
 
-    # Nothing staged → explicit error, never a retry loop.
+    # Nothing staged. A multiagent issue reaches ship time with every file it
+    # changed already committed by the integration merges - by DPR-7's last
+    # line, that is not an error: land it at HEAD, with no new commit, once
+    # its gates have passed and its declared files are genuinely there,
+    # clean. Every other case refuses as before, naming which condition
+    # failed.
     if _git(["diff", "--cached", "--quiet"], cwd).returncode == 0:
-        raise CompassError(
-            "compass ship-commit: nothing staged to land. Stage the artifacts "
-            "first (e.g. `git add <paths>`), then re-run."
+        if not getattr(args, "task", None):
+            raise CompassError(
+                "compass ship-commit: nothing staged to land, and no issue "
+                "was named. Stage the artifacts first (e.g. `git add "
+                "<paths>`), then re-run - or pass --issue <slug> if that "
+                "issue's work is already committed."
+            )
+        try:
+            head_task_dir = resolve_issue_dir(args.task)
+            head_task_path = manifest_path(head_task_dir)
+            head_task = normalize_spine(load_yaml(head_task_path))
+        except CompassError as exc:
+            raise CompassError(
+                f"compass ship-commit: nothing staged to land, and issue "
+                f"'{args.task}' could not be resolved ({exc})."
+            )
+        head_slug = os.path.basename(str(head_task_dir).rstrip("/"))
+        unmet = [g.get("id", "?") for g in (head_task.get("gates") or [])
+                 if isinstance(g, dict) and g.get("status") != "pass"]
+        if unmet:
+            raise CompassError(
+                f"compass ship-commit: nothing staged to land, and "
+                f"{len(unmet)} gate(s) on '{head_slug}' have not passed "
+                f"({', '.join(unmet)})."
+            )
+        declared = [cf.get("path") for cf in (head_task.get("changed_files") or [])
+                    if isinstance(cf, dict) and cf.get("path")]
+        dirty_or_missing = []
+        for path in declared:
+            status = _git(["status", "--porcelain", "--", path], cwd).stdout.strip()
+            if status:
+                dirty_or_missing.append(path)
+                continue
+            in_head = _git(["cat-file", "-e", f"HEAD:{path}"], cwd).returncode == 0
+            if not in_head:
+                dirty_or_missing.append(path)
+        if dirty_or_missing:
+            raise CompassError(
+                f"compass ship-commit: nothing staged to land, and "
+                f"{len(dirty_or_missing)} of '{head_slug}'s changed file(s) "
+                "are uncommitted or missing from HEAD:\n  "
+                + "\n  ".join(dirty_or_missing)
+            )
+
+        head_id = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
+        head_task["status"] = "landed"
+        head_task["land_timestamp"] = now_iso()
+        head_task["land_commit"] = head_id
+        save_manifest(head_task, head_task_path)
+        landed_note = _derive_and_commit_living_spec(cwd, head_slug)
+        print(
+            f"compass ship-commit: every file '{head_slug}' changed is "
+            f"already committed - landed at HEAD {head_id[:8]}, no new "
+            "commit made." + landed_note
         )
+        return 0
 
     # The issue's declared scope. Everything below re-stages against this
     # rather than against the whole tree: a ship commit must contain what the
@@ -243,6 +351,11 @@ def cmd_land_commit(args):
                         task["land_commit"] = head_after
                         save_manifest(task, task_path)
                         landed_note = "\n  issue marked landed."
+                        # ADR-026: ship-commit is the one step that derives
+                        # the living spec, and only for an issue it has just
+                        # marked landed.
+                        landed_note += _derive_and_commit_living_spec(
+                            cwd, os.path.basename(str(task_dir).rstrip("/")))
         except CompassError:
             pass  # status update is best-effort; the commit already succeeded
 

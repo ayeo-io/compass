@@ -21,10 +21,27 @@
 #   has what they need.
 #
 # CONFLICTS
-#   This script does NOT auto-resolve conflicts. If a merge conflicts, it
-#   aborts that merge, leaves the repo clean, reports exactly which subtask and
-#   which files conflicted, and stops. Resolving cross-subtask conflicts is the
-#   orchestrator's job and no one else's - the script just surfaces them.
+#   A conflict confined to Compass's own records - any path under .compass/
+#   or docs/compass/ - is resolved on the spot: the base branch's side wins
+#   (its deletion counts as its side too), the merge completes, and the
+#   script names which file it kept or removed. Any other conflict is NOT
+#   auto-resolved: the merge aborts, the repo is left clean, and the script
+#   reports exactly which subtask and which files conflicted, then stops.
+#   Resolving a cross-subtask conflict outside Compass's own records is the
+#   orchestrator's job and no one else's - the script just surfaces it. If
+#   resolving a records-only conflict itself fails part way (a commit hook
+#   rejects it, say), the merge is aborted the same way - nothing is ever
+#   left half done.
+#
+#   A merge git refuses to even start (e.g. an untracked file at a path the
+#   merge would write) is not a conflict - no MERGE_HEAD exists, so there is
+#   nothing to abort. The script reports git's own reason and stops.
+#
+# STARTING CLEAN
+#   integrate.sh refuses to start when a tracked file has an uncommitted
+#   change. An untracked file does not block the start - git itself already
+#   refuses a merge that would overwrite one, so this script does not
+#   duplicate that check.
 #
 # COMBINED REGRESSION
 #   After all subtasks merge cleanly, the project's test command runs once
@@ -43,11 +60,11 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COMPASS_HOME="$(cd "$SCRIPT_DIR/.." && pwd)"
 PROJECT_DIR="$(git -C "$(pwd)" rev-parse --show-toplevel 2>/dev/null || pwd)"
 
 # shellcheck source=lib/compass-python.sh
 source "$SCRIPT_DIR/lib/compass-python.sh"
+source "$SCRIPT_DIR/lib/issue-docs.sh"
 
 # --- args -------------------------------------------------------------------
 TASK_SLUG=""
@@ -64,15 +81,24 @@ done
 [ -n "$TASK_SLUG" ] || { echo "integrate.sh: need an issue slug. See --help." >&2; exit 1; }
 
 TASK_DIR="$PROJECT_DIR/.compass/work/$TASK_SLUG"
-MAP="$TASK_DIR/distribution-map.md"
 CONFIG="$PROJECT_DIR/.compass/config.yml"
-[ -f "$MAP" ] || { echo "integrate.sh: no distribution-map.md for '$TASK_SLUG'." >&2; exit 1; }
+
+# The map is found through the artifact registry, so an issue whose
+# documents moved to docs/compass/<created>-<slug>/ still resolves, and an
+# issue whose map is still flat under .compass/work/<slug>/ works as before.
+# issue_doc_path already reports WHY a lookup failed on stderr.
+MAP="$(issue_doc_path "$TASK_SLUG" distribution-map)" \
+  && [ -f "$MAP" ] \
+  || { echo "integrate.sh: no distribution-map.md for '$TASK_SLUG'." >&2; exit 1; }
 
 # --- repo sanity: must start clean ------------------------------------------
 git -C "$PROJECT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
   || { echo "integrate.sh: $PROJECT_DIR is not a git repository." >&2; exit 1; }
-if [ -n "$(git -C "$PROJECT_DIR" status --porcelain)" ]; then
-  echo "integrate.sh: working tree is dirty - commit or stash before integrating." >&2
+# Tracked files only - an untracked file does not block the start. Git
+# itself already refuses a merge that would overwrite one, and that is the
+# only case an untracked file needs to matter for.
+if [ -n "$(git -C "$PROJECT_DIR" status --porcelain --untracked-files=no)" ]; then
+  echo "integrate.sh: working tree has uncommitted changes - commit or stash before integrating." >&2
   exit 1
 fi
 BASE_BRANCH="$(git -C "$PROJECT_DIR" rev-parse --abbrev-ref HEAD)"
@@ -90,14 +116,51 @@ case "$WORKTREE_ROOT_REL" in
   *)  WORKTREE_ROOT="$PROJECT_DIR/$WORKTREE_ROOT_REL" ;;
 esac
 
+# --- find the subtask table's own header row (same shape as multiagent.sh) --
+# A map can carry more than one markdown table; only the table whose rows
+# carry a subtask id governs merging, so "Branch name" must be read from
+# THAT table's header, not any other table's or a fixed cell position - a
+# Wave column placed ahead of it (multiagent.sh's staged-map columns) would
+# otherwise shift what this script reads as the branch and silently skip
+# the subtask (see multiagent.sh's own header-finding block for why).
+PENDING_HEADER=""
+SUBTASK_HEADER=""
+while IFS= read -r line; do
+  case "$line" in \|*) ;; *) continue ;; esac
+  case "$(echo "$line" | tr -d '|:- ')" in '') continue ;; esac
+  IFS='|' read -r -a _hdr_cells <<<"$line"
+  _hdr_cell1="$(echo "${_hdr_cells[1]:-}" | xargs 2>/dev/null || true)"
+  case "$_hdr_cell1" in
+    subtask-*|stream-*)  # vocabulary-scan: allow - reads the retired spelling for back-compat (ADR-006)
+      [ -n "$SUBTASK_HEADER" ] || SUBTASK_HEADER="$PENDING_HEADER"
+      ;;
+    *)
+      PENDING_HEADER="$line"
+      ;;
+  esac
+done < "$MAP"
+
+# Position 4 is the template's usual "Branch name" cell, kept as the
+# default for a hand-filled map whose header text does not match exactly.
+BRANCH_COL=4
+if [ -n "$SUBTASK_HEADER" ]; then
+  IFS='|' read -r -a _hdr_cells <<<"$SUBTASK_HEADER"
+  for _idx in "${!_hdr_cells[@]}"; do
+    _cell="$(echo "${_hdr_cells[$_idx]}" | xargs 2>/dev/null || true)"
+    case "$_cell" in
+      "Branch name") BRANCH_COL="$_idx" ;;
+    esac
+  done
+fi
+
 # --- parse subtasks + branches (same parser shape as multiagent.sh) ---------------
 SUBTASKS=(); BRANCHES=()
 while IFS= read -r line; do
   # A map written before ADR-023 says stream-N. Read both (ADR-006).  # vocabulary-scan: allow - reads the retired spelling for back-compat (ADR-006)
   case "$line" in \|*subtask-*|\|*stream-*) ;; *) continue ;; esac  # vocabulary-scan: allow - reads the retired spelling for back-compat (ADR-006)
-  IFS='|' read -r _ c1 c2 c3 c4 _rest <<<"$line"
-  sid="$(echo "${c1:-}" | xargs 2>/dev/null || true)"
-  branch="$(echo "${c4:-}" | xargs 2>/dev/null || true)"
+  IFS='|' read -r -a _row_cells <<<"$line"
+  sid="$(echo "${_row_cells[1]:-}" | xargs 2>/dev/null || true)"
+  branch="$(echo "${_row_cells[$BRANCH_COL]:-}" | xargs 2>/dev/null | sed -E 's/^[`*]+//; s/[`*]+$//' || true)"
   case "$sid" in subtask-*|stream-*) ;; *) continue ;; esac  # vocabulary-scan: allow - reads the retired spelling for back-compat (ADR-006)
   [ -n "$branch" ] || branch="compass/$TASK_SLUG/$sid"
   SUBTASKS+=("$sid"); BRANCHES+=("$branch")
@@ -126,6 +189,52 @@ echo "  subtasks:       ${#SUBTASKS[@]}  (merged in map order)"
 echo "  test command:  ${TEST_CMD:-<none resolved - combined regression cannot run automatically>}"
 echo ""
 
+# Every conflicted path is one of Compass's own records: anything under
+# .compass/ or docs/compass/, and nothing else. The match is a path prefix,
+# not a substring, so a look-alike name such as .compass-worktrees/ - a
+# builder's live checkout, not a record this script keeps - does not slip
+# through: it is a sibling directory outside the repository, so it never
+# reaches this check, and even a tracked file with that name at the repo
+# root is refused rather than resolved. Reads the list from stdin, one path
+# per line.
+_all_paths_are_compass_records() {
+  local line all_compass=1
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    case "$line" in
+      .compass/*|docs/compass/*) ;;
+      *) all_compass=0 ;;
+    esac
+  done
+  [ "$all_compass" -eq 1 ]
+}
+
+# A conflicted path under .compass/ or docs/compass/ can still be the
+# DESTINATION of a rename whose SOURCE sat outside both - a builder who
+# moved source code into the records tree and edited it, while the base
+# branch edited the original path too. git reports the conflict at the
+# destination, which would otherwise read as records-only. Renames are
+# looked up in both directions - either side of the merge can be the one
+# that moved the file - filtered to R (git diff's rename status); the
+# threshold is git's default (-M with no percentage). A match whose
+# source is itself outside .compass/ and docs/compass/ means the
+# conflicting work began outside the records tree, so the whole conflict
+# must abort like any other cross-subtask one, not resolve on the spot.
+_rename_into_records_has_outside_source() {
+  local dest="$1" range status old new
+  for range in "HEAD...MERGE_HEAD" "MERGE_HEAD...HEAD"; do
+    while IFS=$'\t' read -r status old new; do
+      case "$status" in R*) ;; *) continue ;; esac
+      [ "$new" = "$dest" ] || continue
+      case "$old" in
+        .compass/*|docs/compass/*) ;;
+        *) return 0 ;;
+      esac
+    done < <(git -C "$PROJECT_DIR" diff --name-status -M "$range" 2>/dev/null || true)
+  done
+  return 1
+}
+
 # --- merge each subtask in order ---------------------------------------------
 MERGED=()
 for i in "${!SUBTASKS[@]}"; do
@@ -145,25 +254,102 @@ for i in "${!SUBTASKS[@]}"; do
   fi
 
   echo "  $sid: merging $branch -> $BASE_BRANCH ..."
-  if git -C "$PROJECT_DIR" merge --no-ff --no-edit \
-        -m "compass($TASK_SLUG): integrate $sid" "$branch" >/dev/null 2>&1; then
+  if MERGE_OUTPUT="$(git -C "$PROJECT_DIR" merge --no-ff --no-edit \
+        -m "compass($TASK_SLUG): integrate $sid" "$branch" 2>&1)"; then
     echo "         merged cleanly."
     MERGED+=("$sid")
-  else
-    # Conflict. Capture the conflicted files, abort, report, stop.
-    CONFLICTS="$(git -C "$PROJECT_DIR" diff --name-only --diff-filter=U || true)"
+    continue
+  fi
+
+  # Read the conflicted paths NUL-delimited, straight into an array. A
+  # quoted, escaped path from a plain `git diff --name-only` (any byte
+  # outside plain ASCII, or a space) would not match the prefix check below
+  # and would be misreported; -z paired with `read -r -d ''` avoids both.
+  CONFLICTS=()
+  while IFS= read -r -d '' f; do
+    CONFLICTS+=("$f")
+  done < <(git -C "$PROJECT_DIR" diff --name-only -z --diff-filter=U 2>/dev/null || true)
+
+  if [ "${#CONFLICTS[@]}" -eq 0 ]; then
+    # git refused the merge before it started - e.g. an untracked file at a
+    # path the merge would write. No MERGE_HEAD exists, so there is nothing
+    # to abort; calling `merge --abort` here would itself fail and hide
+    # git's real reason behind a second, misleading error.
+    echo ""
+    echo "  integrate.sh: git refused to merge $sid ($branch) - nothing changed."
+    echo "$MERGE_OUTPUT" | sed 's/^/    /'
+    exit 1
+  fi
+
+  RECORDS_ONLY=0
+  if printf '%s\n' "${CONFLICTS[@]}" | _all_paths_are_compass_records; then
+    RECORDS_ONLY=1
+    for f in "${CONFLICTS[@]}"; do
+      [ -n "$f" ] || continue
+      if _rename_into_records_has_outside_source "$f"; then
+        RECORDS_ONLY=0
+        break
+      fi
+    done
+  fi
+
+  if [ "$RECORDS_ONLY" -eq 1 ]; then
+    # Confined to Compass's own records - keep the base branch's side of
+    # each conflicted file (a deletion on the base branch counts as its
+    # side too) and complete the merge. The builder's own record of its own
+    # subtask stays on its branch; only the base's copy, the one the
+    # orchestrator has been updating, survives.
+    RESOLVE_FAILED=""
+    echo "         conflict confined to Compass's own records; kept the base branch's copy of:"
+    for f in "${CONFLICTS[@]}"; do
+      [ -n "$f" ] || continue
+      if git -C "$PROJECT_DIR" cat-file -e ":2:$f" 2>/dev/null; then
+        # The base branch still has a version of this file - keep it.
+        if git -C "$PROJECT_DIR" checkout --ours -- "$f" 2>/dev/null \
+             && git -C "$PROJECT_DIR" add -- "$f" 2>/dev/null; then
+          echo "           - $f"
+        else
+          RESOLVE_FAILED="$f"
+          break
+        fi
+      else
+        # The base branch deleted this file - keep the deletion.
+        if git -C "$PROJECT_DIR" rm -f -q -- "$f" 2>/dev/null; then
+          echo "           - $f (removed - deleted on $BASE_BRANCH)"
+        else
+          RESOLVE_FAILED="$f"
+          break
+        fi
+      fi
+    done
+    if [ -z "$RESOLVE_FAILED" ] \
+       && git -C "$PROJECT_DIR" commit --no-edit >/dev/null 2>&1; then
+      echo "         merged."
+      MERGED+=("$sid")
+      continue
+    fi
+    # A step above failed - a checkout, an add, the rm, or the commit
+    # itself (a hook can reject it). Leave nothing half done: abort like
+    # any other unresolved conflict, instead of exiting mid-merge.
     git -C "$PROJECT_DIR" merge --abort || true
     echo ""
-    echo "  CONFLICT integrating $sid ($branch)."
-    echo "  Conflicted files:"
-    echo "$CONFLICTS" | sed 's/^/    - /'
-    echo ""
-    echo "  The merge was aborted; the repo is clean again. This is the"
-    echo "  orchestrator's call to resolve - re-cut the boundary, re-sequence,"
-    echo "  or escalate to a re-frame. No one else may resolve a cross-subtask"
-    echo "  conflict. Subtasks merged so far: ${MERGED[*]:-none}."
+    echo "  integrate.sh: could not resolve the records conflict for $sid ($branch)${RESOLVE_FAILED:+ (failed at $RESOLVE_FAILED)}."
+    echo "  The merge was aborted; the repo is clean again."
     exit 2
   fi
+
+  # Any other conflict is not auto-resolved: abort, report, stop.
+  git -C "$PROJECT_DIR" merge --abort || true
+  echo ""
+  echo "  CONFLICT integrating $sid ($branch)."
+  echo "  Conflicted files:"
+  printf '    - %s\n' "${CONFLICTS[@]}"
+  echo ""
+  echo "  The merge was aborted; the repo is clean again. This is the"
+  echo "  orchestrator's call to resolve - re-cut the boundary, re-sequence,"
+  echo "  or escalate to a re-frame. No one else may resolve a cross-subtask"
+  echo "  conflict. Subtasks merged so far: ${MERGED[*]:-none}."
+  exit 2
 done
 
 if [ "${#MERGED[@]}" -eq 0 ]; then
@@ -194,50 +380,15 @@ else
   echo "per-subtask green does not imply integrated green."
 fi
 
-# --- write status: landed and derive the living system spec -----------------
-echo ""
-echo "Writing status: landed to manifest.yml and deriving living system spec..."
-
-TASK_YML="$TASK_DIR/manifest.yml"
-if [ -f "$TASK_YML" ]; then
-  # Parenthesised into its own subshell: this call - unlike the ones above
-  # that already sit inside `$(...)` - is a plain statement, not a captured
-  # substitution. compass_python forks python3; it does not replace the
-  # calling shell, so worktree cleanup and the final summary below still run
-  # whatever this block does.
-  ( compass_python - <<PYEOF
-import compass_pkg
-import yaml, datetime, sys
-path = "$TASK_YML"
-try:
-    with open(path, 'r', encoding='utf-8') as f:
-        task = yaml.safe_load(f) or {}
-    if not isinstance(task, dict):
-        task = {}
-    task['status'] = 'landed'
-    task['land_timestamp'] = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds')
-    with open(path, 'w', encoding='utf-8') as f:
-        yaml.safe_dump(task, f, sort_keys=False, default_flow_style=False)
-    print("  manifest.yml: status=landed, land_timestamp written.")
-except Exception as exc:
-    print(f"WARNING: could not write status: landed to {path}: {exc}", file=sys.stderr)
-PYEOF
-  )
-else
-  echo "  WARNING: no manifest.yml found at $TASK_YML - skipping status write."
-fi
-
-COMPASS_CLI="$COMPASS_HOME/cli/compass"
-if [ -x "$COMPASS_CLI" ] || [ -f "$COMPASS_CLI" ]; then
-  if ( cd "$PROJECT_DIR" && python3 "$COMPASS_CLI" _derive-system-spec --internal ); then
-    echo "  docs/system-spec.md updated (living spec derived)."
-  else
-    echo "  WARNING: living spec derivation failed - docs/system-spec.md may be stale."
-    echo "  Re-run: python3 cli/compass _derive-system-spec --internal"
-  fi
-else
-  echo "  WARNING: compass CLI not found at $COMPASS_CLI - skipping derivation."
-fi
+# integrate.sh does NOT write status: landed or derive docs/system-spec.md.
+# It runs before the verify stage, and on a staged (multi-wave) map it can
+# run more than once for the same issue - writing landed here marked the
+# issue landed after wave 1, and even on a single-wave run marked it
+# landed before the verify stage ever ran. `ship-commit` alone marks an
+# issue landed, once HEAD has actually moved and the gates have passed
+# (manifest.py); living-spec derivation reads only landed issues, so
+# deriving it here was a
+# no-op ahead of that point in any case.
 
 # --- clean up the worktrees -------------------------------------------------
 echo ""
@@ -260,8 +411,10 @@ else
 fi
 
 echo ""
-echo "Integration complete for '$TASK_SLUG'. Back in /compass:ship, finish by:"
-echo "  - pasting the combined-regression run into verification-report.md"
-echo "  - updating living docs"
-echo "  - resolving every outstanding follow-up in delivery-approach.md"
-echo "  - writing the final devlog.md entry"
+echo "Wave integrated for '$TASK_SLUG'; the combined regression above is green."
+echo "The issue is not landed yet. Next, whichever this wave was:"
+echo "  - a wave before the last: provision the next wave -"
+echo "    scripts/multiagent.sh $TASK_SLUG --wave <n>"
+echo "  - the last wave: review the integrated result, then \`/compass:verify\`"
+echo ""
+echo "Next: \`/compass:verify\`, then \`ship-commit\` - only ship-commit marks '$TASK_SLUG' landed."

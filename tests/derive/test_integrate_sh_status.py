@@ -37,22 +37,49 @@ class TestIntegrateSh:
     We test this in two layers:
     1. The derive_system_spec function correctly reads status: landed from
        manifest.yml (already covered in TestTrcB11 in test_derive_system_spec.py).
-    2. scripts/integrate.sh contains the invocation of _derive-system-spec
-       --internal AND writes status: landed to manifest.yml after combined
-       regression passes.
+    2. scripts/integrate.sh writes status: landed to manifest.yml after
+       combined regression passes.
+
+    ADR-026 (`DPR-7`) moved the living-spec derivation off integrate.sh and
+    onto `ship-commit`, the one step that lands every issue - solo or
+    multiagent. The two tests that used to pin the old invocation, below,
+    now pin its replacement: integrate.sh does not call the derivation, and
+    ship-commit does, after it has marked the issue landed.
     """
 
-    def test_integrate_sh_contains_derive_invocation(self):
-        """integrate.sh must invoke compass _derive-system-spec --internal
-        after combined regression (DD-4)."""
+    def test_integrate_sh_does_not_invoke_the_derivation(self):
+        """integrate.sh must not call compass _derive-system-spec --internal -
+        ADR-026 moved that call to ship-commit."""
         assert INTEGRATE_SH.is_file(), f"integrate.sh not found at {INTEGRATE_SH}"
         content = INTEGRATE_SH.read_text(encoding="utf-8")
-        assert "_derive-system-spec" in content, (
-            "integrate.sh must invoke compass _derive-system-spec --internal "
-            "after combined regression (DD-4)"
+        assert "_derive-system-spec" not in content, (
+            "integrate.sh must not invoke compass _derive-system-spec "
+            "--internal - ADR-026 moved the derivation to ship-commit"
         )
-        assert "--internal" in content, (
-            "integrate.sh's derivation invocation must include --internal flag"
+
+    def test_ship_commit_derives_after_marking_the_issue_landed(self):
+        """ship-commit calls derive_system_spec, in the branch that has just
+        marked the issue landed - never from integrate.sh (ADR-026).
+        `tests/test_ship_commit_derives.py` proves this behaviourally: a
+        gate that has not passed marks nothing landed and derives nothing."""
+        manifest_src = (FRAMEWORK_ROOT / "cli" / "compass_pkg" / "manifest.py").read_text(
+            encoding="utf-8")
+        landed_marker = 'task["status"] = "landed"'
+        derive_call = "_derive_and_commit_living_spec("
+        assert landed_marker in manifest_src, (
+            f"expected {landed_marker!r} in cli/compass_pkg/manifest.py"
+        )
+        assert "derive_system_spec" in manifest_src, (
+            "compass ship-commit must call derive_system_spec after marking "
+            "an issue landed (ADR-026)"
+        )
+        # The call site, not its definition or import, must sit inside the
+        # branch that has just marked the issue landed.
+        landed_pos = manifest_src.index(landed_marker)
+        call_pos = manifest_src.index(derive_call, landed_pos)
+        assert call_pos > landed_pos, (
+            "ship-commit must call the derivation after marking the issue "
+            "landed, not before"
         )
 
     def test_integrate_sh_writes_status_landed(self):
@@ -63,33 +90,6 @@ class TestIntegrateSh:
                "landed" in content, (
             "integrate.sh must write status: landed to the task's manifest.yml"
         )
-
-    def test_derive_invocation_comes_after_regression(self):
-        """In integrate.sh, the _derive-system-spec invocation appears AFTER
-        the combined regression section - not before (ADR-008 §1: derivation
-        runs at ship time, after regression passes)."""
-        content = INTEGRATE_SH.read_text(encoding="utf-8")
-
-        # Find position of the regression section and the derive invocation
-        regression_marker = "Combined regression"
-        derive_marker = "_derive-system-spec"
-        status_marker = "status: landed"
-
-        assert regression_marker in content, (
-            f"integrate.sh should have a {regression_marker!r} section"
-        )
-        assert derive_marker in content, (
-            f"integrate.sh should invoke {derive_marker!r}"
-        )
-
-        reg_pos = content.index(regression_marker)
-        derive_pos = content.index(derive_marker)
-
-        assert derive_pos > reg_pos, (
-            f"_derive-system-spec invocation (pos {derive_pos}) must come "
-            f"AFTER the combined regression section (pos {reg_pos}) in integrate.sh"
-        )
-
 
 class TestStatusLandedWrite:
     """Unit tests for writing status: landed to manifest.yml."""

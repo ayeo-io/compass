@@ -218,7 +218,12 @@ def _git(cwd, *args):
                           text=True, check=True)
 
 
-def test_integrate_writes_landed_status_without_a_system_pyyaml(bare_interpreter, tmp_path):
+def test_integrate_leaves_status_untouched_ship_commit_lands_without_a_system_pyyaml(
+        bare_interpreter, tmp_path):
+    """`integrate.sh` merges a wave and leaves the issue's status alone;
+    `ship-commit` is the step that lands it and derives the living spec
+    (ADR-026, `DPR-7`). Both run on the bare interpreter, so this still
+    proves the zero-install claim for whichever step does the writing."""
     repo = tmp_path / "repo"
     repo.mkdir()
     _git(repo, "init", "-q")
@@ -268,13 +273,33 @@ def test_integrate_writes_landed_status_without_a_system_pyyaml(bare_interpreter
     assert result.returncode == 0, result.stdout + result.stderr
     assert "could not write status" not in (result.stdout + result.stderr), (
         result.stdout + result.stderr)
-    assert "WARNING" not in result.stdout or "living spec" in result.stdout, (
-        result.stdout)
+
+    after_integrate = yaml.safe_load((task_dir / "manifest.yml").read_text())
+    assert after_integrate["status"] == "active", (
+        "integrate.sh must not mark the issue landed - only ship-commit does "
+        f"(ADR-026):\n{result.stdout}{result.stderr}")
+    assert not (repo / "docs" / "system-spec.md").exists(), (
+        "integrate.sh must not derive docs/system-spec.md - only "
+        f"ship-commit does (ADR-026):\n{result.stdout}{result.stderr}")
+
+    # The real workflow stages the verification report before shipping -
+    # something of the issue's own has to be staged for ship-commit to land.
+    (task_dir / "verification-report.md").write_text(
+        "# Verification\n", encoding="utf-8")
+    _git(repo, "add", "--", f".compass/work/{slug}/verification-report.md")
+
+    ship_result = _run_cli(bare_interpreter, repo, "ship-commit", "-m",
+                            "land it", "--issue", slug)
+    assert ship_result.returncode == 0, ship_result.stdout + ship_result.stderr
+    _assert_no_install_instruction(ship_result)
 
     written = yaml.safe_load((task_dir / "manifest.yml").read_text())
     assert written["status"] == "landed"
     assert "land_timestamp" in written
     assert written["other_field"] == before_other_field == "must-survive-unchanged"
+    assert (repo / "docs" / "system-spec.md").is_file(), (
+        "ship-commit must derive docs/system-spec.md once the issue lands "
+        f"(ADR-026):\n{ship_result.stdout}{ship_result.stderr}")
 
 
 # ---------------------------------------------------------------------------

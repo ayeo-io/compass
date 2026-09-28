@@ -200,6 +200,16 @@ def test_qfo3_start_refuses_a_slug_that_is_not_one_segment(repo):
     assert not (repo / ".compass" / "current-task").is_file()
 
 
+def test_qfo1_start_prints_the_rest_of_the_path(repo):
+    # A session that reached start from /compass:assess has not read the
+    # quick-fix command. The hand-off is where it learns how to finish.
+    result = _start(repo, "greet-path")
+    assert result.returncode == 0, result.stderr
+    assert "compass tdd-red --scenario TRC-001" in result.stdout
+    assert "compass quick-fix finish" in result.stdout
+    assert "--no-commit" in result.stdout
+
+
 def test_qfo1_start_says_when_it_creates_a_directory(repo):
     result = _start(repo, "greet-new")
     assert result.returncode == 0, result.stderr

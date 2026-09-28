@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### A run is recorded under either condition
+### An edit under the project root's .compass/ does not
 
-- **Scenario id:** `SPT-1`
+- **Scenario id:** `SHN-2`
 - **Intent:** `INT-1`
-- **Source issue:** `skill-prose-pressure-tests`
+- **Source issue:** `source-hash-skips-nested-records`
 - **Landed:** 2026-09-27
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -8910,3 +8910,17 @@
 - **Intent:** `INT-1`
 - **Source issue:** `tr-range-fails-on-linux`
 - **Landed:** 2026-09-25
+
+### A run is recorded under either condition _(archived)_
+
+- **Scenario id:** `SPT-1`
+- **Intent:** `INT-1`
+- **Source issue:** `skill-prose-pressure-tests`
+- **Landed:** 2026-09-27
+
+### An edit under a nested .compass/ changes the source hash _(archived)_
+
+- **Scenario id:** `SHN-1`
+- **Intent:** `INT-1`
+- **Source issue:** `source-hash-skips-nested-records`
+- **Landed:** 2026-09-27

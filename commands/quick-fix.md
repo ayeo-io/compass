@@ -7,9 +7,10 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 # /compass:quick-fix
 
 The change is small, safe, and in code whose behaviour is already written
-down. This one
-file is the whole path - assess, state the criterion, build it test-first,
-check the result, ship. Load `quick-fix` alongside it and read nothing else.
+down. `compass quick-fix start` opens the issue and records the assessment
+in one call; `compass quick-fix finish` checks, traces and ships in another.
+Between them you write one failing test and the code that turns it green.
+Load `quick-fix` alongside it and read nothing else.
 
 **Issue:** $ARGUMENTS
 
@@ -26,71 +27,37 @@ Stop and run the full pipeline if any of these is true:
   a designer brings artifacts this path does not write.
 
 Guessing low here is the failure this path is most prone to. When unsure,
-choose the larger size: collapsing a stage that turned out easy is cheap, discovering
+choose the larger size: collapsing an easy stage later is cheap, discovering
 mid-build that the process was too light is not.
 
-## 1. Assess
-
-Run `compass init`. It creates `.compass/` if it is absent and says so;
-if the project is already there it changes nothing. Tell the user in one line
-when it created something - a directory appearing unannounced is how it gets
-deleted by hand or committed by accident.
-
-Pick a slug. Make `.compass/work/<slug>/` and write `manifest.yml` into it
-from `${CLAUDE_PLUGIN_ROOT}/templates/manifest.yml`.
-
-Read the four dimensions into the manifest's `assessment:` block - risk,
-familiarity, size, goal and role - each with a one-line justification. The
-skill has the scoring tests. If you cannot justify a value, ask rather than
-guess.
-
-Then compute the approach:
+## 1. Start
 
 ```
-compass approach evaluate --issue <slug> --write
+compass quick-fix start <slug> \
+  --risk "<VALUE - reason>" --familiarity "<VALUE - reason>" --size "<VALUE - reason>" \
+  --goal "delivery" --role "engineer" \
+  --intent "<sentence>" \
+  --scenario "Given ... When ... Then ..." --scenario-id <id> \
+  --test <node-id>
 ```
 
-You do not pick the approach and you do not apply a policy rule by hand. The
-CLI reads `governance/routing-policy.yml` against the assessment you just
-recorded and folds the result - `delivery_approach`, `stages`, `gates`,
-`orchestration` - back into the manifest. **If it comes back as anything
-other than a quick fix, this command is over**: the work is heavier than it
-looked. Say so, keep the assessment you just recorded, and continue from
-`/compass:assess`, which hands off to the full pipeline. Do not argue with the
-result - the CLI applied the policy to the four values you recorded, so the
-thing to re-examine is a dimension, not the approach.
+`--test` repeats for more than one test; `--goal` and `--role` default to
+`delivery` and `engineer`, and can carry a reason.
 
-Write the record itself to `docs/compass/<created>-<slug>/delivery-approach.md`,
-where the date is the manifest's `created:` field, and register it with
-`compass issue artifact delivery-approach --status draft --path <that path>`.
-If you created `docs/compass/`, say so in one line - a directory appearing with
-nothing said is how it gets deleted by hand or committed by accident.
+Before writing anything, the verb refuses a dimension with no reason, or a
+value the policy does not know, and names which. It then runs `compass init`,
+writes the manifest, and computes the approach through `compass approach
+evaluate`. If the result is not a quick fix, it says so, keeps the
+assessment, and hands off to `/compass:assess` - exit non-zero, nothing else
+written. Re-examine a dimension, not the computed approach.
 
-Its content comes from `${CLAUDE_PLUGIN_ROOT}/templates/delivery-approach.md`: the four dimensions
-with their justifications, the computed approach, any policy rule the CLI
-reported, and the de-scope ledger - each collapsed stage with its "safe to
-skip because..." line. Write the slug into `.compass/current-task` so later
-`compass` calls resolve without a flag.
+Otherwise it writes `delivery-approach.md`, registers it with `compass issue
+artifact delivery-approach`, sets `.compass/current-task`, and records the
+scenario against the intent, all in one call. If it created `.compass/` or
+`docs/compass/`, it prints the line - report it, since an unannounced
+directory is how it gets deleted by hand or committed by accident.
 
-This is the only document a quick fix owes. Everything else it records is a
-machine-readable entry the CLI reads back.
-
-## 2. State the one criterion
-
-One Given/When/Then scenario, and it is the spec. It must be genuinely
-unambiguous - the requirements review is collapsed only because the scenario
-is unambiguous, so if the scenario needs a conversation to interpret, the
-approach was wrong.
-
-Write it into the manifest's `scenarios:` block: a stable id, a title, the
-`intent` it serves, and the `tests` that will exercise it. That block is what
-`compass check` reads for the acceptance-before-code guardrail. Put the same
-scenario in `delivery-approach.md` so a person can read it without opening
-the manifest.
-
-Zero scenarios is never valid; one is the minimum.
-
-## 3. Build it test-first
+## 2. Red, green
 
 Write the failing test, then:
 
@@ -98,82 +65,44 @@ Write the failing test, then:
 compass tdd-red --scenario <id> -- <test command>
 ```
 
-The CLI runs it, asserts it genuinely fails, records the failure and drops the
-marker `hooks/pre-tool.sh` reads before it will let you edit code. If the test
-passes, the CLI refuses and says so - you skipped red. Never touch the markers
-by hand; the CLI owns them.
-
-Then write the smallest correct change and:
+The CLI runs it, asserts it genuinely fails, and drops the marker
+`hooks/pre-tool.sh` reads before it lets you edit code. Write the smallest
+correct change, then:
 
 ```
 compass tdd-green --scenario <id> -- <test command>
 ```
 
-It asserts the test passes, records the green under the scenario id, and
-clears the marker. Refactor with the suite green.
+It asserts the test passes and clears the marker. Refactor with the suite
+green; never touch the markers by hand.
 
-For each production file you touched, add an entry to the manifest's
-`changed_files:` - the path and the scenario id it traces to. That is the
-code-to-criterion half of traceability, and `compass check` checks it.
-
-## 4. Verify
-
-Run the new test and the existing suite. Then:
+## 3. Finish
 
 ```
-compass check --issue <slug>
+compass quick-fix finish -m "<message>"
 ```
 
-This is the mechanical gate: every scenario has a test, a green is on file,
-every changed file traces to a scenario, every gate marked pass has evidence
-that resolves. It exits non-zero on any failure.
+It checks every precondition first: the approach is still `quick-fix`, no
+gate is pending beyond the three, the scenario has a green on file, and -
+with more than one scenario - every changed path is already traced. Any
+unmet condition is named, nothing is committed, exit non-zero.
 
-Read what it says rather than the exit code alone. A line like "no
-changed_files recorded yet" or "0/3 pass gates" is green and asserts nothing;
-counting it as progress is how an untraced change ships.
-
-Record the check's own output and clear the three gates against it:
-
-```
-compass check --issue <slug> --evidence-out evidence/check-output.txt
-compass evidence add --issue <slug> --type command-output --path evidence/check-output.txt
-compass gate pass verify.governance --issue <slug> --evidence EV-<id>
-```
-
-`verify.correctness` points at the scenario-bound green record,
-`verify.traceability` and `verify.governance` at the check output. "It passed"
-is not a gate-clearing statement; the recorded output is.
-
-A quick fix writes no verification report. The gates and their evidence
-pointers are the record.
-
-## 5. Ship
-
-```
-compass ship-commit --issue <slug> -m "<message>"
-```
-
-It commits on the current branch and errors if HEAD did not move, so a commit
-that did not happen cannot count as shipped. Write the message for someone who was not
-in the conversation: what changed and why, no agent attribution trailer and no
-"generated with" footer.
-
-Add one line to `devlog.md`: what changed, and what proved it.
+Once those hold, `finish` does the rest of shipping in one call: traces
+each changed path, runs `compass check`, records the output through
+`compass evidence`, passes the three gates against that check and the
+green, appends the devlog line, and commits through `compass ship-commit`.
 
 ## Stop and re-assess when
 
 The change grows - a second file, then a third, then a decision you did not
-expect. The assessment was wrong, and the move is
-`compass approach evaluate` again with the real dimensions, not pushing on
-with a process you no longer believe. Three consecutive fixes that did not
-hold means the same thing: stop.
+expect. The assessment was wrong; the move is `compass quick-fix start`
+again with the real dimensions, not pushing on with a process you no longer
+believe. Three consecutive fixes that did not hold means the same thing.
 
 ## Gate
 
-- `delivery-approach.md` exists with justified dimensions and a de-scope ledger;
-- the manifest carries one scenario with an id, an intent and a test;
-- a red record and a green record are both on file for it;
-- every changed file traces to it;
-- `compass check` passes;
-- the three gates are `pass` with evidence that resolves;
-- the commit is made and the devlog line written.
+- `quick-fix start` wrote `delivery-approach.md` and the one scenario;
+- a red and a green are both on file for it;
+- `quick-fix finish` ran to completion: every changed file traced, `compass
+  check` passed, the three gates `pass` with evidence, the commit landed and
+  the devlog line was written.

@@ -18,6 +18,14 @@ recorded" - never zero, which would claim a clean run nobody checked. A
 final summary table lists every condition's totals side by side, in the
 order the records first name them - it ranks nothing.
 
+A record's own `hidden.failed` undercounts when the hidden test file
+failed to import: pytest's own summary then reports one error for the
+whole file, not one for each test it defines. This reads `--scenarios-dir`
+(default `evals/scenarios` next to this file) to find every scenario's own
+`hidden_tests/` and correct for it (EGB-4), so a stored record with no raw
+pytest output left to re-read still reports every test the file defines as
+failed, not the fewer pytest's own summary line gave.
+
 CMP-4.
 """
 from __future__ import annotations
@@ -28,7 +36,17 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+FRAMEWORK_ROOT = Path(__file__).resolve().parent.parent
+if str(FRAMEWORK_ROOT) not in sys.path:
+    sys.path.insert(0, str(FRAMEWORK_ROOT))
+# `hidden_tests_defined_count` and `corrected_hidden_counts` (EGB-4) live
+# once, in the harness - reused here rather than kept as a second copy, the
+# same reason `evals/judge.py` imports `_is_compass_own_record` from it.
+from evals import harness as _harness  # noqa: E402
+
 Cell = Tuple[str, str]  # (scenario, condition)
+
+DEFAULT_SCENARIOS_DIR = Path(__file__).resolve().parent / "scenarios"
 
 
 # --- per-run measure extraction ---------------------------------------------
@@ -36,8 +54,37 @@ Cell = Tuple[str, str]  # (scenario, condition)
 # holds for a measure, or None when the record does not carry it - "not
 # recorded" is a fact about the record, not a computed zero.
 
-def _hidden_pass_rate(record: Dict[str, Any]) -> Optional[float]:
+def _corrected_hidden(record: Dict[str, Any],
+                       scenarios_dir: Path) -> Optional[Dict[str, Any]]:
+    """`record["hidden"]`, corrected for a hidden test file that failed to
+    import (EGB-4): pytest's own summary then reports one error for the
+    whole file, not one for each test it defines, so a stored record whose
+    own total falls short of what `scenarios_dir/<scenario>/hidden_tests/`
+    defines is read as every one of those tests failing - there is no raw
+    pytest output left in the record to re-read, so this is the only
+    ground truth a re-score has for an already-recorded run. A scenario id
+    `scenarios_dir` carries no `hidden_tests/` for - unknown, or one
+    without any - leaves the record's own numbers untouched."""
     hidden = record.get("hidden")
+    if not isinstance(hidden, dict):
+        return hidden
+    passed, failed = hidden.get("passed"), hidden.get("failed")
+    if passed is None or failed is None:
+        return hidden
+    scenario = record.get("scenario")
+    if not scenario:
+        return hidden
+    defined = _harness.hidden_tests_defined_count(
+        scenarios_dir / scenario / "hidden_tests")
+    corrected_passed, corrected_failed = _harness.corrected_hidden_counts(
+        passed, failed, defined)
+    if (corrected_passed, corrected_failed) == (passed, failed):
+        return hidden
+    return {**hidden, "passed": corrected_passed, "failed": corrected_failed}
+
+
+def _hidden_pass_rate(record: Dict[str, Any], scenarios_dir: Path) -> Optional[float]:
+    hidden = _corrected_hidden(record, scenarios_dir)
     if not isinstance(hidden, dict):
         return None
     passed, failed = hidden.get("passed"), hidden.get("failed")
@@ -77,14 +124,14 @@ def _framework_commit(record: Dict[str, Any]) -> Optional[str]:
     return framework.get("commit") if isinstance(framework, dict) else None
 
 
-def _is_completed(record: Dict[str, Any]) -> bool:
+def _is_completed(record: Dict[str, Any], scenarios_dir: Path) -> bool:
     """Finished, with every hidden test passing. A record with no `hidden`
     at all is not counted complete - CMP-3's six scenarios all carry hidden
     tests, so an absent `hidden` on real data means the run never reached
     them, not that there were none to fail."""
     if "finished" not in record or not record["finished"]:
         return False
-    hidden = record.get("hidden")
+    hidden = _corrected_hidden(record, scenarios_dir)
     if not isinstance(hidden, dict):
         return False
     passed, failed = hidden.get("passed"), hidden.get("failed")
@@ -160,8 +207,8 @@ def _runs_label(n: int) -> str:
     return "one run" if n == 1 else f"{n} runs"
 
 
-def _completed_fraction(records: List[Dict[str, Any]]) -> str:
-    completed = sum(1 for r in records if _is_completed(r))
+def _completed_fraction(records: List[Dict[str, Any]], scenarios_dir: Path) -> str:
+    completed = sum(1 for r in records if _is_completed(r, scenarios_dir))
     return f"{completed}/{len(records)}"
 
 
@@ -195,7 +242,7 @@ def cell_identity(records: List[Dict[str, Any]]) -> Dict[str, str]:
     }
 
 
-def cell_measures(records: List[Dict[str, Any]]) -> Dict[str, str]:
+def cell_measures(records: List[Dict[str, Any]], scenarios_dir: Path) -> Dict[str, str]:
     """The seven measures CMP-4 asks for, for one (scenario, condition)
     cell's worth of run records - every run in the list is a repeat
     execution of the same scenario under the same condition, so a spread
@@ -203,8 +250,9 @@ def cell_measures(records: List[Dict[str, Any]]) -> Dict[str, str]:
     token_values, token_formatter = _tokens_values(records)
     return {
         "runs": _runs_label(len(records)),
-        "completed": _completed_fraction(records),
-        "hidden_pass_rate": _measure([_hidden_pass_rate(r) for r in records], _percentage),
+        "completed": _completed_fraction(records, scenarios_dir),
+        "hidden_pass_rate": _measure(
+            [_hidden_pass_rate(r, scenarios_dir) for r in records], _percentage),
         "regressions": _measure([_regressions_count(r) for r in records], _plain_count),
         "replies_sent": _measure([_replies_sent(r) for r in records], _plain_count),
         "wall_time": _measure([_wall_time(r) for r in records], _seconds),
@@ -224,11 +272,12 @@ def _total(values: List[Optional[float]], formatter) -> str:
     return f"{formatter(sum(present))} (total)"
 
 
-def _pooled_hidden_pass_rate(records: List[Dict[str, Any]]) -> str:
+def _pooled_hidden_pass_rate(records: List[Dict[str, Any]], scenarios_dir: Path) -> str:
     """The pass rate over every hidden test counted across the pool, not
     the mean of each run's own rate - two records with 1/1 and 0/3 pool to
     1/4, not to the average of 100% and 0%."""
-    totals = [r.get("hidden") for r in records if isinstance(r.get("hidden"), dict)]
+    totals = [_corrected_hidden(r, scenarios_dir) for r in records
+              if isinstance(r.get("hidden"), dict)]
     passed = failed = 0
     counted = False
     for hidden in totals:
@@ -243,7 +292,7 @@ def _pooled_hidden_pass_rate(records: List[Dict[str, Any]]) -> str:
     return f"{_percentage(passed / (passed + failed))} (pooled)"
 
 
-def summary_measures(records: List[Dict[str, Any]]) -> Dict[str, str]:
+def summary_measures(records: List[Dict[str, Any]], scenarios_dir: Path) -> Dict[str, str]:
     """A condition's own totals, pooled across every scenario it ran. Runs
     and Completed already say the same thing regardless of what they pool
     across, so they are unchanged; every other measure is a sum or a
@@ -254,8 +303,8 @@ def summary_measures(records: List[Dict[str, Any]]) -> Dict[str, str]:
     token_values, token_formatter = _tokens_values(records)
     return {
         "runs": _runs_label(len(records)),
-        "completed": _completed_fraction(records),
-        "hidden_pass_rate": _pooled_hidden_pass_rate(records),
+        "completed": _completed_fraction(records, scenarios_dir),
+        "hidden_pass_rate": _pooled_hidden_pass_rate(records, scenarios_dir),
         "regressions": _total([_regressions_count(r) for r in records], _plain_count),
         "replies_sent": _total([_replies_sent(r) for r in records], _plain_count),
         "wall_time": _total([_wall_time(r) for r in records], _seconds),
@@ -304,7 +353,8 @@ def _pool_by_condition(cells: Dict[Cell, List[Dict[str, Any]]],
 
 
 def render_report(cells: Dict[Cell, List[Dict[str, Any]]],
-                   scenario_order: List[str], condition_order: List[str]) -> str:
+                   scenario_order: List[str], condition_order: List[str],
+                   scenarios_dir: Path) -> str:
     lines = ["# Comparison report", ""]
     lines.append(
         "An intervention is the harness sending the scenario's own "
@@ -321,7 +371,8 @@ def render_report(cells: Dict[Cell, List[Dict[str, Any]]],
             records = cells.get((scenario, condition))
             if not records:
                 continue
-            row_values = {**cell_identity(records), **cell_measures(records)}
+            row_values = {**cell_identity(records),
+                          **cell_measures(records, scenarios_dir)}
             columns = IDENTITY_COLUMNS + MEASURE_COLUMNS
             rows.append([condition] + [row_values[key] for key, _ in columns])
         headers = ["Condition"] + [label for _, label in IDENTITY_COLUMNS + MEASURE_COLUMNS]
@@ -344,7 +395,7 @@ def render_report(cells: Dict[Cell, List[Dict[str, Any]]],
     for key, label in MEASURE_COLUMNS:
         row = [label]
         for condition in condition_order:
-            row.append(summary_measures(pooled[condition])[key])
+            row.append(summary_measures(pooled[condition], scenarios_dir)[key])
         rows.append(row)
     lines.append(_markdown_table(headers, rows))
     lines.append("")
@@ -357,9 +408,11 @@ def load_records(paths: List[str]) -> List[Dict[str, Any]]:
     return [json.loads(Path(p).read_text(encoding="utf-8")) for p in paths]
 
 
-def build_report(records: List[Dict[str, Any]]) -> str:
+def build_report(records: List[Dict[str, Any]],
+                  scenarios_dir: Optional[Path] = None) -> str:
     cells, scenario_order, condition_order = group_by_scenario_and_condition(records)
-    return render_report(cells, scenario_order, condition_order)
+    return render_report(cells, scenario_order, condition_order,
+                          scenarios_dir or DEFAULT_SCENARIOS_DIR)
 
 
 def parse_args(argv: List[str]) -> argparse.Namespace:
@@ -368,12 +421,18 @@ def parse_args(argv: List[str]) -> argparse.Namespace:
                      "write a comparison report.")
     parser.add_argument("records", nargs="+", help="run record JSON files")
     parser.add_argument("--report", required=True, help="path to write the markdown report")
+    parser.add_argument("--scenarios-dir", default=None,
+                         help="directory holding <scenario id>/hidden_tests/, "
+                              "read to correct a hidden test file that failed "
+                              "to import (EGB-4) - default: evals/scenarios "
+                              "next to this file")
     return parser.parse_args(argv)
 
 
 def main(argv: Optional[List[str]] = None) -> int:
     args = parse_args(argv if argv is not None else sys.argv[1:])
-    report_text = build_report(load_records(args.records))
+    scenarios_dir = Path(args.scenarios_dir) if args.scenarios_dir else None
+    report_text = build_report(load_records(args.records), scenarios_dir)
     Path(args.report).write_text(report_text, encoding="utf-8")
     print(f"wrote {args.report}")
     return 0

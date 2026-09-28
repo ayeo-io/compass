@@ -237,6 +237,12 @@ def main():
         with open(os.path.join(cwd, ".git", "HEAD"), "w", encoding="utf-8") as fh:
             fh.write("not a valid HEAD\\n")
 
+    # EGB-3: a test that wants `.git/HEAD` left untouched and valid, but
+    # every git call to still fail - the shape a deleted `.git/objects`
+    # leaves - sets "delete_git_objects".
+    if config.get("delete_git_objects"):
+        shutil.rmtree(os.path.join(cwd, ".git", "objects"))
+
     # A test that wants a second issue directory under `.compass/work/` - to
     # check `manifests` holds more than one - sets "second_manifest_slug".
     second_manifest_slug = config.get("second_manifest_slug")
@@ -615,6 +621,39 @@ def test_compass_condition_gets_a_read_only_plugin_copy_at_head(
     # part of the seed itself, not something the session changed.
     assert ".compass/marker-from-init.txt" in record["compass_files"]
     assert "marker-from-init.txt" not in record["diff"]
+
+
+def test_compass_condition_records_the_plugin_source_own_commit(
+    tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
+):
+    """EGB-5: a compass run records the Compass commit it ran - the
+    `--plugin-source` checkout's own `HEAD`, read independently of the
+    harness's own `_run_git` here, before the harness deletes anything."""
+    expected_commit = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=str(plugin_source_dir),
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+
+    _, record, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "compass", monkeypatch,
+        plugin_source_dir, out_suffix="-compass-commit",
+    )
+
+    assert record["compass_commit"] == expected_commit
+
+
+def test_bare_condition_records_no_compass_commit(
+    tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
+):
+    """The bare condition never loads Compass into the session at all - it
+    must not carry a `compass_commit`, whatever `--plugin-source` was
+    given for containment hashing."""
+    _, record, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "bare", monkeypatch,
+        plugin_source_dir, out_suffix="-bare-no-compass-commit",
+    )
+
+    assert record["compass_commit"] is None
 
 
 def test_plugin_copy_leaves_out_evals(
@@ -1132,6 +1171,23 @@ def test_deleted_git_head_is_recorded_as_not_contained(
     )
     assert record["contained"] is False
     assert "git-state:.git/HEAD" in record["escaped_paths"]
+
+
+def test_deleted_git_objects_is_recorded_as_not_contained_end_to_end(
+    tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
+):
+    """EGB-3: `.git/HEAD` is untouched and valid, but `.git/objects` is
+    gone - every guarded git call in `_diff_since_seed` fails for that
+    reason alone. The unit tests against `_diff_since_seed` directly
+    already pin `tampered_paths`; this pins the same case end to end
+    through `run_once`, which is what a real run actually records."""
+    _, record, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "bare", monkeypatch,
+        plugin_source_dir, out_suffix="-git-objects-deleted",
+        extra_config={"delete_git_objects": True},
+    )
+    assert record["contained"] is False
+    assert "git-state:.git" in record["escaped_paths"]
 
 
 def test_corrupted_git_head_is_recorded_as_not_contained(
@@ -1657,7 +1713,7 @@ def test_run_record_has_every_documented_field(
         "permission_denials", "final_text", "diff", "changed_paths",
         "compass_files", "changed", "manifests", "tests_after", "contained",
         "escaped_paths", "stderr_tail", "over_budget", "replies_sent",
-        "framework", "hidden", "regressions", "tokens",
+        "framework", "hidden", "regressions", "tokens", "compass_commit",
     }
     # This scenario carries no hidden_tests/, and this condition is not
     # superpowers or spec-kit - CMP-1 and CMP-2's own fields both read as
@@ -2421,10 +2477,11 @@ def test_copy_tracked_files_still_copies_an_ordinary_tracked_seed(tmp_path):
 # --- own one -----------------------------------------------------------------
 
 def test_diff_since_seed_never_stages_into_the_repository_own_index(tmp_path):
-    """`git add -A` used to run against the repository's own index while a
-    session's later call could still read it with the allowed `git status` -
-    a write the session never made. A temporary index (`GIT_INDEX_FILE`)
-    leaves the real one exactly as the session left it."""
+    """A session's own later `git status` call is allowed, and reads the
+    repository's real index - if `git add -A` staged into that index, the
+    session would see a write it never made. A temporary index
+    (`GIT_INDEX_FILE`) leaves the real one exactly as the session left
+    it."""
     repo = tmp_path / "repo"
     repo.mkdir()
     (repo / "seed.txt").write_text("original\n", encoding="utf-8")
@@ -2514,9 +2571,10 @@ def test_diff_since_seed_removes_a_planted_git_commondir_and_reports_it(tmp_path
 def test_diff_since_seed_records_a_head_pointing_nowhere_as_not_contained(tmp_path):
     """`.git/HEAD` reads `ref: garbage` - a line that starts with `ref:`, so
     `_git_head_is_valid` calls it fine, but git itself refuses every call
-    against it. `_diff_since_seed` read only `.stdout` before this change,
-    so a refused `git add -A` and `git diff` left `changed_paths` empty and
-    the run passed as contained instead of failing it."""
+    against it. `_diff_since_seed` reads each call's own exit code, not
+    only its `.stdout`, so a refused `git add -A` and `git diff` still
+    record the run as not contained, even though `changed_paths` is
+    empty."""
     repo = tmp_path / "repo"
     repo.mkdir()
     (repo / "seed.txt").write_text("original\n", encoding="utf-8")
@@ -2601,15 +2659,34 @@ def test_is_compass_own_record_returns_false_for_none():
 # --- EGA-6: a comment states the rule, not the module's own history -------
 
 def test_compass_own_record_paths_comment_says_the_judge_imports_it():
-    """The comment above `_COMPASS_OWN_RECORD_PATHS` said `evals/judge.py`
-    "keeps its own copy of the same definition" - untrue since EJG-5 made
-    the judge import this module's function instead of defining its own.
-    It must say this is the one definition and that the judge imports
-    it."""
+    """The comment above `_COMPASS_OWN_RECORD_PATHS` must say this is the
+    one definition and that `evals/judge.py` imports it, not that the
+    judge keeps a separate copy of the same list."""
     source = Path(harness.__file__).read_text(encoding="utf-8")
     assert "keeps its own copy" not in source
     assert "the one definition" in source
     assert "imports it" in source
+
+
+def test_diff_since_seed_docstring_names_the_two_specific_paths_it_checks():
+    """EGB-6: the docstring must not overstate when `.git` is added to
+    `tampered_paths` as "no more specific reason is already on record" -
+    the code checks only two specific entries, `.git/HEAD` and `.git`
+    itself, not whether `tampered_paths` already carries any reason at
+    all."""
+    doc = " ".join((harness._diff_since_seed.__doc__ or "").split())
+    assert "no more specific reason is already on record" not in doc
+    assert "checked against those two specific entries" in doc
+
+
+def test_tamper_watched_paths_label_comment_does_not_call_commondir_a_config_file():
+    """EGB-6: `.git/commondir` is a pointer to another git directory, not a
+    config file - the comment above the `git-config:`/`git-state:` label
+    split must not call all three of `_TAMPER_WATCHED_RELATIVE_PATHS` "a
+    config file each"."""
+    source = Path(harness.__file__).read_text(encoding="utf-8")
+    assert "is genuinely a config file each" not in source
+    assert "not a config file itself" in source
 
 
 # --- 17. a failed `compass init` is an error, never a silent empty run ------
@@ -3344,9 +3421,12 @@ def test_a_scenario_without_hidden_tests_gets_no_hidden_or_regressions_measure(
 def _write_scenario_with_uncollectable_hidden_test(tmp_path: Path) -> Path:
     """A CMP-2 fixture whose hidden test cannot import: it names a function
     the seed never defines, the same shape as `cmp-risky`'s own hidden
-    test naming a function no session wrote. The seed carries no
-    `seed.txt`, so the fake CLI's universal edit never touches it - the
-    seed's own tests still pass, whatever the session did."""
+    test naming a function no session wrote. It defines three `test_`
+    functions, not one - EGB-4's fixture, so a fix that counts every test
+    the file holds reads differently from one that still counts the
+    single collection error pytest's own summary reports. The seed
+    carries no `seed.txt`, so the fake CLI's universal edit never touches
+    it - the seed's own tests still pass, whatever the session did."""
     scenario_dir = tmp_path / "uncollectable-hidden-scenario"
     seed_src_dir = scenario_dir / "seed" / "src"
     seed_tests_dir = scenario_dir / "seed" / "tests"
@@ -3370,6 +3450,12 @@ def _write_scenario_with_uncollectable_hidden_test(tmp_path: Path) -> Path:
         "from src.thing import missing_function\n"
         "\n"
         "def test_missing_function():\n"
+        "    assert missing_function() is True\n"
+        "\n"
+        "def test_missing_function_again():\n"
+        "    assert missing_function() is True\n"
+        "\n"
+        "def test_missing_function_a_third_time():\n"
         "    assert missing_function() is True\n",
         encoding="utf-8",
     )
@@ -3413,6 +3499,24 @@ def test_a_hidden_test_that_cannot_import_never_inflates_regressions(
 
     assert record["regressions"] == []
     assert record["tests_after"]["exit_code"] == 0
+
+
+def test_a_hidden_test_that_cannot_import_counts_every_test_it_holds_as_failed(
+    tmp_path, fake_claude, plugin_source_dir, monkeypatch
+):
+    """EGB-4: pytest's own summary line counts one error for the whole
+    file, whatever `test_` functions it defines - B6's `cmp-risky` under
+    Compass showed 1 of 1 failed where the file holds five. The fixture
+    here holds three; the record must count every one of them as failed,
+    not the one pytest's own line gives."""
+    scenario_dir = _write_scenario_with_uncollectable_hidden_test(tmp_path)
+    _, record, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "bare", monkeypatch,
+        plugin_source_dir, out_suffix="-hidden-uncollectable-count",
+    )
+
+    assert record["hidden"]["passed"] == 0
+    assert record["hidden"]["failed"] == 3
 
 
 def test_pytest_summary_counts_reads_only_the_final_summary_line():

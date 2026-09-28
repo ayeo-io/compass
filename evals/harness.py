@@ -1169,26 +1169,27 @@ def _diff_since_seed(repo_dir: Path, seed_commit: str, env: dict[str, str],
                       ) -> tuple[str, list[str], list[dict[str, str]]]:
     """Stage every change (so a new file counts, not only an edited one) and
     diff it against the seed commit - in a temporary index, never the
-    repository's own one. `git add -A` used to run against the real index
-    while a session's own later call could still read it with the allowed
-    `git status`, staging a change the session never made itself. Every git
-    call here runs through `_run_guarded_git`, which restores what changed
-    among `_TAMPER_WATCHED_RELATIVE_PATHS` first and then, through
-    `_run_git`, adds `--no-ext-diff --no-textconv` to each diff so a
-    planted `diff.external` or textconv driver never runs, with the
-    environment built for the session, never `os.environ`. Returns the diff
-    text, the changed paths, and each path with its status (`A`, `M` or `D`)
-    against the seed.
+    repository's own one, so a session's own later `git status` call -
+    allowed, and reading the real index - never sees a change staging made
+    rather than the session itself. Every git call here runs through
+    `_run_guarded_git`, which restores what changed among
+    `_TAMPER_WATCHED_RELATIVE_PATHS` first and then, through `_run_git`,
+    adds `--no-ext-diff --no-textconv` to each diff so a planted
+    `diff.external` or textconv driver never runs, with the environment
+    built for the session, never `os.environ`. Returns the diff text, the
+    changed paths, and each path with its status (`A`, `M` or `D`) against
+    the seed.
 
     A repository can be unusable in a way `_run_guarded_git` never refuses
     outright: `.git/HEAD` reading `ref: garbage` still starts with `ref:`,
     so `_git_head_is_valid` calls it fine, and a deleted `.git/objects`
     leaves `.git/HEAD` untouched - in both, every git call below runs and
-    fails (EGA-1). Reading only `.stdout` from a failed call left
-    `changed_paths` empty and the run recorded as contained; this checks
-    each call's own exit code and adds `.git` to `tampered_paths`, the same
-    way a missing `.git/HEAD` already does, whenever one is non-zero and no
-    more specific reason is already on record."""
+    fails, read from each call's own exit code, never only its `.stdout`.
+    `.git` is added to `tampered_paths` for that case, the same way a
+    missing `.git/HEAD` already is, whenever one of the three calls above
+    returns non-zero - checked against those two specific entries,
+    `.git/HEAD` and `.git` itself, not against whether `tampered_paths`
+    already carries any reason at all."""
     with tempfile.TemporaryDirectory() as tmp:
         call_env = dict(env)
         call_env["GIT_INDEX_FILE"] = str(Path(tmp) / "index")
@@ -1266,6 +1267,36 @@ def _pytest_summary_counts(output: str) -> tuple[int, int]:
             passed = count
         else:
             failed += count
+    return passed, failed
+
+
+# A top-level `test_` function definition - what pytest itself collects as
+# one test by its default naming convention, `async def` included.
+_TEST_FUNCTION_RE = re.compile(r"^(?:async )?def (test_\w+)\(", re.MULTILINE)
+
+
+def hidden_tests_defined_count(hidden_tests_dir: Path) -> int:
+    """Every `test_` function every `.py` file under `hidden_tests_dir`
+    defines, summed - what a hidden test file that fails to import still
+    holds, whatever pytest's own summary line counts for it. `0` when
+    `hidden_tests_dir` does not exist."""
+    if not hidden_tests_dir.is_dir():
+        return 0
+    return sum(len(_TEST_FUNCTION_RE.findall(path.read_text(encoding="utf-8")))
+               for path in hidden_tests_dir.rglob("*.py"))
+
+
+def corrected_hidden_counts(passed: int, failed: int, defined: int) -> tuple[int, int]:
+    """`(passed, failed)`, corrected for a hidden test file that failed to
+    import: pytest's own summary then reports one error for the whole
+    file, not one for each test it defines (EGB-4) - B6's `cmp-risky`
+    showed 1 of 1 failed where the file holds five. A genuine per-test
+    result already accounts for every test `defined` names (`passed +
+    failed == defined`), and is left alone; a total short of it means
+    every test the file defines counts failed instead - none of them ran,
+    so none passed either."""
+    if defined and passed + failed < defined:
+        return 0, defined
     return passed, failed
 
 
@@ -1462,6 +1493,18 @@ def _stop_reason_and_finished(subtypes: list[str | None],
     return "no_result_event", False
 
 
+def _compass_commit(plugin_source: Path, plugin_copy_dir: Path | None,
+                     env: dict[str, str]) -> str | None:
+    """`plugin_source`'s own `HEAD` commit - the Compass checkout the
+    compass condition's plugin copy was built from (EGB-5) - `None` for
+    every other condition, which never loads Compass into the session at
+    all: `plugin_source` is still hashed for containment either way, but
+    nothing there runs."""
+    if plugin_copy_dir is None:
+        return None
+    return _run_git(["rev-parse", "HEAD"], plugin_source, env).stdout.strip()
+
+
 def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
              run_index: int, claude_exe: str, *, plugin_source: Path,
              plugin_copy_dir: Path | None,
@@ -1485,6 +1528,7 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
     record_cwd: str | None = None
 
     claude_version = _claude_version(claude_exe, child_env)
+    compass_commit = _compass_commit(plugin_source, plugin_copy_dir, child_env)
     checkout_before = _checkout_fingerprint(plugin_source, child_env)
     plugin_before = _dir_snapshot(plugin_copy_dir) if plugin_copy_dir else None
 
@@ -1580,6 +1624,9 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
             hidden_exit, hidden_output = _run_test_command(
                 hidden_command, repo_dir, child_env)
             hidden_passed, hidden_failed = _pytest_summary_counts(hidden_output)
+            hidden_passed, hidden_failed = corrected_hidden_counts(
+                hidden_passed, hidden_failed,
+                hidden_tests_defined_count(hidden_tests_dir))
             hidden_record = {
                 "command": hidden_command, "exit_code": hidden_exit,
                 "passed": hidden_passed, "failed": hidden_failed,
@@ -1600,11 +1647,13 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
     if plugin_copy_dir is not None:
         escaped_paths += [f"plugin:{path}" for path in
                            _dir_snapshot_changed_paths(plugin_before, plugin_after)]
-    # `_TAMPER_WATCHED_RELATIVE_PATHS` is genuinely a config file each; a
-    # path `_run_guarded_git` or `_diff_since_seed` adds beyond that list -
-    # `.git/HEAD`, or `.git` itself when a guarded call simply failed
-    # (EGA-1) - is git's own repository state, not config, so it gets its
-    # own label (EGA-5).
+    # `_TAMPER_WATCHED_RELATIVE_PATHS` names the three files git reads its
+    # own settings or the location of its real git directory from -
+    # `.git/config` and `.git/info/attributes` hold settings,
+    # `.git/commondir` a location, not a config file itself. A path
+    # `_run_guarded_git` or `_diff_since_seed` adds beyond that list -
+    # `.git/HEAD`, or `.git` itself when a guarded call simply failed - is
+    # git's own repository state, not config, so it gets its own label.
     escaped_paths += [
         (f"git-config:{path}" if path in _TAMPER_WATCHED_RELATIVE_PATHS
          else f"git-state:{path}")
@@ -1648,6 +1697,7 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
         "regressions": regressions,
         "framework": ({"name": condition, "commit": framework_commit}
                        if framework_copy_dir is not None else None),
+        "compass_commit": compass_commit,
         "contained": contained,
         "escaped_paths": escaped_paths,
         "stderr_tail": _tail(state["stderr"]),

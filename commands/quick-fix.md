@@ -7,10 +7,9 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 # /compass:quick-fix
 
 The change is small, safe, and in code whose behaviour is already written
-down. `compass quick-fix start` opens the issue and records the assessment
-in one call; `compass quick-fix finish` checks, traces and ships in another.
-Between them you write one failing test and the code that turns it green.
-Load `quick-fix` alongside it and read nothing else.
+down. Three calls: `compass quick-fix start` records the assessment,
+`compass tdd-red` records the failing test, and `compass quick-fix finish`
+checks the fix. Read nothing else unless one of them refuses.
 
 **Issue:** $ARGUMENTS
 
@@ -34,75 +33,71 @@ mid-build that the process was too light is not.
 
 ```
 compass quick-fix start <slug> \
-  --risk "<VALUE - reason>" --familiarity "<VALUE - reason>" --size "<VALUE - reason>" \
-  --goal "delivery" --role "engineer" \
-  --intent "<sentence>" \
-  --scenario "Given ... When ... Then ..." --scenario-id <id> \
-  --test <node-id>
+  --risk "<VALUE> - <reason>" \
+  --familiarity "<VALUE> - <reason>" \
+  --size "<VALUE> - <reason>" \
+  --intent "<what will be true afterwards, one sentence>" \
+  --scenario "Given ... When ... Then ..." \
+  --test <test node id>
 ```
 
-`--test` repeats for more than one test; `--goal` and `--role` default to
-`delivery` and `engineer`, and can carry a reason.
+The values, and nothing else:
 
-Before writing anything, the verb refuses a dimension with no reason, or a
-value the policy does not know, and names which. It then runs `compass init`,
-writes the manifest, and computes the approach through `compass approach
-evaluate`. If the result is not a quick fix, it says so, keeps the
-assessment, and hands off to `/compass:assess` - exit non-zero, nothing else
-written. Re-examine a dimension, not the computed approach.
+- risk: `trivial`, `contained`, `cross-cutting` or `critical`
+- familiarity: `greenfield`, `brownfield-mapped` or `brownfield-unmapped`
+- size: `atomic`, `small`, `standard`, `large` or `product`
 
-Otherwise it writes `delivery-approach.md`, registers it with `compass issue
-artifact delivery-approach`, sets `.compass/current-task`, and records the
-scenario against the intent, all in one call. If it created `.compass/` or
-`docs/compass/`, it prints the line - report it, since an unannounced
-directory is how it gets deleted by hand or committed by accident.
+`--goal` and `--role` default to `delivery` and `engineer`. `--test` can
+repeat. The scenario id is `TRC-001` unless you pass `--scenario-id`.
 
-## 2. Red, green
+It runs `compass init`, records the assessment, computes the approach
+through `compass approach evaluate`, writes `delivery-approach.md`, and
+registers it with `compass issue artifact`. If it prints a `created:` line
+naming `.compass/` or `docs/compass/`, report it to the user: a directory
+that appears unannounced gets deleted by hand or committed by accident.
+
+If the approach is heavier than a quick fix, it stops and says so. Continue
+with `/compass:assess`: the assessment is already recorded.
+
+## 2. Red
 
 Write the failing test, then:
 
 ```
-compass tdd-red --scenario <id> -- <test command>
+compass tdd-red --scenario TRC-001 -- <test command>
 ```
 
-The CLI runs it, asserts it genuinely fails, and drops the marker
-`hooks/pre-tool.sh` reads before it lets you edit code. Write the smallest
-correct change, then:
-
-```
-compass tdd-green --scenario <id> -- <test command>
-```
-
-It asserts the test passes and clears the marker. Refactor with the suite
-green; never touch the markers by hand.
+It asserts the test fails and lets `hooks/pre-tool.sh` allow code edits.
+Then write the smallest correct change. Never touch the markers by hand.
 
 ## 3. Finish
 
 ```
-compass quick-fix finish -m "<message>"
+compass quick-fix finish -m "<commit message>" --no-commit -- <test command>
 ```
 
-It checks every precondition first: the approach is still `quick-fix`, no
-gate is pending beyond the three, the scenario has a green on file, and -
-with more than one scenario - every changed path is already traced. Any
-unmet condition is named, nothing is committed, exit non-zero.
+It traces the changed files, records the green through `compass tdd-green`
+with your test command, runs `compass check`, records its output through
+`compass evidence`, passes the three gates and writes the devlog line.
 
-Once those hold, `finish` does the rest of shipping in one call: traces
-each changed path, runs `compass check`, records the output through
-`compass evidence`, passes the three gates against that check and the
-green, appends the devlog line, and commits through `compass ship-commit`.
+Leave out `--no-commit` only when the user asked for a commit: it then
+commits through `compass ship-commit`. With `--no-commit`, say the change
+is checked and not committed, and give the commit command it prints.
+
+If it refuses, it names the failed condition and passes no gate. Fix that
+and run the same command again.
 
 ## Stop and re-assess when
 
 The change grows - a second file, then a third, then a decision you did not
-expect. The assessment was wrong; the move is `compass quick-fix start`
-again with the real dimensions, not pushing on with a process you no longer
-believe. Three consecutive fixes that did not hold means the same thing.
+expect. The assessment was wrong. Run `/compass:assess --reassess` with the
+real dimensions rather than push on. Three fixes in a row that did not hold
+mean the same thing.
 
 ## Gate
 
 - `quick-fix start` wrote `delivery-approach.md` and the one scenario;
-- a red and a green are both on file for it;
-- `quick-fix finish` ran to completion: every changed file traced, `compass
-  check` passed, the three gates `pass` with evidence, the commit landed and
-  the devlog line was written.
+- a red is on file for it;
+- `quick-fix finish` ran to completion: the green recorded, every changed
+  file traced, `compass check` passed, the three gates `pass` with
+  evidence, and the devlog line written.

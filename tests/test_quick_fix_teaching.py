@@ -139,3 +139,34 @@ def test_qfo_6_the_two_files_combined_stay_well_under_the_old_reading_path():
     assert total <= 3000, (
         f"commands/quick-fix.md and skills/quick-fix/SKILL.md read {total} "
         "words together, over the 3000-word ceiling")
+
+
+def test_qfo_6_finish_is_taught_with_the_test_command_and_no_commit():
+    """`finish` records the green itself, so it takes the test command, and
+    it commits only when the user asked for a commit."""
+    text = _text(COMMAND)
+    finish_lines = [l for l in text.splitlines()
+                    if l.startswith("compass quick-fix finish")]
+    assert finish_lines, "commands/quick-fix.md shows no finish command line"
+    assert all("-- <test command>" in l and "--no-commit" in l
+               for l in finish_lines), finish_lines
+    assert "compass tdd-green --scenario" not in text, (
+        "a separate green step before finish records a green over the "
+        "untraced files")
+
+
+def test_qfo_6_the_command_lists_every_allowed_value():
+    """An agent that guesses `low` or `high` spends a call on the refusal."""
+    text = _text(COMMAND)
+    for value in ("trivial", "contained", "cross-cutting", "critical",
+                  "greenfield", "brownfield-mapped", "brownfield-unmapped",
+                  "atomic", "small", "standard", "large", "product"):
+        assert f"`{value}`" in text, f"commands/quick-fix.md omits {value}"
+
+
+def test_qfo_6_assess_sends_a_small_change_to_quick_fix_start():
+    """An agent that opens `/compass:assess` for a small change otherwise
+    writes the manifest and the approach record by hand."""
+    text = _text(ROOT / "commands" / "assess.md")
+    assert "compass quick-fix start" in text
+    assert "/compass:quick-fix" in text

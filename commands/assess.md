@@ -21,6 +21,11 @@ optional and not a prerequisite. If a project has run `/compass:init`, its
 
 **Issue:** $ARGUMENTS
 
+**A small change an engineer is making:** follow `/compass:quick-fix`
+instead. Its `compass quick-fix start` records the assessment in one call,
+and stops with the assessment kept if the approach is heavier than a
+quick fix; then continue here.
+
 ## First: make sure this is a Compass project
 
 Run `compass init`. It creates `.compass/` if it is not there and reports that

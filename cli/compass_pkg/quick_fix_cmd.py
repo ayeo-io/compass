@@ -31,14 +31,13 @@ import argparse
 import contextlib
 import datetime
 import io
-import json
 import os
-import shlex
 import subprocess
 
 from compass_pkg.check_cmd import cmd_check
 from compass_pkg.core import (
-    CompassError, display_shape, display_stage, docs_dir, find_governance,
+    CompassError, _one_segment, display_shape, display_stage, docs_dir,
+    find_governance,
     load_manifest, load_yaml, manifest_path, resolve_issue_dir, save_manifest,
 )
 from compass_pkg.dashboard import cmd_issue_artifact
@@ -102,7 +101,13 @@ def register(sub, issue_arg):
     fi = subs.add_parser(
         "finish", help="trace, check, gate and ship a quick fix in one call")
     fi.add_argument("-m", "--message", required=True, help="the commit message")
+    fi.add_argument("--no-commit", action="store_true",
+                    help="pass the gates and write the records, but leave the "
+                         "commit to the user")
     issue_arg(fi)
+    fi.add_argument("command", nargs=argparse.REMAINDER,
+                    help="the test command (after --); finish records the "
+                         "green with it after tracing the changed files")
     fi.set_defaults(func=cmd_quick_fix_finish, output_kind="hand-off")
 
 
@@ -180,7 +185,7 @@ def _delivery_approach_md(slug, approach, dims, rules_fired, intent_text,
 
 
 def cmd_quick_fix_start(args):
-    slug = args.slug
+    slug = _one_segment(args.slug, "compass quick-fix start")
     risk_v, risk_r = _split_required(args.risk, "risk")
     fam_v, fam_r = _split_required(args.familiarity, "familiarity")
     size_v, size_r = _split_required(args.size, "size")
@@ -203,7 +208,9 @@ def cmd_quick_fix_start(args):
     tests = list(args.test or [])
 
     project_root = resolve_project_root()
-    ensure_initialised(project_root, by="compass quick-fix start")
+    created_project, _ = ensure_initialised(
+        project_root, by="compass quick-fix start")
+    created_dirs = [".compass/"] if created_project else []
 
     task_dir = os.path.join(project_root, ".compass", "work", slug)
     if os.path.isdir(task_dir):
@@ -220,10 +227,6 @@ def cmd_quick_fix_start(args):
         "status": "active",
         "assessment": dict(readings),
     }, manifest_path(task_dir))
-
-    with open(os.path.join(project_root, ".compass", "current-task"),
-             "w", encoding="utf-8") as fh:
-        fh.write(slug + "\n")
 
     _quiet_run(cmd_route_evaluate, reading=None, task=slug, write=True,
               reason=None, kind=None)
@@ -254,9 +257,17 @@ def cmd_quick_fix_start(args):
                     f"in the fixed table.")
             ledger.append((stage, weight, reason))
 
+    # Written only once the approach is a quick fix, so a heavier result
+    # leaves the pointer on whatever issue it named before.
+    with open(os.path.join(project_root, ".compass", "current-task"),
+             "w", encoding="utf-8") as fh:
+        fh.write(slug + "\n")
+
     doc_dir_rel = docs_dir(task_dir)
     doc_path_rel = f"{doc_dir_rel}/delivery-approach.md"
     doc_path_abs = os.path.join(project_root, doc_path_rel)
+    if not os.path.isdir(os.path.join(project_root, "docs", "compass")):
+        created_dirs.append("docs/compass/")
     os.makedirs(os.path.dirname(doc_path_abs), exist_ok=True)
     content = _delivery_approach_md(
         slug=slug, approach=approach,
@@ -279,7 +290,9 @@ def cmd_quick_fix_start(args):
         args,
         f"compass quick-fix start: '{slug}' recorded as "
         f"{display_shape(approach)}.",
-        detail=[f"record : {doc_path_rel}",
+        detail=([f"created: {', '.join(created_dirs)} - tell the user"]
+                if created_dirs else []) + [
+                f"record : {doc_path_rel}",
                 f"next   : write the failing test, then `compass tdd-red "
                 f"--scenario {args.scenario_id} -- <test command>`"],
         decision=True, approach=approach, record=doc_path_rel,
@@ -319,40 +332,22 @@ def _git_changed_paths(cwd):
     return paths
 
 
-def _regreen(task_dir, slug, scenario_ids):
-    """Re-run each scenario's newest green command through `tdd-green`."""
-    task, _ = load_manifest(task_dir)
-    for sid in scenario_ids:
-        runs = [e for e in (task.get("evidence") or [])
-                if isinstance(e, dict) and e.get("type") == "test-run"
-                and e.get("scenario") == sid and e.get("path")]
-        if not runs:
-            continue
-        with open(os.path.join(task_dir, runs[-1]["path"]),
-                  encoding="utf-8") as fh:
-            command = json.load(fh).get("command")
-        if not command:
-            raise CompassError(
-                f"compass quick-fix finish: the green for {sid} does not "
-                f"record its command, so it cannot be re-run on the traced "
-                f"files. Run `compass tdd-green --scenario {sid} -- <test "
-                f"command>` again, then re-run finish.")
-        try:
-            _quiet_run(cmd_tdd_green, task=slug, scenario=sid,
-                       verified_by=None, command=shlex.split(command))
-        except CompassError as exc:
-            raise CompassError(
-                f"compass quick-fix finish: re-running the green for {sid} "
-                f"on the traced files failed - no gate passed and nothing "
-                f"was committed.\n{exc}")
-
-
 def cmd_quick_fix_finish(args):
     task_dir = resolve_issue_dir(getattr(args, "task", None))
     task, _ = load_manifest(task_dir)
     slug = task.get("issue")
+    command = list(getattr(args, "command", None) or [])
+    if command and command[0] == "--":
+        command = command[1:]
 
     # Every precondition is checked before anything is written (QFO-5).
+    if not command:
+        raise CompassError(
+            "compass quick-fix finish needs the test command after `--`: "
+            "`compass quick-fix finish -m <message> -- <test command>`. It "
+            "records the green itself, after tracing the changed files, so "
+            "the green covers exactly what lands.")
+
     approach = task.get("delivery_approach")
     if approach != "quick-fix":
         raise CompassError(
@@ -375,15 +370,6 @@ def cmd_quick_fix_finish(args):
             f"compass quick-fix finish: '{slug}' has no scenario recorded "
             f"- quick-fix start writes one before this can run.")
     scenario_ids = [s.get("id") for s in scenarios]
-    evidence = task.get("evidence") or []
-    green_scenarios = {e.get("scenario") for e in evidence
-                       if isinstance(e, dict) and e.get("type") == "test-run"}
-    missing_green = [sid for sid in scenario_ids if sid not in green_scenarios]
-    if missing_green:
-        raise CompassError(
-            f"compass quick-fix finish: no green test-run is bound to "
-            f"scenario(s) {', '.join(missing_green)}. Run `compass "
-            f"tdd-green --scenario <id> -- <test command>` first.")
 
     cwd = os.getcwd()
     all_paths = _git_changed_paths(cwd)
@@ -394,7 +380,6 @@ def cmd_quick_fix_finish(args):
     artifact_paths = [p for p in all_paths if p.startswith(doc_prefix)]
     existing_traced = {cf.get("path") for cf in (task.get("changed_files") or [])
                        if isinstance(cf, dict)}
-    before_tracing = set(existing_traced)
 
     if len(scenarios) > 1:
         untraced = [p for p in production_paths if p not in existing_traced]
@@ -419,12 +404,19 @@ def cmd_quick_fix_finish(args):
                       scenario=list(scenario_ids))
             existing_traced.add(p)
 
-    # A green covers the files traced when it ran. Tracing just added files,
-    # so the newest green no longer covers what is about to land, and the
-    # check on the landed issue would fail. Re-run each scenario's own green
-    # command on the traced tree, so the newest record names what lands.
-    if existing_traced != before_tracing:
-        _regreen(task_dir, slug, scenario_ids)
+    # The green runs here, on every call, after the files are traced and
+    # with the command exactly as the agent gave it. A green covers the files
+    # traced when it ran, so one recorded before tracing would not cover what
+    # lands; and a refused call leaves its traces saved, so a later call that
+    # skipped the green would ship on the earlier, failed one.
+    for sid in scenario_ids:
+        try:
+            _quiet_run(cmd_tdd_green, task=slug, scenario=sid,
+                       verified_by=None, command=list(command))
+        except CompassError as exc:
+            raise CompassError(
+                f"compass quick-fix finish: the green for {sid} failed - no "
+                f"gate passed and nothing was committed.\n{exc}")
 
     evidence_path_rel = "evidence/check-output.txt"
     evidence_path_abs = os.path.join(task_dir, evidence_path_rel)
@@ -469,6 +461,22 @@ def cmd_quick_fix_finish(args):
         fh.write(f"- {datetime.date.today().isoformat()}: "
                 f"{message_first_line} (evidence: {', '.join(evidence_ids)})\n")
 
+    detail = [f"gates    : {', '.join(THREE_GATES)} -> pass",
+              f"evidence : {', '.join(evidence_ids)}"]
+
+    # A commit is the user's to ask for. With --no-commit the gates and
+    # records are complete and the change is left in the working tree.
+    if getattr(args, "no_commit", False):
+        return say(
+            args,
+            f"compass quick-fix finish: '{slug}' checked, not committed.",
+            detail=detail + [
+                f"commit   : when asked, `compass ship-commit --issue {slug} "
+                f"-m \"<message>\"` after staging the traced files"],
+            decision=True, gates=list(THREE_GATES), evidence=evidence_ids,
+            committed=False,
+        )
+
     stage_paths = sorted(set(production_paths) | set(artifact_paths)
                          | {f".compass/work/{slug}"})
     ship_out, _ = _quiet_run(cmd_land_commit, task=slug, message=args.message,
@@ -479,8 +487,7 @@ def cmd_quick_fix_finish(args):
     return say(
         args,
         f"compass quick-fix finish: '{slug}' shipped.",
-        detail=[f"gates    : {', '.join(THREE_GATES)} -> pass",
-                f"evidence : {', '.join(evidence_ids)}",
-                ship_tail],
+        detail=detail + [ship_tail],
         decision=True, gates=list(THREE_GATES), evidence=evidence_ids,
+        committed=True,
     )

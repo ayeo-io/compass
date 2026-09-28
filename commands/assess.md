@@ -21,10 +21,33 @@ optional and not a prerequisite. If a project has run `/compass:init`, its
 
 **Issue:** $ARGUMENTS
 
-**A small change an engineer is making:** follow `/compass:quick-fix`
-instead. Its `compass quick-fix start` records the assessment in one call,
-and stops with the assessment kept if the approach is heavier than a
-quick fix; then continue here.
+## A small change an engineer is making
+
+This is the whole of `/compass:quick-fix`; you do not need to load it.
+
+```
+compass quick-fix start <slug> --risk "<VALUE> - <reason>" \
+  --familiarity "<VALUE> - <reason>" --size "<VALUE> - <reason>" \
+  --intent "<what will be true afterwards>" \
+  --scenario "Given ... When ... Then ..." --test <test node id>
+```
+
+Risk is `trivial`, `contained`, `cross-cutting` or `critical`; familiarity
+is `greenfield`, `brownfield-mapped` or `brownfield-unmapped`; size is
+`atomic`, `small`, `standard`, `large` or `product`. When unsure, choose
+the larger. If it prints a `created:` line, tell the user.
+
+Then write the failing test, record it, and write the fix:
+
+```
+compass tdd-red --scenario TRC-001 -- <test command>
+compass quick-fix finish -m "<commit message>" --no-commit -- <test command>
+```
+
+`finish` records the green, runs the checks and passes the gates. Leave out
+`--no-commit` only if the user asked for a commit. If `start` says the
+approach is heavier than a quick fix, the assessment is recorded: continue
+below from step 4 of the procedure.
 
 ## First: make sure this is a Compass project
 

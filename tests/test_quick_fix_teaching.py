@@ -170,3 +170,18 @@ def test_qfo_6_assess_sends_a_small_change_to_quick_fix_start():
     text = _text(ROOT / "commands" / "assess.md")
     assert "compass quick-fix start" in text
     assert "/compass:quick-fix" in text
+
+
+def test_qfo_6_assess_carries_the_whole_quick_fix_recipe():
+    """A session opens `/compass:assess` first. With the three commands and
+    the allowed values there, it does not spend a call loading
+    `/compass:quick-fix` as well."""
+    text = _text(ROOT / "commands" / "assess.md")
+    assert "compass tdd-red" in text
+    finish = [l for l in text.splitlines()
+              if l.strip().startswith("compass quick-fix finish")]
+    assert finish and all("--no-commit" in l and "-- <test command>" in l
+                          for l in finish), finish
+    for value in ("trivial", "contained", "brownfield-mapped", "atomic",
+                  "small"):
+        assert f"`{value}`" in text, f"commands/assess.md omits {value}"

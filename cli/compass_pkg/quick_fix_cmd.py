@@ -294,7 +294,11 @@ def cmd_quick_fix_start(args):
                 if created_dirs else []) + [
                 f"record : {doc_path_rel}",
                 f"next   : write the failing test, then `compass tdd-red "
-                f"--scenario {args.scenario_id} -- <test command>`"],
+                f"--scenario {args.scenario_id} -- <test command>`",
+                f"then   : write the fix, then `compass quick-fix finish -m "
+                f"\"<commit message>\" --no-commit -- <test command>` "
+                f"(leave out --no-commit only if the user asked for a "
+                f"commit)"],
         decision=True, approach=approach, record=doc_path_rel,
     )
 

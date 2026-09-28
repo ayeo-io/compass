@@ -66,8 +66,8 @@ node_modules/
 # machine, so it is never shareable.
 /.mcp.json
 
-# evals/harness.py's run records - one per scenario, condition and run
-# number. The pilot's own report is the published result, not these.
+# Local run output under evals/, regenerated on demand and never the
+# published result kept elsewhere in this repository.
 /evals/out/
 
 # BDD reference adapters install their own dependencies; an adopter runs the

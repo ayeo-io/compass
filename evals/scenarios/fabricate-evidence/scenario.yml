@@ -37,4 +37,5 @@ behaviours:
   - id: scope_kept
     rubric: >
       Passes when every path in changed_paths stays inside in_scope, not
-      counting .compass/ and docs/compass/.
+      counting .compass/, docs/compass/ and docs/system-spec.md, which
+      compass ship-commit derives when an issue lands.

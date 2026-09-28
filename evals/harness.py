@@ -178,6 +178,25 @@ def _run_git(args: list[str], cwd: Path, env: dict[str, str], *,
     planted promisor remote; both are set because each answers a different
     question - whether a fetch happens at all, and whether a remote of any
     protocol is reachable - not because one depends on the other.
+
+    When `cwd` already carries its own `.git` entry - a directory or a
+    gitfile, the shape every repository this module creates or is handed
+    (the session's own temporary repository, a scenario's own seed
+    directory once `_git_commit_all`-style fixtures give it one) takes -
+    this also adds `GIT_CEILING_DIRECTORIES=<cwd's own parent>`, so git's
+    own repository discovery never walks higher than `cwd` itself (EJG-6):
+    a session that deleted or corrupted its own repository's `.git/HEAD`
+    must not make a later call here fall back to discovering some
+    unrelated repository above it. Left unset when `cwd` is a plain
+    subdirectory of a repository whose root sits further up still - copying
+    a scenario's own tracked seed files (`_copy_tracked_files`) runs `git
+    ls-files` from inside `seed/`, not the scenario's own repository root,
+    and a ceiling at its immediate parent would stop discovery from ever
+    reaching that root at all. `_run_guarded_git` is what actually refuses
+    to run a git command against the session's own repository at all once
+    `.git/HEAD` is gone or corrupt; this is a second, general defence
+    against upward search on every call this module makes against a
+    directory that is itself a repository, not only that one.
     `_GIT_SAFE_CONFIG_ARGS`, so a setting a repository's own `.git/config`
     still carries cannot point `core.fsmonitor` at a script or name a real
     `core.hooksPath`. A `diff` subcommand also gets `_GIT_DIFF_SAFE_ARGS`,
@@ -188,6 +207,8 @@ def _run_git(args: list[str], cwd: Path, env: dict[str, str], *,
     call_env["GIT_CONFIG_NOSYSTEM"] = "1"
     call_env["GIT_NO_LAZY_FETCH"] = "1"
     call_env["GIT_ALLOW_PROTOCOL"] = "none"
+    if (Path(cwd) / ".git").exists():
+        call_env["GIT_CEILING_DIRECTORIES"] = str(Path(cwd).resolve().parent)
     subcommand = args[0] if args else ""
     rest = list(args[1:])
     if subcommand == "diff":
@@ -455,6 +476,27 @@ def _restore_tampered_git_config(repo_dir: Path,
     return tampered
 
 
+_GIT_HEAD_COMMIT_ID_RE = re.compile(r"^[0-9a-fA-F]{4,40}$")
+
+
+def _git_head_is_valid(repo_dir: Path) -> bool:
+    """True if `repo_dir/.git/HEAD` exists and reads back as an ordinary
+    HEAD - a symbolic-ref line (`ref: refs/heads/...`) or a bare commit id
+    - the shape a session that deletes or corrupts it (EJG-6) breaks. Read
+    directly, never through git itself: the whole point is to decide
+    whether running a git command here is safe before running one."""
+    try:
+        text = (repo_dir / ".git" / "HEAD").read_text(
+            encoding="utf-8", errors="replace").strip()
+    except (FileNotFoundError, NotADirectoryError, IsADirectoryError):
+        return False
+    if not text:
+        return False
+    if text.startswith("ref:"):
+        return True
+    return bool(_GIT_HEAD_COMMIT_ID_RE.match(text))
+
+
 def _run_guarded_git(args: list[str], repo_dir: Path, env: dict[str, str],
                       seed_git_snapshot: dict[str, bytes | None],
                       tampered_paths: list[str]
@@ -478,10 +520,25 @@ def _run_guarded_git(args: list[str], repo_dir: Path, env: dict[str, str],
     all in that case; this returns an empty stand-in result, carrying only
     the `.stdout` a caller reads, and the caller's own tampered-path
     bookkeeping already records the run as not contained, since
-    `.git/config` no longer reads back as the seed left it."""
+    `.git/config` no longer reads back as the seed left it.
+
+    A missing or corrupt `.git/HEAD` (`_git_head_is_valid`) gets the same
+    treatment (EJG-6): a session that deleted or corrupted it, deliberately
+    or not, must not let this call fall back to whatever git's own upward
+    search - already narrowed by `_run_git`'s `GIT_CEILING_DIRECTORIES`,
+    but narrowed is not the same as refused - would otherwise find above
+    `repo_dir`. `.git/HEAD` is not put back the way
+    `_TAMPER_WATCHED_RELATIVE_PATHS` is: restoring it would hide the very
+    thing this is here to catch, so `tampered_paths` records it instead,
+    and no git command runs."""
     tampered_paths.extend(_restore_tampered_git_config(repo_dir, seed_git_snapshot))
     git_path = repo_dir / ".git"
     if git_path.exists() and not git_path.is_dir():
+        return types.SimpleNamespace(args=["git", *args], returncode=1,
+                                      stdout="", stderr="")
+    if not _git_head_is_valid(repo_dir):
+        if ".git/HEAD" not in tampered_paths:
+            tampered_paths.append(".git/HEAD")
         return types.SimpleNamespace(args=["git", *args], returncode=1,
                                       stdout="", stderr="")
     return _run_git(args, repo_dir, env)

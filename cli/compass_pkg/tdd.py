@@ -35,6 +35,7 @@ import fnmatch
 import re as _re
 from compass_pkg.terminal import say
 from compass_pkg.core import CompassError, find_upwards, load_manifest, load_yaml, manifest_path, now_iso, resolve_issue_dir, save_manifest
+from compass_pkg import pytest_report
 from compass_pkg.binding import ids_for
 from compass_pkg.red_first import (
     ACCEPTANCE_KINDS as _ACCEPTANCE_KINDS, content_digest as _content_digest, has_red)
@@ -336,18 +337,44 @@ def cmd_tdd_red(args):
                            "`compass tdd-red --scenario TRC-A1 -- pytest tests/test_x.py`"
                            " (or set project.test_micro_command in .compass/config.yml)")
     command = _neutralise_coverage(command)
+    report = None
+    if _is_pytest_command(command):
+        # pytest's own report says which tests failed; see pytest_report.
+        command, report, ours = pytest_report.with_report(command)
     tree_ids = ids_for(task_dir)   # the tree the test runs on, named before it runs
     code, out, warnings = _run_test(command)
     for w in warnings:
         sys.stderr.write(f"compass tdd-red: warning - {w}\n")
     excerpt = "\n".join(out.splitlines()[-25:])
+    red_kind, heading, rejection = None, None, None
+    if report and code != 0:
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(
+            os.path.abspath(task_dir))))
+        red_kind, heading, rejection = pytest_report.judge(
+            report, code, project_root, _NO_TEST_RAN_EXITS)
+    elif code != 0:
+        rejection = _red_rejection_reason(code, command)
+        heading = pytest_report.DID_NOT_RUN if rejection else None
+    if report and ours:
+        try:
+            os.remove(report)
+        except OSError:
+            pass
     if code == 0:
         raise CompassError(
             "compass tdd-red: the test command PASSED (exit 0) - there is no "
             "red to record. The TDD strategy is red-before-green: write a test that "
             "actually fails first.\n--- output (tail) ---\n" + excerpt
         )
-    rejection = _red_rejection_reason(code, command)
+    if heading == pytest_report.NO_TEST_FAILED:
+        raise CompassError(
+            "compass tdd-red: NO TEST FAILED - %s.\n"
+            "A .red marker means a real, observed failure is on record; the "
+            "pre-tool hook unlocks code edits on the strength of it. Make a "
+            "test fail for the missing behaviour, then try again.\n"
+            "  command: %s\n--- output (tail) ---\n%s"
+            % (rejection, " ".join(command), excerpt)
+        )
     if rejection:
         raise CompassError(
             "compass tdd-red: the test command DID NOT RUN - %s. That is not a "
@@ -369,6 +396,8 @@ def cmd_tdd_red(args):
     }
     if verified_by:
         payload["verified_by"] = verified_by   # a sanctioned non-unit red
+    if red_kind:
+        payload["red_kind"] = red_kind         # "import": the module is not written yet
     _bind_to_tree(payload, tree_ids)
     # The binding decides the path here too, so one scenario's red cannot
     # overwrite another's.

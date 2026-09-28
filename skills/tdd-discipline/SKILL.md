@@ -49,9 +49,15 @@ the hotfix under time pressure.
 **Red → Green → Refactor**, one scenario at a time.
 
 1. **Red.** Write a test for the next behaviour and watch it fail *for the
-   right reason*. A test that fails because of a typo or a missing import is not
-   a red - it has not yet described the behaviour. The failure message should
-   read like the absence of the feature.
+   right reason*. A test that fails because of a typo is not a red - it has
+   not yet described the behaviour. The failure message should read like the
+   absence of the feature. One case is still a red although pytest cannot
+   collect the test: the test imports a module of this project that is not
+   written yet. `compass tdd-red` records it as an **import red** when the
+   module's top-level package already exists as a Python package within
+   three levels of the project root. For a new top-level package, create its
+   directory first. Any other collection error is refused, and so is a run
+   in which pytest's report shows no failed test, whatever its exit code.
 2. **Green.** Write the smallest correct code that makes the test pass. Not the
    most elegant, not the most general - the smallest *correct*. Generality is
    earned in refactor, under a green suite.

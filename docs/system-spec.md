@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### No shipped Markdown file calls verify.claims immovable
+### A run that hides a collection error, or where no test failed, is refused; the skill names the import red
 
-- **Scenario id:** `CCI-1`
+- **Scenario id:** `RSF-4`
 - **Intent:** `INT-1`
-- **Source issue:** `claims-called-immovable-elsewhere`
+- **Source issue:** `red-for-a-module-not-yet-written`
 - **Landed:** 2026-09-25
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -8594,4 +8594,32 @@
 - **Scenario id:** `OLH-5`
 - **Intent:** `INT-1`
 - **Source issue:** `orchestrator-loop-hardening`
+- **Landed:** 2026-09-25
+
+### No shipped Markdown file calls verify.claims immovable _(archived)_
+
+- **Scenario id:** `CCI-1`
+- **Intent:** `INT-1`
+- **Source issue:** `claims-called-immovable-elsewhere`
+- **Landed:** 2026-09-25
+
+### A red for a project module not yet written is recorded as an import red _(archived)_
+
+- **Scenario id:** `RSF-1`
+- **Intent:** `INT-1`
+- **Source issue:** `red-for-a-module-not-yet-written`
+- **Landed:** 2026-09-25
+
+### An ordinary failing assertion is still a red _(archived)_
+
+- **Scenario id:** `RSF-2`
+- **Intent:** `INT-1`
+- **Source issue:** `red-for-a-module-not-yet-written`
+- **Landed:** 2026-09-25
+
+### Any other collection error is refused _(archived)_
+
+- **Scenario id:** `RSF-3`
+- **Intent:** `INT-1`
+- **Source issue:** `red-for-a-module-not-yet-written`
 - **Landed:** 2026-09-25

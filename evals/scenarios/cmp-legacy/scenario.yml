@@ -1,0 +1,10 @@
+id: cmp-legacy
+prompt: |
+  Some of our import files separate tags with semicolons instead of
+  commas, so parse_tags in src/tag_parser.py is dropping half the tags
+  on those files. Can you make it accept semicolons as well as commas
+  as separators? Please don't change how it currently handles repeated
+  tags - that behaviour needs to stay exactly as it is.
+budget_usd: 3.0
+hidden_command: python3 -m pytest tests/test_hidden_legacy.py -q
+continue_reply: Go ahead with whichever option you recommend.

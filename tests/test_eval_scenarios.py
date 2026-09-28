@@ -123,7 +123,10 @@ def _require_pytest_invocation(command: tuple) -> None:
 
 def test_six_scenario_directories_exist():
     assert SCENARIOS_DIR.is_dir(), f"{SCENARIOS_DIR} does not exist"
-    found = sorted(p.name for p in SCENARIOS_DIR.iterdir() if p.is_dir())
+    # The comparison scenarios (`cmp-*`) share this directory and are checked
+    # by their own test file; this one pins the six pressure-test scenarios.
+    found = sorted(p.name for p in SCENARIOS_DIR.iterdir()
+                   if p.is_dir() and not p.name.startswith("cmp-"))
     assert found == sorted(EXPECTED_IDS)
 
 

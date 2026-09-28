@@ -1,0 +1,11 @@
+id: cmp-spike
+prompt: |
+  Before we build anything, can you find out whether src/cache.py's
+  Cache class could expire entries on its own after a set number of
+  seconds, using only the Python standard library - we don't want to
+  add a new dependency for this. Write what you find to FINDINGS.md at
+  the top of the repository: say yes or no plainly, and if yes, name
+  the approach in a sentence or two.
+budget_usd: 3.0
+hidden_command: python3 -m pytest tests/test_hidden_spike.py -q
+continue_reply: Go ahead with whichever option you recommend.

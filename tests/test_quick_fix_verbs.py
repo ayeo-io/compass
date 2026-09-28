@@ -1,0 +1,323 @@
+"""`compass quick-fix start` and `compass quick-fix finish`.
+
+A B6 comparison session spent 19 to 22 model calls on a quick fix, most of
+them mechanical steps an agent drove one at a time - init, write the
+manifest from a template it read in full, evaluate, write the approach
+record, register it, trace files, check, record the check, pass three
+gates, devlog, commit. These two verbs do those same steps, through the
+same code, in two calls.
+
+Scenario ids: QFO-1 to QFO-5, in the acceptance criteria of the issue
+quick-fix-overhead/acceptance-criteria.md.
+"""
+from __future__ import annotations
+
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+import yaml
+
+ROOT = Path(__file__).resolve().parent.parent
+CLI = ROOT / "cli" / "compass"
+GIT = ["git", "-c", "user.email=t@example.com", "-c", "user.name=t"]
+
+
+def _git(root, *args):
+    return subprocess.run([*GIT, *args], cwd=root, capture_output=True,
+                          text=True, check=True).stdout.strip()
+
+
+def _run(root, *args):
+    return subprocess.run([sys.executable, str(CLI), *args], cwd=root,
+                          capture_output=True, text=True)
+
+
+def _manifest(root, slug):
+    return yaml.safe_load(
+        (root / ".compass" / "work" / slug / "manifest.yml").read_text())
+
+
+def _manifest_path(root, slug):
+    return root / ".compass" / "work" / slug / "manifest.yml"
+
+
+def _save_manifest(root, slug, manifest):
+    (_manifest_path(root, slug)).write_text(
+        yaml.safe_dump(manifest, sort_keys=False, default_flow_style=False))
+
+
+def _gate_statuses(root, slug):
+    return {g["id"]: g["status"] for g in _manifest(root, slug)["gates"]}
+
+
+@pytest.fixture
+def repo(tmp_path):
+    root = tmp_path / "repo"
+    root.mkdir()
+    _git(root, "init", "-q")
+    (root / "README.md").write_text("hello\n")
+    _git(root, "add", "-A")
+    _git(root, "commit", "-q", "-m", "base")
+    return root
+
+
+def _start(root, slug, **over):
+    args = [
+        "quick-fix", "start", slug,
+        "--risk", over.get("risk", "trivial - a one-line text change"),
+        "--familiarity", over.get(
+            "familiarity",
+            "brownfield-mapped - the file and its test already exist"),
+        "--size", over.get("size", "atomic - one file, one obvious change"),
+        "--intent", over.get(
+            "intent",
+            "A quick fix ships with the same three gates and less overhead."),
+        "--scenario", over.get(
+            "scenario",
+            "Given the greeting template, when it is read, then it says "
+            "'Hello, %s!'."),
+        "--scenario-id", over.get("scenario_id", "TRC-001"),
+        "--test", over.get(
+            "test", "tests/test_greeting.py::test_greeting_says_hello"),
+    ]
+    if "goal" in over:
+        args += ["--goal", over["goal"]]
+    if "role" in over:
+        args += ["--role", over["role"]]
+    return _run(root, *args)
+
+
+def _write_greeting(root, text):
+    d = root / "data"
+    d.mkdir(exist_ok=True)
+    (d / "greeting.txt").write_text(text)
+
+
+def _write_greeting_test(root):
+    d = root / "tests"
+    d.mkdir(exist_ok=True)
+    (d / "test_greeting.py").write_text(
+        "import pathlib\n\n\n"
+        "def test_greeting_says_hello():\n"
+        "    p = (pathlib.Path(__file__).resolve().parent.parent / 'data' "
+        "/ 'greeting.txt')\n"
+        "    assert p.read_text().strip() == 'Hello, %s!'\n"
+    )
+
+
+def _ready_to_finish(root, slug, scenario_id="TRC-001"):
+    """A started quick fix with a red and a green on record, not yet
+    finished - the state every QFO-5 refusal test starts from before it
+    breaks exactly one condition."""
+    _write_greeting(root, "Hi, %s!")
+    _write_greeting_test(root)
+    start = _start(root, slug, scenario_id=scenario_id)
+    assert start.returncode == 0, start.stderr
+
+    red = _run(root, "tdd-red", "--issue", slug, "--scenario", scenario_id,
+              "--", "python3", "-m", "pytest", "-q",
+              "tests/test_greeting.py::test_greeting_says_hello")
+    assert red.returncode == 0, red.stderr
+
+    _write_greeting(root, "Hello, %s!")
+
+    green = _run(root, "tdd-green", "--issue", slug, "--scenario",
+                 scenario_id, "--", "python3", "-m", "pytest", "-q",
+                 "tests/test_greeting.py::test_greeting_says_hello")
+    assert green.returncode == 0, green.stderr
+
+
+# --- QFO-1 -------------------------------------------------------------
+
+def test_qfo1_start_records_the_whole_assessment_in_one_call(repo):
+    result = _start(repo, "greet-fix")
+    assert result.returncode == 0, result.stderr
+
+    manifest = _manifest(repo, "greet-fix")
+    assert manifest["delivery_approach"] == "quick-fix"
+    assert manifest["assessment"]["risk"] == "trivial"
+    assert manifest["assessment"]["familiarity"] == "brownfield-mapped"
+    assert manifest["assessment"]["size"] == "atomic"
+    assert manifest["stages"]["refine"] == "collapsed"
+
+    scenarios = manifest.get("scenarios") or []
+    assert len(scenarios) == 1
+    assert scenarios[0]["id"] == "TRC-001"
+    assert scenarios[0]["intent"] == "INT-1"
+    assert scenarios[0]["tests"] == [
+        "tests/test_greeting.py::test_greeting_says_hello"]
+
+    doc = (repo / "docs" / "compass" / f"{manifest['created']}-greet-fix"
+           / "delivery-approach.md")
+    assert doc.is_file()
+    content = doc.read_text()
+    assert "quick fix" in content.lower()
+    assert "TRC-001" in content
+    assert "INT-1" in content
+
+    artifact = next(a for a in manifest["artifacts"]
+                    if a["kind"] == "delivery-approach")
+    assert artifact["status"] == "draft"
+
+    current_task = (repo / ".compass" / "current-task").read_text().strip()
+    assert current_task == "greet-fix"
+
+
+# --- QFO-2 -------------------------------------------------------------
+
+def test_qfo2_start_stops_when_the_approach_is_not_a_quick_fix(repo):
+    result = _start(repo, "bigger-change",
+                    size="standard - several files and a design choice")
+    assert result.returncode == 1
+
+    manifest = _manifest(repo, "bigger-change")
+    assert manifest["delivery_approach"] == "feature"
+    assert not (manifest.get("scenarios") or [])
+
+    doc_dir = repo / "docs" / "compass"
+    assert not (doc_dir.is_dir()
+               and any(doc_dir.glob("*/delivery-approach.md")))
+
+    heard = result.stdout + result.stderr
+    assert "/compass:assess" in heard
+
+
+# --- QFO-3 -------------------------------------------------------------
+
+def test_qfo3_start_refuses_a_dimension_with_no_reason(repo):
+    result = _start(repo, "no-reason-fix", risk="trivial")
+    assert result.returncode != 0
+    assert "risk" in (result.stdout + result.stderr).lower()
+    assert not (repo / ".compass" / "work" / "no-reason-fix").exists()
+
+
+def test_qfo3_start_refuses_a_value_the_policy_does_not_know(repo):
+    result = _start(repo, "bad-value-fix", risk="dangerous - my own word")
+    assert result.returncode != 0
+    assert "risk" in (result.stdout + result.stderr).lower()
+    assert not (repo / ".compass" / "work" / "bad-value-fix").exists()
+
+
+# --- QFO-4 -------------------------------------------------------------
+
+def test_qfo4_finish_traces_checks_passes_the_three_gates_and_lands(repo):
+    slug = "greet-ship"
+    _ready_to_finish(repo, slug)
+    head_before = _git(repo, "rev-parse", "HEAD")
+
+    finish = _run(repo, "quick-fix", "finish", "--issue", slug, "-m",
+                 "Say hello properly")
+    assert finish.returncode == 0, finish.stderr
+
+    head_after = _git(repo, "rev-parse", "HEAD")
+    assert head_after != head_before
+
+    manifest = _manifest(repo, slug)
+    assert manifest["status"] == "landed"
+    for gid in ("verify.correctness", "verify.governance",
+                "verify.traceability"):
+        gate = next(g for g in manifest["gates"] if g["id"] == gid)
+        assert gate["status"] == "pass"
+        assert gate["evidence"]
+
+    changed = {cf["path"] for cf in manifest["changed_files"]}
+    assert "data/greeting.txt" in changed
+    doc_path = f"docs/compass/{manifest['created']}-{slug}/delivery-approach.md"
+    assert doc_path in changed
+
+    check_evidence = next(e for e in manifest["evidence"]
+                          if e["type"] == "command-output")
+    assert (repo / ".compass" / "work" / slug
+           / check_evidence["path"]).is_file()
+
+    devlog = (repo / ".compass" / "work" / slug / "devlog.md").read_text()
+    assert "Say hello properly" in devlog
+    assert any(e["id"] in devlog for e in manifest["evidence"])
+
+
+# --- QFO-5 ---------------------------------------------------------------
+
+def test_qfo5_finish_refuses_when_check_fails(repo):
+    slug = "greet-ghost"
+    _ready_to_finish(repo, slug)
+    manifest = _manifest(repo, slug)
+    # A green is bound to `TRC-001` (finish's own precondition is satisfied),
+    # but its evidence file does not resolve - `compass check`'s
+    # `suite-passed` guardrail catches that, independently of the four
+    # conditions `finish` itself checks before running it.
+    for e in manifest["evidence"]:
+        if e.get("type") == "test-run" and e.get("scenario") == "TRC-001":
+            e["path"] = "evidence/does-not-exist.json"
+    _save_manifest(repo, slug, manifest)
+    before = _gate_statuses(repo, slug)
+    head_before = _git(repo, "rev-parse", "HEAD")
+
+    finish = _run(repo, "quick-fix", "finish", "--issue", slug, "-m", "x")
+    assert finish.returncode != 0
+
+    assert _gate_statuses(repo, slug) == before
+    assert _git(repo, "rev-parse", "HEAD") == head_before
+
+
+def test_qfo5_finish_refuses_when_another_gate_is_pending(repo):
+    slug = "greet-extra-gate"
+    _ready_to_finish(repo, slug)
+    manifest = _manifest(repo, slug)
+    manifest["gates"].append(
+        {"id": "verify.clarity", "status": "pending", "evidence": []})
+    _save_manifest(repo, slug, manifest)
+    before = _gate_statuses(repo, slug)
+    head_before = _git(repo, "rev-parse", "HEAD")
+
+    finish = _run(repo, "quick-fix", "finish", "--issue", slug, "-m", "x")
+    assert finish.returncode != 0
+    assert "verify.clarity" in (finish.stdout + finish.stderr)
+
+    assert _gate_statuses(repo, slug) == before
+    assert _git(repo, "rev-parse", "HEAD") == head_before
+
+
+def test_qfo5_finish_refuses_when_no_green_is_bound_to_the_scenario(repo):
+    slug = "greet-no-green"
+    _write_greeting(repo, "Hi, %s!")
+    _write_greeting_test(repo)
+    start = _start(repo, slug)
+    assert start.returncode == 0, start.stderr
+    before = _gate_statuses(repo, slug)
+    head_before = _git(repo, "rev-parse", "HEAD")
+
+    finish = _run(repo, "quick-fix", "finish", "--issue", slug, "-m", "x")
+    assert finish.returncode != 0
+    assert "TRC-001" in (finish.stdout + finish.stderr)
+
+    assert _gate_statuses(repo, slug) == before
+    assert _git(repo, "rev-parse", "HEAD") == head_before
+
+
+def test_qfo5_finish_refuses_an_untraced_path_with_several_scenarios(repo):
+    slug = "greet-multi"
+    _ready_to_finish(repo, slug)
+    manifest = _manifest(repo, slug)
+    manifest["scenarios"].append({
+        "id": "TRC-002", "title": "a second scenario", "intent": "INT-1",
+        "tests": ["tests/test_greeting.py::test_greeting_says_hello"],
+    })
+    manifest["evidence"].append({
+        "id": "EV-T-TRC-002", "type": "test-run", "scenario": "TRC-002",
+        "path": "evidence/green-TRC-001.json",
+    })
+    _save_manifest(repo, slug, manifest)
+    # A second, untraced production change - ambiguous with two scenarios
+    # on record, so it must not be guessed at.
+    _write_greeting(repo, "Hello there, %s!")
+    before = _gate_statuses(repo, slug)
+    head_before = _git(repo, "rev-parse", "HEAD")
+
+    finish = _run(repo, "quick-fix", "finish", "--issue", slug, "-m", "x")
+    assert finish.returncode != 0
+    assert "data/greeting.txt" in (finish.stdout + finish.stderr)
+
+    assert _gate_statuses(repo, slug) == before
+    assert _git(repo, "rev-parse", "HEAD") == head_before

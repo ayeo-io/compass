@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### A second cost for the same try replaces it
+### Every multiagent route earns the map
 
-- **Scenario id:** `SCT-2`
+- **Scenario id:** `FRM-2`
 - **Intent:** `INT-1`
-- **Source issue:** `subtask-cost-keeps-last-try-only`
+- **Source issue:** `feature-route-omits-the-map`
 - **Landed:** 2026-09-27
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -9007,4 +9007,18 @@
 - **Scenario id:** `SCT-1`
 - **Intent:** `INT-1`
 - **Source issue:** `subtask-cost-keeps-last-try-only`
+- **Landed:** 2026-09-27
+
+### A second cost for the same try replaces it _(archived)_
+
+- **Scenario id:** `SCT-2`
+- **Intent:** `INT-1`
+- **Source issue:** `subtask-cost-keeps-last-try-only`
+- **Landed:** 2026-09-27
+
+### A feature assessment earns and registers the map _(archived)_
+
+- **Scenario id:** `FRM-1`
+- **Intent:** `INT-1`
+- **Source issue:** `feature-route-omits-the-map`
 - **Landed:** 2026-09-27

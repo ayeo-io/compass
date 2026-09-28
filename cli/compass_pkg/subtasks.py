@@ -183,6 +183,10 @@ def cmd_subtask_update(args):
     task_dir, task, path, subtasks = _load(args)
     root = _root(task_dir)
     s = _find(subtasks, args.id)
+    # Captured here, before this call can open a new try below, so a cost
+    # given in the same call names the try being closed out, not the one
+    # just opened.
+    pre_attempt_try = int(s.get("attempts") or 1)
     if args.brief:
         new = _inside(root, args.brief, "brief")
         if new != s.get("brief"):
@@ -219,8 +223,23 @@ def cmd_subtask_update(args):
         # One cost per try, keyed by the try, and `cost` their total: a
         # subtask sent back for another try keeps what the earlier tries
         # used. A second cost for the same try replaces that try's figure.
+        # The try comes from `--try` when given, otherwise from the try
+        # this call is closing out (`pre_attempt_try`, which is the current
+        # try unless this same call also opens a new one, above). A try
+        # beyond what has been dispatched is refused.
+        tries_dispatched = int(s.get("attempts") or 1)
+        try_n = args.try_ if args.try_ is not None else pre_attempt_try
+        if try_n < 1:
+            raise CompassError(f"compass issue subtask: a try counts from "
+                               f"1, not {try_n}.")
+        if try_n > tries_dispatched:
+            raise CompassError(
+                f"compass issue subtask: {args.id} has not reached try "
+                f"{try_n}; {tries_dispatched} attempt(s) are recorded. "
+                f"Dispatch another with `--attempt` before recording its "
+                f"cost.")
         costs = s.setdefault("costs", {})
-        costs[str(int(s.get("attempts") or 1))] = _count(args.cost, "cost")
+        costs[str(try_n)] = _count(args.cost, "cost")
         s["cost"] = sum(costs.values())
         budget = s.get("budget")
         if isinstance(budget, int) and args.cost > budget:
@@ -335,8 +354,10 @@ def register(issue_subparsers, issue_arg):
                     "another attempt, its result file, the reviewer's brief "
                     "(refused if it matches a fixed list of phrases that say "
                     "what not to flag), the revision reviewed, findings, "
-                    "review rounds, the cost, or another attempt. A cost over "
-                    "the budget adds a finding.")
+                    "review rounds, the cost, or another attempt. A cost "
+                    "over the budget adds a finding. --try names the try a "
+                    "cost belongs to; a try beyond what has been dispatched "
+                    "is refused.")
     u.add_argument("id")
     u.add_argument("--status", help=" | ".join(STATUSES))
     u.add_argument("--brief", help="the brief for this attempt; the earlier one is kept")
@@ -349,6 +370,10 @@ def register(issue_subparsers, issue_arg):
     u.add_argument("--resolve", type=int, help="mark finding N resolved (from 1)")
     u.add_argument("--round", choices=("pass", "fail"), help="append a review round")
     u.add_argument("--cost", type=int, help="tokens the dispatch used")
+    u.add_argument("--try", dest="try_", type=int,
+                   help="the try this cost belongs to; without it, a cost "
+                        "given with --attempt belongs to the try before the "
+                        "new one, otherwise to the current try")
     u.add_argument("--attempt", action="store_true", help="count another attempt")
     issue_arg(u)
     u.set_defaults(func=cmd_subtask_update, output_kind="hand-off")

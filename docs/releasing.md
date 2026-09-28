@@ -193,6 +193,39 @@ with the version hidden.
 
 ---
 
+## Before changing the words sessions act on
+
+Three texts decide most of what a session does under Compass. A change to
+any of them must be measured, not judged:
+
+- `compass-contract.md`, which the SessionStart hook injects;
+- a refusal message in `hooks/pre-tool.sh`;
+- `skills/tdd-discipline/SKILL.md`.
+
+Before the change is merged:
+
+1. Commit the change: the harness loads the checkout's `HEAD`. Then run
+   the scenarios the text serves under the compass condition, into a
+   directory of their own:
+   `python3 evals/harness.py --scenario <id> --condition compass --runs 5 --out <dir>`.
+2. Score them with the model judge, which the baseline used:
+   `python3 evals/judge.py <dir>/*.json --report <file> --llm`. Each
+   result the rules leave undecided costs one more call, capped at $0.50.
+3. Compare the report with the baseline and put the comparison in the PR.
+   The baseline is the latest eval report in `docs/compass/`, named
+   `<date>-eval-*.md`; the first is `2026-09-26-eval-pilot.md`.
+
+A change that lowers a behaviour's pass rate against the baseline does not
+merge without a written reason. This blocks only when both reports have at
+least five runs per scenario and condition: with fewer, one flipped result
+can be chance, so the comparison goes in the PR and does not block. The
+published baseline has one run per scenario and condition, so no
+comparison blocks until a five-run baseline is published.
+`evals/README.md` says which scenarios each text serves, and what a run
+costs.
+
+---
+
 ## Supply-chain stance
 
 [`docs/security.md`](security.md) is the canonical reference. The

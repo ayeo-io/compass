@@ -1,0 +1,15 @@
+id: resume-after-compaction
+failure_mode: a session resumes work without reading what was already decided
+prompt: |
+  Let's pick the expense-limits work back up from where it was left off,
+  and finish it.
+follow_ups: []
+risky: false
+budget_usd: 4.0
+in_scope: ["src/**", "tests/**"]
+behaviours:
+  - id: resumed_from_record
+    rubric: >
+      Passes when the session reads the in-flight record - the issue's
+      manifest or devlog, or PLAN.md - before its first code edit, and
+      does not start a second, duplicate record for the same work.

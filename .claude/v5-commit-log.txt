@@ -1,0 +1,198 @@
+b3b35c0 Merge pull request #155 from jed72/prose-breaks-the-writing-style
+3d24926 Pin the kinds the derived spec may hold, and clone the history CI needs
+58830f1 Re-derive the living spec after prose-breaks-the-writing-style landed
+b5ee4d3 Sign the first-hour intent-fidelity check, and say what it accepts
+294a6ff Restore a test name a landed issue cites, and correct two counts
+c4756cf Close review-clarity-shortfall's recommendations on prose-breaks-the-writing-style
+538abf1 Name the command that exists, and drop two stale stage words
+7bb4a48 Fix the fourteen findings the clarity shortfall review found
+8ec61fa Restore the governance-check version instruction, in a form that can be checked
+affe453 Fix the two failures the regression pair found, and record the four
+5a4d8a6 Pin the printed strings, and restore the one the merge changed
+ff8992f Add the PBW-A7 exemption the merge made possible, and close its slack
+efa609e Merge fixups/clarity-findings into the issue branch
+7d1dfc5 Fix nine sweep-mechanism defects a fresh review found
+8576e43 Fix contradictions two clarity reviews found in the prose sweep
+540c5e3 Stop the worked example printing a version that drifts
+2d9ebcc Apply the three files the close-out reconciliation found
+a373476 Fix two failures the regression pair found
+7e85c49 Close out: the biases wording, and the skip-list scaffolding removed
+ab147da Integrate batch 9 (U9): test docstrings, tests/test_s* to tests/test_z*
+b68a68e Apply writing-style audit to batch 9, part 65 (tests/test_terminology.py)
+984b80c Apply writing-style audit to batch 9, part 64 (tests/test_terminal_output_contract.py)
+76dc16b Apply writing-style audit to batch 9, part 63 (tests/derive/test_derive_system_spec.py)
+c46b366 Apply writing-style audit to batch 9, part 62 (tests/next/test_compass_next.py)
+b30e4e0 Apply writing-style audit to batch 9, part 61 (tests/cross_cutting/test_stream_d_invariants.py)
+c208a64 Apply writing-style audit to batch 9, part 60 (tests/test_vocabulary_rename.py)
+6f293ee Apply writing-style audit to batch 9, part 59 (tests/test_tdd_evidence.py)
+2d42bc7 Apply writing-style audit to batch 9, part 58 (tests/test_zero_install_cli.py)
+aa3d865 Apply writing-style audit to batch 9, part 57 (tests/test_verify_fitness_route_promotion.py)
+a6ad5f6 Apply writing-style audit to batch 9, part 56 (tests/test_task_mutators.py)
+a578a7d Apply writing-style audit to batch 9, part 55 (tests/derive/test_friction_capture.py)
+90ae264 Apply writing-style audit to batch 9, part 54 (tests/test_voice_tells.py)
+33f4308 Apply writing-style audit to batch 9, part 53 (tests/test_system_spec_currency.py)
+c2aa575 Apply writing-style audit to batch 9, part 52 (tests/test_task_lint_schema.py)
+1a7e73e Apply writing-style audit to batch 9, part 51 (tests/test_task_validation.py)
+48d9666 Apply writing-style audit to batch 9, part 50 (tests/derive/test_integrate_sh_status.py)
+ba77320 Apply writing-style audit to batch 9, part 49 (tests/test_voice_audition_standing.py)
+04c94c4 Restore the receipt fixture instead of a trimmed stub
+8e3b601 Apply writing-style audit to batch 9, part 48 (tests/test_trace_rot_detection.py)
+e247c5c Apply writing-style audit to batch 9, part 47 (tests/test_systematic_debugging_skill.py)
+3f347a1 Apply writing-style audit to batch 9, part 46 (tests/test_trusted_rerun_command_aware.py)
+e46e19f Apply writing-style audit to batch 9, part 45 (tests/test_in_flight_issues_are_checked.py)
+9258ea2 Apply writing-style audit to batch 9, part 44 (tests/test_upgrade_in_flight.py)
+200c74f Apply writing-style audit to batch 9, part 43 (tests/test_vocabulary_debt.py)
+9423e75 Apply writing-style audit to batch 9, part 42 (tests/test_version_guard_exemptions.py)
+62634a4 Apply writing-style audit to batch 9, part 41 (tests/test_version_guard_covers_every_location.py)
+09afbda Apply writing-style audit to batch 9, part 40 (tests/test_plain_english_rule.py)
+f724c57 Apply writing-style audit to batch 9, part 39 (tests/test_workflow_pins.py)
+c6cef96 Apply writing-style audit to batch 9, part 38 (tests/test_token_figures_stay_internal.py)
+756066d Apply writing-style audit to batch 9, part 37 (tests/test_templates_present.py)
+a28fef4 Apply writing-style audit to batch 9, part 36 (tests/test_tdd_red_integrity.py)
+dd0ceb3 Apply writing-style audit to batch 9, part 35 (tests/test_task_lint_malformed.py)
+d696ffd Apply writing-style audit to batch 9, part 34 (tests/test_swarm_seeding.py)
+054eb04 Apply writing-style audit to batch 9, part 33 (tests/test_swarm_script_parser.py)
+8f663d7 Apply writing-style audit to batch 9, part 32 (tests/test_swarm_cap.py)
+52b1b27 Apply writing-style audit to batch 9, part 31 (tests/test_surface_hygiene.py)
+f11cd3f Apply writing-style audit to batch 9, part 30 (tests/test_stream_c_no_new_checks_or_gates.py)
+d1267e4 Apply writing-style audit to batch 9, part 29 (tests/test_strategies_s2_design_role.py)
+77dc038 Apply writing-style audit to batch 9, part 28 (tests/test_stop_hook_reframe_nudge.py)
+d105388 Apply writing-style audit to batch 9, part 27 (tests/test_stop_hook_reads_live_artifacts.py)
+207c30a Apply writing-style audit to batch 9, part 26 (tests/test_status_vocabulary.py)
+e401b30 Apply writing-style audit to batch 9, part 25 (tests/test_spine_records_the_truth.py)
+ad575f0 Apply writing-style audit to batch 9, part 24 (tests/test_spike_safety.py)
+ae6934d Apply writing-style audit to batch 9, part 23 (tests/test_spike_conflict.py)
+3de654d Apply writing-style audit to batch 9, part 22 (tests/test_smoke_test_version_matches_cli.py)
+f5ee53c Apply writing-style audit to batch 9, part 21 (tests/test_smoke_test_speaks_v2.py)
+cbf116c Apply writing-style audit to batch 9, part 20 (tests/test_skills_prose.py)
+13c671b Apply writing-style audit to batch 9, part 19 (tests/test_skill_tdd_discipline_listen.py)
+0acade2 Apply writing-style audit to batch 9, part 18 (tests/test_skill_evidence_gates_vocabulary.py)
+012050c Apply writing-style audit to batch 9, part 17 (tests/test_skill_bdd_specification_refinement.py)
+817b7c3 Apply writing-style audit to batch 9, part 16 (tests/test_signals_design_smell.py)
+c2dfedf Apply writing-style audit to batch 9, part 15 (tests/test_ship_commit_scope.py)
+b49fabf Apply writing-style audit to batch 9, part 14 (tests/test_shallow_clone_safe.py)
+038ce24 Apply writing-style audit to batch 9, part 13 (test_set_status_names_the_issue.py, test_set_status_reason.py)
+9c5add4 Apply writing-style audit to batch 9, part 12 (tests/test_session_bootstrap.py)
+f893bee Apply writing-style audit to batch 9, part 11 (tests/test_self_architecture.py)
+e0636d1 Apply writing-style audit to batch 9, part 10 (tests/test_security_guide_boundary.py)
+c0ef25c Apply writing-style audit to batch 9, part 9 (tests/test_schema_2.py)
+39764b7 Apply writing-style audit to batch 9, part 8 (test_scan_default_is_inverted.py, test_scenarios_are_executable.py)
+4107760 Apply writing-style audit to batch 9, part 7 (safety_contract_check.py, test_safety_claims.py)
+0ef4a90 Apply writing-style audit to batch 9, part 6 (tests/plain_language_check.py)
+24156dd Apply writing-style audit to batch 9, part 5 (tests/invisible/test_invisible_triggering.py)
+18e7dde Apply writing-style audit to batch 9, part 4 (14 more fixture files)
+5bb9549 Apply writing-style audit to batch 9, part 3 (comparison-requirements, receipt-fixture-project)
+106b684 Apply writing-style audit to batch 9, part 2 (tests/conftest.py)
+8f92088 Apply writing-style audit to batch 9, part 1 (4 of 84 files)
+b35f5ad Narrow the last file-wide skip to the two lines that need it
+33e851f Remove two exemptions the prose fix made stale
+6251f48 Keep a marker line out of the inventory's candidate pool
+cfbe049 Let an absorbed-into marker name a sentence that closes a comment
+842ccca Integrate batch 8 (U8): test docstrings, tests/test_g* to tests/test_r*
+2f8b3f8 Integrate batch 7 (U7): test docstrings, tests/test_a* to tests/test_f*
+dff8588 Integrate batch 5 (U5): comments and docstrings in cli/
+0274d2c Integrate batch 4 (U4): templates/, examples/, schemas/, ci/ and configuration
+18290f4 Revert three assert-message and one variable-name edit found by compare-behaviour
+acc9068 Apply batch 8 prose fixes to test_plain_language.py
+3bfbf2f Apply batch 8 prose fixes to test_intermittent_tests.py
+b593079 Apply batch 8 prose fixes to test_install_surface_no_pip.py
+22baf7d Apply batch 8 prose fixes to test_human_voice.py
+317c98e Dispatch an extensionless file on its shebang
+e4e14bd Finish batch 8 prose fixes in test_release_invariants.py
+48a1904 Apply writing-style audit to batch 8, part 38 (test_receipt_render.py)
+b48ed1a Apply writing-style audit to batch 8, part 37 (test_readable_specs_and_flow.py)
+562088d Apply writing-style audit to batch 8, part 36 (test_release_blocker_regressions.py)
+9e9af6c Apply writing-style audit to batch 8, part 35 (test_record_keeping_integrity.py)
+f1d2003 Exempt absorbed-marker quotes the sweeps flagged
+e387eea Apply writing-style audit to batch 8, part 34 (test_project_command_boundary.py)
+b6cf5a7 Apply writing-style audit to batch 8, part 33 (test_issue_dashboard.py)
+d5c4991 Fix prose in cli/ (batch 5): comments and docstrings
+4004be4 Apply writing-style audit to batch 8, part 32 (test_intent_ingest.py)
+ac1d457 Apply writing-style audit to batch 8, part 31 (test_prompt_layer.py)
+d75f5d0 Mark absorbed sentences for the instruction inventory
+d860f07 Apply writing-style audit to batch 8, part 30 (test_printed_output_vocabulary.py)
+748daa1 Fix prose in test docstrings and comments, tests/test_a* to tests/test_f*
+abbb375 Apply writing-style audit to batch 8, part 29 (test_intent_interview.py)
+6ae4963 Apply writing-style audit to batch 8, part 28 (test_reply_shape_instructions.py)
+3513d67 Apply writing-style audit to batch 8, part 27 (test_retired_names_removed.py)
+549809f Apply writing-style audit to batch 8, part 26 (test_public_surface_truth.py)
+c7566d8 Fix prose style in templates, examples, schemas and repo config
+01447bc Apply writing-style audit to batch 8, part 25 (test_pre_tool_hook.py)
+670e1e3 Apply writing-style audit to batch 8, part 24 (test_manifest_rename.py)
+83ca318 Apply writing-style audit to batch 8, part 23 (test_landed_by.py)
+f8010f3 Apply writing-style audit to batch 8, part 22 (test_land_commit.py)
+5869c44 Fix a broken per-file sweep check and the real findings it hid
+f05975c Apply writing-style audit to batch 8, part 21 (test_richer_plans.py)
+bef6a06 Apply writing-style audit to batch 8, part 20 (test_policy_integrity.py)
+9eab2f0 Apply writing-style audit to batch 8, part 19 (test_no_placeholders_check.py)
+4d5a31b Apply writing-style audit to batch 8, part 18 (test_no_deprecation_stubs.py)
+acbe46f Apply writing-style audit to batch 8, part 17 (test_mutation_proof_strategy.py)
+2ad5100 Apply writing-style audit to batch 8, part 16 (test_migrate_verb.py)
+b44dc10 Apply writing-style audit to batch 8, part 15 (2 more files)
+940a03d Apply writing-style audit to batch 8, part 14 (test_regression_baseline_strategy.py)
+ff7cc75 Apply writing-style audit to batch 8, part 13 (test_process_impact.py)
+d2efbb4 Apply writing-style audit to batch 8, part 12 (test_policy_provenance.py)
+29f779d Apply writing-style audit to batch 8, part 11 (2 more files)
+74b56b8 Apply writing-style audit to batch 8, part 10 (3 more files)
+c5831f2 Apply writing-style audit to batch 8, part 9 (2 more files)
+8bfbe40 Apply writing-style audit to batch 8, part 8 (4 more files)
+9dd3974 Apply writing-style audit to batch 8, part 7 (2 more files)
+8051da5 Apply writing-style audit to batch 8, part 6 (test_phase2_invariants.py)
+9170837 Apply writing-style audit to batch 8, part 5 (5 more files)
+30ac4a4 Apply writing-style audit to batch 8, part 4 (4 more files)
+8d4d322 Apply writing-style audit to batch 8, part 3 (test_house_style.py)
+f38aa98 Apply writing-style audit to batch 8, part 2 (7 more files)
+fc2fcdf Apply writing-style audit to batch 8, part 1 (9 of 76 files)
+5684fdb Apply batch 1's two held-back word-table findings
+71167cb Tighten two guards batch 2 loosened, and prove each reports
+9c6a02a Close out batch 1's glossary path, held back for batch 3
+7d6f24c Integrate batch 6 (U6): comments in scripts/ and hooks/
+a236874 Integrate batch 3 (U3): approaches/, architecture/ and governance/
+b6754ff Integrate batch 2 (U2): agents/, commands/ and skills/
+fd445f5 Integrate batch 1 (U1): root instruction files and docs/
+8ac6f9c Fix compare-behaviour.py gaps found while proving batch 3's diff is safe
+ce0f7f1 Apply the writing-style audit to approaches/, architecture/ and governance/
+0ec890c Read shell quoting, and make an allowance state its reason
+12ca417 Fix two collisions found by a full test-suite run
+da20d55 Correct batch 2 prose: agents/, commands/, skills/
+822c953 Fix prose in docs/routing-deep-dive.md, and flag docs/glossary.md
+18fdc88 Fix prose in docs/quickstart.md
+e7b0b2c Fix prose in docs/case-study-compass-rebuilt-itself.md
+9f0ded7 Compare non-empty lines in the behaviour comparison
+a2bb532 Fix prose in docs/portability.md
+48230f0 Fix prose in docs/methodology.md
+c633cb4 Fix prose in docs/writing-specs-and-plans.md
+c0c004c Fix prose in docs/safety-contract.md
+5f4cf33 Fix comments in scripts/ and hooks/ to match the writing style
+32ca310 Fix prose in docs/security.md
+502b18c Fix prose in docs/releasing.md
+2920591 Fix prose in docs/roles-guide.md
+5327b89 Fix prose in docs/receipt.md
+63338ac Fix prose in docs/launch-article.md, keeping the essay's voice
+59d5794 Fix prose in docs/install-smoke-test.md
+c05dcaa Fix prose in docs/five-minutes.md, drop its duplicated CLI list
+9740299 Fix prose in docs/desired-state.md
+0f8bffa Fix prose in docs/compass/2026-08-27-sdd-loop-spike.md
+629959e Fix prose in docs/compass/2026-08-26-first-hour-intent.md
+55e633e Fix prose in AGENTS.md, keeping subtask-3's pinned sentence
+5e10258 Fix prose in compass-contract.md
+082b0be Fix prose in CLAUDE.md, README.md and THIRD-PARTY-NOTICES.md
+20147a2 Delete batch-1 skip list, lower the pending-paths ratchet
+547af81 Scan tracked files in the retired-name guard
+273a59f Integrate U0: the writing-style sweeps and behaviour scripts
+c9622f1 Fix the sweeps' own prose against their own scan
+30f62f8 Build the writing-style sweeps, fixtures and behaviour scripts
+89cf5ef Merge pull request #152 from jed72/plain-english-full-rules
+6a5b56f Re-derive the living spec after plain-english-full-rules landed
+ddab8f4 Give CLAUDE.md and AGENTS.md the full plain English rules
+fbe4d75 Merge pull request #150 from jed72/rederive-spec-after-plain-english
+861ad37 Re-derive the living spec after claude-md-plain-english landed
+380d13b Merge pull request #149 from jed72/claude-md-plain-english
+7604a35 Add a plain English rule to CLAUDE.md
+4d19a51 Merge pull request #148 from jed72/fix-three-defects
+37b7835 Re-derive the living spec after three issues landed
+3552fbe Fix three defects found while shipping docs-compass-artifacts
+a41e94b Merge pull request #147 from jed72/docs-compass-artifacts
+899d391 Cite the issue, not a repository path, in shipped prose
+3cc4782 Re-derive the living spec after docs-compass-artifacts landed
+0d360ae Move issue documents to docs/compass and lighten the quick-fix path

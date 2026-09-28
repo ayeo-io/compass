@@ -246,6 +246,10 @@ EXPECTED_SUBCOMMANDS = {
     # GROUP (`start`, `record`), so later kinds add a subcommand rather than a
     # verb.
     "acceptance",
+    # `quick-fix` (`start`, `finish`) runs the quick-fix path's mechanical
+    # steps in two calls instead of a dozen, through the same handlers; it
+    # adds no guardrail, gate or record. A GROUP, like `acceptance`.
+    "quick-fix",
 }
 
 

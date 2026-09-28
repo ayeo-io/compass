@@ -69,6 +69,10 @@ VERB_DESCRIPTIONS = {
         'Say which stage of its delivery approach an issue has reached and what comes next, reading the approach rather than guessing. Skipped and collapsed stages are passed over, because the approach already decided they do not run.',
     'plan lint':
         'Scan a technical design for placeholder phrases - TBD, TODO, "implement later". Advisory and always exits 0: a design can be vague without using one of those words, so this is the mechanical floor rather than the judgement.',
+    'quick-fix start':
+        "Assess a quick fix and record it in one call: refuses before writing anything if a dimension has no reason or the policy does not know its value, otherwise initialises the project, writes the manifest's assessment, runs the same evaluator `compass approach evaluate --write` runs, and - only if the computed approach is quick fix - writes delivery-approach.md, registers it and records the one scenario against its intent. If the approach computes heavier than a quick fix, it keeps the assessment and says to continue with /compass:assess rather than writing an approach record and a scenario that do not apply.",
+    'quick-fix finish':
+        "Check every precondition before writing anything, then trace, check, gate and ship a quick fix in one call: every changed path outside .compass/ traces to its scenario, compass check's output is recorded as command-output evidence, the three quick-fix gates pass against that evidence and the scenario's green, one devlog line is appended, and compass ship-commit lands the change. Refuses - with no gate passed and nothing committed - if check fails, another gate is still pending, no green is bound to a scenario, or a changed path is untraced while several scenarios are on record.",
     'policy lint':
         "Structurally validate the governance YAML - including that every guardrail's declared check is actually implemented in the CLI. A guardrail whose check does not exist is not a guardrail, and this is what says so.",
     'retro':

@@ -992,6 +992,14 @@ _TAIL_EXEMPT = {
           "its own suite covers it",
     "issue receipt": "renders a landed issue's record; needs a landed issue with "
                      "cleared gates to say anything",
+    "quick-fix start": "needs a project with no issue yet, which the shared "
+                       "fixture already has one for; test_quick_fix_verbs.py "
+                       "runs it, without measuring its output against this "
+                       "contract",
+    "quick-fix finish": "needs a quick-fix issue with a scenario-bound red "
+                        "and green already recorded, which the fixture does "
+                        "not build; test_quick_fix_verbs.py runs it, without "
+                        "measuring its output against this contract",
 }
 
 _TAIL_ARGV = {

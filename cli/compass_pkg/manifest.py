@@ -35,6 +35,7 @@ import fnmatch
 import re as _re
 from compass_pkg.terminal import say
 from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, normalize_spine, now_iso, resolve_issue_dir, save_manifest
+from compass_pkg.binding import changes_id, changes_paths, _changes_id_at, _newest_bound_record
 
 
 
@@ -84,6 +85,50 @@ def _out_of_scope(staged, owned, artifact_dir):
         if p not in owned
         and p not in FRAMEWORK_OWNED_PATHS
         and not p.startswith(artifact_dir)
+    )
+
+
+def _refuse_stale_green(task, task_dir, slug, root, at_commit=None):
+    """Refuse `ship-commit` if a file the issue changed, or a test it
+    declares, was edited after the newest bound green - reusing the same
+    comparison `compass check` uses for a landed issue
+    (`binding._check_landed`), so ship-commit and check never disagree.
+
+    Judges only once every gate has passed, and only when the newest record
+    carries a `changes_id`; a record without one, or an issue with no bound
+    record, is not judged - `compass check` does not judge one either.
+
+    `at_commit` is None to read the issue's files from disk, for the commit
+    ship-commit is about to make, or a commit id to read them as that commit
+    holds them, for the files a multiagent land already committed.
+    """
+    gates = [g for g in task.get("gates") or [] if isinstance(g, dict)]
+    if not gates or not all(g.get("status") == "pass" for g in gates):
+        return
+    newest = _newest_bound_record(task, task_dir)
+    if newest is None:
+        return
+    record_path, record = newest
+    then = record.get("changes_id")
+    if not then:
+        return
+    paths = changes_paths(task, record)
+    now = (_changes_id_at(root, at_commit, paths) if at_commit
+           else changes_id(root, paths))
+    if now is None or now == then:
+        return
+    changed = [p for p in paths
+               if _changes_id_at(root, then, [p]) !=
+               (_changes_id_at(root, at_commit, [p]) if at_commit
+                else changes_id(root, [p]))]
+    raise CompassError(
+        "compass ship-commit: refusing to commit - %d of issue '%s's "
+        "changed file(s) or declared test(s) changed after %s's green:\n  "
+        "%s\n\nRe-run `compass tdd-green` on the same test command, then "
+        "ship again."
+        % (len(changed), slug, record_path,
+           "\n  ".join(changed) if changed
+           else "(the issue's files - the exact path could not be narrowed)")
     )
 
 
@@ -204,6 +249,9 @@ def cmd_land_commit(args):
                 + "\n  ".join(dirty_or_missing)
             )
 
+        _refuse_stale_green(head_task, head_task_dir, head_slug, cwd,
+                            at_commit="HEAD")
+
         head_id = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
         head_task["status"] = "landed"
         head_task["land_timestamp"] = now_iso()
@@ -234,6 +282,9 @@ def cmd_land_commit(args):
         owned, artifact_dir = _land_scope(_scope_task, slug)
     except (CompassError, OSError, KeyError):
         pass
+
+    if slug is not None:
+        _refuse_stale_green(_scope_task, _scope_dir, slug, cwd)
 
     staged_now = _git(["diff", "--cached", "--name-only"], cwd).stdout.split()
 

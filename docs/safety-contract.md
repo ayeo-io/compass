@@ -94,7 +94,8 @@ enough or the implementation is defect-free.
 A test-run record holds **one exit code for one command**. That is all it
 proves. It does not prove:
 
-- which tests were collected or ran;
+- which tests were collected or ran - a command that runs no test, such as
+  `true`, records a green;
 - that the run exercised every declared scenario; or
 - that a trusted runner made the record.
 
@@ -112,6 +113,12 @@ The ids show which tree a record claims; they do not prove that a trusted
 runner produced the record, and an older record is not judged. A record
 written outside a git repository, or before records carried a tree id, is
 not judged either.
+
+Tracing a new file into the issue between two runs of the same command
+changes `tree_id` and `changes_id`, because the traced file joins
+`changed_files`. So a green recorded after that trace is a new assertion,
+not a rerun of the one before it: the same command on the same code is not
+flagged as a rerun, and the traced file shows in `changed_files`.
 
 Teams must keep their normal CI controls.
 

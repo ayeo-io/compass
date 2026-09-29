@@ -353,13 +353,15 @@ def test_d2_repairs_change_only_retired_names():
       declare - a stated fact the audit found the source contradicted, not
       a wording swap.
 
-    One was re-baselined three times, by three issues:
-    `docs/safety-contract.md` (list_items 19 -> 21 -> 23 -> 25).
+    One was re-baselined four times, by four issues:
+    `docs/safety-contract.md` (list_items 19 -> 21 -> 23 -> 25 -> 28).
     `red-record-identity-cutoff` made the two conditions under which an
     unstamped red record still counts a vertical list, `hook-failure-matrix`
     did the same for the two gaps in checking a shell write inside a
     worktree, and `evidence-binding` for the two ways a record's tree is
-    judged.
+    judged. `finish-and-ship-commit-edges` added a "`quick-fix finish`
+    judges what to commit by when a file changed" section, one `###`
+    heading, listing the three cases `finish` does not guard.
 
     Two were re-baselined by `orchestrator-loop-hardening`, which adopted the
     multiagent loop's rules: `agents/orchestrator.md` gained a

@@ -148,7 +148,7 @@ if [ -z "$ROUTE" ] || [ ! -f "$ROUTE" ]; then
   # vocabulary-scan: allow - reads the retired artifact name for old archives
   ROUTE="$TASK_DIR/route.md"
 fi
-[ -f "$ROUTE" ] || { echo "multiagent.sh: no delivery-approach.md for issue '$TASK_SLUG' - triage must run first." >&2; exit 1; }
+[ -f "$ROUTE" ] || { echo "multiagent.sh: no delivery-approach.md for issue '$TASK_SLUG' - run /compass:assess first." >&2; exit 1; }
 [ -f "$TASK_YML" ] || { echo "multiagent.sh: no manifest.yml for issue '$TASK_SLUG' - the worktree cap is read from structured assessment, not delivery-approach.md prose. Run /compass:assess." >&2; exit 1; }
 
 # --- config: worktree_root + max_worktrees ----------------------------------

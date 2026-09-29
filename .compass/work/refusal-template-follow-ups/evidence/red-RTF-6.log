@@ -1,0 +1,30 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_____________ test_rtf_6_the_docs_page_does_not_claim_cli_refusals _____________
+
+    def test_rtf_6_the_docs_page_does_not_claim_cli_refusals():
+        page = (ROOT / "docs" / "refusal-codes.md").read_text()
+>       assert "the CLI can refuse" not in page, page[:400]
+E       AssertionError: # Refusal codes
+E         
+E         Every reason code the pre-tool hook and the CLI can refuse with, generated
+E         from `cli/compass_pkg/refusals.py` by `compass _refusal --list`. Do not
+E         hand-edit the list below - regenerate it after any change to the registry,
+E         and `tests/test_refusal_registry.py` fails the build if it goes stale.
+E         
+E         A refusal always has three lines - `Blocked:`, `Why:`, `Fix:` - and ends
+E         with its code in
+E       assert 'the CLI can refuse' not in '# Refusal c...ommand>.\n\n'
+E         
+E         'the CLI can refuse' is contained here:
+E            hook and the CLI can refuse with, generated
+E         ?           ++++++++++++++++++
+E           from `cli/compass_pkg/refusals.py` by `compass _refusal --list`. Do not
+E           hand-edit the list below - regenerate it after any change to the registry,
+E           and `tests/test_refusal_registry.py` fails the build if it goes stale....
+E         
+E         ...Full output truncated (66 lines hidden), use '-vv' to show
+
+tests/test_refusal_registry.py:351: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_refusal_registry.py::test_rtf_6_the_docs_page_does_not_claim_cli_refusals

@@ -456,11 +456,8 @@ def _scan_units(path: Path) -> list[tuple[int, str]]:
         for lineno, line in enumerate(text.splitlines(), 1):
             if not in_python:
                 # ONLY a heredoc handed to a Python interpreter. Matching any
-                # uppercase delimiter also swallowed `cat >&2 <<EOF`, which is
-                # where every one of the hook's BLOCKED messages lives - 92 of
-                # pre-tool.sh's 627 lines, and precisely the text this rule's
-                # own comment calls the most user-facing Compass has. The scan
-                # passed green over them because they happen to be clean.
+                # uppercase delimiter would also swallow a `cat >&2 <<EOF`
+                # message in a hook - user-facing text this scan must read.
                 m = re.search(r"<<'?([A-Z_]{2,})'?\s*$", line.rstrip())
                 if m and re.search(r"\bpython3?\b|compass_python", line):
                     in_python, delim = True, m.group(1)

@@ -1,0 +1,26 @@
+........F.                                                               [100%]
+=================================== FAILURES ===================================
+____________ test_no_string_literal_in_the_cli_or_hooks_says_triage ____________
+
+    def test_no_string_literal_in_the_cli_or_hooks_says_triage():
+        """The whole class, not the listed files: every string literal in the
+        CLI and the hooks - what can reach a terminal. Comments name the
+        retired word freely and are not scanned."""
+        offenders = []
+        for path in _all_cli_and_hook_sources():
+            for lineno, line in enumerate(
+                    path.read_text(encoding="utf-8").splitlines(), start=1):
+                if line.strip().startswith("#") or line.strip() == _ALLOWED_LINE:
+                    continue
+                if _LITERAL.search(line):
+                    offenders.append(f"{path.relative_to(ROOT)}:{lineno}")
+>       assert not offenders, "string literals saying 'triage':\n  " + \
+            "\n  ".join(offenders)
+E       AssertionError: string literals saying 'triage':
+E           scripts/install.sh:275
+E           scripts/multiagent.sh:151
+E       assert not ['scripts/install.sh:275', 'scripts/multiagent.sh:151']
+
+tests/test_printed_strings_name_no_retired_word.py:209: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_printed_strings_name_no_retired_word.py::test_no_string_literal_in_the_cli_or_hooks_says_triage

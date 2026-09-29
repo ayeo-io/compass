@@ -134,8 +134,8 @@ def test_scn_b1_the_message_names_the_guardrail_and_the_remedy():
         err = _run(project).stderr
         assert "acceptance-before-code" in err and "acceptance-criteria.md" in err, err
         assert "scenarios" in err, err
-        assert "frame" in err.lower(), (
-            "a genuinely exploratory task should be told to re-frame - a Spike "
+        assert "/compass:assess --reassess" in err, (
+            "a genuinely exploratory task should be told to re-assess - a Spike "
             "suspends G2:\n" + err)
     finally:
         shutil.rmtree(project, ignore_errors=True)

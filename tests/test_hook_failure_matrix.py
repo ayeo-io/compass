@@ -281,7 +281,7 @@ def test_hfm_3_a_broken_config_names_the_config_as_the_fix(install):
         "enforcement:\n  code_globs: [unclosed\n")
     result = _hook(install, "packaging/app.cfg")
     text = " ".join(result.stderr.split())
-    assert "fix .compass/config.yml and re-try" in text, text
+    assert "fix .compass/config.yml and retry" in text, text
     assert "Fix the install" not in text
 
 
@@ -324,5 +324,5 @@ def test_cgs_1_code_globs_of_the_wrong_shape_refuses(install, value):
     result = _hook(install, "packaging/app.cfg")
     assert result.returncode == 2, (result.returncode, result.stderr)
     text = " ".join(result.stderr.split())
-    assert "fix .compass/config.yml and re-try" in text, text
+    assert "fix .compass/config.yml and retry" in text, text
     assert "a list of strings" in text, text

@@ -1,0 +1,25 @@
+{
+  "command": "python3 -m pytest -q tests/test_refusal_registry.py -k rtf_3 --cov-fail-under=0",
+  "argv": [
+    "python3",
+    "-m",
+    "pytest",
+    "-q",
+    "tests/test_refusal_registry.py",
+    "-k",
+    "rtf_3",
+    "--cov-fail-under=0"
+  ],
+  "scenario": "RTF-3",
+  "exit_code": 1,
+  "passed": false,
+  "timestamp": "2026-09-29T19:44:38+00:00",
+  "log_excerpt": "F                                                                        [100%]\n=================================== FAILURES ===================================\n________ test_rtf_3_a_long_parameter_is_cut_and_the_refusal_stays_short ________\n\n    def test_rtf_3_a_long_parameter_is_cut_and_the_refusal_stays_short():\n        long_detail = \" \".join([\"word\"] * 200)\n        text = render(\"config-invalid\", target=\"src/app.py\", tool=\"Edit\",\n                      detail=long_detail)\n>       assert len(text.split()) < 60, len(text.split())\nE       AssertionError: 218\nE       assert 218 < 60\nE        +  where 218 = len(['Blocked:', 'edit', 'to', 'src/app.py', '(tool:', 'Edit)', ...])\nE        +    where ['Blocked:', 'edit', 'to', 'src/app.py', '(tool:', 'Edit)', ...] = <built-in method split of str object at 0xcaf4d5e00>()\nE        +      where <built-in method split of str object at 0xcaf4d5e00> = \"Blocked: edit to src/app.py (tool: Edit)\\nWhy: '.compass/config.yml' could not be read: word word word word word word...word word word word word word word word word word word word\\nFix: fix .compass/config.yml and re-try. [config-invalid]\".split\n\ntests/test_refusal_registry.py:328: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_refusal_registry.py::test_rtf_3_a_long_parameter_is_cut_and_the_refusal_stays_short",
+  "_full_log": "F                                                                        [100%]\n=================================== FAILURES ===================================\n________ test_rtf_3_a_long_parameter_is_cut_and_the_refusal_stays_short ________\n\n    def test_rtf_3_a_long_parameter_is_cut_and_the_refusal_stays_short():\n        long_detail = \" \".join([\"word\"] * 200)\n        text = render(\"config-invalid\", target=\"src/app.py\", tool=\"Edit\",\n                      detail=long_detail)\n>       assert len(text.split()) < 60, len(text.split())\nE       AssertionError: 218\nE       assert 218 < 60\nE        +  where 218 = len(['Blocked:', 'edit', 'to', 'src/app.py', '(tool:', 'Edit)', ...])\nE        +    where ['Blocked:', 'edit', 'to', 'src/app.py', '(tool:', 'Edit)', ...] = <built-in method split of str object at 0xcaf4d5e00>()\nE        +      where <built-in method split of str object at 0xcaf4d5e00> = \"Blocked: edit to src/app.py (tool: Edit)\\nWhy: '.compass/config.yml' could not be read: word word word word word word...word word word word word word word word word word word word\\nFix: fix .compass/config.yml and re-try. [config-invalid]\".split\n\ntests/test_refusal_registry.py:328: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_refusal_registry.py::test_rtf_3_a_long_parameter_is_cut_and_the_refusal_stays_short\n",
+  "red_kind": "failure",
+  "tree_id": "3f5ac384b844b069f1ba768f142466b04ea3daa5",
+  "changes_id": "e5b1b50836ab187cae09e3f2180ffc2f3a223d28",
+  "changes_scope": "changed-files-and-declared-tests",
+  "record_id": "f999b3fc716c426e",
+  "content_digest": "sha256:a208f20325b19b0820da172a9fce5f6ac590ce1580e4145f591f2c25bf7ac126"
+}

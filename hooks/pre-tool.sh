@@ -98,14 +98,14 @@ fi
 
 # --- one registry, one shape, for every refusal ------------------------------
 # cli/compass_pkg/refusals.py is the one place a refusal's wording lives
-# (spec D38); `compass _refusal <code> key=value ...` is the CLI's front
-# door onto it, for docs generation and any external caller. This hook
+# (spec D38); `compass _refusal <code> key=value ...` is the CLI command
+# that reads it, for docs generation and any external caller. This hook
 # reaches the registry directly - `import compass_pkg.refusals`, the same
 # narrow import every other reader in this file makes - rather than through
 # `cli/compass`, which pulls in every command module at start-up and needs
 # newer syntax than this hook's other readers do. A refusal is printed on
-# every blocked call in every session, so it keeps the same low bar for
-# what has to run as the rest of the hook.
+# every blocked call in every session, so it needs no more to run than the
+# rest of the hook does.
 #
 # python3 existing but failing every call (not merely missing - a broken
 # install, exit 1/2/3/127 on anything) would otherwise render THIS call
@@ -130,16 +130,23 @@ print(render(code, **params))
 PYEOF
 )"
   status=$?
-  if [ -z "$out" ]; then
-    # Nothing at all came back - not even the underlying failure's own
-    # message (test_evidence_gaps.py's shim exits non-zero and prints
-    # nothing). A non-zero status WITH output is still shown as-is just
-    # below: it is real diagnostic text (an import-time "install is
-    # incomplete" message, a missing-helper notice), and more useful than
-    # this generic line.
-    printf 'Blocked: this edit\nWhy: python3 could not render the %s refusal (it exited %s).\nFix: check the python3 install (python3 --version), then retry. [%s]\n' \
-      "$code" "$status" "$code" >&2
-    return
+  if [ "$status" -ne 0 ] || [ -z "$out" ]; then
+    # The render failed. The refusal keeps its three lines and its code so
+    # a reader, or a search of docs/refusal-codes.md, still finds it; what
+    # python3 printed (an import error, an "install is incomplete" notice)
+    # follows, indented, because it names the real fault.
+    local target="this edit" tool="" arg
+    for arg in "$@"; do
+      case "$arg" in
+        target=*) target="edit to ${arg#target=}" ;;
+        tool=*)   tool="${arg#tool=}" ;;
+      esac
+    done
+    [ -n "$tool" ] && [ "$target" != "this edit" ] && target="$target (tool: $tool)"
+    printf 'Blocked: %s\nWhy: python3 could not render the %s refusal (it exited %s).\nFix: check the python3 install (python3 --version), then retry. [%s]\n' \
+      "$target" "$code" "$status" "$code" >&2
+    [ -n "$out" ] && printf '%s\n' "$out" | sed 's/^/    /' >&2
+    return 0
   fi
   printf '%s\n' "$out" >&2
 }
@@ -176,7 +183,7 @@ compass_reader_failed() {
     # so this is a byte-identical static copy of
     # render("python-missing", target=..., tool=...). Kept in step by
     # tests/test_refusal_registry.py::test_rtp_3_no_python3_names_python_missing_and_matches_the_registry.
-    printf 'Blocked: edit to %s (tool: %s)\nWhy: python3 was not found on the PATH, so Compass cannot check whether this edit is allowed.\nFix: install python3 (3.9+) or put it on PATH, then retry. [python-missing]\n' "$target" "$tool" >&2
+    printf 'Blocked: edit to %s (tool: %s)\nWhy: python3 was not found on the PATH, so Compass cannot check whether this edit is allowed.\nFix: install python3 (3.10+) or put it on PATH, then retry. [python-missing]\n' "$target" "$tool" >&2
   elif [ -n "$fix_override" ]; then
     emit_refusal config-invalid "target=$target" "tool=$tool" "detail=$errline"
   else
@@ -470,7 +477,7 @@ PYEOF
     set -e
     if [ "$glob_status" -eq 4 ]; then
       compass_reader_failed "enforcement.code_globs reader" "$glob_status" \
-        "$glob_err" "Fix .compass/config.yml and re-try."
+        "$glob_err" "Fix .compass/config.yml and retry."
     elif [ "$glob_status" -ne 0 ]; then
       compass_reader_failed "enforcement.code_globs reader" "$glob_status" "$glob_err"
     fi

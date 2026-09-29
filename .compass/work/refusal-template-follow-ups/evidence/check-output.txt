@@ -1,0 +1,2 @@
+PASS - 13 check(s) passed, 6 had nothing to check on 'refusal-template-follow-ups' (feature)
+[mode: enforced]

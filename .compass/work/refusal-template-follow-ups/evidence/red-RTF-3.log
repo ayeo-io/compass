@@ -1,0 +1,18 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+________ test_rtf_3_a_long_parameter_is_cut_and_the_refusal_stays_short ________
+
+    def test_rtf_3_a_long_parameter_is_cut_and_the_refusal_stays_short():
+        long_detail = " ".join(["word"] * 200)
+        text = render("config-invalid", target="src/app.py", tool="Edit",
+                      detail=long_detail)
+>       assert len(text.split()) < 60, len(text.split())
+E       AssertionError: 218
+E       assert 218 < 60
+E        +  where 218 = len(['Blocked:', 'edit', 'to', 'src/app.py', '(tool:', 'Edit)', ...])
+E        +    where ['Blocked:', 'edit', 'to', 'src/app.py', '(tool:', 'Edit)', ...] = <built-in method split of str object at 0xcaf4d5e00>()
+E        +      where <built-in method split of str object at 0xcaf4d5e00> = "Blocked: edit to src/app.py (tool: Edit)\nWhy: '.compass/config.yml' could not be read: word word word word word word...word word word word word word word word word word word word\nFix: fix .compass/config.yml and re-try. [config-invalid]".split
+
+tests/test_refusal_registry.py:328: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_refusal_registry.py::test_rtf_3_a_long_parameter_is_cut_and_the_refusal_stays_short

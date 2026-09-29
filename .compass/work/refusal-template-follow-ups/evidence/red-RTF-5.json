@@ -1,0 +1,23 @@
+{
+  "command": "python3 -m pytest -q tests/test_printed_strings_name_no_retired_word.py --cov-fail-under=0",
+  "argv": [
+    "python3",
+    "-m",
+    "pytest",
+    "-q",
+    "tests/test_printed_strings_name_no_retired_word.py",
+    "--cov-fail-under=0"
+  ],
+  "scenario": "RTF-5",
+  "exit_code": 1,
+  "passed": false,
+  "timestamp": "2026-09-29T19:44:41+00:00",
+  "log_excerpt": "=================================== FAILURES ===================================\n____________ test_no_string_literal_in_the_cli_or_hooks_says_triage ____________\n\n    def test_no_string_literal_in_the_cli_or_hooks_says_triage():\n        \"\"\"The whole class, not the listed files: every string literal in the\n        CLI and the hooks - what can reach a terminal. Comments name the\n        retired word freely and are not scanned.\"\"\"\n        offenders = []\n        for path in _all_cli_and_hook_sources():\n            for lineno, line in enumerate(\n                    path.read_text(encoding=\"utf-8\").splitlines(), start=1):\n                if line.strip().startswith(\"#\") or line.strip() == _ALLOWED_LINE:\n                    continue\n                if _LITERAL.search(line):\n                    offenders.append(f\"{path.relative_to(ROOT)}:{lineno}\")\n>       assert not offenders, \"string literals saying 'triage':\\n  \" + \\\n            \"\\n  \".join(offenders)\nE       AssertionError: string literals saying 'triage':\nE           scripts/install.sh:275\nE           scripts/multiagent.sh:151\nE       assert not ['scripts/install.sh:275', 'scripts/multiagent.sh:151']\n\ntests/test_printed_strings_name_no_retired_word.py:209: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_printed_strings_name_no_retired_word.py::test_no_string_literal_in_the_cli_or_hooks_says_triage",
+  "_full_log": "........F.                                                               [100%]\n=================================== FAILURES ===================================\n____________ test_no_string_literal_in_the_cli_or_hooks_says_triage ____________\n\n    def test_no_string_literal_in_the_cli_or_hooks_says_triage():\n        \"\"\"The whole class, not the listed files: every string literal in the\n        CLI and the hooks - what can reach a terminal. Comments name the\n        retired word freely and are not scanned.\"\"\"\n        offenders = []\n        for path in _all_cli_and_hook_sources():\n            for lineno, line in enumerate(\n                    path.read_text(encoding=\"utf-8\").splitlines(), start=1):\n                if line.strip().startswith(\"#\") or line.strip() == _ALLOWED_LINE:\n                    continue\n                if _LITERAL.search(line):\n                    offenders.append(f\"{path.relative_to(ROOT)}:{lineno}\")\n>       assert not offenders, \"string literals saying 'triage':\\n  \" + \\\n            \"\\n  \".join(offenders)\nE       AssertionError: string literals saying 'triage':\nE           scripts/install.sh:275\nE           scripts/multiagent.sh:151\nE       assert not ['scripts/install.sh:275', 'scripts/multiagent.sh:151']\n\ntests/test_printed_strings_name_no_retired_word.py:209: AssertionError\n=========================== short test summary info ============================\nFAILED tests/test_printed_strings_name_no_retired_word.py::test_no_string_literal_in_the_cli_or_hooks_says_triage\n",
+  "red_kind": "failure",
+  "tree_id": "3f5ac384b844b069f1ba768f142466b04ea3daa5",
+  "changes_id": "e5b1b50836ab187cae09e3f2180ffc2f3a223d28",
+  "changes_scope": "changed-files-and-declared-tests",
+  "record_id": "3b6bb8f33f1b437a",
+  "content_digest": "sha256:975df6f29d2a40591ad100109bf8ceb31701b9cf5dc3e3b96a01ad8272e809d6"
+}

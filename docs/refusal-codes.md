@@ -1,6 +1,6 @@
 # Refusal codes
 
-Every reason code the pre-tool hook and the CLI can refuse with, generated
+Every reason code the pre-tool hook can refuse with, generated
 from `cli/compass_pkg/refusals.py` by `compass _refusal --list`. Do not
 hand-edit the list below - regenerate it after any change to the registry,
 and `tests/test_refusal_registry.py` fails the build if it goes stale.
@@ -20,13 +20,13 @@ code from a refusal you hit.
 
 **Blocked:** edit to {target} (tool: {tool})
 **Why:** '.compass/config.yml' could not be read: {detail}
-**Fix:** fix .compass/config.yml and re-try.
+**Fix:** fix .compass/config.yml and retry.
 
 ### `no-acceptance-criteria`
 
 **Blocked:** edit to {target} (tool: {tool})
 **Why:** the acceptance-before-code guardrail blocks this: define: full is set but manifest.yml has no scenarios.
-**Fix:** add the scenarios to acceptance-criteria.md and manifest.yml (compass scenario add), or re-frame as a spike if this is exploratory.
+**Fix:** add the scenarios to acceptance-criteria.md and manifest.yml (compass scenario add), or run /compass:assess --reassess if this is exploratory.
 
 ### `no-delivery-approach`
 
@@ -38,7 +38,7 @@ code from a refusal you hit.
 
 **Blocked:** edit to {target} (tool: {tool}, guarded by {guard})
 **Why:** no failing test is on record for issue '{slug}' - the red-before-green strategy applies here.
-**Fix:** run compass tdd-red -- <your failing test command>, then retry this edit.
+**Fix:** run compass tdd-red --scenario <id> -- <your failing test command>, then retry this edit.
 
 ### `not-initialised`
 
@@ -50,23 +50,22 @@ code from a refusal you hit.
 
 **Blocked:** edit to {target} (tool: {tool})
 **Why:** python3 was not found on the PATH, so Compass cannot check whether this edit is allowed.
-**Fix:** install python3 (3.9+) or put it on PATH, then retry.
+**Fix:** install python3 (3.10+) or put it on PATH, then retry.
 
 ### `reader-failed`
 
 **Blocked:** edit to {target} (tool: {tool})
 **Why:** the {reader} could not run. {cause}{detail}
-**Fix:** fix the install and re-try - this is not about your edit.
+**Fix:** fix the install and retry - this is not about your edit.
 
 ### `red-marker-no-record`
 
 **Blocked:** this edit
 **Why:** the .red marker for issue '{slug}' has no matching record in evidence/ - the marker alone is not evidence.
-**Fix:** run compass tdd-red -- <your failing test command>.
+**Fix:** run compass tdd-red --scenario <id> -- <your failing test command>.
 
 ### `red-unsigned`
 
 **Blocked:** this edit
 **Why:** the red record for issue '{slug}' carries no identity - no content_digest - and this project needs one for records written since records_signed_since: {since_date}.
-**Fix:** run compass tdd-red -- <your failing test command>.
-
+**Fix:** run compass tdd-red --scenario <id> -- <your failing test command>.

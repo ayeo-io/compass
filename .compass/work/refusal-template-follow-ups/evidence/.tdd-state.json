@@ -1,0 +1,37 @@
+{
+  "RTF-1": {
+    "tree_hash": "104f12bccb90f42460530a50c1b7a8728ac1325c+befe8d371e58ed86c6c13f6ddc63a4f9fbcb372596ae6b3017ca96e33f4a98ed+8230eebf9d1377799534e2a983398bc6a4431974",
+    "attempts": 2,
+    "command": "python3 -m pytest -q tests/test_refusal_registry.py tests/test_printed_strings_name_no_retired_word.py tests/test_terminology.py tests/test_hook_failure_matrix.py --cov-fail-under=0"
+  },
+  "RTF-2": {
+    "tree_hash": "104f12bccb90f42460530a50c1b7a8728ac1325c+befe8d371e58ed86c6c13f6ddc63a4f9fbcb372596ae6b3017ca96e33f4a98ed+8230eebf9d1377799534e2a983398bc6a4431974",
+    "attempts": 2,
+    "command": "python3 -m pytest -q tests/test_refusal_registry.py tests/test_printed_strings_name_no_retired_word.py tests/test_terminology.py tests/test_hook_failure_matrix.py --cov-fail-under=0"
+  },
+  "RTF-3": {
+    "tree_hash": "104f12bccb90f42460530a50c1b7a8728ac1325c+befe8d371e58ed86c6c13f6ddc63a4f9fbcb372596ae6b3017ca96e33f4a98ed+8230eebf9d1377799534e2a983398bc6a4431974",
+    "attempts": 2,
+    "command": "python3 -m pytest -q tests/test_refusal_registry.py tests/test_printed_strings_name_no_retired_word.py tests/test_terminology.py tests/test_hook_failure_matrix.py --cov-fail-under=0"
+  },
+  "RTF-4": {
+    "tree_hash": "104f12bccb90f42460530a50c1b7a8728ac1325c+befe8d371e58ed86c6c13f6ddc63a4f9fbcb372596ae6b3017ca96e33f4a98ed+8230eebf9d1377799534e2a983398bc6a4431974",
+    "attempts": 2,
+    "command": "python3 -m pytest -q tests/test_refusal_registry.py tests/test_printed_strings_name_no_retired_word.py tests/test_terminology.py tests/test_hook_failure_matrix.py --cov-fail-under=0"
+  },
+  "RTF-5": {
+    "tree_hash": "104f12bccb90f42460530a50c1b7a8728ac1325c+befe8d371e58ed86c6c13f6ddc63a4f9fbcb372596ae6b3017ca96e33f4a98ed+8230eebf9d1377799534e2a983398bc6a4431974",
+    "attempts": 2,
+    "command": "python3 -m pytest -q tests/test_refusal_registry.py tests/test_printed_strings_name_no_retired_word.py tests/test_terminology.py tests/test_hook_failure_matrix.py --cov-fail-under=0"
+  },
+  "RTF-6": {
+    "tree_hash": "104f12bccb90f42460530a50c1b7a8728ac1325c+befe8d371e58ed86c6c13f6ddc63a4f9fbcb372596ae6b3017ca96e33f4a98ed+8230eebf9d1377799534e2a983398bc6a4431974",
+    "attempts": 2,
+    "command": "python3 -m pytest -q tests/test_refusal_registry.py tests/test_printed_strings_name_no_retired_word.py tests/test_terminology.py tests/test_hook_failure_matrix.py --cov-fail-under=0"
+  },
+  "": {
+    "tree_hash": "20ec112d193caed11019a1b40f50fe5dd2defa6e+4a5115bf4a591e58528a8e7cb6f4c27967266c207c4dfbffac90f5eea1f3f116+d2eea6d23b00d230ff3ffc58611bf0eb0d306b74",
+    "attempts": 1,
+    "command": "python3 -m pytest -q -p no:cacheprovider --cov-fail-under=0"
+  }
+}

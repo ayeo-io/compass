@@ -1,0 +1,21 @@
+.F.                                                                      [100%]
+=================================== FAILURES ===================================
+________ test_rtf_4_the_registry_comment_claims_only_what_render_checks ________
+
+    def test_rtf_4_the_registry_comment_claims_only_what_render_checks():
+        source = (ROOT / "cli" / "compass_pkg" / "refusals.py").read_text()
+>       assert "passes a\n#: field the template does not use" not in source
+E       AssertionError: assert 'passes a\n#...does not use' not in '# =========...  return 0\n'
+E         
+E         'passes a\n#: field...mplate does not use' is contained here:
+E           site that passes a
+E           #: field the template does not use, or omits one it does, fails loudly -
+E           #: str.format() raises rather than silently dropping text - because that
+E           #: means the call site and the registry have drifted apart.
+E           REFUSALS: dict[str, dict[str, str]] = {...
+E         
+E         ...Full output truncated (123 lines hidden), use '-vv' to show
+
+tests/test_refusal_registry.py:333: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_refusal_registry.py::test_rtf_4_the_registry_comment_claims_only_what_render_checks

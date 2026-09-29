@@ -29,12 +29,12 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given HOME points at an empty directory, when the quick-fix verb tests run, then every finish test commits and passes
+### Given an issue with no record of its start state, when `finish` runs w
 
-- **Scenario id:** `QGI-1`
+- **Scenario id:** `FUU-5`
 - **Intent:** `INT-1`
-- **Source issue:** `quick-fix-tests-need-a-git-identity`
-- **Landed:** 2026-09-28
+- **Source issue:** `finish-commits-unrelated-untracked-files`
+- **Landed:** 2026-09-29
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
 
@@ -43,19 +43,19 @@
 - **Source issue:** `framework-field-feedback`
 - **Landed:** 2026-06-23
 
-### Six scenarios cover the failure modes
+### Given a new source file created after `start` and a new test file the 
 
-- **Scenario id:** `SPT-2`
+- **Scenario id:** `FUU-4`
 - **Intent:** `INT-2`
-- **Source issue:** `skill-prose-pressure-tests`
-- **Landed:** 2026-09-27
+- **Source issue:** `finish-commits-unrelated-untracked-files`
+- **Landed:** 2026-09-29
 
-### Behaviours are scored from actions and artifacts
+### Given any successful `finish`, when it prints its hand-off, then the h
 
-- **Scenario id:** `SPT-3`
+- **Scenario id:** `FUU-6`
 - **Intent:** `INT-3`
-- **Source issue:** `skill-prose-pressure-tests`
-- **Landed:** 2026-09-27
+- **Source issue:** `finish-commits-unrelated-untracked-files`
+- **Landed:** 2026-09-29
 
 ### The releasing guide requires a run
 
@@ -8918,6 +8918,20 @@
 - **Source issue:** `skill-prose-pressure-tests`
 - **Landed:** 2026-09-27
 
+### Six scenarios cover the failure modes _(archived)_
+
+- **Scenario id:** `SPT-2`
+- **Intent:** `INT-2`
+- **Source issue:** `skill-prose-pressure-tests`
+- **Landed:** 2026-09-27
+
+### Behaviours are scored from actions and artifacts _(archived)_
+
+- **Scenario id:** `SPT-3`
+- **Intent:** `INT-3`
+- **Source issue:** `skill-prose-pressure-tests`
+- **Landed:** 2026-09-27
+
 ### An edit under a nested .compass/ changes the source hash _(archived)_
 
 - **Scenario id:** `SHN-1`
@@ -9274,3 +9288,31 @@
 - **Intent:** `INT-1`
 - **Source issue:** `quick-fix-finish-gaps`
 - **Landed:** 2026-09-28
+
+### Given HOME points at an empty directory, when the quick-fix verb tests run, then every finish test commits and passes _(archived)_
+
+- **Scenario id:** `QGI-1`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-tests-need-a-git-identity`
+- **Landed:** 2026-09-28
+
+### Given an untracked file present before `quick-fix start` that nobody t _(archived)_
+
+- **Scenario id:** `FUU-1`
+- **Intent:** `INT-1`
+- **Source issue:** `finish-commits-unrelated-untracked-files`
+- **Landed:** 2026-09-29
+
+### Given a tracked file already modified before `quick-fix start` that no _(archived)_
+
+- **Scenario id:** `FUU-2`
+- **Intent:** `INT-1`
+- **Source issue:** `finish-commits-unrelated-untracked-files`
+- **Landed:** 2026-09-29
+
+### Given a file present before `start` that the agent then traced with `c _(archived)_
+
+- **Scenario id:** `FUU-3`
+- **Intent:** `INT-1`
+- **Source issue:** `finish-commits-unrelated-untracked-files`
+- **Landed:** 2026-09-29

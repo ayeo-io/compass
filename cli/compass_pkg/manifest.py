@@ -92,7 +92,8 @@ def _refuse_stale_green(task, task_dir, slug, root, at_commit=None):
     """Refuse `ship-commit` if a file the issue changed, or a test it
     declares, was edited after the newest bound green. It reuses the
     comparison `compass check` uses for a landed issue
-    (`binding._check_landed`), on the tree the commit will hold.
+    (`binding._check_landed`), on the tree the commit will hold: the
+    staged tree, judged right before each commit.
 
     A landed issue is not judged: its green was judged when it landed, and
     a later edit to one of its files belongs to later work.
@@ -130,8 +131,9 @@ def _refuse_stale_green(task, task_dir, slug, root, at_commit=None):
     raise CompassError(
         "compass ship-commit: refusing to commit - %d of issue '%s's "
         "changed file(s) or declared test(s) changed after %s's green:\n  "
-        "%s\n\nRe-run `compass tdd-green` on the same test command, then "
-        "ship again."
+        "%s\n\nIf the tested version is on disk but not staged, stage it "
+        "with `git add`. If the files changed after the green, re-run "
+        "`compass tdd-green` on the same test command. Then ship again."
         % (len(changed), slug, record_path,
            "\n  ".join(changed) if changed
            else "(the issue's files - the exact path could not be narrowed)")
@@ -290,11 +292,21 @@ def cmd_land_commit(args):
     except (CompassError, OSError, KeyError):
         pass
 
-    if slug is not None:
-        # Judge what is staged, which is what commits - not the disk copy.
-        staged_tree = _git(["write-tree"], cwd).stdout.strip() or None
+    def _judge_index():
+        """Judge what is staged at this moment, which is what the next
+        commit holds. Called right before each commit: the pre-commit step
+        and the retry re-stage from disk, so a check made earlier would
+        have judged a copy that is no longer the one committed."""
+        if slug is None:
+            return
+        tree = _git(["write-tree"], cwd)
+        if tree.returncode != 0 or not tree.stdout.strip():
+            raise CompassError(
+                "compass ship-commit: git could not write the staged tree, so "
+                "the staged files cannot be checked against the green - "
+                "nothing was committed.\n" + (tree.stderr or "").strip())
         _refuse_stale_green(_scope_task, _scope_dir, slug, cwd,
-                            at_commit=staged_tree)
+                            at_commit=tree.stdout.strip())
 
     staged_now = [n for n in _git(["diff", "--cached", "--name-only", "-z"],
                                   cwd).stdout.split("\0") if n]
@@ -359,6 +371,7 @@ def cmd_land_commit(args):
             _restage_owned()  # re-stage what the hooks rewrote, scoped
 
     # First try at the commit.
+    _judge_index()
     c1 = _git(["commit", "-m", msg], cwd)
     head_after = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
 
@@ -369,6 +382,7 @@ def cmd_land_commit(args):
         _restage_owned()
         retried = True
         if _git(["diff", "--cached", "--quiet"], cwd).returncode != 0:
+            _judge_index()
             _git(["commit", "-m", msg], cwd)
             head_after = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
 

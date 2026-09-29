@@ -220,3 +220,47 @@ def test_sjs6_the_safety_contract_states_the_three_cases():
     assert "a test the scenario declares is committed" in flat.lower()
     assert "digest record" in flat
     assert "tracing an already-tracked file changes only `changes_id`" in flat.lower()
+
+
+def test_sjs1_a_stale_disk_copy_does_not_land_through_a_restage(repo, tmp_path):
+    """With pre-commit set up, ship-commit re-stages the paths after the
+    hooks run, which puts the disk copy in the index. The check must judge
+    what is staged at the moment of the commit, not before the re-stage."""
+    bin_dir = tmp_path / "fakebin"
+    bin_dir.mkdir()
+    fake = bin_dir / "pre-commit"
+    fake.write_text("#!/bin/sh\nexit 0\n")
+    fake.chmod(0o755)
+    (repo / ".pre-commit-config.yaml").write_text("repos: []\n")
+    _git(repo, "add", ".pre-commit-config.yaml")
+    _git(repo, "commit", "-q", "-m", "hooks")
+    (repo / "src" / "new.py").write_text("y = 1\n")
+    _green(repo)
+    _git(repo, "add", "src/new.py")                    # the tested copy
+    (repo / "src" / "new.py").write_text("y = 9\n")   # untested, on disk
+    head_before = _git(repo, "rev-parse", "HEAD")
+
+    env = {**os.environ, "CLAUDE_PROJECT_DIR": str(repo),
+           "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}"}
+    result = subprocess.run([sys.executable, str(CLI), "ship-commit",
+                             "--issue", SLUG, "-m", "land it"], cwd=repo,
+                            capture_output=True, text=True, env=env)
+    if result.returncode == 0:
+        assert _git(repo, "show", "HEAD:src/new.py") == "y = 1", (
+            "the untested disk copy was committed")
+    else:
+        assert _git(repo, "rev-parse", "HEAD") == head_before
+
+
+def test_sjs1_a_traced_symlink_can_ship(repo):
+    (repo / "src" / "new.py").write_text("y = 1\n")
+    os.symlink("new.py", repo / "src" / "link.py")
+    path = repo / ".compass" / "work" / SLUG / "manifest.yml"
+    data = yaml.safe_load(path.read_text())
+    data["changed_files"].append({"path": "src/link.py", "scenarios": ["S-1"]})
+    path.write_text(yaml.safe_dump(data, sort_keys=False))
+    _green(repo)
+    _git(repo, "add", "src/new.py", "src/link.py")
+
+    result = _cli(repo, "ship-commit", "--issue", SLUG, "-m", "land it")
+    assert result.returncode == 0, result.stdout + result.stderr

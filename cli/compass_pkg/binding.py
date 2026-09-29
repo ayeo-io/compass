@@ -162,7 +162,9 @@ def _changes_id_at(project_root, commit, claimed):
             continue
         meta, _, name = record.partition("\t")
         mode, kind, blob = meta.split()
-        if kind == "blob":
+        # A symlink is left out, as the green's own tree leaves it out;
+        # counting it on one side only would make the two never match.
+        if kind == "blob" and mode != "120000":
             steps.append((["update-index", "--add", "--cacheinfo",
                            "%s,%s,%s" % (mode, blob, name)], True))
     return _in_temp_index(top, steps)

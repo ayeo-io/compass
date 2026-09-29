@@ -35,7 +35,7 @@ import fnmatch
 import re as _re
 from compass_pkg.terminal import say
 from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, normalize_spine, now_iso, resolve_issue_dir, save_manifest
-from compass_pkg.binding import changes_id, changes_paths, _changes_id_at, _newest_bound_record
+from compass_pkg.binding import changes_paths, _changes_id_at, _newest_bound_record
 
 
 
@@ -88,46 +88,50 @@ def _out_of_scope(staged, owned, artifact_dir):
     )
 
 
-def _refuse_stale_green(task, task_dir, slug, root, at_commit=None):
-    """Refuse `ship-commit` if a file the issue changed, or a test it
-    declares, was edited after the newest bound green. It reuses the
-    comparison `compass check` uses for a landed issue
-    (`binding._check_landed`), on the tree the commit will hold: the
-    staged tree, judged right before each commit.
+def _stale_paths(task, task_dir, root, at_commit):
+    """The issue files that differ, in `at_commit`, from what the newest
+    bound green tested, as (record path, paths), or None when there is
+    nothing to judge or nothing differs.
+
+    It reuses the comparison `compass check` uses for a landed issue
+    (`binding._check_landed`). `at_commit` is a tree or commit: the index's
+    tree before a commit, the new commit after it, or `HEAD` for a land
+    that makes no commit.
 
     A landed issue is not judged: its green was judged when it landed, and
-    a later edit to one of its files belongs to later work.
-
-    Judges only once every gate has passed, and only when the newest record
-    carries a `changes_id`; a record without one, or an issue with no bound
-    record, is not judged - `compass check` does not judge one either.
-
-    `at_commit` names the tree to judge: the index's tree, written with
-    `git write-tree`, for the commit ship-commit is about to make, or a
-    commit id for the files a multiagent land already committed. None reads
-    the files from disk.
+    a later edit to one of its files belongs to later work. Nothing is
+    judged until every gate has passed, or when the newest record carries
+    no `changes_id` - `compass check` does not judge those either.
     """
     if task.get("status") == "landed":
-        return
+        return None
     gates = [g for g in task.get("gates") or [] if isinstance(g, dict)]
     if not gates or not all(g.get("status") == "pass" for g in gates):
-        return
+        return None
     newest = _newest_bound_record(task, task_dir)
     if newest is None:
-        return
+        return None
     record_path, record = newest
     then = record.get("changes_id")
     if not then:
-        return
+        return None
     paths = changes_paths(task, record)
-    now = (_changes_id_at(root, at_commit, paths) if at_commit
-           else changes_id(root, paths))
+    now = _changes_id_at(root, at_commit, paths)
     if now is None or now == then:
-        return
+        return None
     changed = [p for p in paths
                if _changes_id_at(root, then, [p]) !=
-               (_changes_id_at(root, at_commit, [p]) if at_commit
-                else changes_id(root, [p]))]
+               _changes_id_at(root, at_commit, [p])]
+    return record_path, changed
+
+
+def _refuse_stale_green(task, task_dir, slug, root, at_commit):
+    """Refuse `ship-commit` when `at_commit` holds issue files that differ
+    from what the newest bound green tested."""
+    stale = _stale_paths(task, task_dir, root, at_commit)
+    if stale is None:
+        return
+    record_path, changed = stale
     raise CompassError(
         "compass ship-commit: refusing to commit - %d of issue '%s's "
         "changed file(s) or declared test(s) changed after %s's green:\n  "
@@ -334,8 +338,22 @@ def cmd_land_commit(args):
 
     head_before = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
 
-    def _restage_owned():
+    def _disk_hashes():
+        """Each staged path's content on disk, as git would store it."""
+        out = {}
+        for path in sorted(set(staged_now) | set(files)):
+            if os.path.isfile(os.path.join(cwd, path)):
+                h = _git(["--literal-pathspecs", "hash-object", "--", path], cwd)
+                out[path] = h.stdout.strip() if h.returncode == 0 else None
+        return out
+
+    def _restage_owned(since):
         """Re-stage this issue's paths after a hook rewrote them.
+
+        Only a path whose disk content changed since `since` - the hashes
+        taken before the hooks ran - is re-staged. Adding every staged path
+        would put an unrelated disk edit over the tested copy the user
+        staged.
 
         Never `git add -A`. The set is what was already staged for this land,
         plus the issue's artifact directory - so a hook that reformats fifty
@@ -353,10 +371,14 @@ def cmd_land_commit(args):
 
         Recovering from a hook rewrite only needs what was already staged.
         """
-        for path in sorted(set(staged_now) | set(files)):
-            _git(["--literal-pathspecs", "add", "--", path], cwd)
+        now = _disk_hashes()
+        for path in sorted(now):
+            if now[path] != since.get(path):
+                _git(["--literal-pathspecs", "add", "--", path], cwd)
         if os.path.isdir(os.path.join(cwd, artifact_dir)):
             _git(["--literal-pathspecs", "add", "--", artifact_dir], cwd)
+
+    before_hooks = _disk_hashes()
 
     # (a) best-effort clean-first: only if the pre-commit framework is set up.
     if shutil.which("pre-commit") and os.path.isfile(
@@ -368,10 +390,11 @@ def cmd_land_commit(args):
             names = ["./" + n if n.startswith("-") else n for n in names]
             subprocess.run(["pre-commit", "run", "--files", *names],
                            cwd=cwd, capture_output=True, text=True)
-            _restage_owned()  # re-stage what the hooks rewrote, scoped
+            _restage_owned(before_hooks)  # what the hooks rewrote, scoped
 
     # First try at the commit.
     _judge_index()
+    before_commit = _disk_hashes()
     c1 = _git(["commit", "-m", msg], cwd)
     head_after = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
 
@@ -379,7 +402,7 @@ def cmd_land_commit(args):
     if head_after == head_before:
         # (b) the commit no-op'd - a hook likely auto-fixed and aborted. Stage
         # whatever it rewrote and retry exactly once, within the issue's scope.
-        _restage_owned()
+        _restage_owned(before_commit)
         retried = True
         if _git(["diff", "--cached", "--quiet"], cwd).returncode != 0:
             _judge_index()
@@ -422,6 +445,22 @@ def cmd_land_commit(args):
                             "re-run, or set status by hand if this issue "
                             "genuinely lands unverified."
                             % (len(unmet), ", ".join(unmet)))
+                    elif _stale_paths(task, task_dir, cwd, head_after):
+                        # A git hook can stage a file during the commit
+                        # itself, after the last check.
+                        _, changed = _stale_paths(task, task_dir, cwd,
+                                                  head_after)
+                        print(
+                            f"compass ship-commit: committed. HEAD "
+                            f"{head_before[:8]} -> {head_after[:8]}\n  NOT "
+                            f"marked landed: the commit holds issue file(s) "
+                            f"that differ from what the green tested - a "
+                            f"hook changed them during the commit:\n    "
+                            + "\n    ".join(changed or ["(not narrowed)"])
+                            + "\n  Re-run `compass tdd-green` on the "
+                            "committed files, then `compass ship-commit "
+                            f"--issue {os.path.basename(str(task_dir))}`.")
+                        return 2
                     else:
                         task["status"] = "landed"
                         task["land_timestamp"] = now_iso()

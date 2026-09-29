@@ -409,7 +409,14 @@ def _reusable_green(task_dir, scenario, command, tree_ids):
     # Compare the argument lists, not their joined text: `sh -c "a b"` and
     # `sh -c a b` join alike and run differently. A record with no list is
     # not reused.
-    if record.get("argv") != _neutralise_coverage(list(command)):
+    wanted = _neutralise_coverage(list(command))
+    if "argv" in record:
+        if record.get("argv") != wanted:
+            return False
+    elif record.get("command") != " ".join(wanted):
+        # A green written before greens carried `argv` has only the joined
+        # text. Rerunning it would be flagged as a rerun, so it is reused
+        # when the text matches, as it was before.
         return False
     old_tree, old_changes = record.get("tree_id"), record.get("changes_id")
     new_tree, new_changes = tree_ids.get("tree_id"), tree_ids.get("changes_id")

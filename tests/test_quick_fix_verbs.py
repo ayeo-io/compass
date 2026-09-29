@@ -604,6 +604,55 @@ def test_fse3_every_commits_line_has_the_same_spacing(repo):
     assert len({l.index(":") for l in lines}) == 1, lines
 
 
+def test_sjs2_a_differently_split_command_is_not_reused(repo):
+    """Both commands join to `sh -c test a = a`. The first passes; the
+    second runs `test` with no arguments and fails. Reusing the first
+    green for the second would clear the gates on a command that fails."""
+    slug = "greet-split"
+    _ready_to_finish(repo, slug)
+    first = _finish(repo, slug, "--no-commit",
+                    command=["--", "sh", "-c", "test a = a"])
+    assert first.returncode == 0, first.stdout + first.stderr
+    second = _finish(repo, slug, "--no-commit",
+                     command=["--", "sh", "-c", "test", "a", "=", "a"])
+    assert second.returncode != 0, second.stdout
+
+
+def test_sjs5_finish_lists_the_files_a_land_at_head_holds(repo):
+    """When the agent committed the fix itself, `ship-commit` makes no
+    commit and lands at HEAD; finish lists that commit's files, not the
+    living spec's."""
+    slug = "greet-precommitted"
+    (repo / ".gitignore").write_text(".compass/\ndocs/\n")
+    _git(repo, "add", ".gitignore")
+    _git(repo, "commit", "-q", "-m", "ignore records")
+    _ready_to_finish(repo, slug)
+    _git(repo, "add", "data/greeting.txt")
+    _git(repo, "commit", "-q", "-m", "the fix, committed by hand")
+    finish = _finish(repo, slug)
+    assert finish.returncode == 0, finish.stdout + finish.stderr
+    listed = [l.split(":", 1)[1].strip() for l in finish.stdout.splitlines()
+              if l.strip().startswith("commits")]
+    assert "data/greeting.txt" in listed, listed
+
+
+def test_sjs5_a_name_with_a_control_character_is_shown_quoted(repo):
+    _ready_to_finish(repo, "greet-newline")
+    (repo / "data" / "new\nline.txt").write_text("odd\n")
+    finish = _finish(repo, "greet-newline")
+    assert finish.returncode == 0, finish.stdout + finish.stderr
+    assert "'data/new\\nline.txt'" in finish.stdout, finish.stdout
+
+
+def test_sjs6_the_start_record_is_gone_after_a_land(repo):
+    _ready_to_finish(repo, "greet-cleanup")
+    record = repo / _git(repo, "rev-parse", "--git-path",
+                         "compass/start-state/greet-cleanup.json")
+    assert record.exists()
+    assert _finish(repo, "greet-cleanup").returncode == 0
+    assert not record.exists()
+
+
 # --- QFO-5 ---------------------------------------------------------------
 
 def test_qfo5_finish_refuses_when_check_fails(repo):

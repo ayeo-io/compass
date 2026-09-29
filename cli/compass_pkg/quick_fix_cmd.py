@@ -328,7 +328,9 @@ def _git_changed_paths(root):
     """Every changed path git sees, relative to `root`, the project root
     (QFG-2), less generated caches. Read with `-z`, so a name with spaces,
     quotes or non-ASCII characters arrives as the file's real name, not
-    git's escaped form."""
+    git's escaped form. `git status` names paths from the repository top;
+    joining them to `root` is right because `compass init` puts `.compass/`
+    there, so the outside-the-root guard below only fires if it is not."""
     out = subprocess.run(
         ["git", "status", "--porcelain", "-z", "--untracked-files=all"],
         cwd=root, capture_output=True, text=True, check=True,
@@ -390,7 +392,9 @@ def _reusable_green(task_dir, scenario, command, tree_ids):
             record_path = e["path"]  # upserted per scenario - last one wins
     if not record_path:
         return False
-    full_path = os.path.join(task_dir, record_path)
+    full_path = os.path.realpath(os.path.join(task_dir, record_path))
+    if not full_path.startswith(os.path.realpath(task_dir) + os.sep):
+        return False  # a record path outside the issue is not this issue's
     try:
         with open(full_path, "r", encoding="utf-8") as fh:
             record = json.load(fh)
@@ -401,8 +405,10 @@ def _reusable_green(task_dir, scenario, command, tree_ids):
     # `tdd-green` stores the command after neutralising a coverage floor for
     # a recognised pytest micro-run (`tdd._neutralise_coverage`); compare
     # against the same form, or an identical command would look changed.
-    stored_command = " ".join(_neutralise_coverage(list(command)))
-    if record.get("command") != stored_command:
+    # Compare the argument lists, not their joined text: `sh -c "a b"` and
+    # `sh -c a b` join alike and run differently. A record with no list is
+    # not reused.
+    if record.get("argv") != _neutralise_coverage(list(command)):
         return False
     old_tree, old_changes = record.get("tree_id"), record.get("changes_id")
     new_tree, new_changes = tree_ids.get("tree_id"), tree_ids.get("changes_id")
@@ -554,12 +560,11 @@ def _refusal(refused, scenario_id):
     return "\n".join(lines)
 
 
-def _commit_files(head_before, root):
-    """The files of the commit `ship-commit` just made: the first commit
-    after `head_before`, read from git rather than from printed text."""
-    commits = subprocess.run(
-        ["git", "rev-list", "--reverse", f"{head_before}..HEAD"],
-        cwd=root, capture_output=True, text=True).stdout.split()
+def _commit_files(land_commit, root):
+    """The files of the commit the issue landed in, as `ship-commit`
+    recorded it: the commit it made, or HEAD when the fix was already
+    committed. Read from git, not from printed text."""
+    commits = [land_commit] if land_commit else []
     if not commits:
         return []
     out = subprocess.run(
@@ -568,13 +573,19 @@ def _commit_files(head_before, root):
     return [f for f in out.split("\0") if f.strip()]
 
 
+def _shown(name):
+    """A name as the reader can tell it apart: quoted when it holds a
+    control character, which the terminal would otherwise show as a space."""
+    return repr(name) if any(ord(c) < 32 for c in name) else name
+
+
 def _commit_lines(files, slug):
     """One line per committed file outside the issue's own records, so none
     is cut off, and the records as one line with their count."""
     records = f".compass/work/{slug}/"
     own = [f for f in files if f.startswith(records)]
     rest = [f for f in files if not f.startswith(records)]
-    lines = [f"commits : {f}" for f in rest]
+    lines = [f"commits : {_shown(f)}" for f in rest]
     if own:
         lines.append(f"commits : {records} ({len(own)} record file(s))")
     return lines
@@ -763,7 +774,14 @@ def cmd_quick_fix_finish(args):
                                  files=stage_paths)
         ship_tail_lines = [ln for ln in ship_out.strip().splitlines() if ln.strip()]
         ship_tail = ship_tail_lines[-1] if ship_tail_lines else "commit recorded"
-        committed_files = _commit_files(head_before, project_root)
+        landed, _ = load_manifest(task_dir)
+        committed_files = _commit_files(landed.get("land_commit"), project_root)
+        # The start record has done its work; a later issue with this slug
+        # must not read it.
+        try:
+            os.remove(_record_path(project_root, slug))
+        except (OSError, subprocess.CalledProcessError):
+            pass
 
         return say(
             args,

@@ -125,7 +125,7 @@ def build_parser():
                      help="what kind of re-assessment this is (default: "
                           "judgement). Only judgement feeds the retrospective "
                           "re-sizing signal - a policy correction is not "
-                          "triage mis-reading the work.")
+                          "assessment mis-reading the work.")
     pre.add_argument("--json", action="store_true", help="emit JSON")
     pre.set_defaults(func=cmd_route_evaluate, output_kind="hand-off")
 
@@ -164,7 +164,7 @@ def build_parser():
 
     pcal = sub.add_parser("retro",
                           help="the retrospective signal - re-assessment "
-                               "patterns across all issues (is triage "
+                               "patterns across all issues (is assessment "
                                "well-sized?)")
     pcal.add_argument(
         "--impact", action="store_true",

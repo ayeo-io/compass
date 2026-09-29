@@ -52,6 +52,15 @@ from compass_pkg.manifest import _annotate_gate_accepts
 # words.
 
 
+# A `block_phase` value comes straight from routing-policy.yml, which still
+# spells the ship stage `land` (RP-ROLE-001) - the policy file is not a
+# manifest, so `normalize_spine` never touches it. Canonicalise it the same
+# way a manifest's stage keys already are on load, then hand it to the
+# display layer, so nothing prints the retired name.
+def _display_blocked_phase(phase):
+    return display_stage(_stage_key_renames().get(phase, phase))
+
+
 def evaluate_route(readings, policy):
     """Pure function: assessment + policy -> the delivery approach and
     everything that shaped it. This is the deterministic core of Compass."""
@@ -214,7 +223,7 @@ def evaluate_route(readings, policy):
         if rr.get("block_phase"):
             blocked_phases.append({"phase": rr["block_phase"],
                                    "until": rr.get("until", "")})
-            changed.append(f"stage '{display_stage(rr['block_phase'])}' "
+            changed.append(f"stage '{_display_blocked_phase(rr['block_phase'])}' "
                            f"blocked until: {rr.get('until', '')}")
         if rr.get("gate"):
             role_gates.append(rr["gate"])
@@ -358,8 +367,9 @@ def cmd_route_evaluate(args):
         readings = task.get("assessment")
         if not readings:
             raise CompassError(
-                f"{task_path} has no assessment block - triage records the "
-                f"four dimensions there before the approach is evaluated."
+                f"{task_path} has no assessment block - the assess stage "
+                f"records the four dimensions there before the approach is "
+                f"evaluated."
             )
 
     result = evaluate_route(readings, policy)
@@ -399,7 +409,8 @@ def cmd_route_evaluate(args):
                 "framework v%s ships - run `compass policy lint`"
                 % (_drift.count, _fw))
         if result["blocked_phases"]:
-            _concerns += ["%s is blocked until %s" % (b["phase"], b["until"])
+            _concerns += ["%s is blocked until %s" % (
+                              _display_blocked_phase(b["phase"]), b["until"])
                           for b in result["blocked_phases"]]
         if result["required_artifacts"]:
             _concerns.append("documents required: "
@@ -475,7 +486,8 @@ def cmd_route_evaluate(args):
             print(f"  required skills : {', '.join(result['required_skills'])}")
         if result["blocked_phases"]:
             for b in result["blocked_phases"]:
-                print(f"  BLOCKED phase   : {b['phase']} until {b['until']}")
+                print(f"  BLOCKED phase   : {_display_blocked_phase(b['phase'])} "
+                      f"until {b['until']}")
         if result.get("applicable_strategies"):
             print("  advisory strategies (soft - assessed, never gating):")
             for s in result["applicable_strategies"]:

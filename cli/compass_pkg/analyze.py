@@ -283,7 +283,7 @@ def _analyze_task(task_dir: str, project_root: str | None = None) -> dict:
     task_path = manifest_path(task_dir)
     if not os.path.isfile(task_path):
         raise CompassError(
-            f"no manifest.yml in {task_dir} - has triage run? "
+            f"no manifest.yml in {task_dir} - has assess run? "
             f"compass analyze cannot run before it."
         )
     try:

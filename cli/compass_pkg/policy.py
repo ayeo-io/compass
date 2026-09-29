@@ -417,7 +417,8 @@ def cmd_task_lint(args):
             pass
         else:
             errs.append(
-                "missing `assessment:` - triage records the four dimensions")
+                "missing `assessment:` - the assess stage records the four "
+                "dimensions")
     elif not isinstance(task["assessment"], dict):
         errs.append("`assessment:` must be a mapping of dimension -> value")
     else:

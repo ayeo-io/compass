@@ -32,7 +32,7 @@ import re as _re
 
 import fnmatch
 import re as _re
-from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, migrate_map_section, normalize_spine, resolve_issue_dir, save_manifest
+from compass_pkg.core import CompassError, display_shape, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, migrate_map_section, normalize_spine, resolve_issue_dir, save_manifest
 
 
 
@@ -536,6 +536,17 @@ def render_impact(r):
     return "\n".join(out)
 
 
+# A `from_route -> to_route` transition is read from `reassessments:`,
+# recorded verbatim at the time it happened (never touched by
+# `normalize_spine`), so an entry logged before a route was renamed still
+# carries the retired name (`express`, `expedition`) on disk. Map both
+# sides through the display layer for printing only - the record on disk
+# stays as it was written.
+def _display_transition(key):
+    fr, _, to = key.partition(" -> ")
+    return f"{display_shape(fr)} -> {display_shape(to)}"
+
+
 def cmd_calibration(args):
     if getattr(args, "impact", False):
         return _cmd_calibration_impact(args)
@@ -639,10 +650,10 @@ def cmd_calibration(args):
     _ctx.__enter__()
     print("Route distribution:")
     for r in sorted(dist, key=lambda x: (weights.get(x, 99), x)):
-        print(f"  {r:<12}: {dist[r]}")
+        print(f"  {display_shape(r):<12}: {dist[r]}")
     if no_route:
-        print(f"  (no route)  : {len(no_route)}  <- triage did not complete: "
-              f"{', '.join(no_route)}")
+        print(f"  (no route)  : {len(no_route)}  <- assessment did not "
+              f"complete: {', '.join(no_route)}")
     print()
     pct = round(100 * reframed_tasks / len(tasks))
     print("Re-framing:")
@@ -658,10 +669,10 @@ def cmd_calibration(args):
             print(f"    unweighed (a route with no weight in routing-policy.yml): "
                   f"{sum(unweighed.values())}")
             for k, v in sorted(unweighed.items()):
-                print(f"      {k} : {v}")
+                print(f"      {_display_transition(k)} : {v}")
         print("  transitions:")
         for k, v in sorted(transitions.items(), key=lambda x: -x[1]):
-            print(f"    {k} : {v}")
+            print(f"    {_display_transition(k)} : {v}")
     print()
     print("Signal:")
     if total == 0:

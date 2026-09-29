@@ -176,7 +176,7 @@ CHECK_GUIDANCE = {
         "fix": "Add a `spike-conclusion` evidence entry to the registry with `decision:` (discard | graduate-to-delivery | defer). If graduating, include `next_task:` linking the new delivery issue.",
     },
     "spike-no-production-changes": {
-        "why": "A Spike's safety model is that it ships nothing - graduating to delivery must be a fresh triage, not a silent merge.",
+        "why": "A Spike's safety model is that it ships nothing - graduating to delivery must be a fresh assessment, not a silent merge.",
         "do": 'Move the production edits to a delivery issue; a spike ships nothing.',
         "fix": "Empty `changed_files:` in this Spike's manifest.yml. If the finding is worth keeping, run `/compass:assess` to start a new delivery issue that owns the code under a real route.",
     },

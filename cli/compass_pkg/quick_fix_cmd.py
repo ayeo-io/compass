@@ -30,9 +30,11 @@ from __future__ import annotations
 import argparse
 import contextlib
 import datetime
+import hashlib
 import io
 import json
 import os
+import re
 import subprocess
 
 from compass_pkg.binding import ids_for
@@ -265,6 +267,8 @@ def cmd_quick_fix_start(args):
              "w", encoding="utf-8") as fh:
         fh.write(slug + "\n")
 
+    _write_start_state(task_dir, project_root)
+
     doc_dir_rel = docs_dir(task_dir)
     doc_path_rel = f"{doc_dir_rel}/delivery-approach.md"
     doc_path_abs = os.path.join(project_root, doc_path_rel)
@@ -321,25 +325,25 @@ def _is_generated(path):
 
 
 def _git_changed_paths(root):
-    """Every changed path git sees, as a path relative to `root` - the
-    project root (QFG-2). `git status` already reports paths relative to the
-    repository top, so running it with `root` as the subprocess's directory
-    and normalising defensively against `root` keeps tracing correct however
-    `finish` itself was invoked."""
+    """Every changed path git sees, relative to `root`, the project root
+    (QFG-2), less generated caches. Read with `-z`, so a name with spaces,
+    quotes or non-ASCII characters arrives as the file's real name, not
+    git's escaped form."""
     out = subprocess.run(
-        ["git", "status", "--porcelain", "--untracked-files=all"],
+        ["git", "status", "--porcelain", "-z", "--untracked-files=all"],
         cwd=root, capture_output=True, text=True, check=True,
     ).stdout
-    paths = []
-    for line in out.splitlines():
-        if not line.strip():
+    fields = out.split("\0")
+    paths, i = [], 0
+    while i < len(fields):
+        entry = fields[i]
+        i += 1
+        if len(entry) < 4:
             continue
-        rest = line[3:]
-        if " -> " in rest:
-            rest = rest.split(" -> ", 1)[-1]
-        raw = rest.strip().strip('"')
-        abs_path = os.path.normpath(os.path.join(root, raw))
-        rel = os.path.relpath(abs_path, root)
+        status, raw = entry[:2], entry[3:]
+        if "R" in status or "C" in status:
+            i += 1  # the next field is the old name of a rename or copy
+        rel = os.path.relpath(os.path.normpath(os.path.join(root, raw)), root)
         if rel == os.pardir or rel.startswith(os.pardir + os.sep):
             continue  # outside the project root - not this issue's to trace
         rel = rel.replace(os.sep, "/")
@@ -407,6 +411,141 @@ def _reusable_green(task_dir, scenario, command, tree_ids):
     return old_tree == new_tree and old_changes == new_changes
 
 
+START_STATE = "start-state.json"
+
+
+def _digest(path):
+    return hashlib.sha256(path.encode("utf-8")).hexdigest()
+
+
+def _untracked_paths(root):
+    out = subprocess.run(
+        ["git", "ls-files", "-z", "--others", "--exclude-standard"],
+        cwd=root, capture_output=True, text=True, check=True).stdout
+    return {p for p in out.split("\0") if p}
+
+
+def _ancestors(path):
+    parts = path.split("/")[:-1]
+    return ["/".join(parts[:n]) + "/" for n in range(1, len(parts) + 1)]
+
+
+def _write_start_state(task_dir, project_root):
+    """Record what was already changed or untracked when the quick fix
+    starts, so `finish` commits none of it unless the agent traces it.
+
+    The record holds SHA-256 digests, never names. In a project that
+    commits `.compass/work/`, it goes out with the issue's records, and a
+    list of local file names would publish what it exists to protect.
+    Directories holding only untracked files, such as a local `.claude/`,
+    are recorded too, so a file written into one after `start` stays out.
+    """
+    try:
+        before = [p for p in _git_changed_paths(project_root)
+                  if not p.startswith(".compass/")]
+        untracked = _untracked_paths(project_root)
+        tracked = subprocess.run(
+            ["git", "ls-files", "-z"], cwd=project_root, capture_output=True,
+            text=True, check=True).stdout.split("\0")
+    except (OSError, subprocess.CalledProcessError):
+        return
+    tracked_dirs = {d for t in tracked if t for d in _ancestors(t)}
+    local_dirs = {d for p in untracked if not p.startswith(".compass/")
+                  for d in _ancestors(p) if d not in tracked_dirs}
+    with open(os.path.join(task_dir, START_STATE), "w", encoding="utf-8") as fh:
+        json.dump({"digest": "sha256",
+                   "changed_before_start": sorted(_digest(p) for p in before),
+                   "untracked_dirs_before_start":
+                       sorted(_digest(d) for d in local_dirs)}, fh, indent=2)
+        fh.write("\n")
+
+
+def _start_state(task_dir):
+    """The digests `start` recorded, as (paths, directories), or None when
+    there is no usable record."""
+    try:
+        with open(os.path.join(task_dir, START_STATE), encoding="utf-8") as fh:
+            data = json.load(fh)
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict) or data.get("digest") != "sha256":
+        return None
+    paths = data.get("changed_before_start")
+    dirs = data.get("untracked_dirs_before_start")
+    if not isinstance(paths, list) or not isinstance(dirs, list):
+        return None
+    return set(paths), set(dirs)
+
+
+def _not_the_change(paths, traced, declared_tests, state, untracked):
+    """The changed paths `finish` must not commit on its own say-so, each
+    with why: `before`, when it was already changed or untracked at `start`
+    or sits in a directory that was wholly untracked then; `unrecorded`,
+    when the issue has no start record and the path is untracked. A path
+    that is traced, or is a test the scenario declares, is never refused."""
+    refused = []
+    for p in paths:
+        if p in traced or p in declared_tests:
+            continue
+        if state is not None:
+            before_paths, before_dirs = state
+            if (_digest(p) in before_paths
+                    or any(_digest(d) in before_dirs for d in _ancestors(p))):
+                refused.append((p, "before"))
+        elif p in untracked:
+            refused.append((p, "unrecorded"))
+    return refused
+
+
+def _refusal(refused, scenario_id):
+    groups = (
+        ("before", "were already changed or untracked when this quick fix "
+                   "started, or sit in a directory that was untracked then"),
+        ("unrecorded", "are untracked, and this issue has no record of what "
+                       "was there when it started"),
+    )
+    lines = ["compass quick-fix finish: no gate passed and nothing was "
+             "committed. Nothing traced these changed path(s), and they"]
+    for key, why in groups:
+        group = [p for p, k in refused if k == key]
+        if group:
+            lines.append(f"{why}:")
+            lines += [f"  {p}" for p in group]
+    lines += [
+        "",
+        f"If a path belongs to this change, trace it: `compass changed-file "
+        f"add <path> --scenario {scenario_id}`.",
+        "Otherwise keep it out of the commit: for a tracked file, `git "
+        "restore <path>` or `git stash push -- <path>`; for an untracked "
+        "one, move it out of the working tree or add it to .gitignore. "
+        "Then run finish again.",
+    ]
+    return "\n".join(lines)
+
+
+def _commit_files(ship_out, root):
+    """The files the commit `ship-commit` just made holds, read from git."""
+    m = re.search(r"-> ([0-9a-f]{7,40})", ship_out or "")
+    if not m:
+        return []
+    out = subprocess.run(
+        ["git", "show", "--name-only", "--format=", m.group(1)],
+        cwd=root, capture_output=True, text=True).stdout
+    return [line for line in out.splitlines() if line.strip()]
+
+
+def _commit_lines(files, slug):
+    """One line per committed file outside the issue's own records, so none
+    is cut off, and the records as one line with their count."""
+    records = f".compass/work/{slug}/"
+    own = [f for f in files if f.startswith(records)]
+    rest = [f for f in files if not f.startswith(records)]
+    lines = [f"commits  : {f}" for f in rest]
+    if own:
+        lines.append(f"commits  : {records} ({len(own)} record file(s))")
+    return lines
+
+
 def cmd_quick_fix_finish(args):
     task_dir = resolve_issue_dir(getattr(args, "task", None))
     task, _ = load_manifest(task_dir)
@@ -462,6 +601,19 @@ def cmd_quick_fix_finish(args):
         artifact_paths = [p for p in all_paths if p.startswith(doc_prefix)]
         existing_traced = {cf.get("path") for cf in (task.get("changed_files") or [])
                            if isinstance(cf, dict)}
+
+        # A path that was already changed or untracked when the quick fix
+        # started is never committed on finish's own say-so: a local note
+        # or archive would otherwise be published by the next push. Paths
+        # that appeared after `start` are taken as the change's.
+        declared_tests = {t.split("::", 1)[0] for sc in scenarios
+                          for t in (sc.get("tests") or []) if isinstance(t, str)}
+        untracked_now = _untracked_paths(project_root)
+        refused = _not_the_change(
+            production_paths, existing_traced, declared_tests,
+            _start_state(task_dir), untracked_now)
+        if refused:
+            raise CompassError(_refusal(refused, scenario_ids[0]))
 
         if len(scenarios) > 1:
             untraced = [p for p in production_paths if p not in existing_traced]
@@ -574,11 +726,12 @@ def cmd_quick_fix_finish(args):
                                  files=stage_paths)
         ship_tail_lines = [ln for ln in ship_out.strip().splitlines() if ln.strip()]
         ship_tail = ship_tail_lines[-1] if ship_tail_lines else "commit recorded"
+        committed_files = _commit_files(ship_out, project_root)
 
         return say(
             args,
             f"compass quick-fix finish: '{slug}' shipped.",
-            detail=detail + [ship_tail],
+            detail=detail + _commit_lines(committed_files, slug) + [ship_tail],
             decision=True, gates=list(THREE_GATES), evidence=evidence_ids,
             committed=True,
         )

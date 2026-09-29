@@ -76,7 +76,7 @@ VERB_DESCRIPTIONS = {
     'policy lint':
         "Structurally validate the governance YAML - including that every guardrail's declared check is actually implemented in the CLI. A guardrail whose check does not exist is not a guardrail, and this is what says so.",
     'retro':
-        'Aggregate the re-assessment log across every issue and report whether triage is systematically over- or under-sizing the process. The signal is direction: mostly-up means work is being read lighter than it is. Reads the archive; changes nothing.',
+        'Aggregate the re-assessment log across every issue and report whether assessment is systematically over- or under-sizing the process. The signal is direction: mostly-up means work is being read lighter than it is. Reads the archive; changes nothing.',
     'rework-scan':
         'Scan the archive for add-then-delete patterns across issues - a file added by one and removed by another inside the configured window. A signal for a person, not a gate.',
     'ship-commit':

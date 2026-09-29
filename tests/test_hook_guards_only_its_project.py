@@ -86,7 +86,9 @@ def test_ff_2_inside_the_project_is_still_blocked(tmp_path):
         f"the hook allowed production code inside the project with no failing "
         f"test on record - red-before-green is no longer enforced anywhere:\n"
         f"{r.stdout}{r.stderr}")
-    assert "BLOCKED" in (r.stdout + r.stderr)
+    # Wording changed under `refusal-template`: refusals now open with
+    # "Blocked:", not "Compass: BLOCKED -" (RTP-1's three-line shape).
+    assert "Blocked:" in (r.stdout + r.stderr)
 
 
 def test_ff_2b_a_relative_path_is_still_guarded(tmp_path):

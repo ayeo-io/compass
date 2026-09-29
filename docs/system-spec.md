@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### the safety contract states the three limits
+### Given a landed quick fix, when it lands, then its start record is gone
 
-- **Scenario id:** `FSE-4`
+- **Scenario id:** `SJS-6`
 - **Intent:** `INT-1`
-- **Source issue:** `finish-and-ship-commit-edges`
+- **Source issue:** `ship-commit-judges-the-staged-files`
 - **Landed:** 2026-09-29
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -9343,4 +9343,46 @@
 - **Scenario id:** `FSE-3`
 - **Intent:** `INT-1`
 - **Source issue:** `finish-and-ship-commit-edges`
+- **Landed:** 2026-09-29
+
+### the safety contract states the three limits _(archived)_
+
+- **Scenario id:** `FSE-4`
+- **Intent:** `INT-1`
+- **Source issue:** `finish-and-ship-commit-edges`
+- **Landed:** 2026-09-29
+
+### Given an issue whose gates have passed, when the staged copy of an iss _(archived)_
+
+- **Scenario id:** `SJS-1`
+- **Intent:** `INT-1`
+- **Source issue:** `ship-commit-judges-the-staged-files`
+- **Landed:** 2026-09-29
+
+### Given a green recorded with one argument list, when `finish` runs with _(archived)_
+
+- **Scenario id:** `SJS-2`
+- **Intent:** `INT-1`
+- **Source issue:** `ship-commit-judges-the-staged-files`
+- **Landed:** 2026-09-29
+
+### Given a multiagent issue whose files are already committed, when a lat _(archived)_
+
+- **Scenario id:** `SJS-3`
+- **Intent:** `INT-1`
+- **Source issue:** `ship-commit-judges-the-staged-files`
+- **Landed:** 2026-09-29
+
+### Given a staged name holding `[`, `*` or `?`, or starting with `-`, whe _(archived)_
+
+- **Scenario id:** `SJS-4`
+- **Intent:** `INT-1`
+- **Source issue:** `ship-commit-judges-the-staged-files`
+- **Landed:** 2026-09-29
+
+### Given a quick fix whose files the agent committed before `finish`, whe _(archived)_
+
+- **Scenario id:** `SJS-5`
+- **Intent:** `INT-1`
+- **Source issue:** `ship-commit-judges-the-staged-files`
 - **Landed:** 2026-09-29

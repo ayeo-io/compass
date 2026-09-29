@@ -328,9 +328,10 @@ def _git_changed_paths(root):
     """Every changed path git sees, relative to `root`, the project root
     (QFG-2), less generated caches. Read with `-z`, so a name with spaces,
     quotes or non-ASCII characters arrives as the file's real name, not
-    git's escaped form. `git status` names paths from the repository top;
-    joining them to `root` is right because `compass init` puts `.compass/`
-    there, so the outside-the-root guard below only fires if it is not."""
+    git's escaped form. `git status` names paths from the repository top,
+    so joining them to `root` assumes `.compass/` sits there, as `compass
+    init` puts it. The guard below never fires in that case; it is not a
+    check that the assumption holds."""
     out = subprocess.run(
         ["git", "status", "--porcelain", "-z", "--untracked-files=all"],
         cwd=root, capture_output=True, text=True, check=True,
@@ -767,9 +768,6 @@ def cmd_quick_fix_finish(args):
 
         stage_paths = sorted(set(production_paths) | set(artifact_paths)
                              | {f".compass/work/{slug}"})
-        head_before = subprocess.run(
-            ["git", "rev-parse", "HEAD"], cwd=project_root,
-            capture_output=True, text=True).stdout.strip()
         ship_out, _ = _quiet_run(cmd_land_commit, task=slug, message=args.message,
                                  files=stage_paths)
         ship_tail_lines = [ln for ln in ship_out.strip().splitlines() if ln.strip()]

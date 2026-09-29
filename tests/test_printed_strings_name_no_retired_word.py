@@ -184,3 +184,33 @@ def test_top_level_help_names_retro_without_triage(run_cli):
     assert "triage" not in m.group(1).lower(), (
         f"the top-level help's 'retro' entry still says 'triage': "
         f"{m.group(1)!r}")
+
+
+_LITERAL = re.compile(r"""(["'])(?:(?!\1).)*triage(?:(?!\1).)*\1""", re.I)
+
+
+def _all_cli_and_hook_sources():
+    return ([ROOT / "cli" / "compass"]
+            + sorted((ROOT / "cli" / "compass_pkg").glob("*.py"))
+            + sorted((ROOT / "hooks").glob("*.sh")))
+
+
+def test_no_string_literal_in_the_cli_or_hooks_says_triage():
+    """The whole class, not the listed files: every string literal in the
+    CLI and the hooks - what can reach a terminal. Comments name the
+    retired word freely and are not scanned."""
+    offenders = []
+    for path in _all_cli_and_hook_sources():
+        for lineno, line in enumerate(
+                path.read_text(encoding="utf-8").splitlines(), start=1):
+            if line.strip().startswith("#") or line.strip() == _ALLOWED_LINE:
+                continue
+            if _LITERAL.search(line):
+                offenders.append(f"{path.relative_to(ROOT)}:{lineno}")
+    assert not offenders, "string literals saying 'triage':\n  " + \
+        "\n  ".join(offenders)
+
+
+def test_the_literal_scan_can_fail():
+    assert _LITERAL.search('    "report whether triage is sized",')
+    assert not _LITERAL.search("    # triage was the old name")

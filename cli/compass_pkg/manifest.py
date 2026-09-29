@@ -339,7 +339,8 @@ def cmd_land_commit(args):
     head_before = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
 
     def _disk_hashes():
-        """Each staged path's content on disk, as git would store it."""
+        """The disk content, as git would store it, of each staged path and
+        each path named on the command line that is a regular file."""
         out = {}
         for path in sorted(set(staged_now) | set(files)):
             if os.path.isfile(os.path.join(cwd, path)):
@@ -445,13 +446,14 @@ def cmd_land_commit(args):
                             "re-run, or set status by hand if this issue "
                             "genuinely lands unverified."
                             % (len(unmet), ", ".join(unmet)))
-                    elif _stale_paths(task, task_dir, cwd, head_after):
+                    elif (stale := _stale_paths(task, task_dir, cwd,
+                                                head_after)):
                         # A git hook can stage a file during the commit
                         # itself, after the last check.
-                        _, changed = _stale_paths(task, task_dir, cwd,
-                                                  head_after)
+                        _, changed = stale
                         print(
-                            f"compass ship-commit: committed. HEAD "
+                            f"compass ship-commit: committed"
+                            f"{' (after one retry)' if retried else ''}. HEAD "
                             f"{head_before[:8]} -> {head_after[:8]}\n  NOT "
                             f"marked landed: the commit holds issue file(s) "
                             f"that differ from what the green tested - a "

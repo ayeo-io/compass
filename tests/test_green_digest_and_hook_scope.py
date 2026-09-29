@@ -128,3 +128,26 @@ def test_gdh2_a_pre_commit_step_that_stages_a_stray_file_stops_the_commit(
     assert result.returncode != 0, result.stdout
     assert "src/app.py" in result.stdout + result.stderr
     assert _git(repo, "rev-parse", "HEAD") == head_before
+
+
+def test_gdh2_a_land_at_head_takes_declared_tests_and_the_issue_documents(repo):
+    """The issue owns its declared test files and its documents as well as
+    its changed files: a commit holding them lands at HEAD."""
+    path = repo / ".compass" / "work" / SLUG / "manifest.yml"
+    data = yaml.safe_load(path.read_text())
+    data["scenarios"] = [{"id": "S-1", "title": "t", "intent": "INT-1",
+                          "tests": ["tests/test_new.py::test_it"]}]
+    path.write_text(yaml.safe_dump(data, sort_keys=False))
+    (repo / "src" / "new.py").write_text("y = 1\n")
+    (repo / "tests").mkdir()
+    (repo / "tests" / "test_new.py").write_text("def test_it():\n    pass\n")
+    docs = repo / "docs" / "compass" / f"2026-09-28-{SLUG}"
+    docs.mkdir(parents=True)
+    (docs / "notes.md").write_text("the issue's own document\n")
+    _git(repo, "add", "src/new.py", "tests/test_new.py", str(docs))
+    _git(repo, "commit", "-q", "-m", "the fix, committed by hand")
+    _green(repo)
+
+    result = _cli(repo, "ship-commit", "--issue", SLUG, "-m", "land it")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert _manifest(repo).get("status") == "landed"

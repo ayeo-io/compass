@@ -264,3 +264,101 @@ def test_sjs1_a_traced_symlink_can_ship(repo):
 
     result = _cli(repo, "ship-commit", "--issue", SLUG, "-m", "land it")
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def _hook(repo, body):
+    hook = repo / ".git" / "hooks" / "pre-commit"
+    hook.write_text("#!/bin/sh\n" + body)
+    hook.chmod(0o755)
+
+
+def _fake_pre_commit(repo, tmp_path, record=None):
+    bin_dir = tmp_path / "fakebin"
+    bin_dir.mkdir(exist_ok=True)
+    fake = bin_dir / "pre-commit"
+    body = f'printf "%s\\n" "$@" > {record}\n' if record else ""
+    fake.write_text("#!/bin/sh\n" + body + "exit 0\n")
+    fake.chmod(0o755)
+    (repo / ".pre-commit-config.yaml").write_text("repos: []\n")
+    _git(repo, "add", ".pre-commit-config.yaml")
+    _git(repo, "commit", "-q", "-m", "hooks")
+    return {**os.environ, "CLAUDE_PROJECT_DIR": str(repo),
+            "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}"}
+
+
+def _ship(repo, env, *args):
+    return subprocess.run([sys.executable, str(CLI), "ship-commit", *args],
+                          cwd=repo, capture_output=True, text=True, env=env)
+
+
+def _status(repo):
+    path = repo / ".compass" / "work" / SLUG / "manifest.yml"
+    return yaml.safe_load(path.read_text()).get("status")
+
+
+def test_scf1_a_hook_that_stages_an_untested_copy_leaves_the_issue_unlanded(repo):
+    (repo / "src" / "new.py").write_text("y = 1\n")
+    _green(repo)
+    _git(repo, "add", "src/new.py")
+    _hook(repo, "printf 'y = 9\\n' > src/new.py\ngit add src/new.py\nexit 0\n")
+
+    result = _cli(repo, "ship-commit", "--issue", SLUG, "-m", "land it")
+    assert result.returncode != 0, result.stdout
+    assert "src/new.py" in result.stdout + result.stderr
+    assert _status(repo) != "landed"
+
+
+def test_scf2_an_unrelated_disk_edit_does_not_replace_the_tested_stage(repo, tmp_path):
+    env = _fake_pre_commit(repo, tmp_path)
+    (repo / "src" / "new.py").write_text("y = 1\n")
+    _green(repo)
+    _git(repo, "add", "src/new.py")
+    (repo / "src" / "new.py").write_text("y = 9\n")   # no hook touches it
+
+    result = _ship(repo, env, "--issue", SLUG, "-m", "land it")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert _git(repo, "show", "HEAD:src/new.py") == "y = 1"
+
+
+def test_scf3_the_retry_judges_what_a_hook_rewrote(repo):
+    (repo / "src" / "new.py").write_text("y = 1\n")
+    _green(repo)
+    _git(repo, "add", "src/new.py")
+    head_before = _git(repo, "rev-parse", "HEAD")
+    _hook(repo, "if [ ! -f .hooked ]; then touch .hooked; "
+                "printf 'y = 9\\n' > src/new.py; exit 1; fi\nexit 0\n")
+
+    result = _cli(repo, "ship-commit", "--issue", SLUG, "-m", "land it")
+    assert result.returncode != 0, result.stdout
+    assert _git(repo, "rev-parse", "HEAD") == head_before
+
+
+def test_scf5_odd_names_stage_as_themselves_and_reach_pre_commit_as_names(tmp_path):
+    root = tmp_path / "plain"
+    root.mkdir()
+    _git(root, "init", "-q")
+    _git(root, "config", "user.email", "t@example.com")
+    _git(root, "config", "user.name", "t")
+    (root / "base.txt").write_text("base\n")
+    _git(root, "add", "base.txt")
+    _git(root, "commit", "-q", "-m", "base")
+    record = tmp_path / "args.txt"
+    env = _fake_pre_commit(root, tmp_path, record=record)
+    for name in ("-dash.txt", "a*b.txt", "q?.txt", "ab.txt", "qx.txt"):
+        (root / name).write_text(name + "\n")
+
+    result = _ship(root, env, "-m", "odd names", "--", "-dash.txt",
+                   "a*b.txt", "q?.txt")
+    assert result.returncode == 0, result.stdout + result.stderr
+    committed = set(_git(root, "show", "--name-only", "--format=",
+                         "HEAD").split("\n"))
+    assert committed == {"-dash.txt", "a*b.txt", "q?.txt"}, committed
+    assert "./-dash.txt" in record.read_text().split("\n")
+
+
+def test_scf6_the_safety_contract_states_the_symlink_ignored_and_hook_cases():
+    flat = " ".join((ROOT / "docs" / "safety-contract.md")
+                    .read_text(encoding="utf-8").split()).lower()
+    assert "a traced symlink is not checked" in flat
+    assert "a traced file git ignores does not change `tree_id`" in flat
+    assert "not marked landed" in flat

@@ -117,9 +117,20 @@ not judged either.
 Tracing a file into the issue between two runs of the same command
 changes `changes_id`, because the traced file joins `changed_files`; it
 changes `tree_id` too only when the file was untracked. Tracing an
-already-tracked file changes only `changes_id`. So a green recorded after that trace is a new assertion,
-not a rerun of the one before it: the same command on the same code is not
-flagged as a rerun, and the traced file shows in `changed_files`.
+already-tracked file changes only `changes_id`, and a traced file git
+ignores does not change `tree_id` either. So a green recorded after that
+trace is a new assertion, not a rerun of the one before it: the same
+command on the same code is not flagged as a rerun, and the traced file
+shows in `changed_files`.
+
+A traced symlink is not checked: neither side of the comparison counts
+it, so a link pointed elsewhere after the green is not reported.
+
+`compass ship-commit` judges the staged files right before each commit.
+A git hook can still stage a file during the commit itself; when the new
+commit then differs from what the green tested, the commit stands but
+the issue is not marked landed, and `ship-commit` names the files and
+exits non-zero.
 
 Teams must keep their normal CI controls.
 

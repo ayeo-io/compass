@@ -653,6 +653,24 @@ def test_sjs6_the_start_record_is_gone_after_a_land(repo):
     assert not record.exists()
 
 
+def test_scf4_a_green_from_before_argv_is_reused(repo):
+    """A quick fix finished with --no-commit before greens carried `argv`
+    must still finish afterwards: rerunning the same command on the same
+    tree is flagged as a rerun, so the old green has to be reused."""
+    import json
+    slug = "greet-old-green"
+    _ready_to_finish(repo, slug)
+    assert _finish(repo, slug, "--no-commit").returncode == 0
+    record = (repo / ".compass" / "work" / slug / "evidence"
+              / "green-TRC-001.json")
+    data = json.loads(record.read_text())
+    data.pop("argv", None)
+    record.write_text(json.dumps(data))
+
+    finish = _finish(repo, slug)
+    assert finish.returncode == 0, finish.stdout + finish.stderr
+
+
 # --- QFO-5 ---------------------------------------------------------------
 
 def test_qfo5_finish_refuses_when_check_fails(repo):

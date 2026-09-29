@@ -629,6 +629,10 @@ def test_sjs5_finish_lists_the_files_a_land_at_head_holds(repo):
     _ready_to_finish(repo, slug)
     _git(repo, "add", "data/greeting.txt")
     _git(repo, "commit", "-q", "-m", "the fix, committed by hand")
+    # A committed file is traced by the agent, never by finish on its own.
+    traced = _run(repo, "changed-file", "add", "data/greeting.txt",
+                  "--issue", slug, "--scenario", "TRC-001")
+    assert traced.returncode == 0, traced.stderr
     finish = _finish(repo, slug)
     assert finish.returncode == 0, finish.stdout + finish.stderr
     listed = [l.split(":", 1)[1].strip() for l in finish.stdout.splitlines()
@@ -719,6 +723,21 @@ def test_gdh1_finish_refuses_an_edited_green(repo):
     finish = _finish(repo, slug)
     assert finish.returncode != 0, finish.stdout
     assert _git(repo, "rev-parse", "HEAD") == head_before
+
+
+def test_gdh2_finish_does_not_trace_someone_elses_commit(repo):
+    """A commit another person makes after `start` is not the quick fix's:
+    finish must not trace it, even though it is already committed."""
+    slug = "greet-others"
+    _ready_to_finish(repo, slug)
+    (repo / "other.py").write_text("theirs = 1\n")
+    _git(repo, "add", "other.py")
+    _git(repo, "commit", "-q", "-m", "someone else's change")
+
+    finish = _finish(repo, slug)
+    assert finish.returncode == 0, finish.stdout + finish.stderr
+    traced = {cf["path"] for cf in _manifest(repo, slug)["changed_files"]}
+    assert "other.py" not in traced, traced
 
 
 # --- QFO-5 ---------------------------------------------------------------

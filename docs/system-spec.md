@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a refusal from ship-commit or finish, when its advice is followed, then the refusal clears
+### the measured eval run is compared with the baseline
 
-- **Scenario id:** `LRA-1`
+- **Scenario id:** `RTP-6`
 - **Intent:** `INT-1`
-- **Source issue:** `land-refusal-advice`
+- **Source issue:** `refusal-template`
 - **Landed:** 2026-09-29
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -9462,4 +9462,46 @@
 - **Scenario id:** `GDH-4`
 - **Intent:** `INT-1`
 - **Source issue:** `green-digest-and-hook-scope`
+- **Landed:** 2026-09-29
+
+### Given a refusal from ship-commit or finish, when its advice is followed, then the refusal clears _(archived)_
+
+- **Scenario id:** `LRA-1`
+- **Intent:** `INT-1`
+- **Source issue:** `land-refusal-advice`
+- **Landed:** 2026-09-29
+
+### Given the refusal registry, when each reason code is rendered with fix _(archived)_
+
+- **Scenario id:** `RTP-1`
+- **Intent:** `INT-1`
+- **Source issue:** `refusal-template`
+- **Landed:** 2026-09-29
+
+### Given every rendered `Fix:` line, then none suggests dropping `--scena _(archived)_
+
+- **Scenario id:** `RTP-2`
+- **Intent:** `INT-1`
+- **Source issue:** `refusal-template`
+- **Landed:** 2026-09-29
+
+### Given each cell of the hook failure matrix, when the hook refuses, the _(archived)_
+
+- **Scenario id:** `RTP-3`
+- **Intent:** `INT-1`
+- **Source issue:** `refusal-template`
+- **Landed:** 2026-09-29
+
+### Given the registry, then `docs/refusal-codes.md` lists every code with _(archived)_
+
+- **Scenario id:** `RTP-4`
+- **Intent:** `INT-1`
+- **Source issue:** `refusal-template`
+- **Landed:** 2026-09-29
+
+### no printed string names a retired word _(archived)_
+
+- **Scenario id:** `RTP-5`
+- **Intent:** `INT-1`
+- **Source issue:** `refusal-template`
 - **Landed:** 2026-09-29

@@ -344,15 +344,18 @@ def test_scf5_odd_names_stage_as_themselves_and_reach_pre_commit_as_names(tmp_pa
     _git(root, "commit", "-q", "-m", "base")
     record = tmp_path / "args.txt"
     env = _fake_pre_commit(root, tmp_path, record=record)
-    for name in ("-dash.txt", "a*b.txt", "q?.txt", "ab.txt", "qx.txt"):
+    # `x[1].txt` read as a pattern also matches `x1.txt`, even when a file
+    # with the exact name exists; `*` and `?` let a literal match win.
+    for name in ("-dash.txt", "a*b.txt", "q?.txt", "x[1].txt",
+                 "ab.txt", "qx.txt", "x1.txt"):
         (root / name).write_text(name + "\n")
 
     result = _ship(root, env, "-m", "odd names", "--", "-dash.txt",
-                   "a*b.txt", "q?.txt")
+                   "a*b.txt", "q?.txt", "x[1].txt")
     assert result.returncode == 0, result.stdout + result.stderr
     committed = set(_git(root, "show", "--name-only", "--format=",
                          "HEAD").split("\n"))
-    assert committed == {"-dash.txt", "a*b.txt", "q?.txt"}, committed
+    assert committed == {"-dash.txt", "a*b.txt", "q?.txt", "x[1].txt"}, committed
     assert "./-dash.txt" in record.read_text().split("\n")
 
 

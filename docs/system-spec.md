@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the safety contract and the post-commit refusal, then the contra
+### Given a refusal from ship-commit or finish, when its advice is followed, then the refusal clears
 
-- **Scenario id:** `GDH-4`
+- **Scenario id:** `LRA-1`
 - **Intent:** `INT-1`
-- **Source issue:** `green-digest-and-hook-scope`
+- **Source issue:** `land-refusal-advice`
 - **Landed:** 2026-09-29
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -9453,6 +9453,13 @@
 ### Given a tracked file that matches `.gitignore`, traced by an issue and _(archived)_
 
 - **Scenario id:** `GDH-3`
+- **Intent:** `INT-1`
+- **Source issue:** `green-digest-and-hook-scope`
+- **Landed:** 2026-09-29
+
+### Given the safety contract and the post-commit refusal, then the contra _(archived)_
+
+- **Scenario id:** `GDH-4`
 - **Intent:** `INT-1`
 - **Source issue:** `green-digest-and-hook-scope`
 - **Landed:** 2026-09-29

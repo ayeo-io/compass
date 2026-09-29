@@ -265,6 +265,25 @@ def cmd_land_commit(args):
         _refuse_stale_green(head_task, head_task_dir, head_slug, cwd,
                             at_commit="HEAD")
 
+        # What HEAD itself added must be the issue's: a commit a git hook
+        # widened, refused once, must not land when shipped again. Compared
+        # with the first parent, so a multiagent merge lists what it merged.
+        if _git(["rev-parse", "--verify", "-q", "HEAD^1"], cwd).returncode == 0:
+            added = [n for n in _git(
+                ["diff", "--name-only", "-z", "HEAD^1", "HEAD"],
+                cwd).stdout.split("\0") if n]
+            head_owned, head_artifacts = _land_scope(head_task, head_slug)
+            stray_head = (_out_of_scope(added, head_owned, head_artifacts)
+                          if head_owned else [])
+            if stray_head:
+                raise CompassError(
+                    "compass ship-commit: refusing to land at HEAD - it holds "
+                    f"{len(stray_head)} path(s) outside issue '{head_slug}'s "
+                    "declared scope:\n  " + "\n  ".join(stray_head[:20])
+                    + "\n\nIf they belong to this issue, trace them with "
+                    "`compass changed-file add <path> --scenario <id>`. "
+                    "Otherwise take them out of that commit, then ship again.")
+
         head_id = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
         head_task["status"] = "landed"
         head_task["land_timestamp"] = now_iso()
@@ -320,7 +339,10 @@ def cmd_land_commit(args):
             raise CompassError(
                 "compass ship-commit: refusing to commit - a hook staged "
                 f"{len(stray_now)} path(s) outside issue '{slug}'s declared "
-                "scope:\n  " + "\n  ".join(stray_now[:20]))
+                "scope:\n  " + "\n  ".join(stray_now[:20])
+                + "\n\nUnstage them (`git restore --staged <path>`), or, if "
+                "they belong to this issue, trace them with `compass "
+                "changed-file add <path> --scenario <id>`. Then ship again.")
 
     staged_now = [n for n in _git(["diff", "--cached", "--name-only", "-z"],
                                   cwd).stdout.split("\0") if n]

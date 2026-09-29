@@ -51,7 +51,6 @@ from compass_pkg.manifest import (
     cmd_scenario_add,
 )
 from compass_pkg.routing import cmd_route_evaluate, evaluate_route
-from compass_pkg.red_first import content_digest
 from compass_pkg.tdd import _neutralise_coverage, cmd_tdd_green
 from compass_pkg.terminal import say
 
@@ -403,10 +402,6 @@ def _reusable_green(task_dir, scenario, command, tree_ids):
     except (OSError, ValueError):
         return False
     if not isinstance(record, dict):
-        return False
-    # An edited record is not a record of what ran.
-    if record.get("content_digest") and (
-            content_digest(record) != record["content_digest"]):
         return False
     # `tdd-green` stores the command after neutralising a coverage floor for
     # a recognised pytest micro-run (`tdd._neutralise_coverage`); compare

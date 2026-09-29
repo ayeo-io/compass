@@ -702,6 +702,25 @@ def test_scf1_finish_reports_a_land_that_ship_commit_refused(repo):
     assert record.exists()
 
 
+def test_gdh1_finish_refuses_an_edited_green(repo):
+    """An edited green record fails compass check's identity check, so
+    finish refuses rather than land on it."""
+    import json
+    slug = "greet-edited-green"
+    _ready_to_finish(repo, slug)
+    assert _finish(repo, slug, "--no-commit").returncode == 0
+    record = (repo / ".compass" / "work" / slug / "evidence"
+              / "green-TRC-001.json")
+    data = json.loads(record.read_text())
+    data["log_excerpt"] = "edited after it was written"
+    record.write_text(json.dumps(data))
+    head_before = _git(repo, "rev-parse", "HEAD")
+
+    finish = _finish(repo, slug)
+    assert finish.returncode != 0, finish.stdout
+    assert _git(repo, "rev-parse", "HEAD") == head_before
+
+
 # --- QFO-5 ---------------------------------------------------------------
 
 def test_qfo5_finish_refuses_when_check_fails(repo):

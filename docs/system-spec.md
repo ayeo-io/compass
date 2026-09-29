@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### the measured eval run is compared with the baseline
+### no script prints triage, and the scan covers scripts
 
-- **Scenario id:** `RTP-6`
+- **Scenario id:** `RTF-5`
 - **Intent:** `INT-1`
-- **Source issue:** `refusal-template`
+- **Source issue:** `refusal-template-follow-ups`
 - **Landed:** 2026-09-29
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -9504,4 +9504,46 @@
 - **Scenario id:** `RTP-5`
 - **Intent:** `INT-1`
 - **Source issue:** `refusal-template`
+- **Landed:** 2026-09-29
+
+### the measured eval run is compared with the baseline _(archived)_
+
+- **Scenario id:** `RTP-6`
+- **Intent:** `INT-1`
+- **Source issue:** `refusal-template`
+- **Landed:** 2026-09-29
+
+### Given a python3 that fails and prints something, when the hook refuses _(archived)_
+
+- **Scenario id:** `RTF-1`
+- **Intent:** `INT-1`
+- **Source issue:** `refusal-template-follow-ups`
+- **Landed:** 2026-09-29
+
+### Given the registry's Fix lines, then `python-missing` says 3.10+, each _(archived)_
+
+- **Scenario id:** `RTF-2`
+- **Intent:** `INT-1`
+- **Source issue:** `refusal-template-follow-ups`
+- **Landed:** 2026-09-29
+
+### Given a template parameter longer than 20 words at run time, when a re _(archived)_
+
+- **Scenario id:** `RTF-3`
+- **Intent:** `INT-1`
+- **Source issue:** `refusal-template-follow-ups`
+- **Landed:** 2026-09-29
+
+### Given the guards, then the call-site test finds a code only as an argu _(archived)_
+
+- **Scenario id:** `RTF-4`
+- **Intent:** `INT-1`
+- **Source issue:** `refusal-template-follow-ups`
+- **Landed:** 2026-09-29
+
+### Given the texts, then `docs/refusal-codes.md` does not claim the CLI r _(archived)_
+
+- **Scenario id:** `RTF-6`
+- **Intent:** `INT-1`
+- **Source issue:** `refusal-template-follow-ups`
 - **Landed:** 2026-09-29

@@ -139,9 +139,16 @@ def changes_id(project_root, claimed=()):
     top = _toplevel(project_root)
     if top is None:
         return None
+    rels = _relative(top, project_root, claimed)
+    # A file git already tracks is counted even when it matches
+    # `.gitignore` (it was added with `-f`), as the commit side counts it.
+    # An untracked ignored file stays out: git will not commit it.
+    listed = _git(["ls-files", "-z", "--", *rels], top) if rels else None
+    tracked = (set(listed.stdout.split("\0"))
+               if listed is not None and _ok(listed) else set())
     steps = [(["read-tree", "--empty"], True)]
-    steps += [(["add", "--", rel], False)
-              for rel in _relative(top, project_root, claimed)]
+    steps += [((["add", "-f", "--", rel] if rel in tracked
+                else ["add", "--", rel]), False) for rel in rels]
     return _in_temp_index(top, steps)
 
 

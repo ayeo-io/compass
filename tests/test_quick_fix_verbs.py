@@ -665,7 +665,17 @@ def test_scf4_a_green_from_before_argv_is_reused(repo):
               / "green-TRC-001.json")
     data = json.loads(record.read_text())
     data.pop("argv", None)
+    # Stamped as the writer before `argv` stamped it, so the record is a
+    # genuine older record, not an edited one.
+    sys.path.insert(0, str(ROOT / "cli"))
+    from compass_pkg.red_first import content_digest
+    data["content_digest"] = content_digest(data)
     record.write_text(json.dumps(data))
+    manifest = _manifest(repo, slug)
+    for entry in manifest["evidence"]:
+        if entry.get("path") == "evidence/green-TRC-001.json":
+            entry["content_digest"] = data["content_digest"]
+    _save_manifest(repo, slug, manifest)
 
     finish = _finish(repo, slug)
     assert finish.returncode == 0, finish.stdout + finish.stderr

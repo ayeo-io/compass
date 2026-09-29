@@ -1,5 +1,5 @@
 ---
-description: Pick up an issue that already has state on disk
+description: Pick up an issue with state on disk
 argument-hint: "<issue-slug>"
 allowed-tools: Read, Write, Glob, Grep
 ---

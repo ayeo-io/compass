@@ -1,5 +1,5 @@
 ---
-description: Marketer entry point - positioning, and the claims that will need scenarios
+description: Marketer entry point - positioning and the claims it needs
 argument-hint: "<what is being positioned>"
 allowed-tools: Read, Write, Edit, Glob, Grep
 ---

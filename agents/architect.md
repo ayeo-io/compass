@@ -1,6 +1,6 @@
 ---
 name: architect
-description: "The architect's perspective: reads the project's architecture artifacts and writes the boundary risks, invariants to preserve and candidate decision records for this issue."
+description: "Architect perspective: boundary risks, invariants and candidate decision records for an issue."
 tools: Read, Glob, Grep, Write, Edit
 model: sonnet
 ---

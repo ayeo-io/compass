@@ -115,6 +115,10 @@ EXPECTED_SUBCOMMANDS = {
     # GROUP (`start`, `record`), so later kinds add a subcommand rather than a
     # verb.
     "acceptance",
+    # `quick-fix` (`start`, `finish`) - the mechanical steps of a quick fix
+    # in two calls instead of a dozen. A GROUP, for the same reason `bdd`
+    # and `acceptance` are.
+    "quick-fix",
 }
 EXPECTED_READING_KEYS = {
     "risk", "familiarity", "size", "goal", "urgency", "role",

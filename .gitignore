@@ -66,6 +66,10 @@ node_modules/
 # machine, so it is never shareable.
 /.mcp.json
 
+# Local run output under evals/, regenerated on demand and never the
+# published result kept elsewhere in this repository.
+/evals/out/
+
 # BDD reference adapters install their own dependencies; an adopter runs the
 # README's setup step, and CI does the same. Committing them would make the
 # examples heavier than the framework.

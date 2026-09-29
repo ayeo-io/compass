@@ -1,6 +1,6 @@
 ---
 name: bdd-specification
-description: How to write Given/When/Then scenarios that double as the acceptance suite, and how to QA them. Load at the define and refine stages.
+description: Writing and checking Given/When/Then acceptance scenarios. Load at define and refine.
 ---
 
 # BDD Specification

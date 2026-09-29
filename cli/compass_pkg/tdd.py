@@ -36,7 +36,7 @@ import re as _re
 from compass_pkg.terminal import say
 from compass_pkg.core import CompassError, find_upwards, load_manifest, load_yaml, manifest_path, now_iso, resolve_issue_dir, save_manifest
 from compass_pkg import pytest_report
-from compass_pkg.binding import ids_for
+from compass_pkg.binding import declared_test_paths, ids_for
 from compass_pkg.red_first import (
     ACCEPTANCE_KINDS as _ACCEPTANCE_KINDS, content_digest as _content_digest, has_red)
 
@@ -321,6 +321,28 @@ def _red_rejection_reason(code, command):
     return _NO_TEST_RAN_EXITS.get(code)
 
 
+def _silent_red_reason(out, command, task_dir):
+    """Why a failing run of an unrecognised runner ran no test, or None.
+
+    A real runner that fails prints why. A command that printed nothing and
+    names none of the issue's declared test files - `false` is the one-word
+    case - ran no test, and a red from it would unlock code edits on
+    nothing. A command that prints and fails still records a red; the
+    record keeps the command, so it can be read.
+    """
+    if out.strip():
+        return None
+    try:
+        task, _ = load_manifest(task_dir)
+    except CompassError:
+        task = {}
+    text = " ".join(command)
+    if any(path in text for path in declared_test_paths(task)):
+        return None
+    return ("it printed nothing and names none of the issue's declared test "
+            "files, so no test ran")
+
+
 def cmd_tdd_red(args):
     task_dir = resolve_issue_dir(args.task)
     scenario = _resolve_scenario(task_dir, getattr(args, "scenario", None))
@@ -357,7 +379,8 @@ def cmd_tdd_red(args):
     elif code != 0:
         # A runner Compass does not recognise, and no pytest report: the
         # exit code is all there is to go on, and the record says so.
-        rejection = _red_rejection_reason(code, command)
+        rejection = (_red_rejection_reason(code, command)
+                     or _silent_red_reason(out, command, task_dir))
         heading = pytest_report.DID_NOT_RUN if rejection else None
         red_kind = None if rejection else "exit-code"
     if ours:
@@ -429,8 +452,9 @@ def _source_tree_hash(project_root):
     """Compute a stable SHA-256 of the source tree under project_root.
 
     Covers all *.py, *.md, *.yml, *.yaml, *.json, *.toml files, ordered by
-    their relative path (deterministic). Excludes .compass/, .git/,
-    __pycache__/, .venv/, node_modules/, and evidence/ directories.
+    their relative path (deterministic). Excludes the project root's own
+    .compass/, and .git/, __pycache__/, .venv/, node_modules/ and evidence/
+    directories at any depth.
 
     Returns a hex digest string. Performance target: < 200 ms on typical
     project trees (< 100 MB of source files).
@@ -438,15 +462,21 @@ def _source_tree_hash(project_root):
     Hash is content + path, deterministic. Used by cmd_tdd_green to
     detect whether any source file changed between two invocations.
     """
-    _EXCLUDED_DIRS = {".compass", ".git", "__pycache__", ".venv",
-                      "node_modules", "evidence"}
+    # `.compass/` is left out only at the project root, where it holds this
+    # project's own records. One anywhere else - a worked example, a test
+    # fixture, an eval seed - is source, and an edit to it is a change.
+    _EXCLUDED_DIRS = {".git", "__pycache__", ".venv", "node_modules",
+                      "evidence"}
+    _EXCLUDED_AT_ROOT = {".compass"}
     _INCLUDED_EXTS = {".py", ".md", ".yml", ".yaml", ".json", ".toml"}
 
     h = hashlib.sha256()
     # Walk the tree in sorted order to be deterministic across file systems
     for root, dirs, files in os.walk(project_root):
         # Prune excluded directories in-place so os.walk skips them
-        dirs[:] = sorted(d for d in dirs if d not in _EXCLUDED_DIRS)
+        at_root = root == project_root   # os.walk yields the root first, as given
+        dirs[:] = sorted(d for d in dirs if d not in _EXCLUDED_DIRS
+                         and not (at_root and d in _EXCLUDED_AT_ROOT))
         for fname in sorted(files):
             ext = os.path.splitext(fname)[1].lower()
             if ext not in _INCLUDED_EXTS:
@@ -602,6 +632,11 @@ def cmd_tdd_green(args):
     current_hash = _source_tree_hash(project_root)
     if tree_ids.get("tree_id"):
         current_hash = "%s+%s" % (tree_ids["tree_id"], current_hash)
+    # The files the record covers are part of what it asserts. After a file
+    # is traced to the issue, the same command over the same tree covers
+    # more files: a new assertion, not a retry of a flaky test.
+    if tree_ids.get("changes_id"):
+        current_hash = "%s+%s" % (current_hash, tree_ids["changes_id"])
     prior_state = _load_tdd_state(task_dir, scenario)
     prior_hash = prior_state.get("tree_hash")
     prior_attempts = prior_state.get("attempts") or 0

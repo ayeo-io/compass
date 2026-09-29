@@ -314,6 +314,7 @@ EXPECTED_SUBCOMMANDS = {
     "migrate",                    # the 1.x-to-2.0 tree migrator
     "init",                       # creates .compass/ - safe to run twice
     "acceptance",                 # the acceptance verb group
+    "quick-fix",                  # start|finish - the quick-fix verb group
 }
 
 

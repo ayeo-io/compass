@@ -589,7 +589,7 @@ if [ ! -d "$COMPASS_DIR" ]; then
 fi
 
 if [ ! -d "$WORK_DIR" ]; then
-  echo "Compass: no .compass/work/ in $PROJECT_DIR - no issue has been assessed. Run /compass:assess before changing code." >&2
+  echo "Compass: no .compass/work/ in $PROJECT_DIR - no issue has been assessed. Run /compass:assess before changing code, or /compass:quick-fix for a small, low-risk change." >&2
   compass_say_how_this_project_opted_in
   exit 2
 fi
@@ -623,7 +623,7 @@ if [ -z "$TASK_DIR" ]; then
 fi
 
 if [ -z "${TASK_DIR:-}" ]; then
-  echo "Compass: no issue under $PROJECT_DIR/.compass/work/ - this change has not been assessed. Run /compass:assess." >&2
+  echo "Compass: no issue under $PROJECT_DIR/.compass/work/ - this change has not been assessed. Run /compass:assess, or /compass:quick-fix for a small, low-risk change." >&2
   compass_say_how_this_project_opted_in
   exit 2
 fi

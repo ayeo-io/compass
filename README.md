@@ -168,6 +168,8 @@ compass changed-file add   trace a changed file to the scenario that asked for i
 compass evidence add       append a typed evidence record
 compass migrate            bring older issue directories up to the current schema
 compass terminology        what a term means here, from the frozen vocabulary
+compass quick-fix start    assess, evaluate and record a quick fix in one call
+compass quick-fix finish   trace, check, gate and ship a quick fix in one call
 ```
 
 Every verb describes itself - `compass <verb> --help` says what it does and

@@ -1,5 +1,5 @@
 ---
-description: The requirements review - resolve ambiguities and QA the spec against governance
+description: Requirements review - resolve ambiguity, check the spec against governance
 allowed-tools: Read, Write, Edit, Glob, Grep
 ---
 

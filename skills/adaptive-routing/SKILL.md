@@ -1,6 +1,6 @@
 ---
 name: adaptive-routing
-description: How to read the four assessment dimensions so the CLI can compute the delivery approach. Load at the assess stage.
+description: Reading the four assessment dimensions for the CLI. Load at the assess stage.
 ---
 
 # Adaptive Routing

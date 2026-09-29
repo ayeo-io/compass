@@ -380,6 +380,18 @@ def _is_excluded(rel: str) -> bool:
 
 _FIXTURE_PREFIX = "tests/fixtures/writing-style/"
 
+# Other frameworks' own records. An eval scenario lays a `seed_superpowers/`
+# or `seed_spec_kit/` overlay over its seed for a session under that
+# framework, in the words that framework writes. Compass's writing rules must
+# not rewrite them, and an allow marker would appear in the text the session
+# reads, so every file in such an overlay is left out.
+_OTHER_FRAMEWORKS_OVERLAYS = ("/seed_superpowers/", "/seed_spec_kit/")
+
+
+def _is_other_frameworks_record(rel: str) -> bool:
+    return rel.startswith("evals/scenarios/") and any(
+        part in rel for part in _OTHER_FRAMEWORKS_OVERLAYS)
+
 
 def scanned_paths() -> list[Path]:
     """Every tracked path, minus `EXCLUDED_PATHS`, minus this mechanism's own
@@ -389,7 +401,8 @@ def scanned_paths() -> list[Path]:
     a real, unfixed finding."""
     return [REPO_ROOT / rel for rel in _git_ls_files()
             if not _is_excluded(rel)
-            and not rel.startswith(_FIXTURE_PREFIX)]
+            and not rel.startswith(_FIXTURE_PREFIX)
+            and not _is_other_frameworks_record(rel)]
 
 
 # ---------------------------------------------------------------------------
@@ -1168,12 +1181,6 @@ _register(Rule(
             "the verb, and singling it out with \"the verify stage\" would "
             "break the list's parallel form."),
         Exemption(
-            "commands/quick-fix.md", "## 4. Verify",
-            "a step heading naming the verify stage, parallel to \"## 1. "
-            "Assess\" and \"## 5. Ship\" two headings over - those two "
-            "escape only because \"assess\" and \"ship\" are not in the "
-            "word table, not because a bare stage-name heading is wrong."),
-        Exemption(
             "skills/adaptive-routing/composition.md", "**Verify** - which "
             "review dimensions",
             "one label in a parallel bulleted list of pipeline-stage names "
@@ -1849,6 +1856,17 @@ _register(Rule(
                    "the same evidence-id-prefix machine identifier as the "
                    "ADR-007 exemption above, truncated mid-token by the "
                    "docstring it illustrates."),
+        # The same no-op case as the ADR-007 exemption above: Spec Kit's own
+        # real command name, hyphenated, so the backtick right before the
+        # match opens two segments earlier and the identifier is not caught.
+        Exemption("evals/harness.py",
+                   "`speckit-analyze`",
+                   "Spec Kit's own real command name, a machine identifier "
+                   "- same case as the ADR-007 exemption above."),
+        Exemption("tests/test_eval_harness.py",
+                   "`speckit-implement`, `speckit-analyze`",
+                   "Spec Kit's own real command name, a machine identifier "
+                   "- same case as the ADR-007 exemption above."),
     ),
 ))
 
@@ -4834,3 +4852,15 @@ def test_pbw_c4_the_stage_key_rename_block_has_a_marker():
         "the stage-key rename block's opening phrase must be a named "
         "marker, the same as the vocabulary-rename block's")
 
+
+
+def test_other_frameworks_records_are_left_out_and_nothing_else_is():
+    """Files in another framework's overlay under `evals/scenarios/` are in
+    that framework's own words, so no Compass writing rule reads them; every
+    other file under `evals/scenarios/` is still scanned, and at least one
+    overlay file exists, so the rule is not checking nothing."""
+    scanned = {str(p.relative_to(REPO_ROOT)) for p in scanned_paths()}
+    tracked = [r for r in _git_ls_files() if r.startswith("evals/scenarios/")]
+    overlays = [r for r in tracked if _is_other_frameworks_record(r)]
+    assert overlays, "no other framework's record is tracked"
+    assert sorted(r for r in tracked if r not in scanned) == sorted(overlays)

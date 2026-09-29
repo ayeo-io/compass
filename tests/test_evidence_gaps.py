@@ -134,7 +134,7 @@ def test_evg_a3_a_green_after_its_own_red_still_works(tmp_path):
     root, work, _ = _project(tmp_path)
 
     red = _cli(root, "tdd-red", "--issue", "demo", "--scenario", "DEMO-1",
-               "--", "false")
+               "--", "sh", "-c", "echo '1 failed'; exit 1")
     assert red.returncode == 0, (red.stdout + red.stderr)
     assert (work / "evidence" / "red-DEMO-1.json").is_file()
 
@@ -153,7 +153,7 @@ def test_evg_a3b_a_red_for_another_scenario_does_not_satisfy_the_green(tmp_path)
     quieter.
     """
     root, _, _ = _project(tmp_path)
-    _cli(root, "tdd-red", "--issue", "demo", "--scenario", "OTHER-1", "--", "false")
+    _cli(root, "tdd-red", "--issue", "demo", "--scenario", "OTHER-1", "--", "sh", "-c", "echo '1 failed'; exit 1")
 
     r = _cli(root, "tdd-green", "--issue", "demo", "--scenario", "DEMO-1",
              "--", "true")
@@ -183,7 +183,7 @@ def test_evg_b1_an_empty_marker_does_not_unlock_the_edit(tmp_path):
 def test_evg_b2_a_real_red_still_unlocks_the_edit(tmp_path):
     root, _, target = _project(tmp_path)
     red = _cli(root, "tdd-red", "--issue", "demo", "--scenario", "DEMO-1",
-               "--", "false")
+               "--", "sh", "-c", "echo '1 failed'; exit 1")
     assert red.returncode == 0, (red.stdout + red.stderr)
 
     r = _hook(root, target)
@@ -201,7 +201,7 @@ def test_evg_b3_an_edited_record_does_not_unlock_the_edit(tmp_path):
     edited after it was written.
     """
     root, work, target = _project(tmp_path)
-    _cli(root, "tdd-red", "--issue", "demo", "--scenario", "DEMO-1", "--", "false")
+    _cli(root, "tdd-red", "--issue", "demo", "--scenario", "DEMO-1", "--", "sh", "-c", "echo '1 failed'; exit 1")
 
     record = work / "evidence" / "red-DEMO-1.json"
     doc = json.loads(record.read_text())
@@ -228,7 +228,7 @@ def test_evg_c1_every_reader_failure_refuses(tmp_path, code):
     refuses first and hides it.
     """
     root, work, target = _project(tmp_path, define="full")
-    _cli(root, "tdd-red", "--issue", "demo", "--scenario", "DEMO-1", "--", "false")
+    _cli(root, "tdd-red", "--issue", "demo", "--scenario", "DEMO-1", "--", "sh", "-c", "echo '1 failed'; exit 1")
 
     r = _hook(root, target, path_prefix=str(_shim(tmp_path, code)))
     out = (r.stdout + r.stderr)
@@ -244,7 +244,7 @@ def test_evg_c1b_exit_three_keeps_its_own_message(tmp_path):
     """Exit 3 names a broken install, which is more useful than a generic
     sentence."""
     root, _, target = _project(tmp_path, define="full")
-    _cli(root, "tdd-red", "--issue", "demo", "--scenario", "DEMO-1", "--", "false")
+    _cli(root, "tdd-red", "--issue", "demo", "--scenario", "DEMO-1", "--", "sh", "-c", "echo '1 failed'; exit 1")
 
     r = _hook(root, target, path_prefix=str(_shim(tmp_path, 3)))
     out = (r.stdout + r.stderr).lower()
@@ -258,7 +258,7 @@ def test_evg_c2_a_healthy_install_is_unchanged(tmp_path):
     """Every change here makes a broken install refuse. None must change a
     working one."""
     root, _, target = _project(tmp_path)
-    _cli(root, "tdd-red", "--issue", "demo", "--scenario", "DEMO-1", "--", "false")
+    _cli(root, "tdd-red", "--issue", "demo", "--scenario", "DEMO-1", "--", "sh", "-c", "echo '1 failed'; exit 1")
 
     r = _hook(root, target)
     assert r.returncode == ALLOW, (

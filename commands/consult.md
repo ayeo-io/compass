@@ -1,5 +1,5 @@
 ---
-description: Multi-role decision - bring the role perspectives to one question
+description: Bring the role perspectives to one decision
 argument-hint: "<the question or decision to work through>"
 allowed-tools: Read, Write, Edit, Glob, Grep
 ---

@@ -1,5 +1,5 @@
 ---
-description: Assess the work - risk, familiarity, size, goal - and compute the delivery approach
+description: Assess risk, familiarity, size and goal, and compute the delivery approach
 argument-hint: "<issue description> [--reassess]"
 allowed-tools: Read, Write, Edit, Glob, Grep
 ---
@@ -20,6 +20,35 @@ optional and not a prerequisite. If a project has run `/compass:init`, its
 `governance/` extends those defaults - read whichever is in force.
 
 **Issue:** $ARGUMENTS
+
+## A small change an engineer is making
+
+This is the whole of `/compass:quick-fix`; you do not need to load it.
+
+```
+compass quick-fix start <slug> --risk "<VALUE> - <reason>" \
+  --familiarity "<VALUE> - <reason>" --size "<VALUE> - <reason>" \
+  --intent "<what will be true afterwards>" \
+  --scenario "Given ... When ... Then ..." --test <test node id>
+```
+
+Risk is `trivial`, `contained`, `cross-cutting` or `critical`; familiarity
+is `greenfield`, `brownfield-mapped` or `brownfield-unmapped`; size is
+`atomic`, `small`, `standard`, `large` or `product`. When unsure, choose
+the larger. If it prints a `created:` line, tell the user.
+
+Then write the failing test, record it, and write the fix:
+
+```
+compass tdd-red --scenario TRC-001 -- <test command>
+compass quick-fix finish -m "<commit message>" --no-commit -- <test command>
+```
+
+`finish` records the green, runs the checks and passes the gates. Leave out
+`--no-commit` only if the user asked for a commit. If `start` says the
+approach is heavier than a quick fix, the manifest holds the values and
+the approach: continue below from step 4, and give each value its reason
+there.
 
 ## First: make sure this is a Compass project
 

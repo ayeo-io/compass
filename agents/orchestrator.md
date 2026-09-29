@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: "Owns breakdown and integration on multiagent orchestrations: creates and merges worktrees, watches for collision, and is the only agent that may resolve a cross-subtask conflict."
+description: Owns multiagent breakdown and integration, and alone resolves a cross-subtask conflict.
 tools: Read, Glob, Grep, Write, Edit, Bash
 model: opus
 ---

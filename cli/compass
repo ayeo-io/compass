@@ -64,6 +64,7 @@ import re as _re
 from compass_pkg import core as _core  # noqa: F401
 from compass_pkg._all import *  # noqa: F401,F403
 from compass_pkg.subtasks import register as register_subtask_parser  # noqa: E402
+from compass_pkg.quick_fix_cmd import register as register_quick_fix_parser  # noqa: E402
 
 # Declared literally here as well as in compass_pkg.core: this file is
 # what `compass --version` and the release-consistency test read, and a
@@ -439,6 +440,8 @@ def build_parser():
     peva.add_argument("--path", required=True, help="path to the evidence file")
     peva.add_argument("--scenario", help="scenario this evidence is for (optional)")
     peva.set_defaults(func=cmd_evidence_add, output_kind="hand-off")
+
+    register_quick_fix_parser(sub, issue_arg)
 
     pmig = sub.add_parser(
         "migrate",

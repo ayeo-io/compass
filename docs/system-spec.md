@@ -29,12 +29,12 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### A branch with no ignored record merges
+### the breakdown gives calls and tokens by step
 
-- **Scenario id:** `MIR-2`
+- **Scenario id:** `QFO-8`
 - **Intent:** `INT-1`
-- **Source issue:** `merge-overwrites-an-ignored-record`
-- **Landed:** 2026-09-25
+- **Source issue:** `quick-fix-overhead`
+- **Landed:** 2026-09-28
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
 
@@ -43,33 +43,33 @@
 - **Source issue:** `framework-field-feedback`
 - **Landed:** 2026-06-23
 
-### A multiagent issue must record its run
+### Six scenarios cover the failure modes
 
-- **Scenario id:** `DPR-1`
+- **Scenario id:** `SPT-2`
 - **Intent:** `INT-2`
-- **Source issue:** `dispatch-protocol`
-- **Landed:** 2026-09-25
+- **Source issue:** `skill-prose-pressure-tests`
+- **Landed:** 2026-09-27
 
-### The scripts find an issue's documents through the registry
+### Behaviours are scored from actions and artifacts
 
-- **Scenario id:** `DPR-2`
+- **Scenario id:** `SPT-3`
 - **Intent:** `INT-3`
-- **Source issue:** `dispatch-protocol`
-- **Landed:** 2026-09-25
+- **Source issue:** `skill-prose-pressure-tests`
+- **Landed:** 2026-09-27
 
-### A staged map is provisioned one wave at a time
+### The releasing guide requires a run
 
-- **Scenario id:** `DPR-3`
+- **Scenario id:** `SPT-4`
 - **Intent:** `INT-4`
-- **Source issue:** `dispatch-protocol`
-- **Landed:** 2026-09-25
+- **Source issue:** `skill-prose-pressure-tests`
+- **Landed:** 2026-09-27
 
-### Only ship-commit marks an issue landed
+### The pilot and one measured change are on record
 
-- **Scenario id:** `DPR-7`
+- **Scenario id:** `SPT-5`
 - **Intent:** `INT-5`
-- **Source issue:** `dispatch-protocol`
-- **Landed:** 2026-09-25
+- **Source issue:** `skill-prose-pressure-tests`
+- **Landed:** 2026-09-27
 
 ### the hook still blocks a code file inside the project
 
@@ -8750,6 +8750,27 @@
 - **Source issue:** `devlog-logs-edits-outside-the-project`
 - **Landed:** 2026-09-25
 
+### A multiagent issue must record its run _(archived)_
+
+- **Scenario id:** `DPR-1`
+- **Intent:** `INT-2`
+- **Source issue:** `dispatch-protocol`
+- **Landed:** 2026-09-25
+
+### The scripts find an issue's documents through the registry _(archived)_
+
+- **Scenario id:** `DPR-2`
+- **Intent:** `INT-3`
+- **Source issue:** `dispatch-protocol`
+- **Landed:** 2026-09-25
+
+### A staged map is provisioned one wave at a time _(archived)_
+
+- **Scenario id:** `DPR-3`
+- **Intent:** `INT-4`
+- **Source issue:** `dispatch-protocol`
+- **Landed:** 2026-09-25
+
 ### A conflict in Compass's records does not stop integration _(archived)_
 
 - **Scenario id:** `DPR-4`
@@ -8761,6 +8782,13 @@
 
 - **Scenario id:** `DPR-5`
 - **Intent:** `INT-1`
+- **Source issue:** `dispatch-protocol`
+- **Landed:** 2026-09-25
+
+### Only ship-commit marks an issue landed _(archived)_
+
+- **Scenario id:** `DPR-7`
+- **Intent:** `INT-5`
 - **Source issue:** `dispatch-protocol`
 - **Landed:** 2026-09-25
 
@@ -8812,3 +8840,402 @@
 - **Intent:** `INT-1`
 - **Source issue:** `merge-overwrites-an-ignored-record`
 - **Landed:** 2026-09-25
+
+### A branch with no ignored record merges _(archived)_
+
+- **Scenario id:** `MIR-2`
+- **Intent:** `INT-1`
+- **Source issue:** `merge-overwrites-an-ignored-record`
+- **Landed:** 2026-09-25
+
+### A same-size edit in the same second changes the tree id _(archived)_
+
+- **Scenario id:** `TSE-1`
+- **Intent:** `INT-1`
+- **Source issue:** `tree-id-misses-a-same-second-edit`
+- **Landed:** 2026-09-25
+
+### A mapped subtask the record lacks fails the check _(archived)_
+
+- **Scenario id:** `CRM-1`
+- **Intent:** `INT-1`
+- **Source issue:** `check-does-not-compare-record-with-map`
+- **Landed:** 2026-09-25
+
+### subtask next lists a mapped subtask not yet dispatched _(archived)_
+
+- **Scenario id:** `CRM-2`
+- **Intent:** `INT-1`
+- **Source issue:** `check-does-not-compare-record-with-map`
+- **Landed:** 2026-09-25
+
+### With no map the check judges the record as before _(archived)_
+
+- **Scenario id:** `CRM-3`
+- **Intent:** `INT-1`
+- **Source issue:** `check-does-not-compare-record-with-map`
+- **Landed:** 2026-09-25
+
+### No script says integration lands or happens at ship _(archived)_
+
+- **Scenario id:** `DSS-1`
+- **Intent:** `INT-1`
+- **Source issue:** `multiagent-scripts-still-say-ship`
+- **Landed:** 2026-09-25
+
+### multiagent.sh names the order of waves and --no-clean _(archived)_
+
+- **Scenario id:** `DSS-2`
+- **Intent:** `INT-1`
+- **Source issue:** `multiagent-scripts-still-say-ship`
+- **Landed:** 2026-09-25
+
+### integrate.sh says no regression ran when none did _(archived)_
+
+- **Scenario id:** `DSS-3`
+- **Intent:** `INT-1`
+- **Source issue:** `multiagent-scripts-still-say-ship`
+- **Landed:** 2026-09-25
+
+### The protocol's landing command runs as written _(archived)_
+
+- **Scenario id:** `DSS-4`
+- **Intent:** `INT-1`
+- **Source issue:** `multiagent-scripts-still-say-ship`
+- **Landed:** 2026-09-25
+
+### No tr set in the scripts reads differently on Linux _(archived)_
+
+- **Scenario id:** `DTR-1`
+- **Intent:** `INT-1`
+- **Source issue:** `tr-range-fails-on-linux`
+- **Landed:** 2026-09-25
+
+### A run is recorded under either condition _(archived)_
+
+- **Scenario id:** `SPT-1`
+- **Intent:** `INT-1`
+- **Source issue:** `skill-prose-pressure-tests`
+- **Landed:** 2026-09-27
+
+### An edit under a nested .compass/ changes the source hash _(archived)_
+
+- **Scenario id:** `SHN-1`
+- **Intent:** `INT-1`
+- **Source issue:** `source-hash-skips-nested-records`
+- **Landed:** 2026-09-27
+
+### An edit under the project root's .compass/ does not _(archived)_
+
+- **Scenario id:** `SHN-2`
+- **Intent:** `INT-1`
+- **Source issue:** `source-hash-skips-nested-records`
+- **Landed:** 2026-09-27
+
+### A silent red naming no test is refused _(archived)_
+
+- **Scenario id:** `RWT-1`
+- **Intent:** `INT-1`
+- **Source issue:** `red-without-a-test-unlocks-edits`
+- **Landed:** 2026-09-27
+
+### Reds that print or name a declared test still record _(archived)_
+
+- **Scenario id:** `RWT-2`
+- **Intent:** `INT-1`
+- **Source issue:** `red-without-a-test-unlocks-edits`
+- **Landed:** 2026-09-27
+
+### EJG-1 _(archived)_
+
+- **Scenario id:** `EJG-1`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-judge-gaps`
+- **Landed:** 2026-09-27
+
+### EJG-2 _(archived)_
+
+- **Scenario id:** `EJG-2`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-judge-gaps`
+- **Landed:** 2026-09-27
+
+### EJG-3 _(archived)_
+
+- **Scenario id:** `EJG-3`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-judge-gaps`
+- **Landed:** 2026-09-27
+
+### EJG-4 _(archived)_
+
+- **Scenario id:** `EJG-4`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-judge-gaps`
+- **Landed:** 2026-09-27
+
+### EJG-5 _(archived)_
+
+- **Scenario id:** `EJG-5`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-judge-gaps`
+- **Landed:** 2026-09-27
+
+### EJG-6 _(archived)_
+
+- **Scenario id:** `EJG-6`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-judge-gaps`
+- **Landed:** 2026-09-27
+
+### EJG-7 _(archived)_
+
+- **Scenario id:** `EJG-7`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-judge-gaps`
+- **Landed:** 2026-09-27
+
+### EJG-8 _(archived)_
+
+- **Scenario id:** `EJG-8`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-judge-gaps`
+- **Landed:** 2026-09-27
+
+### Two tries keep both costs and their total _(archived)_
+
+- **Scenario id:** `SCT-1`
+- **Intent:** `INT-1`
+- **Source issue:** `subtask-cost-keeps-last-try-only`
+- **Landed:** 2026-09-27
+
+### A second cost for the same try replaces it _(archived)_
+
+- **Scenario id:** `SCT-2`
+- **Intent:** `INT-1`
+- **Source issue:** `subtask-cost-keeps-last-try-only`
+- **Landed:** 2026-09-27
+
+### A feature assessment earns and registers the map _(archived)_
+
+- **Scenario id:** `FRM-1`
+- **Intent:** `INT-1`
+- **Source issue:** `feature-route-omits-the-map`
+- **Landed:** 2026-09-27
+
+### Every multiagent route earns the map _(archived)_
+
+- **Scenario id:** `FRM-2`
+- **Intent:** `INT-1`
+- **Source issue:** `feature-route-omits-the-map`
+- **Landed:** 2026-09-27
+
+### EGA-1 _(archived)_
+
+- **Scenario id:** `EGA-1`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d30`
+- **Landed:** 2026-09-27
+
+### EGA-2 _(archived)_
+
+- **Scenario id:** `EGA-2`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d30`
+- **Landed:** 2026-09-27
+
+### EGA-3 _(archived)_
+
+- **Scenario id:** `EGA-3`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d30`
+- **Landed:** 2026-09-27
+
+### EGA-4 _(archived)_
+
+- **Scenario id:** `EGA-4`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d30`
+- **Landed:** 2026-09-27
+
+### EGA-5 _(archived)_
+
+- **Scenario id:** `EGA-5`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d30`
+- **Landed:** 2026-09-27
+
+### EGA-6 _(archived)_
+
+- **Scenario id:** `EGA-6`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d30`
+- **Landed:** 2026-09-27
+
+### EGA-7 _(archived)_
+
+- **Scenario id:** `EGA-7`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d30`
+- **Landed:** 2026-09-27
+
+### CMP-1 _(archived)_
+
+- **Scenario id:** `CMP-1`
+- **Intent:** `INT-1`
+- **Source issue:** `comparison-suite`
+- **Landed:** 2026-09-28
+
+### CMP-2 _(archived)_
+
+- **Scenario id:** `CMP-2`
+- **Intent:** `INT-1`
+- **Source issue:** `comparison-suite`
+- **Landed:** 2026-09-28
+
+### CMP-3 _(archived)_
+
+- **Scenario id:** `CMP-3`
+- **Intent:** `INT-1`
+- **Source issue:** `comparison-suite`
+- **Landed:** 2026-09-28
+
+### CMP-4 _(archived)_
+
+- **Scenario id:** `CMP-4`
+- **Intent:** `INT-1`
+- **Source issue:** `comparison-suite`
+- **Landed:** 2026-09-28
+
+### CMP-5 _(archived)_
+
+- **Scenario id:** `CMP-5`
+- **Intent:** `INT-1`
+- **Source issue:** `comparison-suite`
+- **Landed:** 2026-09-28
+
+### CMP-6 _(archived)_
+
+- **Scenario id:** `CMP-6`
+- **Intent:** `INT-1`
+- **Source issue:** `comparison-suite`
+- **Landed:** 2026-09-28
+
+### EGB-1 _(archived)_
+
+- **Scenario id:** `EGB-1`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d33`
+- **Landed:** 2026-09-28
+
+### EGB-2 _(archived)_
+
+- **Scenario id:** `EGB-2`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d33`
+- **Landed:** 2026-09-28
+
+### EGB-3 _(archived)_
+
+- **Scenario id:** `EGB-3`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d33`
+- **Landed:** 2026-09-28
+
+### EGB-4 _(archived)_
+
+- **Scenario id:** `EGB-4`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d33`
+- **Landed:** 2026-09-28
+
+### EGB-5 _(archived)_
+
+- **Scenario id:** `EGB-5`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d33`
+- **Landed:** 2026-09-28
+
+### EGB-6 _(archived)_
+
+- **Scenario id:** `EGB-6`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d33`
+- **Landed:** 2026-09-28
+
+### EGB-7 _(archived)_
+
+- **Scenario id:** `EGB-7`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d33`
+- **Landed:** 2026-09-28
+
+### EGB-8 _(archived)_
+
+- **Scenario id:** `EGB-8`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d33`
+- **Landed:** 2026-09-28
+
+### Resident text at or under 900 words _(archived)_
+
+- **Scenario id:** `RFD-1`
+- **Intent:** `INT-1`
+- **Source issue:** `resident-footprint-diet`
+- **Landed:** 2026-09-28
+
+### Triggering tests pass unchanged _(archived)_
+
+- **Scenario id:** `RFD-2`
+- **Intent:** `INT-1`
+- **Source issue:** `resident-footprint-diet`
+- **Landed:** 2026-09-28
+
+### start records the whole assessment in one call _(archived)_
+
+- **Scenario id:** `QFO-1`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-overhead`
+- **Landed:** 2026-09-28
+
+### start stops when the approach is not a quick fix _(archived)_
+
+- **Scenario id:** `QFO-2`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-overhead`
+- **Landed:** 2026-09-28
+
+### start refuses an unreasoned or unknown dimension _(archived)_
+
+- **Scenario id:** `QFO-3`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-overhead`
+- **Landed:** 2026-09-28
+
+### finish traces, checks, passes the three gates and lands _(archived)_
+
+- **Scenario id:** `QFO-4`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-overhead`
+- **Landed:** 2026-09-28
+
+### finish refuses and passes nothing on any unmet condition _(archived)_
+
+- **Scenario id:** `QFO-5`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-overhead`
+- **Landed:** 2026-09-28
+
+### the command and skill teach the two verbs _(archived)_
+
+- **Scenario id:** `QFO-6`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-overhead`
+- **Landed:** 2026-09-28
+
+### a re-run costs at most twice Superpowers _(archived)_
+
+- **Scenario id:** `QFO-7`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-overhead`
+- **Landed:** 2026-09-28

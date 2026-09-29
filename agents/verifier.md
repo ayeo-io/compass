@@ -1,6 +1,6 @@
 ---
 name: verifier
-description: "The mechanical half of the verify stage: runs the scenarios as an acceptance suite and the full test suite, and gathers the output and artifacts as evidence."
+description: "The mechanical half of the verify stage: runs the scenarios and the full suite, and gathers evidence."
 tools: Read, Glob, Grep, Bash, Write, Edit
 model: sonnet
 ---

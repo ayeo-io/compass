@@ -270,8 +270,10 @@ does not appear in it: read the remaining waves from the map.
 After `/compass:verify` passes every gate, land the issue:
 
 ```
-compass ship-commit --issue <slug>
+compass ship-commit --issue <slug> -m "<one-line summary>"
 ```
+
+`-m` is needed although no commit is made.
 
 By then every file the issue changed is committed by the integration merges,
 so nothing is staged. `ship-commit` then makes no commit: it checks that

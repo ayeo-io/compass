@@ -1,5 +1,5 @@
 ---
-description: Optionally adopt project-specific governance - copy governance/ in and extend it
+description: Optionally adopt and extend project governance
 allowed-tools: Read, Write, Edit, Bash, Glob
 ---
 

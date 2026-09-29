@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given an issue with no record of its start state, when `finish` runs w
+### the safety contract states the three limits
 
-- **Scenario id:** `FUU-5`
+- **Scenario id:** `FSE-4`
 - **Intent:** `INT-1`
-- **Source issue:** `finish-commits-unrelated-untracked-files`
+- **Source issue:** `finish-and-ship-commit-edges`
 - **Landed:** 2026-09-29
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -9315,4 +9315,32 @@
 - **Scenario id:** `FUU-3`
 - **Intent:** `INT-1`
 - **Source issue:** `finish-commits-unrelated-untracked-files`
+- **Landed:** 2026-09-29
+
+### Given an issue with no record of its start state, when `finish` runs w _(archived)_
+
+- **Scenario id:** `FUU-5`
+- **Intent:** `INT-1`
+- **Source issue:** `finish-commits-unrelated-untracked-files`
+- **Landed:** 2026-09-29
+
+### Given a fix that creates a file whose name has a space, a quote or a n _(archived)_
+
+- **Scenario id:** `FSE-1`
+- **Intent:** `INT-1`
+- **Source issue:** `finish-and-ship-commit-edges`
+- **Landed:** 2026-09-29
+
+### Given a quick fix started with a local file present, when it lands, th _(archived)_
+
+- **Scenario id:** `FSE-2`
+- **Intent:** `INT-1`
+- **Source issue:** `finish-and-ship-commit-edges`
+- **Landed:** 2026-09-29
+
+### Given a successful `finish`, when it prints its hand-off, then the fil _(archived)_
+
+- **Scenario id:** `FSE-3`
+- **Intent:** `INT-1`
+- **Source issue:** `finish-and-ship-commit-edges`
 - **Landed:** 2026-09-29

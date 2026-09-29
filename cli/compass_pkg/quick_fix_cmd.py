@@ -407,8 +407,7 @@ def _reusable_green(task_dir, scenario, command, tree_ids):
     # a recognised pytest micro-run (`tdd._neutralise_coverage`); compare
     # against the same form, or an identical command would look changed.
     # Compare the argument lists, not their joined text: `sh -c "a b"` and
-    # `sh -c a b` join alike and run differently. A record with no list,
-    # written before greens carried one, is compared on its joined text.
+    # `sh -c a b` join alike and run differently.
     wanted = _neutralise_coverage(list(command))
     if "argv" in record:
         if record.get("argv") != wanted:

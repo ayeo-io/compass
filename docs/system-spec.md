@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### a green without argv is reused on its joined command
+### Given the safety contract and the post-commit refusal, then the contra
 
-- **Scenario id:** `SCF-4`
+- **Scenario id:** `GDH-4`
 - **Intent:** `INT-1`
-- **Source issue:** `ship-commit-follow-ups`
+- **Source issue:** `green-digest-and-hook-scope`
 - **Landed:** 2026-09-29
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -9415,6 +9415,13 @@
 - **Source issue:** `ship-commit-follow-ups`
 - **Landed:** 2026-09-29
 
+### a green without argv is reused on its joined command _(archived)_
+
+- **Scenario id:** `SCF-4`
+- **Intent:** `INT-1`
+- **Source issue:** `ship-commit-follow-ups`
+- **Landed:** 2026-09-29
+
 ### Given names starting with `-` or holding `*` or `?`, when `ship-commit _(archived)_
 
 - **Scenario id:** `SCF-5`
@@ -9427,4 +9434,25 @@
 - **Scenario id:** `SCF-6`
 - **Intent:** `INT-1`
 - **Source issue:** `ship-commit-follow-ups`
+- **Landed:** 2026-09-29
+
+### Given a green record edited after it was written, its stored digest le _(archived)_
+
+- **Scenario id:** `GDH-1`
+- **Intent:** `INT-1`
+- **Source issue:** `green-digest-and-hook-scope`
+- **Landed:** 2026-09-29
+
+### Given a git pre-commit hook that stages a file outside the issue's sco _(archived)_
+
+- **Scenario id:** `GDH-2`
+- **Intent:** `INT-1`
+- **Source issue:** `green-digest-and-hook-scope`
+- **Landed:** 2026-09-29
+
+### Given a tracked file that matches `.gitignore`, traced by an issue and _(archived)_
+
+- **Scenario id:** `GDH-3`
+- **Intent:** `INT-1`
+- **Source issue:** `green-digest-and-hook-scope`
 - **Landed:** 2026-09-29

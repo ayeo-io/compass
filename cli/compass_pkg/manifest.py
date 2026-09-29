@@ -293,7 +293,8 @@ def cmd_land_commit(args):
     if slug is not None:
         _refuse_stale_green(_scope_task, _scope_dir, slug, cwd)
 
-    staged_now = _git(["diff", "--cached", "--name-only"], cwd).stdout.split()
+    staged_now = [n for n in _git(["diff", "--cached", "--name-only", "-z"],
+                                  cwd).stdout.split("\0") if n]
 
     # The scope check needs a declared scope. An issue with no `changed_files`
     # has not said what it owns, so there is nothing to check against and
@@ -345,7 +346,8 @@ def cmd_land_commit(args):
     # (a) best-effort clean-first: only if the pre-commit framework is set up.
     if shutil.which("pre-commit") and os.path.isfile(
             os.path.join(cwd, ".pre-commit-config.yaml")):
-        names = _git(["diff", "--cached", "--name-only"], cwd).stdout.split()
+        names = [n for n in _git(["diff", "--cached", "--name-only", "-z"],
+                                 cwd).stdout.split("\0") if n]
         if names:
             subprocess.run(["pre-commit", "run", "--files", *names],
                            cwd=cwd, capture_output=True, text=True)

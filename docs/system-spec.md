@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a landed quick fix, when it lands, then its start record is gone
+### a green without argv is reused on its joined command
 
-- **Scenario id:** `SJS-6`
+- **Scenario id:** `SCF-4`
 - **Intent:** `INT-1`
-- **Source issue:** `ship-commit-judges-the-staged-files`
+- **Source issue:** `ship-commit-follow-ups`
 - **Landed:** 2026-09-29
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -9385,4 +9385,46 @@
 - **Scenario id:** `SJS-5`
 - **Intent:** `INT-1`
 - **Source issue:** `ship-commit-judges-the-staged-files`
+- **Landed:** 2026-09-29
+
+### Given a landed quick fix, when it lands, then its start record is gone _(archived)_
+
+- **Scenario id:** `SJS-6`
+- **Intent:** `INT-1`
+- **Source issue:** `ship-commit-judges-the-staged-files`
+- **Landed:** 2026-09-29
+
+### Given a git pre-commit hook that stages an untested copy of an issue f _(archived)_
+
+- **Scenario id:** `SCF-1`
+- **Intent:** `INT-1`
+- **Source issue:** `ship-commit-follow-ups`
+- **Landed:** 2026-09-29
+
+### Given pre-commit set up, a tested copy staged and an untested edit on  _(archived)_
+
+- **Scenario id:** `SCF-2`
+- **Intent:** `INT-1`
+- **Source issue:** `ship-commit-follow-ups`
+- **Landed:** 2026-09-29
+
+### Given a hook that rewrites an issue file with untested content and fai _(archived)_
+
+- **Scenario id:** `SCF-3`
+- **Intent:** `INT-1`
+- **Source issue:** `ship-commit-follow-ups`
+- **Landed:** 2026-09-29
+
+### Given names starting with `-` or holding `*` or `?`, when `ship-commit _(archived)_
+
+- **Scenario id:** `SCF-5`
+- **Intent:** `INT-1`
+- **Source issue:** `ship-commit-follow-ups`
+- **Landed:** 2026-09-29
+
+### Given `docs/safety-contract.md`, then it states that a traced symlink  _(archived)_
+
+- **Scenario id:** `SCF-6`
+- **Intent:** `INT-1`
+- **Source issue:** `ship-commit-follow-ups`
 - **Landed:** 2026-09-29

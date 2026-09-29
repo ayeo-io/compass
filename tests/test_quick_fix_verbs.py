@@ -65,6 +65,10 @@ def repo(tmp_path):
     root = tmp_path / "repo"
     root.mkdir()
     _git(root, "init", "-q")
+    # finish commits through the CLI, not through _git, so the identity must
+    # live in the repository: a CI runner has no global git identity.
+    _git(root, "config", "user.email", "t@example.com")
+    _git(root, "config", "user.name", "t")
     (root / "README.md").write_text("hello\n")
     _git(root, "add", "-A")
     _git(root, "commit", "-q", "-m", "base")

@@ -437,21 +437,32 @@ def _write_start_state(task_dir, project_root):
     The record holds SHA-256 digests, never names. In a project that
     commits `.compass/work/`, it goes out with the issue's records, and a
     list of local file names would publish what it exists to protect.
-    Directories holding only untracked files, such as a local `.claude/`,
-    are recorded too, so a file written into one after `start` stays out.
+    Directories holding no tracked file - only untracked or ignored ones,
+    such as a local `.claude/` - are recorded too, so a file written into
+    one after `start` stays out. `finish` still commits a path the agent
+    traced, or a test the scenario declares.
     """
     try:
         before = [p for p in _git_changed_paths(project_root)
                   if not p.startswith(".compass/")]
         untracked = _untracked_paths(project_root)
+        ignored = subprocess.run(
+            ["git", "ls-files", "-z", "--others", "--ignored",
+             "--exclude-standard", "--directory"], cwd=project_root,
+            capture_output=True, text=True, check=True).stdout.split("\0")
         tracked = subprocess.run(
             ["git", "ls-files", "-z"], cwd=project_root, capture_output=True,
             text=True, check=True).stdout.split("\0")
     except (OSError, subprocess.CalledProcessError):
         return
     tracked_dirs = {d for t in tracked if t for d in _ancestors(t)}
-    local_dirs = {d for p in untracked if not p.startswith(".compass/")
-                  for d in _ancestors(p) if d not in tracked_dirs}
+    # A directory with no tracked file in it is local: one holding only
+    # untracked files, or only ignored ones, such as a `.claude/` with an
+    # ignored settings file after Claude Code has run.
+    local = [p for p in list(untracked) + [i for i in ignored if i]
+             if not p.startswith(".compass/")]
+    local_dirs = {d for p in local for d in _ancestors(p)
+                  if d not in tracked_dirs}
     with open(os.path.join(task_dir, START_STATE), "w", encoding="utf-8") as fh:
         json.dump({"digest": "sha256",
                    "changed_before_start": sorted(_digest(p) for p in before),

@@ -452,6 +452,38 @@ def test_fuu1_a_new_file_in_a_directory_untracked_before_start_is_refused(repo):
     assert _git(repo, "rev-parse", "HEAD") == head_before
 
 
+def test_fuu1_a_directory_of_ignored_files_is_local_too(repo):
+    """After Claude Code has run, `.claude/` often holds only an ignored
+    `settings.local.json`. A plan written there after `start` is local."""
+    (repo / ".gitignore").write_text("local/settings.json\n")
+    _git(repo, "add", ".gitignore")
+    _git(repo, "commit", "-q", "-m", "ignore")
+    (repo / "local").mkdir()
+    (repo / "local" / "settings.json").write_text("{}\n")
+    _ready_to_finish(repo, "greet-ignored-dir")
+    (repo / "local" / "plan.md").write_text("private\n")
+
+    finish = _finish(repo, "greet-ignored-dir")
+    assert finish.returncode != 0
+    assert "local/plan.md" in finish.stdout + finish.stderr
+
+
+def test_fuu4_a_directory_holding_a_tracked_file_takes_new_files(repo):
+    """A directory with a tracked file in it is the project's, so a new
+    file the change writes there is committed, even when the directory
+    also held an untracked file before `start`."""
+    (repo / "data").mkdir()
+    (repo / "data" / "keep.txt").write_text("tracked\n")
+    _git(repo, "add", "data/keep.txt")
+    _git(repo, "commit", "-q", "-m", "keep")
+    _ready_to_finish(repo, "greet-mixed-dir")
+    (repo / "data" / "extra.txt").write_text("made by the fix\n")
+
+    finish = _finish(repo, "greet-mixed-dir")
+    assert finish.returncode == 0, finish.stdout + finish.stderr
+    assert "data/extra.txt" in _files_in_head(repo)
+
+
 def test_fuu4_a_declared_test_from_before_start_needs_no_trace(repo):
     """The test file the scenario declares may exist, untracked, before
     `start`: it is the change's by declaration."""

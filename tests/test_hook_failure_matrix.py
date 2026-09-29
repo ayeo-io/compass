@@ -152,19 +152,27 @@ def test_hfm_1_every_reader_that_cannot_run_refuses_and_names_itself(
 
 @pytest.mark.parametrize("target", ["src/app.py", "packaging/app.cfg"])
 def test_hfm_2_with_no_python3_the_refusal_says_so(install, target):
+    """Wording changed under `refusal-template`: the refusal is now the
+    registry's `python-missing` rendering (RTP-3), not a reader-named
+    message - so it no longer names the reader, and the pin below moved
+    with it."""
     result = _hook(install, target, path=_no_python_path(install))
     assert result.returncode == 2, (result.returncode, result.stderr)
     text = " ".join(result.stderr.split())
-    assert "python3 not found" in text, text
+    assert "python3 was not found on the PATH" in text, text
+    assert "[python-missing]" in text, text
     assert "did not complete" not in text
 
 
 def test_hfm_3_a_config_that_does_not_parse_does_not_unguard(install):
+    """Wording changed under `refusal-template`: a bad `.compass/config.yml`
+    now renders the registry's `config-invalid` code, not the reader's own
+    name."""
     (install / ".compass" / "config.yml").write_text(
         "enforcement:\n  code_globs: [unclosed\n")
     result = _hook(install, "packaging/app.cfg")
     assert result.returncode == 2, (result.returncode, result.stderr)
-    assert READERS["code_globs"][1] in " ".join(result.stderr.split())
+    assert "[config-invalid]" in " ".join(result.stderr.split())
 
 
 def test_hfm_4_a_missing_approach_record_is_still_reported_as_missing(install):
@@ -273,7 +281,7 @@ def test_hfm_3_a_broken_config_names_the_config_as_the_fix(install):
         "enforcement:\n  code_globs: [unclosed\n")
     result = _hook(install, "packaging/app.cfg")
     text = " ".join(result.stderr.split())
-    assert "Fix .compass/config.yml and re-try" in text, text
+    assert "fix .compass/config.yml and re-try" in text, text
     assert "Fix the install" not in text
 
 
@@ -316,5 +324,5 @@ def test_cgs_1_code_globs_of_the_wrong_shape_refuses(install, value):
     result = _hook(install, "packaging/app.cfg")
     assert result.returncode == 2, (result.returncode, result.stderr)
     text = " ".join(result.stderr.split())
-    assert "Fix .compass/config.yml and re-try" in text, text
+    assert "fix .compass/config.yml and re-try" in text, text
     assert "a list of strings" in text, text

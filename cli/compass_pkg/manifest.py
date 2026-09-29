@@ -79,7 +79,11 @@ def _land_scope(task, slug):
         cf["path"] for cf in (task.get("changed_files") or [])
         if isinstance(cf, dict) and cf.get("path")
     }
-    owned |= set(declared_test_paths(task))
+    # ADR-006: an issue that has not said what it changes has no scope to
+    # check. The declared tests widen a scope that exists; they do not
+    # create one.
+    if owned:
+        owned |= set(declared_test_paths(task))
     return owned, f".compass/work/{slug}/"
 
 

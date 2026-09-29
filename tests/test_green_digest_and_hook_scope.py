@@ -151,3 +151,19 @@ def test_gdh2_a_land_at_head_takes_declared_tests_and_the_issue_documents(repo):
     result = _cli(repo, "ship-commit", "--issue", SLUG, "-m", "land it")
     assert result.returncode == 0, result.stdout + result.stderr
     assert _manifest(repo).get("status") == "landed"
+
+
+def test_gdh2_an_issue_with_no_changed_files_is_not_scope_checked(repo):
+    """ADR-006: an issue that has not said what it changes has no scope to
+    check against, even when its scenarios declare tests."""
+    path = repo / ".compass" / "work" / SLUG / "manifest.yml"
+    data = yaml.safe_load(path.read_text())
+    data["changed_files"] = []
+    data["scenarios"] = [{"id": "S-1", "title": "t", "intent": "INT-1",
+                          "tests": ["tests/test_new.py::test_it"]}]
+    path.write_text(yaml.safe_dump(data, sort_keys=False))
+    (repo / "src" / "new.py").write_text("y = 1\n")
+    _git(repo, "add", "src/new.py")
+
+    result = _cli(repo, "ship-commit", "--issue", SLUG, "-m", "land it")
+    assert result.returncode == 0, result.stdout + result.stderr

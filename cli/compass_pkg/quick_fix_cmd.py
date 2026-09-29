@@ -486,34 +486,10 @@ def _write_start_state(project_root, slug):
                   if d not in tracked_dirs}
     os.makedirs(os.path.dirname(record), exist_ok=True)
     with open(record, "w", encoding="utf-8") as fh:
-        head = subprocess.run(["git", "rev-parse", "--verify", "-q", "HEAD"],
-                              cwd=project_root, capture_output=True,
-                              text=True).stdout.strip()
         json.dump({"changed_before_start": sorted(before),
-                   "local_dirs_before_start": sorted(local_dirs),
-                   "head_at_start": head or None},
+                   "local_dirs_before_start": sorted(local_dirs)},
                   fh, indent=2)
         fh.write("\n")
-
-
-def _committed_since_start(project_root, slug):
-    """Files committed between the `HEAD` `start` recorded and now, or none
-    when there is no record of it."""
-    try:
-        with open(_record_path(project_root, slug), encoding="utf-8") as fh:
-            head = json.load(fh).get("head_at_start")
-    except (OSError, ValueError, AttributeError,
-            subprocess.CalledProcessError):
-        return []
-    if not head:
-        return []
-    out = subprocess.run(
-        ["git", "diff", "--name-only", "-z", head, "HEAD"],
-        cwd=project_root, capture_output=True, text=True)
-    if out.returncode != 0:
-        return []
-    return [p for p in out.stdout.split("\0")
-            if p and not p.startswith(".compass/") and not _is_generated(p)]
 
 
 def _start_state(task_dir, project_root, slug):
@@ -670,11 +646,6 @@ def cmd_quick_fix_finish(args):
 
     with _at_project_root(project_root):
         all_paths = _git_changed_paths(project_root)
-        # A fix the agent committed itself before `finish` is still the
-        # change's: add the files committed since `start`.
-        for p in _committed_since_start(project_root, slug):
-            if p not in all_paths:
-                all_paths.append(p)
         doc_prefix = docs_dir(task_dir) + "/"
         production_paths = [p for p in all_paths
                             if not p.startswith(".compass/")

@@ -84,7 +84,8 @@ set -euo pipefail
 # the runtime lets through. Without it, a stand-in answers every reader with
 # exit 3 and a reason, so an opted-in project refuses and names the file, and
 # a repository that never opted in reaches its silent exit 0 as before.
-COMPASS_PYTHON_SH="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/scripts/lib/compass-python.sh"
+HOOK_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+COMPASS_PYTHON_SH="$HOOK_ROOT/scripts/lib/compass-python.sh"
 if [ -f "$COMPASS_PYTHON_SH" ]; then
   source "$COMPASS_PYTHON_SH"
 else
@@ -95,6 +96,64 @@ else
   }
 fi
 
+# --- one registry, one shape, for every refusal ------------------------------
+# cli/compass_pkg/refusals.py is the one place a refusal's wording lives
+# (spec D38); `compass _refusal <code> key=value ...` is the CLI's front
+# door onto it, for docs generation and any external caller. This hook
+# reaches the registry directly - `import compass_pkg.refusals`, the same
+# narrow import every other reader in this file makes - rather than through
+# `cli/compass`, which pulls in every command module at start-up and needs
+# newer syntax than this hook's other readers do. A refusal is printed on
+# every blocked call in every session, so it keeps the same low bar for
+# what has to run as the rest of the hook.
+#
+# python3 existing but failing every call (not merely missing - a broken
+# install, exit 1/2/3/127 on anything) would otherwise render THIS call
+# silent too, since rendering a refusal about python3 failing is itself a
+# python3 call. So a failed render falls back to a fixed line in shell
+# rather than nothing - tests/test_evidence_gaps.py::test_evg_c1_* plants
+# exactly this. `command -v python3` failing outright (python3-missing
+# below) is the one case that never reaches this function at all.
+emit_refusal() {
+  local code="$1"; shift
+  local out status
+  set +e
+  out="$(compass_python - "$code" "$@" 2>&1 <<'PYEOF'
+import sys
+
+import compass_pkg                      # noqa: F401 - puts vendor on sys.path
+from compass_pkg.refusals import render
+
+code = sys.argv[1]
+params = dict(arg.split("=", 1) for arg in sys.argv[2:])
+print(render(code, **params))
+PYEOF
+)"
+  status=$?
+  if [ -z "$out" ]; then
+    # Nothing at all came back - not even the underlying failure's own
+    # message (test_evidence_gaps.py's shim exits non-zero and prints
+    # nothing). A non-zero status WITH output is still shown as-is just
+    # below: it is real diagnostic text (an import-time "install is
+    # incomplete" message, a missing-helper notice), and more useful than
+    # this generic line.
+    printf 'Blocked: this edit\nWhy: python3 could not render the %s refusal (it exited %s).\nFix: check the python3 install (python3 --version), then retry. [%s]\n' \
+      "$code" "$status" "$code" >&2
+    return
+  fi
+  printf '%s\n' "$out" >&2
+}
+
+# Renders a refusal from the registry and exits 2 - always, even if the
+# render call itself fails (a python3 broken in some way not yet covered
+# here). A refusal that cannot render nicely must still block, not fall
+# through to exit 1 (which the runtime treats as non-blocking) or exit 0.
+compass_block() {
+  set +e
+  emit_refusal "$@"
+  exit 2
+}
+
 # --- one failure rule -------------------------------------------------------
 # Inside an opted-in project, a check that cannot run refuses with exit 2 and
 # names what could not run. Exit 1 is not a refusal - the runtime treats it as
@@ -102,26 +161,28 @@ fi
 # the issue when the install is broken sends the user to the wrong fix. Every
 # Python reader below calls this on any non-zero status.
 compass_reader_failed() {
-  local reader="$1" status="$2" errfile="${3:-}" fix="${4:-}" cause
-  if [ "$status" = "tmp" ]; then
-    cause="It could not create a temporary file for its output."
-  elif ! command -v python3 >/dev/null 2>&1; then
-    cause="python3 not found on the PATH."
-  else
-    cause="It exited $status."
+  local reader="$1" status="$2" errfile="${3:-}" fix_override="${4:-}"
+  local target="${TARGET:-${candidate:-?}}" tool="${TOOL:-?}" errline=""
+  if [ -n "$errfile" ] && [ -s "$errfile" ]; then
+    errline="$(sed -n '1p' "$errfile")"
   fi
-  {
-    echo "Compass: BLOCKED - the $reader could not run."
-    echo ""
-    echo "  $cause"
-    if [ -n "$errfile" ] && [ -s "$errfile" ]; then
-      sed -n '1,5s/^/  /p' "$errfile"
-    fi
-    echo "  The hook cannot tell whether this edit is allowed, so it refuses."
-    echo "  Edit target: ${TARGET:-${candidate:-?}}  (tool: ${TOOL:-?})"
-    echo ""
-    echo "  ${fix:-Fix the install and re-try. Nothing about this issue is wrong.}"
-  } >&2
+  set +e
+  if [ "$status" = "tmp" ]; then
+    emit_refusal reader-failed "target=$target" "tool=$tool" "reader=$reader" \
+      "cause=It could not create a temporary file for its output." \
+      "detail=${errline:+ ($errline)}"
+  elif ! command -v python3 >/dev/null 2>&1; then
+    # python3 itself is missing - there is no CLI left to render this with,
+    # so this is a byte-identical static copy of
+    # render("python-missing", target=..., tool=...). Kept in step by
+    # tests/test_refusal_registry.py::test_rtp_3_no_python3_names_python_missing_and_matches_the_registry.
+    printf 'Blocked: edit to %s (tool: %s)\nWhy: python3 was not found on the PATH, so Compass cannot check whether this edit is allowed.\nFix: install python3 (3.9+) or put it on PATH, then retry. [python-missing]\n' "$target" "$tool" >&2
+  elif [ -n "$fix_override" ]; then
+    emit_refusal config-invalid "target=$target" "tool=$tool" "detail=$errline"
+  else
+    emit_refusal reader-failed "target=$target" "tool=$tool" "reader=$reader" \
+      "cause=It exited $status." "detail=${errline:+ ($errline)}"
+  fi
   [ -n "$errfile" ] && rm -f "$errfile"
   exit 2
 }
@@ -589,9 +650,8 @@ if [ ! -d "$COMPASS_DIR" ]; then
 fi
 
 if [ ! -d "$WORK_DIR" ]; then
-  echo "Compass: no .compass/work/ in $PROJECT_DIR - no issue has been assessed. Run /compass:assess before changing code, or /compass:quick-fix for a small, low-risk change." >&2
   compass_say_how_this_project_opted_in
-  exit 2
+  compass_block not-initialised "detail=no .compass/work/ exists in $PROJECT_DIR"
 fi
 
 # The current issue is named by the .compass/current-task pointer (written by
@@ -608,8 +668,7 @@ if [ -f "$POINTER" ]; then
   # directory, and this hook would judge the edit by that directory's red.
   case "$SLUG" in
     .|..|*/*|*\\*)
-      echo "Compass: BLOCKED - .compass/current-task names '$SLUG', which is not one path segment. An issue slug names a directory directly under .compass/work/." >&2
-      exit 2 ;;
+      compass_block bad-current-task "slug=$SLUG" ;;
   esac
   if [ -n "$SLUG" ] && [ -d "$WORK_DIR/$SLUG" ]; then
     TASK_DIR="$WORK_DIR/$SLUG"
@@ -623,9 +682,8 @@ if [ -z "$TASK_DIR" ]; then
 fi
 
 if [ -z "${TASK_DIR:-}" ]; then
-  echo "Compass: no issue under $PROJECT_DIR/.compass/work/ - this change has not been assessed. Run /compass:assess, or /compass:quick-fix for a small, low-risk change." >&2
   compass_say_how_this_project_opted_in
-  exit 2
+  compass_block not-initialised "detail=no issue exists under $PROJECT_DIR/.compass/work/"
 fi
 
 TASK_SLUG="$(basename "$TASK_DIR")"
@@ -666,8 +724,7 @@ if [ "$ROUTE_PROBE_STATUS" -ne 0 ] || [ -z "$ROUTE_PROBE" ]; then
 fi
 rm -f "$ROUTE_PROBE_ERR"
 if [ "$ROUTE_PROBE" != "found" ]; then
-  echo "Compass: issue '$TASK_SLUG' has no delivery-approach.md - its assessment did not finish. Run /compass:assess." >&2
-  exit 2
+  compass_block no-delivery-approach "slug=$TASK_SLUG"
 fi
 
 # --- approach-aware: red-before-green is suspended on a spike ----------------
@@ -747,28 +804,7 @@ PYEOF
   fi
   rm -f "$G2_ERR"
   if [ "${G2_VERDICT:-}" = "block" ]; then
-    cat >&2 <<EOF
-Compass: BLOCKED - the delivery approach says define: full, but manifest.yml has no scenarios.
-
-  The acceptance-before-code guardrail. No code is written that no stated,
-  checkable acceptance criterion describes - and a guardrail beats a
-  strategy, so this is checked before the red.
-  Edit target: $TARGET  (tool: ${TOOL:-?})
-  Guarded by  : ${MATCHED_RULE:-the built-in production-code set}
-
-  To proceed the Compass way:
-    1. Write the scenarios into the issue's acceptance-criteria.md, under
-       docs/compass/<created>-$TASK_SLUG/.
-    2. Mirror them into manifest.yml's \`scenarios:\` block - each with an id, a
-       linked intent, and the test(s) that will exercise it:
-         compass scenario add SCN-001 --title "..." --intent INT-1
-    3. Re-try this edit.
-
-  If this is genuinely exploratory work it should be a spike, where this is
-  suspended - re-run /compass:assess. The fix is to state the acceptance or
-  re-frame, not to route around the hook.
-EOF
-    exit 2
+    compass_block no-acceptance-criteria "target=$TARGET" "tool=${TOOL:-?}"
   fi
 fi
 
@@ -837,65 +873,13 @@ PYEOF
 
   case "$RED_VERDICT" in
     unsigned*)
-      cat >&2 <<EOF
-Compass: BLOCKED - the red record for issue '$TASK_SLUG' carries no identity.
-
-  This project requires one for records written since
-  records_signed_since: ${RED_VERDICT#unsigned }, set in .compass/config.yml.
-  A record written by \`compass tdd-red\` carries a content_digest. This one
-  has no content_digest, and its own timestamp does not put it before that
-  date.
-
-  To proceed the Compass way:
-    compass tdd-red -- <your failing test command>
-
-  Edit target: $TARGET  (tool: ${TOOL:-?})
-EOF
-      exit 2 ;;
+      compass_block red-unsigned "slug=$TASK_SLUG" \
+        "since_date=${RED_VERDICT#unsigned }" ;;
   esac
 
-  cat >&2 <<EOF
-Compass: BLOCKED - the .red marker for issue '$TASK_SLUG' has no record behind it.
-
-  The marker says a failing test was observed. No matching record was found in
-  .compass/work/$TASK_SLUG/evidence/ - either there is none, or its content no
-  longer matches the digest written with it.
-
-  The marker is not the evidence. \`compass tdd-red\` writes it only after
-  running a test and watching it fail; an empty file with the same name proves
-  nothing, which is why this hook now reads what is beside it.
-
-  To proceed the Compass way:
-    compass tdd-red -- <your failing test command>
-
-  Edit target: $TARGET  (tool: ${TOOL:-?})
-EOF
-  exit 2
+  compass_block red-marker-no-record "slug=$TASK_SLUG"
 fi
 
 # No .red marker → no failing test on record → block the code edit.
-cat >&2 <<EOF
-Compass: BLOCKED - no failing test on record for issue '$TASK_SLUG'.
-
-  The red-before-green strategy applies on this delivery approach, in
-  service of the guardrail that a change ships only with a passing test.
-  Edit target: $TARGET  (tool: ${TOOL:-?})
-  Guarded by  : ${MATCHED_RULE:-the built-in production-code set}
-
-  To proceed the Compass way:
-    1. Write the failing test for the scenario you are implementing.
-    2. Record the red - run it through the CLI so the failure is observed
-       and the evidence is captured:
-         compass tdd-red -- <your failing test command>
-       (this runs the test, confirms it fails, writes evidence/red.json,
-        and drops the .red marker this hook checks for).
-    3. Re-try this edit.
-
-  Later, \`compass tdd-green -- <test command>\` confirms green, writes
-  evidence/green.json, and clears the .red marker - the hand-off to Verify.
-
-  If this is genuinely exploratory work, it should be a spike - re-run
-  /compass:assess. The fix is to write the test or re-frame, not to route
-  around the hook.
-EOF
-exit 2
+compass_block no-red-on-record "slug=$TASK_SLUG" "target=$TARGET" "tool=${TOOL:-?}" \
+  "guard=${MATCHED_RULE:-the built-in production-code set}"

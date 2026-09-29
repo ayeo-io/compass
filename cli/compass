@@ -514,6 +514,19 @@ def build_parser():
                         help=argparse.SUPPRESS)
     p_fric.add_argument("--note-phase", dest="note_phase", help=argparse.SUPPRESS)
     p_fric.set_defaults(func=cmd_friction_capture, output_kind="hand-off")
+
+    # Private entry point that renders one refusal from the registry in
+    # cli/compass_pkg/refusals.py. hooks/pre-tool.sh calls it at every
+    # refusal site python3 is known to be running for, so a refusal's
+    # wording lives in one place instead of being hand-written per call
+    # site. `--list` renders every code's template, unfilled, for
+    # docs/refusal-codes.md.
+    p_ref = sub.add_parser("_refusal", help=argparse.SUPPRESS)
+    p_ref.add_argument("code", nargs="?", help=argparse.SUPPRESS)
+    p_ref.add_argument("params", nargs="*", help=argparse.SUPPRESS)
+    p_ref.add_argument("--list", action="store_true", help=argparse.SUPPRESS)
+    from compass_pkg.refusals import cmd_refusal as _cmd_refusal
+    p_ref.set_defaults(func=_cmd_refusal, output_kind="hand-off")
     # Hide all private (leading-underscore) subcommands from --help output:
     #   1. Remove from _choices_actions  →  hides from the positional-args
     #      listing section in the help text.

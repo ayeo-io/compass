@@ -1007,6 +1007,9 @@ _TAIL_ARGV = {
     # a project exists. In this fixture one already does, so it takes the
     # already-initialised path.
     "init": ["init"],
+    # No project state needed either - it renders a fixed template from the
+    # registry in cli/compass_pkg/refusals.py with the params given on argv.
+    "_refusal": ["_refusal", "no-delivery-approach", "slug=demo"],
     "approach evaluate": ["approach", "evaluate"],
     "issue dashboard": ["issue", "dashboard"],
     "issue set-status": ["issue", "set-status", "active"],

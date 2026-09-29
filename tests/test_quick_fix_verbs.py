@@ -476,7 +476,9 @@ def test_fuu4_a_directory_holding_a_tracked_file_takes_new_files(repo):
     (repo / "data" / "keep.txt").write_text("tracked\n")
     _git(repo, "add", "data/keep.txt")
     _git(repo, "commit", "-q", "-m", "keep")
+    (repo / "data" / "scratch.txt").write_text("untracked before start\n")
     _ready_to_finish(repo, "greet-mixed-dir")
+    (repo / "data" / "scratch.txt").unlink()
     (repo / "data" / "extra.txt").write_text("made by the fix\n")
 
     finish = _finish(repo, "greet-mixed-dir")

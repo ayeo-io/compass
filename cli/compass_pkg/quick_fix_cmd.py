@@ -407,9 +407,16 @@ def _reusable_green(task_dir, scenario, command, tree_ids):
     # a recognised pytest micro-run (`tdd._neutralise_coverage`); compare
     # against the same form, or an identical command would look changed.
     # Compare the argument lists, not their joined text: `sh -c "a b"` and
-    # `sh -c a b` join alike and run differently. A record with no list is
-    # not reused.
-    if record.get("argv") != _neutralise_coverage(list(command)):
+    # `sh -c a b` join alike and run differently. A record with no list,
+    # written before greens carried one, is compared on its joined text.
+    wanted = _neutralise_coverage(list(command))
+    if "argv" in record:
+        if record.get("argv") != wanted:
+            return False
+    elif record.get("command") != " ".join(wanted):
+        # A green written before greens carried `argv` has only the joined
+        # text. Rerunning it would be flagged as a rerun, so it is reused
+        # when the text matches, as it was before.
         return False
     old_tree, old_changes = record.get("tree_id"), record.get("changes_id")
     new_tree, new_changes = tree_ids.get("tree_id"), tree_ids.get("changes_id")
@@ -768,8 +775,16 @@ def cmd_quick_fix_finish(args):
 
         stage_paths = sorted(set(production_paths) | set(artifact_paths)
                              | {f".compass/work/{slug}"})
-        ship_out, _ = _quiet_run(cmd_land_commit, task=slug, message=args.message,
-                                 files=stage_paths)
+        ship_out, ship_code = _quiet_run(cmd_land_commit, task=slug,
+                                         message=args.message,
+                                         files=stage_paths)
+        if ship_code != 0:
+            # The commit may stand, but the issue did not land: a hook
+            # changed an issue file during the commit. The start record
+            # stays for the next try.
+            raise CompassError(
+                f"compass quick-fix finish: '{slug}' did not land.\n"
+                + ship_out.strip())
         ship_tail_lines = [ln for ln in ship_out.strip().splitlines() if ln.strip()]
         ship_tail = ship_tail_lines[-1] if ship_tail_lines else "commit recorded"
         landed, _ = load_manifest(task_dir)

@@ -154,10 +154,13 @@ def _changes_id_at(project_root, commit, claimed):
     steps = [(["read-tree", "--empty"], True)]
     for rel in claimed:
         path = os.path.relpath(os.path.join(root, rel), top)
-        entry = _git(["ls-tree", commit, "--", path], top)
-        if not _ok(entry) or not entry.stdout.strip():
+        # `-z`: a name with a space, quote, newline or non-ASCII character
+        # comes back as itself, not in git's quoted form.
+        entry = _git(["ls-tree", "-z", commit, "--", path], top)
+        record = entry.stdout.split("\0", 1)[0] if _ok(entry) else ""
+        if not record:
             continue
-        meta, _, name = entry.stdout.strip().partition("\t")
+        meta, _, name = record.partition("\t")
         mode, kind, blob = meta.split()
         if kind == "blob":
             steps.append((["update-index", "--add", "--cacheinfo",

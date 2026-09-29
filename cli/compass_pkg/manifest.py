@@ -92,9 +92,7 @@ def _refuse_stale_green(task, task_dir, slug, root, at_commit=None):
     """Refuse `ship-commit` if a file the issue changed, or a test it
     declares, was edited after the newest bound green. It reuses the
     comparison `compass check` uses for a landed issue
-    (`binding._check_landed`). It reads the files on disk, not the staged
-    copies, so a partial stage can still differ from what it judged; a
-    `compass check` after the land catches that case.
+    (`binding._check_landed`), on the tree the commit will hold.
 
     A landed issue is not judged: its green was judged when it landed, and
     a later edit to one of its files belongs to later work.
@@ -103,9 +101,10 @@ def _refuse_stale_green(task, task_dir, slug, root, at_commit=None):
     carries a `changes_id`; a record without one, or an issue with no bound
     record, is not judged - `compass check` does not judge one either.
 
-    `at_commit` is None to read the issue's files from disk, for the commit
-    ship-commit is about to make, or a commit id to read them as that commit
-    holds them, for the files a multiagent land already committed.
+    `at_commit` names the tree to judge: the index's tree, written with
+    `git write-tree`, for the commit ship-commit is about to make, or a
+    commit id for the files a multiagent land already committed. None reads
+    the files from disk.
     """
     if task.get("status") == "landed":
         return
@@ -179,7 +178,7 @@ def _derive_and_commit_living_spec(cwd, slug):
     # commits everything staged - so anything else staged at this moment (a
     # hook's own side effect, or a leftover from elsewhere in the same tree)
     # would otherwise land in this commit too.
-    _git(["add", "--", rel_spec], cwd)
+    _git(["--literal-pathspecs", "add", "--", rel_spec], cwd)
     commit = _git(
         ["commit", "-m", f"Re-derive the living spec after {slug} landed",
          "--", rel_spec], cwd
@@ -202,8 +201,9 @@ def cmd_land_commit(args):
         raise CompassError("compass ship-commit: not inside a git repository.")
 
     # Stage any explicitly named paths.
+    # A name is a name, not a pattern: `x[1].txt` must not stage `x1.txt`.
     for f in files:
-        _git(["add", "--", f], cwd)
+        _git(["--literal-pathspecs", "add", "--", f], cwd)
 
     # Nothing staged. A multiagent issue reaches ship time with every file it
     # changed already committed by the integration merges - by DPR-7's last
@@ -291,7 +291,10 @@ def cmd_land_commit(args):
         pass
 
     if slug is not None:
-        _refuse_stale_green(_scope_task, _scope_dir, slug, cwd)
+        # Judge what is staged, which is what commits - not the disk copy.
+        staged_tree = _git(["write-tree"], cwd).stdout.strip() or None
+        _refuse_stale_green(_scope_task, _scope_dir, slug, cwd,
+                            at_commit=staged_tree)
 
     staged_now = [n for n in _git(["diff", "--cached", "--name-only", "-z"],
                                   cwd).stdout.split("\0") if n]
@@ -339,9 +342,9 @@ def cmd_land_commit(args):
         Recovering from a hook rewrite only needs what was already staged.
         """
         for path in sorted(set(staged_now) | set(files)):
-            _git(["add", "--", path], cwd)
+            _git(["--literal-pathspecs", "add", "--", path], cwd)
         if os.path.isdir(os.path.join(cwd, artifact_dir)):
-            _git(["add", "--", artifact_dir], cwd)
+            _git(["--literal-pathspecs", "add", "--", artifact_dir], cwd)
 
     # (a) best-effort clean-first: only if the pre-commit framework is set up.
     if shutil.which("pre-commit") and os.path.isfile(
@@ -349,6 +352,8 @@ def cmd_land_commit(args):
         names = [n for n in _git(["diff", "--cached", "--name-only", "-z"],
                                  cwd).stdout.split("\0") if n]
         if names:
+            # A name starting with `-` would read as an option.
+            names = ["./" + n if n.startswith("-") else n for n in names]
             subprocess.run(["pre-commit", "run", "--files", *names],
                            cwd=cwd, capture_output=True, text=True)
             _restage_owned()  # re-stage what the hooks rewrote, scoped

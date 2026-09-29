@@ -114,9 +114,10 @@ runner produced the record, and an older record is not judged. A record
 written outside a git repository, or before records carried a tree id, is
 not judged either.
 
-Tracing a new file into the issue between two runs of the same command
-changes `tree_id` and `changes_id`, because the traced file joins
-`changed_files`. So a green recorded after that trace is a new assertion,
+Tracing a file into the issue between two runs of the same command
+changes `changes_id`, because the traced file joins `changed_files`; it
+changes `tree_id` too only when the file was untracked. Tracing an
+already-tracked file changes only `changes_id`. So a green recorded after that trace is a new assertion,
 not a rerun of the one before it: the same command on the same code is not
 flagged as a rerun, and the traced file shows in `changed_files`.
 
@@ -135,6 +136,12 @@ lists the files it commits. It does not guard three cases:
   what `finish` refuses;
 - an issue with no start record, such as one begun before `start` wrote
   one, commits a tracked file changed before the fix began.
+
+Two more cases follow from how `finish` decides. A test the scenario
+declares is committed even if it changed before `start`, because the
+scenario names it. And an issue started before the record moved into the
+git directory kept a digest record beside its manifest, which is
+committed with the issue's records.
 
 Read the file list `finish` prints before you push.
 

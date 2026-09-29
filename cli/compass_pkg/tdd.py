@@ -415,6 +415,8 @@ def cmd_tdd_red(args):
         )
     payload = {
         "command": " ".join(command),
+        # The argument list as given: two lists can join to the same text.
+        "argv": list(command),
         "scenario": scenario,          # the scenario this red is evidence FOR
         "exit_code": code,
         "passed": False,
@@ -668,6 +670,8 @@ def cmd_tdd_green(args):
 
     payload = {
         "command": " ".join(command),
+        # The argument list as given: two lists can join to the same text.
+        "argv": list(command),
         "scenario": scenario,          # the scenario this green is evidence FOR
         "exit_code": 0,
         "passed": True,
@@ -844,6 +848,8 @@ def cmd_acceptance_start(args):
     payload = {
         "kind": kind,
         "command": " ".join(command),
+        # The argument list as given: two lists can join to the same text.
+        "argv": list(command),
         "declared_at": now_iso(),
         "tree_hash": _source_tree_hash(project_root),
     }
@@ -927,6 +933,8 @@ def cmd_acceptance_record(args):
     payload = {
         "kind": kind,
         "command": " ".join(command),
+        # The argument list as given: two lists can join to the same text.
+        "argv": list(command),
         "exit_code": code,
         "passed": True,
         "timestamp": now_iso(),

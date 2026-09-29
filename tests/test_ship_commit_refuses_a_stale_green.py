@@ -153,3 +153,70 @@ def test_fse4_the_safety_contract_states_what_finish_does_not_guard():
     assert "created after `start` is taken as the change's" in flat
     assert "not checked for tampering" in flat
     assert "no start record" in flat and "changed before the fix began" in flat
+
+
+def test_sjs1_a_stale_staged_copy_refuses(repo):
+    """The check judges what is staged, which is what commits."""
+    (repo / "src" / "new.py").write_text("y = 1\n")
+    _green(repo)
+    (repo / "src" / "new.py").write_text("y = 2\n")
+    _git(repo, "add", "src/new.py")                    # y = 2 staged
+    (repo / "src" / "new.py").write_text("y = 1\n")   # disk back to tested
+    head_before = _git(repo, "rev-parse", "HEAD")
+
+    result = _cli(repo, "ship-commit", "--issue", SLUG, "-m", "land it")
+    assert result.returncode != 0, result.stdout
+    assert _git(repo, "rev-parse", "HEAD") == head_before
+
+
+def test_sjs1_a_tested_staged_copy_commits_despite_a_disk_edit(repo):
+    (repo / "src" / "new.py").write_text("y = 1\n")
+    _green(repo)
+    _git(repo, "add", "src/new.py")                    # the tested copy
+    (repo / "src" / "new.py").write_text("y = 9\n")   # later, unstaged
+
+    result = _cli(repo, "ship-commit", "--issue", SLUG, "-m", "land it")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert _git(repo, "show", "HEAD:src/new.py") == "y = 1"
+
+
+def test_sjs3_a_committed_multiagent_land_refuses_a_later_change(repo):
+    """Every file already committed, then one changed in a later commit:
+    the land at HEAD judges the files as HEAD holds them."""
+    (repo / "src" / "new.py").write_text("y = 1\n")
+    _git(repo, "add", "src/new.py")
+    _git(repo, "commit", "-q", "-m", "integrate")
+    _green(repo)
+    (repo / "src" / "new.py").write_text("y = 2\n")
+    _git(repo, "commit", "-q", "-am", "later")
+
+    result = _cli(repo, "ship-commit", "--issue", SLUG, "-m", "land it")
+    assert result.returncode != 0, result.stdout
+    assert "src/new.py" in result.stdout + result.stderr
+
+
+def test_sjs4_a_name_with_a_pattern_character_stages_only_itself(tmp_path):
+    """No issue: `ship-commit` stages exactly the names it is given."""
+    root = tmp_path / "plain"
+    root.mkdir()
+    _git(root, "init", "-q")
+    _git(root, "config", "user.email", "t@example.com")
+    _git(root, "config", "user.name", "t")
+    (root / "base.txt").write_text("base\n")
+    _git(root, "add", "base.txt")
+    _git(root, "commit", "-q", "-m", "base")
+    (root / "x[1].txt").write_text("named\n")
+    (root / "x1.txt").write_text("not named\n")
+    result = _cli(root, "ship-commit", "-m", "one file", "x[1].txt")
+    assert result.returncode == 0, result.stdout + result.stderr
+    committed = _git(root, "show", "--name-only", "--format=", "HEAD")
+    assert "x[1].txt" in committed
+    assert "x1.txt" not in committed.split("\n")
+
+
+def test_sjs6_the_safety_contract_states_the_three_cases():
+    flat = " ".join((ROOT / "docs" / "safety-contract.md")
+                    .read_text(encoding="utf-8").split())
+    assert "a test the scenario declares is committed" in flat.lower()
+    assert "digest record" in flat
+    assert "tracing an already-tracked file changes only `changes_id`" in flat.lower()

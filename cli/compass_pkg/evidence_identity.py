@@ -23,7 +23,6 @@ from compass_pkg.check_results import NOTHING_TO_CHECK
 from compass_pkg.red_first import content_digest
 
 
-
 def _check_evidence_identity_matches(task, task_dir):
     """Is each registry entry still naming the record it was created from?
 

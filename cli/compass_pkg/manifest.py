@@ -35,7 +35,7 @@ import fnmatch
 import re as _re
 from compass_pkg.terminal import say
 from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, normalize_spine, now_iso, resolve_issue_dir, save_manifest
-from compass_pkg.binding import changes_paths, _changes_id_at, _newest_bound_record
+from compass_pkg.binding import changes_paths, declared_test_paths, _changes_id_at, _newest_bound_record
 
 
 
@@ -67,24 +67,34 @@ FRAMEWORK_OWNED_PATHS = frozenset({
 def _land_scope(task, slug):
     """The paths a ship commit is allowed to contain.
 
-    An issue's own `changed_files`, its artifact directory, and the framework's
-    own bookkeeping files above. Anything else in the commit belongs to someone
-    else - a concurrent agent's edits, untracked scratch, or the unrelated
-    files a repo-wide formatter just rewrote.
+    An issue's own `changed_files`, the test files its scenarios declare,
+    its artifact directory, its documents under `docs/compass/`, and the
+    framework's own bookkeeping files above. The declared tests are the
+    issue's as the stale-green check counts them, so the two checks agree on
+    what the issue owns. Anything else in the commit belongs to someone else
+    - a concurrent agent's edits, untracked scratch, or the unrelated files
+    a repo-wide formatter just rewrote.
     """
     owned = {
         cf["path"] for cf in (task.get("changed_files") or [])
         if isinstance(cf, dict) and cf.get("path")
     }
+    owned |= set(declared_test_paths(task))
     return owned, f".compass/work/{slug}/"
 
 
-def _out_of_scope(staged, owned, artifact_dir):
+def _docs_prefix(task, slug):
+    created = task.get("created")
+    return f"docs/compass/{created}-{slug}/" if created else None
+
+
+def _out_of_scope(staged, owned, artifact_dir, docs_prefix=None):
+    prefixes = tuple(p for p in (artifact_dir, docs_prefix) if p)
     return sorted(
         p for p in staged
         if p not in owned
         and p not in FRAMEWORK_OWNED_PATHS
-        and not p.startswith(artifact_dir)
+        and not p.startswith(prefixes)
     )
 
 
@@ -273,8 +283,9 @@ def cmd_land_commit(args):
                 ["diff", "--name-only", "-z", "HEAD^1", "HEAD"],
                 cwd).stdout.split("\0") if n]
             head_owned, head_artifacts = _land_scope(head_task, head_slug)
-            stray_head = (_out_of_scope(added, head_owned, head_artifacts)
-                          if head_owned else [])
+            stray_head = (_out_of_scope(
+                added, head_owned, head_artifacts,
+                _docs_prefix(head_task, head_slug)) if head_owned else [])
             if stray_head:
                 raise CompassError(
                     "compass ship-commit: refusing to land at HEAD - it holds "
@@ -307,11 +318,13 @@ def cmd_land_commit(args):
     # declared scope to check against - the re-stage below stays scoped either
     # way.
     owned, artifact_dir, slug = set(), "\0none", None
+    docs_prefix = None
     try:
         _scope_dir = resolve_issue_dir(getattr(args, "task", None))
         _scope_task, _ = load_manifest(_scope_dir)
         slug = os.path.basename(str(_scope_dir).rstrip("/"))
         owned, artifact_dir = _land_scope(_scope_task, slug)
+        docs_prefix = _docs_prefix(_scope_task, slug)
     except (CompassError, OSError, KeyError):
         pass
 
@@ -334,7 +347,8 @@ def cmd_land_commit(args):
         # what is staged now.
         now = [n for n in _git(["diff", "--cached", "--name-only", "-z"],
                                cwd).stdout.split("\0") if n]
-        stray_now = _out_of_scope(now, owned, artifact_dir) if owned else []
+        stray_now = (_out_of_scope(now, owned, artifact_dir, docs_prefix)
+                     if owned else [])
         if stray_now:
             raise CompassError(
                 "compass ship-commit: refusing to commit - a hook staged "
@@ -353,7 +367,8 @@ def cmd_land_commit(args):
     # a new mechanism no-ops for projects that have not adopted it). The
     # re-stage below is still scoped in that case - it re-stages what was
     # staged, never the whole tree.
-    stray = _out_of_scope(staged_now, owned, artifact_dir) if owned else []
+    stray = (_out_of_scope(staged_now, owned, artifact_dir, docs_prefix)
+             if owned else [])
     if stray:
         raise CompassError(
             "compass ship-commit: refusing to commit - "
@@ -482,7 +497,7 @@ def cmd_land_commit(args):
                             [n for n in _git(
                                 ["show", "--name-only", "-z", "--format=",
                                  head_after], cwd).stdout.split("\0") if n],
-                            owned, artifact_dir)):
+                            owned, artifact_dir, docs_prefix)):
                         # A git hook can stage a file during the commit
                         # itself, after the last scope check.
                         print(

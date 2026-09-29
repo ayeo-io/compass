@@ -125,6 +125,8 @@ shows in `changed_files`.
 Two kinds of traced file are not checked. An untracked file git ignores
 changes neither id and is not checked: git will not stage it, so an edit
 after the green is not reported, and a second run is flagged as a rerun.
+If it is forced in with `git add -f` after the green, `ship-commit`
+refuses until the green is run again.
 A traced symlink is not checked either: neither side of the comparison
 counts it, so a link pointed elsewhere after the green is not reported.
 

@@ -8,7 +8,8 @@ gates, devlog, commit. These two verbs do those same steps, through the
 same code, in two calls.
 
 Scenario ids: QFO-1 to QFO-5, in the acceptance criteria of the issue
-quick-fix-overhead/acceptance-criteria.md.
+quick-fix-overhead/acceptance-criteria.md. QFG-1 and QFG-2 are in the
+acceptance criteria of quick-fix-finish-gaps/acceptance-criteria.md.
 """
 from __future__ import annotations
 
@@ -31,6 +32,13 @@ def _git(root, *args):
 
 def _run(root, *args):
     return subprocess.run([sys.executable, str(CLI), *args], cwd=root,
+                          capture_output=True, text=True)
+
+
+def _run_from(cwd, *args):
+    """Like `_run`, but from a directory that need not be the project root
+    (QFG-2)."""
+    return subprocess.run([sys.executable, str(CLI), *args], cwd=cwd,
                           capture_output=True, text=True)
 
 
@@ -57,6 +65,10 @@ def repo(tmp_path):
     root = tmp_path / "repo"
     root.mkdir()
     _git(root, "init", "-q")
+    # finish commits through the CLI, not through _git, so the identity must
+    # live in the repository: a CI runner has no global git identity.
+    _git(root, "config", "user.email", "t@example.com")
+    _git(root, "config", "user.name", "t")
     (root / "README.md").write_text("hello\n")
     _git(root, "add", "-A")
     _git(root, "commit", "-q", "-m", "base")
@@ -480,3 +492,91 @@ def test_qfo5_finish_refuses_an_untraced_path_with_several_scenarios(repo):
 
     assert _gate_statuses(repo, slug) == before
     assert _git(repo, "rev-parse", "HEAD") == head_before
+
+
+# --- QFG-1 ---------------------------------------------------------------
+
+def test_qfg1_finish_after_no_commit_reuses_the_green_and_commits(repo):
+    # `finish --no-commit` records a green and passes the gates. Asking for
+    # the commit afterwards runs `finish` again with the same command on the
+    # same tree - it must reuse that green rather than record a rerun, which
+    # would fail `compass check` on the issue it has just landed.
+    slug = "greet-nc-then-commit"
+    _ready_to_finish(repo, slug)
+    head_before = _git(repo, "rev-parse", "HEAD")
+
+    first = _finish(repo, slug, "--no-commit")
+    assert first.returncode == 0, first.stdout + first.stderr
+    assert _git(repo, "rev-parse", "HEAD") == head_before
+
+    second = _finish(repo, slug)
+    assert second.returncode == 0, second.stdout + second.stderr
+    assert _git(repo, "rev-parse", "HEAD") != head_before
+
+    assert set(_gate_statuses(repo, slug).values()) == {"pass"}
+    check = _run(repo, "check", "--issue", slug)
+    assert check.returncode == 0, check.stdout + check.stderr
+
+
+def test_qfg1_finish_succeeds_after_a_bad_trace_is_removed(repo):
+    # A first call traces the files, records a green and then fails at
+    # `compass check` for a reason outside the source tree - a trace to a
+    # scenario the issue does not have. Fixing the manifest and calling
+    # `finish` again, with the same command on the same tree, must reuse the
+    # green rather than refuse it as a rerun; a third call with nothing
+    # changed must succeed the same way.
+    slug = "greet-badtrace"
+    _ready_to_finish(repo, slug)
+    manifest = _manifest(repo, slug)
+    manifest.setdefault("changed_files", []).append(
+        {"path": "data/greeting.txt", "scenarios": ["TRC-999"]})
+    _save_manifest(repo, slug, manifest)
+    head_before = _git(repo, "rev-parse", "HEAD")
+
+    first = _finish(repo, slug, "--no-commit")
+    assert first.returncode != 0
+    assert "`compass check` failed" in (first.stdout + first.stderr)
+    assert _git(repo, "rev-parse", "HEAD") == head_before
+
+    manifest = _manifest(repo, slug)
+    manifest["changed_files"] = [
+        cf for cf in manifest["changed_files"]
+        if cf.get("scenarios") != ["TRC-999"]]
+    _save_manifest(repo, slug, manifest)
+
+    second = _finish(repo, slug, "--no-commit")
+    assert second.returncode == 0, second.stdout + second.stderr
+    assert set(_gate_statuses(repo, slug).values()) == {"pass"}
+
+    third = _finish(repo, slug, "--no-commit")
+    assert third.returncode == 0, third.stdout + third.stderr
+    assert set(_gate_statuses(repo, slug).values()) == {"pass"}
+    check = _run(repo, "check", "--issue", slug)
+    assert check.returncode == 0, check.stdout + check.stderr
+
+
+# --- QFG-2 ---------------------------------------------------------------
+
+def test_qfg2_finish_from_a_subdirectory_traces_stages_and_lands(repo):
+    # A quick fix started at the project root, finished from `tests/` with a
+    # test command written for that subdirectory. The command must run where
+    # it was given; tracing, `compass check` and staging must run from the
+    # project root, or `git add` on a root-relative path fails from `tests/`.
+    slug = "greet-subdir"
+    _ready_to_finish(repo, slug)
+    head_before = _git(repo, "rev-parse", "HEAD")
+
+    finish = _run_from(repo / "tests", "quick-fix", "finish",
+                       "--issue", slug, "-m", "Say hello properly", "--",
+                       "python3", "-m", "pytest", "-q",
+                       "test_greeting.py::test_greeting_says_hello")
+    assert finish.returncode == 0, finish.stdout + finish.stderr
+    assert _git(repo, "rev-parse", "HEAD") != head_before
+
+    manifest = _manifest(repo, slug)
+    assert manifest["status"] == "landed"
+    assert set(_gate_statuses(repo, slug).values()) == {"pass"}
+    changed = {cf["path"] for cf in manifest["changed_files"]}
+    assert "data/greeting.txt" in changed
+    check = _run(repo, "check", "--issue", slug)
+    assert check.returncode == 0, check.stdout + check.stderr

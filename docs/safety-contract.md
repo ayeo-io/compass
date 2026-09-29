@@ -122,6 +122,22 @@ flagged as a rerun, and the traced file shows in `changed_files`.
 
 Teams must keep their normal CI controls.
 
+### `quick-fix finish` judges what to commit by when a file changed
+
+`compass quick-fix start` records which files were already changed or
+untracked, and which directories held no tracked file. It keeps that
+record inside the git directory, where nothing is committed. `compass
+quick-fix finish` refuses any of those files the agent did not trace, and
+lists the files it commits. It does not guard three cases:
+
+- a file created after `start` is taken as the change's, whoever made it;
+- the start record is not checked for tampering: an edited record changes
+  what `finish` refuses;
+- an issue with no start record, such as one begun before `start` wrote
+  one, commits a tracked file changed before the fix began.
+
+Read the file list `finish` prints before you push.
+
 ### Compass enforces nothing in a project that has not opted in
 
 The hooks are installed at user scope and run in every repository on the

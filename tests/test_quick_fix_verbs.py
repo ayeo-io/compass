@@ -424,16 +424,19 @@ def test_fuu4_files_made_after_start_and_declared_tests_need_no_trace(repo):
 
 
 def test_fuu1_the_start_record_names_no_local_file(repo):
-    """The start record is committed with the issue's records in a project
-    that commits `.compass/work/`, so it must not carry the names it
-    protects."""
+    """The start record holds the names it protects, so it must never sit
+    where a commit can take it: it lives inside the git directory, not with
+    the issue's records, which a project may commit."""
     (repo / "notes").mkdir()
     (repo / "notes" / "acquisition-plan.md").write_text("private\n")
     _ready_to_finish(repo, "greet-names")
-    record = (repo / ".compass" / "work" / "greet-names"
-              / "start-state.json").read_text()
-    assert "acquisition" not in record
-    assert "notes" not in record
+    records = repo / ".compass" / "work" / "greet-names"
+    assert not any("acquisition" in f.read_text(errors="ignore")
+                   for f in records.rglob("*") if f.is_file())
+    git_record = repo / _git(repo, "rev-parse", "--git-path",
+                             "compass/start-state/greet-names.json")
+    assert ".git" in git_record.parts
+    assert "acquisition-plan.md" in git_record.read_text()
 
 
 def test_fuu1_a_new_file_in_a_directory_untracked_before_start_is_refused(repo):
@@ -516,7 +519,8 @@ def test_fuu2_the_refusal_gives_a_remedy_for_a_tracked_file(repo):
 def test_fuu5_with_no_start_state_an_undeclared_untracked_file_is_refused(repo):
     slug = "greet-no-state"
     _ready_to_finish(repo, slug)
-    (repo / ".compass" / "work" / slug / "start-state.json").unlink(missing_ok=True)
+    (repo / _git(repo, "rev-parse", "--git-path",
+                 f"compass/start-state/{slug}.json")).unlink()
     (repo / "scratch.txt").write_text("whose is this?\n")
 
     finish = _finish(repo, slug)
@@ -538,6 +542,66 @@ def test_fuu6_finish_lists_every_file_it_commits(repo):
             assert any(l.startswith(records) for l in listed), listed
         else:
             assert path in listed, (path, listed)
+
+
+def test_fse1_a_new_file_with_an_unusual_name_lands(repo):
+    slug = "greet-odd-names"
+    _ready_to_finish(repo, slug)
+    for name in ("notes with space.txt", "quote'd.txt", "caf\u00e9.txt"):
+        (repo / "data" / name).write_text("made by the fix\n")
+
+    finish = _finish(repo, slug)
+    assert finish.returncode == 0, finish.stdout + finish.stderr
+    files = set(_git(repo, "show", "--name-only", "-z", "--format=",
+                     "HEAD~1").split("\0"))
+    for name in ("notes with space.txt", "quote'd.txt", "caf\u00e9.txt"):
+        assert f"data/{name}" in files, files
+
+
+def test_fse2_no_commit_reveals_a_local_path(repo):
+    (repo / "notes").mkdir()
+    (repo / "notes" / "acquisition-plan.md").write_text("private\n")
+    _ready_to_finish(repo, "greet-no-trace")
+    (repo / "notes" / "acquisition-plan.md").unlink()   # moved out
+    finish = _finish(repo, "greet-no-trace")
+    assert finish.returncode == 0, finish.stdout + finish.stderr
+    import hashlib
+    digest = hashlib.sha256(b"notes/acquisition-plan.md").hexdigest()
+    committed = _git(repo, "log", "-p", "--all", "--format=")
+    assert "acquisition" not in committed
+    assert digest not in committed
+    assert not (repo / ".compass" / "work" / "greet-no-trace"
+                / "start-state.json").exists()
+
+
+def test_fse2_a_record_an_older_start_wrote_is_still_read(repo):
+    import hashlib, json
+    (repo / "notes").mkdir()
+    (repo / "notes" / "old.md").write_text("private\n")
+    _ready_to_finish(repo, "greet-old-record")
+    task = repo / ".compass" / "work" / "greet-old-record"
+    git_record = _git(repo, "rev-parse", "--git-path",
+                      "compass/start-state/greet-old-record.json")
+    (repo / git_record).unlink()
+    (task / "start-state.json").write_text(json.dumps({
+        "digest": "sha256",
+        "changed_before_start": [hashlib.sha256(b"notes/old.md").hexdigest()],
+        "untracked_dirs_before_start": []}))
+
+    finish = _finish(repo, "greet-old-record")
+    assert finish.returncode != 0
+    assert "notes/old.md" in finish.stdout + finish.stderr
+
+
+def test_fse3_every_commits_line_has_the_same_spacing(repo):
+    _ready_to_finish(repo, "greet-spacing")
+    (repo / "data" / "extra.txt").write_text("more\n")
+    finish = _finish(repo, "greet-spacing")
+    assert finish.returncode == 0, finish.stdout + finish.stderr
+    lines = [l for l in finish.stdout.splitlines()
+             if l.strip().startswith("commits")]
+    assert len(lines) >= 2
+    assert len({l.index(":") for l in lines}) == 1, lines
 
 
 # --- QFO-5 ---------------------------------------------------------------

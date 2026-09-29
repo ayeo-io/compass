@@ -22,6 +22,8 @@ import os
 from compass_pkg.check_results import NOTHING_TO_CHECK
 
 
+from compass_pkg.red_first import content_digest
+
 def _check_evidence_identity_matches(task, task_dir):
     """Is each registry entry still naming the record it was created from?
 
@@ -78,6 +80,15 @@ def _check_evidence_identity_matches(task, task_dir):
             continue
         claimed_digest = entry.get("content_digest")
         actual_digest = record.get("content_digest")
+        # The stored digest only says what the record claimed when it was
+        # written. Recompute it from the content, so an edit that leaves
+        # the digest field alone is caught too.
+        if actual_digest and content_digest(record) != actual_digest:
+            problems.append(
+                f"{ev_id}: {path} was edited after it was written - its "
+                f"contents no longer match its own digest"
+            )
+            continue
         if claimed_digest and actual_digest != claimed_digest:
             problems.append(
                 f"{ev_id}: {path} is the right record but its contents changed "

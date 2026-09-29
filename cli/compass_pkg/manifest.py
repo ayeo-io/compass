@@ -311,6 +311,16 @@ def cmd_land_commit(args):
                 "nothing was committed.\n" + (tree.stderr or "").strip())
         _refuse_stale_green(_scope_task, _scope_dir, slug, cwd,
                             at_commit=tree.stdout.strip())
+        # A pre-commit step can stage files too: check the scope again on
+        # what is staged now.
+        now = [n for n in _git(["diff", "--cached", "--name-only", "-z"],
+                               cwd).stdout.split("\0") if n]
+        stray_now = _out_of_scope(now, owned, artifact_dir) if owned else []
+        if stray_now:
+            raise CompassError(
+                "compass ship-commit: refusing to commit - a hook staged "
+                f"{len(stray_now)} path(s) outside issue '{slug}'s declared "
+                "scope:\n  " + "\n  ".join(stray_now[:20]))
 
     staged_now = [n for n in _git(["diff", "--cached", "--name-only", "-z"],
                                   cwd).stdout.split("\0") if n]
@@ -446,6 +456,23 @@ def cmd_land_commit(args):
                             "re-run, or set status by hand if this issue "
                             "genuinely lands unverified."
                             % (len(unmet), ", ".join(unmet)))
+                    elif owned and (stray_after := _out_of_scope(
+                            [n for n in _git(
+                                ["show", "--name-only", "-z", "--format=",
+                                 head_after], cwd).stdout.split("\0") if n],
+                            owned, artifact_dir)):
+                        # A git hook can stage a file during the commit
+                        # itself, after the last scope check.
+                        print(
+                            f"compass ship-commit: committed"
+                            f"{' (after one retry)' if retried else ''}. HEAD "
+                            f"{head_before[:8]} -> {head_after[:8]}\n  NOT "
+                            f"marked landed: a hook put path(s) outside the "
+                            f"issue's declared scope in the commit:\n    "
+                            + "\n    ".join(stray_after)
+                            + "\n  Move them out of this commit, then ship "
+                            "again.")
+                        return 2
                     elif (stale := _stale_paths(task, task_dir, cwd,
                                                 head_after)):
                         # A git hook can stage a file during the commit
@@ -461,7 +488,9 @@ def cmd_land_commit(args):
                             + "\n    ".join(changed or ["(not narrowed)"])
                             + "\n  Re-run `compass tdd-green` on the "
                             "committed files, then `compass ship-commit "
-                            f"--issue {os.path.basename(str(task_dir))}`.")
+                            f"--issue {os.path.basename(str(task_dir))}` - "
+                            "or, on a quick fix, re-run `compass quick-fix "
+                            "finish`.")
                         return 2
                     else:
                         task["status"] = "landed"

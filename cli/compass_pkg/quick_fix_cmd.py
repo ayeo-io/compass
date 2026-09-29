@@ -51,6 +51,7 @@ from compass_pkg.manifest import (
     cmd_scenario_add,
 )
 from compass_pkg.routing import cmd_route_evaluate, evaluate_route
+from compass_pkg.red_first import content_digest
 from compass_pkg.tdd import _neutralise_coverage, cmd_tdd_green
 from compass_pkg.terminal import say
 
@@ -403,12 +404,15 @@ def _reusable_green(task_dir, scenario, command, tree_ids):
         return False
     if not isinstance(record, dict):
         return False
+    # An edited record is not a record of what ran.
+    if record.get("content_digest") and (
+            content_digest(record) != record["content_digest"]):
+        return False
     # `tdd-green` stores the command after neutralising a coverage floor for
     # a recognised pytest micro-run (`tdd._neutralise_coverage`); compare
     # against the same form, or an identical command would look changed.
     # Compare the argument lists, not their joined text: `sh -c "a b"` and
-    # `sh -c a b` join alike and run differently. A record with no list,
-    # written before greens carried one, is compared on its joined text.
+    # `sh -c a b` join alike and run differently.
     wanted = _neutralise_coverage(list(command))
     if "argv" in record:
         if record.get("argv") != wanted:

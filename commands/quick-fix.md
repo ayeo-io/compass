@@ -85,6 +85,10 @@ Leave out `--no-commit` only when the user asked for a commit: it then
 commits through `compass ship-commit`. With `--no-commit`, say the change
 is checked and not committed, and give the commit command it prints.
 
+It lists every file it commits. It refuses a file that was already changed
+or untracked when `start` ran, or that sits in a directory untracked then,
+unless you trace it with `compass changed-file add`.
+
 If it refuses, it names the failed condition and passes no gate. Fix that
 and run the same command again.
 

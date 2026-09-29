@@ -128,12 +128,22 @@ def _finish(root, slug, *extra, command=GREET_CMD):
                 "Say hello properly", *extra, *command)
 
 
+def _base_greeting(root):
+    """The code and its test as a project has them before a fix begins:
+    committed. `finish` refuses a file that was already changed or
+    untracked when the quick fix started, so a test's setup must not
+    leave one."""
+    _write_greeting(root, "Hi, %s!")
+    _write_greeting_test(root)
+    _git(root, "add", "data/greeting.txt", "tests/test_greeting.py")
+    _git(root, "commit", "-q", "-m", "greeting")
+
+
 def _ready_to_finish(root, slug, scenario_id="TRC-001"):
     """A started quick fix with a red on record and the fix written, not yet
     finished - `finish` records the green itself. The state every QFO-5
     refusal test starts from before it breaks exactly one condition."""
-    _write_greeting(root, "Hi, %s!")
-    _write_greeting_test(root)
+    _base_greeting(root)
     start = _start(root, slug, scenario_id=scenario_id)
     assert start.returncode == 0, start.stderr
 
@@ -348,6 +358,154 @@ def test_qfo4_finish_lands_clean_when_every_changed_file_was_tracked(repo):
     assert check.returncode == 0, check.stdout + check.stderr
 
 
+def _files_in_head(root):
+    return set(_git(root, "show", "--name-only", "--format=", "HEAD~1").split())
+
+
+def test_fuu1_an_untracked_file_from_before_start_is_refused(repo):
+    """A local file nobody traced must never be committed. This is how
+    private notes reached a public branch."""
+    (repo / "notes").mkdir()
+    (repo / "notes" / "private.md").write_text("not for publishing\n")
+    _ready_to_finish(repo, "greet-private")
+    head_before = _git(repo, "rev-parse", "HEAD")
+
+    finish = _finish(repo, "greet-private")
+    heard = finish.stdout + finish.stderr
+    assert finish.returncode != 0, heard
+    assert "notes/private.md" in heard
+    assert "changed-file add" in heard
+    assert all(v != "pass" for v in _gate_statuses(repo, "greet-private").values())
+    assert _git(repo, "rev-parse", "HEAD") == head_before
+
+
+def test_fuu2_a_tracked_file_modified_before_start_is_refused(repo):
+    (repo / "README.md").write_text("an edit that is not this fix\n")
+    _ready_to_finish(repo, "greet-dirty")
+    head_before = _git(repo, "rev-parse", "HEAD")
+
+    finish = _finish(repo, "greet-dirty")
+    assert finish.returncode != 0
+    assert "README.md" in finish.stdout + finish.stderr
+    assert _git(repo, "rev-parse", "HEAD") == head_before
+
+
+def test_fuu3_a_file_from_before_start_is_committed_once_traced(repo):
+    (repo / "notes").mkdir()
+    (repo / "notes" / "fix.md").write_text("part of this fix\n")
+    _ready_to_finish(repo, "greet-traced")
+    traced = _run(repo, "changed-file", "add", "notes/fix.md", "--issue",
+                  "greet-traced", "--scenario", "TRC-001")
+    assert traced.returncode == 0, traced.stderr
+
+    finish = _finish(repo, "greet-traced")
+    assert finish.returncode == 0, finish.stdout + finish.stderr
+    assert "notes/fix.md" in _files_in_head(repo)
+
+
+def test_fuu4_files_made_after_start_and_declared_tests_need_no_trace(repo):
+    slug = "greet-new-files"
+    _write_greeting(repo, "Hi, %s!")
+    _git(repo, "add", "data/greeting.txt")
+    _git(repo, "commit", "-q", "-m", "greeting")
+    assert _start(repo, slug).returncode == 0
+    _write_greeting_test(repo)                     # the declared test, new
+    red = _run(repo, "tdd-red", "--issue", slug, "--scenario", "TRC-001",
+               *GREET_CMD)
+    assert red.returncode == 0, red.stderr
+    _write_greeting(repo, "Hello, %s!")
+    (repo / "data" / "helper.txt").write_text("made by the fix\n")
+
+    finish = _finish(repo, slug)
+    assert finish.returncode == 0, finish.stdout + finish.stderr
+    files = _files_in_head(repo)
+    assert {"tests/test_greeting.py", "data/helper.txt",
+            "data/greeting.txt"} <= files
+
+
+def test_fuu1_the_start_record_names_no_local_file(repo):
+    """The start record is committed with the issue's records in a project
+    that commits `.compass/work/`, so it must not carry the names it
+    protects."""
+    (repo / "notes").mkdir()
+    (repo / "notes" / "acquisition-plan.md").write_text("private\n")
+    _ready_to_finish(repo, "greet-names")
+    record = (repo / ".compass" / "work" / "greet-names"
+              / "start-state.json").read_text()
+    assert "acquisition" not in record
+    assert "notes" not in record
+
+
+def test_fuu1_a_new_file_in_a_directory_untracked_before_start_is_refused(repo):
+    """A directory nobody tracks, such as a local `.claude/`, stays local:
+    a file written into it after `start` is refused like one from before."""
+    (repo / "local").mkdir()
+    (repo / "local" / "old.md").write_text("private\n")
+    _ready_to_finish(repo, "greet-local-dir")
+    (repo / "local" / "old.md").unlink()
+    (repo / "local" / "new.md").write_text("also private\n")
+    head_before = _git(repo, "rev-parse", "HEAD")
+
+    finish = _finish(repo, "greet-local-dir")
+    assert finish.returncode != 0
+    assert "local/new.md" in finish.stdout + finish.stderr
+    assert _git(repo, "rev-parse", "HEAD") == head_before
+
+
+def test_fuu4_a_declared_test_from_before_start_needs_no_trace(repo):
+    """The test file the scenario declares may exist, untracked, before
+    `start`: it is the change's by declaration."""
+    slug = "greet-declared-early"
+    _write_greeting(repo, "Hi, %s!")
+    _git(repo, "add", "data/greeting.txt")
+    _git(repo, "commit", "-q", "-m", "greeting")
+    _write_greeting_test(repo)                     # untracked, before start
+    assert _start(repo, slug).returncode == 0
+    red = _run(repo, "tdd-red", "--issue", slug, "--scenario", "TRC-001",
+               *GREET_CMD)
+    assert red.returncode == 0, red.stderr
+    _write_greeting(repo, "Hello, %s!")
+
+    finish = _finish(repo, slug)
+    assert finish.returncode == 0, finish.stdout + finish.stderr
+    assert "tests/test_greeting.py" in _files_in_head(repo)
+
+
+def test_fuu2_the_refusal_gives_a_remedy_for_a_tracked_file(repo):
+    (repo / "README.md").write_text("an edit that is not this fix\n")
+    _ready_to_finish(repo, "greet-remedy")
+    heard = _finish(repo, "greet-remedy")
+    text = heard.stdout + heard.stderr
+    assert "git restore" in text or "git stash" in text, text
+
+
+def test_fuu5_with_no_start_state_an_undeclared_untracked_file_is_refused(repo):
+    slug = "greet-no-state"
+    _ready_to_finish(repo, slug)
+    (repo / ".compass" / "work" / slug / "start-state.json").unlink(missing_ok=True)
+    (repo / "scratch.txt").write_text("whose is this?\n")
+
+    finish = _finish(repo, slug)
+    assert finish.returncode != 0
+    heard = finish.stdout + finish.stderr
+    assert "scratch.txt" in heard
+    assert "before this quick fix started" not in heard, heard
+
+
+def test_fuu6_finish_lists_every_file_it_commits(repo):
+    _ready_to_finish(repo, "greet-list")
+    finish = _finish(repo, "greet-list")
+    assert finish.returncode == 0, finish.stdout + finish.stderr
+    listed = [l.split(":", 1)[1].strip() for l in finish.stdout.splitlines()
+              if l.strip().startswith("commits")]
+    records = ".compass/work/greet-list/"
+    for path in _files_in_head(repo):
+        if path.startswith(records):
+            assert any(l.startswith(records) for l in listed), listed
+        else:
+            assert path in listed, (path, listed)
+
+
 # --- QFO-5 ---------------------------------------------------------------
 
 def test_qfo5_finish_refuses_when_check_fails(repo):
@@ -392,8 +550,7 @@ def test_qfo5_finish_refuses_when_another_gate_is_pending(repo):
 
 def test_qfo5_finish_refuses_when_no_red_is_on_record(repo):
     slug = "greet-no-red"
-    _write_greeting(repo, "Hi, %s!")
-    _write_greeting_test(repo)
+    _base_greeting(repo)
     start = _start(repo, slug)
     assert start.returncode == 0, start.stderr
     _write_greeting(repo, "Hello, %s!")

@@ -330,6 +330,8 @@ def test_scf3_the_retry_judges_what_a_hook_rewrote(repo):
 
     result = _cli(repo, "ship-commit", "--issue", SLUG, "-m", "land it")
     assert result.returncode != 0, result.stdout
+    heard = result.stdout + result.stderr
+    assert "refusing to commit" in heard and "src/new.py" in heard, heard
     assert _git(repo, "rev-parse", "HEAD") == head_before
 
 
@@ -363,5 +365,5 @@ def test_scf6_the_safety_contract_states_the_symlink_ignored_and_hook_cases():
     flat = " ".join((ROOT / "docs" / "safety-contract.md")
                     .read_text(encoding="utf-8").split()).lower()
     assert "a traced symlink is not checked" in flat
-    assert "a traced file git ignores does not change `tree_id`" in flat
+    assert "a traced file git ignores changes neither id and is not checked" in flat
     assert "not marked landed" in flat

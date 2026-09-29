@@ -671,6 +671,27 @@ def test_scf4_a_green_from_before_argv_is_reused(repo):
     assert finish.returncode == 0, finish.stdout + finish.stderr
 
 
+def test_scf1_finish_reports_a_land_that_ship_commit_refused(repo):
+    """A git hook that stages an untested copy during the commit makes
+    ship-commit leave the issue unlanded. finish must say so, not
+    "shipped", and must keep the start record for the next try."""
+    slug = "greet-hooked"
+    _ready_to_finish(repo, slug)
+    hook = repo / ".git" / "hooks" / "pre-commit"
+    hook.write_text("#!/bin/sh\nprintf 'untested\\n' > data/greeting.txt\n"
+                    "git add data/greeting.txt\nexit 0\n")
+    hook.chmod(0o755)
+    record = repo / _git(repo, "rev-parse", "--git-path",
+                         f"compass/start-state/{slug}.json")
+
+    finish = _finish(repo, slug)
+    heard = finish.stdout + finish.stderr
+    assert finish.returncode != 0, heard
+    assert "shipped" not in heard, heard
+    assert "data/greeting.txt" in heard, heard
+    assert record.exists()
+
+
 # --- QFO-5 ---------------------------------------------------------------
 
 def test_qfo5_finish_refuses_when_check_fails(repo):

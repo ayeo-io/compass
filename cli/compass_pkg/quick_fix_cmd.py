@@ -486,10 +486,37 @@ def _write_start_state(project_root, slug):
                   if d not in tracked_dirs}
     os.makedirs(os.path.dirname(record), exist_ok=True)
     with open(record, "w", encoding="utf-8") as fh:
+        head = subprocess.run(["git", "rev-parse", "--verify", "-q", "HEAD"],
+                              cwd=project_root, capture_output=True,
+                              text=True).stdout.strip()
+        # `head_at_start` is read only to warn about untraced commits; it
+        # never adds a file to the change.
         json.dump({"changed_before_start": sorted(before),
-                   "local_dirs_before_start": sorted(local_dirs)},
+                   "local_dirs_before_start": sorted(local_dirs),
+                   "head_at_start": head or None},
                   fh, indent=2)
         fh.write("\n")
+
+
+def _untraced_since_start(project_root, slug, traced):
+    """Files committed since `start` that nobody traced. Named in the
+    hand-off, never traced: a commit after `start` may be someone else's."""
+    try:
+        with open(_record_path(project_root, slug), encoding="utf-8") as fh:
+            head = json.load(fh).get("head_at_start")
+    except (OSError, ValueError, AttributeError,
+            subprocess.CalledProcessError):
+        return []
+    if not head:
+        return []
+    out = subprocess.run(["git", "diff", "--name-only", "-z", head, "HEAD"],
+                         cwd=project_root, capture_output=True, text=True)
+    if out.returncode != 0:
+        return []
+    return sorted(p for p in out.stdout.split("\0")
+                  if p and p not in traced and not p.startswith(".compass/")
+                  and not p.startswith("docs/compass/")
+                  and not _is_generated(p))
 
 
 def _start_state(task_dir, project_root, slug):
@@ -788,6 +815,9 @@ def cmd_quick_fix_finish(args):
         ship_tail = ship_tail_lines[-1] if ship_tail_lines else "commit recorded"
         landed, _ = load_manifest(task_dir)
         committed_files = _commit_files(landed.get("land_commit"), project_root)
+        traced_now = {cf.get("path") for cf in (landed.get("changed_files")
+                                                or []) if isinstance(cf, dict)}
+        untraced = _untraced_since_start(project_root, slug, traced_now)
         # The start record has done its work; a later issue with this slug
         # must not read it.
         try:
@@ -798,7 +828,10 @@ def cmd_quick_fix_finish(args):
         return say(
             args,
             f"compass quick-fix finish: '{slug}' shipped.",
-            detail=detail + _commit_lines(committed_files, slug) + [ship_tail],
+            detail=detail + _commit_lines(committed_files, slug)
+            + [f"not traced: {_shown(p)} - committed since start; trace it "
+               f"with `compass changed-file add` if it is this fix's"
+               for p in untraced] + [ship_tail],
             decision=True, gates=list(THREE_GATES), evidence=evidence_ids,
             committed=True,
         )

@@ -89,7 +89,7 @@ It lists the files it commits. It refuses a file that was already changed
 or untracked when `start` ran, or that sits in a directory with no tracked
 file then, unless you trace it with `compass changed-file add`.
 
-If it refuses, it names the failed condition and passes no gate. Fix that
+If it refuses, it names the failed condition. Fix that
 and run the same command again.
 
 ## Stop and re-assess when

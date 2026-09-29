@@ -267,7 +267,7 @@ def cmd_quick_fix_start(args):
              "w", encoding="utf-8") as fh:
         fh.write(slug + "\n")
 
-    _write_start_state(task_dir, project_root)
+    _write_start_state(project_root, slug)
 
     doc_dir_rel = docs_dir(task_dir)
     doc_path_rel = f"{doc_dir_rel}/delivery-approach.md"
@@ -430,17 +430,27 @@ def _ancestors(path):
     return ["/".join(parts[:n]) + "/" for n in range(1, len(parts) + 1)]
 
 
-def _write_start_state(task_dir, project_root):
+def _record_path(project_root, slug):
+    """Where `start` keeps its record: inside the git directory (the
+    worktree's own, in a worktree), where nothing is ever committed."""
+    out = subprocess.run(
+        ["git", "rev-parse", "--git-path",
+         f"compass/start-state/{slug}.json"],
+        cwd=project_root, capture_output=True, text=True, check=True).stdout
+    return os.path.join(project_root, out.strip())
+
+
+def _write_start_state(project_root, slug):
     """Record what was already changed or untracked when the quick fix
     starts, so `finish` commits none of it unless the agent traces it.
 
-    The record holds SHA-256 digests, never names. In a project that
-    commits `.compass/work/`, it goes out with the issue's records, and a
-    list of local file names would publish what it exists to protect.
-    Directories holding no tracked file - only untracked or ignored ones,
-    such as a local `.claude/` - are recorded too, so a file written into
-    one after `start` stays out. `finish` still commits a path the agent
-    traced, or a test the scenario declares.
+    The record lives inside the git directory, never in the issue's
+    records: a project that commits `.compass/work/` would publish it, and
+    the names it holds are the ones it protects. Directories holding no
+    tracked file - only untracked or ignored ones, such as a local
+    `.claude/` - are recorded too, so a file written into one after
+    `start` stays out. `finish` still commits a path the agent traced, or
+    a test the scenario declares.
     """
     try:
         before = [p for p in _git_changed_paths(project_root)
@@ -453,27 +463,36 @@ def _write_start_state(task_dir, project_root):
         tracked = subprocess.run(
             ["git", "ls-files", "-z"], cwd=project_root, capture_output=True,
             text=True, check=True).stdout.split("\0")
+        record = _record_path(project_root, slug)
     except (OSError, subprocess.CalledProcessError):
         return
     tracked_dirs = {d for t in tracked if t for d in _ancestors(t)}
-    # A directory with no tracked file in it is local: one holding only
-    # untracked files, or only ignored ones, such as a `.claude/` with an
-    # ignored settings file after Claude Code has run.
     local = [p for p in list(untracked) + [i for i in ignored if i]
              if not p.startswith(".compass/")]
     local_dirs = {d for p in local for d in _ancestors(p)
                   if d not in tracked_dirs}
-    with open(os.path.join(task_dir, START_STATE), "w", encoding="utf-8") as fh:
-        json.dump({"digest": "sha256",
-                   "changed_before_start": sorted(_digest(p) for p in before),
-                   "untracked_dirs_before_start":
-                       sorted(_digest(d) for d in local_dirs)}, fh, indent=2)
+    os.makedirs(os.path.dirname(record), exist_ok=True)
+    with open(record, "w", encoding="utf-8") as fh:
+        json.dump({"changed_before_start": sorted(before),
+                   "local_dirs_before_start": sorted(local_dirs)},
+                  fh, indent=2)
         fh.write("\n")
 
 
-def _start_state(task_dir):
-    """The digests `start` recorded, as (paths, directories), or None when
-    there is no usable record."""
+def _start_state(task_dir, project_root, slug):
+    """What `start` recorded, as (paths, directories, hashed), or None when
+    there is no usable record. A record in the git directory holds plain
+    paths; an older `start` wrote SHA-256 digests beside the manifest."""
+    try:
+        with open(_record_path(project_root, slug), encoding="utf-8") as fh:
+            data = json.load(fh)
+        paths = data.get("changed_before_start")
+        dirs = data.get("local_dirs_before_start")
+        if isinstance(paths, list) and isinstance(dirs, list):
+            return set(paths), set(dirs), False
+    except (OSError, ValueError, AttributeError,
+            subprocess.CalledProcessError):
+        pass
     try:
         with open(os.path.join(task_dir, START_STATE), encoding="utf-8") as fh:
             data = json.load(fh)
@@ -485,7 +504,7 @@ def _start_state(task_dir):
     dirs = data.get("untracked_dirs_before_start")
     if not isinstance(paths, list) or not isinstance(dirs, list):
         return None
-    return set(paths), set(dirs)
+    return set(paths), set(dirs), True
 
 
 def _not_the_change(paths, traced, declared_tests, state, untracked):
@@ -499,9 +518,10 @@ def _not_the_change(paths, traced, declared_tests, state, untracked):
         if p in traced or p in declared_tests:
             continue
         if state is not None:
-            before_paths, before_dirs = state
-            if (_digest(p) in before_paths
-                    or any(_digest(d) in before_dirs for d in _ancestors(p))):
+            before_paths, before_dirs, hashed = state
+            key = _digest if hashed else (lambda x: x)
+            if (key(p) in before_paths
+                    or any(key(d) in before_dirs for d in _ancestors(p))):
                 refused.append((p, "before"))
         elif p in untracked:
             refused.append((p, "unrecorded"))
@@ -534,15 +554,18 @@ def _refusal(refused, scenario_id):
     return "\n".join(lines)
 
 
-def _commit_files(ship_out, root):
-    """The files the commit `ship-commit` just made holds, read from git."""
-    m = re.search(r"-> ([0-9a-f]{7,40})", ship_out or "")
-    if not m:
+def _commit_files(head_before, root):
+    """The files of the commit `ship-commit` just made: the first commit
+    after `head_before`, read from git rather than from printed text."""
+    commits = subprocess.run(
+        ["git", "rev-list", "--reverse", f"{head_before}..HEAD"],
+        cwd=root, capture_output=True, text=True).stdout.split()
+    if not commits:
         return []
     out = subprocess.run(
-        ["git", "show", "--name-only", "--format=", m.group(1)],
+        ["git", "show", "--name-only", "-z", "--format=", commits[0]],
         cwd=root, capture_output=True, text=True).stdout
-    return [line for line in out.splitlines() if line.strip()]
+    return [f for f in out.split("\0") if f.strip()]
 
 
 def _commit_lines(files, slug):
@@ -551,9 +574,9 @@ def _commit_lines(files, slug):
     records = f".compass/work/{slug}/"
     own = [f for f in files if f.startswith(records)]
     rest = [f for f in files if not f.startswith(records)]
-    lines = [f"commits  : {f}" for f in rest]
+    lines = [f"commits : {f}" for f in rest]
     if own:
-        lines.append(f"commits  : {records} ({len(own)} record file(s))")
+        lines.append(f"commits : {records} ({len(own)} record file(s))")
     return lines
 
 
@@ -622,7 +645,7 @@ def cmd_quick_fix_finish(args):
         untracked_now = _untracked_paths(project_root)
         refused = _not_the_change(
             production_paths, existing_traced, declared_tests,
-            _start_state(task_dir), untracked_now)
+            _start_state(task_dir, project_root, slug), untracked_now)
         if refused:
             raise CompassError(_refusal(refused, scenario_ids[0]))
 
@@ -733,11 +756,14 @@ def cmd_quick_fix_finish(args):
 
         stage_paths = sorted(set(production_paths) | set(artifact_paths)
                              | {f".compass/work/{slug}"})
+        head_before = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=project_root,
+            capture_output=True, text=True).stdout.strip()
         ship_out, _ = _quiet_run(cmd_land_commit, task=slug, message=args.message,
                                  files=stage_paths)
         ship_tail_lines = [ln for ln in ship_out.strip().splitlines() if ln.strip()]
         ship_tail = ship_tail_lines[-1] if ship_tail_lines else "commit recorded"
-        committed_files = _commit_files(ship_out, project_root)
+        committed_files = _commit_files(head_before, project_root)
 
         return say(
             args,

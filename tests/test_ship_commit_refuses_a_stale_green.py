@@ -145,3 +145,11 @@ def test_qfg4_the_safety_contract_states_the_limits():
                     .read_text(encoding="utf-8").split())
     assert "runs no test" in text and "records a green" in text
     assert "not flagged as a rerun" in text and "changed_files" in text
+
+
+def test_fse4_the_safety_contract_states_what_finish_does_not_guard():
+    text = (ROOT / "docs" / "safety-contract.md").read_text(encoding="utf-8")
+    flat = " ".join(text.split())
+    assert "created after `start` is taken as the change's" in flat
+    assert "not checked for tampering" in flat
+    assert "no start record" in flat and "changed before the fix began" in flat

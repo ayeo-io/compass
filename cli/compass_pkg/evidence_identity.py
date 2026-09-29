@@ -85,7 +85,9 @@ def _check_evidence_identity_matches(task, task_dir):
         if actual_digest and content_digest(record) != actual_digest:
             problems.append(
                 f"{ev_id}: {path} was edited after it was written - its "
-                f"contents no longer match its own digest"
+                f"contents no longer match its own digest. Restore the "
+                f"record's original content; a new green on the same tree "
+                f"would be flagged as a rerun"
             )
             continue
         if claimed_digest and actual_digest != claimed_digest:

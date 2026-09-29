@@ -35,6 +35,7 @@ import fnmatch
 import re as _re
 from compass_pkg.terminal import say
 from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, normalize_spine, now_iso, resolve_issue_dir, save_manifest
+from compass_pkg.issue_layout import docs_dir_for
 from compass_pkg.binding import changes_paths, declared_test_paths, _changes_id_at, _newest_bound_record
 
 
@@ -67,11 +68,11 @@ FRAMEWORK_OWNED_PATHS = frozenset({
 def _land_scope(task, slug):
     """The paths a ship commit is allowed to contain.
 
-    An issue's own `changed_files`, the test files its scenarios declare,
-    its artifact directory, its documents under `docs/compass/`, and the
-    framework's own bookkeeping files above. The declared tests are the
-    issue's as the stale-green check counts them, so the two checks agree on
-    what the issue owns. Anything else in the commit belongs to someone else
+    An issue's own `changed_files`, its artifact directory, its documents
+    under `docs/compass/`, and the framework's own bookkeeping files above;
+    when `changed_files` is not empty, the test files its scenarios declare
+    too, as the stale-green check counts them, so the two checks agree on
+    what the issue owns. An issue with no `changed_files` has no scope. Anything else in the commit belongs to someone else
     - a concurrent agent's edits, untracked scratch, or the unrelated files
     a repo-wide formatter just rewrote.
     """
@@ -88,8 +89,9 @@ def _land_scope(task, slug):
 
 
 def _docs_prefix(task, slug):
-    created = task.get("created")
-    return f"docs/compass/{created}-{slug}/" if created else None
+    """The issue's documents folder, as `issue_layout.docs_dir_for` names
+    it - including the slug alone when the issue has no `created:`."""
+    return docs_dir_for(task.get("created"), slug).rstrip("/") + "/"
 
 
 def _out_of_scope(staged, owned, artifact_dir, docs_prefix=None):
@@ -291,13 +293,18 @@ def cmd_land_commit(args):
                 added, head_owned, head_artifacts,
                 _docs_prefix(head_task, head_slug)) if head_owned else [])
             if stray_head:
+                head_short = _git(["rev-parse", "--short", "HEAD"],
+                                  cwd).stdout.strip()
                 raise CompassError(
-                    "compass ship-commit: refusing to land at HEAD - it holds "
-                    f"{len(stray_head)} path(s) outside issue '{head_slug}'s "
-                    "declared scope:\n  " + "\n  ".join(stray_head[:20])
+                    f"compass ship-commit: refusing to land at HEAD - commit "
+                    f"{head_short} holds {len(stray_head)} path(s) outside "
+                    f"issue '{head_slug}'s declared scope:\n  "
+                    + "\n  ".join(stray_head[:20])
                     + "\n\nIf they belong to this issue, trace them with "
-                    "`compass changed-file add <path> --scenario <id>`. "
-                    "Otherwise take them out of that commit, then ship again.")
+                    "`compass changed-file add <path> --scenario <id>`. If "
+                    f"{head_short} is not this issue's commit, land the issue "
+                    "from a branch whose tip is its own commit, then ship "
+                    "again.")
 
         head_id = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
         head_task["status"] = "landed"
@@ -379,8 +386,9 @@ def cmd_land_commit(args):
             f"{len(stray)} staged path(s) are outside issue '{slug}'s declared "
             "scope:\n  " + "\n  ".join(stray[:20])
             + ("\n  ... and %d more" % (len(stray) - 20) if len(stray) > 20 else "")
-            + "\n\nA ship commit contains the issue's `changed_files` and its "
-            f"artifact directory ({artifact_dir}). If these paths belong to "
+            + "\n\nA ship commit contains the issue's `changed_files`, the "
+            "tests its scenarios declare, its artifact directory "
+            f"({artifact_dir}) and its documents folder. If these paths belong to "
             "this issue, record them first:\n"
             "  compass changed-file add <path> --scenario TRC-<id>\n"
             "Otherwise unstage them (`git restore --staged <path>`) - they may "

@@ -5,7 +5,7 @@ checked result.
 
 ## Before you start
 
-You need Claude Code and Python 3. Compass CI tests Python 3.11.
+You need Claude Code and Python 3.10 or later. Compass CI tests Python 3.11.
 
 Install Compass inside Claude Code:
 

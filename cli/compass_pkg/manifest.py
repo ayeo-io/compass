@@ -500,8 +500,9 @@ def cmd_land_commit(args):
                     if unmet:
                         landed_note = (
                             "\n  NOT marked landed: %d gate(s) have not "
-                            "passed (%s).\n  The commit stands - shipping is a "
-                            "record, not a rubber stamp. Clear the gates and "
+                            "passed (%s).\n  The commit stands - landed means "
+                            "every gate passed, not only that the commit "
+                            "exists. Clear the gates and "
                             "re-run, or set status by hand if this issue "
                             "genuinely lands unverified."
                             % (len(unmet), ", ".join(unmet)))
@@ -786,7 +787,7 @@ def cmd_task_set_status(args):
             raise CompassError(
                 f"compass issue set-status: refusing to mark '{task.get('issue')}' "
                 f"landed - {len(unmet)} gate(s) have not passed "
-                f"({', '.join(unmet)}). Shipping is a record, not a rubber stamp. "
+                f"({', '.join(unmet)}). Landed means every gate passed. "
                 "Clear the gates and re-run."
             )
         task["land_timestamp"] = now_iso()

@@ -213,3 +213,58 @@ def test_no_string_literal_in_the_cli_or_hooks_says_triage():
 def test_the_literal_scan_can_fail():
     assert _LITERAL.search('    "report whether triage is sized",')
     assert not _LITERAL.search("    # triage was the old name")
+
+
+# ---------------------------------------------------------------------------
+# No printed string uses an idiom. The table is the writing-style test's
+# own, so the two cannot drift. The noun "accretion" is added because the
+# table holds only the verb form.
+# ---------------------------------------------------------------------------
+
+def _idiom_patterns():
+    import sys
+    sys.path.insert(0, str(ROOT / "tests"))
+    from test_writing_style import _IDIOM_PATTERNS
+    return ([p for p, _ in _IDIOM_PATTERNS]
+            + [re.compile(r"\baccretion\b", re.IGNORECASE)])
+
+
+_ANY_LITERAL = re.compile(r"""(["'])((?:(?!\1).)*)\1""")
+
+
+def _idiom_offences(rel, text, patterns):
+    offences = []
+    for lineno, line in enumerate(text.splitlines(), start=1):
+        if line.strip().startswith("#"):
+            continue
+        for literal in _ANY_LITERAL.finditer(line):
+            body = literal.group(2)
+            if "code smell" in body.lower():
+                continue
+            for pattern in patterns:
+                if pattern.search(body):
+                    offences.append(f"{rel}:{lineno}: {pattern.pattern}")
+    return offences
+
+
+def test_no_string_literal_in_the_cli_hooks_or_scripts_uses_an_idiom():
+    patterns = _idiom_patterns()
+    offences = []
+    for path in _all_cli_and_hook_sources():
+        offences += _idiom_offences(path.relative_to(ROOT),
+                                    path.read_text(encoding="utf-8"), patterns)
+    assert not offences, "printed strings using an idiom:\n  " + \
+        "\n  ".join(offences)
+
+
+def test_the_idiom_scan_can_fail():
+    patterns = _idiom_patterns()
+    assert _idiom_offences("planted.sh", 'echo " COMPASS - REFRAME NUDGE"\n', patterns)
+    assert _idiom_offences("planted.sh", 'echo "It is accretion, not a step."\n', patterns)
+    assert not _idiom_offences("planted.sh", "# a nudge in a comment\n", patterns)
+
+
+def test_the_docs_name_the_python_version_the_cli_needs():
+    for rel in ("README.md", "docs/five-minutes.md"):
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        assert "Python 3.10 or later" in text, rel

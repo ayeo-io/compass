@@ -617,7 +617,7 @@ def cmd_route_evaluate(args):
             if not args.reason:
                 sys.stderr.write(
                     "compass: re-frame recorded with no reason. Re-run with "
-                    "--reason \"...\" or edit manifest.yml's last `reframes` "
+                    "--reason \"...\" or edit manifest.yml's last `reassessments` "
                     "entry - the reason is the calibration signal.\n"
                 )
     return 0

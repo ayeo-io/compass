@@ -275,7 +275,7 @@ echo "  2. Run  /compass:assess \"<your task>\"  - that's it. The default guardr
 echo "     and strategies ship active, so assessment computes an approach with zero setup."
 echo "  3. Optional, whenever you have governance to encode:  /compass:init  -"
 echo "     it copies governance/ into the project so you can add project-specific"
-echo "     guardrails and strategies. It is accretion, not a prerequisite."
+echo "     guardrails and strategies. It adds to the defaults and is not a prerequisite."
 echo ""
 if [ "$MODE" = "global" ]; then
   echo "Note: a global install makes the /compass: commands available everywhere."

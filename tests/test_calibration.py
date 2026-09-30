@@ -104,6 +104,8 @@ def test_route_evaluate_warns_when_reframe_has_no_reason(run_cli, make_task,
     combined = r.stdout + r.stderr
     # the CLI must mention the missing reason on stderr
     assert "reason" in combined.lower(), r
+    # and name the manifest key a user can edit today
+    assert "`reassessments`" in r.stderr and "`reframes`" not in r.stderr, r.stderr
 
 
 # --- the aggregator: calibration -------------------------------------------

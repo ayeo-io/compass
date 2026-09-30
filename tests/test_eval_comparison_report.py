@@ -36,3 +36,26 @@ def test_cmp_6_no_readme_claim_about_another_framework_outruns_the_run():
     if mentions:
         assert "2026-09-28-eval-comparison.md" in text, (
             "the README names another framework but does not cite the run")
+
+
+# The second comparison: four scenarios where a careless change fails.
+DISCRIMINATING = ROOT / "docs" / "compass" / "2026-09-30-eval-comparison-discriminating.md"
+NEW_SCENARIOS = ("cmp-hidden-requirement", "cmp-call-sites", "cmp-refactor",
+                 "cmp-edge-case")
+
+
+def test_the_discriminating_comparison_is_on_record():
+    raw = DISCRIMINATING.read_text(encoding="utf-8")
+    text = " ".join(raw.split())
+    for name in ("Compass", "Superpowers", "Spec Kit", "no framework"):
+        assert name in text, name
+    for scenario in NEW_SCENARIOS:
+        assert f"`{scenario}`" in text, scenario
+    assert "32 sessions" in text
+    assert "## Did the conditions differ?" in raw
+    per_scenario = raw.split("## Per scenario", 1)[1].split("\n## ", 1)[0]
+    for scenario in NEW_SCENARIOS:
+        assert f"| `{scenario}` |" in per_scenario, scenario
+    assert "## What this does not show" in raw
+    for placeholder in ("TODO", "TBD", "{{"):
+        assert placeholder not in raw, placeholder

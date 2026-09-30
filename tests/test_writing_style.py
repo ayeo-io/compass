@@ -2509,10 +2509,41 @@ def _find_missing_reference(span: ProseSpan) -> list[Finding]:
         path = match.group(1)
         if _looks_like_issue_citation(path) or _looks_like_runtime_evidence(path):
             continue
-        if not (REPO_ROOT / path).exists():
+        if not (REPO_ROOT / path).exists() and not _exists_in_own_seed(span.path, path):
             findings.append(Finding(
                 span.path, span.line, f'named path "{path}" does not exist'))
     return findings
+
+
+def _exists_in_own_seed(file_path: str, path: str) -> bool:
+    """An eval scenario's seed is its own small repository: a file in the
+    scenario names paths relative to that seed, not to this repository."""
+    parts = Path(file_path).parts
+    if len(parts) < 3 or parts[:2] != ("evals", "scenarios"):
+        return False
+    return (REPO_ROOT / "evals" / "scenarios" / parts[2] / "seed" / path).exists()
+
+
+def test_pbw_a8_a_scenario_path_resolves_only_in_its_own_seed():
+    """The seed rule narrows the check to the scenario's own seed: a path
+    that exists there is fine, and one that does not is still reported.
+    The scenario is found at run time, so this file names none - a scenario
+    id outside evals/ would reach the eval sessions' plugin copy."""
+    for seed_test in sorted((REPO_ROOT / "evals" / "scenarios").glob("*/seed/tests/*.py")):
+        if not (REPO_ROOT / "tests" / seed_test.name).exists():
+            break
+    else:
+        pytest.skip("no seed test file with a name unique to its seed")
+    scenario_file = str(seed_test.relative_to(REPO_ROOT))
+    named = f"tests/{seed_test.name}"
+    assert _exists_in_own_seed(scenario_file, named)
+    assert not _exists_in_own_seed(scenario_file, "tests/no_such_seed_file.py")
+    assert not _exists_in_own_seed("docs/five-minutes.md", named)
+    # And the check itself still reports a path missing from the seed.
+    missing = ProseSpan(scenario_file, 1, "See `tests/no_such_seed_file.py`.", "markdown")
+    assert _find_missing_reference(missing)
+    present = ProseSpan(scenario_file, 1, f"See `{named}`.", "markdown")
+    assert not _find_missing_reference(present)
 
 
 _register(Rule(

@@ -1,0 +1,8 @@
+id: cmp-hidden-requirement
+prompt: |
+  Can you add a split_bill function to src/billing.py? It should take a
+  bill total and a number of people, and return a list with each
+  person's share, so a group can split a restaurant bill.
+budget_usd: 3.0
+hidden_command: python3 -m pytest tests/test_hidden_split.py -q
+continue_reply: Go ahead with whichever option you recommend.

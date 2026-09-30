@@ -1,0 +1,8 @@
+id: cmp-refactor
+prompt: |
+  parse_config in src/config.py has grown hard to follow. Can you tidy it
+  up and split it into smaller functions? It must behave exactly as it
+  does now.
+budget_usd: 3.0
+hidden_command: python3 -m pytest tests/test_hidden_config.py -q
+continue_reply: Go ahead with whichever option you recommend.

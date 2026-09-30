@@ -1,12 +1,15 @@
-"""CMP-3: six comparison scenarios under evals/scenarios/, one per class,
+"""CMP-3: ten comparison scenarios under evals/scenarios/, one per class,
 each with hidden tests that fail on the seed and pass on a correct change.
+The last four also have a careless change that passes the seed's own tests
+and fails the hidden ones, so the comparison can tell a careful session
+from a careless one.
 
-Every one of the six is copied into a fresh temporary directory before any
+Every one of the ten is copied into a fresh temporary directory before any
 test command runs, so nothing here ever writes into the tracked seed. The
 "correct change" is a reference solution kept in this file, never in the
 seed: applying it is how this file proves a hidden test can both fail (on
 the untouched seed) and pass (once the change is actually made), which is
-the CMP-3 contract for all six.
+the CMP-3 contract for all ten.
 """
 from __future__ import annotations
 
@@ -35,6 +38,10 @@ TASK_IDS = (
     "cmp-risky",
     "cmp-spike",
     "cmp-resume",
+    "cmp-hidden-requirement",
+    "cmp-call-sites",
+    "cmp-refactor",
+    "cmp-edge-case",
 )
 
 OWN_TEST_COMMAND = ("python3", "-m", "pytest", "-q")
@@ -104,7 +111,7 @@ def _overlay_markdown_text(overlay_dir: Path) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Reference solutions - the correct change for each of the six, applied
+# Reference solutions - the correct change for each of the ten, applied
 # to a copy of the seed, never to the tracked seed itself.
 # ---------------------------------------------------------------------------
 
@@ -383,6 +390,180 @@ def _apply_resume(workdir: Path) -> None:
     (workdir / "src" / "grades.py").write_text(_RESUME_SOURCE, encoding="utf-8")
 
 
+# --- The four scenarios that separate a careful change from a careless one --
+
+def _write(workdir: Path, rel: str, text: str) -> None:
+    (workdir / rel).write_text(text, encoding="utf-8")
+
+
+_BILLING_HEAD = '''"""Bill helpers for splitting costs between friends."""
+
+from __future__ import annotations
+
+
+def format_pence(amount: int) -> str:
+    """Show an amount of pence as pounds, e.g. 1234 -> '£12.34'."""
+    pounds, pence = divmod(amount, 100)
+    return f"£{pounds}.{pence:02d}"
+
+
+def add_tip(total: int, percent: int) -> int:
+    """Return total plus a tip of percent, rounded down to whole pence."""
+    return total + total * percent // 100
+'''
+
+
+def _apply_hidden_requirement(workdir: Path) -> None:
+    _write(workdir, "src/billing.py", _BILLING_HEAD + '''
+
+def split_bill(total: int, people: int) -> list[int]:
+    """Split total pence between people; leftover pence go to the first."""
+    base, extra = divmod(total, people)
+    return [base + 1 if i < extra else base for i in range(people)]
+''')
+
+
+def _careless_hidden_requirement(workdir: Path) -> None:
+    _write(workdir, "src/billing.py", _BILLING_HEAD + '''
+
+def split_bill(total: int, people: int) -> list[int]:
+    """Split total between people."""
+    return [total // people] * people
+''')
+
+
+_PRICING_CORRECT = '''"""Price formatting."""
+
+from __future__ import annotations
+
+SYMBOLS = {"GBP": "£", "EUR": "€"}
+
+
+def format_price(amount: int, currency: str = "GBP") -> str:
+    """Show amount (in the currency's minor unit) with its symbol."""
+    whole, minor = divmod(amount, 100)
+    return f"{SYMBOLS[currency]}{whole}.{minor:02d}"
+'''
+
+
+def _apply_call_sites(workdir: Path) -> None:
+    _write(workdir, "src/pricing.py", _PRICING_CORRECT)
+
+
+def _careless_call_sites(workdir: Path) -> None:
+    _write(workdir, "src/pricing.py", _PRICING_CORRECT.replace(
+        'currency: str = "GBP"', "currency: str"))
+    invoice = (workdir / "src" / "invoice.py").read_text(encoding="utf-8")
+    _write(workdir, "src/invoice.py",
+           invoice.replace("format_price(amount)", "format_price(amount, 'GBP')"))
+    test = (workdir / "tests" / "test_pricing.py").read_text(encoding="utf-8")
+    _write(workdir, "tests/test_pricing.py",
+           re.sub(r"format_price\((\d+)\)", r'format_price(\1, "GBP")', test))
+
+
+def _apply_refactor(workdir: Path) -> None:
+    _write(workdir, "src/config.py", '''"""Read the app's key = value settings file."""
+
+from __future__ import annotations
+
+
+def _strip_comment(line: str) -> str:
+    if " #" in line:
+        line = line[:line.index(" #")]
+    return line.strip()
+
+
+def _split_setting(line: str, raw: str) -> tuple[str, str]:
+    if "=" not in line:
+        raise ValueError(f"not a key = value line: {raw!r}")
+    key, value = line.split("=", 1)
+    return key.strip().lower(), value.strip()
+
+
+def parse_config(text: str) -> dict[str, str]:
+    """Return the settings in text; a later key replaces an earlier one."""
+    settings: dict[str, str] = {}
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        key, value = _split_setting(_strip_comment(line), raw)
+        settings[key] = value
+    return settings
+''')
+
+
+def _careless_refactor(workdir: Path) -> None:
+    _write(workdir, "src/config.py", '''"""Read the app's key = value settings file."""
+
+from __future__ import annotations
+
+
+def _is_setting(line: str) -> bool:
+    line = line.strip()
+    return bool(line) and not line.startswith("#")
+
+
+def _parse_setting(line: str) -> tuple[str, str]:
+    key, value = line.split("=")
+    return key.strip(), value.strip()
+
+
+def parse_config(text: str) -> dict[str, str]:
+    """Return the settings in text."""
+    return dict(_parse_setting(line) for line in text.splitlines()
+                if _is_setting(line))
+''')
+
+
+_PAGING_HEAD = '''"""Paging helpers for long lists."""
+
+from __future__ import annotations
+
+
+def page_count(total_items: int, size: int) -> int:
+    """How many pages of size it takes to show total_items."""
+    return -(-total_items // size)
+'''
+
+
+def _apply_edge_case(workdir: Path) -> None:
+    _write(workdir, "src/paging.py", _PAGING_HEAD + '''
+
+def page(items: list, number: int, size: int) -> list:
+    """The items on page number (from 1) of pages of size."""
+    if number < 1 or size < 1:
+        raise ValueError("number and size must be at least 1")
+    start = (number - 1) * size
+    return items[start:start + size]
+''')
+
+
+def _careless_edge_case(workdir: Path) -> None:
+    _write(workdir, "src/paging.py", _PAGING_HEAD + '''
+
+def page(items: list, number: int, size: int) -> list:
+    """The items on page number of pages of size."""
+    start = (number - 1) * size
+    return items[start:start + size]
+''')
+
+
+CARELESS_CHANGES = {
+    "cmp-hidden-requirement": _careless_hidden_requirement,
+    "cmp-call-sites": _careless_call_sites,
+    "cmp-refactor": _careless_refactor,
+    "cmp-edge-case": _careless_edge_case,
+}
+
+# The rule each hidden test checks, which the prompt must leave the
+# session to find in the repository.
+UNSTATED_RULE_WORDS = {
+    "cmp-hidden-requirement": ("pence", "left over", "remainder", "first", "add up"),
+    "cmp-refactor": ("comment", "lower", "duplicate", "=", "case"),
+}
+
+
 REFERENCE_SOLUTIONS = {
     "cmp-small-fix": _apply_small_fix,
     "cmp-feature": _apply_feature,
@@ -390,6 +571,10 @@ REFERENCE_SOLUTIONS = {
     "cmp-risky": _apply_risky,
     "cmp-spike": _apply_spike,
     "cmp-resume": _apply_resume,
+    "cmp-hidden-requirement": _apply_hidden_requirement,
+    "cmp-call-sites": _apply_call_sites,
+    "cmp-refactor": _apply_refactor,
+    "cmp-edge-case": _apply_edge_case,
 }
 
 
@@ -397,7 +582,7 @@ REFERENCE_SOLUTIONS = {
 # Tests
 # ---------------------------------------------------------------------------
 
-def test_six_cmp_task_directories_exist():
+def test_every_cmp_task_directory_is_listed():
     found = sorted(p.name for p in SCENARIOS_DIR.glob("cmp-*") if p.is_dir())
     assert found == sorted(TASK_IDS)
 
@@ -766,3 +951,33 @@ def test_cmp_spike_hidden_tests_accept_a_finding_naming_only_time_time(tmp_path)
 
     result = _run_hidden_command("cmp-spike", tmp_path)
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+# ---------------------------------------------------------------------------
+# The careless change: passes what the session can see, fails what it cannot.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("task_id", sorted(CARELESS_CHANGES))
+def test_a_careless_change_passes_the_seed_tests_and_fails_the_hidden_ones(
+        task_id, tmp_path):
+    _require_python3()
+    _prepare_seed(task_id, tmp_path)
+    CARELESS_CHANGES[task_id](tmp_path)
+    own = _run(OWN_TEST_COMMAND, tmp_path)
+    assert own.returncode == 0, (
+        f"{task_id}: the careless change fails the seed's own tests, so a "
+        "session would see its mistake:\n" + own.stdout + own.stderr)
+    _copy_hidden_tests(task_id, tmp_path)
+    hidden = _run_hidden_command(task_id, tmp_path)
+    # Exit 1 means tests ran and failed; 2 or 5 would be a collection
+    # error or no tests, which proves nothing about the change.
+    assert hidden.returncode == 1, (
+        f"{task_id}: the hidden tests do not fail cleanly on a careless change:\n"
+        + hidden.stdout + hidden.stderr)
+
+
+@pytest.mark.parametrize("task_id", sorted(UNSTATED_RULE_WORDS))
+def test_the_prompt_leaves_the_rule_to_be_found(task_id):
+    prompt = _load_scenario(task_id)["prompt"].lower()
+    stated = [w for w in UNSTATED_RULE_WORDS[task_id] if w in prompt]
+    assert not stated, f"{task_id}'s prompt states the rule: {stated}"

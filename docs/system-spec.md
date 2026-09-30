@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the CLI, hooks and scripts, when their string literals are scanned, then none uses an idiom from the writing-style table or "accretion", the scan fails on a planted breach, the no-reason re-assessment warning names `reassessments`, and the README and five-minutes guide name Python 3.10 or later
+### A published report gives each condition's hidden-test result per new scenario and says whether they differed
 
-- **Scenario id:** `TRC-001`
+- **Scenario id:** `CSD-5`
 - **Intent:** `INT-1`
-- **Source issue:** `printed-wording-sweep`
+- **Source issue:** `comparison-scenarios-that-discriminate`
 - **Landed:** 2026-09-30
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -9561,3 +9561,38 @@
 - **Intent:** `INT-1`
 - **Source issue:** `refusal-template-follow-ups`
 - **Landed:** 2026-09-29
+
+### Given the CLI, hooks and scripts, when their string literals are scanned, then none uses an idiom from the writing-style table or "accretion", the scan fails on a planted breach, the no-reason re-assessment warning names `reassessments`, and the README and five-minutes guide name Python 3.10 or later _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `printed-wording-sweep`
+- **Landed:** 2026-09-30
+
+### Each new scenario has every field, its seed's tests pass, and its hidden tests fail on the seed _(archived)_
+
+- **Scenario id:** `CSD-1`
+- **Intent:** `INT-1`
+- **Source issue:** `comparison-scenarios-that-discriminate`
+- **Landed:** 2026-09-30
+
+### A correct change passes each new scenario's hidden tests _(archived)_
+
+- **Scenario id:** `CSD-2`
+- **Intent:** `INT-1`
+- **Source issue:** `comparison-scenarios-that-discriminate`
+- **Landed:** 2026-09-30
+
+### A careless change passes the seed's tests and fails the hidden tests _(archived)_
+
+- **Scenario id:** `CSD-3`
+- **Intent:** `INT-1`
+- **Source issue:** `comparison-scenarios-that-discriminate`
+- **Landed:** 2026-09-30
+
+### Each prompt reads as a real request, and two do not state the rule their hidden tests check _(archived)_
+
+- **Scenario id:** `CSD-4`
+- **Intent:** `INT-1`
+- **Source issue:** `comparison-scenarios-that-discriminate`
+- **Landed:** 2026-09-30

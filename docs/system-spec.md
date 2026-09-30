@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### A published report gives each condition's hidden-test result per new scenario and says whether they differed
+### Given a compass run record with compass_commit and no framework block, when the comparison report is built, then it shows that commit
 
-- **Scenario id:** `CSD-5`
+- **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `comparison-scenarios-that-discriminate`
+- **Source issue:** `compare-names-the-compass-commit`
 - **Landed:** 2026-09-30
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -9593,6 +9593,13 @@
 ### Each prompt reads as a real request, and two do not state the rule their hidden tests check _(archived)_
 
 - **Scenario id:** `CSD-4`
+- **Intent:** `INT-1`
+- **Source issue:** `comparison-scenarios-that-discriminate`
+- **Landed:** 2026-09-30
+
+### A published report gives each condition's hidden-test result per new scenario and says whether they differed _(archived)_
+
+- **Scenario id:** `CSD-5`
 - **Intent:** `INT-1`
 - **Source issue:** `comparison-scenarios-that-discriminate`
 - **Landed:** 2026-09-30

@@ -27,7 +27,7 @@ Install Compass from inside Claude Code:
 /plugin install compass@compass
 ```
 
-Needs Python 3. Compass CI tests Python 3.11.
+Needs Python 3.10 or later. Compass CI tests Python 3.11.
 
 Or from source:
 

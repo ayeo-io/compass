@@ -341,7 +341,7 @@ PYEOF
     {
       echo ""
       echo "================================================================"
-      echo " COMPASS - REFRAME NUDGE"
+      echo " COMPASS - REFRAME REMINDER"
       echo "================================================================"
       echo "  The following scope-bloat signals were found in devlog.md"
       echo "  but no reframe has been filed after them:"
@@ -354,7 +354,7 @@ PYEOF
       echo "    /compass:assess --reassess --reason \"<what changed and why>\""
       echo ""
       echo "  This preserves the calibration signal (compass retro)."
-      echo "  The nudge is non-blocking - the session ends regardless."
+      echo "  This reminder does not block - the session ends regardless."
       echo "================================================================"
       echo ""
     } >&2

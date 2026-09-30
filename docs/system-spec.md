@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### A published report gives each condition's hidden-test result per new scenario and says whether they differed
+### retro, flow, approach evaluate and the stop hook say re-assessment
 
-- **Scenario id:** `CSD-5`
+- **Scenario id:** `RRA-3`
 - **Intent:** `INT-1`
-- **Source issue:** `comparison-scenarios-that-discriminate`
+- **Source issue:** `reframe-to-reassessment`
 - **Landed:** 2026-09-30
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -9595,4 +9595,25 @@
 - **Scenario id:** `CSD-4`
 - **Intent:** `INT-1`
 - **Source issue:** `comparison-scenarios-that-discriminate`
+- **Landed:** 2026-09-30
+
+### A published report gives each condition's hidden-test result per new scenario and says whether they differed _(archived)_
+
+- **Scenario id:** `CSD-5`
+- **Intent:** `INT-1`
+- **Source issue:** `comparison-scenarios-that-discriminate`
+- **Landed:** 2026-09-30
+
+### reframe is a banned term, bound to a pattern that flags a planted use _(archived)_
+
+- **Scenario id:** `RRA-1`
+- **Intent:** `INT-1`
+- **Source issue:** `reframe-to-reassessment`
+- **Landed:** 2026-09-30
+
+### No scanned surface uses reframe except a marked compatibility line _(archived)_
+
+- **Scenario id:** `RRA-2`
+- **Intent:** `INT-1`
+- **Source issue:** `reframe-to-reassessment`
 - **Landed:** 2026-09-30

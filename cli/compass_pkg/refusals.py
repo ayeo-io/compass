@@ -38,26 +38,26 @@ from compass_pkg.core import CompassError
 
 #: code -> {"what": ..., "why": ..., "fix": ...}. Each value is a
 #: str.format() template; the named fields it reads are the keyword
-#: parameters `render()` needs for that code. A call site that passes a
-#: field the template does not use, or omits one it does, fails loudly -
-#: str.format() raises rather than silently dropping text - because that
-#: means the call site and the registry have drifted apart.
+#: parameters `render()` needs for that code. A call site that omits a
+#: field the template uses fails loudly - str.format() raises KeyError -
+#: because that means the call site and the registry have drifted apart.
+#: An extra field is ignored; str.format() does not check for one.
 REFUSALS: dict[str, dict[str, str]] = {
     "python-missing": {
         "what": "edit to {target} (tool: {tool})",
         "why": "python3 was not found on the PATH, so Compass cannot check "
                "whether this edit is allowed.",
-        "fix": "install python3 (3.9+) or put it on PATH, then retry.",
+        "fix": "install python3 (3.10+) or put it on PATH, then retry.",
     },
     "reader-failed": {
         "what": "edit to {target} (tool: {tool})",
         "why": "the {reader} could not run. {cause}{detail}",
-        "fix": "fix the install and re-try - this is not about your edit.",
+        "fix": "fix the install and retry - this is not about your edit.",
     },
     "config-invalid": {
         "what": "edit to {target} (tool: {tool})",
         "why": "'.compass/config.yml' could not be read: {detail}",
-        "fix": "fix .compass/config.yml and re-try.",
+        "fix": "fix .compass/config.yml and retry.",
     },
     "not-initialised": {
         "what": "this edit",
@@ -84,7 +84,8 @@ REFUSALS: dict[str, dict[str, str]] = {
         "why": "the acceptance-before-code guardrail blocks this: define: "
                "full is set but manifest.yml has no scenarios.",
         "fix": "add the scenarios to acceptance-criteria.md and manifest.yml "
-               "(compass scenario add), or re-frame as a spike if this is "
+               "(compass scenario add), or run /compass:assess --reassess "
+               "if this is "
                "exploratory.",
     },
     "red-unsigned": {
@@ -92,20 +93,22 @@ REFUSALS: dict[str, dict[str, str]] = {
         "why": "the red record for issue '{slug}' carries no identity - no "
                "content_digest - and this project needs one for records "
                "written since records_signed_since: {since_date}.",
-        "fix": "run compass tdd-red -- <your failing test command>.",
+        "fix": "run compass tdd-red --scenario <id> -- <your failing test "
+               "command>.",
     },
     "red-marker-no-record": {
         "what": "this edit",
         "why": "the .red marker for issue '{slug}' has no matching record "
                "in evidence/ - the marker alone is not evidence.",
-        "fix": "run compass tdd-red -- <your failing test command>.",
+        "fix": "run compass tdd-red --scenario <id> -- <your failing test "
+               "command>.",
     },
     "no-red-on-record": {
         "what": "edit to {target} (tool: {tool}, guarded by {guard})",
         "why": "no failing test is on record for issue '{slug}' - the "
                "red-before-green strategy applies here.",
-        "fix": "run compass tdd-red -- <your failing test command>, then "
-               "retry this edit.",
+        "fix": "run compass tdd-red --scenario <id> -- <your failing test "
+               "command>, then retry this edit.",
     },
 }
 
@@ -119,6 +122,16 @@ def codes() -> list[str]:
     return sorted(REFUSALS)
 
 
+MAX_PARAM_WORDS = 20
+
+
+def _cap(value) -> str:
+    words = str(value).split()
+    if len(words) <= MAX_PARAM_WORDS:
+        return str(value)
+    return " ".join(words[:MAX_PARAM_WORDS]) + " ..."
+
+
 def render(code: str, **params) -> str:
     """The three-line refusal text for `code`, filled with `params`.
 
@@ -130,6 +143,10 @@ def render(code: str, **params) -> str:
         entry = REFUSALS[code]
     except KeyError:
         raise KeyError(f"no such refusal code: {code!r}") from None
+    # A parameter is text from the environment - an exception message, a
+    # path. Cutting each to a fixed word count keeps a refusal short
+    # enough to read, however long the text it quotes.
+    params = {k: _cap(v) for k, v in params.items()}
     what = entry["what"].format(**params)
     why = entry["why"].format(**params)
     fix = entry["fix"].format(**params)

@@ -39,31 +39,29 @@ _ALLOWED_LINE = '"assess": "assess", "triage": "assess", "frame": "assess",'
 def test_no_owned_source_file_prints_triage():
     offenders = []
     for rel in _SOURCE_FILES:
-        text = (ROOT / rel).read_text(encoding="utf-8")
-        for lineno, line in enumerate(text.splitlines(), start=1):
-            if "triage" not in line.lower():
-                continue
-            if line.strip() == _ALLOWED_LINE:
-                continue
-            offenders.append(f"{rel}:{lineno}: {line.strip()}")
+        offenders += _offending_lines(rel, (ROOT / rel).read_text(encoding="utf-8"))
     assert not offenders, (
         "these lines still print or could print the retired word "
         "'triage':\n  " + "\n  ".join(offenders)
     )
 
 
-def test_the_scan_can_fail():
-    """The control: a planted breach, elsewhere in the same line shape as a
-    real one, must be caught."""
+def _offending_lines(rel, text):
     offenders = []
-    text = '        "why": "graduating to delivery must be a fresh triage"\n'
     for lineno, line in enumerate(text.splitlines(), start=1):
         if "triage" not in line.lower():
             continue
         if line.strip() == _ALLOWED_LINE:
             continue
-        offenders.append((lineno, line.strip()))
-    assert offenders, "the scan missed a planted 'triage' occurrence"
+        offenders.append(f"{rel}:{lineno}: {line.strip()}")
+    return offenders
+
+
+def test_the_scan_can_fail():
+    """The control runs the scan itself on a planted breach."""
+    planted = '        "why": "graduating to delivery must be a fresh triage"\n'
+    assert _offending_lines("planted.py", planted)
+    assert not _offending_lines("planted.py", _ALLOWED_LINE + "\n")
 
 
 def _word(name):
@@ -192,7 +190,8 @@ _LITERAL = re.compile(r"""(["'])(?:(?!\1).)*triage(?:(?!\1).)*\1""", re.I)
 def _all_cli_and_hook_sources():
     return ([ROOT / "cli" / "compass"]
             + sorted((ROOT / "cli" / "compass_pkg").glob("*.py"))
-            + sorted((ROOT / "hooks").glob("*.sh")))
+            + sorted((ROOT / "hooks").glob("*.sh"))
+            + sorted((ROOT / "scripts").glob("*.sh")))
 
 
 def test_no_string_literal_in_the_cli_or_hooks_says_triage():

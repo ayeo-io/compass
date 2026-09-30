@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -40,7 +41,7 @@ from test_terminology import _scan_text                          # noqa: E402
 FIXTURES = {
     "python-missing": dict(target="src/app.py", tool="Edit"),
     "reader-failed": dict(target="src/app.py", tool="Edit",
-                          reader="the delivery-approach reader",
+                          reader="delivery-approach reader",
                           cause="It exited 1.", detail=""),
     "config-invalid": dict(
         target="packaging/app.cfg", tool="Edit",
@@ -267,6 +268,8 @@ def test_rtp_4_docs_page_is_not_stale():
 
 
 def test_rtp_4_every_code_has_a_call_site():
+    """A code counts as used only where it is passed to the hook's refusal
+    functions or to render() - a mention in a comment does not count."""
     text = ""
     for p in (ROOT / "hooks").glob("*.sh"):
         text += p.read_text(encoding="utf-8")
@@ -275,5 +278,97 @@ def test_rtp_4_every_code_has_a_call_site():
             continue
         text += p.read_text(encoding="utf-8")
     text += (ROOT / "cli" / "compass").read_text(encoding="utf-8")
-    missing = [c for c in codes() if c not in text]
+    missing = [c for c in codes() if not _called(c, text)]
     assert not missing, f"codes with no call site outside the registry: {missing}"
+
+
+def _called(code, text):
+    code_lines = "\n".join(line for line in text.splitlines()
+                           if not line.lstrip().startswith("#"))
+    return bool(re.search(
+        rf"(emit_refusal|compass_block)\s+{re.escape(code)}\b"
+        rf"|render\(\s*[\"']{re.escape(code)}[\"']"
+        rf"|printf .*\[{re.escape(code)}\]", code_lines))
+
+
+def test_rtf_4_a_code_named_only_in_a_comment_is_not_a_call_site():
+    assert not _called("no-red-on-record", "# no-red-on-record is handled\n")
+    assert not _called("python-missing",
+                       '    # render("python-missing", target=..., tool=...)\n')
+    assert _called("no-red-on-record", 'compass_block no-red-on-record "x=1"')
+
+
+# ---------------------------------------------------------------------------
+# RTF - D45: the fallback keeps its shape, and the texts are exact.
+# ---------------------------------------------------------------------------
+
+def test_rtf_1_a_python3_that_fails_with_output_keeps_the_refusal_shape(install):
+    broken = install / "brokenbin"
+    broken.mkdir()
+    (broken / "python3").write_text(
+        "#!/bin/sh\necho 'broken python: dyld error' >&2\nexit 1\n")
+    (broken / "python3").chmod(0o755)
+    result = _hook(install, "src/app.py",
+                   path=f"{broken}:{os.environ['PATH']}")
+    assert result.returncode == 2, (result.returncode, result.stderr)
+    lines = result.stderr.splitlines()
+    starts = [i for i, l in enumerate(lines)
+              if l.startswith(("Blocked:", "Why:", "Fix:"))]
+    assert [lines[i].split(":")[0] for i in starts] == ["Blocked", "Why", "Fix"], lines
+    assert "src/app.py" in lines[starts[0]], lines
+    assert re.search(r"\[[a-z-]+\]$", lines[starts[2]]), lines
+    assert "    broken python: dyld error" in lines[starts[2] + 1:], lines
+
+
+def test_rtf_2_the_fix_lines_are_exact():
+    fixes = {c: REFUSALS[c]["fix"] for c in codes()}
+    assert "3.10+" in fixes["python-missing"]
+    for code in ("red-unsigned", "red-marker-no-record", "no-red-on-record"):
+        assert "--scenario <id>" in fixes[code], (code, fixes[code])
+    assert "/compass:assess --reassess" in fixes["no-acceptance-criteria"]
+    assert not any("re-try" in f for f in fixes.values()), fixes
+
+
+def test_rtf_3_a_long_parameter_is_cut_and_the_refusal_stays_short():
+    long_detail = " ".join(["word"] * 200)
+    text = render("config-invalid", target="src/app.py", tool="Edit",
+                  detail=long_detail)
+    assert len(text.split()) < 60, len(text.split())
+
+
+def test_rtf_4_the_registry_comment_claims_only_what_render_checks():
+    """The comment says an extra field is ignored and a missing one
+    raises; render() must behave that way."""
+    render("config-invalid", target="a", tool="Edit", detail="d", extra="x")
+    with pytest.raises(KeyError):
+        render("config-invalid", target="a", tool="Edit")
+    source = (ROOT / "cli" / "compass_pkg" / "refusals.py").read_text()
+    assert "An extra field is ignored" in source
+
+
+def test_rtf_4_the_hook_runs_under_a_python3_older_than_3_10(install):
+    old = shutil.which("python3", path="/usr/bin")
+    if not old:
+        pytest.skip("no /usr/bin/python3 on this machine")
+    version = subprocess.run([old, "-c", "import sys; print(sys.version_info[:2] < (3, 10))"],
+                             capture_output=True, text=True).stdout.strip()
+    if version != "True":
+        pytest.skip("/usr/bin/python3 is 3.10 or newer")
+    for red in install.glob(".compass/work/*/.red"):
+        red.unlink()
+    result = _hook(install, "src/app.py", path=f"/usr/bin:{os.environ['PATH']}")
+    assert result.returncode == 2, result.stderr
+    assert "[no-red-on-record]" in result.stderr, result.stderr
+    assert "Traceback" not in result.stderr, result.stderr
+
+
+def test_rtf_6_the_docs_page_does_not_claim_cli_refusals():
+    page = (ROOT / "docs" / "refusal-codes.md").read_text()
+    assert "the CLI can refuse" not in page, page[:400]
+
+
+def test_rtf_6_no_fixture_renders_a_doubled_word():
+    doubled = {c: m.group(0) for c in codes()
+               for m in [re.search(r"\b(\w+) \1\b", render(c, **FIXTURES[c]))]
+               if m}
+    assert not doubled, doubled

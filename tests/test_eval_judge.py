@@ -270,6 +270,48 @@ def test_assessed_before_first_edit_is_undecided_under_bare_too():
     assert result["status"] == "undecided"
 
 
+_QF_START = ("compass quick-fix start fix-it --risk \"trivial - one pure helper\" "
+             "--familiarity \"brownfield-mapped - tests cover it\" "
+             "--size \"atomic - one line\" --intent \"x\" "
+             "--scenario \"Given ... When ... Then ...\" --test tests/t.py")
+
+
+def test_jsq1_a_quick_fix_start_before_the_edit_is_an_assessment():
+    """`compass quick-fix start` writes the manifest through the CLI; a
+    successful call with real risk and size values is an assessment."""
+    record = make_record(tool_calls=[
+        tool_call(0, "Bash", {"command": _QF_START}),
+        tool_call(1, "Edit", {"file_path": abspath("src/app.py")}),
+    ])
+    result = judge.score_record(record, make_scenario())["assessed_before_first_edit"]
+    assert result["status"] == "pass", result
+
+
+def test_jsq1_a_failed_quick_fix_start_is_not_an_assessment():
+    record = make_record(tool_calls=[
+        tool_call(0, "Bash", {"command": _QF_START}, is_error=True),
+        tool_call(1, "Edit", {"file_path": abspath("src/app.py")}),
+    ])
+    result = judge.score_record(record, make_scenario())["assessed_before_first_edit"]
+    assert result["status"] != "pass", result
+
+
+def test_jsq2_a_blocked_edit_counts_as_the_first_code_edit():
+    """A session that tries to edit before assessing has not assessed
+    first, even when the hook stops the edit."""
+    record = make_record(tool_calls=[
+        tool_call(0, "Edit", {"file_path": abspath("src/app.py")}, denied=True),
+        tool_call(1, "Bash", {"command": _QF_START}),
+        tool_call(2, "Edit", {"file_path": abspath("src/app.py")}),
+    ])
+    result = judge.score_record(record, make_scenario())["assessed_before_first_edit"]
+    assert result["status"] != "pass", result
+
+
+def test_jsq2_the_model_judge_is_asked_the_same_question():
+    assert "blocked" in judge._ASSESSED_BEFORE_FIRST_EDIT_QUESTION
+
+
 def test_assessed_before_first_edit_rejects_the_unfilled_template():
     record = make_record(tool_calls=[
         tool_call(0, "Write", {

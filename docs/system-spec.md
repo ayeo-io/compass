@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### the measured eval run is compared with the baseline
+### Given a session that ran compass quick-fix start before its first code edit, when the rule judge scores it, then it passes
 
-- **Scenario id:** `RTP-6`
+- **Scenario id:** `JSQ-1`
 - **Intent:** `INT-1`
-- **Source issue:** `refusal-template`
+- **Source issue:** `judge-sees-quick-fix-start`
 - **Landed:** 2026-09-29
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -9502,6 +9502,13 @@
 ### no printed string names a retired word _(archived)_
 
 - **Scenario id:** `RTP-5`
+- **Intent:** `INT-1`
+- **Source issue:** `refusal-template`
+- **Landed:** 2026-09-29
+
+### the measured eval run is compared with the baseline _(archived)_
+
+- **Scenario id:** `RTP-6`
 - **Intent:** `INT-1`
 - **Source issue:** `refusal-template`
 - **Landed:** 2026-09-29

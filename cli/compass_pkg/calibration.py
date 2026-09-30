@@ -609,6 +609,10 @@ def cmd_calibration(args):
             total += 1
             fr, to = rf.get("from_route"), rf.get("to_route")
             transitions[f"{fr} -> {to}"] = transitions.get(f"{fr} -> {to}", 0) + 1
+            # A policy correction records a newer policy, not a misread of
+            # the work, so it says nothing about how assessment sizes work.
+            if rf.get("kind") == "policy-correction":
+                continue
             wf, wt = weights.get(fr), weights.get(to)
             if wf is None or wt is None:
                 # A route with no weight has no direction to count.

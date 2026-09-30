@@ -142,9 +142,6 @@ def test_scn_a4_entry_carries_a_kind(tmp_path):
     assert _task(root)["reassessments"][-1].get("kind") == "judgement", _task(root)["reassessments"]
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "compass retro counts a policy-correction re-assessment in the up/down "
-    "sizing signal; its own issue fixes that"))
 def test_scn_a5_calibration_counts_only_judgement(tmp_path):
     """A policy-correction reassessment would otherwise read as assessment
     under-sizing the work, which skews the retro signal."""
@@ -161,7 +158,7 @@ def test_scn_a5_calibration_counts_only_judgement(tmp_path):
     assert "policy-correction" in out or "1" in out, out
     # The judgement re-assessment counts as one up; the policy correction
     # must not count as a second.
-    assert "(1 up vs 0 down)" in out, (
+    assert "(1 up / 0 down)" in out, (
         f"a policy-correction was counted in the re-sizing signal:\n{out}")
 
 

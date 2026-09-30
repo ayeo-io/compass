@@ -1,0 +1,9 @@
+id: cmp-call-sites
+prompt: |
+  We're starting to take orders in euros. Can you change format_price in
+  src/pricing.py so it takes a currency code, "GBP" or "EUR", and shows
+  euros as €12.34? Everywhere else that shows a price should keep
+  showing pounds for now.
+budget_usd: 3.0
+hidden_command: python3 -m pytest tests/test_hidden_currency.py -q
+continue_reply: Go ahead with whichever option you recommend.

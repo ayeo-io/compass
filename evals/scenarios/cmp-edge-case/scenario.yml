@@ -1,0 +1,9 @@
+id: cmp-edge-case
+prompt: |
+  Can you add a page function to src/paging.py? page(items, number, size)
+  should return the items on that page. Pages are numbered from 1, a page
+  past the end is an empty list, and a number or size below 1 should
+  raise a ValueError.
+budget_usd: 3.0
+hidden_command: python3 -m pytest tests/test_hidden_page.py -q
+continue_reply: Go ahead with whichever option you recommend.

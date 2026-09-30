@@ -2509,10 +2509,36 @@ def _find_missing_reference(span: ProseSpan) -> list[Finding]:
         path = match.group(1)
         if _looks_like_issue_citation(path) or _looks_like_runtime_evidence(path):
             continue
-        if not (REPO_ROOT / path).exists():
+        if not (REPO_ROOT / path).exists() and not _exists_in_own_seed(span.path, path):
             findings.append(Finding(
                 span.path, span.line, f'named path "{path}" does not exist'))
     return findings
+
+
+def _exists_in_own_seed(file_path: str, path: str) -> bool:
+    """An eval scenario's seed is its own small repository: a file in the
+    scenario names paths relative to that seed, not to this repository."""
+    parts = Path(file_path).parts
+    if len(parts) < 3 or parts[:2] != ("evals", "scenarios"):
+        return False
+    return (REPO_ROOT / "evals" / "scenarios" / parts[2] / "seed" / path).exists()
+
+
+def test_pbw_a8_a_scenario_path_resolves_only_in_its_own_seed():
+    """The seed rule narrows the check to the scenario's own seed: a path
+    that exists there is fine, and one that does not is still reported."""
+    assert _exists_in_own_seed(
+        "evals/scenarios/cmp-hidden-requirement/seed/README.md", "docs/CONVENTIONS.md")
+    assert not _exists_in_own_seed(
+        "evals/scenarios/cmp-call-sites/seed/src/pricing.py", "docs/CONVENTIONS.md")
+    assert not _exists_in_own_seed("docs/five-minutes.md", "docs/CONVENTIONS.md")
+    # And the check itself still reports a path missing from the seed.
+    missing = ProseSpan("evals/scenarios/cmp-call-sites/seed/README.md", 1,
+                        "See `docs/CONVENTIONS.md` first.", "markdown")
+    assert _find_missing_reference(missing)
+    present = ProseSpan("evals/scenarios/cmp-hidden-requirement/seed/README.md", 1,
+                        "See `docs/CONVENTIONS.md` first.", "markdown")
+    assert not _find_missing_reference(present)
 
 
 _register(Rule(

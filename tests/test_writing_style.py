@@ -2526,18 +2526,23 @@ def _exists_in_own_seed(file_path: str, path: str) -> bool:
 
 def test_pbw_a8_a_scenario_path_resolves_only_in_its_own_seed():
     """The seed rule narrows the check to the scenario's own seed: a path
-    that exists there is fine, and one that does not is still reported."""
-    assert _exists_in_own_seed(
-        "evals/scenarios/cmp-hidden-requirement/seed/README.md", "docs/CONVENTIONS.md")
-    assert not _exists_in_own_seed(
-        "evals/scenarios/cmp-call-sites/seed/src/pricing.py", "docs/CONVENTIONS.md")
-    assert not _exists_in_own_seed("docs/five-minutes.md", "docs/CONVENTIONS.md")
+    that exists there is fine, and one that does not is still reported.
+    The scenario is found at run time, so this file names none - a scenario
+    id outside evals/ would reach the eval sessions' plugin copy."""
+    for seed_test in sorted((REPO_ROOT / "evals" / "scenarios").glob("*/seed/tests/*.py")):
+        if not (REPO_ROOT / "tests" / seed_test.name).exists():
+            break
+    else:
+        pytest.skip("no seed test file with a name unique to its seed")
+    scenario_file = str(seed_test.relative_to(REPO_ROOT))
+    named = f"tests/{seed_test.name}"
+    assert _exists_in_own_seed(scenario_file, named)
+    assert not _exists_in_own_seed(scenario_file, "tests/no_such_seed_file.py")
+    assert not _exists_in_own_seed("docs/five-minutes.md", named)
     # And the check itself still reports a path missing from the seed.
-    missing = ProseSpan("evals/scenarios/cmp-call-sites/seed/README.md", 1,
-                        "See `docs/CONVENTIONS.md` first.", "markdown")
+    missing = ProseSpan(scenario_file, 1, "See `tests/no_such_seed_file.py`.", "markdown")
     assert _find_missing_reference(missing)
-    present = ProseSpan("evals/scenarios/cmp-hidden-requirement/seed/README.md", 1,
-                        "See `docs/CONVENTIONS.md` first.", "markdown")
+    present = ProseSpan(scenario_file, 1, f"See `{named}`.", "markdown")
     assert not _find_missing_reference(present)
 
 

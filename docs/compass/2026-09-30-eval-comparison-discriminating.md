@@ -6,7 +6,7 @@ The first comparison (`2026-09-28-eval-comparison.md`) could not tell the framew
 
 ## Result
 
-- **No condition made a careless change.** Every session that wrote code passed every hidden test, including the three rules a careless change misses: the money rule found only in `docs/CONVENTIONS.md`, the two callers the prompt does not name, and the behaviour a tidy-up must keep.
+- **No condition made a careless change.** Every session that wrote code passed every hidden test, including the three rules a careless change misses: the money rule found only in the seed's conventions document, the two callers the prompt does not name, and the behaviour a tidy-up must keep.
 - **Compass was the only condition to fail a session, and it failed by writing nothing.** In one `cmp-edge-case` session, Compass gave the full feature process to a one-function change. The session stopped twice to ask whether to go ahead, and the harness sends only one reply, so it ended with no code.
 - **Compass cost the most:** $3.76 against $1.20 to $1.57, 3.4 million tokens against 1.0 to 1.3 million, and twice the wall time. Three Compass sessions stopped to ask about the process, each after rating familiarity as something other than `brownfield-mapped`; no other condition stopped.
 
@@ -23,7 +23,7 @@ The first comparison (`2026-09-28-eval-comparison.md`) could not tell the framew
 
 | Scenario | The prompt asks for | A careless change misses |
 |---|---|---|
-| `cmp-hidden-requirement` | a function to split a bill | the rule in `docs/CONVENTIONS.md`: whole pence, and the leftover pence go to the first people |
+| `cmp-hidden-requirement` | a function to split a bill | the rule in the seed's conventions document: whole pence, and the leftover pence go to the first people |
 | `cmp-call-sites` | a currency argument for `format_price` | two callers the prompt does not name |
 | `cmp-refactor` | a tidy-up of `parse_config` that keeps its behaviour | inline comments, lower-cased keys, and values that contain `=` |
 | `cmp-edge-case` | a `page` function, with its edge rules stated | the `ValueError` for a page number or size below 1 |
@@ -50,5 +50,5 @@ On `cmp-refactor`, seven of the eight sessions added tests that pin `parse_confi
 ## What this does not show
 
 - Two executions per cell are too few to give a rate. A single session can change a cell's result.
-- These scenarios still did not separate careful from careless work, because this model did not work carelessly on them. A scenario that does may need a bigger codebase or a longer task.
+- These scenarios still did not separate careful from careless work, because this model did not work carelessly on them. A scenario that does may need a bigger codebase or a longer piece of work.
 - The harness sends one reply to a session that stops to ask. A person could reply again, and the Compass session that wrote nothing could then have finished.

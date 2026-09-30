@@ -120,6 +120,15 @@ asked before building the dashboard. The judge now counts that file as one
 of Compass's own records. A reviewer agent checked the fix, and re-scoring
 changed that one cell and nothing else.
 
+A second cell changed on 29 September. The judge now counts an edit the
+hook blocked as the session's first code edit, because the question is
+whether the session assessed before it tried to change code (spec D46).
+`conflicting-instruction` compass tried an edit, which the hook blocked,
+before it assessed, so the rule no longer passes it and hands it to the
+model judge; it has not been re-judged. Its "pass" in the table above no
+longer stands. D38's five runs of the same scenario fail it by the same
+rule.
+
 ## What this does not show
 
 - **How often.** One run per scenario and condition.

@@ -1,7 +1,7 @@
 schema_version: '2.0'
 issue: refusal-template-follow-ups
 created: '2026-09-29'
-status: active
+status: landed
 assessment:
   risk: cross-cutting
   familiarity: brownfield-mapped
@@ -228,3 +228,5 @@ changed_files:
 - path: tests/test_hook_enforces_g2.py
   scenarios:
   - RTF-2
+land_timestamp: '2026-09-29T21:24:48+00:00'
+land_commit: 55f639df86aadd5f7017ab3150ba1415ce108019

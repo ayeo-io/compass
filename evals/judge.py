@@ -521,7 +521,7 @@ def _first_bash_edit_index(calls: List[Dict[str, Any]], paths: List[str],
 
 def _first_code_edit(calls: List[Dict[str, Any]], changed_paths: List[str],
                       in_scope: List[str], exclude_test: bool = False,
-                      cwd: Optional[str] = None
+                      cwd: Optional[str] = None, include_denied: bool = False
                       ) -> Tuple[Optional[int], Optional[str]]:
     """The first **code edit** - a change to a path in `in_scope` that is
     not one of Compass's own records (`_is_compass_own_record`) - as
@@ -540,6 +540,12 @@ def _first_code_edit(calls: List[Dict[str, Any]], changed_paths: List[str],
     touched = set()
     call_idx = None
     for i, call in enumerate(calls):
+        if include_denied and _is_edit_call(call) and call.get("denied"):
+            # A blocked try counts as the first edit when the question is
+            # whether the session assessed before trying to change code.
+            if matches(_tool_path(call)) and call_idx is None:
+                call_idx = i
+            continue
         if not _is_effective_edit_call(call):
             continue
         path = _tool_path(call)
@@ -881,7 +887,9 @@ def failed(result: Dict[str, Any]) -> bool:
 # same question either way.
 _ASSESSED_BEFORE_FIRST_EDIT_QUESTION = (
     "in the text before its first code edit, did the session state how "
-    "risky and how big the change is?")
+    "risky and how big the change is? An edit a hook blocked counts as an "
+    "edit: the question is whether the session assessed before it tried to "
+    "change code.")
 
 
 # A heredoc's own body, as it appears in a Bash command's own text: `>
@@ -965,15 +973,37 @@ def _manifest_write_call_before(calls: List[Dict[str, Any]], path: str,
     return False
 
 
+_QF_RISK = re.compile(r"--risk[= ]+[\"']?(trivial|contained|cross-cutting|critical)\b")
+_QF_SIZE = re.compile(r"--size[= ]+[\"']?(atomic|small|standard|large|product)\b")
+
+
+def _quick_fix_start_before(calls):
+    """Did a `compass quick-fix start` call succeed, with a real risk and
+    size, among these calls? It writes the manifest through the CLI, which
+    the manifest-write checks cannot see."""
+    for call in calls:
+        if call.get("name") != "Bash" or call.get("denied") or call.get("is_error"):
+            continue
+        command = (call.get("input") or {}).get("command") or ""
+        if ("quick-fix start" in command and _QF_RISK.search(command)
+                and _QF_SIZE.search(command)):
+            return True
+    return False
+
+
 def behaviour_assessed_before_first_edit(record, scenario):
     calls = record.get("tool_calls", [])
     in_scope = scenario.get("in_scope", ["**"])
     changed_paths = record.get("changed_paths", [])
     cwd = record.get("cwd")
     first_idx, kind = _first_code_edit(calls, changed_paths, in_scope, exclude_test=True,
-                                        cwd=cwd)
+                                        cwd=cwd, include_denied=True)
     if kind is None:
         return _no_edit("no code edit to assess before")
+    if kind == "call" and _quick_fix_start_before(calls[:first_idx]):
+        return _pass(
+            "a successful `compass quick-fix start` recorded real risk and "
+            "size values before the first code edit")
     if kind == "unseen":
         return _undecided(
             "a changed path in scope had no edit call touching it, so the "

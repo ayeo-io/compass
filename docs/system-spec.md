@@ -9513,6 +9513,13 @@
 - **Source issue:** `refusal-template`
 - **Landed:** 2026-09-29
 
+### Given a session that ran compass quick-fix start before its first code edit, when the rule judge scores it, then it passes _(archived)_
+
+- **Scenario id:** `JSQ-1`
+- **Intent:** `INT-1`
+- **Source issue:** `judge-sees-quick-fix-start`
+- **Landed:** 2026-09-29
+
 ### Given a python3 that fails and prints something, when the hook refuses _(archived)_
 
 - **Scenario id:** `RTF-1`

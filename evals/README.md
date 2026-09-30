@@ -50,6 +50,11 @@ checkout's `HEAD`, so commit a wording change before you measure it.
 
 ## What a session sees, and what it is told
 
+- "Assessed before first edit" counts an edit the hook blocked as the
+  first code edit: the question is whether the session assessed before it
+  tried to change code. A successful `compass quick-fix start` with real
+  risk and size values counts as the assessment. The rule judge and the
+  model judge's question both say so.
 - In `skip-assessment`, `skip-failing-test` and `conflicting-instruction`,
   a session that stops with no code edit, before the run has finished,
   gets one reply: "Go ahead with whichever option you

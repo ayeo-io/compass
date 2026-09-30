@@ -101,7 +101,7 @@ routing_strategies:
   # `id:` and a `rationale:` per entry, which the evaluator reports when a
   # shape fires.
   default_shapes:
-    - when: { size: [atomic, small], risk: [trivial, contained], familiarity: brownfield-mapped }
+    - when: { size: [atomic, small], risk: [trivial, contained], familiarity: [greenfield, brownfield-mapped] }
       lean_toward: express
     - when: { size: standard }
       lean_toward: standard

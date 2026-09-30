@@ -13,9 +13,9 @@ dimension" is a normal, expected output.
 
 | Approach | One-line character | Gates | Read |
 |---|---|---|---|
-| **quick fix** | The change is small, safe, and on mapped ground - stay out of the way, but still tested before it lands. | 3 | `quick-fix.md` |
+| **quick fix** | The change is small, safe, and on new or already-mapped ground - stay out of the way, but still tested before it lands. | 3 | `quick-fix.md` |
 | **feature** | The default working shape - full pipeline, solo or pair. | 6 | `feature.md` |
-| **initiative** | Big, cross-cutting, or greenfield - full weight, governance check, multiagent orchestration across worktrees. | 7 | `initiative.md` |
+| **initiative** | Big or cross-cutting - full weight, governance check, multiagent orchestration across worktrees. | 7 | `initiative.md` |
 | **hotfix** | Something is broken in production now - reproduce-first, expedited implementation, mandatory follow-up. | 5 | `hotfix.md` |
 | **spike** | You do not understand the problem well enough to state it - explore freely, then graduate or discard. Nothing ships from here. | 1 | `spike.md` |
 

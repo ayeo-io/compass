@@ -29,12 +29,12 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### no script prints triage, and the scan covers scripts
+### Given the CLI, hooks and scripts, when their string literals are scanned, then none uses an idiom from the writing-style table or "accretion", the scan fails on a planted breach, the no-reason re-assessment warning names `reassessments`, and the README and five-minutes guide name Python 3.10 or later
 
-- **Scenario id:** `RTF-5`
+- **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `refusal-template-follow-ups`
-- **Landed:** 2026-09-29
+- **Source issue:** `printed-wording-sweep`
+- **Landed:** 2026-09-30
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
 
@@ -9544,6 +9544,13 @@
 ### Given the guards, then the call-site test finds a code only as an argu _(archived)_
 
 - **Scenario id:** `RTF-4`
+- **Intent:** `INT-1`
+- **Source issue:** `refusal-template-follow-ups`
+- **Landed:** 2026-09-29
+
+### no script prints triage, and the scan covers scripts _(archived)_
+
+- **Scenario id:** `RTF-5`
 - **Intent:** `INT-1`
 - **Source issue:** `refusal-template-follow-ups`
 - **Landed:** 2026-09-29

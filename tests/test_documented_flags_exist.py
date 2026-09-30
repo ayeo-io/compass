@@ -1,15 +1,15 @@
 """Every flag a shipped document teaches is one the CLI accepts (issue
-reframe-is-documented-but-does-not-exist).
+reframe-is-documented-but-does-not-exist). <!-- vocabulary-scan: allow - names the retired flag and the issue that removed it -->
 
 Every flag a shipped document teaches must parse, because a reader who
 follows a documented flag the CLI rejects gets `unrecognized arguments` and
 no way to tell whether the tool or the instruction is wrong.
 `tests/test_documented_commands_exist.py` checks the verb; this checks the
-flags, since six shipped surfaces once taught `--reframe`, a flag no
+flags, since six shipped surfaces once taught `--reframe`, a flag no <!-- vocabulary-scan: allow - names the retired flag and the issue that removed it -->
 version of the CLI has ever parsed, and nothing objected.
 
 Scenario ids: `TRC-A1`, `TRC-A2`, `TRC-F1` in
-reframe-is-documented-but-does-not-exist/acceptance-criteria.md
+reframe-is-documented-but-does-not-exist/acceptance-criteria.md <!-- vocabulary-scan: allow - names the retired flag and the issue that removed it -->
 """
 from __future__ import annotations
 

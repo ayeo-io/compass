@@ -84,6 +84,12 @@ BAN_PATTERNS: dict[str, list[re.Pattern]] = {
         # a regex; it is its own issue rather than a silent widening here.
         re.compile(r"\bTriage\b"),
     ],
+    # A changed assessment. The command is /compass:assess --reassess and the
+    # manifest key is `reassessments`, so the output says re-assessment too.
+    # The ordinary verb "frame" is a different word and stays legal.
+    "reframe / re-frame": [
+        re.compile(r"\bre-?fram(?:e|es|ed|ing)\b", re.IGNORECASE),
+    ],
     # The designer's command, which went back to /compass:design.
     "Wireframe": [
         re.compile(r"/compass:wireframe\b"),

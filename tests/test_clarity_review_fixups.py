@@ -94,8 +94,8 @@ def test_manifest_py_g1_sentence_leads_with_a_plain_word():
 
 def test_calibration_py_uses_one_name_for_reframe_debt():
     text = _read("cli/compass_pkg/calibration.py")
-    assert "Re-assessment debt is a misjudgement nobody recorded" not in text
-    assert "Reframe debt is a misjudgement nobody recorded" in text
+    assert "Reframe debt is a misjudgement nobody recorded" not in text
+    assert "An unrecorded re-assessment is a misjudgement nobody recorded" in text
 
 
 def test_terminal_py_has_no_empty_comment_line():

@@ -81,4 +81,4 @@ def test_spike_conflict_message_actionable(run_cli):
     assert r.returncode != 0, r
     msg = (r.stdout + r.stderr).lower()
     # the message should suggest a reassessment as the answer
-    assert "re-frame" in msg or "reframe" in msg or "narrower" in msg, r
+    assert "re-assess" in msg, r

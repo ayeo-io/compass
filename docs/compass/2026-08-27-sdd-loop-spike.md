@@ -73,7 +73,7 @@ change.
 
 ### Superpowers has not failed at parallel implementers - it banned them
 
-This is the correction that reframes the comparison. Superpowers ships
+This correction changes how the comparison reads. Superpowers ships
 `dispatching-parallel-agents`, a whole skill about issuing several subagent
 dispatches in one response so they run concurrently. It is not missing the
 capability. Its SDD loop contains this line:

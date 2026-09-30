@@ -648,6 +648,9 @@ banned:
   - term: "Triage"
     replacement: assess
     context: "As the stage name and command. The stage produces an `assessment:` block, the flag is --assessment and the policy section is assessment_vocabulary - a command called triage producing an assessment is the defect this replaced. Triage also means sorting BETWEEN cases by urgency, which is what `compass flow` does, not this stage. The command is /compass:assess; /compass:triage was removed at 4.0.0. 'triage' as an ordinary verb, about sorting between things, is fine."
+  - term: "reframe / re-frame"
+    replacement: re-assessment
+    context: "As the name of a changed assessment. The command is /compass:assess --reassess and the manifest key is `reassessments`, so the output and the docs say re-assessment too; two words for one event made a reader guess they were the same. 'reframe debt' is 'unrecorded re-assessments'. The retired manifest key `reframes` is still read so old manifests load. 'frame' as an ordinary verb is a different word and is fine."
   - term: "Wireframe"
     replacement: design
     context: "As the designer's command. The designer's entry point is /compass:design again - it held that name before, and 'design' reads as UI work to most people. /compass:wireframe was removed at 4.0.0. 'wireframe' as an ordinary noun is fine."

@@ -3,6 +3,6 @@ suspends the TDD red-before-green strategy (`S2`) - code edits are not blocked,
 because exploration code is throwaway and red-before-green is the wrong
 discipline for it.
 
-Written by the router at triage. Removed only if the spike is re-framed onto a
+Written by the router at triage. Removed only if the spike is re-assessed onto a
 delivery approach (graduation), where the marker no longer applies and the
 guardrails apply in full.

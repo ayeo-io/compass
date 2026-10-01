@@ -3,7 +3,9 @@
 # Review only: the job can read the code and post comments, and its tool
 # list holds no command that commits or pushes. It reviews against
 # CLAUDE.md, the house rules every change in this repository must meet.
-# Each run is billed to the ANTHROPIC_API_KEY repository secret.
+# It authenticates by identity federation: GitHub's OIDC token is swapped
+# for a short-lived Anthropic token under a federation rule, so no key is
+# stored. The ids are repository variables, not secrets.
 name: claude-review
 
 on:
@@ -17,7 +19,8 @@ concurrency:
 
 jobs:
   review:
-    # A draft is not ready for review, and a fork cannot read the secret.
+    # A draft is not ready for review, and a fork gets no OIDC token for
+    # this repository's federation rule.
     if: >-
       github.event.pull_request.draft == false &&
       github.event.pull_request.head.repo.full_name == github.repository
@@ -33,7 +36,9 @@ jobs:
 
       - uses: anthropics/claude-code-action@12dd8d74c712f5f3669365b2369b558c495b1104 # v1.0.238
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          anthropic_federation_rule_id: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
+          anthropic_organization_id: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
+          anthropic_service_account_id: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}

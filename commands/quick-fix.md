@@ -38,7 +38,8 @@ compass quick-fix start <slug> \
   --size "<VALUE> - <reason>" \
   --intent "<what will be true afterwards, one sentence>" \
   --scenario "Given ... When ... Then ..." \
-  --test <test node id>
+  --test <test node id> \
+  [--labels <tag,...>]
 ```
 
 The values, and nothing else:
@@ -49,6 +50,10 @@ The values, and nothing else:
 
 `--goal` and `--role` default to `delivery` and `engineer`. `--test` can
 repeat. The scenario id is `TRC-001` unless you pass `--scenario-id`.
+
+Pass `--labels` with the domains touched, comma-separated. Only `auth`,
+`payments`, `personal-data` and `migrations` bring the heavier process and
+the human sign-off; a synonym such as `pii` does not.
 
 It runs `compass init`, records the assessment, computes the approach
 through `compass approach evaluate`, writes `delivery-approach.md`, and

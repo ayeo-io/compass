@@ -29,12 +29,12 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Re-run of the edge-case and refactor comparison runs under Compass: no session ends without code
+### Given no `--labels`, then the labels are empty and the result is unchanged; a malformed label is refused before anything is written.
 
-- **Scenario id:** `SCU-3`
+- **Scenario id:** `QFL-3`
 - **Intent:** `INT-1`
-- **Source issue:** `small-change-read-as-unmapped`
-- **Landed:** 2026-09-30
+- **Source issue:** `quick-fix-start-drops-labels`
+- **Landed:** 2026-10-01
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
 
@@ -9652,3 +9652,24 @@
 - **Intent:** `INT-1`
 - **Source issue:** `small-change-read-as-unmapped`
 - **Landed:** 2026-09-30
+
+### Re-run of the edge-case and refactor comparison runs under Compass: no session ends without code _(archived)_
+
+- **Scenario id:** `SCU-3`
+- **Intent:** `INT-1`
+- **Source issue:** `small-change-read-as-unmapped`
+- **Landed:** 2026-09-30
+
+### Given `quick-fix start --labels auth` on a small, contained change, then the manifest records `labels: [auth]` and the approach is not a quick fix. _(archived)_
+
+- **Scenario id:** `QFL-1`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-start-drops-labels`
+- **Landed:** 2026-10-01
+
+### Given that change, then `compass check` treats the human sign-off guardrail as applicable. _(archived)_
+
+- **Scenario id:** `QFL-2`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-start-drops-labels`
+- **Landed:** 2026-10-01

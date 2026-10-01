@@ -29,8 +29,12 @@ This is the whole of `/compass:quick-fix`; you do not need to load it.
 compass quick-fix start <slug> --risk "<VALUE> - <reason>" \
   --familiarity "<VALUE> - <reason>" --size "<VALUE> - <reason>" \
   --intent "<what will be true afterwards>" \
-  --scenario "Given ... When ... Then ..." --test <test node id>
+  --scenario "Given ... When ... Then ..." --test <test node id> \
+  [--labels <tag,...>]
 ```
+
+Pass `--labels` when the change touches `auth`, `payments`,
+`personal-data` or `migrations`: those tags bring the human sign-off.
 
 Risk is `trivial`, `contained`, `cross-cutting` or `critical`; familiarity
 is `greenfield`, `brownfield-mapped` or `brownfield-unmapped`; size is

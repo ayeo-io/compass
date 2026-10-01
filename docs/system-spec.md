@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the review workflow, when it is read, then every action is pinned to a commit, contents are read-only, and no allowed tool can commit or push
+### A comparison corrects a record against the hidden-test count its own run recorded
 
-- **Scenario id:** `TRC-001`
+- **Scenario id:** `TRC-002`
 - **Intent:** `INT-1`
-- **Source issue:** `claude-review-workflow`
+- **Source issue:** `eval-gaps-after-d34`
 - **Landed:** 2026-10-01
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -9686,4 +9686,18 @@
 - **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
 - **Source issue:** `quick-fix-message-edges`
+- **Landed:** 2026-10-01
+
+### Given the review workflow, when it is read, then every action is pinned to a commit, contents are read-only, and no allowed tool can commit or push _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `claude-review-workflow`
+- **Landed:** 2026-10-01
+
+### Given a hidden test run that skipped a test and exited 1, when the harness corrects its counts, then it leaves them alone, and corrects only a collection error that exited 2 _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d34`
 - **Landed:** 2026-10-01

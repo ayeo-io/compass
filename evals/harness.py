@@ -1186,7 +1186,7 @@ def _diff_since_seed(repo_dir: Path, seed_commit: str, env: dict[str, str],
     leaves `.git/HEAD` untouched - in both, every git call below runs and
     fails, read from each call's own exit code, never only its `.stdout`.
     `.git` is added to `tampered_paths` for that case, the same way a
-    missing `.git/HEAD` already is, whenever one of the three calls above
+    missing `.git/HEAD` already is, whenever one of the three calls below
     returns non-zero - checked against those two specific entries,
     `.git/HEAD` and `.git` itself, not against whether `tampered_paths`
     already carries any reason at all."""
@@ -1286,16 +1286,17 @@ def hidden_tests_defined_count(hidden_tests_dir: Path) -> int:
                for path in hidden_tests_dir.rglob("*.py"))
 
 
-def corrected_hidden_counts(passed: int, failed: int, defined: int) -> tuple[int, int]:
+def corrected_hidden_counts(passed: int, failed: int, defined: int,
+                            exit_code: int | None = 2) -> tuple[int, int]:
     """`(passed, failed)`, corrected for a hidden test file that failed to
     import: pytest's own summary then reports one error for the whole
-    file, not one for each test it defines (EGB-4) - B6's `cmp-risky`
-    showed 1 of 1 failed where the file holds five. A genuine per-test
-    result already accounts for every test `defined` names (`passed +
-    failed == defined`), and is left alone; a total short of it means
-    every test the file defines counts failed instead - none of them ran,
-    so none passed either."""
-    if defined and passed + failed < defined:
+    file, not one for each test it defines (EGB-4). Pytest exits 2 on that
+    collection error. Only then does a total short of `defined` mean none
+    of the tests ran, so every one counts as failed. Any other short total
+    is a run that skipped or deselected a test, and is left alone. A
+    caller with no exit code to give (an old record) keeps the old
+    reading."""
+    if defined and passed + failed < defined and exit_code == 2:
         return 0, defined
     return passed, failed
 
@@ -1624,12 +1625,16 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
             hidden_exit, hidden_output = _run_test_command(
                 hidden_command, repo_dir, child_env)
             hidden_passed, hidden_failed = _pytest_summary_counts(hidden_output)
+            hidden_defined = hidden_tests_defined_count(hidden_tests_dir)
             hidden_passed, hidden_failed = corrected_hidden_counts(
-                hidden_passed, hidden_failed,
-                hidden_tests_defined_count(hidden_tests_dir))
+                hidden_passed, hidden_failed, hidden_defined, hidden_exit)
+            # `defined` records the count this run's hidden tests had, so
+            # a later re-score corrects against it, not against a hidden
+            # test file that may have changed since.
             hidden_record = {
                 "command": hidden_command, "exit_code": hidden_exit,
                 "passed": hidden_passed, "failed": hidden_failed,
+                "defined": hidden_defined,
             }
         else:
             tests_exit_code, _tests_output = _run_test_command(

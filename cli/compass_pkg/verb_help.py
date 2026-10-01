@@ -68,7 +68,7 @@ VERB_DESCRIPTIONS = {
     'migrate':
         'Bring issue directories written under an older vocabulary up to the current schema - renaming artifacts, mapping manifest keys forward, and repointing the manifest at the files it renamed. Dry-run by default. Refuses before writing anything if two retired filenames claim the same current name.',
     'next':
-        'Say which stage of its delivery approach an issue has reached and what comes next, reading the approach rather than guessing. Skipped and collapsed stages are passed over, because the approach already decided they do not run.',
+        'Say which stage of its delivery approach an issue has reached and what comes next, reading the approach rather than guessing. Skipped and collapsed stages are passed over, because the approach already decided they do not run. At a terminal it opens with the route as a rail - done, current, pending, and stages the policy skipped - and ends with the next command. Piped output, and any run with CLAUDECODE set, is the plain line alone, so the model sees no change. NO_COLOR drops the colour; COMPASS_COLOR=never uses ASCII markers and COMPASS_COLOR=always draws the rail even when piped.',
     'plan lint':
         'Scan a technical design for placeholder phrases - TBD, TODO, "implement later". Advisory and always exits 0: a design can be vague without using one of those words, so this is the mechanical floor rather than the judgement.',
     'quick-fix start':

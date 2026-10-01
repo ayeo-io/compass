@@ -3679,7 +3679,8 @@ def test_pbw_e2_each_sweep_reports_the_files_it_scanned():
 _GROWING_REACH = {
     "PBW-C3": (lambda path: path.startswith("cli/compass_pkg/"), 0),
     "PBW-C5": (lambda path: path.startswith("tests/") and path.endswith(".py"), 3),
-    "PBW-C4": (lambda path: path.startswith("tests/"), 11),
+    # 12 with tests/fixtures/next-golden.json, a golden file of command output.
+    "PBW-C4": (lambda path: path.startswith("tests/"), 12),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

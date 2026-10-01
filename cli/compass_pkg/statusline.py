@@ -23,6 +23,8 @@ import json
 import os
 import sys
 
+from compass_pkg.render import fit
+
 SEP = " · "
 
 
@@ -58,20 +60,6 @@ def _evidence_state(task_dir: str, scenarios: list) -> str | None:
         red = os.path.isfile(os.path.join(evidence, f"red-{name}.json"))
         return f"{scn} {'red' if red else 'none'}"
     return f"{ids[-1]} green"
-
-
-def _fit(fields: list, width: int) -> str:
-    """Drop fields from the right until the line fits; then cut the slug,
-    which is the last thing to go."""
-    fields = list(fields)
-    while len(SEP.join(fields)) > width and len(fields) > 2:
-        fields.pop()
-    line = SEP.join(fields)
-    if len(line) > width and len(fields) == 2:
-        room = width - len(fields[0]) - len(SEP) - 1
-        fields[1] = fields[1][:max(room, 1)] + "…"
-        line = SEP.join(fields)
-    return line
 
 
 def render(cwd: str, width: int = 80) -> str:
@@ -124,7 +112,8 @@ def render(cwd: str, width: int = 80) -> str:
     state = _evidence_state(task_dir, task.get("scenarios") or [])
     if state:
         fields.append(state)
-    return _fit(fields, width)
+    # The slug is the second field, so it is the last thing cut.
+    return fit(fields, width, SEP)
 
 
 def main() -> int:

@@ -203,7 +203,7 @@
     "table_rows": 12
   },
   "docs/quickstart.md": {
-    "fences": 28,
+    "fences": 32,
     "heading_levels": [
       1,
       2,
@@ -225,6 +225,7 @@
       2,
       3,
       3,
+      2,
       2,
       2
     ],

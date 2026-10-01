@@ -374,6 +374,10 @@ def test_d2_repairs_change_only_retired_names():
     (table_rows 13 -> 17), which gained a four-row example table, in a
     comment, showing the optional `Wave` column.
 
+    One more was re-baselined by `status-line`: `docs/quickstart.md` gained
+    a "See the issue's state in the status line" section, one `##` heading
+    and two code blocks: an example line and the settings to add.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

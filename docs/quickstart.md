@@ -400,6 +400,37 @@ only exit that keeps code is *graduating* - reassessing into a delivery
 approach where the guardrails apply in full - or discarding it with the
 finding recorded. See `approaches/spike.md`.
 
+## See the issue's state in the status line
+
+Compass can show the current issue in Claude Code's status line, for
+example:
+
+```text
+compass · fix-login-redirect · quick fix · Implement · gates 1/3 · TRC-002 red
+```
+
+The last field says the second traced criterion has a failing test on
+record. The line is shown to you, never to the model, so it costs no
+tokens, and it names the same stage as `compass next`.
+
+A plugin cannot add a status line itself, so add it to your Claude Code
+settings file, either your own or the project's:
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "<compass plugin>/bin/compass-statusline"
+  }
+}
+```
+
+`<compass plugin>` is where the plugin is installed, normally
+`~/.claude/plugins/cache/compass/compass/<version>`. The path names a
+version, and an old version stays on disk after an upgrade, so a path left
+unchanged keeps running the old code: update it when you upgrade. Outside a
+Compass project, the line is empty.
+
 ## Where to go next
 
 - **`docs/routing-deep-dive.md`** - how the assess stage actually composes an

@@ -9443,3 +9443,45 @@
 - **Intent:** `INT-1`
 - **Source issue:** `claude-review-workspace`
 - **Landed:** 2026-10-01
+
+### Given no Compass project, or garbage on stdin, then `bin/compass-statusline` prints nothing, writes nothing to stderr and exits 0. _(archived)_
+
+- **Scenario id:** `SL-A`
+- **Intent:** `INT-1`
+- **Source issue:** `status-line`
+- **Landed:** 2026-10-01
+
+### Given an issue with a red on record for its scenario, then the line shows `compass`, the slug, the approach, the stage, the gates cleared out of those _(archived)_
+
+- **Scenario id:** `SL-B`
+- **Intent:** `INT-1`
+- **Source issue:** `status-line`
+- **Landed:** 2026-10-01
+
+### Given an unparseable manifest, then the line is empty, stderr is empty and the exit code is 0. _(archived)_
+
+- **Scenario id:** `SL-C`
+- **Intent:** `INT-1`
+- **Source issue:** `status-line`
+- **Landed:** 2026-10-01
+
+### Given any issue, then the stage on the line is the one `compass next` reports, and the line shows no stage when `compass next` reports none. _(archived)_
+
+- **Scenario id:** `SL-D`
+- **Intent:** `INT-1`
+- **Source issue:** `status-line`
+- **Landed:** 2026-10-01
+
+### Given a narrow terminal (COLUMNS), then fields drop right to left and the slug is cut last. _(archived)_
+
+- **Scenario id:** `SL-E`
+- **Intent:** `INT-1`
+- **Source issue:** `status-line`
+- **Landed:** 2026-10-01
+
+### Given `bin/compass-statusline`, then it does not load the full CLI, and a run takes under 0.25 s (median of 7). _(archived)_
+
+- **Scenario id:** `SL-F`
+- **Intent:** `INT-1`
+- **Source issue:** `status-line`
+- **Landed:** 2026-10-01

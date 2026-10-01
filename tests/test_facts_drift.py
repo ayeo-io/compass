@@ -149,7 +149,7 @@ def _shipped_markdown():
                            capture_output=True, text=True, check=True).stdout
     return [f for f in files.split()
             if not re.match(r"docs/compass/[^/]+/", f)
-            and f != "docs/system-spec.md"]
+            and f not in ("docs/system-spec.md", "docs/system-spec-archive.md")]
 
 
 def test_fdg_2_no_document_calls_verify_claims_immovable():

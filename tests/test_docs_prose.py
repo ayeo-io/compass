@@ -55,7 +55,7 @@ def test_reference_docs_carry_v2_names():
                 "approaches/*.md", "cli/compass_pkg/*.py"):
         surfaces += sorted(REPO_ROOT.glob(pat))
     for path in surfaces:
-        if not path.is_file() or path.name == "system-spec.md":
+        if not path.is_file() or path.name in ("system-spec.md", "system-spec-archive.md"):
             continue
         for lineno, line in enumerate(
                 path.read_text(encoding="utf-8").splitlines(), 1):
@@ -153,7 +153,7 @@ def test_no_live_doc_teaches_a_retired_cli_spelling():
         surfaces += sorted(REPO_ROOT.glob(pat))
     hits = []
     for path in surfaces:
-        if not path.is_file() or path.name == "system-spec.md":
+        if not path.is_file() or path.name in ("system-spec.md", "system-spec-archive.md"):
             continue
         for lineno, line in enumerate(
                 path.read_text(encoding="utf-8").splitlines(), 1):

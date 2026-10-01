@@ -535,8 +535,8 @@ def test_pl_g3_living_spec_title_matches_its_source_scenario():
     and not the manifest leaves the two disagreeing, and the derivation
     faithfully reproduces the one nobody edited.
     """
-    spec = REPO_ROOT / "docs" / "system-spec.md"
-    text = spec.read_text(encoding="utf-8")
+    text = "".join((REPO_ROOT / "docs" / name).read_text(encoding="utf-8")
+                   for name in ("system-spec.md", "system-spec-archive.md"))
     # Assembled, never written literally - the same convention every other
     # guard in this suite uses, so this file is not an exception to the rule
     # it enforces.

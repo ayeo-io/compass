@@ -246,7 +246,7 @@ def test_derive_and_commit_living_spec_excludes_a_stray_staged_file(tmp_path):
     assert "unrelated.txt" not in land_files, land_files
     spec_files = _git(repo, "show", "--name-only", "--pretty=format:",
                       spec_commit).stdout.split()
-    assert spec_files == ["docs/system-spec.md"], spec_files
+    assert spec_files == ["docs/system-spec-archive.md", "docs/system-spec.md"], spec_files
 
     # The stray file is untouched by either commit - still staged, waiting
     # for whoever staged it.

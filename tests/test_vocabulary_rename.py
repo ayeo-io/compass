@@ -511,7 +511,7 @@ def _is_own_issue_archive(rel):
     parts = rel.parts
     return (len(parts) > 3 and parts[0] == "docs" and parts[1] == "compass")
 # Generated from governance/terminology.yml - fix the source, not the output.
-_GENERATED = {"docs/system-spec.md", "docs/glossary.md"}
+_GENERATED = {"docs/system-spec.md", "docs/system-spec-archive.md", "docs/glossary.md"}
 
 
 def _shipped_docs():

@@ -24,7 +24,8 @@ PROSE_ROOTS = ("approaches", "skills", "agents", "commands", "templates",
                "docs", "governance", "architecture")
 EXEMPT = ("architecture/decisions/", "templates/architecture/decisions/",
           "docs/compass/",
-          "docs/proposals/", "docs/analysis/", "docs/system-spec.md")
+          "docs/proposals/", "docs/analysis/", "docs/system-spec.md",
+          "docs/system-spec-archive.md")
 
 
 def _prose_files() -> list[Path]:

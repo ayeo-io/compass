@@ -255,7 +255,7 @@ def test_no_undefined_internal_identifiers():
         "stream" + "-B": "an internal work stream that no file in the repository defines",
         "stream" + "-C": "an internal work stream that no file in the repository defines",
     }
-    excluded = ("docs/system-spec.md:", "tests/fixtures/")
+    excluded = ("docs/system-spec.md:", "docs/system-spec-archive.md:", "tests/fixtures/")
     hits: list[str] = []
     for needle, why in needles.items():
         for hit in _scan(needle):

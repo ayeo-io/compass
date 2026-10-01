@@ -75,7 +75,7 @@ def _live_files():
             # Derived at ship from the scenarios landed issues recorded, which
             # keep the names they landed under. Exempt from the vocabulary
             # scan for the same reason.
-            if path.name == "system-spec.md":
+            if path.name in ("system-spec.md", "system-spec-archive.md"):
                 continue
             yield path
     for name in ("README.md", "CLAUDE.md", "AGENTS.md"):

@@ -47,7 +47,8 @@ NOT_COMPASS_IDS = {"ISO", "SHA", "RFC", "UTF"}
 # per-issue scenario and intent id ever written - GL-, SR-, SS- and so on.
 # Those are an issue's local numbering, not framework vocabulary, and the
 # archive that produced them is exempt for the same reason.
-DERIVED_FROM_ARCHIVE = {"docs/system-spec.md", "docs/glossary.md"}
+DERIVED_FROM_ARCHIVE = {"docs/system-spec.md", "docs/system-spec-archive.md",
+                        "docs/glossary.md"}
 
 
 def _vocab() -> dict:

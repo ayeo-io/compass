@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given one judgement re-assessment and one policy correction, each moving standard to expedition, when compass retro runs, then it reports 1 up and 0 down
+### Given a compass run record with compass_commit and no framework block, when the comparison report is built, then it shows that commit
 
 - **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `retro-counts-policy-corrections`
+- **Source issue:** `compare-names-the-compass-commit`
 - **Landed:** 2026-09-30
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -9623,4 +9623,11 @@
 - **Scenario id:** `RRA-3`
 - **Intent:** `INT-1`
 - **Source issue:** `reframe-to-reassessment`
+- **Landed:** 2026-09-30
+
+### Given one judgement re-assessment and one policy correction, each moving standard to expedition, when compass retro runs, then it reports 1 up and 0 down _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `retro-counts-policy-corrections`
 - **Landed:** 2026-09-30

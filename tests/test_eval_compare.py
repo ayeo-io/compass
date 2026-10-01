@@ -226,6 +226,17 @@ def test_cell_shows_model_and_framework_commit():
     assert "8ca22dba9a94f28898bbce59f2537ff4d87c747d" in report
 
 
+def test_a_compass_cell_shows_the_compass_commit():
+    """`evals/harness.py` writes no `framework` block for the compass
+    condition; it records the checkout's commit as `compass_commit`. The
+    report must show that commit, or a reader cannot tell which Compass
+    version produced the numbers."""
+    record = make_record(condition="compass", framework=None,
+                         compass_commit="d35ba15911b4cf5d8c1b3a605ebdfc12be58552f")
+    report = compare.build_report([record])
+    assert "d35ba15911b4cf5d8c1b3a605ebdfc12be58552f" in report
+
+
 def test_cell_says_mixed_when_runs_disagree_on_model_or_commit():
     """Two runs of the same cell that used a different model, or a
     different framework commit, must not silently report only the first

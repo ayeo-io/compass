@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given no `--labels`, then the labels are empty and the result is unchanged; a malformed label is refused before anything is written.
+### A comparison corrects a record against the hidden-test count its own run recorded
 
-- **Scenario id:** `QFL-3`
+- **Scenario id:** `TRC-002`
 - **Intent:** `INT-1`
-- **Source issue:** `quick-fix-start-drops-labels`
+- **Source issue:** `eval-gaps-after-d34`
 - **Landed:** 2026-10-01
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -9672,4 +9672,18 @@
 - **Scenario id:** `QFL-2`
 - **Intent:** `INT-1`
 - **Source issue:** `quick-fix-start-drops-labels`
+- **Landed:** 2026-10-01
+
+### Given no `--labels`, then the labels are empty and the result is unchanged; a malformed label is refused before anything is written. _(archived)_
+
+- **Scenario id:** `QFL-3`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-start-drops-labels`
+- **Landed:** 2026-10-01
+
+### Given a hidden test run that skipped a test and exited 1, when the harness corrects its counts, then it leaves them alone, and corrects only a collection error that exited 2 _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d34`
 - **Landed:** 2026-10-01

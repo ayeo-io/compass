@@ -9436,3 +9436,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `one-entry-point`
 - **Landed:** 2026-10-01
+
+### Given the review workflow, when it is read, then it passes anthropic_workspace_id from the ANTHROPIC_WORKSPACE_ID repository variable _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `claude-review-workspace`
+- **Landed:** 2026-10-01

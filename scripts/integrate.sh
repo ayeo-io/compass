@@ -377,7 +377,7 @@ for i in "${!SUBTASKS[@]}"; do
   echo ""
   echo "  The merge was aborted; the repo is clean again. This is the"
   echo "  orchestrator's call to resolve - re-cut the boundary, re-sequence,"
-  echo "  or escalate to a re-frame. No one else may resolve a cross-subtask"
+  echo "  or escalate to a re-assessment. No one else may resolve a cross-subtask"
   echo "  conflict. Subtasks merged so far: ${MERGED[*]:-none}."
   exit 2
 done

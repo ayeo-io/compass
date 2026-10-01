@@ -3,7 +3,7 @@
 - `TRC-F4`: Flow advises, never gates. Snapshot SHA256 of every manifest.yml
   before/after running advisory commands; assert byte-identity.
 - `TRC-D5`: `compass flow --digest` includes a Rework scan section.
-- `TRC-C6`: the digest surfaces calibration's `reframe debt` section.
+- `TRC-C6`: the digest surfaces calibration's `unrecorded re-assessments` section.
 """
 from __future__ import annotations
 
@@ -239,12 +239,12 @@ def test_includes_rework_scan(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# `TRC-C6` - Flow digest includes calibration's `reframe debt` section
+# `TRC-C6` - Flow digest includes calibration's `unrecorded re-assessments` section
 # ---------------------------------------------------------------------------
 
 def test_includes_reframe_debt(tmp_path):
-    """`TRC-C6`: calibration output includes a 'reframe debt' section when at
-    least one issue has a devlog scope-bloat phrase and an empty reframes list.
+    """`TRC-C6`: calibration output includes an 'unrecorded re-assessments' section when at
+    least one issue has a devlog scope-bloat phrase and an empty re-assessments list.
     """
     import shutil
 
@@ -291,12 +291,12 @@ def test_includes_reframe_debt(tmp_path):
     assert result.returncode == 0, result.stderr
 
     output = result.stdout.lower()
-    assert "reframe debt" in output, (
+    assert "unrecorded re-assessments" in output, (
         "Expected a 'reframe debt' section in calibration output when "
         "a task has scope-bloat devlog phrases and empty reframes.\n"
         f"Got:\n{result.stdout}"
     )
-    assert "absorbed" in output or "signal lost" in output, (
-        "The reframe-debt section should explain 'absorbed mis-frame, signal lost'.\n"
+    assert "scope grew with no re-assessment" in output, (
+        "The unrecorded re-assessments section should say the scope grew and none was recorded.\n"
         f"Got:\n{result.stdout}"
     )

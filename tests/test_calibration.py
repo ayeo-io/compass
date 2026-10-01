@@ -84,7 +84,7 @@ def test_route_evaluate_does_not_log_reframe_when_route_unchanged(run_cli,
 
 def test_route_evaluate_warns_when_reframe_has_no_reason(run_cli, make_task,
                                                         project):
-    """Re-frame with no --reason still records the entry, but warns - the
+    """Re-assessment with no --reason still records the entry, but warns - the
     reason is the calibration signal."""
     body = {
         "task": "rf-noreason",
@@ -138,7 +138,7 @@ def test_calibration_no_tasks(run_cli):
 
 
 def test_calibration_aggregates_up_reframes(run_cli, make_task):
-    """Three up-reframes (express -> expedition, standard -> expedition,
+    """Three up re-assessments (express -> expedition, standard -> expedition,
     express -> standard) must report 'UNDER-sizing'."""
     make_task("t1", _task_with_reframes(
         "t1", [("express", "expedition")], base_route="expedition"))
@@ -152,7 +152,7 @@ def test_calibration_aggregates_up_reframes(run_cli, make_task):
 
 
 def test_calibration_aggregates_down_reframes(run_cli, make_task):
-    """Three down-reframes report 'OVER-sizing'."""
+    """Three down re-assessments report 'OVER-sizing'."""
     make_task("t1", _task_with_reframes(
         "t1", [("expedition", "express")], base_route="express"))
     make_task("t2", _task_with_reframes(
@@ -180,14 +180,14 @@ def test_calibration_balanced(run_cli, make_task):
     assert "Route distribution" in out, r
 
 
-# --- `TRC-C5`: reframe-debt section in calibration output ---------------------
+# --- `TRC-C5`: unrecorded re-assessments section in calibration output -------
 
 
 def test_reframe_debt_section(run_cli, make_task, project):
     """`TRC-C5`: compass retro surfaces absorbed mis-frames.
 
-    An issue with scope-bloat devlog phrases and an empty reframes list is
-    reported in a 'reframe debt' section, with the matched devlog signal
+    An issue with scope-bloat devlog phrases and an empty re-assessments list is
+    reported in an 'unrecorded re-assessments' section, with the matched devlog signal
     and explicit mention that the signal was absorbed/lost.
 
     The devlog patterns come from signals.yml, not hardcoded in
@@ -202,7 +202,7 @@ def test_reframe_debt_section(run_cli, make_task, project):
     if signals_src.is_file() and not (gov_dir / "signals.yml").is_file():
         shutil.copy(signals_src, gov_dir / "signals.yml")
 
-    # Issue with a scope-bloat devlog phrase and no reframes
+    # Issue with a scope-bloat devlog phrase and no re-assessments
     task_dir = make_task("reframe-debt-task", {
         "task": "reframe-debt-task",
         "created": "2026-05-20",
@@ -222,8 +222,8 @@ def test_reframe_debt_section(run_cli, make_task, project):
     assert r.returncode == 0, r
 
     out = r.stdout.lower()
-    assert "reframe debt" in out, (
-        "Expected a 'reframe debt' section in calibration output.\n"
+    assert "unrecorded re-assessments" in out, (
+        "Expected an 'unrecorded re-assessments' section in calibration output.\n"
         f"Got:\n{r.stdout}"
     )
     # Must name the issue
@@ -232,14 +232,14 @@ def test_reframe_debt_section(run_cli, make_task, project):
         f"Got:\n{r.stdout}"
     )
     # Must explain the consequence
-    assert "absorbed" in out or "signal lost" in out, (
-        "Reframe-debt section must state 'absorbed mis-frame, signal lost'.\n"
+    assert "scope grew with no re-assessment" in out, (
+        "The unrecorded re-assessments section must say the scope grew and none was recorded.\n"
         f"Got:\n{r.stdout}"
     )
 
 
 def test_reframe_debt_empty_when_no_bloat(run_cli, make_task, project):
-    """`TRC-C5` negative case: issues with no scope-bloat phrases get no reframe-debt section."""
+    """`TRC-C5` negative case: issues with no scope-bloat phrases get no unrecorded re-assessments section."""
     import pathlib
     import shutil
 
@@ -262,15 +262,15 @@ def test_reframe_debt_empty_when_no_bloat(run_cli, make_task, project):
 
     r = run_cli("retro")
     assert r.returncode == 0, r
-    # No reframe-debt section when devlog has no scope-bloat phrases
-    assert "reframe debt" not in r.stdout.lower(), (
+    # No unrecorded re-assessments section when devlog has no scope-bloat phrases
+    assert "unrecorded re-assessments" not in r.stdout.lower(), (
         "Unexpected reframe-debt section when no scope-bloat phrases in devlog.\n"
         f"Got:\n{r.stdout}"
     )
 
 
 def test_reframe_debt_suppressed_when_reframe_filed(run_cli, make_task, project):
-    """`TRC-C5` suppression case: a filed reframe removes the debt for that issue."""
+    """`TRC-C5` suppression case: a filed re-assessment removes the debt for that issue."""
     import pathlib
     import shutil
 
@@ -303,13 +303,13 @@ def test_reframe_debt_suppressed_when_reframe_filed(run_cli, make_task, project)
 
     r = run_cli("retro")
     assert r.returncode == 0, r
-    # The issue had a bloat phrase BUT a reframe was filed after - no debt
+    # The issue had a bloat phrase BUT a re-assessment was filed after - no debt
     # (If the section is absent entirely, or the issue is not in it, pass.)
     out = r.stdout.lower()
-    if "reframe debt" in out:
+    if "unrecorded re-assessments" in out:
         assert "reframed-ok" not in out, (
-            "Task 'reframed-ok' should not appear in reframe-debt when a "
-            "reframe was already filed.\n"
+            "Task 'reframed-ok' should not appear under unrecorded "
+            "re-assessments when a re-assessment was already recorded.\n"
             f"Got:\n{r.stdout}"
         )
 
@@ -448,7 +448,7 @@ def test_friction_never_in_land_gate(framework_root):
 def test_friction_recorded_but_unclusterable_is_not_reported_as_none(
         run_cli, make_task):
     """An issue that recorded friction with no proposed_change (e.g. a derived
-    reframe entry, or a human note without a proposal) must NOT be reported as
+    re-assessment entry, or a human note without a proposal) must NOT be reported as
     'No friction recorded' - that line is for an empty corpus only. The entry is
     still surfaced (by category), it just hasn't clustered into a trend."""
     make_task("ft1", _task_with_friction("ft1", [

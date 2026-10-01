@@ -173,7 +173,7 @@ def build_parser():
     pcal.add_argument(
         "--friction",
         action="store_true",
-        help="aggregate the per-issue `friction:` signal instead of reframes - "
+        help="aggregate the per-issue `friction:` signal instead of re-assessments - "
              "recurring process friction grouped by category and proposed "
              "change (advisory only; exit 0 always)",
     )

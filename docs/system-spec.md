@@ -29,7 +29,7 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given `bin/compass-statusline`, then a run takes under 0.25 s (median of 7), so it does not load the full CLI.
+### Given `bin/compass-statusline`, then it does not load the full CLI, and a run takes under 0.25 s (median of 7).
 
 - **Scenario id:** `SL-F`
 - **Intent:** `INT-1`

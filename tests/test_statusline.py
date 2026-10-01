@@ -76,6 +76,22 @@ def test_shows_the_issue_state_with_a_red_on_record(repo):
         assert part in line, (part, line)
 
 
+def test_a_scenario_id_with_a_slash_finds_its_evidence(repo):
+    """`compass tdd-red` writes `red-a_b.json` for scenario `a/b`, so the
+    status line must look for the same name."""
+    import yaml
+    task = _start(repo)
+    path = task / "manifest.yml"
+    m = yaml.safe_load(path.read_text())
+    m["scenarios"][0]["id"] = "login/redirect"
+    path.write_text(yaml.safe_dump(m, sort_keys=False))
+    (task / "evidence").mkdir(exist_ok=True)
+    (task / "evidence" / "red-login_redirect.json").write_text(json.dumps(
+        {"exit_code": 1, "passed": False, "scenario": "login/redirect"}))
+    line = _statusline(repo, columns=200).stdout
+    assert "login/redirect red" in line, line
+
+
 def test_a_corrupt_manifest_prints_nothing(repo):
     task = _start(repo)
     (task / "manifest.yml").write_text("issue: [unclosed\n  : : :\n")
@@ -115,6 +131,20 @@ def test_the_stage_agrees_with_compass_next(repo, change):
     path.write_text(yaml.safe_dump(m, sort_keys=False))
     line = _statusline(repo).stdout
     assert f" · {_next_stage(repo)}" in line, (change, _next_stage(repo), line)
+
+
+def test_no_approach_record_shows_no_stage(repo):
+    """`compass next` reports no stage when delivery-approach.md is missing,
+    so the line shows none either; the other fields stay."""
+    _start(repo)
+    for record in repo.rglob("delivery-approach.md"):
+        record.unlink()
+    nxt = subprocess.run([sys.executable, str(CLI), "next"], cwd=repo,
+                         capture_output=True, text=True)
+    assert nxt.returncode == 2, nxt.stdout
+    fields = _statusline(repo).stdout.strip().split(" · ")
+    assert fields[:3] == ["compass", "fix-login-redirect", "quick fix"], fields
+    assert fields[3].startswith("gates "), fields
 
 
 def test_a_nested_repository_without_compass_is_not_its_parents_project(repo):
@@ -161,10 +191,10 @@ def test_the_shim_does_not_load_the_full_cli(repo):
 
 
 def test_the_shim_is_fast_enough(repo):
-    """The status line brief asks for a p95 under 100 ms on a warm repository.
-    A shared CI runner cannot hold that exactly, so this pins a generous
-    ceiling against a large regression; the test above checks the module
-    stays lean."""
+    """The status line runs after every message, so it should take under
+    100 ms on a warm repository. A shared CI runner cannot hold that
+    exactly, so this pins a generous ceiling against a large regression;
+    the test above checks the module stays lean."""
     _start(repo)
     _statusline(repo)
     times = []

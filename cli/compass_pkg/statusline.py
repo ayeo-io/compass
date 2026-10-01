@@ -51,9 +51,11 @@ def _evidence_state(task_dir: str, scenarios: list) -> str | None:
         return None
     evidence = os.path.join(task_dir, "evidence")
     for scn in ids:
-        if os.path.isfile(os.path.join(evidence, f"green-{scn}.json")):
+        # Named as `compass tdd-red` and `tdd-green` name them.
+        name = scn.replace("/", "_")
+        if os.path.isfile(os.path.join(evidence, f"green-{name}.json")):
             continue
-        red = os.path.isfile(os.path.join(evidence, f"red-{scn}.json"))
+        red = os.path.isfile(os.path.join(evidence, f"red-{name}.json"))
         return f"{scn} {'red' if red else 'none'}"
     return f"{ids[-1]} green"
 
@@ -87,8 +89,8 @@ def render(cwd: str, width: int = 80) -> str:
         return ""
     task_dir = os.path.join(compass, "work", slug)
 
-    from compass_pkg.core import (display_shape, display_stage, load_yaml,
-                                  manifest_path, normalize_spine)
+    from compass_pkg.core import (artifact_path, display_shape, display_stage,
+                                  load_yaml, manifest_path, normalize_spine)
     from compass_pkg.next_cmd import _all_gates_pass, _current_phase_from_task
 
     path = manifest_path(task_dir)
@@ -101,7 +103,10 @@ def render(cwd: str, width: int = 80) -> str:
     gates = [g for g in raw_gates if isinstance(g, dict)]
     # The raw list, as `compass next` passes it, so the two agree even on
     # a malformed gate entry.
-    if task.get("status") == "landed" or _all_gates_pass(raw_gates):
+    if not os.path.isfile(artifact_path(task_dir, "delivery-approach.md")):
+        # `compass next` reports no stage without the approach record.
+        stage = None
+    elif task.get("status") == "landed" or _all_gates_pass(raw_gates):
         stage = "done"
     else:
         phase = _current_phase_from_task(task)
@@ -111,7 +116,8 @@ def render(cwd: str, width: int = 80) -> str:
     approach = task.get("delivery_approach")
     if approach:
         fields.append(display_shape(approach))
-    fields.append(stage)
+    if stage:
+        fields.append(stage)
     if gates:
         cleared = sum(1 for g in gates if g.get("status") == "pass")
         fields.append(f"gates {cleared}/{len(gates)}")

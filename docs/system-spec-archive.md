@@ -9444,7 +9444,7 @@
 - **Source issue:** `claude-review-workspace`
 - **Landed:** 2026-10-01
 
-### Given no Compass project, or garbage on stdin, then `compass statusline` prints nothing, writes nothing to stderr and exits 0. _(archived)_
+### Given no Compass project, or garbage on stdin, then `bin/compass-statusline` prints nothing, writes nothing to stderr and exits 0. _(archived)_
 
 - **Scenario id:** `SL-A`
 - **Intent:** `INT-1`
@@ -9465,7 +9465,7 @@
 - **Source issue:** `status-line`
 - **Landed:** 2026-10-01
 
-### Given any issue, then the stage on the line is the one `compass next` reports. _(archived)_
+### Given any issue, then the stage on the line is the one `compass next` reports, and the line shows no stage when `compass next` reports none. _(archived)_
 
 - **Scenario id:** `SL-D`
 - **Intent:** `INT-1`

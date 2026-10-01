@@ -23,6 +23,7 @@ import yaml
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
 SPEC = ROOT / "docs" / "system-spec.md"
+ARCHIVE = ROOT / "docs" / "system-spec-archive.md"
 WORK = ROOT / ".compass" / "work"
 
 # Written as an escape, not a literal: this file is tracked, and the house-style
@@ -40,9 +41,15 @@ def _cli_module():
 
 
 def _derive_into(root):
-    """Run the derivation against a project root and return the file's text."""
+    """Run the derivation against a project root and return the text of the
+    spec and its archive, the two files it writes."""
     _cli_module().derive_system_spec(str(root))
-    return (root / "docs" / "system-spec.md").read_text(encoding="utf-8")
+    return ((root / "docs" / "system-spec.md").read_text(encoding="utf-8")
+            + (root / "docs" / "system-spec-archive.md").read_text(encoding="utf-8"))
+
+
+def _committed():
+    return SPEC.read_text(encoding="utf-8") + ARCHIVE.read_text(encoding="utf-8")
 
 
 def _sandbox(landed_only=True):
@@ -115,8 +122,9 @@ def test_trc_a2_a_current_derived_spec_should_pass():
         first = _derive_into(tmp)
         second = _derive_into(tmp)
         assert first == second, "the derivation is not idempotent"
-        assert SPEC.read_text(encoding="utf-8") == first, (
-            "docs/system-spec.md does not match a fresh derivation - it is "
+        assert _committed() == first, (
+            "docs/system-spec.md or its archive does not match a fresh "
+            "derivation - they are "
             "stale. Regenerate it with:\n"
             "    python3 cli/compass _derive-system-spec --internal")
     finally:
@@ -129,7 +137,7 @@ def test_trc_a3_the_committed_spec_should_cover_every_landed_task():
     landed = _landed_slugs(WORK)
     if not landed:
         return
-    text = SPEC.read_text(encoding="utf-8")
+    text = _committed()
     # The derived line says "Source issue:" since the CLI-voice slice.
     named = set(re.findall(r"Source issue:\*\* `([a-z0-9-]+)`", text))
     missing = sorted(landed - named)

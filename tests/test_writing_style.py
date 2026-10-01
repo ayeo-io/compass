@@ -62,6 +62,8 @@ from scripts.prose_keys import PROSE_KEYS  # noqa: E402
 # unmodified (DD-7 keeps `cli/vendor/README.md` out of this set, because
 # Compass wrote it); `LICENSE` and `assets/` are out of scope.
 #
+# `docs/system-spec-archive.md` holds the spec's archived sections since the
+# split, on the same ground.
 # `docs/system-spec.md` is derived rather than excluded on some ground the
 # sweeps could not state - it hides real findings, and the reason it is
 # still right to exclude it is recorded here (finding 7,
@@ -80,6 +82,7 @@ from scripts.prose_keys import PROSE_KEYS  # noqa: E402
 # which is the check this exclusion needs, not the ground for it.
 EXCLUDED_PATHS: frozenset[str] = frozenset({
     "docs/system-spec.md",
+    "docs/system-spec-archive.md",
     "cli/vendor/yaml/",
     "cli/vendor/LICENSE-PyYAML",
     "LICENSE",
@@ -4830,7 +4833,8 @@ def test_pbw_d8_system_spec_findings_are_the_recorded_kinds():
     titles, and continuous integration failed on a number that was never the
     point. A sixth KIND is the thing worth stopping, because the exclusion's
     reasoning covers archived titles and nothing else."""
-    spans = _spans_for_file(REPO_ROOT / "docs" / "system-spec.md")
+    spans = (_spans_for_file(REPO_ROOT / "docs" / "system-spec.md")
+             + _spans_for_file(REPO_ROOT / "docs" / "system-spec-archive.md"))
     by_rule = {rid: len([f for s in spans for f in rule.find(s)])
                for rid, rule in RULES.items()}
     unexpected = {rid: n for rid, n in by_rule.items()

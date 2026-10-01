@@ -27,7 +27,7 @@ DOC_GLOBS = ("commands/*.md", "skills/*/SKILL.md", "agents/*.md",
              "docs/*.md", "governance/*.md", "approaches/*.md",
              "templates/**/*.md")
 NAMED_DOCS = ("CLAUDE.md", "AGENTS.md", "README.md", "compass-contract.md")
-SKIP_NAMES = {"system-spec.md"}
+SKIP_NAMES = {"system-spec.md", "system-spec-archive.md"}
 
 # Flags every verb takes, added by the shared output-mode block rather than by
 # any one parser. Checking these per verb would be noise.

@@ -136,9 +136,9 @@ def test_ff_3_restage_does_not_widen_the_commit(tmp_path):
     assert head != land_commit, "no spec commit followed the land commit"
     spec_committed = _git(
         ["show", "--name-only", "--pretty=format:", head], root).stdout.split()
-    assert spec_committed == ["docs/system-spec.md"], (
+    assert spec_committed == ["docs/system-spec-archive.md", "docs/system-spec.md"], (
         f"the spec commit that follows the land commit must hold only "
-        f"docs/system-spec.md: {spec_committed}")
+        f"docs/system-spec.md and its archive: {spec_committed}")
 
 
 def test_ff_4_artifacts_are_still_restaged(tmp_path):

@@ -79,6 +79,15 @@ def _import_derive():
     return mod.derive_system_spec
 
 
+def _spec_and_archive(root: Path) -> str:
+    """The text of the spec and its archive, which the derivation writes as
+    two files: a superseded scenario is in the archive."""
+    docs = root / "docs"
+    archive = docs / "system-spec-archive.md"
+    return ((docs / "system-spec.md").read_text(encoding="utf-8")
+            + (archive.read_text(encoding="utf-8") if archive.exists() else ""))
+
+
 # ---------------------------------------------------------------------------
 # Fixture helpers
 # ---------------------------------------------------------------------------
@@ -274,7 +283,7 @@ class TestTrcB1:
 
         derive(str(tmp_path))
 
-        spec = (tmp_path / "docs" / "system-spec.md").read_text(encoding="utf-8")
+        spec = _spec_and_archive(tmp_path)
         assert "SCN-001" in spec, "Scenario id SCN-001 not found in system spec"
         assert "task-one" in spec, "Source task slug not found in system spec"
 
@@ -291,7 +300,7 @@ class TestTrcB1:
 
         derive(str(tmp_path))
 
-        spec = (tmp_path / "docs" / "system-spec.md").read_text(encoding="utf-8")
+        spec = _spec_and_archive(tmp_path)
         assert "SCN-XYZ" in spec
         assert "my-task" in spec
 
@@ -323,7 +332,7 @@ class TestTrcB2:
 
         derive(str(tmp_path))
 
-        spec = (tmp_path / "docs" / "system-spec.md").read_text(encoding="utf-8")
+        spec = _spec_and_archive(tmp_path)
         assert "SCN-SPIKE" not in spec, "Active task's scenario appeared in spec"
         assert "SCN-LAND" in spec, "Landed task's scenario should be in spec"
 
@@ -355,7 +364,7 @@ class TestTrcB2:
 
         derive(str(tmp_path))
 
-        spec = (tmp_path / "docs" / "system-spec.md").read_text(encoding="utf-8")
+        spec = _spec_and_archive(tmp_path)
         assert "SCN-OLD" not in spec, (
             "manifest.yml without status field should be treated as active (not landed)"
         )
@@ -442,7 +451,7 @@ class TestTrcB4:
         )
 
         derive(str(tmp_path))
-        spec = (tmp_path / "docs" / "system-spec.md").read_text(encoding="utf-8")
+        spec = _spec_and_archive(tmp_path)
 
         # SCN-NEW should be in the current section - it came later
         assert "SCN-NEW" in spec, "Newer scenario not found in spec"
@@ -469,7 +478,7 @@ class TestTrcB4:
         )
 
         derive(str(tmp_path))
-        spec = (tmp_path / "docs" / "system-spec.md").read_text(encoding="utf-8")
+        spec = _spec_and_archive(tmp_path)
 
         # The spec should have an archived section
         assert "archive" in spec.lower() or "archived" in spec.lower(), (
@@ -507,7 +516,7 @@ class TestTrcB4a:
         )
 
         derive(str(tmp_path))
-        spec = (tmp_path / "docs" / "system-spec.md").read_text(encoding="utf-8")
+        spec = _spec_and_archive(tmp_path)
 
         # old-provider is the archived issue
         assert "old-provider" in spec, "Source task slug missing from archive"
@@ -533,7 +542,7 @@ class TestTrcB4a:
         )
 
         derive(str(tmp_path))
-        spec = (tmp_path / "docs" / "system-spec.md").read_text(encoding="utf-8")
+        spec = _spec_and_archive(tmp_path)
 
         # The archive should contain a date reference
         # (at minimum the land_timestamp date portion: 2026-05-20)
@@ -568,7 +577,7 @@ class TestTrcB7:
         )
 
         derive(str(tmp_path))
-        spec = (tmp_path / "docs" / "system-spec.md").read_text(encoding="utf-8")
+        spec = _spec_and_archive(tmp_path)
 
         # Each scenario should appear with its source issue slug
         assert "SCN-A" in spec
@@ -760,7 +769,7 @@ class TestTrcB11:
             )
 
         derive(str(tmp_path))
-        spec = (tmp_path / "docs" / "system-spec.md").read_text(encoding="utf-8")
+        spec = _spec_and_archive(tmp_path)
 
         assert "SCN-LND" in spec, "Landed scenario not in spec"
         assert "SCN-ACT" not in spec, "Active scenario should not be in spec"
@@ -825,7 +834,7 @@ class TestTrcB11:
         )
 
         derive(str(tmp_path))
-        spec = (tmp_path / "docs" / "system-spec.md").read_text(encoding="utf-8")
+        spec = _spec_and_archive(tmp_path)
 
         for sid in scn_ids:
             assert sid in spec, f"Scenario {sid} from scenarios block not in spec"
@@ -861,7 +870,7 @@ class TestTrcF2:
         )
 
         derive(str(tmp_path))
-        spec = (tmp_path / "docs" / "system-spec.md").read_text(encoding="utf-8")
+        spec = _spec_and_archive(tmp_path)
 
         # SCN-B (later) should be in the current section
         assert "SCN-B" in spec, "Later-landed scenario not in spec"
@@ -917,7 +926,7 @@ class TestTrcF2:
         )
 
         derive(str(tmp_path))
-        spec = (tmp_path / "docs" / "system-spec.md").read_text(encoding="utf-8")
+        spec = _spec_and_archive(tmp_path)
 
         # Both appear (one current, one archived) - result is defined
         assert "SCN-AAA" in spec
@@ -925,5 +934,5 @@ class TestTrcF2:
 
         # Run again - same outcome
         derive(str(tmp_path))
-        spec2 = (tmp_path / "docs" / "system-spec.md").read_text(encoding="utf-8")
+        spec2 = _spec_and_archive(tmp_path)
         assert spec == spec2, "Tiebreaker result is not stable"

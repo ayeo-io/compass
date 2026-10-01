@@ -35,7 +35,7 @@ NAMED_DOCS = ("CLAUDE.md", "AGENTS.md", "README.md", "compass-contract.md")
 # `docs/system-spec.md` is derived from landed scenarios and marks archived
 # entries as such. `docs/glossary.md` is derived from the vocabulary, whose
 # ban entries must name the word they retire.
-SKIP_NAMES = {"system-spec.md", "glossary.md"}
+SKIP_NAMES = {"system-spec.md", "system-spec-archive.md", "glossary.md"}
 
 # A removed command may be named where the naming IS the service: the upgrade
 # table telling a broken caller what to type instead.

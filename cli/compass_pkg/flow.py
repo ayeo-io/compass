@@ -332,10 +332,25 @@ def derive_system_spec(project_root: str) -> None:
             "",
         ]
 
+    # The archive is most of the history and almost none of what a reader
+    # opens the spec for, so it has its own file; the spec points to it.
+    archive_lines = list(lines[:1]) + [
+        "",
+        "# System Specification - Archive (derived)",
+        "",
+        "> Scenarios superseded by a later-landed scenario with the same intent "
+        "id. The current behaviour is in `docs/system-spec.md`.",
+        "",
+    ]
     if archived:
         lines += [
             "---",
             "",
+            f"{len(archived)} superseded scenario(s) are in "
+            "`docs/system-spec-archive.md`.",
+            "",
+        ]
+        archive_lines += [
             "## Archived Behaviour",
             "",
             "> These scenarios were superseded by a later-landed scenario "
@@ -345,7 +360,7 @@ def derive_system_spec(project_root: str) -> None:
         # Sort archived entries: land_timestamp, then scn_id for determinism
         archived_sorted = sorted(archived, key=lambda x: (x["land_timestamp"], x["scn_id"]))
         for entry in archived_sorted:
-            lines += [
+            archive_lines += [
                 f"### {entry['scn_title'] or entry['scn_id']} _(archived)_",
                 "",
                 f"- **Scenario id:** `{entry['scn_id']}`",
@@ -356,6 +371,7 @@ def derive_system_spec(project_root: str) -> None:
             ]
 
     content = "\n".join(lines)
+    archive_content = "\n".join(archive_lines)
 
     # ---- 3b. Normalise house style on write ---------------------------------
     # Scenario titles from landed issues are copied verbatim, and four historic
@@ -377,6 +393,7 @@ def derive_system_spec(project_root: str) -> None:
     # [ \t] not \s: \s matches newlines, so an em dash at the end of a line
     # would remove the line break and join a heading to the list after it.
     content = re.sub(r"[ \t]*\u2014[ \t]*", " - ", content)
+    archive_content = re.sub(r"[ \t]*\u2014[ \t]*", " - ", archive_content)
 
     # ---- 4. Write atomically -----------------------------------------------
     out_dir = os.path.join(project_root, "docs")
@@ -384,6 +401,9 @@ def derive_system_spec(project_root: str) -> None:
     out_path = os.path.join(out_dir, "system-spec.md")
     with open(out_path, "w", encoding="utf-8") as fh:
         fh.write(content)
+    archive_path = os.path.join(out_dir, "system-spec-archive.md")
+    with open(archive_path, "w", encoding="utf-8") as fh:
+        fh.write(archive_content)
 
 
 def cmd_derive_system_spec(args):

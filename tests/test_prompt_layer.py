@@ -155,7 +155,8 @@ def test_trc_f3_nothing_names_a_skill_that_does_not_exist():
 #: Listed rather than derived: "is this document about the framework itself" is
 #: a judgement, and a rule that tried to infer it would be guessing.
 FRAMEWORK_INTERNAL = {
-    "docs/system-spec.md",          # the framework's own dev history, 96% archived
+    "docs/system-spec.md",          # the framework's own dev history, current part
+    "docs/system-spec-archive.md",  # and its archived part
     "docs/releasing.md",            # how to cut a Compass release
     "docs/install-smoke-test.md",   # run after changing Compass's installation
     "docs/desired-state.md",        # where Compass is going

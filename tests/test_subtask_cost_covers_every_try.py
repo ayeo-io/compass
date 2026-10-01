@@ -1,16 +1,12 @@
 """A subtask's recorded cost covers every try.
 
-`compass issue subtask update --cost N` replaced the subtask's `cost`, so a
-subtask sent back for another try kept only the last try's tokens, and a
-run record had to sum the tries by hand. Each try's cost is now kept in
-`costs`, keyed by the try, and `cost` is their total.
+Each try's cost is kept in `costs`, keyed by the try, and `cost` is their
+total, so a subtask sent back for another try keeps every try's tokens.
 
-`--cost` keyed a cost by the subtask's current `attempts` count, so a cost
-recorded in the same call as the flag that opens a new try landed on the
-try just opened, not the try that call was closing out - a real run lost a
-try's cost this way. `--try N` now names the try a cost belongs to; without
-it, a cost in a call that also opens a new try belongs to the try before
-the new one, and a try beyond what has been dispatched is refused.
+`--try N` names the try a cost belongs to. Without it, a cost in a call
+that also opens a new try belongs to the try before the new one; a cost in
+a later call belongs to the latest try dispatched. A try beyond what has
+been dispatched is refused.
 
 Scenario ids: SCT-1 and SCT-2, in the delivery approach of issue
 `subtask-cost-keeps-last-try-only`; EGB-8, in the delivery approach of issue

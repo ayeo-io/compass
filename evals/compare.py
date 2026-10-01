@@ -74,10 +74,14 @@ def _corrected_hidden(record: Dict[str, Any],
     scenario = record.get("scenario")
     if not scenario:
         return hidden
-    defined = _harness.hidden_tests_defined_count(
-        scenarios_dir / scenario / "hidden_tests")
+    # The count the run itself recorded, when it recorded one; today's
+    # hidden test file only for an older record that did not.
+    defined = hidden.get("defined")
+    if not isinstance(defined, int):
+        defined = _harness.hidden_tests_defined_count(
+            scenarios_dir / scenario / "hidden_tests")
     corrected_passed, corrected_failed = _harness.corrected_hidden_counts(
-        passed, failed, defined)
+        passed, failed, defined, hidden.get("exit_code", 2))
     if (corrected_passed, corrected_failed) == (passed, failed):
         return hidden
     return {**hidden, "passed": corrected_passed, "failed": corrected_failed}

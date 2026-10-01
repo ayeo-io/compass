@@ -391,3 +391,19 @@ def test_cli_writes_the_report_file():
         assert result.returncode == 0, result.stderr
         assert report_path.is_file()
         assert "# Comparison report" in report_path.read_text(encoding="utf-8")
+
+
+def test_a_record_is_corrected_against_the_hidden_tests_it_ran(tmp_path):
+    """A record that says how many hidden tests its run defined is
+    corrected against that number, not against today's hidden test file,
+    which may have gained or lost tests since."""
+    scenarios = tmp_path / "scenarios"
+    hidden_dir = scenarios / "cmp-small-fix" / "hidden_tests" / "tests"
+    hidden_dir.mkdir(parents=True)
+    (hidden_dir / "test_hidden.py").write_text(
+        "".join(f"def test_{i}():\n    pass\n" for i in range(9)))
+    record = make_record(hidden={"command": "pytest", "exit_code": 2,
+                                 "passed": 0, "failed": 1, "defined": 3})
+    corrected = compare._corrected_hidden(record, scenarios)
+    assert (corrected["passed"], corrected["failed"]) == (0, 3), corrected
+

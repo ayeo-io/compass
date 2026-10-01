@@ -233,6 +233,9 @@ def main():
         head_path = os.path.join(cwd, ".git", "HEAD")
         if os.path.isfile(head_path):
             os.remove(head_path)
+    if config.get("garbage_ref_git_head"):
+        with open(os.path.join(cwd, ".git", "HEAD"), "w", encoding="utf-8") as fh:
+            fh.write("ref: garbage\\n")
     if config.get("corrupt_git_head"):
         with open(os.path.join(cwd, ".git", "HEAD"), "w", encoding="utf-8") as fh:
             fh.write("not a valid HEAD\\n")
@@ -3398,7 +3401,7 @@ def test_hidden_command_gives_a_pass_rate_and_regressions_are_recorded(
 
     assert record["hidden"] == {
         "command": "python3 -m pytest -q tests/test_hidden_feature.py",
-        "exit_code": 1, "passed": 0, "failed": 1,
+        "exit_code": 1, "passed": 0, "failed": 1, "defined": 1,
     }
     assert record["regressions"] == ["tests/test_seed.py::test_seed_unchanged"]
     assert record["tests_after"]["exit_code"] != 0
@@ -3532,3 +3535,28 @@ def test_pytest_summary_counts_reads_only_the_final_summary_line():
         "=================== 1 failed, 1 passed in 0.03s ===================\n"
     )
     assert harness._pytest_summary_counts(output) == (1, 1)
+
+
+def test_a_head_reading_ref_garbage_is_recorded_as_not_contained_end_to_end(
+    tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
+):
+    """The second broken repository state: `.git/HEAD` reads `ref: garbage`,
+    a line that starts with `ref:` but names no branch. The unit test
+    against `_diff_since_seed` pins it; this pins it through `run_once`,
+    which is what a real run records."""
+    _, record, _ = _run_condition(
+        tmp_path, scenario_dir, fake_claude, "bare", monkeypatch,
+        plugin_source_dir, out_suffix="-git-head-garbage-ref",
+        extra_config={"garbage_ref_git_head": True},
+    )
+    assert record["contained"] is False
+    assert "git-state:.git" in record["escaped_paths"]
+
+
+def test_a_skipped_hidden_test_is_not_counted_as_failed():
+    """A short total with exit 1 is a run where a test was skipped; only a
+    collection error, exit 2, means none of the defined tests ran."""
+    assert harness.corrected_hidden_counts(4, 0, 5, exit_code=0) == (4, 0)
+    assert harness.corrected_hidden_counts(3, 1, 5, exit_code=1) == (3, 1)
+    assert harness.corrected_hidden_counts(0, 1, 5, exit_code=2) == (0, 5)
+

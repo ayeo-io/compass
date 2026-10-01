@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the review workflow, when it is read, then every action is pinned to a commit, contents are read-only, and no allowed tool can commit or push
+### Given the review workflow, when it is read, then it authenticates with the federation rule, organisation and service account variables, and no step uses an API key or OAuth token
 
 - **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `claude-review-workflow`
+- **Source issue:** `claude-review-federation`
 - **Landed:** 2026-10-01
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -9686,4 +9686,11 @@
 - **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
 - **Source issue:** `quick-fix-message-edges`
+- **Landed:** 2026-10-01
+
+### Given the review workflow, when it is read, then every action is pinned to a commit, contents are read-only, and no allowed tool can commit or push _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `claude-review-workflow`
 - **Landed:** 2026-10-01

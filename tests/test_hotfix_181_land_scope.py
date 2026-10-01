@@ -128,9 +128,10 @@ def test_scn_b1_unrelated_dirty_file_is_not_swept_into_the_land_commit(repo):
 
     head = _git(repo, "rev-parse", "HEAD").stdout.strip()
     assert head != land_commit, "no spec commit followed the land commit"
-    assert _committed_files(repo, head) == {"docs/system-spec.md"}, (
+    assert _committed_files(repo, head) == {"docs/system-spec.md",
+                                            "docs/system-spec-archive.md"}, (
         "the spec commit that follows the land commit must hold only "
-        "docs/system-spec.md")
+        "docs/system-spec.md and its archive")
 
 
 def test_scn_b1_untracked_scratch_is_not_swept_in(repo):

@@ -190,20 +190,20 @@ def _derive_and_commit_living_spec(cwd, slug):
     except Exception as exc:
         return f"\n  living spec NOT re-derived: {exc}"
 
-    spec_path = os.path.join(project_root, "docs", "system-spec.md")
-    rel_spec = os.path.relpath(spec_path, cwd)
-    changed = _git(["status", "--porcelain", "--", rel_spec], cwd).stdout.strip()
+    rel_specs = [os.path.relpath(os.path.join(project_root, "docs", name), cwd)
+                 for name in ("system-spec.md", "system-spec-archive.md")]
+    changed = _git(["status", "--porcelain", "--", *rel_specs], cwd).stdout.strip()
     if not changed:
         return "\n  living spec re-derived (no change)."
 
-    # `-- rel_spec` scopes the commit to the spec alone. A plain `git commit`
-    # commits everything staged - so anything else staged at this moment (a
-    # hook's own side effect, or a leftover from elsewhere in the same tree)
-    # would otherwise land in this commit too.
-    _git(["--literal-pathspecs", "add", "--", rel_spec], cwd)
+    # `-- rel_specs` scopes the commit to the spec and its archive alone. A
+    # plain `git commit` commits everything staged - so anything else staged
+    # at this moment (a hook's own side effect, or a leftover from elsewhere
+    # in the same tree) would otherwise land in this commit too.
+    _git(["--literal-pathspecs", "add", "--", *rel_specs], cwd)
     commit = _git(
         ["commit", "-m", f"Re-derive the living spec after {slug} landed",
-         "--", rel_spec], cwd
+         "--", *rel_specs], cwd
     )
     if commit.returncode != 0:
         log = ((commit.stdout or "") + (commit.stderr or ""))[-800:]

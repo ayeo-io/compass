@@ -149,6 +149,7 @@ OLD_NAME_ALLOWED = (
     # points at a directory that does not exist.
     "tests/test_spine_records_the_truth.py",
     "docs/system-spec.md",
+    "docs/system-spec-archive.md",
     # Quotes this repository's archive verbatim; the quoted sessions used the
     # old word and scripts/verify-archive-quotes.py hashes the quotes against
     # the real files, so editing one falsifies it.

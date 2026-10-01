@@ -9366,3 +9366,17 @@
 - **Intent:** `INT-1`
 - **Source issue:** `claude-review-workflow`
 - **Landed:** 2026-10-01
+
+### Given a hidden test run that skipped a test and exited 1, when the harness corrects its counts, then it leaves them alone, and corrects only a collection error that exited 2 _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d34`
+- **Landed:** 2026-10-01
+
+### A comparison corrects a record against the hidden-test count its own run recorded _(archived)_
+
+- **Scenario id:** `TRC-002`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-gaps-after-d34`
+- **Landed:** 2026-10-01

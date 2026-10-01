@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the review workflow, when it is read, then it authenticates with the federation rule, organisation and service account variables, and no step uses an API key or OAuth token
+### Given a fresh repository, when a session types `/compass:go` with a small change, then it lands a quick fix; measured in an eval run (spend asked for 
 
-- **Scenario id:** `TRC-001`
+- **Scenario id:** `ONE-6`
 - **Intent:** `INT-1`
-- **Source issue:** `claude-review-federation`
+- **Source issue:** `one-entry-point`
 - **Landed:** 2026-10-01
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1340 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1346 superseded scenario(s) are in `docs/system-spec-archive.md`.

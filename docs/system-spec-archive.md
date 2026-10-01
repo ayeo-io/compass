@@ -9429,3 +9429,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `one-entry-point`
 - **Landed:** 2026-10-01
+
+### Given a fresh repository, when a session types `/compass:go` with a small change, then it lands a quick fix; measured in an eval run (spend asked for  _(archived)_
+
+- **Scenario id:** `ONE-6`
+- **Intent:** `INT-1`
+- **Source issue:** `one-entry-point`
+- **Landed:** 2026-10-01

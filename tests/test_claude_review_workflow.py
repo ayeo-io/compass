@@ -41,3 +41,18 @@ def test_no_allowed_tool_can_commit_or_push():
     for tool in tools:
         assert not re.search(r"\bgit\b|Write|Edit|push|commit", tool), tool
     assert any(t.startswith("Bash(gh pr comment") for t in tools), tools
+
+
+def test_the_review_authenticates_by_federation_with_no_stored_key():
+    """The job swaps GitHub's OIDC token for a short-lived Anthropic token,
+    so no API key or OAuth token is stored to leak or rotate."""
+    step = next(s for s in _job()["steps"]
+                if "claude-code-action" in s.get("uses", ""))
+    inputs = step["with"]
+    for key, var in (("anthropic_federation_rule_id", "ANTHROPIC_FEDERATION_RULE_ID"),
+                     ("anthropic_organization_id", "ANTHROPIC_ORGANIZATION_ID"),
+                     ("anthropic_service_account_id", "ANTHROPIC_SERVICE_ACCOUNT_ID")):
+        assert inputs.get(key) == "${{ vars." + var + " }}", (key, inputs.get(key))
+    assert "anthropic_api_key" not in inputs and "claude_code_oauth_token" not in inputs
+    assert _job()["permissions"].get("id-token") == "write"
+    assert "${{ secrets." not in WORKFLOW.read_text(encoding="utf-8")

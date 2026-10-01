@@ -9380,3 +9380,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `eval-gaps-after-d34`
 - **Landed:** 2026-10-01
+
+### Given the landed issues, when the spec is derived, then docs/system-spec.md holds only current behaviour under 4,000 words with a pointer, and docs/system-spec-archive.md holds every archived section unchanged _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `system-spec-split`
+- **Landed:** 2026-10-01

@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a compass run record with compass_commit and no framework block, when the comparison report is built, then it shows that commit
+### Re-run of the edge-case and refactor comparison runs under Compass: no session ends without code
 
-- **Scenario id:** `TRC-001`
+- **Scenario id:** `SCU-3`
 - **Intent:** `INT-1`
-- **Source issue:** `compare-names-the-compass-commit`
+- **Source issue:** `small-change-read-as-unmapped`
 - **Landed:** 2026-09-30
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -9630,4 +9630,25 @@
 - **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
 - **Source issue:** `retro-counts-policy-corrections`
+- **Landed:** 2026-09-30
+
+### Given a compass run record with compass_commit and no framework block, when the comparison report is built, then it shows that commit _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `compare-names-the-compass-commit`
+- **Landed:** 2026-09-30
+
+### A small, contained greenfield change is a quick fix; unmapped still gets the heavier process _(archived)_
+
+- **Scenario id:** `SCU-1`
+- **Intent:** `INT-1`
+- **Source issue:** `small-change-read-as-unmapped`
+- **Landed:** 2026-09-30
+
+### A heavier quick-fix start names the dimension that blocked it _(archived)_
+
+- **Scenario id:** `SCU-2`
+- **Intent:** `INT-1`
+- **Source issue:** `small-change-read-as-unmapped`
 - **Landed:** 2026-09-30

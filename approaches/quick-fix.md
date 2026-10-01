@@ -1,6 +1,6 @@
 # Delivery approach - Quick fix
 
-> The change is small, safe, and on mapped ground. Stay out of the way.
+> The change is small, safe, and on new or already-mapped ground. Stay out of the way.
 > Still tested before it lands.
 
 ## Running it
@@ -14,7 +14,7 @@ weights in this document are what that command implements.
 
 - size is `atomic` or `small`, **and**
 - risk is `trivial` or `contained`, **and**
-- familiarity is `brownfield-mapped`, **and**
+- familiarity is `greenfield` or `brownfield-mapped`, **and**
 - no floor raises the approach, **and**
 - role is `engineer` (a non-engineering role in play almost always pulls the
   approach up, because it adds artifacts and gates).
@@ -50,7 +50,7 @@ Solo. No worktree. Breakdown is a no-op.
 | Stage | Action | Standing justification |
 |---|---|---|
 | Refine | collapsed | The spec is a single scenario the assessment marked unambiguous. Nothing to clarify. |
-| Plan | collapsed to a one-liner | No design decision and no new architecture - size `atomic`/`small` on mapped familiarity means the plan is "edit this file." |
+| Plan | collapsed to a one-liner | No design decision and no new architecture - size `atomic`/`small` on new or mapped ground means the plan is "edit this file." |
 | Breakdown | skipped | One subtask of work. Parallelism would be pure overhead. |
 
 These justifications are copied into the issue's `delivery-approach.md` so the skip is

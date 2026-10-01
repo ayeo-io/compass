@@ -70,9 +70,9 @@ def _task(root, slug="t"):
 
 def _seeded(tmp_path, **readings):
     """An issue whose delivery approach has already been computed once."""
-    root = _project(tmp_path, _base(readings={
+    root = _project(tmp_path, _base(assessment={
         "risk": "contained", "familiarity": "greenfield",
-        "size": "small", "intent": "delivery", "urgency": "none",
+        "size": "standard", "intent": "delivery", "urgency": "none",
         "role": "engineer", "labels": [], **readings}))
     _run(root, "approach", "evaluate", "--issue", "t", "--write")
     return root

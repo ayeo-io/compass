@@ -17,7 +17,7 @@
 # framework for everyone - see routing-policy.md.
 # =============================================================================
 
-version: 2.12.2
+version: 2.13.0
 # -----------------------------------------------------------------------------
 # ROUTING STRATEGIES - soft. They BIAS the candidate delivery approach. The evaluator uses
 # them in composition (step 1); a later rule can override the result.
@@ -37,9 +37,11 @@ routing_strategies:
       lean_toward: hotfix
       rationale: "A live defect, small enough to reproduce-and-fix fast."
     - id: RP-SHAPE-003
-      when: { size: [atomic, small], risk: [trivial, contained], familiarity: brownfield-mapped }
+      when: { size: [atomic, small], risk: [trivial, contained], familiarity: [greenfield, brownfield-mapped] }
       lean_toward: express
-      rationale: "Small on every axis, on mapped ground."
+      # New code has no existing behaviour to break, so greenfield qualifies;
+      # unmapped code does, so brownfield-unmapped stays out.
+      rationale: "Small on every axis, on new or already-mapped ground."
     - id: RP-SHAPE-004
       when: { size: [large, product] }
       lean_toward: expedition

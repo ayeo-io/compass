@@ -36,12 +36,13 @@ import json
 import os
 import re
 import subprocess
+import textwrap
 
 from compass_pkg.binding import ids_for
 from compass_pkg.check_cmd import cmd_check
 from compass_pkg.core import (
-    CompassError, _one_segment, display_shape, display_stage, docs_dir,
-    find_governance, find_upwards,
+    CompassError, _WHEN_KEY_MAP, _one_segment, canonical_shape, display_shape,
+    display_stage, docs_dir, find_governance, find_upwards, reading_matches,
     load_manifest, load_yaml, manifest_path, resolve_issue_dir, save_manifest,
 )
 from compass_pkg.dashboard import cmd_issue_artifact
@@ -188,6 +189,35 @@ def _delivery_approach_md(slug, approach, dims, rules_fired, intent_text,
     return "\n".join(lines)
 
 
+def _quick_fix_blockers(readings, task):
+    """Why the assessment is not a quick fix, read from the policy's own
+    quick-fix shape through the evaluator's matching, so a session can act
+    on the reason instead of stopping to ask. Every line stays under the
+    terminal's 100-character cut, or the instruction at its end is lost."""
+    policy = load_yaml(os.path.join(find_governance(), "routing-policy.yml"))
+    shapes = (policy.get("routing_strategies") or {}).get("default_shapes") or []
+    shape = next((s for s in shapes
+                  if canonical_shape(s.get("lean_toward")) == "quick-fix"), None)
+    lines, blocked = [], []
+    for key, allowed in ((shape or {}).get("when") or {}).items():
+        if reading_matches({key: allowed}, readings):
+            continue
+        name = _WHEN_KEY_MAP.get(key, key)
+        blocked.append(name)
+        allowed = allowed if isinstance(allowed, list) else [allowed]
+        lines.append(f"blocked: {name} is {readings.get(name, 'not given')}; "
+                     f"the quick fix needs {' or '.join(str(a) for a in allowed)}")
+    if blocked == ["familiarity"] and readings.get("familiarity") == "brownfield-unmapped":
+        lines += ["to go ahead as a quick fix: pin the current behaviour with tests,",
+                  "then re-assess familiarity as brownfield-mapped"]
+    for rule in task.get("policy_rules_fired") or []:
+        if rule.get("id"):
+            why = rule.get("rationale") or "no reason recorded"
+            lines += textwrap.wrap(f"{why} ({rule['id']}, {rule.get('kind', 'rule')})",
+                                   width=96)
+    return lines
+
+
 def cmd_quick_fix_start(args):
     slug = _one_segment(args.slug, "compass quick-fix start")
     risk_v, risk_r = _split_required(args.risk, "risk")
@@ -242,10 +272,12 @@ def cmd_quick_fix_start(args):
     if approach != "quick-fix":
         say(args,
            f"compass quick-fix start: '{slug}' computes to "
-           f"{display_shape(approach)}, heavier than a quick fix. The "
-           f"manifest keeps the assessment and the computed approach; "
-           f"no approach record and no scenario were written.",
-           detail=["next: continue with /compass:assess"],
+           f"{display_shape(approach)}, heavier than a quick fix.",
+           detail=["the manifest keeps the assessment and the computed approach;",
+                   "no approach record and no scenario were written"]
+           + _quick_fix_blockers(readings, task)
+           + ["next: continue with /compass:assess, or, if a rating was wrong,",
+              'correct it: /compass:assess --reassess --reason "..."'],
            decision=True, approach=approach)
         return 1
 

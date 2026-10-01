@@ -36,12 +36,12 @@ from compass_pkg.core import artifact_path, load_yaml, manifest_path, normalize_
 
 # --- command: next -----------------------------------------------------------
 # `compass next` reads manifest.yml + delivery-approach.md and prints ONE
-# line: the next stage, the next uncleared gate, and delivery-approach-aware
+# line (at a terminal, framed by the rail; see `_emit`): the next stage, the next uncleared gate, and delivery-approach-aware
 # collapsed-stage markers. It is strictly READ-ONLY over
 # .compass/work/<task>/ - no file is written or created. It derives its
 # answer from manifest.yml + delivery-approach.md only; nothing else is read.
 #
-# Output format (chosen to read clearly without colour escapes):
+# The plain line, which is all piped output and the model ever see:
 #   "<NextPhase> [gate: <gate-id>][ | <phase> collapsed on this route]"
 # When all stages are complete / landed:
 #   "all phases complete"
@@ -160,7 +160,8 @@ def _emit(args, task, task_dir, line, current_phase, finished):
 def cmd_next(args):
     """compass next - what comes next on this issue's delivery approach?
 
-    Reads manifest.yml + delivery-approach.md and prints ONE line.
+    Reads manifest.yml + delivery-approach.md and prints ONE line, framed
+    by the rail when a person reads it at a terminal.
     Strictly read-only.
     """
     task_dir = resolve_issue_dir(getattr(args, "task", None))

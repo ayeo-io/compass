@@ -4,14 +4,15 @@ to the terminal's width.
 `compass next` opens with the route's stages in a row - done, current,
 pending, skipped by policy - when a person runs it. The model must see no
 change, so the rail is drawn only when stdout is a terminal and `CLAUDECODE`
-is unset: Claude Code runs commands with neither a terminal nor that
-variable unset. Everything else gets the verb's plain output, byte for byte.
+is unset: Claude Code runs commands without a terminal and with that
+variable set. Everything else gets the verb's plain output, byte for byte.
 
-The status line (`bin/compass-statusline`) fits its line with `fit`, so
-width fitting lives in one place.
+The status line (`bin/compass-statusline`) fits its line with `fit` too, so
+the rail, its header and the status line share one way of fitting a line.
+`terminal.py` shortens the CLI's own output lines separately.
 
-Standard library only, so any entry point can use it without the YAML
-dependency or the full CLI.
+DEPENDENCY: standard library only (os, re, shutil), so any entry point can
+use it without the bundled PyYAML or the full CLI.
 """
 from __future__ import annotations
 
@@ -32,6 +33,7 @@ _COLOUR = {"done": "\x1b[32m", "current": "\x1b[1;36m", "pending": "",
            "skipped": "\x1b[2;9m"}
 _RESET = "\x1b[0m"
 _ANSI = re.compile(r"\x1b\[[0-9;]*m")
+_CONTROL = re.compile(r"[\x00-\x1f\x7f-\x9f]")
 
 
 def rail_style(out, mode: str = "summary", env=None) -> str | None:
@@ -46,8 +48,12 @@ def rail_style(out, mode: str = "summary", env=None) -> str | None:
     if env.get("CLAUDECODE") or mode != "summary":
         return None
     choice = (env.get("COMPASS_COLOR") or "").strip().lower()
+    # NO_COLOR counts when present and not empty (no-color.org), and it wins
+    # over COMPASS_COLOR=always: that setting is about where the rail shows,
+    # not whether it is coloured.
+    no_color = bool(env.get("NO_COLOR"))
     if choice == "always":
-        return "color"
+        return "unicode" if no_color else "color"
     try:
         terminal = out.isatty()
     except (AttributeError, ValueError):
@@ -56,10 +62,7 @@ def rail_style(out, mode: str = "summary", env=None) -> str | None:
         return None
     if choice == "never":
         return "ascii"
-    # NO_COLOR counts when present and not empty (no-color.org).
-    if env.get("NO_COLOR"):
-        return "unicode"
-    return "color"
+    return "unicode" if no_color else "color"
 
 
 def stage_states(order, weights, current, finished, skipped_weights):
@@ -139,4 +142,7 @@ def header(fields: list, style: str, width: int | None = None) -> str:
     if width is None:
         width = shutil.get_terminal_size((80, 24)).columns
     glyphs = GLYPHS["ascii" if style == "ascii" else "unicode"]
+    # The fields come from the manifest, which anyone can edit. A control
+    # character in one could set the window title or clear the screen.
+    fields = [_CONTROL.sub("", str(f)) for f in fields if f]
     return fit([f for f in fields if f], width, glyphs["join"], glyphs["cut"])

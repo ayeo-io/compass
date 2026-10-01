@@ -203,7 +203,7 @@
     "table_rows": 12
   },
   "docs/quickstart.md": {
-    "fences": 32,
+    "fences": 34,
     "heading_levels": [
       1,
       2,
@@ -227,9 +227,10 @@
       3,
       2,
       2,
+      2,
       2
     ],
-    "list_items": 15,
+    "list_items": 17,
     "table_rows": 0
   },
   "docs/routing-deep-dive.md": {

@@ -222,6 +222,38 @@ def test_compass_color_always_shows_the_rail_when_piped(tmp_path):
     assert _piped(root, COMPASS_COLOR="always", CLAUDECODE="1") == golden
 
 
+def test_no_color_wins_over_compass_color_always(tmp_path):
+    """RL-E: NO_COLOR means no colour codes, whatever COMPASS_COLOR says."""
+    root = _build(tmp_path, "feature/implementing")
+    code, out = _tty(root, NO_COLOR="1", COMPASS_COLOR="always")
+    assert "●" in out and "\x1b[" not in out, repr(out)
+    shown = _piped(root, NO_COLOR="1", COMPASS_COLOR="always")["stdout"]
+    assert "●" in shown and "\x1b[" not in shown, repr(shown)
+
+
+@pytest.mark.parametrize("flag", ["--json", "--quiet", "--evidence-out"])
+def test_machine_views_stay_plain_under_compass_color_always(tmp_path, flag):
+    """`always` draws the rail on a pipe, but never into a machine view."""
+    root = _build(tmp_path, "feature/implementing")
+    args = [flag, str(tmp_path / "capture.txt")] if flag == "--evidence-out" else [flag]
+    assert _piped(root, *args, COMPASS_COLOR="always") == _piped(root, *args)
+
+
+def test_a_manifest_value_cannot_write_escape_codes(tmp_path):
+    """The header prints the manifest's issue name. A control character in it
+    must not reach the terminal, where it could set the window title or clear
+    the screen."""
+    root = _build(tmp_path, "feature/implementing")
+    manifest = root / ".compass" / "work" / "feature-implementing" / "manifest.yml"
+    manifest.write_text(manifest.read_text().replace(
+        "issue: feature-implementing",
+        'issue: "\\e]0;pwned\\a\\e[2Jevil"'))
+    code, out = _tty(root, COMPASS_COLOR="never")
+    assert code == 0, out
+    assert "\x1b" not in out and "\x07" not in out, repr(out)
+    assert out.split("\n")[0] == "feature - ]0;pwned[2Jevil", repr(out)
+
+
 @pytest.mark.parametrize("colour", [None, "never"])
 def test_a_terminal_that_cannot_encode_the_rail_gets_a_working_output(tmp_path, colour):
     """A stdout that cannot encode the glyphs must not crash `compass next`:

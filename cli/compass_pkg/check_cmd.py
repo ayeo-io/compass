@@ -235,6 +235,7 @@ class _CheckRun:
     """What a run of `compass check` found, before anything is printed."""
 
     def __init__(self, task_dir, task, mode):
+        self.task_dir = task_dir
         self.slug = os.path.basename(task_dir)
         self.approach = task.get("delivery_approach", "?")
         self.mode_banner = mode_banner(mode)
@@ -363,8 +364,19 @@ def _summary_lines(run):
 
 
 def _emit_check(run, args):
-    """Render the run in the mode the caller asked for."""
+    """Render the run in the mode the caller asked for, and count a run with
+    a failure as one interruption in `.compass/interruptions.log`, never in
+    the issue folder. Advisory mode exits 0 on a failure, so the count reads
+    the failures, not the exit. A `compass ci` sweep passes `no_count`: it
+    checks issues nobody is working on, so its failures are not
+    interruptions."""
+    from compass_pkg.interruptions import record
     from compass_pkg.terminal import mark_handled, resolve_mode
+
+    if run.failures and not getattr(args, "no_count", False):
+        compass_dir = os.path.dirname(os.path.dirname(
+            os.path.normpath(run.task_dir)))
+        record(compass_dir, run.slug, "check_failures")
 
     mark_handled()
     mode = resolve_mode(args)

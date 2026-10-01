@@ -74,6 +74,9 @@
 # =============================================================================
 
 set -euo pipefail
+# The issue this hook works on is resolved below. Clear it first, so a
+# TASK_DIR exported by the caller's environment is never taken for it.
+TASK_DIR=""
 
 # shellcheck source=../scripts/lib/compass-python.sh
 # The shared loader in scripts/lib/compass-python.sh: compass_python() below
@@ -158,7 +161,27 @@ PYEOF
 compass_block() {
   set +e
   emit_refusal "$@"
+  compass_count_block
   exit 2
+}
+
+# Counts the block for the current issue in `.compass/interruptions.log`, an
+# append-only log outside every issue folder, so `compass retro` can report
+# how often the framework stopped work. Only once an issue is known (TASK_DIR is set);
+# every error is swallowed and the exit code is untouched, because a count
+# must never change the block it counts.
+compass_count_block() {
+  [ -n "${TASK_DIR:-}" ] && [ -d "$TASK_DIR" ] || return 0
+  compass_python - "$(dirname "$(dirname "$TASK_DIR")")" "$(basename "$TASK_DIR")" \
+    >/dev/null 2>&1 <<'PYEOF'
+import sys
+
+import compass_pkg                      # noqa: F401 - puts vendor on sys.path
+from compass_pkg.interruptions import record
+
+record(sys.argv[1], sys.argv[2], "hook_blocks")
+PYEOF
+  return 0
 }
 
 # --- one failure rule -------------------------------------------------------

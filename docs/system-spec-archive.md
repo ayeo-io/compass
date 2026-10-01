@@ -9387,3 +9387,45 @@
 - **Intent:** `INT-1`
 - **Source issue:** `system-spec-split`
 - **Landed:** 2026-10-01
+
+### Given the review workflow, when it is read, then it authenticates with the federation rule, organisation and service account variables, and no step uses an API key or OAuth token _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `claude-review-federation`
+- **Landed:** 2026-10-01
+
+### Given `commands/go.md`, then it runs `compass init`, assesses with `compass quick-fix start`, shows `compass approach summary`, and continues into the _(archived)_
+
+- **Scenario id:** `ONE-1`
+- **Intent:** `INT-1`
+- **Source issue:** `one-entry-point`
+- **Landed:** 2026-10-01
+
+### Given an assessed issue, when `compass approach summary` runs, then it prints exactly three lines: the approach, its gates, and where the issue's file _(archived)_
+
+- **Scenario id:** `ONE-2`
+- **Intent:** `INT-1`
+- **Source issue:** `one-entry-point`
+- **Landed:** 2026-10-01
+
+### Given a pre-tool hook block on an assessed issue, then one line for that issue and `hook_blocks` is appended to `.compass/interruptions.log`, and the  _(archived)_
+
+- **Scenario id:** `ONE-3`
+- **Intent:** `INT-1`
+- **Source issue:** `one-entry-point`
+- **Landed:** 2026-10-01
+
+### Given a failing `compass check`, then one `check_failures` line is appended to the log and the issue folder is untouched; a `compass ci` sweep does no _(archived)_
+
+- **Scenario id:** `ONE-4`
+- **Intent:** `INT-1`
+- **Source issue:** `one-entry-point`
+- **Landed:** 2026-10-01
+
+### Given issues with interruptions, then `compass retro` reports their totals. _(archived)_
+
+- **Scenario id:** `ONE-5`
+- **Intent:** `INT-1`
+- **Source issue:** `one-entry-point`
+- **Landed:** 2026-10-01

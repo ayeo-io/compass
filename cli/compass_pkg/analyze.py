@@ -685,7 +685,8 @@ def cmd_ci(args):
         # re-run a command.
         if cmd_check(types.SimpleNamespace(
                 task=slug, _mode=getattr(args, "_mode", None),
-                evidence_out=getattr(args, "evidence_out", None))):
+                evidence_out=getattr(args, "evidence_out", None),
+                no_count=True)):
             failures += 1
 
     print("\n" + "=" * 60)

@@ -128,6 +128,12 @@ def build_parser():
                           "assessment mis-reading the work.")
     pre.add_argument("--json", action="store_true", help="emit JSON")
     pre.set_defaults(func=cmd_route_evaluate, output_kind="hand-off")
+    prsum = prs.add_parser(
+        "summary",
+        help="print the three-line decision view: approach, gates, files")
+    prsum.add_argument("--issue", dest="task", metavar="SLUG",
+                       help="issue slug (default: current-task pointer)")
+    prsum.set_defaults(func=cmd_approach_summary, output_kind="report")
 
     # `bdd` is a subcommand GROUP, not a flat verb, so later BDD work (a
     # scenarios-are-executable check) adds `compass bdd <thing>` rather than a

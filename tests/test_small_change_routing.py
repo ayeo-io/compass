@@ -90,3 +90,21 @@ def test_the_way_forward_is_offered_only_when_familiarity_alone_blocks(repo):
     out = r.stdout + r.stderr
     assert "blocked: size is standard" in out, out
     assert "to go ahead as a quick fix" not in out, out
+
+
+def test_a_long_slug_and_a_wrapped_rule_reach_the_reader_whole(repo):
+    r = subprocess.run(
+        [sys.executable, str(CLI), "quick-fix", "start",
+         "refactor-the-configuration-parser-into-helpers",
+         "--risk", "cross-cutting - every command reads the configuration",
+         "--familiarity", "brownfield-unmapped - its behaviour is not pinned by tests",
+         "--size", "small - one function and its tests",
+         "--intent", "parse_config is easier to read",
+         "--scenario", "Given the settings file, when it is parsed, then nothing changes",
+         "--test", "tests/test_config.py"],
+        cwd=repo, capture_output=True, text=True)
+    out = r.stdout + r.stderr
+    assert "…" not in out and not any(len(line) > 100 for line in out.splitlines()), out
+    assert "refactor-the-configuration-parser-into-helpers" in out, out
+    assert "(RP-REQUIRE-003, requirement)" in out, out
+    assert "is None" not in out and "labels_any" not in out, out

@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given no `--labels`, then the labels are empty and the result is unchanged; a malformed label is refused before anything is written.
+### Given a 45-character slug and a cross-cutting change, when quick-fix start computes a heavier process, then no line passes 100 characters, nothing is cut, and each rule's id and kind share a line
 
-- **Scenario id:** `QFL-3`
+- **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `quick-fix-start-drops-labels`
+- **Source issue:** `quick-fix-message-edges`
 - **Landed:** 2026-10-01
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -9670,6 +9670,13 @@
 ### Given that change, then `compass check` treats the human sign-off guardrail as applicable. _(archived)_
 
 - **Scenario id:** `QFL-2`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-start-drops-labels`
+- **Landed:** 2026-10-01
+
+### Given no `--labels`, then the labels are empty and the result is unchanged; a malformed label is refused before anything is written. _(archived)_
+
+- **Scenario id:** `QFL-3`
 - **Intent:** `INT-1`
 - **Source issue:** `quick-fix-start-drops-labels`
 - **Landed:** 2026-10-01

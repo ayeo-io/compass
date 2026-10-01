@@ -9478,3 +9478,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `status-line`
 - **Landed:** 2026-10-01
+
+### Given `bin/compass-statusline`, then it does not load the full CLI, and a run takes under 0.25 s (median of 7). _(archived)_
+
+- **Scenario id:** `SL-F`
+- **Intent:** `INT-1`
+- **Source issue:** `status-line`
+- **Landed:** 2026-10-01

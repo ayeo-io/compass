@@ -1,16 +1,21 @@
 """The automatic Claude review must stay review-only.
 
 `.github/workflows/claude-review.yml` runs Claude on every pull request.
-It holds a repository secret and posts to the pull request, so three things
-must stay true: every action is pinned to a commit, the job's token cannot
-write to the repository's contents, and no tool it may use can commit or
-push.
+It posts to the pull request, so three things must stay true: every action
+is pinned to a commit, the job's token cannot write to the repository's
+contents, and no tool it may use can commit or push. Its check is required
+on `main` in place of a human approval, so a fourth: the job fails unless
+Claude's verdict is PASS.
 """
 from __future__ import annotations
 
+import json
+import os
 import re
+import subprocess
 from pathlib import Path
 
+import pytest
 import yaml
 
 WORKFLOW = Path(__file__).resolve().parent.parent / ".github" / "workflows" / "claude-review.yml"
@@ -57,3 +62,40 @@ def test_the_review_authenticates_by_federation_with_no_stored_key():
     assert "anthropic_api_key" not in inputs and "claude_code_oauth_token" not in inputs
     assert _job()["permissions"].get("id-token") == "write"
     assert "${{ secrets." not in WORKFLOW.read_text(encoding="utf-8")
+
+
+def _verdict_step():
+    steps = _job()["steps"]
+    review = next(i for i, s in enumerate(steps)
+                  if "claude-code-action" in s.get("uses", ""))
+    later = [s for s in steps[review + 1:] if "run" in s]
+    assert later, "no step after the review reads its verdict"
+    return steps[review], later[0]
+
+
+def test_the_review_returns_its_verdict_as_structured_output():
+    """A verdict read from a field cannot be misread the way a comment can."""
+    review, check = _verdict_step()
+    args = review["with"]["claude_args"]
+    schema = json.loads(re.search(r"--json-schema '([^']+)'", args).group(1))
+    assert schema["required"] == ["verdict"], schema
+    assert schema["properties"]["verdict"]["enum"] == ["PASS", "FAIL"], schema
+    assert check["env"]["RESULT"] == (
+        "${{ steps." + review["id"] + ".outputs.structured_output }}"), check["env"]
+
+
+@pytest.mark.parametrize("result, passes", [
+    ('{"verdict": "PASS"}', True),
+    ('{"verdict": "FAIL"}', False),
+    ("", False),
+    ("{}", False),
+    ("not json", False),
+    ('{"verdict": "pass"}', False),
+])
+def test_the_job_fails_unless_the_verdict_is_pass(result, passes):
+    """The review check is required on main, so it must be red on a FAIL
+    and on a missing verdict, and green only on PASS."""
+    _, check = _verdict_step()
+    r = subprocess.run(["bash", "-c", check["run"]], env={**os.environ, "RESULT": result},
+                       capture_output=True, text=True)
+    assert (r.returncode == 0) == passes, (result, r.returncode, r.stdout, r.stderr)

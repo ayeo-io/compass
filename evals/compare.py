@@ -120,8 +120,12 @@ def _model(record: Dict[str, Any]) -> Optional[str]:
 
 
 def _framework_commit(record: Dict[str, Any]) -> Optional[str]:
+    """The framework's pinned commit, or for the compass condition, which
+    has no `framework` block, the checkout commit the harness recorded."""
     framework = record.get("framework")
-    return framework.get("commit") if isinstance(framework, dict) else None
+    if isinstance(framework, dict) and framework.get("commit"):
+        return framework["commit"]
+    return record.get("compass_commit")
 
 
 def _is_completed(record: Dict[str, Any], scenarios_dir: Path) -> bool:

@@ -9632,6 +9632,13 @@
 - **Source issue:** `retro-counts-policy-corrections`
 - **Landed:** 2026-09-30
 
+### Given a compass run record with compass_commit and no framework block, when the comparison report is built, then it shows that commit _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `compare-names-the-compass-commit`
+- **Landed:** 2026-09-30
+
 ### A small, contained greenfield change is a quick fix; unmapped still gets the heavier process _(archived)_
 
 - **Scenario id:** `SCU-1`

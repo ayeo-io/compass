@@ -339,7 +339,7 @@ def test_stop_hook_scope_signal_runs_without_a_system_pyyaml(bare_interpreter, t
         capture_output=True, text=True, env=env, timeout=30)
 
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "reframe" in result.stderr.lower(), result.stderr
+    assert "re-assess" in result.stderr.lower(), result.stderr
     assert "/compass:assess --reassess" in result.stderr, result.stderr
 
 

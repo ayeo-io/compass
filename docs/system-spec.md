@@ -29,7 +29,7 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Re-run of cmp-edge-case and cmp-refactor under Compass: no session ends without code
+### Re-run of the edge-case and refactor comparison runs under Compass: no session ends without code
 
 - **Scenario id:** `SCU-3`
 - **Intent:** `INT-1`
@@ -9602,6 +9602,34 @@
 - **Scenario id:** `CSD-5`
 - **Intent:** `INT-1`
 - **Source issue:** `comparison-scenarios-that-discriminate`
+- **Landed:** 2026-09-30
+
+### reframe is a banned term, bound to a pattern that flags a planted use _(archived)_
+
+- **Scenario id:** `RRA-1`
+- **Intent:** `INT-1`
+- **Source issue:** `reframe-to-reassessment`
+- **Landed:** 2026-09-30
+
+### No scanned surface uses reframe except a marked compatibility line _(archived)_
+
+- **Scenario id:** `RRA-2`
+- **Intent:** `INT-1`
+- **Source issue:** `reframe-to-reassessment`
+- **Landed:** 2026-09-30
+
+### retro, flow, approach evaluate and the stop hook say re-assessment _(archived)_
+
+- **Scenario id:** `RRA-3`
+- **Intent:** `INT-1`
+- **Source issue:** `reframe-to-reassessment`
+- **Landed:** 2026-09-30
+
+### Given one judgement re-assessment and one policy correction, each moving standard to expedition, when compass retro runs, then it reports 1 up and 0 down _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `retro-counts-policy-corrections`
 - **Landed:** 2026-09-30
 
 ### A small, contained greenfield change is a quick fix; unmapped still gets the heavier process _(archived)_

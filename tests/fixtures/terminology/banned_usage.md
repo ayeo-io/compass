@@ -93,3 +93,5 @@ A fitness function is declared by the project, and fitness functions are checked
 Invoke the navigator to assess; the navigators own that stage.
 Convene a roundtable when roles disagree, or several roundtables.
 Intent elicitation draws the outcome out of the person.
+If the scope grew, file a reframe; the retro counts every re-framed issue.
+The stop hook printed COMPASS - REFRAME REMINDER at the end of the session.

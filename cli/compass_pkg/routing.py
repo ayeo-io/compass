@@ -190,7 +190,7 @@ def evaluate_route(readings, policy):
             f"  A Spike ships nothing and must not touch production-critical "
             f"surface - that is its whole safety model (see the spike "
             f"reference doc).\n"
-            f"  Re-frame: either scope a narrower discovery issue that does not "
+            f"  Re-assess: either scope a narrower discovery issue that does not "
             f"touch the risky surface, or set intent=delivery and accept the "
             f"'{final}' route deliberately. The point is that this is a choice "
             f"a human makes, not one the router makes silently."
@@ -611,12 +611,12 @@ def cmd_route_evaluate(args):
                   "The route, phases, gates, ceiling and fired guardrails are "
                   "all identical to what was already on record.")
         if reframed:
-            print(f"  RE-FRAME recorded ({task['reassessments'][-1]['kind']}): "
+            print(f"  RE-ASSESSMENT recorded ({task['reassessments'][-1]['kind']}): "
                   f"{prior['delivery_approach']} -> {result['delivery_approach']}"
                   + (f"  [changed: {', '.join(sorted(changed))}]" if changed else ""))
             if not args.reason:
                 sys.stderr.write(
-                    "compass: re-frame recorded with no reason. Re-run with "
+                    "compass: re-assessment recorded with no reason. Re-run with "
                     "--reason \"...\" or edit manifest.yml's last `reassessments` "
                     "entry - the reason is the calibration signal.\n"
                 )

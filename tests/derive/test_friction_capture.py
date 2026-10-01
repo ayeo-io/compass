@@ -1,7 +1,7 @@
 """Tests for the ship-time friction-capture step (`compass _friction-capture`).
 
 At ship time, a draft `friction:` list is assembled from signals the CLI
-already computes (reframes, reframe-debt) plus an optional human note, and
+already computes (re-assessments, unrecorded re-assessments) plus an optional human note, and
 written into the issue manifest (`TRC-A2`..`TRC-A5`). Capture is mechanism;
 the human note is the only judgement input (ADR-001). It writes the friction
 section and nothing that gates (no follow-up, no gate).
@@ -20,7 +20,7 @@ FRAMEWORK_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 
 def _copy_signals(project):
     """Put the shipped signals.yml into the temp project's governance/ so the
-    reframe-debt scan (scope_bloat_phrases) and threshold load can find it."""
+    unrecorded re-assessments scan (scope_bloat_phrases) and threshold load can find it."""
     gov = project / "governance"
     src = FRAMEWORK_ROOT / "governance" / "signals.yml"
     if src.is_file() and not (gov / "signals.yml").is_file():
@@ -48,8 +48,8 @@ def _capture(run_cli, slug, *extra):
 
 
 def test_reframe_seeds_misroute_friction(run_cli, make_task, project):
-    """A recorded reframe seeds a derived mis-route friction entry whose
-    observation carries the reframe's from_route, to_route and reason (`TRC-A2`)."""
+    """A recorded re-assessment seeds a derived mis-route friction entry whose
+    observation carries the re-assessment's from_route, to_route and reason (`TRC-A2`)."""
     _copy_signals(project)
     task_dir = make_task("ft-reframe", _base_body(
         "ft-reframe",
@@ -71,7 +71,7 @@ def test_reframe_seeds_misroute_friction(run_cli, make_task, project):
 
 
 def test_reframe_debt_seeds_derived_friction(run_cli, make_task, project):
-    """Scope-bloat absorbed without a recorded reframe - reframe-debt - seeds a
+    """Scope-bloat absorbed without a recorded re-assessment - unrecorded re-assessments - seeds a
     derived friction entry (`TRC-A3`)."""
     _copy_signals(project)
     task_dir = make_task("ft-debt", _base_body("ft-debt", reframes=[]))
@@ -115,7 +115,7 @@ def test_human_note_recorded(run_cli, make_task, project):
 
 
 def test_no_friction_lands_unchanged(run_cli, make_task, project):
-    """An issue that hit no friction (no reframes, no debt, no note)
+    """An issue that hit no friction (no re-assessments, no debt, no note)
     records no friction, and capture adds nothing - recording nothing is valid (`TRC-A5`)."""
     _copy_signals(project)
     task_dir = make_task("ft-none", _base_body("ft-none", reframes=[]))

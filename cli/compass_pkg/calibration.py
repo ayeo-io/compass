@@ -63,7 +63,7 @@ def _find_reframe_debt(tasks, work):
     """Return a list of absorbed mis-assessment records.
 
     For each issue, scan its devlog.md for scope_bloat_phrases.  An issue
-    qualifies as 'reframe debt' when:
+    counts as an unrecorded re-assessment when:
       - at least one scope-bloat phrase appears as the start of a devlog line
         (column-0 anchor - same rule as the stop-hook, for consistency), AND
       - manifest.yml's `reassessments` has no entry whose date is >= the date
@@ -89,7 +89,7 @@ def _find_reframe_debt(tasks, work):
         except OSError:
             continue
 
-        # Latest reframe date for this issue
+        # Latest re-assessment date for this issue
         reframes = task.get("reassessments") or []
         reframe_dates = sorted(
             r.get("date", "") for r in reframes if r.get("date")
@@ -118,13 +118,13 @@ def _find_reframe_debt(tasks, work):
                 m = _re.match(r'^(\d{4}-\d{2}-\d{2})', line)
                 if m:
                     line_date = m.group(1)
-                # Suppression: a reframe filed after (or on) the line date
+                # Suppression: a re-assessment filed after (or on) the line date
                 if latest_reframe_date:
                     if not line_date:
                         # No date on the devlog line → can't order; suppress
                         break
                     if latest_reframe_date >= line_date:
-                        break  # reframe filed after or on the bloat line
+                        break  # re-assessment filed after or on the bloat line
                 # Record the debt
                 debts.append({
                     "task": slug,
@@ -260,13 +260,13 @@ def _cmd_calibration_friction(args, tasks):
 
 def derive_friction(slug, task, work):
     """Assemble the `source: derived` friction entries for one issue from signals
-    the CLI already computes - recorded reframes and absorbed reframe-debt.
+    the CLI already computes - recorded re-assessments and unrecorded ones.
 
     A re-assessment records an assessment that misjudged the work.
-    Reframe debt is a misjudgement nobody recorded. Both are friction
+    An unrecorded re-assessment is a misjudgement nobody recorded. Both are friction
     by definition. Pure: it
     reads manifest.yml + devlog (via _find_reframe_debt) and writes nothing. Derived
-    entries carry no `proposed_change` - a reframe does not propose a specific
+    entries carry no `proposed_change` - a re-assessment does not propose a specific
     governance change; it is the recurrence of *human*-proposed changes that the
     aggregator clusters on.
     """
@@ -277,7 +277,7 @@ def derive_friction(slug, task, work):
         fr = rf.get("from_route", "?")
         to = rf.get("to_route", "?")
         reason = (rf.get("reason") or "").strip()
-        obs = f"reframe {fr} -> {to}"
+        obs = f"re-assessment {fr} -> {to}"
         if reason:
             obs += f": {reason}"
         entries.append({
@@ -290,7 +290,7 @@ def derive_friction(slug, task, work):
         entries.append({
             "phase": "frame",
             "category": "mis-route",
-            "observation": ("absorbed scope-bloat without a reframe: "
+            "observation": ("absorbed scope-bloat without a re-assessment: "
                             f"{d['devlog_line']}"),
             "source": "derived",
         })
@@ -609,6 +609,10 @@ def cmd_calibration(args):
             total += 1
             fr, to = rf.get("from_route"), rf.get("to_route")
             transitions[f"{fr} -> {to}"] = transitions.get(f"{fr} -> {to}", 0) + 1
+            # A policy correction records a newer policy, not a misread of
+            # the work, so it says nothing about how assessment sizes work.
+            if rf.get("kind") == "policy-correction":
+                continue
             wf, wt = weights.get(fr), weights.get(to)
             if wf is None or wt is None:
                 # A route with no weight has no direction to count.
@@ -626,7 +630,7 @@ def cmd_calibration(args):
     # the one thing a reader is here for.
     pct_head = round(100 * reframed_tasks / len(tasks))
     if total == 0:
-        _signal = ("no re-frames recorded - either routing is well-calibrated "
+        _signal = ("no re-assessments recorded - either routing is well-calibrated "
                    "or there is not enough history yet")
     elif ups >= 2 and ups > downs * 2:
         _signal = "a lean toward UNDER-sizing (%d up vs %d down)" % (ups, downs)
@@ -638,7 +642,7 @@ def cmd_calibration(args):
     import contextlib as _cl, io as _io
 
     _rep = Report(args, title="compass retro")
-    _rep.summary("compass retro - %d issue(s), %d re-framed (%d%%): %s."
+    _rep.summary("compass retro - %d issue(s), %d re-assessed (%d%%): %s."
                  % (len(tasks), reframed_tasks, pct_head, _signal))
     _rep.data(issues=len(tasks), reframed=reframed_tasks,
               reframe_pct=pct_head, up=ups, down=downs, sideways=sideways,
@@ -656,9 +660,9 @@ def cmd_calibration(args):
               f"complete: {', '.join(no_route)}")
     print()
     pct = round(100 * reframed_tasks / len(tasks))
-    print("Re-framing:")
-    print(f"  issues that re-framed : {reframed_tasks} of {len(tasks)} ({pct}%)")
-    print(f"  total re-frames      : {total}")
+    print("Re-assessments:")
+    print(f"  issues re-assessed   : {reframed_tasks} of {len(tasks)} ({pct}%)")
+    print(f"  total re-assessments : {total}")
     if total:
         print("  direction:")
         print(f"    up   (assessment under-sized) : {ups}")
@@ -676,34 +680,34 @@ def cmd_calibration(args):
     print()
     print("Signal:")
     if total == 0:
-        print("  No re-frames recorded - either routing is well-calibrated, or")
+        print("  No re-assessments recorded - either routing is well-calibrated, or")
         print("  there is not enough history yet. Revisit after more issues.")
     elif ups >= 2 and ups > downs * 2:
-        print(f"  {ups} up-reframes vs {downs} down - a lean toward UNDER-sizing.")
+        print(f"  {ups} up re-assessments vs {downs} down - a lean toward UNDER-sizing.")
         print("  Assess is reading size or risk low. Tune routing-policy.yml")
         print("  `default_shapes`, or sharpen the sizing rubric in the")
         print("  delivery-approach reference docs.")
     elif downs >= 2 and downs > ups * 2:
-        print(f"  {downs} down-reframes vs {ups} up - a lean toward OVER-sizing.")
+        print(f"  {downs} down re-assessments vs {ups} up - a lean toward OVER-sizing.")
         print("  Assessment is reading risk high; the routes may be heavier")
         print("  than the work warrants. Review routing-policy.yml.")
     else:
-        print(f"  {ups} up / {downs} down - roughly balanced, re-frame rate "
+        print(f"  {ups} up / {downs} down - roughly balanced, re-assessment rate "
               f"{pct}%.")
         print("  Routing looks reasonably calibrated; keep watching the trend.")
 
-    # --- Reframe debt ---------------------------------------------------------
-    # Read devlogs for scope-bloat signals that were absorbed without a reframe.
+    # --- Unrecorded re-assessments -------------------------------------------
+    # Read devlogs for scope-bloat signals that were absorbed without a re-assessment.
     # Strictly read-only - no manifest.yml is written here.
     # Patterns loaded from signals.yml at runtime (never hardcoded).
     # Advisory only - this section reports, never gates (Inv-4).
     debts = _find_reframe_debt(tasks, work)
     if debts:
         print()
-        print("Reframe debt - absorbed mis-frames, signal lost:")
+        print("Unrecorded re-assessments - scope grew with no re-assessment:")
         print("  Each entry below is an issue where a scope-bloat signal was")
-        print("  detected in devlog.md but no reframe was filed afterwards.")
-        print("  These are missed calibration signals. File a reframe retroactively")
+        print("  detected in devlog.md but no re-assessment was recorded afterwards.")
+        print("  These are missed calibration signals. Re-assess retroactively")
         print("  with: /compass:assess --reassess --reason \"<why scope grew>\"")
         print()
         for d in debts:

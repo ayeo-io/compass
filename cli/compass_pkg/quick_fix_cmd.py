@@ -226,9 +226,11 @@ def _quick_fix_blockers(readings, task):
         if reading_matches({key: allowed}, readings):
             continue
         name = _WHEN_KEY_MAP.get(key, key)
+        if name == "labels_any":
+            name = "labels"
         blocked.append(name)
         allowed = allowed if isinstance(allowed, list) else [allowed]
-        lines.append(f"blocked: {name} is {readings.get(name, 'not given')}; "
+        lines.append(f"blocked: {name} is {readings.get(name) or 'not given'}; "
                      f"the quick fix needs {' or '.join(str(a) for a in allowed)}")
     if blocked == ["familiarity"] and readings.get("familiarity") == "brownfield-unmapped":
         lines += ["to go ahead as a quick fix: pin the current behaviour with tests,",
@@ -236,8 +238,13 @@ def _quick_fix_blockers(readings, task):
     for rule in task.get("policy_rules_fired") or []:
         if rule.get("id"):
             why = rule.get("rationale") or "no reason recorded"
-            lines += textwrap.wrap(f"{why} ({rule['id']}, {rule.get('kind', 'rule')})",
-                                   width=96)
+            tag = f"({rule['id']}, {rule.get('kind', 'rule')})"
+            wrapped = textwrap.wrap(why, width=96, break_on_hyphens=False)
+            if len(wrapped[-1]) + 1 + len(tag) <= 96:
+                wrapped[-1] += " " + tag
+            else:
+                wrapped.append(tag)
+            lines += wrapped
     return lines
 
 
@@ -294,9 +301,10 @@ def cmd_quick_fix_start(args):
 
     if approach != "quick-fix":
         say(args,
-           f"compass quick-fix start: '{slug}' computes to "
+           f"compass quick-fix start: computes to "
            f"{display_shape(approach)}, heavier than a quick fix.",
-           detail=["the manifest keeps the assessment and the computed approach;",
+           detail=[f"issue: {slug}",
+                   "the manifest keeps the assessment and the computed approach;",
                    "no approach record and no scenario were written"]
            + _quick_fix_blockers(readings, task)
            + ["next: continue with /compass:assess, or, if a rating was wrong,",

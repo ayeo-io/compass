@@ -9680,3 +9680,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `quick-fix-start-drops-labels`
 - **Landed:** 2026-10-01
+
+### Given a 45-character slug and a cross-cutting change, when quick-fix start computes a heavier process, then no line passes 100 characters, nothing is cut, and each rule's id and kind share a line _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-message-edges`
+- **Landed:** 2026-10-01

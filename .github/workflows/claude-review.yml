@@ -1,0 +1,65 @@
+# Automatic review of every pull request by Claude.
+#
+# Review only: the job can read the code and post comments, and its tool
+# list holds no command that commits or pushes. It reviews against
+# CLAUDE.md, the house rules every change in this repository must meet.
+# Each run is billed to the ANTHROPIC_API_KEY repository secret.
+name: claude-review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review]
+
+# A newer push to the same pull request makes the older review pointless.
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    # A draft is not ready for review, and a fork cannot read the secret.
+    if: >-
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 1
+
+      - uses: anthropics/claude-code-action@12dd8d74c712f5f3669365b2369b558c495b1104 # v1.0.238
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            Review this pull request. The branch is checked out in the
+            working directory. Read CLAUDE.md first: its house rules apply
+            to every file, commit message and pull-request body.
+
+            Look for, in this order:
+            1. Defects the change introduces: wrong behaviour, a test that
+               cannot fail, a check that can be bypassed.
+            2. Breaches of CLAUDE.md: an em dash, any line crediting an
+               agent, an idiom, American spelling (except "artifact"), an
+               id or reference a reader cannot resolve.
+            3. Claims in the pull-request body that the diff or the
+               recorded evidence does not support.
+
+            Report only problems this pull request introduces. Say what is
+            wrong, where (file and line), and the smallest fix. Write in
+            plain British English, with no em dash.
+
+            Post findings with
+            mcp__github_inline_comment__create_inline_comment (with
+            confirmed: true) for a specific line, and gh pr comment for
+            one summary that starts with PASS or FAIL. Do not change any
+            file, commit, or push. Do not add any line crediting Claude or
+            any other agent to a comment.
+          claude_args: |
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Read,Grep,Glob"

@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a 45-character slug and a cross-cutting change, when quick-fix start computes a heavier process, then no line passes 100 characters, nothing is cut, and each rule's id and kind share a line
+### Given the review workflow, when it is read, then every action is pinned to a commit, contents are read-only, and no allowed tool can commit or push
 
 - **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `quick-fix-message-edges`
+- **Source issue:** `claude-review-workflow`
 - **Landed:** 2026-10-01
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -9679,4 +9679,11 @@
 - **Scenario id:** `QFL-3`
 - **Intent:** `INT-1`
 - **Source issue:** `quick-fix-start-drops-labels`
+- **Landed:** 2026-10-01
+
+### Given a 45-character slug and a cross-cutting change, when quick-fix start computes a heavier process, then no line passes 100 characters, nothing is cut, and each rule's id and kind share a line _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-message-edges`
 - **Landed:** 2026-10-01

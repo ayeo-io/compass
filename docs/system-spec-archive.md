@@ -9359,3 +9359,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `quick-fix-message-edges`
 - **Landed:** 2026-10-01
+
+### Given the review workflow, when it is read, then every action is pinned to a commit, contents are read-only, and no allowed tool can commit or push _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `claude-review-workflow`
+- **Landed:** 2026-10-01

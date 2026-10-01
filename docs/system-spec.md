@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the review workflow, when it is read, then every action is pinned to a commit, contents are read-only, and no allowed tool can commit or push
+### Given the landed issues, when the spec is derived, then docs/system-spec.md holds only current behaviour under 4,000 words with a pointer, and docs/system-spec-archive.md holds every archived section unchanged
 
 - **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `claude-review-workflow`
+- **Source issue:** `system-spec-split`
 - **Landed:** 2026-10-01
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1336 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1337 superseded scenario(s) are in `docs/system-spec-archive.md`.

@@ -93,6 +93,10 @@ def register(sub, issue_arg):
                     help="goal value, reason optional (default: delivery)")
     st.add_argument("--role", default="engineer", metavar="VALUE[ - REASON]",
                     help="role value, reason optional (default: engineer)")
+    st.add_argument("--labels", default="", metavar="TAG[,TAG...]",
+                    help="domain tags the change touches, comma-separated - "
+                         "auth, payments, personal-data or migrations bring "
+                         "the human sign-off (default: none)")
     st.add_argument("--intent", required=True,
                     help="the intent sentence this quick fix serves (recorded as INT-1)")
     st.add_argument("--scenario", required=True,
@@ -189,6 +193,25 @@ def _delivery_approach_md(slug, approach, dims, rules_fired, intent_text,
     return "\n".join(lines)
 
 
+_LABEL = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
+
+
+def _split_labels(value):
+    """The comma-separated --labels value as a list of domain tags, each
+    lowercase words joined by hyphens. The policy's floors and the sign-off
+    guardrail match tags exactly, so only `auth`, `payments`,
+    `personal-data` and `migrations` bring the sign-off; a well-formed
+    synonym such as `pii` passes this check and brings nothing."""
+    labels = [t.strip() for t in (value or "").split(",") if t.strip()]
+    for tag in labels:
+        if not _LABEL.fullmatch(tag):
+            raise CompassError(
+                f"compass quick-fix start: --labels: {tag!r} is not a label - "
+                f"use lowercase words joined by hyphens, e.g. auth or "
+                f"personal-data.")
+    return labels
+
+
 def _quick_fix_blockers(readings, task):
     """Why the assessment is not a quick fix, read from the policy's own
     quick-fix shape through the evaluator's matching, so a session can act
@@ -228,7 +251,7 @@ def cmd_quick_fix_start(args):
 
     readings = {
         "risk": risk_v, "familiarity": fam_v, "size": size_v,
-        "goal": goal_v, "role": role_v, "labels": [],
+        "goal": goal_v, "role": role_v, "labels": _split_labels(args.labels),
     }
 
     # Before writing anything: the evaluator runs on the values in memory,

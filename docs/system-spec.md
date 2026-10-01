@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the review workflow, when it is read, then it passes anthropic_workspace_id from the ANTHROPIC_WORKSPACE_ID repository variable
+### Given `bin/compass-statusline`, then it does not load the full CLI, and a run takes under 0.25 s (median of 7).
 
-- **Scenario id:** `TRC-001`
+- **Scenario id:** `SL-F`
 - **Intent:** `INT-1`
-- **Source issue:** `claude-review-workspace`
+- **Source issue:** `status-line`
 - **Landed:** 2026-10-01
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1347 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1353 superseded scenario(s) are in `docs/system-spec-archive.md`.

@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Claude Code's status line command for Compass. It runs after each message,
+# so it loads only the status line module, not the full CLI. Point the
+# statusLine setting at this file:
+#   "statusLine": {"type": "command", "command": "<compass>/bin/compass-statusline"}
+# It must never break the session: with no python3, or on any error, it
+# prints nothing and exits 0.
+ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/.." >/dev/null 2>&1 && pwd)"
+command -v python3 >/dev/null 2>&1 || exit 0
+python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); import compass_pkg; from compass_pkg.statusline import main; main()' "$ROOT/cli" 2>/dev/null
+exit 0

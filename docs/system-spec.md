@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given `bin/compass-statusline`, then it does not load the full CLI, and a run takes under 0.25 s (median of 7).
+### Given the review workflow, when it is read, then the review returns its verdict as structured output and a later step fails the job unless the verdict is PASS
 
-- **Scenario id:** `SL-F`
+- **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `status-line`
+- **Source issue:** `review-verdict`
 - **Landed:** 2026-10-01
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1353 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1354 superseded scenario(s) are in `docs/system-spec-archive.md`.

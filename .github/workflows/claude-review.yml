@@ -6,6 +6,13 @@
 # It authenticates by identity federation: GitHub's OIDC token is swapped
 # for a short-lived Anthropic token under a federation rule, so no key is
 # stored. The ids are repository variables, not secrets.
+#
+# `main` needs this job's check instead of a human approval, so the job
+# fails unless Claude returns the verdict PASS. Claude returns it as
+# structured output, a field rather than comment text, and a missing
+# verdict fails too. The action does not review a pull request that
+# changes this file, so such a pull request has no verdict: its check is
+# red and it needs an admin to merge it after reading it.
 name: claude-review
 
 on:
@@ -34,7 +41,8 @@ jobs:
         with:
           fetch-depth: 1
 
-      - uses: anthropics/claude-code-action@12dd8d74c712f5f3669365b2369b558c495b1104 # v1.0.238
+      - id: review
+        uses: anthropics/claude-code-action@12dd8d74c712f5f3669365b2369b558c495b1104 # v1.0.238
         with:
           anthropic_federation_rule_id: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
           anthropic_organization_id: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
@@ -67,5 +75,25 @@ jobs:
             one summary that starts with PASS or FAIL. Do not change any
             file, commit, or push. Do not add any line crediting Claude or
             any other agent to a comment.
+
+            Return the same verdict as your result: PASS when this pull
+            request introduces no defect and no breach of CLAUDE.md,
+            otherwise FAIL. The merge waits on it.
           claude_args: |
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Read,Grep,Glob"
+            --json-schema '{"type":"object","properties":{"verdict":{"type":"string","enum":["PASS","FAIL"]}},"required":["verdict"]}'
+
+      - name: Fail unless the verdict is PASS
+        env:
+          RESULT: ${{ steps.review.outputs.structured_output }}
+        run: |
+          verdict=$(printf '%s' "$RESULT" | python3 -c 'import json, sys
+          try:
+              print(json.load(sys.stdin).get("verdict", ""))
+          except Exception:
+              print("")')
+          if [ "$verdict" != "PASS" ]; then
+            echo "Claude's review verdict is '${verdict:-missing}', not PASS. See its summary comment on the pull request."
+            exit 1
+          fi
+          echo "Claude's review verdict is PASS."

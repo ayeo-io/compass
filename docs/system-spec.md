@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given no `--labels`, then the labels are empty and the result is unchanged; a malformed label is refused before anything is written.
+### Given the review workflow, when it is read, then every action is pinned to a commit, contents are read-only, and no allowed tool can commit or push
 
-- **Scenario id:** `QFL-3`
+- **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `quick-fix-start-drops-labels`
+- **Source issue:** `claude-review-workflow`
 - **Landed:** 2026-10-01
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -9670,6 +9670,13 @@
 ### Given that change, then `compass check` treats the human sign-off guardrail as applicable. _(archived)_
 
 - **Scenario id:** `QFL-2`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-start-drops-labels`
+- **Landed:** 2026-10-01
+
+### Given no `--labels`, then the labels are empty and the result is unchanged; a malformed label is refused before anything is written. _(archived)_
+
+- **Scenario id:** `QFL-3`
 - **Intent:** `INT-1`
 - **Source issue:** `quick-fix-start-drops-labels`
 - **Landed:** 2026-10-01

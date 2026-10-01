@@ -293,6 +293,13 @@ def test_trc_b4_a_reading_command_creates_nothing(tmp_path, verb):
     after = sorted(p.relative_to(tmp_path).as_posix()
                    for p in tmp_path.rglob("*"))
     created = [p for p in after if p not in before]
+    # A failing `compass check` appends one line to `.compass/interruptions.log`,
+    # an append-only count of interruptions outside every issue folder (the
+    # maintainer's choice, issue one-entry-point). It is a count of the run,
+    # not a record the reading produced, so it is the one file `check` may
+    # create; anything else it creates still fails here.
+    if verb == "check":
+        created = [p for p in created if p != ".compass/interruptions.log"]
     assert not created, (
         f"`compass {verb}` created {created} - a reading command writes "
         f"nothing")

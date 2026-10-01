@@ -33,6 +33,8 @@ VERB_DESCRIPTIONS = {
         'Create the next numbered ADR from the template and register it in the index. Numbers are never reused: a superseded decision keeps its number and its file, and the successor gets a new one.',
     'analyze':
         "Read one issue's artifacts against each other and report where they disagree - a delivery-approach record whose stage weights contradict the manifest, a claim with no scenario behind it, a document the approach earned and nobody wrote. Advisory: it blocks nothing, because a disagreement between documents is a question for a person.",
+    'approach summary':
+        "Print the three-line decision view for an issue: the delivery approach with the risk, familiarity and size behind it, the gates it must pass, and the two directories its files go in. /compass:go shows these lines to the person before any code, so the output stays exactly three lines.",
     'approach evaluate':
         "Apply governance/routing-policy.yml to an issue's recorded assessment and write the delivery approach back into its manifest: the per-stage weights, the gate set, the subtask ceiling and every policy rule that fired. This is the determinism boundary - the assessment is judgement, and the same assessment with the same policy always produces the same approach.",
     'bdd extract':

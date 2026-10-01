@@ -678,6 +678,17 @@ def cmd_calibration(args):
         for k, v in sorted(transitions.items(), key=lambda x: -x[1]):
             print(f"    {_display_transition(k)} : {v}")
     print()
+    # Interruptions: each hook block and each failing `compass check`,
+    # appended to .compass/interruptions.log as the work happened.
+    from compass_pkg.interruptions import totals
+    logged = totals(os.path.dirname(os.path.normpath(work)))
+    blocks = sum(c.get("hook_blocks", 0) for c in logged.values())
+    failures = sum(c.get("check_failures", 0) for c in logged.values())
+    counted = len(logged)
+    print("Interruptions:")
+    print(f"  {blocks} hook block(s) and {failures} check failure(s), "
+          f"across {counted} issue(s)")
+    print()
     print("Signal:")
     if total == 0:
         print("  No re-assessments recorded - either routing is well-calibrated, or")

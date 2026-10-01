@@ -342,6 +342,29 @@ def evaluate_route(readings, policy):
     }
 
 
+# --- command: approach summary ------------------------------------------------
+
+def cmd_approach_summary(args):
+    """`compass approach summary`: the three lines a person reads before
+    any code - the approach and the assessment behind it, the gates it must
+    pass, and where the issue's files go. `/compass:go` prints this as its
+    decision view, so it stays exactly three lines."""
+    from compass_pkg.core import docs_dir
+
+    task_dir = resolve_issue_dir(args.task)
+    task, _ = load_manifest(task_dir)
+    slug = os.path.basename(os.path.normpath(task_dir))
+    a = task.get("assessment") or {}
+    readings = ", ".join(f"{k} {a[k]}" for k in ("risk", "familiarity", "size")
+                         if a.get(k))
+    gates = [g.get("id") for g in task.get("gates") or [] if g.get("id")]
+    print(f"Approach: {display_shape(task.get('delivery_approach'))}"
+          + (f" ({readings})" if readings else ""))
+    print("Gates: " + (", ".join(gates) if gates else "none"))
+    print(f"Writes: .compass/work/{slug}/ and {docs_dir(task_dir)}/")
+    return 0
+
+
 # --- command: approach evaluate -----------------------------------------------
 
 def cmd_route_evaluate(args):

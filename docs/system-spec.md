@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a fresh repository, when a session types `/compass:go` with a small change, then it lands a quick fix; measured in an eval run (spend asked for 
+### Given the review workflow, when it is read, then it passes anthropic_workspace_id from the ANTHROPIC_WORKSPACE_ID repository variable
 
-- **Scenario id:** `ONE-6`
+- **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `one-entry-point`
+- **Source issue:** `claude-review-workspace`
 - **Landed:** 2026-10-01
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1346 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1347 superseded scenario(s) are in `docs/system-spec-archive.md`.

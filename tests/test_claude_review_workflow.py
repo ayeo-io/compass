@@ -51,7 +51,8 @@ def test_the_review_authenticates_by_federation_with_no_stored_key():
     inputs = step["with"]
     for key, var in (("anthropic_federation_rule_id", "ANTHROPIC_FEDERATION_RULE_ID"),
                      ("anthropic_organization_id", "ANTHROPIC_ORGANIZATION_ID"),
-                     ("anthropic_service_account_id", "ANTHROPIC_SERVICE_ACCOUNT_ID")):
+                     ("anthropic_service_account_id", "ANTHROPIC_SERVICE_ACCOUNT_ID"),
+                     ("anthropic_workspace_id", "ANTHROPIC_WORKSPACE_ID")):
         assert inputs.get(key) == "${{ vars." + var + " }}", (key, inputs.get(key))
     assert "anthropic_api_key" not in inputs and "claude_code_oauth_token" not in inputs
     assert _job()["permissions"].get("id-token") == "write"

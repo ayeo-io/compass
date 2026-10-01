@@ -82,7 +82,7 @@ def test_trc_1_a_recorded_reassessment_still_lints_clean(tmp_path):
     again = _run(project, "approach", "evaluate", "--issue", "reassessed",
                  "--write", "--reason", "scope grew")
     assert again.returncode == 0, again.stdout + again.stderr
-    assert "RE-FRAME recorded" in (again.stdout + again.stderr), (
+    assert "RE-ASSESSMENT recorded" in (again.stdout + again.stderr), (
         "the evaluator did not record a re-assessment, so this proves nothing"
     )
 

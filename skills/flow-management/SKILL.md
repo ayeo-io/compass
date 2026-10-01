@@ -107,7 +107,7 @@ the natural fit). Keep it short enough to read in two minutes.
 - {{issue-slug}} - {{outstanding hotfix follow-up | unbacked claim | de-scoped artifact}}
 
 ## Calibration
-- {{`compass retro` signal - re-frame rate, lean toward over- or
+- {{`compass retro` signal - re-assessment rate, lean toward over- or
   under-sizing, or "balanced" - or "not enough history yet"}}
 
 ## Next up

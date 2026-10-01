@@ -64,7 +64,7 @@ def _make_task(project: Path, slug: str, *,
     lines = devlog_lines or []
     (task_dir / "devlog.md").write_text("\n".join(lines) + "\n")
 
-    # manifest.yml - needed by the hook's reframes check
+    # manifest.yml - needed by the hook's re-assessments check
     body: dict = {
         "task": slug,
         "created": "2026-05-20",
@@ -119,11 +119,11 @@ def test_nudge_on_bloat(tmp_path):
     )
     result = _run_hook(project)
     assert result.returncode == 0, f"hook must exit 0\n{result.stderr}"
-    assert "reframe" in result.stderr.lower(), (
-        "Expected a reframe nudge in stderr, got:\n" + result.stderr
+    assert "re-assess" in result.stderr.lower(), (
+        "Expected a re-assessment nudge in stderr, got:\n" + result.stderr
     )
     assert "/compass:assess --reassess" in result.stderr, (
-        "Expected the exact reframe command in stderr"
+        "Expected the exact re-assessment command in stderr"
     )
 
 
@@ -146,8 +146,8 @@ def test_silent_on_clean(tmp_path):
     result = _run_hook(project)
     assert result.returncode == 0, result.stderr
     # No prompt expected
-    assert "reframe" not in result.stderr.lower(), (
-        "Expected no reframe nudge for a clean devlog, got:\n" + result.stderr
+    assert "re-assess" not in result.stderr.lower(), (
+        "Expected no re-assessment nudge for a clean devlog, got:\n" + result.stderr
     )
 
 
@@ -164,7 +164,7 @@ def test_silent_when_reframed(tmp_path):
         "reframed-task",
         devlog_lines=[
             "2026-05-19: more files than Plan estimated",
-            "2026-05-20: Filed reframe, all good",
+            "2026-05-20: Filed re-assessment, all good",
         ],
         reframes=[
             {
@@ -177,8 +177,8 @@ def test_silent_when_reframed(tmp_path):
     )
     result = _run_hook(project)
     assert result.returncode == 0, result.stderr
-    assert "reframe" not in result.stderr.lower(), (
-        "Expected no nudge when reframe is already filed:\n" + result.stderr
+    assert "re-assess" not in result.stderr.lower(), (
+        "Expected no nudge when re-assessment is already filed:\n" + result.stderr
     )
 
 
@@ -204,7 +204,7 @@ def test_no_false_positive_in_quoted_context(tmp_path):
     )
     result = _run_hook(project)
     assert result.returncode == 0, result.stderr
-    assert "reframe" not in result.stderr.lower(), (
+    assert "re-assess" not in result.stderr.lower(), (
         "False positive: hook fired on quoted/indented context:\n" + result.stderr
     )
 
@@ -245,6 +245,6 @@ def test_hook_reads_signals_at_runtime(tmp_path):
     result = _run_hook(project)
     assert result.returncode == 0, result.stderr
     # The hook should fire because the custom phrase is present
-    assert "reframe" in result.stderr.lower(), (
+    assert "re-assess" in result.stderr.lower(), (
         "Hook should have fired on the custom phrase:\n" + result.stderr
     )

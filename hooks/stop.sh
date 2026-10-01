@@ -341,16 +341,16 @@ PYEOF
     {
       echo ""
       echo "================================================================"
-      echo " COMPASS - REFRAME REMINDER"
+      echo " COMPASS - RE-ASSESSMENT REMINDER"
       echo "================================================================"
       echo "  The following scope-bloat signals were found in devlog.md"
-      echo "  but no reframe has been filed after them:"
+      echo "  but no re-assessment has been recorded after them:"
       echo ""
       for n in "${nudges[@]}"; do
         echo "  ! $n"
       done
       echo ""
-      echo "  If the scope grew during Build, file a reframe now:"
+      echo "  If the scope grew during Build, re-assess now:"
       echo "    /compass:assess --reassess --reason \"<what changed and why>\""
       echo ""
       echo "  This preserves the calibration signal (compass retro)."

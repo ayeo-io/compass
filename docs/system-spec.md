@@ -9688,6 +9688,13 @@
 - **Source issue:** `quick-fix-message-edges`
 - **Landed:** 2026-10-01
 
+### Given the review workflow, when it is read, then every action is pinned to a commit, contents are read-only, and no allowed tool can commit or push _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `claude-review-workflow`
+- **Landed:** 2026-10-01
+
 ### Given a hidden test run that skipped a test and exited 1, when the harness corrects its counts, then it leaves them alone, and corrects only a collection error that exited 2 _(archived)_
 
 - **Scenario id:** `TRC-001`

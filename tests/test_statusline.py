@@ -208,13 +208,22 @@ def test_the_shim_is_fast_enough(repo):
     assert times[len(times) // 2] < 0.25, times
 
 
-def test_the_session_contract_is_unchanged():
+def test_the_session_contract_is_unchanged(tmp_path):
     """The status line costs no model context: nothing the session start
-    injects mentions it."""
-    for name in ("compass-contract.md", "hooks/session-start.sh"):
-        p = ROOT / name
-        if p.is_file():
-            assert "statusline" not in p.read_text(encoding="utf-8").lower(), name
+    injects mentions it. The hook writes the status line launcher (#247), so
+    its source names the status line; what reaches the model must not."""
+    assert "statusline" not in (ROOT / "compass-contract.md").read_text(
+        encoding="utf-8").lower()
+    proj = tmp_path / "proj"
+    (proj / ".compass" / "work").mkdir(parents=True)
+    subprocess.run(["git", "init", "-q"], cwd=proj, check=True)
+    env = {k: v for k, v in os.environ.items() if k != "CLAUDE_PROJECT_DIR"}
+    env["CLAUDE_PLUGIN_DATA"] = str(tmp_path / "data")
+    r = subprocess.run(["bash", str(ROOT / "hooks" / "session-start.sh")], input="{}",
+                       cwd=proj, env=env, capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0
+    assert "Compass operating contract" in r.stdout
+    assert "statusline" not in (r.stdout + r.stderr).lower()
 
 
 def test_a_malformed_gate_entry_counts_towards_the_total(repo):

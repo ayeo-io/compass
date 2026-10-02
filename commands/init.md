@@ -35,7 +35,8 @@ it is exempt from assessment.
 1. **Check for an existing install.** If a project `governance/` directory
    or `.compass/config.yml` already exists, stop and report what is
    present. Do not overwrite live governance; offer to show a diff against
-   the shipped defaults instead.
+   the shipped defaults instead. Then go on to the status line step below,
+   which runs either way.
 
 2. **Copy `governance/` into the project.** Place the shipped `governance/`
    files named here at the project root, and no others: the Compass
@@ -95,6 +96,23 @@ it is exempt from assessment.
    command: `/compass:assess` for an engineer, or a role entry point -
    `/compass:intent` (product owner/manager), `/compass:position` (product
    marketer), or `/compass:design` (designer).
+
+## The status line, even when step 1 stops
+
+Run this whether or not step 1 stopped for an existing install: a project
+that adopted governance long ago still needs its status line.
+
+1. Ask which settings file the person wants: their own `settings.json` in
+   `~/.claude`, or the project's `settings.json` in its `.claude` folder.
+2. Run `python3 "${CLAUDE_PLUGIN_ROOT}/scripts/statusline-setup.py" --settings <that file>`.
+   It finds the launcher this plugin's session-start hook keeps under
+   `~/.claude/plugins/data/`, prints the change it would make, and writes
+   nothing.
+3. Show the person that output. If it is a change, ask: "Add the Compass
+   status line to this file?" Only on a yes, run the same command again with
+   `--apply`. A person approves a change to their settings (guardrail 5).
+4. If it says the file already has a status line that is not Compass's,
+   pass on its advice for combining the two, and change nothing.
 
 ## Gate
 

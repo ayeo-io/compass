@@ -420,15 +420,18 @@ settings file, either your own or the project's:
 {
   "statusLine": {
     "type": "command",
-    "command": "<compass plugin>/bin/compass-statusline"
+    "command": "~/.claude/plugins/data/compass-compass/compass-statusline"
   }
 }
 ```
 
-`<compass plugin>` is where the plugin is installed, normally
-`~/.claude/plugins/cache/compass/compass/<version>`. The path names a
-version, and an old version stays on disk after an upgrade, so a path left
-unchanged keeps running the old code: update it when you upgrade. Outside a
+That file is a launcher the session-start hook keeps in the plugin's data
+folder, which Claude Code keeps across plugin updates. Each session start
+points it at the installed version, so the setting never needs editing. A
+plugin loaded with `--plugin-dir` keeps its launcher under
+`~/.claude/plugins/data/compass-inline/` instead. `/compass:init` offers to
+add the entry for you: it shows the change and writes it only when you say
+yes. Outside a
 Compass project, the line is empty. The line fits the terminal width that
 Claude Code passes in `COLUMNS`, and assumes 80 columns when it is not set.
 

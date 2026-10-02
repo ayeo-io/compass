@@ -53,7 +53,7 @@ The Claude Code adapter registers four local hooks:
 | `pre-tool.sh` | Applies approach-aware red-before-green checks before edits. | Yes |
 | `post-tool.sh` | Updates the issue history after relevant actions. | No |
 | `stop.sh` | Warns about unfinished or inconsistent issue state. | No |
-| `session-start.sh` | Loads the operating contract into the session. | No |
+| `session-start.sh` | Loads the operating contract into the session. In every repository, it also keeps the status line launcher, `compass-statusline`, in the plugin's own data folder under `~/.claude/plugins/data/`; it writes nothing else and prints nothing for it. | No |
 
 They run locally with the same permissions as your user. The shipped hooks do
 not need network access, but check the installed revision rather than

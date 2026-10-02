@@ -162,20 +162,22 @@ def _stages_on_record(task: dict, task_dir: str | None) -> set:
     """The stages the records on disk show as done.
 
     A stage is done when its own record exists, or when a later stage's
-    does. The second rule covers stages that leave no record of their own:
-    refine run light writes nothing, and a builder can start without a
-    design registered. `compass next` cannot run without the approach
-    record, so assess is always done. Ship's record, `status: landed`, is
-    handled by the callers before they ask for a stage.
+    does. The second rule covers a record that was never written, such as
+    a builder starting without a design registered. `compass next` cannot
+    run without the approach record, so assess is always done. Ship's
+    record, `status: landed`, is handled by the callers before they ask for
+    a stage.
     """
     own = {
         "assess": True,
         # A quick fix earns no criteria document; its scenarios are define's
-        # record. Registered criteria count under refine, which follows.
-        "define": bool(_entries(task, "scenarios")),
-        # Refine run light or collapsed writes nothing; the criteria it reviews do.
-        "refine": (_registered(task, "requirements-review")
-                   or _registered(task, "acceptance-criteria")),
+        # record.
+        "define": (_registered(task, "acceptance-criteria")
+                   or bool(_entries(task, "scenarios"))),
+        # Wherever refine runs, light included, it registers the review
+        # (commands/refine.md). Where it is collapsed or skipped it is not
+        # a current stage at all.
+        "refine": _registered(task, "requirements-review"),
         "plan": _registered(task, "technical-design"),
         "breakdown": bool(_entries(task, "subtasks")) or _registered(task, "distribution-map"),
         "implement": _every_scenario_tested(task),

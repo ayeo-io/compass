@@ -43,7 +43,8 @@ def _env(**extra):
     return env
 
 
-def _issue(root: Path, route: str, *, scenarios=True, criteria=None, design=False,
+def _issue(root: Path, route: str, *, scenarios=True, criteria=None, review=False,
+           design=False,
            dist_map=False, subtask=False, red=False, green=(), narrative=(),
            gates_pass=False, landed=False, current_phase=None, raw=None) -> Path:
     """A project at `root` whose one issue carries the named records,
@@ -68,6 +69,9 @@ def _issue(root: Path, route: str, *, scenarios=True, criteria=None, design=Fals
     if criteria:
         arts.append({"id": "ART-AC", "kind": "acceptance-criteria", "status": criteria,
                      "path": "docs/ac.md"})
+    if review:
+        arts.append({"id": "ART-RR", "kind": "requirements-review", "status": "draft",
+                     "path": "docs/rr.md"})
     if design:
         arts.append({"id": "ART-TD", "kind": "technical-design", "status": "draft",
                      "path": "docs/td.md"})
@@ -131,7 +135,11 @@ CASES = {
     "feature, criteria superseded": (dict(route="feature", scenarios=False,
                                           criteria="superseded"), "Define"),
     # NS-B
-    "feature, criteria draft": (dict(route="feature", criteria="draft"), "Plan"),
+    "feature, criteria draft": (dict(route="feature", criteria="draft"), "Refine"),
+    "feature, criteria without scenarios": (dict(route="feature", scenarios=False,
+                                                 criteria="draft"), "Refine"),
+    "feature, requirements review draft": (dict(route="feature", criteria="draft",
+                                                review=True), "Plan"),
     "quick-fix, scenarios only": (dict(route="quick-fix"), "Implement"),
     # NS-C
     "feature, design draft": (dict(route="feature", criteria="draft", design=True), "Breakdown"),

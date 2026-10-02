@@ -99,3 +99,81 @@ def test_the_job_fails_unless_the_verdict_is_pass(result, passes):
     r = subprocess.run(["bash", "-c", check["run"]], env={**os.environ, "RESULT": result},
                        capture_output=True, text=True)
     assert (r.returncode == 0) == passes, (result, r.returncode, r.stdout, r.stderr)
+
+
+# The review reads the review rules (#264). The rules and the CLI that
+# prints them come from the base branch, so a pull request cannot change
+# what it is reviewed against.
+
+def _step(step_id):
+    return next((s for s in _job()["steps"] if s.get("id") == step_id), None)
+
+
+def test_a_rules_step_runs_before_the_review():
+    ids = [s.get("id") for s in _job()["steps"]]
+    assert "rules" in ids, ids
+    assert ids.index("rules") < ids.index("review"), ids
+
+
+def test_the_rules_and_the_cli_come_from_the_base_branch():
+    run = _step("rules")["run"]
+    assert 'git fetch --depth=1 origin "$BASE_REF"' in run, run
+    assert "git worktree add" in run and "FETCH_HEAD" in run, run
+    assert re.search(r'"\$BASE"/cli/compass policy review-rules', run), run
+    assert '--rules "$BASE/governance/review-rules.yml"' in run, run
+    assert "gh api --paginate" in run and "/pulls/$PR_NUMBER/files" in run, run
+
+
+def test_the_rules_step_takes_pull_request_values_through_env_only():
+    """A value the pull request controls never lands in the script text."""
+    step = _step("rules")
+    assert "${{" not in step["run"], step["run"]
+    assert step["env"]["BASE_REF"] == "${{ github.base_ref }}"
+    assert step["env"]["PR_NUMBER"] == "${{ github.event.pull_request.number }}"
+
+
+def test_the_prompt_holds_the_rules_and_asks_for_rr_ids():
+    prompt = _step("review")["with"]["prompt"]
+    assert "${{ steps.rules.outputs.rules }}" in prompt, prompt
+    assert "RR-" in prompt and "Do not flag" in prompt, prompt
+
+
+def test_one_rules_file_and_no_swallowed_failure():
+    """Only the base branch's rules file is read, and a failed call is not
+    hidden: argparse keeps the last --rules, and `|| true` would turn a
+    failure into an empty rule list."""
+    run = _step("rules")["run"]
+    assert run.count("--rules") == 1, run
+    assert "|| true" not in run and "|| :" not in run, run
+    assert "< <(" not in run, "a process substitution hides its exit status"
+
+
+def test_the_output_delimiter_is_random():
+    run = _step("rules")["run"]
+    assert re.search(r'delim="RULES_\$\(openssl rand -hex 16\)"', run), run
+    assert 'echo "rules<<$delim"' in run, run
+
+
+def test_a_failed_file_listing_fails_the_step(tmp_path):
+    """A pull request over GitHub's diff size limit makes the listing fail.
+    The step must then fail, not review with no rules."""
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    for name, body in (("git", "exit 0"), ("gh", "echo 'HTTP 406' >&2; exit 1"),
+                       ("python3", "echo SHOULD-NOT-RUN; exit 0")):
+        stub = bin_dir / name
+        stub.write_text("#!/bin/sh\n" + body + "\n")
+        stub.chmod(0o755)
+    out = tmp_path / "out.txt"
+    env = {"PATH": f"{bin_dir}:/usr/bin:/bin", "BASE_REF": "main", "PR_NUMBER": "1",
+           "GITHUB_REPOSITORY": "o/r", "RUNNER_TEMP": str(tmp_path),
+           "GITHUB_OUTPUT": str(out), "GH_TOKEN": "x"}
+    r = subprocess.run(["bash", "-e", "-o", "pipefail", "-c", _step("rules")["run"]],
+                       env=env, capture_output=True, text=True)
+    assert r.returncode != 0, r.stdout + r.stderr
+    assert not out.exists() or "rules<<" not in out.read_text()
+
+
+def test_the_verdict_counts_a_blocking_rule():
+    prompt = _step("review")["with"]["prompt"]
+    assert re.search(r"blocking review rule", prompt), prompt

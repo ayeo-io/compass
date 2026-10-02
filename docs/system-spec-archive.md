@@ -9800,3 +9800,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `review-rules-as-data`
 - **Landed:** 2026-10-02
+
+### Given the verb surface, then policy review-rules is in verb_help.py, the README's CLI block and compass policy --help. The top-level verb set does not change. _(archived)_
+
+- **Scenario id:** `RV-F`
+- **Intent:** `INT-1`
+- **Source issue:** `review-rules-as-data`
+- **Landed:** 2026-10-02

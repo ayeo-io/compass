@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the verb surface, then policy review-rules is in verb_help.py, the README's CLI block and compass policy --help. The top-level verb set does not change.
+### Given a pull request, then the CI review's prompt holds the review rules that match its changed files, taken with the CLI from the base branch
 
-- **Scenario id:** `RV-F`
+- **Scenario id:** `RB-A`
 - **Intent:** `INT-1`
-- **Source issue:** `review-rules-as-data`
+- **Source issue:** `ci-review-reads-review-rules`
 - **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1399 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1400 superseded scenario(s) are in `docs/system-spec-archive.md`.

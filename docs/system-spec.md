@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the verb surface, then scenario descope is in verb_help.py, the README's CLI block and compass scenario --help. The top-level verb set does not change.
+### Given a scenario title naming a missing file path or an eval scenario or behaviour id, then compass scenario add and quick-fix start refuse it before it can reach the living spec
 
-- **Scenario id:** `FM-D`
+- **Scenario id:** `TC-A`
 - **Intent:** `INT-1`
-- **Source issue:** `failure-modes-in-define`
+- **Source issue:** `titles-checked-before-ship`
 - **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1430 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1431 superseded scenario(s) are in `docs/system-spec-archive.md`.

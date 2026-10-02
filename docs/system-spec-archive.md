@@ -10017,3 +10017,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `failure-modes-in-define`
 - **Landed:** 2026-10-02
+
+### Given the verb surface, then scenario descope is in verb_help.py, the README's CLI block and compass scenario --help. The top-level verb set does not change. _(archived)_
+
+- **Scenario id:** `FM-D`
+- **Intent:** `INT-1`
+- **Source issue:** `failure-modes-in-define`
+- **Landed:** 2026-10-02

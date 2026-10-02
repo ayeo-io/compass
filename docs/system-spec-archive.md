@@ -9990,6 +9990,13 @@
 - **Source issue:** `project-lessons`
 - **Landed:** 2026-10-02
 
+### Given a pending lesson proposal, then compass lesson decline removes it and records its text, so compass retro --lessons does not propose it again _(archived)_
+
+- **Scenario id:** `LD-A`
+- **Intent:** `INT-1`
+- **Source issue:** `lesson-proposal-decline`
+- **Landed:** 2026-10-02
+
 ### Given commands/define.md and skills/bdd-specification/SKILL.md, then each asks the author which input classes and failure modes the brief implies that no scenario covers, says each answer becomes a scenario or a recorded de-scope, and gives two worked examples. _(archived)_
 
 - **Scenario id:** `FM-A`

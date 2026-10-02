@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given docs/releasing.md, then it says how to install pytest-xdist, and names COMPASS_FULL_ARCHIVE=1 as the full-archive check to run before a release.
+### Given the release intends 5.2.0, When the version tests run, Then every version location reads 5.2.0
 
-- **Scenario id:** `FS-G`
+- **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `faster-suite-and-release`
+- **Source issue:** `release-5-2-0`
 - **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1382 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1383 superseded scenario(s) are in `docs/system-spec-archive.md`.

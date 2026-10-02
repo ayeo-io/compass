@@ -9681,3 +9681,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `faster-suite-and-release`
 - **Landed:** 2026-10-02
+
+### Given docs/releasing.md, then it says how to install pytest-xdist, and names COMPASS_FULL_ARCHIVE=1 as the full-archive check to run before a release. _(archived)_
+
+- **Scenario id:** `FS-G`
+- **Intent:** `INT-1`
+- **Source issue:** `faster-suite-and-release`
+- **Landed:** 2026-10-02

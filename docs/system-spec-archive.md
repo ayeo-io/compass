@@ -9688,3 +9688,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `faster-suite-and-release`
 - **Landed:** 2026-10-02
+
+### Given the release intends 5.2.0, When the version tests run, Then every version location reads 5.2.0 _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `release-5-2-0`
+- **Landed:** 2026-10-02

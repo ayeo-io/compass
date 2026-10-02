@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given queued issues, then compass flow --digest lists each with its age and flags those older than the threshold that carry a recommendation heading or a label a routing rule names, and the release guide asks which queued issues touch the release
+### Given a committed living spec that names an issue missing from the local archive, then deriving it refuses and names the issue instead of dropping its scenarios
 
-- **Scenario id:** `QA-A`
+- **Scenario id:** `SK-A`
 - **Intent:** `INT-1`
-- **Source issue:** `queue-ageing-signal`
+- **Source issue:** `spec-derive-keeps-missing-issues`
 - **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1432 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1433 superseded scenario(s) are in `docs/system-spec-archive.md`.

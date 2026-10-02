@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a manifest whose gates is not a list, whose stages is not a mapping, or whose stage weight is not a string, When compass next runs, Then it prints a stage and exits 0 with nothing on stderr, and the status line prints its line
+### Given a manifest with one cleared gate and one malformed gate entry, When the status line runs, Then it shows gates 1/2
 
 - **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `next-crashes-on-mistyped-manifest`
+- **Source issue:** `status-line-gate-count-and-width`
 - **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1372 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1373 superseded scenario(s) are in `docs/system-spec-archive.md`.

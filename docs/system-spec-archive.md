@@ -9611,3 +9611,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `next-never-leaves-assess`
 - **Landed:** 2026-10-02
+
+### Given a manifest whose gates is not a list, whose stages is not a mapping, or whose stage weight is not a string, When compass next runs, Then it prints a stage and exits 0 with nothing on stderr, and the status line prints its line _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `next-crashes-on-mistyped-manifest`
+- **Landed:** 2026-10-02

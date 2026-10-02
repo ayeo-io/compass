@@ -9821,3 +9821,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `rules-step-file-cap`
 - **Landed:** 2026-10-02
+
+### Given the rules step's file count does not match, then its message names the cause it can tell apart: a missing count, the 3,000-file limit, or a count from before a newer push _(archived)_
+
+- **Scenario id:** `RD-A`
+- **Intent:** `INT-1`
+- **Source issue:** `rules-step-count-message`
+- **Landed:** 2026-10-02

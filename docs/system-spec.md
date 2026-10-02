@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the rules step's file count does not match, then its message names the cause it can tell apart: a missing count, the 3,000-file limit, or a count from before a newer push
+### Given an ADR index with sections after its table, then compass adr new puts the new row, as a link, right after the last ADR row
 
-- **Scenario id:** `RD-A`
+- **Scenario id:** `AN-A`
 - **Intent:** `INT-1`
-- **Source issue:** `rules-step-count-message`
+- **Source issue:** `adr-new-row-in-the-table`
 - **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1402 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1403 superseded scenario(s) are in `docs/system-spec-archive.md`.

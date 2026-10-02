@@ -9982,3 +9982,31 @@
 - **Intent:** `INT-1`
 - **Source issue:** `project-lessons`
 - **Landed:** 2026-10-02
+
+### Given the verb surface, then lesson is in the CLI baseline, the README's CLI block, verb_help.py and each frozen verb list, and ADR-029 records the decision. The 900-word resident test passes unchanged. _(archived)_
+
+- **Scenario id:** `PL-I`
+- **Intent:** `INT-1`
+- **Source issue:** `project-lessons`
+- **Landed:** 2026-10-02
+
+### Given commands/define.md and skills/bdd-specification/SKILL.md, then each asks the author which input classes and failure modes the brief implies that no scenario covers, says each answer becomes a scenario or a recorded de-scope, and gives two worked examples. _(archived)_
+
+- **Scenario id:** `FM-A`
+- **Intent:** `INT-1`
+- **Source issue:** `failure-modes-in-define`
+- **Landed:** 2026-10-02
+
+### Given compass scenario descope "<mode>" --reason "<why>", then it appends the mode, the reason and the date to the manifest's failure_modes_descoped, and the manifest still passes compass issue lint. It refuses an empty mode or reason, and a mode already recorded. _(archived)_
+
+- **Scenario id:** `FM-B`
+- **Intent:** `INT-1`
+- **Source issue:** `failure-modes-in-define`
+- **Landed:** 2026-10-02
+
+### Given an issue with de-scoped failure modes, then agents/verifier.md tells the verifier to list each in the verification report, and templates/verification-report.md has a section for them. _(archived)_
+
+- **Scenario id:** `FM-C`
+- **Intent:** `INT-1`
+- **Source issue:** `failure-modes-in-define`
+- **Landed:** 2026-10-02

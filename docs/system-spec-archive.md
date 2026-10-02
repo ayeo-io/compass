@@ -9927,7 +9927,7 @@
 - **Source issue:** `diagnose-output-edges`
 - **Landed:** 2026-10-02
 
-### Given compass lesson add "<rule>", then it writes a lesson to .compass/lessons.yml with added_by from git config compass.decidedBy, else user.name; there is no option to set it. An exact repeat is refused; a rule that contains an existing one replaces it and records superseded. _(archived)_
+### Given compass lesson add "<rule>", then it writes a lesson to the lessons file with added_by from git config compass.decidedBy, else user.name; there is no option to set it. An exact repeat is refused; a rule that contains an existing one replaces it and records superseded. _(archived)_
 
 - **Scenario id:** `PL-A`
 - **Intent:** `INT-1`
@@ -9941,7 +9941,7 @@
 - **Source issue:** `project-lessons`
 - **Landed:** 2026-10-02
 
-### Given compass lesson propose "<rule>", then it writes to .compass/lessons-pending.yml only, and compass lesson accept <id> moves it to lessons.yml. _(archived)_
+### Given compass lesson propose "<rule>", then it writes to the pending lessons file only, and compass lesson accept <id> moves it to lessons.yml. _(archived)_
 
 - **Scenario id:** `PL-C`
 - **Intent:** `INT-1`

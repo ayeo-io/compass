@@ -9870,3 +9870,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `python-dependency-said-early`
 - **Landed:** 2026-10-02
+
+### Given an ADR index with sections after its table, then compass adr new puts the new row, as a link, right after the last ADR row _(archived)_
+
+- **Scenario id:** `AN-A`
+- **Intent:** `INT-1`
+- **Source issue:** `adr-new-row-in-the-table`
+- **Landed:** 2026-10-02

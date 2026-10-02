@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given an ADR index with sections after its table, then compass adr new puts the new row, as a link, right after the last ADR row
+### Given schemas/adapter-contract.yml, then every capability in docs/portability.md has a row, every adapter has a full, partial or none cell with a path, an adapter directory without a column fails, and a new negative-identity check in cli/ or hooks/ fails the scan
 
-- **Scenario id:** `AN-A`
+- **Scenario id:** `AC-A`
 - **Intent:** `INT-1`
-- **Source issue:** `adr-new-row-in-the-table`
+- **Source issue:** `adapter-contract-gate`
 - **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1409 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1410 superseded scenario(s) are in `docs/system-spec-archive.md`.

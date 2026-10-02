@@ -1,9 +1,9 @@
-"""`compass next` reports the stage an issue has reached (spec D56).
+"""`compass next` reports the stage an issue has reached: the
+next-never-leaves-assess issue, scenarios NS-A to NS-I in
+`docs/system-spec.md`.
 
-It used to read a `current_phase` manifest key that nothing writes, and fell
-back to the first stage of the route, so every issue in progress read
-"Assess". The stage is now derived from the records on disk. The status line
-and the rail take it from the same place, so all three must agree.
+The stage is derived from the records on disk. The status line and the rail
+take it from the same place, so all three must agree.
 
 Each test builds a project with `compass approach evaluate`, then adds the
 records a stage leaves, as the commands write them: documents registered as
@@ -73,7 +73,12 @@ def _issue(root: Path, route: str, *, scenarios=True, criteria=None, design=Fals
     if dist_map:
         arts.append({"id": "ART-DM", "kind": "distribution-map", "status": "omitted",
                      "reason": "one subtask"})
-    m["artifacts"] = arts
+    # Merged by kind into the list `approach evaluate` seeded, which holds a
+    # `draft` entry with no path for every document the route earns. Those
+    # placeholders must not count as registered.
+    by_kind = {a["kind"]: a for a in arts}
+    m["artifacts"] = [by_kind.pop(a.get("kind"), a) for a in (m.get("artifacts") or [])]
+    m["artifacts"] += list(by_kind.values())
     if subtask:
         m["subtasks"] = [{"id": "subtask-1", "status": "dispatched"}]
     if red:

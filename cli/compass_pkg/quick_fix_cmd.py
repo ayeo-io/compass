@@ -382,9 +382,14 @@ _GENERATED_DIRS = {"__pycache__", ".pytest_cache", ".mypy_cache",
 
 
 def _is_generated(path):
+    """True for caches, and for the living spec files: ship-commit derives
+    those at landing, after the green, so tracing them would always name an
+    older version than the one that lands."""
+    from compass_pkg.flow import LIVING_SPEC_FILES
     parts = path.split("/")
     return (any(p in _GENERATED_DIRS for p in parts[:-1])
-            or path.endswith((".pyc", ".pyo")))
+            or path.endswith((".pyc", ".pyo"))
+            or path in LIVING_SPEC_FILES)
 
 
 def _git_changed_paths(root):

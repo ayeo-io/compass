@@ -194,6 +194,11 @@ def cmd_flow(args):
 #             silent overwrite on next ship.
 #   brand-new project with no landed issues produces a stub file.
 
+# The living spec and its archive, project-relative. Only the derivation
+# writes them, and ship-commit commits them at landing, so they are never
+# one issue's change to trace.
+LIVING_SPEC_FILES = ("docs/system-spec.md", "docs/system-spec-archive.md")
+
 _DERIVED_HEADER = (
     "<!-- DERIVED FILE - do not hand-edit; `compass _derive-system-spec` "
     "rebuilds it from the scenarios in each landed issue's manifest.yml - "
@@ -396,12 +401,11 @@ def derive_system_spec(project_root: str) -> None:
     archive_content = re.sub(r"[ \t]*\u2014[ \t]*", " - ", archive_content)
 
     # ---- 4. Write atomically -----------------------------------------------
-    out_dir = os.path.join(project_root, "docs")
-    os.makedirs(out_dir, exist_ok=True)
-    out_path = os.path.join(out_dir, "system-spec.md")
+    out_path, archive_path = (os.path.join(project_root, *rel.split("/"))
+                              for rel in LIVING_SPEC_FILES)
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as fh:
         fh.write(content)
-    archive_path = os.path.join(out_dir, "system-spec-archive.md")
     with open(archive_path, "w", encoding="utf-8") as fh:
         fh.write(archive_content)
 

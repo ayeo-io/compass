@@ -140,6 +140,7 @@ EXPECTED_SUBCOMMANDS = {
     "quick-fix",
     # decisions-ledger (ADR-027): a group, record|list|show|check.
     "decision",
+    "lesson",  # project-lessons (ADR-029)
 }
 EXPECTED_READING_KEYS = {
     "risk", "familiarity", "size", "goal", "urgency", "role",

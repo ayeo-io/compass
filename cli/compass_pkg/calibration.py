@@ -550,6 +550,9 @@ def _display_transition(key):
 def cmd_calibration(args):
     if getattr(args, "impact", False):
         return _cmd_calibration_impact(args)
+    if getattr(args, "lessons", False):
+        from compass_pkg.lessons import cmd_retro_lessons
+        return cmd_retro_lessons(args)
 
     compass_dir = find_compass_dir()
     work = os.path.join(compass_dir, "work")

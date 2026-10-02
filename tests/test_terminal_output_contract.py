@@ -972,6 +972,11 @@ _TAIL_EXEMPT = {
     # hooks read it in a command substitution, and a hand-off tail in the
     # middle of that would end up in the variable.
     "issue artifact-path": "prints a bare path for a shell caller to consume",
+    "lesson add": "writes .compass/lessons.yml and needs a git user name the fixture does not set; test_lessons.py runs it",
+    "lesson propose": "writes .compass/lessons-pending.yml; test_lessons.py runs it",
+    "lesson accept": "needs a pending proposal and a git user name; test_lessons.py runs it",
+    "lesson list": "prints the lessons verbatim, one line each; test_lessons.py runs it",
+    "lesson remove": "needs an existing lesson; test_lessons.py runs it",
     "decision record": "writes a tracked file and needs a git user name the fixture does not set; test_decisions_ledger.py runs it",
     "decision check": "needs a git repository with a base ref; test_decisions_ledger.py runs it",
     "decision list": "prints the ledger's entries verbatim, one line each; test_decisions_ledger.py runs it",

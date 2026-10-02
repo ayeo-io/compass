@@ -80,6 +80,28 @@ Intent id. The "why" end of the traceability chain - the outcome the work is mea
 
 **Related:** `TRC`, `intent`
 
+### `LP-`
+
+Lesson proposal. A lesson held in `lessons-pending.yml` in the project's `.compass` folder until someone runs `compass lesson accept`. `compass retro --lessons` proposes, and the model is told to propose rather than add.
+
+**Refers to:** One pending proposal.
+
+**Appears in:** `lessons-pending.yml`, `compass lesson list`
+
+**Related:** `LS`
+
+### `LS-`
+
+Lesson. One rule in `lessons.yml` in the project's `.compass` folder that a person in this project had to repeat, injected into later sessions when it applies always. `compass lesson` adds, lists and removes them.
+
+**Not:** A guardrail or a routing rule. A lesson is advice: no check reads it, and a guardrail always wins over it.
+
+**Refers to:** One lesson in the project's lessons file.
+
+**Appears in:** `lessons.yml`, `compass lesson list`
+
+**Related:** `LP`, `guardrail`
+
 ### `PX-`
 
 Position exemption. One entry in `scan.position_exemptions` naming a position the vocabulary scan does not read - a source comment, a machine key - together with the reason a string in that position cannot reach a user. The scan reads every position by default, so a PX- entry is the only way a position is excluded.

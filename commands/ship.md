@@ -110,6 +110,11 @@ for delivery work; on a spike, follow the graduate-or-discard step in
      the `friction:` section (no follow-up, no gate), and
      `compass retro --friction` later aggregates it across issues as
      advice, never as a gate (Flow advises but never gates).
+   - If the person corrected something during the issue and said they had
+     to say it before, offer to keep it as a project lesson: run
+     `compass lesson propose "<their words>"`, quoting them,
+     and never `compass lesson add`. It takes effect only when someone runs
+     `compass lesson accept`.
 7. **Final devlog entry.** One entry: what shipped, what checked it,
    what follow-ups were settled.
 

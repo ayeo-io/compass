@@ -254,6 +254,7 @@ EXPECTED_SUBCOMMANDS = {
     # four subcommands; it adds no guardrail or gate, and its history check
     # runs inside the existing `compass ci`.
     "decision",
+    "lesson",  # project-lessons (ADR-029)
 }
 
 

@@ -292,6 +292,7 @@ NOT_ON_THE_LIGHT_PATH = {
     "_friction-capture": "friction capture is a step of the full ship, which a quick fix collapses",
     "follow-up": "a quick fix borrows no process weight, so it owes nothing to pay back",
     "retro": "cross-issue aggregation, not a step of any one issue",
+    "lesson": "offered beside friction capture in the full ship, which a quick fix collapses",
 }
 
 #: The five stage commands the quick-fix command inlines.

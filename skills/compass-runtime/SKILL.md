@@ -124,6 +124,16 @@ is no worktree - work on the current branch.
 whichever is in force: the project's own if `/compass:init` copied one in, the
 framework's shipped defaults otherwise.
 
+## Project lessons
+
+A project keeps rules a person has had to repeat as lessons; the session
+start shows the `always` ones after the contract. When the person states
+one, run `compass lesson propose "<their words>"`, quoting them,
+and never `compass lesson add`. A proposal takes effect only when someone runs
+`compass lesson accept`. The CLI cannot tell whether the person or the model
+typed a rule, so this instruction is what keeps the model on the proposing
+side. A lesson is advice: a guardrail always wins.
+
 ## Writing voice
 
 Before you write:

@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a landed_by mapping, an unbound green, an early omission or an issue landed through another, then compass issue diagnose prints the value, (unbound), no false deviation, and that the records are in the other issue
+### Given the verb surface, then lesson is in the CLI baseline, the README's CLI block, verb_help.py and each frozen verb list, and ADR-029 records the decision. The 900-word resident test passes unchanged.
 
-- **Scenario id:** `DE-A`
+- **Scenario id:** `PL-I`
 - **Intent:** `INT-1`
-- **Source issue:** `diagnose-output-edges`
+- **Source issue:** `project-lessons`
 - **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1416 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1425 superseded scenario(s) are in `docs/system-spec-archive.md`.

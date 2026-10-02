@@ -9919,3 +9919,66 @@
 - **Intent:** `INT-1`
 - **Source issue:** `session-diagnosis`
 - **Landed:** 2026-10-02
+
+### Given a landed_by mapping, an unbound green, an early omission or an issue landed through another, then compass issue diagnose prints the value, (unbound), no false deviation, and that the records are in the other issue _(archived)_
+
+- **Scenario id:** `DE-A`
+- **Intent:** `INT-1`
+- **Source issue:** `diagnose-output-edges`
+- **Landed:** 2026-10-02
+
+### Given compass lesson add "<rule>", then it writes a lesson to .compass/lessons.yml with added_by from git config compass.decidedBy, else user.name; there is no option to set it. An exact repeat is refused; a rule that contains an existing one replaces it and records superseded. _(archived)_
+
+- **Scenario id:** `PL-A`
+- **Intent:** `INT-1`
+- **Source issue:** `project-lessons`
+- **Landed:** 2026-10-02
+
+### Given a rule that names a guardrail id from governance/guardrails.yml, a model id or a tool version, or --source verify, then add and propose refuse it with the reason; a near-miss sentence is accepted. _(archived)_
+
+- **Scenario id:** `PL-B`
+- **Intent:** `INT-1`
+- **Source issue:** `project-lessons`
+- **Landed:** 2026-10-02
+
+### Given compass lesson propose "<rule>", then it writes to .compass/lessons-pending.yml only, and compass lesson accept <id> moves it to lessons.yml. _(archived)_
+
+- **Scenario id:** `PL-C`
+- **Intent:** `INT-1`
+- **Source issue:** `project-lessons`
+- **Landed:** 2026-10-02
+
+### Given compass lesson list and compass lesson remove <id>, then list prints each lesson and each pending proposal, marking on_topic lessons "stored, not yet surfaced", and remove deletes one lesson. _(archived)_
+
+- **Scenario id:** `PL-D`
+- **Intent:** `INT-1`
+- **Source issue:** `project-lessons`
+- **Landed:** 2026-10-02
+
+### Given five always lessons and one on_topic lesson, when a session starts, then the injected context holds the five after the operating contract under [Project lessons], with a line saying they cannot override a guardrail, and not the on_topic one. _(archived)_
+
+- **Scenario id:** `PL-E`
+- **Intent:** `INT-1`
+- **Source issue:** `project-lessons`
+- **Landed:** 2026-10-02
+
+### Given always lessons over 150 words, then the injected block holds at most 150 words, oldest first, cut between lessons, and a frame line names how many were shown and how many omitted. _(archived)_
+
+- **Scenario id:** `PL-F`
+- **Intent:** `INT-1`
+- **Source issue:** `project-lessons`
+- **Landed:** 2026-10-02
+
+### Given the same friction observation in three distinct issues, then compass retro --lessons writes one pending proposal with source: friction, and does not write lessons.yml. _(archived)_
+
+- **Scenario id:** `PL-G`
+- **Intent:** `INT-1`
+- **Source issue:** `project-lessons`
+- **Landed:** 2026-10-02
+
+### Given a lesson that says a gate passes, then compass check gives the same result as without it. _(archived)_
+
+- **Scenario id:** `PL-H`
+- **Intent:** `INT-1`
+- **Source issue:** `project-lessons`
+- **Landed:** 2026-10-02

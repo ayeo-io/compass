@@ -19,7 +19,7 @@ Output format chosen (devlog entry):
   Examples:
     "Define [gate: verify.correctness]"
     "Plan [gate: verify.correctness] | Define collapsed on this route"
-    "all phases complete"   <- when issue is fully landed/all gates pass
+    "all phases complete"   <- when the issue has landed
   This is deliberately plain (no colour escapes) so it is clear in a terminal
   and in logged output.
 """
@@ -300,7 +300,7 @@ class TestNextShowsCollapsedPhases:
 
 class TestNextCompletedTask:
     def test_completed_task_reports_nothing_remains(self, tmp_path):
-        """When all gates pass, next reports no stage remains (`TRC-C6`)."""
+        """When the issue has landed, next reports no stage remains (`TRC-C6`)."""
         project = make_project(tmp_path)
         task_body = dict(STANDARD_TASK)
         task_body["current_phase"] = "land"

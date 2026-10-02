@@ -6,6 +6,9 @@ current, pending, skipped by policy) and the next command. Claude Code runs
 commands with stdout not a terminal and with `CLAUDECODE` set, so either
 condition must keep today's output byte for byte: `tests/fixtures/next-golden.json`
 holds that output, captured before the rail existed, for each route below.
+Spec D56 re-captured two states per route, because `compass next` now derives
+the stage from the records: "fresh" moved from Assess to Define, and
+"gates-pass" from all phases complete to Ship.
 
 Regenerate the golden file only for a deliberate change to `compass next`'s
 plain output: `python3 tests/test_progress_rail.py --regen`.

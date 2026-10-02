@@ -48,7 +48,10 @@ def _project_dir(start: str) -> str | None:
 def _evidence_state(task_dir: str, scenarios: list) -> str | None:
     """`<id> red`, `<id> none` or `<id> green` for the first scenario that
     has no green on record; the last scenario's green when all are green."""
-    ids = [s.get("id") for s in scenarios if isinstance(s, dict) and s.get("id")]
+    if not isinstance(scenarios, list):
+        return None
+    ids = [s["id"] for s in scenarios if isinstance(s, dict) and isinstance(s.get("id"), str)
+           and s["id"]]
     if not ids:
         return None
     evidence = os.path.join(task_dir, "evidence")
@@ -79,7 +82,7 @@ def render(cwd: str, width: int = 80) -> str:
 
     from compass_pkg.core import (artifact_path, display_shape, display_stage,
                                   load_yaml, manifest_path, normalize_spine)
-    from compass_pkg.next_cmd import _all_gates_pass, _current_phase_from_task
+    from compass_pkg.next_cmd import _current_phase_from_task
 
     path = manifest_path(task_dir)
     if not os.path.isfile(path):
@@ -87,17 +90,14 @@ def render(cwd: str, width: int = 80) -> str:
     task = normalize_spine(load_yaml(path))
     if not isinstance(task, dict):
         return ""
-    raw_gates = task.get("gates") or []
-    gates = [g for g in raw_gates if isinstance(g, dict)]
-    # The raw list, as `compass next` passes it, so the two agree even on
-    # a malformed gate entry.
+    gates = [g for g in (task.get("gates") or []) if isinstance(g, dict)]
     if not os.path.isfile(artifact_path(task_dir, "delivery-approach.md")):
         # `compass next` reports no stage without the approach record.
         stage = None
-    elif task.get("status") == "landed" or _all_gates_pass(raw_gates):
+    elif task.get("status") == "landed":
         stage = "done"
     else:
-        phase = _current_phase_from_task(task)
+        phase = _current_phase_from_task(task, task_dir)
         # Capitalised as `compass next` prints it, so the two read the same.
         stage = display_stage(phase).capitalize() if phase else "done"
     fields = ["compass", slug]

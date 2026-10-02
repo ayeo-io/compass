@@ -9758,3 +9758,45 @@
 - **Intent:** `INT-1`
 - **Source issue:** `decisions-ledger`
 - **Landed:** 2026-10-02
+
+### Given governance/decisions/, then it holds at least ten entries, each a decision the maintainer made on record and confirmed in their own words. _(archived)_
+
+- **Scenario id:** `DL-G`
+- **Intent:** `INT-1`
+- **Source issue:** `decisions-ledger`
+- **Landed:** 2026-10-02
+
+### Given compass policy review-rules --changed-files hooks/pre-tool.sh, then it prints each rule whose patterns match that file, including the hook rules, and no rule scoped only to templates or the adopter's reading path. _(archived)_
+
+- **Scenario id:** `RV-A`
+- **Intent:** `INT-1`
+- **Source issue:** `review-rules-as-data`
+- **Landed:** 2026-10-02
+
+### Given --rules PATH, then it reads that file instead of the project's, so CI can pass the base branch's copy. Given a project with no rules file, then it says so and exits 0. It reads the project's own governance/, never the shipped copy. _(archived)_
+
+- **Scenario id:** `RV-B`
+- **Intent:** `INT-1`
+- **Source issue:** `review-rules-as-data`
+- **Landed:** 2026-10-02
+
+### Given compass policy lint and a rules file with a malformed or repeated id, an unknown enforces id, no patterns, a rule over 150 words or no incident, then it fails and names the rule and the field. _(archived)_
+
+- **Scenario id:** `RV-C`
+- **Intent:** `INT-1`
+- **Source issue:** `review-rules-as-data`
+- **Landed:** 2026-10-02
+
+### Given agents/reviewer.md, then it says to run compass policy review-rules --changed-files, to report a finding under the RR- id it breaks, and not to flag what a rule's allowed list permits. _(archived)_
+
+- **Scenario id:** `RV-D`
+- **Intent:** `INT-1`
+- **Source issue:** `review-rules-as-data`
+- **Landed:** 2026-10-02
+
+### Given governance/review-rules.yml, then it holds at least ten rules, each with an incident naming a pull request, issue or commit a reader can open. _(archived)_
+
+- **Scenario id:** `RV-E`
+- **Intent:** `INT-1`
+- **Source issue:** `review-rules-as-data`
+- **Landed:** 2026-10-02

@@ -38,7 +38,9 @@ it is exempt from assessment.
    the shipped defaults instead.
 
 2. **Copy `governance/` into the project.** Place the shipped `governance/`
-   files at the project root: the prose `guardrails.md`, `strategies.md`,
+   files named here at the project root, and no others: the Compass
+   repository's own `review-rules.yml` and `decisions/` stay behind. Copy
+   the prose `guardrails.md`, `strategies.md`,
    `strategies-rationale.md`, `routing-policy.md`, `README.md`, **and the
    machine-readable `guardrails.yml` and `routing-policy.yml`** - the latter two are what
    the `compass` CLI runs (`compass approach evaluate`, `compass check`,

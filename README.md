@@ -145,6 +145,7 @@ compass ci                 the full mechanical gate suite, for continuous integr
 compass tdd-red            run a test, assert it FAILS, record the red
 compass tdd-green          run a test, assert it PASSES, record the green
 compass policy lint        structurally validate the governance YAML
+compass policy review-rules  the review rules that apply to the changed files
 compass plan lint          scan a technical design for placeholder phrases
 compass intent ingest      read a brief that already exists, by path or https URL
 compass issue lint         structurally validate an issue manifest

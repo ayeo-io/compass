@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given governance/decisions/, then it holds at least ten entries, each a decision the maintainer made on record and confirmed in their own words.
+### Given the verb surface, then policy review-rules is in verb_help.py, the README's CLI block and compass policy --help. The top-level verb set does not change.
 
-- **Scenario id:** `DL-G`
+- **Scenario id:** `RV-F`
 - **Intent:** `INT-1`
-- **Source issue:** `decisions-ledger`
+- **Source issue:** `review-rules-as-data`
 - **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1393 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1399 superseded scenario(s) are in `docs/system-spec-archive.md`.

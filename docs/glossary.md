@@ -112,6 +112,18 @@ Routing policy rule. One rule in routing-policy.yml that biases or constrains th
 
 **Related:** `routing-policy`, `delivery-approach`, `guardrail`
 
+### `RR-`
+
+Review rule. One rule in governance/review-rules.yml that a reviewer applies to the files it names, with the incident that justifies it and what not to flag. `compass policy review-rules` prints the rules that match a change.
+
+**Not:** A routing policy rule (RP-), which shapes the delivery approach, or a guardrail, which is cleared with evidence. A review rule guides a reviewer's judgement of a change.
+
+**Refers to:** One rule in the review rules file.
+
+**Appears in:** `review-rules.yml`, `review findings`
+
+**Related:** `RP`, `guardrail`
+
 ### `RS-`
 
 The retired spelling of RP- for the soft rules. Same replacement, same reason.

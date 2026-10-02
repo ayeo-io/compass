@@ -38,8 +38,11 @@ def _copy_tracked(dest: Path) -> None:
                            capture_output=True, check=True).stdout
     for rel in filter(None, files.decode().split("\0")):
         src = ROOT / rel
-        if not src.is_file():
-            continue
+        if src.is_dir():
+            continue  # a submodule, which git lists as one path
+        # A tracked file missing from the working tree used to be skipped
+        # silently, and a later check failed far from the cause. Name it.
+        assert src.is_file(), f"tracked file {rel} is missing from the working tree"
         out = dest / rel
         out.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, out)

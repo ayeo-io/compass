@@ -32,6 +32,9 @@ distinct *is* the check:
 
 **traceability** - Are both chains intact and current - code → scenario →
 intent, and claim → scenario? A break is a no-pass. See `traceability.md` in this directory.
+Where the project names an owning doc for each code area (Compass does, in
+the "Owning docs" table of its `docs/README.md`), a change to an area changes its
+owning doc in the same commit, or says why the doc still holds.
 
 **regression** - Does the evidence show nothing that passed before now fails?
 On a multiagent, this is per-subtask at the checkpoint gates and *combined* at ship time -

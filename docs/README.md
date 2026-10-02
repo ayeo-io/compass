@@ -1,0 +1,65 @@
+# Compass docs
+
+Every doc in this folder, by what you came to do, and which doc owns the
+facts about each code area. `tests/test_doc_router.py` fails when a path in
+the table does not exist, and when a doc in this folder is not listed.
+
+## Start here
+
+- [five-minutes.md](five-minutes.md) - one small change from assessment to a reviewable result.
+- [quickstart.md](quickstart.md) - from an empty machine to a finished first issue, and the status line and the rail.
+- [roles-guide.md](roles-guide.md) - how product, design, engineering, marketing and QA each use Compass.
+- [glossary.md](glossary.md) - every word and id prefix Compass uses.
+
+## How Compass works
+
+- [methodology.md](methodology.md) - the adaptive, spec-driven method and why it is built this way.
+- [routing-deep-dive.md](routing-deep-dive.md) - how the assessment becomes a delivery approach.
+- [safety-contract.md](safety-contract.md) - what Compass enforces, and what it does not claim.
+- [refusal-codes.md](refusal-codes.md) - every reason the pre-tool hook can refuse with, generated.
+- [multiagent-protocol.md](multiagent-protocol.md) - how a multiagent issue is run, step by step.
+- [receipt.md](receipt.md) - the one-screen view of an issue's gates and evidence.
+- [writing-specs-and-plans.md](writing-specs-and-plans.md) - a worked example of a spec and a plan.
+- [system-spec.md](system-spec.md) - the current behaviour, derived from landed issues.
+- [system-spec-archive.md](system-spec-archive.md) - superseded behaviour, derived.
+
+## Running and maintaining Compass
+
+- [install-smoke-test.md](install-smoke-test.md) - the checklist after an install or an install change.
+- [releasing.md](releasing.md) - how to cut a release.
+- [security.md](security.md) - what Compass adds to a repository, and how to review it.
+- [portability.md](portability.md) - the adapter boundary, for running Compass outside Claude Code.
+
+## Background
+
+- [desired-state.md](desired-state.md) - where Compass is going.
+- [case-study-compass-rebuilt-itself.md](case-study-compass-rebuilt-itself.md) - what Compass's own record shows.
+- [launch-article.md](launch-article.md) - the launch article.
+
+## Owning docs
+
+Each area's facts live in one doc. Change the code, change the doc, in the
+same commit.
+
+| Area | Owning doc |
+|---|---|
+| `hooks/`, `compass-contract.md` | `docs/safety-contract.md` |
+| `cli/compass_pkg/refusals.py` | `docs/refusal-codes.md` |
+| `cli/compass_pkg/routing.py`, `governance/routing-policy.yml`, `approaches/` | `governance/routing-policy.md` |
+| `cli/compass_pkg/checks.py`, `cli/compass_pkg/check_cmd.py`, `governance/guardrails.yml` | `governance/guardrails.md` |
+| `governance/strategies.md` | `governance/strategies-rationale.md` |
+| `governance/terminology.yml` | `docs/glossary.md` |
+| `commands/`, `agents/`, `schemas/` | `skills/compass-runtime/SKILL.md` |
+| `cli/compass_pkg/tdd.py`, `cli/compass_pkg/evidence_identity.py` | `skills/evidence-gates/SKILL.md` |
+| `cli/compass_pkg/subtasks.py`, `cli/compass_pkg/multiagent_check.py`, `scripts/multiagent.sh`, `scripts/integrate.sh` | `docs/multiagent-protocol.md` |
+| `cli/compass_pkg/flow.py`, `docs/system-spec.md`, `docs/system-spec-archive.md` | `architecture/decisions/ADR-026-ship-commit-lands-and-derives-the-living-spec.md` |
+| `cli/compass_pkg/next_cmd.py`, `cli/compass_pkg/render.py`, `cli/compass_pkg/statusline.py`, `bin/compass-statusline` | `docs/quickstart.md` |
+| `cli/compass_pkg/receipt.py` | `docs/receipt.md` |
+| `cli/compass`, `cli/compass_pkg/verb_help.py` | `README.md` |
+| `scripts/release.sh`, `Makefile`, `VERSION` | `docs/releasing.md` |
+| `scripts/install.sh`, `.claude-plugin/` | `docs/install-smoke-test.md` |
+| `hooks/hooks.json`, the adapter boundary | `docs/portability.md` |
+| `cli/compass_pkg/project_commands.py`, `cli/compass_pkg/trust.py` | `docs/security.md` |
+| `evals/` | `evals/README.md` |
+| `ci/` | `ci/README.md` |
+| `architecture/` | `architecture/decisions/README.md` |

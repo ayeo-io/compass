@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a manifest whose artifacts, evidence, scenarios or subtasks is not a list, or whose ids are not strings, then compass next still prints a stage and exits 0, and the status line still prints its line.
+### Given a manifest whose gates is not a list, whose stages is not a mapping, or whose stage weight is not a string, When compass next runs, Then it prints a stage and exits 0 with nothing on stderr, and the status line prints its line
 
-- **Scenario id:** `NS-I`
+- **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `next-never-leaves-assess`
+- **Source issue:** `next-crashes-on-mistyped-manifest`
 - **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1371 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1372 superseded scenario(s) are in `docs/system-spec-archive.md`.

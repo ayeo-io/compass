@@ -9618,3 +9618,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `next-crashes-on-mistyped-manifest`
 - **Landed:** 2026-10-02
+
+### Given a manifest with one cleared gate and one malformed gate entry, When the status line runs, Then it shows gates 1/2 _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `status-line-gate-count-and-width`
+- **Landed:** 2026-10-02

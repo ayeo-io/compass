@@ -1,5 +1,5 @@
 """Every code area names its one owning doc, and every doc is indexed: the
-owning-doc-router issue (TRC-001).
+owning-doc-router issue, GitHub issue #253.
 
 The table lives in `docs/README.md` under "## Owning docs", beside the
 index. It is not in `CLAUDE.md`, which ships to adopters and must not point
@@ -59,12 +59,12 @@ def test_the_owning_docs_table_has_rows():
 
 
 def test_every_path_in_the_table_exists():
-    """A row naming a moved or deleted file is stale (TRC-001)."""
+    """A row naming a moved or deleted file is stale."""
     assert not _missing_paths(ROOT), _missing_paths(ROOT)
 
 
 def test_every_doc_is_indexed():
-    """A doc under docs/ that nothing links goes unread (TRC-001)."""
+    """A doc under docs/ that nothing links goes unread."""
     assert not _unindexed_docs(ROOT), _unindexed_docs(ROOT)
 
 

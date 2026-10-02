@@ -269,6 +269,13 @@ def cmd_quick_fix_start(args):
     policy = load_yaml(os.path.join(gov, "routing-policy.yml"))
     evaluate_route(readings, policy)
 
+    # The title reaches the living spec at ship; refuse it now, before
+    # anything is written, if a check on the spec would refuse it there.
+    from compass_pkg.manifest import title_problem
+    problem = title_problem(resolve_project_root(), args.scenario)
+    if problem:
+        raise CompassError(f"compass quick-fix start: scenario title refused: {problem}")
+
     tests = list(args.test or [])
 
     project_root = resolve_project_root()

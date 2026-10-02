@@ -626,8 +626,57 @@ def cmd_gate_pass(args):
                gate=args.gate_id, status="pass", evidence=list(ev_ids))
 
 
+# A file path with a directory and an extension, the shape the writing-style check treats
+# as a reference to a file in the repository.
+_TITLE_PATH = re.compile(r"(?:[\w.][\w-]*/)+[\w.-]+\.(?:md|py|yml|yaml|json|sh|feature)\b")
+
+
+def _eval_ids(project_root):
+    """Eval scenario and judge behaviour ids, where the project has evals."""
+    ids = set()
+    scen = os.path.join(project_root, "evals", "scenarios")
+    if os.path.isdir(scen):
+        ids |= {d for d in os.listdir(scen)
+                if os.path.isfile(os.path.join(scen, d, "scenario.yml"))}
+    judge = os.path.join(project_root, "evals", "judge.py")
+    if os.path.isfile(judge):
+        import ast
+        try:
+            tree = ast.parse(open(judge, encoding="utf-8").read())
+        except (OSError, SyntaxError):
+            tree = None
+        for node in getattr(tree, "body", []):
+            if (isinstance(node, ast.Assign) and isinstance(node.value, ast.Dict)
+                    and any(isinstance(t, ast.Name) and t.id == "BEHAVIOURS"
+                            for t in node.targets)):
+                ids |= {k.value for k in node.value.keys
+                        if isinstance(k, ast.Constant) and isinstance(k.value, str)}
+    return ids
+
+
+def title_problem(project_root, title):
+    """Why a scenario title would break a check on docs/system-spec.md, or
+    None. ship-commit copies titles into that file after the suite has run,
+    so a title is checked here, when it is recorded (#283)."""
+    for m in _TITLE_PATH.finditer(title or ""):
+        if not os.path.exists(os.path.join(project_root, m.group(0))):
+            return (f"it names the path {m.group(0)}, which does not exist; the living "
+                    f"spec's check refuses a named file that is missing. Describe it "
+                    f"instead.")
+    for ident in sorted(_eval_ids(project_root)):
+        if re.search(rf"(?<![\w-]){re.escape(ident)}(?![\w-])", title or ""):
+            return (f"it names the eval scenario or behaviour {ident}; the living spec "
+                    f"ships in the eval plugin copy, which must name none. Describe the "
+                    f"run instead.")
+    return None
+
+
 def cmd_scenario_add(args):
     task_dir = resolve_issue_dir(args.task)
+    problem = title_problem(os.path.dirname(os.path.dirname(os.path.dirname(
+        os.path.normpath(task_dir)))), args.title or "")
+    if problem:
+        raise CompassError(f"compass scenario add: title refused: {problem}")
     task, task_path = load_manifest(task_dir)
     scns = task.setdefault("scenarios", [])
     if any(isinstance(s, dict) and s.get("id") == args.scenario_id for s in scns):

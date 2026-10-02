@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a feature issue with its acceptance criteria registered and no technical design, When compass next runs, Then it reports Plan; and given an initiative issue with its criteria registered and no requirements review, Then it reports Refine
+### Given docs/releasing.md, then it says how to install pytest-xdist, and names COMPASS_FULL_ARCHIVE=1 as the full-archive check to run before a release.
 
-- **Scenario id:** `TRC-001`
+- **Scenario id:** `FS-G`
 - **Intent:** `INT-1`
-- **Source issue:** `refine-never-clears-on-a-feature`
+- **Source issue:** `faster-suite-and-release`
 - **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1375 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1382 superseded scenario(s) are in `docs/system-spec-archive.md`.

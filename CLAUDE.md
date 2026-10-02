@@ -99,6 +99,11 @@ and the things it does not claim.
   perspectives. Assess loads it, when present, into `architecture-loaded.yml`;
   projects without one keep working.
 
+## Owning docs
+
+Each code area's facts live in one doc, named in the "Owning docs" table in
+`docs/README.md`. Change the code, change that doc, in the same commit.
+
 ## Writing voice
 
 Communicate the decision, not the process: what you found, what you need, what

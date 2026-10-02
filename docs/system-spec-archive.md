@@ -9695,3 +9695,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `release-5-2-0`
 - **Landed:** 2026-10-02
+
+### Given a quick fix whose working tree also changes docs/system-spec.md and docs/system-spec-archive.md, When quick-fix finish runs, Then it traces neither file and the issue's changed files are only its own _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `ship-restales-a-traced-living-spec`
+- **Landed:** 2026-10-02

@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the release intends 5.2.0, When the version tests run, Then every version location reads 5.2.0
+### Given a quick fix whose working tree also changes docs/system-spec.md and docs/system-spec-archive.md, When quick-fix finish runs, Then it traces neither file and the issue's changed files are only its own
 
 - **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `release-5-2-0`
+- **Source issue:** `ship-restales-a-traced-living-spec`
 - **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1383 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1384 superseded scenario(s) are in `docs/system-spec-archive.md`.

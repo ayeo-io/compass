@@ -190,8 +190,9 @@ def _derive_and_commit_living_spec(cwd, slug):
     except Exception as exc:
         return f"\n  living spec NOT re-derived: {exc}"
 
-    rel_specs = [os.path.relpath(os.path.join(project_root, "docs", name), cwd)
-                 for name in ("system-spec.md", "system-spec-archive.md")]
+    from compass_pkg.flow import LIVING_SPEC_FILES
+    rel_specs = [os.path.relpath(os.path.join(project_root, *rel.split("/")), cwd)
+                 for rel in LIVING_SPEC_FILES]
     changed = _git(["status", "--porcelain", "--", *rel_specs], cwd).stdout.strip()
     if not changed:
         return "\n  living spec re-derived (no change)."

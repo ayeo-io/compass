@@ -971,3 +971,30 @@ def test_qfg2_finish_from_a_subdirectory_traces_stages_and_lands(repo):
     assert "data/greeting.txt" in changed
     check = _run(repo, "check", "--issue", slug)
     assert check.returncode == 0, check.stdout + check.stderr
+
+
+def test_finish_never_traces_the_living_spec_files(repo):
+    """quick-fix finish leaves docs/system-spec.md and its archive out of the
+    issue's changed files. ship-commit derives both at landing, after the
+    green, so a traced copy would always name an older version than the one
+    that lands (TRC-001 of ship-restales-a-traced-living-spec)."""
+    docs = repo / "docs"
+    docs.mkdir()
+    for name in ("system-spec.md", "system-spec-archive.md"):
+        (docs / name).write_text("# derived\n")
+    _git(repo, "add", "docs")
+    _git(repo, "commit", "-q", "-m", "derived spec")
+    slug = "greet-spec"
+    _ready_to_finish(repo, slug)
+    # A derivation run before the suite, as a session may do.
+    for name in ("system-spec.md", "system-spec-archive.md"):
+        (docs / name).write_text("# derived, again\n")
+
+    finish = _finish(repo, slug)
+    assert finish.returncode == 0, finish.stdout + finish.stderr
+
+    changed = {cf["path"] for cf in _manifest(repo, slug)["changed_files"]}
+    assert "docs/system-spec.md" not in changed, changed
+    assert "docs/system-spec-archive.md" not in changed, changed
+    check = _run(repo, "check", "--issue", slug)
+    assert check.returncode == 0, check.stdout

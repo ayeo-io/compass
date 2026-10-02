@@ -1,11 +1,11 @@
 """`compass next` names a stage when `gates` or `stages` has the wrong type
-(spec D57, issue #236).
+(issue #236).
 
-A hand-edited manifest can hold anything. Before this change, a `gates` that
-was not a list, a `stages` that was not a mapping, or a stage weight that
-was not a string made `compass next` print a traceback and exit 1, and the
-status line go blank. D56 guarded the other manifest lists; these three
-shapes crashed before D56 and were left to this fix.
+A hand-edited manifest can hold anything. A `gates` that is not a list, a
+`stages` that is not a mapping, or a stage weight that is not a string must
+still give a stage from `compass next`, with exit 0 and nothing on stderr,
+and a line from the status line. `tests/test_next_stage.py` covers the
+other manifest lists.
 """
 from __future__ import annotations
 

@@ -66,6 +66,7 @@ from compass_pkg._all import *  # noqa: F401,F403
 from compass_pkg.subtasks import register as register_subtask_parser  # noqa: E402
 from compass_pkg.quick_fix_cmd import register as register_quick_fix_parser  # noqa: E402
 from compass_pkg.decisions import register as register_decision_parser  # noqa: E402
+from compass_pkg.diagnose import register as register_diagnose_parser  # noqa: E402
 from compass_pkg.review_rules import register as register_review_rules_parser  # noqa: E402
 
 # Declared literally here as well as in compass_pkg.core: this file is
@@ -266,6 +267,7 @@ def build_parser():
     issue_arg(ptl)
     ptl.add_argument("--file", help="lint a specific manifest.yml file")
     ptl.set_defaults(func=cmd_task_lint, output_kind="report")
+    register_diagnose_parser(pts, issue_arg)
 
     ptr = pts.add_parser("receipt", help="render a one-screen receipt for an issue")
     issue_arg(ptr)

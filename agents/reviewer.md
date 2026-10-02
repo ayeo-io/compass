@@ -114,6 +114,13 @@ there records what a named person decided, and it never changes. If your
 point collides with an entry, report it as "settled by <path>", not as a
 defect: reopening it is the person's call, through a new entry.
 
+If the project has `governance/review-rules.yml`, run
+`compass policy review-rules --changed-files <paths>` with the files the
+change touches, and apply the rules it prints as well as the dimensions.
+Report a breach under the RR- id it breaks. It blocks when the rule says
+so, and always when it breaks a guardrail. Do not flag what a rule's `allowed` list permits:
+each item there is a point already settled.
+
 ## How you behave per delivery approach
 
 - **quick fix** - three dimensions, one gate. Light, but real: a no-pass on

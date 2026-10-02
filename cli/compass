@@ -66,6 +66,7 @@ from compass_pkg._all import *  # noqa: F401,F403
 from compass_pkg.subtasks import register as register_subtask_parser  # noqa: E402
 from compass_pkg.quick_fix_cmd import register as register_quick_fix_parser  # noqa: E402
 from compass_pkg.decisions import register as register_decision_parser  # noqa: E402
+from compass_pkg.review_rules import register as register_review_rules_parser  # noqa: E402
 
 # Declared literally here as well as in compass_pkg.core: this file is
 # what `compass --version` and the release-consistency test read, and a
@@ -230,6 +231,7 @@ def build_parser():
     pls = pl.add_subparsers(dest="subcmd", required=True)
     pll = pls.add_parser("lint", help="structurally validate the governance YAML")
     pll.set_defaults(func=cmd_policy_lint, output_kind="report")
+    register_review_rules_parser(pls)
 
     # The planning stage's verb is `plan`, the word its key, skill, agent
     # and slash command use. `design` names the designer's stage. ADR-024

@@ -1,0 +1,181 @@
+# Review rules for this repository, read by `compass policy review-rules`.
+#
+# A reviewer, human or agent, runs
+#   compass policy review-rules --changed-files <paths>
+# and gets only the rules whose file_patterns match the change, then cites
+# each finding by its RR- id. `compass policy lint` checks this file.
+#
+# Fields:
+#   id             RR- and three digits, never reused.
+#   blocking       true when a breach must be fixed before merge.
+#   file_patterns  shell patterns on the repository-relative path; `*`
+#                  crosses `/`, so `hooks/*` covers every file under hooks/.
+#   enforces       the id of the guardrail or strategy the rule serves, as
+#                  guardrails.yml and strategies.md define them.
+#   rule           at most 150 words.
+#   allowed        what not to flag, so a reviewer does not reopen it.
+#   incident       the event that justifies the rule: a pull request, issue
+#                  or commit a reader can open. A rule with no incident is
+#                  a preference, and preferences belong in CLAUDE.md.
+#
+# This file is the Compass repository's own. /compass:init does not copy it,
+# and the verb reads the project's governance/, never the shipped copy.
+
+rules:
+  - id: RR-001
+    blocking: true
+    file_patterns: ["*"]
+    enforces: S7
+    rule: >
+      A tracked file must not cite an id the reader cannot resolve from the
+      repository, such as a spec or requirement id defined only in a private
+      planning document. Name the subject, or give the GitHub issue or pull
+      request number with what it is.
+    allowed:
+      - An id a tracked file defines, such as an ADR number, a guardrail or
+        strategy id, an RR- rule id, or a scenario id in docs/system-spec.md.
+      - A GitHub issue or pull request number given with what it is.
+    incident: >
+      The CI review asked for fixes on #237, whose test files cited a spec
+      id defined nowhere in the repository, and on #260, whose new test cited
+      a requirement id instead of naming the issue.
+
+  - id: RR-002
+    blocking: true
+    file_patterns: ["cli/*", "governance/*", "commands/*", "skills/*", "agents/*",
+                    "approaches/*", "hooks/*"]
+    enforces: S11
+    rule: >
+      Before recommending a change to how a stage, gate or route behaves,
+      check it against governance/routing-policy.yml, governance/guardrails.yml
+      and governance/decisions/. When the recommendation contradicts one of
+      them, report the conflict with the file and line it contradicts; do not
+      present it as a fix to make.
+    allowed:
+      - A change the routing policy or a decision entry already asks for.
+    incident: >
+      #237 acted on a review point that contradicted the routing policy:
+      commit 744ffa9 counted refine done only on a registered requirements
+      review, which a feature never earns. It shipped as a defect, #242,
+      which #241 and #249 fixed.
+
+  - id: RR-003
+    blocking: true
+    file_patterns: ["tests/*", "scripts/*", "hooks/*", "cli/compass_pkg/check*.py"]
+    enforces: S10
+    rule: >
+      A new check or test guard must be shown to fail: break what it guards
+      and see it report, or point at a recorded red. A guard that passes
+      before the code it guards exists checks nothing.
+    allowed:
+      - A test that pins behaviour that already exists, when the pull request
+        says so.
+    incident: >
+      In #260, the planted-fault test for the documents index could not fail
+      on its missing-path half; commit e3df350 made it exact.
+
+  - id: RR-004
+    blocking: true
+    file_patterns: ["hooks/*"]
+    enforces: G1
+    rule: >
+      A hook check that cannot run must refuse the edit with exit 2 and say
+      why. Exit 1 is a non-blocking error to the runtime, so the edit goes
+      through. A crashed reader, a missing python3 or an unreadable config is
+      a refusal, not a pass.
+    allowed:
+      - A silent exit 0 in a repository that never opted into Compass.
+    incident: >
+      Commit 9bc086c: a hook check that could not run ended in exit 1 and let
+      the edit through, and a crashed code_globs reader allowed an edit
+      silently.
+
+  - id: RR-005
+    blocking: true
+    file_patterns: ["hooks/*", "cli/*"]
+    enforces: G1
+    rule: >
+      A name read from a file or the command line, such as the current-task
+      pointer or an issue slug, must be checked as one path segment before it
+      is joined onto a directory. Refuse ".", ".." and any path separator, and
+      name where the value came from.
+    allowed: []
+    incident: >
+      Commit 141a0e4: a slug such as ../side resolved outside .compass/work/,
+      and the hook allowed an edit with no red on the current issue.
+
+  - id: RR-006
+    blocking: true
+    file_patterns: ["commands/*", "skills/*", "approaches/*", "agents/*",
+                    "templates/*", "CLAUDE.md", "compass-contract.md"]
+    enforces: S7
+    rule: >
+      These files are on an adopter's reading path. They must not point at a
+      document about building Compass, such as docs/system-spec.md or
+      docs/releasing.md: an adopter who follows the pointer lands in a project
+      that is not theirs.
+    allowed:
+      - A pointer to a document about using Compass, such as
+        docs/five-minutes.md or docs/safety-contract.md.
+    incident: >
+      #260 had to keep its table of owning documents out of CLAUDE.md and
+      put it in docs/README.md: CLAUDE.md ships to adopters, and
+      tests/test_prompt_layer.py fails a file on their reading path that
+      points at a document about developing Compass.
+
+  - id: RR-007
+    blocking: true
+    file_patterns: ["docs/system-spec.md", "docs/system-spec-archive.md"]
+    enforces: G4
+    rule: >
+      The living spec ships in the plugin copy the eval sessions run, and
+      ship-commit copies scenario titles into it. A title must not name an
+      eval scenario or judge behaviour by its id; describe the run instead.
+    allowed: []
+    incident: >
+      #224 failed CI because a scenario title named two eval scenarios, and
+      tests/test_eval_harness.py found them in the plugin copy.
+
+  - id: RR-008
+    blocking: true
+    file_patterns: ["cli/compass_pkg/binding.py", "cli/compass_pkg/manifest.py",
+                    "cli/compass_pkg/quick_fix_cmd.py", "scripts/*"]
+    enforces: G5
+    rule: >
+      Code that stages or commits files must commit only the files it was
+      given or traced, never every untracked file. A push to a public branch
+      cannot be taken back.
+    allowed: []
+    incident: >
+      #207 was closed after a quick-fix commit carried untracked private
+      files, which nothing had traced, to a public pull request.
+
+  - id: RR-009
+    blocking: true
+    file_patterns: ["governance/decisions/*"]
+    enforces: G5
+    rule: >
+      An entry never changes once merged; a change of mind is a new entry
+      whose Supersedes names the old one. A new entry records a decision a
+      person made, with Decided by taken from git config, and its evidence
+      says what each cited item is.
+    allowed:
+      - A new entry that supersedes an older one.
+    incident: >
+      #263 added the ledger and its first ten entries. ADR-027, which it
+      added, makes an entry immutable once merged, so a wrong or unclear
+      entry can only be fixed in its own pull request.
+
+  - id: RR-010
+    blocking: false
+    file_patterns: [".github/workflows/claude-review.yml"]
+    enforces: G5
+    rule: >
+      A pull request that changes this file gets no automatic review, because
+      the review action does not run on a change to its own workflow. Keep the
+      change to this file alone, and say in the body that a person must read
+      and merge it.
+    allowed: []
+    incident: >
+      #248 changed the review job's model. Its review check showed as failed,
+      and the maintainer merged it after reading it.

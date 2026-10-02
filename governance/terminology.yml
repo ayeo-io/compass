@@ -621,6 +621,19 @@ codes:
     referent: One rule in the routing policy.
     appears_in: [routing-policy.yml, delivery-approach.md, "manifest.yml policy_rules_fired[].id"]
     related: [routing-policy, delivery-approach, guardrail]
+  RR:
+    means: >
+      Review rule. One rule in governance/review-rules.yml that a reviewer
+      applies to the files it names, with the incident that justifies it and
+      what not to flag. `compass policy review-rules` prints the rules that
+      match a change.
+    not: >
+      A routing policy rule (RP-), which shapes the delivery approach, or a
+      guardrail, which is cleared with evidence. A review rule guides a
+      reviewer's judgement of a change.
+    referent: One rule in the review rules file.
+    appears_in: [review-rules.yml, review findings]
+    related: [RP, guardrail]
   RG:
     means: The retired spelling of RP-. Kept in archived records, which keep the id that fired.
     referent: A routing policy rule. Same referent as RP-.

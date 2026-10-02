@@ -214,3 +214,16 @@ def test_the_session_contract_is_unchanged():
         p = ROOT / name
         if p.is_file():
             assert "statusline" not in p.read_text(encoding="utf-8").lower(), name
+
+
+def test_a_malformed_gate_entry_counts_towards_the_total(repo):
+    """One cleared gate and one malformed entry show `gates 1/2`, so the
+    count agrees with the stage, which treats the malformed entry as a gate
+    not passed (TRC-001 of status-line-gate-count-and-width)."""
+    import yaml
+    task = _start(repo)
+    path = task / "manifest.yml"
+    m = yaml.safe_load(path.read_text())
+    m["gates"] = [dict(m["gates"][0], status="pass"), 5]
+    path.write_text(yaml.safe_dump(m, sort_keys=False))
+    assert " · gates 1/2" in _statusline(repo).stdout

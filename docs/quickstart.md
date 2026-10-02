@@ -429,7 +429,8 @@ settings file, either your own or the project's:
 `~/.claude/plugins/cache/compass/compass/<version>`. The path names a
 version, and an old version stays on disk after an upgrade, so a path left
 unchanged keeps running the old code: update it when you upgrade. Outside a
-Compass project, the line is empty.
+Compass project, the line is empty. The line fits the terminal width that
+Claude Code passes in `COLUMNS`, and assumes 80 columns when it is not set.
 
 ## See the route in your terminal
 

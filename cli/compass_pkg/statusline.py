@@ -91,7 +91,9 @@ def render(cwd: str, width: int = 80) -> str:
     if not isinstance(task, dict):
         return ""
     task = _typed(task)
-    gates = [g for g in (task.get("gates") or []) if isinstance(g, dict)]
+    # Every entry counts towards the total, a malformed one included: the
+    # stage treats it as a gate not passed, so the count must too.
+    gates = task.get("gates") or []
     if not os.path.isfile(artifact_path(task_dir, "delivery-approach.md")):
         # `compass next` reports no stage without the approach record.
         stage = None
@@ -108,7 +110,7 @@ def render(cwd: str, width: int = 80) -> str:
     if stage:
         fields.append(stage)
     if gates:
-        cleared = sum(1 for g in gates if g.get("status") == "pass")
+        cleared = sum(1 for g in gates if isinstance(g, dict) and g.get("status") == "pass")
         fields.append(f"gates {cleared}/{len(gates)}")
     state = _evidence_state(task_dir, task.get("scenarios") or [])
     if state:

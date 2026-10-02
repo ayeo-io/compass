@@ -226,3 +226,43 @@ def test_a_failed_file_listing_fails_the_step(tmp_path):
 def test_the_verdict_counts_a_blocking_rule():
     prompt = _step("review")["with"]["prompt"]
     assert re.search(r"blocking review rule", prompt), prompt
+
+
+# The failure message names the cause the step can tell apart (#269).
+
+def test_a_missing_count_is_named(tmp_path):
+    r, _ = _run_rules_step(tmp_path, "printf 'a.py\\n'", "")
+    assert "no usable changed-file count" in r.stderr, r.stderr
+
+
+def test_the_file_limit_is_named_when_the_list_stops_short(tmp_path):
+    listing = "i=0; while [ $i -lt 3000 ]; do echo f$i.py; i=$((i+1)); done"
+    r, _ = _run_rules_step(tmp_path, listing, "3500")
+    assert r.returncode != 0
+    assert "3,000" in r.stderr, r.stderr
+
+
+def test_a_count_from_before_a_push_is_named(tmp_path):
+    r, _ = _run_rules_step(tmp_path, "printf 'a.py\\nb.py\\n'", "3")
+    assert r.returncode != 0
+    assert "3,000" not in r.stderr, r.stderr
+    assert "newer push" in r.stderr, r.stderr
+
+
+@pytest.mark.parametrize("listing, changed", [("printf 'a.py\\n'", ""),
+                                              ("printf 'a.py\\nb.py\\n'", "3")])
+def test_no_message_advises_a_re_run(tmp_path, listing, changed):
+    """A re-run reuses the event payload and its count, so it fails again.
+    A new push starts a run with a new payload."""
+    r, _ = _run_rules_step(tmp_path, listing, changed)
+    assert r.returncode != 0
+    assert "re-run" not in r.stderr.lower(), r.stderr
+    assert "push" in r.stderr.lower(), r.stderr
+
+
+def test_a_long_listing_is_not_blamed_on_the_limit(tmp_path):
+    """3,000 listed of a smaller count is a stale count, not the limit."""
+    listing = "i=0; while [ $i -lt 3000 ]; do echo f$i.py; i=$((i+1)); done"
+    r, _ = _run_rules_step(tmp_path, listing, "2999")
+    assert r.returncode != 0
+    assert "3,000" not in r.stderr, r.stderr

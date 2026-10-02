@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a pull request, then the CI review's prompt holds the review rules that match its changed files, taken with the CLI from the base branch
+### Given a pull request with more changed files than the files API lists, then the review's rules step fails rather than reviewing with a partial rule set
 
-- **Scenario id:** `RB-A`
+- **Scenario id:** `RC-A`
 - **Intent:** `INT-1`
-- **Source issue:** `ci-review-reads-review-rules`
+- **Source issue:** `rules-step-file-cap`
 - **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1400 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1401 superseded scenario(s) are in `docs/system-spec-archive.md`.

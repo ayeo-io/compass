@@ -9982,3 +9982,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `project-lessons`
 - **Landed:** 2026-10-02
+
+### Given the verb surface, then lesson is in the CLI baseline, the README's CLI block, verb_help.py and each frozen verb list, and ADR-029 records the decision. The 900-word resident test passes unchanged. _(archived)_
+
+- **Scenario id:** `PL-I`
+- **Intent:** `INT-1`
+- **Source issue:** `project-lessons`
+- **Landed:** 2026-10-02

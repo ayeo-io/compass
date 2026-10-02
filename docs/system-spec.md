@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the verb surface, then lesson is in the CLI baseline, the README's CLI block, verb_help.py and each frozen verb list, and ADR-029 records the decision. The 900-word resident test passes unchanged.
+### Given a pending lesson proposal, then compass lesson decline removes it and records its text, so compass retro --lessons does not propose it again
 
-- **Scenario id:** `PL-I`
+- **Scenario id:** `LD-A`
 - **Intent:** `INT-1`
-- **Source issue:** `project-lessons`
+- **Source issue:** `lesson-proposal-decline`
 - **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1425 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1426 superseded scenario(s) are in `docs/system-spec-archive.md`.

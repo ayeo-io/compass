@@ -94,7 +94,9 @@ VERB_DESCRIPTIONS = {
     'lesson list':
         "Print each lesson and each pending proposal, marking `on_topic` lessons as stored, not yet surfaced.",
     'lesson remove':
-        "Delete one lesson by its LS- id. The lesson it superseded, if any, is not restored; git keeps the history.",
+        "Delete one lesson by its LS- id. The lesson it superseded, if any, is not restored; git keeps the history. Its text is kept, so `compass retro --lessons` does not propose it again.",
+    'lesson decline':
+        "Drop a pending proposal by its LP- id without making it a lesson. Its text is kept, so `compass retro --lessons` does not propose it again.",
     'policy review-rules':
         "Print the rules in governance/review-rules.yml whose file patterns match the paths given to --changed-files, each with whether it blocks, the guardrail or strategy it enforces, what not to flag and the incident behind it. A reviewer reads this instead of every house rule and cites a finding by its RR- id. It reads the project's own governance/, never the shipped copy; --rules reads another file, such as the base branch's copy in CI.",
     'policy lint':

@@ -181,6 +181,7 @@ compass lesson propose     hold a lesson for acceptance (the model's route)
 compass lesson accept      turn a pending proposal into a lesson
 compass lesson list        each lesson and each pending proposal
 compass lesson remove      delete one lesson
+compass lesson decline     drop a pending proposal; retro will not propose it again
 ```
 
 Every verb describes itself - `compass <verb> --help` says what it does and

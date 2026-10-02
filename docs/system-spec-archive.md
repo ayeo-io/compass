@@ -9498,46 +9498,109 @@
 - **Scenario id:** `RL-A`
 - **Intent:** `INT-1`
 - **Source issue:** `progress-rail`
-- **Landed:** 2026-10-02
+- **Landed:** 2026-10-01
 
 ### Given stdout is a pipe, when compass next runs, then its output matches the golden file captured before the rail, byte for byte, for every route in the fixtures. _(archived)_
 
 - **Scenario id:** `RL-B`
 - **Intent:** `INT-1`
 - **Source issue:** `progress-rail`
-- **Landed:** 2026-10-02
+- **Landed:** 2026-10-01
 
 ### Given a route that skips or collapses a stage, when the rail is shown, then that stage is shown with the skipped marker, not left out. _(archived)_
 
 - **Scenario id:** `RL-C`
 - **Intent:** `INT-1`
 - **Source issue:** `progress-rail`
-- **Landed:** 2026-10-02
+- **Landed:** 2026-10-01
 
 ### Given CLAUDECODE is set, when compass next runs with stdout a terminal, then its output is today's output, byte for byte. _(archived)_
 
 - **Scenario id:** `RL-D`
 - **Intent:** `INT-1`
 - **Source issue:** `progress-rail`
-- **Landed:** 2026-10-02
+- **Landed:** 2026-10-01
 
 ### Given NO_COLOR, then the rail has no colour codes; given COMPASS_COLOR=never, then it uses ASCII markers; given COMPASS_COLOR=always, then the rail shows when piped, unless CLAUDECODE is set. _(archived)_
 
 - **Scenario id:** `RL-E`
 - **Intent:** `INT-1`
 - **Source issue:** `progress-rail`
-- **Landed:** 2026-10-02
+- **Landed:** 2026-10-01
 
 ### Given a terminal narrower than the rail, then the rail wraps between stages and no line is wider than the terminal. _(archived)_
 
 - **Scenario id:** `RL-F`
 - **Intent:** `INT-1`
 - **Source issue:** `progress-rail`
-- **Landed:** 2026-10-02
+- **Landed:** 2026-10-01
 
 ### Given an issue in progress, then the rail is followed by a Next line naming the command for the current stage. _(archived)_
 
 - **Scenario id:** `RL-G`
 - **Intent:** `INT-1`
 - **Source issue:** `progress-rail`
+- **Landed:** 2026-10-01
+
+### Given the status line, then it fits its line with the shared renderer, so width fitting lives in one module. _(archived)_
+
+- **Scenario id:** `RL-H`
+- **Intent:** `INT-1`
+- **Source issue:** `progress-rail`
+- **Landed:** 2026-10-01
+
+### Given an issue with its approach record and no other record, when compass next runs, then it reports Define. _(archived)_
+
+- **Scenario id:** `NS-A`
+- **Intent:** `INT-1`
+- **Source issue:** `next-never-leaves-assess`
+- **Landed:** 2026-10-02
+
+### Given the acceptance criteria registered as draft, and no later record, then it reports Plan on a route that runs plan. Given scenarios and no later record on a route that collapses plan and skips breakdown, then it reports Implement. _(archived)_
+
+- **Scenario id:** `NS-B`
+- **Intent:** `INT-1`
+- **Source issue:** `next-never-leaves-assess`
+- **Landed:** 2026-10-02
+
+### Given the technical design registered, and no subtask, distribution map or test record, then it reports Breakdown on a route that runs breakdown. Given a subtask or the distribution map recorded, then it reports Implement. _(archived)_
+
+- **Scenario id:** `NS-C`
+- **Intent:** `INT-1`
+- **Source issue:** `next-never-leaves-assess`
+- **Landed:** 2026-10-02
+
+### Given a red on record and no green, or test evidence for some scenarios but not all, then it reports Implement. _(archived)_
+
+- **Scenario id:** `NS-D`
+- **Intent:** `INT-1`
+- **Source issue:** `next-never-leaves-assess`
+- **Landed:** 2026-10-02
+
+### Given test evidence for every scenario that needs one and a gate not passed, then it reports Verify, even when no design or breakdown record exists. _(archived)_
+
+- **Scenario id:** `NS-E`
+- **Intent:** `INT-1`
+- **Source issue:** `next-never-leaves-assess`
+- **Landed:** 2026-10-02
+
+### Given every gate passed and the issue not landed, then it reports Ship. Given status: landed, then it reports all phases complete. _(archived)_
+
+- **Scenario id:** `NS-F`
+- **Intent:** `INT-1`
+- **Source issue:** `next-never-leaves-assess`
+- **Landed:** 2026-10-02
+
+### Given a current_phase key in the manifest, then it reports that stage, whatever the records show. _(archived)_
+
+- **Scenario id:** `NS-G`
+- **Intent:** `INT-1`
+- **Source issue:** `next-never-leaves-assess`
+- **Landed:** 2026-10-02
+
+### Given any issue in NS-A to NS-F, then the status line's stage and the rail's current marker name the same stage as compass next. _(archived)_
+
+- **Scenario id:** `NS-H`
+- **Intent:** `INT-1`
+- **Source issue:** `next-never-leaves-assess`
 - **Landed:** 2026-10-02

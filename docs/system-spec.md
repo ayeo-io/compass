@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the status line, then it fits its line with the shared renderer, so width fitting lives in one module.
+### Given a manifest whose artifacts, evidence, scenarios or subtasks is not a list, or whose ids are not strings, then compass next still prints a stage and exits 0, and the status line still prints its line.
 
-- **Scenario id:** `RL-H`
+- **Scenario id:** `NS-I`
 - **Intent:** `INT-1`
-- **Source issue:** `progress-rail`
+- **Source issue:** `next-never-leaves-assess`
 - **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1362 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1371 superseded scenario(s) are in `docs/system-spec-archive.md`.

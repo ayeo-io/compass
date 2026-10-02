@@ -293,6 +293,7 @@ NOT_ON_THE_LIGHT_PATH = {
     "follow-up": "a quick fix borrows no process weight, so it owes nothing to pay back",
     "retro": "cross-issue aggregation, not a step of any one issue",
     "lesson": "offered beside friction capture in the full ship, which a quick fix collapses",
+    "scenario": "define records scenarios and de-scoped failure modes with it; a quick fix records its one scenario through compass quick-fix start",
 }
 
 #: The five stage commands the quick-fix command inlines.

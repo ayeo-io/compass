@@ -135,6 +135,12 @@ reassessments: []
 #    reason: "Implementation revealed the change spanned three modules, not one."
 #    date: "{{ISO date}}"
 
+# --- failure modes de-scoped at define ----------------------------------------
+# A failure mode or input class the brief implies that no scenario covers, with
+# the reason, written by `compass scenario descope`. The verifier lists each in
+# the verification report. Optional; no gate reads it.
+failure_modes_descoped: []
+
 # --- friction (the framework's self-calibration signal) ---------------------
 # Optional. Written at ship time. Records where Compass's own process weight cost
 # more than it returned; soft, advisory; it never gates shipping. Assembled

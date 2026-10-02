@@ -52,6 +52,26 @@ place to restate them. Length scales with the delivery approach the same way sce
 does: quick fix one to two sentences per field, feature ordinary paragraphs,
 initiative up to 200 words per field where the work warrants it.
 
+## Failure modes the brief implies
+
+After the happy path and the edges, ask which
+input classes and failure modes the brief implies that no scenario yet covers. Each answer becomes a
+scenario, a light one if need be, or is recorded with
+`compass scenario descope "<mode>" --reason "<why>"`. The verifier lists every
+recorded mode in the verification report, so nothing named is dropped
+silently.
+
+- **Worked example, a rate limit.** "Limit search to 100 requests a minute"
+  implies a client exactly at 100, a client over it, two clients sharing an
+  address, and the counter's reset at the minute boundary. The first three
+  become scenarios; the reset is de-scoped because the limiter library's own
+  tests cover the window.
+- **Worked example, a CSV import.** "Import customers from a CSV file"
+  implies an empty file, a header with no rows, a row missing a required
+  column, a duplicate customer, and a file that is not UTF-8. The first four
+  become scenarios; the encoding case is de-scoped as out of scope for this
+  release, with a follow-up issue that adds encoding detection.
+
 ## Self-review before the requirements review
 
 When `acceptance-criteria.md` is written, run these four scans over it yourself before

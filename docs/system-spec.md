@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a pending lesson proposal, then compass lesson decline removes it and records its text, so compass retro --lessons does not propose it again
+### Given the verb surface, then scenario descope is in verb_help.py, the README's CLI block and compass scenario --help. The top-level verb set does not change.
 
-- **Scenario id:** `LD-A`
+- **Scenario id:** `FM-D`
 - **Intent:** `INT-1`
-- **Source issue:** `lesson-proposal-decline`
+- **Source issue:** `failure-modes-in-define`
 - **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1426 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1430 superseded scenario(s) are in `docs/system-spec-archive.md`.

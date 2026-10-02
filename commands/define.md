@@ -44,6 +44,23 @@ contract, QA for coverage. Write it so all five roles can.
    but never to zero: "no scenario" is never a valid state. On a quick fix
    the single scenario must be genuinely unambiguous, because the
    requirements review is collapsed only because the scenario is unambiguous.
+   Then ask yourself which input classes and failure modes the brief
+   implies that no scenario yet covers. Each answer becomes a scenario, a
+   light one if need be, or is recorded with
+   `compass scenario descope "<mode>" --reason "<why>"`, which the verifier
+   lists in the verification report. Nothing named is dropped silently.
+   - **Worked example, a rate limit.** The brief says "limit search to 100
+     requests a minute". The happy path is one client under the limit. It
+     implies: a client exactly at 100, a client over it, two clients sharing
+     an address, and the counter's reset at the minute boundary. Each of the
+     first three becomes a scenario; the reset is de-scoped with the reason
+     "the limiter library's own tests cover the window".
+   - **Worked example, a CSV import.** The brief says "import customers from
+     a CSV file". It implies: an empty file, a header with no rows, a row
+     with a missing required column, a duplicate customer, and a file that
+     is not UTF-8. The first four become scenarios; the encoding case is
+     de-scoped with the reason "non-UTF-8 files are out of scope for this
+     release; a follow-up issue adds encoding detection".
 3. **Group by independence.** On larger work, group scenarios by which touch
    disjoint surface - this grouping seeds the distribution map at the plan
    stage.

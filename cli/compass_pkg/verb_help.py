@@ -95,6 +95,8 @@ VERB_DESCRIPTIONS = {
         "Print each lesson and each pending proposal, marking `on_topic` lessons as stored, not yet surfaced.",
     'lesson remove':
         "Delete one lesson by its LS- id. The lesson it superseded, if any, is not restored; git keeps the history. Its text is kept, so `compass retro --lessons` does not propose it again.",
+    'scenario descope':
+        "Record, in the manifest's `failure_modes_descoped`, a failure mode or input class the brief implies that no scenario covers, with the reason it is left out and today's date. The verifier is told to list each in the verification report. Nothing checks that it did, and a hand edit of the manifest can remove an entry, so this is a record and a prompt, not a guarantee. Refuses an empty mode or reason, and a mode already recorded. No gate reads it.",
     'lesson decline':
         "Drop a pending proposal by its LP- id without making it a lesson. Its text is kept, so `compass retro --lessons` does not propose it again.",
     'policy review-rules':

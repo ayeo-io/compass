@@ -106,7 +106,17 @@ evidence block is an automatic fail.
 
 **If FAIL - disposition:** {{"fix and re-check" \| "sent back to the define stage: scenarios TRC-… are uncoverable because …"}}
 
-## 5. Decisions taken for the user
+## 5. Failure modes de-scoped at define
+
+<!-- Each entry in the manifest's `failure_modes_descoped`, recorded with
+     `compass scenario descope`: the mode and why no scenario covers it.
+     "None" is an answer; an empty section is not. -->
+
+| Failure mode | Why no scenario covers it |
+|---|---|
+| {{mode}} | {{reason}} |
+
+## 6. Decisions taken for the user
 
 <!-- Every choice an agent made that the user would otherwise have made: a
      scope cut, a design fork, a finding judged out of scope, a re-sequenced

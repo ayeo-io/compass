@@ -70,7 +70,7 @@ from compass_pkg.quick_fix_cmd import register as register_quick_fix_parser  # n
 # what `compass --version` and the release-consistency test read, and a
 # grep for the constant should find it at the CLI's entry point. The
 # assert fails if the two values differ.
-COMPASS_VERSION = "5.1.0"
+COMPASS_VERSION = "5.2.0"
 assert COMPASS_VERSION == _core.COMPASS_VERSION, (
     "cli/compass and compass_pkg/core.py disagree about the version")
 

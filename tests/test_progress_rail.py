@@ -172,7 +172,8 @@ def _rail_lines(out: str) -> list[str]:
 
 
 def test_a_terminal_shows_a_rail_with_one_current_marker(tmp_path):
-    """RL-A."""
+    """RL-A: at a terminal, the line after the header is a rail with exactly
+    one current marker."""
     root = _build(tmp_path, "feature/implementing")
     code, out = _tty(root)
     assert code == 0, out
@@ -197,14 +198,15 @@ def test_a_skipped_stage_is_shown_not_left_out(tmp_path):
 
 
 def test_no_color_drops_the_colour_codes(tmp_path):
-    """RL-E."""
+    """RL-E: with NO_COLOR set, the rail has no colour codes."""
     root = _build(tmp_path, "feature/implementing")
     code, out = _tty(root, NO_COLOR="1")
     assert "●" in out and "\x1b[" not in out, repr(out)
 
 
 def test_compass_color_never_uses_ascii_markers(tmp_path):
-    """RL-E."""
+    """RL-E: with COMPASS_COLOR=never, the rail uses ASCII markers and no
+    colour codes."""
     root = _build(tmp_path, "quick-fix/implementing")
     code, out = _tty(root, COMPASS_COLOR="never")
     rail = " ".join(_rail_lines(out))
@@ -322,7 +324,7 @@ def test_a_narrow_terminal_wraps_the_rail(tmp_path, case):
     ("quick-fix/implementing", "/compass:quick-fix"),
 ])
 def test_the_next_line_names_the_command(tmp_path, case, command):
-    """RL-G."""
+    """RL-G: a Next line names the command for the current stage."""
     code, out = _tty(_build(tmp_path, case))
     assert f"Next: {command}" in ANSI.sub("", out), out
 

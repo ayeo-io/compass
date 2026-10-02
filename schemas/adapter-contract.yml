@@ -1,0 +1,56 @@
+# The runtime adapter contract as a table: one row per capability in the
+# mapping table of docs/portability.md, one cell per adapter.
+#
+# Each cell has a status:
+#   full     the adapter gives the capability; `path` is where
+#   partial  it gives part of it; `path` is where, `note` says what is missing
+#   none     it does not; `reason` says why
+#
+# tests/test_adapter_contract.py fails when a capability in the doc has no
+# row, an adapter's cell is missing or empty, a path does not exist, or a
+# directory under adapters/ has no column. A second adapter adds its name to
+# `adapters` and a cell to every row before it lands.
+#
+# `obligation` is the numbered requirement under "Runtime adapter contract"
+# in docs/portability.md that the capability serves.
+
+adapters:
+  - claude-code
+
+capabilities:
+  - capability: Always-loaded operating instructions
+    obligation: 4
+    claude-code: {status: full, path: hooks/session-start.sh}
+  - capability: Intent-triggered assessment
+    obligation: 1
+    claude-code: {status: full, path: compass-contract.md}
+  - capability: User commands or stage interface
+    obligation: 2
+    claude-code: {status: full, path: commands/}
+  - capability: Kit CLI invocation
+    obligation: 3
+    claude-code: {status: full, path: bin/compass}
+  - capability: Pre-action enforcement
+    obligation: 4
+    claude-code: {status: full, path: hooks/pre-tool.sh}
+  - capability: Post-action issue logging
+    obligation: 6
+    claude-code: {status: full, path: hooks/post-tool.sh}
+  - capability: Session-end status check
+    obligation: 4
+    claude-code: {status: full, path: hooks/stop.sh}
+  - capability: Role entry points
+    obligation: 5
+    claude-code: {status: full, path: commands/intent.md}
+  - capability: Distinct agent contexts
+    obligation: 7
+    claude-code: {status: full, path: agents/}
+  - capability: Isolated parallel workspaces
+    obligation: 7
+    claude-code: {status: full, path: skills/worktree-multiagent/SKILL.md}
+  - capability: CI integration
+    obligation: 3
+    claude-code: {status: full, path: .github/workflows/compass.yml}
+  - capability: Install surface (`bin/compass`, `.claude-plugin/`)
+    obligation: 3
+    claude-code: {status: full, path: .claude-plugin/plugin.json}

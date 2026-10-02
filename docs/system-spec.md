@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the release intends 5.1.0, When the version tests run, Then every version location reads 5.1.0
+### Given a feature issue with its acceptance criteria registered and no technical design, When compass next runs, Then it reports Plan; and given an initiative issue with its criteria registered and no requirements review, Then it reports Refine
 
 - **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `release-5-1-0`
+- **Source issue:** `refine-never-clears-on-a-feature`
 - **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1374 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1375 superseded scenario(s) are in `docs/system-spec-archive.md`.

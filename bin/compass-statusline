@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Claude Code's status line command for Compass. It runs after each message,
 # so it loads only the status line module, not the full CLI. Point the
-# statusLine setting at this file:
-#   "statusLine": {"type": "command", "command": "<compass>/bin/compass-statusline"}
+# statusLine setting at the launcher the session-start hook keeps in the
+# plugin's data folder, which runs this file and survives upgrades:
+#   "statusLine": {"type": "command", "command": "~/.claude/plugins/data/compass-compass/compass-statusline"}
 # It must never break the session: with no python3, or on any error, it
 # prints nothing and exits 0.
 ROOT="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/.." >/dev/null 2>&1 && pwd)"

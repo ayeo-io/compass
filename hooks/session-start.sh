@@ -34,6 +34,34 @@ set -uo pipefail
 FRAMEWORK_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONTRACT="$FRAMEWORK_ROOT/compass-contract.md"
 
+# The status line launcher. A statusLine setting must name a fixed path, but
+# the plugin's own path names its version and changes on every upgrade. So
+# keep a small launcher in the plugin's data folder, which Claude Code keeps
+# across updates, pointing at this version's bin/compass-statusline; the
+# setting names the launcher and never has to change. It is written in every
+# repository, before the opt-in check, because the status line runs
+# everywhere. Rewritten only when its content differs, through a temporary
+# file and a rename, so a status line refresh never runs half a script. It
+# prints nothing and never fails the session.
+compass_write_statusline_launcher() {
+  local data="${CLAUDE_PLUGIN_DATA:-}" target launcher want tmp
+  [ -n "$data" ] || return 0
+  mkdir -p "$data" 2>/dev/null
+  [ -d "$data" ] && [ -w "$data" ] || return 0
+  target="$FRAMEWORK_ROOT/bin/compass-statusline"
+  launcher="$data/compass-statusline"
+  want="$(printf '#!/usr/bin/env bash\n# Written by the Compass session-start hook, and rewritten when the plugin\n# moves, so the statusLine setting can name this file and never change.\ntarget=%q\n[ -x "$target" ] || exit 0\nexec "$target"' "$target")"
+  if [ -f "$launcher" ] && [ "$(cat "$launcher" 2>/dev/null)" = "$want" ]; then
+    return 0
+  fi
+  tmp="$(mktemp "$data/.compass-statusline.XXXXXX" 2>/dev/null)" || return 0
+  if printf '%s\n' "$want" > "$tmp" && chmod 755 "$tmp" && mv -f "$tmp" "$launcher"; then
+    return 0
+  fi
+  rm -f "$tmp"
+}
+compass_write_statusline_launcher >/dev/null 2>&1 || true
+
 INVOKED_FROM="$(pwd)"
 if [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
   PROJECT_DIR="$CLAUDE_PROJECT_DIR"

@@ -167,7 +167,10 @@ machine. A repository with no `.compass/` directory has never opted into
 Compass, so `pre-tool.sh` and `post-tool.sh` pass through silently there: no
 refusal, no output, nothing. `compass init` creates `.compass/`, which the
 five entry-point commands run, so a project opts in the moment someone runs
-a Compass command in it.
+a Compass command in it. One write happens everywhere: the session-start hook
+keeps the status line launcher in the plugin's own data folder, so the
+status line keeps working after an upgrade. It writes nothing in the
+repository and prints nothing.
 
 The boundary is the directory, not the state of the work. A project that has
 opted in and has not been assessed is still refused, and a project the hook

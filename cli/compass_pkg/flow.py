@@ -32,7 +32,9 @@ import re as _re
 
 import fnmatch
 import re as _re
-from compass_pkg.core import CompassError, find_compass_dir, load_yaml, manifest_path, normalize_spine
+import glob
+from compass_pkg.core import (CompassError, find_compass_dir, find_governance, load_yaml,
+                              manifest_path, normalize_spine)
 from compass_pkg.rework import cmd_rework_scan
 
 
@@ -40,6 +42,97 @@ from compass_pkg.rework import cmd_rework_scan
 # --- command: flow ----------------------------------------------------------
 # Cross-issue flow view. Reads broadly; writes only when --digest is given.
 # Never changes any manifest (`Inv-4`: Flow advises, never gates).
+
+# A queued issue older than this many days is flagged when it carries a
+# written recommendation or a label a routing rule names: the two signals that
+# made a month-long wait on a written-up fix expensive (#288).
+QUEUE_AGE_DAYS = 14
+_RECOMMENDATION = re.compile(
+    r"^#+\s.*\b(recommend\w*|proposed|proposal|suggested fix|decision)\b", re.I | re.M)
+
+
+def _routing_labels():
+    """Every label a routing-policy rule names in `labels_any`."""
+    try:
+        policy = load_yaml(os.path.join(find_governance(), "routing-policy.yml"))
+    except CompassError:
+        return set()
+    found, stack = set(), [policy]
+    while stack:
+        node = stack.pop()
+        if isinstance(node, dict):
+            for k, v in node.items():
+                if k == "labels_any" and isinstance(v, list):
+                    found |= {str(x) for x in v}
+                else:
+                    stack.append(v)
+        elif isinstance(node, list):
+            stack.extend(node)
+    return found
+
+
+def _has_recommendation(project_root, slug, created):
+    """True when one of the issue's documents has a heading that names a
+    recommendation, a proposal or a decision. A heading match, not a reading."""
+    dirs = [os.path.join(project_root, "docs", "compass", f"{created}-{slug}"),
+            os.path.join(project_root, ".compass", "work", slug)]
+    for d in dirs:
+        for path in sorted(glob.glob(os.path.join(d, "*.md"))):
+            try:
+                with open(path, encoding="utf-8") as fh:
+                    if _RECOMMENDATION.search(fh.read()):
+                        return True
+            except OSError:
+                continue
+    return False
+
+
+def queue_ageing(work_root, today=None):
+    """(top line, table) for the digest: queued issues by age, and the old
+    ones that carry a recommendation or a guarded label."""
+    today = today or datetime.date.today()
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(work_root)))
+    guarded = _routing_labels()
+    rows = []
+    for slug in sorted(os.listdir(work_root)) if os.path.isdir(work_root) else []:
+        tp = manifest_path(os.path.join(work_root, slug))
+        if not os.path.isfile(tp):
+            continue
+        try:
+            m = load_yaml(tp)
+        except CompassError:
+            continue
+        if not isinstance(m, dict) or m.get("status") != "queued":
+            continue
+        created = str(m.get("created") or "")
+        try:
+            age = (today - datetime.date.fromisoformat(created)).days
+        except ValueError:
+            continue
+        signals = []
+        if _has_recommendation(project_root, slug, created):
+            signals.append("recommendation")
+        labels = [l for l in ((m.get("assessment") or {}).get("labels") or [])
+                  if str(l) in guarded]
+        if labels:
+            signals.append("label " + ", ".join(str(l) for l in labels))
+        rows.append((age, slug, signals))
+    rows.sort(key=lambda r: (-r[0], r[1]))
+    if not rows:
+        return "**Queue ageing:** No queued issues.", "## Queue age\n\nNo queued issues.\n"
+    flagged = [f"{slug} ({age} days, {'; '.join(sig)})"
+               for age, slug, sig in rows if age > QUEUE_AGE_DAYS and sig]
+    if flagged:
+        top = (f"**Queue ageing:** {len(flagged)} queued issue(s) older than "
+               f"{QUEUE_AGE_DAYS} days carry a recommendation or a guarded label: "
+               + ", ".join(flagged) + ".")
+    else:
+        top = (f"**Queue ageing:** no queued issue older than {QUEUE_AGE_DAYS} days "
+               f"carries a recommendation or a guarded label.")
+    table = ["## Queue age", "", "| Issue | Age (days) | Signal |", "|---|---|---|"]
+    table += [f"| {slug} | {age} | {'; '.join(sig) or '-'} |" for age, slug, sig in rows]
+    return top, "\n".join(table) + "\n"
+
 
 def cmd_flow(args):
     """Produce the flow board; with --digest also output a dated digest section
@@ -132,6 +225,9 @@ def cmd_flow(args):
     today = datetime.date.today().isoformat()
     print(f"# Flow digest - {today}\n")
     print("> Advisory only. This digest does not modify any issue state (Inv-4).\n")
+    top, table = queue_ageing(work_root)
+    print(top + "\n")
+    print(table)
 
     # --- Rework scan section (TRC-D5) ---
     # Capture rework-scan output by invoking the scan logic directly

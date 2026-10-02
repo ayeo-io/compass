@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a scenario title naming a missing file path or an eval scenario or behaviour id, then compass scenario add and quick-fix start refuse it before it can reach the living spec
+### Given queued issues, then compass flow --digest lists each with its age and flags those older than the threshold that carry a recommendation heading or a label a routing rule names, and the release guide asks which queued issues touch the release
 
-- **Scenario id:** `TC-A`
+- **Scenario id:** `QA-A`
 - **Intent:** `INT-1`
-- **Source issue:** `titles-checked-before-ship`
+- **Source issue:** `queue-ageing-signal`
 - **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1431 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1432 superseded scenario(s) are in `docs/system-spec-archive.md`.

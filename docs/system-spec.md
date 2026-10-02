@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given schemas/adapter-contract.yml, then every capability in docs/portability.md has a row, every adapter has a full, partial or none cell with a path, an adapter directory without a column fails, and a new negative-identity check in cli/ or hooks/ fails the scan
+### Given the verb surface, then issue diagnose is in verb_help.py, the README's CLI block and compass issue --help. The top-level verb set does not change.
 
-- **Scenario id:** `AC-A`
+- **Scenario id:** `SD-E`
 - **Intent:** `INT-1`
-- **Source issue:** `adapter-contract-gate`
+- **Source issue:** `session-diagnosis`
 - **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1410 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1415 superseded scenario(s) are in `docs/system-spec-archive.md`.

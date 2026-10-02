@@ -10038,3 +10038,59 @@
 - **Intent:** `INT-1`
 - **Source issue:** `queue-ageing-signal`
 - **Landed:** 2026-10-02
+
+### Given a committed living spec that names an issue missing from the local archive, then deriving it refuses and names the issue instead of dropping its scenarios _(archived)_
+
+- **Scenario id:** `SK-A`
+- **Intent:** `INT-1`
+- **Source issue:** `spec-derive-keeps-missing-issues`
+- **Landed:** 2026-10-02
+
+### Given a session start with CLAUDE_PLUGIN_DATA set, then a launcher named compass-statusline exists there and runs the current plugin root's status line script, passing stdin through. _(archived)_
+
+- **Scenario id:** `SL-A`
+- **Intent:** `INT-1`
+- **Source issue:** `status-line-launcher`
+- **Landed:** 2026-10-02
+
+### Given a second session start from a different plugin root, then the launcher is rewritten to the new root; from the same root, the file is left unchanged, with the same modification time. _(archived)_
+
+- **Scenario id:** `SL-B`
+- **Intent:** `INT-1`
+- **Source issue:** `status-line-launcher`
+- **Landed:** 2026-10-02
+
+### Given CLAUDE_PLUGIN_DATA unset or not writable, then session start exits as before and its output is byte-identical; with it set, the output to the model is unchanged too. _(archived)_
+
+- **Scenario id:** `SL-C`
+- **Intent:** `INT-1`
+- **Source issue:** `status-line-launcher`
+- **Landed:** 2026-10-02
+
+### Given the launcher's target is missing, then the launcher prints nothing and exits 0. _(archived)_
+
+- **Scenario id:** `SL-D`
+- **Intent:** `INT-1`
+- **Source issue:** `status-line-launcher`
+- **Landed:** 2026-10-02
+
+### Given the setup helper and a settings file with no statusLine, then it shows the diff and writes nothing without --apply, and writes the entry with it. _(archived)_
+
+- **Scenario id:** `SL-E`
+- **Intent:** `INT-1`
+- **Source issue:** `status-line-launcher`
+- **Landed:** 2026-10-02
+
+### Given a settings file whose statusLine does not name Compass, then the file is left byte-identical, with or without --apply, and the helper says how to combine the two. _(archived)_
+
+- **Scenario id:** `SL-F`
+- **Intent:** `INT-1`
+- **Source issue:** `status-line-launcher`
+- **Landed:** 2026-10-02
+
+### Given a settings file whose statusLine names a versioned Compass path, then the helper offers the launcher path as the replacement and writes it only with --apply. _(archived)_
+
+- **Scenario id:** `SL-G`
+- **Intent:** `INT-1`
+- **Source issue:** `status-line-launcher`
+- **Landed:** 2026-10-02

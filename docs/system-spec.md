@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a committed living spec that names an issue missing from the local archive, then deriving it refuses and names the issue instead of dropping its scenarios
+### Given the init command and the quickstart, then init has a status line step that runs even when its first step stops for existing governance, and asks before applying; the quickstart gives the launcher path and no longer says to edit the path after each upgrade.
 
-- **Scenario id:** `SK-A`
+- **Scenario id:** `SL-H`
 - **Intent:** `INT-1`
-- **Source issue:** `spec-derive-keeps-missing-issues`
+- **Source issue:** `status-line-launcher`
 - **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1433 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1441 superseded scenario(s) are in `docs/system-spec-archive.md`.

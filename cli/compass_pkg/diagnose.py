@@ -96,11 +96,31 @@ def _interruptions(root, slug):
     return out
 
 
+def _landed_by_items(m):
+    """`landed_by` as a list: older manifests hold a list of mappings, each
+    naming a `commit`, an `issue` or an `id`; some hold one mapping or text."""
+    by = m.get("landed_by")
+    return by if isinstance(by, list) else [by] if by else []
+
+
 def _landed_as(m):
-    by = m.get("land_commit") or m.get("landed_by")
-    if isinstance(by, list):
-        by = ", ".join(str(b) for b in by)
-    return str(by) if by else ""
+    if m.get("land_commit"):
+        return str(m["land_commit"])
+    names = []
+    for item in _landed_by_items(m):
+        if isinstance(item, dict):
+            item = item.get("commit") or item.get("issue") or item.get("id") or ""
+        if item:
+            names.append(str(item))
+    return ", ".join(names)
+
+
+def _landed_through(m):
+    """The issues this one landed through, when `landed_by` names any."""
+    if m.get("land_commit"):
+        return ""
+    return ", ".join(str(i["issue"]) for i in _landed_by_items(m)
+                     if isinstance(i, dict) and i.get("issue"))
 
 
 def _omitted(m):
@@ -184,8 +204,14 @@ def _deviations(task_dir, m, stages, shown, records):
     spike = str(m.get("delivery_approach") or "") == "spike"
     # An issue that has not landed has reached only as far as its last stage
     # with a record; a stage after that is not reached yet, not missing.
-    reached = max((i for i, s in enumerate(_ORDER) if shown[s]), default=-1)
-    for i, stage in enumerate(_ORDER):
+    # An omission recorded early says nothing about how far the work got.
+    reached = max((i for i, s in enumerate(_ORDER)
+                   if any(not r.startswith("omitted:") for r in shown[s])), default=-1)
+    through = _landed_through(m)
+    if through:
+        out.append(f"landed through {through}: its records are in that issue, "
+                   f"so this issue's own missing stages are not listed")
+    for i, stage in enumerate(_ORDER if not through else ()):
         weight = stages.get(stage)
         if weight is None or str(weight) in _NOT_RUN or shown[stage]:
             continue
@@ -207,7 +233,7 @@ def _deviations(task_dir, m, stages, shown, records):
         # Red-first is checked per issue, so a green whose scenario has no
         # red of its own is only a deviation when the issue has no red at all.
         if not own and not reds and not declared:
-            out.append(f"scenario {scenario}: a green, and no red anywhere in the issue")
+            out.append(f"scenario {scenario or '(unbound)'}: a green, and no red anywhere in the issue")
         for red in own:
             if red[2] and when and red[2] > when:
                 source = ("the same command" if red[3] == command

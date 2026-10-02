@@ -38,7 +38,7 @@ import re as _re
 SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))  # realpath: resolve symlinks
 FRAMEWORK_ROOT = os.path.dirname(SCRIPT_DIR)  # cli/.. == the compass repo root
 
-COMPASS_VERSION = "5.0.0"    # the CLI's own version
+COMPASS_VERSION = "5.1.0"    # the CLI's own version
 COMPASS_SCHEMA_VERSION = "2.0"    # the manifest.yml schema this CLI writes
 COMPASS_SCHEMA_VERSION_11 = "1.1"  # schema version that introduced manifest.yml.status
 

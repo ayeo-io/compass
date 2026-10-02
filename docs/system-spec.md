@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a doc under docs/ that the docs/README.md index does not list, or a path in its owning-docs table that does not exist, When the suite runs, Then a test fails naming it
+### Given the suite runs on parallel workers, When make test or CI runs it, Then tests marked serial, including the two timing tests, run in a second pass on their own
 
 - **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `owning-doc-router`
+- **Source issue:** `parallel-ci-flakes`
 - **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1385 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1386 superseded scenario(s) are in `docs/system-spec-archive.md`.

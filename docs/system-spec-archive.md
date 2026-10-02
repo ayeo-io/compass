@@ -10031,3 +10031,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `titles-checked-before-ship`
 - **Landed:** 2026-10-02
+
+### Given queued issues, then compass flow --digest lists each with its age and flags those older than the threshold that carry a recommendation heading or a label a routing rule names, and the release guide asks which queued issues touch the release _(archived)_
+
+- **Scenario id:** `QA-A`
+- **Intent:** `INT-1`
+- **Source issue:** `queue-ageing-signal`
+- **Landed:** 2026-10-02

@@ -51,6 +51,7 @@ jobs:
         env:
           BASE_REF: ${{ github.base_ref }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          CHANGED_FILES: ${{ github.event.pull_request.changed_files }}
           GH_TOKEN: ${{ github.token }}
         run: |
           git fetch --depth=1 origin "$BASE_REF"
@@ -62,6 +63,13 @@ jobs:
           names=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files" --jq '.[].filename')
           files=()
           while IFS= read -r f; do [ -n "$f" ] && files+=("$f"); done <<< "$names"
+          # The files API stops at 3,000 files without an error, so a short
+          # list would review the rest with no rules.
+          # Compared as strings, so an empty or non-numeric count fails too.
+          if [ "${#files[@]}" != "$CHANGED_FILES" ]; then
+            echo "The files API listed ${#files[@]} of $CHANGED_FILES changed files, so the review rules would be incomplete. GitHub's files API stops at 3,000 files: split the pull request, or a person reads it and merges it as an admin." >&2
+            exit 1
+          fi
           if [ -f "$BASE/governance/review-rules.yml" ] && [ "${#files[@]}" -gt 0 ]; then
             text=$(python3 "$BASE"/cli/compass policy review-rules \
               --rules "$BASE/governance/review-rules.yml" --changed-files "${files[@]}")

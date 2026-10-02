@@ -154,6 +154,55 @@ def test_the_output_delimiter_is_random():
     assert 'echo "rules<<$delim"' in run, run
 
 
+def _run_rules_step(tmp_path, gh_body, changed):
+    """Run the rules step's script with stub git, gh and python3."""
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    for name, body in (("git", "exit 0"), ("gh", gh_body),
+                       ("python3", "echo RULES-PRINTED; exit 0")):
+        stub = bin_dir / name
+        stub.write_text("#!/bin/sh\n" + body + "\n")
+        stub.chmod(0o755)
+    (tmp_path / "base" / "governance").mkdir(parents=True)
+    (tmp_path / "base" / "governance" / "review-rules.yml").write_text("rules: []\n")
+    out = tmp_path / "out.txt"
+    env = {"PATH": f"{bin_dir}:/usr/bin:/bin", "BASE_REF": "main", "PR_NUMBER": "1",
+           "GITHUB_REPOSITORY": "o/r", "RUNNER_TEMP": str(tmp_path),
+           "GITHUB_OUTPUT": str(out), "GH_TOKEN": "x", "CHANGED_FILES": changed}
+    r = subprocess.run(["bash", "-e", "-o", "pipefail", "-c", _step("rules")["run"]],
+                       env=env, capture_output=True, text=True)
+    return r, (out.read_text() if out.exists() else "")
+
+
+def test_a_short_file_listing_fails_the_step(tmp_path):
+    """The files API stops at 3,000 files without an error (#266). A listing
+    shorter than the pull request's own count must fail the step."""
+    r, out = _run_rules_step(tmp_path, "printf 'a.py\\nb.py\\n'", "3")
+    assert r.returncode != 0, r.stdout + r.stderr
+    assert "rules<<" not in out
+    assert "listed 2 of 3" in r.stdout + r.stderr
+
+
+@pytest.mark.parametrize("changed", ["", "abc"])
+def test_a_missing_count_fails_the_step(tmp_path, changed):
+    """A count the step cannot compare is a failure, not a pass."""
+    r, out = _run_rules_step(tmp_path, "printf 'a.py\\nb.py\\n'", changed)
+    assert r.returncode != 0, r.stdout + r.stderr
+    assert "rules<<" not in out
+
+
+def test_a_full_file_listing_prints_the_rules(tmp_path):
+    """The guard does not refuse a listing that matches the count."""
+    r, out = _run_rules_step(tmp_path, "printf 'a.py\\nb.py\\n'", "2")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "RULES-PRINTED" in out
+
+
+def test_the_changed_file_count_comes_through_env():
+    step = _step("rules")
+    assert step["env"]["CHANGED_FILES"] == "${{ github.event.pull_request.changed_files }}"
+
+
 def test_a_failed_file_listing_fails_the_step(tmp_path):
     """A pull request over GitHub's diff size limit makes the listing fail.
     The step must then fail, not review with no rules."""

@@ -11,8 +11,11 @@ python3 --version
 git --version
 ```
 
-Compass needs Python 3. Its CI tests Python 3.11. The CLI bundles its YAML
-parser; `jsonschema` is optional.
+Compass needs Python 3.10 or later. Its CI tests Python 3.11. The CLI bundles
+its YAML parser; `jsonschema` is optional. Without Python 3.10 or later,
+`scripts/install.sh` warns and installs anyway, and the first session in a
+Compass project says so in place of the operating contract;
+`docs/safety-contract.md` says what each hook does then.
 
 ## 2. Install Compass
 

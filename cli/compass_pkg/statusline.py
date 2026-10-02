@@ -82,7 +82,7 @@ def render(cwd: str, width: int = 80) -> str:
 
     from compass_pkg.core import (artifact_path, display_shape, display_stage,
                                   load_yaml, manifest_path, normalize_spine)
-    from compass_pkg.next_cmd import _current_phase_from_task
+    from compass_pkg.next_cmd import _current_phase_from_task, _typed
 
     path = manifest_path(task_dir)
     if not os.path.isfile(path):
@@ -90,6 +90,7 @@ def render(cwd: str, width: int = 80) -> str:
     task = normalize_spine(load_yaml(path))
     if not isinstance(task, dict):
         return ""
+    task = _typed(task)
     gates = [g for g in (task.get("gates") or []) if isinstance(g, dict)]
     if not os.path.isfile(artifact_path(task_dir, "delivery-approach.md")):
         # `compass next` reports no stage without the approach record.

@@ -33,6 +33,9 @@ ROUTES = {
                   "size": "atomic", "goal": "delivery", "role": "engineer"},
     "feature": {"risk": "contained", "familiarity": "brownfield-mapped",
                 "size": "standard", "goal": "delivery", "role": "engineer"},
+    # The only route that earns a requirements review.
+    "initiative": {"risk": "cross-cutting", "familiarity": "brownfield-unmapped",
+                   "size": "large", "goal": "delivery", "role": "engineer"},
 }
 
 
@@ -135,11 +138,14 @@ CASES = {
     "feature, criteria superseded": (dict(route="feature", scenarios=False,
                                           criteria="superseded"), "Define"),
     # NS-B
-    "feature, criteria draft": (dict(route="feature", criteria="draft"), "Refine"),
-    "feature, criteria without scenarios": (dict(route="feature", scenarios=False,
-                                                 criteria="draft"), "Refine"),
-    "feature, requirements review draft": (dict(route="feature", criteria="draft",
-                                                review=True), "Plan"),
+    # A feature earns no requirements review, so its registered criteria
+    # take it past refine.
+    "feature, criteria draft": (dict(route="feature", criteria="draft"), "Plan"),
+    "initiative, criteria draft": (dict(route="initiative", criteria="draft"), "Refine"),
+    "initiative, criteria without scenarios": (dict(route="initiative", scenarios=False,
+                                                    criteria="draft"), "Refine"),
+    "initiative, requirements review draft": (dict(route="initiative", criteria="draft",
+                                                   review=True), "Plan"),
     "quick-fix, scenarios only": (dict(route="quick-fix"), "Implement"),
     # NS-C
     "feature, design draft": (dict(route="feature", criteria="draft", design=True), "Breakdown"),

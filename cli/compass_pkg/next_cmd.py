@@ -148,6 +148,13 @@ def _registered(task: dict, kind: str) -> bool:
     return False
 
 
+def _earned(task: dict, kind: str) -> bool:
+    """True when the issue's route earns the `kind` document.
+    `approach evaluate` seeds an entry for every document the route earns,
+    and `compass issue artifact` refuses any other kind."""
+    return any(a.get("kind") == kind for a in _entries(task, "artifacts"))
+
+
 def _testing_started(task: dict, task_dir: str | None) -> bool:
     """True once any test result is on record: a test-run in the manifest, or
     a red that `compass tdd-red` wrote, which the manifest does not list."""
@@ -191,10 +198,13 @@ def _stages_on_record(task: dict, task_dir: str | None) -> set:
         # record.
         "define": (_registered(task, "acceptance-criteria")
                    or bool(_entries(task, "scenarios"))),
-        # Wherever refine runs, light included, it registers the review
-        # (commands/refine.md). Where it is collapsed or skipped it is not
-        # a current stage at all.
-        "refine": _registered(task, "requirements-review"),
+        # Refine's record is its requirements review, but only a route that
+        # earns the review (an initiative) can register one. Elsewhere refine
+        # leaves no record of its own, so the registered criteria it reviewed
+        # stand in for it.
+        "refine": (_registered(task, "requirements-review")
+                   or (not _earned(task, "requirements-review")
+                       and _registered(task, "acceptance-criteria"))),
         "plan": _registered(task, "technical-design"),
         "breakdown": bool(_entries(task, "subtasks")) or _registered(task, "distribution-map"),
         "implement": _every_scenario_tested(task),

@@ -40,10 +40,10 @@ def project(tmp_path):
 
 @pytest.fixture
 def with_evals(project):
-    (project / "evals" / "scenarios" / "cmp-edge-case").mkdir(parents=True)
-    (project / "evals" / "scenarios" / "cmp-edge-case" / "scenario.yml").write_text("x: 1\n")
+    (project / "evals" / "scenarios" / "zz-made-up-run").mkdir(parents=True)
+    (project / "evals" / "scenarios" / "zz-made-up-run" / "scenario.yml").write_text("x: 1\n")
     (project / "evals" / "judge.py").write_text(
-        'BEHAVIOURS = {\n    "assessed_before_first_edit": "x",\n}\n')
+        'BEHAVIOURS = {\n    "zz_made_up_behaviour": "x",\n}\n')
     return project
 
 
@@ -65,8 +65,8 @@ def test_a_title_naming_a_real_path_is_recorded(project):
 
 
 @pytest.mark.parametrize("title", [
-    "Given the cmp-edge-case run, then it passes",
-    "Given assessed_before_first_edit, then it is judged",
+    "Given the zz-made-up-run run, then it passes",
+    "Given zz_made_up_behaviour, then it is judged",
 ])
 def test_an_eval_scenario_or_behaviour_id_is_refused(with_evals, title):
     r = _start(with_evals, title)
@@ -75,7 +75,7 @@ def test_an_eval_scenario_or_behaviour_id_is_refused(with_evals, title):
 
 
 def test_without_evals_the_same_words_are_recorded(project):
-    r = _start(project, "Given the cmp-edge-case run, then it passes")
+    r = _start(project, "Given the zz-made-up-run run, then it passes")
     assert r.returncode == 0, r.stdout + r.stderr
 
 

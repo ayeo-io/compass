@@ -480,6 +480,7 @@ class TestNextNoFrame:
 # ---------------------------------------------------------------------------
 
 class TestNextLatency:
+    @pytest.mark.serial
     def test_next_under_200ms_p95(self, tmp_path):
         """p95 of 20 runs is under 200ms - BF-1 provisional target (`TRC-C10`)."""
         project = make_project(tmp_path)

@@ -20,7 +20,8 @@ help:  ## list targets
 	@grep -E '^[a-z-]+:.*?##' Makefile | awk -F':.*?##' '{printf "  %-12s %s\n", $$1, $$2}'
 
 test:  ## run the CLI test suite (autoload disabled - reliable in clean envs)
-	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest tests/ -q $(XDIST)
+	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest tests/ -q $(if $(XDIST),$(XDIST) -m "not serial")
+	$(if $(XDIST),PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest tests/ -q -m serial)
 
 lint:  ## check governance YAML
 	python3 cli/compass policy lint

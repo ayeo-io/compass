@@ -9702,3 +9702,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `ship-restales-a-traced-living-spec`
 - **Landed:** 2026-10-02
+
+### Given a doc under docs/ that the docs/README.md index does not list, or a path in its owning-docs table that does not exist, When the suite runs, Then a test fails naming it _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `owning-doc-router`
+- **Landed:** 2026-10-02

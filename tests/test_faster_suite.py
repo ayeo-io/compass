@@ -133,3 +133,39 @@ def test_each_archive_sweep_is_one_test_per_issue(module):
     assert expected, f"{module}: no issue to sweep, so this check proves nothing"
     missing = sorted(expected - ids)
     assert not missing, f"{module}: these issues are not their own test: {missing[:10]}"
+
+
+SERIAL_TESTS = {
+    "tests/next/test_compass_next.py::TestNextLatency::test_next_under_200ms_p95",
+    "tests/test_statusline.py::test_the_shim_is_fast_enough",
+}
+
+
+def test_timing_tests_are_marked_serial():
+    """A wall-clock limit fails at random when parallel workers share the
+    CPU, so each timing test carries the serial marker (TRC-001 of
+    parallel-ci-flakes)."""
+    r = subprocess.run([sys.executable, "-m", "pytest", "--collect-only", "-q",
+                        "-o", "addopts=", "-p", "no:cacheprovider", "-m", "serial",
+                        *sorted({t.split("::")[0] for t in SERIAL_TESTS})],
+                       cwd=ROOT, capture_output=True, text=True,
+                       env={**os.environ, "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"})
+    collected = set(r.stdout.split())
+    assert SERIAL_TESTS <= collected, (SERIAL_TESTS - collected, r.stdout[-500:])
+
+
+def test_make_test_runs_serial_tests_in_their_own_pass(tmp_path):
+    """With pytest-xdist, make test runs the parallel pass without the serial
+    tests, then the serial tests alone (TRC-001 of parallel-ci-flakes)."""
+    out = _make_n("test", tmp_path, xdist=True)
+    assert f'{PARALLEL} -m "not serial"' in out, out
+    assert '-m serial' in out.replace('"not serial"', ""), out
+
+
+def test_ci_runs_serial_tests_in_their_own_pass():
+    """The CI self-check job runs the serial tests after the parallel pass
+    (TRC-001 of parallel-ci-flakes)."""
+    text = (ROOT / ".github" / "workflows" / "compass.yml").read_text(encoding="utf-8")
+    job = text[text.index("self-check"):text.index("bdd-adapter")]
+    assert f'{PARALLEL} -m "not serial"' in job, job
+    assert "-m serial" in job.replace('"not serial"', ""), job

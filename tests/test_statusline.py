@@ -190,6 +190,7 @@ def test_the_shim_does_not_load_the_full_cli(repo):
     assert r.stdout.strip().endswith("LEAN"), r.stdout + r.stderr
 
 
+@pytest.mark.serial
 def test_the_shim_is_fast_enough(repo):
     """The status line runs after every message, so it should take under
     100 ms on a warm repository. A shared CI runner cannot hold that

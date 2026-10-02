@@ -80,7 +80,11 @@ jobs:
         # the cheaper checks above fail first.
         env:
           PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
-        run: python3 -m pytest tests/ -q -p xdist.plugin -n auto
+        # Tests marked serial assert wall-clock limits, so they run after the
+        # parallel pass, on an otherwise idle runner.
+        run: |
+          python3 -m pytest tests/ -q -p xdist.plugin -n auto -m "not serial"
+          python3 -m pytest tests/ -q -m serial
 
   # ---------------------------------------------------------------------------
   # The BDD reference adapter, in its own job and its own environment.

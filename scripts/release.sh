@@ -150,7 +150,13 @@ if [ "$SKIP_TESTS" -eq 0 ]; then
       XDIST="-p xdist.plugin -n auto"
     fi
     # shellcheck disable=SC2086  # XDIST holds several arguments, split on purpose.
-    PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest tests/ -q $XDIST >/dev/null
+    if [ -n "$XDIST" ]; then
+      # Timing tests (marked serial) run after the parallel pass, alone.
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest tests/ -q $XDIST -m "not serial" >/dev/null
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest tests/ -q -m serial >/dev/null
+    else
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest tests/ -q >/dev/null
+    fi
     echo "    PASS"
   else
     echo "    skipped (no python3 or no tests/)"

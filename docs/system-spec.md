@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the rules step's file count does not match, then its message names the cause it can tell apart: a missing count, the 3,000-file limit, or a count from before a newer push
+### Given ADR-028, then it records the single-file CLI decision with the measured size and startup cost.
 
-- **Scenario id:** `RD-A`
+- **Scenario id:** `PY-F`
 - **Intent:** `INT-1`
-- **Source issue:** `rules-step-count-message`
+- **Source issue:** `python-dependency-said-early`
 - **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1402 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1408 superseded scenario(s) are in `docs/system-spec-archive.md`.

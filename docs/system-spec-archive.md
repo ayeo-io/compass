@@ -9821,3 +9821,45 @@
 - **Intent:** `INT-1`
 - **Source issue:** `rules-step-file-cap`
 - **Landed:** 2026-10-02
+
+### Given the rules step's file count does not match, then its message names the cause it can tell apart: a missing count, the 3,000-file limit, or a count from before a newer push _(archived)_
+
+- **Scenario id:** `RD-A`
+- **Intent:** `INT-1`
+- **Source issue:** `rules-step-count-message`
+- **Landed:** 2026-10-02
+
+### Given an opted-in project and no python3 on the PATH, when a session starts, then the hook prints valid JSON with a systemMessage for the person and additionalContext for the model, each saying Compass needs Python 3.10 or later, that edits will be refused until it is installed, and how to fix it. _(archived)_
+
+- **Scenario id:** `PY-A`
+- **Intent:** `INT-1`
+- **Source issue:** `python-dependency-said-early`
+- **Landed:** 2026-10-02
+
+### Given an opted-in project and a python3 older than 3.10, when a session starts, then the hook says the same and names the version it found. _(archived)_
+
+- **Scenario id:** `PY-B`
+- **Intent:** `INT-1`
+- **Source issue:** `python-dependency-said-early`
+- **Landed:** 2026-10-02
+
+### Given a repository that never opted in, when a session starts without python3, then the hook prints nothing and exits 0, as now. _(archived)_
+
+- **Scenario id:** `PY-C`
+- **Intent:** `INT-1`
+- **Source issue:** `python-dependency-said-early`
+- **Landed:** 2026-10-02
+
+### Given scripts/install.sh on a machine without python3 3.10+, then it says so before it finishes, names what will not work, and still installs. With it, it names the version found. _(archived)_
+
+- **Scenario id:** `PY-D`
+- **Intent:** `INT-1`
+- **Source issue:** `python-dependency-said-early`
+- **Landed:** 2026-10-02
+
+### Given docs/safety-contract.md, then it has a table of what each hook and the CLI do without python3 3.10+, and the table's pre-tool row matches the hook's python-missing refusal. _(archived)_
+
+- **Scenario id:** `PY-E`
+- **Intent:** `INT-1`
+- **Source issue:** `python-dependency-said-early`
+- **Landed:** 2026-10-02

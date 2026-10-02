@@ -85,6 +85,16 @@ VERB_DESCRIPTIONS = {
         "Check every precondition before writing anything, then trace, check, gate and ship a quick fix in one call: every changed path outside .compass/ traces to its scenario, compass check's output is recorded as command-output evidence, the three quick-fix gates pass against that evidence and the scenario's green, one devlog line is appended, and compass ship-commit lands the change. Refuses - with no gate passed and nothing committed - if check fails, another gate is still pending, no green is bound to a scenario, or a changed path is untraced while several scenarios are on record.",
     'issue diagnose':
         "Explain one run from its issue's own records, after the session is gone: each stage the route ran against the record that shows it, each gate with its evidence, a timeline of every dated record (reds, greens, subtask dispatches, review rounds, reassessments, the landing), the deviations those records show (a stage with no record, a red dated after its green, a green with no red, a failed review round, a gate not passed), and the questions only the transcript could answer. It reads and never writes.",
+    'lesson add':
+        "Record a one-sentence lesson in `lessons.yml` in the project's `.compass` folder for later sessions in this repository. Who added it comes from `git config compass.decidedBy`, else `user.name`; there is no option for it, and the CLI cannot tell whether the person or the model typed the words. The model is told to use `compass lesson propose` instead. An exact repeat is refused; a rule that contains an existing one replaces it and records `superseded`, while a rule contained in an existing one is kept as a separate lesson. A rule naming a guardrail id is refused, and so is one matching a short list of model names and tool-version shapes: that check is a pattern, not a proof, so some names pass and some ordinary words are refused. A rule over 150 words is refused. `source` records the route a lesson came by, not who typed it. `always` lessons are injected at session start under a 150-word cap; `on_topic` lessons are stored, not yet surfaced.",
+    'lesson propose':
+        "Hold a lesson in `lessons-pending.yml` in the project's `.compass` folder. It takes effect only on `compass lesson accept`. The model is told to propose rather than add.",
+    'lesson accept':
+        "Turn a pending proposal into a lesson, recording who accepted it from git config.",
+    'lesson list':
+        "Print each lesson and each pending proposal, marking `on_topic` lessons as stored, not yet surfaced.",
+    'lesson remove':
+        "Delete one lesson by its LS- id. The lesson it superseded, if any, is not restored; git keeps the history.",
     'policy review-rules':
         "Print the rules in governance/review-rules.yml whose file patterns match the paths given to --changed-files, each with whether it blocks, the guardrail or strategy it enforces, what not to flag and the incident behind it. A reviewer reads this instead of every house rule and cites a finding by its RR- id. It reads the project's own governance/, never the shipped copy; --rules reads another file, such as the base branch's copy in CI.",
     'policy lint':

@@ -84,12 +84,24 @@ esac
 # JSON. A hand-rolled escape here would break on the first apostrophe in the
 # contract.
 
-python3 - "$CONTRACT" <<'PY' 2>/dev/null || exit 0
+# The project's `always` lessons follow the contract, under their own
+# 150-word cap (cli/compass_pkg/lessons.py, ADR-029). A failure to read them
+# loses the lessons, never the contract.
+PYTHONPATH="$FRAMEWORK_ROOT/cli${PYTHONPATH:+:$PYTHONPATH}" \
+python3 - "$CONTRACT" "$PROJECT_DIR/.compass" <<'PY' 2>/dev/null || exit 0
 import json
 import sys
 
 with open(sys.argv[1], encoding="utf-8") as fh:
     contract = fh.read()
+
+try:
+    from compass_pkg.lessons import render_block
+    lessons = render_block(sys.argv[2])
+except BaseException:  # noqa: BLE001 - the contract must still reach the session
+    lessons = ""
+if lessons:
+    contract = contract.rstrip("\n") + "\n\n" + lessons + "\n"
 
 print(json.dumps({
     "hookSpecificOutput": {

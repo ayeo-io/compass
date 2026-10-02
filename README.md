@@ -176,6 +176,11 @@ compass decision record    write a settled product decision; the decider comes f
 compass decision list      each decision's date, slug and outcome, newest first
 compass decision show      print one decision
 compass decision check     fail when a decision at a base ref was changed or removed
+compass lesson add         record a project lesson now; who added it comes from git
+compass lesson propose     hold a lesson for acceptance (the model's route)
+compass lesson accept      turn a pending proposal into a lesson
+compass lesson list        each lesson and each pending proposal
+compass lesson remove      delete one lesson
 ```
 
 Every verb describes itself - `compass <verb> --help` says what it does and

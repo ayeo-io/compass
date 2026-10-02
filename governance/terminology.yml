@@ -621,6 +621,25 @@ codes:
     referent: One rule in the routing policy.
     appears_in: [routing-policy.yml, delivery-approach.md, "manifest.yml policy_rules_fired[].id"]
     related: [routing-policy, delivery-approach, guardrail]
+  LS:
+    means: >
+      Lesson. One rule in `lessons.yml` in the project's `.compass` folder that a person in this project
+      had to repeat, injected into later sessions when it applies always.
+      `compass lesson` adds, lists and removes them.
+    not: >
+      A guardrail or a routing rule. A lesson is advice: no check reads it,
+      and a guardrail always wins over it.
+    referent: One lesson in the project's lessons file.
+    appears_in: [lessons.yml, "compass lesson list"]
+    related: [LP, guardrail]
+  LP:
+    means: >
+      Lesson proposal. A lesson held in `lessons-pending.yml` in the project's `.compass` folder until
+      someone runs `compass lesson accept`. `compass retro --lessons`
+      proposes, and the model is told to propose rather than add.
+    referent: One pending proposal.
+    appears_in: [lessons-pending.yml, "compass lesson list"]
+    related: [LS]
   RR:
     means: >
       Review rule. One rule in governance/review-rules.yml that a reviewer

@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a quick fix whose working tree also changes docs/system-spec.md and docs/system-spec-archive.md, When quick-fix finish runs, Then it traces neither file and the issue's changed files are only its own
+### Given a doc under docs/ that is in neither docs/README.md nor the CLAUDE.md table, or a table path that does not exist, When the suite runs, Then a test fails naming it
 
 - **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `ship-restales-a-traced-living-spec`
+- **Source issue:** `owning-doc-router`
 - **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1384 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1385 superseded scenario(s) are in `docs/system-spec-archive.md`.

@@ -89,3 +89,55 @@ def test_adr_readme_updated_multiple_times(project: Path, run_cli):
     text = readme.read_text(encoding="utf-8")
     assert "ADR-001" in text
     assert "ADR-002" in text
+
+
+# ---------------------------------------------------------------------------
+# The row goes in the table, not at the end of the file (#272)
+# ---------------------------------------------------------------------------
+
+_INDEX = """# Decisions
+
+## Index
+
+| ID | Title | Status |
+|---|---|---|
+| [ADR-001](ADR-001-first.md) | First | accepted |
+
+## Authoring a new ADR
+
+Use `compass adr new <slug>`.
+"""
+
+
+def _decisions_with_index(project: Path) -> Path:
+    decisions = project / "architecture" / "decisions"
+    decisions.mkdir(parents=True)
+    (decisions / "ADR-001-first.md").write_text(
+        "---\nid: ADR-001\ntitle: First\nstatus: accepted\ndate: 2026-01-01\n"
+        "supersedes: ''\nsuperseded_by: ''\n---\n# First\n", encoding="utf-8")
+    (decisions / "README.md").write_text(_INDEX, encoding="utf-8")
+    return decisions
+
+
+def test_the_row_goes_after_the_last_adr_row(project: Path, run_cli):
+    decisions = _decisions_with_index(project)
+    result = run_cli("adr", "new", "second-decision", cwd=project)
+    assert result.returncode == 0, result.combined
+    lines = (decisions / "README.md").read_text(encoding="utf-8").splitlines()
+    first = next(i for i, l in enumerate(lines) if l.startswith("| [ADR-001]"))
+    assert lines[first + 1].startswith("| [ADR-002](ADR-002-second-decision.md) |"), lines
+    assert lines[-1] == "Use `compass adr new <slug>`.", "nothing is appended after the last section"
+
+
+def test_the_row_goes_under_an_empty_table(project: Path, run_cli):
+    decisions = project / "architecture" / "decisions"
+    decisions.mkdir(parents=True)
+    (decisions / "README.md").write_text(
+        "# Decisions\n\n| ID | Title | Status |\n|---|---|---|\n\n## Later\n\nText.\n",
+        encoding="utf-8")
+    result = run_cli("adr", "new", "first-decision", cwd=project)
+    assert result.returncode == 0, result.combined
+    lines = (decisions / "README.md").read_text(encoding="utf-8").splitlines()
+    sep = lines.index("|---|---|---|")
+    assert lines[sep + 1].startswith("| [ADR-001](ADR-001-first-decision.md) |"), lines
+    assert lines[-1] == "Text."

@@ -561,7 +561,33 @@ collision; resolve by renumbering one side.
 
 
 def _adr_readme_row(adr_id: str, title: str, status: str, path: str) -> str:
-    return f"| {adr_id} | {title} | {status} |\n"
+    return f"| [{adr_id}]({path}) | {title} | {status} |\n"
+
+
+def _with_adr_row(readme_text: str, row: str) -> str:
+    """The README with `row` placed in the ADR table.
+
+    After the last existing ADR row; failing that, under the separator of the
+    first table whose header starts with ID; failing that, at the end. A README
+    with sections after its table must keep them after it, so appending to the
+    file is only the last resort.
+    """
+    lines = readme_text.splitlines(keepends=True)
+    adr_row = re.compile(r"^\|\s*\[?ADR-\d+")
+    at = max((i for i, line in enumerate(lines) if adr_row.match(line)), default=None)
+    if at is None:
+        for i, line in enumerate(lines[:-1]):
+            if re.match(r"^\|\s*ID\s*\|", line) and re.match(r"^\|[-\s|:]+\|\s*$", lines[i + 1]):
+                at = i + 1
+                break
+    if at is None:
+        if lines and not lines[-1].endswith("\n"):
+            lines[-1] += "\n"
+        return "".join(lines) + row
+    if not lines[at].endswith("\n"):
+        lines[at] += "\n"
+    lines.insert(at + 1, row)
+    return "".join(lines)
 
 
 def cmd_adr_new(args):
@@ -618,11 +644,8 @@ def cmd_adr_new(args):
 
     row = _adr_readme_row(adr_id, title_words, "proposed", filename)
     if adr_id not in readme_text:
-        with open(readme_path, "a", encoding="utf-8") as fh:
-            # If the file was just created (header only), the table is already
-            # there; append row.  If we appended the header we need a trailing
-            # newline before the row.
-            fh.write(row)
+        with open(readme_path, "w", encoding="utf-8") as fh:
+            fh.write(_with_adr_row(readme_text, row))
 
     # The caveat is split across two lines: one 129-character line is not a
     # line a person reads, and this one is worth reading.

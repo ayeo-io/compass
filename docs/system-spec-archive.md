@@ -9863,3 +9863,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `python-dependency-said-early`
 - **Landed:** 2026-10-02
+
+### Given ADR-028, then it records the single-file CLI decision with the measured size and startup cost. _(archived)_
+
+- **Scenario id:** `PY-F`
+- **Intent:** `INT-1`
+- **Source issue:** `python-dependency-said-early`
+- **Landed:** 2026-10-02

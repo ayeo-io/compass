@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given ADR-028, then it records the single-file CLI decision with the measured size and startup cost.
+### Given an ADR index with sections after its table, then compass adr new puts the new row, as a link, right after the last ADR row
 
-- **Scenario id:** `PY-F`
+- **Scenario id:** `AN-A`
 - **Intent:** `INT-1`
-- **Source issue:** `python-dependency-said-early`
+- **Source issue:** `adr-new-row-in-the-table`
 - **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1408 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1409 superseded scenario(s) are in `docs/system-spec-archive.md`.

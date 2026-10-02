@@ -91,8 +91,8 @@ is for. The same split is written from the other side in
    `compass issue artifact requirements-review --status draft --path <that path>`. The CLI
    refuses a path that climbs out of the project, so the record is checked
    rather than claimed. A feature does not earn it, and the CLI refuses to
-   register it there: write the file, leave it unregistered, and `compass next`
-   takes the registered acceptance criteria as refine's record. If you had to create `docs/compass/`, **say so in one
+   register it there: write the file and leave it unregistered. `compass next`
+   takes the file as refine's record. If you had to create `docs/compass/`, **say so in one
    line** - a directory appearing with nothing said is how it gets deleted by
    hand or committed by accident.
 

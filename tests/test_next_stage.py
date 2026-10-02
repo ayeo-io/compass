@@ -47,6 +47,7 @@ def _env(**extra):
 
 
 def _issue(root: Path, route: str, *, scenarios=True, criteria=None, review=False,
+           review_file=False,
            design=False,
            dist_map=False, subtask=False, red=False, green=(), narrative=(),
            gates_pass=False, landed=False, current_phase=None, raw=None) -> Path:
@@ -72,6 +73,12 @@ def _issue(root: Path, route: str, *, scenarios=True, criteria=None, review=Fals
     if criteria:
         arts.append({"id": "ART-AC", "kind": "acceptance-criteria", "status": criteria,
                      "path": "docs/ac.md"})
+    if review_file:
+        # Written and left unregistered, as commands/refine.md says to do on
+        # a route that does not earn the review.
+        docs = root / "docs" / "compass" / f"2026-10-02-{SLUG}"
+        docs.mkdir(parents=True)
+        (docs / "requirements-review.md").write_text("# Requirements review\n")
     if review:
         arts.append({"id": "ART-RR", "kind": "requirements-review", "status": "draft",
                      "path": "docs/rr.md"})
@@ -138,14 +145,19 @@ CASES = {
     "feature, criteria superseded": (dict(route="feature", scenarios=False,
                                           criteria="superseded"), "Define"),
     # NS-B
-    # A feature earns no requirements review, so its registered criteria
-    # take it past refine.
-    "feature, criteria draft": (dict(route="feature", criteria="draft"), "Plan"),
+    # A feature earns no requirements review; refine's record there is the
+    # review file, written and left unregistered.
+    "feature, criteria draft": (dict(route="feature", criteria="draft"), "Refine"),
+    "feature, review written": (dict(route="feature", criteria="draft",
+                                     review_file=True), "Plan"),
     "initiative, criteria draft": (dict(route="initiative", criteria="draft"), "Refine"),
     "initiative, criteria without scenarios": (dict(route="initiative", scenarios=False,
                                                     criteria="draft"), "Refine"),
     "initiative, requirements review draft": (dict(route="initiative", criteria="draft",
                                                    review=True), "Plan"),
+    # An initiative earns the review, so only a registered one clears refine.
+    "initiative, review file unregistered": (dict(route="initiative", criteria="draft",
+                                                  review_file=True), "Refine"),
     "quick-fix, scenarios only": (dict(route="quick-fix"), "Implement"),
     # NS-C
     "feature, design draft": (dict(route="feature", criteria="draft", design=True), "Breakdown"),

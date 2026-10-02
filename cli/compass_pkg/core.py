@@ -1023,6 +1023,21 @@ def artifact_path(task_dir, name):
     return os.path.join(task_dir, name)
 
 
+def unregistered_document(task_dir, name):
+    """The path of a document in the issue's documents folder that the
+    registry does not name, or None when there is no such file.
+
+    A route that does not earn a document cannot register it: refine on a
+    feature writes `requirements-review.md` and leaves it unregistered. This
+    is how a reader finds that file without building the path itself. The
+    project root comes from the issue's folder, not the current directory,
+    because the status line runs from wherever Claude Code is.
+    """
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.normpath(task_dir))))
+    path = os.path.join(root, docs_dir(task_dir), name)
+    return path if os.path.isfile(path) else None
+
+
 def resolve_artifact(task_dir, kind):
     """Where a document is, and why that is the answer.
 

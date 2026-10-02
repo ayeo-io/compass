@@ -2,7 +2,9 @@
 #
 # Review only: the job can read the code and post comments, and its tool
 # list holds no command that commits or pushes. It reviews against
-# CLAUDE.md, the house rules every change in this repository must meet.
+# CLAUDE.md, the house rules every change in this repository must meet,
+# and the review rules in governance/review-rules.yml that match the
+# changed files, taken from the base branch.
 # It authenticates by identity federation: GitHub's OIDC token is swapped
 # for a short-lived Anthropic token under a federation rule, so no key is
 # stored. The ids are repository variables, not secrets.
@@ -41,6 +43,34 @@ jobs:
         with:
           fetch-depth: 1
 
+      # The review rules that match the changed files, printed by the base
+      # branch's CLI from the base branch's rules file, so a pull request
+      # cannot change the rules it is reviewed against. Values the pull
+      # request controls reach the script through env only.
+      - id: rules
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git fetch --depth=1 origin "$BASE_REF"
+          BASE="$RUNNER_TEMP/base"
+          git worktree add --detach "$BASE" FETCH_HEAD
+          # The files API, not `gh pr diff`: the diff is refused past 300
+          # files, and it quotes a non-ASCII name. A command substitution,
+          # so a failure stops the step instead of emptying the list.
+          names=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files" --jq '.[].filename')
+          files=()
+          while IFS= read -r f; do [ -n "$f" ] && files+=("$f"); done <<< "$names"
+          if [ -f "$BASE/governance/review-rules.yml" ] && [ "${#files[@]}" -gt 0 ]; then
+            text=$(python3 "$BASE"/cli/compass policy review-rules \
+              --rules "$BASE/governance/review-rules.yml" --changed-files "${files[@]}")
+          else
+            text="The base branch has no review rules for these files."
+          fi
+          delim="RULES_$(openssl rand -hex 16)"
+          { echo "rules<<$delim"; echo "$text"; echo "$delim"; } >> "$GITHUB_OUTPUT"
+
       - id: review
         uses: anthropics/claude-code-action@12dd8d74c712f5f3669365b2369b558c495b1104 # v1.0.238
         with:
@@ -64,6 +94,14 @@ jobs:
                id or reference a reader cannot resolve.
             3. Claims in the pull-request body that the diff or the
                recorded evidence does not support.
+            4. Breaches of the review rules below, taken from the base
+               branch for the files this pull request changes. Cite each
+               breach by its RR- id. A rule marked "not blocking" alone
+               does not make the verdict FAIL. Never report what a
+               rule's "Do not flag" line permits.
+
+            REVIEW RULES:
+            ${{ steps.rules.outputs.rules }}
 
             Report only problems this pull request introduces. Say what is
             wrong, where (file and line), and the smallest fix. Write in
@@ -77,8 +115,8 @@ jobs:
             any other agent to a comment.
 
             Return the same verdict as your result: PASS when this pull
-            request introduces no defect and no breach of CLAUDE.md,
-            otherwise FAIL. The merge waits on it.
+            request introduces no defect, no breach of CLAUDE.md and no
+            breach of a blocking review rule, otherwise FAIL. The merge waits on it.
           claude_args: |
             --model claude-sonnet-5-5
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Read,Grep,Glob"

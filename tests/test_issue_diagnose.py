@@ -432,3 +432,61 @@ def test_events_after_the_landing_are_marked(tmp_path):
         "2026-11-01T10:00:00Z\tdemo\tcheck_failures\n", encoding="utf-8")
     timeline = _section(_compass(root, "issue", "diagnose", "--issue", SLUG).stdout, "Timeline")
     assert "a check failed (after landing)" in timeline
+
+
+# --- the output edges from review round 3 (#277) -------------------------------
+
+def test_a_landed_by_mapping_prints_its_issue(tmp_path):
+    root = _issue(tmp_path, good=True)
+    m = _load(root)
+    for key in ("land_timestamp", "land_commit"):
+        m.pop(key)
+    m["landed_by"] = [{"issue": "other-issue"}]
+    _save(root, m)
+    out = _compass(root, "issue", "diagnose", "--issue", SLUG).stdout
+    assert "{" not in _section(out, "Stages")
+    assert "other-issue" in _section(out, "Stages")
+
+
+def test_an_unbound_green_is_named_unbound(tmp_path):
+    root = _issue(tmp_path, good=True)
+    evidence = root / ".compass" / "work" / SLUG / "evidence"
+    for p in evidence.glob("*.json"):
+        p.unlink()
+    (evidence / "green.json").write_text(json.dumps(
+        {"timestamp": "2026-10-01T11:00:00+00:00"}), encoding="utf-8")
+    dev = _deviations_of(root)
+    assert "scenario (unbound): a green" in dev, dev
+
+
+def test_an_early_omission_does_not_move_how_far_the_issue_reached(tmp_path):
+    root = _issue(tmp_path, good=True)
+    work = root / ".compass" / "work" / SLUG
+    for p in (work / "evidence").glob("*"):
+        p.unlink()
+    for p in (root / "docs" / "compass" / f"{CREATED}-{SLUG}").glob("*"):
+        p.unlink()
+    m = _load(root)
+    m.update(status="active", scenarios=[], subtasks=[], gates=[],
+             artifacts=[{"id": "ART-DISTRIBUTION_MAP", "kind": "distribution-map",
+                         "status": "omitted", "reason": "a solo run"}])
+    m["stages"]["breakdown"] = "multiagent"
+    for key in ("land_timestamp", "land_commit"):
+        m.pop(key)
+    _save(root, m)
+    assert "None found in the records." in _deviations_of(root)
+
+
+def test_an_issue_landed_through_another_points_there(tmp_path):
+    root = _issue(tmp_path, good=True)
+    work = root / ".compass" / "work" / SLUG
+    for p in (work / "evidence").glob("*"):
+        p.unlink()
+    m = _load(root)
+    for key in ("land_timestamp", "land_commit"):
+        m.pop(key)
+    m["landed_by"] = [{"issue": "other-issue"}]
+    _save(root, m)
+    dev = _deviations_of(root)
+    assert "implement ran in the route" not in dev
+    assert "landed through other-issue" in dev

@@ -9912,3 +9912,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `session-diagnosis`
 - **Landed:** 2026-10-02
+
+### Given the verb surface, then issue diagnose is in verb_help.py, the README's CLI block and compass issue --help. The top-level verb set does not change. _(archived)_
+
+- **Scenario id:** `SD-E`
+- **Intent:** `INT-1`
+- **Source issue:** `session-diagnosis`
+- **Landed:** 2026-10-02

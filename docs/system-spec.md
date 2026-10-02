@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the verb surface, then issue diagnose is in verb_help.py, the README's CLI block and compass issue --help. The top-level verb set does not change.
+### Given a landed_by mapping, an unbound green, an early omission or an issue landed through another, then compass issue diagnose prints the value, (unbound), no false deviation, and that the records are in the other issue
 
-- **Scenario id:** `SD-E`
+- **Scenario id:** `DE-A`
 - **Intent:** `INT-1`
-- **Source issue:** `session-diagnosis`
+- **Source issue:** `diagnose-output-edges`
 - **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1415 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1416 superseded scenario(s) are in `docs/system-spec-archive.md`.

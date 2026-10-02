@@ -499,6 +499,24 @@ def derive_system_spec(project_root: str) -> None:
     # ---- 4. Write atomically -----------------------------------------------
     out_path, archive_path = (os.path.join(project_root, *rel.split("/"))
                               for rel in LIVING_SPEC_FILES)
+
+    # The archive of issues is local and untracked, so a worktree or a clone
+    # can lack an issue the committed spec already names. Rewriting the spec
+    # then would drop that issue's scenarios without a word (#289), so refuse
+    # and name each missing issue instead.
+    on_disk = {item["slug"] for item in landed}
+    named = set()
+    for path in (out_path, archive_path):
+        if os.path.isfile(path):
+            with open(path, encoding="utf-8") as fh:
+                named |= set(re.findall(r"^- \*\*Source issue:\*\* `([^`]+)`", fh.read(), re.M))
+    missing = sorted(named - on_disk)
+    if missing:
+        raise CompassError(
+            "the living spec names landed issue(s) missing from .compass/work/: "
+            + ", ".join(missing) + ". Re-deriving now would drop their scenarios. "
+            "Copy those issue folders into .compass/work/ from the checkout that "
+            "has them, then derive again.")
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as fh:
         fh.write(content)

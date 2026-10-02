@@ -977,6 +977,7 @@ _TAIL_EXEMPT = {
     "lesson accept": "needs a pending proposal and a git user name; test_lessons.py runs it",
     "lesson list": "prints the lessons verbatim, one line each; test_lessons.py runs it",
     "lesson remove": "needs an existing lesson; test_lessons.py runs it",
+    "lesson decline": "needs a pending proposal; test_lessons.py runs it",
     "decision record": "writes a tracked file and needs a git user name the fixture does not set; test_decisions_ledger.py runs it",
     "decision check": "needs a git repository with a base ref; test_decisions_ledger.py runs it",
     "decision list": "prints the ledger's entries verbatim, one line each; test_decisions_ledger.py runs it",

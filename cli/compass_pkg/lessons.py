@@ -70,7 +70,8 @@ def _save(name, items):
     old = [i for i in before.get("lessons") or [] if isinstance(i, dict)]
     nums = [int(str(i.get("id", ""))[3:]) for i in items + old
             if str(i.get("id", ""))[3:].isdigit()]
-    data = {"last_id": max([int(last)] + nums), "lessons": items}
+    data = dict(before)
+    data.update(last_id=max([int(last)] + nums), lessons=items)
     with open(os.path.join(_dir(), name), "w", encoding="utf-8") as fh:
         yaml.safe_dump(data, fh, sort_keys=False, allow_unicode=True)
 
@@ -216,13 +217,39 @@ def cmd_lesson_list(args):
     return 0
 
 
+def _remember(name, key, text):
+    """Keep `text` under `key` in file `name`, so `retro --lessons` does not
+    propose it again."""
+    data = _read(name)
+    seen = [t for t in data.get(key) or [] if isinstance(t, str)]
+    if _norm(text) not in {_norm(t) for t in seen}:
+        seen.append(text)
+    data[key] = seen
+    data.setdefault("lessons", [])
+    with open(os.path.join(_dir(), name), "w", encoding="utf-8") as fh:
+        yaml.safe_dump(data, fh, sort_keys=False, allow_unicode=True)
+
+
 def cmd_lesson_remove(args):
     lessons = _load(LESSONS)
-    keep = [l for l in lessons if l.get("id") != args.id]
-    if len(keep) == len(lessons):
+    gone = next((l for l in lessons if l.get("id") == args.id), None)
+    if gone is None:
         raise CompassError(f"no lesson {args.id}; see `compass lesson list`.")
-    _save(LESSONS, keep)
+    _save(LESSONS, [l for l in lessons if l is not gone])
+    _remember(LESSONS, "removed", str(gone.get("rule", "")))
     print(f"compass lesson remove: {args.id} removed.")
+    return 0
+
+
+def cmd_lesson_decline(args):
+    pending = _load(PENDING)
+    entry = next((p for p in pending if p.get("id") == args.id), None)
+    if entry is None:
+        raise CompassError(f"no pending proposal {args.id}; see `compass lesson list`.")
+    _save(PENDING, [p for p in pending if p is not entry])
+    _remember(PENDING, "declined", str(entry.get("rule", "")))
+    print(f"compass lesson decline: {args.id} declined. compass retro --lessons "
+          f"will not propose it again.")
     return 0
 
 
@@ -277,6 +304,8 @@ def propose_from_friction(work_dir, min_issues=3):
                 seen.setdefault(_norm(text), (text, set()))[1].add(slug)
     lessons, pending = _load(LESSONS), _load(PENDING)
     known = {_norm(l["rule"]) for l in lessons + pending}
+    known |= {_norm(t) for t in _read(LESSONS).get("removed") or [] if isinstance(t, str)}
+    known |= {_norm(t) for t in _read(PENDING).get("declined") or [] if isinstance(t, str)}
     added = []
     for key, (text, issues) in sorted(seen.items()):
         if len(issues) < min_issues or key in known or _refusal(text, "friction"):
@@ -328,6 +357,9 @@ def register(sub):
     acc.set_defaults(func=cmd_lesson_accept, output_kind="hand-off")
     lst = subs.add_parser("list", help="each lesson and each pending proposal")
     lst.set_defaults(func=cmd_lesson_list, output_kind="hand-off")
+    dec = subs.add_parser("decline", help="drop a pending proposal; retro will not propose it again")
+    dec.add_argument("id", help="the proposal's LP- id")
+    dec.set_defaults(func=cmd_lesson_decline, output_kind="hand-off")
     rem = subs.add_parser("remove", help="delete one lesson")
     rem.add_argument("id", help="the lesson's LS- id")
     rem.set_defaults(func=cmd_lesson_remove, output_kind="hand-off")

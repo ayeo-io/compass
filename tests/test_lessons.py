@@ -328,3 +328,36 @@ def test_a_hand_written_file_without_last_id_reuses_no_id(project):
     _compass(project, "lesson", "remove", "LS-002")
     _add(project, "Third.")
     assert [l["id"] for l in _lessons(project)] == ["LS-001", "LS-003"]
+
+
+# --- declining a proposal (#280) ------------------------------------------------
+
+def _three_issues(project, text):
+    for n in range(3):
+        _issue_with_friction(project, f"issue-{n}", text)
+
+
+def test_decline_removes_a_proposal(project):
+    _compass(project, "lesson", "propose", "Seed the fixtures first.")
+    r = _compass(project, "lesson", "decline", "LP-001")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert _pending(project) == [] and _lessons(project) == []
+    assert _compass(project, "lesson", "decline", "LP-001").returncode != 0
+
+
+def test_retro_does_not_propose_a_declined_text_again(project):
+    _three_issues(project, "The fixture DB was not seeded.")
+    _compass(project, "retro", "--lessons")
+    [p] = _pending(project)
+    _compass(project, "lesson", "decline", p["id"])
+    _compass(project, "retro", "--lessons")
+    assert _pending(project) == []
+
+
+def test_retro_does_not_propose_a_removed_lesson_again(project):
+    _three_issues(project, "The fixture DB was not seeded.")
+    _compass(project, "retro", "--lessons")
+    _compass(project, "lesson", "accept", _pending(project)[0]["id"])
+    _compass(project, "lesson", "remove", _lessons(project)[0]["id"])
+    _compass(project, "retro", "--lessons")
+    assert _pending(project) == []

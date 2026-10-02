@@ -67,6 +67,7 @@ Rules:
 | [ADR-025](ADR-025-the-printed-plan-and-the-recorded-run-are-the-multiagent-interface.md) | The printed plan and the recorded run are the multiagent interface: Compass provisions, prints and records, the host launches the agents, and `multiagent-run-recorded` reads the record | accepted | answers `swarm-dispatch-is-a-protocol-not-a-script`; builds on the subtask record of `orchestrator-loop-hardening` |
 | [ADR-026](ADR-026-ship-commit-lands-and-derives-the-living-spec.md) | `ship-commit` lands every issue and derives the living spec; `integrate.sh` only merges and runs the combined regression | accepted | amends ADR-008's first rule (where the derivation runs); needed by ADR-025's staged waves |
 | [ADR-027](ADR-027-settled-decisions-are-a-ledger.md) | Settled product decisions are a ledger of immutable entries in `governance/decisions/`, recorded by the person who made them and checked against a base ref | accepted | answers `decisions-ledger`; additive under ADR-006 |
+| [ADR-028](ADR-028-cli-ships-as-a-directory.md) | The Compass CLI ships as a directory, not as a single-file archive; Python 3.10 or later stays a requirement, said at install and session start | accepted | answers `python-dependency-said-early` |
 
 ## Principle → ADR mapping
 

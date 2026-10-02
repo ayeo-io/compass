@@ -68,6 +68,31 @@ echo "  source (COMPASS_HOME): $COMPASS_HOME"
 echo "  mode:                  $MODE"
 echo "  destination:           $CLAUDE_ROOT"
 echo "  link mode:             $LINK_MODE"
+
+# Compass's CLI and the pre-tool hook's checks need Python 3.10 or later. Say
+# so here, before anything is installed, rather than let a refused edit be how
+# the person finds out. It warns and carries on: the files can be installed
+# first and Python added after.
+# shellcheck source=scripts/lib/python-check.sh
+. "$SCRIPT_DIR/lib/python-check.sh"
+if [ "$ACTION" = "install" ]; then
+  PY_STATUS="$(compass_python_status)"
+  case "$PY_STATUS" in
+    ok\ *) echo "  python3:               ${PY_STATUS#ok } (Python 3.10 or later, as needed)" ;;
+    *)
+      case "$PY_STATUS" in
+        missing) echo "  python3:               not found" ;;
+        broken)  echo "  python3:               on the PATH, but it did not run" ;;
+        *)       echo "  python3:               ${PY_STATUS#old } (too old)" ;;
+      esac
+      echo ""
+      echo "  WARNING: Compass needs Python 3.10 or later. Without it, its commands"
+      echo "           do not run, so the pre-tool hook refuses code edits in a"
+      echo "           Compass project. Install it and put python3 on the PATH;"
+      echo "           this install carries on, and works once Python is there."
+      ;;
+  esac
+fi
 echo ""
 
 # --- helper: link or copy one component directory ---------------------------

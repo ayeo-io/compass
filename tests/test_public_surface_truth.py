@@ -354,7 +354,7 @@ def test_d2_repairs_change_only_retired_names():
       declare - a stated fact the audit found the source contradicted, not
       a wording swap.
 
-    One was re-baselined four times, by four issues:
+    One was re-baselined five times, by five issues:
     `docs/safety-contract.md` (list_items 19 -> 21 -> 23 -> 25 -> 28).
     `red-record-identity-cutoff` made the two conditions under which an
     unstamped red record still counts a vertical list, `hook-failure-matrix`
@@ -363,6 +363,9 @@ def test_d2_repairs_change_only_retired_names():
     judged. `finish-and-ship-commit-edges` added a "`quick-fix finish`
     judges what to commit by when a file changed" section, one `###`
     heading, listing the three cases `finish` does not guard.
+    `python-dependency-said-early` added a "Compass needs Python 3.10 or
+    later" section, one `###` heading and a six-row table of what each
+    hook and the CLI do without it.
 
     Two were re-baselined by `orchestrator-loop-hardening`, which adopted the
     multiagent loop's rules: `agents/orchestrator.md` gained a

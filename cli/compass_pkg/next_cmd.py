@@ -129,7 +129,7 @@ def _emit(args, task, task_dir, line, current_phase, finished):
     reading. compass_pkg.render decides that; piped output, `CLAUDECODE`,
     `--json`, `--quiet` and `--evidence-out` all get `line` unchanged."""
     from compass_pkg.core import display_shape, display_stage
-    from compass_pkg.render import header, rail, rail_style, stage_states
+    from compass_pkg.render import header, rail, rail_style, stage_states, wrap
     from compass_pkg.terminal import resolve_mode
 
     style = None if getattr(args, "evidence_out", None) else rail_style(
@@ -144,10 +144,11 @@ def _emit(args, task, task_dir, line, current_phase, finished):
                              finished, _SKIPPED_WEIGHTS)
         out = [header([display_shape(approach), slug], style)]
         out += rail([(display_stage(k).capitalize(), st) for k, st in states], style)
-        out += ["", line.rstrip("\n")]
+        # The plain line is wrapped here only; piped output keeps it whole.
+        out += [""] + wrap(line.rstrip("\n"))
         if not finished and current_phase in _PHASE_ORDER:
             quick = approach in ("quick-fix", "express")
-            out.append("Next: /compass:" + ("quick-fix" if quick else display_stage(current_phase)))
+            out += wrap("Next: /compass:" + ("quick-fix" if quick else display_stage(current_phase)))
         text = "\n".join(out) + "\n"
         # Checked before writing, so a terminal that cannot show the glyphs
         # gets today's line rather than half a rail and a traceback.

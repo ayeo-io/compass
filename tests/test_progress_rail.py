@@ -284,7 +284,7 @@ def test_a_long_slug_still_fits_a_narrow_terminal(tmp_path):
         "issue: feature-implementing", f"issue: {long_slug}"))
     code, out = _tty(root, columns=40)
     assert code == 0, out
-    for line in ANSI.sub("", out).split("\n")[:-3]:
+    for line in ANSI.sub("", out).split("\n"):
         assert len(line) <= 40, line
 
 
@@ -303,9 +303,11 @@ def test_an_unknown_current_stage_gets_no_next_command(tmp_path):
     assert "Conclude [gate: verify.correctness]" in plain, plain
 
 
-def test_a_narrow_terminal_wraps_the_rail(tmp_path):
-    """RL-F."""
-    root = _build(tmp_path, "feature/implementing")
+@pytest.mark.parametrize("case", ["feature/implementing", "quick-fix/implementing"])
+def test_a_narrow_terminal_wraps_the_rail(tmp_path, case):
+    """RL-F: every line fits, the plain line under the rail included. A
+    quick-fix's plain line names its collapsed stages, so it is the longest."""
+    root = _build(tmp_path, case)
     code, out = _tty(root, columns=40)
     rail = _rail_lines(out)
     assert len(rail) > 1, rail

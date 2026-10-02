@@ -11,14 +11,15 @@ The status line (`bin/compass-statusline`) fits its line with `fit` too, so
 the rail, its header and the status line share one way of fitting a line.
 `terminal.py` shortens the CLI's own output lines separately.
 
-DEPENDENCY: standard library only (os, re, shutil), so any entry point can
-use it without the bundled PyYAML or the full CLI.
+DEPENDENCY: standard library only (os, re, shutil, textwrap), so any entry
+point can use it without the bundled PyYAML or the full CLI.
 """
 from __future__ import annotations
 
 import os
 import re
 import shutil
+import textwrap
 
 GLYPHS = {
     "unicode": {"done": "✓", "current": "●", "pending": "○", "skipped": "–",
@@ -135,6 +136,14 @@ def fit(fields: list, width: int, sep: str, cut: str = "…") -> str:
         fields[1] = fields[1][:max(room, 1)] + cut
         line = sep.join(fields)
     return line
+
+
+def wrap(text: str, width: int | None = None) -> list[str]:
+    """`text` broken at spaces into lines no wider than `width`. Used for the
+    plain lines under the rail, which keep their words but not their line."""
+    if width is None:
+        width = shutil.get_terminal_size((80, 24)).columns
+    return textwrap.wrap(text, max(width, 1), break_on_hyphens=False) or [""]
 
 
 def header(fields: list, style: str, width: int | None = None) -> str:

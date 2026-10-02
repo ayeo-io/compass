@@ -80,6 +80,7 @@ jobs:
             request introduces no defect and no breach of CLAUDE.md,
             otherwise FAIL. The merge waits on it.
           claude_args: |
+            --model claude-sonnet-5-5
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Read,Grep,Glob"
             --json-schema '{"type":"object","properties":{"verdict":{"type":"string","enum":["PASS","FAIL"]}},"required":["verdict"]}'
 

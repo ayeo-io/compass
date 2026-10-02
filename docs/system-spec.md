@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a pull request with more changed files than the files API lists, then the review's rules step fails rather than reviewing with a partial rule set
+### Given the rules step's file count does not match, then its message names the cause it can tell apart: a missing count, the 3,000-file limit, or a count from before a newer push
 
-- **Scenario id:** `RC-A`
+- **Scenario id:** `RD-A`
 - **Intent:** `INT-1`
-- **Source issue:** `rules-step-file-cap`
+- **Source issue:** `rules-step-count-message`
 - **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1401 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1402 superseded scenario(s) are in `docs/system-spec-archive.md`.

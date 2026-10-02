@@ -67,7 +67,16 @@ jobs:
           # list would review the rest with no rules.
           # Compared as strings, so an empty or non-numeric count fails too.
           if [ "${#files[@]}" != "$CHANGED_FILES" ]; then
-            echo "The files API listed ${#files[@]} of $CHANGED_FILES changed files, so the review rules would be incomplete. GitHub's files API stops at 3,000 files: split the pull request, or a person reads it and merges it as an admin." >&2
+            case "$CHANGED_FILES" in
+              ''|*[!0-9]*)
+                echo "The event gave no usable changed-file count (got '$CHANGED_FILES'), so the review rules cannot be checked as complete. Push a new commit to start a run with a new event." >&2 ;;
+              *)
+                if [ "${#files[@]}" -ge 3000 ] && [ "${#files[@]}" -lt "$CHANGED_FILES" ]; then
+                  echo "The files API listed ${#files[@]} of $CHANGED_FILES changed files: it stops at 3,000 files, so the review rules would be incomplete. Split the pull request, or a person reads it and merges it as an admin." >&2
+                else
+                  echo "The files API listed ${#files[@]} of $CHANGED_FILES changed files. The count likely comes from before a newer push, whose own run reviews it. Running this job again reuses its count, so push a new commit if no newer run started." >&2
+                fi ;;
+            esac
             exit 1
           fi
           if [ -f "$BASE/governance/review-rules.yml" ] && [ "${#files[@]}" -gt 0 ]; then

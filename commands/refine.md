@@ -86,10 +86,13 @@ is for. The same split is written from the other side in
    resolved or assigned.
 
    **Where it goes.** `docs/compass/<created>-<issue-slug>/requirements-review.md`, where the
-   date is the manifest's `created:` field - not today's. Then register it:
+   date is the manifest's `created:` field - not today's. On a route that
+   earns the document (an initiative), register it:
    `compass issue artifact requirements-review --status draft --path <that path>`. The CLI
    refuses a path that climbs out of the project, so the record is checked
-   rather than claimed. If you had to create `docs/compass/`, **say so in one
+   rather than claimed. A feature does not earn it, and the CLI refuses to
+   register it there: write the file, leave it unregistered, and `compass next`
+   takes the registered acceptance criteria as refine's record. If you had to create `docs/compass/`, **say so in one
    line** - a directory appearing with nothing said is how it gets deleted by
    hand or committed by accident.
 

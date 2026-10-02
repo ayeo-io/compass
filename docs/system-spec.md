@@ -29,12 +29,12 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the review workflow, when it is read, then the review returns its verdict as structured output and a later step fails the job unless the verdict is PASS
+### Given the status line, then it fits its line with the shared renderer, so width fitting lives in one module.
 
-- **Scenario id:** `TRC-001`
+- **Scenario id:** `RL-H`
 - **Intent:** `INT-1`
-- **Source issue:** `review-verdict`
-- **Landed:** 2026-10-01
+- **Source issue:** `progress-rail`
+- **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
 
@@ -332,4 +332,4 @@
 
 ---
 
-1354 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1362 superseded scenario(s) are in `docs/system-spec-archive.md`.

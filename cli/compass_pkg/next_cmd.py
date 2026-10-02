@@ -36,12 +36,12 @@ from compass_pkg.core import artifact_path, load_yaml, manifest_path, normalize_
 
 # --- command: next -----------------------------------------------------------
 # `compass next` reads manifest.yml + delivery-approach.md and prints ONE
-# line: the next stage, the next uncleared gate, and delivery-approach-aware
+# line (at a terminal, framed by the rail; see `_emit`): the next stage, the next uncleared gate, and delivery-approach-aware
 # collapsed-stage markers. It is strictly READ-ONLY over
 # .compass/work/<task>/ - no file is written or created. It derives its
 # answer from manifest.yml + delivery-approach.md only; nothing else is read.
 #
-# Output format (chosen to read clearly without colour escapes):
+# The plain line, which is all piped output and the model ever see:
 #   "<NextPhase> [gate: <gate-id>][ | <phase> collapsed on this route]"
 # When all stages are complete / landed:
 #   "all phases complete"
@@ -124,10 +124,45 @@ def _current_phase_from_task(task: dict) -> str | None:
     return _next_active_phase(phases)
 
 
+def _emit(args, task, task_dir, line, current_phase, finished):
+    """Write `line`, today's output, opened by the rail when a person is
+    reading. compass_pkg.render decides that; piped output, `CLAUDECODE`,
+    `--json`, `--quiet` and `--evidence-out` all get `line` unchanged."""
+    from compass_pkg.core import display_shape, display_stage
+    from compass_pkg.render import header, rail, rail_style, stage_states, wrap
+    from compass_pkg.terminal import resolve_mode
+
+    style = None if getattr(args, "evidence_out", None) else rail_style(
+        sys.stdout, resolve_mode(args))
+    if not style:
+        sys.stdout.write(line)
+        return
+    try:
+        approach = task.get("delivery_approach") or ""
+        slug = task.get("issue") or os.path.basename(task_dir.rstrip(os.sep))
+        states = stage_states(_PHASE_ORDER, task.get("stages") or {}, current_phase,
+                             finished, _SKIPPED_WEIGHTS)
+        out = [header([display_shape(approach), slug], style)]
+        out += rail([(display_stage(k).capitalize(), st) for k, st in states], style)
+        # The plain line is wrapped here only; piped output keeps it whole.
+        out += [""] + wrap(line.rstrip("\n"))
+        if not finished and current_phase in _PHASE_ORDER:
+            quick = approach in ("quick-fix", "express")
+            out += wrap("Next: /compass:" + ("quick-fix" if quick else display_stage(current_phase)))
+        text = "\n".join(out) + "\n"
+        # Checked before writing, so a terminal that cannot show the glyphs
+        # gets today's line rather than half a rail and a traceback.
+        text.encode(sys.stdout.encoding or "utf-8")
+    except Exception:  # noqa: BLE001 - the rail is decoration; the line must still print
+        text = line
+    sys.stdout.write(text)
+
+
 def cmd_next(args):
     """compass next - what comes next on this issue's delivery approach?
 
-    Reads manifest.yml + delivery-approach.md and prints ONE line.
+    Reads manifest.yml + delivery-approach.md and prints ONE line, framed
+    by the rail when a person reads it at a terminal.
     Strictly read-only.
     """
     task_dir = resolve_issue_dir(getattr(args, "task", None))
@@ -156,7 +191,7 @@ def cmd_next(args):
     status = task.get("status", "")
     gates = task.get("gates") or []
     if status == "landed" or _all_gates_pass(gates):
-        sys.stdout.write("all phases complete\n")
+        _emit(args, task, task_dir, "all phases complete\n", None, True)
         return 0
 
     # --- determine next stage and collapsed siblings ---
@@ -168,7 +203,7 @@ def cmd_next(args):
     next_phase = current_phase
     if not next_phase:
         # No current stage derivable - delivery approach is complete or degenerate
-        sys.stdout.write("all phases complete\n")
+        _emit(args, task, task_dir, "all phases complete\n", None, True)
         return 0
 
     # Find the first pending gate for the "next gate" display
@@ -184,5 +219,5 @@ def cmd_next(args):
     if collapsed:
         parts.append(f"{', '.join(collapsed)} collapsed on this route")
 
-    sys.stdout.write(" | ".join(parts) + "\n")
+    _emit(args, task, task_dir, " | ".join(parts) + "\n", next_phase, False)
     return 0

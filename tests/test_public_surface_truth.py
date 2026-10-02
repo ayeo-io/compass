@@ -378,6 +378,11 @@ def test_d2_repairs_change_only_retired_names():
     a "See the issue's state in the status line" section, one `##` heading
     and two code blocks: an example line and the settings to add.
 
+    One more was re-baselined by `progress-rail`: `docs/quickstart.md` gained
+    a "See the route in your terminal" section, one `##` heading, one code
+    block showing the rail and two list items naming `NO_COLOR` and
+    `COMPASS_COLOR`.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

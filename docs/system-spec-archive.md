@@ -9485,3 +9485,59 @@
 - **Intent:** `INT-1`
 - **Source issue:** `status-line`
 - **Landed:** 2026-10-01
+
+### Given the review workflow, when it is read, then the review returns its verdict as structured output and a later step fails the job unless the verdict is PASS _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `review-verdict`
+- **Landed:** 2026-10-01
+
+### Given stdout is a terminal and neither CLAUDECODE nor NO_COLOR is set, when compass next runs on an issue in progress, then the line after the header is a rail of the route's stages with exactly one current marker. _(archived)_
+
+- **Scenario id:** `RL-A`
+- **Intent:** `INT-1`
+- **Source issue:** `progress-rail`
+- **Landed:** 2026-10-02
+
+### Given stdout is a pipe, when compass next runs, then its output matches the golden file captured before the rail, byte for byte, for every route in the fixtures. _(archived)_
+
+- **Scenario id:** `RL-B`
+- **Intent:** `INT-1`
+- **Source issue:** `progress-rail`
+- **Landed:** 2026-10-02
+
+### Given a route that skips or collapses a stage, when the rail is shown, then that stage is shown with the skipped marker, not left out. _(archived)_
+
+- **Scenario id:** `RL-C`
+- **Intent:** `INT-1`
+- **Source issue:** `progress-rail`
+- **Landed:** 2026-10-02
+
+### Given CLAUDECODE is set, when compass next runs with stdout a terminal, then its output is today's output, byte for byte. _(archived)_
+
+- **Scenario id:** `RL-D`
+- **Intent:** `INT-1`
+- **Source issue:** `progress-rail`
+- **Landed:** 2026-10-02
+
+### Given NO_COLOR, then the rail has no colour codes; given COMPASS_COLOR=never, then it uses ASCII markers; given COMPASS_COLOR=always, then the rail shows when piped, unless CLAUDECODE is set. _(archived)_
+
+- **Scenario id:** `RL-E`
+- **Intent:** `INT-1`
+- **Source issue:** `progress-rail`
+- **Landed:** 2026-10-02
+
+### Given a terminal narrower than the rail, then the rail wraps between stages and no line is wider than the terminal. _(archived)_
+
+- **Scenario id:** `RL-F`
+- **Intent:** `INT-1`
+- **Source issue:** `progress-rail`
+- **Landed:** 2026-10-02
+
+### Given an issue in progress, then the rail is followed by a Next line naming the command for the current stage. _(archived)_
+
+- **Scenario id:** `RL-G`
+- **Intent:** `INT-1`
+- **Source issue:** `progress-rail`
+- **Landed:** 2026-10-02

@@ -431,6 +431,28 @@ version, and an old version stays on disk after an upgrade, so a path left
 unchanged keeps running the old code: update it when you upgrade. Outside a
 Compass project, the line is empty.
 
+## See the route in your terminal
+
+When you run `compass next` in a terminal, it shows the issue's route as a
+rail, with the current stage marked:
+
+```text
+feature · feature-implementing
+Assess ✓ → Define ✓ → Refine ✓ → Plan ✓ → Breakdown ✓ → Implement ● → Verify ○ → Ship ○
+
+Implement [gate: verify.correctness]
+Next: /compass:implement
+```
+
+Piped output, and any run inside Claude Code, keeps the plain one-line form,
+so scripts and the model see no change. Two environment variables change the
+rail:
+
+- `NO_COLOR` removes the colour.
+- `COMPASS_COLOR=never` uses the ASCII markers `[x] [>] [ ] [-]` and no
+  colour. `COMPASS_COLOR=always` shows the rail even when the output is piped.
+  `NO_COLOR` still removes the colour.
+
 ## Where to go next
 
 - **`docs/routing-deep-dive.md`** - how the assess stage actually composes an

@@ -1,0 +1,86 @@
+{
+  "quick-fix/fresh": {
+    "exit": 0,
+    "stdout": "Assess [gate: verify.correctness] | Refine, Plan collapsed on this route\n"
+  },
+  "quick-fix/implementing": {
+    "exit": 0,
+    "stdout": "Implement [gate: verify.correctness] | Refine, Plan collapsed on this route\n"
+  },
+  "quick-fix/verifying": {
+    "exit": 0,
+    "stdout": "Verify [gate: verify.correctness] | Refine, Plan collapsed on this route\n"
+  },
+  "quick-fix/landed": {
+    "exit": 0,
+    "stdout": "all phases complete\n"
+  },
+  "quick-fix/gates-pass": {
+    "exit": 0,
+    "stdout": "all phases complete\n"
+  },
+  "feature/fresh": {
+    "exit": 0,
+    "stdout": "Assess [gate: verify.correctness]\n"
+  },
+  "feature/implementing": {
+    "exit": 0,
+    "stdout": "Implement [gate: verify.correctness]\n"
+  },
+  "feature/verifying": {
+    "exit": 0,
+    "stdout": "Verify [gate: verify.correctness]\n"
+  },
+  "feature/landed": {
+    "exit": 0,
+    "stdout": "all phases complete\n"
+  },
+  "feature/gates-pass": {
+    "exit": 0,
+    "stdout": "all phases complete\n"
+  },
+  "initiative/fresh": {
+    "exit": 0,
+    "stdout": "Assess [gate: verify.correctness]\n"
+  },
+  "initiative/implementing": {
+    "exit": 0,
+    "stdout": "Implement [gate: verify.correctness]\n"
+  },
+  "initiative/verifying": {
+    "exit": 0,
+    "stdout": "Verify [gate: verify.correctness]\n"
+  },
+  "initiative/landed": {
+    "exit": 0,
+    "stdout": "all phases complete\n"
+  },
+  "initiative/gates-pass": {
+    "exit": 0,
+    "stdout": "all phases complete\n"
+  },
+  "spike/fresh": {
+    "exit": 0,
+    "stdout": "Assess [gate: spike.conclude] | Plan collapsed on this route\n"
+  },
+  "spike/implementing": {
+    "exit": 0,
+    "stdout": "Implement [gate: spike.conclude] | Plan collapsed on this route\n"
+  },
+  "spike/verifying": {
+    "exit": 0,
+    "stdout": "Verify [gate: spike.conclude] | Plan collapsed on this route\n"
+  },
+  "spike/landed": {
+    "exit": 0,
+    "stdout": "all phases complete\n"
+  },
+  "spike/gates-pass": {
+    "exit": 0,
+    "stdout": "all phases complete\n"
+  },
+  "feature/no-approach-record": {
+    "exit": 2,
+    "stdout": "delivery-approach.md is missing from <ROOT>/.compass/work/feature-fresh\n  Run /compass:assess to produce delivery-approach.md before using compass next.\n"
+  }
+}

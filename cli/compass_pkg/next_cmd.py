@@ -39,11 +39,12 @@ from compass_pkg.core import artifact_path, load_yaml, manifest_path, normalize_
 # line (at a terminal, framed by the rail; see `_emit`): the next stage, the next uncleared gate, and delivery-approach-aware
 # collapsed-stage markers. It is strictly READ-ONLY over
 # .compass/work/<task>/ - no file is written or created. It derives its
-# answer from manifest.yml + delivery-approach.md only; nothing else is read.
+# answer from manifest.yml and delivery-approach.md, and checks evidence/
+# and the .red marker for a red the manifest does not list.
 #
 # The plain line, which is all piped output and the model ever see:
 #   "<NextPhase> [gate: <gate-id>][ | <phase> collapsed on this route]"
-# When all stages are complete / landed:
+# When the issue has landed:
 #   "all phases complete"
 # When delivery-approach.md is missing:
 #   exit non-zero with a message naming delivery-approach.md
@@ -110,18 +111,106 @@ def _all_gates_pass(gates: list) -> bool:
     )
 
 
-def _current_phase_from_task(task: dict) -> str | None:
-    """Determine the current (active) stage from manifest.yml.
+def _entries(task: dict, key: str) -> list:
+    """The dict entries of a manifest list. A hand-edited manifest can hold
+    anything, and `compass next` must still name a stage."""
+    value = task.get(key)
+    return [e for e in value if isinstance(e, dict)] if isinstance(value, list) else []
 
-    Priority:
-      1. manifest.yml top-level `current_phase` field (builder sets this).
-      2. Fall back to the first non-skipped stage in the phases map.
+
+def _registered(task: dict, kind: str) -> bool:
+    """True when the manifest registers the `kind` document: an entry with a
+    path at any status but `superseded`, or one recorded as omitted. The
+    stage commands register their documents as `draft`, and nothing marks
+    them approved, so the status cannot be what counts."""
+    for a in _entries(task, "artifacts"):
+        if a.get("kind") != kind:
+            continue
+        if a.get("status") == "omitted" or (a.get("path") and a.get("status") != "superseded"):
+            return True
+    return False
+
+
+def _testing_started(task: dict, task_dir: str | None) -> bool:
+    """True once any test result is on record: a test-run in the manifest, or
+    a red that `compass tdd-red` wrote, which the manifest does not list."""
+    if any(e.get("type") == "test-run" for e in _entries(task, "evidence")):
+        return True
+    if not task_dir:
+        return False
+    if os.path.isfile(os.path.join(task_dir, ".red")):
+        return True
+    try:
+        names = os.listdir(os.path.join(task_dir, "evidence"))
+    except OSError:
+        return False
+    return any(n.startswith("red") and n.endswith(".json") for n in names)
+
+
+def _every_scenario_tested(task: dict) -> bool:
+    """True when each scenario that needs a test has a test-run bound to it.
+    A `verifiable: narrative` scenario is cleared by its written body, so it
+    never gets one."""
+    ids = [s["id"] for s in _entries(task, "scenarios")
+           if isinstance(s.get("id"), str) and s.get("verifiable") != "narrative"]
+    tested = {e["scenario"] for e in _entries(task, "evidence")
+              if e.get("type") == "test-run" and isinstance(e.get("scenario"), str)}
+    return bool(ids) and all(i in tested for i in ids)
+
+
+def _stages_on_record(task: dict, task_dir: str | None) -> set:
+    """The stages the records on disk show as done.
+
+    A stage is done when its own record exists, or when a later stage's
+    does. The second rule covers a record that was never written, such as
+    a builder starting without a design registered. `compass next` cannot
+    run without the approach record, so assess is always done. Ship's
+    record, `status: landed`, is handled by the callers before they ask for
+    a stage.
+    """
+    own = {
+        "assess": True,
+        # A quick fix earns no criteria document; its scenarios are define's
+        # record.
+        "define": (_registered(task, "acceptance-criteria")
+                   or bool(_entries(task, "scenarios"))),
+        # Wherever refine runs, light included, it registers the review
+        # (commands/refine.md). Where it is collapsed or skipped it is not
+        # a current stage at all.
+        "refine": _registered(task, "requirements-review"),
+        "plan": _registered(task, "technical-design"),
+        "breakdown": bool(_entries(task, "subtasks")) or _registered(task, "distribution-map"),
+        "implement": _every_scenario_tested(task),
+        "verify": _all_gates_pass(task.get("gates") or []),
+        "ship": False,
+    }
+    reached = max(i for i, p in enumerate(_PHASE_ORDER) if own[p])
+    if _testing_started(task, task_dir):
+        # A test on record means the builder is at work, so every stage
+        # before implement is behind it.
+        reached = max(reached, _PHASE_ORDER.index("implement") - 1)
+    return set(_PHASE_ORDER[:reached + 1])
+
+
+def _current_phase_from_task(task: dict, task_dir: str | None = None) -> str | None:
+    """The stage the issue has reached, or None when every stage that runs
+    on its delivery approach is done.
+
+    A top-level `current_phase` key wins when present. Nothing in Compass
+    writes it, but test fixtures and hand-edited manifests use it.
+    Otherwise the stage is the first one that runs on the approach and is
+    not done on the records (`_stages_on_record`).
     """
     cp = task.get("current_phase")
     if cp and isinstance(cp, str):
         return cp.strip().lower()
     phases = task.get("stages") or {}
-    return _next_active_phase(phases)
+    done = _stages_on_record(task, task_dir)
+    for p in _PHASE_ORDER:
+        weight = (phases.get(p) or "").strip().lower()
+        if weight not in _SKIPPED_WEIGHTS and p not in done:
+            return p
+    return None
 
 
 def _emit(args, task, task_dir, line, current_phase, finished):
@@ -188,18 +277,20 @@ def cmd_next(args):
         return 2
 
     # --- completed issue ---
+    # Passed gates alone do not finish it: ship still runs, and a landed
+    # status is ship's record.
     status = task.get("status", "")
     gates = task.get("gates") or []
-    if status == "landed" or _all_gates_pass(gates):
+    if status == "landed":
         _emit(args, task, task_dir, "all phases complete\n", None, True)
         return 0
 
     # --- determine next stage and collapsed siblings ---
     phases = task.get("stages") or {}
-    current_phase = _current_phase_from_task(task)
+    current_phase = _current_phase_from_task(task, task_dir)
 
-    # The "next stage" is the current_phase (the one in progress, or the
-    # first non-skipped stage on a fresh issue).
+    # The "next stage" is the current_phase: the first stage that runs on
+    # this approach and is not done on the records.
     next_phase = current_phase
     if not next_phase:
         # No current stage derivable - delivery approach is complete or degenerate

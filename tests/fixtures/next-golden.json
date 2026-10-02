@@ -1,7 +1,7 @@
 {
   "quick-fix/fresh": {
     "exit": 0,
-    "stdout": "Assess [gate: verify.correctness] | Refine, Plan collapsed on this route\n"
+    "stdout": "Define [gate: verify.correctness] | Refine, Plan collapsed on this route\n"
   },
   "quick-fix/implementing": {
     "exit": 0,
@@ -17,11 +17,11 @@
   },
   "quick-fix/gates-pass": {
     "exit": 0,
-    "stdout": "all phases complete\n"
+    "stdout": "Ship | Refine, Plan collapsed on this route\n"
   },
   "feature/fresh": {
     "exit": 0,
-    "stdout": "Assess [gate: verify.correctness]\n"
+    "stdout": "Define [gate: verify.correctness]\n"
   },
   "feature/implementing": {
     "exit": 0,
@@ -37,11 +37,11 @@
   },
   "feature/gates-pass": {
     "exit": 0,
-    "stdout": "all phases complete\n"
+    "stdout": "Ship\n"
   },
   "initiative/fresh": {
     "exit": 0,
-    "stdout": "Assess [gate: verify.correctness]\n"
+    "stdout": "Define [gate: verify.correctness]\n"
   },
   "initiative/implementing": {
     "exit": 0,
@@ -57,11 +57,11 @@
   },
   "initiative/gates-pass": {
     "exit": 0,
-    "stdout": "all phases complete\n"
+    "stdout": "Ship\n"
   },
   "spike/fresh": {
     "exit": 0,
-    "stdout": "Assess [gate: spike.conclude] | Plan collapsed on this route\n"
+    "stdout": "Define [gate: spike.conclude] | Plan collapsed on this route\n"
   },
   "spike/implementing": {
     "exit": 0,
@@ -77,7 +77,7 @@
   },
   "spike/gates-pass": {
     "exit": 0,
-    "stdout": "all phases complete\n"
+    "stdout": "Ship | Plan collapsed on this route\n"
   },
   "feature/no-approach-record": {
     "exit": 2,

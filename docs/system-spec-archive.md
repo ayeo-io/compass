@@ -9556,7 +9556,7 @@
 - **Source issue:** `next-never-leaves-assess`
 - **Landed:** 2026-10-02
 
-### Given the acceptance criteria registered as draft, and no later record, then it reports Plan on a route that runs plan. Given scenarios and no later record on a route that collapses plan and skips breakdown, then it reports Implement. _(archived)_
+### Given the acceptance criteria registered as draft, and no later record, then it reports Refine on a route that runs refine. Given the requirements review registered as well, then it reports Plan on a route that runs plan. Given scenarios and no later record on a route that collapses refine and plan and skips breakdown, then it reports Implement. _(archived)_
 
 - **Scenario id:** `NS-B`
 - **Intent:** `INT-1`

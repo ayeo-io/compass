@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the suite runs on parallel workers, When make test or CI runs it, Then tests marked serial, including the two timing tests, run in a second pass on their own
+### Given governance/decisions/, then it holds at least ten entries, each a decision the maintainer made on record and confirmed in their own words.
 
-- **Scenario id:** `TRC-001`
+- **Scenario id:** `DL-G`
 - **Intent:** `INT-1`
-- **Source issue:** `parallel-ci-flakes`
+- **Source issue:** `decisions-ledger`
 - **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1386 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1393 superseded scenario(s) are in `docs/system-spec-archive.md`.

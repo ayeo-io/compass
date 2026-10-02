@@ -972,6 +972,10 @@ _TAIL_EXEMPT = {
     # hooks read it in a command substitution, and a hand-off tail in the
     # middle of that would end up in the variable.
     "issue artifact-path": "prints a bare path for a shell caller to consume",
+    "decision record": "writes a tracked file and needs a git user name the fixture does not set; test_decisions_ledger.py runs it",
+    "decision check": "needs a git repository with a base ref; test_decisions_ledger.py runs it",
+    "decision list": "prints the ledger's entries verbatim, one line each; test_decisions_ledger.py runs it",
+    "decision show": "prints one entry's text verbatim; test_decisions_ledger.py runs it",
     "issue subtask add": "needs a git repository and a brief file the fixture does not create; test_subtask_record.py runs it, without measuring its output against this contract",
     "issue subtask update": "needs a recorded subtask the fixture does not create; test_subtask_record.py runs it, without measuring its output against this contract",
     "issue subtask package": "needs a git history to diff, which the fixture does not have; test_subtask_record.py runs it, without measuring its output against this contract",

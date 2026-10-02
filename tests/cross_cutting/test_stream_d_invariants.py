@@ -126,6 +126,9 @@ EXPECTED_PUBLIC_SUBCOMMANDS = {
                                   # instead of a dozen, through the same code
                                   # each step already used. A GROUP, so a
                                   # later quick-fix verb has a home.
+    "decision",                   # decisions-ledger (ADR-027): record|list|
+                                  # show|check, the settled-decisions ledger.
+                                  # A GROUP; record reads the decider from git.
 }
 
 

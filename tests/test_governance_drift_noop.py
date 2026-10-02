@@ -250,6 +250,10 @@ EXPECTED_SUBCOMMANDS = {
     # steps in two calls instead of a dozen, through the same handlers; it
     # adds no guardrail, gate or record. A GROUP, like `acceptance`.
     "quick-fix",
+    # decisions-ledger (ADR-027): the settled-decisions ledger. A group of
+    # four subcommands; it adds no guardrail or gate, and its history check
+    # runs inside the existing `compass ci`.
+    "decision",
 }
 
 

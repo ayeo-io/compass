@@ -41,6 +41,11 @@ complete governance state**: "the shipped default guardrails, the shipped defaul
 and zero project additions" is a fully legitimate thing to check against. Do
 not treat an un-extended `governance/` as a reason to stop.
 
+If the project has `governance/decisions/`, read it too. Each entry records a
+product decision a named person made, and never changes. A design that
+reverses one is reported as "settled by <path>", for the person to reopen
+with a new entry, not passed or failed on your judgement.
+
 ## Walk 1 - the guardrails (hard, evidence)
 
 Walk the plan, spec, or change against every applicable guardrail - the five

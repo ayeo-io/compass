@@ -71,6 +71,14 @@ VERB_DESCRIPTIONS = {
         'Say which stage of its delivery approach an issue has reached and what comes next, reading the approach rather than guessing. Skipped and collapsed stages are passed over, because the approach already decided they do not run. At a terminal it opens with the route as a rail - done, current, pending, and stages the policy skipped - and ends with the next command. Piped output, and any run with CLAUDECODE set, is the plain line alone, so the model sees no change. NO_COLOR drops the colour; COMPASS_COLOR=never uses ASCII markers and COMPASS_COLOR=always draws the rail even when piped.',
     'plan lint':
         'Scan a technical design for placeholder phrases - TBD, TODO, "implement later". Advisory and always exits 0: a design can be vague without using one of those words, so this is the mechanical floor rather than the judgement.',
+    'decision record':
+        "Write a new entry in governance/decisions/ for a product decision a person has made, named for today and the slug. The decider comes from `git config compass.decidedBy`, else `user.name`; there is no option for it, because in a session whoever passes an option is the model. Refuses an existing slug, a slug that is not lower-case words joined by hyphens, and an unknown --supersedes slug. An entry never changes; a change of mind is a new entry that supersedes the old one.",
+    'decision list':
+        "List each entry in governance/decisions/, newest first: the date it was recorded, its slug and the first line of its decision.",
+    'decision show':
+        "Print one entry from governance/decisions/ by its slug: who decided, when, what it supersedes, the decision, why, and the evidence. Refuses a slug with no entry.",
+    'decision check':
+        "Compare governance/decisions/ with a base ref: fails, naming the file, when an entry that exists at the ref was changed or removed. New entries pass. A ref git cannot resolve fails rather than checking nothing. compass ci --since runs the same check.",
     'quick-fix start':
         "Assess a quick fix and record it in one call: refuses before writing anything if a dimension has no reason or the policy does not know its value, otherwise initialises the project, writes the manifest's assessment with any --labels (a domain tag such as auth brings the floor and the human sign-off), runs the same evaluator `compass approach evaluate --write` runs, and - only if the computed approach is quick fix - writes delivery-approach.md, registers it and records the one scenario against its intent. If the approach computes heavier than a quick fix, it keeps the assessment and says to continue with /compass:assess rather than writing an approach record and a scenario that do not apply.",
     'quick-fix finish':

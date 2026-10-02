@@ -67,7 +67,17 @@ jobs:
         # The framework repo has no .compass/work/ issues, so this is
         # `compass policy lint` in practice - it proves the shipped governance
         # YAML is valid and the CLI runs.
-        run: python3 cli/compass ci
+        # On a pull request, compare the decisions ledger with the base
+        # branch, so an edited entry fails here (ADR-027). On a push there
+        # is no base to compare with, and compass ci says it skipped the check.
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          if [ -n "$BASE_REF" ]; then
+            python3 cli/compass ci --since "origin/$BASE_REF"
+          else
+            python3 cli/compass ci
+          fi
 
       - name: Test suite
         # `compass ci` above checks governance and per-issue guardrails; it does

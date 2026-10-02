@@ -315,6 +315,7 @@ EXPECTED_SUBCOMMANDS = {
     "init",                       # creates .compass/ - safe to run twice
     "acceptance",                 # the acceptance verb group
     "quick-fix",                  # start|finish - the quick-fix verb group
+    "decision",                   # record|list|show|check - the ledger (ADR-027)
 }
 
 

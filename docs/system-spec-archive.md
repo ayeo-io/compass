@@ -9709,3 +9709,52 @@
 - **Intent:** `INT-1`
 - **Source issue:** `owning-doc-router`
 - **Landed:** 2026-10-02
+
+### Given the suite runs on parallel workers, When make test or CI runs it, Then tests marked serial, including the two timing tests, run in a second pass on their own _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `parallel-ci-flakes`
+- **Landed:** 2026-10-02
+
+### Given compass decision record <slug>, then it writes a new entry from the template, dated today, with Decided by taken from git config compass.decidedBy, else git config user.name. It refuses an existing slug, and refuses when git has neither name set. There is no option to set Decided by. _(archived)_
+
+- **Scenario id:** `DL-A`
+- **Intent:** `INT-1`
+- **Source issue:** `decisions-ledger`
+- **Landed:** 2026-10-02
+
+### Given compass decision list, then it prints each entry's date, slug and the first line of its decision, newest first. Given compass decision show <slug>, then it prints that entry. _(archived)_
+
+- **Scenario id:** `DL-B`
+- **Intent:** `INT-1`
+- **Source issue:** `decisions-ledger`
+- **Landed:** 2026-10-02
+
+### Given compass decision check --base <ref>, then it fails, naming the entry, when an entry that exists at the ref is changed or removed. A new entry passes. A ref git cannot resolve fails loudly. _(archived)_
+
+- **Scenario id:** `DL-C`
+- **Intent:** `INT-1`
+- **Source issue:** `decisions-ledger`
+- **Landed:** 2026-10-02
+
+### Given compass ci --since <ref> in a project with governance/decisions/, then it runs the history check against that ref. Without --since, it says the history check was skipped and why. _(archived)_
+
+- **Scenario id:** `DL-D`
+- **Intent:** `INT-1`
+- **Source issue:** `decisions-ledger`
+- **Landed:** 2026-10-02
+
+### Given the reviewer agent and the governance-check skill, then each says to read governance/decisions/ before recommending a rename, a wording change or a reversal, and to report a collision as "settled by <path>". _(archived)_
+
+- **Scenario id:** `DL-E`
+- **Intent:** `INT-1`
+- **Source issue:** `decisions-ledger`
+- **Landed:** 2026-10-02
+
+### Given the verb surface, then decision is in the CLI's baseline and in the README's CLI surface block. _(archived)_
+
+- **Scenario id:** `DL-F`
+- **Intent:** `INT-1`
+- **Source issue:** `decisions-ledger`
+- **Landed:** 2026-10-02

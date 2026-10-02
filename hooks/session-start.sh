@@ -58,12 +58,31 @@ fi
 
 [ -f "$CONTRACT" ] || exit 0
 
+# Without Python 3.10 or later the CLI cannot run and pre-tool.sh refuses
+# code edits, so say so now, to the person and to the model, rather than let
+# the first refused edit be how they find out. The message is fixed ASCII
+# built with printf; the one variable part, the version, holds only digits
+# and dots (scripts/lib/python-check.sh), so the JSON stays valid. The hook
+# still never blocks.
+# shellcheck source=../scripts/lib/python-check.sh
+. "$FRAMEWORK_ROOT/scripts/lib/python-check.sh"
+PY_STATUS="$(compass_python_status)"
+case "$PY_STATUS" in
+  ok\ *) ;;
+  *)
+    case "$PY_STATUS" in
+      missing) found="python3 was not found on the PATH. Until it is installed, Compass refuses code edits in this project and its commands do not run." ;;
+      broken) found="a python3 is on the PATH but did not run. Until it runs, Compass refuses code edits in this project and its commands do not run." ;;
+      *) found="python3 ${PY_STATUS#old } was found, which the Compass CLI cannot run on. Without the CLI, an issue's assessment and failing test cannot be recorded, so Compass refuses the code edits that need them." ;;
+    esac
+    msg="Compass needs Python 3.10 or later, and $found Fix: install Python 3.10 or later and put python3 on the PATH, then start a new session."
+    printf '{"systemMessage": "%s", "hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "%s"}}\n' "$msg" "$msg"
+    exit 0 ;;
+esac
+
 # Emitted as JSON by python3, which is how the rest of the kit reads and writes
 # JSON. A hand-rolled escape here would break on the first apostrophe in the
-# contract. With no python3 the session simply starts without it: degrading
-# quietly is right for a hook that only ever ADDS context, and is the opposite
-# of the rule in pre-tool.sh, where a hook that cannot check must not permit.
-command -v python3 >/dev/null 2>&1 || exit 0
+# contract.
 
 python3 - "$CONTRACT" <<'PY' 2>/dev/null || exit 0
 import json

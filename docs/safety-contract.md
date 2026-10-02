@@ -174,6 +174,28 @@ opted in and has not been assessed is still refused, and a project the hook
 cannot read is still refused - Compass answering "allow" to a question it
 could not ask would be a guardrail switched off silently.
 
+### Compass needs Python 3.10 or later
+
+The CLI and the pre-tool hook's checks are Python. Without a working
+`python3` 3.10 or later on the PATH, an opted-in project refuses code edits
+rather than permitting them, and says so at install and at session start,
+before the first refusal. Edits to files the hook does not guard as code,
+such as documentation, go through as usual.
+
+| Part | No `python3`, or one that does not run | `python3` older than 3.10 |
+|---|---|---|
+| `scripts/install.sh` | Says none was found, or that it did not run, warns, and installs anyway. | Names the version, warns, and installs anyway. |
+| `hooks/session-start.sh` | Tells the person and the model, in place of the operating contract. Never blocks. | The same, naming the version. |
+| `hooks/pre-tool.sh` | Refuses each code edit: `python-missing` when there is no `python3`, `reader-failed` when it does not run. | Its checks run, but the CLI cannot record the assessment and failing test they look for, so a code edit in an issue without them is refused as usual. |
+| `hooks/post-tool.sh` | No change: it does not use Python. | No change. |
+| `hooks/stop.sh` | Says the end-of-session check did not run, and exits 0. | Runs its check as usual. |
+| `compass` | Does not run. | Does not run. |
+
+These rows were checked by running each hook with no `python3`, with one
+that exits without running, and with Python 3.9.6. A repository that never
+opted in sees none of this. Shipping the CLI as a single file would not
+remove the dependency; ADR-028 records why Compass ships as a directory.
+
 ### The red marker is checked against its record, and a record can still be written by hand
 
 The pre-tool hook refuses a code edit unless a failing test is on record for

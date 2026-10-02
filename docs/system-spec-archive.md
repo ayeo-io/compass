@@ -9877,3 +9877,38 @@
 - **Intent:** `INT-1`
 - **Source issue:** `adr-new-row-in-the-table`
 - **Landed:** 2026-10-02
+
+### Given schemas/adapter-contract.yml, then every capability in docs/portability.md has a row, every adapter has a full, partial or none cell with a path, an adapter directory without a column fails, and a new negative-identity check in cli/ or hooks/ fails the scan _(archived)_
+
+- **Scenario id:** `AC-A`
+- **Intent:** `INT-1`
+- **Source issue:** `adapter-contract-gate`
+- **Landed:** 2026-10-02
+
+### Given a landed issue, when compass issue diagnose runs, then it lists each stage the route ran, with the record that shows it ran and its path, and each gate with its status and evidence. _(archived)_
+
+- **Scenario id:** `SD-A`
+- **Intent:** `INT-1`
+- **Source issue:** `session-diagnosis`
+- **Landed:** 2026-10-02
+
+### Given an issue's records, then the report gives a timeline of every dated record: reds, greens, subtask dispatches, review rounds, reassessments, hook refusals and failed checks from .compass/interruptions.log, and the landing, oldest first, each with its path. _(archived)_
+
+- **Scenario id:** `SD-B`
+- **Intent:** `INT-1`
+- **Source issue:** `session-diagnosis`
+- **Landed:** 2026-10-02
+
+### Given a stage the route ran that has no record, a red dated after its scenario's green, a green in an issue with no red at all, a review round that failed, or a landed issue's gate not passed, then the report lists each as a deviation, naming the scenario, stage or gate. A solo breakdown, a spike's missing red and an unfinished issue's later stages are not deviations. _(archived)_
+
+- **Scenario id:** `SD-C`
+- **Intent:** `INT-1`
+- **Source issue:** `session-diagnosis`
+- **Landed:** 2026-10-02
+
+### Given any issue, then the report ends with the questions its records cannot answer, including edits the hook refused, time between records, and what was said in the session. _(archived)_
+
+- **Scenario id:** `SD-D`
+- **Intent:** `INT-1`
+- **Source issue:** `session-diagnosis`
+- **Landed:** 2026-10-02

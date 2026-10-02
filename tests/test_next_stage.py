@@ -1,6 +1,7 @@
 """`compass next` reports the stage an issue has reached: the
-next-never-leaves-assess issue, scenarios NS-A to NS-I in
-`docs/system-spec.md`.
+next-never-leaves-assess issue, scenarios NS-A to NS-I. The current one is in
+`docs/system-spec.md`, and the eight it supersedes are in
+`docs/system-spec-archive.md`.
 
 The stage is derived from the records on disk. The status line and the rail
 take it from the same place, so all three must agree.

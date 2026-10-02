@@ -93,6 +93,23 @@ def _detect_collapsed_phases(phases: dict) -> list:
     return out
 
 
+def _typed(task: dict) -> dict:
+    """The manifest with `gates` as a list and `stages` as a mapping of strings.
+
+    A hand-edited manifest can hold anything, and every reader below
+    assumes these two shapes. A value of the wrong type is read as empty,
+    so `compass next` and the status line still name a stage.
+    """
+    if not isinstance(task, dict):
+        return task
+    gates = task.get("gates")
+    stages = task.get("stages")
+    stages = stages if isinstance(stages, dict) else {}
+    return dict(task,
+                gates=gates if isinstance(gates, list) else [],
+                stages={k: v if isinstance(v, str) else "" for k, v in stages.items()})
+
+
 def _first_pending_gate(gates: list) -> str | None:
     """Return the id of the first gate whose status is not 'pass'."""
     for g in (gates or []):
@@ -265,7 +282,7 @@ def cmd_next(args):
         )
         return 2
 
-    task = normalize_spine(load_yaml(task_path))
+    task = _typed(normalize_spine(load_yaml(task_path)))
 
     # --- delivery-approach.md: must exist ---
     route_md_path = artifact_path(task_dir, "delivery-approach.md")

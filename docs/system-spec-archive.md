@@ -9604,3 +9604,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `next-never-leaves-assess`
 - **Landed:** 2026-10-02
+
+### Given a manifest whose artifacts, evidence, scenarios or subtasks is not a list, or whose ids are not strings, then compass next still prints a stage and exits 0, and the status line still prints its line. _(archived)_
+
+- **Scenario id:** `NS-I`
+- **Intent:** `INT-1`
+- **Source issue:** `next-never-leaves-assess`
+- **Landed:** 2026-10-02

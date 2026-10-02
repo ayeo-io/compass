@@ -6,11 +6,21 @@
 
 .PHONY: help test lint validate ci release clean
 
+# Parallel workers when pytest-xdist is installed. Autoload stays off, so the
+# plugin is loaded by name; without it the suite runs in series as before.
+XDIST := $(shell python3 -c "import xdist" 2>/dev/null && echo "-p xdist.plugin -n auto")
+
+# `make ci` checks issues landed since the latest release tag; the ones
+# before it were checked when that release was cut. COMPASS_FULL_ARCHIVE=1,
+# or a checkout with no tag, checks every issue.
+LAST_TAG := $(shell git describe --tags --abbrev=0 2>/dev/null)
+SINCE := $(if $(COMPASS_FULL_ARCHIVE),,$(if $(LAST_TAG),--since $(LAST_TAG)))
+
 help:  ## list targets
 	@grep -E '^[a-z-]+:.*?##' Makefile | awk -F':.*?##' '{printf "  %-12s %s\n", $$1, $$2}'
 
 test:  ## run the CLI test suite (autoload disabled - reliable in clean envs)
-	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest tests/ -q
+	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest tests/ -q $(XDIST)
 
 lint:  ## check governance YAML
 	python3 cli/compass policy lint
@@ -18,8 +28,8 @@ lint:  ## check governance YAML
 validate:  ## self-check the framework repo structure
 	bash scripts/validate.sh
 
-ci:  ## the full mechanical gate suite (policy lint + issue lint + check across all issues)
-	python3 cli/compass ci
+ci:  ## the mechanical gate suite (policy lint + issue lint + check of issues since the last tag)
+	python3 cli/compass ci $(SINCE)
 
 release:  ## build a clean release tarball into dist/
 	bash scripts/release.sh

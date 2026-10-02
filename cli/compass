@@ -193,7 +193,11 @@ def build_parser():
 
     pci = sub.add_parser("ci",
                          help="run the full mechanical gate suite (policy lint "
-                              "+ issue lint + check, all issues) - for CI")
+                              "+ issue lint + check, all issues, or with --since "
+                              "only recent ones) - for CI")
+    pci.add_argument("--since", metavar="REF",
+                     help="fully check only issues in flight and issues landed "
+                          "after REF, a git tag or commit; lint the rest")
     pci.set_defaults(func=cmd_ci, output_kind="hand-off")
 
     prd = sub.add_parser("tdd-red", help="run a test, assert it FAILS, record the red")

@@ -23,6 +23,7 @@ import json
 import re
 import pathlib
 
+import pytest
 import yaml
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -384,21 +385,19 @@ def _pre_existing_task_slugs():
     return slugs
 
 
-def test_trc_f1_existing_tasks_still_pass():
+# One test per issue, so parallel workers share the sweep. An empty list (no
+# local archive) makes pytest skip the test, as the loop used to return early.
+@pytest.mark.parametrize("slug", _pre_existing_task_slugs())
+def test_trc_f1_existing_tasks_still_pass(slug):
     """Every issue that predates this change still passes, once the references
     `declared-tests-resolve` exposed have been repaired. Run against the real
     .compass/work/, not a fixture - the point is the actual audit trail."""
     import subprocess
     import sys
 
-    failures = []
-    for slug in _pre_existing_task_slugs():
-        r = subprocess.run(
-            [sys.executable, str(ROOT / "cli" / "compass"), "check", "--verbose", "--issue", slug],
-            capture_output=True, text=True, timeout=120, cwd=str(ROOT))
-        if r.returncode != 0:
-            failures.append(f"--- {slug} ---\n{r.stdout[-1500:]}")
-
-    assert not failures, (
-        "adding declared-tests-resolve broke tasks already on disk:\n"
-        + "\n".join(failures))
+    r = subprocess.run(
+        [sys.executable, str(ROOT / "cli" / "compass"), "check", "--verbose", "--issue", slug],
+        capture_output=True, text=True, timeout=120, cwd=str(ROOT))
+    assert r.returncode == 0, (
+        f"adding declared-tests-resolve broke {slug}, already on disk:\n"
+        f"{r.stdout[-1500:]}")

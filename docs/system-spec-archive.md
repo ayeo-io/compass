@@ -9632,3 +9632,52 @@
 - **Intent:** `INT-1`
 - **Source issue:** `release-5-1-0`
 - **Landed:** 2026-10-02
+
+### Given a feature issue with its acceptance criteria registered and no technical design, When compass next runs, Then it reports Plan; and given an initiative issue with its criteria registered and no requirements review, Then it reports Refine _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `refine-never-clears-on-a-feature`
+- **Landed:** 2026-10-02
+
+### Given pytest-xdist is installed, when make test runs, then the suite runs on parallel workers. Given it is not installed, then make test runs the suite in series, as before. _(archived)_
+
+- **Scenario id:** `FS-A`
+- **Intent:** `INT-1`
+- **Source issue:** `faster-suite-and-release`
+- **Landed:** 2026-10-02
+
+### Given the local issue archive, when the suite is collected, then the two archive sweeps in test_phase2_invariants.py and test_record_keeping_integrity.py are one test per issue, each named after its issue. Given no archive, then they skip as before. _(archived)_
+
+- **Scenario id:** `FS-B`
+- **Intent:** `INT-1`
+- **Source issue:** `faster-suite-and-release`
+- **Landed:** 2026-10-02
+
+### Given compass ci --since <ref>, then it lints every manifest, fully checks every issue in flight and every issue landed after <ref>, and reports the rest as lint-only. Given no --since, then compass ci checks exactly what it checked before. _(archived)_
+
+- **Scenario id:** `FS-C`
+- **Intent:** `INT-1`
+- **Source issue:** `faster-suite-and-release`
+- **Landed:** 2026-10-02
+
+### Given make ci in this repository, then it runs compass ci --since the latest release tag. Given COMPASS_FULL_ARCHIVE=1, then make ci checks every issue. _(archived)_
+
+- **Scenario id:** `FS-D`
+- **Intent:** `INT-1`
+- **Source issue:** `faster-suite-and-release`
+- **Landed:** 2026-10-02
+
+### Given pytest-xdist is installed, when scripts/release.sh runs its test step, then it runs the suite on parallel workers. Given it is not installed, then it runs in series, as before. _(archived)_
+
+- **Scenario id:** `FS-E`
+- **Intent:** `INT-1`
+- **Source issue:** `faster-suite-and-release`
+- **Landed:** 2026-10-02
+
+### Given the CI self-check job, then it installs pytest-xdist and runs the suite on parallel workers. _(archived)_
+
+- **Scenario id:** `FS-F`
+- **Intent:** `INT-1`
+- **Source issue:** `faster-suite-and-release`
+- **Landed:** 2026-10-02

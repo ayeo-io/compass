@@ -125,7 +125,9 @@ with the version hidden.
    `.DS_Store`, `.pytest_cache`, `_deltest`, `pytest-cache-files-*`).
    The release tarball must not carry any of these.
 
-3. **`make test`** - must be green. The full test suite, including:
+3. **`make test`** - must be green. It runs on parallel workers when
+   `pytest-xdist` is installed (`pip install pytest-xdist`), which takes a
+   few minutes instead of half an hour. The full test suite, including:
    - `tests/test_cli_surface_drift.py` (every CLI subcommand documented
      in the public CLI surface blocks)
    - `tests/test_release_invariants.py` (the partial-version-bump guard
@@ -140,9 +142,12 @@ with the version hidden.
    updated for a behaviour change - the framework's own traceability guardrail (`G3`)
    is at risk. Fix the docs to catch up, re-run, then bump.
 
-4. **`make ci`** - must be green. Runs `compass policy lint` + `issue
-   lint` + `check` across all issues under `.compass/work/`. (`make ci`
-   is what CI runs; failing it locally means CI will fail.)
+4. **`make ci`** - must be green. Runs `compass policy lint`, then `issue
+   lint` on every issue under `.compass/work/` and `check` on the issues in
+   flight or landed since the last release tag (`compass ci --since <tag>`).
+   Once per release, run `COMPASS_FULL_ARCHIVE=1 make ci`, which checks
+   every issue. (`compass ci` is what CI runs; failing it locally means CI
+   will fail.)
 
 5. **`make release`** - produces `dist/compass-<version>.tar.gz`.
 

@@ -155,6 +155,19 @@ def _earned(task: dict, kind: str) -> bool:
     return any(a.get("kind") == kind for a in _entries(task, "artifacts"))
 
 
+def _review_written(task_dir: str | None) -> bool:
+    """True when the issue's requirements review exists on disk, registered
+    or not. The resolver finds a registered one, or one beside the manifest
+    as issues before 5.0.0 kept it; an unregistered one in the documents
+    folder is what refine writes on a route that does not earn it."""
+    if not task_dir:
+        return False
+    from compass_pkg.core import unregistered_document
+    name = "requirements-review.md"
+    return (os.path.isfile(artifact_path(task_dir, name))
+            or unregistered_document(task_dir, name) is not None)
+
+
 def _testing_started(task: dict, task_dir: str | None) -> bool:
     """True once any test result is on record: a test-run in the manifest, or
     a red that `compass tdd-red` wrote, which the manifest does not list."""
@@ -198,13 +211,13 @@ def _stages_on_record(task: dict, task_dir: str | None) -> set:
         # record.
         "define": (_registered(task, "acceptance-criteria")
                    or bool(_entries(task, "scenarios"))),
-        # Refine's record is its requirements review, but only a route that
-        # earns the review (an initiative) can register one. Elsewhere refine
-        # leaves no record of its own, so the registered criteria it reviewed
-        # stand in for it.
+        # Refine's record is its requirements review. Only a route that earns
+        # the review (an initiative) can register it; elsewhere refine writes
+        # the file and leaves it unregistered (commands/refine.md), so the
+        # file itself is the record.
         "refine": (_registered(task, "requirements-review")
                    or (not _earned(task, "requirements-review")
-                       and _registered(task, "acceptance-criteria"))),
+                       and _review_written(task_dir))),
         "plan": _registered(task, "technical-design"),
         "breakdown": bool(_entries(task, "subtasks")) or _registered(task, "distribution-map"),
         "implement": _every_scenario_tested(task),

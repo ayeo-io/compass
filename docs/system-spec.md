@@ -34,7 +34,7 @@
 - **Scenario id:** `RL-H`
 - **Intent:** `INT-1`
 - **Source issue:** `progress-rail`
-- **Landed:** 2026-10-01
+- **Landed:** 2026-10-02
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
 

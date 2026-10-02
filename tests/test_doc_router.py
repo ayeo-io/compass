@@ -19,9 +19,11 @@ ROOT = Path(__file__).resolve().parent.parent
 HEADING = "## Owning docs"
 
 
-def _table_rows(root: Path) -> list:
-    """(area paths, owning doc paths) for each row of the owning-docs table."""
-    text = (root / "docs" / "README.md").read_text(encoding="utf-8")
+def _table_rows(root: Path, text: str | None = None) -> list:
+    """(area paths, owning doc paths) for each row of the owning-docs table,
+    read from `text` when given, else from the root's docs/README.md."""
+    if text is None:
+        text = (root / "docs" / "README.md").read_text(encoding="utf-8")
     assert HEADING in text, f"docs/README.md has no '{HEADING}' section"
     section = text.split(HEADING, 1)[1].split("\n## ", 1)[0]
     rows = []
@@ -34,10 +36,10 @@ def _table_rows(root: Path) -> list:
     return rows
 
 
-def _missing_paths(root: Path) -> list:
+def _missing_paths(root: Path, text: str | None = None) -> list:
     """Paths the table names that do not exist."""
     missing = []
-    for areas, owners in _table_rows(root):
+    for areas, owners in _table_rows(root, text):
         for rel in areas + owners:
             if not (list(root.glob(rel)) if "*" in rel else (root / rel).exists()):
                 missing.append(rel)
@@ -69,13 +71,16 @@ def test_every_doc_is_indexed():
 
 
 def test_the_checks_name_a_planted_fault(tmp_path):
-    """Both checks can fail: an unindexed doc and a table path that does not
-    exist are each reported by name."""
+    """Both checks can fail. Against the real repository, a planted table
+    row naming a missing file is the only missing path reported, and a doc
+    planted in a copy of docs/ without an index line is reported by name."""
+    readme = (ROOT / "docs" / "README.md").read_text(encoding="utf-8")
+    planted = (readme.rstrip()
+               + "\n| `cli/compass_pkg/no_such_module.py` | `docs/quickstart.md` |\n")
+    assert _missing_paths(ROOT, planted) == ["cli/compass_pkg/no_such_module.py"]
+
     copy = tmp_path / "repo"
-    (copy / "docs").mkdir(parents=True)
-    shutil.copy(ROOT / "docs" / "README.md", copy / "docs" / "README.md")
-    for p in (ROOT / "docs").glob("*.md"):
-        shutil.copy(p, copy / "docs" / p.name)
+    shutil.copytree(ROOT / "docs", copy / "docs",
+                    ignore=shutil.ignore_patterns("compass", "analysis", "proposals"))
     (copy / "docs" / "planted-unindexed.md").write_text("# Planted\n")
-    assert "docs/planted-unindexed.md" in _unindexed_docs(copy)
-    assert _missing_paths(copy), "every table path existed in a copy holding only docs/"
+    assert _unindexed_docs(copy) == ["docs/planted-unindexed.md"]

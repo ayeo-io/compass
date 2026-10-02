@@ -190,6 +190,15 @@ A port must document the capability mapping below it too.
 
 An empty cell is a design question, not evidence of equivalence.
 
+`schemas/adapter-contract.yml` holds this table as data, with the Claude Code
+adapter's column filled in. `tests/test_adapter_contract.py` fails when a
+capability here has no row there, when an adapter's cell is empty or names a
+path that does not exist, or when a directory under `adapters/` has no
+column. A port adds its column before it lands. The same test fails on a new
+line in `cli/` or `hooks/` that branches on not being some adapter, such as
+`if adapter != "claude-code"`: code that needs a capability must ask for the
+capability.
+
 ## What to reuse
 
 A port normally keeps these unchanged:

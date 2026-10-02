@@ -9807,3 +9807,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `review-rules-as-data`
 - **Landed:** 2026-10-02
+
+### Given a pull request, then the CI review's prompt holds the review rules that match its changed files, taken with the CLI from the base branch _(archived)_
+
+- **Scenario id:** `RB-A`
+- **Intent:** `INT-1`
+- **Source issue:** `ci-review-reads-review-rules`
+- **Landed:** 2026-10-02

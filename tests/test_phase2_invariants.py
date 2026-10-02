@@ -19,6 +19,7 @@ import subprocess
 import sys
 import tempfile
 
+import pytest
 import yaml
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -46,53 +47,71 @@ def test_trc_f1_a_project_that_opted_into_nothing_should_see_no_change():
         shutil.rmtree(proj, ignore_errors=True)
 
 
-def test_trc_f2_adding_the_check_should_not_change_any_existing_tasks_result():
+def _archive_slugs():
+    """(non-spike slugs, spike slugs) in the local archive, or two empty
+    lists when there is none.
+
+    A Spike runs `spike_guardrails`, not `G1`-`G5` - the BDD and TDD
+    strategies are suspended there by design, so a check about executable
+    scenarios correctly never fires. Excluded rather than asserted over.
+    A manifest that cannot be read counts as not a spike, so it is checked.
+    """
+    work = ROOT / ".compass" / "work"
+    if not work.is_dir():
+        return [], []
+    slugs, spikes = [], []
+    for p in sorted(work.iterdir()):
+        if not (p / "manifest.yml").is_file():
+            continue
+        try:
+            data = yaml.safe_load((p / "manifest.yml").read_text()) or {}
+        except yaml.YAMLError:
+            data = {}
+        is_spike = isinstance(data, dict) and data.get("delivery_approach") == "spike"
+        (spikes if is_spike else slugs).append(p.name)
+    return slugs, spikes
+
+
+_SLUGS, _SPIKES = _archive_slugs()
+
+
+def test_trc_f2_the_archive_sweep_is_not_empty_and_covers_a_spike():
+    """The per-issue sweep below is only a guard if it has issues to check,
+    and its spike exclusion is only tested while a spike exists."""
+    if not (ROOT / ".compass" / "work").is_dir():
+        return
+    assert _SLUGS or _SPIKES, "no tasks on disk - this guard would be empty"
+    assert _SPIKES, (
+        "no Spike task on disk, so the exclusion above is untested - if every "
+        "Spike has been archived, simplify this test rather than leaving a "
+        "branch nothing exercises")
+
+
+# One test per issue, so parallel workers share the sweep. With no local
+# archive the list is empty and pytest skips it, as the loop returned early.
+@pytest.mark.parametrize("slug", _SLUGS)
+def test_trc_f2_adding_the_check_should_not_change_any_existing_tasks_result(slug):
     """Every issue already on disk must still check the way it did.
 
     The new check runs inside `G1`, which is always active - so a bug in it
     would change the result for every issue in the repository at once. This
     is the guard on that.
     """
-    work = ROOT / ".compass" / "work"
-    if not work.is_dir():
-        return
-    slugs = sorted(p.name for p in work.iterdir() if (p / "manifest.yml").is_file())
-    assert slugs, "no tasks on disk - this guard would be empty"
-
-    # A Spike runs `spike_guardrails`, not `G1`-`G5` - the BDD and TDD strategies
-    # are suspended there by design, so a check about executable scenarios
-    # correctly never fires. Excluded rather than asserted over.
-    spikes = set()
-    for slug in slugs:
-        data = yaml.safe_load((work / slug / "manifest.yml").read_text()) or {}
-        if data.get("delivery_approach") == "spike":
-            spikes.add(slug)
-    slugs = [s for s in slugs if s not in spikes]
-
-    checked = 0
-    for slug in slugs:
-        r = subprocess.run(
-            [sys.executable, str(CLI), "check", "--verbose", "--issue", slug],
-            cwd=str(ROOT), capture_output=True, text=True, timeout=180)
-        line = next((l for l in r.stdout.splitlines()
-                     if "scenarios-are-executable" in l), "")
-        # No issue in this repository has wired a runner, so every one of
-        # them must take the no-op path. A FAIL here would mean the check is
-        # penalising projects for not having opted in.
-        if line:
-            checked += 1
-            assert line.strip().startswith("PASS"), (
-                f"{slug}: the new check fails a task that wired no runner:\n{line}")
-            assert "runner" in line.lower(), (
-                f"{slug}: the no-op pass gives no reason:\n{line}")
-    assert checked == len(slugs), (
-        f"the check ran for only {checked} of {len(slugs)} non-Spike tasks - "
-        f"it is registered under G1, which is always active on a delivery "
-        f"route, so it should run for all of them")
-    assert spikes, (
-        "no Spike task on disk, so the exclusion above is untested - if every "
-        "Spike has been archived, simplify this test rather than leaving a "
-        "branch nothing exercises")
+    r = subprocess.run(
+        [sys.executable, str(CLI), "check", "--verbose", "--issue", slug],
+        cwd=str(ROOT), capture_output=True, text=True, timeout=180)
+    line = next((l for l in r.stdout.splitlines()
+                 if "scenarios-are-executable" in l), "")
+    assert line, (
+        f"{slug}: the check did not run - it is registered under G1, which is "
+        f"always active on a delivery route, so it should run for every issue")
+    # No issue in this repository has wired a runner, so every one of them
+    # must take the no-op path. A FAIL here would mean the check is
+    # penalising projects for not having opted in.
+    assert line.strip().startswith("PASS"), (
+        f"{slug}: the new check fails a task that wired no runner:\n{line}")
+    assert "runner" in line.lower(), (
+        f"{slug}: the no-op pass gives no reason:\n{line}")
 
 
 EXPECTED_GUARDRAIL_IDS = {"G1", "G2", "G3", "G4", "G5", "S1", "S2"}

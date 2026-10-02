@@ -628,6 +628,43 @@ def _issue_status(slug):
     return (manifest.get("status") or "").strip()
 
 
+def _git_out(cwd, *args):
+    """The output of a git command, or None when it fails."""
+    try:
+        r = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
+    except OSError:
+        return None
+    return r.stdout.strip() if r.returncode == 0 else None
+
+
+def _landed_before(slug, cwd, ref, ref_time):
+    """True only when the issue's landing is known to be before `ref`.
+
+    `land_commit` is placed by git ancestry. An issue without it, such as
+    one landed before `ship-commit` wrote the field, is placed by
+    `land_timestamp` against the ref's commit time. Anything that cannot be
+    placed counts as after, so it is checked:
+    checking too much costs time, and checking too little hides a failure.
+    """
+    try:
+        manifest = load_yaml(os.path.join(resolve_issue_dir(slug), "manifest.yml"))
+    except Exception:
+        return False
+    if not isinstance(manifest, dict):
+        return False
+    commit = manifest.get("land_commit")
+    if isinstance(commit, str) and commit:
+        r = subprocess.run(["git", "merge-base", "--is-ancestor", commit, ref],
+                           cwd=cwd, capture_output=True, text=True)
+        return r.returncode == 0
+    stamp = manifest.get("land_timestamp")
+    try:
+        landed = datetime.datetime.fromisoformat(str(stamp))
+        return landed < ref_time
+    except (TypeError, ValueError):
+        return False
+
+
 def cmd_ci(args):
     import types
     mode = load_mode()
@@ -637,6 +674,25 @@ def cmd_ci(args):
     failures = 0
     checked = 0
     skipped = 0
+
+    since = getattr(args, "since", None)
+    project = os.getcwd()
+    ref_time = None
+    if since:
+        # A ref git cannot resolve must stop the run: carrying on would
+        # check less than the caller asked for and still report a pass.
+        try:
+            project = os.path.dirname(find_compass_dir())
+        except CompassError:
+            pass
+        commit = _git_out(project, "rev-parse", "--verify", "--quiet", f"{since}^{{commit}}")
+        stamp = commit and _git_out(project, "log", "-1", "--format=%cI", commit)
+        if not stamp:
+            print(f"compass ci: --since {since} does not name a commit in this "
+                  f"repository, so nothing was checked.")
+            return 2
+        ref_time = datetime.datetime.fromisoformat(stamp)
+        print(f"Issues landed before {since} are linted only.\n")
 
     print("[1] governance policy")
     if cmd_policy_lint(types.SimpleNamespace()):
@@ -676,6 +732,13 @@ def cmd_ci(args):
                   f"not exist yet. The manifest itself was still linted.")
             skipped += 1
             continue
+        # The resolved commit id, not the caller's string, reaches git.
+        if since and status == "landed" and _landed_before(slug, project, commit, ref_time):
+            print(f"  gate checks skipped - landed before {since}. Run "
+                  f"compass ci without --since to check it. The manifest "
+                  f"itself was still linted.")
+            skipped += 1
+            continue
         print()
         # cmd_check applies the output mode itself. Call it and keep its exit
         # code, so ci can report which groups failed.
@@ -697,7 +760,8 @@ def cmd_ci(args):
         # reads the summary line, not the skip lines above it.
         counted = f"{checked} issue(s) fully checked"
         if skipped:
-            counted += f", {skipped} lint-only (not in flight)"
+            why = f"not in flight, or landed before {since}" if since else "not in flight"
+            counted += f", {skipped} lint-only ({why})"
         print(f"compass ci: PASS - governance valid; every manifest lints clean; "
               f"{counted}.")
     return exit_for_mode(failures, mode)

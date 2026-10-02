@@ -52,7 +52,7 @@ jobs:
         # for it here. jsonschema turns on full JSON Schema validation in the
         # lint commands (optional). pytest is for the test suite step
         # below.
-        run: pip install jsonschema pytest
+        run: pip install jsonschema pytest pytest-xdist
 
       - name: Repo structure self-check
         # scripts/validate.sh checks the directory tree, that commands
@@ -75,11 +75,12 @@ jobs:
         # including the release invariants that cap the guardrail count and the
         # house-style guards. Plugin autoload is disabled for the same reason
         # `make test` disables it: third-party pytest plugins sometimes hang on
-        # a clean machine. Runs last because it is the slowest step, so the
-        # cheaper checks above fail first.
+        # a clean machine, so pytest-xdist is loaded by name to run the suite
+        # on parallel workers. Runs last because it is the slowest step, so
+        # the cheaper checks above fail first.
         env:
           PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
-        run: python3 -m pytest tests/ -q
+        run: python3 -m pytest tests/ -q -p xdist.plugin -n auto
 
   # ---------------------------------------------------------------------------
   # The BDD reference adapter, in its own job and its own environment.

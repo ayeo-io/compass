@@ -144,7 +144,13 @@ fi
 echo "[3] tests"
 if [ "$SKIP_TESTS" -eq 0 ]; then
   if command -v python3 >/dev/null 2>&1 && [ -d tests ]; then
-    PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest tests/ -q >/dev/null
+    # Parallel workers when pytest-xdist is installed, as `make test` does.
+    XDIST=""
+    if python3 -c "import xdist" 2>/dev/null; then
+      XDIST="-p xdist.plugin -n auto"
+    fi
+    # shellcheck disable=SC2086  # XDIST holds several arguments, split on purpose.
+    PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest tests/ -q $XDIST >/dev/null
     echo "    PASS"
   else
     echo "    skipped (no python3 or no tests/)"

@@ -10,6 +10,10 @@ then `compass issue lint` and `compass check` for every issue under
 `.compass/work/`, and exits non-zero if anything fails. That is the one command
 a CI job needs; everything else is just the platform's way of running it.
 
+`compass ci --since <ref>` still lints every issue, but fully checks only those
+in flight or landed after `<ref>`, a git tag or commit. Use it where the
+archive is large and older issues were checked when they landed.
+
 ## Compass CI does not replace your project CI
 
 Compass CI is a **process-integrity lane**, not a substitute for the rest of

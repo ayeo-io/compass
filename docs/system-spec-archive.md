@@ -9814,3 +9814,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `ci-review-reads-review-rules`
 - **Landed:** 2026-10-02
+
+### Given a pull request with more changed files than the files API lists, then the review's rules step fails rather than reviewing with a partial rule set _(archived)_
+
+- **Scenario id:** `RC-A`
+- **Intent:** `INT-1`
+- **Source issue:** `rules-step-file-cap`
+- **Landed:** 2026-10-02

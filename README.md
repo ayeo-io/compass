@@ -170,6 +170,10 @@ compass migrate            bring older issue directories up to the current schem
 compass terminology        what a term means here, from the frozen vocabulary
 compass quick-fix start    assess, evaluate and record a quick fix in one call
 compass quick-fix finish   trace, check, gate and ship a quick fix in one call
+compass decision record    write a settled product decision; the decider comes from git
+compass decision list      each decision's date, slug and outcome, newest first
+compass decision show      print one decision
+compass decision check     fail when a decision at a base ref was changed or removed
 ```
 
 Every verb describes itself - `compass <verb> --help` says what it does and

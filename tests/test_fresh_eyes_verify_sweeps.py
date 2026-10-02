@@ -349,6 +349,7 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
         "rework-scan", "flow", "next", "follow-up", "ship-commit", "gate",
         "scenario", "changed-file", "evidence", "migrate", "terminology",
         "init", "quick-fix",
+        "decision",  # decisions-ledger (ADR-027): the settled-decisions ledger
     }
     line = next(l for l in result.stdout.splitlines() if l.strip().startswith("{"))
     verbs = set(line.strip().strip("{}").split(","))

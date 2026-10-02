@@ -108,6 +108,12 @@ looks for a word at the front and costs the author more than an unlabelled
 comment would. The label is a claim about severity, and you own it the same
 way you own the finding.
 
+Before you recommend a rename, a change of wording or a reversal of
+behaviour, read `governance/decisions/` if the project has one. An entry
+there records what a named person decided, and it never changes. If your
+point collides with an entry, report it as "settled by <path>", not as a
+defect: reopening it is the person's call, through a new entry.
+
 ## How you behave per delivery approach
 
 - **quick fix** - three dimensions, one gate. Light, but real: a no-pass on

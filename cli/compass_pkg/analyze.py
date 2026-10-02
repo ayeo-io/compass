@@ -698,6 +698,28 @@ def cmd_ci(args):
     if cmd_policy_lint(types.SimpleNamespace()):
         failures += 1
 
+    # The decisions ledger's history check needs a base ref to compare with
+    # (ADR-027). Without --since it says so, rather than passing silently.
+    from compass_pkg.decisions import LEDGER, history_problems
+    ledger_root = project
+    try:
+        ledger_root = os.path.dirname(find_compass_dir())
+    except CompassError:
+        pass
+    if os.path.isdir(os.path.join(ledger_root, LEDGER)):
+        if since:
+            problems = history_problems(ledger_root, commit)
+            if problems:
+                failures += 1
+                print("\n[ledger] FAIL - an entry never changes:")
+                for p in problems:
+                    print(f"  {p}")
+            else:
+                print(f"\n[ledger] PASS - every entry at {since} is unchanged.")
+        else:
+            print("\n[ledger] history check skipped - pass --since <ref> to "
+                  "compare governance/decisions/ with a base ref.")
+
     slugs = []
     try:
         work = os.path.join(find_compass_dir(), "work")

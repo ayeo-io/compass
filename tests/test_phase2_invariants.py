@@ -138,6 +138,8 @@ EXPECTED_SUBCOMMANDS = {
     # in two calls instead of a dozen. A GROUP, for the same reason `bdd`
     # and `acceptance` are.
     "quick-fix",
+    # decisions-ledger (ADR-027): a group, record|list|show|check.
+    "decision",
 }
 EXPECTED_READING_KEYS = {
     "risk", "familiarity", "size", "goal", "urgency", "role",

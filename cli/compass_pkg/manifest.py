@@ -647,6 +647,29 @@ def cmd_scenario_add(args):
                tests=list(args.test or []))
 
 
+def cmd_scenario_descope(args):
+    """Record a failure mode the brief implies that no scenario covers, with
+    the reason it is left out, so the verifier lists it (failure-modes-in-define)."""
+    mode = " ".join(str(args.mode or "").split())
+    reason = " ".join(str(args.reason or "").split())
+    if not mode or not reason:
+        raise CompassError("compass scenario descope: give the failure mode and, with "
+                           "--reason, why no scenario covers it.")
+    task_dir = resolve_issue_dir(args.task)
+    task, task_path = load_manifest(task_dir)
+    modes = task.get("failure_modes_descoped")
+    if not isinstance(modes, list):
+        modes = task["failure_modes_descoped"] = []
+    if any(isinstance(m, dict) and str(m.get("mode", "")).casefold() == mode.casefold()
+           for m in modes):
+        raise CompassError(f"compass scenario descope: '{mode}' is already recorded.")
+    modes.append({"mode": mode, "reason": reason,
+                  "recorded": datetime.date.today().isoformat()})
+    save_manifest(task, task_path)
+    return say(args, f"compass scenario descope: '{mode}' recorded as de-scoped. "
+                     f"Verify lists it in the verification report.", mode=mode)
+
+
 def cmd_changed_file_add(args):
     task_dir = resolve_issue_dir(args.task)
     task, task_path = load_manifest(task_dir)

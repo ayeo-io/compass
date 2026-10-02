@@ -140,7 +140,10 @@
             "type": "object",
             "description": "Tokens each try used, keyed by the try's number. A second cost for the same try replaces it.",
             "patternProperties": {
-              "^[1-9][0-9]*$": {"type": "integer", "minimum": 0}
+              "^[1-9][0-9]*$": {
+                "type": "integer",
+                "minimum": 0
+              }
             },
             "additionalProperties": false
           },
@@ -628,6 +631,32 @@
           "changed": {
             "type": "object",
             "description": "What the recomputation actually moved - delivery approach, stages, gates, orchestration - each as a from/to pair. Written by the evaluator as the audit detail behind the reason."
+          }
+        }
+      }
+    },
+    "failure_modes_descoped": {
+      "type": "array",
+      "description": "Optional. Written at define by `compass scenario descope`. Each entry is a failure mode or input class the brief implies that no scenario covers, with the reason it is left out. The verifier lists each in the verification report, so none disappears silently. No gate reads it. Absent on issues that record none (ADR-006).",
+      "items": {
+        "type": "object",
+        "required": [
+          "mode",
+          "reason",
+          "recorded"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "recorded": {
+            "type": "string"
           }
         }
       }

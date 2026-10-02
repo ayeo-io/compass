@@ -43,7 +43,11 @@ what is actually true. Your deliverable is the evidence portion of
    (the green record, a coverage report, a report path). The CLI's
    `gate-evidence-present` check fails any `pass` gate whose pointer does not
    resolve - so the pointer is the evidence, not a claim about it.
-8. **Write the evidence into `verification-report.md`** and hand to the
+8. **List the de-scoped failure modes.** Read the manifest's
+   `failure_modes_descoped` and copy each mode and its reason into the
+   report's "Failure modes de-scoped at define" section, or write "None".
+   A mode named at define must not disappear before ship.
+9. **Write the evidence into `verification-report.md`** and hand to the
    reviewer. Where evidence is missing or a scenario cannot be run, say so
    plainly - a gap is a finding, not something to hide.
 

@@ -41,6 +41,11 @@ scenarios:       # (optional until the define stage) list of maps:
     intent:      #   (required in entry) string or list of strings - intent id(s) it traces to
     tests:       #   (optional until implement/verify) list of strings - test refs
 
+failure_modes_descoped: # (optional) list of maps - failure modes no scenario covers, written by `compass scenario descope`:
+  - mode:        #   (required in entry) string - the input class or failure mode
+    reason:      #   (required in entry) string - why no scenario covers it
+    recorded:    #   (required in entry) string - ISO date it was recorded
+
 changed_files:   # (optional until implement) list of maps:
   - path:        #   (required in entry) string - the production file path
     scenarios:   #   (required in entry) list of scenario ids it traces to

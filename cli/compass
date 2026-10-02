@@ -441,6 +441,11 @@ def build_parser():
     psca.add_argument("--test", action="append",
                       help="test that exercises it (repeatable)")
     psca.set_defaults(func=cmd_scenario_add, output_kind="hand-off")
+    pscd = pscs.add_parser("descope", help="record a failure mode no scenario covers, and why")
+    pscd.add_argument("mode", help="the input class or failure mode, in a few words")
+    issue_arg(pscd)
+    pscd.add_argument("--reason", required=True, help="why no scenario covers it")
+    pscd.set_defaults(func=cmd_scenario_descope, output_kind="hand-off")
 
     pcf = sub.add_parser("changed-file", help="issue changed-file tools")
     pcfs = pcf.add_subparsers(dest="subcmd", required=True)

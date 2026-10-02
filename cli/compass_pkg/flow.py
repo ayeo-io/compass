@@ -45,7 +45,7 @@ from compass_pkg.rework import cmd_rework_scan
 
 # A queued issue older than this many days is flagged when it carries a
 # written recommendation or a label a routing rule names: the two signals that
-# made a month-long wait on a written-up fix expensive (queue-ageing-signal).
+# made a month-long wait on a written-up fix expensive (#288).
 QUEUE_AGE_DAYS = 14
 _RECOMMENDATION = re.compile(
     r"^#+\s.*\b(recommend\w*|proposed|proposal|suggested fix|decision)\b", re.I | re.M)

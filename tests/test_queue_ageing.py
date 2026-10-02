@@ -1,6 +1,6 @@
 """The flow digest shows how long queued issues have waited, and flags the
-old ones that carry a written recommendation or a guarded label: the
-queue-ageing-signal issue.
+old ones that carry a written recommendation or a guarded label: GitHub
+issue #288.
 """
 from __future__ import annotations
 

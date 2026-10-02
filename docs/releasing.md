@@ -196,8 +196,10 @@ with the version hidden.
    and read its queue ageing line and table. For each queued issue that
    touches what this release changes, either pull it in or say why it
    waits. Put the answer in the release notes under
-   "Queued against this release", or write "None" there. A queued fix with its recommendation
-   already written is the case this step exists for.
+   "Queued against this release", or write "None" there. A queued fix
+   with its recommendation already written is the case this step exists
+   for.
+
 10. **Tag and publish.** The release-script run, the out-of-tree smoke
    test, and the seven-locations version bump are the gate; tagging is
    the consequence.

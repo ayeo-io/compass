@@ -10024,3 +10024,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `failure-modes-in-define`
 - **Landed:** 2026-10-02
+
+### Given a scenario title naming a missing file path or an eval scenario or behaviour id, then compass scenario add and quick-fix start refuse it before it can reach the living spec _(archived)_
+
+- **Scenario id:** `TC-A`
+- **Intent:** `INT-1`
+- **Source issue:** `titles-checked-before-ship`
+- **Landed:** 2026-10-02

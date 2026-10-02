@@ -29,7 +29,7 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a doc under docs/ that is in neither docs/README.md nor the CLAUDE.md table, or a table path that does not exist, When the suite runs, Then a test fails naming it
+### Given a doc under docs/ that the docs/README.md index does not list, or a path in its owning-docs table that does not exist, When the suite runs, Then a test fails naming it
 
 - **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`

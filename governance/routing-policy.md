@@ -161,7 +161,11 @@ the answer into the manifest as `checkpoints:`.
   the domain labels bring.
 - An `autonomy` value that is not one of the three is refused, not read as
   balanced.
-- A policy without the table waits at every hand-off the route runs.
+- A policy without the table, or a table that leaves out a value or a
+  route, waits at every hand-off the route runs. Only a route listed with an
+  empty list never waits. Route keys are the current route names, and a
+  retired name (`express`, `standard`, `expedition`) is read as its current
+  one; an unknown route, or one route named twice, is refused.
 
 ## Schema reference
 

@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a checkpoint table that names something other than the four checkpoint stages, when the policy is linted, then it is refused.
+### Given a checkpoint table that leaves out a value or a route, then that case waits at every hand-off the route runs, and a misspelt or repeated route key is refused.
 
-- **Scenario id:** `AU-6`
+- **Scenario id:** `CT-1`
 - **Intent:** `INT-1`
-- **Source issue:** `autonomy-setting`
+- **Source issue:** `checkpoint-table-gaps`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1506 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1507 superseded scenario(s) are in `docs/system-spec-archive.md`.

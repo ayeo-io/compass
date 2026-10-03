@@ -289,8 +289,8 @@ assessment_vocabulary:
 # collapses or skips has no hand-off, so it never waits whatever this says.
 # Only the four checkpoint stages can be named: the setting never changes a
 # gate, evidence, the pre-tool hook, `compass check`, guardrail 5 or the
-# sign-off the domain labels bring. A policy without this block waits at
-# every hand-off the route runs, as before it existed.
+# sign-off the domain labels bring. A policy without this block, or a
+# value or route left out of it, waits at every hand-off the route runs.
 # Added 2026-10-03, issue #329.
 # -----------------------------------------------------------------------------
 autonomy_checkpoints:

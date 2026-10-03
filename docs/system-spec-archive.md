@@ -10500,3 +10500,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `unmapped-small-change-advisory`
 - **Landed:** 2026-10-03
+
+### Given quick-fix start on a small, contained, unmapped change, then the quick fix starts and its approach record names behaviour-mapping as advice. _(archived)_
+
+- **Scenario id:** `UA-2`
+- **Intent:** `INT-1`
+- **Source issue:** `unmapped-small-change-advisory`
+- **Landed:** 2026-10-03

@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given quick-fix start on a small, contained, unmapped change, then the quick fix starts and its approach record names behaviour-mapping as advice.
+### Given re-assessments recorded under retired and current route names, when compass retro runs, then each transition appears once under its current names with the counts summed.
 
-- **Scenario id:** `UA-2`
+- **Scenario id:** `RT-1`
 - **Intent:** `INT-1`
-- **Source issue:** `unmapped-small-change-advisory`
+- **Source issue:** `retro-transitions-split-by-old-names`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1499 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1500 superseded scenario(s) are in `docs/system-spec-archive.md`.

@@ -10725,7 +10725,7 @@
 - **Source issue:** `delivery-board`
 - **Landed:** 2026-10-03
 
-### Given this repository's manifests, then the flow board finishes in under two seconds. _(archived)_
+### Given this repository's manifests, then the flow board stays within the speed bound its test sets. _(archived)_
 
 - **Scenario id:** `DB-5`
 - **Intent:** `INT-1`

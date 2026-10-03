@@ -324,7 +324,8 @@ def _plant_link_in_record(remote, tmp_path, rel, target):
     """Commit a symbolic link into the record repository, as someone with
     write access to it could."""
     work = tmp_path / "attacker"
-    subprocess.run(["git", "clone", "-q", str(remote), str(work)], check=True)
+    subprocess.run(["git", "clone", "-q", "-b", "main", str(remote), str(work)],
+                   check=True)
     link = work / rel
     link.parent.mkdir(parents=True, exist_ok=True)
     link.symlink_to(target)

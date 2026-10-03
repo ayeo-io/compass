@@ -117,6 +117,11 @@ for delivery work; on a spike, follow the graduate-or-discard step in
      `compass lesson accept`.
 7. **Final devlog entry.** One entry: what shipped, what checked it,
    what follow-ups were settled.
+8. **After a review fix.** If review of the pull request changes the
+   issue's own files after `ship-commit` landed it, commit the fix, re-run
+   `compass tdd-green`, then run `compass ship-commit --issue <slug> -m
+   <message>` with nothing staged. It moves `land_commit` to HEAD, and
+   refuses while the newest green does not name HEAD's files.
 
 ## Gate - ship refuses to close the issue unless
 

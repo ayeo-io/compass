@@ -26,7 +26,8 @@ contract, QA for coverage. Write it so all five roles can.
 - If `delivery-approach.md` assesses familiarity as `brownfield-unmapped`,
   also load `behaviour-mapping` - reverse-engineer the *current*
   behaviour into scenarios **before** writing the scenarios for the change. A
-  policy floor forces this; you cannot safely change what you have not first
+  policy floor forces this unless the change is atomic or small, with trivial
+  or contained risk and no domain label; you cannot safely change what you have not first
   described.
 - Invoke the `spec-author` agent - it owns this stage.
 - Read any upstream role artifacts for this issue: `intent.md` (the outcome to

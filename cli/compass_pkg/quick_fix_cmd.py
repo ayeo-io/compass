@@ -160,7 +160,7 @@ def _split_optional(raw):
 
 
 def _delivery_approach_md(slug, approach, dims, rules_fired, intent_text,
-                          scenario_id, scenario_text, ledger):
+                          scenario_id, scenario_text, ledger, advice=()):
     lines = [
         f"# Delivery approach - {slug}",
         "",
@@ -180,6 +180,14 @@ def _delivery_approach_md(slug, approach, dims, rules_fired, intent_text,
             lines.append(f"- {rationale} ({f.get('id', '?')}, {f.get('kind', '?')})")
     else:
         lines.append("none")
+    if advice:
+        # Advisory strategies: they never block, so the record is the only
+        # place a session meets them.
+        lines += ["", "## Advice", ""]
+        for s in advice:
+            rationale = " ".join(str(s.get("rationale", "")).split()).rstrip(".")
+            lines.append(f"- {s.get('strategy', '?')}: {rationale} "
+                         f"({s.get('id', '?')})")
     lines += [
         "", "## Intent", "", f"INT-1: {intent_text}",
         "", "## Scenario", "", f"{scenario_id}: {scenario_text}",
@@ -221,20 +229,16 @@ def _quick_fix_blockers(readings, task):
     shapes = (policy.get("routing_strategies") or {}).get("default_shapes") or []
     shape = next((s for s in shapes
                   if canonical_shape(s.get("lean_toward")) == "quick-fix"), None)
-    lines, blocked = [], []
+    lines = []
     for key, allowed in ((shape or {}).get("when") or {}).items():
         if reading_matches({key: allowed}, readings):
             continue
         name = _WHEN_KEY_MAP.get(key, key)
         if name == "labels_any":
             name = "labels"
-        blocked.append(name)
         allowed = allowed if isinstance(allowed, list) else [allowed]
         lines.append(f"blocked: {name} is {readings.get(name) or 'not given'}; "
                      f"the quick fix needs {' or '.join(str(a) for a in allowed)}")
-    if blocked == ["familiarity"] and readings.get("familiarity") == "brownfield-unmapped":
-        lines += ["to go ahead as a quick fix: pin the current behaviour with tests,",
-                  "then re-assess familiarity as brownfield-mapped"]
     for rule in task.get("policy_rules_fired") or []:
         if rule.get("id"):
             why = rule.get("rationale") or "no reason recorded"
@@ -267,7 +271,7 @@ def cmd_quick_fix_start(args):
     # a manifest to write it into.
     gov = find_governance()
     policy = load_yaml(os.path.join(gov, "routing-policy.yml"))
-    evaluate_route(readings, policy)
+    advice = evaluate_route(readings, policy).get("applicable_strategies") or []
 
     # The title reaches the living spec at ship; refuse it now, before
     # anything is written, if a check on the spec would refuse it there.
@@ -357,7 +361,7 @@ def cmd_quick_fix_start(args):
               ("Role", role_v, role_r)],
         rules_fired=task.get("policy_rules_fired") or [],
         intent_text=args.intent, scenario_id=args.scenario_id,
-        scenario_text=args.scenario, ledger=ledger,
+        scenario_text=args.scenario, ledger=ledger, advice=advice,
     )
     with open(doc_path_abs, "w", encoding="utf-8") as fh:
         fh.write(content)

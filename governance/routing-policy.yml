@@ -17,7 +17,7 @@
 # framework for everyone - see routing-policy.md.
 # =============================================================================
 
-version: 2.16.0
+version: 2.17.0
 # -----------------------------------------------------------------------------
 # ROUTING STRATEGIES - soft. They BIAS the candidate delivery approach. The evaluator uses
 # them in composition (step 1); a later rule can override the result.
@@ -37,11 +37,14 @@ routing_strategies:
       lean_toward: hotfix
       rationale: "A live defect, small enough to reproduce-and-fix fast."
     - id: RP-SHAPE-003
-      when: { size: [atomic, small], risk: [trivial, contained], familiarity: [greenfield, brownfield-mapped] }
+      when: { size: [atomic, small], risk: [trivial, contained] }
       lean_toward: express
-      # New code has no existing behaviour to break, so greenfield qualifies;
-      # unmapped code does, so brownfield-unmapped stays out.
-      rationale: "Small on every axis, on new or already-mapped ground."
+      # Any familiarity qualifies. Unmapped ground on a change this small
+      # gets behaviour-mapping as advice (RP-ADV-002), not a floor: two of
+      # the three stops in the comparison run of 30 Sep 2026
+      # (docs/compass/2026-09-30-eval-comparison-discriminating.md) came
+      # from sending it to define at full weight (issue #324).
+      rationale: "Small on every axis."
     - id: RP-SHAPE-004
       when: { size: [large, product] }
       lean_toward: expedition
@@ -90,6 +93,14 @@ routing_strategies:
         test-run evidence on verify.regression. Soft: assessed as reviewer
         judgement, never gating - it is the regression-baseline strategy, and a
         strategy is assessed rather than checked."
+    - id: RP-ADV-002
+      strategy: behaviour-mapping
+      when: { familiarity: brownfield-unmapped, size: [atomic, small], risk: [trivial, contained] }
+      rationale: "Unmapped ground on a small change - before editing, write
+        a test that pins what the code does now where the change touches it,
+        so the change cannot break behaviour nobody wrote down. Advice, not a
+        floor: a larger, riskier or domain-labelled unmapped change meets
+        RP-FLOOR-002."
 
 # -----------------------------------------------------------------------------
 # ROUTING RULES - hard. They BOUND the candidate delivery approach. The evaluator
@@ -115,9 +126,16 @@ routing_guardrails:
       rationale: "Critical changes coordinate, or they break things quietly."
 
     - id: RP-FLOOR-002
-      when: { familiarity: brownfield-unmapped }
+      when:
+        familiarity: brownfield-unmapped
+        any_of:
+          - { size: [standard, large, product] }
+          - { risk: [cross-cutting, critical] }
+          - { labels_any: [auth, payments, personal-data, migrations] }
       require_phase: define
       require_skill: behaviour-mapping
+      # A small, contained change on unmapped ground with none of the four
+      # domain labels gets the same skill as advice instead (RP-ADV-002).
       rationale: "You cannot safely change behaviour you have not first written down."
 
     - id: RP-FLOOR-003

@@ -39,8 +39,10 @@ ROUTES = {
                 "size": "standard", "goal": "delivery", "role": "engineer"},
     "initiative": {"risk": "cross-cutting", "familiarity": "brownfield-unmapped",
                    "size": "large", "goal": "delivery", "role": "engineer"},
+    # Standard size, so the unmapped-familiarity floor runs define and the
+    # rail shows it; a small unmapped spike gets the floor only as advice.
     "spike": {"risk": "contained", "familiarity": "brownfield-unmapped",
-              "size": "small", "goal": "exploration", "role": "engineer"},
+              "size": "standard", "goal": "exploration", "role": "engineer"},
 }
 STATES = {
     "fresh": {},

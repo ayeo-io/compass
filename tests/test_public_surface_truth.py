@@ -390,6 +390,11 @@ def test_d2_repairs_change_only_retired_names():
     gained a "When to stop" section, one `##` heading and four list items
     naming the conditions that stop a multiagent run.
 
+    One more was re-baselined by `unmapped-small-change-advisory`:
+    `approaches/quick-fix.md` (list_items 9 -> 8), losing the familiarity
+    condition from its list of quick-fix conditions, because unmapped
+    familiarity no longer blocks a quick fix.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

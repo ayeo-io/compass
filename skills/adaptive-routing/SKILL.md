@@ -41,8 +41,11 @@ treat an un-extended `governance/` as a missing prerequisite.
 
 **Familiarity** - *new code, or old code, and is the old code mapped?*
 - `brownfield-unmapped` is not a judgement of code quality - it means the
-  behaviour is not written down as scenarios. It triggers a routing guardrail
-  floor: `behaviour-mapping` must run. Do not skip it.
+  behaviour is not written down as scenarios. At standard size or more, with
+  cross-cutting or critical risk, or with a domain label, it triggers a
+  routing guardrail floor: `behaviour-mapping` must run. Do not skip it. On
+  an atomic or small change with trivial or contained risk and no domain
+  label, the skill is advice (`RP-ADV-002`).
 - "Trivially readable" greenfield or brownfield can be treated as mapped, but
   be honest - "I could figure it out" is not "it is written down."
 

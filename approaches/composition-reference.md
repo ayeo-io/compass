@@ -21,7 +21,7 @@ assembles it from per-dimension contributions:
 | The delivery approach is heavier when… | The delivery approach is lighter when… |
 |---|---|
 | risk is `cross-cutting`/`critical` | risk is `trivial` |
-| familiarity is `brownfield-unmapped` | familiarity is `greenfield` or `brownfield-mapped` |
+| familiarity is `brownfield-unmapped`, unless the change is atomic or small with trivial or contained risk and no domain label | familiarity is `greenfield` or `brownfield-mapped` |
 | size is `large`/`product` | size is `atomic`/`small` |
 | a non-engineering role is involved (more artifacts, more gates) | only `engineer` is involved |
 

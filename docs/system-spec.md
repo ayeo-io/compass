@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a heavier route started by /compass:go, then go and assess agree that the approach summary already shown is the confirmation, and go does not stop at assess step 7 to wait for one.
+### Given quick-fix start on a small, contained, unmapped change, then the quick fix starts and its approach record names behaviour-mapping as advice.
 
-- **Scenario id:** `GC-1`
+- **Scenario id:** `UA-2`
 - **Intent:** `INT-1`
-- **Source issue:** `go-confirms-on-the-heavier-route`
+- **Source issue:** `unmapped-small-change-advisory`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1497 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1499 superseded scenario(s) are in `docs/system-spec-archive.md`.

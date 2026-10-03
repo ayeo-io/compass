@@ -8,7 +8,9 @@ description: Capturing existing behaviour as scenarios before changing it. Load 
 The rule behind this skill is simple: **you cannot safely change behaviour you
 have not first written down.** On `brownfield-unmapped` familiarity the routing
 policy makes this a routing guardrail floor - behaviour mapping runs before any new
-scenario, before any change. This skill is how you do it well.
+scenario, before any change. On an atomic or small change with trivial or
+contained risk and no domain label it is advice (`RP-ADV-002`): pin what the code does now where
+the change touches it with a test. This skill is how you do it well.
 
 ## What behaviour mapping produces
 

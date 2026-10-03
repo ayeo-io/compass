@@ -998,7 +998,7 @@ def test_trc_b8_a_policy_floor_written_with_a_retired_stage_key_still_applies():
     policy = core.load_yaml(
         os.path.join(core.find_governance(), "routing-policy.yml"))
     assessment = {"risk": "contained", "familiarity": "brownfield-unmapped",
-                  "size": "small", "goal": "delivery", "role": "engineer",
+                  "size": "standard", "goal": "delivery", "role": "engineer",
                   "labels": []}
 
     def refine_weight(spelling):

@@ -1,6 +1,6 @@
 # Delivery approach - Quick fix
 
-> The change is small, safe, and on new or already-mapped ground. Stay out of the way.
+> The change is small and safe. Stay out of the way.
 > Still tested before it lands.
 
 ## Running it
@@ -14,7 +14,6 @@ weights in this document are what that command implements.
 
 - size is `atomic` or `small`, **and**
 - risk is `trivial` or `contained`, **and**
-- familiarity is `greenfield` or `brownfield-mapped`, **and**
 - no floor raises the approach, **and**
 - role is `engineer` (a non-engineering role in play almost always pulls the
   approach up, because it adds artifacts and gates).
@@ -50,7 +49,7 @@ Solo. No worktree. Breakdown is a no-op.
 | Stage | Action | Standing justification |
 |---|---|---|
 | Refine | collapsed | The spec is a single scenario the assessment marked unambiguous. Nothing to clarify. |
-| Plan | collapsed to a one-liner | No design decision and no new architecture - size `atomic`/`small` on new or mapped ground means the plan is "edit this file." |
+| Plan | collapsed to a one-liner | No design decision and no new architecture - size `atomic`/`small` with trivial or contained risk means the plan is "edit this file." |
 | Breakdown | skipped | One subtask of work. Parallelism would be pure overhead. |
 
 These justifications are copied into the issue's `delivery-approach.md` so the skip is
@@ -64,9 +63,10 @@ auditable per-issue, not just per-approach.
   that strategy and quick fix does not exempt itself from it.
 - Skip the define stage. "No scenario" is never a quick fix state - the one scenario is
   the minimum, not zero.
-- Be used when *any* dimension reads high. If risk is `cross-cutting`,
-  or familiarity is `brownfield-unmapped`, or size is `standard`+, the
-  evaluator computes a heavier approach. quick fix is for issues that are
-  small on *every* axis.
+- Be used when risk or size reads high. If risk is `cross-cutting`+ or
+  size is `standard`+, the evaluator computes a heavier approach. quick fix
+  is for issues that are small on both axes. Unmapped familiarity does not
+  block it: the approach record gives `behaviour-mapping` as advice
+  (`RP-ADV-002`).
 - Be used to "just get the change in" past the approach the evaluator
   actually computed. `delivery-approach.md` makes that visible.

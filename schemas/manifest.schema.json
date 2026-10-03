@@ -247,6 +247,66 @@
         }
       }
     },
+    "runs": {
+      "type": "array",
+      "description": "Each unattended run of a stage, written by `compass run` (ADR-030).",
+      "items": {
+        "type": "object",
+        "required": [
+          "n",
+          "stage",
+          "outcome"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "n": {
+            "type": "integer"
+          },
+          "stage": {
+            "enum": [
+              "build",
+              "verify"
+            ]
+          },
+          "started": {
+            "type": "string"
+          },
+          "ended": {
+            "type": "string"
+          },
+          "cycles": {
+            "type": "integer"
+          },
+          "outcome": {
+            "enum": [
+              "done",
+              "stopped"
+            ]
+          },
+          "stopped_reason": {
+            "type": "object",
+            "required": [
+              "reason",
+              "evidence"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "evidence": {
+                "type": "string",
+                "minLength": 1
+              },
+              "at": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
     "replans": {
       "type": "array",
       "description": "Each replan of a multiagent breakdown, written by `compass issue subtask replan`. Another is refused at the replans ceiling in routing-policy.yml.",

@@ -316,6 +316,7 @@ EXPECTED_SUBCOMMANDS = {
     "acceptance",                 # the acceptance verb group
     "quick-fix",                  # start|finish - the quick-fix verb group
     "lesson",                     # add|list|remove|propose|accept - project lessons (ADR-029)
+    "run",                        # one stage of one issue unattended (ADR-030)
     "decision",                   # record|list|show|check - the ledger (ADR-027)
 }
 

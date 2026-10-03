@@ -2107,6 +2107,11 @@ def _process_starts_by_function(source: str) -> dict[str, list[str]]:
             if isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name):
                 if func.value.id in subprocess_modules:
                     hit = f"subprocess.{func.attr}"
+                elif func.attr == "launch_claude":
+                    # The shared launcher `compass run` also uses
+                    # (cli/compass_pkg/host_launch.py, ADR-030) starts
+                    # `claude`, so calling it starts a process here too.
+                    hit = f"{func.value.id}.launch_claude"
                 elif (func.value.id in os_modules
                       and (func.attr == "system" or func.attr == "popen"
                            or func.attr.startswith("exec"))):

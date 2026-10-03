@@ -7,7 +7,9 @@
 # error reported in a row. `compass issue subtask` (subtasks.py) refuses
 # work past them, and `multiagent-run-recorded` (multiagent_check.py) refuses
 # to land a subtask past them without a stop reason. Both read the limits
-# and the cutoff date here, so neither module imports the other.
+# and the cutoff date here, so neither module imports the other. Two more
+# bound an unattended `compass run` (run_cmd.py): the sessions it may start
+# and the minutes it may take.
 #
 # DEPENDENCY: standard library (datetime, os) and compass_pkg.core.
 # =============================================================================
@@ -24,7 +26,8 @@ from compass_pkg.core import find_governance, load_yaml, reading_matches
 LOOP_CEILINGS_FROM = datetime.date(2026, 10, 3)
 
 #: The ceilings a `loop_ceilings` rule in routing-policy.yml can set.
-CEILINGS = ("builder_attempts", "review_rounds", "replans", "repeated_error")
+CEILINGS = ("builder_attempts", "review_rounds", "replans", "repeated_error",
+            "run_cycles", "run_minutes")
 
 
 def on_or_after(created, cutoff):

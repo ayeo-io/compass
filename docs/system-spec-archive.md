@@ -10206,3 +10206,73 @@
 - **Intent:** `INT-1`
 - **Source issue:** `loop-ceilings`
 - **Landed:** 2026-10-03
+
+### Given a run at its replan ceiling, when another replan is recorded, then subtask replan refuses it and names the ceiling. _(archived)_
+
+- **Scenario id:** `LC-F`
+- **Intent:** `INT-1`
+- **Source issue:** `loop-ceilings`
+- **Landed:** 2026-10-03
+
+### Given a project, then compass run exits 2 and starts no session when the project has no .compass, the issue does not exist, the stage is not build or verify, no stop file is given, claude cannot be found, or a ceiling flag is out of range or above its policy ceiling. _(archived)_
+
+- **Scenario id:** `HR-A`
+- **Intent:** `INT-1`
+- **Source issue:** `headless-runner`
+- **Landed:** 2026-10-03
+
+### Given sessions that change the records but never finish the stage, when the run reaches its cycle ceiling, then it exits 4, records a stopped run with a stop reason naming the ceiling and the run record, and the issue is not landed. _(archived)_
+
+- **Scenario id:** `HR-B`
+- **Intent:** `INT-1`
+- **Source issue:** `headless-runner`
+- **Landed:** 2026-10-03
+
+### Given a stop file, present at the start or appearing during the run, then the runner starts no further session and exits 4 with the stop file as the reason. _(archived)_
+
+- **Scenario id:** `HR-C`
+- **Intent:** `INT-1`
+- **Source issue:** `headless-runner`
+- **Landed:** 2026-10-03
+
+### Given a run whose stage is done, every gate passing for verify or every scenario green for build, then it exits 0 with the outcome done, and a session that lands the issue stops the run. _(archived)_
+
+- **Scenario id:** `HR-D`
+- **Intent:** `INT-1`
+- **Source issue:** `headless-runner`
+- **Landed:** 2026-10-03
+
+### Given a session whose error output carries a credential, then the run record, the manifest and the printed output hold the text with the credential redacted. _(archived)_
+
+- **Scenario id:** `HR-E`
+- **Intent:** `INT-1`
+- **Source issue:** `headless-runner`
+- **Landed:** 2026-10-03
+
+### Given any run, then each cycle starts a new claude -p session that resumes nothing, loads the Compass plugin, names the stage's command, says it is unattended, and forbids landing, pushing and merging. _(archived)_
+
+- **Scenario id:** `HR-F`
+- **Intent:** `INT-1`
+- **Source issue:** `headless-runner`
+- **Landed:** 2026-10-03
+
+### Given sessions that change nothing on disk, then the run stops after the repeated-error ceiling's number of cycles without progress, and a manifest it cannot read stops it too. _(archived)_
+
+- **Scenario id:** `HR-G`
+- **Intent:** `INT-1`
+- **Source issue:** `headless-runner`
+- **Landed:** 2026-10-03
+
+### Given a run that passes its minute ceiling during a session, then the session is ended and the run stops with the minute ceiling as the reason. _(archived)_
+
+- **Scenario id:** `HR-H`
+- **Intent:** `INT-1`
+- **Source issue:** `headless-runner`
+- **Landed:** 2026-10-03
+
+### Given the eval harness, then it starts claude through the same launcher function compass run uses. _(archived)_
+
+- **Scenario id:** `HR-I`
+- **Intent:** `INT-1`
+- **Source issue:** `headless-runner`
+- **Landed:** 2026-10-03

@@ -2,7 +2,7 @@
 
 `compass run` runs the build or verify stage of one issue with nobody in the session. It starts one fresh `claude -p` session per cycle, and between cycles decides from the manifest and the evidence alone whether to go on. ADR-030 records why Compass starts sessions at all.
 
-**The live acceptance is not met yet:** a quick-fix example run from assess to ship in CI. It needs an Anthropic secret in GitHub Actions and a spend limit, and every run costs money, so it waits for the maintainer. Every test of the runner uses a stub `claude`.
+**What has run live:** the build stage of a quick-fix example, in CI, through `.github/workflows/compass-run-demo.yml` (see "The demo in CI" below). Its first run, on 2026-10-03, finished in one session for 0.21 US dollars. The workflow starts only by hand, because every run costs money. Every test of the runner uses a stub `claude`.
 
 ## Running it
 

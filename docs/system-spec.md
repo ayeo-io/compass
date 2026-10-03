@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given an issue whose manifest has no scenario X, when tdd-red or tdd-green runs with scenario X, then it is refused, writes no record, and names compass scenario add.
+### Given the eval scenario records for other frameworks, then none holds a sentence copied from that framework's own templates, and their file layout and heading form are unchanged.
 
-- **Scenario id:** `US-1`
+- **Scenario id:** `QT-1`
 - **Intent:** `INT-1`
-- **Source issue:** `red-for-an-unknown-scenario`
+- **Source issue:** `eval-record-quotes-a-template`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1517 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1518 superseded scenario(s) are in `docs/system-spec-archive.md`.

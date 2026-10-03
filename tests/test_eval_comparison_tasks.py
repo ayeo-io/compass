@@ -940,17 +940,18 @@ def test_cmp_resume_every_record_says_what_is_done_and_what_is_next(condition):
 
 def test_cmp_resume_superpowers_overlay_uses_its_own_heading_form():
     """Superpowers' plan-writing skill headers each unit of work its own
-    way, and says how a plan gets implemented in its own words - a session
-    under that framework must read those words, not Compass's paraphrase
-    of them."""
+    way, so the record uses that heading form. It does not copy the
+    framework's banner text."""
     overlay_dir = _overlay_dir("cmp-resume", "superpowers")
     plan_path = next((overlay_dir / "docs" / "superpowers" / "plans").glob("*.md"))
     text = plan_path.read_text(encoding="utf-8")
     assert "### Task 1:" in text and "### Task 2:" in text, (
         f"{plan_path.name} does not use Superpowers' own heading form for a unit of work"
     )
-    assert "task-by-task" in text, (
-        f"{plan_path.name} does not use Superpowers' own wording for how it is implemented"
+    # Its layout only: no committed file quotes another product's template
+    # text (the maintainer's rule, 2026-10-03; issue #341).
+    assert "REQUIRED SUB-SKILL" not in text and "For agentic workers" not in text, (
+        f"{plan_path.name} copies that framework's plan banner word for word"
     )
 
 

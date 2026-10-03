@@ -1,6 +1,7 @@
 # Grade Summary Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> Work through the tasks below in order, one step at a time, and tick each
+> step's checkbox when it is done.
 
 **Goal:** Add a summarize function that reports the average score and the
 top and bottom scorer from parsed grades.

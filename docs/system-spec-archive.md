@@ -10094,3 +10094,24 @@
 - **Intent:** `INT-1`
 - **Source issue:** `status-line-launcher`
 - **Landed:** 2026-10-02
+
+### Given the init command and the quickstart, then init has a status line step that runs even when its first step stops for existing governance, and asks before applying; the quickstart gives the launcher path and no longer says to edit the path after each upgrade. _(archived)_
+
+- **Scenario id:** `SL-H`
+- **Intent:** `INT-1`
+- **Source issue:** `status-line-launcher`
+- **Landed:** 2026-10-02
+
+### Given a project, when tdd-red, tdd-green, flow --digest, adr new, issue lint and ci run, then none of them prints the project's absolute path; each path is relative to the project root. _(archived)_
+
+- **Scenario id:** `CP-A`
+- **Intent:** `INT-1`
+- **Source issue:** `clickable-paths`
+- **Landed:** 2026-10-03
+
+### Given a scenario defined on a line of the acceptance criteria, when tdd-red or tdd-green runs for it, then the output names that file as path:line. _(archived)_
+
+- **Scenario id:** `CP-B`
+- **Intent:** `INT-1`
+- **Source issue:** `clickable-paths`
+- **Landed:** 2026-10-03

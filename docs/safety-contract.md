@@ -93,8 +93,11 @@ issue each Claude Code session last worked on, by its session id, in a
 `sessions.json` file under `.compass/`. When another session has moved the pointer since,
 the session's next code edit is refused (`pointer-moved`) until it runs
 `compass issue use <slug>` to say which issue it means. A record older than
-12 hours is ignored, and a session with `COMPASS_ISSUE` set, or a runtime
-that gives no session id, is not tracked.
+12 hours is ignored and dropped the next time the table is written, and a
+session with `COMPASS_ISSUE` set, or a runtime that gives no session id, is
+not tracked. Writes are locked, so two sessions at once keep both records,
+and a `.gitignore` in `.compass/` keeps the table out of every project's
+commits.
 
 ## Deliberate limits
 

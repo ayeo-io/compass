@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the session-issue variable, no session id, or a session record older than 12 hours, then the hook refuses nothing for a moved pointer.
+### Given the session table, then concurrent writes keep every record, stale records are dropped when it is written, the table is ignored by git in any project, and a pointer-moved refusal is counted against the session's own issue.
 
-- **Scenario id:** `CL-D`
+- **Scenario id:** `ST2-1`
 - **Intent:** `INT-1`
-- **Source issue:** `pointer-lease`
+- **Source issue:** `session-table-tidy`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1493 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1494 superseded scenario(s) are in `docs/system-spec-archive.md`.

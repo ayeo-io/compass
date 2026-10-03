@@ -740,7 +740,15 @@ PYEOF
   [ "$LEASE_STATUS" -eq 0 ] || compass_reader_failed "session lease reader" "$LEASE_STATUS" "$LEASE_ERR"
   rm -f "$LEASE_ERR"
   case "$LEASE" in
-    moved:*) compass_block pointer-moved "slug=$SLUG" "previous=${LEASE#moved:}" ;;
+    moved:*)
+      # Counted against the issue this session works on, not the pointer's,
+      # when the recorded name is one path segment: it was read from a file.
+      PREV="${LEASE#moved:}"
+      case "$PREV" in
+        ""|.|..|*/*|*\\*) ;;
+        *) [ -d "$WORK_DIR/$PREV" ] && TASK_DIR="$WORK_DIR/$PREV" ;;
+      esac
+      compass_block pointer-moved "slug=$SLUG" "previous=${LEASE#moved:}" ;;
   esac
 fi
 if [ -z "$TASK_DIR" ]; then

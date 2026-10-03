@@ -21,6 +21,7 @@ orchestration:       # (optional until approach evaluate) string - solo | pair |
 subtask_ceiling: # (optional) integer or null - how many parallel subtasks the delivery approach permits
 policy_rules_fired: # (optional) list of maps {id, kind, rationale, changed[]}
 stages:          # (optional until approach evaluate) map of stage -> weight string
+checkpoints:     # (optional until approach evaluate) list of the stage hand-offs that wait for a person: assess, define, refine, plan
 
 evidence:        # (optional) list of maps - the typed evidence registry gates reference by id:
   - id:          #   (required in entry) string - e.g. EV-001 or EV-A1

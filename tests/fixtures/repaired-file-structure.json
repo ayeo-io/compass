@@ -779,10 +779,11 @@
       3,
       2,
       2,
+      2,
       2
     ],
-    "list_items": 17,
-    "table_rows": 0
+    "list_items": 22,
+    "table_rows": 7
   },
   "governance/strategies.md": {
     "fences": 0,

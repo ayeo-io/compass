@@ -61,9 +61,10 @@ def _display_blocked_phase(phase):
     return display_stage(_stage_key_renames().get(phase, phase))
 
 
-def evaluate_route(readings, policy):
+def evaluate_route(readings, policy, autonomy="balanced"):
     """Pure function: assessment + policy -> the delivery approach and
-    everything that shaped it. This is the deterministic core of Compass."""
+    everything that shaped it. This is the deterministic core of Compass.
+    `autonomy` changes only `checkpoints` in the result."""
     _vk = {"blast_radius": "risk", "terrain": "familiarity",
            "magnitude": "size", "intent": "goal",
            "touches_common": "labels_common"}
@@ -325,6 +326,23 @@ def evaluate_route(readings, policy):
                 "rationale": adv.get("rationale", ""),
             })
 
+    # --- checkpoints: which hand-offs wait for a person ----------------------
+    # Looked up after everything else, from the final route, so the setting
+    # cannot change the route, the stages or the gates.
+    from compass_pkg.policy import CHECKPOINT_STAGES, checkpoint_table_errors
+    table_errors = checkpoint_table_errors(policy)
+    if table_errors:
+        raise CompassError("governance/routing-policy.yml: " + table_errors[0])
+    runs = [s for s in CHECKPOINT_STAGES
+            if phases.get(s) not in (None, "collapsed", "skipped")]
+    table = policy.get("autonomy_checkpoints")
+    if table is None:
+        checkpoints = runs
+    else:
+        row = {canonical_shape(k): v for k, v in (table.get(autonomy) or {}).items()}
+        listed = row.get(canonical_shape(final)) or []
+        checkpoints = [s for s in runs if s in listed]
+
     return {
         "candidate_route": canonical_shape(candidate),
         "candidate_via": candidate_via,
@@ -339,6 +357,7 @@ def evaluate_route(readings, policy):
         "blocked_phases": blocked_phases,
         "max_worktrees": max_worktrees,
         "applicable_strategies": applicable_strategies,
+        "checkpoints": checkpoints,
     }
 
 
@@ -358,8 +377,15 @@ def cmd_approach_summary(args):
     readings = ", ".join(f"{k} {a[k]}" for k in ("risk", "familiarity", "size")
                          if a.get(k))
     gates = [g.get("id") for g in task.get("gates") or [] if g.get("id")]
+    checkpoints = task.get("checkpoints")
+    if checkpoints is None:
+        waits = ""
+    elif checkpoints:
+        waits = " - waits for you at: " + ", ".join(checkpoints)
+    else:
+        waits = " - does not stop to wait for you"
     print(f"Approach: {display_shape(task.get('delivery_approach'))}"
-          + (f" ({readings})" if readings else ""))
+          + (f" ({readings})" if readings else "") + waits)
     print("Gates: " + (", ".join(gates) if gates else "none"))
     print(f"Writes: .compass/work/{slug}/ and {docs_dir(task_dir)}/")
     return 0
@@ -395,7 +421,8 @@ def cmd_route_evaluate(args):
                 f"evaluated."
             )
 
-    result = evaluate_route(readings, policy)
+    from compass_pkg.core import load_autonomy
+    result = evaluate_route(readings, policy, load_autonomy())
 
     from compass_pkg.terminal import Emitter, mark_handled, resolve_mode
 
@@ -594,6 +621,7 @@ def cmd_route_evaluate(args):
         task["delivery_approach"] = result["delivery_approach"]
         task["policy_rules_fired"] = result["policy_rules_fired"]
         task["stages"] = result["stages"]
+        task["checkpoints"] = result["checkpoints"]
         # seed the gate list (status pending) without clobbering existing state
         existing = {g.get("id"): g for g in task.get("gates", []) if isinstance(g, dict)}
         task["gates"] = [

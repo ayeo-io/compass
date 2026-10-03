@@ -91,8 +91,10 @@ Then open `.compass/work/<issue>/README.md`. It tells you:
   scenario to test to evidence that renders in a Markdown preview; and
 - the next action.
 
-Approve or correct the assessment before continuing. A good delivery
-approach depends on a good assessment. Regenerate the dashboard after a
+Correct the assessment if it is wrong: a good delivery approach depends on
+a good assessment. The session waits for your approval only at the
+checkpoints the project's `autonomy` setting lists, which the first line of
+`compass approach summary` names. Regenerate the dashboard after a
 stage changes the issue.
 
 ## 2. Define acceptance

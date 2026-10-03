@@ -46,6 +46,20 @@ version: 1.0.0
 # enforced : checks exit non-zero on any failure - the gate is real.
 mode: enforced
 
+# How often a session stops to wait for you at a stage hand-off (confirming
+# the approach, and approving the acceptance criteria, the requirements review
+# and the technical design). The routing policy's `autonomy_checkpoints:` table
+# says which hand-offs wait for each value and route; `compass approach
+# summary` shows the answer for an issue. No value changes a gate, evidence,
+# the hook or `compass check`.
+#   controlled : wait at every hand-off the table lists: all four on a
+#                feature or initiative, assess and define on a hotfix,
+#                assess on a quick fix or spike.
+#   balanced   : a quick fix does not stop; a feature waits at define and
+#                plan; an initiative waits at all four. (The default.)
+#   autonomous : never wait; every hand-off is shown and logged instead.
+autonomy: balanced
+
 # What created this project, and when. The hook reads these so that its first
 # refusal in a project somebody's entry point initialised can say where Compass
 # came from - a user who never ran `init` themselves should not meet an

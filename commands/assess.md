@@ -166,6 +166,12 @@ force; if it is still a spike, leave the marker in place.
    approach. Under `/compass:go`, the approach summary it already showed is
    the confirmation: do not stop to wait for one, but act on an override
    whenever the person gives it.
+   Wait for the confirmation only if `assess` is in the manifest's
+   `checkpoints:`, which the project's `autonomy` setting in
+   `.compass/config.yml` decides. If it is not listed, present the
+   approach, say you are going on without waiting and name the setting,
+   and log the skipped checkpoint to `devlog.md`. `/compass:go` does not
+   wait here even when `assess` is listed.
 
 ## Voice
 

@@ -17,7 +17,7 @@
 # framework for everyone - see routing-policy.md.
 # =============================================================================
 
-version: 2.17.0
+version: 2.18.0
 # -----------------------------------------------------------------------------
 # ROUTING STRATEGIES - soft. They BIAS the candidate delivery approach. The evaluator uses
 # them in composition (step 1); a later rule can override the result.
@@ -279,6 +279,39 @@ assessment_vocabulary:
   role: [engineer, product-owner, product-marketer, designer, qa]
   # `labels` is an open list of domain tags - common ones, not exhaustive:
   labels_common: [auth, payments, personal-data, migrations, public-api, infra, ci]
+
+# -----------------------------------------------------------------------------
+# Autonomy checkpoints - which stage hand-offs wait for a person. A checkpoint
+# is a hand-off where the session stops: assess step 7 (confirm the approach)
+# and the define, refine and plan hand-offs. `.compass/config.yml` sets
+# `autonomy:` (default balanced); the evaluator looks up the route here and
+# writes the result to the manifest as `checkpoints:`. A stage the route
+# collapses or skips has no hand-off, so it never waits whatever this says.
+# Only the four checkpoint stages can be named: the setting never changes a
+# gate, evidence, the pre-tool hook, `compass check`, guardrail 5 or the
+# sign-off the domain labels bring. A policy without this block waits at
+# every hand-off the route runs, as before it existed.
+# Added 2026-10-03, issue #329.
+# -----------------------------------------------------------------------------
+autonomy_checkpoints:
+  controlled:
+    quick-fix: [assess]
+    feature: [assess, define, refine, plan]
+    initiative: [assess, define, refine, plan]
+    hotfix: [assess, define]
+    spike: [assess]
+  balanced:
+    quick-fix: []
+    feature: [define, plan]
+    initiative: [assess, define, refine, plan]
+    hotfix: []
+    spike: []
+  autonomous:
+    quick-fix: []
+    feature: []
+    initiative: []
+    hotfix: []
+    spike: []
 
 # -----------------------------------------------------------------------------
 # Route shapes - the machine-readable mirror of the five reference delivery approaches. The

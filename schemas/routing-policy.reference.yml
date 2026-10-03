@@ -59,6 +59,7 @@ assessment_vocabulary: # (required) map - the closed value sets per assessment d
   urgency:             #   (optional) list of strings
   role:                #   (optional) list of strings
   labels_common:      #   (optional) list of strings - illustrative, not closed
+autonomy_checkpoints: # (optional) map of autonomy value -> map of route -> list of checkpoint stages (assess, define, refine, plan) that wait for a person; without it every hand-off the route runs waits
 
 route_shapes:          # (required) map - the machine mirror of the five reference delivery approaches
   <route-name>:        #   one entry per approach; spike/express/standard/hotfix/expedition required

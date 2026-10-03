@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given an error naming a project file, or compass approach evaluate's Read line, then the path is printed relative to the project root
+### Given the status line, then it names the gates passed out of the gates required.
 
-- **Scenario id:** `EP-A`
+- **Scenario id:** `IO-E`
 - **Intent:** `INT-1`
-- **Source issue:** `errors-print-relative-paths`
+- **Source issue:** `issue-overview`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1445 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1450 superseded scenario(s) are in `docs/system-spec-archive.md`.

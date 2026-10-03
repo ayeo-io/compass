@@ -34,6 +34,9 @@ _SOURCE_FILES = [
 # stage name - still resolves to the current stage key. It is read, never
 # printed.
 _ALLOWED_LINE = '"assess": "assess", "triage": "assess", "frame": "assess",'
+# The public-copy pattern that finds "minutes to first triage" in prose
+# (`compass_pkg.public_copy`). It matches the word; it never prints it.
+_ALLOWED_PATTERN_LINE = 'r"\\b\\w+ minutes? to (?:a )?first (?:triage|shipped change)\\b",  # vocabulary-scan: allow - matches the retired word where public copy still uses it'
 
 
 def test_no_owned_source_file_prints_triage():
@@ -202,7 +205,8 @@ def test_no_string_literal_in_the_cli_or_hooks_says_triage():
     for path in _all_cli_and_hook_sources():
         for lineno, line in enumerate(
                 path.read_text(encoding="utf-8").splitlines(), start=1):
-            if line.strip().startswith("#") or line.strip() == _ALLOWED_LINE:
+            if line.strip().startswith("#") or line.strip() in (
+                    _ALLOWED_LINE, _ALLOWED_PATTERN_LINE):
                 continue
             if _LITERAL.search(line):
                 offenders.append(f"{path.relative_to(ROOT)}:{lineno}")

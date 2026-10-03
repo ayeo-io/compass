@@ -10577,3 +10577,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `headless-doc-after-the-demo`
 - **Landed:** 2026-10-03
+
+### Given the expected version is 5.4.0, then every published location carries 5.4.0. _(archived)_
+
+- **Scenario id:** `RL-A`
+- **Intent:** `INT-1`
+- **Source issue:** `release-5-4-0`
+- **Landed:** 2026-10-03

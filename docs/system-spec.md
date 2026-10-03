@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the expected version is 5.4.0, then every published location carries 5.4.0.
+### Given the Claude review workflow, then it starts only by hand and never on a pull request event.
 
-- **Scenario id:** `RL-A`
+- **Scenario id:** `CR-1`
 - **Intent:** `INT-1`
-- **Source issue:** `release-5-4-0`
+- **Source issue:** `ci-review-manual-only`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1510 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1511 superseded scenario(s) are in `docs/system-spec-archive.md`.

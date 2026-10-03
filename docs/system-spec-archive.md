@@ -10122,3 +10122,38 @@
 - **Intent:** `INT-1`
 - **Source issue:** `clickable-paths`
 - **Landed:** 2026-10-03
+
+### Given an error naming a project file, or compass approach evaluate's Read line, then the path is printed relative to the project root _(archived)_
+
+- **Scenario id:** `EP-A`
+- **Intent:** `INT-1`
+- **Source issue:** `errors-print-relative-paths`
+- **Landed:** 2026-10-03
+
+### Given an issue's scenarios and its red and green records, then the page has one table row per scenario with its title, a red mark, a green mark and its evidence path, using ✓ and ○. _(archived)_
+
+- **Scenario id:** `IO-A`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-overview`
+- **Landed:** 2026-10-03
+
+### Given the same issue, then the page has a Mermaid flowchart from each intent to its scenarios, tests and evidence, and a scenario with a red but no green is styled as open. _(archived)_
+
+- **Scenario id:** `IO-B`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-overview`
+- **Landed:** 2026-10-03
+
+### Given more than 25 scenarios, then the flowchart shows a summary node instead of every scenario, and the table still lists them all. _(archived)_
+
+- **Scenario id:** `IO-C`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-overview`
+- **Landed:** 2026-10-03
+
+### Given a green recorded after the page was written, then compass check fails the page as stale and names compass issue dashboard as the fix. _(archived)_
+
+- **Scenario id:** `IO-D`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-overview`
+- **Landed:** 2026-10-03

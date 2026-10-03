@@ -28,3 +28,19 @@ def test_ft_1_a_tracked_compass_file_lands_with_one_finish(repo):
     assert ".compass/config.yml" in committed, committed
     assert ".compass/work/" not in committed.replace(
         ".compass/work/fix-greeting/", ""), committed
+
+
+def test_ft_1_tracked_issue_state_stays_out(repo):
+    """A project that uses Compass commits `.compass/work/`. Another issue's
+    record there is tracked, but it is issue state, not this fix's change."""
+    other = repo / ".compass" / "work" / "other-issue" / "devlog.md"
+    other.parent.mkdir(parents=True)
+    other.write_text("first\n")
+    _git(repo, "add", ".compass/work/other-issue/devlog.md")
+    _git(repo, "commit", "-q", "-m", "other issue")
+    _ready_to_finish(repo, "fix-greeting")
+    other.write_text("first\nsecond\n")
+    result = _finish(repo, "fix-greeting")
+    assert result.returncode == 0, result.stdout + result.stderr
+    committed = _git(repo, "show", "--name-only", "--format=", "HEAD~1")
+    assert ".compass/work/other-issue/" not in committed, committed

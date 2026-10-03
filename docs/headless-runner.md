@@ -16,6 +16,7 @@ compass run <slug> --stage verify --stop-file .compass/STOP
 | `--stop-file` | Required. Create this file to stop the run before its next session. A relative path is read from the project root, not from where the command was started. |
 | `--max-cycles` | Sessions to start at most. At most the RP-LOOP-006 ceiling, 30. |
 | `--max-minutes` | Minutes to run at most; decimals are allowed. At most the RP-LOOP-007 ceiling, 240. |
+| `--max-cost-usd` | US dollars the run may spend at most. At most the RP-LOOP-008 ceiling, 5. Each session gets what is left as its `--max-budget-usd`, and the run stops once the sessions' reported costs reach the ceiling. |
 | `--claude` | The `claude` executable, when it is not on the path. |
 
 Exit codes: 0 when the stage is done, 4 when the run stopped, 2 when it was refused before any session started.
@@ -24,7 +25,7 @@ One issue runs one stage at a time. A run holds `run.lock` in the issue's folder
 
 ## When a run stops
 
-Before each cycle the runner stops if the stop file exists, the cycle ceiling is reached, or the minutes are spent. After each session it stops if:
+Before each cycle the runner stops if the stop file exists, the cycle ceiling is reached, or the minutes are spent. After each session it stops once the money spent reaches the cost ceiling. After each session it stops if:
 
 - the stage is done: every gate passes for the verify stage; every scenario has a green record for the build stage;
 - the session landed the issue, which an unattended run must never do;

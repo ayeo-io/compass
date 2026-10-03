@@ -4,8 +4,9 @@
 # a person starts it by hand. Every run starts paid Claude sessions.
 #
 # To use it, copy it into your project's .github/workflows folder and add
-# a repository secret named ANTHROPIC_API_KEY. Set a spend limit on that
-# key first: the cycle and minute ceilings bound a run, not your bill.
+# a repository secret named ANTHROPIC_API_KEY. A run stops at five US
+# dollars (RP-LOOP-008), but every start is a new run: set a monthly spend
+# limit on the key too.
 #
 # The job runs the verify stage of one issue with `compass run`. It never
 # lands the issue: a run that ends done or stopped leaves its record in the

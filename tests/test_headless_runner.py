@@ -95,7 +95,8 @@ elif action == "sleep":
     Path(os.environ["STUB_PIDFILE"]).write_text(str(os.getpid()))
     time.sleep(30)
 print(json.dumps({"type": "result", "subtype": "success", "is_error": False,
-                  "session_id": f"s{n}", "total_cost_usd": 0.01}))
+                  "session_id": f"s{n}",
+                  "total_cost_usd": float(os.environ.get("STUB_COST", "0.01"))}))
 '''
 
 
@@ -568,3 +569,25 @@ def test_hr_g_a_runs_entry_that_is_not_a_list_stops_cleanly(project):
     result = _run(project, "--max-cycles", "3", plan=("bad_runs",))
     assert result.returncode in (2, 4), result.stderr
     assert "Traceback" not in result.stderr
+
+
+
+# --- RC-1: the cost ceiling ---------------------------------------------------------
+
+def test_rc_1_the_cost_ceiling_stops_the_run_and_bounds_each_session(project, monkeypatch):
+    monkeypatch.setenv("STUB_COST", "2.0")
+    result = _run(project, "--max-cycles", "10", plan=("touch",))
+    assert result.returncode == 4, result.stdout + result.stderr
+    calls = _calls(project)
+    assert len(calls) == 3
+    budgets = [argv[argv.index("--max-budget-usd") + 1] for argv in calls]
+    assert budgets == ["5.00", "3.00", "1.00"]
+    reason = _last_run(project)["stopped_reason"]["reason"]
+    assert "cost ceiling" in reason and "RP-LOOP-008" in reason
+
+
+def test_rc_1_a_cost_flag_above_the_policy_is_refused(project):
+    result = _run(project, "--max-cost-usd", "6")
+    assert result.returncode == 2 and "RP-LOOP-008" in result.stderr
+    assert _run(project, "--max-cost-usd", "0").returncode == 2
+    assert _calls(project) == []

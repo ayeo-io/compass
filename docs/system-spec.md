@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given many manifests read in one process, then the migrate map is parsed once, and parsed again only when its path or contents change.
+### Given a project and an issue made with the 5.0.0 CLI, when the working tree's CLI reads them, then every manifest loads and compass check gives the same gate-by-gate verdict.
 
-- **Scenario id:** `MM-1`
+- **Scenario id:** `UP-1`
 - **Intent:** `INT-1`
-- **Source issue:** `migrate-map-parsed-once`
+- **Source issue:** `upgrade-from-5-0-0`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1525 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1526 superseded scenario(s) are in `docs/system-spec-archive.md`.

@@ -49,6 +49,10 @@ The denied commands are matched by how they start, so another spelling of the sa
 - `run-<n>.md` in the issue's documents folder: the stage, the times, the outcome, the stop reason, the money spent, each cycle's exit code, session, cost and whether it changed the records, and what each session said last.
 - A `runs:` entry in the manifest: `{n, stage, started, ended, cycles, outcome}`, and for a stopped run `stopped_reason: {reason, evidence, at}`, with the run record as the evidence.
 
+## The demo in CI
+
+`scripts/run-demo.sh` builds a project with one known bug, records its failing test as a quick fix, and runs the build stage on it. In Compass's own repository, `.github/workflows/compass-run-demo.yml` runs it when started by hand. It authenticates by identity federation, as the review job does, so no key is stored: the job's GitHub OIDC token goes to a file named by `ANTHROPIC_IDENTITY_TOKEN_FILE`, and a profile (`ANTHROPIC_CONFIG_DIR`, `ANTHROPIC_PROFILE`) lets the run's several `claude` processes share one exchanged token. The record is kept as the job's artifact.
+
 ## Credentials
 
 The runner reads no credential. It passes its own environment to `claude` unchanged. Everything it writes or prints passes through `cli/compass_pkg/redact.py` first, which replaces Anthropic, GitHub, AWS and bearer tokens, `key=value` secrets, and the value of any environment variable whose name contains KEY, TOKEN, SECRET or PASSWORD.

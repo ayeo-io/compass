@@ -398,8 +398,13 @@ def test_hr_j_the_exception_is_accepted_and_the_workflow_is_inactive():
     on = yaml.safe_load(workflow)[True]
     assert list(on) == ["workflow_dispatch"]
     assert "ANTHROPIC_API_KEY" in workflow
-    assert not any("compass run" in p.read_text()
-                   for p in (ROOT / ".github" / "workflows").glob("*.y*ml"))
+    # A workflow in this repository that runs compass run starts by hand
+    # only: every run is paid (the maintainer approved the demo workflow,
+    # 2026-10-03).
+    for p in (ROOT / ".github" / "workflows").glob("*.y*ml"):
+        text = p.read_text()
+        if "compass run" in text or "run-demo.sh" in text:
+            assert list(yaml.safe_load(text)[True]) == ["workflow_dispatch"], p.name
     doc = (ROOT / "docs" / "headless-runner.md").read_text()
     assert "not met" in doc
     readme = (ROOT / "docs" / "README.md").read_text()

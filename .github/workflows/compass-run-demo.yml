@@ -1,0 +1,84 @@
+# Run the headless runner's demo in CI: `compass run` on a project with one
+# known bug, built inside the runner (scripts/run-demo.sh).
+#
+# Started by hand only. Every run starts paid Claude sessions, and each run
+# stops at five US dollars (RP-LOOP-008, ADR-030).
+#
+# No key is stored. Like the review job, this authenticates by identity
+# federation: the job's GitHub OIDC token is written to a file, and the
+# claude CLI exchanges it for a short-lived Anthropic token under the
+# federation rule named by the repository variables. The profile file makes
+# the run's several claude processes share one exchanged token, since a
+# GitHub OIDC token can be exchanged only once, and the token file is
+# refreshed every four minutes, as anthropics/claude-code-action does.
+name: compass-run-demo
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: compass-run-demo
+  cancel-in-progress: false
+
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4.1.0
+        with:
+          node-version: '22'
+      - name: Install the test runner and Claude Code
+        run: |
+          pip install pytest
+          npm install -g @anthropic-ai/claude-code@2.1.288
+      - name: Run the demo, authenticated by federation
+        env:
+          ANTHROPIC_FEDERATION_RULE_ID: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
+          ANTHROPIC_ORGANIZATION_ID: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
+          ANTHROPIC_SERVICE_ACCOUNT_ID: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
+          ANTHROPIC_WORKSPACE_ID: ${{ vars.ANTHROPIC_WORKSPACE_ID }}
+          DEMO_DIR: ${{ runner.temp }}/demo
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/claude-workload-identity"
+          mkdir -p -m 700 "$dir/config/configs"
+          printf '%s\n' '{"version": "1.0", "authentication": {"type": "oidc_federation"}}' \
+            > "$dir/config/configs/default.json"
+          fetch_token() {
+            curl -sSf -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+              "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.anthropic.com" \
+              | python3 -c 'import json, sys; print(json.load(sys.stdin)["value"])' \
+              > "$dir/identity-token.new"
+            echo "::add-mask::$(cat "$dir/identity-token.new")"
+            mv "$dir/identity-token.new" "$dir/identity-token"
+          }
+          fetch_token
+          ( while sleep 240; do fetch_token || echo "identity token refresh failed" >&2; done ) &
+          refresher=$!
+          export ANTHROPIC_IDENTITY_TOKEN_FILE="$dir/identity-token"
+          export ANTHROPIC_CONFIG_DIR="$dir/config"
+          export ANTHROPIC_PROFILE=default
+          set +e
+          bash scripts/run-demo.sh
+          code=$?
+          kill "$refresher"
+          rm -rf "$dir"
+          exit "$code"
+      - name: Keep the run record
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: compass-run-demo-record
+          path: ${{ runner.temp }}/demo/docs/compass/*/run-*.md
+          if-no-files-found: warn

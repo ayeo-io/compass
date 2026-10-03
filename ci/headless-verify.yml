@@ -4,7 +4,9 @@
 # a person starts it by hand. Every run starts paid Claude sessions.
 #
 # To use it, copy it into your project's .github/workflows folder and add
-# a repository secret named ANTHROPIC_API_KEY. A run stops at five US
+# a repository secret named ANTHROPIC_API_KEY. If your organisation has an
+# Anthropic identity federation rule, you need no stored key: see how
+# .github/workflows/compass-run-demo.yml in the Compass repository sets it up. A run stops at five US
 # dollars (RP-LOOP-008), but every start is a new run: set a monthly spend
 # limit on the key too.
 #

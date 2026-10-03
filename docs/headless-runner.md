@@ -47,7 +47,7 @@ The denied commands are matched by how they start, so another spelling of the sa
 ## What a run leaves
 
 - `run-<n>.md` in the issue's documents folder: the stage, the times, the outcome, the stop reason, the money spent, each cycle's exit code, session, cost and whether it changed the records, and what each session said last.
-- A `runs:` entry in the manifest: `{n, stage, started, ended, cycles, outcome}`, and for a stopped run `stopped_reason: {reason, evidence, at}`, with the run record as the evidence.
+- A `runs:` entry in the manifest: `{n, stage, started, ended, cycles, cost_usd, outcome}`, and for a stopped run `stopped_reason: {reason, evidence, at}`, with the run record as the evidence. Each run covers one stage, so these entries are the issue's cost per stage. An interactive session records no cost: Claude Code does not report it to Compass.
 
 ## The demo in CI
 

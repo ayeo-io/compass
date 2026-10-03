@@ -1716,6 +1716,7 @@ def test_run_record_has_every_documented_field(
         "permission_denials", "final_text", "diff", "changed_paths",
         "compass_files", "changed", "manifests", "tests_after", "contained",
         "escaped_paths", "stderr_tail", "over_budget", "replies_sent",
+        "interruptions",
         "framework", "hidden", "regressions", "tokens", "compass_commit",
     }
     # This scenario carries no hidden_tests/, and this condition is not

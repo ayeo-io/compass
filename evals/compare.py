@@ -115,6 +115,20 @@ def _replies_sent(record: Dict[str, Any]) -> Optional[int]:
     return record.get("replies_sent")
 
 
+def _interruption_count(kind: str):
+    """How many times Compass stopped the session with `kind` (`hook_blocks`
+    or `check_failures`), from the record's `interruptions`. None when the
+    record does not carry it: a condition with no Compass project, or a
+    record from before the field existed."""
+    def extract(record: Dict[str, Any]) -> Optional[int]:
+        counts = record.get("interruptions")
+        if not isinstance(counts, dict):
+            return None
+        value = counts.get(kind)
+        return value if isinstance(value, int) else None
+    return extract
+
+
 def _wall_time(record: Dict[str, Any]) -> Optional[float]:
     return record.get("seconds")
 
@@ -235,6 +249,8 @@ MEASURE_COLUMNS = (
     ("hidden_pass_rate", "Hidden-test pass rate"),
     ("regressions", "Regressions"),
     ("replies_sent", "Interventions (replies sent)"),
+    ("hook_blocks", "Hook blocks"),
+    ("check_failures", "Check failures"),
     ("wall_time", "Wall time"),
     ("tokens", "Tokens"),
 )
@@ -263,6 +279,10 @@ def cell_measures(records: List[Dict[str, Any]], scenarios_dir: Path) -> Dict[st
             [_hidden_pass_rate(r, scenarios_dir) for r in records], _percentage),
         "regressions": _measure([_regressions_count(r) for r in records], _plain_count),
         "replies_sent": _measure([_replies_sent(r) for r in records], _plain_count),
+        "hook_blocks": _measure([_interruption_count("hook_blocks")(r) for r in records],
+                                _plain_count),
+        "check_failures": _measure(
+            [_interruption_count("check_failures")(r) for r in records], _plain_count),
         "wall_time": _measure([_wall_time(r) for r in records], _seconds),
         "tokens": _measure(token_values, token_formatter),
     }
@@ -315,6 +335,10 @@ def summary_measures(records: List[Dict[str, Any]], scenarios_dir: Path) -> Dict
         "hidden_pass_rate": _pooled_hidden_pass_rate(records, scenarios_dir),
         "regressions": _total([_regressions_count(r) for r in records], _plain_count),
         "replies_sent": _total([_replies_sent(r) for r in records], _plain_count),
+        "hook_blocks": _total([_interruption_count("hook_blocks")(r) for r in records],
+                              _plain_count),
+        "check_failures": _total(
+            [_interruption_count("check_failures")(r) for r in records], _plain_count),
         "wall_time": _total([_wall_time(r) for r in records], _seconds),
         "tokens": _total(token_values, token_formatter),
     }

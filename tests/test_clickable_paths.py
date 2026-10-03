@@ -48,7 +48,9 @@ def _no_absolute(root: Path, r) -> None:
 
 
 def test_the_verbs_print_no_absolute_project_path(project):
-    """CP-A, and CP-D: these runs are piped, so no escape code either."""
+    """CP-A: no absolute project path. CP-D: no escape code in piped
+    output. The escape-code half pins behaviour that already held before
+    #291; it fails when an escape code is planted in say()'s output."""
     runs = [
         ("tdd-red", "--scenario", "TRC-001", "--", sys.executable, "-m", "pytest", "-q",
          "-p", "no:cacheprovider", "tests/test_x.py"),

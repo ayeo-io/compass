@@ -192,7 +192,7 @@ def cmd_run(args):
             "be stopped.")
     task_dir = resolve_issue_dir(args.slug)
     task, path = load_manifest(task_dir)
-    if not isinstance(task.get("runs", []), list):
+    if task.get("runs") is not None and not isinstance(task["runs"], list):
         raise CompassError(
             f"compass run: the manifest's `runs:` is not a list, so a run "
             f"cannot be recorded. Fix {os.path.relpath(path, root)} first.")
@@ -267,62 +267,89 @@ def _run(args, root, task_dir, task, path, claude, stop, ceilings,
     cycles, outcome, reason = [], "stopped", None
     previous, stale, readable = _digest(task, task_dir), 0, True
 
-    cycle = 0
-    while True:
-        cycle += 1
-        if os.path.exists(stop):
-            reason = f"the stop file {args.stop_file} exists"
-            break
-        if cycle > max_cycles:
-            reason = (f"the cycle ceiling of {max_cycles} is reached "
-                      f"({cycles_rule})")
-            break
-        left = deadline - time.monotonic()
-        if left <= 0:
-            reason = (f"the minute ceiling of {max_minutes:g} is reached "
-                      f"({minutes_rule})")
-            break
-        launched = host_launch.launch_claude(claude, prompt, session_args,
-                                             root, dict(os.environ),
-                                             timeout=left)
-        summary = host_launch.session_summary(launched.stdout)
-        entry = {"cycle": cycle, "exit": launched.returncode,
-                 "session": summary["session_id"], "cost": summary["cost_usd"]}
-        if launched.returncode != 0 and launched.stderr.strip():
-            # Redact first, then cut: a cut through a credential would
-            # leave a piece no pattern recognises.
-            entry["error"] = redact(launched.stderr)[-_ERROR_TAIL:]
-        cycles.append(entry)
-        # The manifest is read first, even after a timeout: a session that
-        # broke it must not have the runner's older copy saved over it.
+    interrupted = None
+    try:
+        cycle = 0
+        while True:
+            cycle += 1
+            if os.path.exists(stop):
+                reason = f"the stop file {args.stop_file} exists"
+                break
+            if cycle > max_cycles:
+                reason = (f"the cycle ceiling of {max_cycles} is reached "
+                          f"({cycles_rule})")
+                break
+            left = deadline - time.monotonic()
+            if left <= 0:
+                reason = (f"the minute ceiling of {max_minutes:g} is reached "
+                          f"({minutes_rule})")
+                break
+            launched = host_launch.launch_claude(claude, prompt, session_args,
+                                                 root, dict(os.environ),
+                                                 timeout=left)
+            summary = host_launch.session_summary(launched.stdout)
+            entry = {"cycle": cycle, "exit": launched.returncode,
+                     "session": summary["session_id"], "cost": summary["cost_usd"]}
+            if launched.returncode != 0 and launched.stderr.strip():
+                # Redact first, then cut: a cut through a credential would
+                # leave a piece no pattern recognises.
+                entry["error"] = redact(launched.stderr)[-_ERROR_TAIL:]
+            cycles.append(entry)
+            # The manifest is read first, even after a timeout: a session that
+            # broke it must not have the runner's older copy saved over it.
+            current_task = _read(task_dir)
+            if current_task is None:
+                readable = False
+                reason = (f"the manifest cannot be read after cycle {cycle}; an "
+                          f"unattended run stops rather than guess")
+                break
+            task = current_task
+            if launched.timed_out:
+                reason = (f"the minute ceiling of {max_minutes:g} is reached "
+                          f"({minutes_rule}); the session was ended")
+                break
+            if task.get("status") == "landed":
+                reason = ("the session landed the issue, which an unattended run "
+                          "must never do; a person must check it")
+                break
+            if _done(task, args.stage, task_dir):
+                outcome, reason = "done", None
+                entry["progress"] = "yes"
+                break
+            current = _digest(task, task_dir)
+            entry["progress"] = "no" if current == previous else "yes"
+            stale = stale + 1 if current == previous else 0
+            previous = current
+            if repeat_limit is not None and stale >= repeat_limit:
+                reason = (f"no progress: {stale} cycles in a row changed nothing "
+                          f"in the manifest or the evidence ({repeat_rule})")
+                break
+    except (KeyboardInterrupt, SystemExit) as exc:
+        # The launcher has ended the session. Record the run before going
+        # on, so an interrupted run leaves a record and a `runs:` entry.
+        interrupted = exc
+        outcome = "stopped"
+        reason = ("the run was interrupted by a signal; a session that was "
+                  "running was ended")
         current_task = _read(task_dir)
-        if current_task is None:
-            readable = False
-            reason = (f"the manifest cannot be read after cycle {cycle}; an "
-                      f"unattended run stops rather than guess")
-            break
-        task = current_task
-        if launched.timed_out:
-            reason = (f"the minute ceiling of {max_minutes:g} is reached "
-                      f"({minutes_rule}); the session was ended")
-            break
-        if task.get("status") == "landed":
-            reason = ("the session landed the issue, which an unattended run "
-                      "must never do; a person must check it")
-            break
-        if _done(task, args.stage, task_dir):
-            outcome, reason = "done", None
-            entry["progress"] = "yes"
-            break
-        current = _digest(task, task_dir)
-        entry["progress"] = "no" if current == previous else "yes"
-        stale = stale + 1 if current == previous else 0
-        previous = current
-        if repeat_limit is not None and stale >= repeat_limit:
-            reason = (f"no progress: {stale} cycles in a row changed nothing "
-                      f"in the manifest or the evidence ({repeat_rule})")
-            break
+        readable = current_task is not None
+        task = current_task or task
 
+    in_manifest = False
+    if readable:
+        # Read again: the last session may have written the manifest.
+        task = _read(task_dir) or task
+        runs = task.get("runs")
+        if runs is not None and not isinstance(runs, list):
+            # A session broke the key. The record keeps the run; the
+            # manifest is left for a person rather than overwritten. The
+            # outcome is settled here, before the record is written, so
+            # the record and the exit code agree.
+            outcome = "stopped"
+            reason = reason or ("the manifest's `runs:` is not a list, so this "
+                                "run is recorded only in its run record")
+        else:
+            in_manifest = True
     run = {"n": n, "stage": args.stage, "started": started, "ended": now_iso(),
            "cycles": len(cycles), "outcome": outcome}
     if reason:
@@ -332,20 +359,11 @@ def _run(args, root, task_dir, task, path, claude, stop, ceilings,
                   {"slug": args.slug, "claude": claude, "cycles": max_cycles,
                    "cycles_rule": cycles_rule, "minutes": max_minutes,
                    "minutes_rule": minutes_rule})
-    if readable:
-        # Read again: the last session may have written the manifest.
-        task = _read(task_dir) or task
-        if not isinstance(task.get("runs", []), list):
-            # A session broke the key. The record keeps the run; the
-            # manifest is left for a person rather than overwritten.
-            note = ("the manifest's `runs:` is not a list, so this run is "
-                    "recorded only here")
-            with open(os.path.join(root, record_rel), "a", encoding="utf-8") as fh:
-                fh.write(f"\n**Not in the manifest:** {note}.\n")
-            outcome, reason = "stopped", reason or note
-        else:
-            task.setdefault("runs", []).append(run)
-            save_manifest(task, path)
+    if in_manifest:
+        task["runs"] = list(task.get("runs") or []) + [run]
+        save_manifest(task, path)
+    if interrupted is not None:
+        raise interrupted
     if outcome == "done":
         print(f"compass run: {args.stage} is done after {len(cycles)} cycle(s). "
               f"Record: {record_rel}")

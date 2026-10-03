@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the change, then a decision record states the exception to the rule that Compass launches nothing, as proposed; a reference workflow runs only when started by hand; and the owning doc says the live CI acceptance is not met.
+### Given an interrupted run, a run whose last session finishes the stage but breaks the runs key, or a manifest with an empty runs key, then the run record's outcome and reason match the exit code, and a run starts on the empty key.
 
-- **Scenario id:** `HR-J`
+- **Scenario id:** `RRE-1`
 - **Intent:** `INT-1`
-- **Source issue:** `headless-runner`
+- **Source issue:** `run-record-edges`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1467 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1468 superseded scenario(s) are in `docs/system-spec-archive.md`.

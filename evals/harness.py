@@ -1368,6 +1368,28 @@ def _manifests(repo_dir: Path) -> dict[str, str]:
     }
 
 
+def _interruptions(repo_dir: Path) -> dict[str, int] | None:
+    """How often Compass stopped the session: the hook blocks and failing
+    `compass check` runs counted in `.compass/interruptions.log`. None when
+    the session has no Compass project, so a condition without Compass
+    reads "not recorded" in the report, not zero. A line that does not
+    parse is skipped, as `compass retro` skips it."""
+    compass_dir = repo_dir / ".compass"
+    if not compass_dir.is_dir():
+        return None
+    counts = {"hook_blocks": 0, "check_failures": 0}
+    log = compass_dir / "interruptions.log"
+    try:
+        lines = log.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return counts
+    for line in lines:
+        parts = line.split("\t")
+        if len(parts) == 3 and parts[2] in counts:
+            counts[parts[2]] += 1
+    return counts
+
+
 # --- containment -------------------------------------------------------------
 
 # Every relative name this module hashes under both a working tree's own git
@@ -1643,6 +1665,7 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
 
         compass_files = _compass_files(repo_dir)
         manifests = _manifests(repo_dir)
+        interruptions = _interruptions(repo_dir)
         record_cwd = state["cwd"]
 
     checkout_after = _checkout_fingerprint(plugin_source, child_env)
@@ -1709,6 +1732,7 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
         "stderr_tail": _tail(state["stderr"]),
         "over_budget": over_budget,
         "replies_sent": replies_sent,
+        "interruptions": interruptions,
     }
 
 

@@ -30,6 +30,13 @@ and a few dollars. With `--llm`, each undecided result costs one more call
 of about $0.10 to $0.20, capped at $0.50. The suite never calls a model:
 the tests use a fake `claude`.
 
+`python3 evals/compare.py <DIR>/*.json --report <file.md>` writes the
+comparison report. Besides cost, wall time and the hidden-test pass rate,
+it shows how often the framework stopped each condition: "Hook blocks" and
+"Check failures", from the session's `.compass/interruptions.log`, which
+the harness records as `interruptions`. A condition with no Compass project
+shows "not recorded" for both, not zero.
+
 Do not edit this checkout, run its tests or run a Compass command in it
 while a run is going. The harness hashes it before and after each run,
 ignored files and git's own settings included, and any change marks the

@@ -10367,3 +10367,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `run-session-issue`
 - **Landed:** 2026-10-03
+
+### Given the variable, then the post-tool and stop hooks, the receipt and the status line read the same issue the pre-tool hook does. _(archived)_
+
+- **Scenario id:** `SI-E`
+- **Intent:** `INT-1`
+- **Source issue:** `run-session-issue`
+- **Landed:** 2026-10-03

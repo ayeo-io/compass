@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a checkpoint table that names something other than the four checkpoint stages, when the policy is linted, then it is refused.
+### Given eval session records, when the comparison report is built, then each cell and the summary show the hook blocks and check failures each condition met, and a record without them shows not recorded.
 
-- **Scenario id:** `AU-6`
+- **Scenario id:** `SC-1`
 - **Intent:** `INT-1`
-- **Source issue:** `autonomy-setting`
+- **Source issue:** `stops-and-cost-per-condition`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1506 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1508 superseded scenario(s) are in `docs/system-spec-archive.md`.

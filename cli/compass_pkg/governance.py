@@ -34,7 +34,7 @@ import fnmatch
 import re as _re
 from compass_pkg.core import CompassError, FRAMEWORK_ROOT, find_compass_dir, find_governance, load_yaml
 from compass_pkg.review_rules import lint_errors as review_rules_lint_errors
-from compass_pkg.policy import _jsonschema_errors, _lint_errors_guardrails, _lint_errors_quarantine, _lint_errors_routing_policy, _schema_note
+from compass_pkg.policy import _jsonschema_errors, architecture_sources_lint_errors, _lint_errors_guardrails, _lint_errors_quarantine, _lint_errors_routing_policy, _schema_note
 
 
 
@@ -304,7 +304,8 @@ def cmd_policy_lint(args):
     errs = (_lint_errors_routing_policy(rp)
             + _lint_errors_guardrails(gr)
             + _lint_errors_quarantine(gov)
-            + review_rules_lint_errors(gov))
+            + review_rules_lint_errors(gov)
+            + architecture_sources_lint_errors(gov))
     # JSON Schema validation runs additionally when `jsonschema` is installed.
     schema_ran = False
     for inst, sname, label in (

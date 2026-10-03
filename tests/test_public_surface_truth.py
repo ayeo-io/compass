@@ -400,6 +400,10 @@ def test_d2_repairs_change_only_retired_names():
     heading, a seven-row table of which hand-offs wait for each autonomy
     value and route, and 5 list items.
 
+    One more was re-baselined by `well-architected-strategy`:
+    `governance/strategies.md` gained the well-architected alignment
+    strategy, one `###` heading and 4 list items.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

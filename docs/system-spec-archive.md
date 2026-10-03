@@ -10633,3 +10633,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `red-for-an-unknown-scenario`
 - **Landed:** 2026-10-03
+
+### Given the eval scenario records for other frameworks, then none holds a sentence copied from that framework's own templates, and their file layout and heading form are unchanged. _(archived)_
+
+- **Scenario id:** `QT-1`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-record-quotes-a-template`
+- **Landed:** 2026-10-03

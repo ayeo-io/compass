@@ -387,10 +387,11 @@ def test_hr_i_the_eval_harness_starts_claude_through_the_shared_launcher(
 
 # --- HR-J: the decision record, the reference workflow and the doc -----------
 
-def test_hr_j_the_exception_is_proposed_and_the_workflow_is_inactive():
+def test_hr_j_the_exception_is_accepted_and_the_workflow_is_inactive():
     adr = next((ROOT / "architecture" / "decisions").glob("ADR-030-*.md"))
     text = adr.read_text()
-    assert "status: proposed" in text and "ADR-025" in text
+    # Accepted by the maintainer on 2026-10-03.
+    assert "status: accepted" in text and "ADR-025" in text
     workflow = (ROOT / "ci" / "headless-verify.yml").read_text()
     on = yaml.safe_load(workflow)[True]
     assert list(on) == ["workflow_dispatch"]

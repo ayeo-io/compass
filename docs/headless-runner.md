@@ -1,6 +1,6 @@
 # The headless runner
 
-`compass run` runs the build or verify stage of one issue with nobody in the session. It starts one fresh `claude -p` session per cycle, and between cycles decides from the manifest and the evidence alone whether to go on. ADR-030 records why Compass starts sessions at all; it is proposed, not yet accepted.
+`compass run` runs the build or verify stage of one issue with nobody in the session. It starts one fresh `claude -p` session per cycle, and between cycles decides from the manifest and the evidence alone whether to go on. ADR-030 records why Compass starts sessions at all.
 
 **The live acceptance is not met yet:** a quick-fix example run from assess to ship in CI. It needs an Anthropic secret in GitHub Actions and a spend limit, and every run costs money, so it waits for the maintainer. Every test of the runner uses a stub `claude`.
 

@@ -1,7 +1,7 @@
 ---
 id: ADR-030
 title: compass run is the one verb that starts a host session
-status: proposed
+status: accepted
 date: 2026-10-03
 supersedes: ''
 superseded_by: ''
@@ -19,10 +19,10 @@ between cycles from the files on disk. That needs something to start the
 sessions. The eval harness (`evals/harness.py`) already starts `claude -p`
 for its comparison runs, but it is a development tool, not a verb.
 
-This decision is proposed, not accepted. The maintainer was offline when it
-was written. The compass:architect agent ruled on their behalf that the
-runner may be built and tested against a stub, and that accepting this
-exception is the maintainer's decision.
+The maintainer was offline when this was written, so it was proposed: the
+compass:architect agent ruled on their behalf that the runner could be
+built and tested against a stub, and left accepting the exception to them.
+The maintainer accepted it on 2026-10-03.
 
 ## Decision
 

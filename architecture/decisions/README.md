@@ -69,7 +69,7 @@ Rules:
 | [ADR-027](ADR-027-settled-decisions-are-a-ledger.md) | Settled product decisions are a ledger of immutable entries in `governance/decisions/`, recorded by the person who made them and checked against a base ref | accepted | answers `decisions-ledger`; additive under ADR-006 |
 | [ADR-028](ADR-028-cli-ships-as-a-directory.md) | The Compass CLI ships as a directory, not as a single-file archive; Python 3.10 or later stays a requirement, said at install and session start | accepted | answers `python-dependency-said-early` |
 | [ADR-029](ADR-029-project-lessons-are-advice-data.md) | Project lessons are advice kept as data, injected under their own 150-word cap and never read by a check | accepted | answers `project-lessons`; additive under ADR-006 |
-| [ADR-030](ADR-030-compass-run-starts-host-sessions.md) | compass run is the one verb that starts a host session | proposed | answers `headless-runner`; a bounded exception to ADR-025, waiting for the maintainer |
+| [ADR-030](ADR-030-compass-run-starts-host-sessions.md) | compass run is the one verb that starts a host session | accepted | answers `headless-runner`; a bounded exception to ADR-025 |
 
 ## Principle → ADR mapping
 

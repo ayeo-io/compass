@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a checkpoint table that leaves out a value or a route, then that case waits at every hand-off the route runs, and a misspelt or repeated route key is refused.
+### Given the CI demo workflow exists and has run, then the headless-runner doc does not say the live acceptance is unmet, and says what the demo covers and that each run costs money.
 
-- **Scenario id:** `CT-1`
+- **Scenario id:** `HD-1`
 - **Intent:** `INT-1`
-- **Source issue:** `checkpoint-table-gaps`
+- **Source issue:** `headless-doc-after-the-demo`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1507 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1509 superseded scenario(s) are in `docs/system-spec-archive.md`.

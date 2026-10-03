@@ -10556,3 +10556,17 @@
 - **Intent:** `INT-1`
 - **Source issue:** `autonomy-setting`
 - **Landed:** 2026-10-03
+
+### Given a checkpoint table that leaves out a value or a route, then that case waits at every hand-off the route runs, and a misspelt or repeated route key is refused. _(archived)_
+
+- **Scenario id:** `CT-1`
+- **Intent:** `INT-1`
+- **Source issue:** `checkpoint-table-gaps`
+- **Landed:** 2026-10-03
+
+### Given eval session records, when the comparison report is built, then each cell and the summary show the hook blocks and check failures each condition met, and a record without them shows not recorded. _(archived)_
+
+- **Scenario id:** `SC-1`
+- **Intent:** `INT-1`
+- **Source issue:** `stops-and-cost-per-condition`
+- **Landed:** 2026-10-03

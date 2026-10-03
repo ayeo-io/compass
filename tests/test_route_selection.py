@@ -140,12 +140,12 @@ def test_floor_g5_domains_force_expedition(run_cli, domain):
 
 
 def test_floor_brownfield_unmapped_requires_specify(run_cli):
-    """RP-FLOOR-002: brownfield-unmapped forces the define stage to full and
-    needs the behaviour-mapping skill."""
+    """RP-FLOOR-002: brownfield-unmapped beyond a small, contained change
+    forces the define stage to full and needs the behaviour-mapping skill."""
     r = run_cli("approach", "evaluate", "--json",
                 *_reading_args({"risk": "contained",
                                 "familiarity": "brownfield-unmapped",
-                                "size": "small",
+                                "size": "standard",
                                 "intent": "delivery"}))
     assert r.returncode == 0, r
     data = json.loads(r.stdout)

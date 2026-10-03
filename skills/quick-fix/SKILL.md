@@ -36,8 +36,8 @@ critical.
 | `brownfield-mapped` | Existing code whose current behaviour is already in scenarios, or is trivially readable. |
 | `brownfield-unmapped` | Existing code whose behaviour is not written down anywhere. |
 
-`brownfield-unmapped` is not a quick fix: a policy floor forces the behaviour
-to be described first - you cannot safely change what nobody wrote down.
+`brownfield-unmapped` does not stop a quick fix. Before editing, pin with a
+test what the code does now where the change touches it (`RP-ADV-002`).
 
 ### Size - how much work, honestly?
 

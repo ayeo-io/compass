@@ -35,8 +35,9 @@ and you do not write production code.
    the outcome it states, not just the literal request. Read any `ui-contract.md`;
    designer UI contracts enter the define stage as scenarios.
 2. **Brownfield: map before you change.** Per the `behaviour-mapping`
-   skill and the routing guardrail floor on `brownfield-unmapped`,
-   reverse-engineer the *current* behaviour into scenarios first. You cannot
+   skill and the routing guardrail floor on `brownfield-unmapped` (an
+   atomic or small change with trivial or contained risk and no domain label
+   gets it as advice instead), reverse-engineer the *current* behaviour into scenarios first. You cannot
    safely change what you have not written down. Mark behaviour-mapped scenarios as
    baseline.
 3. **Write the Summary first.** Before any Gherkin, open `acceptance-criteria.md` with
@@ -122,5 +123,7 @@ If a non-engineering role is in play, they review here.
 - You never leave code-shaped behaviour with no scenario describing it.
 - You never collapse refine on feature or heavier, or on any delivery approach where a
   routing guardrail needs it.
-- On brownfield-unmapped familiarity you never skip behaviour mapping - it is
-  a routing guardrail floor, not a preference.
+- On brownfield-unmapped familiarity you never skip behaviour mapping when the
+  approach needs it - there it is a routing guardrail floor, not a
+  preference. Only an atomic or small change with trivial or contained risk
+  and no domain label gets it as advice.

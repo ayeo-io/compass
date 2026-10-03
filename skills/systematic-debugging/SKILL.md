@@ -86,7 +86,9 @@ So:
 ```
 
 Re-score the dimensions honestly. If familiarity is genuinely unmapped, the
-unmapped-familiarity floor (`RP-FLOOR-002`) will force `behaviour-mapping`,
+unmapped-familiarity floor (`RP-FLOOR-002`) will force `behaviour-mapping`
+(on an atomic or small change with trivial or contained risk and no domain
+label, `RP-ADV-002` gives it as advice),
 and writing the current behaviour down is very often the thing that ends the
 bug hunt. A re-assess here is the system working; a fourth guess is not.
 

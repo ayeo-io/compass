@@ -147,6 +147,7 @@ EXPECTED_SUBCOMMANDS = {
     "decision",
     "lesson",  # project-lessons (ADR-029)
     "run",  # headless-runner (ADR-030)
+    "record",  # delivery-record (ADR-031)
 }
 EXPECTED_READING_KEYS = {
     "risk", "familiarity", "size", "goal", "urgency", "role",

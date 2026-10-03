@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the demo quick fix, then a manually started workflow runs compass run on it in CI, authenticated by federation with no stored key, and keeps the run record.
+### Given the change, then a decision record states the choice of a second private repository, and the restore drill has been run once from a fresh clone.
 
-- **Scenario id:** `RD-1`
+- **Scenario id:** `DR-E`
 - **Intent:** `INT-1`
-- **Source issue:** `run-demo-in-ci`
+- **Source issue:** `delivery-record`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1483 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1488 superseded scenario(s) are in `docs/system-spec-archive.md`.

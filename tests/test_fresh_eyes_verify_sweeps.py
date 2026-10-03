@@ -352,6 +352,7 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
         "decision",  # decisions-ledger (ADR-027): the settled-decisions ledger
         "lesson",  # project-lessons (ADR-029): lessons for later sessions
         "run",  # headless-runner (ADR-030): a stage run with nobody in the session
+        "record",  # delivery-record (ADR-031): the record kept off the laptop
     }
     line = next(l for l in result.stdout.splitlines() if l.strip().startswith("{"))
     verbs = set(line.strip().strip("{}").split(","))

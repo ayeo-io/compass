@@ -560,6 +560,35 @@ def cmd_land_commit(args):
             pass  # status update is best-effort; the commit already succeeded
 
     suffix = " (after one retry)" if retried else ""
+    if "issue marked landed" in landed_note:
+        # ADR-031: every landing updates the delivery record, when the
+        # project names one. A failed sync fails ship loudly: the commit
+        # stands, but a record that silently stopped syncing is the loss
+        # the record exists to prevent.
+        from compass_pkg.core import docs_dir
+        from compass_pkg.record import linked_worktree
+        from compass_pkg.record import settings as record_settings
+        from compass_pkg.record import sync as record_sync
+        project_root = os.path.dirname(find_compass_dir())
+        try:
+            if record_settings(project_root) is not None:
+                # A linked worktree holds only part of the record, so ship
+                # syncs just this issue's folders from it.
+                only = None
+                if linked_worktree(project_root):
+                    issue_dir = str(task_dir).rstrip("/")
+                    only = [os.path.relpath(issue_dir, project_root),
+                            docs_dir(issue_dir)]
+                landed_note += f"\n  {record_sync(project_root, only=only)}."
+        except Exception as exc:                        # noqa: BLE001
+            print(f"compass ship-commit: committed{suffix}. "
+                  f"HEAD {head_before[:8]} -> {head_after[:8]}" + landed_note)
+            sys.stderr.write(
+                f"compass ship-commit: the commit landed and the issue is "
+                f"marked landed, but the delivery record did not sync: "
+                f"{exc}\nFix the cause, then run `compass record sync` from "
+                f"the main checkout.\n")
+            return 2
     print(f"compass ship-commit: committed{suffix}. "
           f"HEAD {head_before[:8]} -> {head_after[:8]}" + landed_note)
     return 0

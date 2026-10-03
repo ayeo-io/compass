@@ -154,3 +154,18 @@ roles:
     - product-marketer
     - designer
     - qa
+
+# --- delivery record (ADR-031) ---------------------------------------------------
+# The issue records, the planning documents and the backlog command are kept
+# out of this public repository. `compass record sync` copies them, with
+# credentials redacted, into a private repository, and ship-commit runs it
+# after every landing. `compass record restore` brings them back.
+record:
+  remote: https://github.com/ayeo-io/compass-delivery-record.git
+  paths:
+    - .compass/work
+    - .compass/rulings
+    - docs/compass
+    - docs/analysis
+    - docs/proposals
+    - .claude/commands

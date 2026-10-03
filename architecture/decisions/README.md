@@ -70,6 +70,7 @@ Rules:
 | [ADR-028](ADR-028-cli-ships-as-a-directory.md) | The Compass CLI ships as a directory, not as a single-file archive; Python 3.10 or later stays a requirement, said at install and session start | accepted | answers `python-dependency-said-early` |
 | [ADR-029](ADR-029-project-lessons-are-advice-data.md) | Project lessons are advice kept as data, injected under their own 150-word cap and never read by a check | accepted | answers `project-lessons`; additive under ADR-006 |
 | [ADR-030](ADR-030-compass-run-starts-host-sessions.md) | compass run is the one verb that starts a host session | accepted | answers `headless-runner`; a bounded exception to ADR-025 |
+| [ADR-031](ADR-031-delivery-record-in-a-second-repository.md) | The delivery record is kept in a second, private repository, synced at every landing | accepted | answers `delivery-record` |
 
 ## Principle → ADR mapping
 

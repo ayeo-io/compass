@@ -364,8 +364,63 @@
             }
           },
           "subtask_ceiling": {
-            "type": ["integer", "null"],
+            "type": [
+              "integer",
+              "null"
+            ],
             "description": "How many parallel subtasks this shape permits: 1, 2, or null for unbounded. A number rather than a word since ADR-023 - the words solo/solo-or-pair/multiagent were only ever converted to these three values before use."
+          }
+        }
+      }
+    },
+    "autonomy_checkpoints": {
+      "type": "object",
+      "description": "Autonomy value -> route -> the checkpoint stages that wait for a person. Only assess, define, refine and plan can be named.",
+      "additionalProperties": false,
+      "properties": {
+        "controlled": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "assess",
+                "define",
+                "refine",
+                "plan"
+              ]
+            },
+            "uniqueItems": true
+          }
+        },
+        "balanced": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "assess",
+                "define",
+                "refine",
+                "plan"
+              ]
+            },
+            "uniqueItems": true
+          }
+        },
+        "autonomous": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "assess",
+                "define",
+                "refine",
+                "plan"
+              ]
+            },
+            "uniqueItems": true
           }
         }
       }

@@ -135,6 +135,34 @@ routing_strategies:
 
 ---
 
+## Checkpoints (soft - they set when a session waits)
+
+A checkpoint is a stage hand-off where a session stops and waits for a
+person: assess step 7 (confirm the approach), and the define, refine and plan
+hand-offs. `.compass/config.yml` sets `autonomy: controlled | balanced |
+autonomous` (balanced when left out). The `autonomy_checkpoints:` table maps
+each value and route to the checkpoints that wait, and the evaluator writes
+the answer into the manifest as `checkpoints:`.
+
+| Route | controlled | balanced | autonomous |
+|---|---|---|---|
+| quick fix | assess | none | none |
+| feature | assess, define, refine, plan | define, plan | none |
+| initiative | assess, define, refine, plan | assess, define, refine, plan | none |
+| hotfix | assess, define | none | none |
+| spike | assess | none | none |
+
+- A stage the route collapses or skips has no hand-off, so it never waits.
+- A hand-off that does not wait still writes its document, shows its
+  summary, names the setting and logs the skipped checkpoint to `devlog.md`.
+- The table can name only the four checkpoint stages. `compass policy lint`
+  and the evaluator refuse anything else, so the setting cannot reach a gate,
+  evidence, the pre-tool hook, `compass check`, guardrail 5 or the sign-off
+  the domain labels bring.
+- An `autonomy` value that is not one of the three is refused, not read as
+  balanced.
+- A policy without the table waits at every hand-off the route runs.
+
 ## Schema reference
 
 The authoritative structure is `routing-policy.yml`, validated by `compass

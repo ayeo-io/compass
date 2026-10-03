@@ -33,7 +33,7 @@ import re as _re
 import fnmatch
 import re as _re
 from compass_pkg.check_cmd import CHECK_FNS
-from compass_pkg.core import (CompassError, FRAMEWORK_ROOT, artifact_path,
+from compass_pkg.core import (AUTONOMY_VALUES, CHECKPOINT_STAGES, CompassError, FRAMEWORK_ROOT, artifact_path,
                               load_manifest, load_yaml, normalize_spine,
                               resolve_issue_dir)
 
@@ -70,8 +70,43 @@ def _jsonschema_errors(instance, schema_name):
     return errs
 
 
-def _lint_errors_routing_policy(p):
+
+
+def checkpoint_table_errors(p):
+    """Problems with the policy's `autonomy_checkpoints:` table. Checked by
+    `compass policy lint` and by the evaluator, so a bad table is refused
+    whether or not `jsonschema` is installed. Only the four checkpoint
+    stages can be named: an entry naming a gate or another stage would let
+    the setting reach something it must never change."""
+    table = p.get("autonomy_checkpoints")
+    if table is None:
+        return []
+    if not isinstance(table, dict):
+        return ["`autonomy_checkpoints:` must map each autonomy value to its routes"]
     errs = []
+    for value, routes in table.items():
+        if value not in AUTONOMY_VALUES:
+            errs.append(f"`autonomy_checkpoints:` names an unknown autonomy value "
+                        f"'{value}'; the values are {', '.join(AUTONOMY_VALUES)}")
+            continue
+        if not isinstance(routes, dict):
+            errs.append(f"`autonomy_checkpoints.{value}` must map each route to a list")
+            continue
+        for route, stages in routes.items():
+            if not isinstance(stages, list):
+                errs.append(f"`autonomy_checkpoints.{value}.{route}` must be a list")
+                continue
+            for stage in stages:
+                if stage not in CHECKPOINT_STAGES:
+                    errs.append(
+                        f"`autonomy_checkpoints.{value}.{route}` names '{stage}', "
+                        f"which is not a checkpoint; a checkpoint is one of "
+                        f"{', '.join(CHECKPOINT_STAGES)}")
+    return errs
+
+
+def _lint_errors_routing_policy(p):
+    errs = list(checkpoint_table_errors(p))
     for top in ("routing_strategies", "routing_guardrails", "route_shapes",
                 "assessment_vocabulary"):
         if top not in p:

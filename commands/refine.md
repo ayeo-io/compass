@@ -127,6 +127,14 @@ about decisions, not wording.
 > On approval this goes to the plan stage, which turns the spec into a
 > technical approach and runs the governance check against it.
 
+Wait for approval only if `refine` is in the manifest's `checkpoints:`.
+The project's `autonomy` setting in `.compass/config.yml` decides that list,
+and `compass approach summary` shows it. If `refine` is not listed, still
+write the ambiguity ledger and show this hand-off, then say you are going on without
+waiting and name the setting, with "Next" in place of "On approval". Log
+the skipped checkpoint to `devlog.md`, so the person can review it later and
+send the issue back.
+
 ## Voice
 
 The ambiguity ledger is read by the person who has to decide, not filled

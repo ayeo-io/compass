@@ -186,6 +186,35 @@ def load_mode():
     return "enforced"
 
 
+# The stage hand-offs that can wait for a person, and the `autonomy:`
+# values that choose among them. Here, not in policy.py, because core reads
+# the setting and policy.py already imports core.
+CHECKPOINT_STAGES = ("assess", "define", "refine", "plan")
+AUTONOMY_VALUES = ("controlled", "balanced", "autonomous")
+
+
+def load_autonomy():
+    """Read `autonomy:` from .compass/config.yml: how often a session stops
+    to wait for a person. Missing means `balanced`. Any other value is
+    refused, not read as balanced: a typo that silently changed how often
+    a session stops would give no sign."""
+    try:
+        cfg_path = os.path.join(find_compass_dir(), "config.yml")
+    except CompassError:
+        return "balanced"
+    if not os.path.isfile(cfg_path):
+        return "balanced"
+    value = (load_yaml(cfg_path) or {}).get("autonomy")
+    if value is None:
+        return "balanced"
+    value = str(value).strip().lower()
+    if value not in AUTONOMY_VALUES:
+        raise CompassError(
+            f"`autonomy: {value}` in .compass/config.yml is not a setting; "
+            f"use {', '.join(AUTONOMY_VALUES)} (balanced if left out).")
+    return value
+
+
 def mode_banner(mode):
     """The visible banner so an advisory run is never mistaken for enforced."""
     if mode == "advisory":

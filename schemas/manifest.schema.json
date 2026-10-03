@@ -72,7 +72,7 @@
     },
     "land_timestamp": {
       "type": "string",
-      "description": "Optional. ISO 8601 timestamp of when the issue was landed. Written by scripts/integrate.sh alongside status: landed. Used as the primary sort key for the living spec derivation order (ADR-008 \u00a73)."
+      "description": "Optional. ISO 8601 timestamp of when the issue was landed. Written by scripts/integrate.sh alongside status: landed. Used as the primary sort key for the living spec derivation order (ADR-008 §3)."
     },
     "land_commit": {
       "type": "string",
@@ -896,6 +896,19 @@
           }
         }
       }
+    },
+    "checkpoints": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "assess",
+          "define",
+          "refine",
+          "plan"
+        ]
+      },
+      "uniqueItems": true,
+      "description": "The stage hand-offs that wait for a person, from the routing policy's autonomy_checkpoints table and the project's autonomy setting; filled by approach evaluate."
     }
   }
 }

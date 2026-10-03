@@ -271,7 +271,9 @@ def cmd_quick_fix_start(args):
     # a manifest to write it into.
     gov = find_governance()
     policy = load_yaml(os.path.join(gov, "routing-policy.yml"))
-    advice = evaluate_route(readings, policy).get("applicable_strategies") or []
+    from compass_pkg.core import load_autonomy
+    advice = (evaluate_route(readings, policy, load_autonomy())
+              .get("applicable_strategies") or [])
 
     # The title reaches the living spec at ship; refuse it now, before
     # anything is written, if a check on the spec would refuse it there.

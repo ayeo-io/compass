@@ -395,6 +395,11 @@ def test_d2_repairs_change_only_retired_names():
     condition from its list of quick-fix conditions, because unmapped
     familiarity no longer blocks a quick fix.
 
+    One more was re-baselined by `autonomy-setting`:
+    `governance/routing-policy.md` gained a "Checkpoints" section, one `##`
+    heading, a seven-row table of which hand-offs wait for each autonomy
+    value and route, and 5 list items.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

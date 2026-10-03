@@ -26,6 +26,11 @@ import pytest
 import yaml
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+
+# The archive these tests read: the tracked sample, or this checkout's own
+# with COMPASS_FULL_ARCHIVE=1 (tests/archive.py).
+sys.path.insert(0, str(ROOT / "tests"))
+from archive import archive_root  # noqa: E402
 CLI = ROOT / "cli" / "compass"
 TERMINOLOGY = ROOT / "governance" / "terminology.yml"
 GLOSSARY = ROOT / "docs" / "glossary.md"
@@ -351,7 +356,7 @@ def test_the_archive_is_untouched():
     The archive holds records naming the pre-rename routing ids. Rewriting one
     would make the audit trail say something that did not happen.
     """
-    archive = ROOT / ".compass" / "work"
+    archive = archive_root() / ".compass" / "work"
     if not archive.is_dir():
         pytest.skip("no archive on this checkout - it is gitignored")
 

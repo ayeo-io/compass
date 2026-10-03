@@ -19,11 +19,18 @@ Scenario id: `TRC-E4`, the-vocabulary-rename/acceptance-criteria.md
 """
 from __future__ import annotations
 
+import sys
+
+import pytest
 import os
 import re
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+# The real archive is an opt-in: COMPASS_FULL_ARCHIVE=1 (tests/archive.py).
+sys.path.insert(0, str(REPO_ROOT / "tests"))
+from archive import NEEDS_FULL_ARCHIVE, full_archive  # noqa: E402
 
 CITATION = re.compile(r"\.compass/work/[a-z0-9-]+/[a-z.-]+\.(?:md|feature)")
 
@@ -170,7 +177,8 @@ def test_trc_e4_every_citation_into_the_archive_opens():
     is always the same shape - the record moved, and the pointer did not - and
     a reader needs to see the whole set at once rather than one per run.
     """
-    import pytest
+    if not full_archive():
+        pytest.skip(NEEDS_FULL_ARCHIVE)
 
     archive = REPO_ROOT / ".compass" / "work"
     if not archive.is_dir() or not any(archive.iterdir()):

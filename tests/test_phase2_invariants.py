@@ -23,6 +23,11 @@ import pytest
 import yaml
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+
+# The archive these tests read: the tracked sample, or this checkout's own
+# with COMPASS_FULL_ARCHIVE=1 (tests/archive.py).
+sys.path.insert(0, str(ROOT / "tests"))
+from archive import archive_root  # noqa: E402
 CLI = ROOT / "cli" / "compass"
 GOVERNANCE = ROOT / "governance"
 
@@ -56,7 +61,7 @@ def _archive_slugs():
     scenarios correctly never fires. Excluded rather than asserted over.
     A manifest that cannot be read counts as not a spike, so it is checked.
     """
-    work = ROOT / ".compass" / "work"
+    work = archive_root() / ".compass" / "work"
     if not work.is_dir():
         return [], []
     slugs, spikes = [], []
@@ -78,7 +83,7 @@ _SLUGS, _SPIKES = _archive_slugs()
 def test_trc_f2_the_archive_sweep_is_not_empty_and_covers_a_spike():
     """The per-issue sweep below is only a guard if it has issues to check,
     and its spike exclusion is only tested while a spike exists."""
-    if not (ROOT / ".compass" / "work").is_dir():
+    if not (archive_root() / ".compass" / "work").is_dir():
         return
     assert _SLUGS or _SPIKES, "no tasks on disk - this guard would be empty"
     assert _SPIKES, (
@@ -99,7 +104,7 @@ def test_trc_f2_adding_the_check_should_not_change_any_existing_tasks_result(slu
     """
     r = subprocess.run(
         [sys.executable, str(CLI), "check", "--verbose", "--issue", slug],
-        cwd=str(ROOT), capture_output=True, text=True, timeout=180)
+        cwd=str(archive_root()), capture_output=True, text=True, timeout=180)
     line = next((l for l in r.stdout.splitlines()
                  if "scenarios-are-executable" in l), "")
     assert line, (

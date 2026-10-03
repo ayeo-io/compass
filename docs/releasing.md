@@ -147,7 +147,10 @@ with the version hidden.
    flight or landed since the last release tag (`compass ci --since <tag>`).
    Once per release, run `COMPASS_FULL_ARCHIVE=1 make ci`, which checks
    every issue. (`compass ci` is what CI runs; failing it locally means CI
-   will fail.)
+   will fail.) Run `COMPASS_FULL_ARCHIVE=1 make test` too: the archive
+   tests then read every local issue instead of the tracked sample,
+   `tests/fixtures/archive-sample.tar.gz`, and the living-spec and citation
+   tests, which skip without it, run.
 
 5. **`make release`** - produces `dist/compass-<version>.tar.gz`.
 

@@ -31,6 +31,11 @@ from typing import Any, Dict, List, Optional
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+# The archive these tests read: the tracked sample, or this checkout's own
+# with COMPASS_FULL_ARCHIVE=1 (tests/archive.py).
+sys.path.insert(0, str(REPO_ROOT / "tests"))
+from archive import archive_root  # noqa: E402
 SCHEMA = REPO_ROOT / "schemas" / "manifest.schema.json"
 sys.path.insert(0, str(REPO_ROOT / "cli"))
 
@@ -191,7 +196,7 @@ def test_b4_landed_issues_still_resolve():
     documents stops resolving, the fallback is wrong.
     """
     from compass_pkg.core import artifact_path
-    work = REPO_ROOT / ".compass" / "work"
+    work = archive_root() / ".compass" / "work"
     if not work.is_dir():
         import pytest
         pytest.skip("no issue archive in this checkout")

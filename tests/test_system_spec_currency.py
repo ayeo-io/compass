@@ -10,6 +10,7 @@ Spec: living-spec-and-process-impact/acceptance-criteria.md (`TRC-A1`..`TRC-A3`,
 """
 from __future__ import annotations
 
+import sys
 import importlib.machinery
 import importlib.util
 import pathlib
@@ -21,6 +22,10 @@ import pytest
 import yaml
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+
+# The real archive is an opt-in: COMPASS_FULL_ARCHIVE=1 (tests/archive.py).
+sys.path.insert(0, str(ROOT / "tests"))
+from archive import NEEDS_FULL_ARCHIVE, full_archive  # noqa: E402
 CLI = ROOT / "cli" / "compass"
 SPEC = ROOT / "docs" / "system-spec.md"
 ARCHIVE = ROOT / "docs" / "system-spec-archive.md"
@@ -78,6 +83,8 @@ def _landed_slugs(work):
 def test_trc_a1_a_stale_derived_spec_should_fail_a_check():
     """Simulated by deriving into a sandbox and removing an issue's scenarios
     from the committed copy - the comparison must notice."""
+    if not full_archive():
+        pytest.skip(NEEDS_FULL_ARCHIVE)
     if not _archive_present():
         pytest.skip("no task archive in this checkout - see _archive_present()")
     tmp = _sandbox()
@@ -113,6 +120,8 @@ def _archive_present():
 def test_trc_a2_a_current_derived_spec_should_pass():
     """THE test. The committed file must equal a fresh derivation, and the
     derivation must be idempotent (ADR-008)."""
+    if not full_archive():
+        pytest.skip(NEEDS_FULL_ARCHIVE)
     if not _archive_present():
         pytest.skip("no .compass/work/ archive in this checkout (it is "
                     "gitignored), so there is nothing to derive from and "
@@ -132,6 +141,8 @@ def test_trc_a2_a_current_derived_spec_should_pass():
 
 
 def test_trc_a3_the_committed_spec_should_cover_every_landed_task():
+    if not full_archive():
+        pytest.skip(NEEDS_FULL_ARCHIVE)
     if not WORK.is_dir():
         return
     landed = _landed_slugs(WORK)
@@ -152,6 +163,8 @@ def test_trc_a3_the_committed_spec_should_cover_every_landed_task():
 # --- group B: house style ---------------------------------------------------
 
 def test_trc_b1_the_generator_should_normalise_house_style_on_write():
+    if not full_archive():
+        pytest.skip(NEEDS_FULL_ARCHIVE)
     tmp = _sandbox()
     try:
         # find a source title that carries an em dash, and prove it survives

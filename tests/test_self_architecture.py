@@ -40,6 +40,11 @@ import pytest
 import yaml
 
 FRAMEWORK_ROOT = Path(__file__).resolve().parent.parent
+
+# The archive these tests read: the tracked sample, or this checkout's own
+# with COMPASS_FULL_ARCHIVE=1 (tests/archive.py).
+sys.path.insert(0, str(FRAMEWORK_ROOT / "tests"))
+from archive import archive_root  # noqa: E402
 CLI_PATH = FRAMEWORK_ROOT / "cli" / "compass"
 ARCH_DIR = FRAMEWORK_ROOT / "architecture"
 DECISIONS_DIR = ARCH_DIR / "decisions"
@@ -346,16 +351,19 @@ def test_sha256_recorded_per_artifact():
         )
 
 
-def test_architect_lens_cites_own_adrs():
-    """The architecture-loaded.yml for Compass's own issue cites its ADRs
-    (TRC-C3)."""
-    # frame_load_architecture writes architecture-loaded.yml.
-    # Check the one in the current issue dir (if present) or derive fresh.
-    arch_loaded = FRAMEWORK_ROOT / ".compass" / "work" / "self-architecture" / "architecture-loaded.yml"
-    if not arch_loaded.is_file():
-        pytest.skip("architecture-loaded.yml not present for self-architecture task - "
-                    "run Frame to generate it")
-    data = yaml.safe_load(arch_loaded.read_text(encoding="utf-8"))
+def test_architect_lens_cites_own_adrs(tmp_path):
+    """Loading Compass's own architecture cites its ADRs (TRC-C3).
+
+    Derived fresh, not read from the issue's record: the record in the
+    archive was written on 2026-05-24 with an empty ADR list, before the
+    decision records were where the loader looks, and a test that read it
+    skipped for months on a stale issue name."""
+    import types as _types
+    source = CLI_PATH.read_text(encoding="utf-8")
+    mod = _types.ModuleType("compass_cli")
+    mod.__file__ = str(CLI_PATH)
+    exec(compile(source, str(CLI_PATH), "exec"), mod.__dict__)
+    data = mod.frame_load_architecture(str(FRAMEWORK_ROOT), str(tmp_path))
     adr_ids = [a["id"] for a in data.get("adrs", [])]
     assert "ADR-001" in adr_ids, (
         "architecture-loaded.yml must include ADR-001 in its adr list"
@@ -430,7 +438,7 @@ def test_policy_lint_passes():
 def test_lint_count_does_not_regress():
     """issue lint does not produce more errors than before (TRC-E4)."""
     # This test uses the current manifest.yml - if it lints clean, regression is OK.
-    task_yml = FRAMEWORK_ROOT / ".compass" / "work" / "self-architecture" / "manifest.yml"
+    task_yml = archive_root() / ".compass" / "work" / "compass-self-architecture" / "manifest.yml"
     if not task_yml.is_file():
         pytest.skip("self-architecture manifest.yml not present - cannot regression-check")
     result = run_cli("issue", "lint", "--file", str(task_yml))

@@ -1,6 +1,7 @@
 """`compass ci --since <ref>` fully checks only issues in flight and those
-landed after the ref: the faster-suite-and-release issue, scenario FS-C in
-`docs/system-spec.md`.
+landed after the ref: the faster-suite-and-release issue, scenario FS-C. A
+scenario is in `docs/system-spec.md` while current and in
+`docs/system-spec-archive.md` once a later one supersedes it.
 
 Each test builds a git repository with three commits and a tag on the
 second, and a Compass project whose issues landed at different points.

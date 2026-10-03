@@ -19,6 +19,7 @@ Spec: record-keeping-integrity/acceptance-criteria.md
 # `compass check --verbose` prints.
 from __future__ import annotations
 
+import sys
 import json
 import re
 import pathlib
@@ -27,6 +28,11 @@ import pytest
 import yaml
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+
+# The archive these tests read: the tracked sample, or this checkout's own
+# with COMPASS_FULL_ARCHIVE=1 (tests/archive.py).
+sys.path.insert(0, str(ROOT / "tests"))
+from archive import archive_root  # noqa: E402
 
 
 def _read(rel):
@@ -361,10 +367,10 @@ def _pre_existing_task_slugs():
     here would make this test fail for the duration of every future issue,
     which is a test that reports on the calendar rather than on the change.
     """
-    work = ROOT / ".compass" / "work"
+    work = archive_root() / ".compass" / "work"
     if not work.is_dir():
         return []
-    current = (ROOT / ".compass" / "current-task")
+    current = (archive_root() / ".compass" / "current-task")
     in_flight = current.read_text().strip() if current.is_file() else ""
     # Same principle for issues the manifest says have not started or will not
     # finish: 'queued', 'parked', and 'abandoned' work has no green run by
@@ -397,7 +403,7 @@ def test_trc_f1_existing_tasks_still_pass(slug):
 
     r = subprocess.run(
         [sys.executable, str(ROOT / "cli" / "compass"), "check", "--verbose", "--issue", slug],
-        capture_output=True, text=True, timeout=120, cwd=str(ROOT))
+        capture_output=True, text=True, timeout=120, cwd=str(archive_root()))
     assert r.returncode == 0, (
         f"adding declared-tests-resolve broke {slug}, already on disk:\n"
         f"{r.stdout[-1500:]}")

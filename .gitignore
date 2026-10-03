@@ -77,3 +77,8 @@ examples/bdd-adapters/*/node_modules/
 examples/bdd-adapters/*/features/*.feature
 examples/bdd-adapters/*/.compass/work/*/spec.feature
 examples/bdd-adapters/*/.compass/work/*/acceptance-criteria.feature
+
+# The unpacked archive sample (tests/archive.py). The packed sample itself is
+# tracked, though other .tar.gz files are not.
+/.compass/archive-sample-cache/
+!/tests/fixtures/archive-sample.tar.gz

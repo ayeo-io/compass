@@ -128,6 +128,7 @@ EXPECTED_PUBLIC_SUBCOMMANDS = {
                                   # later quick-fix verb has a home.
     "lesson",                     # project-lessons (ADR-029)
     "run",                        # headless-runner (ADR-030)
+    "record",                     # delivery-record (ADR-031)
     "decision",                   # decisions-ledger (ADR-027): record|list|
                                   # show|check, the settled-decisions ledger.
                                   # A GROUP; record reads the decider from git.

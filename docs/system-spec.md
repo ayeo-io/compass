@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a project and an issue made with the 5.0.0 CLI, when the working tree's CLI reads them, then every manifest loads and compass check gives the same gate-by-gate verdict.
+### Given the contribution guide, then it names the required CI check, how review works with the automatic review off, the review rules file, the code owners and the house rules, and every path it names exists.
 
-- **Scenario id:** `UP-1`
+- **Scenario id:** `CG-1`
 - **Intent:** `INT-1`
-- **Source issue:** `upgrade-from-5-0-0`
+- **Source issue:** `contribution-guide`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1526 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1533 superseded scenario(s) are in `docs/system-spec-archive.md`.

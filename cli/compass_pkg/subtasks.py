@@ -16,19 +16,24 @@
 # status, `attempts`, the revision last reviewed, findings not yet resolved,
 # and every review round.
 #
-# The round count is recorded, not capped. The spike that adopted this loop
-# (docs/compass/2026-08-27-sdd-loop-spike.md) deferred a fix-round cap until
-# Compass has its own rounds to size it from.
+# The loop stops at ceilings set by the `loop_ceilings` rules in
+# governance/routing-policy.yml: tries, review rounds, replans, and the
+# same error reported in a row. Another try or replan past one is
+# refused. A review round past one is still recorded, because it happened,
+# and `compass check` then refuses to land the subtask until a stop reason
+# with an evidence file says why. A ceiling reached is a stop, not a success.
 #
 # Every value that reaches git or the file system is checked first: the base
 # is resolved to a full commit id, a subtask id is a plain name, and every
 # path stays inside the project.
 #
-# DEPENDENCY: standard library (os, re, subprocess) and compass_pkg.core.
+# DEPENDENCY: standard library (hashlib, os, re, subprocess),
+# compass_pkg.core and compass_pkg.loop_ceilings.
 # =============================================================================
 """`compass issue subtask`: record, resume and package a multiagent run."""
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import subprocess
@@ -36,6 +41,8 @@ import subprocess
 from compass_pkg.core import (CompassError, docs_dir, find_upwards,
                               load_manifest, now_iso, resolve_issue_dir,
                               save_manifest)
+from compass_pkg.loop_ceilings import (LOOP_CEILINGS_FROM, loop_ceilings,
+                                       on_or_after)
 
 #: dispatched - a builder has its brief; reported - its result is recorded;
 #: reviewing - a review of the latest package is under way; integrating -
@@ -65,6 +72,42 @@ CADENCE = {
     "cross-cutting": "a review of each subtask's package before integration, and one after",
     "critical": "a review of each subtask's package before integration, with a second reviewer, and one after",
 }
+
+
+def _int(value, default):
+    """A count from the manifest, or the default when it is not a number:
+    a hand-edited value must not crash the command that reads it."""
+    if isinstance(value, str) and value.strip().isdecimal():
+        return int(value)
+    return value if isinstance(value, int) and not isinstance(value, bool) \
+        else default
+
+
+def error_refusal(subtask, ceilings):
+    """Why the subtask is stopped by a repeated error, or None."""
+    if "repeated_error" in ceilings:
+        limit, rid = ceilings["repeated_error"]
+        repeats = _int(subtask.get("error_repeat_count"), 0)
+        if repeats >= limit:
+            return (f"its builder reported the same error {repeats} times, "
+                    f"the ceiling {rid} sets")
+    return None
+
+
+def attempt_refusal(subtask, ceilings):
+    """Why another try at this subtask is refused, or None."""
+    attempts = _int(subtask.get("attempts"), 1)
+    if "builder_attempts" in ceilings:
+        limit, rid = ceilings["builder_attempts"]
+        if attempts >= limit:
+            return (f"it has had {attempts} attempts, the ceiling {rid} "
+                    f"sets")
+    return error_refusal(subtask, ceilings)
+
+
+def error_digest(text):
+    """The same error reported with different spacing is the same error."""
+    return hashlib.sha256(" ".join(text.split()).encode("utf-8")).hexdigest()[:16]
 
 
 def _root(task_dir):
@@ -205,8 +248,31 @@ def cmd_subtask_update(args):
         s["status"] = args.status
     if args.reviewed:
         s["reviewed_revision"] = _commit(root, args.reviewed, "reviewed revision")
-    if args.attempt:
-        s["attempts"] = int(s.get("attempts") or 0) + 1
+    if args.error is not None:
+        digest = error_digest(args.error)
+        repeats = _int(s.get("error_repeat_count"), 0)
+        s["error_repeat_count"] = repeats + 1 \
+            if s.get("last_error_digest") == digest else 1
+        s["last_error_digest"] = digest
+    if (args.stop_reason is None) != (args.stop_evidence is None):
+        raise CompassError("compass issue subtask: a stop needs both "
+                           "--stop-reason and --stop-evidence: the reason, "
+                           "and the file that shows it.")
+    if args.stop_reason is not None:
+        if not args.stop_reason.strip():
+            raise CompassError("compass issue subtask: --stop-reason is empty. "
+                               "Say why the subtask stopped.")
+        s["stopped_reason"] = {
+            "reason": args.stop_reason.strip(),
+            "evidence": _inside(root, args.stop_evidence, "stop evidence"),
+            "at": now_iso()}
+    ceilings = loop_ceilings(task)
+    # A refused try refuses only the try. The rest of the call - the
+    # error that caused the refusal among it - is still recorded, or the
+    # repeat count could be kept below its ceiling by asking again.
+    refusal = attempt_refusal(s, ceilings) if args.attempt else None
+    if args.attempt and not refusal:
+        s["attempts"] = _int(s.get("attempts"), 0) + 1
     findings = s.setdefault("findings", [])
     if args.finding:
         findings.append({"text": args.finding, "resolved": False})
@@ -219,6 +285,14 @@ def cmd_subtask_update(args):
         rounds = s.setdefault("review_rounds", [])
         rounds.append({"round": len(rounds) + 1, "verdict": args.round,
                        "at": now_iso()})
+        limit, rid = ceilings.get("review_rounds", (None, None))
+        if limit is not None and len(rounds) > limit \
+                and "stopped_reason" not in s \
+                and on_or_after(task.get("created"), LOOP_CEILINGS_FROM):
+            print(f"compass issue subtask: {args.id} has {len(rounds)} review "
+                  f"rounds, past its ceiling of {limit} ({rid}). The run "
+                  f"cannot land until --stop-reason and --stop-evidence "
+                  f"record why.")
     if args.cost is not None:
         # One cost per try, keyed by the try, and `cost` their total: a
         # subtask sent back for another try keeps what the earlier tries
@@ -251,6 +325,14 @@ def cmd_subtask_update(args):
     if not findings:
         s.pop("findings")
     save_manifest(task, path)
+    if refusal:
+        then = ("The stop reason given is recorded." if "stopped_reason" in s
+                else f"Record why it stopped with `compass issue subtask "
+                     f"update {args.id} --stop-reason TEXT --stop-evidence "
+                     f"FILE`, or replan the work.")
+        raise CompassError(
+            f"compass issue subtask: refusing another attempt at {args.id}: "
+            f"{refusal}. The rest of this update is recorded. {then}")
     print(f"compass issue subtask: {args.id} updated ({s.get('status')}).")
     return 0
 
@@ -267,9 +349,11 @@ def cmd_subtask_next(args):
     if not subtasks and not unrecorded:
         print("compass issue subtask next: no subtask is recorded yet.")
         return 0
-    open_ = [s for s in subtasks if s.get("status") != "done"]
+    open_ = [s for s in subtasks if s.get("status") != "done"
+             and "stopped_reason" not in s]
+    ceilings = loop_ceilings(task)
     if not open_ and not unrecorded:
-        print("compass issue subtask next: every subtask is done.")
+        print("compass issue subtask next: every subtask is done or stopped.")
         return 0
     # Work already under way resumes before work not yet started.
     order = {st: i for i, st in enumerate(reversed(STATUSES))}
@@ -278,7 +362,14 @@ def cmd_subtask_next(args):
     if risk in CADENCE:
         print(f"  risk {risk}: {CADENCE[risk]}")
     for s in open_:
-        line = (f"  {s['id']}  {s.get('status')}  attempt {s.get('attempts', 1)}"
+        refusal = error_refusal(s, ceilings)
+        if refusal:
+            # The same error again and again: the work is not handed out.
+            print(f"  {s['id']}  refused  {refusal}; record a stop reason "
+                  f"or replan")
+            continue
+        attempts = _int(s.get("attempts"), 1)
+        line = (f"  {s['id']}  {s.get('status')}  attempt {attempts}"
                 f"  base {str(s.get('base_sha', '?'))[:12]}")
         if s.get("reviewed_revision"):
             line += f"  reviewed {s['reviewed_revision'][:12]}"
@@ -288,11 +379,38 @@ def cmd_subtask_next(args):
                            ("package", "package")):
             if s.get(key):
                 print(f"      {label}: {s[key]}")
+        if "builder_attempts" in ceilings:
+            limit, rid = ceilings["builder_attempts"]
+            if attempts >= limit:
+                print(f"      attempt {attempts} of {limit} ({rid}): the "
+                      f"last one; another is refused")
         for f in s.get("findings") or []:
             if not f.get("resolved"):
                 print(f"      unresolved: {f.get('text')}")
     for sid in unrecorded:
         print(f"  {sid}  not yet dispatched  (named in the distribution map)")
+    return 0
+
+
+def cmd_subtask_replan(args):
+    task_dir, task, path, _ = _load(args)
+    if not (args.reason or "").strip():
+        raise CompassError("compass issue subtask: --reason is empty. Say why "
+                           "the breakdown is replanned.")
+    replans = task.setdefault("replans", [])
+    if not isinstance(replans, list):
+        raise CompassError("compass issue subtask: the manifest's `replans:` "
+                           "is not a list.")
+    limit, rid = loop_ceilings(task).get("replans", (None, None))
+    if limit is not None and len(replans) >= limit:
+        raise CompassError(
+            f"compass issue subtask: refusing another replan: the run has had "
+            f"{len(replans)} replans, the ceiling {rid} sets. A breakdown "
+            f"that does not settle is a stop: record a stop reason on each "
+            f"open subtask, and ask.")
+    replans.append({"reason": args.reason.strip(), "at": now_iso()})
+    save_manifest(task, path)
+    print(f"compass issue subtask: replan {len(replans)} recorded.")
     return 0
 
 
@@ -357,7 +475,10 @@ def register(issue_subparsers, issue_arg):
                     "review rounds, the cost, or another attempt. A cost "
                     "over the budget adds a finding. --try names the try a "
                     "cost belongs to; a try beyond what has been dispatched "
-                    "is refused.")
+                    "is refused. Another attempt is refused past the "
+                    "loop_ceilings rules in routing-policy.yml; --error "
+                    "counts a repeated error, and --stop-reason with "
+                    "--stop-evidence records why a subtask stopped.")
     u.add_argument("id")
     u.add_argument("--status", help=" | ".join(STATUSES))
     u.add_argument("--brief", help="the brief for this attempt; the earlier one is kept")
@@ -374,7 +495,17 @@ def register(issue_subparsers, issue_arg):
                    help="the try this cost belongs to; without it, a cost "
                         "given with --attempt belongs to the try before the "
                         "new one, otherwise to the current try")
-    u.add_argument("--attempt", action="store_true", help="count another attempt")
+    u.add_argument("--attempt", action="store_true",
+                   help="count another attempt; refused past the attempt or "
+                        "repeated-error ceiling")
+    u.add_argument("--error",
+                   help="the error the builder reported; the same error in a "
+                        "row is counted")
+    u.add_argument("--stop-reason", dest="stop_reason",
+                   help="why the subtask stopped short of done, or went past "
+                        "a ceiling; needs --stop-evidence")
+    u.add_argument("--stop-evidence", dest="stop_evidence",
+                   help="the file that shows the stop reason")
     issue_arg(u)
     u.set_defaults(func=cmd_subtask_update, output_kind="hand-off")
 
@@ -384,9 +515,20 @@ def register(issue_subparsers, issue_arg):
                     "with its status, attempt, base commit, the revision last "
                     "reviewed, its files and its unresolved findings, and the "
                     "review cadence the issue's risk calls for, so a fresh "
-                    "session resumes an interrupted run from the record alone.")
+                    "session resumes an interrupted run from the record alone. "
+                    "A subtask whose builder reported the same error up to "
+                    "its ceiling is listed as refused, with the reason; one "
+                    "at its attempt ceiling is marked as on its last attempt.")
     issue_arg(n)
     n.set_defaults(func=cmd_subtask_next, output_kind="hand-off")
+
+    r = sub.add_parser(
+        "replan", help="record a replan of the breakdown",
+        description="Record that the breakdown was replanned, and why. "
+                    "Refused past the replan ceiling in routing-policy.yml.")
+    r.add_argument("--reason", required=True, help="why the work is replanned")
+    issue_arg(r)
+    r.set_defaults(func=cmd_subtask_replan, output_kind="hand-off")
 
     k = sub.add_parser(
         "package", help="write the review package: the diff from the base commit",

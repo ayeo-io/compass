@@ -55,6 +55,7 @@ from compass_pkg.policy import _jsonschema_errors, _lint_errors_guardrails, _lin
 _DRIFT_RULE_SOURCES = (
     ("routing-policy.yml", ("routing_guardrails", "floors"), "floor"),
     ("routing-policy.yml", ("routing_guardrails", "caps"), "cap"),
+    ("routing-policy.yml", ("routing_guardrails", "loop_ceilings"), "loop ceiling"),
     ("routing-policy.yml", ("routing_guardrails", "immovable_gates"), "immovable gate"),
     ("routing-policy.yml", ("routing_guardrails", "role_rules"), "role rule"),
     ("routing-policy.yml", ("routing_strategies", "default_shapes"), "route shape"),

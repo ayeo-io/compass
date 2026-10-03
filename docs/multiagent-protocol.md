@@ -169,6 +169,34 @@ A finding answered by a later try, or one the orchestrator decides not to act
 on, is marked resolved with `--resolve <n>`. The reason for each one not
 acted on is listed at the end of the run as a decision taken for the user.
 
+**Ceilings.** The `loop_ceilings` rules in `governance/routing-policy.yml`
+bound the loop. With the shipped rules a subtask gets 3 tries, 2 review
+rounds at trivial or contained risk and 3 otherwise, and the run gets 2
+replans. Record each error a builder reports, so the same error in a row is
+counted:
+
+```
+compass issue subtask update <id> --error "<the error text>"
+```
+
+Another try is refused at the try ceiling, or once the same error
+has been reported 3 times in a row. `subtask next` lists a subtask stopped
+by a repeated error as refused, and marks one at the try ceiling as on
+its last attempt. A review round past the ceiling is recorded, but the run cannot
+land until the subtask records why. A replan is recorded, and refused past
+its ceiling, with:
+
+```
+compass issue subtask replan --reason "<why>"
+```
+
+A ceiling reached is a stop, not a success. Stop the subtask with a reason
+and a file that shows it, and ask the person who owns the issue:
+
+```
+compass issue subtask update <id> --stop-reason "<why>" --stop-evidence <file>
+```
+
 **The integrated result.** After the last wave integrates (Step 6), write
 the whole change since the first wave's base to a file, and review it the
 same way, with the brief and report named `integrated-review-brief-<round>.md`
@@ -246,6 +274,9 @@ issue landed: that is `ship-commit`'s alone.
 | 5 | `subtask update --finding` | one finding per call |
 | 5 | `subtask update --brief`, with the try flag | a new brief, the earlier one kept, and the try counted |
 | 5 | `subtask update --resolve` | a finding marked resolved |
+| 5 | `subtask update --error` | the error's digest, and how many times in a row it was reported |
+| 5 | `subtask replan` | a replan and its reason |
+| 5 | `subtask update --stop-reason --stop-evidence` | why the subtask stopped, and the file that shows it |
 | 6 | `subtask update --status done` | status `done` |
 
 An interrupted run resumes from `compass issue subtask next`, which names
@@ -255,8 +286,11 @@ does not appear in it: read the remaining waves from the map.
 
 ## At the end of the run
 
-- Every subtask is `done` with a passing last review round; otherwise
-  `compass check` fails `multiagent-run-recorded` once every gate has passed.
+- Every subtask is `done` with a passing last review round, or stopped with
+  a recorded reason; otherwise `compass check` fails
+  `multiagent-run-recorded` once every gate has passed. It also fails a
+  subtask past its try or review-round ceiling that records no stop
+  reason, on an issue created on or after 2026-10-03.
   The check judges the subtasks the manifest records, so the orchestrator
   checks that every row of the map was recorded.
 - The run record, `docs/compass/<created>-<slug>-run-<n>.md`, states the

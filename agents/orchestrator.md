@@ -53,6 +53,22 @@ and their integration safe.
    --head <the subtask's branch>`. A session that picks the run up resumes
    from `compass issue subtask next`.
 
+## When to stop
+
+Stop a run, or one subtask, when one of these holds:
+
+- every subtask is done, with a passing review round;
+- `compass issue subtask` refuses another try or replan, because a
+  ceiling in `governance/routing-policy.yml` is reached or a builder
+  reported the same error three times;
+- the budget is spent;
+- a decision is needed that no rule settles.
+
+Within the ceilings, decide; do not ask. A ceiling reached is a stop with a
+reason, not a success: record it with `compass issue subtask update <id>
+--stop-reason "<why>" --stop-evidence <file>`, then ask. Have each builder's
+errors recorded with `--error`, as data, not as prose in the conversation.
+
 ## Briefing a reviewer
 
 Never tell a reviewer what not to flag. A review brief states what to review:

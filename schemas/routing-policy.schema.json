@@ -156,6 +156,43 @@
             }
           }
         },
+        "loop_ceilings": {
+          "type": "array",
+          "description": "How far a multiagent run may go before it stops with a reason. For each ceiling the lowest limit among the matching rules applies.",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "ceiling",
+              "limit",
+              "rationale"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "ceiling": {
+                "type": "string",
+                "enum": [
+                  "builder_attempts",
+                  "review_rounds",
+                  "replans",
+                  "repeated_error"
+                ]
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "when": {
+                "type": "object"
+              },
+              "rationale": {
+                "type": "string"
+              }
+            }
+          }
+        },
         "immovable_gates": {
           "type": "array",
           "items": {

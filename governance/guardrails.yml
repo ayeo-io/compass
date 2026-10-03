@@ -27,7 +27,7 @@
 # schemas/guardrails.schema.json.
 # =============================================================================
 
-version: 1.25.1
+version: 1.26.0
 # -----------------------------------------------------------------------------
 # Named checks - the mechanical checks `compass check` knows how to run. Each
 # guardrail below references one or more of these by name. The check reads
@@ -144,7 +144,12 @@ checks:
       only if created on or after 2026-09-26 - a missing `created:` never
       qualifies on the date alone. Once ready, fails on a manifest with no
       `subtasks:`, a subtask that is not `done`, or a subtask whose last
-      review round is missing or `fail`.
+      review round is missing or `fail`. A subtask with a `stopped_reason`
+      is judged on the stop instead: it passes when the stop names a reason
+      and an evidence file that exists. For an issue created on or after
+      2026-10-03, a subtask with more tries or review rounds than its
+      `loop_ceilings` rule in routing-policy.yml fails unless it records a
+      stop reason.
 
 # -----------------------------------------------------------------------------
 # Evidence types - what KINDS of evidence a gate can be cleared with. Without

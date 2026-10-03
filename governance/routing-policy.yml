@@ -17,7 +17,7 @@
 # framework for everyone - see routing-policy.md.
 # =============================================================================
 
-version: 2.13.0
+version: 2.14.0
 # -----------------------------------------------------------------------------
 # ROUTING STRATEGIES - soft. They BIAS the candidate delivery approach. The evaluator uses
 # them in composition (step 1); a later rule can override the result.
@@ -164,6 +164,38 @@ routing_guardrails:
       when: { risk: critical }
       max_worktrees: 1
       rationale: "Coordination risk on critical changes outweighs parallelism."
+
+  # loop_ceilings - how far a multiagent run may go before it stops with a
+  # reason. `compass issue subtask` refuses another try or replan past
+  # one, and `compass check` refuses to land a subtask past one unless a
+  # stop reason with evidence is recorded. For each ceiling the LOWEST limit
+  # among the matching rules applies, so a rule can only lower a limit. A
+  # ceiling reached is a stop, not a success.
+  # The limits are a starting point. Of the 49 subtasks recorded before
+  # these rules, 16 went past three tries or two review rounds; the next
+  # runs are the measurement that should tune them.
+  loop_ceilings:
+    - id: RP-LOOP-001
+      ceiling: builder_attempts
+      limit: 3
+      rationale: "A builder that has failed three times needs a new brief or a stop, not a fourth try."
+    - id: RP-LOOP-002
+      ceiling: review_rounds
+      limit: 3
+      rationale: "Review rounds past three mean the brief or the plan is wrong; record why before landing."
+    - id: RP-LOOP-003
+      ceiling: review_rounds
+      when: { risk: [trivial, contained] }
+      limit: 2
+      rationale: "A contained change that has not passed in two rounds needs a recorded reason."
+    - id: RP-LOOP-004
+      ceiling: replans
+      limit: 2
+      rationale: "A breakdown replanned twice is not converging; stop and ask."
+    - id: RP-LOOP-005
+      ceiling: repeated_error
+      limit: 3
+      rationale: "The same error three times is a failure, not a reason for a fourth attempt."
 
   # immovable_gates - review gates no delivery approach may drop.
   # These three are "the default guardrails in review form": every delivery

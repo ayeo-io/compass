@@ -66,8 +66,8 @@ read the dimensions.
    and why. A policy `floor` or an `immovable_gate` cannot be
    overridden - that needs a change to `governance/routing-policy.yml`,
    not overriding one issue's approach.
-7. **Write the `.compass/current-task` pointer** with the issue slug, so
-   every later `compass` call resolves to this issue.
+7. **Set the `.compass/current-task` pointer** with `compass issue use
+   <slug>`, so every later `compass` call resolves to this issue.
 8. **On a spike, write the `.spike` marker.** When the CLI's approach is a
    spike, drop a `.compass/work/<issue-slug>/.spike` marker file alongside
    `delivery-approach.md`. The approach-aware pre-tool hook reads it to

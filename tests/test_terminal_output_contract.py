@@ -988,6 +988,7 @@ _TAIL_EXEMPT = {
     "record sync": "needs a record repository to push to; test_delivery_record.py runs it against a local one, without measuring its output against this contract",
     "record restore": "needs a record repository to read; test_delivery_record.py runs it against a local one, without measuring its output against this contract",
     "run": "starts claude sessions, so it needs a stub executable the fixture does not have; test_headless_runner.py runs it against one, without measuring its output against this contract",
+    "issue use": "writes the pointer and the session record of an existing issue; test_current_task_lease.py runs it, without measuring its output against this contract",
     "issue subtask replan": "writes the manifest of an existing multiagent issue; test_loop_ceilings.py runs it, without measuring its output against this contract",
     "issue subtask package": "needs a git history to diff, which the fixture does not have; test_subtask_record.py runs it, without measuring its output against this contract",
     "plan lint": "needs a design with placeholders to say anything",

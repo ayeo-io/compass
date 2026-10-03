@@ -82,6 +82,14 @@ REFUSALS: dict[str, dict[str, str]] = {
         "fix": "set COMPASS_ISSUE to a real issue slug, or unset it to use "
                ".compass/current-task, then retry.",
     },
+    "pointer-moved": {
+        "what": "this edit",
+        "why": "another session moved .compass/current-task from this "
+               "session's issue '{previous}' to '{slug}', so this edit would "
+               "count against the wrong issue.",
+        "fix": "in this session, run `compass issue use {previous}` to carry "
+               "on, or `compass issue use {slug}` to switch, then retry.",
+    },
     "no-delivery-approach": {
         "what": "this edit",
         "why": "issue '{slug}' has no delivery-approach.md - its "

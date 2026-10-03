@@ -336,6 +336,11 @@ def cmd_quick_fix_start(args):
     with open(os.path.join(project_root, ".compass", "current-task"),
              "w", encoding="utf-8") as fh:
         fh.write(slug + "\n")
+    # The session that moved the pointer works on the new issue, so the
+    # pre-tool hook does not refuse its own edits as pointer-moved.
+    from compass_pkg.session_lease import SESSION_ENV, record
+    record(os.path.join(project_root, ".compass"),
+           os.environ.get(SESSION_ENV, ""), slug)
 
     _write_start_state(project_root, slug)
 

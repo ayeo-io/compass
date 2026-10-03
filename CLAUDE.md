@@ -14,8 +14,9 @@ and the things it does not claim.
 
 - `/compass:assess` writes `.compass/current-task`, a one-line pointer to the
   active issue. `compass check`, `compass tdd-red` and the pre-tool hook all
-  resolve the current issue through it. Keep it pointing at the issue you are
-  working on.
+  resolve the current issue through it. Move it with `compass issue use
+  <slug>`, not by writing the file: the hook records each session's issue,
+  and refuses an edit (`pointer-moved`) when another session moved it.
 - `/compass:assess --reassess` re-runs the evaluator and records the change in
   the manifest's `reassessments:` log.
 - Pass `--reason "..."` with it. `compass retro` aggregates those across issues

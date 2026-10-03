@@ -86,7 +86,9 @@ Then open `.compass/work/<issue>/README.md`. It tells you:
 - the proposed approach;
 - what needs human approval;
 - which artifacts will be produced;
-- what Compass deliberately omitted, and why; and
+- what Compass deliberately omitted, and why;
+- each scenario's red, green and evidence, with a diagram from intent to
+  scenario to test to evidence that renders in a Markdown preview; and
 - the next action.
 
 Approve or correct the assessment before continuing. A good delivery

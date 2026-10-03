@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the change, then a decision record states the choice of a second private repository, and the restore drill has been run once from a fresh clone.
+### Given a record holding a .gitignore or a submodule entry, then sync still records every file or refuses the submodule, a restore that copies nothing says why, and the clone runs with LFS filters off.
 
-- **Scenario id:** `DR-E`
+- **Scenario id:** `RG-1`
 - **Intent:** `INT-1`
-- **Source issue:** `delivery-record`
+- **Source issue:** `record-sync-gaps`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1488 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1489 superseded scenario(s) are in `docs/system-spec-archive.md`.

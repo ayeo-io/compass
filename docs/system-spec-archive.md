@@ -10458,3 +10458,17 @@
 - **Intent:** `INT-1`
 - **Source issue:** `pointer-lease`
 - **Landed:** 2026-10-03
+
+### Given the session-issue variable, no session id, or a session record older than 12 hours, then the hook refuses nothing for a moved pointer. _(archived)_
+
+- **Scenario id:** `CL-D`
+- **Intent:** `INT-1`
+- **Source issue:** `pointer-lease`
+- **Landed:** 2026-10-03
+
+### Given the session table, then concurrent writes keep every record, stale records are dropped when it is written, the table is ignored by git in any project, and a pointer-moved refusal is counted against the session's own issue. _(archived)_
+
+- **Scenario id:** `ST2-1`
+- **Intent:** `INT-1`
+- **Source issue:** `session-table-tidy`
+- **Landed:** 2026-10-03

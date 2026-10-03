@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the session-issue variable, no session id, or a session record older than 12 hours, then the hook refuses nothing for a moved pointer.
+### Given a script that sets pipefail, then it never pipes into grep -q, because a grep that exits at its first match can fail the pipe and turn a found line into a missing one.
 
-- **Scenario id:** `CL-D`
+- **Scenario id:** `GQ-1`
 - **Intent:** `INT-1`
-- **Source issue:** `pointer-lease`
+- **Source issue:** `grep-q-under-pipefail`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1493 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1495 superseded scenario(s) are in `docs/system-spec-archive.md`.

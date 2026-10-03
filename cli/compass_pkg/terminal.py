@@ -570,6 +570,25 @@ class Report:
         return 0
 
 
+def _project_root():
+    try:
+        from compass_pkg.core import find_compass_dir
+        return os.path.dirname(find_compass_dir())
+    except Exception:  # noqa: BLE001 - outside a project, nothing to relativise
+        return None
+
+
+def _relative(text, root):
+    from compass_pkg.render import relative_paths
+    return relative_paths(text, root)
+
+
+def relative_to_project(text):
+    """`text` with absolute paths under the project made relative (#291), for
+    the verbs that print rather than going through `say()`."""
+    return _relative(text, _project_root())
+
+
 def say(args, outcome, detail=None, read=None, reply=None, decision=False, **data):
     """One hand-off, from a verb that has a single thing to report.
 
@@ -603,6 +622,12 @@ def say(args, outcome, detail=None, read=None, reply=None, decision=False, **dat
     if getattr(args, "evidence_out", None):
         write_capture(args.evidence_out,
                       "\n".join([str(outcome)] + [str(d) for d in (detail or [])]))
+    # A person or the model reading this opens paths relative to the project
+    # (#291). The --json mode above keeps this verb's data as given; verbs
+    # that print their own lines are relativised where they print.
+    root = _project_root()
+    outcome = _relative(outcome, root)
+    detail = [_relative(str(d), root) for d in (detail or [])]
     if mode == "quiet":
         if decision:
             # `--quiet` is "errors and the decision hand-off only", so a run

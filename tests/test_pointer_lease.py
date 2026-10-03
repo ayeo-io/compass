@@ -154,3 +154,12 @@ def test_cl_d_no_session_id_and_a_stale_record_refuse_nothing(project):
     table.write_text(json.dumps(data))
     assert _use(project, "session-b", "why").returncode == 0
     assert _edit(project, "session-a").returncode == 0
+
+
+def test_cl_d_a_lease_check_that_crashes_refuses_the_edit(project):
+    """Hooks fail closed: a lease check that cannot run refuses, naming
+    what failed, rather than letting the edit through unchecked."""
+    (project / ".compass" / "sessions.json").mkdir()
+    result = _edit(project, "session-a")
+    assert result.returncode == 2, result.stderr
+    assert "reader-failed" in result.stderr and "session" in result.stderr

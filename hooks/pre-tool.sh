@@ -722,7 +722,9 @@ fi
 # (session_lease.py). Only when the pointer named the issue: COMPASS_ISSUE
 # names one session's issue, and the fallback names none.
 if [ -z "${COMPASS_ISSUE:-}" ] && [ -n "${SESSION_ID:-}" ] && [ -n "$TASK_DIR" ]; then
-  LEASE="$(compass_python - "$COMPASS_DIR" "$SESSION_ID" "$SLUG" 2>/dev/null <<'PYEOF'
+  LEASE_ERR="$(mktemp 2>/dev/null)" || compass_reader_failed "session lease reader" tmp
+  set +e
+  LEASE="$(compass_python - "$COMPASS_DIR" "$SESSION_ID" "$SLUG" 2>"$LEASE_ERR" <<'PYEOF'
 import sys
 
 import compass_pkg                      # noqa: F401 - puts vendor on sys.path
@@ -730,7 +732,13 @@ from compass_pkg.session_lease import check
 
 print(check(*sys.argv[1:]))
 PYEOF
-)" || LEASE=""
+)"
+  LEASE_STATUS=$?
+  set -e
+  # Fails closed: a lease check that cannot run refuses, as every reader
+  # in this hook does.
+  [ "$LEASE_STATUS" -eq 0 ] || compass_reader_failed "session lease reader" "$LEASE_STATUS" "$LEASE_ERR"
+  rm -f "$LEASE_ERR"
   case "$LEASE" in
     moved:*) compass_block pointer-moved "slug=$SLUG" "previous=${LEASE#moved:}" ;;
   esac

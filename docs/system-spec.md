@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given Compass 5.3.0, then every location that carries the version says 5.3.0
+### Given a run at its replan ceiling, when another replan is recorded, then subtask replan refuses it and names the ceiling.
 
-- **Scenario id:** `RL-A`
+- **Scenario id:** `LC-F`
 - **Intent:** `INT-1`
-- **Source issue:** `release-5-3-0`
+- **Source issue:** `loop-ceilings`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1451 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1457 superseded scenario(s) are in `docs/system-spec-archive.md`.

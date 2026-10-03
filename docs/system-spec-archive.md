@@ -10164,3 +10164,45 @@
 - **Intent:** `INT-1`
 - **Source issue:** `issue-overview`
 - **Landed:** 2026-10-03
+
+### Given Compass 5.3.0, then every location that carries the version says 5.3.0 _(archived)_
+
+- **Scenario id:** `RL-A`
+- **Intent:** `INT-1`
+- **Source issue:** `release-5-3-0`
+- **Landed:** 2026-10-03
+
+### Given the shipped routing policy, then an issue's ceilings resolve from loop_ceilings rules with RP- ids, the lowest matching limit wins, and a policy without the rules gives no ceiling and a drift report naming the missing ids. _(archived)_
+
+- **Scenario id:** `LC-A`
+- **Intent:** `INT-1`
+- **Source issue:** `loop-ceilings`
+- **Landed:** 2026-10-03
+
+### Given a subtask whose builder reported the same error three times, when another attempt is asked for, then the update refuses it and names the repeated error, and subtask next lists the subtask as refused. _(archived)_
+
+- **Scenario id:** `LC-B`
+- **Intent:** `INT-1`
+- **Source issue:** `loop-ceilings`
+- **Landed:** 2026-10-03
+
+### Given a subtask at its attempt ceiling, when another attempt is asked for, then the update refuses it and names the ceiling and its rule id. _(archived)_
+
+- **Scenario id:** `LC-C`
+- **Intent:** `INT-1`
+- **Source issue:** `loop-ceilings`
+- **Landed:** 2026-10-03
+
+### Given a multiagent issue whose subtask has more review rounds than its ceiling, then compass check fails it until a stop reason is recorded with an evidence file, and a subtask stopped that way passes without being done. _(archived)_
+
+- **Scenario id:** `LC-D`
+- **Intent:** `INT-1`
+- **Source issue:** `loop-ceilings`
+- **Landed:** 2026-10-03
+
+### Given an issue created before the ceilings existed, then compass check judges it as before, whatever its counts. _(archived)_
+
+- **Scenario id:** `LC-E`
+- **Intent:** `INT-1`
+- **Source issue:** `loop-ceilings`
+- **Landed:** 2026-10-03

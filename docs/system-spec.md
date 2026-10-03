@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the named-patterns strategy, then it asks a design to name its patterns and any it rejected, the reviewer checks both a novel structure where a pattern fits and a pattern where none is needed, and it stays advice.
+### Given many manifests read in one process, then the migrate map is parsed once, and parsed again only when its path or contents change.
 
-- **Scenario id:** `NP-1`
+- **Scenario id:** `MM-1`
 - **Intent:** `INT-1`
-- **Source issue:** `named-patterns-strategy`
+- **Source issue:** `migrate-map-parsed-once`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1520 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1525 superseded scenario(s) are in `docs/system-spec-archive.md`.

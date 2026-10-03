@@ -151,3 +151,19 @@ def test_retro_reports_the_interruptions(repo):
     assert r.returncode == 0, r.stderr
     assert "interruptions" in r.stdout.lower(), r.stdout
     assert "1 check failure" in r.stdout, r.stdout
+
+
+# --- GC-1: go does not stop at assess's confirmation (issue `go-confirms-on-the-heavier-route`) ----------------
+
+def test_gc_1_go_and_assess_agree_that_go_does_not_wait_to_confirm():
+    """`/compass:go` hands a heavier route to `/compass:assess` from step 4.
+    Assess step 7 asks for a confirmation; go says not to stop. Both texts
+    must say the same thing: under go, the summary already shown is the
+    confirmation."""
+    go = (ROOT / "commands" / "go.md").read_text(encoding="utf-8")
+    assess = (ROOT / "commands" / "assess.md").read_text(encoding="utf-8")
+    assert "steps 4 to 6" in go, "go must name the assess steps it runs"
+    assert "step 7" in go and "do not wait" in go.lower(), \
+        "go must say it does not wait at assess step 7"
+    step7 = assess[assess.index("7. **Confirm.**"):assess.index("## Voice")]
+    assert "/compass:go" in step7, "assess step 7 must say what go does"

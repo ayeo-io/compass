@@ -163,7 +163,9 @@ force; if it is still a spike, leave the marker in place.
    approach. Record overrides in `delivery-approach.md` with who and why.
    Immovable gates and floors cannot be overridden; changing one means
    amending `governance/routing-policy.yml`, not overriding one issue's
-   approach.
+   approach. Under `/compass:go`, the approach summary it already showed is
+   the confirmation: do not stop to wait for one, but act on an override
+   whenever the person gives it.
 
 ## Voice
 

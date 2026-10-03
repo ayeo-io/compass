@@ -62,9 +62,11 @@ Do not stop to ask whether to go ahead.
   The change is checked and gated but not committed: committing is the
   person's to ask for. Say so when you finish.
 - **Anything heavier:** `quick-fix start` has already recorded the
-  assessment and computed the approach. Continue with `/compass:assess` from
-  its step 4 (write `delivery-approach.md`), then follow that approach's
-  stages.
+  assessment and computed the approach. Run `/compass:assess` steps 4 to 6
+  (write `delivery-approach.md`, the pointer and any spike marker), then
+  follow that approach's stages. Do not wait at its step 7: the summary you
+  showed is the confirmation, and the person can still override a dimension
+  at any point.
 - **Not yet clear what it delivers:** if you cannot state what will be true
   afterwards, that is exploration. Run `/compass:assess`; it routes a spike.
 

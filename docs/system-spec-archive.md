@@ -10619,3 +10619,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `premium-scenario-classes`
 - **Landed:** 2026-10-03
+
+### Given the eval readme, then it states the decision rule for the run that uses these scenarios before any run. _(archived)_
+
+- **Scenario id:** `PS-4`
+- **Intent:** `INT-1`
+- **Source issue:** `premium-scenario-classes`
+- **Landed:** 2026-10-03

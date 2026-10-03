@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the eval readme, then it states the decision rule for the run that uses these scenarios before any run.
+### Given an issue whose manifest has no scenario X, when tdd-red or tdd-green runs with scenario X, then it is refused, writes no record, and names compass scenario add.
 
-- **Scenario id:** `PS-4`
+- **Scenario id:** `US-1`
 - **Intent:** `INT-1`
-- **Source issue:** `premium-scenario-classes`
+- **Source issue:** `red-for-an-unknown-scenario`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1516 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1517 superseded scenario(s) are in `docs/system-spec-archive.md`.

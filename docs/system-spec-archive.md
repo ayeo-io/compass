@@ -10479,3 +10479,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `grep-q-under-pipefail`
 - **Landed:** 2026-10-03
+
+### Given a quick fix that changes a tracked file under .compass, such as the project config, then finish traces and commits it with one run, while untracked issue state under .compass stays out. _(archived)_
+
+- **Scenario id:** `FT-1`
+- **Intent:** `INT-1`
+- **Source issue:** `finish-traces-compass-files`
+- **Landed:** 2026-10-03

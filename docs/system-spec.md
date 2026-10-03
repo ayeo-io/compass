@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a quick fix that changes a tracked file under .compass, such as the project config, then finish traces and commits it with one run, while untracked issue state under .compass stays out.
+### Given a heavier route started by /compass:go, then go and assess agree that the approach summary already shown is the confirmation, and go does not stop at assess step 7 to wait for one.
 
-- **Scenario id:** `FT-1`
+- **Scenario id:** `GC-1`
 - **Intent:** `INT-1`
-- **Source issue:** `finish-traces-compass-files`
+- **Source issue:** `go-confirms-on-the-heavier-route`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1496 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1497 superseded scenario(s) are in `docs/system-spec-archive.md`.

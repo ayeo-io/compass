@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the sample, then the self-architecture tests read the issue's real name, and the readable-specs test reads older acceptance criteria without a Summary, so neither returns early on a stale name.
+### Given the variable, then the post-tool and stop hooks, the receipt and the status line read the same issue the pre-tool hook does.
 
-- **Scenario id:** `AS-F`
+- **Scenario id:** `SI-E`
 - **Intent:** `INT-1`
-- **Source issue:** `archive-sample`
+- **Source issue:** `run-session-issue`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1475 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1480 superseded scenario(s) are in `docs/system-spec-archive.md`.

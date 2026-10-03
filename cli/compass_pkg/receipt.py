@@ -58,6 +58,12 @@ def _receipt_resolve_task_dir(args):
     else:
         compass_dir = find_compass_dir()
         project_root = os.path.dirname(compass_dir)
+    session = None
+    if not slug:
+        from compass_pkg.core import _one_segment, session_issue
+        session = session_issue()
+        if session is not None:
+            slug = _one_segment(session, "COMPASS_ISSUE")
     if not slug:
         ptr = os.path.join(compass_dir, "current-task")
         if os.path.isfile(ptr):
@@ -69,8 +75,10 @@ def _receipt_resolve_task_dir(args):
         )
     task_dir = os.path.join(compass_dir, "work", slug)
     if not os.path.isdir(task_dir):
+        named_by = ("COMPASS_ISSUE" if not args.task and slug == session
+                    else "the issue")
         raise CompassError(
-            f"compass issue receipt: issue '{slug}' not found at "
+            f"compass issue receipt: {named_by} '{slug}' not found at "
             f".compass/work/{slug} (looked under {task_dir})"
         )
     return task_dir, slug, project_root

@@ -93,7 +93,13 @@ WARNINGS=()
 # The hooks and the CLI rely on .compass/current-task. A dangling pointer is a
 # quiet way for the wrong issue to be acted on next session.
 POINTER="$COMPASS_DIR/current-task"
-if [ -f "$POINTER" ]; then
+# With COMPASS_ISSUE set, the session works on that issue, so that is the
+# name that must resolve; the person's pointer is theirs to keep.
+if [ -n "${COMPASS_ISSUE:-}" ]; then
+  if [ ! -d "$WORK_DIR/$COMPASS_ISSUE" ] || case "$COMPASS_ISSUE" in */*|.|..) true ;; *) false ;; esac; then
+    WARNINGS+=("COMPASS_ISSUE names '$COMPASS_ISSUE' but no such issue directory exists - set it to a real issue slug, or unset it to use .compass/current-task.")
+  fi
+elif [ -f "$POINTER" ]; then
   PSLUG="$(tr -d '[:space:]' < "$POINTER" 2>/dev/null || true)"
   if [ -n "$PSLUG" ] && [ ! -d "$WORK_DIR/$PSLUG" ]; then
     WARNINGS+=(".compass/current-task points at '$PSLUG' but no such issue directory exists - fix or clear the pointer.")

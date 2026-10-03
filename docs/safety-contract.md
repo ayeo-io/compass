@@ -81,6 +81,13 @@ Compass writes the assessment, approach, artifacts, evidence, decisions and
 status beneath `.compass/`. Another person, session or compatible runtime can
 resume by reading the files rather than reconstructing chat history.
 
+The hooks and the CLI judge work against the current issue:
+`.compass/current-task`, or `COMPASS_ISSUE` when a session's environment
+sets it. `COMPASS_ISSUE` comes first, so two sessions in one project can work
+on two issues; `compass run` sets it for each unattended session. A value
+that names no issue is refused (`bad-session-issue`), never passed over for
+the pointer.
+
 ## Deliberate limits
 
 ### Compass does not prove correctness

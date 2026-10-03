@@ -692,7 +692,19 @@ fi
 # hook refuses below.
 TASK_DIR=""
 POINTER="$COMPASS_DIR/current-task"
-if [ -f "$POINTER" ]; then
+# COMPASS_ISSUE names this session's issue ahead of the pointer. `compass
+# run` sets it for each unattended session, whose edits must be judged by
+# the run's issue, not by whatever issue the person's pointer names. A bad
+# value is refused, never passed over for the pointer.
+if [ -n "${COMPASS_ISSUE:-}" ]; then
+  SLUG="$COMPASS_ISSUE"
+  case "$SLUG" in
+    .|..|*/*|*\\*)
+      compass_block bad-session-issue "slug=$SLUG" ;;
+  esac
+  [ -d "$WORK_DIR/$SLUG" ] || compass_block bad-session-issue "slug=$SLUG"
+  TASK_DIR="$WORK_DIR/$SLUG"
+elif [ -f "$POINTER" ]; then
   SLUG="$(tr -d '[:space:]' < "$POINTER" 2>/dev/null || true)"
   # A slug is one path segment. `../side` would resolve outside the work
   # directory, and this hook would judge the edit by that directory's red.

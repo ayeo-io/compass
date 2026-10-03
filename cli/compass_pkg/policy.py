@@ -33,7 +33,7 @@ import re as _re
 import fnmatch
 import re as _re
 from compass_pkg.check_cmd import CHECK_FNS
-from compass_pkg.core import (AUTONOMY_VALUES, CHECKPOINT_STAGES, CompassError, FRAMEWORK_ROOT, artifact_path,
+from compass_pkg.core import (AUTONOMY_VALUES, CHECKPOINT_STAGES, CompassError, canonical_shape, FRAMEWORK_ROOT, artifact_path,
                               load_manifest, load_yaml, normalize_spine,
                               resolve_issue_dir)
 
@@ -72,6 +72,11 @@ def _jsonschema_errors(instance, schema_name):
 
 
 
+# Current route names. A retired name (`express`, `standard`, `expedition`)
+# is read as its current one, so an older project policy keeps working.
+CHECKPOINT_ROUTES = ("quick-fix", "feature", "initiative", "hotfix", "spike")
+
+
 def checkpoint_table_errors(p):
     """Problems with the policy's `autonomy_checkpoints:` table. Checked by
     `compass policy lint` and by the evaluator, so a bad table is refused
@@ -92,6 +97,17 @@ def checkpoint_table_errors(p):
         if not isinstance(routes, dict):
             errs.append(f"`autonomy_checkpoints.{value}` must map each route to a list")
             continue
+        seen = {}
+        for route in routes:
+            name = canonical_shape(route)
+            if name not in CHECKPOINT_ROUTES:
+                errs.append(f"`autonomy_checkpoints.{value}` names an unknown route "
+                            f"'{route}'; the routes are {', '.join(CHECKPOINT_ROUTES)}")
+            elif name in seen:
+                errs.append(f"`autonomy_checkpoints.{value}` names route '{name}' "
+                            f"twice, as '{seen[name]}' and '{route}'")
+            else:
+                seen[name] = route
         for route, stages in routes.items():
             if not isinstance(stages, list):
                 errs.append(f"`autonomy_checkpoints.{value}.{route}` must be a list")

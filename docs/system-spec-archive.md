@@ -10276,3 +10276,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `headless-runner`
 - **Landed:** 2026-10-03
+
+### Given the change, then a decision record states the exception to the rule that Compass launches nothing, as proposed; a reference workflow runs only when started by hand; and the owning doc says the live CI acceptance is not met. _(archived)_
+
+- **Scenario id:** `HR-J`
+- **Intent:** `INT-1`
+- **Source issue:** `headless-runner`
+- **Landed:** 2026-10-03

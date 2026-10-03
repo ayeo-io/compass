@@ -128,7 +128,9 @@ classDiagram
      Each entry needs a reason. A pattern name with no reason is
      name-dropping: it makes a plan sound considered without making it
      clearer, and a reviewer cannot disagree with a bare name. Two justified
-     patterns beat five decorative ones. -->
+     patterns beat five decorative ones. Where a real choice existed, name
+     the pattern you rejected and why - the named-patterns strategy,
+     `S16`. -->
 
 > - **{{Pattern name}}** ({{GoF / DDD / architectural}}) - {{what it does
 >   here}}. Worth using because {{the concrete reason - an existing

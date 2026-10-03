@@ -189,6 +189,7 @@ def test_default_method_strategy_set_is_the_known_set():
     - `S13` - a title is a summary, not a headline
     - `S14` - correct every place at once, or you have made it worse
     - `S15` - well-architected alignment: name the pillars a design touches
+    - `S16` - named patterns: prefer a well-understood pattern, and say why
 
     The rationale for each lives in governance/strategies.md. Adding a
     strategy is allowed and cheap, but it must be a decision - so this list
@@ -200,7 +201,7 @@ def test_default_method_strategy_set_is_the_known_set():
     import re
     ids = set(re.findall(r"^### .*\(`(S\d+)`\)", text, flags=re.MULTILINE))
     expected = {"S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8", "S9", "S10",
-                "S11", "S12", "S13", "S14", "S15"}
+                "S11", "S12", "S13", "S14", "S15", "S16"}
     assert ids == expected, (
         f"strategies.md declares {sorted(ids)}; this invariant expects "
         f"{sorted(expected)}. If you added a strategy on purpose, add its id "

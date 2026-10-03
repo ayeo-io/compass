@@ -404,6 +404,10 @@ def test_d2_repairs_change_only_retired_names():
     `governance/strategies.md` gained the well-architected alignment
     strategy, one `###` heading and 4 list items.
 
+    One more was re-baselined by `named-patterns-strategy`:
+    `governance/strategies.md` gained the named-patterns strategy, one
+    `###` heading and 4 list items.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

@@ -10591,3 +10591,31 @@
 - **Intent:** `INT-1`
 - **Source issue:** `ci-review-manual-only`
 - **Landed:** 2026-10-03
+
+### Given a landed issue whose files a review fix changes, when its green is re-recorded and ship-commit runs for it with nothing staged, then land_commit names the fix commit and compass check passes; without the new green it is refused. _(archived)_
+
+- **Scenario id:** `RB-1`
+- **Intent:** `INT-1`
+- **Source issue:** `review-fix-rebinds-land-commit`
+- **Landed:** 2026-10-03
+
+### Given each of the four new scenarios, then it has a seed, a hidden test, a real-request prompt, the standard reply, and a reference that passes both test sets. _(archived)_
+
+- **Scenario id:** `PS-1`
+- **Intent:** `INT-1`
+- **Source issue:** `premium-scenario-classes`
+- **Landed:** 2026-10-03
+
+### Given each of the four new scenarios, when its careless change is applied, then the seed's own tests pass and the hidden tests fail. _(archived)_
+
+- **Scenario id:** `PS-2`
+- **Intent:** `INT-1`
+- **Source issue:** `premium-scenario-classes`
+- **Landed:** 2026-10-03
+
+### Given the two scenarios that start from earlier work, then each condition finds it in its usual place and every record states the rule the hidden test checks. _(archived)_
+
+- **Scenario id:** `PS-3`
+- **Intent:** `INT-1`
+- **Source issue:** `premium-scenario-classes`
+- **Landed:** 2026-10-03

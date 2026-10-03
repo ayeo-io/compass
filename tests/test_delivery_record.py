@@ -32,7 +32,10 @@ def _git(cwd, *args):
 
 def _remote(tmp_path):
     remote = tmp_path / "record.git"
-    subprocess.run(["git", "init", "-q", "--bare", str(remote)], check=True)
+    # A default branch other than the record's `main`, as git gives where
+    # init.defaultBranch is unset (CI): the record must still be found.
+    subprocess.run(["git", "-c", "init.defaultBranch=master", "init", "-q",
+                    "--bare", str(remote)], check=True)
     return remote
 
 
@@ -67,7 +70,8 @@ def _cli(cwd, *args):
 
 def _record_files(remote, tmp_path, name="check"):
     clone = tmp_path / name
-    subprocess.run(["git", "clone", "-q", str(remote), str(clone)], check=True)
+    subprocess.run(["git", "clone", "-q", "-b", "main", str(remote), str(clone)],
+                   check=True)
     return clone
 
 

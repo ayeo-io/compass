@@ -147,13 +147,16 @@ def _fresh_clone(remote):
         _must(_git(["clone", "-q", remote, clone], None), "cloning the record")
     else:
         _must(_git(["fetch", "-q", "origin"], clone), "fetching the record")
-        has_branch = _git(["rev-parse", "--verify", "-q",
-                           f"origin/{BRANCH}"], clone).returncode == 0
-        if has_branch:
-            _must(_git(["checkout", "-q", "-B", BRANCH, f"origin/{BRANCH}"],
-                       clone), "checking out the record")
-            _must(_git(["reset", "-q", "--hard", f"origin/{BRANCH}"], clone),
-                  "resetting the record")
+    # Always the record's own branch: a remote whose default branch is
+    # another one would otherwise give a clone with nothing checked out,
+    # and a restore on a new machine would find an empty record.
+    has_branch = _git(["rev-parse", "--verify", "-q",
+                       f"origin/{BRANCH}"], clone).returncode == 0
+    if has_branch:
+        _must(_git(["checkout", "-q", "-B", BRANCH, f"origin/{BRANCH}"],
+                   clone), "checking out the record")
+        _must(_git(["reset", "-q", "--hard", f"origin/{BRANCH}"], clone),
+              "resetting the record")
     _must(_git(["clean", "-qfd"], clone), "cleaning the record clone")
     _refuse_links(clone)
     return clone

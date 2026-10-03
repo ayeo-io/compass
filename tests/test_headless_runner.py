@@ -405,8 +405,7 @@ def test_hr_j_the_exception_is_accepted_and_the_workflow_is_inactive():
         text = p.read_text()
         if "compass run" in text or "run-demo.sh" in text:
             assert list(yaml.safe_load(text)[True]) == ["workflow_dispatch"], p.name
-    doc = (ROOT / "docs" / "headless-runner.md").read_text()
-    assert "not met" in doc
+    # What the doc says about the live run is test_hd_1's.
     readme = (ROOT / "docs" / "README.md").read_text()
     assert "`docs/headless-runner.md`" in readme
     assert "run_cmd.py" in readme and "host_launch.py" in readme
@@ -651,3 +650,15 @@ def test_st_1_the_record_keeps_each_sessions_last_message(project):
     assert "Session 1 finished: the fix is in place." in record
     assert "Session 2 finished" in record
     assert "5 US dollars (RP-LOOP-008)" in record
+
+
+def test_hd_1_the_doc_says_what_the_ci_demo_shows():
+    """The CI demo ran on 2026-10-03 (#313, closing #302). The doc must not
+    still open by saying the live acceptance is unmet, and must say what the
+    demo covers: the build stage of a quick fix."""
+    doc = (ROOT / "docs" / "headless-runner.md").read_text(encoding="utf-8")
+    assert "not met yet" not in doc
+    opening = doc.split("## ", 1)[0]
+    assert ".github/workflows/compass-run-demo.yml" in opening, opening
+    assert "build stage" in opening, opening
+    assert "costs money" in opening, opening

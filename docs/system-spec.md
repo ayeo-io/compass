@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given eval session records, when the comparison report is built, then each cell and the summary show the hook blocks and check failures each condition met, and a record without them shows not recorded.
+### Given the CI demo workflow exists and has run, then the headless-runner doc does not say the live acceptance is unmet, and says what the demo covers and that each run costs money.
 
-- **Scenario id:** `SC-1`
+- **Scenario id:** `HD-1`
 - **Intent:** `INT-1`
-- **Source issue:** `stops-and-cost-per-condition`
+- **Source issue:** `headless-doc-after-the-demo`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1508 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1509 superseded scenario(s) are in `docs/system-spec-archive.md`.

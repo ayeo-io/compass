@@ -10563,3 +10563,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `checkpoint-table-gaps`
 - **Landed:** 2026-10-03
+
+### Given eval session records, when the comparison report is built, then each cell and the summary show the hook blocks and check failures each condition met, and a record without them shows not recorded. _(archived)_
+
+- **Scenario id:** `SC-1`
+- **Intent:** `INT-1`
+- **Source issue:** `stops-and-cost-per-condition`
+- **Landed:** 2026-10-03

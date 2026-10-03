@@ -10465,3 +10465,17 @@
 - **Intent:** `INT-1`
 - **Source issue:** `pointer-lease`
 - **Landed:** 2026-10-03
+
+### Given the session table, then concurrent writes keep every record, stale records are dropped when it is written, the table is ignored by git in any project, and a pointer-moved refusal is counted against the session's own issue. _(archived)_
+
+- **Scenario id:** `ST2-1`
+- **Intent:** `INT-1`
+- **Source issue:** `session-table-tidy`
+- **Landed:** 2026-10-03
+
+### Given a script that sets pipefail, then it never pipes into grep -q, because a grep that exits at its first match can fail the pipe and turn a found line into a missing one. _(archived)_
+
+- **Scenario id:** `GQ-1`
+- **Intent:** `INT-1`
+- **Source issue:** `grep-q-under-pipefail`
+- **Landed:** 2026-10-03

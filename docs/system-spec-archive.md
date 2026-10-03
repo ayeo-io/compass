@@ -10682,3 +10682,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `quality-static-signals`
 - **Landed:** 2026-10-03
+
+### Given many manifests read in one process, then the migrate map is parsed once, and parsed again only when its path or contents change. _(archived)_
+
+- **Scenario id:** `MM-1`
+- **Intent:** `INT-1`
+- **Source issue:** `migrate-map-parsed-once`
+- **Landed:** 2026-10-03

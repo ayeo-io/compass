@@ -10157,3 +10157,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `issue-overview`
 - **Landed:** 2026-10-03
+
+### Given the status line, then it names the gates passed out of the gates required. _(archived)_
+
+- **Scenario id:** `IO-E`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-overview`
+- **Landed:** 2026-10-03

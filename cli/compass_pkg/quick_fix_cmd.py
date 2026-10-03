@@ -533,6 +533,34 @@ def _record_path(project_root, slug):
     return os.path.join(project_root, out.strip())
 
 
+def _tracked_paths(project_root):
+    """Every path git tracks, or an empty set when git cannot say."""
+    try:
+        out = subprocess.run(["git", "ls-files", "-z"], cwd=project_root,
+                             capture_output=True, text=True, check=True).stdout
+    except (OSError, subprocess.CalledProcessError):
+        return set()
+    return {p for p in out.split("\0") if p}
+
+
+# Compass's own state under `.compass/`. A project that uses Compass commits
+# `.compass/work/`, so being tracked does not make these the fix's change.
+_STATE_PATHS = (".compass/work/", ".compass/flow/", ".compass/current-task",
+                ".compass/sessions.json", ".compass/.sessions.lock",
+                ".compass/interruptions.log")
+
+
+def _is_issue_state(path, tracked):
+    """Is `path` Compass's own state, kept out of a quick fix's commit? A
+    path under `.compass/` is when it is one of `_STATE_PATHS` or git does
+    not track it. Any other tracked file there, such as
+    `.compass/config.yml`, is the project's own and is traced like any other
+    change."""
+    if not path.startswith(".compass/"):
+        return False
+    return path.startswith(_STATE_PATHS) or path not in tracked
+
+
 def _write_start_state(project_root, slug):
     """Record what was already changed or untracked when the quick fix
     starts, so `finish` commits none of it unless the agent traces it.
@@ -546,8 +574,9 @@ def _write_start_state(project_root, slug):
     a test the scenario declares.
     """
     try:
+        tracked_now = _tracked_paths(project_root)
         before = [p for p in _git_changed_paths(project_root)
-                  if not p.startswith(".compass/")]
+                  if not _is_issue_state(p, tracked_now)]
         untracked = _untracked_paths(project_root)
         ignored = subprocess.run(
             ["git", "ls-files", "-z", "--others", "--ignored",
@@ -593,8 +622,9 @@ def _untraced_since_start(project_root, slug, traced):
                          cwd=project_root, capture_output=True, text=True)
     if out.returncode != 0:
         return []
+    tracked = _tracked_paths(project_root)
     return sorted(p for p in out.stdout.split("\0")
-                  if p and p not in traced and not p.startswith(".compass/")
+                  if p and p not in traced and not _is_issue_state(p, tracked)
                   and not p.startswith("docs/compass/")
                   and not _is_generated(p))
 
@@ -754,8 +784,9 @@ def cmd_quick_fix_finish(args):
     with _at_project_root(project_root):
         all_paths = _git_changed_paths(project_root)
         doc_prefix = docs_dir(task_dir) + "/"
+        tracked = _tracked_paths(project_root)
         production_paths = [p for p in all_paths
-                            if not p.startswith(".compass/")
+                            if not _is_issue_state(p, tracked)
                             and not p.startswith(doc_prefix)]
         artifact_paths = [p for p in all_paths if p.startswith(doc_prefix)]
         existing_traced = {cf.get("path") for cf in (task.get("changed_files") or [])

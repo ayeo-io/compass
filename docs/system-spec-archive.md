@@ -10472,3 +10472,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `session-table-tidy`
 - **Landed:** 2026-10-03
+
+### Given a script that sets pipefail, then it never pipes into grep -q, because a grep that exits at its first match can fail the pipe and turn a found line into a missing one. _(archived)_
+
+- **Scenario id:** `GQ-1`
+- **Intent:** `INT-1`
+- **Source issue:** `grep-q-under-pipefail`
+- **Landed:** 2026-10-03

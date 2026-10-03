@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a script that sets pipefail, then it never pipes into grep -q, because a grep that exits at its first match can fail the pipe and turn a found line into a missing one.
+### Given a quick fix that changes a tracked file under .compass, such as the project config, then finish traces and commits it with one run, while untracked issue state under .compass stays out.
 
-- **Scenario id:** `GQ-1`
+- **Scenario id:** `FT-1`
 - **Intent:** `INT-1`
-- **Source issue:** `grep-q-under-pipefail`
+- **Source issue:** `finish-traces-compass-files`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1495 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1496 superseded scenario(s) are in `docs/system-spec-archive.md`.

@@ -10458,3 +10458,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `pointer-lease`
 - **Landed:** 2026-10-03
+
+### Given the session-issue variable, no session id, or a session record older than 12 hours, then the hook refuses nothing for a moved pointer. _(archived)_
+
+- **Scenario id:** `CL-D`
+- **Intent:** `INT-1`
+- **Source issue:** `pointer-lease`
+- **Landed:** 2026-10-03

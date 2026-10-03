@@ -86,6 +86,9 @@ elif action == "spawn_sleep":
     time.sleep(30)
 elif action == "rm_lock":
     (task / "run.lock").unlink()
+elif action == "done_bad_runs":
+    text = manifest.read_text().replace("status: pending", "status: pass")
+    manifest.write_text(text + "runs: oops\n")
 elif action == "bad_runs":
     manifest.write_text(manifest.read_text() + "runs: oops\n")
 elif action == "sleep":
@@ -468,6 +471,56 @@ def test_hr_b_a_second_run_of_the_same_issue_is_refused(project):
     assert _run(project, "--max-cycles", "1").returncode == 4
     assert not lock.exists()
 
+
+
+def _interrupt(project, signame):
+    """Start a run whose session sleeps, send the runner `signame`, and
+    return the session's pid once the runner has exited."""
+    import signal
+    import time
+    tmp = project.parent
+    env = {**os.environ, "STUB_LOG": str(tmp / "stub.log"),
+           "STUB_MARKERS": str(tmp / "markers"),
+           "STUB_PLAN": json.dumps(["sleep"]),
+           "STUB_TASK": str(project / ".compass" / "work" / SLUG),
+           "STUB_STOP": str(tmp / "STOP"), "STUB_TOKEN": TOKEN,
+           "STUB_PIDFILE": str(tmp / "child.pid"),
+           "MY_SERVICE_TOKEN": ENV_SECRET}
+    runner = subprocess.Popen(
+        [sys.executable, str(CLI), "run", SLUG, "--stage", "verify",
+         "--stop-file", str(tmp / "STOP"), "--claude", str(tmp / "bin" / "claude")],
+        cwd=project, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    pidfile = tmp / "child.pid"
+    for _ in range(100):
+        if pidfile.exists() and pidfile.read_text():
+            break
+        time.sleep(0.1)
+    runner.send_signal(getattr(signal, signame))
+    runner.wait(timeout=20)
+    return int(pidfile.read_text())
+
+
+@pytest.mark.parametrize("signame", ["SIGINT", "SIGTERM"])
+def test_rre_1_an_interrupted_run_leaves_a_record_naming_it(project, signame):
+    _interrupt(project, signame)
+    record = _record(project)
+    assert "Outcome:** stopped" in record
+    assert "interrupted" in record
+    assert "interrupted" in _last_run(project)["stopped_reason"]["reason"]
+
+
+def test_rre_1_the_record_outcome_matches_the_exit_code(project):
+    result = _run(project, "--max-cycles", "1", plan=("done_bad_runs",))
+    assert result.returncode == 4
+    assert "Outcome:** stopped" in _record(project)
+
+
+def test_rre_1_an_empty_runs_key_is_read_as_no_runs(project):
+    manifest = project / ".compass" / "work" / SLUG / "manifest.yml"
+    manifest.write_text(manifest.read_text() + "runs:\n")
+    result = _run(project, "--max-cycles", "1", plan=("touch",))
+    assert result.returncode == 4, result.stderr
+    assert _last_run(project)["n"] == 1
 
 
 @pytest.mark.parametrize("signame", ["SIGINT", "SIGTERM"])

@@ -76,6 +76,13 @@ def _session_args():
             "--disallowedTools", ",".join(DENIED)]
 
 
+#: The shipped rule that sets each run ceiling, named when a project's own
+#: policy lacks it.
+_RULE_FOR = {"cycle": "RP-LOOP-006 (run_cycles)",
+             "minute": "RP-LOOP-007 (run_minutes)",
+             "cost": "RP-LOOP-008 (run_cost_usd)"}
+
+
 def _limit(value, ceiling, name, flag, minimum_text):
     """The value a run uses: the flag when given, else the policy limit.
     Refused when the policy sets none, or the flag is out of range."""
@@ -83,8 +90,8 @@ def _limit(value, ceiling, name, flag, minimum_text):
         raise CompassError(
             f"compass run: governance/routing-policy.yml sets no {name} "
             f"ceiling, and an unattended run must have one. Add the "
-            f"`loop_ceilings` rules RP-LOOP-006 (run_cycles) and RP-LOOP-007 "
-            f"(run_minutes) from the Compass copy of that file.")
+            f"`loop_ceilings` rule {_RULE_FOR[name]} from the Compass copy "
+            f"of that file.")
     limit, rid = ceiling
     if value is None:
         return limit, rid
@@ -321,9 +328,6 @@ def _run(args, root, task_dir, task, path, claude, stop, ceilings,
                           f"unattended run stops rather than guess")
                 break
             task = current_task
-            if spent >= max_cost:
-                reason = cost_reached
-                break
             if launched.timed_out:
                 reason = (f"the minute ceiling of {max_minutes:g} is reached "
                           f"({minutes_rule}); the session was ended")
@@ -335,6 +339,11 @@ def _run(args, root, task_dir, task, path, claude, stop, ceilings,
             if _done(task, args.stage, task_dir):
                 outcome, reason = "done", None
                 entry["progress"] = "yes"
+                break
+            # After the done and landed checks: a session that finishes the
+            # stage as the money runs out has still finished it.
+            if spent >= max_cost:
+                reason = cost_reached
                 break
             current = _digest(task, task_dir)
             entry["progress"] = "no" if current == previous else "yes"

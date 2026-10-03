@@ -591,3 +591,25 @@ def test_rc_1_a_cost_flag_above_the_policy_is_refused(project):
     assert result.returncode == 2 and "RP-LOOP-008" in result.stderr
     assert _run(project, "--max-cost-usd", "0").returncode == 2
     assert _calls(project) == []
+
+
+
+def test_rc_1_a_session_that_finishes_at_the_ceiling_is_done(project, monkeypatch):
+    monkeypatch.setenv("STUB_COST", "5.0")
+    result = _run(project, plan=("pass_gates",))
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert _last_run(project)["outcome"] == "done"
+
+
+def test_rc_1_a_policy_without_the_cost_rule_is_refused_naming_it(project):
+    gov = project / "governance"
+    gov.mkdir()
+    (gov / "guardrails.yml").write_text((ROOT / "governance" / "guardrails.yml").read_text())
+    policy = yaml.safe_load((ROOT / "governance" / "routing-policy.yml").read_text())
+    policy["routing_guardrails"]["loop_ceilings"] = [
+        r for r in policy["routing_guardrails"]["loop_ceilings"]
+        if r["ceiling"] != "run_cost_usd"]
+    (gov / "routing-policy.yml").write_text(yaml.safe_dump(policy))
+    result = _run(project)
+    assert result.returncode == 2 and "RP-LOOP-008" in result.stderr
+    assert _calls(project) == []

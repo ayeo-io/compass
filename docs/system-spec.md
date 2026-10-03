@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a project and an issue made with the 5.0.0 CLI, when the working tree's CLI reads them, then every manifest loads and compass check gives the same gate-by-gate verdict.
+### Given a scenario title that attaches a duration to a user or claims an outside user, then scenario add refuses it when it is recorded, using the same patterns the public-copy check applies.
 
-- **Scenario id:** `UP-1`
+- **Scenario id:** `TT-1`
 - **Intent:** `INT-1`
-- **Source issue:** `upgrade-from-5-0-0`
+- **Source issue:** `title-times-a-user`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1526 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1533 superseded scenario(s) are in `docs/system-spec-archive.md`.

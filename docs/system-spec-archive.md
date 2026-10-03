@@ -10689,3 +10689,52 @@
 - **Intent:** `INT-1`
 - **Source issue:** `migrate-map-parsed-once`
 - **Landed:** 2026-10-03
+
+### Given a project and an issue made with the 5.0.0 CLI, when the working tree's CLI reads them, then every manifest loads and compass check gives the same gate-by-gate verdict. _(archived)_
+
+- **Scenario id:** `UP-1`
+- **Intent:** `INT-1`
+- **Source issue:** `upgrade-from-5-0-0`
+- **Landed:** 2026-10-03
+
+### Given an issue in progress, then its board row shows its route, current stage, gates passed out of total, and whether its newest test record still matches its files. _(archived)_
+
+- **Scenario id:** `DB-1`
+- **Intent:** `INT-1`
+- **Source issue:** `delivery-board`
+- **Landed:** 2026-10-03
+
+### Given in-progress issues whose evidence is stale and parked issues, then each appears in its own section, apart from the issues moving normally. _(archived)_
+
+- **Scenario id:** `DB-2`
+- **Intent:** `INT-1`
+- **Source issue:** `delivery-board`
+- **Landed:** 2026-10-03
+
+### Given queued and landed issues, then the board shows the queue with age and signal, what landed in the last seven days, and the most common friction among them. _(archived)_
+
+- **Scenario id:** `DB-3`
+- **Intent:** `INT-1`
+- **Source issue:** `delivery-board`
+- **Landed:** 2026-10-03
+
+### Given the flow command with an html file named, then it writes one self-contained page with the same sections and rows, every value escaped. _(archived)_
+
+- **Scenario id:** `DB-4`
+- **Intent:** `INT-1`
+- **Source issue:** `delivery-board`
+- **Landed:** 2026-10-03
+
+### Given this repository's manifests, then the flow board stays within the speed bound its test sets. _(archived)_
+
+- **Scenario id:** `DB-5`
+- **Intent:** `INT-1`
+- **Source issue:** `delivery-board`
+- **Landed:** 2026-10-03
+
+### Given a manifest whose fields have the wrong types, then the board lists it as unreadable and still renders every other issue. _(archived)_
+
+- **Scenario id:** `DB-6`
+- **Intent:** `INT-1`
+- **Source issue:** `delivery-board`
+- **Landed:** 2026-10-03

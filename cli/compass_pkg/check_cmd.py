@@ -107,7 +107,7 @@ CHECK_GUIDANCE = {
     },
     "evidence-matches-tree": {
         "why": "A green proves a command passed on the tree it ran on. Once that tree changes, the record says nothing about the code that is about to ship - or, for a landed issue, about the commit that landed it.",
-        "fix": "Re-run the suite through `compass tdd-green -- <test command>` on the tree you intend to ship, so the newest record names it. For a landed issue, the files the commit landed are not the files that were tested: check out a tree whose changed files match the landing commit, re-run the suite through `compass tdd-green`, and the newest record will name them.",
+        "fix": "Re-run the suite through `compass tdd-green -- <test command>` on the tree you intend to ship, so the newest record names it. For a landed issue, the files the commit landed are not the files that were tested. If a review fix changed them after landing, commit the fix, re-run the suite through `compass tdd-green`, then run `compass ship-commit --issue <slug> -m <message>` with nothing staged: it moves `land_commit` to HEAD once the newest green names HEAD's files.",
         "do": "Re-run the suite with `compass tdd-green` on the tree you ship.",
     },
     "multiagent-run-recorded": {

@@ -104,7 +104,7 @@ def _out_of_scope(staged, owned, artifact_dir, docs_prefix=None):
     )
 
 
-def _stale_paths(task, task_dir, root, at_commit):
+def _stale_paths(task, task_dir, root, at_commit, judge_landed=False):
     """The issue files that differ, in `at_commit`, from what the newest
     bound green tested, as (record path, paths), or None when there is
     nothing to judge or nothing differs.
@@ -115,11 +115,14 @@ def _stale_paths(task, task_dir, root, at_commit):
     that makes no commit.
 
     A landed issue is not judged: its green was judged when it landed, and
-    a later edit to one of its files belongs to later work. Nothing is
+    a later edit to one of its files belongs to later work. The exception
+    is `judge_landed`: re-landing the issue itself at HEAD, after a review
+    fix changed its files, moves `land_commit`, so the new landing must be
+    a tree its newest green tested. Nothing is
     judged until every gate has passed, or when the newest record carries
     no `changes_id` - `compass check` does not judge those either.
     """
-    if task.get("status") == "landed":
+    if task.get("status") == "landed" and not judge_landed:
         return None
     gates = [g for g in task.get("gates") or [] if isinstance(g, dict)]
     if not gates or not all(g.get("status") == "pass" for g in gates):
@@ -141,10 +144,11 @@ def _stale_paths(task, task_dir, root, at_commit):
     return record_path, changed
 
 
-def _refuse_stale_green(task, task_dir, slug, root, at_commit):
+def _refuse_stale_green(task, task_dir, slug, root, at_commit,
+                        judge_landed=False):
     """Refuse `ship-commit` when `at_commit` holds issue files that differ
     from what the newest bound green tested."""
-    stale = _stale_paths(task, task_dir, root, at_commit)
+    stale = _stale_paths(task, task_dir, root, at_commit, judge_landed)
     if stale is None:
         return
     record_path, changed = stale
@@ -279,8 +283,11 @@ def cmd_land_commit(args):
                 + "\n  ".join(dirty_or_missing)
             )
 
+        # Judged even when the issue is already landed: landing it again
+        # here moves `land_commit` to HEAD, after a review fix, and HEAD's
+        # files must be the ones its newest green tested.
         _refuse_stale_green(head_task, head_task_dir, head_slug, cwd,
-                            at_commit="HEAD")
+                            at_commit="HEAD", judge_landed=True)
 
         # What HEAD itself added must be the issue's: a commit a git hook
         # widened, refused once, must not land when shipped again. Compared

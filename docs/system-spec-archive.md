@@ -10584,3 +10584,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `release-5-4-0`
 - **Landed:** 2026-10-03
+
+### Given the Claude review workflow, then it starts only by hand and never on a pull request event. _(archived)_
+
+- **Scenario id:** `CR-1`
+- **Intent:** `INT-1`
+- **Source issue:** `ci-review-manual-only`
+- **Landed:** 2026-10-03

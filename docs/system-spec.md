@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the Claude review workflow, then it starts only by hand and never on a pull request event.
+### Given a landed issue whose files a review fix changes, when its green is re-recorded and ship-commit runs for it with nothing staged, then land_commit names the fix commit and compass check passes; without the new green it is refused.
 
-- **Scenario id:** `CR-1`
+- **Scenario id:** `RB-1`
 - **Intent:** `INT-1`
-- **Source issue:** `ci-review-manual-only`
+- **Source issue:** `review-fix-rebinds-land-commit`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1511 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1512 superseded scenario(s) are in `docs/system-spec-archive.md`.

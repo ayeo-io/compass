@@ -75,9 +75,11 @@ def _end_group(proc):
 
 
 def session_summary(stdout):
-    """The last `result` event's session id, cost and error flag, read from
+    """The last `result` event's session id, cost, error flag and final
+    text, read from
     the line-delimited JSON output, or empty values when it holds none."""
-    summary = {"session_id": None, "cost_usd": None, "is_error": None}
+    summary = {"session_id": None, "cost_usd": None, "is_error": None,
+               "result": None}
     for line in (stdout or "").splitlines():
         try:
             event = json.loads(line)
@@ -86,5 +88,6 @@ def session_summary(stdout):
         if isinstance(event, dict) and event.get("type") == "result":
             summary = {"session_id": event.get("session_id"),
                        "cost_usd": event.get("total_cost_usd"),
-                       "is_error": event.get("is_error")}
+                       "is_error": event.get("is_error"),
+                       "result": event.get("result")}
     return summary

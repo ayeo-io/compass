@@ -40,11 +40,13 @@ Each session gets `COMPASS_ISSUE` set to the run's issue, so the hooks and the C
 
 The prompt names the stage's command and the issue, says nobody will answer a question, and forbids landing, shipping, pushing and merging. The session loads the Compass plugin the running CLI belongs to, and `git push`, `gh pr merge` and `compass ship-commit` are denied to it. No session resumes another.
 
+Without a person to answer a permission prompt, a session can use only what it is given: the file tools, skills, and the `compass` CLI, which runs the test command itself. `compass quick-fix finish`, which commits through `ship-commit`, and `compass run` itself are denied.
+
 The denied commands are matched by how they start, so another spelling of the same command, such as `git -C . push`, is not denied. What stops a landing is the check after every session: a session that lands the issue stops the run. Grant the session no credential that can push.
 
 ## What a run leaves
 
-- `run-<n>.md` in the issue's documents folder: the stage, the times, the outcome, the stop reason, and each cycle's exit code, session, cost and whether it changed the records.
+- `run-<n>.md` in the issue's documents folder: the stage, the times, the outcome, the stop reason, the money spent, each cycle's exit code, session, cost and whether it changed the records, and what each session said last.
 - A `runs:` entry in the manifest: `{n, stage, started, ended, cycles, outcome}`, and for a stopped run `stopped_reason: {reason, evidence, at}`, with the run record as the evidence.
 
 ## Credentials

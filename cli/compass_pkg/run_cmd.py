@@ -50,9 +50,21 @@ from compass_pkg.redact import redact
 #: assesses, plans or lands: those need a person.
 STAGES = {"build": "/compass:implement", "verify": "/compass:verify"}
 
-#: Commands a session started by the runner may not use.
+#: What a session may do without asking. In `-p` mode nobody can answer a
+#: permission prompt, so anything not listed is refused: the first live run
+#: made its fix but could not run `compass tdd-green` to record it. The
+#: compass CLI runs the test command itself, so no test runner is listed.
+ALLOWED = ("Read", "Edit", "Write", "Glob", "Grep", "Skill",
+           "Bash(compass:*)")
+
+#: What a session may never do, even where ALLOWED would let it: land, push,
+#: merge, or start another run. A deny wins over an allow.
 DENIED = ("Bash(git push:*)", "Bash(gh pr merge:*)",
-          "Bash(compass ship-commit:*)")
+          "Bash(compass ship-commit:*)", "Bash(compass quick-fix finish:*)",
+          "Bash(compass run:*)")
+
+#: How much of a session's last message a record keeps.
+_SAID_TAIL = 1500
 
 #: Exit code of a run that stopped short of done. 2 is a refusal and 3 an
 #: incomplete install, so a stop has its own code.
@@ -74,6 +86,7 @@ def _session_args():
     return ["--output-format", "stream-json", "--verbose",
             "--permission-mode", "acceptEdits",
             "--plugin-dir", FRAMEWORK_ROOT,
+            "--allowedTools", ",".join(ALLOWED),
             "--disallowedTools", ",".join(DENIED)]
 
 
@@ -164,14 +177,25 @@ def _write_record(root, rel, run, cycles, settings):
     if run.get("stopped_reason"):
         lines.append(f"- **Stopped because:** {run['stopped_reason']['reason']}")
     lines += [f"- **Ceilings:** {settings['cycles']} cycles ({settings['cycles_rule']}), "
-              f"{settings['minutes']:g} minutes ({settings['minutes_rule']})",
+              f"{settings['minutes']:g} minutes ({settings['minutes_rule']}), "
+              f"{settings['cost']:g} US dollars ({settings['cost_rule']})",
+              f"- **Spent:** {run.get('cost_usd', 0):.2f} US dollars",
               f"- **Session executable:** `{settings['claude']}`", "",
               "| Cycle | Exit code | Session | Cost (USD) | Changed the records |",
               "|---|---|---|---|---|"]
     for c in cycles:
+        cost = c.get("cost")
         lines.append(f"| {c['cycle']} | {c['exit']} | {c.get('session') or '-'} "
-                     f"| {c.get('cost') if c.get('cost') is not None else '-'} "
+                     f"| {f'{cost:.4f}' if isinstance(cost, (int, float)) else '-'} "
                      f"| {c.get('progress', '-')} |")
+    said = [c for c in cycles if c.get("said")]
+    if said:
+        lines += ["", "## What each session said last", ""]
+        for c in said:
+            lines += [f"Cycle {c['cycle']}:", ""]
+            lines += [f"> {line}" if line else ">" for line in
+                      c["said"].rstrip().splitlines()]
+            lines.append("")
     errors = [c for c in cycles if c.get("error")]
     if errors:
         lines += ["", "## Errors", ""]
@@ -314,6 +338,8 @@ def _run(args, root, task_dir, task, path, claude, stop, ceilings,
             summary = host_launch.session_summary(launched.stdout)
             entry = {"cycle": cycle, "exit": launched.returncode,
                      "session": summary["session_id"], "cost": summary["cost_usd"]}
+            if summary.get("result"):
+                entry["said"] = redact(summary["result"])[-_SAID_TAIL:]
             if launched.returncode != 0 and launched.stderr.strip():
                 # Redact first, then cut: a cut through a credential would
                 # leave a piece no pattern recognises.
@@ -390,7 +416,8 @@ def _run(args, root, task_dir, task, path, claude, stop, ceilings,
     _write_record(root, record_rel, run, cycles,
                   {"slug": args.slug, "claude": claude, "cycles": max_cycles,
                    "cycles_rule": cycles_rule, "minutes": max_minutes,
-                   "minutes_rule": minutes_rule})
+                   "minutes_rule": minutes_rule, "cost": max_cost,
+                   "cost_rule": cost_rule})
     if in_manifest:
         task["runs"] = list(task.get("runs") or []) + [run]
         save_manifest(task, path)

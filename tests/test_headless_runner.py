@@ -95,6 +95,7 @@ elif action == "sleep":
     Path(os.environ["STUB_PIDFILE"]).write_text(str(os.getpid()))
     time.sleep(30)
 print(json.dumps({"type": "result", "subtype": "success", "is_error": False,
+                  "result": f"Session {n} finished: the fix is in place.",
                   "session_id": f"s{n}",
                   "total_cost_usd": float(os.environ.get("STUB_COST", "0.01"))}))
 '''
@@ -621,3 +622,27 @@ def test_rc_1_a_ceiling_flag_must_be_a_finite_number(project, flag, value):
     result = _run(project, flag, value)
     assert result.returncode == 2, result.stdout + result.stderr
     assert _calls(project) == []
+
+
+
+# --- ST-1: what a session may do, and what it said --------------------------------
+
+def test_st_1_a_session_may_use_skills_and_the_cli_but_not_land(project):
+    _run(project, "--max-cycles", "1", plan=("touch",))
+    argv = _calls(project)[0]
+    allowed = argv[argv.index("--allowedTools") + 1].split(",")
+    for tool in ("Skill", "Read", "Edit", "Write", "Glob", "Grep",
+                 "Bash(compass:*)"):
+        assert tool in allowed, tool
+    denied = argv[argv.index("--disallowedTools") + 1]
+    for command in ("git push", "gh pr merge", "compass ship-commit",
+                    "compass quick-fix finish", "compass run"):
+        assert command in denied, command
+
+
+def test_st_1_the_record_keeps_each_sessions_last_message(project):
+    _run(project, "--max-cycles", "2", plan=("touch",))
+    record = _record(project)
+    assert "Session 1 finished: the fix is in place." in record
+    assert "Session 2 finished" in record
+    assert "5 US dollars (RP-LOOP-008)" in record

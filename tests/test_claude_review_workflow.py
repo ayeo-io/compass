@@ -1,11 +1,12 @@
-"""The automatic Claude review must stay review-only.
+"""The Claude review must stay review-only.
 
-`.github/workflows/claude-review.yml` runs Claude on every pull request.
-It posts to the pull request, so three things must stay true: every action
-is pinned to a commit, the job's token cannot write to the repository's
-contents, and no tool it may use can commit or push. Its check is required
-on `main` in place of a human approval, so a fourth: the job fails unless
-Claude's verdict is PASS.
+`.github/workflows/claude-review.yml` runs Claude on a pull request. The
+maintainer turned it off on 2026-10-03: it starts only by hand, and `main`
+no longer needs its check (governance/decisions, `ci-review-manual-only`).
+When it runs it posts to the pull request, so three things must stay true:
+every action is pinned to a commit, the job's token cannot write to the
+repository's contents, and no tool it may use can commit or push. A fourth:
+the job fails unless Claude's verdict is PASS.
 """
 from __future__ import annotations
 
@@ -266,3 +267,10 @@ def test_a_long_listing_is_not_blamed_on_the_limit(tmp_path):
     r, _ = _run_rules_step(tmp_path, listing, "2999")
     assert r.returncode != 0
     assert "3,000" not in r.stderr, r.stderr
+
+
+def test_cr_1_the_review_starts_only_by_hand():
+    """Turned off by the maintainer on 2026-10-03: no pull request event
+    starts it, so it spends nothing unless someone starts it."""
+    on = yaml.safe_load(WORKFLOW.read_text(encoding="utf-8"))[True]
+    assert list(on) == ["workflow_dispatch"], on

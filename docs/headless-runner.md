@@ -35,6 +35,8 @@ A session that runs past the minute ceiling is ended, with every process it star
 
 ## What each session is told
 
+Each session gets `COMPASS_ISSUE` set to the run's issue, so the hooks and the CLI in it judge the run's issue, whatever issue `.compass/current-task` names for the person working beside it. The run never writes the pointer.
+
 The prompt names the stage's command and the issue, says nobody will answer a question, and forbids landing, shipping, pushing and merging. The session loads the Compass plugin the running CLI belongs to, and `git push`, `gh pr merge` and `compass ship-commit` are denied to it. No session resumes another.
 
 The denied commands are matched by how they start, so another spelling of the same command, such as `git -C . push`, is not denied. What stops a landing is the check after every session: a session that lands the issue stops the run. Grant the session no credential that can push.

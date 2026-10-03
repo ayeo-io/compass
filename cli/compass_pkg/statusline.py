@@ -71,11 +71,14 @@ def render(cwd: str, width: int = 80) -> str:
     if not project:
         return ""
     compass = os.path.join(project, ".compass")
-    try:
-        with open(os.path.join(compass, "current-task"), encoding="utf-8") as fh:
-            slug = fh.read().strip()
-    except OSError:
-        return ""
+    # COMPASS_ISSUE names this session's issue ahead of the pointer.
+    slug = os.environ.get("COMPASS_ISSUE", "")
+    if not slug:
+        try:
+            with open(os.path.join(compass, "current-task"), encoding="utf-8") as fh:
+                slug = fh.read().strip()
+        except OSError:
+            return ""
     if not slug or "/" in slug or slug in (".", ".."):
         return ""
     task_dir = os.path.join(compass, "work", slug)

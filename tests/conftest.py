@@ -371,3 +371,12 @@ def load_route_fixtures() -> List[Dict[str, Any]]:
         data["__file__"] = f.name
         out.append(data)
     return out
+
+
+@pytest.fixture(autouse=True)
+def _no_session_issue(monkeypatch):
+    """`compass run` sets COMPASS_ISSUE for the sessions it starts, and those
+    sessions run this suite. The tests build their own projects, whose
+    issues the session's never is, so the variable must not reach them. A
+    test about the variable sets it itself."""
+    monkeypatch.delenv("COMPASS_ISSUE", raising=False)

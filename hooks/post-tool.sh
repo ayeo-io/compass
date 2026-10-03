@@ -97,7 +97,16 @@ esac
 # --- find the current issue (pointer first, most-recent as fallback) --------
 TASK_DIR=""
 POINTER="$COMPASS_DIR/current-task"
-if [ -f "$POINTER" ]; then
+# COMPASS_ISSUE names this session's issue ahead of the pointer (see
+# pre-tool.sh). A value that names no issue logs nothing, rather than
+# writing to the pointer's issue.
+if [ -n "${COMPASS_ISSUE:-}" ]; then
+  case "$COMPASS_ISSUE" in
+    .|..|*/*|*\\*) exit 0 ;;
+  esac
+  [ -d "$WORK_DIR/$COMPASS_ISSUE" ] || exit 0
+  TASK_DIR="$WORK_DIR/$COMPASS_ISSUE"
+elif [ -f "$POINTER" ]; then
   SLUG="$(tr -d '[:space:]' < "$POINTER" 2>/dev/null || true)"
   if [ -n "$SLUG" ] && [ -d "$WORK_DIR/$SLUG" ]; then
     TASK_DIR="$WORK_DIR/$SLUG"

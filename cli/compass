@@ -113,7 +113,7 @@ def build_parser():
         "evaluate",
         help="apply routing-policy.yml to an issue's assessment")
     pre.add_argument("--issue", dest="task", metavar="SLUG",
-                     help="issue slug (default: current-task pointer)")
+                     help="issue slug (default: COMPASS_ISSUE, then the current-task pointer)")
     pre.add_argument("--assessment", dest="reading", metavar="KEY=VALUE",
                      action="append",
                      help="ad-hoc assessment key=value (repeatable; "
@@ -137,7 +137,7 @@ def build_parser():
         "summary",
         help="print the three-line decision view: approach, gates, files")
     prsum.add_argument("--issue", dest="task", metavar="SLUG",
-                       help="issue slug (default: current-task pointer)")
+                       help="issue slug (default: COMPASS_ISSUE, then the current-task pointer)")
     prsum.set_defaults(func=cmd_approach_summary, output_kind="report")
 
     # `bdd` is a subcommand GROUP, not a flat verb, so later BDD work (a

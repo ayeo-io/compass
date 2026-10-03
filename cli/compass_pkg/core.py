@@ -202,6 +202,14 @@ def exit_for_mode(failures, mode):
     return 1 if failures else 0
 
 
+def session_issue():
+    """The issue `COMPASS_ISSUE` names for this session, or None when it is
+    unset or empty. Not stripped: the hooks read the value as it is, and a
+    value with spaces must be refused by both, not accepted by one."""
+    value = os.environ.get("COMPASS_ISSUE", "")
+    return value or None
+
+
 def _one_segment(slug, where):
     """Refuse a slug that is not one path segment.
 
@@ -219,8 +227,11 @@ def _one_segment(slug, where):
 def resolve_issue_dir(slug=None):
     """Resolve an issue's working directory.
 
-    Priority: explicit slug > .compass/current-task pointer > most recently
-    changed dir under .compass/work/ (with a warning - ambiguous).
+    Priority: explicit slug > COMPASS_ISSUE > .compass/current-task pointer >
+    most recently changed dir under .compass/work/ (with a warning -
+    ambiguous). COMPASS_ISSUE names one session's issue: `compass run` sets
+    it, so an unattended session never works on the person's issue. A bad
+    value is refused, not passed over for the pointer.
     """
     compass_dir = find_compass_dir()
     work = os.path.join(compass_dir, "work")
@@ -228,6 +239,15 @@ def resolve_issue_dir(slug=None):
         d = os.path.join(work, _one_segment(slug, "--issue"))
         if not os.path.isdir(d):
             raise CompassError(f"no issue directory for slug '{slug}' under {work}")
+        return d
+    session = session_issue()
+    if session is not None:
+        d = os.path.join(work, _one_segment(session, "COMPASS_ISSUE"))
+        if not os.path.isdir(d):
+            raise CompassError(
+                f"COMPASS_ISSUE names '{session}', which is not an issue "
+                f"under {work}. Set it to a real issue slug, or unset it to "
+                f"use .compass/current-task.")
         return d
     pointer = os.path.join(compass_dir, "current-task")
     if os.path.isfile(pointer):
@@ -1102,5 +1122,6 @@ def issue_arg(p):
     `cli/compass` under its line cap.
     """
     p.add_argument("--issue", dest="task", metavar="SLUG",
-                   help="issue slug (default: current-task pointer)")
+                   help="issue slug (default: COMPASS_ISSUE, then the "
+                        "current-task pointer)")
     return p

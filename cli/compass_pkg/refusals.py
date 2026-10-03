@@ -73,6 +73,15 @@ REFUSALS: dict[str, dict[str, str]] = {
         "fix": "fix .compass/current-task to name a real issue slug, then "
                "retry.",
     },
+    "bad-session-issue": {
+        "what": "this edit",
+        "why": "COMPASS_ISSUE names '{slug}', which is not an issue directly "
+               "under .compass/work/. It names this session's issue ahead of "
+               ".compass/current-task, so the edit is not judged by another "
+               "issue instead.",
+        "fix": "set COMPASS_ISSUE to a real issue slug, or unset it to use "
+               ".compass/current-task, then retry.",
+    },
     "no-delivery-approach": {
         "what": "this edit",
         "why": "issue '{slug}' has no delivery-approach.md - its "

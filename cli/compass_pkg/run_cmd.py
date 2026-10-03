@@ -284,8 +284,11 @@ def _run(args, root, task_dir, task, path, claude, stop, ceilings,
                 reason = (f"the minute ceiling of {max_minutes:g} is reached "
                           f"({minutes_rule})")
                 break
+            # The session's own issue, ahead of the person's pointer,
+            # which the run never writes.
+            session_env = {**os.environ, "COMPASS_ISSUE": args.slug}
             launched = host_launch.launch_claude(claude, prompt, session_args,
-                                                 root, dict(os.environ),
+                                                 root, session_env,
                                                  timeout=left)
             summary = host_launch.session_summary(launched.stdout)
             entry = {"cycle": cycle, "exit": launched.returncode,

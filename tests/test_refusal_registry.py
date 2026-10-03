@@ -49,6 +49,7 @@ FIXTURES = {
                "not ['packaging/**']"),
     "not-initialised": dict(detail="no .compass/work/ exists in this project"),
     "bad-current-task": dict(slug="../side"),
+    "bad-session-issue": dict(slug="missing"),
     "no-delivery-approach": dict(slug="demo"),
     "no-acceptance-criteria": dict(target="src/app.py", tool="Edit"),
     "red-unsigned": dict(slug="demo", since_date="2026-09-01"),

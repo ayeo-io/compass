@@ -37,6 +37,15 @@ it shows how often the framework stopped each condition: "Hook blocks" and
 the harness records as `interruptions`. A condition with no Compass project
 shows "not recorded" for both, not zero.
 
+Three more columns give static code-quality signals: "Complexity added",
+"Duplicated lines" and "Lint findings". `evals/quality.py` rebuilds each
+run's final code from the scenario seed and the run's recorded diff, then
+measures the changed Python files outside `tests/` with Python's own `ast`,
+with no model and no other tool. They cover Python only and ignore
+`tests/`, so they mean nothing for a run that changes no Python: such a
+run, or one whose diff will not apply, shows "not recorded", not zero. They
+say nothing about design, naming or whether a pattern fits.
+
 Do not edit this checkout, run its tests or run a Compass command in it
 while a run is going. The harness hashes it before and after each run,
 ignored files and git's own settings included, and any change marks the

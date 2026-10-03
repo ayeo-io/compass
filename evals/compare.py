@@ -43,6 +43,7 @@ if str(FRAMEWORK_ROOT) not in sys.path:
 # once, in the harness - reused here rather than kept as a second copy, the
 # same reason `evals/judge.py` imports `_is_compass_own_record` from it.
 from evals import harness as _harness  # noqa: E402
+from evals import quality  # noqa: E402
 
 Cell = Tuple[str, str]  # (scenario, condition)
 
@@ -127,6 +128,15 @@ def _interruption_count(kind: str):
         value = counts.get(kind)
         return value if isinstance(value, int) else None
     return extract
+
+
+# Static code-quality signals (evals/quality.py): the changed Python files
+# outside tests/, rebuilt from the seed and the run's diff, measured with ast.
+_QUALITY_MEASURES = (
+    ("complexity_added", quality.complexity_added_of),
+    ("duplicated_lines", quality.duplicated_lines_of),
+    ("lint_findings", quality.lint_findings_of),
+)
 
 
 def _wall_time(record: Dict[str, Any]) -> Optional[float]:
@@ -251,6 +261,9 @@ MEASURE_COLUMNS = (
     ("replies_sent", "Interventions (replies sent)"),
     ("hook_blocks", "Hook blocks"),
     ("check_failures", "Check failures"),
+    ("complexity_added", "Complexity added"),
+    ("duplicated_lines", "Duplicated lines"),
+    ("lint_findings", "Lint findings"),
     ("wall_time", "Wall time"),
     ("tokens", "Tokens"),
 )
@@ -283,6 +296,8 @@ def cell_measures(records: List[Dict[str, Any]], scenarios_dir: Path) -> Dict[st
                                 _plain_count),
         "check_failures": _measure(
             [_interruption_count("check_failures")(r) for r in records], _plain_count),
+        **{key: _measure([of(r, scenarios_dir) for r in records], _plain_count)
+           for key, of in _QUALITY_MEASURES},
         "wall_time": _measure([_wall_time(r) for r in records], _seconds),
         "tokens": _measure(token_values, token_formatter),
     }
@@ -339,6 +354,8 @@ def summary_measures(records: List[Dict[str, Any]], scenarios_dir: Path) -> Dict
                               _plain_count),
         "check_failures": _total(
             [_interruption_count("check_failures")(r) for r in records], _plain_count),
+        **{key: _total([of(r, scenarios_dir) for r in records], _plain_count)
+           for key, of in _QUALITY_MEASURES},
         "wall_time": _total([_wall_time(r) for r in records], _seconds),
         "tokens": _total(token_values, token_formatter),
     }

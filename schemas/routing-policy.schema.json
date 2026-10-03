@@ -179,7 +179,8 @@
                   "replans",
                   "repeated_error",
                   "run_cycles",
-                  "run_minutes"
+                  "run_minutes",
+                  "run_cost_usd"
                 ]
               },
               "limit": {

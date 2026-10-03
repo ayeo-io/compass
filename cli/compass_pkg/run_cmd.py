@@ -22,7 +22,7 @@
 # would are denied to it, and a session that lands the issue anyway stops
 # the run. Every piece of text it writes or prints is redacted first.
 #
-# DEPENDENCY: standard library (hashlib, json, os, shutil, signal, sys,
+# DEPENDENCY: standard library (hashlib, json, math, os, shutil, signal, sys,
 # time) and
 # compass_pkg (core, host_launch, loop_ceilings, redact).
 # =============================================================================
@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import shutil
 import signal
@@ -76,6 +77,13 @@ def _session_args():
             "--disallowedTools", ",".join(DENIED)]
 
 
+#: The shipped rule that sets each run ceiling, named when a project's own
+#: policy lacks it.
+_RULE_FOR = {"cycle": "RP-LOOP-006 (run_cycles)",
+             "minute": "RP-LOOP-007 (run_minutes)",
+             "cost": "RP-LOOP-008 (run_cost_usd)"}
+
+
 def _limit(value, ceiling, name, flag, minimum_text):
     """The value a run uses: the flag when given, else the policy limit.
     Refused when the policy sets none, or the flag is out of range."""
@@ -83,12 +91,13 @@ def _limit(value, ceiling, name, flag, minimum_text):
         raise CompassError(
             f"compass run: governance/routing-policy.yml sets no {name} "
             f"ceiling, and an unattended run must have one. Add the "
-            f"`loop_ceilings` rules RP-LOOP-006 (run_cycles) and RP-LOOP-007 "
-            f"(run_minutes) from the Compass copy of that file.")
+            f"`loop_ceilings` rule {_RULE_FOR[name]} from the Compass copy "
+            f"of that file.")
     limit, rid = ceiling
     if value is None:
         return limit, rid
-    if value <= 0:
+    # `nan` passes every comparison, so a run given it would never stop.
+    if not math.isfinite(value) or value <= 0:
         raise CompassError(f"compass run: {flag} must be {minimum_text}.")
     if value > limit:
         raise CompassError(
@@ -202,6 +211,9 @@ def cmd_run(args):
     max_minutes, minutes_rule = _limit(args.max_minutes,
                                        ceilings.get("run_minutes"), "minute",
                                        "--max-minutes", "more than 0")
+    max_cost, cost_rule = _limit(args.max_cost_usd,
+                                 ceilings.get("run_cost_usd"), "cost",
+                                 "--max-cost-usd", "more than 0")
     claude = _claude(args.claude)
     # A relative stop file is read from the project root, wherever the
     # command was started.
@@ -223,7 +235,8 @@ def cmd_run(args):
     previous = signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
     try:
         return _run(args, root, task_dir, task, path, claude, stop, ceilings,
-                    max_cycles, cycles_rule, max_minutes, minutes_rule)
+                    max_cycles, cycles_rule, max_minutes, minutes_rule,
+                    max_cost, cost_rule)
     finally:
         signal.signal(signal.SIGTERM, previous)
         try:
@@ -258,7 +271,8 @@ def _reserve_record(root, task_dir, task):
 
 
 def _run(args, root, task_dir, task, path, claude, stop, ceilings,
-         max_cycles, cycles_rule, max_minutes, minutes_rule):
+         max_cycles, cycles_rule, max_minutes, minutes_rule,
+         max_cost, cost_rule):
     repeat_limit, repeat_rule = ceilings.get("repeated_error", (None, None))
     n, record_rel = _reserve_record(root, task_dir, task)
     started = now_iso()
@@ -266,6 +280,9 @@ def _run(args, root, task_dir, task, path, claude, stop, ceilings,
     prompt, session_args = _prompt(args.stage, args.slug), _session_args()
     cycles, outcome, reason = [], "stopped", None
     previous, stale, readable = _digest(task, task_dir), 0, True
+    spent = 0.0
+    cost_reached = (f"the cost ceiling of {max_cost:g} US dollars is reached "
+                    f"({cost_rule})")
 
     interrupted = None
     try:
@@ -287,7 +304,11 @@ def _run(args, root, task_dir, task, path, claude, stop, ceilings,
             # The session's own issue, ahead of the person's pointer,
             # which the run never writes.
             session_env = {**os.environ, "COMPASS_ISSUE": args.slug}
-            launched = host_launch.launch_claude(claude, prompt, session_args,
+            # Each session may spend only what the run has left; claude
+            # stops itself at its budget, and the runner stops after it.
+            budget = ["--max-budget-usd", f"{max_cost - spent:.2f}"]
+            launched = host_launch.launch_claude(claude, prompt,
+                                                 session_args + budget,
                                                  root, session_env,
                                                  timeout=left)
             summary = host_launch.session_summary(launched.stdout)
@@ -298,6 +319,8 @@ def _run(args, root, task_dir, task, path, claude, stop, ceilings,
                 # leave a piece no pattern recognises.
                 entry["error"] = redact(launched.stderr)[-_ERROR_TAIL:]
             cycles.append(entry)
+            if isinstance(summary["cost_usd"], (int, float)):
+                spent += summary["cost_usd"]
             # The manifest is read first, even after a timeout: a session that
             # broke it must not have the runner's older copy saved over it.
             current_task = _read(task_dir)
@@ -318,6 +341,11 @@ def _run(args, root, task_dir, task, path, claude, stop, ceilings,
             if _done(task, args.stage, task_dir):
                 outcome, reason = "done", None
                 entry["progress"] = "yes"
+                break
+            # After the done and landed checks: a session that finishes the
+            # stage as the money runs out has still finished it.
+            if spent >= max_cost:
+                reason = cost_reached
                 break
             current = _digest(task, task_dir)
             entry["progress"] = "no" if current == previous else "yes"
@@ -354,7 +382,8 @@ def _run(args, root, task_dir, task, path, claude, stop, ceilings,
         else:
             in_manifest = True
     run = {"n": n, "stage": args.stage, "started": started, "ended": now_iso(),
-           "cycles": len(cycles), "outcome": outcome}
+           "cycles": len(cycles), "cost_usd": round(spent, 4),
+           "outcome": outcome}
     if reason:
         run["stopped_reason"] = {"reason": redact(reason),
                                  "evidence": record_rel, "at": run["ended"]}
@@ -383,7 +412,7 @@ def register(sub):
         description="Run the build or verify stage of one issue through "
                     "`claude -p`, one fresh session per cycle, deciding "
                     "between cycles from the manifest and evidence alone. "
-                    "Stops at the cycle and minute ceilings in "
+                    "Stops at the cycle, minute and cost ceilings in "
                     "routing-policy.yml, when the stop file exists, or after "
                     "cycles that change nothing, and never lands the issue. "
                     "Exit 0 when the stage is done, 4 when stopped, 2 when "
@@ -397,5 +426,8 @@ def register(sub):
                    help="sessions to start at most; at most the policy ceiling")
     p.add_argument("--max-minutes", dest="max_minutes", type=float,
                    help="minutes to run at most; at most the policy ceiling")
+    p.add_argument("--max-cost-usd", dest="max_cost_usd", type=float,
+                   help="US dollars the run may spend at most; at most the "
+                        "policy ceiling")
     p.add_argument("--claude", help="the claude executable (default: on the path)")
     p.set_defaults(func=cmd_run, output_kind="hand-off")

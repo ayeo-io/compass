@@ -8,8 +8,8 @@
 # work past them, and `multiagent-run-recorded` (multiagent_check.py) refuses
 # to land a subtask past them without a stop reason. Both read the limits
 # and the cutoff date here, so neither module imports the other. Two more
-# bound an unattended `compass run` (run_cmd.py): the sessions it may start
-# and the minutes it may take.
+# bound an unattended `compass run` (run_cmd.py): the sessions it may start,
+# the minutes it may take and the money it may spend.
 #
 # DEPENDENCY: standard library (datetime, os) and compass_pkg.core.
 # =============================================================================
@@ -27,7 +27,7 @@ LOOP_CEILINGS_FROM = datetime.date(2026, 10, 3)
 
 #: The ceilings a `loop_ceilings` rule in routing-policy.yml can set.
 CEILINGS = ("builder_attempts", "review_rounds", "replans", "repeated_error",
-            "run_cycles", "run_minutes")
+            "run_cycles", "run_minutes", "run_cost_usd")
 
 
 def on_or_after(created, cutoff):

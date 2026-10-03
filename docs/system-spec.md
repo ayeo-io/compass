@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the variable, then the post-tool and stop hooks, the receipt and the status line read the same issue the pre-tool hook does.
+### Given a run whose sessions report their cost, then each session gets the money left as its budget, and the run stops with exit 4 once the total reaches the cost ceiling the policy sets.
 
-- **Scenario id:** `SI-E`
+- **Scenario id:** `RC-1`
 - **Intent:** `INT-1`
-- **Source issue:** `run-session-issue`
+- **Source issue:** `run-cost-ceiling`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1480 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1481 superseded scenario(s) are in `docs/system-spec-archive.md`.

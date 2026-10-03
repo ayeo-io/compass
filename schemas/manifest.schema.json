@@ -277,6 +277,10 @@
           "cycles": {
             "type": "integer"
           },
+          "cost_usd": {
+            "type": "number",
+            "description": "The total the run's sessions reported spending."
+          },
           "outcome": {
             "enum": [
               "done",

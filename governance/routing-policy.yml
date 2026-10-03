@@ -17,7 +17,7 @@
 # framework for everyone - see routing-policy.md.
 # =============================================================================
 
-version: 2.15.0
+version: 2.16.0
 # -----------------------------------------------------------------------------
 # ROUTING STRATEGIES - soft. They BIAS the candidate delivery approach. The evaluator uses
 # them in composition (step 1); a later rule can override the result.
@@ -206,6 +206,10 @@ routing_guardrails:
       ceiling: run_minutes
       limit: 240
       rationale: "An unattended run that is still going after four hours is not converging, and is spending money."
+    - id: RP-LOOP-008
+      ceiling: run_cost_usd
+      limit: 5
+      rationale: "Every session of an unattended run is paid; five US dollars is the most one run may spend, set by the maintainer on 2026-10-03."
 
   # immovable_gates - review gates no delivery approach may drop.
   # These three are "the default guardrails in review form": every delivery

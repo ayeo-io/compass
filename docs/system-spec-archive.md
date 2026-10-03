@@ -10290,3 +10290,45 @@
 - **Intent:** `INT-1`
 - **Source issue:** `run-record-edges`
 - **Landed:** 2026-10-03
+
+### Given the maintainer accepted ADR-030 on 2026-10-03, then its status, its index row and the owning doc say accepted, and the test pins accepted. _(archived)_
+
+- **Scenario id:** `AA-1`
+- **Intent:** `INT-1`
+- **Source issue:** `accept-adr-030`
+- **Landed:** 2026-10-03
+
+### Given the local archive, then the sample builder copies a fixed list of landed and abandoned issues with their layout, replaces local and private paths, recomputes the digest of each record it changed, and gives the same files when run twice. _(archived)_
+
+- **Scenario id:** `AS-A`
+- **Intent:** `INT-1`
+- **Source issue:** `archive-sample`
+- **Landed:** 2026-10-03
+
+### Given the sample, then compass check passes for every issue in it, run from the sample's root. _(archived)_
+
+- **Scenario id:** `AS-B`
+- **Intent:** `INT-1`
+- **Source issue:** `archive-sample`
+- **Landed:** 2026-10-03
+
+### Given the sample, then a test fails if any file in it holds a local absolute path, a private planning path, an email address or a credential shape. _(archived)_
+
+- **Scenario id:** `AS-C`
+- **Intent:** `INT-1`
+- **Source issue:** `archive-sample`
+- **Landed:** 2026-10-03
+
+### Given a clean checkout with no local archive, then the tests that read the archive's shape read the sample and run, and with the full-archive switch set they read the real archive. _(archived)_
+
+- **Scenario id:** `AS-D`
+- **Intent:** `INT-1`
+- **Source issue:** `archive-sample`
+- **Landed:** 2026-10-03
+
+### Given a clean checkout, then the living-spec currency and archive citation tests skip naming the full-archive switch, run when it is set, and the release guide says to set it. _(archived)_
+
+- **Scenario id:** `AS-E`
+- **Intent:** `INT-1`
+- **Source issue:** `archive-sample`
+- **Landed:** 2026-10-03

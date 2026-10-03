@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the maintainer accepted ADR-030 on 2026-10-03, then its status, its index row and the owning doc say accepted, and the test pins accepted.
+### Given the sample, then the self-architecture tests read the issue's real name, and the readable-specs test reads older acceptance criteria without a Summary, so neither returns early on a stale name.
 
-- **Scenario id:** `AA-1`
+- **Scenario id:** `AS-F`
 - **Intent:** `INT-1`
-- **Source issue:** `accept-adr-030`
+- **Source issue:** `archive-sample`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1469 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1475 superseded scenario(s) are in `docs/system-spec-archive.md`.

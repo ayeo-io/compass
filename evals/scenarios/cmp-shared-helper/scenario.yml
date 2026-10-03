@@ -1,0 +1,7 @@
+id: cmp-shared-helper
+prompt: |
+  Big amounts are hard to read. Can you make format_amount in src/fmt.py
+  show thousands separators, so 123456 pence shows as £1,234.56?
+budget_usd: 3.0
+hidden_command: python3 -m pytest tests/test_hidden_shared_helper.py -q
+continue_reply: Go ahead with whichever option you recommend.

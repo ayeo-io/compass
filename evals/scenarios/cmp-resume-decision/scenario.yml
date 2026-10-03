@@ -1,0 +1,7 @@
+id: cmp-resume-decision
+prompt: |
+  Let's pick the shipping costs work back up from where it was left off,
+  and finish it.
+budget_usd: 4.0
+hidden_command: python3 -m pytest tests/test_hidden_resume_decision.py -q
+continue_reply: Go ahead with whichever option you recommend.

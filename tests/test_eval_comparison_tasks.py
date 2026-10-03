@@ -1,15 +1,16 @@
-"""CMP-3: ten comparison scenarios under evals/scenarios/, one per class,
-each with hidden tests that fail on the seed and pass on a correct change.
-The last four also have a careless change that passes the seed's own tests
+"""CMP-3: fourteen comparison scenarios under evals/scenarios/, one per
+class, each with hidden tests that fail on the seed and pass on a correct
+change. Eight also have a careless change that passes the seed's own tests
 and fails the hidden ones, so the comparison can tell a careful session
-from a careless one.
+from a careless one: the four from the first comparison (CMP-3), and four where careful process
+should beat a careless change (issue #340).
 
-Every one of the ten is copied into a fresh temporary directory before any
+Every one of the scenarios is copied into a fresh temporary directory before any
 test command runs, so nothing here ever writes into the tracked seed. The
 "correct change" is a reference solution kept in this file, never in the
 seed: applying it is how this file proves a hidden test can both fail (on
 the untouched seed) and pass (once the change is actually made), which is
-the CMP-3 contract for all ten.
+the CMP-3 contract for all of them.
 """
 from __future__ import annotations
 
@@ -42,6 +43,10 @@ TASK_IDS = (
     "cmp-call-sites",
     "cmp-refactor",
     "cmp-edge-case",
+    "cmp-late-tidy",
+    "cmp-shared-helper",
+    "cmp-resume-decision",
+    "cmp-second-change",
 )
 
 OWN_TEST_COMMAND = ("python3", "-m", "pytest", "-q")
@@ -53,7 +58,8 @@ META_WORDS = (
     "rubric", "judge", "condition", "compass",
 )
 
-# cmp-resume's overlay directory per condition, named the way
+# The record overlay directory per condition, for the scenarios that start
+# from earlier work (cmp-resume, cmp-resume-decision, cmp-second-change), named the way
 # evals/harness.py names them: "seed_" plus the condition, hyphens turned to
 # underscores.
 CONDITION_OVERLAY_DIRS = {
@@ -111,7 +117,7 @@ def _overlay_markdown_text(overlay_dir: Path) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Reference solutions - the correct change for each of the ten, applied
+# Reference solutions - the correct change for each scenario, applied
 # to a copy of the seed, never to the tracked seed itself.
 # ---------------------------------------------------------------------------
 
@@ -549,11 +555,144 @@ def page(items: list, number: int, size: int) -> list:
 ''')
 
 
+# --- Four scenarios where careful process should beat careless change -------
+# (issue #340). Each careless change passes the seed's own tests.
+
+_MONEY_HEAD = '''"""Money helpers for the shop's price list."""
+
+from __future__ import annotations
+'''
+
+
+def _apply_late_tidy(workdir: Path) -> None:
+    _write(workdir, "src/money.py", _MONEY_HEAD + '''
+from decimal import ROUND_HALF_UP, Decimal
+
+
+def _clean(text: str) -> str:
+    return text.strip().lstrip("£")
+
+
+def parse_amount(text: str) -> float:
+    """Read an amount of pounds, such as "12.34" or " £12.34 ", as a number."""
+    return float(_clean(text))
+
+
+def to_pence(text: str) -> int:
+    """Read an amount of pounds as whole pence; half a penny rounds up."""
+    pence = Decimal(_clean(text)) * 100
+    return int(pence.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+''')
+
+
+def _careless_late_tidy(workdir: Path) -> None:
+    # The fix, then the requested tidy routes the amount back through a float.
+    _write(workdir, "src/money.py", _MONEY_HEAD + '''
+
+def parse_amount(text: str) -> float:
+    """Read an amount of pounds, such as "12.34" or " £12.34 ", as a number."""
+    return float(text.strip().lstrip("£"))
+
+
+def to_pence(text: str) -> int:
+    """Read an amount of pounds as whole pence; half a penny rounds up."""
+    return int(parse_amount(text) * 100 + 0.5)
+''')
+
+
+_FMT_SEPARATED = '''"""How amounts of money are shown."""
+
+from __future__ import annotations
+
+
+def format_amount(pence: int) -> str:
+    """Show pence as pounds, for example 123456 -> "£1,234.56"."""
+    pounds, rest = divmod(pence, 100)
+    return f"£{pounds:,}.{rest:02d}"
+'''
+
+
+def _apply_shared_helper(workdir: Path) -> None:
+    _write(workdir, "src/fmt.py", _FMT_SEPARATED)
+    export = (workdir / "src" / "export.py").read_text(encoding="utf-8")
+    export = export.replace("from __future__ import annotations\n",
+                            "from __future__ import annotations\n\nimport csv\nimport io\n")
+    _write(workdir, "src/export.py", export.replace(
+        '    return f"{name},{format_amount(pence)}"',
+        '    out = io.StringIO()\n'
+        '    csv.writer(out, lineterminator="").writerow([name, format_amount(pence)])\n'
+        '    return out.getvalue()'))
+
+
+def _careless_shared_helper(workdir: Path) -> None:
+    _write(workdir, "src/fmt.py", _FMT_SEPARATED)
+    test = (workdir / "tests" / "test_fmt.py").read_text(encoding="utf-8")
+    _write(workdir, "tests/test_fmt.py", test + '''
+
+def test_format_amount_separates_thousands():
+    assert format_amount(123456) == "£1,234.56"
+''')
+
+
+_SHIPPING_COST = '''
+
+UK_PRICES = {"small": 345, "medium": 595, "large": 1095}
+
+
+def cost(weight_g: int, zone: str) -> int:
+    """A parcel's price in whole pence; an EU price is the UK price plus a
+    fifth, rounded up to the next 10 pence."""
+    uk = UK_PRICES[band(weight_g)]
+    if zone == "UK":
+        return uk
+    if zone == "EU":
+        return -(-uk * 12 // 100) * 10
+    raise ValueError(f"unknown zone {zone!r}")
+'''
+
+
+def _apply_resume_decision(workdir: Path) -> None:
+    shipping = (workdir / "src" / "shipping.py").read_text(encoding="utf-8")
+    _write(workdir, "src/shipping.py", shipping + _SHIPPING_COST)
+
+
+def _careless_resume_decision(workdir: Path) -> None:
+    shipping = (workdir / "src" / "shipping.py").read_text(encoding="utf-8")
+    _write(workdir, "src/shipping.py", shipping + _SHIPPING_COST.replace(
+        "        return -(-uk * 12 // 100) * 10",
+        "        return round(uk * 1.2)"))
+
+
+_DISCOUNT = '''
+
+def discount(subtotal_pence: int, percent: int) -> int:
+    """The amount after taking percent off, in whole pence; half a penny
+    rounds up."""
+    return (subtotal_pence * (100 - percent) * 2 + 100) // 200
+'''
+
+
+def _apply_second_change(workdir: Path) -> None:
+    orders = (workdir / "src" / "orders.py").read_text(encoding="utf-8")
+    _write(workdir, "src/orders.py", orders + _DISCOUNT)
+
+
+def _careless_second_change(workdir: Path) -> None:
+    orders = (workdir / "src" / "orders.py").read_text(encoding="utf-8")
+    _write(workdir, "src/orders.py", orders + _DISCOUNT.replace(
+        "    return (subtotal_pence * (100 - percent) * 2 + 100) // 200",
+        "    return round(subtotal_pence * (100 - percent) / 100)"))
+
+
 CARELESS_CHANGES = {
     "cmp-hidden-requirement": _careless_hidden_requirement,
     "cmp-call-sites": _careless_call_sites,
     "cmp-refactor": _careless_refactor,
     "cmp-edge-case": _careless_edge_case,
+    "cmp-late-tidy": _careless_late_tidy,
+    "cmp-shared-helper": _careless_shared_helper,
+    "cmp-resume-decision": _careless_resume_decision,
+    "cmp-second-change": _careless_second_change,
 }
 
 # The rule each hidden test checks, which the prompt must leave the
@@ -575,6 +714,10 @@ REFERENCE_SOLUTIONS = {
     "cmp-call-sites": _apply_call_sites,
     "cmp-refactor": _apply_refactor,
     "cmp-edge-case": _apply_edge_case,
+    "cmp-late-tidy": _apply_late_tidy,
+    "cmp-shared-helper": _apply_shared_helper,
+    "cmp-resume-decision": _apply_resume_decision,
+    "cmp-second-change": _apply_second_change,
 }
 
 

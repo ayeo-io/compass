@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given compass run, then each session is allowed the file tools, Skill and the compass CLI, is denied landing, pushing, merging and starting another run, and the run record keeps each session's last message.
+### Given the demo quick fix, then a manually started workflow runs compass run on it in CI, authenticated by federation with no stored key, and keeps the run record.
 
-- **Scenario id:** `ST-1`
+- **Scenario id:** `RD-1`
 - **Intent:** `INT-1`
-- **Source issue:** `run-session-tools`
+- **Source issue:** `run-demo-in-ci`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1482 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1483 superseded scenario(s) are in `docs/system-spec-archive.md`.

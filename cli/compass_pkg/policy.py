@@ -337,6 +337,7 @@ def _plan_stage_weight(task_slug):
 
 
 def cmd_plan_lint(args):
+    from compass_pkg.terminal import relative_to_project
     # The default path goes through `artifact_path`, which knows both the name
     # this framework writes today and the one a landed issue still holds. This
     # function joined the filename itself, and got it wrong twice: first left
@@ -351,7 +352,7 @@ def cmd_plan_lint(args):
         path = artifact_path(task_dir, "technical-design.md")
 
     if not os.path.isfile(path):
-        print(f"compass plan lint: ERROR - no such file: {path}")
+        print(f"compass plan lint: ERROR - no such file: {relative_to_project(path)}")
         # Say why it might legitimately be absent AND check that reason against
         # the record, rather than explaining away an absence the approach says
         # should not happen.
@@ -372,11 +373,11 @@ def cmd_plan_lint(args):
         findings = _plan_lint_findings(fh.read())
 
     if not findings:
-        print(f"compass plan lint: PASS - no placeholders found in {path}")
+        print(f"compass plan lint: PASS - no placeholders found in {relative_to_project(path)}")
         return 0
 
     noun = "placeholder" if len(findings) == 1 else "placeholders"
-    print(f"compass plan lint: {len(findings)} possible {noun} in {path} [advisory]")
+    print(f"compass plan lint: {len(findings)} possible {noun} in {relative_to_project(path)} [advisory]")
     for lineno, phrase in findings:
         print(f"  line {lineno}: {phrase}")
     print("\n  Advisory, not a gate - this exits 0. Assess these as judgement in "
@@ -386,6 +387,7 @@ def cmd_plan_lint(args):
 
 
 def cmd_task_lint(args):
+    from compass_pkg.terminal import relative_to_project
     if args.file:
         path = args.file
         task = normalize_spine(load_yaml(path))
@@ -453,10 +455,10 @@ def cmd_task_lint(args):
     if je:
         errs += je
     if errs:
-        print(f"compass issue lint: FAIL - {path}")
+        print(f"compass issue lint: FAIL - {relative_to_project(path)}")
         for e in errs:
             print(f"  - {e}")
         return 1
-    print(f"compass issue lint: PASS - {path} is structurally valid."
+    print(f"compass issue lint: PASS - {relative_to_project(path)} is structurally valid."
           + ("\n" + _schema_note(schema_ran) if not schema_ran else ""))
     return 0

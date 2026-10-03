@@ -443,9 +443,10 @@ def cmd_tdd_red(args):
               if red_kind == "exit-code" else [])
     return say(args,
                f"compass tdd-red: failing test recorded (exit {code}){bound}.",
-               detail=judged + [f"evidence : {ev_path}",
-                       f"marker   : {os.path.join(task_dir, '.red')}",
-                       "           the pre-tool hook will now allow code edits."],
+               detail=judged + [f"evidence : {ev_path}"]
+                      + [x for x in [_scenario_line(task_dir, scenario)] if x]
+                      + [f"marker   : {os.path.join(task_dir, '.red')}",
+                         "           the pre-tool hook will now allow code edits."],
                scenario=scenario, exit_code=code, evidence=ev_path,
                marker=os.path.join(task_dir, ".red"))
 
@@ -728,8 +729,27 @@ def cmd_tdd_green(args):
                detail=[f"evidence : {ev_path}",
                        "registry : manifest.yml `evidence:` updated with the "
                        "test-run entry",
-                       marker_line],
+                       marker_line]
+                      + [x for x in [_scenario_line(task_dir, scenario)] if x],
                scenario=scenario, exit_code=0, evidence=ev_path)
+
+
+def _scenario_line(task_dir, scenario):
+    """`scenario : <acceptance criteria>:<line>` for the row that defines
+    `scenario`, so a reader opens it with one click (#291), or None."""
+    if not scenario:
+        return None
+    from compass_pkg.core import artifact_path
+    from compass_pkg.terminal import relative_to_project
+    path = artifact_path(task_dir, "acceptance-criteria.md")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            for n, line in enumerate(fh, 1):
+                if line.lstrip().startswith(f"| {scenario} |"):
+                    return f"scenario : {relative_to_project(path)}:{n}"
+    except OSError:
+        return None
+    return None
 
 
 def _upsert_test_run_evidence(task_dir, scenario, rel_path,
@@ -973,7 +993,8 @@ def cmd_acceptance_record(args):
     if kind == "refactor":
         print("  contract : the baselined command was green before the change "
               "and is green after, across a changed tree")
-    print(f"  evidence : {ev_path}")
+    from compass_pkg.terminal import relative_to_project
+    print(f"  evidence : {relative_to_project(ev_path)}")
     print("  registry : manifest.yml `evidence:` updated with the test-run entry")
     print("  marker   : .acceptance cleared")
     return 0

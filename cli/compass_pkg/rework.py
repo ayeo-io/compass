@@ -345,7 +345,8 @@ def _emit_markdown_report(instances, tasks, skipped, window_days, root):
     n = len(instances)
     print("## Rework scan")
     print("")
-    print(f"Scanned {len(tasks)} issue(s) under `{root}` "
+    from compass_pkg.terminal import relative_to_project
+    print(f"Scanned {len(tasks)} issue(s) under `{relative_to_project(root)}` "
           f"(window: {window_days} days).")
     if skipped:
         print(f"Skipped {len(skipped)} issue(s) due to parse errors "

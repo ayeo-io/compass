@@ -155,3 +155,25 @@ def header(fields: list, style: str, width: int | None = None) -> str:
     # character in one could set the window title or clear the screen.
     fields = [_CONTROL.sub("", str(f)) for f in fields if f]
     return fit([f for f in fields if f], width, glyphs["join"], glyphs["cut"])
+
+
+# --- paths ---------------------------------------------------------------------
+# Every path the CLI prints is relative to the project root, `path:line` where
+# the line is known, so a terminal or an IDE opens it with one click and the
+# model reads it without a search (#291).
+
+
+def relative_paths(text, root) -> str:
+    """`text` with each absolute path under `root` made relative to it. The
+    root itself is left absolute: "initialised Compass in <root>" must say
+    where."""
+    if not root or not isinstance(text, str):
+        return text
+    for base in sorted({os.path.abspath(root), os.path.realpath(root)}, key=len, reverse=True):
+        if len(base) <= 1:
+            continue          # the filesystem root would match everything
+        # Only where the root starts a path - not inside a URL or a longer
+        # path that merely contains it - and only with a name after it.
+        pattern = r"(?<![\w./:~$-])" + re.escape(base + os.sep) + r"(?=[^\s`'\"])"
+        text = re.sub(pattern, "", text)
+    return text

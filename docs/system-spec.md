@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a run whose sessions report their cost, then each session gets the money left as its budget, and the run stops with exit 4 once the total reaches the cost ceiling the policy sets.
+### Given compass run, then each session is allowed the file tools, Skill and the compass CLI, is denied landing, pushing, merging and starting another run, and the run record keeps each session's last message.
 
-- **Scenario id:** `RC-1`
+- **Scenario id:** `ST-1`
 - **Intent:** `INT-1`
-- **Source issue:** `run-cost-ceiling`
+- **Source issue:** `run-session-tools`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1481 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1482 superseded scenario(s) are in `docs/system-spec-archive.md`.

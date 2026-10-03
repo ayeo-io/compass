@@ -385,3 +385,70 @@ def test_dr_c_a_worktree_ship_syncs_only_configured_paths(cli_path, tmp_path, mo
     clone = _record_files(remote, tmp_path)
     assert not (clone / ".compass" / "work" / "shipped").exists()
     assert (clone / "docs" / "analysis" / "plan.md").is_file()
+
+
+# --- RG-1: content in the record cannot make a sync quietly record nothing ----
+
+def _commit_in_record(remote, tmp_path, change):
+    """Change the record as someone with write access to it could."""
+    work = tmp_path / "writer"
+    subprocess.run(["git", "clone", "-q", "-b", "main", str(remote), str(work)],
+                   check=True)
+    change(work)
+    _git(work, "-c", "user.name=x", "-c", "user.email=x@example.invalid",
+         "commit", "-q", "-m", "change")
+    _git(work, "push", "-q", "origin", "HEAD:main")
+
+
+def test_rg_1_a_gitignore_in_the_record_does_not_stop_a_sync(project, tmp_path):
+    remote = _remote(tmp_path)
+    _configure(project, remote)
+    assert _cli(project, "record", "sync").returncode == 0
+
+    def ignore_everything(work):
+        (work / ".gitignore").write_text("*\n")
+        _git(work, "add", "-f", ".gitignore")
+    _commit_in_record(remote, tmp_path, ignore_everything)
+    (project / "docs" / "analysis" / "new.md").write_text("new plan\n")
+    result = _cli(project, "record", "sync")
+    assert result.returncode == 0 and "nothing to sync" not in result.stdout
+    clone = _record_files(remote, tmp_path)
+    assert (clone / "docs" / "analysis" / "new.md").is_file()
+
+
+def test_rg_1_a_submodule_entry_in_the_record_is_refused(project, tmp_path):
+    remote = _remote(tmp_path)
+    _configure(project, remote)
+    assert _cli(project, "record", "sync").returncode == 0
+
+    def add_submodule(work):
+        _git(work, "update-index", "--add", "--cacheinfo",
+             "160000,1111111111111111111111111111111111111111,.compass/work/sub")
+    _commit_in_record(remote, tmp_path, add_submodule)
+    sync = _cli(project, "record", "sync")
+    assert sync.returncode != 0 and "submodule" in sync.stderr
+    restore = _cli(project, "record", "restore", "--force")
+    assert restore.returncode != 0 and "submodule" in restore.stderr
+
+
+def test_rg_1_a_restore_that_copies_nothing_says_why(project, tmp_path):
+    remote = _remote(tmp_path)
+    _configure(project, remote)
+    assert _cli(project, "record", "sync").returncode == 0
+    fresh = tmp_path / "fresh"
+    fresh.mkdir()
+    _init_repo(fresh)
+    _configure(fresh, remote, paths=("docs/never-recorded",))
+    result = _cli(fresh, "record", "restore")
+    assert result.returncode == 0
+    assert "holds nothing" in result.stdout
+
+
+def test_rg_1_the_clone_runs_with_lfs_filters_off(project, tmp_path):
+    remote = _remote(tmp_path)
+    _configure(project, remote)
+    assert _cli(project, "record", "sync").returncode == 0
+    clone = next((tmp_path / "cache" / "compass" / "record").iterdir())
+    assert _git(clone, "config", "filter.lfs.required").stdout.strip() == "false"
+    assert _git(clone, "config", "filter.lfs.process").stdout.strip() == ""
+    assert _git(clone, "config", "--get", "filter.lfs.process").returncode == 0

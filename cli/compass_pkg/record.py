@@ -31,6 +31,12 @@ from compass_pkg.redact import redact
 #: The branch the record is kept on.
 BRANCH = "main"
 
+#: Settings that turn LFS filters off in the clone: a record's own
+#: `.lfsconfig` must not make git contact another server, and the record
+#: is copied as it is stored.
+_NO_LFS = (("filter.lfs.process", ""), ("filter.lfs.smudge", "cat"),
+           ("filter.lfs.clean", "cat"), ("filter.lfs.required", "false"))
+
 
 def settings(project_root):
     """`(remote, paths)` from `.compass/config.yml`, or None when the
@@ -144,7 +150,11 @@ def _fresh_clone(remote):
     if not os.path.isdir(os.path.join(clone, ".git")):
         shutil.rmtree(clone, ignore_errors=True)
         os.makedirs(os.path.dirname(clone), exist_ok=True)
-        _must(_git(["clone", "-q", remote, clone], None), "cloning the record")
+        flags = [arg for key, value in _NO_LFS for arg in ("-c", f"{key}={value}")]
+        _must(_git([*flags, "clone", "-q", remote, clone], None),
+              "cloning the record")
+        for key, value in _NO_LFS:
+            _must(_git(["config", key, value], clone), "configuring the clone")
     else:
         _must(_git(["fetch", "-q", "origin"], clone), "fetching the record")
     # Always the record's own branch: a remote whose default branch is
@@ -168,6 +178,14 @@ def _refuse_links(clone):
     own folder or outside the clone, or a restore to copy any file on the
     machine into the project."""
     listed = _must(_git(["ls-files", "-s"], clone), "listing the record").stdout
+    modules = [line.split("\t", 1)[-1] for line in listed.splitlines()
+               if line.startswith("160000 ")]
+    if modules:
+        raise CompassError(
+            f"compass record: the record repository holds a submodule entry "
+            f"({', '.join(modules[:5])}), which Compass never writes and which "
+            f"can hide files from a sync. Remove it from the record before "
+            f"syncing or restoring.")
     links = [line.split("\t", 1)[-1] for line in listed.splitlines()
              if line.startswith("120000 ")]
     if links:
@@ -262,7 +280,8 @@ def sync(project_root, prune=False, only=None):
         _mirror(project_root, clone, rel, prune)
     note = (f" ({', '.join(skipped)} not in this checkout, so left as "
             f"recorded)" if skipped else "")
-    _must(_git(["add", "-A"], clone), "staging the record")
+    # --force: a `.gitignore` in the record must not hide files from it.
+    _must(_git(["add", "-A", "--force"], clone), "staging the record")
     if not _git(["status", "--porcelain"], clone).stdout.strip():
         return "nothing to sync: the record already matches" + note
     head = _git(["rev-parse", "--short=12", "HEAD"], project_root).stdout.strip()
@@ -312,6 +331,10 @@ def restore(project_root, force=False):
     for full, target in pairs:
         os.makedirs(os.path.dirname(target), exist_ok=True)
         shutil.copyfile(full, target)
+    if not pairs and not any(
+            os.path.exists(os.path.join(clone, rel)) for rel in paths):
+        return (f"restored nothing: the record at {remote} holds nothing "
+                f"under {', '.join(paths)}")
     return f"restored {len(pairs)} file(s) from {remote}"
 
 

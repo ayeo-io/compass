@@ -371,6 +371,12 @@ def build_parser():
              "(advisory only; never modifies issue state)",
     )
     pfl.add_argument(
+        "--html",
+        metavar="FILE",
+        help="write the delivery board as one static HTML page to FILE "
+             "(not inside .compass/ or docs/compass/)",
+    )
+    pfl.add_argument(
         "--digest",
         action="store_true",
         help="write a dated digest to stdout including the rework-scan "

@@ -740,7 +740,10 @@ PYEOF
   [ "$LEASE_STATUS" -eq 0 ] || compass_reader_failed "session lease reader" "$LEASE_STATUS" "$LEASE_ERR"
   rm -f "$LEASE_ERR"
   case "$LEASE" in
-    moved:*) compass_block pointer-moved "slug=$SLUG" "previous=${LEASE#moved:}" ;;
+    moved:*)
+      # Counted against the issue this session works on, not the pointer's.
+      [ -d "$WORK_DIR/${LEASE#moved:}" ] && TASK_DIR="$WORK_DIR/${LEASE#moved:}"
+      compass_block pointer-moved "slug=$SLUG" "previous=${LEASE#moved:}" ;;
   esac
 fi
 if [ -z "$TASK_DIR" ]; then

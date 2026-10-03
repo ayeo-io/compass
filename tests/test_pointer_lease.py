@@ -163,3 +163,48 @@ def test_cl_d_a_lease_check_that_crashes_refuses_the_edit(project):
     result = _edit(project, "session-a")
     assert result.returncode == 2, result.stderr
     assert "reader-failed" in result.stderr and "session" in result.stderr
+
+
+# --- the session table kept tidy (issue #318) ----------------------------------
+
+def test_st2_concurrent_records_are_all_kept(project):
+    sys.path.insert(0, str(ROOT / "cli"))
+    from concurrent.futures import ProcessPoolExecutor
+    compass_dir = str(project / ".compass")
+    with ProcessPoolExecutor(max_workers=8) as pool:
+        list(pool.map(_record_one, [(compass_dir, f"s{i}") for i in range(40)]))
+    table = json.loads((project / ".compass" / "sessions.json").read_text())
+    assert len(table) == 40
+
+
+def _record_one(args):
+    sys.path.insert(0, str(ROOT / "cli"))
+    from compass_pkg.session_lease import record
+    record(args[0], args[1], "ex")
+
+
+def test_st2_stale_records_are_dropped_when_the_table_is_written(project):
+    assert _edit(project, "old-session").returncode == 0
+    table = project / ".compass" / "sessions.json"
+    data = json.loads(table.read_text())
+    data["old-session"]["at"] = (datetime.datetime.now(datetime.timezone.utc)
+                                 - datetime.timedelta(hours=13)).isoformat(timespec="seconds")
+    table.write_text(json.dumps(data))
+    assert _edit(project, "new-session").returncode == 0
+    assert "old-session" not in json.loads(table.read_text())
+
+
+def test_st2_the_table_is_ignored_by_git_in_any_project(project):
+    subprocess.run(["git", "init", "-q"], cwd=project, check=True)
+    assert _edit(project, "session-a").returncode == 0
+    ignored = subprocess.run(["git", "check-ignore", "-q", ".compass/sessions.json"],
+                             cwd=project)
+    assert ignored.returncode == 0
+
+
+def test_st2_a_pointer_moved_refusal_counts_against_the_sessions_issue(project):
+    assert _edit(project, "session-a").returncode == 0
+    assert _use(project, "session-b", "why").returncode == 0
+    assert _edit(project, "session-a").returncode == 2
+    log = (project / ".compass" / "interruptions.log").read_text().splitlines()
+    assert log and log[-1].split("\t")[1] == "ex", log

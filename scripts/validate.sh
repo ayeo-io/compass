@@ -94,7 +94,9 @@ EXISTING_SKILLS="$(cd skills 2>/dev/null && ls -d */ 2>/dev/null | sed 's:/$::' 
 EXISTING_TEMPLATES="$(cd templates 2>/dev/null && ls *.md 2>/dev/null | sed 's/\.md$//' || true)"
 
 has() { # needle  haystack(newline-separated)
-  printf '%s\n' "$2" | grep -qxF "$1"
+  # A here-string, not a pipe: under pipefail a `grep -q` that exits at its
+  # first match can fail the pipe and turn a found line into a missing one.
+  grep -qxF "$1" <<<"$2"
 }
 
 # --- 3. agents referenced by commands exist ---------------------------------

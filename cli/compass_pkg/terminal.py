@@ -175,7 +175,7 @@ def _path_line(prefix, path):
     for, the other is untidy. The width guard knows about this and exempts a
     line whose overflow is a single unbreakable token.
     """
-    return "%s%s" % (prefix, str(path).strip())
+    return "%s%s" % (prefix, relative_to_project(str(path).strip()))
 
 
 def write_capture(path, capture):

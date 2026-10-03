@@ -113,3 +113,23 @@ def test_tdd_names_the_scenario_line(project):
 ])
 def test_relative_paths_touches_only_paths_under_the_root(root, text, expected):
     assert render.relative_paths(text, root) == expected
+
+
+# --- error messages and the Read line (#293) ------------------------------------
+
+def test_an_error_names_a_project_file_relatively(project):
+    import shutil
+    shutil.rmtree(project / ".compass" / "work" / "demo" )
+    (project / ".compass" / "work" / "demo").mkdir()
+    r = _compass(project, "issue", "lint", "--issue", "demo")
+    assert r.returncode != 0
+    _no_absolute(project, r)
+    assert ".compass/work/demo" in r.stdout + r.stderr
+
+
+def test_approach_evaluate_reads_a_relative_path(project):
+    # The Read line names the approach record when it sits beside the manifest.
+    (project / ".compass" / "work" / "demo" / "delivery-approach.md").write_text("# x\n")
+    r = _compass(project, "approach", "evaluate", "--issue", "demo")
+    assert "Read" in r.stdout, r.stdout
+    _no_absolute(project, r)

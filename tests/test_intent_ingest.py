@@ -10,6 +10,8 @@ ingest-an-existing-brief/acceptance-criteria.md
 """
 from __future__ import annotations
 
+import os
+
 import sys
 from pathlib import Path
 
@@ -354,8 +356,10 @@ def test_ing_a4c_a_missing_source_leaves_the_issue_untouched(tmp_path):
     # this the test passes against a CLI that has no such verb at all - argparse
     # exits non-zero and writes nothing, which is the same shape as success
     # here and proves nothing about the behaviour.
+    # Since #293 the path is printed relative to the project root, so look
+    # for the source as the project sees it.
     combined = run.stdout + run.stderr
-    assert str(missing) in combined, (
+    assert "no such source: " + os.path.relpath(missing, project) in combined, (
         "the failure does not name the source it looked for, so this is not "
         "the reader refusing:\n" + combined)
 

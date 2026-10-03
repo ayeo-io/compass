@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the verbs CP-A runs, with their output piped, then it carries no escape code of any kind.
+### Given an error naming a project file, or compass approach evaluate's Read line, then the path is printed relative to the project root
 
-- **Scenario id:** `CP-D`
+- **Scenario id:** `EP-A`
 - **Intent:** `INT-1`
-- **Source issue:** `clickable-paths`
+- **Source issue:** `errors-print-relative-paths`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1444 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1445 superseded scenario(s) are in `docs/system-spec-archive.md`.

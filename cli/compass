@@ -614,7 +614,10 @@ def main(argv=None):
     try:
         return run_with_mode(args, lambda a: args.func(a) or 0) or 0
     except CompassError as exc:
-        sys.stderr.write(f"compass: {exc}\n")
+        # Paths in an error open from the project root, like every other
+        # path the CLI prints (#293).
+        from compass_pkg.terminal import relative_to_project
+        sys.stderr.write(f"compass: {relative_to_project(str(exc))}\n")
         return 2
     except KeyboardInterrupt:
         return 130

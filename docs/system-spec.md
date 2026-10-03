@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the session table, then concurrent writes keep every record, stale records are dropped when it is written, the table is ignored by git in any project, and a pointer-moved refusal is counted against the session's own issue.
+### Given a script that sets pipefail, then it never pipes into grep -q, because a grep that exits at its first match can fail the pipe and turn a found line into a missing one.
 
-- **Scenario id:** `ST2-1`
+- **Scenario id:** `GQ-1`
 - **Intent:** `INT-1`
-- **Source issue:** `session-table-tidy`
+- **Source issue:** `grep-q-under-pipefail`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1494 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1495 superseded scenario(s) are in `docs/system-spec-archive.md`.

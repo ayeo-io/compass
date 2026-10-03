@@ -37,7 +37,7 @@ set -euo pipefail
 # `compass-<v>/./path`.
 tar_prefix_flags() {
   local version="$1"
-  if tar --version 2>/dev/null | grep -qi 'gnu tar'; then
+  if grep -qi 'gnu tar' <<<"$(tar --version 2>/dev/null)"; then
     printf '%s\n' "--transform" "s,^\./,compass-${version}/,"
   else
     printf '%s\n' "-s" ",^\./,compass-${version}/,"
@@ -84,7 +84,7 @@ vendor_integrity_missing() {
   local tar_list="$1" version="$2"
   local f missing=""
   for f in "cli/vendor/yaml/__init__.py" "cli/vendor/LICENSE-PyYAML" "THIRD-PARTY-NOTICES.md"; do
-    if ! printf '%s\n' "$tar_list" | grep -qF "compass-${version}/$f"; then
+    if ! grep -qF "compass-${version}/$f" <<<"$tar_list"; then
       missing="$missing $f"
     fi
   done
@@ -173,7 +173,7 @@ for e in $required_examples; do
   if [ ! -f "examples/$e/.compass/work"/*/manifest.yml ] 2>/dev/null; then
     # `[ -f glob ]` fails when the glob matches no file or several, so fall
     # back to find.
-    if ! find "examples/$e" -name manifest.yml -type f 2>/dev/null | grep -q .; then
+    if [ -z "$(find "examples/$e" -name manifest.yml -type f 2>/dev/null)" ]; then
       missing="$missing $e"
     fi
   fi
@@ -252,7 +252,7 @@ required_examples="quick-fix-typo feature-api-change hotfix-regression initiativ
 missing=""
 for e in $required_examples; do
   # vocabulary-scan: allow - greps a real path inside the tarball listing
-  if ! printf '%s\n' "$TAR_LIST" | grep -q "examples/$e/\.compass/work/.*/manifest\.yml"; then
+  if ! grep -q "examples/$e/\.compass/work/.*/manifest\.yml" <<<"$TAR_LIST"; then
     missing="$missing $e"
   fi
 done

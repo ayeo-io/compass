@@ -613,3 +613,11 @@ def test_rc_1_a_policy_without_the_cost_rule_is_refused_naming_it(project):
     result = _run(project)
     assert result.returncode == 2 and "RP-LOOP-008" in result.stderr
     assert _calls(project) == []
+
+
+@pytest.mark.parametrize("flag", ["--max-cost-usd", "--max-minutes"])
+@pytest.mark.parametrize("value", ["nan", "inf"])
+def test_rc_1_a_ceiling_flag_must_be_a_finite_number(project, flag, value):
+    result = _run(project, flag, value)
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert _calls(project) == []

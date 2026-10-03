@@ -22,7 +22,7 @@
 # would are denied to it, and a session that lands the issue anyway stops
 # the run. Every piece of text it writes or prints is redacted first.
 #
-# DEPENDENCY: standard library (hashlib, json, os, shutil, signal, sys,
+# DEPENDENCY: standard library (hashlib, json, math, os, shutil, signal, sys,
 # time) and
 # compass_pkg (core, host_launch, loop_ceilings, redact).
 # =============================================================================
@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import shutil
 import signal
@@ -95,7 +96,8 @@ def _limit(value, ceiling, name, flag, minimum_text):
     limit, rid = ceiling
     if value is None:
         return limit, rid
-    if value <= 0:
+    # `nan` passes every comparison, so a run given it would never stop.
+    if not math.isfinite(value) or value <= 0:
         raise CompassError(f"compass run: {flag} must be {minimum_text}.")
     if value > limit:
         raise CompassError(

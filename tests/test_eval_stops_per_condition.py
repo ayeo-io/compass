@@ -5,7 +5,7 @@ Compass counts each hook block and each failing `compass check` in
 of a session and records the counts as `interruptions`; `evals/compare.py`
 shows them per cell and in the summary as "Hook blocks" and "Check
 failures". A condition with no Compass project, or a record from before
-this field, shows "not recorded", never zero (B21).
+this field, shows "not recorded", never zero.
 
 Scenario id: SC-1 (issue `stops-and-cost-per-condition`).
 """

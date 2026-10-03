@@ -17,9 +17,15 @@
 # red and it needs an admin to merge it after reading it.
 name: claude-review
 
+# Turned off by the maintainer on 2026-10-03 (governance/decisions,
+# `ci-review-manual-only`). No pull request starts it, and `main` no longer
+# needs its check. Started by hand it is skipped, because the job reads
+# the pull request it reviews. To turn it back on, replace the trigger with
+#   pull_request:
+#     types: [opened, synchronize, ready_for_review]
+# and add `review` back to the protected-main ruleset's required checks.
 on:
-  pull_request:
-    types: [opened, synchronize, ready_for_review]
+  workflow_dispatch:
 
 # A newer push to the same pull request makes the older review pointless.
 concurrency:

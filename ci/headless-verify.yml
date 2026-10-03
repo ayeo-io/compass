@@ -1,0 +1,61 @@
+# Compass - reference workflow: run the verify stage unattended (ADR-030).
+#
+# NOT ACTIVE. It sits in ci/, not .github/workflows/, and it runs only when
+# a person starts it by hand. Every run starts paid Claude sessions.
+#
+# To use it, copy it into your project's .github/workflows folder and add
+# a repository secret named ANTHROPIC_API_KEY. Set a spend limit on that
+# key first: the cycle and minute ceilings bound a run, not your bill.
+#
+# The job runs the verify stage of one issue with `compass run`. It never
+# lands the issue: a run that ends done or stopped leaves its record in the
+# issue's documents for a person to read. A stopped run (exit 4) fails the
+# job, so a person looks at it.
+
+name: Compass unattended run of the verify stage
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: "The issue whose verify stage runs"
+        required: true
+      max_cycles:
+        description: "Sessions to start at most (the policy ceiling is 30)"
+        required: false
+        default: "10"
+
+permissions:
+  contents: read
+
+jobs:
+  compass-run-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false   # the session gets no token that can push
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+      - name: Run the verify stage unattended
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          COMPASS_CLI: ./cli/compass   # adjust to where Compass lives in your repo
+          ISSUE: ${{ inputs.issue }}
+          MAX_CYCLES: ${{ inputs.max_cycles }}
+        run: |
+          python3 "$COMPASS_CLI" run "$ISSUE" --stage verify \
+            --stop-file .compass/STOP --max-cycles "$MAX_CYCLES"
+      # The runner machine is discarded, so the run record must be uploaded
+      # for a person to read it, whether the run ended done or stopped.
+      - name: Keep the run record
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compass-run-record
+          path: docs/compass/*/run-*.md
+          if-no-files-found: warn

@@ -18,6 +18,7 @@ the table does not exist, and when a doc in this folder is not listed.
 - [safety-contract.md](safety-contract.md) - what Compass enforces, and what it does not claim.
 - [refusal-codes.md](refusal-codes.md) - every reason the pre-tool hook can refuse with, generated.
 - [multiagent-protocol.md](multiagent-protocol.md) - how a multiagent issue is run, step by step.
+- [headless-runner.md](headless-runner.md) - `compass run`: one stage of one issue with nobody in the session.
 - [receipt.md](receipt.md) - the one-screen view of an issue's gates and evidence.
 - [writing-specs-and-plans.md](writing-specs-and-plans.md) - a worked example of a spec and a plan.
 - [system-spec.md](system-spec.md) - the current behaviour, derived from landed issues.
@@ -52,6 +53,7 @@ same commit.
 | `commands/`, `agents/`, `schemas/` | `skills/compass-runtime/SKILL.md` |
 | `cli/compass_pkg/tdd.py`, `cli/compass_pkg/evidence_identity.py` | `skills/evidence-gates/SKILL.md` |
 | `cli/compass_pkg/subtasks.py`, `cli/compass_pkg/loop_ceilings.py`, `cli/compass_pkg/multiagent_check.py`, `scripts/multiagent.sh`, `scripts/integrate.sh` | `docs/multiagent-protocol.md` |
+| `cli/compass_pkg/run_cmd.py`, `cli/compass_pkg/host_launch.py`, `cli/compass_pkg/redact.py`, `ci/headless-verify.yml` | `docs/headless-runner.md` |
 | `cli/compass_pkg/flow.py`, `docs/system-spec.md`, `docs/system-spec-archive.md` | `architecture/decisions/ADR-026-ship-commit-lands-and-derives-the-living-spec.md` |
 | `cli/compass_pkg/next_cmd.py`, `cli/compass_pkg/render.py`, `cli/compass_pkg/statusline.py`, `bin/compass-statusline` | `docs/quickstart.md` |
 | `cli/compass_pkg/receipt.py` | `docs/receipt.md` |

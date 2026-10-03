@@ -985,6 +985,7 @@ _TAIL_EXEMPT = {
     "decision show": "prints one entry's text verbatim; test_decisions_ledger.py runs it",
     "issue subtask add": "needs a git repository and a brief file the fixture does not create; test_subtask_record.py runs it, without measuring its output against this contract",
     "issue subtask update": "needs a recorded subtask the fixture does not create; test_subtask_record.py runs it, without measuring its output against this contract",
+    "run": "starts claude sessions, so it needs a stub executable the fixture does not have; test_headless_runner.py runs it against one, without measuring its output against this contract",
     "issue subtask replan": "writes the manifest of an existing multiagent issue; test_loop_ceilings.py runs it, without measuring its output against this contract",
     "issue subtask package": "needs a git history to diff, which the fixture does not have; test_subtask_record.py runs it, without measuring its output against this contract",
     "plan lint": "needs a design with placeholders to say anything",

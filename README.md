@@ -183,6 +183,7 @@ compass lesson accept      turn a pending proposal into a lesson
 compass lesson list        each lesson and each pending proposal
 compass lesson remove      delete one lesson
 compass lesson decline     drop a pending proposal; retro will not propose it again
+compass run                run the build or verify stage of one issue unattended (ADR-030)
 ```
 
 Every verb describes itself - `compass <verb> --help` says what it does and

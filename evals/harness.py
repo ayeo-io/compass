@@ -86,6 +86,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # standard library and what this repository already carries.
 sys.path.insert(0, str(REPO_ROOT / "cli"))
 from compass_pkg.core import load_yaml  # noqa: E402
+# Sessions start through the launcher `compass run` uses (ADR-030), so the
+# harness and the runner start `claude` the same way.
+from compass_pkg import host_launch  # noqa: E402
 
 # The allow-list a session runs under: the three file tools, `Skill` (so a
 # compass session can run a `/compass:*` command - the bare condition has
@@ -1060,16 +1063,14 @@ def _invoke_claude(claude_exe: str, message: str, common_args: list[str],
                     repo_dir: Path, state: dict[str, Any], *,
                     resume: str | None, remaining_budget: float,
                     env: dict[str, str]) -> tuple[int, str]:
-    args = [claude_exe, "-p", message, *common_args,
-            "--max-budget-usd", str(remaining_budget)]
+    args = [*common_args, "--max-budget-usd", str(remaining_budget)]
     if resume:
         args += ["--resume", resume]
-    proc = subprocess.run(args, cwd=str(repo_dir), env=env,
-                           capture_output=True, text=True,
-                           stdin=subprocess.DEVNULL)
-    state["stderr"] += proc.stderr or ""
-    final_text = _consume_events(proc.stdout, state)
-    return proc.returncode, final_text
+    launched = host_launch.launch_claude(claude_exe, message, args, repo_dir,
+                                         env)
+    state["stderr"] += launched.stderr
+    final_text = _consume_events(launched.stdout, state)
+    return launched.returncode, final_text
 
 
 # --- the continuation reply --------------------------------------------------

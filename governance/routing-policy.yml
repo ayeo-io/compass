@@ -17,7 +17,7 @@
 # framework for everyone - see routing-policy.md.
 # =============================================================================
 
-version: 2.14.0
+version: 2.15.0
 # -----------------------------------------------------------------------------
 # ROUTING STRATEGIES - soft. They BIAS the candidate delivery approach. The evaluator uses
 # them in composition (step 1); a later rule can override the result.
@@ -196,6 +196,16 @@ routing_guardrails:
       ceiling: repeated_error
       limit: 3
       rationale: "The same error three times is a failure, not a reason for a fourth attempt."
+    # `compass run` (ADR-030): the sessions one unattended run may start,
+    # and the minutes it may take. A flag can lower either, never raise it.
+    - id: RP-LOOP-006
+      ceiling: run_cycles
+      limit: 30
+      rationale: "One long unattended run loses the thread; a run that has not finished in 30 sessions needs a person."
+    - id: RP-LOOP-007
+      ceiling: run_minutes
+      limit: 240
+      rationale: "An unattended run that is still going after four hours is not converging, and is spending money."
 
   # immovable_gates - review gates no delivery approach may drop.
   # These three are "the default guardrails in review form": every delivery

@@ -255,6 +255,7 @@ EXPECTED_SUBCOMMANDS = {
     # runs inside the existing `compass ci`.
     "decision",
     "lesson",  # project-lessons (ADR-029)
+    "run",  # headless-runner (ADR-030)
 }
 
 

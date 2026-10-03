@@ -141,6 +141,7 @@ EXPECTED_SUBCOMMANDS = {
     # decisions-ledger (ADR-027): a group, record|list|show|check.
     "decision",
     "lesson",  # project-lessons (ADR-029)
+    "run",  # headless-runner (ADR-030)
 }
 EXPECTED_READING_KEYS = {
     "risk", "familiarity", "size", "goal", "urgency", "role",

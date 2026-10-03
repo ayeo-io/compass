@@ -177,7 +177,9 @@
                   "builder_attempts",
                   "review_rounds",
                   "replans",
-                  "repeated_error"
+                  "repeated_error",
+                  "run_cycles",
+                  "run_minutes"
                 ]
               },
               "limit": {

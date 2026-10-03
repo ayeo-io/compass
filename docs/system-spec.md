@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a landed issue whose files a review fix changes, when its green is re-recorded and ship-commit runs for it with nothing staged, then land_commit names the fix commit and compass check passes; without the new green it is refused.
+### Given the eval readme, then it states the decision rule for the run that uses these scenarios before any run.
 
-- **Scenario id:** `RB-1`
+- **Scenario id:** `PS-4`
 - **Intent:** `INT-1`
-- **Source issue:** `review-fix-rebinds-land-commit`
+- **Source issue:** `premium-scenario-classes`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1512 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1516 superseded scenario(s) are in `docs/system-spec-archive.md`.

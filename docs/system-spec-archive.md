@@ -10486,3 +10486,17 @@
 - **Intent:** `INT-1`
 - **Source issue:** `finish-traces-compass-files`
 - **Landed:** 2026-10-03
+
+### Given a heavier route started by /compass:go, then go and assess agree that the approach summary already shown is the confirmation, and go does not stop at assess step 7 to wait for one. _(archived)_
+
+- **Scenario id:** `GC-1`
+- **Intent:** `INT-1`
+- **Source issue:** `go-confirms-on-the-heavier-route`
+- **Landed:** 2026-10-03
+
+### Given an atomic or small change with trivial or contained risk on unmapped ground, when it is assessed, then it gets the mapped route, the unmapped floor does not fire, and behaviour-mapping is advice. _(archived)_
+
+- **Scenario id:** `UA-1`
+- **Intent:** `INT-1`
+- **Source issue:** `unmapped-small-change-advisory`
+- **Landed:** 2026-10-03

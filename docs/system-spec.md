@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the eval readme, then it states the decision rule for the run that uses these scenarios before any run.
+### Given the eval scenario records for other frameworks, then none holds a sentence copied from that framework's own templates, and their file layout and heading form are unchanged.
 
-- **Scenario id:** `PS-4`
+- **Scenario id:** `QT-1`
 - **Intent:** `INT-1`
-- **Source issue:** `premium-scenario-classes`
+- **Source issue:** `eval-record-quotes-a-template`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1516 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1518 superseded scenario(s) are in `docs/system-spec-archive.md`.

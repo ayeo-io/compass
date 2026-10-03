@@ -10619,3 +10619,17 @@
 - **Intent:** `INT-1`
 - **Source issue:** `premium-scenario-classes`
 - **Landed:** 2026-10-03
+
+### Given the eval readme, then it states the decision rule for the run that uses these scenarios before any run. _(archived)_
+
+- **Scenario id:** `PS-4`
+- **Intent:** `INT-1`
+- **Source issue:** `premium-scenario-classes`
+- **Landed:** 2026-10-03
+
+### Given an issue whose manifest has no scenario X, when tdd-red or tdd-green runs with scenario X, then it is refused, writes no record, and names compass scenario add. _(archived)_
+
+- **Scenario id:** `US-1`
+- **Intent:** `INT-1`
+- **Source issue:** `red-for-an-unknown-scenario`
+- **Landed:** 2026-10-03

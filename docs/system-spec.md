@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the CI demo workflow exists and has run, then the headless-runner doc does not say the live acceptance is unmet, and says what the demo covers and that each run costs money.
+### Given the expected version is 5.4.0, then every published location carries 5.4.0.
 
-- **Scenario id:** `HD-1`
+- **Scenario id:** `RL-A`
 - **Intent:** `INT-1`
-- **Source issue:** `headless-doc-after-the-demo`
+- **Source issue:** `release-5-4-0`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1509 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1510 superseded scenario(s) are in `docs/system-spec-archive.md`.

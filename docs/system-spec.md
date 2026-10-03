@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a diff with unusual paths, deleted or unparsable files, or a git environment pointing elsewhere, then the rebuild measures exactly the right files and touches nothing outside its directory.
+### Given many manifests read in one process, then the migrate map is parsed once, and parsed again only when its path or contents change.
 
-- **Scenario id:** `QS-4`
+- **Scenario id:** `MM-1`
 - **Intent:** `INT-1`
-- **Source issue:** `quality-static-signals`
+- **Source issue:** `migrate-map-parsed-once`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1524 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1525 superseded scenario(s) are in `docs/system-spec-archive.md`.

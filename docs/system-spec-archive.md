@@ -10675,3 +10675,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `quality-static-signals`
 - **Landed:** 2026-10-03
+
+### Given a diff with unusual paths, deleted or unparsable files, or a git environment pointing elsewhere, then the rebuild measures exactly the right files and touches nothing outside its directory. _(archived)_
+
+- **Scenario id:** `QS-4`
+- **Intent:** `INT-1`
+- **Source issue:** `quality-static-signals`
+- **Landed:** 2026-10-03

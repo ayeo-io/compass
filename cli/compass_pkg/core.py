@@ -397,6 +397,22 @@ def migrate_map_path():
                         os.pardir, "migrate-map.yml")
 
 
+# The parsed migrate map, keyed by path, modification time and size: every
+# manifest read goes through `normalize_spine`, which asks for several of its
+# sections, and parsing the file each time was most of the cost of reading
+# many manifests. A changed or swapped file has a new key and is read again.
+_MIGRATE_MAP_CACHE = {}
+
+
+def _migrate_map_data(path):
+    st = os.stat(path)
+    key = (os.path.abspath(path), st.st_mtime_ns, st.st_size)
+    if key not in _MIGRATE_MAP_CACHE:
+        with open(path, encoding="utf-8") as fh:
+            _MIGRATE_MAP_CACHE[key] = yaml.safe_load(fh) or {}
+    return _MIGRATE_MAP_CACHE[key]
+
+
 def migrate_map_section(name, fallback):
     """One section of `cli/migrate-map.yml`, or the in-module copy of it.
 
@@ -412,8 +428,7 @@ def migrate_map_section(name, fallback):
     is comparing it with itself.
     """
     try:
-        with open(migrate_map_path(), encoding="utf-8") as fh:
-            data = yaml.safe_load(fh) or {}
+        data = _migrate_map_data(migrate_map_path())
     except OSError:
         # No framework install beside this module - use the in-module copy.
         return dict(fallback)

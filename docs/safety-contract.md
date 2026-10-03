@@ -88,6 +88,14 @@ on two issues; `compass run` sets it for each unattended session. A value
 that names no issue is refused (`bad-session-issue`), never passed over for
 the pointer.
 
+Two interactive sessions share the pointer, so the pre-tool hook records the
+issue each Claude Code session last worked on, by its session id, in a
+`sessions.json` file under `.compass/`. When another session has moved the pointer since,
+the session's next code edit is refused (`pointer-moved`) until it runs
+`compass issue use <slug>` to say which issue it means. A record older than
+12 hours is ignored, and a session with `COMPASS_ISSUE` set, or a runtime
+that gives no session id, is not tracked.
+
 ## Deliberate limits
 
 ### Compass does not prove correctness

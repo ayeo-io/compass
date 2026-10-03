@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a record holding a .gitignore or a submodule entry, then sync still records every file or refuses the submodule, a restore that copies nothing says why, and the clone runs with LFS filters off.
+### Given the session-issue variable, no session id, or a session record older than 12 hours, then the hook refuses nothing for a moved pointer.
 
-- **Scenario id:** `RG-1`
+- **Scenario id:** `CL-D`
 - **Intent:** `INT-1`
-- **Source issue:** `record-sync-gaps`
+- **Source issue:** `pointer-lease`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1489 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1493 superseded scenario(s) are in `docs/system-spec-archive.md`.

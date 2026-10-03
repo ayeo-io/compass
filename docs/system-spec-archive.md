@@ -10430,3 +10430,31 @@
 - **Intent:** `INT-1`
 - **Source issue:** `delivery-record`
 - **Landed:** 2026-10-03
+
+### Given a record holding a .gitignore or a submodule entry, then sync still records every file or refuses the submodule, a restore that copies nothing says why, and the clone runs with LFS filters off. _(archived)_
+
+- **Scenario id:** `RG-1`
+- **Intent:** `INT-1`
+- **Source issue:** `record-sync-gaps`
+- **Landed:** 2026-10-03
+
+### Given a session that edited under one issue, when another session moves the pointer, then that session's next code edit is refused naming both issues and the command to confirm. _(archived)_
+
+- **Scenario id:** `CL-A`
+- **Intent:** `INT-1`
+- **Source issue:** `pointer-lease`
+- **Landed:** 2026-10-03
+
+### Given that refusal, then compass issue use run in the session sets the pointer and lets its edits through on the issue it names. _(archived)_
+
+- **Scenario id:** `CL-B`
+- **Intent:** `INT-1`
+- **Source issue:** `pointer-lease`
+- **Landed:** 2026-10-03
+
+### Given the session that moved the pointer, then its own edits are not refused, because issue use and quick-fix start record the new issue for the calling session. _(archived)_
+
+- **Scenario id:** `CL-C`
+- **Intent:** `INT-1`
+- **Source issue:** `pointer-lease`
+- **Landed:** 2026-10-03

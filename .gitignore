@@ -82,3 +82,6 @@ examples/bdd-adapters/*/.compass/work/*/acceptance-criteria.feature
 # tracked, though other .tar.gz files are not.
 /.compass/archive-sample-cache/
 !/tests/fixtures/archive-sample.tar.gz
+
+# Which issue each Claude Code session works on (cli/compass_pkg/session_lease.py).
+/.compass/sessions.json

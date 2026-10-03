@@ -274,7 +274,7 @@ def resolve_issue_dir(slug=None):
         sys.stderr.write(
             "compass: no --issue slug and no .compass/current-task pointer - "
             "falling back to the most recently modified issue directory. This "
-            "is ambiguous; write .compass/current-task to be sure.\n"
+            "is ambiguous; run `compass issue use <slug>` to be sure.\n"
         )
     return max(candidates, key=os.path.getmtime)
 

@@ -225,9 +225,11 @@ INPUT="$(cat || true)"
 if command -v jq >/dev/null 2>&1; then
   TARGET="$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // .tool_input.path // empty' 2>/dev/null || true)"
   TOOL="$(printf '%s' "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null || true)"
+  SESSION_ID="$(printf '%s' "$INPUT" | jq -r '.session_id // empty' 2>/dev/null || true)"
   COMMAND="$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null || true)"
 else
   TARGET="$(printf '%s' "$INPUT" | grep -oE '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n1 | sed -E 's/.*:[[:space:]]*"([^"]*)"/\1/' || true)"
+  SESSION_ID="$(printf '%s' "$INPUT" | grep -oE '"session_id"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n1 | sed -E 's/.*:[[:space:]]*"([^"]*)"/\1/' || true)"
   TOOL="$(printf '%s' "$INPUT" | grep -oE '"tool_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n1 | sed -E 's/.*:[[:space:]]*"([^"]*)"/\1/' || true)"
   COMMAND="$(printf '%s' "$INPUT" | grep -oE '"command"[[:space:]]*:[[:space:]]*"[^"]*"' | head -n1 | sed -E 's/.*:[[:space:]]*"([^"]*)"/\1/' || true)"
 fi
@@ -716,11 +718,36 @@ elif [ -f "$POINTER" ]; then
     TASK_DIR="$WORK_DIR/$SLUG"
   fi
 fi
+# Another session may have moved the pointer since this one last edited
+# (session_lease.py). Only when the pointer named the issue: COMPASS_ISSUE
+# names one session's issue, and the fallback names none.
+if [ -z "${COMPASS_ISSUE:-}" ] && [ -n "${SESSION_ID:-}" ] && [ -n "$TASK_DIR" ]; then
+  LEASE_ERR="$(mktemp 2>/dev/null)" || compass_reader_failed "session lease reader" tmp
+  set +e
+  LEASE="$(compass_python - "$COMPASS_DIR" "$SESSION_ID" "$SLUG" 2>"$LEASE_ERR" <<'PYEOF'
+import sys
+
+import compass_pkg                      # noqa: F401 - puts vendor on sys.path
+from compass_pkg.session_lease import check
+
+print(check(*sys.argv[1:]))
+PYEOF
+)"
+  LEASE_STATUS=$?
+  set -e
+  # Fails closed: a lease check that cannot run refuses, as every reader
+  # in this hook does.
+  [ "$LEASE_STATUS" -eq 0 ] || compass_reader_failed "session lease reader" "$LEASE_STATUS" "$LEASE_ERR"
+  rm -f "$LEASE_ERR"
+  case "$LEASE" in
+    moved:*) compass_block pointer-moved "slug=$SLUG" "previous=${LEASE#moved:}" ;;
+  esac
+fi
 if [ -z "$TASK_DIR" ]; then
   # fallback: most recently changed - ambiguous, so say so.
   TASK_DIR="$(ls -dt "$WORK_DIR"/*/ 2>/dev/null | head -n1 || true)"
   TASK_DIR="${TASK_DIR%/}"
-  [ -n "$TASK_DIR" ] && echo "Compass: no .compass/current-task pointer - falling back to the most recently modified issue ($(basename "$TASK_DIR")). Write .compass/current-task to be unambiguous." >&2
+  [ -n "$TASK_DIR" ] && echo "Compass: no .compass/current-task pointer - falling back to the most recently modified issue ($(basename "$TASK_DIR")). Run compass issue use <slug> to be unambiguous." >&2
 fi
 
 if [ -z "${TASK_DIR:-}" ]; then

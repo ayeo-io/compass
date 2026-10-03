@@ -16,9 +16,9 @@ written precisely so the process never has to be re-derived.
 
 1. **Locate the issue.** Find `.compass/work/<issue-slug>/`. If the slug is
    ambiguous or missing, list the available issues and ask. Once found,
-   write the slug into `.compass/current-task` - that pointer is how every
-   `compass` call (and a later session) resolves to *this* issue without a
-   `--issue` flag.
+   run `compass issue use <slug>` - the `.compass/current-task` pointer it
+   sets is how every `compass` call (and a later session) resolves to
+   *this* issue without a `--issue` flag.
 2. **Read `delivery-approach.md` and `manifest.yml` first.**
    `delivery-approach.md` is the human-readable contract for this issue -
    the delivery approach, the per-stage weight, the gate set, the orchestration,

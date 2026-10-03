@@ -53,6 +53,12 @@ code from a refusal you hit.
 **Why:** no issue has been assessed yet - {detail}.
 **Fix:** run /compass:assess before changing code, or /compass:quick-fix for a small, low-risk change.
 
+### `pointer-moved`
+
+**Blocked:** this edit
+**Why:** another session moved .compass/current-task from this session's issue '{previous}' to '{slug}', so this edit would count against the wrong issue.
+**Fix:** in this session, run `compass issue use {previous}` to carry on, or `compass issue use {slug}` to switch, then retry.
+
 ### `python-missing`
 
 **Blocked:** edit to {target} (tool: {tool})

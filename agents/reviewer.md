@@ -96,6 +96,11 @@ final review of the integrated result, read the manifest's `follow_ups`
 ledger too: a finding deferred from a subtask review is owed there, not
 forgotten.
 
+**Patterns.** On a feature or initiative, check the design's named patterns
+against the code (the named-patterns strategy, `S16`). Flag a novel
+structure where a standard pattern fits, and a pattern applied where none
+is needed. It is advice: say it in the report, and never fail a gate on it.
+
 ## How you write a comment
 
 Open every comment with a plain-word label saying what kind of comment it is -

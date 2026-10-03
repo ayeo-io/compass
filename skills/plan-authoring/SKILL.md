@@ -80,6 +80,8 @@ touching `AuthService`; we already ship two and expect a third" is.
 
 If you cannot name a real pattern, omit the section. Two justified patterns
 beat five decorative ones, and an omitted section costs a reviewer nothing.
+Where you chose between two, name the one you rejected and why: that is the
+named-patterns strategy, `S16`.
 
 ## Self-review before hand-off
 

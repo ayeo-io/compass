@@ -10640,3 +10640,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `eval-record-quotes-a-template`
 - **Landed:** 2026-10-03
+
+### Given the well-architected register and strategy, then the register lists the three frameworks with sources, pillars and a review date that lint checks, and the strategy, its rationale and the planning texts name it as advice. _(archived)_
+
+- **Scenario id:** `WA-1`
+- **Intent:** `INT-1`
+- **Source issue:** `well-architected-strategy`
+- **Landed:** 2026-10-03

@@ -355,6 +355,27 @@ and says in a sentence or two what it does about each.**
   advises but never gates (ADR-003). The reviewer and the architect assess
   it; no check reads it.
 
+
+---
+
+### Named patterns: prefer a well-understood pattern, and say why (`S16`)
+
+*Assessed under the `clarity` dimension, on feature and initiative routes.*
+
+**A technical design names the well-understood design patterns it uses, and
+where a real choice existed, the one it rejected and why.**
+
+- A named pattern is one a reader can look up: a design pattern, a
+  domain-driven design pattern or a named architectural style. Section 4 of
+  the design template holds it, with the reason it earns its place.
+- Prefer a named pattern to a structure of your own when one fits. A
+  reader who knows the pattern understands the code faster.
+- The reviewer flags both ways this goes wrong: a novel structure where a
+  standard pattern fits, and a pattern applied where none is needed. The
+  strategy asks for fit, not for a count of patterns.
+- **Advice, not a gate.** Whether a pattern fits is judgement, and judgement
+  advises but never gates (ADR-003).
+
 ---
 
 ## Project strategies

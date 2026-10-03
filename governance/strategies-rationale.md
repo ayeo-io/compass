@@ -271,6 +271,15 @@ trade-offs: a gate would have to decide which one wins, and that is the
 judgement the strategy exists to make visible. So it stays a strategy, and
 ADR-007's promotion path stays open if evidence later earns a floor.
 
+## Named patterns (`S16`)
+
+No incident produced this one either. Nothing defined what maintainable
+code looks like, so a reviewer had no stated standard to judge against. A
+well-understood pattern is that standard: a reader who knows it reads the
+code faster. But a misapplied pattern is worse than none, because it adds
+indirection a reader must undo, so fit stays a judgement and the strategy
+does not gate.
+
 ## The integrity rule (`guardrails.md`)
 
 A guardrail whose check has no implementation would silently become advisory -

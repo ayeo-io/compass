@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the well-architected register and strategy, then the register lists the three frameworks with sources, pillars and a review date that lint checks, and the strategy, its rationale and the planning texts name it as advice.
+### Given the named-patterns strategy, then it asks a design to name its patterns and any it rejected, the reviewer checks both a novel structure where a pattern fits and a pattern where none is needed, and it stays advice.
 
-- **Scenario id:** `WA-1`
+- **Scenario id:** `NP-1`
 - **Intent:** `INT-1`
-- **Source issue:** `well-architected-strategy`
+- **Source issue:** `named-patterns-strategy`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1519 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1520 superseded scenario(s) are in `docs/system-spec-archive.md`.

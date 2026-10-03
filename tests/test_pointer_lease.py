@@ -208,3 +208,18 @@ def test_st2_a_pointer_moved_refusal_counts_against_the_sessions_issue(project):
     assert _edit(project, "session-a").returncode == 2
     log = (project / ".compass" / "interruptions.log").read_text().splitlines()
     assert log and log[-1].split("\t")[1] == "ex", log
+
+
+def test_st2_a_planted_record_cannot_point_outside_the_work_folder(project):
+    """A record's issue name comes from a file; it is joined onto the work
+    folder only when it is one path segment."""
+    assert _edit(project, "session-a").returncode == 0
+    table = project / ".compass" / "sessions.json"
+    data = json.loads(table.read_text())
+    data["session-a"]["issue"] = "../side"
+    table.write_text(json.dumps(data))
+    (project / ".compass" / "side").mkdir()
+    result = _edit(project, "session-a")
+    assert result.returncode == 2, result.stderr
+    log = (project / ".compass" / "interruptions.log").read_text().splitlines()
+    assert log[-1].split("\t")[1] == "ex", log

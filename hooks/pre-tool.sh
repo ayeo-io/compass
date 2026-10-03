@@ -741,8 +741,13 @@ PYEOF
   rm -f "$LEASE_ERR"
   case "$LEASE" in
     moved:*)
-      # Counted against the issue this session works on, not the pointer's.
-      [ -d "$WORK_DIR/${LEASE#moved:}" ] && TASK_DIR="$WORK_DIR/${LEASE#moved:}"
+      # Counted against the issue this session works on, not the pointer's,
+      # when the recorded name is one path segment: it was read from a file.
+      PREV="${LEASE#moved:}"
+      case "$PREV" in
+        ""|.|..|*/*|*\\*) ;;
+        *) [ -d "$WORK_DIR/$PREV" ] && TASK_DIR="$WORK_DIR/$PREV" ;;
+      esac
       compass_block pointer-moved "slug=$SLUG" "previous=${LEASE#moved:}" ;;
   esac
 fi

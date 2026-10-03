@@ -661,3 +661,4 @@ def test_hd_1_the_doc_says_what_the_ci_demo_shows():
     opening = doc.split("## ", 1)[0]
     assert ".github/workflows/compass-run-demo.yml" in opening, opening
     assert "build stage" in opening, opening
+    assert "costs money" in opening, opening

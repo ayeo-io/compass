@@ -27,6 +27,11 @@ import yaml
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
+# The archive these tests read: the tracked sample, or this checkout's own
+# with COMPASS_FULL_ARCHIVE=1 (tests/archive.py).
+sys.path.insert(0, str(ROOT / "tests"))
+from archive import archive_root  # noqa: E402
+
 SPEC_TEMPLATE = "templates/acceptance-criteria.md"
 CLARIFICATIONS_TEMPLATE = "templates/requirements-review.md"
 BDD_SKILL = "skills/bdd-specification/SKILL.md"
@@ -518,13 +523,16 @@ def test_trc_f1_pre_existing_specs_still_pass():
     over prose structure would fail every spec already on disk, and every
     adopter's too.
     """
-    work = ROOT / ".compass/work"
+    work = archive_root() / ".compass" / "work"
     if not work.is_dir():          # the issue directory is not shipped to adopters
         return
 
+    # Specs were once a file beside the manifest; they are now
+    # `acceptance-criteria.md` in the issue's documents folder.
     older = [
-        p for p in sorted(work.glob("*/spec.feature.md"))
-        if p.parent.name != "readable-specs-and-flow"
+        p for p in sorted((archive_root() / "docs" / "compass")
+                          .glob("*/acceptance-criteria.md"))
+        if not p.parent.name.endswith("-readable-specs-and-flow")
     ]
     if not older:
         return
@@ -541,7 +549,7 @@ def test_trc_f1_pre_existing_specs_still_pass():
     # mid-implement has not recorded its green run yet, and asserting
     # otherwise would make this test fail for the duration of every future
     # issue.
-    current = ROOT / ".compass" / "current-task"
+    current = archive_root() / ".compass" / "current-task"
     in_flight = current.read_text().strip() if current.is_file() else ""
 
     failures = []
@@ -560,7 +568,7 @@ def test_trc_f1_pre_existing_specs_still_pass():
             continue
         result = subprocess.run(
             [sys.executable, str(ROOT / "cli" / "compass"), "check", "--issue", slug],
-            capture_output=True, text=True, timeout=120, cwd=str(ROOT),
+            capture_output=True, text=True, timeout=120, cwd=str(archive_root()),
         )
         if result.returncode != 0:
             failures.append(f"--- {slug} ---\n{result.stdout[-1200:]}")

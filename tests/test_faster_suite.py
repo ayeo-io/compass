@@ -1,6 +1,8 @@
 """The suite and the release run on parallel workers, and `make ci` checks
 only recent issues by default: the faster-suite-and-release issue,
-scenarios FS-A, FS-B and FS-D to FS-G in `docs/system-spec.md`.
+scenarios FS-A, FS-B and FS-D to FS-G. A scenario is in
+`docs/system-spec.md` while current and in `docs/system-spec-archive.md`
+once a later one supersedes it.
 
 `make -n` prints the commands a target would run without running them, so
 these tests read the flags each target passes. A stub `xdist` package on

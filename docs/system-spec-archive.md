@@ -10374,3 +10374,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `run-session-issue`
 - **Landed:** 2026-10-03
+
+### Given a run whose sessions report their cost, then each session gets the money left as its budget, and the run stops with exit 4 once the total reaches the cost ceiling the policy sets. _(archived)_
+
+- **Scenario id:** `RC-1`
+- **Intent:** `INT-1`
+- **Source issue:** `run-cost-ceiling`
+- **Landed:** 2026-10-03

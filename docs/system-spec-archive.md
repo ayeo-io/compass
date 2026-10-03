@@ -10381,3 +10381,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `run-cost-ceiling`
 - **Landed:** 2026-10-03
+
+### Given compass run, then each session is allowed the file tools, Skill and the compass CLI, is denied landing, pushing, merging and starting another run, and the run record keeps each session's last message. _(archived)_
+
+- **Scenario id:** `ST-1`
+- **Intent:** `INT-1`
+- **Source issue:** `run-session-tools`
+- **Landed:** 2026-10-03

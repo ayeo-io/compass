@@ -67,7 +67,10 @@ a parallel spec.
 
    ### 5. Notes for the planner
    Summarise your findings in terms the planner can use when composing
-   `technical-design.md` §6 (Design decisions). The planner reads this
+   `technical-design.md` §6 (Design decisions). On a feature or initiative,
+   name the well-architected pillars the change touches and any trade-off
+   between them (strategy `S15`, pillars from
+   `governance/architecture-sources.yml`). The planner reads this
    section and either cites an existing ADR, names a candidate ADR, or
    records a divergence.
 

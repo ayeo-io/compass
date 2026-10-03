@@ -28,6 +28,12 @@ this skill teaches.
 | **5. The shape of the change** (code) | The shape of an interface, type, or API is itself a decision worth arguing with. | The shape is obvious from section 1. |
 | **5a. Cross-cutting concerns** | The change touches security, privacy, or what you can see in production. *Design Docs at Google* (<https://www.industrialempathy.com/posts/design-docs-at-google/>) names these three as concerns of the design rather than documents of their own. | It touches none of them - or a label earned a full threat-model.md or rollback-plan.md, in which case link that rather than summarising it here. |
 
+Where the route plans in full, section 5a also names the well-architected
+pillars the change touches and what the design does about each. That is
+the well-architected alignment strategy, `S15`, and the pillars come from
+`governance/architecture-sources.yml`. It is advice for the reviewer, not a
+gate.
+
 **Delete the sections you do not use.** An empty optional heading is worse
 than an absent one: it reads as an omission rather than a decision, and the
 next author fills it in to be safe.

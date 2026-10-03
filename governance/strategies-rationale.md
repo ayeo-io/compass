@@ -261,6 +261,16 @@ underneath it, and nothing sends the writer back to the top. It has happened to
 this project's proposal, its acceptance criteria, its requirements review, and
 to an audit document written to record corrections.
 
+## Well-architected alignment (`S15`)
+
+No incident produced this one. Compass had records of its own architecture
+and an architect agent, but nothing tied a design's judgement to the
+frameworks the large cloud providers publish, and so nothing gave a reviewer
+a shared word for "this change trades reliability for cost". The pillars are
+trade-offs: a gate would have to decide which one wins, and that is the
+judgement the strategy exists to make visible. So it stays a strategy, and
+ADR-007's promotion path stays open if evidence later earns a floor.
+
 ## The integrity rule (`guardrails.md`)
 
 A guardrail whose check has no implementation would silently become advisory -

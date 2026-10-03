@@ -1,0 +1,47 @@
+# The well-architected frameworks the three large cloud providers publish.
+#
+# Strategy `S15` (governance/strategies.md) asks a feature or initiative design
+# to name the pillars it touches. This register is where those pillars come
+# from, and the date each framework was last checked against its source, so
+# a later review can see what changed. It is advice, never a gate (ADR-003).
+# `compass policy lint` checks that it parses and that every entry has a
+# source, a pillar list in the neutral words below, and a review date.
+#
+# Neutral pillar words: reliability, security, cost, operational
+# excellence, performance efficiency, sustainability.
+
+version: 1.0.0
+
+frameworks:
+  - provider: AWS
+    name: AWS Well-Architected Framework
+    sources:
+      - https://docs.aws.amazon.com/wellarchitected/latest/framework/the-pillars-of-the-framework.html
+    pillars: [operational excellence, security, reliability, performance efficiency, cost, sustainability]
+    last_reviewed: 2026-10-03
+    digest: >-
+      Six pillars: operational excellence, security, reliability,
+      performance efficiency, cost optimization and sustainability.
+
+  - provider: Microsoft Azure
+    name: Azure Well-Architected Framework
+    sources:
+      - https://learn.microsoft.com/en-us/azure/well-architected/pillars
+    pillars: [reliability, security, cost, operational excellence, performance efficiency]
+    last_reviewed: 2026-10-03
+    digest: >-
+      Five pillars: reliability, security, cost optimization, operational
+      excellence and performance efficiency. No sustainability pillar
+      (pillars page dated 2025-01-22).
+
+  - provider: Google Cloud
+    name: Google Cloud Well-Architected Framework
+    sources:
+      - https://docs.cloud.google.com/architecture/framework
+    pillars: [operational excellence, security, reliability, cost, performance efficiency, sustainability]
+    last_reviewed: 2026-10-03
+    digest: >-
+      Six pillars: operational excellence; security, privacy and
+      compliance; reliability; cost optimization; performance optimization;
+      and sustainability. Formerly the Google Cloud Architecture Framework
+      (page last reviewed by Google 2026-01-28).

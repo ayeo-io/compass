@@ -121,6 +121,59 @@ def checkpoint_table_errors(p):
     return errs
 
 
+ARCHITECTURE_PILLARS = ("reliability", "security", "cost",
+                        "operational excellence", "performance efficiency",
+                        "sustainability")
+
+
+def architecture_sources_lint_errors(gov):
+    """Problems with governance/architecture-sources.yml, the register the
+    well-architected alignment strategy (`S15`) reads. An absent register is not an error: a project may leave it out.
+    Every entry needs a provider, a name, an https source, pillars in the
+    neutral words, a digest and a review date, so a later review can see how
+    old each entry is."""
+    import datetime
+    path = os.path.join(gov, "architecture-sources.yml")
+    if not os.path.isfile(path):
+        return []
+    try:
+        data = load_yaml(path) or {}
+    except CompassError as exc:
+        return [f"[architecture-sources.yml] does not parse: {exc}"]
+    frameworks = data.get("frameworks") if isinstance(data, dict) else None
+    if not isinstance(frameworks, list) or not frameworks:
+        return ["[architecture-sources.yml] needs a non-empty `frameworks:` list"]
+    errs = []
+    for i, f in enumerate(frameworks):
+        label = f"[architecture-sources.yml] entry {i + 1}"
+        if not isinstance(f, dict):
+            errs.append(f"{label} is not a mapping")
+            continue
+        label = f"{label} ({f.get('provider', '?')})"
+        for key in ("provider", "name", "digest"):
+            if not str(f.get(key) or "").strip():
+                errs.append(f"{label} has no `{key}`")
+        sources = f.get("sources")
+        if not isinstance(sources, list) or not sources or not all(
+                isinstance(u, str) and u.startswith("https://") for u in sources):
+            errs.append(f"{label} needs `sources:` as a list of https URLs")
+        pillars = f.get("pillars")
+        if not isinstance(pillars, list) or not pillars:
+            errs.append(f"{label} needs a `pillars:` list")
+        else:
+            unknown = [p for p in pillars if p not in ARCHITECTURE_PILLARS]
+            if unknown:
+                errs.append(f"{label} names pillars outside the neutral words "
+                            f"({', '.join(ARCHITECTURE_PILLARS)}): {unknown}")
+        reviewed = f.get("last_reviewed")
+        try:
+            datetime.date.fromisoformat(str(reviewed))
+        except ValueError:
+            errs.append(f"{label} needs `last_reviewed:` as a date (YYYY-MM-DD), "
+                        f"so a review can see how old the entry is")
+    return errs
+
+
 def _lint_errors_routing_policy(p):
     errs = list(checkpoint_table_errors(p))
     for top in ("routing_strategies", "routing_guardrails", "route_shapes",

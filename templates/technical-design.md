@@ -186,6 +186,11 @@ stays - or "none".}}
 tells you it is not. A metric, an alert, a log line someone will actually
 read - or "the existing dashboards cover it", said deliberately.}}
 
+**Well-architected pillars (`S15`):** {{on a feature or initiative, each pillar
+the change touches - reliability, security, cost, operational excellence,
+performance efficiency, sustainability - and what the design does about it.
+Name only the ones it touches.}}
+
 ---
 
 ## 6. Design decisions (ADR-style)

@@ -335,6 +335,28 @@ not a count. Any count a tool produces is a number that moves.*
 
 ---
 
+### Well-architected alignment: name the pillars a design touches (`S15`)
+
+*Assessed under the `architecture` dimension, on feature and initiative routes.*
+
+**A technical design names the well-architected pillars the change touches,
+and says in a sentence or two what it does about each.**
+
+- The pillars are reliability, security, cost, operational excellence,
+  performance efficiency and, where it applies, sustainability.
+  `governance/architecture-sources.yml` records where they come from: the
+  AWS, Azure and Google Cloud well-architected frameworks, each with the
+  date it was last checked.
+- Name only the pillars the change touches. A pillar the change does not
+  touch is left out, not written up as "no impact".
+- Where two pillars pull against each other, such as cost against
+  reliability, say which the design favours and why.
+- **Advice, not a gate.** Pillar trade-offs are judgement, and judgement
+  advises but never gates (ADR-003). The reviewer and the architect assess
+  it; no check reads it.
+
+---
+
 ## Project strategies
 
 <!-- Add strategies specific to this project here. Add freely - strategies are

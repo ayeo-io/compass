@@ -10332,3 +10332,38 @@
 - **Intent:** `INT-1`
 - **Source issue:** `archive-sample`
 - **Landed:** 2026-10-03
+
+### Given the sample, then the self-architecture tests read the issue's real name, and the readable-specs test reads older acceptance criteria without a Summary, so neither returns early on a stale name. _(archived)_
+
+- **Scenario id:** `AS-F`
+- **Intent:** `INT-1`
+- **Source issue:** `archive-sample`
+- **Landed:** 2026-10-03
+
+### Given an environment variable that names one issue and a pointer that names another, then the pre-tool hook judges an edit by the issue the variable names. _(archived)_
+
+- **Scenario id:** `SI-A`
+- **Intent:** `INT-1`
+- **Source issue:** `run-session-issue`
+- **Landed:** 2026-10-03
+
+### Given the variable, then a CLI command run without an explicit issue works on that issue, and an explicit issue still wins. _(archived)_
+
+- **Scenario id:** `SI-B`
+- **Intent:** `INT-1`
+- **Source issue:** `run-session-issue`
+- **Landed:** 2026-10-03
+
+### Given the variable names no issue or a path, then the hook and the CLI refuse it as they refuse a bad pointer, without falling back to the pointer. _(archived)_
+
+- **Scenario id:** `SI-C`
+- **Intent:** `INT-1`
+- **Source issue:** `run-session-issue`
+- **Landed:** 2026-10-03
+
+### Given compass run, then every session it starts has the variable set to the run's issue, and the pointer file is unchanged by the run. _(archived)_
+
+- **Scenario id:** `SI-D`
+- **Intent:** `INT-1`
+- **Source issue:** `run-session-issue`
+- **Landed:** 2026-10-03

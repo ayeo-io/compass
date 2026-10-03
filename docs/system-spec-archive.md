@@ -10283,3 +10283,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `headless-runner`
 - **Landed:** 2026-10-03
+
+### Given an interrupted run, a run whose last session finishes the stage but breaks the runs key, or a manifest with an empty runs key, then the run record's outcome and reason match the exit code, and a run starts on the empty key. _(archived)_
+
+- **Scenario id:** `RRE-1`
+- **Intent:** `INT-1`
+- **Source issue:** `run-record-edges`
+- **Landed:** 2026-10-03

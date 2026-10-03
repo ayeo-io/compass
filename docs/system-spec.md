@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given an interrupted run, a run whose last session finishes the stage but breaks the runs key, or a manifest with an empty runs key, then the run record's outcome and reason match the exit code, and a run starts on the empty key.
+### Given the maintainer accepted ADR-030 on 2026-10-03, then its status, its index row and the owning doc say accepted, and the test pins accepted.
 
-- **Scenario id:** `RRE-1`
+- **Scenario id:** `AA-1`
 - **Intent:** `INT-1`
-- **Source issue:** `run-record-edges`
+- **Source issue:** `accept-adr-030`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1468 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1469 superseded scenario(s) are in `docs/system-spec-archive.md`.

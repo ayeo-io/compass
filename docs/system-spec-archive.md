@@ -10647,3 +10647,31 @@
 - **Intent:** `INT-1`
 - **Source issue:** `well-architected-strategy`
 - **Landed:** 2026-10-03
+
+### Given the named-patterns strategy, then it asks a design to name its patterns and any it rejected, the reviewer checks both a novel structure where a pattern fits and a pattern where none is needed, and it stays advice. _(archived)_
+
+- **Scenario id:** `NP-1`
+- **Intent:** `INT-1`
+- **Source issue:** `named-patterns-strategy`
+- **Landed:** 2026-10-03
+
+### Given a run record and its scenario, when the final code is rebuilt from the seed and the diff, then the measures cover changed Python files outside tests, and a diff that does not apply gives no measure. _(archived)_
+
+- **Scenario id:** `QS-1`
+- **Intent:** `INT-1`
+- **Source issue:** `quality-static-signals`
+- **Landed:** 2026-10-03
+
+### Given a before and after version of a file, then complexity added, duplicated lines and lint findings are counted as the design states. _(archived)_
+
+- **Scenario id:** `QS-2`
+- **Intent:** `INT-1`
+- **Source issue:** `quality-static-signals`
+- **Landed:** 2026-10-03
+
+### Given records for several conditions, then the comparison report shows the three measures per cell and per condition, and not recorded where none exists. _(archived)_
+
+- **Scenario id:** `QS-3`
+- **Intent:** `INT-1`
+- **Source issue:** `quality-static-signals`
+- **Landed:** 2026-10-03

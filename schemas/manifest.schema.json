@@ -189,7 +189,7 @@
           },
           "review_rounds": {
             "type": "array",
-            "description": "Every review round, appended. The fix-round cap is sized from these later.",
+            "description": "Every review round, appended. A round past the review_rounds ceiling in routing-policy.yml is recorded, and the run then needs a stop reason to land.",
             "items": {
               "type": "object",
               "required": [
@@ -212,6 +212,57 @@
                 }
               }
             }
+          },
+          "last_error_digest": {
+            "type": "string",
+            "description": "The first 16 hex digits of the SHA-256 of the last error the builder reported, whitespace collapsed."
+          },
+          "error_repeat_count": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "How many times in a row the builder reported the error in last_error_digest. Another try is refused at the repeated_error ceiling."
+          },
+          "stopped_reason": {
+            "type": "object",
+            "description": "Why the subtask stopped short of done, or went past a loop ceiling, and the file that shows it. compass check accepts a stopped subtask in place of a done one.",
+            "required": [
+              "reason",
+              "evidence"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "evidence": {
+                "type": "string",
+                "minLength": 1
+              },
+              "at": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "replans": {
+      "type": "array",
+      "description": "Each replan of a multiagent breakdown, written by `compass issue subtask replan`. Another is refused at the replans ceiling in routing-policy.yml.",
+      "items": {
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "at": {
+            "type": "string"
           }
         }
       }

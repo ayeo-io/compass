@@ -51,7 +51,7 @@ same commit.
 | `governance/terminology.yml` | `docs/glossary.md` |
 | `commands/`, `agents/`, `schemas/` | `skills/compass-runtime/SKILL.md` |
 | `cli/compass_pkg/tdd.py`, `cli/compass_pkg/evidence_identity.py` | `skills/evidence-gates/SKILL.md` |
-| `cli/compass_pkg/subtasks.py`, `cli/compass_pkg/multiagent_check.py`, `scripts/multiagent.sh`, `scripts/integrate.sh` | `docs/multiagent-protocol.md` |
+| `cli/compass_pkg/subtasks.py`, `cli/compass_pkg/loop_ceilings.py`, `cli/compass_pkg/multiagent_check.py`, `scripts/multiagent.sh`, `scripts/integrate.sh` | `docs/multiagent-protocol.md` |
 | `cli/compass_pkg/flow.py`, `docs/system-spec.md`, `docs/system-spec-archive.md` | `architecture/decisions/ADR-026-ship-commit-lands-and-derives-the-living-spec.md` |
 | `cli/compass_pkg/next_cmd.py`, `cli/compass_pkg/render.py`, `cli/compass_pkg/statusline.py`, `bin/compass-statusline` | `docs/quickstart.md` |
 | `cli/compass_pkg/receipt.py` | `docs/receipt.md` |

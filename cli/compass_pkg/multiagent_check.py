@@ -16,16 +16,27 @@
 # required, and a new mechanism must not judge work that predates it
 # (ADR-006).
 #
-# DEPENDENCY: standard library (datetime) and compass_pkg.check_results.
+# A subtask may instead record a stop reason with an evidence file: the run
+# stopped it, and says why. For an issue created on or after 2026-10-03, a
+# subtask past its try or review-round ceiling (the `loop_ceilings`
+# rules in routing-policy.yml) needs that stop reason to land. An issue
+# created earlier is not compared with ceilings that did not exist when it
+# ran.
+#
+# DEPENDENCY: standard library (datetime, os), compass_pkg.check_results and
+# compass_pkg.loop_ceilings.
 # =============================================================================
 """`multiagent-run-recorded`: does a multiagent issue's manifest show its run
 completed - every subtask done, with a passing last review round?"""
 from __future__ import annotations
 
 import datetime
+import os
 
 from compass_pkg.check_results import NOTHING_TO_CHECK
-from compass_pkg.core import FOUND, resolve_artifact
+from compass_pkg.core import FOUND, find_upwards, resolve_artifact
+from compass_pkg.loop_ceilings import (LOOP_CEILINGS_FROM, loop_ceilings,
+                                       on_or_after)
 
 #: An issue with no `subtasks:` key is read by the check only if created on
 #: or after this date; an issue that already has the key is read whatever
@@ -34,22 +45,41 @@ from compass_pkg.core import FOUND, resolve_artifact
 RUN_RECORD_REQUIRED_FROM = datetime.date(2026, 9, 26)
 
 
-def _applies_from(created):
-    """For an issue with no `subtasks:` key, was it created on or after the
-    cutoff? A missing or blank `created:` does not apply - an issue with no
-    date at all predates the field. A value present but not an ISO date is
-    not trusted to mean "old", so the check still applies to it."""
-    if isinstance(created, datetime.datetime):
-        created = created.date()
-    if isinstance(created, datetime.date):
-        return created >= RUN_RECORD_REQUIRED_FROM
-    text = "" if created is None else str(created).strip()
-    if not text:
-        return False
-    try:
-        return datetime.date.fromisoformat(text[:10]) >= RUN_RECORD_REQUIRED_FROM
-    except ValueError:
-        return True
+def _applies_from(created, cutoff=RUN_RECORD_REQUIRED_FROM):
+    """Was the issue created on or after the cutoff? See `on_or_after`."""
+    return on_or_after(created, cutoff)
+
+
+def _stop_problem(stop, task_dir):
+    """What is wrong with a recorded stop reason, or None when it has a
+    reason and an evidence file that exists inside the project."""
+    if not isinstance(stop, dict) or not str(stop.get("reason") or "").strip():
+        return "a stop with no reason"
+    evidence = stop.get("evidence")
+    if not isinstance(evidence, str) or not evidence:
+        return "a stop with no evidence file"
+    root = os.path.realpath(find_upwards(task_dir, ".compass") or task_dir)
+    full = os.path.realpath(os.path.join(root, evidence))
+    if os.path.commonpath([root, full]) != root or not os.path.isfile(full):
+        return "its stop evidence %s does not exist" % evidence
+    return None
+
+
+def _past_ceilings(subtask, ceilings):
+    """The ceilings this subtask went past, as phrases for the message."""
+    past = []
+    attempts = subtask.get("attempts")
+    rounds = subtask.get("review_rounds")
+    counts = (("builder_attempts", attempts if isinstance(attempts, int) else 0,
+               "attempts"),
+              ("review_rounds", len(rounds) if isinstance(rounds, list) else 0,
+               "review rounds"))
+    for name, count, noun in counts:
+        if name in ceilings and count > ceilings[name][0]:
+            limit, rid = ceilings[name]
+            past.append("%d %s, past the ceiling of %d (%s)"
+                        % (count, noun, limit, rid))
+    return past
 
 
 def _ready(task):
@@ -184,25 +214,49 @@ def _check_multiagent_run_recorded(task, task_dir):
     # Every entry is judged, in the order the manifest holds it. A subtask
     # entry that is not a mapping cannot be a passing one, so it is named by
     # its position and counted as not done.
+    # A subtask with a stop reason is judged on the stop alone.
+    ceilings = {}
+    if _applies_from(task.get("created"), LOOP_CEILINGS_FROM):
+        ceilings = loop_ceilings(task)
     not_done = []
     no_pass = []
+    bad_stop = []
+    past = []
     for index, entry in enumerate(subtasks):
         label = _subtask_label(entry, index)
+        if isinstance(entry, dict) and "stopped_reason" in entry:
+            problem = _stop_problem(entry["stopped_reason"], task_dir)
+            if problem:
+                bad_stop.append("%s (%s)" % (label, problem))
+            continue
         if not isinstance(entry, dict) or entry.get("status") != "done":
             not_done.append(label)
         if not isinstance(entry, dict) or not _last_round_passed(entry):
             no_pass.append(label)
+        if isinstance(entry, dict) and _past_ceilings(entry, ceilings):
+            past.append("%s: %s" % (label,
+                                    "; ".join(_past_ceilings(entry, ceilings))))
 
-    if not_done or no_pass:
+    if not_done or no_pass or bad_stop:
         problems = []
         if not_done:
             problems.append("not done: %s" % ", ".join(not_done))
         if no_pass:
             problems.append("no passing last review round: %s" % ", ".join(no_pass))
+        if bad_stop:
+            problems.append("stopped without a usable record: %s"
+                            % ", ".join(bad_stop))
         return False, (
             "subtask(s) with an incomplete run record - %s. Record status "
-            "with `compass issue subtask update --status done`, and a "
-            "passing round with `--round pass`." % "; ".join(problems))
+            "with `compass issue subtask update --status done`, a passing "
+            "round with `--round pass`, or why it stopped with "
+            "`--stop-reason` and `--stop-evidence`." % "; ".join(problems))
+
+    if past:
+        return False, (
+            "subtask(s) past a loop ceiling with no stop reason - %s. Record "
+            "why with `compass issue subtask update <id> --stop-reason TEXT "
+            "--stop-evidence FILE`." % "; ".join(past))
 
     mapped = mapped_subtask_ids(task_dir)
     if mapped:
@@ -214,5 +268,8 @@ def _check_multiagent_run_recorded(task, task_dir):
                 "record: %s. Dispatch and record each with `compass issue "
                 "subtask add`, or take it out of the map." % ", ".join(unrecorded))
 
-    return True, ("every subtask is done with a passing review round (%d "
-                  "subtask(s))" % len(subtasks))
+    stopped = sum(1 for e in subtasks
+                  if isinstance(e, dict) and "stopped_reason" in e)
+    return True, ("every subtask is done with a passing review round, or "
+                  "stopped with a recorded reason (%d subtask(s), %d stopped)"
+                  % (len(subtasks), stopped))

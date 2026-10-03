@@ -386,6 +386,10 @@ def test_d2_repairs_change_only_retired_names():
     block showing the rail and two list items naming `NO_COLOR` and
     `COMPASS_COLOR`.
 
+    One more was re-baselined by `loop-ceilings`: `agents/orchestrator.md`
+    gained a "When to stop" section, one `##` heading and four list items
+    naming the conditions that stop a multiagent run.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

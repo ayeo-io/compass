@@ -8,9 +8,10 @@
       2,
       2,
       2,
+      2,
       2
     ],
-    "list_items": 17,
+    "list_items": 21,
     "table_rows": 0
   },
   "agents/planner.md": {
@@ -103,6 +104,7 @@
     "table_rows": 10
   },
   "approaches/quick-fix.md": {
+    "fences": 0,
     "heading_levels": [
       1,
       2,
@@ -113,9 +115,8 @@
       2,
       2
     ],
-    "fences": 0,
-    "table_rows": 15,
-    "list_items": 9
+    "list_items": 9,
+    "table_rows": 15
   },
   "approaches/rubric.md": {
     "fences": 2,

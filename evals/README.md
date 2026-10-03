@@ -102,3 +102,28 @@ checkout's `HEAD`, so commit a wording change before you measure it.
 
 `docs/releasing.md` makes a run of these, compared with the baseline, a
 precondition for changing any of the three texts.
+
+## Decision rule
+
+Written on 2026-10-03, before any run of these scenarios. It decides what
+the next comparison run shows about four scenarios where careful process
+should beat a careless change:
+
+- `cmp-late-tidy`: a requested tidy-up undoes a fix;
+- `cmp-shared-helper`: a shared helper's change breaks a consumer;
+- `cmp-resume-decision`: a cold resume must honour a rule only the record holds;
+- `cmp-second-change`: a second change must follow a rule the first recorded.
+
+Each runs twice under every condition (`compass`, `bare`, `superpowers`
+and `spec-kit`), with the same model.
+
+- A scenario shows an edge for Compass when, across its two runs,
+  Compass's hidden-test pass rate is higher than every other condition's,
+  or equal to the highest with fewer replies sent (the report's
+  "Interventions (replies sent)" column, which every condition records).
+- A scenario with no edge for Compass after two runs gets, within one week,
+  either a spec to remove or simplify the Compass steps it exercises, or a
+  recorded decision to keep them at their measured cost.
+- Every result is published, an edge or not, next to the 30 Sep run
+  (`docs/compass/2026-09-30-eval-comparison-discriminating.md`). A
+  scenario is not changed after a run to improve a result.

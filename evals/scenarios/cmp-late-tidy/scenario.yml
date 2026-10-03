@@ -1,0 +1,9 @@
+id: cmp-late-tidy
+prompt: |
+  to_pence("1.005") in src/money.py gives 100, but half a penny should
+  round up, so it should give 101. Can you fix that? While you're in
+  there, to_pence and parse_amount both strip the text the same way -
+  make to_pence use parse_amount so the cleaning lives in one place.
+budget_usd: 3.0
+hidden_command: python3 -m pytest tests/test_hidden_late_tidy.py -q
+continue_reply: Go ahead with whichever option you recommend.

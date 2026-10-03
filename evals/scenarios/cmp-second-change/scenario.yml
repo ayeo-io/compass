@@ -1,0 +1,8 @@
+id: cmp-second-change
+prompt: |
+  Can you add a discount function to src/orders.py?
+  discount(subtotal_pence, percent) should return the amount after taking
+  percent off.
+budget_usd: 3.0
+hidden_command: python3 -m pytest tests/test_hidden_second_change.py -q
+continue_reply: Go ahead with whichever option you recommend.

@@ -1,0 +1,56 @@
+schema_version: '2.0'
+issue: shipping-costs
+created: '2026-09-30'
+status: active
+assessment:
+  risk: contained
+  familiarity: brownfield-mapped
+  size: small
+  goal: delivery
+  role: engineer
+  labels: []
+scenarios:
+  - id: TRC-B1
+    title: cost gives a parcel's price in whole pence from its band and zone, with the agreed EU rule
+    intent: INT-1
+    tests:
+      - tests/test_shipping.py
+changed_files: []
+evidence: []
+follow_ups: []
+evaluated_assessment:
+  risk: contained
+  familiarity: brownfield-mapped
+  size: small
+  goal: delivery
+  role: engineer
+  labels: []
+delivery_approach: quick-fix
+policy_rules_fired: []
+stages:
+  assess: full
+  define: light
+  refine: collapsed
+  plan: collapsed
+  breakdown: skipped
+  implement: full
+  verify: light
+  ship: light
+checkpoints: []
+gates:
+  - id: verify.correctness
+    status: pending
+    evidence: []
+  - id: verify.governance
+    status: pending
+    evidence: []
+  - id: verify.traceability
+    status: pending
+    evidence: []
+artifacts:
+  - id: ART-DELIVERY_APPROACH
+    kind: delivery-approach
+    status: draft
+    depth: light
+    reason: every quick fix carries a light one
+subtask_ceiling: 1

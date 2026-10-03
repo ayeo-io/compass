@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given many manifests read in one process, then the migrate map is parsed once, and parsed again only when its path or contents change.
+### Given a manifest whose fields have the wrong types, then the board lists it as unreadable and still renders every other issue.
 
-- **Scenario id:** `MM-1`
+- **Scenario id:** `DB-6`
 - **Intent:** `INT-1`
-- **Source issue:** `migrate-map-parsed-once`
+- **Source issue:** `delivery-board`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1525 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1532 superseded scenario(s) are in `docs/system-spec-archive.md`.

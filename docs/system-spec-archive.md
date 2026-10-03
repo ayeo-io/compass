@@ -10388,3 +10388,38 @@
 - **Intent:** `INT-1`
 - **Source issue:** `run-session-tools`
 - **Landed:** 2026-10-03
+
+### Given the demo quick fix, then a manually started workflow runs compass run on it in CI, authenticated by federation with no stored key, and keeps the run record. _(archived)_
+
+- **Scenario id:** `RD-1`
+- **Intent:** `INT-1`
+- **Source issue:** `run-demo-in-ci`
+- **Landed:** 2026-10-03
+
+### Given a configured record, then record sync adds and updates its paths in the record repository, redacting credentials, commits naming the project's HEAD and pushes; it deletes only with prune, refuses a full sync from a linked worktree and any path outside the project or into git's folder. _(archived)_
+
+- **Scenario id:** `DR-A`
+- **Intent:** `INT-1`
+- **Source issue:** `delivery-record`
+- **Landed:** 2026-10-03
+
+### Given no record in the config, then record sync says none is configured and exits 0, and ship is unchanged. _(archived)_
+
+- **Scenario id:** `DR-B`
+- **Intent:** `INT-1`
+- **Source issue:** `delivery-record`
+- **Landed:** 2026-10-03
+
+### Given a configured record, then ship-commit syncs it after a landing, and a failed sync makes ship exit non-zero naming the fix. _(archived)_
+
+- **Scenario id:** `DR-C`
+- **Intent:** `INT-1`
+- **Source issue:** `delivery-record`
+- **Landed:** 2026-10-03
+
+### Given a fresh clone and the record repository, then record restore copies the record's paths back, refuses to overwrite a differing file without force, and reports what it restored. _(archived)_
+
+- **Scenario id:** `DR-D`
+- **Intent:** `INT-1`
+- **Source issue:** `delivery-record`
+- **Landed:** 2026-10-03

@@ -10472,3 +10472,17 @@
 - **Intent:** `INT-1`
 - **Source issue:** `session-table-tidy`
 - **Landed:** 2026-10-03
+
+### Given a script that sets pipefail, then it never pipes into grep -q, because a grep that exits at its first match can fail the pipe and turn a found line into a missing one. _(archived)_
+
+- **Scenario id:** `GQ-1`
+- **Intent:** `INT-1`
+- **Source issue:** `grep-q-under-pipefail`
+- **Landed:** 2026-10-03
+
+### Given a quick fix that changes a tracked file under .compass, such as the project config, then finish traces and commits it with one run, while untracked issue state under .compass stays out. _(archived)_
+
+- **Scenario id:** `FT-1`
+- **Intent:** `INT-1`
+- **Source issue:** `finish-traces-compass-files`
+- **Landed:** 2026-10-03

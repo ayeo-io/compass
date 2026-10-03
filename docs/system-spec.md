@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a script that sets pipefail, then it never pipes into grep -q, because a grep that exits at its first match can fail the pipe and turn a found line into a missing one.
+### Given a heavier route started by /compass:go, then go and assess agree that the approach summary already shown is the confirmation, and go does not stop at assess step 7 to wait for one.
 
-- **Scenario id:** `GQ-1`
+- **Scenario id:** `GC-1`
 - **Intent:** `INT-1`
-- **Source issue:** `grep-q-under-pipefail`
+- **Source issue:** `go-confirms-on-the-heavier-route`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1495 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1497 superseded scenario(s) are in `docs/system-spec-archive.md`.

@@ -10115,3 +10115,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `clickable-paths`
 - **Landed:** 2026-10-03
+
+### Given the verbs CP-A runs, with their output piped, then it carries no escape code of any kind. _(archived)_
+
+- **Scenario id:** `CP-D`
+- **Intent:** `INT-1`
+- **Source issue:** `clickable-paths`
+- **Landed:** 2026-10-03

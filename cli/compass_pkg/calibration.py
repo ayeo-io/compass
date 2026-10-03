@@ -32,7 +32,7 @@ import re as _re
 
 import fnmatch
 import re as _re
-from compass_pkg.core import CompassError, display_shape, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, migrate_map_section, normalize_spine, resolve_issue_dir, save_manifest
+from compass_pkg.core import CompassError, canonical_shape, display_shape, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, migrate_map_section, normalize_spine, resolve_issue_dir, save_manifest
 
 
 
@@ -611,7 +611,10 @@ def cmd_calibration(args):
         for rf in rfs:
             total += 1
             fr, to = rf.get("from_route"), rf.get("to_route")
-            transitions[f"{fr} -> {to}"] = transitions.get(f"{fr} -> {to}", 0) + 1
+            # Keyed on the current names, so an entry recorded before a
+            # route was renamed counts with its renamed twin, not beside it.
+            key = f"{canonical_shape(fr)} -> {canonical_shape(to)}"
+            transitions[key] = transitions.get(key, 0) + 1
             # A policy correction records a newer policy, not a misread of
             # the work, so it says nothing about how assessment sizes work.
             if rf.get("kind") == "policy-correction":

@@ -10570,3 +10570,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `stops-and-cost-per-condition`
 - **Landed:** 2026-10-03
+
+### Given the CI demo workflow exists and has run, then the headless-runner doc does not say the live acceptance is unmet, and says what the demo covers and that each run costs money. _(archived)_
+
+- **Scenario id:** `HD-1`
+- **Intent:** `INT-1`
+- **Source issue:** `headless-doc-after-the-demo`
+- **Landed:** 2026-10-03

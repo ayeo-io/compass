@@ -10549,3 +10549,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `autonomy-setting`
 - **Landed:** 2026-10-03
+
+### Given a checkpoint table that names something other than the four checkpoint stages, when the policy is linted, then it is refused. _(archived)_
+
+- **Scenario id:** `AU-6`
+- **Intent:** `INT-1`
+- **Source issue:** `autonomy-setting`
+- **Landed:** 2026-10-03

@@ -10507,3 +10507,45 @@
 - **Intent:** `INT-1`
 - **Source issue:** `unmapped-small-change-advisory`
 - **Landed:** 2026-10-03
+
+### Given re-assessments recorded under retired and current route names, when compass retro runs, then each transition appears once under its current names with the counts summed. _(archived)_
+
+- **Scenario id:** `RT-1`
+- **Intent:** `INT-1`
+- **Source issue:** `retro-transitions-split-by-old-names`
+- **Landed:** 2026-10-03
+
+### Given no autonomy setting, when an assessment is evaluated, then the manifest's checkpoints follow the balanced column of the policy's checkpoint table. _(archived)_
+
+- **Scenario id:** `AU-1`
+- **Intent:** `INT-1`
+- **Source issue:** `autonomy-setting`
+- **Landed:** 2026-10-03
+
+### Given one assessment under each of the three autonomy values, when it is evaluated, then only the checkpoints differ; the route, stages, gates and rules fired stay the same. _(archived)_
+
+- **Scenario id:** `AU-2`
+- **Intent:** `INT-1`
+- **Source issue:** `autonomy-setting`
+- **Landed:** 2026-10-03
+
+### Given an autonomy value that is not one of the three, when an assessment is evaluated, then it is refused with the setting and the allowed values named. _(archived)_
+
+- **Scenario id:** `AU-3`
+- **Intent:** `INT-1`
+- **Source issue:** `autonomy-setting`
+- **Landed:** 2026-10-03
+
+### Given an issue, when approach summary runs, then it still prints three lines and the first names the checkpoints that wait or says none do. _(archived)_
+
+- **Scenario id:** `AU-4`
+- **Intent:** `INT-1`
+- **Source issue:** `autonomy-setting`
+- **Landed:** 2026-10-03
+
+### Given the assess, define, refine and plan commands, then each hand-off waits only when its stage is a listed checkpoint, and otherwise shows the hand-off and logs the skip. _(archived)_
+
+- **Scenario id:** `AU-5`
+- **Intent:** `INT-1`
+- **Source issue:** `autonomy-setting`
+- **Landed:** 2026-10-03

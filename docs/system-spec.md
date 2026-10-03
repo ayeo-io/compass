@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given re-assessments recorded under retired and current route names, when compass retro runs, then each transition appears once under its current names with the counts summed.
+### Given a checkpoint table that names something other than the four checkpoint stages, when the policy is linted, then it is refused.
 
-- **Scenario id:** `RT-1`
+- **Scenario id:** `AU-6`
 - **Intent:** `INT-1`
-- **Source issue:** `retro-transitions-split-by-old-names`
+- **Source issue:** `autonomy-setting`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1500 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1506 superseded scenario(s) are in `docs/system-spec-archive.md`.

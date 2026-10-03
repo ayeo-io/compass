@@ -179,7 +179,9 @@ def _write_evidence(task_dir, name, payload):
 def _resolve_scenario(task_dir, scenario):
     """Check a --scenario binding. A red/green that proves a test ran is
     weaker than one bound to the scenario it is evidence FOR - relevance, not
-    just failure. If the issue has a scenarios block, the id must be in it."""
+    just failure. The id must be in the manifest's scenarios, an empty list
+    included: a red bound to a scenario nobody wrote would unlock code edits
+    for acceptance that does not exist."""
     if not scenario:
         return None
     try:
@@ -187,11 +189,14 @@ def _resolve_scenario(task_dir, scenario):
     except CompassError:
         return scenario  # no manifest.yml yet - record the binding, can't check it
     ids = {s.get("id") for s in (task.get("scenarios") or []) if isinstance(s, dict)}
-    if ids and scenario not in ids:
+    if scenario not in ids:
+        listed = (f"its scenarios are {sorted(ids)}" if ids
+                  else "it has no scenarios yet")
         raise CompassError(
-            f"--scenario '{scenario}' is not a scenario id in this issue's "
-            f"manifest.yml (scenarios: {sorted(ids)}). Bind to a real scenario, or "
-            f"add it to manifest.yml first."
+            f"--scenario '{scenario}' is not a scenario in this issue's "
+            f"manifest.yml: {listed}. Add it first with `compass scenario add "
+            f"{scenario} --title \"...\" --intent INT-1 --test <test file>`, "
+            f"or bind to one that exists."
         )
     return scenario
 

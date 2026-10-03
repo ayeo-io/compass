@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import os
 import pathlib
+import re
 import subprocess
 import sys
 
@@ -39,7 +40,9 @@ status: active
 assessment: {{risk: contained, familiarity: brownfield-mapped, size: atomic, goal: delivery, role: engineer}}
 delivery_approach: feature
 stages: {{assess: full, define: {define}, refine: light, plan: full, breakdown: solo-or-pair, implement: full, verify: full, ship: full}}
-scenarios: []
+scenarios:
+  - {{id: DEMO-1, title: the demo, intent: INT-1, tests: [tests/test_demo.py]}}
+  - {{id: OTHER-1, title: another, intent: INT-1, tests: [tests/test_demo.py]}}
 evidence: []
 gates: []
 changed_files: []
@@ -229,6 +232,12 @@ def test_evg_c1_every_reader_failure_refuses(tmp_path, code):
     """
     root, work, target = _project(tmp_path, define="full")
     _cli(root, "tdd-red", "--issue", "demo", "--scenario", "DEMO-1", "--", "sh", "-c", "echo '1 failed'; exit 1")
+    # The scenarios are removed after the red: the CLI no longer records a
+    # red for a scenario the manifest lacks, so this is how the state arises.
+    manifest = work / "manifest.yml"
+    manifest.write_text(re.sub(r"scenarios:\n(  - .*\n)+", "scenarios: []\n",
+                               manifest.read_text()))
+    assert "scenarios: []" in manifest.read_text()
 
     r = _hook(root, target, path_prefix=str(_shim(tmp_path, code)))
     out = (r.stdout + r.stderr)

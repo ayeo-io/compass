@@ -10423,3 +10423,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `delivery-record`
 - **Landed:** 2026-10-03
+
+### Given the change, then a decision record states the choice of a second private repository, and the restore drill has been run once from a fresh clone. _(archived)_
+
+- **Scenario id:** `DR-E`
+- **Intent:** `INT-1`
+- **Source issue:** `delivery-record`
+- **Landed:** 2026-10-03

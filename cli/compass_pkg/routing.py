@@ -336,12 +336,12 @@ def evaluate_route(readings, policy, autonomy="balanced"):
     runs = [s for s in CHECKPOINT_STAGES
             if phases.get(s) not in (None, "collapsed", "skipped")]
     table = policy.get("autonomy_checkpoints")
-    if table is None:
-        checkpoints = runs
-    else:
-        row = {canonical_shape(k): v for k, v in (table.get(autonomy) or {}).items()}
-        listed = row.get(canonical_shape(final)) or []
-        checkpoints = [s for s in runs if s in listed]
+    row = {canonical_shape(k): v
+           for k, v in ((table or {}).get(autonomy) or {}).items()}
+    listed = row.get(canonical_shape(final))
+    # A missing table, value or route waits at every hand-off the route
+    # runs: a gap must not read as "never wait".
+    checkpoints = runs if listed is None else [s for s in runs if s in listed]
 
     return {
         "candidate_route": canonical_shape(candidate),

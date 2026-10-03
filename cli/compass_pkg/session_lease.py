@@ -20,10 +20,16 @@
 """The per-session issue record behind the `pointer-moved` refusal."""
 from __future__ import annotations
 
+import contextlib
 import datetime
 import json
 import os
 import tempfile
+
+try:
+    import fcntl
+except ImportError:                                     # pragma: no cover
+    fcntl = None                                        # no file locks here
 
 from compass_pkg.core import CompassError, _one_segment, find_compass_dir
 
@@ -51,9 +57,46 @@ def _load(compass_dir):
     return table if isinstance(table, dict) else {}
 
 
+@contextlib.contextmanager
+def _locked(compass_dir):
+    """Hold an exclusive lock while the table is read and written, so two
+    hooks at once cannot lose each other's record. Where the system has no
+    file locks, carry on without one."""
+    if fcntl is None:
+        yield
+        return
+    with open(os.path.join(compass_dir, ".sessions.lock"), "a") as fh:
+        fcntl.flock(fh, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(fh, fcntl.LOCK_UN)
+
+
+def _ignore(compass_dir):
+    """A `.gitignore` beside the table names it, so no project commits it,
+    whatever its own ignore rules say."""
+    path = os.path.join(compass_dir, ".gitignore")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            lines = fh.read().splitlines()
+    except OSError:
+        lines = []
+    wanted = [name for name in ("sessions.json", ".sessions.lock")
+              if name not in lines]
+    if wanted:
+        with open(path, "a", encoding="utf-8") as fh:
+            if lines and lines[-1]:
+                fh.write("\n")
+            fh.write("\n".join(wanted) + "\n")
+
+
 def _save(compass_dir, table):
     """Written to a temporary file and moved into place, so a reader never
-    sees half a table."""
+    sees half a table. Stale records are dropped as it is written."""
+    table = {k: v for k, v in table.items()
+             if isinstance(v, dict) and _fresh(v)}
+    _ignore(compass_dir)
     fd, tmp = tempfile.mkstemp(dir=compass_dir, prefix=".sessions-")
     with os.fdopen(fd, "w", encoding="utf-8") as fh:
         json.dump(table, fh, indent=2, sort_keys=True)
@@ -74,9 +117,11 @@ def record(compass_dir, session, slug):
     """Note that `session` works on `slug` now."""
     if not session:
         return
-    table = _load(compass_dir)
-    table[session] = {"issue": slug, "at": _now().isoformat(timespec="seconds")}
-    _save(compass_dir, table)
+    with _locked(compass_dir):
+        table = _load(compass_dir)
+        table[session] = {"issue": slug,
+                          "at": _now().isoformat(timespec="seconds")}
+        _save(compass_dir, table)
 
 
 def check(compass_dir, session, slug):
@@ -84,11 +129,15 @@ def check(compass_dir, session, slug):
     the session's fresh record names another issue than the pointer now
     does. A moved pointer is not recorded: the session must say which issue
     it means, with `compass issue use`."""
-    entry = _load(compass_dir).get(session)
-    if isinstance(entry, dict) and _fresh(entry) and entry.get("issue") \
-            and entry.get("issue") != slug:
-        return f"moved:{entry['issue']}"
-    record(compass_dir, session, slug)
+    with _locked(compass_dir):
+        table = _load(compass_dir)
+        entry = table.get(session)
+        if isinstance(entry, dict) and _fresh(entry) and entry.get("issue") \
+                and entry.get("issue") != slug:
+            return f"moved:{entry['issue']}"
+        table[session] = {"issue": slug,
+                          "at": _now().isoformat(timespec="seconds")}
+        _save(compass_dir, table)
     return "ok"
 
 

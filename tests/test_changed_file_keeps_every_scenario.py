@@ -14,7 +14,10 @@ import yaml
 BODY = {"assessment": {"risk": "contained", "familiarity": "greenfield",
                        "size": "small", "goal": "delivery",
                        "role": "engineer", "labels": []},
-        "scenarios": []}
+        # Defined, because changed-file add refuses an id the issue does
+        # not define (#119).
+        "scenarios": [{"id": f"S-{n}", "title": f"scenario {n}"}
+                      for n in (1, 2, 3)]}
 
 
 def _traced(task_dir, path):

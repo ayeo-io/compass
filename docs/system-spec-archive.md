@@ -10927,3 +10927,17 @@
 - **Intent:** `INT-1`
 - **Source issue:** `keep-the-stop-before-a-breaking-change`
 - **Landed:** 2026-10-04
+
+### Given the repository now lives at ayeo-io/compass, then no tracked file names the old address as the repository, the plugin manifests name the new one, and the marketplace owner is the organisation. _(archived)_
+
+- **Scenario id:** `RA-1`
+- **Intent:** `INT-1`
+- **Source issue:** `repoint-to-ayeo-io`
+- **Landed:** 2026-10-04
+
+### Given a project whose decisions ledger holds entries, then quick-fix start lists each live entry's slug and first decision sentence, newest first and capped with a count of the rest, leaves out superseded entries, and adds nothing when the ledger is empty. _(archived)_
+
+- **Scenario id:** `SD-1`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-shows-settled-decisions`
+- **Landed:** 2026-10-04

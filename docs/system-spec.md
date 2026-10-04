@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the repository now lives at ayeo-io/compass, then no tracked file names the old address as the repository, the plugin manifests name the new one, and the marketplace owner is the organisation.
+### Given the published breakdown, then it carries a dated correction saying shell calls that ran compass also read files in the same call, so the Compass CLI share is an upper bound, and what those calls read.
 
-- **Scenario id:** `RA-1`
+- **Scenario id:** `CB-1`
 - **Intent:** `INT-1`
-- **Source issue:** `repoint-to-ayeo-io`
+- **Source issue:** `correct-token-breakdown-categories`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1560 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1562 superseded scenario(s) are in `docs/system-spec-archive.md`.

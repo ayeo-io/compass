@@ -11039,3 +11039,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `pytest-bdd-adapter-tests-run`
 - **Landed:** 2026-10-04
+
+### Given an issue whose friction entry names a current stage such as implement, When compass issue lint runs with jsonschema installed, Then it passes; and Compass writes and loads friction phases in the current stage names, mapping a retired name such as frame to assess _(archived)_
+
+- **Scenario id:** `FP-1`
+- **Intent:** `INT-1`
+- **Source issue:** `friction-phase-takes-v2-stages`
+- **Landed:** 2026-10-04

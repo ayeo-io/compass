@@ -10822,3 +10822,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `harness-containment-under-root`
 - **Landed:** 2026-10-04
+
+### Given the commit-msg hook is installed, then a commit whose message names a rival product is refused before it is made, a clean message commits, and the refusal names no product. _(archived)_
+
+- **Scenario id:** `CM-1`
+- **Intent:** `INT-1`
+- **Source issue:** `commit-msg-name-check`
+- **Landed:** 2026-10-04

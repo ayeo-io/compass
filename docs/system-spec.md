@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the commit-msg hook is installed, then a commit whose message names a rival product is refused before it is made, a clean message commits, and the refusal names no product.
+### Given a traced file whose deletion is staged but not yet committed, then the traceability check counts its absence as the change; a traced file missing from disk with no deletion staged or committed is still reported.
 
-- **Scenario id:** `CM-1`
+- **Scenario id:** `SD-1`
 - **Intent:** `INT-1`
-- **Source issue:** `commit-msg-name-check`
+- **Source issue:** `check-accepts-a-staged-deletion`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1545 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1546 superseded scenario(s) are in `docs/system-spec-archive.md`.

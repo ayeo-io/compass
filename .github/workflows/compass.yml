@@ -169,6 +169,20 @@ jobs:
           grep -q "test_" /tmp/collected.txt || {
             echo "No scenarios were collected - pytest-bdd did not load."; exit 1; }
 
+      - name: Run the suite's own pytest-bdd adapter tests, and fail on a skip
+        # The self-check job has no pytest-bdd, so these tests skip there,
+        # and a stale feature-file path went unseen (#407). Here pytest-bdd
+        # is installed, so a skip means a test did not run. `shell: bash`
+        # adds pipefail, so a failing run is not hidden by the pipe to tee.
+        shell: bash
+        run: |
+          python3 -m pytest -rs --color=no -p no:cacheprovider \
+            tests/test_bdd_adapter_reference.py \
+            "tests/test_bdd_adapters_all.py::test_trc_a2_each_adapter_should_run_the_extracted_feature_and_pass[pytest-bdd]" \
+            | tee /tmp/adapter-tests.txt
+          ! grep -q "^SKIPPED" /tmp/adapter-tests.txt || {
+            echo "An adapter test skipped where pytest-bdd is installed."; exit 1; }
+
   # An example no job runs is an example nobody can trust. Every directory under
   # examples/bdd-adapters/ has one of these, and tests/test_bdd_adapters_all.py asserts it.
   bdd-adapter-behave:

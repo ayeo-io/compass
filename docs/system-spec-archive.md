@@ -10808,3 +10808,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `rival-names-never-committed`
 - **Landed:** 2026-10-04
+
+### Given the published comparison runs after the sweep, then every number in them is unchanged and each carries one line saying rival products appear as codes and the maintainer holds the key. _(archived)_
+
+- **Scenario id:** `RN-9`
+- **Intent:** `INT-1`
+- **Source issue:** `rival-names-never-committed`
+- **Landed:** 2026-10-04

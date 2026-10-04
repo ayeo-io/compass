@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the comparison run found Compass stopped to warn of a change that would break a hidden consumer, then the decisions ledger records the maintainer's decision to keep that stop at its measured cost, with its evidence.
+### Given a quick fix resumed by a session that did not start it, then the resume command names the red and quick-fix finish as the way to land it, and quick-fix finish lands it in one call with no start record.
 
-- **Scenario id:** `KS-1`
+- **Scenario id:** `RQ-1`
 - **Intent:** `INT-1`
-- **Source issue:** `keep-the-stop-before-a-breaking-change`
+- **Source issue:** `resumed-quick-fix-lands-in-one-command`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1559 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1561 superseded scenario(s) are in `docs/system-spec-archive.md`.

@@ -10892,3 +10892,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `tokens-per-stage-interactive`
 - **Landed:** 2026-10-04
+
+### Given the 4 October comparison run, then its document is on record with every condition and scenario, the decision rule's verdict for each of the four careful-process scenarios, the cost per condition, the tokens per stage, and what it does not show. _(archived)_
+
+- **Scenario id:** `PR-1`
+- **Intent:** `INT-1`
+- **Source issue:** `premium-run`
+- **Landed:** 2026-10-04

@@ -347,6 +347,17 @@ fi
 # decision at the end of the run is about the whole map, not one wave.
 MAP_TOTAL_SUBTASKS="$SUBTASK_COUNT"
 
+# --- the map states its final count twice: they must agree -----------------
+# §3 lists one row per subtask and §5 states the "Final subtask count after
+# caps". On one issue they disagreed and the dry run planned a worktree the
+# document said should not exist (#101). A §5 that states no number, or
+# still holds the template's placeholder, is not compared.
+STATED_FINAL="$(sed -n 's/.*Final subtask count after caps:[* ]*\([0-9][0-9]*\).*/\1/p' "$MAP" | head -n 1)"
+if [ -n "$STATED_FINAL" ] && [ "$STATED_FINAL" -ne "$MAP_TOTAL_SUBTASKS" ]; then
+  echo "multiagent.sh: distribution-map.md lists $MAP_TOTAL_SUBTASKS subtask row(s) in §3 but states \"Final subtask count after caps: $STATED_FINAL\" in §5. Make the two agree before provisioning. Nothing was created." >&2
+  exit 1
+fi
+
 # --- waves: a staged map is provisioned one wave at a time -------------------
 NEXT_WAVE=""
 WAVE_REQUESTED=""

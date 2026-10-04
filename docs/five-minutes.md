@@ -204,7 +204,7 @@ runtime can resume from these files without the original chat.
 ## The CLI underneath
 
 Everything above runs through slash commands, which call the CLI. The full
-verb list is in the [README](../README.md#the-cli); every verb describes
+verb list is in the [README](https://github.com/ayeo-io/compass/blob/main/README.md#the-cli); every verb describes
 itself - `compass <verb> --help` says what it does and what the result
 means.
 

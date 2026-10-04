@@ -4,7 +4,7 @@
 # autoload so the suite runs from a clean checkout; autoloaded plugins are
 # the most common cause of environment-specific hangs.
 
-.PHONY: help test lint validate ci release clean
+.PHONY: help test test-clean lint validate ci release clean
 
 # Parallel workers when pytest-xdist is installed. Autoload stays off, so the
 # plugin is loaded by name; without it the suite runs in series as before.
@@ -22,6 +22,16 @@ help:  ## list targets
 test:  ## run the CLI test suite (autoload disabled - reliable in clean envs)
 	PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest tests/ -q $(if $(XDIST),$(XDIST) -m "not serial")
 	$(if $(XDIST),PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 python3 -m pytest tests/ -q -m serial)
+
+# The target `make test-clean` runs inside the clone; a test of the target sets
+# it to `help` to prove the clone works without running the whole suite.
+CLEAN_TARGET ?= test
+
+test-clean:  ## run the suite in a fresh clone of HEAD, as CI sees it (commit first)
+	@d=$$(mktemp -d) && trap 'rm -rf "$$d"' EXIT && \
+	  echo "test-clean: running in a clean clone of $$(git rev-parse --short HEAD); uncommitted changes and ignored files are left out" && \
+	  git clone -q --no-hardlinks . "$$d/compass" && \
+	  $(MAKE) -s -C "$$d/compass" $(CLEAN_TARGET)
 
 lint:  ## check governance YAML
 	python3 cli/compass policy lint

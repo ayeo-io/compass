@@ -74,6 +74,11 @@ Schema validation in policy and issue linting.
 
 Run `compass --version` to see which Compass and PyYAML versions are active.
 
+This repository's own CI pins every action by commit SHA and installs its
+test tools from `.github/requirements/`, which lists each package at an exact
+version; the cucumber-js adapter installs from its lockfile with `npm ci`. The
+workflows in `ci/` that you copy pin their actions the same way.
+
 ## Project guardrails are executable code
 
 A project guardrail can use `command-passes` - a shipped check **whose

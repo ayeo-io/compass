@@ -42,6 +42,14 @@ def test_ci_workflow_runs_the_test_suite():
     that breaks all of them goes green.
     """
     workflow = WORKFLOW.read_text()
+    # The packages come from a requirements file of exact versions (#99), so
+    # what is installed is the workflow's text plus the files it names.
+    root = WORKFLOW.parent.parent.parent
+    for req in re.findall(r"pip install -r (\S+)", workflow):
+        workflow += "\n" + "\n".join(
+            f"pip install {line.strip()}" for line in
+            (root / req).read_text().splitlines() if line.strip()
+            and not line.startswith("#"))
 
     assert re.search(r"pip install[^\n]*\bpytest\b", workflow), (
         ".github/workflows/compass.yml does not install pytest. The workflow "

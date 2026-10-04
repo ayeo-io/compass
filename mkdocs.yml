@@ -1,0 +1,51 @@
+# The documentation site, published at https://docs.ayeo.io/compass/ by
+# .github/workflows/docs.yml. Pages are the same files as in docs/, so they
+# stay under the repository's tests and pull-request rule; only the pages
+# in `nav` are published (`exclude_docs`), never issue records or the
+# living spec.
+site_name: Compass
+site_description: Adaptive spec-driven development for Claude Code
+site_url: https://docs.ayeo.io/compass/
+repo_url: https://github.com/ayeo-io/compass
+repo_name: ayeo-io/compass
+edit_uri: edit/main/docs/
+docs_dir: docs
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - search.suggest
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+
+exclude_docs: |
+  /*
+  !/five-minutes.md
+  !/quickstart.md
+  !/safety-contract.md
+  !/refusal-codes.md
+  !/methodology.md
+  !/roles-guide.md
+  !/security.md
+  !/portability.md
+  !/install-smoke-test.md
+
+nav:
+  - Start:
+      - Five minutes: five-minutes.md
+      - Quickstart: quickstart.md
+      - Install check: install-smoke-test.md
+  - Guarantees:
+      - Safety contract: safety-contract.md
+      - Refusal codes: refusal-codes.md
+      - Security: security.md
+  - How it works:
+      - Methodology: methodology.md
+      - Roles: roles-guide.md
+      - Portability: portability.md

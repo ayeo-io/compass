@@ -10731,3 +10731,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `delivery-board`
 - **Landed:** 2026-10-03
+
+### Given a manifest whose fields have the wrong types, then the board lists it as unreadable and still renders every other issue. _(archived)_
+
+- **Scenario id:** `DB-6`
+- **Intent:** `INT-1`
+- **Source issue:** `delivery-board`
+- **Landed:** 2026-10-03

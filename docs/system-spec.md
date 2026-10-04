@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a manifest whose fields have the wrong types, then the board lists it as unreadable and still renders every other issue.
+### Given the contribution guide, then it names the required CI check, how review works with the automatic review off, the review rules file, the code owners and the house rules, and every path it names exists.
 
-- **Scenario id:** `DB-6`
+- **Scenario id:** `CG-1`
 - **Intent:** `INT-1`
-- **Source issue:** `delivery-board`
+- **Source issue:** `contribution-guide`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1532 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1533 superseded scenario(s) are in `docs/system-spec-archive.md`.

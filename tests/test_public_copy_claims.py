@@ -23,29 +23,14 @@ from __future__ import annotations
 import pathlib
 import re
 import subprocess
+import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "cli"))
 
-# Phrases that assert a real outside person used Compass, rather than
-# describing what a newcomer would meet. Past tense is the tell: "it fails
-# for a newcomer" is a description; "it failed on someone's machine" is a
-# report of an event that did not happen.
-OUTSIDE_USER_PATTERNS = [
-    r"failed on the machine of someone",
-    r"had known Compass for",
-    r"one of our users",
-    r"a user reported",
-    r"users told us",
-]
-
-# Any duration attached to a person's experience of Compass. Development
-# effort in sessions is not this, and is deliberately not matched.
-USER_TIMING_PATTERNS = [
-    r"\bknown Compass for \w+ seconds?\b",
-    r"\bin (?:under|less than) \w+ (?:seconds?|minutes?)\b",
-    r"\b\w+ minutes? to (?:a )?first (?:triage|shipped change)\b",
-    r"\bfifteen minutes\b",
-]
+# The phrase lists live in the CLI, so `compass scenario add` refuses a title
+# that would fail this check once it reaches the living spec (issue #359).
+from compass_pkg.public_copy import OUTSIDE_USER_PATTERNS, USER_TIMING_PATTERNS  # noqa: E402
 
 
 def _public_prose_files() -> list[pathlib.Path]:

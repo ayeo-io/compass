@@ -704,6 +704,14 @@ def title_problem(project_root, title):
             return (f"it names the eval scenario or behaviour {ident}; the living spec "
                     f"ships in the eval plugin copy, which must name none. Describe the "
                     f"run instead.")
+    from compass_pkg import public_copy
+    if public_copy.first_match(title, public_copy.USER_TIMING_PATTERNS):
+        return ("it attaches a duration to a user's experience, which the living "
+                "spec, as public copy, must not claim unmeasured. State the bound "
+                "the test sets instead.")
+    if public_copy.first_match(title, public_copy.OUTSIDE_USER_PATTERNS):
+        return ("it claims an outside user's experience, which the living spec, "
+                "as public copy, must not claim. Describe the behaviour instead.")
     return None
 
 

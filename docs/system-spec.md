@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the contribution guide, then it names the required CI check, how review works with the automatic review off, the review rules file, the code owners and the house rules, and every path it names exists.
+### Given a scenario title that attaches a duration to a user or claims an outside user, then scenario add refuses it when it is recorded, using the same patterns the public-copy check applies.
 
-- **Scenario id:** `CG-1`
+- **Scenario id:** `TT-1`
 - **Intent:** `INT-1`
-- **Source issue:** `contribution-guide`
+- **Source issue:** `title-times-a-user`
 - **Landed:** 2026-10-03
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1533 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1534 superseded scenario(s) are in `docs/system-spec-archive.md`.

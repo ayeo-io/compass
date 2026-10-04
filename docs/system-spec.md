@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the 4 October comparison run, then its document is on record with every condition and scenario, the decision rule's verdict for each of the four careful-process scenarios, the cost per condition, the tokens per stage, and what it does not show.
+### Given an issue slug that contains an eval scenario or behaviour id, then quick-fix start and approach evaluate refuse it before writing anything, and a slug that names none is accepted.
 
-- **Scenario id:** `PR-1`
+- **Scenario id:** `SN-1`
 - **Intent:** `INT-1`
-- **Source issue:** `premium-run`
+- **Source issue:** `slug-names-an-eval-scenario`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1555 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1557 superseded scenario(s) are in `docs/system-spec-archive.md`.

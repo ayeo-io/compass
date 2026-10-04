@@ -10872,6 +10872,13 @@
 - **Source issue:** `tokens-per-stage-interactive`
 - **Landed:** 2026-10-04
 
+### Given eval records whose manifests carry tokens per stage, then the comparison report shows each condition's tokens per stage. _(archived)_
+
+- **Scenario id:** `TS-5`
+- **Intent:** `INT-1`
+- **Source issue:** `tokens-per-stage-interactive`
+- **Landed:** 2026-10-04
+
 ### Given one session that works on two issues, then each issue's assess window starts after the other issue's last boundary in that session, and a stage whose window overlaps the other issue's is marked shared. _(archived)_
 
 - **Scenario id:** `TS-6`

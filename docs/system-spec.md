@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given eval records whose manifests carry tokens per stage, then the comparison report shows each condition's tokens per stage.
+### Given the 4 October comparison run, then its document is on record with every condition and scenario, the decision rule's verdict for each of the four careful-process scenarios, the cost per condition, the tokens per stage, and what it does not show.
 
-- **Scenario id:** `TS-5`
+- **Scenario id:** `PR-1`
 - **Intent:** `INT-1`
-- **Source issue:** `tokens-per-stage-interactive`
+- **Source issue:** `premium-run`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1554 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1555 superseded scenario(s) are in `docs/system-spec-archive.md`.

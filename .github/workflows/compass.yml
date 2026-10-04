@@ -79,7 +79,7 @@ jobs:
         # for it here. jsonschema turns on full JSON Schema validation in the
         # lint commands (optional). pytest is for the test suite step
         # below.
-        run: pip install jsonschema pytest pytest-xdist
+        run: pip install -r .github/requirements/self-check.txt
 
       - name: Repo structure self-check
         # scripts/validate.sh checks the directory tree, that commands
@@ -147,7 +147,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install the test tooling and the BDD runner
-        run: pip install pytest pytest-bdd
+        run: pip install -r .github/requirements/bdd-adapter.txt
 
       - name: Extract the spec into a runnable feature file
         working-directory: examples/bdd-adapters/pytest-bdd
@@ -195,7 +195,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install the BDD runner
-        run: pip install behave
+        run: pip install -r .github/requirements/behave.txt
 
       - name: Extract the spec into a runnable feature file
         working-directory: examples/bdd-adapters/behave
@@ -222,7 +222,7 @@ jobs:
 
       - name: Install the runner
         working-directory: examples/bdd-adapters/cucumber-js
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Extract the spec into a runnable feature file
         working-directory: examples/bdd-adapters/cucumber-js

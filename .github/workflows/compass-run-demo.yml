@@ -40,7 +40,7 @@ jobs:
           node-version: '22'
       - name: Install the test runner and Claude Code
         run: |
-          pip install pytest
+          pip install -r .github/requirements/self-check.txt
           npm install -g @anthropic-ai/claude-code@2.1.288
       - name: Run the demo, authenticated by federation
         env:

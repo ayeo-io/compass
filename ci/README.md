@@ -68,7 +68,7 @@ jobs:
   project-ci:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       # your normal pipeline: tests, lint, type-check, build, etc.
       - run: make test
       - run: make lint
@@ -79,8 +79,8 @@ jobs:
     env:
       COMPASS_CLI: cli/compass    # adjust to wherever Compass lives in your repo
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.11"
       - run: python3 "$COMPASS_CLI" ci

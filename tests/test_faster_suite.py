@@ -90,7 +90,11 @@ def test_ci_installs_xdist_and_runs_in_parallel():
     parallel workers (FS-F)."""
     text = (ROOT / ".github" / "workflows" / "compass.yml").read_text(encoding="utf-8")
     job = text[text.index("self-check"):text.index("bdd-adapter")]
-    assert re.search(r"pip install[^\n]*pytest-xdist", job), "self-check does not install pytest-xdist"
+    # The job installs from a requirements file of exact versions (#99).
+    req = re.search(r"pip install -r (\S+)", job)
+    assert req, "self-check installs no requirements file"
+    pins = (ROOT / req.group(1)).read_text(encoding="utf-8")
+    assert re.search(r"^pytest-xdist==", pins, re.M), "self-check does not install pytest-xdist"
     assert f"pytest tests/ -q {PARALLEL}" in job, "self-check does not run in parallel"
 
 

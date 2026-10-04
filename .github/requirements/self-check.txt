@@ -1,0 +1,16 @@
+# The self-check job's test tooling, every package at the exact version a
+# green CI run installed (2026-10-04). Change a version here, not in the
+# workflow, so the change is reviewed as a dependency change.
+attrs==26.1.0
+execnet==2.1.2
+iniconfig==2.3.0
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
+packaging==26.3
+pluggy==1.6.0
+pygments==2.21.0
+pytest==9.1.1
+pytest-xdist==3.8.0
+referencing==0.37.0
+rpds-py==2026.9.1
+typing-extensions==4.16.0

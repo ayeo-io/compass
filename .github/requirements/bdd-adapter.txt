@@ -1,0 +1,15 @@
+# The pytest-bdd adapter job, every package at the exact version a green CI
+# run installed (2026-10-04).
+gherkin-official==42.0.1
+iniconfig==2.3.0
+mako==1.4.3
+MarkupSafe==3.0.4
+packaging==26.3
+parse==1.22.2
+parse-type==0.6.6
+pluggy==1.6.0
+pygments==2.21.0
+pytest==9.1.1
+pytest-bdd==9.0.0
+six==1.17.0
+typing-extensions==4.16.0

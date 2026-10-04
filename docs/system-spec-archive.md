@@ -11074,3 +11074,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `trace-checks-scenario-ids`
 - **Landed:** 2026-10-04
+
+### Given a fired policy rule with a rationale, an id and a kind, When approach evaluate prints its summary or verbose view and issue receipt prints the receipt, Then each line is exactly what it is today, and all three come from one shared formatter _(archived)_
+
+- **Scenario id:** `FR-1`
+- **Intent:** `INT-1`
+- **Source issue:** `one-fired-rule-formatter-shared`
+- **Landed:** 2026-10-04

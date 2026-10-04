@@ -1,0 +1,19 @@
+#!/bin/sh
+# Stop a commit message that names a rival product before the commit is
+# made (governance/decisions/2026-10-04-rival-names-never-committed.md).
+# CI runs the same gate, but only after the push. Opt-in:
+#   git config core.hooksPath scripts/git-hooks
+# RIVAL_NAME_HASHES names another hash file; the tests use it.
+here=$(cd "$(dirname "$0")" && pwd)
+gate="$here/../rival-name-gate.py"
+[ -f "$gate" ] || exit 0
+if [ -n "${RIVAL_NAME_HASHES:-}" ]; then
+  python3 "$gate" --text "$1" --hashes "$RIVAL_NAME_HASHES"
+else
+  python3 "$gate" --text "$1"
+fi
+status=$?
+if [ "$status" -ne 0 ]; then
+  echo "commit refused: the message names a rival product; write its code (R1 to R9) instead" >&2
+fi
+exit $status

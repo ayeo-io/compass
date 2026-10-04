@@ -34,6 +34,7 @@ import re as _re
 import fnmatch
 import re as _re
 from compass_pkg.core import CompassError, artifact_path, display_shape, find_compass_dir, find_upwards, load_yaml, manifest_path, normalize_spine
+from compass_pkg.render import fired_rule_line
 
 
 
@@ -304,14 +305,11 @@ def _receipt_render(task, slug, route_readings, gate_requirements=None,
     if fired:
         lines.append("  policy rules fired:")
         for g in fired:
-            gid = g.get("id", "?") if isinstance(g, dict) else str(g)
-            rationale = g.get("rationale", "") if isinstance(g, dict) else ""
             # Meaning first, code in brackets, so a reader meets the meaning
             # before the code (`S7`, cold reader). The code stays: it carries
             # the traceability and it is what someone searches for.
             lines.append(_receipt_truncate(
-                f"    {rationale.rstrip().rstrip('.')} ({gid})"
-                if rationale else f"    ({gid})"))
+                f"    {fired_rule_line(g, with_kind=False)}"))
     else:
         lines.append("  policy rules fired: none")
     lines.append("")

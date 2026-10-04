@@ -11011,3 +11011,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `docs-table-code-wraps`
 - **Landed:** 2026-10-04
+
+### Given an issue manifest whose assessment holds a key the manifest schema does not allow, such as risk_reason, When compass approach evaluate --write or compass check runs on it, Then each refuses and names the unknown key and the allowed keys, as issue lint does, with or without jsonschema installed _(archived)_
+
+- **Scenario id:** `SK-1`
+- **Intent:** `INT-1`
+- **Source issue:** `evaluate-and-check-apply-the-schema`
+- **Landed:** 2026-10-04

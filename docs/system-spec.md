@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given an issue manifest whose assessment holds a key the manifest schema does not allow, such as risk_reason, When compass approach evaluate --write or compass check runs on it, Then each refuses and names the unknown key and the allowed keys, as issue lint does, with or without jsonschema installed
+### Given FORCE_COLOR is set in the environment, When compass tdd-red runs a test that imports a project module not yet written, Then it records an import red, and the eval harness reads each test's outcome from coloured pytest output
 
-- **Scenario id:** `SK-1`
+- **Scenario id:** `CL-1`
 - **Intent:** `INT-1`
-- **Source issue:** `evaluate-and-check-apply-the-schema`
+- **Source issue:** `colour-hides-an-import-red`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1572 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1573 superseded scenario(s) are in `docs/system-spec-archive.md`.

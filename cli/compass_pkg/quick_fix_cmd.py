@@ -43,7 +43,7 @@ from compass_pkg.check_cmd import cmd_check
 from compass_pkg.core import (
     CompassError, _WHEN_KEY_MAP, _one_segment, canonical_shape, display_shape,
     display_stage, docs_dir, find_governance, find_upwards, reading_matches,
-    load_manifest, load_yaml, manifest_path, resolve_issue_dir, save_manifest,
+    load_manifest, now_iso, load_yaml, manifest_path, resolve_issue_dir, save_manifest,
 )
 from compass_pkg.dashboard import cmd_issue_artifact
 from compass_pkg.init_cmd import ensure_initialised, resolve_project_root
@@ -297,13 +297,19 @@ def cmd_quick_fix_start(args):
             f"existing issue with the ordinary verbs.")
     os.makedirs(task_dir, exist_ok=True)
     created = datetime.date.today().isoformat()
-    save_manifest({
+    start_record = {
         "schema_version": "2.0",
         "issue": slug,
         "created": created,
         "status": "active",
         "assessment": dict(readings),
-    }, manifest_path(task_dir))
+        # Where the assess stage ends; finish reads the session's tokens
+        # per stage from here (#375).
+        "started_at": now_iso(),
+    }
+    if os.environ.get("CLAUDE_CODE_SESSION_ID"):
+        start_record["usage"] = {"session": os.environ["CLAUDE_CODE_SESSION_ID"]}
+    save_manifest(start_record, manifest_path(task_dir))
 
     _quiet_run(cmd_route_evaluate, reading=None, task=slug, write=True,
               reason=None, kind=None)
@@ -741,7 +747,41 @@ def _commit_lines(files, slug):
     return lines
 
 
+def _record_usage(task_dir, finish_started_at):
+    """Write the stage boundaries finish knows and the tokens the session
+    spent in each stage. Never fails the finish: whatever goes wrong is
+    recorded as one of the fixed reasons in `session_usage.REASONS`."""
+    from compass_pkg import session_usage
+    path = manifest_path(task_dir)
+    task, _ = load_manifest(task_dir)
+    task["finish_started_at"] = finish_started_at
+    task["committed_at"] = now_iso()
+    work = os.path.dirname(task_dir)
+    others = []
+    for name in sorted(os.listdir(work)):
+        other = manifest_path(os.path.join(work, name))
+        if os.path.join(work, name) != task_dir and os.path.isfile(other):
+            try:
+                others.append(load_yaml(other) or {})
+            except Exception:                              # noqa: BLE001
+                continue
+    config_path = os.path.join(os.path.dirname(os.path.dirname(work)),
+                               ".compass", "config.yml")
+    try:
+        config = load_yaml(config_path) if os.path.isfile(config_path) else {}
+        prices = (config or {}).get("prices") or {}
+        task["usage"] = session_usage.stage_usage(
+            task_dir, task, others, prices=prices if isinstance(prices, dict) else {})
+    except Exception:                                      # noqa: BLE001
+        previous = task.get("usage") if isinstance(task.get("usage"), dict) else {}
+        task["usage"] = {"recorded": False, "reason": "unreadable",
+                         **({"session": previous["session"]}
+                            if isinstance(previous.get("session"), str) else {})}
+    save_manifest(task, path)
+
+
 def cmd_quick_fix_finish(args):
+    finish_started_at = now_iso()
     task_dir = resolve_issue_dir(getattr(args, "task", None))
     task, _ = load_manifest(task_dir)
     slug = task.get("issue")
@@ -902,6 +942,8 @@ def cmd_quick_fix_finish(args):
 
         detail = [f"gates    : {', '.join(THREE_GATES)} -> pass",
                   f"evidence : {', '.join(evidence_ids)}"]
+
+        _record_usage(task_dir, finish_started_at)
 
         # A commit is the user's to ask for. With --no-commit the gates and
         # records are complete and the change is left in the working tree.

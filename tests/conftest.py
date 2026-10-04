@@ -380,3 +380,11 @@ def _no_session_issue(monkeypatch):
     issues the session's never is, so the variable must not reach them. A
     test about the variable sets it itself."""
     monkeypatch.delenv("COMPASS_ISSUE", raising=False)
+
+
+@pytest.fixture(autouse=True)
+def _no_host_claude_session(monkeypatch):
+    """A test run inside a Claude Code session inherits its session id, and
+    `quick-fix` would then read that session's real transcript into a test
+    manifest (#375). A test that needs a session sets its own."""
+    monkeypatch.delenv("CLAUDE_CODE_SESSION_ID", raising=False)

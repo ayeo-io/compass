@@ -10836,3 +10836,52 @@
 - **Intent:** `INT-1`
 - **Source issue:** `check-accepts-a-staged-deletion`
 - **Landed:** 2026-10-04
+
+### Given the terminology tests running in parallel workers, then each worker scans its samples in a folder of its own, so no worker removes another's folder. _(archived)_
+
+- **Scenario id:** `TV-1`
+- **Intent:** `INT-1`
+- **Source issue:** `terminology-test-shares-a-folder`
+- **Landed:** 2026-10-04
+
+### Given a Claude Code transcript, then the reader gives each request's time, model and token counts once, though the transcript can repeat a request over several lines (taking the first line's time and the highest count per field), and it includes the session's subagent transcripts by their own times. _(archived)_
+
+- **Scenario id:** `TS-1`
+- **Intent:** `INT-1`
+- **Source issue:** `tokens-per-stage-interactive`
+- **Landed:** 2026-10-04
+
+### Given a quick fix finished in a Claude Code session, with or without `--no-commit`, then its manifest records the input, output and cache tokens spent in its assess and implement stages, taken from that session''s transcript between the times the manifest records for the stage boundaries, and records verify and ship as not measured. _(archived)_
+
+- **Scenario id:** `TS-2`
+- **Intent:** `INT-1`
+- **Source issue:** `tokens-per-stage-interactive`
+- **Landed:** 2026-10-04
+
+### Given a quick fix finished outside Claude Code, or with a transcript that cannot be read, then the finish succeeds as before and the manifest says why no tokens were recorded. _(archived)_
+
+- **Scenario id:** `TS-3`
+- **Intent:** `INT-1`
+- **Source issue:** `tokens-per-stage-interactive`
+- **Landed:** 2026-10-04
+
+### Given a model whose price the project configures, then each stage also records its cost; given none, cost is "not recorded", never a guessed price. _(archived)_
+
+- **Scenario id:** `TS-4`
+- **Intent:** `INT-1`
+- **Source issue:** `tokens-per-stage-interactive`
+- **Landed:** 2026-10-04
+
+### Given one session that works on two issues, then each issue's assess window starts after the other issue's last boundary in that session, and a stage whose window overlaps the other issue's is marked shared. _(archived)_
+
+- **Scenario id:** `TS-6`
+- **Intent:** `INT-1`
+- **Source issue:** `tokens-per-stage-interactive`
+- **Landed:** 2026-10-04
+
+### Given a transcript whose messages hold a sentence of text, then nothing the reader returns or the manifest records contains that sentence, a path or an error message; a reason for not recording comes from a fixed list. _(archived)_
+
+- **Scenario id:** `TS-7`
+- **Intent:** `INT-1`
+- **Source issue:** `tokens-per-stage-interactive`
+- **Landed:** 2026-10-04

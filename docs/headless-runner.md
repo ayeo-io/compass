@@ -47,7 +47,9 @@ The denied commands are matched by how they start, so another spelling of the sa
 ## What a run leaves
 
 - `run-<n>.md` in the issue's documents folder: the stage, the times, the outcome, the stop reason, the money spent, each cycle's exit code, session, cost and whether it changed the records, and what each session said last.
-- A `runs:` entry in the manifest: `{n, stage, started, ended, cycles, cost_usd, outcome}`, and for a stopped run `stopped_reason: {reason, evidence, at}`, with the run record as the evidence. Each run covers one stage, so these entries are the issue's cost per stage. An interactive session records no cost: Claude Code does not report it to Compass.
+- A `runs:` entry in the manifest: `{n, stage, started, ended, cycles, cost_usd, outcome}`, and for a stopped run `stopped_reason: {reason, evidence, at}`, with the run record as the evidence. Each run covers one stage, so these entries are the issue's cost per stage.
+
+An interactive quick fix records its tokens per stage too. `compass quick-fix finish` reads the session's own Claude Code transcript and writes `usage:` to the manifest: for `assess` and `implement`, the requests and the input, output and cache tokens, taken between the times `start` and `finish` record. `verify` and `ship` are recorded as not measured: both happen inside the one `finish` command, during which the model makes no requests. Only numbers, model names, times and the session id are kept, never the transcript's text. Cost needs a price: give `prices:` in `.compass/config.yml`, in dollars per million tokens for each model (`{claude-opus-5-5: {input: ..., output: ..., cache_write: ..., cache_read: ...}}`). Compass ships no price list, because prices change; a stage with an unpriced model records `cost_usd: null`.
 
 ## The demo in CI
 

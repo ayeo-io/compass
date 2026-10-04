@@ -235,6 +235,53 @@ def _tokens_values(records: List[Dict[str, Any]]) -> Tuple[List[Optional[float]]
 
 # --- one cell's measures -----------------------------------------------------
 
+_STAGES = ("assess", "implement", "verify", "ship")
+
+
+def _stage_totals(record: Dict[str, Any]) -> Optional[Dict[str, int]]:
+    """Each stage's tokens from the `usage` block a quick fix records in its
+    manifest (#375), summed over every manifest the run left, or None when
+    no manifest recorded any."""
+    from compass_pkg import core as _core  # the bundled YAML, as harness does
+    found: Dict[str, Any] = {}
+    for text in (record.get("manifests") or {}).values():
+        try:
+            data = _core.yaml.safe_load(text) or {}
+        except _core.yaml.YAMLError:
+            continue
+        stages = ((data.get("usage") or {}).get("stages") or {}) \
+            if isinstance(data, dict) else {}
+        for stage in _STAGES:
+            counts = stages.get(stage) or {}
+            if counts.get("measured") is False:
+                found.setdefault(stage, "not measured")
+                continue
+            values = [counts.get(k) for k in ("input", "output", "cache_write",
+                                              "cache_read")]
+            if any(isinstance(v, int) for v in values):
+                previous = found.get(stage)
+                found[stage] = (previous if isinstance(previous, int) else 0) + sum(
+                    v for v in values if isinstance(v, int))
+    return found or None
+
+
+def _tokens_by_stage(records: List[Dict[str, Any]]) -> str:
+    """The mean tokens per stage across the runs that recorded them."""
+    totals = [t for t in (_stage_totals(r) for r in records) if t]
+    if not totals:
+        return "not recorded"
+    parts = []
+    for stage in _STAGES:
+        values = [t[stage] for t in totals if isinstance(t.get(stage), int)]
+        if values:
+            parts.append(f"{stage} {round(sum(values) / len(values)):,}")
+        elif any(t.get(stage) == "not measured" for t in totals):
+            parts.append(f"{stage} not measured")
+        else:
+            parts.append(f"{stage} not recorded")
+    return ", ".join(parts) + f" (mean of {len(totals)})"
+
+
 def _runs_label(n: int) -> str:
     return "one run" if n == 1 else f"{n} runs"
 
@@ -266,6 +313,7 @@ MEASURE_COLUMNS = (
     ("lint_findings", "Lint findings"),
     ("wall_time", "Wall time"),
     ("tokens", "Tokens"),
+    ("tokens_by_stage", "Tokens by stage"),
 )
 
 
@@ -300,6 +348,7 @@ def cell_measures(records: List[Dict[str, Any]], scenarios_dir: Path) -> Dict[st
            for key, of in _QUALITY_MEASURES},
         "wall_time": _measure([_wall_time(r) for r in records], _seconds),
         "tokens": _measure(token_values, token_formatter),
+        "tokens_by_stage": _tokens_by_stage(records),
     }
 
 
@@ -358,6 +407,7 @@ def summary_measures(records: List[Dict[str, Any]], scenarios_dir: Path) -> Dict
            for key, of in _QUALITY_MEASURES},
         "wall_time": _total([_wall_time(r) for r in records], _seconds),
         "tokens": _total(token_values, token_formatter),
+        "tokens_by_stage": _tokens_by_stage(records),
     }
 
 

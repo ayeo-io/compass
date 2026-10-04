@@ -74,6 +74,22 @@
       "type": "string",
       "description": "Optional. ISO 8601 timestamp of when the issue was landed. Written by scripts/integrate.sh alongside status: landed. Used as the primary sort key for the living spec derivation order (ADR-008 §3)."
     },
+    "started_at": {
+      "type": "string",
+      "description": "Optional. ISO 8601 time `compass quick-fix start` ran: where the assess stage ends for the tokens-per-stage record (#375)."
+    },
+    "finish_started_at": {
+      "type": "string",
+      "description": "Optional. ISO 8601 time `compass quick-fix finish` began: where the implement stage ends."
+    },
+    "committed_at": {
+      "type": "string",
+      "description": "Optional. ISO 8601 time `compass quick-fix finish` recorded usage, just before its commit: where the verify stage ends."
+    },
+    "usage": {
+      "type": "object",
+      "description": "Optional. Tokens the session spent in each stage, read from its Claude Code transcript by cli/compass_pkg/session_usage.py: `session`, `source`, `skipped_lines`, and either `stages` (`assess` and `implement` each with requests, subagent_requests, input, output, cache_write, cache_read, cost_usd and optionally shared; `verify` and `ship` as `measured: false` with a reason) or `recorded: false` with a fixed `reason` (not-claude-code, bad-session-id, no-transcript, unreadable, no-start-time). Numbers only; no transcript text."
+    },
     "land_commit": {
       "type": "string",
       "description": "The commit ship-commit made when it marked the issue landed. evidence-matches-tree compares the newest green's tree_id with this commit's tree."

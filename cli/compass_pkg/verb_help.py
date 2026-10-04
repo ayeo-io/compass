@@ -108,7 +108,7 @@ VERB_DESCRIPTIONS = {
     'rework-scan':
         'Scan the archive for add-then-delete patterns across issues - a file added by one and removed by another inside the configured window. A signal for a person, not a gate.',
     'ship-commit':
-        "Commit an issue's recorded changed files and nothing else, so the commit matches what the manifest says the issue touched. Refuses to stage anything the issue never claimed.",
+        "Commit an issue's recorded changed files and nothing else, so the commit matches what the manifest says the issue touched. Refuses to stage anything the issue never claimed. Takes the message with -m, or from a file with -F.",
     'tdd-green':
         "Run a test command, require that it PASSES, record the green and clear the red marker. Each scenario's green has its own file.",
     'tdd-red':

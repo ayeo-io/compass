@@ -33,7 +33,8 @@ for delivery work; on a spike, follow the graduate-or-discard step in
      HEAD unmoved), retries once after re-staging the hooks' fixes, and
      **errors if HEAD did not advance** so a commit that did not happen
      cannot count as shipped. Pass `--issue <slug>` to mark the issue
-     shipped only on a checked commit.
+     shipped only on a checked commit. For a long message, `-F <file>`
+     reads it from a file; never fall back to `git commit` around it.
    - **Message rules:** the message follows the cold-reader strategy: say
      what changed and why, for someone who was not in the conversation; no
      `Co-Authored-By:` trailer for any agent and no "Generated with"

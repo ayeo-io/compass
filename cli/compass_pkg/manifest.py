@@ -220,6 +220,18 @@ def cmd_land_commit(args):
     import shutil
     cwd = os.getcwd()
     msg = args.message
+    # A long message comes from a file, so it never needs a shell fallback
+    # around this verb, which would lose the HEAD check below (#120).
+    if getattr(args, "message_file", None):
+        try:
+            with open(args.message_file, encoding="utf-8") as fh:
+                msg = fh.read()
+        except OSError as exc:
+            raise CompassError(f"compass ship-commit: cannot read the message "
+                               f"file {args.message_file}: {exc.strerror}")
+        if not msg.strip():
+            raise CompassError(f"compass ship-commit: the message file "
+                               f"{args.message_file} is empty.")
     files = getattr(args, "files", None) or []
 
     # Confirm we are in a git work tree.

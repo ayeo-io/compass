@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given FORCE_COLOR is set in the environment, When compass tdd-red runs a test that imports a project module not yet written, Then it records an import red, and the eval harness reads each test's outcome from coloured pytest output
+### Given another test's pytest run has made a pytest-cache-files folder inside a scenario seed, When the scenario-file walks in tests/test_eval_scenarios.py list the files to scan, Then they skip that folder and .pytest_cache, so a folder deleted mid-walk cannot fail them
 
-- **Scenario id:** `CL-1`
+- **Scenario id:** `SW-1`
 - **Intent:** `INT-1`
-- **Source issue:** `colour-hides-an-import-red`
+- **Source issue:** `seed-walk-skips-pytest-cache`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1573 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1574 superseded scenario(s) are in `docs/system-spec-archive.md`.

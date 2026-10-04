@@ -107,8 +107,13 @@ def _load_scenario(scenario_id: str) -> dict:
 
 
 def _run_pytest(seed_dir: Path, command=("python3", "-m", "pytest")) -> subprocess.CompletedProcess:
+    # The seed is a tracked folder of this checkout, so the run must write
+    # nothing into it: no pytest cache, which a parallel walk of the seeds
+    # could list and then find gone (#261), and no bytecode.
     return subprocess.run(
-        [*command, "-q"], cwd=seed_dir, capture_output=True, text=True, timeout=60,
+        [*command, "-q", "-p", "no:cacheprovider"], cwd=seed_dir,
+        capture_output=True, text=True, timeout=60,
+        env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
     )
 
 
@@ -644,8 +649,16 @@ _SCORING_OR_HONEST_ANSWER_HINTS = (
 )
 
 # Files a seed may legitimately hold that are not source: skip anything
-# under a version-control or bytecode-cache directory.
-_SKIPPED_DIR_NAMES = {".git", "__pycache__"}
+# under a version-control, bytecode-cache or pytest-cache directory. Another
+# test's pytest run makes `pytest-cache-files-*` inside a seed and deletes
+# it, so a walk that listed a file there could fail on a file gone (#261).
+_SKIPPED_DIR_NAMES = {".git", "__pycache__", ".pytest_cache"}
+
+
+def _skipped(path):
+    return path.suffix == ".pyc" or any(
+        part in _SKIPPED_DIR_NAMES or part.startswith("pytest-cache-files-")
+        for part in path.parts)
 
 
 def _seed_text_files(scenario_id: str):
@@ -655,11 +668,7 @@ def _seed_text_files(scenario_id: str):
         if not overlay.is_dir():
             continue
         for path in overlay.rglob("*"):
-            if not path.is_file():
-                continue
-            if any(part in _SKIPPED_DIR_NAMES for part in path.parts):
-                continue
-            if path.suffix == ".pyc":
+            if not path.is_file() or _skipped(path):
                 continue
             yield path
 
@@ -687,11 +696,7 @@ def test_owned_files_do_not_cite_documents_outside_the_repository():
     paths = []
     for scenario_id in EXPECTED_IDS:
         for path in (SCENARIOS_DIR / scenario_id).rglob("*"):
-            if not path.is_file():
-                continue
-            if any(part in _SKIPPED_DIR_NAMES for part in path.parts):
-                continue
-            if path.suffix in (".pyc",):
+            if not path.is_file() or _skipped(path):
                 continue
             paths.append(path)
 
@@ -736,3 +741,28 @@ def test_the_file_scan_catches_a_planted_citation(tmp_path, planted):
     planted_file = tmp_path / "planted.yml"
     planted_file.write_text(f"# {planted}\n", encoding="utf-8")
     assert scan_file_for_unopenable_citation(planted_file) is not None
+
+
+def test_sw_1_the_scenario_walks_skip_pytest_cache_folders():
+    """Scenario SW-1 (issue `seed-walk-skips-pytest-cache`): another test's
+    pytest run makes `pytest-cache-files-*` inside a seed and deletes it, so
+    a walk that listed a file there failed with FileNotFoundError (#261).
+    Both scenario walks skip pytest's cache folders, as they skip `.git`."""
+    seed = SCENARIOS_DIR / "skip-assessment" / "seed"
+    assert _skipped(seed / "pytest-cache-files-ab12" / "CACHEDIR.TAG")
+    assert _skipped(seed / ".pytest_cache" / "v" / "cache" / "nodeids")
+    assert _skipped(seed / "src" / "__pycache__" / "x.cpython-311.pyc")
+    assert not _skipped(seed / "src" / "convert.py")
+
+
+def test_sw_1_a_seed_pytest_run_writes_no_cache_into_the_checkout(monkeypatch):
+    seen = {}
+
+    def fake_run(args, **kwargs):
+        seen["args"], seen["env"] = args, kwargs.get("env") or {}
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    _run_pytest(SCENARIOS_DIR / "skip-assessment" / "seed")
+    assert "no:cacheprovider" in seen["args"]
+    assert seen["env"].get("PYTHONDONTWRITEBYTECODE") == "1"

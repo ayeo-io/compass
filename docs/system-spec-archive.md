@@ -11018,3 +11018,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `evaluate-and-check-apply-the-schema`
 - **Landed:** 2026-10-04
+
+### Given FORCE_COLOR is set in the environment, When compass tdd-red runs a test that imports a project module not yet written, Then it records an import red, and the eval harness reads each test's outcome from coloured pytest output _(archived)_
+
+- **Scenario id:** `CL-1`
+- **Intent:** `INT-1`
+- **Source issue:** `colour-hides-an-import-red`
+- **Landed:** 2026-10-04

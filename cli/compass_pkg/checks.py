@@ -461,7 +461,7 @@ def _check_claim_traces(task, task_dir):
 def _check_gate_evidence(task, task_dir):
     gates = task.get("gates") or []
     if not gates:
-        return False, "no gates in manifest.yml - has the route been evaluated?"
+        return False, "no gates in manifest.yml - has the delivery approach been evaluated?"
     registry = {e.get("id"): e for e in (task.get("evidence") or [])
                 if isinstance(e, dict) and e.get("id")}
     # Load the evidence typing rules. The one extra yaml load per `check` run is

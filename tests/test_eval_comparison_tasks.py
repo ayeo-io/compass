@@ -1068,7 +1068,7 @@ def test_cmp_resume_compass_overlay_manifest_has_gates_and_a_traceability_id():
     data = load_yaml(str(manifest_path))
     assert data.get("gates"), (
         "seed_compass's manifest has no gates - compass check reports "
-        '"no gates in manifest.yml - has the route been evaluated?"'
+        '"no gates in manifest.yml - has the delivery approach been evaluated?"'
     )
     scenario_id = data["scenarios"][0]["id"]
     assert scenario_id.startswith("TRC-"), (

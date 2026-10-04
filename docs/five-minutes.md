@@ -59,7 +59,7 @@ them - the stages, the gates, the orchestration - is computed. Run
 ```text
   policy          : <your project>/governance/routing-policy.yml (v<the version that file declares>)
   assessment      : {"risk": "contained", "familiarity": "brownfield-mapped", "size": "atomic", "goal": "delivery", "role": "engineer"}
-  candidate shape : quick fix  <- RP-SHAPE-003 (Small on every axis.)
+  first approach  : quick fix  <- RP-SHAPE-003 (Small on every axis.)
   FINAL APPROACH  : quick fix
   policy rules fired: none
   parallel subtasks: up to 1 (a ceiling - breakdown sets the orchestration once the distribution map exists)

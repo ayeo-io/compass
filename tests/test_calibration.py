@@ -177,7 +177,7 @@ def test_calibration_balanced(run_cli, make_task):
     assert "UNDER-sizing" not in out, r
     assert "OVER-sizing" not in out, r
     # and the route distribution must be reported
-    assert "Route distribution" in out, r
+    assert "Delivery approaches:" in out, r
 
 
 # --- `TRC-C5`: unrecorded re-assessments section in calibration output -------

@@ -640,7 +640,7 @@ def cmd_gate_pass(args):
     if gate is None:
         raise CompassError(
             f"compass gate pass: '{args.gate_id}' is not a gate in this issue "
-            f"({[g.get('id') for g in gates]}). Has the route been evaluated?"
+            f"({[g.get('id') for g in gates]}). Has the delivery approach been evaluated?"
         )
     ev_ids = args.evidence or []
     if not ev_ids:

@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the published comparison runs after the sweep, then every number in them is unchanged and each carries one line saying rival products appear as codes and the maintainer holds the key.
+### Given the commit-msg hook is installed, then a commit whose message names a rival product is refused before it is made, a clean message commits, and the refusal names no product.
 
-- **Scenario id:** `RN-9`
+- **Scenario id:** `CM-1`
 - **Intent:** `INT-1`
-- **Source issue:** `rival-names-never-committed`
+- **Source issue:** `commit-msg-name-check`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1543 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1545 superseded scenario(s) are in `docs/system-spec-archive.md`.

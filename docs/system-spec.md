@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the terminology tests running in parallel workers, then each worker scans its samples in a folder of its own, so no worker removes another's folder.
+### Given eval records whose manifests carry tokens per stage, then the comparison report shows each condition's tokens per stage.
 
-- **Scenario id:** `TV-1`
+- **Scenario id:** `TS-5`
 - **Intent:** `INT-1`
-- **Source issue:** `terminology-test-shares-a-folder`
+- **Source issue:** `tokens-per-stage-interactive`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1547 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1554 superseded scenario(s) are in `docs/system-spec-archive.md`.

@@ -33,6 +33,7 @@ exempt from the vocabulary scan during the transition).
 from __future__ import annotations
 
 import ast
+import os
 import re
 from functools import lru_cache
 from pathlib import Path
@@ -1294,13 +1295,20 @@ def test_pl_c11_strategies_prose_is_not_path_exempt():
 RETIRED_STAGES = ("Frame", "Specify", "Clarify", "Distribute", "Land")
 
 
+def _sample_holder() -> Path:
+    """This process's own folder for scan samples. One shared folder failed
+    under parallel workers: each removes its folder when done, which removed
+    it from under another worker still writing there (#371)."""
+    return REPO_ROOT / f".pytest-vocab-tmp-{os.getpid()}"
+
+
 def _scan_text(text: str, name: str = "sample.md") -> list[str]:
     """Run the scanner over a string by writing it to a temp markdown file."""
     # Inside the repository: _scan_files reports paths relative to REPO_ROOT
     # and raises on anything outside it. Under a dot-directory so no surface
     # glob picks the sample up while it exists.
     import tempfile
-    holder = REPO_ROOT / ".pytest-vocab-tmp"
+    holder = _sample_holder()
     holder.mkdir(exist_ok=True)
     d = tempfile.mkdtemp(dir=holder)
     try:

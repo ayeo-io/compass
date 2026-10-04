@@ -190,6 +190,8 @@ A port must document the capability mapping below it too.
 
 An empty cell is a design question, not evidence of equivalence.
 
+Tokens per stage for an interactive quick fix come from a Claude Code adapter, `cli/compass_pkg/session_usage.py`, which reads that runtime's own session transcript. Outside Claude Code a quick fix records `usage.reason: not-claude-code` until a port gives an adapter of its own, and a count a runtime does not give is recorded as null, never 0.
+
 `schemas/adapter-contract.yml` holds this table as data, with the Claude Code
 adapter's column filled in. `tests/test_adapter_contract.py` fails when a
 capability here has no row there, when an adapter's cell is empty or names a

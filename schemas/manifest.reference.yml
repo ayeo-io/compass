@@ -47,6 +47,10 @@ failure_modes_descoped: # (optional) list of maps - failure modes no scenario co
     reason:      #   (required in entry) string - why no scenario covers it
     recorded:    #   (required in entry) string - ISO date it was recorded
 
+started_at:      # (optional) string - ISO time `compass quick-fix start` ran; where the assess stage ends
+finish_started_at: # (optional) string - ISO time `compass quick-fix finish` began; where implement ends
+committed_at:    # (optional) string - ISO time `quick-fix finish` recorded usage, just before its commit
+usage:           # (optional) map - tokens per stage from the session's Claude Code transcript: session, source, skipped_lines, stages{assess, implement, ...: requests, subagent_requests, input, output, cache_write, cache_read, cost_usd, shared?}; or recorded: false with a fixed reason. Numbers only.
 changed_files:   # (optional until implement) list of maps:
   - path:        #   (required in entry) string - the production file path
     scenarios:   #   (required in entry) list of scenario ids it traces to

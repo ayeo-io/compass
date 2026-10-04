@@ -11053,3 +11053,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `entry-point-cap-measures-code`
 - **Landed:** 2026-10-04
+
+### Given a commit message in a file, When compass ship-commit -F <file> runs with staged changes, Then it commits with that message and verifies HEAD advanced; and giving both -m and -F, or neither, is refused _(archived)_
+
+- **Scenario id:** `SF-1`
+- **Intent:** `INT-1`
+- **Source issue:** `ship-commit-takes-a-message-file`
+- **Landed:** 2026-10-04

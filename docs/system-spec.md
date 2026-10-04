@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a commit message in a file, When compass ship-commit -F <file> runs with staged changes, Then it commits with that message and verifies HEAD advanced; and giving both -m and -F, or neither, is refused
+### Given a checkout with the full archive but without the adapter's generated feature file, When the archive citation guard runs with COMPASS_FULL_ARCHIVE=1, Then the README's mention of the file bdd extract writes is treated as illustrative and the guard passes
 
-- **Scenario id:** `SF-1`
+- **Scenario id:** `AC-1`
 - **Intent:** `INT-1`
-- **Source issue:** `ship-commit-takes-a-message-file`
+- **Source issue:** `archive-citation-in-adapter-readme`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1578 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1579 superseded scenario(s) are in `docs/system-spec-archive.md`.

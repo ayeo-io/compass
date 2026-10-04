@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given eval records whose manifests carry tokens per stage, then the comparison report shows each condition's tokens per stage.
+### Given two Compass quick-fix sessions and their no-framework pairs from the 4 October run, then the breakdown is on record: resident load per request, each source's share of the tokens read, and the request counts, with how they were measured and what they do not show.
 
-- **Scenario id:** `TS-5`
+- **Scenario id:** `TB-1`
 - **Intent:** `INT-1`
-- **Source issue:** `tokens-per-stage-interactive`
+- **Source issue:** `cmp-refactor-token-breakdown`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1554 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1556 superseded scenario(s) are in `docs/system-spec-archive.md`.

@@ -10872,6 +10872,13 @@
 - **Source issue:** `tokens-per-stage-interactive`
 - **Landed:** 2026-10-04
 
+### Given eval records whose manifests carry tokens per stage, then the comparison report shows each condition's tokens per stage. _(archived)_
+
+- **Scenario id:** `TS-5`
+- **Intent:** `INT-1`
+- **Source issue:** `tokens-per-stage-interactive`
+- **Landed:** 2026-10-04
+
 ### Given one session that works on two issues, then each issue's assess window starts after the other issue's last boundary in that session, and a stage whose window overlaps the other issue's is marked shared. _(archived)_
 
 - **Scenario id:** `TS-6`
@@ -10884,4 +10891,11 @@
 - **Scenario id:** `TS-7`
 - **Intent:** `INT-1`
 - **Source issue:** `tokens-per-stage-interactive`
+- **Landed:** 2026-10-04
+
+### Given the 4 October comparison run, then its document is on record with every condition and scenario, the decision rule's verdict for each of the four careful-process scenarios, the cost per condition, the tokens per stage, and what it does not show. _(archived)_
+
+- **Scenario id:** `PR-1`
+- **Intent:** `INT-1`
+- **Source issue:** `premium-run`
 - **Landed:** 2026-10-04

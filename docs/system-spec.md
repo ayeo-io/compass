@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the docs site, then its root serves a home page, index.md, that is first in the navigation and links only to pages in the site.
+### Given a docs page with a table cell holding inline code such as /compass:intent, When the site renders it at desktop width, Then the code stays on one line rather than breaking mid-word
 
-- **Scenario id:** `DH-1`
+- **Scenario id:** `DT-1`
 - **Intent:** `INT-1`
-- **Source issue:** `docs-site-home-page`
+- **Source issue:** `docs-table-code-wraps`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1570 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1571 superseded scenario(s) are in `docs/system-spec-archive.md`.

@@ -1,0 +1,9 @@
+/* Material lets inline code break at any character, so a narrow table
+   column split commands such as /compass:intent mid-word. Code in a table
+   cell stays on one line; a table too wide for the page scrolls inside its
+   own frame instead. */
+.md-typeset table:not([class]) code {
+  white-space: nowrap;
+  word-break: normal;
+  overflow-wrap: normal;
+}

@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the 4 October comparison run, then its document is on record with every condition and scenario, the decision rule's verdict for each of the four careful-process scenarios, the cost per condition, the tokens per stage, and what it does not show.
+### Given the plugin as the directory receives it, then the icon is under the 5 MiB per-file limit and still square, and the README lists everything Compass runs on the machine, sends and fetches.
 
-- **Scenario id:** `PR-1`
+- **Scenario id:** `DL-1`
 - **Intent:** `INT-1`
-- **Source issue:** `premium-run`
+- **Source issue:** `directory-listing-prep`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1555 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1557 superseded scenario(s) are in `docs/system-spec-archive.md`.

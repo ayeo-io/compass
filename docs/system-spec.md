@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the release is 5.5.0, then VERSION, the CLI, both plugin manifests and the install smoke test all say 5.5.0 and the version guard agrees.
+### Given the docs site, then its root serves a home page, index.md, that is first in the navigation and links only to pages in the site.
 
-- **Scenario id:** `RV-1`
+- **Scenario id:** `DH-1`
 - **Intent:** `INT-1`
-- **Source issue:** `release-5-5-0`
+- **Source issue:** `docs-site-home-page`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1569 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1570 superseded scenario(s) are in `docs/system-spec-archive.md`.

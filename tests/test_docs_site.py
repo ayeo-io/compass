@@ -63,3 +63,23 @@ def test_ds_1_the_build_is_pinned_and_publishes_from_main_only():
     assert "refs/heads/main" in deploy["if"]
     for line in re.findall(r"uses:\s*(\S+)", text):
         assert re.search(r"@[0-9a-f]{40}$", line), f"{line} is not pinned by SHA"
+
+
+def test_dh_1_the_site_has_a_home_page_first():
+    """Scenario DH-1 (issue `docs-site-home-page`): MkDocs serves the site's
+    root from index.md; without it the root returned 404."""
+    pages = list(_nav_pages(_config()["nav"]))
+    assert pages[0] == "index.md"
+    assert (ROOT / "docs" / "index.md").is_file()
+
+
+def test_dh_1_the_exclude_rule_leaves_the_theme_alone():
+    """Scenario DH-1: MkDocs applies `exclude_docs` to the theme's files too,
+    so a bare "/*" removed the stylesheets and the site rendered unstyled.
+    The rule names Markdown files and the issue records only, and the
+    workflow checks the built site has its stylesheet."""
+    rules = [line.strip() for line in _config()["exclude_docs"].splitlines()
+             if line.strip() and not line.strip().startswith("!")]
+    assert rules == ["/*.md", "/compass/"], rules
+    workflow = (ROOT / ".github" / "workflows" / "docs.yml").read_text()
+    assert "site/assets/stylesheets/main.*.min.css" in workflow

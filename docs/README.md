@@ -6,6 +6,7 @@ the table does not exist, and when a doc in this folder is not listed.
 
 ## Start here
 
+- [index.md](index.md) - the documentation site's home page, at https://docs.ayeo.io/compass/.
 - [five-minutes.md](five-minutes.md) - one small change from assessment to a reviewable result.
 - [quickstart.md](quickstart.md) - from an empty machine to a finished first issue, and the status line and the rail.
 - [roles-guide.md](roles-guide.md) - how product, design, engineering, marketing and QA each use Compass.

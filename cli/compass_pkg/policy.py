@@ -33,7 +33,7 @@ import re as _re
 import fnmatch
 import re as _re
 from compass_pkg.check_cmd import CHECK_FNS
-from compass_pkg.core import (AUTONOMY_VALUES, CHECKPOINT_STAGES, CompassError, canonical_shape, FRAMEWORK_ROOT, artifact_path,
+from compass_pkg.core import (AUTONOMY_VALUES, assessment_key_errors, CHECKPOINT_STAGES, CompassError, canonical_shape, FRAMEWORK_ROOT, artifact_path,
                               load_manifest, load_yaml, normalize_spine,
                               resolve_issue_dir)
 
@@ -68,8 +68,6 @@ def _jsonschema_errors(instance, schema_name):
         loc = "/".join(str(p) for p in e.absolute_path) or "<root>"
         errs.append(f"{loc}: {e.message}")
     return errs
-
-
 
 
 # Current route names. A retired name (`express`, `standard`, `expedition`)
@@ -556,6 +554,10 @@ def cmd_task_lint(args):
     # JSON Schema validation (when `jsonschema` is installed)
     je = _jsonschema_errors(task, "manifest.schema.json")
     schema_ran = je is not None
+    if not schema_ran:
+        # jsonschema reports an unknown assessment key itself; without it,
+        # the shared check does, so evaluate, check and lint agree (#399).
+        errs += assessment_key_errors(task.get("assessment"))
     if je:
         errs += je
     if errs:

@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a docs page with a table cell holding inline code such as /compass:intent, When the site renders it at desktop width, Then the code stays on one line rather than breaking mid-word
+### Given an issue manifest whose assessment holds a key the manifest schema does not allow, such as risk_reason, When compass approach evaluate --write or compass check runs on it, Then each refuses and names the unknown key and the allowed keys, as issue lint does, with or without jsonschema installed
 
-- **Scenario id:** `DT-1`
+- **Scenario id:** `SK-1`
 - **Intent:** `INT-1`
-- **Source issue:** `docs-table-code-wraps`
+- **Source issue:** `evaluate-and-check-apply-the-schema`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1571 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1572 superseded scenario(s) are in `docs/system-spec-archive.md`.

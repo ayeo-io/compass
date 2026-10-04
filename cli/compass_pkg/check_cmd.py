@@ -409,6 +409,18 @@ def _emit_check(run, args):
     print("\n".join(lines))
 
 
+def _assessment_keys_pass(run, task):
+    """Report the assessment keys the manifest schema does not allow. The
+    release's `issue lint` refuses them, so check must too, or an issue
+    lands with a manifest that fails the release (#399)."""
+    from compass_pkg.core import assessment_key_errors
+    errs = assessment_key_errors(task.get("assessment"))
+    run.guardrail("", "manifest schema")
+    run.result("assessment-keys", not errs,
+               "; ".join(errs) or "every assessment key is one the schema allows")
+    return not errs
+
+
 def cmd_check(args):
     gov = find_governance()
     guardrails = load_yaml(os.path.join(gov, "guardrails.yml"))
@@ -457,6 +469,9 @@ def cmd_check(args):
                     failures += 1
                 run.result(check_name, passed, detail)
 
+        ran += 1
+        if not _assessment_keys_pass(run, task):
+            failures += 1
         # Follow-ups apply to every delivery approach, and a spike most often
         # owes one - a graduating spike leaves deferred work behind by
         # design - so the spike branch must reach the follow-up block below.
@@ -582,6 +597,9 @@ def cmd_check(args):
                 nothing_to_check += 1
             run.result(check_name, passed, detail)
 
+    ran += 1
+    if not _assessment_keys_pass(run, task):
+        failures += 1
     # follow-ups are cross-cutting - always run them
     ran += 1
     try:

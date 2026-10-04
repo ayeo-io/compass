@@ -11004,3 +11004,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `docs-site-home-page`
 - **Landed:** 2026-10-04
+
+### Given a docs page with a table cell holding inline code such as /compass:intent, When the site renders it at desktop width, Then the code stays on one line rather than breaking mid-word _(archived)_
+
+- **Scenario id:** `DT-1`
+- **Intent:** `INT-1`
+- **Source issue:** `docs-table-code-wraps`
+- **Landed:** 2026-10-04

@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given an issue, When approach evaluate --verbose --write, gate pass on an unknown gate, check with no gates and retro print their output, Then none of it says route, candidate shape or phases where it means the delivery approach or its stages
+### Given a distribution map whose subtask table lists a different number of rows from the Final subtask count after caps it states, When multiagent.sh provisions it, Then it refuses, names both numbers and creates nothing; and a map whose counts agree, or that states no number, is provisioned as before
 
-- **Scenario id:** `RW-1`
+- **Scenario id:** `MC-1`
 - **Intent:** `INT-1`
-- **Source issue:** `printed-route-wording`
+- **Source issue:** `map-counts-agree`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1583 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1584 superseded scenario(s) are in `docs/system-spec-archive.md`.

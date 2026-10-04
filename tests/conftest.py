@@ -388,3 +388,13 @@ def _no_host_claude_session(monkeypatch):
     `quick-fix` would then read that session's real transcript into a test
     manifest (#375). A test that needs a session sets its own."""
     monkeypatch.delenv("CLAUDE_CODE_SESSION_ID", raising=False)
+
+
+@pytest.fixture(autouse=True)
+def _no_forced_colour(monkeypatch):
+    """Many terminals and CI services set FORCE_COLOR, and pytest then
+    colours the output that tests read from a subprocess (#403). The suite
+    must give the same result whatever shell started it. A test about
+    colour sets the variable itself."""
+    for name in ("FORCE_COLOR", "PY_COLORS", "CLICOLOR_FORCE"):
+        monkeypatch.delenv(name, raising=False)

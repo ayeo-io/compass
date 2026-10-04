@@ -177,3 +177,17 @@ def relative_paths(text, root) -> str:
         pattern = r"(?<![\w./:~$-])" + re.escape(base + os.sep) + r"(?=[^\s`'\"])"
         text = re.sub(pattern, "", text)
     return text
+
+
+# A colour or cursor sequence a terminal program writes: ESC, `[`, numbers
+# and semicolons, then one letter. XML cannot hold ESC, so pytest's JUnit
+# report writes it as the literal text `#x1B`; both forms are matched.
+_ANSI_SEQUENCE = re.compile(r"(?:\x1b|#x1B)\[[0-9;?]*[A-Za-z]")
+
+
+def strip_ansi(text):
+    """`text` without terminal colour codes. With FORCE_COLOR set, pytest
+    colours `E`, `PASSED`, `FAILED` and its summary counts even when its
+    output is captured, so any match on those words reads the text through
+    this first (#403)."""
+    return _ANSI_SEQUENCE.sub("", text or "")

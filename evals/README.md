@@ -37,6 +37,10 @@ it shows how often the framework stopped each condition: "Hook blocks" and
 the harness records as `interruptions`. A condition with no Compass project
 shows "not recorded" for both, not zero.
 
+The harness and the judge read pytest's printed results with terminal
+colour codes removed, so a shell that sets `FORCE_COLOR` gives the same
+outcomes and counts as one that does not.
+
 Three more columns give static code-quality signals: "Complexity added",
 "Duplicated lines" and "Lint findings". `evals/quality.py` rebuilds each
 run's final code from the scenario seed and the run's recorded diff, then

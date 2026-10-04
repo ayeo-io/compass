@@ -12,7 +12,7 @@ imports a module of the project not written yet. That is an import red. A
 missing module outside the project, or any other collection error, says the
 test could not run, not that the behaviour is missing, so it is refused.
 """
-# DEPENDENCY: standard library only.
+# DEPENDENCY: standard library only, plus compass_pkg itself.
 from __future__ import annotations
 
 import os
@@ -20,6 +20,8 @@ import re
 import shlex
 import tempfile
 import xml.etree.ElementTree as ET
+
+from compass_pkg.render import strip_ansi
 
 DID_NOT_RUN = "DID NOT RUN"
 NO_TEST_FAILED = "NO TEST FAILED"
@@ -135,7 +137,7 @@ def _read(report_path):
                 failed += 1
             elif outcome.tag == "error" and \
                     (outcome.get("message") or "") == "collection failure":
-                text = outcome.text or ""
+                text = strip_ansi(outcome.text)
                 found = [m.group(1) for p in _MISSING for m in p.finditer(text)]
                 collection.append((case.get("name") or "?",
                                    found[-1] if found else None))

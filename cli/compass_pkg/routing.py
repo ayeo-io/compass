@@ -413,6 +413,17 @@ def cmd_route_evaluate(args):
     else:
         task_dir = resolve_issue_dir(args.task)
         task, task_path = load_manifest(task_dir)
+        if getattr(args, "write", False):
+            # The slug reaches the living spec at ship, as a title does.
+            from compass_pkg.manifest import slug_problem
+            slug = os.path.basename(os.path.normpath(task_dir))
+            root = os.path.dirname(os.path.dirname(os.path.dirname(
+                os.path.normpath(task_dir))))
+            problem = slug_problem(root, slug)
+            if problem:
+                raise CompassError(
+                    f"compass approach evaluate: issue slug '{slug}' refused: "
+                    f"{problem}")
         readings = task.get("assessment")
         if not readings:
             raise CompassError(

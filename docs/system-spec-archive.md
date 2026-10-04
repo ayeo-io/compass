@@ -10927,3 +10927,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `keep-the-stop-before-a-breaking-change`
 - **Landed:** 2026-10-04
+
+### Given the repository now lives at ayeo-io/compass, then no tracked file names the old address as the repository, the plugin manifests name the new one, and the marketplace owner is the organisation. _(archived)_
+
+- **Scenario id:** `RA-1`
+- **Intent:** `INT-1`
+- **Source issue:** `repoint-to-ayeo-io`
+- **Landed:** 2026-10-04

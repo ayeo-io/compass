@@ -135,6 +135,36 @@ def _first_decision_line(text):
     return ""
 
 
+def settled(root, limit=5):
+    """One line per live ledger entry, newest first: its slug and the first
+    sentence of its decision. An entry another entry supersedes is left
+    out. Past `limit`, one line counts the rest. A quick fix prints these
+    at start, because a settled decision it never reads can be broken
+    (#385); kept short, because a session reads its output again on every
+    later request."""
+    entries = _entries(root)
+    texts = {}
+    for name, _, _ in entries:
+        with open(os.path.join(root, LEDGER, name), encoding="utf-8") as fh:
+            texts[name] = fh.read()
+    superseded = set()
+    for text in texts.values():
+        part = text.split("## Supersedes", 1)
+        if len(part) == 2:
+            section = part[1].split("\n## ", 1)[0]
+            superseded |= set(re.findall(r"(\d{4}-\d{2}-\d{2}-[a-z0-9-]+)\.md", section))
+    live = [(name, slug) for name, _, slug in entries
+            if name[:-len(".md")] not in superseded]
+    lines = []
+    for name, slug in live[:limit]:
+        first = _first_decision_line(texts[name])
+        sentence = re.split(r"(?<=[.!?])\s", first, maxsplit=1)[0]
+        lines.append(f"{slug}: {sentence}")
+    if len(live) > limit:
+        lines.append(f"and {len(live) - limit} more: `compass decision list`")
+    return lines
+
+
 def cmd_decision_list(args):
     root = _project()
     entries = _entries(root)

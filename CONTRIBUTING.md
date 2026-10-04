@@ -33,6 +33,10 @@ for every path.
   crediting an AI agent in a commit or pull request. British English, except
   "artifact". `tests/test_house_style.py` enforces the first two in tracked
   files; read your commit message and pull request body yourself.
+- **No rival product name.** Another product is named only by its code, R1
+  to R9, in files, paths, branch names, commit messages and pull requests.
+  CI checks all of them. To have your commit messages checked before the
+  push, run `git config core.hooksPath scripts/git-hooks` once.
 - **The frozen vocabulary.** Words Compass has retired fail
   `tests/test_terminology.py`. `governance/terminology.yml` lists them.
 - **Plain English.** `CLAUDE.md` sets the writing rules. Lead with the point,

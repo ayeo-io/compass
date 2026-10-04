@@ -509,6 +509,10 @@ def normalize_spine(task):
         for f in fups:
             if isinstance(f, dict) and f.get("status") in FOLLOW_UP_STATUS_MAP:
                 f["status"] = FOLLOW_UP_STATUS_MAP[f["status"]]
+    # A friction entry's `phase` names a stage, so it maps like a stage key.
+    for f in (out.get("friction") if isinstance(out.get("friction"), list) else []):
+        if isinstance(f, dict) and f.get("phase") in _stage_key_renames():
+            f["phase"] = _stage_key_renames()[f["phase"]]
     # Gate ids. ADR-023 renamed `verify.fitness` to `verify.architecture`.
     # This is not cosmetic: `compass check` looks a gate's accepted evidence
     # types up BY ID, and an id that no longer resolves yields None, which

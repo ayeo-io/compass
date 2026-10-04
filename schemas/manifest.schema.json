@@ -804,17 +804,8 @@
         "additionalProperties": false,
         "properties": {
           "phase": {
-            "enum": [
-              "frame",
-              "specify",
-              "clarify",
-              "plan",
-              "distribute",
-              "build",
-              "verify",
-              "land"
-            ],
-            "description": "The stage the friction was felt in."
+            "enum": ["assess", "define", "refine", "plan", "breakdown", "implement", "verify", "ship", "frame", "specify", "clarify", "distribute", "build", "land"],
+            "description": "The stage the friction was felt in, by its current name. The retired names after `ship` are accepted for archived records; Compass maps them to the current name on load."
           },
           "category": {
             "enum": [

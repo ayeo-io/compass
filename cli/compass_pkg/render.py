@@ -191,3 +191,16 @@ def strip_ansi(text):
     output is captured, so any match on those words reads the text through
     this first (#403)."""
     return _ANSI_SEQUENCE.sub("", text or "")
+
+
+def fired_rule_line(rule, with_kind=True):
+    """One fired policy rule as a line: its meaning first, then its id, and
+    its kind when asked. Every screen that names a fired rule prints it
+    through this, so the screens cannot drift apart again (#109)."""
+    if not isinstance(rule, dict):
+        return f"({rule})"
+    rationale = str(rule.get("rationale") or "").rstrip().rstrip(".")
+    code = rule.get("id", "?")
+    if with_kind and rule.get("kind"):
+        code = f"{code}, {rule['kind']}"
+    return f"{rationale} ({code})" if rationale else f"({code})"

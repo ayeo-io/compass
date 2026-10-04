@@ -11067,3 +11067,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `archive-citation-in-adapter-readme`
 - **Landed:** 2026-10-04
+
+### Given an issue with scenarios TRC-1 and TRC-2, When compass changed-file add or compass evidence add is given a scenario id the issue does not define, or several ids in one quoted string, Then it refuses, names the issue's scenarios and writes nothing _(archived)_
+
+- **Scenario id:** `TS-1`
+- **Intent:** `INT-1`
+- **Source issue:** `trace-checks-scenario-ids`
+- **Landed:** 2026-10-04

@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given an issue with scenarios TRC-1 and TRC-2, When compass changed-file add or compass evidence add is given a scenario id the issue does not define, or several ids in one quoted string, Then it refuses, names the issue's scenarios and writes nothing
+### Given a fired policy rule with a rationale, an id and a kind, When approach evaluate prints its summary or verbose view and issue receipt prints the receipt, Then each line is exactly what it is today, and all three come from one shared formatter
 
-- **Scenario id:** `TS-1`
+- **Scenario id:** `FR-1`
 - **Intent:** `INT-1`
-- **Source issue:** `trace-checks-scenario-ids`
+- **Source issue:** `one-fired-rule-formatter-shared`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1580 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1581 superseded scenario(s) are in `docs/system-spec-archive.md`.

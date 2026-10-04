@@ -35,6 +35,7 @@ import fnmatch
 import re as _re
 from compass_pkg.core import _stage_key_renames, ASSESSMENT_KEY_MAP, CompassError, canonical_shape, display_shape, display_stage, find_governance, load_manifest, load_yaml, reading_matches, resolve_issue_dir, save_manifest, shape_stages
 from compass_pkg.governance import governance_drift
+from compass_pkg.render import fired_rule_line
 from compass_pkg.manifest import _annotate_gate_accepts
 
 
@@ -456,9 +457,7 @@ def cmd_route_evaluate(args):
         # and a person deciding whether the approach looks right does not need
         # all of it on the first screen - they need the approach, the rules
         # that produced it, and where it was written.
-        _fired = [str(f["rationale"]).rstrip().rstrip(".")
-                  + " (%s, %s)" % (f["id"], f["kind"])
-                  for f in result["policy_rules_fired"]]
+        _fired = [fired_rule_line(f) for f in result["policy_rules_fired"]]
         _ceiling = result["subtask_ceiling"]
         _concerns = []
         # Policy drift is a CONCERN, not provenance. The plain "which policy
@@ -527,8 +526,7 @@ def cmd_route_evaluate(args):
                 # the first screen a new user sees. Keep the kind: it says
                 # whether the rule raised the whole approach or only
                 # attached one gate.
-                rationale = str(f['rationale']).rstrip().rstrip('.')
-                print(f"    {rationale} ({f['id']}, {f['kind']})")
+                print(f"    {fired_rule_line(f)}")
                 for c in f["changed"]:
                     if c in seen_effects:
                         continue

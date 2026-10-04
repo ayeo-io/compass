@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the plugin as the directory receives it, then the icon is under the 5 MiB per-file limit and still square, and the README lists everything Compass runs on the machine, sends and fetches.
+### Given two Compass quick-fix sessions and their no-framework pairs from the 4 October run, then the breakdown is on record: resident load per request, each source's share of the tokens read, and the request counts, with how they were measured and what they do not show.
 
-- **Scenario id:** `DL-1`
+- **Scenario id:** `TB-1`
 - **Intent:** `INT-1`
-- **Source issue:** `directory-listing-prep`
+- **Source issue:** `quick-fix-token-breakdown`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1557 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1558 superseded scenario(s) are in `docs/system-spec-archive.md`.

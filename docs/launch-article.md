@@ -198,11 +198,11 @@ early, imperfections included. I'd rather hear where it breaks now than keep
 polishing something that only ever made sense to one person.
 
 If you want to try it, it's on GitHub at
-[github.com/jed72/compass](https://github.com/jed72/compass). In Claude Code you
+[github.com/ayeo-io/compass](https://github.com/ayeo-io/compass). In Claude Code you
 can add it as a plugin:
 
 ```
-/plugin marketplace add jed72/compass
+/plugin marketplace add ayeo-io/compass
 /plugin install compass@compass
 ```
 

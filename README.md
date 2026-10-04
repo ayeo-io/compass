@@ -23,7 +23,7 @@ Assess the work. Let policy choose the process.
 Install Compass from inside Claude Code:
 
 ```text
-/plugin marketplace add jed72/compass
+/plugin marketplace add ayeo-io/compass
 /plugin install compass@compass
 ```
 
@@ -32,7 +32,7 @@ Needs Python 3.10 or later. Compass CI tests Python 3.11.
 Or from source:
 
 ```bash
-git clone https://github.com/jed72/compass.git
+git clone https://github.com/ayeo-io/compass.git
 cd compass
 bash scripts/install.sh --global
 ```

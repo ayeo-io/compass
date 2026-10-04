@@ -22,7 +22,7 @@ There are two ways in. Pick one.
 
 ```bash
 # In Claude Code:
-/plugin marketplace add jed72/compass
+/plugin marketplace add ayeo-io/compass
 /plugin install compass@compass
 ```
 
@@ -34,7 +34,7 @@ hooks, and puts the `compass` CLI on your PATH. Skip to step 2.
 picked up live:
 
 ```bash
-git clone https://github.com/jed72/compass.git
+git clone https://github.com/ayeo-io/compass.git
 cd compass
 pip install jsonschema                # optional - turns on full JSON Schema lint
 bash scripts/install.sh --global      # or: bash scripts/install.sh  (project-local)

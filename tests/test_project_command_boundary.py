@@ -76,14 +76,14 @@ def _fork_pr_env(tmp_path: Path) -> Dict[str, str]:
     payload.write_text(json.dumps({
         "pull_request": {
             "head": {"repo": {"full_name": "outsider/compass", "fork": True}},
-            "base": {"repo": {"full_name": "jed72/compass"}},
+            "base": {"repo": {"full_name": "ayeo-io/compass"}},
         }
     }))
     return {
         "CI": "true",
         "GITHUB_ACTIONS": "true",
         "GITHUB_EVENT_NAME": "pull_request",
-        "GITHUB_REPOSITORY": "jed72/compass",
+        "GITHUB_REPOSITORY": "ayeo-io/compass",
         "GITHUB_EVENT_PATH": str(payload),
     }
 
@@ -687,13 +687,13 @@ def test_b2_event_payload_inside_the_checkout_is_refused(tmp_path):
     # A payload committed to the repository, claiming this is a same-repo PR.
     forged = project / "event.json"
     forged.write_text(json.dumps({
-        "pull_request": {"head": {"repo": {"full_name": "jed72/compass"}}}}))
+        "pull_request": {"head": {"repo": {"full_name": "ayeo-io/compass"}}}}))
 
     result = _run_check(project, extra_env={
         "CI": "true",
         "GITHUB_ACTIONS": "true",
         "GITHUB_EVENT_NAME": "pull_request",
-        "GITHUB_REPOSITORY": "jed72/compass",
+        "GITHUB_REPOSITORY": "ayeo-io/compass",
         "GITHUB_EVENT_PATH": str(forged),
     })
     output = result.stdout + result.stderr

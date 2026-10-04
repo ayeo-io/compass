@@ -33,7 +33,7 @@ def test_trc_a1_readme_source_install_has_path_note():
     # The source-install code block (clone -> bash install.sh). The block
     # ends at the install-script invocation.
     m = re.search(
-        r"git clone https://github\.com/jed72/compass\.git.*?"
+        r"git clone https://github\.com/ayeo-io/compass\.git.*?"
         r"bash scripts/install\.sh --global",
         readme,
         re.DOTALL,

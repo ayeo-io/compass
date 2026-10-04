@@ -225,7 +225,7 @@ def _https_only_redirect_handler():
 #: What a fetch says it is. A brief is a document, and a server that content-
 #: negotiates should be told so rather than guessing from a default.
 _ACCEPT = "text/markdown, text/plain, text/html;q=0.9, */*;q=0.1"
-_USER_AGENT = "compass/%s (+https://github.com/jed72/compass)"
+_USER_AGENT = "compass/%s (+https://github.com/ayeo-io/compass)"
 
 
 #: A fetch that hangs is indistinguishable from one that is slow, and a stage

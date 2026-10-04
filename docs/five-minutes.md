@@ -10,7 +10,7 @@ You need Claude Code and Python 3.10 or later. Compass CI tests Python 3.11.
 Install Compass inside Claude Code:
 
 ```text
-/plugin marketplace add jed72/compass
+/plugin marketplace add ayeo-io/compass
 /plugin install compass@compass
 ```
 

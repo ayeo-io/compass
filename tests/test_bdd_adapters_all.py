@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import importlib.machinery
 import importlib.util
+import os
 import pathlib
 import re
 import shutil
@@ -126,8 +127,13 @@ def test_trc_a2_each_adapter_should_run_the_extracted_feature_and_pass(name, tmp
         cwd=str(work), capture_output=True, text=True, timeout=60)
     assert r.returncode == 0, f"{name}: extract failed:\n{r.stderr[-500:]}"
 
+    # `make test` runs the suite with plugin autoload off, and pytest-bdd is
+    # a plugin: the adapter's own run must turn it back on, as an adopter's
+    # shell has it (#114).
+    env = {k: v for k, v in os.environ.items()
+           if k != "PYTEST_DISABLE_PLUGIN_AUTOLOAD"}
     r = subprocess.run(run_cmd, cwd=str(work), capture_output=True,
-                       text=True, timeout=600)
+                       text=True, timeout=600, env=env)
     assert r.returncode == 0, (
         f"{name}: the documented run command failed:\n{r.stdout[-2000:]}\n"
         f"{r.stderr[-1000:]}")

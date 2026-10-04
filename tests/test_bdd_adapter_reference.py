@@ -69,7 +69,11 @@ def test_trc_b1_adapter_runs_green_end_to_end(tmp_path):
         f"the reference adapter is not green:\n{result.stdout[-4000:]}\n"
         f"{result.stderr[-2000:]}")
 
-    feature = work / ".compass" / "work" / "reset-password" / "spec.feature"
+    # The path `bdd extract` writes, read from the CLI rather than written
+    # out here: a hard-coded name went stale when the file was renamed (#407).
+    from compass_pkg.bdd import default_extract_path
+    feature = pathlib.Path(default_extract_path(
+        str(work / ".compass" / "work" / "reset-password")))
     assert feature.is_file(), "extraction produced no feature file"
 
     # every scenario in the spec was collected and passed, by TRC id

@@ -23,7 +23,7 @@ STATUSES = {"full", "partial", "none"}
 # A check that names an adapter to exclude it: "!= claude-code",
 # "-ne codex", "not in ('cursor',)". Code that needs a capability asks for the
 # capability; branching on "not the other adapter" breaks every later one.
-_ADAPTERS = r"(?:claude(?:-code)?|codex|cursor|gemini|kiro|windsurf)"
+_ADAPTERS = r"(?:claude(?:-code)?|codex|cursor|gemini|R9|windsurf)"
 NEGATIVE_IDENTITY = re.compile(
     r"(?:!==?|\s-ne\s|\bis\s+not\b|\bnot\s+in\b)\s*[\(\[\{]?\s*[\"']?" + _ADAPTERS + r"\b",
     re.IGNORECASE)

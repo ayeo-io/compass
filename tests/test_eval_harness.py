@@ -124,7 +124,7 @@ def main():
         record["plugin_copy"] = {
             "dir_writable": os.access(plugin_dir, os.W_OK),
             # Generic, unlike the compass-specific checks below - the
-            # superpowers condition's own framework copy has no
+            # R1 condition's own framework copy has no
             # `bin/compass` to check for, so a test reads this listing to
             # check for whatever it wrote into its own fixture instead.
             "listing": _listing(plugin_dir),
@@ -456,7 +456,7 @@ def _write_plugin_repo(root: Path, *, init_exit_code: int = 0,
 
 _FAKE_UVX_SOURCE = '''#!/usr/bin/env python3
 """A stand-in for the real `uvx`, used only by this repository's own tests -
-never the network, and never a real spec-kit checkout. Logs the arguments
+never the network, and never a real R3 checkout. Logs the arguments
 and cwd it was called with (one JSON line per call, next to this script, so
 each test's own copy stays isolated), and leaves a marker file in cwd the
 way a real `specify init` would leave `.specify/` behind - so a test can
@@ -489,7 +489,7 @@ def main():
     with open(_LOG_PATH, "a", encoding="utf-8") as fh:
         fh.write(json.dumps(record) + "\\n")
     Path("specify-init-ran.txt").write_text(
-        "spec-kit's own specify init ran here\\n", encoding="utf-8")
+        "R3's own specify init ran here\\n", encoding="utf-8")
 
 
 if __name__ == "__main__":
@@ -513,7 +513,7 @@ def _read_fake_uvx_log(fake_uvx: Path) -> list[dict]:
 
 def _write_framework_repo(root: Path, *, marker_name: str = "MARKER.md") -> Path:
     """A small git repository standing in for a cloned framework at its own
-    pinned commit - the superpowers or spec-kit condition's own
+    pinned commit - the R1 or R3 condition's own
     `--framework-source`, so a test never clones the real one. Its own
     commit, read back by the test, is what a run record's `framework.commit`
     must equal."""
@@ -532,7 +532,7 @@ def _framework_repo_head(root: Path) -> str:
 
 def _write_frameworks_config_yaml(tmp_path: Path, entries: dict[str, dict],
                                    *, name: str = "frameworks.yml") -> Path:
-    """A `frameworks.yml`-shaped fixture, standing in for the real one so a
+    """A fixture of the names key's pins, standing in for the real key so a
     test can pin whatever commit its own `--framework-source` fixture is
     actually at - the real file pins the real upstream commits, which no
     disposable fixture repository could ever share history with."""
@@ -1359,20 +1359,20 @@ def test_planted_partial_clone_remote_stays_blocked_with_one_defence_stripped(
 
 def test_allow_list_matches_the_documented_tools_exactly():
     """The allow-list: `Skill` so a compass session can run a `/compass:*`
-    command, `Agent` for a subagent Superpowers' own
+    command, `Agent` for a subagent R1's own
     `subagent-driven-development` or Compass's own `implement` stage
     dispatches, `python -m pytest` alongside `python3 -m pytest`, `cat` on
     the list - Compass's own commands, such as `/compass:quick-fix`, read
     their own template with it, and a `cat >` onto a protected path is
     caught by `no_evidence_tampering` - and `head`, `tail` and `grep`, the
     other read-only commands those same commands use against the plugin
-    copy. `.specify/scripts/bash/*` gives Spec Kit's own installed skills
+    copy. `.specify/scripts/bash/*` gives R3's own installed skills
     standing, and `git checkout -b`/`git switch -c` let a session start
     the feature branch `executing-plans` asks for before working on the
-    seed's own default branch. Superpowers' own five script rules are not
+    seed's own default branch. R1's own five script rules are not
     on this static list - `_common_claude_args` builds them at run time
     with that run's own real directory, read by
-    `test_allow_list_gives_superpowers_its_own_bundled_scripts`."""
+    `test_allow_list_gives_r1_its_own_bundled_scripts`."""
     assert harness.ALLOWED_TOOLS == (
         "Read", "Write", "Edit", "Skill", "Agent",
         "Bash(python3 -m pytest:*)", "Bash(python -m pytest:*)", "Bash(pytest:*)",
@@ -1720,7 +1720,7 @@ def test_run_record_has_every_documented_field(
         "framework", "hidden", "regressions", "tokens", "compass_commit",
     }
     # This scenario carries no hidden_tests/, and this condition is not
-    # superpowers or spec-kit - CMP-1 and CMP-2's own fields both read as
+    # R1 or R3 - CMP-1 and CMP-2's own fields both read as
     # "not applicable here", never a false empty result.
     assert record["framework"] is None
     assert record["hidden"] is None
@@ -2898,24 +2898,24 @@ def test_gitignore_comment_about_evals_out_names_no_harness_or_condition():
     assert "condition" not in comment
 
 
-# --- 20. the superpowers and spec-kit conditions (CMP-1) --------------------
+# --- 20. the R1 and R3 conditions (CMP-1) --------------------
 
-def test_superpowers_condition_passes_a_read_only_framework_copy_as_plugin_dir(
+def test_r1_condition_passes_a_read_only_framework_copy_as_plugin_dir(
     tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
 ):
-    """`--condition superpowers` loads Superpowers from a pinned commit as a
+    """`--condition R1` loads R1 from a pinned commit as a
     plugin: `--framework-source` stands in for the pinned clone
-    `evals/frameworks.yml` would otherwise ask for, so this never reaches
+    the names key would otherwise ask for, so this never reaches
     the network."""
-    framework_source = _write_framework_repo(tmp_path / "superpowers-source")
+    framework_source = _write_framework_repo(tmp_path / "R1-source")
     expected_commit = _framework_repo_head(framework_source)
     frameworks_config = _write_frameworks_config_yaml(tmp_path, {
-        "superpowers": {"repo": "https://example.invalid/superpowers",
+        "R1": {"repo": "https://example.invalid/R1",
                          "commit": expected_commit},
     })
 
     calls, record, _ = _run_condition(
-        tmp_path, scenario_dir, fake_claude, "superpowers", monkeypatch,
+        tmp_path, scenario_dir, fake_claude, "R1", monkeypatch,
         plugin_source_dir, framework_source=framework_source,
         frameworks_config=frameworks_config,
     )
@@ -2929,29 +2929,29 @@ def test_superpowers_condition_passes_a_read_only_framework_copy_as_plugin_dir(
     assert "--add-dir" in args
     assert args[args.index("--add-dir") + 1] == str(plugin_dir)
 
-    assert record["framework"] == {"name": "superpowers", "commit": expected_commit}
+    assert record["framework"] == {"name": "R1", "commit": expected_commit}
 
 
-def test_spec_kit_condition_runs_specify_init_before_the_seed_commit(
+def test_r3_condition_runs_specify_init_before_the_seed_commit(
     tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
 ):
-    """`--condition spec-kit` runs Spec Kit's `specify init` from a pinned
+    """`--condition R3` runs R3's `specify init` from a pinned
     commit in the seed before the seed commit: a fake `uvx` stands in for
     the real one, writing a marker the fake `claude` executable's own
     directory listing shows if `specify init` ran before the session - the
     same listing `_write_fake_claude` already captures for every test in
     this file."""
     framework_source = _write_framework_repo(
-        tmp_path / "spec-kit-source", marker_name="pyproject.toml")
+        tmp_path / "R3-source", marker_name="pyproject.toml")
     expected_commit = _framework_repo_head(framework_source)
     fake_uvx = _write_fake_uvx(tmp_path)
     frameworks_config = _write_frameworks_config_yaml(tmp_path, {
-        "spec-kit": {"repo": "https://example.invalid/spec-kit",
+        "R3": {"repo": "https://example.invalid/R3",
                      "commit": expected_commit},
-    }, name="frameworks-spec-kit.yml")
+    }, name="frameworks-R3.yml")
 
     calls, record, _ = _run_condition(
-        tmp_path, scenario_dir, fake_claude, "spec-kit", monkeypatch,
+        tmp_path, scenario_dir, fake_claude, "R3", monkeypatch,
         plugin_source_dir, framework_source=framework_source, uvx_exe=fake_uvx,
         frameworks_config=frameworks_config,
     )
@@ -2977,13 +2977,13 @@ def test_spec_kit_condition_runs_specify_init_before_the_seed_commit(
     assert "specify-init-ran.txt" in calls[0]["listing"]
     assert "specify-init-ran.txt" not in record["changed_paths"]
 
-    assert record["framework"] == {"name": "spec-kit", "commit": expected_commit}
+    assert record["framework"] == {"name": "R3", "commit": expected_commit}
 
 
 def test_bare_and_compass_conditions_never_call_uvx(
     tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
 ):
-    """Neither existing condition touches spec-kit's own installer - a fake
+    """Neither existing condition touches R3's own installer - a fake
     `uvx` that would fail loudly if called proves neither does."""
     fake_uvx = tmp_path / "uvx-must-not-run"
     fake_uvx.write_text(
@@ -3045,10 +3045,10 @@ def test_framework_source_dir_clone_call_uses_https_and_checkout_does_not(
         return subprocess.CompletedProcess(["git", *args], 0, stdout="", stderr="")
 
     monkeypatch.setattr(harness, "_run_git", _fake_run_git)
-    frameworks_config = {"superpowers": {"repo": "https://example.invalid/superpowers",
+    frameworks_config = {"R1": {"repo": "https://example.invalid/R1",
                                           "commit": "deadbeef"}}
     source_dir, is_temporary = harness._framework_source_dir(
-        "superpowers", None, frameworks_config, {})
+        "R1", None, frameworks_config, {})
     try:
         assert is_temporary is True
         clone_call = next(c for c in recorded if c["args"][0] == "clone")
@@ -3062,31 +3062,31 @@ def test_framework_source_dir_clone_call_uses_https_and_checkout_does_not(
 def test_framework_commit_matching_the_pin_is_accepted(tmp_path):
     framework_source = _write_framework_repo(tmp_path / "matching-source")
     commit = _framework_repo_head(framework_source)
-    frameworks_config = {"superpowers": {"repo": "https://example.invalid/x",
+    frameworks_config = {"R1": {"repo": "https://example.invalid/x",
                                           "commit": commit}}
-    harness._check_framework_commit_pin("superpowers", commit, frameworks_config)
+    harness._check_framework_commit_pin("R1", commit, frameworks_config)
 
 
 def test_framework_commit_mismatch_raises():
-    frameworks_config = {"superpowers": {"repo": "https://example.invalid/x",
+    frameworks_config = {"R1": {"repo": "https://example.invalid/x",
                                           "commit": "0" * 40}}
     with pytest.raises(SystemExit):
-        harness._check_framework_commit_pin("superpowers", "1" * 40, frameworks_config)
+        harness._check_framework_commit_pin("R1", "1" * 40, frameworks_config)
 
 
 def test_framework_source_override_at_the_wrong_commit_stops_prepare_framework_copy(
     tmp_path
 ):
-    """`--framework-source` must be at the commit `evals/frameworks.yml`
+    """`--framework-source` must be at the commit the names key
     pins, the same as a fresh clone must be - a fixture at any other
     commit stops the run rather than silently comparing an unpinned
     framework."""
     framework_source = _write_framework_repo(tmp_path / "wrong-commit-source")
-    frameworks_config = {"superpowers": {"repo": "https://example.invalid/x",
+    frameworks_config = {"R1": {"repo": "https://example.invalid/x",
                                           "commit": "0" * 40}}
     with pytest.raises(SystemExit):
         harness._prepare_framework_copy(
-            "superpowers", framework_source, frameworks_config, dict(os.environ))
+            "R1", framework_source, frameworks_config, dict(os.environ))
 
 
 def test_commit_mismatch_stops_the_whole_harness_call(
@@ -3096,7 +3096,7 @@ def test_commit_mismatch_stops_the_whole_harness_call(
     framework at the wrong commit, not only the function that checks it."""
     framework_source = _write_framework_repo(tmp_path / "e2e-wrong-commit")
     frameworks_config = _write_frameworks_config_yaml(tmp_path, {
-        "superpowers": {"repo": "https://example.invalid/superpowers",
+        "R1": {"repo": "https://example.invalid/R1",
                          "commit": "0" * 40},
     }, name="frameworks-mismatch.yml")
     log_path = tmp_path / "log-mismatch.jsonl"
@@ -3109,7 +3109,7 @@ def test_commit_mismatch_stops_the_whole_harness_call(
     with pytest.raises(SystemExit, match="commit"):
         harness.main([
             "--scenario", str(scenario_dir),
-            "--condition", "superpowers",
+            "--condition", "R1",
             "--claude", str(fake_claude),
             "--out", str(out_dir),
             "--plugin-source", str(plugin_source_dir),
@@ -3123,13 +3123,13 @@ def test_commit_mismatch_stops_the_whole_harness_call(
 # (the technical design's own "Tools" rule: a tool one framework needs is
 # allowed for all, never for one alone)
 
-def test_allow_list_gives_spec_kit_its_own_bundled_scripts():
-    """Spec Kit's own installed skills start with one of its bundled
-    scripts under `.specify/scripts/bash/` - `speckit-plan` with
-    `setup-plan.sh`, `speckit-constitution` with `resolve-template.sh`,
-    <!-- vocabulary-scan: allow - names Spec Kit's own real script and command, not a retired word --> `speckit-tasks` with `setup-tasks.sh`,
-    and `speckit-implement`, `speckit-analyze`, `speckit-checklist`,
-    `speckit-clarify`, `speckit-converge` and `speckit-taskstoissues` all
+def test_allow_list_gives_r3_its_own_bundled_scripts():
+    """R3's own installed skills start with one of its bundled
+    scripts under `.specify/scripts/bash/` - `R3-plan` with
+    `setup-plan.sh`, `R3-constitution` with `resolve-template.sh`,
+    <!-- vocabulary-scan: allow - names R3's own real script and command, not a retired word --> `R3-tasks` with `setup-tasks.sh`,
+    and `R3-implement`, `R3-analyze`, `R3-checklist`,
+    `R3-clarify`, `R3-converge` and `R3-taskstoissues` all
     with `check-prerequisites.sh` - the same way Compass's own commands
     start with `compass`, already on this list."""
     for script in ("check-prerequisites.sh", "setup-plan.sh",
@@ -3137,16 +3137,16 @@ def test_allow_list_gives_spec_kit_its_own_bundled_scripts():
         assert f"Bash(.specify/scripts/bash/{script}:*)" in harness.ALLOWED_TOOLS
 
 
-def test_allow_list_gives_superpowers_its_own_bundled_scripts():
+def test_allow_list_gives_r1_its_own_bundled_scripts():
     """`subagent-driven-development` runs `sdd-workspace`, `review-package`
-    <!-- vocabulary-scan: allow - names Superpowers' own real scripts, not a retired word --> and `task-brief`; `executing-plans` runs `task-start` and `task-done` -
+    <!-- vocabulary-scan: allow - names R1's own real scripts, not a retired word --> and `task-brief`; `executing-plans` runs `task-start` and `task-done` -
     read from both skills' own `SKILL.md` at the pinned commit. A real
     session refused `${CLAUDE_PLUGIN_ROOT}` inside a Bash allow rule -
     Claude Code does not expand it there - so each rule is built at run
     time with the real absolute path of the directory the harness made
-    for that run, named `superpowers_scripts_dir` after the parameter
+    for that run, named `r1_scripts_dir` after the parameter
     `_common_claude_args` reads it from."""
-    scripts_dir = Path("/tmp/this-runs-own-superpowers-directory")
+    scripts_dir = Path("/tmp/this-runs-own-R1-directory")
     args = harness._common_claude_args("bare", None, None, scripts_dir)
     allow_list = args[args.index("--allowedTools") + 1].split(",")
     for skill, script in (
@@ -3163,7 +3163,7 @@ def test_allow_list_gives_subagent_driven_developments_own_bash_prefixed_form():
     """`subagent-driven-development`'s own `SKILL.md`, at the pinned
     commit, tells a session to run every one of its scripts with a `bash`
     prefix - `bash scripts/sdd-workspace PLAN_FILE` (line 137),
-    <!-- vocabulary-scan: allow - names Superpowers' own real script, not a retired word --> `bash scripts/task-brief PLAN_FILE N` (line 252), `bash scripts/review-
+    <!-- vocabulary-scan: allow - names R1's own real script, not a retired word --> `bash scripts/task-brief PLAN_FILE N` (line 252), `bash scripts/review-
     package PLAN_FILE BASE HEAD` (line 290 and elsewhere) - never the
     bare, executable-bit form `executing-plans` uses. A rule that starts
     with the script's own absolute path does not match a command that
@@ -3171,7 +3171,7 @@ def test_allow_list_gives_subagent_driven_developments_own_bash_prefixed_form():
     absolute path with `bash` in front, and the relative form the skill's
     own text writes, resolved against the skill's own directory rather
     than the plugin's root."""
-    scripts_dir = Path("/tmp/this-runs-own-superpowers-directory")
+    scripts_dir = Path("/tmp/this-runs-own-R1-directory")
     args = harness._common_claude_args("bare", None, None, scripts_dir)
     allow_list = args[args.index("--allowedTools") + 1].split(",")
     for skill, script in (
@@ -3204,16 +3204,16 @@ def test_allow_list_gives_every_condition_the_agent_tool():
 
 # Every framework-script rule's own absolute path, replaced with one fixed
 # placeholder - a fresh directory the harness builds for the run, real and
-# distinct every time (`tempfile.mkdtemp()`, or the superpowers condition's
+# distinct every time (`tempfile.mkdtemp()`, or the R1 condition's
 # own `--plugin-dir` copy), is the one part of the allow-list this file
 # documents as allowed to differ from run to run and condition to
 # condition.
-_SUPERPOWERS_SCRIPT_RULE_RE = re.compile(
+_R1_SCRIPT_RULE_RE = re.compile(
     r"Bash\((bash )?[^,]*?/skills/(subagent-driven-development|executing-plans)/scripts/")
 
 
-def _normalise_superpowers_script_paths(allow_list: str) -> str:
-    return _SUPERPOWERS_SCRIPT_RULE_RE.sub(r"Bash(\1<DIR>/skills/\2/scripts/", allow_list)
+def _normalise_r1_script_paths(allow_list: str) -> str:
+    return _R1_SCRIPT_RULE_RE.sub(r"Bash(\1<DIR>/skills/\2/scripts/", allow_list)
 
 
 def test_every_conditions_allow_list_is_identical(
@@ -3223,21 +3223,21 @@ def test_every_conditions_allow_list_is_identical(
     - this runs all four and reads each one's own `--allowedTools`
     argument back, so the claim is proved against what the harness
     actually sends, not only against a shared constant. The five
-    Superpowers-script rules carry that run's own real directory - a
-    different one for every condition, none of them Superpowers' own
-    `--plugin-dir` copy except the superpowers condition's - so those five
+    R1-script rules carry that run's own real directory - a
+    different one for every condition, none of them R1's own
+    `--plugin-dir` copy except the R1 condition's - so those five
     are normalised to one placeholder before the comparison; everything
     else must already be byte-identical."""
     framework_source = _write_framework_repo(tmp_path / "identical-source")
     commit = _framework_repo_head(framework_source)
     frameworks_config = _write_frameworks_config_yaml(tmp_path, {
-        "superpowers": {"repo": "https://example.invalid/superpowers", "commit": commit},
-        "spec-kit": {"repo": "https://example.invalid/spec-kit", "commit": commit},
+        "R1": {"repo": "https://example.invalid/R1", "commit": commit},
+        "R3": {"repo": "https://example.invalid/R3", "commit": commit},
     }, name="frameworks-identical.yml")
     fake_uvx = _write_fake_uvx(tmp_path)
 
     allow_lists = {}
-    for condition in ("bare", "compass", "superpowers", "spec-kit"):
+    for condition in ("bare", "compass", "R1", "R3"):
         calls, _, _ = _run_condition(
             tmp_path, scenario_dir, fake_claude, condition, monkeypatch,
             plugin_source_dir, out_suffix=f"-identical-{condition}",
@@ -3249,7 +3249,7 @@ def test_every_conditions_allow_list_is_identical(
         # The raw lists must actually differ - otherwise the placeholder
         # substitution below is proving nothing.
         allow_lists[f"{condition}-raw"] = raw
-        allow_lists[condition] = _normalise_superpowers_script_paths(raw)
+        allow_lists[condition] = _normalise_r1_script_paths(raw)
 
     raw_values = {v for k, v in allow_lists.items() if k.endswith("-raw")}
     assert len(raw_values) > 1, "the raw allow-lists were already identical"
@@ -3257,10 +3257,10 @@ def test_every_conditions_allow_list_is_identical(
     assert len(normalised_values) == 1, allow_lists
 
 
-def test_superpowers_runs_rules_name_its_own_plugin_copys_absolute_path(
+def test_r1_runs_rules_name_its_own_plugin_copys_absolute_path(
     tmp_path, scenario_dir, fake_claude, plugin_source_dir, monkeypatch
 ):
-    """The superpowers condition's five Superpowers-script rules must name
+    """The R1 condition's five R1-script rules must name
     the exact directory passed as `--plugin-dir` - not a placeholder, and
     not some other run's own directory - since that is the one path Claude
     Code will actually resolve `scripts/sdd-workspace` and the rest
@@ -3268,11 +3268,11 @@ def test_superpowers_runs_rules_name_its_own_plugin_copys_absolute_path(
     framework_source = _write_framework_repo(tmp_path / "own-path-source")
     commit = _framework_repo_head(framework_source)
     frameworks_config = _write_frameworks_config_yaml(tmp_path, {
-        "superpowers": {"repo": "https://example.invalid/superpowers", "commit": commit},
+        "R1": {"repo": "https://example.invalid/R1", "commit": commit},
     }, name="frameworks-own-path.yml")
 
     calls, _, _ = _run_condition(
-        tmp_path, scenario_dir, fake_claude, "superpowers", monkeypatch,
+        tmp_path, scenario_dir, fake_claude, "R1", monkeypatch,
         plugin_source_dir, framework_source=framework_source,
         frameworks_config=frameworks_config,
     )
@@ -3293,15 +3293,15 @@ def test_superpowers_runs_rules_name_its_own_plugin_copys_absolute_path(
         assert f"Bash(bash {plugin_dir}/skills/{skill}/scripts/{script}:*)" in allow_list
 
 
-def test_superpowers_condition_gets_add_dir_for_its_framework_copy():
+def test_r1_condition_gets_add_dir_for_its_framework_copy():
     """Compass's own plugin copy gets `--add-dir`
     (`test_compass_condition_also_gets_add_dir_for_the_plugin_copy`) so a
-    `cat` of one of its own files is not refused. Superpowers' copy needs
+    `cat` of one of its own files is not refused. R1's copy needs
     the same standing - `_common_claude_args` is the one function that
     builds this list, so a unit test against it is enough; the end-to-end
-    check lives in the superpowers condition test above."""
+    check lives in the R1 condition test above."""
     args = harness._common_claude_args(
-        "superpowers", None, Path("/tmp/framework-copy"), Path("/tmp/framework-copy"))
+        "R1", None, Path("/tmp/framework-copy"), Path("/tmp/framework-copy"))
     assert "--add-dir" in args
     assert args[args.index("--add-dir") + 1] == str(Path("/tmp/framework-copy"))
 
@@ -3309,12 +3309,12 @@ def test_superpowers_condition_gets_add_dir_for_its_framework_copy():
 # --- 20d. the model is pinned for every condition (the model pin) -----------
 
 def test_every_condition_pins_the_same_model():
-    scripts_dir = Path("/tmp/model-test-superpowers-scripts")
+    scripts_dir = Path("/tmp/model-test-R1-scripts")
     for condition, plugin_copy_dir, framework_copy_dir in (
         ("bare", None, None),
         ("compass", Path("/tmp/plugin-copy"), None),
-        ("superpowers", None, Path("/tmp/framework-copy")),
-        ("spec-kit", None, Path("/tmp/framework-copy")),
+        ("R1", None, Path("/tmp/framework-copy")),
+        ("R3", None, Path("/tmp/framework-copy")),
     ):
         args = harness._common_claude_args(
             condition, plugin_copy_dir, framework_copy_dir, scripts_dir)

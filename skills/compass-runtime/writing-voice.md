@@ -164,6 +164,15 @@ reader has to ask:
 
 Not one of these is a hard idea. Each took a single sentence to say plainly.
 
+## A rival product is named by its code
+
+When the project keeps a names key - a private file, never committed, that
+maps codes such as R1 to rival product names - write the code, never the
+name, alias, repository slug or URL, in anything committed or synced: files,
+paths, branch names, commit messages, pull requests and the delivery record.
+Compass's own repository keeps its key, untracked, under `.compass/private/`,
+and checks with `scripts/rival-name-gate.py`.
+
 ## The tells
 
 Nine habits mark this narration. Three of them a fixed string can find -

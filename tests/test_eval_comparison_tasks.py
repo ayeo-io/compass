@@ -65,8 +65,8 @@ META_WORDS = (
 CONDITION_OVERLAY_DIRS = {
     "bare": "seed_bare",
     "compass": "seed_compass",
-    "superpowers": "seed_superpowers",
-    "spec-kit": "seed_spec_kit",
+    "R1": "seed_R1",
+    "R3": "seed_R3",
 }
 
 
@@ -914,18 +914,18 @@ def test_cmp_resume_compass_overlay_is_an_in_flight_issue():
     assert manifests, "seed_compass has no manifest.yml under .compass/work/"
 
 
-def test_cmp_resume_superpowers_overlay_is_a_plan():
-    overlay_dir = _overlay_dir("cmp-resume", "superpowers")
-    plans = list((overlay_dir / "docs" / "superpowers" / "plans").glob("*.md"))
-    assert plans, "seed_superpowers has no record under docs/superpowers/plans/"
+def test_cmp_resume_r1_overlay_is_a_plan():
+    overlay_dir = _overlay_dir("cmp-resume", "R1")
+    plans = list((overlay_dir / "docs" / "R1" / "plans").glob("*.md"))
+    assert plans, "seed_R1 has no record under docs/R1/plans/"
 
 
-def test_cmp_resume_spec_kit_overlay_is_a_spec_and_its_checklist():
-    overlay_dir = _overlay_dir("cmp-resume", "spec-kit")
+def test_cmp_resume_r3_overlay_is_a_spec_and_its_checklist():
+    overlay_dir = _overlay_dir("cmp-resume", "R3")
     specs = list((overlay_dir / "specs").glob("*/spec.md"))
     checklists = list((overlay_dir / "specs").glob("*/tasks.md"))
-    assert specs, "seed_spec_kit has no spec.md under specs/"
-    assert checklists, "seed_spec_kit has no checklist under specs/"
+    assert specs, "seed_R3 has no spec.md under specs/"
+    assert checklists, "seed_R3 has no checklist under specs/"
 
 
 @pytest.mark.parametrize("condition", sorted(CONDITION_OVERLAY_DIRS))
@@ -938,15 +938,15 @@ def test_cmp_resume_every_record_says_what_is_done_and_what_is_next(condition):
     )
 
 
-def test_cmp_resume_superpowers_overlay_uses_its_own_heading_form():
-    """Superpowers' plan-writing skill headers each unit of work its own
+def test_cmp_resume_r1_overlay_uses_its_own_heading_form():
+    """R1's plan-writing skill headers each unit of work its own
     way, so the record uses that heading form. It does not copy the
     framework's banner text."""
-    overlay_dir = _overlay_dir("cmp-resume", "superpowers")
-    plan_path = next((overlay_dir / "docs" / "superpowers" / "plans").glob("*.md"))
+    overlay_dir = _overlay_dir("cmp-resume", "R1")
+    plan_path = next((overlay_dir / "docs" / "R1" / "plans").glob("*.md"))
     text = plan_path.read_text(encoding="utf-8")
     assert "### Task 1:" in text and "### Task 2:" in text, (
-        f"{plan_path.name} does not use Superpowers' own heading form for a unit of work"
+        f"{plan_path.name} does not use R1's own heading form for a unit of work"
     )
     # Its layout only: no committed file quotes another product's template
     # text (the maintainer's rule, 2026-10-03; issue #341).
@@ -955,20 +955,20 @@ def test_cmp_resume_superpowers_overlay_uses_its_own_heading_form():
     )
 
 
-def test_cmp_resume_spec_kit_overlay_uses_its_own_heading_form():
-    """Spec Kit's own checklist template opens with a title naming what
+def test_cmp_resume_r3_overlay_uses_its_own_heading_form():
+    """R3's own checklist template opens with a title naming what
     the file holds - a session under that framework must read that
     title, not Compass's paraphrase of it."""
-    overlay_dir = _overlay_dir("cmp-resume", "spec-kit")
+    overlay_dir = _overlay_dir("cmp-resume", "R3")
     tasks_path = next((overlay_dir / "specs").glob("*/tasks.md"))
     text = tasks_path.read_text(encoding="utf-8")
     assert text.startswith("# Tasks:"), (
-        f"{tasks_path.name} does not open with Spec Kit's own title form"
+        f"{tasks_path.name} does not open with R3's own title form"
     )
 
 
 # ---------------------------------------------------------------------------
-# cmp-resume, round 4: Spec Kit's own first step, equal records, and the
+# cmp-resume, round 4: R3's own first step, equal records, and the
 # review's other follow-ups against this subtask's files.
 # ---------------------------------------------------------------------------
 
@@ -981,34 +981,34 @@ HIDDEN_RESUME_TEST_NAMES = (
 )
 
 
-def _spec_kit_feature_dir(overlay_dir: Path) -> Path:
+def _r3_feature_dir(overlay_dir: Path) -> Path:
     feature_json = json.loads((overlay_dir / ".specify" / "feature.json").read_text(encoding="utf-8"))
     return overlay_dir / feature_json["feature_directory"]
 
 
-def test_cmp_resume_spec_kit_overlay_has_what_its_own_first_step_needs():
-    """Spec Kit's own check-prerequisites script, the first step of
-    speckit-implement, reads the feature-tracking file for the feature
+def test_cmp_resume_r3_overlay_has_what_its_own_first_step_needs():
+    """R3's own check-prerequisites script, the first step of
+    R3-implement, reads the feature-tracking file for the feature
     directory, then needs a plan document there always, and a checklist
     there when one is asked for. This checks every file that script
     reads is present, the fallback the brief allows when a test cannot
-    reach a real, pinned Spec Kit offline."""
-    overlay_dir = _overlay_dir("cmp-resume", "spec-kit")
+    reach a real, pinned R3 offline."""
+    overlay_dir = _overlay_dir("cmp-resume", "R3")
     feature_json_path = overlay_dir / ".specify" / "feature.json"
-    assert feature_json_path.is_file(), "seed_spec_kit has no .specify/feature.json"
-    feature_dir = _spec_kit_feature_dir(overlay_dir)
+    assert feature_json_path.is_file(), "seed_R3 has no .specify/feature.json"
+    feature_dir = _r3_feature_dir(overlay_dir)
     assert feature_dir.is_dir(), (
-        f"{feature_json_path} names a feature_directory that does not exist under seed_spec_kit"
+        f"{feature_json_path} names a feature_directory that does not exist under seed_R3"
     )
     for name in ("spec.md", "plan.md", "tasks.md"):
         assert (feature_dir / name).is_file(), (
-            f"seed_spec_kit's feature directory has no {name}, which "
+            f"seed_R3's feature directory has no {name}, which "
             f"check-prerequisites.sh requires"
         )
 
 
-def test_cmp_resume_spec_kit_overlay_has_story_labels_and_paths():
-    tasks_path = _spec_kit_feature_dir(_overlay_dir("cmp-resume", "spec-kit")) / "tasks.md"
+def test_cmp_resume_r3_overlay_has_story_labels_and_paths():
+    tasks_path = _r3_feature_dir(_overlay_dir("cmp-resume", "R3")) / "tasks.md"
     text = tasks_path.read_text(encoding="utf-8")
     assert "[US1]" in text, "tasks.md has no story label, which its own template asks for"
     assert "src/grades.py" in text and "tests/test_grades.py" in text, (
@@ -1016,8 +1016,8 @@ def test_cmp_resume_spec_kit_overlay_has_story_labels_and_paths():
     )
 
 
-def test_cmp_resume_superpowers_overlay_names_files_with_their_directories():
-    plan_path = next((_overlay_dir("cmp-resume", "superpowers") / "docs" / "superpowers" / "plans").glob("*.md"))
+def test_cmp_resume_r1_overlay_names_files_with_their_directories():
+    plan_path = next((_overlay_dir("cmp-resume", "R1") / "docs" / "R1" / "plans").glob("*.md"))
     text = plan_path.read_text(encoding="utf-8")
     assert "src/grades.py" in text and "tests/test_grades.py" in text, (
         f"{plan_path.name} does not give exact paths"
@@ -1032,8 +1032,8 @@ def test_cmp_resume_superpowers_overlay_names_files_with_their_directories():
         )
 
 
-def test_cmp_resume_superpowers_overlay_does_not_quote_a_hidden_test():
-    plan_path = next((_overlay_dir("cmp-resume", "superpowers") / "docs" / "superpowers" / "plans").glob("*.md"))
+def test_cmp_resume_r1_overlay_does_not_quote_a_hidden_test():
+    plan_path = next((_overlay_dir("cmp-resume", "R1") / "docs" / "R1" / "plans").glob("*.md"))
     text = plan_path.read_text(encoding="utf-8")
     for name in HIDDEN_RESUME_TEST_NAMES:
         assert name not in text, f"{plan_path.name} quotes the hidden test {name}"
@@ -1049,7 +1049,7 @@ def test_cmp_resume_compass_overlay_does_not_name_a_hidden_test():
 def test_cmp_resume_compass_overlay_devlog_names_the_return_keys():
     """Every hidden test reads result["average"], result["highest"] or
     result["lowest"] - the devlog must say summarize returns a dict with
-    those three keys, the same as the bare, Superpowers and Spec Kit
+    those three keys, the same as the bare, R1 and R3
     records already do, not just describe the value in words."""
     devlog_path = (
         _overlay_dir("cmp-resume", "compass") / ".compass" / "work"

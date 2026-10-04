@@ -66,6 +66,17 @@ def _sandbox(landed_only=True):
         for t in WORK.iterdir():
             if (t / "manifest.yml").is_file():
                 shutil.copytree(t, tmp / ".compass" / "work" / t.name)
+    # The project's config and its names key, so the derivation replaces
+    # rival names with codes here as it does for the committed files.
+    config = WORK.parent / "config.yml"
+    if config.is_file():
+        shutil.copy(config, tmp / ".compass" / "config.yml")
+        sys.path.insert(0, str(ROOT / "cli"))
+        from compass_pkg import record
+        key = record.names_key(str(ROOT))
+        if key:
+            (tmp / ".compass" / "private").mkdir()
+            shutil.copy(key, tmp / ".compass" / "private" / "rival-codes.yml")
     return tmp
 
 

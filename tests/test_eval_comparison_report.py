@@ -20,7 +20,7 @@ README = ROOT / "README.md"
 def test_cmp_5_the_comparison_is_on_record_with_its_limits():
     raw = REPORT.read_text(encoding="utf-8")
     text = " ".join(raw.split())
-    for name in ("Compass", "Superpowers", "Spec Kit", "no framework"):
+    for name in ("Compass", "R1", "R3", "no framework"):
         assert name in text, name
     for pin in ("8ca22dba", "3b895d16", "claude-opus-5-5"):
         assert pin in text, pin
@@ -32,7 +32,7 @@ def test_cmp_5_the_comparison_is_on_record_with_its_limits():
 
 def test_cmp_6_no_readme_claim_about_another_framework_outruns_the_run():
     text = README.read_text(encoding="utf-8")
-    mentions = re.findall(r"(?i)superpowers|spec[- ]?kit", text)
+    mentions = re.findall(r"(?i)R1|R3", text)
     if mentions:
         assert "2026-09-28-eval-comparison.md" in text, (
             "the README names another framework but does not cite the run")
@@ -47,7 +47,7 @@ NEW_SCENARIOS = ("cmp-hidden-requirement", "cmp-call-sites", "cmp-refactor",
 def test_the_discriminating_comparison_is_on_record():
     raw = DISCRIMINATING.read_text(encoding="utf-8")
     text = " ".join(raw.split())
-    for name in ("Compass", "Superpowers", "Spec Kit", "no framework"):
+    for name in ("Compass", "R1", "R3", "no framework"):
         assert name in text, name
     for scenario in NEW_SCENARIOS:
         assert f"`{scenario}`" in text, scenario

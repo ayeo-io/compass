@@ -748,6 +748,17 @@ def derive_system_spec(project_root: str) -> None:
             "Copy those issue folders into .compass/work/ from the checkout that "
             "has them, then derive again.")
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    # The derived files are committed, but their titles come from local
+    # issue records, which may name a rival product. With a names key
+    # configured, each name becomes its code; a configured key that is
+    # missing stops the derivation rather than commit a name
+    # (governance/decisions/2026-10-04-rival-names-never-committed.md).
+    from compass_pkg import record, rival_names
+    key_path = record.names_key(project_root)
+    if key_path:
+        names = rival_names.load_key(key_path)
+        content = rival_names.redact_names(content, names)
+        archive_content = rival_names.redact_names(archive_content, names)
     with open(out_path, "w", encoding="utf-8") as fh:
         fh.write(content)
     with open(archive_path, "w", encoding="utf-8") as fh:

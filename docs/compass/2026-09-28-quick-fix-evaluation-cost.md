@@ -1,14 +1,16 @@
 # Quick-fix cost - before and after `compass quick-fix`
 
+Rival products appear as codes R1 to R9; the maintainer holds the key.
+
 On each scenario's mean, a quick fix under Compass now costs 1.4 to 1.9
-times what it costs under Superpowers, down from 6.6 to 8.6 times. Every
+times what it costs under R1, down from 6.6 to 8.6 times. Every
 session after the change passed its hidden tests and its three gates. Before it, two of the four
 Compass sessions ended with at least one gate still pending.
 
 ## Results
 
 Two B6 scenarios, two sessions each, model `claude-opus-5-5`.
-Superpowers is pinned at `8ca22dba` (v6.4.2). The "before" and rival
+R1 is pinned at `8ca22dba` (v6.4.2). The "before" and rival
 sessions are the published B6 runs (`2026-09-28-eval-comparison.md`), with
 Compass at `99dfa86`. The "after" sessions ran Compass at `85bce9e`.
 Tokens count every token each model call reported. Hidden tests are the
@@ -18,29 +20,29 @@ scenario's own, which the session never sees.
 |---|---|---|---|---|---|---|
 | `cmp-small-fix` | no framework | 1 | 69,929 | 4 | 2/2 | - |
 | `cmp-small-fix` | no framework | 2 | 68,561 | 4 | 2/2 | - |
-| `cmp-small-fix` | superpowers | 1 | 120,451 | 6 | 2/2 | - |
-| `cmp-small-fix` | superpowers | 2 | 99,032 | 5 | 2/2 | - |
+| `cmp-small-fix` | R1 | 1 | 120,451 | 6 | 2/2 | - |
+| `cmp-small-fix` | R1 | 2 | 99,032 | 5 | 2/2 | - |
 | `cmp-small-fix` | compass before | 1 | 668,052 | 19 | 2/2 | pass |
 | `cmp-small-fix` | compass before | 2 | 788,153 | 21 | 2/2 | pending |
 | `cmp-small-fix` | compass after | 1 | 150,502 | 7 | 2/2 | pass |
 | `cmp-small-fix` | compass after | 2 | 150,013 | 7 | 2/2 | pass |
 | `cmp-feature` | no framework | 1 | 70,301 | 4 | 3/3 | - |
 | `cmp-feature` | no framework | 2 | 69,958 | 4 | 3/3 | - |
-| `cmp-feature` | superpowers | 1 | 102,269 | 5 | 3/3 | - |
-| `cmp-feature` | superpowers | 2 | 78,599 | 4 | 3/3 | - |
+| `cmp-feature` | R1 | 1 | 102,269 | 5 | 3/3 | - |
+| `cmp-feature` | R1 | 2 | 78,599 | 4 | 3/3 | - |
 | `cmp-feature` | compass before | 1 | 818,973 | 22 | 3/3 | pass |
 | `cmp-feature` | compass before | 2 | 736,380 | 19 | 3/3 | pending |
 | `cmp-feature` | compass after | 1 | 196,426 | 8 | 3/3 | pass |
 | `cmp-feature` | compass after | 2 | 142,626 | 6 | 3/3 | pass |
 
-Means, and Compass after against Superpowers:
+Means, and Compass after against R1:
 
-| Scenario | No framework | Superpowers | Compass before | Compass after | After / Superpowers |
+| Scenario | No framework | R1 | Compass before | Compass after | After / R1 |
 |---|---|---|---|---|---|
 | `cmp-small-fix` | 69,245 | 109,742 | 728,103 | 150,258 | 1.37 |
 | `cmp-feature` | 70,130 | 90,434 | 777,677 | 169,526 | 1.87 |
 
-One session, `cmp-feature` 1, is 2.17 times Superpowers' mean. It spent
+One session, `cmp-feature` 1, is 2.17 times R1's mean. It spent
 one call reading `compass quick-fix start --help` before using the flags
 the command had already shown it.
 

@@ -8919,7 +8919,7 @@
 - **Source issue:** `quick-fix-overhead`
 - **Landed:** 2026-09-28
 
-### a re-run costs at most twice Superpowers _(archived)_
+### a re-run costs at most twice R1 _(archived)_
 
 - **Scenario id:** `QFO-7`
 - **Intent:** `INT-1`
@@ -10745,3 +10745,66 @@
 - **Intent:** `INT-1`
 - **Source issue:** `contribution-guide`
 - **Landed:** 2026-10-03
+
+### Given a scenario title that attaches a duration to a user or claims an outside user, then scenario add refuses it when it is recorded, using the same patterns the public-copy check applies. _(archived)_
+
+- **Scenario id:** `TT-1`
+- **Intent:** `INT-1`
+- **Source issue:** `title-times-a-user`
+- **Landed:** 2026-10-03
+
+### Given the tracked tree, when the gate scans every tracked file's text and every tracked path against the committed hashes, then it finds no rival name. _(archived)_
+
+- **Scenario id:** `RN-1`
+- **Intent:** `INT-1`
+- **Source issue:** `rival-names-never-committed`
+- **Landed:** 2026-10-04
+
+### Given a name planted in a tracked file, a tracked path, a commit message and a pull request body, then the gate fails on each, and its output gives the place but never the name. _(archived)_
+
+- **Scenario id:** `RN-2`
+- **Intent:** `INT-1`
+- **Source issue:** `rival-names-never-committed`
+- **Landed:** 2026-10-04
+
+### Given the order file's own name, which ends with one rival's alias, then the gate passes it; the same scan without the allowed compound fails, so the exemption is what passes it. _(archived)_
+
+- **Scenario id:** `RN-3`
+- **Intent:** `INT-1`
+- **Source issue:** `rival-names-never-committed`
+- **Landed:** 2026-10-04
+
+### Given no names key, when the harness is asked for a rival condition, then it stops with a message naming the missing key, and bare and compass runs still work; given a key, a rival condition builds its copy from the key's pinned source. _(archived)_
+
+- **Scenario id:** `RN-4`
+- **Intent:** `INT-1`
+- **Source issue:** `rival-names-never-committed`
+- **Landed:** 2026-10-04
+
+### Given a record path holding names and a project that configures a names key, when the record syncs, then the record holds codes only and the gate passes over the synced copy; when the configured key is missing, sync refuses with exit 2 and sends nothing. _(archived)_
+
+- **Scenario id:** `RN-5`
+- **Intent:** `INT-1`
+- **Source issue:** `rival-names-never-committed`
+- **Landed:** 2026-10-04
+
+### Given a pull request, then CI runs the gate over the text of its commit messages, title and body. _(archived)_
+
+- **Scenario id:** `RN-6`
+- **Intent:** `INT-1`
+- **Source issue:** `rival-names-never-committed`
+- **Landed:** 2026-10-04
+
+### Given CLAUDE.md, the house rules and the plugin's writing guidance, then each states the rule and the code convention. _(archived)_
+
+- **Scenario id:** `RN-7`
+- **Intent:** `INT-1`
+- **Source issue:** `rival-names-never-committed`
+- **Landed:** 2026-10-04
+
+### Given the key, then the committed hash file is exactly what the generator writes from it, so the gate covers every entry in the key. _(archived)_
+
+- **Scenario id:** `RN-8`
+- **Intent:** `INT-1`
+- **Source issue:** `rival-names-never-committed`
+- **Landed:** 2026-10-04

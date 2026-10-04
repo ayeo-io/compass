@@ -1,5 +1,7 @@
 # Intent - first-hour
 
+Rival products appear as codes R1 to R9; the maintainer holds the key.
+
 > **Author:** jed72 · **Date:** 2026-08-26
 > **Governance owner check:** consistent with `governance/strategies.md`.
 > This intent document is the parent of six issues. Each issue's
@@ -12,7 +14,7 @@
 ## Problem
 
 A Claude Code user's first hour with Compass is worse than their first hour
-with Superpowers, even though Compass has the stronger mechanism underneath
+with R1, even though Compass has the stronger mechanism underneath
 (routing, evidence, traceability, CI). The plugin hook refuses code edits in
 repos that have never opted in; nothing loads the operating contract into a
 session; a feature run reads roughly three times the instruction prose; and
@@ -23,7 +25,7 @@ in `.compass/work/` next to machine state.
 ## Desired outcome
 
 Someone who installs Compass from the marketplace gets the same
-frictionless first hour they would get from Superpowers, and finds the
+frictionless first hour they would get from R1, and finds the
 mechanism (routing, evidence, traceability, CI) already working underneath
 it. Human-facing artifacts are where a reviewer would look for them.
 
@@ -40,13 +42,13 @@ it. Human-facing artifacts are where a reviewer would look for them.
   holds only the manifest, evidence and markers.
 - INT-4 A quick-fix issue reads one command and one skill and produces the
   manifest plus red/green evidence and nothing else; resident per-turn cost is
-  at or under Superpowers' (about 1k tokens).
+  at or under R1's (about 1k tokens).
 - INT-5 A green cannot be recorded without a red on record for the same
   scenario; the hook checks a digested red record rather than an empty
   marker; fail-closed behaviour is the same for every python failure mode.
 - INT-6 The public surface carries no retired vocabulary, no dead links, and
   no claim that contradicts the routing policy.
-- INT-7 A written recommendation exists on which parts of Superpowers' SDD
+- INT-7 A written recommendation exists on which parts of R1's SDD
   controller loop transfer to the orchestrator/builder protocol.
 
 ## Constraints
@@ -68,7 +70,7 @@ it. Human-facing artifacts are where a reviewer would look for them.
 ## Internal FAQ
 
 **Why now?**
-The comparison against Superpowers 6.3.0 on 26 Aug 2026 found Compass ahead
+The comparison against R1 6.3.0 on 26 Aug 2026 found Compass ahead
 on mechanism and behind on the first hour. The blockers are small relative
 to the mechanism, and every week they stand costs adopters.
 
@@ -111,7 +113,7 @@ about to move.
 things fall short of what the intake asked for. jed72 accepted both on
 2026-09-23.
 
-- INT-4 asks for resident per-turn cost at or under Superpowers', about 1,000
+- INT-4 asks for resident per-turn cost at or under R1's, about 1,000
   tokens. The issue that delivers and measures it records about 1,600. The
   rest of INT-4, one command and one skill and nothing else written, is
   delivered and verified.

@@ -104,8 +104,8 @@ that with data - and a human changes the policy, on evidence.
 and at least one has said in public, in their own words, that it made
 their delivery better.
 
-**D19.** The comparison question has a crisp answer. "Why not Superpowers/
-Spec-Kit/OpenSpec?" - *because none of them right-size the process, and
+**D19.** The comparison question has a crisp answer. "Why not R1/
+R3/R5?" - *because none of them right-size the process, and
 none of them can prove what they shipped.* The advantage (deterministic
 sizing + evidence you can fail) has not been traded away for any feature,
 however tempting.

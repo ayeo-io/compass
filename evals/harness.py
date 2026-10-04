@@ -1,7 +1,7 @@
 """Run one eval scenario under one condition and write a run record.
 
     python3 evals/harness.py --scenario <id> \\
-        --condition compass|bare|superpowers|spec-kit \\
+        --condition compass|bare|R1|R3 \\
         [--runs N] [--out DIR] [--claude PATH] [--plugin-source DIR] \\
         [--framework-source DIR] [--uvx PATH]
 
@@ -28,11 +28,11 @@ a built environment, not an inherited one - no `CLAUDE*` variable and no
 installed plugin's `bin/` reach it - so a run cannot fall back to whatever
 `compass` happens to be on the machine that started it.
 
-Under the `superpowers` condition the session loads a read-only copy of
-`evals/frameworks.yml`'s pinned Superpowers commit as `--plugin-dir` - built
+Under the `R1` condition the session loads a read-only copy of
+the names key's pinned R1 commit as `--plugin-dir` - built
 fresh, once per harness call, from a clone of that pin, or from
 `--framework-source`, a local directory a test points here instead so no
-call here ever reaches the network. Under the `spec-kit` condition the same
+call here ever reaches the network. Under the `R3` condition the same
 kind of copy's own `specify init` seeds the repository for Claude, through
 `uvx`, before the seed commit - the same position `compass init` runs
 `bin/compass init` in for the compass condition. Either way the run
@@ -54,7 +54,7 @@ the tracked `evals/scenarios/` tree.
 
 Nothing here calls a real model: `--claude` names the executable, so a test
 can point it at a stand-in that prints a canned run and records its own
-arguments and environment. `--uvx` names spec-kit's own installer the same
+arguments and environment. `--uvx` names R3's own installer the same
 way.
 """
 from __future__ import annotations
@@ -108,31 +108,31 @@ from compass_pkg import host_launch  # noqa: E402
 # footings.
 #
 # `Bash(compass:*)` gives Compass's own commands standing, and
-# `.specify/scripts/bash/*` gives Spec Kit's the same. `specify init`
+# `.specify/scripts/bash/*` gives R3's the same. `specify init`
 # installs its skills to run one of `check-prerequisites.sh` first -
-# `speckit-implement`, `speckit-checklist`, `speckit-clarify`,
-# `speckit-converge` and `speckit-taskstoissues` among them - or
-# `setup-plan.sh` for `speckit-plan`, or `resolve-template.sh` for
-# `speckit-constitution`, as their own first step. Two more real names of
+# `R3-implement`, `R3-checklist`, `R3-clarify`,
+# `R3-converge` and `R3-taskstoissues` among them - or
+# `setup-plan.sh` for `R3-plan`, or `resolve-template.sh` for
+# `R3-constitution`, as their own first step. Two more real names of
 # its own, quoted here for the same reason and not a retired word either:
-# `speckit-analyze`, and
-# <!-- vocabulary-scan: allow - names Spec Kit's own real script and command, not a retired word --> `setup-tasks.sh` for `speckit-tasks`.
-# Read from Spec Kit's own command templates (`templates/commands/*.md`,
+# `R3-analyze`, and
+# <!-- vocabulary-scan: allow - names R3's own real script and command, not a retired word --> `setup-tasks.sh` for `R3-tasks`.
+# Read from R3's own command templates (`templates/commands/*.md`,
 # `scripts.sh:` in each one's frontmatter) at the pinned commit.
 #
-# Superpowers' own `subagent-driven-development` and `executing-plans`
+# R1's own `subagent-driven-development` and `executing-plans`
 # skills run five of its own bundled scripts, read from those two skills'
 # own `SKILL.md` at the pinned commit: `sdd-workspace`,
-# <!-- vocabulary-scan: allow - names Superpowers' own real script, not a retired word --> `task-brief` and
+# <!-- vocabulary-scan: allow - names R1's own real script, not a retired word --> `task-brief` and
 # `review-package` (`subagent-driven-development/scripts/`), and
-# <!-- vocabulary-scan: allow - names Superpowers' own real scripts, not a retired word --> `task-start` and `task-done` (`executing-plans/scripts/`).
+# <!-- vocabulary-scan: allow - names R1's own real scripts, not a retired word --> `task-start` and `task-done` (`executing-plans/scripts/`).
 # Each one runs from its own absolute path under the plugin's own root.
 # That root is not on this static tuple: a real session refused
-# <!-- vocabulary-scan: allow - names Superpowers' own real script, not a retired word --> `${CLAUDE_PLUGIN_ROOT}/skills/executing-plans/scripts/task-start` - the
+# <!-- vocabulary-scan: allow - names R1's own real script, not a retired word --> `${CLAUDE_PLUGIN_ROOT}/skills/executing-plans/scripts/task-start` - the
 # `permission_denials` it recorded named the literal, unexpanded string,
 # not the path Claude Code actually ran - so a Bash allow rule has to
 # carry the real directory the harness built for that run, computed at
-# call time by `_superpowers_script_rules` and appended in
+# call time by `_r1_script_rules` and appended in
 # `_common_claude_args`, never a variable Claude Code is asked to resolve
 # on its own.
 #
@@ -156,11 +156,11 @@ ALLOWED_TOOLS: tuple[str, ...] = (
     "Bash(.specify/scripts/bash/resolve-template.sh:*)",
 )
 
-# Each pair is a Superpowers skill and the one of its own bundled scripts
+# Each pair is a R1 skill and the one of its own bundled scripts
 # that skill runs, read from both skills' own `SKILL.md` at the pinned
-# commit - the same five `_superpowers_script_rules` below turns into a
+# commit - the same five `_r1_script_rules` below turns into a
 # Bash allow rule per call, with that call's own real directory.
-_SUPERPOWERS_SCRIPTS: tuple[tuple[str, str], ...] = (
+_R1_SCRIPTS: tuple[tuple[str, str], ...] = (
     ("subagent-driven-development", "sdd-workspace"),
     ("subagent-driven-development", "task-brief"),
     ("subagent-driven-development", "review-package"),
@@ -169,8 +169,8 @@ _SUPERPOWERS_SCRIPTS: tuple[tuple[str, str], ...] = (
 )
 
 
-def _superpowers_script_rules(superpowers_scripts_dir: Path) -> tuple[str, ...]:
-    """Three Bash allow-list entries per `_SUPERPOWERS_SCRIPTS` pair.
+def _r1_script_rules(r1_scripts_dir: Path) -> tuple[str, ...]:
+    """Three Bash allow-list entries per `_R1_SCRIPTS` pair.
     `executing-plans`' own `SKILL.md` runs a script bare, by its own
     absolute path, which the first entry covers - Claude Code does not
     expand `${CLAUDE_PLUGIN_ROOT}` inside a Bash allow rule, so the rule
@@ -186,8 +186,8 @@ def _superpowers_script_rules(superpowers_scripts_dir: Path) -> tuple[str, ...]:
     gets all three, not only the ones `subagent-driven-development` owns,
     so this function has one shape to test rather than two."""
     rules: list[str] = []
-    for skill, script in _SUPERPOWERS_SCRIPTS:
-        script_path = f"{superpowers_scripts_dir}/skills/{skill}/scripts/{script}"
+    for skill, script in _R1_SCRIPTS:
+        script_path = f"{r1_scripts_dir}/skills/{skill}/scripts/{script}"
         rules.append(f"Bash({script_path}:*)")
         rules.append(f"Bash(bash {script_path}:*)")
         rules.append(f"Bash(bash scripts/{script}:*)")
@@ -254,13 +254,40 @@ def load_scenario(scenario_dir: Path) -> dict[str, Any]:
     return data
 
 
+# The rival conditions' clone addresses and pins live in the maintainer's
+# names key, never in this repository: committed text names no rival
+# product (governance/decisions/2026-10-04-rival-names-never-committed.md).
+_RIVALS_KEY = Path(".compass") / "private" / "rival-codes.yml"
+
+
+def rivals_key_path() -> Path:
+    """Where the names key is: `COMPASS_RIVALS_KEY`, then this checkout's
+    own copy, then the main checkout's when this is a linked worktree (the
+    key is untracked, so a worktree has none of its own)."""
+    if os.environ.get("COMPASS_RIVALS_KEY"):
+        return Path(os.environ["COMPASS_RIVALS_KEY"])
+    own = REPO_ROOT / _RIVALS_KEY
+    if own.is_file():
+        return own
+    common = _run_git(["rev-parse", "--path-format=absolute",
+                       "--git-common-dir"], REPO_ROOT, dict(os.environ))
+    if common.returncode == 0 and common.stdout.strip():
+        main = Path(common.stdout.strip()).parent / _RIVALS_KEY
+        if main.is_file():
+            return main
+    return own
+
+
 def load_frameworks_config(path: Path | None = None) -> dict[str, Any]:
-    """`evals/frameworks.yml` through the shared loader - each condition
-    name (`superpowers`, `spec-kit`) mapped to its own pinned `repo` and
-    `commit`. Never called for a run that names `--framework-source`
-    instead: a test that never reaches the network points there and never
-    reaches this function at all."""
-    return load_yaml(str(path or (REPO_ROOT / "evals" / "frameworks.yml")))
+    """Each rival condition (`R1`, `R3`) mapped to its pinned `repo`,
+    `commit` and any `paths` map. A file with a top-level `rivals:` is the
+    names key, and each code's `eval:` block is read; any other file is the
+    flat shape a test writes for its own fixture."""
+    data = load_yaml(str(path or rivals_key_path())) or {}
+    if isinstance(data.get("rivals"), dict):
+        return {code: entry["eval"] for code, entry in data["rivals"].items()
+                if isinstance(entry, dict) and isinstance(entry.get("eval"), dict)}
+    return data
 
 
 # --- the one function every git call in this module runs through -----------
@@ -464,15 +491,15 @@ def _run_compass_init(plugin_copy_dir: Path, repo_dir: Path,
 
 def _run_specify_init(uvx_exe: str, framework_copy_dir: Path, repo_dir: Path,
                        env: dict[str, str]) -> None:
-    """Run Spec Kit's own `specify init` for Claude in the seed, through
+    """Run R3's own `specify init` for Claude in the seed, through
     `uvx` from the pinned commit's read-only copy - before the seed commit,
     the same position `_run_compass_init` runs `compass init` in for the
     compass condition. `--here` targets `repo_dir` itself rather than
     creating a new one inside it; `--non-interactive --force
     --ignore-agent-tools` make it run to completion with no prompt and no
     check for a real `claude` binary, which the harness's own `--claude`
-    may not even be. A failure here would give a spec-kit run seeded with
-    nothing spec-kit itself wrote, where the condition silently measures
+    may not even be. A failure here would give a R3 run seeded with
+    nothing R3 itself wrote, where the condition silently measures
     the bare condition instead - the same silent-empty-seed mistake
     `_run_compass_init` already refuses, so this refuses the same way."""
     result = subprocess.run(
@@ -487,7 +514,7 @@ def _run_specify_init(uvx_exe: str, framework_copy_dir: Path, repo_dir: Path,
             f"specify init failed in {repo_dir} (exit {result.returncode}): {stderr}")
 
 
-# --- the framework copy (superpowers, spec-kit) -----------------------------
+# --- the framework copy (R1, R3) -----------------------------
 
 def _framework_source_dir(condition: str, framework_source_override: Path | None,
                            frameworks_config: dict[str, Any], env: dict[str, str]
@@ -495,7 +522,7 @@ def _framework_source_dir(condition: str, framework_source_override: Path | None
     """The directory holding `condition`'s framework at its own `HEAD` -
     `framework_source_override` directly, when a test gave one, so nothing
     here ever reaches the network; otherwise a fresh clone of
-    `evals/frameworks.yml`'s pinned repository and commit for `condition`,
+    the names key's pinned repository and commit for `condition`,
     through `_run_git`, into a temporary directory the caller must remove.
     Returns the directory and whether it is this call's own temporary clone
     (`True`, the caller's to remove) or the caller's own override (`False`,
@@ -504,7 +531,7 @@ def _framework_source_dir(condition: str, framework_source_override: Path | None
         return framework_source_override, False
     entry = frameworks_config.get(condition)
     if not entry:
-        raise SystemExit(f"no {condition!r} entry in evals/frameworks.yml")
+        raise SystemExit(f"no {condition!r} entry in the names key")
     clone_dir = Path(tempfile.mkdtemp())
     # The one clone in this module that needs the network - `allow_protocol
     # ="https"` widens `_run_git`'s own protocol lock for this call alone;
@@ -529,19 +556,19 @@ def _check_framework_commit_pin(condition: str, commit: str,
                                  frameworks_config: dict[str, Any]) -> None:
     """Stop the run if `commit` - the framework copy's own resolved `HEAD`,
     from a fresh clone or from `--framework-source` alike - is not the
-    commit `evals/frameworks.yml` pins for `condition`. A
+    commit the names key pins for `condition`. A
     `--framework-source` a test or an operator points elsewhere is
     exactly as able to drift from the pin as a clone racing a force-push
     upstream, so both go through this one check, not only the clone path."""
     entry = frameworks_config.get(condition)
     pinned = entry.get("commit") if entry else None
     if not pinned:
-        raise SystemExit(f"no {condition!r} entry in evals/frameworks.yml "
+        raise SystemExit(f"no {condition!r} entry in the names key "
                           f"to check {commit} against")
     if commit != pinned:
         raise SystemExit(
             f"{condition} framework is at commit {commit}, not the commit "
-            f"evals/frameworks.yml pins ({pinned})")
+            f"names key pins ({pinned})")
 
 
 def _prepare_framework_copy(condition: str, framework_source_override: Path | None,
@@ -552,13 +579,13 @@ def _prepare_framework_copy(condition: str, framework_source_override: Path | No
     `HEAD`, outside this checkout (`_copy_git_tree_read_only`, with no path
     excluded - a framework carries none of this repository's own scenario
     or behaviour names to protect), and the commit the copy was built
-    from. `superpowers` passes the copy on as `--plugin-dir`
-    (`_common_claude_args`); `spec-kit` runs `specify init` from it
+    from. `R1` passes the copy on as `--plugin-dir`
+    (`_common_claude_args`); `R3` runs `specify init` from it
     (`_run_specify_init`); the run record carries the commit either way
     (`framework: {name, commit}`). `_check_framework_commit_pin` runs
     before the copy is built, so a framework at the wrong commit - cloned
     or given by `--framework-source` - never reaches a session at all."""
-    if condition not in ("superpowers", "spec-kit"):
+    if condition not in ("R1", "R3"):
         return None, None
     source_dir, is_temporary = _framework_source_dir(
         condition, framework_source_override, frameworks_config, env)
@@ -605,7 +632,8 @@ def _backdate_setup_date(repo_dir: Path) -> None:
     config_path.write_text(text.replace(match.group(1), backdated), encoding="utf-8")
 
 
-def _copy_tracked_files(source_dir: Path, dest_dir: Path, env: dict[str, str]) -> None:
+def _copy_tracked_files(source_dir: Path, dest_dir: Path, env: dict[str, str],
+                        path_map: dict[str, str] | None = None) -> None:
     """Copy only `source_dir`'s own git-tracked files into `dest_dir`. A
     scenario's seed and overlay directories are tracked inside this
     repository; a local file that never was, such as a stray
@@ -631,19 +659,31 @@ def _copy_tracked_files(source_dir: Path, dest_dir: Path, env: dict[str, str]) -
         raise SystemExit(f"{source_dir} has no git-tracked file to seed a run with")
     for name in names:
         source_path = source_dir / name
-        dest_path = dest_dir / name
+        dest_path = dest_dir / _mapped(name, path_map or {})
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source_path, dest_path)
+
+
+def _mapped(name: str, path_map: dict[str, str]) -> str:
+    """`name` with a leading folder from `path_map` replaced. A rival's
+    seed overlay is committed with its own working folder named by code
+    (`docs/R1/`); the names key maps it back to the folder that rival
+    really uses, so the session sees what the rival itself would write."""
+    for committed, runtime in path_map.items():
+        if name == committed or name.startswith(committed + "/"):
+            return runtime + name[len(committed):]
+    return name
 
 
 def _materialise_repo(scenario_dir: Path, condition: str, repo_dir: Path,
                        plugin_copy_dir: Path | None,
                        framework_copy_dir: Path | None, uvx_exe: str,
-                       child_env: dict[str, str]) -> None:
+                       child_env: dict[str, str],
+                       seed_paths: dict[str, str] | None = None) -> None:
     """Copy the seed's own git-tracked files, then seed the condition's own
     state before the seed commit - the compass condition runs the plugin
     copy's `compass init` and backdates the setup date it records; the
-    spec-kit condition runs the framework copy's own `specify init` - then
+    R3 condition runs the framework copy's own `specify init` - then
     lay the condition's own overlay over the result. In that order, so the
     overlay can add to what init already wrote and all of it is part of the
     seed commit, not a change the session made."""
@@ -657,18 +697,18 @@ def _materialise_repo(scenario_dir: Path, condition: str, repo_dir: Path,
             raise SystemExit("compass condition needs a plugin copy")
         _run_compass_init(plugin_copy_dir, repo_dir, child_env)
         _backdate_setup_date(repo_dir)
-    elif condition == "spec-kit":
+    elif condition == "R3":
         if framework_copy_dir is None:
-            raise SystemExit("spec-kit condition needs a framework copy")
+            raise SystemExit("R3 condition needs a framework copy")
         _run_specify_init(uvx_exe, framework_copy_dir, repo_dir, child_env)
 
     # One overlay directory per condition - "seed_compass", "seed_bare",
-    # "seed_superpowers", "seed_spec_kit" - each optional; a scenario that
+    # "seed_R1", "seed_R3" - each optional; a scenario that
     # carries none for a condition seeds it from `seed/` alone.
     overlay_name = f"seed_{condition.replace('-', '_')}"
     overlay_dir = scenario_dir / overlay_name
     if overlay_dir.is_dir():
-        _copy_tracked_files(overlay_dir, repo_dir, child_env)
+        _copy_tracked_files(overlay_dir, repo_dir, child_env, seed_paths)
 
 
 # The three paths that let a git command in the session's own repository
@@ -886,21 +926,21 @@ _PINNED_CLAUDE_MODEL = "claude-opus-5-5"
 
 def _common_claude_args(condition: str, plugin_copy_dir: Path | None,
                          framework_copy_dir: Path | None,
-                         superpowers_scripts_dir: Path
+                         r1_scripts_dir: Path
                          ) -> list[str]:
-    """`superpowers_scripts_dir` is the directory this harness call's own
-    Superpowers-script allow rules are built against - the superpowers
+    """`r1_scripts_dir` is the directory this harness call's own
+    R1-script allow rules are built against - the R1
     condition's own `--plugin-dir` copy, or, for every other condition, a
     directory the harness still built for this call but never mounts as a
     plugin, kept only so every condition's allow-list carries the same
-    five rules (`main`'s own `superpowers_scripts_dir` decides which)."""
+    five rules (`main`'s own `r1_scripts_dir` decides which)."""
     args = [
         "--output-format", "stream-json",
         "--verbose",
         "--setting-sources", "project,local",
         "--permission-mode", "acceptEdits",
         "--allowedTools", ",".join(ALLOWED_TOOLS
-                                    + _superpowers_script_rules(superpowers_scripts_dir)),
+                                    + _r1_script_rules(r1_scripts_dir)),
         "--strict-mcp-config",
         "--model", _PINNED_CLAUDE_MODEL,
     ]
@@ -911,12 +951,12 @@ def _common_claude_args(condition: str, plugin_copy_dir: Path | None,
         # outside the temporary repository `--plugin-dir` alone does not
         # widen.
         args += ["--plugin-dir", str(plugin_copy_dir), "--add-dir", str(plugin_copy_dir)]
-    elif condition == "superpowers":
-        # Superpowers passes as `--plugin-dir` directly - the copy carries
+    elif condition == "R1":
+        # R1 passes as `--plugin-dir` directly - the copy carries
         # its own `.claude-plugin/plugin.json` at its root, the same shape
         # `--plugin-dir` already expects for the compass condition. It
         # gets the same `--add-dir`: without it, a `cat` of one of
-        # Superpowers' own files sits outside the working directory
+        # R1's own files sits outside the working directory
         # `--plugin-dir` alone does not widen, the same refusal `--add-dir`
         # already fixes for compass.
         args += ["--plugin-dir", str(framework_copy_dir),
@@ -1534,12 +1574,13 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
              plugin_copy_dir: Path | None,
              framework_copy_dir: Path | None = None,
              framework_commit: str | None = None, uvx_exe: str = "uvx",
-             superpowers_scripts_dir: Path,
-             child_env: dict[str, str]
+             r1_scripts_dir: Path,
+             child_env: dict[str, str],
+             seed_paths: dict[str, str] | None = None
              ) -> dict[str, Any]:
     """Do one run of `scenario` under `condition` and return its record.
     `plugin_copy_dir`, `framework_copy_dir`, `framework_commit`,
-    `superpowers_scripts_dir` and `child_env` are built once per harness
+    `r1_scripts_dir` and `child_env` are built once per harness
     call, by `_prepare_plugin_copy` and `_prepare_framework_copy`, and
     reused by every run - never rebuilt here."""
     started = datetime.now(timezone.utc).isoformat()
@@ -1560,7 +1601,7 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
         repo_dir = Path(tmp)
         _materialise_repo(scenario_dir, condition, repo_dir,
                            plugin_copy_dir, framework_copy_dir, uvx_exe,
-                           child_env)
+                           child_env, seed_paths)
         seed_commit = _git_init_and_commit(repo_dir, child_env)
         seed_git_snapshot = _snapshot_git_config(repo_dir)
         tampered_paths: list[str] = []
@@ -1579,7 +1620,7 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
             seed_outcomes = _pytest_outcomes(seed_output)
 
         common_args = _common_claude_args(condition, plugin_copy_dir, framework_copy_dir,
-                                           superpowers_scripts_dir)
+                                           r1_scripts_dir)
         budget_usd = float(scenario["budget_usd"])
 
         remaining = round(budget_usd - state["cost_usd"], 6)
@@ -1744,7 +1785,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
                          help="a scenario id under evals/scenarios/, or a "
                               "path to a scenario directory")
     parser.add_argument("--condition", required=True,
-                         choices=["compass", "bare", "superpowers", "spec-kit"])
+                         choices=["compass", "bare", "R1", "R3"])
     parser.add_argument("--runs", type=int, default=1)
     parser.add_argument("--out", default=None,
                          help="defaults to evals/out/ under this repository")
@@ -1759,21 +1800,24 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--framework-source", default=None,
                          help="a local directory already checked out at a "
                               "framework's own commit, used for the "
-                              "superpowers or spec-kit condition instead of "
-                              "cloning evals/frameworks.yml's pinned "
+                              "R1 or R3 condition instead of "
+                              "cloning the names key's pinned "
                               "repository - what a test points at a "
                               "fixture with, so it never reaches the "
                               "network")
     parser.add_argument("--uvx", default="uvx",
-                         help="the executable to run spec-kit's own "
+                         help="the executable to run R3's own "
                               "specify init through - a real uvx, or a "
                               "stand-in for a test")
     parser.add_argument("--frameworks-config", default=None,
-                         help="the frameworks.yml-shaped file the "
-                              "superpowers or spec-kit condition checks "
+                         help="the names key, or a file of the same "
+                              "pins, the "
+                              "R1 or R3 condition checks "
                               "its own commit against, whether cloned or "
                               "given by --framework-source - defaults to "
-                              "evals/frameworks.yml; a test points this at "
+                              "COMPASS_RIVALS_KEY, then "
+                              ".compass/private/rival-codes.yml; a test "
+                              "points this at "
                               "a fixture pinning its own fixture commit")
     return parser
 
@@ -1803,6 +1847,17 @@ def main(argv: list[str] | None = None) -> int:
         print(f"no scenario directory at {scenario_dir}", file=sys.stderr)
         return 1
     scenario = load_scenario(scenario_dir)
+    rivals_key: Path | None = None
+    if args.condition in ("R1", "R3"):
+        rivals_key = (Path(args.frameworks_config) if args.frameworks_config
+                      else rivals_key_path())
+        if not rivals_key.is_file():
+            # Without the maintainer's key there is nothing to clone or pin
+            # against; bare and compass never need it.
+            print(f"skipped: the {args.condition} condition needs the rival "
+                  f"key ({rivals_key} is missing; set COMPASS_RIVALS_KEY or "
+                  f"--frameworks-config)", file=sys.stderr)
+            return 0
     out_dir = Path(args.out) if args.out else (REPO_ROOT / "evals" / "out")
     out_dir.mkdir(parents=True, exist_ok=True)
     plugin_source = Path(args.plugin_source) if args.plugin_source else REPO_ROOT
@@ -1812,27 +1867,29 @@ def main(argv: list[str] | None = None) -> int:
     plugin_copy_dir, child_env = _prepare_plugin_copy(args.condition, plugin_source)
     framework_copy_dir: Path | None = None
     framework_commit: str | None = None
-    if args.condition in ("superpowers", "spec-kit"):
+    seed_paths: dict[str, str] = {}
+    if args.condition in ("R1", "R3"):
         # Loaded whether or not `--framework-source` is given: a cloned
         # framework and one a test or an operator points at directly are
         # checked against the same pin.
-        frameworks_config = load_frameworks_config(
-            Path(args.frameworks_config) if args.frameworks_config else None)
+        frameworks_config = load_frameworks_config(rivals_key)
+        seed_paths = dict((frameworks_config.get(args.condition) or {})
+                          .get("paths") or {})
         framework_copy_dir, framework_commit = _prepare_framework_copy(
             args.condition, framework_source_override, frameworks_config, child_env)
 
-    # Every condition's allow-list carries the same five Superpowers-script
+    # Every condition's allow-list carries the same five R1-script
     # rules, each built with this directory's own absolute path. The
-    # superpowers condition reuses its own `--plugin-dir` copy - the one
+    # R1 condition reuses its own `--plugin-dir` copy - the one
     # path a session there could actually run those scripts from; every
     # other condition gets a fresh, otherwise-unused directory, never
     # mounted as a plugin, kept only so its allow-list has the same rules
-    # to offer, even though nothing loads Superpowers there to use them.
-    superpowers_scripts_dir_is_framework_copy = args.condition == "superpowers"
-    if superpowers_scripts_dir_is_framework_copy:
-        superpowers_scripts_dir = framework_copy_dir
+    # to offer, even though nothing loads R1 there to use them.
+    r1_scripts_dir_is_framework_copy = args.condition == "R1"
+    if r1_scripts_dir_is_framework_copy:
+        r1_scripts_dir = framework_copy_dir
     else:
-        superpowers_scripts_dir = Path(tempfile.mkdtemp())
+        r1_scripts_dir = Path(tempfile.mkdtemp())
     try:
         for run_index in range(1, args.runs + 1):
             record = run_once(scenario, scenario_dir, args.condition, run_index,
@@ -1841,8 +1898,8 @@ def main(argv: list[str] | None = None) -> int:
                                framework_copy_dir=framework_copy_dir,
                                framework_commit=framework_commit,
                                uvx_exe=args.uvx,
-                               superpowers_scripts_dir=superpowers_scripts_dir,
-                               child_env=child_env)
+                               r1_scripts_dir=r1_scripts_dir,
+                               child_env=child_env, seed_paths=seed_paths)
             out_path = out_dir / f"{scenario['id']}-{args.condition}-{run_index}.json"
             out_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
     finally:
@@ -1850,8 +1907,8 @@ def main(argv: list[str] | None = None) -> int:
             _remove_read_only_tree(plugin_copy_dir)
         if framework_copy_dir is not None:
             _remove_read_only_tree(framework_copy_dir)
-        if not superpowers_scripts_dir_is_framework_copy:
-            shutil.rmtree(superpowers_scripts_dir, ignore_errors=True)
+        if not r1_scripts_dir_is_framework_copy:
+            shutil.rmtree(r1_scripts_dir, ignore_errors=True)
     return 0
 
 

@@ -71,6 +71,7 @@ Rules:
 | [ADR-029](ADR-029-project-lessons-are-advice-data.md) | Project lessons are advice kept as data, injected under their own 150-word cap and never read by a check | accepted | answers `project-lessons`; additive under ADR-006 |
 | [ADR-030](ADR-030-compass-run-starts-host-sessions.md) | compass run is the one verb that starts a host session | accepted | answers `headless-runner`; a bounded exception to ADR-025 |
 | [ADR-031](ADR-031-delivery-record-in-a-second-repository.md) | The delivery record is kept in a second, private repository, synced at every landing | accepted | answers `delivery-record` |
+| [ADR-032](ADR-032-rival-names-in-an-off-github-key.md) | Rival product names are held in an off-GitHub key and kept out by hashed matching | proposed | answers `rival-names-never-committed`; keeps ADR-031's record clean |
 
 ## Principle → ADR mapping
 

@@ -38,8 +38,8 @@ RULE_WORDS = {
 USUAL_PLACE = {
     "bare": "NOTES.md",
     "compass": (".compass/work/*/devlog.md", "governance/decisions/*.md"),
-    "superpowers": "docs/superpowers/*/*.md",
-    "spec-kit": "specs/*/spec.md",
+    "R1": "docs/R1/*/*.md",
+    "R3": "specs/*/spec.md",
 }
 
 

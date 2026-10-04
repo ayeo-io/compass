@@ -48,7 +48,7 @@ PRIVATE = (
     ("an email address", re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")),
     # Compass never quotes another product in what it commits. The sample
     # needs none of them, so even a name is a sign a quotation came in.
-    ("another product", re.compile(r"(?i)superpowers|spec ?kit|kiro|builder\.?io|tessl")),
+    ("another product", re.compile(r"(?i)R1|R3|R9|R8|tessl")),
 )
 
 

@@ -29,12 +29,12 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a scenario title that attaches a duration to a user or claims an outside user, then scenario add refuses it when it is recorded, using the same patterns the public-copy check applies.
+### Given the published comparison runs after the sweep, then every number in them is unchanged and each carries one line saying rival products appear as codes and the maintainer holds the key.
 
-- **Scenario id:** `TT-1`
+- **Scenario id:** `RN-9`
 - **Intent:** `INT-1`
-- **Source issue:** `title-times-a-user`
-- **Landed:** 2026-10-03
+- **Source issue:** `rival-names-never-committed`
+- **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
 
@@ -332,4 +332,4 @@
 
 ---
 
-1534 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1543 superseded scenario(s) are in `docs/system-spec-archive.md`.

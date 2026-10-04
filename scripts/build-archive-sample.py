@@ -108,7 +108,7 @@ _SUBS = (
      "a private planning document"),
     (re.compile(r"\b(?:spec|Spec|PRD)\s[ABD]?\d{1,3}[a-z]?\b"), "a planning spec"),
     (re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+"), "<email>"),
-    (re.compile(r"the Kiro Crew analysis"), "a private analysis"),
+    (re.compile(r"the R9 analysis"), "a private analysis"),
     (re.compile("\u2014"), "-"),
     (re.compile(r"\\u2014"), "-"),
 )

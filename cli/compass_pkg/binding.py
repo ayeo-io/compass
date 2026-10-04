@@ -293,6 +293,21 @@ def _check_landed(task, root, path, record):
                   % (path, land[:12]))
 
 
+def evidence_state(task, task_dir):
+    """Whether an in-flight issue's newest test record still matches its
+    files: `none` when no record names a tree, `unknown` when git cannot name
+    the tree now, else `fresh` or `stale`. Read by the delivery board, and by
+    the check below, which decides what each state means for a gate."""
+    newest = _newest_bound_record(task, task_dir)
+    if newest is None:
+        return "none"
+    root = find_upwards(task_dir, ".compass") or task_dir
+    now = work_tree_id(root, claimed_paths(task))
+    if now is None:
+        return "unknown"
+    return "fresh" if now == newest[1]["tree_id"] else "stale"
+
+
 def _check_evidence_matches_tree(task, task_dir):
     """Is the newest test record still a record for this tree?
 
@@ -313,11 +328,11 @@ def _check_evidence_matches_tree(task, task_dir):
 
     gates = [g for g in task.get("gates") or [] if isinstance(g, dict)]
     ready = bool(gates) and all(g.get("status") == "pass" for g in gates)
-    now = work_tree_id(root, claimed_paths(task))
-    if now is None:
+    state = evidence_state(task, task_dir)
+    if state == "unknown":
         why = "git cannot name the tree now, so %s cannot be compared" % path
         return (False, why) if ready else (NOTHING_TO_CHECK, why)
-    if now == record["tree_id"]:
+    if state == "fresh":
         return True, "%s was recorded on the tree as it is now" % path
     stale = ("%s is stale: the tree changed after it was recorded - a file "
              "was edited, or the issue's changed_files grew, so it no longer "

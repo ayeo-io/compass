@@ -40,7 +40,7 @@ from compass_pkg.rework import cmd_rework_scan
 
 
 # --- command: flow ----------------------------------------------------------
-# Cross-issue flow view. Reads broadly; writes only when --digest is given.
+# Cross-issue flow view. Reads broadly; writes only the page `--html` names.
 # Never changes any manifest (`Inv-4`: Flow advises, never gates).
 
 # A queued issue older than this many days is flagged when it carries a
@@ -134,6 +134,286 @@ def queue_ageing(work_root, today=None):
     return top, "\n".join(table) + "\n"
 
 
+# --- the delivery board ------------------------------------------------------
+# One read of every manifest, shaped into the sections the board shows. Plain
+# data, so the text board, `--json` and the HTML page cannot disagree.
+
+LANDED_WINDOW_DAYS = 7
+
+
+def _queue_row(project_root, slug, m, today, guarded):
+    created = str(m.get("created") or "")
+    try:
+        age = (today - datetime.date.fromisoformat(created)).days
+    except ValueError:
+        return None
+    signals = []
+    if _has_recommendation(project_root, slug, created):
+        signals.append("recommendation")
+    assessment = m.get("assessment")
+    raw = assessment.get("labels") if isinstance(assessment, dict) else None
+    labels = [l for l in (raw if isinstance(raw, list) else []) if str(l) in guarded]
+    if labels:
+        signals.append("label " + ", ".join(str(l) for l in labels))
+    return (age, slug, signals)
+
+
+def _landed_at(m):
+    raw = str(m.get("land_timestamp") or "")
+    try:
+        when = datetime.datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=datetime.timezone.utc)
+    return when
+
+
+def board(work_root, today=None):
+    """The delivery board as plain data. Reads each manifest once, and runs git
+    (through the evidence check) for in-progress issues only."""
+    from compass_pkg.binding import evidence_state
+    from compass_pkg.next_cmd import _current_phase_from_task
+
+    today = today or datetime.date.today()
+    now = datetime.datetime.now(datetime.timezone.utc)
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(work_root)))
+    guarded = _routing_labels()
+    out = {"in_progress": [], "stale": [], "held": [], "next_up": [],
+           "landed_this_week": [], "abandoned": [], "other": [], "unreadable": [],
+           "friction": None, "counts": {}, "total": 0}
+    categories = {}
+    slugs = [d for d in sorted(os.listdir(work_root))
+             if os.path.isdir(os.path.join(work_root, d))]
+    out["total"] = len(slugs)
+    for slug in slugs:
+        task_dir = os.path.join(work_root, slug)
+        tp = manifest_path(task_dir)
+        if not os.path.isfile(tp):
+            out["unreadable"].append({"slug": slug, "note": "no manifest.yml"})
+            out["counts"]["unreadable"] = out["counts"].get("unreadable", 0) + 1
+            continue
+        try:
+            m = normalize_spine(load_yaml(tp))
+            if not isinstance(m, dict):
+                raise CompassError("not a mapping")
+        except Exception:                                   # noqa: BLE001
+            out["unreadable"].append({"slug": slug, "note": "unreadable manifest.yml"})
+            out["counts"]["unreadable"] = out["counts"].get("unreadable", 0) + 1
+            continue
+        try:
+            _board_place(out, categories, slug, task_dir, m, project_root,
+                         today, now, guarded, evidence_state,
+                         _current_phase_from_task)
+        except Exception as exc:                            # noqa: BLE001
+            # One malformed manifest must not hide every other issue.
+            out["unreadable"].append({"slug": slug, "note": "malformed manifest.yml "
+                                      "(%s)" % type(exc).__name__})
+            out["counts"]["unreadable"] = out["counts"].get("unreadable", 0) + 1
+    out["next_up"].sort(key=lambda r: (-(r["age_days"] or 0), r["slug"]))
+    if categories:
+        top = sorted(categories.items(), key=lambda kv: (-kv[1], kv[0]))[0]
+        out["friction"] = {"category": top[0], "count": top[1]}
+    return out
+
+
+def _board_place(out, categories, slug, task_dir, m, project_root, today, now,
+                 guarded, evidence_state, current_stage):
+    """Put one issue's row in its section. Raises on a field of the wrong
+    type, which the caller reports as a malformed manifest."""
+    # Absent means active: manifests written before the status field
+    # existed omit it (ADR-006).
+    status = m.get("status") or "active"
+    if not isinstance(status, str):
+        raise TypeError("status is not text")
+    approach = m.get("delivery_approach") or "not assessed"
+    if status == "active":
+        gates = m.get("gates") or []
+        if not isinstance(gates, list):
+            raise TypeError("gates is not a list")
+        gates = [g for g in gates if isinstance(g, dict)]
+        passed = sum(1 for g in gates if g.get("status") == "pass")
+        state = evidence_state(m, task_dir)
+        row = {"slug": slug, "delivery_approach": approach,
+               "stage": current_stage(m, task_dir) or "done",
+               "gates": f"{passed}/{len(gates)}", "evidence": state}
+        out["stale" if state == "stale" else "in_progress"].append(row)
+    elif status == "parked":
+        out["held"].append({"slug": slug, "delivery_approach": approach,
+                            "reason": str(m.get("parked_reason") or "no reason recorded")})
+    elif status == "queued":
+        q = _queue_row(project_root, slug, m, today, guarded)
+        out["next_up"].append({"slug": slug, "delivery_approach": approach,
+                               "age_days": q[0] if q else None,
+                               "signal": "; ".join(q[2]) if q else ""})
+    elif status == "landed":
+        when = _landed_at(m)
+        if when and when <= now and (now - when).days < LANDED_WINDOW_DAYS:
+            out["landed_this_week"].append({"slug": slug, "delivery_approach": approach,
+                                            "landed": when.date().isoformat()})
+            friction = m.get("friction")
+            for f in friction if isinstance(friction, list) else []:
+                if isinstance(f, dict) and f.get("category"):
+                    c = str(f["category"])
+                    categories[c] = categories.get(c, 0) + 1
+    elif status == "abandoned":
+        out["abandoned"].append({"slug": slug, "delivery_approach": approach})
+    else:
+        out["other"].append({"slug": slug, "delivery_approach": approach,
+                             "status": status})
+    out["counts"][status] = out["counts"].get(status, 0) + 1
+
+
+_BOARD_SECTIONS = (
+    ("in_progress", "IN PROGRESS", "In progress"),
+    ("stale", "STALE EVIDENCE - re-run the suite before ship", "Stale evidence"),
+    ("held", "HELD - parked, can resume", "Held"),
+    ("next_up", "NEXT UP - oldest first", "Next up"),
+    ("landed_this_week", "LANDED THIS WEEK", "Landed this week"),
+    ("abandoned", "ABANDONED - will not resume", "Abandoned"),
+    ("other", "OTHER STATUS - not one Compass sets", "Other status"),
+    ("unreadable", "UNPLACEABLE - no readable manifest.yml, so no state to report",
+     "Unplaceable"),
+)
+
+
+def _board_row(key, r):
+    if key in ("in_progress", "stale"):
+        return "%-40s approach=%s stage=%s gates=%s evidence=%s" % (
+            r["slug"], r["delivery_approach"], r["stage"], r["gates"], r["evidence"])
+    if key == "held":
+        return "%-40s approach=%s  - %s" % (r["slug"], r["delivery_approach"], r["reason"])
+    if key == "next_up":
+        age = "?" if r["age_days"] is None else r["age_days"]
+        return "%-40s approach=%s age=%s days%s" % (
+            r["slug"], r["delivery_approach"], age, "  - " + r["signal"] if r["signal"] else "")
+    if key == "landed_this_week":
+        return "%-40s approach=%s landed=%s" % (r["slug"], r["delivery_approach"], r["landed"])
+    if key == "unreadable":
+        return "%-40s - %s" % (r["slug"], r["note"])
+    if key == "other":
+        return "%-40s approach=%s status=%s" % (r["slug"], r["delivery_approach"], r["status"])
+    return "%-40s approach=%s" % (r["slug"], r["delivery_approach"])
+
+
+def _friction_line(data):
+    f = data["friction"]
+    if not f:
+        return "Friction this week: none recorded."
+    return "Friction this week: %s (%d)." % (f["category"], f["count"])
+
+
+def _render_board(args, data):
+    from compass_pkg.terminal import Report
+    counts = data["counts"]
+    rep = Report(args, title="compass flow - delivery board (advisory)")
+    rep.summary(
+        "compass flow - %d issue(s) across %d state(s), %d stale, %d landed "
+        "this week. Advisory: this changes no issue state."
+        % (data["total"], len(counts), len(data["stale"]),
+           len(data["landed_this_week"])),
+        ", ".join("%s %d" % (k, n) for k, n in sorted(counts.items()))
+        or "nothing to report",
+        _friction_line(data))
+    for key, heading, _ in _BOARD_SECTIONS:
+        rows = data[key]
+        rep.section(heading, rows, lambda r, k=key: _board_row(k, r))
+    rep.data(counts=counts, board={k: data[k] for k, _, _ in _BOARD_SECTIONS},
+             friction=data["friction"])
+    return rep.emit()
+
+
+def _check_html_target(target):
+    """Refuse a directory, and a path inside `.compass/` or `docs/compass/`,
+    which hold issue state. Checked before the board is read."""
+    path = os.path.abspath(target)
+    parent = os.path.dirname(path)
+    if not os.path.isdir(parent):
+        raise CompassError(f"compass flow --html: the folder for {target} does not exist")
+    # Resolve symlinks and compare without case: a link, or `.COMPASS` on a
+    # file system that ignores case, must not reach issue state.
+    path = os.path.join(os.path.realpath(parent), os.path.basename(path))
+    if os.path.isdir(path):
+        raise CompassError(f"compass flow --html: {target} is a directory; "
+                           f"name a file, such as board.html")
+    try:
+        project_root = os.path.dirname(find_compass_dir())
+    except CompassError:
+        project_root = os.getcwd()
+    folded = path.casefold()
+    for guarded, label in ((os.path.join(project_root, ".compass"), ".compass"),
+                           (os.path.join(project_root, "docs", "compass"), "docs/compass")):
+        g = os.path.realpath(guarded).casefold()
+        if folded == g or folded.startswith(g + os.sep):
+            raise CompassError(
+                f"compass flow --html: {target} is inside {label}/, "
+                f"which holds issue state; write the page somewhere else")
+    return path
+
+
+def _write_board_html(data, target):
+    """One static page from the board data: every value escaped, inline CSS,
+    no script and no external resource."""
+    import html
+    import tempfile
+    path = _check_html_target(target)
+    e = html.escape
+    cols = {"in_progress": ("Issue", "Approach", "Stage", "Gates", "Evidence"),
+            "stale": ("Issue", "Approach", "Stage", "Gates", "Evidence"),
+            "held": ("Issue", "Approach", "Reason"),
+            "next_up": ("Issue", "Approach", "Age (days)", "Signal"),
+            "landed_this_week": ("Issue", "Approach", "Landed"),
+            "abandoned": ("Issue", "Approach"),
+            "other": ("Issue", "Approach", "Status"),
+            "unreadable": ("Issue", "Why")}
+    keys = {"in_progress": ("slug", "delivery_approach", "stage", "gates", "evidence"),
+            "stale": ("slug", "delivery_approach", "stage", "gates", "evidence"),
+            "held": ("slug", "delivery_approach", "reason"),
+            "next_up": ("slug", "delivery_approach", "age_days", "signal"),
+            "landed_this_week": ("slug", "delivery_approach", "landed"),
+            "abandoned": ("slug", "delivery_approach"),
+            "other": ("slug", "delivery_approach", "status"),
+            "unreadable": ("slug", "note")}
+    generated = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    parts = ["<!doctype html>", "<html lang=\"en\"><head><meta charset=\"utf-8\">",
+             "<title>Compass delivery board</title>",
+             "<style>body{font-family:system-ui,sans-serif;margin:2rem;max-width:72rem}"
+             "table{border-collapse:collapse;width:100%;margin-bottom:1.5rem}"
+             "th,td{border:1px solid #ccc;padding:.3rem .5rem;text-align:left}"
+             "th{background:#f3f3f3}</style></head><body>",
+             "<h1>Compass delivery board</h1>",
+             "<p>Generated %s. Advisory: this page changes no issue state.</p>" % e(generated),
+             "<p>%s</p>" % e(", ".join("%s %d" % (k, n) for k, n in sorted(data["counts"].items()))),
+             "<p>%s</p>" % e(_friction_line(data))]
+    for key, _, title in _BOARD_SECTIONS:
+        rows = data[key]
+        parts.append("<h2>%s (%d)</h2>" % (e(title), len(rows)))
+        if not rows:
+            parts.append("<p>None.</p>")
+            continue
+        parts.append("<table><tr>" + "".join("<th>%s</th>" % e(c) for c in cols[key]) + "</tr>")
+        for r in rows:
+            parts.append("<tr>" + "".join(
+                "<td>%s</td>" % e("" if r.get(k) is None else str(r.get(k)))
+                for k in keys[key]) + "</tr>")
+        parts.append("</table>")
+    parts.append("</body></html>")
+    directory = os.path.dirname(path) or "."
+    fd, tmp = tempfile.mkstemp(dir=directory, prefix=".board-", suffix=".html")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write("\n".join(parts) + "\n")
+        os.chmod(tmp, 0o644)
+        os.replace(tmp, path)
+    except BaseException:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+        raise
+    print(f"compass flow: wrote the delivery board to {target}")
+    return 0
+
+
+
 def cmd_flow(args):
     """Produce the flow board; with --digest also output a dated digest section
     to stdout. The digest includes the rework-scan section and a retro
@@ -150,73 +430,23 @@ def cmd_flow(args):
         except CompassError:
             work_root = ".compass/work"
 
+    html_out = getattr(args, "html", None)
+    if html_out:
+        if do_digest:
+            raise CompassError("compass flow: --html writes the board, and "
+                               "--digest the digest; give one of them")
+        _check_html_target(html_out)
     if not do_digest:
-        # Live board mode: minimal - list issues and their delivery approaches
         if not os.path.isdir(work_root):
             print("compass flow: no issues found - work root does not exist.")
             return 0
-        slugs = [d for d in sorted(os.listdir(work_root))
-                 if os.path.isdir(os.path.join(work_root, d))]
-        if not slugs:
+        data = board(work_root)
+        if not data["total"]:
             print("compass flow: no issues under work root.")
             return 0
-        # Group by lifecycle state. A flat list counts parked work as active,
-        # and parked issues accumulate, so the active count gets more wrong
-        # over time.
-        groups = {"active": [], "queued": [], "parked": [], "landed": [],
-                  "abandoned": [], "unreadable": []}
-        for slug in slugs:
-            task_yml = manifest_path(os.path.join(work_root, slug))
-            if not os.path.isfile(task_yml):
-                groups["unreadable"].append((slug, "?", "no manifest.yml"))
-                continue
-            try:
-                t = normalize_spine(load_yaml(task_yml))
-                # The live manifest key, `delivery_approach`.
-                route = t.get("delivery_approach", "?")
-                # Absent means active: every manifest.yml written before the status
-                # field existed omits it (ADR-006).
-                status = t.get("status") or "active"
-                note = t.get("parked_reason", "") if status == "parked" else ""
-                groups.setdefault(status, []).append((slug, route, note))
-            except Exception:                                   # noqa: BLE001
-                groups["unreadable"].append((slug, "?", "unreadable manifest.yml"))
-
-        # The board is a REPORT: every issue is listed, because a board that
-        # omits part of the work looks complete when it is not. What it owes a
-        # reader is a summary they can stop at - the counts - before 150 rows
-        # of detail.
-        from compass_pkg.terminal import Report
-
-        headings = [
-            ("active", "IN PROGRESS"),
-            ("queued", "NEXT UP"),
-            ("parked", "PARKED - stopped, can resume"),
-            ("landed", "DONE"),
-            ("abandoned", "ABANDONED - will not resume"),
-        ]
-        named = {k for k, _ in headings} | {"unreadable"}
-        counts = {k: len(v) for k, v in groups.items() if v}
-        rep = Report(args, title="compass flow - cross-issue board (advisory)")
-        rep.summary(
-            "compass flow - %d issue(s) across %d state(s). Advisory: this "
-            "changes no issue state." % (len(slugs), len(counts)),
-            ", ".join("%s %d" % (k, n) for k, n in sorted(counts.items()))
-            or "nothing to report")
-
-        def _row(r):
-            slug, route, note = r
-            return "%-40s approach=%s%s" % (slug, route,
-                                            "  - %s" % note if note else "")
-
-        for key, heading in headings:
-            rep.section(heading, groups.get(key) or [], _row)
-        for key in sorted(set(groups) - named):
-            rep.section(key.upper(), groups[key], _row)
-        rep.section("UNPLACEABLE - no readable manifest.yml, so no state to report",
-                    groups["unreadable"], _row)
-        rep.data(counts=counts)
-        return rep.emit()
+        if html_out:
+            return _write_board_html(data, html_out)
+        return _render_board(args, data)
 
     # --digest mode: produce a digest including rework-scan
     import io as _io

@@ -227,6 +227,7 @@ consultation - see the [roles guide](docs/roles-guide.md).
 - **[Safety contract](docs/safety-contract.md):** what Compass guarantees and what it does not.
 - **[Security](docs/security.md):** hooks, dependencies and the trust model.
 - **[Portability](docs/portability.md):** how the methodology, kit and adapter fit together.
+- **[Contributing](CONTRIBUTING.md):** what judges a pull request, and where to start.
 
 ## License
 

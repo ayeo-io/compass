@@ -10738,3 +10738,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `delivery-board`
 - **Landed:** 2026-10-03
+
+### Given the contribution guide, then it names the required CI check, how review works with the automatic review off, the review rules file, the code owners and the house rules, and every path it names exists. _(archived)_
+
+- **Scenario id:** `CG-1`
+- **Intent:** `INT-1`
+- **Source issue:** `contribution-guide`
+- **Landed:** 2026-10-03

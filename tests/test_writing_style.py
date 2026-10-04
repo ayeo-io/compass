@@ -1177,13 +1177,6 @@ _register(Rule(
             "\"Implement\" and \"Ship\" - an identifier (section 4), "
             "not the verb the word table retires"),
         Exemption(
-            "commands/flow.md", "verifying",
-            "one label in a parallel list of pipeline-stage gerunds "
-            "(\"defining criteria . reviewing requirements . designing . "
-            "implementing . verifying . shipping\") - the stage name, not "
-            "the verb, and singling it out with \"the verify stage\" would "
-            "break the list's parallel form."),
-        Exemption(
             "skills/adaptive-routing/composition.md", "**Verify** - which "
             "review dimensions",
             "one label in a parallel bulleted list of pipeline-stage names "

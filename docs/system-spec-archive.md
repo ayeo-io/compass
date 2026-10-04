@@ -10976,3 +10976,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `trim-quick-fix-context`
 - **Landed:** 2026-10-04
+
+### Given the plugin installed under a path that contains a space, then each of the four hook commands in hooks.json runs its own script, because each quotes the plugin root. _(archived)_
+
+- **Scenario id:** `HQ-1`
+- **Intent:** `INT-1`
+- **Source issue:** `quote-the-plugin-root-in-hooks`
+- **Landed:** 2026-10-04

@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given an issue whose friction entry names a current stage such as implement, When compass issue lint runs with jsonschema installed, Then it passes; and Compass writes and loads friction phases in the current stage names, mapping a retired name such as frame to assess
+### Given cli/compass holds the shebang, build_parser and main, When a verb is registered in build_parser, Then the entry-point guard still passes; and when logic is added outside build_parser, or a loop or a new function is added, Then it fails
 
-- **Scenario id:** `FP-1`
+- **Scenario id:** `EC-1`
 - **Intent:** `INT-1`
-- **Source issue:** `friction-phase-takes-v2-stages`
+- **Source issue:** `entry-point-cap-measures-code`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1576 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1577 superseded scenario(s) are in `docs/system-spec-archive.md`.

@@ -11102,3 +11102,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `map-counts-agree`
 - **Landed:** 2026-10-04
+
+### Given a checkout with gitignored local state such as .compass/work, When make test-clean runs, Then it clones the committed HEAD into a temporary folder, runs the suite there without that state, and removes the folder afterwards _(archived)_
+
+- **Scenario id:** `CC-1`
+- **Intent:** `INT-1`
+- **Source issue:** `suite-from-a-clean-clone`
+- **Landed:** 2026-10-04

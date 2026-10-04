@@ -66,7 +66,7 @@ and the things it does not claim.
 - **No rival product name, in any form.** A rival product is named only by
   its code, R1 to R9, in every tracked file and path, branch name, commit
   message, pull request and synced record. The names key that maps codes to
-  names is `.compass/private/rival-codes.yml`; it is never committed. Read
+  names is the YAML file in `.compass/private/`; it is never committed. Read
   names only through it. `scripts/rival-name-gate.py` fails the build on a
   name; CI also runs it over each pull request's commits, title and body.
   Decision: `governance/decisions/2026-10-04-rival-names-never-committed.md`.

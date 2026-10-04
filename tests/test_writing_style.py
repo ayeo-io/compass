@@ -2054,13 +2054,6 @@ _register(Rule(
     _find_citation,
     exemptions=(
         Exemption(
-            "CLAUDE.md",
-            ".compass/private/rival-codes.yml",
-            "the rival names key is undistributed on purpose: committed "
-            "text must not hold the names it maps "
-            "(governance/decisions/2026-10-04-rival-names-never-committed.md), "
-            "and a session in this repository needs its exact path"),
-        Exemption(
             "docs/quickstart.md",
             ".compass/work/add-rate-limiting/manifest.yml",
             "the walkthrough's own hypothetical issue - it shows the "

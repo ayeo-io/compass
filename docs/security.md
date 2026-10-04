@@ -96,7 +96,7 @@ Treat governance files that declare `command-passes` **as code, not as configura
 continuous integration normally runs on a pull request **before** it is
 approved, so a contribution's command runs before anyone has read it. The
 explicit opt-in that closes this gap is
-[issue #65](https://github.com/jed72/compass/issues/65).
+[issue #65](https://github.com/ayeo-io/compass/issues/65).
 
 ### Safer default
 

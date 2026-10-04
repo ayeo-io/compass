@@ -382,12 +382,16 @@ def cmd_quick_fix_start(args):
     _quiet_run(cmd_scenario_add, task=slug, scenario_id=args.scenario_id,
               title=args.scenario, intent="INT-1", test=tests)
 
+    from compass_pkg.decisions import settled
+    decisions = settled(project_root)
     return say(
         args,
         f"compass quick-fix start: '{slug}' recorded as "
         f"{display_shape(approach)}.",
         detail=([f"created: {', '.join(created_dirs)} - tell the user"]
-                if created_dirs else []) + [
+                if created_dirs else []) + (
+            ["settled decisions (read any that touch this change):"]
+            + [f"  {line}" for line in decisions] if decisions else []) + [
                 f"record : {doc_path_rel}",
                 f"next   : write the failing test, then `compass tdd-red "
                 f"--scenario {args.scenario_id} -- <test command>`",

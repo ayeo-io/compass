@@ -55,7 +55,7 @@ small change from start to finish.
 ## Where to start
 
 Issues labelled
-[good first issue](https://github.com/jed72/compass/labels/good%20first%20issue)
+[good first issue](https://github.com/ayeo-io/compass/labels/good%20first%20issue)
 are small, checked against the current code, and each says what to change.
 Comment on one before you start, so two people do not do the same work.
 

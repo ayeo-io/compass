@@ -24,7 +24,7 @@ Compass project says so in place of the operating contract;
 Inside Claude Code:
 
 ```text
-/plugin marketplace add jed72/compass
+/plugin marketplace add ayeo-io/compass
 /plugin install compass@compass
 ```
 
@@ -33,7 +33,7 @@ Restart Claude Code if the new commands are not immediately visible.
 ### From source
 
 ```bash
-git clone https://github.com/jed72/compass.git
+git clone https://github.com/ayeo-io/compass.git
 cd compass
 bash scripts/install.sh --global
 ```

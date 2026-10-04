@@ -10969,3 +10969,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `trim-quick-fix-context`
 - **Landed:** 2026-10-04
+
+### Given `--help` for `quick-fix start`, `quick-fix finish`, `tdd-red` and `tdd-green`, then each, printed at 80 columns, is within a budget set from the rewrite (2,600 characters for `quick-fix start`, 1,500 for `quick-fix finish`, 1,450 for `tdd-red`, 1,250 for `tdd-green`) and still lists every option it accepted before. _(archived)_
+
+- **Scenario id:** `TC-2`
+- **Intent:** `INT-1`
+- **Source issue:** `trim-quick-fix-context`
+- **Landed:** 2026-10-04

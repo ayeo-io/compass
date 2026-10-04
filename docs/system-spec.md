@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the comparison run found Compass stopped to warn of a change that would break a hidden consumer, then the decisions ledger records the maintainer's decision to keep that stop at its measured cost, with its evidence.
+### Given a project whose decisions ledger holds entries, then quick-fix start lists each live entry's slug and first decision sentence, newest first and capped with a count of the rest, leaves out superseded entries, and adds nothing when the ledger is empty.
 
-- **Scenario id:** `KS-1`
+- **Scenario id:** `SD-1`
 - **Intent:** `INT-1`
-- **Source issue:** `keep-the-stop-before-a-breaking-change`
+- **Source issue:** `quick-fix-shows-settled-decisions`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1559 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1561 superseded scenario(s) are in `docs/system-spec-archive.md`.

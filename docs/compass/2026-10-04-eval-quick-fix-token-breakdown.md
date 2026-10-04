@@ -8,10 +8,22 @@ The 4 October run measured how much more a Compass quick fix costs than no frame
 
 ## Result
 
+A correction below narrows the "Compass CLI output" category.
+
 - **Most of every session is the resident load, read again on every request.** It is 63 to 72 percent of everything a Compass session reads, and 77 to 87 percent without a framework.
 - **Compass adds about 2,600 tokens to the resident load** (18,585 against 16,004 at the first request). Because every request reads it again, this alone is about a quarter of Compass's extra tokens.
 - **Compass CLI output and skill text enter early and are read again on every later request.** Together with the other text Compass injects, they are 27 to 28 percent of what a Compass session reads. Without a framework, test output and code reads fill that place at 8 to 14 percent.
 - **Compass sessions make more requests:** 8 and 15, against 7 and 13. Each extra request reads the whole context again.
+
+## Correction, 4 October
+
+"Compass CLI output" counts every shell call that ran `compass`, and the sessions often ran `compass` together with other commands in one call. The category therefore also holds what those calls read, so its share is an upper bound on what the CLI itself printed. In the first Compass session, the calls that ran `compass` also read:
+
+- the project's source and tests, read with `cat`, and a test run;
+- Compass's own files: `.compass/config.yml` and the issue's `delivery-approach.md`;
+- `compass tdd-red --help`, about 1,500 characters, which the session asked for although the assess command gives the syntax.
+
+The default output of the quick-fix commands is short: 207 to 350 characters each for `quick-fix start`, `tdd-red` and `quick-fix finish`, measured on a small project on 4 October. Their `--help` is 1,500 to 2,800 characters. The next measurement splits each call into its commands before assigning it (issue #387).
 
 ## By source
 

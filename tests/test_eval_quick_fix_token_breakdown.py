@@ -26,3 +26,14 @@ def test_tb_1_the_breakdown_is_on_record():
     assert "Rival products appear as codes R1 to R9" in text
     for placeholder in ("TODO", "TBD", "{{"):
         assert placeholder not in raw, placeholder
+
+
+def test_cb_1_the_cli_category_is_corrected_as_an_upper_bound():
+    """Scenario CB-1 (issue `correct-token-breakdown-categories`): a shell
+    call that ran `compass` often read files in the same call, so the CLI
+    share counts those reads too."""
+    raw = REPORT.read_text(encoding="utf-8")
+    assert "## Correction, 4 October" in raw
+    correction = raw.split("## Correction, 4 October", 1)[1].split("\n## ", 1)[0]
+    assert "upper bound" in correction
+    assert "--help" in correction

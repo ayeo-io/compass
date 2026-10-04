@@ -77,7 +77,7 @@ from compass_pkg.review_rules import register as register_review_rules_parser  #
 # what `compass --version` and the release-consistency test read, and a
 # grep for the constant should find it at the CLI's entry point. The
 # assert fails if the two values differ.
-COMPASS_VERSION = "5.4.0"
+COMPASS_VERSION = "5.5.0"
 assert COMPASS_VERSION == _core.COMPASS_VERSION, (
     "cli/compass and compass_pkg/core.py disagree about the version")
 

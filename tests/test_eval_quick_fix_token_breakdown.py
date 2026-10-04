@@ -4,7 +4,7 @@ The 4 October comparison run measured Compass's quick-fix premium and its
 split by stage. This document breaks one scenario's sessions down by what
 entered the model's context, before anything is cut (#377).
 
-Scenario id: TB-1 (issue `cmp-refactor-token-breakdown`).
+Scenario id: TB-1 (issue `quick-fix-token-breakdown`).
 """
 from __future__ import annotations
 

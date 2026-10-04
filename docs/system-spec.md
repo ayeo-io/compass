@@ -33,7 +33,7 @@
 
 - **Scenario id:** `TB-1`
 - **Intent:** `INT-1`
-- **Source issue:** `cmp-refactor-token-breakdown`
+- **Source issue:** `quick-fix-token-breakdown`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6

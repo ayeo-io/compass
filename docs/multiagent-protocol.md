@@ -28,7 +28,8 @@ The printed plan plus the recorded run is the interface (ADR-025).
 
 1. The distribution map exists and is registered. Its subtask table has one
    row per subtask. For a staged run it has a `Wave` column: a whole number
-   per row, starting at 1.
+   per row, starting at 1. Its "Final subtask count after caps" must equal
+   the number of rows; `multiagent.sh` refuses a map where they differ.
 2. Every document a builder needs is registered in the manifest, so
    `multiagent.sh` can seed it into each worktree:
 

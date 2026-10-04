@@ -37,6 +37,12 @@ written precisely so the process never has to be re-derived.
    last completed stage, the next command to run, and any blocker or owed
    follow-up. Then continue from that stage - invoke the matching
    `/compass:*` command's procedure.
+6. **A quick fix lands in one command.** If the approach is quick fix, write
+   the failing test and run `compass tdd-red --scenario <id> -- <test
+   command>`, write the fix, then run `compass quick-fix finish -m
+   "<message>" --no-commit -- <test command>`. It traces the changed files,
+   runs the check and passes the three gates, even for an issue another
+   session started. Do not pass the gates by hand.
 
 ## When the artifacts do not answer the question
 

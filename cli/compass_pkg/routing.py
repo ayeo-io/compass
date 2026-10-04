@@ -194,7 +194,7 @@ def evaluate_route(readings, policy, autonomy="balanced"):
             f"reference doc).\n"
             f"  Re-assess: either scope a narrower discovery issue that does not "
             f"touch the risky surface, or set intent=delivery and accept the "
-            f"'{final}' route deliberately. The point is that this is a choice "
+            f"'{final}' approach deliberately. The point is that this is a choice "
             f"a human makes, not one the router makes silently."
         )
 
@@ -245,7 +245,7 @@ def evaluate_route(readings, policy, autonomy="balanced"):
     # --- 5. assemble the final shape ----------------------------------------
     shape = shapes.get(final)
     if not shape:
-        raise CompassError(f"route '{final}' has no entry in route_shapes")
+        raise CompassError(f"delivery approach '{final}' has no entry in route_shapes")
     phases = shape_stages(shape)
     for p in (never_skip | required_phases):
         if phases.get(p) in ("collapsed", "skipped", "light"):
@@ -515,7 +515,7 @@ def cmd_route_evaluate(args):
         elif not drift.comparable:
             print(f"  policy drift    : not compared ({drift.reason})")
         print(f"  assessment      : {json.dumps(readings)}")
-        print(f"  candidate shape : {display_shape(result['candidate_route'])}  "
+        print(f"  first approach  : {display_shape(result['candidate_route'])}  "
               f"<- {result['candidate_via']}")
         print(f"  FINAL APPROACH  : {display_shape(result['delivery_approach'])}")
         if result["policy_rules_fired"]:
@@ -669,11 +669,11 @@ def cmd_route_evaluate(args):
         task.pop("orchestration", None)
         save_manifest(task, task_path)
         _annotate_gate_accepts(task_path)   # seed accepted-type comments
-        print(f"\n  wrote route, phases, gates -> {task_path}")
+        print(f"\n  wrote the delivery approach, stages and gates -> {task_path}")
         if not reframed and getattr(args, "reason", None):
-            print("  no route change detected - the --reason was NOT recorded. "
-                  "The route, phases, gates, ceiling and fired guardrails are "
-                  "all identical to what was already on record.")
+            print("  the delivery approach did not change - the --reason was NOT "
+                  "recorded. The approach, stages, gates, ceiling and policy "
+                  "rules fired are all identical to what was already on record.")
         if reframed:
             print(f"  RE-ASSESSMENT recorded ({task['reassessments'][-1]['kind']}): "
                   f"{prior['delivery_approach']} -> {result['delivery_approach']}"

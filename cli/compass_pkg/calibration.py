@@ -512,7 +512,7 @@ def render_impact(r):
                    % (r["restore_median"], r["hotfixes"]))
 
     out.append("")
-    out.append("  by route:")
+    out.append("  by delivery approach:")
     for route, g in sorted(r["by_route"].items()):
         gates = ", ".join(str(x) for x in sorted(g["gates"]))
         if g["n"] < IMPACT_GROUP_FLOOR:
@@ -525,14 +525,14 @@ def render_impact(r):
     out.append("")
     if r["withheld"]:
         out.append("  CORRELATIONS WITHHELD - %s." % r["withheld"])
-        out.append("  Below that sample any correlation between route, gate count")
+        out.append("  Below that sample any correlation between approach, gate count")
         out.append("  and outcome is noise wearing a number.")
     else:
-        out.append("  Read the by-route figures as a hypothesis to test, not a")
+        out.append("  Read the by-approach figures as a hypothesis to test, not a")
         out.append("  verdict. This is single-project observational data: the")
-        out.append("  variables are not controlled, and a heavier route is chosen")
+        out.append("  variables are not controlled, and a heavier approach is chosen")
         out.append("  BECAUSE work looks riskier, so slower lead times on heavy")
-        out.append("  routes may reflect the work rather than the process weight.")
+        out.append("  approaches may reflect the work rather than the process weight.")
     return "\n".join(out)
 
 
@@ -658,7 +658,7 @@ def cmd_calibration(args):
     _buf = _io.StringIO()
     _ctx = _cl.redirect_stdout(_buf)
     _ctx.__enter__()
-    print("Route distribution:")
+    print("Delivery approaches:")
     for r in sorted(dist, key=lambda x: (weights.get(x, 99), x)):
         print(f"  {display_shape(r):<12}: {dist[r]}")
     if no_route:

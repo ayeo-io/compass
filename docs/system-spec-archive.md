@@ -11081,3 +11081,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `one-fired-rule-formatter-shared`
 - **Landed:** 2026-10-04
+
+### Given an issue where some checks have nothing to inspect and one fails, When compass check runs in the verbose and default views, Then those checks are labelled NOTHING TO CHECK rather than PASS, and the failing verdict counts only checks that inspected something and names how many had nothing to check _(archived)_
+
+- **Scenario id:** `NI-1`
+- **Intent:** `INT-1`
+- **Source issue:** `nothing-inspected-is-not-pass`
+- **Landed:** 2026-10-04

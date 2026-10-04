@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given an issue where some checks have nothing to inspect and one fails, When compass check runs in the verbose and default views, Then those checks are labelled NOTHING TO CHECK rather than PASS, and the failing verdict counts only checks that inspected something and names how many had nothing to check
+### Given an issue, When approach evaluate --verbose --write, gate pass on an unknown gate, check with no gates and retro print their output, Then none of it says route, candidate shape or phases where it means the delivery approach or its stages
 
-- **Scenario id:** `NI-1`
+- **Scenario id:** `RW-1`
 - **Intent:** `INT-1`
-- **Source issue:** `nothing-inspected-is-not-pass`
+- **Source issue:** `printed-route-wording`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1582 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1583 superseded scenario(s) are in `docs/system-spec-archive.md`.

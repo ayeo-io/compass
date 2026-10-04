@@ -111,9 +111,9 @@ def test_trc_f2_adding_the_check_should_not_change_any_existing_tasks_result(slu
         f"{slug}: the check did not run - it is registered under G1, which is "
         f"always active on a delivery route, so it should run for every issue")
     # No issue in this repository has wired a runner, so every one of them
-    # must take the no-op path. A FAIL here would mean the check is
-    # penalising projects for not having opted in.
-    assert line.strip().startswith("PASS"), (
+    # must take the no-op path, labelled NOTHING TO CHECK since #110. A FAIL
+    # here would mean the check is penalising projects for not having opted in.
+    assert line.strip().startswith("NOTHING TO CHECK"), (
         f"{slug}: the new check fails a task that wired no runner:\n{line}")
     assert "runner" in line.lower(), (
         f"{slug}: the no-op pass gives no reason:\n{line}")

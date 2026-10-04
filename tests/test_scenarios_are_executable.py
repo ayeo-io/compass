@@ -163,7 +163,8 @@ def test_trc_c2_a_project_that_has_wired_no_runner_should_pass_with_a_stated_rea
     out = check(make(tmp_path)).stdout
     line = line_for(out)
     assert line, f"the check did not run at all:\n{out}"
-    assert line.strip().startswith("PASS"), (
+    # Labelled NOTHING TO CHECK since #110: not a failure, and not a PASS.
+    assert line.strip().startswith("NOTHING TO CHECK"), (
         f"a project that wired no runner was penalised:\n{line}")
     assert "runner" in line.lower(), (
         f"the pass gives no reason, so a reader cannot tell it was a no-op:\n{line}")

@@ -321,7 +321,8 @@ class TestNothingToCheckPass:
         )
 
     def test_passes_with_nothing_to_check_exits_pass(self, tmp_path):
-        """PASS command-passes must appear in output when nothing-to-check pass."""
+        """A command-passes check with nothing to run is labelled NOTHING TO
+        CHECK, not PASS (#110)."""
         project_root, task_dir = _make_project(
             tmp_path,
             project_guardrails=[],
@@ -330,9 +331,10 @@ class TestNothingToCheckPass:
             ],
         )
         result = _run_cli("check", "--verbose", "--issue", "test-task", cwd=project_root)
-        assert "PASS command-passes" in result.stdout, (
-            f"Expected PASS command-passes in output:\n{result.stdout}\n{result.stderr}"
+        assert "NOTHING TO CHECK command-passes" in result.stdout, (
+            f"Expected NOTHING TO CHECK command-passes in output:\n{result.stdout}\n{result.stderr}"
         )
+        assert "PASS command-passes" not in result.stdout
 
 
 # ---------------------------------------------------------------------------

@@ -102,7 +102,9 @@ _(none yet - the shipped default guardrails apply as-is)_
   against the issue's `manifest.yml` and `evidence/`, and reports pass or fail
   with specifics. It also fails an issue whose `assessment:` holds a key
   `schemas/manifest.schema.json` does not allow, which the release's `issue
-  lint` would refuse.
+  lint` would refuse. A check with nothing to inspect, such as a BDD check
+  where no runner is wired, is labelled NOTHING TO CHECK, never PASS, and is
+  counted apart; it does not fail the run.
 - **The pre-tool hook** enforces red-before-green in service of `G1`. It is
   approach-aware and does not block on a spike.
 - **The `verifier` and `reviewer` agents** at Verify, for the parts that remain

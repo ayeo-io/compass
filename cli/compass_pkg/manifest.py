@@ -690,6 +690,21 @@ def _eval_ids(project_root):
     return ids
 
 
+def slug_problem(project_root, slug):
+    """Why an issue slug would break the living spec, or None. The spec
+    lists every landed issue by slug and ships in the eval plugin copy,
+    which must name no eval scenario or behaviour. A hyphen joins a slug's
+    words, so it counts as a boundary here, unlike in a title (#382)."""
+    for ident in sorted(_eval_ids(project_root)):
+        if re.search(rf"(?<![A-Za-z0-9_]){re.escape(ident)}(?![A-Za-z0-9_])",
+                     slug or ""):
+            return (f"it names the eval scenario or behaviour {ident}; the living "
+                    f"spec lists every landed issue by slug and ships in the eval "
+                    f"plugin copy, which must name none. Pick a slug that "
+                    f"describes the change instead.")
+    return None
+
+
 def title_problem(project_root, title):
     """Why a scenario title would break a check on docs/system-spec.md, or
     None. ship-commit copies titles into that file after the suite has run,

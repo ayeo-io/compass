@@ -1,11 +1,10 @@
 # Compass operating contract
 
-This project uses Compass. Follow this in every session.
+This project uses Compass: follow this in every session.
 
 **Assess before you change anything.** Before editing code, specs or product
-artifacts, run `/compass:assess`. You read four things - risk, familiarity,
-size, goal - and the CLI computes the delivery approach from them. You do
-not choose the process.
+artifacts, run `/compass:assess`: you read risk, familiarity, size and goal,
+and the CLI computes the delivery approach. You do not choose the process.
 
 **Never skip assessment.** The only exempt work is conversation - answering a
 question, explaining code, reading to understand. The moment a tool call would
@@ -25,14 +24,12 @@ carry on with it rather than assessing again.
 4. Evidence is a recorded command output, never a claim that something passed.
 5. A human approves anything irreversible.
 
-Strategies - writing the failing test first, Given/When/Then scenarios - are
-how you satisfy those. You can step off a strategy with a recorded reason;
-you cannot step off a guardrail.
+Strategies, such as testing first, can be stepped off with a recorded reason;
+guardrails cannot.
 
-**Evidence, not assertion.** "The tests pass" clears nothing. Drive the cycle
-through the CLI: `compass tdd-red -- <cmd>` proves a test fails and records it;
-`compass tdd-green -- <cmd>` proves it passes. `compass check` runs the
-guardrail checks against what is on disk.
+**Evidence, not assertion.** Use the CLI: `compass tdd-red -- <cmd>` records a
+failing test, `compass tdd-green -- <cmd>` a passing one, and `compass check`
+runs the guardrails against what is on disk.
 
 **If it is not on disk, it did not happen.** Stage documents go to
 `docs/compass/<created>-<slug>/`, registered in the manifest. The manifest,
@@ -50,11 +47,10 @@ another agent, picks the work up from those files.
 7. verify
 8. ship
 
-The delivery approach written at assessment says which run at what weight and
-why any was skipped. Honour it.
+Honour the delivery approach's stage weights.
 
-**Where to look.** `compass <verb> --help` explains any verb; the
-`compass-runtime` skill has the stage map, agents and on-disk layout.
+**Where to look.** `compass <verb> --help` explains a verb; the
+`compass-runtime` skill maps the stages.
 
 **Write for someone with no context.** Why before what, no reference a reader
 cannot follow, and stop once you have said it.

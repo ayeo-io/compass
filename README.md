@@ -220,6 +220,31 @@ artifacts: engineer, product owner, designer, product marketer and QA. A
 non-engineering entry point changes the delivery approach rather than adding a
 consultation - see the [roles guide](docs/roles-guide.md).
 
+## What Compass runs, sends and fetches
+
+Compass works on your machine and in your repository. It reaches the network
+only in the cases below, and each one starts only when you ask for it.
+
+- **Fetches** a brief you name over HTTPS, with `compass intent ingest --from
+  <url>`. It is the CLI's only web request, and it refuses any scheme but
+  `https`, on redirects too.
+- **Sends** your delivery record to a git repository you configure, with
+  `compass record sync`, which `compass ship-commit` also runs. It happens
+  only when `.compass/config.yml` names a `record:` remote; it redacts
+  credentials, and rival product names when `record.names_key` is set.
+- **Starts** host sessions (`claude -p`) with `compass run`, which sends their
+  prompts through Claude Code as any session does. Those sessions may not push
+  or merge.
+- **Runs** commands on your machine: the test command you give `compass
+  tdd-red`, `compass tdd-green` and `compass quick-fix finish`, your
+  project's own guardrails declared with `check: command-passes`, git in your
+  repository, and the CLI itself from the plugin's hooks.
+- **Reads** the current Claude Code session's own transcript when a quick fix
+  finishes, keeping only token counts, model names and times
+  (`docs/headless-runner.md`).
+- **Clones and installs** other frameworks only in the evaluation harness,
+  `evals/harness.py`, which maintainers run by hand to compare conditions.
+
 ## Read next
 
 - **[Five-minute walkthrough](docs/five-minutes.md):** install Compass and ship a small issue.

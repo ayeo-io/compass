@@ -10899,3 +10899,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `premium-run`
 - **Landed:** 2026-10-04
+
+### Given the plugin as the directory receives it, then the icon is under the 5 MiB per-file limit and still square, and the README lists everything Compass runs on the machine, sends and fetches. _(archived)_
+
+- **Scenario id:** `DL-1`
+- **Intent:** `INT-1`
+- **Source issue:** `directory-listing-prep`
+- **Landed:** 2026-10-04

@@ -10983,3 +10983,17 @@
 - **Intent:** `INT-1`
 - **Source issue:** `quote-the-plugin-root-in-hooks`
 - **Landed:** 2026-10-04
+
+### Given the plugin manifests, then the plugin keeps the name compass, its display name is Compass Adaptive Spec-Driven Development, and its author is ayeo.io in both manifests. _(archived)_
+
+- **Scenario id:** `PN-1`
+- **Intent:** `INT-1`
+- **Source issue:** `plugin-display-name`
+- **Landed:** 2026-10-04
+
+### Given the release is 5.5.0, then VERSION, the CLI, both plugin manifests and the install smoke test all say 5.5.0 and the version guard agrees. _(archived)_
+
+- **Scenario id:** `RV-1`
+- **Intent:** `INT-1`
+- **Source issue:** `release-5-5-0`
+- **Landed:** 2026-10-04

@@ -51,23 +51,55 @@ def _imports_of(path):
 
 # --- group A: the structure ------------------------------------------------
 
+# The entry point holds the shebang, the parser and main(), and no logic.
+# A raw line cap measured the verb count instead, because each verb adds a
+# few lines of parser, so it was raised three times in a week (#102). The
+# guard now measures what it is for: only these functions, no loop or
+# nested function in the parser, and a cap on the lines outside it.
+_ENTRY_POINT_FUNCTIONS = {"_pyyaml_resolution_line", "build_parser", "main"}
+_LINES_OUTSIDE_THE_PARSER = 140
+# The parser holds one `if`: the check that every hidden verb exists.
+_PARSER_IFS = 1
+
+
+def _entry_point_problems(src):
+    import ast
+    problems = []
+    tree = ast.parse(src)
+    defs = [n for n in tree.body
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))]
+    extra = sorted({n.name for n in defs} - _ENTRY_POINT_FUNCTIONS)
+    if extra:
+        problems.append(f"cli/compass defines {', '.join(extra)}; logic "
+                        f"belongs in cli/compass_pkg")
+    parser = next((n for n in defs if n.name == "build_parser"), None)
+    if parser is None:
+        return problems + ["cli/compass has no build_parser()"]
+    nested = [n for n in ast.walk(parser) if n is not parser and isinstance(
+        n, (ast.For, ast.While, ast.Try, ast.With, ast.FunctionDef,
+            ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda))]
+    if nested:
+        problems.append(f"build_parser() holds a {type(nested[0]).__name__} "
+                        f"at line {nested[0].lineno}; it registers verbs only")
+    ifs = sum(isinstance(n, ast.If) for n in ast.walk(parser))
+    if ifs > _PARSER_IFS:
+        problems.append(f"build_parser() holds {ifs} if statements, "
+                        f"{_PARSER_IFS} allowed")
+    outside = (len(src.splitlines())
+               - (parser.end_lineno - parser.lineno + 1))
+    if outside >= _LINES_OUTSIDE_THE_PARSER:
+        problems.append(f"cli/compass has {outside} lines outside "
+                        f"build_parser(), {_LINES_OUTSIDE_THE_PARSER} allowed")
+    return problems
+
+
 def test_trc_a1_the_entry_point_should_be_thin():
     assert PKG.is_dir(), "cli/compass_pkg does not exist"
-    lines = len(CLI.read_text(encoding="utf-8").splitlines())
-    # The cap holds the property it exists for: main(), the shebang and the
-    # parser stay in this file, and logic does not - registering a new verb
-    # costs a few lines of parser and is not what the cap exists to stop. A
-    # cap re-raised every time a verb is added would be measuring the verb
-    # count rather than that property, which is filed as
-    # `entry-point-cap-measures-the-wrong-thing`. The three assertions below
-    # check the property directly.
-    assert lines < 640, (
-        f"cli/compass is still {lines} lines (was {BASELINE['line_count']}). "
-        f"The entry point should hold the shebang, the parser and main().")
     src = CLI.read_text(encoding="utf-8")
     assert src.startswith("#!"), "the entry point lost its shebang"
     assert "def main(" in src, "main() left the entry point"
     assert "add_subparsers" in src, "the argument parser left the entry point"
+    assert _entry_point_problems(src) == []
 
 
 def test_trc_a2_the_modules_should_follow_the_groupings_the_code_already_had():
@@ -250,3 +282,41 @@ def test_trc_f2_no_function_should_be_renamed_merged_or_split_by_this_task():
         f"  removed: {sorted(before - after)}\n"
         "A rename is a behaviour change to any importer, and it makes the diff "
         "unreadable. Do it in a follow-up task, against a smaller file.")
+
+
+# --- EC-1: the entry-point guard measures logic, not verbs ------------------
+
+_EC_BASE = (
+    "#!/usr/bin/env python3\n"
+    "import argparse\n\n"
+    "def _pyyaml_resolution_line():\n    return ''\n\n"
+    "def build_parser():\n"
+    "    p = argparse.ArgumentParser()\n"
+    "    sub = p.add_subparsers()\n"
+    "    sub.add_parser('a')\n"
+    "    return p\n\n"
+    "def main(argv=None):\n    return build_parser().parse_args(argv)\n")
+
+
+def test_ec_1_the_real_entry_point_passes():
+    assert _entry_point_problems(CLI.read_text(encoding="utf-8")) == []
+
+
+def test_ec_1_registering_verbs_is_not_a_problem():
+    many = _EC_BASE.replace(
+        "    sub.add_parser('a')\n",
+        "".join(f"    sub.add_parser('v{i}')\n" for i in range(400)))
+    assert _entry_point_problems(many) == []
+
+
+def test_ec_1_logic_outside_the_parser_is_a_problem():
+    logic = _EC_BASE + "".join(f"X{i} = {i}\n" for i in range(200))
+    assert _entry_point_problems(logic)
+
+
+def test_ec_1_a_loop_or_a_new_function_is_a_problem():
+    loop = _EC_BASE.replace("    return p\n",
+                            "    for n in 'ab':\n        sub.add_parser(n)\n    return p\n")
+    assert _entry_point_problems(loop)
+    extra = _EC_BASE + "\ndef helper():\n    return 1\n"
+    assert _entry_point_problems(extra)

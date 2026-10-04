@@ -10941,3 +10941,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `quick-fix-shows-settled-decisions`
 - **Landed:** 2026-10-04
+
+### Given a quick fix resumed by a session that did not start it, then the resume command names the red and quick-fix finish as the way to land it, and quick-fix finish lands it in one call with no start record. _(archived)_
+
+- **Scenario id:** `RQ-1`
+- **Intent:** `INT-1`
+- **Source issue:** `resumed-quick-fix-lands-in-one-command`
+- **Landed:** 2026-10-04

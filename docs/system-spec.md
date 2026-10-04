@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a quick fix resumed by a session that did not start it, then the resume command names the red and quick-fix finish as the way to land it, and quick-fix finish lands it in one call with no start record.
+### Given the published breakdown, then it carries a dated correction saying shell calls that ran compass also read files in the same call, so the Compass CLI share is an upper bound, and what those calls read.
 
-- **Scenario id:** `RQ-1`
+- **Scenario id:** `CB-1`
 - **Intent:** `INT-1`
-- **Source issue:** `resumed-quick-fix-lands-in-one-command`
+- **Source issue:** `correct-token-breakdown-categories`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1562 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1563 superseded scenario(s) are in `docs/system-spec-archive.md`.

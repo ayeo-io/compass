@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a project whose decisions ledger holds entries, then quick-fix start lists each live entry's slug and first decision sentence, newest first and capped with a count of the rest, leaves out superseded entries, and adds nothing when the ledger is empty.
+### Given a quick fix resumed by a session that did not start it, then the resume command names the red and quick-fix finish as the way to land it, and quick-fix finish lands it in one call with no start record.
 
-- **Scenario id:** `SD-1`
+- **Scenario id:** `RQ-1`
 - **Intent:** `INT-1`
-- **Source issue:** `quick-fix-shows-settled-decisions`
+- **Source issue:** `resumed-quick-fix-lands-in-one-command`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1561 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1562 superseded scenario(s) are in `docs/system-spec-archive.md`.

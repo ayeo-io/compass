@@ -60,6 +60,7 @@ from typing import Any, Dict, List, Optional, Tuple
 FRAMEWORK_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(FRAMEWORK_ROOT / "cli"))
 from compass_pkg.core import CompassError, load_yaml  # noqa: E402
+from compass_pkg.render import strip_ansi  # noqa: E402
 
 # The judge's own call to `claude` needs the same built-from-nothing
 # environment as a scored session - no `CLAUDE*` variable, no Claude Code
@@ -292,7 +293,7 @@ def _pytest_summary_reports_failure(output: str) -> bool:
     """True if `output` carries a pytest summary line reporting a failure
     or an error - decided from that line alone, never from the command's
     exit status."""
-    return any(int(m.group(1)) > 0 for m in _PYTEST_SUMMARY_FAIL_RE.finditer(output or ""))
+    return any(int(m.group(1)) > 0 for m in _PYTEST_SUMMARY_FAIL_RE.finditer(strip_ansi(output)))
 
 
 # Compass's own red step never prints a pytest summary line: it runs the

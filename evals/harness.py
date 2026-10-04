@@ -86,6 +86,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # standard library and what this repository already carries.
 sys.path.insert(0, str(REPO_ROOT / "cli"))
 from compass_pkg.core import load_yaml  # noqa: E402
+from compass_pkg.render import strip_ansi  # noqa: E402
 # Sessions start through the launcher `compass run` uses (ADR-030), so the
 # harness and the runner start `claude` the same way.
 from compass_pkg import host_launch  # noqa: E402
@@ -1324,7 +1325,7 @@ def _pytest_summary_counts(output: str) -> tuple[int, int]:
     a failure: a fixture error stops a test running under whatever name
     pytest would otherwise report it failed under, so the harness has no
     finer distinction to make here."""
-    summary_lines = _PYTEST_SUMMARY_LINE_RE.findall(output or "")
+    summary_lines = _PYTEST_SUMMARY_LINE_RE.findall(strip_ansi(output))
     if not summary_lines:
         return 0, 0
     passed = failed = 0
@@ -1382,7 +1383,7 @@ def _pytest_outcomes(output: str) -> dict[str, str]:
     `output`, mapped to its outcome - the identity `_seed_regressions`
     compares before and after the session ran."""
     return dict((name, outcome)
-                for outcome, name in _PYTEST_SHORT_SUMMARY_RE.findall(output or ""))
+                for outcome, name in _PYTEST_SHORT_SUMMARY_RE.findall(strip_ansi(output)))
 
 
 def _seed_test_command_with_report(test_command: str) -> str:

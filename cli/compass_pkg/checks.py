@@ -319,8 +319,13 @@ def _path_was_deleted(path, project_root):
 
     Removing dead code is legitimate work, and the file it removes is
     legitimately absent afterwards. Only git can tell that apart from a
-    record that is out of date.
+    record that is out of date. A deletion staged for the ship commit counts
+    too: ship-commit needs the deleted path to be traced, so check must
+    accept it before the commit as well as after (#368).
     """
+    if _git_out(["diff", "--cached", "--diff-filter=D", "--name-only", "--",
+                 path], project_root).strip():
+        return True
     return bool(_git_out(["log", "--diff-filter=D", "--oneline", "-1", "--", path],
                          project_root).strip())
 

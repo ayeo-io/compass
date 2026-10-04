@@ -11032,3 +11032,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `seed-walk-skips-pytest-cache`
 - **Landed:** 2026-10-04
+
+### Given pytest-bdd is installed, When the reference-adapter end-to-end test and the pytest-bdd case of the all-adapters test run, including under make test with plugin autoload off, Then both pass, and the bdd-adapter CI job runs them and fails if either skips _(archived)_
+
+- **Scenario id:** `PB-1`
+- **Intent:** `INT-1`
+- **Source issue:** `pytest-bdd-adapter-tests-run`
+- **Landed:** 2026-10-04

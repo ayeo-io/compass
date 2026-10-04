@@ -24,8 +24,14 @@ markdown_extensions:
   - toc:
       permalink: true
 
+# Only these pages are published: every other Markdown file in docs/ and the
+# issue records under docs/compass/ are left out. The pattern names Markdown
+# files, not "/*": MkDocs applies it to the theme's own files too, and a
+# bare "/*" removed the stylesheets.
 exclude_docs: |
-  /*
+  /*.md
+  /compass/
+  !/index.md
   !/five-minutes.md
   !/quickstart.md
   !/safety-contract.md
@@ -37,6 +43,7 @@ exclude_docs: |
   !/install-smoke-test.md
 
 nav:
+  - Home: index.md
   - Start:
       - Five minutes: five-minutes.md
       - Quickstart: quickstart.md

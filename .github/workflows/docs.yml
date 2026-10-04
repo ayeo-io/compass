@@ -32,6 +32,11 @@ jobs:
         run: pip install "mkdocs-material==9.7.1"
       - name: Build the site, failing on any warning
         run: mkdocs build --strict --site-dir site
+      - name: Check the theme's stylesheets and scripts were published
+        # An exclude pattern once removed them, and the site still built.
+        run: |
+          ls site/assets/stylesheets/main.*.min.css
+          ls site/assets/javascripts/bundle.*.min.js
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: site

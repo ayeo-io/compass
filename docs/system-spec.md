@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the published breakdown, then it carries a dated correction saying shell calls that ran compass also read files in the same call, so the Compass CLI share is an upper bound, and what those calls read.
+### Given mkdocs.yml and the docs workflow, then the site lists the five core pages and the pages they link to, every listed page exists, every relative link on them stays inside the site, the build tool is pinned and used only in CI, and the site is published from main only.
 
-- **Scenario id:** `CB-1`
+- **Scenario id:** `DS-1`
 - **Intent:** `INT-1`
-- **Source issue:** `correct-token-breakdown-categories`
+- **Source issue:** `docs-site`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1563 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1564 superseded scenario(s) are in `docs/system-spec-archive.md`.

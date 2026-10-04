@@ -10948,3 +10948,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `resumed-quick-fix-lands-in-one-command`
 - **Landed:** 2026-10-04
+
+### Given the published breakdown, then it carries a dated correction saying shell calls that ran compass also read files in the same call, so the Compass CLI share is an upper bound, and what those calls read. _(archived)_
+
+- **Scenario id:** `CB-1`
+- **Intent:** `INT-1`
+- **Source issue:** `correct-token-breakdown-categories`
+- **Landed:** 2026-10-04

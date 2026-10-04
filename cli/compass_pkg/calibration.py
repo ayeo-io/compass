@@ -281,14 +281,14 @@ def derive_friction(slug, task, work):
         if reason:
             obs += f": {reason}"
         entries.append({
-            "phase": "frame",
+            "phase": "assess",
             "category": "mis-route",
             "observation": obs,
             "source": "derived",
         })
     for d in _find_reframe_debt([(slug, task)], work):
         entries.append({
-            "phase": "frame",
+            "phase": "assess",
             "category": "mis-route",
             "observation": ("absorbed scope-bloat without a re-assessment: "
                             f"{d['devlog_line']}"),

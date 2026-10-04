@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given pytest-bdd is installed, When the reference-adapter end-to-end test and the pytest-bdd case of the all-adapters test run, including under make test with plugin autoload off, Then both pass, and the bdd-adapter CI job runs them and fails if either skips
+### Given an issue whose friction entry names a current stage such as implement, When compass issue lint runs with jsonschema installed, Then it passes; and Compass writes and loads friction phases in the current stage names, mapping a retired name such as frame to assess
 
-- **Scenario id:** `PB-1`
+- **Scenario id:** `FP-1`
 - **Intent:** `INT-1`
-- **Source issue:** `pytest-bdd-adapter-tests-run`
+- **Source issue:** `friction-phase-takes-v2-stages`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1575 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1576 superseded scenario(s) are in `docs/system-spec-archive.md`.

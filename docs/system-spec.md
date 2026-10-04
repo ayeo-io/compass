@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given two Compass quick-fix sessions and their no-framework pairs from the 4 October run, then the breakdown is on record: resident load per request, each source's share of the tokens read, and the request counts, with how they were measured and what they do not show.
+### Given the repository now lives at ayeo-io/compass, then no tracked file names the old address as the repository, the plugin manifests name the new one, and the marketplace owner is the organisation.
 
-- **Scenario id:** `TB-1`
+- **Scenario id:** `RA-1`
 - **Intent:** `INT-1`
-- **Source issue:** `quick-fix-token-breakdown`
+- **Source issue:** `repoint-to-ayeo-io`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1558 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1560 superseded scenario(s) are in `docs/system-spec-archive.md`.

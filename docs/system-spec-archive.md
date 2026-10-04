@@ -10913,3 +10913,17 @@
 - **Intent:** `INT-1`
 - **Source issue:** `slug-names-an-eval-scenario`
 - **Landed:** 2026-10-04
+
+### Given two Compass quick-fix sessions and their no-framework pairs from the 4 October run, then the breakdown is on record: resident load per request, each source's share of the tokens read, and the request counts, with how they were measured and what they do not show. _(archived)_
+
+- **Scenario id:** `TB-1`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-token-breakdown`
+- **Landed:** 2026-10-04
+
+### Given the comparison run found Compass stopped to warn of a change that would break a hidden consumer, then the decisions ledger records the maintainer's decision to keep that stop at its measured cost, with its evidence. _(archived)_
+
+- **Scenario id:** `KS-1`
+- **Intent:** `INT-1`
+- **Source issue:** `keep-the-stop-before-a-breaking-change`
+- **Landed:** 2026-10-04

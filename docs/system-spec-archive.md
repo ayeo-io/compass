@@ -10906,3 +10906,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `directory-listing-prep`
 - **Landed:** 2026-10-04
+
+### Given an issue slug that contains an eval scenario or behaviour id, then quick-fix start and approach evaluate refuse it before writing anything, and a slug that names none is accepted. _(archived)_
+
+- **Scenario id:** `SN-1`
+- **Intent:** `INT-1`
+- **Source issue:** `slug-names-an-eval-scenario`
+- **Landed:** 2026-10-04

@@ -277,10 +277,13 @@ def cmd_quick_fix_start(args):
 
     # The title reaches the living spec at ship; refuse it now, before
     # anything is written, if a check on the spec would refuse it there.
-    from compass_pkg.manifest import title_problem
+    from compass_pkg.manifest import slug_problem, title_problem
     problem = title_problem(resolve_project_root(), args.scenario)
     if problem:
         raise CompassError(f"compass quick-fix start: scenario title refused: {problem}")
+    problem = slug_problem(resolve_project_root(), slug)
+    if problem:
+        raise CompassError(f"compass quick-fix start: issue slug '{slug}' refused: {problem}")
 
     tests = list(args.test or [])
 

@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the published comparison runs after the sweep, then every number in them is unchanged and each carries one line saying rival products appear as codes and the maintainer holds the key.
+### Given an eval run, then every session runs without writing bytecode, a compass run as root is refused unless its plugin copy is on a read-only mount or --allow-root is given, each record names the uid, Python version and whether it ran as root, and the comparison report states those and how many runs were not contained.
 
-- **Scenario id:** `RN-9`
+- **Scenario id:** `HC-1`
 - **Intent:** `INT-1`
-- **Source issue:** `rival-names-never-committed`
+- **Source issue:** `harness-containment-under-root`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1543 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1544 superseded scenario(s) are in `docs/system-spec-archive.md`.

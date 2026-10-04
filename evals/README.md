@@ -64,6 +64,13 @@ back what the session changed: a setting planted there runs on your next
 `git status`, with your shell's full environment. The compass condition loads the
 checkout's `HEAD`, so commit a wording change before you measure it.
 
+The plugin copy is kept out of a session's reach by its read-only file mode,
+which root ignores. So a compass run as root is refused unless the copy is on
+a read-only mount or `--allow-root` is given, and every session runs with
+`PYTHONDONTWRITEBYTECODE=1`. Each record carries `uid`, `ran_as_root` and
+`python_version`; the comparison report states the uid and Python version,
+and how many runs were not contained.
+
 ## What a session sees, and what it is told
 
 - "Assessed before first edit" counts an edit the hook blocked as the

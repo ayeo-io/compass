@@ -401,6 +401,29 @@ def _pool_by_condition(cells: Dict[Cell, List[Dict[str, Any]]],
     return pooled
 
 
+def _how_it_ran(records: List[Dict[str, Any]]) -> List[str]:
+    """The uid and Python version the runs used, and how many runs were
+    not contained and why. A run that escaped its sandbox has undecided
+    rule-judged behaviours, so a reader must see it before the numbers."""
+    lines: List[str] = []
+    uids = sorted({r["uid"] for r in records if r.get("uid") is not None})
+    pythons = sorted({r["python_version"] for r in records
+                      if r.get("python_version")})
+    if uids or pythons:
+        lines += [f"Method: ran as uid {', '.join(map(str, uids)) or 'not recorded'}, "
+                  f"Python {', '.join(pythons) or 'not recorded'}.", ""]
+    escaped = [r for r in records if r.get("contained") is False]
+    if escaped:
+        paths = sorted({p for r in escaped for p in r.get("escaped_paths") or []})
+        shown = ", ".join(f"`{p}`" for p in paths[:5])
+        more = f" and {len(paths) - 5} more" if len(paths) > 5 else ""
+        lines += [f"{len(escaped)} of {len(records)} runs were not contained, "
+                  f"so their rule-judged behaviours are undecided. They wrote "
+                  f"outside their sandbox: {shown or 'no path recorded'}{more}.",
+                  ""]
+    return lines
+
+
 def render_report(cells: Dict[Cell, List[Dict[str, Any]]],
                    scenario_order: List[str], condition_order: List[str],
                    scenarios_dir: Path) -> str:
@@ -412,6 +435,7 @@ def render_report(cells: Dict[Cell, List[Dict[str, Any]]],
         "its own. \"Interventions (replies sent)\" below counts how many "
         "a condition needed.")
     lines.append("")
+    lines.extend(_how_it_ran([r for rs in cells.values() for r in rs]))
     for scenario in scenario_order:
         lines.append(f"## {scenario}")
         lines.append("")

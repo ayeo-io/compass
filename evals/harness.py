@@ -907,7 +907,33 @@ def _build_child_env(condition: str, plugin_copy_dir: Path | None
     if condition == "compass" and plugin_copy_dir is not None:
         kept_entries = [str(plugin_copy_dir / "bin"), *kept_entries]
     env["PATH"] = os.pathsep.join(kept_entries)
+    # File mode alone keeps a session from writing into the plugin copy, and
+    # root ignores file mode: a root session's Python wrote bytecode into
+    # the copy and the run was recorded as not contained (issue #370).
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
     return env
+
+
+def _on_read_only_mount(path: Path) -> bool:
+    try:
+        return bool(os.statvfs(path).f_flag & os.ST_RDONLY)
+    except (OSError, AttributeError):
+        return False
+
+
+def _root_refusal(condition: str, plugin_copy_dir: Path | None, *,
+                  allow_root: bool, euid: int) -> str | None:
+    """Why a compass run must not start as root, or None. Root ignores the
+    file mode that protects the plugin copy, so only a read-only mount
+    still protects it; `--allow-root` accepts the risk knowingly."""
+    if condition != "compass" or euid != 0 or allow_root:
+        return None
+    if plugin_copy_dir is not None and _on_read_only_mount(plugin_copy_dir):
+        return None
+    return ("refusing a compass run as root: root ignores the file mode that "
+            "keeps a session out of the plugin copy, so the run could not be "
+            "contained. Put the copy on a read-only mount, run as another "
+            "user, or pass --allow-root to run anyway.")
 
 
 def _claude_version(claude_exe: str, env: dict[str, str]) -> str:
@@ -1770,6 +1796,9 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
         "compass_commit": compass_commit,
         "contained": contained,
         "escaped_paths": escaped_paths,
+        "uid": os.geteuid(),
+        "ran_as_root": os.geteuid() == 0,
+        "python_version": "{}.{}.{}".format(*sys.version_info[:3]),
         "stderr_tail": _tail(state["stderr"]),
         "over_budget": over_budget,
         "replies_sent": replies_sent,
@@ -1809,6 +1838,9 @@ def _build_arg_parser() -> argparse.ArgumentParser:
                          help="the executable to run R3's own "
                               "specify init through - a real uvx, or a "
                               "stand-in for a test")
+    parser.add_argument("--allow-root", action="store_true",
+                        help="run the compass condition as root even though "
+                             "root ignores the plugin copy's read-only mode")
     parser.add_argument("--frameworks-config", default=None,
                          help="the names key, or a file of the same "
                               "pins, the "
@@ -1865,6 +1897,13 @@ def main(argv: list[str] | None = None) -> int:
         Path(args.framework_source) if args.framework_source else None)
 
     plugin_copy_dir, child_env = _prepare_plugin_copy(args.condition, plugin_source)
+    refusal = _root_refusal(args.condition, plugin_copy_dir,
+                            allow_root=args.allow_root, euid=os.geteuid())
+    if refusal:
+        if plugin_copy_dir is not None:
+            _remove_read_only_tree(plugin_copy_dir)
+        print(refusal, file=sys.stderr)
+        return 2
     framework_copy_dir: Path | None = None
     framework_commit: str | None = None
     seed_paths: dict[str, str] = {}

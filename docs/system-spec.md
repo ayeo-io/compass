@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given mkdocs.yml and the docs workflow, then the site lists the five core pages and the pages they link to, every listed page exists, every relative link on them stays inside the site, the build tool is pinned and used only in CI, and the site is published from main only.
+### Given `--help` for `quick-fix start`, `quick-fix finish`, `tdd-red` and `tdd-green`, then each, printed at 80 columns, is within a budget set from the rewrite (2,600 characters for `quick-fix start`, 1,500 for `quick-fix finish`, 1,450 for `tdd-red`, 1,250 for `tdd-green`) and still lists every option it accepted before.
 
-- **Scenario id:** `DS-1`
+- **Scenario id:** `TC-2`
 - **Intent:** `INT-1`
-- **Source issue:** `docs-site`
+- **Source issue:** `trim-quick-fix-context`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1564 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1566 superseded scenario(s) are in `docs/system-spec-archive.md`.

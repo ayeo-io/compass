@@ -10955,3 +10955,17 @@
 - **Intent:** `INT-1`
 - **Source issue:** `correct-token-breakdown-categories`
 - **Landed:** 2026-10-04
+
+### Given mkdocs.yml and the docs workflow, then the site lists the five core pages and the pages they link to, every listed page exists, every relative link on them stays inside the site, the build tool is pinned and used only in CI, and the site is published from main only. _(archived)_
+
+- **Scenario id:** `DS-1`
+- **Intent:** `INT-1`
+- **Source issue:** `docs-site`
+- **Landed:** 2026-10-04
+
+### Given the session-start contract, then it is at most 2,250 characters, from 2,517, and still holds a pinned phrase for each of its rules - assess first, never skip assessment, trigger on intent, the five guardrails, guardrails hard and strategies soft, evidence not assertion, state on disk, the numbered stages, the instruction to use the CLI, the statement that there are five guardrails, where to look and writing for no context - and deleting any one of them fails the test. _(archived)_
+
+- **Scenario id:** `TC-1`
+- **Intent:** `INT-1`
+- **Source issue:** `trim-quick-fix-context`
+- **Landed:** 2026-10-04

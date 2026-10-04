@@ -80,9 +80,9 @@ VERB_DESCRIPTIONS = {
     'decision check':
         "Compare governance/decisions/ with a base ref: fails, naming the file, when an entry that exists at the ref was changed or removed. New entries pass. A ref git cannot resolve fails rather than checking nothing. compass ci --since runs the same check.",
     'quick-fix start':
-        "Assess a quick fix and record it in one call: refuses before writing anything if a dimension has no reason or the policy does not know its value, otherwise initialises the project, writes the manifest's assessment with any --labels (a domain tag such as auth brings the floor and the human sign-off), runs the same evaluator `compass approach evaluate --write` runs, and - only if the computed approach is quick fix - writes delivery-approach.md, registers it and records the one scenario against its intent. If the approach computes heavier than a quick fix, it keeps the assessment and says to continue with /compass:assess rather than writing an approach record and a scenario that do not apply.",
+        "Assess and record a quick fix in one call. Refuses before writing anything if a dimension has no reason or an unknown value. Otherwise it initialises the project, records the assessment and any --labels (a domain tag such as auth raises the approach's floor and brings the human sign-off), computes the approach, and, if it is a quick fix, writes delivery-approach.md and the one scenario. A heavier approach keeps the assessment and says to continue with /compass:assess.",
     'quick-fix finish':
-        "Check every precondition before writing anything, then trace, check, gate and ship a quick fix in one call: every changed path outside .compass/ traces to its scenario, compass check's output is recorded as command-output evidence, the three quick-fix gates pass against that evidence and the scenario's green, one devlog line is appended, and compass ship-commit lands the change. Refuses - with no gate passed and nothing committed - if check fails, another gate is still pending, no green is bound to a scenario, or a changed path is untraced while several scenarios are on record.",
+        "Trace, check, gate and land a quick fix in one call, after checking every precondition: changed paths trace to the scenario, compass check's output becomes evidence, the three quick-fix gates pass, one devlog line is appended, and compass ship-commit lands it. Refuses, with no gate passed and nothing committed, if check fails, another gate is pending, no green is bound, or a path is untraced while several scenarios exist.",
     'issue diagnose':
         "Explain one run from its issue's own records, after the session is gone: each stage the route ran against the record that shows it, each gate with its evidence, a timeline of every dated record (reds, greens, subtask dispatches, review rounds, reassessments, the landing), the deviations those records show (a stage with no record, a red dated after its green, a green with no red, a failed review round, a gate not passed), and the questions only the transcript could answer. It reads and never writes.",
     'lesson add':
@@ -110,9 +110,9 @@ VERB_DESCRIPTIONS = {
     'ship-commit':
         "Commit an issue's recorded changed files and nothing else, so the commit matches what the manifest says the issue touched. Refuses to stage anything the issue never claimed.",
     'tdd-green':
-        'Run a test command, assert that it PASSES, record the green and clear the red marker. The binding decides the filename, so recording one scenario cannot destroy the record another gate is citing.',
+        "Run a test command, require that it PASSES, record the green and clear the red marker. Each scenario's green has its own file.",
     'tdd-red':
-        'Run a test command, assert that it genuinely FAILS, and record the failure plus the marker the pre-tool hook reads. The marker is only ever written after a real failure, which is what makes it evidence rather than a claim. Binding the run to a scenario proves the right thing broke, not merely that something did.',
+        'Run a test command, require that it FAILS, and record the failure and the marker the pre-tool hook reads. A command that passes, or runs no test, is refused. Bound to a scenario, it shows the right thing broke.',
     'terminology':
         'Print what a term means in this framework - the definition, what it is NOT, and the related words. The vocabulary is frozen and the file is what the scan enforces, so this is the authority rather than a convenience.',
 }

@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given cli/compass holds the shebang, build_parser and main, When a verb is registered in build_parser, Then the entry-point guard still passes; and when logic is added outside build_parser, or a loop or a new function is added, Then it fails
+### Given a commit message in a file, When compass ship-commit -F <file> runs with staged changes, Then it commits with that message and verifies HEAD advanced; and giving both -m and -F, or neither, is refused
 
-- **Scenario id:** `EC-1`
+- **Scenario id:** `SF-1`
 - **Intent:** `INT-1`
-- **Source issue:** `entry-point-cap-measures-code`
+- **Source issue:** `ship-commit-takes-a-message-file`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1577 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1578 superseded scenario(s) are in `docs/system-spec-archive.md`.

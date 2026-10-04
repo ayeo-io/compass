@@ -10997,3 +10997,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `release-5-5-0`
 - **Landed:** 2026-10-04
+
+### Given the docs site, then its root serves a home page, index.md, that is first in the navigation and links only to pages in the site. _(archived)_
+
+- **Scenario id:** `DH-1`
+- **Intent:** `INT-1`
+- **Source issue:** `docs-site-home-page`
+- **Landed:** 2026-10-04

@@ -790,6 +790,26 @@ def cmd_scenario_descope(args):
                      f"Verify lists it in the verification report.", mode=mode)
 
 
+def _check_scenario_ids(task, ids, verb):
+    """Refuse a scenario id the issue does not define, as `compass tdd-red`
+    does. A trace stored an unknown id, or six ids quoted as one string,
+    and only a later `compass check` reported it (#119)."""
+    known = {s.get("id") for s in (task.get("scenarios") or [])
+             if isinstance(s, dict)}
+    listed = (f"its scenarios are {sorted(known)}" if known
+              else "it has no scenarios yet")
+    for sid in ids:
+        if len(str(sid).split()) > 1:
+            raise CompassError(
+                f"compass {verb}: --scenario '{sid}' holds several ids in one "
+                f"value; give --scenario once for each id.")
+        if sid not in known:
+            raise CompassError(
+                f"compass {verb}: --scenario '{sid}' is not a scenario in this "
+                f"issue's manifest.yml: {listed}. Add it first with `compass "
+                f"scenario add`, or trace to one that exists.")
+
+
 def cmd_changed_file_add(args):
     task_dir = resolve_issue_dir(args.task)
     task, task_path = load_manifest(task_dir)
@@ -799,6 +819,7 @@ def cmd_changed_file_add(args):
     # `--scenario` may be repeated: a file often serves several scenarios, and
     # every one given is recorded, merged with those already traced.
     given = args.scenario if isinstance(args.scenario, list) else [args.scenario]
+    _check_scenario_ids(task, given, "changed-file add")
     if existing:
         existing["scenarios"] = sorted(set(existing.get("scenarios") or []) | set(given))
     else:
@@ -811,6 +832,8 @@ def cmd_changed_file_add(args):
 def cmd_evidence_add(args):
     task_dir = resolve_issue_dir(args.task)
     task, task_path = load_manifest(task_dir)
+    if getattr(args, "scenario", None):
+        _check_scenario_ids(task, [args.scenario], "evidence add")
     _reqs, known = _load_gate_requirements()
     if known and args.type not in known:
         raise CompassError(

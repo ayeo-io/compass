@@ -11060,3 +11060,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `ship-commit-takes-a-message-file`
 - **Landed:** 2026-10-04
+
+### Given a checkout with the full archive but without the adapter's generated feature file, When the archive citation guard runs with COMPASS_FULL_ARCHIVE=1, Then the README's mention of the file bdd extract writes is treated as illustrative and the guard passes _(archived)_
+
+- **Scenario id:** `AC-1`
+- **Intent:** `INT-1`
+- **Source issue:** `archive-citation-in-adapter-readme`
+- **Landed:** 2026-10-04

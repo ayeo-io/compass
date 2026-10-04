@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given an issue slug that contains an eval scenario or behaviour id, then quick-fix start and approach evaluate refuse it before writing anything, and a slug that names none is accepted.
+### Given two Compass quick-fix sessions and their no-framework pairs from the 4 October run, then the breakdown is on record: resident load per request, each source's share of the tokens read, and the request counts, with how they were measured and what they do not show.
 
-- **Scenario id:** `SN-1`
+- **Scenario id:** `TB-1`
 - **Intent:** `INT-1`
-- **Source issue:** `slug-names-an-eval-scenario`
+- **Source issue:** `quick-fix-token-breakdown`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1557 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1558 superseded scenario(s) are in `docs/system-spec-archive.md`.

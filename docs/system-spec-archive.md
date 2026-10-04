@@ -10900,9 +10900,16 @@
 - **Source issue:** `premium-run`
 - **Landed:** 2026-10-04
 
-### Given two Compass quick-fix sessions and their no-framework pairs from the 4 October run, then the breakdown is on record: resident load per request, each source's share of the tokens read, and the request counts, with how they were measured and what they do not show. _(archived)_
+### Given the plugin as the directory receives it, then the icon is under the 5 MiB per-file limit and still square, and the README lists everything Compass runs on the machine, sends and fetches. _(archived)_
 
-- **Scenario id:** `TB-1`
+- **Scenario id:** `DL-1`
 - **Intent:** `INT-1`
-- **Source issue:** `quick-fix-token-breakdown`
+- **Source issue:** `directory-listing-prep`
+- **Landed:** 2026-10-04
+
+### Given an issue slug that contains an eval scenario or behaviour id, then quick-fix start and approach evaluate refuse it before writing anything, and a slug that names none is accepted. _(archived)_
+
+- **Scenario id:** `SN-1`
+- **Intent:** `INT-1`
+- **Source issue:** `slug-names-an-eval-scenario`
 - **Landed:** 2026-10-04

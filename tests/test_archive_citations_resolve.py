@@ -61,6 +61,10 @@ ILLUSTRATIVE = {
         "docs/five-minutes.md walks a worked example through the pipeline. "
         "The path is what the tutorial's imaginary issue would print, not a "
         "record in this repository.",
+    ".compass/work/reset-password/acceptance-criteria.feature":
+        "examples/bdd-adapters/pytest-bdd/README.md names the file `compass "
+        "bdd extract` writes when the adapter runs. It is generated and "
+        "gitignored, so it exists only after that step (#153).",
     ".compass/work/fixture-issue/devlog.md":
         "test_archive_quote_manifest.py builds this path as the `source:` of "
         "a synthetic quote manifest. The directory is created by the test.",

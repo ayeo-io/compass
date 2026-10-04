@@ -11095,3 +11095,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `printed-route-wording`
 - **Landed:** 2026-10-04
+
+### Given a distribution map whose subtask table lists a different number of rows from the Final subtask count after caps it states, When multiagent.sh provisions it, Then it refuses, names both numbers and creates nothing; and a map whose counts agree, or that states no number, is provisioned as before _(archived)_
+
+- **Scenario id:** `MC-1`
+- **Intent:** `INT-1`
+- **Source issue:** `map-counts-agree`
+- **Landed:** 2026-10-04

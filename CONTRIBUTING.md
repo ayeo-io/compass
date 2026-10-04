@@ -46,6 +46,7 @@ for every path.
 
 ```
 make test        # the full suite; install pytest-xdist to run it in parallel
+make test-clean  # the suite in a fresh clone of HEAD, as CI sees it
 make ci          # policy lint, issue lint and compass check on recent issues
 ```
 

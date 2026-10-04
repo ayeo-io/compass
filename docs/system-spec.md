@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a distribution map whose subtask table lists a different number of rows from the Final subtask count after caps it states, When multiagent.sh provisions it, Then it refuses, names both numbers and creates nothing; and a map whose counts agree, or that states no number, is provisioned as before
+### Given a checkout with gitignored local state such as .compass/work, When make test-clean runs, Then it clones the committed HEAD into a temporary folder, runs the suite there without that state, and removes the folder afterwards
 
-- **Scenario id:** `MC-1`
+- **Scenario id:** `CC-1`
 - **Intent:** `INT-1`
-- **Source issue:** `map-counts-agree`
+- **Source issue:** `suite-from-a-clean-clone`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1584 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1585 superseded scenario(s) are in `docs/system-spec-archive.md`.

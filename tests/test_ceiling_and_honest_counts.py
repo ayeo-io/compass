@@ -148,13 +148,15 @@ def test_trc_b1_summary_has_no_denominator():
 
 def test_trc_b2_a_failure_still_names_its_denominator():
     """The control: a denominator is the right thing to print when checks
-    FAILED - "2 of 15 failed" is the number a reader needs."""
+    FAILED - "2 of 12 failed" is the number a reader needs. The checks that
+    inspected nothing are counted apart, not in the denominator (#110)."""
     from compass_pkg.check_cmd import summarise_counts
 
     line = summarise_counts(ran=15, failures=2, nothing_to_check=3)
     assert line.startswith("compass check: FAIL"), line
-    assert "2 of 15" in line, (
+    assert "2 of 12" in line, (
         f"a failing run must still say how many of how many: {line!r}")
+    assert "3 had nothing to check" in line, line
 
 
 # ---------------------------------------------------------------------------

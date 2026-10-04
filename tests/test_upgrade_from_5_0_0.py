@@ -94,6 +94,11 @@ def _verdict(cli, root):
     r = _cli(cli, root, "check", "--issue", "fix-greeting", "--verbose")
     rows = {}
     for line in r.stdout.splitlines():
+        # Since #110 a check that inspected nothing is labelled NOTHING TO
+        # CHECK where 5.0.0 printed PASS. Neither fails the run, so the
+        # upgrade compares them as the same verdict.
+        if line.strip().startswith("NOTHING TO CHECK "):
+            line = line.replace("NOTHING TO CHECK", "PASS", 1)
         parts = line.split()
         if len(parts) >= 2 and parts[0] in ("PASS", "FAIL", "SKIP", "N/A", "WARN") \
                 and parts[1].endswith(":"):

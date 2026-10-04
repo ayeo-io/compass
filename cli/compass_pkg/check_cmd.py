@@ -209,6 +209,11 @@ def summarise_counts(ran, failures, nothing_to_check=0):
     apart so the count never overstates.
     """
     if failures:
+        # The denominator counts only checks that inspected something, so it
+        # never invites a reader to count the empty ones as clean (#110).
+        if nothing_to_check:
+            return (f"compass check: FAIL - {failures} of {ran - nothing_to_check} "
+                    f"check(s) failed, {nothing_to_check} had nothing to check.")
         return f"compass check: FAIL - {failures} of {ran} check(s) failed."
     # No denominator on a pass. "12 of 15 passed" reads as three failures at
     # a glance, and the total is not a constant anyway - `G5 A human signs off
@@ -272,7 +277,11 @@ def _verbose_lines(run):
                 out.append("  %s %s" % (gid, name))
         else:
             name, passed, detail = payload
-            if passed:
+            # The third state the run tracks: a check that inspected nothing
+            # did not pass anything, so it is not labelled PASS (#110).
+            if passed is NOTHING_TO_CHECK:
+                out.append("    NOTHING TO CHECK %s: %s" % (name, detail))
+            elif passed:
                 out.append("    PASS %s: %s" % (name, detail))
             else:
                 out.append("    FAIL %s" % name)
@@ -323,13 +332,17 @@ def _summary_lines(run):
     # evaluate` run on it, so say that.
     approach = (run.approach if run.approach and run.approach != "?"
                 else "no approach yet - run `compass approach evaluate --write`")
+    distinct_nothing = len({n for _g, n, p, _d in run.results
+                            if p is NOTHING_TO_CHECK})
+    nothing = (", %d had nothing to check" % distinct_nothing
+               if distinct_nothing else "")
     if distinct_failed:
-        verdict = "FAIL - %d of %d check(s) failed on '%s' (%s)" % (
-            distinct_failed, distinct_ran, run.slug, approach)
+        verdict = "FAIL - %d of %d check(s) failed%s on '%s' (%s)" % (
+            distinct_failed, distinct_ran - distinct_nothing, nothing,
+            run.slug, approach)
     else:
-        nothing = (", %d had nothing to check" % run.nothing) if run.nothing else ""
         verdict = "PASS - %d check(s) passed%s on '%s' (%s)" % (
-            distinct_ran - run.nothing, nothing, run.slug, approach)
+            distinct_ran - distinct_nothing, nothing, run.slug, approach)
     out = [_fit(verdict)]
 
     # Keep the adoption-mode banner in the default view. Without it, an

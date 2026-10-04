@@ -1,9 +1,10 @@
 {
   "name": "compass",
+  "displayName": "Compass Adaptive Spec-Driven Development",
   "version": "5.4.0",
   "description": "Compass - an adaptive spec-driven development framework. Assess reads risk, familiarity, size, and goal; a deterministic CLI computes the delivery approach; BDD/TDD strategies and five hard guardrails keep the work honest. Ships the /compass: pipeline commands, agents, skills, hooks, and the compass CLI.",
   "author": {
-    "name": "jed72"
+    "name": "ayeo.io"
   },
   "homepage": "https://github.com/ayeo-io/compass",
   "repository": "https://github.com/ayeo-io/compass",

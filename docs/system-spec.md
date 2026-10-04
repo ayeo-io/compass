@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the plugin installed under a path that contains a space, then each of the four hook commands in hooks.json runs its own script, because each quotes the plugin root.
+### Given the plugin manifests, then the plugin keeps the name compass, its display name is Compass Adaptive Spec-Driven Development, and its author is ayeo.io in both manifests.
 
-- **Scenario id:** `HQ-1`
+- **Scenario id:** `PN-1`
 - **Intent:** `INT-1`
-- **Source issue:** `quote-the-plugin-root-in-hooks`
+- **Source issue:** `plugin-display-name`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1567 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1568 superseded scenario(s) are in `docs/system-spec-archive.md`.

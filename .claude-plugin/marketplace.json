@@ -15,7 +15,7 @@
       "description": "Adaptive spec-driven development. Assess reads risk, familiarity, size, and goal; a deterministic CLI computes the delivery approach; BDD/TDD strategies and five hard guardrails keep work honest. Ships the /compass: pipeline, agents, skills, hooks, and the compass CLI.",
       "version": "5.4.0",
       "author": {
-        "name": "jed72"
+        "name": "ayeo.io"
       },
       "homepage": "https://github.com/ayeo-io/compass",
       "license": "Apache-2.0",

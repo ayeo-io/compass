@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a checkout with the full archive but without the adapter's generated feature file, When the archive citation guard runs with COMPASS_FULL_ARCHIVE=1, Then the README's mention of the file bdd extract writes is treated as illustrative and the guard passes
+### Given an issue with scenarios TRC-1 and TRC-2, When compass changed-file add or compass evidence add is given a scenario id the issue does not define, or several ids in one quoted string, Then it refuses, names the issue's scenarios and writes nothing
 
-- **Scenario id:** `AC-1`
+- **Scenario id:** `TS-1`
 - **Intent:** `INT-1`
-- **Source issue:** `archive-citation-in-adapter-readme`
+- **Source issue:** `trace-checks-scenario-ids`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1579 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1580 superseded scenario(s) are in `docs/system-spec-archive.md`.

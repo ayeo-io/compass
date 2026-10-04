@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given `--help` for `quick-fix start`, `quick-fix finish`, `tdd-red` and `tdd-green`, then each, printed at 80 columns, is within a budget set from the rewrite (2,600 characters for `quick-fix start`, 1,500 for `quick-fix finish`, 1,450 for `tdd-red`, 1,250 for `tdd-green`) and still lists every option it accepted before.
+### Given the plugin installed under a path that contains a space, then each of the four hook commands in hooks.json runs its own script, because each quotes the plugin root.
 
-- **Scenario id:** `TC-2`
+- **Scenario id:** `HQ-1`
 - **Intent:** `INT-1`
-- **Source issue:** `trim-quick-fix-context`
+- **Source issue:** `quote-the-plugin-root-in-hooks`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1566 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1567 superseded scenario(s) are in `docs/system-spec-archive.md`.

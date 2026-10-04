@@ -11025,3 +11025,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `colour-hides-an-import-red`
 - **Landed:** 2026-10-04
+
+### Given another test's pytest run has made a pytest-cache-files folder inside a scenario seed, When the scenario-file walks in tests/test_eval_scenarios.py list the files to scan, Then they skip that folder and .pytest_cache, so a folder deleted mid-walk cannot fail them _(archived)_
+
+- **Scenario id:** `SW-1`
+- **Intent:** `INT-1`
+- **Source issue:** `seed-walk-skips-pytest-cache`
+- **Landed:** 2026-10-04

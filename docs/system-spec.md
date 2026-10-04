@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given another test's pytest run has made a pytest-cache-files folder inside a scenario seed, When the scenario-file walks in tests/test_eval_scenarios.py list the files to scan, Then they skip that folder and .pytest_cache, so a folder deleted mid-walk cannot fail them
+### Given pytest-bdd is installed, When the reference-adapter end-to-end test and the pytest-bdd case of the all-adapters test run, including under make test with plugin autoload off, Then both pass, and the bdd-adapter CI job runs them and fails if either skips
 
-- **Scenario id:** `SW-1`
+- **Scenario id:** `PB-1`
 - **Intent:** `INT-1`
-- **Source issue:** `seed-walk-skips-pytest-cache`
+- **Source issue:** `pytest-bdd-adapter-tests-run`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1574 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1575 superseded scenario(s) are in `docs/system-spec-archive.md`.

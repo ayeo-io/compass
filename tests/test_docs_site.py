@@ -83,3 +83,17 @@ def test_dh_1_the_exclude_rule_leaves_the_theme_alone():
     assert rules == ["/*.md", "/compass/"], rules
     workflow = (ROOT / ".github" / "workflows" / "docs.yml").read_text()
     assert "site/assets/stylesheets/main.*.min.css" in workflow
+
+
+def test_dt_1_table_code_does_not_break_mid_word():
+    """Scenario DT-1 (issue `docs-table-code-wraps`): Material lets inline
+    code break at any character, so a narrow table column split commands
+    such as /compass:intent mid-word. The site's own stylesheet keeps code
+    in a table cell on one line; a wide table scrolls inside its own frame."""
+    config = _config()
+    assert "stylesheets/extra.css" in config.get("extra_css", [])
+    css = (ROOT / "docs" / "stylesheets" / "extra.css").read_text(encoding="utf-8")
+    rule = re.search(r"\.md-typeset table:not\(\[class\]\) code\s*\{([^}]*)\}", css)
+    assert rule, "no rule for code inside a table"
+    assert "white-space: nowrap" in rule.group(1)
+    assert "word-break: normal" in rule.group(1)

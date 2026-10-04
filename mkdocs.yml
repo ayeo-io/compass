@@ -18,6 +18,10 @@ theme:
     - search.suggest
     - content.code.copy
 
+# The site's own styles, beside the theme's.
+extra_css:
+  - stylesheets/extra.css
+
 markdown_extensions:
   - admonition
   - tables

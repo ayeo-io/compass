@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the plugin manifests, then the plugin keeps the name compass, its display name is Compass Adaptive Spec-Driven Development, and its author is ayeo.io in both manifests.
+### Given the release is 5.5.0, then VERSION, the CLI, both plugin manifests and the install smoke test all say 5.5.0 and the version guard agrees.
 
-- **Scenario id:** `PN-1`
+- **Scenario id:** `RV-1`
 - **Intent:** `INT-1`
-- **Source issue:** `plugin-display-name`
+- **Source issue:** `release-5-5-0`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1568 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1569 superseded scenario(s) are in `docs/system-spec-archive.md`.

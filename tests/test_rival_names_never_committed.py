@@ -223,7 +223,11 @@ def test_rn_3_a_name_inside_a_longer_word_does_not_match(fake):
 def test_rn_4_a_rival_condition_without_the_key_is_skipped(tmp_path, capsys):
     import harness
     out = tmp_path / "out"
-    code = harness.main(["--scenario", "cmp-edge-case", "--condition", "R1",
+    # Any real scenario folder, found rather than named: the plugin copy
+    # this repository ships must name no eval scenario.
+    scenario = next(p for p in sorted((ROOT / "evals" / "scenarios").iterdir())
+                    if (p / "seed").is_dir())
+    code = harness.main(["--scenario", str(scenario), "--condition", "R1",
                          "--out", str(out),
                          "--frameworks-config", str(tmp_path / "absent.yml")])
     err = capsys.readouterr().err
@@ -415,6 +419,27 @@ def test_rn_5_this_project_configures_its_key():
     if not record:
         pytest.skip("this checkout has no delivery record configured")
     assert record.get("names_key") == ".compass/private/rival-codes.yml"
+
+
+def test_rn_5_the_living_spec_derivation_writes_codes(fake, tmp_path, monkeypatch):
+    """The living spec is committed but derived from local issue records,
+    whose scenario titles may name a rival."""
+    from compass_pkg import flow
+    key, _ = fake
+    root, _ = _record_project(tmp_path, monkeypatch, key)
+    task = root / ".compass" / "work" / "compare"
+    task.mkdir(parents=True)
+    (task / "manifest.yml").write_text(yaml.safe_dump({
+        "schema_version": "2.0", "issue": "compare", "status": "landed",
+        "land_timestamp": "2026-10-04T00:00:00+00:00",
+        "scenarios": [{"id": "CMP-1", "intent": "INT-1",
+                       "title": "Given a run, then Compass costs at most "
+                                "twice Zorblax Kit."}]}), encoding="utf-8")
+    flow.derive_system_spec(str(root))
+    derived = "".join((root / rel).read_text(encoding="utf-8")
+                      for rel in flow.LIVING_SPEC_FILES)
+    assert "CMP-1" in derived
+    assert "zorblax" not in derived.lower() and "R0" in derived
 
 
 # --- RN-6: CI runs the gate over pull request text ---------------------------

@@ -8919,7 +8919,7 @@
 - **Source issue:** `quick-fix-overhead`
 - **Landed:** 2026-09-28
 
-### a re-run costs at most twice Superpowers _(archived)_
+### a re-run costs at most twice R1 _(archived)_
 
 - **Scenario id:** `QFO-7`
 - **Intent:** `INT-1`

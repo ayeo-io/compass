@@ -10815,3 +10815,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `rival-names-never-committed`
 - **Landed:** 2026-10-04
+
+### Given an eval run, then every session runs without writing bytecode, a compass run as root is refused unless its plugin copy is on a read-only mount or --allow-root is given, each record names the uid, Python version and whether it ran as root, and the comparison report states those and how many runs were not contained. _(archived)_
+
+- **Scenario id:** `HC-1`
+- **Intent:** `INT-1`
+- **Source issue:** `harness-containment-under-root`
+- **Landed:** 2026-10-04

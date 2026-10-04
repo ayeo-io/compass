@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given an eval run, then every session runs without writing bytecode, a compass run as root is refused unless its plugin copy is on a read-only mount or --allow-root is given, each record names the uid, Python version and whether it ran as root, and the comparison report states those and how many runs were not contained.
+### Given the commit-msg hook is installed, then a commit whose message names a rival product is refused before it is made, a clean message commits, and the refusal names no product.
 
-- **Scenario id:** `HC-1`
+- **Scenario id:** `CM-1`
 - **Intent:** `INT-1`
-- **Source issue:** `harness-containment-under-root`
+- **Source issue:** `commit-msg-name-check`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1544 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1545 superseded scenario(s) are in `docs/system-spec-archive.md`.

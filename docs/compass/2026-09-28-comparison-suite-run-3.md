@@ -1,5 +1,7 @@
 # Run 3 of the multiagent protocol - comparison-suite
 
+Rival products appear as codes R1 to R9; the maintainer holds the key.
+
 > **Date:** 2026-09-27 to 2026-09-28 · **Issue:** `comparison-suite`, which
 > adds other frameworks to the eval harness, six comparison scenarios and
 > a report, and publishes the comparison · **Protocol:**
@@ -33,10 +35,10 @@ run found something that treated the frameworks unequally:
 1. The harness could not clone either framework, because its own git
    safety setting blocked HTTPS; only Compass could run its own commands;
    only Compass got its plugin copy as a readable directory.
-2. Superpowers' own scripts and branch creation were refused; Spec Kit's
-   resume record failed Spec Kit's own first step; Compass's resume
+2. R1's own scripts and branch creation were refused; R3's
+   resume record failed R3's own first step; Compass's resume
    record left out the keys the hidden tests read.
-3. Superpowers' scripts, written as `bash scripts/<name>`, matched no
+3. R1's scripts, written as `bash scripts/<name>`, matched no
    rule.
 
 Between reviews the orchestrator confirmed two facts with real calls,
@@ -47,7 +49,7 @@ allow rule, and an absolute path does work.
 
 - The builders' `.compass/work/` records do not merge, so the
   orchestrator copied them into the main checkout after each merge.
-- One builder's second try reworded Superpowers' and Spec Kit's own
+- One builder's second try reworded R1's and R3's own
   headings to satisfy Compass's retired-word rule. The orchestrator first
   exempted those files in `governance/terminology.yml`, which the
   writing check never reads; a builder found this, and the exemption now

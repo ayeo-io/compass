@@ -123,8 +123,8 @@ should beat a careless change:
 - `cmp-resume-decision`: a cold resume must honour a rule only the record holds;
 - `cmp-second-change`: a second change must follow a rule the first recorded.
 
-Each runs twice under every condition (`compass`, `bare`, `superpowers`
-and `spec-kit`), with the same model.
+Each runs twice under every condition (`compass`, `bare`, `R1`
+and `R3`), with the same model.
 
 - A scenario shows an edge for Compass when, across its two runs,
   Compass's hidden-test pass rate is higher than every other condition's,

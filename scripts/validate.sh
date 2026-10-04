@@ -241,6 +241,19 @@ if command -v python3 >/dev/null 2>&1 && [ -x "cli/compass" ]; then
 else
   say "  skip compass policy lint  <- python3 or cli/compass not runnable; skipped"
 fi
+# 8f. no rival product name in a tracked file or path
+#     (governance/decisions/2026-10-04-rival-names-never-committed.md).
+if command -v python3 >/dev/null 2>&1 && [ -f "scripts/rival-name-gate.py" ] \
+    && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  if GATE_OUT="$(python3 scripts/rival-name-gate.py --tree 2>&1)"; then
+    ok "rival-name-gate --tree  <- PASS"
+  else
+    fail "a tracked file or path names a rival product; use its code:"
+    printf '%s\n' "$GATE_OUT" | sed 's/^/         /' >&2
+  fi
+else
+  say "  skip rival-name-gate  <- python3, the gate or a git checkout not present; skipped"
+fi
 say ""
 
 # --- verdict ----------------------------------------------------------------

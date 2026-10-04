@@ -1,9 +1,11 @@
 # Spike conclusion - the subagent-driven-development loop
 
+Rival products appear as codes R1 to R9; the maintainer holds the key.
+
 > **Author:** jed72 · **Date:** 2026-08-27
 > **Issue:** `sdd-loop-spike` (parent intent document:
 > `docs/compass/2026-08-26-first-hour-intent.md`, INT-7)
-> **Question:** which parts of Superpowers' subagent-driven-development loop
+> **Question:** which parts of R1's subagent-driven-development loop
 > should Compass's orchestrator/builder protocol adopt, which should it not,
 > and why - so a follow-on issue can be sized honestly, or the question
 > closed.
@@ -13,23 +15,23 @@
 
 ## What was read
 
-Superpowers at tag **v6.3.0**, commit `b36e082`, dated 2026-08-12 - cloned
-from `github.com/obra/superpowers` and read from disk, not recalled. The
+R1 at tag **v6.3.0**, commit `b36e082`, dated 2026-08-12 - cloned
+from `github.com/R1` and read from disk, not recalled. The
 files that carry the loop:
 
-Every path in this table is inside the **Superpowers** repository, not this
+Every path in this table is inside the **R1** repository, not this
 one, and is written repo-first so it stays openable: read it at
-`https://github.com/obra/superpowers/blob/v6.3.0/<path>`.
+`R1/blob/v6.3.0/<path>`.
 
 | File | Lines |
 |---|---|
-| `obra/superpowers/skills/subagent-driven-development/SKILL.md` | 568 |
-| `obra/superpowers/skills/subagent-driven-development/task-reviewer-prompt.md` | 207 |
-| `obra/superpowers/skills/subagent-driven-development/implementer-prompt.md` | 154 |
-| `obra/superpowers/skills/subagent-driven-development/re-review-prompt.md` | 115 |
-| `obra/superpowers/skills/dispatching-parallel-agents/SKILL.md` | 167 |
-| `obra/superpowers/skills/using-git-worktrees/SKILL.md` | 167 |
-| `obra/superpowers/RELEASE-NOTES.md` (v6.2.0 and v6.3.0 sections) | - |
+| `R1/skills/subagent-driven-development/SKILL.md` | 568 |
+| `R1/skills/subagent-driven-development/task-reviewer-prompt.md` | 207 |
+| `R1/skills/subagent-driven-development/implementer-prompt.md` | 154 |
+| `R1/skills/subagent-driven-development/re-review-prompt.md` | 115 |
+| `R1/skills/dispatching-parallel-agents/SKILL.md` | 167 |
+| `R1/skills/using-git-worktrees/SKILL.md` | 167 |
+| `R1/RELEASE-NOTES.md` (v6.2.0 and v6.3.0 sections) | - |
 
 On the Compass side: `skills/worktree-multiagent/SKILL.md` (139),
 `agents/orchestrator.md` (74), `agents/builder.md` (102),
@@ -40,7 +42,7 @@ orchestration.
 ## The premise, checked
 
 This spike set out to test the premise that Compass's orchestrator/builder
-protocol runs builders in parallel across worktrees, which Superpowers
+protocol runs builders in parallel across worktrees, which R1
 cannot do. That is two claims, and measuring them changes what this spike is
 about.
 
@@ -71,9 +73,9 @@ assumes a controller dispatching subagents is, in Compass today, a paragraph
 of prose that a session either follows or does not. There is no code path to
 change.
 
-### Superpowers has not failed at parallel implementers - it banned them
+### R1 has not failed at parallel implementers - it banned them
 
-This correction changes how the comparison reads. Superpowers ships
+This correction changes how the comparison reads. R1 ships
 `dispatching-parallel-agents`, a whole skill about issuing several subagent
 dispatches in one response so they run concurrently. It is not missing the
 capability. Its SDD loop contains this line:
@@ -84,14 +86,14 @@ And `dispatching-parallel-agents` is explicit that it is for independent
 *investigation* domains, with "Don't use when... Shared state: Agents would
 interfere (editing same files, using same resources)."
 
-So Superpowers can dispatch in parallel and chooses not to for
+So R1 can dispatch in parallel and chooses not to for
 implementation, because its workers share one workspace - its
 `using-git-worktrees` skill creates **one** isolated workspace per plan, and
 its first instruction is "detect existing isolation first... Do NOT create
 another worktree."
 
-**Compass's differentiator is not a capability Superpowers lacks. It is a
-design choice Superpowers considered and rejected**: that one worktree per
+**Compass's differentiator is not a capability R1 lacks. It is a
+design choice R1 considered and rejected**: that one worktree per
 subtask makes parallel implementers safe. The
 `cross-task-architectural-integrity` run is one data point that it works.
 One.
@@ -119,7 +121,7 @@ Fifteen mechanisms, each marked against `worktree-multiagent`,
 | 8 | Explicit model per dispatch | **adopt** | Compass pins a model in agent frontmatter but says nothing about scaling it to the work. |
 | 9 | Batch small same-shape work | **adopt** | Compass's unit of dispatch is the subtask, with no guidance below it. |
 | 10 | No-subagents contract for workers | **adopt** | Nothing stops a Compass builder spawning its own reviewer. |
-| 11 | Never dispatch implementers in parallel | **reject** | This is the mechanism Superpowers rejected and Compass adopts. |
+| 11 | Never dispatch implementers in parallel | **reject** | This is the mechanism R1 rejected and Compass adopts. |
 | 12 | "Rulings I made" exhaustive final list | **adapt** | Compass has the artifacts but no rule that decisions taken on the user's behalf are surfaced as a list. |
 | 13 | Scoped re-review | **adapt** | Follows mechanism 5; meaningless without a fix loop. |
 | 14 | Deferred-minors roll-up into the final review | **adapt** | Compass has `follow_ups:`, which is stronger, but nothing points the reviewer at it. |
@@ -127,7 +129,7 @@ Fifteen mechanisms, each marked against `worktree-multiagent`,
 
 ### The five that matter most
 
-**1, 3 - artifacts as files.** Superpowers' rule is blunt: "Everything you
+**1, 3 - artifacts as files.** R1's rule is blunt: "Everything you
 paste into a dispatch prompt - and everything a subagent prints back - stays
 resident in your context for the rest of the session and is re-read on every
 later turn. Hand artifacts over as files." It cites a real session whose
@@ -140,7 +142,7 @@ not have is the rule that the assignment is a *path*, not a paste. This is the
 cheapest adoption on the list and the one with the clearest payoff, because
 Compass's instruction volume is already a live concern.
 
-**4 - not coaching the reviewer.** Superpowers names the tells: "If the
+**4 - not coaching the reviewer.** R1 names the tells: "If the
 prompt you are writing contains 'do not flag,' 'don't treat X as a defect,'
 'at most Minor,' or 'the plan chose' - stop: you are pre-judging, usually to
 spare yourself a review loop."
@@ -157,7 +159,7 @@ failing it.
 a gate decision; `/compass:verify` says "If anything fails, the issue does
 not advance - fix it or send it back." Who fixes it, how many tries are
 allowed, what happens when tries stop converging, and where the decision
-is recorded are all unspecified. Superpowers has a five-round cap, a
+is recorded are all unspecified. R1 has a five-round cap, a
 capability escalation at round four, a scoped re-review that checks fixes
 without wandering, and a mandatory adjudication when the breaker trips, every
 one of which is a ledger entry.
@@ -166,7 +168,7 @@ Adapt rather than adopt, because Compass already has better places to put
 each half: the round count and its rulings belong in the manifest, not a
 markdown ledger, so `compass check` can see them.
 
-**6 - rulings, not stalls: the one to reject as written.** Superpowers'
+**6 - rulings, not stalls: the one to reject as written.** R1's
 change here came from a donated session that "sat blocked for almost nine
 hours on a question the controller could have decided." The fix was to let
 the controller rule on anything short of destructive, and record it.
@@ -183,7 +185,7 @@ with a `--reason` that `compass retro` aggregates. Extending that habit - a
 decision taken on the user's behalf is written where they will see it, not
 only where it happened to be made - is mechanism 12, and it is an adapt.
 
-**7 - the ledger: reject, because Compass already has better.** Superpowers
+**7 - the ledger: reject, because Compass already has better.** R1
 built the ledger because "conversation memory does not survive compaction"
 and controllers were re-dispatching sequences of already-completed work.
 Compass's
@@ -192,7 +194,7 @@ scenarios - plus `/compass:resume`, which reads the delivery approach and
 works out where things stand. It is structured where the ledger is prose, and
 `compass check` can check it where nothing checks a ledger.
 
-The one idea worth adopting is the *identity line*: Superpowers' ledger names
+The one idea worth adopting is the *identity line*: R1's ledger names
 its plan on its first line because a follow-up plan in the same tree read the
 previous plan's progress as its own. Compass has a filed defect of exactly
 this shape - `work-dir-is-shared-across-branches`. That is already an issue;
@@ -245,7 +247,7 @@ nothing an adopter's tooling depends on), familiarity
 
 ### The fix loop - do not file it yet
 
-Mechanism 5 is 2-3 days and adds schema. Superpowers arrived at five rounds
+Mechanism 5 is 2-3 days and adds schema. R1 arrived at five rounds
 and a capability bump at round four from eval campaigns with published
 numbers. Compass has no measurement of how often a Compass review round even
 repeats, because nothing records review rounds. Adopting a cap of five on
@@ -267,7 +269,7 @@ implementers in parallel - is the thing Compass exists to do differently.
 
 ## One thing this spike did not do, and it is the most important gap
 
-Donated real sessions with numbers attached shaped Superpowers' loop: a
+Donated real sessions with numbers attached shaped R1's loop: a
 nine-hour stall, a 42,000-character dispatch, 6-13 tool calls of forensics
 per resume, an eval where deleting a section moved test-first behaviour from
 8/10 to 5/10.
@@ -281,7 +283,7 @@ from Compass's. That is a reasonable basis for the prose changes, which are
 cheap and reversible. It is a poor basis for the fix loop, which is why the
 recommendation defers it.
 
-The measurement Compass is missing is not of Superpowers. It is of itself:
+The measurement Compass is missing is not of R1. It is of itself:
 how often a multiagent orchestration is actually used, what the subtasks
 cost, how often a review round repeats. `compass retro` already aggregates
 re-assessments. Nothing aggregates the multiagent orchestration.

@@ -4,7 +4,7 @@ The report gives every session's tokens, before and after, for the two
 B6 scenarios a quick fix serves, and the calls by step. This test reads
 the report's own table, so a figure changed in one place and not the
 other fails here, and it holds the claim the report makes: each
-scenario's Compass mean after the change is at most twice Superpowers'.
+scenario's Compass mean after the change is at most twice R1's.
 
 Scenario ids: QFO-7 and QFO-8, in acceptance-criteria.md of issue
 quick-fix-overhead.
@@ -19,7 +19,7 @@ REPORT = ROOT / "docs" / "compass" / "2026-09-28-quick-fix-evaluation-cost.md"
 
 # | scenario | condition | session | tokens | calls | hidden | gates |
 ROW = re.compile(
-    r"^\| `(cmp-[a-z-]+)` \| ([a-z -]+?) \| (\d) \| ([\d,]+) \| (\d+) \| "
+    r"^\| `(cmp-[a-z-]+)` \| ([A-Za-z0-9 -]+?) \| (\d) \| ([\d,]+) \| (\d+) \| "
     r"(\d+/\d+) \| ([a-z-]+) \|$")
 
 
@@ -42,11 +42,11 @@ def _mean(rows, scenario, condition):
     return sum(got) / len(got)
 
 
-def test_qfo_7_each_scenario_mean_is_within_twice_superpowers():
+def test_qfo_7_each_scenario_mean_is_within_twice_r1():
     rows = _rows()
     for scenario in ("cmp-small-fix", "cmp-feature"):
         after = _mean(rows, scenario, "compass after")
-        rival = _mean(rows, scenario, "superpowers")
+        rival = _mean(rows, scenario, "R1")
         assert after <= 2 * rival, (scenario, after, rival)
 
 
@@ -62,7 +62,7 @@ def test_qfo_7_every_session_after_held_the_guardrails_and_the_result():
 def test_qfo_8_the_breakdown_gives_calls_before_and_after_with_its_limits():
     raw = REPORT.read_text(encoding="utf-8")
     rows = _rows()
-    for condition in ("compass before", "compass after", "superpowers",
+    for condition in ("compass before", "compass after", "R1",
                       "no framework"):
         assert any(r["condition"] == condition for r in rows), condition
     assert "## Calls by step" in raw

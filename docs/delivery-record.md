@@ -28,6 +28,16 @@ A record path must be a folder or file inside the project; `.`, `.git` and anyth
 
 Nothing in the record is trusted. A record that holds a symbolic link or a submodule entry is refused by sync and restore; a `.gitignore` in the record cannot hide files from a sync; the clone runs with LFS filters off, so a record cannot make git contact another server. A restore that finds nothing under the configured paths says so.
 
+## Keeping rival names out of the record
+
+A project that refers to other products by codes can set `record.names_key` to a key file inside the project, never committed. The key maps each code to the product's name, aliases and URLs.
+
+- Sync replaces every name in copied text and paths with its code, then scans what it wrote. A file or path that still names a product stops the sync before anything is committed or pushed.
+- The key is found from `COMPASS_RIVALS_KEY`, then the configured path, then the same path in the main checkout, so a ship from a linked worktree finds it.
+- When the setting names a key that cannot be found, sync exits 2 and sends nothing.
+- Files already in the record from before the key was set are not refused; sync says how many still name a product, and one `compass record sync --prune` from the main checkout rewrites them.
+- `compass record restore` brings back the codes, not the names.
+
 One record repository serves one project. The clone lives in the user's cache folder (`$XDG_CACHE_HOME/compass/record/`, or `~/.cache/compass/record/`), never inside the project, and a cached clone whose remote changed is replaced.
 
 ## Restoring onto a new machine

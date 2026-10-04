@@ -14,7 +14,7 @@
 # inside the project, so the project can never commit it by mistake.
 #
 # DEPENDENCY: standard library (hashlib, os, shutil, subprocess) and
-# compass_pkg (core, redact).
+# compass_pkg (core, redact, rival_names).
 # =============================================================================
 """`compass record sync|restore`: the delivery record in its own repository."""
 from __future__ import annotations
@@ -27,6 +27,7 @@ import subprocess
 
 from compass_pkg.core import CompassError, find_compass_dir, load_yaml
 from compass_pkg.redact import redact
+from compass_pkg import rival_names
 
 #: The branch the record is kept on.
 BRANCH = "main"
@@ -75,6 +76,39 @@ def settings(project_root):
                                f"folder or file inside the project.")
         cleaned.append(rel)
     return remote.strip(), cleaned
+
+
+def names_key(project_root):
+    """The names key `record.names_key` sets, or None when it sets none.
+    Found from `COMPASS_RIVALS_KEY`, then the configured path in the
+    project, then the same path in the main checkout: the key is never
+    committed, so a linked worktree, where ship syncs from, has none of its
+    own. A key that is configured but found nowhere is refused, so the
+    record never receives names for want of it."""
+    path = os.path.join(project_root, ".compass", "config.yml")
+    config = load_yaml(path) if os.path.isfile(path) else {}
+    record = (config or {}).get("record")
+    configured = record.get("names_key") if isinstance(record, dict) else None
+    if not configured:
+        return None
+    if not isinstance(configured, str) or os.path.isabs(configured) \
+            or ".." in configured.replace("\\", "/").split("/"):
+        raise CompassError("compass record: `record.names_key` must be a "
+                           "path inside the project.")
+    candidates = [os.environ.get("COMPASS_RIVALS_KEY", ""),
+                  _inside(project_root, configured)]
+    common = _git(["rev-parse", "--path-format=absolute", "--git-common-dir"],
+                  project_root).stdout.strip()
+    if common:
+        main = os.path.dirname(common)
+        candidates.append(_inside(main, configured))
+    for candidate in candidates:
+        if candidate and os.path.isfile(candidate):
+            return candidate
+    raise CompassError(
+        f"compass record sync: the names key {configured} is configured but "
+        f"missing, so the record would receive rival product names. Nothing "
+        f"was synced. Put the key there, or set COMPASS_RIVALS_KEY.")
 
 
 def _inside(root, rel):
@@ -196,10 +230,14 @@ def _refuse_links(clone):
             f"record before syncing or restoring.")
 
 
-def _copy_file(source, target):
+def _copy_file(source, target, names=None, written=None):
+    """Copy one file, with credentials redacted and, given a names key,
+    rival product names replaced by their codes."""
     if os.path.islink(source):
         return  # a link could lead anywhere on the machine
     os.makedirs(os.path.dirname(target), exist_ok=True)
+    if written is not None:
+        written.append(target)
     with open(source, "rb") as fh:
         data = fh.read()
     try:
@@ -207,24 +245,30 @@ def _copy_file(source, target):
     except UnicodeDecodeError:
         shutil.copyfile(source, target)
         return
+    text = redact(text)
+    if names:
+        text = rival_names.redact_names(text, names)
     with open(target, "w", encoding="utf-8") as fh:
-        fh.write(redact(text))
+        fh.write(text)
 
 
-def _mirror(source_root, target_root, rel, prune):
+def _mirror(source_root, target_root, rel, prune, names=None, written=None):
     """Copy `source_root/rel` into `target_root/rel`, redacted. With
     `prune`, first remove what the source no longer has; without it, the
     record only gains and updates files, so a partial checkout loses
     nothing from it."""
     source = _inside(source_root, rel)
-    target = _inside(target_root, rel)
+    # The record path itself can hold a name, such as an issue folder
+    # synced alone from a worktree.
+    target = _inside(target_root,
+                     rival_names.redact_names(rel, names) if names else rel)
     if prune:
         if os.path.isdir(target):
             shutil.rmtree(target)
         elif os.path.exists(target):
             os.remove(target)
     if os.path.isfile(source):
-        _copy_file(source, target)
+        _copy_file(source, target, names, written)
         return
     for base, dirs, files in os.walk(source):
         # A nested `.git`, in any case, is git's own state, never record.
@@ -236,7 +280,46 @@ def _mirror(source_root, target_root, rel, prune):
                     or name.lower() == ".git":
                 continue
             full = os.path.join(base, name)
-            _copy_file(full, os.path.join(target, os.path.relpath(full, source)))
+            inner = os.path.relpath(full, source)
+            if names:
+                inner = rival_names.redact_names(inner, names)
+            _copy_file(full, os.path.join(target, inner), names, written)
+
+
+def _check_names(clone, names, written):
+    """Refuse the sync if a file or path it wrote still names a rival; say
+    how many earlier record files do. Only what this sync wrote is refused,
+    so files from before the key was configured do not block every sync;
+    one `--prune` sync rewrites them."""
+    hashes = rival_names.hashes_from_key(names)
+    found = []
+    for target in written:
+        rel = os.path.relpath(target, clone)
+        with open(target, "rb") as fh:
+            text = rival_names.readable_text(fh.read())
+        if rival_names.scan(rel, hashes) or rival_names.scan(text, hashes):
+            found.append(rival_names.mask(rel, hashes))
+    if found:
+        raise CompassError(
+            f"compass record sync: {len(found)} file(s) still name a rival "
+            f"product after redaction, so nothing was committed: "
+            f"{', '.join(found[:5])}")
+    done = {os.path.realpath(t) for t in written}
+    earlier = 0
+    for base, dirs, files in os.walk(clone):
+        dirs[:] = [d for d in dirs if d != ".git"]
+        for name in files:
+            full = os.path.join(base, name)
+            if os.path.realpath(full) in done:
+                continue
+            with open(full, "rb") as fh:
+                text = rival_names.readable_text(fh.read())
+            if rival_names.scan(os.path.relpath(full, clone), hashes) or \
+                    rival_names.scan(text, hashes):
+                earlier += 1
+    return (f"; {earlier} earlier record file(s) still name a rival product, "
+            f"and `compass record sync --prune` rewrites them"
+            if earlier else "")
 
 
 def _identity(project_root):
@@ -258,6 +341,8 @@ def sync(project_root, prune=False, only=None):
     if found is None:
         return "no record is configured (`record:` in .compass/config.yml)"
     remote, paths = found
+    key_path = names_key(project_root)
+    names = rival_names.load_key(key_path) if key_path else None
     if only is None and linked_worktree(project_root):
         raise CompassError(
             "compass record sync: this is a linked worktree, which holds only "
@@ -270,6 +355,7 @@ def sync(project_root, prune=False, only=None):
                  and any(rel == p or rel.startswith(p + "/") for p in paths)]
     clone = _fresh_clone(remote)
     skipped = []
+    written = []
     for rel in paths:
         if not os.path.exists(os.path.join(project_root, rel)):
             # A whole path absent from this checkout, such as an ignored
@@ -277,9 +363,11 @@ def sync(project_root, prune=False, only=None):
             # record: its absence here says nothing about the record.
             skipped.append(rel)
             continue
-        _mirror(project_root, clone, rel, prune)
+        _mirror(project_root, clone, rel, prune, names, written)
     note = (f" ({', '.join(skipped)} not in this checkout, so left as "
             f"recorded)" if skipped else "")
+    if names:
+        note += _check_names(clone, names, written)
     # --force: a `.gitignore` in the record must not hide files from it.
     _must(_git(["add", "-A", "--force"], clone), "staging the record")
     if not _git(["status", "--porcelain"], clone).stdout.strip():

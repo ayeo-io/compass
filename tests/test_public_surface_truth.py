@@ -104,7 +104,7 @@ def test_a4_named_files_resolve():
     a backticked or bare path ending in .md under a known framework directory.
     """
     # The lookbehind is what keeps this about OUR files. A path with a segment
-    # in front of it - `obra/superpowers/skills/...`, or the tail of a URL -
+    # in front of it - `R1/skills/...`, or the tail of a URL -
     # names another project's file, and asserting it exists here would be
     # wrong. Without it, a document that compares Compass to another framework
     # cannot cite that framework's files at all. Scoping by a prose caveat

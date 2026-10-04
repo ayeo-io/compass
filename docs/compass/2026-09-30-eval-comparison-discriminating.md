@@ -1,8 +1,10 @@
 # Comparison: four scenarios where a careless change fails
 
-> **Harness and report:** `evals/harness.py`, `evals/compare.py` · **Model:** `claude-opus-5-5`, Claude Code 2.1.284 · **Compass:** `d35ba159` · **Superpowers:** `8ca22dba` · **Spec Kit:** `3b895d16` · **Run:** 30 September 2026, 32 sessions, $7.90
+Rival products appear as codes R1 to R9; the maintainer holds the key.
 
-The first comparison (`2026-09-28-eval-comparison.md`) could not tell the frameworks apart: its scenarios were small enough that nearly every session got them right (47 of 48). This comparison adds four scenarios in which a careless change passes the visible tests and fails the hidden ones. Each ran under four conditions (no framework, Compass, Superpowers and Spec Kit), twice.
+> **Harness and report:** `evals/harness.py`, `evals/compare.py` · **Model:** `claude-opus-5-5`, Claude Code 2.1.284 · **Compass:** `d35ba159` · **R1:** `8ca22dba` · **R3:** `3b895d16` · **Run:** 30 September 2026, 32 sessions, $7.90
+
+The first comparison (`2026-09-28-eval-comparison.md`) could not tell the frameworks apart: its scenarios were small enough that nearly every session got them right (47 of 48). This comparison adds four scenarios in which a careless change passes the visible tests and fails the hidden ones. Each ran under four conditions (no framework, Compass, R1 and R3), twice.
 
 ## Result
 
@@ -10,7 +12,7 @@ The first comparison (`2026-09-28-eval-comparison.md`) could not tell the framew
 - **Compass was the only condition to fail a session, and it failed by writing nothing.** In one `cmp-edge-case` session, Compass gave the full feature process to a one-function change. The session stopped twice to ask whether to go ahead, and the harness sends only one reply, so it ended with no code.
 - **Compass cost the most:** $3.76 against $1.20 to $1.57, 3.4 million tokens against 1.0 to 1.3 million, and twice the wall time. Three Compass sessions stopped to ask about the process, each after rating familiarity as something other than `brownfield-mapped`; no other condition stopped.
 
-| Measure | no framework | Compass | Superpowers | Spec Kit |
+| Measure | no framework | Compass | R1 | R3 |
 |---|---|---|---|---|
 | Sessions that passed every hidden test | 8 of 8 | 7 of 8 | 8 of 8 | 8 of 8 |
 | Regressions | 0 | 0 | 0 | 0 |
@@ -32,7 +34,7 @@ The first comparison (`2026-09-28-eval-comparison.md`) could not tell the framew
 
 ## Per scenario
 
-| Scenario | no framework | Compass | Superpowers | Spec Kit |
+| Scenario | no framework | Compass | R1 | R3 |
 |---|---|---|---|---|
 | `cmp-hidden-requirement` | 2 of 2 | 2 of 2 | 2 of 2 | 2 of 2 |
 | `cmp-call-sites` | 2 of 2 | 2 of 2 | 2 of 2 | 2 of 2 |

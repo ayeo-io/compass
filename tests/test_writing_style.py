@@ -383,12 +383,12 @@ def _is_excluded(rel: str) -> bool:
 
 _FIXTURE_PREFIX = "tests/fixtures/writing-style/"
 
-# Other frameworks' own records. An eval scenario lays a `seed_superpowers/`
-# or `seed_spec_kit/` overlay over its seed for a session under that
+# Other frameworks' own records. An eval scenario lays a `seed_R1/`
+# or `seed_R3/` overlay over its seed for a session under that
 # framework, in the words that framework writes. Compass's writing rules must
 # not rewrite them, and an allow marker would appear in the text the session
 # reads, so every file in such an overlay is left out.
-_OTHER_FRAMEWORKS_OVERLAYS = ("/seed_superpowers/", "/seed_spec_kit/")
+_OTHER_FRAMEWORKS_OVERLAYS = ("/seed_R1/", "/seed_R3/")
 
 
 def _is_other_frameworks_record(rel: str) -> bool:
@@ -606,7 +606,7 @@ _register(Rule(
         Exemption(
             "docs/compass/2026-08-27-sdd-loop-spike.md",
             "task-reviewer-prompt.md",
-            "the literal filename of a file inside the Superpowers "
+            "the literal filename of a file inside the R1 "
             "repository, cited so the reference stays openable - not "
             "this project's vocabulary"),
         Exemption(
@@ -1852,16 +1852,16 @@ _register(Rule(
                    "the same evidence-id-prefix machine identifier as the "
                    "ADR-007 exemption above, truncated mid-token by the "
                    "docstring it illustrates."),
-        # The same no-op case as the ADR-007 exemption above: Spec Kit's own
+        # The same no-op case as the ADR-007 exemption above: R3's own
         # real command name, hyphenated, so the backtick right before the
         # match opens two segments earlier and the identifier is not caught.
         Exemption("evals/harness.py",
-                   "`speckit-analyze`",
-                   "Spec Kit's own real command name, a machine identifier "
+                   "`R3-analyze`",
+                   "R3's own real command name, a machine identifier "
                    "- same case as the ADR-007 exemption above."),
         Exemption("tests/test_eval_harness.py",
-                   "`speckit-implement`, `speckit-analyze`",
-                   "Spec Kit's own real command name, a machine identifier "
+                   "`R3-implement`, `R3-analyze`",
+                   "R3's own real command name, a machine identifier "
                    "- same case as the ADR-007 exemption above."),
     ),
 ))
@@ -2054,6 +2054,13 @@ _register(Rule(
     _find_citation,
     exemptions=(
         Exemption(
+            "CLAUDE.md",
+            ".compass/private/rival-codes.yml",
+            "the rival names key is undistributed on purpose: committed "
+            "text must not hold the names it maps "
+            "(governance/decisions/2026-10-04-rival-names-never-committed.md), "
+            "and a session in this repository needs its exact path"),
+        Exemption(
             "docs/quickstart.md",
             ".compass/work/add-rate-limiting/manifest.yml",
             "the walkthrough's own hypothetical issue - it shows the "
@@ -2140,10 +2147,20 @@ _BARE_CODE_RE = re.compile(
 _BARE_CODE_TABLE_SKIP = "architecture/decisions/README.md"
 
 
+# R1 to R9 are rival product codes. Their meaning is the product's name,
+# which committed text must not carry
+# (governance/decisions/2026-10-04-rival-names-never-committed.md), so no
+# plain words can stand beside them; the convention is stated once in
+# CLAUDE.md instead.
+_RIVAL_CODE = re.compile(r"R[1-9]")
+
+
 def _find_bare_code(span: ProseSpan) -> list[Finding]:
     findings = []
     for match in _BARE_CODE_RE.finditer(span.text):
         start = match.start()
+        if _RIVAL_CODE.fullmatch(match.group(0)):
+            continue
         # Already in the house form - "the plain words (`G5`)" - or a
         # backticked cross-reference beside a rule already stated in full.
         # Neither shape has the code opening the line: a lone backtick with
@@ -2547,10 +2564,10 @@ _register(Rule(
     _find_missing_reference,
     exemptions=(
         Exemption(
-            "docs/compass/2026-08-27-sdd-loop-spike.md", "obra/superpowers",
-            "every path under obra/superpowers/ is inside the Superpowers "
-            "repository, not this one - the file itself says so and gives "
-            "the github.com URL each path resolves against"),
+            "docs/compass/2026-08-27-sdd-loop-spike.md", "R1",
+            "every path under R1/ is inside the R1 "
+            "repository, not this one - the file itself says so; the "
+            "maintainer's names key holds that repository's address"),
         Exemption(
             "tests/fixtures/terminology/banned_usage.md",
             "Write the brief to `prd.md`, from `templates/prd.md`",
@@ -3331,6 +3348,8 @@ def _find_docstring_shape(span: ProseSpan) -> list[Finding]:
             f'form'))
     for match in _BARE_CODE_RE.finditer(span.text):
         start = match.start()
+        if _RIVAL_CODE.fullmatch(match.group(0)):
+            continue
         if start > 0 and span.text[start - 1] in "(`":
             continue
         findings.append(Finding(

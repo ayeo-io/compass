@@ -1,4 +1,6 @@
-# Eval comparison - Compass, Superpowers, Spec Kit and no framework
+# Eval comparison - Compass, R1, R3 and no framework
+
+Rival products appear as codes R1 to R9; the maintainer holds the key.
 
 > **Run:** 2026-09-28 · **Issue:** `comparison-suite` ·
 > **Harness and report:** `evals/harness.py`, `evals/compare.py` ·
@@ -8,8 +10,8 @@ Six scenarios, each run twice under four conditions: 48 sessions. Every
 condition got the same prompt, model, budget, allow-list and reply rule,
 and the same seed repository, except in `cmp-resume`. There each framework
 got the record it keeps for work in flight, and the condition with no
-framework got a plain `NOTES.md`. The frameworks were pinned: Superpowers
-at `8ca22dba` (tag v6.4.2), Spec Kit at `3b895d16` (tag v1.0.9), and
+framework got a plain `NOTES.md`. The frameworks were pinned: R1
+at `8ca22dba` (tag v6.4.2), R3 at `3b895d16` (tag v1.0.9), and
 Compass at `99dfa86`, this checkout's `HEAD` throughout the runs; the run
 records do not store Compass's commit. Correctness is measured by hidden
 tests the session never sees, copied in after it ends.
@@ -22,8 +24,7 @@ tests the session never sees, copied in after it ends.
   needed before any framework can claim to produce better software.
 - **Compass cost the most, by a wide margin.** Across its 12 sessions it
   used 7.19 million tokens and 1,126 seconds, against 0.95 million and
-  290 seconds with no framework, 1.27 million and 409 seconds under Spec
-  Kit, and 2.21 million and 760 seconds under Superpowers. Compass
+  290 seconds with no framework, 1.27 million and 409 seconds under R3, and 2.21 million and 760 seconds under R1. Compass
   sessions ran its assessment, wrote its records and ran its checks,
   which the others did not; the records do not split the cost by step.
 - **Compass was the only condition that did not complete a scenario.** On
@@ -38,7 +39,7 @@ tests the session never sees, copied in after it ends.
 
 ## Results
 
-| Measure | no framework | Compass | Spec Kit | Superpowers |
+| Measure | no framework | Compass | R3 | R1 |
 |---|---|---|---|---|
 | Completed | 12 of 12 | 11 of 12 | 12 of 12 | 12 of 12 |
 | Hidden tests passed | all | 33 of 38 | all | all |
@@ -73,8 +74,8 @@ The two executions agreed on every correctness result except Compass on
 
 - **Scenarios:** a small fix, a feature, unclear legacy behaviour, a risky
   change to money, a spike, and a resumed session.
-- **Frameworks:** Superpowers loaded as a plugin from its pinned commit.
-  Spec Kit set up by its own `specify init` for Claude, from its pinned
+- **Frameworks:** R1 loaded as a plugin from its pinned commit.
+  R3 set up by its own `specify init` for Claude, from its pinned
   commit. Compass set up by `compass init` and its plugin, the repository
   opted in.
 - **Tools:** one allow-list for all four, wide enough for each framework's
@@ -90,11 +91,11 @@ The two executions agreed on every correctness result except Compass on
   every scenario but one. The scenarios did not separate them.
 - **More than two executions.** Two runs per scenario and condition give
   a lowest and a highest value, not a rate.
-- **Each framework's own workflow, in most sessions.** Superpowers'
+- **Each framework's own workflow, in most sessions.** R1's
   skills ran in 2 of its 12 sessions, both in `cmp-resume`, which
-  accounts for 58% of its tokens and 65% of its time. Spec Kit's workflow
+  accounts for 58% of its tokens and 65% of its time. R3's workflow
   starts when a person runs its commands; every condition got the same
-  plain prompt, and one Spec Kit session, in `cmp-resume`, ran its
+  plain prompt, and one R3 session, in `cmp-resume`, ran its
   implement step. Claude Code refuses, under every condition, commands
   outside the allow-list or beyond its parser; it refused Compass most
   often.

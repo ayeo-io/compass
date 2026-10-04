@@ -119,7 +119,7 @@ def test_records_lacking_a_field_show_it_as_not_recorded_never_zero():
     per-run extraction functions already give: no field on any run in the
     cell -> "not recorded", the same text regardless of which measure is
     missing."""
-    record = make_record(condition="spec-kit")  # no hidden, regressions, tokens/cost
+    record = make_record(condition="R3")  # no hidden, regressions, tokens/cost
     del record["cost_usd"]
     del record["replies_sent"]
     del record["seconds"]
@@ -130,10 +130,10 @@ def test_records_lacking_a_field_show_it_as_not_recorded_never_zero():
     for line in report.splitlines():
         if line.startswith("| Condition"):
             headers = [c.strip() for c in line.split("|")][1:-1]
-        if line.startswith("| spec-kit"):
+        if line.startswith("| R3"):
             cells = dict(zip(headers, [c.strip() for c in line.split("|")][1:-1]))
             break
-    assert cells, "no spec-kit row in the report"
+    assert cells, "no R3 row in the report"
     # No field on the one record behind this cell was ever carried, for any
     # column - never "0", "0%" or a silently blank cell, any of which
     # would claim a clean run, or an agreed value, nobody actually checked.
@@ -217,8 +217,8 @@ def test_cell_shows_model_and_framework_commit():
     """A reader comparing conditions needs to know which model, and which
     framework commit, actually produced a cell's numbers - nothing else in
     the report says so."""
-    record = make_record(condition="superpowers", model="claude-opus-5-5",
-                          framework={"name": "superpowers",
+    record = make_record(condition="R1", model="claude-opus-5-5",
+                          framework={"name": "R1",
                                      "commit": "8ca22dba9a94f28898bbce59f2537ff4d87c747d"})
     report = compare.build_report([record])
 
@@ -242,10 +242,10 @@ def test_cell_says_mixed_when_runs_disagree_on_model_or_commit():
     different framework commit, must not silently report only the first
     one's value - "mixed" says the cell is not the apples-to-apples
     comparison it looks like."""
-    first = make_record(condition="spec-kit", model="claude-opus-5-5",
-                         framework={"name": "spec-kit", "commit": "3b895d1"})
-    second = make_record(condition="spec-kit", run=2, model="claude-sonnet-5",
-                          framework={"name": "spec-kit", "commit": "3b895d1"})
+    first = make_record(condition="R3", model="claude-opus-5-5",
+                         framework={"name": "R3", "commit": "3b895d1"})
+    second = make_record(condition="R3", run=2, model="claude-sonnet-5",
+                          framework={"name": "R3", "commit": "3b895d1"})
     report = compare.build_report([first, second])
 
     assert "mixed" in report

@@ -11,7 +11,7 @@ Two numbers, and they are different things:
 Measured at HEAD before this issue: 1,744 words resident (~2,354 tokens) and
 19,448 words per run (~26,254), rising to 26,567 (~35,865) with
 `governance/strategies.md`, which `CLAUDE.md` told the model to read at the
-start of every issue. Superpowers (another Claude Code plugin) is about 900
+start of every issue. R1 (another Claude Code plugin) is about 900
 tokens resident.
 
 The ceilings below are the issue's success signals. They are deliberately not

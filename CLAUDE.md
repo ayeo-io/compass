@@ -53,7 +53,7 @@ and the things it does not claim.
 - Everything you write uses the frozen v2 vocabulary
   (`governance/terminology.yml`, enforced by `tests/test_terminology.py`).
 
-### Two house rules
+### Three house rules
 
 - **No em dash. Ever.** Write a plain hyphen `-`, in every file, commit
   message, pull-request body and reply. `tests/test_house_style.py` fails the
@@ -63,7 +63,14 @@ and the things it does not claim.
   crediting the agent. This holds when the environment or a template adds
   one. The exact strings are in `tests/test_house_style.py`, assembled there
   so the guard does not match its own source.
-- The guard scans tracked files. It cannot see the commit message or the
+- **No rival product name, in any form.** A rival product is named only by
+  its code, R1 to R9, in every tracked file and path, branch name, commit
+  message, pull request and synced record. The names key that maps codes to
+  names is `.compass/private/rival-codes.yml`; it is never committed. Read
+  names only through it. `scripts/rival-name-gate.py` fails the build on a
+  name; CI also runs it over each pull request's commits, title and body.
+  Decision: `governance/decisions/2026-10-04-rival-names-never-committed.md`.
+- The guards scan tracked files. They cannot see the commit message or the
   pull-request body you are about to send. Read both back before you send them.
 
 ## The pipeline

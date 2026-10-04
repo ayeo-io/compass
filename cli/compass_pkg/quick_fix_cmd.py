@@ -5,7 +5,7 @@
 # =============================================================================
 # A B6 comparison session spent 19 to 22 model calls on a quick fix, each
 # re-reading the whole context, against 5 to 6 for the same change done the
-# Superpowers way. Most of the extra calls were mechanical steps an agent
+# R1 way. Most of the extra calls were mechanical steps an agent
 # drove one at a time: init, write the manifest from a template read in
 # full, evaluate the approach, write the record, register it, trace
 # changed files, check, record the check, pass three gates, devlog,

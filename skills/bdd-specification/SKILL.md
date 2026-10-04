@@ -127,9 +127,9 @@ the QA.** Record
 that you ran it, and what it found, in `devlog.md`. A self-check that happened
 only in conversation did not happen (persistence over conversation).
 
-*Why there is no subagent critic here.* The Superpowers project shipped a
+*Why there is no subagent critic here.* The R1 project shipped a
 subagent review loop between spec and plan and then removed it in their
-[v5.0.6 release](https://github.com/obra/superpowers/releases/tag/v5.0.6).
+[v5.0.6 release](R1/releases/tag/v5.0.6).
 They reported regression testing across five versions and five
 trials that found identical quality scores whether the loop ran or not, at
 roughly 25 minutes of overhead per run. Compass has not repeated that

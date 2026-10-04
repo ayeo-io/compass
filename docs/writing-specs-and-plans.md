@@ -283,8 +283,8 @@ person something specific to argue with.
 
 **No subagent review loop between spec and plan.** The obvious way to improve a
 spec is to have a second agent critique it. The evidence against it is not
-Compass's own: the Superpowers project shipped such a loop, then removed it in
-their [v5.0.6 release](https://github.com/obra/superpowers/releases/tag/v5.0.6)
+Compass's own: the R1 project shipped such a loop, then removed it in
+their [v5.0.6 release](R1/releases/tag/v5.0.6)
 after regression testing across five versions and five
 trials found identical quality scores whether the loop ran or not, at roughly 25
 minutes of overhead per run. Compass has not repeated that measurement, and

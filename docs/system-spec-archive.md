@@ -11046,3 +11046,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `friction-phase-takes-v2-stages`
 - **Landed:** 2026-10-04
+
+### Given cli/compass holds the shebang, build_parser and main, When a verb is registered in build_parser, Then the entry-point guard still passes; and when logic is added outside build_parser, or a loop or a new function is added, Then it fails _(archived)_
+
+- **Scenario id:** `EC-1`
+- **Intent:** `INT-1`
+- **Source issue:** `entry-point-cap-measures-code`
+- **Landed:** 2026-10-04

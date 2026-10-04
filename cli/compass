@@ -424,7 +424,10 @@ def build_parser():
              "staged artifacts robustly: survives auto-fixing pre-commit "
              "hooks and verifies HEAD advanced.",
     )
-    plc.add_argument("-m", "--message", required=True, help="commit message")
+    plc_msg = plc.add_mutually_exclusive_group(required=True)
+    plc_msg.add_argument("-m", "--message", help="commit message")
+    plc_msg.add_argument("-F", "--message-file", dest="message_file", metavar="FILE",
+                         help="read the commit message from FILE, as git commit -F does")
     plc.add_argument("--issue", dest="task", metavar="SLUG", help="issue slug to mark landed on a verified commit")
     plc.add_argument("files", nargs="*",
                      help="optional paths to stage before committing")

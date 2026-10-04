@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given an eval run, then every session runs without writing bytecode, a compass run as root is refused unless its plugin copy is on a read-only mount or --allow-root is given, each record names the uid, Python version and whether it ran as root, and the comparison report states those and how many runs were not contained.
+### Given the terminology tests running in parallel workers, then each worker scans its samples in a folder of its own, so no worker removes another's folder.
 
-- **Scenario id:** `HC-1`
+- **Scenario id:** `TV-1`
 - **Intent:** `INT-1`
-- **Source issue:** `harness-containment-under-root`
+- **Source issue:** `terminology-test-shares-a-folder`
 - **Landed:** 2026-10-04
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1544 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1546 superseded scenario(s) are in `docs/system-spec-archive.md`.

@@ -100,7 +100,9 @@ _(none yet - the shipped default guardrails apply as-is)_
 
 - **`compass check`** runs the checks each guardrail names in `guardrails.yml`
   against the issue's `manifest.yml` and `evidence/`, and reports pass or fail
-  with specifics.
+  with specifics. It also fails an issue whose `assessment:` holds a key
+  `schemas/manifest.schema.json` does not allow, which the release's `issue
+  lint` would refuse.
 - **The pre-tool hook** enforces red-before-green in service of `G1`. It is
   approach-aware and does not block on a spike.
 - **The `verifier` and `reviewer` agents** at Verify, for the parts that remain

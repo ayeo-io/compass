@@ -184,6 +184,11 @@ A policy written before the v2 freeze keeps working: the evaluator maps the
 retired dimension names on read, so an unmigrated project file still
 matches. Write the current names in anything new.
 
+The evaluator refuses an `assessment:` key that
+`schemas/manifest.schema.json` does not allow, such as `risk_reason`, before
+it writes anything. `compass check` and `compass issue lint` refuse the same
+keys, with or without `jsonschema` installed.
+
 Routing-rule keys: `force_minimum_route`, `require_phase`,
 `require_skill`, `never_skip`, `max_worktrees`, `forbid_route`,
 `block_phase` + `until`, `require_artifact`, `add_gate`, `gate`. Every rule

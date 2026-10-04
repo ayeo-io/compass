@@ -1169,3 +1169,21 @@ def issue_arg(p):
                    help="issue slug (default: COMPASS_ISSUE, then the "
                         "current-task pointer)")
     return p
+
+
+def assessment_key_errors(assessment):
+    """One error per `assessment:` key the manifest schema does not allow.
+
+    `issue lint` refused such keys only through jsonschema, which a release
+    runs, while `approach evaluate --write` and `compass check` passed them
+    to landing (#399). All three call this, and it reads the allowed keys
+    from the schema with the standard library, so it runs with or without
+    jsonschema installed."""
+    if not isinstance(assessment, dict):
+        return []
+    path = os.path.join(FRAMEWORK_ROOT, "schemas", "manifest.schema.json")
+    with open(path, encoding="utf-8") as fh:
+        allowed = list(json.load(fh)["properties"]["assessment"]["properties"])
+    return [f"assessment has a key the manifest schema does not allow: "
+            f"'{key}'; the allowed keys are {', '.join(allowed)}"
+            for key in assessment if key not in allowed]

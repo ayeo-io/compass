@@ -431,6 +431,10 @@ def cmd_route_evaluate(args):
                 f"records the four dimensions there before the approach is "
                 f"evaluated."
             )
+        from compass_pkg.core import assessment_key_errors
+        key_errors = assessment_key_errors(readings)
+        if key_errors:
+            raise CompassError(f"{task_path}: " + "; ".join(key_errors))
 
     from compass_pkg.core import load_autonomy
     result = evaluate_route(readings, policy, load_autonomy())

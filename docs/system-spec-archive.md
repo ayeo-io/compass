@@ -11109,3 +11109,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `suite-from-a-clean-clone`
 - **Landed:** 2026-10-04
+
+### Given the workflows in .github/workflows and the copyable files in ci/, When a test reads every uses: line and every package install, Then each action is pinned by a full commit SHA, each pip install reads a requirements file of exact versions or pins inline with ==, and the cucumber-js job installs with npm ci from its lockfile _(archived)_
+
+- **Scenario id:** `SP-1`
+- **Intent:** `INT-1`
+- **Source issue:** `supply-chain-pins`
+- **Landed:** 2026-10-04

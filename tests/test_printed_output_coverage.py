@@ -38,24 +38,25 @@ WRITER_ATTRS = {"write", "writelines"}
 # because an error message is written once and rarely re-read.
 RAISED_TO_USER = {"CompassError"}
 
-# Retired names that must not reach a user, with the ordinary-English senses
-# the pattern has to leave alone. Keyed the same way the vocabulary scan keys
-# its patterns, and deliberately a separate list: this one is about machine
-# values in printed strings, which the prose scan cannot see.
-RETIRED_IN_OUTPUT = {
-    "compass design lint": re.compile(r"compass design lint"),
-    "compass land-commit": re.compile(r"compass land-commit"),
-    "compass calibration": re.compile(r"compass calibration"),
-    "compass route evaluate": re.compile(r"compass route evaluate"),
-    "compass task lint": re.compile(r"compass task lint"),
-    "compass backfill": re.compile(r"compass backfill"),
-    "verify.fitness": re.compile(r"verify\.fitness"),
-    "coherence-check": re.compile(r"coherence-check"),
-    "over-ceremony": re.compile(r"over-ceremony"),
-    "stream_ceiling": re.compile(r"stream_ceiling"),
-    "expedition": re.compile(r"\bexpedition\b"),
-    "spine": re.compile(r"\bspine\b"),
-}
+# Retired names that must not reach a user, read from the `retired_in_output`
+# block of governance/terminology.yml: one list, so retiring a name is one
+# edit. Deliberately separate from the prose scan's patterns, which are
+# capitalisation-scoped and cannot see a lowercase machine value.
+def _retired_in_output():
+    import yaml
+    block = yaml.safe_load(
+        (ROOT / "governance" / "terminology.yml").read_text(encoding="utf-8")
+    ).get("retired_in_output") or []
+    patterns = {}
+    for entry in block:
+        pattern = re.escape(entry["name"])
+        if entry.get("whole_word"):
+            pattern = rf"\b{pattern}\b"
+        patterns[entry["name"]] = re.compile(pattern)
+    return patterns
+
+
+RETIRED_IN_OUTPUT = _retired_in_output()
 
 # A printed string may name a retired spelling when naming it IS the message -
 # a redirect telling someone the verb moved, or an error quoting what it read.
@@ -144,3 +145,20 @@ def test_a_planted_retired_name_is_reported():
     assert any(RETIRED_IN_OUTPUT["compass land-commit"].search(t) for t in found), (
         "the walk did not see a retired verb inside a plain print call, so it "
         "would not see one in the CLI either")
+
+
+def test_the_retired_names_come_from_terminology():
+    """The names the CLI must never print are listed once, in
+    governance/terminology.yml, so retiring a name is one edit there rather
+    than a second list here that a reviewer has to remember."""
+    import yaml
+    block = yaml.safe_load(
+        (ROOT / "governance" / "terminology.yml").read_text(encoding="utf-8")
+    ).get("retired_in_output")
+    assert block, "governance/terminology.yml has no retired_in_output block"
+    assert set(RETIRED_IN_OUTPUT) == {entry["name"] for entry in block}
+    for entry in block:
+        # Each name, printed, is reported: a pattern built wrongly from the
+        # block would pass the equality above and catch nothing.
+        printed = f"run {entry['name']} to finish"
+        assert RETIRED_IN_OUTPUT[entry["name"]].search(printed), entry["name"]

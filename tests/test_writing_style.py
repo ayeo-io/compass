@@ -499,14 +499,15 @@ _RETIRED_WORD_STRUCTURAL_SKIP = "tests/fixtures/terminology/"
 _ADR_VOCABULARY_SKIP = "architecture/decisions/"
 
 _TERMINOLOGY_PATH_STR = "governance/terminology.yml"
-# terminology.yml's own `scan.exempt_regions` already names these four
+# terminology.yml's own `scan.exempt_regions` already names these five
 # top-level blocks as the ones that "carry every retired word by
 # necessity" - a ban must name the term it retires, and a rename table must
 # name both spellings. PBW-D2 holds the retired-word and idiom sweeps to
 # that same exemption for this one file, computed from the blocks'
 # real line spans rather than a line range that would go stale on edit.
 _TERMINOLOGY_EXEMPT_BLOCKS = frozenset(
-    {"banned", "retired_machine_names", "retired_machine_name_exempt", "scan"})
+    {"banned", "retired_machine_names", "retired_machine_name_exempt", "scan",
+     "retired_in_output"})
 
 
 def _leading_banner_start(lines: list[str], key_line_index: int) -> int:
@@ -1949,7 +1950,7 @@ def _find_idiom(span: ProseSpan) -> list[Finding]:
         # applies here for the same reason.
         return []
     if _in_terminology_exempt_block(span):
-        # PBW-D2: the same four blocks that must keep naming every banned
+        # PBW-D2: the same five blocks that must keep naming every banned
         # word also carry idiom-table words as part of what they ban or
         # rename - an idiom this table replaces, quoted inside a `context:`
         # explaining why a word was retired.

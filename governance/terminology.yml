@@ -890,11 +890,13 @@ scan:
   # region runs from that key to the next one at column zero.
   exempt_regions:
     - path: governance/terminology.yml
-      blocks: [banned, retired_machine_names, retired_machine_name_exempt, scan]
+      blocks: [banned, retired_machine_names, retired_machine_name_exempt, scan,
+               retired_in_output]
       why: >-
         A ban must name the term it retires and a rename table must name both
         spellings, so these blocks carry every retired word by necessity.
-        `scan:` names the exempt paths.
+        `scan:` names the exempt paths, and `retired_in_output:` lists the
+        names the CLI must never print.
         Everything else in the file - `terms:`, `codes:`, `id_prefixes:` - is
         read like any other surface.
 
@@ -1067,3 +1069,41 @@ retired_machine_name_exempt:
       an old archive is translation, not a redirect (ADR-014).
   - path: cli/migrate-map.yml
     why: The translation table itself, as data.
+
+# =============================================================================
+# Retired names the CLI must never print. tests/test_printed_output_coverage.py
+# walks every string the CLI writes to the terminal and fails on any of these.
+# The prose scan cannot do this job: its patterns are capitalisation-scoped,
+# so a lowercase machine value or a retired command name passes it.
+#
+# `name` is matched literally; `whole_word: true` adds word boundaries, for a
+# name that is also part of longer words. Each entry names what replaced it,
+# so the list says where a reader should go instead.
+# =============================================================================
+retired_in_output:
+  - name: compass design lint
+    replacement: compass plan lint
+  - name: compass land-commit
+    replacement: compass ship-commit
+  - name: compass calibration
+    replacement: compass retro
+  - name: compass route evaluate
+    replacement: compass approach evaluate
+  - name: compass task lint
+    replacement: compass issue lint
+  - name: compass backfill
+    replacement: compass follow-up
+  - name: verify.fitness
+    replacement: verify.architecture
+  - name: coherence-check
+    replacement: consistency-check
+  - name: over-ceremony
+    replacement: over-weight
+  - name: stream_ceiling
+    replacement: subtask_ceiling
+  - name: expedition
+    whole_word: true
+    replacement: initiative
+  - name: spine
+    whole_word: true
+    replacement: manifest

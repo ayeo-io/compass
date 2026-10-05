@@ -320,6 +320,16 @@ def main():
     if link_git_dir_to:
         shutil.rmtree(os.path.join(cwd, ".git"))
         os.symlink(link_git_dir_to, os.path.join(cwd, ".git"))
+    if config.get("linger_holding_output"):
+        # A child that keeps the session's own output open and outlives it.
+        subprocess.Popen([sys.executable, "-c", "import time; time.sleep(120)"],
+                         start_new_session=True)
+    write_home_claude_md = config.get("write_home_claude_md")
+    if write_home_claude_md:
+        claude_dir = os.path.join(os.path.expanduser("~"), ".claude")
+        os.makedirs(claude_dir, exist_ok=True)
+        with open(os.path.join(claude_dir, "CLAUDE.md"), "w", encoding="utf-8") as fh:
+            fh.write(write_home_claude_md)
     dir_at_hidden_test = config.get("dir_at_hidden_test")
     if dir_at_hidden_test:
         # A folder where a hidden test will be copied, so the copy cannot
@@ -1815,7 +1825,8 @@ def test_run_record_has_every_documented_field(
         "stop_reason", "finished", "tool_calls", "texts",
         "permission_denials", "final_text", "diff", "changed_paths",
         "compass_files", "changed", "manifests", "tests_after", "contained",
-        "escaped_paths", "stderr_tail", "over_budget", "replies_sent",
+        "escaped_paths", "session_config_changed", "stderr_tail",
+        "over_budget", "replies_sent",
         "interruptions",
         "framework", "hidden", "regressions", "tokens", "compass_commit",
         "uid", "ran_as_root", "session_uid", "python_version",
@@ -2139,14 +2150,16 @@ def test_the_file_scan_catches_a_planted_citation(tmp_path, planted):
 
 
 # Every function in `evals/harness.py` that is allowed to start a new
-# process at all - `_run_git` for git, and the four others that between
-# them start `compass init`, `claude --version`, `claude` itself and the
-# scenario's own test command. `test_every_new_process_starts_through_a_
+# process at all - `_run_git` for git, and the others that between them
+# start `compass init`, R3's own init, `claude --version`, `claude` itself,
+# the scenario's own test command, any call as the session user, the
+# kill-all and the session-user account check. `test_every_new_process_starts_through_a_
 # named_function` below checks each one actually starts a process, not
 # that it starts the specific program its own name suggests.
 _ALLOWED_TO_START_A_PROCESS = (
     "_run_git", "_run_compass_init", "_run_specify_init", "_claude_version",
     "_invoke_claude", "_run_test_command", "_end_session_user_processes",
+    "_run_as_session_user", "_account_in_use",
 )
 
 
@@ -2194,6 +2207,15 @@ def _process_starts_by_function(source: str) -> dict[str, list[str]]:
 
         def _enter(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> None:
             previous, self.current = self.current, node.name
+            # A runner injected as a default, `run=subprocess.run`, starts
+            # a process when the body calls `run(...)`, a name nothing
+            # above recognises.
+            for default in node.args.defaults + node.args.kw_defaults:
+                if (isinstance(default, ast.Attribute)
+                        and isinstance(default.value, ast.Name)
+                        and default.value.id in subprocess_modules):
+                    calls.setdefault(node.name, []).append(
+                        f"subprocess.{default.attr} as a default")
             self.generic_visit(node)
             self.current = previous
 
@@ -2209,11 +2231,12 @@ def _process_starts_by_function(source: str) -> dict[str, list[str]]:
             if isinstance(func, ast.Attribute) and isinstance(func.value, ast.Name):
                 if func.value.id in subprocess_modules:
                     hit = f"subprocess.{func.attr}"
-                elif func.attr == "launch_claude":
+                elif func.attr in ("launch_claude", "run_session_user_call"):
                     # The shared launcher `compass run` also uses
                     # (cli/compass_pkg/host_launch.py, ADR-030) starts
-                    # `claude`, so calling it starts a process here too.
-                    hit = f"{func.value.id}.launch_claude"
+                    # `claude`, and its session-user runner starts any
+                    # command, so calling either starts a process here too.
+                    hit = f"{func.value.id}.{func.attr}"
                 elif (func.value.id in os_modules
                       and (func.attr == "system" or func.attr == "popen"
                            or func.attr.startswith("exec"))):
@@ -2264,12 +2287,14 @@ _PLANTED_PROCESS_START_BYPASSES = {
     "list concatenation": 'import subprocess\ndef _new_helper(args):\n    return subprocess.run(["git"] + args)\n',
     "imported run": 'from subprocess import run\ndef _new_helper():\n    return run(["git", "status"])\n',
     "os.system": 'import os\ndef _new_helper():\n    return os.system("git status")\n',
+    "injected runner": 'import subprocess\ndef _new_helper(run=subprocess.run):\n    return run(["git", "status"])\n',
+    "session-user runner": 'from compass_pkg import host_launch\ndef _new_helper():\n    return host_launch.run_session_user_call(["git"], end_processes=None)\n',
 }
 
 
 @pytest.mark.parametrize("bypass", sorted(_PLANTED_PROCESS_START_BYPASSES))
 def test_the_process_start_guard_catches_each_planted_bypass(bypass):
-    """Each of the five call shapes `_PLANTED_PROCESS_START_BYPASSES` lists,
+    """Each of the call shapes `_PLANTED_PROCESS_START_BYPASSES` lists,
     planted as a new function appended to `evals/harness.py`'s own source -
     not one of them may pass unnoticed. This is not every shape a bypass
     could take; see `test_every_new_process_starts_through_a_named_function`

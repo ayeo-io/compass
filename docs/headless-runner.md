@@ -64,6 +64,6 @@ The runner reads no credential. It passes its own environment to `claude` unchan
 | File | Role |
 |---|---|
 | `cli/compass_pkg/run_cmd.py` | The verb and the loop. |
-| `cli/compass_pkg/host_launch.py` | Starts one `claude -p` call. The eval harness uses it too, and can pass a user: the call then runs as that user, in a new session with no terminal. `compass run` passes none. |
+| `cli/compass_pkg/host_launch.py` | Starts one `claude -p` call. The eval harness uses it too, and can pass a user: the call then runs as that user, in a new session with no terminal, and a process it leaves holding the output is ended rather than waited on. `session_user_args` is the one place the user's arguments are built. `compass run` passes no user. |
 | `cli/compass_pkg/redact.py` | Removes credentials from text. |
 | `ci/headless-verify.yml` | Reference workflow, started only by hand. |

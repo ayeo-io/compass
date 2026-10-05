@@ -376,7 +376,8 @@ def test_hr_i_the_eval_harness_starts_claude_through_the_shared_launcher(
     from evals import harness
     seen = []
 
-    def fake(claude_exe, message, args, cwd, env, timeout=None, user=None):
+    def fake(claude_exe, message, args, cwd, env, timeout=None, user=None,
+             end_processes=None):
         seen.append((claude_exe, message))
         return host_launch.Launch(0, "", "", False)
 

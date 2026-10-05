@@ -49,8 +49,10 @@ USERS = _lookup({"evaluser": SESSION, "root": ROOT_USER})
 
 
 def _refusal(**kw):
+    # The account check is stubbed idle here; its own tests are in
+    # tests/test_harness_session_user_hardening.py.
     base = dict(allow_root=False, euid=0, session_user=None, env={},
-                lookup=USERS)
+                lookup=USERS, probe=lambda entry: None)
     base.update(kw)
     return harness._root_refusal("compass", None, **base)
 
@@ -103,11 +105,11 @@ def test_hr_a_a_valid_session_user_is_a_sanctioned_path():
 def test_hr_a_the_launcher_starts_the_session_as_the_user(monkeypatch, tmp_path):
     seen = {}
 
-    def fake_run(command, **kwargs):
+    def fake_call(command, **kwargs):
         seen.update(kwargs)
-        return subprocess.CompletedProcess(command, 0, "", "")
+        return host_launch.SessionCall(0, "", "", False)
 
-    monkeypatch.setattr(host_launch.subprocess, "run", fake_run)
+    monkeypatch.setattr(host_launch, "run_session_user_call", fake_call)
     host_launch.launch_claude("claude", "hi", [], tmp_path, {}, user=(1500, 1500))
     assert seen["user"] == 1500 and seen["group"] == 1500
 
@@ -151,8 +153,11 @@ def test_hr_a_a_root_run_with_a_session_user_records_the_session_uid(
     # tests: the run takes the root path, and every session starts as
     # "evaluser", whose uid is the test user's own, so no real privilege
     # change is needed for the run to complete.
-    me = _User("evaluser", os.getuid(), os.getgid(), str(Path.home()))
+    home = tmp_path / "evaluser-home"
+    home.mkdir()
+    me = _User("evaluser", os.getuid(), os.getgid(), str(home))
     monkeypatch.setattr(harness, "_euid", lambda: 0)
+    monkeypatch.setattr(harness, "_account_in_use", lambda entry: None)
     monkeypatch.setattr(harness, "_lookup_user", _lookup({"evaluser": me}))
     monkeypatch.delenv("CI", raising=False)
     monkeypatch.delenv("COMPASS_UNATTENDED", raising=False)
@@ -206,6 +211,9 @@ def test_hr_g_git_and_the_tests_ask_for_the_session_user(tmp_path, monkeypatch):
 
     monkeypatch.setattr(harness, "_SESSION_FOLDER", (tmp_path, (1500, 1500)))
     monkeypatch.setattr(harness.subprocess, "run", fake_run)
+    monkeypatch.setattr(harness.host_launch, "run_session_user_call",
+                        lambda command, **kwargs: fake_run(command, **kwargs)
+                        and host_launch.SessionCall(0, "", "", False))
     harness._run_git(["status"], tmp_path, {})
     harness._run_test_command("python3 run_tests.py", tmp_path, {})
     # Each call is followed by the kill-all, which also runs as the user.
@@ -284,6 +292,9 @@ def test_hr_i_git_and_the_tests_end_the_users_processes(tmp_path, monkeypatch):
 
     monkeypatch.setattr(harness, "_SESSION_FOLDER", (tmp_path, (1500, 1500)))
     monkeypatch.setattr(harness.subprocess, "run", fake_run)
+    monkeypatch.setattr(harness.host_launch, "run_session_user_call",
+                        lambda command, **kwargs: fake_run(command, **kwargs)
+                        and host_launch.SessionCall(0, "", "", False))
     harness._run_git(["status"], tmp_path, {})
     assert [user for _, user in _kill_alls(calls)] == [1500]
     harness._run_test_command("python3 run_tests.py", tmp_path, {})
@@ -516,11 +527,11 @@ def test_hr_g_the_launcher_starts_a_session_user_without_roots_terminal(
         monkeypatch, tmp_path):
     seen = {}
 
-    def fake_run(command, **kwargs):
+    def fake_call(command, **kwargs):
         seen.update(kwargs)
-        return subprocess.CompletedProcess(command, 0, "", "")
+        return host_launch.SessionCall(0, "", "", False)
 
-    monkeypatch.setattr(host_launch.subprocess, "run", fake_run)
+    monkeypatch.setattr(host_launch, "run_session_user_call", fake_call)
     host_launch.launch_claude("claude", "hi", [], tmp_path, {},
                               user=(1500, 1500))
     assert seen["start_new_session"] is True

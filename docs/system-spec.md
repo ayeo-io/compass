@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given an issue with status abandoned and no assessment block, When compass issue lint runs, Then it does not demand an assessment; and an active issue with no assessment is still refused
+### Given the repository root and .github, When a contributor looks for a security policy, a code of conduct and issue templates, Then SECURITY.md points to GitHub private vulnerability reporting and names the supported version, CODE_OF_CONDUCT.md adopts the Contributor Covenant 2.1 with conduct@ayeo.io as the contact, and bug and feature templates ask for the Compass version
 
-- **Scenario id:** `LA-1`
+- **Scenario id:** `CF-1`
 - **Intent:** `INT-1`
-- **Source issue:** `lint-excuses-unassessed-abandoned`
+- **Source issue:** `security-policy-and-templates`
 - **Landed:** 2026-10-05
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1588 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1589 superseded scenario(s) are in `docs/system-spec-archive.md`.

@@ -60,6 +60,11 @@ Issues labelled
 are small, checked against the current code, and each says what to change.
 Comment on one before you start, so two people do not do the same work.
 
+## Security and conduct
+
+Report a vulnerability privately, as `SECURITY.md` describes, never in a
+public issue. Everyone taking part follows `CODE_OF_CONDUCT.md`.
+
 ## Licence
 
 By contributing, you agree that your contribution is licensed under the

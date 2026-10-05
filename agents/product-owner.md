@@ -65,7 +65,7 @@ stage, not as a downstream consumer of a finished engineering process.
 - When you *are* in play, your involvement pulls the delivery approach heavier (more
   artifacts, the intent-fidelity gate) - that is expected and the assessment
   accounts for it.
-- On initiative you review at the requirements review alongside the other roles and again
+- On the full approach you review at the requirements review alongside the other roles and again
   before shipping.
 
 ## Hard boundaries

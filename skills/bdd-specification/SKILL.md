@@ -49,8 +49,8 @@ stops happening.
 
 The Summary is **additive**. It does not replace scenarios, and it is not a
 place to restate them. Length scales with the delivery approach the same way scenario depth
-does: quick fix one to two sentences per field, feature ordinary paragraphs,
-initiative up to 200 words per field where the work warrants it.
+does: quick fix one to two sentences per field, the regular approach ordinary
+paragraphs, the full approach up to 200 words per field where the work warrants it.
 
 ## Failure modes the brief implies
 
@@ -91,7 +91,7 @@ a review artifact, and do not invoke a reviewer agent or subagent for this.
    number attached. Either attach the number or cut the word.
 
 **This complements the requirements review; it does not replace it.**
-The review still runs on feature and heavier approaches, and it does
+The review still runs on the regular and heavier approaches, and it does
 things this cannot: it QAs the spec against governance, resolves
 contradictions, and records an ambiguity ledger with owners. The
 self-check is simply what a spec-author owes the reviewer - the cheap
@@ -106,11 +106,11 @@ finding they can produce*.
 
 | | Inline self-review (define stage) | Requirements review (its own stage) |
 |---|---|---|
-| **Who** | the spec-author, alone | spec-author plus reviewer; every role on an initiative |
+| **Who** | the spec-author, alone | spec-author plus reviewer; every role on the full approach |
 | **Cost** | minutes - four mechanical scans over one file | a stage; needs reading, and often a human decision |
 | **Finds** | placeholder, orphan-intent, untestable-`Then`, ambiguous-quantifier | contradictions between scenarios, gaps across the whole set, governance conflicts, ambiguities that need someone to *choose* |
 | **Output** | edits to `acceptance-criteria.md`, in place | `requirements-review.md` - a ledger with a resolution and an owner per entry |
-| **Delivery approaches** | every approach, including the quick fix | feature and heavier; collapsed on quick fixes and hotfixes, skipped on spikes |
+| **Delivery approaches** | every approach, including the quick fix | the regular approach and heavier; collapsed on quick fixes and hotfixes, skipped on spikes |
 
 The dividing line: **the self-review fixes what one person can see and
 settle alone; the requirements review resolves what needs a decision.** An unfilled placeholder has
@@ -160,7 +160,7 @@ Walk it for:
 
 Record each ambiguity, its resolution, and who resolved it in
 `requirements-review.md`. The requirements review:
-- can be *light* on a feature;
+- can be *light* on the regular approach;
 - can be *collapsed* on quick fix only because the one scenario was
   certified unambiguous;
 - is *skipped* on spike because the unknown is the point;

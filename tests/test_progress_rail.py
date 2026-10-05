@@ -183,7 +183,7 @@ def test_a_terminal_shows_a_rail_with_one_current_marker(tmp_path):
     code, out = _tty(root)
     assert code == 0, out
     plain = ANSI.sub("", out)
-    assert plain.split("\n")[0] == "feature · feature-implementing", plain
+    assert plain.split("\n")[0] == "regular · feature-implementing", plain
     rail = " ".join(_rail_lines(out))
     assert rail.count("●") == 1, rail
     assert "Implement ●" in rail, rail
@@ -258,7 +258,7 @@ def test_a_manifest_value_cannot_write_escape_codes(tmp_path):
     code, out = _tty(root, COMPASS_COLOR="never")
     assert code == 0, out
     assert "\x1b" not in out and "\x07" not in out, repr(out)
-    assert out.split("\n")[0] == "feature - ]0;pwned[2Jevil", repr(out)
+    assert out.split("\n")[0] == "regular - ]0;pwned[2Jevil", repr(out)
 
 
 @pytest.mark.parametrize("colour", [None, "never"])

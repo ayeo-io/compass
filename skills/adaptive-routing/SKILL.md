@@ -15,7 +15,7 @@ four independent questions, and the delivery approach is their composition - hea
 they read high, lighter where they read low. The composition is **biased** by
 the routing strategies and **bounded** by the routing guardrails, both in
 `governance/routing-policy.md`. The five reference shapes
-(quick fix/feature/initiative/hotfix/spike) are shapes the composition tends to
+(quick fix/regular/full/hotfix/spike) are shapes the composition tends to
 land near, not boxes to sort into.
 
 ## The shipped defaults are enough - you work with them
@@ -98,11 +98,11 @@ skips earns a row in the de-scope ledger, and each row needs an explicit
   Confirm it actually holds for *this* issue. quick-fix's "requirements review collapsed - the one
   scenario is unambiguous" is only valid if the scenario really is unambiguous.
 - Cap-driven reductions are **not** de-scopes. If the `critical` risk
-  cap pins an initiative to one worktree, record that as cap-driven in the
+  cap pins the full approach to one worktree, record that as cap-driven in the
   orchestration section, not in the de-scope ledger. The ledger is for things the
   delivery approach chose to skip, not things a guardrail removed.
-- initiative's ledger is empty by definition. If you are writing de-scope rows
-  on an initiative delivery approach, you have mis-composed.
+- The full approach's ledger is empty by definition. If you are writing de-scope
+  rows on the full approach, you have mis-composed.
 
 ### Anti-patterns
 

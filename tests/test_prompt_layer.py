@@ -394,7 +394,7 @@ def test_trc_f1_the_quick_fix_command_sends_the_agent_nowhere_else():
 # ---------------------------------------------------------------------------
 
 #: The routing policy's internal name for the quick-fix shape.
-QUICK_FIX_SHAPE = "express"
+QUICK_FIX_SHAPE = "quick-fix"
 
 
 def _routing_policy():

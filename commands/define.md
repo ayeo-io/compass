@@ -15,8 +15,8 @@ contract, QA for coverage. Write it so all five roles can.
 - Read `delivery-approach.md`. Its weight for this stage tells you how deep
   to go:
   - one scenario (quick fix);
-  - a small feature set (feature);
-  - full BDD discovery (initiative);
+  - a small feature set (regular);
+  - full BDD discovery (the full approach);
   - on a **spike** - collapsed into *the question* (what do we need to
     learn, and what would a useful answer look like), not acceptance
     criteria for code.

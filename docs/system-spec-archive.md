@@ -11299,6 +11299,13 @@
 - **Source issue:** `keep-docs-specs-untracked`
 - **Landed:** 2026-10-05
 
+### Given a session that leaves a process holding its output open, when the call ends, then the harness ends it and records the run as not contained _(archived)_
+
+- **Scenario id:** `SUH-1`
+- **Intent:** `INT-1`
+- **Source issue:** `harness-session-user-hardening`
+- **Landed:** 2026-10-05
+
 ### Given a session user with running processes or a link in its watched Claude configuration, when a run starts, then it is refused naming what was found _(archived)_
 
 - **Scenario id:** `SUH-2`
@@ -11332,4 +11339,46 @@
 - **Scenario id:** `SUH-6`
 - **Intent:** `INT-1`
 - **Source issue:** `harness-session-user-hardening`
+- **Landed:** 2026-10-05
+
+### Given the shipped routing policy, when it is read, then route_shapes and every route reference use the five route names _(archived)_
+
+- **Scenario id:** `RN-2`
+- **Intent:** `INT-1`
+- **Source issue:** `one-name-per-route`
+- **Landed:** 2026-10-05
+
+### Given the checkpoint routes, the lint route check and the schema, when compared with route_shapes, then they match _(archived)_
+
+- **Scenario id:** `RN-3`
+- **Intent:** `INT-1`
+- **Source issue:** `one-name-per-route`
+- **Landed:** 2026-10-05
+
+### Given a manifest with an unknown delivery approach, when the issue is linted, then the value is reported _(archived)_
+
+- **Scenario id:** `RN-4`
+- **Intent:** `INT-1`
+- **Source issue:** `one-name-per-route`
+- **Landed:** 2026-10-05
+
+### Given the retro over the archive, when it runs before and after the rename, then the counts are the same with no translation left _(archived)_
+
+- **Scenario id:** `RN-5`
+- **Intent:** `INT-1`
+- **Source issue:** `one-name-per-route`
+- **Landed:** 2026-10-05
+
+### Given the approach documents, when the rename lands, then regular and full replace the old files and no link is broken _(archived)_
+
+- **Scenario id:** `RN-6`
+- **Intent:** `INT-1`
+- **Source issue:** `one-name-per-route`
+- **Landed:** 2026-10-05
+
+### Given the decisions of 5 October on routing, when this lands, then each is a decision entry _(archived)_
+
+- **Scenario id:** `RN-7`
+- **Intent:** `INT-1`
+- **Source issue:** `one-name-per-route`
 - **Landed:** 2026-10-05

@@ -122,7 +122,7 @@ def test_trc_b1_every_metric_should_be_attributed_to_route_shape_and_gate_set(tm
     out = run(make_project(tmp_path, tasks), "--impact").stdout.lower()
     # the by-route breakdown speaks the v2 machine spellings since the
     # migrator rename
-    assert "feature" in out and "quick-fix" in out, (
+    assert "regular" in out and "quick-fix" in out, (
         f"metrics are not broken down by route:\n{out}")
     assert "gate" in out, f"the gate set is not reported per group:\n{out}"
 

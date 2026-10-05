@@ -40,7 +40,7 @@ usually rewritten under TDD, sometimes kept and tested afterwards. The strategy
 is suspended; the guardrail is only *deferred to graduation*, never
 skipped.
 
-On every other approach - quick fix, feature, initiative, hotfix - the TDD
+On every other approach - quick fix, regular, full, hotfix - the TDD
 strategy applies. Red comes first. It is on the quick fix, and it is on
 the hotfix under time pressure.
 

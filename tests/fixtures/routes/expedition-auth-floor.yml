@@ -1,5 +1,5 @@
 # A small change that touches auth. RP-SHAPE-003 picks quick-fix as the
-# candidate; RP-FLOOR-003 raises the delivery approach to initiative because
+# candidate; RP-FLOOR-003 raises the delivery approach to full because
 # domain risk overrides size, and a one-line auth change is not small.
 name: expedition-auth-floor
 assessment:
@@ -11,7 +11,7 @@ assessment:
   labels: [auth]
 expected:
   candidate_route: quick-fix
-  delivery_approach: initiative
+  delivery_approach: full
   fired_guardrail_ids: [RP-FLOOR-003]
   conflict: false
   subtask_ceiling: null   # multiagent orchestration is unbounded; only a cap produces a number

@@ -89,7 +89,7 @@ def test_rcd_e1_check_header_names_approach(tmp_path):
     header = _header(result.stdout + result.stderr)
 
     assert header, f"no header line in:\n{result.stdout}\n{result.stderr}"
-    assert "feature" in header, (
+    assert "regular" in header, (
         f"the header does not name the issue's computed approach:\n  {header}"
     )
     assert "?" not in header, (
@@ -110,7 +110,7 @@ def test_rcd_e2_flow_board_names_approach(tmp_path):
             if "alpha" in ln or "beta" in ln]
     assert rows, f"no issue rows on the board:\n{out}"
 
-    assert "feature" in out and "quick-fix" in out, (
+    assert "regular" in out and "quick-fix" in out, (
         f"the board does not name each issue's computed approach:\n{out}"
     )
     for row in rows:

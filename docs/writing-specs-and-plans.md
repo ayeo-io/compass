@@ -164,7 +164,7 @@ design before it is built, which is the cheapest moment to disagree with it.
 
 They are optional individually. `skills/plan-authoring/SKILL.md` carries the
 rule for each; the short version is that quick fix writes no plan at all,
-a feature uses the one or two that add clarity, and an initiative can use
+the regular approach uses the one or two that add clarity, and the full approach can use
 all of them. **Delete the ones you do not use** - an empty optional heading
 reads as an omission rather than a decision.
 

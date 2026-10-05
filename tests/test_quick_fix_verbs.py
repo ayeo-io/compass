@@ -199,7 +199,7 @@ def test_qfo2_start_stops_when_the_approach_is_not_a_quick_fix(repo):
     assert result.returncode == 1
 
     manifest = _manifest(repo, "bigger-change")
-    assert manifest["delivery_approach"] == "feature"
+    assert manifest["delivery_approach"] == "regular"
     assert not (manifest.get("scenarios") or [])
 
     doc_dir = repo / "docs" / "compass"

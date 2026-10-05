@@ -59,7 +59,7 @@ def test_rwc_2_a_route_with_no_weight_is_unweighed_not_sideways(run_cli, make_ta
     assert data["sideways"] == 0, data
     assert data["unweighed"] == 1, data
     text = run_cli("retro").stdout
-    assert "unweighed" in text and "bespoke -> feature" in text, text
+    assert "unweighed" in text and "bespoke -> regular" in text, text
 
 
 def test_rwc_3_retro_prints_no_retired_name_for_assessment(run_cli, make_task):

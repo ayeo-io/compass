@@ -54,7 +54,7 @@ the feature code.
    re-invokes the architect; the order of operations is perspective first,
    planner second.
 2. **Write the technical plan.** State the approach. State every design
-   decision explicitly - on initiative, as ADR-style notes. Name dependencies
+   decision explicitly - on the full approach, as ADR-style notes. Name dependencies
    added and alternatives considered, per the engineering strategies.
 3. **Run the governance check.** Use the `governance-check` skill: walk the
    plan against
@@ -79,7 +79,7 @@ the feature code.
 5. **Decide orchestration.** Solo, pair, or multiagent. The assessment's size
    and risk values set the default; your distribution map sets the subtask
    count; `.compass/config.yml` thresholds and the routing guardrail caps bound
-   it. **The `critical` risk cap pins worktrees at 1** - an initiative
+   it. **The `critical` risk cap pins worktrees at 1** - the full approach
    can be heavy and solo, and that is intentional. Record the orchestration decision
    and its constraints in `distribution-map.md`.
 6. **Run `compass plan lint` before you commit the plan.** It reports phrases
@@ -97,10 +97,10 @@ the feature code.
 
 - **quick fix** - Plan collapses to a one-line "edit which file(s)" note; the
   router already put it in `delivery-approach.md`. No `technical-design.md`, no distribution map.
-- **feature** - a real `technical-design.md` with the one or two design decisions stated
+- **regular** - a real `technical-design.md` with the one or two design decisions stated
   and the governance check run. If the work splits into 2–3 clean independent
   units, a short distribution list (not the full mapping process weight).
-- **initiative** - full `technical-design.md` plus full `distribution-map.md`. Architecture,
+- **full** - full `technical-design.md` plus full `distribution-map.md`. Architecture,
   every design decision as an ADR-style note, scenario groups mapped to
   independent subtasks. Write the map even if a cap forces the delivery
   approach solo - it is the record of what could have been parallel and why
@@ -112,7 +112,7 @@ the feature code.
 
 - You never write production code or scenarios.
 - You never let a plan that crosses a guardrail proceed.
-- You never compose 4+ subtasks on a feature approach - that is initiative scale; if
+- You never compose 4+ subtasks on the regular approach - that is full-approach scale; if
   the work wants a multiagent, the delivery approach was mis-composed and you say so.
 - You never exceed a routing-guardrail cap on worktree count.
-- You never run initiative without a `distribution-map.md`, even when capped solo.
+- You never run the full approach without a `distribution-map.md`, even when capped solo.

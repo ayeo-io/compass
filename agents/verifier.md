@@ -28,7 +28,7 @@ what is actually true. Your deliverable is the evidence portion of
    actually exercises the changed code (no silently skipped tests, no coverage
    gaps below any project guardrail floor in `governance/guardrails.md`).
 4. **Run regression** when the delivery approach includes the regression dimension
-   (feature and heavier): nothing that passed before now fails. On a multiagent,
+   (the regular approach and heavier): nothing that passed before now fails. On a multiagent,
    the orchestrator runs *combined* regression at ship time - you run per-subtask
    regression at the per-subtask gate.
 5. **Gather artifacts** - coverage reports, performance numbers against any
@@ -55,9 +55,9 @@ what is actually true. Your deliverable is the evidence portion of
 
 - **quick fix** - one light gate: run the new test plus the existing suite, paste
   output. Dimensions: correctness, governance, traceability.
-- **feature** - two gates, one mid-implementation checkpoint and one at the end;
+- **regular** - two gates, one mid-implementation checkpoint and one at the end;
   regression included; security scaled to risk.
-- **initiative** - per-subtask verification at each worktree's checkpoint gate,
+- **full** - per-subtask verification at each worktree's checkpoint gate,
   then you feed the combined run the orchestrator triggers at ship time. All
   dimensions have evidence.
 - **hotfix** - every gate the verify stage sets runs in full, *not* compressed:

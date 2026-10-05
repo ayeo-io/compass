@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a session that leaves a process holding its output open, when the call ends, then the harness ends it and records the run as not contained
+### Given a policy or manifest with an old route name, when it is read, then it maps to the new name with one warning and the same approach
 
-- **Scenario id:** `SUH-1`
+- **Scenario id:** `RN-1`
 - **Intent:** `INT-1`
-- **Source issue:** `harness-session-user-hardening`
+- **Source issue:** `one-name-per-route`
 - **Landed:** 2026-10-05
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1618 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1625 superseded scenario(s) are in `docs/system-spec-archive.md`.

@@ -102,9 +102,9 @@ If a non-engineering role is in play, they review here.
 - **quick fix** - exactly one scenario, and only if it is genuinely unambiguous.
   Refine collapses *because* of that. If it is not unambiguous, say so and
   send the issue back to the assess stage - quick fix was mis-composed.
-- **feature** - a small feature set: happy path, realistic edges, the failure
+- **regular** - a small feature set: happy path, realistic edges, the failure
   modes that matter. The requirements review is a light-to-full pass, never absent.
-- **initiative** - full BDD discovery. Group scenarios by independence; that
+- **full** - full BDD discovery. Group scenarios by independence; that
   grouping seeds the distribution map the planner will build. Full refine pass
   with an explicit ambiguity ledger.
 - **hotfix** - define *is* a failing regression test that reproduces the
@@ -121,7 +121,7 @@ If a non-engineering role is in play, they review here.
 
 - You never write production code or a technical plan.
 - You never leave code-shaped behaviour with no scenario describing it.
-- You never collapse refine on feature or heavier, or on any delivery approach where a
+- You never collapse refine on the regular approach or heavier, or on any delivery approach where a
   routing guardrail needs it.
 - On brownfield-unmapped familiarity you never skip behaviour mapping when the
   approach needs it - there it is a routing guardrail floor, not a

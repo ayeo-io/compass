@@ -25,7 +25,7 @@ from __future__ import annotations
 import os
 
 from compass_pkg.check_results import NOTHING_TO_CHECK
-from compass_pkg.core import (FOUND, CompassError, _registered_path, docs_dir,
+from compass_pkg.core import (FOUND, CompassError, _registered_path, canonical_shape, docs_dir,
                              load_yaml, manifest_path, resolve_artifact,
                              resolve_issue_dir, save_manifest)
 
@@ -50,7 +50,12 @@ def _spine(task_dir):
         task = load_yaml(path)
     except CompassError:
         return {}
-    return task if isinstance(task, dict) else {}
+    if not isinstance(task, dict):
+        return {}
+    # An approach recorded under an old name shows under its current one.
+    if task.get("delivery_approach"):
+        task["delivery_approach"] = canonical_shape(task["delivery_approach"])
+    return task
 
 
 def _artifacts(task):

@@ -33,7 +33,7 @@ import re as _re
 import fnmatch
 import re as _re
 from compass_pkg.check_cmd import CHECK_FNS
-from compass_pkg.core import (AUTONOMY_VALUES, assessment_key_errors, CHECKPOINT_STAGES, CompassError, canonical_shape, FRAMEWORK_ROOT, artifact_path,
+from compass_pkg.core import (AUTONOMY_VALUES, ROUTE_NAMES, assessment_key_errors, CHECKPOINT_STAGES, CompassError, canonical_shape, FRAMEWORK_ROOT, artifact_path,
                               load_manifest, load_yaml, normalize_spine,
                               resolve_issue_dir)
 
@@ -70,9 +70,10 @@ def _jsonschema_errors(instance, schema_name):
     return errs
 
 
-# Current route names. A retired name (`express`, `standard`, `expedition`)
-# is read as its current one, so an older project policy keeps working.
-CHECKPOINT_ROUTES = ("quick-fix", "feature", "initiative", "hotfix", "spike")
+# Current route names. A retired name (`express`, `standard`, `expedition`,
+# or `feature` and `initiative` before 5 October 2026) is read as its
+# current one, so an older project policy keeps working.
+CHECKPOINT_ROUTES = ("quick-fix", "regular", "full", "hotfix", "spike")
 
 
 def checkpoint_table_errors(p):
@@ -200,8 +201,10 @@ def _lint_errors_routing_policy(p):
     for ig in rg.get("immovable_gates", []):
         if "gate" not in ig:
             errs.append(f"an immovable_gate has no `gate`: {ig}")
-    shapes = p.get("route_shapes", {})
-    for name in ("spike", "express", "standard", "hotfix", "expedition"):
+    # A policy copied before the routes were renamed still keys them by the
+    # old names; read them as the new ones, as the evaluator does.
+    shapes = {canonical_shape(k): v for k, v in (p.get("route_shapes") or {}).items()}
+    for name in ROUTE_NAMES:
         if name not in shapes:
             errs.append(f"route_shapes is missing the shape named by default_shapes: {name}")
         elif "weight" not in shapes[name]:
@@ -488,6 +491,18 @@ def cmd_plan_lint(args):
     return 0
 
 
+def delivery_approach_errors(task):
+    """An unknown `delivery_approach`, reported by the built-in lint so the
+    check does not depend on the optional `jsonschema` package. An old route
+    name is accepted: it is read as its current one (ADR-006)."""
+    from compass_pkg.core import SHAPE_VALUE_MAP
+    value = task.get("delivery_approach")
+    if value is None or value in ROUTE_NAMES or value in SHAPE_VALUE_MAP:
+        return []
+    return [f"`delivery_approach: {value}` is not a delivery approach; the "
+            f"approaches are {', '.join(ROUTE_NAMES)}"]
+
+
 def cmd_task_lint(args):
     from compass_pkg.terminal import relative_to_project
     if args.file:
@@ -499,6 +514,7 @@ def cmd_task_lint(args):
     # built-in structural lint (always runs)
     errs = []
     # The manifest is normalised above, so this reads the current key.
+    errs += delivery_approach_errors(task)
     if "issue" not in task:
         errs.append("missing `issue:` (the issue slug)")
     # Each block below checks the shape before reading it. This command's whole

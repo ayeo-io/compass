@@ -7,9 +7,9 @@
 
 - there is a live defect with user impact happening *now*, **and**
 - size is `atomic` or `small` (a large fix is an incident, not a hotfix -
-  assess it as an initiative under incident command), **and**
+  assess it on the full approach under incident command), **and**
 - risk is high `cross-cutting` (a `critical` risk value is floored to
-  initiative by RP-FLOOR-001, so it never composes as a hotfix, however
+  the full approach by RP-FLOOR-001, so it never composes as a hotfix, however
   urgent), **and**
 - role is typically `engineer`, often paired with `qa`.
 
@@ -34,7 +34,7 @@ dimensions - they shape the follow-up - but urgency is what selects the shape.
 
 Full Verify gate. Review dimensions: `correctness`, `governance`,
 `traceability`, `regression`, `security`. `clarity` is deferred to the
-follow-up. The gate is *not* lighter than a feature's - Hotfix compresses the
+follow-up. The gate is *not* lighter than the regular approach's - Hotfix compresses the
 stages *before* Verify, never Verify itself.
 
 ## Multiagent orchestration
@@ -68,5 +68,5 @@ A Hotfix that has not completed the follow-up is an open issue.
 - Close without the follow-up. The follow-up must complete before the issue
   closes.
 - Be used for a fix that is actually `standard`+ in size. That is an
-  incident: assess it as an initiative, put someone in incident command, and
+  incident: assess it on the full approach, put someone in incident command, and
   use multiagent orchestration if it helps.

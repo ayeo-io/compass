@@ -20,7 +20,7 @@ Go stage by stage, not approach by approach:
 - **Ship** - trivial integration vs. coordinated merge; which follow-ups are owed.
 
 Name the nearest reference shape for shared vocabulary, then list deviations
-explicitly. "Feature, but the verify stage also runs `security` because risk
+explicitly. "Regular, but the verify stage also runs `security` because risk
 is cross-cutting" is a correct, expected output - not an exception.
 
 The composition step is where the **routing strategies** apply. They *bias* the
@@ -52,7 +52,7 @@ What is different about a Spike composition:
   untested code on `main`, because it has no path to `main` at all.
 - A question that can only be answered by touching irreversible surface
   (`auth`, `payments`, `personal-data`, `migrations`) is **not** a Spike - the
-  routing guardrail floors force those to initiative regardless of intent.
+  routing guardrail floors force those to the full approach regardless of intent.
 
 ## Constraining with the routing guardrails
 

@@ -162,7 +162,7 @@ def test_trc_b3_spine_keys_are_the_current_ones(tmp_path):
         "stage set as one written after it")
     # The stored approach value is already v2 - `canonical_shape` converts it
     # on write.
-    assert manifest["delivery_approach"] == "initiative", (
+    assert manifest["delivery_approach"] == "full", (
         f"the stored approach value changed; only the printed word should: "
         f"{manifest['delivery_approach']!r}")
 

@@ -1184,7 +1184,7 @@ def test_trc_b3():
                           "phases": {"frame": "full", "specify": "light"}})
     # `standard` is the v1 SHAPE name; the freeze renamed the value to
     # `feature` as well as the key, and the loader maps both.
-    assert v1.get("delivery_approach") == "feature"
+    assert v1.get("delivery_approach") == "regular"
     assert v1.get("stages", {}).get("assess") == "full"
     assert v1.get("stages", {}).get("define") == "light"
     assert "phases" not in v1 and "route" not in v1

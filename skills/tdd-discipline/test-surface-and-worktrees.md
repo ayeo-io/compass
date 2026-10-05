@@ -11,7 +11,7 @@ adversarial inputs - not "tests at all," which is constant.
 - **`trivial` risk** - the scenario and its obvious edges. Quick-fix
   territory.
 - **`contained`** - the scenario, its realistic edges, the failure modes
-  that matter. Feature territory.
+  that matter. Regular-approach territory.
 - **`cross-cutting`** - the above plus the interaction surface: how this
   behaviour holds when adjacent features are also exercised.
 - **`critical`** - the above plus adversarial and boundary inputs, the rollback

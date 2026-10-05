@@ -38,8 +38,8 @@ verifier gathered, `acceptance-criteria.md`, `technical-design.md`, the `governa
   and claim → scenario? An unbroken chain is the audit trail; a break is a
   no-pass.
 - **regression** - does the evidence show nothing that passed before now fails?
-- **security** - applied full on initiative/hotfix, scaled to risk on
-  feature. OWASP floor, dependency-CVE scan where the policy needs it.
+- **security** - applied full on the full approach and hotfix, scaled to risk
+  on the regular approach. OWASP floor, dependency-CVE scan where the policy needs it.
 - **clarity** - is the code and its tests legible to the next person? (Deferred
   to the follow-up on hotfix.) This dimension covers:
   - **legibility** - would a reader with no prior context follow the
@@ -96,7 +96,7 @@ final review of the integrated result, read the manifest's `follow_ups`
 ledger too: a finding deferred from a subtask review is owed there, not
 forgotten.
 
-**Patterns.** On a feature or initiative, check the design's named patterns
+**Patterns.** On the regular or full approach, check the design's named patterns
 against the code (the named-patterns strategy, `S16`). Flag a novel
 structure where a standard pattern fits, and a pattern applied where none
 is needed. It is advice: say it in the report, and never fail a gate on it.
@@ -130,9 +130,9 @@ each item there is a point already settled.
 
 - **quick fix** - three dimensions, one gate. Light, but real: a no-pass on
   quick fix is still a no-pass.
-- **feature** - the mid-implementation checkpoint and the end gate; clarity and
+- **regular** - the mid-implementation checkpoint and the end gate; clarity and
   regression included; security scaled.
-- **initiative** - all dimensions, per-subtask gates plus the combined gate
+- **full** - all dimensions, per-subtask gates plus the combined gate
   after integration. Security is full, not scaled.
 - **hotfix** - full gate, not compressed. Clarity is the one dimension deferred,
   and only to the mandatory follow-up - everything else still applies under

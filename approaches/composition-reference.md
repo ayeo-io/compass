@@ -40,14 +40,14 @@ Concretely, `compass approach evaluate` decides, per stage:
   follow-ups are owed.
 
 Most compositions land near one of the five reference shapes
-(quick fix, feature, initiative, hotfix, spike). Assess names the
+(quick fix, regular, full, hotfix, spike). Assess names the
 nearest reference shape in `delivery-approach.md` for shared vocabulary, then lists any
-stage-level deviations from it. A delivery approach that is "Feature, but Verify also runs
+stage-level deviations from it. A delivery approach that is "Regular, but Verify also runs
 the security dimension because risk is cross-cutting" is a normal output.
 
 ### Review dimensions by delivery approach (the default; routing rules can add but not remove)
 
-| Dimension | quick fix | Feature | initiative | Hotfix | Spike |
+| Dimension | quick fix | Regular | Full | Hotfix | Spike |
 |---|---|---|---|---|---|
 | correctness | ✓ | ✓ | ✓ | ✓ | - |
 | governance | ✓ | ✓ | ✓ | ✓ | - |
@@ -76,5 +76,5 @@ above - is now bounded by the **routing rules** in `governance/routing-policy.md
 4. **blocking role_rules** add required artifacts and stage blocks.
 
 Every routing rule that fires is recorded. Assess never applies a
-constraint silently - if quick fix became initiative, `delivery-approach.md` says which floor
+constraint silently - if quick fix became the full approach, `delivery-approach.md` says which floor
 did it and quotes the floor's rationale.

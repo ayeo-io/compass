@@ -24,7 +24,7 @@ short - what happened, evidence pointer, what's next.
 ## {{YYYY-MM-DD HH:MM}} - Assess
 
 - **Event:** assess ran; the delivery approach was computed.
-- **Approach:** {{reference shape - quick fix/feature/initiative/hotfix/spike}} - see `delivery-approach.md` revision {{N}}.
+- **Approach:** {{reference shape - quick fix/regular/full/hotfix/spike}} - see `delivery-approach.md` revision {{N}}.
 - **Assessment:** risk {{…}}, familiarity {{…}}, size {{…}}, goal & role {{…}}.
 - **Policy rules fired:** {{list - or "none"}}.
 - **Owed follow-ups:** {{list - or "none" (a spike owes none)}}.

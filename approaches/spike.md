@@ -107,9 +107,9 @@ conclusion, which is just untracked work.
   is re-assessing. If you find yourself wanting to merge a spike branch to
   `main`, stop - that is a re-assess, not a merge.
 - **Touch anything irreversible.** No auth, payments, personal data, or
-  migrations - the floors force those to initiative regardless of
+  migrations - the floors force those to the full approach regardless of
   intent. If the question can only be answered by touching irreversible
-  surface, it is not a spike; it is initiative with a discovery-heavy define stage.
+  surface, it is not a spike; it is the full approach with a discovery-heavy define stage.
 - **Run past its timebox silently.** When the clock runs out, either conclude
   or re-assess the spike with a new timebox and a written reason. An open-ended
   spike is how exploration becomes drift.

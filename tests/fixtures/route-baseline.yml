@@ -54,7 +54,7 @@
     goal: delivery
     role: engineer
     labels: []
-  expected_route: feature
+  expected_route: regular
   expected_phases:
     assess: full
     define: full
@@ -106,7 +106,7 @@
     goal: delivery
     role: engineer
     labels: []
-  expected_route: initiative
+  expected_route: full
   expected_phases:
     assess: full
     define: full

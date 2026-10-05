@@ -45,7 +45,7 @@ points at the `test-run`, governance and traceability at the `artifact`.
 skips most stages, and records why - but the de-scopes are written down, not
 assumed.
 
-### 2. `feature-api-change/` - the feature approach
+### 2. `feature-api-change/` - the regular approach
 
 **Issue:** add per-client rate limiting to the public `/search` endpoint after
 one client's bulk job degraded latency for everyone.

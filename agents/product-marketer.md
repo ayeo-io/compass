@@ -43,7 +43,7 @@ roles do.
 - On lighter delivery approaches a marketer is often not in play - no `/compass:position`
   entry, no `positioning.md`, you do not run. When you *are* in play the
   delivery approach goes heavier; the assessment accounts for it.
-- On initiative the `claims` dimension is on by default and you review at
+- On the full approach the `claims` dimension is on by default and you review at
   refine with the other roles and again at ship time.
 - `verify.claims` is a blocking role gate - the role rule adds it on every
   delivery approach while you are in play, even where your involvement is

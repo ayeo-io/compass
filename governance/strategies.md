@@ -337,7 +337,7 @@ not a count. Any count a tool produces is a number that moves.*
 
 ### Well-architected alignment: name the pillars a design touches (`S15`)
 
-*Assessed under the `architecture` dimension, on feature and initiative routes.*
+*Assessed under the `architecture` dimension, on the regular and full approaches.*
 
 **A technical design names the well-architected pillars the change touches,
 and says in a sentence or two what it does about each.**
@@ -360,7 +360,7 @@ and says in a sentence or two what it does about each.**
 
 ### Named patterns: prefer a well-understood pattern, and say why (`S16`)
 
-*Assessed under the `clarity` dimension, on feature and initiative routes.*
+*Assessed under the `clarity` dimension, on the regular and full approaches.*
 
 **A technical design names the well-understood design patterns it uses, and
 where a real choice existed, the one it rejected and why.**

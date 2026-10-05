@@ -17,7 +17,7 @@
 # framework for everyone - see routing-policy.md.
 # =============================================================================
 
-version: 2.18.0
+version: 2.19.0
 # -----------------------------------------------------------------------------
 # ROUTING STRATEGIES - soft. They BIAS the candidate delivery approach. The evaluator uses
 # them in composition (step 1); a later rule can override the result.
@@ -38,7 +38,7 @@ routing_strategies:
       rationale: "A live defect, small enough to reproduce-and-fix fast."
     - id: RP-SHAPE-003
       when: { size: [atomic, small], risk: [trivial, contained] }
-      lean_toward: express
+      lean_toward: quick-fix
       # Any familiarity qualifies. Unmapped ground on a change this small
       # gets behaviour-mapping as advice (RP-ADV-002), not a floor: two of
       # the three stops in the comparison run of 30 Sep 2026
@@ -47,15 +47,15 @@ routing_strategies:
       rationale: "Small on every axis."
     - id: RP-SHAPE-004
       when: { size: [large, product] }
-      lean_toward: expedition
+      lean_toward: full
       rationale: "Large work - full weight, plausibly parallel."
     - id: RP-SHAPE-005
       when: { size: standard }
-      lean_toward: standard
+      lean_toward: regular
       rationale: "The default working shape."
 
   # Fallback when no default_shape matches.
-  default_route: standard
+  default_route: regular
 
   # biases - free-text tie-breakers the assess stage applies during composition.
   # Not machine-evaluated; surfaced to the assess stage and recorded for audit.
@@ -111,8 +111,8 @@ routing_guardrails:
 
   # floors - a matching assessment value forces the delivery approach to be AT LEAST a given weight,
   # and/or forces specific stages/skills back to full weight.
-  # Route weight order for force_minimum_route: spike < express < standard
-  # < hotfix < expedition. The evaluator raises the candidate to the max.
+  # Route weight order for force_minimum_route: spike < quick-fix < regular
+  # < hotfix < full. The evaluator raises the candidate to the max.
   # NOTE: six of the entries below carry RP-REQUIRE ids because they attach a
   # gate and raise no minimum - they are not floors. The block name lags its
   # contents: moving them into their own section changes a
@@ -121,7 +121,7 @@ routing_guardrails:
   floors:
     - id: RP-FLOOR-001
       when: { risk: critical }
-      force_minimum_route: expedition
+      force_minimum_route: full
       never_skip: [refine, verify, ship]
       rationale: "Critical changes coordinate, or they break things quietly."
 
@@ -140,7 +140,7 @@ routing_guardrails:
 
     - id: RP-FLOOR-003
       when: { labels_any: [auth, payments, personal-data, migrations] }
-      force_minimum_route: expedition
+      force_minimum_route: full
       rationale: "Domain risk overrides size. A one-line auth change is not small."
 
     - id: RP-REQUIRE-001
@@ -236,7 +236,7 @@ routing_guardrails:
   # here: verify.regression is route-scoped (quick fix, being atomic+trivial,
   # does not run it - that is quick fix's whole point), and verify.claims is
   # role-scoped (added by RP-ROLE-001 when a marketer is in play, and built
-  # into initiative). Immovable means immovable *everywhere* - keep the set to
+  # into the full approach). Immovable means immovable *everywhere* - keep the set to
   # what genuinely is.
   immovable_gates:
     - id: RP-GATE-001
@@ -296,20 +296,20 @@ assessment_vocabulary:
 autonomy_checkpoints:
   controlled:
     quick-fix: [assess]
-    feature: [assess, define, refine, plan]
-    initiative: [assess, define, refine, plan]
+    regular: [assess, define, refine, plan]
+    full: [assess, define, refine, plan]
     hotfix: [assess, define]
     spike: [assess]
   balanced:
     quick-fix: []
-    feature: [define, plan]
-    initiative: [assess, define, refine, plan]
+    regular: [define, plan]
+    full: [assess, define, refine, plan]
     hotfix: []
     spike: []
   autonomous:
     quick-fix: []
-    feature: []
-    initiative: []
+    regular: []
+    full: []
     hotfix: []
     spike: []
 
@@ -318,7 +318,7 @@ autonomy_checkpoints:
 # approaches/*.md files are the human-readable canonical descriptions; this is what
 # `compass approach evaluate` reads to emit the per-stage weight, gate set, and
 # subtask ceiling once the final delivery approach is known. The weight ladder for
-# force_minimum_route (spike < express < standard < hotfix < expedition) is the
+# force_minimum_route (spike < quick-fix < regular < hotfix < full) is the
 # `weight:` field.
 # -----------------------------------------------------------------------------
 route_shapes:
@@ -331,7 +331,7 @@ route_shapes:
     # conclusion - discard, graduate, or defer - and that is typed evidence,
     # not a document. An empty pack here is the honest answer, not a gap.
     artifacts: {}
-  express:
+  quick-fix:
     weight: 1
     stages: { assess: full, define: light, refine: collapsed, plan: collapsed, breakdown: skipped, implement: full, verify: light, ship: light }
     gates: [verify.correctness, verify.governance, verify.traceability]
@@ -343,7 +343,7 @@ route_shapes:
     # (`G1`). So "a quick fix writes delivery-approach.md and nothing else" is
     # a routed decision a check can read, not a convention.
     artifacts: { delivery-approach: light }
-  standard:
+  regular:
     weight: 2
     stages: { assess: full, define: full, refine: light, plan: full, breakdown: multiagent, implement: full, verify: full, ship: full }
     gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.clarity, verify.security]
@@ -360,7 +360,7 @@ route_shapes:
     gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.security]
     subtask_ceiling: 1
     artifacts: { acceptance-criteria: light, verification-report: full }
-  expedition:
+  full:
     weight: 4
     stages: { assess: full, define: full, refine: full, plan: full, breakdown: multiagent, implement: full, verify: full, ship: full }
     gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.security, verify.clarity, verify.claims]

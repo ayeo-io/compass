@@ -83,8 +83,8 @@ starting points, not selectable levels.
 | Shape | Typical response |
 |---|---|
 | Quick fix | One scenario, focused implementation and verification; plan and breakdown normally collapse. |
-| Feature | A small scenario set, proportionate design, solo or paired implementation and normal verification. |
-| Initiative | Product intent, architecture and delivery planning at full weight; detailed design, test strategy and parallel subtasks where useful. |
+| Regular | A small scenario set, proportionate design, solo or paired implementation and normal verification. |
+| Full | Product intent, architecture and delivery planning at full weight; detailed design, test strategy and parallel subtasks where useful. |
 | Hotfix | Reproduce before changing code, restore service safely, then complete the owed specification and evidence. |
 | Spike | Time-boxed exploration with no production delivery; conclude, discard, defer or reassess into a delivery approach. |
 

@@ -58,7 +58,7 @@ def test_standard_route_for_default_shape(run_cli):
                                 "intent": "delivery"}))
     assert r.returncode == 0, r
     data = json.loads(r.stdout)
-    assert data["delivery_approach"] == "feature"
+    assert data["delivery_approach"] == "regular"
 
 
 def test_expedition_route_for_large_magnitude(run_cli):
@@ -70,7 +70,7 @@ def test_expedition_route_for_large_magnitude(run_cli):
                                 "intent": "delivery"}))
     assert r.returncode == 0, r
     data = json.loads(r.stdout)
-    assert data["delivery_approach"] == "initiative"
+    assert data["delivery_approach"] == "full"
     # No policy bounds multiagent work: no number for it exists in
     # routing-policy.yml or .compass/config.yml, so only a cap makes one.
     assert data["subtask_ceiling"] is None
@@ -114,7 +114,7 @@ def test_floor_critical_blast_radius_forces_expedition(run_cli):
                                 "intent": "delivery"}))
     assert r.returncode == 0, r
     data = json.loads(r.stdout)
-    assert data["delivery_approach"] == "initiative"
+    assert data["delivery_approach"] == "full"
     fired = [f["id"] for f in data["policy_rules_fired"]]
     assert "RP-FLOOR-001" in fired
     # candidate was lighter; the floor raised it
@@ -132,7 +132,7 @@ def test_floor_g5_domains_force_expedition(run_cli, domain):
                                 "labels": [domain]}))
     assert r.returncode == 0, r
     data = json.loads(r.stdout)
-    assert data["delivery_approach"] == "initiative", (
+    assert data["delivery_approach"] == "full", (
         f"touching {domain!r} should force expedition, got {data['delivery_approach']!r}"
     )
     fired = [f["id"] for f in data["policy_rules_fired"]]
@@ -167,7 +167,7 @@ def test_cap_critical_caps_worktrees_to_one(run_cli):
                                 "intent": "delivery"}))
     assert r.returncode == 0, r
     data = json.loads(r.stdout)
-    assert data["delivery_approach"] == "initiative"   # floor pushed it
+    assert data["delivery_approach"] == "full"   # floor pushed it
     assert data["max_worktrees"] == 1
     assert data["subtask_ceiling"] == 1
     fired_ids = [f["id"] for f in data["policy_rules_fired"]]
@@ -189,7 +189,7 @@ def test_candidate_and_final_route_both_recorded(run_cli):
     assert r.returncode == 0, r
     data = json.loads(r.stdout)
     assert data["candidate_route"] == "quick-fix"
-    assert data["delivery_approach"] == "initiative"
+    assert data["delivery_approach"] == "full"
     assert data["candidate_via"], "candidate_via must say WHY the candidate was picked"
 
 

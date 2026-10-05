@@ -67,7 +67,7 @@ a parallel spec.
 
    ### 5. Notes for the planner
    Summarise your findings in terms the planner can use when composing
-   `technical-design.md` §6 (Design decisions). On a feature or initiative,
+   `technical-design.md` §6 (Design decisions). On the regular or full approach,
    name the well-architected pillars the change touches and any trade-off
    between them (strategy `S15`, pillars from
    `governance/architecture-sources.yml`). The planner reads this
@@ -99,7 +99,7 @@ a parallel spec.
 - **quick fix / hotfix** - invoked only if explicitly requested via
   `/compass:consult architect`. Not auto-triggered on light delivery
   approaches.
-- **feature / initiative** - auto-triggered by spec-author when the issue's
+- **regular / full** - auto-triggered by spec-author when the issue's
   labels include `public-api`, a service in `architecture/relations.md`, or
   a `lens_trigger_tag` (see `agents/spec-author.md`). Produces a full
   `architecture-notes.md` per the five sections above.

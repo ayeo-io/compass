@@ -6,7 +6,7 @@ Produced by: the plan stage (`/compass:plan`) on pair/multiagent-capable work;
 Lives at:    docs/compass/<created>-<issue-slug>/distribution-map.md
 Role in the pipeline: the record of what could run in parallel and why.
 The plan stage produces it; `scripts/multiagent.sh` reads it to create
-worktrees. Initiative-scale work writes this file even if a cap pins it
+worktrees. Full-approach scale work writes this file even if a cap pins it
 solo - the map is the record of what could have been parallel and why it
 wasn't.
 
@@ -84,7 +84,7 @@ Fill every {{PLACEHOLDER}}.
 <!-- Orchestration is a routed decision. The worktree cap comes from the
      routing-guardrail `caps` in governance/routing-policy.yml, recorded in
      delivery-approach.md by the CLI. THE STANDING CAP: critical risk pins
-     max_worktrees to 1 - initiative-scale work can be heavy AND solo. If the cap
+     max_worktrees to 1 - full-approach scale work can be heavy AND solo. If the cap
      and the proposed count disagree, the cap wins; record it as
      cap-driven, not as a de-scope. -->
 

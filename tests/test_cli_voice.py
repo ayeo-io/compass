@@ -151,8 +151,8 @@ def test_output_speaks_v2_shape_names_and_receipt_shows_overrides(tmp_path):
     root = _project(tmp_path, approach_md=OVERRIDE_MD)
     r = _run(root, "issue", "receipt", "--issue", "t")
     assert r.returncode == 0, r.stderr[-400:]
-    assert "initiative" in r.stdout, (
-        "receipt does not translate 'expedition' to 'initiative':\n"
+    assert "full" in r.stdout, (
+        "receipt does not translate 'expedition' to 'full':\n"
         + r.stdout)
     assert "expedition" not in r.stdout.lower(), (
         "receipt still prints the machine value 'expedition':\n" + r.stdout)

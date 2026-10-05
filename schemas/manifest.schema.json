@@ -411,11 +411,26 @@
       }
     },
     "delivery_approach": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "description": "The final delivery approach; filled by `compass approach evaluate --write`."
+      "description": "The final delivery approach; filled by `compass approach evaluate --write`. A route name, or an old name read through cli/migrate-map.yml.",
+      "anyOf": [
+        {
+          "enum": [
+            "quick-fix",
+            "regular",
+            "full",
+            "hotfix",
+            "spike",
+            "express",
+            "standard",
+            "expedition",
+            "feature",
+            "initiative"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "orchestration": {
       "type": [

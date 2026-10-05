@@ -77,7 +77,7 @@ def test_critical_and_domain_floors_still_win(readings, floor):
     result = _evaluate(familiarity="brownfield-unmapped", size="small",
                        intent="delivery", **readings)
     assert floor in _fired(result)
-    assert result["delivery_approach"] == "initiative"
+    assert result["delivery_approach"] == "full"
 
 
 @pytest.fixture

@@ -81,7 +81,7 @@ explicit "safe to skip because..." justification. **A stage with no
 justification cannot be skipped - if you cannot justify the skip, the
 stage runs.** Do not copy a reference shape's standing justification
 blindly; confirm it actually holds for *this* issue. The ledger is empty
-by definition on an initiative; cap-driven reductions are recorded as
+by definition on the full approach; cap-driven reductions are recorded as
 cap-driven, not as de-scopes.
 
 ## The five reference shapes
@@ -93,9 +93,9 @@ points you tune, not a menu:
   single scenario is genuinely unambiguous. If any dimension reads high,
   the approach composes heavier. Watch for an approach lighter than the
   assessment warrants.
-- **Feature** - the default working shape. The requirements review may be
+- **Regular** - the default working shape. The requirements review may be
   light, never absent.
-- **Initiative** - forced by `critical` risk, `large`/`product` size, or a
+- **Full approach** - forced by `critical` risk, `large`/`product` size, or a
   domain floor. Write a distribution map even if a cap makes it solo.
 - **Hotfix** - selected by *urgency*, not size. Still score all four
   dimensions; they shape the mandatory follow-up.
@@ -105,7 +105,7 @@ points you tune, not a menu:
   on a spike and nothing ships from it - write the `.spike` marker (step
   8) so the hook honours that. A spike whose question can only be
   answered by touching irreversible surface is not a spike - the policy
-  floors `auth`/`payments`/`personal-data`/`migrations` to an initiative
+  floors `auth`/`payments`/`personal-data`/`migrations` to the full approach
   regardless of goal.
 
 ## Re-assessing

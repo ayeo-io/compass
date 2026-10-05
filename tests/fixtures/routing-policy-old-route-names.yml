@@ -1,0 +1,420 @@
+# The shipped routing policy as it was before the delivery approaches were
+# renamed (5 October 2026), data only. tests/test_one_name_per_route.py
+# checks that a project which copied it computes the same approaches.
+version: 2.18.0
+routing_strategies:
+  default_shapes:
+  - id: RP-SHAPE-001
+    when:
+      goal: exploration
+    lean_toward: spike
+    rationale: Exploration intent - cannot frame for delivery yet.
+  - id: RP-SHAPE-002
+    when:
+      urgency: live-defect
+      size:
+      - atomic
+      - small
+    lean_toward: hotfix
+    rationale: A live defect, small enough to reproduce-and-fix fast.
+  - id: RP-SHAPE-003
+    when:
+      size:
+      - atomic
+      - small
+      risk:
+      - trivial
+      - contained
+    lean_toward: express
+    rationale: Small on every axis.
+  - id: RP-SHAPE-004
+    when:
+      size:
+      - large
+      - product
+    lean_toward: expedition
+    rationale: Large work - full weight, plausibly parallel.
+  - id: RP-SHAPE-005
+    when:
+      size: standard
+    lean_toward: standard
+    rationale: The default working shape.
+  default_route: standard
+  biases:
+  - When size is genuinely unclear, estimate up - it is cheaper to collapse a stage
+    that turned out easy than to discover mid-implementation that the approach was
+    too light.
+  - A non-engineering role in play usually pulls the delivery approach heavier, because
+    it adds artifacts and assessed strategies - but this is a bias, not a floor.
+  - Prefer the lightest delivery approach that still clears every routing guardrail
+    and the applicable gates. Process weight is a cost; spend it where it buys safety.
+  role_defaults:
+  - id: RP-SROLE-001
+    when:
+      role: designer
+    suggest_artifact: ui-contract.md
+    rationale: A new user-facing surface usually wants a UI contract.
+  advisory_strategies:
+  - id: RP-ADV-001
+    strategy: regression-baseline
+    when:
+      risk:
+      - cross-cutting
+      - critical
+    rationale: 'Shared/critical surface - capture a green baseline of the designated
+      existing suite (project.regression_baseline_suite, else test_command) BEFORE
+      the change and re-run it AFTER; record both as test-run evidence on verify.regression.
+      Soft: assessed as reviewer judgement, never gating - it is the regression-baseline
+      strategy, and a strategy is assessed rather than checked.'
+  - id: RP-ADV-002
+    strategy: behaviour-mapping
+    when:
+      familiarity: brownfield-unmapped
+      size:
+      - atomic
+      - small
+      risk:
+      - trivial
+      - contained
+    rationale: 'Unmapped ground on a small change - before editing, write a test that
+      pins what the code does now where the change touches it, so the change cannot
+      break behaviour nobody wrote down. Advice, not a floor: a larger, riskier or
+      domain-labelled unmapped change meets RP-FLOOR-002.'
+routing_guardrails:
+  floors:
+  - id: RP-FLOOR-001
+    when:
+      risk: critical
+    force_minimum_route: expedition
+    never_skip:
+    - refine
+    - verify
+    - ship
+    rationale: Critical changes coordinate, or they break things quietly.
+  - id: RP-FLOOR-002
+    when:
+      familiarity: brownfield-unmapped
+      any_of:
+      - size:
+        - standard
+        - large
+        - product
+      - risk:
+        - cross-cutting
+        - critical
+      - labels_any:
+        - auth
+        - payments
+        - personal-data
+        - migrations
+    require_phase: define
+    require_skill: behaviour-mapping
+    rationale: You cannot safely change behaviour you have not first written down.
+  - id: RP-FLOOR-003
+    when:
+      labels_any:
+      - auth
+      - payments
+      - personal-data
+      - migrations
+    force_minimum_route: expedition
+    rationale: Domain risk overrides size. A one-line auth change is not small.
+  - id: RP-REQUIRE-001
+    when:
+      risk: critical
+    add_gate: verify.analyze
+    rationale: Cross-artifact consistency checked before high-care work lands.
+  - id: RP-REQUIRE-002
+    when:
+      labels_any:
+      - auth
+      - payments
+      - personal-data
+      - migrations
+    add_gate: verify.analyze
+    rationale: Irreversible-surface issues have consistency checked before they ship.
+  - id: RP-REQUIRE-003
+    when:
+      risk:
+      - cross-cutting
+      - critical
+    add_gate: verify.architecture
+    rationale: Architecture checked before cross-cutting or critical changes land.
+  - id: RP-REQUIRE-004
+    when:
+      labels_any:
+      - auth
+      - payments
+      - personal-data
+      - migrations
+    add_gate: verify.architecture
+    rationale: Irreversible-surface issues have architecture checked before they ship.
+  - id: RP-REQUIRE-005
+    when:
+      labels_any:
+      - auth
+      - payments
+      - personal-data
+    add_artifact: threat-model
+    rationale: Work on a trust boundary states the threats it considered.
+  - id: RP-REQUIRE-006
+    when:
+      labels_any:
+      - migrations
+    add_artifact: rollback-plan
+    rationale: A change that is hard to undo says in advance how it would be undone.
+  caps:
+  - id: RP-CAP-001
+    when:
+      risk: critical
+    max_worktrees: 1
+    rationale: Coordination risk on critical changes outweighs parallelism.
+  loop_ceilings:
+  - id: RP-LOOP-001
+    ceiling: builder_attempts
+    limit: 3
+    rationale: A builder that has failed three times needs a new brief or a stop,
+      not a fourth try.
+  - id: RP-LOOP-002
+    ceiling: review_rounds
+    limit: 3
+    rationale: Review rounds past three mean the brief or the plan is wrong; record
+      why before landing.
+  - id: RP-LOOP-003
+    ceiling: review_rounds
+    when:
+      risk:
+      - trivial
+      - contained
+    limit: 2
+    rationale: A contained change that has not passed in two rounds needs a recorded
+      reason.
+  - id: RP-LOOP-004
+    ceiling: replans
+    limit: 2
+    rationale: A breakdown replanned twice is not converging; stop and ask.
+  - id: RP-LOOP-005
+    ceiling: repeated_error
+    limit: 3
+    rationale: The same error three times is a failure, not a reason for a fourth
+      attempt.
+  - id: RP-LOOP-006
+    ceiling: run_cycles
+    limit: 30
+    rationale: One long unattended run loses the thread; a run that has not finished
+      in 30 sessions needs a person.
+  - id: RP-LOOP-007
+    ceiling: run_minutes
+    limit: 240
+    rationale: An unattended run that is still going after four hours is not converging,
+      and is spending money.
+  - id: RP-LOOP-008
+    ceiling: run_cost_usd
+    limit: 5
+    rationale: Every session of an unattended run is paid; five US dollars is the
+      most one run may spend, set by the maintainer on 2026-10-03.
+  immovable_gates:
+  - id: RP-GATE-001
+    gate: verify.correctness
+    rationale: Protects the user - the work must satisfy its acceptance criteria.
+  - id: RP-GATE-002
+    gate: verify.governance
+    rationale: Protects the project's own rules - honours guardrails and strategies.
+  - id: RP-GATE-003
+    gate: verify.traceability
+    rationale: Protects the audit trail - code -> criterion -> intent stays intact.
+  role_rules:
+  - id: RP-ROLE-001
+    when:
+      role: product-marketer
+    require_artifact: launch-readiness.md
+    gate: verify.claims
+    block_phase: land
+    until: every claim in positioning.md traces to a passing scenario
+    rationale: A launch claim with no backing scenario must not ship.
+  - id: RP-ROLE-002
+    when:
+      role: product-owner
+    require_artifact: intent.md
+    block_phase: plan
+    until: the spec has been checked against intent.md for intent fidelity
+    rationale: Built-the-thing-right and built-the-right-thing are different checks.
+assessment_vocabulary:
+  risk:
+  - trivial
+  - contained
+  - cross-cutting
+  - critical
+  familiarity:
+  - greenfield
+  - brownfield-mapped
+  - brownfield-unmapped
+  size:
+  - atomic
+  - small
+  - standard
+  - large
+  - product
+  goal:
+  - delivery
+  - exploration
+  urgency:
+  - none
+  - live-defect
+  role:
+  - engineer
+  - product-owner
+  - product-marketer
+  - designer
+  - qa
+  labels_common:
+  - auth
+  - payments
+  - personal-data
+  - migrations
+  - public-api
+  - infra
+  - ci
+autonomy_checkpoints:
+  controlled:
+    quick-fix:
+    - assess
+    feature:
+    - assess
+    - define
+    - refine
+    - plan
+    initiative:
+    - assess
+    - define
+    - refine
+    - plan
+    hotfix:
+    - assess
+    - define
+    spike:
+    - assess
+  balanced:
+    quick-fix: []
+    feature:
+    - define
+    - plan
+    initiative:
+    - assess
+    - define
+    - refine
+    - plan
+    hotfix: []
+    spike: []
+  autonomous:
+    quick-fix: []
+    feature: []
+    initiative: []
+    hotfix: []
+    spike: []
+route_shapes:
+  spike:
+    weight: 0
+    stages:
+      assess: light
+      define: collapsed
+      refine: skipped
+      plan: collapsed
+      breakdown: skipped
+      implement: explore
+      verify: conclude
+      ship: graduate-or-discard
+    gates:
+    - spike.conclude
+    subtask_ceiling: 1
+    artifacts: {}
+  express:
+    weight: 1
+    stages:
+      assess: full
+      define: light
+      refine: collapsed
+      plan: collapsed
+      breakdown: skipped
+      implement: full
+      verify: light
+      ship: light
+    gates:
+    - verify.correctness
+    - verify.governance
+    - verify.traceability
+    subtask_ceiling: 1
+    artifacts:
+      delivery-approach: light
+  standard:
+    weight: 2
+    stages:
+      assess: full
+      define: full
+      refine: light
+      plan: full
+      breakdown: multiagent
+      implement: full
+      verify: full
+      ship: full
+    gates:
+    - verify.correctness
+    - verify.governance
+    - verify.traceability
+    - verify.regression
+    - verify.clarity
+    - verify.security
+    subtask_ceiling: 2
+    artifacts:
+      acceptance-criteria: full
+      technical-design: full
+      distribution-map: light
+      verification-report: full
+  hotfix:
+    weight: 3
+    stages:
+      assess: light
+      define: reproduce-first
+      refine: collapsed
+      plan: collapsed
+      breakdown: skipped
+      implement: expedited
+      verify: full
+      ship: full-plus-backfill
+    gates:
+    - verify.correctness
+    - verify.governance
+    - verify.traceability
+    - verify.regression
+    - verify.security
+    subtask_ceiling: 1
+    artifacts:
+      acceptance-criteria: light
+      verification-report: full
+  expedition:
+    weight: 4
+    stages:
+      assess: full
+      define: full
+      refine: full
+      plan: full
+      breakdown: multiagent
+      implement: full
+      verify: full
+      ship: full
+    gates:
+    - verify.correctness
+    - verify.governance
+    - verify.traceability
+    - verify.regression
+    - verify.security
+    - verify.clarity
+    - verify.claims
+    subtask_ceiling: null
+    artifacts:
+      intent: full
+      acceptance-criteria: full
+      requirements-review: full
+      technical-design: full
+      distribution-map: full
+      verification-report: full

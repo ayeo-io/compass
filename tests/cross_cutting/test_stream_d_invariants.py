@@ -232,7 +232,7 @@ def test_trc_d5_pipeline_phases_flex_by_route():
     shapes = policy["route_shapes"]
     phase_maps = {name: shape["stages"] for name, shape in shapes.items()}
     # All five shapes present
-    assert {"spike", "express", "standard", "hotfix", "expedition"} == set(phase_maps.keys())
+    assert {"spike", "quick-fix", "regular", "hotfix", "full"} == set(phase_maps.keys())
     # At least two shapes must have distinct phase maps
     distinct = {tuple(sorted(pm.items())) for pm in phase_maps.values()}
     assert len(distinct) >= 2, (
@@ -243,7 +243,7 @@ def test_trc_d5_pipeline_phases_flex_by_route():
     # skips the breakdown. Read by the CURRENT stage keys - the policy
     # declared the retired ones until 2026-08-25, which is the whole reason
     # `shape_stages` had to canonicalise them for every caller.
-    assert phase_maps["express"]["refine"] in {"collapsed", "light"}
+    assert phase_maps["quick-fix"]["refine"] in {"collapsed", "light"}
     assert phase_maps["spike"]["breakdown"] in {"skipped", "collapsed"}
 
 

@@ -139,7 +139,7 @@ Then the mechanism takes over. `/compass:assess` shells out to
 deterministically - composing the candidate delivery approach, applying the
 floors and caps, assembling the gate set - and folds `delivery_approach`,
 `stages`, and `gates` back into `manifest.yml`. For this issue it lands on
-**feature, with the `security` review dimension turned on because risk is
+**the regular approach, with the `security` review dimension turned on because risk is
 cross-cutting**; no routing policy rule forces a heavier delivery approach.
 Assess then writes the human-readable `delivery-approach.md` alongside it.
 Same assessment + same policy would produce this exact delivery approach on
@@ -149,7 +149,7 @@ and the hooks know which issue is live.
 
 It then **presents the delivery approach and waits**. It is advisory until
 confirmed. You read the four assessment values, you read the de-scope ledger
-- feature collapses nothing major, so the ledger is short - and you confirm,
+- the regular approach collapses nothing major, so the ledger is short - and you confirm,
 or you override an assessment value and the override is recorded in
 `delivery-approach.md` with your name and reason.
 
@@ -182,7 +182,7 @@ your acceptance suite and seed your TDD cycle.
 /compass:refine
 ```
 
-On a feature, the requirements review is a light-to-full pass - never skipped. The `spec-author`
+On the regular approach, the requirements review is a light-to-full pass - never skipped. The `spec-author`
 QAs the spec against itself (is "the limit" defined? per-client or global? what
 about unauthenticated traffic?) and against governance. Each ambiguity is
 resolved into `acceptance-criteria.md` or recorded in `requirements-review.md` with an
@@ -261,10 +261,10 @@ issue does not advance - you fix it, or it goes back.
 
 Solo orchestration, so shipping commits on the current branch, runs regression across the
 result, updates any living docs the change touched, and checks the de-scope
-ledger for owed follow-ups (feature owed none here). A final `devlog.md` entry
+ledger for owed follow-ups (the regular approach owed none here). A final `devlog.md` entry
 records what landed and how it was checked. The issue is closed.
 
-That is the full feature approach, walked end to end. Seven artifacts on disk,
+That is the whole regular approach, walked end to end. Seven artifacts on disk,
 each one readable by anyone who picks the issue up later.
 
 ---
@@ -441,7 +441,7 @@ When you run `compass next` in a terminal, it shows the issue's route as a
 rail, with the current stage marked:
 
 ```text
-feature · feature-implementing
+regular · feature-implementing
 Assess ✓ → Define ✓ → Refine ✓ → Plan ✓ → Breakdown ✓ → Implement ● → Verify ○ → Ship ○
 
 Implement [gate: verify.correctness]

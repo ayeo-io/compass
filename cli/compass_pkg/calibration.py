@@ -559,18 +559,13 @@ def cmd_calibration(args):
     weights = {}
     try:
         policy = load_yaml(os.path.join(find_governance(), "routing-policy.yml"))
-        weights = {r: s.get("weight")
+        # One name per route: an old name, in the policy or in a recorded
+        # re-assessment, is read as its current one.
+        weights = {canonical_shape(r): s.get("weight")
                    for r, s in (policy.get("route_shapes") or {}).items()
                    if isinstance(s, dict) and isinstance(s.get("weight"), int)}
     except CompassError:
         pass
-    # Manifests record the current route names; the policy's keys may still
-    # be the machine names. The migration table maps one to the other, so a
-    # route weighs the same by either name.
-    for machine, name in (migrate_map_section("values", {})
-                          .get("delivery_approach") or {}).items():
-        if machine in weights and name not in weights:
-            weights[name] = weights[machine]
 
     tasks = []
     if os.path.isdir(work):
@@ -619,7 +614,7 @@ def cmd_calibration(args):
             # the work, so it says nothing about how assessment sizes work.
             if rf.get("kind") == "policy-correction":
                 continue
-            wf, wt = weights.get(fr), weights.get(to)
+            wf, wt = weights.get(canonical_shape(fr)), weights.get(canonical_shape(to))
             if wf is None or wt is None:
                 # A route with no weight has no direction to count.
                 key = f"{fr} -> {to}"

@@ -74,9 +74,9 @@ approach's guardrails, where the guardrail is checked in full.
 
 - **quick fix** - one scenario, its failing test, the smallest green, obvious-edge
   coverage. Light, but the TDD strategy still applies - red comes first.
-- **feature** - full TDD per scenario; test surface scaled to `contained` /
+- **regular** - full TDD per scenario; test surface scaled to `contained` /
   `cross-cutting` risk.
-- **initiative (multiagent)** - full TDD inside your worktree, in parallel with
+- **full (multiagent)** - full TDD inside your worktree, in parallel with
   siblings. If you find your work reaching into another subtask's surface, stop
   and tell the orchestrator - do not reach across yourself.
 - **hotfix** - the reproduction test is already red; make it green with the

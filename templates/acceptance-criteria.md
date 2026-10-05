@@ -38,8 +38,8 @@ scenario, concrete Given/When/Then, no implementation detail.
 
      Three fields, in this order. Length scales with the delivery approach:
        quick fix   - one to two sentences per field.
-       feature     - ordinary paragraphs.
-       initiative  - up to 200 words per field, where the work warrants it.
+       regular     - ordinary paragraphs.
+       full        - up to 200 words per field, where the work warrants it.
 
      An unfilled field is caught twice: by the author's placeholder scan
      when the criteria are finished, and by the Definition of Ready at the
@@ -134,7 +134,7 @@ Scenario: {{scenario title}}
 ## Failure-mode scenarios
 
 <!-- The failure modes that matter, per the approach's test-surface target.
-     Quick fix: the obvious edges only. Feature and up: the failure modes
+     Quick fix: the obvious edges only. Regular and up: the failure modes
      that matter. Critical risk: adversarial and boundary inputs too. -->
 
 ### Scenario: {{FAILURE MODE TITLE}}

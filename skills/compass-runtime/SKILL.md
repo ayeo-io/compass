@@ -110,7 +110,7 @@ is no worktree - work on the current branch.
 │       ├── acceptance-criteria.md  The shared artifact every role reads
 │       ├── requirements-review.md  (ends with the Definition of Ready gate)
 │       ├── technical-design.md  The design
-│       ├── distribution-map.md  Multiagent orchestration (initiative-scale work)
+│       ├── distribution-map.md  Multiagent orchestration (full-approach scale work)
 │       ├── positioning.md       Marketer messaging (if in play)
 │       ├── launch-readiness.md  Marketer claims gate (if in play)
 │       ├── verification-report.md  (ends with the Definition of Done gate)

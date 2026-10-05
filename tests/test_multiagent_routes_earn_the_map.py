@@ -39,7 +39,7 @@ def test_frm_1_a_feature_assessment_earns_and_registers_the_map(make_task, run_c
 def test_frm_2_every_multiagent_route_earns_the_map():
     routes = yaml.safe_load(POLICY.read_text())
     shapes = next(v for v in routes.values()
-                  if isinstance(v, dict) and "standard" in v and "expedition" in v)
+                  if isinstance(v, dict) and "regular" in v and "full" in v)
     multiagent = [name for name, shape in shapes.items()
                   if isinstance(shape, dict)
                   and (shape.get("stages") or {}).get("breakdown") == "multiagent"]

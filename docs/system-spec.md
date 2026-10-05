@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a technical spec written to docs/specs/ When git status runs Then the file is ignored and git ls-files lists nothing under docs/specs/
+### Given a session that leaves a process holding its output open, when the call ends, then the harness ends it and records the run as not contained
 
-- **Scenario id:** `TRC-001`
+- **Scenario id:** `SUH-1`
 - **Intent:** `INT-1`
-- **Source issue:** `keep-docs-specs-untracked`
+- **Source issue:** `harness-session-user-hardening`
 - **Landed:** 2026-10-05
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1612 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1618 superseded scenario(s) are in `docs/system-spec-archive.md`.

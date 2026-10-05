@@ -11284,3 +11284,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `harness-post-session-walks`
 - **Landed:** 2026-10-05
+
+### Given the maintainer approved the configurable-framework recommendation on 2026-10-05 When a reader opens architecture/decisions/README.md Then ADR-002 shows superseded by ADR-033, ADR-010 shows accepted, Inv-2 and Inv-3 carry the new wording, and the ledger holds both decisions _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `adr-projects-add-checks-as-data`
+- **Landed:** 2026-10-05

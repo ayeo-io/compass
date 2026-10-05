@@ -117,9 +117,11 @@ Logical surface: **role pipeline**
    added by `RP-REQUIRE-003` and `RP-REQUIRE-004` when risk or labels
    warrant it.
 
-4. **The router is not extensible in-line.** Adding a new delivery-approach
-   shape or assessment dimension needs a deliberate framework change with its
-   own issue and ADR; it is not a per-project configuration option.
+4. **The shipped core is framework-owned.** Changing a shipped delivery
+   approach, assessment dimension, stage or guardrail needs a framework
+   change with its own issue and ADR. A project can add checks, gates,
+   assessment-dimension values and dimensions by configuration; loosening the
+   default needs an approved waiver (ADR-033).
 
 5. **The `architecture/` tree is advisory.** A project may operate Compass
    without an `architecture/` directory. Assess degrades gracefully to an

@@ -761,12 +761,18 @@ def _copy_tracked_files(source_dir: Path, dest_dir: Path, env: dict[str, str],
     names = [name for name in raw_names if name]
     if not names:
         raise SystemExit(f"{source_dir} has no git-tracked file to seed a run with")
+    refused: list[str] = []
     for name in names:
         source_path = source_dir / name
-        dest_path = dest_dir / _mapped(name, path_map or {})
+        mapped = _mapped(name, path_map or {})
+        dest_path = dest_dir / mapped
         # The hidden tests are copied into a folder a session has used:
-        # never write through a link it left there.
-        if not _inside_without_links(dest_dir, dest_path.parent):
+        # never write through a link it left there, and never remove a
+        # folder it planted where a file goes. Either is refused and
+        # returned, so the caller records the run as not contained.
+        if not _inside_without_links(dest_dir, dest_path.parent) or (
+                dest_path.is_dir() and not dest_path.is_symlink()):
+            refused.append(mapped)
             continue
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         # A fresh file every time: writing into an existing one would also
@@ -784,6 +790,7 @@ def _copy_tracked_files(source_dir: Path, dest_dir: Path, env: dict[str, str],
             os.fchmod(out.fileno(), stat.S_IMODE(source_stat.st_mode))
             os.utime(out.fileno(), ns=(source_stat.st_atime_ns,
                                        source_stat.st_mtime_ns))
+    return refused
 
 
 def _mapped(name: str, path_map: dict[str, str]) -> str:
@@ -1654,14 +1661,22 @@ def _seed_regressions(seed_outcomes: dict[str, str], after_outcomes: dict[str, s
 
 
 def _compass_files(repo_dir: Path) -> list[str]:
+    """The files under the session's `.compass`, never reached through a
+    link: a linked `.compass` lists nothing, and a link inside it is
+    neither listed nor walked. `os.walk` does not follow linked folders, and
+    each file is checked as a link before anything reads what it names, so
+    a link to `/` cannot send root across the whole filesystem."""
     compass_dir = repo_dir / ".compass"
-    if not compass_dir.is_dir():
+    if compass_dir.is_symlink() or not compass_dir.is_dir():
         return []
-    return sorted(
-        p.relative_to(repo_dir).as_posix()
-        for p in compass_dir.rglob("*")
-        if p.is_file() and _inside_without_links(repo_dir, p)
-    )
+    found = []
+    for base, _dirs, files in os.walk(compass_dir):
+        for name in files:
+            path = Path(base) / name
+            if path.is_symlink() or not path.is_file():
+                continue
+            found.append(path.relative_to(repo_dir).as_posix())
+    return sorted(found)
 
 
 def _manifests(repo_dir: Path) -> dict[str, str]:
@@ -1893,6 +1908,9 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
             _hand_to(repo_dir, session_user)
             _SESSION_FOLDER = (repo_dir, (session_user.uid, session_user.gid))
         tampered_paths: list[str] = []
+        # Hidden-test paths the post-session copy refused (a planted folder,
+        # or a link above the path); each makes the run not contained.
+        refused_hidden: list[str] = []
 
         test_command = scenario.get("test_command", _DEFAULT_TEST_COMMAND)
         hidden_tests_dir = scenario_dir / "hidden_tests"
@@ -1972,7 +1990,8 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
             # Copied in only now, after the session has ended - a session
             # can never read `hidden_tests/`, never mind the rubric inside
             # it (CMP-2).
-            _copy_tracked_files(hidden_tests_dir, repo_dir, child_env)
+            refused_hidden = _copy_tracked_files(
+                hidden_tests_dir, repo_dir, child_env)
             hidden_command = scenario["hidden_command"]
             hidden_exit, hidden_output = _run_test_command(
                 hidden_command, repo_dir, child_env)
@@ -2018,6 +2037,7 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
         (f"git-config:{path}" if path in _TAMPER_WATCHED_RELATIVE_PATHS
          else f"git-state:{path}")
         for path in sorted(set(tampered_paths))]
+    escaped_paths += [f"hidden-test:{path}" for path in refused_hidden]
     contained = not escaped_paths
 
     stop_reason, finished = _stop_reason_and_finished(

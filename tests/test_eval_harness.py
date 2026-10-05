@@ -320,6 +320,17 @@ def main():
     if link_git_dir_to:
         shutil.rmtree(os.path.join(cwd, ".git"))
         os.symlink(link_git_dir_to, os.path.join(cwd, ".git"))
+    dir_at_hidden_test = config.get("dir_at_hidden_test")
+    if dir_at_hidden_test:
+        # A folder where a hidden test will be copied, so the copy cannot
+        # write the file there.
+        os.makedirs(os.path.join(cwd, dir_at_hidden_test, "inner"), exist_ok=True)
+    link_compass_to = config.get("link_compass_to")
+    if link_compass_to:
+        compass_dir = os.path.join(cwd, ".compass")
+        if os.path.lexists(compass_dir):
+            shutil.rmtree(compass_dir)
+        os.symlink(link_compass_to, compass_dir)
     link_hidden_test_to = config.get("link_hidden_test_to")
     if link_hidden_test_to:
         hidden = os.path.join(cwd, "tests", "test_hidden_feature.py")

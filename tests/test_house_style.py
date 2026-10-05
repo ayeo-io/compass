@@ -364,13 +364,13 @@ def test_pl_a1b_working_notes_stay_untracked():
     unscanned em dash.
     """
     gitignore = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8")
-    for path in ("/docs/analysis/", "/docs/proposals/"):
+    for path in ("/docs/analysis/", "/docs/proposals/", "/docs/specs/"):
         assert path in gitignore, (
             f"{path} must stay in .gitignore - it holds local-only planning "
             f"documents, and this repository is public."
         )
     leaked = [p for p in subprocess.run(
-        ["git", "ls-files", "docs/analysis", "docs/proposals"],
+        ["git", "ls-files", "docs/analysis", "docs/proposals", "docs/specs"],
         cwd=REPO_ROOT, capture_output=True, text=True,
     ).stdout.split("\n") if p.strip()]
     assert not leaked, (

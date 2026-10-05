@@ -41,7 +41,7 @@ Rules:
 | ID | Title | Status | Principles covered |
 |---|---|---|---|
 | [ADR-001](ADR-001-judgement-and-mechanism-are-separated.md) | Judgement and mechanism are separated | accepted | Inv-1 (readings are sole judgement field), Inv-7 (mechanism is deterministic) |
-| [ADR-002](ADR-002-framework-grows-by-adding-artifacts-not-rules.md) | The framework grows by adding artifacts and lenses, not by adding guardrails or routing dimensions | accepted | Inv-2 (five guardrails), Inv-3 (adaptive routing untouched) |
+| [ADR-002](ADR-002-framework-grows-by-adding-artifacts-not-rules.md) | The framework grows by adding artifacts and lenses, not by adding guardrails or routing dimensions | superseded by ADR-033 | Inv-2 (five guardrails), Inv-3 (adaptive routing untouched) |
 | [ADR-003](ADR-003-flow-advises-but-never-gates.md) | Flow advises but never gates | accepted | Inv-4 (Flow advises, never gates) |
 | [ADR-004](ADR-004-one-spec-many-lenses.md) | One spec, many lenses; the lens annotates, never forks | accepted | Inv-5 (one spec, many lenses) |
 | [ADR-005](ADR-005-state-lives-on-disk.md) | State lives on disk; conversation reconstructs from artifacts | accepted | Inv-6 (persistence over conversation) |
@@ -49,7 +49,7 @@ Rules:
 | [ADR-007](ADR-007-conditional-gate-promotion-via-floors.md) | Gates may be conditionally promoted from advisory to blocking via routing-policy floors; advisory gates write evidence but do not block Land | accepted | RP-REQUIRE-001/002, verify.analyze (advisory-by-default lifecycle) |
 | [ADR-008](ADR-008-cross-task-derived-artifacts.md) | Cross-task derived artifacts are generated from landed task scenarios at Land time; the derivation is reconstructible, idempotent, and never a source-of-truth | accepted | Inv-5, Inv-6, Inv-8 (living spec, derived at Land, silent overwrite contract) |
 | [ADR-009](ADR-009-fitness-functions-are-project-guardrails.md) | Architectural fitness functions are project guardrails, not framework guardrails | accepted | Inv-2 (five guardrails), Inv-8 (backward compat; nothing-to-check pass on zero declarations), ADR-007 reuse (verify.architecture floor promotion) |
-| [ADR-010](ADR-010-governance-layers-rather-than-copies.md) | Project governance should layer over framework defaults rather than copy them | proposed | Inv-8 (backward compat - a file with no `extends:` must keep working); supersedes nothing, complements the drift-detection work |
+| [ADR-010](ADR-010-governance-layers-rather-than-copies.md) | Project governance should layer over framework defaults rather than copy them | accepted | Inv-8 (backward compat - a file with no `extends:` must keep working); supersedes nothing, complements the drift-detection work |
 | [ADR-011](ADR-011-enforced-file-types-are-project-configurable.md) | Which file types need a red should be project-configurable, not a fixed list | accepted | Inv-8 (backward compat - a project that configures nothing keeps today's behaviour); same floor-plus-opt-in shape as ADR-010 |
 | [ADR-012](ADR-012-the-v2-vocabulary-freeze.md) | The v2 vocabulary is frozen - industry words only, enforced by the build; post-freeze changes need a decision record | accepted | governance/terminology.yml + tests/test_terminology.py (the ratchet); ADR-006 (break paid once behind a major version) |
 | [ADR-013](ADR-013-vendored-third-party-code.md) | Compass may redistribute third-party code inside the plugin, and a bundled copy takes precedence over any system copy | accepted | Inv-8 (backward compat - TRC-F4/TRC-F5 hold no behaviour change); ADR-002 (no new guardrail or routing dimension added) |
@@ -72,6 +72,7 @@ Rules:
 | [ADR-030](ADR-030-compass-run-starts-host-sessions.md) | compass run is the one verb that starts a host session | accepted | answers `headless-runner`; a bounded exception to ADR-025 |
 | [ADR-031](ADR-031-delivery-record-in-a-second-repository.md) | The delivery record is kept in a second, private repository, synced at every landing | accepted | answers `delivery-record` |
 | [ADR-032](ADR-032-rival-names-in-an-off-github-key.md) | Rival product names are held in an off-GitHub key and kept out by hashed matching | proposed | answers `rival-names-never-committed`; keeps ADR-031's record clean |
+| [ADR-033](ADR-033-projects-add-checks-gates-and-dimension-values-as-data.md) | Projects add checks, gates and assessment-dimension values as data; the five guardrails and the shipped core stay framework-owned and locked | accepted | supersedes ADR-002; Inv-2 and Inv-3 reworded; ADR-009 (project checks already exist); accepts ADR-010 |
 
 ## Principle → ADR mapping
 
@@ -82,8 +83,8 @@ them:
 | Invariant | Principle statement | ADR |
 |---|---|---|
 | Inv-1 | Assess is mandatory; the manifest's `assessment:` is the only judgement field | ADR-001 |
-| Inv-2 | Five guardrails (G1–G5), not more | ADR-002 |
-| Inv-3 | Adaptive routing is untouched; no new delivery approaches or dimensions added | ADR-002 |
+| Inv-2 | Five framework guardrails (G1-G5), locked; a project check or gate is not a guardrail and gets no G number | ADR-033 |
+| Inv-3 | The shipped delivery approaches and assessment dimensions change only by a framework decision; a project's additions are data, and loosening the default needs an approved waiver | ADR-033 |
 | Inv-4 | Flow (cross-task signals) advises; it never gates or mutates | ADR-003 |
 | Inv-5 | One spec (`acceptance-criteria.md`), many roles; roles annotate, never fork | ADR-004 |
 | Inv-6 | Every mechanism output is a named file on disk (persistence over conversation) | ADR-005 |

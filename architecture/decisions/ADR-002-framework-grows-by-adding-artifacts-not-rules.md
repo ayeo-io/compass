@@ -1,10 +1,10 @@
 ---
 id: ADR-002
 title: The framework grows by adding artifacts and lenses, not by adding guardrails or routing dimensions
-status: accepted
+status: superseded
 date: 2026-05-24
 supersedes: ''
-superseded_by: ''
+superseded_by: 'ADR-033'
 ---
 
 > **Vocabulary note (ADR-023, 2026-08-27):** this record's *lens* is now

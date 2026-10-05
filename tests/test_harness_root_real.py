@@ -133,3 +133,17 @@ def test_hr_i_a_process_the_test_command_left_is_ended(world):
     _run(world, {"plant_test_linger_marker": str(marker)})
     time.sleep(4)
     assert not marker.exists(), "a process the test command left ran on"
+
+
+def test_hr_i_the_session_cannot_stop_the_kill_all(world):
+    # The kill-all is an interpreter started as the session user, so it
+    # must not load anything from that user's home.
+    marker = world["shared"] / "late-defeat.txt"
+    os.chmod(world["shared"], 0o777)
+    home = Path(pwd.getpwnam(USER).pw_dir)
+    try:
+        _run(world, {"defeat_kill_all": True, "linger_marker": str(marker)})
+        time.sleep(4)
+    finally:
+        subprocess.run(["rm", "-rf", str(home / ".local")], check=False)
+    assert not marker.exists(), "the session stopped the kill-all"

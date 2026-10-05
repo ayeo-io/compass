@@ -281,6 +281,17 @@ def main():
                      "subprocess.Popen([sys.executable, '-c', " + repr(child)
                      + "], start_new_session=True, stdout=subprocess.DEVNULL,"
                      " stderr=subprocess.DEVNULL)\\n" + body)
+    if config.get("defeat_kill_all"):
+        # The session user's own site folder, which any interpreter it starts
+        # loads: a hook there that exits when asked to signal everything.
+        import site
+        user_site = site.getusersitepackages()
+        os.makedirs(user_site, exist_ok=True)
+        with open(os.path.join(user_site, "usercustomize.py"), "w",
+                  encoding="utf-8") as fh:
+            fh.write("import os, sys\\n"
+                     "if any('os.kill(-1' in a for a in sys.orig_argv):\\n"
+                     "    os._exit(0)\\n")
     link_hidden_test_to = config.get("link_hidden_test_to")
     if link_hidden_test_to:
         hidden = os.path.join(cwd, "tests", "test_hidden_feature.py")

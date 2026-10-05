@@ -450,3 +450,56 @@ def test_hr_d_the_account_that_ran_sudo_is_refused():
     reason = _refusal(session_user="evaluser", env={"SUDO_UID": "1500"})
     assert reason and "sudo" in reason
     assert _refusal(session_user="evaluser", env={"SUDO_UID": "1600"}) is None
+
+
+def test_hr_i_the_kill_all_loads_nothing_the_session_user_controls(monkeypatch):
+    # Isolated mode skips the user's site folder and every PYTHON* variable,
+    # where a session could plant code that stops the kill-all.
+    calls = []
+    monkeypatch.setattr(
+        harness.subprocess, "run",
+        lambda command, **k: calls.append((command, k))
+        or subprocess.CompletedProcess(command, 0, "", ""))
+    harness._end_session_user_processes(1500, 1500, {"PYTHONPATH": "/x",
+                                                     "HOME": "/home/evaluser"})
+    command, kwargs = calls[0]
+    assert command[1:3] == ["-I", "-S"]
+    assert not any(k.startswith("PYTHON") for k in kwargs["env"])
+    assert "HOME" not in kwargs["env"]
+
+
+def test_hr_h_the_hidden_test_copy_sets_its_mode_on_the_file_it_made(
+        tmp_path, monkeypatch):
+    # A process that swaps the new file for a link while it is written must
+    # not get root to change the mode of the file the link names.
+    source = tmp_path / "hidden"
+    source.mkdir()
+    (source / "test_h.py").write_text("hidden\n")
+    os.chmod(source / "test_h.py", 0o644)
+    subprocess.run(["git", "init", "-q"], cwd=source, check=True)
+    subprocess.run(["git", "add", "-A"], cwd=source, check=True)
+    dest = tmp_path / "repo"
+    dest.mkdir()
+    victim = tmp_path / "victim"
+    victim.write_text("keep me\n")
+    os.chmod(victim, 0o600)
+    real_copy = harness.shutil.copyfileobj
+
+    def swap_while_copying(src, out):
+        real_copy(src, out)
+        (dest / "test_h.py").unlink()
+        (dest / "test_h.py").symlink_to(victim)
+
+    monkeypatch.setattr(harness.shutil, "copyfileobj", swap_while_copying)
+    harness._copy_tracked_files(source, dest, dict(os.environ))
+    assert stat.S_IMODE(victim.stat().st_mode) == 0o600
+
+
+def test_hr_h_a_config_turned_into_a_folder_is_tampering_not_a_crash(tmp_path):
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    (repo / ".git" / "config").write_bytes(b"[core]\n")
+    snapshot = harness._snapshot_git_config(repo)
+    (repo / ".git" / "config").unlink()
+    (repo / ".git" / "config" / "inner").mkdir(parents=True)
+    assert ".git/config" in harness._restore_tampered_git_config(repo, snapshot)

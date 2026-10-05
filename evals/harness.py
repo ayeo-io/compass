@@ -355,8 +355,14 @@ def _end_session_user_processes(uid: int, gid: int, env: dict[str, str]) -> None
     runs only for a distinct, unprivileged user."""
     if uid in (0, os.geteuid()):
         return
-    proc = subprocess.run([sys.executable, "-c", _KILL_ALL_CODE], env=env,
-                          capture_output=True, text=True, user=uid, group=gid,
+    # The session user's home and the session's environment can carry code
+    # an interpreter loads at start-up, such as a `usercustomize.py` that
+    # exits before the signal. `-I -S` and an environment with only PATH
+    # load nothing the session could have written.
+    clean_env = {"PATH": env.get("PATH", os.defpath)}
+    proc = subprocess.run([sys.executable, "-I", "-S", "-c", _KILL_ALL_CODE],
+                          env=clean_env, capture_output=True, text=True,
+                          user=uid, group=gid,
                           **({"extra_groups": []} if os.geteuid() == 0 else {}))
     if proc.returncode != 0:
         raise SystemExit(
@@ -764,9 +770,15 @@ def _copy_tracked_files(source_dir: Path, dest_dir: Path, env: dict[str, str],
             dest_path.unlink()
         fd = os.open(dest_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL
                      | os.O_NOFOLLOW, 0o600)
+        # Mode and times are set through the open file, never by path: a
+        # process could have swapped the path for a link by now.
+        source_stat = source_path.stat()
         with os.fdopen(fd, "wb") as out, source_path.open("rb") as src:
             shutil.copyfileobj(src, out)
-        shutil.copystat(source_path, dest_path)
+            out.flush()
+            os.fchmod(out.fileno(), stat.S_IMODE(source_stat.st_mode))
+            os.utime(out.fileno(), ns=(source_stat.st_atime_ns,
+                                       source_stat.st_mtime_ns))
 
 
 def _mapped(name: str, path_map: dict[str, str]) -> str:
@@ -879,6 +891,10 @@ def _restore_tampered_git_config(repo_dir: Path,
         if current_bytes == seed_bytes:
             continue
         tampered.append(rel)
+        if path.is_dir() and not path.is_symlink():
+            # A folder cannot be written over; `rel` is already in
+            # `tampered`, so the run is recorded as not contained.
+            continue
         if path.is_symlink() or (path.exists() and not path.is_file()):
             # Removing a link removes the link, not what it points at; a
             # named pipe is removed rather than opened, which would wait.

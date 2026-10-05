@@ -11291,3 +11291,45 @@
 - **Intent:** `INT-1`
 - **Source issue:** `adr-projects-add-checks-as-data`
 - **Landed:** 2026-10-05
+
+### Given a technical spec written to docs/specs/ When git status runs Then the file is ignored and git ls-files lists nothing under docs/specs/ _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `keep-docs-specs-untracked`
+- **Landed:** 2026-10-05
+
+### Given a session user with running processes or a link in its watched Claude configuration, when a run starts, then it is refused naming what was found _(archived)_
+
+- **Scenario id:** `SUH-2`
+- **Intent:** `INT-1`
+- **Source issue:** `harness-session-user-hardening`
+- **Landed:** 2026-10-05
+
+### Given a session user with a crontab or a queued at job, when the harness checks it, then the run is refused naming which _(archived)_
+
+- **Scenario id:** `SUH-3`
+- **Intent:** `INT-1`
+- **Source issue:** `harness-session-user-hardening`
+- **Landed:** 2026-10-05
+
+### Given a run that changed the contents, permissions or type of the session user's watched Claude configuration, when the record is written, then it lists the changed paths _(archived)_
+
+- **Scenario id:** `SUH-4`
+- **Intent:** `INT-1`
+- **Source issue:** `harness-session-user-hardening`
+- **Landed:** 2026-10-05
+
+### Given any run with a session user, when it ends, then the harness has modified nothing in the session user's home _(archived)_
+
+- **Scenario id:** `SUH-5`
+- **Intent:** `INT-1`
+- **Source issue:** `harness-session-user-hardening`
+- **Landed:** 2026-10-05
+
+### Given the three places that start a process as the session user, when their arguments are built, then they come from one helper _(archived)_
+
+- **Scenario id:** `SUH-6`
+- **Intent:** `INT-1`
+- **Source issue:** `harness-session-user-hardening`
+- **Landed:** 2026-10-05

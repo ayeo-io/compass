@@ -471,7 +471,23 @@ def _how_it_ran(records: List[Dict[str, Any]]) -> List[str]:
                   f"so their rule-judged behaviours are undecided. They wrote "
                   f"outside their sandbox: {shown or 'no path recorded'}{more}.",
                   ""]
+    lines += _config_change_lines(records)
     return lines
+
+
+def _config_change_lines(records: List[Dict[str, Any]]) -> List[str]:
+    """How many runs changed the session user's Claude configuration, and
+    where. Such a run may have steered the runs after it, so a reader must
+    see it before comparing them. A record with `None` was not checked."""
+    changed = [r for r in records if r.get("session_config_changed")]
+    if not changed:
+        return []
+    paths = sorted({p for r in changed for p in r["session_config_changed"]})
+    shown = ", ".join(f"`{p}`" for p in paths[:5])
+    more = f" and {len(paths) - 5} more" if len(paths) > 5 else ""
+    return [f"{len(changed)} of {len(records)} runs changed the session "
+            f"user's Claude configuration, which could steer the runs after "
+            f"them: {shown}{more}.", ""]
 
 
 def render_report(cells: Dict[Cell, List[Dict[str, Any]]],

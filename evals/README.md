@@ -84,8 +84,22 @@ paths:
   The user must be dedicated to the harness. After the session, every git
   call and every test run, the harness ends every process that user has,
   so nothing the session started can change the folder while root reads
-  it. For that reason `--session-user` refuses root and the account that
-  started the harness through sudo. The host must have
+  it. For that reason `--session-user` refuses root, the account that
+  started the harness through sudo, and an account that is in use: one
+  with running processes, a crontab or a queued `at` job. The check only
+  looks; the harness never changes the account. A process the session
+  leaves holding a call's output is ended rather than waited on, and the
+  run is recorded as not contained (`session-process:held-output:`).
+
+  The harness never resets the user's home either. It fingerprints the
+  user's Claude configuration (`CLAUDE.md`, settings, agents, commands,
+  skills, hooks and project memory) before and after each run: each
+  path's type, permissions and contents, never following a link. Any
+  change goes into `session_config_changed`, because it could steer the
+  next run, and the comparison report counts those runs. A run is refused
+  while any of those paths is a link, since edits behind it would go
+  unseen. `~/.claude.json` and installed plugins are not watched: they
+  change on every run. The host must have
   `fs.protected_hardlinks` on, the Linux default: it stops the session
   user making a hard link to a file root then reads.
 - The plugin copy on a read-only mount.
@@ -94,8 +108,10 @@ Without either, the run is refused. `--allow-root` runs it uncontained, and is
 a person's decision: it is refused when `CI` or `COMPASS_UNATTENDED` is set,
 so a scheduled run cannot use it. Every session runs with
 `PYTHONDONTWRITEBYTECODE=1`. Each record carries `uid`, `ran_as_root`,
-`session_uid` and `python_version`; the comparison report states the uid and
-Python version, and how many runs were not contained.
+`session_uid`, `python_version` and `session_config_changed` (null without a
+session user); the comparison report states the uid and Python version, how
+many runs were not contained, and how many changed the session user's Claude
+configuration.
 
 ## What a session sees, and what it is told
 

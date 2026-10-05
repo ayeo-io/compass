@@ -80,6 +80,21 @@ def _with_a_terminal():
             "preexec_fn": take_terminal}
 
 
+def _harness(world, extra=None, scenario="scenario", terminal=False):
+    _configure_fake_claude(world["claude"], world["log"], extra)
+    os.chmod(world["claude"].parent / "fake_claude_config.json", 0o644)
+    out = world["shared"] / "out"
+    env = {k: v for k, v in os.environ.items()
+           if k not in ("CI", "COMPASS_UNATTENDED")}
+    return subprocess.run(
+        [sys.executable, str(ROOT / "evals" / "harness.py"),
+         "--scenario", str(world[scenario]), "--condition", "compass",
+         "--claude", str(world["claude"]), "--out", str(out),
+         "--plugin-source", str(world["plugin"]), "--session-user", USER],
+        env=env, capture_output=True, text=True, timeout=600,
+        **(_with_a_terminal() if terminal else {})), out
+
+
 def _run(world, extra=None, scenario="scenario", terminal=False):
     _configure_fake_claude(world["claude"], world["log"], extra)
     os.chmod(world["claude"].parent / "fake_claude_config.json", 0o644)
@@ -183,3 +198,63 @@ def test_hr_g_session_user_processes_cannot_reach_roots_terminal(world):
                  "plant_test_tty_marker": str(test_marker)}, terminal=True)
     assert session_marker.read_text() == "none"
     assert test_marker.read_text() == "none"
+
+
+# --- the session user stays dedicated, unhung and untouched -----------------
+# Scenario ids SUH-1 to SUH-5 (issue `harness-session-user-hardening`).
+
+def _home_tree(home: Path) -> dict[str, str]:
+    import hashlib
+    tree = {}
+    for base, dirs, files in os.walk(home):
+        for name in dirs + files:
+            path = Path(base) / name
+            rel = path.relative_to(home).as_posix()
+            if path.is_symlink():
+                tree[rel] = "link:" + os.readlink(path)
+            elif path.is_file():
+                tree[rel] = hashlib.sha256(path.read_bytes()).hexdigest()
+            else:
+                tree[rel] = "dir"
+    return tree
+
+
+def test_suh_1_a_process_holding_the_output_is_ended_not_waited_on(world):
+    start = time.monotonic()
+    record = _run(world, {"linger_holding_output": True})
+    assert time.monotonic() - start < 100, "the harness waited on the survivor"
+    assert record["contained"] is False
+    assert "session-process:held-output:session" in record["escaped_paths"]
+
+
+def test_suh_2_a_busy_account_is_refused_before_any_session(world):
+    entry = pwd.getpwnam(USER)
+    busy = subprocess.Popen(["sleep", "60"], user=entry.pw_uid,
+                            group=entry.pw_gid, extra_groups=[])
+    try:
+        result, out = _harness(world)
+    finally:
+        busy.kill()
+        busy.wait()
+    assert result.returncode != 0
+    assert "not ready" in (result.stdout + result.stderr)
+    assert "running process" in (result.stdout + result.stderr)
+    assert not list(out.glob("*.json")), "a session ran on a busy account"
+
+
+def test_suh_4_a_run_that_writes_the_users_claude_md_is_flagged(world):
+    home = Path(pwd.getpwnam(USER).pw_dir)
+    try:
+        record = _run(world, {"write_home_claude_md": "always do X\n"})
+    finally:
+        subprocess.run(["rm", "-rf", str(home / ".claude" / "CLAUDE.md")],
+                       check=False)
+    assert ".claude/CLAUDE.md" in record["session_config_changed"]
+
+
+def test_suh_5_the_harness_changes_nothing_in_the_users_home(world):
+    home = Path(pwd.getpwnam(USER).pw_dir)
+    before = _home_tree(home)
+    record = _run(world)
+    assert record["session_config_changed"] == []
+    assert _home_tree(home) == before

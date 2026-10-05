@@ -321,9 +321,16 @@ _GIT_DIFF_SAFE_ARGS = ("--no-ext-diff", "--no-textconv")
 _SESSION_FOLDER: tuple[Path, tuple[int, int]] | None = None
 
 
+# The calls made as the session user whose output a process they started
+# was still holding when they exited. Each was ended by the kill-all, and
+# each makes the run not contained. Reset by `run_once` for every run.
+_HELD_CALLS: list[str] = []
+
+
 def _as_session_user(cwd: Path) -> dict[str, Any]:
     """The `subprocess` arguments that start a call in `cwd` as the session
-    user, or none outside the session's folder."""
+    user, or none outside the session's folder. Built by
+    `host_launch.session_user_args`, the one place they are built."""
     if _SESSION_FOLDER is None:
         return {}
     folder, (uid, gid) = _SESSION_FOLDER
@@ -331,12 +338,24 @@ def _as_session_user(cwd: Path) -> dict[str, Any]:
         Path(cwd).resolve().relative_to(folder.resolve())
     except ValueError:
         return {}
-    extra = {"extra_groups": []} if os.geteuid() == 0 else {}
-    # A new session and no standard input: a process that keeps root's
-    # controlling terminal can push a line into it (`TIOCSTI`), which root's
-    # shell then runs.
-    return {"user": uid, "group": gid, "start_new_session": True,
-            "stdin": subprocess.DEVNULL, **extra}
+    return host_launch.session_user_args(uid, gid)
+
+
+def _run_as_session_user(command: list[str], label: str, *, cwd: Path,
+                         env: dict[str, str], text: bool,
+                         as_user: dict[str, Any]) -> host_launch.SessionCall:
+    """Run one call as the session user without waiting on a process it
+    leaves holding its output (`host_launch.run_session_user_call`), then
+    end everything the user still has. A held call is recorded by `label`."""
+    uid, gid = as_user["user"], as_user["group"]
+    call = host_launch.run_session_user_call(
+        command, cwd=str(cwd), env=env, text=text,
+        end_processes=lambda: _end_session_user_processes(uid, gid, env),
+        **as_user)
+    if call.held:
+        _HELD_CALLS.append(label)
+    _end_session_user_processes(uid, gid, env)
+    return call
 
 
 # `os.kill(-1, ...)` signals every process the caller may signal, except
@@ -366,14 +385,133 @@ def _end_session_user_processes(uid: int, gid: int, env: dict[str, str]) -> None
     clean_env = {"PATH": env.get("PATH", os.defpath)}
     proc = subprocess.run([sys.executable, "-I", "-S", "-c", _KILL_ALL_CODE],
                           env=clean_env, capture_output=True, text=True,
-                          stdin=subprocess.DEVNULL, start_new_session=True,
-                          user=uid, group=gid,
-                          **({"extra_groups": []} if os.geteuid() == 0 else {}))
+                          **host_launch.session_user_args(uid, gid))
     if proc.returncode != 0:
         raise SystemExit(
             f"could not end the session user's processes (uid {uid}): "
             f"{(proc.stderr or '').strip()}. A process left running could "
             f"change the session's folder while the harness reads it.")
+
+
+# The session user's Claude configuration that could steer the next run:
+# instructions, settings, agents, commands, skills, hooks and project
+# memory. Credentials, transcripts, logs and caches change every run and do
+# not steer the next one, so they are left out.
+_SESSION_CONFIG_FILES = ("CLAUDE.md", ".claude/CLAUDE.md")
+_SESSION_CONFIG_GLOBS = (".claude/settings*.json",)
+_SESSION_CONFIG_FOLDERS = (".claude/agents", ".claude/commands",
+                           ".claude/skills", ".claude/hooks")
+_SESSION_CONFIG_WATCHED = (_SESSION_CONFIG_FILES + _SESSION_CONFIG_GLOBS
+                           + _SESSION_CONFIG_FOLDERS
+                           + (".claude/projects/*/memory",))
+
+
+_FILE_KINDS = {stat.S_IFREG: "file", stat.S_IFDIR: "dir", stat.S_IFIFO: "fifo",
+               stat.S_IFSOCK: "socket", stat.S_IFCHR: "device",
+               stat.S_IFBLK: "device"}
+
+
+def _linked_config_paths(home: Path) -> list[str]:
+    """Watched paths in the session user's home that are, or sit under, a
+    link. A link in place before a run would hide every edit made behind
+    it, so the account check refuses one rather than fingerprinting it."""
+    return sorted(path for path, value in
+                  _session_config_fingerprint(home).items()
+                  if value.startswith("link:"))
+
+
+def _session_config_fingerprint(home: Path) -> dict[str, str]:
+    """A hash per watched path under the session user's `home`, read with
+    the same care root takes in a session's folder: only regular files are
+    read, and no link is followed. Wherever a link stops the walk - the
+    watched file itself, a watched folder, or any folder above one, such as
+    a linked `.claude` - that link is recorded as the link, so swapping a
+    folder for a link shows up as a change at the level it happened."""
+    found: dict[str, str] = {}
+
+    def first_link(path: Path) -> Path | None:
+        current = home
+        for part in path.relative_to(home).parts:
+            current = current / part
+            if current.is_symlink():
+                return current
+        return None
+
+    def note_link(link: Path) -> None:
+        found[link.relative_to(home).as_posix()] = "link:" + os.readlink(link)
+
+    def add(path: Path) -> None:
+        # The type and permissions count as much as the contents: an
+        # unreadable settings file, or a named pipe where an instruction
+        # file was, changes the next session as surely as new text.
+        link = first_link(path)
+        if link is not None:
+            note_link(link)
+            return
+        try:
+            info = path.lstat()
+        except (FileNotFoundError, NotADirectoryError):
+            return
+        kind = _FILE_KINDS.get(stat.S_IFMT(info.st_mode), "other")
+        value = f"{kind}:{stat.S_IMODE(info.st_mode):o}"
+        if kind == "file":
+            raw = _read_regular_file(path)
+            value += ":" + (hashlib.sha256(raw).hexdigest() if raw is not None
+                            else "unreadable")
+        found[path.relative_to(home).as_posix()] = value
+
+    def walk(folder: Path) -> None:
+        link = first_link(folder)
+        if link is not None:
+            note_link(link)
+            return
+        if not folder.is_dir():
+            return
+        add(folder)
+        for base, dirs, files in os.walk(folder):
+            # `os.walk` lists a linked folder among `dirs` and never enters
+            # it; `add` records it as the link, and a real folder by its
+            # permissions.
+            for name in dirs + files:
+                add(Path(base) / name)
+
+    for rel in _SESSION_CONFIG_FILES:
+        add(home / rel)
+    claude = home / ".claude"
+    link = first_link(claude)
+    if link is not None:
+        note_link(link)
+    elif claude.is_dir():
+        for path in claude.glob("settings*.json"):
+            add(path)
+    for rel in _SESSION_CONFIG_FOLDERS:
+        walk(home / rel)
+    projects = home / ".claude" / "projects"
+    link = first_link(projects)
+    if link is not None:
+        note_link(link)
+    elif projects.is_dir():
+        for project in sorted(projects.iterdir()):
+            walk(project / "memory")
+    return found
+
+
+def _run_config_changes(before: dict[str, str], after: dict[str, str]
+                        ) -> list[str]:
+    """What one run's record lists: every watched path the run changed,
+    and every watched path that was already a link when the run started.
+    The link check refuses a link only before the first run, so a link an
+    earlier run planted hides whatever later runs write behind it; such a
+    path cannot be checked, so it is listed rather than read as unchanged."""
+    unchecked = {path for path, value in before.items()
+                 if value.startswith("link:")}
+    return sorted(set(_config_changes(before, after)) | unchecked)
+
+
+def _config_changes(before: dict[str, str], after: dict[str, str]) -> list[str]:
+    """The watched paths a run added, removed or changed."""
+    return sorted(path for path in set(before) | set(after)
+                  if before.get(path) != after.get(path))
 
 
 def _read_regular_file(path: Path) -> bytes | None:
@@ -476,11 +614,12 @@ def _run_git(args: list[str], cwd: Path, env: dict[str, str], *,
     full_args = ["git", *_GIT_SAFE_CONFIG_ARGS,
                  *([subcommand] if subcommand else []), *rest]
     as_user = _as_session_user(cwd)
-    result = subprocess.run(full_args, cwd=str(cwd), env=call_env,
-                            capture_output=True, text=text, **as_user)
     if as_user:
-        _end_session_user_processes(as_user["user"], as_user["group"], env)
-    return result
+        return _run_as_session_user(full_args, f"git {subcommand}".strip(),
+                                    cwd=cwd, env=call_env, text=text,
+                                    as_user=as_user)
+    return subprocess.run(full_args, cwd=str(cwd), env=call_env,
+                          capture_output=True, text=text)
 
 
 # --- the plugin copy --------------------------------------------------------
@@ -1131,10 +1270,62 @@ def _on_read_only_mount(path: Path) -> bool:
         return False
 
 
+def _account_in_use(entry: Any, run: Callable[..., Any] = subprocess.run
+                    ) -> str | None:
+    """Why the session user's account is not dedicated to the harness, or
+    None. Only looks: it changes nothing. The kill-all ends every process
+    the account has, and a scheduled job would run in the session folder
+    outside any session, so the account must be idle.
+
+    A scheduler that is not installed holds no jobs. A check that could not
+    run is reported, never passed: a probe that read nothing proves
+    nothing."""
+    found, failed = [], []
+
+    def probe(command):
+        try:
+            return run(command, capture_output=True, text=True,
+                       stdin=subprocess.DEVNULL)
+        except FileNotFoundError:
+            return None
+
+    procs = probe(["pgrep", "-U", str(entry.pw_uid)])
+    if procs is None:
+        failed.append("its processes (pgrep is not installed)")
+    elif procs.returncode == 0:
+        count = len([line for line in procs.stdout.splitlines() if line.strip()])
+        found.append(f"{count} running process{'es' if count != 1 else ''}")
+    elif procs.returncode != 1:
+        failed.append("its processes")
+    cron = probe(["crontab", "-l", "-u", entry.pw_name])
+    if cron is not None:
+        if cron.returncode == 0 and cron.stdout.strip():
+            found.append("a crontab")
+        elif cron.returncode != 0 and "no crontab" not in (cron.stderr or "").lower():
+            failed.append("its crontab")
+    queue = probe(["atq"])
+    if queue is not None:
+        if queue.returncode != 0:
+            failed.append("its queued at jobs")
+        else:
+            jobs = [line for line in queue.stdout.splitlines()
+                    if line.split() and line.split()[-1] == entry.pw_name]
+            if jobs:
+                found.append(f"{len(jobs)} queued at job{'s' if len(jobs) != 1 else ''}")
+    linked = _linked_config_paths(Path(entry.pw_dir))
+    if linked:
+        found.append("a link in its Claude configuration at "
+                     + ", ".join(linked))
+    if failed:
+        found.append("could not check " + " or ".join(failed))
+    return "; ".join(found) or None
+
+
 def _root_refusal(condition: str, plugin_copy_dir: Path | None, *,
                   allow_root: bool, euid: int, session_user: str | None = None,
                   env: dict[str, str] | None = None,
-                  lookup: Callable[[str], Any] | None = None) -> str | None:
+                  lookup: Callable[[str], Any] | None = None,
+                  probe: Callable[[Any], str | None] | None = None) -> str | None:
     """Why this run must not start, or None. Root ignores the file mode that
     protects the plugin copy, so a compass run as root needs a sanctioned
     path: each session as an unprivileged user (`--session-user`), or the
@@ -1155,6 +1346,14 @@ def _root_refusal(condition: str, plugin_copy_dir: Path | None, *,
             return (f"refusing --session-user {session_user}: it is root, so "
                     f"its sessions would not be contained. Name an "
                     f"unprivileged user.")
+        busy = (probe or _account_in_use)(entry)
+        if busy:
+            return (f"refusing --session-user {session_user}: the account is "
+                    f"not ready for the harness ({busy}). The harness ends "
+                    f"every process the session user has, a scheduled job "
+                    f"would run outside any session, and a link in its Claude "
+                    f"configuration would hide edits made behind it, so the "
+                    f"user must be dedicated, idle and free of such links.")
         if str(entry.pw_uid) == env.get("SUDO_UID"):
             return (f"refusing --session-user {session_user}: it is the "
                     f"account that started the harness through sudo. The "
@@ -1373,10 +1572,15 @@ def _invoke_claude(claude_exe: str, message: str, common_args: list[str],
     args = [*common_args, "--max-budget-usd", str(remaining_budget)]
     if resume:
         args += ["--resume", resume]
-    launched = host_launch.launch_claude(claude_exe, message, args, repo_dir,
-                                         env, user=state.get("as_user"))
-    if state.get("as_user"):
-        _end_session_user_processes(*state["as_user"], env)
+    as_user = state.get("as_user")
+    launched = host_launch.launch_claude(
+        claude_exe, message, args, repo_dir, env, user=as_user,
+        end_processes=(lambda: _end_session_user_processes(*as_user, env))
+        if as_user else None)
+    if launched.held:
+        _HELD_CALLS.append("session")
+    if as_user:
+        _end_session_user_processes(*as_user, env)
     state["stderr"] += launched.stderr
     final_text = _consume_events(launched.stdout, state)
     return launched.returncode, final_text
@@ -1543,10 +1747,13 @@ def _run_test_command(test_command: str, repo_dir: Path, env: dict[str, str]
     `_pytest_outcomes` (CMP-2) read the output; a caller that wants only the
     exit code discards it."""
     as_user = _as_session_user(repo_dir)
-    proc = subprocess.run(shlex.split(test_command), cwd=str(repo_dir), env=env,
-                           capture_output=True, text=True, **as_user)
     if as_user:
-        _end_session_user_processes(as_user["user"], as_user["group"], env)
+        proc = _run_as_session_user(shlex.split(test_command), "test command",
+                                    cwd=repo_dir, env=env, text=True,
+                                    as_user=as_user)
+    else:
+        proc = subprocess.run(shlex.split(test_command), cwd=str(repo_dir),
+                              env=env, capture_output=True, text=True)
     return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
 
 
@@ -1878,6 +2085,7 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
     reused by every run - never rebuilt here."""
     global _SESSION_FOLDER
     _SESSION_FOLDER = None
+    _HELD_CALLS.clear()
     started = datetime.now(timezone.utc).isoformat()
     clock_start = time.monotonic()
     state = _new_run_state()
@@ -1907,6 +2115,7 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
             # tests run in it as that user from now on.
             _hand_to(repo_dir, session_user)
             _SESSION_FOLDER = (repo_dir, (session_user.uid, session_user.gid))
+            config_before = _session_config_fingerprint(Path(session_user.home))
         tampered_paths: list[str] = []
         # Hidden-test paths the post-session copy refused (a planted folder,
         # or a link above the path); each makes the run not contained.
@@ -2011,6 +2220,10 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
             tests_exit_code, _tests_output = _run_test_command(
                 test_command, repo_dir, child_env)
 
+        session_config_changed = (
+            _run_config_changes(config_before,
+                                _session_config_fingerprint(Path(session_user.home)))
+            if session_user is not None else None)
         compass_files = _compass_files(repo_dir)
         manifests = _manifests(repo_dir)
         interruptions = _interruptions(repo_dir)
@@ -2038,6 +2251,8 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
          else f"git-state:{path}")
         for path in sorted(set(tampered_paths))]
     escaped_paths += [f"hidden-test:{path}" for path in refused_hidden]
+    escaped_paths += [f"session-process:held-output:{call}"
+                      for call in _HELD_CALLS]
     contained = not escaped_paths
 
     stop_reason, finished = _stop_reason_and_finished(
@@ -2080,6 +2295,10 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
         "compass_commit": compass_commit,
         "contained": contained,
         "escaped_paths": escaped_paths,
+        # Paths in the session user's Claude configuration this run changed;
+        # None when no session user was used, so "not checked" never reads
+        # as "unchanged" (`_SESSION_CONFIG_WATCHED`).
+        "session_config_changed": session_config_changed,
         "uid": os.geteuid(),
         "ran_as_root": os.geteuid() == 0,
         "session_uid": (session_user.uid if session_user is not None

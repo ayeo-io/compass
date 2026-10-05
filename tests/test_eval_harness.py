@@ -256,6 +256,95 @@ def main():
                   encoding="utf-8") as fh:
             fh.write("issue: " + second_manifest_slug + "\\nstatus: active\\n")
 
+    # Hostile sessions for the root tests (issue harness-root-sanctioned-path):
+    # code planted in the seed's test script, links planted where the
+    # harness later writes or reads, and a process left running.
+    plant_test_marker = config.get("plant_test_marker")
+    if plant_test_marker:
+        # At the top, so it runs before the seed script's own exit.
+        script = os.path.join(cwd, "run_tests.py")
+        with open(script, encoding="utf-8") as fh:
+            body = fh.read()
+        with open(script, "w", encoding="utf-8") as fh:
+            fh.write("open(" + repr(plant_test_marker) + ", 'w').write('ran')\\n"
+                     + body)
+    plant_test_linger_marker = config.get("plant_test_linger_marker")
+    if plant_test_linger_marker:
+        # The test command, not the session, leaves a process running.
+        script = os.path.join(cwd, "run_tests.py")
+        with open(script, encoding="utf-8") as fh:
+            body = fh.read()
+        child = ("import time; time.sleep(2); open("
+                 + repr(plant_test_linger_marker) + ", 'w').write('late')")
+        with open(script, "w", encoding="utf-8") as fh:
+            fh.write("import subprocess, sys\\n"
+                     "subprocess.Popen([sys.executable, '-c', " + repr(child)
+                     + "], start_new_session=True, stdout=subprocess.DEVNULL,"
+                     " stderr=subprocess.DEVNULL)\\n" + body)
+    if config.get("defeat_kill_all"):
+        # The session user's own site folder, which any interpreter it starts
+        # loads: a hook there that exits when asked to signal everything.
+        import site
+        user_site = site.getusersitepackages()
+        os.makedirs(user_site, exist_ok=True)
+        with open(os.path.join(user_site, "usercustomize.py"), "w",
+                  encoding="utf-8") as fh:
+            fh.write("import os, sys\\n"
+                     "if any('os.kill(-1' in a for a in sys.orig_argv):\\n"
+                     "    os._exit(0)\\n")
+    tty_marker = config.get("tty_marker")
+    if tty_marker:
+        # Whether this process can reach a controlling terminal, the route
+        # by which it could push input into the shell that started root.
+        try:
+            os.close(os.open("/dev/tty", os.O_RDWR))
+            reached = "tty"
+        except OSError:
+            reached = "none"
+        with open(tty_marker, "w", encoding="utf-8") as fh:
+            fh.write(reached)
+    plant_test_tty_marker = config.get("plant_test_tty_marker")
+    if plant_test_tty_marker:
+        script = os.path.join(cwd, "run_tests.py")
+        with open(script, encoding="utf-8") as fh:
+            body = fh.read()
+        probe = ("import os\\n"
+                 "try:\\n"
+                 "    os.close(os.open('/dev/tty', os.O_RDWR)); _r = 'tty'\\n"
+                 "except OSError:\\n"
+                 "    _r = 'none'\\n"
+                 "open(" + repr(plant_test_tty_marker) + ", 'w').write(_r)\\n")
+        with open(script, "w", encoding="utf-8") as fh:
+            fh.write(probe + body)
+    link_git_dir_to = config.get("link_git_dir_to")
+    if link_git_dir_to:
+        shutil.rmtree(os.path.join(cwd, ".git"))
+        os.symlink(link_git_dir_to, os.path.join(cwd, ".git"))
+    link_hidden_test_to = config.get("link_hidden_test_to")
+    if link_hidden_test_to:
+        hidden = os.path.join(cwd, "tests", "test_hidden_feature.py")
+        os.makedirs(os.path.dirname(hidden), exist_ok=True)
+        if os.path.lexists(hidden):
+            os.remove(hidden)
+        os.symlink(link_hidden_test_to, hidden)
+    link_git_config_to = config.get("link_git_config_to")
+    if link_git_config_to:
+        os.remove(os.path.join(cwd, ".git", "config"))
+        os.symlink(link_git_config_to, os.path.join(cwd, ".git", "config"))
+    link_manifest_to = config.get("link_manifest_to")
+    if link_manifest_to:
+        leak_dir = os.path.join(cwd, ".compass", "work", "leak")
+        os.makedirs(leak_dir, exist_ok=True)
+        os.symlink(link_manifest_to, os.path.join(leak_dir, "manifest.yml"))
+    linger_marker = config.get("linger_marker")
+    if linger_marker:
+        subprocess.Popen(
+            [sys.executable, "-c",
+             "import time; time.sleep(2); open(" + repr(linger_marker)
+             + ", 'w').write('late')"],
+            start_new_session=True, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL)
+
     cost = float(config.get("cost", 0.02))
     session_id = "fake-session-0001"
     deny_tool = config.get("deny_tool")
@@ -1718,7 +1807,7 @@ def test_run_record_has_every_documented_field(
         "escaped_paths", "stderr_tail", "over_budget", "replies_sent",
         "interruptions",
         "framework", "hidden", "regressions", "tokens", "compass_commit",
-        "uid", "ran_as_root", "python_version",
+        "uid", "ran_as_root", "session_uid", "python_version",
     }
     # This scenario carries no hidden_tests/, and this condition is not
     # R1 or R3 - CMP-1 and CMP-2's own fields both read as
@@ -2046,7 +2135,7 @@ def test_the_file_scan_catches_a_planted_citation(tmp_path, planted):
 # that it starts the specific program its own name suggests.
 _ALLOWED_TO_START_A_PROCESS = (
     "_run_git", "_run_compass_init", "_run_specify_init", "_claude_version",
-    "_invoke_claude", "_run_test_command",
+    "_invoke_claude", "_run_test_command", "_end_session_user_processes",
 )
 
 

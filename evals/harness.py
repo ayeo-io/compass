@@ -75,7 +75,12 @@ import time
 import types
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, NamedTuple
+
+try:
+    import pwd
+except ImportError:                     # not POSIX: no session user to switch to
+    pwd = None
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -308,6 +313,100 @@ _GIT_SAFE_CONFIG_ARGS = ("-c", "core.fsmonitor=false", "-c", "core.hooksPath=/de
 _GIT_DIFF_SAFE_ARGS = ("--no-ext-diff", "--no-textconv")
 
 
+# The session's folder once it is handed to a session user, and that user.
+# Set by `run_once` for the life of one run. While set, every git call and
+# test run whose working folder is inside it runs as the session user: root's
+# git refuses a folder another user owns, and the test command runs code the
+# session wrote, which must never run as root.
+_SESSION_FOLDER: tuple[Path, tuple[int, int]] | None = None
+
+
+def _as_session_user(cwd: Path) -> dict[str, Any]:
+    """The `subprocess` arguments that start a call in `cwd` as the session
+    user, or none outside the session's folder."""
+    if _SESSION_FOLDER is None:
+        return {}
+    folder, (uid, gid) = _SESSION_FOLDER
+    try:
+        Path(cwd).resolve().relative_to(folder.resolve())
+    except ValueError:
+        return {}
+    extra = {"extra_groups": []} if os.geteuid() == 0 else {}
+    # A new session and no standard input: a process that keeps root's
+    # controlling terminal can push a line into it (`TIOCSTI`), which root's
+    # shell then runs.
+    return {"user": uid, "group": gid, "start_new_session": True,
+            "stdin": subprocess.DEVNULL, **extra}
+
+
+# `os.kill(-1, ...)` signals every process the caller may signal, except
+# itself; procps' own `kill` cannot parse `-KILL -1`. It raises
+# ProcessLookupError when the user has nothing left running, the usual case.
+_KILL_ALL_CODE = ("import os, signal\n"
+                  "try:\n"
+                  "    os.kill(-1, signal.SIGKILL)\n"
+                  "except ProcessLookupError:\n"
+                  "    pass\n")
+
+
+def _end_session_user_processes(uid: int, gid: int, env: dict[str, str]) -> None:
+    """End every process the session user still has. Called after every
+    call that runs as the session user - the session, git and the test
+    command all run code the session chose - so nothing it started can
+    change the folder while root reads it next. The user is dedicated to
+    the harness, so nothing else is ended. As the harness's own uid or as
+    root it would end the operator's shell and the harness itself, so it
+    runs only for a distinct, unprivileged user."""
+    if uid in (0, os.geteuid()):
+        return
+    # The session user's home and the session's environment can carry code
+    # an interpreter loads at start-up, such as a `usercustomize.py` that
+    # exits before the signal. `-I -S` and an environment with only PATH
+    # load nothing the session could have written.
+    clean_env = {"PATH": env.get("PATH", os.defpath)}
+    proc = subprocess.run([sys.executable, "-I", "-S", "-c", _KILL_ALL_CODE],
+                          env=clean_env, capture_output=True, text=True,
+                          stdin=subprocess.DEVNULL, start_new_session=True,
+                          user=uid, group=gid,
+                          **({"extra_groups": []} if os.geteuid() == 0 else {}))
+    if proc.returncode != 0:
+        raise SystemExit(
+            f"could not end the session user's processes (uid {uid}): "
+            f"{(proc.stderr or '').strip()}. A process left running could "
+            f"change the session's folder while the harness reads it.")
+
+
+def _read_regular_file(path: Path) -> bytes | None:
+    """`path`'s bytes when it is a regular file, else None. Opened without
+    following a final link and without waiting on a named pipe or a device,
+    which a session can leave where root reads a file."""
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    except OSError:
+        return None
+    with os.fdopen(fd, "rb") as fh:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            return None
+        return fh.read()
+
+
+def _inside_without_links(folder: Path, path: Path) -> bool:
+    """True when `path` lies inside `folder` and no part of it below
+    `folder` is a symbolic link. The harness checks this before its own
+    reads and writes in a session's folder, so a link the session planted
+    never sends root to a file outside it."""
+    try:
+        rel = Path(path).relative_to(folder)
+    except ValueError:
+        return False
+    current = Path(folder)
+    for part in rel.parts:
+        current = current / part
+        if current.is_symlink():
+            return False
+    return True
+
+
 def _run_git(args: list[str], cwd: Path, env: dict[str, str], *,
               text: bool = True, allow_protocol: str = "none"
               ) -> subprocess.CompletedProcess:
@@ -376,8 +475,12 @@ def _run_git(args: list[str], cwd: Path, env: dict[str, str], *,
         rest = [flag for flag in _GIT_DIFF_SAFE_ARGS if flag not in args] + rest
     full_args = ["git", *_GIT_SAFE_CONFIG_ARGS,
                  *([subcommand] if subcommand else []), *rest]
-    return subprocess.run(full_args, cwd=str(cwd), env=call_env,
-                           capture_output=True, text=text)
+    as_user = _as_session_user(cwd)
+    result = subprocess.run(full_args, cwd=str(cwd), env=call_env,
+                            capture_output=True, text=text, **as_user)
+    if as_user:
+        _end_session_user_processes(as_user["user"], as_user["group"], env)
+    return result
 
 
 # --- the plugin copy --------------------------------------------------------
@@ -661,8 +764,26 @@ def _copy_tracked_files(source_dir: Path, dest_dir: Path, env: dict[str, str],
     for name in names:
         source_path = source_dir / name
         dest_path = dest_dir / _mapped(name, path_map or {})
+        # The hidden tests are copied into a folder a session has used:
+        # never write through a link it left there.
+        if not _inside_without_links(dest_dir, dest_path.parent):
+            continue
         dest_path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source_path, dest_path)
+        # A fresh file every time: writing into an existing one would also
+        # change any file it is hard-linked to, and a link is never opened.
+        if os.path.lexists(dest_path):
+            dest_path.unlink()
+        fd = os.open(dest_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL
+                     | os.O_NOFOLLOW, 0o600)
+        # Mode and times are set through the open file, never by path: a
+        # process could have swapped the path for a link by now.
+        source_stat = source_path.stat()
+        with os.fdopen(fd, "wb") as out, source_path.open("rb") as src:
+            shutil.copyfileobj(src, out)
+            out.flush()
+            os.fchmod(out.fileno(), stat.S_IMODE(source_stat.st_mode))
+            os.utime(out.fileno(), ns=(source_stat.st_atime_ns,
+                                       source_stat.st_mtime_ns))
 
 
 def _mapped(name: str, path_map: dict[str, str]) -> str:
@@ -730,11 +851,20 @@ def _read_bytes_or_none(path: Path) -> bytes | None:
     including when an ancestor that must be a directory, most often `.git`
     itself, has been replaced by a plain file. That turns every lookup
     below it into `NotADirectoryError`, not `FileNotFoundError`, so both
-    are read the same way: nothing here, not a crash."""
+    are read the same way: nothing here, not a crash. A link is read as the
+    link, never followed: a session that swapped a file for a link to one
+    outside its folder still shows as changed, and root never reads the
+    target."""
     try:
-        return path.read_bytes()
+        mode = path.lstat().st_mode
     except (FileNotFoundError, NotADirectoryError):
         return None
+    if stat.S_ISLNK(mode):
+        return b"\0link\0" + os.fsencode(os.readlink(path))
+    if not stat.S_ISREG(mode):
+        # A named pipe or a device: never opened, so never waited on.
+        return b"\0special\0"
+    return _read_regular_file(path)
 
 
 def _snapshot_git_config(repo_dir: Path) -> dict[str, bytes | None]:
@@ -762,10 +892,24 @@ def _restore_tampered_git_config(repo_dir: Path,
     tampered: list[str] = []
     for rel, seed_bytes in seed_git_snapshot.items():
         path = repo_dir / rel
+        if not _inside_without_links(repo_dir, path.parent):
+            # A link above the file, most often `.git` itself, puts every
+            # path under it outside the folder: nothing there is read,
+            # removed or written.
+            tampered.append(rel)
+            continue
         current_bytes = _read_bytes_or_none(path)
         if current_bytes == seed_bytes:
             continue
         tampered.append(rel)
+        if path.is_dir() and not path.is_symlink():
+            # A folder cannot be written over; `rel` is already in
+            # `tampered`, so the run is recorded as not contained.
+            continue
+        if path.is_symlink() or (path.exists() and not path.is_file()):
+            # Removing a link removes the link, not what it points at; a
+            # named pipe is removed rather than opened, which would wait.
+            path.unlink()
         if seed_bytes is None:
             if path.exists():
                 path.unlink()
@@ -777,7 +921,10 @@ def _restore_tampered_git_config(repo_dir: Path,
             continue
         else:
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(seed_bytes)
+            fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+                         | os.O_NOFOLLOW, 0o644)
+            with os.fdopen(fd, "wb") as fh:
+                fh.write(seed_bytes)
     return tampered
 
 
@@ -790,11 +937,12 @@ def _git_head_is_valid(repo_dir: Path) -> bool:
     - the shape a session that deletes or corrupts it (EJG-6) breaks. Read
     directly, never through git itself: the whole point is to decide
     whether running a git command here is safe before running one."""
-    try:
-        text = (repo_dir / ".git" / "HEAD").read_text(
-            encoding="utf-8", errors="replace").strip()
-    except (FileNotFoundError, NotADirectoryError, IsADirectoryError):
+    if not _inside_without_links(repo_dir, repo_dir / ".git"):
         return False
+    raw = _read_regular_file(repo_dir / ".git" / "HEAD")
+    if raw is None:
+        return False
+    text = raw.decode("utf-8", "replace").strip()
     if not text:
         return False
     if text.startswith("ref:"):
@@ -879,6 +1027,53 @@ def _git_init_and_commit(repo_dir: Path, env: dict[str, str]) -> str:
     return _run_git(["rev-parse", "HEAD"], repo_dir, call_env).stdout.strip()
 
 
+# --- the session user ---------------------------------------------------------
+
+class SessionUser(NamedTuple):
+    """The unprivileged user a root run starts each session as."""
+    name: str
+    uid: int
+    gid: int
+    home: str
+
+    @classmethod
+    def of(cls, entry) -> "SessionUser":
+        return cls(entry.pw_name, entry.pw_uid, entry.pw_gid, entry.pw_dir)
+
+
+def _euid() -> int:
+    """The harness's effective uid; one function, so a test can play root."""
+    return os.geteuid()
+
+
+def _lookup_user(name: str):
+    """The password entry for `name`; raises KeyError when there is none."""
+    if pwd is None:
+        raise KeyError(name)
+    return pwd.getpwnam(name)
+
+
+def _open_for_session_user(root: Path) -> None:
+    """Let the session user read `root` and everything in it, and write
+    none of it. `tempfile.mkdtemp` makes a folder only its owner can enter,
+    so a session running as another user would find no plugin at all."""
+    for path in [root, *root.rglob("*")]:
+        if path.is_symlink():
+            continue
+        mode = path.stat().st_mode
+        add = stat.S_IRGRP | stat.S_IROTH
+        if path.is_dir():
+            add |= stat.S_IXGRP | stat.S_IXOTH
+        os.chmod(path, (mode | add) & ~(stat.S_IWGRP | stat.S_IWOTH))
+
+
+def _hand_to(root: Path, user: SessionUser) -> None:
+    """Give the session user its working folder and everything in it. The
+    plugin copy and the checkout stay the harness's."""
+    for path in [root, *root.rglob("*")]:
+        os.chown(path, user.uid, user.gid, follow_symlinks=False)
+
+
 # --- the child's own environment ---------------------------------------------
 
 def _is_claude_plugin_path(entry: str) -> bool:
@@ -891,7 +1086,8 @@ def _is_claude_plugin_path(entry: str) -> bool:
                for i in range(len(parts) - 1))
 
 
-def _build_child_env(condition: str, plugin_copy_dir: Path | None
+def _build_child_env(condition: str, plugin_copy_dir: Path | None, *,
+                      session_user: SessionUser | None = None
                       ) -> dict[str, str]:
     """The session's own environment, built from nothing rather than
     filtered from the harness's, so no `CLAUDE*` variable can pass through
@@ -902,6 +1098,12 @@ def _build_child_env(condition: str, plugin_copy_dir: Path | None
     for key in ("HOME", "USER", "LANG", "TMPDIR"):
         if key in os.environ:
             env[key] = os.environ[key]
+    if session_user is not None:
+        # The session reads its Claude login from HOME, and cannot read
+        # root's; a root TMPDIR may not be writable to it either, so the
+        # system default applies.
+        env["HOME"], env["USER"] = session_user.home, session_user.name
+        env.pop("TMPDIR", None)
 
     kept_entries = [entry for entry in os.environ.get("PATH", "").split(os.pathsep)
                     if entry and not _is_claude_plugin_path(entry)]
@@ -923,18 +1125,49 @@ def _on_read_only_mount(path: Path) -> bool:
 
 
 def _root_refusal(condition: str, plugin_copy_dir: Path | None, *,
-                  allow_root: bool, euid: int) -> str | None:
-    """Why a compass run must not start as root, or None. Root ignores the
-    file mode that protects the plugin copy, so only a read-only mount
-    still protects it; `--allow-root` accepts the risk knowingly."""
-    if condition != "compass" or euid != 0 or allow_root:
+                  allow_root: bool, euid: int, session_user: str | None = None,
+                  env: dict[str, str] | None = None,
+                  lookup: Callable[[str], Any] | None = None) -> str | None:
+    """Why this run must not start, or None. Root ignores the file mode that
+    protects the plugin copy, so a compass run as root needs a sanctioned
+    path: each session as an unprivileged user (`--session-user`), or the
+    copy on a read-only mount. `--allow-root` accepts the risk instead, and
+    only a person at a terminal may accept it, never a scheduled run."""
+    env = os.environ if env is None else env
+    lookup = lookup or _lookup_user
+    if session_user is not None:
+        if euid != 0:
+            return ("refusing --session-user: only root can start a session "
+                    "as another user, and this run is not root.")
+        try:
+            entry = lookup(session_user)
+        except KeyError:
+            return (f"refusing --session-user {session_user}: there is no "
+                    f"such user on this machine.")
+        if entry.pw_uid == 0:
+            return (f"refusing --session-user {session_user}: it is root, so "
+                    f"its sessions would not be contained. Name an "
+                    f"unprivileged user.")
+        if str(entry.pw_uid) == env.get("SUDO_UID"):
+            return (f"refusing --session-user {session_user}: it is the "
+                    f"account that started the harness through sudo. The "
+                    f"harness ends every process the session user has, "
+                    f"which would end that account's own login session. "
+                    f"Name a user dedicated to the harness.")
+    if allow_root and (env.get("CI") or env.get("COMPASS_UNATTENDED")):
+        return ("refusing --allow-root: CI or COMPASS_UNATTENDED is set, so "
+                "no person is at the terminal, and a scheduled run cannot "
+                "accept an uncontained run. Use --session-user instead.")
+    if condition != "compass" or euid != 0 or allow_root or session_user:
         return None
     if plugin_copy_dir is not None and _on_read_only_mount(plugin_copy_dir):
         return None
     return ("refusing a compass run as root: root ignores the file mode that "
             "keeps a session out of the plugin copy, so the run could not be "
-            "contained. Put the copy on a read-only mount, run as another "
-            "user, or pass --allow-root to run anyway.")
+            "contained. Run each session as an unprivileged user with "
+            "--session-user <name>, or put the plugin copy on a read-only "
+            "mount. As a last resort, --allow-root accepts an uncontained "
+            "run; it is a person's decision, made at the terminal.")
 
 
 def _claude_version(claude_exe: str, env: dict[str, str]) -> str:
@@ -1134,7 +1367,9 @@ def _invoke_claude(claude_exe: str, message: str, common_args: list[str],
     if resume:
         args += ["--resume", resume]
     launched = host_launch.launch_claude(claude_exe, message, args, repo_dir,
-                                         env)
+                                         env, user=state.get("as_user"))
+    if state.get("as_user"):
+        _end_session_user_processes(*state["as_user"], env)
     state["stderr"] += launched.stderr
     final_text = _consume_events(launched.stdout, state)
     return launched.returncode, final_text
@@ -1261,6 +1496,11 @@ def _diff_since_seed(repo_dir: Path, seed_commit: str, env: dict[str, str],
     with tempfile.TemporaryDirectory() as tmp:
         call_env = dict(env)
         call_env["GIT_INDEX_FILE"] = str(Path(tmp) / "index")
+        if _as_session_user(repo_dir):
+            # Git runs as the session user here, and must write its index;
+            # the folder stays outside the session's own.
+            _, (uid, gid) = _SESSION_FOLDER
+            os.chown(tmp, uid, gid)
         add_result = _run_guarded_git(["add", "-A"], repo_dir, call_env,
                                        seed_git_snapshot, tampered_paths)
         diff_result = _run_guarded_git(
@@ -1295,8 +1535,11 @@ def _run_test_command(test_command: str, repo_dir: Path, env: dict[str, str]
     own combined stdout and stderr - `_pytest_summary_counts` and
     `_pytest_outcomes` (CMP-2) read the output; a caller that wants only the
     exit code discards it."""
+    as_user = _as_session_user(repo_dir)
     proc = subprocess.run(shlex.split(test_command), cwd=str(repo_dir), env=env,
-                           capture_output=True, text=True)
+                           capture_output=True, text=True, **as_user)
+    if as_user:
+        _end_session_user_processes(as_user["user"], as_user["group"], env)
     return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
 
 
@@ -1416,7 +1659,8 @@ def _compass_files(repo_dir: Path) -> list[str]:
         return []
     return sorted(
         p.relative_to(repo_dir).as_posix()
-        for p in compass_dir.rglob("*") if p.is_file()
+        for p in compass_dir.rglob("*")
+        if p.is_file() and _inside_without_links(repo_dir, p)
     )
 
 
@@ -1428,11 +1672,15 @@ def _manifests(repo_dir: Path) -> dict[str, str]:
     work_dir = repo_dir / ".compass" / "work"
     if not work_dir.is_dir():
         return {}
-    return {
-        manifest_path.relative_to(repo_dir).as_posix():
-            manifest_path.read_text(encoding="utf-8")
-        for manifest_path in sorted(work_dir.glob("*/manifest.yml"))
-    }
+    manifests = {}
+    for manifest_path in sorted(work_dir.glob("*/manifest.yml")):
+        if not _inside_without_links(repo_dir, manifest_path):
+            continue
+        raw = _read_regular_file(manifest_path)
+        if raw is not None:
+            manifests[manifest_path.relative_to(repo_dir).as_posix()] = (
+                raw.decode("utf-8", "replace"))
+    return manifests
 
 
 def _interruptions(repo_dir: Path) -> dict[str, int] | None:
@@ -1446,10 +1694,12 @@ def _interruptions(repo_dir: Path) -> dict[str, int] | None:
         return None
     counts = {"hook_blocks": 0, "check_failures": 0}
     log = compass_dir / "interruptions.log"
-    try:
-        lines = log.read_text(encoding="utf-8").splitlines()
-    except OSError:
+    if not _inside_without_links(repo_dir, log):
         return counts
+    raw = _read_regular_file(log)
+    if raw is None:
+        return counts
+    lines = raw.decode("utf-8", "replace").splitlines()
     for line in lines:
         parts = line.split("\t")
         if len(parts) == 3 and parts[2] in counts:
@@ -1603,16 +1853,21 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
              framework_commit: str | None = None, uvx_exe: str = "uvx",
              r1_scripts_dir: Path,
              child_env: dict[str, str],
-             seed_paths: dict[str, str] | None = None
+             seed_paths: dict[str, str] | None = None,
+             session_user: SessionUser | None = None
              ) -> dict[str, Any]:
     """Do one run of `scenario` under `condition` and return its record.
     `plugin_copy_dir`, `framework_copy_dir`, `framework_commit`,
     `r1_scripts_dir` and `child_env` are built once per harness
     call, by `_prepare_plugin_copy` and `_prepare_framework_copy`, and
     reused by every run - never rebuilt here."""
+    global _SESSION_FOLDER
+    _SESSION_FOLDER = None
     started = datetime.now(timezone.utc).isoformat()
     clock_start = time.monotonic()
     state = _new_run_state()
+    if session_user is not None:
+        state["as_user"] = (session_user.uid, session_user.gid)
     final_text = ""
     exit_code = 0
     skipped_for_budget = False
@@ -1631,6 +1886,12 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
                            child_env, seed_paths)
         seed_commit = _git_init_and_commit(repo_dir, child_env)
         seed_git_snapshot = _snapshot_git_config(repo_dir)
+        if session_user is not None:
+            # The seed is committed by the harness; from here the working
+            # folder is the session user's, and nothing else is. Git and the
+            # tests run in it as that user from now on.
+            _hand_to(repo_dir, session_user)
+            _SESSION_FOLDER = (repo_dir, (session_user.uid, session_user.gid))
         tampered_paths: list[str] = []
 
         test_command = scenario.get("test_command", _DEFAULT_TEST_COMMAND)
@@ -1735,6 +1996,8 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
         manifests = _manifests(repo_dir)
         interruptions = _interruptions(repo_dir)
         record_cwd = state["cwd"]
+    # The folder is gone; nothing runs as the session user from here.
+    _SESSION_FOLDER = None
 
     checkout_after = _checkout_fingerprint(plugin_source, child_env)
     plugin_after = _dir_snapshot(plugin_copy_dir) if plugin_copy_dir else None
@@ -1799,6 +2062,8 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
         "escaped_paths": escaped_paths,
         "uid": os.geteuid(),
         "ran_as_root": os.geteuid() == 0,
+        "session_uid": (session_user.uid if session_user is not None
+                        else os.geteuid()),
         "python_version": "{}.{}.{}".format(*sys.version_info[:3]),
         "stderr_tail": _tail(state["stderr"]),
         "over_budget": over_budget,
@@ -1839,9 +2104,13 @@ def _build_arg_parser() -> argparse.ArgumentParser:
                          help="the executable to run R3's own "
                               "specify init through - a real uvx, or a "
                               "stand-in for a test")
+    parser.add_argument("--session-user", default=None, metavar="NAME",
+                        help="run as root, start every session as this "
+                             "unprivileged user, so the run stays contained")
     parser.add_argument("--allow-root", action="store_true",
-                        help="run the compass condition as root even though "
-                             "root ignores the plugin copy's read-only mode")
+                        help="a person's decision to run the compass "
+                             "condition as root uncontained; refused when "
+                             "CI or COMPASS_UNATTENDED is set")
     parser.add_argument("--frameworks-config", default=None,
                          help="the names key, or a file of the same "
                               "pins, the "
@@ -1855,8 +2124,9 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _prepare_plugin_copy(condition: str, plugin_source: Path
-                          ) -> tuple[Path | None, dict[str, str]]:
+def _prepare_plugin_copy(condition: str, plugin_source: Path, *,
+                         session_user: SessionUser | None = None
+                         ) -> tuple[Path | None, dict[str, str]]:
     """Build the compass condition's plugin copy once, from `plugin_source`,
     and the child environment naming its own `bin/` - both reused by every
     run this harness call makes, never rebuilt per run. `(None, env)` for
@@ -1867,7 +2137,8 @@ def _prepare_plugin_copy(condition: str, plugin_source: Path
         # that can see its own working directory learns neither the
         # scenario nor the condition from its name.
         plugin_copy_dir = Path(tempfile.mkdtemp())
-    child_env = _build_child_env(condition, plugin_copy_dir)
+    child_env = _build_child_env(condition, plugin_copy_dir,
+                                 session_user=session_user)
     if plugin_copy_dir is not None:
         _make_plugin_copy(plugin_source, plugin_copy_dir, child_env)
     return plugin_copy_dir, child_env
@@ -1897,9 +2168,21 @@ def main(argv: list[str] | None = None) -> int:
     framework_source_override = (
         Path(args.framework_source) if args.framework_source else None)
 
-    plugin_copy_dir, child_env = _prepare_plugin_copy(args.condition, plugin_source)
+    # A session user is checked before anything is built, because the
+    # session's environment and files depend on it.
+    session_user: SessionUser | None = None
+    if args.session_user:
+        refusal = _root_refusal(args.condition, None, allow_root=args.allow_root,
+                                euid=_euid(), session_user=args.session_user)
+        if refusal:
+            print(refusal, file=sys.stderr)
+            return 2
+        session_user = SessionUser.of(_lookup_user(args.session_user))
+    plugin_copy_dir, child_env = _prepare_plugin_copy(
+        args.condition, plugin_source, session_user=session_user)
     refusal = _root_refusal(args.condition, plugin_copy_dir,
-                            allow_root=args.allow_root, euid=os.geteuid())
+                            allow_root=args.allow_root, euid=_euid(),
+                            session_user=args.session_user)
     if refusal:
         if plugin_copy_dir is not None:
             _remove_read_only_tree(plugin_copy_dir)
@@ -1930,6 +2213,10 @@ def main(argv: list[str] | None = None) -> int:
         r1_scripts_dir = framework_copy_dir
     else:
         r1_scripts_dir = Path(tempfile.mkdtemp())
+    if session_user is not None:
+        for shared in (plugin_copy_dir, framework_copy_dir, r1_scripts_dir):
+            if shared is not None:
+                _open_for_session_user(shared)
     try:
         for run_index in range(1, args.runs + 1):
             record = run_once(scenario, scenario_dir, args.condition, run_index,
@@ -1939,10 +2226,13 @@ def main(argv: list[str] | None = None) -> int:
                                framework_commit=framework_commit,
                                uvx_exe=args.uvx,
                                r1_scripts_dir=r1_scripts_dir,
-                               child_env=child_env, seed_paths=seed_paths)
+                               child_env=child_env, seed_paths=seed_paths,
+                               session_user=session_user)
             out_path = out_dir / f"{scenario['id']}-{args.condition}-{run_index}.json"
             out_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
     finally:
+        global _SESSION_FOLDER
+        _SESSION_FOLDER = None
         if plugin_copy_dir is not None:
             _remove_read_only_tree(plugin_copy_dir)
         if framework_copy_dir is not None:

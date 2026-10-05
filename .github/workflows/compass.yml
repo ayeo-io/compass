@@ -258,3 +258,37 @@ jobs:
       - name: Run the extracted scenarios
         working-directory: examples/bdd-adapters/godog
         run: go test ./...
+
+  # The eval harness's --session-user path runs as root and hands each session
+  # to an unprivileged user. A test that only plays root cannot fail on
+  # ownership or privilege, so this job runs tests/test_harness_root_real.py
+  # as real root against a real dedicated user. Every other job skips it.
+  harness-root:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11"
+
+      - name: Install the test tooling
+        run: pip install -r .github/requirements/self-check.txt
+
+      - name: Create the dedicated session user
+        run: sudo useradd --create-home evaluser
+
+      - name: Run the real-root tests as root, and fail on a skip
+        # sudo resets PATH, so the interpreter is named by its full path.
+        # Root's git must accept a checkout the runner user owns. A skip here
+        # means the tests did not run as root, which is the failure this job
+        # exists to catch; `shell: bash` adds pipefail so tee hides nothing.
+        shell: bash
+        run: |
+          PY="$(command -v python3)"
+          sudo git config --global --add safe.directory "$PWD"
+          sudo env COMPASS_ROOT_TEST_USER=evaluser PYTHONDONTWRITEBYTECODE=1 \
+            "$PY" -m pytest -rs --color=no -p no:cacheprovider \
+            tests/test_harness_root_real.py | tee /tmp/harness-root.txt
+          ! grep -q "^SKIPPED" /tmp/harness-root.txt || {
+            echo "A real-root test skipped in the job that runs as root."; exit 1; }

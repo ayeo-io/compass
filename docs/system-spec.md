@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the maintainer's choices of 5 October on issues #100, #105, #116 and #121, When the decisions ledger is read, Then each has an entry by jed72 with its decision, its reason and the issue it answers
+### Given a real root run with a real unprivileged session user, then the run is contained and the session's edit is in the diff.
 
-- **Scenario id:** `TD-1`
+- **Scenario id:** `HR-J`
 - **Intent:** `INT-1`
-- **Source issue:** `record-triage-decisions`
+- **Source issue:** `harness-root-sanctioned-path`
 - **Landed:** 2026-10-05
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1590 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1600 superseded scenario(s) are in `docs/system-spec-archive.md`.

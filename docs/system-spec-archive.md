@@ -11137,3 +11137,73 @@
 - **Intent:** `INT-1`
 - **Source issue:** `security-policy-and-templates`
 - **Landed:** 2026-10-05
+
+### Given the maintainer's choices of 5 October on issues #100, #105, #116 and #121, When the decisions ledger is read, Then each has an entry by jed72 with its decision, its reason and the issue it answers _(archived)_
+
+- **Scenario id:** `TD-1`
+- **Intent:** `INT-1`
+- **Source issue:** `record-triage-decisions`
+- **Landed:** 2026-10-05
+
+### Given the harness runs as root with --session-user naming an unprivileged user, then each session runs as that user, owns its working folder, cannot write the plugin copy or the checkout, and the record states its uid. _(archived)_
+
+- **Scenario id:** `HR-A`
+- **Intent:** `INT-1`
+- **Source issue:** `harness-root-sanctioned-path`
+- **Landed:** 2026-10-05
+
+### Given a root run with Compass installed and no sanctioned path, then it is refused before any session, naming --session-user and a read-only mount first and --allow-root last. _(archived)_
+
+- **Scenario id:** `HR-B`
+- **Intent:** `INT-1`
+- **Source issue:** `harness-root-sanctioned-path`
+- **Landed:** 2026-10-05
+
+### Given --allow-root where CI or COMPASS_UNATTENDED is set, then the run is refused before any session. _(archived)_
+
+- **Scenario id:** `HR-C`
+- **Intent:** `INT-1`
+- **Source issue:** `harness-root-sanctioned-path`
+- **Landed:** 2026-10-05
+
+### Given --session-user naming root or an unknown user, then the run is refused before any session and names the problem. _(archived)_
+
+- **Scenario id:** `HR-D`
+- **Intent:** `INT-1`
+- **Source issue:** `harness-root-sanctioned-path`
+- **Landed:** 2026-10-05
+
+### Given --session-user while the harness is not root, then the run is refused. _(archived)_
+
+- **Scenario id:** `HR-E`
+- **Intent:** `INT-1`
+- **Source issue:** `harness-root-sanctioned-path`
+- **Landed:** 2026-10-05
+
+### Given a run that is not as root and has no --session-user, then sessions start as before and session_uid equals the harness's uid. _(archived)_
+
+- **Scenario id:** `HR-F`
+- **Intent:** `INT-1`
+- **Source issue:** `harness-root-sanctioned-path`
+- **Landed:** 2026-10-05
+
+### Given a root run with a session user, then git and the test command in the session's folder run as that user, so code the session wrote never runs as root. _(archived)_
+
+- **Scenario id:** `HR-G`
+- **Intent:** `INT-1`
+- **Source issue:** `harness-root-sanctioned-path`
+- **Landed:** 2026-10-05
+
+### Given a session that replaced a file in its folder with a link outside it, then the harness's own reads and writes there do not follow the link. _(archived)_
+
+- **Scenario id:** `HR-H`
+- **Intent:** `INT-1`
+- **Source issue:** `harness-root-sanctioned-path`
+- **Landed:** 2026-10-05
+
+### Given a session that left a process running, then the harness ends the session user's processes before it touches the folder again. _(archived)_
+
+- **Scenario id:** `HR-I`
+- **Intent:** `INT-1`
+- **Source issue:** `harness-root-sanctioned-path`
+- **Landed:** 2026-10-05

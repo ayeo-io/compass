@@ -11221,3 +11221,45 @@
 - **Intent:** `INT-1`
 - **Source issue:** `retired-terms-from-terminology`
 - **Landed:** 2026-10-05
+
+### Given an issue whose review page matched its manifest, When a verb that writes the manifest leaves the page stale, Then the verb prints one line naming compass issue dashboard, and prints none when the page is still current or there is no page _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `review-page-stale-reminder`
+- **Landed:** 2026-10-05
+
+### Given a shipped check with no register entry, when the register test runs, then it fails naming the check _(archived)_
+
+- **Scenario id:** `MPR-1`
+- **Intent:** `INT-1`
+- **Source issue:** `mutation-proof-register`
+- **Landed:** 2026-10-05
+
+### Given a register entry missing a required field, when the register test runs, then it fails naming the check and the field _(archived)_
+
+- **Scenario id:** `MPR-2`
+- **Intent:** `INT-1`
+- **Source issue:** `mutation-proof-register`
+- **Landed:** 2026-10-05
+
+### Given a register entry for a check that no longer exists, when the register test runs, then it fails naming the entry _(archived)_
+
+- **Scenario id:** `MPR-3`
+- **Intent:** `INT-1`
+- **Source issue:** `mutation-proof-register`
+- **Landed:** 2026-10-05
+
+### Given the shipped checks cannot be read or are empty, when the register test runs, then it fails rather than passing _(archived)_
+
+- **Scenario id:** `MPR-4`
+- **Intent:** `INT-1`
+- **Source issue:** `mutation-proof-register`
+- **Landed:** 2026-10-05
+
+### Given each shipped check, when the register is read, then its entry names a failing-input test and a passing control that exist _(archived)_
+
+- **Scenario id:** `MPR-5`
+- **Intent:** `INT-1`
+- **Source issue:** `mutation-proof-register`
+- **Landed:** 2026-10-05

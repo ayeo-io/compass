@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given commands/assess.md, When its size and the procedure file are checked, Then assess is at most 2,500 characters, names the procedure file for heavier routes and --reassess, and the procedure keeps every step
+### Given a quick fix that recorded an acceptance of kind refactor and no red, When quick-fix finish runs, Then it records the green, passes the three gates and finishes
 
-- **Scenario id:** `LA-1`
+- **Scenario id:** `FA-1`
 - **Intent:** `INT-1`
-- **Source issue:** `lean-assess`
+- **Source issue:** `finish-honours-acceptance`
 - **Landed:** 2026-10-05
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1626 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1627 superseded scenario(s) are in `docs/system-spec-archive.md`.

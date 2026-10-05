@@ -141,7 +141,7 @@ def test_retro_transitions_print_no_raw_route_name(make_task, run_cli):
         assert _word(retired).search(out) is None, (
             f"compass retro prints the retired route name {retired!r}:\n"
             f"{out}")
-    assert "quick fix -> initiative" in out, (
+    assert "quick fix -> full" in out, (
         f"compass retro does not show the transition by its current "
         f"route names:\n{out}")
 

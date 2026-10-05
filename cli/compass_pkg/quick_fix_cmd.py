@@ -55,13 +55,13 @@ from compass_pkg.routing import cmd_route_evaluate, evaluate_route
 from compass_pkg.tdd import _neutralise_coverage, cmd_tdd_green
 from compass_pkg.terminal import say
 
-#: The three gates a quick fix ever clears (route_shapes.express.gates in
+#: The three gates a quick fix ever clears (route_shapes.quick-fix.gates in
 #: governance/routing-policy.yml). `finish` refuses if any OTHER gate on the
 #: issue is still pending - that is heavier work than a quick fix earns.
 THREE_GATES = ("verify.correctness", "verify.governance",
               "verify.traceability")
 
-#: The fixed reason a collapsed or skipped stage carries on the express
+#: The fixed reason a collapsed or skipped stage carries on the quick-fix
 #: shape (stages: { refine: collapsed, plan: collapsed, breakdown: skipped,
 #: ... }). A stage this table does not name is refused rather than printed
 #: with no reason - a de-scope ledger entry with nothing to justify it is

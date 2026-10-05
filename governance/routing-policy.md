@@ -69,13 +69,13 @@ participants, not optional consultees.
 
 The shipped defaults (see `routing-policy.yml` for the live, id-tagged set):
 
-- **floors** - `RP-FLOOR-001` critical risk → at least initiative,
+- **floors** - `RP-FLOOR-001` critical risk → at least the full approach,
   never skip refine/verify/ship; `RP-FLOOR-002` brownfield-unmapped familiarity
   at standard size or more, with cross-cutting or critical risk, or with one
   of the four domain labels → define
   runs full-weight with `behaviour-mapping` (below that, `RP-ADV-002` gives
   the skill as advice); `RP-FLOOR-003`
-  touching auth/payments/personal-data/migrations → at least initiative.
+  touching auth/payments/personal-data/migrations → at least the full approach.
 - **caps** - `RP-CAP-001` critical risk caps worktrees at 1.
 - **immovable_gates** - `RP-GATE-001..003`: `verify.correctness`,
   `verify.governance`, `verify.traceability`. Deliberately not here:
@@ -87,7 +87,7 @@ The shipped defaults (see `routing-policy.yml` for the live, id-tagged set):
 
 The `verify.governance` immovable gate is what makes `G5` (a human signs off
 on the irreversible) hold: a change labelled with an irreversible surface is
-floored to initiative, where the human checkpoint is part of the gate set.
+floored to the full approach, where the human checkpoint is part of the gate set.
 
 ---
 
@@ -105,11 +105,11 @@ routing_strategies:
   # shape fires.
   default_shapes:
     - when: { size: [atomic, small], risk: [trivial, contained] }
-      lean_toward: express
+      lean_toward: quick-fix
     - when: { size: standard }
-      lean_toward: standard
+      lean_toward: regular
     - when: { size: [large, product] }
-      lean_toward: expedition
+      lean_toward: full
     - when: { urgency: live-defect, size: [atomic, small] }
       lean_toward: hotfix
     - when: { goal: exploration }      # "I need to understand this before I can scope it"
@@ -122,7 +122,7 @@ routing_strategies:
        that the approach was too light."
     - "A non-engineering role in play usually pulls the route heavier, because
        it adds artifacts and assessed strategies - but this is a bias, not a
-       floor. A marketer glancing at a tiny change need not trigger an initiative."
+       floor. A marketer glancing at a tiny change need not trigger the full approach."
     - "Prefer the lightest route that still clears the routing guardrails and
        the applicable gates. Process weight is a cost; spend it where it buys safety."
 
@@ -147,8 +147,8 @@ the answer into the manifest as `checkpoints:`.
 | Route | controlled | balanced | autonomous |
 |---|---|---|---|
 | quick fix | assess | none | none |
-| feature | assess, define, refine, plan | define, plan | none |
-| initiative | assess, define, refine, plan | assess, define, refine, plan | none |
+| regular | assess, define, refine, plan | define, plan | none |
+| full | assess, define, refine, plan | assess, define, refine, plan | none |
 | hotfix | assess, define | none | none |
 | spike | assess | none | none |
 
@@ -164,8 +164,8 @@ the answer into the manifest as `checkpoints:`.
 - A policy without the table, or a table that leaves out a value or a
   route, waits at every hand-off the route runs. Only a route listed with an
   empty list never waits. Route keys are the current route names, and a
-  retired name (`express`, `standard`, `expedition`) is read as its current
-  one; an unknown route, or one route named twice, is refused.
+  retired name (`express`, `standard`, `expedition`, or `feature` and
+  `initiative` before 5 October 2026) is read as its current one; an unknown route, or one route named twice, is refused.
 
 ## Schema reference
 

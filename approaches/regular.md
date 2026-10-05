@@ -1,8 +1,8 @@
-# Delivery approach - Feature
+# Delivery approach - Regular
 
 > The default working shape. Full pipeline at moderate weight, solo or pair.
 
-## Assess composes towards a feature approach when
+## Assess composes towards the regular approach when
 
 - size is `standard` (several files, 1–3 days, one or two design
   decisions), **and**
@@ -12,7 +12,7 @@
   or RP-ADV-002 gives it as advice on an atomic or small change with trivial or contained risk
   with no domain label),
   **and**
-- no floor forces initiative.
+- no floor forces the full approach.
 
 Typical issues: a new feature of normal size, a refactor of one module, an
 integration with one external service, a meaningful bug fix with design
@@ -20,7 +20,7 @@ choices in it.
 
 ## Per-stage weight
 
-| Stage | Weight on a feature approach |
+| Stage | Weight on the regular approach |
 |---|---|
 | Assess | Full. `delivery-approach.md` written. |
 | Define | A small **feature set** of scenarios - happy path, the realistic edges, the failure modes that matter. Brownfield-unmapped: map current behaviour into scenarios first. |
@@ -43,7 +43,7 @@ Solo by default. Pair (2–3 worktrees, one `builder` agent each, no dedicated
 orchestrator - the lead builder integrates) when the distribution map shows
 genuinely independent units and the size justifies the setup cost.
 
-## De-scope ledger - what a feature approach collapses or skips, and why it is safe
+## De-scope ledger - what the regular approach collapses or skips, and why it is safe
 
 | Item | Action | Standing justification |
 |---|---|---|
@@ -51,16 +51,16 @@ genuinely independent units and the size justifies the setup cost.
 | Full distribution map | reduced to a short list | Independence among 2–3 units is verifiable by reading; the full mapping process is for multiagent-scale work. |
 
 If the requirements review finds the spec is bigger or more ambiguous
-than the feature approach assumed,
-re-assess - do not push a feature approach through an initiative-shaped problem.
+than the regular approach assumed,
+re-assess - do not push the regular approach through a problem shaped for the full approach.
 
-## Feature may NOT
+## The regular approach may NOT
 
-- Skip the requirements review entirely. Feature's spec is a feature set, not a single
+- Skip the requirements review entirely. The regular approach's spec is a feature set, not a single
   certified-unambiguous scenario - there is always something to QA. The requirements review
   may be *light*, never *absent*.
-- Run as a multiagent orchestration. Four or more subtasks is initiative territory; it needs the
+- Run as a multiagent orchestration. Four or more subtasks is full-approach territory; it needs the
   orchestrator and the full distribution map. If the work needs one, the
-  assessment was wrong - re-assess to initiative.
-- Drop the regression dimension. Feature touches enough surface that
+  assessment was wrong - re-assess to the full approach.
+- Drop the regression dimension. The regular approach touches enough surface that
   "nothing that passed before now fails" must be checked.

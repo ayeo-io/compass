@@ -35,11 +35,12 @@ mode: enforced
 # says which hand-offs wait for each value and route; `compass approach
 # summary` shows the answer for an issue. No value changes a gate, evidence,
 # the hook or `compass check`.
-#   controlled : wait at every hand-off the table lists: all four on a
-#                feature or initiative, assess and define on a hotfix,
+#   controlled : wait at every hand-off the table lists: all four on the
+#                regular or full approach, assess and define on a hotfix,
 #                assess on a quick fix or spike.
-#   balanced   : a quick fix does not stop; a feature waits at define and
-#                plan; an initiative waits at all four. (The default.)
+#   balanced   : a quick fix does not stop; the regular approach waits at
+#                define and plan; the full approach waits at all four.
+#                (The default.)
 #   autonomous : never wait; every hand-off is shown and logged instead.
 autonomy: balanced
 

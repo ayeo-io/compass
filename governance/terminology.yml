@@ -696,7 +696,7 @@ banned:
     replacement: quick fix
     context: "Route name."
   - term: "Expedition"
-    replacement: initiative
+    replacement: full approach
     context: "Route name."
   - term: "Specify / Clarify / Distribute / Land"
     replacement: "define acceptance criteria / requirements review / break down the work / ship"
@@ -1103,7 +1103,7 @@ retired_in_output:
     replacement: subtask_ceiling
   - name: expedition
     whole_word: true
-    replacement: initiative
+    replacement: full
   - name: spine
     whole_word: true
     replacement: manifest

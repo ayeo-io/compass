@@ -159,7 +159,7 @@ reader has to ask:
 - **evidence types** - `test-run`, `command-output`, `manual-review`,
   `human-approval`. Say what the thing is: a recorded test run, the output of a
   command, someone's written review, a person's sign-off.
-- **delivery approaches** - quick fix, feature, initiative, hotfix, spike. Say how
+- **delivery approaches** - quick fix, regular, full, hotfix, spike. Say how
   much process the change is getting and why.
 
 Not one of these is a hard idea. Each took a single sentence to say plainly.

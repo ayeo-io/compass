@@ -27,10 +27,10 @@ routing-guardrail caps bound it.
 ## The critical-risk cap
 
 The standing cap: **`critical` risk pins `max_worktrees` to 1.** A
-critical change runs solo even on initiative. This is deliberate - a multiagent buys
+critical change runs solo even on the full approach. This is deliberate - a multiagent buys
 speed but carries coordination risk, and on a critical change the coordination
-risk costs more than the speed saves. An initiative that is heavy *and* solo is
-not a contradiction; it is the cap working. The initiative still writes a
+risk costs more than the speed saves. The full approach being heavy *and* solo is
+not a contradiction; it is the cap working. The full approach still writes a
 `distribution-map.md` - it is the record of what could have been parallel and
 why it wasn't.
 
@@ -46,7 +46,7 @@ and both must hold:
 
 Independence is *determined*, not guessed - you derive it from the scenario
 file and the technical plan. The scenario grouping done at the define stage
-(initiative's "group scenarios by independence") is the seed; the distribution
+(the full approach's "group scenarios by independence") is the seed; the distribution
 map is where you confirm it against the plan.
 
 Practical decomposition heuristics:
@@ -135,7 +135,7 @@ the main checkout.
    coordinated order (foundations first, dependents after).
 3. Only the orchestrator resolves a merge conflict - a builder must not.
 4. **Run combined regression across the integrated result.** This is
-   non-negotiable on initiative. Per-subtask green does not imply integrated
+   non-negotiable on the full approach. Per-subtask green does not imply integrated
    green; proving the combination is the entire reason the orchestrator owns
    integration. Record the run and link the record. Integration does not land
    the issue: only `ship-commit` does (ADR-026).

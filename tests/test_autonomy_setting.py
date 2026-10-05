@@ -134,7 +134,7 @@ def test_au_6_a_table_naming_another_stage_is_refused(project):
     shutil.copytree(ROOT / "governance", project / "governance")
     path = project / "governance" / "routing-policy.yml"
     policy = yaml.safe_load(path.read_text())
-    policy["autonomy_checkpoints"]["balanced"]["feature"].append("verify")
+    policy["autonomy_checkpoints"]["balanced"]["regular"].append("verify")
     path.write_text(yaml.safe_dump(policy, sort_keys=False))
     lint = _run(project, "policy", "lint")
     assert lint.returncode != 0, lint.stdout + lint.stderr

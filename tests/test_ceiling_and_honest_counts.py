@@ -277,12 +277,12 @@ def test_trc_e1_swarm_has_no_invented_ceiling():
         (ROOT / "governance" / "routing-policy.yml").read_text()
     )["route_shapes"]
 
-    assert shapes["expedition"]["subtask_ceiling"] is None, (
+    assert shapes["full"]["subtask_ceiling"] is None, (
         f"the unbounded shape carries an invented ceiling of "
-        f"{shapes['expedition']['subtask_ceiling']!r}. Unbounded is the honest "
+        f"{shapes['full']['subtask_ceiling']!r}. Unbounded is the honest "
         f"value: the policy states no number, so only a cap can produce one")
-    assert shapes["express"]["subtask_ceiling"] == 1
-    assert shapes["standard"]["subtask_ceiling"] == 2
+    assert shapes["quick-fix"]["subtask_ceiling"] == 1
+    assert shapes["regular"]["subtask_ceiling"] == 2
 
 
 def test_trc_e2_a_cap_still_produces_a_number(tmp_path):

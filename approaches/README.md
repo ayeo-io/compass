@@ -8,21 +8,21 @@ dimensions - see `rubric.md` - not picked from this list.
 The five files here are **reference shapes**: the common shapes that
 composition lands near. Assess names the nearest one in the issue's
 delivery-approach record so everyone shares vocabulary, then records any
-per-stage deviation from it. "Feature, but verify adds the security
+per-stage deviation from it. "Regular, but verify adds the security
 dimension" is a normal, expected output.
 
 | Approach | One-line character | Gates | Read |
 |---|---|---|---|
 | **quick fix** | The change is small and safe - stay out of the way, but still tested before it lands. | 3 | `quick-fix.md` |
-| **feature** | The default working shape - full pipeline, solo or pair. | 6 | `feature.md` |
-| **initiative** | Big or cross-cutting - full weight, governance check, multiagent orchestration across worktrees. | 7 | `initiative.md` |
+| **regular** | The default working shape - full pipeline, solo or pair. | 6 | `regular.md` |
+| **full** | Big or cross-cutting - full weight, governance check, multiagent orchestration across worktrees. | 7 | `full.md` |
 | **hotfix** | Something is broken in production now - reproduce-first, expedited implementation, mandatory follow-up. | 5 | `hotfix.md` |
 | **spike** | You do not understand the problem well enough to state it - explore freely, then graduate or discard. Nothing ships from here. | 1 | `spike.md` |
 
 The gate counts are what `governance/routing-policy.yml` computes for the
 shape's own assessment, before any floor or requirement adds more. A policy
-rule can raise them: a `critical` risk value turns a feature into an
-initiative and adds further gates. `compass approach evaluate --verbose`
+rule can raise them: a `critical` risk value turns the regular approach into
+the full approach and adds further gates. `compass approach evaluate --verbose`
 prints the set for any assessment, and it is the authority - this table is a
 summary of it.
 

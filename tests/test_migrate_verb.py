@@ -138,8 +138,8 @@ def test_apply_migrates_the_shape_value(tmp_path):
     shape name - all five cases, with hotfix and spike keeping their
     spelling. The normaliser and the receipt's display layer agree with the
     migrated output."""
-    cases = {"express": "quick-fix", "standard": "feature",
-             "expedition": "initiative", "hotfix": "hotfix",
+    cases = {"express": "quick-fix", "standard": "regular",
+             "expedition": "full", "hotfix": "hotfix",
              "spike": "spike"}
     root = tmp_path / "proj"
     for i, (v1, v2) in enumerate(cases.items()):
@@ -159,7 +159,7 @@ def test_apply_migrates_the_shape_value(tmp_path):
     assert display_shape("quick-fix") == "quick fix", (
         "the receipt would print the machine hyphen for a migrated value")
     norm = normalize_spine({"route": "expedition"})
-    assert norm["delivery_approach"] == "initiative", (
+    assert norm["delivery_approach"] == "full", (
         "the normalizer does not agree with the migrated value")
 
 

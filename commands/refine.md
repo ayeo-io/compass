@@ -26,11 +26,11 @@ satisfied by construction:
 - a hotfix, by the reproduction test being the spec;
 - a spike, by having no acceptance criteria to be ready against.
 
-So there is no separate checklist to fill. On feature and initiative work it
-is the explicit gate below.
+So there is no separate checklist to fill. On the regular and full approaches
+it is the explicit gate below.
 
-On a feature, the review is a light-to-full pass - light, never absent. On an
-initiative it is a full pass with an explicit ambiguity ledger and
+On the regular approach, the review is a light-to-full pass - light, never
+absent. On the full approach it is a full pass with an explicit ambiguity ledger and
 non-engineering role review.
 
 ## What the define stage already did - and what is left for you
@@ -86,11 +86,11 @@ is for. The same split is written from the other side in
    resolved or assigned.
 
    **Where it goes.** `docs/compass/<created>-<issue-slug>/requirements-review.md`, where the
-   date is the manifest's `created:` field - not today's. On a route that
-   earns the document (an initiative), register it:
+   date is the manifest's `created:` field - not today's. On an approach that
+   earns the document (the full approach), register it:
    `compass issue artifact requirements-review --status draft --path <that path>`. The CLI
    refuses a path that climbs out of the project, so the record is checked
-   rather than claimed. A feature does not earn it, and the CLI refuses to
+   rather than claimed. The regular approach does not earn it, and the CLI refuses to
    register it there: write the file and leave it unregistered. `compass next`
    takes the file as refine's record. If you had to create `docs/compass/`, **say so in one
    line** - a directory appearing with nothing said is how it gets deleted by
@@ -100,7 +100,8 @@ is for. The same split is written from the other side in
 
 If the review reveals the spec is bigger or more ambiguous than the
 assessment assumed, **stop and re-assess** (`/compass:assess --reassess`) - do
-not push a feature-shaped process through an initiative-shaped problem.
+not push a regular-approach process through a problem that needs the full
+approach.
 
 ## Hand-off
 

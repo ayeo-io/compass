@@ -187,7 +187,7 @@ say ""
 
 # --- 7. the five reference approach docs -------------------------------------
 say "7. Reference approaches"
-for r in quick-fix feature initiative hotfix spike; do
+for r in quick-fix regular full hotfix spike; do
   if [ -f "approaches/$r.md" ]; then
     if grep -qiE "(\`|/| )$r\b" approaches/rubric.md 2>/dev/null; then
       ok "shape  $r  <- exists, named in rubric.md"

@@ -46,15 +46,15 @@ severity, worst first:
    The fix is to run `/compass:assess` now and reconcile.
 
 2. **Delivery approach outgrown** - the devlog shows the issue outgrowing its delivery approach
-   (a feature issue that has sprouted a fourth work subtask; a quick-fix
+   (a regular-approach issue that has sprouted a fourth work subtask; a quick-fix
    issue still open after days). The fix is `/compass:assess --reassess`, not
    pushing on. A delivery approach quietly outgrown is the failure mode Compass exists to
    prevent - flow management is where it gets caught when the issue itself
    missed it.
 
 3. **Stalled** - an in-progress stage with no `devlog.md` movement for longer
-   than the delivery approach's expected cadence (quick-fix: hours; feature: a day or two;
-   initiative: longer, but each subtask should still show movement). A stall is
+   than the delivery approach's expected cadence (quick-fix: hours; regular: a day or two;
+   the full approach: longer, but each subtask should still show movement). A stall is
    almost always a hidden blocker. Name the likely cause from the artifacts.
 
 4. **Owed follow-up sitting** - an issue past the verify stage with an owed

@@ -16,8 +16,8 @@ engineering plan stage.)
 
 - Read `delivery-approach.md`. Its weight for this stage tells you the
   shape: a one-line "edit which file(s)" note (quick fix - no `technical-design.md`), a
-  real `technical-design.md` (feature), or a full `technical-design.md` plus
-  `distribution-map.md` (initiative).
+  real `technical-design.md` (regular), or a full `technical-design.md` plus
+  `distribution-map.md` (the full approach).
 - Read `acceptance-criteria.md` and `requirements-review.md` - the design is
   built on the hardened spec.
 - Load the `plan-authoring` skill - how to write the design itself: what a
@@ -44,10 +44,10 @@ engineering plan stage.)
 3. **Distribution map** (when the work splits into independent units). Read
    the scenario groups from `acceptance-criteria.md`; units that touch
    disjoint code and satisfy disjoint scenarios can run in parallel.
-   - On a feature: a short list of 2-3 units is enough.
-   - On an initiative: write the full `distribution-map.md` from its
+   - On the regular approach: a short list of 2-3 units is enough.
+   - On the full approach: write the full `distribution-map.md` from its
      template.
-   - On an initiative capped solo: still write the full map - it records
+   - On the full approach capped solo: still write the full map - it records
      what *could* have been parallel and why it wasn't.
 
    Subtask count comes from the map; orchestration thresholds from

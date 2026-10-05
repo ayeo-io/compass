@@ -27,15 +27,19 @@ values:
     paid: resolved
   delivery_approach:
     express: quick-fix
-    standard: feature
-    expedition: initiative
+    standard: regular
+    expedition: full
+    feature: regular
+    initiative: full
 
-# Machine shape values -> the v2 change-type names the display layer
-# prints. The manifest keeps the machine value; the terminal never shows it.
+# Old route names -> the names the display layer prints. Manifests record
+# the route names themselves; an old name is read through the map above.
 shape_display:
   express: quick fix
-  standard: feature
-  expedition: initiative
+  standard: regular
+  expedition: full
+  feature: regular
+  initiative: full
   hotfix: hotfix
   spike: spike
 

@@ -62,10 +62,62 @@ def _display_blocked_phase(phase):
     return display_stage(_stage_key_renames().get(phase, phase))
 
 
+def canonical_routes(policy):
+    """`policy` with every route name in its current spelling, and the old
+    names it held. A project's policy copied before the routes were renamed
+    keys them `express`, `standard` and `expedition`, or names `feature`
+    and `initiative`; it computes exactly as the renamed one does."""
+    import copy
+    out = copy.deepcopy(policy or {})
+    old = set()
+
+    def name(value):
+        new = canonical_shape(value)
+        if new != value:
+            old.add(value)
+        return new
+
+    def keyed(mapping, where):
+        # Two keys that name one route - `standard` beside `regular` - would
+        # silently merge, and one of them would be lost; refuse instead.
+        merged, seen = {}, {}
+        for key, value in mapping.items():
+            new = name(key)
+            if new in merged:
+                raise CompassError(
+                    f"`{where}` names route '{new}' twice, as '{seen[new]}' "
+                    f"and '{key}'. Keep one of them.")
+            merged[new], seen[new] = value, key
+        return merged
+
+    out["route_shapes"] = keyed(out.get("route_shapes") or {}, "route_shapes")
+    strategies = out.get("routing_strategies") or {}
+    if "default_route" in strategies:
+        strategies["default_route"] = name(strategies["default_route"])
+    for shape in strategies.get("default_shapes") or []:
+        if isinstance(shape, dict) and "lean_toward" in shape:
+            shape["lean_toward"] = name(shape["lean_toward"])
+    for group in (out.get("routing_guardrails") or {}).values():
+        for rule in group if isinstance(group, list) else []:
+            if isinstance(rule, dict):
+                for key in ("force_minimum_route", "forbid_route"):
+                    if key in rule:
+                        rule[key] = name(rule[key])
+    table = out.get("autonomy_checkpoints")
+    if isinstance(table, dict):
+        out["autonomy_checkpoints"] = {
+            level: (keyed(row, f"autonomy_checkpoints.{level}")
+                    if isinstance(row, dict) else row)
+            for level, row in table.items()}
+    return out, sorted(old)
+
+
 def evaluate_route(readings, policy, autonomy="balanced"):
     """Pure function: assessment + policy -> the delivery approach and
     everything that shaped it. This is the deterministic core of Compass.
-    `autonomy` changes only `checkpoints` in the result."""
+    `autonomy` changes only `checkpoints` in the result. Old route names in
+    the policy are read as the current ones (`canonical_routes`)."""
+    policy, renamed = canonical_routes(policy)
     _vk = {"blast_radius": "risk", "terrain": "familiarity",
            "magnitude": "size", "intent": "goal",
            "touches_common": "labels_common"}
@@ -96,7 +148,7 @@ def evaluate_route(readings, policy, autonomy="balanced"):
         raise CompassError("invalid assessment:\n  - " + "\n  - ".join(errors))
 
     # --- 1. compose the candidate (routing strategies bias this) -------------
-    candidate = strategies.get("default_route", "standard")
+    candidate = strategies.get("default_route", "regular")
     candidate_via = "the policy default (no shape matched)"
     for shape in strategies.get("default_shapes", []):
         if reading_matches(shape.get("when"), readings):
@@ -287,8 +339,9 @@ def evaluate_route(readings, policy, autonomy="balanced"):
             # The reason names the rule that earned it, in the reader's words.
             # It deliberately does not repeat the kind - the row already says
             # which document this is.
+            # "regular" and "full" are adjectives, so they take a noun.
             "reason": "every %s carries %s" % (
-                display_shape(final),
+                display_shape(final) + (" approach" if final in ("regular", "full") else ""),
                 "one" if depth == "full" else "a light one"),
         })
     # A role rule already demands documents via `require_artifact` - a marketer
@@ -345,6 +398,9 @@ def evaluate_route(readings, policy, autonomy="balanced"):
     checkpoints = runs if listed is None else [s for s in runs if s in listed]
 
     return {
+        # Old route names the policy used, read as the current ones; the
+        # caller warns about them.
+        "renamed_routes": renamed,
         "candidate_route": canonical_shape(candidate),
         "candidate_via": candidate_via,
         "delivery_approach": canonical_shape(final),
@@ -439,6 +495,13 @@ def cmd_route_evaluate(args):
 
     from compass_pkg.core import load_autonomy
     result = evaluate_route(readings, policy, load_autonomy())
+    if result.get("renamed_routes"):
+        sys.stderr.write(
+            "compass: governance/routing-policy.yml uses old route names ("
+            + ", ".join(f"{old} -> {canonical_shape(old)}"
+                        for old in result["renamed_routes"])
+            + "); they are read as the new names. Rename them in the file; "
+            "the old names stop working at the next major version.\n")
 
     from compass_pkg.terminal import Emitter, mark_handled, resolve_mode
 

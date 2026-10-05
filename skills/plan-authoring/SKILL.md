@@ -42,10 +42,10 @@ next author fills it in to be safe.
 
 - **quick-fix** - none of them. quick-fix writes no `technical-design.md` at all; the plan is
   a one-line edit note in `delivery-approach.md`.
-- **feature** - the ones that add clarity. Typically one diagram, and one of
-  the other three. Reaching for all six on a feature approach is a sign the
+- **regular** - the ones that add clarity. Typically one diagram, and one of
+  the other three. Reaching for all six on the regular approach is a sign the
   assessment was too low, not a sign of thoroughness.
-- **initiative** - all of them, freely, where the work warrants it. Here the
+- **full** - all of them, freely, where the work warrants it. Here the
   plan *is* the design document, and a reviewer is expected to spend real time
   in it.
 

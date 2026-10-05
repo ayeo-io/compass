@@ -823,7 +823,7 @@ fi
 # write a red for a scenario that does not exist yet.
 #
 # Only `define: full` (or the retired `specify: full`) triggers it, which
-# routing-policy.yml gives to feature and initiative work. A hotfix
+# routing-policy.yml gives to the regular and full approaches. A hotfix
 # (reproduce-first) and a spike (collapsed) are exempt by construction, and
 # the .spike early exit above suspends this the same way it suspends
 # red-before-green.

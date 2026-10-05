@@ -40,8 +40,8 @@ owning doc in the same commit, or says why the doc still holds.
 On a multiagent, this is per-subtask at the checkpoint gates and *combined* at ship time -
 per-subtask green does not imply integrated green.
 
-**security** - Full on initiative and hotfix, scaled to risk on
-feature, off on quick fix unless a label added it. OWASP floor;
+**security** - Full on the full approach and hotfix, scaled to risk on
+the regular approach, off on quick fix unless a label added it. OWASP floor;
 dependency-CVE scan where a project security guardrail needs it; evidence is
 scan output, not "looks fine."
 

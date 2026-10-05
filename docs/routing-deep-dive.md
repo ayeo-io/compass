@@ -27,9 +27,9 @@ Every issue, every time, the assess stage runs the same four steps:
    every collapsed or skipped stage carries an explicit "safe to skip
    because…" line.
 
-The five reference shapes - quick fix, feature, initiative, hotfix, spike - are
+The five reference shapes - quick fix, regular, full, hotfix, spike - are
 not a menu. They are the common shapes the composition lands near. A perfectly
-normal output is "feature, but verify also runs the `security` dimension" -
+normal output is "regular, but verify also runs the `security` dimension" -
 that is the framework working, not an exception.
 
 What follows is six cases. Read them in order; they build on each other.
@@ -64,25 +64,25 @@ verify.
 ### Constrain
 
 Now the routing policy rules run. The floor `when: { labels: [auth] }` matches
-the `labels: [auth]` tag, and its action is `force_minimum_route: expedition`.
-The candidate quick fix is raised to **initiative**.
+the `labels: [auth]` tag, and its action is `force_minimum_route: full`.
+The candidate quick fix is raised to **full**.
 
 This is the single most important thing the routing system does, so it is
 worth stating plainly: *a one-character change to an auth error message gets
-the full initiative treatment.* Not because the change is large - it is
+the full approach.* Not because the change is large - it is
 atomic - but because the risk of the auth module is not a function of
 line count. A floor is domain knowledge overriding the raw dimension assessment.
 
 ### Final `delivery-approach.md`
 
-The delivery approach is initiative. The policy-rules section of
+The delivery approach is the full approach. The policy-rules section of
 `delivery-approach.md` records:
 
 > **floor** · `labels: [auth]` · Candidate delivery approach quick fix was
-> raised to initiative · *"Domain risk overrides size. A one-line auth
+> raised to the full approach · *"Domain risk overrides size. A one-line auth
 > change is not small."*
 
-The engineer sees *why* a typo fix got the initiative approach. Because the
+The engineer sees *why* a typo fix got the full approach. Because the
 delivery approach is advisory until confirmed, they can discuss it - but they
 cannot have it silently routed light. A floor is a rule in
 `governance/routing-policy.yml`; overriding it would mean amending that
@@ -92,7 +92,7 @@ In practice the team might decide the policy is too blunt and narrow the floor
 (`labels: [auth]` only when the change is to auth *logic*, not auth-adjacent
 strings). That is a legitimate, logged amendment to
 `governance/routing-policy.yml` - not a convenience edit mid-issue. Until then,
-the typo fix runs initiative, and that is the system being conservative on
+the typo fix runs the full approach, and that is the system being conservative on
 purpose.
 
 ---
@@ -118,12 +118,12 @@ policy's floor list (`auth`, `payments`, `personal-data`, `migrations`,
 ### Compose
 
 Standard size, contained risk, mapped familiarity. The candidate is
-**feature**, plainly: a small feature set of scenarios, a light-to-full
+**regular**, plainly: a small feature set of scenarios, a light-to-full
 requirements review pass, a real `technical-design.md` with the design decisions recorded, solo or
 pair orchestration, six gates at verify. No deviation from the reference shape is
 warranted - risk is only `contained`, so `security` stays scaled
-rather than full and `clarity` and `regression` are on as feature always has
-them.
+rather than full and `clarity` and `regression` are on as the regular approach
+always has them.
 
 ### Constrain
 
@@ -143,13 +143,13 @@ The policy-rules section reads, in full:
 > No routing policy rule fired. Candidate delivery approach stands.
 
 That line is itself the record - silence is not allowed; "nothing fired" is
-written down. The delivery approach is feature, unmodified. The de-scope
+written down. The delivery approach is regular, unmodified. The de-scope
 ledger is short: the dedicated orchestrator agent is skipped (≤3 subtasks,
 the lead builder integrates) and the full distribution map is reduced to a
 short list. Both carry their standing justifications.
 
-This is the boring case, and the boring case matters: most work is feature,
-and the feature approach should feel like the default working shape, not
+This is the boring case, and the boring case matters: most work is on the regular
+approach, and it should feel like the default working shape, not
 extra process.
 
 ---
@@ -178,24 +178,24 @@ floor list.
 ### Compose
 
 If size alone drove the delivery approach, this would compose towards quick
-fix or a light feature - `small` on mapped familiarity. Assess composes the
+fix or a light regular approach - `small` on mapped familiarity. Assess composes the
 candidate from *all four* contributions, and `critical` risk dominates: full
 test surface including adversarial and boundary inputs, the rollback path
 exercised, every review dimension. The candidate already composes heavy -
-towards **initiative** - on risk alone.
+towards **full** - on risk alone.
 
 ### Constrain
 
 Two floors fire, and they reinforce each other:
 
-- `when: { risk: critical }` → `force_minimum_route: expedition`,
+- `when: { risk: critical }` → `force_minimum_route: full`,
   `never_skip: [refine, verify, ship]`. *"Critical changes coordinate or they
   break things quietly."*
 - `when: { labels: [payments, migrations] }` → `force_minimum_route:
-  expedition`. *"Domain risk overrides size."*
+  full`. *"Domain risk overrides size."*
 
 Then a **cap** fires - and this is the subtle part. `when: { risk:
-critical }` → `max_worktrees: 1`. So this is an initiative delivery approach
+critical }` → `max_worktrees: 1`. So this is the full approach
 that is *capped to a single worktree*. It is heavy - full BDD discovery, full
 requirements review, a full `technical-design.md`, every gate - and
 **solo**. That is not a contradiction. The cap encodes a real trade-off:
@@ -211,15 +211,15 @@ blocks.)
 
 ### Final `delivery-approach.md`
 
-The delivery approach is initiative, single worktree. The policy-rules
+The delivery approach is the full approach, single worktree. The policy-rules
 section records both floors and the cap, each with its rationale. The
 orchestration section (§4c of the template) records the worktree count as
 **cap-driven** - not as a de-scope.
 This distinction matters: the de-scope ledger is for things the delivery
 approach *chose* to skip; a cap removing a worktree is a routing policy rule,
 and rule-driven reductions go in the orchestration section, never the
-ledger. initiative's de-scope ledger is empty by definition, and a capped
-initiative is still an initiative.
+ledger. The full approach's de-scope ledger is empty by definition, and a
+capped full approach is still the full approach.
 
 A `distribution-map.md` is still written, even though the work runs solo. The
 map is the record of *what could have been parallel and why it wasn't* - here,
@@ -248,7 +248,7 @@ that tag would add a floor; assume here it does not.
 ### Compose
 
 `product` size with `cross-cutting` risk and `greenfield` familiarity
-is the textbook **initiative** case, and it composes there with no help from
+is the textbook **full** case, and it composes there with no help from
 the routing policy rules. Full BDD discovery from the intent document;
 scenarios grouped by independence - email delivery, in-app delivery, webhook
 delivery, preferences, the delivery log are plausibly disjoint surfaces; a
@@ -268,13 +268,13 @@ subtasks, the multiagent orchestration runs five worktrees.
 
 This is the key contrast with Case 3: Case 3 was *heavy and
 solo* (critical risk, capped); Case 4 is *heavy and parallel*
-(cross-cutting risk, uncapped). Same initiative reference shape,
+(cross-cutting risk, uncapped). Same full-approach reference shape,
 genuinely different orchestration - because the dimensions read differently.
 
 ### Final `delivery-approach.md`
 
-The delivery approach is initiative at full weight, multiagent orchestration,
-empty de-scope ledger (initiative's
+The delivery approach is the full approach at full weight, multiagent orchestration,
+empty de-scope ledger (the full approach's
 ledger is empty by definition - it is what the other approaches are measured
 against). If a designer and product owner did join, their `role_rules` would
 fire: `intent.md` required and the intent-fidelity gate before the plan
@@ -323,10 +323,10 @@ stage:
 ### Constrain
 
 Risk here is `cross-cutting`, not `critical`. `RP-FLOOR-001` floors a
-`critical` risk value to initiative, and no delivery approach composes it as a
+`critical` risk value to the full approach, and no delivery approach composes it as a
 hotfix, however urgent the defect (`approaches/hotfix.md`). Had the discount
 path also double-charged a card, risk would score `critical` and assess would
-floor the route to initiative, under incident command, instead.
+raise the approach to the full approach, under incident command, instead.
 
 The architecture-check requirement fires on the `cross-cutting` value and adds
 `verify.architecture` to hotfix's gate set, so this hotfix runs six gates, not
@@ -337,8 +337,8 @@ approach that compresses the stages *before* verify and never verify itself.
 Hotfix has no worktree to cap - breakdown is skipped and the fix runs solo.
 
 The methodology's own guard applies here: a fix that turns out to be
-`standard`+ in size is *not* a hotfix - it is an incident. Assess it as an
-initiative, put someone in incident command, use the multiagent
+`standard`+ in size is *not* a hotfix - it is an incident. Assess it on the
+full approach, put someone in incident command, use the multiagent
 orchestration if it helps. Assess scores size precisely so that distinction
 holds.
 
@@ -395,7 +395,7 @@ directory so the hook knows.
 The routing policy rules still apply - and one matters here. If the question
 could only be answered by touching `auth`, `payments`, `personal-data`, or
 `migrations`, the floor would fire and this would *not* be a spike; it would be
-an initiative with discovery-heavy acceptance criteria. Here the investigation stays
+the full approach with discovery-heavy acceptance criteria. Here the investigation stays
 clear of irreversible surface, so spike stands. Nothing is floored.
 
 ### Final `delivery-approach.md` - and the exit
@@ -407,7 +407,7 @@ written down." ship becomes **graduate or discard**:
 
 - **Graduate** - the spike found the cause (say, a connection-pool exhaustion
   under a specific retry storm). The finding feeds a fresh `/compass:assess` for
-  the real fix. That re-assess is a normal delivery approach - feature,
+  the real fix. That re-assess is a normal delivery approach - regular,
   probably - and the tested-before-ship, acceptance-before-code, and
   traceability guardrails apply to the fix in full. Any diagnostic code
   carried over is now subject to that delivery approach's guardrails; in
@@ -450,7 +450,7 @@ request - and "self-serve" implies filters that match what finance actually
 needs, perhaps scheduling, perhaps permissions. Size is no longer `small`;
 it is `standard` or larger. The `product-owner` role rule fires: `intent.md`
 required, the intent-fidelity gate before the plan stage. Composes to
-**feature or heavier**, with a gate that checks the export scenarios
+**the regular approach or heavier**, with a gate that checks the export scenarios
 actually deliver "self-serve" and not just "a button that produces a file."
 Same words, a genuinely bigger delivery approach - because the goal under
 them is bigger.
@@ -460,11 +460,11 @@ them is bigger.
 Same three words again, but the table is the payments ledger. Assess tags
 `labels: [payments, personal-data]`. Size might still be `small`. It does
 not matter: the policy floor `when: { labels: [payments,
-personal-data] }` fires and forces the initiative shape. Composes to
-**initiative** - full
+personal-data] }` fires and forces the full approach. Composes to
+**full** - full
 discovery (what exactly is in this export? what must *not* be?), full requirements review,
 a `technical-design.md` with the data-handling decisions recorded, every gate, `security`
-full. A "small" feature, the initiative approach, because of what it touches.
+full. A "small" feature, the full approach, because of what it touches.
 
 ### "Add a CSV export" - product marketer, a launch feature
 
@@ -516,8 +516,8 @@ The triggers are concrete:
   is cheap; discovering mid-implementation that the approach was too light
   is expensive.
 - **The requirements review finds the spec is bigger than the approach assumed.** More scenarios,
-  more ambiguity than a feature approach's review pass can absorb. Do not push a
-  feature approach through an initiative-shaped problem.
+  more ambiguity than the regular approach's review pass can absorb. Do not push the
+  regular approach through a problem shaped for the full approach.
 - **A label surfaces late.** You discover mid-implement that the change
   reaches auth after all. Re-assess, the floor fires, the delivery approach
   is raised - and it is recorded, not silent.

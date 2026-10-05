@@ -35,7 +35,7 @@ def _policy():
 
 def test_ct_1_a_missing_route_waits_at_every_hand_off():
     policy = _policy()
-    del policy["autonomy_checkpoints"]["balanced"]["feature"]
+    del policy["autonomy_checkpoints"]["balanced"]["regular"]
     assert evaluate_route(FEATURE, policy, "balanced")["checkpoints"] == EVERY
 
 
@@ -60,4 +60,4 @@ def test_ct_1_a_route_named_twice_is_refused():
     policy = _policy()
     policy["autonomy_checkpoints"]["balanced"]["standard"] = ["plan"]
     errors = checkpoint_table_errors(policy)
-    assert any("standard" in e and "feature" in e for e in errors), errors
+    assert any("standard" in e and "regular" in e for e in errors), errors

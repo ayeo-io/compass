@@ -334,13 +334,26 @@
     },
     "route_shapes": {
       "type": "object",
-      "description": "The machine mirror of the five reference approaches.",
-      "required": [
-        "spike",
-        "express",
-        "standard",
-        "hotfix",
-        "expedition"
+      "description": "The machine mirror of the five reference approaches. A policy copied before the routes were renamed keys them by the old names, read as the new ones.",
+      "anyOf": [
+        {
+          "required": [
+            "spike",
+            "quick-fix",
+            "regular",
+            "hotfix",
+            "full"
+          ]
+        },
+        {
+          "required": [
+            "spike",
+            "express",
+            "standard",
+            "hotfix",
+            "expedition"
+          ]
+        }
       ],
       "additionalProperties": {
         "type": "object",

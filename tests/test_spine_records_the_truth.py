@@ -82,7 +82,7 @@ def test_scn_a1_content_change_is_logged(tmp_path):
     """Same delivery-approach name, materially different delivery approach."""
     root = _seeded(tmp_path)
     before = _task(root)
-    assert before["delivery_approach"] == "feature", before["delivery_approach"]
+    assert before["delivery_approach"] == "regular", before["delivery_approach"]
 
     # cross-cutting keeps the delivery-approach name `standard` and takes the
     # gate set from 6 to 7 (RP-REQUIRE-003 adds verify.fitness). `critical`

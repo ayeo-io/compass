@@ -8,8 +8,8 @@ question asked, and every resolution is recorded here. Collapsed on a
 quick fix when the criteria are a single scenario certified unambiguous
 at assess (and no policy rule needs the review), and on a hotfix where
 the reproduction is the clarification. Skipped entirely on a spike - the
-behaviour is the unknown, so there is nothing to QA. On a feature or
-anything heavier this file always exists.
+behaviour is the unknown, so there is nothing to QA. On the regular approach
+or anything heavier this file always exists.
 
 Fill every {{PLACEHOLDER}}. Each entry is a closed loop: question →
 resolution → who decided → what it changed.
@@ -94,7 +94,7 @@ a form.
 
 - [ ] No ambiguity left `open` - every entry is `resolved`.
 - [ ] `acceptance-criteria.md` updated to reflect every resolution.
-- [ ] Non-engineering roles in play have reviewed (initiative-scale work: required at this stage).
+- [ ] Non-engineering roles in play have reviewed (full-approach scale work: required at this stage).
 
 ### Definition of Ready
 

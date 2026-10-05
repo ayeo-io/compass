@@ -132,8 +132,8 @@ def test_trc_d3_bdd_skill_documents_the_split():
         "the skill never says what work the requirements review does that "
         "the inline self-review does not"
     )
-    # and which delivery approaches run each: quick fix or feature.
-    assert "quick fix" in text and re.search(r"feature", text), (
+    # and which delivery approaches run each: quick fix or regular.
+    assert "quick fix" in text and re.search(r"regular", text), (
         "the skill does not say which delivery approaches run the inline "
         "self-review and which run the requirements review"
     )

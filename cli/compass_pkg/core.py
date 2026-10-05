@@ -598,9 +598,13 @@ CHECK_NAME_MAP = {"coherence-check-passes": "consistency-check-passes"}
 # persists it.
 SHAPE_VALUE_MAP = {
     "express": "quick-fix",
-    "standard": "feature",
-    "expedition": "initiative",
+    "standard": "regular",
+    "expedition": "full",
+    "feature": "regular",       # renamed 5 Oct 2026: now an issue type
+    "initiative": "full",       # renamed 5 Oct 2026: now a level of work
 }
+#: The route names in weight order; a test keeps them equal to route_shapes.
+ROUTE_NAMES = ("spike", "quick-fix", "regular", "hotfix", "full")
 
 
 def canonical_shape(value):
@@ -612,8 +616,10 @@ def canonical_shape(value):
 # shows it (the receipt is the most shareable screen Compass produces).
 SHAPE_DISPLAY = {
     "express": "quick fix",
-    "standard": "feature",
-    "expedition": "initiative",
+    "standard": "regular",
+    "expedition": "full",
+    "feature": "regular",
+    "initiative": "full",
     # the v2 machine spelling renders without the hyphen
     "quick-fix": "quick fix",
 }

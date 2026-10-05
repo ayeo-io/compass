@@ -340,7 +340,7 @@ def test_the_rename_does_not_change_any_computed_approach(tmp_path):
     )
     assert r.returncode == 0, r.stdout + r.stderr
     out = r.stdout
-    assert "initiative" in out, f"the computed approach changed:\n{out}"
+    assert "full" in out, f"the computed approach changed:\n{out}"
     assert "verify.architecture" in out, (
         f"the fitness gate is no longer added on a cross-cutting change - the "
         f"rename changed behaviour:\n{out}"

@@ -146,12 +146,13 @@ def test_trc_c4_selection_rules_scale_by_route():
     assert re.search(r"\b(none|no)\b", express, re.I), (
         f"the skill does not say a quick-fix plan uses none of them: {express!r}")
 
-    standard = _route_rule(text, "feature")
+    standard = _route_rule(text, "regular")
     assert re.search(r"\b(clarity|clarify|helps?|add)\b", standard, re.I), (
         f"the skill does not say a feature plan uses the ones that help: "
         f"{standard!r}")
 
-    expedition = _route_rule(text, "initiative")
+    # "full" is also a stage weight, so the rule is found by its bullet.
+    expedition = next((line for line in text.splitlines() if "**full**" in line), "")
     assert re.search(r"\b(all|freely|every)\b", expedition, re.I), (
         f"the skill does not say an initiative plan may use all of them: "
         f"{expedition!r}")

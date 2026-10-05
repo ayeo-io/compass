@@ -6,8 +6,8 @@ Role in the pipeline: the technical plan. Records the approach, the design
 decisions as ADR-style notes, the governance check against all of
 governance/, and the independent work units. On a quick fix or hotfix, the plan stage
 collapses to a one-line note in delivery-approach.md and this file is not written; on
-a spike it collapses to a timebox sketch in delivery-approach.md. On a feature this is a
-real file; on initiative-scale work it is paired with distribution-map.md.
+a spike it collapses to a timebox sketch in delivery-approach.md. On the regular approach this is a
+real file; on full-approach scale work it is paired with distribution-map.md.
 
 The governance check here is run by the `governance-check` skill. How to
 choose and write the sections below is the `plan-authoring` skill.
@@ -20,8 +20,8 @@ one. Each carries its own rule for when it earns a place; follow the rule
 rather than filling every heading. Delete the ones you do not use - an empty
 optional section is worse than an absent one.
 
-Roughly: a quick fix writes no technical-design.md at all; a feature uses the one or two that
-add clarity; initiative-scale work may use all of them, because there this file IS the
+Roughly: a quick fix writes no technical-design.md at all; the regular approach uses the one or two that
+add clarity; full-approach scale work may use all of them, because there this file IS the
 design document.
 
 Fill every {{PLACEHOLDER}} in the sections you keep.
@@ -188,7 +188,7 @@ stays - or "none".}}
 tells you it is not. A metric, an alert, a log line someone will actually
 read - or "the existing dashboards cover it", said deliberately.}}
 
-**Well-architected pillars (`S15`):** {{on a feature or initiative, each pillar
+**Well-architected pillars (`S15`):** {{on the regular or full approach, each pillar
 the change touches - reliability, security, cost, operational excellence,
 performance efficiency, sustainability - and what the design does about it.
 Name only the ones it touches.}}
@@ -242,8 +242,8 @@ Name only the ones it touches.}}
 
 ## 8. Work units
 
-<!-- The independent (or shared-surface) units of work. On a feature this is
-     a short list; on initiative-scale work it becomes the input to distribution-map.md.
+<!-- The independent (or shared-surface) units of work. On the regular approach this is
+     a short list; on full-approach scale work it becomes the input to distribution-map.md.
      Independence = disjoint code AND disjoint scenario groups. -->
 
 | Unit | Scenario group(s) it satisfies | Code surface it touches | Independent of |

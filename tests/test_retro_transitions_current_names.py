@@ -23,8 +23,8 @@ def test_rt_1_one_transition_is_one_row_under_current_names(run_cli, make_task):
     assert r.returncode == 0, r
     payload = json.loads(r.stdout)
     transitions = payload.get("data", payload)["transitions"]
-    assert transitions == {"quick-fix -> feature": 2,
-                           "initiative -> feature": 1}, transitions
+    assert transitions == {"quick-fix -> regular": 2,
+                           "full -> regular": 1}, transitions
     text = run_cli("retro").stdout
-    assert text.count("quick fix -> feature") == 1, text
-    assert "quick fix -> feature : 2" in text, text
+    assert text.count("quick fix -> regular") == 1, text
+    assert "quick fix -> regular : 2" in text, text

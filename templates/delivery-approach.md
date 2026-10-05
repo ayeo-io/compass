@@ -20,7 +20,7 @@ line is not skippable - it runs.
 
 > **Issue:** {{ONE-LINE DESCRIPTION AS INVOKED}}
 > **Assessed:** {{DATE}} by {{WHO}} · **Revision:** {{N}} (revision 1 = first assessment; bump on `--reassess`)
-> **Reference shape:** {{quick fix | feature | initiative | hotfix | spike}}
+> **Reference shape:** {{quick fix | regular | full | hotfix | spike}}
 
 <!-- On a re-assessment (`--reassess`), keep the prior revision below this
      line under a "## Superseded - revision <N-1>" heading so the history
@@ -81,7 +81,7 @@ Candidate review dimensions: {{correctness, governance, traceability, … per th
 
 | Rule type | Rule | What it changed | Rationale (quoted from the policy) |
 |---|---|---|---|
-| {{floor \| cap \| immovable_gate \| role_rule}} | {{e.g. the auth label}} | {{e.g. "Candidate quick fix raised to initiative-scale process weight."}} | {{"…"}} |
+| {{floor \| cap \| immovable_gate \| role_rule}} | {{e.g. the auth label}} | {{e.g. "Candidate quick fix raised to full-approach scale process weight."}} | {{"…"}} |
 
 <!-- If nothing fired: "No hard policy rule fired. The candidate stands." -->
 
@@ -122,7 +122,7 @@ Candidate review dimensions: {{correctness, governance, traceability, … per th
 
 <!-- THE AUDIT CENTREPIECE. Every stage or check that is collapsed or
      skipped, each with an explicit "safe to skip because…" line. A stage
-     with no justification CANNOT be skipped - it runs. On initiative-scale
+     with no justification CANNOT be skipped - it runs. On full-approach scale
      work this table is empty by definition; cap-driven reductions go in
      section 4c, not here. On a spike the standing justification for every
      row is the same: nothing ships from a spike. -->

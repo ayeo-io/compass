@@ -8,8 +8,8 @@ assessment:
   role: engineer
   labels: []
 expected:
-  candidate_route: feature
-  delivery_approach: feature
+  candidate_route: regular
+  delivery_approach: regular
   fired_guardrail_ids: []
   conflict: false
   subtask_ceiling: 2

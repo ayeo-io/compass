@@ -123,8 +123,8 @@ def test_trc_a3_summary_length_scales_by_route():
     low = body.lower()
 
     assert "quick fix" in low, "Summary guidance does not mention the quick fix"
-    assert "feature" in low, "Summary guidance does not mention the feature shape"
-    assert "initiative" in low, "Summary guidance does not mention the initiative"
+    assert "regular" in low, "Summary guidance does not mention the regular approach"
+    assert re.search(r"(?m)^\s*full\s+-", low), "Summary guidance does not mention the full approach"
 
     assert re.search(r"one to two sentences|1-2 sentences", low), (
         "Quick-fix length target (one to two sentences per field) not stated"
@@ -242,9 +242,9 @@ def test_trc_b4_self_review_complements_clarify():
 
     assert "review still runs" in low, (
         "The self-review does not state that the requirements review still "
-        "runs on feature approaches and above"
+        "runs on the regular approach and above"
     )
-    assert "feature" in low, (
+    assert "regular" in low, (
         "The self-review does not name the approaches the requirements "
         "review still runs on")
 

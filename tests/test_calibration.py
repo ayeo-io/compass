@@ -50,11 +50,11 @@ def test_route_evaluate_write_logs_reframe(run_cli, make_task, project):
                 "--reason", "discovered the change touches auth")
     assert r.returncode == 0, r
     task = yaml.safe_load((task_dir / "manifest.yml").read_text())
-    assert task["delivery_approach"] == "initiative"
+    assert task["delivery_approach"] == "full"
     assert task["reassessments"], "expected a reframes entry"
     rf = task["reassessments"][-1]
     assert rf["from_route"] == "quick-fix"
-    assert rf["to_route"] == "initiative"
+    assert rf["to_route"] == "full"
     assert "auth" in rf["reason"]
 
 

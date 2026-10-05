@@ -11277,3 +11277,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `harness-post-session-walks`
 - **Landed:** 2026-10-05
+
+### Given a session that replaced .compass with a link, when the run lists its compass files, then it lists nothing and never walks the link _(archived)_
+
+- **Scenario id:** `PSW-2`
+- **Intent:** `INT-1`
+- **Source issue:** `harness-post-session-walks`
+- **Landed:** 2026-10-05

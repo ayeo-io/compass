@@ -11207,3 +11207,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `harness-root-sanctioned-path`
 - **Landed:** 2026-10-05
+
+### Given a real root run with a real unprivileged session user, then the run is contained and the session's edit is in the diff. _(archived)_
+
+- **Scenario id:** `HR-J`
+- **Intent:** `INT-1`
+- **Source issue:** `harness-root-sanctioned-path`
+- **Landed:** 2026-10-05

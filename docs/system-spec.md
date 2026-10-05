@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a real root run with a real unprivileged session user, then the run is contained and the session's edit is in the diff.
+### Given a retired_in_output block in governance/terminology.yml, When the printed-output guard builds its patterns, Then it scans for every name in the block and holds no hand-written list
 
-- **Scenario id:** `HR-J`
+- **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `harness-root-sanctioned-path`
+- **Source issue:** `retired-terms-from-terminology`
 - **Landed:** 2026-10-05
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1600 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1601 superseded scenario(s) are in `docs/system-spec-archive.md`.

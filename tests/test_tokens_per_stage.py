@@ -272,7 +272,7 @@ def test_ts_5_the_report_shows_tokens_by_stage_per_condition():
                                                         manifests={})])
     assert "Tokens by stage" in report
     assert "assess 125" in report          # (115 + 135) / 2
-    assert "verify not measured" in report
+    assert "verify and ship not recorded" in report   # no session total
     bare_row = next(line for line in report.splitlines()
                     if line.startswith("| Tokens by stage"))
     assert bare_row.rstrip(" |").endswith("not recorded"), bare_row
@@ -296,4 +296,4 @@ def test_ts_5_a_measured_stage_with_no_counts_is_not_recorded():
               "verify": {"measured": False}, "ship": {"measured": False}}
     record = {"manifests": {"m": yaml.safe_dump({"usage": {"stages": stages}})}}
     shown = compare._tokens_by_stage([record])
-    assert "implement not recorded" in shown and "verify not measured" in shown
+    assert "implement not recorded" in shown and "verify and ship not recorded" in shown

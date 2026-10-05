@@ -113,5 +113,6 @@ with them, not before.
 - ADR-006 - backward compatibility within a major version.
 - `docs/safety-contract.md` - the guarantees the framework locks.
 - `governance/decisions/2026-10-05-guardrails-merge-routing-policy-replaces.md`
-  - the near-term decision for issue #105: guardrails merge now, while the
-  routing policy is still replaced whole until layering ships.
+  - the earlier plan for issue #105, in which guardrails merged first and the
+  routing policy stayed replaced whole. Issue #105 is now part of the
+  configurable framework, so both merge together when layering ships.

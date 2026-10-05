@@ -11417,3 +11417,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `stage-tokens-in-report`
 - **Landed:** 2026-10-05
+
+### Given a ledger whose entries have very long first sentences, When quick-fix start lists the settled decisions, Then each line and the whole listing stay within their character budgets and every line still names its entry _(archived)_
+
+- **Scenario id:** `TC-3`
+- **Intent:** `INT-1`
+- **Source issue:** `ledger-listing-cap`
+- **Landed:** 2026-10-05

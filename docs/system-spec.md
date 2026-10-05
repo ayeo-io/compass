@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a ledger whose entries have very long first sentences, When quick-fix start lists the settled decisions, Then each line and the whole listing stay within their character budgets and every line still names its entry
+### Given a refactor acceptance recorded with no edit in a repository with no pytest cache, When compass acceptance record runs, Then it refuses because the source tree has not changed
 
-- **Scenario id:** `TC-3`
+- **Scenario id:** `AT-1`
 - **Intent:** `INT-1`
-- **Source issue:** `ledger-listing-cap`
+- **Source issue:** `acceptance-timing-gaps`
 - **Landed:** 2026-10-05
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1630 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1631 superseded scenario(s) are in `docs/system-spec-archive.md`.

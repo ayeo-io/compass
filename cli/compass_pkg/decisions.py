@@ -21,6 +21,11 @@ from compass_pkg.core import CompassError, find_compass_dir
 LEDGER = os.path.join("governance", "decisions")
 _SLUG = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
 _NAME = re.compile(r"(\d{4}-\d{2}-\d{2})-(.+)\.md")
+# A quick fix prints the listing at start and the session reads it again on
+# every later request, so its size is fixed, not left to how long a decision
+# is written. Five lines and the "more" line fit inside the listing budget.
+LINE_BUDGET = 160
+LISTING_BUDGET = 1000
 
 _TEMPLATE = """# {slug}
 
@@ -159,7 +164,10 @@ def settled(root, limit=5):
     for name, slug in live[:limit]:
         first = _first_decision_line(texts[name])
         sentence = re.split(r"(?<=[.!?])\s", first, maxsplit=1)[0]
-        lines.append(f"{slug}: {sentence}")
+        line = f"{slug}: {sentence}"
+        if len(line) > LINE_BUDGET:
+            line = line[:LINE_BUDGET - 3].rstrip() + "..."
+        lines.append(line)
     if len(live) > limit:
         lines.append(f"and {len(live) - limit} more: `compass decision list`")
     return lines

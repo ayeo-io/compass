@@ -161,7 +161,8 @@ def test_gc_1_go_and_assess_agree_that_go_does_not_wait_to_confirm():
     must say the same thing: under go, the summary already shown is the
     confirmation."""
     go = (ROOT / "commands" / "go.md").read_text(encoding="utf-8")
-    assess = (ROOT / "commands" / "assess.md").read_text(encoding="utf-8")
+    assess = (ROOT / "commands" / "assess.md").read_text(encoding="utf-8") \
+        + (ROOT / "approaches" / "assess-procedure.md").read_text(encoding="utf-8")
     assert "steps 4 to 6" in go, "go must name the assess steps it runs"
     assert "step 7" in go and "do not wait" in go.lower(), \
         "go must say it does not wait at assess step 7"

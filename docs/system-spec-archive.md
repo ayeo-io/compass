@@ -11341,6 +11341,13 @@
 - **Source issue:** `harness-session-user-hardening`
 - **Landed:** 2026-10-05
 
+### Given a policy or manifest with an old route name, when it is read, then it maps to the new name with one warning and the same approach _(archived)_
+
+- **Scenario id:** `RN-1`
+- **Intent:** `INT-1`
+- **Source issue:** `one-name-per-route`
+- **Landed:** 2026-10-05
+
 ### Given the shipped routing policy, when it is read, then route_shapes and every route reference use the five route names _(archived)_
 
 - **Scenario id:** `RN-2`

@@ -1,7 +1,7 @@
 ---
 id: ADR-010
 title: Project governance should layer over framework defaults rather than copy them
-status: proposed
+status: accepted
 date: 2026-08-03
 supersedes: ''
 superseded_by: ''
@@ -72,6 +72,21 @@ detection work:
    sees the whole policy. Layered, they see a fragment. `compass policy show
    --merged` or equivalent is required; without it a reader cannot see the
    whole policy.
+
+**Accepted on 2026-10-05, with ADR-033.** The three prerequisites are met by
+the configurable-framework design ADR-033 records:
+
+1. A migration converts a copied `governance/` into a layer, keeps the
+   original beside it, and can be undone. A project that does not migrate
+   keeps working as it does now.
+2. Locks and a classifier separate adding and waiving from weakening. A
+   change that weakens an obligation needs an approved waiver, and a locked
+   entry refuses it.
+3. A command prints the resolved configuration, with the layer each value
+   came from.
+
+The `extends: framework` example above shows the idea, not the final syntax.
+A project names a versioned parent, such as `compass:default@6`.
 
 ## Consequences
 

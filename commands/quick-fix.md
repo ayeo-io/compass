@@ -83,7 +83,7 @@ compass quick-fix finish -m "<commit message>" --no-commit -- <test command>
 ```
 
 It traces the changed files, records the green through `compass tdd-green`
-with your test command, runs `compass check`, records its output through
+with your test command, or the declared acceptance, runs `compass check`, records its output through
 `compass evidence`, passes the three gates and writes the devlog line.
 
 Leave out `--no-commit` only when the user asked for a commit: it then
@@ -107,7 +107,7 @@ mean the same thing.
 ## Gate
 
 - `quick-fix start` wrote `delivery-approach.md` and the one scenario;
-- a red is on file for it;
+- a red (or acceptance) is on file for it;
 - `quick-fix finish` ran to completion: the green recorded, every changed
   file traced, `compass check` passed, the three gates `pass` with
   evidence, and the devlog line written.

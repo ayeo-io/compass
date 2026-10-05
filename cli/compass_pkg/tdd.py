@@ -592,6 +592,14 @@ def cmd_tdd_green(args):
     # check would find it afterwards, when it is already on disk and already
     # cited by a gate.
     red_path = _red_record_for(task_dir, scenario)
+    if red_path and not os.path.isfile(red_path) and _acceptance_state(task_dir):
+        # Telling a session that already declared an acceptance to declare
+        # one sends it in a circle; name the step it has left instead.
+        raise CompassError(
+            f"compass tdd-green: no red is on record for {scenario}, and this "
+            f"issue declared an acceptance instead. Close it with `compass "
+            f"acceptance record --scenario {scenario} -- <the declared "
+            f"command>`. On a quick fix, `compass quick-fix finish` does it.")
     if red_path and not os.path.isfile(red_path):
         raise CompassError(
             f"compass tdd-green: no red is on record for {scenario}, so there "

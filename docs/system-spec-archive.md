@@ -11389,3 +11389,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `one-name-per-route`
 - **Landed:** 2026-10-05
+
+### Given commands/assess.md, When its size and the procedure file are checked, Then assess is at most 2,500 characters, names the procedure file for heavier routes and --reassess, and the procedure keeps every step _(archived)_
+
+- **Scenario id:** `LA-1`
+- **Intent:** `INT-1`
+- **Source issue:** `lean-assess`
+- **Landed:** 2026-10-05

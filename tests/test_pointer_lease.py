@@ -129,7 +129,7 @@ def test_cl_c_quick_fix_start_records_the_new_issue_for_its_session(project):
 
 
 def test_cl_c_the_assess_and_resume_instructions_set_the_pointer_by_issue_use():
-    for rel in ("commands/assess.md", "commands/resume.md", "agents/router.md"):
+    for rel in ("approaches/assess-procedure.md", "commands/resume.md", "agents/router.md"):
         text = (ROOT / rel).read_text()
         assert "compass issue use" in text, rel
 

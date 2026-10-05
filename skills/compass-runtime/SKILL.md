@@ -31,6 +31,11 @@ what it explicitly does not.
 | Test & review | `/compass:verify` | `verification-report.md` (ends with the Definition of Done) |
 | Ship | `/compass:ship` | the integration commit + settled follow-ups |
 
+`/compass:assess` itself carries only that light path. The full assess
+procedure - setup, `--reassess`, steps 1 to 7 and the gate - is in
+`approaches/assess-procedure.md`, which assess names for every heavier
+approach and for `--reassess`.
+
 When assess computes a **quick fix**, the eight rows above collapse into one
 command: `/compass:quick-fix` carries the whole light path - assess, the one
 scenario, red-green, the check, the commit - inlined in a single file, and it

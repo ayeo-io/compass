@@ -52,7 +52,9 @@ from compass_pkg.manifest import (
     cmd_scenario_add,
 )
 from compass_pkg.routing import cmd_route_evaluate, evaluate_route
-from compass_pkg.tdd import _neutralise_coverage, cmd_tdd_green
+from compass_pkg.tdd import (_acceptance_state, _neutralise_coverage,
+                              _red_record_for, cmd_acceptance_record,
+                              cmd_tdd_green)
 from compass_pkg.terminal import say
 
 #: The three gates a quick fix ever clears (route_shapes.quick-fix.gates in
@@ -896,11 +898,31 @@ def cmd_quick_fix_finish(args):
         if _reusable_green(task_dir, sid, command, tree_ids_now):
             continue
         try:
+            # Work with no natural red - a refactor, config, docs - declares
+            # an acceptance before the change instead of recording a red.
+            # The acceptance record is then this scenario's green, run on the
+            # tree that lands. It must run the command that was declared: a
+            # refactor's record refuses another command itself, and a
+            # validation is refused here, or finish's test command would
+            # stand in for the validator that was promised.
+            state = _acceptance_state(task_dir)
+            if state and not os.path.isfile(_red_record_for(task_dir, sid)):
+                if (state.get("kind") == "validation"
+                        and " ".join(command) != state.get("command")):
+                    raise CompassError(
+                        f"compass acceptance: this issue declared the "
+                        f"validator\n  {state.get('command')}\nbut finish "
+                        f"was given\n  {' '.join(command)}\nRun finish with "
+                        f"the declared command after `--`.")
+                _quiet_run(cmd_acceptance_record, task=slug, scenario=sid,
+                           command=list(command))
+                continue
             _quiet_run(cmd_tdd_green, task=slug, scenario=sid,
                        verified_by=None, command=list(command))
         except CompassError as exc:
             raise CompassError(
-                f"compass quick-fix finish: the green for {sid} failed - no "
+                f"compass quick-fix finish: the green or acceptance for {sid} "
+                f"failed - no "
                 f"gate passed and nothing was committed.\n{exc}")
 
     with _at_project_root(project_root):

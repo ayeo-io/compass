@@ -64,7 +64,7 @@ and the things it does not claim.
   one. The exact strings are in `tests/test_house_style.py`, assembled there
   so the guard does not match its own source.
 - **No rival product name, in any form.** A rival product is named only by
-  its code, R1 to R9, in every tracked file and path, branch name, commit
+  its code, such as R1, in every tracked file and path, branch name, commit
   message, pull request and synced record. The names key that maps codes to
   names is the YAML file in `.compass/private/`; it is never committed. Read
   names only through it. `scripts/rival-name-gate.py` fails the build on a

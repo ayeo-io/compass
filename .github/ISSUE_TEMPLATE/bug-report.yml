@@ -1,0 +1,29 @@
+name: Bug report
+description: Something Compass does that it should not, or does not do that it should.
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Compass version
+      description: The output of `compass --version`.
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: What happened
+      description: The command you ran and its output.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: The smallest set of steps that shows the problem.

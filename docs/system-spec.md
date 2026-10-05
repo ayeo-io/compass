@@ -29,12 +29,12 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the workflows in .github/workflows and the copyable files in ci/, When a test reads every uses: line and every package install, Then each action is pinned by a full commit SHA, each pip install reads a requirements file of exact versions or pins inline with ==, and the cucumber-js job installs with npm ci from its lockfile
+### Given an issue with status abandoned and no assessment block, When compass issue lint runs, Then it does not demand an assessment; and an active issue with no assessment is still refused
 
-- **Scenario id:** `SP-1`
+- **Scenario id:** `LA-1`
 - **Intent:** `INT-1`
-- **Source issue:** `supply-chain-pins`
-- **Landed:** 2026-10-04
+- **Source issue:** `lint-excuses-unassessed-abandoned`
+- **Landed:** 2026-10-05
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
 
@@ -332,4 +332,4 @@
 
 ---
 
-1586 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1588 superseded scenario(s) are in `docs/system-spec-archive.md`.

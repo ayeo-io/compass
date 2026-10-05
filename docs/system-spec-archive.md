@@ -11116,3 +11116,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `supply-chain-pins`
 - **Landed:** 2026-10-04
+
+### Given the release procedure's seven version locations and the version test's expected version, When each is bumped to 5.6.0, Then the version consistency and coverage tests pass and compass --version prints 5.6.0 _(archived)_
+
+- **Scenario id:** `RL-1`
+- **Intent:** `INT-1`
+- **Source issue:** `release-5-6-0`
+- **Landed:** 2026-10-05

@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the release procedure's seven version locations and the version test's expected version, When each is bumped to 5.6.0, Then the version consistency and coverage tests pass and compass --version prints 5.6.0
+### Given an issue with status abandoned and no assessment block, When compass issue lint runs, Then it does not demand an assessment; and an active issue with no assessment is still refused
 
-- **Scenario id:** `RL-1`
+- **Scenario id:** `LA-1`
 - **Intent:** `INT-1`
-- **Source issue:** `release-5-6-0`
+- **Source issue:** `lint-excuses-unassessed-abandoned`
 - **Landed:** 2026-10-05
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1587 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1588 superseded scenario(s) are in `docs/system-spec-archive.md`.

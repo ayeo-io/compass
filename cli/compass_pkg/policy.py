@@ -506,7 +506,9 @@ def cmd_task_lint(args):
     # a scenario written as a bare string must be reported, not raise
     # AttributeError.
     if "assessment" not in task:
-        if (task.get("status") or "active") == "queued":
+        # An abandoned issue that never had an assessment was dropped before
+        # it entered the pipeline, which is the same case as a queued one.
+        if (task.get("status") or "active") in ("queued", "abandoned"):
             # A queued issue has not been assessed yet, so the lint does not
             # ask it for an assessment. Only that field is skipped: the rest
             # of the lint still runs, because a malformed manifest is

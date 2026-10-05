@@ -11123,3 +11123,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `release-5-6-0`
 - **Landed:** 2026-10-05
+
+### Given an issue with status abandoned and no assessment block, When compass issue lint runs, Then it does not demand an assessment; and an active issue with no assessment is still refused _(archived)_
+
+- **Scenario id:** `LA-1`
+- **Intent:** `INT-1`
+- **Source issue:** `lint-excuses-unassessed-abandoned`
+- **Landed:** 2026-10-05

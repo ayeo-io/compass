@@ -91,6 +91,10 @@ Then open `.compass/work/<issue>/README.md`. It tells you:
   scenario to test to evidence that renders in a Markdown preview; and
 - the next action.
 
+Compass never regenerates the page for you. When a command that writes the
+manifest leaves the page out of date, it prints one line telling you to run
+`compass issue dashboard` again.
+
 Correct the assessment if it is wrong: a good delivery approach depends on
 a good assessment. The session waits for your approval only at the
 checkpoints the project's `autonomy` setting lists, which the first line of

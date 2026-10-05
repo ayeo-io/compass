@@ -631,6 +631,13 @@ def _load_gate_requirements():
             set((g.get("evidence_types") or {}).keys()))
 
 
+def _stale_page(task_dir):
+    """`say` detail lines: the one stale-page reminder, or none."""
+    from compass_pkg.dashboard import stale_page_reminder
+    line = stale_page_reminder(task_dir)
+    return [line] if line else None
+
+
 def cmd_gate_pass(args):
     task_dir = resolve_issue_dir(args.task)
     task, task_path = load_manifest(task_dir)
@@ -671,6 +678,7 @@ def cmd_gate_pass(args):
     save_manifest(task, task_path)
     return say(args, f"compass gate pass: {args.gate_id} -> pass "
                     f"(evidence: {', '.join(ev_ids)}).",
+               detail=_stale_page(task_dir),
                gate=args.gate_id, status="pass", evidence=list(ev_ids))
 
 
@@ -826,6 +834,7 @@ def cmd_changed_file_add(args):
         cfs.append({"path": args.path, "scenarios": sorted(set(given))})
     save_manifest(task, task_path)
     return say(args, f"compass changed-file add: {args.path} -> {', '.join(given)}.",
+               detail=_stale_page(task_dir),
                path=args.path, scenario=given[-1], scenarios=given)
 
 
@@ -878,6 +887,7 @@ def cmd_evidence_add(args):
     save_manifest(task, task_path)
     return say(args, f"compass evidence add: {args.evidence_id} "
                     f"({args.type}) added.",
+               detail=_stale_page(task_dir),
                evidence_id=args.evidence_id, type=args.type, path=args.path)
 
 
@@ -975,4 +985,5 @@ def cmd_task_set_status(args):
     detail = f" ({reason})" if reason else ""
     return say(args, f"compass issue set-status: {task.get('issue')} -> "
                     f"{status}{detail}.",
+               detail=_stale_page(task_dir),
                issue=task.get("issue"), status=status, reason=reason or None)

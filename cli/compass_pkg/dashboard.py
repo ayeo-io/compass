@@ -282,6 +282,28 @@ def dashboard_is_current(task_dir):
     return True, "README.md matches the manifest"
 
 
+def stale_page_reminder(task_dir):
+    """The one line a verb that writes the manifest prints when it has left
+    the review page behind, or None.
+
+    Silent when there is no page, or a page someone wrote by hand: neither was
+    generated from the manifest, so neither went stale because of it. The
+    page is never regenerated here - the dashboard-current check keeps its
+    reach only while a person runs `compass issue dashboard` themselves.
+    """
+    path = os.path.join(task_dir, "README.md")
+    if not os.path.isfile(path):
+        return None
+    with open(path, encoding="utf-8") as fh:
+        if GENERATED_NOTE not in fh.read():
+            return None
+    current, _ = dashboard_is_current(task_dir)
+    if current:
+        return None
+    return ("the review page no longer matches the manifest - run "
+            "`compass issue dashboard` to regenerate it")
+
+
 def _check_dashboard_current(task, task_dir):
     """The per-issue review page still matches the record it was generated from.
 
@@ -429,7 +451,7 @@ def cmd_issue_artifact(args):
     from compass_pkg.terminal import say
 
     return say(args, "compass issue artifact: %s -> %s" % (args.kind, args.status),
-               detail=["reason: %s" % entry.get("reason", "(none recorded)"),
-                       "regenerate the review page with `compass issue dashboard`"],
+               detail=["reason: %s" % entry.get("reason", "(none recorded)")]
+               + [line for line in [stale_page_reminder(task_dir)] if line],
                kind=args.kind, status=args.status,
                reason=entry.get("reason"))

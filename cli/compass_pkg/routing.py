@@ -670,6 +670,10 @@ def cmd_route_evaluate(args):
         save_manifest(task, task_path)
         _annotate_gate_accepts(task_path)   # seed accepted-type comments
         print(f"\n  wrote the delivery approach, stages and gates -> {task_path}")
+        from compass_pkg.dashboard import stale_page_reminder
+        reminder = stale_page_reminder(task_dir)
+        if reminder:
+            print(f"  {reminder}")
         if not reframed and getattr(args, "reason", None):
             print("  the delivery approach did not change - the --reason was NOT "
                   "recorded. The approach, stages, gates, ceiling and policy "

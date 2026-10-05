@@ -36,8 +36,11 @@ def test_hc_1_a_compass_run_as_root_is_refused(tmp_path):
 
 
 def test_hc_1_allow_root_or_another_user_or_condition_runs(tmp_path):
+    # An empty environment: a person at a terminal. Under CI or
+    # COMPASS_UNATTENDED --allow-root is refused (issue
+    # harness-root-sanctioned-path, HR-C).
     assert harness._root_refusal("compass", tmp_path, allow_root=True,
-                                 euid=0) is None
+                                 euid=0, env={}) is None
     assert harness._root_refusal("compass", tmp_path, allow_root=False,
                                  euid=501) is None
     assert harness._root_refusal("bare", tmp_path, allow_root=False,

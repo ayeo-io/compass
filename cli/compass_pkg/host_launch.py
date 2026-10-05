@@ -31,7 +31,7 @@ class Launch(NamedTuple):
     timed_out: bool
 
 
-def launch_claude(claude_exe, message, args, cwd, env, timeout=None):
+def launch_claude(claude_exe, message, args, cwd, env, timeout=None, user=None):
     """Run `claude -p <message> <args...>` in `cwd` with `env`, with no
     standard input, and return a `Launch`.
 
@@ -40,17 +40,28 @@ def launch_claude(claude_exe, message, args, cwd, env, timeout=None):
     anything it started - and is reported as timed out, not raised. Ending
     only `claude` would leave a command it started running after the run
     has stopped. Without a timeout the call waits, as the eval harness's
-    sessions, bounded by their budget, always have."""
+    sessions, bounded by their budget, always have.
+
+    With a `user`, a `(uid, gid)` pair, the session starts as that user and
+    group: the eval harness run as root uses it to keep each session
+    unprivileged. Its supplementary groups are cleared only when this
+    process can clear them, which needs root."""
     command = [claude_exe, "-p", message, *args]
+    as_user = {}
+    if user is not None:
+        as_user = {"user": user[0], "group": user[1]}
+        if os.geteuid() == 0:
+            as_user["extra_groups"] = []
     if timeout is None:
         proc = subprocess.run(command, cwd=str(cwd), env=env,
                               capture_output=True, text=True,
-                              stdin=subprocess.DEVNULL)
+                              stdin=subprocess.DEVNULL, **as_user)
         return Launch(proc.returncode, proc.stdout or "", proc.stderr or "",
                       False)
     proc = subprocess.Popen(command, cwd=str(cwd), env=env, text=True,
                             stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE, start_new_session=True)
+                            stderr=subprocess.PIPE, start_new_session=True,
+                            **as_user)
     try:
         stdout, stderr = proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:

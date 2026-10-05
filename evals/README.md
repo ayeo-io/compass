@@ -69,11 +69,22 @@ back what the session changed: a setting planted there runs on your next
 checkout's `HEAD`, so commit a wording change before you measure it.
 
 The plugin copy is kept out of a session's reach by its read-only file mode,
-which root ignores. So a compass run as root is refused unless the copy is on
-a read-only mount or `--allow-root` is given, and every session runs with
-`PYTHONDONTWRITEBYTECODE=1`. Each record carries `uid`, `ran_as_root` and
-`python_version`; the comparison report states the uid and Python version,
-and how many runs were not contained.
+which root ignores. So a compass run as root needs one of two sanctioned
+paths:
+
+- `--session-user <name>` starts every session as that unprivileged user.
+  The session gets its own working folder and the user's home; the plugin
+  copy and the checkout stay root's and read-only to it. Log the user in to
+  Claude once, as that user, before the first run: the session reads its
+  login from its own home.
+- The plugin copy on a read-only mount.
+
+Without either, the run is refused. `--allow-root` runs it uncontained, and is
+a person's decision: it is refused when `CI` or `COMPASS_UNATTENDED` is set,
+so a scheduled run cannot use it. Every session runs with
+`PYTHONDONTWRITEBYTECODE=1`. Each record carries `uid`, `ran_as_root`,
+`session_uid` and `python_version`; the comparison report states the uid and
+Python version, and how many runs were not contained.
 
 ## What a session sees, and what it is told
 

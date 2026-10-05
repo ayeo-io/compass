@@ -75,7 +75,12 @@ import time
 import types
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, NamedTuple
+
+try:
+    import pwd
+except ImportError:                     # not POSIX: no session user to switch to
+    pwd = None
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -879,6 +884,53 @@ def _git_init_and_commit(repo_dir: Path, env: dict[str, str]) -> str:
     return _run_git(["rev-parse", "HEAD"], repo_dir, call_env).stdout.strip()
 
 
+# --- the session user ---------------------------------------------------------
+
+class SessionUser(NamedTuple):
+    """The unprivileged user a root run starts each session as."""
+    name: str
+    uid: int
+    gid: int
+    home: str
+
+    @classmethod
+    def of(cls, entry) -> "SessionUser":
+        return cls(entry.pw_name, entry.pw_uid, entry.pw_gid, entry.pw_dir)
+
+
+def _euid() -> int:
+    """The harness's effective uid; one function, so a test can play root."""
+    return os.geteuid()
+
+
+def _lookup_user(name: str):
+    """The password entry for `name`; raises KeyError when there is none."""
+    if pwd is None:
+        raise KeyError(name)
+    return pwd.getpwnam(name)
+
+
+def _open_for_session_user(root: Path) -> None:
+    """Let the session user read `root` and everything in it, and write
+    none of it. `tempfile.mkdtemp` makes a folder only its owner can enter,
+    so a session running as another user would find no plugin at all."""
+    for path in [root, *root.rglob("*")]:
+        if path.is_symlink():
+            continue
+        mode = path.stat().st_mode
+        add = stat.S_IRGRP | stat.S_IROTH
+        if path.is_dir():
+            add |= stat.S_IXGRP | stat.S_IXOTH
+        os.chmod(path, (mode | add) & ~(stat.S_IWGRP | stat.S_IWOTH))
+
+
+def _hand_to(root: Path, user: SessionUser) -> None:
+    """Give the session user its working folder and everything in it. The
+    plugin copy and the checkout stay the harness's."""
+    for path in [root, *root.rglob("*")]:
+        os.chown(path, user.uid, user.gid, follow_symlinks=False)
+
+
 # --- the child's own environment ---------------------------------------------
 
 def _is_claude_plugin_path(entry: str) -> bool:
@@ -891,7 +943,8 @@ def _is_claude_plugin_path(entry: str) -> bool:
                for i in range(len(parts) - 1))
 
 
-def _build_child_env(condition: str, plugin_copy_dir: Path | None
+def _build_child_env(condition: str, plugin_copy_dir: Path | None, *,
+                      session_user: SessionUser | None = None
                       ) -> dict[str, str]:
     """The session's own environment, built from nothing rather than
     filtered from the harness's, so no `CLAUDE*` variable can pass through
@@ -902,6 +955,12 @@ def _build_child_env(condition: str, plugin_copy_dir: Path | None
     for key in ("HOME", "USER", "LANG", "TMPDIR"):
         if key in os.environ:
             env[key] = os.environ[key]
+    if session_user is not None:
+        # The session reads its Claude login from HOME, and cannot read
+        # root's; a root TMPDIR may not be writable to it either, so the
+        # system default applies.
+        env["HOME"], env["USER"] = session_user.home, session_user.name
+        env.pop("TMPDIR", None)
 
     kept_entries = [entry for entry in os.environ.get("PATH", "").split(os.pathsep)
                     if entry and not _is_claude_plugin_path(entry)]
@@ -923,18 +982,43 @@ def _on_read_only_mount(path: Path) -> bool:
 
 
 def _root_refusal(condition: str, plugin_copy_dir: Path | None, *,
-                  allow_root: bool, euid: int) -> str | None:
-    """Why a compass run must not start as root, or None. Root ignores the
-    file mode that protects the plugin copy, so only a read-only mount
-    still protects it; `--allow-root` accepts the risk knowingly."""
-    if condition != "compass" or euid != 0 or allow_root:
+                  allow_root: bool, euid: int, session_user: str | None = None,
+                  env: dict[str, str] | None = None,
+                  lookup: Callable[[str], Any] | None = None) -> str | None:
+    """Why this run must not start, or None. Root ignores the file mode that
+    protects the plugin copy, so a compass run as root needs a sanctioned
+    path: each session as an unprivileged user (`--session-user`), or the
+    copy on a read-only mount. `--allow-root` accepts the risk instead, and
+    only a person at a terminal may accept it, never a scheduled run."""
+    env = os.environ if env is None else env
+    lookup = lookup or _lookup_user
+    if session_user is not None:
+        if euid != 0:
+            return ("refusing --session-user: only root can start a session "
+                    "as another user, and this run is not root.")
+        try:
+            entry = lookup(session_user)
+        except KeyError:
+            return (f"refusing --session-user {session_user}: there is no "
+                    f"such user on this machine.")
+        if entry.pw_uid == 0:
+            return (f"refusing --session-user {session_user}: it is root, so "
+                    f"its sessions would not be contained. Name an "
+                    f"unprivileged user.")
+    if allow_root and (env.get("CI") or env.get("COMPASS_UNATTENDED")):
+        return ("refusing --allow-root: CI or COMPASS_UNATTENDED is set, so "
+                "no person is at the terminal, and a scheduled run cannot "
+                "accept an uncontained run. Use --session-user instead.")
+    if condition != "compass" or euid != 0 or allow_root or session_user:
         return None
     if plugin_copy_dir is not None and _on_read_only_mount(plugin_copy_dir):
         return None
     return ("refusing a compass run as root: root ignores the file mode that "
             "keeps a session out of the plugin copy, so the run could not be "
-            "contained. Put the copy on a read-only mount, run as another "
-            "user, or pass --allow-root to run anyway.")
+            "contained. Run each session as an unprivileged user with "
+            "--session-user <name>, or put the plugin copy on a read-only "
+            "mount. As a last resort, --allow-root accepts an uncontained "
+            "run; it is a person's decision, made at the terminal.")
 
 
 def _claude_version(claude_exe: str, env: dict[str, str]) -> str:
@@ -1134,7 +1218,7 @@ def _invoke_claude(claude_exe: str, message: str, common_args: list[str],
     if resume:
         args += ["--resume", resume]
     launched = host_launch.launch_claude(claude_exe, message, args, repo_dir,
-                                         env)
+                                         env, user=state.get("as_user"))
     state["stderr"] += launched.stderr
     final_text = _consume_events(launched.stdout, state)
     return launched.returncode, final_text
@@ -1603,7 +1687,8 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
              framework_commit: str | None = None, uvx_exe: str = "uvx",
              r1_scripts_dir: Path,
              child_env: dict[str, str],
-             seed_paths: dict[str, str] | None = None
+             seed_paths: dict[str, str] | None = None,
+             session_user: SessionUser | None = None
              ) -> dict[str, Any]:
     """Do one run of `scenario` under `condition` and return its record.
     `plugin_copy_dir`, `framework_copy_dir`, `framework_commit`,
@@ -1613,6 +1698,8 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
     started = datetime.now(timezone.utc).isoformat()
     clock_start = time.monotonic()
     state = _new_run_state()
+    if session_user is not None:
+        state["as_user"] = (session_user.uid, session_user.gid)
     final_text = ""
     exit_code = 0
     skipped_for_budget = False
@@ -1631,6 +1718,10 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
                            child_env, seed_paths)
         seed_commit = _git_init_and_commit(repo_dir, child_env)
         seed_git_snapshot = _snapshot_git_config(repo_dir)
+        if session_user is not None:
+            # The seed is committed by the harness; from here the working
+            # folder is the session user's, and nothing else is.
+            _hand_to(repo_dir, session_user)
         tampered_paths: list[str] = []
 
         test_command = scenario.get("test_command", _DEFAULT_TEST_COMMAND)
@@ -1799,6 +1890,8 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
         "escaped_paths": escaped_paths,
         "uid": os.geteuid(),
         "ran_as_root": os.geteuid() == 0,
+        "session_uid": (session_user.uid if session_user is not None
+                        else os.geteuid()),
         "python_version": "{}.{}.{}".format(*sys.version_info[:3]),
         "stderr_tail": _tail(state["stderr"]),
         "over_budget": over_budget,
@@ -1839,9 +1932,13 @@ def _build_arg_parser() -> argparse.ArgumentParser:
                          help="the executable to run R3's own "
                               "specify init through - a real uvx, or a "
                               "stand-in for a test")
+    parser.add_argument("--session-user", default=None, metavar="NAME",
+                        help="run as root, start every session as this "
+                             "unprivileged user, so the run stays contained")
     parser.add_argument("--allow-root", action="store_true",
-                        help="run the compass condition as root even though "
-                             "root ignores the plugin copy's read-only mode")
+                        help="a person's decision to run the compass "
+                             "condition as root uncontained; refused when "
+                             "CI or COMPASS_UNATTENDED is set")
     parser.add_argument("--frameworks-config", default=None,
                          help="the names key, or a file of the same "
                               "pins, the "
@@ -1855,8 +1952,9 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _prepare_plugin_copy(condition: str, plugin_source: Path
-                          ) -> tuple[Path | None, dict[str, str]]:
+def _prepare_plugin_copy(condition: str, plugin_source: Path, *,
+                         session_user: SessionUser | None = None
+                         ) -> tuple[Path | None, dict[str, str]]:
     """Build the compass condition's plugin copy once, from `plugin_source`,
     and the child environment naming its own `bin/` - both reused by every
     run this harness call makes, never rebuilt per run. `(None, env)` for
@@ -1867,7 +1965,8 @@ def _prepare_plugin_copy(condition: str, plugin_source: Path
         # that can see its own working directory learns neither the
         # scenario nor the condition from its name.
         plugin_copy_dir = Path(tempfile.mkdtemp())
-    child_env = _build_child_env(condition, plugin_copy_dir)
+    child_env = _build_child_env(condition, plugin_copy_dir,
+                                 session_user=session_user)
     if plugin_copy_dir is not None:
         _make_plugin_copy(plugin_source, plugin_copy_dir, child_env)
     return plugin_copy_dir, child_env
@@ -1897,9 +1996,21 @@ def main(argv: list[str] | None = None) -> int:
     framework_source_override = (
         Path(args.framework_source) if args.framework_source else None)
 
-    plugin_copy_dir, child_env = _prepare_plugin_copy(args.condition, plugin_source)
+    # A session user is checked before anything is built, because the
+    # session's environment and files depend on it.
+    session_user: SessionUser | None = None
+    if args.session_user:
+        refusal = _root_refusal(args.condition, None, allow_root=args.allow_root,
+                                euid=_euid(), session_user=args.session_user)
+        if refusal:
+            print(refusal, file=sys.stderr)
+            return 2
+        session_user = SessionUser.of(_lookup_user(args.session_user))
+    plugin_copy_dir, child_env = _prepare_plugin_copy(
+        args.condition, plugin_source, session_user=session_user)
     refusal = _root_refusal(args.condition, plugin_copy_dir,
-                            allow_root=args.allow_root, euid=os.geteuid())
+                            allow_root=args.allow_root, euid=_euid(),
+                            session_user=args.session_user)
     if refusal:
         if plugin_copy_dir is not None:
             _remove_read_only_tree(plugin_copy_dir)
@@ -1930,6 +2041,10 @@ def main(argv: list[str] | None = None) -> int:
         r1_scripts_dir = framework_copy_dir
     else:
         r1_scripts_dir = Path(tempfile.mkdtemp())
+    if session_user is not None:
+        for shared in (plugin_copy_dir, framework_copy_dir, r1_scripts_dir):
+            if shared is not None:
+                _open_for_session_user(shared)
     try:
         for run_index in range(1, args.runs + 1):
             record = run_once(scenario, scenario_dir, args.condition, run_index,
@@ -1939,7 +2054,8 @@ def main(argv: list[str] | None = None) -> int:
                                framework_commit=framework_commit,
                                uvx_exe=args.uvx,
                                r1_scripts_dir=r1_scripts_dir,
-                               child_env=child_env, seed_paths=seed_paths)
+                               child_env=child_env, seed_paths=seed_paths,
+                               session_user=session_user)
             out_path = out_dir / f"{scenario['id']}-{args.condition}-{run_index}.json"
             out_path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
     finally:

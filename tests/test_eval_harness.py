@@ -1718,7 +1718,7 @@ def test_run_record_has_every_documented_field(
         "escaped_paths", "stderr_tail", "over_budget", "replies_sent",
         "interruptions",
         "framework", "hidden", "regressions", "tokens", "compass_commit",
-        "uid", "ran_as_root", "python_version",
+        "uid", "ran_as_root", "session_uid", "python_version",
     }
     # This scenario carries no hidden_tests/, and this condition is not
     # R1 or R3 - CMP-1 and CMP-2's own fields both read as

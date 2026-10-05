@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a session that leaves a process holding its output open, when the call ends, then the harness ends it and records the run as not contained
+### Given commands/assess.md, When its size and the procedure file are checked, Then assess is at most 2,500 characters, names the procedure file for heavier routes and --reassess, and the procedure keeps every step
 
-- **Scenario id:** `SUH-1`
+- **Scenario id:** `LA-1`
 - **Intent:** `INT-1`
-- **Source issue:** `harness-session-user-hardening`
+- **Source issue:** `lean-assess`
 - **Landed:** 2026-10-05
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1618 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1619 superseded scenario(s) are in `docs/system-spec-archive.md`.

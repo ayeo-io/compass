@@ -11299,6 +11299,13 @@
 - **Source issue:** `keep-docs-specs-untracked`
 - **Landed:** 2026-10-05
 
+### Given a session that leaves a process holding its output open, when the call ends, then the harness ends it and records the run as not contained _(archived)_
+
+- **Scenario id:** `SUH-1`
+- **Intent:** `INT-1`
+- **Source issue:** `harness-session-user-hardening`
+- **Landed:** 2026-10-05
+
 ### Given a session user with running processes or a link in its watched Claude configuration, when a run starts, then it is refused naming what was found _(archived)_
 
 - **Scenario id:** `SUH-2`

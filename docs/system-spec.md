@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a retired_in_output block in governance/terminology.yml, When the printed-output guard builds its patterns, Then it scans for every name in the block and holds no hand-written list
+### Given an issue whose review page matched its manifest, When a verb that writes the manifest leaves the page stale, Then the verb prints one line naming compass issue dashboard, and prints none when the page is still current or there is no page
 
 - **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `retired-terms-from-terminology`
+- **Source issue:** `review-page-stale-reminder`
 - **Landed:** 2026-10-05
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1601 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1602 superseded scenario(s) are in `docs/system-spec-archive.md`.

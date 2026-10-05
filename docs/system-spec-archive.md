@@ -11214,3 +11214,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `harness-root-sanctioned-path`
 - **Landed:** 2026-10-05
+
+### Given a retired_in_output block in governance/terminology.yml, When the printed-output guard builds its patterns, Then it scans for every name in the block and holds no hand-written list _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `retired-terms-from-terminology`
+- **Landed:** 2026-10-05

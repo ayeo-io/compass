@@ -65,7 +65,10 @@ If a run is recorded as not contained, read `escaped_paths` in its record
 before you run any git command in this checkout. If it names anything
 under `.git/`, check `.git/config`, `.git/hooks/` and `.git/info/`, and put
 back what the session changed: a setting planted there runs on your next
-`git status`, with your shell's full environment. The compass condition loads the
+`git status`, with your shell's full environment. A `hidden-test:` entry
+means the session left a folder or a link where a hidden test is copied:
+that test was not copied in, so the hidden pass rate for the run does not
+count. The compass condition loads the
 checkout's `HEAD`, so commit a wording change before you measure it.
 
 The plugin copy is kept out of a session's reach by its read-only file mode,

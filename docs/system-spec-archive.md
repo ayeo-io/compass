@@ -11263,3 +11263,17 @@
 - **Intent:** `INT-1`
 - **Source issue:** `mutation-proof-register`
 - **Landed:** 2026-10-05
+
+### Given the change lands, then nothing under governance changes and the project guardrail list stays empty _(archived)_
+
+- **Scenario id:** `MPR-6`
+- **Intent:** `INT-1`
+- **Source issue:** `mutation-proof-register`
+- **Landed:** 2026-10-05
+
+### Given a session that planted a folder where a hidden test is copied, When the run finishes, Then the record says not contained and names the path, instead of the run ending with an error _(archived)_
+
+- **Scenario id:** `PSW-1`
+- **Intent:** `INT-1`
+- **Source issue:** `harness-post-session-walks`
+- **Landed:** 2026-10-05

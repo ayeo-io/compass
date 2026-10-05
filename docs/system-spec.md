@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the change lands, then nothing under governance changes and the project guardrail list stays empty
+### Given a session that replaced .compass with a link, when the run lists its compass files, then it lists nothing and never walks the link
 
-- **Scenario id:** `MPR-6`
+- **Scenario id:** `PSW-2`
 - **Intent:** `INT-1`
-- **Source issue:** `mutation-proof-register`
+- **Source issue:** `harness-post-session-walks`
 - **Landed:** 2026-10-05
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1608 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1610 superseded scenario(s) are in `docs/system-spec-archive.md`.

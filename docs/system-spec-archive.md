@@ -11410,3 +11410,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `finish-honours-acceptance`
 - **Landed:** 2026-10-05
+
+### Given eval records whose manifests measured assess and implement and whose session total is known, When the comparison report is built, Then each cell shows assess, implement, and verify and ship as the remainder, and a cell whose mean assess exceeds its mean implement is flagged _(archived)_
+
+- **Scenario id:** `ST-1`
+- **Intent:** `INT-1`
+- **Source issue:** `stage-tokens-in-report`
+- **Landed:** 2026-10-05

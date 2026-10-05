@@ -11130,3 +11130,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `lint-excuses-unassessed-abandoned`
 - **Landed:** 2026-10-05
+
+### Given the repository root and .github, When a contributor looks for a security policy, a code of conduct and issue templates, Then SECURITY.md points to GitHub private vulnerability reporting and names the supported version, CODE_OF_CONDUCT.md adopts the Contributor Covenant 2.1 with conduct@ayeo.io as the contact, and bug and feature templates ask for the Compass version _(archived)_
+
+- **Scenario id:** `CF-1`
+- **Intent:** `INT-1`
+- **Source issue:** `security-policy-and-templates`
+- **Landed:** 2026-10-05

@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the repository root and .github, When a contributor looks for a security policy, a code of conduct and issue templates, Then SECURITY.md points to GitHub private vulnerability reporting and names the supported version, CODE_OF_CONDUCT.md adopts the Contributor Covenant 2.1 with conduct@ayeo.io as the contact, and bug and feature templates ask for the Compass version
+### Given the maintainer's choices of 5 October on issues #100, #105, #116 and #121, When the decisions ledger is read, Then each has an entry by jed72 with its decision, its reason and the issue it answers
 
-- **Scenario id:** `CF-1`
+- **Scenario id:** `TD-1`
 - **Intent:** `INT-1`
-- **Source issue:** `security-policy-and-templates`
+- **Source issue:** `record-triage-decisions`
 - **Landed:** 2026-10-05
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1589 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1590 superseded scenario(s) are in `docs/system-spec-archive.md`.

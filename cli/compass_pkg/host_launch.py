@@ -53,9 +53,13 @@ def launch_claude(claude_exe, message, args, cwd, env, timeout=None, user=None):
         if os.geteuid() == 0:
             as_user["extra_groups"] = []
     if timeout is None:
+        # A session as another user starts its own session, so it cannot
+        # reach this process's controlling terminal and push input into it.
+        new_session = {"start_new_session": True} if user is not None else {}
         proc = subprocess.run(command, cwd=str(cwd), env=env,
                               capture_output=True, text=True,
-                              stdin=subprocess.DEVNULL, **as_user)
+                              stdin=subprocess.DEVNULL, **as_user,
+                              **new_session)
         return Launch(proc.returncode, proc.stdout or "", proc.stderr or "",
                       False)
     proc = subprocess.Popen(command, cwd=str(cwd), env=env, text=True,

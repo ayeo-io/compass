@@ -503,3 +503,62 @@ def test_hr_h_a_config_turned_into_a_folder_is_tampering_not_a_crash(tmp_path):
     (repo / ".git" / "config").unlink()
     (repo / ".git" / "config" / "inner").mkdir(parents=True)
     assert ".git/config" in harness._restore_tampered_git_config(repo, snapshot)
+
+
+def test_hr_g_session_user_calls_start_without_roots_terminal(tmp_path, monkeypatch):
+    monkeypatch.setattr(harness, "_SESSION_FOLDER", (tmp_path, (1500, 1500)))
+    as_user = harness._as_session_user(tmp_path)
+    assert as_user["start_new_session"] is True
+    assert as_user["stdin"] == subprocess.DEVNULL
+
+
+def test_hr_g_the_launcher_starts_a_session_user_without_roots_terminal(
+        monkeypatch, tmp_path):
+    seen = {}
+
+    def fake_run(command, **kwargs):
+        seen.update(kwargs)
+        return subprocess.CompletedProcess(command, 0, "", "")
+
+    monkeypatch.setattr(host_launch.subprocess, "run", fake_run)
+    host_launch.launch_claude("claude", "hi", [], tmp_path, {},
+                              user=(1500, 1500))
+    assert seen["start_new_session"] is True
+
+
+def test_hr_i_the_kill_all_starts_without_roots_terminal(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        harness.subprocess, "run",
+        lambda command, **k: calls.append(k)
+        or subprocess.CompletedProcess(command, 0, "", ""))
+    harness._end_session_user_processes(1500, 1500, {})
+    assert calls[0]["start_new_session"] is True
+
+
+def _linked_git(tmp_path):
+    repo = tmp_path / "repo"
+    (repo / ".git").mkdir(parents=True)
+    (repo / ".git" / "config").write_bytes(b"[core]\n")
+    (repo / ".git" / "HEAD").write_text("ref: refs/heads/main\n")
+    snapshot = harness._snapshot_git_config(repo)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "config").symlink_to(tmp_path / "anything")
+    (outside / "HEAD").write_text("ref: refs/heads/main\n")
+    import shutil
+    shutil.rmtree(repo / ".git")
+    (repo / ".git").symlink_to(outside)
+    return repo, snapshot, outside
+
+
+def test_hr_h_a_linked_git_folder_is_tampering_and_nothing_outside_changes(tmp_path):
+    repo, snapshot, outside = _linked_git(tmp_path)
+    tampered = harness._restore_tampered_git_config(repo, snapshot)
+    assert ".git/config" in tampered
+    assert (outside / "config").is_symlink()
+
+
+def test_hr_h_a_head_under_a_linked_git_folder_is_not_read(tmp_path):
+    repo, _, _ = _linked_git(tmp_path)
+    assert harness._git_head_is_valid(repo) is False

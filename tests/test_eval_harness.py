@@ -292,6 +292,34 @@ def main():
             fh.write("import os, sys\\n"
                      "if any('os.kill(-1' in a for a in sys.orig_argv):\\n"
                      "    os._exit(0)\\n")
+    tty_marker = config.get("tty_marker")
+    if tty_marker:
+        # Whether this process can reach a controlling terminal, the route
+        # by which it could push input into the shell that started root.
+        try:
+            os.close(os.open("/dev/tty", os.O_RDWR))
+            reached = "tty"
+        except OSError:
+            reached = "none"
+        with open(tty_marker, "w", encoding="utf-8") as fh:
+            fh.write(reached)
+    plant_test_tty_marker = config.get("plant_test_tty_marker")
+    if plant_test_tty_marker:
+        script = os.path.join(cwd, "run_tests.py")
+        with open(script, encoding="utf-8") as fh:
+            body = fh.read()
+        probe = ("import os\\n"
+                 "try:\\n"
+                 "    os.close(os.open('/dev/tty', os.O_RDWR)); _r = 'tty'\\n"
+                 "except OSError:\\n"
+                 "    _r = 'none'\\n"
+                 "open(" + repr(plant_test_tty_marker) + ", 'w').write(_r)\\n")
+        with open(script, "w", encoding="utf-8") as fh:
+            fh.write(probe + body)
+    link_git_dir_to = config.get("link_git_dir_to")
+    if link_git_dir_to:
+        shutil.rmtree(os.path.join(cwd, ".git"))
+        os.symlink(link_git_dir_to, os.path.join(cwd, ".git"))
     link_hidden_test_to = config.get("link_hidden_test_to")
     if link_hidden_test_to:
         hidden = os.path.join(cwd, "tests", "test_hidden_feature.py")

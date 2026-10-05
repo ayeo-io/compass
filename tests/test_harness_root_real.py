@@ -66,7 +66,21 @@ def world(tmp_path):
     subprocess.run(["rm", "-rf", str(shared), str(private)], check=False)
 
 
-def _run(world, extra=None, scenario="scenario"):
+def _with_a_terminal():
+    """`subprocess` arguments that start the harness in its own session with
+    a pseudo-terminal as its controlling terminal, as when root runs it from
+    a shell."""
+    import fcntl
+    import termios
+    _master, slave = os.openpty()
+
+    def take_terminal():
+        fcntl.ioctl(0, termios.TIOCSCTTY, 0)
+    return {"stdin": slave, "start_new_session": True,
+            "preexec_fn": take_terminal}
+
+
+def _run(world, extra=None, scenario="scenario", terminal=False):
     _configure_fake_claude(world["claude"], world["log"], extra)
     os.chmod(world["claude"].parent / "fake_claude_config.json", 0o644)
     out = world["shared"] / "out"
@@ -77,7 +91,8 @@ def _run(world, extra=None, scenario="scenario"):
          "--scenario", str(world[scenario]), "--condition", "compass",
          "--claude", str(world["claude"]), "--out", str(out),
          "--plugin-source", str(world["plugin"]), "--session-user", USER],
-        env=env, capture_output=True, text=True, timeout=600)
+        env=env, capture_output=True, text=True, timeout=600,
+        **(_with_a_terminal() if terminal else {}))
     assert code.returncode == 0, code.stdout + code.stderr
     return json.loads(next(out.glob("*.json")).read_text(encoding="utf-8"))
 
@@ -147,3 +162,24 @@ def test_hr_i_the_session_cannot_stop_the_kill_all(world):
     finally:
         subprocess.run(["rm", "-rf", str(home / ".local")], check=False)
     assert not marker.exists(), "the session stopped the kill-all"
+
+
+def test_hr_h_root_does_not_follow_a_linked_git_folder(world):
+    # With `.git` itself a link, every path under it is outside the folder.
+    target = world["private"] / "gitdir"
+    target.mkdir()
+    (target / "config").symlink_to("/etc/hostname")
+    _run(world, {"link_git_dir_to": str(target)})
+    assert (target / "config").is_symlink(), "root deleted a file outside"
+
+
+def test_hr_g_session_user_processes_cannot_reach_roots_terminal(world):
+    # A process with root's controlling terminal can push a line into it,
+    # which root's shell runs after the harness exits.
+    session_marker = world["shared"] / "tty-session.txt"
+    test_marker = world["shared"] / "tty-test.txt"
+    os.chmod(world["shared"], 0o777)
+    _run(world, {"tty_marker": str(session_marker),
+                 "plant_test_tty_marker": str(test_marker)}, terminal=True)
+    assert session_marker.read_text() == "none"
+    assert test_marker.read_text() == "none"

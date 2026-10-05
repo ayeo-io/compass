@@ -332,7 +332,11 @@ def _as_session_user(cwd: Path) -> dict[str, Any]:
     except ValueError:
         return {}
     extra = {"extra_groups": []} if os.geteuid() == 0 else {}
-    return {"user": uid, "group": gid, **extra}
+    # A new session and no standard input: a process that keeps root's
+    # controlling terminal can push a line into it (`TIOCSTI`), which root's
+    # shell then runs.
+    return {"user": uid, "group": gid, "start_new_session": True,
+            "stdin": subprocess.DEVNULL, **extra}
 
 
 # `os.kill(-1, ...)` signals every process the caller may signal, except
@@ -362,6 +366,7 @@ def _end_session_user_processes(uid: int, gid: int, env: dict[str, str]) -> None
     clean_env = {"PATH": env.get("PATH", os.defpath)}
     proc = subprocess.run([sys.executable, "-I", "-S", "-c", _KILL_ALL_CODE],
                           env=clean_env, capture_output=True, text=True,
+                          stdin=subprocess.DEVNULL, start_new_session=True,
                           user=uid, group=gid,
                           **({"extra_groups": []} if os.geteuid() == 0 else {}))
     if proc.returncode != 0:
@@ -887,6 +892,12 @@ def _restore_tampered_git_config(repo_dir: Path,
     tampered: list[str] = []
     for rel, seed_bytes in seed_git_snapshot.items():
         path = repo_dir / rel
+        if not _inside_without_links(repo_dir, path.parent):
+            # A link above the file, most often `.git` itself, puts every
+            # path under it outside the folder: nothing there is read,
+            # removed or written.
+            tampered.append(rel)
+            continue
         current_bytes = _read_bytes_or_none(path)
         if current_bytes == seed_bytes:
             continue
@@ -899,10 +910,6 @@ def _restore_tampered_git_config(repo_dir: Path,
             # Removing a link removes the link, not what it points at; a
             # named pipe is removed rather than opened, which would wait.
             path.unlink()
-        if not _inside_without_links(repo_dir, path.parent):
-            # A link somewhere above the file would send the write outside
-            # the folder; `rel` is already in `tampered`.
-            continue
         if seed_bytes is None:
             if path.exists():
                 path.unlink()
@@ -930,8 +937,10 @@ def _git_head_is_valid(repo_dir: Path) -> bool:
     - the shape a session that deletes or corrupts it (EJG-6) breaks. Read
     directly, never through git itself: the whole point is to decide
     whether running a git command here is safe before running one."""
+    if not _inside_without_links(repo_dir, repo_dir / ".git"):
+        return False
     raw = _read_regular_file(repo_dir / ".git" / "HEAD")
-    if raw is None or not _inside_without_links(repo_dir, repo_dir / ".git"):
+    if raw is None:
         return False
     text = raw.decode("utf-8", "replace").strip()
     if not text:

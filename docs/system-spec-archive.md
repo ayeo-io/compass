@@ -11396,3 +11396,17 @@
 - **Intent:** `INT-1`
 - **Source issue:** `lean-assess`
 - **Landed:** 2026-10-05
+
+### Given this repository's .compass/config.yml, When an issue on the regular or full approach is evaluated, Then no checkpoint waits for a person _(archived)_
+
+- **Scenario id:** `RA-1`
+- **Intent:** `INT-1`
+- **Source issue:** `repository-autonomy`
+- **Landed:** 2026-10-05
+
+### Given a quick fix that recorded an acceptance of kind refactor and no red, When quick-fix finish runs, Then it records the green, passes the three gates and finishes _(archived)_
+
+- **Scenario id:** `FA-1`
+- **Intent:** `INT-1`
+- **Source issue:** `finish-honours-acceptance`
+- **Landed:** 2026-10-05

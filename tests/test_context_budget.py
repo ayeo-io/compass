@@ -102,3 +102,23 @@ def test_tc_2_help_keeps_every_option_within_its_budget(verb):
                for o in re.findall(r"(?<![\w-])(--?[a-z][\w-]*)", line)}
     assert OPTIONS[verb] <= options, OPTIONS[verb] - options
     assert len(text) <= HELP_BUDGETS[verb], len(text)
+
+
+# --- TC-3: the settled-decisions listing --------------------------------------
+
+def test_tc_3_the_settled_decisions_listing_stays_within_its_budget(tmp_path):
+    """`quick-fix start` prints the newest ledger entries, which the session
+    then reads on every later request; a long decision must not make that
+    listing long. Every line still names its entry, so the session can open
+    the one that touches its change."""
+    sys.path.insert(0, str(ROOT / "cli"))
+    from compass_pkg import decisions
+    from test_quick_fix_shows_settled_decisions import _entry
+    for day in range(1, 10):
+        _entry(tmp_path, f"2026-10-0{day}", f"rule-{day}",
+               "Money " + "rounds half up and never to even " * 40 + "today.")
+    lines = decisions.settled(str(tmp_path))
+    assert all(len(line) <= decisions.LINE_BUDGET for line in lines), lines
+    assert len("\n".join(lines)) <= decisions.LISTING_BUDGET, lines
+    for day in range(5, 10):
+        assert any(line.startswith(f"rule-{day}:") for line in lines), lines

@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a session that replaced .compass with a link, when the run lists its compass files, then it lists nothing and never walks the link
+### Given a technical spec written to docs/specs/ When git status runs Then the file is ignored and git ls-files lists nothing under docs/specs/
 
-- **Scenario id:** `PSW-2`
+- **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `harness-post-session-walks`
+- **Source issue:** `keep-docs-specs-untracked`
 - **Landed:** 2026-10-05
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1610 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1611 superseded scenario(s) are in `docs/system-spec-archive.md`.

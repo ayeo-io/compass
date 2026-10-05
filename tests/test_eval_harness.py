@@ -256,6 +256,56 @@ def main():
                   encoding="utf-8") as fh:
             fh.write("issue: " + second_manifest_slug + "\\nstatus: active\\n")
 
+    # Hostile sessions for the root tests (issue harness-root-sanctioned-path):
+    # code planted in the seed's test script, links planted where the
+    # harness later writes or reads, and a process left running.
+    plant_test_marker = config.get("plant_test_marker")
+    if plant_test_marker:
+        # At the top, so it runs before the seed script's own exit.
+        script = os.path.join(cwd, "run_tests.py")
+        with open(script, encoding="utf-8") as fh:
+            body = fh.read()
+        with open(script, "w", encoding="utf-8") as fh:
+            fh.write("open(" + repr(plant_test_marker) + ", 'w').write('ran')\\n"
+                     + body)
+    plant_test_linger_marker = config.get("plant_test_linger_marker")
+    if plant_test_linger_marker:
+        # The test command, not the session, leaves a process running.
+        script = os.path.join(cwd, "run_tests.py")
+        with open(script, encoding="utf-8") as fh:
+            body = fh.read()
+        child = ("import time; time.sleep(2); open("
+                 + repr(plant_test_linger_marker) + ", 'w').write('late')")
+        with open(script, "w", encoding="utf-8") as fh:
+            fh.write("import subprocess, sys\\n"
+                     "subprocess.Popen([sys.executable, '-c', " + repr(child)
+                     + "], start_new_session=True, stdout=subprocess.DEVNULL,"
+                     " stderr=subprocess.DEVNULL)\\n" + body)
+    link_hidden_test_to = config.get("link_hidden_test_to")
+    if link_hidden_test_to:
+        hidden = os.path.join(cwd, "tests", "test_hidden_feature.py")
+        os.makedirs(os.path.dirname(hidden), exist_ok=True)
+        if os.path.lexists(hidden):
+            os.remove(hidden)
+        os.symlink(link_hidden_test_to, hidden)
+    link_git_config_to = config.get("link_git_config_to")
+    if link_git_config_to:
+        os.remove(os.path.join(cwd, ".git", "config"))
+        os.symlink(link_git_config_to, os.path.join(cwd, ".git", "config"))
+    link_manifest_to = config.get("link_manifest_to")
+    if link_manifest_to:
+        leak_dir = os.path.join(cwd, ".compass", "work", "leak")
+        os.makedirs(leak_dir, exist_ok=True)
+        os.symlink(link_manifest_to, os.path.join(leak_dir, "manifest.yml"))
+    linger_marker = config.get("linger_marker")
+    if linger_marker:
+        subprocess.Popen(
+            [sys.executable, "-c",
+             "import time; time.sleep(2); open(" + repr(linger_marker)
+             + ", 'w').write('late')"],
+            start_new_session=True, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL)
+
     cost = float(config.get("cost", 0.02))
     session_id = "fake-session-0001"
     deny_tool = config.get("deny_tool")
@@ -2046,7 +2096,7 @@ def test_the_file_scan_catches_a_planted_citation(tmp_path, planted):
 # that it starts the specific program its own name suggests.
 _ALLOWED_TO_START_A_PROCESS = (
     "_run_git", "_run_compass_init", "_run_specify_init", "_claude_version",
-    "_invoke_claude", "_run_test_command",
+    "_invoke_claude", "_run_test_command", "_end_session_user_processes",
 )
 
 

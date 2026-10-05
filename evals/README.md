@@ -77,6 +77,14 @@ paths:
   copy and the checkout stay root's and read-only to it. Log the user in to
   Claude once, as that user, before the first run: the session reads its
   login from its own home.
+
+  The user must be dedicated to the harness. After the session, every git
+  call and every test run, the harness ends every process that user has,
+  so nothing the session started can change the folder while root reads
+  it. For that reason `--session-user` refuses root and the account that
+  started the harness through sudo. The host must have
+  `fs.protected_hardlinks` on, the Linux default: it stops the session
+  user making a hard link to a file root then reads.
 - The plugin copy on a read-only mount.
 
 Without either, the run is refused. `--allow-root` runs it uncontained, and is

@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the maintainer approved the configurable-framework recommendation on 2026-10-05 When a reader opens architecture/decisions/README.md Then ADR-002 shows superseded by ADR-033, ADR-010 shows accepted, Inv-2 and Inv-3 carry the new wording, and the ledger holds both decisions
+### Given a technical spec written to docs/specs/ When git status runs Then the file is ignored and git ls-files lists nothing under docs/specs/
 
 - **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `adr-projects-add-checks-as-data`
+- **Source issue:** `keep-docs-specs-untracked`
 - **Landed:** 2026-10-05
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1611 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1612 superseded scenario(s) are in `docs/system-spec-archive.md`.

@@ -5,6 +5,7 @@
 # the patterns below.
 /docs/proposals/
 /docs/analysis/
+/docs/specs/
 
 # Compass per-project working state.
 #

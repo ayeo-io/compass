@@ -614,6 +614,8 @@ def test_trc_b2_assess_refine_and_verify_point_at_the_reference():
     stubs: set[str] = set()
     for name in included:
         text = (command_dir / name).read_text(encoding="utf-8")
+        if name == "assess.md":   # its full procedure is a reference file
+            text += (REPO_ROOT / "approaches" / "assess-procedure.md").read_text(encoding="utf-8")
         section = _section_after_heading(text, "Voice")
         assert REFERENCE_PATH in section, (
             f"commands/{name} must name the reference by path"

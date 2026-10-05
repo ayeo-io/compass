@@ -125,6 +125,8 @@ def test_au_4_the_summary_stays_three_lines_and_names_the_checkpoints(project):
 @pytest.mark.parametrize("command", ["assess", "define", "refine", "plan"])
 def test_au_5_each_hand_off_waits_only_when_listed(command):
     text = (ROOT / "commands" / f"{command}.md").read_text(encoding="utf-8")
+    if command == "assess":   # its full procedure is a reference file
+        text += (ROOT / "approaches" / "assess-procedure.md").read_text(encoding="utf-8")
     assert "`checkpoints:`" in text, command
     assert "devlog.md" in text, command
     assert "autonomy" in text, command

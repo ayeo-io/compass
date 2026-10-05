@@ -1,0 +1,128 @@
+# Mutation proofs for every check under `checks:` in governance/guardrails.yml.
+#
+# The mutation-proof strategy in governance/strategies.md accepts a guard only
+# on a demonstrated failure. Here a proof is a pair of tests that run on
+# every suite: `fails` feeds the check a broken input and asserts it fails;
+# `restores` asserts it passes once the input is put right (it may be the
+# same test when that test asserts both). `broken` says what the failing test
+# breaks. `record`, where present, names an older written proof that broke
+# the check's own code; it is for a reader, and the register test does not
+# open it.
+#
+# tests/test_mutation_proof_register.py fails when a check has no entry, an
+# entry is missing a field, an entry names a check that is gone, or a test
+# named here does not exist.
+
+- check: borrowed-documents-answered
+  broken: a threat in the threat model with no scenario or accepted risk
+  fails: tests/test_borrowed_document_shapes.py::test_trc_a2
+  restores: tests/test_borrowed_document_shapes.py::test_trc_a2
+  record: .compass/work/adaptive-artifact-composition/evidence/mutation-round.txt
+
+- check: dashboard-current
+  broken: the manifest moved after the review page was generated
+  fails: tests/test_issue_dashboard.py::test_d2_stale_dashboard_fails_a_guardrail_check
+  restores: tests/test_issue_dashboard.py::test_d2_stale_dashboard_fails_a_guardrail_check
+
+- check: landed-by-resolves
+  broken: a landed_by pointer at an issue that does not exist
+  fails: tests/test_landed_by.py::test_del_b1_a_pointer_at_nothing_fails
+  restores: tests/test_landed_by.py::test_del_a1_a_landed_issue_with_a_pointer_passes
+
+- check: scenarios-have-tests
+  broken: a scenario with its tests removed
+  fails: tests/test_check_guardrails.py::test_check_fails_when_scenarios_have_no_tests
+  restores: tests/test_check_guardrails.py::test_check_passes_when_changed_file_traces_to_real_scenario
+
+- check: scenarios-are-executable
+  broken: a runner record that never ran one scenario
+  fails: tests/test_scenarios_are_executable.py::test_trc_c4_a_scenario_the_runner_never_ran_should_be_named
+  restores: tests/test_scenarios_are_executable.py::test_trc_c3_every_scenario_bound_to_a_collected_step_definition_should_pass
+
+- check: declared-tests-resolve
+  broken: a declared test id that names a test not on disk
+  fails: tests/test_record_keeping_integrity.py::test_trc_a2_missing_test_function_reported
+  restores: tests/test_record_keeping_integrity.py::test_trc_a3_resolvable_test_id_passes
+  record: .compass/work/rehearsal-cli-defects/evidence/mutation-table.md
+
+- check: suite-passed
+  broken: no passing test-run record on file
+  fails: tests/test_check_guardrails.py::test_check_fails_when_no_test_run_evidence
+  restores: tests/test_check_guardrails.py::test_check_passes_when_changed_file_traces_to_real_scenario
+
+- check: changed-code-traces-to-scenario
+  broken: a changed file traced to no scenario
+  fails: tests/test_check_guardrails.py::test_check_fails_on_changed_file_without_scenario
+  restores: tests/test_check_guardrails.py::test_check_passes_when_changed_file_traces_to_real_scenario
+
+- check: scenario-has-id-and-intent
+  broken: a scenario with its intent removed
+  fails: tests/test_check_guardrails.py::test_check_fails_when_scenario_has_no_intent
+  restores: tests/test_check_guardrails.py::test_check_passes_when_changed_file_traces_to_real_scenario
+
+- check: claim-traces-to-scenario
+  broken: a claim pointing at a scenario the issue does not have
+  fails: tests/test_check_guardrails.py::test_check_fails_when_claim_references_unknown_scenario
+  restores: tests/test_check_guardrails.py::test_check_passes_when_claim_references_a_real_scenario
+
+- check: gate-evidence-present
+  broken: a gate cleared with evidence of a type it does not accept
+  fails: tests/test_check_guardrails.py::test_check_fails_on_wrong_evidence_type_for_gate
+  restores: tests/test_check_guardrails.py::test_check_passes_with_correct_evidence_type
+
+- check: human-approval-present
+  broken: an issue needing sign-off with no approval on record
+  fails: tests/test_check_guardrails.py::test_check_fails_on_g5_touched_task_with_no_approval
+  restores: tests/test_check_guardrails.py::test_check_passes_on_complete_g5_approval
+
+- check: backfills-paid
+  broken: a follow-up left owed
+  fails: tests/test_check_guardrails.py::test_check_fails_on_unpaid_backfill
+  restores: tests/test_check_guardrails.py::test_check_passes_with_paid_backfill
+
+- check: spike-conclusion-present
+  broken: a spike with no conclusion evidence
+  fails: tests/test_spike_safety.py::test_spike_without_conclusion_fails
+  restores: tests/test_spike_safety.py::test_spike_discard_decision_passes
+
+- check: spike-no-production-changes
+  broken: a spike that changed production files
+  fails: tests/test_spike_safety.py::test_spike_with_production_changes_fails
+  restores: tests/test_spike_safety.py::test_spike_discard_decision_passes
+
+- check: dod-evidence-typed
+  broken: an unchecked Definition of Done box with no evidence tag
+  fails: tests/test_check_guardrails.py::test_dod_unbacked_fails
+  restores: tests/test_check_guardrails.py::test_dod_with_evidence_passes
+
+- check: consistency-check-passes
+  broken: consistency-check evidence that records findings, or none on record
+  fails: tests/test_consistency_check_passes.py::test_findings_or_no_evidence_fail_the_check
+  restores: tests/test_consistency_check_passes.py::test_zero_findings_pass_the_check
+
+- check: no-trusted-rerun
+  broken: a test marked rerun-without-change with no quarantine
+  fails: tests/test_intermittent_tests.py::TestNoTrustedRerunCheck::test_g4_fails_when_rerun_without_change_and_no_quarantine
+  restores: tests/test_intermittent_tests.py::TestNoTrustedRerunCheck::test_g4_passes_when_quarantined_test_links_tracking_task
+
+- check: evidence-identity-matches
+  broken: a green record replaced after it was cited
+  fails: tests/test_evidence_identity.py::test_c3_report_names_what_changed
+  restores: tests/test_evidence_identity.py::test_c2_matching_citation_is_quiet
+  record: .compass/work/tdd-green-unbound-record/evidence/mutation-proofs.md
+
+- check: evidence-matches-tree
+  broken: a tracked file edited after the green run
+  fails: tests/test_evidence_binding.py::test_evb_2_a_green_for_a_changed_tree_fails_at_ship
+  restores: tests/test_evidence_binding.py::test_evb_4_an_ignored_or_unclaimed_edit_does_not_make_a_green_stale
+
+- check: command-passes
+  broken: a declared project command that exits non-zero
+  fails: tests/test_fitness_functions.py::TestCommandPassesFailure::test_command_passes_check_fails_on_non_zero_exit
+  restores: tests/test_fitness_functions.py::TestCommandPassesSuccess::test_command_passes_succeeds_in_check_output
+  record: .compass/work/project-commands-are-a-trust-boundary/evidence/mutation-proofs.md
+
+- check: multiagent-run-recorded
+  broken: a subtask left not done
+  fails: tests/test_multiagent_run_recorded.py::test_row_5_a_subtask_not_done_fails_and_names_it
+  restores: tests/test_multiagent_run_recorded.py::test_row_2_a_subtasks_key_created_2026_09_25_with_a_complete_record_passes

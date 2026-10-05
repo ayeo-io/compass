@@ -167,6 +167,18 @@ def test_check_fails_when_claim_references_unknown_scenario(run_cli, make_task):
     assert "claim-traces-to-scenario" in r.stdout, r
 
 
+def test_check_passes_when_claim_references_a_real_scenario(run_cli, make_task):
+    """The control for the test above: the same claim, pointed at a scenario
+    the issue has, passes. Together they are this check's mutation proof
+    (`tests/mutation_proofs.yml`)."""
+    body = _correct_body()
+    body["claims"] = [{"id": "CLM-1", "text": "fast", "scenario": "SCN-001"}]
+    task_dir = make_task("good-claim", body)
+    _make_green(task_dir)
+    r = run_cli("check", "--verbose", "--issue", "good-claim")
+    assert r.returncode == 0, r
+
+
 # --- `G4` gate evidence types ------------------------------------------------
 
 
@@ -188,7 +200,10 @@ def test_check_fails_on_wrong_evidence_type_for_gate(run_cli, make_task):
     (task_dir / "notes.md").write_text("placeholder")
     r = run_cli("check", "--verbose", "--issue", "wrong-type")
     assert r.returncode != 0, r
-    assert "gate-evidence-present" in r.stdout, r
+    # The FAIL line, not the bare name: --verbose prints every check's name,
+    # and another check failing in this fixture would make the exit code
+    # non-zero on its own.
+    assert "FAIL gate-evidence-present" in r.stdout, r
 
 
 def test_check_passes_with_correct_evidence_type(run_cli, make_task, project):

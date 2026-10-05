@@ -236,6 +236,8 @@ def _tokens_values(records: List[Dict[str, Any]]) -> Tuple[List[Optional[float]]
 # --- one cell's measures -----------------------------------------------------
 
 _STAGES = ("assess", "implement", "verify", "ship")
+_VERIFY_AND_SHIP = "verify and ship"
+_SHOWN_STAGES = ("assess", "implement", _VERIFY_AND_SHIP)
 
 
 def _stage_totals(record: Dict[str, Any]) -> Optional[Dict[str, int]]:
@@ -262,24 +264,40 @@ def _stage_totals(record: Dict[str, Any]) -> Optional[Dict[str, int]]:
                 previous = found.get(stage)
                 found[stage] = (previous if isinstance(previous, int) else 0) + sum(
                     v for v in values if isinstance(v, int))
-    return found or None
+    if not found:
+        return None
+    # `verify` and `ship` run inside `quick-fix finish`, which writes the
+    # usage block while it runs, so the session's wrap-up after it is never
+    # in the block. The record's `tokens` counts the whole session over the
+    # same four kinds, so those two stages are what assess and implement
+    # leave.
+    assess, implement = found.get("assess"), found.get("implement")
+    total = record.get("tokens")
+    if (isinstance(assess, int) and isinstance(implement, int)
+            and isinstance(total, int) and total >= assess + implement):
+        found[_VERIFY_AND_SHIP] = total - assess - implement
+    return found
 
 
 def _tokens_by_stage(records: List[Dict[str, Any]]) -> str:
-    """The mean tokens per stage across the runs that recorded them."""
+    """The mean tokens per stage across the runs that recorded them. A cell
+    whose mean assess exceeds its mean implement is flagged: assess is meant
+    to be the cheap stage, so that cell shows where it is not."""
     totals = [t for t in (_stage_totals(r) for r in records) if t]
     if not totals:
         return "not recorded"
-    parts = []
-    for stage in _STAGES:
+    parts, means = [], {}
+    for stage in _SHOWN_STAGES:
         values = [t[stage] for t in totals if isinstance(t.get(stage), int)]
         if values:
-            parts.append(f"{stage} {round(sum(values) / len(values)):,}")
-        elif any(t.get(stage) == "not measured" for t in totals):
-            parts.append(f"{stage} not measured")
+            means[stage] = sum(values) / len(values)
+            parts.append(f"{stage} {round(means[stage]):,}")
         else:
             parts.append(f"{stage} not recorded")
-    return ", ".join(parts) + f" (mean of {len(totals)})"
+    shown = ", ".join(parts) + f" (mean of {len(totals)})"
+    if means.get("assess", 0) > means.get("implement", float("inf")):
+        shown += ", assess above implement"
+    return shown
 
 
 def _runs_label(n: int) -> str:

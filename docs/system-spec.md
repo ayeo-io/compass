@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a quick fix that recorded an acceptance of kind refactor and no red, When quick-fix finish runs, Then it records the green, passes the three gates and finishes
+### Given eval records whose manifests measured assess and implement and whose session total is known, When the comparison report is built, Then each cell shows assess, implement, and verify and ship as the remainder, and a cell whose mean assess exceeds its mean implement is flagged
 
-- **Scenario id:** `FA-1`
+- **Scenario id:** `ST-1`
 - **Intent:** `INT-1`
-- **Source issue:** `finish-honours-acceptance`
+- **Source issue:** `stage-tokens-in-report`
 - **Landed:** 2026-10-05
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1627 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1629 superseded scenario(s) are in `docs/system-spec-archive.md`.

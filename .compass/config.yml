@@ -42,7 +42,8 @@ mode: enforced
 #                define and plan; the full approach waits at all four.
 #                (The default.)
 #   autonomous : never wait; every hand-off is shown and logged instead.
-autonomy: balanced
+# This repository runs autonomously at the maintainer's request (5 Oct 2026).
+autonomy: autonomous
 
 # From this date, a red record must carry the identity `compass tdd-red`
 # stamps on it (record_id and content_digest) before it unlocks a code edit.

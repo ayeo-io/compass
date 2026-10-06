@@ -11753,3 +11753,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `compat-command-corpus`
 - **Landed:** 2026-10-06
+
+### Given the archive sample at 5.6.0, when the archive baseline is captured, then every check's verdict on every sampled issue is recorded, issue lint and issue receipt exit 0 on each, the test passes on today's code, and it fails when one verdict changes _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `compat-archive-baseline`
+- **Landed:** 2026-10-06

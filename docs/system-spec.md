@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the 5.6.0 evaluator, when the routing baseline is captured, then every one of the 1,200 assessments and every label subset over the four named labels has a recorded result, the test passes on today's code, and it fails when one shipped default changes
+### Given the archive sample at 5.6.0, when the archive baseline is captured, then every check's verdict on every sampled issue is recorded, issue lint and issue receipt exit 0 on each, the test passes on today's code, and it fails when one verdict changes
 
 - **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `compat-routing-baseline`
+- **Source issue:** `compat-archive-baseline`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1674 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1675 superseded scenario(s) are in `docs/system-spec-archive.md`.

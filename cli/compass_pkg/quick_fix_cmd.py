@@ -903,6 +903,20 @@ def cmd_quick_fix_finish(args):
         detail = [f"gates    : {', '.join(THREE_GATES)} -> pass",
                   f"evidence : {', '.join(evidence_ids)}"]
 
+        # The friction the CLI can derive, as ship step 6 records it for a
+        # shipped issue; without it no quick fix ever carried friction.
+        # Advisory: a failure here is reported and never stops the finish.
+        try:
+            from compass_pkg.calibration import cmd_friction_capture
+            _quiet_run(cmd_friction_capture, task=slug, internal=True, note=None)
+            recorded = load_manifest(task_dir)[0].get("friction") or []
+            if recorded:
+                detail.append(f"friction : {len(recorded)} entr"
+                              f"{'y' if len(recorded) == 1 else 'ies'} recorded "
+                              f"(`compass retro --friction`)")
+        except (CompassError, OSError) as exc:
+            detail.append(f"friction : not captured ({exc})")
+
         _record_usage(task_dir, finish_started_at)
 
         # A commit is the user's to ask for. With --no-commit the gates and

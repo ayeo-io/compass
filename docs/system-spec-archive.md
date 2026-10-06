@@ -11543,3 +11543,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `doc-scans-read-tracked-files`
 - **Landed:** 2026-10-06
+
+### Given the harness running as root on Linux, When it prepares its plugin copy, Then it bind-mounts the copy read-only before any session, records that it did, removes the mount at the end, and falls back to the refusal when the mount fails _(archived)_
+
+- **Scenario id:** `RM-1`
+- **Intent:** `INT-1`
+- **Source issue:** `harness-read-only-bind-mount`
+- **Landed:** 2026-10-06

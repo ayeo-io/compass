@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the harness running as root on Linux, When it prepares its plugin copy, Then it bind-mounts the copy read-only before any session, records that it did, removes the mount at the end, and falls back to the refusal when the mount fails
+### Given a quick fix whose manifest records a re-assessment, When quick-fix finish runs, Then the manifest's friction list holds the derived entry; with no signal, no friction key is written and no extra line is printed
 
-- **Scenario id:** `RM-1`
+- **Scenario id:** `QF-1`
 - **Intent:** `INT-1`
-- **Source issue:** `harness-read-only-bind-mount`
+- **Source issue:** `quick-fix-finish-captures-friction`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1648 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1649 superseded scenario(s) are in `docs/system-spec-archive.md`.

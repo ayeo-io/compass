@@ -56,7 +56,7 @@ from compass_pkg.start_state import (  # noqa: F401
     _GENERATED_DIRS, _STATE_PATHS, _git_changed_paths, _is_generated,
     _is_issue_state, _record_path, _tracked_paths, changed_since_start)
 from compass_pkg.tdd import (_acceptance_state, _neutralise_coverage,
-                              _red_record_for, cmd_acceptance_record,
+                              _red_record_for, _run_test, cmd_acceptance_record,
                               cmd_tdd_green)
 from compass_pkg.terminal import say
 
@@ -825,6 +825,19 @@ def cmd_quick_fix_finish(args):
     # a second `finish` with nothing new to assert is not recorded as a
     # rerun of an unchanged tree (QFG-1).
     tree_ids_now = ids_for(task_dir)
+    # One passing run on one tree is evidence for every scenario it covers,
+    # so the command runs once, on the first scenario that needs it, and the
+    # others record that same run. Each scenario still gets its own record
+    # and its own red check.
+    shared = {}
+
+    def _shared_run():
+        if not shared:
+            argv = _neutralise_coverage(list(command))
+            shared.update(argv=argv, tree_ids=ids_for(task_dir),
+                          result=_run_test(argv))
+        return shared
+
     for sid in scenario_ids:
         if _reusable_green(task_dir, sid, command, tree_ids_now):
             continue
@@ -849,7 +862,8 @@ def cmd_quick_fix_finish(args):
                            command=list(command))
                 continue
             _quiet_run(cmd_tdd_green, task=slug, scenario=sid,
-                       verified_by=None, command=list(command))
+                       verified_by=None, command=list(command),
+                       prerun=_shared_run())
         except CompassError as exc:
             raise CompassError(
                 f"compass quick-fix finish: the green or acceptance for {sid} "

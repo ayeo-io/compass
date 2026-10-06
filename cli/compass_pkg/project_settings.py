@@ -83,6 +83,60 @@ def settings(project_root):
     return data
 
 
+# Where `compass.yml` keeps each setting the shell scripts read, by the key the
+# scripts ask for. `compass.yml` is read only at these paths, so a key of the
+# same name in a check's parameters or elsewhere is never taken for a setting.
+SCRIPT_SETTINGS = {
+    "worktree_root": ("multiagent", "worktree_root"),
+    "max_worktrees": ("multiagent", "max_worktrees"),
+    "test_command": ("project", "test_command"),
+}
+
+
+def scalar(project_root, key):
+    """One setting the shell scripts read, as text.
+
+    It is "" when the setting is absent, empty or holds a mapping or a list. A
+    file that cannot be read raises `CompassError`; the script decides what
+    that means.
+
+    - In `compass.yml` the setting is read at its documented path in
+      `SCRIPT_SETTINGS`, and a key with no documented path is "".
+    - In `.compass/config.yml` the first `key:` at any depth, in document
+      order, is read. The scripts once matched an indented or top-level line
+      with `grep`, so a key under `multiagent:`, under an older heading and at
+      the top level all gave the same answer, and old projects rely on it.
+    """
+    missing = object()
+    seen = set()
+
+    def first(node):
+        # An anchor can make a mapping contain itself, so a node is visited once.
+        if isinstance(node, dict) and id(node) not in seen:
+            seen.add(id(node))
+            if key in node:
+                return node[key]
+            for child in node.values():
+                found = first(child)
+                if found is not missing:
+                    return found
+        return missing
+
+    def documented(node):
+        for step in SCRIPT_SETTINGS.get(key, ()):
+            if not isinstance(node, dict) or step not in node:
+                return missing
+            node = node[step]
+        return node if key in SCRIPT_SETTINGS else missing
+
+    data = settings(project_root)
+    in_compass_yml = settings_file(project_root) == COMPASS_YML
+    value = documented(data) if in_compass_yml else first(data)
+    if value is missing or value is None or isinstance(value, (dict, list)):
+        return ""
+    return str(value).lower() if isinstance(value, bool) else str(value)
+
+
 def settings_file(project_root):
     """The file name to show a person: the one `settings` reads, or
     `compass.yml` when the project has neither, because that is where a

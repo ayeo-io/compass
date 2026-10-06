@@ -93,11 +93,12 @@ not a branch - see `docs/security.md` for the supply-chain stance.
 
 When a team is first adopting Compass, you may want `compass ci` to *report*
 failures without exiting non-zero, so it does not block PRs while the team
-is still learning the model. Set the adoption mode in `.compass/config.yml`:
+is still learning the model. Set the adoption mode in `compass.yml` (the key is `mode` in `.compass/config.yml`
+for a project without a `compass.yml`):
 
 ```yaml
-mode: advisory     # report failures, exit 0 - non-blocking
-# mode: enforced   # the default - fail the CI job on any failure
+adoption: advisory     # report failures, exit 0 - non-blocking
+# adoption: enforced   # the default - fail the CI job on any failure
 ```
 
 In `advisory` mode every failure is still printed (with the structured

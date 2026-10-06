@@ -8,18 +8,25 @@
 itself would ignore `compass.yml`, so this test fails for it.
 
 Scenario ids: SR-1 to SR-5, in the acceptance criteria of the issue
-`settings-reader-python`.
+`settings-reader-python`; SH-4 and SH-6, in those of `settings-reader-hook`.
 """
 from __future__ import annotations
 
 import ast
 import datetime
 import os
+import re
+import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import pytest
+
+import compat_hook
+from settings_helpers import (GLOBS, SETTINGS, hook_edit, make_project,
+                              make_repo, run_script)
 
 ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "cli" / "compass"
@@ -219,11 +226,9 @@ def test_sr3_init_writes_state_and_no_settings_file(tmp_path):
     state = (proj / ".compass" / "state.yml").read_text()
     assert "initialised:" in state and "records_signed_since:" in state
     assert not (proj / "compass.yml").exists()
-    # The hook still reads `initialised` from the old file, so init writes
-    # that one block there and no setting.
-    import yaml
-    old = yaml.safe_load((proj / ".compass" / "config.yml").read_text())
-    assert set(old) == {"initialised"}
+    # The hook reads `initialised` through project_settings, so init no longer
+    # writes the interim `.compass/config.yml` that held it.
+    assert not (proj / ".compass" / "config.yml").exists()
     # The cutoff reads from the state file.
     assert red_first.signed_since(str(proj / ".compass" / "work")) \
         == datetime.date.today()
@@ -361,3 +366,243 @@ def test_sr2_advice_names_the_file_and_key_actually_read(root):
     assert "`adoption: enforced` in compass.yml" in core.mode_banner("advisory")
     with pytest.raises(core.CompassError, match="`record:` in compass.yml"):
         record.settings(root)
+
+
+# SH-4: `compass init` writes the state file only, and leaves an old project
+# alone.
+
+def _init(proj):
+    env = {**os.environ, "CLAUDE_PROJECT_DIR": str(proj)}
+    return subprocess.run([sys.executable, str(CLI), "init"], cwd=proj,
+                          env=env, check=True, capture_output=True, text=True)
+
+
+def _hook_says_initialised_by(proj, who):
+    import json
+    env = {**os.environ, "CLAUDE_PROJECT_DIR": str(proj)}
+    payload = json.dumps({"tool_name": "Write", "tool_input": {
+        "file_path": str(proj / "app.py"), "content": "x = 1\n"},
+        "cwd": str(proj)})
+    out = subprocess.run(["bash", str(ROOT / "hooks" / "pre-tool.sh")],
+                         input=payload, text=True, capture_output=True,
+                         env=env, cwd=proj)
+    return f"initialised by {who}" in out.stderr, out.stderr
+
+
+def test_sh4_init_writes_no_old_settings_file_in_a_new_project(tmp_path):
+    proj = tmp_path / "fresh"
+    proj.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=proj, check=True)
+    _init(proj)
+    assert sorted(p.name for p in (proj / ".compass").iterdir()) == \
+        ["state.yml", "work"]
+    assert _hook_says_initialised_by(proj, "compass init")[0]
+
+
+@pytest.mark.parametrize("old", [
+    "mode: advisory\nautonomy: autonomous\ninitialised:\n  by: older\n  at: '2026-01-01'\n",
+    "initialised:\n  by: older\n  at: '2026-01-01'\n",
+])
+def test_sh4_an_old_project_is_left_as_it_is(tmp_path, old):
+    proj = tmp_path / "old"
+    (proj / ".compass").mkdir(parents=True)
+    subprocess.run(["git", "init", "-q"], cwd=proj, check=True)
+    (proj / ".compass" / "config.yml").write_text(old)
+    _init(proj)
+    assert (proj / ".compass" / "config.yml").read_text() == old
+    assert not (proj / ".compass" / "state.yml").exists()
+    assert _hook_says_initialised_by(proj, "older")[0]
+
+
+# SH-6: the hook and the two scripts do not read the old file themselves.
+
+#: The one shell file that names the settings files, so the hook can tell
+#: whether any exists before it starts Python (SH-10). It only tests that a
+#: file exists, and a test below pins its two names to `project_settings`.
+SETTINGS_FILES_HELPER = ROOT / "scripts" / "lib" / "settings-files.sh"
+
+SHELL_READERS = [p for p in (
+    sorted((ROOT / "hooks").glob("*.sh"))
+    + [ROOT / "scripts" / "integrate.sh", ROOT / "scripts" / "multiagent.sh"]
+    + sorted((ROOT / "scripts" / "lib").glob("*.sh")))
+    if p != SETTINGS_FILES_HELPER]
+
+
+def _shell_names_old_file(source):
+    """Whether shell source (or the Python inside its heredocs) names the old
+    settings file in a line that is not a comment.
+
+    A line is flattened first - quotes, backslashes, `$`, braces, `+`,
+    parentheses and spaces removed - so `'.compass' + '/config.yml'`,
+    `"$DIR/config"".yml"` and an f-string all read as the name they build. A
+    quoted piece that is only the stem or only the extension is refused too:
+    it is the half of a name built in two steps.
+    """
+    for line in source.splitlines():
+        if line.lstrip().startswith("#"):
+            continue
+        flat = re.sub(r"""["'\\${}+\s()]""", "", line)
+        if re.search(r"config\.?y(a)?ml|\.compass/config", flat, re.I):
+            return True
+        if re.search(r"""["']config\.?["']|["']\.?ya?ml["']""", line):
+            return True
+    return False
+
+
+SHELL_PLANTED_FORMS = {
+    "a whole path": 'CFG="$PROJECT_DIR/.compass/config.yml"\n',
+    "a directory variable": 'f="$COMPASS_DIR/config.yml"\n',
+    "a split string": "f=\"$d/config\"'.yml'\n",
+    "a python concatenation": "p = d + '/.compass' + '/' + 'config' + '.yml'\n",
+    "a python path join": "p = os.path.join(d, '.compass', 'config.yml')\n",
+    "a stem built in a variable": "name='config'\nf=\"$d/${name}.suffix\"\n",
+    "an extension built in a variable": "ext='.yml'\nf=\"$d/$stem$ext\"\n",
+    "a yaml spelling": 'f="$d/config.yaml"\n',
+    "a line with a trailing comment": 'f=".compass/config.yml" # read it\n',
+}
+
+
+@pytest.mark.parametrize("form", sorted(SHELL_PLANTED_FORMS))
+def test_sh6_the_shell_scan_flags_each_planted_form(form):
+    assert _shell_names_old_file(SHELL_PLANTED_FORMS[form]), form
+
+
+def test_sh6_the_shell_scan_passes_comments_and_unrelated_code():
+    assert not _shell_names_old_file(
+        "# the old .compass/config.yml is read by project_settings\n"
+        "echo \"configure the project\"\n"
+        "compass_setting \"$PROJECT_DIR\" test_command ''\n")
+
+
+def test_sh6_the_hook_and_the_scripts_name_no_settings_file():
+    offenders = [str(p.relative_to(ROOT)) for p in SHELL_READERS
+                 if _shell_names_old_file(p.read_text(encoding="utf-8"))]
+    assert not offenders, offenders
+    assert len(SHELL_READERS) >= 6
+
+
+def _honoured(framework, base):
+    """What a copy of the hook and the scripts do with `compass.yml` alone:
+    the hook blocks the glob, `multiagent.sh` takes the root and cap, and
+    `integrate.sh` takes the test command. A name that is True is honoured."""
+    project = make_project(base, compass_yml=GLOBS)
+    hook = hook_edit(framework, base, project, "packaging/a.cfg")[0] == 2
+    repo = make_repo(base, compass=SETTINGS % ("new", 3, "new"))
+    out = run_script(framework, repo, "multiagent.sh", "--dry-run")
+    multi = "wt-new" in out.stdout and "config max 3" in out.stdout
+    out = run_script(framework, repo, "integrate.sh")
+    integ = "test command:  run-new" in out.stdout
+    return {"hook": hook, "multiagent": multi, "integrate": integ}
+
+
+def _planted(tmp_framework, name, old, new):
+    path = tmp_framework / name
+    text = path.read_text(encoding="utf-8")
+    assert old in text, (name, old)
+    path.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+
+@pytest.fixture
+def copy():
+    base = Path(tempfile.mkdtemp(prefix="shf-"))
+    framework = compat_hook.install(base / "framework")
+    yield framework, base
+    shutil.rmtree(base, ignore_errors=True)
+
+
+def test_sh6_the_real_hook_and_scripts_honour_compass_yml(copy):
+    framework, base = copy
+    assert _honoured(framework, base) == {
+        "hook": True, "multiagent": True, "integrate": True}
+
+
+# The old file named by a spelling the scan cannot see (the name is assembled
+# at run time from pieces no line holds whole), so only a behaviour check
+# can catch it.
+_HIDDEN = ('OLD="$PROJECT_DIR/.$(printf comp)ass/$(printf con)fig.$(printf y)ml"\n'
+           '_read() { grep -E "^[[:space:]]*$1:" "$OLD" 2>/dev/null | head -n1 '
+           '| sed -E "s/^[^:]*:[[:space:]]*//"; }\n')
+
+
+def test_sh6_a_script_left_on_the_old_file_fails_the_behaviour_check(copy):
+    framework, base = copy
+    _planted(framework, "scripts/multiagent.sh",
+             'WORKTREE_ROOT_REL="$(compass_setting "$PROJECT_DIR" worktree_root'
+             " '../.compass-worktrees')\"",
+             _HIDDEN + 'WORKTREE_ROOT_REL="$(_read worktree_root)"; '
+             'WORKTREE_ROOT_REL="${WORKTREE_ROOT_REL:-../.compass-worktrees}"')
+    assert not _shell_names_old_file(
+        (framework / "scripts" / "multiagent.sh").read_text())
+    assert _honoured(framework, base)["multiagent"] is False
+
+
+def test_sh6_the_other_script_left_on_the_old_file_fails_too(copy):
+    framework, base = copy
+    _planted(framework, "scripts/integrate.sh",
+             'TEST_CMD="$(compass_setting "$PROJECT_DIR" test_command \'\')"',
+             _HIDDEN + 'TEST_CMD="$(_read test_command)"')
+    assert _honoured(framework, base)["integrate"] is False
+
+
+def test_sh6_a_hook_left_on_the_old_file_fails_the_behaviour_check(copy):
+    framework, base = copy
+    _planted(framework, "hooks/pre-tool.sh",
+             "cfg = project_settings.settings(sys.argv[1])",
+             "import os, yaml\n"
+             "    p = os.path.join(sys.argv[1], '.compass',\n"
+             "                     ''.join(['con', 'fig', '.', 'y', 'ml']))\n"
+             "    cfg = (yaml.safe_load(open(p)) or {}) if os.path.exists(p) else {}")
+    assert not _shell_names_old_file(
+        (framework / "hooks" / "pre-tool.sh").read_text())
+    assert _honoured(framework, base)["hook"] is False
+
+
+def test_sh6_the_scan_flags_a_hook_that_names_the_old_file_plainly(copy):
+    framework, _base = copy
+    _planted(framework, "hooks/pre-tool.sh",
+             "cfg = project_settings.settings(sys.argv[1])",
+             "cfg = open(sys.argv[1] + '/.compass/config.yml').read()")
+    assert _shell_names_old_file(
+        (framework / "hooks" / "pre-tool.sh").read_text())
+
+
+# SH-10: the helper that names the two settings files is pinned to
+# `project_settings`.
+
+def _helper_names(text):
+    """The paths the helper tests with `[ -f "$1/<path>" ]`, and any other
+    non-comment line that is neither the function line, its closing brace nor
+    such a test."""
+    names, other = [], []
+    for line in text.splitlines():
+        stripped = line.strip().rstrip("|").strip()
+        found = re.fullmatch(r'\[ -f "\$1/([^"]+)" \]', stripped)
+        if found:
+            names.append(found.group(1))
+        elif (stripped and not stripped.startswith("#")
+              and stripped not in ("}",)
+              and not stripped.startswith("compass_has_settings_file()")):
+            other.append(line)
+    return names, other
+
+
+def test_sh10_the_helper_names_exactly_the_files_project_settings_reads():
+    assert SETTINGS_FILES_HELPER.is_file(), "the helper does not exist"
+    names, other = _helper_names(
+        SETTINGS_FILES_HELPER.read_text(encoding="utf-8"))
+    assert sorted(names) == sorted([project_settings.COMPASS_YML,
+                                    project_settings.OLD_CONFIG])
+    assert not other, other
+
+
+@pytest.mark.parametrize("planted", [
+    'compass_has_settings_file() {\n  [ -f "$1/compass.yml" ]\n}\n',
+    'compass_has_settings_file() {\n  [ -f "$1/compass.yml" ] || [ -f "$1/.compass/config.yaml" ]\n}\n',
+    'compass_has_settings_file() {\n  [ -f "$1/compass.yml" ] || [ -f "$1/.compass/config.yml" ]\n'
+    '  grep -q x "$1/.compass/config.yml"\n}\n',
+])
+def test_sh10_the_pin_fails_for_a_helper_that_drifts(planted):
+    names, other = _helper_names(planted)
+    assert (sorted(names) != sorted([project_settings.COMPASS_YML,
+                                     project_settings.OLD_CONFIG])
+            or other)

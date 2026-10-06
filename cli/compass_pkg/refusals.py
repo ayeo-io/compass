@@ -56,8 +56,8 @@ REFUSALS: dict[str, dict[str, str]] = {
     },
     "config-invalid": {
         "what": "edit to {target} (tool: {tool})",
-        "why": "'.compass/config.yml' could not be read: {detail}",
-        "fix": "fix .compass/config.yml and retry.",
+        "why": "'{file}' could not be read: {detail}",
+        "fix": "fix {file} and retry.",
     },
     "not-initialised": {
         "what": "this edit",

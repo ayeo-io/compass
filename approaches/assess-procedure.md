@@ -40,8 +40,9 @@ shipped governance defaults stay in force, and adopting your own is what
   runs: the CLI applies its **policy floors, caps, immovable gates, and
   blocking role rules** (hard) and its **default shapes and
   tie-breaking biases** (soft). You do not apply these by hand; the CLI does.
-- Read `.compass/config.yml` for project settings (test command, multiagent
-  worktree root). Routing rules are not here - they live in
+- Read `compass.yml` for project settings (test command, multiagent
+  worktree root), or `.compass/config.yml` in a project that has no
+  `compass.yml`. Routing rules are not here - they live in
   `routing-policy.yml`.
 - For a non-trivial or ambiguous issue, invoke the `router` agent to read
   the four dimensions.
@@ -138,7 +139,8 @@ force; if it is still a spike, leave the marker in place.
    whenever the person gives it.
    Wait for the confirmation only if `assess` is in the manifest's
    `checkpoints:`, which the project's `autonomy` setting in
-   `.compass/config.yml` decides. If it is not listed, present the
+   `compass.yml` decides (or `.compass/config.yml` in a project without
+   one). If it is not listed, present the
    approach, say you are going on without waiting and name the setting,
    and log the skipped checkpoint to `devlog.md`. `/compass:go` does not
    wait here even when `assess` is listed.

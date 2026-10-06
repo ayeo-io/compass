@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### The terms the accepted vocabulary decision defines are in the glossary
+### Given a project with neither settings file, the hook starts no Python for the code_globs read; the names of the two files live in one allow-listed helper pinned equal to project_settings
 
-- **Scenario id:** `VC-7`
+- **Scenario id:** `SH-10`
 - **Intent:** `INT-1`
-- **Source issue:** `vocabulary-catalogue`
+- **Source issue:** `settings-reader-hook`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1708 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1718 superseded scenario(s) are in `docs/system-spec-archive.md`.

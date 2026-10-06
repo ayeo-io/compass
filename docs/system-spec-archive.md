@@ -11963,3 +11963,73 @@
 - **Intent:** `INT-1`
 - **Source issue:** `vocabulary-catalogue`
 - **Landed:** 2026-10-06
+
+### The terms the accepted vocabulary decision defines are in the glossary _(archived)_
+
+- **Scenario id:** `VC-7`
+- **Intent:** `INT-1`
+- **Source issue:** `vocabulary-catalogue`
+- **Landed:** 2026-10-06
+
+### Given code_globs in compass.yml, the hook blocks a matching path as for the old file; compass.yml wins; an unreadable file blocks naming the file; no file allows an unlisted path _(archived)_
+
+- **Scenario id:** `SH-1`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-hook`
+- **Landed:** 2026-10-06
+
+### Given initialised in state.yml or only the old file, the first refusal says who initialised the project; a broken record adds nothing _(archived)_
+
+- **Scenario id:** `SH-2`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-hook`
+- **Landed:** 2026-10-06
+
+### Given worktree root, cap or test command in compass.yml, multiagent.sh and integrate.sh read them there; old file keeps its values; compass.yml wins _(archived)_
+
+- **Scenario id:** `SH-3`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-hook`
+- **Landed:** 2026-10-06
+
+### Given a new project, init writes state.yml and no .compass/config.yml; an old-file project is untouched _(archived)_
+
+- **Scenario id:** `SH-4`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-hook`
+- **Landed:** 2026-10-06
+
+### Given an unreadable settings file, the refusal and its doc name the file the hook read _(archived)_
+
+- **Scenario id:** `SH-5`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-hook`
+- **Landed:** 2026-10-06
+
+### Given the fold-in test, a hook or script naming the old file in any spelling, or reading it with compass.yml present, fails it _(archived)_
+
+- **Scenario id:** `SH-6`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-hook`
+- **Landed:** 2026-10-06
+
+### Given the recorded hook corpus, every decision matches unchanged, and again with settings moved to compass.yml and state.yml _(archived)_
+
+- **Scenario id:** `SH-7`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-hook`
+- **Landed:** 2026-10-06
+
+### Given prose that says where a setting is read or what init writes, then it matches the CLI: init writes no settings file, and a setting is read from compass.yml or the old file without one _(archived)_
+
+- **Scenario id:** `SH-8`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-hook`
+- **Landed:** 2026-10-06
+
+### Given compass.yml, the scripts read only the documented paths (multiagent.worktree_root, multiagent.max_worktrees, project.test_command); the old file keeps the any-depth lookup; an unreadable settings file stops both scripts with exit 1 naming the file _(archived)_
+
+- **Scenario id:** `SH-9`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-hook`
+- **Landed:** 2026-10-06

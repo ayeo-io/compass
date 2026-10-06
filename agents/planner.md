@@ -78,7 +78,7 @@ the feature code.
    not by guesswork. Load the `worktree-multiagent` skill for the decomposition craft.
 5. **Decide orchestration.** Solo, pair, or multiagent. The assessment's size
    and risk values set the default; your distribution map sets the subtask
-   count; `.compass/config.yml` thresholds and the routing guardrail caps bound
+   count; the multiagent settings in `compass.yml` (or `.compass/config.yml` in a project without one) and the routing guardrail caps bound
    it. **The `critical` risk cap pins worktrees at 1** - the full approach
    can be heavy and solo, and that is intentional. Record the orchestration decision
    and its constraints in `distribution-map.md`.

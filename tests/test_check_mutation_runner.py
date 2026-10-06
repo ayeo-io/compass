@@ -16,6 +16,7 @@ Scenario id: CM-1 (issue `check-mutation-runner`).
 """
 from __future__ import annotations
 
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -75,7 +76,13 @@ class TestNotCollected:
 def _project(tmp_path, fails, restores):
     root = tmp_path / "proj"
     (root / "cli" / "compass_pkg").mkdir(parents=True)
-    (root / "cli" / "compass_pkg" / "__init__.py").write_text("")
+    # Like the real package, the fixture loads the bundled PyYAML from
+    # `cli/vendor`: a CI runner has no PyYAML installed.
+    shutil.copytree(ROOT / "cli" / "vendor", root / "cli" / "vendor")
+    (root / "cli" / "compass_pkg" / "__init__.py").write_text(
+        "import os, sys\n"
+        "sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),"
+        " os.pardir, 'vendor'))\n")
     (root / "cli" / "compass_pkg" / "checks.py").write_text(CHECKS)
     # The runner reads the register through `compass_pkg.core.yaml`, the
     # one way this repository reads YAML.

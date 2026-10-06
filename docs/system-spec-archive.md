@@ -11572,14 +11572,14 @@
 - **Source issue:** `living-spec-conflicts`
 - **Landed:** 2026-10-06
 
-### Given a branch that conflicts with its base only in the two derived spec files, when `compass spec refresh --base <ref>` runs, then the base is merged, the base's spec is taken, the spec is re-derived with the branch's own issue and committed, and no conflict is left. _(archived)_
+### Given a branch that conflicts with its base only in the two derived spec files, when `compass issue refresh-spec --base <ref>` runs, then the base is merged, the base's spec is taken, the spec is re-derived with the branch's own issue and committed, and no conflict is left. _(archived)_
 
 - **Scenario id:** `LS-2`
 - **Intent:** `INT-1`
 - **Source issue:** `living-spec-conflicts`
 - **Landed:** 2026-10-06
 
-### Given a merge that also conflicts in another file, when `compass spec refresh` runs, then it aborts the merge, leaves the branch as it was and names the other files. _(archived)_
+### Given a merge that also conflicts in another file, when `compass issue refresh-spec` runs, then it aborts the merge, leaves the branch as it was and names the other files. _(archived)_
 
 - **Scenario id:** `LS-3`
 - **Intent:** `INT-1`

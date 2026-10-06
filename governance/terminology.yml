@@ -23,7 +23,7 @@
 # shrink-only baseline.
 # =============================================================================
 
-version: 2.0.0-pre15
+version: 2.0.0-pre16
 
 terms:
 
@@ -491,6 +491,82 @@ terms:
       called this "calibration".
     related: [dora-metrics, assess]
 
+  # --- Configuration (the configuration vocabulary decision) ----------------
+  catalogue:
+    means: >
+      One of the eight maps of configuration entries keyed by id:
+      `dimensions`, `stages`, `approaches`, `rules`, `checks`, `gates`,
+      `artifacts` and `vocabulary`. An id is stable; a display name lives in
+      the `vocabulary` catalogue.
+    related: [layer, overlay, generation]
+  layer:
+    means: >
+      One source of configuration: the shipped preset, a team parent, the
+      project file or the issue. Layers merge in order, and each states only
+      what it changes.
+    related: [catalogue, overlay, preset, project-file]
+  overlay:
+    means: >
+      A layer file that states only its differences from its parent, so it
+      holds the changes and not a copy of the parent.
+    related: [layer, preset]
+  preset:
+    means: >
+      A named, versioned parent layer. `default` is the only preset Compass
+      ships.
+    related: [layer, overlay]
+  generation:
+    means: >
+      A stored, numbered copy of the resolved configuration that an issue
+      runs against, so the issue keeps the rules it started with.
+    related: [catalogue, layer]
+  waiver:
+    means: >
+      A recorded departure from a parent's value, with a reason and an
+      approver.
+    related: [lock]
+  lock:
+    means: >
+      A mark on an entry that refuses a change from a lower layer that would
+      loosen it, or that the classifier cannot compare. Tightening stays
+      allowed.
+    related: [waiver, classifier]
+  capability:
+    means: >
+      A named switch for new blocking behaviour, off in the shipped default.
+    related: [lock]
+  stage-mode:
+    means: >
+      How a stage runs for an issue, such as `collapsed`. It is the `mode`
+      field of a stage.
+    not: >
+      Not the adoption setting, which is a separate key in the project file.
+    related: [catalogue]
+  project-file:
+    means: >
+      `compass.yml` at the project root, the one file a person edits.
+    related: [layer, settings-key]
+  settings-key:
+    means: >
+      A top-level key of `compass.yml` that configures the CLI instead of the
+      process.
+    related: [project-file]
+  pin:
+    means: >
+      The `#<sha>` suffix on a git `extends:`, which names the parent commit
+      a project runs against.
+    related: [layer, preset]
+  obligation:
+    means: >
+      Anything the configuration asks for at an assessment: a stage mode, a
+      check on an entry or exit list, a gate, an artifact, a checkpoint or a
+      ceiling.
+    related: [classifier, stage-mode]
+  classifier:
+    means: >
+      The component that compares two configurations by their obligations.
+    related: [obligation, lock]
+
 # =============================================================================
 # CODES - the id prefixes that appear in artifacts
 # =============================================================================
@@ -900,6 +976,17 @@ scan:
         Everything else in the file - `terms:`, `codes:`, `id_prefixes:` - is
         read like any other surface.
 
+  # Where `vocabulary` catalogues live. Under `governance/` the line scan
+  # above gets only the markdown files, so a banned word in a display name or
+  # an alias in a YAML file would pass it. tests/test_terminology.py runs the
+  # same ban patterns over the names in every tracked YAML file under these
+  # paths that holds a top-level `vocabulary` mapping, whether the name sits
+  # on the entry or under its `set:`. A name that must keep a retired word
+  # carries the per-line marker with its reason, never a path exemption.
+  vocabulary_surfaces:
+    - governance/
+    - examples/
+
   # The ratchet: surfaces not yet renamed. A slice's DoD includes removing
   # its surface from this list; removed surfaces must stay clean forever.
   # A meta-test asserts this list only ever shrinks. Every scanned surface
@@ -965,7 +1052,7 @@ quoted_term_exception:
     command and a reader retyping a paraphrase would not reproduce the result.
 
 # =============================================================================
-# Project-specific additions - NOT SUPPORTED YET
+# Project-specific additions - NOT SUPPORTED YET (the name format exists)
 # =============================================================================
 # The ruling (maintainer, 2026-08-14): the everyday-words list ships as a
 # default, is extendable per project, and is never replaceable. The named
@@ -974,20 +1061,31 @@ quoted_term_exception:
 # that collides with the list is handled by the quoted-term exception above,
 # never by deleting the entry.
 #
-# WHAT IS TRUE TODAY, which is not that:
+# WHAT IS TRUE TODAY:
 #   - The shipped list above applies as-is. That part works.
-#   - Project-specific additions are NOT SUPPORTED YET. A project-local
+#   - The `vocabulary` catalogue exists as a format: each entry maps a
+#     catalogue id to a display name and aliases, a lookup resolves an alias
+#     to its id, and a check refuses a name or alias that two entries share
+#     (an alias collision). The ban patterns are run over the names in this
+#     repository's own `vocabulary` catalogues (`scan:` above names where).
+#   - But no command reads a project's names yet. Nothing loads a project's
+#     compass.yml `vocabulary`, no shipped entries exist on this branch, and
+#     the scan never reads an adopter's file. So a project cannot yet give
+#     its own words a display name.
+#   - This file stays the frozen glossary; the catalogue sits beside it.
+#   - Extending the banned list itself is NOT SUPPORTED YET. A project-local
 #     governance/ now REPLACES the shipped defaults wholesale rather than
 #     layering onto them, and only when routing-policy.yml sits beside it - so
-#     there is no layer for a project's entries to be added to.
-#   - Tracked in `governance-merge-not-replace`. The acceptance criterion for
-#     the behaviour above travels with that issue.
+#     there is no layer for a project's ban entries to be added to.
+#   - That part is tracked in `governance-merge-not-replace`. The acceptance
+#     criterion for it travels with that issue.
 #
 # This section states what is true rather than what is intended, deliberately.
 # Writing the end state in the present tense would be a governance file
 # asserting something it has not established.
 project_additions:
-  supported: false
+  display_names: format_and_checks_exist_no_command_reads_them_yet
+  ban_list_extension: not_supported_yet
   shipped_list_applies: true
   tracked_in: governance-merge-not-replace
 

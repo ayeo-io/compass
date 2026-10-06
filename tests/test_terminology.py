@@ -779,6 +779,42 @@ def test_vocabulary_file_parses_with_three_sections():
     )
 
 
+ADR_041 = (REPO_ROOT / "architecture" / "decisions" /
+           "ADR-041-the-configuration-vocabulary.md")
+
+
+def _adr_041_terms() -> list[tuple[str, str]]:
+    """`(term, definition)` for each bullet under "These terms join the
+    vocabulary:" in the accepted decision record."""
+    text = ADR_041.read_text(encoding="utf-8")
+    block = text.split("**These terms join the vocabulary:**", 1)[1]
+    block = block.split("\n\n", 2)[1] if block.startswith("\n\n") else block
+    return re.findall(r"^- \*\*([^*]+)\*\*: (.+)$", block, re.M)
+
+
+def test_vc7_every_term_the_accepted_decision_defines_is_in_the_glossary():
+    """The accepted vocabulary decision says its terms join this file in the
+    increment that builds the `vocabulary` catalogue, with the version bumped
+    (ADR-012 rule 4) (`VC-7`)."""
+    wanted = _adr_041_terms()
+    assert len(wanted) >= 14, f"read only {len(wanted)} terms from the decision record"
+    terms = _terminology()["terms"]
+    glossary = (REPO_ROOT / "docs" / "glossary.md").read_text(encoding="utf-8")
+    missing = [t for t, _ in wanted if t.replace(" ", "-") not in terms]
+    assert not missing, f"terms the decision defines but terminology.yml lacks: {missing}"
+    for term, _ in wanted:
+        entry = terms[term.replace(" ", "-")]
+        assert len(str(entry.get("means", "")).split()) >= 8, (
+            f"{term}: the definition is too short to be one")
+        assert term.replace(" ", "-") in glossary, f"{term}: not in docs/glossary.md"
+
+
+def test_vc7_the_version_is_bumped_past_the_one_before_these_terms():
+    m = re.fullmatch(r"2\.0\.0-pre(\d+)", str(_terminology()["version"]))
+    assert m and int(m.group(1)) >= 16, (
+        f"version {_terminology()['version']}: adding terms needs a bump past 2.0.0-pre15")
+
+
 def test_every_term_states_its_meaning():
     """A term without a meaning is a name, not vocabulary (`TRC-A2`)."""
     missing = [
@@ -1232,25 +1268,367 @@ def test_pl_b4_quoted_term_exception_is_written_down():
         )
 
 
+def _project_additions_text() -> str:
+    """The comment block and the mapping that make up `project_additions`,
+    from the heading rule to the mapping's last line. Comments carry most of
+    the wording, so the parsed mapping alone would miss it."""
+    lines = TERMINOLOGY_PATH.read_text(encoding="utf-8").splitlines()
+    heading = next(i for i, line in enumerate(lines)
+                   if line.startswith("# Project-specific additions"))
+    end = next(i for i, line in enumerate(lines)
+               if line.startswith("project_additions:"))
+    while end + 1 < len(lines) and lines[end + 1].startswith("  "):
+        end += 1
+    return "\n".join(lines[heading - 1:end + 1])
+
+
 def test_pl_b7_the_list_states_todays_behaviour_not_the_intended_one():
-    """What ships says what is true now, not what is planned (`TRC-B7`).
+    """What ships says what is true now, not what is planned (`TRC-B7`, `VC-6`).
 
     The ruling is that the list ships as a default, extends per project and is
-    never replaceable. Only the first of those is true today: a project-local
-    governance/ replaces the shipped defaults wholesale. Stating the end state
-    in the present tense would be this issue committing the defect it exists to
-    fix.
+    never replaceable. A project adds display names through its `vocabulary`
+    catalogue. Extending the banned list itself is still not supported: a
+    project-local governance/ replaces the shipped defaults wholesale. Stating
+    the end state in the present tense would be this issue committing the
+    defect it exists to fix.
     """
-    doc = TERMINOLOGY_PATH.read_text(encoding="utf-8")
-    low = doc.lower()
+    block = _project_additions_text()
+    low = block.lower()
+    assert "`vocabulary` catalogue" in low and "display name" in low, (
+        "project_additions does not say a project adds display names through "
+        "its `vocabulary` catalogue, so a project author will not know where "
+        "their own words go"
+    )
     assert "not supported yet" in low or "not yet supported" in low, (
-        "the vocabulary file does not say that project-specific additions are "
-        "not supported yet, so a project author will assume they are"
+        "project_additions does not say that extending the banned list is not "
+        "supported yet, so a project author will assume it is"
     )
-    assert "governance-merge-not-replace" in doc, (
-        "the file does not name the issue tracking project additions, so a "
-        "reader who wants them has nowhere to go"
+    assert "governance-merge-not-replace" in block, (
+        "project_additions does not name the issue tracking ban-list "
+        "extension, so a reader who wants it has nowhere to go"
     )
+    assert "supported: false" not in block, (
+        "project_additions still says project additions are unsupported as a "
+        "whole, which is no longer true of display names"
+    )
+    # Only current behaviour: the format, the lookup and the collision check
+    # exist, but nothing reads a project's compass.yml vocabulary yet.
+    assert "no command reads" in low and "yet" in low, (
+        "project_additions does not say that no command reads a project's "
+        "names yet, so it claims more than this branch does"
+    )
+    value = yaml.safe_load(
+        TERMINOLOGY_PATH.read_text(encoding="utf-8"))["project_additions"]["display_names"]
+    assert "yet" in str(value) and "through_vocabulary_catalogue" != value, (
+        f"display_names is {value!r}, which does not say the names are not read yet"
+    )
+    assert "block below" not in low, (
+        "project_additions points at a scan block below it; `scan:` is above"
+    )
+    assert "collision" in low, (
+        "project_additions does not say the collision check exists"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Display names in `vocabulary` catalogues (`VC-5`)
+#
+# A project's own words go in the `vocabulary` catalogue as display names and
+# aliases. The line scan above gets only the markdown files of `governance/`
+# (its YAML files are scanned by name, never wholesale), so a banned word in a
+# display name or alias would pass it. These checks run the same ban patterns
+# over the names themselves.
+# ---------------------------------------------------------------------------
+
+def _field_names(fields: yaml.MappingNode) -> list[yaml.ScalarNode]:
+    """The string nodes of a `name` and an `aliases` in one mapping. A
+    layer writes aliases as a list, or as `{add: [...]}` under `set:`."""
+    found = []
+    for key, value in fields.value:
+        if key.value == "name" and isinstance(value, yaml.ScalarNode):
+            found.append(value)
+        elif key.value == "aliases" and isinstance(value, yaml.SequenceNode):
+            found += value.value
+        elif key.value == "aliases" and isinstance(value, yaml.MappingNode):
+            found += [item for op, seq in value.value
+                      if op.value == "add" and isinstance(seq, yaml.SequenceNode)
+                      for item in seq.value]
+    return [n for n in found
+            if isinstance(n, yaml.ScalarNode) and n.tag == "tag:yaml.org,2002:str"]
+
+
+def _vocabulary_names(text: str) -> list[tuple[str, yaml.ScalarNode]]:
+    """`(key, node)` for every display name and alias a layer holds: on the
+    entry itself (a new entry, or `replace: true`) and under its `set:`.
+    A node carries its own line, which is where a marker must sit; a YAML
+    alias to a name is the anchored node, so a marker at the alias does not
+    reach it."""
+    root = yaml.compose(text)
+    if not isinstance(root, yaml.MappingNode):
+        return []
+    names = []
+    for key, section in root.value:
+        if key.value != "vocabulary" or not isinstance(section, yaml.MappingNode):
+            continue
+        for entry_key, entry in section.value:
+            if not isinstance(entry, yaml.MappingNode):
+                continue
+            groups = [entry] + [value for k, value in entry.value
+                                if k.value == "set" and isinstance(value, yaml.MappingNode)]
+            for group in groups:
+                names += [(str(entry_key.value), node) for node in _field_names(group)]
+    seen = set()
+    return [(k, n) for k, n in names if not (id(n) in seen or seen.add(id(n)))]
+
+
+def _vocabulary_name_hits(path: Path, root: Path) -> list[str]:
+    """Banned-term hits in one file's display names and aliases.
+
+    A name is exempt when a reasoned allow marker sits on the line where its
+    YAML node starts or on the line before: the same per-line rule as prose,
+    so `grep -rn "vocabulary-scan: allow"` still lists every exemption.
+    """
+    text = path.read_text(encoding="utf-8")
+    lines = text.splitlines()
+    hits = []
+    for key, node in _vocabulary_names(text):
+        line = node.start_mark.line
+        if ALLOW_MARKER_RE.search(lines[line]) or (
+                line > 0 and ALLOW_MARKER_RE.search(lines[line - 1])):
+            continue
+        for term, patterns in BAN_PATTERNS.items():
+            if any(p.search(node.value) for p in patterns):
+                hits.append(f"{path.relative_to(root)}:{line + 1}: {key}: banned "
+                            f"'{term}' in the display name {node.value!r}")
+    return hits
+
+
+def _vocabulary_files(root: Path, surfaces: list[str]) -> list[Path]:
+    """Tracked YAML files under `surfaces` that hold a top-level `vocabulary:`
+    key. Discovery reads `git ls-files`, as the style tests do, so a file left
+    untracked locally does not change the answer CI gets. A file that holds the
+    key but does not parse fails here, naming the file."""
+    import subprocess
+    listed = subprocess.run(
+        ["git", "ls-files", "-z", "--", *surfaces], cwd=root, check=True,
+        capture_output=True, text=True).stdout.split("\0")
+    files = []
+    for rel in sorted(r for r in listed if r.endswith((".yml", ".yaml"))):
+        path = root / rel
+        text = path.read_text(encoding="utf-8")
+        if not re.search(r"^vocabulary:", text, re.M):
+            continue
+        try:
+            doc = yaml.safe_load(text)
+        except yaml.YAMLError as exc:
+            pytest.fail(f"{rel}: holds a vocabulary key but is not valid YAML: {exc}")
+        if isinstance(doc, dict) and isinstance(doc.get("vocabulary"), dict):
+            files.append(path)
+    return files
+
+
+def _vocabulary_catalogue_hits(root: Path, surfaces: list[str]) -> list[str]:
+    """Banned-term hits across every vocabulary catalogue under `surfaces`."""
+    hits = []
+    for path in _vocabulary_files(root, surfaces):
+        hits += _vocabulary_name_hits(path, root)
+    return hits
+
+
+def _project_file(tmp_path: Path, vocabulary_text: str) -> Path:
+    path = tmp_path / "compass.yml"
+    path.write_text(vocabulary_text, encoding="utf-8")
+    return path
+
+
+def test_vc5_the_scan_config_names_where_vocabulary_catalogues_live():
+    surfaces = _terminology()["scan"].get("vocabulary_surfaces")
+    assert isinstance(surfaces, list) and surfaces and all(
+        isinstance(s, str) and s for s in surfaces
+    ), "scan.vocabulary_surfaces must list the paths whose vocabulary catalogues are scanned"
+
+
+def test_vc5_a_banned_display_name_is_reported(tmp_path):
+    path = _project_file(tmp_path, (
+        "vocabulary:\n"
+        "  checks.suite-passed:\n"
+        "    name: Triage queue\n"
+        "    aliases: [tests green]\n"
+    ))
+    hits = _vocabulary_name_hits(path, tmp_path)
+    assert len(hits) == 1
+    assert "Triage" in hits[0] and "checks.suite-passed" in hits[0]
+
+
+def test_vc5_a_banned_alias_is_reported(tmp_path):
+    path = _project_file(tmp_path, (
+        "vocabulary:\n"
+        "  checks.suite-passed:\n"
+        "    name: Suite passed\n"
+        "    aliases: [tests green, Triage]\n"
+    ))
+    assert len(_vocabulary_name_hits(path, tmp_path)) == 1
+
+
+def test_vc5_clean_names_pass(tmp_path):
+    path = _project_file(tmp_path, (
+        "vocabulary:\n"
+        "  checks.suite-passed:\n"
+        "    name: Suite passed\n"
+        "    aliases: [tests green, ci]\n"
+    ))
+    assert _vocabulary_name_hits(path, tmp_path) == []
+
+
+def test_vc5_a_reasoned_marker_exempts_the_name_and_a_bare_one_does_not(tmp_path):
+    reasoned = _project_file(tmp_path, (
+        "vocabulary:\n"
+        "  checks.suite-passed:\n"
+        "    name: Suite passed\n"
+        "    aliases: [Triage]  # vocabulary-scan: allow - the retired name an old script still passes\n"
+    ))
+    assert _vocabulary_name_hits(reasoned, tmp_path) == []
+    above = _project_file(tmp_path, (
+        "vocabulary:\n"
+        "  checks.suite-passed:\n"
+        "    name: Suite passed\n"
+        "    # vocabulary-scan: allow - the retired name an old script still passes\n"
+        "    aliases: [Triage]\n"
+    ))
+    assert _vocabulary_name_hits(above, tmp_path) == []
+    bare = _project_file(tmp_path, (
+        "vocabulary:\n"
+        "  checks.suite-passed:\n"
+        "    name: Suite passed\n"
+        "    aliases: [Triage]  # vocabulary-scan: allow\n"
+    ))
+    assert len(_vocabulary_name_hits(bare, tmp_path)) == 1
+
+
+def _git_repo(tmp_path: Path, tracked: dict, untracked: dict | None = None) -> Path:
+    """A throwaway repository holding `tracked` files (path to text), with
+    `untracked` ones beside them. Discovery reads `git ls-files`, so a file
+    that is not tracked is not a vocabulary file as CI sees it."""
+    import subprocess
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    for files in (tracked, untracked or {}):
+        for rel, text in files.items():
+            target = tmp_path / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(text, encoding="utf-8")
+    subprocess.run(["git", "add", "--", *tracked], cwd=tmp_path, check=True)
+    return tmp_path
+
+
+def test_vc5_discovery_finds_a_tracked_vocabulary_catalogue_under_a_surface(tmp_path):
+    repo = _git_repo(tmp_path, {
+        "preset/vocabulary.yml": "vocabulary:\n  checks.x:\n    name: Triage queue\n",
+        "preset/checks.yml": "checks:\n  x: {statement: Triage queue}\n",
+    })
+    hits = _vocabulary_catalogue_hits(repo, ["preset/", "absent/"])
+    assert len(hits) == 1 and "vocabulary.yml" in hits[0]
+
+
+def test_vc5_discovery_ignores_a_file_git_does_not_track(tmp_path):
+    # rglob would find the untracked file locally and CI would not.
+    repo = _git_repo(
+        tmp_path,
+        {"preset/vocabulary.yml": "vocabulary:\n  checks.x:\n    name: Fine\n"},
+        {"preset/local.yml": "vocabulary:\n  checks.x:\n    name: Triage queue\n"})
+    assert _vocabulary_catalogue_hits(repo, ["preset/"]) == []
+
+
+def test_vc5_a_vocabulary_file_that_does_not_parse_fails_naming_the_file(tmp_path):
+    repo = _git_repo(tmp_path, {
+        "preset/vocabulary.yml": "vocabulary:\n  checks.x: [unclosed\n"})
+    with pytest.raises(pytest.fail.Exception) as raised:
+        _vocabulary_catalogue_hits(repo, ["preset/"])
+    assert "preset/vocabulary.yml" in str(raised.value)
+
+
+def test_vc5_a_banned_name_under_set_is_reported(tmp_path):
+    path = _project_file(tmp_path, (
+        "vocabulary:\n"
+        "  checks.suite-passed:\n"
+        "    set:\n"
+        "      name: Triage queue\n"
+    ))
+    hits = _vocabulary_name_hits(path, tmp_path)
+    assert len(hits) == 1 and "Triage" in hits[0]
+
+
+def test_vc5_a_banned_alias_added_under_set_is_reported(tmp_path):
+    path = _project_file(tmp_path, (
+        "vocabulary:\n"
+        "  checks.suite-passed:\n"
+        "    set:\n"
+        "      aliases:\n"
+        "        add: [tests green, Triage]\n"
+    ))
+    assert len(_vocabulary_name_hits(path, tmp_path)) == 1
+
+
+def test_vc5_a_banned_name_in_a_replacing_entry_is_reported(tmp_path):
+    path = _project_file(tmp_path, (
+        "vocabulary:\n"
+        "  checks.suite-passed:\n"
+        "    replace: true\n"
+        "    name: Triage queue\n"
+        "    aliases: [Triage]\n"
+    ))
+    assert len(_vocabulary_name_hits(path, tmp_path)) == 2
+
+
+def test_vc5_a_marker_on_a_folded_names_first_line_exempts_it(tmp_path):
+    path = _project_file(tmp_path, (
+        "vocabulary:\n"
+        "  checks.suite-passed:\n"
+        "    # vocabulary-scan: allow - the retired name an old script still passes\n"
+        "    name: >-\n"
+        "      Triage\n"
+        "      queue\n"
+    ))
+    assert _vocabulary_name_hits(path, tmp_path) == []
+
+
+def test_vc5_a_marker_elsewhere_does_not_exempt_a_folded_name(tmp_path):
+    path = _project_file(tmp_path, (
+        "vocabulary:\n"
+        "  checks.suite-passed:\n"
+        "    name: >-\n"
+        "      Triage\n"
+        "      queue\n"
+        "    # vocabulary-scan: allow - the retired name an old script still passes\n"
+        "  checks.reviewed:\n"
+        "    name: Reviewed\n"
+    ))
+    assert len(_vocabulary_name_hits(path, tmp_path)) == 1
+
+
+def test_vc5_a_marker_at_a_yaml_alias_does_not_exempt_the_anchored_name(tmp_path):
+    path = _project_file(tmp_path, (
+        "vocabulary:\n"
+        "  checks.suite-passed:\n"
+        "    name: &retired Triage queue\n"
+        "  checks.reviewed:\n"
+        "    name: Reviewed\n"
+        "    aliases: [*retired]  # vocabulary-scan: allow - the retired name an old script passes\n"
+    ))
+    hits = _vocabulary_name_hits(path, tmp_path)
+    assert len(hits) == 1 and "checks.suite-passed" in hits[0]
+
+
+def test_vc5_every_vocabulary_catalogue_in_the_repository_is_clean():
+    surfaces = _terminology()["scan"]["vocabulary_surfaces"]
+    hits = _vocabulary_catalogue_hits(REPO_ROOT, surfaces)
+    assert not hits, _report(hits, "A display name or alias holds a banned term.")
+    if (REPO_ROOT / "governance" / "presets").exists():
+        # Once the shipped preset lands it holds a vocabulary file. If the
+        # scan finds none, discovery is broken and this test would pass empty.
+        assert _vocabulary_files(REPO_ROOT, surfaces), (
+            "governance/presets/ exists but no vocabulary catalogue was found "
+            "under the scan's vocabulary surfaces"
+        )
 
 
 def test_pl_c11_strategies_prose_is_not_path_exempt():

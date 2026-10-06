@@ -244,6 +244,24 @@ Releasing to a small slice of traffic/users first, watching SLIs.
 
 **Related:** `rollout-plan`, `sli`
 
+### capability
+
+A named switch for new blocking behaviour, off in the shipped default.
+
+**Related:** `lock`
+
+### catalogue
+
+One of the eight maps of configuration entries keyed by id: `dimensions`, `stages`, `approaches`, `rules`, `checks`, `gates`, `artifacts` and `vocabulary`. An id is stable; a display name lives in the `vocabulary` catalogue.
+
+**Related:** `layer`, `overlay`, `generation`
+
+### classifier
+
+The component that compares two configurations by their obligations.
+
+**Related:** `obligation`, `lock`
+
 ### definition-of-done
 
 The gate before shipping: acceptance criteria pass, applicable guardrails clear, every box backed by evidence.
@@ -336,6 +354,12 @@ Work owed after an expedited ship (the hotfix's promoted scenario, the optional 
 
 **Related:** `hotfix`, `backlog`
 
+### generation
+
+A stored, numbered copy of the resolved configuration that an issue runs against, so the issue keeps the rules it started with.
+
+**Related:** `catalogue`, `layer`
+
 ### guardrail
 
 A hard rule cleared with evidence; a failed guardrail stops the work. Few by design. Plain statement of the five: every change lands with a passing test that covers it; acceptance criteria exist before the code is written; every change traces to a stated reason; claims need evidence; a human signs off on the irreversible.
@@ -406,11 +430,23 @@ The deterministic consequence of a label, declared in policy: security/payments/
 
 **Related:** `label`, `quality-gate`
 
+### layer
+
+One source of configuration: the shipped preset, a team parent, the project file or the issue. Layers merge in order, and each states only what it changes.
+
+**Related:** `catalogue`, `overlay`, `preset`, `project-file`
+
 ### lld
 
 Low-level design: optional per-component detail on initiative-scale work only. Empty is a valid state.
 
 **Related:** `design-doc`
+
+### lock
+
+A mark on an entry that refuses a change from a lower layer that would loosen it, or that the classifier cannot compare. Tightening stays allowed.
+
+**Related:** `waiver`, `classifier`
 
 ### manifest
 
@@ -430,11 +466,29 @@ A shippable checkpoint within an initiative: a coherent bundle of delivered issu
 
 **Related:** `initiative`, `issue`
 
+### obligation
+
+Anything the configuration asks for at an assessment: a stage mode, a check on an entry or exit list, a gate, an artifact, a checkpoint or a ceiling.
+
+**Related:** `classifier`, `stage-mode`
+
 ### operability
 
 The design section answering "what tells us this works in production?": the SLIs/SLOs the change affects, the alerts that watch them, runbook updates where the ops surface changes. Required by the ops-surface label rule; always present on initiatives.
 
 **Related:** `sli`, `slo`, `runbook`
+
+### overlay
+
+A layer file that states only its differences from its parent, so it holds the changes and not a copy of the parent.
+
+**Related:** `layer`, `preset`
+
+### pin
+
+The `#<sha>` suffix on a git `extends:`, which names the parent commit a project runs against.
+
+**Related:** `layer`, `preset`
 
 ### plan
 
@@ -457,6 +511,18 @@ The unit of landing code. Small, trunk-based PRs preferred.
 **GitHub:** Pull request
 
 **Related:** `issue`, `ship`
+
+### preset
+
+A named, versioned parent layer. `default` is the only preset Compass ships.
+
+**Related:** `layer`, `overlay`
+
+### project-file
+
+`compass.yml` at the project root, the one file a person edits.
+
+**Related:** `layer`, `settings-key`
 
 ### quality-gate
 
@@ -522,6 +588,12 @@ The atomic unit of acceptance: one behaviour, one Given/When/Then, one executabl
 
 **Related:** `feature-file`, `step`, `acceptance-criteria`
 
+### settings-key
+
+A top-level key of `compass.yml` that configures the CLI instead of the process.
+
+**Related:** `project-file`
+
 ### ship
 
 Merging and releasing the change: the PR lands, follow-ups are # vocabulary-scan: allow - a note recording what v1 called this. recorded, the derived system spec is regenerated. v1 called this "Land".
@@ -551,6 +623,14 @@ Service level objective - the target an SLI must meet. Implies an error budget.
 Time-boxed exploration whose output is knowledge, not shipped code. Records the question, the timebox, and a conclusion: discard, graduate (a fresh issue owns any real work), or defer. Nothing ships from a spike.
 
 **Related:** `issue-type`
+
+### stage-mode
+
+How a stage runs for an issue, such as `collapsed`. It is the `mode` field of a stage.
+
+**Not:** Not the adoption setting, which is a separate key in the project file.
+
+**Related:** `catalogue`
 
 ### step
 
@@ -587,6 +667,12 @@ The chain that makes a change accountable: code traces to a TRC- id, which trace
 **Not:** A report produced at the end. A chain assembled after the fact records what someone remembered, not what happened.
 
 **Related:** `scenario`, `intent`, `acceptance-criteria`
+
+### waiver
+
+A recorded departure from a parent's value, with a reason and an approver.
+
+**Related:** `lock`
 
 ### workflow-state
 

@@ -11718,3 +11718,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `agent-recorded-friction`
 - **Landed:** 2026-10-06
+
+### Given a committed living spec that names an issue whose records are missing, when quick-fix finish lands a fix, then its output says the living spec was not re-derived and names compass issue refresh-spec _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `finish-shows-a-failed-derive`
+- **Landed:** 2026-10-06

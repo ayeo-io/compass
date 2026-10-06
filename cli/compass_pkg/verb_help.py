@@ -137,3 +137,26 @@ def apply_descriptions(root):
 
     walk(root, [])
     return root
+
+
+def parse_command_line(root, raw):
+    """Parse `raw` with the built parser tree, reporting an unknown option
+    against the verb it was given to, with that verb's usage, rather than
+    the top level's. Each verb's parser records itself as the one to report
+    against; a deeper parser's default replaces its parent's, so the parsed
+    namespace names the verb that was actually run."""
+    import argparse
+
+    def mark(parser):
+        for action in parser._actions:
+            if isinstance(action, argparse._SubParsersAction):
+                for sub in set(action.choices.values()):
+                    sub.set_defaults(_usage_parser=sub)
+                    mark(sub)
+
+    mark(root)
+    args, extra = root.parse_known_args(raw)
+    if extra:
+        getattr(args, "_usage_parser", root).error(
+            "unrecognized arguments: " + " ".join(extra))
+    return args

@@ -1,0 +1,1225 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A project's one configuration file: its overlay on the shipped default and its settings (ADR-043). Generated from cli/compass_pkg/catalogue_spec.py; do not edit by hand.",
+  "properties": {
+    "adoption": {
+      "enum": [
+        "advisory",
+        "enforced"
+      ]
+    },
+    "allow_project_commands": {
+      "type": "boolean"
+    },
+    "approaches": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[A-Za-z][A-Za-z0-9._-]*$": {
+          "additionalProperties": false,
+          "properties": {
+            "artifacts": {
+              "type": "object"
+            },
+            "checkpoints": {
+              "type": "object"
+            },
+            "extends": {
+              "type": "string"
+            },
+            "gates": {
+              "oneOf": [
+                {
+                  "type": "array"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "add": {
+                      "type": "array"
+                    },
+                    "remove": {
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              ]
+            },
+            "locked": {
+              "enum": [
+                true,
+                "hard"
+              ]
+            },
+            "remove": {
+              "const": true
+            },
+            "replace": {
+              "const": true
+            },
+            "set": {
+              "additionalProperties": false,
+              "properties": {
+                "artifacts": {
+                  "type": "object"
+                },
+                "checkpoints": {
+                  "type": "object"
+                },
+                "extends": {
+                  "type": "string"
+                },
+                "gates": {
+                  "oneOf": [
+                    {
+                      "type": "array"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "add": {
+                          "type": "array"
+                        },
+                        "remove": {
+                          "type": "array"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  ]
+                },
+                "ships": {
+                  "type": "boolean"
+                },
+                "stages": {
+                  "type": "object"
+                },
+                "subtask_ceiling": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "weight": {
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            },
+            "ships": {
+              "type": "boolean"
+            },
+            "stages": {
+              "type": "object"
+            },
+            "subtask_ceiling": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "unlock": {
+              "const": true
+            },
+            "waiver": {
+              "type": "object"
+            },
+            "weight": {
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "approvers": {
+      "additionalProperties": false,
+      "properties": {
+        "issue-waiver": {
+          "type": "array"
+        },
+        "project-waiver": {
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "artifacts": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[A-Za-z][A-Za-z0-9._-]*$": {
+          "additionalProperties": false,
+          "properties": {
+            "bookkeeping": {
+              "type": "boolean"
+            },
+            "checks": {
+              "oneOf": [
+                {
+                  "type": "array"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "add": {
+                      "type": "array"
+                    },
+                    "remove": {
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              ]
+            },
+            "depends_on": {
+              "oneOf": [
+                {
+                  "type": "array"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "add": {
+                      "type": "array"
+                    },
+                    "remove": {
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              ]
+            },
+            "file": {
+              "type": "string"
+            },
+            "locked": {
+              "enum": [
+                true,
+                "hard"
+              ]
+            },
+            "remove": {
+              "const": true
+            },
+            "replace": {
+              "const": true
+            },
+            "set": {
+              "additionalProperties": false,
+              "properties": {
+                "bookkeeping": {
+                  "type": "boolean"
+                },
+                "checks": {
+                  "oneOf": [
+                    {
+                      "type": "array"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "add": {
+                          "type": "array"
+                        },
+                        "remove": {
+                          "type": "array"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  ]
+                },
+                "depends_on": {
+                  "oneOf": [
+                    {
+                      "type": "array"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "add": {
+                          "type": "array"
+                        },
+                        "remove": {
+                          "type": "array"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  ]
+                },
+                "file": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "unlock": {
+              "const": true
+            },
+            "waiver": {
+              "type": "object"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "autonomy": {
+      "enum": [
+        "controlled",
+        "balanced",
+        "autonomous"
+      ]
+    },
+    "capabilities": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact-freshness": {
+          "type": "boolean"
+        },
+        "entry-exit-evaluation": {
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "checks": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[A-Za-z][A-Za-z0-9._-]*$": {
+          "additionalProperties": false,
+          "properties": {
+            "accepts": {
+              "oneOf": [
+                {
+                  "type": "array"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "add": {
+                      "type": "array"
+                    },
+                    "remove": {
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              ]
+            },
+            "approvers": {
+              "oneOf": [
+                {
+                  "type": "array"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "add": {
+                      "type": "array"
+                    },
+                    "remove": {
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              ]
+            },
+            "blocking_when": {
+              "type": "object"
+            },
+            "impl": {
+              "type": "string"
+            },
+            "inputs": {
+              "oneOf": [
+                {
+                  "type": "array"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "add": {
+                      "type": "array"
+                    },
+                    "remove": {
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              ]
+            },
+            "kind": {
+              "enum": [
+                "deterministic",
+                "evidence",
+                "judged",
+                "human"
+              ]
+            },
+            "locked": {
+              "enum": [
+                true,
+                "hard"
+              ]
+            },
+            "on_skipped": {
+              "enum": [
+                "pass",
+                "not-applicable",
+                "fail"
+              ]
+            },
+            "params": {
+              "type": "object"
+            },
+            "remove": {
+              "const": true
+            },
+            "replace": {
+              "const": true
+            },
+            "requires": {
+              "oneOf": [
+                {
+                  "type": "array"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "add": {
+                      "type": "array"
+                    },
+                    "remove": {
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              ]
+            },
+            "reviewers": {
+              "oneOf": [
+                {
+                  "type": "array"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "add": {
+                      "type": "array"
+                    },
+                    "remove": {
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              ]
+            },
+            "set": {
+              "additionalProperties": false,
+              "properties": {
+                "accepts": {
+                  "oneOf": [
+                    {
+                      "type": "array"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "add": {
+                          "type": "array"
+                        },
+                        "remove": {
+                          "type": "array"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  ]
+                },
+                "approvers": {
+                  "oneOf": [
+                    {
+                      "type": "array"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "add": {
+                          "type": "array"
+                        },
+                        "remove": {
+                          "type": "array"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  ]
+                },
+                "blocking_when": {
+                  "type": "object"
+                },
+                "impl": {
+                  "type": "string"
+                },
+                "inputs": {
+                  "oneOf": [
+                    {
+                      "type": "array"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "add": {
+                          "type": "array"
+                        },
+                        "remove": {
+                          "type": "array"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  ]
+                },
+                "kind": {
+                  "enum": [
+                    "deterministic",
+                    "evidence",
+                    "judged",
+                    "human"
+                  ]
+                },
+                "locked": {
+                  "enum": [
+                    true,
+                    "hard"
+                  ]
+                },
+                "on_skipped": {
+                  "enum": [
+                    "pass",
+                    "not-applicable",
+                    "fail"
+                  ]
+                },
+                "params": {
+                  "type": "object"
+                },
+                "requires": {
+                  "oneOf": [
+                    {
+                      "type": "array"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "add": {
+                          "type": "array"
+                        },
+                        "remove": {
+                          "type": "array"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  ]
+                },
+                "reviewers": {
+                  "oneOf": [
+                    {
+                      "type": "array"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "add": {
+                          "type": "array"
+                        },
+                        "remove": {
+                          "type": "array"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  ]
+                },
+                "severity": {
+                  "enum": [
+                    "advisory",
+                    "blocking"
+                  ]
+                },
+                "statement": {
+                  "type": "string"
+                },
+                "when": {
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
+            "severity": {
+              "enum": [
+                "advisory",
+                "blocking"
+              ]
+            },
+            "statement": {
+              "type": "string"
+            },
+            "unlock": {
+              "const": true
+            },
+            "waiver": {
+              "type": "object"
+            },
+            "when": {
+              "type": "object"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "dimensions": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[A-Za-z][A-Za-z0-9._-]*$": {
+          "additionalProperties": false,
+          "properties": {
+            "common": {
+              "oneOf": [
+                {
+                  "type": "array"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "add": {
+                      "type": "array"
+                    },
+                    "remove": {
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              ]
+            },
+            "locked": {
+              "enum": [
+                true,
+                "hard"
+              ]
+            },
+            "open": {
+              "type": "boolean"
+            },
+            "remove": {
+              "const": true
+            },
+            "replace": {
+              "const": true
+            },
+            "required": {
+              "type": "boolean"
+            },
+            "set": {
+              "additionalProperties": false,
+              "properties": {
+                "common": {
+                  "oneOf": [
+                    {
+                      "type": "array"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "add": {
+                          "type": "array"
+                        },
+                        "remove": {
+                          "type": "array"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  ]
+                },
+                "open": {
+                  "type": "boolean"
+                },
+                "required": {
+                  "type": "boolean"
+                },
+                "tighter": {
+                  "enum": [
+                    "higher",
+                    "lower"
+                  ]
+                },
+                "type": {
+                  "enum": [
+                    "ordered-enum",
+                    "enum",
+                    "set"
+                  ]
+                },
+                "values": {
+                  "oneOf": [
+                    {
+                      "type": "array"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "add": {
+                          "type": "array"
+                        },
+                        "remove": {
+                          "type": "array"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  ]
+                }
+              },
+              "type": "object"
+            },
+            "tighter": {
+              "enum": [
+                "higher",
+                "lower"
+              ]
+            },
+            "type": {
+              "enum": [
+                "ordered-enum",
+                "enum",
+                "set"
+              ]
+            },
+            "unlock": {
+              "const": true
+            },
+            "values": {
+              "oneOf": [
+                {
+                  "type": "array"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "add": {
+                      "type": "array"
+                    },
+                    "remove": {
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              ]
+            },
+            "waiver": {
+              "type": "object"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "enforcement": {
+      "type": "object"
+    },
+    "extends": {
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "approved_by": {
+              "type": "string"
+            },
+            "approved_on": {
+              "type": "string"
+            },
+            "from": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "from"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "gates": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[A-Za-z][A-Za-z0-9._-]*$": {
+          "additionalProperties": false,
+          "properties": {
+            "accepts": {
+              "oneOf": [
+                {
+                  "type": "array"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "add": {
+                      "type": "array"
+                    },
+                    "remove": {
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              ]
+            },
+            "applies_to": {
+              "type": "object"
+            },
+            "checks": {
+              "oneOf": [
+                {
+                  "type": "array"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "add": {
+                      "type": "array"
+                    },
+                    "remove": {
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              ]
+            },
+            "kind": {
+              "enum": [
+                "review",
+                "guardrail"
+              ]
+            },
+            "locked": {
+              "enum": [
+                true,
+                "hard"
+              ]
+            },
+            "name": {
+              "type": "string"
+            },
+            "remove": {
+              "const": true
+            },
+            "replace": {
+              "const": true
+            },
+            "set": {
+              "additionalProperties": false,
+              "properties": {
+                "accepts": {
+                  "oneOf": [
+                    {
+                      "type": "array"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "add": {
+                          "type": "array"
+                        },
+                        "remove": {
+                          "type": "array"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  ]
+                },
+                "applies_to": {
+                  "type": "object"
+                },
+                "checks": {
+                  "oneOf": [
+                    {
+                      "type": "array"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "add": {
+                          "type": "array"
+                        },
+                        "remove": {
+                          "type": "array"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  ]
+                },
+                "kind": {
+                  "enum": [
+                    "review",
+                    "guardrail"
+                  ]
+                },
+                "locked": {
+                  "enum": [
+                    true,
+                    "hard"
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                },
+                "stage": {
+                  "type": "string"
+                },
+                "statement": {
+                  "type": "string"
+                },
+                "when": {
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
+            "stage": {
+              "type": "string"
+            },
+            "statement": {
+              "type": "string"
+            },
+            "unlock": {
+              "const": true
+            },
+            "waiver": {
+              "type": "object"
+            },
+            "when": {
+              "type": "object"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "multiagent": {
+      "type": "object"
+    },
+    "owner": {
+      "type": "string"
+    },
+    "preset": {
+      "type": "object"
+    },
+    "preset_index": {
+      "type": "string"
+    },
+    "prices": {
+      "type": "object"
+    },
+    "project": {
+      "type": "object"
+    },
+    "record": {
+      "type": "object"
+    },
+    "rules": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[A-Za-z][A-Za-z0-9._-]*$": {
+          "additionalProperties": false,
+          "properties": {
+            "hit": {
+              "type": "object"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "locked": {
+              "enum": [
+                true,
+                "hard"
+              ]
+            },
+            "remove": {
+              "const": true
+            },
+            "replace": {
+              "const": true
+            },
+            "rules": {
+              "type": "object"
+            },
+            "set": {
+              "additionalProperties": false,
+              "properties": {
+                "hit": {
+                  "type": "object"
+                },
+                "kind": {
+                  "type": "string"
+                },
+                "rules": {
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
+            "unlock": {
+              "const": true
+            },
+            "waiver": {
+              "type": "object"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "schema": {
+      "type": "integer"
+    },
+    "stages": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[A-Za-z][A-Za-z0-9._-]*$": {
+          "additionalProperties": false,
+          "properties": {
+            "entry": {
+              "oneOf": [
+                {
+                  "type": "array"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "add": {
+                      "type": "array"
+                    },
+                    "remove": {
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              ]
+            },
+            "exit": {
+              "oneOf": [
+                {
+                  "type": "array"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "add": {
+                      "type": "array"
+                    },
+                    "remove": {
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              ]
+            },
+            "locked": {
+              "enum": [
+                true,
+                "hard"
+              ]
+            },
+            "mode": {
+              "type": "string"
+            },
+            "modes": {
+              "type": "object"
+            },
+            "order": {
+              "type": "integer"
+            },
+            "remove": {
+              "const": true
+            },
+            "replace": {
+              "const": true
+            },
+            "set": {
+              "additionalProperties": false,
+              "properties": {
+                "entry": {
+                  "oneOf": [
+                    {
+                      "type": "array"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "add": {
+                          "type": "array"
+                        },
+                        "remove": {
+                          "type": "array"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  ]
+                },
+                "exit": {
+                  "oneOf": [
+                    {
+                      "type": "array"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "add": {
+                          "type": "array"
+                        },
+                        "remove": {
+                          "type": "array"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  ]
+                },
+                "mode": {
+                  "type": "string"
+                },
+                "modes": {
+                  "type": "object"
+                },
+                "order": {
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            },
+            "unlock": {
+              "const": true
+            },
+            "waiver": {
+              "type": "object"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "vocabulary": {
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[A-Za-z][A-Za-z0-9._-]*$": {
+          "additionalProperties": false,
+          "properties": {
+            "aliases": {
+              "oneOf": [
+                {
+                  "type": "array"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "add": {
+                      "type": "array"
+                    },
+                    "remove": {
+                      "type": "array"
+                    }
+                  },
+                  "type": "object"
+                }
+              ]
+            },
+            "locked": {
+              "enum": [
+                true,
+                "hard"
+              ]
+            },
+            "name": {
+              "type": "string"
+            },
+            "remove": {
+              "const": true
+            },
+            "replace": {
+              "const": true
+            },
+            "set": {
+              "additionalProperties": false,
+              "properties": {
+                "aliases": {
+                  "oneOf": [
+                    {
+                      "type": "array"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "add": {
+                          "type": "array"
+                        },
+                        "remove": {
+                          "type": "array"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  ]
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "unlock": {
+              "const": true
+            },
+            "waiver": {
+              "type": "object"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "title": "compass.yml",
+  "type": "object"
+}

@@ -32,6 +32,12 @@ def _git(root, *args, check=False):
 def refresh(root, base):
     """Merge `base` into the current branch, resolve only the derived spec,
     re-derive and commit. Returns the lines to print."""
+    # Outside git every later step fails, and "the base does not exist"
+    # would send the person to fetch a branch instead of to the real cause.
+    if _git(root, "rev-parse", "--git-dir").returncode != 0:
+        raise CompassError(
+            "compass issue refresh-spec: this project is not a git repository, "
+            "so there is no base branch to merge.")
     # A merge already under way is the person's: this command never takes
     # it over, and its `merge --abort` must never undo it.
     if _git(root, "rev-parse", "-q", "--verify", "MERGE_HEAD").returncode == 0:

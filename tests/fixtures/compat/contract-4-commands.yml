@@ -118,10 +118,12 @@ entries:
   argv: ["issue", "receipt"]
   exit: 0
   stdout_contains: "not yet landed"
+# Changed on purpose by cli-refusal-consistency: a missing issue is a
+# refusal, so it exits 2 like every other verb (was 1 at 5.6.0).
 - id: issue-receipt-unknown
   project: quick-fix-started
   argv: ["issue", "receipt", "--issue", "nope"]
-  exit: 1
+  exit: 2
 - id: issue-raised-by-known-parent
   project: regular-issue
   argv: ["issue", "raised-by", "greet", "--found-at", "review"]
@@ -314,10 +316,12 @@ entries:
   project: quick-fix-started
   argv: ["flow"]
   exit: 0
+# Changed on purpose by cli-refusal-consistency: outside a Compass project
+# flow refuses like every other verb (was 0 at 5.6.0).
 - id: flow-no-compass-folder
   project: empty
   argv: ["flow"]
-  exit: 0
+  exit: 2
 - id: next-quick-fix
   project: quick-fix-started
   argv: ["next"]

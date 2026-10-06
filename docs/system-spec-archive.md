@@ -11550,3 +11550,59 @@
 - **Intent:** `INT-1`
 - **Source issue:** `harness-read-only-bind-mount`
 - **Landed:** 2026-10-06
+
+### Given a quick fix whose manifest records a re-assessment, When quick-fix finish runs, Then the manifest's friction list holds the derived entry; with no signal, no friction key is written and no extra line is printed _(archived)_
+
+- **Scenario id:** `QF-1`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-finish-captures-friction`
+- **Landed:** 2026-10-06
+
+### Given the mutation runner, When --check names no register entry, Then it exits non-zero naming the id; and when a test stays green its output is shown _(archived)_
+
+- **Scenario id:** `MT-1`
+- **Intent:** `INT-1`
+- **Source issue:** `mutation-runner-tidy`
+- **Landed:** 2026-10-06
+
+### Given issues whose records carry a session id and that session's transcript, when `compass retro --compliance` runs, then each judge behaviour gets sessions, pass, fail, undecided, a pass rate over decided sessions and a 95% Wilson interval, and each failing session is named by issue id and tool-call index; `--json` prints the same; `--days N` and `--issue` narrow it. _(archived)_
+
+- **Scenario id:** `CS-1`
+- **Intent:** `INT-1`
+- **Source issue:** `session-compliance`
+- **Landed:** 2026-10-06
+
+### Given a transcript that no issue's records name, when the report runs, then it is counted as unmatched and never assigned to an issue by time or path. _(archived)_
+
+- **Scenario id:** `CS-2`
+- **Intent:** `INT-1`
+- **Source issue:** `session-compliance`
+- **Landed:** 2026-10-06
+
+### Given a transcript with tool calls, results and a hook refusal, when the adapter reads it, then it yields the run-record shape the judge reads (tool calls with name, input, output, error flag), and no other module reads the transcript format; a session that is not Claude Code is reported as `not-claude-code`. _(archived)_
+
+- **Scenario id:** `CS-3`
+- **Intent:** `INT-1`
+- **Source issue:** `session-compliance`
+- **Landed:** 2026-10-06
+
+### Given a session in which the pre-tool hook refused a write to a path and a later call writes that path through a shape the hook does not classify (for example `python3 script.py`), when it is scored, then `no_route_around` fails at that call's index; with no later write, it passes. _(archived)_
+
+- **Scenario id:** `CS-5`
+- **Intent:** `INT-1`
+- **Source issue:** `session-compliance`
+- **Landed:** 2026-10-06
+
+### Given a transcript seeded with a unique secret string, when the report runs in text and JSON, then the string appears in no output and no file the command writes. _(archived)_
+
+- **Scenario id:** `CS-6`
+- **Intent:** `INT-1`
+- **Source issue:** `session-compliance`
+- **Landed:** 2026-10-06
+
+### Given the report, then `compass check` does not read it and no gate depends on it. _(archived)_
+
+- **Scenario id:** `CS-9`
+- **Intent:** `INT-1`
+- **Source issue:** `session-compliance`
+- **Landed:** 2026-10-06

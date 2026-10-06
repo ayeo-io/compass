@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a quick fix whose manifest records a re-assessment, When quick-fix finish runs, Then the manifest's friction list holds the derived entry; with no signal, no friction key is written and no extra line is printed
+### Given a behaviour failing in three or more distinct issues in the window, when the report runs, then it writes a pending lesson with `source: compliance` naming the behaviour and the issues, and nothing takes effect until `compass lesson accept`.
 
-- **Scenario id:** `QF-1`
+- **Scenario id:** `CS-10`
 - **Intent:** `INT-1`
-- **Source issue:** `quick-fix-finish-captures-friction`
+- **Source issue:** `session-compliance`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1649 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1657 superseded scenario(s) are in `docs/system-spec-archive.md`.

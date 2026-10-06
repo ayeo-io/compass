@@ -59,7 +59,7 @@ EXPECTED_IDS = (
     "conflicting-instruction",
 )
 
-# The nine behaviour ids `evals/judge.py` scores, spelled exactly as it
+# The behaviour ids `evals/judge.py` scores, spelled exactly as it
 # names them. A scenario may name any of these; no scenario may name one
 # outside this set.
 KNOWN_BEHAVIOUR_IDS = frozenset({

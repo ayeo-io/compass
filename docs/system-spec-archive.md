@@ -11593,30 +11593,79 @@
 - **Source issue:** `living-spec-conflicts`
 - **Landed:** 2026-10-06
 
-### Given an issue, when the agent runs compass issue friction with a category, phase, an existing evidence path and a fix, then a source: agent entry is added; a fourth note, a repeated category and phase, a missing fix or an unknown evidence path is refused _(archived)_
+### Given issues whose records carry a session id and that session's transcript, when `compass retro --compliance` runs, then each judge behaviour gets sessions, pass, fail, undecided, a pass rate over decided sessions and a 95% Wilson interval, and each failing session is named by issue id and tool-call index; `--json` prints the same; `--days N` and `--issue` narrow it. _(archived)_
+
+- **Scenario id:** `CS-1`
+- **Intent:** `INT-1`
+- **Source issue:** `session-compliance`
+- **Landed:** 2026-10-06
+
+### Given a behaviour failing in three or more distinct issues in the window, when the report runs, then it writes a pending lesson with `source: compliance` naming the behaviour and the issues, and nothing takes effect until `compass lesson accept`. _(archived)_
+
+- **Scenario id:** `CS-10`
+- **Intent:** `INT-1`
+- **Source issue:** `session-compliance`
+- **Landed:** 2026-10-06
+
+### Given a transcript that no issue's records name, when the report runs, then it is counted as unmatched and never assigned to an issue by time or path. _(archived)_
+
+- **Scenario id:** `CS-2`
+- **Intent:** `INT-1`
+- **Source issue:** `session-compliance`
+- **Landed:** 2026-10-06
+
+### Given a transcript with tool calls, results and a hook refusal, when the adapter reads it, then it yields the run-record shape the judge reads (tool calls with name, input, output, error flag), and no other module reads the transcript format; a session that is not Claude Code is reported as `not-claude-code`. _(archived)_
+
+- **Scenario id:** `CS-3`
+- **Intent:** `INT-1`
+- **Source issue:** `session-compliance`
+- **Landed:** 2026-10-06
+
+### Given a session in which the pre-tool hook refused a write to a path and a later call writes that path through a shape the hook does not classify (for example `python3 script.py`), when it is scored, then the behaviour for writing around a hook refusal fails at that call's index; with no later write, it passes. _(archived)_
+
+- **Scenario id:** `CS-5`
+- **Intent:** `INT-1`
+- **Source issue:** `session-compliance`
+- **Landed:** 2026-10-06
+
+### Given a transcript seeded with a unique secret string, when the report runs in text and JSON, then the string appears in no output and no file the command writes. _(archived)_
+
+- **Scenario id:** `CS-6`
+- **Intent:** `INT-1`
+- **Source issue:** `session-compliance`
+- **Landed:** 2026-10-06
+
+### Given the report, then `compass check` does not read it and no gate depends on it. _(archived)_
+
+- **Scenario id:** `CS-9`
+- **Intent:** `INT-1`
+- **Source issue:** `session-compliance`
+- **Landed:** 2026-10-06
+
+### Given a branch already up to date with its base whose derived spec is stale, when compass issue refresh-spec runs, then it commits the re-derived spec with a message that names no merge _(archived)_
 
 - **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `agent-recorded-friction`
+- **Source issue:** `refresh-spec-message-when-up-to-date`
 - **Landed:** 2026-10-06
 
-### Given agent and person friction, when compass retro --friction runs, then agent entries are counted in their own column and never merged with person or derived entries _(archived)_
+### Each structural decision of the configuration foundation is a proposed ADR with a rejected alternative, listed in the index _(archived)_
 
-- **Scenario id:** `TRC-002`
+- **Scenario id:** `DR-1`
 - **Intent:** `INT-1`
-- **Source issue:** `agent-recorded-friction`
+- **Source issue:** `configuration-decision-records`
 - **Landed:** 2026-10-06
 
-### Given the same friction in three issues from agent notes only, when lessons are proposed, then none is proposed; with one person entry for it, one is _(archived)_
+### Each product decision of 5 and 6 October 2026 for the configurable framework has a ledger entry _(archived)_
 
-- **Scenario id:** `TRC-003`
+- **Scenario id:** `DR-2`
 - **Intent:** `INT-1`
-- **Source issue:** `agent-recorded-friction`
+- **Source issue:** `configuration-decision-records`
 - **Landed:** 2026-10-06
 
-### Given a note about a guardrail-backed step, when it is recorded, then it is accepted, reported as guardrail, not changeable by friction, and never counts toward a lesson or a recurring cluster _(archived)_
+### No record cites a private planning path or names a rival product _(archived)_
 
-- **Scenario id:** `TRC-004`
+- **Scenario id:** `DR-3`
 - **Intent:** `INT-1`
-- **Source issue:** `agent-recorded-friction`
+- **Source issue:** `configuration-decision-records`
 - **Landed:** 2026-10-06

@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the instruction to record agent friction, then it adds at most 40 words to resident context and resident context stays under its ceiling
+### The vocabulary amendment names the approaches catalogue, the adoption setting and every new term
 
-- **Scenario id:** `TRC-005`
+- **Scenario id:** `DR-4`
 - **Intent:** `INT-1`
-- **Source issue:** `agent-recorded-friction`
+- **Source issue:** `configuration-decision-records`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1659 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1666 superseded scenario(s) are in `docs/system-spec-archive.md`.

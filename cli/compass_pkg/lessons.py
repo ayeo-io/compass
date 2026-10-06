@@ -36,7 +36,7 @@ PENDING = "lessons-pending.yml"
 LESSONS_CAP = 150
 CATEGORIES = ("tool", "process", "repo")
 APPLIES = ("always", "on_topic")
-SOURCES = ("human", "friction", "verify")
+SOURCES = ("human", "friction", "verify", "compliance")
 
 # A model id goes stale and pins a choice that is not the project's to make.
 _MODEL = re.compile(r"\b(?:claude-[\w.-]+|gpt-[\w.-]+|sonnet|opus|haiku)\b", re.I)
@@ -283,6 +283,24 @@ def render_block(compass_dir):
                      f"{len(items) - len(shown)} omitted to stay within {LESSONS_CAP} words. "
                      f"Run compass lesson list to see them all.)")
     return "\n".join(lines)
+
+
+def propose_pending(rule, source, issues):
+    """Add one pending proposal unless it is already a lesson, pending,
+    removed or declined, or the refusal rules turn it away. Returns the new
+    entry or None. Nothing takes effect until `compass lesson accept`."""
+    lessons, pending = _load(LESSONS), _load(PENDING)
+    known = {_norm(l["rule"]) for l in lessons + pending}
+    known |= {_norm(t) for t in _read(LESSONS).get("removed") or [] if isinstance(t, str)}
+    known |= {_norm(t) for t in _read(PENDING).get("declined") or [] if isinstance(t, str)}
+    if _norm(rule) in known or _refusal(rule, source):
+        return None
+    entry = {"id": _next_id("LP-", PENDING), "rule": rule, "category": "process",
+             "applies": "always", "source": source, "issue": sorted(issues)[0],
+             "created": datetime.date.today().isoformat()}
+    pending.append(entry)
+    _save(PENDING, pending)
+    return entry
 
 
 def propose_from_friction(work_dir, min_issues=3):

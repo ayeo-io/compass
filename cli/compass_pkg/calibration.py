@@ -581,6 +581,9 @@ def cmd_calibration(args):
     if getattr(args, "lessons", False):
         from compass_pkg.lessons import cmd_retro_lessons
         return cmd_retro_lessons(args)
+    if getattr(args, "compliance", False):
+        from compass_pkg.compliance import cmd_retro_compliance
+        return cmd_retro_compliance(args)
     if getattr(args, "lineage", False):
         from compass_pkg.lineage import cmd_retro_lineage
         return cmd_retro_lineage(args)

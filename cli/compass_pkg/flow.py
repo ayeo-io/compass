@@ -424,11 +424,9 @@ def cmd_flow(args):
 
     # Resolve the work root
     if work_root is None:
-        try:
-            compass_dir = find_compass_dir()
-            work_root = os.path.join(compass_dir, "work")
-        except CompassError:
-            work_root = ".compass/work"
+        # Outside a Compass project this refuses, as every other verb does;
+        # `--work-root` still reads any folder of issues.
+        work_root = os.path.join(find_compass_dir(), "work")
 
     html_out = getattr(args, "html", None)
     if html_out:

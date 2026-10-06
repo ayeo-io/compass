@@ -32,7 +32,8 @@ import re as _re
 
 import fnmatch
 import re as _re
-from compass_pkg.core import artifact_path, load_yaml, manifest_path, normalize_spine, resolve_issue_dir
+from compass_pkg.core import (CompassError, artifact_path, load_yaml, manifest_path,
+                              normalize_spine, resolve_issue_dir)
 
 # --- command: next -----------------------------------------------------------
 # `compass next` reads manifest.yml + delivery-approach.md and prints ONE
@@ -298,23 +299,22 @@ def cmd_next(args):
 
     # --- manifest.yml: must exist (assess check) ---
     task_path = manifest_path(task_dir)
+    # Each refusal goes to stderr with paths from the project root, as every
+    # other verb's refusal does.
     if not os.path.isfile(task_path):
-        sys.stdout.write(
-            "Assess has not run for this issue - manifest.yml is missing.\n"
-            f"  Run /compass:assess to start the issue at: {task_dir}\n"
-        )
-        return 2
+        raise CompassError(
+            "assess has not run for this issue - manifest.yml is missing.\n"
+            f"  Run /compass:assess to start the issue at: {task_dir}")
 
     task = _typed(normalize_spine(load_yaml(task_path)))
 
     # --- delivery-approach.md: must exist ---
     route_md_path = artifact_path(task_dir, "delivery-approach.md")
     if not os.path.isfile(route_md_path):
-        sys.stdout.write(
+        raise CompassError(
             f"delivery-approach.md is missing from {task_dir}\n"
-            "  Run /compass:assess to produce delivery-approach.md before using compass next.\n"
-        )
-        return 2
+            "  Run /compass:assess to produce delivery-approach.md before using "
+            "compass next.")
 
     # --- completed issue ---
     # Passed gates alone do not finish it: ship still runs, and a landed

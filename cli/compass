@@ -664,8 +664,9 @@ def build_parser():
 def main(argv=None):
     raw = list(sys.argv[1:]) if argv is None else list(argv)
     # A retired v1 verb is an unrecognised verb, and argparse reports it
-    # (ADR-014).
-    args = build_parser().parse_args(raw)
+    # (ADR-014). An unknown option is reported against its own verb.
+    from compass_pkg.verb_help import parse_command_line
+    args = parse_command_line(build_parser(), raw)
     # tdd-red/green: strip a leading "--" that argparse REMAINDER keeps
     if getattr(args, "command", None) and args.command and args.command[0] == "--":
         args.command = args.command[1:]

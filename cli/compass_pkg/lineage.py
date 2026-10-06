@@ -30,9 +30,11 @@ def _work(compass_dir):
     return os.path.join(compass_dir, "work")
 
 
-def check(compass_dir, parent, found_at):
+def check(compass_dir, parent, found_at, named="--raised-by"):
     """Refuse a parent with no issue folder or a place not in FOUND_AT, before
-    anything is written."""
+    anything is written. `named` is how the person gave the parent - a flag
+    on `quick-fix start`, the first argument of `issue raised-by` - so the
+    refusal names what they typed."""
     if (parent is None) != (found_at is None):
         raise CompassError(
             "give --raised-by and --found-at together: the parent issue and "
@@ -43,18 +45,18 @@ def check(compass_dir, parent, found_at):
         raise CompassError(
             f"--found-at '{found_at}' is not a place an issue is found; use "
             f"one of {', '.join(FOUND_AT)}.")
-    _one_segment(parent, "--raised-by")
+    _one_segment(parent, named)
     if not os.path.isfile(manifest_path(os.path.join(_work(compass_dir), parent))):
         raise CompassError(
-            f"--raised-by '{parent}' names no issue in this project "
+            f"{named} '{parent}' names no issue in this project "
             f"(no .compass/work/{parent}/manifest.yml).")
 
 
-def record(compass_dir, task_dir, parent, found_at):
+def record(compass_dir, task_dir, parent, found_at, named="--raised-by"):
     """Write `raised_by` to the issue's manifest. Return the value it
     replaced, so a correction is shown, and the line for the third issue in
     a chain, or None."""
-    check(compass_dir, parent, found_at)
+    check(compass_dir, parent, found_at, named)
     if parent == os.path.basename(task_dir):
         raise CompassError(
             f"'{parent}' cannot be raised from itself; name the issue it was "
@@ -149,7 +151,8 @@ def cmd_retro_lineage(args):
 def cmd_issue_raised_by(args):
     compass_dir = find_compass_dir()
     task_dir = resolve_issue_dir(getattr(args, "task", None))
-    earlier, said = record(compass_dir, task_dir, args.parent, args.found_at)
+    earlier, said = record(compass_dir, task_dir, args.parent, args.found_at,
+                           named="the parent issue")
     print(f"compass issue raised-by: '{os.path.basename(task_dir)}' was raised "
           f"from '{args.parent}' at {args.found_at}.")
     if isinstance(earlier, dict):

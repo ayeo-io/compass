@@ -283,8 +283,9 @@ assessment_vocabulary:
 # -----------------------------------------------------------------------------
 # Autonomy checkpoints - which stage hand-offs wait for a person. A checkpoint
 # is a hand-off where the session stops: assess step 7 (confirm the approach)
-# and the define, refine and plan hand-offs. `.compass/config.yml` sets
-# `autonomy:` (default balanced); the evaluator looks up the route here and
+# and the define, refine and plan hand-offs. `autonomy:` in `compass.yml`
+# (or `.compass/config.yml` in a project without one) sets it, default
+# balanced; the evaluator looks up the route here and
 # writes the result to the manifest as `checkpoints:`. A stage the route
 # collapses or skips has no hand-off, so it never waits whatever this says.
 # Only the four checkpoint stages can be named: the setting never changes a

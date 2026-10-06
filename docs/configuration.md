@@ -2,7 +2,8 @@
 
 A project's settings: what each one does, its values, its default and which
 file holds it. The Python reader is `cli/compass_pkg/project_settings.py`
-(ADR-043).
+(ADR-043). The pre-tool hook and the two multiagent scripts call it too, so
+every reader of a setting follows the same file.
 
 ## Where the settings live
 
@@ -14,8 +15,10 @@ file holds it. The Python reader is `cli/compass_pkg/project_settings.py`
   `adoption`.
 - **The state file in `.compass/`** holds what the CLI writes, not what a
   person edits: `initialised` (what created the project, and when) and
-  `records_signed_since`. Do not edit it. A project created before ADR-043
-  keeps both values in `.compass/config.yml`, and the CLI reads them there.
+  `records_signed_since`. Do not edit it. `compass init` writes this file and
+  no other. A project created before ADR-043 keeps both values in
+  `.compass/config.yml`, and the CLI and the hook read them there. `init` adds
+  nothing to such a project.
 
 A missing file means every default below. A file the CLI cannot read, or a
 duplicate key in `compass.yml`, is a broken file. Each command then does what
@@ -82,7 +85,26 @@ changed how often a session stops would give no sign.
 `code_globs` is a list of path patterns the pre-tool hook treats as code, in
 addition to its own rules. A string instead of a list, or an unreadable file,
 makes the hook refuse the edit, because it cannot tell whether the path is
-guarded.
+guarded. The refusal (`config-invalid` in `docs/refusal-codes.md`) names the
+file the hook read, `compass.yml` or `.compass/config.yml`.
+
+The hook reads this setting for an edit to a path that its built-in rules
+neither guard nor exempt, and only when the project has a settings file. A
+project with neither file costs the hook no Python start for that edit. It
+reads `initialised` only when it is about to refuse an edit, to say who
+initialised the project.
+
+### `multiagent`
+
+`scripts/multiagent.sh` reads `worktree_root` and `max_worktrees`, and
+`scripts/integrate.sh` reads `worktree_root` and `test_command` (under
+`project`). In `compass.yml` they read `multiagent.worktree_root`,
+`multiagent.max_worktrees` and `project.test_command` only, so a key of the
+same name elsewhere is ignored. In `.compass/config.yml` they find a key by
+its name at any depth, so a key under `multiagent:`, under an older heading or
+at the top level all work. A missing key gives the default. A file the scripts
+cannot read stops them with exit 1 and a message naming the file, because a
+default would give a silent worktree cap or skip the combined regression run.
 
 ### `record`
 

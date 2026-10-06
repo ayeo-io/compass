@@ -104,7 +104,7 @@ it after.**
   untouched behaviour: it catches a high-consequence break in code you did
   not mean to change.
 - The designated suite is a project setting -
-  `project.regression_baseline_suite` in `.compass/config.yml`, falling back to
+  `project.regression_baseline_suite` in `compass.yml` (or `.compass/config.yml` without one), falling back to
   `project.test_command`.
 - The implement stage prompts for the baseline up front, not as an afterthought.
   `compass approach evaluate` surfaces it under `applicable_strategies` when

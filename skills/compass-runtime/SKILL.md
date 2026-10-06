@@ -105,7 +105,7 @@ is no worktree - work on the current branch.
 ```
 .compass/
 ├── state.yml                   What the CLI wrote: what initialised the project, and when
-├── config.yml                  Project config (settings now go in compass.yml at the project root)
+├── config.yml                  Old projects only: settings go in compass.yml at the project root, and init does not write this file
 ├── current-task                One-line pointer to the active issue
 ├── work/
 │   └── <issue-slug>/            One directory per issue

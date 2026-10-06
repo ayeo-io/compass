@@ -83,7 +83,6 @@ done
 [ -n "$TASK_SLUG" ] || { echo "integrate.sh: need an issue slug. See --help." >&2; exit 1; }
 
 TASK_DIR="$PROJECT_DIR/.compass/work/$TASK_SLUG"
-CONFIG="$PROJECT_DIR/.compass/config.yml"
 
 # The map is found through the artifact registry, so an issue whose
 # documents moved to docs/compass/<created>-<slug>/ still resolves, and an
@@ -106,13 +105,7 @@ fi
 BASE_BRANCH="$(git -C "$PROJECT_DIR" rev-parse --abbrev-ref HEAD)"
 
 # --- config: worktree_root --------------------------------------------------
-read_cfg() {
-  local v=""
-  [ -f "$CONFIG" ] && v="$(grep -E "^[[:space:]]*$1:" "$CONFIG" 2>/dev/null \
-      | head -n1 | sed -E 's/^[^:]*:[[:space:]]*//; s/[[:space:]]*#.*$//; s/^"//; s/"$//')"
-  echo "${v:-$2}"
-}
-WORKTREE_ROOT_REL="$(read_cfg 'worktree_root' '../.compass-worktrees')"
+WORKTREE_ROOT_REL="$(compass_setting "$PROJECT_DIR" worktree_root '../.compass-worktrees')"
 case "$WORKTREE_ROOT_REL" in
   /*) WORKTREE_ROOT="$WORKTREE_ROOT_REL" ;;
   *)  WORKTREE_ROOT="$PROJECT_DIR/$WORKTREE_ROOT_REL" ;;
@@ -180,7 +173,7 @@ if [ "${#SUBTASKS[@]}" -eq 0 ]; then
 fi
 
 # --- discover the project test command (for combined regression) ------------
-TEST_CMD="$(read_cfg 'test_command' '')"
+TEST_CMD="$(compass_setting "$PROJECT_DIR" test_command '')"
 if [ -z "$TEST_CMD" ] && [ -f "$PROJECT_DIR/package.json" ] \
    && grep -q '"test"' "$PROJECT_DIR/package.json" 2>/dev/null; then
   TEST_CMD="npm test"
@@ -407,7 +400,7 @@ if [ -n "$TEST_CMD" ]; then
     exit 1
   fi
 else
-  echo "No test command resolved (set 'test_command:' in .compass/config.yml)."
+  echo "No test command resolved (set 'test_command:' under 'project:' in compass.yml)."
   echo "No regression ran. Run the combined regression by hand before /compass:verify -"
   echo "per-subtask green does not imply integrated green."
 fi

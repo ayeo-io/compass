@@ -1,6 +1,6 @@
 """`compass init` - the verb that makes a directory a Compass project.
 
-`compass init` creates `.compass/config.yml` and `.compass/work/` and is
+`compass init` creates the state file in `.compass/` and `.compass/work/` and is
 safe to run twice. The five entry points call it.
 
 Scenario ids: IOI-A1, IOI-A2 in
@@ -36,8 +36,8 @@ def test_ioi_a1_the_init_verb_creates_a_project(tmp_path):
     out = run.stdout + run.stderr
 
     assert run.returncode == 0, f"compass init failed:\n{out}"
-    assert (root / ".compass" / "config.yml").is_file(), (
-        f"init did not write .compass/config.yml:\n{out}")
+    assert (root / ".compass" / "state.yml").is_file(), (
+        f"init did not write .compass/state.yml:\n{out}")
     assert (root / ".compass" / "work").is_dir(), (
         f"init did not create .compass/work/:\n{out}")
     assert str(root) in out or root.name in out, (
@@ -65,14 +65,14 @@ def test_ioi_a1b_the_config_it_writes_is_readable(tmp_path):
 def test_ioi_a2_init_is_safe_to_run_twice(tmp_path):
     """The property that lets every entry point call it without checking.
 
-    If a second run overwrote config.yml, an entry point calling init
-    unconditionally would silently discard the project's test command.
+    If a second run overwrote the state file, an entry point calling init
+    unconditionally would silently discard the project's signed-record cutoff.
     """
     root = (tmp_path / "fresh").resolve()
     root.mkdir()
     _init(root)
 
-    config = root / ".compass" / "config.yml"
+    config = root / ".compass" / "state.yml"
     edited = config.read_text(encoding="utf-8") + "\n# edited by the project\n"
     config.write_text(edited, encoding="utf-8")
     issue = root / ".compass" / "work" / "an-issue"
@@ -149,9 +149,8 @@ def test_ioi_c2_init_creates_no_governance_directory(tmp_path):
         "slash command's job, after a conversation, not something five "
         "commands do on a user's behalf")
     entries = {p.name for p in (root / ".compass").iterdir()}
-    # state.yml holds what init writes (ADR-043); config.yml is the hook's copy
-    # of `initialised` until the hook reads state.yml.
-    assert entries == {"config.yml", "state.yml", "work"}, (
+    # state.yml holds what init writes (ADR-043), and nothing else is written.
+    assert entries == {"state.yml", "work"}, (
         f"init created more than the project state it promises: {sorted(entries)}")
 
 

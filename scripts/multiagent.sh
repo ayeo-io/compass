@@ -26,8 +26,10 @@
 #   the next wave is named. A map with no Wave column ignores waves.
 #
 # WHAT IT RESPECTS
-#   - .compass/config.yml  multiagent.worktree_root   (default ../.compass-worktrees)
-#   - .compass/config.yml  multiagent.max_worktrees   (default 6) - hard ceiling
+#   - compass.yml  multiagent.worktree_root   (default ../.compass-worktrees)
+#   - compass.yml  multiagent.max_worktrees   (default 6) - hard ceiling
+#     Both are read through compass_setting, which falls back to the settings
+#     file of a project that has no compass.yml.
 #   - the cap in manifest.yml: critical risk (assessment.risk) or a fired
 #     RP-CAP-001 rule gives max_worktrees 1.
 #     If the cap is below the subtask count, the cap WINS and multiagent.sh refuses to
@@ -105,7 +107,6 @@ done
 
 TASK_DIR="$PROJECT_DIR/.compass/work/$TASK_SLUG"
 TASK_YML="$TASK_DIR/manifest.yml"
-CONFIG="$PROJECT_DIR/.compass/config.yml"
 
 # The map and the approach record are found through the artifact registry,
 # so an issue whose documents moved to docs/compass/<created>-<slug>/ still
@@ -152,15 +153,8 @@ fi
 [ -f "$TASK_YML" ] || { echo "multiagent.sh: no manifest.yml for issue '$TASK_SLUG' - the worktree cap is read from structured assessment, not delivery-approach.md prose. Run /compass:assess." >&2; exit 1; }
 
 # --- config: worktree_root + max_worktrees ----------------------------------
-# Minimal YAML reads - these keys are simple scalars in .compass/config.yml.
-read_cfg() { # key default
-  local v=""
-  [ -f "$CONFIG" ] && v="$(grep -E "^[[:space:]]*$1:" "$CONFIG" 2>/dev/null \
-      | head -n1 | sed -E 's/^[^:]*:[[:space:]]*//; s/[[:space:]]*#.*$//; s/^"//; s/"$//')"
-  echo "${v:-$2}"
-}
-WORKTREE_ROOT_REL="$(read_cfg 'worktree_root' '../.compass-worktrees')"
-MAX_WORKTREES="$(read_cfg 'max_worktrees' '6')"
+WORKTREE_ROOT_REL="$(compass_setting "$PROJECT_DIR" worktree_root '../.compass-worktrees')"
+MAX_WORKTREES="$(compass_setting "$PROJECT_DIR" max_worktrees '6')"
 
 # worktree_root is relative to the project root.
 case "$WORKTREE_ROOT_REL" in

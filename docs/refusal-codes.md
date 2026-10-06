@@ -26,8 +26,8 @@ code from a refusal you hit.
 ### `config-invalid`
 
 **Blocked:** edit to {target} (tool: {tool})
-**Why:** '.compass/config.yml' could not be read: {detail}
-**Fix:** fix .compass/config.yml and retry.
+**Why:** '{file}' could not be read: {detail}
+**Fix:** fix {file} and retry.
 
 ### `no-acceptance-criteria`
 

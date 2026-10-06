@@ -99,6 +99,17 @@ else
   }
 fi
 
+# Whether the project has a settings file, so the code_globs reader below
+# starts Python only when there is one to read. A missing helper answers yes:
+# the reader then runs, and a reader that cannot run refuses, so a broken
+# install never turns "unknown" into "not guarded".
+SETTINGS_FILES_SH="$HOOK_ROOT/scripts/lib/settings-files.sh"
+if [ -f "$SETTINGS_FILES_SH" ]; then
+  source "$SETTINGS_FILES_SH"
+else
+  compass_has_settings_file() { return 0; }
+fi
+
 # --- one registry, one shape, for every refusal ------------------------------
 # cli/compass_pkg/refusals.py is the one place a refusal's wording lives
 # (spec D38); `compass _refusal <code> key=value ...` is the CLI command
@@ -191,7 +202,7 @@ PYEOF
 # the issue when the install is broken sends the user to the wrong fix. Every
 # Python reader below calls this on any non-zero status.
 compass_reader_failed() {
-  local reader="$1" status="$2" errfile="${3:-}" fix_override="${4:-}"
+  local reader="$1" status="$2" errfile="${3:-}" settings_name="${4:-}"
   local target="${TARGET:-${candidate:-?}}" tool="${TOOL:-?}" errline=""
   if [ -n "$errfile" ] && [ -s "$errfile" ]; then
     errline="$(sed -n '1p' "$errfile")"
@@ -207,8 +218,11 @@ compass_reader_failed() {
     # render("python-missing", target=..., tool=...). Kept in step by
     # tests/test_refusal_registry.py::test_rtp_3_no_python3_names_python_missing_and_matches_the_registry.
     printf 'Blocked: edit to %s (tool: %s)\nWhy: python3 was not found on the PATH, so Compass cannot check whether this edit is allowed.\nFix: install python3 (3.10+) or put it on PATH, then retry. [python-missing]\n' "$target" "$tool" >&2
-  elif [ -n "$fix_override" ]; then
-    emit_refusal config-invalid "target=$target" "tool=$tool" "detail=$errline"
+  elif [ -n "$settings_name" ]; then
+    # A settings file the reader found but could not use. `file` is the one
+    # project_settings read, so the refusal never names a file that was not.
+    emit_refusal config-invalid "target=$target" "tool=$tool" \
+      "file=$settings_name" "detail=$errline"
   else
     emit_refusal reader-failed "target=$target" "tool=$tool" "reader=$reader" \
       "cause=It exited $status." "detail=${errline:+ ($errline)}"
@@ -449,7 +463,9 @@ is_enforced_path() {
     return 0
   fi
 
-  # (d) the project's own declaration. `.compass/config.yml`:
+  # (d) the project's own declaration, in the project's settings file
+  # (`compass.yml`, or `.compass/config.yml` for a project that has not moved
+  # its settings):
   #
   #     enforcement:
   #       code_globs: ["*.sh", "packaging/**"]
@@ -463,8 +479,14 @@ is_enforced_path() {
   # Why this exists: without a declared list an author cannot predict which
   # edit will block (`.github/workflows/ci.yml` is guarded, `docker-compose.yml`
   # is not).
-  if [ -f "$PROJECT_DIR/.compass/config.yml" ]; then
-    local hit glob_status glob_err
+  #
+  # Which file holds the declaration, and how it is read, is
+  # project_settings's question, not this hook's. The hook only asks whether a
+  # settings file exists, through the one helper that names them, so a project
+  # with none costs no Python start on an edit to a path the sets above
+  # neither guard nor exempt.
+  if [ -d "$PROJECT_DIR/.compass" ] && compass_has_settings_file "$PROJECT_DIR"; then
+    local hit glob_status glob_err glob_out settings_name
     # A reader that ran and matched nothing means the path is not
     # project-guarded. A reader that could not run - no python3, a broken
     # install, or a config it cannot parse - means we do not know whether it
@@ -473,13 +495,16 @@ is_enforced_path() {
     glob_err="$(mktemp 2>/dev/null)" \
       || compass_reader_failed "enforcement.code_globs reader" tmp
     set +e
-    hit="$(compass_python - "$PROJECT_DIR/.compass/config.yml" "$rel" 2>"$glob_err" <<'PYEOF'
+    # The reader prints the settings file it read on its first line, before
+    # it can fail, so a refusal can name that file; a match follows on the
+    # second line.
+    glob_out="$(compass_python - "$PROJECT_DIR" "$rel" 2>"$glob_err" <<'PYEOF'
 import fnmatch, sys
 import compass_pkg
+from compass_pkg import project_settings
+print(project_settings.settings_file(sys.argv[1]))
 try:
-    import yaml
-    with open(sys.argv[1], encoding="utf-8") as fh:
-        cfg = yaml.safe_load(fh) or {}
+    cfg = project_settings.settings(sys.argv[1])
     globs = ((cfg.get("enforcement") or {}).get("code_globs")) or []
     # A string would be walked one character at a time, and `*` alone
     # guards every path. Any other shape is a config this cannot read.
@@ -487,8 +512,9 @@ try:
         raise ValueError("enforcement.code_globs must be a list of strings, "
                          "not %r" % (globs,))
 except Exception as exc:            # unreadable config -> cannot answer
-    print("could not read enforcement.code_globs from .compass/config.yml: "
-          "%s" % exc, file=sys.stderr)
+    # The refusal already says which file could not be read, so this is the
+    # reason alone.
+    print(exc, file=sys.stderr)
     sys.exit(4)
 path = sys.argv[2]
 for g in globs:
@@ -500,15 +526,17 @@ PYEOF
 )"
     glob_status=$?
     set -e
+    settings_name="$(printf '%s\n' "$glob_out" | sed -n '1p')"
+    hit="$(printf '%s\n' "$glob_out" | sed -n '2p')"
     if [ "$glob_status" -eq 4 ]; then
       compass_reader_failed "enforcement.code_globs reader" "$glob_status" \
-        "$glob_err" "Fix .compass/config.yml and retry."
+        "$glob_err" "$settings_name"
     elif [ "$glob_status" -ne 0 ]; then
       compass_reader_failed "enforcement.code_globs reader" "$glob_status" "$glob_err"
     fi
     rm -f "$glob_err"
     if [ -n "${hit:-}" ]; then
-      MATCHED_RULE="enforcement.code_globs pattern '$hit' in .compass/config.yml"
+      MATCHED_RULE="enforcement.code_globs pattern '$hit' in $settings_name"
       return 0
     fi
   fi
@@ -641,16 +669,29 @@ fi
 
 
 # Say when and how this project opted into Compass, if the record is there.
-# `compass init` writes `initialised: {by, at}` into .compass/config.yml. A
-# user whose project was initialised by an entry point never ran init
-# themselves, so an unexplained refusal is their first sight of Compass.
+# `compass init` writes `initialised: {by, at}` into the project's state file,
+# which project_settings.state reads. A user whose project was initialised by
+# an entry point never ran init themselves, so an unexplained refusal is their
+# first sight of Compass.
 compass_say_how_this_project_opted_in() {
-  _cfg="$COMPASS_DIR/config.yml"
-  [ -f "$_cfg" ] || return 0
-  # `|| true`: this only adds a sentence to a refusal already on its way. An
-  # unreadable config must not end the script under pipefail with exit 1.
-  _by="$(sed -n 's/^  by: *"\{0,1\}\([^"]*\)"\{0,1\} *$/\1/p' "$_cfg" 2>/dev/null | head -1 || true)"
-  _at="$(sed -n 's/^  at: *"\{0,1\}\([^"]*\)"\{0,1\} *$/\1/p' "$_cfg" 2>/dev/null | head -1 || true)"
+  # `|| return 0`: this only adds a sentence to a refusal already on its way.
+  # A record that is missing, unreadable or the wrong shape adds nothing, and
+  # a Python that cannot run must not end the script under `set -e`.
+  _rec="$(compass_python - "$PROJECT_DIR" 2>/dev/null <<'PYEOF'
+import sys
+import compass_pkg
+from compass_pkg import project_settings
+try:
+    rec = project_settings.state(sys.argv[1]).get("initialised")
+except Exception:
+    sys.exit(0)
+if isinstance(rec, dict) and rec.get("by"):
+    print(" ".join(str(rec["by"]).split()))
+    print(" ".join(str(rec.get("at") or "").split()))
+PYEOF
+)" || return 0
+  _by="$(printf '%s\n' "$_rec" | sed -n '1p')"
+  _at="$(printf '%s\n' "$_rec" | sed -n '2p')"
   [ -n "$_by" ] || return 0
   if [ -n "$_at" ]; then
     echo "  This project was initialised by $_by on $_at, which is when it opted into Compass." >&2

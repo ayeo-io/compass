@@ -50,19 +50,6 @@ initialised:
 records_signed_since: '{at}'
 """
 
-# The pre-tool hook still reads `initialised` from `.compass/config.yml`
-# with sed. Until it reads the state file in `.compass/`, init also writes
-# that one block there, so the hook's first refusal keeps explaining where
-# Compass came from. It holds no setting.
-HOOK_INITIALISED_TEMPLATE = """\
-# Compass - read by the pre-tool hook until it reads the state file in
-# .compass/. Holds no setting. Settings go in compass.yml; see
-# docs/configuration.md in the Compass documentation.
-initialised:
-  by: "{by}"
-  at: "{at}"
-"""
-
 
 def resolve_project_root():
     """Where a project would be, for a verb that runs before one exists.
@@ -107,19 +94,18 @@ def ensure_initialised(project_root, by="compass init"):
     compass_dir = os.path.join(project_root, ".compass")
     work_dir = os.path.join(compass_dir, "work")
     state = os.path.join(project_root, project_settings.STATE_YML)
-    hook_copy = os.path.join(project_root, project_settings.OLD_CONFIG)
+    old_config = os.path.join(project_root, project_settings.OLD_CONFIG)
 
     created = not os.path.isdir(compass_dir)
 
     os.makedirs(work_dir, exist_ok=True)
     stamp = datetime.date.today().isoformat()
-    # A project from before ADR-043 has the values in config.yml already, so
-    # init adds neither file to it.
-    if not os.path.exists(state) and not os.path.exists(hook_copy):
+    # A project from before ADR-043 has the values in its old settings file
+    # already, which `project_settings.state` still reads, so init adds
+    # nothing to it.
+    if not os.path.exists(state) and not os.path.exists(old_config):
         with open(state, "w", encoding="utf-8") as fh:
             fh.write(STATE_TEMPLATE.format(by=by, at=stamp))
-        with open(hook_copy, "w", encoding="utf-8") as fh:
-            fh.write(HOOK_INITIALISED_TEMPLATE.format(by=by, at=stamp))
 
     return created, compass_dir
 

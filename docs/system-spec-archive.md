@@ -11529,3 +11529,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `approach-diagram`
 - **Landed:** 2026-10-06
+
+### Given `docs/approach-diagram.html`, when the suite runs, then a test fails when it differs from a fresh render of the shipped policy under `balanced`, and two renders are byte-identical. _(archived)_
+
+- **Scenario id:** `RD-6`
+- **Intent:** `INT-1`
+- **Source issue:** `approach-diagram`
+- **Landed:** 2026-10-06

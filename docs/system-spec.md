@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given `docs/approach-diagram.html`, when the suite runs, then a test fails when it differs from a fresh render of the shipped policy under `balanced`, and two renders are byte-identical.
+### Given a repository with one tracked and one untracked document, When the document scans list their files, Then only the tracked document is listed
 
-- **Scenario id:** `RD-6`
+- **Scenario id:** `DS-1`
 - **Intent:** `INT-1`
-- **Source issue:** `approach-diagram`
+- **Source issue:** `doc-scans-read-tracked-files`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1646 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1647 superseded scenario(s) are in `docs/system-spec-archive.md`.

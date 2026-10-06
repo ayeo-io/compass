@@ -11600,6 +11600,13 @@
 - **Source issue:** `session-compliance`
 - **Landed:** 2026-10-06
 
+### Given a behaviour failing in three or more distinct issues in the window, when the report runs, then it writes a pending lesson with `source: compliance` naming the behaviour and the issues, and nothing takes effect until `compass lesson accept`. _(archived)_
+
+- **Scenario id:** `CS-10`
+- **Intent:** `INT-1`
+- **Source issue:** `session-compliance`
+- **Landed:** 2026-10-06
+
 ### Given a transcript that no issue's records name, when the report runs, then it is counted as unmatched and never assigned to an issue by time or path. _(archived)_
 
 - **Scenario id:** `CS-2`
@@ -11633,4 +11640,25 @@
 - **Scenario id:** `CS-9`
 - **Intent:** `INT-1`
 - **Source issue:** `session-compliance`
+- **Landed:** 2026-10-06
+
+### Each structural decision of the configuration foundation is a proposed ADR with a rejected alternative, listed in the index _(archived)_
+
+- **Scenario id:** `DR-1`
+- **Intent:** `INT-1`
+- **Source issue:** `configuration-decision-records`
+- **Landed:** 2026-10-06
+
+### Each product decision of 5 and 6 October 2026 for the configurable framework has a ledger entry _(archived)_
+
+- **Scenario id:** `DR-2`
+- **Intent:** `INT-1`
+- **Source issue:** `configuration-decision-records`
+- **Landed:** 2026-10-06
+
+### No record cites a private planning path or names a rival product _(archived)_
+
+- **Scenario id:** `DR-3`
+- **Intent:** `INT-1`
+- **Source issue:** `configuration-decision-records`
 - **Landed:** 2026-10-06

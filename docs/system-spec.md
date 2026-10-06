@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### The vocabulary amendment names the approaches catalogue, the adoption setting and every new term
+### Given a branch already up to date with its base whose derived spec is stale, when compass issue refresh-spec runs, then it commits the re-derived spec with a message that names no merge
 
-- **Scenario id:** `DR-4`
+- **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `configuration-decision-records`
+- **Source issue:** `refresh-spec-message-when-up-to-date`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1665 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1662 superseded scenario(s) are in `docs/system-spec-archive.md`.

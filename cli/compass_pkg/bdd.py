@@ -35,7 +35,7 @@ import re as _re
 from compass_pkg.checks import _spec_sha256
 from compass_pkg.terminal import say
 from compass_pkg.core import CompassError, artifact_path, find_upwards, load_yaml, manifest_path, normalize_spine, now_iso, resolve_issue_dir
-from compass_pkg.tdd import _read_config, _run_test
+from compass_pkg.tdd import _read_config, _run_test, settings_hint
 
 
 
@@ -354,8 +354,8 @@ def cmd_bdd_verify(args):
     if not command:
         raise CompassError(
             "compass bdd verify needs a run command, e.g. `compass bdd verify "
-            "-- pytest tests/` (or set project.bdd_run_command in "
-            ".compass/config.yml)")
+            "-- pytest tests/` (or set %s)" % settings_hint(
+                task_dir, "project.bdd_run_command"))
 
     code, out, _warnings = _run_test(command)
 

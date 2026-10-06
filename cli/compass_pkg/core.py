@@ -43,8 +43,8 @@ COMPASS_SCHEMA_VERSION = "2.0"    # the manifest.yml schema this CLI writes
 COMPASS_SCHEMA_VERSION_11 = "1.1"  # schema version that introduced manifest.yml.status
 
 
-class CompassError(Exception):
-    """A user-facing error: printed without a traceback, exits non-zero."""
+from compass_pkg import project_settings  # noqa: E402  (defines CompassError)
+from compass_pkg.project_settings import CompassError  # noqa: E402,F401
 
 
 # --- small helpers -----------------------------------------------------------
@@ -171,16 +171,14 @@ def find_compass_dir():
 
 
 def load_mode():
-    """Read the adoption mode from .compass/config.yml: 'enforced' (default)
+    """Read the adoption mode from the project's settings: 'enforced' (default)
     or 'advisory'. In advisory mode every failure is still reported, but the
     CLI exits 0 - useful for piloting Compass without blocking delivery."""
     try:
-        cfg_path = os.path.join(find_compass_dir(), "config.yml")
-        if os.path.isfile(cfg_path):
-            cfg = load_yaml(cfg_path) or {}
-            mode = str(cfg.get("mode") or "enforced").strip().lower()
-            if mode in ("advisory", "enforced"):
-                return mode
+        cfg = project_settings.settings(os.path.dirname(find_compass_dir()))
+        mode = str(cfg.get("adoption") or "enforced").strip().lower()
+        if mode in ("advisory", "enforced"):
+            return mode
     except CompassError:
         pass
     return "enforced"
@@ -194,23 +192,22 @@ AUTONOMY_VALUES = ("controlled", "balanced", "autonomous")
 
 
 def load_autonomy():
-    """Read `autonomy:` from .compass/config.yml: how often a session stops
+    """Read `autonomy:` from the project's settings: how often a session stops
     to wait for a person. Missing means `balanced`. Any other value is
     refused, not read as balanced: a typo that silently changed how often
     a session stops would give no sign."""
     try:
-        cfg_path = os.path.join(find_compass_dir(), "config.yml")
+        root = os.path.dirname(find_compass_dir())
     except CompassError:
         return "balanced"
-    if not os.path.isfile(cfg_path):
-        return "balanced"
-    value = (load_yaml(cfg_path) or {}).get("autonomy")
+    value = project_settings.settings(root).get("autonomy")
     if value is None:
         return "balanced"
     value = str(value).strip().lower()
     if value not in AUTONOMY_VALUES:
+        named = os.path.relpath(project_settings.settings_source(root), root)
         raise CompassError(
-            f"`autonomy: {value}` in .compass/config.yml is not a setting; "
+            f"`autonomy: {value}` in {named} is not a setting; "
             f"use {', '.join(AUTONOMY_VALUES)} (balanced if left out).")
     return value
 
@@ -218,9 +215,13 @@ def load_autonomy():
 def mode_banner(mode):
     """The visible banner so an advisory run is never mistaken for enforced."""
     if mode == "advisory":
+        try:
+            root = os.path.dirname(find_compass_dir())
+        except CompassError:
+            root = os.getcwd()
         return ("[mode: advisory] - every failure below is reported but NOT "
-                "blocking; exit code will be 0. Set `mode: enforced` in "
-                ".compass/config.yml when the team is ready.")
+                "blocking; exit code will be 0. Set %s when the team is "
+                "ready." % project_settings.named(root, "adoption", "enforced"))
     return "[mode: enforced]"
 
 

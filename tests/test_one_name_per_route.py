@@ -197,9 +197,10 @@ def test_rn_6_the_review_page_shows_the_current_name(tmp_path):
     assert dashboard._spine(str(task_dir))["delivery_approach"] == "regular"
 
 
-def test_rn_6_a_new_project_config_names_the_current_approaches():
-    from compass_pkg import init_cmd
-    text = init_cmd.__doc__ or ""
-    source = (ROOT / "cli" / "compass_pkg" / "init_cmd.py").read_text(encoding="utf-8")
-    block = source[source.index("#   controlled"):source.index("autonomy: balanced")]
+def test_rn_6_the_settings_reference_names_the_current_approaches():
+    # The autonomy values are described in the settings reference since
+    # `compass init` stopped writing a commented settings file.
+    doc = (ROOT / "docs" / "configuration.md").read_text(encoding="utf-8")
+    block = doc[doc.index("### `autonomy`"):doc.index("### `project`")]
+    assert "regular" in block and "quick fix" in block, block
     assert "feature" not in block and "initiative" not in block, block

@@ -149,7 +149,9 @@ def test_ioi_c2_init_creates_no_governance_directory(tmp_path):
         "slash command's job, after a conversation, not something five "
         "commands do on a user's behalf")
     entries = {p.name for p in (root / ".compass").iterdir()}
-    assert entries == {"config.yml", "work"}, (
+    # state.yml holds what init writes (ADR-043); config.yml is the hook's copy
+    # of `initialised` until the hook reads state.yml.
+    assert entries == {"config.yml", "state.yml", "work"}, (
         f"init created more than the project state it promises: {sorted(entries)}")
 
 

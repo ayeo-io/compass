@@ -40,6 +40,7 @@ import textwrap
 
 from compass_pkg.binding import ids_for
 from compass_pkg.check_cmd import cmd_check
+from compass_pkg import project_settings
 from compass_pkg.core import (
     CompassError, _WHEN_KEY_MAP, _one_segment, canonical_shape, display_shape,
     display_stage, docs_dir, find_governance, find_upwards, reading_matches,
@@ -705,11 +706,9 @@ def _record_usage(task_dir, finish_started_at):
                 others.append(load_yaml(other) or {})
             except Exception:                              # noqa: BLE001
                 continue
-    config_path = os.path.join(os.path.dirname(os.path.dirname(work)),
-                               ".compass", "config.yml")
+    project_root = os.path.dirname(os.path.dirname(work))
     try:
-        config = load_yaml(config_path) if os.path.isfile(config_path) else {}
-        prices = (config or {}).get("prices") or {}
+        prices = project_settings.settings(project_root).get("prices") or {}
         task["usage"] = session_usage.stage_usage(
             task_dir, task, others, prices=prices if isinstance(prices, dict) else {})
     except Exception:                                      # noqa: BLE001

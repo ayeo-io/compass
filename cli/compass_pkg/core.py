@@ -27,10 +27,6 @@ import tempfile
 # code runs, so this is never anything but a normal import.
 import yaml
 
-
-import re as _re
-
-
 import fnmatch
 import re as _re
 
@@ -845,10 +841,11 @@ _WHEN_KEY_MAP = {
 }
 
 
-def reading_matches(when, assessment):
+def reading_matches(when, assessment, orders=None):
     """Does a `when:` condition match the assessment? List value == any-of.
     Special key `labels_any`: intersect against the assessment's `labels`.
     Special key `any_of`: a list of sub-conditions, matching if ANY matches.
+    `{at_least: v}` on an ordered dimension: see `catalogue_check.at_least`.
 
     Keys are otherwise ANDed, so `any_of` alongside another key means "that
     key AND one of these". `any_of` exists because a rule sometimes has to
@@ -861,7 +858,11 @@ def reading_matches(when, assessment):
         key = _WHEN_KEY_MAP.get(key, key)
         if key == "any_of":
             clauses = val if isinstance(val, list) else [val]
-            if not any(reading_matches(c, assessment) for c in clauses):
+            if not any(reading_matches(c, assessment, orders) for c in clauses):
+                return False
+        elif isinstance(val, dict) and "at_least" in val:
+            from compass_pkg.catalogue_check import at_least
+            if not at_least(key, val["at_least"], assessment.get(key), orders):
                 return False
         elif key == "labels_any":
             wanted = val if isinstance(val, list) else [val]

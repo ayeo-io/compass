@@ -48,6 +48,7 @@ same commit.
 |---|---|
 | `hooks/`, `compass-contract.md` | `docs/safety-contract.md` |
 | `cli/compass_pkg/refusals.py` | `docs/refusal-codes.md` |
+| `cli/compass_pkg/catalogue_spec.py`, `cli/compass_pkg/catalogue_check.py`, `schemas/compass.schema.json` | `architecture/decisions/ADR-035-delivery-approaches-stages-and-modes-are-configuration.md` |
 | `cli/compass_pkg/atomic_io.py` | `architecture/decisions/ADR-036-an-issue-runs-against-a-stored-generation.md` |
 | `cli/compass_pkg/routing.py`, `cli/compass_pkg/approach_diagram.py`, `governance/routing-policy.yml`, `approaches/`, `docs/approach-diagram.html` | `governance/routing-policy.md` |
 | `cli/compass_pkg/checks.py`, `cli/compass_pkg/check_cmd.py`, `governance/guardrails.yml` | `governance/guardrails.md` |

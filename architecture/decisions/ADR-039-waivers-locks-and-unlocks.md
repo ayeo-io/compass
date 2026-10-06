@@ -1,13 +1,15 @@
 ---
 id: ADR-039
 title: "Waivers, locks and unlocks: who may depart from the shipped default"
-status: proposed
+status: accepted
 date: 2026-10-06
 supersedes: ''
 superseded_by: ''
 ---
 
 ## Context
+
+The maintainer accepted this record on 2026-10-06.
 
 ADR-033 lets a project add and change checks, gates and dimension values as data, and keeps the five guardrails and the shipped core framework-owned and locked. The configurable-framework design makes the rest of the shipped default changeable through layers: the shipped default, an optional parent, the project file `compass.yml` and the issue's `config:`. A layer can loosen what the layer above it set. That needs three rules: who may approve a departure, what a lock protects, and what the CLI can and cannot confirm.
 

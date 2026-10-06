@@ -1,13 +1,15 @@
 ---
 id: ADR-038
 title: Check implementations carry versions, and a major change refuses rather than reinterprets
-status: proposed
+status: accepted
 date: 2026-10-06
 supersedes: ''
 superseded_by: ''
 ---
 
 ## Context
+
+The maintainer accepted this record on 2026-10-06.
 
 The configurable-framework design records, for each issue, the configuration it runs against (ADR-036, an issue runs against a stored generation). A configuration names its deterministic checks by implementation id, and the CLI runs the implementation it ships. Recording the id does not preserve the behaviour: the code behind an id can change in any release.
 

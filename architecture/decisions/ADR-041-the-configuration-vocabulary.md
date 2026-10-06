@@ -1,13 +1,15 @@
 ---
 id: ADR-041
 title: The configuration vocabulary, amending ADR-012
-status: proposed
+status: accepted
 date: 2026-10-06
 supersedes: ''
 superseded_by: ''
 ---
 
 ## Context
+
+The maintainer accepted this record on 2026-10-06.
 
 This record amends ADR-012 (the v2 vocabulary is frozen - industry words only, enforced by the build). ADR-012 asks for a decision record for a new term, a change of meaning or a new ban; its rule 4 also lets a recorded maintainer instruction fill a gap additively. This record is the decision for the configurable-framework design, because it adds terms and resolves two clashes.
 

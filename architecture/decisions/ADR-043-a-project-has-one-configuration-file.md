@@ -1,13 +1,15 @@
 ---
 id: ADR-043
 title: A project has one configuration file, compass.yml
-status: proposed
+status: accepted
 date: 2026-10-06
 supersedes: ''
 superseded_by: ''
 ---
 
 ## Context
+
+The maintainer accepted this record on 2026-10-06.
 
 A project configures Compass in up to three places today:
 

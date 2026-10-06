@@ -1,13 +1,15 @@
 ---
 id: ADR-042
 title: Shipped defaults live in a preset directory
-status: proposed
+status: accepted
 date: 2026-10-06
 supersedes: ''
 superseded_by: ''
 ---
 
 ## Context
+
+The maintainer accepted this record on 2026-10-06.
 
 Today the shipped defaults are two files: `governance/routing-policy.yml`, which `compass approach evaluate` runs, and `governance/guardrails.yml`, which `compass check` runs. A project that wants to change anything copies both into its own `governance/`. `find_governance()` returns that copy when both files are present (`cli/compass_pkg/core.py:135`) and the shipped directory otherwise (`core.py:154-156`).
 

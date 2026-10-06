@@ -1,13 +1,15 @@
 ---
 id: ADR-035
 title: Delivery approaches, stages and modes are configuration data
-status: proposed
+status: accepted
 date: 2026-10-06
 supersedes: ''
 superseded_by: ''
 ---
 
 ## Context
+
+The maintainer accepted this record on 2026-10-06.
 
 The routing policy is one file, and a project changes it only by owning a full copy. `/compass:init` copies `governance/routing-policy.yml` (368 lines, `version: 2.19.0` at line 20) into the project, and the CLI reads that copy instead of the shipped file. A project that changes one stage of one delivery approach owns every other line from then on, and the drift report compares rule ids, not content.
 

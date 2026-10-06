@@ -1,13 +1,15 @@
 ---
 id: ADR-036
 title: An issue runs against a stored generation of its configuration
-status: proposed
+status: accepted
 date: 2026-10-06
 supersedes: ''
 superseded_by: ''
 ---
 
 ## Context
+
+The maintainer accepted this record on 2026-10-06.
 
 Every command reads governance live. `compass approach evaluate`, `compass check` and the receipt each load the routing policy and the guardrails from disk when they run, and nothing records which configuration an issue was assessed under. `--write` folds the computed outcome into the manifest (`cli/compass_pkg/routing.py:622-733`), but not the configuration that produced it. It saves the manifest by rewriting the file in place (`save_manifest`, `cli/compass_pkg/core.py:662-664`), so a crash mid-write can leave it truncated.
 

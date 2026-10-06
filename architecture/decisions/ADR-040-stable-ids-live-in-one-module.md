@@ -1,13 +1,15 @@
 ---
 id: ADR-040
 title: Stable ids live in one registered constants module
-status: proposed
+status: accepted
 date: 2026-10-06
 supersedes: ''
 superseded_by: ''
 ---
 
 ## Context
+
+The maintainer accepted this record on 2026-10-06.
 
 The configurable-framework design moves the stages, delivery approaches, checks, gates and dimensions into catalogues that a project extends as data. The catalogues become the one source of truth for what each of them declares. The CLI still needs to name some of them: a built-in check implementation asks whether an issue is a spike, and the migration map turns a retired name into its current one.
 

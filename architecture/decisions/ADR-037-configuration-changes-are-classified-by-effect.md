@@ -1,13 +1,15 @@
 ---
 id: ADR-037
 title: A configuration change is classified by its effect over the assessment grid
-status: proposed
+status: accepted
 date: 2026-10-06
 supersedes: ''
 superseded_by: ''
 ---
 
 ## Context
+
+The maintainer accepted this record on 2026-10-06.
 
 ADR-033 (projects add checks, gates and dimension values as data) lets a project, and a single issue, change the shipped configuration. A change that adds process is free; a change that removes process needs an approved waiver. ADR-035 (delivery approaches, stages and modes are configuration data) applies the same rule to stages, modes and gates. Both rest on one question: is a layer stricter or less strict than its parent?
 

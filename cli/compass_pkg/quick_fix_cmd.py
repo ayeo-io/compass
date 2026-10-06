@@ -52,6 +52,9 @@ from compass_pkg.manifest import (
     cmd_scenario_add,
 )
 from compass_pkg.routing import cmd_route_evaluate, evaluate_route
+from compass_pkg.start_state import (  # noqa: F401
+    _GENERATED_DIRS, _STATE_PATHS, _git_changed_paths, _is_generated,
+    _is_issue_state, _record_path, _tracked_paths, changed_since_start)
 from compass_pkg.tdd import (_acceptance_state, _neutralise_coverage,
                               _red_record_for, cmd_acceptance_record,
                               cmd_tdd_green)
@@ -422,57 +425,6 @@ def cmd_quick_fix_start(args):
     )
 
 
-# Directories a test run or an interpreter writes, never a person. A
-# project with no .gitignore for them still shows them as untracked, and
-# they change between the green and the commit: traced and committed, they
-# make the landed files differ from the tested ones and fail the check on
-# the issue just landed.
-_GENERATED_DIRS = {"__pycache__", ".pytest_cache", ".mypy_cache",
-                   ".ruff_cache", ".tox", ".nox"}
-
-
-def _is_generated(path):
-    """True for caches, and for the living spec files: ship-commit derives
-    those at landing, after the green, so tracing them would always name an
-    older version than the one that lands."""
-    from compass_pkg.flow import LIVING_SPEC_FILES
-    parts = path.split("/")
-    return (any(p in _GENERATED_DIRS for p in parts[:-1])
-            or path.endswith((".pyc", ".pyo"))
-            or path in LIVING_SPEC_FILES)
-
-
-def _git_changed_paths(root):
-    """Every changed path git sees, relative to `root`, the project root
-    (QFG-2), less generated caches. Read with `-z`, so a name with spaces,
-    quotes or non-ASCII characters arrives as the file's real name, not
-    git's escaped form. `git status` names paths from the repository top,
-    so joining them to `root` assumes `.compass/` sits there, as `compass
-    init` puts it. The guard below never fires in that case; it is not a
-    check that the assumption holds."""
-    out = subprocess.run(
-        ["git", "status", "--porcelain", "-z", "--untracked-files=all"],
-        cwd=root, capture_output=True, text=True, check=True,
-    ).stdout
-    fields = out.split("\0")
-    paths, i = [], 0
-    while i < len(fields):
-        entry = fields[i]
-        i += 1
-        if len(entry) < 4:
-            continue
-        status, raw = entry[:2], entry[3:]
-        if "R" in status or "C" in status:
-            i += 1  # the next field is the old name of a rename or copy
-        rel = os.path.relpath(os.path.normpath(os.path.join(root, raw)), root)
-        if rel == os.pardir or rel.startswith(os.pardir + os.sep):
-            continue  # outside the project root - not this issue's to trace
-        rel = rel.replace(os.sep, "/")
-        if not _is_generated(rel):
-            paths.append(rel)
-    return paths
-
-
 @contextlib.contextmanager
 def _at_project_root(root):
     """Change directory to the project root for the wrapped steps, and back
@@ -559,44 +511,6 @@ def _untracked_paths(root):
 def _ancestors(path):
     parts = path.split("/")[:-1]
     return ["/".join(parts[:n]) + "/" for n in range(1, len(parts) + 1)]
-
-
-def _record_path(project_root, slug):
-    """Where `start` keeps its record: inside the git directory (the
-    worktree's own, in a worktree), where nothing is ever committed."""
-    out = subprocess.run(
-        ["git", "rev-parse", "--git-path",
-         f"compass/start-state/{slug}.json"],
-        cwd=project_root, capture_output=True, text=True, check=True).stdout
-    return os.path.join(project_root, out.strip())
-
-
-def _tracked_paths(project_root):
-    """Every path git tracks, or an empty set when git cannot say."""
-    try:
-        out = subprocess.run(["git", "ls-files", "-z"], cwd=project_root,
-                             capture_output=True, text=True, check=True).stdout
-    except (OSError, subprocess.CalledProcessError):
-        return set()
-    return {p for p in out.split("\0") if p}
-
-
-# Compass's own state under `.compass/`. A project that uses Compass commits
-# `.compass/work/`, so being tracked does not make these the fix's change.
-_STATE_PATHS = (".compass/work/", ".compass/flow/", ".compass/current-task",
-                ".compass/sessions.json", ".compass/.sessions.lock",
-                ".compass/interruptions.log")
-
-
-def _is_issue_state(path, tracked):
-    """Is `path` Compass's own state, kept out of a quick fix's commit? A
-    path under `.compass/` is when it is one of `_STATE_PATHS` or git does
-    not track it. Any other tracked file there, such as
-    `.compass/config.yml`, is the project's own and is traced like any other
-    change."""
-    if not path.startswith(".compass/"):
-        return False
-    return path.startswith(_STATE_PATHS) or path not in tracked
 
 
 def _write_start_state(project_root, slug):

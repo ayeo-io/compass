@@ -32,7 +32,12 @@ compass acceptance record -- <the same command>
 - **`validation`** - a validator must pass after the change: `docker compose
   config`, `promtool check rules`, `terraform validate`, a schema parse. There
   may be no meaningful "before" (a new rules file has none), so no baseline is
-  needed.
+  needed. On a quick fix, `acceptance start` refuses a validation when files
+  have already changed since `quick-fix start`, staged or not: the change came
+  first. The scenario's own test files do not count, and neither do commits.
+  An output file from an earlier validator run counts as a change: delete it
+  or ignore it before declaring. A change to an ignored path, such as `.env`,
+  is not seen, so declare before making it.
 - **`refactor`** - a command that passes now must **still** pass afterwards,
   across a source tree that demonstrably changed. Behaviour preservation is the
   contract, so the baseline is needed, and green-then-green with an unchanged

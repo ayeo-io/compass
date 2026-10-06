@@ -130,7 +130,8 @@ def test_ric_5_compass_init_declares_the_cutoff(tmp_path):
                             capture_output=True, text=True,
                             env={**os.environ, "CLAUDE_PROJECT_DIR": str(tmp_path)})
     assert result.returncode == 0, result.stderr
-    config = (tmp_path / ".compass" / "config.yml").read_text()
+    # The cutoff is state the CLI writes, so it lives in state.yml (ADR-043).
+    config = (tmp_path / ".compass" / "state.yml").read_text()
     # Today or yesterday: the run can cross midnight between init and here.
     today = datetime.date.today()
     days = {today.isoformat(), (today - datetime.timedelta(days=1)).isoformat()}

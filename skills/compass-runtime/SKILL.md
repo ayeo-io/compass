@@ -104,7 +104,8 @@ is no worktree - work on the current branch.
 
 ```
 .compass/
-├── config.yml                  Project config, and what initialised the project
+├── state.yml                   What the CLI wrote: what initialised the project, and when
+├── config.yml                  Project config (settings now go in compass.yml at the project root)
 ├── current-task                One-line pointer to the active issue
 ├── work/
 │   └── <issue-slug>/            One directory per issue

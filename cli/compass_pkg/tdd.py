@@ -34,6 +34,7 @@ import re as _re
 import fnmatch
 import re as _re
 from compass_pkg.terminal import say
+from compass_pkg import project_settings
 from compass_pkg.core import CompassError, find_upwards, load_manifest, load_yaml, manifest_path, now_iso, resolve_issue_dir, save_manifest
 from compass_pkg import pytest_report
 from compass_pkg.binding import declared_test_paths, ids_for
@@ -207,14 +208,19 @@ _VERIFIED_BY_KINDS = {"regression", "e2e", "typecheck", "live"}
 
 
 def _read_config(task_dir):
-    """Load .compass/config.yml for the project containing task_dir. {} on miss."""
+    """Load the settings of the project containing task_dir. {} on miss."""
     root = find_upwards(task_dir, ".compass") or task_dir
-    path = os.path.join(root, ".compass", "config.yml")
     try:
-        cfg = load_yaml(path)
-        return cfg if isinstance(cfg, dict) else {}
+        return project_settings.settings(root)
     except CompassError:
         return {}
+
+
+def settings_hint(task_dir, key, value=None):
+    """A setting as advice shows it, naming the file the project's settings
+    are read from: "`mode: enforced` in .compass/config.yml"."""
+    root = find_upwards(task_dir, ".compass") or task_dir
+    return project_settings.named(root, key, value)
 
 
 def _micro_command(args, task_dir):
@@ -363,7 +369,8 @@ def cmd_tdd_red(args):
     if not command:
         raise CompassError("compass tdd-red needs a test command, e.g. "
                            "`compass tdd-red --scenario TRC-A1 -- pytest tests/test_x.py`"
-                           " (or set project.test_micro_command in .compass/config.yml)")
+                           " (or set %s)" % settings_hint(
+                               task_dir, "project.test_micro_command"))
     command = _neutralise_coverage(command)
     # pytest's own report says which tests failed, however pytest is
     # started; see pytest_report.
@@ -588,7 +595,7 @@ def cmd_tdd_green(args):
     command = _micro_command(args, task_dir)
     if not command:
         raise CompassError("compass tdd-green needs a test command (-- <cmd>) "
-                           "or project.test_micro_command in .compass/config.yml")
+                           "or " + settings_hint(task_dir, "project.test_micro_command"))
     # A bound green claims a red happened for the same scenario. Check that
     # before running anything: the refusal is about what may be RECORDED, and
     # refusing at the moment of writing means a bad record never exists. A

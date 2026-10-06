@@ -11824,6 +11824,13 @@
 - **Source issue:** `layers-and-merge`
 - **Landed:** 2026-10-06
 
+### One error reports every fault in a layer and inputs stay unchanged _(archived)_
+
+- **Scenario id:** `LM-11`
+- **Intent:** `INT-1`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
 ### A layer digest covers the layer keys only _(archived)_
 
 - **Scenario id:** `LM-2`
@@ -11878,4 +11885,32 @@
 - **Scenario id:** `LM-9`
 - **Intent:** `INT-1`
 - **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
+### Given the same settings in `.compass/config.yml` or in `compass.yml`, when each Python reader runs (adoption mode, autonomy, drift strictness, record _(archived)_
+
+- **Scenario id:** `SR-1`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-python`
+- **Landed:** 2026-10-06
+
+### Given a missing or broken settings file, when each reader runs, then it behaves as it did at 5.6.0 (the design's table: enforced, balanced or a refus _(archived)_
+
+- **Scenario id:** `SR-2`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-python`
+- **Landed:** 2026-10-06
+
+### Given the fold-in test, when one reader is left reading `.compass/config.yml` directly, then the test fails; and no module but `project_settings.py`  _(archived)_
+
+- **Scenario id:** `SR-4`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-python`
+- **Landed:** 2026-10-06
+
+### The compatibility contracts 1 to 6 still pass, apart from any entry this change alters on purpose with its reason.  _(archived)_
+
+- **Scenario id:** `SR-5`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-python`
 - **Landed:** 2026-10-06

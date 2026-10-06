@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a quick fix with two scenarios, each with a red on record, when quick-fix finish runs, then the test command runs once and each scenario gets its own green record
+### The vocabulary amendment names the approaches catalogue, the adoption setting and every new term
 
-- **Scenario id:** `TRC-001`
+- **Scenario id:** `DR-4`
 - **Intent:** `INT-1`
-- **Source issue:** `finish-runs-the-suite-once`
+- **Source issue:** `configuration-decision-records`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1663 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1666 superseded scenario(s) are in `docs/system-spec-archive.md`.

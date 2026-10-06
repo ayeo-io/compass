@@ -11711,3 +11711,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `agent-recorded-friction`
 - **Landed:** 2026-10-06
+
+### Given the instruction to record agent friction, then it adds at most 40 words to resident context and resident context stays under its ceiling _(archived)_
+
+- **Scenario id:** `TRC-005`
+- **Intent:** `INT-1`
+- **Source issue:** `agent-recorded-friction`
+- **Landed:** 2026-10-06

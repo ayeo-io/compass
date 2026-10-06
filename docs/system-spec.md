@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a quick fix whose manifest records a re-assessment, When quick-fix finish runs, Then the manifest's friction list holds the derived entry; with no signal, no friction key is written and no extra line is printed
+### Given the mutation runner, When --check names no register entry, Then it exits non-zero naming the id; and when a test stays green its output is shown
 
-- **Scenario id:** `QF-1`
+- **Scenario id:** `MT-1`
 - **Intent:** `INT-1`
-- **Source issue:** `quick-fix-finish-captures-friction`
+- **Source issue:** `mutation-runner-tidy`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1649 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1650 superseded scenario(s) are in `docs/system-spec-archive.md`.

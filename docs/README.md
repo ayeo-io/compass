@@ -30,6 +30,7 @@ the table does not exist, and when a doc in this folder is not listed.
 
 - [install-smoke-test.md](install-smoke-test.md) - the checklist after an install or an install change.
 - [releasing.md](releasing.md) - how to cut a release.
+- [configuration.md](configuration.md) - every project setting: what it does, its values, its default and which file holds it.
 - [security.md](security.md) - what Compass adds to a repository, and how to review it.
 - [portability.md](portability.md) - the adapter boundary, for running Compass outside Claude Code.
 
@@ -48,6 +49,7 @@ same commit.
 |---|---|
 | `hooks/`, `compass-contract.md` | `docs/safety-contract.md` |
 | `cli/compass_pkg/refusals.py` | `docs/refusal-codes.md` |
+| `cli/compass_pkg/project_settings.py` | `docs/configuration.md` |
 | `cli/compass_pkg/catalogue_spec.py`, `cli/compass_pkg/catalogue_check.py`, `schemas/compass.schema.json` | `architecture/decisions/ADR-035-delivery-approaches-stages-and-modes-are-configuration.md` |
 | `cli/compass_pkg/atomic_io.py` | `architecture/decisions/ADR-036-an-issue-runs-against-a-stored-generation.md` |
 | `cli/compass_pkg/layers.py`, `cli/compass_pkg/merge.py` | `architecture/decisions/ADR-035-delivery-approaches-stages-and-modes-are-configuration.md` |

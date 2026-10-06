@@ -34,7 +34,7 @@ import fnmatch
 import re as _re
 from compass_pkg.core import CompassError, artifact_location, artifact_path, find_compass_dir, find_governance, load_yaml, manifest_path, normalize_spine
 from compass_pkg.manifest import TERMINAL_STATUSES
-from compass_pkg.tdd import _read_config
+from compass_pkg.tdd import _read_config, settings_hint
 from compass_pkg.trust import UNKNOWN, UNTRUSTED, contribution_trust, is_ci
 from compass_pkg.check_results import NOTHING_TO_CHECK  # re-exported: callers still import it from here
 from compass_pkg.evidence_identity import _check_evidence_identity_matches
@@ -1055,8 +1055,8 @@ def _check_command_passes(task, task_dir):
             f"{len(cp_guardrails)} project guardrail(s) declare a command and "
             f"NONE were run, because project commands are disabled: {names}. "
             f"This is a declaration that exists and was not checked, not an "
-            f"absence of declarations. To run them, add "
-            f"`allow_project_commands: true` to .compass/config.yml")
+            f"absence of declarations. To run them, set "
+            + settings_hint(task_dir, "allow_project_commands", "true"))
 
     failures = []
     for g in cp_guardrails:

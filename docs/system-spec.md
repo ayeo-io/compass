@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### One error reports every fault in a layer and inputs stay unchanged
+### Given a project after compass init, then a state file in the .compass folder holds initialised and records_signed_since, no settings file is written, and the cutoff and the hook's explanation still read from it
 
-- **Scenario id:** `LM-11`
+- **Scenario id:** `SR-3`
 - **Intent:** `INT-1`
-- **Source issue:** `layers-and-merge`
+- **Source issue:** `settings-reader-python`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1696 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1701 superseded scenario(s) are in `docs/system-spec-archive.md`.

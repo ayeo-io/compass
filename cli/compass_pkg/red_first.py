@@ -28,6 +28,7 @@ import json
 import os
 import stat
 
+from compass_pkg import project_settings
 from compass_pkg.core import CompassError, find_upwards, load_yaml
 
 #: Issues created on or after this date, or with evidence recorded on or
@@ -95,14 +96,12 @@ def signed_since(task_dir, compass_dir=None):
         if not root:
             return None
         compass_dir = os.path.join(root, ".compass")
-    path = os.path.join(compass_dir, "config.yml")
-    if not os.path.exists(path):
+    project_root = os.path.dirname(os.path.normpath(compass_dir))
+    if project_settings.state_source(project_root) is None:
         return None
     try:
-        config = load_yaml(path)
+        config = project_settings.state(project_root)
     except (CompassError, OSError, ValueError):
-        return datetime.date.min
-    if not isinstance(config, dict):
         return datetime.date.min
     value = config.get("records_signed_since")
     if value is None or str(value).strip() == "":

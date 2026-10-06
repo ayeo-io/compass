@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a committed living spec that names an issue whose records are missing, when quick-fix finish lands a fix, then its output says the living spec was not re-derived and names compass issue refresh-spec
+### Given the instruction to record agent friction, then it adds at most 40 words to resident context and resident context stays under its ceiling
 
-- **Scenario id:** `TRC-001`
+- **Scenario id:** `TRC-005`
 - **Intent:** `INT-1`
-- **Source issue:** `finish-shows-a-failed-derive`
+- **Source issue:** `agent-recorded-friction`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1668 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1672 superseded scenario(s) are in `docs/system-spec-archive.md`.

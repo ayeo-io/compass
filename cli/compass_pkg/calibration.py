@@ -173,8 +173,17 @@ def _aggregate_friction(tasks, threshold):
     def _norm(s):
         return _re.sub(r"\s+", " ", (s or "").strip()).lower()
 
+    # Agent notes (`compass issue friction`) are counted in their own column
+    # and never decide whether a cluster recurs: the agent's view of the
+    # process is a separate signal from the person's. A note about a step a
+    # guardrail backs is only counted, since friction cannot change a
+    # guardrail.
+    from compass_pkg.agent_friction import is_guardrail_note
+
     clusters = {}
     by_category = {}
+    agent_by_category = {}
+    guardrail_notes = 0
     n_with_friction = 0
     for slug, t in tasks:
         fr = t.get("friction") or []
@@ -183,17 +192,22 @@ def _aggregate_friction(tasks, threshold):
         for e in fr:
             if not isinstance(e, dict):
                 continue
+            if is_guardrail_note(e):
+                guardrail_notes += 1
+                continue
+            agent = e.get("source") == "agent"
             cat = e.get("category", "other")
-            by_category[cat] = by_category.get(cat, 0) + 1
+            column = agent_by_category if agent else by_category
+            column[cat] = column.get(cat, 0) + 1
             pc = e.get("proposed_change") or ""
             key = _norm(pc)
             if not key:
                 continue  # nothing to cluster on; still counted by category
             c = clusters.setdefault(
                 key, {"proposed_change": pc.strip(), "categories": set(),
-                      "tasks": set()})
+                      "tasks": set(), "agent_tasks": set()})
             c["categories"].add(cat)
-            c["tasks"].add(slug)
+            c["agent_tasks" if agent else "tasks"].add(slug)
 
     recurring, below = [], []
     for c in clusters.values():
@@ -202,7 +216,10 @@ def _aggregate_friction(tasks, threshold):
             "categories": sorted(c["categories"]),
             "tasks": sorted(c["tasks"]),
             "count": len(c["tasks"]),
+            "agent_count": len(c["agent_tasks"]),
         }
+        if not item["count"]:
+            continue  # agent notes alone are shown in their column, not as a trend
         (recurring if item["count"] >= threshold else below).append(item)
     recurring.sort(key=lambda x: (-x["count"], x["proposed_change"]))
     below.sort(key=lambda x: x["proposed_change"])
@@ -210,6 +227,9 @@ def _aggregate_friction(tasks, threshold):
         "threshold": threshold,
         "tasks_with_friction": n_with_friction,
         "by_category": dict(sorted(by_category.items(), key=lambda kv: -kv[1])),
+        "agent_by_category": dict(sorted(agent_by_category.items(),
+                                         key=lambda kv: -kv[1])),
+        "guardrail_notes": guardrail_notes,
         "recurring": recurring,
         "below_threshold": below,
     }
@@ -233,9 +253,13 @@ def _cmd_calibration_friction(args, tasks):
               "staying out of the way, or\nthere is not enough history yet.")
         return 0
 
-    print("Friction by category:")
-    for cat, n in agg["by_category"].items():
-        print(f"  {cat:<16}: {n}")
+    print("Friction by category (person and derived | agent):")
+    for cat in sorted(set(agg["by_category"]) | set(agg["agent_by_category"])):
+        print(f"  {cat:<16}: {agg['by_category'].get(cat, 0)} | "
+              f"{agg['agent_by_category'].get(cat, 0)}")
+    if agg["guardrail_notes"]:
+        print(f"  agent notes about a guardrail step: {agg['guardrail_notes']} "
+              f"(guardrail, not changeable by friction)")
     print()
     print(f"Recurring friction (>= {threshold} issues) - candidate framework "
           f"changes:")
@@ -243,7 +267,8 @@ def _cmd_calibration_friction(args, tasks):
         for c in agg["recurring"]:
             cats = ", ".join(c["categories"])
             print(f"  [{cats}] {c['proposed_change']}")
-            print(f"      {c['count']} issues: {', '.join(c['tasks'])}")
+            agent = f"; agent notes in {c['agent_count']}" if c["agent_count"] else ""
+            print(f"      {c['count']} issues: {', '.join(c['tasks'])}{agent}")
     else:
         print("  (none yet - no proposed change has recurred across enough "
               "issues)")
@@ -336,12 +361,15 @@ def cmd_friction_capture(args):
     # derived set; human notes are observations that cannot be recomputed, so
     # they accumulate. Assigning the whole list would discard every note an
     # earlier run recorded.
+    # Agent notes (`compass issue friction`) cannot be recomputed either, and
+    # this runs at every quick-fix finish, so they are kept as they are.
     existing = task.get("friction") or []
     kept_human = [e for e in existing if e.get("source") == "human"]
+    kept_agent = [e for e in existing if e.get("source") == "agent"]
     new_human = [e for e in entries if e.get("source") == "human"]
     seen = {e.get("observation") for e in kept_human}
     kept_human += [e for e in new_human if e.get("observation") not in seen]
-    entries = [e for e in entries if e.get("source") != "human"] + kept_human
+    entries = [e for e in entries if e.get("source") != "human"] + kept_human + kept_agent
 
     if entries:
         task["friction"] = entries
@@ -349,7 +377,7 @@ def cmd_friction_capture(args):
         print(f"compass _friction-capture: recorded {len(entries)} friction "
               f"entry(ies) -> {path}")
         for e in entries:
-            print(f"  [{e['source']}/{e['category']}] {e.get('observation', '')}")
+            print(f"  [{e['source']}/{e['category']}] {e.get('observation') or e.get('proposed_change', '')}")
     else:
         # Recording nothing is a valid, common outcome. Leave the key
         # absent so an issue that hit no friction stays a clean no-op (ADR-006).

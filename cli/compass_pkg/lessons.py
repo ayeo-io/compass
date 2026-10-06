@@ -306,8 +306,13 @@ def propose_pending(rule, source, issues):
 def propose_from_friction(work_dir, min_issues=3):
     """Pending proposals for friction seen in `min_issues` distinct issues.
     Exact text after case and spacing are normalised; a reworded row does
-    not match. Returns the new pending entries."""
-    seen = {}
+    not match. Returns the new pending entries.
+
+    An agent note counts by its fix, and only towards text that a person or
+    the CLI also recorded in at least one issue: agent notes alone never make
+    a lesson. A note about a guardrail step never counts."""
+    from compass_pkg.agent_friction import is_guardrail_note
+    seen, vouched = {}, set()
     for slug in sorted(os.listdir(work_dir)) if os.path.isdir(work_dir) else []:
         path = manifest_path(os.path.join(work_dir, slug))
         if not os.path.isfile(path):
@@ -317,9 +322,21 @@ def propose_from_friction(work_dir, min_issues=3):
         except CompassError:
             continue
         for row in (m.get("friction") if isinstance(m, dict) else None) or []:
-            if isinstance(row, dict) and row.get("observation"):
-                text = " ".join(str(row["observation"]).split())
-                seen.setdefault(_norm(text), (text, set()))[1].add(slug)
+            if not isinstance(row, dict) or is_guardrail_note(row):
+                continue
+            agent = row.get("source") == "agent"
+            text = row.get("proposed_change" if agent else "observation")
+            if not text:
+                continue
+            text = " ".join(str(text).split())
+            seen.setdefault(_norm(text), (text, set()))[1].add(slug)
+            if not agent:
+                # A person's proposed change backs an agent note naming the
+                # same change, as well as their observation.
+                vouched.add(_norm(text))
+                if row.get("proposed_change"):
+                    vouched.add(_norm(" ".join(str(row["proposed_change"]).split())))
+    seen = {key: value for key, value in seen.items() if key in vouched}
     lessons, pending = _load(LESSONS), _load(PENDING)
     known = {_norm(l["rule"]) for l in lessons + pending}
     known |= {_norm(t) for t in _read(LESSONS).get("removed") or [] if isinstance(t, str)}

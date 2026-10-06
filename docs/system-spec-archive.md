@@ -11669,3 +11669,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `configuration-decision-records`
 - **Landed:** 2026-10-06
+
+### The vocabulary amendment names the approaches catalogue, the adoption setting and every new term _(archived)_
+
+- **Scenario id:** `DR-4`
+- **Intent:** `INT-1`
+- **Source issue:** `configuration-decision-records`
+- **Landed:** 2026-10-06

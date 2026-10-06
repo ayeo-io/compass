@@ -139,7 +139,8 @@ rules:
   - id: RR-008
     blocking: true
     file_patterns: ["cli/compass_pkg/binding.py", "cli/compass_pkg/manifest.py",
-                    "cli/compass_pkg/quick_fix_cmd.py", "scripts/*"]
+                    "cli/compass_pkg/quick_fix_cmd.py",
+                    "cli/compass_pkg/start_state.py", "scripts/*"]
     enforces: G5
     rule: >
       Code that stages or commits files must commit only the files it was

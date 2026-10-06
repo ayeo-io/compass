@@ -890,6 +890,30 @@ def cmd_acceptance_start(args):
         "tree_hash": _source_tree_hash(project_root),
     }
 
+    if kind == "validation":
+        # A validation stands in for a red, so it is declared before the
+        # change. On a quick fix, `start` recorded the tree; a file changed
+        # since then means the change came first. The scenario's own tests
+        # may be written first. A refactor may write its characterisation
+        # tests first too, so it is not checked here.
+        from compass_pkg.start_state import changed_since_start
+        try:
+            task, _ = load_manifest(task_dir)
+        except CompassError:
+            task = {}
+        keep = set(declared_test_paths(task))
+        changed = changed_since_start(project_root, os.path.basename(task_dir), keep)
+        if changed:
+            more = (f"\n  and {len(changed) - 10} more" if len(changed) > 10 else "")
+            raise CompassError(
+                "compass acceptance start: these files changed after the "
+                "quick fix started, before this acceptance was declared:\n  "
+                + "\n  ".join(changed[:10]) + more
+                + "\nA validation stands in for a failing test, so it is "
+                "declared before the change. Undo the change, declare the "
+                "acceptance, then make it again; or, if the change has a "
+                "test that can fail, record a red with `compass tdd-red`.")
+
     if kind == "refactor":
         # The baseline IS the contract. Without a passing command to begin with
         # there is nothing to preserve, so this refuses rather than recording a

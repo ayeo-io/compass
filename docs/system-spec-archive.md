@@ -11466,3 +11466,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `delivery-board-midnight-flake`
 - **Landed:** 2026-10-06
+
+### Given one manifest under .compass/work written as a YAML list, When compass retro runs, Then it exits 0, reports the other issues and names the skipped manifest _(archived)_
+
+- **Scenario id:** `RL-1`
+- **Intent:** `INT-1`
+- **Source issue:** `retro-skips-list-manifest`
+- **Landed:** 2026-10-06

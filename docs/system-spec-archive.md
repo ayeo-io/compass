@@ -11725,3 +11725,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `finish-shows-a-failed-derive`
 - **Landed:** 2026-10-06
+
+### Given the 5.6.0 evaluator, when the routing baseline is captured, then every one of the 1,200 assessments and every label subset over the four named labels has a recorded result, the test passes on today's code, and it fails when one shipped default changes _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `compat-routing-baseline`
+- **Landed:** 2026-10-06

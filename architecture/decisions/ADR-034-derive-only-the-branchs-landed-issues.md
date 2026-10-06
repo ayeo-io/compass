@@ -1,7 +1,7 @@
 ---
 id: ADR-034
 title: Derive the living spec from the landed issues on the branch
-status: proposed
+status: accepted
 date: 2026-10-06
 supersedes: ''
 superseded_by: ''
@@ -14,6 +14,8 @@ ADR-008 made the living spec a derived file, rebuilt from the scenarios of every
 Issue records (`.compass/work/<slug>/`) are local and never committed. A checkout's records therefore include issues landed on other branches whose pull requests are still open, and the derive took all of them: a branch's committed spec could name an issue that had not landed on it. On 6 October 2026 one derive did exactly that.
 
 And because each branch commits its own derived copy, two open pull requests that each land an issue conflict on `docs/system-spec.md` and `docs/system-spec-archive.md`, though neither changed a line a person wrote. On 6 October #439, #445, #448 and #451 each conflicted only there, and each was resolved by hand: merge main, take main's spec, copy in the right records, re-derive, commit.
+
+The maintainer accepted it on 2026-10-06.
 
 ## Decision
 

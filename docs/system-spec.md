@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the mutation-proof register, When the runner breaks each check to always pass and then always fail in a copy of the checkout, Then each fails test and each restores test goes red, a weakened, skipped or uncollected test is reported by name with a non-zero exit, and the checkout is unchanged
+### Given the decisions of 5 and 6 October 2026, When governance/decisions/ is read, Then entries record that old route names stay readable until 7.0.0, B39 folds into PRD 22, A16 waits for PRD 19 and this repository may hold a settings-only compass.yml, each superseding what it replaces
 
-- **Scenario id:** `CM-1`
+- **Scenario id:** `DE-1`
 - **Intent:** `INT-1`
-- **Source issue:** `check-mutation-runner`
+- **Source issue:** `decisions-2026-10-06`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1640 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1641 superseded scenario(s) are in `docs/system-spec-archive.md`.

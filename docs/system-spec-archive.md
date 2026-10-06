@@ -11487,3 +11487,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `session-user-follow-ups`
 - **Landed:** 2026-10-06
+
+### Given the mutation-proof register, When the runner breaks each check to always pass and then always fail in a copy of the checkout, Then each fails test and each restores test goes red, a weakened, skipped or uncollected test is reported by name with a non-zero exit, and the checkout is unchanged _(archived)_
+
+- **Scenario id:** `CM-1`
+- **Intent:** `INT-1`
+- **Source issue:** `check-mutation-runner`
+- **Landed:** 2026-10-06

@@ -42,7 +42,10 @@ RULES = {
     "write for no context": "**Write for someone with no context.**",
 }
 
-CONTRACT_BUDGET = 2250
+# Raised from 2,250 by the one line that asks the agent to record friction it
+# observes (issue `agent-recorded-friction`, which allows 40 resident words):
+# the agent meets that friction mid-run, so the line must be resident.
+CONTRACT_BUDGET = 2400
 
 # Set from the rewrite of 2026-10-04 (2,581, 1,476, 1,436 and 1,216
 # characters at 80 columns), with a little room; before it, 2,805, 1,643,

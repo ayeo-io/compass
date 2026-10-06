@@ -260,3 +260,14 @@ def test_ls_1_a_record_with_no_land_commit_is_kept(tmp_path):
         "  intent: INT-old\n", encoding="utf-8")
     flow.derive_system_spec(str(root))
     assert "TRC-old-record" in _spec(root)
+
+
+def test_ls_2_an_up_to_date_branch_names_no_merge_in_its_commit(tmp_path):
+    # Nothing was merged, so the commit must not say a merge happened.
+    root = _repo(tmp_path)
+    _issue(root, "here", _git(root, "rev-parse", "HEAD"))
+    result = _refresh(root, "--base", "main")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "already up to date" in result.stdout
+    message = _git(root, "log", "-1", "--format=%s")
+    assert "merging" not in message, message

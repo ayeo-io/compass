@@ -92,8 +92,11 @@ def refresh(root, base):
                if os.path.exists(os.path.join(root, rel))]
     if _git(root, "status", "--porcelain", "--", *present).stdout.strip():
         _git(root, "add", "--", *present, check=True)
-        _git(root, "commit", "-m",
-             f"Re-derive the living spec after merging {base}", check=True)
+        # A branch already up to date merged nothing, so its commit says so.
+        merged = not said[0].startswith("already up to date")
+        message = (f"Re-derive the living spec after merging {base}" if merged
+                   else "Re-derive the living spec")
+        _git(root, "commit", "-m", message, check=True)
         said.append("re-derived the living spec and committed it")
     else:
         said.append("the living spec was already current")

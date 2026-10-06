@@ -143,6 +143,7 @@ compass analyze            where an issue's artifacts disagree with each other
 compass retro              is triage systematically over- or under-sizing the process?
 compass retro --lineage    how many issues were found in another, and how many before it landed
 compass issue raised-by    record the issue this one was found in, and where
+compass issue refresh-spec merge main, resolving only conflicts in the derived living spec
 compass ci                 the full mechanical gate suite, for continuous integration
 compass tdd-red            run a test, assert it FAILS, record the red
 compass tdd-green          run a test, assert it PASSES, record the green

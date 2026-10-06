@@ -66,6 +66,7 @@ from compass_pkg._all import *  # noqa: F401,F403
 from compass_pkg.subtasks import register as register_subtask_parser  # noqa: E402
 from compass_pkg.quick_fix_cmd import register as register_quick_fix_parser  # noqa: E402
 from compass_pkg.decisions import register as register_decision_parser  # noqa: E402
+from compass_pkg.spec_refresh import register as register_refresh_spec_parser  # noqa: E402
 from compass_pkg.lineage import cmd_issue_raised_by  # noqa: E402
 from compass_pkg.approach_diagram import cmd_approach_diagram  # noqa: E402
 from compass_pkg.diagnose import register as register_diagnose_parser  # noqa: E402
@@ -304,6 +305,7 @@ def build_parser():
     ptl.set_defaults(func=cmd_task_lint, output_kind="report")
     register_diagnose_parser(pts, issue_arg)
     register_issue_use_parser(pts)
+    register_refresh_spec_parser(pts)
 
     ptrb = pts.add_parser(
         "raised-by", help="record the issue this one was found in",

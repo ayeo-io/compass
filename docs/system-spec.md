@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a behaviour failing in three or more distinct issues in the window, when the report runs, then it writes a pending lesson with `source: compliance` naming the behaviour and the issues, and nothing takes effect until `compass lesson accept`.
+### Given the decision, then an architecture decision record states the new selection rule and how it narrows ADR-008's "reconstructible from landed issues alone".
 
-- **Scenario id:** `CS-10`
+- **Scenario id:** `LS-4`
 - **Intent:** `INT-1`
-- **Source issue:** `session-compliance`
+- **Source issue:** `living-spec-conflicts`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1657 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1654 superseded scenario(s) are in `docs/system-spec-archive.md`.

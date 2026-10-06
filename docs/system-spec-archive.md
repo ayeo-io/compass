@@ -11802,3 +11802,80 @@
 - **Intent:** `INT-1`
 - **Source issue:** `catalogue-spec`
 - **Landed:** 2026-10-06
+
+### Given the committed JSON Schema for compass.yml in the schemas folder, then it equals the schema generated from the field table _(archived)_
+
+- **Scenario id:** `CS-5`
+- **Intent:** `INT-1`
+- **Source issue:** `catalogue-spec`
+- **Landed:** 2026-10-06
+
+### A project file loads with its layer keys and settings keys split _(archived)_
+
+- **Scenario id:** `LM-1`
+- **Intent:** `INT-1`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
+### Removing an entry something refers to names each referrer _(archived)_
+
+- **Scenario id:** `LM-10`
+- **Intent:** `INT-1`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
+### A layer digest covers the layer keys only _(archived)_
+
+- **Scenario id:** `LM-2`
+- **Intent:** `INT-1`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
+### The chain runs parent, project, issue and refuses a settings key in a parent _(archived)_
+
+- **Scenario id:** `LM-3`
+- **Intent:** `INT-1`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
+### Entry operations add, set, replace and remove _(archived)_
+
+- **Scenario id:** `LM-4`
+- **Intent:** `INT-1`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
+### Field operations inside set on scalars, lists and maps _(archived)_
+
+- **Scenario id:** `LM-5`
+- **Intent:** `INT-1`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
+### Provenance names the layer and operation of every field _(archived)_
+
+- **Scenario id:** `LM-6`
+- **Intent:** `INT-1`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
+### Bad targets and bad entries are refused by code _(archived)_
+
+- **Scenario id:** `LM-7`
+- **Intent:** `INT-1`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
+### Misused list and map operations are refused by code _(archived)_
+
+- **Scenario id:** `LM-8`
+- **Intent:** `INT-1`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
+### An operation or field a layer may not use is refused _(archived)_
+
+- **Scenario id:** `LM-9`
+- **Intent:** `INT-1`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06

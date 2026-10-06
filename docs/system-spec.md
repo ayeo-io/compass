@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the committed JSON Schema for compass.yml in the schemas folder, then it equals the schema generated from the field table
+### One error reports every fault in a layer and inputs stay unchanged
 
-- **Scenario id:** `CS-5`
+- **Scenario id:** `LM-11`
 - **Intent:** `INT-1`
-- **Source issue:** `catalogue-spec`
+- **Source issue:** `layers-and-merge`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1685 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1696 superseded scenario(s) are in `docs/system-spec-archive.md`.

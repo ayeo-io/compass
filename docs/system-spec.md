@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given issue C raised from B, which was raised from A, when C's `raised_by` is recorded, then one line names A as the root and points at `S14` in `governance/strategies.md`. A second-level issue prints no such line.
+### Given one manifest under .compass/work written as a YAML list, When compass retro runs, Then it exits 0, reports the other issues and names the skipped manifest
 
-- **Scenario id:** `LN-5`
+- **Scenario id:** `RL-1`
 - **Intent:** `INT-1`
-- **Source issue:** `lineage`
+- **Source issue:** `retro-skips-list-manifest`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1635 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1637 superseded scenario(s) are in `docs/system-spec-archive.md`.

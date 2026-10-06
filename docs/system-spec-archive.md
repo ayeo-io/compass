@@ -11452,3 +11452,17 @@
 - **Intent:** `INT-1`
 - **Source issue:** `lineage`
 - **Landed:** 2026-10-06
+
+### Given issue C raised from B, which was raised from A, when C's `raised_by` is recorded, then one line names A as the root and points at `S14` in `governance/strategies.md`. A second-level issue prints no such line. _(archived)_
+
+- **Scenario id:** `LN-5`
+- **Intent:** `INT-1`
+- **Source issue:** `lineage`
+- **Landed:** 2026-10-06
+
+### Given the clock moves one day on between the test module loading and board() running, When the queue age test runs, Then it still reports the age it set up _(archived)_
+
+- **Scenario id:** `DM-1`
+- **Intent:** `INT-1`
+- **Source issue:** `delivery-board-midnight-flake`
+- **Landed:** 2026-10-06

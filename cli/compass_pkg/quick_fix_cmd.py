@@ -107,6 +107,10 @@ def register(sub, issue_arg):
                     help="scenario id (default: TRC-001)")
     st.add_argument("--test", action="append", required=True,
                     help="test node id that exercises the scenario (repeatable, at least one)")
+    st.add_argument("--raised-by", metavar="SLUG",
+                    help="the issue this was found in")
+    st.add_argument("--found-at", metavar="WHERE",
+                    help="where: a stage, review, ci or after-landing")
     st.set_defaults(func=cmd_quick_fix_start, output_kind="hand-off")
 
     fi = subs.add_parser(
@@ -294,6 +298,15 @@ def cmd_quick_fix_start(args):
         project_root, by="compass quick-fix start")
     created_dirs = [".compass/"] if created_project else []
 
+    # The parent is checked before anything is written, so a mistyped one
+    # leaves no half-made issue behind.
+    from compass_pkg import lineage
+    raised_by, found_at = getattr(args, "raised_by", None), getattr(args, "found_at", None)
+    try:
+        lineage.check(os.path.join(project_root, ".compass"), raised_by, found_at)
+    except CompassError as exc:
+        raise CompassError(f"compass quick-fix start: {exc}")
+
     task_dir = os.path.join(project_root, ".compass", "work", slug)
     if os.path.isdir(task_dir):
         raise CompassError(
@@ -314,7 +327,11 @@ def cmd_quick_fix_start(args):
     }
     if os.environ.get("CLAUDE_CODE_SESSION_ID"):
         start_record["usage"] = {"session": os.environ["CLAUDE_CODE_SESSION_ID"]}
+    if raised_by:
+        start_record["raised_by"] = {"issue": raised_by, "found_at": found_at}
     save_manifest(start_record, manifest_path(task_dir))
+    chain_line = lineage.hint(os.path.join(project_root, ".compass"), slug)
+    chain_detail = [chain_line] if chain_line else []
 
     _quiet_run(cmd_route_evaluate, reading=None, task=slug, write=True,
               reason=None, kind=None)
@@ -327,7 +344,7 @@ def cmd_quick_fix_start(args):
         say(args,
            f"compass quick-fix start: computes to "
            f"{display_shape(approach)}, heavier than a quick fix.",
-           detail=[f"issue: {slug}",
+           detail=[f"issue: {slug}"] + chain_detail + [
                    "the manifest keeps the assessment and the computed approach;",
                    "no approach record and no scenario were written"]
            + _quick_fix_blockers(readings, task)
@@ -391,7 +408,7 @@ def cmd_quick_fix_start(args):
         f"compass quick-fix start: '{slug}' recorded as "
         f"{display_shape(approach)}.",
         detail=([f"created: {', '.join(created_dirs)} - tell the user"]
-                if created_dirs else []) + (
+                if created_dirs else []) + chain_detail + (
             ["settled decisions (read any that touch this change):"]
             + [f"  {line}" for line in decisions] if decisions else []) + [
                 f"record : {doc_path_rel}",

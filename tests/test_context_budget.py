@@ -48,8 +48,12 @@ CONTRACT_BUDGET = 2250
 # characters at 80 columns), with a little room; before it, 2,805, 1,643,
 # 1,539 and 1,285. The rest of each is the usage line and option help, which
 # the README quotes and tests read flags from.
+# quick-fix start rose by about 190 characters on 2026-10-06 for
+# --raised-by and --found-at (lineage): two options cannot fit in the 21
+# characters that were left, and hiding them would leave a session no way
+# to learn them from --help.
 HELP_BUDGETS = {
-    ("quick-fix", "start"): 2600,
+    ("quick-fix", "start"): 2800,
     ("quick-fix", "finish"): 1500,
     ("tdd-red",): 1450,
     ("tdd-green",): 1250,

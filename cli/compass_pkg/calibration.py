@@ -570,20 +570,32 @@ def cmd_calibration(args):
     except CompassError:
         pass
 
-    tasks = []
+    tasks, not_mappings = [], []
     if os.path.isdir(work):
         for d in sorted(os.listdir(work)):
             tp = manifest_path(os.path.join(work, d))
             if os.path.isfile(tp):
                 try:
-                    tasks.append((d, normalize_spine(load_yaml(tp))))
+                    data = load_yaml(tp)
                 except CompassError:
-                    pass
+                    continue
+                # One malformed manifest must not stop the report for every
+                # other issue; `compass issue lint` is where it is reported.
+                if not isinstance(data, dict):
+                    not_mappings.append(d)
+                    continue
+                tasks.append((d, normalize_spine(data)))
 
     # --- friction view - a flag on retro, not a new verb.
     # Read-only, exit 0 always; handles the empty corpus gracefully.
     if getattr(args, "friction", False):
         return _cmd_calibration_friction(args, tasks)
+
+    # After the friction view, whose --format json output must stay JSON.
+    if not_mappings:
+        print(f"compass retro: skipped {len(not_mappings)} manifest(s) that "
+              f"are not a mapping: {', '.join(not_mappings)} "
+              f"(see `compass issue lint`).")
 
     if not tasks:
         print("compass retro: no issues under .compass/work/ yet - "

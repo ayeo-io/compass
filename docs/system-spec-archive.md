@@ -11802,3 +11802,38 @@
 - **Intent:** `INT-1`
 - **Source issue:** `catalogue-spec`
 - **Landed:** 2026-10-06
+
+### Given the committed JSON Schema for compass.yml in the schemas folder, then it equals the schema generated from the field table _(archived)_
+
+- **Scenario id:** `CS-5`
+- **Intent:** `INT-1`
+- **Source issue:** `catalogue-spec`
+- **Landed:** 2026-10-06
+
+### Given the same settings in `.compass/config.yml` or in `compass.yml`, when each Python reader runs (adoption mode, autonomy, drift strictness, record _(archived)_
+
+- **Scenario id:** `SR-1`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-python`
+- **Landed:** 2026-10-06
+
+### Given a missing or broken settings file, when each reader runs, then it behaves as it did at 5.6.0 (the design's table: enforced, balanced or a refus _(archived)_
+
+- **Scenario id:** `SR-2`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-python`
+- **Landed:** 2026-10-06
+
+### Given the fold-in test, when one reader is left reading `.compass/config.yml` directly, then the test fails; and no module but `project_settings.py`  _(archived)_
+
+- **Scenario id:** `SR-4`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-python`
+- **Landed:** 2026-10-06
+
+### The compatibility contracts 1 to 6 still pass, apart from any entry this change alters on purpose with its reason.  _(archived)_
+
+- **Scenario id:** `SR-5`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-python`
+- **Landed:** 2026-10-06

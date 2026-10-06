@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the committed JSON Schema for compass.yml in the schemas folder, then it equals the schema generated from the field table
+### Given a project after compass init, then a state file in the .compass folder holds initialised and records_signed_since, no settings file is written, and the cutoff and the hook's explanation still read from it
 
-- **Scenario id:** `CS-5`
+- **Scenario id:** `SR-3`
 - **Intent:** `INT-1`
-- **Source issue:** `catalogue-spec`
+- **Source issue:** `settings-reader-python`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1685 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1690 superseded scenario(s) are in `docs/system-spec-archive.md`.

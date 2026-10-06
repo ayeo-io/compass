@@ -38,7 +38,6 @@ COMPASS_VERSION = "5.6.0"    # the CLI's own version
 COMPASS_SCHEMA_VERSION = "2.0"    # the manifest.yml schema this CLI writes
 COMPASS_SCHEMA_VERSION_11 = "1.1"  # schema version that introduced manifest.yml.status
 
-
 from compass_pkg import project_settings  # noqa: E402  (defines CompassError)
 from compass_pkg.project_settings import CompassError  # noqa: E402,F401
 
@@ -210,15 +209,15 @@ def load_autonomy():
 
 def mode_banner(mode):
     """The visible banner so an advisory run is never mistaken for enforced."""
-    if mode == "advisory":
-        try:
-            root = os.path.dirname(find_compass_dir())
-        except CompassError:
-            root = os.getcwd()
-        return ("[mode: advisory] - every failure below is reported but NOT "
-                "blocking; exit code will be 0. Set %s when the team is "
-                "ready." % project_settings.named(root, "adoption", "enforced"))
-    return "[mode: enforced]"
+    if mode != "advisory":
+        return "[mode: enforced]"
+    try:
+        root = os.path.dirname(find_compass_dir())
+    except CompassError:
+        root = os.getcwd()
+    return ("[mode: advisory] - every failure below is reported but NOT blocking; exit "
+            "code will be 0. Set %s when the team is ready."
+            % project_settings.named(root, "adoption", "enforced"))
 
 
 def exit_for_mode(failures, mode):

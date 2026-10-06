@@ -11739,3 +11739,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `compat-hook-corpus`
 - **Landed:** 2026-10-06
+
+### Given a project after compass init, when a person reads the mode comment in .compass/config.yml, then it says advisory mode stops checks and CI from failing and that the pre-tool hook still blocks code edits without a failing test, instead of saying nothing blocks _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `advisory-mode-wording`
+- **Landed:** 2026-10-06

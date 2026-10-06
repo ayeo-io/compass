@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a project after compass init, when a person reads the mode comment in .compass/config.yml, then it says advisory mode stops checks and CI from failing and that the pre-tool hook still blocks code edits without a failing test, instead of saying nothing blocks
+### Given atomic_io, when a file is written and the process fails before the rename, then the old file is intact and no temporary file is left; a YAML file with a duplicate key is refused with its line; equal data gives equal canonical JSON and digests
 
 - **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `advisory-mode-wording`
+- **Source issue:** `atomic-io`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1676 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1677 superseded scenario(s) are in `docs/system-spec-archive.md`.

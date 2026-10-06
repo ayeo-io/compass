@@ -11494,3 +11494,38 @@
 - **Intent:** `INT-1`
 - **Source issue:** `check-mutation-runner`
 - **Landed:** 2026-10-06
+
+### Given the decisions of 5 and 6 October 2026, When governance/decisions/ is read, Then entries record that old route names stay readable until 7.0.0, B39 folds into PRD 22, A16 waits for PRD 19 and this repository may hold a settings-only compass.yml, each superseding what it replaces _(archived)_
+
+- **Scenario id:** `DE-1`
+- **Intent:** `INT-1`
+- **Source issue:** `decisions-2026-10-06`
+- **Landed:** 2026-10-06
+
+### Given the shipped policy and `--autonomy balanced`, when `compass approach diagram` runs, then the regular row marks define and plan as stops for a person, the quick-fix row marks none, and every cell names its weight as a word. _(archived)_
+
+- **Scenario id:** `RD-1`
+- **Intent:** `INT-1`
+- **Source issue:** `approach-diagram`
+- **Landed:** 2026-10-06
+
+### Given no `--autonomy`, when it runs, then it uses the project's `autonomy:` setting; an unknown value is refused, naming the values. _(archived)_
+
+- **Scenario id:** `RD-2`
+- **Intent:** `INT-1`
+- **Source issue:** `approach-diagram`
+- **Landed:** 2026-10-06
+
+### Given a project with its own `governance/routing-policy.yml`, when it runs, then the diagram shows that policy, read through the same route names as the evaluator. _(archived)_
+
+- **Scenario id:** `RD-3`
+- **Intent:** `INT-1`
+- **Source issue:** `approach-diagram`
+- **Landed:** 2026-10-06
+
+### Given any render, then it names the three ways work comes back: a reassessment, a refusal from the pre-tool hook and a failed `compass check`. _(archived)_
+
+- **Scenario id:** `RD-5`
+- **Intent:** `INT-1`
+- **Source issue:** `approach-diagram`
+- **Landed:** 2026-10-06

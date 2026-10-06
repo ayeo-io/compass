@@ -20,6 +20,12 @@ This is the answer to the obvious objection to any adaptive framework - *"if
 the process can flex, what stops it flexing to nothing?"* The routing
 rules are what stop it. The flex is real, and it is bounded by this file.
 
+To see every delivery approach at once - its stage weights, the stages that
+wait for a person, its gates and its documents - open
+`docs/approach-diagram.html`. `compass approach diagram` generates it from
+the policy, and a test fails when the committed copy is out of date. Run it
+in a project to see that project's own policy and autonomy setting.
+
 Assess applies this policy after reading the four dimensions
 and composing a candidate delivery approach, before writing `delivery-approach.md`. Every routing
 rule that fires is recorded in `delivery-approach.md` with its rationale - so any

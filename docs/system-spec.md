@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the decisions of 5 and 6 October 2026, When governance/decisions/ is read, Then entries record that old route names stay readable until 7.0.0, B39 folds into PRD 22, A16 waits for PRD 19 and this repository may hold a settings-only compass.yml, each superseding what it replaces
+### Given `docs/approach-diagram.html`, when the suite runs, then a test fails when it differs from a fresh render of the shipped policy under `balanced`, and two renders are byte-identical.
 
-- **Scenario id:** `DE-1`
+- **Scenario id:** `RD-6`
 - **Intent:** `INT-1`
-- **Source issue:** `decisions-2026-10-06`
+- **Source issue:** `approach-diagram`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1641 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1646 superseded scenario(s) are in `docs/system-spec-archive.md`.

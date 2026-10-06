@@ -11,7 +11,9 @@
 #
 # tests/test_mutation_proof_register.py fails when a check has no entry, an
 # entry is missing a field, an entry names a check that is gone, or a test
-# named here does not exist.
+# named here does not exist. .github/scripts/check_mutation_runner.py, run by
+# the check-mutation CI job, breaks each check in a copy of the checkout and
+# fails when its `fails` or `restores` test does not go red.
 
 - check: borrowed-documents-answered
   broken: a threat in the threat model with no scenario or accepted risk

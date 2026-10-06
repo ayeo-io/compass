@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a branch already up to date with its base whose derived spec is stale, when compass issue refresh-spec runs, then it commits the re-derived spec with a message that names no merge
+### Given a quick fix with two scenarios, each with a red on record, when quick-fix finish runs, then the test command runs once and each scenario gets its own green record
 
 - **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `refresh-spec-message-when-up-to-date`
+- **Source issue:** `finish-runs-the-suite-once`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1662 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1663 superseded scenario(s) are in `docs/system-spec-archive.md`.

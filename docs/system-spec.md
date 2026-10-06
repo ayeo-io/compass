@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given atomic_io, when a file is written and the process fails before the rename, then the old file is intact and no temporary file is left; a YAML file with a duplicate key is refused with its line; equal data gives equal canonical JSON and digests
+### Given a project after compass init, then a state file in the .compass folder holds initialised and records_signed_since, no settings file is written, and the cutoff and the hook's explanation still read from it
 
-- **Scenario id:** `TRC-001`
+- **Scenario id:** `SR-3`
 - **Intent:** `INT-1`
-- **Source issue:** `atomic-io`
+- **Source issue:** `settings-reader-python`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1679 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1684 superseded scenario(s) are in `docs/system-spec-archive.md`.

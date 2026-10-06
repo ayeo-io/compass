@@ -11760,3 +11760,38 @@
 - **Intent:** `INT-1`
 - **Source issue:** `compat-archive-baseline`
 - **Landed:** 2026-10-06
+
+### Given atomic_io, when a file is written and the process fails before the rename, then the old file is intact and no temporary file is left; a YAML file with a duplicate key is refused with its line; equal data gives equal canonical JSON and digests _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `atomic-io`
+- **Landed:** 2026-10-06
+
+### Given the same settings in `.compass/config.yml` or in `compass.yml`, when each Python reader runs (adoption mode, autonomy, drift strictness, record _(archived)_
+
+- **Scenario id:** `SR-1`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-python`
+- **Landed:** 2026-10-06
+
+### Given a missing or broken settings file, when each reader runs, then it behaves as it did at 5.6.0 (the design's table: enforced, balanced or a refus _(archived)_
+
+- **Scenario id:** `SR-2`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-python`
+- **Landed:** 2026-10-06
+
+### Given the fold-in test, when one reader is left reading `.compass/config.yml` directly, then the test fails; and no module but `project_settings.py`  _(archived)_
+
+- **Scenario id:** `SR-4`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-python`
+- **Landed:** 2026-10-06
+
+### The compatibility contracts 1 to 6 still pass, apart from any entry this change alters on purpose with its reason.  _(archived)_
+
+- **Scenario id:** `SR-5`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-python`
+- **Landed:** 2026-10-06

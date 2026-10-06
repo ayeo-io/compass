@@ -74,7 +74,7 @@ def test_db_1_evidence_state_is_none_fresh_or_stale(repo):
 def test_db_1_an_in_progress_row_shows_stage_gates_and_evidence(repo):
     _ready_to_finish(repo, "fix-greeting")
     _green(repo)
-    data = board(str(repo / ".compass" / "work"))
+    data = board(str(repo / ".compass" / "work"), today=TODAY)
     row = _row(data["in_progress"], "fix-greeting")
     assert row["delivery_approach"] == "quick-fix"
     assert row["stage"]
@@ -89,7 +89,7 @@ def test_db_2_stale_evidence_and_parked_issues_are_set_apart(repo):
     _green(repo)
     _write_greeting(repo, "Hello, %s!\n\n")
     _manifest(repo, "waiting", status="parked", parked_reason="needs a decision")
-    data = board(str(repo / ".compass" / "work"))
+    data = board(str(repo / ".compass" / "work"), today=TODAY)
     assert "fix-greeting" in [r["slug"] for r in data["stale"]]
     assert "fix-greeting" not in [r["slug"] for r in data["in_progress"]]
     assert [r["slug"] for r in data["held"]] == ["waiting"]
@@ -113,7 +113,7 @@ def test_db_3_queue_landed_this_week_and_friction(tmp_path):
               friction=friction)
     _manifest(root, "shipped-long-ago", status="landed", land_timestamp=long_ago,
               friction=[{"category": "spec", "observation": "w"}] * 5)
-    data = board(str(root / ".compass" / "work"))
+    data = board(str(root / ".compass" / "work"), today=TODAY)
     queued = _row(data["next_up"], "old-idea")
     assert queued["age_days"] == 30, queued
     assert [r["slug"] for r in data["landed_this_week"]] == ["shipped-today"]
@@ -209,3 +209,25 @@ def test_db_4_html_refuses_symlinked_and_case_variant_paths(repo, tmp_path):
         assert r.returncode != 0, (target, r.stdout + r.stderr)
     assert not list((repo / ".compass").glob("board.html"))
     assert not list((repo / "docs" / "compass").glob("board.html"))
+
+
+def test_dm_1_the_queue_age_test_holds_across_midnight(tmp_path, monkeypatch):
+    """CI ran this file across midnight UTC once: `TODAY` was set before it
+    and `board()` read the clock after it, so a 30-day-old issue read 31."""
+    from compass_pkg import flow
+
+    class _Tomorrow(datetime.date):
+        @classmethod
+        def today(cls):
+            return TODAY + datetime.timedelta(days=1)
+
+    real = datetime
+
+    class _Clock:
+        date = _Tomorrow
+        datetime = real.datetime
+        timezone = real.timezone
+        timedelta = real.timedelta
+
+    monkeypatch.setattr(flow, "datetime", _Clock)
+    test_db_3_queue_landed_this_week_and_friction(tmp_path)

@@ -11683,3 +11683,45 @@
 - **Intent:** `INT-1`
 - **Source issue:** `finish-runs-the-suite-once`
 - **Landed:** 2026-10-06
+
+### Given an issue, when the agent runs compass issue friction with a category, phase, an existing evidence path and a fix, then a source: agent entry is added; a fourth note, a repeated category and phase, a missing fix or an unknown evidence path is refused _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `agent-recorded-friction`
+- **Landed:** 2026-10-06
+
+### Given agent and person friction, when compass retro --friction runs, then agent entries are counted in their own column and never merged with person or derived entries _(archived)_
+
+- **Scenario id:** `TRC-002`
+- **Intent:** `INT-1`
+- **Source issue:** `agent-recorded-friction`
+- **Landed:** 2026-10-06
+
+### Given the same friction in three issues from agent notes only, when lessons are proposed, then none is proposed; with one person entry for it, one is _(archived)_
+
+- **Scenario id:** `TRC-003`
+- **Intent:** `INT-1`
+- **Source issue:** `agent-recorded-friction`
+- **Landed:** 2026-10-06
+
+### Given a note about a guardrail-backed step, when it is recorded, then it is accepted, reported as guardrail, not changeable by friction, and never counts toward a lesson or a recurring cluster _(archived)_
+
+- **Scenario id:** `TRC-004`
+- **Intent:** `INT-1`
+- **Source issue:** `agent-recorded-friction`
+- **Landed:** 2026-10-06
+
+### Given the instruction to record agent friction, then it adds at most 40 words to resident context and resident context stays under its ceiling _(archived)_
+
+- **Scenario id:** `TRC-005`
+- **Intent:** `INT-1`
+- **Source issue:** `agent-recorded-friction`
+- **Landed:** 2026-10-06
+
+### Given a committed living spec that names an issue whose records are missing, when quick-fix finish lands a fix, then its output says the living spec was not re-derived and names compass issue refresh-spec _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `finish-shows-a-failed-derive`
+- **Landed:** 2026-10-06

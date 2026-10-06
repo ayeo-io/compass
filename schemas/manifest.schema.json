@@ -855,9 +855,18 @@
           "source": {
             "enum": [
               "derived",
-              "human"
+              "human",
+              "agent"
             ],
-            "description": "derived: assembled automatically at ship from the reassessments log. human: given by the author."
+            "description": "derived: assembled automatically at ship from the reassessments log. human: given by the author. agent: recorded by the agent with `compass issue friction`, counted apart and never a lesson on its own."
+          },
+          "evidence": {
+            "type": "string",
+            "description": "An agent note's cited evidence: a file in the issue folder, or a devlog line as devlog.md:<line>."
+          },
+          "guardrail": {
+            "type": "boolean",
+            "description": "An agent note about a step a guardrail backs. Reported, never counted towards a lesson or a recurring cluster: friction cannot change a guardrail."
           }
         }
       }

@@ -960,6 +960,21 @@ def cmd_quick_fix_finish(args):
                 + ship_out.strip())
         ship_tail_lines = [ln for ln in ship_out.strip().splitlines() if ln.strip()]
         ship_tail = ship_tail_lines[-1] if ship_tail_lines else "commit recorded"
+        # Landing re-derives the living spec. When that fails the land still
+        # stands, so ship-commit only notes it - and a note finish dropped
+        # left the issue out of the spec with nothing said.
+        spec_lines = [ln.strip() for ln in ship_tail_lines
+                      if "living spec" in ln and ln.strip() != ship_tail.strip()]
+        missing = re.search(r"missing from \.compass/work/: (.+?)\. ", ship_out)
+        if missing:
+            # The output layer shortens a long line, and the names are the
+            # part a reader needs, so they get a short line of their own.
+            spec_lines = ["living spec NOT re-derived: records missing for "
+                          + missing.group(1)]
+        if any("NOT re-derived" in ln or "commit failed" in ln for ln in spec_lines):
+            spec_lines.append(
+                "fix it: copy those issue folders into .compass/work/, then "
+                "run `compass issue refresh-spec`")
         landed, _ = load_manifest(task_dir)
         committed_files = _commit_files(landed.get("land_commit"), project_root)
         traced_now = {cf.get("path") for cf in (landed.get("changed_files")
@@ -978,7 +993,7 @@ def cmd_quick_fix_finish(args):
             detail=detail + _commit_lines(committed_files, slug)
             + [f"not traced: {_shown(p)} - committed since start; trace it "
                f"with `compass changed-file add` if it is this fix's"
-               for p in untraced] + [ship_tail],
+               for p in untraced] + spec_lines + [ship_tail],
             decision=True, gates=list(THREE_GATES), evidence=evidence_ids,
             committed=True,
         )

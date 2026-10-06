@@ -11536,3 +11536,31 @@
 - **Intent:** `INT-1`
 - **Source issue:** `approach-diagram`
 - **Landed:** 2026-10-06
+
+### Given a repository with one tracked and one untracked document, When the document scans list their files, Then only the tracked document is listed _(archived)_
+
+- **Scenario id:** `DS-1`
+- **Intent:** `INT-1`
+- **Source issue:** `doc-scans-read-tracked-files`
+- **Landed:** 2026-10-06
+
+### Given a git project where an issue is landed in local records, is not named in the spec committed at HEAD and its `land_commit` is not reachable from HEAD, when the spec is derived, then its scenarios are left out; an issue named in HEAD's spec, or whose `land_commit` is reachable, is kept. _(archived)_
+
+- **Scenario id:** `LS-1`
+- **Intent:** `INT-1`
+- **Source issue:** `living-spec-conflicts`
+- **Landed:** 2026-10-06
+
+### Given a branch that conflicts with its base only in the two derived spec files, when `compass spec refresh --base <ref>` runs, then the base is merged, the base's spec is taken, the spec is re-derived with the branch's own issue and committed, and no conflict is left. _(archived)_
+
+- **Scenario id:** `LS-2`
+- **Intent:** `INT-1`
+- **Source issue:** `living-spec-conflicts`
+- **Landed:** 2026-10-06
+
+### Given a merge that also conflicts in another file, when `compass spec refresh` runs, then it aborts the merge, leaves the branch as it was and names the other files. _(archived)_
+
+- **Scenario id:** `LS-3`
+- **Intent:** `INT-1`
+- **Source issue:** `living-spec-conflicts`
+- **Landed:** 2026-10-06

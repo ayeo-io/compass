@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a repository with one tracked and one untracked document, When the document scans list their files, Then only the tracked document is listed
+### Given the decision, then an architecture decision record states the new selection rule and how it narrows ADR-008's "reconstructible from landed issues alone".
 
-- **Scenario id:** `DS-1`
+- **Scenario id:** `LS-4`
 - **Intent:** `INT-1`
-- **Source issue:** `doc-scans-read-tracked-files`
+- **Source issue:** `living-spec-conflicts`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1647 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1651 superseded scenario(s) are in `docs/system-spec-archive.md`.

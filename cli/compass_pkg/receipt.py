@@ -80,7 +80,7 @@ def _receipt_resolve_task_dir(args):
                     else "the issue")
         raise CompassError(
             f"compass issue receipt: {named_by} '{slug}' not found at "
-            f".compass/work/{slug} (looked under {task_dir})"
+            f".compass/work/{slug}"
         )
     return task_dir, slug, project_root
 
@@ -124,11 +124,13 @@ def _receipt_parse_route_md_readings(route_md_path):
         # only to read old archives
         (("Familiarity", "Terrain"), "familiarity"),
         (("Size", "Magnitude"), "size"),
-        (("Goal & role", "Intent & role"), "goal"),
+        (("Goal & role", "Intent & role", "Goal"), "goal"),
     ]:
       for dim_label in dim_labels:
+        # The assess record bolds the label; the quick-fix record does not,
+        # and says "Goal" where the assess record says "Goal & role".
         m = _re.search(
-            rf"\|\s*\*\*{_re.escape(dim_label)}\*\*\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|",
+            rf"\|\s*(?:\*\*)?{_re.escape(dim_label)}(?:\*\*)?\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|",
             text,
         )
         if m:
@@ -491,11 +493,9 @@ def _receipt_render(task, slug, route_readings, gate_requirements=None,
 
 
 def cmd_task_receipt(args):
-    try:
-        task_dir, slug, project_root = _receipt_resolve_task_dir(args)
-    except CompassError as exc:
-        sys.stderr.write(f"{exc}\n")
-        return 1
+    # A missing issue is a refusal (exit 2), as in every other verb; exit 1
+    # is kept for a check that ran and found something.
+    task_dir, slug, project_root = _receipt_resolve_task_dir(args)
     task = normalize_spine(load_yaml(manifest_path(task_dir)) or {})
     approach_path = artifact_path(task_dir, "delivery-approach.md")
     route_readings = _receipt_parse_route_md_readings(approach_path)

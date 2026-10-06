@@ -11901,6 +11901,13 @@
 - **Source issue:** `settings-reader-python`
 - **Landed:** 2026-10-06
 
+### Given a project after compass init, then a state file in the .compass folder holds initialised and records_signed_since, no settings file is written, and the cutoff and the hook's explanation still read from it _(archived)_
+
+- **Scenario id:** `SR-3`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-python`
+- **Landed:** 2026-10-06
+
 ### Given the fold-in test, when one reader is left reading `.compass/config.yml` directly, then the test fails; and no module but `project_settings.py`  _(archived)_
 
 - **Scenario id:** `SR-4`
@@ -11913,4 +11920,46 @@
 - **Scenario id:** `SR-5`
 - **Intent:** `INT-1`
 - **Source issue:** `settings-reader-python`
+- **Landed:** 2026-10-06
+
+### A display name comes from the vocabulary and a project layer changes it _(archived)_
+
+- **Scenario id:** `VC-1`
+- **Intent:** `INT-1`
+- **Source issue:** `vocabulary-catalogue`
+- **Landed:** 2026-10-06
+
+### An alias resolves to its id _(archived)_
+
+- **Scenario id:** `VC-2`
+- **Intent:** `INT-1`
+- **Source issue:** `vocabulary-catalogue`
+- **Landed:** 2026-10-06
+
+### A name or alias that collides with another entry fails _(archived)_
+
+- **Scenario id:** `VC-3`
+- **Intent:** `INT-1`
+- **Source issue:** `vocabulary-catalogue`
+- **Landed:** 2026-10-06
+
+### A vocabulary key that names nothing fails _(archived)_
+
+- **Scenario id:** `VC-4`
+- **Intent:** `INT-1`
+- **Source issue:** `vocabulary-catalogue`
+- **Landed:** 2026-10-06
+
+### The ban scan covers display names _(archived)_
+
+- **Scenario id:** `VC-5`
+- **Intent:** `INT-1`
+- **Source issue:** `vocabulary-catalogue`
+- **Landed:** 2026-10-06
+
+### The terminology file says how a project adds names _(archived)_
+
+- **Scenario id:** `VC-6`
+- **Intent:** `INT-1`
+- **Source issue:** `vocabulary-catalogue`
 - **Landed:** 2026-10-06

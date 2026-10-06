@@ -65,13 +65,13 @@ The terms join `governance/terminology.yml` when this record is accepted, in the
 - The migration renames `mode` to `adoption` when it writes `compass.yml`. A project moves its settings file anyway when it migrates, so the rename costs nothing extra.
 - Tests that pin the banner text or the advice naming `.compass/config.yml` change with the key. `tests/test_modes.py` covers the banner.
 - The catalogue `approaches` shares its name with the prose directory `approaches/`, which describes the same delivery approaches. The two hold the same subject in two forms: the catalogue is data, the directory explains it.
-- The `project_additions` block in `terminology.yml` (lines 989-992) says project vocabulary additions are not supported. It changes in the increment that builds the `vocabulary` catalogue, because a project can then give its own entries display names.
+- The `project_additions` block in `terminology.yml` says project vocabulary additions are not supported yet. It now also states that the `vocabulary` catalogue format, the alias lookup and the collision check exist, and that no command reads a project's names yet. It changes again when a command does, because a project can then give its own entries display names.
 
 ## References
 
 - ADR-012: the v2 vocabulary is frozen; this record amends it.
 - ADR-042: shipped defaults live in a preset directory.
 - ADR-043: a project has one configuration file, `compass.yml`.
-- `governance/terminology.yml`: the `banned:` block (line 673), the `router` term (line 245) and `project_additions` (lines 989-992).
+- `governance/terminology.yml`: the `banned:` block (line 673), the `router` term (line 245) and the `project_additions` block.
 - `cli/compass_pkg/core.py`: `load_mode` (lines 173-186) and `mode_banner` (lines 218-224).
 - `governance/decisions/2026-10-06-the-approach-catalogue-is-approaches.md` and `governance/decisions/2026-10-06-the-adoption-setting-is-adoption.md`: the ledger entries for the two naming decisions.

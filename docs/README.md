@@ -60,7 +60,7 @@ same commit.
 | `cli/compass_pkg/flow.py`, `docs/system-spec.md`, `docs/system-spec-archive.md` | `architecture/decisions/ADR-026-ship-commit-lands-and-derives-the-living-spec.md` |
 | `cli/compass_pkg/next_cmd.py`, `cli/compass_pkg/render.py`, `cli/compass_pkg/statusline.py`, `bin/compass-statusline` | `docs/quickstart.md` |
 | `cli/compass_pkg/receipt.py` | `docs/receipt.md` |
-| `cli/compass`, `cli/compass_pkg/verb_help.py` | `README.md` |
+| `cli/compass`, `cli/compass_pkg/verb_help.py`, `cli/compass_pkg/lineage.py` | `README.md` |
 | `scripts/release.sh`, `Makefile`, `VERSION` | `docs/releasing.md` |
 | `scripts/install.sh`, `.claude-plugin/` | `docs/install-smoke-test.md` |
 | `hooks/hooks.json`, the adapter boundary | `docs/portability.md` |

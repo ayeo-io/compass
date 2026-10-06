@@ -11417,3 +11417,38 @@
 - **Intent:** `INT-1`
 - **Source issue:** `stage-tokens-in-report`
 - **Landed:** 2026-10-05
+
+### Given a ledger whose entries have very long first sentences, When quick-fix start lists the settled decisions, Then each line and the whole listing stay within their character budgets and every line still names its entry _(archived)_
+
+- **Scenario id:** `TC-3`
+- **Intent:** `INT-1`
+- **Source issue:** `ledger-listing-cap`
+- **Landed:** 2026-10-05
+
+### Given a refactor acceptance recorded with no edit in a repository with no pytest cache, When compass acceptance record runs, Then it refuses because the source tree has not changed _(archived)_
+
+- **Scenario id:** `AT-1`
+- **Intent:** `INT-1`
+- **Source issue:** `acceptance-timing-gaps`
+- **Landed:** 2026-10-05
+
+### Given a landed issue, when an issue is created with `quick-fix start --raised-by <it> --found-at review`, or `compass issue raised-by <it> --found-at review` runs on an existing issue, then the manifest carries `raised_by` with that issue and `found_at: review`, and `compass issue lint` accepts it. _(archived)_
+
+- **Scenario id:** `LN-1`
+- **Intent:** `INT-1`
+- **Source issue:** `lineage`
+- **Landed:** 2026-10-06
+
+### Given `--raised-by` names no issue in the project, or `--found-at` is not one of define, plan, implement, verify, review, ci, after-landing, or only one of the two flags is given, when either verb runs, then it exits non-zero and writes nothing. A manifest whose `raised_by` has an unknown `found_at` fails `compass issue lint`. _(archived)_
+
+- **Scenario id:** `LN-2`
+- **Intent:** `INT-1`
+- **Source issue:** `lineage`
+- **Landed:** 2026-10-06
+
+### Given three issues raised at review and one raised after-landing, when `compass retro --lineage` runs, then it reports three found before landing and one after, counts by `found_at`, names chains of three or more and the parents with the most children, and exits 0. With no raised issues it says so and exits 0. _(archived)_
+
+- **Scenario id:** `LN-3`
+- **Intent:** `INT-1`
+- **Source issue:** `lineage`
+- **Landed:** 2026-10-06

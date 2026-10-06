@@ -116,8 +116,14 @@ def main(argv=None) -> int:
         copy = Path(tmp)
         _copy_checkout(args.root.resolve(), copy)
         targets = _targets(copy)
+        entries = _entries(copy)
+        # A mistyped --check would otherwise run nothing and report success.
+        unknown = sorted(set(args.check or []) - {e.get("check") for e in entries})
+        if unknown:
+            print(f"no register entry for: {', '.join(unknown)}")
+            return 2
         stayed_green = []
-        for entry in _entries(copy):
+        for entry in entries:
             check = entry.get("check")
             if args.check and check not in args.check:
                 continue
@@ -127,8 +133,12 @@ def main(argv=None) -> int:
             file, name = targets[check]
             # A test that already fails proves nothing by failing again:
             # each must pass on the unmutated copy first.
+            # Run once per distinct test: `fails` and `restores` are often
+            # the same test.
+            failing = {node for node in {entry["fails"], entry["restores"]}
+                       if not _passes(copy, node)[0]}
             baseline = [field for field in ("fails", "restores")
-                        if not _passes(copy, entry[field])[0]]
+                        if entry[field] in failing]
             if baseline:
                 stayed_green.extend(f"{check}: `{f}` ({entry[f]}) fails before "
                                     f"any mutation" for f in baseline)
@@ -141,6 +151,10 @@ def main(argv=None) -> int:
                       f"{'always passing' if result is _PASS else 'always failing'}: {state}")
                 if not red:
                     stayed_green.append(f"{check}: `{field}` ({entry[field]}) stayed green")
+                    # The test's own last lines say what it saw, which is
+                    # the first thing a person needs to fix it.
+                    stayed_green.extend("    " + line for line in
+                                        tail.strip().splitlines()[-3:])
     print(f"\n{time.monotonic() - started:.0f}s")
     if stayed_green:
         print("These register tests cannot show that their check works:")

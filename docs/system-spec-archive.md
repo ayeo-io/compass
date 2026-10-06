@@ -11550,3 +11550,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `harness-read-only-bind-mount`
 - **Landed:** 2026-10-06
+
+### Given a quick fix whose manifest records a re-assessment, When quick-fix finish runs, Then the manifest's friction list holds the derived entry; with no signal, no friction key is written and no extra line is printed _(archived)_
+
+- **Scenario id:** `QF-1`
+- **Intent:** `INT-1`
+- **Source issue:** `quick-fix-finish-captures-friction`
+- **Landed:** 2026-10-06

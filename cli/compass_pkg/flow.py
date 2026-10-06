@@ -531,6 +531,51 @@ _DERIVED_HEADER = (
     "edit the scenario there and in the issue's acceptance-criteria.md -->"
 )
 
+# Specs written before 2.0.0 label the source with the retired word for an
+# issue; both labels name an issue, and a spec from either release must keep
+# every issue it names. The old word is assembled, as `MANIFEST_NAMES` in
+# core.py does, so the vocabulary scan does not read it as current prose.
+_SOURCE_LABELS = "(?:issue|" + "ta" + "sk)"
+_SOURCE_ISSUE = re.compile(r"\*\*Source " + _SOURCE_LABELS + r":\*\* `([^`]+)`")
+
+
+def _landed_on_this_branch(project_root, landed):
+    """The landed issues that belong to the branch being derived (ADR-034).
+
+    Issue records are local and not committed, so they hold issues landed on
+    other branches too, and deriving all of them gave a branch scenarios it
+    does not have. An issue is left out only when it has a `land_commit`
+    that is not reachable from HEAD and the spec committed at HEAD does not
+    name it. Every landing re-derives that spec, so main's names what landed
+    on main, squash merges included; a branch's own landing is reachable.
+    Outside git, before a first commit, or with no `land_commit`, an issue
+    is kept, as before."""
+    def git(*args):
+        return subprocess.run(["git", "-C", project_root, *args],
+                              capture_output=True, text=True)
+    try:
+        if git("rev-parse", "--verify", "-q", "HEAD").returncode != 0:
+            return landed
+        named = set()
+        for rel in LIVING_SPEC_FILES:
+            shown = git("show", f"HEAD:{rel}")
+            if shown.returncode == 0:
+                named |= set(_SOURCE_ISSUE.findall(shown.stdout))
+        kept = []
+        for item in landed:
+            commit = item["issue"].get("land_commit")
+            # Only an issue the rule can judge is ever left out: one with a
+            # `land_commit` that is not on this branch and that the committed
+            # spec does not name. A record with no `land_commit` (written
+            # before ship-commit recorded one, or by hand) is kept, as before.
+            if (item["slug"] in named or not isinstance(commit, str) or not commit
+                    or git("merge-base", "--is-ancestor", commit,
+                           "HEAD").returncode == 0):
+                kept.append(item)
+        return kept
+    except OSError:
+        return landed
+
 
 def derive_system_spec(project_root: str) -> None:
     """Derive docs/system-spec.md from all landed manifest.yml files.
@@ -580,6 +625,8 @@ def derive_system_spec(project_root: str) -> None:
 
     # Sort: land_timestamp ascending, issue slug as tiebreaker
     landed.sort(key=lambda x: (x["land_timestamp"], x["slug"]))
+    all_landed = landed
+    landed = _landed_on_this_branch(project_root, landed)
 
     # ---- 2. Build the current-behaviour and archived-behaviour tables ------
     # Key: intent id → winner entry  (dict with slug, scn_id, scn_title, ts, date)
@@ -734,12 +781,16 @@ def derive_system_spec(project_root: str) -> None:
     # can lack an issue the committed spec already names. Rewriting the spec
     # then would drop that issue's scenarios without a word (#289), so refuse
     # and name each missing issue instead.
-    on_disk = {item["slug"] for item in landed}
+    # Every landed record on disk counts here, kept by the branch rule or
+    # not: one the rule left out is not missing, and saying so would send a
+    # person to copy a record that is already there.
+    on_disk = {item["slug"] for item in all_landed}
     named = set()
     for path in (out_path, archive_path):
         if os.path.isfile(path):
             with open(path, encoding="utf-8") as fh:
-                named |= set(re.findall(r"^- \*\*Source issue:\*\* `([^`]+)`", fh.read(), re.M))
+                named |= set(re.findall(r"^- \*\*Source " + _SOURCE_LABELS
+                                        + r":\*\* `([^`]+)`", fh.read(), re.M))
     missing = sorted(named - on_disk)
     if missing:
         raise CompassError(

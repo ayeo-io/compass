@@ -17,6 +17,10 @@ superseded_by: ''
 > `ship-commit`, after it marks an issue landed, and `integrate.sh` no longer
 > derives or marks anything landed. Rules 2 to 4 below stand.
 
+> **Amended by ADR-034 (2026-10-06, proposed):** the derivation includes only
+> the landed issues on the branch being derived, which the committed spec
+> and commit reachability identify. Rule 2 is narrowed accordingly.
+
 ## Context
 
 Every artifact Compass produces today is **per-task**: `route.md`, `spec.feature.md`, `plan.md`, `verification-report.md`, `task.yml`, and so on all live under a single `.compass/work/<task>/` directory and describe one task's slice of work. The framework has no first-class concept of a **cross-task** artifact - a single document derived from many tasks' outputs.

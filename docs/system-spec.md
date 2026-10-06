@@ -29,12 +29,12 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a ledger whose entries have very long first sentences, When quick-fix start lists the settled decisions, Then each line and the whole listing stay within their character budgets and every line still names its entry
+### Given issue C raised from B, which was raised from A, when C's `raised_by` is recorded, then one line names A as the root and points at `S14` in `governance/strategies.md`. A second-level issue prints no such line.
 
-- **Scenario id:** `TC-3`
+- **Scenario id:** `LN-5`
 - **Intent:** `INT-1`
-- **Source issue:** `ledger-listing-cap`
-- **Landed:** 2026-10-05
+- **Source issue:** `lineage`
+- **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
 
@@ -332,4 +332,4 @@
 
 ---
 
-1630 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1635 superseded scenario(s) are in `docs/system-spec-archive.md`.

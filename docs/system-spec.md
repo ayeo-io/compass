@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the decision, then an architecture decision record states the new selection rule and how it narrows ADR-008's "reconstructible from landed issues alone".
+### Given the mutation runner, When --check names no register entry, Then it exits non-zero naming the id; and when a test stays green its output is shown
 
-- **Scenario id:** `LS-4`
+- **Scenario id:** `MT-1`
 - **Intent:** `INT-1`
-- **Source issue:** `living-spec-conflicts`
+- **Source issue:** `mutation-runner-tidy`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1651 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1650 superseded scenario(s) are in `docs/system-spec-archive.md`.

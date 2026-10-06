@@ -316,3 +316,28 @@ def test_sf_1_a_link_planted_during_a_run_stops_the_next_run(world):
     assert result.returncode != 0, said
     assert "refusing run 2" in said and "link" in said, said
     assert len(list(out.glob("*.json"))) == 1
+
+
+# --- A bare root run mounts its plugin copy read-only (RM-1, issue
+# `harness-read-only-bind-mount`)
+
+def test_rm_1_a_root_run_without_a_session_user_mounts_its_copy_read_only(world):
+    _configure_fake_claude(world["claude"], world["log"], None)
+    os.chmod(world["claude"].parent / "fake_claude_config.json", 0o644)
+    out = world["shared"] / "out"
+    env = {k: v for k, v in os.environ.items() if k not in ("CI", "COMPASS_UNATTENDED")}
+    def tmp_mounts():
+        return [line for line in Path("/proc/mounts").read_text().splitlines()
+                if " /tmp" in line]
+    before = tmp_mounts()
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "evals" / "harness.py"),
+         "--scenario", str(world["scenario"]), "--condition", "compass",
+         "--claude", str(world["claude"]), "--out", str(out),
+         "--plugin-source", str(world["plugin"])],
+        env=env, capture_output=True, text=True, timeout=600)
+    assert result.returncode == 0, result.stdout + result.stderr
+    record = json.loads(next(out.glob("*.json")).read_text(encoding="utf-8"))
+    assert record["plugin_copy_mount"] == "read-only bind"
+    assert record["contained"] is True, record.get("escaped_paths")
+    assert tmp_mounts() == before, "the mount was left behind"

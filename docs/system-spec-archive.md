@@ -11544,23 +11544,16 @@
 - **Source issue:** `doc-scans-read-tracked-files`
 - **Landed:** 2026-10-06
 
-### Given a git project where an issue is landed in local records, is not named in the spec committed at HEAD and its `land_commit` is not reachable from HEAD, when the spec is derived, then its scenarios are left out; an issue named in HEAD's spec, or whose `land_commit` is reachable, is kept. _(archived)_
+### Given the harness running as root on Linux, When it prepares its plugin copy, Then it bind-mounts the copy read-only before any session, records that it did, removes the mount at the end, and falls back to the refusal when the mount fails _(archived)_
 
-- **Scenario id:** `LS-1`
+- **Scenario id:** `RM-1`
 - **Intent:** `INT-1`
-- **Source issue:** `living-spec-conflicts`
+- **Source issue:** `harness-read-only-bind-mount`
 - **Landed:** 2026-10-06
 
-### Given a branch that conflicts with its base only in the two derived spec files, when `compass spec refresh --base <ref>` runs, then the base is merged, the base's spec is taken, the spec is re-derived with the branch's own issue and committed, and no conflict is left. _(archived)_
+### Given a quick fix whose manifest records a re-assessment, When quick-fix finish runs, Then the manifest's friction list holds the derived entry; with no signal, no friction key is written and no extra line is printed _(archived)_
 
-- **Scenario id:** `LS-2`
+- **Scenario id:** `QF-1`
 - **Intent:** `INT-1`
-- **Source issue:** `living-spec-conflicts`
-- **Landed:** 2026-10-06
-
-### Given a merge that also conflicts in another file, when `compass spec refresh` runs, then it aborts the merge, leaves the branch as it was and names the other files. _(archived)_
-
-- **Scenario id:** `LS-3`
-- **Intent:** `INT-1`
-- **Source issue:** `living-spec-conflicts`
+- **Source issue:** `quick-fix-finish-captures-friction`
 - **Landed:** 2026-10-06

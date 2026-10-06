@@ -1,13 +1,12 @@
 """The check-mutation runner proves each register test can fail.
 
 `tests/mutation_proofs.yml` names a pair of tests for every shipped check,
-and `tests/test_mutation_proof_register.py` proves they exist. An
-independent review of that register found four of 22 cited tests still
-passed with their check disabled: one matched text a passing check also
-prints, another passed because a different check failed in its fixture.
+and `tests/test_mutation_proof_register.py` proves they exist. A test can
+exist and still not notice a broken check: it can match text a passing check
+also prints, or pass because a different check failed in its fixture.
 `.github/scripts/check_mutation_runner.py` breaks each check in a copy of
 the checkout, to always pass and then always fail, and reports any test
-that stayed green.
+that stayed green, with its last lines of output.
 
 These tests run it on a small project with one check, so each way a test
 can fail to prove its check is shown on its own.
@@ -144,3 +143,24 @@ def test_cm_1_a_check_missing_from_the_registry_is_named(tmp_path):
     result = _run(root)
     assert result.returncode != 0
     assert "gone: no function" in result.stdout, result.stdout
+
+
+# --- MT-1: no false all-clear, and the reason a test stayed green -------------------
+
+def test_mt_1_an_unknown_check_id_is_refused(tmp_path):
+    root = _project(tmp_path, "test_an_unnamed_issue_fails", "test_a_named_issue_passes")
+    result = subprocess.run([sys.executable, str(RUNNER), "--root", str(root),
+                             "--check", "nosuchcheck"],
+                            capture_output=True, text=True, timeout=300)
+    assert result.returncode != 0, result.stdout
+    assert "nosuchcheck" in result.stdout + result.stderr
+    assert "Every register test went red" not in result.stdout
+
+
+def test_mt_1_a_test_that_stayed_green_shows_its_output(tmp_path):
+    root = _project(tmp_path, "test_weak_only_looks_at_the_detail",
+                    "test_a_named_issue_passes")
+    result = _run(root)
+    assert result.returncode != 0
+    assert "passed" in result.stdout.split("cannot show that their check works")[1], \
+        result.stdout

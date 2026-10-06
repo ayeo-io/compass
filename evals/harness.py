@@ -320,6 +320,11 @@ _GIT_DIFF_SAFE_ARGS = ("--no-ext-diff", "--no-textconv")
 # session wrote, which must never run as root.
 _SESSION_FOLDER: tuple[Path, tuple[int, int]] | None = None
 
+# How the plugin copy is protected beyond its file modes for this harness
+# call: "read-only bind" when `main` mounted it read-only, else None. Each
+# record carries it.
+_PLUGIN_COPY_MOUNT: str | None = None
+
 
 # The calls made as the session user whose output a process they started
 # was still holding when they exited. Each was ended by the kill-all, and
@@ -798,6 +803,66 @@ def _remove_read_only_tree(root: Path) -> None:
         os.chmod(path, path.stat().st_mode | stat.S_IWUSR)
     os.chmod(root, root.stat().st_mode | stat.S_IWUSR)
     shutil.rmtree(root)
+
+
+def _mount_read_only(path: Path, *, euid: int | None = None,
+                     platform: str | None = None,
+                     run: Callable[..., Any] = subprocess.run) -> bool:
+    """Bind-mount `path` onto itself and remount it read-only, so a root
+    run's plugin copy cannot be edited even though root ignores file modes.
+    Only root on Linux can; elsewhere nothing is tried. A failed remount
+    undoes the bind, so a half-made mount is never left behind. Returns
+    whether the copy is now read-only; on False the caller falls back to
+    the refusal or to `--session-user`, never to a silent run."""
+    # The real euid, never `_euid()`: tests fake root through `_euid()`, and
+    # one running in a real-root container with mount rights must not then
+    # mount for real.
+    euid = os.geteuid() if euid is None else euid
+    platform = sys.platform if platform is None else platform
+    if euid != 0 or not platform.startswith("linux"):
+        return False
+    target = str(path)
+
+    def ok(command):
+        try:
+            return run(command, capture_output=True, text=True).returncode == 0
+        except OSError:
+            return False
+
+    if not ok(["mount", "--bind", target, target]):
+        return False
+    try:
+        remounted = ok(["mount", "-o", "remount,bind,ro", target, target])
+    except BaseException:
+        # An interrupt here would otherwise leave a writable bind behind.
+        ok(["umount", target])
+        raise
+    if not remounted:
+        ok(["umount", target])
+        return False
+    return True
+
+
+def _release_plugin_copy(path: Path, *, mounted: bool,
+                         run: Callable[..., Any] = subprocess.run) -> None:
+    """Remove the read-only mount, when there is one, then the copy: the
+    files of a read-only mount cannot be deleted. A busy mount, held by a
+    process still working in the copy, is detached lazily. A mount that
+    cannot be removed at all is reported and the copy kept, because
+    deleting under it would fail and leave the mount anyway."""
+    if mounted:
+        target = str(path)
+        for command in (["umount", target], ["umount", "-l", target]):
+            done = run(command, capture_output=True, text=True)
+            if done.returncode == 0:
+                break
+        else:
+            print(f"could not remove the read-only mount of the plugin copy at "
+                  f"{target} (umount: {(done.stderr or '').strip()}); it and the "
+                  f"copy are left in place. Remove them with `umount {target}`.",
+                  file=sys.stderr)
+            return
+    _remove_read_only_tree(path)
 
 
 def _run_compass_init(plugin_copy_dir: Path, repo_dir: Path,
@@ -2395,6 +2460,9 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
         # None when no session user was used, so "not checked" never reads
         # as "unchanged" (`_SESSION_CONFIG_WATCHED`).
         "session_config_changed": session_config_changed,
+        # "read-only bind" when the harness mounted its plugin copy
+        # read-only as root on Linux; None otherwise.
+        "plugin_copy_mount": _PLUGIN_COPY_MOUNT,
         "uid": os.geteuid(),
         "ran_as_root": os.geteuid() == 0,
         "session_uid": (session_user.uid if session_user is not None
@@ -2517,12 +2585,20 @@ def main(argv: list[str] | None = None) -> int:
         session_user = SessionUser.of(_lookup_user(args.session_user))
     plugin_copy_dir, child_env = _prepare_plugin_copy(
         args.condition, plugin_source, session_user=session_user)
+    global _PLUGIN_COPY_MOUNT
+    _PLUGIN_COPY_MOUNT = None
+    # Without a session user, root's only protection for the copy is a
+    # read-only mount, so it is made before the check that needs it.
+    # With one, it waits until the copy's modes are opened for that user,
+    # which a read-only mount would refuse.
+    mounted = (session_user is None and plugin_copy_dir is not None
+               and _mount_read_only(plugin_copy_dir))
     refusal = _root_refusal(args.condition, plugin_copy_dir,
                             allow_root=args.allow_root, euid=_euid(),
                             session_user=args.session_user)
     if refusal:
         if plugin_copy_dir is not None:
-            _remove_read_only_tree(plugin_copy_dir)
+            _release_plugin_copy(plugin_copy_dir, mounted=mounted)
         print(refusal, file=sys.stderr)
         return 2
     framework_copy_dir: Path | None = None
@@ -2554,6 +2630,10 @@ def main(argv: list[str] | None = None) -> int:
         for shared in (plugin_copy_dir, framework_copy_dir, r1_scripts_dir):
             if shared is not None:
                 _open_for_session_user(shared)
+        if plugin_copy_dir is not None:
+            mounted = _mount_read_only(plugin_copy_dir)
+    if mounted:
+        _PLUGIN_COPY_MOUNT = "read-only bind"
     try:
         for run_index in range(1, args.runs + 1):
             record = run_once(scenario, scenario_dir, args.condition, run_index,
@@ -2571,7 +2651,7 @@ def main(argv: list[str] | None = None) -> int:
         global _SESSION_FOLDER
         _SESSION_FOLDER = None
         if plugin_copy_dir is not None:
-            _remove_read_only_tree(plugin_copy_dir)
+            _release_plugin_copy(plugin_copy_dir, mounted=mounted)
         if framework_copy_dir is not None:
             _remove_read_only_tree(framework_copy_dir)
         if not r1_scripts_dir_is_framework_copy:

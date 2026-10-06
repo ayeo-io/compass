@@ -210,6 +210,15 @@ def build_parser():
         help="propose friction seen in three or more issues as pending lessons "
              "(nothing becomes a lesson until `compass lesson accept`)")
     pcal.add_argument(
+        "--compliance", action="store_true",
+        help="score real sessions from their transcripts against the "
+             "process behaviours (advisory; exit 0)")
+    pcal.add_argument("--days", type=int, metavar="N",
+                      help="with --compliance: issues started in the last N "
+                           "days (default 14)")
+    pcal.add_argument("--issue", dest="issue_slug", metavar="SLUG",
+                      help="with --compliance: one issue only")
+    pcal.add_argument(
         "--lineage", action="store_true",
         help="count issues raised from another issue by where they were "
              "found, before or after the parent landed (advisory; exit 0)")

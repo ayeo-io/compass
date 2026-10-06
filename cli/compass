@@ -66,6 +66,7 @@ from compass_pkg._all import *  # noqa: F401,F403
 from compass_pkg.subtasks import register as register_subtask_parser  # noqa: E402
 from compass_pkg.quick_fix_cmd import register as register_quick_fix_parser  # noqa: E402
 from compass_pkg.decisions import register as register_decision_parser  # noqa: E402
+from compass_pkg.lineage import cmd_issue_raised_by  # noqa: E402
 from compass_pkg.diagnose import register as register_diagnose_parser  # noqa: E402
 from compass_pkg.lessons import register as register_lesson_parser  # noqa: E402
 from compass_pkg.session_lease import register as register_issue_use_parser  # noqa: E402
@@ -195,6 +196,10 @@ def build_parser():
         help="propose friction seen in three or more issues as pending lessons "
              "(nothing becomes a lesson until `compass lesson accept`)")
     pcal.add_argument(
+        "--lineage", action="store_true",
+        help="count issues raised from another issue by where they were "
+             "found, before or after the parent landed (advisory; exit 0)")
+    pcal.add_argument(
         "--format",
         choices=["markdown", "json"],
         default="markdown",
@@ -277,6 +282,18 @@ def build_parser():
     ptl.set_defaults(func=cmd_task_lint, output_kind="report")
     register_diagnose_parser(pts, issue_arg)
     register_issue_use_parser(pts)
+
+    ptrb = pts.add_parser(
+        "raised-by", help="record the issue this one was found in",
+        description="Record the issue this one was found in, and where: the "
+                    "manifest's raised_by key, which `compass retro --lineage` "
+                    "counts. The third issue in a chain is told to correct "
+                    "every place at once.")
+    ptrb.add_argument("parent", help="the parent issue's slug")
+    ptrb.add_argument("--found-at", required=True,
+                      help="define, plan, implement, verify, review, ci or after-landing")
+    issue_arg(ptrb)
+    ptrb.set_defaults(func=cmd_issue_raised_by, output_kind="hand-off")
 
     ptr = pts.add_parser("receipt", help="render a one-screen receipt for an issue")
     issue_arg(ptr)

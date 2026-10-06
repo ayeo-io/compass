@@ -117,6 +117,11 @@ force; if it is still a spike, leave the marker in place.
    <slug>`, so every later `compass` call resolves to this issue without an
    `--issue` flag, and another session working on another issue is told
    that the pointer moved.
+   If this issue was found while working on another, record that too:
+   `compass issue raised-by <parent> --found-at <where>`, where `<where>`
+   is `define`, `plan`, `implement`, `verify`, `review`, `ci` or
+   `after-landing`.
+   `compass retro --lineage` counts these.
 6. **On a spike, write the `.spike` marker.** If the CLI's approach is a
    spike, create an empty marker file at `.compass/work/<issue-slug>/.spike`.
    The approach-aware pre-tool hook reads this to know the TDD strategy is

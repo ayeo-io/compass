@@ -503,6 +503,21 @@ def delivery_approach_errors(task):
             f"approaches are {', '.join(ROUTE_NAMES)}"]
 
 
+def raised_by_errors(task):
+    """A malformed `raised_by`, reported by the built-in lint for the same
+    reason as `delivery_approach_errors`: jsonschema is optional."""
+    from compass_pkg.lineage import FOUND_AT
+    raised = task.get("raised_by")
+    if raised is None:
+        return []
+    if not isinstance(raised, dict) or not isinstance(raised.get("issue"), str):
+        return ["`raised_by` must name the parent issue: {issue: <slug>, found_at: <where>}"]
+    if raised.get("found_at") not in FOUND_AT:
+        return [f"`raised_by.found_at: {raised.get('found_at')}` is not a place an "
+                f"issue is found; use one of {', '.join(FOUND_AT)}"]
+    return []
+
+
 def cmd_task_lint(args):
     from compass_pkg.terminal import relative_to_project
     if args.file:
@@ -515,6 +530,7 @@ def cmd_task_lint(args):
     errs = []
     # The manifest is normalised above, so this reads the current key.
     errs += delivery_approach_errors(task)
+    errs += raised_by_errors(task)
     if "issue" not in task:
         errs.append("missing `issue:` (the issue slug)")
     # Each block below checks the shape before reading it. This command's whole

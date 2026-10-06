@@ -701,6 +701,16 @@
         }
       }
     },
+    "raised_by": {
+      "type": "object",
+      "description": "The issue this one was found in, and where. Set by `quick-fix start --raised-by --found-at` or `compass issue raised-by`; read by `compass retro --lineage`. Advisory only.",
+      "required": ["issue", "found_at"],
+      "additionalProperties": false,
+      "properties": {
+        "issue": {"type": "string", "minLength": 1},
+        "found_at": {"enum": ["define", "plan", "implement", "verify", "review", "ci", "after-landing"]}
+      }
+    },
     "follow_ups": {
       "type": "array",
       "description": "Work this issue deferred and still owes (e.g. a hotfix's). `compass check` fails while any is unresolved. The v2 states are outstanding/resolved; the 1.x spellings (owed/paid) stay schema-legal so an unmigrated manifest still lints - readers normalise them.",

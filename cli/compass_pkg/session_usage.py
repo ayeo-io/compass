@@ -1,4 +1,5 @@
-"""Tokens spent in each stage of a quick fix, from the session's transcript.
+"""Tokens spent in each stage of a quick fix, and the tool calls a session
+made, from the session's transcript.
 
 Claude Code writes every session to a transcript under its config folder,
 named after the session id it also gives each tool call
@@ -6,9 +7,10 @@ named after the session id it also gives each tool call
 place that reads that format, which Claude Code does not version. Another
 runtime has no adapter yet and records `not-claude-code`.
 
-Only numbers, model names and times leave this module. A transcript holds
-the whole conversation; none of its text, paths or error messages is kept,
-and a reason for recording nothing is one of `REASONS`.
+`stage_usage` stores only numbers, model names and times: none of the
+transcript's text, paths or error messages is kept, and a reason for
+recording nothing is one of `REASONS`. `events` returns text in memory for
+`compliance` to score; that module prints and stores none of it.
 """
 # DEPENDENCY: standard library (datetime, glob, json, os).
 from __future__ import annotations
@@ -70,6 +72,68 @@ def transcript_paths(session_id):
     subagents = glob.glob(os.path.join(projects, "*", session_id,
                                        "subagents", "*.jsonl"))
     return sorted(main) + sorted(subagents)
+
+
+def _result_text(content):
+    """A tool result's content as one string: Claude Code writes either a
+    string or a list of text blocks."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "\n".join(str(b.get("text", "")) for b in content
+                         if isinstance(b, dict) and b.get("type") == "text")
+    return ""
+
+
+def events(paths):
+    """The main session's tool calls and assistant text, in order. Each call
+    is `{kind: "call", at, name, input, output, is_error}`, with its result
+    joined to it; each text is `{kind: "text", at, text}`. Subagents'
+    transcripts are left out: their calls are not the session's own. Lines
+    that are not JSON are skipped."""
+    main = [p for p in paths if os.path.basename(os.path.dirname(p)) != "subagents"]
+    found, by_id = [], {}
+    for path in main[:1]:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            for raw in fh:
+                try:
+                    line = json.loads(raw)
+                except ValueError:
+                    continue
+                if not isinstance(line, dict):
+                    continue
+                message = line.get("message")
+                blocks = message.get("content") if isinstance(message, dict) else None
+                if not isinstance(blocks, list):
+                    continue
+                at = line.get("timestamp")
+                for block in blocks:
+                    if not isinstance(block, dict):
+                        continue
+                    kind = block.get("type")
+                    if line.get("type") == "assistant" and kind == "tool_use":
+                        # A call's input is always a mapping to its readers,
+                        # whatever a malformed line holds.
+                        tool_input = block.get("input")
+                        call = {"kind": "call", "at": at, "name": block.get("name"),
+                                "input": tool_input if isinstance(tool_input, dict) else {},
+                                "output": "", "is_error": False}
+                        by_id[block.get("id")] = call
+                        found.append(call)
+                    elif line.get("type") == "assistant" and kind == "text":
+                        found.append({"kind": "text", "at": at,
+                                      "text": str(block.get("text") or "")})
+                    elif line.get("type") == "user" and kind == "tool_result":
+                        call = by_id.get(block.get("tool_use_id"))
+                        if call is not None:
+                            call["output"] = _result_text(block.get("content"))
+                            call["is_error"] = bool(block.get("is_error"))
+    return found
+
+
+def tool_calls(paths):
+    """The main session's tool calls, in order (see `events`)."""
+    return [e for e in events(paths) if e["kind"] == "call"]
 
 
 def requests(paths, skipped=None):

@@ -82,3 +82,42 @@ def test_contract_2_is_a_projection_of_contract_1():
     _, rows = load_routing()
     recorded = yaml.safe_load(OWED.read_text(encoding="utf-8"))
     assert owed_by_approach(rows) == recorded["owed"]
+
+
+# --- contracts 3 and 6: verdicts and readability over the archive sample ---------
+
+def _archive():
+    import json
+
+    from archive import sample_root
+    from compat_baseline import ARCHIVE
+    return sample_root(), json.loads(ARCHIVE.read_text(encoding="utf-8"))
+
+
+def test_contract_3_check_gives_the_recorded_verdicts_on_the_archive_sample():
+    from compat_baseline import archive_differences, archive_results
+    root, recorded = _archive()
+    assert recorded["version"] == "5.6.0" and len(recorded["issues"]) == 16
+    differences = archive_differences(recorded["issues"], archive_results(root))
+    assert differences == [], "\n".join(differences)
+
+
+def test_contract_6_every_sampled_issue_stays_readable():
+    _, recorded = _archive()
+    unreadable = {slug: r for slug, r in recorded["issues"].items()
+                  if r["lint_exit"] or r["receipt_exit"]}
+    assert unreadable == {}
+
+
+def test_contract_3_can_fail_when_an_issue_loses_its_evidence(tmp_path):
+    import shutil
+
+    from compat_baseline import archive_differences, archive_results
+    root, recorded = _archive()
+    slug = next(s for s, r in recorded["issues"].items()
+                if r["verdicts"].get("suite-passed") == "pass")
+    copy = tmp_path / "sample"
+    shutil.copytree(root, copy)
+    shutil.rmtree(copy / ".compass" / "work" / slug / "evidence")
+    now = archive_results(copy, only={slug})
+    assert archive_differences({slug: recorded["issues"][slug]}, now)

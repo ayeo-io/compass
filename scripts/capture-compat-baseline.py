@@ -52,11 +52,35 @@ def _archive_assessments():
     return found
 
 
+def capture_archive(force):
+    """Contracts 3 and 6: `compass check`'s verdict per check on each issue
+    in the archive sample, and the exit of `issue lint` and `issue receipt`
+    on each, so old records are shown to stay readable."""
+    from compat_baseline import ARCHIVE, archive_results
+    if ARCHIVE.exists() and not force:
+        sys.exit(f"{ARCHIVE.relative_to(ROOT)} exists. A baseline is captured once; "
+                 f"pass --force only for a new major version's defaults.")
+    commit = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "HEAD"],
+                            capture_output=True, text=True, check=True).stdout.strip()
+    version = (ROOT / "VERSION").read_text().strip()
+    issues = archive_results(sample_root())
+    FIXTURES.mkdir(parents=True, exist_ok=True)
+    ARCHIVE.write_text(json.dumps({"version": version, "captured_from": commit,
+                                   "issues": issues}, indent=1, sort_keys=True) + "\n",
+                       encoding="utf-8")
+    print(f"captured {len(issues)} archive issues from {version} at {commit[:12]}")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--force", action="store_true",
                         help="overwrite an existing baseline (a new major only)")
+    parser.add_argument("--archive", action="store_true",
+                        help="capture contracts 3 and 6 (the archive sample) "
+                             "instead of the routing baseline")
     args = parser.parse_args()
+    if args.archive:
+        return capture_archive(args.force)
     if ROUTING.exists() and not args.force:
         sys.exit(f"{ROUTING.relative_to(ROOT)} exists. A baseline is captured once; "
                  f"pass --force only for a new major version's defaults.")

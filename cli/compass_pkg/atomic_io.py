@@ -14,11 +14,12 @@ This module holds what that needs:
 
 It imports nothing from Compass, so every module, core included, can use it.
 """
-# DEPENDENCY: standard library (contextlib, hashlib, json, os, tempfile);
+# DEPENDENCY: standard library (contextlib, datetime, hashlib, json, os, tempfile);
 # the bundled PyYAML.
 from __future__ import annotations
 
 import contextlib
+import datetime
 import hashlib
 import json
 import os
@@ -123,9 +124,19 @@ def load_yaml_strict(path):
     return {} if data is None else data
 
 
+def _json_default(value):
+    """YAML reads an unquoted `2026-10-05` as a date, so a parsed layer can
+    hold one. Write it as its ISO string; anything else JSON cannot hold is
+    refused by type, not silently coerced."""
+    if isinstance(value, (datetime.date, datetime.datetime)):
+        return value.isoformat()
+    raise TypeError(f"cannot digest a value of type {type(value).__name__}: {value!r}")
+
+
 def canonical_json(obj):
     """One byte form for equal data: sorted keys, no spaces, ASCII only."""
-    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=True,
+                      default=_json_default)
 
 
 def digest(obj):

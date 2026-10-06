@@ -11810,30 +11810,72 @@
 - **Source issue:** `catalogue-spec`
 - **Landed:** 2026-10-06
 
-### Given the same settings in `.compass/config.yml` or in `compass.yml`, when each Python reader runs (adoption mode, autonomy, drift strictness, record _(archived)_
+### A project file loads with its layer keys and settings keys split _(archived)_
 
-- **Scenario id:** `SR-1`
+- **Scenario id:** `LM-1`
 - **Intent:** `INT-1`
-- **Source issue:** `settings-reader-python`
+- **Source issue:** `layers-and-merge`
 - **Landed:** 2026-10-06
 
-### Given a missing or broken settings file, when each reader runs, then it behaves as it did at 5.6.0 (the design's table: enforced, balanced or a refus _(archived)_
+### Removing an entry something refers to names each referrer _(archived)_
 
-- **Scenario id:** `SR-2`
+- **Scenario id:** `LM-10`
 - **Intent:** `INT-1`
-- **Source issue:** `settings-reader-python`
+- **Source issue:** `layers-and-merge`
 - **Landed:** 2026-10-06
 
-### Given the fold-in test, when one reader is left reading `.compass/config.yml` directly, then the test fails; and no module but `project_settings.py`  _(archived)_
+### A layer digest covers the layer keys only _(archived)_
 
-- **Scenario id:** `SR-4`
+- **Scenario id:** `LM-2`
 - **Intent:** `INT-1`
-- **Source issue:** `settings-reader-python`
+- **Source issue:** `layers-and-merge`
 - **Landed:** 2026-10-06
 
-### The compatibility contracts 1 to 6 still pass, apart from any entry this change alters on purpose with its reason.  _(archived)_
+### The chain runs parent, project, issue and refuses a settings key in a parent _(archived)_
 
-- **Scenario id:** `SR-5`
+- **Scenario id:** `LM-3`
 - **Intent:** `INT-1`
-- **Source issue:** `settings-reader-python`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
+### Entry operations add, set, replace and remove _(archived)_
+
+- **Scenario id:** `LM-4`
+- **Intent:** `INT-1`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
+### Field operations inside set on scalars, lists and maps _(archived)_
+
+- **Scenario id:** `LM-5`
+- **Intent:** `INT-1`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
+### Provenance names the layer and operation of every field _(archived)_
+
+- **Scenario id:** `LM-6`
+- **Intent:** `INT-1`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
+### Bad targets and bad entries are refused by code _(archived)_
+
+- **Scenario id:** `LM-7`
+- **Intent:** `INT-1`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
+### Misused list and map operations are refused by code _(archived)_
+
+- **Scenario id:** `LM-8`
+- **Intent:** `INT-1`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
+### An operation or field a layer may not use is refused _(archived)_
+
+- **Scenario id:** `LM-9`
+- **Intent:** `INT-1`
+- **Source issue:** `layers-and-merge`
 - **Landed:** 2026-10-06

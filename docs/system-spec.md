@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given atomic_io, when a file is written and the process fails before the rename, then the old file is intact and no temporary file is left; a YAML file with a duplicate key is refused with its line; equal data gives equal canonical JSON and digests
+### Given each of the inconsistent refusals the command corpus found, when it runs, then it exits 2, names the real problem and the flag it has, writes to stderr, and the corpus entry records the new exit on purpose
 
 - **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `atomic-io`
+- **Source issue:** `cli-refusal-consistency`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1679 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1680 superseded scenario(s) are in `docs/system-spec-archive.md`.

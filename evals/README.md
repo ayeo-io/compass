@@ -108,13 +108,20 @@ paths:
   change on every run. The host must have
   `fs.protected_hardlinks` on, the Linux default: it stops the session
   user making a hard link to a file root then reads.
-- The plugin copy on a read-only mount.
+- The plugin copy on a read-only mount. As root on Linux the harness makes
+  this mount itself: it bind-mounts its plugin copy onto itself and remounts
+  it read-only before any session, records `plugin_copy_mount: read-only
+  bind`, and removes the mount at the end. A container needs the
+  `SYS_ADMIN` capability for it. When the mount cannot be made, the run
+  falls back to `--session-user` or to the refusal, never to a silent run.
+  With `--session-user` the copy is mounted too, after its modes are opened
+  for that user.
 
 Without either, the run is refused. `--allow-root` runs it uncontained, and is
 a person's decision: it is refused when `CI` or `COMPASS_UNATTENDED` is set,
 so a scheduled run cannot use it. Every session runs with
 `PYTHONDONTWRITEBYTECODE=1`. Each record carries `uid`, `ran_as_root`,
-`session_uid`, `python_version` and `session_config_changed` (null without a
+`session_uid`, `python_version`, `plugin_copy_mount` and `session_config_changed` (null without a
 session user); the comparison report states the uid and Python version, how
 many runs were not contained, and how many changed the session user's Claude
 configuration.

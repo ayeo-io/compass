@@ -1843,7 +1843,8 @@ def test_run_record_has_every_documented_field(
         "stop_reason", "finished", "tool_calls", "texts",
         "permission_denials", "final_text", "diff", "changed_paths",
         "compass_files", "changed", "manifests", "tests_after", "contained",
-        "escaped_paths", "session_config_changed", "stderr_tail",
+        "escaped_paths", "session_config_changed", "plugin_copy_mount",
+        "stderr_tail",
         "over_budget", "replies_sent",
         "interruptions",
         "framework", "hidden", "regressions", "tokens", "compass_commit",
@@ -2171,13 +2172,15 @@ def test_the_file_scan_catches_a_planted_citation(tmp_path, planted):
 # process at all - `_run_git` for git, and the others that between them
 # start `compass init`, R3's own init, `claude --version`, `claude` itself,
 # the scenario's own test command, any call as the session user, the
-# kill-all and the session-user account check. `test_every_new_process_starts_through_a_
+# kill-all, the session-user account check, and `mount` and `umount` for
+# the plugin copy's read-only mount. `test_every_new_process_starts_through_a_
 # named_function` below checks each one actually starts a process, not
 # that it starts the specific program its own name suggests.
 _ALLOWED_TO_START_A_PROCESS = (
     "_run_git", "_run_compass_init", "_run_specify_init", "_claude_version",
     "_invoke_claude", "_run_test_command", "_end_session_user_processes",
-    "_run_as_session_user", "_account_in_use",
+    "_run_as_session_user", "_account_in_use", "_mount_read_only",
+    "_release_plugin_copy",
 )
 
 

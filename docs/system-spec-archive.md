@@ -11642,6 +11642,13 @@
 - **Source issue:** `session-compliance`
 - **Landed:** 2026-10-06
 
+### Given a branch already up to date with its base whose derived spec is stale, when compass issue refresh-spec runs, then it commits the re-derived spec with a message that names no merge _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `refresh-spec-message-when-up-to-date`
+- **Landed:** 2026-10-06
+
 ### Each structural decision of the configuration foundation is a proposed ADR with a rejected alternative, listed in the index _(archived)_
 
 - **Scenario id:** `DR-1`

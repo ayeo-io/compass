@@ -7,6 +7,10 @@ supersedes: ''
 superseded_by: ''
 ---
 
+> **Amended by ADR-034 (2026-10-06, proposed):** `ship-commit`'s derive
+> includes only the landed issues on the branch, and `compass issue refresh-spec`
+> clears a conflict confined to the derived spec.
+
 ## Context
 
 ADR-008 made the living system spec a derived file, and put its derivation

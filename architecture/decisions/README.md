@@ -73,6 +73,7 @@ Rules:
 | [ADR-031](ADR-031-delivery-record-in-a-second-repository.md) | The delivery record is kept in a second, private repository, synced at every landing | accepted | answers `delivery-record` |
 | [ADR-032](ADR-032-rival-names-in-an-off-github-key.md) | Rival product names are held in an off-GitHub key and kept out by hashed matching | proposed | answers `rival-names-never-committed`; keeps ADR-031's record clean |
 | [ADR-033](ADR-033-projects-add-checks-gates-and-dimension-values-as-data.md) | Projects add checks, gates and assessment-dimension values as data; the five guardrails and the shipped core stay framework-owned and locked | accepted | supersedes ADR-002; Inv-2 and Inv-3 reworded; ADR-009 (project checks already exist); accepts ADR-010 |
+| [ADR-034](ADR-034-derive-only-the-branchs-landed-issues.md) | Derive the living spec from the landed issues on the branch | proposed | narrows ADR-008 rule 2; amends ADR-026 |
 
 ## Principle → ADR mapping
 

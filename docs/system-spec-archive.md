@@ -11480,3 +11480,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `late-validation-acceptance`
 - **Landed:** 2026-10-06
+
+### Given a root eval run with --session-user, When a run changes a folder's mode, installs a job, or leaves an oversized file, or a call is held and the kill-all fails, Then the record or the next run's check shows it, and the call's readers and pipes are closed _(archived)_
+
+- **Scenario id:** `SF-1`
+- **Intent:** `INT-1`
+- **Source issue:** `session-user-follow-ups`
+- **Landed:** 2026-10-06

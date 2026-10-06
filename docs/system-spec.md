@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a root eval run with --session-user, When a run changes a folder's mode, installs a job, or leaves an oversized file, or a call is held and the kill-all fails, Then the record or the next run's check shows it, and the call's readers and pipes are closed
+### Given the mutation-proof register, When the runner breaks each check to always pass and then always fail in a copy of the checkout, Then each fails test and each restores test goes red, a weakened, skipped or uncollected test is reported by name with a non-zero exit, and the checkout is unchanged
 
-- **Scenario id:** `SF-1`
+- **Scenario id:** `CM-1`
 - **Intent:** `INT-1`
-- **Source issue:** `session-user-follow-ups`
+- **Source issue:** `check-mutation-runner`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1639 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1640 superseded scenario(s) are in `docs/system-spec-archive.md`.

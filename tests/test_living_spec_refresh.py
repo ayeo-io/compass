@@ -7,14 +7,15 @@ issue landed in local records, so a branch could carry an issue that had
 landed only on another branch.
 
 The derive now keeps a landed issue only when the spec committed at HEAD
-names it or its `land_commit` is reachable from HEAD, and `compass spec
-refresh` merges a base, takes the base's side of the two derived files,
+names it or its `land_commit` is reachable from HEAD, and `compass issue
+refresh-spec` merges a base, takes the base's side of the two derived files,
 re-derives and commits.
 
 Scenario ids: LS-1 to LS-4 (issue `living-spec-conflicts`).
 """
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -145,8 +146,11 @@ def _two_branches(tmp_path, extra_conflict=False):
 
 
 def _refresh(root, *args):
+    # The command runs git itself; a CI runner has no committer identity.
+    env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
+           "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com"}
     return subprocess.run([sys.executable, str(CLI), "issue", "refresh-spec", *args],
-                          cwd=root, capture_output=True, text=True, timeout=120)
+                          cwd=root, capture_output=True, text=True, timeout=120, env=env)
 
 
 def test_ls_2_refresh_merges_the_base_and_re_derives_both_issues(tmp_path):

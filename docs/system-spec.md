@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a project after compass init, then a state file in the .compass folder holds initialised and records_signed_since, no settings file is written, and the cutoff and the hook's explanation still read from it
+### Given a project with neither settings file, the hook starts no Python for the code_globs read; the names of the two files live in one allow-listed helper pinned equal to project_settings
 
-- **Scenario id:** `SR-3`
+- **Scenario id:** `SH-10`
 - **Intent:** `INT-1`
-- **Source issue:** `settings-reader-python`
+- **Source issue:** `settings-reader-hook`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1701 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1711 superseded scenario(s) are in `docs/system-spec-archive.md`.

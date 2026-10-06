@@ -156,3 +156,51 @@ def owed_by_approach(rows):
         owed.setdefault(result["delivery_approach"], set()).add(key)
     return {approach: [json.loads(k) for k in sorted(keys)]
             for approach, keys in sorted(owed.items())}
+
+
+# --- contracts 3 and 6: verdicts and readability over the archive sample -------
+
+ARCHIVE = FIXTURES / "contract-3-check-verdicts.json"
+CLI = ROOT / "cli" / "compass"
+
+
+def _issues(root):
+    work = Path(root) / ".compass" / "work"
+    return sorted(p.name for p in work.iterdir() if (p / "manifest.yml").is_file())
+
+
+def archive_results(root, only=None):
+    """For each sampled issue: `compass check`'s exit and its verdict per
+    check, and the exit of `issue lint` and `issue receipt`. Contract 3 is
+    the verdicts; contract 6 is that old records stay readable."""
+    import subprocess
+
+    def run(*args):
+        return subprocess.run([sys.executable, str(CLI), *args], cwd=root,
+                              capture_output=True, text=True)
+
+    results = {}
+    for slug in _issues(root):
+        if only and slug not in only:
+            continue
+        check = run("check", "--issue", slug, "--json")
+        try:
+            verdicts = {c["name"]: c["status"] for c in json.loads(check.stdout)["checks"]}
+        except (ValueError, KeyError, TypeError):
+            verdicts = {"unreadable output": check.stdout[-200:]}
+        results[slug] = {
+            "check_exit": check.returncode,
+            "verdicts": verdicts,
+            "lint_exit": run("issue", "lint", "--issue", slug).returncode,
+            "receipt_exit": run("issue", "receipt", "--issue", slug).returncode,
+        }
+    return results
+
+
+def archive_differences(recorded, now):
+    found = []
+    for slug in sorted(set(recorded) | set(now)):
+        old, new = recorded.get(slug), now.get(slug)
+        if old != new:
+            found.append(f"{slug}: {_first_difference(old or {}, new or {})}")
+    return found

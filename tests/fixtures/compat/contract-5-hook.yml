@@ -1,0 +1,553 @@
+# Contract 5: the pre-tool hook's decision on each tool call below, captured
+# once from compass 5.6.0 (commit db08a51f) by tests/compat_hook.py.
+# Do not regenerate this file from newer code: it is the record a rewrite of
+# the configuration must still match. `decision` follows the exit status
+# (0 allows, 2 blocks); `code` is the bracketed refusal code, or null.
+# `{project}` and `{outside}` stand for the project directory and a
+# directory outside it, filled in when the entry runs.
+contract: 5
+entries:
+- id: edit-code-with-red
+  state: red
+  tool: Edit
+  tool_input:
+    file_path: '{project}/src/app.py'
+    old_string: a
+    new_string: b
+  exit: 0
+  decision: allow
+  code: null
+- id: write-new-code-with-red
+  state: red
+  tool: Write
+  tool_input:
+    file_path: '{project}/src/pkg/fresh.py'
+    content: 'x
+
+      '
+  exit: 0
+  decision: allow
+  code: null
+- id: bash-redirect-with-red
+  state: red
+  tool: Bash
+  tool_input:
+    command: echo x > src/app.py
+  exit: 0
+  decision: allow
+  code: null
+- id: edit-code-no-red
+  state: no-red
+  tool: Edit
+  tool_input:
+    file_path: '{project}/src/app.py'
+    old_string: a
+    new_string: b
+  exit: 2
+  decision: block
+  code: no-red-on-record
+- id: write-new-code-no-red
+  state: no-red
+  tool: Write
+  tool_input:
+    file_path: '{project}/src/pkg/fresh.py'
+    content: 'x
+
+      '
+  exit: 2
+  decision: block
+  code: no-red-on-record
+- id: edit-workflow-no-red
+  state: no-red
+  tool: Edit
+  tool_input:
+    file_path: '{project}/.github/workflows/ci.yml'
+    old_string: a
+    new_string: b
+  exit: 2
+  decision: block
+  code: no-red-on-record
+- id: edit-migration-no-red
+  state: no-red
+  tool: Edit
+  tool_input:
+    file_path: '{project}/db/migrations/001.sql'
+    old_string: a
+    new_string: b
+  exit: 2
+  decision: block
+  code: no-red-on-record
+- id: write-test-dir-no-red
+  state: no-red
+  tool: Write
+  tool_input:
+    file_path: '{project}/tests/test_app.py'
+    content: 'x
+
+      '
+  exit: 0
+  decision: allow
+  code: null
+- id: edit-test-basename-no-red
+  state: no-red
+  tool: Edit
+  tool_input:
+    file_path: '{project}/pkg/app_test.go'
+    old_string: a
+    new_string: b
+  exit: 0
+  decision: allow
+  code: null
+- id: edit-markdown-no-red
+  state: no-red
+  tool: Edit
+  tool_input:
+    file_path: '{project}/README.md'
+    old_string: a
+    new_string: b
+  exit: 0
+  decision: allow
+  code: null
+- id: edit-issue-manifest-no-red
+  state: no-red
+  tool: Edit
+  tool_input:
+    file_path: '{project}/.compass/work/corpus/manifest.yml'
+    old_string: a
+    new_string: b
+  exit: 0
+  decision: allow
+  code: null
+- id: edit-issue-document-no-red
+  state: no-red
+  tool: Edit
+  tool_input:
+    file_path: '{project}/docs/compass/2026-10-06-corpus/intent.md'
+    old_string: a
+    new_string: b
+  exit: 0
+  decision: allow
+  code: null
+- id: edit-compass-config-no-red
+  state: no-red
+  tool: Edit
+  tool_input:
+    file_path: '{project}/.compass/config.yml'
+    old_string: a
+    new_string: b
+  exit: 0
+  decision: allow
+  code: null
+- id: edit-glob-dir-match-no-red
+  state: no-red
+  tool: Edit
+  tool_input:
+    file_path: '{project}/packaging/build.cfg'
+    old_string: a
+    new_string: b
+  exit: 2
+  decision: block
+  code: no-red-on-record
+- id: edit-glob-ext-match-no-red
+  state: no-red
+  tool: Edit
+  tool_input:
+    file_path: '{project}/bin/deploy.sh'
+    old_string: a
+    new_string: b
+  exit: 2
+  decision: block
+  code: no-red-on-record
+- id: edit-glob-miss-no-red
+  state: no-red
+  tool: Edit
+  tool_input:
+    file_path: '{project}/docker-compose.yml'
+    old_string: a
+    new_string: b
+  exit: 0
+  decision: allow
+  code: null
+- id: bash-redirect-glob-match-no-red
+  state: no-red
+  tool: Bash
+  tool_input:
+    command: echo x > packaging/build.cfg
+  exit: 2
+  decision: block
+  code: no-red-on-record
+- id: bash-redirect-no-red
+  state: no-red
+  tool: Bash
+  tool_input:
+    command: echo x > src/app.py
+  exit: 2
+  decision: block
+  code: no-red-on-record
+- id: bash-append-no-red
+  state: no-red
+  tool: Bash
+  tool_input:
+    command: printf y >> src/app.py
+  exit: 2
+  decision: block
+  code: no-red-on-record
+- id: bash-sed-in-place-no-red
+  state: no-red
+  tool: Bash
+  tool_input:
+    command: sed -i '' 's/a/b/' src/app.py
+  exit: 2
+  decision: block
+  code: no-red-on-record
+- id: bash-tee-no-red
+  state: no-red
+  tool: Bash
+  tool_input:
+    command: echo x | tee src/app.py
+  exit: 2
+  decision: block
+  code: no-red-on-record
+- id: bash-python-open-write-no-red
+  state: no-red
+  tool: Bash
+  tool_input:
+    command: 'python3 - <<''PY''
+
+      open(''src/app.py'', ''w'').write(''x'')
+
+      PY'
+  exit: 2
+  decision: block
+  code: no-red-on-record
+- id: bash-pathlib-write-no-red
+  state: no-red
+  tool: Bash
+  tool_input:
+    command: 'python3 - <<''PY''
+
+      import pathlib
+
+      pathlib.Path(''src/app.py'').write_text(''x'')
+
+      PY'
+  exit: 2
+  decision: block
+  code: no-red-on-record
+- id: bash-copy-onto-code-no-red
+  state: no-red
+  tool: Bash
+  tool_input:
+    command: cp /tmp/draft.py src/app.py
+  exit: 2
+  decision: block
+  code: no-red-on-record
+- id: bash-git-apply-no-red
+  state: no-red
+  tool: Bash
+  tool_input:
+    command: git apply fix.diff
+  exit: 2
+  decision: block
+  code: no-red-on-record
+- id: bash-cat-no-red
+  state: no-red
+  tool: Bash
+  tool_input:
+    command: cat src/app.py
+  exit: 0
+  decision: allow
+  code: null
+- id: bash-grep-no-red
+  state: no-red
+  tool: Bash
+  tool_input:
+    command: grep -n main src/app.py
+  exit: 0
+  decision: allow
+  code: null
+- id: bash-python-open-read-no-red
+  state: no-red
+  tool: Bash
+  tool_input:
+    command: 'python3 - <<''PY''
+
+      print(open(''src/app.py'').read())
+
+      PY'
+  exit: 0
+  decision: allow
+  code: null
+- id: bash-stderr-duplicate-no-red
+  state: no-red
+  tool: Bash
+  tool_input:
+    command: pytest -q 2>&1 | tail -5
+  exit: 0
+  decision: allow
+  code: null
+- id: bash-redirect-dev-null-no-red
+  state: no-red
+  tool: Bash
+  tool_input:
+    command: ls > /dev/null
+  exit: 0
+  decision: allow
+  code: null
+- id: bash-redirect-test-file-no-red
+  state: no-red
+  tool: Bash
+  tool_input:
+    command: echo x > tests/test_app.py
+  exit: 0
+  decision: allow
+  code: null
+- id: edit-outside-project-no-red
+  state: no-red
+  tool: Edit
+  tool_input:
+    file_path: '{outside}/app.py'
+    old_string: a
+    new_string: b
+  exit: 0
+  decision: allow
+  code: null
+- id: bash-redirect-outside-project-no-red
+  state: no-red
+  tool: Bash
+  tool_input:
+    command: echo x > {outside}/app.py
+  exit: 0
+  decision: allow
+  code: null
+- id: edit-code-not-opted-in
+  state: not-opted-in
+  tool: Edit
+  tool_input:
+    file_path: '{project}/src/app.py'
+    old_string: a
+    new_string: b
+  exit: 0
+  decision: allow
+  code: null
+- id: bash-redirect-not-opted-in
+  state: not-opted-in
+  tool: Bash
+  tool_input:
+    command: echo x > src/app.py
+  exit: 0
+  decision: allow
+  code: null
+- id: edit-code-no-work-initialised
+  state: no-work-initialised
+  tool: Edit
+  tool_input:
+    file_path: '{project}/src/app.py'
+    old_string: a
+    new_string: b
+  exit: 2
+  decision: block
+  code: not-initialised
+  stderr_contains: which is when it opted into Compass
+- id: edit-code-no-work-plain
+  state: no-work-plain
+  tool: Edit
+  tool_input:
+    file_path: '{project}/src/app.py'
+    old_string: a
+    new_string: b
+  exit: 2
+  decision: block
+  code: not-initialised
+  stderr_excludes: which is when it opted into Compass
+- id: edit-code-no-issue-initialised
+  state: no-issue-initialised
+  tool: Edit
+  tool_input:
+    file_path: '{project}/src/app.py'
+    old_string: a
+    new_string: b
+  exit: 2
+  decision: block
+  code: not-initialised
+  stderr_contains: which is when it opted into Compass
+- id: edit-code-no-issue-plain
+  state: no-issue-plain
+  tool: Edit
+  tool_input:
+    file_path: '{project}/src/app.py'
+    old_string: a
+    new_string: b
+  exit: 2
+  decision: block
+  code: not-initialised
+  stderr_excludes: which is when it opted into Compass
+- id: edit-test-no-issue-initialised
+  state: no-issue-initialised
+  tool: Edit
+  tool_input:
+    file_path: '{project}/tests/test_app.py'
+    old_string: a
+    new_string: b
+  exit: 0
+  decision: allow
+  code: null
+- id: edit-code-spike
+  state: spike
+  tool: Edit
+  tool_input:
+    file_path: '{project}/src/app.py'
+    old_string: a
+    new_string: b
+  exit: 0
+  decision: allow
+  code: null
+- id: edit-code-acceptance
+  state: acceptance
+  tool: Edit
+  tool_input:
+    file_path: '{project}/src/app.py'
+    old_string: a
+    new_string: b
+  exit: 0
+  decision: allow
+  code: null
+- id: edit-code-red-unsigned
+  state: red-unsigned
+  tool: Edit
+  tool_input:
+    file_path: '{project}/src/app.py'
+    old_string: a
+    new_string: b
+  exit: 2
+  decision: block
+  code: red-unsigned
+- id: edit-code-red-marker-only
+  state: red-marker-only
+  tool: Edit
+  tool_input:
+    file_path: '{project}/src/app.py'
+    old_string: a
+    new_string: b
+  exit: 2
+  decision: block
+  code: red-marker-no-record
+- id: edit-code-no-scenarios
+  state: no-scenarios
+  tool: Edit
+  tool_input:
+    file_path: '{project}/src/app.py'
+    old_string: a
+    new_string: b
+  exit: 2
+  decision: block
+  code: no-acceptance-criteria
+- id: edit-code-no-approach
+  state: no-approach
+  tool: Edit
+  tool_input:
+    file_path: '{project}/src/app.py'
+    old_string: a
+    new_string: b
+  exit: 2
+  decision: block
+  code: no-delivery-approach
+- id: edit-code-no-pointer
+  state: no-pointer
+  tool: Edit
+  tool_input:
+    file_path: '{project}/src/app.py'
+    old_string: a
+    new_string: b
+  exit: 0
+  decision: allow
+  code: null
+  stderr_contains: falling back to the most recently modified issue
+- id: edit-code-bad-pointer
+  state: bad-pointer
+  tool: Edit
+  tool_input:
+    file_path: '{project}/src/app.py'
+    old_string: a
+    new_string: b
+  exit: 2
+  decision: block
+  code: bad-current-task
+- id: edit-code-config-malformed
+  state: config-malformed
+  tool: Edit
+  tool_input:
+    file_path: '{project}/src/app.py'
+    old_string: a
+    new_string: b
+  exit: 0
+  decision: allow
+  code: null
+- id: edit-unlisted-config-malformed
+  state: config-malformed
+  tool: Edit
+  tool_input:
+    file_path: '{project}/packaging/build.cfg'
+    old_string: a
+    new_string: b
+  exit: 2
+  decision: block
+  code: config-invalid
+- id: edit-markdown-config-malformed
+  state: config-malformed
+  tool: Edit
+  tool_input:
+    file_path: '{project}/README.md'
+    old_string: a
+    new_string: b
+  exit: 0
+  decision: allow
+  code: null
+- id: edit-code-config-unreadable
+  state: config-unreadable
+  tool: Edit
+  tool_input:
+    file_path: '{project}/src/app.py'
+    old_string: a
+    new_string: b
+  exit: 0
+  decision: allow
+  code: null
+- id: edit-unlisted-config-unreadable
+  state: config-unreadable
+  tool: Edit
+  tool_input:
+    file_path: '{project}/packaging/build.cfg'
+    old_string: a
+    new_string: b
+  exit: 2
+  decision: block
+  code: config-invalid
+- id: edit-unlisted-globs-string
+  state: config-globs-string
+  tool: Edit
+  tool_input:
+    file_path: '{project}/docker-compose.yml'
+    old_string: a
+    new_string: b
+  exit: 2
+  decision: block
+  code: config-invalid
+- id: edit-code-advisory
+  state: advisory
+  tool: Edit
+  tool_input:
+    file_path: '{project}/src/app.py'
+    old_string: a
+    new_string: b
+  exit: 2
+  decision: block
+  code: no-red-on-record
+- id: bash-redirect-advisory
+  state: advisory
+  tool: Bash
+  tool_input:
+    command: echo x > src/app.py
+  exit: 2
+  decision: block
+  code: no-red-on-record

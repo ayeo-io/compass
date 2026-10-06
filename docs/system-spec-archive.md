@@ -11536,3 +11536,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `approach-diagram`
 - **Landed:** 2026-10-06
+
+### Given a repository with one tracked and one untracked document, When the document scans list their files, Then only the tracked document is listed _(archived)_
+
+- **Scenario id:** `DS-1`
+- **Intent:** `INT-1`
+- **Source issue:** `doc-scans-read-tracked-files`
+- **Landed:** 2026-10-06

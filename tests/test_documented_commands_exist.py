@@ -43,14 +43,19 @@ def _subcommands():
     return set(m.group(1).split(","))
 
 
-def _markdown_files():
-    files = [ROOT / "CLAUDE.md", ROOT / "README.md"]
+def _markdown_files(root=ROOT):
+    # Only what git tracks: an untracked planning file on one machine may
+    # name a verb that is planned, not shipped, and no reader sees it.
+    out = subprocess.run(["git", "ls-files", "-z"], cwd=root,
+                         capture_output=True, text=True, check=True).stdout
+    tracked = {p for p in out.split("\0") if p}
+    files = [root / "CLAUDE.md", root / "README.md"]
     for d in SEARCH_DIRS:
-        files += sorted((ROOT / d).rglob("*.md"))
+        files += sorted((root / d).rglob("*.md"))
     return [
         f for f in files
-        if f.exists()
-        and not any(f.relative_to(ROOT).as_posix().startswith(d) for d in EXCLUDED_DIRS)
+        if f.exists() and f.relative_to(root).as_posix() in tracked
+        and not any(f.relative_to(root).as_posix().startswith(d) for d in EXCLUDED_DIRS)
     ]
 
 

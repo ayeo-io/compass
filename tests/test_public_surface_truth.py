@@ -28,11 +28,23 @@ EXEMPT = ("architecture/decisions/", "templates/architecture/decisions/",
           "docs/system-spec-archive.md")
 
 
-def _prose_files() -> list[Path]:
-    files = [p for r in PROSE_ROOTS for p in (REPO_ROOT / r).rglob("*.md")]
-    files += [REPO_ROOT / n for n in ("README.md", "CLAUDE.md", "AGENTS.md")]
+def _tracked(root: Path) -> set[str]:
+    """The paths git tracks under `root`. The scans read what git
+    distributes: an untracked planning file on one machine is not a
+    document anyone else reads."""
+    import subprocess
+    out = subprocess.run(["git", "ls-files", "-z"], cwd=root,
+                         capture_output=True, text=True, check=True).stdout
+    return {p for p in out.split("\0") if p}
+
+
+def _prose_files(root: Path = REPO_ROOT) -> list[Path]:
+    files = [p for r in PROSE_ROOTS for p in (root / r).rglob("*.md")]
+    files += [root / n for n in ("README.md", "CLAUDE.md", "AGENTS.md")]
+    tracked = _tracked(root)
     return [p for p in files
-            if p.is_file() and not str(p.relative_to(REPO_ROOT)).startswith(EXEMPT)]
+            if p.is_file() and p.relative_to(root).as_posix() in tracked
+            and not str(p.relative_to(root)).startswith(EXEMPT)]
 
 
 # --- `TRC-A1` -----------------------------------------------------------------

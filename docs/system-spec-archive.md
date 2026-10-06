@@ -11732,3 +11732,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `compat-routing-baseline`
 - **Landed:** 2026-10-06
+
+### Given the 5.6.0 pre-tool hook, when the hook corpus is captured, then each recorded tool call gets the recorded decision and refusal code, including both reads of .compass/config.yml, and the test fails when one decision changes _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `compat-hook-corpus`
+- **Landed:** 2026-10-06

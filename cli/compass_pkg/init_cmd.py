@@ -42,7 +42,9 @@ CONFIG_TEMPLATE = """\
 
 version: 1.0.0
 
-# advisory : checks report every failure clearly but exit 0 - nothing blocks.
+# advisory : compass check and compass ci report every failure clearly but
+#            exit 0, so CI does not fail. The pre-tool hook still refuses a
+#            code edit with no failing test on record.
 # enforced : checks exit non-zero on any failure - the gate is real.
 mode: enforced
 

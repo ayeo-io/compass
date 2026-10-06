@@ -1,7 +1,8 @@
 # Schemas
 
-Schemas for the four machine-readable Compass files. Each of the first three
-comes in two forms; `signals.yml` has no readable companion.
+Schemas for the five machine-readable Compass files. Each of the first three
+comes in two forms; `signals.yml` and `compass.yml` have no readable
+companion.
 
 | File | Executable schema | Readable companion |
 |---|---|---|
@@ -10,9 +11,13 @@ comes in two forms; `signals.yml` has no readable companion.
 <!-- vocabulary-scan: allow - the row names files on disk by their real names -->
 | `.compass/work/<issue>/manifest.yml` | `manifest.schema.json` | `manifest.reference.yml` |
 | `governance/signals.yml` | `signals.schema.json` | none |
+| `compass.yml` (a project's configuration file, ADR-043) | `compass.schema.json` | none |
 
-**The `.schema.json` files are real, executable JSON Schema** (draft-07) and
-are the authority for structure. **The `.reference.yml` files are the
+**The `.schema.json` files are real, executable JSON Schema** (draft-07;
+`compass.schema.json` declares 2020-12 and uses only what draft-07 also
+reads) and are the authority for structure. `compass.schema.json` is
+generated from `cli/compass_pkg/catalogue_spec.py` and is never edited by
+hand. **The `.reference.yml` files are the
 human-readable companions** - JSON Schema is precise but hard to read at a
 glance, so each field is also documented in a plain annotated YAML file. Where
 the two could be read to differ, the `.schema.json` wins.

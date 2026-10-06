@@ -11767,3 +11767,38 @@
 - **Intent:** `INT-1`
 - **Source issue:** `atomic-io`
 - **Landed:** 2026-10-06
+
+### Given each of the inconsistent refusals the command corpus found, when it runs, then it exits 2, names the real problem and the flag it has, writes to stderr, and the corpus entry records the new exit on purpose _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `cli-refusal-consistency`
+- **Landed:** 2026-10-06
+
+### Given the field table, then it names the eight catalogues, each catalogue's fields with their type, merge kind and compare kind, the obligation fields the clas _(archived)_
+
+- **Scenario id:** `CS-1`
+- **Intent:** `INT-1`
+- **Source issue:** `catalogue-spec`
+- **Landed:** 2026-10-06
+
+### Given a layer document, when it is checked, then an unknown top-level key, an unknown catalogue field, an id that breaks the id pattern, a settings key in a pa _(archived)_
+
+- **Scenario id:** `CS-2`
+- **Intent:** `INT-1`
+- **Source issue:** `catalogue-spec`
+- **Landed:** 2026-10-06
+
+### Given a dimension entry, when it is checked, then a type outside `ordered-enum`, `enum` and `set`, an ordered dimension without `tighter:`, and `at_least:` on  _(archived)_
+
+- **Scenario id:** `CS-3`
+- **Intent:** `INT-1`
+- **Source issue:** `catalogue-spec`
+- **Landed:** 2026-10-06
+
+### Given `when: { risk: { at_least: cross-cutting } }`, when an assessment is matched, then cross-cutting and critical match and trivial and contained do not; eve _(archived)_
+
+- **Scenario id:** `CS-4`
+- **Intent:** `INT-1`
+- **Source issue:** `catalogue-spec`
+- **Landed:** 2026-10-06

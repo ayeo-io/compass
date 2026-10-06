@@ -11641,3 +11641,73 @@
 - **Intent:** `INT-1`
 - **Source issue:** `session-compliance`
 - **Landed:** 2026-10-06
+
+### Given a branch already up to date with its base whose derived spec is stale, when compass issue refresh-spec runs, then it commits the re-derived spec with a message that names no merge _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `refresh-spec-message-when-up-to-date`
+- **Landed:** 2026-10-06
+
+### Each structural decision of the configuration foundation is a proposed ADR with a rejected alternative, listed in the index _(archived)_
+
+- **Scenario id:** `DR-1`
+- **Intent:** `INT-1`
+- **Source issue:** `configuration-decision-records`
+- **Landed:** 2026-10-06
+
+### Each product decision of 5 and 6 October 2026 for the configurable framework has a ledger entry _(archived)_
+
+- **Scenario id:** `DR-2`
+- **Intent:** `INT-1`
+- **Source issue:** `configuration-decision-records`
+- **Landed:** 2026-10-06
+
+### No record cites a private planning path or names a rival product _(archived)_
+
+- **Scenario id:** `DR-3`
+- **Intent:** `INT-1`
+- **Source issue:** `configuration-decision-records`
+- **Landed:** 2026-10-06
+
+### The vocabulary amendment names the approaches catalogue, the adoption setting and every new term _(archived)_
+
+- **Scenario id:** `DR-4`
+- **Intent:** `INT-1`
+- **Source issue:** `configuration-decision-records`
+- **Landed:** 2026-10-06
+
+### Given a quick fix with two scenarios, each with a red on record, when quick-fix finish runs, then the test command runs once and each scenario gets its own green record _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `finish-runs-the-suite-once`
+- **Landed:** 2026-10-06
+
+### Given an issue, when the agent runs compass issue friction with a category, phase, an existing evidence path and a fix, then a source: agent entry is added; a fourth note, a repeated category and phase, a missing fix or an unknown evidence path is refused _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `agent-recorded-friction`
+- **Landed:** 2026-10-06
+
+### Given agent and person friction, when compass retro --friction runs, then agent entries are counted in their own column and never merged with person or derived entries _(archived)_
+
+- **Scenario id:** `TRC-002`
+- **Intent:** `INT-1`
+- **Source issue:** `agent-recorded-friction`
+- **Landed:** 2026-10-06
+
+### Given the same friction in three issues from agent notes only, when lessons are proposed, then none is proposed; with one person entry for it, one is _(archived)_
+
+- **Scenario id:** `TRC-003`
+- **Intent:** `INT-1`
+- **Source issue:** `agent-recorded-friction`
+- **Landed:** 2026-10-06
+
+### Given a note about a guardrail-backed step, when it is recorded, then it is accepted, reported as guardrail, not changeable by friction, and never counts toward a lesson or a recurring cluster _(archived)_
+
+- **Scenario id:** `TRC-004`
+- **Intent:** `INT-1`
+- **Source issue:** `agent-recorded-friction`
+- **Landed:** 2026-10-06

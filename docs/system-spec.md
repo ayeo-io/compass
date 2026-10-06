@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a branch already up to date with its base whose derived spec is stale, when compass issue refresh-spec runs, then it commits the re-derived spec with a message that names no merge
+### Given the instruction to record agent friction, then it adds at most 40 words to resident context and resident context stays under its ceiling
 
-- **Scenario id:** `TRC-001`
+- **Scenario id:** `TRC-005`
 - **Intent:** `INT-1`
-- **Source issue:** `refresh-spec-message-when-up-to-date`
+- **Source issue:** `agent-recorded-friction`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1662 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1672 superseded scenario(s) are in `docs/system-spec-archive.md`.

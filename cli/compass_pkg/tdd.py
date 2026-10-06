@@ -617,7 +617,14 @@ def cmd_tdd_green(args):
 
     command = _neutralise_coverage(command)
     tree_ids = ids_for(task_dir)   # the tree the test runs on, named before it runs
-    code, out, warnings = _run_test(command)
+    # `quick-fix finish` records a green for several scenarios from one run.
+    # It hands that run in, and it stands for this scenario only when it ran
+    # this exact command on this exact tree; otherwise the command runs here.
+    prerun = getattr(args, "prerun", None)
+    if prerun and prerun["argv"] == command and prerun["tree_ids"] == tree_ids:
+        code, out, warnings = prerun["result"]
+    else:
+        code, out, warnings = _run_test(command)
     for w in warnings:
         sys.stderr.write(f"compass tdd-green: warning - {w}\n")
     excerpt = "\n".join(out.splitlines()[-25:])

@@ -49,6 +49,9 @@ another agent, picks the work up from those files.
 
 Honour the delivery approach's stage weights.
 
+**Record friction you observe.** If a step costs more than it returns and
+will recur, run `compass issue friction` with evidence and a one-line fix.
+
 **Where to look.** `compass <verb> --help` explains a verb; the
 `compass-runtime` skill maps the stages.
 

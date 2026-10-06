@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a quick fix with two scenarios, each with a red on record, when quick-fix finish runs, then the test command runs once and each scenario gets its own green record
+### Given the 5.6.0 pre-tool hook, when the hook corpus is captured, then each recorded tool call gets the recorded decision and refusal code, including both reads of .compass/config.yml, and the test fails when one decision changes
 
 - **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `finish-runs-the-suite-once`
+- **Source issue:** `compat-hook-corpus`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1667 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1668 superseded scenario(s) are in `docs/system-spec-archive.md`.

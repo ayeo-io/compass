@@ -11676,3 +11676,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `configuration-decision-records`
 - **Landed:** 2026-10-06
+
+### Given a quick fix with two scenarios, each with a red on record, when quick-fix finish runs, then the test command runs once and each scenario gets its own green record _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `finish-runs-the-suite-once`
+- **Landed:** 2026-10-06

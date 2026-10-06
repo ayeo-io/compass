@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a repository with one tracked and one untracked document, When the document scans list their files, Then only the tracked document is listed
+### Given a quick fix whose manifest records a re-assessment, When quick-fix finish runs, Then the manifest's friction list holds the derived entry; with no signal, no friction key is written and no extra line is printed
 
-- **Scenario id:** `DS-1`
+- **Scenario id:** `QF-1`
 - **Intent:** `INT-1`
-- **Source issue:** `doc-scans-read-tracked-files`
+- **Source issue:** `quick-fix-finish-captures-friction`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1647 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1648 superseded scenario(s) are in `docs/system-spec-archive.md`.

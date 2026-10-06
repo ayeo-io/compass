@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the decision, then an architecture decision record states the new selection rule and how it narrows ADR-008's "reconstructible from landed issues alone".
+### Given the instruction to record agent friction, then it adds at most 40 words to resident context and resident context stays under its ceiling
 
-- **Scenario id:** `LS-4`
+- **Scenario id:** `TRC-005`
 - **Intent:** `INT-1`
-- **Source issue:** `living-spec-conflicts`
+- **Source issue:** `agent-recorded-friction`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1654 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1659 superseded scenario(s) are in `docs/system-spec-archive.md`.

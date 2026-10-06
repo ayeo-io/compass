@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a project after compass init, then a state file in the .compass folder holds initialised and records_signed_since, no settings file is written, and the cutoff and the hook's explanation still read from it
+### The terms the accepted vocabulary decision defines are in the glossary
 
-- **Scenario id:** `SR-3`
+- **Scenario id:** `VC-7`
 - **Intent:** `INT-1`
-- **Source issue:** `settings-reader-python`
+- **Source issue:** `vocabulary-catalogue`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1701 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1708 superseded scenario(s) are in `docs/system-spec-archive.md`.

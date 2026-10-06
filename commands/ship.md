@@ -107,6 +107,9 @@ for delivery work; on a spike, follow the graduate-or-discard step in
      made harder than it should have been?"* - pass it with `--note "..."
      --note-category <over-weight|tooling|...> --note-phase <stage>`.
      **Recording nothing is a valid, common outcome.**
+   - Notes the agent recorded during the run with `compass issue friction`
+     are kept. Each cites evidence and a fix; `compass retro --friction`
+     counts them in their own column, and they never make a lesson alone.
    - This step never blocks shipping: it runs after the gate, writes only
      the `friction:` section (no follow-up, no gate), and
      `compass retro --friction` later aggregates it across issues as

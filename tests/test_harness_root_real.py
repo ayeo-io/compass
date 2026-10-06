@@ -203,6 +203,14 @@ def test_hr_g_session_user_processes_cannot_reach_roots_terminal(world):
 # --- the session user stays dedicated, unhung and untouched -----------------
 # Scenario ids SUH-1 to SUH-5 (issue `harness-session-user-hardening`).
 
+def _outside_projects(tree: dict[str, str]) -> dict[str, str]:
+    """The home tree less what a session itself creates: `.claude` and its
+    project folders."""
+    return {path: value for path, value in tree.items()
+            if path not in (".claude", ".claude/projects")
+            and not path.startswith(".claude/projects/")}
+
+
 def _home_tree(home: Path) -> dict[str, str]:
     import hashlib
     tree = {}
@@ -255,6 +263,56 @@ def test_suh_4_a_run_that_writes_the_users_claude_md_is_flagged(world):
 def test_suh_5_the_harness_changes_nothing_in_the_users_home(world):
     home = Path(pwd.getpwnam(USER).pw_dir)
     before = _home_tree(home)
-    record = _run(world)
+    # As a real `claude` does, the session creates a project folder for its
+    # cwd; an empty one steers nothing and must not count as a change.
+    record = _run(world, {"create_project_folder": True})
     assert record["session_config_changed"] == []
-    assert _home_tree(home) == before
+    # Only the session's own project folder may be new; the harness adds,
+    # removes and changes nothing.
+    assert _outside_projects(_home_tree(home)) == _outside_projects(before)
+
+
+# --- The follow-ups to the --session-user hardening: SF-1 (issue
+# `session-user-follow-ups`)
+
+def test_sf_1_a_run_that_makes_the_users_claude_folder_unreadable_is_flagged(world):
+    home = Path(pwd.getpwnam(USER).pw_dir)
+    claude = home / ".claude"
+    existed = claude.exists()
+    mode = claude.stat().st_mode & 0o777 if existed else None
+    try:
+        record = _run(world, {"chmod_home_claude": 0})
+    finally:
+        if existed:
+            os.chmod(claude, mode)
+        else:
+            subprocess.run(["rm", "-rf", str(claude)], check=False)
+    assert ".claude" in record["session_config_changed"], record["session_config_changed"]
+
+
+def test_sf_1_a_link_planted_during_a_run_stops_the_next_run(world):
+    # Two runs in one harness call. The first run's session plants a link in
+    # its own Claude configuration; the account check, now run before every
+    # run, must refuse run 2.
+    home = Path(pwd.getpwnam(USER).pw_dir)
+    link = home / ".claude" / "settings.local.json"
+    _configure_fake_claude(world["claude"], world["log"],
+                           {"link_home_settings": "/etc/hostname"})
+    os.chmod(world["claude"].parent / "fake_claude_config.json", 0o644)
+    out = world["shared"] / "out"
+    env = {k: v for k, v in os.environ.items() if k not in ("CI", "COMPASS_UNATTENDED")}
+    try:
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "evals" / "harness.py"),
+             "--scenario", str(world["scenario"]), "--condition", "compass",
+             "--claude", str(world["claude"]), "--out", str(out),
+             "--plugin-source", str(world["plugin"]), "--session-user", USER,
+             "--runs", "2"],
+            env=env, capture_output=True, text=True, timeout=600)
+    finally:
+        if link.is_symlink():
+            link.unlink()
+    said = result.stdout + result.stderr
+    assert result.returncode != 0, said
+    assert "refusing run 2" in said and "link" in said, said
+    assert len(list(out.glob("*.json"))) == 1

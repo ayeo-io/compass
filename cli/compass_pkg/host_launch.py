@@ -10,13 +10,15 @@
 # It starts the process and returns what came back. It reads no credential
 # and adds none: the caller's environment is passed on as it is.
 #
-# DEPENDENCY: standard library (json, os, signal, subprocess, threading, time).
+# DEPENDENCY: standard library (json, os, selectors, signal, subprocess,
+# threading, time).
 # =============================================================================
 """Start one `claude -p` call and read the result event it prints."""
 from __future__ import annotations
 
 import json
 import os
+import selectors
 import signal
 import subprocess
 import threading
@@ -83,10 +85,24 @@ def run_session_user_call(command, *, end_processes: Callable[[], None],
     proc = subprocess.Popen(command, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE, **kwargs)
     chunks: dict[str, list[bytes]] = {"out": [], "err": []}
+    stop = threading.Event()
 
     def pump(stream, key):
-        for piece in iter(lambda: stream.read(65536), b""):
-            chunks[key].append(piece)
+        # Each wait lasts at most 0.2 seconds, so the reader can be told to
+        # stop: a process the kill-all could not end may hold the pipe for
+        # good, and a reader blocked in `read` would then never finish. A
+        # selector, not `select.select`, which cannot watch a descriptor
+        # numbered 1024 or higher and would lose the output without a word.
+        fd = stream.fileno()
+        with selectors.DefaultSelector() as waiting:
+            waiting.register(fd, selectors.EVENT_READ)
+            while not stop.is_set():
+                if not waiting.select(0.2):
+                    continue
+                piece = os.read(fd, 65536)
+                if not piece:
+                    return
+                chunks[key].append(piece)
 
     readers = [threading.Thread(target=pump, args=(proc.stdout, "out"), daemon=True),
                threading.Thread(target=pump, args=(proc.stderr, "err"), daemon=True)]
@@ -108,9 +124,14 @@ def run_session_user_call(command, *, end_processes: Callable[[], None],
         proc.wait()
         raise
     finally:
+        # Stopped and closed whether or not the kill-all worked, so a held
+        # call leaves no thread reading and no pipe open behind it.
+        stop.set()
+        for reader in readers:
+            if reader.ident is not None:  # an interrupt can land before a start
+                reader.join()
         for stream in (proc.stdout, proc.stderr):
-            if not any(reader.is_alive() for reader in readers):
-                stream.close()
+            stream.close()
     out, err = b"".join(chunks["out"]), b"".join(chunks["err"])
     if text:
         # The same newlines `subprocess.run(text=True)` gives, so a root

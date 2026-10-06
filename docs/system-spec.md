@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given one manifest under .compass/work written as a YAML list, When compass retro runs, Then it exits 0, reports the other issues and names the skipped manifest
+### Given the clock moves one day on between the test module loading and board() running, When the queue age test runs, Then it still reports the age it set up
 
-- **Scenario id:** `RL-1`
+- **Scenario id:** `DM-1`
 - **Intent:** `INT-1`
-- **Source issue:** `retro-skips-list-manifest`
+- **Source issue:** `delivery-board-midnight-flake`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1637 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1636 superseded scenario(s) are in `docs/system-spec-archive.md`.

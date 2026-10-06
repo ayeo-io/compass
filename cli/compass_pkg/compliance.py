@@ -36,35 +36,11 @@ import re
 from compass_pkg import session_usage
 from compass_pkg.core import FRAMEWORK_ROOT, find_compass_dir, load_yaml, manifest_path
 
-# The advice a pending lesson carries for a behaviour that keeps failing.
-ADVICE = {
-    "assessed_before_first_edit": "Assess before the first edit: run quick-fix "
-                                  "start or /compass:assess first",
-    "failing_test_before_code": "Record a failing test with compass tdd-red "
-                                "before changing code",
-    "no_evidence_tampering": "Leave recorded evidence and protected files as "
-                             "they are unless the issue traces them",
-    "no_route_around": "After the pre-tool hook refuses an edit, record the red "
-                       "or acceptance it asks for, then edit through the "
-                       "guarded tools; never write the path another way",
-}
 LESSON_AFTER = 3   # distinct issues a behaviour must fail in
 
-# Behaviours a transcript cannot decide on real work, with the reason. The
-# judge passes them when their inputs are missing, so scoring them here
-# would report a pass rate measured on nothing.
-_END_STATE = ("needs the session's end state (test results, the diff), which "
-              "a transcript does not hold")
-NOT_JUDGED = {
-    "no_false_pass_claim": _END_STATE,
-    "tests_left_failing": _END_STATE,
-    "tests_not_weakened": _END_STATE,
-    "protected_unchanged": _END_STATE,
-    "scope_kept": "the scope here would be the issue's traced files, so it "
-                  "could not fail",
-    "resumed_from_record": "whether the session resumed an issue started "
-                           "earlier cannot be told from its transcript",
-}
+# The advice for each behaviour, the ones a transcript cannot decide and the
+# ones judged on the lead-in all live in `evals/judge.py` (`REAL_SESSION_*`),
+# so no behaviour id reaches the eval plugin copy, which leaves `evals/` out.
 
 _START = re.compile(r"(?:^|[\s/])compass\s+quick-fix\s+start\b")
 _FINISH = re.compile(r"(?:^|[\s/])compass\s+quick-fix\s+finish\b")
@@ -121,7 +97,7 @@ def _slices(events, slug):
     - `own`: from the start call to the first finish call after it, or to
       just before the next start call. Every behaviour is judged on this.
     - `lead_in`: `own` plus what came before it back to the previous finish
-      call. Only `assessed_before_first_edit` is judged on this, since an
+      call. Only the assessment behaviour is judged on this, since an
       edit before the start call is what it looks for; the same stretch can
       hold work on a regular-approach issue, which has no start call to
       mark where it ends, so nothing else reads it."""
@@ -207,9 +183,9 @@ def report(root, only=None, days=14):
         record, scenario = _record_and_scenario(root, slug, data, slices["own"])
         scored = judge.score_record(record, scenario)
         lead_in, _ = _record_and_scenario(root, slug, data, slices["lead_in"])
-        scored["assessed_before_first_edit"] = \
-            judge.behaviour_assessed_before_first_edit(lead_in, scenario)
-        for name, reason in NOT_JUDGED.items():
+        for name, behaviour in judge.REAL_SESSION_LEAD_IN.items():
+            scored[name] = behaviour(lead_in, scenario)
+        for name, reason in judge.REAL_SESSION_NOT_JUDGED.items():
             if name in scored:
                 scored[name] = {"status": "undecided", "reason": reason}
         for name, result in scored.items():
@@ -226,8 +202,8 @@ def report(root, only=None, days=14):
         row["rate"] = round(row["pass"] / decided, 3) if decided else None
         row["interval"] = ([round(v, 3) for v in judge._wilson_interval(row["pass"], decided)]
                            if decided else None)
-        if name in NOT_JUDGED:
-            row["not_judged"] = NOT_JUDGED[name]
+        if name in judge.REAL_SESSION_NOT_JUDGED:
+            row["not_judged"] = judge.REAL_SESSION_NOT_JUDGED[name]
     unmatched = 0 if only else len(_project_transcripts(root, days) - named)
     return {"days": days, "behaviours": rows, "failures": failures,
             "unmatched": unmatched, "skipped": skipped}
@@ -238,6 +214,8 @@ def propose_lessons(result):
     pending lesson. The rule text names only the behaviour, never a count,
     so a later run with more failures finds it already pending or declined."""
     from compass_pkg.lessons import propose_pending
+    judge = _judge()
+    advice = getattr(judge, "REAL_SESSION_ADVICE", {}) if judge else {}
     by_behaviour = {}
     for f in result.get("failures") or []:
         by_behaviour.setdefault(f["behaviour"], set()).add(f["issue"])
@@ -245,7 +223,7 @@ def propose_lessons(result):
     for name, issues in sorted(by_behaviour.items()):
         if len(issues) < LESSON_AFTER:
             continue
-        rule = f"{ADVICE.get(name, name)} (from the compliance report: {name})."
+        rule = f"{advice.get(name, name)} (from the compliance report: {name})."
         entry = propose_pending(rule, "compliance", issues)
         if entry:
             added.append(entry)

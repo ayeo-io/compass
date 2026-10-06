@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given issue C raised from B, which was raised from A, when C's `raised_by` is recorded, then one line names A as the root and points at `S14` in `governance/strategies.md`. A second-level issue prints no such line.
+### Given the clock moves one day on between the test module loading and board() running, When the queue age test runs, Then it still reports the age it set up
 
-- **Scenario id:** `LN-5`
+- **Scenario id:** `DM-1`
 - **Intent:** `INT-1`
-- **Source issue:** `lineage`
+- **Source issue:** `delivery-board-midnight-flake`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1635 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1636 superseded scenario(s) are in `docs/system-spec-archive.md`.

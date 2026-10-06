@@ -67,6 +67,7 @@ from compass_pkg.subtasks import register as register_subtask_parser  # noqa: E4
 from compass_pkg.quick_fix_cmd import register as register_quick_fix_parser  # noqa: E402
 from compass_pkg.decisions import register as register_decision_parser  # noqa: E402
 from compass_pkg.lineage import cmd_issue_raised_by  # noqa: E402
+from compass_pkg.approach_diagram import cmd_approach_diagram  # noqa: E402
 from compass_pkg.diagnose import register as register_diagnose_parser  # noqa: E402
 from compass_pkg.lessons import register as register_lesson_parser  # noqa: E402
 from compass_pkg.session_lease import register as register_issue_use_parser  # noqa: E402
@@ -142,6 +143,18 @@ def build_parser():
     prsum.add_argument("--issue", dest="task", metavar="SLUG",
                        help="issue slug (default: COMPASS_ISSUE, then the current-task pointer)")
     prsum.set_defaults(func=cmd_approach_summary, output_kind="report")
+    prdia = prs.add_parser(
+        "diagram",
+        help="render every delivery approach as one HTML table",
+        description="Render the delivery approaches from the effective "
+                    "routing policy as one HTML table: one row per approach, "
+                    "one column per stage, each weight as a word, and the "
+                    "stages that stop for a person under an autonomy setting.")
+    prdia.add_argument("--autonomy", help="controlled, balanced or autonomous "
+                                          "(default: the project's setting)")
+    prdia.add_argument("--out", metavar="PATH", help="write the page here "
+                                                     "instead of to stdout")
+    prdia.set_defaults(func=cmd_approach_diagram, output_kind="report")
 
     # `bdd` is a subcommand GROUP, not a flat verb, so later BDD work (a
     # scenarios-are-executable check) adds `compass bdd <thing>` rather than a

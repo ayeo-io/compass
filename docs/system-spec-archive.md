@@ -11760,3 +11760,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `compat-archive-baseline`
 - **Landed:** 2026-10-06
+
+### Given atomic_io, when a file is written and the process fails before the rename, then the old file is intact and no temporary file is left; a YAML file with a duplicate key is refused with its line; equal data gives equal canonical JSON and digests _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `atomic-io`
+- **Landed:** 2026-10-06

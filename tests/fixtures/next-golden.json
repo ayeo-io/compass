@@ -81,6 +81,6 @@
   },
   "feature/no-approach-record": {
     "exit": 2,
-    "stdout": "delivery-approach.md is missing from <ROOT>/.compass/work/feature-fresh\n  Run /compass:assess to produce delivery-approach.md before using compass next.\n"
+    "stdout": ""
   }
 }

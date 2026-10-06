@@ -456,6 +456,11 @@ def cmd_route_evaluate(args):
 
     task = None
     task_path = None
+    if args.reading and getattr(args, "write", False):
+        # Refused before anything prints: a refusal that follows a printed
+        # result reads as a result that was written.
+        raise CompassError("--write needs an issue (use --issue, or run it in an "
+                           "issue); it cannot write an ad-hoc --assessment")
     if args.reading:
         readings = {}
         for pair in args.reading:
@@ -622,8 +627,8 @@ def cmd_route_evaluate(args):
     # --write: fold the result back into manifest.yml
     if args.write:
         if task is None:
-            raise CompassError("--write needs an issue (use --issue or run in a "
-                               "issue; it cannot write with ad-hoc --assessment)")
+            raise CompassError("--write needs an issue (use --issue, or run it in an "
+                               "issue); it cannot write an ad-hoc --assessment")
         # Detect a re-assessment from the approach's content, not its name: a
         # governance update can add gates without changing the approach name.
         # The four assessment dimensions, compared against what the LAST

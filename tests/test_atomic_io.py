@@ -99,3 +99,16 @@ def test_trc_001_the_module_imports_nothing_from_compass():
     source = (ROOT / "cli" / "compass_pkg" / "atomic_io.py").read_text(encoding="utf-8")
     assert "compass_pkg" not in source.replace("compass_pkg.atomic_io", "")
     assert os.path.basename(atomic_io.__file__) == "atomic_io.py"
+
+
+def test_lm_1_a_date_digests_as_its_iso_string():
+    import datetime
+    assert atomic_io.canonical_json({"d": datetime.date(2026, 10, 5)}) == \
+        atomic_io.canonical_json({"d": "2026-10-05"})
+    stamp = datetime.datetime(2026, 10, 5, 12, 0, 0)
+    assert atomic_io.canonical_json([stamp]) == atomic_io.canonical_json([stamp.isoformat()])
+
+
+def test_lm_1_a_value_json_cannot_hold_is_refused_naming_its_type():
+    with pytest.raises(TypeError, match="set"):
+        atomic_io.canonical_json({"x": {1, 2}})

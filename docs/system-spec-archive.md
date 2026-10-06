@@ -11746,3 +11746,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `advisory-mode-wording`
 - **Landed:** 2026-10-06
+
+### Given the 5.6.0 CLI, when the command corpus is captured, then each recorded invocation exits as recorded, and the test fails when one exit code changes _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `compat-command-corpus`
+- **Landed:** 2026-10-06

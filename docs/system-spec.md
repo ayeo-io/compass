@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a project after compass init, when a person reads the mode comment in .compass/config.yml, then it says advisory mode stops checks and CI from failing and that the pre-tool hook still blocks code edits without a failing test, instead of saying nothing blocks
+### Given the 5.6.0 CLI, when the command corpus is captured, then each recorded invocation exits as recorded, and the test fails when one exit code changes
 
 - **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `advisory-mode-wording`
+- **Source issue:** `compat-command-corpus`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1676 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1677 superseded scenario(s) are in `docs/system-spec-archive.md`.

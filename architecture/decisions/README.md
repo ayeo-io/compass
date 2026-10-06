@@ -74,6 +74,15 @@ Rules:
 | [ADR-032](ADR-032-rival-names-in-an-off-github-key.md) | Rival product names are held in an off-GitHub key and kept out by hashed matching | proposed | answers `rival-names-never-committed`; keeps ADR-031's record clean |
 | [ADR-033](ADR-033-projects-add-checks-gates-and-dimension-values-as-data.md) | Projects add checks, gates and assessment-dimension values as data; the five guardrails and the shipped core stay framework-owned and locked | accepted | supersedes ADR-002; Inv-2 and Inv-3 reworded; ADR-009 (project checks already exist); accepts ADR-010 |
 | [ADR-034](ADR-034-derive-only-the-branchs-landed-issues.md) | Derive the living spec from the landed issues on the branch | accepted | narrows ADR-008 rule 2; amends ADR-026 |
+| [ADR-035](ADR-035-delivery-approaches-stages-and-modes-are-configuration.md) | Delivery approaches, stages and modes are configuration data | proposed | extends ADR-010 and ADR-033 |
+| [ADR-036](ADR-036-an-issue-runs-against-a-stored-generation.md) | An issue runs against a stored generation of its configuration | proposed | mechanism 1 of ADR-033 |
+| [ADR-037](ADR-037-configuration-changes-are-classified-by-effect.md) | A configuration change is classified by its effect over the assessment grid | proposed | mechanism 3 of ADR-033 |
+| [ADR-038](ADR-038-check-implementations-carry-versions.md) | Check implementations carry versions, and a major change refuses rather than reinterprets | proposed | mechanism 2 of ADR-033 |
+| [ADR-039](ADR-039-waivers-locks-and-unlocks.md) | Waivers, locks and unlocks: who may depart from the shipped default | proposed | mechanism 4 of ADR-033; narrows ADR-033's lock list |
+| [ADR-040](ADR-040-stable-ids-live-in-one-module.md) | Stable ids live in one registered constants module | proposed | with ADR-035 |
+| [ADR-041](ADR-041-the-configuration-vocabulary.md) | The configuration vocabulary, amending ADR-012 | proposed | amends ADR-012 |
+| [ADR-042](ADR-042-shipped-defaults-live-in-a-preset-directory.md) | Shipped defaults live in a preset directory | proposed | with ADR-010 and ADR-033 |
+| [ADR-043](ADR-043-a-project-has-one-configuration-file.md) | A project has one configuration file, compass.yml | proposed | with ADR-042 |
 
 ## Principle → ADR mapping
 

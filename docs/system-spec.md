@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a quick fix whose files changed after quick-fix start, staged or not, When acceptance start --kind validation runs, Then it refuses and names the files; declared before the change, the same work records and finishes
+### Given a root eval run with --session-user, When a run changes a folder's mode, installs a job, or leaves an oversized file, or a call is held and the kill-all fails, Then the record or the next run's check shows it, and the call's readers and pipes are closed
 
-- **Scenario id:** `LV-1`
+- **Scenario id:** `SF-1`
 - **Intent:** `INT-1`
-- **Source issue:** `late-validation-acceptance`
+- **Source issue:** `session-user-follow-ups`
 - **Landed:** 2026-10-06
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1638 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1639 superseded scenario(s) are in `docs/system-spec-archive.md`.

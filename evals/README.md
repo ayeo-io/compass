@@ -86,17 +86,23 @@ paths:
   so nothing the session started can change the folder while root reads
   it. For that reason `--session-user` refuses root, the account that
   started the harness through sudo, and an account that is in use: one
-  with running processes, a crontab or a queued `at` job. The check only
-  looks; the harness never changes the account. A process the session
-  leaves holding a call's output is ended rather than waited on, and the
-  run is recorded as not contained (`session-process:held-output:`).
+  with running processes, a crontab or a queued `at` job. The check runs
+  before every run, not only the first, so a job one run installs stops
+  the next. The check only looks; the harness never changes the account.
+  A process the session leaves holding a call's output is ended rather
+  than waited on, and the run is recorded as not contained
+  (`session-process:held-output:`).
 
   The harness never resets the user's home either. It fingerprints the
   user's Claude configuration (`CLAUDE.md`, settings, agents, commands,
   skills, hooks and project memory) before and after each run: each
-  path's type, permissions and contents, never following a link. Any
+  path's type, permissions and contents, never following a link, and the
+  permissions of `~/.claude`, `~/.claude/projects` and each project folder.
+  A file over 16 MiB is recorded as too large rather than read. Any
   change goes into `session_config_changed`, because it could steer the
-  next run, and the comparison report counts those runs. A run is refused
+  next run, and the comparison report counts those runs. A change made
+  between two runs, outside any session, is listed there too, marked
+  "before this run". A run is refused
   while any of those paths is a link, since edits behind it would go
   unseen. `~/.claude.json` and installed plugins are not watched: they
   change on every run. The host must have

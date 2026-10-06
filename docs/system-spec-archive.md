@@ -11473,3 +11473,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `retro-skips-list-manifest`
 - **Landed:** 2026-10-06
+
+### Given a quick fix whose files changed after quick-fix start, staged or not, When acceptance start --kind validation runs, Then it refuses and names the files; declared before the change, the same work records and finishes _(archived)_
+
+- **Scenario id:** `LV-1`
+- **Intent:** `INT-1`
+- **Source issue:** `late-validation-acceptance`
+- **Landed:** 2026-10-06

@@ -324,12 +324,30 @@ def main():
         # A child that keeps the session's own output open and outlives it.
         subprocess.Popen([sys.executable, "-c", "import time; time.sleep(120)"],
                          start_new_session=True)
+    if config.get("create_project_folder"):
+        # What a real `claude` does in every session: a project folder named
+        # after the cwd, with an empty memory folder in it.
+        project = os.path.join(os.path.expanduser("~"), ".claude", "projects",
+                               cwd.replace("/", "-"), "memory")
+        os.makedirs(project, exist_ok=True)
     write_home_claude_md = config.get("write_home_claude_md")
     if write_home_claude_md:
         claude_dir = os.path.join(os.path.expanduser("~"), ".claude")
         os.makedirs(claude_dir, exist_ok=True)
         with open(os.path.join(claude_dir, "CLAUDE.md"), "w", encoding="utf-8") as fh:
             fh.write(write_home_claude_md)
+    chmod_home_claude = config.get("chmod_home_claude")
+    if chmod_home_claude is not None:
+        claude_dir = os.path.join(os.path.expanduser("~"), ".claude")
+        os.makedirs(claude_dir, exist_ok=True)
+        os.chmod(claude_dir, chmod_home_claude)
+    link_home_settings = config.get("link_home_settings")
+    if link_home_settings:
+        claude_dir = os.path.join(os.path.expanduser("~"), ".claude")
+        os.makedirs(claude_dir, exist_ok=True)
+        target = os.path.join(claude_dir, "settings.local.json")
+        if not os.path.lexists(target):
+            os.symlink(link_home_settings, target)
     dir_at_hidden_test = config.get("dir_at_hidden_test")
     if dir_at_hidden_test:
         # A folder where a hidden test will be copied, so the copy cannot

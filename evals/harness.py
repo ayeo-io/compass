@@ -444,28 +444,33 @@ def _session_config_fingerprint(home: Path) -> dict[str, str]:
         # The type and permissions count as much as the contents: an
         # unreadable settings file, or a named pipe where an instruction
         # file was, changes the next session as surely as new text.
-        link = first_link(path)
-        if link is not None:
-            note_link(link)
-            return
         try:
+            link = first_link(path)
+            if link is not None:
+                note_link(link)
+                return
             info = path.lstat()
-        except (FileNotFoundError, NotADirectoryError):
+        except OSError:
+            # Missing, or behind a folder that cannot be searched. A harness
+            # not run as root meets the second; the folder's own mode,
+            # recorded by its caller, already shows the change.
             return
         kind = _FILE_KINDS.get(stat.S_IFMT(info.st_mode), "other")
         value = f"{kind}:{stat.S_IMODE(info.st_mode):o}"
         if kind == "file":
-            raw = _read_regular_file(path)
-            value += ":" + (hashlib.sha256(raw).hexdigest() if raw is not None
-                            else "unreadable")
+            value += ":" + _hash_regular_file(path)
         found[path.relative_to(home).as_posix()] = value
 
     def walk(folder: Path) -> None:
-        link = first_link(folder)
+        try:
+            link = first_link(folder)
+            is_dir = link is None and folder.is_dir()
+        except OSError:
+            return
         if link is not None:
             note_link(link)
             return
-        if not folder.is_dir():
+        if not is_dir:
             return
         add(folder)
         for base, dirs, files in os.walk(folder):
@@ -482,36 +487,115 @@ def _session_config_fingerprint(home: Path) -> dict[str, str]:
     if link is not None:
         note_link(link)
     elif claude.is_dir():
+        # The folders above the watched files are recorded by mode too: one
+        # made unreadable hides every settings file inside it from the next
+        # session, which would otherwise read as nothing changed.
+        add(claude)
         for path in claude.glob("settings*.json"):
             add(path)
     for rel in _SESSION_CONFIG_FOLDERS:
         walk(home / rel)
     projects = home / ".claude" / "projects"
-    link = first_link(projects)
+    try:
+        link = first_link(projects)
+        is_dir = link is None and projects.is_dir()
+        entries = sorted(projects.iterdir()) if is_dir else []
+    except OSError:
+        # Behind a folder that cannot be searched, or unreadable itself:
+        # the mode recorded for it, or for `.claude`, says so.
+        link, is_dir, entries = None, projects.parent.is_dir(), []
     if link is not None:
         note_link(link)
-    elif projects.is_dir():
-        for project in sorted(projects.iterdir()):
+    elif is_dir:
+        add(projects)
+        for project in entries:
+            add(project)
             walk(project / "memory")
     return found
+
+
+# Root reads each watched configuration file to hash it. A session could
+# leave one of several gigabytes there, so past this size the file is
+# recorded as too large rather than read.
+_CONFIG_READ_CAP = 16 * 1024 * 1024
+
+
+def _hash_regular_file(path: Path) -> str:
+    """The sha256 of `path` when it is a regular file of at most
+    `_CONFIG_READ_CAP` bytes, read in pieces; `too-large` past the cap and
+    `unreadable` otherwise. Opened as `_read_regular_file` opens a file:
+    no final link followed, no wait on a pipe or a device."""
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    except OSError:
+        return "unreadable"
+    with os.fdopen(fd, "rb") as fh:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            return "unreadable"
+        digest, read = hashlib.sha256(), 0
+        for piece in iter(lambda: fh.read(65536), b""):
+            read += len(piece)
+            if read > _CONFIG_READ_CAP:
+                return "too-large"
+            digest.update(piece)
+    return digest.hexdigest()
+
+
+def _between_runs(previous_after: dict[str, str] | None,
+                  this_before: dict[str, str]) -> list[str]:
+    """The watched paths that changed after the previous run ended and
+    before this one started: something outside any session, such as a
+    scheduled job, changed what this session reads."""
+    if previous_after is None:
+        return []
+    return [f"before this run: {path}"
+            for path in _config_changes(previous_after, this_before)]
+
+
+# The previous run's "after" fingerprint, compared with each run's "before".
+# Reset by `main` for every harness call.
+_LAST_CONFIG_AFTER: dict[str, str] | None = None
 
 
 def _run_config_changes(before: dict[str, str], after: dict[str, str]
                         ) -> list[str]:
     """What one run's record lists: every watched path the run changed,
     and every watched path that was already a link when the run started.
-    The link check refuses a link only before the first run, so a link an
-    earlier run planted hides whatever later runs write behind it; such a
-    path cannot be checked, so it is listed rather than read as unchanged."""
+    The account check before each run refuses a link, so a link here was
+    planted between that check and the "before" fingerprint; it hides
+    whatever is written behind it and cannot be checked, so it is listed
+    rather than read as unchanged."""
     unchecked = {path for path, value in before.items()
                  if value.startswith("link:")}
     return sorted(set(_config_changes(before, after)) | unchecked)
 
 
+def _record_config_changes(before: dict[str, str], after: dict[str, str]
+                           ) -> list[str]:
+    """This run's `session_config_changed`: what changed between the
+    previous run's end and this run's start, then what this run changed.
+    Keeps this run's "after" for the next run to compare with."""
+    global _LAST_CONFIG_AFTER
+    listed = _between_runs(_LAST_CONFIG_AFTER, before) + _run_config_changes(before, after)
+    _LAST_CONFIG_AFTER = after
+    return listed
+
+
 def _config_changes(before: dict[str, str], after: dict[str, str]) -> list[str]:
-    """The watched paths a run added, removed or changed."""
+    """The watched paths added, removed or changed. A folder that appears
+    holding no watched file is left out: Claude creates
+    `~/.claude/projects/<cwd>/memory/` for every session, each eval run has
+    a new cwd, and an empty folder steers nothing. A watched file inside a
+    new folder is listed as the file, and a mode change on a folder that
+    was already there still counts."""
+    def empty_new_folder(path: str) -> bool:
+        return (path not in before and after.get(path, "").startswith("dir:")
+                and not any(other.startswith(path + "/") and
+                            not after[other].startswith("dir:")
+                            for other in after))
     return sorted(path for path in set(before) | set(after)
-                  if before.get(path) != after.get(path))
+                  if before.get(path) != after.get(path)
+                  and not empty_new_folder(path))
 
 
 def _read_regular_file(path: Path) -> bytes | None:
@@ -2086,6 +2170,18 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
     global _SESSION_FOLDER
     _SESSION_FOLDER = None
     _HELD_CALLS.clear()
+    if session_user is not None:
+        # Checked before every run, not only the first: a crontab or an `at`
+        # job installed during one run would otherwise run in the next
+        # session's folder, and the kill-all would end it mid-run.
+        reason = _account_in_use(types.SimpleNamespace(
+            pw_name=session_user.name, pw_uid=session_user.uid,
+            pw_gid=session_user.gid, pw_dir=session_user.home))
+        if reason:
+            raise SystemExit(
+                f"refusing run {run_index}: the session user "
+                f"'{session_user.name}' is no longer dedicated to the harness: "
+                f"{reason}.")
     started = datetime.now(timezone.utc).isoformat()
     clock_start = time.monotonic()
     state = _new_run_state()
@@ -2221,8 +2317,8 @@ def run_once(scenario: dict[str, Any], scenario_dir: Path, condition: str,
                 test_command, repo_dir, child_env)
 
         session_config_changed = (
-            _run_config_changes(config_before,
-                                _session_config_fingerprint(Path(session_user.home)))
+            _record_config_changes(
+                config_before, _session_config_fingerprint(Path(session_user.home)))
             if session_user is not None else None)
         compass_files = _compass_files(repo_dir)
         manifests = _manifests(repo_dir)
@@ -2384,6 +2480,8 @@ def _prepare_plugin_copy(condition: str, plugin_source: Path, *,
 
 
 def main(argv: list[str] | None = None) -> int:
+    global _LAST_CONFIG_AFTER
+    _LAST_CONFIG_AFTER = None
     args = _build_arg_parser().parse_args(argv)
     scenario_dir = _resolve_scenario_dir(args.scenario)
     if not scenario_dir.is_dir():

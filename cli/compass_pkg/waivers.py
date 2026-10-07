@@ -10,13 +10,14 @@ operation, the scope from the layer, and the covered revision from the pin
 
 The module is pure. It takes layer documents, resolved configurations and an
 evidence registry as data, reads no file, writes none, and no command calls it
-yet. The later lint, update and reassess steps call `check`, `describe`,
+yet; only `locks` uses `check`, to check an unlock's waiver. The
+later lint, update and reassess steps call `check`, `describe`,
 `recheck` and `attribute`. The CLI checks that a name is in a list and that a
 date is not in the future; it never authenticates the person.
 """
 # DEPENDENCY: standard library (copy, datetime, collections);
 # compass_pkg.catalogue_spec, compass_pkg.classify (the classify function)
-# and compass_pkg.core (CompassError, only). Nothing imports this module yet.
+# and compass_pkg.core (CompassError, only). Only compass_pkg.locks imports this module (its unlock check).
 from __future__ import annotations
 
 import copy

@@ -125,12 +125,18 @@ def _start(root, slug="greeting"):
 def test_a_failing_check_is_counted_and_the_issue_folder_is_untouched(repo):
     _start(repo)
     work = repo / ".compass" / "work" / "greeting"
-    before = {p: p.read_bytes() for p in work.rglob("*") if p.is_file()}
+
+    # The count goes to the interruptions log. `compass check` also files its
+    # verdicts in the generation's results.yml by design; nothing else moves.
+    def files():
+        return {p: p.read_bytes() for p in work.rglob("*")
+                if p.is_file() and not (p.name == "results.yml" and "generations" in p.parts)}
+
+    before = files()
     r = _run(repo, "check", "--issue", "greeting")
     assert r.returncode != 0, r.stdout
     assert _counted(repo, "greeting", "check_failures") == 1, _log(repo)
-    after = {p: p.read_bytes() for p in work.rglob("*") if p.is_file()}
-    assert after == before
+    assert files() == before
 
 
 def test_a_ci_sweep_does_not_count(repo):

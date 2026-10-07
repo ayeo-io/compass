@@ -1119,20 +1119,64 @@ def test_ob_8_the_command_answers_as_before(tmp_path):
     assert "issue_overrides" not in answer
 
 
-def test_ob_8_only_the_classifier_and_the_replay_read_the_new_path():
-    import re
-    imports = re.compile(r"^\s*(from compass_pkg(\.obligations)? import .*|"
-                         r"import compass_pkg\.obligations)", re.M)
-    users = []
-    for path in sorted((ROOT / "cli").rglob("*.py")):
-        if path.name == "obligations.py" or "vendor" in path.parts:
-            continue
-        text = path.read_text(encoding="utf-8")
-        if any("obligations" in m.group(0) for m in imports.finditer(text)):
-            users.append(str(path.relative_to(ROOT)))
-    # The replay (policy-diff) runs the same function to list what a change moves.
-    assert users == ["cli/compass_pkg/classify.py", "cli/compass_pkg/replay.py"]
+def _obligations_importers(paths):
+    """The files among `paths` that import `obligations` in any form: `from
+    compass_pkg import obligations`, with other names or in a parenthesised list,
+    `from compass_pkg.obligations import x`, and `import compass_pkg.obligations`."""
+    import ast
+    found = []
+    for path in paths:
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            names = []
+            if isinstance(node, ast.ImportFrom):
+                if node.module == "compass_pkg":
+                    names = [a.name for a in node.names]
+                elif node.module == "compass_pkg.obligations":
+                    names = ["obligations"]
+            elif isinstance(node, ast.Import):
+                names = [a.name.rsplit(".", 1)[-1] for a in node.names
+                         if a.name.startswith("compass_pkg.")]
+            if "obligations" in names:
+                found.append(path)
+                break
+    return found
+
+
+def test_ob_8_only_classify_effective_and_the_replay_read_the_new_path():
+    """Amended 2026-10-07 (ADR-037): `effective` may import `obligations` as
+    well as `classify`; the readers go through the effective view. The replay
+    (policy diff) runs the same function to list what a change moves."""
+    paths = [p for p in sorted((ROOT / "cli").rglob("*.py"))
+             if p.name != "obligations.py" and "vendor" not in p.parts]
+    users = [str(p.relative_to(ROOT)) for p in _obligations_importers(paths)]
+    assert users == ["cli/compass_pkg/classify.py", "cli/compass_pkg/effective.py",
+                     "cli/compass_pkg/replay.py"]
     assert "obligations" not in (ROOT / "cli" / "compass").read_text(encoding="utf-8")
+
+
+def test_ob_8_the_import_rule_sees_every_import_form(tmp_path):
+    forms = {
+        "a.py": "from compass_pkg import obligations\n",
+        "b.py": "from compass_pkg import (\n    layers,\n    obligations,\n)\n",
+        "c.py": "import compass_pkg.obligations as o\n",
+        "d.py": "def f():\n    from compass_pkg.obligations import obligations\n",
+    }
+    for name, text in forms.items():
+        (tmp_path / name).write_text(text, encoding="utf-8")
+    (tmp_path / "e.py").write_text("from compass_pkg import layers\n", encoding="utf-8")
+    seen = sorted(p.name for p in _obligations_importers(sorted(tmp_path.glob("*.py"))))
+    assert seen == ["a.py", "b.py", "c.py", "d.py"]
+
+
+def test_ob_8_a_third_importer_fails_the_rule(tmp_path):
+    planted = tmp_path / "reader.py"
+    planted.write_text("from compass_pkg import (\n    obligations,\n)\n", encoding="utf-8")
+    paths = [p for p in sorted((ROOT / "cli").rglob("*.py"))
+             if p.name != "obligations.py" and "vendor" not in p.parts] + [planted]
+    users = [p.name for p in _obligations_importers(paths)]
+    assert users != ["classify.py", "effective.py"]
+    assert users[-1] == "reader.py"
 
 
 def test_ob_8_the_effect_names_are_the_inverse_of_the_adapters():

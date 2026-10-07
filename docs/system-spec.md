@@ -29,6 +29,13 @@
 - **Source issue:** `ready-and-done-as-data`
 - **Landed:** 2026-10-07
 
+### The rebuilt maps equal today's values and core.py stays within its cap
+
+- **Scenario id:** `SI-7`
+- **Intent:** `E1.S1.19`
+- **Source issue:** `stable-ids`
+- **Landed:** 2026-10-07
+
 ### the guard can fail on each new surface
 
 - **Scenario id:** `SS-4`
@@ -346,4 +353,4 @@
 
 ---
 
-1767 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1773 superseded scenario(s) are in `docs/system-spec-archive.md`.

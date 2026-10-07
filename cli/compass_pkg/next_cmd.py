@@ -32,7 +32,10 @@ import re as _re
 
 import fnmatch
 import re as _re
-from compass_pkg.core import (CompassError, artifact_path, load_yaml, manifest_path,
+from compass_pkg.stable_ids import (
+    APPROACH_QUICK_FIX, STAGE_ASSESS, STAGE_BREAKDOWN, STAGE_DEFINE, STAGE_IDS, STAGE_IMPLEMENT, STAGE_PLAN,
+    STAGE_REFINE, STAGE_SHIP, STAGE_VERIFY)
+from compass_pkg.core import (CompassError, artifact_path, canonical_shape, load_yaml, manifest_path,
                               normalize_spine, resolve_issue_dir)
 
 # --- command: next -----------------------------------------------------------
@@ -56,16 +59,7 @@ from compass_pkg.core import (CompassError, artifact_path, load_yaml, manifest_p
 # The current keys. `normalize_spine` maps a retired key forward on load, so a
 # list written in the retired spelling would stop matching every manifest it
 # reads, and `compass next` would report the wrong stage instead of failing.
-_PHASE_ORDER = [
-    "assess",
-    "define",
-    "refine",
-    "plan",
-    "breakdown",
-    "implement",
-    "verify",
-    "ship",
-]
+_PHASE_ORDER = list(STAGE_IDS)
 
 # Weights that show a stage was deliberately left out of this delivery approach
 _SKIPPED_WEIGHTS = {"skipped", "collapsed"}
@@ -207,23 +201,23 @@ def _stages_on_record(task: dict, task_dir: str | None) -> set:
     a stage.
     """
     own = {
-        "assess": True,
+        STAGE_ASSESS: True,
         # A quick fix earns no criteria document; its scenarios are define's
         # record.
-        "define": (_registered(task, "acceptance-criteria")
+        STAGE_DEFINE: (_registered(task, "acceptance-criteria")
                    or bool(_entries(task, "scenarios"))),
         # Refine's record is its requirements review. Only a route that earns
         # the review (an initiative) can register it; elsewhere refine writes
         # the file and leaves it unregistered (commands/refine.md), so the
         # file itself is the record.
-        "refine": (_registered(task, "requirements-review")
+        STAGE_REFINE: (_registered(task, "requirements-review")
                    or (not _earned(task, "requirements-review")
                        and _review_written(task_dir))),
-        "plan": _registered(task, "technical-design"),
-        "breakdown": bool(_entries(task, "subtasks")) or _registered(task, "distribution-map"),
-        "implement": _every_scenario_tested(task),
-        "verify": _all_gates_pass(task.get("gates") or []),
-        "ship": False,
+        STAGE_PLAN: _registered(task, "technical-design"),
+        STAGE_BREAKDOWN: bool(_entries(task, "subtasks")) or _registered(task, "distribution-map"),
+        STAGE_IMPLEMENT: _every_scenario_tested(task),
+        STAGE_VERIFY: _all_gates_pass(task.get("gates") or []),
+        STAGE_SHIP: False,
     }
     reached = max(i for i, p in enumerate(_PHASE_ORDER) if own[p])
     if _testing_started(task, task_dir):
@@ -277,7 +271,7 @@ def _emit(args, task, task_dir, line, current_phase, finished):
         # The plain line is wrapped here only; piped output keeps it whole.
         out += [""] + wrap(line.rstrip("\n"))
         if not finished and current_phase in _PHASE_ORDER:
-            quick = approach in ("quick-fix", "express")
+            quick = canonical_shape(approach) == APPROACH_QUICK_FIX
             out += wrap("Next: /compass:" + ("quick-fix" if quick else display_stage(current_phase)))
         text = "\n".join(out) + "\n"
         # Checked before writing, so a terminal that cannot show the glyphs

@@ -1,0 +1,50 @@
+# compass_pkg.stable_ids - the ids of the approaches, stages and gates (ADR-040)
+# DEPENDENCY: none (constants only; it imports nothing so every module can import it).
+APPROACH_SPIKE = "spike"
+APPROACH_QUICK_FIX = "quick-fix"
+APPROACH_REGULAR = "regular"
+APPROACH_HOTFIX = "hotfix"
+APPROACH_FULL = "full"
+APPROACH_IDS = (APPROACH_SPIKE, APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_HOTFIX, APPROACH_FULL)
+
+LEGACY_APPROACH_ALIASES = {
+    "express": APPROACH_QUICK_FIX,
+    "standard": APPROACH_REGULAR,
+    "expedition": APPROACH_FULL,
+    "feature": APPROACH_REGULAR,
+    "initiative": APPROACH_FULL,
+}
+
+STAGE_ASSESS = "assess"
+STAGE_DEFINE = "define"
+STAGE_REFINE = "refine"
+STAGE_PLAN = "plan"
+STAGE_BREAKDOWN = "breakdown"
+STAGE_IMPLEMENT = "implement"
+STAGE_VERIFY = "verify"
+STAGE_SHIP = "ship"
+STAGE_IDS = (STAGE_ASSESS, STAGE_DEFINE, STAGE_REFINE, STAGE_PLAN, STAGE_BREAKDOWN,
+             STAGE_IMPLEMENT, STAGE_VERIFY, STAGE_SHIP)
+
+GATE_G1 = "G1"
+GATE_G2 = "G2"
+GATE_G3 = "G3"
+GATE_G4 = "G4"
+GATE_G5 = "G5"
+GATE_S1 = "S1"
+GATE_S2 = "S2"
+GATE_VERIFY_CORRECTNESS = "verify.correctness"
+GATE_VERIFY_REGRESSION = "verify.regression"
+GATE_VERIFY_SECURITY = "verify.security"
+GATE_VERIFY_GOVERNANCE = "verify.governance"
+GATE_VERIFY_TRACEABILITY = "verify.traceability"
+GATE_VERIFY_CLAIMS = "verify.claims"
+GATE_VERIFY_CLARITY = "verify.clarity"
+GATE_SPIKE_CONCLUDE = "spike.conclude"
+GATE_VERIFY_ANALYZE = "verify.analyze"
+GATE_VERIFY_ARCHITECTURE = "verify.architecture"
+GATE_IDS = (GATE_G1, GATE_G2, GATE_G3, GATE_G4, GATE_G5, GATE_S1, GATE_S2,
+            GATE_VERIFY_CORRECTNESS, GATE_VERIFY_REGRESSION, GATE_VERIFY_SECURITY,
+            GATE_VERIFY_GOVERNANCE, GATE_VERIFY_TRACEABILITY, GATE_VERIFY_CLAIMS,
+            GATE_VERIFY_CLARITY, GATE_SPIKE_CONCLUDE, GATE_VERIFY_ANALYZE,
+            GATE_VERIFY_ARCHITECTURE)

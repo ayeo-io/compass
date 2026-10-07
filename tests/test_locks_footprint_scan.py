@@ -703,3 +703,15 @@ def test_cs_5_the_routes_tried_cover_refusals_allowances_and_the_cap():
     seen = list(ROUTE_OUTCOMES.values())
     assert seen.count("refused") >= 30 and seen.count("allowed") >= 2, seen
     assert seen.count("capped") >= 3, seen
+
+
+def test_cs_7_the_locks_header_names_every_compass_module_it_imports():
+    # Read as text so a header left half-merged fails here, not at import.
+    import re
+    text = (ROOT / "cli" / "compass_pkg" / "locks.py").read_text(encoding="utf-8")
+    assert "<<<<<<<" not in text and ">>>>>>>" not in text
+    header = text.split("# DEPENDENCY:", 1)[1].split("\nfrom ", 1)[0]
+    imported = set(re.findall(r"^from compass_pkg import ([\w, ]+)", text, flags=re.M))
+    names = {n.split(" as ")[0].strip() for line in imported for n in line.split(",")}
+    for name in names:
+        assert f"compass_pkg.{name}" in header, name

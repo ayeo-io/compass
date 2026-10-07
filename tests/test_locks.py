@@ -1395,3 +1395,16 @@ def test_cs_5_the_proof_ran_on_the_cases_of_this_file():
     if not LOCK_PROOF["compared"]:
         pytest.skip("run the whole file to count the cases the fixture compared")
     assert LOCK_PROOF["compared"] >= 70, LOCK_PROOF
+
+
+def test_lk_1_an_unlock_whose_waiver_is_dated_in_the_future_is_refused():
+    locks = _api()
+    parent = _layer({"checks": {"a": {"locked": True}}}, "parent", "base")
+    future = _waiver()
+    future["approved_on"] = "2999-01-01"
+    project = _layer({"owner": "owner-1", "checks": {
+        "a": {"unlock": True, "waiver": future}}})
+    found = locks.unlock_findings(project, locks.lock_set([parent]))
+    assert [f.ok for f in found] == [False]
+    assert "later than today" in found[0].reason
+    assert set(locks.lock_set([parent, project])) == {"checks.a"}

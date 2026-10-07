@@ -12279,6 +12279,13 @@
 - **Source issue:** `obligations`
 - **Landed:** 2026-10-07
 
+### The evaluator called as today answers as before, nothing else reads the new module, and it declares its dependencies _(archived)_
+
+- **Scenario id:** `OB-8`
+- **Intent:** `INT-1`
+- **Source issue:** `obligations`
+- **Landed:** 2026-10-07
+
 ### The seven Definition of Ready items are human checks equal to the template text, listed as the plan stage's entry _(archived)_
 
 - **Scenario id:** `RD-1`
@@ -12326,4 +12333,46 @@
 - **Scenario id:** `RD-7`
 - **Intent:** `E1.S1.04c`
 - **Source issue:** `ready-and-done-as-data`
+- **Landed:** 2026-10-07
+
+### The grid: union domains, grouped classes, named labels and subsets, the cap of eight _(archived)_
+
+- **Scenario id:** `CL-1`
+- **Intent:** `INT-1`
+- **Source issue:** `classifier`
+- **Landed:** 2026-10-07
+
+### Points combine into equivalent, tightening, loosening or incomparable; refusals are outcomes _(archived)_
+
+- **Scenario id:** `CL-2`
+- **Intent:** `INT-1`
+- **Source issue:** `classifier`
+- **Landed:** 2026-10-07
+
+### Each field compares by the kind the field table gives it _(archived)_
+
+- **Scenario id:** `CL-3`
+- **Intent:** `INT-1`
+- **Source issue:** `classifier`
+- **Landed:** 2026-10-07
+
+### The first looser, tighter or mixed point is named with field, parent and child; early exit _(archived)_
+
+- **Scenario id:** `CL-4`
+- **Intent:** `INT-1`
+- **Source issue:** `classifier`
+- **Landed:** 2026-10-07
+
+### The grouped grid equals the full grid, and the atoms cover every read _(archived)_
+
+- **Scenario id:** `CL-5`
+- **Intent:** `INT-1`
+- **Source issue:** `classifier`
+- **Landed:** 2026-10-07
+
+### The verdict has complete, stable, pinned JSON _(archived)_
+
+- **Scenario id:** `CL-6`
+- **Intent:** `INT-1`
+- **Source issue:** `classifier`
 - **Landed:** 2026-10-07

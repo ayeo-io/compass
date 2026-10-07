@@ -50,11 +50,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### The module declares its dependencies, is pure, is unused and has an owning doc
+### The module declares its dependencies and owning doc, and core stays in bounds
 
-- **Scenario id:** `WV-8`
+- **Scenario id:** `LK-9`
 - **Intent:** `INT-1`
-- **Source issue:** `waivers`
+- **Source issue:** `locks`
 - **Landed:** 2026-10-07
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -353,4 +353,4 @@
 
 ---
 
-1781 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1790 superseded scenario(s) are in `docs/system-spec-archive.md`.

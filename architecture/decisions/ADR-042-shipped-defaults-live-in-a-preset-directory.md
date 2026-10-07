@@ -53,6 +53,10 @@ On the third, `find_governance()` cannot tell the two cases apart. Run in this r
 - A minor release that needs to change an existing default value must wait for the next major, or add a capability that a project turns on.
 - A test fixture under `tests/` must hold its own `.compass` or `.git`. The project root is the first directory, walking up, that holds either (`core.py:87`), so a fixture with neither would read this repository's `compass.yml`. This exposure exists today for `.compass/config.yml`.
 
+## Amendment, 6 October 2026: the values the views need and the catalogues lack
+
+The two generated views hold values the catalogue form has no field for, such as a guardrail's full `checked_at` list and the legacy spelling of a stage name. They are kept in `governance/legacy-views.yml`, outside the preset directory, so the preset stays the format a third-party preset author copies. Only the generator of the views (in the increment that makes them generated views) reads that file, and no behaviour in 6.x reads it. It is removed with the generated views at 7.0.0. A test rebuilds both legacy files from the preset and this file, and fails if the result differs from today's files in values or in how the evaluator answers.
+
 ## References
 
 - ADR-006: backward compatibility is non-negotiable.

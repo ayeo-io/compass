@@ -1,0 +1,71 @@
+# The shipped default preset, produced once from governance/routing-policy.yml
+# and governance/guardrails.yml by cli/compass_pkg/legacy_adapter.py.
+# From the increment that turns those two legacy files into generated views,
+# these files are the source of the shipped defaults. Change the defaults
+# here, never in a view.
+schema: 1
+approaches:
+  spike:
+    weight: 0
+    ships: false
+    stages: {assess: light, define: collapsed, refine: skipped, plan: collapsed, breakdown: skipped, implement: explore,
+      verify: conclude, ship: graduate-or-discard}
+    gates: [spike.conclude]
+    artifacts: {}
+    subtask_ceiling: 1
+    checkpoints:
+      controlled: [assess]
+      balanced: []
+      autonomous: []
+    locked: true
+  quick-fix:
+    weight: 1
+    ships: true
+    stages: {assess: full, define: light, refine: collapsed, plan: collapsed, breakdown: skipped, implement: full,
+      verify: light, ship: light}
+    gates: [verify.correctness, verify.governance, verify.traceability]
+    artifacts: {delivery-approach: light}
+    subtask_ceiling: 1
+    checkpoints:
+      controlled: [assess]
+      balanced: []
+      autonomous: []
+  regular:
+    weight: 2
+    ships: true
+    stages: {assess: full, define: full, refine: light, plan: full, breakdown: multiagent, implement: full,
+      verify: full, ship: full}
+    gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.clarity,
+      verify.security]
+    artifacts: {acceptance-criteria: full, technical-design: full, distribution-map: light, verification-report: full}
+    subtask_ceiling: 2
+    checkpoints:
+      controlled: [assess, define, refine, plan]
+      balanced: [define, plan]
+      autonomous: []
+  hotfix:
+    weight: 3
+    ships: true
+    stages: {assess: light, define: reproduce-first, refine: collapsed, plan: collapsed, breakdown: skipped,
+      implement: expedited, verify: full, ship: full-plus-backfill}  # vocabulary-scan: allow - machine enum value that manifests on disk already carry
+    gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.security]
+    artifacts: {acceptance-criteria: light, verification-report: full}
+    subtask_ceiling: 1
+    checkpoints:
+      controlled: [assess, define]
+      balanced: []
+      autonomous: []
+  full:
+    weight: 4
+    ships: true
+    stages: {assess: full, define: full, refine: full, plan: full, breakdown: multiagent, implement: full,
+      verify: full, ship: full}
+    gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.security,
+      verify.clarity, verify.claims]
+    artifacts: {intent: full, acceptance-criteria: full, requirements-review: full, technical-design: full,
+      distribution-map: full, verification-report: full}
+    subtask_ceiling: null
+    checkpoints:
+      controlled: [assess, define, refine, plan]
+      balanced: [assess, define, refine, plan]
+      autonomous: []

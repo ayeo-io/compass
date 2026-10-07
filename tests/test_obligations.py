@@ -1119,7 +1119,7 @@ def test_ob_8_the_command_answers_as_before(tmp_path):
     assert "issue_overrides" not in answer
 
 
-def test_ob_8_only_the_classifier_reads_the_new_path():
+def test_ob_8_only_the_classifier_and_the_replay_read_the_new_path():
     import re
     imports = re.compile(r"^\s*(from compass_pkg(\.obligations)? import .*|"
                          r"import compass_pkg\.obligations)", re.M)
@@ -1130,7 +1130,8 @@ def test_ob_8_only_the_classifier_reads_the_new_path():
         text = path.read_text(encoding="utf-8")
         if any("obligations" in m.group(0) for m in imports.finditer(text)):
             users.append(str(path.relative_to(ROOT)))
-    assert users == ["cli/compass_pkg/classify.py"]
+    # The replay (policy-diff) runs the same function to list what a change moves.
+    assert users == ["cli/compass_pkg/classify.py", "cli/compass_pkg/replay.py"]
     assert "obligations" not in (ROOT / "cli" / "compass").read_text(encoding="utf-8")
 
 

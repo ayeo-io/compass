@@ -50,11 +50,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### The benchmark, the module's declarations, the owning doc and the unchanged core
+### The classifier has a public scan with a point callback and locks read no private name
 
-- **Scenario id:** `CL-7`
+- **Scenario id:** `CS-7`
 - **Intent:** `INT-1`
-- **Source issue:** `classifier`
+- **Source issue:** `classifier-speed`
 - **Landed:** 2026-10-07
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -353,4 +353,4 @@
 
 ---
 
-1773 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1780 superseded scenario(s) are in `docs/system-spec-archive.md`.

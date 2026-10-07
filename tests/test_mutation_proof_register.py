@@ -13,7 +13,8 @@ A proof is a pair of tests: one feeds the check a broken input and asserts
 it fails, the other (or the same one) asserts it passes once the input is
 put right. Both run on every suite, so a proof cannot go out of date without
 the suite saying so. `tests/mutation_proofs.yml` names the pair for each check
-under `checks:` in `governance/guardrails.yml`. Whether a proof is real -
+under `checks:` in the default preset's `checks.yml`, which
+`governance/guardrails.yml` is generated from. Whether a proof is real -
 whether the test truly breaks what the check guards - no machine can tell,
 and the reviewer judges it.
 
@@ -28,11 +29,20 @@ import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 GUARDRAILS = ROOT / "governance" / "guardrails.yml"
+PRESET = ROOT / "governance" / "presets" / "default"
 REGISTER = ROOT / "tests" / "mutation_proofs.yml"
 REQUIRED = ("broken", "fails", "restores")
 
 
-def _checks(guardrails=GUARDRAILS):
+def _checks(preset=PRESET, guardrails=GUARDRAILS):
+    """The shipped checks, by name. The preset is the source of the shipped
+    defaults, so it is read first; the generated guardrails view answers only
+    when the preset's checks file is absent."""
+    checks_file = preset / "checks.yml"
+    if checks_file.is_file():
+        data = yaml.safe_load(checks_file.read_text(encoding="utf-8")) or {}
+        return {name: {"description": body.get("statement")}
+                for name, body in (data.get("checks") or {}).items()}
     data = yaml.safe_load(guardrails.read_text(encoding="utf-8")) or {}
     return data.get("checks") or {}
 
@@ -74,7 +84,7 @@ def register_problems(checks, entries, root=ROOT) -> list[str]:
     """Each way the register falls short of the checks, one line each,
     naming the check and the field."""
     if not checks:
-        return ["governance/guardrails.yml lists no checks, so there is "
+        return ["the default preset lists no checks, so there is "
                 "nothing to compare the register with"]
     problems = []
     by_check = {}
@@ -91,7 +101,7 @@ def register_problems(checks, entries, root=ROOT) -> list[str]:
             problems.append(f"{name}: no mutation proof on record")
     for name, entry in by_check.items():
         if name not in checks:
-            problems.append(f"{name}: on record, but guardrails.yml has no "
+            problems.append(f"{name}: on record, but the default preset has no "
                             f"such check")
             continue
         for field in REQUIRED:
@@ -156,7 +166,7 @@ def test_an_entry_for_a_check_that_is_gone_is_named():
     """MPR-3."""
     problems = register_problems(
         _CHECKS, [_entry("alpha"), _entry("beta"), _entry("gamma")])
-    assert problems == ["gamma: on record, but guardrails.yml has no such check"]
+    assert problems == ["gamma: on record, but the default preset has no such check"]
 
 
 def test_no_checks_to_compare_is_a_failure_not_a_pass():

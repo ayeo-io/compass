@@ -270,3 +270,22 @@ def test_cs_5_the_schema_checks_inside_set_and_the_enumerations():
     assert check["properties"]["set"]["additionalProperties"] is False
     assert check["properties"]["severity"] == {"enum": list(catalogue_spec.SEVERITIES)}
     assert schema["properties"]["autonomy"] == {"enum": list(catalogue_spec.AUTONOMY)}
+
+
+# --- every documented setting is a settings key ---------------------------------------
+
+def test_governance_drift_is_accepted_and_split_as_a_setting():
+    from compass_pkg import layers
+    doc = {"schema": 1, "governance_drift": "strict"}
+    assert catalogue_check.check_layer(doc, "project") == []
+    layer, settings = layers.split_project_file(doc)
+    assert settings == {"governance_drift": "strict"}
+    assert "governance_drift" not in layer
+
+
+def test_every_documented_setting_is_a_settings_key():
+    import re
+    text = (ROOT / "docs" / "configuration.md").read_text(encoding="utf-8")
+    table = text.split("## Settings", 1)[1].split("\n###", 1)[0]
+    documented = set(re.findall(r"^\| `([a-z_]+)`", table, flags=re.M))
+    assert documented - set(catalogue_spec.SETTINGS_KEYS) == set()

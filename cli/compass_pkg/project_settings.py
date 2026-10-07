@@ -18,7 +18,7 @@ hold a mapping, raises `CompassError` naming it. Each caller decides what
 that means, so a broken file behaves in each place exactly as it did before
 there was one reader.
 """
-# DEPENDENCY: standard library (os, sys), compass_pkg.atomic_io,
+# DEPENDENCY: standard library (copy, os, sys), compass_pkg.atomic_io,
 # compass_pkg.catalogue_spec and the bundled PyYAML; imports nothing else from
 # Compass.
 from __future__ import annotations
@@ -154,10 +154,9 @@ def settings_source(project_root):
     return old if os.path.isfile(old) else None
 
 
-#: Keys only the old file is read for. `mode` is its name for `adoption`, and
-#: `governance_drift` is read from it but is not in the catalogue's list. A
+#: Keys only the old file is read for. `mode` is its name for `adoption`. A
 #: union with `SETTINGS_KEYS`, so listing one there later counts it once.
-OLD_FILE_EXTRA_KEYS = ("mode", "governance_drift")
+OLD_FILE_EXTRA_KEYS = ("mode",)
 
 
 def _old_settings_keys(project_root):

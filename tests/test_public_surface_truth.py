@@ -431,8 +431,13 @@ def test_d2_repairs_change_only_retired_names():
     section, "The default preset", listing how the legacy files convert into
     the preset's catalogues.
 
+    One more was re-baselined by `generated-legacy-views`:
+    `governance/routing-policy.md` (list_items 28 -> 33) gained five bullets
+    in "The default preset", the commands and tests that keep the two legacy
+    files generated from it.
+
     One more was re-baselined by `obligations`: `governance/routing-policy.md`
-    gained one `##` section, "What a configuration owes an assessment", with
+    (list_items 33 -> 43) gained one `##` section, "What a configuration owes an assessment", with
     three lists (the evaluator's four additions, the two replays and the rank
     replay).
 

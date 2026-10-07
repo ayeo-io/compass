@@ -636,14 +636,6 @@ _register(Rule(
             "the real slug of a past, archived issue - the same protected "
             "citation as the cross-task-architectural-integrity exemption "
             "above."),
-        # The `ship` stage-weight enum value below has its own
-        # "vocabulary-scan: allow" marker on the comment line above it, not
-        # on the value's own line, so `ALLOW_MARKER_RE` (checked directly by
-        # `_find_retired_word`) never reaches it - this sweep needs its own
-        # named exemption for that line.
-        Exemption("governance/routing-policy.yml", "full-plus-backfill",
-                   "a machine stage-weight enum value; its allow marker sits "
-                   "on the line above, not on this one."),
         # Two of terminology.yml's `not:` entries name a retired word on a
         # simple scalar line, with the "vocabulary-scan: allow" marker on a
         # real YAML comment line above it - a separate span this sweep
@@ -746,7 +738,7 @@ _register(Rule(
             "cli/compass_pkg/landed_by.py",
             "and `backfills-paid` still apply",
             "backfills-paid is the real check id in "
-            "governance/guardrails.yml:74, an identifier - the audit notes "
+            "the `checks` block of governance/guardrails.yml, an identifier - the audit notes "
             "the `backfills:` key is an identifier and stays; this is the "
             "same class of identifier."),
         Exemption(
@@ -1159,7 +1151,7 @@ _register(Rule(
         Exemption(
             "docs/routing-deep-dive.md", "[refine, verify, ship]",
             "the literal `never_skip` policy value quoted from "
-            "governance/routing-policy.yml:109 - an identifier (section "
+            "the `RP-FLOOR-001` floor in governance/routing-policy.yml - an identifier (section "
             "4), not the verb the word table retires"),
         Exemption(
             "docs/routing-deep-dive.md", "not skipped; verify and ship",

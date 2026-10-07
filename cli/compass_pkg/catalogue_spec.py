@@ -191,7 +191,8 @@ CAPABILITIES = ("entry-exit-evaluation", "artifact-freshness")
 # Top-level keys of a layer file (ADR-043).
 LAYER_KEYS = ("schema", "extends", "owner", "approvers", "capabilities") + CATALOGUES
 SETTINGS_KEYS = ("autonomy", "adoption", "allow_project_commands", "enforcement",
-                 "record", "project", "prices", "multiagent", "preset_index")
+                 "record", "project", "prices", "multiagent", "governance_drift",
+                 "preset_index")
 RESERVED_KEYS = ("preset",)
 
 # What an issue's own layer (the manifest's `config:`) may hold.

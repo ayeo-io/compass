@@ -1,8 +1,10 @@
-# The shipped default preset, produced once from governance/routing-policy.yml
-# and governance/guardrails.yml by cli/compass_pkg/legacy_adapter.py.
-# From the increment that turns those two legacy files into generated views,
-# these files are the source of the shipped defaults. Change the defaults
-# here, never in a view.
+# The shipped default preset: the source of the shipped defaults.
+# The two files governance/routing-policy.yml and governance/guardrails.yml
+# are generated from these files and governance/legacy-views.yml.
+# Change a default here, then run python3 scripts/generate-legacy-views.py.
+# Also raise the version in legacy-views.yml, then run the script with --pin
+# and again with --pin-hashes, which update the digest and drift fixtures.
+# cli/compass_pkg/legacy_adapter.py wrote these files once, from those two files.
 schema: 1
 stages:
   assess:

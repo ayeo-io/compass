@@ -35,6 +35,7 @@ A project that refers to other products by codes can set `record.names_key` to a
 - Sync replaces every name in copied text and paths with its code, then scans what it wrote. A file or path that still names a product stops the sync before anything is committed or pushed.
 - The key is found from `COMPASS_RIVALS_KEY`, then the configured path, then the same path in the main checkout, so a ship from a linked worktree finds it.
 - When the setting names a key that cannot be found, sync exits 2 and sends nothing.
+- Sync scans a binary file's printable runs, as the tracked-tree gate does. A binary file pinned in `scripts/rival-name-binary-pins.txt` by blob hash and path is skipped there too; the path inside the record must match the pin. See `governance/decisions/2026-10-04-rival-names-never-committed.md`.
 - Files already in the record from before the key was set are not refused; sync says how many still name a product, and one `compass record sync --prune` from the main checkout rewrites them.
 - `compass record restore` brings back the codes, not the names.
 

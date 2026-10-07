@@ -285,17 +285,20 @@ def _mirror(source_root, target_root, rel, prune, names=None, written=None):
             _copy_file(full, os.path.join(target, inner), names, written)
 
 
-def _check_names(clone, names, written):
+def _check_names(clone, names, written, pins=()):
     """Refuse the sync if a file or path it wrote still names a rival; say
     how many earlier record files do. Only what this sync wrote is refused,
     so files from before the key was configured do not block every sync;
-    one `--prune` sync rewrites them."""
+    one `--prune` sync rewrites them. A binary file pinned in the gate's pin
+    file, by blob hash and path, is not scanned, as in the gate."""
     hashes = rival_names.hashes_from_key(names)
     found = []
     for target in written:
         rel = os.path.relpath(target, clone)
         with open(target, "rb") as fh:
-            text = rival_names.readable_text(fh.read())
+            data = fh.read()
+        text = "" if rival_names.is_pinned(rel, data, pins) \
+            else rival_names.readable_text(data)
         if rival_names.scan(rel, hashes) or rival_names.scan(text, hashes):
             found.append(rival_names.mask(rel, hashes))
     if found:
@@ -312,9 +315,11 @@ def _check_names(clone, names, written):
             if os.path.realpath(full) in done:
                 continue
             with open(full, "rb") as fh:
-                text = rival_names.readable_text(fh.read())
-            if rival_names.scan(os.path.relpath(full, clone), hashes) or \
-                    rival_names.scan(text, hashes):
+                data = fh.read()
+            rel = os.path.relpath(full, clone)
+            text = "" if rival_names.is_pinned(rel, data, pins) \
+                else rival_names.readable_text(data)
+            if rival_names.scan(rel, hashes) or rival_names.scan(text, hashes):
                 earlier += 1
     return (f"; {earlier} earlier record file(s) still name a rival product, "
             f"and `compass record sync --prune` rewrites them"
@@ -367,7 +372,8 @@ def sync(project_root, prune=False, only=None):
     note = (f" ({', '.join(skipped)} not in this checkout, so left as "
             f"recorded)" if skipped else "")
     if names:
-        note += _check_names(clone, names, written)
+        note += _check_names(clone, names, written, rival_names.load_pins(
+            os.path.join(project_root, "scripts", rival_names.PINS_NAME)))
     # --force: a `.gitignore` in the record must not hide files from it.
     _must(_git(["add", "-A", "--force"], clone), "staging the record")
     if not _git(["status", "--porcelain"], clone).stdout.strip():

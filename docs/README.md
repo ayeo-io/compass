@@ -54,6 +54,7 @@ same commit.
 | `cli/compass_pkg/legacy_adapter.py`, `cli/compass_pkg/legacy_views.py`, `cli/compass_pkg/legacy_views_template.py`, `scripts/generate-legacy-views.py`, `governance/presets/default/`, `tests/fixtures/preset-digests.yml` | `governance/routing-policy.md` |
 | `cli/compass_pkg/vocabulary.py` | `architecture/decisions/ADR-035-delivery-approaches-stages-and-modes-are-configuration.md` |
 | `cli/compass_pkg/atomic_io.py` | `architecture/decisions/ADR-036-an-issue-runs-against-a-stored-generation.md` |
+| `cli/compass_pkg/obligations.py` | `architecture/decisions/ADR-037-configuration-changes-are-classified-by-effect.md` |
 | `cli/compass_pkg/layers.py`, `cli/compass_pkg/merge.py` | `architecture/decisions/ADR-035-delivery-approaches-stages-and-modes-are-configuration.md` |
 | `cli/compass_pkg/routing.py`, `cli/compass_pkg/approach_diagram.py`, `governance/routing-policy.yml`, `approaches/`, `docs/approach-diagram.html` | `governance/routing-policy.md` |
 | `cli/compass_pkg/checks.py`, `cli/compass_pkg/check_cmd.py`, `cli/compass_pkg/check_registry.py`, `governance/guardrails.yml` | `governance/guardrails.md` |

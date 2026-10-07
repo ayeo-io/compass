@@ -279,4 +279,74 @@ from the preset and `legacy-views.yml` to show nothing is lost:
 - The fallback approach becomes the last rule of `default_shapes`, and the
   `biases` become a rule set with no effect.
 - Each check gets an `on_skipped` value from what it returns when it cannot
-  run. A replay of those verdicts against the archive is still owed.
+  run. The replay against the archive sample is in
+  `tests/test_obligations.py` and is described below.
+
+## What a configuration owes an assessment
+
+`cli/compass_pkg/obligations.py` computes the facts the classifier compares
+for one resolved configuration and one assessment: stage modes, entry and
+exit checks, the gate set with each gate's checks and accepted evidence
+types, artifacts and their depth, required skills, blocked stages, required
+artifacts, checkpoints for each autonomy value, ceilings and each active
+check's compared fields. It does not route. `policy_adapter` turns the merged
+catalogues into the dictionary `evaluate_route` takes, and the evaluator
+answers. Nothing reads this path yet, and `compass approach evaluate` still
+reads `routing-policy.yml`.
+
+The evaluator took four additions, and a call that uses none of them answers
+as before:
+
+- `stage_mode_ranks` in the policy (stage, then mode, then rank). A floor's
+  lift raises a mode ranked below `full` and leaves a mode with no rank, or
+  one ranked equal to `full` or above, alone. Without the key the lift is the
+  fixed set `collapsed`, `skipped` and `light`, which is what the shipped ranks
+  reproduce
+  (`governance/decisions/2026-10-06-stage-mode-ranks-cover-the-depth-ladder-only.md`).
+- `dimension_orders` in the policy (dimension, then its values in ascending
+  order). A `when:` clause with `at_least` reads the configuration's order.
+  Without the key the shipped orders of risk and size apply.
+- `issue`, an issue's own layer, applied in the order
+  `governance/decisions/2026-10-05-floors-win-over-the-issue-layer.md` fixes.
+  It names the candidate, replaces the candidate's base stage modes and can
+  lower the subtask ceiling. The floors, caps and role rules apply after it,
+  so a floor lifts a mode the issue lowered, and a floor that replaces the
+  candidate drops the issue's modes (the result lists them as ignored). A cap
+  lowers an issue's ceiling and an issue never raises one.
+- `RoutingConflict`, the error class of the two refusals: exploration that a
+  floor would turn into delivery, and an approach a cap forbids. A caller that
+  compares policies treats these as results (`Refused`). Every other error is
+  a fault in an input and raises.
+
+The evaluator applies one hit policy to each effect, and it does not read a
+declared one. `policy_adapter` raises when a rule set declares a different
+hit policy. It also raises for an approach outside the five the evaluator
+knows, and for a `ships` value that differs from the one it assumes. These
+three guards go when the evaluator takes the catalogue form.
+
+Two replays tie the new path to today's behaviour, and each has a planted
+fault that makes it fail:
+
+- The adapted preset routes the 1,200 assessments of the compatibility
+  baseline, their label subsets and the archive assessments as today's policy
+  does. The two values the catalogues spell differently differ in spelling
+  only: a document is its id (`intent`, not `intent.md`) and a stage is its
+  current name (`ship`, not `land`). The replay takes the stage names from the
+  table in `core`.
+- The preset's `on_skipped` values give today's verdicts on the archive
+  sample for the nine checks that decline. The four checks a `landed_by`
+  pointer stands down (`scenarios-have-tests`, `suite-passed`,
+  `scenario-has-id-and-intent`, `gate-evidence-present`) differ in 16 cases:
+  today they report nothing to check when the pointer holds, and `on_skipped`
+  says `fail`. The caller of the check path applies that relaxation, and the
+  increment that moves `compass check` to the resolved configuration decides
+  where it lives. The test pins the four names and fails on a fifth.
+
+What the stage-mode rank replay shows:
+
+- The ranked lift gives today's answer over the whole baseline.
+- A rank of 2 on `reproduce-first` is reported, because a floor names `define`.
+- A rank below `full` on `expedited` is not reported over today's policy,
+  because no floor names `implement` and the lift never reaches that stage.
+  With one floor added to both paths that names it, the same rank is reported.
+- A dropped floor or gate is reported.

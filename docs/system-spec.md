@@ -22,13 +22,6 @@
 - **Source issue:** `generated-legacy-views`
 - **Landed:** 2026-10-07
 
-### The preset file headers do not claim the adapter wrote the files once
-
-- **Scenario id:** `RD-8`
-- **Intent:** `E1.S1.04c`
-- **Source issue:** `ready-and-done-as-data`
-- **Landed:** 2026-10-07
-
 ### the guard can fail on each new surface
 
 - **Scenario id:** `SS-4`
@@ -43,11 +36,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a non-UTF-8 file pinned by blob hash and path, when the gate scans the tree, then it passes the file's content; given any change to the file, a UTF-8 file, a path, or a stale pin, then the gate still fails or reports
+### The evaluator called as today answers as before, nothing else reads the new module, and it declares its dependencies
 
-- **Scenario id:** `TRC-001`
+- **Scenario id:** `OB-8`
 - **Intent:** `INT-1`
-- **Source issue:** `rival-gate-new-key`
+- **Source issue:** `obligations`
 - **Landed:** 2026-10-07
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -346,4 +339,4 @@
 
 ---
 
-1752 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1753 superseded scenario(s) are in `docs/system-spec-archive.md`.

@@ -891,19 +891,15 @@ def cmd_evidence_add(args):
                evidence_id=args.evidence_id, type=args.type, path=args.path)
 
 
-def _annotate_gate_accepts(task_path):
-    """Annotate each gate in the gates block with a `# accepts: [...]`
-    comment naming its accepted evidence types (from guardrails.yml). A seeding
-    nicety - yaml round-trips drop it, so it is re-applied after each
-    `approach evaluate --write`."""
+def annotate_gate_accepts_text(text):
+    """`text` (a manifest) with each gate in the gates block annotated with a
+    `# accepts: [...]` comment naming its accepted evidence types (from
+    guardrails.yml). A seeding nicety - yaml round-trips drop it, so
+    `approach evaluate --write` applies it to the text it is about to write."""
     reqs, _known = _load_gate_requirements()
     if not reqs:
-        return
-    try:
-        with open(task_path, "r", encoding="utf-8") as fh:
-            lines = fh.read().splitlines()
-    except OSError:
-        return
+        return text
+    lines = text.splitlines()
     out, in_gates = [], False
     for line in lines:
         if _re.match(r"^gates:\s*$", line):
@@ -920,8 +916,18 @@ def _annotate_gate_accepts(task_path):
                 if acc:
                     out.append(f"{indent}# accepts: {acc}")
         out.append(line)
-    with open(task_path, "w", encoding="utf-8") as fh:
-        fh.write("\n".join(out) + "\n")
+    return "\n".join(out) + "\n"
+
+
+def _annotate_gate_accepts(task_path):
+    """Annotate the manifest file in place, atomically."""
+    from compass_pkg.atomic_io import atomic_write_text
+    try:
+        with open(task_path, "r", encoding="utf-8") as fh:
+            text = fh.read()
+    except OSError:
+        return
+    atomic_write_text(task_path, annotate_gate_accepts_text(text))
 
 
 # --- compass issue set-status -------------------------------------------------

@@ -16,6 +16,9 @@ assessment:        # (required) map - the four-dimension JUDGEMENT assessment (a
   role:          # (optional) [engineer, product-owner, product-marketer, designer, qa]
   labels:        # (optional) list of strings - domain tags (auth, payments, …)
 
+generation:      # (optional) integer, at least 0 - the stored generation of configuration the issue runs against; 0 = assessed under 6.x with none yet; absent = pre-6.0.0, reads live governance
+config:          # (optional) map - the issue's own configuration layer, an input; it takes effect when approach evaluate --write commits it
+
 delivery_approach:  # (optional until approach evaluate) string - the final delivery approach name
 orchestration:       # (optional until approach evaluate) string - solo | pair | multiagent | …
 subtask_ceiling: # (optional) integer or null - how many parallel subtasks the delivery approach permits

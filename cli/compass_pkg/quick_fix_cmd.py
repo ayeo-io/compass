@@ -340,8 +340,15 @@ def cmd_quick_fix_start(args):
     chain_line = lineage.hint(os.path.join(project_root, ".compass"), slug)
     chain_detail = [chain_line] if chain_line else []
 
-    _quiet_run(cmd_route_evaluate, reading=None, task=slug, write=True,
-              reason=None, kind=None)
+    try:
+        _quiet_run(cmd_route_evaluate, reading=None, task=slug, write=True,
+                   reason=None, kind=None)
+    except CompassError:
+        # This call made the folder, so a refusal (a compass.yml the lint
+        # rejects, for one) takes it away, and the slug stays free.
+        import shutil
+        shutil.rmtree(task_dir, ignore_errors=True)
+        raise
 
     task_dir = resolve_issue_dir(slug)
     task, _ = load_manifest(task_dir)

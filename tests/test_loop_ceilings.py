@@ -49,6 +49,9 @@ def _git(root, *args):
 def _manifest(root, risk="cross-cutting", created="2026-10-03"):
     task = root / ".compass" / "work" / SLUG
     task.mkdir(parents=True, exist_ok=True)
+    # A fresh manifest names no generation, so a stored one from an earlier
+    # call would be refused as unreferenced: start the issue clean.
+    shutil.rmtree(task / "generations", ignore_errors=True)
     (task / "manifest.yml").write_text(
         f"schema_version: '2.0'\nissue: {SLUG}\ncreated: '{created}'\n"
         f"status: active\nassessment: {{risk: {risk}, familiarity: "

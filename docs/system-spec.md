@@ -22,6 +22,13 @@
 - **Source issue:** `generated-legacy-views`
 - **Landed:** 2026-10-07
 
+### The preset file headers do not claim the adapter wrote the files once
+
+- **Scenario id:** `RD-8`
+- **Intent:** `E1.S1.04c`
+- **Source issue:** `ready-and-done-as-data`
+- **Landed:** 2026-10-07
+
 ### the guard can fail on each new surface
 
 - **Scenario id:** `SS-4`
@@ -339,4 +346,4 @@
 
 ---
 
-1753 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1760 superseded scenario(s) are in `docs/system-spec-archive.md`.

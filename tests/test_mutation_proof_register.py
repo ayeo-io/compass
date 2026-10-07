@@ -23,11 +23,16 @@ Scenario ids MPR-1 to MPR-6 (issue `mutation-proof-register`).
 from __future__ import annotations
 
 import ast
+import sys
 from pathlib import Path
 
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "cli"))
+
+from compass_pkg import legacy_views  # noqa: E402
+
 GUARDRAILS = ROOT / "governance" / "guardrails.yml"
 PRESET = ROOT / "governance" / "presets" / "default"
 REGISTER = ROOT / "tests" / "mutation_proofs.yml"
@@ -37,12 +42,14 @@ REQUIRED = ("broken", "fails", "restores")
 def _checks(preset=PRESET, guardrails=GUARDRAILS):
     """The shipped checks, by name. The preset is the source of the shipped
     defaults, so it is read first; the generated guardrails view answers only
-    when the preset's checks file is absent."""
+    when the preset's checks file is absent. A human check has no
+    implementation to break, so it has no mutation proof and is left out."""
     checks_file = preset / "checks.yml"
     if checks_file.is_file():
         data = yaml.safe_load(checks_file.read_text(encoding="utf-8")) or {}
         return {name: {"description": body.get("statement")}
-                for name, body in (data.get("checks") or {}).items()}
+                for name, body in (data.get("checks") or {}).items()
+                if legacy_views.has_implementation(body)}
     data = yaml.safe_load(guardrails.read_text(encoding="utf-8")) or {}
     return data.get("checks") or {}
 

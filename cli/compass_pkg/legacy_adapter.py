@@ -537,7 +537,8 @@ _HEADER = (
     "# Change a default here, then run python3 scripts/generate-legacy-views.py.\n"
     "# Also raise the version in legacy-views.yml, then run the script with --pin\n"
     "# and again with --pin-hashes, which update the digest and drift fixtures.\n"
-    "# cli/compass_pkg/legacy_adapter.py wrote these files once, from those two files.\n")
+    "# cli/compass_pkg/legacy_adapter.py wrote the first version of these files from\n"
+    "# those two files. The preset is the source now; edit it here.\n")
 
 _MODE_NOTE = ("  # vocabulary-scan: allow - machine enum value that manifests on "
               "disk already carry\n")

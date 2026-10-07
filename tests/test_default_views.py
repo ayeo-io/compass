@@ -193,8 +193,10 @@ def test_gv_3_the_register_and_the_derivation_read_the_preset(tmp_path):
         "the plain-language derivation reads the guardrails view only"
 
     preset = ROOT / "governance" / "presets" / "default"
-    assert set(reg._checks()) == set(yaml.safe_load(
-        (preset / "checks.yml").read_text(encoding="utf-8"))["checks"])
+    assert set(reg._checks()) == {
+        name for name, body in yaml.safe_load(
+            (preset / "checks.yml").read_text(encoding="utf-8"))["checks"].items()
+        if importlib.import_module("compass_pkg.legacy_views").has_implementation(body)}
     # With the preset present the guardrails view is not read at all.
     broken = tmp_path / "guardrails.yml"
     broken.write_text("not: [valid\n", encoding="utf-8")

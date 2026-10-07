@@ -123,7 +123,7 @@ class _Notes:
 
 def _dimension_name(name):
     name = core.ASSESSMENT_KEY_MAP.get(name, name)
-    return core._WHEN_KEY_MAP.get(name, name)
+    return core.WHEN_KEY_MAP.get(name, name)
 
 
 def _when(when, seen=None):
@@ -133,7 +133,7 @@ def _when(when, seen=None):
         return copy.deepcopy(when)
     out = {}
     for key, value in when.items():
-        new = core._WHEN_KEY_MAP.get(key, key)
+        new = core.WHEN_KEY_MAP.get(key, key)
         if seen is not None and new != key:
             seen[new] = key
         if new == "any_of" and isinstance(value, list):

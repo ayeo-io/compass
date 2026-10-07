@@ -1112,7 +1112,7 @@ def test_ob_8_the_command_answers_as_before(tmp_path):
     assert "issue_overrides" not in answer
 
 
-def test_ob_8_no_module_reads_the_new_path_yet():
+def test_ob_8_only_the_classifier_reads_the_new_path():
     import re
     imports = re.compile(r"^\s*(from compass_pkg(\.obligations)? import .*|"
                          r"import compass_pkg\.obligations)", re.M)
@@ -1123,7 +1123,7 @@ def test_ob_8_no_module_reads_the_new_path_yet():
         text = path.read_text(encoding="utf-8")
         if any("obligations" in m.group(0) for m in imports.finditer(text)):
             users.append(str(path.relative_to(ROOT)))
-    assert users == []
+    assert users == ["cli/compass_pkg/classify.py"]
     assert "obligations" not in (ROOT / "cli" / "compass").read_text(encoding="utf-8")
 
 

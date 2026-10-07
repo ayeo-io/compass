@@ -176,6 +176,26 @@ OBLIGATION_FIELDS = {
     "evaluation.required_artifacts": "obligation-set",
 }
 
+# Which way is stricter for each ceiling the classifier compares and a lock
+# protects (ADR-037, ADR-039). A key is a ceiling field of the table above,
+# or `rules.ceilings.<name>` for a loop ceiling. `lower` means a smaller
+# number is stricter, and no ceiling at all is the loosest. `none` makes any
+# change incomparable: the four correction loops, where an earlier stop also
+# removes a chance to fix a defect. A ceiling not listed here is `none`. Only
+# the framework declares a direction, so a loader must never fill this from
+# project data.
+CEILING_DIRECTIONS = {
+    "approaches.subtask_ceiling": "lower",
+    "evaluation.max_worktrees": "lower",
+    "rules.ceilings.run_cost_usd": "lower",
+    "rules.ceilings.run_minutes": "lower",
+    "rules.ceilings.run_cycles": "lower",
+    "rules.ceilings.builder_attempts": "none",
+    "rules.ceilings.review_rounds": "none",
+    "rules.ceilings.replans": "none",
+    "rules.ceilings.repeated_error": "none",
+}
+
 ARTIFACT_DEPTHS = ("light", "full")              # ascending strictness
 AUTONOMY = ("controlled", "balanced", "autonomous")
 ADOPTION = ("advisory", "enforced")

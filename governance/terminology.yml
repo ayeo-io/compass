@@ -1157,7 +1157,7 @@ retired_machine_name_exempt:
   - path: cli/compass_pkg/core.py
     why: >-
       Holds the read-side rename tables (SPINE_KEY_MAP, ASSESSMENT_KEY_MAP,
-      _WHEN_KEY_MAP). Every loader normalises through them, which is what lets
+      WHEN_KEY_MAP). Every loader normalises through them, which is what lets
       the rest of the CLI speak one vocabulary while a 1.x spine still loads.
       This is the single legitimate home for a retired spine key.
   - path: cli/compass_pkg/migrate.py

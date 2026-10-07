@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "result": "loosening",
+  "reason": "at risk contained, familiarity greenfield, size small, labels none: gates.accepts (verify.correctness) is [\"test-run\"] in the parent and [\"artifact\", \"test-run\"] in the child",
+  "scan": "full",
+  "parent": "default@6",
+  "child": "project",
+  "exhaustive": false,
+  "complete": true,
+  "grid": {
+    "labels": ["auth"],
+    "label_count": 1,
+    "label_cap": 8,
+    "points": 4,
+    "raw_points": 16,
+    "evaluated": 4
+  },
+  "counts": {"equal": 0, "tighter": 0, "looser": 4, "mixed": 0},
+  "first_looser": {
+    "assessment": {"risk": "contained", "familiarity": "greenfield", "size": "small", "labels": []},
+    "represents": {
+      "risk": ["contained", "critical"],
+      "familiarity": ["greenfield", "brownfield-unmapped"],
+      "size": ["small"]
+    },
+    "outcome": "looser",
+    "summary": "at risk contained, familiarity greenfield, size small, labels none: gates.accepts (verify.correctness) is [\"test-run\"] in the parent and [\"artifact\", \"test-run\"] in the child",
+    "changes": [
+      {
+        "fact": "gate_accepts",
+        "field": "gates.accepts",
+        "key": "verify.correctness",
+        "outcome": "looser",
+        "parent": ["test-run"],
+        "child": ["artifact", "test-run"]
+      }
+    ]
+  },
+  "first_tighter": null,
+  "first_mixed": null
+}

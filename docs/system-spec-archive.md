@@ -12685,9 +12685,72 @@
 - **Source issue:** `classifier-speed`
 - **Landed:** 2026-10-07
 
-### Given the count of compared lock cases is partial because pytest-xdist split the file When test_cs_5 runs inside a worker Then it skips instead of failing, and outside a worker it still requires at least 70 _(archived)_
+### The references resolve to configurations or exit 2 _(archived)_
 
-- **Scenario id:** `TRC-001`
+- **Scenario id:** `PD-1`
 - **Intent:** `INT-1`
-- **Source issue:** `lock-proof-under-xdist`
+- **Source issue:** `policy-diff`
+- **Landed:** 2026-10-07
+
+### The verb is documented, registered, in the command corpus and within the caps _(archived)_
+
+- **Scenario id:** `PD-10`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-diff`
+- **Landed:** 2026-10-07
+
+### The classification is the classifier's own JSON _(archived)_
+
+- **Scenario id:** `PD-2`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-diff`
+- **Landed:** 2026-10-07
+
+### The grid is replayed and each changed point is listed _(archived)_
+
+- **Scenario id:** `PD-3`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-diff`
+- **Landed:** 2026-10-07
+
+### The label combinations are replayed and the cap skips them _(archived)_
+
+- **Scenario id:** `PD-4`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-diff`
+- **Landed:** 2026-10-07
+
+### The archive's assessments are replayed _(archived)_
+
+- **Scenario id:** `PD-5`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-diff`
+- **Landed:** 2026-10-07
+
+### --open lists the open issues and the waivers a change affects _(archived)_
+
+- **Scenario id:** `PD-6`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-diff`
+- **Landed:** 2026-10-07
+
+### The exit codes and --exit-code _(archived)_
+
+- **Scenario id:** `PD-7`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-diff`
+- **Landed:** 2026-10-07
+
+### --json has a pinned, deterministic shape _(archived)_
+
+- **Scenario id:** `PD-8`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-diff`
+- **Landed:** 2026-10-07
+
+### The text output _(archived)_
+
+- **Scenario id:** `PD-9`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-diff`
 - **Landed:** 2026-10-07

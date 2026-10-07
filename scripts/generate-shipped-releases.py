@@ -17,12 +17,14 @@ import sys
 import tarfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, os.path.join(ROOT, "cli", "vendor"))
 sys.path.insert(0, os.path.join(ROOT, "cli"))
 
-import yaml  # noqa: E402
-
+from compass_pkg import core  # noqa: E402
 from compass_pkg import shipped_releases as sr  # noqa: E402
+
+# The package resolves the bundled PyYAML; a script uses its copy rather than
+# importing one of its own, which CI (no installed PyYAML) would not find.
+yaml = core.yaml
 
 HEADER = ("# The governance files each shipped release held, by version and content digest.\n"
           "# Written by scripts/generate-shipped-releases.py from the git tags; do not edit.\n"

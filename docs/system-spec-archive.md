@@ -12194,3 +12194,31 @@
 - **Intent:** `INT-1`
 - **Source issue:** `governance-drift-is-a-settings-key`
 - **Landed:** 2026-10-07
+
+### The two views equal the generator's output byte for byte; a stale view names the regenerate command _(archived)_
+
+- **Scenario id:** `GV-1`
+- **Intent:** `E1.S1.04b`
+- **Source issue:** `generated-legacy-views`
+- **Landed:** 2026-10-07
+
+### A generated header says generated and names the command; preset, sidecar and template changes change the text _(archived)_
+
+- **Scenario id:** `GV-2`
+- **Intent:** `E1.S1.04b`
+- **Source issue:** `generated-legacy-views`
+- **Landed:** 2026-10-07
+
+### The mutation-proof register and the plain-language derivation read the preset _(archived)_
+
+- **Scenario id:** `GV-3`
+- **Intent:** `E1.S1.04b`
+- **Source issue:** `generated-legacy-views`
+- **Landed:** 2026-10-07
+
+### Preset digests are pinned and a changed preset file fails naming the digest file _(archived)_
+
+- **Scenario id:** `GV-4`
+- **Intent:** `E1.S1.04b`
+- **Source issue:** `generated-legacy-views`
+- **Landed:** 2026-10-07

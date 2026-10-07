@@ -31,9 +31,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
 
-import compass_pkg  # noqa: E402,F401  (puts the bundled YAML parser first)
-import yaml  # noqa: E402
-from compass_pkg import catalogue_spec, classify, merge  # noqa: E402
+from compass_pkg import catalogue_spec, classify, core, merge  # noqa: E402
 
 DEFAULT_LABELS = (4, 8)
 SHIPPED_LABELS = ("auth", "migrations", "payments", "personal-data")
@@ -43,7 +41,8 @@ def preset():
     directory = ROOT / "governance" / "presets" / "default"
     parts = []
     for name in catalogue_spec.CATALOGUES:
-        part = yaml.safe_load((directory / f"{name}.yml").read_text(encoding="utf-8"))
+        # The package's reader, so the bundled YAML parser is the one used.
+        part = core.load_yaml(str(directory / f"{name}.yml"))
         parts.append({k: v for k, v in part.items() if k != "schema"})
     config, _ = merge.apply({}, {"schema": 1, **merge.combine(parts)}, "parent",
                             "default")

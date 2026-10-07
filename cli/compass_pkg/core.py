@@ -834,7 +834,7 @@ def shape_stages(shape):
     return out
 
 
-_WHEN_KEY_MAP = {
+WHEN_KEY_MAP = {
     "blast_radius": "risk", "terrain": "familiarity",
     "magnitude": "size", "intent": "goal", "touches": "labels",
     "touches_any": "labels_any", "touches_common": "labels_common",
@@ -855,7 +855,7 @@ def reading_matches(when, assessment, orders=None):
     come to disagree.
     """
     for key, val in (when or {}).items():
-        key = _WHEN_KEY_MAP.get(key, key)
+        key = WHEN_KEY_MAP.get(key, key)
         if key == "any_of":
             clauses = val if isinstance(val, list) else [val]
             if not any(reading_matches(c, assessment, orders) for c in clauses):

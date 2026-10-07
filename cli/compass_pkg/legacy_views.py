@@ -42,6 +42,14 @@ _TEXT_KEYS = frozenset({"rationale", "until", "name", "description", "statement"
 _WRAP_LIST_SECTIONS = frozenset({"defaults", "spike_guardrails"})
 
 
+def has_implementation(check):
+    """True for a check the legacy view can name. Only a `deterministic` check
+    has an implementation, and a legacy `checks:` entry is refused without one,
+    so the views, the mutation-proof register and the tests that rebuild the
+    views all use this one predicate."""
+    return check["kind"] == "deterministic"
+
+
 def _load(path):
     with open(path, encoding="utf-8") as fh:
         return yaml.safe_load(fh)
@@ -137,6 +145,10 @@ def rebuild(root):
 
     checks = {}
     for name, check in preset["checks"].items():
+        # A human check has no implementation, so only the stage lists of the
+        # preset carry it (see `has_implementation`).
+        if not has_implementation(check):
+            continue
         checks[name] = {"description": check["statement"]}
         if "blocking_when" in check:
             checks[name]["blocking_when"] = _when_back(check["blocking_when"],

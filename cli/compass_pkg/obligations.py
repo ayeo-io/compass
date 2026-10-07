@@ -19,7 +19,7 @@ different thing and raises.
 # compass_pkg.core (CompassError, reading_matches, canonical_shape,
 # _stage_key_renames),
 # compass_pkg.loop_ceilings (the ceiling names) and compass_pkg.routing
-# (evaluate_route, RoutingConflict). Nothing imports this module yet.
+# (evaluate_route, RoutingConflict). Only compass_pkg.classify imports this module.
 from __future__ import annotations
 
 import copy
@@ -91,7 +91,7 @@ def _resolved_approach(approaches, name, seen=()):
     return merged
 
 
-def _vocabulary(dimensions):
+def assessment_vocabulary(dimensions):
     vocabulary = {}
     for name, dimension in dimensions.items():
         if dimension.get("type") in ("enum", "ordered-enum"):
@@ -191,7 +191,7 @@ def policy_adapter(config):
     not read, and one that differs from the evaluator's own is refused."""
     _check_hit_policies(config.get("rules") or {})
     policy = {
-        "assessment_vocabulary": _vocabulary(config.get("dimensions") or {}),
+        "assessment_vocabulary": assessment_vocabulary(config.get("dimensions") or {}),
         "route_shapes": _shapes(config.get("approaches") or {}),
         "routing_strategies": _strategies(config.get("rules") or {}),
         "routing_guardrails": _guardrails(config.get("rules") or {}),
@@ -202,7 +202,7 @@ def policy_adapter(config):
     ranks = _ranks(config.get("stages") or {})
     if ranks is not None:
         policy["stage_mode_ranks"] = ranks
-    orders = _orders(config.get("dimensions") or {})
+    orders = dimension_orders(config.get("dimensions") or {})
     if orders:
         policy["dimension_orders"] = orders
     return policy
@@ -310,7 +310,7 @@ def skipped_verdict(check):
 
 # --- the facts -------------------------------------------------------------------
 
-def _orders(dimensions):
+def dimension_orders(dimensions):
     return {name: list(d.get("values") or []) for name, d in dimensions.items()
             if d.get("type") == "ordered-enum"}
 
@@ -486,7 +486,7 @@ def obligations(config, assessment, autonomy_values=AUTONOMY, capabilities=(),
         return Refused(str(exc))
     result = results[values[0]]
     dimensions = config.get("dimensions") or {}
-    orders = _orders(dimensions)
+    orders = dimension_orders(dimensions)
     checks, gates = config.get("checks") or {}, config.get("gates") or {}
     approach = (config.get("approaches") or {}).get(result["delivery_approach"]) or {}
     review = list(result["gates"])

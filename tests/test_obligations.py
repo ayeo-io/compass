@@ -974,8 +974,11 @@ def test_ob_7_the_sample_has_every_check_that_declines(preset_config):
     stood_down = {name for r in recorded.values()
                   for name, status in r["verdicts"].items()
                   if status == "nothing-to-check"}
+    from compass_pkg.legacy_views import has_implementation
+    # `compass check` runs only checks with an implementation; the human Ready
+    # checks never run on the sample, so they cannot stand down there.
     declining = {n for n, c in preset_config["checks"].items()
-                 if c["on_skipped"] == "not-applicable"}
+                 if c["on_skipped"] == "not-applicable" and has_implementation(c)}
     assert declining <= stood_down, declining - stood_down
 
 
@@ -1044,9 +1047,13 @@ PASS_WHEN_EMPTY = {"backfills-paid", "changed-code-traces-to-scenario",
 
 
 def test_ob_7_on_an_empty_issue_each_check_says_what_on_skipped_says(preset_config):
+    from compass_pkg.legacy_views import has_implementation
     skipped_verdict = _api("skipped_verdict")
     today = _empty_issue_verdicts()
-    checks = preset_config["checks"]
+    # Only a check with an implementation runs on an empty issue; the human
+    # Ready and Done checks have none, and their capability is off.
+    checks = {name: check for name, check in preset_config["checks"].items()
+              if has_implementation(check)}
     assert set(today) == set(checks)
     for name, status in today.items():
         path = skipped_verdict(checks[name])
@@ -1112,7 +1119,7 @@ def test_ob_8_the_command_answers_as_before(tmp_path):
     assert "issue_overrides" not in answer
 
 
-def test_ob_8_no_module_reads_the_new_path_yet():
+def test_ob_8_only_the_classifier_reads_the_new_path():
     import re
     imports = re.compile(r"^\s*(from compass_pkg(\.obligations)? import .*|"
                          r"import compass_pkg\.obligations)", re.M)
@@ -1123,7 +1130,7 @@ def test_ob_8_no_module_reads_the_new_path_yet():
         text = path.read_text(encoding="utf-8")
         if any("obligations" in m.group(0) for m in imports.finditer(text)):
             users.append(str(path.relative_to(ROOT)))
-    assert users == []
+    assert users == ["cli/compass_pkg/classify.py"]
     assert "obligations" not in (ROOT / "cli" / "compass").read_text(encoding="utf-8")
 
 

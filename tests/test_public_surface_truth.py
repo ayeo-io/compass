@@ -441,6 +441,11 @@ def test_d2_repairs_change_only_retired_names():
     three lists (the evaluator's four additions, the two replays and the rank
     replay).
 
+    One more was re-baselined by `classifier`: `governance/routing-policy.md`
+    (list_items 43 -> 53, fences 2 -> 4) gained one `##` section, "How two
+    configurations are compared", with a list of the grid's rules, the JSON
+    document and its fields.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

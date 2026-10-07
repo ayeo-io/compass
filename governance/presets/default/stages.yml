@@ -4,7 +4,8 @@
 # Change a default here, then run python3 scripts/generate-legacy-views.py.
 # Also raise the version in legacy-views.yml, then run the script with --pin
 # and again with --pin-hashes, which update the digest and drift fixtures.
-# cli/compass_pkg/legacy_adapter.py wrote these files once, from those two files.
+# cli/compass_pkg/legacy_adapter.py wrote the first version of these files from
+# those two files. The preset is the source now; edit it here.
 schema: 1
 stages:
   assess:
@@ -32,6 +33,8 @@ stages:
     modes:
       collapsed: {rank: 1}
       full: {rank: 3}
+    entry: [dor-summary-filled, dor-problem-traces-up, dor-behaviour-is-gwt, dor-traceability-ids,
+      dor-affected-surface-named, dor-no-open-questions, dor-approach-still-fits]
   breakdown:
     order: 5
     modes:
@@ -49,6 +52,8 @@ stages:
       light: {rank: 2}
       full: {rank: 3}
       conclude: {}
+    exit: [dod-every-scenario-passes, dod-suite-green, dod-coverage-floor, dod-no-lint-errors,
+      dod-traceability-intact, dod-living-docs-updated, dod-follow-ups-settled]
     locked: true
   ship:
     order: 8

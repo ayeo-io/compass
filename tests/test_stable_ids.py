@@ -181,6 +181,8 @@ ALLOW = (
      '"full" is a stage mode name with a rank, not a delivery approach'),
     ("routing.py", 'stage_ranks.get("full")',
      '"full" is a stage mode looked up in the rank table, not a delivery approach'),
+    ("classify.py", '"scan": ("one of", ("full",',
+     '"full" is a scan mode (the whole grid was compared), not the approach id'),
     ("routing.py", 'if depth == "full"',
      '"full" is an artifact depth, not a delivery approach'),
 )

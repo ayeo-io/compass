@@ -299,6 +299,36 @@ entries:
   argv: ["policy", "lint"]
   exit: 1
   stdout_contains: "FAIL"
+# Added on purpose by policy-diff: `policy diff` is a new verb. 5.6.0 refused it
+# as an unknown choice (exit 2); from 6.0.0 two identical configurations print
+# that there is no difference and exit 0.
+- id: policy-diff-identical
+  project: initialised
+  argv: ["policy", "diff", "default@6", "project"]
+  exit: 0
+  stdout_contains: "no difference"
+# Added on purpose by policy-diff: `--exit-code` exits 1 only when something
+# differs, so identical configurations still exit 0.
+- id: policy-diff-identical-exit-code
+  project: initialised
+  argv: ["policy", "diff", "--exit-code", "default@6", "project"]
+  exit: 0
+# Added on purpose by policy-diff: a reference that is neither a keyword nor a
+# file exits 2. 5.6.0 also exited 2, for the unknown verb, so this guards that
+# the new verb keeps refusing what it cannot read.
+- id: policy-diff-bad-reference
+  project: initialised
+  argv: ["policy", "diff", "nonsense"]
+  exit: 2
+# Added on purpose by policy-diff: a project file that loosens a shipped check
+# is a difference, so `--exit-code` exits 1. Without the flag the same command
+# exits 0: `policy diff` reports what differs and leaves the failure to the
+# flag, unlike `policy lint`, which judges and exits 1 on FAIL.
+- id: policy-diff-differs-exit-code
+  project: with-looser-compass-yml
+  argv: ["policy", "diff", "--exit-code", "default@6", "project"]
+  exit: 1
+  stdout_contains: "loosening"
 - id: retro-plain
   project: quick-fix-started
   argv: ["retro"]

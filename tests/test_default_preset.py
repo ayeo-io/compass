@@ -683,14 +683,17 @@ def test_dp_5_only_the_adapter_and_the_view_generator_read_the_preset():
                 continue
             if "legacy_adapter" in text or "presets/default" in text:
                 hits.append("/".join(parts))
-    # effective.py names the adapter to store a generation for a project that
-    # runs on copied governance; it reads no preset file.
+    # effective.py and replay.py name the adapter to convert a project's
+    # copied governance (a stored generation; `policy diff legacy`);
+    # neither reads a preset file.
     assert hits == ["cli/compass_pkg/effective.py",
                     "cli/compass_pkg/legacy_adapter.py",
                     "cli/compass_pkg/legacy_views.py",
                     "cli/compass_pkg/legacy_views_template.py",
+                    "cli/compass_pkg/replay.py",
                     "scripts/generate-legacy-views.py"], hits
-    assert "presets/default" not in (ROOT / "cli" / "compass_pkg" / "effective.py").read_text(
+    for reader in ("effective.py", "replay.py"):
+        assert "presets/default" not in (ROOT / "cli" / "compass_pkg" / reader).read_text(
         encoding="utf-8")
     generator = (ROOT / "cli" / "compass_pkg" / "legacy_views.py").read_text(encoding="utf-8")
     assert "import legacy_adapter" not in generator

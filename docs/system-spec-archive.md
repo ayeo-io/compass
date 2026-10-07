@@ -12418,3 +12418,59 @@
 - **Intent:** `INT-1`
 - **Source issue:** `classifier`
 - **Landed:** 2026-10-07
+
+### The benchmark, the module's declarations, the owning doc and the unchanged core _(archived)_
+
+- **Scenario id:** `CL-7`
+- **Intent:** `INT-1`
+- **Source issue:** `classifier`
+- **Landed:** 2026-10-07
+
+### A waiver is found with its id, scope, operation and fields, and its shape is checked _(archived)_
+
+- **Scenario id:** `WV-1`
+- **Intent:** `INT-1`
+- **Source issue:** `waivers`
+- **Landed:** 2026-10-07
+
+### The approvers come from the layer above, and no owner fails _(archived)_
+
+- **Scenario id:** `WV-2`
+- **Intent:** `INT-1`
+- **Source issue:** `waivers`
+- **Landed:** 2026-10-07
+
+### An issue waiver's approval is a matching human-approval record _(archived)_
+
+- **Scenario id:** `WV-3`
+- **Intent:** `INT-1`
+- **Source issue:** `waivers`
+- **Landed:** 2026-10-07
+
+### The covered revision is derived and each waived field's parent value is recorded _(archived)_
+
+- **Scenario id:** `WV-4`
+- **Intent:** `INT-1`
+- **Source issue:** `waivers`
+- **Landed:** 2026-10-07
+
+### A moved revision invalidates a waiver only when a waived field's parent value changed _(archived)_
+
+- **Scenario id:** `WV-5`
+- **Intent:** `INT-1`
+- **Source issue:** `waivers`
+- **Landed:** 2026-10-07
+
+### Attribution classifies the residual layer and excuses only waived entries _(archived)_
+
+- **Scenario id:** `WV-6`
+- **Intent:** `INT-1`
+- **Source issue:** `waivers`
+- **Landed:** 2026-10-07
+
+### A waiver that excuses nothing is reported as unneeded _(archived)_
+
+- **Scenario id:** `WV-7`
+- **Intent:** `INT-1`
+- **Source issue:** `waivers`
+- **Landed:** 2026-10-07

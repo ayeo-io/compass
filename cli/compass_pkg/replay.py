@@ -32,7 +32,7 @@ from compass_pkg import catalogue_check, classify, legacy_adapter, manifest, mer
 from compass_pkg import catalogue_spec as spec
 from compass_pkg import obligations, policy_lint, waivers
 from compass_pkg.atomic_io import StrictYamlError, digest, load_yaml_strict
-from compass_pkg.core import CompassError, load_yaml
+from compass_pkg.core import CompassError, load_yaml, manifest_path
 
 JSON_SCHEMA_VERSION = 1
 
@@ -370,7 +370,7 @@ def read_archive(root):
         return []
     found = []
     for slug in sorted(os.listdir(work)):
-        path = os.path.join(work, slug, "manifest.yml")
+        path = manifest_path(os.path.join(work, slug))
         if not os.path.isfile(path):
             continue
         try:

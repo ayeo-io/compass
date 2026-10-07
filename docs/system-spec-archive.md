@@ -11978,6 +11978,13 @@
 - **Source issue:** `settings-reader-hook`
 - **Landed:** 2026-10-06
 
+### Given a project with neither settings file, the hook starts no Python for the code_globs read; the names of the two files live in one allow-listed helper pinned equal to project_settings _(archived)_
+
+- **Scenario id:** `SH-10`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-hook`
+- **Landed:** 2026-10-06
+
 ### Given initialised in state.yml or only the old file, the first refusal says who initialised the project; a broken record adds nothing _(archived)_
 
 - **Scenario id:** `SH-2`
@@ -12033,3 +12040,59 @@
 - **Intent:** `INT-1`
 - **Source issue:** `settings-reader-hook`
 - **Landed:** 2026-10-06
+
+### Given both files and a recognised compass.yml, an old file that holds a settings key makes the hook refuse with settings-conflict and the CLI raise the same text _(archived)_
+
+- **Scenario id:** `BS-1`
+- **Intent:** `INT-1`
+- **Source issue:** `both-settings-files-present`
+- **Landed:** 2026-10-07
+
+### Given both files and a compass.yml with no schema, the old file is read, a warning goes to stderr once, and the hook decides as for the old file alone _(archived)_
+
+- **Scenario id:** `BS-2`
+- **Intent:** `INT-1`
+- **Source issue:** `both-settings-files-present`
+- **Landed:** 2026-10-07
+
+### Given both files, a recognised compass.yml and an old file with only state keys, compass.yml is read with no refusal and no warning _(archived)_
+
+- **Scenario id:** `BS-3`
+- **Intent:** `INT-1`
+- **Source issue:** `both-settings-files-present`
+- **Landed:** 2026-10-07
+
+### Given only compass.yml, with or without schema, it is read and nothing warns _(archived)_
+
+- **Scenario id:** `BS-4`
+- **Intent:** `INT-1`
+- **Source issue:** `both-settings-files-present`
+- **Landed:** 2026-10-07
+
+### Given a broken file beside the other, the reader refuses naming the broken file _(archived)_
+
+- **Scenario id:** `BS-5`
+- **Intent:** `INT-1`
+- **Source issue:** `both-settings-files-present`
+- **Landed:** 2026-10-07
+
+### Given more than five conflicting keys, the text lists five in file order and says and N more _(archived)_
+
+- **Scenario id:** `BS-6`
+- **Intent:** `INT-1`
+- **Source issue:** `both-settings-files-present`
+- **Landed:** 2026-10-07
+
+### Given a conflict, compass check and every reader that used to ignore an unreadable file fail with the conflict text _(archived)_
+
+- **Scenario id:** `BS-7`
+- **Intent:** `INT-1`
+- **Source issue:** `both-settings-files-present`
+- **Landed:** 2026-10-07
+
+### Given the registry, settings-conflict follows the three-line shape and is listed in the generated refusal codes _(archived)_
+
+- **Scenario id:** `BS-8`
+- **Intent:** `INT-1`
+- **Source issue:** `both-settings-files-present`
+- **Landed:** 2026-10-07

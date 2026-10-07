@@ -29,12 +29,12 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a project with neither settings file, the hook starts no Python for the code_globs read; the names of the two files live in one allow-listed helper pinned equal to project_settings
+### Given the recorded hook corpus with settings moved to compass.yml with schema, every decision matches
 
-- **Scenario id:** `SH-10`
+- **Scenario id:** `BS-9`
 - **Intent:** `INT-1`
-- **Source issue:** `settings-reader-hook`
-- **Landed:** 2026-10-06
+- **Source issue:** `both-settings-files-present`
+- **Landed:** 2026-10-07
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
 
@@ -332,4 +332,4 @@
 
 ---
 
-1718 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1727 superseded scenario(s) are in `docs/system-spec-archive.md`.

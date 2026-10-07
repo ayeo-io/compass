@@ -12103,3 +12103,45 @@
 - **Intent:** `INT-1`
 - **Source issue:** `both-settings-files-present`
 - **Landed:** 2026-10-07
+
+### Given the recorded hook corpus with settings moved to compass.yml with schema, every decision matches _(archived)_
+
+- **Scenario id:** `BS-9`
+- **Intent:** `INT-1`
+- **Source issue:** `both-settings-files-present`
+- **Landed:** 2026-10-07
+
+### Today's two policy files convert to the committed preset, and a planted policy change breaks the match _(archived)_
+
+- **Scenario id:** `DP-1`
+- **Intent:** `INT-1`
+- **Source issue:** `default-preset-data`
+- **Landed:** 2026-10-07
+
+### The preset is named default at version 6.0.0 with capabilities off and checks as a parent layer _(archived)_
+
+- **Scenario id:** `DP-2`
+- **Intent:** `INT-1`
+- **Source issue:** `default-preset-data`
+- **Landed:** 2026-10-07
+
+### Stage modes carry the ruled ranks on the depth ladder and no rank elsewhere _(archived)_
+
+- **Scenario id:** `DP-3`
+- **Intent:** `INT-1`
+- **Source issue:** `default-preset-data`
+- **Landed:** 2026-10-07
+
+### Exactly the entries of the shipped lock set are locked, with the human sign-off hard-locked _(archived)_
+
+- **Scenario id:** `DP-4`
+- **Intent:** `INT-1`
+- **Source issue:** `default-preset-data`
+- **Landed:** 2026-10-07
+
+### The adapter reads old key names, leaves its input unchanged and is read by nothing yet _(archived)_
+
+- **Scenario id:** `DP-5`
+- **Intent:** `INT-1`
+- **Source issue:** `default-preset-data`
+- **Landed:** 2026-10-07

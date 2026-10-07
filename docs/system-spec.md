@@ -15,6 +15,13 @@
 - **Source issue:** `id-prefix-vocabulary-and-glossary`
 - **Landed:** 2026-08-13
 
+### The generator script writes, is idempotent, and --check fails on a stale view
+
+- **Scenario id:** `GV-5`
+- **Intent:** `E1.S1.04b`
+- **Source issue:** `generated-legacy-views`
+- **Landed:** 2026-10-07
+
 ### the guard can fail on each new surface
 
 - **Scenario id:** `SS-4`
@@ -332,4 +339,4 @@
 
 ---
 
-1734 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1738 superseded scenario(s) are in `docs/system-spec-archive.md`.

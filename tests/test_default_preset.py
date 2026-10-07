@@ -24,7 +24,7 @@ import yaml
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "cli"))
 
-from compass_pkg import catalogue_check, catalogue_spec, legacy_adapter  # noqa: E402
+from compass_pkg import catalogue_check, catalogue_spec, legacy_adapter, legacy_views  # noqa: E402
 
 PRESET = ROOT / "governance" / "presets" / "default"
 POLICY = ROOT / "governance" / "routing-policy.yml"
@@ -55,10 +55,22 @@ def _preset():
 
 # --- the adapter equals the committed preset (`DP-1`) --------------------------
 
+def _adapter_part(preset):
+    """The preset without what the adapter never wrote: the human checks and
+    the stage entry and exit lists, added after the preset became the source."""
+    part = copy.deepcopy(preset)
+    part["checks"] = {n: c for n, c in part["checks"].items()
+                       if legacy_views.has_implementation(c)}
+    for stage in part["stages"].values():
+        stage.pop("entry", None)
+        stage.pop("exit", None)
+    return part
+
+
 def test_dp_1_the_adapter_of_todays_files_equals_the_committed_preset():
     policy, guardrails = _today()
     adapted = legacy_adapter.adapt(policy, guardrails)
-    committed = _preset()
+    committed = _adapter_part(_preset())
     assert set(adapted) == {"schema", *catalogue_spec.CATALOGUES}
     for name in catalogue_spec.CATALOGUES:
         assert adapted[name] == committed[name], name
@@ -71,11 +83,11 @@ def test_dp_1_a_gate_removed_from_one_approach_breaks_the_match():
     policy, guardrails = _today()
     planted = copy.deepcopy(policy)
     planted["route_shapes"]["regular"]["gates"].remove("verify.security")
-    assert legacy_adapter.adapt(planted, guardrails) != _preset()
+    assert legacy_adapter.adapt(planted, guardrails) != _adapter_part(_preset())
     # The same fault in the guardrails file is caught too.
     planted_g = copy.deepcopy(guardrails)
     planted_g["defaults"][0]["checks"].remove("suite-passed")
-    assert legacy_adapter.adapt(policy, planted_g) != _preset()
+    assert legacy_adapter.adapt(policy, planted_g) != _adapter_part(_preset())
 
 
 # The preset plus its sidecar must hold everything today's two files hold, so
@@ -164,6 +176,8 @@ def _rebuild(preset, sidecar, types):
 
     checks = {}
     for name, check in preset["checks"].items():
+        if not legacy_views.has_implementation(check):
+            continue
         checks[name] = {"description": check["statement"]}
         if "blocking_when" in check:
             checks[name]["blocking_when"] = _when_back(check["blocking_when"],
@@ -334,7 +348,15 @@ def test_dp_1_the_rendered_files_are_what_is_committed():
     assert set(files) == {"preset.yml", "evidence-types.yml",
                           *(f"{n}.yml" for n in catalogue_spec.CATALOGUES)}
     for name, text in files.items():
-        assert (PRESET / name).read_text(encoding="utf-8") == text, name
+        committed = (PRESET / name).read_text(encoding="utf-8")
+        if name in ("checks.yml", "stages.yml"):
+            # These two gained the human checks and the stage lists after the
+            # adapter wrote them; what the adapter wrote is unchanged.
+            wrote = yaml.safe_load(text)
+            kept = _adapter_part({"checks": {}, "stages": {}, **yaml.safe_load(committed)})
+            assert kept[name[:-4]] == wrote[name[:-4]], name
+        else:
+            assert committed == text, name
         assert text.startswith("#"), name
         assert "source of the shipped defaults" in " ".join(text.splitlines()[:5]), name
     # The legacy-view values sit beside the legacy files, not in the preset.
@@ -717,13 +739,20 @@ def test_dp_6_every_reference_in_the_preset_resolves():
         assert catalogue in catalogue_spec.CATALOGUES, key
         assert entry_id in preset[catalogue], key
     for entry in preset["checks"].values():
+        if entry["kind"] == "human":
+            continue
         assert entry["kind"] == "deterministic"
         assert entry["impl"] in preset["checks"]
+    for stage_id, stage in stages.items():
+        for side in ("entry", "exit"):
+            for check in stage.get(side, []):
+                assert check in checks, (stage_id, side, check)
 
 
 def test_dp_6_the_checks_are_the_guardrail_files_registry():
     _, guardrails = _today()
-    checks = _preset()["checks"]
+    checks = {n: c for n, c in _preset()["checks"].items()
+              if legacy_views.has_implementation(c)}
     assert set(checks) == set(guardrails["checks"])
     for name, entry in guardrails["checks"].items():
         assert checks[name]["statement"] == entry["description"]
@@ -786,6 +815,8 @@ EXPECTED_ON_SKIPPED = {
 def test_dp_6_on_skipped_follows_what_each_check_returns_when_it_cannot_run():
     checks = _preset()["checks"]
     for name, entry in checks.items():
+        if entry["kind"] == "human":
+            continue  # the human checks are in tests/test_ready_and_done_data.py
         assert entry["on_skipped"] == EXPECTED_ON_SKIPPED.get(name, "fail"), name
 
 

@@ -4,7 +4,8 @@
 # Change a default here, then run python3 scripts/generate-legacy-views.py.
 # Also raise the version in legacy-views.yml, then run the script with --pin
 # and again with --pin-hashes, which update the digest and drift fixtures.
-# cli/compass_pkg/legacy_adapter.py wrote these files once, from those two files.
+# cli/compass_pkg/legacy_adapter.py wrote the first version of these files from
+# those two files. The preset is the source now; edit it here.
 schema: 1
 vocabulary:
   approaches.spike:

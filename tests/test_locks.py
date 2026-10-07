@@ -35,6 +35,47 @@ def test_lk_9_the_module_declares_its_dependencies():
     assert "compass_pkg.merge" in header
 
 
+# --- the footprint scan against the full scan, on every case in this file ----------
+
+LOCK_PROOF = {"compared": 0, "full_capped": 0}
+
+
+@pytest.fixture(autouse=True)
+def _the_footprint_scan_gives_the_full_scans_refusals(monkeypatch):
+    """Every call to `enforce` that a test in this file makes is also run with
+    the full scan and with the footprint scan, and the two must refuse the same
+    things (entry, level, field, key, outcome, values, first point and layer).
+    A case the full scan cannot run, because the layer holds more than eight
+    labels, has nothing to compare. This is the proof that the footprint
+    projection is exact (CS-5 of issue `classifier-speed`); the test then gets
+    the answer it asked for."""
+    from compass_pkg import locks
+    real = locks.enforce
+
+    def both(held, before, after, **kwargs):
+        got = real(held, before, after, **kwargs)
+        if kwargs.get("scan", "footprint") != "footprint":
+            return got
+        every = {**kwargs, "early_exit": False}
+        every.pop("scan", None)
+        full = real(held, before, after, scan="full", **every)
+        footprint = real(held, before, after, scan="footprint", **every)
+        if any(r.field == "grid" for r in full.refusals):
+            LOCK_PROOF["full_capped"] += 1
+            return got
+        LOCK_PROOF["compared"] += 1
+
+        def keys(result):
+            return sorted((r.entry, r.level, r.field, r.key, r.outcome, repr(r.parent),
+                           repr(r.child), r.where, r.layer) for r in result.refusals)
+
+        assert keys(footprint) == keys(full), (
+            "the footprint scan refuses differently from the full scan")
+        return got
+
+    monkeypatch.setattr(locks, "enforce", both)
+
+
 # --- helpers ---------------------------------------------------------------------
 
 def _api():
@@ -1316,7 +1357,7 @@ def test_lk_5_a_rejected_configuration_says_an_unlock_cannot_help():
 
 def test_lk_9_the_owning_doc_states_the_label_cap_the_unmapped_effects_and_the_approach_footprint():
     text = " ".join((ROOT / "governance" / "guardrails.md").read_text(encoding="utf-8").split())
-    for part in ("across the whole layer", "fail-safe", "issue's `config:`",
+    for part in ("only the labels a locked entry can read", "issue's `config:`",
                  "protects its `when` too", "its existence and its `ships` value",
                  "vocabulary", "A human signs off on the irreversible (`G5`)"):
         assert part in text, part
@@ -1324,13 +1365,13 @@ def test_lk_9_the_owning_doc_states_the_label_cap_the_unmapped_effects_and_the_a
     assert "(`G5`)" in section and section.index("signs off") < section.index("`G5` and")
 
 
-def test_lk_9_the_header_names_every_private_classifier_name_the_module_uses():
+def test_lk_9_the_module_uses_no_private_classifier_name_and_its_header_names_the_public_scan():
     text = MODULE.read_text(encoding="utf-8")
     header = text.split("from __future__", 1)[0]
     used = sorted(set(re.findall(r"classify\.(_\w+)", text))
                   | set(re.findall(r"from compass_pkg\.classify import (_\w+)", text)))
-    assert used, "the module uses no private name; drop this test"
-    for name in used:
+    assert used == [], f"locks.py reads private classifier names: {used}"
+    for name in ("`scan`", "per-point callback", "Scan.obligations"):
         assert name in header, name
 
 
@@ -1347,6 +1388,14 @@ def test_lk_5_a_child_that_refuses_an_assessment_the_parent_accepted_ends_the_lo
     found = [r for r in result.refusals if r.field == "evaluation.refused"]
     assert [(r.entry, r.outcome) for r in found] == [("gates.verify.correctness", "looser")]
     assert "refused" in found[0].message
+
+
+def test_cs_5_the_proof_ran_on_the_cases_of_this_file():
+    """The fixture above does the comparing. This only shows it ran: the file's
+    other tests have made calls, and most of them the full scan could run."""
+    if not LOCK_PROOF["compared"]:
+        pytest.skip("run the whole file to count the cases the fixture compared")
+    assert LOCK_PROOF["compared"] >= 70, LOCK_PROOF
 
 
 def test_lk_1_an_unlock_whose_waiver_is_dated_in_the_future_is_refused():

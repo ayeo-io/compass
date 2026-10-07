@@ -767,7 +767,7 @@
       2,
       2
     ],
-    "list_items": 43,
+    "list_items": 46,
     "table_rows": 0
   },
   "governance/routing-policy.md": {
@@ -787,8 +787,8 @@
       2,
       2
     ],
-    "list_items": 53,
-    "table_rows": 7
+    "list_items": 56,
+    "table_rows": 12
   },
   "governance/strategies.md": {
     "fences": 0,

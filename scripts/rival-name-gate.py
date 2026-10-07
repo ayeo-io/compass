@@ -14,7 +14,12 @@ Usage:
   rival-name-gate.py --github-event FILE    a pull request's title and body
   rival-name-gate.py --write-hashes KEY     write the hash file from the key
   rival-name-gate.py --check-hashes KEY     fail if the hash file is stale
-Add --hashes FILE to use another hash file.
+Add --hashes FILE to use another hash file, and --pins FILE another pin
+file (by default `rival-name-binary-pins.txt` beside the hash file).
+
+A pin line, a git blob hash and a path, exempts that one non-UTF-8 file from
+the content scan of --tree. It never exempts a path or a UTF-8 file, and a
+pin whose hash or path no longer matches is reported as stale.
 
 Exit 0 when nothing is found, 1 on a finding, 2 on a usage or input error.
 """
@@ -40,17 +45,31 @@ def _read(path):
         return rival_names.readable_text(fh.read())
 
 
-def _scan_tree(hashes):
+def _scan_tree(hashes, pins=()):
     listed = subprocess.run(["git", "ls-files", "-z"], capture_output=True,
                             check=True).stdout.decode("utf-8")
     findings = []
-    for rel in sorted(p for p in listed.split("\0") if p):
+    tracked = sorted(p for p in listed.split("\0") if p)
+    current = {}                      # path -> blob hash of a scanned file
+    for rel in tracked:
         if rival_names.scan(rel, hashes):
             findings.append(f"{rival_names.mask(rel, hashes)}: path: {ADVICE}")
         if not os.path.isfile(rel) or os.path.islink(rel):
             continue
-        for line in rival_names.scan(_read(rel), hashes):
+        with open(rel, "rb") as fh:
+            data = fh.read()
+        current[rel] = rival_names.blob_hash(data)
+        if rival_names.is_pinned(rel, data, pins):
+            continue
+        for line in rival_names.scan(rival_names.readable_text(data), hashes):
             findings.append(f"{rival_names.mask(rel, hashes)}:{line}: {ADVICE}")
+    for digest, rel in pins:
+        if current.get(rel) != digest:
+            why = ("no longer tracked" if rel not in current
+                   else "the file's hash has changed")
+            findings.append(f"{rival_names.mask(rel, hashes)}: stale pin, "
+                            f"{why}: check the file, then re-pin or remove "
+                            f"the line")
     return findings
 
 
@@ -69,6 +88,7 @@ def main(argv=None):
     mode.add_argument("--check-hashes", metavar="KEY")
     parser.add_argument("--hashes",
                         default=os.path.join(ROOT, rival_names.HASHES_PATH))
+    parser.add_argument("--pins")
     args = parser.parse_args(argv)
 
     try:
@@ -89,7 +109,10 @@ def main(argv=None):
             return 0
         hashes = rival_names.load_hashes(args.hashes)
         if args.tree:
-            findings = _scan_tree(hashes)
+            pins = rival_names.load_pins(args.pins or os.path.join(
+                os.path.dirname(os.path.abspath(args.hashes)),
+                rival_names.PINS_NAME))
+            findings = _scan_tree(hashes, pins)
         elif args.text:
             text = sys.stdin.read() if args.text == "-" else _read(args.text)
             findings = _scan_text("text", text, hashes)

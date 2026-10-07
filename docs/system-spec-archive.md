@@ -12187,3 +12187,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `check-registry`
 - **Landed:** 2026-10-07
+
+### Given a compass.yml with schema: 1 and governance_drift: strict, When the project layer is checked and loaded, Then it is accepted and governance_drift is read as a setting, not a layer key _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `governance-drift-is-a-settings-key`
+- **Landed:** 2026-10-07

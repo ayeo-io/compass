@@ -1256,3 +1256,12 @@ def test_pd_10_the_corpus_reason_does_not_claim_every_report_verb_exits_0():
     text = (ROOT / "tests" / "fixtures" / "compat" / "contract-4-commands.yml").read_text(
         encoding="utf-8")
     assert "every report verb" not in text
+
+
+def test_pd_10_the_policy_verbs_module_registers_diff_once_and_holds_no_merge_markers():
+    # Read as text: a half-merged module fails here with its cause, not at import.
+    text = (ROOT / "cli" / "compass_pkg" / "policy_cmd.py").read_text(encoding="utf-8")
+    for marker in ("<<<<<<<", "=======\n", ">>>>>>>"):
+        assert marker not in text, marker
+    assert text.count("def run_policy_diff(") == 1
+    assert text.count('pls.add_parser("diff"') == 1

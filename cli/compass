@@ -76,6 +76,7 @@ from compass_pkg.session_lease import register as register_issue_use_parser  # n
 from compass_pkg.run_cmd import register as register_run_parser  # noqa: E402
 from compass_pkg.record import register as register_record_parser  # noqa: E402
 from compass_pkg.review_rules import register as register_review_rules_parser  # noqa: E402
+from compass_pkg.policy_cmd import register as register_policy_parser  # noqa: E402
 
 # Declared literally here as well as in compass_pkg.core: this file is
 # what `compass --version` and the release-consistency test read, and a
@@ -267,8 +268,7 @@ def build_parser():
 
     pl = sub.add_parser("policy", help="governance policy tools")
     pls = pl.add_subparsers(dest="subcmd", required=True)
-    pll = pls.add_parser("lint", help="structurally validate the governance YAML")
-    pll.set_defaults(func=cmd_policy_lint, output_kind="report")
+    register_policy_parser(pls)
     register_review_rules_parser(pls)
 
     # The planning stage's verb is `plan`, the word its key, skill, agent

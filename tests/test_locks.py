@@ -1109,11 +1109,11 @@ IMPORTS_LOCKS = re.compile(
     r"|import compass_pkg\.locks)", re.M)
 
 
-def test_lk_9_only_check_the_receipt_and_the_summary_import_the_module():
+def test_lk_9_only_check_lint_the_receipt_and_the_summary_import_the_module():
     hits = [name for name, text in _python_sources()
             if name != "cli/compass_pkg/locks.py" and IMPORTS_LOCKS.search(text)]
-    assert hits == ["cli/compass_pkg/check_cmd.py", "cli/compass_pkg/receipt.py",
-                    "cli/compass_pkg/routing.py"], hits
+    assert hits == ["cli/compass_pkg/check_cmd.py", "cli/compass_pkg/policy_lint.py",
+                    "cli/compass_pkg/receipt.py", "cli/compass_pkg/routing.py"], hits
 
 
 def test_lk_9_no_command_exposes_the_module_and_the_aggregate_does_not_name_it():

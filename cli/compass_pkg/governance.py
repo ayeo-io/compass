@@ -306,8 +306,10 @@ def _drift_is_strict():
     return str(cfg.get("governance_drift", "advisory")).strip().lower() == "strict"
 
 
-def cmd_policy_lint(args):
-    gov = find_governance()
+def legacy_structure(gov):
+    """`(errors, schema_ran)` for the governance files under `gov`: the
+    structural lint of the copied policy and guardrails. `compass policy
+    lint` prints it, and the legacy `--json` view lists it."""
     rp = load_yaml(os.path.join(gov, "routing-policy.yml"))
     gr = load_yaml(os.path.join(gov, "guardrails.yml"))
     # The built-in lint always runs - the no-dependency floor, and the only
@@ -327,6 +329,12 @@ def cmd_policy_lint(args):
         if je is not None:
             schema_ran = True
             errs += [f"[{label}] {e}" for e in je]
+    return errs, schema_ran
+
+
+def cmd_policy_lint(args):
+    gov = find_governance()
+    errs, schema_ran = legacy_structure(gov)
     if errs:
         # Structural errors stop the drift comparison. A policy that fails to
         # parse would otherwise be reported as missing every framework rule -

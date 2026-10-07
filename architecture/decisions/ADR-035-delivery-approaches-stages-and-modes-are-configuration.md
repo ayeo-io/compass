@@ -82,6 +82,10 @@ An issue picks an approach with `approach:`, and a floor raises the minimum appr
 - The word `mode` now names a stage attribute. The adoption setting takes the key `adoption` in the project file (`governance/decisions/2026-10-06-the-adoption-setting-is-adoption.md`). ADR-041 records the vocabulary amendment.
 - Removing the approach-name literals touches `core`, the evaluator, lint, `check_cmd`, `quick_fix_cmd`, `calibration`, `diagnose` and `next_cmd` (for example `check_cmd.py:449` and `quick_fix_cmd.py:346`). Each moves to a catalogue attribute or to the constants module.
 
+## Amendment (2026-10-07): the effect table lives in the catalogue spec
+
+The decision says a rule set names a `hit:` policy for each effect and that lint refuses a pairing the effect does not allow. The table that says which policies an effect allows is `EFFECT_POLICIES` in `cli/compass_pkg/catalogue_spec.py`. The layered `policy lint` reads it to report `M-HIT-MISSING` (a rule set uses an effect and names no policy) and `M-HIT-DISALLOWED` (a policy the effect does not allow, or an effect the table does not know). A key under a rule's `then:` must be an effect in that table or a qualifier listed in `EFFECT_QUALIFIERS` (`ceiling` and `until`); lint refuses any other key (`M-EFFECT-UNKNOWN`), so a misspelt effect such as `force_minimum_aproach` fails and is not silently ignored. `EFFECT_TARGETS` names the catalogue each effect's value points at (an approach, a stage, a gate or an artifact), and lint reports an id that catalogue lacks (`M-REF-UNKNOWN`).
+
 ## References
 
 - ADR-006: backward compatibility is non-negotiable; the legacy adapter keeps copied policies working through 6.x.

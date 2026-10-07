@@ -176,6 +176,50 @@ OBLIGATION_FIELDS = {
     "evaluation.required_artifacts": "obligation-set",
 }
 
+# The hit policies a rule set can name for an effect (ADR-035). `first` stops
+# at the first matching rule, `max` and `min` take the highest or lowest
+# value, and `collect` gathers every match. Lint refuses a policy the effect
+# does not allow, and a rule set that uses an effect without naming one. An
+# effect is a key a rule's `then:` can hold; the other keys there (a ceiling
+# name, an end date) qualify an effect and take no policy.
+EFFECT_POLICIES = {
+    "lean_toward": ("first",),
+    "force_minimum_approach": ("max",),
+    "max_worktrees": ("min",),
+    "limit": ("min",),
+    "never_skip": ("collect",),
+    "require_phase": ("collect",),
+    "require_skill": ("collect",),
+    "add_gate": ("collect",),
+    "add_artifact": ("collect",),
+    "gate": ("collect",),
+    "require_artifact": ("collect",),
+    "block_phase": ("collect",),
+    "strategy": ("collect",),
+    "suggest_artifact": ("collect",),
+}
+
+# The catalogue each effect's value names: a value is an id of that catalogue
+# (one id, or a list of them). Lint refuses an id the catalogue lacks. An
+# effect that is not here names no catalogue entry (a skill, a number).
+EFFECT_TARGETS = {
+    "lean_toward": "approaches",
+    "force_minimum_approach": "approaches",
+    "never_skip": "stages",
+    "require_phase": "stages",
+    "block_phase": "stages",
+    "add_gate": "gates",
+    "gate": "gates",
+    "add_artifact": "artifacts",
+    "require_artifact": "artifacts",
+    "suggest_artifact": "artifacts",
+}
+
+# The other keys a rule's `then:` may hold. They qualify an effect and take no
+# hit policy. Any key in neither this tuple nor `EFFECT_POLICIES` is refused,
+# so a misspelt effect fails lint and is not silently ignored.
+EFFECT_QUALIFIERS = ("ceiling", "until")
+
 # Which way is stricter for each ceiling the classifier compares and a lock
 # protects (ADR-037, ADR-039). A key is a ceiling field of the table above,
 # or `rules.ceilings.<name>` for a loop ceiling. `lower` means a smaller

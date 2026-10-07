@@ -671,7 +671,7 @@ def test_wv_8_the_module_is_pure():
         assert not re.search(pattern, code), pattern
 
 
-def test_wv_8_nothing_imports_it_and_no_command_exposes_it():
+def test_wv_8_only_lint_imports_it_and_no_command_exposes_it():
     import re
     pattern = re.compile(r"^\s*(from compass_pkg import [^\n]*\bwaivers\b|"
                          r"from compass_pkg\.waivers import|import compass_pkg\.waivers)",
@@ -682,7 +682,9 @@ def test_wv_8_nothing_imports_it_and_no_command_exposes_it():
             continue
         if pattern.search(path.read_text(encoding="utf-8")):
             users.append(path.name)
-    assert users == [], users
+    # The layered lint (policy-lint) is the one reader; it adds no command of
+    # its own for waivers.
+    assert users == ["policy_lint.py"], users
     for name in ("cli/compass", "cli/compass_pkg/_all.py"):
         assert "waivers" not in (ROOT / name).read_text(encoding="utf-8"), name
     core = (ROOT / "cli" / "compass_pkg" / "core.py").read_text(encoding="utf-8")

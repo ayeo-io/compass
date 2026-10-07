@@ -11978,6 +11978,13 @@
 - **Source issue:** `settings-reader-hook`
 - **Landed:** 2026-10-06
 
+### Given a project with neither settings file, the hook starts no Python for the code_globs read; the names of the two files live in one allow-listed helper pinned equal to project_settings _(archived)_
+
+- **Scenario id:** `SH-10`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-hook`
+- **Landed:** 2026-10-06
+
 ### Given initialised in state.yml or only the old file, the first refusal says who initialised the project; a broken record adds nothing _(archived)_
 
 - **Scenario id:** `SH-2`

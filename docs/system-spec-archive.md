@@ -12041,6 +12041,13 @@
 - **Source issue:** `settings-reader-hook`
 - **Landed:** 2026-10-06
 
+### Given an eval session transcript that edits compass.yml, When the judge checks protected files, Then it reports the edit as touching a protected file, as it does for .compass/config.yml _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-judge-guards-compass-yml`
+- **Landed:** 2026-10-07
+
 ### Given both files and a recognised compass.yml, an old file that holds a settings key makes the hook refuse with settings-conflict and the CLI raise the same text _(archived)_
 
 - **Scenario id:** `BS-1`

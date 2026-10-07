@@ -32,6 +32,7 @@ import re as _re
 
 import fnmatch
 import re as _re
+from compass_pkg.stable_ids import APPROACH_SPIKE
 from compass_pkg.core import CHECK_NAME_MAP, migrate_map_section
 from compass_pkg.landed_by import LANDED_BY_RELAXES, landed_by_holds, _check_landed_by_resolves
 from compass_pkg.checks import NOTHING_TO_CHECK, _check_backfills_paid, _check_changed_code_traces, _check_claim_traces, _check_coherence_check_passes, _check_evidence_identity_matches, _check_command_passes, _check_declared_tests_resolve, _check_dod_evidence_typed, _check_gate_evidence, _check_human_approval, _check_no_trusted_rerun, _check_scenario_has_id_and_intent, _check_scenarios_are_executable, _check_scenarios_have_tests, _check_spike_conclusion_present, _check_spike_no_production_changes, _check_suite_passed
@@ -432,7 +433,7 @@ def cmd_check(args):
     # It is still controlled: it must conclude, and it must not change
     # production code. On a spike, `compass check` runs `spike_guardrails`
     # from guardrails.yml instead.
-    if task.get("delivery_approach") == "spike":
+    if task.get("delivery_approach") == APPROACH_SPIKE:
         spike_gs = list(guardrails.get("spike_guardrails", []))
         run = _CheckRun(task_dir, task, mode)
         if not spike_gs:

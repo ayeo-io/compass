@@ -8,12 +8,13 @@ stage catches before the parent lands. File overlap cannot stand in: it flagged
 
 Advisory only: nothing here gates.
 """
-# DEPENDENCY: standard library (collections, os); compass_pkg.core.
+# DEPENDENCY: standard library (collections, os); compass_pkg.core, compass_pkg.stable_ids.
 from __future__ import annotations
 
 import collections
 import os
 
+from compass_pkg.stable_ids import STAGE_DEFINE, STAGE_IMPLEMENT, STAGE_PLAN, STAGE_VERIFY
 from compass_pkg.core import (CompassError, _one_segment, find_compass_dir,
                               load_manifest,
                               load_yaml, manifest_path, resolve_issue_dir,
@@ -21,7 +22,7 @@ from compass_pkg.core import (CompassError, _one_segment, find_compass_dir,
 
 # Every place a defect can be found. All but `after-landing` are before the
 # parent landed, which is the share the report exists to show.
-FOUND_AT = ("define", "plan", "implement", "verify", "review", "ci",
+FOUND_AT = (STAGE_DEFINE, STAGE_PLAN, STAGE_IMPLEMENT, STAGE_VERIFY, "review", "ci",
             "after-landing")
 AFTER = "after-landing"
 

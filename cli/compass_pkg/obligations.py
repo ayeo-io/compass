@@ -19,13 +19,15 @@ different thing and raises.
 # compass_pkg.core (CompassError, reading_matches, canonical_shape,
 # _stage_key_renames),
 # compass_pkg.loop_ceilings (the ceiling names) and compass_pkg.routing
-# (evaluate_route, RoutingConflict). Only compass_pkg.classify imports this module.
+# (evaluate_route, RoutingConflict), and compass_pkg.stable_ids (the approach
+# ids). Only compass_pkg.classify imports this module.
 from __future__ import annotations
 
 import copy
 from dataclasses import dataclass, fields
 
 from compass_pkg.catalogue_spec import AUTONOMY, CAPABILITIES, ISSUE_KEYS
+from compass_pkg.stable_ids import APPROACH_FULL, APPROACH_HOTFIX, APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_SPIKE
 from compass_pkg.core import (CompassError, _stage_key_renames, canonical_shape,
                               reading_matches)
 from compass_pkg.loop_ceilings import CEILINGS
@@ -48,8 +50,8 @@ DEFAULT_HIT = "collect"
 # spike as a literal where it adds the gates every shipping approach carries,
 # and its checkpoint table accepts only these names, so another approach, or a
 # changed `ships`, would be a fact it never reads.
-EVALUATOR_APPROACHES = {"spike": False, "quick-fix": True, "regular": True,
-                        "hotfix": True, "full": True}
+EVALUATOR_APPROACHES = {APPROACH_SPIKE: False, APPROACH_QUICK_FIX: True, APPROACH_REGULAR: True,
+                        APPROACH_HOTFIX: True, APPROACH_FULL: True}
 
 # Which legacy block a rule set's `kind` fills.
 _GUARDRAIL_BLOCKS = {"floors": "floors", "caps": "caps", "ceilings": "loop_ceilings",

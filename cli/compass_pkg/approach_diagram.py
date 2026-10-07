@@ -11,19 +11,19 @@ the stage wait for a person. The shipped policy's render is committed as
 The output carries no date and no colour that matters: two renders of one
 policy are byte-identical, and every cell reads in plain text.
 """
-# DEPENDENCY: standard library (html, os, sys); compass_pkg.core, routing.
+# DEPENDENCY: standard library (html, os, sys); compass_pkg.core, routing, stable_ids.
 from __future__ import annotations
 
 import html
 import os
 import sys
 
+from compass_pkg.stable_ids import STAGE_IDS
 from compass_pkg.core import (AUTONOMY_VALUES, CompassError, find_governance,
                               load_autonomy, load_yaml)
 from compass_pkg.routing import canonical_routes
 
-STAGES = ("assess", "define", "refine", "plan", "breakdown", "implement",
-          "verify", "ship")
+STAGES = STAGE_IDS
 
 # The three ways an issue goes back, whatever its approach.
 WAYS_BACK = (

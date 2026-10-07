@@ -32,6 +32,7 @@ import re as _re
 
 import fnmatch
 import re as _re
+from compass_pkg.stable_ids import GATE_VERIFY_ANALYZE, GATE_VERIFY_CORRECTNESS
 from compass_pkg.core import CompassError, artifact_location, artifact_path, find_compass_dir, find_governance, load_yaml, manifest_path, normalize_spine
 from compass_pkg.manifest import TERMINAL_STATUSES
 from compass_pkg.tdd import _read_config, settings_hint
@@ -107,7 +108,7 @@ def _check_declared_tests_resolve(task, task_dir):
                       % status)
 
     gates = {g.get("id"): g.get("status") for g in (task.get("gates") or [])}
-    if gates.get("verify.correctness") != "pass":
+    if gates.get(GATE_VERIFY_CORRECTNESS) != "pass":
         return True, ("correctness not yet claimed - declared tests are still a "
                       "plan, not a claim")
 
@@ -397,7 +398,7 @@ def _check_changed_code_traces(task, task_dir):
 
     landed = (task.get("status") or "active") != "active"
     gates = {g.get("id"): g.get("status") for g in (task.get("gates") or [])}
-    claimed = gates.get("verify.correctness") == "pass"
+    claimed = gates.get(GATE_VERIFY_CORRECTNESS) == "pass"
 
     if missing and not landed and claimed:
         return False, (
@@ -946,7 +947,7 @@ def _check_coherence_check_passes(task, task_dir):
     issue is not subject to the consistency-check requirement)."""
     gates = task.get("gates") or []
     gate_ids = [g.get("id") for g in gates if isinstance(g, dict)]
-    if "verify.analyze" not in gate_ids:
+    if GATE_VERIFY_ANALYZE not in gate_ids:
         return True, "verify.analyze not in gate set - consistency check not required"
     # Gate is present: look for a consistency-check typed evidence entry
     registry = {e.get("id"): e for e in (task.get("evidence") or [])

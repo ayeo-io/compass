@@ -409,3 +409,19 @@ entries:
   project: quick-fix-started
   argv: ["check", "--frobnicate"]
   exit: 2
+# Added on purpose by generation-store: the state's own `approach evaluate
+# --write` committed generation 1, so a second run finds the stored
+# configuration equal and commits nothing. 5.6.0 exited 0 and so does this.
+- id: approach-evaluate-write-again-commits-nothing
+  project: regular-issue
+  argv: ["approach", "evaluate", "--issue", "feature", "--write"]
+  exit: 0
+  stdout_contains: "no change"
+# Added on purpose by generation-store: `approach evaluate --write` stores the
+# configuration the issue resolves to, so it refuses a project whose
+# compass.yml the lint rejects, before it writes anything. 5.6.0 did not read
+# the file and exited 0.
+- id: approach-evaluate-write-refuses-a-broken-compass-yml
+  project: regular-issue-broken-compass-yml
+  argv: ["approach", "evaluate", "--issue", "feature", "--write"]
+  exit: 2

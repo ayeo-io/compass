@@ -987,7 +987,8 @@ def test_cl_7_only_the_classifier_imports_the_obligations_module():
         text = path.read_text(encoding="utf-8")
         if any("obligations" in m.group(0) for m in pattern.finditer(text)):
             users.append(path.name)
-    assert users == ["classify.py"]
+    # Amended 2026-10-07 (ADR-037): `effective` may import it too.
+    assert users == ["classify.py", "effective.py"]
 
 
 def test_cl_7_no_command_exposes_the_classifier_yet():

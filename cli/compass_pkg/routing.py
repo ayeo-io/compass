@@ -33,11 +33,11 @@ import re as _re
 
 import fnmatch
 import re as _re
-from compass_pkg.core import _stage_key_renames, ASSESSMENT_KEY_MAP, CompassError, canonical_shape, display_shape, display_stage, find_governance, load_manifest, load_yaml, reading_matches, resolve_issue_dir, save_manifest, shape_stages
+from compass_pkg.core import _stage_key_renames, ASSESSMENT_KEY_MAP, CompassError, canonical_shape, display_shape, display_stage, find_governance, load_manifest, load_yaml, reading_matches, resolve_issue_dir, shape_stages
 from compass_pkg.governance import governance_drift
 from compass_pkg.stable_ids import APPROACH_FULL, APPROACH_REGULAR, APPROACH_SPIKE
 from compass_pkg.render import fired_rule_line
-from compass_pkg.manifest import _annotate_gate_accepts
+from compass_pkg.manifest import annotate_gate_accepts_text
 
 
 
@@ -801,9 +801,15 @@ def cmd_route_evaluate(args):
         # Assess never records an orchestration: breakdown owns it, once the
         # distribution map says whether independent subtasks exist.
         task.pop("orchestration", None)
-        save_manifest(task, task_path)
-        _annotate_gate_accepts(task_path)   # seed accepted-type comments
+        # The manifest is replaced inside the commit, after the generation's
+        # files are whole (ADR-036). A configuration that does not resolve
+        # raises here, before any file is written.
+        from compass_pkg import effective
+        # The accepted-type comments are written in the same replace, under the lock.
+        committed = effective.commit_generation(task_dir, task,
+                                                render=annotate_gate_accepts_text)
         print(f"\n  wrote the delivery approach, stages and gates -> {task_path}")
+        print(f"  {committed.message}")
         from compass_pkg.dashboard import stale_page_reminder
         reminder = stale_page_reminder(task_dir)
         if reminder:

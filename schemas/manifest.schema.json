@@ -885,6 +885,16 @@
       "description": "Optional. The assessment `compass approach evaluate --write` last computed from. Written by that command and read only by the next run of it, to notice a corrected dimension when the computed approach absorbs the correction. Not a second source of truth: `assessment` holds the four dimensions, and this is a copy of what was last evaluated.",
       "additionalProperties": true
     },
+    "generation": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Optional. The stored generation of the issue's configuration it runs against (ADR-036). `0` means the issue was assessed under 6.x and has no generation yet; absent means the issue predates 6.0.0 and reads live governance. Written by `compass approach evaluate --write`; never edit it by hand."
+    },
+    "config": {
+      "type": "object",
+      "description": "Optional. The issue's own configuration layer (ADR-036, ADR-043): a person-written input. Editing it changes nothing until `compass approach evaluate --write` commits it into a new generation. Its keys are checked by `compass policy lint --issue`.",
+      "additionalProperties": true
+    },
     "status_reason": {
       "type": "string",
       "description": "Optional. Why the status was last changed, for any status other than parked - a re-opening, an abandonment, a landing out of the usual order. Written by `compass issue set-status --reason`. Parking has its own key because a parked issue is the one a reader most often has to decide about."

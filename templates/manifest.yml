@@ -41,6 +41,8 @@ assessment:
   role: "{{engineer | product-owner | product-marketer | designer | qa}}"
   labels: []                                 # domain labels: [auth, payments, …]
 
+generation: 0                # 0 = assessed, no stored configuration yet; the evaluator
+                             # (--write) commits generation 1. Absent = a pre-6.0.0 issue.
 delivery_approach: null      # filled by the evaluator (--write)
 orchestration: null               # filled by the evaluator
 policy_rules_fired: []       # filled by the evaluator - [{id, kind, rationale, changed}]

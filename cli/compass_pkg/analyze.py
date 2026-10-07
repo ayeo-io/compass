@@ -741,6 +741,20 @@ def cmd_ci(args):
         if cmd_task_lint(types.SimpleNamespace(task=slug, file=None)):
             failures += 1
 
+        # The generation the manifest names is the issue's configuration. A
+        # broken one fails the sweep and its gate checks are not run, because
+        # `compass check` refuses it; a leftover folder is only reported.
+        from compass_pkg import effective
+        gen_lines, gen_broken = effective.generation_report(resolve_issue_dir(slug))
+        for gen_line in gen_lines:
+            print(gen_line)
+        if gen_broken:
+            print("  gate checks skipped - the stored configuration is broken. "
+                  "The manifest itself was still linted.")
+            failures += 1
+            skipped += 1
+            continue
+
         # The gate checks are different. An issue that has not started has no
         # acceptance criteria and no evidence, correctly so - the framework
         # asks for work to be assessed early, and failing the sweep for

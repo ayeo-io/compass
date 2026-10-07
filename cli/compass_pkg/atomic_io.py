@@ -14,7 +14,7 @@ This module holds what that needs:
 
 It imports nothing from Compass, so every module, core included, can use it.
 """
-# DEPENDENCY: standard library (contextlib, datetime, hashlib, json, os, tempfile);
+# DEPENDENCY: standard library (contextlib, datetime, hashlib, json, os, stat, tempfile);
 # the bundled PyYAML.
 from __future__ import annotations
 
@@ -23,6 +23,7 @@ import datetime
 import hashlib
 import json
 import os
+import stat
 import tempfile
 
 import yaml
@@ -50,12 +51,25 @@ def atomic_write_text(path, text, encoding="utf-8"):
             fh.write(text)
             fh.flush()
             os.fsync(fh.fileno())
+        # mkstemp makes the file private (0600). Keep the mode of the file being
+        # replaced, or give a new file the mode `open` would have given it.
+        try:
+            mode = stat.S_IMODE(os.stat(path).st_mode)
+        except FileNotFoundError:
+            mode = 0o666 & ~_umask()
+        os.chmod(tmp, mode)
         os.replace(tmp, path)
     except BaseException:
         with contextlib.suppress(OSError):
             os.unlink(tmp)
         raise
     _sync_folder(folder)
+
+
+def _umask():
+    old = os.umask(0)
+    os.umask(old)
+    return old
 
 
 def _sync_folder(folder):

@@ -12,7 +12,7 @@ transcript's text, paths or error messages is kept, and a reason for
 recording nothing is one of `REASONS`. `events` returns text in memory for
 `compliance` to score; that module prints and stores none of it.
 """
-# DEPENDENCY: standard library (datetime, glob, json, os).
+# DEPENDENCY: standard library (datetime, glob, json, os); compass_pkg.stable_ids.
 from __future__ import annotations
 
 import glob
@@ -21,12 +21,14 @@ import os
 import re
 from datetime import datetime, timezone
 
+from compass_pkg.stable_ids import STAGE_ASSESS, STAGE_IMPLEMENT, STAGE_SHIP, STAGE_VERIFY
+
 SOURCE = "claude-code"
-STAGES = ("assess", "implement", "verify", "ship")
+STAGES = (STAGE_ASSESS, STAGE_IMPLEMENT, STAGE_VERIFY, STAGE_SHIP)
 # The `verify` and `ship` stages happen inside one `quick-fix finish` call,
 # during which the model makes no requests, so a window there would always
 # read zero.
-MEASURED = ("assess", "implement")
+MEASURED = (STAGE_ASSESS, STAGE_IMPLEMENT)
 NOT_MEASURED = {"measured": False,
                 "reason": "inside one command, where the model makes no requests"}
 COUNTS = ("input", "output", "cache_write", "cache_read")
@@ -210,10 +212,10 @@ def _windows(manifest, others, session, first, now):
             if ((o.get("usage") or {}).get("session") == session)]
     earlier = [t for o in mine for t in _boundaries(o) if t < started]
     assess_from = max(earlier) if earlier else first
-    windows = {"assess": (assess_from, started),
-               "implement": (started, finish),
-               "verify": (finish, committed),
-               "ship": (committed, now)}
+    windows = {STAGE_ASSESS: (assess_from, started),
+               STAGE_IMPLEMENT: (started, finish),
+               STAGE_VERIFY: (finish, committed),
+               STAGE_SHIP: (committed, now)}
     spans = []
     for o in mine:
         times = _boundaries(o)

@@ -21,13 +21,15 @@ import glob
 import json
 import os
 
+from compass_pkg.stable_ids import (
+    APPROACH_SPIKE, STAGE_ASSESS, STAGE_BREAKDOWN, STAGE_DEFINE, STAGE_IDS, STAGE_IMPLEMENT, STAGE_PLAN,
+    STAGE_REFINE, STAGE_SHIP, STAGE_VERIFY)
 from compass_pkg.core import (artifact_path, load_yaml, manifest_path,
                               resolve_issue_dir, unregistered_document)
 from compass_pkg.interruptions import LOG_NAME
 
 _NOT_RUN = {"skipped", "collapsed", "none", ""}
-_ORDER = ("assess", "define", "refine", "plan", "breakdown", "implement",
-          "verify", "ship")
+_ORDER = STAGE_IDS
 _KINDS = ("red", "green", "acceptance")
 
 CANNOT_SHOW = (
@@ -135,32 +137,32 @@ def _stage_records(root, task_dir, m, records):
     omitted = _omitted(m)
     mpath = _rel(root, manifest_path(task_dir))
     if m.get("assessment"):
-        shown["assess"].append(f"{mpath} (assessment)")
+        shown[STAGE_ASSESS].append(f"{mpath} (assessment)")
     approach = _doc(task_dir, "delivery-approach.md")
     if approach:
-        shown["assess"].append(_rel(root, approach))
-    for stage, name in (("define", "acceptance-criteria.md"),
-                        ("refine", "requirements-review.md"),
-                        ("plan", "technical-design.md"),
-                        ("breakdown", "distribution-map.md")):
+        shown[STAGE_ASSESS].append(_rel(root, approach))
+    for stage, name in ((STAGE_DEFINE, "acceptance-criteria.md"),
+                        (STAGE_REFINE, "requirements-review.md"),
+                        (STAGE_PLAN, "technical-design.md"),
+                        (STAGE_BREAKDOWN, "distribution-map.md")):
         path = _doc(task_dir, name)
         if path:
             shown[stage].append(_rel(root, path))
         elif name[:-3] in omitted:
             shown[stage].append(f"omitted: {omitted[name[:-3]]}")
     if _list(m.get("scenarios")):
-        shown["define"].append(f"{mpath} (scenarios: {len(m['scenarios'])})")
+        shown[STAGE_DEFINE].append(f"{mpath} (scenarios: {len(m['scenarios'])})")
     if _list(m.get("subtasks")):
-        shown["breakdown"].append(f"{mpath} (subtasks: {len(m['subtasks'])})")
-    shown["implement"] = [_rel(root, r[4]) for r in records]
+        shown[STAGE_BREAKDOWN].append(f"{mpath} (subtasks: {len(m['subtasks'])})")
+    shown[STAGE_IMPLEMENT] = [_rel(root, r[4]) for r in records]
     if any(g.get("status") == "pass" for g in _dicts(m.get("gates"))):
-        shown["verify"].append(f"{mpath} (gates)")
+        shown[STAGE_VERIFY].append(f"{mpath} (gates)")
     review = os.path.join(task_dir, "evidence", "review.md")
     if os.path.isfile(review):
-        shown["verify"].append(_rel(root, review))
+        shown[STAGE_VERIFY].append(_rel(root, review))
     landed_as = _landed_as(m)
     if landed_as or m.get("land_timestamp"):
-        shown["ship"].append(f"{mpath} (landed {landed_as})" if landed_as else f"{mpath} (landed)")
+        shown[STAGE_SHIP].append(f"{mpath} (landed {landed_as})" if landed_as else f"{mpath} (landed)")
     return shown
 
 
@@ -201,7 +203,7 @@ def _timeline(root, task_dir, m, records):
 def _deviations(task_dir, m, stages, shown, records):
     out = []
     landed = str(m.get("status") or "") == "landed"
-    spike = str(m.get("delivery_approach") or "") == "spike"
+    spike = str(m.get("delivery_approach") or "") == APPROACH_SPIKE
     # An issue that has not landed has reached only as far as its last stage
     # with a record; a stage after that is not reached yet, not missing.
     # An omission recorded early says nothing about how far the work got.
@@ -217,9 +219,9 @@ def _deviations(task_dir, m, stages, shown, records):
             continue
         if not landed and i >= reached:
             continue
-        if stage == "breakdown":
+        if stage == STAGE_BREAKDOWN:
             continue                    # a solo run writes no subtasks
-        if stage == "implement" and spike:
+        if stage == STAGE_IMPLEMENT and spike:
             continue                    # a spike records no red
         out.append(f"{stage} ran in the route ({weight}) but has no record")
     declared = any(r[0] == "acceptance" for r in records) or os.path.isfile(

@@ -13,7 +13,9 @@ maintains and becomes a fact the runner establishes.
 
 ## The four steps
 
-### 1. Declare the runner in `.compass/config.yml`
+### 1. Declare the runner in `compass.yml`
+
+Use `.compass/config.yml` in a project that has no `compass.yml`.
 
 ```yaml
 project:

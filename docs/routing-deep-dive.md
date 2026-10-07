@@ -262,8 +262,8 @@ a per-worktree mid-delivery-approach checkpoint.
 The `risk: critical` floor does *not* fire - this is `cross-cutting`,
 not `critical`. So the critical-risk cap does *not* apply either: the
 multiagent orchestration is not pinned to one worktree. Subtask count comes
-from the distribution map, bounded by `.compass/config.yml`'s
-`max_worktrees` (default 6). If the map identifies five independent
+from the distribution map, bounded by `max_worktrees` in `compass.yml`
+(`.compass/config.yml` in a project without one; default 6). If the map identifies five independent
 subtasks, the multiagent orchestration runs five worktrees.
 
 This is the key contrast with Case 3: Case 3 was *heavy and

@@ -33,7 +33,7 @@ Concretely, `compass approach evaluate` decides, per stage:
 - **Plan** - "edit this file" one-liner, a real technical plan, or a plan plus
   a distribution map.
 - **Breakdown** - skipped (solo), pair, or multiagent. Subtask count comes from the
-  distribution map; orchestration thresholds come from `.compass/config.yml`.
+  distribution map; orchestration thresholds come from `compass.yml` (or `.compass/config.yml` in a project without one).
 - **Implement** - test surface target, scaled to risk.
 - **Verify** - which review dimensions apply (see below), how many gates.
 - **Ship** - trivial integration vs. coordinated multi-worktree merge; which

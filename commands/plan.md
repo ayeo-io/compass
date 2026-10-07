@@ -51,7 +51,8 @@ engineering plan stage.)
      what *could* have been parallel and why it wasn't.
 
    Subtask count comes from the map; orchestration thresholds from
-   `.compass/config.yml`; a policy cap can bound the count.
+   the multiagent settings in `compass.yml` (or `.compass/config.yml` in a
+   project without one); a policy cap can bound the count.
 4. **Write `technical-design.md`** from `${CLAUDE_PLUGIN_ROOT}/templates/technical-design.md`,
    and `distribution-map.md` from its template when applicable.
 
@@ -91,7 +92,8 @@ the design.
 > work.
 
 Wait for approval only if `plan` is in the manifest's `checkpoints:`.
-The project's `autonomy` setting in `.compass/config.yml` decides that list,
+The project's `autonomy` setting, read from `compass.yml` (or from
+`.compass/config.yml` in a project without one), decides that list,
 and `compass approach summary` shows it. If `plan` is not listed, still
 write the technical design and show this hand-off, then say you are going on without
 waiting and name the setting, with "Next" in place of "On approval". Log

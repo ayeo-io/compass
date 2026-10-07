@@ -39,6 +39,13 @@ The configurable-framework design adds a project overlay and, from a later relea
 
 The key stays project-file-only, so a published preset cannot authorise its own commands.
 
+**Amendment, 7 October 2026: which file counts when both exist.** The decision above does not say what happens when a project has both `compass.yml` and `.compass/config.yml`. It was made on the maintainer's behalf while they were away and stands until they reverse it.
+
+- `compass.yml` is Compass's file when it has a top-level `schema:` key, or when it is the only settings file. A `compass.yml` with no `schema:` beside an old file is ignored with a warning on stderr, and the old file keeps guarding.
+- When both files exist, `compass.yml` is Compass's file, and the old file still holds a settings key, the reader refuses. The hook exits 2 with the refusal code `settings-conflict`, each CLI command that reads settings stops with the same text, and `compass check` fails. A settings key is one of the keys listed above except `adoption`, plus `mode` (the old name of `adoption`), `governance_drift`, and `worktree_root`, `max_worktrees` and `test_command` when they sit outside `multiagent:` and `project:`. An old file that holds only `initialised`, `records_signed_since` or keys no code reads is not a conflict. The refusal text names the keys and the fix (move them into `compass.yml` and delete them from the old file), and names no migration command until one exists.
+- `/compass:init` and `compass policy migrate` must write `schema:` into every `compass.yml` they create. Nothing writes one yet, because `compass init` writes no `compass.yml`.
+- The reasons: ignoring an old file that sets `enforcement.code_globs` switches a guard off without a word, a file of another product with the same name must not switch Compass's guards off, and merging the two files would need a precedence rule for every key and would make two files count. No 5.6.0 project has a Compass `compass.yml`, so no working project starts to refuse by upgrading (ADR-006).
+
 ## Alternatives considered
 
 - **A project overlay in `governance/` beside a separate `.compass/config.yml`.** Rejected: a person would edit two files with different rules, and every reader of settings would have to know which file holds which key. A copied `governance/` directory is also what the legacy adapter detects (ADR-042), so an overlay there would be easy to mistake for a copy.

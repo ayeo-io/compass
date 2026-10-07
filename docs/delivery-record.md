@@ -4,7 +4,7 @@ Compass keeps each issue's records out of the project's git history, so a public
 
 ## Setting it up
 
-Name the repository and the paths it holds in `.compass/config.yml`:
+Name the repository and the paths it holds in `compass.yml` at the project root, or in `.compass/config.yml` for a project that has no `compass.yml` (the CLI reads one file, `compass.yml` first):
 
 ```yaml
 record:

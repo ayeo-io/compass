@@ -105,9 +105,10 @@ root:
    team can extend the shipped defaults. It does not make you author anything: the defaults are real,
    in-force content from the moment they land. The team adds project
    guardrails and strategies whenever it is ready.
-2. **Creates `.compass/config.yml`** - delivery-approach defaults, multiagent
-   thresholds, worktree ceilings. The defaults are sane; `init` confirms
-   them with you.
+2. **Writes no settings file.** `compass init` creates only a state file in
+   `.compass/`. Settings such as the test command and the multiagent worktree
+   limits go in `compass.yml` at the project root, and the defaults are sane
+   until you set them. See `docs/configuration.md`.
 3. **Creates `.compass/work/`** - where every issue's state will live. Note
    that `.compass/work/` **is committed**. It is the audit trail, not scratch.
 

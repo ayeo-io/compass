@@ -44,9 +44,12 @@ FIXTURES = {
                           reader="delivery-approach reader",
                           cause="It exited 1.", detail=""),
     "config-invalid": dict(
-        target="packaging/app.cfg", tool="Edit",
+        target="packaging/app.cfg", tool="Edit", file=".compass/config.yml",
         detail="enforcement.code_globs must be a list of strings, "
                "not ['packaging/**']"),
+    "settings-conflict": dict(target="packaging/app.cfg", tool="Edit",
+                              keys="mode, autonomy, enforcement, record, "
+                                   "project and 2 more"),
     "not-initialised": dict(detail="no .compass/work/ exists in this project"),
     "bad-current-task": dict(slug="../side"),
     "bad-session-issue": dict(slug="missing"),
@@ -334,16 +337,17 @@ def test_rtf_2_the_fix_lines_are_exact():
 def test_rtf_3_a_long_parameter_is_cut_and_the_refusal_stays_short():
     long_detail = " ".join(["word"] * 200)
     text = render("config-invalid", target="src/app.py", tool="Edit",
-                  detail=long_detail)
+                  file="compass.yml", detail=long_detail)
     assert len(text.split()) < 60, len(text.split())
 
 
 def test_rtf_4_the_registry_comment_claims_only_what_render_checks():
     """The comment says an extra field is ignored and a missing one
     raises; render() must behave that way."""
-    render("config-invalid", target="a", tool="Edit", detail="d", extra="x")
+    render("config-invalid", target="a", tool="Edit", file="f", detail="d",
+           extra="x")
     with pytest.raises(KeyError):
-        render("config-invalid", target="a", tool="Edit")
+        render("config-invalid", target="a", tool="Edit", file="f")
     source = (ROOT / "cli" / "compass_pkg" / "refusals.py").read_text()
     assert "An extra field is ignored" in source
 
@@ -374,3 +378,24 @@ def test_rtf_6_no_fixture_renders_a_doubled_word():
                for m in [re.search(r"\b(\w+) \1\b", render(c, **FIXTURES[c]))]
                if m}
     assert not doubled, doubled
+
+
+# SH-5: the refusal for a settings file the hook cannot read names the file
+# it read.
+
+@pytest.mark.parametrize("name", ["compass.yml", ".compass/config.yml"])
+def test_sh5_config_invalid_names_the_file_it_was_given(name):
+    text = " ".join(render("config-invalid", target="a", tool="Edit",
+                          file=name, detail="d").split())
+    assert f"'{name}' could not be read" in text, text
+    assert f"fix {name} and retry" in text, text
+    other = ".compass/config.yml" if name == "compass.yml" else "compass.yml"
+    assert other not in text.replace(name, ""), text
+
+
+def test_sh5_the_registry_and_its_doc_hold_no_fixed_settings_file():
+    template = REFUSALS["config-invalid"]
+    assert ".compass/config.yml" not in " ".join(template.values())
+    page = (ROOT / "docs" / "refusal-codes.md").read_text(encoding="utf-8")
+    section = page.split("### `config-invalid`", 1)[1].split("###", 1)[0]
+    assert "{file}" in section and ".compass/config.yml" not in section

@@ -7,8 +7,8 @@ allowed-tools: Read, Write, Edit, Bash, Glob
 
 `/compass:init` is **optional**, and it is not what creates your project.
 
-The `compass init` verb creates `.compass/` - a config file and the work
-directory - and your first Compass command runs it for you and says that it
+The `compass init` verb creates `.compass/` - a state file and the work
+directory, and no settings file - and your first Compass command runs it for you and says that it
 did. So the command you wanted to run initialises the project,
 not a setup step you had to know about first.
 
@@ -33,7 +33,8 @@ it is exempt from assessment.
 ## Steps
 
 1. **Check for an existing install.** If a project `governance/` directory
-   or `.compass/config.yml` already exists, stop and report what is
+   or a settings file (`compass.yml`, or `.compass/config.yml` in an older
+   project) already exists, stop and report what is
    present. Do not overwrite live governance; offer to show a diff against
    the shipped defaults instead. Then go on to the status line step below,
    which runs either way.
@@ -78,9 +79,11 @@ it is exempt from assessment.
    Fill `{{PROJECT_NAME}}`, `{{DATE}}` (today), and each file's
    amendment-log first row. Do not leave `{{...}}` placeholders behind.
 
-4. **Create the config.** `compass init` has already written a minimal
-   `.compass/config.yml` if one was missing. Set
-   `project.name` and `project.test_command`. It holds only project
+4. **Create the config.** `compass init` writes no settings file, only the
+   state file in `.compass/`. Create `compass.yml` at the project root, or
+   open it if it exists, and set `project.name` and `project.test_command`
+   in it. An older project that has only `.compass/config.yml` keeps
+   that file until it moves. `compass.yml` holds only project
    settings - routing rules (the default shape, the worktree caps) live in
    `governance/routing-policy.yml`, which is authoritative; tune routing
    there, not here.
@@ -118,6 +121,6 @@ that adopted governance long ago still needs its status line.
 
 Init is complete when the project `governance/` files are in place with no
 remaining `{{...}}` placeholders in their headers and amendment logs, and
-`.compass/config.yml` is set. The project guardrail and strategy *sections*
+`compass.yml` is set. The project guardrail and strategy *sections*
 can be left empty - that is a project section not yet built up, not an
 unfinished step. The shipped defaults are in force regardless.

@@ -11,15 +11,21 @@ keys, field types, the enumerations, the operations each layer may use, and
 from the same table; the committed copy in `schemas/` is generated from it
 and a test keeps the two equal.
 
+`check_vocabulary` is the one check on a resolved configuration here: it
+refuses a vocabulary key that names nothing and a name or alias that two
+entries share.
+
 What this does not check yet: whether an entry is complete enough to add
 (the merge), and whether a value loosens its parent (the classifier).
 """
-# DEPENDENCY: standard library (re); compass_pkg.catalogue_spec.
+# DEPENDENCY: standard library (re); compass_pkg.catalogue_spec;
+# compass_pkg.vocabulary.
 from __future__ import annotations
 
 import re
 
 from compass_pkg import catalogue_spec as spec
+from compass_pkg import vocabulary
 
 _ID = re.compile(spec.ID_PATTERN)
 
@@ -323,3 +329,66 @@ def schema():
         "properties": properties,
         "additionalProperties": False,
     }
+
+
+def check_vocabulary(config):
+    """Every problem in the `vocabulary` of a resolved configuration, as
+    `(code, path, message)` like the merge's errors. Empty means every key
+    names a real entry and no name or alias is ambiguous.
+
+    This reads the resolved result, not one layer: a collision is between
+    entries that may come from different layers, and a layer on its own
+    cannot see the parent's names. `policy lint` will call it.
+
+    - `M-REF-UNKNOWN`: a key that is not `<catalogue>.<id>`, names a
+      catalogue with no display names, or names an id the catalogue lacks.
+    - `M-ALIAS-COLLISION`: one text, ignoring case and spacing, belongs to
+      two entries of one catalogue, as an id, a name or an alias. The same
+      text in two catalogues is fine, because a person types it against one.
+      Two ids that differ only by case are not reported: no name or alias
+      is involved.
+    - `M-FIELD-SHAPE`: a name or an alias that is empty or blank.
+    """
+    vocabulary_entries = config.get("vocabulary")
+    if not isinstance(vocabulary_entries, dict):
+        return []
+    errors = []
+    owners = {}       # (catalogue, normalised text) -> [(entry key, role, text)]
+    for catalogue in spec.CATALOGUES:
+        table = config.get(catalogue)
+        if catalogue != "vocabulary" and isinstance(table, dict):  # no names of its own
+            for entry_id in table:
+                owners.setdefault((catalogue, vocabulary.normal(entry_id)), []).append(
+                    (f"{catalogue}.{entry_id}", "id", str(entry_id)))
+    for key, entry in vocabulary_entries.items():
+        parts = vocabulary.split_key(key)
+        if parts is None:
+            errors.append(("M-REF-UNKNOWN", f"vocabulary.{key}",
+                           f"'{key}' is not <catalogue>.<id> for a catalogue that "
+                           f"has display names"))
+            continue
+        catalogue, entry_id = parts
+        if entry_id not in (config.get(catalogue) or {}):
+            errors.append(("M-REF-UNKNOWN", f"vocabulary.{key}",
+                           f"{catalogue} has no entry '{entry_id}' to name"))
+            continue
+        for role, text in vocabulary.texts(entry):
+            if not vocabulary.normal(text):
+                # A blank name shows nothing and a blank alias is typed by no
+                # one; two blanks would also collide with each other.
+                errors.append(("M-FIELD-SHAPE", f"vocabulary.{key}",
+                               f"the {role} is empty or blank"))
+                continue
+            owners.setdefault((catalogue, vocabulary.normal(text)), []).append(
+                (key, role, text))
+    for (catalogue, _), holders in owners.items():
+        distinct = {key for key, _, _ in holders}
+        if len(distinct) < 2 or all(role == "id" for _, role, _ in holders):
+            continue
+        shown = next(text for _, role, text in holders if role != "id")
+        who = " and ".join(f"the {role} of {key}"
+                           for key, role in dict.fromkeys((k, r) for k, r, _ in holders))
+        errors.append(("M-ALIAS-COLLISION", "vocabulary",
+                       f"'{shown}' is {who}, so it does not name one entry of "
+                       f"{catalogue}"))
+    return errors

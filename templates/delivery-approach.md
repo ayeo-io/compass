@@ -112,7 +112,7 @@ Candidate review dimensions: {{correctness, governance, traceability, … per th
 
 - Orchestration: {{solo \| pair (2-3 subtasks) \| multiagent (4+ subtasks)}}
 - Subtask count: {{N - from distribution-map.md, or "n/a (solo)"}}
-- Worktree root: {{from .compass/config.yml `multiagent.worktree_root`, default ../.compass-worktrees}}
+- Worktree root: {{from `multiagent.worktree_root` in compass.yml (or .compass/config.yml without one), default ../.compass-worktrees}}
 - Cap in effect: {{e.g. "critical risk → max_worktrees: 1" - from a hard cap in routing-policy.yml - or "none"}}
 - Orchestrator agent: {{yes (multiagent) \| no - lead builder integrates (pair) \| n/a (solo)}}
 

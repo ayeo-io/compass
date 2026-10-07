@@ -33,3 +33,34 @@ compass_python() {
   root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
   PYTHONPATH="$root/cli${PYTHONPATH:+:$PYTHONPATH}" python3 "$@"
 }
+
+# compass_setting ROOT KEY DEFAULT - print one project setting for a script.
+#
+# The value comes from compass_pkg.project_settings, the one reader of the
+# project's settings file, so a script follows `compass.yml` as the CLI does
+# and no script parses a settings file itself. In `compass.yml` KEY is read at
+# its documented path (multiagent.worktree_root, multiagent.max_worktrees,
+# project.test_command); in an old project's settings file it is found at any
+# depth. A key that is absent or empty gives DEFAULT. A settings file that
+# cannot be read returns 1 with the reason on stderr, and the caller must stop:
+# a default in its place would be a silent cap or a skipped regression run.
+compass_setting() {
+  local value
+  if value="$(compass_python - "$1" "$2" "$3" <<'PYEOF'
+import sys
+
+import compass_pkg                      # noqa: F401 - puts vendor on sys.path
+from compass_pkg import project_settings
+
+try:
+    print(project_settings.scalar(sys.argv[1], sys.argv[2]))
+except project_settings.CompassError as exc:
+    print("compass: %s" % exc, file=sys.stderr)
+    sys.exit(4)
+PYEOF
+  )"; then
+    printf '%s\n' "${value:-$3}"
+  else
+    return 1
+  fi
+}

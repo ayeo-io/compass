@@ -52,8 +52,9 @@ def test_contract_4_reports_a_refusal_that_no_longer_happens(projects):
     assert entry["exit"] != 0
     root = projects.fresh(entry["project"])
     config = root / ".compass" / "config.yml"
-    config.write_text(config.read_text(encoding="utf-8").replace(
-        "mode: enforced", "mode: advisory"), encoding="utf-8")
+    # `compass init` writes no `mode:` since ADR-043, so the file is written
+    # whole rather than edited.
+    config.write_text("mode: advisory\n", encoding="utf-8")
     outcome = cc.run_in(root, projects.env, entry["argv"])
     assert outcome.exit == 0, outcome.stdout + outcome.stderr
     assert f"exit 0, recorded {entry['exit']}" in cc.differences(

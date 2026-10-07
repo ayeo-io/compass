@@ -76,7 +76,7 @@ Fill every {{PLACEHOLDER}}.
 
 - Proposed orchestration: {{solo \| pair (2–3) \| multiagent (4+)}}
 - Proposed subtask count: {{N}}
-- Worktree root: {{.compass/config.yml `multiagent.worktree_root`, default ../.compass-worktrees}}
+- Worktree root: {{`multiagent.worktree_root` in compass.yml (or .compass/config.yml without one), default ../.compass-worktrees}}
 - One worktree + one `builder` per subtask; {{plus one `orchestrator` (multiagent) \| lead builder integrates (pair)}}.
 
 ## 5. The cap that applies

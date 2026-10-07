@@ -12145,3 +12145,38 @@
 - **Intent:** `INT-1`
 - **Source issue:** `default-preset-data`
 - **Landed:** 2026-10-07
+
+### Every reference in the preset resolves and the evidence types match the guardrails file _(archived)_
+
+- **Scenario id:** `DP-6`
+- **Intent:** `INT-1`
+- **Source issue:** `default-preset-data`
+- **Landed:** 2026-10-07
+
+### The registry holds one versioned entry per built-in check and CHECK_FNS is derived from it _(archived)_
+
+- **Scenario id:** `CR-1`
+- **Intent:** `INT-1`
+- **Source issue:** `check-registry`
+- **Landed:** 2026-10-07
+
+### The registry answers the installed version and major of an implementation _(archived)_
+
+- **Scenario id:** `CR-2`
+- **Intent:** `INT-1`
+- **Source issue:** `check-registry`
+- **Landed:** 2026-10-07
+
+### Each implementation has a verdict-only corpus seeded from its mutation proof, and a test runs each seed _(archived)_
+
+- **Scenario id:** `CR-3`
+- **Intent:** `INT-1`
+- **Source issue:** `check-registry`
+- **Landed:** 2026-10-07
+
+### The lock file build rule fails on a changed verdict digest without a major bump _(archived)_
+
+- **Scenario id:** `CR-4`
+- **Intent:** `INT-1`
+- **Source issue:** `check-registry`
+- **Landed:** 2026-10-07

@@ -33,6 +33,7 @@ import re as _re
 import fnmatch
 import re as _re
 from compass_pkg.check_cmd import CHECK_FNS
+from compass_pkg.check_registry import REGISTRY
 from compass_pkg.core import (AUTONOMY_VALUES, ROUTE_NAMES, assessment_key_errors, CHECKPOINT_STAGES, CompassError, canonical_shape, FRAMEWORK_ROOT, artifact_path,
                               load_manifest, load_yaml, normalize_spine,
                               resolve_issue_dir)
@@ -212,6 +213,23 @@ def _lint_errors_routing_policy(p):
     return errs
 
 
+def _check_declaration_errors(gid, name, decl):
+    """Problems in one `checks:` entry. `impl:` names a built-in
+    implementation; until stored generations decide who may choose one, the
+    runtime ignores it, so lint only refuses a name the registry lacks."""
+    if decl is None:
+        return []
+    if not isinstance(decl, dict):
+        return [f"guardrail {gid} references check '{name}', which is declared "
+                f"as a {type(decl).__name__} under `checks:`; it must be a "
+                f"mapping"]
+    impl = decl.get("impl")
+    if impl is not None and impl not in REGISTRY:
+        return [f"guardrail {gid} references check '{name}', which names impl "
+                f"'{impl}'; that is not in the check registry"]
+    return []
+
+
 def _lint_errors_guardrails(p):
     errs = []
     if "defaults" not in p:
@@ -233,7 +251,10 @@ def _lint_errors_guardrails(p):
             if c not in known_checks:
                 errs.append(f"guardrail {g.get('id', '?')} references check "
                             f"'{c}' not declared under `checks:`")
-            elif c not in CHECK_FNS:
+                continue
+            errs.extend(_check_declaration_errors(
+                g.get("id", "?"), c, (p.get("checks") or {}).get(c)))
+            if c not in CHECK_FNS:
                 # The integrity rule: a declared guardrail check the CLI does
                 # not implement would silently become advisory. Lint catches it
                 # here, before an issue relies on it; `compass check` also fails

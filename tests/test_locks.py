@@ -1347,3 +1347,16 @@ def test_lk_5_a_child_that_refuses_an_assessment_the_parent_accepted_ends_the_lo
     found = [r for r in result.refusals if r.field == "evaluation.refused"]
     assert [(r.entry, r.outcome) for r in found] == [("gates.verify.correctness", "looser")]
     assert "refused" in found[0].message
+
+
+def test_lk_1_an_unlock_whose_waiver_is_dated_in_the_future_is_refused():
+    locks = _api()
+    parent = _layer({"checks": {"a": {"locked": True}}}, "parent", "base")
+    future = _waiver()
+    future["approved_on"] = "2999-01-01"
+    project = _layer({"owner": "owner-1", "checks": {
+        "a": {"unlock": True, "waiver": future}}})
+    found = locks.unlock_findings(project, locks.lock_set([parent]))
+    assert [f.ok for f in found] == [False]
+    assert "later than today" in found[0].reason
+    assert set(locks.lock_set([parent, project])) == {"checks.a"}

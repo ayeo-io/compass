@@ -13,22 +13,24 @@ lock. A project that unlocks a framework entry is reported non-conformant by
 
 This module reads layer documents and configurations that its caller hands it,
 and reads no preset. The shipped lock set is written once, in the preset's
-`locked` markers. Whether a waiver is otherwise well formed (a date, a covered
-revision) is the waiver module's. Nothing here prints; the commands print
+`locked` markers. An unlock's waiver must pass `waivers.check` (its shape, a date
+not in the future, an approver with authority); the owner-only rule is this
+module's and applies on top. Nothing here prints; the commands print
 what `conformance_lines` returns.
 """
-# DEPENDENCY: standard library (copy, itertools, json, os, textwrap, dataclasses);
+# DEPENDENCY: standard library (copy, datetime, itertools, json, os, textwrap, dataclasses);
 # compass_pkg.catalogue_spec, compass_pkg.atomic_io (the strict loader),
 # compass_pkg.classify (the grid, the comparison rules, its private names `_Run`,
 # `_evaluate`, `_where` and `_plain`, and the evaluator it imports, reached as
 # `classify.obligations` and `classify.Refused` because only classify may import
-# obligations), compass_pkg.merge, compass_pkg.layers (Layer),
+# obligations), compass_pkg.merge, compass_pkg.waivers (check), compass_pkg.layers (Layer),
 # compass_pkg.legacy_views (the preset's lock summary, read lazily) and
 # compass_pkg.core (CompassError). Imported by compass_pkg.check_cmd,
 # compass_pkg.receipt and compass_pkg.routing, which print its report.
 from __future__ import annotations
 
 import copy
+import datetime
 import itertools
 import json
 import os
@@ -37,7 +39,7 @@ from collections import namedtuple
 from dataclasses import dataclass, replace
 
 from compass_pkg import catalogue_spec as spec
-from compass_pkg import classify, merge
+from compass_pkg import classify, merge, waivers
 from compass_pkg.atomic_io import load_yaml_strict
 from compass_pkg.classify import _plain
 from compass_pkg.core import CompassError
@@ -96,6 +98,14 @@ def _unlock_reason(entry, body, layer, owner, locks):
     if approved != owner:
         return (f"the waiver is approved by {approved if approved else 'no one'}, "
                 f"and only the owner {owner} approves an unlock")
+    catalogue, _, entry_id = entry.partition(".")
+    record = waivers.Waiver(f"project:{entry}", "project", catalogue, entry_id,
+                            "set", (), waiver)
+    faults = [f for f in waivers.check(record, today=datetime.date.today(),
+                                       project=layer.doc, parent=None)
+              if f.level == "error"]
+    if faults:
+        return f"the waiver fails the waiver check: {faults[0].message}"
     if locks is not None:
         held = locks.get(entry)
         if held is None:

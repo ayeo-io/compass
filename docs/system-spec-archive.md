@@ -12537,3 +12537,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `locks`
 - **Landed:** 2026-10-07
+
+### The module declares its dependencies and owning doc, and core stays in bounds _(archived)_
+
+- **Scenario id:** `LK-9`
+- **Intent:** `INT-1`
+- **Source issue:** `locks`
+- **Landed:** 2026-10-07

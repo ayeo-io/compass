@@ -50,11 +50,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the count of compared lock cases is partial because pytest-xdist split the file When test_cs_5 runs inside a worker Then it skips instead of failing, and outside a worker it still requires at least 70
+### A non-text key anywhere in a layer is refused with L-KEY-NOT-TEXT naming its path and telling the person to quote it
 
 - **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `lock-proof-under-xdist`
+- **Source issue:** `layer-non-text-key`
 - **Landed:** 2026-10-07
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -353,4 +353,4 @@
 
 ---
 
-1811 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1812 superseded scenario(s) are in `docs/system-spec-archive.md`.

@@ -50,11 +50,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### The classifier has a public scan with a point callback and locks read no private name
+### The verb is documented, registered, in the command corpus and within the caps
 
-- **Scenario id:** `CS-7`
+- **Scenario id:** `PD-10`
 - **Intent:** `INT-1`
-- **Source issue:** `classifier-speed`
+- **Source issue:** `policy-diff`
 - **Landed:** 2026-10-07
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -353,4 +353,4 @@
 
 ---
 
-1810 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1820 superseded scenario(s) are in `docs/system-spec-archive.md`.

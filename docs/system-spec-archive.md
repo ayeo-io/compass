@@ -12103,3 +12103,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `both-settings-files-present`
 - **Landed:** 2026-10-07
+
+### Given the recorded hook corpus with settings moved to compass.yml with schema, every decision matches _(archived)_
+
+- **Scenario id:** `BS-9`
+- **Intent:** `INT-1`
+- **Source issue:** `both-settings-files-present`
+- **Landed:** 2026-10-07

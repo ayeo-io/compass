@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the recorded hook corpus with settings moved to compass.yml with schema, every decision matches
+### Given a compass.yml with schema: 1 and governance_drift: strict, When the project layer is checked and loaded, Then it is accepted and governance_drift is read as a setting, not a layer key
 
-- **Scenario id:** `BS-9`
+- **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `both-settings-files-present`
+- **Source issue:** `governance-drift-is-a-settings-key`
 - **Landed:** 2026-10-07
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1728 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1729 superseded scenario(s) are in `docs/system-spec-archive.md`.

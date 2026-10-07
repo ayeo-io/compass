@@ -50,11 +50,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a project unlock whose waiver has an approved_on date in the future, When the lock chain is enforced, Then the unlock is refused and the entry stays locked
+### Both verbs are documented, in the command corpus and within the line caps
 
-- **Scenario id:** `TRC-001`
+- **Scenario id:** `PL-12`
 - **Intent:** `INT-1`
-- **Source issue:** `unlock-uses-the-waiver-check`
+- **Source issue:** `policy-lint`
 - **Landed:** 2026-10-07
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -353,4 +353,4 @@
 
 ---
 
-1791 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1803 superseded scenario(s) are in `docs/system-spec-archive.md`.

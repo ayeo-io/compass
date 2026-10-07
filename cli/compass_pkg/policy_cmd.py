@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import os
 
-from compass_pkg import governance, layers, policy_lint, project_settings
+from compass_pkg import governance, layers, policy_lint, policy_migrate, project_settings
 from compass_pkg.core import (FRAMEWORK_ROOT, CompassError, find_governance, load_manifest,
                               resolve_issue_dir)
 from compass_pkg.terminal import mark_handled, resolve_mode
@@ -75,6 +75,17 @@ def run_policy_effective(args):
     return 0
 
 
+def run_policy_migrate(args):
+    root = layers.find_project_root(os.getcwd())
+    made = policy_migrate.plan(root)
+    mode = "apply" if getattr(args, "apply", False) else "dry-run"
+    if mode == "apply" and made.result == "ready":
+        policy_migrate.apply(root, made)
+        made.result = "applied"
+    _emit(args, policy_migrate.report_json(made, mode), policy_migrate.report_text(made, mode))
+    return 1 if made.result == "blocked" else 0
+
+
 ISSUE_HELP = ("issue slug: read that issue's `config:` from its manifest. Without it "
               "no issue is read: there is no COMPASS_ISSUE or current-task fallback")
 
@@ -89,6 +100,11 @@ def register(pls):
                          "with its source layer")
     _issue_option(ple)
     ple.set_defaults(func=run_policy_effective, output_kind="report")
+    plm = pls.add_parser("migrate", help="turn copied governance and the old settings file "
+                         "into a compass.yml overlay over the shipped default")
+    plm.add_argument("--apply", action="store_true",
+                     help="write the files; without it nothing is written")
+    plm.set_defaults(func=run_policy_migrate, output_kind="report")
     pll = pls.add_parser("lint", help="structurally validate the governance YAML")
     _issue_option(pll)
     pll.add_argument("--file", metavar="PATH",

@@ -328,6 +328,19 @@ def _locked_by_gate(guardrails):
     return locks
 
 
+def _project_check_id(guardrail):
+    """The id of the check a project guardrail's `command-passes` becomes:
+    the guardrail id, then its name as a slug."""
+    slug = "".join(c if c.isalnum() else "-" for c in str(guardrail.get("name", "")).lower())
+    slug = "-".join(part for part in slug.split("-") if part)
+    return f"{guardrail['id']}-{slug}" if slug else str(guardrail["id"])
+
+
+def _project_guardrails(guardrails):
+    return [g for g in guardrails.get("project") or []
+            if isinstance(g, dict) and "id" in g]
+
+
 def _checks(guardrails, notes):
     locks = _locked_by_gate(guardrails)
     out = {}
@@ -341,6 +354,16 @@ def _checks(guardrails, notes):
         if name in locks:
             entry["locked"] = locks[name]
         out[name] = entry
+    # A project guardrail runs the project's own command through the generic
+    # `command-passes` check; its parameters belong to the check it becomes.
+    for guardrail in _project_guardrails(guardrails):
+        if "command-passes" in (guardrail.get("checks") or []):
+            check = {"statement": guardrail.get("statement", ""), "kind": "deterministic",
+                     "impl": "command-passes", "severity": "blocking",
+                     "on_skipped": "not-applicable"}
+            if guardrail.get("params"):
+                check["params"] = copy.deepcopy(guardrail["params"])
+            out[_project_check_id(guardrail)] = check
     return out
 
 
@@ -374,6 +397,13 @@ def _gates(policy, guardrails, approaches, rules, notes):
         out[g["id"]] = _guardrail_gate(g, True, notes)
     for g in guardrails.get("spike_guardrails") or []:
         out[g["id"]] = _guardrail_gate(g, False, notes)
+    for g in _project_guardrails(guardrails):
+        gate = _guardrail_gate(g, True, notes)
+        # The project's own gate is not one of the framework's locks.
+        gate.pop("locked", None)
+        gate["checks"] = [_project_check_id(g) if c == "command-passes" else c
+                          for c in g.get("checks") or []]
+        out[g["id"]] = gate
     immovable = {r["gate"] for r in
                  (policy.get("routing_guardrails") or {}).get("immovable_gates") or []}
     accepted = guardrails.get("gate_evidence_requirements") or {}

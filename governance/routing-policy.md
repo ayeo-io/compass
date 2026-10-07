@@ -248,6 +248,19 @@ the two files are views generated from it.
 - The mutation-proof register test and the plain-language check read the
   checks and the guardrail statements from the preset.
 
+The preset also holds checks of kind `human`: the seven Definition of Ready
+items and the seven Definition of Done items. Each statement is the text of
+the template item (`templates/requirements-review.md` and
+`templates/verification-report.md`), and `tests/test_ready_and_done_data.py`
+fails when either differs. The `plan` stage's `entry` list holds the first
+seven and the `verify` stage's `exit` list holds the second seven. Each check
+needs the capability `entry-exit-evaluation`, which is off in `default@6`,
+so `compass check` does not run them and the two views do not name them (a
+legacy `checks:` entry needs an implementation). A Definition of Ready check
+returns `not-applicable` when its stage is skipped, because a collapsed or
+skipped refine meets it by construction. A Definition of Done check returns
+`fail`, as `dod-evidence-typed` does.
+
 `governance/legacy-views.yml` holds what the two files contain that the
 catalogues have no field for. Only the generator of the views reads it, and it
 goes with the views at 7.0.0.

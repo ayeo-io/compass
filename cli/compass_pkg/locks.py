@@ -19,10 +19,12 @@ what `conformance_lines` returns.
 """
 # DEPENDENCY: standard library (copy, itertools, json, os, textwrap, dataclasses);
 # compass_pkg.catalogue_spec, compass_pkg.atomic_io (the strict loader),
-# compass_pkg.classify (the grid, the comparison rules and its private names
-# `_Run`, `_evaluate`, `_where`, `_plain` and `_ob`), compass_pkg.merge,
-# compass_pkg.layers (Layer), compass_pkg.legacy_views (the preset's lock
-# summary, read lazily) and compass_pkg.core (CompassError). Imported by compass_pkg.check_cmd,
+# compass_pkg.classify (the grid, the comparison rules, its private names `_Run`,
+# `_evaluate`, `_where` and `_plain`, and the evaluator it imports, reached as
+# `classify.obligations` and `classify.Refused` because only classify may import
+# obligations), compass_pkg.merge, compass_pkg.layers (Layer),
+# compass_pkg.legacy_views (the preset's lock summary, read lazily) and
+# compass_pkg.core (CompassError). Imported by compass_pkg.check_cmd,
 # compass_pkg.receipt and compass_pkg.routing, which print its report.
 from __future__ import annotations
 
@@ -553,9 +555,9 @@ def _ended_here(fp, change, point, run):
     if not gone:
         return
     config, capabilities, issue = run.inputs[0]
-    owed = classify._ob.obligations(config, point.assessment, capabilities=capabilities,
+    owed = classify.obligations.obligations(config, point.assessment, capabilities=capabilities,
                                     issue=issue)
-    if isinstance(owed, classify._ob.Refused):
+    if isinstance(owed, classify.Refused):
         return
     listed = set()
     for ids in (*owed.entry.values(), *owed.exit.values(), *owed.gate_checks.values()):
@@ -573,7 +575,7 @@ def _evaluate_grid(fp, locks, before, after, kwargs, early_exit, out, grid):
     seen = {(r.entry, r.field, r.key) for r in out.refusals}
     for classes in itertools.product(*[cs for _, cs in grid.dimensions]):
         for subset in grid.label_subsets():
-            point = classify._evaluate(None, classes, subset, before, after, run)
+            point = classify._evaluate(classes, subset, run)
             out.evaluated += 1
             for change in point.changes:
                 for entry, field, key, outcome, p, c in itertools.chain(

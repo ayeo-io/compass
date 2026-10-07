@@ -12278,3 +12278,52 @@
 - **Intent:** `INT-1`
 - **Source issue:** `obligations`
 - **Landed:** 2026-10-07
+
+### The seven Definition of Ready items are human checks equal to the template text, listed as the plan stage's entry _(archived)_
+
+- **Scenario id:** `RD-1`
+- **Intent:** `E1.S1.04c`
+- **Source issue:** `ready-and-done-as-data`
+- **Landed:** 2026-10-07
+
+### The seven Definition of Done items are human checks equal to the template text, listed as the verify stage's exit _(archived)_
+
+- **Scenario id:** `RD-2`
+- **Intent:** `E1.S1.04c`
+- **Source issue:** `ready-and-done-as-data`
+- **Landed:** 2026-10-07
+
+### The 14 checks require the off capability, are blocking, and carry on_skipped; no other stage has a list _(archived)_
+
+- **Scenario id:** `RD-3`
+- **Intent:** `E1.S1.04c`
+- **Source issue:** `ready-and-done-as-data`
+- **Landed:** 2026-10-07
+
+### The generated views do not name the human checks and stay unchanged _(archived)_
+
+- **Scenario id:** `RD-4`
+- **Intent:** `E1.S1.04c`
+- **Source issue:** `ready-and-done-as-data`
+- **Landed:** 2026-10-07
+
+### A drifted template item, missing check, reordered list or wrong kind is named by the guard _(archived)_
+
+- **Scenario id:** `RD-5`
+- **Intent:** `E1.S1.04c`
+- **Source issue:** `ready-and-done-as-data`
+- **Landed:** 2026-10-07
+
+### A spike owes none of the 14 checks while the capability is off _(archived)_
+
+- **Scenario id:** `RD-6`
+- **Intent:** `E1.S1.04c`
+- **Source issue:** `ready-and-done-as-data`
+- **Landed:** 2026-10-07
+
+### A stray line in a template section is refused _(archived)_
+
+- **Scenario id:** `RD-7`
+- **Intent:** `E1.S1.04c`
+- **Source issue:** `ready-and-done-as-data`
+- **Landed:** 2026-10-07

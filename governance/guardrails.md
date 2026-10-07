@@ -126,3 +126,30 @@ in `guardrails.yml`, it belongs in `strategies.md`.
 
 Why it is enforced rather than warned about:
 `governance/strategies-rationale.md`, under "The integrity rule".
+
+**The check registry - each implementation carries a version.**
+
+- `cli/compass_pkg/check_registry.py` holds one entry for each built-in check
+  implementation. `CHECK_FNS` is derived from it. An entry holds a semantic
+  version (all start at `1.0.0`), a parameter spec, a `tighter` value per
+  parameter (`higher`, `lower` or `none`, default `none`), whether the check
+  runs project code (`command-passes` alone), and the path of its fixture
+  corpus. It also answers "installed version" and "installed major" of an
+  implementation.
+- The corpus is `tests/fixtures/check-corpus/<implementation>/<case>/`. Each
+  case has an `expected.yml` holding a verdict (`pass`, `fail` or
+  `nothing-to-check`) and a short description of the input, never the detail
+  text. The input is built by `tests/check_corpus_runner.py`, which runs the
+  implementation and computes the verdict. A test fails when a label differs
+  from the computed verdict.
+- `tests/fixtures/check-corpus/versions.lock.yml` holds, per implementation,
+  its version and a digest of its computed verdicts. The build fails when a
+  digest changes and the major version does not, and when the installed major
+  differs from the locked one. A change that changes a verdict must bump the
+  major and update the lock file in the same change.
+- Within a major, compatibility is shown on the corpus cases only. A change of
+  behaviour that no case exercises is not detected.
+- `compass policy lint` refuses a check whose `impl:` names an implementation
+  the registry does not hold. The runtime ignores `impl:` for now: a check runs
+  the implementation that carries its name. The refusal of a major-version
+  mismatch at run time comes with stored configuration generations.

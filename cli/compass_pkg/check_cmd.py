@@ -43,30 +43,9 @@ from compass_pkg.core import FRAMEWORK_ROOT, exit_for_mode, find_governance, loa
 
 
 
-CHECK_FNS = {
-    "scenarios-have-tests": _check_scenarios_have_tests,
-    "scenarios-are-executable": _check_scenarios_are_executable,
-    "declared-tests-resolve": _check_declared_tests_resolve,
-    "suite-passed": _check_suite_passed,
-    "changed-code-traces-to-scenario": _check_changed_code_traces,
-    "scenario-has-id-and-intent": _check_scenario_has_id_and_intent,
-    "claim-traces-to-scenario": _check_claim_traces,
-    "landed-by-resolves": _check_landed_by_resolves,
-    "gate-evidence-present": _check_gate_evidence,
-    "dod-evidence-typed": _check_dod_evidence_typed,
-    "human-approval-present": _check_human_approval,
-    "backfills-paid": _check_backfills_paid,
-    "spike-conclusion-present": _check_spike_conclusion_present,
-    "spike-no-production-changes": _check_spike_no_production_changes,
-    "consistency-check-passes": _check_coherence_check_passes,
-    "no-trusted-rerun": _check_no_trusted_rerun,
-    "command-passes": _check_command_passes,
-    "evidence-identity-matches": _check_evidence_identity_matches,
-    "evidence-matches-tree": _check_evidence_matches_tree,
-    "dashboard-current": _check_dashboard_current,
-    "borrowed-documents-answered": _check_borrowed_documents_answered,
-    "multiagent-run-recorded": _check_multiagent_run_recorded,
-}
+# Derived from the registry, which holds each implementation's version and
+# corpus (ADR-038); kept here so every existing caller keeps its import.
+from compass_pkg.check_registry import CHECK_FNS  # noqa: E402
 
 # Per-check guidance for structured failure messages. Each entry has the
 # *why it matters* and the *how to fix it* - the bits a check's own detail

@@ -283,6 +283,15 @@ Compass cannot prevent a person, automation or agent from changing the
 repository outside its adapter and commands. Repository permissions, branch
 protection, review policy and CI remain essential.
 
+### A check's compatibility within a major version is shown on its corpus only
+
+Each built-in check implementation carries a version, and a fixture corpus of
+cases with known verdicts. A build rule fails when a corpus verdict changes
+and the major version does not. Across majors, Compass is designed to refuse
+rather than reinterpret. Within a major, compatibility is shown on the corpus
+cases and nowhere else. A change of behaviour that no case exercises is not
+detected, and the corpus is small (two cases for each check at first).
+
 ### Compass is adaptable, not universal
 
 The shipped policies are a starting point. Teams can add strategies and

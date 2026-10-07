@@ -12327,3 +12327,45 @@
 - **Intent:** `E1.S1.04c`
 - **Source issue:** `ready-and-done-as-data`
 - **Landed:** 2026-10-07
+
+### stable_ids.py imports nothing and its ids equal the default preset _(archived)_
+
+- **Scenario id:** `SI-1`
+- **Intent:** `E1.S1.19`
+- **Source issue:** `stable-ids`
+- **Landed:** 2026-10-07
+
+### The scanner finds an id in five positions and skips text _(archived)_
+
+- **Scenario id:** `SI-2`
+- **Intent:** `E1.S1.19`
+- **Source issue:** `stable-ids`
+- **Landed:** 2026-10-07
+
+### No module outside stable_ids.py holds an approach id or a gate id in a scanned position _(archived)_
+
+- **Scenario id:** `SI-3`
+- **Intent:** `E1.S1.19`
+- **Source issue:** `stable-ids`
+- **Landed:** 2026-10-07
+
+### Legacy approach names and routing.py approach ids live only in stable_ids.py _(archived)_
+
+- **Scenario id:** `SI-4`
+- **Intent:** `E1.S1.19`
+- **Source issue:** `stable-ids`
+- **Landed:** 2026-10-07
+
+### The allow list names a reason, matches a line, and a stale entry fails _(archived)_
+
+- **Scenario id:** `SI-5`
+- **Intent:** `E1.S1.19`
+- **Source issue:** `stable-ids`
+- **Landed:** 2026-10-07
+
+### The stage-id literals left in each module equal the recorded count _(archived)_
+
+- **Scenario id:** `SI-6`
+- **Intent:** `E1.S1.19`
+- **Source issue:** `stable-ids`
+- **Landed:** 2026-10-07

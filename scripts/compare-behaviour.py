@@ -3,7 +3,7 @@
 prose rewrite changed no behaviour: no printed string, no asserted string
 and no code body. `prose-breaks-the-writing-style` needs this because
 `verify.architecture` accepts only a `test-run` or a `command-output`
-(`governance/guardrails.yml:182`), and this is the command that produces one.
+(`gate_evidence_requirements` in `governance/guardrails.yml`), and this is the command that produces one.
 
 Comparison, per file type:
 

@@ -1,11 +1,16 @@
+# GENERATED FILE - do not edit by hand. The source is the default preset in
+# governance/presets/default/ and governance/legacy-views.yml. Change those,
+# then regenerate this file with: python3 scripts/generate-legacy-views.py
+# A test fails when this file differs from what that command writes.
 # =============================================================================
 # A CHECK DERIVES FROM THIS FILE'S STRUCTURE.
-# tests/plain_language_check.py builds its registry of what each code means by
-# reading `defaults:` and each entry's `id`, `name` and `statement`. Change
-# those key names or that nesting and the derivation fails loudly, naming this
-# file - it does not fall back to a hand-written table, because a table would
-# drift from this file in silence. This is the derivation-failure criterion
-# (`TRC-C9`).
+# tests/plain_language_check.py builds its registry of what each code means from
+# the `gates` of the preset in governance/presets/default/, and from `defaults:`
+# and each entry's `id`, `name` and `statement` here when the preset is absent.
+# Change those key names or that nesting and the derivation fails loudly,
+# naming this file - it does not fall back to a hand-written table, because a
+# table would drift from this file in silence. This is the derivation-failure
+# criterion (`TRC-C9`).
 # =============================================================================
 # Compass - guardrails.yml
 # =============================================================================
@@ -85,50 +90,53 @@ checks:
   dod-evidence-typed:
     description: >
       Every unchecked DoD box in verification-report.md must carry an inline
-      tag: `(evidence: EV-<id>)` referencing a typed evidence registry entry,
-      or `(follow-up: FU-<id>)` referencing an outstanding follow-up. A bare unchecked
-      box fails. Checked boxes (`- [x]`) pass without a tag - the human took
-      responsibility. Narrative notes (devlog 'USER TO APPLY') never count.
-      Cross-issue: when another issue has a follow-up with target_task pointing at
-      this issue, that follow-up must be resolved before this issue ships.
+      tag: `(evidence: EV-<id>)` referencing a typed evidence registry
+      entry, or `(follow-up: FU-<id>)` referencing an outstanding follow-up.
+      A bare unchecked box fails. Checked boxes (`- [x]`) pass without a tag
+      - the human took responsibility. Narrative notes (devlog 'USER TO
+      APPLY') never count. Cross-issue: when another issue has a follow-up
+      with target_task pointing at this issue, that follow-up must be
+      resolved before this issue ships.
   consistency-check-passes:
     description: "compass analyze reports zero consistency findings. Gate-clearing runs write type consistency-check evidence; advisory runs write command-output and do not clear verify.analyze."
   no-trusted-rerun:
     description: >
       Every test-run evidence entry is checked for rerun integrity. A record
-      with rerun_without_change: true must have its test listed in the project
-      quarantine registry (governance/quarantine.yml) with a tracking issue - a
-      rerun-to-green without a quarantine entry is a `G4` failure (`S5`: intermittency
-      is failure). A record with `attempts` > 1 but no rerun_without_change marker
-      is also rejected - incomplete evidence cannot clear `G4`. Old evidence without
-      an `attempts` field passes trivially (backward compatibility, ADR-006,
-      `TRC-A5`). May carry
-      attempts: <int> and rerun_without_change: <bool> to signal rerun integrity
-      (see strategy `S5`).
+      with rerun_without_change: true must have its test listed in the
+      project quarantine registry (governance/quarantine.yml) with a
+      tracking issue - a rerun-to-green without a quarantine entry is a `G4`
+      failure (`S5`: intermittency is failure). A record with `attempts` > 1
+      but no rerun_without_change marker is also rejected - incomplete
+      evidence cannot clear `G4`. Old evidence without an `attempts` field
+      passes trivially (backward compatibility, ADR-006, `TRC-A5`). May
+      carry attempts: <int> and rerun_without_change: <bool> to signal rerun
+      integrity (see strategy `S5`).
   evidence-identity-matches:
     description: >
-      Every registry entry still names the record it was created from. Records
-      are stamped at write time with a `record_id` (unique per write) and a
-      `content_digest` (over the payload); the entry stores both. A different
-      record_id means the file was replaced after it was cited; a matching
-      record_id with a different digest means it was edited in place. An entry
-      with no record_id predates stamping and is UNVERIFIABLE - reported and
-      counted apart from the passes, never treated as checked, because an
-      unstamped record cannot be checked against its citation.
+      Every registry entry still names the record it was created from.
+      Records are stamped at write time with a `record_id` (unique per
+      write) and a `content_digest` (over the payload); the entry stores
+      both. A different record_id means the file was replaced after it was
+      cited; a matching record_id with a different digest means it was
+      edited in place. An entry with no record_id predates stamping and is
+      UNVERIFIABLE - reported and counted apart from the passes, never
+      treated as checked, because an unstamped record cannot be checked
+      against its citation.
 
   evidence-matches-tree:
     description: >
       The newest test record still names the tree that ships. Every red,
       green and acceptance record carries tree_id, the git tree id of the
       tracked files on disk plus the issue's untracked changed files, less
-      .compass/ and docs/compass/, and changes_id, a tree of the changed files
-      and the test files the scenarios declare. For an issue in flight the check compares tree_id with the tree
-      now, and fails only once every gate has passed; before that a stale
-      record is a note. For a landed issue it compares changes_id with the
-      same files in land_commit, the commit ship-commit made. A record with
-      no tree_id, or a landed issue with no land_commit, is not judged; a
-      land_commit that is not a commit id fails. It shows which tree a record
-      claims, not that a trusted runner made the claim.
+      .compass/ and docs/compass/, and changes_id, a tree of the changed
+      files and the test files the scenarios declare. For an issue in flight
+      the check compares tree_id with the tree now, and fails only once
+      every gate has passed; before that a stale record is a note. For a
+      landed issue it compares changes_id with the same files in
+      land_commit, the commit ship-commit made. A record with no tree_id, or
+      a landed issue with no land_commit, is not judged; a land_commit that
+      is not a commit id fails. It shows which tree a record claims, not
+      that a trusted runner made the claim.
 
   command-passes:
     description: "Runs the project guardrail's declared `command:` via subprocess and checks it exits 0. On success: emits a command-output evidence entry. On failure: emits a command-output evidence entry with exit code + stderr. When verify.architecture is in the gate set and zero project guardrails declare command-passes, it passes without checking anything (no declarations means there are no architecture checks to run)."
@@ -167,10 +175,9 @@ evidence_types:
     description: >
       A recorded test execution - e.g. evidence/green-<scenario>.json from a
       scenario-bound `compass tdd-green`, or evidence/green.json from an
-      unbound one.
-      The strongest: a machine ran it. May carry attempts: <int> and
-      rerun_without_change: <bool> to signal rerun integrity (see strategy `S5` and
-      the no-trusted-rerun check).
+      unbound one. The strongest: a machine ran it. May carry attempts:
+      <int> and rerun_without_change: <bool> to signal rerun integrity (see
+      strategy `S5` and the no-trusted-rerun check).
   command-output:
     description: "Captured output of a command - a scanner, a linter, a coverage run, a `compass check` run."
   manual-review:
@@ -221,8 +228,11 @@ defaults:
   - id: G1
     name: "Tested before it lands"
     statement: >
-      No code reaches main unless it traces to a declared test and a green test run is on record.
-      Compass checks that both exist and line up; it does not observe the declared test running - see docs/safety-contract.md for what a test-run record does and does not establish.
+      No code reaches main unless it traces to a declared test and a green
+      test run is on record. Compass checks that both exist and line up; it
+      does not observe the declared test running - see
+      docs/safety-contract.md for what a test-run record does and does not
+      establish.
     # The red-before-green cycle is strategy `S2`, not this guardrail. `G1` is the
     # outcome; `compass check` checks the outcome, the hook enforces `S2`.
     # `declared-tests-resolve` closes the gap that a test being *named* is not
@@ -251,25 +261,27 @@ defaults:
     # ends must name each other, the named issue must have landed, and it
     # must carry a record of its own - otherwise a chain of empty issues
     # could vouch for one another.
-    checks: [changed-code-traces-to-scenario, scenario-has-id-and-intent, claim-traces-to-scenario, landed-by-resolves]
+    checks: [changed-code-traces-to-scenario, scenario-has-id-and-intent, claim-traces-to-scenario,
+             landed-by-resolves]
     checked_at: [clarify, build, verify, land]
 
   - id: G4
     name: "Evidence, not assertion"
     statement: >
-      A guardrail is cleared with artifacts and command output, never a claim.
-      The Definition of Done is a typed gate: every unchecked DoD box must
-      reference typed evidence or a filed follow-up - narrative notes never clear it.
-    checks: [gate-evidence-present, dod-evidence-typed, consistency-check-passes, no-trusted-rerun, command-passes,
-             evidence-identity-matches, evidence-matches-tree, dashboard-current,
+      A guardrail is cleared with artifacts and command output, never a
+      claim. The Definition of Done is a typed gate: every unchecked DoD box
+      must reference typed evidence or a filed follow-up - narrative notes
+      never clear it.
+    checks: [gate-evidence-present, dod-evidence-typed, consistency-check-passes, no-trusted-rerun,
+             command-passes, evidence-identity-matches, evidence-matches-tree, dashboard-current,
              borrowed-documents-answered, multiagent-run-recorded]
     checked_at: [verify, land]
 
   - id: G5
     name: "A human signs off on the irreversible"
     statement: >
-      A change that can lose data, move money, or breach auth or privacy gets
-      an explicit human checkpoint before it lands.
+      A change that can lose data, move money, or breach auth or privacy
+      gets an explicit human checkpoint before it lands.
     checks: [human-approval-present]
     # Fires on either arm, because the statement above names CONSEQUENCES while
     # a tag list names domains, and those are not the same set. A change that
@@ -298,8 +310,8 @@ spike_guardrails:
     name: "Spike conclusion recorded"
     statement: >
       A Spike must record what it learned and a close-out decision: discard
-      the work, graduate to delivery, or defer. Without a recorded conclusion
-      a Spike is just untracked work.
+      the work, graduate to delivery, or defer. Without a recorded
+      conclusion a Spike is just untracked work.
     checks: [spike-conclusion-present]
     checked_at: [land]
 

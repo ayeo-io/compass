@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Prove each shipped check's register tests can fail, by breaking the check.
 
-`tests/mutation_proofs.yml` names, for every check under `checks:` in
-`governance/guardrails.yml`, a test that feeds the check a broken input
+`tests/mutation_proofs.yml` names, for every check under `checks:` in the
+default preset's `checks.yml`, a test that feeds the check a broken input
 (`fails`) and a test that asserts it passes once the input is right
 (`restores`). That proves the tests exist, not that they would notice a
 broken check: a test can match a message a passing check also prints, or

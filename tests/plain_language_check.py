@@ -9,7 +9,7 @@ the reader still met the code first. **The order is the rule, not the nearness.*
 Two design decisions a reader should be able to argue with:
 
 **The registry of meanings is DERIVED from governance, never hand-written.**
-`guardrails.yml` states `G1`-`G5`, the strategy headings state `S1`-`S12`, and
+the default preset's gates state `G1`-`G5`, the strategy headings state `S1`-`S12`, and
 `terminology.yml`'s `codes:` block already carries a `means:` per id prefix. A
 hand-written table would go out of date without any check failing - it would
 keep passing while describing codes that had been renamed. The cost is that
@@ -84,8 +84,24 @@ class Hit:
     sentence: str
 
 
-def _guardrail_meanings() -> dict[str, set[str]]:
-    path = REPO_ROOT / "governance" / "guardrails.yml"
+PRESET_DIR = REPO_ROOT / "governance" / "presets" / "default"
+
+
+def _guardrail_meanings(preset: Path = PRESET_DIR,
+                        guardrails: Path | None = None) -> dict[str, set[str]]:
+    """Each default guardrail's words, from the preset's gates.
+
+    The preset is the source of the shipped defaults and guardrails.yml is a
+    view generated from it, so the preset is read first. The view is read
+    only when the preset's gates file is absent.
+    """
+    gates_file = preset / "gates.yml"
+    if gates_file.is_file():
+        doc = yaml.safe_load(gates_file.read_text(encoding="utf-8")) or {}
+        return {gid: _words(f"{g.get('name','')} {g.get('statement','')}")
+                for gid, g in (doc.get("gates") or {}).items()
+                if g.get("kind") == "guardrail" and (g.get("applies_to") or {}).get("ships")}
+    path = guardrails or REPO_ROOT / "governance" / "guardrails.yml"
     doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     out = {}
     for g in doc.get("defaults") or []:
@@ -129,7 +145,8 @@ def gloss_registry(guardrails=None, strategies=None, codes=None) -> dict[str, se
     if empty:
         raise EmptyRegistry(
             f"the gloss registry is empty from: {', '.join(empty)}. "
-            f"Derived from guardrails.yml, the strategy headings in "
+            f"Derived from the default preset's gates (guardrails.yml, "
+            f"generated from them, when the preset is absent), the strategy headings in "
             f"strategies.md, and terminology.yml's codes: block. With no "
             f"meanings on record every code looks unexplainable, so this "
             f"refuses to report a count of zero - a zero here would be "

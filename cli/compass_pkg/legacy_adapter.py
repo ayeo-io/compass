@@ -531,11 +531,13 @@ def lock_summary(document):
 
 
 _HEADER = (
-    "# The shipped default preset, produced once from governance/routing-policy.yml\n"
-    "# and governance/guardrails.yml by cli/compass_pkg/legacy_adapter.py.\n"
-    "# From the increment that turns those two legacy files into generated views,\n"
-    "# these files are the source of the shipped defaults. Change the defaults\n"
-    "# here, never in a view.\n")
+    "# The shipped default preset: the source of the shipped defaults.\n"
+    "# The two files governance/routing-policy.yml and governance/guardrails.yml\n"
+    "# are generated from these files and governance/legacy-views.yml.\n"
+    "# Change a default here, then run python3 scripts/generate-legacy-views.py.\n"
+    "# Also raise the version in legacy-views.yml, then run the script with --pin\n"
+    "# and again with --pin-hashes, which update the digest and drift fixtures.\n"
+    "# cli/compass_pkg/legacy_adapter.py wrote these files once, from those two files.\n")
 
 _MODE_NOTE = ("  # vocabulary-scan: allow - machine enum value that manifests on "
               "disk already carry\n")

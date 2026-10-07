@@ -221,6 +221,7 @@ class _CheckRun:
 
     def __init__(self, task_dir, task, mode):
         self.task_dir = task_dir
+        self.task = task
         self.slug = os.path.basename(task_dir)
         self.approach = task.get("delivery_approach", "?")
         self.mode_banner = mode_banner(mode)
@@ -394,7 +395,7 @@ def _emit_check(run, args):
     # The verdicts go into the generation's `results.yml`, which the generation's
     # marker does not cover. An issue with no generation writes nothing.
     from compass_pkg import effective
-    effective.record_check_results(run.task_dir, _verdicts(run.results))
+    effective.record_check_results(run.task_dir, _verdicts(run.results), manifest=run.task)
 
     mark_handled()
     mode = resolve_mode(args)

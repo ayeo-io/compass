@@ -1290,3 +1290,15 @@ def test_gs_22_evaluator_policy_is_the_adapter_over_the_resolved_configuration(
         assert policy == obligations.policy_adapter(view.config)
         assert {"route_shapes", "assessment_vocabulary", "routing_strategies"} <= set(policy)
     assert live.evaluator_policy() == stored.evaluator_policy()
+
+
+def test_gs_12_check_records_results_from_the_manifest_it_already_loaded(tmp_path, monkeypatch):
+    # compass check holds the manifest; reading it again from disk is a second
+    # source of truth, and fails a summary built without a file on disk.
+    import inspect
+    from compass_pkg import effective
+    assert "manifest" in inspect.signature(effective.record_check_results).parameters
+    calls = []
+    monkeypatch.setattr(effective, "load_manifest", lambda *a, **k: calls.append(a))
+    assert effective.record_check_results(tmp_path, {}, manifest={"status": "active"}) is None
+    assert calls == []

@@ -311,15 +311,17 @@ def _verdict_rank(verdict):
     return ("pass", "nothing-to-check", "fail").index(verdict)
 
 
-def record_check_results(task_dir, verdicts):
+def record_check_results(task_dir, verdicts, manifest=None):
     """Rewrite `results.yml` of the generation the issue runs against with the
     verdict of each check in `verdicts` (`{check id: pass | fail |
     nothing-to-check}`): when it ran, which implementation and version ran
     it, and a digest of the check's definition as the generation stores it.
     An issue with no generation gets no file. Returns the number of checks
-    written, or None."""
+    written, or None. `compass check` passes the manifest it already loaded,
+    so the verdicts are filed against the generation that run checked."""
     task_dir = os.fspath(task_dir)
-    manifest, _ = load_manifest(task_dir)
+    if manifest is None:
+        manifest, _ = load_manifest(task_dir)
     held = generation.number(manifest)
     if not held:
         return None

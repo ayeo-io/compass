@@ -210,10 +210,7 @@ _VERIFIED_BY_KINDS = {"regression", "e2e", "typecheck", "live"}
 def _read_config(task_dir):
     """Load the settings of the project containing task_dir. {} on miss."""
     root = find_upwards(task_dir, ".compass") or task_dir
-    try:
-        return project_settings.settings(root)
-    except CompassError:
-        return {}
+    return project_settings.lenient(root)
 
 
 def settings_hint(task_dir, key, value=None):

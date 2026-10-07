@@ -170,13 +170,13 @@ def load_mode():
     or 'advisory'. In advisory mode every failure is still reported, but the
     CLI exits 0 - useful for piloting Compass without blocking delivery."""
     try:
-        cfg = project_settings.settings(os.path.dirname(find_compass_dir()))
-        mode = str(cfg.get("adoption") or "enforced").strip().lower()
-        if mode in ("advisory", "enforced"):
-            return mode
+        root = os.path.dirname(find_compass_dir())
     except CompassError:
-        pass
-    return "enforced"
+        return "enforced"
+    # `lenient` lets a conflict through: the mode cannot be read, so the
+    # command must not carry on as if it were enforced or advisory.
+    mode = str(project_settings.lenient(root).get("adoption") or "").strip().lower()
+    return mode if mode == "advisory" else "enforced"
 
 
 # The stage hand-offs that can wait for a person, and the `autonomy:`

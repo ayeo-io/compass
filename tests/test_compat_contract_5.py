@@ -105,6 +105,8 @@ def move_settings(project):
              if k in data}
     if "mode" in data:
         data["adoption"] = data.pop("mode")
+    # `schema:` first, as migration writes it: it marks the file as Compass's.
+    data = {"schema": 1, **data}
     (project / "compass.yml").write_text(yaml.safe_dump(data, sort_keys=False))
     if state:
         (project / ".compass" / "state.yml").write_text(
@@ -124,6 +126,33 @@ def test_contract_5_decides_the_same_with_settings_in_compass_yml(install, entry
         assert entry["stderr_contains"] in err
     if "stderr_excludes" in entry:
         assert entry["stderr_excludes"] not in err
+
+
+def test_contract_5_every_moved_compass_yml_carries_the_schema_marker(install):
+    """Migration writes `schema:` into each `compass.yml` it creates, because
+    that key is how a project holding both files tells Compass's file from
+    another product's. The conversion above stands in for migration, so it
+    must write the key, or the corpus would not test what migration makes.
+    A file that does not parse is moved whole and has no key to check."""
+    import yaml
+
+    hook_root, base = install
+    seen = []
+
+    def move_and_record(project):
+        move_settings(project)
+        moved = project / "compass.yml"
+        if moved.exists():
+            try:
+                seen.append(yaml.safe_load(moved.read_text()))
+            except yaml.YAMLError:
+                pass
+
+    for entry in MOVABLE:
+        compat_hook.run_entry(hook_root, base, entry, mutate=move_and_record)
+    moved = [data for data in seen if isinstance(data, dict)]
+    assert moved, "no entry moved a settings file"
+    assert [d for d in moved if "schema" not in d] == []
 
 
 def test_contract_5_the_moved_corpus_can_fail_when_the_hook_ignores_compass_yml(

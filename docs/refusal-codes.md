@@ -82,3 +82,9 @@ code from a refusal you hit.
 **Blocked:** this edit
 **Why:** the red record for issue '{slug}' carries no identity - no content_digest - and this project needs one for records written since records_signed_since: {since_date}.
 **Fix:** run compass tdd-red --scenario <id> -- <your failing test command>.
+
+### `settings-conflict`
+
+**Blocked:** edit to {target} (tool: {tool})
+**Why:** .compass/config.yml sets {keys}, but compass.yml is read, so those keys guard nothing.
+**Fix:** Move them into compass.yml (write mode as adoption) and delete them from .compass/config.yml, then retry.

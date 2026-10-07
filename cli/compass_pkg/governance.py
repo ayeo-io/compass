@@ -298,7 +298,9 @@ def _drift_is_strict():
     failing by default would turn every existing adopter's build red the moment
     they upgrade, which punishes upgrading (ADR-006)."""
     try:
-        cfg = project_settings.settings(os.path.dirname(find_compass_dir()))
+        cfg = project_settings.lenient(os.path.dirname(find_compass_dir()))
+    except project_settings.SettingsConflict:
+        raise
     except Exception:                                   # noqa: BLE001
         return False
     return str(cfg.get("governance_drift", "advisory")).strip().lower() == "strict"

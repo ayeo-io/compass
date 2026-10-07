@@ -195,6 +195,15 @@ opted in and has not been assessed is still refused, and a project the hook
 cannot read is still refused - Compass answering "allow" to a question it
 could not ask would be a guardrail switched off silently.
 
+The same rule covers a project with both `compass.yml` and
+`.compass/config.yml`. When `compass.yml` is Compass's file (it has a
+top-level `schema:` key) and the old file still holds a setting such as
+`enforcement`, that setting would stop guarding without a word, so the hook
+refuses with `settings-conflict` and the CLI commands that read settings stop
+with the same text. A `compass.yml` with no `schema:` is not taken for
+Compass's file: the old file keeps guarding and a warning says so. A
+`compass.yml` that is the only settings file is read as it is.
+
 ### Compass needs Python 3.10 or later
 
 The CLI and the pre-tool hook's checks are Python. Without a working

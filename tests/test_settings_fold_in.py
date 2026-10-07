@@ -208,10 +208,14 @@ def test_sr2_unknown_autonomy_names_the_file_read(root):
         core.load_autonomy()
 
 
-def test_sr2_compass_yml_wins_when_both_exist(root):
-    (root / ".compass" / "config.yml").write_text("mode: advisory\n")
-    (root / "compass.yml").write_text("adoption: enforced\n")
-    assert core.load_mode() == "enforced"
+def test_sr2_compass_yml_is_read_when_both_exist_and_the_old_file_has_only_state(
+        root):
+    # `schema:` makes it Compass's file, so it is the one read. A setting left
+    # in the old file would be a conflict, so the old file holds state only.
+    (root / ".compass" / "config.yml").write_text(
+        "records_signed_since: '2026-09-24'\n")
+    (root / "compass.yml").write_text("schema: 1\nadoption: advisory\n")
+    assert core.load_mode() == "advisory"
 
 
 # SR-3: `compass init` writes the state file and no settings.

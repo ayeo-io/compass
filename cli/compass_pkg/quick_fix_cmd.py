@@ -711,7 +711,9 @@ def _record_usage(task_dir, finish_started_at):
         prices = project_settings.settings(project_root).get("prices") or {}
         task["usage"] = session_usage.stage_usage(
             task_dir, task, others, prices=prices if isinstance(prices, dict) else {})
-    except Exception:                                      # noqa: BLE001
+    except project_settings.SettingsConflict:
+        raise
+    except Exception:                                    # noqa: BLE001
         previous = task.get("usage") if isinstance(task.get("usage"), dict) else {}
         task["usage"] = {"recorded": False, "reason": "unreadable",
                          **({"session": previous["session"]}

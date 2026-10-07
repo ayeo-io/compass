@@ -47,6 +47,9 @@ FIXTURES = {
         target="packaging/app.cfg", tool="Edit", file=".compass/config.yml",
         detail="enforcement.code_globs must be a list of strings, "
                "not ['packaging/**']"),
+    "settings-conflict": dict(target="packaging/app.cfg", tool="Edit",
+                              keys="mode, autonomy, enforcement, record, "
+                                   "project and 2 more"),
     "not-initialised": dict(detail="no .compass/work/ exists in this project"),
     "bad-current-task": dict(slug="../side"),
     "bad-session-issue": dict(slug="missing"),

@@ -35,6 +35,7 @@
 from __future__ import annotations
 
 from compass_pkg.core import CompassError
+from compass_pkg.project_settings import CONFLICT_FIX, CONFLICT_WHY
 
 #: code -> {"what": ..., "why": ..., "fix": ...}. Each value is a
 #: str.format() template; the named fields it reads are the keyword
@@ -58,6 +59,13 @@ REFUSALS: dict[str, dict[str, str]] = {
         "what": "edit to {target} (tool: {tool})",
         "why": "'{file}' could not be read: {detail}",
         "fix": "fix {file} and retry.",
+    },
+    "settings-conflict": {
+        "what": "edit to {target} (tool: {tool})",
+        # The same two strings the CLI error is built from, so the hook and
+        # the CLI cannot word it differently.
+        "why": CONFLICT_WHY,
+        "fix": CONFLICT_FIX,
     },
     "not-initialised": {
         "what": "this edit",

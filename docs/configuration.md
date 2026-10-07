@@ -8,11 +8,13 @@ every reader of a setting follows the same file.
 ## Where the settings live
 
 - **`compass.yml` at the project root** holds the settings. The CLI reads it
-  when it exists, and refuses a key that appears twice.
+  when it is Compass's file, and refuses a key that appears twice. It is
+  Compass's file when it has a top-level `schema:` key, or when it is the only
+  settings file.
 - **`.compass/config.yml`** holds the same settings for a project that has no
-  `compass.yml`. The CLI reads it only when `compass.yml` is absent. In this
-  file the adoption setting is called `mode`; in `compass.yml` it is called
-  `adoption`.
+  `compass.yml`. The CLI reads it when `compass.yml` is absent, or present
+  without `schema:`. In this file the adoption setting is called `mode`; in
+  `compass.yml` it is called `adoption`.
 - **The state file in `.compass/`** holds what the CLI writes, not what a
   person edits: `initialised` (what created the project, and when) and
   `records_signed_since`. Do not edit it. `compass init` writes this file and
@@ -25,6 +27,37 @@ duplicate key in `compass.yml`, is a broken file. Each command then does what
 it did before: the adoption setting falls back to `enforced`, `autonomy` and
 `record` refuse and name the file, and the project and `allow_project_commands`
 settings read as not set.
+
+### A project with both files
+
+The state decides what Compass reads, and no state loses a setting silently:
+
+| `compass.yml` | `.compass/config.yml` | What happens |
+|---|---|---|
+| has `schema:` | holds a settings key | Compass refuses (`settings-conflict`). |
+| has `schema:` | holds only `initialised`, `records_signed_since` or unread keys | `compass.yml` is read. |
+| has no `schema:` | present | `.compass/config.yml` is read, and a warning on stderr says `compass.yml` is ignored. Add `schema:` if it is Compass's file. |
+| only file | absent | `compass.yml` is read, with or without `schema:`. |
+
+- **What counts as a settings key in the old file:** `mode`, `autonomy`,
+  `allow_project_commands`, `enforcement`, `record`, `project`, `prices`,
+  `multiagent`, `preset_index` and `governance_drift`. The three keys the
+  multiagent scripts read, `worktree_root`, `max_worktrees` and `test_command`,
+  also count when they sit outside `multiagent:` and `project:`, because the
+  scripts find them at any depth in the old file.
+- **How the refusal shows.** The pre-tool hook exits 2 with `settings-conflict`
+  for an edit to a path its built-in rules neither guard nor exempt. Each CLI
+  command that reads settings stops with the same text, and `compass check`
+  fails. The text names the keys, up to five and then "and N more".
+- **The way out.** Move those keys into `compass.yml` (write `mode` as
+  `adoption`) and delete them from `.compass/config.yml`. The text names no
+  migration command, because none exists yet.
+- **A broken file.** A file that cannot be parsed is refused and named, in
+  either position, as for a lone file. A `compass.yml` that cannot be parsed
+  counts as Compass's file, so the old file cannot hide it.
+- **The marker.** Every `compass.yml` that Compass creates must carry
+  `schema:`. `compass init` writes no `compass.yml`, so nothing writes it yet;
+  the migration command and the rewritten `init` will.
 
 ## Settings
 

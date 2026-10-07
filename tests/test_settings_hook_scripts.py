@@ -52,9 +52,11 @@ def test_sh1_a_glob_guards_its_path_from_either_file(box, where):
     assert hook_edit(framework, base, project, "docker-compose.yml")[0] == 0
 
 
-def test_sh1_compass_yml_wins_when_both_files_exist(box):
+def test_sh1_compass_yml_is_read_when_both_exist_and_the_old_file_has_only_state(
+        box):
     framework, base = box
-    project = make_project(base, compass_yml=GLOBS, old=OTHER_GLOBS)
+    # A setting left in the old file would be a conflict, not a second source.
+    project = make_project(base, compass_yml="schema: 1\n" + GLOBS, old=STATE)
     assert hook_edit(framework, base, project, "packaging/build.cfg")[0] == 2
     assert hook_edit(framework, base, project, "other/build.cfg")[0] == 0
 
@@ -82,7 +84,9 @@ def test_sh1_the_matched_rule_names_the_file_it_read(box):
 ])
 def test_sh1_a_compass_yml_the_hook_cannot_read_blocks_and_names_it(box, body):
     framework, base = box
-    project = make_project(base, compass_yml=body, old=GLOBS)
+    # `schema:` makes it Compass's file. The old file holds state only: a
+    # setting in it would be a conflict, and this test is about the read error.
+    project = make_project(base, compass_yml="schema: 1\n" + body, old=STATE)
     exit_code, code, err = hook_edit(framework, base, project,
                                      "docker-compose.yml")
     assert (exit_code, code) == (2, "config-invalid"), err
@@ -169,15 +173,25 @@ def test_sh3_an_older_heading_and_top_level_keys_still_read_from_the_old_file(bo
         assert root in text, text
 
 
-def test_sh3_compass_yml_wins_when_both_files_exist(box):
+def test_sh3_compass_yml_is_read_when_both_exist_and_the_old_file_has_only_state(
+        box):
     framework, base = box
-    repo = make_repo(base, compass=SETTINGS % ("new", 3, "new"),
-                     old=SETTINGS % ("old", 5, "old"))
+    repo = make_repo(base, compass="schema: 1\n" + SETTINGS % ("new", 3, "new"),
+                     old=STATE)
     text = _output(run_script(framework, repo, "multiagent.sh", "--dry-run"))
     assert "wt-new" in text and "config max 3" in text, text
-    assert "wt-old" not in text
     text = _output(run_script(framework, repo, "integrate.sh"))
     assert "test command:  run-new" in text, text
+
+
+def test_sh3_a_script_stops_on_a_settings_conflict(box):
+    framework, base = box
+    repo = make_repo(base, compass="schema: 1\n" + SETTINGS % ("new", 3, "new"),
+                     old=SETTINGS % ("old", 5, "old"))
+    for script, flags in (("multiagent.sh", ("--dry-run",)), ("integrate.sh", ())):
+        result = run_script(framework, repo, script, *flags)
+        assert result.returncode != 0, script
+        assert "settings-conflict" in _output(result), script
 
 
 def test_sh3_a_project_with_no_settings_uses_the_defaults(box):

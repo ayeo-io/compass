@@ -12195,6 +12195,13 @@
 - **Source issue:** `governance-drift-is-a-settings-key`
 - **Landed:** 2026-10-07
 
+### Given a non-UTF-8 file pinned by blob hash and path, when the gate scans the tree, then it passes the file's content; given any change to the file, a UTF-8 file, a path, or a stale pin, then the gate still fails or reports _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `rival-gate-new-key`
+- **Landed:** 2026-10-07
+
 ### The two views equal the generator's output byte for byte; a stale view names the regenerate command _(archived)_
 
 - **Scenario id:** `GV-1`
@@ -12221,4 +12228,53 @@
 - **Scenario id:** `GV-4`
 - **Intent:** `E1.S1.04b`
 - **Source issue:** `generated-legacy-views`
+- **Landed:** 2026-10-07
+
+### The preset, through the adapter, routes the whole compatibility grid as today's policy does, and a planted preset change breaks the replay _(archived)_
+
+- **Scenario id:** `OB-1`
+- **Intent:** `INT-1`
+- **Source issue:** `obligations`
+- **Landed:** 2026-10-07
+
+### The evaluator lifts by rank when given ranks, and by today's fixed set when not _(archived)_
+
+- **Scenario id:** `OB-2`
+- **Intent:** `INT-1`
+- **Source issue:** `obligations`
+- **Landed:** 2026-10-07
+
+### Obligations name every fact the design lists and equal the evaluator's answers, and every compared field is a fact or a lock footprint _(archived)_
+
+- **Scenario id:** `OB-3`
+- **Intent:** `INT-1`
+- **Source issue:** `obligations`
+- **Landed:** 2026-10-07
+
+### A refused assessment is a Refused outcome with the evaluator's reason, counted as the baseline counts it, and a configuration fault still raises _(archived)_
+
+- **Scenario id:** `OB-4`
+- **Intent:** `INT-1`
+- **Source issue:** `obligations`
+- **Landed:** 2026-10-07
+
+### An issue layer picks the candidate, overrides base modes, then floors, caps and role rules apply and floors win _(archived)_
+
+- **Scenario id:** `OB-5`
+- **Intent:** `INT-1`
+- **Source issue:** `obligations`
+- **Landed:** 2026-10-07
+
+### Checks are active by when and capabilities, severity follows blocking_when, guardrail gates apply by ships and when _(archived)_
+
+- **Scenario id:** `OB-6`
+- **Intent:** `INT-1`
+- **Source issue:** `obligations`
+- **Landed:** 2026-10-07
+
+### The preset's on_skipped values give today's verdicts on the archive sample, apart from the landed_by relaxations _(archived)_
+
+- **Scenario id:** `OB-7`
+- **Intent:** `INT-1`
+- **Source issue:** `obligations`
 - **Landed:** 2026-10-07

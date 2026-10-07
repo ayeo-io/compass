@@ -91,8 +91,8 @@ HARD_GUARDRAILS = ("G5",)
 # claim-traces-to-scenario, command-passes), borrowed_docs.py, binding.py
 # (evidence-matches-tree), dashboard.py, landed_by.py, multiagent_check.py
 # and evidence_identity.py. The check declared-tests-resolve returns a pass
-# with a note. Every other check fails. A replay of these verdicts against the
-# archive is owed before 6.0.0 and lands with the obligations increment.
+# with a note. Every other check fails. `tests/test_obligations.py` replays
+# these verdicts against the archive sample.
 DECLINING_CHECKS = (
     "scenarios-are-executable", "claim-traces-to-scenario", "command-passes",
     "borrowed-documents-answered", "evidence-matches-tree",

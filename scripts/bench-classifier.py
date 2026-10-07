@@ -66,21 +66,26 @@ def pair(labels):
 
 
 def measure(parent, child, exhaustive):
-    """One scan, timed. `evaluations` counts calls to the evaluator."""
-    start = time.perf_counter()
+    """One scan, timed twice: by the clock and by the CPU time of this
+    process. The clock moves with the load of the machine and the CPU time much
+    less, so the speed targets are read from `cpu_seconds`. `evaluations` counts
+    calls to the evaluator."""
+    start, cpu_start = time.perf_counter(), time.process_time()
     got = classify.classify(parent, child, exhaustive=exhaustive)
     seconds = time.perf_counter() - start
+    cpu_seconds = time.process_time() - cpu_start
     return {"mode": "full" if exhaustive else "grouped",
             "labels": got.grid.label_count, "points": got.grid.points,
             "raw_points": got.grid.raw_points, "evaluations": 2 * got.grid.evaluated,
-            "seconds": seconds, "result": got.result}
+            "seconds": seconds, "cpu_seconds": cpu_seconds, "result": got.result}
 
 
 def format_row(row):
     per_point = row["seconds"] / max(row["points"], 1) * 1e6
     return (f"{row['mode']:8} {row['labels']:2} labels {row['points']:>9,} points "
             f"{row['evaluations']:>9,} evaluations {row['seconds']:>8.1f} s "
-            f"{per_point:>7.0f} us/point  {row['result']}")
+            f"{row['cpu_seconds']:>8.1f} s cpu {per_point:>7.0f} us/point  "
+            f"{row['result']}")
 
 
 def main(argv=None):

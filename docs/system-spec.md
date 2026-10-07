@@ -50,11 +50,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### The module declares its dependencies and owning doc, and core stays in bounds
+### The classifier has a public scan with a point callback and locks read no private name
 
-- **Scenario id:** `LK-9`
+- **Scenario id:** `CS-7`
 - **Intent:** `INT-1`
-- **Source issue:** `locks`
+- **Source issue:** `classifier-speed`
 - **Landed:** 2026-10-07
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -353,4 +353,4 @@
 
 ---
 
-1790 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1810 superseded scenario(s) are in `docs/system-spec-archive.md`.

@@ -437,5 +437,44 @@ the same order for every verdict, and a point that does not exist is `null`:
   adding a field raises `schema`.
 
 `scripts/bench-classifier.py` times the grouped grid and, with `--raw`, the
-full grid at four and eight labels. The numbers belong in the pull request
-that changes the classifier.
+full grid at four and eight labels. It prints the clock and the CPU time of the
+process, and the CPU time is the figure to read the targets against: the clock
+moves with the load of the machine. The numbers belong in the pull request that
+changes the classifier.
+
+Speed has three targets, on the benchmark machine:
+
+| Case | Target |
+|---|---|
+| A changed layer at the four labels the shipped policy names | 5 s or less |
+| A changed layer at eight labels | 30 s or less |
+| An unchanged layer | no scan |
+
+The measures taken, in this order, and the ones not allowed:
+
+- **A stored classification.** `classify_stored(store, parent, child, ...)`
+  returns the result held in `store` (a mapping the caller owns) when the same
+  two configurations, capabilities, issue layers, directions and scan were
+  classified before. The key (`classification_key`) holds a digest of each side,
+  `CLASSIFIER_VERSION`, and every table the comparison reads, so a changed rule
+  table or registry makes a new key. Raise `CLASSIFIER_VERSION` when a change to
+  the comparison, the grid or the evaluator can change a verdict:
+  `tests/test_classifier_speed.py` pins the functions that decide one, so a
+  change to them fails until the author has decided. An entry that is not a
+  classification is scanned again, and a function passed as `tighter` is never
+  stored. `Classification.from_json` reads a stored document back.
+- **One evaluator call for each side at a point.** The evaluator copies none of
+  the policy it routes (`routing.canonical_view`), routes once for all autonomy
+  values (only the checkpoints differ, `routing.route_checkpoints`), and the
+  scan builds each side's policy once (`obligations.Preparation`).
+  Points where both sides owe the same are not compared field by field.
+- Not allowed: sampling the grid, deciding a refusal at the issue's own point,
+  raising the label cap without numbers, and skipping a dimension without a
+  test that proves the skip exact. Each of the other measures the ruling lists
+  (one cache shared across layers, fixed chunks, a progress line) is held back
+  until the numbers need it.
+
+`classify.scan(parent, child, grid, on_point=..., **options)` is the one loop
+over a grid. `classify` and the lock check both run through it, and the
+callback receives each point and the `Scan`, whose `obligations(side,
+assessment)` and `ctx` it can read.

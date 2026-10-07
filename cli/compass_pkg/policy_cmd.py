@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 # compass_pkg.policy_cmd - `compass policy lint`, `effective` and `diff`
 """The three verbs over `policy_lint` and `replay`.
+=======
+# compass_pkg.policy_cmd - `compass policy lint` and `compass policy effective`
+"""The two verbs over `policy_lint`.
+>>>>>>> origin/main
 
 `policy lint` runs the legacy lint, unchanged, for a project with no
 `compass.yml` that Compass reads and for the framework's own repository, and
@@ -7,12 +12,20 @@ the layered lint for any other project. `compass ci` calls the legacy
 function in `governance` directly, so its behaviour does not move.
 """
 # DEPENDENCY: standard library (os); compass_pkg.core, governance, layers,
+<<<<<<< HEAD
 # policy_lint, project_settings, replay, terminal.
+=======
+# policy_lint, project_settings, terminal.
+>>>>>>> origin/main
 from __future__ import annotations
 
 import os
 
+<<<<<<< HEAD
 from compass_pkg import governance, layers, policy_lint, project_settings, replay
+=======
+from compass_pkg import governance, layers, policy_lint, project_settings
+>>>>>>> origin/main
 from compass_pkg.core import (FRAMEWORK_ROOT, CompassError, find_governance, load_manifest,
                               resolve_issue_dir)
 from compass_pkg.terminal import mark_handled, resolve_mode
@@ -75,6 +88,7 @@ def run_policy_effective(args):
     return 0
 
 
+<<<<<<< HEAD
 def run_policy_diff(args):
     root = layers.find_project_root(os.getcwd())
     first, second = replay.default_refs(getattr(args, "refs", None) or [])
@@ -85,6 +99,8 @@ def run_policy_diff(args):
     return 1 if args.exit_code and document["differs"] else 0
 
 
+=======
+>>>>>>> origin/main
 ISSUE_HELP = ("issue slug: read that issue's `config:` from its manifest. Without it "
               "no issue is read: there is no COMPASS_ISSUE or current-task fallback")
 
@@ -94,7 +110,11 @@ def _issue_option(parser):
 
 
 def register(pls):
+<<<<<<< HEAD
     """Add `lint`, `effective` and `diff` to the `policy` parsers."""
+=======
+    """Add `lint` and `effective` to the `policy` parsers."""
+>>>>>>> origin/main
     ple = pls.add_parser("effective", help="show every resolved configuration field "
                          "with its source layer")
     _issue_option(ple)
@@ -106,6 +126,7 @@ def register(pls):
     pll.add_argument("--exhaustive", action="store_true",
                      help="run the full grid, not the grouped one (layered projects)")
     pll.set_defaults(func=run_policy_lint, output_kind="report")
+<<<<<<< HEAD
     pld = pls.add_parser("diff", help="compare two configurations by classification "
                          "and by replaying assessments under both")
     pld.add_argument("refs", nargs="*", metavar="REF",
@@ -118,3 +139,5 @@ def register(pls):
     pld.add_argument("--exit-code", dest="exit_code", action="store_true",
                      help="exit 1 when anything differs, as git diff --exit-code does")
     pld.set_defaults(func=run_policy_diff, output_kind="report")
+=======
+>>>>>>> origin/main

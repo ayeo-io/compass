@@ -133,6 +133,12 @@ def _compass_yml_counts(project_root):
         or _recognised(path))
 
 
+def compass_yml_counts(project_root):
+    """Public name of the test above, for a command that must read the same
+    file the settings reader reads (`compass policy lint` and `effective`)."""
+    return _compass_yml_counts(project_root)
+
+
 def lenient(project_root):
     """`settings`, or `{}` when a file cannot be read, for a caller whose
     broken-file behaviour is to carry on with defaults. A conflict still

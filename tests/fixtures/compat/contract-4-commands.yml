@@ -276,6 +276,29 @@ entries:
   argv: ["policy", "lint"]
   exit: 1
   stdout_contains: "FAIL"
+# Added on purpose by policy-lint: `policy effective` is a new verb. 5.6.0
+# refused it as an unknown choice (exit 2); from 6.0.0 it prints the resolved
+# configuration and exits 0.
+- id: policy-effective-shipped
+  project: initialised
+  argv: ["policy", "effective"]
+  exit: 0
+  stdout_contains: "default@6.0.0"
+# Added on purpose by policy-lint: a root compass.yml that Compass reads is
+# now linted layer by layer. 5.6.0 did not read the file, so it ran the legacy
+# lint and passed.
+- id: policy-lint-layered
+  project: with-compass-yml
+  argv: ["policy", "lint"]
+  exit: 0
+  stdout_contains: "PASS"
+# Added on purpose by policy-lint: a compass.yml with a schema fault now fails
+# the lint (exit 1). 5.6.0 did not read the file and exited 0.
+- id: policy-lint-layered-broken
+  project: with-broken-compass-yml
+  argv: ["policy", "lint"]
+  exit: 1
+  stdout_contains: "FAIL"
 - id: retro-plain
   project: quick-fix-started
   argv: ["retro"]

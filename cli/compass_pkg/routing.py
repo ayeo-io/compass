@@ -112,11 +112,42 @@ def canonical_routes(policy):
     return out, sorted(old)
 
 
-def evaluate_route(readings, policy, autonomy="balanced"):
+class RoutingConflict(CompassError):
+    """The assessment and the policy disagree: exploration that a floor would
+    turn into delivery, or an approach a cap forbids. These are outcomes of
+    an assessment, and the one kind of error a caller that compares policies
+    can treat as a result. Every other error is a fault in an input."""
+
+
+def _below_full(stage, mode, ranks):
+    """Does a floor's lift raise this stage's mode to `full`? With ranks
+    (the catalogue form's `stages.<id>.modes.<mode>.rank`, handed over as
+    `stage_mode_ranks`) it lifts a mode ranked below `full`, and leaves a
+    mode with no rank alone. Without them it lifts the three modes that sit
+    below `full` on the depth ladder, which is what the ranks reproduce for
+    the shipped policy."""
+    if ranks is None:
+        return mode in ("collapsed", "skipped", "light")
+    stage_ranks = ranks.get(stage) or {}
+    mode_rank, full_rank = stage_ranks.get(mode), stage_ranks.get("full")
+    return mode_rank is not None and full_rank is not None and mode_rank < full_rank
+
+
+def evaluate_route(readings, policy, autonomy="balanced", issue=None):
     """Pure function: assessment + policy -> the delivery approach and
     everything that shaped it. This is the deterministic core of Compass.
     `autonomy` changes only `checkpoints` in the result. Old route names in
-    the policy are read as the current ones (`canonical_routes`)."""
+    the policy are read as the current ones (`canonical_routes`).
+
+    `issue` is an issue's own layer, applied in the order
+    `governance/decisions/2026-10-05-floors-win-over-the-issue-layer.md`
+    fixes: it names the candidate (`approach`), replaces the candidate's
+    base stage modes (`stage_modes`) and can lower the approach's subtask
+    ceiling (`subtask_ceiling`), and then the floors, caps and role rules
+    apply, so they win over it. A floor that replaces the candidate brings
+    the new approach's own modes, so the issue's modes are reported as
+    ignored. With no `issue` the result is what it was before the argument
+    existed."""
     policy, renamed = canonical_routes(policy)
     _vk = {"blast_radius": "risk", "terrain": "familiarity",
            "magnitude": "size", "intent": "goal",
@@ -124,6 +155,13 @@ def evaluate_route(readings, policy, autonomy="balanced"):
     vocab = {_vk.get(k, k): v
              for k, v in (policy.get("assessment_vocabulary")
                           or policy.get("reading_vocabulary") or {}).items()}
+    # The dimension orders a `when:` clause reads `at_least` against. Absent,
+    # the shipped orders of risk and size apply, as before.
+    orders = policy.get("dimension_orders")
+
+    def matches(when):
+        return reading_matches(when, readings, orders)
+
     shapes = policy.get("route_shapes", {})
     strategies = policy.get("routing_strategies", {})
     guardrails = policy.get("routing_guardrails", {})
@@ -151,10 +189,14 @@ def evaluate_route(readings, policy, autonomy="balanced"):
     candidate = strategies.get("default_route", "regular")
     candidate_via = "the policy default (no shape matched)"
     for shape in strategies.get("default_shapes", []):
-        if reading_matches(shape.get("when"), readings):
+        if matches(shape.get("when")):
             candidate = shape["lean_toward"]
             candidate_via = f"{shape.get('id', '?')} ({shape.get('rationale', '')})"
             break
+    issue = issue or {}
+    if issue.get("approach"):
+        candidate = canonical_shape(issue["approach"])
+        candidate_via = "the issue's own choice"
 
     final = candidate
     fired = []
@@ -174,7 +216,7 @@ def evaluate_route(readings, policy, autonomy="balanced"):
     # framework exists to remove.
     rule_artifacts = []
     for fl in guardrails.get("floors", []):
-        if not reading_matches(fl.get("when"), readings):
+        if not matches(fl.get("when")):
             continue
         changed = []
         forced = fl.get("force_minimum_route")
@@ -237,7 +279,7 @@ def evaluate_route(readings, policy, autonomy="balanced"):
     # and says so.
     if candidate == "spike" and final != "spike":
         floor_ids = [f["id"] for f in fired if f["kind"] == "floor"]
-        raise CompassError(
+        raise RoutingConflict(
             "routing conflict - exploration cannot silently become delivery.\n"
             f"  Intent is 'exploration' (a Spike candidate), but routing "
             f"guardrail(s) {floor_ids} would force at least '{final}'.\n"
@@ -252,7 +294,7 @@ def evaluate_route(readings, policy, autonomy="balanced"):
 
     # --- 3. caps limit scale-up ---------------------------------------------
     for cap in guardrails.get("caps", []):
-        if not reading_matches(cap.get("when"), readings):
+        if not matches(cap.get("when")):
             continue
         changed = []
         if "max_worktrees" in cap:
@@ -268,7 +310,7 @@ def evaluate_route(readings, policy, autonomy="balanced"):
 
     # --- 4. role rules add enforced artifacts / blocks ----------------------
     for rr in guardrails.get("role_rules", []):
-        if not reading_matches(rr.get("when"), readings):
+        if not matches(rr.get("when")):
             continue
         changed = []
         if rr.get("require_artifact"):
@@ -288,7 +330,7 @@ def evaluate_route(readings, policy, autonomy="balanced"):
                           "rationale": rr.get("rationale", ""), "changed": changed})
 
     if final in forbidden:
-        raise CompassError(
+        raise RoutingConflict(
             f"routing conflict: the composed approach '{final}' is forbidden by "
             f"a cap for this assessment. Re-assess - the assessment and the "
             f"policy disagree, and that needs a human."
@@ -299,8 +341,17 @@ def evaluate_route(readings, policy, autonomy="balanced"):
     if not shape:
         raise CompassError(f"delivery approach '{final}' has no entry in route_shapes")
     phases = shape_stages(shape)
+    applied, ignored = {}, {}
+    for stage, mode in (issue.get("stage_modes") or {}).items():
+        stage = _stage_key_renames().get(stage, stage)
+        # Only the candidate's own stages take an override: the approach a
+        # floor chose instead has modes of its own.
+        if final == candidate and stage in phases:
+            phases[stage] = applied[stage] = mode
+        else:
+            ignored[stage] = mode
     for p in (never_skip | required_phases):
-        if phases.get(p) in ("collapsed", "skipped", "light"):
+        if _below_full(p, phases.get(p), policy.get("stage_mode_ranks")):
             phases[p] = "full"
     gates = list(shape.get("gates", []))
     # Immovable gates and role-added gates apply to delivery approaches only. Spike
@@ -362,6 +413,11 @@ def evaluate_route(readings, policy, autonomy="balanced"):
         })
 
     subtask_ceiling = shape.get("subtask_ceiling", 1)
+    if "subtask_ceiling" in issue:
+        # A minimum, as for a cap: the issue layer lowers a ceiling and never
+        # raises it. An approach with no ceiling takes the issue's.
+        asked = issue["subtask_ceiling"]
+        subtask_ceiling = asked if subtask_ceiling is None else min(subtask_ceiling, asked)
     if max_worktrees is not None:
         subtask_ceiling = (max_worktrees if subtask_ceiling is None
                            else min(subtask_ceiling, max_worktrees))
@@ -373,7 +429,7 @@ def evaluate_route(readings, policy, autonomy="balanced"):
     # a guardrail.
     applicable_strategies = []
     for adv in strategies.get("advisory_strategies", []):
-        if reading_matches(adv.get("when"), readings):
+        if matches(adv.get("when")):
             applicable_strategies.append({
                 "id": adv.get("id", "?"),
                 "strategy": adv.get("strategy", ""),
@@ -397,7 +453,7 @@ def evaluate_route(readings, policy, autonomy="balanced"):
     # runs: a gap must not read as "never wait".
     checkpoints = runs if listed is None else [s for s in runs if s in listed]
 
-    return {
+    result = {
         # Old route names the policy used, read as the current ones; the
         # caller warns about them.
         "renamed_routes": renamed,
@@ -416,6 +472,9 @@ def evaluate_route(readings, policy, autonomy="balanced"):
         "applicable_strategies": applicable_strategies,
         "checkpoints": checkpoints,
     }
+    if issue:
+        result["issue_overrides"] = {"applied": applied, "ignored": ignored}
+    return result
 
 
 # --- command: approach summary ------------------------------------------------

@@ -431,6 +431,11 @@ def test_d2_repairs_change_only_retired_names():
     section, "The default preset", listing how the legacy files convert into
     the preset's catalogues.
 
+    One more was re-baselined by `obligations`: `governance/routing-policy.md`
+    gained one `##` section, "What a configuration owes an assessment", with
+    three lists (the evaluator's four additions, the two replays and the rank
+    replay).
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

@@ -150,6 +150,8 @@ OBLIGATION_FIELDS = {
     "approaches.checkpoints": "obligation-set",
     "approaches.subtask_ceiling": "ceiling",
     "approaches.ships": "identity",              # a lock's footprint (ADR-039)
+    "artifacts.depends_on": "obligation-set",    # what an owed artifact builds on
+    "artifacts.checks": "obligation-set",        # the checks an owed artifact carries
     "stages.mode": "ordered",                    # an issue's own choice
     "stages.order": "identity",                  # a lock's footprint
     "stages.entry": "obligation-set",

@@ -15,13 +15,6 @@
 - **Source issue:** `id-prefix-vocabulary-and-glossary`
 - **Landed:** 2026-08-13
 
-### The generator script writes, is idempotent, and --check fails on a stale view
-
-- **Scenario id:** `GV-5`
-- **Intent:** `E1.S1.04b`
-- **Source issue:** `generated-legacy-views`
-- **Landed:** 2026-10-07
-
 ### the guard can fail on each new surface
 
 - **Scenario id:** `SS-4`
@@ -36,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Every reference in the preset resolves and the evidence types match the guardrails file
+### Given a non-UTF-8 file pinned by blob hash and path, when the gate scans the tree, then it passes the file's content; given any change to the file, a UTF-8 file, a path, or a stale pin, then the gate still fails or reports
 
-- **Scenario id:** `DP-6`
+- **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `default-preset-data`
+- **Source issue:** `rival-gate-new-key`
 - **Landed:** 2026-10-07
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -339,4 +332,4 @@
 
 ---
 
-1738 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1741 superseded scenario(s) are in `docs/system-spec-archive.md`.

@@ -12146,30 +12146,51 @@
 - **Source issue:** `default-preset-data`
 - **Landed:** 2026-10-07
 
-### The two views equal the generator's output byte for byte; a stale view names the regenerate command _(archived)_
+### Every reference in the preset resolves and the evidence types match the guardrails file _(archived)_
 
-- **Scenario id:** `GV-1`
-- **Intent:** `E1.S1.04b`
-- **Source issue:** `generated-legacy-views`
+- **Scenario id:** `DP-6`
+- **Intent:** `INT-1`
+- **Source issue:** `default-preset-data`
 - **Landed:** 2026-10-07
 
-### A generated header says generated and names the command; preset, sidecar and template changes change the text _(archived)_
+### The registry holds one versioned entry per built-in check and CHECK_FNS is derived from it _(archived)_
 
-- **Scenario id:** `GV-2`
-- **Intent:** `E1.S1.04b`
-- **Source issue:** `generated-legacy-views`
+- **Scenario id:** `CR-1`
+- **Intent:** `INT-1`
+- **Source issue:** `check-registry`
 - **Landed:** 2026-10-07
 
-### The mutation-proof register and the plain-language derivation read the preset _(archived)_
+### The registry answers the installed version and major of an implementation _(archived)_
 
-- **Scenario id:** `GV-3`
-- **Intent:** `E1.S1.04b`
-- **Source issue:** `generated-legacy-views`
+- **Scenario id:** `CR-2`
+- **Intent:** `INT-1`
+- **Source issue:** `check-registry`
 - **Landed:** 2026-10-07
 
-### Preset digests are pinned and a changed preset file fails naming the digest file _(archived)_
+### Each implementation has a verdict-only corpus seeded from its mutation proof, and a test runs each seed _(archived)_
 
-- **Scenario id:** `GV-4`
-- **Intent:** `E1.S1.04b`
-- **Source issue:** `generated-legacy-views`
+- **Scenario id:** `CR-3`
+- **Intent:** `INT-1`
+- **Source issue:** `check-registry`
+- **Landed:** 2026-10-07
+
+### The lock file build rule fails on a changed verdict digest without a major bump _(archived)_
+
+- **Scenario id:** `CR-4`
+- **Intent:** `INT-1`
+- **Source issue:** `check-registry`
+- **Landed:** 2026-10-07
+
+### Policy lint refuses a check naming an impl the registry does not hold _(archived)_
+
+- **Scenario id:** `CR-5`
+- **Intent:** `INT-1`
+- **Source issue:** `check-registry`
+- **Landed:** 2026-10-07
+
+### Given a compass.yml with schema: 1 and governance_drift: strict, When the project layer is checked and loaded, Then it is accepted and governance_drift is read as a setting, not a layer key _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `governance-drift-is-a-settings-key`
 - **Landed:** 2026-10-07

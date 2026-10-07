@@ -3694,8 +3694,9 @@ _GROWING_REACH = {
     # 12 with tests/fixtures/next-golden.json, a golden file of command output;
     # 13 with tests/fixtures/archive-sample.tar.gz, the packed archive sample;
     # 14 with the packed routing baseline in tests/fixtures/compat/;
-    # 15 with the check-verdict baseline beside it, which is plain JSON.
-    "PBW-C4": (lambda path: path.startswith("tests/"), 15),
+    # 15 with the check-verdict baseline beside it, which is plain JSON;
+    # 59 with the 44 check-corpus case labels, which hold a verdict and one line.
+    "PBW-C4": (lambda path: path.startswith("tests/"), 59),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

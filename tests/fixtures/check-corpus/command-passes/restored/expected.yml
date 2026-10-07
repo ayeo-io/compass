@@ -1,0 +1,2 @@
+verdict: nothing-to-check
+input: no project guardrail declares a command, so there is nothing to run

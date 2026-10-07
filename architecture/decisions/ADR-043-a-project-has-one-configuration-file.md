@@ -24,7 +24,7 @@ The configurable-framework design adds a project overlay and, from a later relea
 
 **A project has one file a person edits: `compass.yml` at the project root.** It holds the project's overlay and the settings that `.compass/config.yml` holds today. The project root is the first directory, walking up, that holds `.compass` or `.git` (`cli/compass_pkg/core.py:87`). A team or community preset is published in the same format.
 
-**Settings keys are read from the project's own `compass.yml` only.** They are `autonomy`, `adoption`, `allow_project_commands`, `enforcement`, `record`, `project`, `prices`, `multiagent` and `preset_index`, which is reserved for published presets and has no behaviour yet. Lint rejects a settings key in a parent or a preset. `owner:` and `approvers:` are not settings keys: they are layer keys, allowed in a parent too (ADR-039). `autonomy` is also valid in the issue layer. A parent that could set `adoption: advisory` or `allow_project_commands: true` would loosen every project that extends it, and no classifier would see it.
+**Settings keys are read from the project's own `compass.yml` only.** They are `autonomy`, `adoption`, `allow_project_commands`, `enforcement`, `record`, `project`, `prices`, `multiagent`, `governance_drift` and `preset_index`, which is reserved for published presets and has no behaviour yet. Lint rejects a settings key in a parent or a preset. `owner:` and `approvers:` are not settings keys: they are layer keys, allowed in a parent too (ADR-039). `autonomy` is also valid in the issue layer. A parent that could set `adoption: advisory` or `allow_project_commands: true` would loosen every project that extends it, and no classifier would see it.
 
 **The pin of a git parent is the `#<sha>` suffix on `extends:`, and there is no lock file.** A form such as `github:<owner>/<repo>@<ref>#<sha>` names the parent's commit. The CLI refuses a remote ref with no sha, and a fetched commit that does not match the sha. `compass:default@<major>` carries no sha, because the CLI ships it.
 
@@ -61,6 +61,8 @@ The key stays project-file-only, so a published preset cannot authorise its own 
 - A hand-edited pin skips the waiver re-check that `compass policy update` does. `compass policy lint` closes that gap by comparing the pin in the working file with the pin at git `HEAD`.
 - `docs/security.md` must record that the declaration and the authorisation share a file, and that the trust decision is the control.
 - A key in `.compass/config.yml` that no code reads, such as `artifacts.work_dir` in this repository's file, is not copied. The migration lists it.
+
+**Amendment, 7 October 2026: `governance_drift` is a settings key.** The list above left out `governance_drift`, which `docs/configuration.md` documents and `cli/compass_pkg/governance.py` reads. `SETTINGS_KEYS` now holds it, so a project layer accepts it in `compass.yml` and the loader splits it off as a setting. It is the only documented or read setting that was missing. The settings-conflict set does not change: `OLD_FILE_EXTRA_KEYS` now holds only `mode`.
 
 ## References
 

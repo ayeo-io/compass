@@ -1,0 +1,2 @@
+2270f19870041898ebf8bb95848040b583f3b54e assets/compass-icon.png
+9ae741824ef7a40e798c4b2a3788bb5c4c7840c7 tests/fixtures/archive-sample.tar.gz

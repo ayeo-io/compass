@@ -1,0 +1,71 @@
+# Per implementation: the version and the digest of its corpus verdicts.
+# tests/test_check_registry.py fails when a verdict digest changes and the
+# major version does not (ADR-038). Update an entry in the same change that
+# bumps the major.
+implementations:
+  backfills-paid:
+    verdicts: 62ed50f7712aa0d5df96f6e1235080bf0b4d3902d30cb7eb4e49bc5f253f2f65
+    version: 1.0.0
+  borrowed-documents-answered:
+    verdicts: 87eee465479486d9dba453319a9a5f124e12ecbe667501313d82b22d1bdf7160
+    version: 1.0.0
+  changed-code-traces-to-scenario:
+    verdicts: 394197b1855fd37b7bf458182823a4835d1dc90e0af00f64e027e8677570660b
+    version: 1.0.0
+  claim-traces-to-scenario:
+    verdicts: e1846369f2bafda8ed66f64385d06df3b6d6807fa56b776bb6ee1faebd91aad0
+    version: 1.0.0
+  command-passes:
+    verdicts: 4b8c7eeaacbf5c4fdcfab903572f07572aea5ab0addbc8dc1d1a14d6b91b356f
+    version: 1.0.0
+  consistency-check-passes:
+    verdicts: 208c4262608b2760cd1c26c8edb8b86714518fa28c596331c658a618de56bb81
+    version: 1.0.0
+  dashboard-current:
+    verdicts: 76dd31dbf957b002628b55d8bd20306caaad21a16d23de666f33b98478208323
+    version: 1.0.0
+  declared-tests-resolve:
+    verdicts: 135069d070419a5861e8a4693bd0be2979076b5f97afb2c1669a44c9a9f159a0
+    version: 1.0.0
+  dod-evidence-typed:
+    verdicts: 10fd64119247fa169b16089d5f9120dbaacf0d2cd1707888fce5e25e11634418
+    version: 1.0.0
+  evidence-identity-matches:
+    verdicts: a19eb720d6c5908a4e1d1dd236c92d2bd8a22a6ec55faa6e8a35a3a048b90a87
+    version: 1.0.0
+  evidence-matches-tree:
+    verdicts: 47a194d3c9acc6cb71c710aa4d061ba711aa813ef7207314e9f4ec0363bafd8d
+    version: 1.0.0
+  gate-evidence-present:
+    verdicts: b53aa32d1beaf81e57c6d644ca7cb886b57c6433811a7592d75105009abbe720
+    version: 1.0.0
+  human-approval-present:
+    verdicts: 7a180471d638a2e8f78ffed9af7c7cd3d7610a13c5c6d328701e1b7bf493295c
+    version: 1.0.0
+  landed-by-resolves:
+    verdicts: af8f3456b7e7a6f5a0edae951ecf4656fce567367fded6fc0e4bd2cf7e53b80e
+    version: 1.0.0
+  multiagent-run-recorded:
+    verdicts: 31e31868b5a0bb6885734f2817617272e4e7bf1356cd55fd6ea8da3c492c7201
+    version: 1.0.0
+  no-trusted-rerun:
+    verdicts: ad2da5db60a39f075be271164795dce779783d540bfd8f2194757e0574fca505
+    version: 1.0.0
+  scenario-has-id-and-intent:
+    verdicts: 6ad20aed1f0071aa85c61afe4e62b17c0984bd98a763244787490bf78ae2c2fd
+    version: 1.0.0
+  scenarios-are-executable:
+    verdicts: 1f4d62fd546bae2b62c1b452d099a3a4b22bc0eafccd3af74875657ca04de47e
+    version: 1.0.0
+  scenarios-have-tests:
+    verdicts: 3c4e371a588f04aa5cae9422d92ff4d8d811b7ee26252e8547aae97fb4092bcc
+    version: 1.0.0
+  spike-conclusion-present:
+    verdicts: 692e3eaafa7389de3b91748737a76ea6233c1aa3e4694c4321123b46ca026d63
+    version: 1.0.0
+  spike-no-production-changes:
+    verdicts: b5e7446db55f8083b339246f753396562143b898de5f9d370cdc404bbdf94599
+    version: 1.0.0
+  suite-passed:
+    verdicts: e395bdee510411c77a8231034c59c54485c800d6bc047e12e1b28f1bfd97d531
+    version: 1.0.0

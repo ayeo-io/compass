@@ -41,6 +41,9 @@ import textwrap
 from compass_pkg.binding import ids_for
 from compass_pkg.check_cmd import cmd_check
 from compass_pkg import project_settings
+from compass_pkg.stable_ids import (
+    APPROACH_QUICK_FIX, GATE_VERIFY_CORRECTNESS, GATE_VERIFY_GOVERNANCE, GATE_VERIFY_TRACEABILITY,
+    STAGE_BREAKDOWN, STAGE_PLAN, STAGE_REFINE)
 from compass_pkg.core import (
     CompassError, _WHEN_KEY_MAP, _one_segment, canonical_shape, display_shape,
     display_stage, docs_dir, find_governance, find_upwards, reading_matches,
@@ -64,8 +67,8 @@ from compass_pkg.terminal import say
 #: The three gates a quick fix ever clears (route_shapes.quick-fix.gates in
 #: governance/routing-policy.yml). `finish` refuses if any OTHER gate on the
 #: issue is still pending - that is heavier work than a quick fix earns.
-THREE_GATES = ("verify.correctness", "verify.governance",
-              "verify.traceability")
+THREE_GATES = (GATE_VERIFY_CORRECTNESS, GATE_VERIFY_GOVERNANCE,
+               GATE_VERIFY_TRACEABILITY)
 
 #: The fixed reason a collapsed or skipped stage carries on the quick-fix
 #: shape (stages: { refine: collapsed, plan: collapsed, breakdown: skipped,
@@ -73,9 +76,9 @@ THREE_GATES = ("verify.correctness", "verify.governance",
 #: with no reason - a de-scope ledger entry with nothing to justify it is
 #: not a ledger.
 STAGE_DESCOPE_REASONS = {
-    "refine": "the one scenario states the whole change",
-    "plan": "no design decision on this size",
-    "breakdown": "one subtask",
+    STAGE_REFINE: "the one scenario states the whole change",
+    STAGE_PLAN: "no design decision on this size",
+    STAGE_BREAKDOWN: "one subtask",
 }
 
 
@@ -238,7 +241,7 @@ def _quick_fix_blockers(readings, task):
     policy = load_yaml(os.path.join(find_governance(), "routing-policy.yml"))
     shapes = (policy.get("routing_strategies") or {}).get("default_shapes") or []
     shape = next((s for s in shapes
-                  if canonical_shape(s.get("lean_toward")) == "quick-fix"), None)
+                  if canonical_shape(s.get("lean_toward")) == APPROACH_QUICK_FIX), None)
     lines = []
     for key, allowed in ((shape or {}).get("when") or {}).items():
         if reading_matches({key: allowed}, readings):
@@ -344,7 +347,7 @@ def cmd_quick_fix_start(args):
     task, _ = load_manifest(task_dir)
     approach = task.get("delivery_approach")
 
-    if approach != "quick-fix":
+    if approach != APPROACH_QUICK_FIX:
         say(args,
            f"compass quick-fix start: computes to "
            f"{display_shape(approach)}, heavier than a quick fix.",
@@ -739,7 +742,7 @@ def cmd_quick_fix_finish(args):
             "the green covers exactly what lands.")
 
     approach = task.get("delivery_approach")
-    if approach != "quick-fix":
+    if approach != APPROACH_QUICK_FIX:
         raise CompassError(
             f"compass quick-fix finish: '{slug}' is "
             f"{display_shape(approach)}, not quick fix - this verb only "
@@ -898,11 +901,11 @@ def cmd_quick_fix_finish(args):
             if isinstance(e, dict) and e.get("type") == "test-run"
             and e.get("scenario") in scenario_ids
         })
-        _quiet_run(cmd_gate_pass, task=slug, gate_id="verify.correctness",
+        _quiet_run(cmd_gate_pass, task=slug, gate_id=GATE_VERIFY_CORRECTNESS,
                   evidence=correctness_ids)
-        _quiet_run(cmd_gate_pass, task=slug, gate_id="verify.governance",
+        _quiet_run(cmd_gate_pass, task=slug, gate_id=GATE_VERIFY_GOVERNANCE,
                   evidence=[check_ev_id])
-        _quiet_run(cmd_gate_pass, task=slug, gate_id="verify.traceability",
+        _quiet_run(cmd_gate_pass, task=slug, gate_id=GATE_VERIFY_TRACEABILITY,
                   evidence=[check_ev_id])
 
         devlog_path = os.path.join(task_dir, "devlog.md")

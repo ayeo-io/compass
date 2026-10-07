@@ -1,5 +1,5 @@
 # compass_pkg.legacy_views_template - what the generated policy files say besides data
-# DEPENDENCY: none (plain constants; no third-party code, no other module).
+# DEPENDENCY: compass_pkg.stable_ids (plain constants; no third-party code).
 """The template of the two generated views.
 
 `legacy_views.py` writes `governance/routing-policy.yml` and
@@ -13,6 +13,10 @@ here changes only how a view reads.
 A `<<name>>` line in a template is replaced by the rendered data of that
 section.
 """
+from compass_pkg.stable_ids import (
+    APPROACH_HOTFIX, APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_SPIKE, GATE_G1, GATE_G2, GATE_G3, GATE_G4,
+    GATE_G5, GATE_S1, GATE_S2, GATE_SPIKE_CONCLUDE, GATE_VERIFY_ANALYZE, GATE_VERIFY_ARCHITECTURE,
+    GATE_VERIFY_CLARITY)
 
 REGENERATE_COMMAND = "python3 scripts/generate-legacy-views.py"
 
@@ -300,12 +304,12 @@ ENTRY_COMMENTS = {
     ('assessment_vocabulary', 'labels_common'): [
         '# `labels` is an open list of domain tags - common ones, not exhaustive:',
     ],
-    ('spike', 'artifacts'): [
+    (APPROACH_SPIKE, 'artifacts'): [
         '# A spike writes no review document. What it owes is a recorded',
         '# conclusion - discard, graduate, or defer - and that is typed evidence,',
         '# not a document. An empty pack here is the honest answer, not a gap.',
     ],
-    ('quick-fix', 'artifacts'): [
+    (APPROACH_QUICK_FIX, 'artifacts'): [
         "# No document beyond `delivery-approach.md`: the manifest's `scenarios:`",
         '# block and a test-run record already hold what a light',
         '# acceptance-criteria.md and verification-report.md would repeat - a',
@@ -313,10 +317,10 @@ ENTRY_COMMENTS = {
         '# (`G1`). So "a quick fix writes delivery-approach.md and nothing else" is',
         '# a routed decision a check can read, not a convention.',
     ],
-    ('regular', 'artifacts'): [
+    (APPROACH_REGULAR, 'artifacts'): [
         '# A multiagent breakdown reads a distribution map, so this route earns one.',
     ],
-    ('hotfix', 'stages'): [
+    (APPROACH_HOTFIX, 'stages'): [
         '# The `ship:` value on the `stages` line below is a stage-weight enum the evaluator',
         '# and every manifest on disk read; renaming it is a migration with a',
         '# back-compat shim, not a text sweep.',
@@ -328,7 +332,7 @@ ENTRY_COMMENTS = {
         '# run - most projects have wired no runner, and an advisory',
         '# finding is the honest default (ADR-006).',
     ],
-    ('G1', 'checks'): [
+    (GATE_G1, 'checks'): [
         '# The red-before-green cycle is strategy `S2`, not this guardrail. `G1` is the',
         '# outcome; `compass check` checks the outcome, the hook enforces `S2`.',
         '# `declared-tests-resolve` closes the gap that a test being *named* is not',
@@ -336,14 +340,14 @@ ENTRY_COMMENTS = {
         '# verify.correctness and is still active - before that the test legitimately',
         '# does not exist yet, and after landing the manifest is a historical record.',
     ],
-    ('G3', 'checks'): [
+    (GATE_G3, 'checks'): [
         '# `landed-by-resolves` is a traceability check: it is what makes a',
         "# pointer at another issue's record a LINK rather than a claim. Both",
         '# ends must name each other, the named issue must have landed, and it',
         '# must carry a record of its own - otherwise a chain of empty issues',
         '# could vouch for one another.',
     ],
-    ('G5', 'applies_when'): [
+    (GATE_G5, 'applies_when'): [
         '# Fires on either arm, because the statement above names CONSEQUENCES while',
         '# a tag list names domains, and those are not the same set. A change that',
         '# can lose data - a backup/restore path, a destructive cleanup job, a',
@@ -359,10 +363,10 @@ ENTRY_COMMENTS = {
 # A comment on the same line as a value, as (spaces before it, the comment).
 INLINE_COMMENTS = {
     ('RP-ROLE-001', 'gate'): (16, "# adds the claims gate to the route's set"),
-    ('gate_evidence_requirements', 'verify.clarity'): (7, '# inherently judgement - and now visibly so'),
-    ('gate_evidence_requirements', 'spike.conclude'): (14, '# SPECIFIC: a generic artifact will not do'),
-    ('gate_evidence_requirements', 'verify.analyze'): (14, '# SPECIFIC: advisory command-output does NOT clear this gate'),
-    ('gate_evidence_requirements', 'verify.architecture'): (4, '# architecture checks: command-output from command-passes, or a test-run'),
+    ('gate_evidence_requirements', GATE_VERIFY_CLARITY): (7, '# inherently judgement - and now visibly so'),
+    ('gate_evidence_requirements', GATE_SPIKE_CONCLUDE): (14, '# SPECIFIC: a generic artifact will not do'),
+    ('gate_evidence_requirements', GATE_VERIFY_ANALYZE): (14, '# SPECIFIC: advisory command-output does NOT clear this gate'),
+    ('gate_evidence_requirements', GATE_VERIFY_ARCHITECTURE): (4, '# architecture checks: command-output from command-passes, or a test-run'),
 }
 
 # Entries of a mapping that follow a blank line. A list that separates every
@@ -378,8 +382,8 @@ FOLDED = {
     ("checks", "evidence-identity-matches"), ("checks", "evidence-matches-tree"),
     ("checks", "multiagent-run-recorded"),
     ("evidence_types", "test-run"), ("evidence_types", "rollback-plan"),
-    ("defaults", "G1"), ("defaults", "G2"), ("defaults", "G3"), ("defaults", "G4"),
-    ("defaults", "G5"), ("spike_guardrails", "S1"), ("spike_guardrails", "S2"),
+    ("defaults", GATE_G1), ("defaults", GATE_G2), ("defaults", GATE_G3), ("defaults", GATE_G4),
+    ("defaults", GATE_G5), ("spike_guardrails", GATE_S1), ("spike_guardrails", GATE_S2),
 }
 
 # Quoted prose that breaks over several lines, by (entry id, key). Every other

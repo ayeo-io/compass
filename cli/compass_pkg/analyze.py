@@ -33,6 +33,9 @@ import re as _re
 import fnmatch
 import re as _re
 from compass_pkg.check_cmd import cmd_check
+from compass_pkg.stable_ids import (
+    GATE_VERIFY_ANALYZE, STAGE_ASSESS, STAGE_BREAKDOWN, STAGE_DEFINE, STAGE_IDS, STAGE_IMPLEMENT, STAGE_PLAN,
+    STAGE_REFINE, STAGE_SHIP, STAGE_VERIFY)
 from compass_pkg.core import COMPASS_SCHEMA_VERSION, COMPASS_VERSION, CompassError, artifact_path, exit_for_mode, find_compass_dir, load_mode, load_yaml, manifest_path, mode_banner, normalize_spine, now_iso, resolve_issue_dir, save_manifest
 from compass_pkg.governance import cmd_policy_lint
 from compass_pkg.policy import cmd_task_lint
@@ -82,10 +85,7 @@ _SPECIFY_FULL_WEIGHTS = {"full"}
 # The stages this checks for approach-disagreement. Current keys:
 # `normalize_spine` maps a retired key forward on load, so a set written in the
 # retired spelling matches nothing and every check below falls to its default.
-_KNOWN_PHASES = {
-    "assess", "define", "refine", "plan", "breakdown",
-    "implement", "verify", "ship",
-}
+_KNOWN_PHASES = set(STAGE_IDS)
 
 # Stage name → manifest.yml key (lowercase map)
 # The names a human writes in delivery-approach.md, and the manifest key each one
@@ -93,26 +93,26 @@ _KNOWN_PHASES = {
 # because a prose record written months ago still says the retired word while
 # the manifest it describes has been normalised forward.
 _PHASE_NAME_MAP = {
-    "assess": "assess", "triage": "assess", "frame": "assess",
-    "define": "define", "specify": "define",
-    "refine": "refine", "clarify": "refine",
-    "plan": "plan", "design": "plan",
-    "breakdown": "breakdown", "distribute": "breakdown",
-    "implement": "implement", "build": "implement",
-    "verify": "verify",
-    "ship": "ship", "land": "ship",
+    STAGE_ASSESS: STAGE_ASSESS, "triage": STAGE_ASSESS, "frame": STAGE_ASSESS,
+    STAGE_DEFINE: STAGE_DEFINE, "specify": STAGE_DEFINE,
+    STAGE_REFINE: STAGE_REFINE, "clarify": STAGE_REFINE,
+    STAGE_PLAN: STAGE_PLAN, "design": STAGE_PLAN,
+    STAGE_BREAKDOWN: STAGE_BREAKDOWN, "distribute": STAGE_BREAKDOWN,
+    STAGE_IMPLEMENT: STAGE_IMPLEMENT, "build": STAGE_IMPLEMENT,
+    STAGE_VERIFY: STAGE_VERIFY,
+    STAGE_SHIP: STAGE_SHIP, "land": STAGE_SHIP,
     # The prose names, which are what the shipped template actually writes in
     # its stage table and therefore what every real record on disk says.
     # Without the prose names, five of the eight rows in a template-shaped
     # record match nothing, and the check compares three stages while
     # reporting on all eight.
-    "define acceptance criteria": "define",
-    "acceptance criteria": "define",
-    "requirements review": "refine",
-    "technical design": "plan",
-    "break down the work": "breakdown",
-    "test & review": "verify",
-    "test and review": "verify",
+    "define acceptance criteria": STAGE_DEFINE,
+    "acceptance criteria": STAGE_DEFINE,
+    "requirements review": STAGE_REFINE,
+    "technical design": STAGE_PLAN,
+    "break down the work": STAGE_BREAKDOWN,
+    "test & review": STAGE_VERIFY,
+    "test and review": STAGE_VERIFY,
 }
 
 
@@ -296,7 +296,7 @@ def _analyze_task(task_dir: str, project_root: str | None = None) -> dict:
 
     # Determine mode from gate set (ADR-007)
     gate_ids = [g.get("id") for g in (task.get("gates") or []) if isinstance(g, dict)]
-    has_analyze_gate = "verify.analyze" in gate_ids
+    has_analyze_gate = GATE_VERIFY_ANALYZE in gate_ids
 
     # --- No artifacts to analyse: exits 0, "no artifacts" (`Inv-8`) --------
     brief_path = artifact_path(task_dir, "intent.md")
@@ -323,7 +323,7 @@ def _analyze_task(task_dir: str, project_root: str | None = None) -> dict:
     phases = task.get("stages") or {}
     # Do not default to "full": a defaulted lookup turns a key rename into a
     # false finding instead of an error.
-    specify_weight = str(phases.get("define", phases.get("specify", ""))).lower()
+    specify_weight = str(phases.get(STAGE_DEFINE, phases.get("specify", ""))).lower()
     if specify_weight in _SPECIFY_FULL_WEIGHTS and not has_brief:
         findings.append({
             "type": "missing-artifact",

@@ -40,6 +40,9 @@ COMPASS_SCHEMA_VERSION_11 = "1.1"  # schema version that introduced manifest.yml
 
 from compass_pkg import project_settings  # noqa: E402  (defines CompassError)
 from compass_pkg.project_settings import CompassError  # noqa: E402,F401
+from compass_pkg.stable_ids import (  # noqa: E402
+    APPROACH_IDS, APPROACH_QUICK_FIX, LEGACY_APPROACH_ALIASES, STAGE_ASSESS, STAGE_DEFINE, STAGE_IDS,
+    STAGE_PLAN, STAGE_REFINE)
 
 
 # --- small helpers -----------------------------------------------------------
@@ -182,7 +185,7 @@ def load_mode():
 # The stage hand-offs that can wait for a person, and the `autonomy:`
 # values that choose among them. Here, not in policy.py, because core reads
 # the setting and policy.py already imports core.
-CHECKPOINT_STAGES = ("assess", "define", "refine", "plan")
+CHECKPOINT_STAGES = (STAGE_ASSESS, STAGE_DEFINE, STAGE_REFINE, STAGE_PLAN)
 AUTONOMY_VALUES = ("controlled", "balanced", "autonomous")
 
 
@@ -592,15 +595,11 @@ CHECK_NAME_MAP = {"coherence-check-passes": "consistency-check-passes"}
 # hyphenated). Read-side via normalize_spine; the evaluator
 # canonicalises its own writes through the same map; the migrator
 # persists it.
-SHAPE_VALUE_MAP = {
-    "express": "quick-fix",
-    "standard": "regular",
-    "expedition": "full",
-    "feature": "regular",       # renamed 5 Oct 2026: now an issue type
-    "initiative": "full",       # renamed 5 Oct 2026: now a level of work
-}
+# `feature` and `initiative` were renamed on 5 Oct 2026: now an issue type and a
+# level of work. The map lives in stable_ids.py.
+SHAPE_VALUE_MAP = dict(LEGACY_APPROACH_ALIASES)
 #: The route names in weight order; a test keeps them equal to route_shapes.
-ROUTE_NAMES = ("spike", "quick-fix", "regular", "hotfix", "full")
+ROUTE_NAMES = APPROACH_IDS
 
 
 def canonical_shape(value):
@@ -610,15 +609,10 @@ def canonical_shape(value):
 # Machine delivery-approach values -> the v2 change-type names the display
 # layer prints. The manifest keeps the machine value; the terminal never
 # shows it (the receipt is the most shareable screen Compass produces).
-SHAPE_DISPLAY = {
-    "express": "quick fix",
-    "standard": "regular",
-    "expedition": "full",
-    "feature": "regular",
-    "initiative": "full",
-    # the v2 machine spelling renders without the hyphen
-    "quick-fix": "quick fix",
-}
+# The v2 machine spelling `quick-fix` renders without the hyphen.
+SHAPE_DISPLAY = {APPROACH_QUICK_FIX: "quick fix"}
+for _old, _new in LEGACY_APPROACH_ALIASES.items():
+    SHAPE_DISPLAY[_old] = SHAPE_DISPLAY.get(_new, _new)
 
 
 def display_shape(value):
@@ -638,16 +632,7 @@ def display_shape(value):
 # retired keys forward before display. It is an identity map. It stays so
 # the display layer is the one place a stage name is chosen; the next
 # rename edits this table, not the print sites.
-STAGE_DISPLAY = {
-    "assess": "assess",
-    "define": "define",
-    "refine": "refine",
-    "plan": "plan",
-    "breakdown": "breakdown",
-    "implement": "implement",
-    "verify": "verify",
-    "ship": "ship",
-}
+STAGE_DISPLAY = {stage: stage for stage in STAGE_IDS}
 
 
 def display_stage(value):

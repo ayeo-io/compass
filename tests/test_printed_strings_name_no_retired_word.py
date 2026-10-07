@@ -33,7 +33,7 @@ _SOURCE_FILES = [
 # delivery-approach.md written months ago - which still spells the retired
 # stage name - still resolves to the current stage key. It is read, never
 # printed.
-_ALLOWED_LINE = '"assess": "assess", "triage": "assess", "frame": "assess",'
+_ALLOWED_LINE = 'STAGE_ASSESS: STAGE_ASSESS, "triage": STAGE_ASSESS, "frame": STAGE_ASSESS,'
 # The public-copy pattern that finds "minutes to first triage" in prose
 # (`compass_pkg.public_copy`). It matches the word; it never prints it.
 _ALLOWED_PATTERN_LINE = 'r"\\b\\w+ minutes? to (?:a )?first (?:triage|shipped change)\\b",  # vocabulary-scan: allow - matches the retired word where public copy still uses it'

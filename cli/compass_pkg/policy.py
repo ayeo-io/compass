@@ -34,6 +34,8 @@ import fnmatch
 import re as _re
 from compass_pkg.check_cmd import CHECK_FNS
 from compass_pkg.check_registry import REGISTRY
+from compass_pkg.stable_ids import (
+    APPROACH_FULL, APPROACH_HOTFIX, APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_SPIKE, STAGE_PLAN)
 from compass_pkg.core import (AUTONOMY_VALUES, ROUTE_NAMES, assessment_key_errors, CHECKPOINT_STAGES, CompassError, canonical_shape, FRAMEWORK_ROOT, artifact_path,
                               load_manifest, load_yaml, normalize_spine,
                               resolve_issue_dir)
@@ -74,7 +76,7 @@ def _jsonschema_errors(instance, schema_name):
 # Current route names. A retired name (`express`, `standard`, `expedition`,
 # or `feature` and `initiative` before 5 October 2026) is read as its
 # current one, so an older project policy keeps working.
-CHECKPOINT_ROUTES = ("quick-fix", "regular", "full", "hotfix", "spike")
+CHECKPOINT_ROUTES = (APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_FULL, APPROACH_HOTFIX, APPROACH_SPIKE)
 
 
 def checkpoint_table_errors(p):
@@ -458,7 +460,7 @@ def _plan_stage_weight(task_slug):
     stages = task.get("stages") or {}
     if not isinstance(stages, dict):
         return None
-    weight = stages.get("plan")
+    weight = stages.get(STAGE_PLAN)
     return str(weight).strip().lower() if weight else None
 
 

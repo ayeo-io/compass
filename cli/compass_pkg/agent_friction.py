@@ -18,20 +18,20 @@ Agent notes are counted apart from person notes and never make a lesson on
 their own (`calibration._aggregate_friction`, `lessons.propose_from_friction`).
 Advisory: no check or gate reads them.
 """
-# DEPENDENCY: standard library (os, re); compass_pkg.core.
+# DEPENDENCY: standard library (os, re); compass_pkg.core, compass_pkg.stable_ids.
 from __future__ import annotations
 
 import os
 import re
 
+from compass_pkg.stable_ids import STAGE_IDS
 from compass_pkg.core import CompassError, load_manifest, resolve_issue_dir, save_manifest
 
 MAX_NOTES = 3
 MAX_FIX = 160
 CATEGORIES = ("over-weight", "under-weight", "mis-route", "missing-strategy",
               "tooling", "docs", "other")
-PHASES = ("assess", "define", "refine", "plan", "breakdown", "implement",
-          "verify", "ship")
+PHASES = STAGE_IDS
 GUARDRAIL_NOTICE = "guardrail, not changeable by friction"
 
 # A fix asks to change a guardrail-backed step when it both names such a step

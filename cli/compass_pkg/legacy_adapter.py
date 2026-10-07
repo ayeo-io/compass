@@ -29,7 +29,7 @@ change shape in the catalogue itself:
   which the design records and does not enforce.
 """
 # DEPENDENCY: PyYAML (bundled); compass_pkg.core, compass_pkg.routing,
-# compass_pkg.catalogue_spec.
+# compass_pkg.catalogue_spec, compass_pkg.stable_ids.
 from __future__ import annotations
 
 import copy
@@ -40,6 +40,8 @@ import yaml
 from compass_pkg import core
 from compass_pkg.catalogue_spec import CAPABILITIES
 from compass_pkg.routing import canonical_routes
+from compass_pkg.stable_ids import (APPROACH_REGULAR, APPROACH_SPIKE, GATE_G5, GATE_SPIKE_CONCLUDE, STAGE_ASSESS,
+                                    STAGE_IDS, STAGE_SHIP, STAGE_VERIFY)
 
 PRESET_ID = "default"
 PRESET_VERSION = "6.0.0"
@@ -48,8 +50,7 @@ PRESET_FILES = ("dimensions", "stages", "approaches", "rules", "checks", "gates"
 
 # The eight stages in the order they run. A stage an approach names that is
 # not here is appended, so an unusual policy still converts.
-STAGE_ORDER = ("assess", "define", "refine", "plan", "breakdown", "implement",
-               "verify", "ship")
+STAGE_ORDER = STAGE_IDS
 
 # A mode has a rank only when it sits on the depth ladder. Every other mode
 # differs in kind, not in depth, so it has no rank and the classifier treats
@@ -82,9 +83,9 @@ ARTIFACT_EFFECTS = ("add_artifact", "require_artifact", "suggest_artifact")
 
 # Locks (ADR-039). The human sign-off guardrail `G5` and its check cannot be
 # unlocked by anyone.
-LOCKED_STAGES = ("assess", "verify", "ship")
-LOCKED_REVIEW_GATES = ("spike.conclude",)
-HARD_GUARDRAILS = ("G5",)
+LOCKED_STAGES = (STAGE_ASSESS, STAGE_VERIFY, STAGE_SHIP)
+LOCKED_REVIEW_GATES = (GATE_SPIKE_CONCLUDE,)
+HARD_GUARDRAILS = (GATE_G5,)
 
 # What a check reports when it cannot run, read from each module that
 # returns `NOTHING_TO_CHECK` for it: checks.py (scenarios-are-executable,
@@ -185,7 +186,7 @@ def _approaches(policy):
     for name, shape in shapes.items():
         entry = {
             "weight": shape["weight"],
-            "ships": name != "spike",
+            "ships": name != APPROACH_SPIKE,
             # `shape_stages` also reads the retired `phases:` block.
             "stages": core.shape_stages(shape),
             "gates": list(shape.get("gates") or []),
@@ -201,7 +202,7 @@ def _approaches(policy):
                        if isinstance(row, dict) and name in row}
         if checkpoints:
             entry["checkpoints"] = checkpoints
-        if name == "spike":
+        if name == APPROACH_SPIKE:
             entry["locked"] = True
         out[name] = entry
     return out
@@ -295,7 +296,7 @@ def _rules(policy, notes):
     out = {}
     shapes = converted(strategies.get("default_shapes"))
     shapes.append((_FALLBACK_RULE, {}, {"lean_toward":
-                   strategies.get("default_route", "regular")},
+                   strategies.get("default_route", APPROACH_REGULAR)},
                    {"rationale": "No other shape matched, so the working default."}))
     out["default_shapes"] = _rule_set("shapes", shapes)
     out["floors"] = _rule_set("floors", converted(guard.get("floors")))
@@ -477,7 +478,7 @@ def _convert(policy, guardrails):
         "routing_policy": {
             "version": policy.get("version"),
             "default_route": (policy.get("routing_strategies") or {}).get(
-                "default_route", "regular"),
+                "default_route", APPROACH_REGULAR),
             "generated_rules": [_FALLBACK_RULE],
             "autonomy_checkpoints": {level: list(row) for level, row in table.items()
                                      if isinstance(row, dict)},

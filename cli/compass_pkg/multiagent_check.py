@@ -35,6 +35,7 @@ import os
 
 from compass_pkg.check_results import NOTHING_TO_CHECK
 from compass_pkg.core import FOUND, find_upwards, resolve_artifact
+from compass_pkg.stable_ids import STAGE_BREAKDOWN
 from compass_pkg.loop_ceilings import (LOOP_CEILINGS_FROM, loop_ceilings,
                                        on_or_after)
 
@@ -181,7 +182,7 @@ def _check_multiagent_run_recorded(task, task_dir):
     requirements review's Q1).
     """
     stages = task.get("stages")
-    breakdown = stages.get("breakdown") if isinstance(stages, dict) else None
+    breakdown = stages.get(STAGE_BREAKDOWN) if isinstance(stages, dict) else None
     if breakdown != "multiagent":
         return NOTHING_TO_CHECK, (
             "breakdown stage is %r, not multiagent - this check only reads a "

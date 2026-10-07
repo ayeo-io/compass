@@ -353,4 +353,4 @@
 
 ---
 
-1811 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1833 superseded scenario(s) are in `docs/system-spec-archive.md`.

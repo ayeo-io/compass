@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Every reference in the preset resolves and the evidence types match the guardrails file
+### Policy lint refuses a check naming an impl the registry does not hold
 
-- **Scenario id:** `DP-6`
+- **Scenario id:** `CR-5`
 - **Intent:** `INT-1`
-- **Source issue:** `default-preset-data`
+- **Source issue:** `check-registry`
 - **Landed:** 2026-10-07
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1734 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1739 superseded scenario(s) are in `docs/system-spec-archive.md`.

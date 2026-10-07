@@ -426,6 +426,11 @@ def test_d2_repairs_change_only_retired_names():
     gained the list describing the registry, versions, the corpus and the
     lock rule.
 
+    One more was re-baselined by `default-preset-data`:
+    `governance/routing-policy.md` (list_items 22 -> 28) gained one `##`
+    section, "The default preset", listing how the legacy files convert into
+    the preset's catalogues.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

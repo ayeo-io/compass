@@ -1,0 +1,19 @@
+# The shipped default preset, produced once from governance/routing-policy.yml
+# and governance/guardrails.yml by cli/compass_pkg/legacy_adapter.py.
+# From the increment that turns those two legacy files into generated views,
+# these files are the source of the shipped defaults. Change the defaults
+# here, never in a view.
+schema: 1
+id: default
+version: 6.0.0
+capabilities: {entry-exit-evaluation: false, artifact-freshness: false}
+locks:
+  hard: [checks.human-approval-present, gates.G5]
+  locked: [stages.assess, stages.verify, stages.ship, approaches.spike, rules.immovable_gates, checks.borrowed-documents-answered,
+    checks.dashboard-current, checks.landed-by-resolves, checks.scenarios-have-tests, checks.scenarios-are-executable,
+    checks.declared-tests-resolve, checks.suite-passed, checks.changed-code-traces-to-scenario, checks.scenario-has-id-and-intent,
+    checks.claim-traces-to-scenario, checks.gate-evidence-present, checks.spike-conclusion-present, checks.spike-no-production-changes,
+    checks.dod-evidence-typed, checks.consistency-check-passes, checks.no-trusted-rerun, checks.evidence-identity-matches,
+    checks.evidence-matches-tree, checks.command-passes, checks.multiagent-run-recorded, gates.G1, gates.G2,
+    gates.G3, gates.G4, gates.S1, gates.S2, gates.verify.correctness, gates.verify.governance, gates.verify.traceability,
+    gates.spike.conclude]

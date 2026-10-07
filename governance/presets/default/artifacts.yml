@@ -1,0 +1,18 @@
+# The shipped default preset, produced once from governance/routing-policy.yml
+# and governance/guardrails.yml by cli/compass_pkg/legacy_adapter.py.
+# From the increment that turns those two legacy files into generated views,
+# these files are the source of the shipped defaults. Change the defaults
+# here, never in a view.
+schema: 1
+artifacts:
+  delivery-approach: {file: delivery-approach.md}
+  acceptance-criteria: {file: acceptance-criteria.md}
+  technical-design: {file: technical-design.md}
+  distribution-map: {file: distribution-map.md}
+  verification-report: {file: verification-report.md}
+  intent: {file: intent.md}
+  requirements-review: {file: requirements-review.md}
+  threat-model: {file: threat-model.md}
+  rollback-plan: {file: rollback-plan.md}
+  launch-readiness: {file: launch-readiness.md}
+  ui-contract: {file: ui-contract.md}

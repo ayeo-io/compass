@@ -1,0 +1,133 @@
+# The shipped default preset, produced once from governance/routing-policy.yml
+# and governance/guardrails.yml by cli/compass_pkg/legacy_adapter.py.
+# From the increment that turns those two legacy files into generated views,
+# these files are the source of the shipped defaults. Change the defaults
+# here, never in a view.
+schema: 1
+vocabulary:
+  approaches.spike:
+    name: spike
+    aliases: []
+  approaches.quick-fix:
+    name: quick fix
+    aliases: []
+  approaches.regular:
+    name: regular
+    aliases: []
+  approaches.hotfix:
+    name: hotfix
+    aliases: []
+  approaches.full:
+    name: full
+    aliases: []
+  stages.assess:
+    name: assess
+    aliases: []
+  stages.define:
+    name: define
+    aliases: []
+  stages.refine:
+    name: refine
+    aliases: []
+  stages.plan:
+    name: plan
+    aliases: []
+  stages.breakdown:
+    name: breakdown
+    aliases: []
+  stages.implement:
+    name: implement
+    aliases: []
+  stages.verify:
+    name: verify
+    aliases: []
+  stages.ship:
+    name: ship
+    aliases: []
+  gates.G1:
+    name: Tested before it lands
+    aliases: []
+  gates.G2:
+    name: Acceptance defined before it is built
+    aliases: []
+  gates.G3:
+    name: Traceability holds
+    aliases: []
+  gates.G4:
+    name: Evidence, not assertion
+    aliases: []
+  gates.G5:
+    name: A human signs off on the irreversible
+    aliases: []
+  gates.S1:
+    name: Spike conclusion recorded
+    aliases: []
+  gates.S2:
+    name: No production change from a Spike
+    aliases: []
+  checks.borrowed-documents-answered:
+    name: Borrowed documents answered
+    aliases: []
+  checks.dashboard-current:
+    name: Dashboard current
+    aliases: []
+  checks.landed-by-resolves:
+    name: Landed-by resolves
+    aliases: []
+  checks.scenarios-have-tests:
+    name: Scenarios have tests
+    aliases: []
+  checks.scenarios-are-executable:
+    name: Scenarios are executable
+    aliases: []
+  checks.declared-tests-resolve:
+    name: Declared tests resolve
+    aliases: []
+  checks.suite-passed:
+    name: Suite passed
+    aliases: []
+  checks.changed-code-traces-to-scenario:
+    name: Changed code traces to scenario
+    aliases: []
+  checks.scenario-has-id-and-intent:
+    name: Scenario has id and intent
+    aliases: []
+  checks.claim-traces-to-scenario:
+    name: Claim traces to scenario
+    aliases: []
+  checks.gate-evidence-present:
+    name: Gate evidence present
+    aliases: []
+  checks.human-approval-present:
+    name: Human approval present
+    aliases: []
+  checks.backfills-paid:
+    name: Follow-ups resolved
+    aliases: []
+  checks.spike-conclusion-present:
+    name: Spike conclusion present
+    aliases: []
+  checks.spike-no-production-changes:
+    name: Spike changes no production code
+    aliases: []
+  checks.dod-evidence-typed:
+    name: Definition of Done evidence is typed
+    aliases: []
+  checks.consistency-check-passes:
+    name: Consistency check passes
+    aliases: []
+  checks.no-trusted-rerun:
+    name: No trusted rerun
+    aliases: []
+  checks.evidence-identity-matches:
+    name: Evidence identity matches
+    aliases: []
+  checks.evidence-matches-tree:
+    name: Evidence matches tree
+    aliases: []
+  checks.command-passes:
+    name: Command passes
+    aliases: []
+  checks.multiagent-run-recorded:
+    name: Multiagent run recorded
+    aliases: []

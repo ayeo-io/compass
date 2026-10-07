@@ -1,0 +1,237 @@
+# The shipped default preset, produced once from governance/routing-policy.yml
+# and governance/guardrails.yml by cli/compass_pkg/legacy_adapter.py.
+# From the increment that turns those two legacy files into generated views,
+# these files are the source of the shipped defaults. Change the defaults
+# here, never in a view.
+schema: 1
+rules:
+  default_shapes:
+    kind: shapes
+    hit: {lean_toward: first}
+    rules:
+      RP-SHAPE-001:
+        order: 1
+        when: {goal: exploration}
+        then: {lean_toward: spike}
+        rationale: Exploration intent - cannot frame for delivery yet.
+      RP-SHAPE-002:
+        order: 2
+        when:
+          urgency: live-defect
+          size: [atomic, small]
+        then: {lean_toward: hotfix}
+        rationale: A live defect, small enough to reproduce-and-fix fast.
+      RP-SHAPE-003:
+        order: 3
+        when:
+          size: [atomic, small]
+          risk: [trivial, contained]
+        then: {lean_toward: quick-fix}
+        rationale: Small on every axis.
+      RP-SHAPE-004:
+        order: 4
+        when:
+          size: [large, product]
+        then: {lean_toward: full}
+        rationale: Large work - full weight, plausibly parallel.
+      RP-SHAPE-005:
+        order: 5
+        when: {size: standard}
+        then: {lean_toward: regular}
+        rationale: The default working shape.
+      RP-SHAPE-FALLBACK:
+        order: 6
+        when: {}
+        then: {lean_toward: regular}
+        rationale: No other shape matched, so the working default.
+  floors:
+    kind: floors
+    hit: {force_minimum_approach: max, never_skip: collect, require_phase: collect, require_skill: collect,
+      add_gate: collect, add_artifact: collect}
+    rules:
+      RP-FLOOR-001:
+        order: 1
+        when: {risk: critical}
+        then:
+          force_minimum_approach: full
+          never_skip: [refine, verify, ship]
+        rationale: Critical changes coordinate, or they break things quietly.
+      RP-FLOOR-002:
+        order: 2
+        when:
+          familiarity: brownfield-unmapped
+          any_of:
+          - size: [standard, large, product]
+          - risk: [cross-cutting, critical]
+          - labels_any: [auth, payments, personal-data, migrations]
+        then: {require_phase: define, require_skill: behaviour-mapping}
+        rationale: You cannot safely change behaviour you have not first written down.
+      RP-FLOOR-003:
+        order: 3
+        when:
+          labels_any: [auth, payments, personal-data, migrations]
+        then: {force_minimum_approach: full}
+        rationale: Domain risk overrides size. A one-line auth change is not small.
+      RP-REQUIRE-001:
+        order: 4
+        when: {risk: critical}
+        then: {add_gate: verify.analyze}
+        rationale: Cross-artifact consistency checked before high-care work lands.
+      RP-REQUIRE-002:
+        order: 5
+        when:
+          labels_any: [auth, payments, personal-data, migrations]
+        then: {add_gate: verify.analyze}
+        rationale: Irreversible-surface issues have consistency checked before they ship.
+      RP-REQUIRE-003:
+        order: 6
+        when:
+          risk: [cross-cutting, critical]
+        then: {add_gate: verify.architecture}
+        rationale: Architecture checked before cross-cutting or critical changes land.
+      RP-REQUIRE-004:
+        order: 7
+        when:
+          labels_any: [auth, payments, personal-data, migrations]
+        then: {add_gate: verify.architecture}
+        rationale: Irreversible-surface issues have architecture checked before they ship.
+      RP-REQUIRE-005:
+        order: 8
+        when:
+          labels_any: [auth, payments, personal-data]
+        then: {add_artifact: threat-model}
+        rationale: Work on a trust boundary states the threats it considered.
+      RP-REQUIRE-006:
+        order: 9
+        when:
+          labels_any: [migrations]
+        then: {add_artifact: rollback-plan}
+        rationale: A change that is hard to undo says in advance how it would be undone.
+  caps:
+    kind: caps
+    hit: {max_worktrees: min}
+    rules:
+      RP-CAP-001:
+        order: 1
+        when: {risk: critical}
+        then: {max_worktrees: 1}
+        rationale: Coordination risk on critical changes outweighs parallelism.
+  loop_ceilings:
+    kind: ceilings
+    hit: {limit: min}
+    rules:
+      RP-LOOP-001:
+        order: 1
+        then: {ceiling: builder_attempts, limit: 3}
+        rationale: A builder that has failed three times needs a new brief or a stop, not a fourth try.
+      RP-LOOP-002:
+        order: 2
+        then: {ceiling: review_rounds, limit: 3}
+        rationale: Review rounds past three mean the brief or the plan is wrong; record why before landing.
+      RP-LOOP-003:
+        order: 3
+        when:
+          risk: [trivial, contained]
+        then: {ceiling: review_rounds, limit: 2}
+        rationale: A contained change that has not passed in two rounds needs a recorded reason.
+      RP-LOOP-004:
+        order: 4
+        then: {ceiling: replans, limit: 2}
+        rationale: A breakdown replanned twice is not converging; stop and ask.
+      RP-LOOP-005:
+        order: 5
+        then: {ceiling: repeated_error, limit: 3}
+        rationale: The same error three times is a failure, not a reason for a fourth attempt.
+      RP-LOOP-006:
+        order: 6
+        then: {ceiling: run_cycles, limit: 30}
+        rationale: One long unattended run loses the thread; a run that has not finished in 30 sessions
+          needs a person.
+      RP-LOOP-007:
+        order: 7
+        then: {ceiling: run_minutes, limit: 240}
+        rationale: An unattended run that is still going after four hours is not converging, and is spending
+          money.
+      RP-LOOP-008:
+        order: 8
+        then: {ceiling: run_cost_usd, limit: 5}
+        rationale: Every session of an unattended run is paid; five US dollars is the most one run may
+          spend, set by the maintainer on 2026-10-03.
+  immovable_gates:
+    kind: immovable-gates
+    hit: {gate: collect}
+    rules:
+      RP-GATE-001:
+        order: 1
+        then: {gate: verify.correctness}
+        rationale: Protects the user - the work must satisfy its acceptance criteria.
+      RP-GATE-002:
+        order: 2
+        then: {gate: verify.governance}
+        rationale: Protects the project's own rules - honours guardrails and strategies.
+      RP-GATE-003:
+        order: 3
+        then: {gate: verify.traceability}
+        rationale: Protects the audit trail - code -> criterion -> intent stays intact.
+    locked: true
+  role_rules:
+    kind: role-rules
+    hit: {require_artifact: collect, gate: collect, block_phase: collect}
+    rules:
+      RP-ROLE-001:
+        order: 1
+        when: {role: product-marketer}
+        then: {require_artifact: launch-readiness, gate: verify.claims, block_phase: ship, until: every
+            claim in positioning.md traces to a passing scenario}
+        rationale: A launch claim with no backing scenario must not ship.
+      RP-ROLE-002:
+        order: 2
+        when: {role: product-owner}
+        then: {require_artifact: intent, block_phase: plan, until: the spec has been checked against intent.md
+            for intent fidelity}
+        rationale: Built-the-thing-right and built-the-right-thing are different checks.
+  advisory:
+    kind: advisory
+    hit: {strategy: collect}
+    rules:
+      RP-ADV-001:
+        order: 1
+        when:
+          risk: [cross-cutting, critical]
+        then: {strategy: regression-baseline}
+        rationale: 'Shared/critical surface - capture a green baseline of the designated existing suite
+          (project.regression_baseline_suite, else test_command) BEFORE the change and re-run it AFTER;
+          record both as test-run evidence on verify.regression. Soft: assessed as reviewer judgement,
+          never gating - it is the regression-baseline strategy, and a strategy is assessed rather than
+          checked.'
+      RP-ADV-002:
+        order: 2
+        when:
+          familiarity: brownfield-unmapped
+          size: [atomic, small]
+          risk: [trivial, contained]
+        then: {strategy: behaviour-mapping}
+        rationale: 'Unmapped ground on a small change - before editing, write a test that pins what the
+          code does now where the change touches it, so the change cannot break behaviour nobody wrote
+          down. Advice, not a floor: a larger, riskier or domain-labelled unmapped change meets RP-FLOOR-002.'
+  role_defaults:
+    kind: advisory
+    hit: {suggest_artifact: collect}
+    rules:
+      RP-SROLE-001:
+        order: 1
+        when: {role: designer}
+        then: {suggest_artifact: ui-contract}
+        rationale: A new user-facing surface usually wants a UI contract.
+  biases:
+    kind: biases
+    hit: {}
+    rules:
+      RP-BIAS-001: {order: 1, rationale: 'When size is genuinely unclear, estimate up - it is cheaper
+          to collapse a stage that turned out easy than to discover mid-implementation that the approach
+          was too light.'}
+      RP-BIAS-002: {order: 2, rationale: 'A non-engineering role in play usually pulls the delivery approach
+          heavier, because it adds artifacts and assessed strategies - but this is a bias, not a floor.'}
+      RP-BIAS-003: {order: 3, rationale: Prefer the lightest delivery approach that still clears every
+          routing guardrail and the applicable gates. Process weight is a cost; spend it where it buys
+          safety.}

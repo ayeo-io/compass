@@ -12537,3 +12537,143 @@
 - **Intent:** `INT-1`
 - **Source issue:** `locks`
 - **Landed:** 2026-10-07
+
+### The module declares its dependencies and owning doc, and core stays in bounds _(archived)_
+
+- **Scenario id:** `LK-9`
+- **Intent:** `INT-1`
+- **Source issue:** `locks`
+- **Landed:** 2026-10-07
+
+### Given a project unlock whose waiver has an approved_on date in the future, When the lock chain is enforced, Then the unlock is refused and the entry stays locked _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `unlock-uses-the-waiver-check`
+- **Landed:** 2026-10-07
+
+### A project with no compass.yml and the framework repository keep the legacy lint _(archived)_
+
+- **Scenario id:** `PL-1`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-lint`
+- **Landed:** 2026-10-07
+
+### Effective prints every resolved field with source and waiver _(archived)_
+
+- **Scenario id:** `PL-10`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-lint`
+- **Landed:** 2026-10-07
+
+### Effective --json has a pinned, deterministic shape _(archived)_
+
+- **Scenario id:** `PL-11`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-lint`
+- **Landed:** 2026-10-07
+
+### Both verbs are documented, in the command corpus and within the line caps _(archived)_
+
+- **Scenario id:** `PL-12`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-lint`
+- **Landed:** 2026-10-07
+
+### Per-layer faults are reported and stop the lint before the merge _(archived)_
+
+- **Scenario id:** `PL-2`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-lint`
+- **Landed:** 2026-10-07
+
+### Every merge code of the first refused layer is reported _(archived)_
+
+- **Scenario id:** `PL-3`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-lint`
+- **Landed:** 2026-10-07
+
+### The merged configuration is checked as a whole _(archived)_
+
+- **Scenario id:** `PL-4`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-lint`
+- **Landed:** 2026-10-07
+
+### Lock refusals are reported and an evaluator fault is reported once _(archived)_
+
+- **Scenario id:** `PL-5`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-lint`
+- **Landed:** 2026-10-07
+
+### An unexcused loosening is an error and waivers are checked _(archived)_
+
+- **Scenario id:** `PL-6`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-lint`
+- **Landed:** 2026-10-07
+
+### A vocabulary change is its own warning _(archived)_
+
+- **Scenario id:** `PL-7`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-lint`
+- **Landed:** 2026-10-07
+
+### The text output, the options and the exit codes _(archived)_
+
+- **Scenario id:** `PL-8`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-lint`
+- **Landed:** 2026-10-07
+
+### Lint --json has a pinned, deterministic shape _(archived)_
+
+- **Scenario id:** `PL-9`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-lint`
+- **Landed:** 2026-10-07
+
+### The evaluator routes without copying the policy _(archived)_
+
+- **Scenario id:** `CS-1`
+- **Intent:** `INT-1`
+- **Source issue:** `classifier-speed`
+- **Landed:** 2026-10-07
+
+### A stored classification is reused when both configurations and the classifier version are unchanged _(archived)_
+
+- **Scenario id:** `CS-2`
+- **Intent:** `INT-1`
+- **Source issue:** `classifier-speed`
+- **Landed:** 2026-10-07
+
+### The benchmark pair keeps its verdict and counts and the benchmark prints CPU seconds _(archived)_
+
+- **Scenario id:** `CS-3`
+- **Intent:** `INT-1`
+- **Source issue:** `classifier-speed`
+- **Landed:** 2026-10-07
+
+### The lock scan classifies only the label sites a footprint can read _(archived)_
+
+- **Scenario id:** `CS-4`
+- **Intent:** `INT-1`
+- **Source issue:** `classifier-speed`
+- **Landed:** 2026-10-07
+
+### The footprint scan gives the full scan's refusals on every lock case and route _(archived)_
+
+- **Scenario id:** `CS-5`
+- **Intent:** `INT-1`
+- **Source issue:** `classifier-speed`
+- **Landed:** 2026-10-07
+
+### A ninth label no locked entry reads is not refused _(archived)_
+
+- **Scenario id:** `CS-6`
+- **Intent:** `INT-1`
+- **Source issue:** `classifier-speed`
+- **Landed:** 2026-10-07

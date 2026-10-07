@@ -183,6 +183,8 @@ ALLOW = (
      '"full" is a stage mode looked up in the rank table, not a delivery approach'),
     ("classify.py", '"scan": ("one of", ("full",',
      '"full" is a scan mode (the whole grid was compared), not the approach id'),
+    ("locks.py", 'SCANS = ("footprint", "full")',
+     '"full" is a scan mode (every label in the layer), not the approach id'),
     ("routing.py", 'if depth == "full"',
      '"full" is an artifact depth, not a delivery approach'),
 )

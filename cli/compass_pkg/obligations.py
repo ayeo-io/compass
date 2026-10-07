@@ -19,8 +19,8 @@ different thing and raises.
 # compass_pkg.core (CompassError, reading_matches, canonical_shape,
 # _stage_key_renames),
 # compass_pkg.loop_ceilings (the ceiling names) and compass_pkg.routing
-# (evaluate_route, RoutingConflict), and compass_pkg.stable_ids (the approach
-# ids). Only compass_pkg.classify imports this module.
+# (evaluate_route, RoutingConflict, prepare_policy, route_checkpoints), and
+# compass_pkg.stable_ids (the approach ids). Only compass_pkg.classify imports this module.
 from __future__ import annotations
 
 import copy
@@ -31,7 +31,8 @@ from compass_pkg.stable_ids import APPROACH_FULL, APPROACH_HOTFIX, APPROACH_QUIC
 from compass_pkg.core import (CompassError, _stage_key_renames, canonical_shape,
                               reading_matches)
 from compass_pkg.loop_ceilings import CEILINGS
-from compass_pkg.routing import RoutingConflict, evaluate_route
+from compass_pkg.routing import (RoutingConflict, evaluate_route, prepare_policy,
+                                 route_checkpoints)
 
 # The effect names the evaluator reads, from the catalogue spelling (ADR-041).
 # A test holds this equal to the inverse of the table the legacy adapter
@@ -468,25 +469,46 @@ def issue_input(config, issue):
     return out
 
 
+class Preparation:
+    """What `obligations` builds from a configuration and an issue layer and
+    would otherwise build again for every assessment: the adapted policy,
+    prepared for the evaluator, and the issue's input. A caller that asks about
+    one configuration at many assessments passes one `Preparation` for it. It
+    fills itself on the first call, so a fault in the configuration surfaces at
+    the same point as without one, and it is built again for a configuration or
+    an issue it was not made from."""
+
+    def __init__(self):
+        self._made_from = None
+        self._built = None
+
+    def get(self, config, issue):
+        if self._made_from is None or (self._made_from[0] is not config
+                                       or self._made_from[1] is not issue):
+            built = (prepare_policy(policy_adapter(config)), issue_input(config, issue))
+            self._made_from, self._built = (config, issue), built
+        return self._built
+
+
 def obligations(config, assessment, autonomy_values=AUTONOMY, capabilities=(),
-                issue=None):
+                issue=None, preparation=None):
     """`Obligations`, or `Refused` when the evaluator refuses the assessment.
     `capabilities` names the switches that are on, and `issue` is the issue's
     own layer, applied before the floors, caps and role rules (`issue_input`).
-    The evaluator runs once for each autonomy value, because only the
-    checkpoints differ."""
+    The evaluator runs once, because only the checkpoints depend on the
+    autonomy value, and the rest are read from the same route."""
     _known_capabilities(capabilities, "obligations were asked for")
-    policy = policy_adapter(config)
-    evaluator_issue = issue_input(config, issue)
+    policy, evaluator_issue = (preparation or Preparation()).get(config, issue)
     values = tuple(autonomy_values) or ("balanced",)
-    results = {}
     try:
-        for value in values:
-            results[value] = evaluate_route(copy.deepcopy(assessment), policy,
-                                            autonomy=value, issue=evaluator_issue)
+        result = evaluate_route(copy.deepcopy(assessment), policy,
+                                autonomy=values[0], issue=evaluator_issue)
     except RoutingConflict as exc:
         return Refused(str(exc))
-    result = results[values[0]]
+    results = {values[0]: result}
+    for value in values[1:]:
+        results[value] = {"checkpoints": route_checkpoints(
+            policy, result["stages"], result["delivery_approach"], value)}
     dimensions = config.get("dimensions") or {}
     orders = dimension_orders(dimensions)
     checks, gates = config.get("checks") or {}, config.get("gates") or {}

@@ -123,7 +123,7 @@ class _Notes:
 
 def _dimension_name(name):
     name = core.ASSESSMENT_KEY_MAP.get(name, name)
-    return core._WHEN_KEY_MAP.get(name, name)
+    return core.WHEN_KEY_MAP.get(name, name)
 
 
 def _when(when, seen=None):
@@ -133,7 +133,7 @@ def _when(when, seen=None):
         return copy.deepcopy(when)
     out = {}
     for key, value in when.items():
-        new = core._WHEN_KEY_MAP.get(key, key)
+        new = core.WHEN_KEY_MAP.get(key, key)
         if seen is not None and new != key:
             seen[new] = key
         if new == "any_of" and isinstance(value, list):
@@ -537,7 +537,8 @@ _HEADER = (
     "# Change a default here, then run python3 scripts/generate-legacy-views.py.\n"
     "# Also raise the version in legacy-views.yml, then run the script with --pin\n"
     "# and again with --pin-hashes, which update the digest and drift fixtures.\n"
-    "# cli/compass_pkg/legacy_adapter.py wrote these files once, from those two files.\n")
+    "# cli/compass_pkg/legacy_adapter.py wrote the first version of these files from\n"
+    "# those two files. The preset is the source now; edit it here.\n")
 
 _MODE_NOTE = ("  # vocabulary-scan: allow - machine enum value that manifests on "
               "disk already carry\n")

@@ -4,7 +4,8 @@
 # Change a default here, then run python3 scripts/generate-legacy-views.py.
 # Also raise the version in legacy-views.yml, then run the script with --pin
 # and again with --pin-hashes, which update the digest and drift fixtures.
-# cli/compass_pkg/legacy_adapter.py wrote these files once, from those two files.
+# cli/compass_pkg/legacy_adapter.py wrote the first version of these files from
+# those two files. The preset is the source now; edit it here.
 schema: 1
 checks:
   borrowed-documents-answered: {statement: 'The threat model and the rollback plan, where they exist,
@@ -132,3 +133,36 @@ checks:
 
       ', kind: deterministic, impl: multiagent-run-recorded, severity: blocking, on_skipped: not-applicable,
     locked: true}
+  dor-summary-filled: {statement: 'Summary is filled - `acceptance-criteria.md` opens with a Summary whose three fields (Goal,
+        Approach, Why now / what changes) are written, not left as template placeholders. This is where the
+        requirement is enforced: the CLI never inspects the spec''s prose, so an empty Summary is caught here
+        or not at all.', kind: human, severity: blocking, on_skipped: not-applicable, requires: [entry-exit-evaluation]}
+  dor-problem-traces-up: {statement: 'Problem traces up - the spec serves the Problem and Desired outcome in `intent.md` (or the
+        issue description, if there is no intent.md). No scenario is orphaned from intent.', kind: human,
+      severity: blocking, on_skipped: not-applicable, requires: [entry-exit-evaluation]}
+  dor-behaviour-is-gwt: {statement: Behaviour is Given/When/Then - every scenario has an observable `Then`. No scenario is a wish.,
+      kind: human, severity: blocking, on_skipped: not-applicable, requires: [entry-exit-evaluation]}
+  dor-traceability-ids: {statement: Traceability ids assigned - every scenario has a `TRC-id` so code and claims can point back
+        to it., kind: human, severity: blocking, on_skipped: not-applicable, requires: [entry-exit-evaluation]}
+  dor-affected-surface-named: {statement: Affected surface named - the spec or `delivery-approach.md` identifies what code and which
+        components this touches., kind: human, severity: blocking, on_skipped: not-applicable, requires: [
+        entry-exit-evaluation]}
+  dor-no-open-questions: {statement: No open questions - the ambiguity ledger above is fully resolved., kind: human, severity: blocking,
+      on_skipped: not-applicable, requires: [entry-exit-evaluation]}
+  dor-approach-still-fits: {statement: 'Delivery approach still fits - nothing found in refine makes `delivery-approach.md` wrong;
+        if it does, re-assess (`/compass:assess --reassess`) before plan.', kind: human, severity: blocking,
+      on_skipped: not-applicable, requires: [entry-exit-evaluation]}
+  dod-every-scenario-passes: {statement: 'Every scenario passes - §1 is all PASS; the spec, read as the acceptance suite, is green.',
+      kind: human, severity: blocking, on_skipped: fail, requires: [entry-exit-evaluation]}
+  dod-suite-green: {statement: TDD suite green - §2 links the record of the full suite passing., kind: human, severity: blocking,
+      on_skipped: fail, requires: [entry-exit-evaluation]}
+  dod-coverage-floor: {statement: Coverage meets the "Tested before it lands" guardrail's floor (`G1`) - evidence in §2., kind: human,
+      severity: blocking, on_skipped: fail, requires: [entry-exit-evaluation]}
+  dod-no-lint-errors: {statement: 'No lint / format / type errors - clean, with the record linked.', kind: human, severity: blocking,
+      on_skipped: fail, requires: [entry-exit-evaluation]}
+  dod-traceability-intact: {statement: Traceability intact - code → scenario → intent holds; claim → scenario holds where the marketer
+        is in play., kind: human, severity: blocking, on_skipped: fail, requires: [entry-exit-evaluation]}
+  dod-living-docs-updated: {statement: (carried to ship) Living docs updated to match reality., kind: human, severity: blocking,
+      on_skipped: fail, requires: [entry-exit-evaluation]}
+  dod-follow-ups-settled: {statement: '(carried to ship) Every outstanding follow-up settled - no unsettled hotfix follow-up, no
+        unbacked marketing claim.', kind: human, severity: blocking, on_skipped: fail, requires: [entry-exit-evaluation]}

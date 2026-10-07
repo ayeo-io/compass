@@ -29,12 +29,12 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the committed JSON Schema for compass.yml in the schemas folder, then it equals the schema generated from the field table
+### Every reference in the preset resolves and the evidence types match the guardrails file
 
-- **Scenario id:** `CS-5`
+- **Scenario id:** `DP-6`
 - **Intent:** `INT-1`
-- **Source issue:** `catalogue-spec`
-- **Landed:** 2026-10-06
+- **Source issue:** `default-preset-data`
+- **Landed:** 2026-10-07
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
 
@@ -332,4 +332,4 @@
 
 ---
 
-1685 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1691 superseded scenario(s) are in `docs/system-spec-archive.md`.

@@ -36,11 +36,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a non-UTF-8 file pinned by blob hash and path, when the gate scans the tree, then it passes the file's content; given any change to the file, a UTF-8 file, a path, or a stale pin, then the gate still fails or reports
+### The evaluator called as today answers as before, nothing else reads the new module, and it declares its dependencies
 
-- **Scenario id:** `TRC-001`
+- **Scenario id:** `OB-8`
 - **Intent:** `INT-1`
-- **Source issue:** `rival-gate-new-key`
+- **Source issue:** `obligations`
 - **Landed:** 2026-10-07
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -339,4 +339,4 @@
 
 ---
 
-1745 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1753 superseded scenario(s) are in `docs/system-spec-archive.md`.

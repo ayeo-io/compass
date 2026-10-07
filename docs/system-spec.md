@@ -50,11 +50,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### The classifier has a public scan with a point callback and locks read no private name
+### EffectiveView.evaluator_policy returns the evaluator's policy from the resolved configuration
 
-- **Scenario id:** `CS-7`
+- **Scenario id:** `GS-22`
 - **Intent:** `INT-1`
-- **Source issue:** `classifier-speed`
+- **Source issue:** `generation-store`
 - **Landed:** 2026-10-07
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -353,4 +353,4 @@
 
 ---
 
-1810 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1832 superseded scenario(s) are in `docs/system-spec-archive.md`.

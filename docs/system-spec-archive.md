@@ -12677,3 +12677,157 @@
 - **Intent:** `INT-1`
 - **Source issue:** `classifier-speed`
 - **Landed:** 2026-10-07
+
+### The classifier has a public scan with a point callback and locks read no private name _(archived)_
+
+- **Scenario id:** `CS-7`
+- **Intent:** `INT-1`
+- **Source issue:** `classifier-speed`
+- **Landed:** 2026-10-07
+
+### effective_for reads live with no generation, refuses generation 0, resolves live with no issue _(archived)_
+
+- **Scenario id:** `GS-1`
+- **Intent:** `INT-1`
+- **Source issue:** `generation-store`
+- **Landed:** 2026-10-07
+
+### The manifest schema and template accept generation and config _(archived)_
+
+- **Scenario id:** `GS-10`
+- **Intent:** `INT-1`
+- **Source issue:** `generation-store`
+- **Landed:** 2026-10-07
+
+### approach evaluate --write commits generation 1, says no change on a repeat, commits 2 on a change _(archived)_
+
+- **Scenario id:** `GS-11`
+- **Intent:** `INT-1`
+- **Source issue:** `generation-store`
+- **Landed:** 2026-10-07
+
+### compass check writes results.yml for an issue with a generation and refuses a broken one _(archived)_
+
+- **Scenario id:** `GS-12`
+- **Intent:** `INT-1`
+- **Source issue:** `generation-store`
+- **Landed:** 2026-10-07
+
+### compass ci reports generation states and fails on a broken one _(archived)_
+
+- **Scenario id:** `GS-13`
+- **Intent:** `INT-1`
+- **Source issue:** `generation-store`
+- **Landed:** 2026-10-07
+
+### Only effective imports generation and the reader modules import no resolver module _(archived)_
+
+- **Scenario id:** `GS-14`
+- **Intent:** `INT-1`
+- **Source issue:** `generation-store`
+- **Landed:** 2026-10-07
+
+### An issue with no generation gets no generation files and the compatibility contracts pass _(archived)_
+
+- **Scenario id:** `GS-15`
+- **Intent:** `INT-1`
+- **Source issue:** `generation-store`
+- **Landed:** 2026-10-07
+
+### The bench script, DEPENDENCY headers, owning-doc row and core.py line cap hold _(archived)_
+
+- **Scenario id:** `GS-16`
+- **Intent:** `INT-1`
+- **Source issue:** `generation-store`
+- **Landed:** 2026-10-07
+
+### A commit refuses a symbolic link, a landed issue and a rejected compass.yml, and its messages name only commands that exist _(archived)_
+
+- **Scenario id:** `GS-17`
+- **Intent:** `INT-1`
+- **Source issue:** `generation-store`
+- **Landed:** 2026-10-07
+
+### The command writes the manifest atomically and every file keeps the previous mode or the umask _(archived)_
+
+- **Scenario id:** `GS-18`
+- **Intent:** `INT-1`
+- **Source issue:** `generation-store`
+- **Landed:** 2026-10-07
+
+### A rejected compass.yml during quick-fix start leaves no issue folder behind _(archived)_
+
+- **Scenario id:** `GS-19`
+- **Intent:** `INT-1`
+- **Source issue:** `generation-store`
+- **Landed:** 2026-10-07
+
+### A generation holds the four files and the complete marker with the contents ADR-036 names _(archived)_
+
+- **Scenario id:** `GS-2`
+- **Intent:** `INT-1`
+- **Source issue:** `generation-store`
+- **Landed:** 2026-10-07
+
+### Folder states, verdict merging and overwrite rules hold on the edge cases _(archived)_
+
+- **Scenario id:** `GS-20`
+- **Intent:** `INT-1`
+- **Source issue:** `generation-store`
+- **Landed:** 2026-10-07
+
+### Only classify and effective import obligations, on any import form _(archived)_
+
+- **Scenario id:** `GS-21`
+- **Intent:** `INT-1`
+- **Source issue:** `generation-store`
+- **Landed:** 2026-10-07
+
+### A commit writes the files, then the marker, then the manifest, under an exclusive lock _(archived)_
+
+- **Scenario id:** `GS-3`
+- **Intent:** `INT-1`
+- **Source issue:** `generation-store`
+- **Landed:** 2026-10-07
+
+### An interrupted commit leaves the manifest on generation n and a named leftover state _(archived)_
+
+- **Scenario id:** `GS-4`
+- **Intent:** `INT-1`
+- **Source issue:** `generation-store`
+- **Landed:** 2026-10-07
+
+### A commit equal to generation n commits nothing and says no change _(archived)_
+
+- **Scenario id:** `GS-5`
+- **Intent:** `INT-1`
+- **Source issue:** `generation-store`
+- **Landed:** 2026-10-07
+
+### A commit refuses a complete-unreferenced target, overwrites an incomplete one, keeps proposed.yml _(archived)_
+
+- **Scenario id:** `GS-6`
+- **Intent:** `INT-1`
+- **Source issue:** `generation-store`
+- **Landed:** 2026-10-07
+
+### Every file the store writes is written atomically and leaves no temporary file _(archived)_
+
+- **Scenario id:** `GS-7`
+- **Intent:** `INT-1`
+- **Source issue:** `generation-store`
+- **Landed:** 2026-10-07
+
+### effective_for returns the stored generation after the project file changes, and refuses a broken one _(archived)_
+
+- **Scenario id:** `GS-8`
+- **Intent:** `INT-1`
+- **Source issue:** `generation-store`
+- **Landed:** 2026-10-07
+
+### Generation directories are classified as current, superseded, proposal, incomplete, complete-unreferenced or broken _(archived)_
+
+- **Scenario id:** `GS-9`
+- **Intent:** `INT-1`
+- **Source issue:** `generation-store`
+- **Landed:** 2026-10-07

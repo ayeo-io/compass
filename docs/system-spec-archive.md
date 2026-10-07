@@ -12677,3 +12677,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `classifier-speed`
 - **Landed:** 2026-10-07
+
+### The classifier has a public scan with a point callback and locks read no private name _(archived)_
+
+- **Scenario id:** `CS-7`
+- **Intent:** `INT-1`
+- **Source issue:** `classifier-speed`
+- **Landed:** 2026-10-07

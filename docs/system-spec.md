@@ -50,11 +50,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### The classifier has a public scan with a point callback and locks read no private name
+### A non-text key anywhere in a layer is refused with L-KEY-NOT-TEXT naming its path and telling the person to quote it
 
-- **Scenario id:** `CS-7`
+- **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `classifier-speed`
+- **Source issue:** `layer-non-text-key`
 - **Landed:** 2026-10-07
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -353,4 +353,4 @@
 
 ---
 
-1810 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1811 superseded scenario(s) are in `docs/system-spec-archive.md`.

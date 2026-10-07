@@ -12426,44 +12426,205 @@
 - **Source issue:** `classifier`
 - **Landed:** 2026-10-07
 
-### The evaluator routes without copying the policy _(archived)_
+### A waiver is found with its id, scope, operation and fields, and its shape is checked _(archived)_
 
-- **Scenario id:** `CS-1`
+- **Scenario id:** `WV-1`
 - **Intent:** `INT-1`
-- **Source issue:** `classifier-speed`
+- **Source issue:** `waivers`
 - **Landed:** 2026-10-07
 
-### A stored classification is reused when both configurations and the classifier version are unchanged _(archived)_
+### The approvers come from the layer above, and no owner fails _(archived)_
 
-- **Scenario id:** `CS-2`
+- **Scenario id:** `WV-2`
 - **Intent:** `INT-1`
-- **Source issue:** `classifier-speed`
+- **Source issue:** `waivers`
 - **Landed:** 2026-10-07
 
-### The benchmark pair keeps its verdict and counts and the benchmark prints CPU seconds _(archived)_
+### An issue waiver's approval is a matching human-approval record _(archived)_
 
-- **Scenario id:** `CS-3`
+- **Scenario id:** `WV-3`
 - **Intent:** `INT-1`
-- **Source issue:** `classifier-speed`
+- **Source issue:** `waivers`
 - **Landed:** 2026-10-07
 
-### The lock scan classifies only the label sites a footprint can read _(archived)_
+### The covered revision is derived and each waived field's parent value is recorded _(archived)_
 
-- **Scenario id:** `CS-4`
+- **Scenario id:** `WV-4`
 - **Intent:** `INT-1`
-- **Source issue:** `classifier-speed`
+- **Source issue:** `waivers`
 - **Landed:** 2026-10-07
 
-### The footprint scan gives the full scan's refusals on every lock case and route _(archived)_
+### A moved revision invalidates a waiver only when a waived field's parent value changed _(archived)_
 
-- **Scenario id:** `CS-5`
+- **Scenario id:** `WV-5`
 - **Intent:** `INT-1`
-- **Source issue:** `classifier-speed`
+- **Source issue:** `waivers`
 - **Landed:** 2026-10-07
 
-### A ninth label no locked entry reads is not refused _(archived)_
+### Attribution classifies the residual layer and excuses only waived entries _(archived)_
 
-- **Scenario id:** `CS-6`
+- **Scenario id:** `WV-6`
 - **Intent:** `INT-1`
-- **Source issue:** `classifier-speed`
+- **Source issue:** `waivers`
+- **Landed:** 2026-10-07
+
+### A waiver that excuses nothing is reported as unneeded _(archived)_
+
+- **Scenario id:** `WV-7`
+- **Intent:** `INT-1`
+- **Source issue:** `waivers`
+- **Landed:** 2026-10-07
+
+### The module declares its dependencies, is pure, is unused and has an owning doc _(archived)_
+
+- **Scenario id:** `WV-8`
+- **Intent:** `INT-1`
+- **Source issue:** `waivers`
+- **Landed:** 2026-10-07
+
+### Locks are read from layer documents and the shipped preset gives the ADR lock set _(archived)_
+
+- **Scenario id:** `LK-1`
+- **Intent:** `INT-1`
+- **Source issue:** `locks`
+- **Landed:** 2026-10-07
+
+### The footprint of a locked check, gate, stage, rule set or approach _(archived)_
+
+- **Scenario id:** `LK-2`
+- **Intent:** `INT-1`
+- **Source issue:** `locks`
+- **Landed:** 2026-10-07
+
+### A lock allows tightening and refuses loosening and each indirect route on a check _(archived)_
+
+- **Scenario id:** `LK-3`
+- **Intent:** `INT-1`
+- **Source issue:** `locks`
+- **Landed:** 2026-10-07
+
+### A lock on a gate, stage, rule set or approach refuses removal and moves _(archived)_
+
+- **Scenario id:** `LK-4`
+- **Intent:** `INT-1`
+- **Source issue:** `locks`
+- **Landed:** 2026-10-07
+
+### A waiver, a hard lock and the label cap: what a lock refuses regardless _(archived)_
+
+- **Scenario id:** `LK-5`
+- **Intent:** `INT-1`
+- **Source issue:** `locks`
+- **Landed:** 2026-10-07
+
+### An unlock needs the project layer, the owner's waiver and a lock that is not hard _(archived)_
+
+- **Scenario id:** `LK-6`
+- **Intent:** `INT-1`
+- **Source issue:** `locks`
+- **Landed:** 2026-10-07
+
+### Conformance is conformant, or non-conformant naming each unlocked entry _(archived)_
+
+- **Scenario id:** `LK-7`
+- **Intent:** `INT-1`
+- **Source issue:** `locks`
+- **Landed:** 2026-10-07
+
+### Check, the receipt and the summary print the conformance line and nothing else changes _(archived)_
+
+- **Scenario id:** `LK-8`
+- **Intent:** `INT-1`
+- **Source issue:** `locks`
+- **Landed:** 2026-10-07
+
+### The module declares its dependencies and owning doc, and core stays in bounds _(archived)_
+
+- **Scenario id:** `LK-9`
+- **Intent:** `INT-1`
+- **Source issue:** `locks`
+- **Landed:** 2026-10-07
+
+### Given a project unlock whose waiver has an approved_on date in the future, When the lock chain is enforced, Then the unlock is refused and the entry stays locked _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `unlock-uses-the-waiver-check`
+- **Landed:** 2026-10-07
+
+### A project with no compass.yml and the framework repository keep the legacy lint _(archived)_
+
+- **Scenario id:** `PL-1`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-lint`
+- **Landed:** 2026-10-07
+
+### Effective prints every resolved field with source and waiver _(archived)_
+
+- **Scenario id:** `PL-10`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-lint`
+- **Landed:** 2026-10-07
+
+### Effective --json has a pinned, deterministic shape _(archived)_
+
+- **Scenario id:** `PL-11`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-lint`
+- **Landed:** 2026-10-07
+
+### Per-layer faults are reported and stop the lint before the merge _(archived)_
+
+- **Scenario id:** `PL-2`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-lint`
+- **Landed:** 2026-10-07
+
+### Every merge code of the first refused layer is reported _(archived)_
+
+- **Scenario id:** `PL-3`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-lint`
+- **Landed:** 2026-10-07
+
+### The merged configuration is checked as a whole _(archived)_
+
+- **Scenario id:** `PL-4`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-lint`
+- **Landed:** 2026-10-07
+
+### Lock refusals are reported and an evaluator fault is reported once _(archived)_
+
+- **Scenario id:** `PL-5`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-lint`
+- **Landed:** 2026-10-07
+
+### An unexcused loosening is an error and waivers are checked _(archived)_
+
+- **Scenario id:** `PL-6`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-lint`
+- **Landed:** 2026-10-07
+
+### A vocabulary change is its own warning _(archived)_
+
+- **Scenario id:** `PL-7`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-lint`
+- **Landed:** 2026-10-07
+
+### The text output, the options and the exit codes _(archived)_
+
+- **Scenario id:** `PL-8`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-lint`
+- **Landed:** 2026-10-07
+
+### Lint --json has a pinned, deterministic shape _(archived)_
+
+- **Scenario id:** `PL-9`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-lint`
 - **Landed:** 2026-10-07

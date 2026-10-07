@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a compass.yml with schema: 1 and governance_drift: strict, When the project layer is checked and loaded, Then it is accepted and governance_drift is read as a setting, not a layer key
+### Policy lint refuses a check naming an impl the registry does not hold
 
-- **Scenario id:** `TRC-001`
+- **Scenario id:** `CR-5`
 - **Intent:** `INT-1`
-- **Source issue:** `governance-drift-is-a-settings-key`
+- **Source issue:** `check-registry`
 - **Landed:** 2026-10-07
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1729 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1739 superseded scenario(s) are in `docs/system-spec-archive.md`.

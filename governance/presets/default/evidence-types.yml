@@ -1,0 +1,37 @@
+# The shipped default preset, produced once from governance/routing-policy.yml
+# and governance/guardrails.yml by cli/compass_pkg/legacy_adapter.py.
+# From the increment that turns those two legacy files into generated views,
+# these files are the source of the shipped defaults. Change the defaults
+# here, never in a view.
+schema: 1
+evidence_types:
+  test-run: {description: 'A recorded test execution - e.g. evidence/green-<scenario>.json from a scenario-bound
+      `compass tdd-green`, or evidence/green.json from an unbound one. The strongest: a machine ran it.
+      May carry attempts: <int> and rerun_without_change: <bool> to signal rerun integrity (see strategy
+      `S5` and the no-trusted-rerun check).
+
+      '}
+  command-output: {description: 'Captured output of a command - a scanner, a linter, a coverage run, a
+      `compass check` run.'}
+  manual-review: {description: 'A recorded reviewer judgement - a code review or governance review captured
+      in a file. Stronger than a generic artifact because it is a named review, not a stray note.'}
+  human-approval: {description: 'A recorded human sign-off - for irreversible changes (guardrail `G5`).
+      Has structured fields: approver, role, decision, timestamp, scope, conditions.'}
+  security-review: {description: A recorded security review or scan result - for security-sensitive changes.}
+  migration-plan: {description: 'A recorded plan for a data, schema, or infrastructure migration.'}
+  rollback-plan: {description: 'A record showing the rollback was REHEARSED - what was run, when, and
+      against what. Not a plan: SWEBOK v4 §6.3.3 needs "a planned and rehearsed rollback" before a new
+      version is deployed, and a rollback nobody has run is a guess. A guess recorded as a plan is the
+      assertion guardrail `G4` exists to reject.
+
+      '}
+  claim-review: {description: A recorded review of public/user-facing claims against backing scenarios
+      - the marketer's audit trail.}
+  spike-conclusion: {description: 'A recorded close-out of a spike: what was learned, a decision (discard
+      | graduate-to-delivery | defer), and any link to the next issue.'}
+  consistency-check: {description: 'Output of compass analyze - a structured consistency findings list.
+      Gate-clearing: zero findings. Only this type clears verify.analyze; advisory command-output entries
+      do not.'}
+  artifact: {description: 'A written record without a more specific type - a review note, a verification
+      report. The weakest, by design: honest for judgement-shaped gates, never enough for a mechanical
+      one.'}

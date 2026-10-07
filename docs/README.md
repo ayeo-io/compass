@@ -51,11 +51,12 @@ same commit.
 | `cli/compass_pkg/refusals.py` | `docs/refusal-codes.md` |
 | `cli/compass_pkg/project_settings.py` | `docs/configuration.md` |
 | `cli/compass_pkg/catalogue_spec.py`, `cli/compass_pkg/catalogue_check.py`, `schemas/compass.schema.json` | `architecture/decisions/ADR-035-delivery-approaches-stages-and-modes-are-configuration.md` |
+| `cli/compass_pkg/legacy_adapter.py`, `governance/presets/default/` | `governance/routing-policy.md` |
 | `cli/compass_pkg/vocabulary.py` | `architecture/decisions/ADR-035-delivery-approaches-stages-and-modes-are-configuration.md` |
 | `cli/compass_pkg/atomic_io.py` | `architecture/decisions/ADR-036-an-issue-runs-against-a-stored-generation.md` |
 | `cli/compass_pkg/layers.py`, `cli/compass_pkg/merge.py` | `architecture/decisions/ADR-035-delivery-approaches-stages-and-modes-are-configuration.md` |
 | `cli/compass_pkg/routing.py`, `cli/compass_pkg/approach_diagram.py`, `governance/routing-policy.yml`, `approaches/`, `docs/approach-diagram.html` | `governance/routing-policy.md` |
-| `cli/compass_pkg/checks.py`, `cli/compass_pkg/check_cmd.py`, `governance/guardrails.yml` | `governance/guardrails.md` |
+| `cli/compass_pkg/checks.py`, `cli/compass_pkg/check_cmd.py`, `cli/compass_pkg/check_registry.py`, `governance/guardrails.yml` | `governance/guardrails.md` |
 | `governance/strategies.md` | `governance/strategies-rationale.md` |
 | `governance/terminology.yml` | `docs/glossary.md` |
 | `commands/`, `agents/`, `schemas/` | `skills/compass-runtime/SKILL.md` |

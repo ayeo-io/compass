@@ -1,0 +1,35 @@
+# What governance/routing-policy.yml and governance/guardrails.yml hold that the
+# preset in governance/presets/default/ has no field for: the values the generator
+# of those two views needs to rebuild them. Only that generator reads this file.
+# It goes with the views at 7.0.0.
+schema: 1
+routing_policy:
+  version: 2.19.0
+  default_route: regular
+  generated_rules: [RP-SHAPE-FALLBACK]
+  autonomy_checkpoints:
+    controlled: [quick-fix, regular, full, hotfix, spike]
+    balanced: [quick-fix, regular, full, hotfix, spike]
+    autonomous: [quick-fix, regular, full, hotfix, spike]
+  when_keys: {}
+  rule_key_order:
+    RP-LOOP-003: [id, ceiling, when, limit, rationale]
+    RP-ADV-001: [id, strategy, when, rationale]
+    RP-ADV-002: [id, strategy, when, rationale]
+  legacy_values:
+    RP-ROLE-001: {require_artifact: launch-readiness.md, block_phase: land}
+    RP-ROLE-002: {require_artifact: intent.md}
+    RP-SROLE-001: {suggest_artifact: ui-contract.md}
+guardrails:
+  version: 1.26.0
+  project: []
+  when_keys: {risk: blast_radius, labels_any: touches_any}
+  checked_at:
+    G1: [verify, land]
+    G2: [clarify, verify]
+    G3: [clarify, build, verify, land]
+    G4: [verify, land]
+    G5: [land]
+    S1: [land]
+    S2: [land]
+  key_order: {}

@@ -11,6 +11,7 @@ Scenario ids: `LK-1` to `LK-9` (issue `locks`).
 from __future__ import annotations
 
 import copy
+import os
 import re
 import sys
 from pathlib import Path
@@ -1395,6 +1396,10 @@ def test_cs_5_the_proof_ran_on_the_cases_of_this_file():
     other tests have made calls, and most of them the full scan could run."""
     if not LOCK_PROOF["compared"]:
         pytest.skip("run the whole file to count the cases the fixture compared")
+    # pytest-xdist (CI's `-n auto`) gives each worker part of this file, so a
+    # worker's count is partial; the floor holds only in one process.
+    if os.environ.get("PYTEST_XDIST_WORKER"):
+        pytest.skip("an xdist worker counts only its share of the file's cases")
     assert LOCK_PROOF["compared"] >= 70, LOCK_PROOF
 
 
@@ -1409,3 +1414,15 @@ def test_lk_1_an_unlock_whose_waiver_is_dated_in_the_future_is_refused():
     assert [f.ok for f in found] == [False]
     assert "later than today" in found[0].reason
     assert set(locks.lock_set([parent, project])) == {"checks.a"}
+
+
+def test_cs_5_skips_inside_an_xdist_worker(monkeypatch):
+    # CI splits this file across xdist workers, so one worker counts only part
+    # of the compared cases; the floor holds only in a single-process run.
+    monkeypatch.setenv("PYTEST_XDIST_WORKER", "gw1")
+    monkeypatch.setitem(LOCK_PROOF, "compared", 10)
+    with pytest.raises(pytest.skip.Exception):
+        test_cs_5_the_proof_ran_on_the_cases_of_this_file()
+    monkeypatch.delenv("PYTEST_XDIST_WORKER")
+    with pytest.raises(AssertionError):
+        test_cs_5_the_proof_ran_on_the_cases_of_this_file()

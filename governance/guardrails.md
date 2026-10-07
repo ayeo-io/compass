@@ -188,13 +188,27 @@ effective` will print what it returns.
   that narrows the rule is refused. A rule that adds a gate, asks for an
   artifact, blocks a stage or asks for a skill is protected through that fact.
 - **A waiver never excuses a lock refusal.**
-- **More than eight named labels is a deliberate fail-safe.** The scan counts
-  labels across the whole layer, not only those a locked entry reads. Once a
-  layer holds nine, every change to it is refused, whether or not it touches a
-  locked entry, and the refusal reaches the layers below it, including an
-  issue's `config:`. It stays until the footprint-only scan lands. To lift it,
-  name no more than eight labels. For a `true` lock an owner-approved unlock
-  also lifts it. For a hard lock nothing else does.
+- **More than eight named labels is still refused, but only the labels a locked
+  entry can read are counted.** The scan keeps a label only where it can reach
+  a fact a lock protects, and drops the labels that only these read:
+  - advisory, bias and ceiling rules, which change what the evaluator reports
+    and which no footprint carries;
+  - a check that no locked stage or gate lists and that is not locked itself;
+  - a gate that is not locked, adds nothing a locked rule set adds, and holds no
+    locked check.
+
+  Labels in floors, shapes, caps, role rules and immovable gates always count,
+  because they decide the approach and so the gates in force. Once more than
+  eight labels a locked entry can read are named, every change to the layer is
+  refused, and the refusal reaches the layers below it, including an issue's
+  `config:`. The refusal names the labels counted. To lift it, name no more than
+  eight of them. For a `true` lock an owner-approved unlock also lifts it. For a
+  hard lock nothing else does. An entry or a path the scan does not recognise
+  keeps its labels, so a doubtful case makes the count larger and never smaller.
+  `enforce(..., scan="full")` counts every label in the layer. It is the
+  reference that `tests/test_locks_footprint_scan.py` compares the footprint scan
+  with: both give the same refusals on every lock test case and every route
+  tried against the shipped policy.
 - **A configuration the evaluator rejects** is refused as well, because no
   lock can be shown to hold. An unlock cannot help. The configuration needs
   fixing, and lint reports the fault.

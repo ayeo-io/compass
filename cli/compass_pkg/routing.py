@@ -67,9 +67,19 @@ def canonical_routes(policy):
     """`policy` with every route name in its current spelling, and the old
     names it held. A project's policy copied before the routes were renamed
     keys them `express`, `standard` and `expedition`, or names `feature`
-    and `initiative`; it computes exactly as the renamed one does."""
+    and `initiative`; it computes exactly as the renamed one does. The result
+    shares nothing with `policy`, so a caller may change it."""
     import copy
-    out = copy.deepcopy(policy or {})
+    return canonical_view(copy.deepcopy(policy or {}))
+
+
+def canonical_view(policy):
+    """What `canonical_routes` returns, without copying the policy: the
+    containers a rename changes are new, and everything else is the policy's
+    own. The result is for reading. The evaluator reads a policy once for each
+    assessment, and copying all of it each time was most of the cost of a
+    classification (a profile of the classifier benchmark)."""
+    out = dict(policy or {})
     old = set()
 
     def name(value):
@@ -92,18 +102,29 @@ def canonical_routes(policy):
         return merged
 
     out["route_shapes"] = keyed(out.get("route_shapes") or {}, "route_shapes")
-    strategies = out.get("routing_strategies") or {}
-    if "default_route" in strategies:
-        strategies["default_route"] = name(strategies["default_route"])
-    for shape in strategies.get("default_shapes") or []:
-        if isinstance(shape, dict) and "lean_toward" in shape:
-            shape["lean_toward"] = name(shape["lean_toward"])
-    for group in (out.get("routing_guardrails") or {}).values():
-        for rule in group if isinstance(group, list) else []:
-            if isinstance(rule, dict):
-                for key in ("force_minimum_route", "forbid_route"):
-                    if key in rule:
-                        rule[key] = name(rule[key])
+    strategies = dict(out.get("routing_strategies") or {})
+    if strategies:
+        if "default_route" in strategies:
+            strategies["default_route"] = name(strategies["default_route"])
+        shapes = strategies.get("default_shapes")
+        if isinstance(shapes, list):
+            strategies["default_shapes"] = [
+                dict(shape, lean_toward=name(shape["lean_toward"]))
+                if isinstance(shape, dict) and "lean_toward" in shape else shape
+                for shape in shapes]
+        out["routing_strategies"] = strategies
+    guardrails = out.get("routing_guardrails")
+    if isinstance(guardrails, dict) and guardrails:
+        def renamed(rule):
+            if not isinstance(rule, dict):
+                return rule
+            return dict(rule, **{key: name(rule[key])
+                                 for key in ("force_minimum_route", "forbid_route")
+                                 if key in rule})
+        out["routing_guardrails"] = {
+            key: ([renamed(rule) for rule in group] if isinstance(group, list)
+                  else group)
+            for key, group in guardrails.items()}
     table = out.get("autonomy_checkpoints")
     if isinstance(table, dict):
         out["autonomy_checkpoints"] = {
@@ -111,6 +132,54 @@ def canonical_routes(policy):
                     if isinstance(row, dict) else row)
             for level, row in table.items()}
     return out, sorted(old)
+
+
+class PreparedPolicy:
+    """A policy read once for many assessments: its route names in the current
+    spelling, the old names it held, its vocabulary, and the problems of its
+    checkpoint table. None of it depends on the assessment, so a caller that
+    routes many assessments under one policy (the classifier) prepares it once
+    and hands this to `evaluate_route` in place of the policy. The table's
+    problems are kept, not raised, so `evaluate_route` raises them at the point
+    it always has."""
+
+    def __init__(self, view, renamed, vocab, table_errors):
+        self.view = view
+        self.renamed = renamed
+        self.vocab = vocab
+        self.table_errors = table_errors
+
+
+_VOCABULARY_KEYS = {"blast_radius": "risk", "terrain": "familiarity",
+                    "magnitude": "size", "intent": "goal",
+                    "touches_common": "labels_common"}
+
+
+def prepare_policy(policy):
+    """The `PreparedPolicy` of `policy`. A policy that names one route twice
+    raises here, as `evaluate_route` has always raised it first."""
+    from compass_pkg.policy import checkpoint_table_errors
+    view, renamed = canonical_view(policy)
+    vocab = {_VOCABULARY_KEYS.get(k, k): v
+             for k, v in (view.get("assessment_vocabulary")
+                          or view.get("reading_vocabulary") or {}).items()}
+    return PreparedPolicy(view, renamed, vocab, checkpoint_table_errors(view))
+
+
+def route_checkpoints(prepared, stages, approach, autonomy):
+    """The hand-offs that wait for a person under `autonomy`, for an approach
+    whose stages are `stages`. Only this depends on the autonomy, so a caller
+    that needs every autonomy value routes once and asks for the rest here."""
+    from compass_pkg.policy import CHECKPOINT_STAGES
+    runs = [s for s in CHECKPOINT_STAGES
+            if stages.get(s) not in (None, "collapsed", "skipped")]
+    table = prepared.view.get("autonomy_checkpoints")
+    row = {canonical_shape(k): v
+           for k, v in ((table or {}).get(autonomy) or {}).items()}
+    listed = row.get(canonical_shape(approach))
+    # A missing table, value or route waits at every hand-off the route
+    # runs: a gap must not read as "never wait".
+    return runs if listed is None else [s for s in runs if s in listed]
 
 
 class RoutingConflict(CompassError):
@@ -149,13 +218,9 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
     the new approach's own modes, so the issue's modes are reported as
     ignored. With no `issue` the result is what it was before the argument
     existed."""
-    policy, renamed = canonical_routes(policy)
-    _vk = {"blast_radius": "risk", "terrain": "familiarity",
-           "magnitude": "size", "intent": "goal",
-           "touches_common": "labels_common"}
-    vocab = {_vk.get(k, k): v
-             for k, v in (policy.get("assessment_vocabulary")
-                          or policy.get("reading_vocabulary") or {}).items()}
+    prepared = (policy if isinstance(policy, PreparedPolicy)
+                else prepare_policy(policy))
+    policy, renamed, vocab = prepared.view, prepared.renamed, prepared.vocab
     # The dimension orders a `when:` clause reads `at_least` against. Absent,
     # the shipped orders of risk and size apply, as before.
     orders = policy.get("dimension_orders")
@@ -440,19 +505,9 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
     # --- checkpoints: which hand-offs wait for a person ----------------------
     # Looked up after everything else, from the final route, so the setting
     # cannot change the route, the stages or the gates.
-    from compass_pkg.policy import CHECKPOINT_STAGES, checkpoint_table_errors
-    table_errors = checkpoint_table_errors(policy)
-    if table_errors:
-        raise CompassError("governance/routing-policy.yml: " + table_errors[0])
-    runs = [s for s in CHECKPOINT_STAGES
-            if phases.get(s) not in (None, "collapsed", "skipped")]
-    table = policy.get("autonomy_checkpoints")
-    row = {canonical_shape(k): v
-           for k, v in ((table or {}).get(autonomy) or {}).items()}
-    listed = row.get(canonical_shape(final))
-    # A missing table, value or route waits at every hand-off the route
-    # runs: a gap must not read as "never wait".
-    checkpoints = runs if listed is None else [s for s in runs if s in listed]
+    if prepared.table_errors:
+        raise CompassError("governance/routing-policy.yml: " + prepared.table_errors[0])
+    checkpoints = route_checkpoints(prepared, phases, final, autonomy)
 
     result = {
         # Old route names the policy used, read as the current ones; the

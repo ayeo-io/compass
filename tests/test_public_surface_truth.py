@@ -446,6 +446,11 @@ def test_d2_repairs_change_only_retired_names():
     configurations are compared", with a list of the grid's rules, the JSON
     document and its fields.
 
+    Two more were re-baselined by `classifier-speed`: `governance/guardrails.md`
+    (list_items 43 -> 46) gained the footprint scan's three bullets, and
+    `governance/routing-policy.md` (list_items 53 -> 56, table_rows 7 -> 12)
+    gained the speed targets, the measures taken and the scan.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

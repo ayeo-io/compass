@@ -19,10 +19,10 @@ what `conformance_lines` returns.
 """
 # DEPENDENCY: standard library (copy, itertools, json, os, textwrap, dataclasses);
 # compass_pkg.catalogue_spec, compass_pkg.atomic_io (the strict loader),
-# compass_pkg.classify (the grid, the comparison rules, its private names `_Run`,
-# `_evaluate`, `_where` and `_plain`, and the evaluator it imports, reached as
-# `classify.obligations` and `classify.Refused` because only classify may import
-# obligations), compass_pkg.merge, compass_pkg.layers (Layer),
+# compass_pkg.classify (the grid, `scan` and its per-point callback, the
+# comparison rules, `where`, `plain` and `Refused`; only classify may import the
+# evaluator, so this module reaches what it owes through `Scan.obligations`),
+# compass_pkg.merge, compass_pkg.layers (Layer),
 # compass_pkg.legacy_views (the preset's lock summary, read lazily) and
 # compass_pkg.core (CompassError). Imported by compass_pkg.check_cmd,
 # compass_pkg.receipt and compass_pkg.routing, which print its report.
@@ -39,7 +39,6 @@ from dataclasses import dataclass, replace
 from compass_pkg import catalogue_spec as spec
 from compass_pkg import classify, merge
 from compass_pkg.atomic_io import load_yaml_strict
-from compass_pkg.classify import _plain
 from compass_pkg.core import CompassError
 from compass_pkg.layers import Layer
 
@@ -331,25 +330,28 @@ def _refusal(fp, locks, entry, field, key, outcome, parent, child, where=""):
     verb = ("loosens" if outcome == "looser" else "cannot be compared with")
     held = _word(level) + (f", by {layer}" if layer else "")
     shown = f" ({key})" if key is not None else ""
+    before, after = classify.plain(parent), classify.plain(child)
     text = (f"{entry} is locked ({held}): {field}{shown} {verb} the locked value - "
-            f"{json.dumps(_plain(parent))} before, {json.dumps(_plain(child))} after"
+            f"{json.dumps(before)} before, {json.dumps(after)} after"
             + (f", at {where}" if where else ""))
-    return Refusal(entry, level, field, key, outcome, _plain(parent), _plain(child),
-                   where, text)
+    return Refusal(entry, level, field, key, outcome, before, after, where, text)
 
 
 # The facts a locked rule set can add a value to.
 RULE_FACT_VALUES = tuple(RULE_EFFECT_FACTS.values())
 
 
-def _check_of(fp, key):
-    """The locked check a change on a check field is about. A parameter's key
-    is `check.parameter`."""
+def _check_of(fp, field, key):
+    """The locked check a change on a check field is about. Every check field
+    is keyed by the check's id, which may hold a dot, so it matches exactly. A
+    parameter's key is `check.parameter`, and only that field matches by the
+    check id and a dot."""
     if key in fp.checks:
         return key
-    for check in sorted(fp.checks, key=len, reverse=True):
-        if isinstance(key, str) and key.startswith(check + "."):
-            return check
+    if field == "checks.params":
+        for check in sorted(fp.checks, key=len, reverse=True):
+            if isinstance(key, str) and key.startswith(check + "."):
+                return check
     return None
 
 
@@ -368,7 +370,7 @@ def _footprint_changes(fp, change, ctx):
     change of the classifier that a lock covers."""
     field, key, p, c = change.field, change.key, change.parent, change.child
     if field.startswith("checks."):
-        check = _check_of(fp, key)
+        check = _check_of(fp, field, key)
         if check:
             yield (f"checks.{check}", field, key, change.outcome, p, c)
     elif field in ("stages.entry", "stages.exit", "gates.checks"):
@@ -511,6 +513,79 @@ def _order_refusals(fp, locks, before, after):
     return found
 
 
+# The rule sets whose conditions no fact of a footprint carries: an advisory
+# strategy or suggestion, a bias and a loop ceiling change what the evaluator
+# reports, and no lock covers any of it. A label that only they read cannot
+# change what a lock refuses, so the footprint scan does not count it.
+IRRELEVANT_RULE_KINDS = ("advisory", "biases", "ceilings")
+
+# `footprint` classifies only the facts, and counts only the labels, a locked
+# entry can read. `full` is the reference: every label in the layer, so a test
+# can compare the two. Nothing else is a scan.
+SCANS = ("footprint", "full")
+
+
+def _check_scan(scan):
+    if scan not in SCANS:
+        raise CompassError(f"scan is '{scan}'; it must be one of {', '.join(SCANS)}")
+
+
+def _lists_with_a_locked_entry(fp, configs):
+    """The checks a locked stage or gate lists, and the gates that list a locked
+    check, in either configuration. A check in the first set fills a locked
+    list, and a gate in the second decides when a locked check is listed."""
+    listed, holders = set(), set()
+
+    def names(value):
+        return {n for n in (value if isinstance(value, (list, tuple)) else ())
+                if isinstance(n, str)}
+
+    for config in configs:
+        for stage in fp.stages:
+            body = (config.get("stages") or {}).get(stage) or {}
+            listed |= names(body.get("entry")) | names(body.get("exit"))
+        for gate_id, gate in (config.get("gates") or {}).items():
+            checks = names((gate or {}).get("checks"))
+            if gate_id in fp.gates:
+                listed |= checks
+            if checks & fp.checks:
+                holders.add(gate_id)
+    return listed, holders
+
+
+def _label_reader(fp, before, after):
+    """Whether the labels a condition names can reach a fact a lock protects,
+    for `classify.collect_atoms`. `path` leads to the entry that holds the
+    condition. A label is dropped only where the entry is positively one no
+    footprint fact reads:
+
+    - a rule in an advisory, bias or ceiling rule set;
+    - a check that is not locked and that no locked stage or gate lists, in
+      either configuration, so no lock compares it;
+    - a gate that is not locked, adds nothing a locked rule set adds, and
+      holds no locked check.
+
+    Any other entry, and any path this does not recognise, keeps its labels, so
+    an unrecognised shape makes the scan larger and never smaller."""
+    listed, holders = _lists_with_a_locked_entry(fp, (before, after))
+
+    def reads(path):
+        if len(path) < 2:
+            return True
+        catalogue, entry_id = path[0], path[1]
+        if catalogue == "rules":
+            kinds = {((c.get("rules") or {}).get(entry_id) or {}).get("kind")
+                     for c in (before, after) if entry_id in (c.get("rules") or {})}
+            return not kinds or not kinds <= set(IRRELEVANT_RULE_KINDS)
+        if catalogue == "checks":
+            return entry_id in fp.checks or entry_id in listed
+        if catalogue == "gates":
+            return entry_id in fp.gates or entry_id in fp.rule_gates or entry_id in holders
+        return True
+
+    return reads
+
+
 def _unprovable(field, reason):
     """The refusal for a change the grid cannot be run over. No lock can be
     shown to hold, so the layer is refused as one that cannot be compared."""
@@ -518,20 +593,28 @@ def _unprovable(field, reason):
                    f"no lock can be shown to hold: {reason}")
 
 
-def _scan(fp, locks, before, after, kwargs, early_exit, out):
+def _scan(fp, locks, before, after, kwargs, early_exit, out, scan="footprint"):
     """Evaluate both configurations at every point of the classifier's grid and
-    collect what the locks refuse there, the first point of each."""
-    atoms = classify.collect_atoms(before, after, None, kwargs["child_issue"])
+    collect what the locks refuse there, the first point of each. The grid's
+    labels are those a locked entry can read (`scan="footprint"`) or every
+    label in the layer (`scan="full"`)."""
+    reader = _label_reader(fp, before, after) if scan == "footprint" else None
+    atoms = classify.collect_atoms(before, after, None, kwargs["child_issue"],
+                                   label_site=reader)
     grid = classify.build_grid(before, after, atoms, False, None, kwargs["child_issue"])
     if len(grid.labels) > spec.LABEL_CAP:
         hard = any(level == "hard" for level in fp.levels.values())
         remedy = ("a hard lock: nothing else lifts it" if hard else
                   "or unlock the locked entries with a waiver the owner approved")
+        counted = ("the labels a locked entry can read. Labels that only advisory, bias or "
+                   "ceiling rules read, or that only checks and gates no lock covers read, "
+                   "are not counted" if scan == "footprint"
+                   else "the labels across the whole layer")
         out.refusals += (_unprovable(
             "grid", f"more than eight named labels: {len(grid.labels)} "
-            f"({', '.join(grid.labels)}). The scan counts labels across the whole layer "
-            f"and does not sample, so every change is refused until the layer is "
-            f"narrowed. Name no more than eight labels"
+            f"({', '.join(grid.labels)}). The scan counts only {counted}, and does not "
+            f"sample, so every change is refused until the layer is narrowed. Name no "
+            f"more than eight labels"
             + (f" - this is {remedy}" if hard else f", {remedy}")),)
         return
     try:
@@ -554,9 +637,7 @@ def _ended_here(fp, change, point, run):
             or (change.field == "evaluation.refused" and change.parent is None))
     if not gone:
         return
-    config, capabilities, issue = run.inputs[0]
-    owed = classify.obligations.obligations(config, point.assessment, capabilities=capabilities,
-                                    issue=issue)
+    owed = run.obligations(0, point.assessment)
     if isinstance(owed, classify.Refused):
         return
     listed = set()
@@ -571,34 +652,36 @@ def _ended_here(fp, change, point, run):
 
 
 def _evaluate_grid(fp, locks, before, after, kwargs, early_exit, out, grid):
-    run = classify._Run(before, after, grid, kwargs)
     seen = {(r.entry, r.field, r.key) for r in out.refusals}
-    for classes in itertools.product(*[cs for _, cs in grid.dimensions]):
-        for subset in grid.label_subsets():
-            point = classify._evaluate(classes, subset, run)
-            out.evaluated += 1
-            for change in point.changes:
-                for entry, field, key, outcome, p, c in itertools.chain(
-                        _footprint_changes(fp, change, run.ctx),
-                        _ended_here(fp, change, point, run)):
-                    if outcome in LOOSENS and (entry, field, key) not in seen:
-                        seen.add((entry, field, key))
-                        out.refusals += (_refusal(
-                            fp, locks, entry, field, key, outcome, p, c,
-                            classify._where(point.assessment)),)
-            if early_exit and out.refusals:
-                return
+
+    def visit(point, run):
+        out.evaluated += 1
+        for change in point.changes:
+            for entry, field, key, outcome, p, c in itertools.chain(
+                    _footprint_changes(fp, change, run.ctx),
+                    _ended_here(fp, change, point, run)):
+                if outcome in LOOSENS and (entry, field, key) not in seen:
+                    seen.add((entry, field, key))
+                    out.refusals += (_refusal(
+                        fp, locks, entry, field, key, outcome, p, c,
+                        classify.where(point.assessment)),)
+        return early_exit and bool(out.refusals)
+
+    classify.scan(before, after, grid, on_point=visit, **kwargs)
 
 
 def enforce(locks, before, after, *, before_capabilities=(), after_capabilities=(),
             after_issue=None, directions=None, tighter=None, cache=None,
-            early_exit=True):
+            early_exit=True, scan="footprint"):
     """What the locks refuse in the change from `before`, the configuration
     they were declared in, to `after`. `locks` maps `catalogue.id` to a `Lock`
     or a level. A change that is equal or tighter is allowed; one that is
     looser or cannot be compared is refused. A waiver is not an input: no
     waiver excuses a lock. With `early_exit` the scan stops at the first
-    refusal."""
+    refusal. `scan` is `footprint` (the labels a locked entry can read) or
+    `full` (every label in the layer, the reference the footprint scan is
+    tested against)."""
+    _check_scan(scan)
     out = Enforcement()
     if not locks or (before == after and tuple(before_capabilities)
                      == tuple(after_capabilities) and after_issue is None):
@@ -612,7 +695,7 @@ def enforce(locks, before, after, *, before_capabilities=(), after_capabilities=
                       child_capabilities=after_capabilities, parent_issue=None,
                       child_issue=after_issue, directions=directions,
                       tighter=tighter, cache=cache)
-        _scan(fp, locks, before, after, kwargs, early_exit, out)
+        _scan(fp, locks, before, after, kwargs, early_exit, out, scan)
     return out
 
 
@@ -648,12 +731,13 @@ def _unlock_refusal(found, held):
 
 
 def enforce_chain(layers, *, directions=None, tighter=None, cache=None,
-                  early_exit=True):
+                  early_exit=True, scan="footprint"):
     """What the locks refuse across a chain of layers, root first. Each layer
     is merged on the one before it, the unlocks it validly carries lift the
     locks declared above it, and what is left is enforced on its change. An
     unlock that is refused is a refusal too. The first layer has nothing above
-    it, so nothing binds it."""
+    it, so nothing binds it. `scan` is as for `enforce`."""
+    _check_scan(scan)
     out = Enforcement()
     held, config, capabilities, seen = {}, {}, (), []
     for index, layer in enumerate(layers):
@@ -669,7 +753,7 @@ def enforce_chain(layers, *, directions=None, tighter=None, cache=None,
                              after_capabilities=after_capabilities,
                              after_issue=layer.doc if layer.kind == "issue" else None,
                              directions=directions, tighter=tighter, cache=cache,
-                             early_exit=early_exit)
+                             early_exit=early_exit, scan=scan)
             out.evaluated += result.evaluated
             refusals += tuple(
                 replace(r, layer=layer.name, message=f"{layer.name} layer: {r.message}")

@@ -234,7 +234,8 @@ only in the cases below, and each one starts only when you ask for it.
   `https`, on redirects too.
 - **Sends** your delivery record to a git repository you configure, with
   `compass record sync`, which `compass ship-commit` also runs. It happens
-  only when `.compass/config.yml` names a `record:` remote; it redacts
+  only when `compass.yml` (or `.compass/config.yml` in a project without one)
+  names a `record:` remote; it redacts
   credentials, and rival product names when `record.names_key` is set.
 - **Starts** host sessions (`claude -p`) with `compass run`, which sends their
   prompts through Claude Code as any session does. Those sessions may not push

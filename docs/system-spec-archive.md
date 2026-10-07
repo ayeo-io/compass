@@ -11810,37 +11810,296 @@
 - **Source issue:** `catalogue-spec`
 - **Landed:** 2026-10-06
 
-### Today's two policy files convert to the committed preset, and a planted policy change breaks the match _(archived)_
+### A project file loads with its layer keys and settings keys split _(archived)_
 
-- **Scenario id:** `DP-1`
+- **Scenario id:** `LM-1`
 - **Intent:** `INT-1`
-- **Source issue:** `default-preset-data`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
+### Removing an entry something refers to names each referrer _(archived)_
+
+- **Scenario id:** `LM-10`
+- **Intent:** `INT-1`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
+### One error reports every fault in a layer and inputs stay unchanged _(archived)_
+
+- **Scenario id:** `LM-11`
+- **Intent:** `INT-1`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
+### A layer digest covers the layer keys only _(archived)_
+
+- **Scenario id:** `LM-2`
+- **Intent:** `INT-1`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
+### The chain runs parent, project, issue and refuses a settings key in a parent _(archived)_
+
+- **Scenario id:** `LM-3`
+- **Intent:** `INT-1`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
+### Entry operations add, set, replace and remove _(archived)_
+
+- **Scenario id:** `LM-4`
+- **Intent:** `INT-1`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
+### Field operations inside set on scalars, lists and maps _(archived)_
+
+- **Scenario id:** `LM-5`
+- **Intent:** `INT-1`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
+### Provenance names the layer and operation of every field _(archived)_
+
+- **Scenario id:** `LM-6`
+- **Intent:** `INT-1`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
+### Bad targets and bad entries are refused by code _(archived)_
+
+- **Scenario id:** `LM-7`
+- **Intent:** `INT-1`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
+### Misused list and map operations are refused by code _(archived)_
+
+- **Scenario id:** `LM-8`
+- **Intent:** `INT-1`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
+### An operation or field a layer may not use is refused _(archived)_
+
+- **Scenario id:** `LM-9`
+- **Intent:** `INT-1`
+- **Source issue:** `layers-and-merge`
+- **Landed:** 2026-10-06
+
+### Given the same settings in `.compass/config.yml` or in `compass.yml`, when each Python reader runs (adoption mode, autonomy, drift strictness, record _(archived)_
+
+- **Scenario id:** `SR-1`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-python`
+- **Landed:** 2026-10-06
+
+### Given a missing or broken settings file, when each reader runs, then it behaves as it did at 5.6.0 (the design's table: enforced, balanced or a refus _(archived)_
+
+- **Scenario id:** `SR-2`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-python`
+- **Landed:** 2026-10-06
+
+### Given a project after compass init, then a state file in the .compass folder holds initialised and records_signed_since, no settings file is written, and the cutoff and the hook's explanation still read from it _(archived)_
+
+- **Scenario id:** `SR-3`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-python`
+- **Landed:** 2026-10-06
+
+### Given the fold-in test, when one reader is left reading `.compass/config.yml` directly, then the test fails; and no module but `project_settings.py`  _(archived)_
+
+- **Scenario id:** `SR-4`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-python`
+- **Landed:** 2026-10-06
+
+### The compatibility contracts 1 to 6 still pass, apart from any entry this change alters on purpose with its reason.  _(archived)_
+
+- **Scenario id:** `SR-5`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-python`
+- **Landed:** 2026-10-06
+
+### A display name comes from the vocabulary and a project layer changes it _(archived)_
+
+- **Scenario id:** `VC-1`
+- **Intent:** `INT-1`
+- **Source issue:** `vocabulary-catalogue`
+- **Landed:** 2026-10-06
+
+### An alias resolves to its id _(archived)_
+
+- **Scenario id:** `VC-2`
+- **Intent:** `INT-1`
+- **Source issue:** `vocabulary-catalogue`
+- **Landed:** 2026-10-06
+
+### A name or alias that collides with another entry fails _(archived)_
+
+- **Scenario id:** `VC-3`
+- **Intent:** `INT-1`
+- **Source issue:** `vocabulary-catalogue`
+- **Landed:** 2026-10-06
+
+### A vocabulary key that names nothing fails _(archived)_
+
+- **Scenario id:** `VC-4`
+- **Intent:** `INT-1`
+- **Source issue:** `vocabulary-catalogue`
+- **Landed:** 2026-10-06
+
+### The ban scan covers display names _(archived)_
+
+- **Scenario id:** `VC-5`
+- **Intent:** `INT-1`
+- **Source issue:** `vocabulary-catalogue`
+- **Landed:** 2026-10-06
+
+### The terminology file says how a project adds names _(archived)_
+
+- **Scenario id:** `VC-6`
+- **Intent:** `INT-1`
+- **Source issue:** `vocabulary-catalogue`
+- **Landed:** 2026-10-06
+
+### The terms the accepted vocabulary decision defines are in the glossary _(archived)_
+
+- **Scenario id:** `VC-7`
+- **Intent:** `INT-1`
+- **Source issue:** `vocabulary-catalogue`
+- **Landed:** 2026-10-06
+
+### Given code_globs in compass.yml, the hook blocks a matching path as for the old file; compass.yml wins; an unreadable file blocks naming the file; no file allows an unlisted path _(archived)_
+
+- **Scenario id:** `SH-1`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-hook`
+- **Landed:** 2026-10-06
+
+### Given a project with neither settings file, the hook starts no Python for the code_globs read; the names of the two files live in one allow-listed helper pinned equal to project_settings _(archived)_
+
+- **Scenario id:** `SH-10`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-hook`
+- **Landed:** 2026-10-06
+
+### Given initialised in state.yml or only the old file, the first refusal says who initialised the project; a broken record adds nothing _(archived)_
+
+- **Scenario id:** `SH-2`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-hook`
+- **Landed:** 2026-10-06
+
+### Given worktree root, cap or test command in compass.yml, multiagent.sh and integrate.sh read them there; old file keeps its values; compass.yml wins _(archived)_
+
+- **Scenario id:** `SH-3`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-hook`
+- **Landed:** 2026-10-06
+
+### Given a new project, init writes state.yml and no .compass/config.yml; an old-file project is untouched _(archived)_
+
+- **Scenario id:** `SH-4`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-hook`
+- **Landed:** 2026-10-06
+
+### Given an unreadable settings file, the refusal and its doc name the file the hook read _(archived)_
+
+- **Scenario id:** `SH-5`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-hook`
+- **Landed:** 2026-10-06
+
+### Given the fold-in test, a hook or script naming the old file in any spelling, or reading it with compass.yml present, fails it _(archived)_
+
+- **Scenario id:** `SH-6`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-hook`
+- **Landed:** 2026-10-06
+
+### Given the recorded hook corpus, every decision matches unchanged, and again with settings moved to compass.yml and state.yml _(archived)_
+
+- **Scenario id:** `SH-7`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-hook`
+- **Landed:** 2026-10-06
+
+### Given prose that says where a setting is read or what init writes, then it matches the CLI: init writes no settings file, and a setting is read from compass.yml or the old file without one _(archived)_
+
+- **Scenario id:** `SH-8`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-hook`
+- **Landed:** 2026-10-06
+
+### Given compass.yml, the scripts read only the documented paths (multiagent.worktree_root, multiagent.max_worktrees, project.test_command); the old file keeps the any-depth lookup; an unreadable settings file stops both scripts with exit 1 naming the file _(archived)_
+
+- **Scenario id:** `SH-9`
+- **Intent:** `INT-1`
+- **Source issue:** `settings-reader-hook`
+- **Landed:** 2026-10-06
+
+### Given an eval session transcript that edits compass.yml, When the judge checks protected files, Then it reports the edit as touching a protected file, as it does for .compass/config.yml _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-judge-guards-compass-yml`
 - **Landed:** 2026-10-07
 
-### The preset is named default at version 6.0.0 with capabilities off and checks as a parent layer _(archived)_
+### Given both files and a recognised compass.yml, an old file that holds a settings key makes the hook refuse with settings-conflict and the CLI raise the same text _(archived)_
 
-- **Scenario id:** `DP-2`
+- **Scenario id:** `BS-1`
 - **Intent:** `INT-1`
-- **Source issue:** `default-preset-data`
+- **Source issue:** `both-settings-files-present`
 - **Landed:** 2026-10-07
 
-### Stage modes carry the ruled ranks on the depth ladder and no rank elsewhere _(archived)_
+### Given both files and a compass.yml with no schema, the old file is read, a warning goes to stderr once, and the hook decides as for the old file alone _(archived)_
 
-- **Scenario id:** `DP-3`
+- **Scenario id:** `BS-2`
 - **Intent:** `INT-1`
-- **Source issue:** `default-preset-data`
+- **Source issue:** `both-settings-files-present`
 - **Landed:** 2026-10-07
 
-### Exactly the entries of the shipped lock set are locked, with the human sign-off hard-locked _(archived)_
+### Given both files, a recognised compass.yml and an old file with only state keys, compass.yml is read with no refusal and no warning _(archived)_
 
-- **Scenario id:** `DP-4`
+- **Scenario id:** `BS-3`
 - **Intent:** `INT-1`
-- **Source issue:** `default-preset-data`
+- **Source issue:** `both-settings-files-present`
 - **Landed:** 2026-10-07
 
-### The adapter reads old key names, leaves its input unchanged and is read by nothing yet _(archived)_
+### Given only compass.yml, with or without schema, it is read and nothing warns _(archived)_
 
-- **Scenario id:** `DP-5`
+- **Scenario id:** `BS-4`
 - **Intent:** `INT-1`
-- **Source issue:** `default-preset-data`
+- **Source issue:** `both-settings-files-present`
+- **Landed:** 2026-10-07
+
+### Given a broken file beside the other, the reader refuses naming the broken file _(archived)_
+
+- **Scenario id:** `BS-5`
+- **Intent:** `INT-1`
+- **Source issue:** `both-settings-files-present`
+- **Landed:** 2026-10-07
+
+### Given more than five conflicting keys, the text lists five in file order and says and N more _(archived)_
+
+- **Scenario id:** `BS-6`
+- **Intent:** `INT-1`
+- **Source issue:** `both-settings-files-present`
+- **Landed:** 2026-10-07
+
+### Given a conflict, compass check and every reader that used to ignore an unreadable file fail with the conflict text _(archived)_
+
+- **Scenario id:** `BS-7`
+- **Intent:** `INT-1`
+- **Source issue:** `both-settings-files-present`
+- **Landed:** 2026-10-07
+
+### Given the registry, settings-conflict follows the three-line shape and is listed in the generated refusal codes _(archived)_
+
+- **Scenario id:** `BS-8`
+- **Intent:** `INT-1`
+- **Source issue:** `both-settings-files-present`
 - **Landed:** 2026-10-07

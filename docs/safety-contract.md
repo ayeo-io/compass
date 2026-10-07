@@ -195,6 +195,15 @@ opted in and has not been assessed is still refused, and a project the hook
 cannot read is still refused - Compass answering "allow" to a question it
 could not ask would be a guardrail switched off silently.
 
+The same rule covers a project with both `compass.yml` and
+`.compass/config.yml`. When `compass.yml` is Compass's file (it has a
+top-level `schema:` key) and the old file still holds a setting such as
+`enforcement`, that setting would stop guarding without a word, so the hook
+refuses with `settings-conflict` and the CLI commands that read settings stop
+with the same text. A `compass.yml` with no `schema:` is not taken for
+Compass's file: the old file keeps guarding and a warning says so. A
+`compass.yml` that is the only settings file is read as it is.
+
 ### Compass needs Python 3.10 or later
 
 The CLI and the pre-tool hook's checks are Python. Without a working
@@ -207,7 +216,7 @@ such as documentation, go through as usual.
 |---|---|---|
 | `scripts/install.sh` | Says none was found, or that it did not run, warns, and installs anyway. | Names the version, warns, and installs anyway. |
 | `hooks/session-start.sh` | Tells the person and the model, in place of the operating contract. Never blocks. | The same, naming the version. |
-| `hooks/pre-tool.sh` | Refuses each code edit: `python-missing` when there is no `python3`, `reader-failed` when it does not run. | Its checks run, but the CLI cannot record the assessment and failing test they look for, so a code edit in an issue without them is refused as usual. |
+| `hooks/pre-tool.sh` | Refuses each code edit, and each edit to a path that is neither built-in code nor exempt in a project that has a settings file (it cannot read `enforcement.code_globs`): `python-missing` when there is no `python3`, `reader-failed` when it does not run. | Its checks run, but the CLI cannot record the assessment and failing test they look for, so a code edit in an issue without them is refused as usual. |
 | `hooks/post-tool.sh` | No change: it does not use Python. | No change. |
 | `hooks/stop.sh` | Says the end-of-session check did not run, and exits 0. | Runs its check as usual. |
 | `compass` | Does not run. | Does not run. |
@@ -234,8 +243,9 @@ valid JSON with a correct digest, not an empty file. It is still possible.
 A record with no identity - written before records carried one, or written
 by hand - unlocks an edit only in one of two cases:
 
-- the project declares no `records_signed_since` date in
-  `.compass/config.yml`
+- the project declares no `records_signed_since` date in its state file
+  (the one `compass init` writes in `.compass/`, or `.compass/config.yml` for
+  a project created before that file existed)
 - the record's own timestamp is earlier than that date
 
 `compass init` writes the date as the day the project was set up, so a new

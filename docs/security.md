@@ -105,7 +105,7 @@ explicit opt-in that closes this gap is
 
 ### Safer default
 
-Project commands are disabled unless `.compass/config.yml` opts in:
+Project commands are disabled unless `compass.yml` opts in (or `.compass/config.yml`, for a project that has no `compass.yml`):
 
 ```yaml
 allow_project_commands: true

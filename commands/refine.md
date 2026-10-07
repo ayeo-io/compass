@@ -129,7 +129,8 @@ about decisions, not wording.
 > technical approach and runs the governance check against it.
 
 Wait for approval only if `refine` is in the manifest's `checkpoints:`.
-The project's `autonomy` setting in `.compass/config.yml` decides that list,
+The project's `autonomy` setting, read from `compass.yml` (or from
+`.compass/config.yml` in a project without one), decides that list,
 and `compass approach summary` shows it. If `refine` is not listed, still
 write the ambiguity ledger and show this hand-off, then say you are going on without
 waiting and name the setting, with "Next" in place of "On approval". Log

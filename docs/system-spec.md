@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Every reference in the preset resolves and the evidence types match the guardrails file
+### Given the recorded hook corpus with settings moved to compass.yml with schema, every decision matches
 
-- **Scenario id:** `DP-6`
+- **Scenario id:** `BS-9`
 - **Intent:** `INT-1`
-- **Source issue:** `default-preset-data`
+- **Source issue:** `both-settings-files-present`
 - **Landed:** 2026-10-07
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1691 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1728 superseded scenario(s) are in `docs/system-spec-archive.md`.

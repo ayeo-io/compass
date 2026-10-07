@@ -4,7 +4,7 @@
 # =============================================================================
 # A project keeps its issue records out of its own git history (.compass/work,
 # docs/compass/<created>-<slug>/), so they exist on one machine. `compass
-# record sync` copies the paths `.compass/config.yml` names under `record:`
+# record sync` copies the paths the project's settings name under `record:`
 # into the repository it names, with credentials redacted, and commits and
 # pushes them. `ship-commit` runs it after every landing (ADR-031). `compass
 # record restore` copies the record back into a project, such as a fresh
@@ -25,6 +25,7 @@ import posixpath
 import shutil
 import subprocess
 
+from compass_pkg import project_settings
 from compass_pkg.core import CompassError, find_compass_dir, load_yaml
 from compass_pkg.redact import redact
 from compass_pkg import rival_names
@@ -40,15 +41,14 @@ _NO_LFS = (("filter.lfs.process", ""), ("filter.lfs.smudge", "cat"),
 
 
 def settings(project_root):
-    """`(remote, paths)` from `.compass/config.yml`, or None when the
+    """`(remote, paths)` from the project's settings, or None when the
     project names no record."""
-    path = os.path.join(project_root, ".compass", "config.yml")
     try:
-        config = load_yaml(path) if os.path.isfile(path) else {}
+        config = project_settings.settings(project_root)
     except Exception as exc:                            # noqa: BLE001
-        raise CompassError(f"compass record: .compass/config.yml cannot be "
-                           f"read: {exc}")
-    record = (config or {}).get("record")
+        raise CompassError(f"compass record: the project's settings cannot "
+                           f"be read: {exc}")
+    record = config.get("record")
     if not record:
         return None
     remote = record.get("remote") if isinstance(record, dict) else None
@@ -57,8 +57,9 @@ def settings(project_root):
             or not isinstance(paths, list) or not paths \
             or not all(isinstance(p, str) and p.strip() for p in paths):
         raise CompassError(
-            "compass record: `record:` in .compass/config.yml needs a "
-            "`remote:` (the record repository) and a list of `paths:`.")
+            "compass record: %s needs a `remote:` (the record repository) "
+            "and a list of `paths:`." % project_settings.named(
+                project_root, "record"))
     cleaned = []
     for raw in paths:
         stripped = raw.strip()
@@ -85,9 +86,7 @@ def names_key(project_root):
     committed, so a linked worktree, where ship syncs from, has none of its
     own. A key that is configured but found nowhere is refused, so the
     record never receives names for want of it."""
-    path = os.path.join(project_root, ".compass", "config.yml")
-    config = load_yaml(path) if os.path.isfile(path) else {}
-    record = (config or {}).get("record")
+    record = project_settings.settings(project_root).get("record")
     configured = record.get("names_key") if isinstance(record, dict) else None
     if not configured:
         return None
@@ -339,7 +338,8 @@ def sync(project_root, prune=False, only=None):
     is refused; ship syncs just the landed issue's folders from it."""
     found = settings(project_root)
     if found is None:
-        return "no record is configured (`record:` in .compass/config.yml)"
+        return "no record is configured (%s)" % project_settings.named(
+            project_root, "record")
     remote, paths = found
     key_path = names_key(project_root)
     names = rival_names.load_key(key_path) if key_path else None
@@ -390,7 +390,8 @@ def restore(project_root, force=False):
     found = settings(project_root)
     if found is None:
         raise CompassError("compass record restore: no record is configured "
-                           "(`record:` in .compass/config.yml).")
+                           "(%s)." % project_settings.named(
+                               project_root, "record"))
     remote, paths = found
     clone = _fresh_clone(remote)
     pairs, differ = [], []
@@ -444,7 +445,7 @@ def register(sub):
     """Add `compass record sync|restore` to the top-level parser."""
     p = sub.add_parser(
         "record", help="keep the delivery record in a second repository",
-        description="The paths `record:` in .compass/config.yml names, kept "
+        description="The paths the `record:` setting names, kept "
                     "in the repository it names (ADR-031). ship-commit runs "
                     "`sync` after every landing.")
     subs = p.add_subparsers(dest="record_cmd", required=True)

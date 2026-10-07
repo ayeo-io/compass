@@ -21,8 +21,8 @@ without the parallelism costing more than it saves.
 | **Multiagent** | 4+ | One worktree per subtask; one `builder` each; plus one `orchestrator`. | The orchestrator. |
 
 The assessment's size and risk values set the default orchestration; the
-distribution map sets the subtask count; `.compass/config.yml` thresholds and the
-routing-guardrail caps bound it.
+distribution map sets the subtask count; the multiagent settings in `compass.yml` (or `.compass/config.yml` in a
+project without one) and the routing-guardrail caps bound it.
 
 ## The critical-risk cap
 

@@ -24,49 +24,21 @@ particular not core.find_compass_dir(), which raises when there is no
 import datetime
 import os
 
+from compass_pkg import project_settings
 from compass_pkg.terminal import say
 
-# Written on creation only - never over an existing file. Deliberately small:
-# authoritative governance lives in governance/, and a value in two places can
-# come to disagree. `/compass:init` is where a project fills these in.
-CONFIG_TEMPLATE = """\
-# Compass - per-project configuration
+# State the CLI writes, not settings a person edits (ADR-043). Written on
+# creation only - never over an existing file. Settings live in `compass.yml`
+# at the project root, which only `/compass:init` or `compass policy migrate`
+# creates. A project that has run neither uses the shipped defaults, which are
+# in force: that is a complete, valid state.
+STATE_TEMPLATE = """\
+# Compass - state the CLI wrote. Do not edit. Settings go in compass.yml; see
+# docs/configuration.md in the Compass documentation.
 #
-# Created by `compass init`. Authoritative governance lives in governance/,
-# not here: governance/routing-policy.yml decides how a delivery approach is
-# composed, and governance/guardrails.yml is what `compass check` runs. This
-# file holds only project knobs those files have no opinion on.
-#
-# A project that has not run `/compass:init` uses the shipped governance
-# defaults, which are active and in force. That is a complete, valid state.
-
-version: 1.0.0
-
-# advisory : compass check and compass ci report every failure clearly but
-#            exit 0, so CI does not fail. The pre-tool hook still refuses a
-#            code edit with no failing test on record.
-# enforced : checks exit non-zero on any failure - the gate is real.
-mode: enforced
-
-# How often a session stops to wait for you at a stage hand-off (confirming
-# the approach, and approving the acceptance criteria, the requirements review
-# and the technical design). The routing policy's `autonomy_checkpoints:` table
-# says which hand-offs wait for each value and route; `compass approach
-# summary` shows the answer for an issue. No value changes a gate, evidence,
-# the hook or `compass check`.
-#   controlled : wait at every hand-off the table lists: all four on the
-#                regular or full approach, assess and define on a hotfix,
-#                assess on a quick fix or spike.
-#   balanced   : a quick fix does not stop; the regular approach waits at
-#                define and plan; the full approach waits at all four.
-#                (The default.)
-#   autonomous : never wait; every hand-off is shown and logged instead.
-autonomy: balanced
-
-# What created this project, and when. The hook reads these so that its first
-# refusal in a project somebody's entry point initialised can say where Compass
-# came from - a user who never ran `init` themselves should not meet an
-# unexplained block.
+# What created this project, and when. The pre-tool hook's first refusal uses
+# this to say where Compass came from - a user who never ran `init` themselves
+# should not meet an unexplained block.
 initialised:
   by: "{by}"
   at: "{at}"
@@ -76,15 +48,6 @@ initialised:
 # A record with no identity counts only if its own timestamp is earlier.
 # Delete the line to accept unstamped records again.
 records_signed_since: '{at}'
-
-project:
-  # Shown in artifact headers and the devlog.
-  name: ""
-
-  # The command Compass runs to execute the test suite, passed to
-  # `compass tdd-red` and `compass tdd-green`. Left empty, the hooks fall back
-  # to detecting npm, Make and pytest conventions.
-  test_command: ""
 """
 
 
@@ -121,26 +84,37 @@ def ensure_initialised(project_root, by="compass init"):
     """Create .compass/ if it is not there. Returns (created, compass_dir).
 
     Idempotent on purpose. Every entry-point command calls this without
-    checking first, so a second run must not touch a config the project has
-    edited or anything under work/.
+    checking first, so a second run must not touch a state or config file or
+    anything under work/.
 
     `by` names what did the initialising - the verb itself, or the entry-point
-    command that called it. It is written into the config so the hook's first
-    refusal can explain where Compass came from.
+    command that called it. It is written into the state file so the hook's
+    first refusal can explain where Compass came from.
     """
     compass_dir = os.path.join(project_root, ".compass")
     work_dir = os.path.join(compass_dir, "work")
-    config = os.path.join(compass_dir, "config.yml")
+    state = os.path.join(project_root, project_settings.STATE_YML)
+    old_config = os.path.join(project_root, project_settings.OLD_CONFIG)
 
     created = not os.path.isdir(compass_dir)
 
     os.makedirs(work_dir, exist_ok=True)
-    if not os.path.exists(config):
-        stamp = datetime.date.today().isoformat()
-        with open(config, "w", encoding="utf-8") as fh:
-            fh.write(CONFIG_TEMPLATE.format(by=by, at=stamp))
+    stamp = datetime.date.today().isoformat()
+    # A project from before ADR-043 has the values in its old settings file
+    # already, which `project_settings.state` still reads, so init adds
+    # nothing to it.
+    if not os.path.exists(state) and not os.path.exists(old_config):
+        with open(state, "w", encoding="utf-8") as fh:
+            fh.write(STATE_TEMPLATE.format(by=by, at=stamp))
 
     return created, compass_dir
+
+
+def _state_path(root, compass_dir):
+    """The file that holds the project's state: the state file, or the old
+    config for a project created before ADR-043."""
+    return (project_settings.state_source(root)
+            or os.path.join(compass_dir, "state.yml"))
 
 
 def cmd_init(args):
@@ -153,7 +127,7 @@ def cmd_init(args):
             args,
             "compass init: initialised Compass in %s." % root,
             detail=[
-                "config   : %s" % os.path.join(compass_dir, "config.yml"),
+                "state    : %s" % _state_path(root, compass_dir),
                 "work     : %s" % os.path.join(compass_dir, "work"),
                 "governance: the shipped defaults are in force. Run "
                 "/compass:init to adopt your own.",
@@ -165,6 +139,6 @@ def cmd_init(args):
     return say(
         args,
         "compass init: %s is already a Compass project - nothing changed." % root,
-        detail=["config : %s" % os.path.join(compass_dir, "config.yml")],
+        detail=["state : %s" % _state_path(root, compass_dir)],
         created=False, path=compass_dir, project_root=root,
     )

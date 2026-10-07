@@ -34,7 +34,7 @@ and their integration safe.
    instruction set. It gives:
    - the independent subtasks;
    - their scenario groups;
-   - the worktree count, already bounded by `.compass/config.yml` and any
+   - the worktree count, already bounded by `max_worktrees` in `compass.yml` (or `.compass/config.yml` in a project without one) and any
      routing-guardrail cap - including the `critical` risk cap that pins
      worktrees at 1.
 2. **Create the worktrees.** Run `scripts/multiagent.sh` to create one git

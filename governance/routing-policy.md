@@ -145,7 +145,7 @@ routing_strategies:
 
 A checkpoint is a stage hand-off where a session stops and waits for a
 person: assess step 7 (confirm the approach), and the define, refine and plan
-hand-offs. `.compass/config.yml` sets `autonomy: controlled | balanced |
+hand-offs. `compass.yml` (or `.compass/config.yml` in a project without one) sets `autonomy: controlled | balanced |
 autonomous` (balanced when left out). The `autonomy_checkpoints:` table maps
 each value and route to the checkpoints that wait, and the evaluator writes
 the answer into the manifest as `checkpoints:`.

@@ -72,3 +72,100 @@ def test_contract_5_can_fail_when_code_globs_is_dropped(install):
     exit_code, _code, _out, _err = compat_hook.run_entry(
         hook_root, base, entry, mutate=drop_globs)
     assert exit_code != entry["exit"]
+
+
+# SH-7: the same corpus, for a project that keeps its settings in `compass.yml`
+# and the state file. The recorded decisions are unchanged: the move
+# must not change what the hook allows or refuses.
+
+#: A state whose settings file cannot be read at all cannot be moved.
+_NOT_MOVABLE = {"config-unreadable"}
+
+
+def move_settings(project):
+    """Turn the project's `.compass/config.yml` into what a migrated project
+    holds: the settings in `compass.yml` (`mode` renamed `adoption`), and
+    `initialised` and `records_signed_since` in the state file. A file
+    that does not parse is moved whole, so it stays broken."""
+    import yaml
+
+    old = project / ".compass" / "config.yml"
+    if not old.exists():          # a project that never opted in
+        return
+    text = old.read_text()
+    try:
+        data = yaml.safe_load(text)
+    except yaml.YAMLError:
+        data = None
+    old.unlink()
+    if not isinstance(data, dict):
+        (project / "compass.yml").write_text(text)
+        return
+    state = {k: data.pop(k) for k in ("initialised", "records_signed_since")
+             if k in data}
+    if "mode" in data:
+        data["adoption"] = data.pop("mode")
+    # `schema:` first, as migration writes it: it marks the file as Compass's.
+    data = {"schema": 1, **data}
+    (project / "compass.yml").write_text(yaml.safe_dump(data, sort_keys=False))
+    if state:
+        (project / ".compass" / "state.yml").write_text(
+            yaml.safe_dump(state, sort_keys=False))
+
+
+MOVABLE = [e for e in ENTRIES if e["state"] not in _NOT_MOVABLE]
+
+
+@pytest.mark.parametrize("entry", MOVABLE, ids=[e["id"] for e in MOVABLE])
+def test_contract_5_decides_the_same_with_settings_in_compass_yml(install, entry):
+    hook_root, base = install
+    exit_code, code, _out, err = compat_hook.run_entry(
+        hook_root, base, entry, mutate=move_settings)
+    assert (exit_code, code) == (entry["exit"], entry["code"]), err
+    if "stderr_contains" in entry:
+        assert entry["stderr_contains"] in err
+    if "stderr_excludes" in entry:
+        assert entry["stderr_excludes"] not in err
+
+
+def test_contract_5_every_moved_compass_yml_carries_the_schema_marker(install):
+    """Migration writes `schema:` into each `compass.yml` it creates, because
+    that key is how a project holding both files tells Compass's file from
+    another product's. The conversion above stands in for migration, so it
+    must write the key, or the corpus would not test what migration makes.
+    A file that does not parse is moved whole and has no key to check."""
+    import yaml
+
+    hook_root, base = install
+    seen = []
+
+    def move_and_record(project):
+        move_settings(project)
+        moved = project / "compass.yml"
+        if moved.exists():
+            try:
+                seen.append(yaml.safe_load(moved.read_text()))
+            except yaml.YAMLError:
+                pass
+
+    for entry in MOVABLE:
+        compat_hook.run_entry(hook_root, base, entry, mutate=move_and_record)
+    moved = [data for data in seen if isinstance(data, dict)]
+    assert moved, "no entry moved a settings file"
+    assert [d for d in moved if "schema" not in d] == []
+
+
+def test_contract_5_the_moved_corpus_can_fail_when_the_hook_ignores_compass_yml(
+        install):
+    """A hook that read only the old file would allow the glob entry once the
+    settings had moved, so the moved run above would then differ."""
+    hook_root, base = install
+    entry = next(e for e in ENTRIES if e["id"] == "edit-glob-dir-match-no-red")
+
+    def move_and_forget_the_globs(project):
+        move_settings(project)
+        (project / "compass.yml").write_text("adoption: enforced\n")
+
+    exit_code, _code, _out, _err = compat_hook.run_entry(
+        hook_root, base, entry, mutate=move_and_forget_the_globs)
+    assert exit_code != entry["exit"]

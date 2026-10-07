@@ -32,6 +32,7 @@ import re as _re
 
 import fnmatch
 import re as _re
+from compass_pkg import project_settings
 from compass_pkg.core import CompassError, FRAMEWORK_ROOT, find_compass_dir, find_governance, load_yaml
 from compass_pkg.review_rules import lint_errors as review_rules_lint_errors
 from compass_pkg.policy import _jsonschema_errors, architecture_sources_lint_errors, _lint_errors_guardrails, _lint_errors_quarantine, _lint_errors_routing_policy, _schema_note
@@ -270,8 +271,8 @@ def _print_drift(report, strict):
         print("  Note: this compares declared rule ids. A rule you have kept by "
               "id but changed the body of is not reported.")
         if not strict:
-            print("  Advisory by default. Set `governance_drift: strict` in "
-                  ".compass/config.yml to make this fail.")
+            print("  Advisory by default. Set %s to make this fail."
+                  % _drift_setting_hint())
 
     if report.waived:
         print("  waived by this project (a recorded decision, not drift):")
@@ -281,16 +282,26 @@ def _print_drift(report, strict):
     return waiver_failed or bool(strict and report.drifted)
 
 
+def _drift_setting_hint():
+    """`governance_drift: strict`, with the file the project's settings are
+    read from. The project root is the working directory's when no `.compass/`
+    is found."""
+    try:
+        root = os.path.dirname(find_compass_dir())
+    except CompassError:
+        root = os.getcwd()
+    return project_settings.named(root, "governance_drift", "strict")
+
+
 def _drift_is_strict():
-    """Read `governance_drift:` from .compass/config.yml. Advisory by default:
+    """Read `governance_drift:` from the project's settings. Advisory by default:
     failing by default would turn every existing adopter's build red the moment
     they upgrade, which punishes upgrading (ADR-006)."""
     try:
-        cfg_path = os.path.join(find_compass_dir(), "config.yml")
-        cfg = load_yaml(cfg_path)
+        cfg = project_settings.lenient(os.path.dirname(find_compass_dir()))
+    except project_settings.SettingsConflict:
+        raise
     except Exception:                                   # noqa: BLE001
-        return False
-    if not isinstance(cfg, dict):
         return False
     return str(cfg.get("governance_drift", "advisory")).strip().lower() == "strict"
 

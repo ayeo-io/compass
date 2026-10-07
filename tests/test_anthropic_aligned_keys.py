@@ -169,20 +169,26 @@ def test_the_config_names_multiagent_work_by_its_new_name():
         assert "swarm" not in cfg, f"{rel} still has a swarm block"
 
 
-def test_a_config_still_using_the_swarm_block_is_read():
+def test_a_config_still_using_the_swarm_block_is_read(tmp_path):
     """`TRC-B7`: an adopter's config is not rewritten by an upgrade.
 
-    The behaviour lives in the shell, not in Python. `read_cfg` in
-    scripts/multiagent.sh and scripts/integrate.sh greps for the leaf key and
-    never reads the block name, so the rename is invisible to the only
-    consumers.
+    The scripts read their settings through `compass_setting`, which finds a
+    key by its leaf name at any depth and never reads the block name, so the
+    rename is invisible to the only consumers. This reads the old block
+    through the same reader.
     """
+    from compass_pkg import project_settings
+
+    (tmp_path / ".compass").mkdir()
+    (tmp_path / ".compass" / "config.yml").write_text(
+        "swarm:\n  worktree_root: ../old-root\n  max_worktrees: 3\n")
+    assert project_settings.scalar(str(tmp_path), "worktree_root") == "../old-root"
+    assert project_settings.scalar(str(tmp_path), "max_worktrees") == "3"
     for rel in ("scripts/multiagent.sh", "scripts/integrate.sh"):
         body = (ROOT / rel).read_text(encoding="utf-8")
-        assert 'grep -E "^[[:space:]]*$1:"' in body, (
-            f"{rel} no longer reads the config by leaf key, so an adopter's "
-            f"swarm: block is no longer read - the compat has moved and "
-            f"nothing replaced it")
+        assert "compass_setting" in body, (
+            f"{rel} no longer reads its settings through compass_setting, so "
+            f"an adopter's swarm: block may no longer be read")
 
 
 # --- `TRC-F2` - a rename that drops data fails loudly -----------------------

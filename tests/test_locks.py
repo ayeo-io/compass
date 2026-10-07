@@ -1032,7 +1032,8 @@ def test_lk_8_conformance_lines_never_raises_and_says_when_it_cannot_read(tmp_pa
     (tmp_path / "compass.yml").write_text("schema: 1\nschema: 2\n")
     lines = locks.conformance_lines(tmp_path)
     assert lines[0].startswith("Conformance: not checked")
-    assert "duplicate key" in " ".join(lines)
+    # The parser wraps a long temporary path across lines, so compare words.
+    assert "duplicate key" in " ".join(" ".join(lines).split())
     (tmp_path / "compass.yml").write_text("- not a mapping\n")
     assert locks.conformance_lines(tmp_path) == []
     (tmp_path / "compass.yml").write_text(UNLOCK_FILE)

@@ -214,3 +214,35 @@ Routing-strategy keys: `lean_toward`, `suggest_artifact`, free-text `biases`.
 - **Routing strategies are meant to be tuned.** Adjust `default_shapes` and
   `biases` freely as the team learns how its work actually distributes. That
   is the soft layer doing its job.
+
+## The default preset
+
+`governance/presets/default/` holds the same defaults in catalogue form, one
+file per catalogue, with `preset.yml` and `evidence-types.yml`
+(`architecture/decisions/ADR-042-shipped-defaults-live-in-a-preset-directory.md`).
+`cli/compass_pkg/legacy_adapter.py` produced it from `routing-policy.yml` and
+`guardrails.yml`, and `tests/test_default_preset.py` fails when the preset and
+the two files stop matching. Nothing reads the preset yet. Until the increment
+that makes `routing-policy.yml` a generated view, change the defaults in
+`routing-policy.yml` and `guardrails.yml` and regenerate the preset with
+`write_preset` in the adapter.
+
+`governance/legacy-views.yml` holds what the two files contain that the
+catalogues have no field for. Only the generator of the views will read it,
+and it goes with the views at 7.0.0.
+
+The conversion changes these things, and the test rebuilds the two files
+from the preset and `legacy-views.yml` to show nothing is lost:
+
+- `checked_at` keeps its first stage as the gate's `stage`; the full list is
+  in `legacy-views.yml`.
+- The floor effect `force_minimum_route` becomes `force_minimum_approach`
+  (ADR-041).
+- Old dimension names and old stage names (`clarify`, `build`, `land`)
+  become the current names; `legacy-views.yml` keeps the
+  spelling each file uses.
+- A document named by file (`intent.md`) becomes its id (`intent`).
+- The fallback approach becomes the last rule of `default_shapes`, and the
+  `biases` become a rule set with no effect.
+- Each check gets an `on_skipped` value from what it returns when it cannot
+  run. A replay of those verdicts against the archive is still owed.

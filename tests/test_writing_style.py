@@ -1525,6 +1525,20 @@ _register(Rule(
         Exemption("governance/guardrails.yml", "attempts: <int>",
                    "attempts: <int> names the evidence field, not the verb "
                    "\"attempt\"."),
+        Exemption("governance/presets/default/checks.yml", "compass bdd verify",
+                   "compass bdd verify is a CLI verb, not the plain verb; the "
+                   "preset copies the check text from governance/guardrails.yml."),
+        Exemption("governance/presets/default/checks.yml", "attempts: <int>",
+                   "attempts: <int> names the evidence field, not the verb "
+                   "\"attempt\"; the preset copies the check text from "
+                   "governance/guardrails.yml."),
+        Exemption("governance/presets/default/evidence-types.yml", "attempts: <int>",
+                   "attempts: <int> names the evidence field, not the verb "
+                   "\"attempt\"; the preset copies the type text from "
+                   "governance/guardrails.yml."),
+        Exemption("governance/presets/default/vocabulary.yml", "verify",
+                   "the display name of the verify stage, not the verb; the "
+                   "file holds display names only."),
         Exemption(
             "tests/fixtures/receipt-fixture-project/governance/guardrails.yml",
             "checked_at: [verify]",

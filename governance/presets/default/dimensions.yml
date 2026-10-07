@@ -1,0 +1,34 @@
+# The shipped default preset, produced once from governance/routing-policy.yml
+# and governance/guardrails.yml by cli/compass_pkg/legacy_adapter.py.
+# From the increment that turns those two legacy files into generated views,
+# these files are the source of the shipped defaults. Change the defaults
+# here, never in a view.
+schema: 1
+dimensions:
+  risk:
+    type: ordered-enum
+    values: [trivial, contained, cross-cutting, critical]
+    tighter: higher
+    required: true
+  familiarity:
+    type: enum
+    values: [greenfield, brownfield-mapped, brownfield-unmapped]
+    required: true
+  size:
+    type: ordered-enum
+    values: [atomic, small, standard, large, product]
+    tighter: higher
+    required: true
+  goal:
+    type: enum
+    values: [delivery, exploration]
+  urgency:
+    type: enum
+    values: [none, live-defect]
+  role:
+    type: enum
+    values: [engineer, product-owner, product-marketer, designer, qa]
+  labels:
+    type: set
+    open: true
+    common: [auth, payments, personal-data, migrations, public-api, infra, ci]

@@ -12573,6 +12573,13 @@
 - **Source issue:** `policy-lint`
 - **Landed:** 2026-10-07
 
+### Both verbs are documented, in the command corpus and within the line caps _(archived)_
+
+- **Scenario id:** `PL-12`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-lint`
+- **Landed:** 2026-10-07
+
 ### Per-layer faults are reported and stop the lint before the merge _(archived)_
 
 - **Scenario id:** `PL-2`
@@ -12627,4 +12634,46 @@
 - **Scenario id:** `PL-9`
 - **Intent:** `INT-1`
 - **Source issue:** `policy-lint`
+- **Landed:** 2026-10-07
+
+### The evaluator routes without copying the policy _(archived)_
+
+- **Scenario id:** `CS-1`
+- **Intent:** `INT-1`
+- **Source issue:** `classifier-speed`
+- **Landed:** 2026-10-07
+
+### A stored classification is reused when both configurations and the classifier version are unchanged _(archived)_
+
+- **Scenario id:** `CS-2`
+- **Intent:** `INT-1`
+- **Source issue:** `classifier-speed`
+- **Landed:** 2026-10-07
+
+### The benchmark pair keeps its verdict and counts and the benchmark prints CPU seconds _(archived)_
+
+- **Scenario id:** `CS-3`
+- **Intent:** `INT-1`
+- **Source issue:** `classifier-speed`
+- **Landed:** 2026-10-07
+
+### The lock scan classifies only the label sites a footprint can read _(archived)_
+
+- **Scenario id:** `CS-4`
+- **Intent:** `INT-1`
+- **Source issue:** `classifier-speed`
+- **Landed:** 2026-10-07
+
+### The footprint scan gives the full scan's refusals on every lock case and route _(archived)_
+
+- **Scenario id:** `CS-5`
+- **Intent:** `INT-1`
+- **Source issue:** `classifier-speed`
+- **Landed:** 2026-10-07
+
+### A ninth label no locked entry reads is not refused _(archived)_
+
+- **Scenario id:** `CS-6`
+- **Intent:** `INT-1`
+- **Source issue:** `classifier-speed`
 - **Landed:** 2026-10-07

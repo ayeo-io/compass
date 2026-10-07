@@ -12040,3 +12040,66 @@
 - **Intent:** `INT-1`
 - **Source issue:** `settings-reader-hook`
 - **Landed:** 2026-10-06
+
+### Given an eval session transcript that edits compass.yml, When the judge checks protected files, Then it reports the edit as touching a protected file, as it does for .compass/config.yml _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `eval-judge-guards-compass-yml`
+- **Landed:** 2026-10-07
+
+### Given both files and a recognised compass.yml, an old file that holds a settings key makes the hook refuse with settings-conflict and the CLI raise the same text _(archived)_
+
+- **Scenario id:** `BS-1`
+- **Intent:** `INT-1`
+- **Source issue:** `both-settings-files-present`
+- **Landed:** 2026-10-07
+
+### Given both files and a compass.yml with no schema, the old file is read, a warning goes to stderr once, and the hook decides as for the old file alone _(archived)_
+
+- **Scenario id:** `BS-2`
+- **Intent:** `INT-1`
+- **Source issue:** `both-settings-files-present`
+- **Landed:** 2026-10-07
+
+### Given both files, a recognised compass.yml and an old file with only state keys, compass.yml is read with no refusal and no warning _(archived)_
+
+- **Scenario id:** `BS-3`
+- **Intent:** `INT-1`
+- **Source issue:** `both-settings-files-present`
+- **Landed:** 2026-10-07
+
+### Given only compass.yml, with or without schema, it is read and nothing warns _(archived)_
+
+- **Scenario id:** `BS-4`
+- **Intent:** `INT-1`
+- **Source issue:** `both-settings-files-present`
+- **Landed:** 2026-10-07
+
+### Given a broken file beside the other, the reader refuses naming the broken file _(archived)_
+
+- **Scenario id:** `BS-5`
+- **Intent:** `INT-1`
+- **Source issue:** `both-settings-files-present`
+- **Landed:** 2026-10-07
+
+### Given more than five conflicting keys, the text lists five in file order and says and N more _(archived)_
+
+- **Scenario id:** `BS-6`
+- **Intent:** `INT-1`
+- **Source issue:** `both-settings-files-present`
+- **Landed:** 2026-10-07
+
+### Given a conflict, compass check and every reader that used to ignore an unreadable file fail with the conflict text _(archived)_
+
+- **Scenario id:** `BS-7`
+- **Intent:** `INT-1`
+- **Source issue:** `both-settings-files-present`
+- **Landed:** 2026-10-07
+
+### Given the registry, settings-conflict follows the three-line shape and is listed in the generated refusal codes _(archived)_
+
+- **Scenario id:** `BS-8`
+- **Intent:** `INT-1`
+- **Source issue:** `both-settings-files-present`
+- **Landed:** 2026-10-07

@@ -495,14 +495,14 @@ is_enforced_path() {
     glob_err="$(mktemp 2>/dev/null)" \
       || compass_reader_failed "enforcement.code_globs reader" tmp
     set +e
-    # The reader prints the settings file it read on its first line, before
-    # it can fail, so a refusal can name that file; a match follows on the
-    # second line.
+    # The reader prints the settings file it read on its first line, so a
+    # refusal can name that file, and a match follows on the second line. On a
+    # failure the file is the one the error names, which can be the old file
+    # when `compass.yml` was the one read.
     glob_out="$(compass_python - "$PROJECT_DIR" "$rel" 2>"$glob_err" <<'PYEOF'
 import fnmatch, sys
 import compass_pkg
 from compass_pkg import project_settings
-print(project_settings.settings_file(sys.argv[1]))
 try:
     cfg = project_settings.settings(sys.argv[1])
     globs = ((cfg.get("enforcement") or {}).get("code_globs")) or []
@@ -513,9 +513,13 @@ try:
                          "not %r" % (globs,))
 except Exception as exc:            # unreadable config -> cannot answer
     # The refusal already says which file could not be read, so this is the
-    # reason alone.
-    print(exc, file=sys.stderr)
-    sys.exit(4)
+    # reason alone. A conflict is not a read failure and has its own status
+    # and refusal; its stderr line is the keys, and the registry words the rest.
+    print(getattr(exc, "file", None) or project_settings.settings_file(sys.argv[1]))
+    conflict = isinstance(exc, project_settings.SettingsConflict)
+    print(exc.shown if conflict else exc, file=sys.stderr)
+    sys.exit(5 if conflict else 4)
+print(project_settings.settings_file(sys.argv[1]))
 path = sys.argv[2]
 for g in globs:
     if fnmatch.fnmatch(path, g) or fnmatch.fnmatch(path, g.rstrip("/") + "/*") \
@@ -528,12 +532,21 @@ PYEOF
     set -e
     settings_name="$(printf '%s\n' "$glob_out" | sed -n '1p')"
     hit="$(printf '%s\n' "$glob_out" | sed -n '2p')"
-    if [ "$glob_status" -eq 4 ]; then
+    if [ "$glob_status" -eq 5 ]; then
+      emit_refusal settings-conflict "target=${TARGET:-${candidate:-?}}" \
+        "tool=${TOOL:-?}" \
+        "keys=$(sed -n '1p' "$glob_err")"
+      rm -f "$glob_err"
+      exit 2
+    elif [ "$glob_status" -eq 4 ]; then
       compass_reader_failed "enforcement.code_globs reader" "$glob_status" \
         "$glob_err" "$settings_name"
     elif [ "$glob_status" -ne 0 ]; then
       compass_reader_failed "enforcement.code_globs reader" "$glob_status" "$glob_err"
     fi
+    # A warning the reader wrote (a `compass.yml` it ignored) is for the person;
+    # it does not change the decision.
+    [ -s "$glob_err" ] && cat "$glob_err" >&2 || true
     rm -f "$glob_err"
     if [ -n "${hit:-}" ]; then
       MATCHED_RULE="enforcement.code_globs pattern '$hit' in $settings_name"

@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given an eval session transcript that edits compass.yml, When the judge checks protected files, Then it reports the edit as touching a protected file, as it does for .compass/config.yml
+### Given the recorded hook corpus with settings moved to compass.yml with schema, every decision matches
 
-- **Scenario id:** `TRC-001`
+- **Scenario id:** `BS-9`
 - **Intent:** `INT-1`
-- **Source issue:** `eval-judge-guards-compass-yml`
+- **Source issue:** `both-settings-files-present`
 - **Landed:** 2026-10-07
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1719 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1728 superseded scenario(s) are in `docs/system-spec-archive.md`.

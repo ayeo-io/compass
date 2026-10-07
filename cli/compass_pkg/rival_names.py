@@ -33,6 +33,9 @@ HASHES_PATH = os.path.join("scripts", "rival-name-hashes.txt")
 #: of R2.
 ALLOWED_COMPOUNDS = ("implement-specs",)
 
+#: Where the committed binary pins live, beside the hash file.
+PINS_NAME = "rival-name-binary-pins.txt"
+
 _TOKEN = re.compile(r"[A-Za-z0-9]+")
 
 
@@ -68,6 +71,47 @@ def readable_text(data):
 
 def _digest(token_list):
     return hashlib.sha256(" ".join(token_list).encode("utf-8")).hexdigest()
+
+
+# --- binary pins ----------------------------------------------------------------
+
+_PIN_LINE = re.compile(r"([0-9a-f]{40}) ([^ ].*)")
+
+
+def blob_hash(data):
+    """The git blob hash of `data`, as `git hash-object` gives it."""
+    return hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest()
+
+
+def load_pins(path):
+    """`[(blob hash, path), ...]` from a pin file. A missing file holds no
+    pins. Each line is a 40-character hash, one space and a path and nothing
+    else, so a name cannot be pinned in by mistake; any other line is
+    refused, without being quoted."""
+    if not os.path.isfile(path):
+        return []
+    pins = []
+    with open(path, encoding="utf-8") as fh:
+        for number, line in enumerate(fh.read().split("\n")[:-1], 1):
+            found = _PIN_LINE.fullmatch(line)
+            if not found:
+                raise CompassError(
+                    f"{path}:{number} is not a pin: a pin line is a "
+                    f"40-character hash, a space and a path")
+            pins.append((found.group(1), found.group(2)))
+    return pins
+
+
+def is_pinned(rel, data, pins):
+    """True when `data` is not UTF-8 and a pin names both `rel` and its blob
+    hash. Only the content scan of a non-UTF-8 file is exempt; a path or a
+    UTF-8 file is always scanned, and a changed file has a new hash."""
+    try:
+        data.decode("utf-8")
+        return False
+    except UnicodeDecodeError:
+        pass
+    return (blob_hash(data), rel) in set(pins)
 
 
 # --- the key -------------------------------------------------------------------

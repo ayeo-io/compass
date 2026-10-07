@@ -21,6 +21,7 @@ import os
 import re
 import subprocess
 import sys
+import zlib
 from pathlib import Path
 
 import pytest
@@ -518,3 +519,149 @@ def test_rn_9_the_sweep_keeps_every_number(rel):
 @pytest.mark.parametrize("rel", sorted(_NUMBERS_BEFORE_THE_SWEEP))
 def test_rn_9_each_swept_run_says_where_the_key_is(rel):
     assert KEY_NOTE in (ROOT / rel).read_text(encoding="utf-8")
+
+
+# --- RN-10: a checked binary file can be pinned ------------------------------
+# A binary file's random bytes can spell a short alias inside a printable run.
+# A person who has checked such a file pins it, by git blob hash and path, in
+# `scripts/rival-name-binary-pins.txt`. These tests use the invented key.
+
+PINS = ROOT / "scripts" / "rival-name-binary-pins.txt"
+
+#: Not UTF-8, and its printable run holds the alias as a standalone token.
+_NOISE = b"\xff\x00\x81" + b"qz zorblax-kit wv" + b"\x80\x00"
+
+
+def _blob(path):
+    return subprocess.run(["git", "hash-object", str(path)], capture_output=True,
+                          text=True, check=True).stdout.strip()
+
+
+def _pin_repo(tmp_path, files):
+    """A repository holding `files` ({path: bytes}), committed."""
+    repo = _repo(tmp_path / "repo")
+    for rel, data in files.items():
+        (repo / rel).parent.mkdir(parents=True, exist_ok=True)
+        (repo / rel).write_bytes(data)
+    _commit_all(repo)
+    return repo
+
+
+def _tree(repo, hashes, pin_lines):
+    pins = repo.parent / "pins.txt"
+    pins.write_text("".join(line + "\n" for line in pin_lines), encoding="utf-8")
+    return _gate("--tree", "--hashes", str(hashes), "--pins", str(pins),
+                 cwd=repo)
+
+
+def test_rn_10_a_pinned_binary_passes_and_an_unpinned_one_fails(fake, tmp_path):
+    _, hashes = fake
+    repo = _pin_repo(tmp_path, {"noise.bin": _NOISE})
+    unpinned = _tree(repo, hashes, [])
+    assert unpinned.returncode == 1 and "noise.bin:1" in unpinned.stdout
+    pinned = _tree(repo, hashes, [f"{_blob(repo / 'noise.bin')} noise.bin"])
+    assert pinned.returncode == 0, pinned.stdout + pinned.stderr
+
+
+def test_rn_10_changing_one_byte_of_a_pinned_file_scans_it_again(fake, tmp_path):
+    _, hashes = fake
+    repo = _pin_repo(tmp_path, {"noise.bin": _NOISE})
+    line = f"{_blob(repo / 'noise.bin')} noise.bin"
+    (repo / "noise.bin").write_bytes(_NOISE[:-1] + b"\x81")
+    result = _tree(repo, hashes, [line])
+    assert result.returncode == 1, result.stdout
+    assert "noise.bin:1" in result.stdout
+    assert "stale" in result.stdout
+
+
+def test_rn_10_a_pin_with_the_right_hash_and_another_path_exempts_nothing(
+        fake, tmp_path):
+    _, hashes = fake
+    repo = _pin_repo(tmp_path, {"noise.bin": _NOISE, "other.bin": b"\xff\x00"})
+    result = _tree(repo, hashes, [f"{_blob(repo / 'noise.bin')} other.bin"])
+    assert result.returncode == 1 and "noise.bin:1" in result.stdout
+
+
+def test_rn_10_a_pin_exempts_no_path_that_names_a_rival(fake, tmp_path):
+    _, hashes = fake
+    repo = _pin_repo(tmp_path, {"zorblax-kit.bin": b"\xff\x00\x81 clean"})
+    result = _tree(repo, hashes,
+                   [f"{_blob(repo / 'zorblax-kit.bin')} zorblax-kit.bin"])
+    assert result.returncode == 1 and ": path:" in result.stdout
+    assert "zorblax" not in result.stdout.lower()
+
+
+def test_rn_10_a_pin_exempts_no_utf8_file(fake, tmp_path):
+    _, hashes = fake
+    repo = _pin_repo(tmp_path, {"notes.txt": b"We tried Zorblax Kit once.\n"})
+    result = _tree(repo, hashes, [f"{_blob(repo / 'notes.txt')} notes.txt"])
+    assert result.returncode == 1 and "notes.txt:1" in result.stdout
+
+
+def _png(*chunks):
+    def chunk(kind, body):
+        return (len(body).to_bytes(4, "big") + kind + body
+                + zlib.crc32(kind + body).to_bytes(4, "big"))
+    return b"\x89PNG\r\n\x1a\n" + b"".join(chunk(k, b) for k, b in chunks)
+
+
+def test_rn_10_a_name_in_a_png_text_chunk_still_fails(fake, tmp_path):
+    _, hashes = fake
+    repo = _pin_repo(tmp_path, {"logo.png": _png(
+        (b"IHDR", b"\x00" * 13), (b"tEXt", b"Comment\x00Zorblax Kit"),
+        (b"IEND", b""))})
+    result = _tree(repo, hashes, [])
+    assert result.returncode == 1 and "logo.png:" in result.stdout
+    assert "zorblax" not in result.stdout.lower()
+
+
+def test_rn_10_a_stale_pin_is_reported_and_exempts_nothing(fake, tmp_path):
+    _, hashes = fake
+    repo = _pin_repo(tmp_path, {"clean.bin": b"\xff\x00"})
+    result = _tree(repo, hashes, [f"{'a' * 40} gone.bin",
+                                  f"{'b' * 40} clean.bin"])
+    assert result.returncode == 1
+    assert "gone.bin" in result.stdout and "clean.bin" in result.stdout
+    assert result.stdout.count("stale") == 2
+
+
+@pytest.mark.parametrize("line", [
+    "Zorblax Kit",                            # a name, not a pin
+    "# Zorblax Kit",                          # a comment can hold a name
+    f"{'a' * 40} ",                           # no path
+    f"{'A' * 40} a.bin",                      # not lower-case hex
+    f"{'a' * 39} a.bin",                      # not 40 characters
+    f"{'a' * 40}  a.bin",                     # two separators
+])
+def test_rn_10_the_gate_refuses_a_pin_file_with_other_content(fake, tmp_path, line):
+    _, hashes = fake
+    repo = _pin_repo(tmp_path, {"a.bin": b"\xff\x00"})
+    result = _tree(repo, hashes, [line])
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "zorblax" not in (result.stdout + result.stderr).lower()
+
+
+def test_rn_10_the_committed_pin_file_holds_only_hashes_and_paths():
+    lines = PINS.read_text(encoding="utf-8").split("\n")
+    assert lines[-1] == "", "the pin file must end with a newline"
+    for line in lines[:-1]:
+        assert re.fullmatch(r"[0-9a-f]{40} [^ ].*", line), \
+            "a pin file line is a 40-character hash, a space and a path"
+    assert sorted(line[41:] for line in lines[:-1]) == [
+        "assets/compass-icon.png", "tests/fixtures/archive-sample.tar.gz"]
+
+
+def test_rn_10_record_sync_honours_the_same_pin(tmp_path):
+    from compass_pkg import record
+    names = {"R0": ["Zorblax Kit", "zorblax-kit"]}
+    clone = tmp_path / "clone"
+    (clone / "docs").mkdir(parents=True)
+    target = clone / "docs" / "noise.bin"
+    target.write_bytes(_NOISE)
+    with pytest.raises(Exception):
+        record._check_names(str(clone), names, [str(target)])
+    pins = [(_blob(target), "docs/noise.bin")]
+    assert record._check_names(str(clone), names, [str(target)], pins) == ""
+    target.write_bytes(_NOISE[:-1] + b"\x81")
+    with pytest.raises(Exception):
+        record._check_names(str(clone), names, [str(target)], pins)

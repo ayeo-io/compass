@@ -770,7 +770,7 @@
     "table_rows": 0
   },
   "governance/routing-policy.md": {
-    "fences": 2,
+    "fences": 4,
     "heading_levels": [
       1,
       2,
@@ -783,9 +783,10 @@
       2,
       2,
       2,
+      2,
       2
     ],
-    "list_items": 43,
+    "list_items": 53,
     "table_rows": 7
   },
   "governance/strategies.md": {

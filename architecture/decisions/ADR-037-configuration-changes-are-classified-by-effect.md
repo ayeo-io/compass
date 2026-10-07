@@ -46,7 +46,7 @@ The evaluator is deterministic (Inv-7) and reads the assessment only through `wh
 | Ordered: stage mode by `rank`, severity, `on_skipped`, artifact depth | higher in the declared order |
 | Obligation set: entry and exit checks, gates, gate checks, artifacts owed, required skills, blocked stages, required artifacts, checkpoints, a check's `inputs` | a superset |
 | Way set: `accepts`, `reviewers`, a check's `approvers` (who may tick a human check, not the layer's waiver approvers of ADR-039) | a subset (the reverse order) |
-| Ceiling or parameter, including a `params` value | as its registry entry declares (`tighter: higher`, `lower` or `none`); `none` is the default, and makes any change incomparable |
+| Ceiling or parameter, including a `params` value | as its owner declares (`tighter: higher`, `lower` or `none`): the check registry for a check parameter, the field table for every other ceiling; `none` is the default, and makes any change incomparable |
 | `kind`, `impl`, any enum value; `statement` of a `human` or `judged` check | never: any change is incomparable |
 
 A way set lists ways to satisfy an obligation, so more members is less strict. An absent `reviewers` is the widest set, any agent session. An absent `approvers` is also the widest, so removing the list is loosening. A check that keeps its id but changes its definition compares by its definition, not its id.
@@ -76,3 +76,11 @@ A way set lists ways to satisfy an obligation, so more members is less strict. A
 - ADR-035: the format whose changes are classified.
 - ADR-036 (an issue runs against a stored generation of its configuration): each generation stores the classification of each layer.
 - `cli/compass_pkg/routing.py` (`evaluate_route`), `cli/compass_pkg/core.py` (`reading_matches`), `governance/routing-policy.yml`.
+
+## Amendment (2026-10-07): where a ceiling that is not a check parameter declares its direction
+
+Proposed while the maintainer was away, and marked for the maintainer's confirmation. The decision above already allows `higher` or `lower`; it left open where a ceiling that has no check registry entry declares one.
+
+- The field table declares it, as `CEILING_DIRECTIONS` in `cli/compass_pkg/catalogue_spec.py`, beside `OBLIGATION_FIELDS`, so the classifier and locks read one table. The caller's `directions` argument overrides it in tests only, and a loader must never fill it from project data.
+- Lower is stricter for the subtask ceiling, the worktree cap and the three budget ceilings (`run_cost_usd`, `run_minutes`, `run_cycles`). No ceiling at all is the loosest.
+- The four correction loops (`builder_attempts`, `review_rounds`, `replans`, `repeated_error`) and any ceiling a project adds stay `none`, for the reason in the consequences above.

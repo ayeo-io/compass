@@ -45,7 +45,7 @@ from compass_pkg.stable_ids import (
     APPROACH_QUICK_FIX, GATE_VERIFY_CORRECTNESS, GATE_VERIFY_GOVERNANCE, GATE_VERIFY_TRACEABILITY,
     STAGE_BREAKDOWN, STAGE_PLAN, STAGE_REFINE)
 from compass_pkg.core import (
-    CompassError, _WHEN_KEY_MAP, _one_segment, canonical_shape, display_shape,
+    CompassError, WHEN_KEY_MAP, _one_segment, canonical_shape, display_shape,
     display_stage, docs_dir, find_governance, find_upwards, reading_matches,
     load_manifest, now_iso, load_yaml, manifest_path, resolve_issue_dir, save_manifest,
 )
@@ -246,7 +246,7 @@ def _quick_fix_blockers(readings, task):
     for key, allowed in ((shape or {}).get("when") or {}).items():
         if reading_matches({key: allowed}, readings):
             continue
-        name = _WHEN_KEY_MAP.get(key, key)
+        name = WHEN_KEY_MAP.get(key, key)
         if name == "labels_any":
             name = "labels"
         allowed = allowed if isinstance(allowed, list) else [allowed]

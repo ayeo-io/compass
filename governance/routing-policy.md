@@ -291,7 +291,7 @@ types, artifacts and their depth, required skills, blocked stages, required
 artifacts, checkpoints for each autonomy value, ceilings and each active
 check's compared fields. It does not route. `policy_adapter` turns the merged
 catalogues into the dictionary `evaluate_route` takes, and the evaluator
-answers. Nothing reads this path yet, and `compass approach evaluate` still
+answers. Only the classifier reads this path, and `compass approach evaluate` still
 reads `routing-policy.yml`.
 
 The evaluator took four additions, and a call that uses none of them answers
@@ -350,3 +350,92 @@ What the stage-mode rank replay shows:
   because no floor names `implement` and the lift never reaches that stage.
   With one floor added to both paths that names it, the same rank is reported.
 - A dropped floor or gate is reported.
+
+## How two configurations are compared
+
+`cli/compass_pkg/classify.py` compares a child configuration with its parent
+by what each owes, as `architecture/decisions/ADR-037-configuration-changes-are-classified-by-effect.md`
+decides. It calls `obligations` for both at every point of the assessment grid
+and compares the facts. Nothing reads it yet, so no command prints its
+result. `classify(parent, child)` returns a `Classification`, and the later
+`policy` commands print `json.dumps(classification.to_json(), indent=2)` and
+build their text from the same dictionary.
+
+The grid:
+
+- A closed dimension runs over the union of both configurations' values.
+  Values that no predicate in either configuration can tell apart are one
+  class, and one value of the class is evaluated. The shipped policy has 288
+  grouped closed points and, with its four named labels, 4,608 grouped points
+  of 51,840 raw points. The raw count includes an assessment that omits each
+  optional dimension (`goal`, `urgency` and `role` in the shipped preset); the
+  evaluator needs only `risk`, `familiarity` and `size`. An omitted dimension is
+  a value of its own, so a rule that reads it is told apart from every value.
+  `exhaustive=True` runs every raw point. It is an argument of `classify`, and
+  the later `policy` commands expose it as a flag.
+- A value only one configuration accepts is its own class. Where a predicate
+  reads it, the point is `incomparable`. Where none does, the class is left
+  out of the grid, because no assessment holds in both configurations.
+- The named labels are the labels any predicate names. Every subset is a
+  point. More than eight classify the layer `incomparable` with the count and
+  no scan, even for two configurations that differ in nothing else, except
+  that identical configurations are `equivalent` without a scan.
+- Each fact is compared by the kind the field table gives it
+  (`catalogue_spec.OBLIGATION_FIELDS`). A field the table omits is not
+  compared. A stage only one side has is compared by existence: adding one is
+  `tighter` and removing one is `looser`, even a stage in mode `skipped`. Two
+  modes with one rank, a mode with no rank and a value outside its order cannot
+  be compared. A ceiling's direction is declared in `CEILING_DIRECTIONS` in
+  `catalogue_spec.py`: lower is stricter for the subtask ceiling, the worktree
+  cap and the three budget ceilings (`run_cost_usd`, `run_minutes`,
+  `run_cycles`), and no ceiling at all is the loosest. The four correction
+  loops and a ceiling the table omits have no direction, so any change to
+  them is `incomparable`. A check parameter's direction comes from the check
+  registry. A check that is renamed with an identical definition is
+  `incomparable`, because a check keeps its id.
+- `stages.order` and `gates.stage` are the footprint of a lock, not facts the
+  classifier reads. Reordering an unlocked stage or moving a gate to another
+  stage reads `equivalent` here, and the locks increment compares both.
+
+The verdicts are `equivalent`, `tightening`, `loosening` and `incomparable`.
+A point is `equal`, `tighter`, `looser` or `mixed`.
+
+`Classification.to_json()` is a public document. It has the same fields in
+the same order for every verdict, and a point that does not exist is `null`:
+
+```json
+{"schema": 1, "result": "equivalent", "reason": "every point owes the same",
+ "scan": "full", "parent": "default@6", "child": "project",
+ "exhaustive": false, "complete": true,
+ "grid": {"labels": [], "label_count": 0, "label_cap": 8,
+          "points": 4, "raw_points": 16, "evaluated": 4},
+ "counts": {"equal": 4, "tighter": 0, "looser": 0, "mixed": 0},
+ "first_looser": null, "first_tighter": null, "first_mixed": null}
+```
+
+- `scan` is `full`, `early-exit`, `identical` or `cap`, so a consumer can tell
+  a scan from a shortcut: `identical` compared nothing because the inputs
+  are equal, and `cap` compared nothing because more than eight labels are
+  named. `parent` and `child` are what the caller passed as `parent_name` and
+  `child_name` (or `null`), and the classifier reads them for nothing else.
+
+- A point in `first_looser`, `first_tighter` or `first_mixed` holds
+  `assessment` (the closed dimensions in catalogue order, then `labels`),
+  `represents` (the values the point stands for; `null` is an assessment that
+  omits the dimension), `outcome`, `summary` and
+  `changes`.
+- A change holds `fact`, `field` (a key of the field table, or
+  `evaluation.refused` or `dimensions.values`), `key` (the stage, gate, check,
+  artifact or ceiling it is about, or `null`), `outcome` (`tighter`, `looser`
+  or `incomparable`), and the `parent` and `child` values as plain JSON.
+- `points` is the number of points the run uses, `raw_points` the ungrouped
+  count, and `evaluated` how many were compared. They are 0 when the cap
+  stops the run. `complete` is false when early exit stopped the scan.
+- `JSON_SHAPE` in the module is the shape, `json_shape_errors` checks a
+  document against it, and `tests/fixtures/classifier-json-example.json` is the
+  pinned example. A change to the shape fails `tests/test_classifier.py`, and
+  adding a field raises `schema`.
+
+`scripts/bench-classifier.py` times the grouped grid and, with `--raw`, the
+full grid at four and eight labels. The numbers belong in the pull request
+that changes the classifier.

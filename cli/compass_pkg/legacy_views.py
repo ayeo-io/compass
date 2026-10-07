@@ -439,6 +439,16 @@ _DIGEST_HEADER = (
     f"# file changes without its digest moving. Pin again with: {PIN_COMMAND}\n")
 
 
+def preset_locks(root):
+    """The `locks:` summary of the preset's `preset.yml` under `root`:
+    `{"hard": [...], "locked": [...]}` of `catalogue.id` names. This is the
+    one reader of the summary, so no other module reads the preset path."""
+    meta = _load(os.path.join(root, PRESET_DIR, "preset.yml"))
+    summary = meta.get("locks") or {}
+    return {"hard": list(summary.get("hard") or []),
+            "locked": list(summary.get("locked") or [])}
+
+
 def preset_digests(root):
     """`(pin key, {"preset": digest, "files": {file name: digest}})` for the
     preset under `root`. The pin key is the preset's id and version."""

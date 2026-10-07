@@ -12474,3 +12474,66 @@
 - **Intent:** `INT-1`
 - **Source issue:** `waivers`
 - **Landed:** 2026-10-07
+
+### The module declares its dependencies, is pure, is unused and has an owning doc _(archived)_
+
+- **Scenario id:** `WV-8`
+- **Intent:** `INT-1`
+- **Source issue:** `waivers`
+- **Landed:** 2026-10-07
+
+### Locks are read from layer documents and the shipped preset gives the ADR lock set _(archived)_
+
+- **Scenario id:** `LK-1`
+- **Intent:** `INT-1`
+- **Source issue:** `locks`
+- **Landed:** 2026-10-07
+
+### The footprint of a locked check, gate, stage, rule set or approach _(archived)_
+
+- **Scenario id:** `LK-2`
+- **Intent:** `INT-1`
+- **Source issue:** `locks`
+- **Landed:** 2026-10-07
+
+### A lock allows tightening and refuses loosening and each indirect route on a check _(archived)_
+
+- **Scenario id:** `LK-3`
+- **Intent:** `INT-1`
+- **Source issue:** `locks`
+- **Landed:** 2026-10-07
+
+### A lock on a gate, stage, rule set or approach refuses removal and moves _(archived)_
+
+- **Scenario id:** `LK-4`
+- **Intent:** `INT-1`
+- **Source issue:** `locks`
+- **Landed:** 2026-10-07
+
+### A waiver, a hard lock and the label cap: what a lock refuses regardless _(archived)_
+
+- **Scenario id:** `LK-5`
+- **Intent:** `INT-1`
+- **Source issue:** `locks`
+- **Landed:** 2026-10-07
+
+### An unlock needs the project layer, the owner's waiver and a lock that is not hard _(archived)_
+
+- **Scenario id:** `LK-6`
+- **Intent:** `INT-1`
+- **Source issue:** `locks`
+- **Landed:** 2026-10-07
+
+### Conformance is conformant, or non-conformant naming each unlocked entry _(archived)_
+
+- **Scenario id:** `LK-7`
+- **Intent:** `INT-1`
+- **Source issue:** `locks`
+- **Landed:** 2026-10-07
+
+### Check, the receipt and the summary print the conformance line and nothing else changes _(archived)_
+
+- **Scenario id:** `LK-8`
+- **Intent:** `INT-1`
+- **Source issue:** `locks`
+- **Landed:** 2026-10-07

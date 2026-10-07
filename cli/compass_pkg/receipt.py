@@ -500,8 +500,16 @@ def cmd_task_receipt(args):
     approach_path = artifact_path(task_dir, "delivery-approach.md")
     route_readings = _receipt_parse_route_md_readings(approach_path)
     gate_requirements = _receipt_gate_requirements(project_root)
-    print(_receipt_render(task, slug, route_readings, gate_requirements,
-                          _receipt_parse_orchestration_override(approach_path)))
+    text = _receipt_render(task, slug, route_readings, gate_requirements,
+                           _receipt_parse_orchestration_override(approach_path))
+    # What `locks` reports about conformance goes before the verdict, on every
+    # run. A project with no `compass.yml` adds nothing.
+    from compass_pkg import locks
+    conformance = locks.conformance_lines(project_root, width=_RECEIPT_LINE_CAP)
+    if conformance:
+        at = text.rindex(_RECEIPT_RULE)
+        text = text[:at] + "\n".join(conformance) + "\n\n" + text[at:]
+    print(text)
     return 0
 
 

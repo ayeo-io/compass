@@ -153,3 +153,68 @@ Why it is enforced rather than warned about:
   the registry does not hold. The runtime ignores `impl:` for now: a check runs
   the implementation that carries its name. The refusal of a major-version
   mismatch at run time comes with stored configuration generations.
+
+## Locks and conformance
+
+`cli/compass_pkg/locks.py` protects the framework's guarantees when a layer
+changes the shipped default. `architecture/decisions/ADR-039-waivers-locks-and-unlocks.md`
+decides the rules. The module has no command yet, so lint and `policy
+effective` will print what it returns.
+
+- **A lock** is `locked: true` or `locked: hard` on an entry. The shipped
+  preset declares the framework locks, and a lower layer cannot remove one. An
+  issue's `config:` cannot lock an entry, and a `locked:` there adds no lock.
+- **The footprint** of a locked entry is what the lock protects:
+  - a check: its compared fields, and its place in each stage list and gate;
+  - a gate: its check set, its accepted evidence types and its stage;
+  - a stage: its existence, its order, and its entry and exit lists;
+  - a rule set: its kind, its hit policy, each rule in it and each rule's
+    effects;
+  - an approach: its existence and its `ships` value.
+- **Enforcement** uses the classifier's comparison, projected to the
+  footprint. A change that is equal or tighter is allowed. A change that
+  loosens the entry, or cannot be compared, is refused with the entry, the
+  lock level, the field, both values and the first assessment where it shows.
+  Removing the stage, changing `when`, detaching a gate, setting `on_skipped:
+  pass`, widening `accepts` or `reviewers`, dropping `approvers`, and changing
+  `params` or a human or judged `statement` are each refused.
+- **A change of vocabulary is a change to the lock.** If a layer drops or
+  renames a dimension value, or closes the label list, so that an assessment a
+  locked gate or check applied to can no longer be made, the lock refuses it.
+  The evaluator is run on the parent at each such assessment to find the locked
+  entries that were in force there.
+- **A rule with an effect that no obligation fact carries** (for example a
+  minimum approach) protects its `when` too, not only its effect, so a change
+  that narrows the rule is refused. A rule that adds a gate, asks for an
+  artifact, blocks a stage or asks for a skill is protected through that fact.
+- **A waiver never excuses a lock refusal.**
+- **More than eight named labels is a deliberate fail-safe.** The scan counts
+  labels across the whole layer, not only those a locked entry reads. Once a
+  layer holds nine, every change to it is refused, whether or not it touches a
+  locked entry, and the refusal reaches the layers below it, including an
+  issue's `config:`. It stays until the footprint-only scan lands. To lift it,
+  name no more than eight labels. For a `true` lock an owner-approved unlock
+  also lifts it. For a hard lock nothing else does.
+- **A configuration the evaluator rejects** is refused as well, because no
+  lock can be shown to hold. An unlock cannot help. The configuration needs
+  fixing, and lint reports the fault.
+- **`locked: hard`** applies to the guardrail A human signs off on the
+  irreversible (`G5`) and its check `human-approval-present`. No unlock
+  lifts `G5` and its check, and no waiver excuses them.
+- **An unlock** is `unlock: true` on an entry in `compass.yml`, with a waiver
+  that gives a reason and is approved by the project's `owner`. An issue, a
+  parent or a preset that carries `unlock:` is refused. An unlocked entry is no
+  longer enforced for the project or the issue below it.
+- **Conformance.** A project that unlocks a framework entry is non-conformant.
+  `compass check`, `compass issue receipt` and `compass approach summary` print
+  `Conformance: non-conformant - this project unlocks framework entries: ...` on
+  every run. An unlock of a hard-locked entry, or of an entry the shipped
+  default does not lock, is refused, and the commands print `Unlock refused for
+  <entry>: <reason>` instead. A project with no `compass.yml`, one that is not
+  Compass's (no `schema:`), or one that unlocks nothing sees no new line. A
+  `compass.yml` that cannot be read prints `Conformance: not checked`.
+
+The report reads `compass.yml` and the shipped default's lock summary. The
+waiver's date and covered revision are checked by the waiver module when it
+lands, and the line for what the hook can enforce comes with the receipt
+provenance.

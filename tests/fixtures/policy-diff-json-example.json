@@ -1,0 +1,1050 @@
+{
+  "schema": 1,
+  "differs": true,
+  "a": {
+    "ref": "default@6",
+    "kind": "default",
+    "default_version": "6.0.0",
+    "digest": "sha256:ce3b4224b600724d4aafc098f484e25f7fe5abc7f787e1869b31a3a38199261f",
+    "capabilities": []
+  },
+  "b": {
+    "ref": "project",
+    "kind": "project",
+    "default_version": "6.0.0",
+    "digest": "sha256:1b6aa156e6afda34401c4f13383f50dc846fbb3be974cc15eff155c0c58cf6d8",
+    "capabilities": [
+      "artifact-freshness"
+    ]
+  },
+  "classification": {
+    "schema": 1,
+    "result": "loosening",
+    "reason": "at risk contained, familiarity greenfield, size small, labels none: checks.severity (tests-pass) is \"blocking\" in the parent and \"advisory\" in the child",
+    "scan": "full",
+    "parent": "default@6",
+    "child": "project",
+    "exhaustive": false,
+    "complete": true,
+    "grid": {
+      "labels": [
+        "auth"
+      ],
+      "label_count": 1,
+      "label_cap": 8,
+      "points": 4,
+      "raw_points": 16,
+      "evaluated": 4
+    },
+    "counts": {
+      "equal": 0,
+      "tighter": 0,
+      "looser": 4,
+      "mixed": 0
+    },
+    "first_looser": {
+      "assessment": {
+        "risk": "contained",
+        "familiarity": "greenfield",
+        "size": "small",
+        "labels": []
+      },
+      "represents": {
+        "risk": [
+          "contained",
+          "critical"
+        ],
+        "familiarity": [
+          "greenfield",
+          "brownfield-unmapped"
+        ],
+        "size": [
+          "small"
+        ]
+      },
+      "outcome": "looser",
+      "summary": "at risk contained, familiarity greenfield, size small, labels none: checks.severity (tests-pass) is \"blocking\" in the parent and \"advisory\" in the child",
+      "changes": [
+        {
+          "fact": "checks",
+          "field": "checks.severity",
+          "key": "tests-pass",
+          "outcome": "looser",
+          "parent": "blocking",
+          "child": "advisory"
+        }
+      ]
+    },
+    "first_tighter": null,
+    "first_mixed": null
+  },
+  "replay": {
+    "sets": [
+      {
+        "name": "grid",
+        "replayed": 2,
+        "changed": 2,
+        "skipped": null
+      },
+      {
+        "name": "labels",
+        "replayed": 2,
+        "changed": 2,
+        "skipped": null
+      },
+      {
+        "name": "archive",
+        "replayed": 4,
+        "changed": 4,
+        "skipped": null
+      }
+    ],
+    "changes": [
+      {
+        "set": "grid",
+        "issue": null,
+        "assessment": {
+          "familiarity": "greenfield",
+          "labels": [],
+          "risk": "contained",
+          "size": "small"
+        },
+        "represents": {
+          "risk": [
+            "contained",
+            "critical"
+          ],
+          "familiarity": [
+            "greenfield",
+            "brownfield-unmapped"
+          ],
+          "size": [
+            "small"
+          ]
+        },
+        "differences": [
+          {
+            "field": "checks",
+            "key": "tests-pass",
+            "before": {
+              "accepts": [],
+              "approvers": [],
+              "impl": "suite-passed",
+              "inputs": [],
+              "kind": "deterministic",
+              "on_skipped": "fail",
+              "params": {},
+              "reviewers": [],
+              "severity": "blocking"
+            },
+            "after": {
+              "accepts": [],
+              "approvers": [],
+              "impl": "suite-passed",
+              "inputs": [],
+              "kind": "deterministic",
+              "on_skipped": "fail",
+              "params": {},
+              "reviewers": [],
+              "severity": "advisory"
+            }
+          }
+        ]
+      },
+      {
+        "set": "grid",
+        "issue": null,
+        "assessment": {
+          "familiarity": "greenfield",
+          "labels": [],
+          "risk": "contained",
+          "size": "large"
+        },
+        "represents": {
+          "risk": [
+            "contained",
+            "critical"
+          ],
+          "familiarity": [
+            "greenfield",
+            "brownfield-unmapped"
+          ],
+          "size": [
+            "large"
+          ]
+        },
+        "differences": [
+          {
+            "field": "approach",
+            "key": null,
+            "before": "full",
+            "after": "regular"
+          },
+          {
+            "field": "gate_set",
+            "key": null,
+            "before": [
+              "G1",
+              "verify.correctness",
+              "verify.security"
+            ],
+            "after": [
+              "G1",
+              "verify.correctness"
+            ]
+          },
+          {
+            "field": "gate_checks",
+            "key": "verify.security",
+            "before": [
+              "no-secrets"
+            ],
+            "after": null
+          },
+          {
+            "field": "gate_accepts",
+            "key": "verify.security",
+            "before": [
+              "security-review",
+              "test-run"
+            ],
+            "after": null
+          },
+          {
+            "field": "checkpoints",
+            "key": "balanced",
+            "before": [
+              "define"
+            ],
+            "after": []
+          },
+          {
+            "field": "checks",
+            "key": "no-secrets",
+            "before": {
+              "accepts": [],
+              "approvers": [],
+              "impl": "no-trusted-rerun",
+              "inputs": [],
+              "kind": "deterministic",
+              "on_skipped": "fail",
+              "params": {},
+              "reviewers": [],
+              "severity": "blocking"
+            },
+            "after": null
+          },
+          {
+            "field": "checks",
+            "key": "tests-pass",
+            "before": {
+              "accepts": [],
+              "approvers": [],
+              "impl": "suite-passed",
+              "inputs": [],
+              "kind": "deterministic",
+              "on_skipped": "fail",
+              "params": {},
+              "reviewers": [],
+              "severity": "blocking"
+            },
+            "after": {
+              "accepts": [],
+              "approvers": [],
+              "impl": "suite-passed",
+              "inputs": [],
+              "kind": "deterministic",
+              "on_skipped": "fail",
+              "params": {},
+              "reviewers": [],
+              "severity": "advisory"
+            }
+          }
+        ]
+      },
+      {
+        "set": "labels",
+        "issue": null,
+        "assessment": {
+          "familiarity": "greenfield",
+          "labels": [
+            "auth"
+          ],
+          "risk": "contained",
+          "size": "small"
+        },
+        "represents": {
+          "risk": [
+            "contained",
+            "critical"
+          ],
+          "familiarity": [
+            "greenfield",
+            "brownfield-unmapped"
+          ],
+          "size": [
+            "small"
+          ]
+        },
+        "differences": [
+          {
+            "field": "approach",
+            "key": null,
+            "before": "full",
+            "after": "regular"
+          },
+          {
+            "field": "gate_set",
+            "key": null,
+            "before": [
+              "G1",
+              "verify.correctness",
+              "verify.security"
+            ],
+            "after": [
+              "G1",
+              "verify.correctness"
+            ]
+          },
+          {
+            "field": "gate_checks",
+            "key": "verify.security",
+            "before": [
+              "no-secrets"
+            ],
+            "after": null
+          },
+          {
+            "field": "gate_accepts",
+            "key": "verify.security",
+            "before": [
+              "security-review",
+              "test-run"
+            ],
+            "after": null
+          },
+          {
+            "field": "checkpoints",
+            "key": "balanced",
+            "before": [
+              "define"
+            ],
+            "after": []
+          },
+          {
+            "field": "checks",
+            "key": "no-secrets",
+            "before": {
+              "accepts": [],
+              "approvers": [],
+              "impl": "no-trusted-rerun",
+              "inputs": [],
+              "kind": "deterministic",
+              "on_skipped": "fail",
+              "params": {},
+              "reviewers": [],
+              "severity": "blocking"
+            },
+            "after": null
+          },
+          {
+            "field": "checks",
+            "key": "tests-pass",
+            "before": {
+              "accepts": [],
+              "approvers": [],
+              "impl": "suite-passed",
+              "inputs": [],
+              "kind": "deterministic",
+              "on_skipped": "fail",
+              "params": {},
+              "reviewers": [],
+              "severity": "blocking"
+            },
+            "after": {
+              "accepts": [],
+              "approvers": [],
+              "impl": "suite-passed",
+              "inputs": [],
+              "kind": "deterministic",
+              "on_skipped": "fail",
+              "params": {},
+              "reviewers": [],
+              "severity": "advisory"
+            }
+          },
+          {
+            "field": "rules_fired",
+            "key": null,
+            "before": [
+              "F-1"
+            ],
+            "after": []
+          }
+        ]
+      },
+      {
+        "set": "labels",
+        "issue": null,
+        "assessment": {
+          "familiarity": "greenfield",
+          "labels": [
+            "auth"
+          ],
+          "risk": "contained",
+          "size": "large"
+        },
+        "represents": {
+          "risk": [
+            "contained",
+            "critical"
+          ],
+          "familiarity": [
+            "greenfield",
+            "brownfield-unmapped"
+          ],
+          "size": [
+            "large"
+          ]
+        },
+        "differences": [
+          {
+            "field": "approach",
+            "key": null,
+            "before": "full",
+            "after": "regular"
+          },
+          {
+            "field": "gate_set",
+            "key": null,
+            "before": [
+              "G1",
+              "verify.correctness",
+              "verify.security"
+            ],
+            "after": [
+              "G1",
+              "verify.correctness"
+            ]
+          },
+          {
+            "field": "gate_checks",
+            "key": "verify.security",
+            "before": [
+              "no-secrets"
+            ],
+            "after": null
+          },
+          {
+            "field": "gate_accepts",
+            "key": "verify.security",
+            "before": [
+              "security-review",
+              "test-run"
+            ],
+            "after": null
+          },
+          {
+            "field": "checkpoints",
+            "key": "balanced",
+            "before": [
+              "define"
+            ],
+            "after": []
+          },
+          {
+            "field": "checks",
+            "key": "no-secrets",
+            "before": {
+              "accepts": [],
+              "approvers": [],
+              "impl": "no-trusted-rerun",
+              "inputs": [],
+              "kind": "deterministic",
+              "on_skipped": "fail",
+              "params": {},
+              "reviewers": [],
+              "severity": "blocking"
+            },
+            "after": null
+          },
+          {
+            "field": "checks",
+            "key": "tests-pass",
+            "before": {
+              "accepts": [],
+              "approvers": [],
+              "impl": "suite-passed",
+              "inputs": [],
+              "kind": "deterministic",
+              "on_skipped": "fail",
+              "params": {},
+              "reviewers": [],
+              "severity": "blocking"
+            },
+            "after": {
+              "accepts": [],
+              "approvers": [],
+              "impl": "suite-passed",
+              "inputs": [],
+              "kind": "deterministic",
+              "on_skipped": "fail",
+              "params": {},
+              "reviewers": [],
+              "severity": "advisory"
+            }
+          }
+        ]
+      },
+      {
+        "set": "archive",
+        "issue": "landed-issue",
+        "assessment": {
+          "familiarity": "greenfield",
+          "labels": [],
+          "risk": "contained",
+          "size": "small"
+        },
+        "represents": null,
+        "differences": [
+          {
+            "field": "checks",
+            "key": "tests-pass",
+            "before": {
+              "accepts": [],
+              "approvers": [],
+              "impl": "suite-passed",
+              "inputs": [],
+              "kind": "deterministic",
+              "on_skipped": "fail",
+              "params": {},
+              "reviewers": [],
+              "severity": "blocking"
+            },
+            "after": {
+              "accepts": [],
+              "approvers": [],
+              "impl": "suite-passed",
+              "inputs": [],
+              "kind": "deterministic",
+              "on_skipped": "fail",
+              "params": {},
+              "reviewers": [],
+              "severity": "advisory"
+            }
+          }
+        ]
+      },
+      {
+        "set": "archive",
+        "issue": "plain-issue",
+        "assessment": {
+          "familiarity": "greenfield",
+          "labels": [
+            "auth"
+          ],
+          "risk": "contained",
+          "size": "large"
+        },
+        "represents": null,
+        "differences": [
+          {
+            "field": "approach",
+            "key": null,
+            "before": "full",
+            "after": "regular"
+          },
+          {
+            "field": "gate_set",
+            "key": null,
+            "before": [
+              "G1",
+              "verify.correctness",
+              "verify.security"
+            ],
+            "after": [
+              "G1",
+              "verify.correctness"
+            ]
+          },
+          {
+            "field": "gate_checks",
+            "key": "verify.security",
+            "before": [
+              "no-secrets"
+            ],
+            "after": null
+          },
+          {
+            "field": "gate_accepts",
+            "key": "verify.security",
+            "before": [
+              "security-review",
+              "test-run"
+            ],
+            "after": null
+          },
+          {
+            "field": "checkpoints",
+            "key": "balanced",
+            "before": [
+              "define"
+            ],
+            "after": []
+          },
+          {
+            "field": "checks",
+            "key": "no-secrets",
+            "before": {
+              "accepts": [],
+              "approvers": [],
+              "impl": "no-trusted-rerun",
+              "inputs": [],
+              "kind": "deterministic",
+              "on_skipped": "fail",
+              "params": {},
+              "reviewers": [],
+              "severity": "blocking"
+            },
+            "after": null
+          },
+          {
+            "field": "checks",
+            "key": "tests-pass",
+            "before": {
+              "accepts": [],
+              "approvers": [],
+              "impl": "suite-passed",
+              "inputs": [],
+              "kind": "deterministic",
+              "on_skipped": "fail",
+              "params": {},
+              "reviewers": [],
+              "severity": "blocking"
+            },
+            "after": {
+              "accepts": [],
+              "approvers": [],
+              "impl": "suite-passed",
+              "inputs": [],
+              "kind": "deterministic",
+              "on_skipped": "fail",
+              "params": {},
+              "reviewers": [],
+              "severity": "advisory"
+            }
+          }
+        ]
+      },
+      {
+        "set": "archive",
+        "issue": "stuck-issue",
+        "assessment": {
+          "familiarity": "greenfield",
+          "labels": [],
+          "risk": "contained",
+          "size": "large"
+        },
+        "represents": null,
+        "differences": [
+          {
+            "field": "approach",
+            "key": null,
+            "before": "full",
+            "after": "regular"
+          },
+          {
+            "field": "gate_set",
+            "key": null,
+            "before": [
+              "G1",
+              "verify.correctness",
+              "verify.security"
+            ],
+            "after": [
+              "G1",
+              "verify.correctness"
+            ]
+          },
+          {
+            "field": "gate_checks",
+            "key": "verify.security",
+            "before": [
+              "no-secrets"
+            ],
+            "after": null
+          },
+          {
+            "field": "gate_accepts",
+            "key": "verify.security",
+            "before": [
+              "security-review",
+              "test-run"
+            ],
+            "after": null
+          },
+          {
+            "field": "checkpoints",
+            "key": "balanced",
+            "before": [
+              "define"
+            ],
+            "after": []
+          },
+          {
+            "field": "checks",
+            "key": "no-secrets",
+            "before": {
+              "accepts": [],
+              "approvers": [],
+              "impl": "no-trusted-rerun",
+              "inputs": [],
+              "kind": "deterministic",
+              "on_skipped": "fail",
+              "params": {},
+              "reviewers": [],
+              "severity": "blocking"
+            },
+            "after": null
+          },
+          {
+            "field": "checks",
+            "key": "tests-pass",
+            "before": {
+              "accepts": [],
+              "approvers": [],
+              "impl": "suite-passed",
+              "inputs": [],
+              "kind": "deterministic",
+              "on_skipped": "fail",
+              "params": {},
+              "reviewers": [],
+              "severity": "blocking"
+            },
+            "after": {
+              "accepts": [],
+              "approvers": [],
+              "impl": "suite-passed",
+              "inputs": [],
+              "kind": "deterministic",
+              "on_skipped": "fail",
+              "params": {},
+              "reviewers": [],
+              "severity": "advisory"
+            }
+          }
+        ]
+      },
+      {
+        "set": "archive",
+        "issue": "waived-issue",
+        "assessment": {
+          "familiarity": "greenfield",
+          "labels": [],
+          "risk": "contained",
+          "size": "large"
+        },
+        "represents": null,
+        "differences": [
+          {
+            "field": "approach",
+            "key": null,
+            "before": "full",
+            "after": "regular"
+          },
+          {
+            "field": "gate_set",
+            "key": null,
+            "before": [
+              "G1",
+              "verify.correctness",
+              "verify.security"
+            ],
+            "after": [
+              "G1",
+              "verify.correctness"
+            ]
+          },
+          {
+            "field": "gate_checks",
+            "key": "verify.security",
+            "before": [
+              "no-secrets"
+            ],
+            "after": null
+          },
+          {
+            "field": "gate_accepts",
+            "key": "verify.security",
+            "before": [
+              "security-review",
+              "test-run"
+            ],
+            "after": null
+          },
+          {
+            "field": "checkpoints",
+            "key": "balanced",
+            "before": [
+              "define"
+            ],
+            "after": []
+          },
+          {
+            "field": "checks",
+            "key": "no-secrets",
+            "before": {
+              "accepts": [],
+              "approvers": [],
+              "impl": "no-trusted-rerun",
+              "inputs": [],
+              "kind": "deterministic",
+              "on_skipped": "fail",
+              "params": {},
+              "reviewers": [],
+              "severity": "blocking"
+            },
+            "after": null
+          },
+          {
+            "field": "checks",
+            "key": "tests-pass",
+            "before": {
+              "accepts": [],
+              "approvers": [],
+              "impl": "suite-passed",
+              "inputs": [],
+              "kind": "deterministic",
+              "on_skipped": "fail",
+              "params": {},
+              "reviewers": [],
+              "severity": "blocking"
+            },
+            "after": {
+              "accepts": [],
+              "approvers": [],
+              "impl": "suite-passed",
+              "inputs": [],
+              "kind": "deterministic",
+              "on_skipped": "fail",
+              "params": {},
+              "reviewers": [],
+              "severity": "advisory"
+            }
+          }
+        ]
+      }
+    ],
+    "unreadable": [
+      "broken-issue"
+    ]
+  },
+  "open": {
+    "examined": 3,
+    "issues": [
+      {
+        "issue": "plain-issue",
+        "status": "queued",
+        "assessment": {
+          "familiarity": "greenfield",
+          "labels": [
+            "auth"
+          ],
+          "risk": "contained",
+          "size": "large"
+        },
+        "differences": [
+          {
+            "field": "approach",
+            "key": null,
+            "before": "full",
+            "after": "regular"
+          },
+          {
+            "field": "gate_set",
+            "key": null,
+            "before": [
+              "G1",
+              "verify.correctness",
+              "verify.security"
+            ],
+            "after": [
+              "G1",
+              "verify.correctness"
+            ]
+          },
+          {
+            "field": "gate_checks",
+            "key": "verify.security",
+            "before": [
+              "no-secrets"
+            ],
+            "after": null
+          },
+          {
+            "field": "gate_accepts",
+            "key": "verify.security",
+            "before": [
+              "security-review",
+              "test-run"
+            ],
+            "after": null
+          },
+          {
+            "field": "checkpoints",
+            "key": "balanced",
+            "before": [
+              "define"
+            ],
+            "after": []
+          },
+          {
+            "field": "checks",
+            "key": "no-secrets",
+            "before": {
+              "accepts": [],
+              "approvers": [],
+              "impl": "no-trusted-rerun",
+              "inputs": [],
+              "kind": "deterministic",
+              "on_skipped": "fail",
+              "params": {},
+              "reviewers": [],
+              "severity": "blocking"
+            },
+            "after": null
+          },
+          {
+            "field": "checks",
+            "key": "tests-pass",
+            "before": {
+              "accepts": [],
+              "approvers": [],
+              "impl": "suite-passed",
+              "inputs": [],
+              "kind": "deterministic",
+              "on_skipped": "fail",
+              "params": {},
+              "reviewers": [],
+              "severity": "blocking"
+            },
+            "after": {
+              "accepts": [],
+              "approvers": [],
+              "impl": "suite-passed",
+              "inputs": [],
+              "kind": "deterministic",
+              "on_skipped": "fail",
+              "params": {},
+              "reviewers": [],
+              "severity": "advisory"
+            }
+          }
+        ],
+        "unresolved": null
+      },
+      {
+        "issue": "stuck-issue",
+        "status": "parked",
+        "assessment": {
+          "familiarity": "greenfield",
+          "labels": [],
+          "risk": "contained",
+          "size": "large"
+        },
+        "differences": [],
+        "unresolved": {
+          "side": "b",
+          "message": "issue: M-SET-UNKNOWN checks.no-secrets: set: the parent does not hold this id"
+        }
+      },
+      {
+        "issue": "waived-issue",
+        "status": "active",
+        "assessment": {
+          "familiarity": "greenfield",
+          "labels": [],
+          "risk": "contained",
+          "size": "large"
+        },
+        "differences": [
+          {
+            "field": "approach",
+            "key": null,
+            "before": "full",
+            "after": "regular"
+          },
+          {
+            "field": "gate_set",
+            "key": null,
+            "before": [
+              "G1",
+              "verify.correctness",
+              "verify.security"
+            ],
+            "after": [
+              "G1",
+              "verify.correctness"
+            ]
+          },
+          {
+            "field": "gate_checks",
+            "key": "verify.security",
+            "before": [
+              "no-secrets"
+            ],
+            "after": null
+          },
+          {
+            "field": "gate_accepts",
+            "key": "verify.security",
+            "before": [
+              "security-review",
+              "test-run"
+            ],
+            "after": null
+          },
+          {
+            "field": "checkpoints",
+            "key": "balanced",
+            "before": [
+              "define"
+            ],
+            "after": []
+          },
+          {
+            "field": "checks",
+            "key": "no-secrets",
+            "before": {
+              "accepts": [],
+              "approvers": [],
+              "impl": "no-trusted-rerun",
+              "inputs": [],
+              "kind": "deterministic",
+              "on_skipped": "fail",
+              "params": {},
+              "reviewers": [],
+              "severity": "blocking"
+            },
+            "after": null
+          }
+        ],
+        "unresolved": null
+      }
+    ],
+    "waivers": [
+      {
+        "issue": "waived-issue",
+        "waiver": "issue:checks.tests-pass",
+        "entry": "checks.tests-pass",
+        "field": "severity",
+        "before": "blocking",
+        "after": "advisory",
+        "message": "checks.tests-pass.severity: the parent value changed from 'blocking' to 'advisory'; the project value is 'advisory'"
+      }
+    ],
+    "unreadable": [
+      "broken-issue"
+    ]
+  }
+}

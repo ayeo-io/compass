@@ -12180,3 +12180,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `check-registry`
 - **Landed:** 2026-10-07
+
+### Policy lint refuses a check naming an impl the registry does not hold _(archived)_
+
+- **Scenario id:** `CR-5`
+- **Intent:** `INT-1`
+- **Source issue:** `check-registry`
+- **Landed:** 2026-10-07

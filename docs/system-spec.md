@@ -29,11 +29,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Policy lint refuses a check naming an impl the registry does not hold
+### Given a non-UTF-8 file pinned by blob hash and path, when the gate scans the tree, then it passes the file's content; given any change to the file, a UTF-8 file, a path, or a stale pin, then the gate still fails or reports
 
-- **Scenario id:** `CR-5`
+- **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `check-registry`
+- **Source issue:** `rival-gate-new-key`
 - **Landed:** 2026-10-07
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -332,4 +332,4 @@
 
 ---
 
-1739 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1740 superseded scenario(s) are in `docs/system-spec-archive.md`.

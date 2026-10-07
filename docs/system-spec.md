@@ -29,6 +29,13 @@
 - **Source issue:** `ready-and-done-as-data`
 - **Landed:** 2026-10-07
 
+### The rebuilt maps equal today's values and core.py stays within its cap
+
+- **Scenario id:** `SI-7`
+- **Intent:** `E1.S1.19`
+- **Source issue:** `stable-ids`
+- **Landed:** 2026-10-07
+
 ### the guard can fail on each new surface
 
 - **Scenario id:** `SS-4`
@@ -43,11 +50,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### The benchmark, the module's declarations, the owning doc and the unchanged core
+### The evaluator called as today answers as before, nothing else reads the new module, and it declares its dependencies
 
-- **Scenario id:** `CL-7`
+- **Scenario id:** `OB-8`
 - **Intent:** `INT-1`
-- **Source issue:** `classifier`
+- **Source issue:** `obligations`
 - **Landed:** 2026-10-07
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -346,4 +353,4 @@
 
 ---
 
-1767 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1766 superseded scenario(s) are in `docs/system-spec-archive.md`.

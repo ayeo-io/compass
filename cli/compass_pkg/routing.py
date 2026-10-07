@@ -35,6 +35,7 @@ import fnmatch
 import re as _re
 from compass_pkg.core import _stage_key_renames, ASSESSMENT_KEY_MAP, CompassError, canonical_shape, display_shape, display_stage, find_governance, load_manifest, load_yaml, reading_matches, resolve_issue_dir, save_manifest, shape_stages
 from compass_pkg.governance import governance_drift
+from compass_pkg.stable_ids import APPROACH_FULL, APPROACH_REGULAR, APPROACH_SPIKE
 from compass_pkg.render import fired_rule_line
 from compass_pkg.manifest import _annotate_gate_accepts
 
@@ -186,7 +187,7 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
         raise CompassError("invalid assessment:\n  - " + "\n  - ".join(errors))
 
     # --- 1. compose the candidate (routing strategies bias this) -------------
-    candidate = strategies.get("default_route", "regular")
+    candidate = strategies.get("default_route", APPROACH_REGULAR)
     candidate_via = "the policy default (no shape matched)"
     for shape in strategies.get("default_shapes", []):
         if matches(shape.get("when")):
@@ -277,7 +278,7 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
     # would quietly change the *meaning* of the work from "explore" to
     # "deliver." The honest answer is a re-assessment, so the evaluator stops
     # and says so.
-    if candidate == "spike" and final != "spike":
+    if candidate == APPROACH_SPIKE and final != APPROACH_SPIKE:
         floor_ids = [f["id"] for f in fired if f["kind"] == "floor"]
         raise RoutingConflict(
             "routing conflict - exploration cannot silently become delivery.\n"
@@ -357,7 +358,7 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
     # Immovable gates and role-added gates apply to delivery approaches only. Spike
     # ships nothing - it carries only its own Conclude gate, by design. (A
     # spike that needs a delivery gate is not a spike; it graduates.)
-    if final != "spike":
+    if final != APPROACH_SPIKE:
         for ig in guardrails.get("immovable_gates", []):
             if ig.get("gate") and ig["gate"] not in gates:
                 gates.append(ig["gate"])
@@ -392,7 +393,7 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
             # which document this is.
             # "regular" and "full" are adjectives, so they take a noun.
             "reason": "every %s carries %s" % (
-                display_shape(final) + (" approach" if final in ("regular", "full") else ""),
+                display_shape(final) + (" approach" if final in (APPROACH_REGULAR, APPROACH_FULL) else ""),
                 "one" if depth == "full" else "a light one"),
         })
     # A role rule already demands documents via `require_artifact` - a marketer

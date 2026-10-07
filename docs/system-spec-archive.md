@@ -12279,13 +12279,6 @@
 - **Source issue:** `obligations`
 - **Landed:** 2026-10-07
 
-### The evaluator called as today answers as before, nothing else reads the new module, and it declares its dependencies _(archived)_
-
-- **Scenario id:** `OB-8`
-- **Intent:** `INT-1`
-- **Source issue:** `obligations`
-- **Landed:** 2026-10-07
-
 ### The seven Definition of Ready items are human checks equal to the template text, listed as the plan stage's entry _(archived)_
 
 - **Scenario id:** `RD-1`
@@ -12335,44 +12328,44 @@
 - **Source issue:** `ready-and-done-as-data`
 - **Landed:** 2026-10-07
 
-### The grid: union domains, grouped classes, named labels and subsets, the cap of eight _(archived)_
+### stable_ids.py imports nothing and its ids equal the default preset _(archived)_
 
-- **Scenario id:** `CL-1`
-- **Intent:** `INT-1`
-- **Source issue:** `classifier`
+- **Scenario id:** `SI-1`
+- **Intent:** `E1.S1.19`
+- **Source issue:** `stable-ids`
 - **Landed:** 2026-10-07
 
-### Points combine into equivalent, tightening, loosening or incomparable; refusals are outcomes _(archived)_
+### The scanner finds an id in five positions and skips text _(archived)_
 
-- **Scenario id:** `CL-2`
-- **Intent:** `INT-1`
-- **Source issue:** `classifier`
+- **Scenario id:** `SI-2`
+- **Intent:** `E1.S1.19`
+- **Source issue:** `stable-ids`
 - **Landed:** 2026-10-07
 
-### Each field compares by the kind the field table gives it _(archived)_
+### No module outside stable_ids.py holds an approach id or a gate id in a scanned position _(archived)_
 
-- **Scenario id:** `CL-3`
-- **Intent:** `INT-1`
-- **Source issue:** `classifier`
+- **Scenario id:** `SI-3`
+- **Intent:** `E1.S1.19`
+- **Source issue:** `stable-ids`
 - **Landed:** 2026-10-07
 
-### The first looser, tighter or mixed point is named with field, parent and child; early exit _(archived)_
+### Legacy approach names and routing.py approach ids live only in stable_ids.py _(archived)_
 
-- **Scenario id:** `CL-4`
-- **Intent:** `INT-1`
-- **Source issue:** `classifier`
+- **Scenario id:** `SI-4`
+- **Intent:** `E1.S1.19`
+- **Source issue:** `stable-ids`
 - **Landed:** 2026-10-07
 
-### The grouped grid equals the full grid, and the atoms cover every read _(archived)_
+### The allow list names a reason, matches a line, and a stale entry fails _(archived)_
 
-- **Scenario id:** `CL-5`
-- **Intent:** `INT-1`
-- **Source issue:** `classifier`
+- **Scenario id:** `SI-5`
+- **Intent:** `E1.S1.19`
+- **Source issue:** `stable-ids`
 - **Landed:** 2026-10-07
 
-### The verdict has complete, stable, pinned JSON _(archived)_
+### The stage-id literals left in each module equal the recorded count _(archived)_
 
-- **Scenario id:** `CL-6`
-- **Intent:** `INT-1`
-- **Source issue:** `classifier`
+- **Scenario id:** `SI-6`
+- **Intent:** `E1.S1.19`
+- **Source issue:** `stable-ids`
 - **Landed:** 2026-10-07

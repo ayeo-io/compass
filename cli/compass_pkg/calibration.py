@@ -32,6 +32,7 @@ import re as _re
 
 import fnmatch
 import re as _re
+from compass_pkg.stable_ids import APPROACH_HOTFIX
 from compass_pkg.core import CompassError, canonical_shape, display_shape, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, migrate_map_section, normalize_spine, resolve_issue_dir, save_manifest
 
 
@@ -426,8 +427,8 @@ def _median(xs):
 def compute_impact(tasks):
     """issues: [(slug, data)]. Returns a dict; pure, no I/O, no clock."""
     landed = [(s, d) for s, d in tasks if (d or {}).get("status") == "landed"]
-    hotfixes = [(s, d) for s, d in landed if d.get("delivery_approach") == "hotfix"]
-    delivery = [(s, d) for s, d in landed if d.get("delivery_approach") != "hotfix"]
+    hotfixes = [(s, d) for s, d in landed if d.get("delivery_approach") == APPROACH_HOTFIX]
+    delivery = [(s, d) for s, d in landed if d.get("delivery_approach") != APPROACH_HOTFIX]
 
     lead, excluded, by_route = [], 0, {}
     for slug, d in delivery:

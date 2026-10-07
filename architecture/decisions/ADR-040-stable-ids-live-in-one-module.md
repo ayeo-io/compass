@@ -68,3 +68,26 @@ So 10 of the 44 matches are not ids. A test that bans the bare words would fail 
 - `cli/compass_pkg/core.py:607` (`ROUTE_NAMES`), `cli/compass_pkg/policy.py:76` (`CHECKPOINT_ROUTES`), `cli/compass_pkg/check_cmd.py:449`.
 - `governance/routing-policy.yml:324-368` (the five approach shapes today).
 - Ledger: `governance/decisions/2026-10-06-old-route-names-readable-until-7-0-0.md` (the approach names, and the old ones readable until 7.0.0).
+
+## Amendment 2026-10-07: the test as built
+
+The decision above stands. This note records what `tests/test_stable_ids.py` scans and how its allow list works, because the build settled details the decision left open.
+
+**Scanned positions.** The scanner reads each module's syntax tree and reports a string literal in any of these positions:
+
+- a dictionary key;
+- a comparison operand (`==`, `!=`, `in`, `not in`, against a literal, tuple, list or set);
+- a tuple, list or set member;
+- a function default argument;
+- a key or default argument of `.get`, `.setdefault` or `.pop`;
+- a subscript key (`m["spike"]`);
+- a call keyword argument (`f(gate_id="verify.analyze")`);
+- a `match`/`case` string pattern.
+
+The first three are the original positions. The scanner does not read a docstring, a comment, an f-string, or a bare message or `print` argument. A comparison, tuple or keyword inside a message is still reported. It does not see string concatenation or a value built at run time.
+
+**Known-id set.** A literal counts only when it is in the set of ids in `stable_ids.py`: approach ids, gate ids, stage ids and the retired approach names. A second test keeps the constants equal to the default preset.
+
+**Allow list.** An entry holds a module, a code fragment that identifies the line, and a written reason. The fragment is matched against the line with its comment removed. A stale entry, one that matches no reported literal, fails the test. Only `terminology_cmd.py` may have a whole-module entry.
+
+**Stage ids.** Approach ids, gate ids and retired approach names must be zero outside `stable_ids.py`, apart from allow-list entries. Stage ids are counted per module and pinned in the test with a reason, so the count cannot change unnoticed. The test does not claim zero.

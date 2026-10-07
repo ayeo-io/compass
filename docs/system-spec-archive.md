@@ -12754,3 +12754,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `policy-diff`
 - **Landed:** 2026-10-07
+
+### Given the count of compared lock cases is partial because pytest-xdist split the file When test_cs_5 runs inside a worker Then it skips instead of failing, and outside a worker it still requires at least 70 _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `lock-proof-under-xdist`
+- **Landed:** 2026-10-07

@@ -178,15 +178,21 @@ def test_trc_a2_changing_governance_content_without_bumping_its_version_should_f
         assert entry.get("version") == version, (
             f"{name} declares version {version} but the pin records "
             f"{entry.get('version')}. Bump one to match the other:\n"
-            f"  - if the content changed, raise `version:` in {name} and "
-            f"re-record the hash\n"
+            f"  - if the content changed, raise the version in "
+            f"governance/legacy-views.yml (the file {name} is generated from "
+            f"it) and re-record the hash with "
+            f"`python3 scripts/generate-legacy-views.py --pin-hashes`\n"
             f"  - if it did not, the pin is stale")
         assert entry.get("sha256") == actual, (
             f"{name} content changed without its version moving.\n"
             f"  declared version: {version}\n"
             f"  pinned  sha256  : {entry.get('sha256')}\n"
             f"  actual  sha256  : {actual}\n"
-            f"Bump `version:` in {name} and update "
+            f"{name} is generated from the preset, so do not edit it. Raise "
+            f"`version:` under `routing_policy` or `guardrails` in "
+            f"governance/legacy-views.yml, run "
+            f"`python3 scripts/generate-legacy-views.py`, then "
+            f"`python3 scripts/generate-legacy-views.py --pin-hashes` to update "
             f"{HASHES.relative_to(ROOT)}.")
 
 

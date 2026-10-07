@@ -1,3 +1,7 @@
+# GENERATED FILE - do not edit by hand. The source is the default preset in
+# governance/presets/default/ and governance/legacy-views.yml. Change those,
+# then regenerate this file with: python3 scripts/generate-legacy-views.py
+# A test fails when this file differs from what that command writes.
 # =============================================================================
 # Compass - routing-policy.yml
 # =============================================================================
@@ -12,9 +16,10 @@
 # is recorded: composing and constraining the delivery approach. That part is deterministic and
 # reproducible - same assessment + same policy => same delivery approach, every time.
 #
-# Edit this file to tune routing. `compass policy lint` checks it against
-# schemas/routing-policy.schema.json. Loosening a routing rule weakens the
-# framework for everyone - see routing-policy.md.
+# Tune routing in the preset, then regenerate this file (see the first lines).
+# `compass policy lint` checks it against schemas/routing-policy.schema.json.
+# Loosening a routing rule weakens the framework for everyone - see
+# routing-policy.md.
 # =============================================================================
 
 version: 2.19.0
@@ -61,11 +66,11 @@ routing_strategies:
   # Not machine-evaluated; surfaced to the assess stage and recorded for audit.
   biases:
     - "When size is genuinely unclear, estimate up - it is cheaper to
-       collapse a stage that turned out easy than to discover mid-implementation
-       that the approach was too light."
+       collapse a stage that turned out easy than to discover
+       mid-implementation that the approach was too light."
     - "A non-engineering role in play usually pulls the delivery approach
-       heavier, because it adds artifacts and assessed strategies - but this is
-       a bias, not a floor."
+       heavier, because it adds artifacts and assessed strategies - but this
+       is a bias, not a floor."
     - "Prefer the lightest delivery approach that still clears every routing
        guardrail and the applicable gates. Process weight is a cost; spend
        it where it buys safety."
@@ -91,21 +96,21 @@ routing_strategies:
         designated existing suite (project.regression_baseline_suite, else
         test_command) BEFORE the change and re-run it AFTER; record both as
         test-run evidence on verify.regression. Soft: assessed as reviewer
-        judgement, never gating - it is the regression-baseline strategy, and a
-        strategy is assessed rather than checked."
+        judgement, never gating - it is the regression-baseline strategy,
+        and a strategy is assessed rather than checked."
     - id: RP-ADV-002
       strategy: behaviour-mapping
       when: { familiarity: brownfield-unmapped, size: [atomic, small], risk: [trivial, contained] }
       rationale: "Unmapped ground on a small change - before editing, write
         a test that pins what the code does now where the change touches it,
-        so the change cannot break behaviour nobody wrote down. Advice, not a
-        floor: a larger, riskier or domain-labelled unmapped change meets
+        so the change cannot break behaviour nobody wrote down. Advice, not
+        a floor: a larger, riskier or domain-labelled unmapped change meets
         RP-FLOOR-002."
 
 # -----------------------------------------------------------------------------
 # ROUTING RULES - hard. They BOUND the candidate delivery approach. The evaluator
 # applies these after composition; they cannot be bypassed, and a human
-# cannot override them per-issue (changing one means editing this file).
+# cannot override them per-issue (changing one means editing the preset).
 # -----------------------------------------------------------------------------
 routing_guardrails:
 
@@ -353,7 +358,7 @@ route_shapes:
     artifacts: { acceptance-criteria: full, technical-design: full, distribution-map: light, verification-report: full }
   hotfix:
     weight: 3
-    # `full-plus-backfill` below is a stage-weight enum the evaluator
+    # The `ship:` value on the `stages` line below is a stage-weight enum the evaluator
     # and every manifest on disk read; renaming it is a migration with a
     # back-compat shim, not a text sweep.
     # vocabulary-scan: allow - machine enum value, see above

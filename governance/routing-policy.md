@@ -220,16 +220,37 @@ Routing-strategy keys: `lean_toward`, `suggest_artifact`, free-text `biases`.
 `governance/presets/default/` holds the same defaults in catalogue form, one
 file per catalogue, with `preset.yml` and `evidence-types.yml`
 (`architecture/decisions/ADR-042-shipped-defaults-live-in-a-preset-directory.md`).
-`cli/compass_pkg/legacy_adapter.py` produced it from `routing-policy.yml` and
-`guardrails.yml`, and `tests/test_default_preset.py` fails when the preset and
-the two files stop matching. Nothing reads the preset yet. Until the increment
-that makes `routing-policy.yml` a generated view, change the defaults in
-`routing-policy.yml` and `guardrails.yml` and regenerate the preset with
-`write_preset` in the adapter.
+`cli/compass_pkg/legacy_adapter.py` produced it once from `routing-policy.yml`
+and `guardrails.yml`. The preset is now the source of the shipped defaults, and
+the two files are views generated from it.
+
+- Change a default in the preset (or in `legacy-views.yml` for a value only the
+  views hold), then run `python3 scripts/generate-legacy-views.py`.
+  Never edit `routing-policy.yml` or `guardrails.yml` by hand: their first
+  lines say so, and `tests/test_default_views.py` fails with the command to
+  run when a view differs from what the generator writes. A changed default
+  also needs the file's `version:` raised, which lives in `legacy-views.yml`
+  under `routing_policy` or `guardrails`, and the content-hash fixture
+  `tests/fixtures/governance-content-hashes.json` re-recorded with
+  `python3 scripts/generate-legacy-views.py --pin-hashes`
+  (`tests/test_governance_drift.py` fails until both are done).
+- `python3 scripts/generate-legacy-views.py --check` writes nothing and exits 1
+  on a stale view.
+- The comments, banner, vocabulary-scan markers and layout of the two views are
+  in `cli/compass_pkg/legacy_views_template.py`. Change a comment there, then
+  regenerate. The values come only from the preset and `legacy-views.yml`.
+- `tests/fixtures/preset-digests.yml` pins a digest for each preset file and
+  for the whole preset. `tests/test_preset_digests.py` fails when a preset file
+  changes without its pin moving; pin again with
+  `python3 scripts/generate-legacy-views.py --pin`. A pin is kept for each
+  preset version, so a re-pin updates the current entry and leaves the
+  earlier ones.
+- The mutation-proof register test and the plain-language check read the
+  checks and the guardrail statements from the preset.
 
 `governance/legacy-views.yml` holds what the two files contain that the
-catalogues have no field for. Only the generator of the views will read it,
-and it goes with the views at 7.0.0.
+catalogues have no field for. Only the generator of the views reads it, and it
+goes with the views at 7.0.0.
 
 The conversion changes these things, and the test rebuilds the two files
 from the preset and `legacy-views.yml` to show nothing is lost:

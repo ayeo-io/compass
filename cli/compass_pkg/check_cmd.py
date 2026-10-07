@@ -362,9 +362,16 @@ def _emit_check(run, args):
     the failures, not the exit. A `compass ci` sweep passes `no_count`: it
     checks issues nobody is working on, so its failures are not
     interruptions."""
+    from compass_pkg import locks
     from compass_pkg.interruptions import record
+    from compass_pkg.layers import find_project_root
     from compass_pkg.terminal import mark_handled, resolve_mode
 
+    # Conformance is reported on every run, ahead of the other notices so the
+    # summary view, which shows only a few, always shows it. A project with no
+    # `compass.yml` adds nothing.
+    run.rows[0:0] = [("line", "  " + line) for line in locks.conformance_lines(
+        find_project_root(run.task_dir), width=10 ** 6)]
     if run.failures and not getattr(args, "no_count", False):
         compass_dir = os.path.dirname(os.path.dirname(
             os.path.normpath(run.task_dir)))

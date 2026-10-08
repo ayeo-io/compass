@@ -3118,6 +3118,31 @@
 - `IP-8` Given a proposal that loosens the issue's layer, When the preview is built, Then its classification names the issue's own assessment as the first point
 - `IP-9` Given a route pick that is mixed at the issue's own assessment, When it is refused, Then the refusal names every looser or incomparable field
 
+### git-parents (landed 2026-10-08)
+
+- `GP-1` A git extends parses strictly and a spelling outside the form is refused
+- `GP-2` A remote ref with no sha is refused and git is not run
+- `GP-3` A pinned sha that is not cached is fetched into the cache with seen.yml
+- `GP-4` A fetched commit that does not match the pin is refused and not cached
+- `GP-5` Check and offline read the cache only
+- `GP-6` A symlink in the fetched tree is refused
+- `GP-7` A cache that leaves .compass is refused
+- `GP-8` Git runs with an argument list, a restricted environment and no shell
+- `GP-9` A parent is data only: settings key, unlock and unknown impl fail lint
+- `GP-10` Policy effective shows the parent as the source of its fields
+- `GP-11` A parent that names a git parent is refused
+- `GP-12` versions.yml records the parent ref, sha, version and digest
+- `GP-13` A moved pin does not change an open issue
+- `GP-14` A short sha resolves only against one cached commit
+- `GP-15` The owning doc, help, finding codes and corpus describe the parent
+- `GP-16` README and security.md say the git fetch happens and when
+- `GP-17` The cache is keyed by repository and sha
+- `GP-18` The docs say what environment git sees and that the user's credential helper runs
+- `GP-19` A partial fetch reads only the root compass.yml entry
+- `GP-20` Guards that the first plants missed are pinned by tests
+- `GP-21` A failed read caches nothing and a cache write race is safe
+- `GP-22` A waiver in a git parent is checked against the parent's own owner
+
 ### living-spec-supersession (landed 2026-10-08)
 
 - `TRC-001` Given two landed issues that share an intent id, when the living spec is derived, then each issue's scenario stays current

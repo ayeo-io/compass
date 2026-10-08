@@ -656,7 +656,10 @@ def cmd_route_evaluate(args):
     drift_gov = gov
     if view is not None and view.from_governance_copy():
         drift_gov = find_governance()
-    result = evaluate_route(readings, policy, autonomy)
+    # The issue's own layer applies before the floors, caps and role rules, as
+    # `obligations` applies it for the classifier.
+    result = evaluate_route(readings, policy, autonomy,
+                            issue=view.evaluator_issue() if view is not None else None)
     if result.get("renamed_routes"):
         sys.stderr.write(
             "compass: governance/routing-policy.yml uses old route names ("

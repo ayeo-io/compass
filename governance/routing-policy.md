@@ -360,7 +360,10 @@ What the stage-mode rank replay shows:
 `cli/compass_pkg/classify.py` compares a child configuration with its parent
 by what each owes, as `architecture/decisions/ADR-037-configuration-changes-are-classified-by-effect.md`
 decides. It calls `obligations` for both at every point of the assessment grid
-and compares the facts. Nothing reads it yet, so no command prints its
+and compares the facts. Given `at=` an assessment, `classify` compares at that
+one point instead (`grid_at`, a grid of one point). The lint, the locks and the
+preview compare an issue's own layer that way, at the issue's own assessment,
+and a project layer over the grid. Nothing reads it yet, so no command prints its
 result. `classify(parent, child)` returns a `Classification`, and the later
 `policy` commands print `json.dumps(classification.to_json(), indent=2)` and
 build their text from the same dictionary.

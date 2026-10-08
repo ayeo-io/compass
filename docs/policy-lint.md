@@ -50,7 +50,7 @@ earlier one. Warnings never stop it and never fail it.
 |---|---|---|
 | `layer` | Each layer alone, before anything merges | `L-LOAD`, `L-KEY-NOT-TEXT`, `L-SCHEMA`, `L-SETTINGS-KEY`, `L-UNLOCK-PLACEMENT`, `L-IMPL-UNKNOWN`, `L-IMPL-TEMPLATED`, `W-APPROVED-ON-ISSUE`, `L-IGNORED-FILE` (warning), and the eleven `L-PARENT-*` codes below for a git parent |
 | `merge` | The merge grammar, layer by layer. It reports every fault of the first layer that does not apply | the merge's own `M-*` codes, such as `M-ADD-EXISTS`, `M-SET-UNKNOWN`, `M-REF-REMOVED` |
-| `resolved` | The merged result as a whole | `M-REF-UNKNOWN`, `M-WEIGHT-TIE`, `M-HIT-MISSING`, `M-HIT-DISALLOWED`, `M-ALIAS-COLLISION`, `M-CYCLE` |
+| `resolved` | The merged result as a whole | `M-REF-UNKNOWN`, `M-WEIGHT-TIE`, `M-HIT-MISSING`, `M-HIT-DISALLOWED`, `M-ALIAS-COLLISION`, `M-CYCLE`, `M-BOOKKEEPING-INPUT`, `M-DIRECTORY-DEPENDENCY` |
 | `locks` | What the locks above a layer refuse, and each refused unlock | `K-LOCK-REFUSED`, `K-UNLOCK-REFUSED`, `K-UNPROVABLE`, `E-EVALUATION` |
 | `classification` | Waivers, the classifier's verdict on each layer, and the vocabulary | `C-LOOSENING`, `C-INCOMPARABLE`, `V-VOCABULARY-CHANGE`, `W-UNNEEDED`, the waivers' own `W-*` codes, `E-EVALUATION` |
 
@@ -82,7 +82,9 @@ earlier one. Warnings never stop it and never fail it.
 | `M-HIT-MISSING` | error | A rule set uses an effect and names no `hit:` policy for it. `EFFECT_POLICIES` in `catalogue_spec.py` lists the effects and the policies each allows |
 | `M-HIT-DISALLOWED` | error | A `hit:` policy the effect does not allow, or an unknown effect |
 | `M-ALIAS-COLLISION` | error | One name or alias belongs to two entries of a catalogue |
-| `M-CYCLE` | error | Artifacts depend on each other in a cycle |
+| `M-CYCLE` | error | Artifacts depend on each other in a cycle. The message gives the path, such as `a -> b -> a`, and the finding sits on the `depends_on` of the first artifact in id order |
+| `M-BOOKKEEPING-INPUT` | error | An artifact lists in `depends_on` an artifact marked `bookkeeping: true`, a record the framework keeps about the work (the dashboard, the receipt, the verification report). A bookkeeping artifact may itself depend on others. The finding sits on the dependent artifact's `depends_on` |
+| `M-DIRECTORY-DEPENDENCY` | error | An artifact lists in `depends_on` an artifact whose `file` ends in `/`, a directory. An artifact depends on files, so a verification report names the evidence ids it cites instead. The finding sits on the dependent artifact's `depends_on` |
 | `M-EFFECT-UNKNOWN` | error | A rule's `then:` holds a key that is neither an effect nor a qualifier (`ceiling`, `until`), such as a misspelt `force_minimum_aproach`. `EFFECT_QUALIFIERS` in `catalogue_spec.py` lists the qualifiers |
 | `M-ADD-EXISTS` | error | A full entry names an id that exists, with no `replace: true` |
 | `M-ADD-PARTIAL` | error | A new entry lacks a required field |
@@ -142,7 +144,7 @@ earlier one. Warnings never stop it and never fail it.
 | Option | Meaning |
 |---|---|
 | `--file PATH` | Lint one `compass.yml` as the project layer, over the shipped default |
-| `--issue SLUG` | Add the issue's `config:` as the issue layer, and look up its approvals in the issue's evidence. Without it no issue is read: there is no `COMPASS_ISSUE` or current-task fallback. A project with no `compass.yml` lints the issue's config over the shipped default |
+| `--issue SLUG` | Add the issue's `config:` as the issue layer, judged at the issue's own assessment and not over the whole grid (a project layer is still judged over the grid), and look up its approvals in the issue's evidence. Without it no issue is read: there is no `COMPASS_ISSUE` or current-task fallback. A project with no `compass.yml` lints the issue's config over the shipped default |
 | `--exhaustive` | Classify with the full grid, not the grouped one |
 | `--offline` | Read a git parent from the cache only and fetch nothing; `COMPASS_OFFLINE=1` does the same. `compass policy effective` takes it too |
 | `--json` | Print the document below |

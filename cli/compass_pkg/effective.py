@@ -75,6 +75,17 @@ class EffectiveView:
         two modules that may import `obligations` (ADR-037); readers call this."""
         return obligations.policy_adapter(self.config)
 
+    def evaluator_issue(self):
+        """The issue's own layer in the shape `evaluate_route` takes as `issue`:
+        the approach it names, the stage modes it sets and the subtask ceiling
+        it sets (`obligations.issue_input`), or None when it sets none of them.
+        The layer is rebuilt from `resolved`, so a stored generation gives what
+        the commit stored and a live view what the manifest's `config:` gives
+        now."""
+        layer = {key: self.resolved[key] for key in ("approach", "ceilings")
+                 if self.resolved.get(key)}
+        return obligations.issue_input(self.config, layer) or None
+
     # --- the accessors the reader modules call --------------------------------------
     # Each returns the data in the shape the reader already consumed from the
     # governance file, so a reader changes its source and not its logic.
@@ -344,6 +355,10 @@ def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False, 
         "capabilities": capabilities,
         "approach": (overlay or {}).get("approach"),
         "autonomy": _autonomy(root, overlay),
+        # The ceilings the issue sets, kept because no catalogue holds them and
+        # the evaluator needs the subtask ceiling when it reads the generation.
+        **({"ceilings": dict(overlay["ceilings"])} if (overlay or {}).get("ceilings")
+           else {}),
         "conformance": {"status": conformance.status, "unlocked": list(conformance.unlocked)},
         **{name: config[name] for name in spec.CATALOGUES if name in config},
         "evidence_types": _evidence_types(root, legacy),

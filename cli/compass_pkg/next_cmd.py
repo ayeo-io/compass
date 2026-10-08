@@ -248,6 +248,19 @@ def _current_phase_from_task(task: dict, task_dir: str | None = None) -> str | N
     return None
 
 
+def _unmet_entry(task: dict, task_dir: str, stage: str) -> list:
+    """The ids of the active entry checks of `stage` that fail (the shipped
+    checks only where `entry-exit-evaluation` is on). `compass next` must
+    still name a stage when the configuration cannot be read, so any fault
+    gives none."""
+    try:
+        from compass_pkg import effective, stage_lists
+        view = effective.view_or_legacy(task_dir)
+        return stage_lists.unmet_entry(stage_lists.evaluate(view, task, task_dir), stage)
+    except Exception:  # noqa: BLE001 - the stage line is the answer; this is extra
+        return []
+
+
 def _emit(args, task, task_dir, line, current_phase, finished):
     """Write `line`, today's output, opened by the rail when a person is
     reading. compass_pkg.render decides that; piped output, `CLAUDECODE`,
@@ -341,6 +354,9 @@ def cmd_next(args):
     parts = [next_phase.capitalize()]
     if pending_gate:
         parts[0] += f" [gate: {pending_gate}]"
+    unmet = _unmet_entry(task, task_dir, next_phase)
+    if unmet:
+        parts.append("entry not met: " + ", ".join(unmet))
     if collapsed:
         parts.append(f"{', '.join(collapsed)} collapsed on this route")
 

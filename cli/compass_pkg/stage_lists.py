@@ -43,8 +43,8 @@ An advisory check, by `severity` or by a `blocking_when` that does not match
 the assessment, reports a failure as a pass that says so.
 """
 # DEPENDENCY: standard library (dataclasses, os, re); compass_pkg.check_registry,
-# compass_pkg.check_results, compass_pkg.core, compass_pkg.next_cmd,
-# compass_pkg.stable_ids.
+# compass_pkg.check_results, compass_pkg.core, compass_pkg.doc_sections,
+# compass_pkg.next_cmd.
 # It reads configuration through an EffectiveView and does not import
 # compass_pkg.obligations, which only classify, effective and replay may import.
 from __future__ import annotations
@@ -56,7 +56,7 @@ from dataclasses import dataclass
 from compass_pkg.check_registry import CHECK_FNS
 from compass_pkg.check_results import NOTHING_TO_CHECK
 from compass_pkg.core import FOUND, OMITTED, resolve_artifact, unregistered_document
-from compass_pkg.stable_ids import STAGE_PLAN, STAGE_VERIFY
+from compass_pkg.doc_sections import comment_mask, list_heading, normal, section
 
 CAPABILITY = "entry-exit-evaluation"
 SIDES = ("entry", "exit")
@@ -67,25 +67,10 @@ SKIPPED_MODES = ("skipped", "collapsed")
 #: The document kind that holds the ticks of each side's lists.
 CHECKLIST_DOCUMENTS = {"entry": "requirements-review", "exit": "verification-report"}
 
-#: The two lists the templates have always worded, each under its own heading.
-NAMED_HEADINGS = {(STAGE_PLAN, "entry"): "Definition of Ready",
-                  (STAGE_VERIFY, "exit"): "Definition of Done"}
-
-
-def list_heading(stage, side):
-    """The heading a stage's list sits under in its checklist document. The
-    plan entry list and the `verify` exit list keep their long-standing names;
-    any other list is headed `<Stage> <side> list`, for example
-    `Implement exit list`. The templates render from this and the ticks and the
-    tag rule read from it, so a heading means one list."""
-    return NAMED_HEADINGS.get((stage, side)) or f"{stage[:1].upper()}{stage[1:]} {side} list"
-
 #: What a skipped check returns, by its `on_skipped`.
 SKIPPED_STATUS = {"pass": "pass", "not-applicable": "nothing-to-check", "fail": "fail"}
 
 _ITEM = re.compile(r"^\s*-\s+\[([ xX])\]\s*(.*)")
-_COMMENT = re.compile(r"<!--.*?-->", re.S)
-_TAG = re.compile(r"^\((?:evidence|follow-up):[^)]*\)\s*")
 _TAG_ANYWHERE = re.compile(r"\((?:evidence|follow-up):[^)]*\)")
 
 
@@ -112,35 +97,28 @@ def label(stage, side):
     return f"stage:{stage}:{side}"
 
 
-def _normal(text):
-    return " ".join(_TAG.sub("", text).replace("**", "").replace("*", "").split())
-
-
 def _items(path, heading):
-    """`[(ticked, text)]` for the checkbox items under `heading` of the
-    document at `path`, or None when the document has no such heading. A
-    continuation line is an indented line after an item."""
+    """`[(ticked, normalised text, text)]` for the checkbox items under
+    `heading` of the document at `path`, or None when the document has no such
+    heading. A continuation line is an indented line after an item. The section
+    is read by `doc_sections`, as the renderer and the tag rule read it."""
     with open(path, encoding="utf-8") as fh:
-        text = _COMMENT.sub("", fh.read())
-    items, inside = [], None
-    for line in text.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("#"):
-            if stripped.lstrip("#").strip() == heading:
-                inside = []
-                continue
-            if inside is not None:
-                break
-        if inside is None:
+        lines = fh.read().split("\n")
+    mask = comment_mask(lines)
+    body = section(lines, mask, heading)
+    if body is None:
+        return None
+    items = []
+    for index in range(*body):
+        line = lines[index]
+        if mask[index]:
             continue
         found = _ITEM.match(line)
         if found:
             items.append([found.group(1).lower() == "x", found.group(2)])
-        elif items and line.startswith(" ") and stripped:
-            items[-1][1] += " " + stripped
-        elif stripped.startswith("Next stage:"):
-            break
-    return None if inside is None else [(t, _normal(s), s) for t, s in items]
+        elif items and line.startswith(" ") and line.strip():
+            items[-1][1] += " " + line.strip()
+    return [(t, normal(s), s) for t, s in items]
 
 
 def _document(task_dir, kind):
@@ -184,7 +162,7 @@ def _tick(check, stage, side, documents, task, owes):
         if owes is not None and kind not in owes[1]:
             return "nothing-to-check", f"{owes[0]} owes no {kind}"
         return "fail", f"{name} not found; its '{heading}' section holds the tick"
-    wanted = _normal(check.get("statement") or "")
+    wanted = normal(check.get("statement") or "")
     matches = [(ticked, raw) for ticked, text, raw in (items or []) if text == wanted]
     if not matches:
         return "fail", (f"no checklist item with this statement under '{heading}' "

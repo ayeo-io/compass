@@ -28,56 +28,25 @@ lists, and evaluation decides what is owed.
 A template of any other kind, and an issue read without a configuration,
 render as the file.
 """
-# DEPENDENCY: standard library (re); compass_pkg.stage_lists. It reads
-# configuration through an EffectiveView.
+# DEPENDENCY: standard library (re); compass_pkg.doc_sections,
+# compass_pkg.stage_lists. It reads configuration through an EffectiveView.
 from __future__ import annotations
 
 import re
 
-from compass_pkg.stage_lists import CHECKLIST_DOCUMENTS, _normal, list_heading
+from compass_pkg.doc_sections import comment_mask, list_heading, normal, section
+from compass_pkg.stage_lists import CHECKLIST_DOCUMENTS
 
 #: Written before a generated exit-list line, so the box can be deferred.
 EVIDENCE_PREFIX = "(evidence: {{EV-id}}) "
 
 _ITEM_START = re.compile(r"^- \[[ xX]\] ")
-_COMMENT_TOKEN = re.compile(r"<!--|-->")
 _SIDE_OF = {kind: side for side, kind in CHECKLIST_DOCUMENTS.items()}
 
 
 def kinds():
     """The document kinds whose checklists render from the lists."""
     return tuple(sorted(_SIDE_OF))
-
-
-def _comment_mask(lines):
-    """For each line, whether it is inside an HTML comment or opens one. The
-    templates quote example boxes inside comments; those are not boxes."""
-    mask, inside = [], False
-    for line in lines:
-        mask.append(inside or "<!--" in line)
-        for token in _COMMENT_TOKEN.findall(line):
-            inside = token == "<!--"
-    return mask
-
-
-def _heading_of(line):
-    return line.strip().lstrip("#").strip() if line.lstrip().startswith("#") else None
-
-
-def _body(lines, mask, heading):
-    """`(start, end)`: the lines under `heading`, up to the next heading or the
-    `Next stage:` line. None when the document has no such heading."""
-    for index, line in enumerate(lines):
-        if mask[index] or _heading_of(line) != heading:
-            continue
-        end = len(lines)
-        for later in range(index + 1, len(lines)):
-            if not mask[later] and (_heading_of(lines[later]) is not None
-                                    or lines[later].startswith("Next stage:")):
-                end = later
-                break
-        return index + 1, end
-    return None
 
 
 def _blocks(lines, mask, start, end):
@@ -94,7 +63,7 @@ def _blocks(lines, mask, start, end):
                and lines[index].strip()):
             text += " " + lines[index].strip()
             index += 1
-        found.append((first, index, _normal(text)))
+        found.append((first, index, normal(text)))
     return found
 
 
@@ -109,7 +78,7 @@ def _items(lines, blocks, statements, side):
     unused = list(blocks)
     out = []
     for statement in statements:
-        wanted = _normal(statement)
+        wanted = normal(statement)
         match = next((b for b in unused if b[2] == wanted), None)
         if match is None:
             out.append(_generated(statement, side))
@@ -120,11 +89,12 @@ def _items(lines, blocks, statements, side):
 
 
 def _statements(config, stage, side):
-    """The statements of the `human` checks the list names, in order."""
+    """The statements of the `human` checks the list names, in order. A check
+    the list names more than once gives one statement."""
     checks = config.get("checks") or {}
     named = ((config.get("stages") or {}).get(stage) or {}).get(side) or []
     out = []
-    for check_id in named:
+    for check_id in dict.fromkeys(named):
         check = checks.get(check_id)
         if isinstance(check, dict) and check.get("kind") == "human" and check.get("statement"):
             out.append(check["statement"])
@@ -143,8 +113,8 @@ def render(text, view, kind):
     for stage in view.stage_order():
         statements = _statements(config, stage, side)
         heading = list_heading(stage, side)
-        mask = _comment_mask(lines)
-        body = _body(lines, mask, heading)
+        mask = comment_mask(lines)
+        body = section(lines, mask, heading)
         if body is None:
             if statements:
                 added.append([f"### {heading}", ""]
@@ -158,11 +128,13 @@ def render(text, view, kind):
         elif items:
             lines = lines[:body[1]] + items + [""] + lines[body[1]:]
     if added:
-        mask = _comment_mask(lines)
+        mask = comment_mask(lines)
         at = next((i for i, line in enumerate(lines)
                    if not mask[i] and line.startswith("Next stage:")), None)
-        extra = [line for section in added for line in section]
+        extra = [line for new in added for line in new]
         if at is None:
+            while lines and lines[-1] == "":
+                lines.pop()
             lines = lines + [""] + extra
         else:
             lines = lines[:at] + extra + lines[at:]

@@ -1,6 +1,6 @@
 ---
 description: Requirements review - resolve ambiguity, check the spec against governance
-allowed-tools: Read, Write, Edit, Glob, Grep
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
 # /compass:refine

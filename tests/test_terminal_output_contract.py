@@ -972,6 +972,9 @@ _TAIL_EXEMPT = {
     # hooks read it in a command substitution, and a hand-off tail in the
     # middle of that would end up in the variable.
     "issue artifact-path": "prints a bare path for a shell caller to consume",
+    # Prints the document and nothing else, on purpose: an agent writes the
+    # output to the issue's document, so a hand-off tail would end up in it.
+    "issue template": "prints a document for a caller to write, with no hand-off tail",
     "lesson add": "writes .compass/lessons.yml and needs a git user name the fixture does not set; test_lessons.py runs it",
     "lesson propose": "writes .compass/lessons-pending.yml; test_lessons.py runs it",
     "lesson accept": "needs a pending proposal and a git user name; test_lessons.py runs it",

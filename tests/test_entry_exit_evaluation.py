@@ -959,7 +959,7 @@ def test_ee_11_dod_evidence_typed_still_runs_with_the_capability_on(tmp_path):
     code, out, err = _run(root, "check", "--issue", SLUG, "--json")
     rows = {r["name"]: r for r in json.loads(out)["checks"]}
     assert rows["dod-evidence-typed"]["status"] == "fail"
-    assert "bare unchecked DoD item" in rows["dod-evidence-typed"]["detail"]
+    assert "bare unchecked exit-list item" in rows["dod-evidence-typed"]["detail"]
 
 
 # --- EE-12: the default preset, help text and owning doc -----------------------------------------

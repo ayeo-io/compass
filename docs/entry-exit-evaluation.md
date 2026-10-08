@@ -169,12 +169,27 @@ list names, in the listed order:
 - A list on a stage other than the two named ones renders as its own section
   under its heading, before the `Next stage:` line. A list with no `human`
   check adds no section.
+- A check the list names more than once gives one box.
+
+An exit list on `plan` or on any stage other than `verify` is always in the
+verification report, and an entry list on any stage other than `plan` is always
+in the requirements review. An exit list on `plan` renders into the
+verification report as `Plan exit list`, although the report is written at
+`verify`: the side of a list picks the document, not the stage.
 
 A check of another kind has no box to tick and does not render. The render
 reads neither `requires` nor `when`: the document shows what the configuration
 lists, and evaluation decides what is owed. Any other template, and an issue
 read without a configuration, render as the file. Rendering adds no line to a
-default template, so the line caps on templates hold.
+default template. The line cap in `tests/test_borrowed_document_shapes.py`
+covers the threat model and the rollback plan only, and rendering does not
+change them.
+
+The tick, the tag rule and the renderer read a section the same way
+(`cli/compass_pkg/doc_sections.py`): it starts at a heading and ends at the next
+heading or at a line that starts `Next stage:`, and a line inside an HTML
+comment is not in any section. A stage id can hold a dot, so `Code.review exit
+list` is an exit heading.
 
 ## Limits
 

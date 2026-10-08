@@ -161,10 +161,10 @@ CHECK_GUIDANCE = {
         "fix": "Empty `changed_files:` in this Spike's manifest.yml. If the finding is worth keeping, run `/compass:assess` to start a new delivery issue that owns the code under a real route.",
     },
     "dod-evidence-typed": {
-        "why": "The evidence-not-assertion guardrail: the Definition of Done is a typed gate. Every unchecked DoD box must reference typed evidence or a filed follow-up - narrative notes in devlog.md do not count.",
+        "why": "The evidence-not-assertion guardrail: every exit list, the Definition of Done among them, is a typed gate. Every unchecked box in one must reference typed evidence or a filed follow-up - narrative notes in devlog.md do not count.",
         "do": 'Give each unchecked box an `(evidence: EV-<id>)` or `(follow-up: FU-<id>)` tag.',
         "fix": (
-            "For each bare unchecked DoD item: (a) add `(evidence: EV-<id>)` "
+            "For each bare unchecked exit-list item: (a) add `(evidence: EV-<id>)` "
             "inline, where EV-<id> is an entry in the issue's evidence registry "
             "with an accepted type; or (b) add `(follow-up: BF-<id>)` inline and "
             "record BF-<id> in manifest.yml follow-ups with status: owed; or (c) tick "

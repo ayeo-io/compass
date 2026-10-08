@@ -550,25 +550,18 @@ def _parse_dod_lines(task_dir):
     if not os.path.isfile(report_path):
         return []
     with open(report_path, "r", encoding="utf-8") as fh:
-        lines = fh.readlines()
-    in_dod = False
+        lines = fh.read().split("\n")
+    # The sections are read by `doc_sections`, as the renderer of the templates
+    # and the tick of a stage list read them: any heading level, every exit
+    # list's heading, no line inside an HTML comment, and a section ends at
+    # the next heading or at `Next stage:`.
+    from compass_pkg import doc_sections
+    mask = doc_sections.comment_mask(lines)
     dod_lines = []
-    for line in lines:
-        stripped = line.rstrip("\n")
-        # Detect the heading - allow any heading level (##, ###, ####). Every
-        # exit list's section counts, not only the Definition of Done.
-        if stripped.strip().startswith("#"):
-            # A heading ends the section before it and may open the next.
-            in_dod = bool(_EXIT_HEADING_RE.match(stripped.strip().lstrip("#").strip()))
-            continue
-        if in_dod:
-            dod_lines.append(stripped)
+    for _, start, end in doc_sections.sections(lines, mask, doc_sections.is_exit_heading):
+        dod_lines.extend(lines[i] for i in range(start, end) if not mask[i])
     return dod_lines
 
-# The headings of an exit list's section: `Definition of Done`, and
-# `<Stage> exit list` for any other stage. `stage_lists.list_heading` writes
-# them; a test pins that the two agree.
-_EXIT_HEADING_RE = _re.compile(r"^(?:Definition of Done|[A-Za-z0-9_-]+ exit list)$")
 _DOD_ITEM_RE = _re.compile(r"^\s*-\s+\[([ xX])\]\s*(.*)")
 _EVIDENCE_TAG_RE = _re.compile(r"\(evidence:\s*(EV-[^\)]+)\)")
 # Both id spellings and both tag words. FU- is what the templates write
@@ -610,12 +603,12 @@ def dod_tag_problems(rest, ev_registry, backfills):
         entry = ev_registry.get(ev_id)
         if not entry:
             problems.append(
-                f"DoD item references evidence id '{ev_id}' which is not "
+                f"exit-list item references evidence id '{ev_id}' which is not "
                 f"in manifest.yml evidence registry"
             )
         elif entry.get("type") not in _DOD_ACCEPTED_EVIDENCE_TYPES:
             problems.append(
-                f"DoD item references evidence '{ev_id}' with type "
+                f"exit-list item references evidence '{ev_id}' with type "
                 f"'{entry.get('type')}' which is not an accepted DoD "
                 f"evidence type"
             )
@@ -624,7 +617,7 @@ def dod_tag_problems(rest, ev_registry, backfills):
         bf_entry = backfills.get(bf_id)
         if not bf_entry:
             problems.append(
-                f"DoD item references follow-up id '{bf_id}' which is not "
+                f"exit-list item references follow-up id '{bf_id}' which is not "
                 f"in manifest.yml follow-ups"
             )
         elif bf_entry.get("status") not in ("outstanding", "resolved"):
@@ -639,8 +632,9 @@ def dod_tag_problems(rest, ev_registry, backfills):
 
 
 def _check_dod_evidence_typed(task, task_dir):
-    """Parse the DoD section of verification-report.md and enforce the
-    inline-tag rule:
+    """Parse every exit list's section of verification-report.md (the
+    Definition of Done, and `<Stage> exit list` for any other stage) and
+    enforce the inline-tag rule:
 
     - `- [x] ...`                  → passes (human ticked it)
     - `- [ ] (evidence: EV-id) ...` → passes if EV-id is in the evidence
@@ -687,7 +681,7 @@ def _check_dod_evidence_typed(task, task_dir):
             # Bare unchecked - fails `G4` (evidence, not assertion)
             desc = rest.strip() or raw.strip()
             problems.append(
-                f"bare unchecked DoD item (no evidence or follow-up tag): "
+                f"bare unchecked exit-list item (no evidence or follow-up tag): "
                 f"'{desc}' - add (evidence: EV-<id>) or (follow-up: BF-<id>) "
                 f"inline tag, or tick the box if done. Evidence, not "
                 f"assertion."
@@ -712,9 +706,9 @@ def _check_dod_evidence_typed(task, task_dir):
     # there is nothing there.
     where = artifact_location(task_dir, "verification-report.md")
     if item_count == 0:
-        return True, ("DoD section is empty or absent - nothing to evidence "
+        return True, ("the exit list sections are empty or absent - nothing to evidence "
                       "(read %s)" % where)
-    return True, ("all %d DoD item(s) are typed or human-ticked (read %s)"
+    return True, ("all %d exit-list item(s) are typed or human-ticked (read %s)"
                   % (item_count, where))
 
 

@@ -89,14 +89,15 @@ checks:
     description: "A Spike's `changed_files` is empty - a spike ships nothing; graduating to delivery is a fresh assessment, not a merge."
   dod-evidence-typed:
     description: >
-      Every unchecked DoD box in verification-report.md must carry an inline
-      tag: `(evidence: EV-<id>)` referencing a typed evidence registry
-      entry, or `(follow-up: FU-<id>)` referencing an outstanding follow-up.
-      A bare unchecked box fails. Checked boxes (`- [x]`) pass without a tag
-      - the human took responsibility. Narrative notes (devlog 'USER TO
-      APPLY') never count. Cross-issue: when another issue has a follow-up
-      with target_task pointing at this issue, that follow-up must be
-      resolved before this issue ships.
+      Every unchecked box in an exit list of verification-report.md (the
+      Definition of Done, and the `<Stage> exit list` of any other stage)
+      must carry an inline tag:`(evidence: EV-<id>)` referencing a typed
+      evidence registry entry, or `(follow-up: FU-<id>)` referencing an
+      outstanding follow-up. A bare unchecked box fails. Checked boxes (`-
+      [x]`) pass without a tag - the human took responsibility. Narrative
+      notes (devlog 'USER TO APPLY') never count. Cross-issue: when another
+      issue has a follow-up with target_task pointing at this issue, that
+      follow-up must be resolved before this issue ships.
   consistency-check-passes:
     description: "compass analyze reports zero consistency findings. Gate-clearing runs write type consistency-check evidence; advisory runs write command-output and do not clear verify.analyze."
   no-trusted-rerun:

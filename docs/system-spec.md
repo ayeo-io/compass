@@ -3146,3 +3146,51 @@
 ### living-spec-supersession (landed 2026-10-08)
 
 - `TRC-001` Given two landed issues that share an intent id, when the living spec is derived, then each issue's scenario stays current
+
+### entry-exit-evaluation (landed 2026-10-08)
+
+- `EE-1` With the capability off no reader shows a list
+- `EE-2` The Definition of Done is not owed by an approach that does not ship
+- `EE-3` A human check is a tick in the issue's checklist
+- `EE-4` A skipped list gives the verdict on_skipped names
+- `EE-5` A list is due by the current stage
+- `EE-6` A deterministic check in a list runs its implementation
+- `EE-7` Kinds this increment does not evaluate fail closed; advisory does not fail
+- `EE-8` compass check reports and counts the list rows
+- `EE-9` compass next names the unmet entry checks
+- `EE-10` The receipt shows each list and its state
+- `EE-11` The existing Definition of Done check keeps running
+- `EE-12` The preset, help text and owning doc describe the lists
+- `EE-13` A project stage list and an unknown check are handled
+- `EE-14` A check whose when does not match is not listed
+
+### parent-states (landed 2026-10-08)
+
+- `TRC-001` Given a project pinned to a cached parent whose compass.yml is unchanged and no newer commit is known When the parent state is read Then it is up to date
+- `TRC-002` Given a pin whose ref has another commit fetched last When the parent state is read Then it is stale
+- `TRC-003` Given a cached compass.yml edited after the fetch When the parent state is read Then it is locally modified and the lint fails
+- `TRC-004` Given a stale parent whose cached compass.yml was edited When the parent state is read Then it is both
+- `TRC-005` Given a parent in each of the four states When policy lint runs Then each state has its own code at its own level
+- `TRC-006` Given a parent in each of the four states When approach summary runs Then it prints one line with the state
+- `TRC-007` Given a cached parent that seen.yml holds no digest for When the parent state is read Then it is locally modified
+- `TRC-008` Given a parent that is not cached When approach summary runs Then it prints the cause on wrapped lines and fetches nothing
+- `TRC-009` Given a project with no git parent When approach summary runs Then it still prints three lines
+- `TRC-010` Given a seen.yml that cannot be read When a command reads the parent state Then it counts as edited and no command crashes
+- `TRC-011` Given a project compass.yml that cannot be read When approach summary runs Then it prints no traceback
+- `TRC-012` Given a seen.yml whose digests entry is not a mapping When a parent is fetched Then the record is rewritten and nothing crashes
+
+### scenario-tests-verb (landed 2026-10-08)
+
+- `TRC-001` Given a scenario whose declared test id is wrong, when compass scenario tests names resolving tests, then the manifest declares them
+
+### parent-chains (landed 2026-10-08)
+
+- `PC-1` A chain of two pinned parents loads furthest first
+- `PC-2` A chain of three loads and a fourth is refused
+- `PC-3` A commit named twice in a chain is a cycle
+- `PC-4` Every parent in a chain is data only
+- `PC-5` Effective names the nearest parent that wrote each field
+- `PC-6` versions.yml lists every parent furthest first
+- `PC-7` An uncached ancestor is refused by readers that do not fetch
+- `PC-8` The docs describe the chain, the depth limit and the cycle code
+- `PC-9` A parent's waiver answers to that parent's owner at every depth

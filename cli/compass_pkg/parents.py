@@ -184,7 +184,8 @@ def _ignore(root):
         atomic_write_text(path, "".join(f"{line}\n" for line in lines) + "cache/\n")
 
 
-def _file_digest(raw):
+def file_digest(raw):
+    """The digest of a cached file's bytes, as `seen.yml` records it."""
     return "sha256:" + hashlib.sha256(raw).hexdigest()
 
 
@@ -192,11 +193,20 @@ def _record_seen(cache, spec, sha, raw):
     path = os.path.join(cache, SEEN)
     try:
         held = load_yaml_strict(path) if os.path.isfile(path) else {}
-    except StrictYamlError:
+    except (StrictYamlError, ValueError):       # a file that is not text is replaced
         held = {}
-    refs = dict((held or {}).get("refs") or {})
+    refs = held.get("refs") if isinstance(held, dict) else None
+    refs = dict(refs) if isinstance(refs, dict) else {}
+    # `content_digest` is the digest of the commit fetched last. `digests` keeps one
+    # per commit, so a cached commit can be checked after another is fetched. A
+    # `digests` entry that is not a mapping was damaged and starts again.
+    before = refs.get(ref_label(spec))
+    kept = before.get("digests") if isinstance(before, dict) else None
+    digests = dict(kept) if isinstance(kept, dict) else {}
+    digests[sha] = file_digest(raw)
     refs[ref_label(spec)] = {
-        "sha": sha, "content_digest": _file_digest(raw), "version": version_of(spec.ref),
+        "sha": sha, "content_digest": file_digest(raw), "digests": digests,
+        "version": version_of(spec.ref),
         "fetched": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
     atomic_write_text(path, yaml.safe_dump({"schema": 1, "refs": refs}, sort_keys=True))
 
@@ -414,6 +424,11 @@ def _on_naming_parent(exc, parent):
     return exc
 
 
+def _cycle(spec, sha, via):
+    return ParentError("L-PARENT-CYCLE", f"the parent names {ref_label(spec)} at {sha[:7]}, "
+                       "which is already in the chain", via.layer.name, "extends")
+
+
 def resolve_chain(root, extends, *, fetch=False):
     """The `Parent`s a project's `extends:` names, furthest ancestor first and
     the direct parent last; empty for the shipped form. Each is pinned,
@@ -425,6 +440,9 @@ def resolve_chain(root, extends, *, fetch=False):
     nearest_first = []
     while spec is not None:
         via = nearest_first[-1] if nearest_first else None
+        # A full sha already in the chain is a cycle at any depth, and needs no fetch.
+        if via and any(spec.sha == earlier.sha for earlier in nearest_first):
+            raise _cycle(spec, spec.sha, via)
         if len(nearest_first) == MAX_DEPTH:
             raise ParentError(
                 "L-PARENT-CHAIN", f"the parent names a fourth git parent ({ref_label(spec)}); "
@@ -435,9 +453,7 @@ def resolve_chain(root, extends, *, fetch=False):
         except ParentError as exc:
             raise (_on_naming_parent(exc, via) if via else exc) from None
         if any(found.sha == earlier.sha for earlier in nearest_first):
-            raise ParentError(
-                "L-PARENT-CYCLE", f"the parent names {ref_label(spec)} at {found.sha[:7]}, "
-                "which is already in the chain", via.layer.name, "extends")
+            raise _cycle(spec, found.sha, via)
         nearest_first.append(found)
         spec = _own_spec(found, inner)
     return nearest_first[::-1]

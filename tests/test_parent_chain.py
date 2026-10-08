@@ -73,8 +73,8 @@ def _cache(root):
     return root / ".compass" / "cache" / "parents"
 
 
-def _folder(root, repo, sha):
-    """Where the cache keeps one commit of one repository."""
+def _held(root, repo, sha):
+    """Where the cache keeps a commit of `acme/<repo>`."""
     return _cache(root) / "acme" / repo / sha
 
 
@@ -118,7 +118,25 @@ def test_pc_1_a_chain_of_two_pinned_parents_loads_furthest_first(tmp_path):
     names = [layer["name"] for layer in json.loads(out)["layers"]]
     assert names == ["default", _label(made[0][1], "p1"), _label(made[1][1], "p2"), "project"]
     for repo, sha in made:
-        assert (_folder(root, repo, sha) / "compass.yml").is_file()
+        assert (_held(root, repo, sha) / "compass.yml").is_file()
+
+
+def test_pc_1_each_parent_of_a_chain_has_its_own_state(tmp_path):
+    """The lint reads the state of every parent in the chain, not only the
+    nearest, so an edit to an ancestor's cached file fails the lint."""
+    root, made, env = _chain_project(tmp_path, [PLAIN, PLAIN])
+    code, report, err = _lint(root, env=env)
+    assert code == 0, err
+    states = {f["layer"]: f["code"] for f in report["findings"]
+              if f["code"].startswith("S-PARENT-")}
+    assert states == {_label(sha, repo): "S-PARENT-UP-TO-DATE" for repo, sha in made}, states
+    far_repo, far_sha = made[0]
+    cached = _held(root, far_repo, far_sha) / "compass.yml"
+    cached.write_text(cached.read_text(encoding="utf-8") + "# edited\n", encoding="utf-8")
+    code, report, err = _lint(root, env=env)
+    assert code == 1, report
+    edited = [f for f in report["findings"] if f["code"] == "S-PARENT-MODIFIED"]
+    assert [f["layer"] for f in edited] == [_label(far_sha, far_repo)], report["findings"]
 
 
 def test_pc_1_an_ancestor_that_cannot_be_fetched_is_reported_on_the_parent_that_names_it(
@@ -152,7 +170,7 @@ def test_pc_2_a_fourth_git_parent_is_refused_on_the_third_and_is_not_fetched(tmp
     assert finding["layer"] == _label(made[1][1], "p2")
     assert finding["path"] == "extends"
     assert "three" in finding["message"]
-    assert not _folder(root, *made[0]).exists(), "the fourth git parent was fetched"
+    assert not _held(root, "p1", made[0][1]).exists(), "the fourth git parent was fetched"
 
 
 # --- PC-3: a cycle -----------------------------------------------------------------------
@@ -161,7 +179,7 @@ def test_pc_3_a_commit_named_twice_in_a_chain_is_a_cycle(tmp_path):
     sha_a, sha_b = "a" * 40, "b" * 40
     root = _project(tmp_path, _ref(sha_a, "pa"))
     for sha, repo, other, other_repo in ((sha_a, "pa", sha_b, "pb"), (sha_b, "pb", sha_a, "pa")):
-        folder = _folder(root, repo, sha)
+        folder = _held(root, repo, sha)
         folder.mkdir(parents=True)
         (folder / "compass.yml").write_text(
             yaml.safe_dump({"schema": 1, "extends": _ref(other, other_repo)}), encoding="utf-8")
@@ -170,6 +188,44 @@ def test_pc_3_a_commit_named_twice_in_a_chain_is_a_cycle(tmp_path):
     assert _codes(report) == ["L-PARENT-CYCLE"], report
     assert report["findings"][0]["layer"] == _label(sha_b, "pb")
     assert sha_a[:7] in report["findings"][0]["message"]
+
+
+def test_pc_3_the_same_commit_under_another_repository_name_is_a_cycle(tmp_path):
+    sha_a, sha_b = "a" * 40, "b" * 40
+    root = _project(tmp_path, _ref(sha_a, "pa"))
+    # The repeat is named under another repository, which holds nothing cached:
+    # a commit sha names the content, so the full sha alone makes it a cycle.
+    for sha, repo, other in ((sha_a, "pa", _ref(sha_b, "pb")),
+                             (sha_b, "pb", _ref(sha_a, "mirror", "9.9.9"))):
+        folder = _held(root, repo, sha)
+        folder.mkdir(parents=True)
+        (folder / "compass.yml").write_text(
+            yaml.safe_dump({"schema": 1, "extends": other}), encoding="utf-8")
+    code, report, _ = _lint(root, "--offline")
+    assert code == 1
+    assert _codes(report) == ["L-PARENT-CYCLE"], report
+    # Reported on the parent that names the repeat, not one hop later.
+    assert report["findings"][0]["layer"] == _label(sha_b, "pb")
+
+
+def test_pc_3_a_cycle_at_the_depth_limit_is_a_cycle_and_nothing_is_fetched(tmp_path):
+    shas = ["1" * 40, "2" * 40, "3" * 40]
+    root = _project(tmp_path, _ref(shas[2], "p3"))
+    # p3 -> p2 -> p1 -> p3: the third parent names the nearest again.
+    named = {shas[2]: _ref(shas[1], "p2"), shas[1]: _ref(shas[0], "p1"),
+             shas[0]: _ref(shas[2], "p3")}
+    repos = {shas[0]: "p1", shas[1]: "p2", shas[2]: "p3"}
+    for sha, extends in named.items():
+        folder = _held(root, repos[sha], sha)
+        folder.mkdir(parents=True)
+        (folder / "compass.yml").write_text(
+            yaml.safe_dump({"schema": 1, "extends": extends}), encoding="utf-8")
+    bin_dir, log = fake_git(tmp_path)
+    code, report, _ = _lint(root, env={"PATH": f"{bin_dir}:{REAL_GIT}"})
+    assert code == 1
+    assert _codes(report) == ["L-PARENT-CYCLE"], report
+    assert report["findings"][0]["layer"] == _label(shas[0], "p1")
+    assert not log.exists(), "git ran for a commit already in the chain"
 
 
 # --- PC-4: every parent is data only -----------------------------------------------------
@@ -205,14 +261,33 @@ UNKNOWN_IMPL = {"schema": 1, "checks": {"evil": {
                                       (UNKNOWN_IMPL, "L-IMPL-UNKNOWN"),
                                       ({"schema": 1, "mystery": 1}, "L-SCHEMA")],
                          ids=["unlock", "impl", "unknown-key"])
-def test_pc_4_an_unlock_an_unknown_impl_or_an_unknown_key_in_the_furthest_parent_is_refused(
-        tmp_path, doc, code):
-    root, made, env = _chain_project(tmp_path, [doc, PLAIN, PLAIN])
+@pytest.mark.parametrize("place", [0, 1, 2], ids=["furthest", "middle", "nearest"])
+def test_pc_4_an_unlock_an_unknown_impl_or_an_unknown_key_in_any_parent_is_refused(
+        tmp_path, doc, code, place):
+    docs = [dict(PLAIN), dict(PLAIN), dict(PLAIN)]
+    docs[place] = doc
+    root, made, env = _chain_project(tmp_path, docs)
     exit_code, report, _ = _lint(root, env=env)
     assert exit_code == 1
     assert code in _codes(report), report
     blamed = next(f for f in report["findings"] if f["code"] == code)
-    assert blamed["layer"] == _label(made[0][1], "p1")
+    assert blamed["layer"] == _label(made[place][1], f"p{place + 1}")
+
+
+@pytest.mark.parametrize("place", [0, 1], ids=["furthest", "middle"])
+def test_pc_4_compass_check_refuses_a_settings_key_in_any_parent_of_a_chain(tmp_path, place):
+    """`compass check` reads the chain through `layers.build_chain`, not the lint."""
+    docs = [dict(PLAIN), dict(PLAIN), dict(PLAIN)]
+    docs[place]["allow_project_commands"] = True
+    base = tmp_path / "remotes"
+    made = _build(base, docs)
+    repo, sha = made[-1]
+    root, _ = issue_project(tmp_path, _ref(sha, repo))
+    _lint(root, env={"COMPASS_PARENT_REMOTE_BASE": str(base)})     # fills the cache
+    code, out, err = _run(root, "check", "--issue", "feature")
+    assert code == 2, (out, err)
+    assert "allow_project_commands" in out + err
+    assert _label(made[place][1], f"p{place + 1}") in out + err
 
 
 @pytest.mark.parametrize("place", [0, 1, 2], ids=["furthest", "middle", "nearest"])
@@ -292,7 +367,7 @@ def _chain_with_far_parent_missing(tmp_path):
     root, made, env = _chain_project(tmp_path, [PLAIN, PLAIN])
     code, _, err = _lint(root, env=env)
     assert code == 0, err
-    shutil.rmtree(_folder(root, *made[0]))
+    shutil.rmtree(_held(root, "p1", made[0][1]))
     return root, made
 
 
@@ -311,6 +386,38 @@ def test_pc_7_an_offline_run_names_the_parent_that_needs_the_missing_ancestor(tm
     assert not log.exists(), "git ran offline"
 
 
+def test_pc_7_effective_and_check_name_the_parent_that_needs_the_missing_ancestor(tmp_path):
+    base = tmp_path / "remotes"
+    made = _build(base, [PLAIN, PLAIN])
+    repo, sha = made[-1]
+    root, _ = issue_project(tmp_path, _ref(sha, repo))
+    _lint(root, env={"COMPASS_PARENT_REMOTE_BASE": str(base)})     # fills the cache
+    shutil.rmtree(_held(root, "p1", made[0][1]))
+    naming = _label(made[1][1], "p2")
+    for argv in (("policy", "effective", "--offline"), ("check", "--issue", "feature")):
+        code, out, err = _run(root, *argv)
+        assert code != 0 and "L-PARENT-NOT-CACHED" in out + err, (argv, out, err)
+        assert naming in out + err, (argv, out + err)
+
+
+def test_pc_7_a_stored_generation_needs_no_cache_and_runs_no_git(tmp_path, monkeypatch):
+    base = tmp_path / "remotes"
+    made = _build(base, [PLAIN, PLAIN, PLAIN])
+    repo, sha = made[-1]
+    root, task_dir = issue_project(tmp_path, _ref(sha, repo))
+    monkeypatch.setenv("COMPASS_PARENT_REMOTE_BASE", str(base))
+    monkeypatch.chdir(root)
+    assert commit(task_dir).committed
+    shutil.rmtree(_cache(root))
+    bin_dir, log = fake_git(tmp_path)
+    code, out, err = _run(root, "check", "--issue", "feature",
+                          env={"PATH": f"{bin_dir}:{REAL_GIT}"})
+    # The synthetic manifest fails other checks, so the exit code says nothing here.
+    assert "L-PARENT" not in out + err, (out, err)
+    assert "generation 1 (parent" in out, (out, err)
+    assert not log.exists(), "compass check ran git"
+
+
 def test_pc_7_a_reader_of_an_issue_never_fetches_an_ancestor(tmp_path):
     base = tmp_path / "remotes"
     made = _build(base, [PLAIN, PLAIN])
@@ -318,7 +425,7 @@ def test_pc_7_a_reader_of_an_issue_never_fetches_an_ancestor(tmp_path):
     root, task_dir = issue_project(tmp_path, _ref(sha, repo))
     code, report, err = _lint(root, env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
     assert code == 0, (report, err)
-    shutil.rmtree(_folder(root, *made[0]))
+    shutil.rmtree(_held(root, "p1", made[0][1]))
     bin_dir, log = fake_git(tmp_path)
     code, out, err = _run(root, "check", "--issue", "feature",
                           env={"PATH": f"{bin_dir}:{REAL_GIT}"})
@@ -339,7 +446,8 @@ def test_pc_8_the_cycle_code_is_a_code_the_lint_can_name():
 
 def test_pc_8_the_owning_docs_describe_the_chain_the_depth_and_the_cycle_code():
     doc = _text("docs", "git-parents.md")
-    for phrase in ("L-PARENT-CYCLE", "depth of three", "furthest", "not counted"):
+    for phrase in ("L-PARENT-CYCLE", "depth of three", "furthest", "not counted",
+                   "may still be fetched"):
         assert phrase in doc, f"docs/git-parents.md does not mention {phrase!r}"
     assert "chains are not built yet" not in doc.lower()
     assert "Chains of git parents and the depth limit" not in doc
@@ -347,3 +455,60 @@ def test_pc_8_the_owning_docs_describe_the_chain_the_depth_and_the_cycle_code():
     assert "L-PARENT-CYCLE" in lint
     assert "Chains are not built yet" not in lint
     assert "the eleven `L-PARENT-*` codes" in lint
+
+
+# --- PC-9: a parent's waiver answers to that parent's owner, at every depth --------------------
+
+def _waiver_chain(place, *, approver, owner=True, above=None):
+    """A lint over three parent layers where parent `place` carries a waiver
+    approved by `approver`. Each parent's owner is `owner-<n>`. `above`, when
+    set, is the `approvers.project-waiver` list of the layer above `place`."""
+    from compass_pkg import layers, policy_lint
+    import waiver_fixtures as fx
+    default, _ = policy_lint.load_parent()
+    parents = []
+    for n in range(3):
+        doc = {"schema": 1}
+        if owner or n != place:
+            doc["owner"] = f"owner-{n}"
+        if n == place:
+            doc["checks"] = {"dor-summary-filled": {
+                "set": {"severity": "advisory"},
+                "waiver": fx.project_waiver(approved_by=approver)}}
+        if above is not None and n == place - 1:
+            doc["approvers"] = {"project-waiver": above}
+        parents.append(layers.Layer(f"github:a/p{n}@1#abc123{n}", "parent", doc,
+                                    layers.layer_digest(doc, "parent")))
+    own = {"schema": 1, "owner": "project-owner"}
+    project = layers.Layer("project", "project", own, layers.layer_digest(own, "project"))
+    return policy_lint.lint_chain(default, project, extra_parents=parents, today=fx.TODAY), parents
+
+
+@pytest.mark.parametrize("place", [0, 1, 2], ids=["furthest", "middle", "nearest"])
+def test_pc_9_the_owner_of_a_parent_may_approve_that_parents_waiver(place):
+    report, _ = _waiver_chain(place, approver=f"owner-{place}")
+    assert [f.code for f in report.errors] == []
+
+
+@pytest.mark.parametrize("place", [0, 1, 2], ids=["furthest", "middle", "nearest"])
+def test_pc_9_the_owner_of_another_layer_may_not_approve_a_parents_waiver(place):
+    others = [f"owner-{n}" for n in range(3) if n != place] + ["project-owner"]
+    for approver in others:
+        report, parents = _waiver_chain(place, approver=approver)
+        assert [(f.code, f.layer) for f in report.errors] \
+            == [("W-APPROVER-NOT-ALLOWED", parents[place].name)], approver
+
+
+@pytest.mark.parametrize("place", [0, 1, 2], ids=["furthest", "middle", "nearest"])
+def test_pc_9_a_parent_with_no_owner_cannot_carry_a_waiver(place):
+    report, _ = _waiver_chain(place, approver="project-owner", owner=False)
+    assert [f.code for f in report.errors] == ["W-NO-OWNER"]
+
+
+@pytest.mark.parametrize("place", [1, 2], ids=["middle", "nearest"])
+def test_pc_9_a_name_in_the_approvers_of_the_layer_above_may_approve(place):
+    report, _ = _waiver_chain(place, approver="named-approver", above=["named-approver"])
+    assert [f.code for f in report.errors] == []
+    report, parents = _waiver_chain(place, approver="named-approver")
+    assert [(f.code, f.layer) for f in report.errors] \
+        == [("W-APPROVER-NOT-ALLOWED", parents[place].name)]

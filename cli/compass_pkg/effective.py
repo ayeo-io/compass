@@ -99,6 +99,12 @@ class EffectiveView:
         """Whether a `when:` clause of this configuration holds for an assessment."""
         return reading_matches(when, assessment, self.orders)
 
+    def listing_assessment(self, assessment, approach_name):
+        """What a check's `when` reads for an issue: its assessment and the
+        derived key `ships`, whether the approach it was routed to ships."""
+        approaches = self.resolved.get("approaches") or {}
+        return obligations.listing_assessment(assessment, approaches.get(approach_name))
+
     def guardrail_gates(self):
         """The guardrails in the legacy shape: `defaults` (gates that apply to
         an approach that ships) and `spike_guardrails` (those that do not), each
@@ -308,8 +314,8 @@ def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False, 
     loaded = policy_lint.load_layers(root, manifest=manifest, read_project=counts, fetch=fetch)
     if loaded.findings:
         first = loaded.findings[0]
-        raise CompassError(f"nothing can be resolved: {first.code} {first.path}: "
-                           f"{first.message}")
+        raise CompassError(f"nothing can be resolved: {first.code} [{first.layer}] "
+                           f"{first.path}: {first.message}")
     legacy = None if counts else _legacy_parent(root)
     parent, meta = legacy if legacy else (loaded.parent, loaded.meta)
     if legacy:

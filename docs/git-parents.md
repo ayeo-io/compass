@@ -6,7 +6,7 @@ spelling, how a parent is fetched and cached, what Compass refuses and why, and 
 issue records. From 6.0.0 the spelling, the finding codes, the cache layout and the
 `seen.yml` and `versions.yml` entries are a public contract.
 
-The code is `cli/compass_pkg/parents.py`. `cli/compass_pkg/policy_lint.py` calls it when it
+The code is `cli/compass_pkg/parents.py`, and `cli/compass_pkg/parent_states.py` for the parent states. `cli/compass_pkg/policy_lint.py` calls it when it
 loads the project, and `cli/compass_pkg/effective.py` stores the result in a generation.
 
 ## The spelling
@@ -96,19 +96,44 @@ The cache is keyed by repository and commit, so `github:someone/else@1#<sha>` ne
 
 The cache is not configuration. It is listed in `.compass/.gitignore`, and a person can delete it. Compass writes only below `.compass/cache/parents/`. If `.compass/cache` or `.compass/cache/parents` is a symbolic link, or a cached parent or the owner or repository folder above it is a link or resolves outside `.compass/`, Compass refuses with `L-PARENT-CACHE` and neither reads nor writes there.
 
-Compass does not check a cached file against `seen.yml`. If someone edits a cached `compass.yml` under `.compass/cache/parents/`, Compass reads the edited file without warning until the parent-state check ("edited in the cache") lands.
+Compass checks a cached `compass.yml` against the digest in `seen.yml` each time it reads the parent (see [the four parent states](#the-four-parent-states)). The check catches an accidental edit. It does not stop a deliberate one, because `seen.yml` sits beside the cached file: someone who can write the cache can rewrite the digest as well, and the edited file then reads as up to date. If you doubt the cache, delete `.compass/cache/parents/`. The next `compass policy lint` fetches the pinned commit again.
 
 `seen.yml` records what this machine has fetched:
 
 ```yaml
 refs:
   github:acme/compass-banking@1.2.0:
-    content_digest: sha256:...   # over the bytes of the cached compass.yml
+    content_digest: sha256:...   # over the bytes of the cached compass.yml, for the commit fetched last
+    digests:                     # the same digest for every commit of the ref fetched on this machine
+      3f9c1a2e...: sha256:...
     fetched: '2026-10-08T09:12:00Z'
     sha: 3f9c1a2e...
     version: 1.2.0               # the ref when it reads as a version, else empty
 schema: 1
 ```
+
+## The four parent states
+
+Each git parent is in one of four states. Compass reads the state from the pin, the cache and `seen.yml`, and never fetches to find it.
+
+| State | Meaning | Lint code and level |
+|---|---|---|
+| `up to date` | The cache holds the pin, and `seen.yml` knows no other commit for the ref | `S-PARENT-UP-TO-DATE`, info |
+| `stale` | `seen.yml` holds another commit for the ref, which this machine fetched last | `S-PARENT-STALE`, warning |
+| `locally modified` | The cached `compass.yml` no longer matches the digest recorded when it was fetched | `S-PARENT-MODIFIED`, error |
+| `both` | Stale, and the cached file was edited | `S-PARENT-BOTH`, error |
+
+A fetch of an exact pin overwrites the sha in `seen.yml`, so the other commit can be older or newer than the pin. A fresh clone has fetched nothing else, so it is never stale. A stale parent never fails the lint, and the pin stays where it is until a person moves it.
+
+An edited cache fails the lint, because the chain would otherwise run a file that is not the pinned commit's. A cached commit that `seen.yml` holds no digest for counts as edited too, since it cannot be shown to match a fetch. To clear either, delete the cached copy of that commit under `.compass/cache/parents/` and run `compass policy lint`, which fetches it again. A `seen.yml` that cannot be read counts as holding no digest. A cached file that no longer parses is reported as `L-LOAD`, before its state is read.
+
+`compass approach summary` adds one line for the project's git parent and nothing for a project with none:
+
+```
+Parent: github:acme/compass-banking@1.2.0 at 3f9c1a2 - locally modified
+```
+
+It reads the cache only. A parent it cannot read, such as one that is not cached, prints `Parent: not read` followed by the finding code and cause.
 
 ## What a parent may hold
 
@@ -120,15 +145,17 @@ A parent's own `extends:` may name `compass:default@<major>` or another git pare
 
 A parent can name a git parent, which can name another. A chain holds at most three git parents, to a depth of three: the project's direct parent, its parent and that parent's parent. The shipped default at the root is not counted, because it is the CLI's own version and not a fetched parent.
 
-Each parent in a chain is pinned by sha, fetched, cached and read as data in the same way as a single parent. The chain is `default`, then the git parents from the furthest to the nearest, `project`, then the issue. A later layer overrides an earlier one, so the nearest parent wins over the furthest, and `policy effective` names the parent that wrote each field. The classifier judges each git parent against the shipped default like any other layer, so a parent that loosens the default needs a waiver the same way a project does.
+Each parent in a chain is pinned by sha, fetched, cached and read as data in the same way as a single parent. The chain is `default`, then the git parents from the furthest to the nearest, `project`, then the issue. A later layer overrides an earlier one, so the nearest parent wins over the furthest, and `policy effective` names the parent that wrote each field. The classifier judges each git parent against the shipped default like any other layer, so a parent that loosens the default needs a waiver the same way a project does. A waiver in a git parent, at any depth, is checked against that parent's own `owner`, or the names in the `approvers.project-waiver` of the layer above it. The project's owner does not count. A parent with no `owner` cannot carry a waiver (`W-NO-OWNER`).
 
 | Fault | Code | Reported on |
 |---|---|---|
 | A third parent names a fourth git parent | `L-PARENT-CHAIN` | The third parent. The fourth is not fetched |
-| A parent names a commit that is already in the chain | `L-PARENT-CYCLE` | The parent that names it |
+| A parent names a commit that is already in the chain, at any depth | `L-PARENT-CYCLE` | The parent that names it. A full sha already in the chain is refused before any fetch |
 | An ancestor cannot be fetched, is not cached for a reader that does not fetch, or has a bad spelling | The code of the fault | The parent that names the ancestor (a bad file reports on the ancestor itself) |
 
-A waiver in a git parent is checked against the parent's own `owner`, or the names in the `approvers.project-waiver` of the layer above it. The project's owner does not count. A parent with no `owner` cannot carry a waiver (`W-NO-OWNER`).
+The refusal from `compass policy lint`, `compass policy effective` and `compass check` names that parent in the same way. A stored generation does not read the cache at all: it uses the record of its parents, so a deleted cache does not stop `compass check` for an issue that has one.
+
+Compass checks a parent after it has loaded the parent's ancestors. A parent that is refused for a settings key, an `unlock:` or an unknown `impl` may still be fetched along with its ancestors, which were pinned and read as data only. Nothing in them runs.
 
 ## What an issue records
 
@@ -163,6 +190,5 @@ Every refusal is a lint finding with a code. [policy-lint.md](policy-lint.md) li
 ## What this page does not cover
 
 - `compass policy update`, which resolves a ref to a sha and moves the pin.
-- The four parent states (up to date, stale, edited in the cache, both).
 - The waiver re-check when a pin moves.
 - A host other than GitHub, and private repositories that need a login: git uses the credential settings of the person running Compass, and Compass never prompts.

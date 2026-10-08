@@ -462,12 +462,14 @@ def test_hr_h_the_minute_ceiling_ends_what_the_session_started(project):
     import time
     _run(project, "--max-minutes", "0.03", plan=("spawn_sleep",))
     pid = int((project.parent / "child.pid").read_text())
-    time.sleep(0.5)
-    try:
-        os.kill(pid, 0)
-        alive = True
-    except ProcessLookupError:
-        alive = False
+    alive = True
+    for _ in range(100):
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            alive = False
+            break
+        time.sleep(0.05)
     if alive:
         os.kill(pid, 9)
     assert not alive, "a process the session started outlived the run"
@@ -485,6 +487,36 @@ def test_hr_b_a_second_run_of_the_same_issue_is_refused(project):
 
 
 
+# A run that is genuinely hung fails after this many seconds. A loaded
+# machine can take far longer than a second to start a session, so the
+# tests wait on the session itself and use this only as a hang limit.
+_HANG_DEADLINE = 120
+
+
+# A suite started in the background, or under nohup, has SIGINT ignored,
+# and Python then installs no KeyboardInterrupt handler, so a SIGINT sent
+# to the runner would do nothing. Start the runner with the handler a
+# terminal session has.
+_RUNNER_PYTHON = [sys.executable, "-c",
+                  "import runpy, signal, sys;"
+                  "signal.signal(signal.SIGINT, signal.default_int_handler);"
+                  "sys.argv = sys.argv[1:];"
+                  "runpy.run_path(sys.argv[0], run_name='__main__')"]
+
+
+def _wait_for_session(pidfile):
+    """Block until the stub session has written its pid, which it does only
+    once the runner has started it. Signalling earlier would test a
+    runner that has not reached its handlers."""
+    import time
+    deadline = time.monotonic() + _HANG_DEADLINE
+    while time.monotonic() < deadline:
+        if pidfile.exists() and pidfile.read_text():
+            return
+        time.sleep(0.05)
+    raise AssertionError("the session never started")
+
+
 def _interrupt(project, signame):
     """Start a run whose session sleeps, send the runner `signame`, and
     return the session's pid once the runner has exited."""
@@ -499,16 +531,13 @@ def _interrupt(project, signame):
            "STUB_PIDFILE": str(tmp / "child.pid"),
            "MY_SERVICE_TOKEN": ENV_SECRET}
     runner = subprocess.Popen(
-        [sys.executable, str(CLI), "run", SLUG, "--stage", "verify",
+        [*_RUNNER_PYTHON, str(CLI), "run", SLUG, "--stage", "verify",
          "--stop-file", str(tmp / "STOP"), "--claude", str(tmp / "bin" / "claude")],
         cwd=project, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     pidfile = tmp / "child.pid"
-    for _ in range(100):
-        if pidfile.exists() and pidfile.read_text():
-            break
-        time.sleep(0.1)
+    _wait_for_session(pidfile)
     runner.send_signal(getattr(signal, signame))
-    runner.wait(timeout=20)
+    runner.wait(timeout=_HANG_DEADLINE)
     return int(pidfile.read_text())
 
 
@@ -548,23 +577,22 @@ def test_hr_h_an_interrupted_run_ends_its_session(project, signame):
            "STUB_PIDFILE": str(tmp / "child.pid"),
            "MY_SERVICE_TOKEN": ENV_SECRET}
     runner = subprocess.Popen(
-        [sys.executable, str(CLI), "run", SLUG, "--stage", "verify",
+        [*_RUNNER_PYTHON, str(CLI), "run", SLUG, "--stage", "verify",
          "--stop-file", str(tmp / "STOP"), "--claude", str(tmp / "bin" / "claude")],
         cwd=project, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     pidfile = tmp / "child.pid"
-    for _ in range(100):
-        if pidfile.exists() and pidfile.read_text():
-            break
-        time.sleep(0.1)
+    _wait_for_session(pidfile)
     runner.send_signal(getattr(signal, signame))
-    runner.wait(timeout=20)
+    runner.wait(timeout=_HANG_DEADLINE)
     pid = int(pidfile.read_text())
-    time.sleep(0.5)
-    try:
-        os.kill(pid, 0)
-        alive = True
-    except ProcessLookupError:
-        alive = False
+    alive = True
+    for _ in range(100):
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            alive = False
+            break
+        time.sleep(0.05)
     if alive:
         os.kill(pid, 9)
     assert not alive, "the session outlived an interrupted run"
@@ -620,6 +648,15 @@ def test_rc_1_a_policy_without_the_cost_rule_is_refused_naming_it(project):
         r for r in policy["routing_guardrails"]["loop_ceilings"]
         if r["ceiling"] != "run_cost_usd"]
     (gov / "routing-policy.yml").write_text(yaml.safe_dump(policy))
+    # An issue with a generation is judged by it, whatever the file now says, so
+    # this issue is reset to one with no stored configuration: the file is read.
+    import shutil
+    shutil.rmtree(project / ".compass" / "work" / SLUG / "generations", ignore_errors=True)
+    (project / ".compass" / "work" / SLUG / "manifest.yml").write_text(
+        f"schema_version: '2.0'\nissue: {SLUG}\ncreated: '{CREATED}'\n"
+        "status: active\nassessment: {risk: contained, familiarity: "
+        "brownfield-mapped, size: small, goal: delivery, role: engineer, "
+        "labels: []}\n")
     result = _run(project)
     assert result.returncode == 2 and "RP-LOOP-008" in result.stderr
     assert _calls(project) == []
@@ -667,3 +704,48 @@ def test_hd_1_the_doc_says_what_the_ci_demo_shows():
     assert ".github/workflows/compass-run-demo.yml" in opening, opening
     assert "build stage" in opening, opening
     assert "costs money" in opening, opening
+
+
+def test_hr_h_a_signal_just_after_the_session_starts_still_ends_it(tmp_path):
+    """A signal that lands right after the session process is created, on a
+    busy machine, must still end the session. The test sends the signal
+    from inside the process-creating call, so it arrives before the launcher
+    waits on the session."""
+    import signal
+    import time
+    sys.path.insert(0, str(ROOT / "cli"))
+    from compass_pkg import host_launch
+    session = tmp_path / "claude"
+    session.write_text("#!/bin/sh\nsleep 30\n")
+    session.chmod(0o755)
+    started = []
+    real_popen = subprocess.Popen
+
+    def popen_then_signal(*args, **kwargs):
+        proc = real_popen(*args, **kwargs)
+        started.append(proc)
+        os.kill(os.getpid(), signal.SIGINT)
+        return proc
+
+    original = host_launch.subprocess.Popen
+    host_launch.subprocess.Popen = popen_then_signal
+    # SIGINT is ignored when the suite runs in the background.
+    old_handler = signal.signal(signal.SIGINT, signal.default_int_handler)
+    ended = False
+    try:
+        with pytest.raises(KeyboardInterrupt):
+            host_launch.launch_claude(str(session), "hi", [], tmp_path,
+                                      dict(os.environ), timeout=60)
+        for _ in range(50):
+            if started[0].poll() is not None:
+                ended = True
+                break
+            time.sleep(0.1)
+    finally:
+        signal.signal(signal.SIGINT, old_handler)
+        host_launch.subprocess.Popen = original
+        for proc in started:
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait()
+    assert ended, "the session outlived an interrupted launch"

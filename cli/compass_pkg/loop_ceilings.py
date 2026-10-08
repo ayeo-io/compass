@@ -11,7 +11,7 @@
 # bound an unattended `compass run` (run_cmd.py): the sessions it may start,
 # the minutes it may take and the money it may spend.
 #
-# DEPENDENCY: standard library (datetime, os) and compass_pkg.core.
+# DEPENDENCY: standard library (datetime, os), compass_pkg.core and compass_pkg.effective.
 # =============================================================================
 """The loop ceilings an issue's assessment earns, and the date they apply from."""
 from __future__ import annotations
@@ -48,22 +48,29 @@ def on_or_after(created, cutoff):
         return True
 
 
-def loop_ceilings(task):
+def loop_ceilings(task, task_dir=None):
     """`{ceiling: (limit, rule id)}` for this issue, from the routing policy
-    in force. For each ceiling the lowest limit among the rules whose `when`
-    matches the assessment applies, so a rule can only lower a limit. A
+    in force: the issue's generation when `task_dir` names one, else the
+    governance files. For each ceiling the lowest limit among the rules whose
+    `when` matches the assessment applies, so a rule can only lower a limit. A
     ceiling no rule sets is absent: there is no limit in code."""
-    policy = load_yaml(os.path.join(find_governance(), "routing-policy.yml"))
-    guardrails = (policy or {}).get("routing_guardrails") or {}
+    from compass_pkg import effective
+    view = effective.view_or_legacy(task_dir) if task_dir is not None else None
+    if view is not None:
+        rules, matches = view.loop_ceiling_rules(), view.matches
+    else:
+        policy = load_yaml(os.path.join(find_governance(), "routing-policy.yml"))
+        rules = ((policy or {}).get("routing_guardrails") or {}).get("loop_ceilings") or []
+        matches = reading_matches
     readings = task.get("assessment") or {}
     found = {}
-    for rule in guardrails.get("loop_ceilings") or []:
+    for rule in rules:
         if not isinstance(rule, dict) or rule.get("ceiling") not in CEILINGS:
             continue
         limit = rule.get("limit")
         if not isinstance(limit, int) or isinstance(limit, bool) or limit < 1:
             continue
-        if not reading_matches(rule.get("when"), readings):
+        if not matches(rule.get("when"), readings):
             continue
         name = rule["ceiling"]
         if name not in found or limit < found[name][0]:

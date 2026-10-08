@@ -10,15 +10,14 @@ resolution).
 
 ## What is built
 
-The store, its commit, the refusal of a check whose implementation major
-differs and `compass issue migrate-config` are built. The modules that read governance
-(`routing`, `check_cmd`, `checks`, `receipt`, `manifest`, `calibration`,
-`flow`, `quick_fix_cmd`, `loop_ceilings`, `lessons`) still read live
-governance. `effective_for` returns the stored generation, and a later change
-moves those modules onto it. Until then a stored generation records the
-configuration an issue was assessed under, and `compass check` writes its
-results next to it, but a project edit still reaches an open issue through
-those readers.
+The store, its commit, the readers, the refusal of a check whose implementation
+major differs and `compass issue migrate-config` are built. The modules that read
+configuration (`routing`, `check_cmd`, `checks`, `receipt`, `manifest`,
+`calibration`, `flow`, `quick_fix_cmd`, `loop_ceilings`, `lessons`,
+`review_rules` and `approach_diagram`) ask `effective.view_or_legacy` first.
+An issue with a generation is judged by that generation, whatever the project's
+`compass.yml` or governance files now say. See "Reading" for the one case that
+reads the governance files.
 
 ## The manifest keys
 
@@ -184,19 +183,66 @@ adopts a leftover folder on its own.
 | no issue (`task_dir=None`) | `live` | the project layers, resolved now |
 
 A project with no `compass.yml` and its own `governance/` copies is resolved
-through the legacy adapter in place of the shipped default.
+through the legacy adapter in place of the shipped default. The adapter also
+converts the `project:` guardrails of such a copy: each becomes a guardrail gate
+with its own checks and its stage from `checked_at`, and a `command-passes`
+check becomes a check named for the guardrail id and name (`PG-E-command-and-suite`)
+that carries the guardrail's `params`. A guardrail that omits a default the
+framework ships is still reported as absent by `compass check` and
+`compass approach evaluate --verbose`, with or without a generation.
 
 `EffectiveView.evaluator_policy()` returns the routing policy in the shape
 `evaluate_route` takes, built by `obligations.policy_adapter` from the resolved
 configuration. `effective` and `classify` are the only modules that may import
 `obligations` (ADR-037); readers call the view.
 
+### What a reader calls
+
+A reader module calls `effective.view_or_legacy(task_dir)`. It returns a view,
+or None when the module must read the governance files as before. That is only
+an issue with no `generation:` key (or no issue) in a project with no
+`compass.yml`. A generation of 0, or one that is not whole, raises.
+
+| Call on the view | Returns | Used by |
+|---|---|---|
+| `evaluator_policy()`, `autonomy` | the routing policy and the autonomy value | `routing`, `quick_fix_cmd`, `flow`, `calibration`, `approach_diagram` |
+| `guardrail_gates()` | the guardrails in the legacy shape: `defaults`, `spike_guardrails`, `checks` (each check's `blocking_when`) and `impl` (the implementation each check runs) | `check_cmd` |
+| `gate_requirements()` | the evidence types each gate accepts, and the known types | `checks`, `manifest`, `receipt` |
+| `command_checks()` | the checks that run a command the project wrote | `checks` |
+| `loop_ceiling_rules()` | the loop-ceiling rules | `loop_ceilings` |
+| `known_ids()` | the ids of the guardrails that apply to a shipping approach | `lessons`, `review_rules` |
+| `matches(when, assessment)` | whether a `when:` clause holds, using the configuration's dimension orders | the callers above |
+| `stage_order()` | the stage names in order | `approach_diagram` |
+| `parent_version()`, `pending_config(manifest)` | for the `compass check` header | `check_cmd` |
+
+A check that a project adds under its own id (for example `arch-rule` with
+`impl: command-passes`) runs the implementation, and its result carries the
+check's id.
+
+`compass approach evaluate --write` computes the outcome from the project's
+live configuration when the project has a `compass.yml`, because the commit
+stores that configuration. Without `--write` it reads the generation.
+
+The quarantine registry (`governance/quarantine.yml`) is a project file, not
+catalogue data, and stays where it is.
+
+## The `compass check` header
+
+An issue with a generation gets a line `generation <n> (parent <version>)`
+ahead of the other notices, and in the `--json` document as `generation` and
+`parent_version`. When the manifest's `config:` is not the overlay the
+generation was committed with, a second line says `pending: config: is not
+committed yet; run compass approach evaluate --write`. The line is a notice and
+does not change the exit code. An issue with no generation gets neither.
+
 ## Not built yet
 
-- Moving the reading modules onto `effective_for`, and the verdict header and
-  pending-change line in `compass check`.
 - `compass issue configure` (`--commit`, `--discard`) and `--reset-config`.
   Until they exist, a complete folder nobody adopted is deleted by hand, and the
   messages name no command that is missing.
 - `policy effective --issue` still resolves the live files and does not read
   the generation.
+- `compass check` reads a check's `blocking_when` from the generation but not
+  its `severity` or `on_skipped`.
+- The leftover-generation states are reported by `compass ci`, not by
+  `compass check`.

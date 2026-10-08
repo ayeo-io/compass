@@ -89,6 +89,10 @@ def _decider():
 
 
 def _guardrail_ids():
+    from compass_pkg import effective
+    view = effective.view_or_legacy()
+    if view is not None:
+        return {str(i) for i in view.known_ids()}
     try:
         gr = load_yaml(os.path.join(find_governance(), "guardrails.yml"))
     except CompassError:

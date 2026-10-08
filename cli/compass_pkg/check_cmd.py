@@ -219,7 +219,8 @@ def summarise_counts(ran, failures, nothing_to_check=0):
 class _CheckRun:
     """What a run of `compass check` found, before anything is printed."""
 
-    def __init__(self, task_dir, task, mode):
+    def __init__(self, task_dir, task, mode, view=None):
+        self.view = view if view is not None and view.source == "generation" else None
         self.task_dir = task_dir
         self.task = task
         self.slug = os.path.basename(task_dir)
@@ -374,6 +375,20 @@ def _verdicts(results):
     return verdicts
 
 
+def _generation_lines(run):
+    """The notices that name the generation an issue was judged by, and a
+    pending `config:` change. None for an issue with no generation."""
+    if run.view is None:
+        return []
+    view = run.view
+    parent = view.parent_version()
+    lines = ["generation %d (parent %s)" % (view.generation, parent or "unknown")]
+    if view.pending_config(run.task):
+        lines.append("pending: config: is not committed yet; "
+                     "run `compass approach evaluate --write`")
+    return lines
+
+
 def _emit_check(run, args):
     """Render the run in the mode the caller asked for, and count a run with
     a failure as one interruption in `.compass/interruptions.log`, never in
@@ -391,6 +406,11 @@ def _emit_check(run, args):
     # `compass.yml` adds nothing.
     run.rows[0:0] = [("line", "  " + line) for line in locks.conformance_lines(
         find_project_root(run.task_dir), width=10 ** 6)]
+    # An issue with a generation says which one it was judged by, ahead of the
+    # other notices, and reports a `config:` the generation does not hold yet.
+    # `config:` is an input: the line is a notice and never fails the run.
+    header = _generation_lines(run)
+    run.rows[0:0] = [("line", "  " + line) for line in header]
     if run.failures and not getattr(args, "no_count", False):
         compass_dir = os.path.dirname(os.path.dirname(
             os.path.normpath(run.task_dir)))
@@ -413,6 +433,9 @@ def _emit_check(run, args):
             "nothing_to_check": run.nothing,
             "notices": [t.strip() for kind, t in run.rows
                         if kind == "line" and t.strip()],
+            **({"generation": run.view.generation,
+                "parent_version": run.view.parent_version()}
+               if run.view is not None else {}),
             "checks": [{"guardrail": g, "name": n,
                         "status": ("refused" if n in run.refused else
                                    "nothing-to-check"
@@ -449,14 +472,26 @@ def _assessment_keys_pass(run, task):
 
 
 def cmd_check(args):
-    gov = find_governance()
-    guardrails = load_yaml(os.path.join(gov, "guardrails.yml"))
+    # The settings are read before anything resolves a configuration, so a
+    # conflict between the two settings files is reported as such.
+    mode = load_mode()
     task_dir = resolve_issue_dir(args.task)
     task, _ = load_manifest(task_dir)
     # A generation that is not whole is the authority being unreadable, so the
     # check refuses (ADR-036). An issue with no generation is not asked.
     from compass_pkg import effective
     effective.require_whole(task_dir)
+    # An issue with a generation is judged by it, whatever the governance files
+    # now say. Only an issue with none, in a project with no `compass.yml`,
+    # reads the governance files.
+    view = effective.view_or_legacy(task_dir)
+    if view is None:
+        gov = find_governance()
+        guardrails = load_yaml(os.path.join(gov, "guardrails.yml"))
+    else:
+        guardrails = view.guardrail_gates()
+    impls = guardrails.get("impl") or {}
+    matches = view.matches if view is not None else reading_matches
     # A check built for another major is refused rather than run (ADR-038).
     from compass_pkg import impl_versions
     from compass_pkg.core import CompassError
@@ -465,7 +500,6 @@ def cmd_check(args):
         raise CompassError(refusals.run)
     refused = refusals.checks
     readings = task.get("assessment") or {}
-    mode = load_mode()
 
     # A spike ships nothing, so the delivery guardrails (`G1`-`G5`) do not apply.
     # It is still controlled: it must conclude, and it must not change
@@ -473,7 +507,7 @@ def cmd_check(args):
     # from guardrails.yml instead.
     if task.get("delivery_approach") == APPROACH_SPIKE:
         spike_gs = list(guardrails.get("spike_guardrails", []))
-        run = _CheckRun(task_dir, task, mode)
+        run = _CheckRun(task_dir, task, mode, view)
         if not spike_gs:
             # Report this as a failed check, not a line: the default view
             # and --json show only checks. Do not count it as a check that
@@ -491,7 +525,7 @@ def cmd_check(args):
             gid = g.get("id", "?")
             run.guardrail(gid, g.get("name", ""))
             for check_name in g.get("checks", []):
-                fn = CHECK_FNS.get(check_name)
+                fn = CHECK_FNS.get(impls.get(check_name, check_name))
                 ran += 1
                 if fn is None:
                     failures += 1
@@ -499,9 +533,9 @@ def cmd_check(args):
                                "declared spike guardrail check has NO CLI "
                                "implementation")
                     continue
-                if check_name in refused:
+                if impls.get(check_name, check_name) in refused:
                     run.refused.add(check_name)
-                    passed, detail = False, refused[check_name]
+                    passed, detail = False, refused[impls.get(check_name, check_name)]
                 else:
                     try:
                         passed, detail = fn(task, task_dir)
@@ -544,11 +578,12 @@ def cmd_check(args):
     # verified.
     nothing_to_check = 0
     # Reads `delivery_approach`, the live manifest key.
-    run = _CheckRun(task_dir, task, mode)
+    run = _CheckRun(task_dir, task, mode, view)
 
     # Report a guardrail the project's file omits when it would apply to
     # this issue. Only this issue's: a full list on every run would not be
-    # read, and `compass policy lint` prints the full list.
+    # read, and `compass policy lint` prints the full list. A generation
+    # holds the guardrails the issue runs against, so nothing is absent from it.
     declared_ids = {g.get("id") for g in all_guardrails}
     try:
         fw_guardrails = load_yaml(
@@ -556,6 +591,8 @@ def cmd_check(args):
         fw_defaults = (fw_guardrails.get("defaults") or []) if isinstance(
             fw_guardrails, dict) else []
     except Exception:                                   # noqa: BLE001
+        fw_defaults = []
+    if view is not None and not view.from_governance_copy():
         fw_defaults = []
     for fg in fw_defaults:
         fid = fg.get("id")
@@ -572,13 +609,14 @@ def cmd_check(args):
     for g in all_guardrails:
         gid = g.get("id", "?")
         applies = g.get("applies_when")
-        if applies and not reading_matches(applies, readings):
+        if applies and not matches(applies, readings):
             run.guardrail(gid, g.get("name", ""),
                           skipped="not applicable for this assessment - skipped")
             continue
         run.guardrail(gid, g.get("name", ""))
         for check_name in g.get("checks", []):
-            fn = CHECK_FNS.get(check_name)
+            implementation = impls.get(check_name, check_name)
+            fn = CHECK_FNS.get(implementation)
             # A project that ran /compass:init before ADR-023 has its own
             # guardrails.yml naming the retired spelling. The check still
             # ships; only its name moved, so say that rather than telling the
@@ -609,7 +647,7 @@ def cmd_check(args):
             # and names this one back.
             # A relaxation that fired on the field's mere presence would waive
             # the guardrail for anything that typed a slug.
-            if check_name in LANDED_BY_RELAXES:
+            if implementation in LANDED_BY_RELAXES:
                 held, why = landed_by_holds(task, task_dir)
                 if held:
                     run.result(check_name, NOTHING_TO_CHECK,
@@ -618,9 +656,9 @@ def cmd_check(args):
                                                  "asked to"))
                     continue
 
-            if check_name in refused:
+            if implementation in refused:
                 run.refused.add(check_name)
-                passed, detail = False, refused[check_name]
+                passed, detail = False, refused[implementation]
             else:
                 try:
                     passed, detail = fn(task, task_dir)
@@ -636,7 +674,7 @@ def cmd_check(args):
             blocking_when = (declared_checks.get(check_name) or {}).get(
                 "blocking_when")
             if (not passed and blocking_when
-                    and not reading_matches(blocking_when, readings)):
+                    and not matches(blocking_when, readings)):
                 passed = True
                 detail = ("advisory for this assessment - %s. It blocks when %s."
                           % (detail, json.dumps(blocking_when)))

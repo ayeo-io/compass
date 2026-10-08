@@ -62,3 +62,18 @@ def record_versions(task_dir, n=1, implementations=None, **top):
     marker["files"]["versions.yml"] = digest(versions)
     (folder / "complete").write_text(yaml.safe_dump(marker, sort_keys=False),
                                      encoding="utf-8")
+
+
+def remap_check(task_dir, check, impl, n=1):
+    """Make check id `check` run implementation `impl` in generation n, and keep
+    the marker's digest of `resolved.yml` right."""
+    from compass_pkg.atomic_io import digest
+    folder = task_dir / "generations" / str(n)
+    resolved = yaml.safe_load((folder / "resolved.yml").read_text(encoding="utf-8"))
+    resolved["checks"][check]["impl"] = impl
+    (folder / "resolved.yml").write_text(yaml.safe_dump(resolved, sort_keys=False),
+                                         encoding="utf-8")
+    marker = yaml.safe_load((folder / "complete").read_text(encoding="utf-8"))
+    marker["files"]["resolved.yml"] = digest(resolved)
+    (folder / "complete").write_text(yaml.safe_dump(marker, sort_keys=False),
+                                     encoding="utf-8")

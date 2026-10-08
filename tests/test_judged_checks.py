@@ -92,7 +92,7 @@ def _stamp(payload):
 
 def _record(task_dir, view, *, verdict="pass", reviewer=("person", "jed72"), inputs=None,
             definition=None, reason="Read in full; it holds.", check=CHECK,
-            registered=True, stamped=True):
+            registered=True, stamped=True, issue=None, generation="current"):
     """Write a review record and register it, as `compass evidence review`
     does, but without calling it, so the reading side is tested alone."""
     from compass_pkg.atomic_io import digest
@@ -103,7 +103,9 @@ def _record(task_dir, view, *, verdict="pass", reviewer=("person", "jed72"), inp
     payload = {"schema": 1, "check": check, "verdict": verdict, "reason": reason,
                "reviewer": {"kind": reviewer[0], "id": reviewer[1]},
                "inputs": _current(task_dir, INPUTS) if inputs is None else inputs,
-               "generation": 1,
+               "issue": SLUG if issue is None else issue,
+               "generation": (body.get("generation") or None) if generation == "current"
+               else generation,
                "definition_digest": (digest(_check_body(view)) if definition is None
                                      else definition),
                "at": "2026-10-08T10:00:00Z"}
@@ -198,7 +200,8 @@ def test_jc_2_a_check_that_declares_no_inputs_cannot_pass(tmp_path, monkeypatch)
 
 def test_jc_3_a_fail_verdict_fails_and_shows_the_reason(tmp_path, monkeypatch):
     root, task_dir, view = _scene(tmp_path, monkeypatch)
-    _record(task_dir, view, verdict="fail", reason="Section 4 contradicts scenario 2.")
+    _record(task_dir, view, verdict="fail", reason="Section 4 contradicts scenario 2.",
+            reviewer=("agent", "jed72"))
     row = _row(view, task_dir)
     assert row.status == "fail" and _cause(row) == "verdict is fail"
     assert "Section 4 contradicts scenario 2." in row.detail and "jed72" in row.detail
@@ -232,6 +235,39 @@ def test_jc_4_the_reviewers_list_decides_who_may_review(tmp_path, monkeypatch, l
     assert (row.status == "pass") is passes, row.detail
     if not passes:
         assert _cause(row) == "reviewer not listed"
+
+
+def test_jc_4_a_reviewer_the_check_does_not_list_cannot_block_a_listed_pass(tmp_path, monkeypatch):
+    root, task_dir, view = _scene(tmp_path, monkeypatch, check=_judged(reviewers=["jed72"]))
+    _record(task_dir, view, reviewer=("person", "jed72"))
+    _record(task_dir, view, reviewer=("person", "someone-else"), verdict="fail",
+            reason="Not my business.")
+    row = _row(view, task_dir)
+    assert row.status == "pass" and "jed72" in row.detail
+    # A listed reviewer's later fail still decides.
+    _record(task_dir, view, reviewer=("person", "jed72"), verdict="fail", reason="A gap.")
+    assert _cause(_row(view, task_dir)) == "verdict is fail"
+
+
+def test_jc_4_only_unlisted_records_give_reviewer_not_listed_even_when_they_fail(
+        tmp_path, monkeypatch):
+    root, task_dir, view = _scene(tmp_path, monkeypatch, check=_judged(reviewers=["jed72"]))
+    _record(task_dir, view, reviewer=("person", "someone-else"), verdict="fail")
+    assert _cause(_row(view, task_dir)) == "reviewer not listed"
+
+
+def test_jc_4_an_agent_entry_in_reviewers_names_that_agent_only(tmp_path, monkeypatch):
+    root, task_dir, view = _scene(tmp_path, monkeypatch, check=_judged(reviewers=["agent:s9"]))
+    _record(task_dir, view, reviewer=("agent", "s1"))
+    assert _cause(_row(view, task_dir)) == "reviewer not listed"
+    _record(task_dir, view, reviewer=("agent", "s9"))
+    assert _row(view, task_dir).status == "pass"
+
+
+def test_jc_4_a_person_named_agent_is_not_an_agent_session(tmp_path, monkeypatch):
+    root, task_dir, view = _scene(tmp_path, monkeypatch)
+    _record(task_dir, view, reviewer=("person", "agent"))
+    assert _cause(_row(view, task_dir)) == "reviewer not listed"
 
 
 @pytest.mark.parametrize("changed", INPUTS)
@@ -366,6 +402,22 @@ def test_jc_6_a_registered_entry_that_points_at_another_checks_record_is_not_a_r
                                            encoding="utf-8")
     row = _row(view, task_dir)
     assert _cause(row) == "no review record" and "not a review record of" in row.detail
+
+
+def test_jc_6_a_record_copied_from_another_issue_is_not_a_record(tmp_path, monkeypatch):
+    root, task_dir, view = _scene(tmp_path, monkeypatch)
+    _record(task_dir, view, reviewer=("agent", "a"), issue="some-other-issue")
+    row = _row(view, task_dir)
+    assert row.status == "fail" and _cause(row) == "no review record"
+    assert "some-other-issue" in row.detail
+
+
+def test_jc_6_a_record_of_another_generation_re_owes_the_review(tmp_path, monkeypatch):
+    root, task_dir, view = _scene(tmp_path, monkeypatch)
+    _record(task_dir, view, reviewer=("agent", "a"), generation=7)
+    row = _row(view, task_dir)
+    assert row.status == "fail" and _cause(row) == "input changed since review"
+    assert "generation" in row.detail
 
 
 # --- JC-7: the verb writes the record and registers it ------------------------------
@@ -522,6 +574,54 @@ def test_jc_8_an_issue_with_no_stored_configuration_is_refused_with_the_fix(tmp_
     assert code == 2 and "approach evaluate --write" in err
 
 
+def test_jc_8_an_agent_reviewer_with_no_id_is_refused(tmp_path):
+    root, task_dir = _cli_project(tmp_path)
+    code, out, err = _review(root, reviewer="agent:")
+    assert code == 2 and "reviewer" in err and out == ""
+
+
+def test_jc_8_a_stray_record_file_does_not_block_the_next_number(tmp_path):
+    root, task_dir = _cli_project(tmp_path)
+    (task_dir / "evidence").mkdir()
+    (task_dir / "evidence" / "review-design-review-1.yml").write_text("x: 1\n", encoding="utf-8")
+    code, out, err = _review(root, reviewer="agent")
+    assert code == 0, err
+    assert (task_dir / "evidence" / "review-design-review-2.yml").is_file()
+
+
+def test_jc_8_an_evidence_id_already_in_use_is_skipped(tmp_path):
+    root, task_dir = _cli_project(tmp_path)
+    (task_dir / "note.md").write_text("n\n", encoding="utf-8")
+    _write_manifest(task_dir, evidence=[{"id": "EV-REVIEW-design-review-1",
+                                         "type": "artifact", "path": "note.md"}])
+    code, out, err = _review(root, reviewer="agent")
+    assert code == 0, err
+    ids = [e["id"] for e in _manifest(task_dir)["evidence"]]
+    assert ids == ["EV-REVIEW-design-review-1", "EV-REVIEW-design-review-2"]
+
+
+def test_jc_8_the_scope_is_written_with_its_whitespace_collapsed(tmp_path):
+    root, task_dir = _cli_project(tmp_path)
+    assert _review(root, "--scope", "  the   design \n section  4 ", reviewer="agent")[0] == 0
+    record = yaml.safe_load((task_dir / "evidence" / "review-design-review-1.yml")
+                            .read_text(encoding="utf-8"))
+    assert record["scope"] == "the design section 4"
+    assert record["issue"] == SLUG
+
+
+def test_jc_8_a_verdict_other_than_pass_or_fail_is_refused_by_the_command_itself(
+        tmp_path, monkeypatch):
+    import argparse
+    from compass_pkg import review_cmd
+    from compass_pkg.core import CompassError
+    root, task_dir = _cli_project(tmp_path)
+    args = argparse.Namespace(check=CHECK, verdict="maybe", reason="r", reviewer="agent",
+                              scope=None, task=SLUG)
+    monkeypatch.chdir(root)
+    with pytest.raises(CompassError, match="verdict"):
+        review_cmd.cmd_evidence_review(args)
+
+
 # --- JC-9: the --json output is documented and pinned --------------------------------
 
 def _masked(text):
@@ -581,11 +681,14 @@ def test_jc_10_the_help_text_the_owning_doc_and_the_router_describe_the_verb():
 def test_jc_10_the_stage_list_docs_say_a_judged_check_is_evaluated():
     doc = (ROOT / "docs" / "entry-exit-evaluation.md").read_text(encoding="utf-8")
     assert "(judged-checks.md)" in doc
+    assert "`evidence` | Not evaluated" in doc
+    assert "- `evidence` checks are not evaluated." in doc
     assert "`judged`, `evidence` | Not evaluated" not in doc
     assert "`judged` and `evidence` checks are not evaluated" not in doc
     from compass_pkg import stage_lists
     assert "`judged` and `evidence`: not evaluated" not in stage_lists.__doc__
-    assert "review_records" in stage_lists.__doc__
+    assert "review_records.judge" in stage_lists.__doc__
+    assert "`evidence`: not evaluated" in stage_lists.__doc__
 
 
 def test_jc_10_the_verb_is_listed_in_its_group_help():

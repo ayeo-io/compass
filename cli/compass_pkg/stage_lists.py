@@ -282,7 +282,7 @@ def _judge(check_id, check, view, kind, side, stage, producer, modes, task, task
             return "pending", "not run here; `compass check` runs it"
         return _implementation(check, task, task_dir)
     if kind == "judged":
-        return review_records.judge(check_id, check, view, task, task_dir)
+        return review_records.judge(check_id, check, task, task_dir)
     return "fail", (f"a check of kind '{kind}' is not evaluated by this version of "
                     f"compass, so it cannot pass")
 

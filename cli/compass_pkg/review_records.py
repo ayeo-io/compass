@@ -35,12 +35,13 @@ AGENT = "agent"
 
 def reviewer_listed(listed, reviewer):
     """Does a `reviewers:` list name this reviewer, `{kind, id}`? `agent`
-    names any agent session. Any other entry names the person with that id.
-    No role to person mapping exists, so a role matches nobody here."""
+    names any agent session and `agent:<id>` names one session. Any other
+    entry names the person with that id, so a role is read as a person id
+    until roles are resolved."""
     if not isinstance(reviewer, dict):
         return False
     if reviewer.get("kind") == "agent":
-        return AGENT in listed
+        return AGENT in listed or f"{AGENT}:{reviewer.get('id')}" in listed
     return reviewer.get("kind") == "person" and str(reviewer.get("id")) in listed \
         and str(reviewer.get("id")) != AGENT
 
@@ -129,9 +130,15 @@ def read_record(task_dir, entry, check_id):
     return record, None
 
 
-def judge(check_id, check, view, task, task_dir):
+def _gather(task_dir, check_id, entries):
+    """`[(entry, record or None, problem)]`, newest first."""
+    return [(entry,) + read_record(task_dir, entry, check_id) for entry in reversed(entries)]
+
+
+def judge(check_id, check, task, task_dir):
     """`(status, detail)` of a judged check: `pass`, or `fail` with the cause
-    first in the detail."""
+    first in the detail. Only a record by a listed reviewer can decide: a
+    record by anyone else is set aside, so it can neither clear nor block."""
     if not declared_inputs(check):
         return "fail", (f"declares no inputs, so no review of {check_id} can be recorded; "
                         f"a judged check lists the artifacts or evidence it reads")
@@ -139,19 +146,30 @@ def judge(check_id, check, view, task, task_dir):
     if not entries:
         return "fail", (f"{NO_RECORD}: run `compass evidence review {check_id} "
                         f"--verdict pass|fail --reason TEXT --reviewer ID`")
-    entry = entries[-1]
-    record, problem = read_record(task_dir, entry, check_id)
-    if record is None:
-        return "fail", f"{NO_RECORD}: the newest record is unusable - {problem}"
+    found = _gather(task_dir, check_id, entries)
+    if found[0][1] is None:
+        return "fail", f"{NO_RECORD}: the newest record is unusable - {found[0][2]}"
+    slug = os.path.basename(os.path.normpath(task_dir))
+    listed = [str(one) for one in (check.get("reviewers") or [AGENT])]
+    usable = [(entry, record) for entry, record, _ in found if record is not None]
+    mine = [(entry, record) for entry, record in usable
+            if reviewer_listed(listed, record.get("reviewer"))]
+    if not mine:
+        entry, record = usable[0]
+        who = record.get("reviewer") or {}
+        return "fail", (f"{NOT_LISTED}: {entry.get('id')} was by {who.get('id')} "
+                        f"({who.get('kind')}); {check_id} lists {', '.join(listed)}")
+    entry, record = mine[0]
     who = (record.get("reviewer") or {}).get("id")
+    if record.get("issue") != slug:
+        return "fail", (f"{NO_RECORD}: {entry.get('id')} was written for issue "
+                        f"{record.get('issue')}, not {slug}")
     if record.get("verdict") != "pass":
         return "fail", (f"{FAILED}: {entry.get('id')} by {who}: {record.get('reason')}")
-    listed = [str(one) for one in (check.get("reviewers") or [AGENT])]
-    if not reviewer_listed(listed, record.get("reviewer")):
-        return "fail", (f"{NOT_LISTED}: {entry.get('id')} was by {who} "
-                        f"({(record.get('reviewer') or {}).get('kind')}); "
-                        f"{check_id} lists {', '.join(listed)}")
     moved = changed_inputs(record.get("inputs"), current_digests(check, task, task_dir))
+    if (record.get("generation") or None) != (task.get("generation") or None):
+        moved.append(f"the generation changed (reviewed under {record.get('generation')}, "
+                     f"now {task.get('generation')})")
     if record.get("definition_digest") != definition_digest(check):
         moved.append(f"the definition of {check_id} changed")
     if moved:

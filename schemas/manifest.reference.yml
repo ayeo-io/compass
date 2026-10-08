@@ -34,6 +34,15 @@ evidence:        # (optional) list of maps - the typed evidence registry gates r
     path:        #   (optional) string - path to the evidence file
     scenario:    #   (optional) string - the scenario id this evidence is for
     check:       #   (optional) string - for manual-review, the judged check this review is for
+    approver:    #   (optional) string - for human-approval, the person's id
+    role:        #   (optional) string - for human-approval, the role the person acts in
+    scope:       #   (optional) string - for human-approval, what the approval covers
+    decision:    #   (optional) [approved, rejected, ...] - for human-approval, approved or rejected
+    timestamp:   #   (optional) string - ISO 8601, for human-approval
+    check:       #   (optional) string - for human-approval, the human check this approves
+    issue:       #   (optional) string - for human-approval of a check, the issue slug; another issue's record does not count
+    generation:  #   (optional) integer - for human-approval of a check, the issue's generation when it was given
+                 #     (`compass evidence approve` writes check, issue, generation and timestamp)
 
 gates:           # (optional until approach evaluate) list of maps:
   - id:          #   (required in entry) string - e.g. verify.correctness

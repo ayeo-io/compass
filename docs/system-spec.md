@@ -3243,3 +3243,7 @@
 - `PI-4` policy diff accepts a git parent written as in extends
 - `PI-5` The extends map form and the reserved preset key are read without error and do not change a digest
 - `PI-6` Owning docs, contract corpus and terminology state the new interfaces
+
+### human-check-approvers (landed 2026-10-08)
+
+- `TRC-001` A human check that lists approvers passes only with a current approval by a listed approver

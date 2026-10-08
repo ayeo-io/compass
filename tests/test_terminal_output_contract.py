@@ -973,6 +973,7 @@ _TAIL_EXEMPT = {
     # hooks read it in a command substitution, and a hand-off tail in the
     # middle of that would end up in the variable.
     "issue artifact-path": "prints a bare path for a shell caller to consume",
+    "evidence approve": "needs a terminal on standard input and a human check that lists approvers, which this fixture lacks; test_human_checks.py runs it under a pseudo-terminal and pins its --json output",
     # Prints the document and nothing else, on purpose: an agent writes the
     # output to the issue's document, so a hand-off tail would end up in it.
     "issue template": "prints a document for a caller to write, with no hand-off tail",

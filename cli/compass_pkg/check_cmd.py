@@ -142,8 +142,8 @@ CHECK_GUIDANCE = {
     },
     "human-approval-present": {
         "why": "The human-sign-off guardrail (a human signs off on the irreversible): this issue touches auth, payments, personal data, or migrations and needs a recorded approval.",
-        "do": 'Record the sign-off: `compass evidence add EV-<id> --type human-approval`.',
-        "fix": "Add a `human-approval` evidence entry to the registry with approver, role, scope, decision=approved, and timestamp. Then reference it from the relevant gate's evidence.",
+        "do": 'Record a `human-approval` entry; a human check uses `compass evidence approve`.',
+        "fix": "Add a `human-approval` evidence entry to the registry with approver, role, scope, decision=approved, and timestamp. Then reference it from the relevant gate's evidence. For a human check that lists approvers, a person runs `compass evidence approve --check <id> --approver <name> --role <role> --scope <text>` in a terminal.",
     },
     "backfills-paid": {
         "why": "Work deferred for speed - a Hotfix follow-up or a de-scoped artifact - must be done before an issue closes. Otherwise the audit trail has a hole.",

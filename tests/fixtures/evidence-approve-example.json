@@ -1,0 +1,17 @@
+{
+  "outcome": "compass evidence approve: sign-off - approved by jed72 recorded as EV-APPROVAL-sign-off-1.",
+  "check": "sign-off",
+  "answer": "approved",
+  "evidence_id": "EV-APPROVAL-sign-off-1",
+  "approver": "jed72",
+  "role": "owner",
+  "scope": "the plan",
+  "issue": "feature",
+  "generation": 1,
+  "at": "...",
+  "detail": [
+    "record     : EV-APPROVAL-sign-off-1 in manifest.yml evidence",
+    "issue      : feature",
+    "generation : 1"
+  ]
+}

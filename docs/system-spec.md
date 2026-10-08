@@ -3183,6 +3183,19 @@
 
 - `TRC-001` Given a scenario whose declared test id is wrong, when compass scenario tests names resolving tests, then the manifest declares them
 
+### policy-test-init-preset (landed 2026-10-08)
+
+- `PT-1` A fixture that matches is reported as passing
+- `PT-2` A fixture whose approach, gates, stages or checks differ fails and names the difference
+- `PT-3` A preset with unlock, a settings key or an unknown impl fails before any fixture runs
+- `PT-4` A malformed fixture is reported as an error and fails the run
+- `PT-5` No fixtures, or a fixture folder not yet read, fails; a missing compass.yml is an input error
+- `PT-6` The --json report has the documented keys in the documented order
+- `PT-7` init-preset scaffolds a preset that passes policy test
+- `PT-8` init-preset never overwrites an existing file
+- `PT-9` A preset that extends a pinned git parent runs its fixtures over the chain
+- `PT-10` Help, verb description, contract corpus and owning doc state the contract
+
 ### parent-chains (landed 2026-10-08)
 
 - `PC-1` A chain of two pinned parents loads furthest first

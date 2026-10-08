@@ -19,7 +19,8 @@ What this does not check yet: whether an entry is complete enough to add
 (the merge), and whether a value loosens its parent (the classifier).
 """
 # DEPENDENCY: standard library (copy, datetime, re); compass_pkg.catalogue_spec;
-# compass_pkg.vocabulary; compass_pkg.waivers (its date reader).
+# compass_pkg.vocabulary. It does not import compass_pkg.waivers: the list of
+# modules that may is pinned, so the one date reader it needs is written here.
 from __future__ import annotations
 
 import copy
@@ -27,7 +28,7 @@ import datetime
 import re
 
 from compass_pkg import catalogue_spec as spec
-from compass_pkg import vocabulary, waivers
+from compass_pkg import vocabulary
 
 _ID = re.compile(spec.ID_PATTERN)
 
@@ -78,7 +79,22 @@ def _allowed_top_level(layer):
     return keys
 
 
-EXTENDS_MAP_KEYS = ("from", "approved_by", "approved_on")
+def _date(value):
+    """A date from a date or an ISO date string, or None. The same reading as the
+    waiver check gives an `approved_on`."""
+    if isinstance(value, datetime.datetime):
+        return value.date()
+    if isinstance(value, datetime.date):
+        return value
+    if isinstance(value, str):
+        try:
+            return datetime.date.fromisoformat(value)
+        except ValueError:
+            return None
+    return None
+
+
+EXTENDS_MAP_KEYS =("from", "approved_by", "approved_on")
 
 
 def _check_extends_map(extends):
@@ -96,7 +112,7 @@ def _check_extends_map(extends):
     if "approved_by" in extends and not isinstance(extends["approved_by"], str):
         errors.append("extends.approved_by: expected text")
     if "approved_on" in extends:
-        given = waivers._date(extends["approved_on"])
+        given = _date(extends["approved_on"])
         if given is None:
             errors.append("extends.approved_on: expected a date written YYYY-MM-DD")
         elif given > datetime.date.today():

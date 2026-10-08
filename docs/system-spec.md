@@ -3121,3 +3121,20 @@
 ### living-spec-supersession (landed 2026-10-08)
 
 - `TRC-001` Given two landed issues that share an intent id, when the living spec is derived, then each issue's scenario stays current
+
+### entry-exit-evaluation (landed 2026-10-08)
+
+- `EE-1` With the capability off no reader shows a list
+- `EE-2` The Definition of Done is not owed by an approach that does not ship
+- `EE-3` A human check is a tick in the issue's checklist
+- `EE-4` A skipped list gives the verdict on_skipped names
+- `EE-5` A list is due by the current stage
+- `EE-6` A deterministic check in a list runs its implementation
+- `EE-7` Kinds this increment does not evaluate fail closed; advisory does not fail
+- `EE-8` compass check reports and counts the list rows
+- `EE-9` compass next names the unmet entry checks
+- `EE-10` The receipt shows each list and its state
+- `EE-11` The existing Definition of Done check keeps running
+- `EE-12` The preset, help text and owning doc describe the lists
+- `EE-13` A project stage list and an unknown check are handled
+- `EE-14` A check whose when does not match is not listed

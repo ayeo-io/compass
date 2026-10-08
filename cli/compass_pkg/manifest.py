@@ -33,6 +33,7 @@ import re as _re
 
 import fnmatch
 import re as _re
+from compass_pkg import status_words
 from compass_pkg.terminal import say
 from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, normalize_spine, now_iso, resolve_issue_dir, save_manifest
 from compass_pkg.issue_layout import docs_dir_for
@@ -124,7 +125,7 @@ def _stale_paths(task, task_dir, root, at_commit, judge_landed=False):
     judged until every gate has passed, or when the newest record carries
     no `changes_id` - `compass check` does not judge those either.
     """
-    if task.get("status") == "landed" and not judge_landed:
+    if status_words.is_completed(task) and not judge_landed:
         return None
     gates = [g for g in task.get("gates") or [] if isinstance(g, dict)]
     if not gates or not all(g.get("status") == "pass" for g in gates):
@@ -996,14 +997,12 @@ def annotate_gate_accepts_text(text, requirements=None):
 # `compass issue set-status`: sets the lifecycle status, so nobody edits the
 # manifest by hand.
 
-TASK_STATUSES = ("active", "queued", "parked", "landed", "abandoned")
-
-#: The two of those whose work is over. A finished issue's manifest records
-#: what was true then, and re-validating it against a codebase that has moved
-#: produces failures nobody can act on (ADR-006). The other three are issues
-#: still in flight, whatever the board calls them - a check that scopes itself
-#: to "not active" silently stops running on `queued` and `parked`.
-TERMINAL_STATUSES = ("landed", "abandoned")
+#: The words the setter takes until it changes. Whether an issue is closed or
+#: still in flight is `status_words.is_closed`: a finished issue's manifest
+#: records what was true then, and re-validating it against a codebase that
+#: has moved produces failures nobody can act on (ADR-006), while a check that
+#: scopes itself to "not active" silently stops running on a held issue.
+TASK_STATUSES = status_words.RETIRED_STATUSES
 
 
 def cmd_task_set_status(args):
@@ -1025,8 +1024,8 @@ def cmd_task_set_status(args):
     # `ship-commit` refuses to write `landed` over gates that have not passed.
     # This command must not be an easier way to set the same field, or the
     # refusal is advice rather than a rule.
-    if status == "landed":
-        unmet = [g.get("id", "?") for g in (task.get("gates") or [])
+    if status_words.is_completed({"status": status}):
+        unmet =[g.get("id", "?") for g in (task.get("gates") or [])
                  if isinstance(g, dict) and g.get("status") != "pass"]
         if unmet:
             raise CompassError(
@@ -1039,7 +1038,7 @@ def cmd_task_set_status(args):
 
     task["status"] = status
     reason = getattr(args, "reason", None)
-    if status == "parked":
+    if status_words.is_parked({"status": status}):
         if reason:
             task["parked_reason"] = reason
         task["parked_at"] = now_iso()

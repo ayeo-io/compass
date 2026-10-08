@@ -590,3 +590,104 @@ def test_vr_c16_lint_asks_for_an_assessment_only_from_an_issue_that_started(
         manifest["status"] = status
     run = _lint(tmp_path, manifest)
     assert ("assessment" in (run.stdout + run.stderr)) is needs_assessment, run.stdout + run.stderr
+
+
+# --- the last readers: manifest, receipt, calibration, receipt_provenance,
+# --- replay -------------------------------------------------------------------
+
+@pytest.mark.parametrize("status,extra,judged", [
+    ("landed", {}, False), ("done", {"close_reason": "completed"}, False),
+    ("done", {"close_reason": "not-planned"}, True),
+    ("active", {}, True), (None, {}, True), ("in-review", {}, True)])
+def test_vr_c16_a_completed_issue_is_not_judged_for_stale_paths(
+        tmp_path, monkeypatch, status, extra, judged):
+    from compass_pkg import manifest
+    asked = []
+    monkeypatch.setattr(manifest, "_newest_bound_record",
+                        lambda task, task_dir: asked.append(1))
+    m = _with(status, extra, gates=[{"id": "verify.correctness", "status": "pass"}])
+    manifest._stale_paths(m, str(tmp_path), str(tmp_path), "HEAD")
+    assert bool(asked) is judged
+
+
+def test_vr_c16_a_completed_issue_is_judged_when_it_is_landed_again(tmp_path, monkeypatch):
+    from compass_pkg import manifest
+    asked = []
+    monkeypatch.setattr(manifest, "_newest_bound_record",
+                        lambda task, task_dir: asked.append(1))
+    m = _with("done", {"close_reason": "completed"},
+              gates=[{"id": "verify.correctness", "status": "pass"}])
+    manifest._stale_paths(m, str(tmp_path), str(tmp_path), "HEAD", judge_landed=True)
+    assert asked
+
+
+def test_vr_c16_the_old_setter_still_takes_the_old_words_and_refuses_a_landing_over_open_gates(
+        tmp_path, monkeypatch):
+    from compass_pkg import manifest
+    from compass_pkg.core import CompassError
+    import types
+    assert set(manifest.TASK_STATUSES) == {"active", "queued", "parked", "landed", "abandoned"}
+    task = _project(tmp_path, gates=[{"id": "verify.correctness", "status": "pending"}])
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(CompassError) as caught:
+        manifest.cmd_task_set_status(types.SimpleNamespace(
+            status="landed", task="the-issue", reason=None, json=False))
+    assert "have not passed" in str(caught.value)
+    import yaml
+    out = manifest.cmd_task_set_status(types.SimpleNamespace(
+        status="parked", task="the-issue", reason="waiting", json=False))
+    saved = yaml.safe_load((task / "manifest.yml").read_text())
+    assert saved["status"] == "parked" and saved["parked_reason"] == "waiting"
+
+
+@pytest.mark.parametrize("status,extra,header", [
+    ("landed", {}, "(landed)"), ("done", {"close_reason": "completed"}, "(landed)"),
+    ("active", {}, "(IN PROGRESS - not yet landed)"), (None, {}, "(IN PROGRESS - not yet landed)"),
+    ("in-progress", {}, "(IN PROGRESS - not yet landed)"),
+    ("backlog", {}, "(BACKLOG)"), ("done", {"close_reason": "not-planned"}, "(DONE)")])
+def test_vr_c16_the_receipt_header_reads_both_word_sets(status, extra, header):
+    from compass_pkg import receipt
+    text = receipt._receipt_render(_with(status, extra, schema_version="2.0"), "the-issue", {})
+    assert header in text.splitlines()[1]
+    assert ("Verdict: not yet landed" in text) is (header != "(landed)")
+
+
+@pytest.mark.parametrize("status,extra,counted", [
+    ("landed", {}, 1), ("done", {"close_reason": "completed"}, 1),
+    ("done", {"close_reason": "not-planned"}, 0), ("abandoned", {}, 0),
+    ("active", {}, 0), (None, {}, 0)])
+def test_vr_c16_the_impact_report_counts_completed_issues(status, extra, counted):
+    from compass_pkg import calibration
+    impact = calibration.compute_impact([("the-issue", _with(
+        status, extra, delivery_approach="feature", created="2026-10-01",
+        land_timestamp="2026-10-08T09:00:00Z"))])
+    assert impact["n_landed"] == counted
+
+
+@pytest.mark.parametrize("status,extra,expired", [
+    ("landed", {}, True), ("done", {"close_reason": "completed"}, True),
+    ("done", {"close_reason": "not-planned"}, False), ("active", {}, False)])
+def test_vr_c16_a_completed_issue_shows_its_issue_waiver_as_expired_at_land(
+        tmp_path, status, extra, expired):
+    import yaml
+    sys.path.insert(0, str(ROOT / "tests"))
+    from test_receipt_provenance import CHECK, ISSUE, _issue_waiver_case, _one, _receipt
+    root, task_dir = _issue_waiver_case(tmp_path)
+    path = task_dir / "manifest.yml"
+    manifest = yaml.safe_load(path.read_text(encoding="utf-8"))
+    manifest.update(extra, status=status, land_timestamp="2026-10-08T10:00:00+00:00")
+    path.write_text(yaml.safe_dump(manifest, sort_keys=False), encoding="utf-8")
+    row = _one(_receipt(root), "waiver", f"issue:checks.{CHECK}")
+    assert ("expired at land 2026-10-08" in row.text) is expired
+
+
+def test_vr_c16_the_policy_diff_examines_every_issue_that_is_not_closed():
+    sys.path.insert(0, str(ROOT / "tests"))
+    from test_policy_diff import _advisory, _diff, _issue
+    archive = [_issue("a-done", status="done"), _issue("b-landed", status="landed"),
+               _issue("c-backlog", status="backlog"), _issue("d-queued", status="queued"),
+               _issue("e-flight", status=None), _issue("f-abandoned", status="abandoned")]
+    document = _diff(_advisory, archive=archive, open=True)["open"]
+    assert [i["issue"] for i in document["issues"]] == ["c-backlog", "d-queued", "e-flight"]
+    assert [i["status"] for i in document["issues"]] == ["backlog", "queued", "active"]
+    assert document["examined"] == 3

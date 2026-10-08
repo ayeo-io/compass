@@ -16,6 +16,10 @@ STATES = ("backlog", "ready", "in-progress", "in-review", "done")
 STORED_STATES = ("backlog", "done")
 CLOSE_REASONS = ("completed", "not-planned", "duplicate")
 
+# The five words stored before 6.0.0, which `issue set-status` still takes
+# until the setter changes.
+RETIRED_STATUSES = ("active", "queued", "parked", "landed", "abandoned")
+
 # Words stored before 6.0.0, read until 7.0.0: the close reason each closing
 # word stood for, and the words that meant a hold.
 _RETIRED_CLOSE_REASON = {"landed": "completed", "abandoned": "not-planned"}

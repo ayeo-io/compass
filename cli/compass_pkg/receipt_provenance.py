@@ -16,11 +16,14 @@ major the two agree), and the receipt's id-wrapping function. It reads no file
 and runs no check. An issue with no stored generation gets no lines, so its
 receipt does not change.
 """
-# DEPENDENCY: standard library (re, textwrap); no other module of the package.
+# DEPENDENCY: standard library (re, textwrap); compass_pkg.status_words, which
+# imports nothing.
 from __future__ import annotations
 
 import re
 import textwrap
+
+from compass_pkg import status_words
 
 TITLE = "Provenance"
 KIND_WIDTH = 14
@@ -221,7 +224,7 @@ def lines(view, task, listed_checks=(), shipped_locks=None, wrap_ids=None, width
             held.append((lock[1], f"{entry} ({_level(lock[0])})"))
     rows += _groups("locks", held, labels, width, wrap_ids)
 
-    landed = task.get("status") == "landed"
+    landed = status_words.is_completed(task)
     stamp = str(task.get("land_timestamp") or "")[:10]
     for record in waiver_records:
         scope = record.get("scope")

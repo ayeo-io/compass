@@ -14,7 +14,7 @@ changes none of the modules it calls.
 # sys, tempfile, textwrap); compass_pkg.atomic_io (digest, load_yaml_strict),
 # catalogue_check, catalogue_spec (LABEL_CAP), the classifier module (the
 # classify and build_grid functions, json_shape_errors), core (CompassError,
-# load_yaml), legacy_adapter (adapt), manifest (the issue statuses), merge, the
+# load_yaml), legacy_adapter (adapt), status_words (is_closed, stored), merge, the
 # obligations module (its function of that name, Refused, COMPARED_FACTS,
 # assessment_vocabulary), policy_lint (load_parent) and waivers (find,
 # describe, recheck) and parents (resolve_chain, ParentError). Only
@@ -31,9 +31,9 @@ import tempfile
 import textwrap
 from dataclasses import dataclass, field
 
-from compass_pkg import catalogue_check, classify, legacy_adapter, manifest, merge
+from compass_pkg import catalogue_check, classify, legacy_adapter, merge
 from compass_pkg import catalogue_spec as spec
-from compass_pkg import obligations, parents, policy_lint, waivers
+from compass_pkg import obligations, parents, policy_lint, status_words, waivers
 from compass_pkg.atomic_io import StrictYamlError, digest, load_yaml_strict
 from compass_pkg.core import CompassError, load_yaml, manifest_path
 
@@ -486,9 +486,10 @@ def replay_sets(a, b, archive=()):
 
 # --- the open issues -----------------------------------------------------------------------
 
-# The statuses of an issue still in flight: every status that is not terminal.
-OPEN_STATUSES = tuple(s for s in manifest.TASK_STATUSES
-                      if s not in manifest.TERMINAL_STATUSES)
+def _is_open(issue):
+    """An issue still in flight or held: anything not closed. One with no
+    stored status is in flight."""
+    return not status_words.is_closed({"status": issue.status})
 
 
 def _merged(side, layer):
@@ -529,7 +530,7 @@ def open_report(a, b, issues):
     and over B with its own `config:` layer. Until the generation store
     exists, A stands for what an issue runs against and B for what it meets
     at its next reassess."""
-    flying = sorted((i for i in issues if i.status in OPEN_STATUSES and not i.unreadable),
+    flying = sorted((i for i in issues if _is_open(i) and not i.unreadable),
                     key=lambda i: i.slug)
     listed, expiring = [], []
     for issue in flying:
@@ -550,7 +551,8 @@ def open_report(a, b, issues):
             if layer is not None:
                 expiring += _invalidated(issue, layer, a, b, sides[0])
         if differences or unresolved:
-            listed.append({"issue": issue.slug, "status": issue.status,
+            listed.append({"issue": issue.slug,
+                           "status": status_words.stored({"status": issue.status}),
                            "assessment": _plain(issue.assessment),
                            "differences": differences, "unresolved": unresolved})
     return {"examined": len(flying), "issues": listed, "waivers": expiring,

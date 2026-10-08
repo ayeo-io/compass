@@ -369,3 +369,131 @@ def test_vr_g10_one_glossary_paragraph_relates_guardrail_gate_and_obligation():
                if all(w in p.lower() for w in wanted)]
     assert len(holders) == 1, (
         "expected one paragraph that says all three; found %d" % len(holders))
+
+
+# --- no module compares an issue status with a retired word ------------------
+#
+# After the status words change, a comparison with a retired word never
+# matches and nothing reports it. `status_words` is the one place that knows
+# the words, so any other literal in a comparison, a table, a default or a
+# subscript is a finding. A string built at run time is not seen.
+
+RETIRED_STATUS_WORDS = frozenset(
+    {"landed", "queued", "parked", "abandoned", "active"})
+
+# A hook line that names a status and compares or assigns a retired word.
+HOOK_STATUS_RE = re.compile(
+    r"""status["']?\)?\s*(?:==|!=|=~|=|-eq|-ne)\s*["']?(?:%s)\b"""
+    % "|".join(sorted(RETIRED_STATUS_WORDS)))
+
+# (module, text of the line, reason). A line is allowed only with a reason,
+# and an entry that matches no finding fails the test.
+STATUS_WORD_ALLOW = (
+    ("status_words.py", "_RETIRED_CLOSE_REASON = {",
+     "the one table of the words 6.0.0 stops storing and the close reason each stood for"),
+    ("status_words.py", "_RETIRED_HOLDS = (",
+     "the one list of the retired words that meant a hold"),
+    ("status_words.py", "_IN_FLIGHT_WORDS = (",
+     "the words accepted and ignored as in flight"),
+    ("status_words.py", "RETIRED_STATUSES = (",
+     "the five words the old status setter accepts, until the setter changes"),
+    ("flow.py", '"landed_this_week": [], "abandoned"',
+     "output keys of the board, which the status change replaces"),
+    ("flow.py", '"landed": when.date()',
+     "an output key of the board row"),
+    ("flow.py", 'out["abandoned"].append',
+     "an output key of the board"),
+    ("flow.py", '("abandoned", "ABANDONED',
+     "a section name of the board"),
+    ("flow.py", 'r["landed"])',
+     "an output key of the board row"),
+    ("flow.py", '"abandoned": ("Issue", "Approach")',
+     "a section name of the board"),
+    ("flow.py", '"landed_this_week": ("slug"',
+     "a section name of the board"),
+    ("flow.py", '"abandoned": ("slug"',
+     "a section name of the board"),
+)
+
+
+def _scan_source():
+    import sys
+    sys.path.insert(0, str(ROOT / "tests"))
+    from test_stable_ids import scan_source
+    return scan_source
+
+
+def status_word_hits(source: str, name: str) -> list[tuple[str, int, str, str]]:
+    """`(name, line, word, line text)` for each retired word in a scanned
+    position of Python source."""
+    lines = source.splitlines()
+    return [(name, line, value, lines[line - 1].strip())
+            for line, _col, value in _scan_source()(source)
+            if value in RETIRED_STATUS_WORDS]
+
+
+def hook_status_hits(text: str, name: str) -> list[tuple[str, int, str, str]]:
+    """The same, for a shell hook: a line that is not a comment."""
+    hits = []
+    for n, line in enumerate(text.splitlines(), 1):
+        if line.lstrip().startswith("#"):
+            continue
+        found = HOOK_STATUS_RE.search(line)
+        if found:
+            hits.append((name, n, found.group(0), line.strip()))
+    return hits
+
+
+def scan_status_words() -> list[tuple[str, int, str, str]]:
+    hits = []
+    cli = ROOT / "cli"
+    paths = [*sorted((cli / "compass_pkg").glob("*.py")), cli / "compass"]
+    for path in paths:
+        hits += status_word_hits(path.read_text(encoding="utf-8"), path.name)
+    for path in sorted((ROOT / "hooks").glob("*.sh")):
+        hits += hook_status_hits(path.read_text(encoding="utf-8"), path.name)
+    return hits
+
+
+def _allowed(hit, allow=STATUS_WORD_ALLOW) -> bool:
+    name, _line, _word, text = hit
+    return any(m == name and fragment in text for m, fragment, _why in allow)
+
+
+def test_vr_g11_no_module_compares_a_status_with_a_retired_word():
+    open_hits = [h for h in scan_status_words() if not _allowed(h)]
+    assert open_hits == [], (
+        "read the status through status_words (is_closed, is_completed, is_held, "
+        "is_in_flight):\n" + "\n".join(f"  {n}:{ln} {w!r}: {t}" for n, ln, w, t in open_hits))
+
+
+def test_vr_g11_each_allowed_line_states_a_reason_and_matches_a_finding():
+    hits = scan_status_words()
+    for module, fragment, reason in STATUS_WORD_ALLOW:
+        assert len(reason.split()) >= 4, (module, fragment, "give a reason")
+        assert any(m == module and fragment in t for m, _l, _w, t in hits), (
+            f"{module}: no finding holds {fragment!r}, so the entry is out of date")
+
+
+def test_vr_g11_a_planted_comparison_fails_the_guard():
+    for planted in ('if task.get("status") == "landed":\n    pass\n',
+                    'if status == "landed":\n    pass\n',
+                    'if task["status"] in ("queued", "parked"):\n    pass\n',
+                    'x = {"abandoned": 1}\n',
+                    'def f(status="active"):\n    pass\n'):
+        hits = status_word_hits(planted, "planted.py")
+        assert hits and not all(_allowed(h) for h in hits), planted
+
+
+def test_vr_g11_a_planted_hook_comparison_fails_the_guard():
+    for planted in ('if [ "$status" = "landed" ]; then\n  :\nfi\n',
+                    'status == landed\n',
+                    'if task.get("status") == "queued":\n'):
+        hits = hook_status_hits(planted, "planted.sh")
+        assert hits and not all(_allowed(h) for h in hits), planted
+    assert hook_status_hits("# status == landed is gone\n", "planted.sh") == []
+
+
+def test_vr_g11_a_word_in_a_message_or_a_name_is_not_a_comparison():
+    assert status_word_hits('print("the issue landed")\nlanded_by = 1\n', "m.py") == []
+    assert hook_status_hits('echo "landed_by is set"\n', "m.sh") == []

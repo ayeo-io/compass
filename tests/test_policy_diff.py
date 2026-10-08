@@ -599,10 +599,13 @@ def test_pd_6_only_issues_still_in_flight_are_examined_and_listed_by_slug():
     archive[3].status = "active"
     document = _diff(_advisory, archive=archive, open=True)
     section = _open(document)
-    assert section["examined"] == 3
-    assert [i["issue"] for i in section["issues"]] == ["active-one", "parked-one",
-                                                      "queued-one"]
-    assert [i["status"] for i in section["issues"]] == ["active", "parked", "queued"]
+    # An issue with no stored status is in flight (it has no status once the
+    # records carry the state), so it is examined, and shown as active.
+    assert section["examined"] == 4
+    assert [i["issue"] for i in section["issues"]] == ["active-one", "no-status",
+                                                      "parked-one", "queued-one"]
+    assert [i["status"] for i in section["issues"]] == ["active", "active", "parked",
+                                                       "queued"]
     for entry in section["issues"]:
         assert list(entry) == OPEN_KEYS
         assert entry["unresolved"] is None

@@ -3194,3 +3194,7 @@
 - `PC-7` An uncached ancestor is refused by readers that do not fetch
 - `PC-8` The docs describe the chain, the depth limit and the cycle code
 - `PC-9` A parent's waiver answers to that parent's owner at every depth
+
+### human-check-approvers (landed 2026-10-08)
+
+- `TRC-001` A human check that lists approvers passes only with a current approval by a listed approver

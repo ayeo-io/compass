@@ -567,6 +567,10 @@
           "content_digest": {
             "type": "string",
             "description": "A digest over the record's content when this entry was created. A matching record_id with a differing digest means the record was edited in place rather than replaced."
+          },
+          "check": {
+            "type": "string",
+            "description": "For manual-review: the id of the judged check this review record is for. `compass evidence review` sets it, and a judged check reads only the records that carry its id."
           }
         }
       }

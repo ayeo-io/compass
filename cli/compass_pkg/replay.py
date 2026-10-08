@@ -257,6 +257,15 @@ def _outcome(config, capabilities, assessment, issue=None):
     return ("runs", got)
 
 
+def evaluate(config, capabilities, assessment):
+    """The outcome of one assessment under one resolved configuration, for a
+    caller that may not import the obligations module: `policy_cmd` hands this
+    function to `preset_test` and `preset_init`. The result is the same
+    `("runs", Obligations)`, `("refused", reason)` or `("cannot-run", message)`
+    pair that a replay compares."""
+    return _outcome(config, capabilities, assessment)
+
+
 def _say(outcome):
     kind, value = outcome
     return "runs" if kind == "runs" else f"{kind.replace('-', ' ')}: {value}"

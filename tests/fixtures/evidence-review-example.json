@@ -1,0 +1,24 @@
+{
+  "outcome": "compass evidence review: design-review - pass recorded as EV-REVIEW-design-review-1.",
+  "check": "design-review",
+  "verdict": "pass",
+  "evidence_id": "EV-REVIEW-design-review-1",
+  "path": "evidence/review-design-review-1.yml",
+  "reviewer": {
+    "kind": "person",
+    "id": "jed72"
+  },
+  "scope": "technical-design.md",
+  "inputs": {
+    "technical-design": "sha256:dd7eb5b73000f522b5ab205e8af24a1cd265725066b603b1db475ff92cf51529",
+    "acceptance-criteria": "sha256:c2405d27077f12e98622f4489dfa5a10d28834fd85d0c32f5fbf73bf1d3a2955"
+  },
+  "generation": 1,
+  "definition_digest": "sha256:...",
+  "at": "...",
+  "detail": [
+    "record : evidence/review-design-review-1.yml",
+    "input  : technical-design sha256:dd7eb5b73000f522b5ab205e8af24a1cd265725066b603b1db475ff92cf51529",
+    "input  : acceptance-criteria sha256:c2405d27077f12e98622f4489dfa5a10d28834fd85d0c32f5fbf73bf1d3a2955"
+  ]
+}

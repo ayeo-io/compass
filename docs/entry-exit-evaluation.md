@@ -49,7 +49,8 @@ receipt shows every list, and says which are not yet due.
 |---|---|
 | `human` | A tick: a checked box (`- [x]`) whose text equals the check's `statement`, under the heading `Definition of Ready` in the requirements review (entry lists) or `Definition of Done` in the verification report (exit lists). With `approvers:` the tick also needs a current approval by a listed approver (see [Approvers on a human check](#approvers-on-a-human-check)). |
 | `deterministic` | Its registered implementation runs. The receipt does not run it and shows `pending`. |
-| `judged`, `evidence` | Not evaluated by this version. A blocking check of these kinds fails, so a list cannot pass by naming a check nothing reads. This holds whatever the capability, for a check a project adds, and `compass policy lint` warns (`M-LIST-KIND-UNEVALUATED`, exit code unchanged). The shipped default names none. |
+| `judged` | A review record: the newest registered `manual-review` record by a listed reviewer must say `pass` and match the check's inputs, definition, issue and generation. The cause of a failure is the first words of the detail. See [judged-checks.md](judged-checks.md). The receipt reads the record and shows the real verdict. |
+| `evidence` | Not evaluated by this version. A blocking check of this kind fails, so a list cannot pass by naming a check nothing reads. This holds whatever the capability, for a check a project adds, and `compass policy lint` warns (`M-LIST-KIND-UNEVALUATED`, exit code unchanged). The shipped default names none. |
 
 An unchecked box that carries a typed tag (`(evidence: ...)` or
 `(follow-up: ...)`) counts when the tag resolves, and the detail says
@@ -222,6 +223,6 @@ detail.
 - A role in `approvers:` other than `owner` is read as a person id. An
   approval record is not authenticated (see [Approvers on a human
   check](#approvers-on-a-human-check)).
-- `judged` and `evidence` checks are not evaluated.
+- `evidence` checks are not evaluated.
 - A tick is found by the text of the statement. A statement that differs from
   the box fails with "no checklist item".

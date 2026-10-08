@@ -179,7 +179,20 @@ CHECK_GUIDANCE = {
 }
 
 
-def summarise_counts(ran, failures, nothing_to_check=0):
+class _AdvisoryFailure(int):
+    """A check that failed and does not block: its effective severity is
+    advisory. Like `NOTHING_TO_CHECK` it is truthy, so every caller that only
+    asks pass or fail sees a run that is not failed; the views ask whether a
+    result `is ADVISORY_FAILURE` so the finding is never shown as a pass."""
+
+    def __repr__(self):
+        return "ADVISORY_FAILURE"
+
+
+ADVISORY_FAILURE = _AdvisoryFailure(1)
+
+
+def summarise_counts(ran, failures, nothing_to_check=0, advisory=0):
     """The one-line verdict `compass check` ends on.
 
     Three of the default checks can clear with nothing to check - no BDD
@@ -187,7 +200,19 @@ def summarise_counts(ran, failures, nothing_to_check=0):
     labelled honestly on its own line. Folding them into "all N passed"
     would make the count claim more than was checked. They are reported
     apart so the count never overstates.
+
+    A check that failed and does not block (an advisory failure) is counted
+    apart too: it is not a pass, and it does not fail the run.
     """
+    if advisory:
+        tail = "%d failed as advisory (does not block)" % advisory
+        if nothing_to_check:
+            tail += ", %d had nothing to check" % nothing_to_check
+        if failures:
+            return (f"compass check: FAIL - {failures} of {ran - nothing_to_check} "
+                    f"check(s) failed, {tail}.")
+        return (f"compass check: PASS - {ran - nothing_to_check - advisory} "
+                f"check(s) passed, {tail}.")
     if failures:
         # The denominator counts only checks that inspected something, so it
         # never invites a reader to count the empty ones as clean (#110).
@@ -231,6 +256,7 @@ class _CheckRun:
         self.ran = 0
         self.failures = 0
         self.nothing = 0
+        self.advisory = 0
 
     def line(self, text):
         self.rows.append(("line", text))
@@ -263,6 +289,8 @@ def _verbose_lines(run):
             # did not pass anything, so it is not labelled PASS (#110).
             if passed is NOTHING_TO_CHECK:
                 out.append("    NOTHING TO CHECK %s: %s" % (name, detail))
+            elif passed is ADVISORY_FAILURE:
+                out.append("    ADVISORY %s: %s" % (name, detail))
             elif passed:
                 out.append("    PASS %s: %s" % (name, detail))
             else:
@@ -273,7 +301,7 @@ def _verbose_lines(run):
                     out.append("         why : %s" % g["why"])
                     out.append("         fix : %s" % g["fix"])
     out += ["-" * 60,
-            summarise_counts(run.ran, run.failures, run.nothing)]
+            summarise_counts(run.ran, run.failures, run.nothing, run.advisory)]
     return out
 
 
@@ -318,13 +346,23 @@ def _summary_lines(run):
                             if p is NOTHING_TO_CHECK})
     nothing = (", %d had nothing to check" % distinct_nothing
                if distinct_nothing else "")
+    # An advisory failure is a finding that does not block. It is named apart
+    # from the failures and is not counted as a pass.
+    advisory_rows, advisory_seen = [], set()
+    for _g, n, p, d in run.results:
+        if p is ADVISORY_FAILURE and n not in advisory_seen:
+            advisory_seen.add(n)
+            advisory_rows.append((n, d))
+    nothing += (", %d failed as advisory (does not block)" % len(advisory_rows)
+                if advisory_rows else "")
     if distinct_failed:
         verdict = "FAIL - %d of %d check(s) failed%s on '%s' (%s)" % (
             distinct_failed, distinct_ran - distinct_nothing, nothing,
             run.slug, approach)
     else:
         verdict = "PASS - %d check(s) passed%s on '%s' (%s)" % (
-            distinct_ran - distinct_nothing, nothing, run.slug, approach)
+            distinct_ran - distinct_nothing - len(advisory_rows), nothing,
+            run.slug, approach)
     out = [_fit(verdict)]
 
     # Keep the adoption-mode banner in the default view. Without it, an
@@ -341,6 +379,15 @@ def _summary_lines(run):
     if len(notices) > MAX_ITEMS:
         out.append(_fit("... and %d more notice(s) - run with --verbose"
                         % (len(notices) - MAX_ITEMS), "  "))
+
+    if advisory_rows:
+        out.append("")
+        for name, detail in advisory_rows[:MAX_ITEMS]:
+            out.append(_fit("%s: %s" % (name, detail), "ADVISORY "))
+        if len(advisory_rows) > MAX_ITEMS:
+            out.append(_fit("... and %d more advisory (%s) - run with --verbose"
+                            % (len(advisory_rows) - MAX_ITEMS,
+                               ", ".join(n for n, _ in advisory_rows[MAX_ITEMS:]))))
 
     if not failed:
         return out
@@ -365,6 +412,7 @@ def _verdicts(results):
     verdicts = {}
     for _, name, passed, _ in results:
         verdict = ("nothing-to-check" if passed is NOTHING_TO_CHECK
+                   else "advisory" if passed is ADVISORY_FAILURE
                    else "pass" if passed else "fail")
         if name not in verdicts or verdict == "fail":
             verdicts[name] = verdict
@@ -424,6 +472,7 @@ def _emit_check(run, args):
             "issue": run.slug, "approach": run.approach,
             "ran": run.ran, "failed": run.failures,
             "nothing_to_check": run.nothing,
+            "advisory": run.advisory,
             "notices": [t.strip() for kind, t in run.rows
                         if kind == "line" and t.strip()],
             **({"generation": run.view.generation,
@@ -432,6 +481,7 @@ def _emit_check(run, args):
             "checks": [{"guardrail": g, "name": n,
                         "status": ("nothing-to-check"
                                    if p is NOTHING_TO_CHECK else
+                                   "advisory" if p is ADVISORY_FAILURE else
                                    "pass" if p else "fail"),
                         "detail": d}
                        for g, n, p, d in run.results],
@@ -461,6 +511,47 @@ def _assessment_keys_pass(run, task):
     run.result("assessment-keys", not errs,
                "; ".join(errs) or "every assessment key is one the schema allows")
     return not errs
+
+
+def _judge(passed, detail, declared, matches, readings):
+    """The result of one check after what it declares: `(passed, detail)`.
+
+    `declared` is the check's entry from the configuration the issue runs
+    against. A check that declares nothing is returned unchanged, which is the
+    case for an issue with no generation.
+
+    - `on_skipped` decides a result of nothing to check: `fail` makes it a
+      failure that says why, `pass` makes it a pass, and `not-applicable` (or
+      no value) leaves it counted apart.
+    - A failure is advisory, and does not fail the run, when the effective
+      severity is advisory: the check declares `severity: advisory`, or it
+      declares `blocking_when` and the assessment does not match it. It is
+      blocking otherwise.
+
+    A guardrail check with no implementation never reaches this function: it
+    always fails.
+    """
+    if passed is NOTHING_TO_CHECK:
+        on_skipped = declared.get("on_skipped")
+        if on_skipped == "fail":
+            passed = False
+            detail = ("nothing to check, and this check declares on_skipped: "
+                      "fail, so it does not clear - %s" % detail)
+        elif on_skipped == "pass":
+            passed = True
+            detail = ("nothing to check, counted as a pass because this check "
+                      "declares on_skipped: pass - %s" % detail)
+    if passed:
+        return passed, detail
+    blocking_when = declared.get("blocking_when")
+    if declared.get("severity") == "advisory":
+        return ADVISORY_FAILURE, ("advisory (this check declares severity: "
+                                  "advisory) - %s" % detail)
+    if blocking_when and not matches(blocking_when, readings):
+        return ADVISORY_FAILURE, ("advisory for this assessment - %s. It "
+                                  "blocks when %s."
+                                  % (detail, json.dumps(blocking_when)))
+    return passed, detail
 
 
 def cmd_check(args):
@@ -522,7 +613,13 @@ def cmd_check(args):
                     passed, detail = fn(task, task_dir)
                 except Exception as exc:
                     passed, detail = False, f"check errored: {exc}"
-                if not passed:
+                passed, detail = _judge(
+                    passed, detail,
+                    (guardrails.get("checks") or {}).get(check_name) or {},
+                    matches, readings)
+                if passed is ADVISORY_FAILURE:
+                    run.advisory += 1
+                elif not passed:
                     failures += 1
                 run.result(check_name, passed, detail)
 
@@ -554,6 +651,8 @@ def cmd_check(args):
     # summary never reports a check that inspected nothing as something it
     # verified.
     nothing_to_check = 0
+    # Checks that failed and do not block, counted apart from the failures.
+    advisory = 0
     # Reads `delivery_approach`, the live manifest key.
     run = _CheckRun(task_dir, task, mode, view)
 
@@ -638,21 +737,19 @@ def cmd_check(args):
             except Exception as exc:  # a check must not crash the run
                 passed, detail = False, f"check errored: {exc}"
 
-            # A check may declare `blocking_when:` in guardrails.yml - an
-            # assessment-scoped condition, exactly like a guardrail's
-            # `applies_when:`. Below that threshold a finding is reported and
-            # does not fail the run. Governance holds the condition as data;
-            # this code only evaluates it, which is the mechanism side of
-            # the boundary ADR-001 draws.
-            blocking_when = (declared_checks.get(check_name) or {}).get(
-                "blocking_when")
-            if (not passed and blocking_when
-                    and not matches(blocking_when, readings)):
-                passed = True
-                detail = ("advisory for this assessment - %s. It blocks when %s."
-                          % (detail, json.dumps(blocking_when)))
+            # A check declares `blocking_when`, `severity` and `on_skipped` as
+            # data, in the configuration the issue runs against. Below the
+            # `blocking_when` threshold, or with `severity: advisory`, a
+            # finding is reported and does not fail the run. Governance holds
+            # the rule as data; this code only applies it, which is the
+            # mechanism side of the boundary ADR-001 draws.
+            passed, detail = _judge(passed, detail,
+                                    declared_checks.get(check_name) or {},
+                                    matches, readings)
 
-            if not passed:
+            if passed is ADVISORY_FAILURE:
+                advisory += 1
+            elif not passed:
                 failures += 1
             elif passed is NOTHING_TO_CHECK:
                 nothing_to_check += 1
@@ -675,5 +772,6 @@ def cmd_check(args):
         failures += 1
 
     run.ran, run.failures, run.nothing = ran, failures, nothing_to_check
+    run.advisory = advisory
     _emit_check(run, args)
     return exit_for_mode(failures, mode)

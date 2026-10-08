@@ -13146,3 +13146,80 @@
 - **Intent:** `INT-1`
 - **Source issue:** `sigint-tests-under-load`
 - **Landed:** 2026-10-08
+
+### Given the compass schema, when a test walks every node, then each node has a non-empty description _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `schema-descriptions`
+- **Landed:** 2026-10-08
+
+### Given a generation with an advisory check, when it fails, then the run passes and shows the failure as advisory _(archived)_
+
+- **Scenario id:** `CS-1`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given a landed_by relaxation on a shipped check with on_skipped fail, the verdict is unchanged _(archived)_
+
+- **Scenario id:** `CS-10`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given a blocking check, when it fails, then the run fails _(archived)_
+
+- **Scenario id:** `CS-2`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given on_skipped fail and nothing to check, then the run fails and says why _(archived)_
+
+- **Scenario id:** `CS-3`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given on_skipped pass and nothing to check, then the check counts as a pass _(archived)_
+
+- **Scenario id:** `CS-4`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given on_skipped not-applicable and nothing to check, then it is counted apart as before _(archived)_
+
+- **Scenario id:** `CS-5`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given a blocking_when that does not match, an advisory severity is shown as advisory with the condition _(archived)_
+
+- **Scenario id:** `CS-6`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given the shipped preset and an existing issue, then the verdicts are unchanged _(archived)_
+
+- **Scenario id:** `CS-7`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### The JSON shape of an advisory failure is documented and pinned _(archived)_
+
+- **Scenario id:** `CS-8`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given an issue with no generation, then check behaves as before _(archived)_
+
+- **Scenario id:** `CS-9`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08

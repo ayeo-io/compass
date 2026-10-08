@@ -3163,3 +3163,18 @@
 - `EE-12` The preset, help text and owning doc describe the lists
 - `EE-13` A project stage list and an unknown check are handled
 - `EE-14` A check whose when does not match is not listed
+
+### parent-states (landed 2026-10-08)
+
+- `TRC-001` Given a project pinned to a cached parent whose compass.yml is unchanged and no newer commit is known When the parent state is read Then it is up to date
+- `TRC-002` Given a pin whose ref has another commit fetched last When the parent state is read Then it is stale
+- `TRC-003` Given a cached compass.yml edited after the fetch When the parent state is read Then it is locally modified and the lint fails
+- `TRC-004` Given a stale parent whose cached compass.yml was edited When the parent state is read Then it is both
+- `TRC-005` Given a parent in each of the four states When policy lint runs Then each state has its own code at its own level
+- `TRC-006` Given a parent in each of the four states When approach summary runs Then it prints one line with the state
+- `TRC-007` Given a cached parent that seen.yml holds no digest for When the parent state is read Then it is locally modified
+- `TRC-008` Given a parent that is not cached When approach summary runs Then it prints the cause on wrapped lines and fetches nothing
+- `TRC-009` Given a project with no git parent When approach summary runs Then it still prints three lines
+- `TRC-010` Given a seen.yml that cannot be read When a command reads the parent state Then it counts as edited and no command crashes
+- `TRC-011` Given a project compass.yml that cannot be read When approach summary runs Then it prints no traceback
+- `TRC-012` Given a seen.yml whose digests entry is not a mapping When a parent is fetched Then the record is rewritten and nothing crashes

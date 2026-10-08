@@ -367,10 +367,10 @@ def _full_sha(cache, spec):
     return held[0]
 
 
-def _load(root, spec, fetch):
+def _load(root, spec, fetch, notify=None):
     """`(Parent, the parent's own extends: value)` for one git parent: the
     fetch, the cache read and the strict load, with no look at what it
-    extends."""
+    extends. `notify(spec)` is called just before a fetch."""
     cache = cache_dir(root)
     if len(spec.sha) < 40:
         spec = spec._replace(sha=_full_sha(cache, spec))
@@ -380,6 +380,8 @@ def _load(root, spec, fetch):
             raise ParentError("L-PARENT-NOT-CACHED", f"{ref_label(spec)} at {spec.sha} is "
                               "not in the cache; run compass policy lint with network access")
         base, local = remote_base()
+        if notify is not None:
+            notify(spec)
         _fetch(cache, spec, local, base)
         _ignore(root)
     path = _cached_file(root, folder)
@@ -429,13 +431,13 @@ def _cycle(spec, sha, via):
                        "which is already in the chain", via.layer.name, "extends")
 
 
-def resolve_chain(root, extends, *, fetch=False):
+def resolve_chain(root, extends, *, fetch=False, notify=None):
     """The `Parent`s a project's `extends:` names, furthest ancestor first and
     the direct parent last; empty for the shipped form. Each is pinned,
     fetched and read like a single parent. A chain holds at most `MAX_DEPTH`
     git parents (`L-PARENT-CHAIN`) and never the same commit twice
     (`L-PARENT-CYCLE`). With `fetch` an uncached commit is fetched; without it
-    the cache is all that is read."""
+    the cache is all that is read. `notify(spec)` is called before each fetch."""
     spec = spec_of(extends)
     nearest_first = []
     while spec is not None:
@@ -449,7 +451,7 @@ def resolve_chain(root, extends, *, fetch=False):
                 "a chain holds at most three git parents, and the shipped default is not "
                 "counted", via.layer.name, "extends")
         try:
-            found, inner = _load(root, spec, fetch)
+            found, inner = _load(root, spec, fetch, notify)
         except ParentError as exc:
             raise (_on_naming_parent(exc, via) if via else exc) from None
         if any(found.sha == earlier.sha for earlier in nearest_first):

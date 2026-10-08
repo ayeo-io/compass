@@ -76,7 +76,7 @@ same commit.
 | `cli/compass_pkg/review_records.py`, `cli/compass_pkg/review_cmd.py`, `tests/fixtures/evidence-review-example.json` | `docs/judged-checks.md` |
 | `cli/compass_pkg/replay.py` | `docs/policy-diff.md` |
 | `cli/compass_pkg/policy_migrate.py`, `cli/compass_pkg/shipped_releases.py`, `scripts/generate-shipped-releases.py`, `governance/shipped-releases.yml`, `governance/shipped-releases.tar.xz` | `docs/policy-migrate.md` |
-| `cli/compass_pkg/parents.py`, `cli/compass_pkg/parent_states.py` | `docs/git-parents.md` |
+| `cli/compass_pkg/parents.py`, `cli/compass_pkg/parent_states.py`, `cli/compass_pkg/chain_class.py` | `docs/git-parents.md` |
 | `cli/compass_pkg/preset_test.py`, `cli/compass_pkg/preset_init.py` | `docs/policy-test.md` |
 | `cli/compass_pkg/policy_update.py` | `docs/policy-update.md` |
 | `cli/compass_pkg/waivers.py` | `architecture/decisions/ADR-039-waivers-locks-and-unlocks.md` |

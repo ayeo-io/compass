@@ -3208,6 +3208,10 @@
 - `PC-8` The docs describe the chain, the depth limit and the cycle code
 - `PC-9` A parent's waiver answers to that parent's owner at every depth
 
+### human-check-approvers (landed 2026-10-08)
+
+- `TRC-001` A human check that lists approvers passes only with a current approval by a listed approver
+
 ### judged-checks (landed 2026-10-08)
 
 - `JC-1` A judged check passes on a review record whose inputs still match

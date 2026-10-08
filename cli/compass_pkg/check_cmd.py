@@ -464,6 +464,9 @@ def _assessment_keys_pass(run, task):
 
 
 def cmd_check(args):
+    # The settings are read before anything resolves a configuration, so a
+    # conflict between the two settings files is reported as such.
+    mode = load_mode()
     task_dir = resolve_issue_dir(args.task)
     task, _ = load_manifest(task_dir)
     # A generation that is not whole is the authority being unreadable, so the
@@ -482,7 +485,6 @@ def cmd_check(args):
     impls = guardrails.get("impl") or {}
     matches = view.matches if view is not None else reading_matches
     readings = task.get("assessment") or {}
-    mode = load_mode()
 
     # A spike ships nothing, so the delivery guardrails (`G1`-`G5`) do not apply.
     # It is still controlled: it must conclude, and it must not change

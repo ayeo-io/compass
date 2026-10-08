@@ -20,7 +20,9 @@ How a check is judged:
 - `human`: a tick, a checked box in a checklist document of the issue. The
   document is the requirements review for an entry list and the verification
   report for an exit list. The box is the one whose text equals the check's
-  statement, under the heading `Definition of Ready` or `Definition of Done`.
+  statement, under the heading of its list (`list_heading`): `Definition of
+  Ready` for the plan entry list, `Definition of Done` for the `verify` exit
+  list and `<Stage> <side> list` for any other.
   An unchecked box that carries a typed tag (`(evidence: ...)` or
   `(follow-up: ...)`) that resolves counts as deferred and passes. The tag is
   resolved by `checks.dod_tag_problems`, the code `dod-evidence-typed` uses.
@@ -44,8 +46,8 @@ An advisory check, by `severity` or by a `blocking_when` that does not match
 the assessment, reports a failure as a pass that says so.
 """
 # DEPENDENCY: standard library (dataclasses, os, re); compass_pkg.check_registry,
-# compass_pkg.check_results, compass_pkg.core, compass_pkg.next_cmd,
-# compass_pkg.review_records.
+# compass_pkg.check_results, compass_pkg.core, compass_pkg.doc_sections,
+# compass_pkg.next_cmd, compass_pkg.review_records.
 # It reads configuration through an EffectiveView and does not import
 # compass_pkg.obligations, which only classify, effective and replay may import.
 from __future__ import annotations
@@ -58,6 +60,7 @@ from compass_pkg import review_records
 from compass_pkg.check_registry import CHECK_FNS
 from compass_pkg.check_results import NOTHING_TO_CHECK
 from compass_pkg.core import FOUND, OMITTED, resolve_artifact, unregistered_document
+from compass_pkg.doc_sections import comment_mask, list_heading, normal, section, visible
 
 CAPABILITY = "entry-exit-evaluation"
 SIDES = ("entry", "exit")
@@ -65,17 +68,13 @@ SIDES = ("entry", "exit")
 #: over the same two.
 SKIPPED_MODES = ("skipped", "collapsed")
 
-#: Where the ticks of a list are: the document kind and the heading its
-#: checklist sits under.
-CHECKLISTS = {"entry": ("requirements-review", "Definition of Ready"),
-              "exit": ("verification-report", "Definition of Done")}
+#: The document kind that holds the ticks of each side's lists.
+CHECKLIST_DOCUMENTS = {"entry": "requirements-review", "exit": "verification-report"}
 
 #: What a skipped check returns, by its `on_skipped`.
 SKIPPED_STATUS = {"pass": "pass", "not-applicable": "nothing-to-check", "fail": "fail"}
 
 _ITEM = re.compile(r"^\s*-\s+\[([ xX])\]\s*(.*)")
-_COMMENT = re.compile(r"<!--.*?-->", re.S)
-_TAG = re.compile(r"^\((?:evidence|follow-up):[^)]*\)\s*")
 _TAG_ANYWHERE = re.compile(r"\((?:evidence|follow-up):[^)]*\)")
 
 
@@ -102,35 +101,29 @@ def label(stage, side):
     return f"stage:{stage}:{side}"
 
 
-def _normal(text):
-    return " ".join(_TAG.sub("", text).replace("**", "").replace("*", "").split())
-
-
 def _items(path, heading):
-    """`[(ticked, text)]` for the checkbox items under `heading` of the
-    document at `path`, or None when the document has no such heading. A
-    continuation line is an indented line after an item."""
+    """`[(ticked, normalised text, text)]` for the checkbox items under
+    `heading` of the document at `path`, or None when the document has no such
+    heading. A continuation line is an indented line after an item. The section
+    is read by `doc_sections`, as the renderer and the tag rule read it."""
     with open(path, encoding="utf-8") as fh:
-        text = _COMMENT.sub("", fh.read())
-    items, inside = [], None
-    for line in text.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("#"):
-            if stripped.lstrip("#").strip() == heading:
-                inside = []
-                continue
-            if inside is not None:
-                break
-        if inside is None:
+        lines = fh.read().split("\n")
+    mask = comment_mask(lines)
+    body = section(lines, mask, heading)
+    if body is None:
+        return None
+    shown = visible(lines)
+    items = []
+    for index in range(*body):
+        line = shown[index]
+        if mask[index]:
             continue
         found = _ITEM.match(line)
         if found:
             items.append([found.group(1).lower() == "x", found.group(2)])
-        elif items and line.startswith(" ") and stripped:
-            items[-1][1] += " " + stripped
-        elif stripped.startswith("Next stage:"):
-            break
-    return None if inside is None else [(t, _normal(s), s) for t, s in items]
+        elif items and line.startswith(" ") and line.strip():
+            items[-1][1] += " " + line.strip()
+    return [(t, normal(s), s) for t, s in items]
 
 
 def _document(task_dir, kind):
@@ -151,29 +144,30 @@ class _Documents:
         self.task_dir = task_dir
         self._cache = {}
 
-    def get(self, side):
-        if side not in self._cache:
-            kind, heading = CHECKLISTS[side]
+    def get(self, stage, side):
+        if (stage, side) not in self._cache:
+            kind = CHECKLIST_DOCUMENTS[side]
+            heading = list_heading(stage, side)
             state, path = _document(self.task_dir, kind)
             items = _items(path, heading) if state == "found" else None
-            self._cache[side] = (state, path, kind + ".md", heading, items)
-        return self._cache[side]
+            self._cache[(stage, side)] = (state, path, kind + ".md", heading, items)
+        return self._cache[(stage, side)]
 
 
-def _tick(check, side, documents, task, owes):
+def _tick(check, stage, side, documents, task, owes):
     """`(status, detail)` of a human check, or None when its document is
     recorded as omitted (the check is skipped). `owes` is `(approach, kinds)`,
     the document kinds the routed approach lists among its artifacts, or None
     when the approach is not known."""
-    state, path, name, heading, items = documents.get(side)
+    state, path, name, heading, items = documents.get(stage, side)
     if state == "omitted":
         return None
-    kind = CHECKLISTS[side][0]
+    kind = CHECKLIST_DOCUMENTS[side]
     if state == "absent":
         if owes is not None and kind not in owes[1]:
             return "nothing-to-check", f"{owes[0]} owes no {kind}"
         return "fail", f"{name} not found; its '{heading}' section holds the tick"
-    wanted = _normal(check.get("statement") or "")
+    wanted = normal(check.get("statement") or "")
     matches = [(ticked, raw) for ticked, text, raw in (items or []) if text == wanted]
     if not matches:
         return "fail", (f"no checklist item with this statement under '{heading}' "
@@ -327,9 +321,9 @@ def _outcome(check_id, check, kind, side, stage, producer, modes, task, task_dir
         return (_skipped(check),
                 f"{source} is {mode}; on_skipped is {check.get('on_skipped')}", True)
     if kind == "human":
-        ticked = _tick(check, side, documents, task, owes)
+        ticked = _tick(check, stage, side, documents, task, owes)
         if ticked is None:
-            return (_skipped(check), f"{CHECKLISTS[side][0]} is recorded as omitted; "
+            return (_skipped(check), f"{CHECKLIST_DOCUMENTS[side]} is recorded as omitted; "
                                      f"on_skipped is {check.get('on_skipped')}", True)
         # The one nothing-to-check a tick gives is a route that owes no document.
         return (*ticked, ticked[0] == "nothing-to-check")

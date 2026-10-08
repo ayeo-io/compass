@@ -980,6 +980,17 @@
           "revision": {
             "type": "integer",
             "description": "Optional. Bumped when the document materially changes; an approval binds to it."
+          },
+          "digest": {
+            "type": "string",
+            "description": "Optional. `sha256:` and the digest of the document's file when it was last written. Only `compass issue artifact` writes it, and only with the capability `artifact-freshness` on."
+          },
+          "upstream": {
+            "type": "object",
+            "description": "Optional. The digest of each artifact this document depends on, as it was when the document was written. The document is stale when one of them differs now. Only `compass issue artifact` writes it, and only with the capability `artifact-freshness` on.",
+            "additionalProperties": {
+              "type": "string"
+            }
           }
         }
       }

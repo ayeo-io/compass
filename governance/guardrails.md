@@ -117,7 +117,9 @@ _(none yet - the shipped default guardrails apply as-is)_
   `stage:<stage>:<entry|exit>` (`docs/entry-exit-evaluation.md`). The shipped
   Definition of Ready and Done checks run only where the capability
   `entry-exit-evaluation` is on; a check a project adds to a list always runs.
-  A project with neither sees no change.
+  With the capability `artifact-freshness` on, it also reports each tracked
+  document as fresh or stale under the label `artifact-freshness`
+  (`docs/artifact-freshness.md`). A project with none of these sees no change.
 - **An advisory failure** is a check that failed where its effective severity
   is advisory (`severity: advisory`, or a `blocking_when` the assessment does
   not match). It is labelled ADVISORY, never PASS or FAIL, is counted apart

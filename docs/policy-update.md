@@ -120,14 +120,20 @@ waiver a person re-approves. The two pins take the place of the two defaults.
    points at. A ref the remote does not have is exit 2.
 2. If that commit is the pin, there is nothing to do.
 3. It fetches the current pin (if it is not cached) and the new commit into the
-   cache. A cached copy of the current pin that was edited stops the move
-   (exit 2): delete it under `.compass/cache/parents/` and run the command again.
-4. It checks the new commit as the lint checks a parent. A settings key, an
-   `unlock:` or an `impl` outside the registry is refused (`new-parent-invalid`).
-5. It lays the project's file over the shipped default plus each commit, and
+   cache, each with the chain of git parents behind it (the parents its own
+   `extends:` names, at most three deep). A cached copy of any parent in the
+   current chain that was edited stops the move (exit 2): delete it under
+   `.compass/cache/parents/` and run the command again.
+4. It checks every parent in the new chain as the lint checks a parent. A
+   settings key, an `unlock:`, an `impl` outside the registry, a chain that is
+   too deep or a cycle is refused (`new-parent-invalid`).
+5. It lays the project's file over the shipped default plus the whole chain at
+   each pin, so a waived field that an ancestor changed counts as changed, and
    runs the same re-check, classification, replay, questions and single write as
-   a default move. An allowed approver is named by the new commit's own
-   `approvers.project-waiver`, else the project's `owner`.
+   a default move. An allowed approver is named by the nearest parent's own
+   `approvers.project-waiver` in the new chain, else the project's `owner`.
+   Only the project's own `#<sha>` is rewritten: the new commit pins its
+   ancestors itself.
 
 `--to` names a shipped major, so it is exit 2 for a git parent. To follow
 another ref, change the `@<ref>` in `compass.yml` by hand and run the command.

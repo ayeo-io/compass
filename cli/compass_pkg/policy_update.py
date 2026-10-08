@@ -206,21 +206,26 @@ def _resolved(directory):
     return (parent.doc,), meta["version"], config, prov
 
 
-def _resolved_git(directory, found):
-    """`_resolved` for a git parent over the default in `directory`: the
-    default's version stands for the pair, and the parent's own faults are
-    returned as text, not raised, so the move is refused with the cause."""
+def _resolved_git(directory, chain):
+    """`_resolved` for a chain of git parents (furthest first) over the default
+    in `directory`: the default's version stands for the whole, and the
+    parents' own faults are returned as text, not raised, so the move is
+    refused with the cause."""
     default = _resolved(directory)
-    problems = [f"{f.code} {f.path}: {f.message}" for f in policy_lint._layer_group(
-        {"chain": [found.layer], "today": datetime.date.today()})]
+    problems = [f"{f.code} [{f.layer}] {f.path}: {f.message}" for f in policy_lint._layer_group(
+        {"chain": [found.layer for found in chain], "today": datetime.date.today()})]
     if problems:
         return None, problems
-    try:
-        config, prov = merge.apply(default[2], found.layer.doc, "parent", found.layer.name,
-                                   default[3])
-    except merge.MergeError as exc:
-        return None, [f"{code} {where}: {message}" for code, where, message in exc.errors]
-    return ((*default[0], found.layer.doc), default[1], config, prov), []
+    docs, config, prov = list(default[0]), default[2], default[3]
+    for found in chain:
+        try:
+            config, prov = merge.apply(config, found.layer.doc, "parent", found.layer.name,
+                                       prov)
+        except merge.MergeError as exc:
+            return None, [f"{code} [{found.layer.name}] {where}: {message}"
+                          for code, where, message in exc.errors]
+        docs.append(found.layer.doc)
+    return (tuple(docs), default[1], config, prov), []
 
 
 def _capabilities(*docs):
@@ -327,13 +332,16 @@ def _compare(made, root, old, new, old_label, new_label):
 # --- a git parent -----------------------------------------------------------------------
 
 def _chain_parents(root, extends, *, fetch):
-    """The git parents a project's `extends:` resolves to, root first: one
-    now, because a git parent may not name another. This is the only place a
-    parent is looked up, so chains of git parents change this function and
-    nothing else about how a parent is found. The parent that a move re-pins
-    is the last one."""
-    found = parents.resolve(root, extends, fetch=fetch)
-    return [found] if found else []
+    """The git parents a project's `extends:` resolves to, furthest ancestor
+    first. This is the only place a parent is looked up. The parent that a
+    move re-pins is the last one, and the ancestors behind it are the ones
+    its own `extends:` names."""
+    return parents.resolve_chain(root, extends, fetch=fetch)
+
+# Faults of the environment, not of the commit: a new commit that causes one of
+# these cannot be judged, so the error is raised, not turned into a refusal.
+_ENVIRONMENT = ("L-PARENT-FETCH", "L-PARENT-CACHE", "L-PARENT-NOT-CACHED",
+                "L-PARENT-SHA-MISMATCH")
 
 
 def _offline_plan(made, spec, why):
@@ -364,28 +372,38 @@ def _plan_git(made, root, spec, to, defaults):
         if len(spec.sha) == 40 and spec.sha == new_sha:
             made.git = GitMove(label, new_sha, new_sha)
             return made
-        old = _chain_parents(root, extends, fetch=True)[-1]
-        state = parent_states.read(root, old)
-        if state.why:
-            raise CompassError(f"the cached copy of the current pin {old.sha[:7]} was edited "
-                               f"({state.why}). Delete it under .compass/cache/parents/ and "
-                               f"run the command again to fetch it afresh")
+        old_chain = _chain_parents(root, extends, fetch=True)
+        old = old_chain[-1]
+        for held in old_chain:
+            state = parent_states.read(root, held)
+            if state.why:
+                raise CompassError(f"the cached copy of {held.sha[:7]} of {held.ref}, in the "
+                                   f"chain of the current pin, was edited ({state.why}). "
+                                   f"Delete it under .compass/cache/parents/ and run the "
+                                   f"command again to fetch it afresh")
         made.git = GitMove(label, old.sha, new_sha, old.version or None)
         if old.sha == new_sha:
             return made
-        new = _chain_parents(root, f"{label}#{new_sha}", fetch=True)[-1]
+        try:
+            new_chain = _chain_parents(root, f"{label}#{new_sha}", fetch=True)
+        except parents.ParentError as exc:
+            if exc.code in _ENVIRONMENT or parents.unreachable(exc.detail):
+                raise
+            made.invalid = [f"{exc.code} [{exc.layer}] {exc.path}: {exc.detail}"]
+            return made
     except parents.ParentError as exc:
         if parents.unreachable(exc.detail):
             return _offline_plan(made, spec, f"{label} could not be reached ({exc.detail}); "
                                              f"nothing was changed")
         raise
+    new = new_chain[-1]
     made.git.new_version = new.version or None
     shipped = defaults[max(defaults)]
-    before, faults = _resolved_git(shipped, old)
+    before, faults = _resolved_git(shipped, old_chain)
     if before is None:
         raise CompassError(f"the current pin {old.sha[:7]} of {label} fails its own check: "
                            f"{faults[0]} (run compass policy lint)")
-    after, faults = _resolved_git(shipped, new)
+    after, faults = _resolved_git(shipped, new_chain)
     if after is None:
         made.invalid = faults
         return made

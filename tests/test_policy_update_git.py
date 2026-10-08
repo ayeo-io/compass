@@ -5,7 +5,7 @@ names. The tests build a local git repository, point `COMPASS_PARENT_REMOTE_BASE
 at its folder and add commits to it, so nothing reaches the network. A script
 named `git` on the PATH stands in for a host that cannot be reached.
 
-Scenario ids: `PUG-1` to `PUG-13`. Each test name starts with its scenario id.
+Scenario ids: `PUG-1` to `PUG-16`. Each test name starts with its scenario id.
 """
 from __future__ import annotations
 
@@ -499,4 +499,77 @@ def test_pug_13_the_parent_lookup_is_one_function():
     mod = _update()
     assert callable(mod._chain_parents)
     source = Path(mod.__file__).read_text(encoding="utf-8")
-    assert len(re.findall(r"parents\.resolve\(", source)) == 1
+    assert len(re.findall(r"parents\.resolve_chain\(", source)) == 1
+    assert not re.search(r"parents\.resolve\(", source)
+
+
+# --- PUG-14 to PUG-16: the parent has parents of its own ---------------------------------
+
+BASE_V1 = {"schema": 1, "owner": "platform-team",
+           "approaches": {"regular": {"set": {"subtask_ceiling": 1}}}}
+BASE_V2 = {"schema": 1, "owner": "platform-team",
+           "approaches": {"regular": {"set": {"subtask_ceiling": 2}}}}
+
+
+def _bank(base_sha, base_ref="main", **more):
+    return {"schema": 1, "owner": "platform-team",
+            "extends": f"github:acme/base@{base_ref}#{base_sha}", **more}
+
+
+def _chained(world):
+    """`acme/base` holds the ceiling, and `acme/bank` (the project's parent) extends
+    it. The first commit of each is pinned."""
+    base_first = make_remote(world.base, repo="base", files={"compass.yml": _dump(BASE_V1)})
+    world.repo.joinpath("compass.yml").write_text(_dump(_bank(base_first)), encoding="utf-8")
+    _git(world.repo, "commit", "--quiet", "-am", "chain")
+    bank_first = _git(world.repo, "rev-parse", "HEAD")
+    base_repo = world.base / "acme" / "base.git"
+    return base_repo, base_first, bank_first
+
+
+def test_pug_14_a_waiver_is_checked_against_the_whole_chain_not_the_nearest_parent(world):
+    base_repo, base_first, bank_first = _chained(world)
+    (base_repo / "compass.yml").write_text(_dump(BASE_V2), encoding="utf-8")
+    _git(base_repo, "commit", "--quiet", "-am", "base two")
+    base_second = _git(base_repo, "rev-parse", "HEAD")
+    bank_second = world.advance(_bank(base_second))      # the nearest parent sets no ceiling
+    world.project(sha=bank_first)
+    made = _update().plan(world.root)
+    [waiver] = made.waivers
+    assert waiver.status == "invalidated"
+    [change] = waiver.invalidations
+    assert (change.field, change.old, change.new) == ("subtask_ceiling", 1, 2)
+    out, _ = _run(world, interactive=True, answers=("y", "jed72", "y"))
+    assert out.status == "applied" and f"#{bank_second}" in world.text()
+
+
+def test_pug_15_a_new_commit_that_makes_the_chain_too_deep_is_refused(world):
+    _, base_first, bank_first = _chained(world)
+    previous, name = base_first, "base"
+    for nxt in ("one", "two", "three"):
+        previous = make_remote(world.base, repo=nxt, files={"compass.yml": _dump(
+            {"schema": 1, "owner": "platform-team",
+             "extends": f"github:acme/{name}@main#{previous}"})})
+        name = nxt
+    world.advance({"schema": 1, "owner": "platform-team",
+                   "extends": f"github:acme/three@main#{previous}"})
+    world.project(sha=bank_first)
+    before = world.text()
+    out, _ = _run(world, yes=True)
+    assert (out.status, out.refusal[0], out.written) == ("refused", "new-parent-invalid", False)
+    assert "L-PARENT-CHAIN" in out.refusal[1] and world.text() == before
+
+
+def test_pug_16_an_edited_cache_of_an_ancestor_of_the_current_pin_stops_the_move(world):
+    from compass_pkg import parents
+    from compass_pkg.core import CompassError
+    _, base_first, bank_first = _chained(world)
+    world.advance({**_bank(base_first), "owner": "platform-team-two"})
+    world.project(sha=bank_first)
+    parents.resolve_chain(world.root, f"github:acme/bank@main#{bank_first}", fetch=True)
+    cached = (world.root / ".compass" / "cache" / "parents" / "acme" / "base" / base_first
+              / "compass.yml")
+    cached.write_text(_dump(BASE_V2), encoding="utf-8")
+    with pytest.raises(CompassError) as caught:
+        _update().plan(world.root)
+    assert "edited" in str(caught.value)

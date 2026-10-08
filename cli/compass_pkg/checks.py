@@ -535,7 +535,8 @@ def _check_gate_evidence(task, task_dir):
 
 def _parse_dod_lines(task_dir):
     """Read verification-report.md from task_dir and return a list of DoD
-    line strings found under the "Definition of Done" heading.
+    line strings found under the "Definition of Done" heading and under the
+    heading of every other exit list ("<Stage> exit list").
 
     Returns an empty list if the file is absent or the section is missing.
     This is the correct backward-compat behaviour (TRC-X4): no file → no
@@ -554,17 +555,20 @@ def _parse_dod_lines(task_dir):
     dod_lines = []
     for line in lines:
         stripped = line.rstrip("\n")
-        # Detect the heading - allow any heading level (##, ###, ####)
-        if stripped.strip().lstrip("#").strip() == "Definition of Done":
-            in_dod = True
+        # Detect the heading - allow any heading level (##, ###, ####). Every
+        # exit list's section counts, not only the Definition of Done.
+        if stripped.strip().startswith("#"):
+            # A heading ends the section before it and may open the next.
+            in_dod = bool(_EXIT_HEADING_RE.match(stripped.strip().lstrip("#").strip()))
             continue
         if in_dod:
-            # A new heading (line starting with #) ends the section
-            if stripped.strip().startswith("#"):
-                break
             dod_lines.append(stripped)
     return dod_lines
 
+# The headings of an exit list's section: `Definition of Done`, and
+# `<Stage> exit list` for any other stage. `stage_lists.list_heading` writes
+# them; a test pins that the two agree.
+_EXIT_HEADING_RE = _re.compile(r"^(?:Definition of Done|[A-Za-z0-9_-]+ exit list)$")
 _DOD_ITEM_RE = _re.compile(r"^\s*-\s+\[([ xX])\]\s*(.*)")
 _EVIDENCE_TAG_RE = _re.compile(r"\(evidence:\s*(EV-[^\)]+)\)")
 # Both id spellings and both tag words. FU- is what the templates write

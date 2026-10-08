@@ -159,6 +159,7 @@ compass issue use          make an issue the current one, for this session
 compass issue dashboard    the per-issue review page
 compass issue artifact     set a document's status in the review pack
 compass issue artifact-path  where one of an issue's documents is
+compass issue template     a document template with its checklists rendered from the stage lists
 compass issue set-status   queued | active | parked | landed | abandoned
 compass issue subtask      record, resume and package a multiagent run's subtasks
 compass acceptance start   open an honest record where there is no natural red

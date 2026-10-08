@@ -20,7 +20,9 @@ How a check is judged:
 - `human`: a tick, a checked box in a checklist document of the issue. The
   document is the requirements review for an entry list and the verification
   report for an exit list. The box is the one whose text equals the check's
-  statement, under the heading `Definition of Ready` or `Definition of Done`.
+  statement, under the heading of its list (`list_heading`): `Definition of
+  Ready` for the plan entry list, `Definition of Done` for the `verify` exit
+  list and `<Stage> <side> list` for any other.
   An unchecked box that carries a typed tag (`(evidence: ...)` or
   `(follow-up: ...)`) that resolves counts as deferred and passes. The tag is
   resolved by `checks.dod_tag_problems`, the code `dod-evidence-typed` uses.
@@ -41,7 +43,8 @@ An advisory check, by `severity` or by a `blocking_when` that does not match
 the assessment, reports a failure as a pass that says so.
 """
 # DEPENDENCY: standard library (dataclasses, os, re); compass_pkg.check_registry,
-# compass_pkg.check_results, compass_pkg.core, compass_pkg.next_cmd.
+# compass_pkg.check_results, compass_pkg.core, compass_pkg.next_cmd,
+# compass_pkg.stable_ids.
 # It reads configuration through an EffectiveView and does not import
 # compass_pkg.obligations, which only classify, effective and replay may import.
 from __future__ import annotations
@@ -53,6 +56,7 @@ from dataclasses import dataclass
 from compass_pkg.check_registry import CHECK_FNS
 from compass_pkg.check_results import NOTHING_TO_CHECK
 from compass_pkg.core import FOUND, OMITTED, resolve_artifact, unregistered_document
+from compass_pkg.stable_ids import STAGE_PLAN, STAGE_VERIFY
 
 CAPABILITY = "entry-exit-evaluation"
 SIDES = ("entry", "exit")
@@ -60,10 +64,21 @@ SIDES = ("entry", "exit")
 #: over the same two.
 SKIPPED_MODES = ("skipped", "collapsed")
 
-#: Where the ticks of a list are: the document kind and the heading its
-#: checklist sits under.
-CHECKLISTS = {"entry": ("requirements-review", "Definition of Ready"),
-              "exit": ("verification-report", "Definition of Done")}
+#: The document kind that holds the ticks of each side's lists.
+CHECKLIST_DOCUMENTS = {"entry": "requirements-review", "exit": "verification-report"}
+
+#: The two lists the templates have always worded, each under its own heading.
+NAMED_HEADINGS = {(STAGE_PLAN, "entry"): "Definition of Ready",
+                  (STAGE_VERIFY, "exit"): "Definition of Done"}
+
+
+def list_heading(stage, side):
+    """The heading a stage's list sits under in its checklist document. The
+    plan entry list and the `verify` exit list keep their long-standing names;
+    any other list is headed `<Stage> <side> list`, for example
+    `Implement exit list`. The templates render from this and the ticks and the
+    tag rule read from it, so a heading means one list."""
+    return NAMED_HEADINGS.get((stage, side)) or f"{stage[:1].upper()}{stage[1:]} {side} list"
 
 #: What a skipped check returns, by its `on_skipped`.
 SKIPPED_STATUS = {"pass": "pass", "not-applicable": "nothing-to-check", "fail": "fail"}
@@ -146,24 +161,25 @@ class _Documents:
         self.task_dir = task_dir
         self._cache = {}
 
-    def get(self, side):
-        if side not in self._cache:
-            kind, heading = CHECKLISTS[side]
+    def get(self, stage, side):
+        if (stage, side) not in self._cache:
+            kind = CHECKLIST_DOCUMENTS[side]
+            heading = list_heading(stage, side)
             state, path = _document(self.task_dir, kind)
             items = _items(path, heading) if state == "found" else None
-            self._cache[side] = (state, path, kind + ".md", heading, items)
-        return self._cache[side]
+            self._cache[(stage, side)] = (state, path, kind + ".md", heading, items)
+        return self._cache[(stage, side)]
 
 
-def _tick(check, side, documents, task, owes):
+def _tick(check, stage, side, documents, task, owes):
     """`(status, detail)` of a human check, or None when its document is
     recorded as omitted (the check is skipped). `owes` is `(approach, kinds)`,
     the document kinds the routed approach lists among its artifacts, or None
     when the approach is not known."""
-    state, path, name, heading, items = documents.get(side)
+    state, path, name, heading, items = documents.get(stage, side)
     if state == "omitted":
         return None
-    kind = CHECKLISTS[side][0]
+    kind = CHECKLIST_DOCUMENTS[side]
     if state == "absent":
         if owes is not None and kind not in owes[1]:
             return "nothing-to-check", f"{owes[0]} owes no {kind}"
@@ -322,9 +338,9 @@ def _outcome(check, kind, side, stage, producer, modes, task, task_dir, document
         return (_skipped(check),
                 f"{source} is {mode}; on_skipped is {check.get('on_skipped')}", True)
     if kind == "human":
-        ticked = _tick(check, side, documents, task, owes)
+        ticked = _tick(check, stage, side, documents, task, owes)
         if ticked is None:
-            return (_skipped(check), f"{CHECKLISTS[side][0]} is recorded as omitted; "
+            return (_skipped(check), f"{CHECKLIST_DOCUMENTS[side]} is recorded as omitted; "
                                      f"on_skipped is {check.get('on_skipped')}", True)
         # The one nothing-to-check a tick gives is a route that owes no document.
         return (*ticked, ticked[0] == "nothing-to-check")

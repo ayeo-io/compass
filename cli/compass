@@ -342,6 +342,11 @@ def build_parser():
 
     ptap = pts.add_parser("artifact-path", help="print where one of an issue's documents is; non-zero when it is not there")
     ptap.add_argument("kind", help="document kind, e.g. delivery-approach"); issue_arg(ptap); ptap.set_defaults(func=cmd_issue_artifact_path, output_kind="hand-off")
+    ptt = pts.add_parser("template", help="print a document template with its checklists rendered from the issue's stage lists")
+    ptt.add_argument("kind", help="template kind, e.g. requirements-review or verification-report")
+    issue_arg(ptt)
+    from compass_pkg.template_lists import cmd_issue_template as _cmd_issue_template
+    ptt.set_defaults(func=_cmd_issue_template, output_kind="hand-off")
     register_subtask_parser(pts, issue_arg)
     ptss = pts.add_parser("set-status",
                           help="set an issue's lifecycle status (queued|active|parked|landed|abandoned)")

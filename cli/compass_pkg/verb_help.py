@@ -57,6 +57,8 @@ VERB_DESCRIPTIONS = {
         "Set a document's status in the issue's review pack. Refuses a document the issue never earned, and an omission must carry a reason - an omission with no reason is indistinguishable from a document nobody got to.",
     'issue artifact-path':
         "Print where one of an issue's documents is, resolved through the artifact registry, and exit 0. Exit non-zero and print nothing when it is not there - a caller in bash reads the exit code before it reads the string. The two hooks call this: they are shell and cannot import the resolver, and a second path-resolution implementation in bash is how the shell half and the Python half stop agreeing about where a document lives.",
+    'issue template':
+        "Print a document template with its checklists rendered from the issue's stage lists: the Definition of Ready in requirements-review and the Definition of Done in verification-report, plus a section for a list on any other stage. A project with the shipped default gets the template file unchanged. Any other template prints as the file. Write the document from this output rather than from the template file, so the checklist matches the lists the issue runs against. --issue names the issue, else the current one. --json gives one object with the keys kind, issue, source (generation, live or none) and text.",
     'issue dashboard':
         'Render the per-issue review page a reviewer opens first - what is being asked for approval, which documents exist, which were deliberately left out and why. Evidence is linked rather than reproduced. Generated, never hand-edited.',
     'issue lint':

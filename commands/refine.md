@@ -81,9 +81,9 @@ is for. The same split is written from the other side in
 3. **Resolve.** For each ambiguity, either resolve it (update
    `acceptance-criteria.md`) or record it as an open question with an owner.
    An unresolved ambiguity is not allowed to silently pass into design.
-4. **Write `requirements-review.md`** from
-   `${CLAUDE_PLUGIN_ROOT}/templates/requirements-review.md`: the ambiguity ledger, each entry
-   resolved or assigned.
+4. **Write `requirements-review.md`** from the output of
+   `compass issue template requirements-review`, which renders the checklist from the
+   issue's entry lists: the ambiguity ledger, each entry resolved or assigned.
 
    **Where it goes.** `docs/compass/<created>-<issue-slug>/requirements-review.md`, where the
    date is the manifest's `created:` field - not today's. On an approach that

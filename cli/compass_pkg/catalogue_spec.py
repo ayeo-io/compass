@@ -65,7 +65,8 @@ VALUE_DOMAINS = (
 )
 
 # The keys that hold a condition on the assessment, and the names of the size
-# dimension a condition may use (`magnitude` is the older spelling).
+# dimension a condition may use (the second is an older spelling that
+# `core.WHEN_KEY_MAP` still reads).
 PREDICATE_KEYS = ("when", "blocking_when", "applies_when", "applies_to")
 SIZE_KEYS = ("size", "magnitude")
 

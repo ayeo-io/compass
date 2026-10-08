@@ -417,12 +417,12 @@ def backup_and_notice(path, raw, rows=None):
     return changes
 
 
-def prepare(task, path, raw, rows=None):
-    """The mapping to write for `task`: it keeps the backup and says what it
-    rewrites (`backup_and_notice`), then returns `task` in the new words. A
-    task with nothing to map comes back as the same object."""
+def prepare(manifest, path, raw, rows=None):
+    """The mapping to write for `manifest`: it keeps the backup and says what
+    it rewrites (`backup_and_notice`), then returns the manifest in the new
+    words. A manifest with nothing to map comes back as the same object."""
     rows = tables() if rows is None else rows
     backup_and_notice(path, raw, rows)
-    changes, probe = [], copy.deepcopy(task)
+    changes, probe = [], copy.deepcopy(manifest)
     _map_manifest(probe, rows, changes)
-    return probe if changes else task
+    return probe if changes else manifest

@@ -256,6 +256,7 @@ class _CheckRun:
         self.ran = 0
         self.failures = 0
         self.nothing = 0
+        self.refused = set()  # checks not run because their implementation major differs
         self.advisory = 0
 
     def line(self, text):
@@ -297,7 +298,7 @@ def _verbose_lines(run):
                 out.append("    FAIL %s" % name)
                 out.append("         what: %s" % detail)
                 g = CHECK_GUIDANCE.get(name)
-                if g:
+                if g and name not in run.refused:
                     out.append("         why : %s" % g["why"])
                     out.append("         fix : %s" % g["fix"])
     out += ["-" * 60,
@@ -316,6 +317,7 @@ def _summary_lines(run):
     says "3 checks failed" without saying which is not something a reader can
     act on, and a check name is its identifier (ADR-017).
     """
+    from compass_pkg.impl_versions import COMMAND
     from compass_pkg.terminal import MAX_ITEMS, _fit
 
     # Deduplicated by check name. Several checks are listed under more than
@@ -396,7 +398,9 @@ def _summary_lines(run):
     for name, detail in failed[:MAX_ITEMS]:
         out.append(_fit("%s: %s" % (name, detail), "FAIL "))
         g = CHECK_GUIDANCE.get(name)
-        if g and g.get("do"):
+        if name in run.refused:
+            out.append(_fit("Run `%s --issue %s`." % (COMMAND, run.slug), "     fix: "))
+        elif g and g.get("do"):
             out.append(_fit(g["do"], "     fix: "))
     hidden = failed[MAX_ITEMS:]  # drawn from the same set the verdict counts
     if hidden:
@@ -463,7 +467,10 @@ def _emit_check(run, args):
     # The verdicts go into the generation's `results.yml`, which the generation's
     # marker does not cover. An issue with no generation writes nothing.
     from compass_pkg import effective
-    effective.record_check_results(run.task_dir, _verdicts(run.results), manifest=run.task)
+    # A refused check did not run, so it has no result to record.
+    effective.record_check_results(
+        run.task_dir, _verdicts([r for r in run.results if r[1] not in run.refused]),
+        manifest=run.task)
 
     mark_handled()
     mode = resolve_mode(args)
@@ -479,7 +486,8 @@ def _emit_check(run, args):
                 "parent_version": run.view.parent_version()}
                if run.view is not None else {}),
             "checks": [{"guardrail": g, "name": n,
-                        "status": ("nothing-to-check"
+                        "status": ("refused" if n in run.refused else
+                                   "nothing-to-check"
                                    if p is NOTHING_TO_CHECK else
                                    "advisory" if p is ADVISORY_FAILURE else
                                    "pass" if p else "fail"),
@@ -502,34 +510,36 @@ def _emit_check(run, args):
 
 
 def _stage_list_pass(run, view, task, task_dir):
-    """Add one result per due check of each stage list, when the capability
-    `entry-exit-evaluation` is on, and return `(ran, failed, nothing)` for them.
-    A list is a guardrail of its own, labelled `stage:<stage>:<entry|exit>`. A
-    project without the capability, or an issue without a configuration,
-    adds nothing."""
+    """Add one result per due, active check of each stage list, and return
+    `(ran, failed, nothing, advisory)` for them. A list is a guardrail of its own,
+    labelled `stage:<stage>:<entry|exit>`. The shipped checks are active only
+    where `entry-exit-evaluation` is on, so a project that has not turned it
+    on and added no check of its own gets none. An issue without a
+    configuration adds nothing."""
     from compass_pkg import stage_lists
 
-    if not stage_lists.enabled(view):
-        return 0, 0, 0
+    if view is None:
+        return 0, 0, 0, 0
     try:
         rows = stage_lists.due_rows(stage_lists.evaluate(view, task, task_dir))
     except Exception as exc:                            # noqa: BLE001
         # A check must not crash the run.
         run.guardrail("stage-lists", "stage lists")
         run.result("stage-lists", False, f"evaluation errored: {exc}")
-        return 1, 1, 0
-    failed = nothing = 0
+        return 1, 1, 0, 0
+    failed = nothing = advisory = 0
     current = None
     for row in rows:
         if (row.stage, row.side) != current:
             current = (row.stage, row.side)
             run.guardrail(row.label, "%s checks of %s" % (row.side, row.stage))
-        passed = {"pass": True, "fail": False,
-                  "nothing-to-check": NOTHING_TO_CHECK}[row.status]
+        passed = {"pass": True, "fail": False, "nothing-to-check": NOTHING_TO_CHECK,
+                  "advisory": ADVISORY_FAILURE}[row.status]
         failed += passed is False
         nothing += passed is NOTHING_TO_CHECK
+        advisory += passed is ADVISORY_FAILURE
         run.result(row.check, passed, row.detail)
-    return len(rows), failed, nothing
+    return len(rows), failed, nothing, advisory
 
 
 def _freshness_pass(run, view, task, task_dir):
@@ -635,7 +645,18 @@ def cmd_check(args):
         guardrails = view.guardrail_gates()
     impls = guardrails.get("impl") or {}
     matches = view.matches if view is not None else reading_matches
+    # A check built for another major is refused rather than run (ADR-038).
+    from compass_pkg import impl_versions
+    from compass_pkg.core import CompassError
+    refusals = impl_versions.refusals(task_dir, task)
+    if refusals.run:
+        raise CompassError(refusals.run)
+    refused = refusals.checks
     readings = task.get("assessment") or {}
+    if view is not None:
+        # A `when`, `applies_when` or `blocking_when` reads one derived key
+        # beside the assessment: `ships` (ADR-037, the amendment of 2026-10-08).
+        readings = view.listing_assessment(readings, task.get("delivery_approach"))
 
     # A spike ships nothing, so the delivery guardrails (`G1`-`G5`) do not apply.
     # It is still controlled: it must conclude, and it must not change
@@ -669,10 +690,14 @@ def cmd_check(args):
                                "declared spike guardrail check has NO CLI "
                                "implementation")
                     continue
-                try:
-                    passed, detail = fn(task, task_dir)
-                except Exception as exc:
-                    passed, detail = False, f"check errored: {exc}"
+                if impls.get(check_name, check_name) in refused:
+                    run.refused.add(check_name)
+                    passed, detail = False, refused[impls.get(check_name, check_name)]
+                else:
+                    try:
+                        passed, detail = fn(task, task_dir)
+                    except Exception as exc:
+                        passed, detail = False, f"check errored: {exc}"
                 passed, detail = _judge(
                     passed, detail,
                     (guardrails.get("checks") or {}).get(check_name) or {},
@@ -683,10 +708,12 @@ def cmd_check(args):
                     failures += 1
                 run.result(check_name, passed, detail)
 
-        listed_ran, listed_failed, _nothing = _stage_list_pass(run, view, task, task_dir)
+        listed_ran, listed_failed, listed_nothing, listed_advisory = _stage_list_pass(
+            run, view, task, task_dir)
         ran += listed_ran
         failures += listed_failed
-        run.nothing += _nothing
+        run.nothing += listed_nothing
+        run.advisory += listed_advisory
         ran += 1
         if not _assessment_keys_pass(run, task):
             failures += 1
@@ -694,10 +721,14 @@ def cmd_check(args):
         # owes one - a graduating spike leaves deferred work behind by
         # design - so the spike branch must reach the follow-up block below.
         ran += 1
-        try:
-            passed, detail = _check_backfills_paid(task, task_dir)
-        except Exception as exc:                        # noqa: BLE001
-            passed, detail = False, f"check errored: {exc}"
+        if "backfills-paid" in refused:
+            run.refused.add("backfills-paid")
+            passed, detail = False, refused["backfills-paid"]
+        else:
+            try:
+                passed, detail = _check_backfills_paid(task, task_dir)
+            except Exception as exc:                    # noqa: BLE001
+                passed, detail = False, f"check errored: {exc}"
         run.guardrail("", "outstanding follow-ups")
         run.result("backfills-paid", passed, detail)
         if not passed:
@@ -796,10 +827,14 @@ def cmd_check(args):
                                                  "asked to"))
                     continue
 
-            try:
-                passed, detail = fn(task, task_dir)
-            except Exception as exc:  # a check must not crash the run
-                passed, detail = False, f"check errored: {exc}"
+            if implementation in refused:
+                run.refused.add(check_name)
+                passed, detail = False, refused[implementation]
+            else:
+                try:
+                    passed, detail = fn(task, task_dir)
+                except Exception as exc:  # a check must not crash the run
+                    passed, detail = False, f"check errored: {exc}"
 
             # A check declares `blocking_when`, `severity` and `on_skipped` as
             # data, in the configuration the issue runs against. Below the
@@ -820,10 +855,12 @@ def cmd_check(args):
             run.result(check_name, passed, detail)
 
     # The stage lists run when the capability `entry-exit-evaluation` is on.
-    listed_ran, listed_failed, listed_nothing = _stage_list_pass(run, view, task, task_dir)
+    listed_ran, listed_failed, listed_nothing, listed_advisory = _stage_list_pass(
+        run, view, task, task_dir)
     ran += listed_ran
     failures += listed_failed
     nothing_to_check += listed_nothing
+    advisory += listed_advisory
     # The freshness pass runs when the capability `artifact-freshness` is on.
     fresh_ran, fresh_failed, fresh_nothing = _freshness_pass(run, view, task, task_dir)
     ran += fresh_ran
@@ -834,12 +871,16 @@ def cmd_check(args):
         failures += 1
     # follow-ups are cross-cutting - always run them
     ran += 1
-    try:
-        # Wrap this one too: a malformed `follow_ups:` list must not crash
-        # check, receipt, rework-scan, flow --digest or ci.
-        passed, detail = _check_backfills_paid(task, task_dir)
-    except Exception as exc:                            # noqa: BLE001
-        passed, detail = False, f"check errored: {exc}"
+    if "backfills-paid" in refused:
+        run.refused.add("backfills-paid")
+        passed, detail = False, refused["backfills-paid"]
+    else:
+        try:
+            # Wrap this one too: a malformed `follow_ups:` list must not crash
+            # check, receipt, rework-scan, flow --digest or ci.
+            passed, detail = _check_backfills_paid(task, task_dir)
+        except Exception as exc:                        # noqa: BLE001
+            passed, detail = False, f"check errored: {exc}"
     run.guardrail("", "outstanding follow-ups")
     run.result("backfills-paid", passed, detail)
     if not passed:

@@ -10,7 +10,7 @@ The code is `cli/compass_pkg/review_records.py` (reading a record and judging
 it) and `cli/compass_pkg/review_cmd.py` (the command).
 `cli/compass_pkg/stage_lists.py` calls the first for each judged check in a
 stage's entry or exit list (see `docs/entry-exit-evaluation.md`). The
-decisions behind it are ADR-035 (checks are data) and ADR-037 (what a
+decisions behind it are ADR-033 (checks are data) and ADR-037 (what a
 configuration change owes).
 
 ## Declaring a judged check
@@ -28,9 +28,9 @@ checks:
 
 | Field | Meaning |
 |---|---|
-| `statement` | What is judged. Changing it changes the definition, so an earlier review no longer counts |
+| `statement` | What is judged. The digest of the check's definition covers every field of the check (`statement`, `inputs`, `reviewers`, `severity`, `on_skipped` and the rest), so changing any of them re-owes the review |
 | `inputs` | The artifact ids or evidence ids the reviewer read. A check with no `inputs` cannot be reviewed and fails in a list |
-| `reviewers` | Who may review. `agent` is any agent session, any other entry is a person's id. The default is `[agent]`. A role matches nobody, because no role to person mapping exists yet |
+| `reviewers` | Who may review. `agent` is any agent session, `agent:<id>` is one session, and any other entry is read as a person's id. A role is therefore matched as a person id; resolving roles is later work. The default is `[agent]` |
 
 An input that is an evidence id names the file of that evidence entry. Any
 other input is a document of the issue, found as every document is. The digest
@@ -45,6 +45,7 @@ with `check: <check id>`:
 ```yaml
 schema: 1
 check: design-review
+issue: my-issue
 verdict: pass
 reason: Sections 2 to 6 read; it holds.
 reviewer: {kind: person, id: jed72}
@@ -63,12 +64,20 @@ after it was written, one with no stamp, one with no file and one for another
 check is not a record.
 
 A record is never overwritten. A second review of the same check is a new
-record, and the newest registered record decides. A later `fail` therefore
+record, and the newest registered record by a listed reviewer decides. A
+record by a reviewer the check does not list is set aside: it can neither
+clear the check nor block it. A later `fail` by a listed reviewer therefore
 overrides an earlier `pass`, and a new `pass` clears a `fail`.
+
+A record is bound to its issue and its generation. `issue` is the slug of the
+issue it was written in, so a record copied into another issue is not a record
+there. A different generation than the one in force re-owes the review, as a
+changed input does.
 
 ## When a judged check passes
 
-It passes only when the newest record meets all four conditions:
+It passes only when the deciding record (the newest by a listed reviewer)
+meets all four conditions:
 
 1. the record is a record, as above;
 2. its `verdict` is `pass`;
@@ -83,8 +92,8 @@ with it:
 |---|---|
 | `no review record` | The check has no registered record, or its newest record is not usable. The detail names the command to run, or says why the record is unusable |
 | `verdict is fail` | The newest record says `fail`. The detail gives the reviewer and the reason |
-| `reviewer not listed` | The reviewer is not in `reviewers`. The detail names who reviewed and who the check lists |
-| `input changed since review` | An input has other bytes, is missing, or is not the set the review covered, or the definition of the check changed. The detail names each |
+| `reviewer not listed` | Every usable record is by a reviewer not in `reviewers`. The detail names who reviewed the newest and who the check lists |
+| `input changed since review` | An input has other bytes, is missing, or is not the set the review covered, or the definition of the check or the generation changed. The detail names each |
 
 A changed input or definition re-owes the review: the same check fails
 again until someone reviews the current inputs. The change of the definition
@@ -93,8 +102,8 @@ review for the same reason an input does.
 
 A judged check follows the rules of every check in a list. It is `pending`
 until its list is due, it gives its `on_skipped` verdict when its stage is
-skipped or collapsed, and an advisory one reports a failure as a pass that
-says so. `compass issue receipt` reads the records and shows the real verdict.
+skipped or collapsed, and an advisory one reports a failure with the
+`advisory` status, which does not fail the run. `compass issue receipt` reads the records and shows the real verdict.
 
 Reviewer identity is not authenticated. This is the same limit as
 `human-approval`: a name in a field is a claim, not a proof.

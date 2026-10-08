@@ -34,8 +34,12 @@ def parse_reviewer(text):
                            "`agent`, `agent:<session id>` or a person's id.")
     if text == review_records.AGENT:
         return {"kind": "agent", "id": review_records.AGENT}
-    if text.startswith(review_records.AGENT + ":") and text[len(review_records.AGENT) + 1:]:
-        return {"kind": "agent", "id": text[len(review_records.AGENT) + 1:]}
+    if text.startswith(review_records.AGENT + ":"):
+        session = text[len(review_records.AGENT) + 1:].strip()
+        if not session:
+            raise CompassError("compass evidence review: --reviewer 'agent:' names no "
+                               "session; give `agent:<session id>` or `agent`.")
+        return {"kind": "agent", "id": session}
     return {"kind": "person", "id": text}
 
 
@@ -58,19 +62,24 @@ def _check_of(view, check_id):
     return check
 
 
-def _numbered(task, check_id):
-    """The next number for a record of the check, and an evidence id no entry
-    already uses."""
+def _numbered(task, task_dir, check_id):
+    """The next number for a record of the check: one that no evidence id and
+    no file in `evidence/` already uses, and the evidence id for it."""
     taken = {e.get("id") for e in task.get("evidence") or [] if isinstance(e, dict)}
     number = 1 + len([e for e in task.get("evidence") or []
                       if isinstance(e, dict) and e.get("check") == check_id])
-    while f"EV-REVIEW-{check_id}-{number}" in taken:
+    safe = re.sub(r"[^A-Za-z0-9._-]", "-", check_id)
+    while (f"EV-REVIEW-{check_id}-{number}" in taken
+           or os.path.exists(os.path.join(task_dir, f"evidence/review-{safe}-{number}.yml"))):
         number += 1
     return number, f"EV-REVIEW-{check_id}-{number}"
 
 
 def cmd_evidence_review(args):
     check_id = args.check
+    if args.verdict not in VERDICTS:
+        raise CompassError(f"compass evidence review: the verdict must be one of "
+                           f"{' or '.join(VERDICTS)}, not '{args.verdict}'.")
     reason = " ".join(str(args.reason or "").split())
     if not reason:
         raise CompassError("compass evidence review: --reason must say what was judged "
@@ -89,11 +98,11 @@ def cmd_evidence_review(args):
         raise CompassError(f"compass evidence review: {', '.join(missing)} cannot be found, "
                            f"so '{check_id}' cannot be reviewed. Write the document or "
                            f"register the evidence, then review again.")
-    number, evidence_id = _numbered(task, check_id)
+    number, evidence_id = _numbered(task, task_dir, check_id)
     safe = re.sub(r"[^A-Za-z0-9._-]", "-", check_id)
     path = f"evidence/review-{safe}-{number}.yml"
-    record = {"schema": 1, "check": check_id, "verdict": args.verdict, "reason": reason,
-              "reviewer": reviewer}
+    record = {"schema": 1, "check": check_id, "issue": os.path.basename(os.path.normpath(task_dir)),
+              "verdict": args.verdict, "reason": reason, "reviewer": reviewer}
     if args.scope:
         record["scope"] = " ".join(str(args.scope).split())
     record.update({"inputs": inputs, "generation": task.get("generation") or None,

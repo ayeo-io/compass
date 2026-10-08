@@ -150,12 +150,15 @@ compass tdd-red            run a test, assert it FAILS, record the red
 compass tdd-green          run a test, assert it PASSES, record the green
 compass policy lint        structurally validate the governance YAML
 compass policy review-rules  the review rules that apply to the changed files
+compass policy diff        compare two configurations: what one accepts that the other does not
 compass plan lint          scan a technical design for placeholder phrases
 compass intent ingest      read a brief that already exists, by path or https URL
 compass issue lint         structurally validate an issue manifest
 compass issue receipt      one screen: assessment, approach, gates, evidence
 compass issue diagnose     explain one run from its own records: stages, timeline, deviations
 compass issue use          make an issue the current one, for this session
+compass issue configure    propose, preview, discard or recover a change to one issue's own configuration
+compass issue migrate-config  pin an issue's configuration to the installed check versions
 compass issue dashboard    the per-issue review page
 compass issue artifact     set a document's status in the review pack
 compass issue artifact-path  where one of an issue's documents is

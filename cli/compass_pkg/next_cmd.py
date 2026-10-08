@@ -249,15 +249,13 @@ def _current_phase_from_task(task: dict, task_dir: str | None = None) -> str | N
 
 
 def _unmet_entry(task: dict, task_dir: str, stage: str) -> list:
-    """The ids of the entry checks of `stage` that fail, when the capability
-    `entry-exit-evaluation` is on for the issue; none otherwise. `compass next`
-    must still name a stage when the configuration cannot be read, so any
-    fault gives none."""
+    """The ids of the active entry checks of `stage` that fail (the shipped
+    checks only where `entry-exit-evaluation` is on). `compass next` must
+    still name a stage when the configuration cannot be read, so any fault
+    gives none."""
     try:
         from compass_pkg import effective, stage_lists
         view = effective.view_or_legacy(task_dir)
-        if not stage_lists.enabled(view):
-            return []
         return stage_lists.unmet_entry(stage_lists.evaluate(view, task, task_dir), stage)
     except Exception:  # noqa: BLE001 - the stage line is the answer; this is extra
         return []

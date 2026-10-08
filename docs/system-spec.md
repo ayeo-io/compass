@@ -50,11 +50,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### The approach diagram of a project with a compass.yml renders the effective configuration
+### Given a spike with an advisory guardrail check that fails, then the run passes and shows the failure as advisory
 
-- **Scenario id:** `EF-12`
+- **Scenario id:** `CS-11`
 - **Intent:** `INT-1`
-- **Source issue:** `effective-readers`
+- **Source issue:** `check-severity-from-generation`
 - **Landed:** 2026-10-08
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -353,4 +353,4 @@
 
 ---
 
-1875 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1904 superseded scenario(s) are in `docs/system-spec-archive.md`.

@@ -223,5 +223,5 @@ gives the same bytes.
 ## What this page does not cover
 
 - A stored generation (`generation:<slug>:<n>`) and the git parent form. Both wait for the pieces they need.
-- `compass policy update` and `compass policy migrate`, which call the same replay later.
+- `compass policy update`, which `docs/policy-update.md` covers, and `compass policy migrate`. Both call the same replay.
 - The classifier's own shape, which `governance/routing-policy.md` describes.

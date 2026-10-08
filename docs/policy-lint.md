@@ -48,7 +48,7 @@ earlier one. Warnings never stop it and never fail it.
 
 | Group | What it checks | Codes |
 |---|---|---|
-| `layer` | Each layer alone, before anything merges | `L-LOAD`, `L-KEY-NOT-TEXT`, `L-SCHEMA`, `L-SETTINGS-KEY`, `L-UNLOCK-PLACEMENT`, `L-IMPL-UNKNOWN`, `L-IMPL-TEMPLATED`, `W-APPROVED-ON-ISSUE`, `L-IGNORED-FILE` (warning), the ten `L-PARENT-*` codes below for a git parent, and the four `S-PARENT-*` state codes |
+| `layer` | Each layer alone, before anything merges | `L-LOAD`, `L-KEY-NOT-TEXT`, `L-SCHEMA`, `L-SETTINGS-KEY`, `L-UNLOCK-PLACEMENT`, `L-IMPL-UNKNOWN`, `L-IMPL-TEMPLATED`, `W-APPROVED-ON-ISSUE`, `L-IGNORED-FILE` (warning), the eleven `L-PARENT-*` codes below for a git parent, and the four `S-PARENT-*` state codes |
 | `merge` | The merge grammar, layer by layer. It reports every fault of the first layer that does not apply | the merge's own `M-*` codes, such as `M-ADD-EXISTS`, `M-SET-UNKNOWN`, `M-REF-REMOVED` |
 | `resolved` | The merged result as a whole | `M-REF-UNKNOWN`, `M-WEIGHT-TIE`, `M-HIT-MISSING`, `M-HIT-DISALLOWED`, `M-ALIAS-COLLISION`, `M-CYCLE`, `M-BOOKKEEPING-INPUT`, `M-DIRECTORY-DEPENDENCY`, `M-LIST-KIND-UNEVALUATED` (warning) |
 | `locks` | What the locks above a layer refuse, and each refused unlock | `K-LOCK-REFUSED`, `K-UNLOCK-REFUSED`, `K-UNPROVABLE`, `E-EVALUATION` |
@@ -74,7 +74,8 @@ earlier one. Warnings never stop it and never fail it.
 | `L-PARENT-SHA-MISMATCH` | error | The fetch returned an object other than the pinned one. Nothing is cached |
 | `L-PARENT-SYMLINK` | error | The root `compass.yml` of the fetched commit is a symbolic link. Nothing is cached. No other file in the tree is read |
 | `L-PARENT-CACHE` | error | `.compass/cache` or `.compass/cache/parents` is a symbolic link, a cached parent or its owner or repository folder is a link or resolves outside `.compass/`, or the cache holds a different file for the commit |
-| `L-PARENT-CHAIN` | error | The parent's own `extends:` names a git parent. Chains are not built yet |
+| `L-PARENT-CHAIN` | error | A chain holds more than three git parents. Reported on the third parent, and the fourth is not fetched |
+| `L-PARENT-CYCLE` | error | A parent names a commit that is already in the chain. Reported on the parent that names it |
 | `L-PARENT-SHA-AMBIGUOUS` | error | A short sha names more than one cached commit |
 | `S-PARENT-UP-TO-DATE` | info | A git parent whose cache holds the pin and for which no other commit is known |
 | `S-PARENT-STALE` | warning | `seen.yml` holds another commit for the parent's ref, which this machine fetched last. It can be older or newer than the pin. The pin does not move |

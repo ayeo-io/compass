@@ -467,12 +467,17 @@ def _check_gate_evidence(task, task_dir):
                 if isinstance(e, dict) and e.get("id")}
     # Load the evidence typing rules. The one extra yaml load per `check` run is
     # negligible, and it keeps the check signature simple.
-    try:
-        gpolicy = load_yaml(os.path.join(find_governance(), "guardrails.yml"))
-    except CompassError:
-        gpolicy = {}
-    known_types = set((gpolicy.get("evidence_types") or {}).keys())
-    requirements = gpolicy.get("gate_evidence_requirements") or {}
+    from compass_pkg import effective
+    view = effective.view_or_legacy(task_dir)
+    if view is not None:
+        requirements, known_types = view.gate_requirements()
+    else:
+        try:
+            gpolicy = load_yaml(os.path.join(find_governance(), "guardrails.yml"))
+        except CompassError:
+            gpolicy = {}
+        known_types = set((gpolicy.get("evidence_types") or {}).keys())
+        requirements = gpolicy.get("gate_evidence_requirements") or {}
 
     problems = []
     for g in gates:
@@ -998,13 +1003,17 @@ def _check_command_passes(task, task_dir):
         project_root = os.getcwd()
 
     # Load the guardrails to find project guardrails with check: command-passes
-    try:
-        gov = find_governance()
-        gpolicy = load_yaml(os.path.join(gov, "guardrails.yml"))
-    except CompassError:
-        gpolicy = {}
-
-    project_guardrails = gpolicy.get("project") or []
+    from compass_pkg import effective
+    view = effective.view_or_legacy(task_dir)
+    if view is not None:
+        project_guardrails = view.command_checks()
+    else:
+        try:
+            gov = find_governance()
+            gpolicy = load_yaml(os.path.join(gov, "guardrails.yml"))
+        except CompassError:
+            gpolicy = {}
+        project_guardrails = gpolicy.get("project") or []
     cp_guardrails = [
         g for g in project_guardrails
         if isinstance(g, dict) and "command-passes" in (g.get("checks") or [])

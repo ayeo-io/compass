@@ -85,13 +85,20 @@ def _receipt_resolve_task_dir(args):
     return task_dir, slug, project_root
 
 
-def _receipt_gate_requirements(project_root):
-    """Read gate_evidence_requirements from governance/guardrails.yml.
+def _receipt_gate_requirements(project_root, task_dir=None):
+    """Read gate_evidence_requirements from the issue's generation, or from
+    governance/guardrails.yml.
 
     Returns {gate_id: frozenset(accepted_types)}. {} when the file is absent -
     type-mismatch detection then silently no-ops (degrades gracefully on
-    projects that have not adopted governance, per ADR-006).
+    projects that have not adopted governance, per ADR-006). An issue with a
+    generation always has its requirements.
     """
+    if task_dir is not None:
+        from compass_pkg import effective
+        view = effective.view_or_legacy(task_dir)
+        if view is not None:
+            return {k: frozenset(v) for k, v in view.gate_requirements()[0].items() if v}
     path = os.path.join(project_root, "governance", "guardrails.yml")
     if not os.path.isfile(path):
         return {}
@@ -499,7 +506,7 @@ def cmd_task_receipt(args):
     task = normalize_spine(load_yaml(manifest_path(task_dir)) or {})
     approach_path = artifact_path(task_dir, "delivery-approach.md")
     route_readings = _receipt_parse_route_md_readings(approach_path)
-    gate_requirements = _receipt_gate_requirements(project_root)
+    gate_requirements = _receipt_gate_requirements(project_root, task_dir)
     text = _receipt_render(task, slug, route_readings, gate_requirements,
                            _receipt_parse_orchestration_override(approach_path))
     # What `locks` reports about conformance goes before the verdict, on every

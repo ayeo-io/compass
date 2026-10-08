@@ -12915,3 +12915,87 @@
 - **Intent:** `INT-1`
 - **Source issue:** `lock-proof-under-xdist`
 - **Landed:** 2026-10-07
+
+### A non-text key anywhere in a layer is refused with L-KEY-NOT-TEXT naming its path and telling the person to quote it _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `layer-non-text-key`
+- **Landed:** 2026-10-07
+
+### The reader helper returns the stored view, a live view for a project with a compass.yml, nothing for a legacy project and refuses generation 0 _(archived)_
+
+- **Scenario id:** `EF-1`
+- **Intent:** `INT-1`
+- **Source issue:** `effective-readers`
+- **Landed:** 2026-10-08
+
+### An issue with no generation reads the governance files and prints what it printed before _(archived)_
+
+- **Scenario id:** `EF-10`
+- **Intent:** `INT-1`
+- **Source issue:** `effective-readers`
+- **Landed:** 2026-10-08
+
+### Every read of a governance policy file is in a function that asks the effective view first _(archived)_
+
+- **Scenario id:** `EF-11`
+- **Intent:** `INT-1`
+- **Source issue:** `effective-readers`
+- **Landed:** 2026-10-08
+
+### The accessors of the shipped default's generation equal what the governance files hold _(archived)_
+
+- **Scenario id:** `EF-2`
+- **Intent:** `INT-1`
+- **Source issue:** `effective-readers`
+- **Landed:** 2026-10-08
+
+### compass check judges an issue by its generation after the governance files change or compass.yml is deleted _(archived)_
+
+- **Scenario id:** `EF-3`
+- **Intent:** `INT-1`
+- **Source issue:** `effective-readers`
+- **Landed:** 2026-10-08
+
+### A check with a custom id and the command-passes implementation runs its command from the generation _(archived)_
+
+- **Scenario id:** `EF-4`
+- **Intent:** `INT-1`
+- **Source issue:** `effective-readers`
+- **Landed:** 2026-10-08
+
+### Gate evidence requirements come from the generation in gate pass, the evidence check and the receipt _(archived)_
+
+- **Scenario id:** `EF-5`
+- **Intent:** `INT-1`
+- **Source issue:** `effective-readers`
+- **Landed:** 2026-10-08
+
+### approach evaluate on an issue with a generation computes from the generation _(archived)_
+
+- **Scenario id:** `EF-6`
+- **Intent:** `INT-1`
+- **Source issue:** `effective-readers`
+- **Landed:** 2026-10-08
+
+### Loop ceilings come from the generation _(archived)_
+
+- **Scenario id:** `EF-7`
+- **Intent:** `INT-1`
+- **Source issue:** `effective-readers`
+- **Landed:** 2026-10-08
+
+### Readers with no issue read the live effective configuration of a project with a compass.yml _(archived)_
+
+- **Scenario id:** `EF-8`
+- **Intent:** `INT-1`
+- **Source issue:** `effective-readers`
+- **Landed:** 2026-10-08
+
+### compass check prints the generation, the parent version and a pending config change _(archived)_
+
+- **Scenario id:** `EF-9`
+- **Intent:** `INT-1`
+- **Source issue:** `effective-readers`
+- **Landed:** 2026-10-08

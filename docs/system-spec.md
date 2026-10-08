@@ -3234,3 +3234,12 @@
 - `TR-7` compass issue template prints the rendered template for the issue, as JSON on request, refuses an unknown kind, and the refine and verify commands use it
 - `TR-8` Every other template renders unchanged and the 120-line cap of the borrowed templates holds
 - `TR-9` The owning doc says what renders and the router names the module
+
+### preset-interfaces (landed 2026-10-08)
+
+- `PI-1` A folder inside compass-fixtures is a fixture group: each fixture carries its group and the report counts each group
+- `PI-2` The policy test --json key order with groups is pinned by a fixture, and the text and help say so
+- `PI-3` A git parent chain is classified against the shipped default before any waiver and the result is stored in versions.yml
+- `PI-4` policy diff accepts a git parent written as in extends
+- `PI-5` The extends map form and the reserved preset key are read without error and do not change a digest
+- `PI-6` Owning docs, contract corpus and terminology state the new interfaces

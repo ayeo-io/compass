@@ -316,7 +316,21 @@ def _with_git_parent_uncached(root: Path, env: dict) -> None:
         encoding="utf-8")
 
 
+def _with_preset(root: Path, env: dict) -> None:
+    _initialised(root, env)
+    _must(root, env, "policy", "init-preset", "team-preset", "--owner", "acme-team")
+
+
+def _with_failing_preset(root: Path, env: dict) -> None:
+    _with_preset(root, env)
+    fixture = root / "team-preset" / "compass-fixtures" / "example.yml"
+    fixture.write_text(fixture.read_text(encoding="utf-8").replace(
+        "approach: quick-fix", "approach: full"), encoding="utf-8")
+
+
 STATES = {
+    "with-preset": _with_preset,
+    "with-failing-preset": _with_failing_preset,
     "with-git-parent-no-sha": _with_git_parent_no_sha,
     "with-git-parent-uncached": _with_git_parent_uncached,
     "empty": _empty,
@@ -383,6 +397,9 @@ def differences(entry: dict, outcome: Outcome) -> list[str]:
     phrase = entry.get("stdout_contains")
     if phrase and phrase not in outcome.stdout:
         found.append(f"stdout lacks {phrase!r}")
+    phrase = entry.get("stderr_contains")
+    if phrase and phrase not in outcome.stderr:
+        found.append(f"stderr lacks {phrase!r}")
     return found
 
 
@@ -410,6 +427,9 @@ def _dump(entries: list[dict]) -> str:
         if entry.get("stdout_contains"):
             lines.append(
                 f"  stdout_contains: {json.dumps(entry['stdout_contains'])}")
+        if entry.get("stderr_contains"):
+            lines.append(
+                f"  stderr_contains: {json.dumps(entry['stderr_contains'])}")
     return "\n".join(lines) + "\n"
 
 

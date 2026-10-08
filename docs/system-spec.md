@@ -3100,3 +3100,7 @@
 - `TRC-002` Given a dependency on a directory, When linted, Then it is reported with code, level, path and group
 - `TRC-003` Given a dangling or cyclic depends_on, When linted, Then each is reported with its path and the cycle path
 - `TRC-004` Given the shipped preset, When linted, Then it is clean and the bookkeeping description follows the design
+
+### living-spec-supersession (landed 2026-10-08)
+
+- `TRC-001` Given two landed issues that share an intent id, when the living spec is derived, then each issue's scenario stays current

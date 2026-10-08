@@ -204,6 +204,10 @@ def repo(tmp_path):
     root = tmp_path / "repo"
     root.mkdir()
     _git(root, "init", "-q")
+    # ship-commit runs its own `git commit`, which does not see the -c
+    # identity in GIT; CI has no global identity to fall back on.
+    _git(root, "config", "user.email", "t@example.com")
+    _git(root, "config", "user.name", "t")
     (root / "README.md").write_text("base\n")
     _git(root, "add", "-A")
     _git(root, "commit", "-q", "-m", "base")

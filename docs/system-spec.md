@@ -50,11 +50,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the compass schema, when a test walks every node, then each node has a non-empty description
+### help, doc, verb description and corpus state the behaviour
 
-- **Scenario id:** `TRC-001`
+- **Scenario id:** `UP-16`
 - **Intent:** `INT-1`
-- **Source issue:** `schema-descriptions`
+- **Source issue:** `policy-update-default`
 - **Landed:** 2026-10-08
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -353,4 +353,4 @@
 
 ---
 
-1877 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1893 superseded scenario(s) are in `docs/system-spec-archive.md`.

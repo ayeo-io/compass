@@ -272,7 +272,22 @@ def _with_broken_compass_yml(root: Path, env: dict) -> None:
     (root / "compass.yml").write_text("schema: 1\nstages: oops\n", encoding="utf-8")
 
 
+def _with_git_parent_no_sha(root: Path, env: dict) -> None:
+    _initialised(root, env)
+    (root / "compass.yml").write_text(
+        "schema: 1\nextends: github:acme/compass-banking@1.2.0\n", encoding="utf-8")
+
+
+def _with_git_parent_uncached(root: Path, env: dict) -> None:
+    _initialised(root, env)
+    (root / "compass.yml").write_text(
+        f"schema: 1\nextends: github:acme/compass-banking@1.2.0#{'a' * 40}\n",
+        encoding="utf-8")
+
+
 STATES = {
+    "with-git-parent-no-sha": _with_git_parent_no_sha,
+    "with-git-parent-uncached": _with_git_parent_uncached,
     "empty": _empty,
     "initialised": _initialised,
     "quick-fix-started": _quick_fix_started,

@@ -562,9 +562,11 @@ def cmd_approach_summary(args):
     print(f"Writes: .compass/work/{slug}/ and {docs_dir(task_dir)}/")
     # The three lines stay three for a project that departs from nothing. One
     # that unlocks a framework entry is reported on every run (ADR-039).
-    from compass_pkg import locks
+    # A git parent adds one line with its state, read from the cache alone.
+    from compass_pkg import locks, parent_states
     from compass_pkg.layers import find_project_root
-    for line in locks.conformance_lines(find_project_root(task_dir)):
+    project = find_project_root(task_dir)
+    for line in locks.conformance_lines(project) + parent_states.summary_lines(project):
         print(line)
     return 0
 
@@ -576,6 +578,9 @@ def cmd_route_evaluate(args):
     task_path = None
     plan = None
     task_dir = None
+    if getattr(args, "offline", False):
+        # Every resolution in this run reads `parents.offline()`.
+        os.environ["COMPASS_OFFLINE"] = "1"
     if args.reading and getattr(args, "write", False):
         # Refused before anything prints: a refusal that follows a printed
         # result reads as a result that was written.
@@ -653,7 +658,10 @@ def cmd_route_evaluate(args):
     drift_gov = gov
     if view is not None and view.from_governance_copy():
         drift_gov = find_governance()
-    result = evaluate_route(readings, policy, autonomy)
+    # The issue's own layer applies before the floors, caps and role rules, as
+    # `obligations` applies it for the classifier.
+    result = evaluate_route(readings, policy, autonomy,
+                            issue=view.evaluator_issue() if view is not None else None)
     if result.get("renamed_routes"):
         sys.stderr.write(
             "compass: governance/routing-policy.yml uses old route names ("

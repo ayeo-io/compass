@@ -131,6 +131,9 @@ def build_parser():
     pre.add_argument("--write", action="store_true",
                      help="fold the approach, stages and gates back into the "
                           "issue's manifest.yml")
+    pre.add_argument("--offline", action="store_true",
+                     help="read git parents from the cache only and fetch "
+                          "nothing; also set by COMPASS_OFFLINE=1")
     pre.add_argument("--reason",
                      help="when --write detects a re-assessment (the "
                           "approach's content changed), record this as the "
@@ -513,6 +516,13 @@ def build_parser():
     issue_arg(pscd)
     pscd.add_argument("--reason", required=True, help="why no scenario covers it")
     pscd.set_defaults(func=cmd_scenario_descope, output_kind="hand-off")
+    psct = pscs.add_parser("tests", help="replace the tests a scenario declares")
+    psct.add_argument("scenario_id", help="scenario id (e.g. TRC-A1)")
+    issue_arg(psct)
+    psct.add_argument("--test", action="append",
+                      help="test that exercises it, as path::name (repeatable; replaces the declared list)")
+    psct.add_argument("--reason", help="why the declared tests change (written to the devlog)")
+    psct.set_defaults(func=cmd_scenario_tests, output_kind="hand-off")
 
     pcf = sub.add_parser("changed-file", help="issue changed-file tools")
     pcfs = pcf.add_subparsers(dest="subcmd", required=True)

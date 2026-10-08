@@ -29,7 +29,7 @@ import os
 import re
 from dataclasses import dataclass, field
 
-from compass_pkg import catalogue_check, layers, locks, merge, waivers
+from compass_pkg import catalogue_check, layers, locks, merge, parent_states, parents, waivers
 from compass_pkg import catalogue_spec as spec
 from compass_pkg.atomic_io import StrictYamlError, load_yaml_strict
 from compass_pkg.check_registry import REGISTRY
@@ -43,8 +43,12 @@ GROUPS = ("layer", "merge", "resolved", "locks", "classification")
 # `W-*` codes pass through under their own names (`docs/policy-lint.md`).
 FINDING_CODES = (
     "L-LOAD", "L-KEY-NOT-TEXT", "L-SCHEMA", "L-SETTINGS-KEY", "L-UNLOCK-PLACEMENT", "L-IMPL-UNKNOWN",
-    "L-IMPL-TEMPLATED", "L-IGNORED-FILE",
+    "L-IMPL-TEMPLATED", "L-IGNORED-FILE", "L-PARENT-FORM", "L-PARENT-NO-SHA",
+    "L-PARENT-NOT-CACHED", "L-PARENT-FETCH", "L-PARENT-CONTENT", "L-PARENT-SHA-MISMATCH",
+    "L-PARENT-SYMLINK", "L-PARENT-CACHE", "L-PARENT-CHAIN", "L-PARENT-SHA-AMBIGUOUS",
+    "S-PARENT-UP-TO-DATE", "S-PARENT-STALE", "S-PARENT-MODIFIED", "S-PARENT-BOTH",
     "M-REF-UNKNOWN", "M-WEIGHT-TIE", "M-HIT-MISSING", "M-HIT-DISALLOWED", "M-CYCLE",
+    "M-BOOKKEEPING-INPUT", "M-DIRECTORY-DEPENDENCY",
     "M-EFFECT-UNKNOWN", "M-LIST-KIND-UNEVALUATED",
     "K-LOCK-REFUSED", "K-UNLOCK-REFUSED", "K-UNPROVABLE",
     "E-EVALUATION",
@@ -91,12 +95,15 @@ class Report:
 @dataclass
 class Loaded:
     """What `load_layers` read: the chain, the parent's identity, the issue's
-    evidence registry and the findings of a layer that did not load."""
+    evidence registry, the issue's assessment (the point its own layer is
+    judged at) and the findings of a layer that did not load."""
     parent: object
     meta: dict
     project: object = None
     issue: object = None
     registry: tuple = ()
+    git_parents: list = field(default_factory=list)     # [parents.Parent], root first
+    assessment: object = None
     findings: list = field(default_factory=list)
     warnings: list = field(default_factory=list)
     failed: object = None       # (name, kind) of a layer that did not load
@@ -169,7 +176,38 @@ def _ignored_file(root, cwd):
                     "project's file is the one in the root")]
 
 
-def load_layers(root, *, file=None, manifest=None, cwd=None, read_project=True):
+def _git_parent(out, root, extends, fetch):
+    """Resolve the project's `extends:` when it names a git parent. A refusal
+    is a finding on the project layer, and ends the lint at the first group."""
+    try:
+        found = parents.resolve(root, extends, fetch=fetch)
+    except parents.ParentError as exc:
+        out.findings.append(Finding(exc.code, "error", exc.layer, exc.path, "layer",
+                                    exc.detail))
+        out.failed = ("project", "project") if exc.layer == "project" \
+            else (exc.layer, "parent")
+        return
+    if found:
+        out.git_parents.append(found)
+        _parent_state(out, root, found)
+
+
+def _parent_state(out, root, found):
+    """Report the parent's state (`parent_states`). A newer commit known is a
+    warning. An edited cache is an error, because the chain would run a file
+    that is not the pinned commit's; it ends the lint at the first group."""
+    state = parent_states.read(root, found)
+    code, level = parent_states.FINDINGS[state.state]
+    finding = Finding(code, level, found.layer.name, "extends", "layer", state.message)
+    if level == "error":
+        out.findings.append(finding)
+        out.failed = (found.layer.name, "parent")
+    else:
+        out.warnings.append(finding)
+
+
+def load_layers(root, *, file=None, manifest=None, cwd=None, read_project=True,
+                fetch=False):
     """The chain for a project. `file` lints one `compass.yml` over the
     shipped parent instead of the project's own. `manifest` is a parsed issue
     manifest, whose `config:` is the issue layer and whose `evidence:` is the
@@ -192,6 +230,8 @@ def load_layers(root, *, file=None, manifest=None, cwd=None, read_project=True):
                 out.project = layers.Layer("project", "project", doc,
                                            layers.layer_digest(doc, "project")
                                            if isinstance(doc, dict) else "")
+                if isinstance(doc, dict):
+                    _git_parent(out, root, doc.get("extends"), fetch)
         except StrictYamlError as exc:
             out.findings.append(_load_finding("project", path, root, exc))
             out.failed = ("project", "project")
@@ -205,6 +245,8 @@ def load_layers(root, *, file=None, manifest=None, cwd=None, read_project=True):
                                          layers.layer_digest(config, "issue")
                                          if isinstance(config, dict) else "")
         out.registry = tuple(manifest.get("evidence") or ())
+        assessment = manifest.get("assessment")
+        out.assessment = dict(assessment) if isinstance(assessment, dict) else None
     return out
 
 
@@ -403,6 +445,38 @@ def _cycles(state):
     return out
 
 
+def _artifact_inputs(state):
+    """What an artifact may not build on. A bookkeeping artifact is a record
+    the framework keeps about the work, so it is never an input. A name that
+    no artifact defines is `M-REF-UNKNOWN`'s to report and a cycle is
+    `M-CYCLE`'s, so neither is repeated here."""
+    catalogue = state["config"].get("artifacts") or {}
+    out = []
+    for artifact_id, entry in catalogue.items():
+        wanted = entry.get("depends_on") if isinstance(entry, dict) else None
+        if not isinstance(wanted, list):
+            continue
+        path = f"artifacts.{artifact_id}.depends_on"
+        bookkeeping = [d for d in wanted if isinstance(d, str)
+                       and isinstance(catalogue.get(d), dict)
+                       and catalogue[d].get("bookkeeping") is True]
+        if bookkeeping:
+            out.append(_finding(
+                "resolved", "M-BOOKKEEPING-INPUT", _layer_of(state, path), path,
+                f"{artifact_id} builds on {', '.join(bookkeeping)}, a bookkeeping "
+                f"artifact; a record the framework keeps is never an input"))
+        directories = [d for d in wanted if isinstance(d, str)
+                       and isinstance(catalogue.get(d), dict)
+                       and str(catalogue[d].get("file") or "").endswith("/")]
+        if directories:
+            out.append(_finding(
+                "resolved", "M-DIRECTORY-DEPENDENCY", _layer_of(state, path), path,
+                f"{artifact_id} builds on {', '.join(directories)}, a directory; an "
+                f"artifact builds on files, so name the artifacts or the evidence "
+                f"ids it cites"))
+    return out
+
+
 def _effect_targets(state):
     """The ids a rule's effects name, checked against the catalogue each
     effect points at (`EFFECT_TARGETS`), and the keys of a `then:` that are
@@ -460,7 +534,7 @@ def _resolved_group(state):
     out += _weight_ties(state) + _hit_policies(state)
     out += [_finding("resolved", code, _layer_of(state, path), path, message)
             for code, path, message in catalogue_check.check_vocabulary(state["config"])]
-    return out + _cycles(state)
+    return out + _artifact_inputs(state) + _cycles(state)
 
 
 EVALUATOR_LEAD = "the evaluator cannot read the configuration: "
@@ -501,7 +575,7 @@ def _locks_group(state):
     only the first."""
     try:
         result = locks.enforce_chain(state["chain"], cache=state["cache"],
-                                     early_exit=False)
+                                     early_exit=False, at=state["assessment"])
     except CompassError as exc:
         return [_evaluation_finding("locks", state["chain"][-1], str(exc))]
     return [_lock_finding(r, r.layer or state["chain"][-1].name) for r in result.refusals]
@@ -551,17 +625,34 @@ def _refusal_finding(layer, refusal, parent_config, child_config):
               "outcome": change.get("outcome"), "field": change.get("field"),
               "key": change.get("key"), "parent": change.get("parent"),
               "child": change.get("child")}
+    message = (refusal["reason"] + "; a waiver on the entry, approved by the "
+               "layer above, excuses it")
+    if getattr(layer, "kind", None) == "issue":
+        # An issue's layer is judged at one point, so every field that is not a
+        # tightening there can be named: the person sees what to combine.
+        named = []
+        for c in (point or {}).get("changes", ()):
+            if c["outcome"] != "tighter":
+                label = c["field"] + (f" ({c['key']})" if c["key"] is not None else "")
+                if label not in named:
+                    named.append(label)
+        if named:
+            message += "; fields that are looser or cannot be compared: " + ", ".join(named)
     return _finding("classification", code, layer,
                     _refusal_path(change, parent_config, child_config),
-                    refusal["reason"] + "; a waiver on the entry, approved by the "
-                    "layer above, excuses it", detail=detail)
+                    message, detail=detail)
 
 
 def _waiver_findings(state, index, layer, parent_config, child_config):
     """`(findings, valid waivers)` for the waivers of one layer."""
     scope = "issue" if layer.kind == "issue" else "project"
     project = next((l.doc for l in state["chain"] if l.kind == "project"), None)
-    shipped = next((l.doc for l in state["chain"] if l.kind == "parent"), None)
+    # The layer above approves a waiver (ADR-039). For a git parent that is the
+    # layer before it, and its own `owner` is the fallback approver, never the
+    # project's.
+    shipped = state["chain"][index - 1].doc
+    if layer.kind == "parent":
+        project = layer.doc
     found, faults = waivers.find(layer.doc, scope)
     out = [_finding("classification", f.code, layer, f.waiver_id, f.message, f.level)
            for f in faults]
@@ -621,6 +712,7 @@ def _classification_group(state):
                 parent_capabilities=_capabilities(chain[:index]),
                 child_capabilities=_capabilities(chain[:index + 1]),
                 child_issue=layer.doc if layer.kind == "issue" else None,
+                at=state["assessment"] if layer.kind == "issue" else None,
                 exhaustive=state["exhaustive"], cache=state["cache"])
         except CompassError as exc:
             if str(exc) not in seen:
@@ -650,14 +742,19 @@ def _order(state, findings):
 
 
 def lint_chain(parent, project, issue=None, *, exhaustive=False, today=None,
-               registry=(), cache=None):
+               registry=(), cache=None, extra_parents=(), assessment=None):
     """The `Report` for a chain of layers, each a `layers.Layer` or None.
-    `today` is the date a waiver's `approved_on` is checked against.
+    `extra_parents` are git parents, root first, between `parent` and the
+    project. `today` is the date a waiver's `approved_on` is checked against.
     `registry` is the issue's evidence records. `cache` is shared with the
-    classifier across calls."""
-    chain = [layer for layer in (parent, project, issue) if layer is not None]
+    classifier across calls. `assessment` is the issue's own: with it, the
+    issue layer is judged at that one point (locks and classification) and not
+    over the grid; a parent (shipped or git) and a project layer are always
+    judged over the grid (ADR-037)."""
+    chain = [layer for layer in (parent, *extra_parents, project, issue) if layer is not None]
     state = {"chain": chain, "today": today or datetime.date.today(),
              "registry": tuple(registry), "exhaustive": exhaustive,
+             "assessment": assessment,
              "cache": {} if cache is None else cache}
     report = Report(layers=[(layer.name, layer.kind) for layer in chain])
     for group, run in GROUP_RUNNERS:
@@ -676,10 +773,12 @@ def lint_loaded(loaded, **kwargs):
         named = [(loaded.parent.name, loaded.parent.kind)]
         named += [loaded.failed] if loaded.failed else []
         named += [(layer.name, layer.kind) for layer in (loaded.project, loaded.issue) if layer]
+        named = list(dict.fromkeys(named))      # a project that loaded but was refused
         return Report(layers=named,
                       findings=loaded.warnings + loaded.findings, stopped_after="layer")
     report = lint_chain(loaded.parent, loaded.project, loaded.issue,
-                        registry=loaded.registry, **kwargs)
+                        registry=loaded.registry, assessment=loaded.assessment,
+                        extra_parents=[p.layer for p in loaded.git_parents], **kwargs)
     report.findings = loaded.warnings + report.findings
     return report
 
@@ -737,9 +836,10 @@ def _waived_fields(chain):
     return out
 
 
-def _top_rows(chain, meta):
+def _top_rows(chain, labels):
     """The rows for `capabilities`, `owner` and `approvers`: each name takes
-    the value of the last layer that holds it."""
+    the value of the last layer that holds it. `labels` maps a layer name to
+    the source shown."""
     def gather(section):
         held = {}
         for layer in chain:
@@ -747,23 +847,28 @@ def _top_rows(chain, meta):
             if isinstance(value, dict):
                 for name, item in value.items():
                     held[name] = (item, layer, "set" if name in held else "add")
-        return [Row(f"{section}.{name}", item, _label(layer, meta), op)
+        return [Row(f"{section}.{name}", item, labels[layer.name], op)
                 for name, (item, layer, op) in sorted(held.items())]
 
     owner = None
     for layer in chain:
         if "owner" in layer.doc:
-            owner = Row("owner", layer.doc["owner"], _label(layer, meta),
+            owner = Row("owner", layer.doc["owner"], labels[layer.name],
                         "set" if owner else "add")
     return gather("capabilities") + ([owner] if owner else []) + gather("approvers")
 
 
-def resolve_effective(parent, project, issue=None, *, meta=None, slug=None):
+def resolve_effective(parent, project, issue=None, *, meta=None, slug=None,
+                      git_parents=()):
     """The `Effective` view of a chain: every resolved field with its value,
-    the layer that wrote it and how, and the waiver that excuses it. A chain
-    that does not load or merge cannot be resolved, so it raises
-    `CompassError` and points to `policy lint`."""
-    chain = [layer for layer in (parent, project, issue) if layer is not None]
+    the layer that wrote it and how, and the waiver that excuses it.
+    `git_parents` are `parents.Parent`s, root first, between `parent` and the
+    project; each is its own source. A chain that does not load or merge
+    cannot be resolved, so it raises `CompassError` and points to
+    `policy lint`."""
+    chain = [layer for layer in (parent, *[p.layer for p in git_parents], project, issue)
+             if layer is not None]
+    versions = {p.layer.name: p.version or None for p in git_parents}
     state = {"chain": chain, "today": datetime.date.today()}
     problems = _layer_group(state) or _merge_group(state)
     if problems:
@@ -771,9 +876,10 @@ def resolve_effective(parent, project, issue=None, *, meta=None, slug=None):
         raise CompassError(
             f"nothing can be resolved: {first.code} [{first.layer}] {first.path}: "
             f"{first.message} ({len(problems)} problem(s); run compass policy lint)")
-    labels = {layer.name: _label(layer, meta) for layer in chain}
+    labels = {layer.name: layer.name if layer.name in versions else _label(layer, meta)
+              for layer in chain}
     waived = _waived_fields(chain)
-    rows = _top_rows(chain, meta)
+    rows = _top_rows(chain, labels)
     on = {r.path.split(".", 1)[1] for r in rows
           if r.path.startswith("capabilities.") and r.value is True}
     held = locks.lock_set(chain)
@@ -801,7 +907,8 @@ def resolve_effective(parent, project, issue=None, *, meta=None, slug=None):
                                 labels[lock.layer], "add" if kind == "parent" else "set"))
     return Effective(
         layers=[{"name": l.name, "kind": l.kind,
-                 "version": (meta or {}).get("version") if l.kind == "parent" else None,
+                 "version": versions[l.name] if l.name in versions
+                 else (meta or {}).get("version") if l.kind == "parent" else None,
                  "digest": l.digest} for l in chain],
         rows=rows, issue=slug)
 

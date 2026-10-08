@@ -49,6 +49,10 @@ aliases:
 hints:
   - old: [policy, effective]
     new: [policy, show]
+  - old: [policy, test]
+    new: [preset, test]
+  - old: [policy, init-preset]
+    new: [preset, init]
   - old: [approach, diagram]
     new: [approach, render]
   - old: [issue, refresh-spec]

@@ -468,7 +468,7 @@ entries:
 # the preset folder given and exits 0 when the lint and every fixture pass.
 - id: policy-test-passes
   project: with-preset
-  argv: ["policy", "test", "team-preset"]
+  argv: ["preset", "test", "team-preset"]
   exit: 0
   stdout_contains: "PASS"
 # Added on purpose by policy-test-init-preset: a fixture whose expected approach
@@ -476,7 +476,7 @@ entries:
 # unknown verb.
 - id: policy-test-fails
   project: with-failing-preset
-  argv: ["policy", "test", "team-preset"]
+  argv: ["preset", "test", "team-preset"]
   exit: 1
   stdout_contains: "expected full"
 # Added on purpose by policy-test-init-preset: a working folder with no compass.yml
@@ -484,7 +484,7 @@ entries:
 # verb, but the cause is now the missing file, not the parser.
 - id: policy-test-no-preset
   project: initialised
-  argv: ["policy", "test"]
+  argv: ["preset", "test"]
   exit: 2
   stderr_contains: "no compass.yml here"
 # Added on purpose by policy-test-init-preset: `policy init-preset` is a new
@@ -492,7 +492,7 @@ entries:
 # preset into a new folder and exits 0.
 - id: policy-init-preset-writes
   project: initialised
-  argv: ["policy", "init-preset", "team-preset", "--owner", "acme-team"]
+  argv: ["preset", "init", "team-preset", "--owner", "acme-team"]
   exit: 0
   stdout_contains: "wrote a preset"
 # Added on purpose by policy-test-init-preset: a folder that already holds one of
@@ -500,7 +500,7 @@ entries:
 # on the unknown verb.
 - id: policy-init-preset-refused
   project: with-preset
-  argv: ["policy", "init-preset", "team-preset", "--owner", "acme-team"]
+  argv: ["preset", "init", "team-preset", "--owner", "acme-team"]
   exit: 1
   stdout_contains: "refused"
 # Added on purpose by preset-interfaces: a folder inside compass-fixtures/ is a
@@ -509,7 +509,7 @@ entries:
 # as a problem and exited 1.
 - id: policy-test-groups
   project: with-grouped-preset
-  argv: ["policy", "test", "team-preset"]
+  argv: ["preset", "test", "team-preset"]
   exit: 0
   stdout_contains: "group meets/banking: 1 run, 1 passed, 0 failed"
 # Added on purpose by policy-update: `policy update` is a new verb. 5.6.0

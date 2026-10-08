@@ -150,6 +150,8 @@ compass tdd-red            run a test, assert it FAILS, record the red
 compass tdd-green          run a test, assert it PASSES, record the green
 compass policy lint        structurally validate the governance YAML
 compass policy show        every resolved configuration field, with its source layer
+compass preset init        scaffold a team preset repository
+compass preset test        run a preset's fixtures and check its locks
 compass review-rule list   the review rules that apply to the changed files
 compass policy diff        compare two configurations: what one accepts that the other does not
 compass plan lint          scan a technical design for placeholder phrases

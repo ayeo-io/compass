@@ -163,6 +163,7 @@ RETIRED_SPELLINGS = [
     r"compass issue artifact(?![\w-]| set)",
     r"compass issue template(?! show)",
     r"compass scenario tests(?! set)",
+    r"compass policy test", r"compass policy init-preset",
 ]
 
 # Paths that record history or are derived from it, so they name old spellings.
@@ -412,7 +413,6 @@ EXCEPTIONS = {
     "lesson accept": "turns a pending proposal into a lesson",
     "lesson decline": "drops a pending proposal",
     "record restore": "restores a record from its sync",
-    "policy init-preset": "scaffolds a team preset; moves to the preset group",
 }
 
 

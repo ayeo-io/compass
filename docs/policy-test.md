@@ -1,7 +1,7 @@
-# Policy test and init-preset
+# Preset test and init
 
-This page is the owning doc for `compass policy test` and `compass policy
-init-preset`. It states the fixture format, what the test checks and in what
+This page is the owning doc for `compass preset test` and `compass preset
+init`. It states the fixture format, what the test checks and in what
 order, the exit codes and the exact shape of the JSON each command prints.
 From 6.0.0 the fixture format, the keys of both reports, their order and their
 values are a public contract: a change to any of them is a breaking change.
@@ -31,7 +31,7 @@ my-preset/
 | `compass.yml` | The preset. It is read as a parent over the shipped default and over any git parent it extends |
 | `compass-fixtures/` | The fixtures, one `.yml` file each, directly in the folder or in a group folder below it |
 
-`compass policy init-preset` writes this layout. The test runs on the folder
+`compass preset init` writes this layout. The test runs on the folder
 given, or on the working folder when none is given.
 
 ## Fixture groups
@@ -64,7 +64,7 @@ fixtures a preset passes. The test does not follow a link of any kind, so a link
 cannot lead the test outside the preset. A folder whose name starts with a dot
 is ignored.
 
-## What `compass policy test` does
+## What `compass preset test` does
 
 The test runs in two steps and does the second only when the first passes.
 
@@ -174,7 +174,7 @@ A `compass.yml` that can be read but is malformed YAML is a lint error
 (`L-LOAD`), so it exits 1 and the report shows the finding. A fixture file that
 cannot be read is an error on that fixture, not exit 2.
 
-## The `--json` report of `compass policy test`
+## The `--json` report of `compass preset test`
 
 `--json` prints one document. Keys appear in this order, and these are all of
 them.
@@ -258,7 +258,7 @@ There is no `--group` selector to run one group. The report holds every group,
 and a tool that wants one reads it from `groups`. A later release can add the
 selector without changing the report.
 
-## `compass policy init-preset DIR --owner NAME`
+## `compass preset init DIR --owner NAME`
 
 The command writes a working preset into `DIR`, creating the folder when it is
 missing.
@@ -270,7 +270,7 @@ missing.
 | `README.md` | How to test the preset, how to write a fixture and how a project extends the preset |
 | `.gitignore` | Ignores `.compass/`, where a fetched git parent is cached |
 
-The scaffold passes `compass policy test` where it stands. The command never
+The scaffold passes `compass preset test` where it stands. The command never
 overwrites a file: when `DIR` holds any of the four files it names them and
 writes nothing. It writes no CI workflow, because a workflow must say how to
 install Compass.
@@ -285,7 +285,7 @@ A failed write can leave some files in `DIR`. The message names the files
 already written, and a re-run is then refused until they are removed. A link
 that points nowhere counts as an existing file.
 
-### The `--json` report of `compass policy init-preset`
+### The `--json` report of `compass preset init`
 
 | Key | Value |
 |---|---|

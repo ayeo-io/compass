@@ -287,7 +287,7 @@ def _with_git_parent_uncached(root: Path, env: dict) -> None:
 
 def _with_preset(root: Path, env: dict) -> None:
     _initialised(root, env)
-    _must(root, env, "policy", "init-preset", "team-preset", "--owner", "acme-team")
+    _must(root, env, "preset", "init", "team-preset", "--owner", "acme-team")
 
 
 def _with_failing_preset(root: Path, env: dict) -> None:

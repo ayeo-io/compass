@@ -1,4 +1,4 @@
-# compass_pkg.preset_test - `compass policy test`: run a preset's fixtures
+# compass_pkg.preset_test - `compass preset test`: run a preset's fixtures
 """Run a preset's fixture assessments and report how each one went.
 
 A preset is a folder with a `compass.yml` and a `compass-fixtures/` folder.
@@ -318,7 +318,7 @@ def text(result):
     ok = passed(result)
     count = len(result.fixtures)
     won = sum(1 for f in result.fixtures if f.status == "pass")
-    lines = [f"compass policy test: {'PASS' if ok else 'FAIL'}", f"  preset: {result.preset}"]
+    lines = [f"compass preset test: {'PASS' if ok else 'FAIL'}", f"  preset: {result.preset}"]
     lines += policy_lint.lint_text(result.lint)[1:]
     if not result.fixtures_run:
         return lines + ["  fixtures: not run (the lint failed)"]

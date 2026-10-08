@@ -41,6 +41,7 @@ import shutil
 import subprocess
 import tempfile
 
+from compass_pkg import status_words
 from compass_pkg.check_results import NOTHING_TO_CHECK
 from compass_pkg.core import CompassError, find_upwards, load_manifest
 from compass_pkg.red_first import load_record
@@ -323,7 +324,7 @@ def _check_evidence_matches_tree(task, task_dir):
                                   "or outside a git repository")
     path, record = newest
     root = find_upwards(task_dir, ".compass") or task_dir
-    if task.get("status") == "landed":
+    if status_words.is_completed(task):
         return _check_landed(task, root, path, record)
 
     gates = [g for g in task.get("gates") or [] if isinstance(g, dict)]

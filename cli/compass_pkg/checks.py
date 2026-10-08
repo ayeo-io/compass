@@ -34,7 +34,7 @@ import fnmatch
 import re as _re
 from compass_pkg.stable_ids import GATE_VERIFY_ANALYZE, GATE_VERIFY_CORRECTNESS
 from compass_pkg.core import CompassError, artifact_location, artifact_path, find_compass_dir, find_governance, load_yaml, manifest_path, normalize_spine
-from compass_pkg.manifest import TERMINAL_STATUSES
+from compass_pkg import status_words
 from compass_pkg.tdd import _read_config, settings_hint
 from compass_pkg.trust import UNKNOWN, UNTRUSTED, contribution_trust, is_ci
 from compass_pkg.check_results import NOTHING_TO_CHECK  # re-exported: callers still import it from here
@@ -99,13 +99,11 @@ def _check_declared_tests_resolve(task, task_dir):
         afterwards, and re-checking history against a moving codebase produces
         failures nobody can act on (ADR-006).
     """
-    # Scoped to the TERMINAL statuses, not to "not active". The vocabulary has
-    # five, and `queued` and `parked` issues are still being worked on, so
-    # the check must apply to them.
-    status = (task.get("status") or "active").strip()
-    if status in TERMINAL_STATUSES:
+    # Scoped to closed issues, not to "not in flight": a held issue is still
+    # being worked on, so the check must apply to it.
+    if status_words.is_closed(task):
         return True, ("issue is %s - declared test ids are a historical record"
-                      % status)
+                      % str(status_words.stored(task)).strip())
 
     gates = {g.get("id"): g.get("status") for g in (task.get("gates") or [])}
     if gates.get(GATE_VERIFY_CORRECTNESS) != "pass":
@@ -396,7 +394,7 @@ def _check_changed_code_traces(task, task_dir):
             continue          # the deletion WAS the change
         missing.append(path)
 
-    landed = (task.get("status") or "active") != "active"
+    landed = not status_words.is_in_flight(task)
     gates = {g.get("id"): g.get("status") for g in (task.get("gates") or [])}
     claimed = gates.get(GATE_VERIFY_CORRECTNESS) == "pass"
 
@@ -767,8 +765,8 @@ def _check_human_approval(task, task_dir):
         # `G5` also fires on critical risk. A landed issue cleared the gates in
         # force when it landed, so report this and do not fail it. There is
         # no gap: an issue becomes `landed` only after the gates pass while
-        # it is active.
-        if (task.get("status") or "active") != "active":
+        # it is in flight.
+        if not status_words.is_in_flight(task):
             return True, ("no human-approval evidence on record, and the issue "
                           "has landed - reported only, because its gates were "
                           "cleared under the trigger in force at the time")

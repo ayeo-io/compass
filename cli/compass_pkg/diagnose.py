@@ -21,6 +21,7 @@ import glob
 import json
 import os
 
+from compass_pkg import status_words
 from compass_pkg.stable_ids import (
     APPROACH_SPIKE, STAGE_ASSESS, STAGE_BREAKDOWN, STAGE_DEFINE, STAGE_IDS, STAGE_IMPLEMENT, STAGE_PLAN,
     STAGE_REFINE, STAGE_SHIP, STAGE_VERIFY)
@@ -202,7 +203,7 @@ def _timeline(root, task_dir, m, records):
 
 def _deviations(task_dir, m, stages, shown, records):
     out = []
-    landed = str(m.get("status") or "") == "landed"
+    landed = status_words.is_completed(m)
     spike = str(m.get("delivery_approach") or "") == APPROACH_SPIKE
     # An issue that has not landed has reached only as far as its last stage
     # with a record; a stage after that is not reached yet, not missing.

@@ -32,6 +32,7 @@ import re as _re
 
 import fnmatch
 import re as _re
+from compass_pkg import status_words
 from compass_pkg.check_cmd import cmd_check
 from compass_pkg.stable_ids import (
     GATE_VERIFY_ANALYZE, STAGE_ASSESS, STAGE_BREAKDOWN, STAGE_DEFINE, STAGE_IDS, STAGE_IMPLEMENT, STAGE_PLAN,
@@ -608,24 +609,26 @@ def cmd_analyze(args):
 # codes. CI integration is genuinely this small: run `compass ci`, honour the
 # exit code. See ci/README.md.
 
-# Lifecycle states meaning "not active". An issue in one of these has no
-# acceptance criteria yet, by design, so the gate checks have nothing to read.
-_NOT_IN_FLIGHT = ("queued", "parked", "abandoned")
+def _issue_manifest(slug):
+    """The issue's manifest, or {} if it cannot be read.
 
-
-def _issue_status(slug):
-    """The issue's lifecycle status, or '' if it cannot be read.
-
-    An unreadable manifest is not treated as not active: it falls through to
+    An unreadable manifest is not treated as not started: it falls through to
     the checks, which report the problem properly rather than skipping it.
     """
     try:
         manifest = load_yaml(os.path.join(resolve_issue_dir(slug), "manifest.yml"))
     except Exception:
-        return ""
-    if not isinstance(manifest, dict):
-        return ""
-    return (manifest.get("status") or "").strip()
+        return {}
+    return manifest if isinstance(manifest, dict) else {}
+
+
+def _gate_checks_wait(manifest):
+    """True for an issue held back or closed without being delivered. It has
+    no acceptance criteria yet, or never will, so the gate checks have
+    nothing to read."""
+    return bool(status_words.is_held(manifest)
+                or (status_words.close_reason(manifest)
+                    and not status_words.is_completed(manifest)))
 
 
 def _git_out(cwd, *args):
@@ -761,15 +764,15 @@ def cmd_ci(args):
         # complying teaches people to stop. Skip those, name the issue, and
         # say why: an issue that vanished from the output would be worse than
         # one that failed, because nobody would know it was there.
-        status = _issue_status(slug)
-        if status in _NOT_IN_FLIGHT:
-            print(f"  gate checks skipped - status is '{status}', so the "
+        manifest = _issue_manifest(slug)
+        if _gate_checks_wait(manifest):
+            print(f"  gate checks skipped - status is '{status_words.stored(manifest)}', so the "
                   f"acceptance criteria and evidence a check looks for do "
                   f"not exist yet. The manifest itself was still linted.")
             skipped += 1
             continue
         # The resolved commit id, not the caller's string, reaches git.
-        if since and status == "landed" and _landed_before(slug, project, commit, ref_time):
+        if since and status_words.is_completed(manifest) and _landed_before(slug, project, commit, ref_time):
             print(f"  gate checks skipped - landed before {since}. Run "
                   f"compass ci without --since to check it. The manifest "
                   f"itself was still linted.")

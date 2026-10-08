@@ -33,6 +33,7 @@ from __future__ import annotations
 import datetime
 import os
 
+from compass_pkg import status_words
 from compass_pkg.check_results import NOTHING_TO_CHECK
 from compass_pkg.core import FOUND, find_upwards, resolve_artifact
 from compass_pkg.stable_ids import STAGE_BREAKDOWN
@@ -88,7 +89,7 @@ def _ready(task):
     is not judged: a subtask legitimately has no final record yet while the
     work is under way. A landed issue is ready whatever its gates say - it is
     not "still in flight" by definition."""
-    if task.get("status") == "landed":
+    if status_words.is_closed(task):
         return True
     gates = [g for g in task.get("gates") or [] if isinstance(g, dict)]
     return bool(gates) and all(g.get("status") == "pass" for g in gates)

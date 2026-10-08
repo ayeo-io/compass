@@ -33,7 +33,7 @@ import json
 import os
 import re
 
-from compass_pkg import session_usage
+from compass_pkg import session_usage, status_words
 from compass_pkg.core import FRAMEWORK_ROOT, find_compass_dir, load_yaml, manifest_path
 
 LESSON_AFTER = 3   # distinct issues a behaviour must fail in
@@ -73,7 +73,10 @@ def _issues(work, only, days):
             data = load_yaml(path)
         except Exception:  # an unreadable manifest is lint's to report
             continue
-        if not isinstance(data, dict) or data.get("status") not in ("landed", "active"):
+        # Issues that were delivered or are in flight; a hold and work that
+        # was closed undelivered did not run, so they cannot show a behaviour.
+        if not isinstance(data, dict) or not (
+                status_words.is_completed(data) or status_words.is_in_flight(data)):
             continue
         # The window reads when the issue began: `started_at`, else the date
         # it was created, which every manifest carries.

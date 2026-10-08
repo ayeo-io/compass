@@ -310,3 +310,171 @@ def test_vr_c16_the_living_spec_keeps_only_completed_issues(tmp_path):
     spec = (tmp_path / "docs" / "system-spec.md").read_text(encoding="utf-8")
     assert "ID-KEPT" in spec
     assert "ID-NOT-PLANNED" not in spec and "ID-HELD" not in spec
+
+
+# --- the readers of the checks: checks, compliance, the ci sweep, diagnose,
+# --- multiagent_check, binding, landed_by ------------------------------------
+
+DONE_WORDS = [("landed", {}), ("done", {"close_reason": "completed"}),
+              ("done", {"close_reason": "not-planned"}), ("abandoned", {})]
+
+
+def _at_project(tmp_path, monkeypatch):
+    (tmp_path / ".compass" / "work").mkdir(parents=True)
+    (tmp_path / ".compass" / "config.yml").write_text("version: 1.0.0\n")
+    monkeypatch.chdir(tmp_path)
+    return tmp_path
+
+
+@pytest.mark.parametrize("status,extra", DONE_WORDS)
+def test_vr_c16_declared_tests_are_a_historical_record_once_the_issue_is_done(
+        tmp_path, monkeypatch, status, extra):
+    from compass_pkg import checks
+    _at_project(tmp_path, monkeypatch)
+    ok, detail = checks._check_declared_tests_resolve(_with(status, extra), str(tmp_path))
+    assert ok and "historical record" in detail
+
+
+@pytest.mark.parametrize("status,extra", [("active", {}), ("backlog", {}), (None, {})])
+def test_vr_c16_declared_tests_are_still_checked_while_the_issue_is_open(
+        tmp_path, monkeypatch, status, extra):
+    from compass_pkg import checks
+    _at_project(tmp_path, monkeypatch)
+    ok, detail = checks._check_declared_tests_resolve(_with(status, extra), str(tmp_path))
+    assert "historical record" not in detail
+
+
+@pytest.mark.parametrize("status,extra,reported", [
+    ("landed", {}, True), ("done", {"close_reason": "completed"}, True),
+    ("done", {"close_reason": "not-planned"}, True), ("queued", {}, True),
+    ("backlog", {}, True), ("active", {}, False), (None, {}, False),
+    ("in-progress", {}, False), ("in-review", {}, False)])
+def test_vr_c16_a_missing_traced_file_is_reported_only_when_the_issue_is_not_open(
+        tmp_path, monkeypatch, status, extra, reported):
+    from compass_pkg import checks
+    _at_project(tmp_path, monkeypatch)
+    m = _with(status, extra, scenarios=[{"id": "S-1"}],
+              changed_files=[{"path": "gone.py", "scenarios": ["S-1"]}],
+              gates=[{"id": "verify.correctness", "status": "pass"}])
+    ok, detail = checks._check_changed_code_traces(m, str(tmp_path))
+    assert ok is reported
+
+
+@pytest.mark.parametrize("status,extra,reported", [
+    ("landed", {}, True), ("done", {"close_reason": "completed"}, True),
+    ("backlog", {}, True), ("active", {}, False), (None, {}, False),
+    ("in-progress", {}, False), ("in-review", {}, False)])
+def test_vr_c16_a_missing_human_approval_is_reported_only_when_the_issue_is_not_open(
+        status, extra, reported):
+    from compass_pkg import checks
+    ok, _detail = checks._check_human_approval(_with(status, extra, evidence=[]), ".")
+    assert ok is reported
+
+
+@pytest.mark.parametrize("status,extra,counted", [
+    ("landed", {}, True), ("done", {"close_reason": "completed"}, True),
+    ("active", {}, True), (None, {}, True), ("in-progress", {}, True),
+    ("done", {"close_reason": "not-planned"}, False), ("abandoned", {}, False),
+    ("queued", {}, False), ("parked", {}, False), ("backlog", {}, False)])
+def test_vr_c16_the_compliance_report_reads_completed_and_open_issues(
+        tmp_path, status, extra, counted):
+    import yaml
+    from compass_pkg import compliance
+    work = tmp_path / "work"
+    (work / "the-issue").mkdir(parents=True)
+    (work / "the-issue" / "manifest.yml").write_text(yaml.safe_dump(
+        _with(status, extra, created="2026-10-08")))
+    found = compliance._issues(str(work), None, 3650)
+    assert bool(found) is counted
+
+
+def _ci_output(tmp_path, status_lines):
+    import subprocess
+    sys.path.insert(0, str(ROOT / "tests"))
+    from test_ci_respects_queued import _project
+    project = _project(tmp_path, "the-issue", "active")
+    manifest = project / ".compass" / "work" / "the-issue" / "manifest.yml"
+    text = manifest.read_text().replace("status: active\n", status_lines)
+    manifest.write_text(text)
+    r = subprocess.run([sys.executable, str(ROOT / "cli" / "compass"), "ci"], cwd=project,
+                       capture_output=True, text=True, timeout=120)
+    return r.stdout + r.stderr
+
+
+@pytest.mark.parametrize("lines,skipped", [
+    ("status: backlog\n", True), ("status: queued\n", True), ("status: parked\n", True),
+    ("status: abandoned\n", True),
+    ("status: done\nclose_reason: not-planned\n", True),
+    ("status: done\nclose_reason: duplicate\n", True),
+    ("status: landed\n", False), ("status: done\nclose_reason: completed\n", False),
+    ("status: active\n", False), ("", False)])
+def test_vr_c16_the_sweep_skips_gate_checks_for_a_hold_and_for_work_not_delivered(
+        tmp_path, lines, skipped):
+    out = _ci_output(tmp_path, lines)
+    assert ("gate checks skipped - status is" in out) is skipped, out
+
+
+def test_vr_c16_the_diagnosis_lists_a_failed_gate_of_a_completed_issue_only(tmp_path):
+    from compass_pkg import diagnose
+    shown = {stage: [] for stage in diagnose._ORDER}
+    gates = [{"id": "verify.correctness", "status": "fail"}]
+    for status, extra, listed in (("landed", {}, True),
+                                  ("done", {"close_reason": "completed"}, True),
+                                  ("done", {"close_reason": "not-planned"}, False),
+                                  ("active", {}, False)):
+        out = diagnose._deviations(str(tmp_path), _with(status, extra, gates=gates),
+                                   {}, shown, [])
+        assert any("verify.correctness is fail" in line for line in out) is listed, status
+
+
+@pytest.mark.parametrize("status,extra,ready", [
+    ("landed", {}, True), ("done", {"close_reason": "completed"}, True),
+    ("done", {"close_reason": "not-planned"}, True), ("active", {}, False)])
+def test_vr_c16_a_closed_issue_is_ready_whatever_its_gates_say(status, extra, ready):
+    from compass_pkg import multiagent_check
+    m = _with(status, extra, gates=[{"id": "g", "status": "pending"}])
+    assert multiagent_check._ready(m) is ready
+
+
+@pytest.mark.parametrize("status,extra", [("landed", {}),
+                                          ("done", {"close_reason": "completed"})])
+def test_vr_c16_the_evidence_check_judges_a_completed_issue_as_landed(
+        tmp_path, monkeypatch, status, extra):
+    from compass_pkg import binding
+    monkeypatch.setattr(binding, "_newest_bound_record", lambda t, d: ("p", {}))
+    monkeypatch.setattr(binding, "_check_landed", lambda *a: ("judged as landed", ""))
+    assert binding._check_evidence_matches_tree(_with(status, extra), str(tmp_path)) == (
+        "judged as landed", "")
+
+
+def _landed_by_project(tmp_path, other_status, other_extra):
+    import yaml
+    for slug, fields in (("this", {"landed_by": [{"issue": "other"}]}),
+                         ("other", {"scenarios": [{"id": "S-1"}], "delivered": ["this"],
+                                    **other_extra, "status": other_status})):
+        d = tmp_path / ".compass" / "work" / slug
+        d.mkdir(parents=True)
+        (d / "manifest.yml").write_text(yaml.safe_dump({"issue": slug, **fields}))
+    return tmp_path / ".compass" / "work" / "this"
+
+
+@pytest.mark.parametrize("this_status,this_extra,other_status,other_extra,holds", [
+    ("landed", {}, "landed", {}, True),
+    ("done", {"close_reason": "completed"}, "done", {"close_reason": "completed"}, True),
+    ("done", {"close_reason": "completed"}, "landed", {}, True),
+    ("landed", {}, "done", {"close_reason": "completed"}, True),
+    ("landed", {}, "done", {"close_reason": "not-planned"}, False),
+    ("landed", {}, "active", {}, False),
+    ("active", {}, "landed", {}, False),
+    ("backlog", {}, "done", {"close_reason": "completed"}, False)])
+def test_vr_c16_a_landed_by_pointer_holds_between_completed_issues(
+        tmp_path, this_status, this_extra, other_status, other_extra, holds):
+    from compass_pkg import landed_by
+    import yaml
+    task_dir = _landed_by_project(tmp_path, other_status, other_extra)
+    task = {"issue": "this", "landed_by": [{"issue": "other"}], "status": this_status,
+            **this_extra}
+    ok, detail = landed_by.landed_by_holds(task, str(task_dir))
+    assert ok is holds, detail
+    ran, _detail = landed_by._check_landed_by_resolves(task, str(task_dir))
+    assert (ran is True) is holds

@@ -33,7 +33,7 @@ from dataclasses import dataclass, field
 
 from compass_pkg import (chain_class, generation, layers, legacy_adapter, locks, merge, parents,
                          policy_lint, project_settings, waivers)
-from compass_pkg import obligations
+from compass_pkg import obligations, status_words
 from compass_pkg import catalogue_spec as spec
 from compass_pkg.atomic_io import digest, load_yaml_strict
 from compass_pkg.check_registry import REGISTRY
@@ -833,7 +833,7 @@ def migrate_generation(task_dir):
     slug = os.path.basename(task_dir)
     path = manifest_path(task_dir)
     manifest = load_yaml(path)
-    if manifest.get("status") == "landed":
+    if status_words.is_closed(manifest):
         raise CompassError(
             f"issue {slug} is landed and keeps the configuration it landed under, so "
             f"`compass issue migrate-config` did not change it")

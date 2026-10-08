@@ -478,3 +478,115 @@ def test_vr_c16_a_landed_by_pointer_holds_between_completed_issues(
     assert ok is holds, detail
     ran, _detail = landed_by._check_landed_by_resolves(task, str(task_dir))
     assert (ran is True) is holds
+
+
+# --- the readers of the configuration: generation, effective, policy,
+# --- issue_config_cmd, run_cmd ----------------------------------------------
+
+# A closed issue keeps the configuration it closed under; a hold and work in
+# flight can still change it.
+CLOSED_FOR_CONFIG = [("landed", {}), ("abandoned", {}),
+                     ("done", {"close_reason": "completed"}),
+                     ("done", {"close_reason": "not-planned"})]
+OPEN_FOR_CONFIG = [(None, {}), ("active", {}), ("queued", {}), ("backlog", {})]
+
+
+def _stored_issue(tmp_path, monkeypatch, status, extra):
+    sys.path.insert(0, str(ROOT / "tests"))
+    from test_generation_store import _commit, _new_check, _project, _write_manifest
+    import yaml
+    root, task_dir = _project(tmp_path)
+    monkeypatch.chdir(root)
+    _commit(root, task_dir)
+    # A configuration unlike the stored one, so a later commit has a change
+    # to refuse.
+    (root / "compass.yml").write_text(
+        yaml.safe_dump({"schema": 1, "checks": {"extra": _new_check()}}), encoding="utf-8")
+    changes = dict(extra, status=status) if status else dict(extra)
+    _write_manifest(task_dir, **changes)
+    return root, task_dir, _commit
+
+
+@pytest.mark.parametrize("status,extra", CLOSED_FOR_CONFIG)
+def test_vr_c16_a_closed_issue_cannot_store_a_new_generation(
+        tmp_path, monkeypatch, status, extra):
+    from compass_pkg.core import CompassError
+    root, task_dir, commit = _stored_issue(tmp_path, monkeypatch, status, extra)
+    with pytest.raises(CompassError) as caught:
+        commit(root, task_dir, delivery_approach="full")
+    assert "keeps" in str(caught.value) and "landed under" in str(caught.value)
+
+
+@pytest.mark.parametrize("status,extra", OPEN_FOR_CONFIG)
+def test_vr_c16_an_open_issue_can_store_a_new_generation(tmp_path, monkeypatch, status, extra):
+    root, task_dir, commit = _stored_issue(tmp_path, monkeypatch, status, extra)
+    assert commit(root, task_dir, delivery_approach="full").number == 2
+
+
+@pytest.mark.parametrize("status,extra", CLOSED_FOR_CONFIG)
+def test_vr_c16_preflight_refuses_a_closed_issue_before_anything_is_printed(
+        tmp_path, monkeypatch, status, extra):
+    from compass_pkg import effective, generation
+    from compass_pkg.core import CompassError
+    root, task_dir, _commit = _stored_issue(tmp_path, monkeypatch, status, extra)
+    from test_generation_store import OUTCOME
+    import yaml
+    manifest = yaml.safe_load((task_dir / "manifest.yml").read_text())
+    manifest.update(OUTCOME)
+    manifest["delivery_approach"] = "full"
+    resolution = effective.resolve_live(str(root), manifest, task_dir.name, str(task_dir),
+                                        validate=True)
+    with pytest.raises(CompassError) as caught:
+        generation.preflight(str(task_dir), resolution, manifest)
+    assert "landed under" in str(caught.value)
+
+
+@pytest.mark.parametrize("status,extra", CLOSED_FOR_CONFIG)
+def test_vr_c16_a_closed_issue_cannot_be_given_a_proposal(tmp_path, monkeypatch, status, extra):
+    from compass_pkg import generation
+    from compass_pkg.core import CompassError
+    root, task_dir, _commit = _stored_issue(tmp_path, monkeypatch, status, extra)
+    import yaml
+    manifest = yaml.safe_load((task_dir / "manifest.yml").read_text())
+    with pytest.raises(CompassError) as caught:
+        generation.write_proposal(str(task_dir), manifest, {"checks": {}})
+    assert "landed under" in str(caught.value)
+
+
+@pytest.mark.parametrize("status,extra", CLOSED_FOR_CONFIG)
+def test_vr_c16_a_closed_issue_cannot_migrate_its_configuration(
+        tmp_path, monkeypatch, status, extra):
+    from compass_pkg import effective
+    from compass_pkg.core import CompassError
+    root, task_dir, _commit = _stored_issue(tmp_path, monkeypatch, status, extra)
+    with pytest.raises(CompassError) as caught:
+        effective.migrate_generation(str(task_dir))
+    assert "landed under" in str(caught.value)
+
+
+@pytest.mark.parametrize("status,extra", CLOSED_FOR_CONFIG)
+def test_vr_c16_a_closed_issue_cannot_be_configured(tmp_path, monkeypatch, status, extra):
+    import subprocess
+    root, task_dir, _commit = _stored_issue(tmp_path, monkeypatch, status, extra)
+    r = subprocess.run([sys.executable, str(ROOT / "cli" / "compass"), "issue", "configure",
+                        "--issue", task_dir.name, "--mode", "implement=lightweight"],
+                       cwd=root, capture_output=True, text=True, timeout=120)
+    assert r.returncode != 0
+    assert "landed under" in r.stderr, r.stdout + r.stderr
+
+
+@pytest.mark.parametrize("status,extra,needs_assessment", [
+    ("queued", {}, False), ("backlog", {}, False), ("abandoned", {}, False),
+    ("done", {"close_reason": "not-planned"}, False),
+    ("done", {"close_reason": "duplicate", "duplicate_of": "other"}, False),
+    ("active", {}, True), (None, {}, True), ("parked", {}, True),
+    ("landed", {}, True), ("done", {"close_reason": "completed"}, True)])
+def test_vr_c16_lint_asks_for_an_assessment_only_from_an_issue_that_started(
+        tmp_path, status, extra, needs_assessment):
+    sys.path.insert(0, str(ROOT / "tests"))
+    from test_ci_queued_issue import _BASE, _lint
+    manifest = dict(_BASE, **extra)
+    if status:
+        manifest["status"] = status
+    run = _lint(tmp_path, manifest)
+    assert ("assessment" in (run.stdout + run.stderr)) is needs_assessment, run.stdout + run.stderr

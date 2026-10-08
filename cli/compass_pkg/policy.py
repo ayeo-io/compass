@@ -32,6 +32,7 @@ import re as _re
 
 import fnmatch
 import re as _re
+from compass_pkg import status_words
 from compass_pkg.check_cmd import CHECK_FNS
 from compass_pkg.check_registry import REGISTRY
 from compass_pkg.stable_ids import (
@@ -561,9 +562,11 @@ def cmd_task_lint(args):
     # a scenario written as a bare string must be reported, not raise
     # AttributeError.
     if "assessment" not in task:
-        # An abandoned issue that never had an assessment was dropped before
-        # it entered the pipeline, which is the same case as a queued one.
-        if (task.get("status") or "active") in ("queued", "abandoned"):
+        # An issue closed without being delivered that never had an assessment
+        # was dropped before it entered the pipeline, which is the same case
+        # as a queued one.
+        if status_words.is_queued(task) or (status_words.close_reason(task)
+                                            and not status_words.is_completed(task)):
             # A queued issue has not been assessed yet, so the lint does not
             # ask it for an assessment. Only that field is skipped: the rest
             # of the lint still runs, because a malformed manifest is

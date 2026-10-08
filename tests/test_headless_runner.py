@@ -56,6 +56,9 @@ elif action == "pass_gates":
     manifest.write_text(manifest.read_text().replace("status: pending", "status: pass"))
 elif action == "land":
     manifest.write_text(manifest.read_text().replace("status: active", "status: landed"))
+elif action == "close":
+    manifest.write_text(manifest.read_text().replace(
+        "status: active", "status: done\nclose_reason: completed"))
 elif action == "stop_file":
     (task / "evidence").mkdir(exist_ok=True)
     (task / "evidence" / f"stub-{n}.txt").write_text("progress\n")
@@ -297,6 +300,12 @@ def test_hr_d_a_build_run_ends_when_every_scenario_is_green(project):
 
 def test_hr_d_a_session_that_lands_the_issue_stops_the_run(project):
     result = _run(project, plan=("land",))
+    assert result.returncode == 4
+    assert "landed" in _last_run(project)["stopped_reason"]["reason"]
+
+
+def test_hr_d_a_session_that_closes_the_issue_in_the_new_words_stops_the_run(project):
+    result = _run(project, plan=("close",))
     assert result.returncode == 4
     assert "landed" in _last_run(project)["stopped_reason"]["reason"]
 

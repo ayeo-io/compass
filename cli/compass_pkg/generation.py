@@ -39,7 +39,7 @@ import yaml
 
 from compass_pkg.atomic_io import (StrictYamlError, atomic_write_text, digest,
                                    load_yaml_strict, locked)
-from compass_pkg import word_map
+from compass_pkg import status_words, word_map
 from compass_pkg.core import (CompassError, load_yaml, manifest_path,
                               prepare_manifest_write)
 
@@ -323,7 +323,7 @@ def write_proposal(task_dir, manifest, overlay):
         if number(disk) != held:
             raise CompassError(f"{manifest_path(task_dir)} changed since it was read (it "
                                f"now names {_named(number(disk))}); run the command again")
-        if disk.get("status") == "landed":
+        if status_words.is_closed(disk):
             raise CompassError(
                 f"issue {os.path.basename(os.path.normpath(task_dir))} is landed and keeps "
                 f"the configuration it landed under; it cannot be given a proposal")
@@ -537,7 +537,7 @@ def preflight(task_dir, resolution, manifest, invalidated=None, adopt=None):
                            invalidated)
     if previous and _same_configuration(previous, documents):
         return      # the outcome decides, and it is not known yet: `commit` answers
-    if disk.get("status") == "landed":
+    if status_words.is_closed(disk):
         raise CompassError(
             f"issue {os.path.basename(os.path.normpath(task_dir))} is landed and keeps "
             f"the configuration it landed under; it cannot store a new generation")
@@ -611,7 +611,7 @@ def commit(task_dir, resolution, manifest, invalidated=None, render=None, *,
                 _remove(os.path.join(gen_dir(task_dir, target), PROPOSED))
             return Committed(n, False, f"no change: generation {n} already holds this "
                                        f"configuration")
-        if disk.get("status") == "landed":
+        if status_words.is_closed(disk):
             raise CompassError(
                 f"issue {os.path.basename(os.path.normpath(task_dir))} is landed and keeps "
                 f"the configuration it landed under; it cannot store a new generation")

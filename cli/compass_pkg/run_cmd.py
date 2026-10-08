@@ -42,7 +42,7 @@ from compass_pkg.core import (FRAMEWORK_ROOT, CompassError, docs_dir,
                               find_upwards, load_manifest, load_yaml,
                               manifest_path, now_iso, resolve_issue_dir,
                               save_manifest)
-from compass_pkg import host_launch
+from compass_pkg import host_launch, status_words
 from compass_pkg.loop_ceilings import loop_ceilings
 from compass_pkg.redact import redact
 
@@ -360,7 +360,7 @@ def _run(args, root, task_dir, task, path, claude, stop, ceilings,
                 reason = (f"the minute ceiling of {max_minutes:g} is reached "
                           f"({minutes_rule}); the session was ended")
                 break
-            if task.get("status") == "landed":
+            if status_words.is_closed(task):
                 reason = ("the session landed the issue, which an unattended run "
                           "must never do; a person must check it")
                 break

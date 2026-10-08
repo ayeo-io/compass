@@ -162,7 +162,7 @@ def test_up_3_an_unusable_request_is_an_error_that_names_the_cause(tmp_path, fra
         (fixtures.PROJECT, 5, "default@5 is not available"),
         (fixtures.PROJECT.replace("@6", "@7"), 6, "older"),
         (fixtures.PROJECT.replace("compass:default@6", "github:o/r@main#abc"), None,
-         "not a shipped parent"),
+         "L-PARENT-FORM"),
         (fixtures.PROJECT.replace("@6", "@5"), None, "default@5 is not kept"),
         (fixtures.NO_WAIVER.replace("extends: compass:default@6   # the shipped default\n", ""),
          7, "no extends"),

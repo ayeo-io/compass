@@ -40,12 +40,13 @@ repository starts with it, because git fetches a full sha only. Two matches are
 sha that names a tree or a file instead of a commit is also `L-PARENT-FORM`.
 
 There is no lock file. The sha in `compass.yml` is the pin, and a git commit sha already
-identifies its content. `compass policy update` will resolve a ref to a sha in a later
-release. Until then a person writes the sha.
+identifies its content. `compass policy update` moves the pin: it resolves the ref to the
+commit it names now (`git ls-remote`), fetches it, re-checks the project's waivers across
+the old and new commit and rewrites the `#<sha>`. See [policy-update.md](policy-update.md).
+A person writes the first sha.
 
-The ref label is not checked against the content. Nothing here tests that the commit is
-reachable from the ref, or that the ref still points at it. A later release checks
-reachability, when `compass policy update` resolves refs.
+The ref label is not checked against the content. Nothing tests that the pinned commit is
+reachable from the ref. `compass policy update` reads only where the ref points now.
 
 ## Where it is fetched from
 
@@ -63,6 +64,7 @@ sha is refused.
 |---|---|
 | `compass check`, and any reader of an issue's stored generation | Never. It reads the cache, and an uncached pin is `L-PARENT-NOT-CACHED` |
 | `compass policy lint`, `compass policy effective` | Yes |
+| `compass policy update` | Yes, always for the ref (`git ls-remote`), and for the current pin and the new commit when they are not cached. With `COMPASS_OFFLINE=1` it asks nothing and reports `offline` |
 | `compass approach evaluate --write` (assess and reassess, including a reassess that commits a `compass issue configure` proposal) | Yes |
 | `compass issue configure` (the preview and the proposal it records) | Never. It reads the cache and commits no generation, so an uncached pin is `L-PARENT-NOT-CACHED`. Run `compass policy lint` first |
 | any of the above with `--offline`, or with `COMPASS_OFFLINE=1` in the environment | Never |
@@ -174,7 +176,5 @@ Every refusal is a lint finding with a code. [policy-lint.md](policy-lint.md) li
 
 ## What this page does not cover
 
-- `compass policy update`, which resolves a ref to a sha and moves the pin.
 - Chains of git parents and the depth limit.
-- The waiver re-check when a pin moves.
 - A host other than GitHub, and private repositories that need a login: git uses the credential settings of the person running Compass, and Compass never prompts.

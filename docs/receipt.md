@@ -92,13 +92,16 @@ Provenance (generation 1)
 | Row | What it names | Layer shown |
 |---|---|---|
 | `rules fired` | each rule in the issue's fired list | the layer that last set the rule |
-| `checks` | a check in a stage list, one a layer other than the default added or changed, or one named by a waiver or unlock | the layer that added it |
+| `stage lists` | the stage-list checks the root layer set and no layer changed, counted once because the Stage lists section already shows them | the root layer |
+| `checks` | a stage-list check a later layer added or changed, any other check a later layer added or changed, or one named by a waiver or unlock | the layer that added it |
 | `check changes` | a later layer's operation on a check | the layer that made it |
 | `locks` | the lock on any entry the section names, with its level, `true` or `hard` | the layer that declared the lock |
 | `waiver` | each waiver by its id, with approver, date and status | `project` or `issue` |
 | `unlock` | each unlocked framework entry, its waiver and the lock it lifts | `project` |
 
-A layer is shown as its label: the default preset with its major and version, as in the example, a git parent as its reference, 12 characters of the pinned sha and its version, `project (compass.yml)`, or `issue (config: in manifest.yml)`.
+A layer is shown as its label: the default preset with its major and version, as in the example, a git parent as its reference, 12 characters of the pinned sha and its version, a project that keeps its own governance copies as `governance copies` with their version, `project (compass.yml)`, or `issue (config: in manifest.yml)`. A label too long for one line continues on the next, and a heading with no room for its first id ends its own line.
+
+- A section that cannot be rendered from a stored generation prints `Provenance - cannot be shown` and the cause, so the reader can tell it from an issue with no generation.
 
 - A rule from a generation stored before each rule had its own record shows `unknown, rule set changed by` and the layers that changed its set. The receipt does not guess among them. A rule the stored configuration does not hold shows `unknown, not in the stored configuration`.
 - An issue waiver of a landed issue shows `expired at land <date>`. No file is rewritten.

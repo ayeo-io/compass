@@ -98,18 +98,20 @@ def _section(out):
         if not line.strip():
             break
         body.append(line)
-    rows = []
+    raw = []
     for line in body:
         if line.startswith("  ") and not line.startswith("   "):
-            kind, rest = line[2:16].strip(), line[17:]
-            # A label too long for its line leaves the " -" at the end of it.
-            label, _, text = (rest[:-2] + " - ").partition(" - ") if rest.endswith(" -") \
-                else rest.partition(" - ")
-            rows.append(Row(kind, label.strip(), text.strip()))
+            raw.append([line[2:16].strip(), line[17:]])
         else:
-            rows[-1].text += " " + line.strip()
-    for row in rows:
-        row.text = re.sub(r"\s+", " ", row.text).strip()
+            raw[-1][1] += " " + line.strip()
+    rows = []
+    for kind, rest in raw:
+        # A label too long for one line continues on the next, and may break
+        # before the "#" of a pinned sha.
+        rest = re.sub(r"\s+", " ", rest).strip().replace(" #", "#")
+        label, _, text = (rest[:-2] + " - ").partition(" - ") if rest.endswith(" -") \
+            else rest.partition(" - ")
+        rows.append(Row(kind, label.strip(), text.strip()))
     return title, rows
 
 
@@ -236,6 +238,16 @@ def test_rp_6_an_unlock_names_the_entry_the_project_its_waiver_and_the_lock(tmp_
                         f"lifts a true lock set by {DEFAULT}")
 
 
+def test_rp_7_a_lock_the_resolved_entry_does_not_keep_comes_from_the_shipped_summary(tmp_path):
+    """An approach loses its `locked` marker in the merge, so the receipt takes it
+    from the shipped lock summary it is handed."""
+    root, _ = _assessed(tmp_path, compass_yml={"schema": 1, "owner": "jed72", "approaches": {
+        "spike": {"unlock": True, "set": {"subtask_ceiling": 1}, "waiver": dict(OWNER_WAIVER)}}})
+    out = _receipt(root)
+    assert _one(out, "unlock", "approaches.spike").text.endswith(f"lifts a true lock set by {DEFAULT}")
+    assert "approaches.spike (true)" in _one(out, "locks", DEFAULT).items
+
+
 def test_rp_7_a_lock_on_a_named_entry_names_its_layer_and_level(tmp_path):
     root, _ = _assessed(tmp_path, compass_yml=_unlocked_project())
     out = _receipt(root)
@@ -276,8 +288,20 @@ def test_rp_8_a_check_in_a_stage_list_is_named_with_its_origin(tmp_path):
         elif in_lists and line.startswith("    "):
             listed.add(line.split()[0])
     assert listed
-    named = set(_one(out, "checks", DEFAULT).items)
-    assert listed <= named, listed - named
+    # The checks are listed above; the section says where they came from once.
+    assert _one(out, "stage lists", DEFAULT).text == f"{len(listed)} checks listed above"
+    assert _rows(out, "checks") == []
+
+
+def test_rp_8_a_stage_list_check_a_project_added_is_named_not_counted(tmp_path):
+    root, _ = _assessed(tmp_path, compass_yml={
+        "schema": 1, "owner": "jed72", "capabilities": {"entry-exit-evaluation": True},
+        "checks": {"arch-rule": ADDED},
+        "stages": {"plan": {"set": {"entry": {"add": ["arch-rule"]}}}}})
+    out = _receipt(root)
+    assert _one(out, "checks", PROJECT).items == ["arch-rule"]
+    counted = int(_one(out, "stage lists", DEFAULT).text.split()[0])
+    assert counted >= 1
 
 
 # --- RP-9: an issue without a generation ----------------------------------------------------
@@ -354,6 +378,130 @@ def test_rp_11_every_line_fits_100_columns_and_no_id_is_cut(tmp_path):
     assert len(project_checks) == 13
     text = out[out.index("Provenance"):out.index("Conformance")]
     assert "..." not in text
+
+
+LONG_REPO = "compass-governance-presets"
+LONG_OWNER = "platform-engineering-team"
+LONG_REF = "release-2026.10"
+
+
+def test_rp_11_a_long_git_reference_wraps_its_heading_and_cuts_no_id(tmp_path):
+    base = tmp_path / "remotes"
+    parent = {"schema": 1, "owner": "platform-team", "rules": {"floors": {"set": {"rules": {
+        "set": {"RP-ACME-001": {"order": 9, "when": {"size": "standard"},
+                                "then": {"add_gate": "verify.analyze"},
+                                "rationale": "The platform team wants analysis."}}}}}}}
+    sha = make_remote(base, owner=LONG_OWNER, repo=LONG_REPO,
+                      files={"compass.yml": yaml.safe_dump(parent)})
+    root, _ = issue_project(
+        tmp_path, f"github:{LONG_OWNER}/{LONG_REPO}@{LONG_REF}#{sha}")
+    code, out, err = _run(root, "approach", "evaluate", "--issue", "feature", "--write",
+                          env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
+    assert code == 0, out + err
+    code, out, err = _run(root, "issue", "receipt", "--issue", "feature")
+    assert code == 0, err
+    assert max(len(line) for line in out.splitlines()) <= 100
+    row = next(r for r in _rows(out, "rules fired") if r.label.startswith("github:"))
+    assert row.label.startswith(f"github:{LONG_OWNER}/{LONG_REPO}@{LONG_REF}#{sha[:12]} (")
+    assert row.items == ["RP-ACME-001"]
+
+
+def test_rp_11_a_label_naming_three_layers_wraps_and_cuts_no_id(tmp_path):
+    issue_rule = {"rules": {"floors": {"set": {"rules": {"set": {"RP-ISS-001": {
+        "order": 10, "when": {"size": "standard"}, "then": {"add_gate": "verify.analyze"},
+        "rationale": "The issue wants analysis."}}}}}}}
+    root, task_dir = _assessed(tmp_path, labels=["auth"], config=issue_rule,
+                               compass_yml={"schema": 1, "owner": "jed72", **PROJECT_RULE})
+    _drop_rule_steps(task_dir)
+    out = _receipt(root)
+    assert max(len(line) for line in out.splitlines()) <= 100
+    row = next(r for r in _rows(out, "rules fired") if r.label.startswith("unknown"))
+    assert row.label == f"unknown, rule set changed by {DEFAULT}, {PROJECT}, {ISSUE}"
+    assert {"RP-FLOOR-003", "RP-PROJ-001", "RP-ISS-001"} <= set(row.items)
+
+
+# --- RP-14: a project that keeps its own governance copies ---------------------------------
+
+def _copies_project(tmp_path):
+    import shutil
+    (tmp_path / "governance").mkdir()
+    for name in ("routing-policy.yml", "guardrails.yml"):
+        shutil.copy(ROOT / "governance" / name, tmp_path / "governance" / name)
+    manifest = copy.deepcopy(MANIFEST)
+    manifest["assessment"]["labels"] = ["auth"]
+    root, task_dir = _project(tmp_path, manifest=manifest, compass_yml=None)
+    (root / "compass.yml").unlink(missing_ok=True)
+    code, out, err = _run(root, "approach", "evaluate", "--issue", SLUG, "--write")
+    assert code == 0, out + err
+    if "generation:" not in (task_dir / "manifest.yml").read_text(encoding="utf-8"):
+        code, out, err = _run(root, "issue", "migrate-config", "--issue", SLUG)
+        assert code == 0, out + err
+    return root, task_dir
+
+
+def test_rp_14_governance_copies_are_labelled_with_their_version(tmp_path):
+    root, task_dir = _copies_project(tmp_path)
+    version = yaml.safe_load((task_dir / "generations" / "1" / "versions.yml")
+                             .read_text(encoding="utf-8"))["parents"][0]["version"]
+    out = _receipt(root)
+    row = _one(out, "rules fired", f"governance copies ({version})")
+    assert "RP-FLOOR-003" in row.items
+
+
+def test_rp_14_governance_copies_do_not_list_every_check_as_a_departure(tmp_path):
+    root, _ = _copies_project(tmp_path)
+    out = _receipt(root)
+    assert _rows(out, "checks") == []
+    assert len(out.splitlines()) <= 50
+
+
+# --- RP-15: a section that cannot be rendered says so --------------------------------------
+
+def test_rp_15_a_stored_step_without_a_layer_is_reported_not_dropped(tmp_path):
+    from compass_pkg.atomic_io import digest
+    root, task_dir = _assessed(tmp_path, labels=["auth"])
+    folder = task_dir / "generations" / "1"
+    doc = yaml.safe_load((folder / "provenance.yml").read_text(encoding="utf-8"))
+    doc["fields"]["rules.floors.rules.RP-FLOOR-003"] = {"steps": [{"op": "add"}]}
+    (folder / "provenance.yml").write_text(yaml.safe_dump(doc, sort_keys=False),
+                                           encoding="utf-8")
+    held = yaml.safe_load((folder / "complete").read_text(encoding="utf-8"))
+    held["files"]["provenance.yml"] = digest(doc)
+    (folder / "complete").write_text(yaml.safe_dump(held, sort_keys=False), encoding="utf-8")
+    out = _receipt(root)
+    assert "Provenance" in out
+    assert "cannot be shown" in out
+    assert max(len(line) for line in out.splitlines()) <= 100
+
+
+# --- RP-16: the module stays pure ------------------------------------------------------------
+
+def test_rp_16_the_module_imports_neither_the_locks_module_nor_the_receipt():
+    text = (ROOT / "cli" / "compass_pkg" / "receipt_provenance.py").read_text(encoding="utf-8")
+    code = "\n".join(line for line in text.splitlines() if line.lstrip().startswith(
+        ("import ", "from ")))
+    assert "locks" not in code and "receipt " not in code
+
+
+def test_rp_16_the_lock_summary_the_receipt_passes_in_names_the_lock():
+    from compass_pkg import locks, receipt_provenance
+    from compass_pkg.effective import EffectiveView
+    view = EffectiveView(
+        "generation", "x", 1,
+        {"checks": {"c": {"locked": True}}, "conformance": {"unlocked": ["stages.assess"]}},
+        {"parents": [{"ref": "compass:default@6", "version": "6.0.0", "source": "shipped"}]},
+        {"fields": {}, "waivers": {}})
+    held = {"stages.assess": locks.Lock(True, "default")}
+    rows = receipt_provenance.lines(view, {}, (), held, lambda h, i, w=100, indent=None: [h],
+                                    100)
+    assert "lifts a true lock set by default@6 (6.0.0)" in re.sub(r"\s+", " ", " ".join(rows))
+
+
+# --- RP-17: the help text ----------------------------------------------------------------------
+
+def test_rp_17_the_receipt_help_mentions_the_provenance_section():
+    from compass_pkg import verb_help
+    assert "Provenance" in verb_help.VERB_DESCRIPTIONS["issue receipt"]
 
 
 # --- RP-12: the store records one step per rule ---------------------------------------------

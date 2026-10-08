@@ -20,6 +20,7 @@ import shlex
 import subprocess
 import sys
 import tempfile
+import textwrap
 
 # --- dependency check --------------------------------------------------------
 # cli/compass_pkg/__init__.py already checked that the bundled copy resolves,
@@ -170,7 +171,7 @@ def _receipt_truncate(text, width=_RECEIPT_LINE_CAP):
     return text[:width - 3] + "..."
 
 
-def _receipt_wrap_ids(head, ids, width=_RECEIPT_LINE_CAP):
+def _receipt_wrap_ids(head, ids, width=_RECEIPT_LINE_CAP, indent=None):
     """`head` followed by `ids`, wrapping instead of cutting an identifier.
 
     Identifiers are the receipt's join keys - a reader follows one from a gate
@@ -180,7 +181,8 @@ def _receipt_wrap_ids(head, ids, width=_RECEIPT_LINE_CAP):
     """
     if not ids:
         return [_receipt_truncate(head + "(none)", width)]
-    cont = " " * len(head.rstrip()) if len(head) < width // 2 else "      "
+    cont = indent if indent is not None else (
+        " " * len(head.rstrip()) if len(head) < width // 2 else "      ")
     out, current, first = [], head, True
     for i, ident in enumerate(ids):
         piece = str(ident) + ("," if i < len(ids) - 1 else "")
@@ -513,12 +515,19 @@ def _receipt_stage_rows(task, task_dir):
 def _receipt_provenance(task, task_dir, listed_checks):
     """The "Provenance" section, or no lines for an issue with no stored
     generation or a configuration that cannot be read."""
-    from compass_pkg import effective, receipt_provenance
+    from compass_pkg import effective, locks, receipt_provenance
     try:
         view = effective.view_or_legacy(task_dir)
-        return receipt_provenance.lines(view, task, listed_checks, _RECEIPT_LINE_CAP)
-    except Exception:  # noqa: BLE001 - the receipt reports what it can
-        return []
+        return receipt_provenance.lines(view, task, listed_checks, locks.shipped_locks(),
+                                        _receipt_wrap_ids, _RECEIPT_LINE_CAP)
+    except Exception as exc:  # noqa: BLE001 - the receipt reports what it can
+        # An issue with no generation has no section. One that has a generation
+        # and cannot be rendered must say so, or the two look alike.
+        title = "Provenance - cannot be shown"
+        reason = " ".join(f"{type(exc).__name__}: {exc}".split())
+        return [title, "-" * len(title)] + textwrap.wrap(
+            reason, width=_RECEIPT_LINE_CAP, initial_indent="  ", subsequent_indent="  ",
+            break_long_words=True)
 
 
 def _receipt_stage_lists(rows):

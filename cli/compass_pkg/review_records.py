@@ -6,9 +6,9 @@ CLI checks the record of it and never the reasoning. The record is a YAML file
 in the issue's `evidence/` folder, registered in the manifest as
 `manual-review` evidence with `check: <check id>`.
 """
-# DEPENDENCY: standard library (hashlib, os); PyYAML through compass_pkg;
-# compass_pkg.core. It imports no command module, so the evaluator and the
-# command can both use it.
+# DEPENDENCY: standard library (hashlib, os); PyYAML, bundled at
+# cli/vendor/yaml/, through compass_pkg.core. It imports no command module, so
+# the evaluator and the command can both use it.
 from __future__ import annotations
 
 import hashlib

@@ -76,8 +76,13 @@ policy lint`, `compass policy effective`, `compass policy diff` (when a
 reference is a git parent) and `compass approach evaluate --write` fetch,
 including a reassess that commits a `compass issue configure` proposal.
 `compass policy diff` prints a line on stderr before it fetches. `compass check`
-and `compass issue configure` never fetch. A cached parent is read without
-warning if someone edits the cache, until the parent-state check lands. Review
+and `compass issue configure` never fetch. Compass
+checks each cached parent against a digest it recorded at fetch, and `compass
+policy lint` fails on a mismatch. That catches an accidental edit of the cache,
+not a deliberate one by someone who can write the cache, because the digest
+sits beside the file and can be rewritten with it. If you doubt the cache,
+delete `.compass/cache/parents/`.
+Review
 [git-parents.md](https://github.com/ayeo-io/compass/blob/main/docs/git-parents.md).
 
 ## Dependencies

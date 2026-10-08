@@ -263,7 +263,11 @@ so `compass check` does not run them and the two views do not name them (a
 legacy `checks:` entry needs an implementation). A Definition of Ready check
 returns `not-applicable` when its stage is skipped, because a collapsed or
 skipped refine meets it by construction. A Definition of Done check returns
-`fail`, as `dod-evidence-typed` does.
+`fail`, as `dod-evidence-typed` does. Each Definition of Done check says
+`when: {ships: true}`, so an approach that does not ship, the spike, owes none
+of them when the capability is on. `ships` is a key that evaluation derives
+from the approach, not a dimension. `docs/entry-exit-evaluation.md` states
+how the lists run once the capability is on.
 
 `governance/legacy-views.yml` holds what the two files contain that the
 catalogues have no field for. Only the generator of the views reads it, and it
@@ -360,7 +364,10 @@ What the stage-mode rank replay shows:
 `cli/compass_pkg/classify.py` compares a child configuration with its parent
 by what each owes, as `architecture/decisions/ADR-037-configuration-changes-are-classified-by-effect.md`
 decides. It calls `obligations` for both at every point of the assessment grid
-and compares the facts. Nothing reads it yet, so no command prints its
+and compares the facts. Given `at=` an assessment, `classify` compares at that
+one point instead (`grid_at`, a grid of one point). The lint, the locks and the
+preview compare an issue's own layer that way, at the issue's own assessment,
+and a project layer over the grid. Nothing reads it yet, so no command prints its
 result. `classify(parent, child)` returns a `Classification`, and the later
 `policy` commands print `json.dumps(classification.to_json(), indent=2)` and
 build their text from the same dictionary.

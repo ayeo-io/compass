@@ -46,7 +46,7 @@ def test_a_first_derivation_writes_the_spec(tmp_path):
     root = _project(tmp_path)
     r = _derive(root)
     assert r.returncode == 0, r.stdout + r.stderr
-    assert "`second-issue`" in _spec_text(root)
+    assert "### second-issue (landed" in _spec_text(root)
 
 
 def test_a_missing_issue_is_refused_and_named(tmp_path):

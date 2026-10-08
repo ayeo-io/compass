@@ -92,3 +92,22 @@ Decided while the maintainer was away, and marked for the maintainer's confirmat
 - `classify` and `effective` may import `obligations`. No other module may.
 - `effective` holds the configuration an issue runs against, so it is the one place that turns it into the evaluator's policy (`EffectiveView.evaluator_policy()`, which calls `obligations.policy_adapter`). The modules that read governance call the effective view and never import `obligations` themselves.
 - The test finds an import in any form, including a parenthesised list, and a planted import in a third module makes it fail.
+
+## Amendment (2026-10-08): a check's `when` reads one derived key, `ships`
+
+Decided while the maintainer was away, and marked for the maintainer's confirmation. The ruling on the spike's Definition of Done asked for a `when` that keeps a spike from owing the Definition of Done, and said that a predicate that cannot name the approach needs a comparison rule.
+
+- `obligations` evaluates a check's `when` and `blocking_when` against the assessment plus one derived key, `ships`: whether the approach the route chose ships (`obligations.listing_assessment`). The goal is optional, so a `when` on it cannot say "not exploration".
+- No comparison rule is added. `ships` adds no field to the table. The classifier already evaluates each check's `when` at every grid point through `obligations`, so removing `when: {ships: true}` from a check shows as the spike owing that check, which is tightening.
+- The same derived reading is used wherever the configuration is evaluated against an assessment: a check's `when` and `blocking_when`, a guardrail gate's `when` (in `obligations` and in `compass check`), and the stage lists.
+- `ships` is not a dimension. The grid does not vary it, and it follows from the approach the other readings route to.
+
+## Amendment (2026-10-08): an issue's layer is compared at the issue's own assessment
+
+Decided while the maintainer was away, and marked for the maintainer's confirmation. The alternative rejected above, "compare only at the issue's own assessment", stands for a project layer and a parent. It does not apply to an issue layer.
+
+- A project layer applies to every assessment the project will see, so it is compared with its parent over the whole grid. An issue has one assessment in force at a time, so its layer is compared with the configuration above it at that assessment. The locks, the classification and the lint all use this single-assessment form for the issue layer (`classify.grid_at`, and `at=` on `classify.classify`, `locks.enforce`, `locks.enforce_chain` and `policy_lint.lint_chain`).
+- Over the whole grid, any route pick reached the spike assessments, where it dropped spike obligations that a lock protects and no waiver excuses. Every `issue configure --route` choice was refused under the shipped default. At the issue's own assessment the same pick is judged by what that issue owes. The lock footprint does not change.
+- No route is special-cased. `full` has no subtask ceiling, and no ceiling is the loosest (the amendment of 2026-10-07 above), so `full` over `regular` is incomparable on `approaches.subtask_ceiling` at the issue's own assessment. A spike issue that picks `full` loses `spike.conclude` and is refused by a lock.
+- The lint of the issue layer runs whenever the issue's stored assessment differs from the one the last write evaluated, including when the configuration equals the generation in force, so a route accepted at one assessment cannot carry onto a spike assessment by a reassess that changes nothing else.
+- A route pick has no catalogue entry to hang a waiver on, so a route pick that is looser or incomparable at the issue's own assessment cannot be waived in 6.0.0.

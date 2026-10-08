@@ -104,7 +104,12 @@ _(none yet - the shipped default guardrails apply as-is)_
   `schemas/manifest.schema.json` does not allow, which the release's `issue
   lint` would refuse. A check with nothing to inspect, such as a BDD check
   where no runner is wired, is labelled NOTHING TO CHECK, never PASS, and is
-  counted apart; it does not fail the run.
+  counted apart; it does not fail the run. It also checks the entry and exit
+  lists of the stages the issue has reached, under the label
+  `stage:<stage>:<entry|exit>` (`docs/entry-exit-evaluation.md`). The shipped
+  Definition of Ready and Done checks run only where the capability
+  `entry-exit-evaluation` is on; a check a project adds to a list always runs.
+  A project with neither sees no change.
 - **An advisory failure** is a check that failed where its effective severity
   is advisory (`severity: advisory`, or a `blocking_when` the assessment does
   not match). It is labelled ADVISORY, never PASS or FAIL, is counted apart
@@ -196,6 +201,18 @@ effective` will print what it returns.
   that narrows the rule is refused. A rule that adds a gate, asks for an
   artifact, blocks a stage or asks for a skill is protected through that fact.
 - **A waiver never excuses a lock refusal.**
+- **An issue's `config:` is enforced at the issue's own assessment.** An issue
+  has one assessment in force, so the comparison runs at that single point and
+  not over the grid. A project layer is still enforced over the grid, because
+  it applies to every assessment the project will see
+  (`architecture/decisions/ADR-037-configuration-changes-are-classified-by-effect.md`,
+  the amendment of 2026-10-08). Nothing is accepted or refused by the name or
+  weight of a route: the field table decides at that point. Naming `full`
+  over `regular` is incomparable on the subtask ceiling, and a spike issue
+  that picks `full` loses `spike.conclude` and is refused by a lock. The lint
+  also runs on an unchanged configuration when the issue's stored assessment
+  changed, so a route accepted at one assessment cannot carry onto a spike by
+  a reassess that changes nothing else.
 - **More than eight named labels is still refused, but only the labels a locked
   entry can read are counted.** The scan keeps a label only where it can reach
   a fact a lock protects, and drops the labels that only these read:
@@ -208,8 +225,8 @@ effective` will print what it returns.
   Labels in floors, shapes, caps, role rules and immovable gates always count,
   because they decide the approach and so the gates in force. Once more than
   eight labels a locked entry can read are named, every change to the layer is
-  refused, and the refusal reaches the layers below it, including an issue's
-  `config:`. The refusal names the labels counted. To lift it, name no more than
+  refused, and the refusal reaches the layers below it. An issue's `config:` is
+  enforced at one assessment and names no labels, so this refusal does not reach it. The refusal names the labels counted. To lift it, name no more than
   eight of them. For a `true` lock an owner-approved unlock also lifts it. For a
   hard lock nothing else does. An entry or a path the scan does not recognise
   keeps its labels, so a doubtful case makes the count larger and never smaller.

@@ -48,9 +48,9 @@ earlier one. Warnings never stop it and never fail it.
 
 | Group | What it checks | Codes |
 |---|---|---|
-| `layer` | Each layer alone, before anything merges | `L-LOAD`, `L-KEY-NOT-TEXT`, `L-SCHEMA`, `L-SETTINGS-KEY`, `L-UNLOCK-PLACEMENT`, `L-IMPL-UNKNOWN`, `L-IMPL-TEMPLATED`, `W-APPROVED-ON-ISSUE`, `L-IGNORED-FILE` (warning), and the eleven `L-PARENT-*` codes below for a git parent |
+| `layer` | Each layer alone, before anything merges | `L-LOAD`, `L-KEY-NOT-TEXT`, `L-SCHEMA`, `L-SETTINGS-KEY`, `L-UNLOCK-PLACEMENT`, `L-IMPL-UNKNOWN`, `L-IMPL-TEMPLATED`, `W-APPROVED-ON-ISSUE`, `L-IGNORED-FILE` (warning), the eleven `L-PARENT-*` codes below for a git parent, and the four `S-PARENT-*` state codes |
 | `merge` | The merge grammar, layer by layer. It reports every fault of the first layer that does not apply | the merge's own `M-*` codes, such as `M-ADD-EXISTS`, `M-SET-UNKNOWN`, `M-REF-REMOVED` |
-| `resolved` | The merged result as a whole | `M-REF-UNKNOWN`, `M-WEIGHT-TIE`, `M-HIT-MISSING`, `M-HIT-DISALLOWED`, `M-ALIAS-COLLISION`, `M-CYCLE` |
+| `resolved` | The merged result as a whole | `M-REF-UNKNOWN`, `M-WEIGHT-TIE`, `M-HIT-MISSING`, `M-HIT-DISALLOWED`, `M-ALIAS-COLLISION`, `M-CYCLE`, `M-BOOKKEEPING-INPUT`, `M-DIRECTORY-DEPENDENCY`, `M-LIST-KIND-UNEVALUATED` (warning) |
 | `locks` | What the locks above a layer refuse, and each refused unlock | `K-LOCK-REFUSED`, `K-UNLOCK-REFUSED`, `K-UNPROVABLE`, `E-EVALUATION` |
 | `classification` | Waivers, the classifier's verdict on each layer, and the vocabulary | `C-LOOSENING`, `C-INCOMPARABLE`, `V-VOCABULARY-CHANGE`, `W-UNNEEDED`, the waivers' own `W-*` codes, `E-EVALUATION` |
 
@@ -77,12 +77,19 @@ earlier one. Warnings never stop it and never fail it.
 | `L-PARENT-CHAIN` | error | A chain holds more than three git parents. Reported on the third parent, and the fourth is not fetched |
 | `L-PARENT-CYCLE` | error | A parent names a commit that is already in the chain. Reported on the parent that names it |
 | `L-PARENT-SHA-AMBIGUOUS` | error | A short sha names more than one cached commit |
+| `S-PARENT-UP-TO-DATE` | info | A git parent whose cache holds the pin and for which no other commit is known |
+| `S-PARENT-STALE` | warning | `seen.yml` holds another commit for the parent's ref, which this machine fetched last. It can be older or newer than the pin. The pin does not move |
+| `S-PARENT-MODIFIED` | error | The cached `compass.yml` no longer matches the digest recorded when it was fetched, or `seen.yml` holds no digest for it. The lint stops at the first group |
+| `S-PARENT-BOTH` | error | Stale, and the cached file was edited. The lint stops at the first group |
 | `M-REF-UNKNOWN` | error | A field, or a rule's effect (`EFFECT_TARGETS` in `catalogue_spec.py` says which catalogue each effect names), names an id that no entry defines |
 | `M-WEIGHT-TIE` | error | Two delivery approaches have the same weight |
+| `M-LIST-KIND-UNEVALUATED` | warning | A stage's `entry` or `exit` list names a check of a kind this version does not evaluate (`judged` or `evidence`). The check fails in `compass check`, whatever the capability. The exit code does not change |
 | `M-HIT-MISSING` | error | A rule set uses an effect and names no `hit:` policy for it. `EFFECT_POLICIES` in `catalogue_spec.py` lists the effects and the policies each allows |
 | `M-HIT-DISALLOWED` | error | A `hit:` policy the effect does not allow, or an unknown effect |
 | `M-ALIAS-COLLISION` | error | One name or alias belongs to two entries of a catalogue |
-| `M-CYCLE` | error | Artifacts depend on each other in a cycle |
+| `M-CYCLE` | error | Artifacts depend on each other in a cycle. The message gives the path, such as `a -> b -> a`, and the finding sits on the `depends_on` of the first artifact in id order |
+| `M-BOOKKEEPING-INPUT` | error | An artifact lists in `depends_on` an artifact marked `bookkeeping: true`, a record the framework keeps about the work (the dashboard, the receipt, the verification report). A bookkeeping artifact may itself depend on others. The finding sits on the dependent artifact's `depends_on` |
+| `M-DIRECTORY-DEPENDENCY` | error | An artifact lists in `depends_on` an artifact whose `file` ends in `/`, a directory. An artifact depends on files, so a verification report names the evidence ids it cites instead. The finding sits on the dependent artifact's `depends_on` |
 | `M-EFFECT-UNKNOWN` | error | A rule's `then:` holds a key that is neither an effect nor a qualifier (`ceiling`, `until`), such as a misspelt `force_minimum_aproach`. `EFFECT_QUALIFIERS` in `catalogue_spec.py` lists the qualifiers |
 | `M-ADD-EXISTS` | error | A full entry names an id that exists, with no `replace: true` |
 | `M-ADD-PARTIAL` | error | A new entry lacks a required field |
@@ -142,7 +149,7 @@ earlier one. Warnings never stop it and never fail it.
 | Option | Meaning |
 |---|---|
 | `--file PATH` | Lint one `compass.yml` as the project layer, over the shipped default |
-| `--issue SLUG` | Add the issue's `config:` as the issue layer, and look up its approvals in the issue's evidence. Without it no issue is read: there is no `COMPASS_ISSUE` or current-task fallback. A project with no `compass.yml` lints the issue's config over the shipped default |
+| `--issue SLUG` | Add the issue's `config:` as the issue layer, judged at the issue's own assessment and not over the whole grid (a project layer is still judged over the grid), and look up its approvals in the issue's evidence. Without it no issue is read: there is no `COMPASS_ISSUE` or current-task fallback. A project with no `compass.yml` lints the issue's config over the shipped default |
 | `--exhaustive` | Classify with the full grid, not the grouped one |
 | `--offline` | Read a git parent from the cache only and fetch nothing; `COMPASS_OFFLINE=1` does the same. `compass policy effective` takes it too |
 | `--json` | Print the document below |

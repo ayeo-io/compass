@@ -121,6 +121,24 @@ def test_pc_1_a_chain_of_two_pinned_parents_loads_furthest_first(tmp_path):
         assert (_held(root, repo, sha) / "compass.yml").is_file()
 
 
+def test_pc_1_each_parent_of_a_chain_has_its_own_state(tmp_path):
+    """The lint reads the state of every parent in the chain, not only the
+    nearest, so an edit to an ancestor's cached file fails the lint."""
+    root, made, env = _chain_project(tmp_path, [PLAIN, PLAIN])
+    code, report, err = _lint(root, env=env)
+    assert code == 0, err
+    states = {f["layer"]: f["code"] for f in report["findings"]
+              if f["code"].startswith("S-PARENT-")}
+    assert states == {_label(sha, repo): "S-PARENT-UP-TO-DATE" for repo, sha in made}, states
+    far_repo, far_sha = made[0]
+    cached = _held(root, far_repo, far_sha) / "compass.yml"
+    cached.write_text(cached.read_text(encoding="utf-8") + "# edited\n", encoding="utf-8")
+    code, report, err = _lint(root, env=env)
+    assert code == 1, report
+    edited = [f for f in report["findings"] if f["code"] == "S-PARENT-MODIFIED"]
+    assert [f["layer"] for f in edited] == [_label(far_sha, far_repo)], report["findings"]
+
+
 def test_pc_1_an_ancestor_that_cannot_be_fetched_is_reported_on_the_parent_that_names_it(
         tmp_path):
     base = tmp_path / "remotes"

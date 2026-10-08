@@ -25,6 +25,8 @@ VERB_DESCRIPTIONS = {
         "Trace a file this issue changed to the scenario that asked for it. The traceability guardrail is maintained as the work happens rather than reconstructed at the end - a chain assembled afterwards records what someone remembered.",
     'scenario add':
         "Add a scenario to the manifest, mirroring the prose in acceptance-criteria.md. The manifest's copy is what compass check reads, so a scenario that exists only in prose is one nothing can verify.",
+    'scenario tests':
+        "Replace the tests a scenario declares in the manifest, for the case where a declared test id went wrong, such as a test renamed for a good reason. It takes only a test id that `declared-tests-resolve` in compass check would accept, and refuses an unknown scenario, no --test, and an id that does not resolve or is marked skipped. It appends a line naming the old tests, the new tests and --reason to devlog.md when the issue has one. A green recorded before the change does not cover a test file the scenario did not declare before: compass ship-commit refuses it until compass tdd-green runs again.",
     'acceptance record':
         'Close an acceptance record with what was actually observed. The pair exists so work without a natural red still leaves evidence a reader can weigh.',
     'acceptance start':
@@ -40,7 +42,7 @@ VERB_DESCRIPTIONS = {
     'bdd extract':
         "Turn an issue's acceptance criteria into a .feature file a BDD runner can execute, so the scenarios written as the specification are the same ones that run as the acceptance suite. Writes the file; runs nothing.",
     'check':
-        "Run the guardrails.yml checks against an issue's manifest and evidence - the mechanical half of the verify gate. Every scenario has a test, the suite passed with a record on file, changed files trace to a scenario, and every gate marked pass points at evidence of an accepted type. A check that had nothing to inspect is reported apart from one that passed, so a clean run cannot be mistaken for a thorough one.",
+        "Run the guardrails.yml checks against an issue's manifest and evidence - the mechanical half of the verify gate. Every scenario has a test, the suite passed with a record on file, changed files trace to a scenario, and every gate marked pass points at evidence of an accepted type. A check that had nothing to inspect is reported apart from one that passed, so a clean run cannot be mistaken for a thorough one. With the capability entry-exit-evaluation on, it also checks the entry and exit lists of the stages the issue has reached, under the guardrail label stage:<stage>:<entry|exit>.",
     'ci':
         'Run the full mechanical gate suite - the governance policy lint, then the manifest lint and the guardrail checks for every issue on disk. Intended for continuous integration and required green before a release. Gate checks are skipped for an issue that has not started, and the skip is named rather than hidden.',
     'evidence add':
@@ -64,13 +66,13 @@ VERB_DESCRIPTIONS = {
     'issue lint':
         'Structurally validate an issue manifest against the schema and report every problem at once, naming the key that is wrong rather than the line. An issue that has not started is not asked for an assessment it cannot have.',
     'issue receipt':
-        'Render a one-screen account of a landed issue: the four-dimension assessment, the approach computed from it, the gates it cleared and the typed evidence each was cleared with. A view over what is recorded, not a re-run of the checks.',
+        'Render a one-screen account of a landed issue: the four-dimension assessment, the approach computed from it, the gates it cleared and the typed evidence each was cleared with. A view over what is recorded, not a re-run of the checks. With the capability entry-exit-evaluation on, it adds a Stage lists section that shows each entry and exit list and the state of each check.',
     'issue set-status':
         'Record an issue as queued, active, parked, landed or abandoned. Only landed makes its scenarios eligible for the derived system spec, so no other value can silently acquire that.',
     'migrate':
         'Bring issue directories written under an older vocabulary up to the current schema - renaming artifacts, mapping manifest keys forward, and repointing the manifest at the files it renamed. Dry-run by default. Refuses before writing anything if two retired filenames claim the same current name.',
     'next':
-        'Say which stage of its delivery approach an issue has reached and what comes next, reading the approach rather than guessing. Skipped and collapsed stages are passed over, because the approach already decided they do not run. At a terminal it opens with the route as a rail - done, current, pending, and stages the policy skipped - and ends with the next command. Piped output, and any run with CLAUDECODE set, is the plain line alone, so the model sees no change. NO_COLOR drops the colour; COMPASS_COLOR=never uses ASCII markers and COMPASS_COLOR=always draws the rail even when piped.',
+        'Say which stage of its delivery approach an issue has reached and what comes next, reading the approach rather than guessing. Skipped and collapsed stages are passed over, because the approach already decided they do not run. At a terminal it opens with the route as a rail - done, current, pending, and stages the policy skipped - and ends with the next command. Piped output, and any run with CLAUDECODE set, is the plain line alone, so the model sees no change. NO_COLOR drops the colour; COMPASS_COLOR=never uses ASCII markers and COMPASS_COLOR=always draws the rail even when piped. With the capability entry-exit-evaluation on, the line also names the entry checks of the current stage that are not met.',
     'plan lint':
         'Scan a technical design for placeholder phrases - TBD, TODO, "implement later". Advisory and always exits 0: a design can be vague without using one of those words, so this is the mechanical floor rather than the judgement.',
     'decision record':

@@ -184,7 +184,8 @@ def _ignore(root):
         atomic_write_text(path, "".join(f"{line}\n" for line in lines) + "cache/\n")
 
 
-def _file_digest(raw):
+def file_digest(raw):
+    """The digest of a cached file's bytes, as `seen.yml` records it."""
     return "sha256:" + hashlib.sha256(raw).hexdigest()
 
 
@@ -192,11 +193,20 @@ def _record_seen(cache, spec, sha, raw):
     path = os.path.join(cache, SEEN)
     try:
         held = load_yaml_strict(path) if os.path.isfile(path) else {}
-    except StrictYamlError:
+    except (StrictYamlError, ValueError):       # a file that is not text is replaced
         held = {}
-    refs = dict((held or {}).get("refs") or {})
+    refs = held.get("refs") if isinstance(held, dict) else None
+    refs = dict(refs) if isinstance(refs, dict) else {}
+    # `content_digest` is the digest of the commit fetched last. `digests` keeps one
+    # per commit, so a cached commit can be checked after another is fetched. A
+    # `digests` entry that is not a mapping was damaged and starts again.
+    before = refs.get(ref_label(spec))
+    kept = before.get("digests") if isinstance(before, dict) else None
+    digests = dict(kept) if isinstance(kept, dict) else {}
+    digests[sha] = file_digest(raw)
     refs[ref_label(spec)] = {
-        "sha": sha, "content_digest": _file_digest(raw), "version": version_of(spec.ref),
+        "sha": sha, "content_digest": file_digest(raw), "digests": digests,
+        "version": version_of(spec.ref),
         "fetched": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
     atomic_write_text(path, yaml.safe_dump({"schema": 1, "refs": refs}, sort_keys=True))
 

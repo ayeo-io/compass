@@ -15,8 +15,7 @@ import os
 import sys
 
 from compass_pkg import governance, layers, parents, policy_lint, policy_migrate
-from compass_pkg import preset_init, preset_test, project_settings, replay
-from compass_pkg import policy_update
+from compass_pkg import policy_update, preset_init, preset_test, project_settings, replay
 from compass_pkg.core import (FRAMEWORK_ROOT, CompassError, find_governance, load_manifest,
                               resolve_issue_dir)
 from compass_pkg.terminal import mark_handled, resolve_mode

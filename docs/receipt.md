@@ -71,6 +71,43 @@ The receipt lists owed follow-ups in a *Follow-ups* section and counts them in t
 
 When any list check is active, the receipt adds a *Stage lists* section before the verdict. It shows each entry and exit list with whether it is due, and each check with its state: `pass`, `fail`, `nothing-to-check` or `pending`. A deterministic check shows `pending`, because the receipt does not run checks. The shipped checks are active only where the capability `entry-exit-evaluation` is on, so a project that has not turned it on and added no list check gets no section (`docs/entry-exit-evaluation.md`).
 
+## Provenance
+
+An issue that runs against a stored generation (`docs/generation-store.md`) gets a *Provenance* section before the verdict. It names where each entry came from, so a reader can trace it to the file that set it. The title carries the generation number, because an issue runs against one generation.
+
+```
+Provenance (generation 1)
+-------------------------
+  rules fired    project (compass.yml) - RP-PROJ-001
+  rules fired    default@6 (6.0.0) - RP-FLOOR-003, RP-REQUIRE-002
+  checks         default@6 (6.0.0) - suite-passed
+  check changes  project (compass.yml) - suite-passed (set)
+  locks          default@6 (6.0.0) - checks.suite-passed (true)
+  waiver         project:checks.suite-passed - project (compass.yml), approved by jed72 on
+                 2026-10-05, valid
+  unlock         checks.suite-passed - project (compass.yml), waiver project:checks.suite-passed;
+                 lifts a true lock set by default@6 (6.0.0)
+```
+
+| Row | What it names | Layer shown |
+|---|---|---|
+| `rules fired` | each rule in the issue's fired list | the layer that last set the rule |
+| `stage lists` | the stage-list checks the root layer set and no layer changed, counted once because the Stage lists section already shows them | the root layer |
+| `checks` | a stage-list check a later layer added or changed, any other check a later layer added or changed, or one named by a waiver or unlock | the layer that added it |
+| `check changes` | a later layer's operation on a check | the layer that made it |
+| `locks` | the lock on any entry the section names, with its level, `true` or `hard` | the layer that declared the lock |
+| `waiver` | each waiver by its id, with approver, date and status | `project` or `issue` |
+| `unlock` | each unlocked framework entry, its waiver and the lock it lifts | `project` |
+
+A layer is shown as its label: the default preset with its major and version, as in the example, a git parent as its reference, 12 characters of the pinned sha and its version, a project that keeps its own governance copies as `governance copies` with their version, `project (compass.yml)`, or `issue (config: in manifest.yml)`. A label too long for one line continues on the next, and a heading with no room for its first id ends its own line.
+
+- A section that cannot be rendered from a stored generation prints `Provenance - cannot be shown` and the cause, so the reader can tell it from an issue with no generation.
+
+- A rule from a generation stored before each rule had its own record shows `unknown, rule set changed by` and the layers that changed its set. The receipt does not guess among them. A rule the stored configuration does not hold shows `unknown, not in the stored configuration`.
+- An issue waiver of a landed issue shows `expired at land <date>`. No file is rewritten.
+- An issue with no stored generation gets no section, and its receipt does not change.
+- Every line stays within 100 columns. A long list continues on the next line and no id is cut.
+
 ## What the receipt does **not** do
 
 - It does not re-run guardrail checks. For that, use `compass check`. The receipt reports what was actually recorded at ship time, which is the audit-trail-from-disk property that makes the chain meaningful (ADR-005).

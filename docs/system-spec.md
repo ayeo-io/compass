@@ -3179,14 +3179,6 @@
 - `TRC-011` Given a project compass.yml that cannot be read When approach summary runs Then it prints no traceback
 - `TRC-012` Given a seen.yml whose digests entry is not a mapping When a parent is fetched Then the record is rewritten and nothing crashes
 
-### parent-chains (landed 2026-10-08)
+### scenario-tests-verb (landed 2026-10-08)
 
-- `PC-1` A chain of two pinned parents loads furthest first
-- `PC-2` A chain of three loads and a fourth is refused
-- `PC-3` A commit named twice in a chain is a cycle
-- `PC-4` Every parent in a chain is data only
-- `PC-5` Effective names the nearest parent that wrote each field
-- `PC-6` versions.yml lists every parent furthest first
-- `PC-7` An uncached ancestor is refused by readers that do not fetch
-- `PC-8` The docs describe the chain, the depth limit and the cycle code
-- `PC-9` A parent's waiver answers to that parent's owner at every depth
+- `TRC-001` Given a scenario whose declared test id is wrong, when compass scenario tests names resolving tests, then the manifest declares them

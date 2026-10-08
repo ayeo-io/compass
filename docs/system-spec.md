@@ -3183,6 +3183,14 @@
 
 - `TRC-001` Given a scenario whose declared test id is wrong, when compass scenario tests names resolving tests, then the manifest declares them
 
-### human-check-approvers (landed 2026-10-08)
+### parent-chains (landed 2026-10-08)
 
-- `TRC-001` A human check that lists approvers passes only with a current approval by a listed approver
+- `PC-1` A chain of two pinned parents loads furthest first
+- `PC-2` A chain of three loads and a fourth is refused
+- `PC-3` A commit named twice in a chain is a cycle
+- `PC-4` Every parent in a chain is data only
+- `PC-5` Effective names the nearest parent that wrote each field
+- `PC-6` versions.yml lists every parent furthest first
+- `PC-7` An uncached ancestor is refused by readers that do not fetch
+- `PC-8` The docs describe the chain, the depth limit and the cycle code
+- `PC-9` A parent's waiver answers to that parent's owner at every depth

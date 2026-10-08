@@ -139,13 +139,27 @@ It reads the cache only. A parent it cannot read, such as one that is not cached
 
 A parent is data. Compass reads its `compass.yml` as strict YAML and runs nothing from it. The parent is a `parent` layer, so the layer checks apply before anything merges: a settings key (`L-SETTINGS-KEY`, which covers `allow_project_commands`), an `unlock:` (`L-UNLOCK-PLACEMENT`) and an `impl` outside the check registry (`L-IMPL-UNKNOWN`) fail the lint, and each finding names the parent's layer. A parent that is not a mapping is `L-SCHEMA`, and a non-text key is `L-KEY-NOT-TEXT`.
 
-A parent's own `extends:` may name `compass:default@<major>`. A parent that names a git parent is `L-PARENT-CHAIN`, because chains are not built yet.
+A parent's own `extends:` may name `compass:default@<major>` or another git parent, in the same spelling. The settings keys are `autonomy`, `adoption`, `allow_project_commands`, `enforcement`, `record`, `project`, `prices`, `multiagent`, `governance_drift` and `preset_index`. A parent may hold `schema`, `extends`, `owner`, `approvers`, `capabilities`, `preset` and the catalogues, and nothing else. This holds for every parent in a chain.
 
-The chain is `default`, the git parent, `project`, then the issue. The classifier judges the git parent against the shipped default like any other layer, so a parent that loosens the default needs a waiver the same way a project does. A waiver in a git parent is checked against the parent's own `owner`, or the names in the `approvers.project-waiver` of the layer above it. The project's owner does not count. A parent with no `owner` cannot carry a waiver (`W-NO-OWNER`).
+## Chains
+
+A parent can name a git parent, which can name another. A chain holds at most three git parents, to a depth of three: the project's direct parent, its parent and that parent's parent. The shipped default at the root is not counted, because it is the CLI's own version and not a fetched parent.
+
+Each parent in a chain is pinned by sha, fetched, cached and read as data in the same way as a single parent. The chain is `default`, then the git parents from the furthest to the nearest, `project`, then the issue. A later layer overrides an earlier one, so the nearest parent wins over the furthest, and `policy effective` names the parent that wrote each field. The classifier judges each git parent against the shipped default like any other layer, so a parent that loosens the default needs a waiver the same way a project does. A waiver in a git parent, at any depth, is checked against that parent's own `owner`, or the names in the `approvers.project-waiver` of the layer above it. The project's owner does not count. A parent with no `owner` cannot carry a waiver (`W-NO-OWNER`).
+
+| Fault | Code | Reported on |
+|---|---|---|
+| A third parent names a fourth git parent | `L-PARENT-CHAIN` | The third parent. The fourth is not fetched |
+| A parent names a commit that is already in the chain, at any depth | `L-PARENT-CYCLE` | The parent that names it. A full sha already in the chain is refused before any fetch |
+| An ancestor cannot be fetched, is not cached for a reader that does not fetch, or has a bad spelling | The code of the fault | The parent that names the ancestor (a bad file reports on the ancestor itself) |
+
+The refusal from `compass policy lint`, `compass policy effective` and `compass check` names that parent in the same way. A stored generation does not read the cache at all: it uses the record of its parents, so a deleted cache does not stop `compass check` for an issue that has one.
+
+Compass checks a parent after it has loaded the parent's ancestors. A parent that is refused for a settings key, an `unlock:` or an unknown `impl` may still be fetched along with its ancestors, which were pinned and read as data only. Nothing in them runs.
 
 ## What an issue records
 
-`compass policy effective` shows the parent as the source of every field it wrote, and lists it in `layers` with its version and digest. When an issue's configuration is committed, `versions.yml` lists the shipped default and then each git parent:
+`compass policy effective` shows the parent as the source of every field it wrote, and lists it in `layers` with its version and digest. When an issue's configuration is committed, `versions.yml` lists the shipped default and then each git parent, furthest first, so the order is the order of the merge:
 
 ```yaml
 parents:
@@ -169,12 +183,12 @@ Every refusal is a lint finding with a code. [policy-lint.md](policy-lint.md) li
 | `L-PARENT-SHA-MISMATCH` | The fetch returned another object |
 | `L-PARENT-SYMLINK` | The root `compass.yml` is a symbolic link |
 | `L-PARENT-CACHE` | The cache is a link, leaves `.compass/`, or holds a different file for the commit |
-| `L-PARENT-CHAIN` | The parent names a git parent |
+| `L-PARENT-CHAIN` | A chain holds more than three git parents |
+| `L-PARENT-CYCLE` | A parent names a commit that is already in the chain |
 | `L-PARENT-SHA-AMBIGUOUS` | A short sha names more than one cached commit |
 
 ## What this page does not cover
 
 - `compass policy update`, which resolves a ref to a sha and moves the pin.
-- Chains of git parents and the depth limit.
 - The waiver re-check when a pin moves.
 - A host other than GitHub, and private repositories that need a login: git uses the credential settings of the person running Compass, and Compass never prompts.

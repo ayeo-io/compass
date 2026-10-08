@@ -73,7 +73,7 @@ same commit.
 | `cli/compass_pkg/stage_lists.py`, `cli/compass_pkg/approval_records.py`, `cli/compass_pkg/approve_cmd.py`, `tests/test_human_checks.py`, `tests/fixtures/evidence-approve-example.json` | `docs/entry-exit-evaluation.md` |
 | `cli/compass_pkg/replay.py` | `docs/policy-diff.md` |
 | `cli/compass_pkg/policy_migrate.py`, `cli/compass_pkg/shipped_releases.py`, `scripts/generate-shipped-releases.py`, `governance/shipped-releases.yml`, `governance/shipped-releases.tar.xz` | `docs/policy-migrate.md` |
-| `cli/compass_pkg/parents.py` | `docs/git-parents.md` |
+| `cli/compass_pkg/parents.py`, `cli/compass_pkg/parent_states.py` | `docs/git-parents.md` |
 | `cli/compass_pkg/policy_update.py` | `docs/policy-update.md` |
 | `cli/compass_pkg/waivers.py` | `architecture/decisions/ADR-039-waivers-locks-and-unlocks.md` |
 | `cli/compass_pkg/layers.py`, `cli/compass_pkg/merge.py` | `architecture/decisions/ADR-035-delivery-approaches-stages-and-modes-are-configuration.md` |

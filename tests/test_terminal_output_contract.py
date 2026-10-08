@@ -979,6 +979,7 @@ _TAIL_EXEMPT = {
     "lesson list": "prints the lessons verbatim, one line each; test_lessons.py runs it",
     "lesson remove": "needs an existing lesson; test_lessons.py runs it",
     "scenario descope": "writes the manifest of an existing issue; test_failure_modes.py runs it",
+    "scenario tests": "refuses a test id that is not on disk, and the fixture creates no test file; test_scenario_tests_verb.py runs it and pins its --json output, without measuring its output against this contract",
     "lesson decline": "needs a pending proposal; test_lessons.py runs it",
     "decision record": "writes a tracked file and needs a git user name the fixture does not set; test_decisions_ledger.py runs it",
     "decision check": "needs a git repository with a base ref; test_decisions_ledger.py runs it",

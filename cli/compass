@@ -516,6 +516,13 @@ def build_parser():
     issue_arg(pscd)
     pscd.add_argument("--reason", required=True, help="why no scenario covers it")
     pscd.set_defaults(func=cmd_scenario_descope, output_kind="hand-off")
+    psct = pscs.add_parser("tests", help="replace the tests a scenario declares")
+    psct.add_argument("scenario_id", help="scenario id (e.g. TRC-A1)")
+    issue_arg(psct)
+    psct.add_argument("--test", action="append",
+                      help="test that exercises it, as path::name (repeatable; replaces the declared list)")
+    psct.add_argument("--reason", help="why the declared tests change (written to the devlog)")
+    psct.set_defaults(func=cmd_scenario_tests, output_kind="hand-off")
 
     pcf = sub.add_parser("changed-file", help="issue changed-file tools")
     pcfs = pcf.add_subparsers(dest="subcmd", required=True)

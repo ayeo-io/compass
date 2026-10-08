@@ -13609,9 +13609,163 @@
 - **Source issue:** `issue-layer-at-its-point`
 - **Landed:** 2026-10-08
 
+### Given a route pick that is mixed at the issue's own assessment, When it is refused, Then the refusal names every looser or incomparable field _(archived)_
+
+- **Scenario id:** `IP-9`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-layer-at-its-point`
+- **Landed:** 2026-10-08
+
 ### Given a delivery issue under the shipped default, When it configures --route regular on a quick-fix assessment, Then the proposal is accepted because the layer is judged at the issue's own assessment _(archived)_
 
 - **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
 - **Source issue:** `issue-layer-at-its-point`
+- **Landed:** 2026-10-08
+
+### A git extends parses strictly and a spelling outside the form is refused _(archived)_
+
+- **Scenario id:** `GP-1`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### Policy effective shows the parent as the source of its fields _(archived)_
+
+- **Scenario id:** `GP-10`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### A parent that names a git parent is refused _(archived)_
+
+- **Scenario id:** `GP-11`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### versions.yml records the parent ref, sha, version and digest _(archived)_
+
+- **Scenario id:** `GP-12`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### A moved pin does not change an open issue _(archived)_
+
+- **Scenario id:** `GP-13`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### A short sha resolves only against one cached commit _(archived)_
+
+- **Scenario id:** `GP-14`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### The owning doc, help, finding codes and corpus describe the parent _(archived)_
+
+- **Scenario id:** `GP-15`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### README and security.md say the git fetch happens and when _(archived)_
+
+- **Scenario id:** `GP-16`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### The cache is keyed by repository and sha _(archived)_
+
+- **Scenario id:** `GP-17`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### The docs say what environment git sees and that the user's credential helper runs _(archived)_
+
+- **Scenario id:** `GP-18`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### A partial fetch reads only the root compass.yml entry _(archived)_
+
+- **Scenario id:** `GP-19`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### A remote ref with no sha is refused and git is not run _(archived)_
+
+- **Scenario id:** `GP-2`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### Guards that the first plants missed are pinned by tests _(archived)_
+
+- **Scenario id:** `GP-20`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### A failed read caches nothing and a cache write race is safe _(archived)_
+
+- **Scenario id:** `GP-21`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### A pinned sha that is not cached is fetched into the cache with seen.yml _(archived)_
+
+- **Scenario id:** `GP-3`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### A fetched commit that does not match the pin is refused and not cached _(archived)_
+
+- **Scenario id:** `GP-4`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### Check and offline read the cache only _(archived)_
+
+- **Scenario id:** `GP-5`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### A symlink in the fetched tree is refused _(archived)_
+
+- **Scenario id:** `GP-6`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### A cache that leaves .compass is refused _(archived)_
+
+- **Scenario id:** `GP-7`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### Git runs with an argument list, a restricted environment and no shell _(archived)_
+
+- **Scenario id:** `GP-8`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### A parent is data only: settings key, unlock and unknown impl fail lint _(archived)_
+
+- **Scenario id:** `GP-9`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
 - **Landed:** 2026-10-08

@@ -43,7 +43,7 @@ reads the governance files.
 | `versions.yml` | `resolver` and `cli` versions, `parents` (reference, version, digest, source), `project` (path, digest, git blob), `issue_overlay_digest`, and `implementations`: the version of each check implementation the configuration uses. | At commit, then fixed. |
 | `records.yml` | The status of each approval, waiver and check result at commit: `valid`, `superseded` or `invalidated`, with a reason. | At commit, then fixed. |
 | `complete` | A marker holding a digest of each of the four files above. | Last of the four-file commit. |
-| `results.yml` | The latest `compass check` verdict for each check: `verdict` (`pass`, `fail` or `nothing-to-check`), `at`, the implementation id and version, a digest of the check's definition, and `status`. | After each `compass check`, replacing the file. The marker does not cover it. |
+| `results.yml` | The latest `compass check` verdict for each check: `verdict` (`pass`, `fail`, `advisory` or `nothing-to-check`), `at`, the implementation id and version, a digest of the check's definition, and `status`. | After each `compass check`, replacing the file. The marker does not cover it. |
 | `proposed.yml` | A pending change to the issue's `config:` layer: `schema`, `issue`, `base_generation`, `base_config_digest` and `overlay`. The state table below recognises it, and a reassess applies it. | By `compass issue configure`, in the folder above the generation in force. Removed by the reassess that applies it, or by `--discard`. |
 
 Every file begins `schema: 1`. A digest is `sha256:` and the hex digest of the
@@ -166,7 +166,7 @@ an issue with no `generation:` key (or no issue) in a project with no
 |---|---|---|
 | `evaluator_policy()`, `autonomy` | the routing policy and the autonomy value | `routing`, `quick_fix_cmd`, `flow`, `calibration`, `approach_diagram` |
 | `evaluator_issue()` | the issue's own layer as the evaluator takes it: the approach it names, the stage modes it sets and its subtask ceiling, or None | `routing` |
-| `guardrail_gates()` | the guardrails in the legacy shape: `defaults`, `spike_guardrails`, `checks` (each check's `blocking_when`) and `impl` (the implementation each check runs) | `check_cmd` |
+| `guardrail_gates()` | the guardrails in the legacy shape: `defaults`, `spike_guardrails`, `checks` (each check's `severity`, `on_skipped` and `blocking_when`) and `impl` (the implementation each check runs) | `check_cmd` |
 | `gate_requirements()` | the evidence types each gate accepts, and the known types | `checks`, `manifest`, `receipt` |
 | `command_checks()` | the checks that run a command the project wrote | `checks` |
 | `loop_ceiling_rules()` | the loop-ceiling rules | `loop_ceilings` |
@@ -195,13 +195,64 @@ generation was committed with, a second line says `pending: config: is not
 committed yet; run compass approach evaluate --write`. The line is a notice and
 does not change the exit code. An issue with no generation gets neither.
 
+## Severity and `on_skipped` in `compass check`
+
+`compass check` reads three fields of each check from the generation, so a
+check the project adds behaves as it declares.
+
+**Effective severity.** A failure blocks only when the check declares
+`severity: blocking` and either declares no `blocking_when` or the issue's
+assessment matches it. Any other failure is advisory: it is shown, it is not
+counted as a failure and it does not fail the run.
+
+**`on_skipped`.** A check that finds nothing to check returns that result
+itself. The check's `on_skipped` then decides what it counts as:
+
+| `on_skipped` | Result |
+|---|---|
+| `not-applicable` | Counted apart as `nothing-to-check`, as before. |
+| `pass` | A pass. |
+| `fail` | A failure whose detail says the check found nothing to check and declares `on_skipped: fail`. Severity then applies, so with `severity: advisory` it is an advisory failure. |
+
+A record claim that `landed_by` moves to another issue is a relaxation, not a
+skipped check. It stays `nothing-to-check` whatever `on_skipped` says.
+
+The shipped checks that can return nothing to check all declare
+`on_skipped: not-applicable`, so their verdicts on an existing issue do not
+change. An issue with no generation reads the governance files, which declare
+neither `severity` nor `on_skipped`, so it behaves as before with one
+exception: the files do declare `blocking_when` for `scenarios-are-executable`.
+A legacy issue with `bdd_runner` set and no BDD run recorded used to show that
+check as `PASS` with an advisory note. It now shows `ADVISORY`, with status
+`advisory` and `advisory: 1` in `--json`, and the verdict line names the
+advisory failure. The exit code does not change.
+
+**The views.** An advisory failure appears as `ADVISORY <check>: <detail>` in
+`--verbose`, as an `ADVISORY` line in the default view, and as a count in the
+verdict line ("N failed as advisory (does not block)"). It is not a `FAIL`
+and not a `PASS`.
+
+**The `--json` document** has these keys:
+
+| Key | Meaning |
+|---|---|
+| `issue`, `approach` | the issue slug and its delivery approach |
+| `ran` | how many checks ran |
+| `failed` | how many checks failed and block |
+| `nothing_to_check` | how many checks found nothing to check |
+| `advisory` | how many checks failed and do not block |
+| `notices` | the header and warning lines |
+| `generation`, `parent_version` | only for an issue with a generation |
+| `checks` | a list of `{guardrail, name, status, detail}` |
+
+`status` is `pass`, `fail`, `advisory` or `nothing-to-check`. A run fails
+only when `failed` is above zero.
+
 ## Not built yet
 
 - The refusal of a check implementation whose major version differs, and
   `compass issue migrate-config`.
 - `policy effective --issue` still resolves the live files and does not read
   the generation.
-- `compass check` reads a check's `blocking_when` from the generation but not
-  its `severity` or `on_skipped`.
 - The leftover-generation states are reported by `compass ci`, not by
   `compass check`.

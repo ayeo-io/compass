@@ -103,8 +103,9 @@ class EffectiveView:
         an approach that ships) and `spike_guardrails` (those that do not), each
         entry with `id`, `name`, `statement`, `checks` and `applies_when`;
         `project` is always empty, because a project's own guardrails are
-        gates of the same catalogue. `checks` maps a check id to its
-        `blocking_when`, and `impl` maps it to the implementation it runs."""
+        gates of the same catalogue. `checks` maps a check id to the
+        `severity`, `on_skipped` and `blocking_when` it declares, and `impl`
+        maps it to the implementation it runs."""
         out = {"defaults": [], "project": [], "spike_guardrails": [], "checks": {},
                "impl": {}}
         for gate_id, gate in (self.resolved.get("gates") or {}).items():
@@ -120,8 +121,10 @@ class EffectiveView:
         for check_id, check in (self.resolved.get("checks") or {}).items():
             if not isinstance(check, dict):
                 continue
-            if "blocking_when" in check:
-                out["checks"][check_id] = {"blocking_when": check["blocking_when"]}
+            declared = {key: check[key] for key in ("severity", "on_skipped", "blocking_when")
+                        if key in check}
+            if declared:
+                out["checks"][check_id] = declared
             out["impl"][check_id] = check.get("impl", check_id)
         return out
 
@@ -643,12 +646,12 @@ def require_whole(task_dir):
 
 
 def _verdict_rank(verdict):
-    return ("pass", "nothing-to-check", "fail").index(verdict)
+    return ("pass", "nothing-to-check", "advisory", "fail").index(verdict)
 
 
 def record_check_results(task_dir, verdicts, manifest=None):
     """Rewrite `results.yml` of the generation the issue runs against with the
-    verdict of each check in `verdicts` (`{check id: pass | fail |
+    verdict of each check in `verdicts` (`{check id: pass | fail | advisory |
     nothing-to-check}`): when it ran, which implementation and version ran
     it, and a digest of the check's definition as the generation stores it.
     An issue with no generation gets no file. Returns the number of checks

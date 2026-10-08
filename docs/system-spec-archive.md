@@ -13077,6 +13077,13 @@
 - **Source issue:** `effective-readers`
 - **Landed:** 2026-10-08
 
+### The approach diagram of a project with a compass.yml renders the effective configuration _(archived)_
+
+- **Scenario id:** `EF-12`
+- **Intent:** `INT-1`
+- **Source issue:** `effective-readers`
+- **Landed:** 2026-10-08
+
 ### The accessors of the shipped default's generation equal what the governance files hold _(archived)_
 
 - **Scenario id:** `EF-2`
@@ -13131,4 +13138,200 @@
 - **Scenario id:** `EF-9`
 - **Intent:** `INT-1`
 - **Source issue:** `effective-readers`
+- **Landed:** 2026-10-08
+
+### Given a loaded machine, when a run is interrupted, then the tests wait for the session to start before signalling _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `sigint-tests-under-load`
+- **Landed:** 2026-10-08
+
+### Given the compass schema, when a test walks every node, then each node has a non-empty description _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `schema-descriptions`
+- **Landed:** 2026-10-08
+
+### already on the target major: nothing to do, nothing written _(archived)_
+
+- **Scenario id:** `UP-1`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### a dropped entry or an unresolvable file is refused _(archived)_
+
+- **Scenario id:** `UP-10`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### a failed write leaves the file as it was _(archived)_
+
+- **Scenario id:** `UP-11`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### the update shows the classification and the replay counts _(archived)_
+
+- **Scenario id:** `UP-12`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### no terminal and no yes shows the plan and exits 1 _(archived)_
+
+- **Scenario id:** `UP-13`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### json equals the pinned example and never prompts _(archived)_
+
+- **Scenario id:** `UP-14`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### an edit the command cannot make exactly exits 2 before writing _(archived)_
+
+- **Scenario id:** `UP-15`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### help, doc, verb description and corpus state the behaviour _(archived)_
+
+- **Scenario id:** `UP-16`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### a bump with no waiver changes only the integer after @ _(archived)_
+
+- **Scenario id:** `UP-2`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### a target not shipped, older, a foreign extends or no file exits 2 _(archived)_
+
+- **Scenario id:** `UP-3`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### an affected waiver is listed and the move refused without a terminal _(archived)_
+
+- **Scenario id:** `UP-4`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### yes never re-approves a waiver _(archived)_
+
+- **Scenario id:** `UP-5`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### terminal re-approval writes the integer and the approval in one write _(archived)_
+
+- **Scenario id:** `UP-6`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### an approver outside the allowed list is refused _(archived)_
+
+- **Scenario id:** `UP-7`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### declining refuses and writes nothing _(archived)_
+
+- **Scenario id:** `UP-8`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### a waiver whose field is unchanged stays valid _(archived)_
+
+- **Scenario id:** `UP-9`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### Given a generation with an advisory check, when it fails, then the run passes and shows the failure as advisory _(archived)_
+
+- **Scenario id:** `CS-1`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given a landed_by relaxation on a shipped check with on_skipped fail, the verdict is unchanged _(archived)_
+
+- **Scenario id:** `CS-10`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given a blocking check, when it fails, then the run fails _(archived)_
+
+- **Scenario id:** `CS-2`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given on_skipped fail and nothing to check, then the run fails and says why _(archived)_
+
+- **Scenario id:** `CS-3`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given on_skipped pass and nothing to check, then the check counts as a pass _(archived)_
+
+- **Scenario id:** `CS-4`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given on_skipped not-applicable and nothing to check, then it is counted apart as before _(archived)_
+
+- **Scenario id:** `CS-5`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given a blocking_when that does not match, an advisory severity is shown as advisory with the condition _(archived)_
+
+- **Scenario id:** `CS-6`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given the shipped preset and an existing issue, then the verdicts are unchanged _(archived)_
+
+- **Scenario id:** `CS-7`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### The JSON shape of an advisory failure is documented and pinned _(archived)_
+
+- **Scenario id:** `CS-8`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given an issue with no generation, then check behaves as before _(archived)_
+
+- **Scenario id:** `CS-9`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
 - **Landed:** 2026-10-08

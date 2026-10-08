@@ -562,9 +562,11 @@ def cmd_approach_summary(args):
     print(f"Writes: .compass/work/{slug}/ and {docs_dir(task_dir)}/")
     # The three lines stay three for a project that departs from nothing. One
     # that unlocks a framework entry is reported on every run (ADR-039).
-    from compass_pkg import locks
+    # A git parent adds one line with its state, read from the cache alone.
+    from compass_pkg import locks, parent_states
     from compass_pkg.layers import find_project_root
-    for line in locks.conformance_lines(find_project_root(task_dir)):
+    project = find_project_root(task_dir)
+    for line in locks.conformance_lines(project) + parent_states.summary_lines(project):
         print(line)
     return 0
 

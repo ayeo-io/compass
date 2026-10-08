@@ -91,12 +91,37 @@ The cache is not configuration. It is listed in `.compass/.gitignore`, and a per
 ```yaml
 refs:
   github:acme/compass-banking@1.2.0:
-    content_digest: sha256:...   # over the bytes of the cached compass.yml
+    content_digest: sha256:...   # over the bytes of the cached compass.yml, for the commit fetched last
+    digests:                     # the same digest for every commit of the ref fetched on this machine
+      3f9c1a2e...: sha256:...
     fetched: '2026-10-08T09:12:00Z'
     sha: 3f9c1a2e...
     version: 1.2.0               # the ref when it reads as a version, else empty
 schema: 1
 ```
+
+## The four parent states
+
+Each git parent is in one of four states. Compass reads the state from the pin, the cache and `seen.yml`, and never fetches to find it.
+
+| State | Meaning | Lint code and level |
+|---|---|---|
+| `up to date` | The cache holds the pin, and `seen.yml` knows no other commit for the ref | `S-PARENT-UP-TO-DATE`, info |
+| `stale` | `seen.yml` holds another commit for the ref, so a newer one is known | `S-PARENT-STALE`, warning |
+| `locally modified` | The cached `compass.yml` no longer matches the digest recorded when it was fetched | `S-PARENT-MODIFIED`, error |
+| `both` | Stale, and the cached file was edited | `S-PARENT-BOTH`, error |
+
+"Known" means this machine fetched the commit. A fresh clone knows of no newer commit. A stale parent never fails the lint, and the pin stays where it is until a person moves it.
+
+An edited cache fails the lint, because the chain would otherwise run a file that is not the pinned commit's. A cached commit that `seen.yml` holds no digest for counts as edited too, since it cannot be shown to match a fetch. To clear either, delete the cached copy of that commit under `.compass/cache/parents/` and run `compass policy lint`, which fetches it again. A cached file that no longer parses is reported as `L-LOAD`, before its state is read.
+
+`compass approach summary` adds one line for the project's git parent and nothing for a project with none:
+
+```
+Parent: github:acme/compass-banking@1.2.0 at 3f9c1a2 - locally modified
+```
+
+It reads the cache only. A parent it cannot read, such as one that is not cached, prints `Parent: not read` followed by the finding code and cause.
 
 ## What a parent may hold
 
@@ -139,6 +164,5 @@ Every refusal is a lint finding with a code. [policy-lint.md](policy-lint.md) li
 
 - `compass policy update`, which resolves a ref to a sha and moves the pin.
 - Chains of git parents and the depth limit.
-- The four parent states (up to date, stale, edited in the cache, both).
 - The waiver re-check when a pin moves.
 - A host other than GitHub, and private repositories that need a login: git uses the credential settings of the person running Compass, and Compass never prompts.

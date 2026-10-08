@@ -750,4 +750,4 @@ def test_gp_15_seen_yml_and_the_versions_entry_have_the_pinned_keys(tmp_path):
     seen = yaml.safe_load((_cache(root) / "seen.yml").read_text(encoding="utf-8"))
     assert list(seen) == ["refs", "schema"] or sorted(seen) == ["refs", "schema"]
     assert sorted(seen["refs"]["github:acme/bank@1.2.0"]) == [
-        "content_digest", "fetched", "sha", "version"]
+        "content_digest", "digests", "fetched", "sha", "version"]

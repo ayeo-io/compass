@@ -29,7 +29,7 @@ import os
 import re
 from dataclasses import dataclass, field
 
-from compass_pkg import catalogue_check, layers, locks, merge, parents, waivers
+from compass_pkg import catalogue_check, layers, locks, merge, parent_states, parents, waivers
 from compass_pkg import catalogue_spec as spec
 from compass_pkg.atomic_io import StrictYamlError, load_yaml_strict
 from compass_pkg.check_registry import REGISTRY
@@ -46,6 +46,7 @@ FINDING_CODES = (
     "L-IMPL-TEMPLATED", "L-IGNORED-FILE", "L-PARENT-FORM", "L-PARENT-NO-SHA",
     "L-PARENT-NOT-CACHED", "L-PARENT-FETCH", "L-PARENT-CONTENT", "L-PARENT-SHA-MISMATCH",
     "L-PARENT-SYMLINK", "L-PARENT-CACHE", "L-PARENT-CHAIN", "L-PARENT-SHA-AMBIGUOUS",
+    "S-PARENT-UP-TO-DATE", "S-PARENT-STALE", "S-PARENT-MODIFIED", "S-PARENT-BOTH",
     "M-REF-UNKNOWN", "M-WEIGHT-TIE", "M-HIT-MISSING", "M-HIT-DISALLOWED", "M-CYCLE",
     "M-EFFECT-UNKNOWN",
     "K-LOCK-REFUSED", "K-UNLOCK-REFUSED", "K-UNPROVABLE",
@@ -180,6 +181,21 @@ def _git_parent(out, root, extends, fetch):
         return
     if found:
         out.git_parents.append(found)
+        _parent_state(out, root, found)
+
+
+def _parent_state(out, root, found):
+    """Report the parent's state (`parent_states`). A newer commit known is a
+    warning. An edited cache is an error, because the chain would run a file
+    that is not the pinned commit's; it ends the lint at the first group."""
+    state = parent_states.read(root, found)
+    code, level = parent_states.FINDINGS[state.state]
+    finding = Finding(code, level, found.layer.name, "extends", "layer", state.message)
+    if level == "error":
+        out.findings.append(finding)
+        out.failed = (found.layer.name, "parent")
+    else:
+        out.warnings.append(finding)
 
 
 def load_layers(root, *, file=None, manifest=None, cwd=None, read_project=True,

@@ -172,7 +172,8 @@ def _ignore(root):
         atomic_write_text(path, "".join(f"{line}\n" for line in lines) + "cache/\n")
 
 
-def _file_digest(raw):
+def file_digest(raw):
+    """The digest of a cached file's bytes, as `seen.yml` records it."""
     return "sha256:" + hashlib.sha256(raw).hexdigest()
 
 
@@ -183,8 +184,14 @@ def _record_seen(cache, spec, sha, raw):
     except StrictYamlError:
         held = {}
     refs = dict((held or {}).get("refs") or {})
+    # `content_digest` is the digest of the commit fetched last. `digests` keeps one
+    # per commit, so a cached commit can be checked after another is fetched.
+    before = refs.get(ref_label(spec))
+    digests = dict(before.get("digests") or {}) if isinstance(before, dict) else {}
+    digests[sha] = file_digest(raw)
     refs[ref_label(spec)] = {
-        "sha": sha, "content_digest": _file_digest(raw), "version": version_of(spec.ref),
+        "sha": sha, "content_digest": file_digest(raw), "digests": digests,
+        "version": version_of(spec.ref),
         "fetched": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}
     atomic_write_text(path, yaml.safe_dump({"schema": 1, "refs": refs}, sort_keys=True))
 

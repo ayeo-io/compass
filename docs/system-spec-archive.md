@@ -13364,6 +13364,13 @@
 - **Source issue:** `impl-refusal`
 - **Landed:** 2026-10-08
 
+### The coverage page is derived and kept current _(archived)_
+
+- **Scenario id:** `IR-12`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
 ### The refusal names what to do _(archived)_
 
 - **Scenario id:** `IR-2`

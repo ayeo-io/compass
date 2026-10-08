@@ -50,12 +50,12 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### A non-text key anywhere in a layer is refused with L-KEY-NOT-TEXT naming its path and telling the person to quote it
+### The approach diagram of a project with a compass.yml renders the effective configuration
 
-- **Scenario id:** `TRC-001`
+- **Scenario id:** `EF-12`
 - **Intent:** `INT-1`
-- **Source issue:** `layer-non-text-key`
-- **Landed:** 2026-10-07
+- **Source issue:** `effective-readers`
+- **Landed:** 2026-10-08
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
 
@@ -353,4 +353,4 @@
 
 ---
 
-1844 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1856 superseded scenario(s) are in `docs/system-spec-archive.md`.

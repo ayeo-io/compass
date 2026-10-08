@@ -59,6 +59,25 @@ They run locally with the same permissions as your user. The shipped hooks do
 not need network access, but check the installed revision rather than
 relying on this document.
 
+## Git parents
+
+A project can extend a git parent, `github:<owner>/<repo>@<ref>#<sha>`, which
+makes the CLI fetch one pinned commit from a remote. A git parent is data: the
+CLI reads one file, `compass.yml` at the repository root, as strict YAML, and
+runs nothing from the repository. It refuses a settings key (so a parent cannot
+authorise project commands), an `unlock:` and a check implementation outside the
+registry. It refuses a fetched commit that is not the pinned sha, and a
+`compass.yml` that is a symbolic link or larger than 1 MiB.
+
+The fetch runs `git` with an argument list and no shell, only over `https`, with
+hooks off and no prompts. It runs with your own git configuration, so your
+credential helper runs and your `url.*.insteadOf` rules apply. Only `compass
+policy lint`, `compass policy effective` and `compass approach evaluate
+--write` fetch, including a reassess that commits a `compass issue configure`
+proposal. `compass check` and `compass issue configure` never do. A cached parent is read without
+warning if someone edits the cache, until the parent-state check lands. Review
+[git-parents.md](https://github.com/ayeo-io/compass/blob/main/docs/git-parents.md).
+
 ## Dependencies
 
 The CLI bundles a pinned copy of PyYAML under `cli/vendor/yaml/`. It adds that

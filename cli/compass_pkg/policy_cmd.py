@@ -7,14 +7,15 @@ the layered lint for any other project. `compass ci` calls the legacy
 function in `governance` directly, so its behaviour does not move.
 """
 # DEPENDENCY: standard library (os, sys); compass_pkg.core, governance, layers,
-# policy_lint, policy_migrate, policy_update, project_settings, replay, terminal.
+# parents, policy_lint, policy_migrate, policy_update, project_settings, replay,
+# terminal.
 from __future__ import annotations
 
 import os
 import sys
 
-from compass_pkg import governance, layers, policy_lint, policy_migrate, project_settings
-from compass_pkg import replay
+from compass_pkg import governance, layers, parents, policy_lint, policy_migrate
+from compass_pkg import project_settings, replay
 from compass_pkg import policy_update
 from compass_pkg.core import (FRAMEWORK_ROOT, CompassError, find_governance, load_manifest,
                               resolve_issue_dir)
@@ -39,6 +40,12 @@ def _emit(args, document, lines):
         print("\n".join(lines))
 
 
+def _may_fetch(args):
+    """Whether this run may fetch an uncached git parent: not with `--offline`
+    or `COMPASS_OFFLINE`."""
+    return not (getattr(args, "offline", False) or parents.offline())
+
+
 def run_policy_lint(args):
     root = layers.find_project_root(os.getcwd())
     file = getattr(args, "file", None)
@@ -57,7 +64,7 @@ def run_policy_lint(args):
         return 0 if report.ok else 1
     manifest = load_manifest(resolve_issue_dir(slug))[0] if slug else None
     loaded = policy_lint.load_layers(root, file=file, manifest=manifest, cwd=os.getcwd(),
-                                     read_project=layered)
+                                     read_project=layered, fetch=_may_fetch(args))
     report = policy_lint.lint_loaded(loaded, exhaustive=bool(getattr(args, "exhaustive", False)))
     _emit(args, policy_lint.lint_json(report), policy_lint.lint_text(report))
     return 0 if report.ok else 1
@@ -67,13 +74,15 @@ def run_policy_effective(args):
     root = layers.find_project_root(os.getcwd())
     slug = getattr(args, "task", None)
     manifest = load_manifest(resolve_issue_dir(slug))[0] if slug else None
-    loaded = policy_lint.load_layers(root, manifest=manifest, read_project=_is_layered(root))
+    loaded = policy_lint.load_layers(root, manifest=manifest, read_project=_is_layered(root),
+                                     fetch=_may_fetch(args))
     if loaded.findings:
         first = loaded.findings[0]
         raise CompassError(f"nothing can be resolved: {first.code} {first.path}: "
                            f"{first.message}")
     effective = policy_lint.resolve_effective(
-        loaded.parent, loaded.project, loaded.issue, meta=loaded.meta, slug=slug)
+        loaded.parent, loaded.project, loaded.issue, meta=loaded.meta, slug=slug,
+        git_parents=loaded.git_parents)
     _emit(args, policy_lint.effective_json(effective), policy_lint.effective_text(effective))
     return 0
 
@@ -133,8 +142,13 @@ ISSUE_HELP = ("issue slug: read that issue's `config:` from its manifest. Withou
               "no issue is read: there is no COMPASS_ISSUE or current-task fallback")
 
 
+OFFLINE_HELP = ("read git parents from the cache only and fetch nothing; also set by "
+                "COMPASS_OFFLINE=1")
+
+
 def _issue_option(parser):
     parser.add_argument("--issue", dest="task", metavar="SLUG", help=ISSUE_HELP)
+    parser.add_argument("--offline", action="store_true", help=OFFLINE_HELP)
 
 
 def register(pls):

@@ -3700,8 +3700,10 @@ _GROWING_REACH = {
     # 61 with tests/fixtures/policy-diff-json-example.json, plain JSON;
     # 62 with tests/fixtures/policy-migrate-example.json, plain JSON;
     # 63 with tests/fixtures/policy-update-json-example.json, plain JSON;
-    # 64 with tests/fixtures/evidence-approve-example.json, plain JSON.
-    "PBW-C4": (lambda path: path.startswith("tests/"), 64),
+    # 64 with tests/fixtures/issue-configure-example.json, plain JSON;
+    # 65 with tests/fixtures/issue-configure-refused-example.json, plain JSON;
+    # 66 with tests/fixtures/evidence-approve-example.json, plain JSON.
+    "PBW-C4": (lambda path: path.startswith("tests/"), 66),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.
@@ -4838,8 +4840,12 @@ def test_pbw_d1_every_tracked_yaml_file_parses():
 #: the ground the exclusion rests on: an archived scenario title is a record
 #: of what a scenario was called when it ran. A sixth kind would not be that,
 #: so it needs a reader before the exclusion still covers it.
+#:
+#: PBW-A9 is read and recorded: the spec heading "### <slug> (landed <date>)"
+#: repeats the word "landed" when a slug ends in it, which is the heading's
+#: own format and not a broken sentence.
 SYSTEM_SPEC_KINDS = frozenset({
-    "PBW-A1", "PBW-A2", "PBW-A3", "PBW-A5", "PBW-A7"})
+    "PBW-A1", "PBW-A2", "PBW-A3", "PBW-A5", "PBW-A7", "PBW-A9"})
 
 
 def test_pbw_d8_system_spec_findings_are_the_recorded_kinds():

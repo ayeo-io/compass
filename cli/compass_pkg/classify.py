@@ -134,21 +134,30 @@ class Grid:
     # dimensions to count from.
     stored_points: object = None
     stored_raw_points: object = None
+    # The one assessment of a grid made by `grid_at`: the grid is that single
+    # point and nothing else.
+    at: object = None
 
     @property
     def closed_points(self):
+        if self.at is not None:
+            return 1
         return 0 if self.stopped else _product(len(c) for _, c in self.dimensions)
 
     @property
     def points(self):
         if self.stored_points is not None:
             return self.stored_points
+        if self.at is not None:
+            return 1
         return self.closed_points * 2 ** len(self.labels)
 
     @property
     def raw_points(self):
         if self.stored_raw_points is not None:
             return self.stored_raw_points
+        if self.at is not None:
+            return 1
         return 0 if self.stopped else _product(self.domain_sizes) * 2 ** len(self.labels)
 
     @property
@@ -228,6 +237,15 @@ def build_grid(parent, child, atoms=None, exhaustive=False, parent_issue=None,
                            for label in atom[1]}))
     return Grid(dimensions=tuple(dimensions), labels=labels,
                 domain_sizes=tuple(len(domains[n]) for n in names))
+
+
+def grid_at(assessment):
+    """The grid of one assessment: the single point an issue's own layer is
+    compared at. An issue has one assessment in force, so its layer is judged
+    there and not over every assessment a project could see (ADR-037). The
+    point is evaluated as it is, so an assessment a side refuses is reported
+    as a refusal and nothing is dropped from it."""
+    return Grid(at=dict(assessment))
 
 
 # --- comparing one fact -----------------------------------------------------------
@@ -524,6 +542,46 @@ def _summary(assessment, changes):
             f"{json.dumps(plain(change.child))} in the child")
 
 
+_AT_RESULT = {EQUAL: "equivalent", TIGHTER: "tightening", LOOSER: "loosening",
+              "mixed": "incomparable"}
+
+
+@dataclass
+class AtAssessment:
+    """What two configurations owe at one assessment: `result` is the
+    classification word for that single point, `changes` the differences
+    (`Change`), `approach` the delivery approach each gives, and `refused` the
+    evaluator's message for a side that refuses the assessment."""
+    result: str
+    changes: tuple
+    approach: tuple
+    refused: tuple
+    stage_modes: tuple = ({}, {})      # the mode of each stage on each side
+
+
+def compare_at(parent, child, assessment, *, parent_capabilities=(), child_capabilities=(),
+               parent_issue=None, child_issue=None):
+    """Compare two configurations at one assessment, the single-point form of
+    `classify`: what the issue owes under `parent`, what it owes under
+    `child`, and how the second differs. This is the comparison a preview
+    shows for the issue's own assessment."""
+    sides = []
+    for config, caps, issue in ((parent, parent_capabilities, parent_issue),
+                                (child, child_capabilities, child_issue)):
+        sides.append(obligations.obligations(
+            config, dict(assessment), capabilities=tuple(caps), issue=issue))
+    refused = tuple(s.reason if isinstance(s, Refused) else None for s in sides)
+    if any(refused):
+        same = refused[0] == refused[1]
+        changes = () if same else (Change(
+            "refused", "evaluation.refused", None, INCOMPARABLE, refused[0], refused[1]),)
+        return AtAssessment(_AT_RESULT[_point_outcome(changes)], changes, (None, None), refused)
+    changes = tuple(_changes(sides[0], sides[1], _Context(parent, child, None, None)))
+    return AtAssessment(_AT_RESULT[_point_outcome(changes)], changes,
+                        (sides[0].approach, sides[1].approach), (None, None),
+                        (dict(sides[0].stage_mode), dict(sides[1].stage_mode)))
+
+
 class Scan:
     """Two configurations run side by side over one grid. `point` gives the
     comparison at one point, `obligations` what one side owes at an
@@ -567,6 +625,30 @@ class Scan:
         self._last[side] = (text, got)
         return got
 
+    def _changes_at(self, assessment):
+        """The differences between what the two sides owe at `assessment`, or
+        the one difference that a side refuses it."""
+        p, c = self.obligations(0, assessment), self.obligations(1, assessment)
+        if isinstance(p, Refused) or isinstance(c, Refused):
+            same = (isinstance(p, Refused) and isinstance(c, Refused)
+                    and p.reason == c.reason)
+            return [] if same else [Change(
+                "refused", "evaluation.refused", None, INCOMPARABLE,
+                p.reason if isinstance(p, Refused) else None,
+                c.reason if isinstance(c, Refused) else None)]
+        return _changes(p, c, self.ctx)
+
+    def point_at(self, assessment):
+        """The comparison at the one assessment of a `grid_at` grid."""
+        assessment = dict(assessment)
+        changes = self._changes_at(assessment)
+        represents = {name: [value] for name, value in assessment.items()
+                      if name != "labels"}
+        point = Point(assessment, represents, _point_outcome(changes), "", tuple(changes))
+        if changes:
+            point.summary = _summary(assessment, changes)
+        return point
+
     def point(self, classes, subset):
         assessment = {name: cls.values[0]
                       for (name, _), cls in zip(self.dimensions, classes)
@@ -582,16 +664,7 @@ class Scan:
                               _accepts(self.vocab[1], name, cls.values[0]))
                        for name, cls in one_side]
         else:
-            p, c = self.obligations(0, assessment), self.obligations(1, assessment)
-            if isinstance(p, Refused) or isinstance(c, Refused):
-                same = (isinstance(p, Refused) and isinstance(c, Refused)
-                        and p.reason == c.reason)
-                changes = [] if same else [Change(
-                    "refused", "evaluation.refused", None, INCOMPARABLE,
-                    p.reason if isinstance(p, Refused) else None,
-                    c.reason if isinstance(c, Refused) else None)]
-            else:
-                changes = _changes(p, c, self.ctx)
+            changes = self._changes_at(assessment)
         point = Point(assessment, represents, _point_outcome(changes), "", tuple(changes))
         if changes:
             point.summary = _summary(assessment, changes)
@@ -602,6 +675,10 @@ class Scan:
         subsets of the labels, and call `on_point(point, scan)` after each. A
         callback that answers yes stops the scan. Returns the number of points
         visited, the one that stopped it included."""
+        if self.grid.at is not None:
+            if on_point is not None:
+                on_point(self.point_at(self.grid.at), self)
+            return 1
         subsets = self.grid.label_subsets()
         scanned = 0
         for classes in itertools.product(*[cs for _, cs in self.dimensions]):
@@ -719,12 +796,17 @@ class Classification:
 def classify(parent, child, *, parent_capabilities=(), child_capabilities=(),
              parent_issue=None, child_issue=None, directions=None, tighter=None,
              exhaustive=False, early_exit=False, cache=None, parent_name=None,
-             child_name=None):
+             child_name=None, at=None):
     """`parent_name` and `child_name` say what was compared (a ref, a layer
-    name). They are carried into the JSON and read by nothing else."""
+    name). They are carried into the JSON and read by nothing else. With `at`,
+    an assessment, the two sides are compared at that one point and not over
+    the grid: this is how an issue's own layer is judged."""
     named = dict(parent_name=parent_name, child_name=child_name)
-    atoms = collect_atoms(parent, child, parent_issue, child_issue)
-    grid = build_grid(parent, child, atoms, exhaustive, parent_issue, child_issue)
+    if at is not None:
+        grid, atoms = grid_at(at), ()
+    else:
+        atoms = collect_atoms(parent, child, parent_issue, child_issue)
+        grid = build_grid(parent, child, atoms, exhaustive, parent_issue, child_issue)
     if (parent == child and tuple(parent_capabilities) == tuple(child_capabilities)
             and parent_issue == child_issue):
         return Classification("equivalent", "the configurations are identical",

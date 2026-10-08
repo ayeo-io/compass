@@ -199,11 +199,13 @@ def _slot(layer, kind):
     return layer
 
 
-def build_chain(parent=None, project=None, issue=None, parent_name="parent"):
-    """The layers, root first: the parent (a mapping or a `Layer`), the
-    project and the issue, each only when given. Every layer is checked
-    alone, before anything merges, whatever form it arrives in, and its
-    kind must match its slot."""
+def build_chain(parent=None, project=None, issue=None, parent_name="parent",
+                extra_parents=()):
+    """The layers, root first: the parent (a mapping or a `Layer`), any
+    `extra_parents` (git parents, as `Layer`s, root first), the project and
+    the issue, each only when given. Every layer is checked alone, before
+    anything merges, whatever form it arrives in, and its kind must match
+    its slot."""
     chain = []
     if parent is not None:
         if isinstance(parent, Layer):
@@ -213,6 +215,9 @@ def build_chain(parent=None, project=None, issue=None, parent_name="parent"):
             _check_parent(parent, parent_name)
             parent = Layer(parent_name, "parent", parent, layer_digest(parent, "parent"))
         chain.append(parent)
+    for extra in extra_parents:
+        _check_parent(_slot(extra, "parent").doc, extra.name)
+        chain.append(extra)
     if project is not None:
         _check(_slot(project, "project").doc, "project", project.name)
         chain.append(project)

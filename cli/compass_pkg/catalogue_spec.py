@@ -417,9 +417,12 @@ FIELD_DESCRIPTIONS = {
     "artifacts": {
         "file": "The file name of the artifact in the issue's folder, for example "
                 "`acceptance-criteria.md`.",
-        "depends_on": "The ids of the artifacts this one builds on. A cycle is an error.",
+        "depends_on": "The ids of the artifacts this one builds on. A cycle, a bookkeeping "
+                      "artifact and a directory are each an error.",
         "checks": "The ids of the checks the artifact carries.",
-        "bookkeeping": "Whether the artifact is a record the framework keeps, not a deliverable.",
+        "bookkeeping": "Whether the artifact is a record the framework keeps about the work, "
+                       "such as the dashboard, the receipt or the verification report. Such "
+                       "an artifact is never an input to another.",
     },
     "vocabulary": {
         "name": "The display name of the entry, shown to people in place of its id.",

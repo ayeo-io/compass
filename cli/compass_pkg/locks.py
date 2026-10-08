@@ -603,11 +603,20 @@ def _unprovable(field, reason):
                    f"no lock can be shown to hold: {reason}")
 
 
-def _scan(fp, locks, before, after, kwargs, early_exit, out, scan="footprint"):
+def _scan(fp, locks, before, after, kwargs, early_exit, out, scan="footprint", at=None):
     """Evaluate both configurations at every point of the classifier's grid and
     collect what the locks refuse there, the first point of each. The grid's
     labels are those a locked entry can read (`scan="footprint"`) or every
-    label in the layer (`scan="full"`)."""
+    label in the layer (`scan="full"`). With `at`, an assessment, the grid is
+    that one point (an issue's own layer, ADR-037)."""
+    if at is not None:
+        try:
+            _evaluate_grid(fp, locks, before, after, kwargs, early_exit, out,
+                           classify.grid_at(at))
+        except CompassError as exc:
+            out.refusals += (_unprovable("evaluation", f"the evaluator cannot read the "
+                                         f"configuration: {exc}. An unlock cannot help; fix the configuration"),)
+        return
     reader = _label_reader(fp, before, after) if scan == "footprint" else None
     atoms = classify.collect_atoms(before, after, None, kwargs["child_issue"],
                                    label_site=reader)
@@ -682,7 +691,7 @@ def _evaluate_grid(fp, locks, before, after, kwargs, early_exit, out, grid):
 
 def enforce(locks, before, after, *, before_capabilities=(), after_capabilities=(),
             after_issue=None, directions=None, tighter=None, cache=None,
-            early_exit=True, scan="footprint"):
+            early_exit=True, scan="footprint", at=None):
     """What the locks refuse in the change from `before`, the configuration
     they were declared in, to `after`. `locks` maps `catalogue.id` to a `Lock`
     or a level. A change that is equal or tighter is allowed; one that is
@@ -690,7 +699,8 @@ def enforce(locks, before, after, *, before_capabilities=(), after_capabilities=
     waiver excuses a lock. With `early_exit` the scan stops at the first
     refusal. `scan` is `footprint` (the labels a locked entry can read) or
     `full` (every label in the layer, the reference the footprint scan is
-    tested against)."""
+    tested against). With `at`, an assessment, the change is judged at that
+    one point and not over the grid: the way an issue's own layer is judged."""
     _check_scan(scan)
     out = Enforcement()
     if not locks or (before == after and tuple(before_capabilities)
@@ -705,7 +715,7 @@ def enforce(locks, before, after, *, before_capabilities=(), after_capabilities=
                       child_capabilities=after_capabilities, parent_issue=None,
                       child_issue=after_issue, directions=directions,
                       tighter=tighter, cache=cache)
-        _scan(fp, locks, before, after, kwargs, early_exit, out, scan)
+        _scan(fp, locks, before, after, kwargs, early_exit, out, scan, at)
     return out
 
 
@@ -741,12 +751,15 @@ def _unlock_refusal(found, held):
 
 
 def enforce_chain(layers, *, directions=None, tighter=None, cache=None,
-                  early_exit=True, scan="footprint"):
+                  early_exit=True, scan="footprint", at=None):
     """What the locks refuse across a chain of layers, root first. Each layer
     is merged on the one before it, the unlocks it validly carries lift the
     locks declared above it, and what is left is enforced on its change. An
     unlock that is refused is a refusal too. The first layer has nothing above
-    it, so nothing binds it. `scan` is as for `enforce`."""
+    it, so nothing binds it. `scan` is as for `enforce`. `at` is the issue's
+    assessment: an issue layer is enforced at that one point, while a parent
+    and a project layer are enforced over the grid (without `at`, an issue
+    layer is too)."""
     _check_scan(scan)
     out = Enforcement()
     held, config, capabilities, seen = {}, {}, (), []
@@ -763,7 +776,8 @@ def enforce_chain(layers, *, directions=None, tighter=None, cache=None,
                              after_capabilities=after_capabilities,
                              after_issue=layer.doc if layer.kind == "issue" else None,
                              directions=directions, tighter=tighter, cache=cache,
-                             early_exit=early_exit, scan=scan)
+                             early_exit=early_exit, scan=scan,
+                             at=at if layer.kind == "issue" else None)
             out.evaluated += result.evaluated
             refusals += tuple(
                 replace(r, layer=layer.name, message=f"{layer.name} layer: {r.message}")

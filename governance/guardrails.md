@@ -7,8 +7,10 @@ strategy.
 
 This file ships with five **default guardrails** active. A project can *add*
 guardrails below them; it can also remove one, and `compass check` reports
-the omission. `/compass:init` copies this file into the project so the team
-can extend it.
+the omission. A project adds its own checks and gates in its `compass.yml`,
+which extends the shipped default (see `docs/configuration.md`). A project that
+copied this file under 5.x keeps running on its copy until `compass policy
+migrate` converts it.
 
 **This document explains; `guardrails.yml` enforces.** The companion
 `governance/guardrails.yml` is the machine-readable authority for *how each

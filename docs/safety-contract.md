@@ -302,6 +302,25 @@ rather than reinterpret. Within a major, compatibility is shown on the corpus
 cases and nowhere else. A change of behaviour that no case exercises is not
 detected, and the corpus is small (two cases for each check at first).
 
+### An approval of a waiver is a name and a date, and is not authenticated
+
+A waiver that loosens the shipped default carries `approved_by` and, for a
+project waiver, `approved_on`. Lint checks that the approver is one the
+project's `owner` or `approvers` list allows, and that an issue waiver's
+approval is a record in the issue's evidence. It cannot check that the person
+named gave the approval. Anyone who can edit `compass.yml` can write any name
+and date. Repository permissions and review of the pull request that changes
+`compass.yml` are the control.
+
+### Conformance is a statement about the configuration, not about the work
+
+A project that unlocks a framework entry is reported non-conformant on every
+`compass check`, `compass issue receipt` and `compass approach summary`. The
+line states that the configuration departs from the framework's locks. It does
+not say that any work was done badly, and a project that unlocks nothing is not
+shown to have done good work. A hard lock (guarantee 5) cannot be unlocked at
+all.
+
 ### Compass is adaptable, not universal
 
 The shipped policies are a starting point. Teams can add strategies and

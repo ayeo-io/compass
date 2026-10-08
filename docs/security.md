@@ -112,7 +112,15 @@ allow_project_commands: true
 ```
 
 This prevents accidental execution; it is not a security boundary because a
-repository change can edit both the command and the setting.
+repository change can edit both the command and the setting. Since 6.0.0 a
+project can declare a `command-passes` check in `compass.yml`, the same file
+that holds `allow_project_commands`, so the setting sits beside the checks it
+authorises and one change can add both. Before, the setting lived apart from
+the governance files that held the checks. That separation was never a
+control. The control is the trust decision, which runs first and reads nothing
+from the project. A parent (data that `extends:` names), a preset and an issue's
+own layer cannot set the key; lint refuses it there. A parent is data and is
+never executed.
 
 Prefer the non-shell script form:
 

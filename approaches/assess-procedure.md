@@ -15,7 +15,9 @@ determinism boundary - see `docs/methodology.md` §2.
 Assess works on day one with **zero project setup**: the shipped default
 guardrails, strategies, and routing policy apply as-is, so `/compass:init` is
 optional and not a prerequisite. If a project has run `/compass:init`, its
-`governance/` extends those defaults - read whichever is in force.
+`compass.yml` extends those defaults - read `compass policy effective` for
+what is in force. A project that still holds copied `governance/` files runs
+on them until `compass policy migrate` converts it.
 
 The issue is the one `/compass:assess` was given.
 
@@ -28,8 +30,8 @@ is safe to run every time and you do not need to check first.
 **Report the result to the user in one line when it created the project.** A
 `.compass/` directory appearing with no word said is how someone deletes it by
 hand, or commits it without meaning to. It creates project state only - the
-shipped governance defaults stay in force, and adopting your own is what
-`/compass:init` offers separately.
+shipped defaults stay in force, and writing a `compass.yml` for the project is
+what `/compass:init` offers separately.
 
 ## Setup
 

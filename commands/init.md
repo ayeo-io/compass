@@ -1,5 +1,5 @@
 ---
-description: Optionally adopt and extend project governance
+description: Write the project's compass.yml, or migrate an older project to it
 allowed-tools: Read, Write, Edit, Bash, Glob
 ---
 
@@ -12,90 +12,98 @@ directory, and no settings file - and your first Compass command runs it for you
 did. So the command you wanted to run initialises the project,
 not a setup step you had to know about first.
 
-What `/compass:init` adds on top is the governance conversation below. Compass
-ships with five default guardrails, a set of default method strategies
-(including BDD and TDD), and a default routing policy, all active from
-install, and `/compass:assess` computes delivery approaches against them on day
-one. This command is not a gate you must clear before the first issue.
+What `/compass:init` adds is **`compass.yml`**, the one file a person edits. It
+holds the project's settings (name, test command, autonomy, adoption mode) and,
+when the team wants them, its own edits to the shipped governance. Compass
+ships a default set of guardrails, method strategies and routing rules, all in
+force from install, and `/compass:assess` computes delivery approaches against
+them on day one. This command is not a gate you must clear before the first
+issue.
 
-What init *is*: the step where a project starts to **build up its own
-governance**. It copies `governance/` into the project so the team can
-extend it - adding project-specific guardrails and strategies, and tuning
-the routing policy to the project's real risk surface. A project can adopt
-governance a piece at a time: "the shipped
-defaults and nothing project-specific yet" is a complete, valid governance
-state. Init is how a team adds to its own governance, when it has formed
-opinions worth writing down - not before.
+`/compass:init` copies nothing. A new project's `compass.yml` extends the
+shipped default (`extends: compass:default@6`) and holds only what differs from
+it, so "the shipped defaults and nothing project-specific yet" is a complete,
+valid configuration. Copying `governance/` into a project, which 5.x versions
+of this command did, is what `compass policy migrate` now converts.
 
 Run it whenever the team is ready. It does not change application code, so
 it is exempt from assessment.
 
 ## Steps
 
-1. **Check for an existing install.** If a project `governance/` directory
-   or a settings file (`compass.yml`, or `.compass/config.yml` in an older
-   project) already exists, stop and report what is
-   present. Do not overwrite live governance; offer to show a diff against
-   the shipped defaults instead. Then go on to the status line step below,
-   which runs either way.
+1. **Check what the project already has.** Look for these, in order:
+   - A `compass.yml` with a top-level `schema:` key. Compass already has its
+     configuration. Stop and report that. Offer `compass policy lint` and
+     `compass policy effective`, which show every resolved field and the layer
+     it came from. Do not overwrite the file.
+   - A `.compass/config.yml`, or copied governance: both
+     `governance/routing-policy.yml` and `governance/guardrails.yml` in the
+     project, a copy made under 5.x. Go to step 2.
+   - None of these. Go to step 3.
 
-2. **Copy `governance/` into the project.** Place the shipped `governance/`
-   files named here at the project root, and no others: the Compass
-   repository's own `review-rules.yml` and `decisions/` stay behind. Copy
-   the prose `guardrails.md`, `strategies.md`,
-   `strategies-rationale.md`, `routing-policy.md`, `README.md`, **and the
-   machine-readable `guardrails.yml` and `routing-policy.yml`** - the latter two are what
-   the `compass` CLI runs (`compass approach evaluate`, `compass check`,
-   `compass policy lint`). These arrive with their defaults already active
-   and in force - they are not empty templates. The `cli/` and `schemas/`
-   directories ship with the framework and are not copied per-project; the
-   CLI walks up to find a project-local `governance/`, falling back to the
-   shipped defaults. The five default guardrails and the default method
-   strategies are real content from the moment they land.
-   `strategies-rationale.md` holds the incidents behind the rules in
-   `strategies.md`, which links to it - copying one without the other leaves
-   that link pointing at nothing.
+   Then go on to the status line step below, which runs every time.
 
-3. **Walk the team through extending them** - additively, in each role's
-   own language, a few questions at a time. The team does not need to fill
-   any section; an empty project section is a valid, complete state.
-   - **`guardrails.md` - project guardrails section.** Add a guardrail only
-     when the team hits something that must *never* recur and can be
-     checked with evidence. Guardrails are slow to add and slower to
-     remove. Leave the section empty rather than padding it.
-   - **`strategies.md` - project strategies section.** Add freely -
-     strategies are meant to build up. Product, engineering, and voice &
-     positioning preferences all live here. A strategy is directional and
-     assessed, not checkable or blocking.
-   - **`routing-policy.md` / `routing-policy.yml`.** Tune them to the
-     project, keeping the prose and the YAML in step - the YAML is
-     authoritative for what the CLI runs. The soft biases
-     (`default_shapes`, `biases`) are meant to be adjusted as the team
-     learns how its work distributes. The hard rules (floors, caps,
-     immovable_gates, role_rules) bound the computed delivery approach -
-     adjust them deliberately; loosening one weakens the framework for
-     everyone. Run `compass policy lint` after any edit to the governance
-     YAML.
-   Fill `{{PROJECT_NAME}}`, `{{DATE}}` (today), and each file's
-   amendment-log first row. Do not leave `{{...}}` placeholders behind.
+2. **Migrate an older project.** Never write a fresh `compass.yml` beside an
+   older settings file: Compass refuses a project that holds settings in both.
+   - Run `compass policy migrate`. It is a dry run and writes nothing. It prints
+     the `compass.yml` it would write, the settings it moves, the state it moves
+     to `.compass/state.yml`, the files it copies to `.compass/legacy/`, and what
+     it could not express.
+   - Show the person that report in plain words and ask: "Apply this migration?"
+     Only on a yes, run `compass policy migrate --apply`. A person approves a
+     change to their project's configuration (guardrail 5).
+   - The command exits 1 when it cannot show the result equivalent to what the
+     project ran, or when a loosening needs an approval. Report each item it
+     names, apply nothing, and let the person decide. It exits 2 when it refuses
+     (for example, `compass.yml` already exists). Report the reason it gives.
+   - After `--apply`, run `compass policy lint` and report the result. An issue
+     that already has a stored configuration keeps it until its next
+     reassessment. An issue without one is judged by the new `compass.yml` at
+     once.
 
-4. **Create the config.** `compass init` writes no settings file, only the
-   state file in `.compass/`. Create `compass.yml` at the project root, or
-   open it if it exists, and set `project.name` and `project.test_command`
-   in it. An older project that has only `.compass/config.yml` keeps
-   that file until it moves. `compass.yml` holds only project
-   settings - routing rules (the default shape, the worktree caps) live in
-   `governance/routing-policy.yml`, which is authoritative; tune routing
-   there, not here.
+3. **Write a minimal `compass.yml` for a new project.** Ask for the project's
+   name, its test command and who approves waivers (the owner). Write
+   `compass.yml` at the project root:
 
-5. **Create working state.** Make `.compass/work/`. Add a `.gitkeep` if
-   empty. Remind the user that `.compass/work/` **is committed** - it is
+   ```yaml
+   schema: 1
+   extends: compass:default@6
+   owner: <the person who approves waivers>
+   project:
+     name: <the project's name>
+     test_command: <the command that runs the tests, such as "pytest -q">
+   ```
+
+   The name is `project.name` and the command is `project.test_command`.
+   `compass init` writes no settings file, so this is the first one. Run
+   `compass policy lint` and report that it passes. Do not add keys the team has
+   not asked for: every other setting has a default (see
+   `docs/configuration.md`), and a missing key is a complete state.
+
+4. **Walk the team through extending the defaults, if it wants to** - a few
+   questions at a time, in each role's own language. The team does not need to
+   add anything.
+   - **Settings** go in `compass.yml` beside `project:`: `autonomy`,
+     `adoption` (`advisory` to pilot Compass, `enforced` once the team is
+     ready), `enforcement.code_globs`, `multiagent`, `record`. Routing rules do
+     not go there.
+   - **Changes to the shipped checks, gates, rules and routes** are entries in
+     the file's catalogue keys, and each is checked against the default:
+     tightening needs nothing, and loosening needs a waiver with an approver.
+     Add one only when the team hits something that must never recur. Run
+     `compass policy lint` after every edit, and `compass policy effective` to
+     see the result.
+
+   Replace every `<...>` placeholder from step 3 before you write the file.
+
+5. **Check working state.** `compass init` already made `.compass/work/`. Add
+   a `.gitkeep` if it is empty. Remind the user that `.compass/work/` **is committed** - it is
    the audit trail, not scratch. `/compass:assess` will later write
    `.compass/current-task` (the pointer the CLI uses to resolve which issue
    a `compass` call acts on); it does not need to be created now.
 
-6. **Report.** Summarise what was created, which project sections the team
-   chose to leave empty (a valid state, not owed work), and the next
+6. **Report.** Summarise what was created or migrated, what the team chose to
+   leave at the default (a valid state, not owed work), and the next
    command: `/compass:assess` for an engineer, or a role entry point -
    `/compass:intent` (product owner/manager), `/compass:position` (product
    marketer), or `/compass:design` (designer).
@@ -103,7 +111,7 @@ it is exempt from assessment.
 ## The status line, even when step 1 stops
 
 Run this whether or not step 1 stopped for an existing install: a project
-that adopted governance long ago still needs its status line.
+that adopted Compass long ago still needs its status line.
 
 1. Ask which settings file the person wants: their own `settings.json` in
    `~/.claude`, or the project's `settings.json` in its `.claude` folder.
@@ -119,8 +127,8 @@ that adopted governance long ago still needs its status line.
 
 ## Gate
 
-Init is complete when the project `governance/` files are in place with no
-remaining `{{...}}` placeholders in their headers and amendment logs, and
-`compass.yml` is set. The project guardrail and strategy *sections*
-can be left empty - that is a project section not yet built up, not an
-unfinished step. The shipped defaults are in force regardless.
+Init is complete when `compass.yml` exists with `schema:`, `compass policy lint`
+passes, and no placeholder remains in it. For an older project, init is complete
+when `compass policy migrate --apply` has run on the person's go-ahead, or the
+person has declined and the old files are untouched. The shipped defaults are in
+force regardless.

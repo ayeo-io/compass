@@ -429,9 +429,9 @@ protects: the checks in `guardrails.yml` run against an adopting project's
 It never runs in an adopting project and never touches a gate.
 
 **If you are adopting Compass:** the rules above are a worked example of the
-shape a project strategy takes, not something you inherit. `/compass:init`
-copies this file wholesale, so **delete this block if your team writes
-differently.** `S7` is the part that ships on, and it governs what a commit
+shape a project strategy takes, not something you inherit. A project that
+copied this file under 5.x has the block too, so **delete it if your team
+writes differently.** `S7` is the part that ships on, and it governs what a commit
 message must *say*; how you format the subject line is yours.
 
 ---

@@ -94,9 +94,8 @@ _STATE_PATHS = (".compass/work/", ".compass/flow/", ".compass/current-task",
 def _is_issue_state(path, tracked):
     """Is `path` Compass's own state, kept out of a quick fix's commit? A
     path under `.compass/` is when it is one of `_STATE_PATHS` or git does
-    not track it. Any other tracked file there, such as
-    `.compass/config.yml`, is the project's own and is traced like any other
-    change."""
+    not track it. Any other tracked file there, such as `.compass/state.yml`,
+    is the project's own and is traced like any other change."""
     if not path.startswith(".compass/"):
         return False
     return path.startswith(_STATE_PATHS) or path not in tracked

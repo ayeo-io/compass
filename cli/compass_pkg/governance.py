@@ -40,7 +40,7 @@ from compass_pkg.policy import _jsonschema_errors, architecture_sources_lint_err
 
 
 # --- governance drift --------------------------------------------------------
-# A project that runs `/compass:init` gets a COPY of governance/. The framework
+# A project that ran `/compass:init` under 5.x got a COPY of governance/. The framework
 # later ships new floors and checks; the copy never learns about them. The
 # failure is DIRECTIONAL and therefore quiet: stale governance never fails
 # loudly, it produces a lighter delivery approach. A project can lose half its

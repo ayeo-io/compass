@@ -2,11 +2,12 @@
 
 The maintainer asked, on 5 October 2026, to stay out of the loop: no
 checkpoint waits at define or plan. The project setting that does this is
-`autonomy: autonomous` in `.compass/config.yml`, which keeps every hand-off
+`autonomy: autonomous` in `compass.yml`, which keeps every hand-off
 shown and logged but stops none. It changes no gate, evidence, hook or
 `compass check`. Adopters keep the shipped default, `balanced`.
 
-Scenario id: RA-1 (issue `repository-autonomy`).
+Scenario id: RA-1 (issue `repository-autonomy`). The setting moved from
+`.compass/config.yml` to `compass.yml` in the issue `init-docs-release`.
 """
 from __future__ import annotations
 
@@ -22,7 +23,7 @@ from compass_pkg.routing import evaluate_route  # noqa: E402
 
 
 def test_ra_1_this_repository_runs_autonomously():
-    config = yaml.safe_load((ROOT / ".compass" / "config.yml").read_text(encoding="utf-8"))
+    config = yaml.safe_load((ROOT / "compass.yml").read_text(encoding="utf-8"))
     assert config.get("autonomy") == "autonomous"
     policy = yaml.safe_load((ROOT / "governance" / "routing-policy.yml")
                             .read_text(encoding="utf-8"))

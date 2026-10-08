@@ -29,6 +29,81 @@ ADR-006 is the other half of this: backward compatibility is non-negotiable
 it, and a breaking change happens once, at a major version, with the reason
 recorded.
 
+### What changed at 6.0.0
+
+6.0.0 makes the project's configuration a file a person edits and a tool can
+check. It is a major release because it changes the shipped default's format
+and ships together with the delivery approaches as data (the decision record
+"routing policy as configuration goes ahead", in `governance/decisions/`),
+not because it removes a command. **It removes nothing.** Every file and name
+that 5.x read is still read, and 7.0.0 removes them
+(`governance/decisions/2026-10-06-legacy-governance-readable-until-7-0-0.md`
+and `governance/decisions/2026-10-06-old-route-names-readable-until-7-0-0.md`).
+
+**What the release contains**
+
+- `compass.yml` at the project root is the one file a person edits. It holds the
+  project's settings and, optionally, its edits to the shipped default. It
+  extends `compass:default@6`, and a project that sets nothing runs on the
+  default. A 6.x release of the default never changes a value that 6.0.0 defines.
+- The shipped default is a preset directory, `governance/presets/default/`.
+  `governance/routing-policy.yml` and `governance/guardrails.yml` are views
+  generated from it, and they stay through 6.x for the projects, the drift
+  report and the tests that read them.
+- A layer can add, set, replace or remove an entry. The classifier compares a
+  layer with its parent. A change that loosens the parent needs a waiver with an
+  approver, a framework lock cannot be removed by a lower layer, and a project
+  that unlocks a framework entry is reported non-conformant.
+- `compass policy lint` checks a layered project. `compass policy effective`
+  prints every resolved field with the layer that set it. `compass policy diff`
+  compares two configurations by classification and by replaying assessments.
+  `compass policy migrate` turns copied governance and a `.compass/config.yml`
+  into a `compass.yml`.
+- `compass approach evaluate --write` stores the configuration an issue runs
+  against as a numbered generation under `.compass/work/<slug>/generations/`.
+  The commands that read configuration read that generation, so a later change
+  to `compass.yml` cannot change an issue that is already running.
+- `/compass:init` writes a minimal `compass.yml` for a new project and copies
+  nothing. It runs `compass policy migrate` when it finds a
+  `.compass/config.yml` or copied governance. `compass init`, which every entry
+  point runs, writes `.compass/state.yml` and no settings file.
+
+**What a person sees**
+
+| Person | Sees |
+|---|---|
+| A new user | `compass init` creates `.compass/state.yml` and `.compass/work/`. `/compass:init`, if run, writes `compass.yml` and no `governance/` copy. |
+| A 5.x user who does nothing | Nothing changes. The CLI reads `.compass/config.yml` and the copied `governance/` files as 5.6.0 did. |
+| A 5.x user who migrates | `compass policy migrate` shows a dry run, and `--apply` moves the settings to `compass.yml`, the state to `.compass/state.yml`, and the old files to `.compass/legacy/`. |
+| This repository | A settings-only `compass.yml`. It keeps its generated governance files and the legacy lint. |
+
+**Behaviour changes**
+
+- A project with a `compass.yml` sees `approach evaluate` name the intent
+  document `intent`, the launch document `launch-readiness` and the last stage
+  `ship`, where 5.6.0 printed `intent.md`, `launch-readiness.md` and `land`. A
+  project without a `compass.yml` keeps the 5.6.0 output exactly.
+- A `compass.yml` that fails `compass policy lint` makes
+  `compass approach evaluate --write` refuse to commit. Without `--write` the
+  command still works.
+- A landed issue keeps the configuration it landed under. It cannot store a new
+  generation.
+- A script that rewrites a manifest wholesale and drops its `generation:` key
+  leaves a complete but unreferenced generation folder. The next
+  `compass approach evaluate --write` refuses to write over it, and `compass ci`
+  reports it. Restore the key, or delete the folder.
+- A migrated overlay takes effect at once for an issue that has no generation.
+  An issue with a generation keeps it until its next reassessment.
+- A project with a `compass.yml` and a `.compass/config.yml` that still holds
+  settings is refused (`settings-conflict`). Move the keys into `compass.yml` and
+  delete them from the old file.
+- A `compass.yml` that has no `schema:` key is not taken for Compass's file. The
+  old file is read, and a warning says so.
+- An old CLI reading a manifest that has `generation:` fails `compass issue lint`,
+  because the old manifest schema forbids unknown keys. The backward-compatibility
+  rule (ADR-006) protects projects that have not adopted a mechanism. It does not promise that new data reads on an
+  old CLI.
+
 ### What changed at 5.0.0
 
 5.0.0 removed two skills by merging each into another. A session, an agent
@@ -206,6 +281,67 @@ with the version hidden.
 10. **Tag and publish.** The release-script run, the out-of-tree smoke
    test, and the seven-locations version bump are the gate; tagging is
    the consequence.
+
+### Checks for 6.0.0
+
+Run these on top of steps 1 to 9, before step 10.
+
+1. **A full run with the whole archive.** `COMPASS_FULL_ARCHIVE=1 make test`
+   and `COMPASS_FULL_ARCHIVE=1 make ci`. The compatibility contract for check
+   verdicts and for old manifests reads every archived issue only with the
+   variable set.
+2. **The six compatibility contracts.** "A project with no configuration
+   behaves as 5.6.0" is six promises, each compared with a baseline captured
+   once from 5.6.0 and never regenerated from newer code: routing output, what
+   each delivery approach owes, `compass check` verdicts on archived issues, CLI
+   exit codes on a recorded command corpus, pre-tool hook decisions on a
+   recorded corpus, and old manifests, evidence and receipts staying readable.
+   The tests are `tests/test_compat_contracts.py` (A),
+   `tests/test_compat_configurations.py` (B and C),
+   `tests/test_compat_contract_4.py` and `tests/test_compat_contract_5.py`.
+   Each contract must hold under these configurations:
+   - **A.** No configuration: the shipped default alone.
+   - **B.** An empty overlay: a `compass.yml` holding `schema: 1` and
+     `extends: compass:default@6` and nothing else.
+   - **C.** A copy of the 5.6.0 shipped governance files, run through the
+     legacy adapter. The copy is in `tests/fixtures/compat/v5.6.0-governance.tgz`,
+     taken from the `v5.6.0` tag.
+   - **D.** Contracts 4 and 5 only, because the settings move files: the same
+     project with a 5.6.0 `.compass/config.yml`, and again after
+     `compass policy migrate` has moved its settings into `compass.yml`. Both
+     states must give the recorded exit codes and hook decisions.
+
+   What B and C check exactly, and where they differ from A:
+   - Contracts 1 to 3 and 6 run in full under B and C. Contract 1 compares a
+     layered result with the baseline after a table of three spellings: the
+     layered path names a required document by its id (`intent`,
+     `launch-readiness`) and a blocked stage by its current name (`ship`),
+     where 5.6.0 printed `intent.md`, `launch-readiness.md` and `land`. Any
+     other name, and every other field, is compared as recorded.
+   - Contract 4 runs the corpus under B and C, with the configuration in the
+     project's base commit. It leaves out an entry whose project state already
+     holds a settings file or governance of its own, every `policy migrate`
+     entry (it migrates the files B and C add), and the `terminology` entries
+     under C (5.6.0 refuses them in a project with a two-file governance copy).
+   - Contract 5 runs the hook corpus with the settings in a `compass.yml` that
+     extends the default (B), and with the 5.6.0 governance copy added beside
+     `.compass/config.yml` (C).
+   - Each parametrisation has a partner test that plants a fault in the
+     configuration builder and expects a difference.
+3. **The framework's own file.** `tests/test_framework_compass_yml.py` fails when
+   this repository's `compass.yml` holds a catalogue key, a waiver, an unlock or
+   a capability, because this repository's issues must run the shipped default
+   unchanged. `tests/test_old_settings_file_sweep.py` and
+   `tests/test_settings_prose.py` fail when a source or a document names
+   `.compass/config.yml` without `compass.yml` or the state file.
+4. **The verbs the notes name exist.** For every command the release notes
+   name, check that `compass <verb> --help` runs. A note must not describe a
+   command the tarball lacks.
+5. **Release notes.** The notes are the body of the GitHub release, which the
+   repository does not track. Use the shape of the 5.6.0 notes: what is new, the
+   changed behaviour, what is fixed, and "Queued against this release" (step 9).
+   Say plainly that nothing is removed, and name the behaviour changes listed
+   above.
 
 ---
 

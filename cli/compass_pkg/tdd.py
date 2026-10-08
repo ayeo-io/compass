@@ -215,7 +215,7 @@ def _read_config(task_dir):
 
 def settings_hint(task_dir, key, value=None):
     """A setting as advice shows it, naming the file the project's settings
-    are read from: "`mode: enforced` in .compass/config.yml"."""
+    are read from: "`adoption: enforced` in compass.yml"."""
     root = find_upwards(task_dir, ".compass") or task_dir
     return project_settings.named(root, key, value)
 

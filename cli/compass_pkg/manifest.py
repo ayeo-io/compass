@@ -288,6 +288,14 @@ def cmd_land_commit(args):
                 continue
             in_head = _git(["cat-file", "-e", f"HEAD:{path}"], cwd).returncode == 0
             if not in_head:
+                # Clean, absent from HEAD and absent from disk: a deletion
+                # that is already committed. A path that was never
+                # committed fails the same test, but git reports it only
+                # when it exists on disk, so it is told apart by history.
+                if not os.path.lexists(os.path.join(cwd, path)) and _git(
+                        ["log", "-1", "--format=%H", "--", path],
+                        cwd).stdout.strip():
+                    continue
                 dirty_or_missing.append(path)
         if dirty_or_missing:
             raise CompassError(

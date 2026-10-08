@@ -13455,6 +13455,13 @@
 - **Source issue:** `configure-and-reassess`
 - **Landed:** 2026-10-08
 
+### configure refuses a landed issue, a symbolic link and a folder that is not a proposal _(archived)_
+
+- **Scenario id:** `CR-12`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
 ### the preview lists fields, classification, assessment effect, invalidations and the next step; exit 0, 1 or 2 _(archived)_
 
 - **Scenario id:** `CR-2`
@@ -13509,4 +13516,25 @@
 - **Scenario id:** `CR-9`
 - **Intent:** `INT-1`
 - **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### Given an artifacts catalogue, When it is linted, Then a bookkeeping artifact used as an input or a dependency on a directory is reported with a code, level, path and group _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `artifact-graph-lint`
+- **Landed:** 2026-10-08
+
+### Given a dependency on a directory, When linted, Then it is reported with code, level, path and group _(archived)_
+
+- **Scenario id:** `TRC-002`
+- **Intent:** `INT-1`
+- **Source issue:** `artifact-graph-lint`
+- **Landed:** 2026-10-08
+
+### Given a dangling or cyclic depends_on, When linted, Then each is reported with its path and the cycle path _(archived)_
+
+- **Scenario id:** `TRC-003`
+- **Intent:** `INT-1`
+- **Source issue:** `artifact-graph-lint`
 - **Landed:** 2026-10-08

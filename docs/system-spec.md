@@ -50,11 +50,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### configure refuses a landed issue, a symbolic link and a folder that is not a proposal
+### Given the shipped preset, When linted, Then it is clean and the bookkeeping description follows the design
 
-- **Scenario id:** `CR-12`
+- **Scenario id:** `TRC-004`
 - **Intent:** `INT-1`
-- **Source issue:** `configure-and-reassess`
+- **Source issue:** `artifact-graph-lint`
 - **Landed:** 2026-10-08
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -353,4 +353,4 @@
 
 ---
 
-1929 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1933 superseded scenario(s) are in `docs/system-spec-archive.md`.

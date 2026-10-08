@@ -43,6 +43,7 @@ from compass_pkg.project_settings import CompassError  # noqa: E402,F401
 from compass_pkg.stable_ids import (  # noqa: E402
     APPROACH_IDS, APPROACH_QUICK_FIX, LEGACY_APPROACH_ALIASES, STAGE_ASSESS, STAGE_DEFINE, STAGE_IDS,
     STAGE_PLAN, STAGE_REFINE)
+from compass_pkg import word_map  # noqa: E402
 
 
 # --- small helpers -----------------------------------------------------------
@@ -448,6 +449,9 @@ def migrate_map_section(name, fallback):
     return dict(fallback)
 
 
+word_map.bind(migrate_map_section)  # word_map cannot import core (a cycle)
+
+
 # The fallback copy. Retired spellings in a scanned surface would normally be a
 # violation; this is the one place they are unavoidable, and the scan exemption
 # for it is recorded in governance/terminology.yml.
@@ -558,7 +562,7 @@ def normalize_spine(task):
     # The on-disk schema_version is preserved: readers must be able to say
     # honestly what generation a manifest was written in (the receipt reports
     # legacy manifests). Writers stamp the current version when they save.
-    return out
+    return word_map.map_manifest(out)
 
 
 # The orchestration words a pre-ceiling manifest could carry, and the ceiling
@@ -640,7 +644,17 @@ def display_stage(value):
     return STAGE_DISPLAY.get(str(value or ""), str(value or ""))
 
 
+def prepare_manifest_write(task, path):
+    """The one write path every manifest writer calls (`word_map.prepare`)."""
+    try:
+        raw = load_yaml(path) if os.path.isfile(path) else None
+    except CompassError:
+        raw = None
+    return word_map.prepare(task, path, raw)
+
+
 def save_manifest(task, path):
+    task = prepare_manifest_write(task, path)
     with open(path, "w", encoding="utf-8") as fh:
         yaml.safe_dump(task, fh, sort_keys=False, default_flow_style=False)
 

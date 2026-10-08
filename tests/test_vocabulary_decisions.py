@@ -278,6 +278,54 @@ def test_vr_g6_levels_follow_the_decision_of_8_october():
     assert "one outcome" in glossary and "release checkpoint" in glossary
 
 
+# --- the retired list and the read-side tables hold the same triples ---------
+
+def _retired_in_terminology() -> list[tuple[str, str, str | None]]:
+    data = yaml.safe_load(TERMINOLOGY.read_text(encoding="utf-8"))
+    rows = data.get("retired_values")
+    assert isinstance(rows, list), "terminology.yml has no `retired_values:` list"
+    return sorted((r["field"], r["old"], r["new"]) for r in rows)
+
+
+def _word_map():
+    import sys
+    sys.path.insert(0, str(ROOT / "cli"))
+    try:
+        from compass_pkg import word_map
+    except ImportError:
+        raise AssertionError("cli/compass_pkg/word_map.py does not exist") from None
+    return word_map
+
+
+def test_vr_g7_the_retired_list_and_the_mapping_tables_hold_the_same_triples():
+    word_map = _word_map()
+    assert _retired_in_terminology() == word_map.retired_triples()
+
+
+def test_vr_g7_the_parity_check_reports_a_row_held_by_one_side_only(monkeypatch):
+    """A check that cannot fail proves nothing: add a row to the tables only."""
+    word_map = _word_map()
+    rows = {"size": {"standard": "medium"}}
+    monkeypatch.setattr(word_map, "tables", lambda: rows)
+    assert word_map.retired_triples() == [("size", "standard", "medium")]
+    assert _retired_in_terminology() != word_map.retired_triples()
+
+
+def test_vr_g7_the_fallback_tables_equal_the_file_with_the_file_unreadable(
+        monkeypatch):
+    """The in-module copy is for a checkout with no framework install; a test
+    that reads the file both times compares it with itself."""
+    import sys
+    sys.path.insert(0, str(ROOT / "cli"))
+    from compass_pkg import core
+    word_map = _word_map()
+    from_file = word_map.tables()
+    monkeypatch.setattr(core, "migrate_map_path",
+                        lambda: str(ROOT / "no-such-dir" / "migrate-map.yml"))
+    assert word_map.tables() == from_file
+    assert word_map.FALLBACK == from_file
+
+
 # --- "route" is a verb only in the prose that teaches ------------------------
 
 ROUTE_RE = re.compile(r"\b(?:route|routes|routed|off-route)\b", re.I)

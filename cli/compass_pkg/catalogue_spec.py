@@ -49,6 +49,26 @@ SHIPPED_ORDERS = {
     "size": ("atomic", "small", "standard", "large", "product"),
 }
 
+# Where a retired word can sit in a configuration layer, one row per field:
+# `(catalogue, entry id or "*", field, shape, domain)`. `domain` names the
+# word table that field is read through (`compass_pkg.word_map`). `shape` says
+# where the word is in the field's value: `value` is the value itself, `keys`
+# are the keys of a map, `values` are the values of a map and `items` are the
+# members of a list. A path that is not here is never mapped, which is what
+# keeps a check parameter that happens to be called `size` unchanged.
+VALUE_DOMAINS = (
+    ("stages", "*", "modes", "keys", "stage_mode"),
+    ("stages", "*", "mode", "value", "stage_mode"),
+    ("approaches", "*", "stages", "values", "stage_mode"),
+    ("approaches", "*", "artifacts", "values", "artifact_depth"),
+    ("dimensions", "size", "values", "items", "size"),
+)
+
+# The keys that hold a condition on the assessment, and the names of the size
+# dimension a condition may use (`magnitude` is the older spelling).
+PREDICATE_KEYS = ("when", "blocking_when", "applies_when", "applies_to")
+SIZE_KEYS = ("size", "magnitude")
+
 
 def _f(type_, merge, compare, required=False):
     return {"type": type_, "merge": merge, "compare": compare, "required": required}

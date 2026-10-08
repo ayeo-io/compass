@@ -12,7 +12,7 @@ import os
 
 import yaml
 
-from compass_pkg.core import CompassError, manifest_path, normalize_spine
+from compass_pkg.core import CompassError, manifest_path, normalize_spine, prepare_manifest_write
 
 # v1 filename -> v2 filename, applied inside each issue directory.
 V1_ARTIFACT_NAMES = {
@@ -462,6 +462,7 @@ def _repoint_evidence(task_dir, filename, project_rel):
     if not changed:
         return False
     data["evidence"] = records
+    data = prepare_manifest_write(data, manifest)
     body = yaml.safe_dump(data, sort_keys=False, default_flow_style=False,
                           allow_unicode=True)
     tmp = manifest + ".tmp"
@@ -561,6 +562,7 @@ def _register(task_dir, kind, rel):
         return False
     entry["path"] = rel
     data["artifacts"] = arts
+    data = prepare_manifest_write(data, manifest)
     body = yaml.safe_dump(data, sort_keys=False, default_flow_style=False,
                           allow_unicode=True)
     tmp = manifest + ".tmp"
@@ -712,6 +714,7 @@ def migrate_issue_dir(task_dir):
             # raises - an unexpected object type in the manifest will do it -
             # would leave manifest.yml empty and the issue with no record at
             # all. os.replace is atomic on every platform Compass supports.
+            migrated = prepare_manifest_write(migrated, manifest)
             body = yaml.safe_dump(migrated, sort_keys=False,
                                   default_flow_style=False, allow_unicode=True)
             tmp = manifest + ".tmp"

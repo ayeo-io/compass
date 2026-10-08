@@ -775,6 +775,15 @@ codes:
     related: [RP]
 
 # =============================================================================
+# RETIRED VALUES - words a field still reads and no longer writes.
+# =============================================================================
+# One row per `(field, old, new)`; `new: null` means the old word is no longer
+# stored. The rows are the same triples as the read-side tables in
+# cli/migrate-map.yml (`values:` and `friction_keys:`), and a test keeps the
+# two equal. No row is wired yet.
+retired_values: []
+
+# =============================================================================
 # BANNED v1 VOCABULARY - the house test scans user-facing surfaces for these.
 # Each ban is pattern plus context, never a bare word: the context note here
 # is the intent, and the tuned, executable patterns live in

@@ -755,7 +755,10 @@ def lint_chain(parent, project, issue=None, *, exhaustive=False, today=None,
     issue layer is judged at that one point (locks and classification) and not
     over the grid; a parent (shipped or git) and a project layer are always
     judged over the grid (ADR-037)."""
-    chain = [layer for layer in (parent, *extra_parents, project, issue) if layer is not None]
+    # Each layer is read through the retired-word tables before any check sees
+    # it; its digest stays the digest of the raw text.
+    chain = [layers.with_mapping(layer)
+             for layer in (parent, *extra_parents, project, issue) if layer is not None]
     state = {"chain": chain, "today": today or datetime.date.today(),
              "registry": tuple(registry), "exhaustive": exhaustive,
              "assessment": assessment,

@@ -39,7 +39,9 @@ import yaml
 
 from compass_pkg.atomic_io import (StrictYamlError, atomic_write_text, digest,
                                    load_yaml_strict, locked)
-from compass_pkg.core import CompassError, load_yaml, manifest_path
+from compass_pkg import word_map
+from compass_pkg.core import (CompassError, load_yaml, manifest_path,
+                              prepare_manifest_write)
 
 FIX_ZERO = "compass approach evaluate --write"
 SCHEMA = 1
@@ -180,6 +182,9 @@ def load(task_dir, n):
             f"version control, or remove the folder and the `generation:` line of "
             f"manifest.yml and run `compass approach evaluate --write` to store a new "
             f"generation")
+    # Read through the retired-word tables, never rewritten: the file keeps the
+    # words it was stored in (ADR-036) and its marker digest is of that text.
+    documents["resolved"] = word_map.map_layer(documents["resolved"])[0]
     return documents
 
 
@@ -599,6 +604,7 @@ def commit(task_dir, resolution, manifest, invalidated=None, render=None, *,
                     f"--discard {adopt}` to remove it")
             same = dict(manifest)
             stamp(same, n, n)
+            same = prepare_manifest_write(same, path)
             atomic_write_text(path, render(_dump(same)))
             if proposal is not None:
                 # The proposal asked for what the generation already holds.
@@ -632,6 +638,7 @@ def commit(task_dir, resolution, manifest, invalidated=None, render=None, *,
         updated = dict(manifest)
         updated["generation"] = target
         stamp(updated, n, target)
+        updated = prepare_manifest_write(updated, path)
         atomic_write_text(path, render(_dump(updated)))
         _after_step("manifest")
         if proposal is not None:

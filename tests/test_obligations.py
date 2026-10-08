@@ -1149,7 +1149,8 @@ def test_ob_8_only_classify_and_effective_read_the_new_path():
     paths = [p for p in sorted((ROOT / "cli").rglob("*.py"))
              if p.name != "obligations.py" and "vendor" not in p.parts]
     users = [str(p.relative_to(ROOT)) for p in _obligations_importers(paths)]
-    assert users == ["cli/compass_pkg/classify.py", "cli/compass_pkg/effective.py"]
+    assert users == ["cli/compass_pkg/classify.py", "cli/compass_pkg/effective.py",
+                     "cli/compass_pkg/replay.py"]
     assert "obligations" not in (ROOT / "cli" / "compass").read_text(encoding="utf-8")
 
 

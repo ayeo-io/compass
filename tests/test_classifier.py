@@ -976,7 +976,7 @@ def test_cl_7_the_benchmark_times_a_grouped_and_a_full_scan_and_prints_numbers()
     assert "grouped" in line and f"{grouped['points']:,}" in line and "s" in line
 
 
-def test_cl_7_only_the_classifier_and_the_replay_import_the_obligations_module():
+def test_cl_7_only_classify_effective_and_the_replay_import_the_obligations_module():
     import re
     pattern = re.compile(r"^\s*(from compass_pkg(\.obligations)? import .*|"
                          r"import compass_pkg\.obligations)", re.M)
@@ -987,8 +987,9 @@ def test_cl_7_only_the_classifier_and_the_replay_import_the_obligations_module()
         text = path.read_text(encoding="utf-8")
         if any("obligations" in m.group(0) for m in pattern.finditer(text)):
             users.append(path.name)
-    # Amended 2026-10-07 (ADR-037): `effective` may import it too.
-    assert users == ["classify.py", "effective.py"]
+    # Amended 2026-10-07 (ADR-037): `effective` may import it too, and the
+    # replay (policy diff) runs the same function to list what a change moves.
+    assert users == ["classify.py", "effective.py", "replay.py"]
 
 
 def test_cl_7_the_entry_script_and_the_aggregate_do_not_name_the_classifier():

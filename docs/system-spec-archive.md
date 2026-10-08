@@ -13455,6 +13455,13 @@
 - **Source issue:** `configure-and-reassess`
 - **Landed:** 2026-10-08
 
+### configure refuses a landed issue, a symbolic link and a folder that is not a proposal _(archived)_
+
+- **Scenario id:** `CR-12`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
 ### the preview lists fields, classification, assessment effect, invalidations and the next step; exit 0, 1 or 2 _(archived)_
 
 - **Scenario id:** `CR-2`
@@ -13509,4 +13516,102 @@
 - **Scenario id:** `CR-9`
 - **Intent:** `INT-1`
 - **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### Given an artifacts catalogue, When it is linted, Then a bookkeeping artifact used as an input or a dependency on a directory is reported with a code, level, path and group _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `artifact-graph-lint`
+- **Landed:** 2026-10-08
+
+### Given a dependency on a directory, When linted, Then it is reported with code, level, path and group _(archived)_
+
+- **Scenario id:** `TRC-002`
+- **Intent:** `INT-1`
+- **Source issue:** `artifact-graph-lint`
+- **Landed:** 2026-10-08
+
+### Given a dangling or cyclic depends_on, When linted, Then each is reported with its path and the cycle path _(archived)_
+
+- **Scenario id:** `TRC-003`
+- **Intent:** `INT-1`
+- **Source issue:** `artifact-graph-lint`
+- **Landed:** 2026-10-08
+
+### Given the shipped preset, When linted, Then it is clean and the bookkeeping description follows the design _(archived)_
+
+- **Scenario id:** `TRC-004`
+- **Intent:** `INT-1`
+- **Source issue:** `artifact-graph-lint`
+- **Landed:** 2026-10-08
+
+### Given an issue config that sets a stage mode When approach evaluate writes Then the manifest stages hold the mode _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-layer-reaches-evaluator`
+- **Landed:** 2026-10-08
+
+### Given a delivery issue, When it configures --route spike, Then a lock refuses it at the issue's own point _(archived)_
+
+- **Scenario id:** `IP-1`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-layer-at-its-point`
+- **Landed:** 2026-10-08
+
+### Given a spike-assessed issue, When it configures --route full, Then a lock refuses it because spike.conclude is lost _(archived)_
+
+- **Scenario id:** `IP-2`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-layer-at-its-point`
+- **Landed:** 2026-10-08
+
+### Given a quick-fix assessed issue under the shipped default, When it configures --route regular, Then the proposal is accepted and a reassess commits it _(archived)_
+
+- **Scenario id:** `IP-3`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-layer-at-its-point`
+- **Landed:** 2026-10-08
+
+### Given a regular issue, When it configures --route full, Then it is refused as incomparable on the subtask ceiling _(archived)_
+
+- **Scenario id:** `IP-4`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-layer-at-its-point`
+- **Landed:** 2026-10-08
+
+### Given a quick-fix issue where refine is collapsed, When it sets refine=collapsed, Then it is accepted; on a regular issue it is refused without a waiver _(archived)_
+
+- **Scenario id:** `IP-5`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-layer-at-its-point`
+- **Landed:** 2026-10-08
+
+### Given an issue with a route pick and an unchanged configuration, When its stored assessment becomes a spike and it is reassessed, Then the reassess is refused _(archived)_
+
+- **Scenario id:** `IP-6`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-layer-at-its-point`
+- **Landed:** 2026-10-08
+
+### Given a project layer, When it is linted, Then it is still judged over the whole grid _(archived)_
+
+- **Scenario id:** `IP-7`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-layer-at-its-point`
+- **Landed:** 2026-10-08
+
+### Given a proposal that loosens the issue's layer, When the preview is built, Then its classification names the issue's own assessment as the first point _(archived)_
+
+- **Scenario id:** `IP-8`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-layer-at-its-point`
+- **Landed:** 2026-10-08
+
+### Given a delivery issue under the shipped default, When it configures --route regular on a quick-fix assessment, Then the proposal is accepted because the layer is judged at the issue's own assessment _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-layer-at-its-point`
 - **Landed:** 2026-10-08

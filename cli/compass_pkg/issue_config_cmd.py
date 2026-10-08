@@ -331,6 +331,14 @@ def reassess_plan(manifest, task_dir, args):
     # What the commit would refuse later is refused now, before anything prints.
     stored = effective.stored_documents(task_dir, manifest)
     effective.preflight(task_dir, resolution, manifest, invalidated, adopt, stored=stored)
+    # An issue's layer is judged at the issue's own assessment (ADR-037). When
+    # the assessment moved and the configuration did not, the commit says "no
+    # change" without a lint, so the layer is linted here at the new assessment:
+    # a route accepted at the old one must not carry onto, say, a spike.
+    if (resolution.validate is not None and manifest.get("config")
+            and manifest.get("evaluated_assessment") != manifest.get("assessment")):
+        resolution.validate()
+        resolution.validate = None
     # The layer changes when the overlay this resolves from differs from the one
     # the generation in force recorded. A first commit changes nothing: there is
     # no earlier layer.

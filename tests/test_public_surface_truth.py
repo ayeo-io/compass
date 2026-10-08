@@ -460,6 +460,10 @@ def test_d2_repairs_change_only_retired_names():
     check whose implementation major differs from the one the generation
     recorded.
 
+    One more was re-baselined by `issue-layer-at-its-point`:
+    `governance/guardrails.md` (list_items 48 -> 49) gained the bullet saying an
+    issue's `config:` is enforced at the issue's own assessment.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

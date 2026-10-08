@@ -50,11 +50,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### configure refuses a landed issue, a symbolic link and a folder that is not a proposal
+### Given a route pick that is mixed at the issue's own assessment, When it is refused, Then the refusal names every looser or incomparable field
 
-- **Scenario id:** `CR-12`
+- **Scenario id:** `IP-9`
 - **Intent:** `INT-1`
-- **Source issue:** `configure-and-reassess`
+- **Source issue:** `issue-layer-at-its-point`
 - **Landed:** 2026-10-08
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -353,4 +353,4 @@
 
 ---
 
-1929 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1944 superseded scenario(s) are in `docs/system-spec-archive.md`.

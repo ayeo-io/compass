@@ -635,7 +635,7 @@ def test_PM_13_the_report_names_the_base_release_and_what_the_default_adds(tmp_p
     assert document["adopted"] and set(document["adopted"][0]) == {"catalogue", "id", "operation"}
     assert document["behaviour"]["result"] in ("tightening", "loosening", "incomparable",
                                                "equivalent")
-    assert "edits to compass.yml do not change compass check" in out
+    assert "an issue with no stored generation is judged by it at once" in out
 
 
 # --- PM-14 ------------------------------------------------------------------------
@@ -872,13 +872,17 @@ def test_PM_17_governance_drift_is_moved_and_lint_accepts_it_at_the_top_level(tm
 
 # --- PM-18 ------------------------------------------------------------------------
 
-def test_PM_18_the_overlay_is_not_in_force_and_the_output_says_so(tmp_path):
+def test_PM_18_the_output_says_when_the_overlay_takes_effect(tmp_path):
     root = _full_project(tmp_path)
     code, out, err = _run(root, "policy", "migrate")
-    assert "edits to compass.yml do not change compass check or the evaluator" in out
+    # Since the readers moved onto the effective view, compass.yml governs an
+    # issue with no generation at once, and one with a generation at reassess.
+    assert "an issue with no stored generation is judged by it at once" in out
+    assert "keeps that generation until its next reassess" in out
     assert "governance copies" in out
+    assert "do not change compass check" not in out
     code, out, err = _run(root, "policy", "migrate", "--apply")
-    assert "edits to compass.yml do not change compass check or the evaluator" in out
+    assert "an issue with no stored generation is judged by it at once" in out
 
 
 def test_PM_18_overlay_between_keeps_every_kind_of_change():

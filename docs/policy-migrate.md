@@ -15,14 +15,20 @@ report), `cli/compass_pkg/shipped_releases.py` (the table of releases) and
 ADR-037 (classification), ADR-039 (waivers), ADR-042 (the shipped preset and
 the legacy views) and ADR-043 (one project file).
 
-## Read this first: the overlay is not in force yet
+## When the overlay takes effect
 
-`compass check` and the evaluator still read the governance copies in the
-project's `governance/` folder. They do not read `compass.yml`'s overlay until
-the readers move onto the effective view. A person who edits only the overlay
-changes nothing in `compass check` or the evaluator. `compass policy lint` and
-`compass policy effective` read the overlay, and they are the only commands
-that do now. The report and the `--apply` output say this in a closing line.
+`compass check`, the evaluator and the other readers resolve each issue's
+configuration through the effective view. After `--apply`:
+
+- an issue with no stored generation is judged by `compass.yml` over the
+  shipped default at once;
+- an issue with a generation keeps it until its next reassess
+  (`compass approach evaluate --write`), which commits the overlay.
+
+The classifier proves the two configurations equivalent before anything is
+written, so no verdict moves at the switch. The governance copies stay in
+place as the record of what the project ran. The report and the `--apply`
+output say this in a closing line.
 
 ## What it reads
 

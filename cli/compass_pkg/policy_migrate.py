@@ -650,9 +650,12 @@ def apply(root, made):
 JSON_SCHEMA_VERSION = 1
 OPERATIONS = ("add", "set", "replace", "remove")
 
-NOT_IN_FORCE = ("Note: edits to compass.yml do not change compass check or the evaluator yet. "
-                "They still read the governance copies, which stay in place, until the "
-                "readers move onto the effective view.")
+# The readers resolve the effective view: compass.yml over the shipped default
+# for an issue with no generation, the stored generation for one that has it.
+NOT_IN_FORCE = ("Note: compass.yml becomes the project's configuration: an issue with no "
+                "stored generation is judged by it at once, and an issue with a generation "
+                "keeps that generation until its next reassess. The governance copies stay "
+                "in place as the record of what the project ran.")
 
 
 def report_json(made, mode):

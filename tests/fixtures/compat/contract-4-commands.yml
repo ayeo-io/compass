@@ -490,6 +490,15 @@ entries:
   argv: ["policy", "init-preset", "team-preset", "--owner", "acme-team"]
   exit: 1
   stdout_contains: "refused"
+# Added on purpose by preset-interfaces: a folder inside compass-fixtures/ is a
+# fixture group, so its fixtures run and the text report counts the group. 5.6.0
+# exited 2 on the unknown verb. policy-test-init-preset reported such a folder
+# as a problem and exited 1.
+- id: policy-test-groups
+  project: with-grouped-preset
+  argv: ["policy", "test", "team-preset"]
+  exit: 0
+  stdout_contains: "group meets/banking: 1 run, 1 passed, 0 failed"
 # Added on purpose by policy-update: `policy update` is a new verb. 5.6.0
 # refused it as an unknown choice (exit 2); from 6.0.0 a project already on
 # the only shipped major has nothing to move, writes nothing and exits 0.

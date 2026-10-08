@@ -107,13 +107,13 @@ def run_policy_diff(args):
 
 
 def run_policy_test(args):
-    result = preset_test.run(args.preset_dir, fetch=_may_fetch(args))
+    result = preset_test.run(args.preset_dir, replay.evaluate, fetch=_may_fetch(args))
     _emit(args, preset_test.report_json(result), preset_test.text(result))
     return 0 if preset_test.passed(result) else 1
 
 
 def run_policy_init_preset(args):
-    result, files = preset_init.scaffold(args.dir, args.owner)
+    result, files = preset_init.scaffold(args.dir, args.owner, replay.evaluate)
     _emit(args, preset_init.report_json(args.dir, result, files),
           preset_init.text(args.dir, result, files))
     return 0 if result == "written" else 1

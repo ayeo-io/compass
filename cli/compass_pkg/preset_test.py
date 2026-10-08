@@ -12,7 +12,7 @@ It reads files and, through `policy_lint.load_layers`, may fetch a pinned git
 parent. It writes no file of the preset and runs nothing the preset carries.
 """
 # DEPENDENCY: standard library (dataclasses, os, re); compass_pkg.atomic_io,
-# core (CompassError), layers, merge, obligations, policy_lint.
+# core (CompassError), layers, merge, policy_lint.
 from __future__ import annotations
 
 import json
@@ -20,7 +20,7 @@ import os
 import re
 from dataclasses import dataclass, field
 
-from compass_pkg import layers, merge, obligations, policy_lint
+from compass_pkg import layers, merge, policy_lint
 from compass_pkg.atomic_io import StrictYamlError, load_yaml_strict
 from compass_pkg.core import CompassError
 
@@ -196,7 +196,7 @@ def _format_problem(doc, dimensions):
     return None
 
 
-def _run_fixture(folder, name, config, capabilities):
+def _run_fixture(folder, name, config, capabilities, evaluate):
     path = os.path.join(folder, FIXTURE_DIR, name)
     stem = os.path.basename(name)[:-len(FIXTURE_SUFFIX)]
     where = f"{FIXTURE_DIR}/{name}"
@@ -212,12 +212,14 @@ def _run_fixture(folder, name, config, capabilities):
         return FixtureResult(name, stem, "error", message=wrong)
     stem = doc.get("name") or stem
     try:
-        got = obligations.obligations(config, doc["assessment"], capabilities=capabilities)
+        kind, got = evaluate(config, capabilities, doc["assessment"])
     except (CompassError, ValueError, KeyError, TypeError) as exc:
         return FixtureResult(name, stem, "error", message=f"the assessment cannot run: {exc}")
-    if isinstance(got, obligations.Refused):
+    if kind == "refused":
         return FixtureResult(name, stem, "error",
-                             message=f"the configuration refuses this assessment: {got.reason}")
+                             message=f"the configuration refuses this assessment: {got}")
+    if kind != "runs":
+        return FixtureResult(name, stem, "error", message=f"the assessment cannot run: {got}")
     mismatches = _compare(doc["expect"], got)
     return FixtureResult(name, stem, "fail" if mismatches else "pass", mismatches)
 
@@ -246,8 +248,10 @@ def _compare(expect, got):
     return found
 
 
-def run(folder, fetch=False):
-    """The `Result` of testing the preset in `folder`."""
+def run(folder, evaluate, fetch=False):
+    """The `Result` of testing the preset in `folder`. `evaluate` is
+    `replay.evaluate`, handed in by the command: only the classifier, the
+    effective view and the replay may import the obligations module."""
     folder = os.fspath(folder)
     if not os.path.exists(folder):
         raise CompassError(f"{shown(folder)}: no such folder")
@@ -276,7 +280,7 @@ def run(folder, fetch=False):
         return result
     config, capabilities = resolve(chain)
     for group, name in _fixture_files(folder, result.problems):
-        ran = _run_fixture(folder, name, config, capabilities)
+        ran = _run_fixture(folder, name, config, capabilities, evaluate)
         ran.group, ran.file = group, os.path.basename(name)
         result.fixtures.append(ran)
     if not result.fixtures:

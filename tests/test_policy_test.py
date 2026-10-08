@@ -696,14 +696,14 @@ def test_pt_8_a_broken_link_in_the_place_of_a_file_counts_as_an_existing_file(tm
 
 
 def test_pt_8_a_file_that_appears_after_the_check_is_never_overwritten(tmp_path, monkeypatch):
-    from compass_pkg import preset_init
+    from compass_pkg import preset_init, replay
     from compass_pkg.core import CompassError
     folder = tmp_path / "acme-preset"
     folder.mkdir()
     (folder / "README.md").write_text("mine\n", encoding="utf-8")
     monkeypatch.setattr(preset_init.os.path, "lexists", lambda path: False)
     with pytest.raises(CompassError):
-        preset_init.scaffold(folder, "acme-team")
+        preset_init.scaffold(folder, "acme-team", replay.evaluate)
     assert (folder / "README.md").read_text(encoding="utf-8") == "mine\n"
 
 

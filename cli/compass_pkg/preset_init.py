@@ -9,7 +9,7 @@ difference. The command never overwrites a file: it refuses and writes
 nothing when any of its files exists. `docs/policy-test.md` owns the contract.
 """
 # DEPENDENCY: standard library (json, os, unicodedata), yaml; compass_pkg.core
-# (CompassError), layers, obligations, policy_lint, preset_test (FIXTURE_DIR,
+# (CompassError), layers, policy_lint, preset_test (FIXTURE_DIR,
 # JSON_SCHEMA_VERSION, resolve, shown).
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ import unicodedata
 
 import yaml
 
-from compass_pkg import layers, obligations, policy_lint
+from compass_pkg import layers, policy_lint
 from compass_pkg.core import CompassError
 from compass_pkg.preset_test import FIXTURE_DIR, JSON_SCHEMA_VERSION, resolve, shown
 
@@ -105,31 +105,35 @@ the Compass repository describes how a pinned parent is fetched and cached.
 FILES = (".gitignore", "README.md", f"{FIXTURE_DIR}/example.yml", "compass.yml")
 
 
-def _example_gates(compass_yml):
+def _example_gates(compass_yml, evaluate):
     """The gates in force for the example assessment under the scaffold's
-    `compass.yml`, sorted, as the example fixture lists them."""
+    `compass.yml`, sorted, as the example fixture lists them. `evaluate` is
+    `replay.evaluate`, handed in by the command."""
     parent, _ = policy_lint.load_parent()
     doc = yaml.safe_load(compass_yml)
     preset = layers.Layer("preset", "parent", doc, layers.layer_digest(doc, "parent"))
     config, capabilities = resolve([parent, preset])
-    owed = obligations.obligations(config, EXAMPLE_ASSESSMENT, capabilities=capabilities)
+    kind, owed = evaluate(config, capabilities, EXAMPLE_ASSESSMENT)
+    if kind != "runs":
+        raise CompassError(f"the example assessment cannot run: {owed}")
     return sorted(owed.gate_set)
 
 
-def _contents(owner):
+def _contents(owner, evaluate):
     # A double-quoted JSON string is valid YAML. Without ensure_ascii=False it
     # would write a character outside the basic plane as two surrogate escapes,
     # which YAML reads as two broken characters.
     compass_yml = COMPASS_YML.format(owner=json.dumps(owner, ensure_ascii=False))
-    gates = ", ".join(_example_gates(compass_yml))
+    gates = ", ".join(_example_gates(compass_yml, evaluate))
     return {".gitignore": ".compass/\n", "README.md": README.format(owner=owner),
             f"{FIXTURE_DIR}/example.yml": EXAMPLE_FIXTURE.format(gates=gates),
             "compass.yml": compass_yml}
 
 
-def scaffold(folder, owner):
+def scaffold(folder, owner, evaluate):
     """`(result, files)`: `("written", every file)` or `("refused", the files
-    that already exist)`. Nothing is written on a refusal."""
+    that already exist)`. Nothing is written on a refusal. `evaluate` is
+    `replay.evaluate`."""
     owner = (owner or "").strip()
     if not owner:
         raise CompassError("--owner needs the name of the team that owns the preset")
@@ -143,7 +147,7 @@ def scaffold(folder, owner):
         return "refused", present
     written = []
     try:
-        for name, text in _contents(owner).items():
+        for name, text in _contents(owner, evaluate).items():
             path = os.path.join(folder, name)
             os.makedirs(os.path.dirname(path), exist_ok=True)
             with open(path, "x", encoding="utf-8") as fh:

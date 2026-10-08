@@ -51,10 +51,9 @@ def _project(tmp_path, intent):
 
 
 def test_a_scenario_serving_two_intents_answers_for_both(tmp_path):
-    """A list intent derives, and the scenario is current behaviour for each id.
+    """A list intent derives, and the scenario is current behaviour.
 
-    Keying on the whole list would invent a composite intent that supersedes
-    neither of the two real ones, so the assertion is per id, not on the pair.
+    The living spec lists the scenario once and does not print its intents.
     """
     flow = _flow_module()
     project = _project(tmp_path, ["INT-1", "INT-2"])
@@ -62,9 +61,7 @@ def test_a_scenario_serving_two_intents_answers_for_both(tmp_path):
     flow.derive_system_spec(str(project))
 
     spec = (project / "docs" / "system-spec.md").read_text(encoding="utf-8")
-    assert "INT-1" in spec, "the scenario does not answer for its first intent"
-    assert "INT-2" in spec, "the scenario does not answer for its second intent"
-    assert "TRC-1" in spec
+    assert spec.count("- `TRC-1` ") == 1
 
 
 def test_a_scenario_serving_one_intent_still_derives(tmp_path):
@@ -75,5 +72,4 @@ def test_a_scenario_serving_one_intent_still_derives(tmp_path):
     flow.derive_system_spec(str(project))
 
     spec = (project / "docs" / "system-spec.md").read_text(encoding="utf-8")
-    assert "INT-9" in spec
-    assert "TRC-1" in spec
+    assert spec.count("- `TRC-1` ") == 1

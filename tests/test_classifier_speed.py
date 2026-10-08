@@ -559,12 +559,12 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # can change, and only then record the new digest here. A change that moves no
 # verdict (a rename, a faster way to the same answer) keeps the version.
 # Re-pinned for `compare_at`, the single-assessment comparison `issue configure`
-# previews with; it adds code and decides no verdict, so the version stays 1.
-# Re-pinned for `grid_at` and the `at=` argument of `classify`, the one-point
-# grid an issue's own layer is judged on (ADR-037, 2026-10-08). A call without
-# `at` runs the same code over the same grid and gives the same verdicts, so
-# the version stays 1.
-VERDICT_SOURCE_PIN = "329adf5fd1d473c2"
+# previews with, and for `grid_at` and the `at=` argument of `classify`, the
+# one-point grid an issue's own layer is judged on (ADR-037, 2026-10-08).
+# Neither decides a verdict: a call without `at` runs the same code over the
+# same grid. Merged with the entry and exit lists' `ships` reading, which
+# raised the version to 2.
+VERDICT_SOURCE_PIN = "60048c9d5e599cdf"
 
 
 def _verdict_source_digest():

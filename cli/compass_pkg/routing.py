@@ -576,6 +576,9 @@ def cmd_route_evaluate(args):
     task_path = None
     plan = None
     task_dir = None
+    if getattr(args, "offline", False):
+        # Every resolution in this run reads `parents.offline()`.
+        os.environ["COMPASS_OFFLINE"] = "1"
     if args.reading and getattr(args, "write", False):
         # Refused before anything prints: a refusal that follows a printed
         # result reads as a result that was written.

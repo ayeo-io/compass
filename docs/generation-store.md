@@ -41,7 +41,7 @@ reads the governance files.
 |---|---|---|
 | `resolved.yml` | The configuration after every layer is merged: the eight catalogues, the evidence types, the capability switches, the approach and the ceilings the issue's overlay names, the autonomy value, and the conformance status. | At commit, then fixed. |
 | `provenance.yml` | `fields`: for each field, the layers that wrote it and the operation of each. `waivers`: each waiver with the parent value it saw. `classification`: for the project and issue layers, that the lint raised no error (`result: accepted`) and which waivers the layer holds. It holds no classifier points: a generation stored by this version has no `points` key, and a reader must treat absent points as "not recorded", never as zero. | At commit, then fixed. |
-| `versions.yml` | `resolver` and `cli` versions, `parents` (reference, version, digest, source), `project` (path, digest, git blob), `issue_overlay_digest`, and `implementations`: the version of each check implementation the configuration uses. | At commit, then fixed. |
+| `versions.yml` | `resolver` and `cli` versions, `parents` (reference, version, digest, source; a git parent adds `sha`, with `source: git`, see [git-parents.md](git-parents.md)), `project` (path, digest, git blob), `issue_overlay_digest`, and `implementations`: the version of each check implementation the configuration uses. | At commit, then fixed. |
 | `records.yml` | The status of each approval, waiver and check result at commit: `valid`, `superseded` or `invalidated`, with a reason. | At commit, then fixed. |
 | `complete` | A marker holding a digest of each of the four files above. | Last of the four-file commit. |
 | `results.yml` | The latest `compass check` verdict for each check: `verdict` (`pass`, `fail`, `advisory` or `nothing-to-check`), `at`, the implementation id and version, a digest of the check's definition, and `status`. | After each `compass check`, replacing the file. The marker does not cover it. |
@@ -234,7 +234,8 @@ an issue with no `generation:` key (or no issue) in a project with no
 | `loop_ceiling_rules()` | the loop-ceiling rules | `loop_ceilings` |
 | `known_ids()` | the ids of the guardrails that apply to a shipping approach | `lessons`, `review_rules` |
 | `matches(when, assessment)` | whether a `when:` clause holds, using the configuration's dimension orders | the callers above |
-| `stage_order()` | the stage names in order | `approach_diagram` |
+| `stage_order()` | the stage names in order | `approach_diagram`, `stage_lists` |
+| `capabilities`, `config`, `listing_assessment(assessment, approach)` | the capability switches, the catalogues, and the assessment with the derived key `ships` that a check's `when` reads | `stage_lists` |
 | `parent_version()`, `pending_config(manifest)` | for the `compass check` header | `check_cmd` |
 
 A check that a project adds under its own id (for example `arch-rule` with

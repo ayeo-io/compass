@@ -32,6 +32,7 @@ import re as _re
 
 import fnmatch
 import re as _re
+from compass_pkg import status_words
 from compass_pkg.stable_ids import (
     APPROACH_QUICK_FIX, STAGE_ASSESS, STAGE_BREAKDOWN, STAGE_DEFINE, STAGE_IDS, STAGE_IMPLEMENT, STAGE_PLAN,
     STAGE_REFINE, STAGE_SHIP, STAGE_VERIFY)
@@ -197,7 +198,7 @@ def _stages_on_record(task: dict, task_dir: str | None) -> set:
     does. The second rule covers a record that was never written, such as
     a builder starting without a design registered. `compass next` cannot
     run without the approach record, so assess is always done. Ship's
-    record, `status: landed`, is handled by the callers before they ask for
+    record, a closed issue, is handled by the callers before they ask for
     a stage.
     """
     own = {
@@ -324,11 +325,10 @@ def cmd_next(args):
             "compass next.")
 
     # --- completed issue ---
-    # Passed gates alone do not finish it: ship still runs, and a landed
-    # status is ship's record.
-    status = task.get("status", "")
+    # Passed gates alone do not finish it: ship still runs, and a closed
+    # issue is ship's record.
     gates = task.get("gates") or []
-    if status == "landed":
+    if status_words.is_closed(task):
         _emit(args, task, task_dir, "all phases complete\n", None, True)
         return 0
 

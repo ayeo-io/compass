@@ -33,6 +33,7 @@ import re as _re
 import fnmatch
 import re as _re
 import glob
+from compass_pkg import status_words
 from compass_pkg.core import (CompassError, find_compass_dir, find_governance, load_yaml,
                               manifest_path, normalize_spine)
 from compass_pkg.rework import cmd_rework_scan
@@ -105,7 +106,7 @@ def queue_ageing(work_root, today=None):
             m = load_yaml(tp)
         except CompassError:
             continue
-        if not isinstance(m, dict) or m.get("status") != "queued":
+        if not isinstance(m, dict) or not status_words.is_queued(m):
             continue
         created = str(m.get("created") or "")
         try:
@@ -224,13 +225,13 @@ def _board_place(out, categories, slug, task_dir, m, project_root, today, now,
                  guarded, evidence_state, current_stage):
     """Put one issue's row in its section. Raises on a field of the wrong
     type, which the caller reports as a malformed manifest."""
-    # Absent means active: manifests written before the status field
-    # existed omit it (ADR-006).
-    status = m.get("status") or "active"
+    # No stored status means in flight: manifests written before the status
+    # field existed omit it (ADR-006).
+    status = status_words.stored(m)
     if not isinstance(status, str):
         raise TypeError("status is not text")
     approach = m.get("delivery_approach") or "not assessed"
-    if status == "active":
+    if status_words.is_in_flight(m):
         gates = m.get("gates") or []
         if not isinstance(gates, list):
             raise TypeError("gates is not a list")
@@ -241,15 +242,15 @@ def _board_place(out, categories, slug, task_dir, m, project_root, today, now,
                "stage": current_stage(m, task_dir) or "done",
                "gates": f"{passed}/{len(gates)}", "evidence": state}
         out["stale" if state == "stale" else "in_progress"].append(row)
-    elif status == "parked":
+    elif status_words.is_parked(m):
         out["held"].append({"slug": slug, "delivery_approach": approach,
                             "reason": str(m.get("parked_reason") or "no reason recorded")})
-    elif status == "queued":
+    elif status_words.is_queued(m):
         q = _queue_row(project_root, slug, m, today, guarded)
         out["next_up"].append({"slug": slug, "delivery_approach": approach,
                                "age_days": q[0] if q else None,
                                "signal": "; ".join(q[2]) if q else ""})
-    elif status == "landed":
+    elif status_words.is_completed(m):
         when = _landed_at(m)
         if when and when <= now and (now - when).days < LANDED_WINDOW_DAYS:
             out["landed_this_week"].append({"slug": slug, "delivery_approach": approach,
@@ -259,7 +260,7 @@ def _board_place(out, categories, slug, task_dir, m, project_root, today, now,
                 if isinstance(f, dict) and f.get("category"):
                     c = str(f["category"])
                     categories[c] = categories.get(c, 0) + 1
-    elif status == "abandoned":
+    elif status_words.close_reason(m):
         out["abandoned"].append({"slug": slug, "delivery_approach": approach})
     else:
         out["other"].append({"slug": slug, "delivery_approach": approach,
@@ -504,7 +505,7 @@ def cmd_flow(args):
 #
 # derive_system_spec(project_root) is the internal helper that produces
 # docs/system-spec.md by walking every .compass/work/*/manifest.yml whose
-# status == 'landed'.
+# issue is completed (`status_words.is_completed`).
 #
 # Design constraints honoured here:
 #   `Inv-5`  - annotation over per-issue specs, never a parallel spec; the
@@ -603,8 +604,8 @@ def derive_system_spec(project_root: str) -> None:
     compass_work = os.path.join(project_root, ".compass", "work")
 
     # ---- 1. Collect landed issues -------------------------------------------
-    # Walk .compass/work/*/manifest.yml; keep only status == 'landed'.
-    # Issues without a `status` field (schema 1.0) are treated as active.
+    # Walk .compass/work/*/manifest.yml; keep only completed issues.
+    # Issues without a `status` field (schema 1.0) are in flight.
     # Process order: land_timestamp ascending, then issue slug ascending.
     landed = []  # list of dicts: {slug, task_dir, issue, land_timestamp}
     if os.path.isdir(compass_work):
@@ -620,8 +621,7 @@ def derive_system_spec(project_root: str) -> None:
                 continue
             if not isinstance(task, dict):
                 continue
-            status = task.get("status")
-            if status != "landed":
+            if not status_words.is_completed(task):
                 continue
             land_ts = task.get("land_timestamp", "")
             landed.append({

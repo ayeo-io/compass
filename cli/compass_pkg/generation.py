@@ -328,10 +328,12 @@ def _prepare_target(task_dir, target):
         shutil.rmtree(path) if os.path.isdir(path) else os.unlink(path)
 
 
-def commit(task_dir, resolution, manifest, invalidated=None, render=None):
+def commit(task_dir, resolution, manifest, invalidated=None, render=None, force=False):
     """Store `resolution` as the next generation of the issue and replace its
     manifest, or commit nothing when generation n already holds the same
-    configuration, overlay and outcome. `manifest` is the mapping to write,
+    configuration, overlay and outcome. `force` commits even then: the
+    versions a generation pins are not part of that comparison, and
+    `migrate-config` changes nothing else. `manifest` is the mapping to write,
     with the outcome fields folded in; it must still name the generation the
     file on disk names. Raises `CompassError` when the file changed since it
     was read, the generation in force is broken, or the next folder is a
@@ -354,7 +356,7 @@ def commit(task_dir, resolution, manifest, invalidated=None, render=None):
         documents = _documents(task_dir, target, resolution,
                                previous["records"].get("records", []) if previous else [],
                                invalidated)
-        if previous and _unchanged(previous, documents, disk, manifest):
+        if previous and not force and _unchanged(previous, documents, disk, manifest):
             atomic_write_text(path, render(_dump(manifest)))
             return Committed(n, False, f"no change: generation {n} already holds this "
                                        f"configuration")

@@ -73,6 +73,7 @@ from compass_pkg.approach_diagram import cmd_approach_diagram  # noqa: E402
 from compass_pkg.diagnose import register as register_diagnose_parser  # noqa: E402
 from compass_pkg.lessons import register as register_lesson_parser  # noqa: E402
 from compass_pkg.session_lease import register as register_issue_use_parser  # noqa: E402
+from compass_pkg.impl_versions import register as register_migrate_config_parser  # noqa: E402
 from compass_pkg.run_cmd import register as register_run_parser  # noqa: E402
 from compass_pkg.record import register as register_record_parser  # noqa: E402
 from compass_pkg.review_rules import register as register_review_rules_parser  # noqa: E402
@@ -306,6 +307,7 @@ def build_parser():
     ptl.set_defaults(func=cmd_task_lint, output_kind="report")
     register_diagnose_parser(pts, issue_arg)
     register_issue_use_parser(pts)
+    register_migrate_config_parser(pts, issue_arg)
     register_refresh_spec_parser(pts)
     register_issue_friction_parser(pts)
 

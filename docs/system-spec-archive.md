@@ -13280,6 +13280,13 @@
 - **Source issue:** `check-severity-from-generation`
 - **Landed:** 2026-10-08
 
+### Given a spike with an advisory guardrail check that fails, then the run passes and shows the failure as advisory _(archived)_
+
+- **Scenario id:** `CS-11`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
 ### Given a blocking check, when it fails, then the run fails _(archived)_
 
 - **Scenario id:** `CS-2`
@@ -13334,4 +13341,88 @@
 - **Scenario id:** `CS-9`
 - **Intent:** `INT-1`
 - **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### A major difference refuses only that check _(archived)_
+
+- **Scenario id:** `IR-1`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### migrate-config commits nothing when already pinned _(archived)_
+
+- **Scenario id:** `IR-10`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### migrate-config adopts an issue with no generation _(archived)_
+
+- **Scenario id:** `IR-11`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### The coverage page is derived and kept current _(archived)_
+
+- **Scenario id:** `IR-12`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### The refusal names what to do _(archived)_
+
+- **Scenario id:** `IR-2`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### A minor or patch difference is not refused _(archived)_
+
+- **Scenario id:** `IR-3`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### A resolver or schema major difference refuses the run _(archived)_
+
+- **Scenario id:** `IR-4`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### A refused check is reported as refused and records no result _(archived)_
+
+- **Scenario id:** `IR-5`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### A verdict change without a major bump fails the build _(archived)_
+
+- **Scenario id:** `IR-6`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### The lock file holds a version and a verdict digest per implementation _(archived)_
+
+- **Scenario id:** `IR-7`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### migrate-config pins the installed versions and invalidates old results _(archived)_
+
+- **Scenario id:** `IR-8`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### migrate-config refuses a landed issue _(archived)_
+
+- **Scenario id:** `IR-9`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
 - **Landed:** 2026-10-08

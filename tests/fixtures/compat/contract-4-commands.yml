@@ -400,6 +400,7 @@ entries:
   project: initialised
   argv: ["policy", "test"]
   exit: 2
+  stderr_contains: "no compass.yml here"
 # Added on purpose by policy-test-init-preset: `policy init-preset` is a new
 # verb. 5.6.0 refused it as an unknown choice (exit 2). From 6.0.0 it writes a
 # preset into a new folder and exits 0.

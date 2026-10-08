@@ -26,6 +26,8 @@ How a check is judged:
   An unchecked box that carries a typed tag (`(evidence: ...)` or
   `(follow-up: ...)`) that resolves counts as deferred and passes. The tag is
   resolved by `checks.dod_tag_problems`, the code `dod-evidence-typed` uses.
+  A check that lists `approvers:` also needs a current approval by one of
+  them, which `compass_pkg.approval_records` judges.
   A missing document is not a failure when the routed approach lists no such
   document among its artifacts: the row is nothing-to-check.
 - `deterministic`: the registered implementation runs.
@@ -154,7 +156,7 @@ class _Documents:
         return self._cache[(stage, side)]
 
 
-def _tick(check, stage, side, documents, task, owes):
+def _tick(check_id, check, stage, side, documents, task, owes):
     """`(status, detail)` of a human check, or None when its document is
     recorded as omitted (the check is skipped). `owes` is `(approach, kinds)`,
     the document kinds the routed approach lists among its artifacts, or None
@@ -173,6 +175,9 @@ def _tick(check, stage, side, documents, task, owes):
         return "fail", (f"no checklist item with this statement under '{heading}' "
                         f"in {name}")
     if any(ticked for ticked, _ in matches):
+        if check.get("approvers"):
+            from compass_pkg import approval_records
+            return approval_records.judge(check_id, check, task, documents.task_dir)
         return "pass", f"ticked in {name}"
     from compass_pkg.checks import dod_tag_problems
     registry = {e.get("id"): e for e in (task.get("evidence") or [])
@@ -186,7 +191,18 @@ def _tick(check, stage, side, documents, task, owes):
             continue
         if not found:
             shown = _TAG_ANYWHERE.search(raw)
-            return "pass", f"deferred with {shown.group(0) if shown else 'a typed tag'}"
+            tag = shown.group(0) if shown else "a typed tag"
+            if check.get("approvers"):
+                # A deferral is not an approval, so it cannot excuse a check
+                # that names who may approve.
+                from compass_pkg import approval_records
+                status, detail = approval_records.judge(check_id, check, task,
+                                                        documents.task_dir)
+                if status == "fail":
+                    return status, (f"{detail} (deferred with {tag}; a deferral does "
+                                    f"not excuse approvers)")
+                return status, f"{detail}; deferred with {tag}"
+            return "pass", f"deferred with {tag}"
         problems += found
     if problems:
         return "fail", "; ".join(problems)
@@ -321,7 +337,7 @@ def _outcome(check_id, check, kind, side, stage, producer, modes, task, task_dir
         return (_skipped(check),
                 f"{source} is {mode}; on_skipped is {check.get('on_skipped')}", True)
     if kind == "human":
-        ticked = _tick(check, stage, side, documents, task, owes)
+        ticked = _tick(check_id, check, stage, side, documents, task, owes)
         if ticked is None:
             return (_skipped(check), f"{CHECKLIST_DOCUMENTS[side]} is recorded as omitted; "
                                      f"on_skipped is {check.get('on_skipped')}", True)

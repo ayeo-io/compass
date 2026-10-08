@@ -3244,22 +3244,6 @@
 - `PI-5` The extends map form and the reserved preset key are read without error and do not change a digest
 - `PI-6` Owning docs, contract corpus and terminology state the new interfaces
 
-### receipt-provenance (landed 2026-10-08)
+### human-check-approvers (landed 2026-10-08)
 
-- `RP-1` A default rule is named with the preset, its version and the generation
-- `RP-2` A project rule names the project, not the default
-- `RP-3` A git parent rule names the reference, pin and version
-- `RP-4` A project waiver names its id, layer, approver, date and status
-- `RP-5` An issue waiver names its approval and shows expiry at land
-- `RP-6` An unlock names the entry, layer, waiver and lifted lock
-- `RP-7` A lock on a named entry names its layer and level
-- `RP-8` A check names its origin and the layer that changed it
-- `RP-9` An issue with no generation gets no provenance section
-- `RP-10` An older generation is not guessed at
-- `RP-11` Every line fits 100 columns and no id is cut
-- `RP-12` A new generation records the layer and operation of each rule
-- `RP-13` The owning documents describe the section
-- `RP-14` Governance copies are labelled with their version and not listed as departures
-- `RP-15` A section that cannot be rendered says so
-- `RP-16` The module stays pure
-- `RP-17` The receipt help mentions the section
+- `TRC-001` A human check that lists approvers passes only with a current approval by a listed approver

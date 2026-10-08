@@ -6,7 +6,9 @@ spelling, how a parent is fetched and cached, what Compass refuses and why, and 
 issue records. From 6.0.0 the spelling, the finding codes, the cache layout and the
 `seen.yml` and `versions.yml` entries are a public contract.
 
-The code is `cli/compass_pkg/parents.py`, and `cli/compass_pkg/parent_states.py` for the parent states. `cli/compass_pkg/policy_lint.py` calls it when it
+The code is `cli/compass_pkg/parents.py`, `cli/compass_pkg/parent_states.py` for the parent
+states and `cli/compass_pkg/chain_class.py` for the stored classification.
+`cli/compass_pkg/policy_lint.py` calls `parents.py` when it
 loads the project, and `cli/compass_pkg/effective.py` stores the result in a generation.
 
 ## The spelling
@@ -26,7 +28,11 @@ The map form works too. `from:` holds the same text:
 ```yaml
 extends:
   from: github:acme/compass-banking@1.2.0#3f9c1a2e5b7d4c6a8e0f1b2c3d4e5f6a7b8c9d0e
+  approved_by: acme-team
+  approved_on: "2026-10-08"
 ```
+
+The map holds `from` (required text), `approved_by` (text) and `approved_on` (text or a date). `approved_by` and `approved_on` are read from the project's own `compass.yml`, in the `extends:` map, and nowhere else. The layer check refuses an `approved_on` that is not a date written `YYYY-MM-DD` (`2026-13-45` and `yesterday` are not) or that is in the future, with `L-SCHEMA`. Nothing else uses the two keys yet: they are not stored in `versions.yml`, and nothing checks `approved_by` against an approver list. Any other key in the map is `L-SCHEMA`. A `from` that is not text is `L-PARENT-FORM`, the same code as a bad spelling in the string form. The layer digest includes the whole `extends:` value, so the two forms of one parent give the project layer a different digest and the parent layer the same one.
 
 Compass refuses every other spelling with `L-PARENT-FORM` before it runs git. That covers
 spaces, shell characters, `..`, a leading `-` in any part, an `https://` URL, an uppercase
@@ -40,12 +46,13 @@ repository starts with it, because git fetches a full sha only. Two matches are
 sha that names a tree or a file instead of a commit is also `L-PARENT-FORM`.
 
 There is no lock file. The sha in `compass.yml` is the pin, and a git commit sha already
-identifies its content. `compass policy update` will resolve a ref to a sha in a later
-release. Until then a person writes the sha.
+identifies its content. `compass policy update` moves the pin: it resolves the ref to the
+commit it names now (`git ls-remote`), fetches it, re-checks the project's waivers across
+the old and new commit and rewrites the `#<sha>`. See [policy-update.md](policy-update.md).
+A person writes the first sha.
 
-The ref label is not checked against the content. Nothing here tests that the commit is
-reachable from the ref, or that the ref still points at it. A later release checks
-reachability, when `compass policy update` resolves refs.
+The ref label is not checked against the content. Nothing tests that the pinned commit is
+reachable from the ref. `compass policy update` reads only where the ref points now.
 
 ## Where it is fetched from
 
@@ -63,6 +70,8 @@ sha is refused.
 |---|---|
 | `compass check`, and any reader of an issue's stored generation | Never. It reads the cache, and an uncached pin is `L-PARENT-NOT-CACHED` |
 | `compass policy lint`, `compass policy effective` | Yes |
+| `compass policy update` | Yes, always for the ref (`git ls-remote`), and for the current pin and the new commit when they are not cached. With `COMPASS_OFFLINE=1` it asks nothing and reports `offline` |
+| `compass policy diff`, when a reference is a git parent | Yes, and it prints one line on stderr (`compass policy diff: fetching <ref> into .compass/cache/parents/`) before each fetch. It also adds `cache/` to `.compass/.gitignore` if the file does not list it. These are the only files `policy diff` writes |
 | `compass approach evaluate --write` (assess and reassess, including a reassess that commits a `compass issue configure` proposal) | Yes |
 | `compass issue configure` (the preview and the proposal it records) | Never. It reads the cache and commits no generation, so an uncached pin is `L-PARENT-NOT-CACHED`. Run `compass policy lint` first |
 | any of the above with `--offline`, or with `COMPASS_OFFLINE=1` in the environment | Never |
@@ -141,6 +150,8 @@ A parent is data. Compass reads its `compass.yml` as strict YAML and runs nothin
 
 A parent's own `extends:` may name `compass:default@<major>` or another git parent, in the same spelling. The settings keys are `autonomy`, `adoption`, `allow_project_commands`, `enforcement`, `record`, `project`, `prices`, `multiagent`, `governance_drift` and `preset_index`. A parent may hold `schema`, `extends`, `owner`, `approvers`, `capabilities`, `preset` and the catalogues, and nothing else. This holds for every parent in a chain.
 
+`preset` is reserved for a description of a published preset. It must be a mapping and may hold anything. Compass reads nothing from it, and the layer digest leaves it out, so a change of description does not look like a change of configuration. `preset_index` is a settings key, so only the project's own file may hold it.
+
 ## Chains
 
 A parent can name a git parent, which can name another. A chain holds at most three git parents, to a depth of three: the project's direct parent, its parent and that parent's parent. The shipped default at the root is not counted, because it is the CLI's own version and not a fetched parent.
@@ -164,10 +175,42 @@ Compass checks a parent after it has loaded the parent's ancestors. A parent tha
 ```yaml
 parents:
   - { ref: "compass:default@6", version: 6.0.0, digest: sha256:..., source: shipped }
-  - { ref: "github:acme/compass-banking@1.2.0", sha: 3f9c1a2e..., version: 1.2.0, digest: sha256:..., source: git }
+  - ref: "github:acme/compass-banking@1.2.0"
+    sha: 3f9c1a2e...
+    version: 1.2.0
+    digest: sha256:...
+    source: git
+    classification:
+      against: "compass:default@6"
+      result: loosening
+      points: 4608
+      raw_points: 51840
+      complete: true
+      first_looser: { assessment: { risk: trivial, ... }, summary: "at risk trivial, ...: approaches.stages (define) is ..." }
 ```
 
 `digest` is the digest of the parent's layer keys. An issue with a stored generation keeps the parent it ran against: moving the pin in `compass.yml` changes nothing for it until a new generation is committed.
+
+### The stored classification
+
+Each git parent entry holds the classification of the chain from the shipped default through that parent, compared with the shipped default alone. A chain of three parents stores three blocks, so the nearest parent's block is the whole chain and the others are the chain up to them. The shipped entry has no block. The keys are in this order:
+
+| Key | Value |
+|---|---|
+| `against` | The reference of the shipped entry, such as `compass:default@6` |
+| `result` | `equivalent`, `tightening`, `loosening` or `incomparable`, as the classifier gives it (ADR-037) |
+| `points` | The grouped assessments the classifier compared |
+| `raw_points` | The assessments before grouping |
+| `complete` | `false` when the classifier stopped before the whole grid (more than eight named labels) |
+| `first_looser` | The first assessment at which the chain owes less, as `assessment` and `summary`, or `null` when none does |
+
+The result is the one before any waiver. A parent's own waivers were approved by the parent's maintainers, and that approval means nothing to a project that extends it, so a waiver does not change the stored `result`. A later check can read the block without running the classifier again.
+
+Only a commit that writes a new generation computes the blocks, with one scan of the grid for each git parent. A commit that finds no change, and a read of the live configuration (`policy effective`), do not. The function is `classify_chain` in `cli/compass_pkg/chain_class.py`.
+
+The cost, measured on 2026-10-08 on a laptop: about 0.6 seconds for one parent with a one-field change, and about 2.3 seconds for a chain of three. A chain of more than eight named labels cannot be committed (the lint cannot prove the locks), so `complete: false` is a guard in the function and not a stored case.
+
+`parents[].version` is the ref when it reads as a version. `preset.version` is not read yet; a later release adds it.
 
 ## Finding codes
 
@@ -189,6 +232,4 @@ Every refusal is a lint finding with a code. [policy-lint.md](policy-lint.md) li
 
 ## What this page does not cover
 
-- `compass policy update`, which resolves a ref to a sha and moves the pin.
-- The waiver re-check when a pin moves.
 - A host other than GitHub, and private repositories that need a login: git uses the credential settings of the person running Compass, and Compass never prompts.

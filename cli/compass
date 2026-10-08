@@ -78,6 +78,7 @@ from compass_pkg.run_cmd import register as register_run_parser  # noqa: E402
 from compass_pkg.record import register as register_record_parser  # noqa: E402
 from compass_pkg.review_rules import register as register_review_rules_parser  # noqa: E402
 from compass_pkg.policy_cmd import register as register_policy_parser  # noqa: E402
+from compass_pkg.approve_cmd import register as register_approve_parser  # noqa: E402
 from compass_pkg.review_cmd import register as register_review_parser  # noqa: E402
 from compass_pkg.issue_config_cmd import register as register_issue_configure_parser  # noqa: E402
 
@@ -356,6 +357,11 @@ def build_parser():
 
     ptap = pts.add_parser("artifact-path", help="print where one of an issue's documents is; non-zero when it is not there")
     ptap.add_argument("kind", help="document kind, e.g. delivery-approach"); issue_arg(ptap); ptap.set_defaults(func=cmd_issue_artifact_path, output_kind="hand-off")
+    ptt = pts.add_parser("template", help="print a document template with its checklists rendered from the issue's stage lists")
+    ptt.add_argument("kind", help="template kind, e.g. requirements-review or verification-report")
+    issue_arg(ptt)
+    from compass_pkg.template_lists import cmd_issue_template as _cmd_issue_template
+    ptt.set_defaults(func=_cmd_issue_template, output_kind="hand-off")
     register_subtask_parser(pts, issue_arg)
     ptss = pts.add_parser("set-status",
                           help="set an issue's lifecycle status (queued|active|parked|landed|abandoned)")
@@ -542,6 +548,7 @@ def build_parser():
     peva.add_argument("--path", required=True, help="path to the evidence file")
     peva.add_argument("--scenario", help="scenario this evidence is for (optional)")
     peva.set_defaults(func=cmd_evidence_add, output_kind="hand-off")
+    register_approve_parser(pevs)
     register_review_parser(pevs)
 
     register_quick_fix_parser(sub, issue_arg)

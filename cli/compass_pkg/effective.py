@@ -20,7 +20,7 @@ the one place the existing modules reach the store through
 (`commit_generation`, `record_check_results`, `generation_report`).
 """
 # DEPENDENCY: standard library (copy, dataclasses, datetime, os, re, subprocess);
-# compass_pkg.atomic_io, check_registry, core, generation, layers,
+# compass_pkg.atomic_io, chain_class, check_registry, core, generation, layers,
 # legacy_adapter, locks, merge, obligations, parents, policy_lint, project_settings, waivers.
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ import re
 import subprocess
 from dataclasses import dataclass, field
 
-from compass_pkg import (generation, layers, legacy_adapter, locks, merge, parents,
+from compass_pkg import (chain_class, generation, layers, legacy_adapter, locks, merge, parents,
                          policy_lint, project_settings, waivers)
 from compass_pkg import obligations
 from compass_pkg import catalogue_spec as spec
@@ -56,6 +56,9 @@ class EffectiveView:
     generation: object
     resolved: dict = field(default_factory=dict)
     versions: dict = field(default_factory=dict)
+    # `provenance.yml`: the layer and operation behind each field, the waivers
+    # and the classification of each layer.
+    provenance: dict = field(default_factory=dict)
 
     @property
     def config(self):
@@ -247,17 +250,47 @@ def _git_blob(path):
     return out.stdout.strip() or None if out.returncode == 0 else None
 
 
+def _rules(config):
+    """`{(rule set, rule id): rule}` for every rule of a configuration."""
+    out = {}
+    for set_id, rule_set in (config.get("rules") or {}).items():
+        members = rule_set.get("rules") if isinstance(rule_set, dict) else None
+        for rule_id, rule in (members.items() if isinstance(members, dict) else ()):
+            out[(set_id, rule_id)] = rule
+    return out
+
+
+def _rule_steps(history, before, after, layer):
+    """Add to `history` one step for each rule `layer` added, changed or removed.
+    The merge records a rule set as one field, so without these steps a rule a
+    project adds to a set cannot be told from the rule the default holds."""
+    old, new = _rules(before), _rules(after)
+    for key in list(old) + [key for key in new if key not in old]:
+        if key not in new:
+            op = "remove"
+        elif key not in old:
+            op = "add"
+        elif old[key] != new[key]:
+            op = "set"
+        else:
+            continue
+        history.setdefault("rules.%s.rules.%s" % key, {"steps": []})["steps"].append(
+            {"layer": layer.name, "op": op})
+
+
 def _steps(chain):
     """`({path: {steps: [{layer, op}]}}, config, per-layer configs)` from applying
-    the chain one layer at a time, so a field keeps every layer that wrote it."""
+    the chain one layer at a time, so a field keeps every layer that wrote it.
+    Each rule of a rule set has a path of its own, `rules.<set>.rules.<id>`."""
     config, prov, history, configs = {}, {}, {}, []
     for layer in chain:
-        before = dict(prov)
+        before, earlier = dict(prov), config
         config, prov = merge.apply(config, layer.doc, layer.kind, layer.name, prov)
         for path, step in prov.items():
             if before.get(path) != step:
                 history.setdefault(path, {"steps": []})["steps"].append(
                     {"layer": step["layer"], "op": step["operation"]})
+        _rule_steps(history, earlier, config, layer)
         configs.append(config)
     return history, config, configs
 
@@ -308,7 +341,11 @@ def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False, 
     calls it before it writes, so a generation never stores such a chain. With
     `validate=True` it is called here too. A chain that does not load or merge
     raises `CompassError` at once. A git parent in the project's `extends:` is
-    read from the cache; only `fetch=True` fetches an uncached pin."""
+    read from the cache; only `fetch=True` fetches an uncached pin. The
+    result's `finish` adds, to each git parent's entry in `versions`, the
+    classification of the chain through it against the shipped default, before
+    any waiver. That is a scan of the grid for each parent, so only a commit that
+    writes a new generation calls it."""
     root = os.path.abspath(root)
     counts = project_settings.compass_yml_counts(root)
     loaded = policy_lint.load_layers(root, manifest=manifest, read_project=counts, fetch=fetch)
@@ -370,10 +407,18 @@ def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False, 
         "evidence_types": _evidence_types(root, legacy),
     }
     major = str(meta.get("version", "")).split(".")[0]
+    root_ref = f"compass:{meta['id']}@{major}" if not legacy else "legacy"
+    git_layers = [p.layer for p in loaded.git_parents]
+
+    def finish(stored):
+        held = chain_class.classify_chain(parent, git_layers, root_ref)
+        for entry, block in zip(stored["parents"][1:], held):
+            entry["classification"] = block
+
     versions = {
         "resolver": generation.RESOLVER_VERSION,
         "cli": COMPASS_VERSION,
-        "parents": [{"ref": f"compass:{meta['id']}@{major}" if not legacy else "legacy",
+        "parents": [{"ref": root_ref,
                      "version": meta.get("version", ""), "digest": parent.digest,
                      "source": "legacy" if legacy else "shipped"}]
                    + [{"ref": p.ref, "sha": p.sha, "version": p.version, "digest": p.digest,
@@ -391,7 +436,7 @@ def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False, 
                     "classification": classification},
         versions=versions,
         records=_approval_records(manifest or {}, root, task_dir, waiver_records),
-        validate=check_chain,
+        validate=check_chain, finish=finish if git_layers else None,
         details={"loaded": loaded, "chain": chain, "configs": configs})
 
 
@@ -404,7 +449,8 @@ def _live_view(task_dir, manifest, slug, start=None, fetch=False):
         # A command that only reads the configuration gives the way to see the rest.
         raise CompassError(f"{exc}. Run `compass policy lint"
                            + (f" --issue {slug}" if slug else "") + "` to see the cause.")
-    return EffectiveView("live", slug, None, resolution.resolved, resolution.versions)
+    return EffectiveView("live", slug, None, resolution.resolved, resolution.versions,
+                         resolution.provenance)
 
 
 def effective_for(task_dir=None):
@@ -423,7 +469,8 @@ def effective_for(task_dir=None):
             f"issue {slug} is at generation 0: it was assessed but has no stored "
             f"configuration yet; run `{generation.FIX_ZERO} --issue {slug}`")
     stored = generation.load(task_dir, held)
-    return EffectiveView("generation", slug, held, stored["resolved"], stored["versions"])
+    return EffectiveView("generation", slug, held, stored["resolved"], stored["versions"],
+                         stored["provenance"])
 
 
 def _layered(root):

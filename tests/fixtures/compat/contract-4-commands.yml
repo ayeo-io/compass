@@ -283,6 +283,19 @@ entries:
   argv: ["issue", "artifact", "acceptance-criteria", "--status", "draft", "--issue", "feature"]
   exit: 0
   stdout_contains: "freshness: digest recorded"
+# Added on purpose by human-check-approvers: `evidence approve` is a new leaf of
+# the evidence group. 5.6.0 refused it as an unknown choice (exit 2). From 6.0.0
+# it records a person's approval from a terminal. The corpus runs without a
+# terminal that it controls, so both entries are refusals whether or not one is
+# attached: a check the configuration does not define, and the approver agent.
+- id: evidence-approve-unknown-check
+  project: regular-issue
+  argv: ["evidence", "approve", "--check", "no-such-check", "--approver", "jed72", "--role", "owner", "--scope", "the plan"]
+  exit: 2
+- id: evidence-approve-agent-refused
+  project: regular-issue
+  argv: ["evidence", "approve", "--check", "dor-summary-filled", "--approver", "agent", "--role", "owner", "--scope", "the plan"]
+  exit: 2
 - id: changed-file-add-valid
   project: quick-fix-started
   argv: ["changed-file", "add", "README.md", "--scenario", "TRC-001"]
@@ -520,6 +533,15 @@ entries:
   argv: ["policy", "init-preset", "team-preset", "--owner", "acme-team"]
   exit: 1
   stdout_contains: "refused"
+# Added on purpose by preset-interfaces: a folder inside compass-fixtures/ is a
+# fixture group, so its fixtures run and the text report counts the group. 5.6.0
+# exited 2 on the unknown verb. policy-test-init-preset reported such a folder
+# as a problem and exited 1.
+- id: policy-test-groups
+  project: with-grouped-preset
+  argv: ["policy", "test", "team-preset"]
+  exit: 0
+  stdout_contains: "group meets/banking: 1 run, 1 passed, 0 failed"
 # Added on purpose by policy-update: `policy update` is a new verb. 5.6.0
 # refused it as an unknown choice (exit 2); from 6.0.0 a project already on
 # the only shipped major has nothing to move, writes nothing and exits 0.
@@ -681,6 +703,28 @@ entries:
 - id: approach-evaluate-write-refuses-a-broken-compass-yml
   project: regular-issue-broken-compass-yml
   argv: ["approach", "evaluate", "--issue", "feature", "--write"]
+  exit: 2
+# Added on purpose by templates-render-lists: `issue template` is a new verb.
+# 5.6.0 refused it as an unknown choice (exit 2); from 6.0.0 it prints the
+# document template with its checklists rendered from the issue's stage lists
+# and exits 0. The shipped default renders the template file unchanged.
+- id: issue-template-requirements-review
+  project: regular-issue
+  argv: ["issue", "template", "requirements-review", "--issue", "feature"]
+  exit: 0
+  stdout_contains: "Definition of Ready"
+- id: issue-template-verification-report-json
+  project: regular-issue
+  argv: ["issue", "template", "verification-report", "--issue", "feature", "--json"]
+  exit: 0
+  stdout_contains: "\"kind\": \"verification-report\""
+# Added on purpose by templates-render-lists: this entry pins the exit code of
+# the refusal only. 5.6.0 exited 2 on the unknown verb; from 6.0.0 the verb
+# exists and exits 2 for a kind that is not a template. The message is not
+# pinned here.
+- id: issue-template-unknown-kind
+  project: regular-issue
+  argv: ["issue", "template", "no-such-template", "--issue", "feature"]
   exit: 2
 # Added on purpose by configure-and-reassess: `issue configure` is a new verb.
 # 5.6.0 refused it as an unknown choice (exit 2). From 6.0.0 a change that

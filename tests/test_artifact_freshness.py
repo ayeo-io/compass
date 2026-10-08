@@ -626,3 +626,26 @@ def test_fresh_6_a_record_that_cannot_be_evaluated_fails_closed_in_every_reader(
     (task_dir / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
     text = _run(root, "next", "--issue", SLUG)[1]
     assert "entry not met: artifact freshness cannot be evaluated" in text, text
+
+
+def test_fresh_8_the_receipt_shows_freshness_then_provenance_then_the_verdict(tmp_path):
+    root, task_dir = _scene(tmp_path)
+    out = _run(root, "issue", "receipt", "--issue", SLUG)[1]
+    fresh, provenance = out.find("Artifact freshness"), out.find("Provenance")
+    assert 0 <= fresh < provenance, out
+    assert provenance < out.index("Verdict"), out
+
+
+def test_fresh_2_stamp_records_nothing_for_a_document_it_cannot_read(tmp_path):
+    from compass_pkg import effective, freshness
+    root, task_dir = _scene(tmp_path)
+    task = _manifest(task_dir)
+    entry = next(a for a in task["artifacts"] if a["kind"] == "technical-design")
+    entry.pop("digest"), entry.pop("upstream")
+    view = effective.view_or_legacy(str(task_dir))
+    _unreadable(task_dir / "technical-design.md")
+    try:
+        changed = freshness.stamp(view, task, str(task_dir), entry)
+    finally:
+        os.chmod(task_dir / "technical-design.md", 0o644)
+    assert changed is False and "digest" not in entry and "upstream" not in entry, entry

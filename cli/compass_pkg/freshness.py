@@ -103,7 +103,10 @@ def stamp(view, task, task_dir, entry):
         return False
     kind = entry.get("kind")
     own = _digest(task, task_dir, kind)
-    if own is None:
+    # A document whose own file cannot be read would be stamped with
+    # UNREADABLE. `compass issue artifact` refuses before it gets this far (see
+    # `unreadable`); this guard keeps any other caller from storing it.
+    if own is None or own == UNREADABLE:
         return False
     deps = graph(view).get(kind) or []
     if entry.get("digest") == own and ("upstream" in entry or not deps):

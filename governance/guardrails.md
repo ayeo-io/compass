@@ -63,6 +63,12 @@ claim.**
   nothing.
 - This guardrail is *about* the others: it defines what "cleared" means.
 
+The check `dod-evidence-typed` applies it to the checklists of
+`verification-report.md`. An unticked box needs an `(evidence: EV-<id>)` or
+`(follow-up: FU-<id>)` tag that resolves. The check reads the Definition of
+Done and the section of every other exit list (`<Stage> exit list`), not only
+the Definition of Done.
+
 ### A human signs off on the irreversible (`G5`)
 
 **A change that cannot be cleanly undone gets an explicit human checkpoint

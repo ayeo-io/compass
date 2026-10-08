@@ -582,7 +582,10 @@ def test_gp_12_versions_yml_records_the_parent_ref_sha_version_and_digest(
                             .read_text(encoding="utf-8"))
     assert [p["source"] for p in stored["parents"]] == ["shipped", "git"]
     assert stored["parents"][0]["ref"] == "compass:default@6"
-    assert stored["parents"][1] == {
+    # The classification block is pinned in test_preset_interfaces.py (PI-3).
+    held = dict(stored["parents"][1])
+    assert held.pop("classification")["against"] == "compass:default@6"
+    assert held == {
         "ref": "github:acme/bank@1.2.0", "sha": sha, "version": "1.2.0",
         "digest": stored["parents"][1]["digest"], "source": "git"}
     assert stored["parents"][1]["digest"].startswith("sha256:")

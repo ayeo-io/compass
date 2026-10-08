@@ -1,5 +1,6 @@
-# compass_pkg.policy_update - `compass policy update` for the shipped default
-"""Move a project from one shipped default major to another (ADR-039).
+# compass_pkg.policy_update - `compass policy update` for the shipped default and git parents
+"""Move a project from one shipped default major to another, or from one commit of
+its git parent to another (ADR-039).
 
 `plan` reads the project's `compass.yml` and the two defaults the framework
 keeps, resolves the project's layer over each, classifies the difference, and
@@ -10,10 +11,17 @@ The framework ships one default in the folder `default` under its presets
 folder. A major it no longer ships under that name stays beside it as
 `default@<n>`, so a project still on it can be compared with the new one.
 `policy_lint.load_parent` reads each folder; this module only lists them.
+
+A project whose `extends:` names a git parent (`github:<owner>/<repo>@<ref>#<sha>`)
+moves the pin instead. The remote's `<ref>` is resolved to a commit (`git ls-remote`),
+the commit is fetched, and the two pins play the part of the two defaults: the same
+waiver re-check, the same terminal re-approval and the same single write, with `#<sha>`
+rewritten in place of the major. A host that cannot be reached is `offline`, which is
+not a refusal: nothing was decided.
 """
 # DEPENDENCY: standard library (copy, dataclasses, datetime, json, os, re, tempfile,
 # textwrap); compass_pkg.atomic_io, catalogue_check, core, layers, merge,
-# policy_lint, replay, waivers.
+# parent_states, parents, policy_lint, replay, waivers.
 from __future__ import annotations
 
 import copy
@@ -27,6 +35,7 @@ import textwrap
 from dataclasses import dataclass, field
 
 from compass_pkg import catalogue_check, layers, merge, policy_lint, replay, waivers
+from compass_pkg import parent_states, parents
 from compass_pkg.atomic_io import StrictYamlError, atomic_write_text, load_yaml_strict
 from compass_pkg.core import FRAMEWORK_ROOT, CompassError
 
@@ -86,10 +95,36 @@ class WaiverView:
 
 
 @dataclass
+class GitMove:
+    """The two pins of a git parent. `label` is `github:<owner>/<repo>@<ref>`.
+    `new_sha` is None when the ref could not be resolved (offline)."""
+    label: str
+    old_sha: str
+    new_sha: object = None
+    old_version: object = None
+    new_version: object = None
+
+    @staticmethod
+    def _shown(label, sha):
+        return f"{label}#{sha[:7]}" if sha else label
+
+    @property
+    def old_ref(self):
+        return self._shown(self.label, self.old_sha)
+
+    @property
+    def new_ref(self):
+        return self._shown(self.label, self.new_sha)
+
+
+@dataclass
 class Plan:
     """What a move would do. `waivers` lists every project waiver. A plan
     with `merge_errors` is a move that leaves the project's file broken:
-    nothing past the waivers is computed for it."""
+    nothing past the waivers is computed for it. `git` is set for a git
+    parent, whose move is `current` and `target` as shipped majors otherwise.
+    `offline` says why a git move could not be planned, and `invalid` lists
+    the faults of a new parent commit."""
     path: str = ""
     text: str = ""
     doc: dict = field(default_factory=dict)
@@ -100,9 +135,27 @@ class Plan:
     merge_errors: list = field(default_factory=list)
     classification: object = None
     replay: object = None
+    git: object = None
+    offline: str = ""
+    invalid: list = field(default_factory=list)
+
+    @property
+    def old_ref(self):
+        return self.git.old_ref if self.git else layers.default_extends(self.current)
+
+    @property
+    def new_ref(self):
+        return self.git.new_ref if self.git else layers.default_extends(self.target)
+
+    @property
+    def move_to(self):
+        """What `rewrite_text` writes: a major, or the new full sha."""
+        return self.git.new_sha if self.git else self.target
 
     @property
     def nothing_to_do(self):
+        if self.git:
+            return self.git.new_sha is not None and self.git.new_sha == self.git.old_sha
         return self.current == self.target
 
     @property
@@ -142,14 +195,41 @@ def _target(to, current, defaults):
 
 
 def _resolved(directory):
-    """`(parent layer, version, resolved config, provenance)` of one default."""
+    """`(layer documents, version, resolved config, provenance)` of one default.
+    The documents are those the project's layer sits over, nearest last."""
     parent, meta = policy_lint.load_parent(directory=directory)
     try:
         config, prov = merge.apply({}, parent.doc, "parent", "default", {})
     except merge.MergeError as exc:
         raise CompassError(f"{os.path.basename(directory)} does not resolve: "
                            f"{exc.errors[0][2]}") from None
-    return parent, meta["version"], config, prov
+    return (parent.doc,), meta["version"], config, prov
+
+
+def _resolved_git(directory, chain, check=False):
+    """`_resolved` for a chain of git parents (furthest first) over the default
+    in `directory`: the default's version stands for the whole, and the
+    parents' own faults are returned as text, not raised, so the move is
+    refused with the cause."""
+    default = _resolved(directory)
+    if check:
+        # Every lint group, as `compass policy lint` runs them, so a pin is
+        # never written that the lint then refuses.
+        base, _ = policy_lint.load_parent(directory=directory)
+        report = policy_lint.lint_chain(base, None, extra_parents=[f.layer for f in chain])
+        problems = [f"{f.code} [{f.layer}] {f.path}: {f.message}" for f in report.errors]
+        if problems:
+            return None, problems
+    docs, config, prov = list(default[0]), default[2], default[3]
+    for found in chain:
+        try:
+            config, prov = merge.apply(config, found.layer.doc, "parent", found.layer.name,
+                                       prov)
+        except merge.MergeError as exc:
+            return None, [f"{code} [{found.layer.name}] {where}: {message}"
+                          for code, where, message in exc.errors]
+        docs.append(found.layer.doc)
+    return (tuple(docs), default[1], config, prov), []
 
 
 def _capabilities(*docs):
@@ -159,20 +239,22 @@ def _capabilities(*docs):
     return tuple(sorted(k for k, v in state.items() if v is True))
 
 
-def _over(label, parent, version, config, prov, layer):
+def _over(label, docs, version, config, prov, layer):
     """The `replay.Config` of `layer` over a default, or the merge errors."""
     merged, merged_prov = merge.apply(config, layer, "project", "project", prov)
     return merged, replay.Config(label, "project", merged,
-                                 _capabilities(parent.doc, layer), merged_prov, version)
+                                 _capabilities(*docs, layer), merged_prov, version)
 
 
-def _views(found, invalidations, doc, new_parent):
+def _views(found, invalidations, doc, above):
+    """The views of the project's waivers. `above` is the document of the layer
+    just above the project, which names who may approve (ADR-039)."""
     by_id = {}
     for change in invalidations:
         by_id.setdefault(change.waiver_id, []).append(change)
     out = []
     for waiver in found:
-        allowed, fault = waivers.allowed_approvers(waiver, doc, new_parent.doc)
+        allowed, fault = waivers.allowed_approvers(waiver, doc, above)
         moved = by_id.get(waiver.id, [])
         out.append(WaiverView(waiver.id, waiver.catalogue, waiver.entry, waiver.body,
                               "invalidated" if moved else "kept", moved, allowed,
@@ -196,8 +278,14 @@ def plan(root, to=None, *, framework_root=None):
         doc = load_yaml_strict(path)
     except StrictYamlError as exc:
         raise CompassError(str(exc)) from None
-    current = _extends(doc, "compass.yml")
+    try:
+        spec = parents.spec_of(doc.get("extends") if isinstance(doc, dict) else None)
+    except parents.ParentError as exc:
+        raise CompassError(f"compass.yml: {exc}") from None
     defaults = available_defaults(framework_root)
+    if spec:
+        return _plan_git(Plan(path, text, doc), root, spec, to, defaults)
+    current = _extends(doc, "compass.yml")
     target = _target(to, current, defaults)
     made = Plan(path, text, doc, current, target)
     if current == target:
@@ -207,25 +295,34 @@ def plan(root, to=None, *, framework_root=None):
                            f"default@{target} cannot be checked against it")
     old, new = _resolved(defaults[current]), _resolved(defaults[target])
     made.versions = {"from": str(old[1]), "to": str(new[1])}
+    return _compare(made, root, old, new, f"default@{current}", f"default@{target}")
+
+
+def _compare(made, root, old, new, old_label, new_label):
+    """Fill `made` from the project's layer over each side: the waiver
+    re-check across the two parents, the classification and the replay. A side
+    is `(layer documents, version, resolved config, provenance)`. The
+    waivers are approved by the layer just above the project in the new side."""
+    doc = made.doc
     layer, _ = layers.split_project_file(doc)
     problems = catalogue_check.check_layer(layer, "project")
     if problems:
         raise CompassError(f"compass.yml fails its own check: {problems[0]} "
                            f"(run compass policy lint)")
     try:
-        old_merged, side_a = _over(f"default@{current} + project", old[0], old[1], old[2],
+        old_merged, side_a = _over(f"{old_label} + project", old[0], old[1], old[2],
                                    old[3], layer)
     except merge.MergeError as exc:
-        raise CompassError(f"compass.yml does not resolve over default@{current}: "
+        raise CompassError(f"compass.yml does not resolve over {old_label}: "
                            f"{exc.errors[0][2]} (run compass policy lint)") from None
     found, faults = waivers.find(layer, "project")
     if faults:
         raise CompassError(f"a waiver in compass.yml is malformed: {faults[0].message} "
                            f"(run compass policy lint)")
     moved = waivers.recheck_move(found, old[2], old_merged, new[2])
-    made.waivers = _views(found, moved, doc, new[0])
+    made.waivers = _views(found, moved, doc, new[0][-1])
     try:
-        _, side_b = _over(f"default@{target} + project", new[0], new[1], new[2], new[3], layer)
+        _, side_b = _over(f"{new_label} + project", new[0], new[1], new[2], new[3], layer)
     except merge.MergeError as exc:
         made.merge_errors = list(exc.errors)
         return made
@@ -236,6 +333,108 @@ def plan(root, to=None, *, framework_root=None):
     return made
 
 
+# --- a git parent -----------------------------------------------------------------------
+
+def _chain_parents(root, extends, *, fetch):
+    """The git parents a project's `extends:` resolves to, furthest ancestor
+    first. This is the only place a parent is looked up. The parent that a
+    move re-pins is the last one, and the ancestors behind it are the ones
+    its own `extends:` names."""
+    return parents.resolve_chain(root, extends, fetch=fetch)
+
+# Faults of the environment, not of the commit: a new commit that causes one of
+# these cannot be judged, so the error is raised, not turned into a refusal.
+_ENVIRONMENT = ("L-PARENT-FETCH", "L-PARENT-CACHE", "L-PARENT-NOT-CACHED",
+                "L-PARENT-SHA-MISMATCH")
+
+
+def _trust_cache(root, chain, where):
+    """Stop the move when a cached copy in `chain` is not the file that was
+    fetched, or cannot be shown to be. The cache is ignored by git, so an edit
+    to it is not visible in review, and it would decide the waiver re-check and
+    the approvers."""
+    for held in chain:
+        state = parent_states.read(root, held)
+        if not state.why:
+            continue
+        # Only a digest that no longer matches means an edit; a missing record
+        # means nothing says what was fetched.
+        edited = "no longer matches" in state.why
+        said = (f"was edited ({state.why})" if edited else
+                f"cannot be checked ({state.why}); nothing records what was fetched")
+        raise CompassError(f"the cached copy of {held.sha[:7]} of {held.ref}, in {where}, "
+                           f"{said}. Delete it under .compass/cache/parents/ and run the "
+                           f"command again to fetch it afresh")
+
+
+def _offline_plan(made, spec, why):
+    made.git = GitMove(parents.ref_label(spec), spec.sha)
+    made.offline = why
+    return made
+
+
+def _plan_git(made, root, spec, to, defaults):
+    """The `Plan` for moving a git parent's pin to the commit its ref names
+    now. Needs the network for the ref and for any commit not yet cached; a
+    host that cannot be reached gives an `offline` plan, and any other git
+    fault is raised."""
+    if to is not None:
+        raise CompassError("--to names a shipped default major, and this project extends a "
+                           "git parent: the pin moves to the commit its @<ref> names now. "
+                           "Change the ref in compass.yml to follow another one")
+    label = parents.ref_label(spec)
+    if parents.offline():
+        return _offline_plan(made, spec, "COMPASS_OFFLINE is set, so the ref was not looked "
+                                         "up and nothing was changed")
+    extends = made.doc.get("extends")
+    try:
+        new_sha = parents.resolve_ref(spec)
+        if new_sha is None:
+            raise CompassError(f"{label}: the remote has no such ref ({spec.ref}); check the "
+                               f"spelling in compass.yml")
+        if len(spec.sha) == 40 and spec.sha == new_sha:
+            made.git = GitMove(label, new_sha, new_sha)
+            return made
+        old_chain = _chain_parents(root, extends, fetch=True)
+        old = old_chain[-1]
+        _trust_cache(root, old_chain, "the chain of the current pin")
+        made.git = GitMove(label, old.sha, new_sha, old.version or None)
+        if old.sha == new_sha:
+            return made
+        try:
+            new_chain = _chain_parents(root, f"{label}#{new_sha}", fetch=True)
+        except parents.ParentError as exc:
+            if parents.unreachable(exc.detail):
+                raise
+            # A fault in the new commit's own ancestors was caused by the parent's
+            # owners, so it is a refusal; a fault fetching the commit itself is not.
+            ours = exc.layer == "project"
+            if exc.code in _ENVIRONMENT and (ours or exc.code != "L-PARENT-FETCH"):
+                raise
+            made.invalid = [f"{exc.code} [{exc.layer}] {exc.path}: {exc.detail}"]
+            return made
+        # The new chain was fetched before any write, so a copy in the cache can
+        # have been edited since. It is checked before anything is read from it.
+        _trust_cache(root, new_chain, "the chain of the new commit")
+    except parents.ParentError as exc:
+        if parents.unreachable(exc.detail):
+            return _offline_plan(made, spec, f"{label} could not be reached ({exc.detail}); "
+                                             f"nothing was changed")
+        raise
+    new = new_chain[-1]
+    made.git.new_version = new.version or None
+    shipped = defaults[max(defaults)]
+    before, faults = _resolved_git(shipped, old_chain)
+    if before is None:
+        raise CompassError(f"the current pin {old.sha[:7]} of {label} fails its own check: "
+                           f"{faults[0]} (run compass policy lint)")
+    after, faults = _resolved_git(shipped, new_chain, check=True)
+    if after is None:
+        made.invalid = faults
+        return made
+    return _compare(made, root, before, after, old.layer.name, new.layer.name)
+
+
 # --- the text edit --------------------------------------------------------------------
 
 # The file is edited as lines so that comments and order survive. Only block
@@ -243,6 +442,7 @@ def plan(root, to=None, *, framework_root=None):
 # it, because an edit inside braces cannot be made line by line.
 
 _MAJOR = re.compile(r"(compass:[a-z][a-z0-9-]*@)\d+")
+_PIN = re.compile(r"(github:[^#\s]+#)[0-9a-f]{7,40}")
 _PLAIN = re.compile(r"^[A-Za-z][A-Za-z0-9_.@-]*$")
 _RESERVED = {"yes", "no", "true", "false", "on", "off", "null", "y", "n"}
 
@@ -334,7 +534,8 @@ def _set_approval(lines, catalogue, entry_id, approver, day):
 
 
 def _set_major(lines, target):
-    """Rewrite the integer after `@` in `extends:` (or in its `from:`)."""
+    """Rewrite the integer after `@` in `extends:` (or in its `from:`), or,
+    when `target` is text, the sha after `#` in a git parent's value."""
     at = next((n for n, line in enumerate(lines) if re.match(r"^extends\s*:", line)), None)
     if at is not None and not _value(lines[at]):
         first, end = _block(lines, at)
@@ -343,9 +544,12 @@ def _set_major(lines, target):
         raise CompassError("compass.yml: the extends line was not found as text")
     head, _, rest = lines[at].partition(":")
     value = _value(lines[at])
-    if len(_MAJOR.findall(value)) != 1:
-        raise CompassError("compass.yml: the extends value is not one compass:<name>@<major>")
-    lines[at] = head + ":" + rest.replace(value, _MAJOR.sub(rf"\g<1>{target}", value), 1)
+    found = _PIN if isinstance(target, str) else _MAJOR
+    if len(found.findall(value)) != 1:
+        raise CompassError("compass.yml: the extends value is not one "
+                           + ("github:<owner>/<repo>@<ref>#<sha>" if isinstance(target, str)
+                              else "compass:<name>@<major>"))
+    lines[at] = head + ":" + rest.replace(value, found.sub(rf"\g<1>{target}", value), 1)
 
 
 def _parse(text):
@@ -363,7 +567,8 @@ def _expected(doc, target, approvals):
     held = out["extends"]
     box = held if isinstance(held, dict) else out
     key = "from" if isinstance(held, dict) else "extends"
-    box[key] = layers.default_extends(target)
+    box[key] = (_PIN.sub(rf"\g<1>{target}", box[key]) if isinstance(target, str)
+                else layers.default_extends(target))
     for catalogue, entry_id, approver, day in approvals:
         body = out[catalogue][entry_id]["waiver"]
         body["approved_by"], body["approved_on"] = approver, day
@@ -371,7 +576,8 @@ def _expected(doc, target, approvals):
 
 
 def rewrite_text(text, target, approvals):
-    """`compass.yml` as text with the major set to `target` and, for each
+    """`compass.yml` as text with the major set to `target` (or, when `target`
+    is a sha, the pin of a git parent) and, for each
     `(catalogue, entry, approver, day)` of `approvals`, that waiver's
     `approved_by` and `approved_on`. Nothing else is touched. The result is
     parsed and compared with the old document changed as data, so an edit
@@ -396,9 +602,11 @@ YES_WORDS = ("y", "yes")
 
 @dataclass
 class Outcome:
-    """What a run did. `status` is `applied`, `nothing-to-do` or `refused`;
-    a refusal is `(code, message)`. `waivers` are the plan's views with a
-    re-approved waiver marked `reapproved`: the plan itself is not changed."""
+    """What a run did. `status` is `applied`, `nothing-to-do`, `refused` or
+    `offline`; a refusal, and an offline run, carry `(code, message)`. An
+    offline run decided nothing: the host could not be asked. `waivers` are the
+    plan's views with a re-approved waiver marked `reapproved`: the plan itself
+    is not changed."""
     plan: Plan
     status: str
     written: bool = False
@@ -407,7 +615,7 @@ class Outcome:
 
     @property
     def exit_code(self):
-        return 1 if self.status == "refused" else 0
+        return 1 if self.status in ("refused", "offline") else 0
 
 
 def _refused(made, code, message, views=None):
@@ -461,7 +669,7 @@ def _reapprove(made, ask, say, today):
         refusal = ("declined", f"the waiver on {view.entry} was not approved")
         try:
             if not _asked(ask, f"Approve this waiver against "
-                               f"{layers.default_extends(made.target)}? [y/N] "):
+                               f"{made.new_ref}? [y/N] "):
                 return None, None, refusal
             name = _approver(view, ask)
         except EOFError:
@@ -506,9 +714,17 @@ def execute(made, *, yes=False, interactive=False, ask=input, say=print, today=N
     nothing is asked. The move and every approval go out in one atomic write
     of `compass.yml`, or nothing does."""
     today = today or datetime.date.today()
+    if made.offline:
+        return Outcome(made, "offline", False, ("offline", made.offline), [])
     if made.nothing_to_do:
         return Outcome(made, "nothing-to-do", waivers=list(made.waivers))
-    target = layers.default_extends(made.target)
+    target = made.new_ref
+    if made.invalid:
+        more = len(made.invalid) - 1
+        return _refused(made, "new-parent-invalid",
+                        f"the new commit of the git parent fails its own check: "
+                        f"{made.invalid[0]}" + (f" (and {more} more)" if more else "")
+                        + ". The pin stays where it is; ask the parent's owners to fix it")
     if made.merge_errors:
         code, where, message = made.merge_errors[0]
         more = len(made.merge_errors) - 1
@@ -541,7 +757,7 @@ def execute(made, *, yes=False, interactive=False, ask=input, say=print, today=N
                            + (f" and write {len(approvals)} approval(s)" if approvals else "")
                            + "? [y/N] "):
             return _refused(made, "declined", "the move was not confirmed")
-    new = rewrite_text(made.text, made.target, approvals)
+    new = rewrite_text(made.text, made.move_to, approvals)
     _unchanged_since_plan(made)
     _write(made.path, new, write)
     return Outcome(made, "applied", True, None, views)
@@ -578,14 +794,25 @@ def document(out):
     replay of the assessments finds under the two defaults."""
     made = out.plan
     versions = made.versions or {}
+    if made.git:
+        # A git parent has no major. Its `from` and `to` carry the pin too,
+        # as `sha` (null when the ref could not be resolved), after `version`.
+        git = made.git
+        sides = ({"ref": git.label, "major": None, "version": git.old_version,
+                  "sha": git.old_sha},
+                 {"ref": git.label, "major": None, "version": git.new_version,
+                  "sha": git.new_sha})
+    else:
+        sides = ({"ref": layers.default_extends(made.current), "major": made.current,
+                  "version": versions.get("from")},
+                 {"ref": layers.default_extends(made.target), "major": made.target,
+                  "version": versions.get("to")})
     return {
         "schema": JSON_SCHEMA_VERSION,
         "status": out.status,
         "written": out.written,
-        "from": {"ref": layers.default_extends(made.current), "major": made.current,
-                 "version": versions.get("from")},
-        "to": {"ref": layers.default_extends(made.target), "major": made.target,
-               "version": versions.get("to")},
+        "from": sides[0],
+        "to": sides[1],
         "refusal": None if out.refusal is None else
         {"code": out.refusal[0], "message": out.refusal[1]},
         "classification": made.classification,
@@ -613,10 +840,11 @@ def _replay_line(sets):
 def plan_lines(made):
     """The plan as lines for a person: the two defaults, what the move
     changes and each waiver."""
-    old, new = layers.default_extends(made.current), layers.default_extends(made.target)
     versions = made.versions
     shown = f" ({versions['from']} -> {versions['to']})" if versions else ""
-    lines = [f"compass policy update: {old} -> {new}{shown}"]
+    if made.offline:
+        return [f"compass policy update: {made.old_ref} (the ref was not resolved)"]
+    lines = [f"compass policy update: {made.old_ref} -> {made.new_ref}{shown}"]
     if made.classification:
         lines += _wrap("classification: ", f"{made.classification['result']} - "
                        f"{made.classification['reason']}")
@@ -641,7 +869,9 @@ def plan_lines(made):
 
 def result_lines(out):
     """The last lines: what the run did."""
-    target = layers.default_extends(out.plan.target)
+    target = out.plan.new_ref
+    if out.status == "offline":
+        return _wrap("offline: ", out.refusal[1])
     if out.status == "nothing-to-do":
         return [f"nothing to do: the project already extends {target}"]
     if out.status == "applied":

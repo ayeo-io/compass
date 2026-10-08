@@ -78,6 +78,10 @@ class Resolution:
     # it just before the first write, so a commit that changes nothing never
     # pays for it.
     validate: object = field(default=None, repr=False, compare=False)
+    # Adds the parts of `versions` that cost a scan, such as the stored
+    # classification of a git parent. `commit` calls it with `versions` after
+    # the "no change" decision, so a commit that writes nothing never pays.
+    finish: object = field(default=None, repr=False, compare=False)
     # What a preview reads and a commit ignores: the loaded layers, the chain
     # and the configuration after each layer.
     details: object = field(default=None, repr=False, compare=False)
@@ -533,6 +537,12 @@ def preflight(task_dir, resolution, manifest, invalidated=None, adopt=None):
             f"issue {os.path.basename(os.path.normpath(task_dir))} is landed and keeps "
             f"the configuration it landed under; it cannot store a new generation")
     if adopt is not None:
+        if resolution.finish is not None:
+            # The leftover holds the stored classification of each git parent,
+            # which `commit` adds before it compares; compare with the same
+            # document or a leftover that commit would adopt is refused here.
+            resolution.finish(resolution.versions)
+            documents["versions.yml"] = {"schema": SCHEMA, **resolution.versions}
         _check_adoption(task_dir, adopt, n + 1, documents, number(disk))
     if resolution.validate is not None:
         resolution.validate()
@@ -601,6 +611,9 @@ def commit(task_dir, resolution, manifest, invalidated=None, render=None, *,
                 f"the configuration it landed under; it cannot store a new generation")
         if resolution.validate is not None:
             resolution.validate()
+        if resolution.finish is not None:
+            resolution.finish(resolution.versions)
+            documents["versions.yml"] = {"schema": SCHEMA, **resolution.versions}
         folder = gen_dir(task_dir, target)
         if adopt is None:
             _prepare_target(task_dir, target)

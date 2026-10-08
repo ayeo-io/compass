@@ -20,6 +20,7 @@ import shlex
 import subprocess
 import sys
 import tempfile
+import textwrap
 
 # --- dependency check --------------------------------------------------------
 # cli/compass_pkg/__init__.py already checked that the bundled copy resolves,
@@ -170,7 +171,7 @@ def _receipt_truncate(text, width=_RECEIPT_LINE_CAP):
     return text[:width - 3] + "..."
 
 
-def _receipt_wrap_ids(head, ids, width=_RECEIPT_LINE_CAP):
+def _receipt_wrap_ids(head, ids, width=_RECEIPT_LINE_CAP, indent=None):
     """`head` followed by `ids`, wrapping instead of cutting an identifier.
 
     Identifiers are the receipt's join keys - a reader follows one from a gate
@@ -180,7 +181,8 @@ def _receipt_wrap_ids(head, ids, width=_RECEIPT_LINE_CAP):
     """
     if not ids:
         return [_receipt_truncate(head + "(none)", width)]
-    cont = " " * len(head.rstrip()) if len(head) < width // 2 else "      "
+    cont = indent if indent is not None else (
+        " " * len(head.rstrip()) if len(head) < width // 2 else "      ")
     out, current, first = [], head, True
     for i, ident in enumerate(ids):
         piece = str(ident) + ("," if i < len(ids) - 1 else "")
@@ -499,17 +501,39 @@ def _receipt_render(task, slug, route_readings, gate_requirements=None,
     return "\n".join(lines)
 
 
-def _receipt_stage_lists(task, task_dir):
-    """The "Stage lists" section: each entry and exit list of the issue with
-    the state of each check, or no lines when the capability is off or the
-    configuration cannot be read. The receipt never re-runs a check, so a
-    deterministic check shows as pending here."""
+def _receipt_stage_rows(task, task_dir):
+    """The rows of the issue's stage lists, or none when the capability is off
+    or the configuration cannot be read."""
     from compass_pkg import effective, stage_lists
     try:
         view = effective.view_or_legacy(task_dir)
-        rows = stage_lists.evaluate(view, task, task_dir, run=False)
+        return stage_lists.evaluate(view, task, task_dir, run=False)
     except Exception:  # noqa: BLE001 - the receipt reports what it can
         return []
+
+
+def _receipt_provenance(task, task_dir, listed_checks):
+    """The "Provenance" section, or no lines for an issue with no stored
+    generation or a configuration that cannot be read."""
+    from compass_pkg import effective, locks, receipt_provenance
+    try:
+        view = effective.view_or_legacy(task_dir)
+        return receipt_provenance.lines(view, task, listed_checks, locks.shipped_locks(),
+                                        _receipt_wrap_ids, _RECEIPT_LINE_CAP)
+    except Exception as exc:  # noqa: BLE001 - the receipt reports what it can
+        # An issue with no generation has no section. One that has a generation
+        # and cannot be rendered must say so, or the two look alike.
+        title = "Provenance - cannot be shown"
+        reason = " ".join(f"{type(exc).__name__}: {exc}".split())
+        return [title, "-" * len(title)] + textwrap.wrap(
+            reason, width=_RECEIPT_LINE_CAP, initial_indent="  ", subsequent_indent="  ",
+            break_long_words=True)
+
+
+def _receipt_stage_lists(rows):
+    """The "Stage lists" section: each entry and exit list of the issue with
+    the state of each check. The receipt never re-runs a check, so a
+    deterministic check shows as pending here."""
     if not rows:
         return []
     lines = ["Stage lists", "-----------"]
@@ -559,7 +583,8 @@ def cmd_task_receipt(args):
                            _receipt_parse_orchestration_override(approach_path))
     # The stage lists go before the verdict when the capability
     # `entry-exit-evaluation` is on for the issue. Without it nothing is added.
-    listed = _receipt_stage_lists(task, task_dir)
+    rows = _receipt_stage_rows(task, task_dir)
+    listed = _receipt_stage_lists(rows)
     if listed:
         at = text.rindex(_RECEIPT_RULE)
         text = text[:at] + "\n".join(listed) + "\n\n" + text[at:]
@@ -569,6 +594,14 @@ def cmd_task_receipt(args):
     if fresh:
         at = text.rindex(_RECEIPT_RULE)
         text = text[:at] + "\n".join(fresh) + "\n\n" + text[at:]
+    # Provenance goes after the freshness section, so the sections run: stage
+    # lists, artifact freshness, provenance, then the verdict.
+    # Where each named rule, check, lock, unlock and waiver came from. An issue
+    # with no stored generation adds nothing.
+    provenance = _receipt_provenance(task, task_dir, [row.check for row in rows])
+    if provenance:
+        at = text.rindex(_RECEIPT_RULE)
+        text = text[:at] + "\n".join(provenance) + "\n\n" + text[at:]
     # What `locks` reports about conformance goes before the verdict, on every
     # run. A project with no `compass.yml` adds nothing.
     from compass_pkg import locks

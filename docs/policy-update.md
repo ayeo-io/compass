@@ -18,7 +18,8 @@ The field-level re-check is `waivers.recheck_move`, which calls
 default major to another. It rewrites the integer in `extends:
 compass:default@<major>` in the project's `compass.yml` and nothing else,
 except the `approved_by` and `approved_on` of each waiver a person
-re-approves in the same step.
+re-approves in the same step. A project that extends a git parent moves the
+pin instead (see [A git parent](#a-git-parent)).
 
 1. It reads `extends:` for the current major and picks the target: `--to`,
    or the newest major this CLI keeps. A move goes forward only.
@@ -107,13 +108,65 @@ The command never removes a waiver. To drop one, remove it from `compass.yml`
 by hand and run the command again. Editing `approved_on` by hand does not
 clear an affected waiver: the command compares parent values, not dates.
 
+## A git parent
+
+When `extends:` names a git parent (`github:<owner>/<repo>@<ref>#<sha>`, see
+[git-parents.md](git-parents.md)), the command moves the pin. It rewrites the
+`#<sha>` and nothing else, except the `approved_by` and `approved_on` of each
+waiver a person re-approves. The two pins take the place of the two defaults.
+
+1. It asks the remote which commit `<ref>` names now, with `git ls-remote`. A
+   tag is tried before a branch, and an annotated tag gives the commit it
+   points at. A ref the remote does not have is exit 2.
+2. If that commit is the pin, there is nothing to do.
+3. It fetches the current pin (if it is not cached) and the new commit into the
+   cache, each with the chain of git parents behind it (the parents its own
+   `extends:` names, at most three deep). A cached copy of any parent in the
+   current chain or the new chain that was edited, or that nothing records the
+   fetch of, stops the move (exit 2) before anything is read from it: the cache
+   is ignored by git, so an edit there would otherwise decide the re-check and
+   the approvers. Delete the copy under `.compass/cache/parents/` and run the
+   command again.
+4. It runs every group of `compass policy lint` over the shipped default plus
+   the new chain. Any error is refused as `new-parent-invalid`, naming the
+   findings: a settings key, an `unlock:`, an `impl` outside the registry, a
+   reference to an unknown entry, a loosening of the default with no waiver, a
+   chain that is too deep, a cycle, or an ancestor that cannot be fetched.
+5. It lays the project's file over the shipped default plus the whole chain at
+   each pin, so a waived field that an ancestor changed counts as changed, and
+   runs the same re-check, classification, replay, questions and single write as
+   a default move. An allowed approver is named by the nearest parent's own
+   `approvers.project-waiver` in the new chain, else the project's `owner`.
+   Only the project's own `#<sha>` is rewritten: the new commit pins its
+   ancestors itself.
+
+`--to` names a shipped major, so it is exit 2 for a git parent. To follow
+another ref, change the `@<ref>` in `compass.yml` by hand and run the command.
+
+A fetched commit stays in the cache and in `seen.yml` whether or not the move is
+written. After a refusal or a declined question, `compass check` reports the
+parent as `stale`: a newer commit is known, and the pin has not moved.
+
+### Offline
+
+When the remote cannot be reached, or `COMPASS_OFFLINE` is set, nothing was
+decided. The status is `offline`, the text starts with `offline:`, nothing is
+written and the exit code is 1. A refusal has the status `refused` and the text
+`not applied (<code>)`. A host that answered with an error (no such repository, a
+failed login) is not offline: it is exit 2. A script reads the `status` in
+`--json` to tell offline from a refusal.
+
+In `--json` a git move has `"major": null` and a `"sha"` in `from` and `to`
+(null in `to` when the ref was not resolved). A move of the shipped default has
+no `sha` key.
+
 ## Exit codes
 
 | Exit | Meaning |
 |---|---|
-| 0 | The move was written, or the project already extends the target major |
-| 1 | The move was refused: an affected waiver, no terminal, a declined question, a file that does not resolve, or no confirmation |
-| 2 | The request or the file cannot be used: a major this CLI does not keep or one older than the project's, an `extends:` that is not the shipped default, no `compass.yml`, a waiver that cannot be edited in place, a file changed since the plan, or a write that failed |
+| 0 | The move was written, or the project already extends the target major (or the commit its ref names) |
+| 1 | The move was refused: an affected waiver, no terminal, a declined question, a file that does not resolve, a new git commit that fails its check, or no confirmation. Also `offline`: the remote could not be reached |
+| 2 | The request or the file cannot be used: a major this CLI does not keep or one older than the project's, an `extends:` that is neither the shipped default nor a git parent, no `compass.yml`, a waiver that cannot be edited in place, a file changed since the plan, a write that failed, `--to` with a git parent, a ref the remote does not have, an edited cache of the current pin, or a git failure that is not about reaching the host |
 
 Exit 1 on a run with no terminal differs from `policy migrate`'s dry run, which
 exits 0: `update` exits 1 whenever it did not write a move it was asked for,
@@ -135,7 +188,9 @@ the next reassess.
 | `nobody-may-approve` | A waiver is affected and no owner is declared, so no approver is allowed |
 | `declined` | The approver said no, gave no allowed name, or the move was not confirmed |
 | `needs-confirmation` | No waiver is affected, but there is no terminal and no `--yes` |
-| `does-not-resolve` | The project's file does not merge over the new default |
+| `does-not-resolve` | The project's file does not merge over the new default, or over the new git commit |
+| `new-parent-invalid` | The new git commit fails the parent checks, or does not merge over the shipped default |
+| `offline` | Not a refusal: the status `offline` carries this code when the remote could not be reached |
 
 ## `compass policy update --json`
 

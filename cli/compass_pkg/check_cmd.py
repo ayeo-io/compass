@@ -142,8 +142,8 @@ CHECK_GUIDANCE = {
     },
     "human-approval-present": {
         "why": "The human-sign-off guardrail (a human signs off on the irreversible): this issue touches auth, payments, personal data, or migrations and needs a recorded approval.",
-        "do": 'Record the sign-off: `compass evidence add EV-<id> --type human-approval`.',
-        "fix": "Add a `human-approval` evidence entry to the registry with approver, role, scope, decision=approved, and timestamp. Then reference it from the relevant gate's evidence.",
+        "do": 'Record a `human-approval` entry; a human check uses `compass evidence approve`.',
+        "fix": "Add a `human-approval` evidence entry to the registry with approver, role, scope, decision=approved, and timestamp. Then reference it from the relevant gate's evidence. For a human check that lists approvers, a person runs `compass evidence approve --check <id> --approver <name> --role <role> --scope <text>` in a terminal.",
     },
     "backfills-paid": {
         "why": "Work deferred for speed - a Hotfix follow-up or a de-scoped artifact - must be done before an issue closes. Otherwise the audit trail has a hole.",
@@ -161,10 +161,10 @@ CHECK_GUIDANCE = {
         "fix": "Empty `changed_files:` in this Spike's manifest.yml. If the finding is worth keeping, run `/compass:assess` to start a new delivery issue that owns the code under a real route.",
     },
     "dod-evidence-typed": {
-        "why": "The evidence-not-assertion guardrail: the Definition of Done is a typed gate. Every unchecked DoD box must reference typed evidence or a filed follow-up - narrative notes in devlog.md do not count.",
+        "why": "The evidence-not-assertion guardrail: every exit list, the Definition of Done among them, is a typed gate. Every unchecked box in one must reference typed evidence or a filed follow-up - narrative notes in devlog.md do not count.",
         "do": 'Give each unchecked box an `(evidence: EV-<id>)` or `(follow-up: FU-<id>)` tag.',
         "fix": (
-            "For each bare unchecked DoD item: (a) add `(evidence: EV-<id>)` "
+            "For each bare unchecked exit-list item: (a) add `(evidence: EV-<id>)` "
             "inline, where EV-<id> is an entry in the issue's evidence registry "
             "with an accepted type; or (b) add `(follow-up: BF-<id>)` inline and "
             "record BF-<id> in manifest.yml follow-ups with status: owed; or (c) tick "

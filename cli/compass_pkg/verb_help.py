@@ -47,6 +47,8 @@ VERB_DESCRIPTIONS = {
         'Run the full mechanical gate suite - the governance policy lint, then the manifest lint and the guardrail checks for every issue on disk. Intended for continuous integration and required green before a release. Gate checks are skipped for an issue that has not started, and the skip is named rather than hidden.',
     'evidence add':
         'Append a typed record to the manifest. The type is validated at write time, because a gate that accepts the wrong kind of evidence is not a gate.',
+    'evidence review':
+        "Record a judgement against a check of kind judged: --verdict pass or fail, --reason, and --reviewer (agent, agent:<session id> or a person's id). The command digests the check's declared inputs as they are now, writes a review record in the issue's evidence folder and registers it as manual-review evidence for the check. The check then passes only while the newest record says pass, names a reviewer the check lists, and still matches its inputs and the check's definition; when an input changes, the review is re-owed. Exit 0 when the record is written, exit 2 when it is not (no such check, a check that is not judged, no inputs, an input that cannot be found, an empty reason).",
     'flow':
         "The cross-issue view: what is blocked, what follow-ups are owed, and the periodic digest. Advisory by design - it never gates and never sets an issue's status, because status is inferred from the artifacts on disk.",
     'follow-up resolve':

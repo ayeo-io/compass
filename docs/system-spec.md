@@ -3207,3 +3207,18 @@
 - `PC-7` An uncached ancestor is refused by readers that do not fetch
 - `PC-8` The docs describe the chain, the depth limit and the cycle code
 - `PC-9` A parent's waiver answers to that parent's owner at every depth
+
+### judged-checks (landed 2026-10-08)
+
+- `JC-1` A judged check passes on a review record whose inputs still match
+- `JC-2` A judged check with no review record fails closed
+- `JC-3` A review with verdict fail does not pass
+- `JC-4` A reviewer the check does not list does not pass
+- `JC-5` A changed input or definition re-owes the review
+- `JC-6` The newest record decides and an altered record is not a record
+- `JC-7` compass evidence review writes the record and registers it
+- `JC-8` compass evidence review refuses what it cannot record
+- `JC-9` The --json output is documented and pinned
+- `JC-10` Help text, owning doc and corpus entries describe the verb
+- `JC-11` A project with no judged check behaves as before
+- `JC-12` A judged check follows due, skipped and advisory rules

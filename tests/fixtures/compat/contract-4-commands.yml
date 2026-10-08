@@ -225,6 +225,34 @@ entries:
   project: quick-fix-started
   argv: ["evidence", "add", "EV-1", "--type", "artifact", "--path", "nope.txt"]
   exit: 2
+# Added on purpose by judged-checks: `evidence review` is a new leaf of the
+# evidence group. 5.6.0 refused it as an unknown choice (exit 2). From 6.0.0 it
+# records a judgement against a judged check whose input exists, and exits 0.
+- id: evidence-review-recorded
+  project: with-judged-check-document
+  argv: ["evidence", "review", "design-review", "--verdict", "pass", "--reason", "Read in full.", "--reviewer", "jed72"]
+  exit: 0
+  stdout_contains: "design-review - pass recorded"
+# Added on purpose by judged-checks: a check the configuration does not define
+# is refused (exit 2) and nothing is written. The exit code equals what 5.6.0
+# gave for the unknown choice, but the cause is now the missing check.
+- id: evidence-review-unknown-check
+  project: regular-issue
+  argv: ["evidence", "review", "no-such-check", "--verdict", "pass", "--reason", "Read in full.", "--reviewer", "jed72"]
+  exit: 2
+# Added on purpose by judged-checks: only a judged check takes a review. A
+# human check is refused (exit 2), so a tick cannot be replaced by a record.
+- id: evidence-review-not-judged
+  project: with-judged-check-document
+  argv: ["evidence", "review", "dor-summary-filled", "--verdict", "pass", "--reason", "Read in full.", "--reviewer", "jed72"]
+  exit: 2
+# Added on purpose by judged-checks: a review of a document that is not there
+# is refused (exit 2). A record of inputs that cannot be found would match
+# nothing later.
+- id: evidence-review-input-missing
+  project: with-judged-check
+  argv: ["evidence", "review", "design-review", "--verdict", "pass", "--reason", "Read in full.", "--reviewer", "jed72"]
+  exit: 2
 - id: changed-file-add-valid
   project: quick-fix-started
   argv: ["changed-file", "add", "README.md", "--scenario", "TRC-001"]

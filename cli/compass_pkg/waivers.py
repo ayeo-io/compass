@@ -339,6 +339,18 @@ def recheck(records, new_parent):
     return out
 
 
+def recheck_move(found, old_parent, old_child, new_parent):
+    """The `Invalidation`s a move of the parent from `old_parent` to
+    `new_parent` causes for the waivers in `found` (what `find` returned).
+    `old_child` is the layer resolved over the old parent: it gives each
+    waived field's project value. There is no stored record of what an
+    approval saw, so the old parent stands for it. This is the whole rule
+    for a move that has both parents at hand, and `recheck` does the
+    comparison, so a move and a reassess ask the same question."""
+    records = [describe(w, old_parent, old_child, None) for w in found]
+    return recheck(records, new_parent)
+
+
 def _revert(child, parent, waivers):
     """The child with each waived entry put back to the parent's value: the
     residual configuration."""

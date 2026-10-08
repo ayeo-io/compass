@@ -369,6 +369,42 @@ entries:
   project: with-compass-yml
   argv: ["policy", "migrate"]
   exit: 2
+# Added on purpose by policy-update: `policy update` is a new verb. 5.6.0
+# refused it as an unknown choice (exit 2); from 6.0.0 a project already on
+# the only shipped major has nothing to move, writes nothing and exits 0.
+- id: policy-update-nothing-to-do
+  project: with-default-extends
+  argv: ["policy", "update"]
+  exit: 0
+  stdout_contains: "nothing to do"
+# Added on purpose by policy-update: the same new verb, asked for its JSON.
+# 5.6.0 exited 2 for the unknown verb; from 6.0.0 the document is printed and
+# the exit is 0.
+- id: policy-update-json-nothing-to-do
+  project: with-default-extends
+  argv: ["policy", "update", "--json"]
+  exit: 0
+  stdout_contains: "nothing-to-do"
+# Added on purpose by policy-update: a major this CLI does not keep exits 2.
+# 5.6.0 also exited 2, for the unknown verb, so this guards that the new verb
+# keeps refusing a move it cannot check.
+- id: policy-update-major-not-kept
+  project: with-default-extends
+  argv: ["policy", "update", "--to", "7"]
+  exit: 2
+# Added on purpose by policy-update: a compass.yml with no extends line has no
+# major to move, so the verb exits 2. 5.6.0 did not read the file and exited 2
+# for the unknown verb.
+- id: policy-update-no-extends
+  project: with-compass-yml
+  argv: ["policy", "update"]
+  exit: 2
+# Added on purpose by policy-update: a project with no compass.yml has no file
+# to rewrite, so the verb exits 2. 5.6.0 exited 2 for the unknown verb.
+- id: policy-update-no-project-file
+  project: initialised
+  argv: ["policy", "update"]
+  exit: 2
 - id: retro-plain
   project: quick-fix-started
   argv: ["retro"]

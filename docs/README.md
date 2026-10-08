@@ -36,6 +36,7 @@ the table does not exist, and when a doc in this folder is not listed.
 - [policy-diff.md](policy-diff.md) - `compass policy diff`: the references, the sets it replays, `--open`, the exit codes and the JSON shape.
 - [generation-store.md](generation-store.md) - the stored generation of an issue's configuration: its files, the commit order, the states and what reads it.
 - [policy-migrate.md](policy-migrate.md) - `compass policy migrate`: how copied governance and the old settings file become a `compass.yml` overlay over the release the copy came from, what it keeps, when it refuses, its exit codes and its JSON shape.
+- [policy-update.md](policy-update.md) - `compass policy update`: the major bump, the waiver re-check, the terminal re-approval, the exit codes and the JSON shape.
 - [security.md](security.md) - what Compass adds to a repository, and how to review it.
 - [portability.md](portability.md) - the adapter boundary, for running Compass outside Claude Code.
 
@@ -67,6 +68,7 @@ same commit.
 | `scripts/impl-coverage.py`, `tests/fixtures/impls/versions.lock.yml` | `docs/check-implementations.md` |
 | `cli/compass_pkg/replay.py` | `docs/policy-diff.md` |
 | `cli/compass_pkg/policy_migrate.py`, `cli/compass_pkg/shipped_releases.py`, `scripts/generate-shipped-releases.py`, `governance/shipped-releases.yml`, `governance/shipped-releases.tar.xz` | `docs/policy-migrate.md` |
+| `cli/compass_pkg/policy_update.py` | `docs/policy-update.md` |
 | `cli/compass_pkg/waivers.py` | `architecture/decisions/ADR-039-waivers-locks-and-unlocks.md` |
 | `cli/compass_pkg/layers.py`, `cli/compass_pkg/merge.py` | `architecture/decisions/ADR-035-delivery-approaches-stages-and-modes-are-configuration.md` |
 | `cli/compass_pkg/locks.py` | `governance/guardrails.md` |

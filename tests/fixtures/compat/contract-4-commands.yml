@@ -329,6 +329,22 @@ entries:
   argv: ["policy", "diff", "--exit-code", "default@6", "project"]
   exit: 1
   stdout_contains: "loosening"
+# Added on purpose by impl-refusal: `issue migrate-config` is a new verb. 5.6.0
+# refused it as an unknown choice (exit 2); from 6.0.0 an issue whose generation
+# already holds the installed versions is left as it is, and the verb says so and
+# exits 0.
+- id: issue-migrate-config-already-pinned
+  project: regular-issue
+  argv: ["issue", "migrate-config"]
+  exit: 0
+  stdout_contains: "no change"
+# Added on purpose by impl-refusal: with no current issue the new verb exits 2.
+# 5.6.0 also exited 2, for the unknown verb, so this guards that the new verb
+# refuses to guess which issue to change.
+- id: issue-migrate-config-no-issue
+  project: initialised
+  argv: ["issue", "migrate-config"]
+  exit: 2
 # Added on purpose by policy-migrate: `policy migrate` is a new verb. 5.6.0
 # refused it as an unknown choice (exit 2). From 6.0.0 it is a dry run on a
 # project with copied governance: an unchanged copy gives an empty overlay,

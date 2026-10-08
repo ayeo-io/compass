@@ -1081,9 +1081,9 @@ def test_gs_17_messages_name_only_commands_the_cli_has(project, tmp_path):
 
 
 def test_gs_17_the_wording_check_can_fail():
-    assert _commands_in("run `compass issue migrate-config` to repair") == [
-        ["issue", "migrate-config"]]
-    assert not _exists(["issue", "migrate-config"])
+    assert _commands_in("run `compass issue no-such-verb` to repair") == [
+        ["issue", "no-such-verb"]]
+    assert not _exists(["issue", "no-such-verb"])
     assert _exists(["approach", "evaluate"])
 
 

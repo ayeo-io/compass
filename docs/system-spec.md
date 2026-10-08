@@ -50,11 +50,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given other threads exist, when an interrupt arrives while the session is created, then the session is ended
+### The coverage page is derived and kept current
 
-- **Scenario id:** `TRC-001`
+- **Scenario id:** `IR-12`
 - **Intent:** `INT-1`
-- **Source issue:** `signal-hold-all-threads`
+- **Source issue:** `impl-refusal`
 - **Landed:** 2026-10-08
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -353,4 +353,4 @@
 
 ---
 
-1889 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1916 superseded scenario(s) are in `docs/system-spec-archive.md`.

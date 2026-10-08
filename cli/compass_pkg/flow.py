@@ -630,8 +630,9 @@ def derive_system_spec(project_root: str) -> None:
     landed = _landed_on_this_branch(project_root, landed)
 
     # ---- 2. Build the current-behaviour and archived-behaviour tables ------
-    # Key: intent id → winner entry  (dict with slug, scn_id, scn_title, ts, date)
-    current: dict = {}    # intent_id -> entry
+    # Key: (slug, scenario id, intent id) -> entry
+    # (dict with slug, scn_id, scn_title, ts, date)
+    current: dict = {}
     archived: list = []   # list of archived entries
 
     for item in landed:
@@ -666,10 +667,15 @@ def derive_system_spec(project_root: str) -> None:
                     "land_timestamp": land_ts,
                     "land_date": land_date,
                 }
-                if one_intent in current:
-                    # Supersession: the current winner is archived
-                    archived.append(current[one_intent])
-                current[one_intent] = entry
+                # Intent ids are local to an issue (most issues use INT-1), so
+                # a shared intent id says nothing about supersession: not
+                # between issues, and not between sibling scenarios. The only
+                # supersession is the one the manifest records, in
+                # `superseded_by`, which names a scenario in the same issue.
+                if scn.get("superseded_by"):
+                    archived.append(entry)
+                else:
+                    current[(slug, scn_id, str(one_intent))] = entry
 
     # ---- 3. Compose the derived spec text ----------------------------------
     lines = [
@@ -691,9 +697,9 @@ def derive_system_spec(project_root: str) -> None:
             "## Current Behaviour",
             "",
         ]
-        # Sort current entries by intent id for deterministic output
-        for intent_id in sorted(current.keys()):
-            entry = current[intent_id]
+        # Sort current entries by intent id, then issue, for deterministic output
+        for key in sorted(current.keys(), key=lambda k: (k[2], k[0], str(k[1]))):
+            entry = current[key]
             lines += [
                 f"### {entry['scn_title'] or entry['scn_id']}",
                 "",
@@ -717,8 +723,8 @@ def derive_system_spec(project_root: str) -> None:
         "",
         "# System Specification - Archive (derived)",
         "",
-        "> Scenarios superseded by a later-landed scenario with the same intent "
-        "id. The current behaviour is in `docs/system-spec.md`.",
+        "> Scenarios whose manifest names a replacement in `superseded_by`. "
+        "The current behaviour is in `docs/system-spec.md`.",
         "",
     ]
     if archived:
@@ -732,8 +738,7 @@ def derive_system_spec(project_root: str) -> None:
         archive_lines += [
             "## Archived Behaviour",
             "",
-            "> These scenarios were superseded by a later-landed scenario "
-            "with the same intent id.",
+            "> These scenarios name a replacement in `superseded_by`.",
             "",
         ]
         # Sort archived entries: land_timestamp, then scn_id for determinism

@@ -18,19 +18,23 @@ from compass_pkg.flow import derive_system_spec  # noqa: E402
 
 
 def _landed(root, slug, when, scn_id, title, intent):
+    """One landed issue holding an old scenario that names its replacement."""
     d = root / ".compass" / "work" / slug
     d.mkdir(parents=True)
     (d / "manifest.yml").write_text(yaml.safe_dump({
         "schema_version": "2.0", "issue": slug, "created": "2026-05-25",
         "status": "landed", "land_timestamp": when,
         "assessment": {"risk": "contained", "familiarity": "greenfield", "size": "small"},
-        "scenarios": [{"id": scn_id, "title": title, "intent": intent, "tests": []}],
+        "scenarios": [
+            {"id": scn_id, "title": title, "intent": intent, "tests": [],
+             "superseded_by": ["SCN-NEW"]},
+            {"id": "SCN-NEW", "title": "new way", "intent": intent, "tests": []},
+        ],
     }, sort_keys=False))
 
 
 def test_current_and_archived_behaviour_go_to_separate_files(tmp_path):
     _landed(tmp_path, "old", "2026-05-25T08:00:00+00:00", "SCN-OLD", "old way", "INT-1")
-    _landed(tmp_path, "new", "2026-05-25T12:00:00+00:00", "SCN-NEW", "new way", "INT-1")
     derive_system_spec(str(tmp_path))
     spec = (tmp_path / "docs" / "system-spec.md").read_text()
     archive = (tmp_path / "docs" / "system-spec-archive.md").read_text()
@@ -45,7 +49,6 @@ def test_current_and_archived_behaviour_go_to_separate_files(tmp_path):
 def test_the_archive_carries_each_section_as_the_one_file_did(tmp_path):
     """Byte-preserved: each archived section is the same text it was."""
     _landed(tmp_path, "old", "2026-05-25T08:00:00+00:00", "SCN-OLD", "old way", "INT-1")
-    _landed(tmp_path, "new", "2026-05-25T12:00:00+00:00", "SCN-NEW", "new way", "INT-1")
     derive_system_spec(str(tmp_path))
     archive = (tmp_path / "docs" / "system-spec-archive.md").read_text()
     assert ("### old way _(archived)_\n\n- **Scenario id:** `SCN-OLD`\n"

@@ -11,6 +11,12 @@ superseded_by: ''
 > includes only the landed issues on the branch, and `compass issue refresh-spec`
 > clears a conflict confined to the derived spec.
 
+> **Supersession rule:** the derive archives a scenario only when its
+> manifest records `superseded_by`, which names a scenario in the same issue.
+> A shared intent id supersedes nothing. Intent ids are local to an issue, and
+> most issues use INT-1, so keying on the id archived other issues' scenarios
+> and the issue's own sibling scenarios.
+
 ## Context
 
 ADR-008 made the living system spec a derived file, and put its derivation

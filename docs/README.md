@@ -24,7 +24,7 @@ the table does not exist, and when a doc in this folder is not listed.
 - [receipt.md](receipt.md) - the one-screen view of an issue's gates and evidence.
 - [writing-specs-and-plans.md](writing-specs-and-plans.md) - a worked example of a spec and a plan.
 - [system-spec.md](system-spec.md) - the current behaviour, derived from landed issues.
-- [system-spec-archive.md](system-spec-archive.md) - superseded behaviour, derived.
+- [system-spec-archive.md](system-spec-archive.md) - scenarios that name a replacement in `superseded_by`, derived.
 
 ## Running and maintaining Compass
 

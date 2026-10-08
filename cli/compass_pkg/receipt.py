@@ -499,6 +499,30 @@ def _receipt_render(task, slug, route_readings, gate_requirements=None,
     return "\n".join(lines)
 
 
+def _receipt_stage_lists(task, task_dir):
+    """The "Stage lists" section: each entry and exit list of the issue with
+    the state of each check, or no lines when the capability is off or the
+    configuration cannot be read. The receipt never re-runs a check, so a
+    deterministic check shows as pending here."""
+    from compass_pkg import effective, stage_lists
+    try:
+        view = effective.view_or_legacy(task_dir)
+        rows = stage_lists.evaluate(view, task, task_dir, run=False)
+    except Exception:  # noqa: BLE001 - the receipt reports what it can
+        return []
+    if not rows:
+        return []
+    lines = ["Stage lists", "-----------"]
+    current = None
+    for row in rows:
+        if (row.stage, row.side) != current:
+            current = (row.stage, row.side)
+            lines.append(f"  {row.stage} {row.side} ({'due' if row.due else 'not yet due'})")
+        lines.append(_receipt_truncate(
+            f"    {row.check:<28}  {row.status:<16}  {row.detail}"))
+    return lines
+
+
 def cmd_task_receipt(args):
     # A missing issue is a refusal (exit 2), as in every other verb; exit 1
     # is kept for a check that ran and found something.
@@ -509,6 +533,12 @@ def cmd_task_receipt(args):
     gate_requirements = _receipt_gate_requirements(project_root, task_dir)
     text = _receipt_render(task, slug, route_readings, gate_requirements,
                            _receipt_parse_orchestration_override(approach_path))
+    # The stage lists go before the verdict when the capability
+    # `entry-exit-evaluation` is on for the issue. Without it nothing is added.
+    listed = _receipt_stage_lists(task, task_dir)
+    if listed:
+        at = text.rindex(_RECEIPT_RULE)
+        text = text[:at] + "\n".join(listed) + "\n\n" + text[at:]
     # What `locks` reports about conformance goes before the verdict, on every
     # run. A project with no `compass.yml` adds nothing.
     from compass_pkg import locks

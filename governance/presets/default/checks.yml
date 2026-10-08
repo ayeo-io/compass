@@ -153,16 +153,16 @@ checks:
         if it does, re-assess (`/compass:assess --reassess`) before plan.', kind: human, severity: blocking,
       on_skipped: not-applicable, requires: [entry-exit-evaluation]}
   dod-every-scenario-passes: {statement: 'Every scenario passes - §1 is all PASS; the spec, read as the acceptance suite, is green.',
-      kind: human, severity: blocking, on_skipped: fail, requires: [entry-exit-evaluation]}
+      kind: human, severity: blocking, on_skipped: fail, requires: [entry-exit-evaluation], when: {ships: true}}
   dod-suite-green: {statement: TDD suite green - §2 links the record of the full suite passing., kind: human, severity: blocking,
-      on_skipped: fail, requires: [entry-exit-evaluation]}
+      on_skipped: fail, requires: [entry-exit-evaluation], when: {ships: true}}
   dod-coverage-floor: {statement: Coverage meets the "Tested before it lands" guardrail's floor (`G1`) - evidence in §2., kind: human,
-      severity: blocking, on_skipped: fail, requires: [entry-exit-evaluation]}
+      severity: blocking, on_skipped: fail, requires: [entry-exit-evaluation], when: {ships: true}}
   dod-no-lint-errors: {statement: 'No lint / format / type errors - clean, with the record linked.', kind: human, severity: blocking,
-      on_skipped: fail, requires: [entry-exit-evaluation]}
+      on_skipped: fail, requires: [entry-exit-evaluation], when: {ships: true}}
   dod-traceability-intact: {statement: Traceability intact - code → scenario → intent holds; claim → scenario holds where the marketer
-        is in play., kind: human, severity: blocking, on_skipped: fail, requires: [entry-exit-evaluation]}
+        is in play., kind: human, severity: blocking, on_skipped: fail, requires: [entry-exit-evaluation], when: {ships: true}}
   dod-living-docs-updated: {statement: (carried to ship) Living docs updated to match reality., kind: human, severity: blocking,
-      on_skipped: fail, requires: [entry-exit-evaluation]}
+      on_skipped: fail, requires: [entry-exit-evaluation], when: {ships: true}}
   dod-follow-ups-settled: {statement: '(carried to ship) Every outstanding follow-up settled - no unsettled hotfix follow-up, no
-        unbacked marketing claim.', kind: human, severity: blocking, on_skipped: fail, requires: [entry-exit-evaluation]}
+        unbacked marketing claim.', kind: human, severity: blocking, on_skipped: fail, requires: [entry-exit-evaluation], when: {ships: true}}

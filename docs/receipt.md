@@ -69,6 +69,8 @@ The receipt's value is what it *won't* hide. The verdict markers and overall ver
 
 The receipt lists owed follow-ups in a *Follow-ups* section and counts them in the verdict: "landed with caveats - N follow-up(s) owed".
 
+With the capability `entry-exit-evaluation` on, the receipt adds a *Stage lists* section before the verdict. It shows each entry and exit list with whether it is due, and each check with its state: `pass`, `fail`, `nothing-to-check` or `pending`. A deterministic check shows `pending`, because the receipt does not run checks. With the capability off, the section is absent (`docs/entry-exit-evaluation.md`).
+
 ## What the receipt does **not** do
 
 - It does not re-run guardrail checks. For that, use `compass check`. The receipt reports what was actually recorded at ship time, which is the audit-trail-from-disk property that makes the chain meaningful (ADR-005).

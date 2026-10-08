@@ -150,7 +150,8 @@ an issue with no `generation:` key (or no issue) in a project with no
 | `loop_ceiling_rules()` | the loop-ceiling rules | `loop_ceilings` |
 | `known_ids()` | the ids of the guardrails that apply to a shipping approach | `lessons`, `review_rules` |
 | `matches(when, assessment)` | whether a `when:` clause holds, using the configuration's dimension orders | the callers above |
-| `stage_order()` | the stage names in order | `approach_diagram` |
+| `stage_order()` | the stage names in order | `approach_diagram`, `stage_lists` |
+| `capabilities`, `config`, `listing_assessment(assessment, approach)` | the capability switches, the catalogues, and the assessment with the derived key `ships` that a check's `when` reads | `stage_lists` |
 | `parent_version()`, `pending_config(manifest)` | for the `compass check` header | `check_cmd` |
 
 A check that a project adds under its own id (for example `arch-rule` with

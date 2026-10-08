@@ -451,6 +451,37 @@ def _emit_check(run, args):
     print("\n".join(lines))
 
 
+def _stage_list_pass(run, view, task, task_dir):
+    """Add one result per due check of each stage list, when the capability
+    `entry-exit-evaluation` is on, and return `(ran, failed, nothing)` for them.
+    A list is a guardrail of its own, labelled `stage:<stage>:<entry|exit>`. A
+    project without the capability, or an issue without a configuration,
+    adds nothing."""
+    from compass_pkg import stage_lists
+
+    if not stage_lists.enabled(view):
+        return 0, 0, 0
+    try:
+        rows = stage_lists.due_rows(stage_lists.evaluate(view, task, task_dir))
+    except Exception as exc:                            # noqa: BLE001
+        # A check must not crash the run.
+        run.guardrail("stage-lists", "stage lists")
+        run.result("stage-lists", False, f"evaluation errored: {exc}")
+        return 1, 1, 0
+    failed = nothing = 0
+    current = None
+    for row in rows:
+        if (row.stage, row.side) != current:
+            current = (row.stage, row.side)
+            run.guardrail(row.label, "%s checks of %s" % (row.side, row.stage))
+        passed = {"pass": True, "fail": False,
+                  "nothing-to-check": NOTHING_TO_CHECK}[row.status]
+        failed += passed is False
+        nothing += passed is NOTHING_TO_CHECK
+        run.result(row.check, passed, row.detail)
+    return len(rows), failed, nothing
+
+
 def _assessment_keys_pass(run, task):
     """Report the assessment keys the manifest schema does not allow. The
     release's `issue lint` refuses them, so check must too, or an issue
@@ -526,6 +557,10 @@ def cmd_check(args):
                     failures += 1
                 run.result(check_name, passed, detail)
 
+        listed_ran, listed_failed, _nothing = _stage_list_pass(run, view, task, task_dir)
+        ran += listed_ran
+        failures += listed_failed
+        run.nothing += _nothing
         ran += 1
         if not _assessment_keys_pass(run, task):
             failures += 1
@@ -658,6 +693,11 @@ def cmd_check(args):
                 nothing_to_check += 1
             run.result(check_name, passed, detail)
 
+    # The stage lists run when the capability `entry-exit-evaluation` is on.
+    listed_ran, listed_failed, listed_nothing = _stage_list_pass(run, view, task, task_dir)
+    ran += listed_ran
+    failures += listed_failed
+    nothing_to_check += listed_nothing
     ran += 1
     if not _assessment_keys_pass(run, task):
         failures += 1

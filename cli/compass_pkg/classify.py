@@ -41,7 +41,11 @@ JSON_SCHEMA_VERSION = 1
 # tables the comparison reads are keyed automatically (`_rule_tables`); this
 # covers the code, and `tests/test_classifier_speed.py` pins the functions that
 # decide a verdict so a change to one cannot pass without a decision here.
-CLASSIFIER_VERSION = 1
+#
+# Version 2: a check's `when` reads the derived key `ships` (ADR-037, the
+# amendment of 2026-10-08), so a configuration that uses it has a verdict the
+# first version could not give.
+CLASSIFIER_VERSION = 2
 
 # Keys whose value is a condition on the assessment.
 WHEN_KEYS = ("when", "blocking_when", "applies_when")

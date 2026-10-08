@@ -327,6 +327,17 @@ def _known_capabilities(names, who):
                                f"{', '.join(CAPABILITIES)}")
 
 
+def listing_assessment(assessment, approach):
+    """The assessment a check's `when` and `blocking_when` read: its values
+    and one derived key, `ships`, whether the chosen approach ships. A `when`
+    reads the assessment only, and an exploration that is not recorded as
+    one cannot be told from a delivery by the goal, so a check that a spike
+    does not owe says `when: {ships: true}` (the ruling on the spike's
+    Definition of Done). `approach` is the catalogue's entry for the approach
+    the route chose."""
+    return {**assessment, "ships": bool((approach or {}).get("ships", True))}
+
+
 def _active(check, assessment, orders, capabilities):
     """A check is active when its `when` matches and every capability it
     needs is on."""
@@ -517,15 +528,17 @@ def obligations(config, assessment, autonomy_values=AUTONOMY, capabilities=(),
     review = list(result["gates"])
     in_force = sorted(set(review) | set(_guardrail_gates(
         gates, approach.get("ships", True), assessment, orders)))
+    # What a check's `when` reads: the assessment and whether the route ships.
+    reading = listing_assessment(assessment, approach)
 
     entry, exit_ = {}, {}
     for stage, body in (config.get("stages") or {}).items():
-        entry[stage] = _active_ids(body.get("entry") or [], checks, assessment,
+        entry[stage] = _active_ids(body.get("entry") or [], checks, reading,
                                    orders, capabilities)
-        exit_[stage] = _active_ids(body.get("exit") or [], checks, assessment,
+        exit_[stage] = _active_ids(body.get("exit") or [], checks, reading,
                                    orders, capabilities)
     gate_checks = {g: _active_ids((gates.get(g) or {}).get("checks") or [], checks,
-                                  assessment, orders, capabilities)
+                                  reading, orders, capabilities)
                    for g in in_force}
     gate_accepts = {g: tuple(sorted((gates.get(g) or {}).get("accepts") or []))
                     for g in in_force}
@@ -535,7 +548,7 @@ def obligations(config, assessment, autonomy_values=AUTONOMY, capabilities=(),
         listed.update(ids)
     catalogue = config.get("artifacts") or {}
     artifact_checks = {kind: _active_ids((catalogue.get(kind) or {}).get("checks") or [],
-                                         checks, assessment, orders, capabilities)
+                                         checks, reading, orders, capabilities)
                        for kind in artifacts}
     artifact_depends_on = {kind: tuple(sorted((catalogue.get(kind) or {})
                                               .get("depends_on") or []))
@@ -564,7 +577,7 @@ def obligations(config, assessment, autonomy_values=AUTONOMY, capabilities=(),
                                         for a in result["required_artifacts"])),
         checkpoints={v: tuple(r["checkpoints"]) for v, r in results.items()},
         ceilings=ceilings,
-        checks={c: _check_facts(checks[c], assessment, orders) for c in sorted(listed)},
+        checks={c: _check_facts(checks[c], reading, orders) for c in sorted(listed)},
         artifact_depends_on=artifact_depends_on, artifact_checks=artifact_checks,
         approach=result["delivery_approach"],
         rules_fired=tuple(f["id"] for f in result["policy_rules_fired"]),

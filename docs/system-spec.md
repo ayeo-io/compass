@@ -3208,10 +3208,6 @@
 - `PC-8` The docs describe the chain, the depth limit and the cycle code
 - `PC-9` A parent's waiver answers to that parent's owner at every depth
 
-### human-check-approvers (landed 2026-10-08)
-
-- `TRC-001` A human check that lists approvers passes only with a current approval by a listed approver
-
 ### judged-checks (landed 2026-10-08)
 
 - `JC-1` A judged check passes on a review record whose inputs still match
@@ -3226,3 +3222,7 @@
 - `JC-10` Help text, owning doc and corpus entries describe the verb
 - `JC-11` A project with no judged check behaves as before
 - `JC-12` A judged check follows due, skipped and advisory rules
+
+### human-check-approvers (landed 2026-10-08)
+
+- `TRC-001` A human check that lists approvers passes only with a current approval by a listed approver

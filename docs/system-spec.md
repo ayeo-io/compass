@@ -3222,3 +3222,12 @@
 - `JC-10` Help text, owning doc and corpus entries describe the verb
 - `JC-11` A project with no judged check behaves as before
 - `JC-12` A judged check follows due, skipped and advisory rules
+
+### preset-interfaces (landed 2026-10-08)
+
+- `PI-1` A folder inside compass-fixtures is a fixture group: each fixture carries its group and the report counts each group
+- `PI-2` The policy test --json key order with groups is pinned by a fixture, and the text and help say so
+- `PI-3` A git parent chain is classified against the shipped default before any waiver and the result is stored in versions.yml
+- `PI-4` policy diff accepts a git parent written as in extends
+- `PI-5` The extends map form and the reserved preset key are read without error and do not change a digest
+- `PI-6` Owning docs, contract corpus and terminology state the new interfaces

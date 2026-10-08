@@ -286,6 +286,11 @@ write.
     },
     {
       "catalogue": "checks",
+      "id": "dod-evidence-typed",
+      "operation": "set"
+    },
+    {
+      "catalogue": "checks",
       "id": "multiagent-run-recorded",
       "operation": "set"
     }

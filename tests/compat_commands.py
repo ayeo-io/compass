@@ -218,6 +218,37 @@ def _regular_issue_broken_compass_yml(root: Path, env: dict) -> None:
     (root / "compass.yml").write_text("schema: 1\nstages: oops\n", encoding="utf-8")
 
 
+JUDGED_COMPASS_YML = """schema: 1
+checks:
+  design-review:
+    statement: The design holds against every scenario.
+    kind: judged
+    inputs: [technical-design]
+    severity: blocking
+    on_skipped: fail
+stages:
+  plan:
+    set:
+      entry:
+        add: [design-review]
+"""
+
+
+def _with_judged_check(root: Path, env: dict) -> None:
+    # A regular issue whose stored configuration holds a judged check, so
+    # `evidence review` has a check to record against. The document the check
+    # reads is not written.
+    _regular_issue(root, env)
+    (root / "compass.yml").write_text(JUDGED_COMPASS_YML, encoding="utf-8")
+    _must(root, env, "approach", "evaluate", "--issue", REGULAR_SLUG, "--write")
+
+
+def _with_judged_check_document(root: Path, env: dict) -> None:
+    _with_judged_check(root, env)
+    (root / ".compass" / "work" / REGULAR_SLUG / "technical-design.md").write_text(
+        "# Design\n", encoding="utf-8")
+
+
 def _with_broken_governance(root: Path, env: dict) -> None:
     _with_copied_governance(root, env)
     # A routing policy without its required top-level keys is the
@@ -237,6 +268,12 @@ def _with_compass_yml(root: Path, env: dict) -> None:
     (root / "compass.yml").write_text("schema: 1\n", encoding="utf-8")
 
 
+def _with_default_extends(root: Path, env: dict) -> None:
+    _initialised(root, env)
+    (root / "compass.yml").write_text("schema: 1\nextends: compass:default@6\n",
+                                      encoding="utf-8")
+
+
 def _with_looser_compass_yml(root: Path, env: dict) -> None:
     _initialised(root, env)
     (root / "compass.yml").write_text(
@@ -249,7 +286,45 @@ def _with_broken_compass_yml(root: Path, env: dict) -> None:
     (root / "compass.yml").write_text("schema: 1\nstages: oops\n", encoding="utf-8")
 
 
+def _with_git_parent_no_sha(root: Path, env: dict) -> None:
+    _initialised(root, env)
+    (root / "compass.yml").write_text(
+        "schema: 1\nextends: github:acme/compass-banking@1.2.0\n", encoding="utf-8")
+
+
+def _with_git_parent_uncached(root: Path, env: dict) -> None:
+    _initialised(root, env)
+    (root / "compass.yml").write_text(
+        f"schema: 1\nextends: github:acme/compass-banking@1.2.0#{'a' * 40}\n",
+        encoding="utf-8")
+
+
+def _with_preset(root: Path, env: dict) -> None:
+    _initialised(root, env)
+    _must(root, env, "policy", "init-preset", "team-preset", "--owner", "acme-team")
+
+
+def _with_failing_preset(root: Path, env: dict) -> None:
+    _with_preset(root, env)
+    fixture = root / "team-preset" / "compass-fixtures" / "example.yml"
+    fixture.write_text(fixture.read_text(encoding="utf-8").replace(
+        "approach: quick-fix", "approach: full"), encoding="utf-8")
+
+
+def _with_grouped_preset(root: Path, env: dict) -> None:
+    _with_preset(root, env)
+    fixtures = root / "team-preset" / "compass-fixtures"
+    (fixtures / "meets" / "banking").mkdir(parents=True)
+    (fixtures / "meets" / "banking" / "example.yml").write_text(
+        (fixtures / "example.yml").read_text(encoding="utf-8"), encoding="utf-8")
+
+
 STATES = {
+    "with-grouped-preset": _with_grouped_preset,
+    "with-preset": _with_preset,
+    "with-failing-preset": _with_failing_preset,
+    "with-git-parent-no-sha": _with_git_parent_no_sha,
+    "with-git-parent-uncached": _with_git_parent_uncached,
     "empty": _empty,
     "initialised": _initialised,
     "quick-fix-started": _quick_fix_started,
@@ -257,9 +332,12 @@ STATES = {
     "regular-issue": _regular_issue,
     "regular-issue-broken-compass-yml": _regular_issue_broken_compass_yml,
     "with-copied-governance": _with_copied_governance,
+    "with-judged-check": _with_judged_check,
+    "with-judged-check-document": _with_judged_check_document,
     "with-broken-governance": _with_broken_governance,
     "with-config": _with_config,
     "with-compass-yml": _with_compass_yml,
+    "with-default-extends": _with_default_extends,
     "with-looser-compass-yml": _with_looser_compass_yml,
     "with-broken-compass-yml": _with_broken_compass_yml,
     "outside-git": _outside_git,
@@ -361,6 +439,9 @@ def differences(entry: dict, outcome: Outcome) -> list[str]:
     phrase = entry.get("stdout_contains")
     if phrase and phrase not in outcome.stdout:
         found.append(f"stdout lacks {phrase!r}")
+    phrase = entry.get("stderr_contains")
+    if phrase and phrase not in outcome.stderr:
+        found.append(f"stderr lacks {phrase!r}")
     return found
 
 
@@ -388,6 +469,9 @@ def _dump(entries: list[dict]) -> str:
         if entry.get("stdout_contains"):
             lines.append(
                 f"  stdout_contains: {json.dumps(entry['stdout_contains'])}")
+        if entry.get("stderr_contains"):
+            lines.append(
+                f"  stderr_contains: {json.dumps(entry['stderr_contains'])}")
     return "\n".join(lines) + "\n"
 
 

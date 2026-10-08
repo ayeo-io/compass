@@ -104,6 +104,17 @@ and `governance/decisions/2026-10-06-old-route-names-readable-until-7-0-0.md`).
   rule (ADR-006) protects projects that have not adopted a mechanism. It does not promise that new data reads on an
   old CLI.
 
+### Keeping the previous default major
+
+A release that moves the shipped default to a new major (`default@7` after
+`default@6`) must keep the previous major's preset files in
+`governance/presets/default@<major>`, a copy of the last preset that major
+shipped. `compass policy update` reads both folders to tell which waived
+fields moved, and exits 2 for a project on a major that is not kept. Pin the
+new preset with `python3 scripts/generate-legacy-views.py --pin`; the old
+pins stay. `tests/test_policy_update.py` fails when a kept folder does not
+match its pinned digest or when an earlier pinned major is not kept.
+
 ### What changed at 5.0.0
 
 5.0.0 removed two skills by merging each into another. A session, an agent

@@ -11,7 +11,7 @@ implementations from where they live and nothing from `check_cmd`, so
 `check_cmd` can import `CHECK_FNS` from here without a cycle.
 
 The runtime refusal of a major-version mismatch is not here. It needs the
-versions a stored generation recorded, so it comes with that increment; this
+versions a stored generation recorded, so it is in `impl_versions`; this
 module only answers "installed major of impl X".
 """
 # DEPENDENCY: standard library (dataclasses, typing) and the check
@@ -36,7 +36,7 @@ from compass_pkg.dashboard import _check_dashboard_current
 from compass_pkg.landed_by import _check_landed_by_resolves
 from compass_pkg.multiagent_check import _check_multiagent_run_recorded
 
-CORPUS_ROOT = "tests/fixtures/check-corpus"
+CORPUS_ROOT = "tests/fixtures/impls"
 TIGHTER = ("higher", "lower", "none")
 
 

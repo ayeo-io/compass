@@ -968,16 +968,22 @@ _TAIL_EXEMPT = {
     "check": "measured by its own tests above, on a failing issue",
     "policy lint": "needs a governance tree of its own to say anything",
     "issue lint": "needs a malformed manifest to say anything",
+    "evidence review": "needs a judged check in the stored configuration and an input document, which this fixture lacks; test_judged_checks.py runs it and pins its --json output",
     # Prints one bare path on stdout and nothing else, on purpose: the two
     # hooks read it in a command substitution, and a hand-off tail in the
     # middle of that would end up in the variable.
     "issue artifact-path": "prints a bare path for a shell caller to consume",
+    "evidence approve": "needs a terminal on standard input and a human check that lists approvers, which this fixture lacks; test_human_checks.py runs it under a pseudo-terminal and pins its --json output",
+    # Prints the document and nothing else, on purpose: an agent writes the
+    # output to the issue's document, so a hand-off tail would end up in it.
+    "issue template": "prints a document for a caller to write, with no hand-off tail",
     "lesson add": "writes .compass/lessons.yml and needs a git user name the fixture does not set; test_lessons.py runs it",
     "lesson propose": "writes .compass/lessons-pending.yml; test_lessons.py runs it",
     "lesson accept": "needs a pending proposal and a git user name; test_lessons.py runs it",
     "lesson list": "prints the lessons verbatim, one line each; test_lessons.py runs it",
     "lesson remove": "needs an existing lesson; test_lessons.py runs it",
     "scenario descope": "writes the manifest of an existing issue; test_failure_modes.py runs it",
+    "scenario tests": "refuses a test id that is not on disk, and the fixture creates no test file; test_scenario_tests_verb.py runs it and pins its --json output, without measuring its output against this contract",
     "lesson decline": "needs a pending proposal; test_lessons.py runs it",
     "decision record": "writes a tracked file and needs a git user name the fixture does not set; test_decisions_ledger.py runs it",
     "decision check": "needs a git repository with a base ref; test_decisions_ledger.py runs it",
@@ -991,6 +997,7 @@ _TAIL_EXEMPT = {
     "issue use": "writes the pointer and the session record of an existing issue; test_current_task_lease.py runs it, without measuring its output against this contract",
     "issue refresh-spec": "merges a base branch and commits; test_living_spec_refresh.py runs it in a temporary repository, without measuring its output against this contract",
     "issue friction": "needs evidence inside an existing issue folder and writes one manifest key; test_agent_friction.py runs it, without measuring its output against this contract",
+    "issue migrate-config": "stores a new generation and prints one line, or two when results are invalidated; test_migrate_config.py runs it, without measuring its output against this contract",
     "issue raised-by": "writes one key to an existing issue's manifest and prints one line, or two with the chain hint; test_lineage.py runs it, without measuring its output against this contract",
     "issue subtask replan": "writes the manifest of an existing multiagent issue; test_loop_ceilings.py runs it, without measuring its output against this contract",
     "issue subtask package": "needs a git history to diff, which the fixture does not have; test_subtask_record.py runs it, without measuring its output against this contract",

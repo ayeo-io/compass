@@ -6,17 +6,19 @@ This module has four parts: the references (`default@6`, `project`, a path
 and the others) that name a configuration; the replay of the grid, the label
 combinations and the archive; the comparison of open issues; and the one
 document the result becomes. It reads files and runs `git show`, writes no
-file of the project (the `git show` copy goes to a temporary folder), and
+file of the project (the `git show` copy goes to a temporary folder) except
+the git parent cache when a reference names an uncached git parent, and
 changes none of the modules it calls.
 """
 # DEPENDENCY: standard library (dataclasses, itertools, json, os, subprocess,
-# tempfile, textwrap); compass_pkg.atomic_io (digest, load_yaml_strict),
+# sys, tempfile, textwrap); compass_pkg.atomic_io (digest, load_yaml_strict),
 # catalogue_check, catalogue_spec (LABEL_CAP), the classifier module (the
 # classify and build_grid functions, json_shape_errors), core (CompassError,
 # load_yaml), legacy_adapter (adapt), manifest (the issue statuses), merge, the
 # obligations module (its function of that name, Refused, COMPARED_FACTS,
 # assessment_vocabulary), policy_lint (load_parent) and waivers (find,
-# describe, recheck). Only compass_pkg.policy_cmd imports it.
+# describe, recheck) and parents (resolve_chain, ParentError). Only
+# compass_pkg.policy_cmd imports it.
 from __future__ import annotations
 
 import dataclasses
@@ -24,13 +26,14 @@ import itertools
 import json
 import os
 import subprocess
+import sys
 import tempfile
 import textwrap
 from dataclasses import dataclass, field
 
 from compass_pkg import catalogue_check, classify, legacy_adapter, manifest, merge
 from compass_pkg import catalogue_spec as spec
-from compass_pkg import obligations, policy_lint, waivers
+from compass_pkg import obligations, parents, policy_lint, waivers
 from compass_pkg.atomic_io import StrictYamlError, digest, load_yaml_strict
 from compass_pkg.core import CompassError, load_yaml, manifest_path
 
@@ -50,7 +53,8 @@ class Config:
     """One side of a comparison: the resolved configuration, the capability
     switches that are on, and where it came from. `ref` is the label (never a
     path outside the project) and `kind` is `default`, `project`, `legacy`,
-    `git` or `file`. `default_version` is the version of the shipped default
+    `git`, `file` or `parent` (a git parent written as in `extends:`).
+    `default_version` is the version of the shipped default
     underneath, or None for `legacy`."""
     ref: str
     kind: str
@@ -193,10 +197,50 @@ def _git_ref(ref, root):
         return _load_file(path, ref, "git")
 
 
-def resolve_ref(ref, root, cwd=None):
+def _parent_ref(ref, root, fetch):
+    """The shipped default with the git parent `ref` and the parents it
+    extends over it, resolved. `ref` is written as in `extends:`. A parent is
+    data, so each layer must pass the parent layer check before it merges (no
+    settings key, no `unlock:`). Nothing the parent carries is run. An uncached
+    pin is fetched into the project's cache only when `fetch` is true, and one
+    line on stderr says so. That cache is the one write `policy diff` makes."""
+    def say(spec):
+        print(f"compass policy diff: fetching {parents.ref_label(spec)}#{spec.sha} into "
+              f".compass/cache/parents/", file=sys.stderr)
+
+    try:
+        chain = parents.resolve_chain(root, ref, fetch=fetch, notify=say)
+    except parents.ParentError as exc:
+        # The detail names `extends:`, which a reference typed on the command
+        # line is not.
+        detail = exc.detail[len("extends: "):] if exc.detail.startswith("extends: ") \
+            else exc.detail
+        raise CompassError(f"{ref}: {exc.code}: {detail}")
+    shipped, meta, config, provenance = _shipped()
+    documents = [shipped.doc]
+    for found in chain:
+        layer = found.layer
+        problems = catalogue_check.check_layer(layer.doc, "parent")
+        if problems:
+            raise CompassError(f"{ref}: {layer.name}: {problems[0]} ({len(problems)} "
+                               f"problem(s); run compass policy lint)")
+        try:
+            config, provenance = merge.apply(config, layer.doc, "parent", layer.name,
+                                             provenance)
+        except merge.MergeError as exc:
+            said = "; ".join(f"{code} {where}: {message}" for code, where, message in exc.errors)
+            raise CompassError(f"{ref}: {said} (run compass policy lint)")
+        documents.append(layer.doc)
+    return Config(ref, "parent", config, _on(documents), provenance, meta.get("version"))
+
+
+def resolve_ref(ref, root, cwd=None, fetch=False):
     """The `Config` a reference names, or a `CompassError` that names it.
-    The keywords win over a file of the same name."""
+    The keywords win over a file of the same name. `fetch` lets a git parent
+    that is not cached be fetched."""
     root = os.fspath(root)
+    if ref.startswith("github:"):
+        return _parent_ref(ref, root, fetch)
     if ref in (DEFAULT_REF, f"compass:{DEFAULT_REF}") or ref.startswith(
             ("default@", f"compass:{DEFAULT_REF}@")):
         return _default_ref(ref)
@@ -216,7 +260,7 @@ def resolve_ref(ref, root, cwd=None):
         return _load_file(path, f"file:{_shown(path, root)}", "file")
     raise CompassError(f"'{ref}' is not a configuration reference and no such file "
                        f"exists; use default@{SHIPPED_MAJOR}, project, legacy, "
-                       f"git:<revision> or a path to a compass.yml")
+                       f"git:<revision>, a github: git parent or a path to a compass.yml")
 
 
 # --- one assessment under both sides ------------------------------------------------------
@@ -255,6 +299,15 @@ def _outcome(config, capabilities, assessment, issue=None):
     if isinstance(got, obligations.Refused):
         return ("refused", got.reason)
     return ("runs", got)
+
+
+def evaluate(config, capabilities, assessment):
+    """The outcome of one assessment under one resolved configuration, for a
+    caller that may not import the obligations module: `policy_cmd` hands this
+    function to `preset_test` and `preset_init`. The result is the same
+    `("runs", Obligations)`, `("refused", reason)` or `("cannot-run", message)`
+    pair that a replay compares."""
+    return _outcome(config, capabilities, assessment)
 
 
 def _say(outcome):
@@ -651,7 +704,7 @@ def diff_text(document):
 # `classification` value has the classifier's own shape (`classify.JSON_SHAPE`),
 # which `classify.json_shape_errors` checks.
 SET_NAMES = ("grid", "labels", "archive")
-CONFIG_KINDS = ("default", "project", "legacy", "git", "file")
+CONFIG_KINDS = ("default", "project", "legacy", "git", "file", "parent")
 _CONFIG_SHAPE = {"ref": "string", "kind": ("one of", CONFIG_KINDS),
                  "default_version": ("or null", "string"), "digest": "string",
                  "capabilities": ["string"]}

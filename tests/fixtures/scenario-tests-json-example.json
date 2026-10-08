@@ -1,0 +1,15 @@
+{
+  "outcome": "compass scenario tests: SCN-1 now declares 1 test.",
+  "scenario": "SCN-1",
+  "issue": "swap",
+  "tests": [
+    "tests/test_new.py::test_new_name"
+  ],
+  "previous": [
+    "tests/test_old.py::test_old_name"
+  ],
+  "reason": "test renamed",
+  "detail": [
+    "next : tests/test_new.py is new to this scenario, so re-run `compass tdd-green` before `compass ship-commit`, which refuses a green recorded before it."
+  ]
+}

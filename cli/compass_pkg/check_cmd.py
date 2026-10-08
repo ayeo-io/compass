@@ -142,8 +142,8 @@ CHECK_GUIDANCE = {
     },
     "human-approval-present": {
         "why": "The human-sign-off guardrail (a human signs off on the irreversible): this issue touches auth, payments, personal data, or migrations and needs a recorded approval.",
-        "do": 'Record the sign-off: `compass evidence add EV-<id> --type human-approval`.',
-        "fix": "Add a `human-approval` evidence entry to the registry with approver, role, scope, decision=approved, and timestamp. Then reference it from the relevant gate's evidence.",
+        "do": 'Record a `human-approval` entry; a human check uses `compass evidence approve`.',
+        "fix": "Add a `human-approval` evidence entry to the registry with approver, role, scope, decision=approved, and timestamp. Then reference it from the relevant gate's evidence. For a human check that lists approvers, a person runs `compass evidence approve --check <id> --approver <name> --role <role> --scope <text>` in a terminal.",
     },
     "backfills-paid": {
         "why": "Work deferred for speed - a Hotfix follow-up or a de-scoped artifact - must be done before an issue closes. Otherwise the audit trail has a hole.",
@@ -161,10 +161,10 @@ CHECK_GUIDANCE = {
         "fix": "Empty `changed_files:` in this Spike's manifest.yml. If the finding is worth keeping, run `/compass:assess` to start a new delivery issue that owns the code under a real route.",
     },
     "dod-evidence-typed": {
-        "why": "The evidence-not-assertion guardrail: the Definition of Done is a typed gate. Every unchecked DoD box must reference typed evidence or a filed follow-up - narrative notes in devlog.md do not count.",
+        "why": "The evidence-not-assertion guardrail: every exit list, the Definition of Done among them, is a typed gate. Every unchecked box in one must reference typed evidence or a filed follow-up - narrative notes in devlog.md do not count.",
         "do": 'Give each unchecked box an `(evidence: EV-<id>)` or `(follow-up: FU-<id>)` tag.',
         "fix": (
-            "For each bare unchecked DoD item: (a) add `(evidence: EV-<id>)` "
+            "For each bare unchecked exit-list item: (a) add `(evidence: EV-<id>)` "
             "inline, where EV-<id> is an entry in the issue's evidence registry "
             "with an accepted type; or (b) add `(follow-up: BF-<id>)` inline and "
             "record BF-<id> in manifest.yml follow-ups with status: owed; or (c) tick "
@@ -179,7 +179,20 @@ CHECK_GUIDANCE = {
 }
 
 
-def summarise_counts(ran, failures, nothing_to_check=0):
+class _AdvisoryFailure(int):
+    """A check that failed and does not block: its effective severity is
+    advisory. Like `NOTHING_TO_CHECK` it is truthy, so every caller that only
+    asks pass or fail sees a run that is not failed; the views ask whether a
+    result `is ADVISORY_FAILURE` so the finding is never shown as a pass."""
+
+    def __repr__(self):
+        return "ADVISORY_FAILURE"
+
+
+ADVISORY_FAILURE = _AdvisoryFailure(1)
+
+
+def summarise_counts(ran, failures, nothing_to_check=0, advisory=0):
     """The one-line verdict `compass check` ends on.
 
     Three of the default checks can clear with nothing to check - no BDD
@@ -187,7 +200,19 @@ def summarise_counts(ran, failures, nothing_to_check=0):
     labelled honestly on its own line. Folding them into "all N passed"
     would make the count claim more than was checked. They are reported
     apart so the count never overstates.
+
+    A check that failed and does not block (an advisory failure) is counted
+    apart too: it is not a pass, and it does not fail the run.
     """
+    if advisory:
+        tail = "%d failed as advisory (does not block)" % advisory
+        if nothing_to_check:
+            tail += ", %d had nothing to check" % nothing_to_check
+        if failures:
+            return (f"compass check: FAIL - {failures} of {ran - nothing_to_check} "
+                    f"check(s) failed, {tail}.")
+        return (f"compass check: PASS - {ran - nothing_to_check - advisory} "
+                f"check(s) passed, {tail}.")
     if failures:
         # The denominator counts only checks that inspected something, so it
         # never invites a reader to count the empty ones as clean (#110).
@@ -231,6 +256,8 @@ class _CheckRun:
         self.ran = 0
         self.failures = 0
         self.nothing = 0
+        self.refused = set()  # checks not run because their implementation major differs
+        self.advisory = 0
 
     def line(self, text):
         self.rows.append(("line", text))
@@ -263,17 +290,19 @@ def _verbose_lines(run):
             # did not pass anything, so it is not labelled PASS (#110).
             if passed is NOTHING_TO_CHECK:
                 out.append("    NOTHING TO CHECK %s: %s" % (name, detail))
+            elif passed is ADVISORY_FAILURE:
+                out.append("    ADVISORY %s: %s" % (name, detail))
             elif passed:
                 out.append("    PASS %s: %s" % (name, detail))
             else:
                 out.append("    FAIL %s" % name)
                 out.append("         what: %s" % detail)
                 g = CHECK_GUIDANCE.get(name)
-                if g:
+                if g and name not in run.refused:
                     out.append("         why : %s" % g["why"])
                     out.append("         fix : %s" % g["fix"])
     out += ["-" * 60,
-            summarise_counts(run.ran, run.failures, run.nothing)]
+            summarise_counts(run.ran, run.failures, run.nothing, run.advisory)]
     return out
 
 
@@ -288,6 +317,7 @@ def _summary_lines(run):
     says "3 checks failed" without saying which is not something a reader can
     act on, and a check name is its identifier (ADR-017).
     """
+    from compass_pkg.impl_versions import COMMAND
     from compass_pkg.terminal import MAX_ITEMS, _fit
 
     # Deduplicated by check name. Several checks are listed under more than
@@ -318,13 +348,23 @@ def _summary_lines(run):
                             if p is NOTHING_TO_CHECK})
     nothing = (", %d had nothing to check" % distinct_nothing
                if distinct_nothing else "")
+    # An advisory failure is a finding that does not block. It is named apart
+    # from the failures and is not counted as a pass.
+    advisory_rows, advisory_seen = [], set()
+    for _g, n, p, d in run.results:
+        if p is ADVISORY_FAILURE and n not in advisory_seen:
+            advisory_seen.add(n)
+            advisory_rows.append((n, d))
+    nothing += (", %d failed as advisory (does not block)" % len(advisory_rows)
+                if advisory_rows else "")
     if distinct_failed:
         verdict = "FAIL - %d of %d check(s) failed%s on '%s' (%s)" % (
             distinct_failed, distinct_ran - distinct_nothing, nothing,
             run.slug, approach)
     else:
         verdict = "PASS - %d check(s) passed%s on '%s' (%s)" % (
-            distinct_ran - distinct_nothing, nothing, run.slug, approach)
+            distinct_ran - distinct_nothing - len(advisory_rows), nothing,
+            run.slug, approach)
     out = [_fit(verdict)]
 
     # Keep the adoption-mode banner in the default view. Without it, an
@@ -342,6 +382,15 @@ def _summary_lines(run):
         out.append(_fit("... and %d more notice(s) - run with --verbose"
                         % (len(notices) - MAX_ITEMS), "  "))
 
+    if advisory_rows:
+        out.append("")
+        for name, detail in advisory_rows[:MAX_ITEMS]:
+            out.append(_fit("%s: %s" % (name, detail), "ADVISORY "))
+        if len(advisory_rows) > MAX_ITEMS:
+            out.append(_fit("... and %d more advisory (%s) - run with --verbose"
+                            % (len(advisory_rows) - MAX_ITEMS,
+                               ", ".join(n for n, _ in advisory_rows[MAX_ITEMS:]))))
+
     if not failed:
         return out
 
@@ -349,7 +398,9 @@ def _summary_lines(run):
     for name, detail in failed[:MAX_ITEMS]:
         out.append(_fit("%s: %s" % (name, detail), "FAIL "))
         g = CHECK_GUIDANCE.get(name)
-        if g and g.get("do"):
+        if name in run.refused:
+            out.append(_fit("Run `%s --issue %s`." % (COMMAND, run.slug), "     fix: "))
+        elif g and g.get("do"):
             out.append(_fit(g["do"], "     fix: "))
     hidden = failed[MAX_ITEMS:]  # drawn from the same set the verdict counts
     if hidden:
@@ -365,6 +416,7 @@ def _verdicts(results):
     verdicts = {}
     for _, name, passed, _ in results:
         verdict = ("nothing-to-check" if passed is NOTHING_TO_CHECK
+                   else "advisory" if passed is ADVISORY_FAILURE
                    else "pass" if passed else "fail")
         if name not in verdicts or verdict == "fail":
             verdicts[name] = verdict
@@ -415,7 +467,10 @@ def _emit_check(run, args):
     # The verdicts go into the generation's `results.yml`, which the generation's
     # marker does not cover. An issue with no generation writes nothing.
     from compass_pkg import effective
-    effective.record_check_results(run.task_dir, _verdicts(run.results), manifest=run.task)
+    # A refused check did not run, so it has no result to record.
+    effective.record_check_results(
+        run.task_dir, _verdicts([r for r in run.results if r[1] not in run.refused]),
+        manifest=run.task)
 
     mark_handled()
     mode = resolve_mode(args)
@@ -424,14 +479,17 @@ def _emit_check(run, args):
             "issue": run.slug, "approach": run.approach,
             "ran": run.ran, "failed": run.failures,
             "nothing_to_check": run.nothing,
+            "advisory": run.advisory,
             "notices": [t.strip() for kind, t in run.rows
                         if kind == "line" and t.strip()],
             **({"generation": run.view.generation,
                 "parent_version": run.view.parent_version()}
                if run.view is not None else {}),
             "checks": [{"guardrail": g, "name": n,
-                        "status": ("nothing-to-check"
+                        "status": ("refused" if n in run.refused else
+                                   "nothing-to-check"
                                    if p is NOTHING_TO_CHECK else
+                                   "advisory" if p is ADVISORY_FAILURE else
                                    "pass" if p else "fail"),
                         "detail": d}
                        for g, n, p, d in run.results],
@@ -451,6 +509,39 @@ def _emit_check(run, args):
     print("\n".join(lines))
 
 
+def _stage_list_pass(run, view, task, task_dir):
+    """Add one result per due, active check of each stage list, and return
+    `(ran, failed, nothing, advisory)` for them. A list is a guardrail of its own,
+    labelled `stage:<stage>:<entry|exit>`. The shipped checks are active only
+    where `entry-exit-evaluation` is on, so a project that has not turned it
+    on and added no check of its own gets none. An issue without a
+    configuration adds nothing."""
+    from compass_pkg import stage_lists
+
+    if view is None:
+        return 0, 0, 0, 0
+    try:
+        rows = stage_lists.due_rows(stage_lists.evaluate(view, task, task_dir))
+    except Exception as exc:                            # noqa: BLE001
+        # A check must not crash the run.
+        run.guardrail("stage-lists", "stage lists")
+        run.result("stage-lists", False, f"evaluation errored: {exc}")
+        return 1, 1, 0, 0
+    failed = nothing = advisory = 0
+    current = None
+    for row in rows:
+        if (row.stage, row.side) != current:
+            current = (row.stage, row.side)
+            run.guardrail(row.label, "%s checks of %s" % (row.side, row.stage))
+        passed = {"pass": True, "fail": False, "nothing-to-check": NOTHING_TO_CHECK,
+                  "advisory": ADVISORY_FAILURE}[row.status]
+        failed += passed is False
+        nothing += passed is NOTHING_TO_CHECK
+        advisory += passed is ADVISORY_FAILURE
+        run.result(row.check, passed, row.detail)
+    return len(rows), failed, nothing, advisory
+
+
 def _assessment_keys_pass(run, task):
     """Report the assessment keys the manifest schema does not allow. The
     release's `issue lint` refuses them, so check must too, or an issue
@@ -461,6 +552,47 @@ def _assessment_keys_pass(run, task):
     run.result("assessment-keys", not errs,
                "; ".join(errs) or "every assessment key is one the schema allows")
     return not errs
+
+
+def _judge(passed, detail, declared, matches, readings):
+    """The result of one check after what it declares: `(passed, detail)`.
+
+    `declared` is the check's entry from the configuration the issue runs
+    against. A check that declares nothing is returned unchanged, which is the
+    case for an issue with no generation.
+
+    - `on_skipped` decides a result of nothing to check: `fail` makes it a
+      failure that says why, `pass` makes it a pass, and `not-applicable` (or
+      no value) leaves it counted apart.
+    - A failure is advisory, and does not fail the run, when the effective
+      severity is advisory: the check declares `severity: advisory`, or it
+      declares `blocking_when` and the assessment does not match it. It is
+      blocking otherwise.
+
+    A guardrail check with no implementation never reaches this function: it
+    always fails.
+    """
+    if passed is NOTHING_TO_CHECK:
+        on_skipped = declared.get("on_skipped")
+        if on_skipped == "fail":
+            passed = False
+            detail = ("nothing to check, and this check declares on_skipped: "
+                      "fail, so it does not clear - %s" % detail)
+        elif on_skipped == "pass":
+            passed = True
+            detail = ("nothing to check, counted as a pass because this check "
+                      "declares on_skipped: pass - %s" % detail)
+    if passed:
+        return passed, detail
+    blocking_when = declared.get("blocking_when")
+    if declared.get("severity") == "advisory":
+        return ADVISORY_FAILURE, ("advisory (this check declares severity: "
+                                  "advisory) - %s" % detail)
+    if blocking_when and not matches(blocking_when, readings):
+        return ADVISORY_FAILURE, ("advisory for this assessment - %s. It "
+                                  "blocks when %s."
+                                  % (detail, json.dumps(blocking_when)))
+    return passed, detail
 
 
 def cmd_check(args):
@@ -484,7 +616,18 @@ def cmd_check(args):
         guardrails = view.guardrail_gates()
     impls = guardrails.get("impl") or {}
     matches = view.matches if view is not None else reading_matches
+    # A check built for another major is refused rather than run (ADR-038).
+    from compass_pkg import impl_versions
+    from compass_pkg.core import CompassError
+    refusals = impl_versions.refusals(task_dir, task)
+    if refusals.run:
+        raise CompassError(refusals.run)
+    refused = refusals.checks
     readings = task.get("assessment") or {}
+    if view is not None:
+        # A `when`, `applies_when` or `blocking_when` reads one derived key
+        # beside the assessment: `ships` (ADR-037, the amendment of 2026-10-08).
+        readings = view.listing_assessment(readings, task.get("delivery_approach"))
 
     # A spike ships nothing, so the delivery guardrails (`G1`-`G5`) do not apply.
     # It is still controlled: it must conclude, and it must not change
@@ -518,14 +661,30 @@ def cmd_check(args):
                                "declared spike guardrail check has NO CLI "
                                "implementation")
                     continue
-                try:
-                    passed, detail = fn(task, task_dir)
-                except Exception as exc:
-                    passed, detail = False, f"check errored: {exc}"
-                if not passed:
+                if impls.get(check_name, check_name) in refused:
+                    run.refused.add(check_name)
+                    passed, detail = False, refused[impls.get(check_name, check_name)]
+                else:
+                    try:
+                        passed, detail = fn(task, task_dir)
+                    except Exception as exc:
+                        passed, detail = False, f"check errored: {exc}"
+                passed, detail = _judge(
+                    passed, detail,
+                    (guardrails.get("checks") or {}).get(check_name) or {},
+                    matches, readings)
+                if passed is ADVISORY_FAILURE:
+                    run.advisory += 1
+                elif not passed:
                     failures += 1
                 run.result(check_name, passed, detail)
 
+        listed_ran, listed_failed, listed_nothing, listed_advisory = _stage_list_pass(
+            run, view, task, task_dir)
+        ran += listed_ran
+        failures += listed_failed
+        run.nothing += listed_nothing
+        run.advisory += listed_advisory
         ran += 1
         if not _assessment_keys_pass(run, task):
             failures += 1
@@ -533,10 +692,14 @@ def cmd_check(args):
         # owes one - a graduating spike leaves deferred work behind by
         # design - so the spike branch must reach the follow-up block below.
         ran += 1
-        try:
-            passed, detail = _check_backfills_paid(task, task_dir)
-        except Exception as exc:                        # noqa: BLE001
-            passed, detail = False, f"check errored: {exc}"
+        if "backfills-paid" in refused:
+            run.refused.add("backfills-paid")
+            passed, detail = False, refused["backfills-paid"]
+        else:
+            try:
+                passed, detail = _check_backfills_paid(task, task_dir)
+            except Exception as exc:                    # noqa: BLE001
+                passed, detail = False, f"check errored: {exc}"
         run.guardrail("", "outstanding follow-ups")
         run.result("backfills-paid", passed, detail)
         if not passed:
@@ -554,6 +717,8 @@ def cmd_check(args):
     # summary never reports a check that inspected nothing as something it
     # verified.
     nothing_to_check = 0
+    # Checks that failed and do not block, counted apart from the failures.
+    advisory = 0
     # Reads `delivery_approach`, the live manifest key.
     run = _CheckRun(task_dir, task, mode, view)
 
@@ -633,47 +798,61 @@ def cmd_check(args):
                                                  "asked to"))
                     continue
 
-            try:
-                passed, detail = fn(task, task_dir)
-            except Exception as exc:  # a check must not crash the run
-                passed, detail = False, f"check errored: {exc}"
+            if implementation in refused:
+                run.refused.add(check_name)
+                passed, detail = False, refused[implementation]
+            else:
+                try:
+                    passed, detail = fn(task, task_dir)
+                except Exception as exc:  # a check must not crash the run
+                    passed, detail = False, f"check errored: {exc}"
 
-            # A check may declare `blocking_when:` in guardrails.yml - an
-            # assessment-scoped condition, exactly like a guardrail's
-            # `applies_when:`. Below that threshold a finding is reported and
-            # does not fail the run. Governance holds the condition as data;
-            # this code only evaluates it, which is the mechanism side of
-            # the boundary ADR-001 draws.
-            blocking_when = (declared_checks.get(check_name) or {}).get(
-                "blocking_when")
-            if (not passed and blocking_when
-                    and not matches(blocking_when, readings)):
-                passed = True
-                detail = ("advisory for this assessment - %s. It blocks when %s."
-                          % (detail, json.dumps(blocking_when)))
+            # A check declares `blocking_when`, `severity` and `on_skipped` as
+            # data, in the configuration the issue runs against. Below the
+            # `blocking_when` threshold, or with `severity: advisory`, a
+            # finding is reported and does not fail the run. Governance holds
+            # the rule as data; this code only applies it, which is the
+            # mechanism side of the boundary ADR-001 draws.
+            passed, detail = _judge(passed, detail,
+                                    declared_checks.get(check_name) or {},
+                                    matches, readings)
 
-            if not passed:
+            if passed is ADVISORY_FAILURE:
+                advisory += 1
+            elif not passed:
                 failures += 1
             elif passed is NOTHING_TO_CHECK:
                 nothing_to_check += 1
             run.result(check_name, passed, detail)
 
+    # The stage lists run when the capability `entry-exit-evaluation` is on.
+    listed_ran, listed_failed, listed_nothing, listed_advisory = _stage_list_pass(
+        run, view, task, task_dir)
+    ran += listed_ran
+    failures += listed_failed
+    nothing_to_check += listed_nothing
+    advisory += listed_advisory
     ran += 1
     if not _assessment_keys_pass(run, task):
         failures += 1
     # follow-ups are cross-cutting - always run them
     ran += 1
-    try:
-        # Wrap this one too: a malformed `follow_ups:` list must not crash
-        # check, receipt, rework-scan, flow --digest or ci.
-        passed, detail = _check_backfills_paid(task, task_dir)
-    except Exception as exc:                            # noqa: BLE001
-        passed, detail = False, f"check errored: {exc}"
+    if "backfills-paid" in refused:
+        run.refused.add("backfills-paid")
+        passed, detail = False, refused["backfills-paid"]
+    else:
+        try:
+            # Wrap this one too: a malformed `follow_ups:` list must not crash
+            # check, receipt, rework-scan, flow --digest or ci.
+            passed, detail = _check_backfills_paid(task, task_dir)
+        except Exception as exc:                        # noqa: BLE001
+            passed, detail = False, f"check errored: {exc}"
     run.guardrail("", "outstanding follow-ups")
     run.result("backfills-paid", passed, detail)
     if not passed:
         failures += 1
 
     run.ran, run.failures, run.nothing = ran, failures, nothing_to_check
+    run.advisory = advisory
     _emit_check(run, args)
     return exit_for_mode(failures, mode)

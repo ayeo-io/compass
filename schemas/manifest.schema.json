@@ -514,6 +514,18 @@
             "type": "string",
             "description": "For human-approval: what the approval is for."
           },
+          "check": {
+            "type": "string",
+            "description": "For human-approval: the human check this approves. It counts only with the issue slug in issue and the issue's generation in generation."
+          },
+          "issue": {
+            "type": "string",
+            "description": "For human-approval of a check: the issue slug it was given for. A record for another issue does not count."
+          },
+          "generation": {
+            "type": ["integer", "null"],
+            "description": "For human-approval of a check: the issue's generation when it was given, or null when the issue had none."
+          },
           "approver": {
             "type": "string",
             "description": "For human-approval: the approver's identifier."
@@ -555,6 +567,10 @@
           "content_digest": {
             "type": "string",
             "description": "A digest over the record's content when this entry was created. A matching record_id with a differing digest means the record was edited in place rather than replaced."
+          },
+          "check": {
+            "type": "string",
+            "description": "For manual-review: the id of the judged check this review record is for. `compass evidence review` sets it, and a judged check reads only the records that carry its id."
           }
         }
       }
@@ -780,9 +796,29 @@
             "enum": [
               "judgement",
               "policy-correction",
-              "scope-change"
+              "scope-change",
+              "configuration"
             ],
-            "description": "What kind of re-assessment this was. Only 'judgement' feeds compass retro's re-sizing signal - a policy correction or a scope change is not the assessment having misread the work."
+            "description": "What kind of re-assessment this was. Only 'judgement' feeds compass retro's re-sizing signal - a policy correction, a scope change or a change to the issue's own config: layer (configuration) is not the assessment having misread the work."
+          },
+          "generation": {
+            "type": "object",
+            "description": "The generation of the issue's stored configuration this re-assessment moved from and to (ADR-036). The two numbers are equal when the re-assessment committed nothing.",
+            "required": [
+              "from",
+              "to"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "from": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "to": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
           },
           "changed": {
             "type": "object",

@@ -74,9 +74,9 @@ The rest of this command is for delivery work.
    artifact (the scenario-bound green record, a report path). `compass check`'s
    `gate-evidence-present` check checks every `pass` gate has a pointer
    that resolves - a gate marked pass with no evidence fails the check.
-6. **Write `verification-report.md`** from
-   `${CLAUDE_PLUGIN_ROOT}/templates/verification-report.md`: each dimension, each gate, the
-   evidence, pass/fail.
+6. **Write `verification-report.md`** from the output of
+   `compass issue template verification-report`, which renders the checklist from the
+   issue's exit lists: each dimension, each gate, the evidence, pass/fail.
 
    **Where it goes.** `docs/compass/<created>-<issue-slug>/verification-report.md`, where the
    date is the manifest's `created:` field - not today's. Then register it:

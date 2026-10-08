@@ -535,7 +535,8 @@ def _check_gate_evidence(task, task_dir):
 
 def _parse_dod_lines(task_dir):
     """Read verification-report.md from task_dir and return a list of DoD
-    line strings found under the "Definition of Done" heading.
+    line strings found under the "Definition of Done" heading and under the
+    heading of every other exit list ("<Stage> exit list").
 
     Returns an empty list if the file is absent or the section is missing.
     This is the correct backward-compat behaviour (TRC-X4): no file → no
@@ -549,20 +550,17 @@ def _parse_dod_lines(task_dir):
     if not os.path.isfile(report_path):
         return []
     with open(report_path, "r", encoding="utf-8") as fh:
-        lines = fh.readlines()
-    in_dod = False
+        lines = fh.read().split("\n")
+    # The sections are read by `doc_sections`, as the renderer of the templates
+    # and the tick of a stage list read them: any heading level, every exit
+    # list's heading, no line inside an HTML comment, and a section ends at
+    # the next heading or at `Next stage:`.
+    from compass_pkg import doc_sections
+    mask = doc_sections.comment_mask(lines)
+    shown = doc_sections.visible(lines)
     dod_lines = []
-    for line in lines:
-        stripped = line.rstrip("\n")
-        # Detect the heading - allow any heading level (##, ###, ####)
-        if stripped.strip().lstrip("#").strip() == "Definition of Done":
-            in_dod = True
-            continue
-        if in_dod:
-            # A new heading (line starting with #) ends the section
-            if stripped.strip().startswith("#"):
-                break
-            dod_lines.append(stripped)
+    for _, start, end in doc_sections.sections(lines, mask, doc_sections.is_exit_heading):
+        dod_lines.extend(shown[i] for i in range(start, end) if not mask[i])
     return dod_lines
 
 _DOD_ITEM_RE = _re.compile(r"^\s*-\s+\[([ xX])\]\s*(.*)")
@@ -588,9 +586,56 @@ _DOD_ACCEPTED_EVIDENCE_TYPES = {
 }
 
 
+def dod_tag_problems(rest, ev_registry, backfills):
+    """The typed inline tag of an unchecked Definition of Done item, resolved.
+
+    `rest` is the text after the checkbox. Returns None when it carries no
+    evidence or follow-up tag, and otherwise the list of problems with the tag
+    (empty when it resolves). The second and third arguments map ids to the
+    manifest's evidence and follow-up entries. `dod-evidence-typed` and the
+    stage lists both call this, so a tag means one thing."""
+    ev_match = _EVIDENCE_TAG_RE.search(rest)
+    bf_match = _BACKFILL_TAG_RE.search(rest)
+    if not ev_match and not bf_match:
+        return None
+    problems = []
+    if ev_match:
+        ev_id = ev_match.group(1).strip()
+        entry = ev_registry.get(ev_id)
+        if not entry:
+            problems.append(
+                f"exit-list item references evidence id '{ev_id}' which is not "
+                f"in manifest.yml evidence registry"
+            )
+        elif entry.get("type") not in _DOD_ACCEPTED_EVIDENCE_TYPES:
+            problems.append(
+                f"exit-list item references evidence '{ev_id}' with type "
+                f"'{entry.get('type')}' which is not an accepted "
+                f"exit-list evidence type"
+            )
+    if bf_match:
+        bf_id = bf_match.group(1).strip()
+        bf_entry = backfills.get(bf_id)
+        if not bf_entry:
+            problems.append(
+                f"exit-list item references follow-up id '{bf_id}' which is not "
+                f"in manifest.yml follow-ups"
+            )
+        elif bf_entry.get("status") not in ("outstanding", "resolved"):
+            problems.append(
+                f"follow-up '{bf_id}' has unrecognised status "
+                f"'{bf_entry.get('status')}' (must be 'outstanding' "
+                "or 'resolved')"
+            )
+        # outstanding and resolved both pass here; resolving is a
+        # separate concern tracked by _check_backfills_paid
+    return problems
+
+
 def _check_dod_evidence_typed(task, task_dir):
-    """Parse the DoD section of verification-report.md and enforce the
-    inline-tag rule:
+    """Parse every exit list's section of verification-report.md (the
+    Definition of Done, and `<Stage> exit list` for any other stage) and
+    enforce the inline-tag rule:
 
     - `- [x] ...`                  → passes (human ticked it)
     - `- [ ] (evidence: EV-id) ...` → passes if EV-id is in the evidence
@@ -632,52 +677,18 @@ def _check_dod_evidence_typed(task, task_dir):
             continue
 
         # Unchecked - must have an inline tag
-        ev_match = _EVIDENCE_TAG_RE.search(rest)
-        bf_match = _BACKFILL_TAG_RE.search(rest)
-
-        if not ev_match and not bf_match:
+        tag_problems = dod_tag_problems(rest, ev_registry, backfills)
+        if tag_problems is None:
             # Bare unchecked - fails `G4` (evidence, not assertion)
             desc = rest.strip() or raw.strip()
             problems.append(
-                f"bare unchecked DoD item (no evidence or follow-up tag): "
+                f"bare unchecked exit-list item (no evidence or follow-up tag): "
                 f"'{desc}' - add (evidence: EV-<id>) or (follow-up: BF-<id>) "
                 f"inline tag, or tick the box if done. Evidence, not "
                 f"assertion."
             )
             continue
-
-        if ev_match:
-            ev_id = ev_match.group(1).strip()
-            entry = ev_registry.get(ev_id)
-            if not entry:
-                problems.append(
-                    f"DoD item references evidence id '{ev_id}' which is not "
-                    f"in manifest.yml evidence registry"
-                )
-            elif entry.get("type") not in _DOD_ACCEPTED_EVIDENCE_TYPES:
-                problems.append(
-                    f"DoD item references evidence '{ev_id}' with type "
-                    f"'{entry.get('type')}' which is not an accepted DoD "
-                    f"evidence type"
-                )
-            # else: passes
-
-        if bf_match:
-            bf_id = bf_match.group(1).strip()
-            bf_entry = backfills.get(bf_id)
-            if not bf_entry:
-                problems.append(
-                    f"DoD item references follow-up id '{bf_id}' which is not "
-                    f"in manifest.yml follow-ups"
-                )
-            elif bf_entry.get("status") not in ("outstanding", "resolved"):
-                problems.append(
-                    f"follow-up '{bf_id}' has unrecognised status "
-                    f"'{bf_entry.get('status')}' (must be 'outstanding' "
-                    "or 'resolved')"
-                )
-            # outstanding and resolved both pass here; resolving is a
-            # separate concern tracked by _check_backfills_paid
+        problems.extend(tag_problems)
 
     # Cross-issue check: scan sibling issues for follow-ups that
     # target this issue and are still outstanding. Use the directory name as the slug
@@ -696,9 +707,9 @@ def _check_dod_evidence_typed(task, task_dir):
     # there is nothing there.
     where = artifact_location(task_dir, "verification-report.md")
     if item_count == 0:
-        return True, ("DoD section is empty or absent - nothing to evidence "
+        return True, ("the exit list sections are empty or absent - nothing to evidence "
                       "(read %s)" % where)
-    return True, ("all %d DoD item(s) are typed or human-ticked (read %s)"
+    return True, ("all %d exit-list item(s) are typed or human-ticked (read %s)"
                   % (item_count, where))
 
 

@@ -73,10 +73,14 @@ from compass_pkg.approach_diagram import cmd_approach_diagram  # noqa: E402
 from compass_pkg.diagnose import register as register_diagnose_parser  # noqa: E402
 from compass_pkg.lessons import register as register_lesson_parser  # noqa: E402
 from compass_pkg.session_lease import register as register_issue_use_parser  # noqa: E402
+from compass_pkg.impl_versions import register as register_migrate_config_parser  # noqa: E402
 from compass_pkg.run_cmd import register as register_run_parser  # noqa: E402
 from compass_pkg.record import register as register_record_parser  # noqa: E402
 from compass_pkg.review_rules import register as register_review_rules_parser  # noqa: E402
 from compass_pkg.policy_cmd import register as register_policy_parser  # noqa: E402
+from compass_pkg.approve_cmd import register as register_approve_parser  # noqa: E402
+from compass_pkg.review_cmd import register as register_review_parser  # noqa: E402
+from compass_pkg.issue_config_cmd import register as register_issue_configure_parser  # noqa: E402
 
 # Declared literally here as well as in compass_pkg.core: this file is
 # what `compass --version` and the release-consistency test read, and a
@@ -128,16 +132,25 @@ def build_parser():
     pre.add_argument("--write", action="store_true",
                      help="fold the approach, stages and gates back into the "
                           "issue's manifest.yml")
+    pre.add_argument("--offline", action="store_true",
+                     help="read git parents from the cache only and fetch "
+                          "nothing; also set by COMPASS_OFFLINE=1")
     pre.add_argument("--reason",
                      help="when --write detects a re-assessment (the "
                           "approach's content changed), record this as the "
                           "reason - it is the retrospective signal")
     pre.add_argument("--kind", choices=["judgement", "policy-correction",
-                                        "scope-change"],
+                                        "scope-change", "configuration"],
                      help="what kind of re-assessment this is (default: "
                           "judgement). Only judgement feeds the retrospective "
                           "re-sizing signal - a policy correction is not "
-                          "assessment mis-reading the work.")
+                          "assessment mis-reading the work. A reassess that "
+                          "changes only the issue's config: layer is recorded "
+                          "as configuration without this flag.")
+    pre.add_argument("--reset-config", dest="reset_config", action="store_true",
+                     help="with --write: drop the issue's config: layer in the "
+                          "generation this commits (refused while a change is "
+                          "proposed; see `compass issue configure`)")
     pre.add_argument("--json", action="store_true", help="emit JSON")
     pre.set_defaults(func=cmd_route_evaluate, output_kind="hand-off")
     prsum = prs.add_parser(
@@ -306,8 +319,10 @@ def build_parser():
     ptl.set_defaults(func=cmd_task_lint, output_kind="report")
     register_diagnose_parser(pts, issue_arg)
     register_issue_use_parser(pts)
+    register_migrate_config_parser(pts, issue_arg)
     register_refresh_spec_parser(pts)
     register_issue_friction_parser(pts)
+    register_issue_configure_parser(pts, issue_arg)
 
     ptrb = pts.add_parser(
         "raised-by", help="record the issue this one was found in",
@@ -342,6 +357,11 @@ def build_parser():
 
     ptap = pts.add_parser("artifact-path", help="print where one of an issue's documents is; non-zero when it is not there")
     ptap.add_argument("kind", help="document kind, e.g. delivery-approach"); issue_arg(ptap); ptap.set_defaults(func=cmd_issue_artifact_path, output_kind="hand-off")
+    ptt = pts.add_parser("template", help="print a document template with its checklists rendered from the issue's stage lists")
+    ptt.add_argument("kind", help="template kind, e.g. requirements-review or verification-report")
+    issue_arg(ptt)
+    from compass_pkg.template_lists import cmd_issue_template as _cmd_issue_template
+    ptt.set_defaults(func=_cmd_issue_template, output_kind="hand-off")
     register_subtask_parser(pts, issue_arg)
     ptss = pts.add_parser("set-status",
                           help="set an issue's lifecycle status (queued|active|parked|landed|abandoned)")
@@ -502,6 +522,13 @@ def build_parser():
     issue_arg(pscd)
     pscd.add_argument("--reason", required=True, help="why no scenario covers it")
     pscd.set_defaults(func=cmd_scenario_descope, output_kind="hand-off")
+    psct = pscs.add_parser("tests", help="replace the tests a scenario declares")
+    psct.add_argument("scenario_id", help="scenario id (e.g. TRC-A1)")
+    issue_arg(psct)
+    psct.add_argument("--test", action="append",
+                      help="test that exercises it, as path::name (repeatable; replaces the declared list)")
+    psct.add_argument("--reason", help="why the declared tests change (written to the devlog)")
+    psct.set_defaults(func=cmd_scenario_tests, output_kind="hand-off")
 
     pcf = sub.add_parser("changed-file", help="issue changed-file tools")
     pcfs = pcf.add_subparsers(dest="subcmd", required=True)
@@ -521,6 +548,8 @@ def build_parser():
     peva.add_argument("--path", required=True, help="path to the evidence file")
     peva.add_argument("--scenario", help="scenario this evidence is for (optional)")
     peva.set_defaults(func=cmd_evidence_add, output_kind="hand-off")
+    register_approve_parser(pevs)
+    register_review_parser(pevs)
 
     register_quick_fix_parser(sub, issue_arg)
     register_decision_parser(sub)

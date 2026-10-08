@@ -225,6 +225,47 @@ entries:
   project: quick-fix-started
   argv: ["evidence", "add", "EV-1", "--type", "artifact", "--path", "nope.txt"]
   exit: 2
+# Added on purpose by judged-checks: `evidence review` is a new leaf of the
+# evidence group. 5.6.0 refused it as an unknown choice (exit 2). From 6.0.0 it
+# records a judgement against a judged check whose input exists, and exits 0.
+- id: evidence-review-recorded
+  project: with-judged-check-document
+  argv: ["evidence", "review", "design-review", "--verdict", "pass", "--reason", "Read in full.", "--reviewer", "jed72"]
+  exit: 0
+  stdout_contains: "design-review - pass recorded"
+# Added on purpose by judged-checks: a check the configuration does not define
+# is refused (exit 2) and nothing is written. The exit code equals what 5.6.0
+# gave for the unknown choice, but the cause is now the missing check.
+- id: evidence-review-unknown-check
+  project: regular-issue
+  argv: ["evidence", "review", "no-such-check", "--verdict", "pass", "--reason", "Read in full.", "--reviewer", "jed72"]
+  exit: 2
+# Added on purpose by judged-checks: only a judged check takes a review. A
+# human check is refused (exit 2), so a tick cannot be replaced by a record.
+- id: evidence-review-not-judged
+  project: with-judged-check-document
+  argv: ["evidence", "review", "dor-summary-filled", "--verdict", "pass", "--reason", "Read in full.", "--reviewer", "jed72"]
+  exit: 2
+# Added on purpose by judged-checks: a review of a document that is not there
+# is refused (exit 2). A record of inputs that cannot be found would match
+# nothing later.
+- id: evidence-review-input-missing
+  project: with-judged-check
+  argv: ["evidence", "review", "design-review", "--verdict", "pass", "--reason", "Read in full.", "--reviewer", "jed72"]
+  exit: 2
+# Added on purpose by human-check-approvers: `evidence approve` is a new leaf of
+# the evidence group. 5.6.0 refused it as an unknown choice (exit 2). From 6.0.0
+# it records a person's approval from a terminal. The corpus runs without a
+# terminal that it controls, so both entries are refusals whether or not one is
+# attached: a check the configuration does not define, and the approver agent.
+- id: evidence-approve-unknown-check
+  project: regular-issue
+  argv: ["evidence", "approve", "--check", "no-such-check", "--approver", "jed72", "--role", "owner", "--scope", "the plan"]
+  exit: 2
+- id: evidence-approve-agent-refused
+  project: regular-issue
+  argv: ["evidence", "approve", "--check", "dor-summary-filled", "--approver", "agent", "--role", "owner", "--scope", "the plan"]
+  exit: 2
 - id: changed-file-add-valid
   project: quick-fix-started
   argv: ["changed-file", "add", "README.md", "--scenario", "TRC-001"]
@@ -240,6 +281,35 @@ entries:
 - id: scenario-add-duplicate
   project: quick-fix-started
   argv: ["scenario", "add", "TRC-001", "--intent", "INT-1"]
+  exit: 2
+# Added on purpose by scenario-tests-verb: `scenario tests` is a new verb. 5.6.0
+# refused it as an unknown choice (exit 2); from 6.0.0 it replaces the tests a
+# scenario declares and exits 0.
+- id: scenario-tests-valid
+  project: quick-fix-started
+  argv: ["scenario", "tests", "TRC-001", "--test", "README.md"]
+  exit: 0
+  stdout_contains: "now declares 1 test"
+# Added on purpose by scenario-tests-verb: an unknown scenario exits 2. 5.6.0
+# also exited 2, for the unknown verb, so this guards that the new verb keeps
+# refusing a scenario the issue does not define.
+- id: scenario-tests-unknown-scenario
+  project: quick-fix-started
+  argv: ["scenario", "tests", "TRC-999", "--test", "README.md"]
+  exit: 2
+# Added on purpose by scenario-tests-verb: a test id that is not on disk exits
+# 2. 5.6.0 also exited 2, for the unknown verb, so this guards that the new verb
+# refuses an id that `declared-tests-resolve` would fail.
+- id: scenario-tests-unresolved
+  project: quick-fix-started
+  argv: ["scenario", "tests", "TRC-001", "--test", "tests/test_greeting.py::test_hello"]
+  exit: 2
+# Added on purpose by scenario-tests-verb: a call with no --test exits 2. 5.6.0
+# also exited 2, for the unknown verb, so this guards that the new verb does not
+# clear a scenario's declared tests.
+- id: scenario-tests-no-test
+  project: quick-fix-started
+  argv: ["scenario", "tests", "TRC-001"]
   exit: 2
 - id: follow-up-resolve-unknown
   project: quick-fix-started
@@ -329,6 +399,22 @@ entries:
   argv: ["policy", "diff", "--exit-code", "default@6", "project"]
   exit: 1
   stdout_contains: "loosening"
+# Added on purpose by impl-refusal: `issue migrate-config` is a new verb. 5.6.0
+# refused it as an unknown choice (exit 2); from 6.0.0 an issue whose generation
+# already holds the installed versions is left as it is, and the verb says so and
+# exits 0.
+- id: issue-migrate-config-already-pinned
+  project: regular-issue
+  argv: ["issue", "migrate-config"]
+  exit: 0
+  stdout_contains: "no change"
+# Added on purpose by impl-refusal: with no current issue the new verb exits 2.
+# 5.6.0 also exited 2, for the unknown verb, so this guards that the new verb
+# refuses to guess which issue to change.
+- id: issue-migrate-config-no-issue
+  project: initialised
+  argv: ["issue", "migrate-config"]
+  exit: 2
 # Added on purpose by policy-migrate: `policy migrate` is a new verb. 5.6.0
 # refused it as an unknown choice (exit 2). From 6.0.0 it is a dry run on a
 # project with copied governance: an unchanged copy gives an empty overlay,
@@ -352,6 +438,115 @@ entries:
 - id: policy-migrate-refused
   project: with-compass-yml
   argv: ["policy", "migrate"]
+  exit: 2
+# Added on purpose by git-parents: `policy lint --offline` is a new flag. 5.6.0
+# refused it as an unrecognised argument (exit 2). From 6.0.0 it lints from the
+# cache only and, in a project with no git parent, passes (exit 0).
+- id: policy-lint-offline
+  project: with-compass-yml
+  argv: ["policy", "lint", "--offline"]
+  exit: 0
+  stdout_contains: "PASS"
+# Added on purpose by git-parents: a compass.yml whose extends names a remote
+# ref with no sha now fails the lint (exit 1) and runs no git. 5.6.0 did not
+# read the file and exited 0.
+- id: policy-lint-git-parent-no-sha
+  project: with-git-parent-no-sha
+  argv: ["policy", "lint"]
+  exit: 1
+  stdout_contains: "L-PARENT-NO-SHA"
+# Added on purpose by git-parents: a pinned git parent that is not in the cache
+# fails with --offline (exit 1), because the run may not fetch. 5.6.0 did not
+# read the file and exited 0.
+- id: policy-lint-git-parent-uncached-offline
+  project: with-git-parent-uncached
+  argv: ["policy", "lint", "--offline"]
+  exit: 1
+  stdout_contains: "L-PARENT-NOT-CACHED"
+# Added on purpose by policy-test-init-preset: `policy test` is a new verb. 5.6.0
+# refused it as an unknown choice (exit 2). From 6.0.0 it runs the fixtures of
+# the preset folder given and exits 0 when the lint and every fixture pass.
+- id: policy-test-passes
+  project: with-preset
+  argv: ["policy", "test", "team-preset"]
+  exit: 0
+  stdout_contains: "PASS"
+# Added on purpose by policy-test-init-preset: a fixture whose expected approach
+# differs from the computed one fails the run (exit 1). 5.6.0 exited 2 on the
+# unknown verb.
+- id: policy-test-fails
+  project: with-failing-preset
+  argv: ["policy", "test", "team-preset"]
+  exit: 1
+  stdout_contains: "expected full"
+# Added on purpose by policy-test-init-preset: a working folder with no compass.yml
+# is an input error (exit 2). The exit code equals what 5.6.0 gave for the unknown
+# verb, but the cause is now the missing file, not the parser.
+- id: policy-test-no-preset
+  project: initialised
+  argv: ["policy", "test"]
+  exit: 2
+  stderr_contains: "no compass.yml here"
+# Added on purpose by policy-test-init-preset: `policy init-preset` is a new
+# verb. 5.6.0 refused it as an unknown choice (exit 2). From 6.0.0 it writes a
+# preset into a new folder and exits 0.
+- id: policy-init-preset-writes
+  project: initialised
+  argv: ["policy", "init-preset", "team-preset", "--owner", "acme-team"]
+  exit: 0
+  stdout_contains: "wrote a preset"
+# Added on purpose by policy-test-init-preset: a folder that already holds one of
+# the preset's files is refused (exit 1) and nothing is written. 5.6.0 exited 2
+# on the unknown verb.
+- id: policy-init-preset-refused
+  project: with-preset
+  argv: ["policy", "init-preset", "team-preset", "--owner", "acme-team"]
+  exit: 1
+  stdout_contains: "refused"
+# Added on purpose by preset-interfaces: a folder inside compass-fixtures/ is a
+# fixture group, so its fixtures run and the text report counts the group. 5.6.0
+# exited 2 on the unknown verb. policy-test-init-preset reported such a folder
+# as a problem and exited 1.
+- id: policy-test-groups
+  project: with-grouped-preset
+  argv: ["policy", "test", "team-preset"]
+  exit: 0
+  stdout_contains: "group meets/banking: 1 run, 1 passed, 0 failed"
+# Added on purpose by policy-update: `policy update` is a new verb. 5.6.0
+# refused it as an unknown choice (exit 2); from 6.0.0 a project already on
+# the only shipped major has nothing to move, writes nothing and exits 0.
+- id: policy-update-nothing-to-do
+  project: with-default-extends
+  argv: ["policy", "update"]
+  exit: 0
+  stdout_contains: "nothing to do"
+# Added on purpose by policy-update: the same new verb, asked for its JSON.
+# 5.6.0 exited 2 for the unknown verb; from 6.0.0 the document is printed and
+# the exit is 0.
+- id: policy-update-json-nothing-to-do
+  project: with-default-extends
+  argv: ["policy", "update", "--json"]
+  exit: 0
+  stdout_contains: "nothing-to-do"
+# Added on purpose by policy-update: a major this CLI does not keep exits 2.
+# 5.6.0 also exited 2, for the unknown verb, so this guards that the new verb
+# keeps refusing a move it cannot check.
+- id: policy-update-major-not-kept
+  project: with-default-extends
+  argv: ["policy", "update", "--to", "7"]
+  exit: 2
+# Added on purpose by policy-update: a compass.yml with no extends line has no
+# major to move, so the verb exits 2. 5.6.0 did not read the file and exited 2
+# for the unknown verb.
+- id: policy-update-no-extends
+  project: with-compass-yml
+  argv: ["policy", "update"]
+  exit: 2
+# Added on purpose by policy-update: a project with no compass.yml has no file
+# to rewrite, so the verb exits 2. 5.6.0 exited 2 for the unknown verb.
+- id: policy-update-no-project-file
+  project: initialised
+  argv: ["policy", "update"]
   exit: 2
 - id: retro-plain
   project: quick-fix-started
@@ -479,3 +674,72 @@ entries:
   project: regular-issue-broken-compass-yml
   argv: ["approach", "evaluate", "--issue", "feature", "--write"]
   exit: 2
+# Added on purpose by templates-render-lists: `issue template` is a new verb.
+# 5.6.0 refused it as an unknown choice (exit 2); from 6.0.0 it prints the
+# document template with its checklists rendered from the issue's stage lists
+# and exits 0. The shipped default renders the template file unchanged.
+- id: issue-template-requirements-review
+  project: regular-issue
+  argv: ["issue", "template", "requirements-review", "--issue", "feature"]
+  exit: 0
+  stdout_contains: "Definition of Ready"
+- id: issue-template-verification-report-json
+  project: regular-issue
+  argv: ["issue", "template", "verification-report", "--issue", "feature", "--json"]
+  exit: 0
+  stdout_contains: "\"kind\": \"verification-report\""
+# Added on purpose by templates-render-lists: this entry pins the exit code of
+# the refusal only. 5.6.0 exited 2 on the unknown verb; from 6.0.0 the verb
+# exists and exits 2 for a kind that is not a template. The message is not
+# pinned here.
+- id: issue-template-unknown-kind
+  project: regular-issue
+  argv: ["issue", "template", "no-such-template", "--issue", "feature"]
+  exit: 2
+# Added on purpose by configure-and-reassess: `issue configure` is a new verb.
+# 5.6.0 refused it as an unknown choice (exit 2). From 6.0.0 a change that
+# the layered lint accepts is parked as a proposal in the next generation's
+# folder, the manifest is untouched, and the command exits 0.
+- id: issue-configure-proposes-a-change
+  project: regular-issue
+  argv: ["issue", "configure", "--issue", "feature", "--mode", "refine=full"]
+  exit: 0
+  stdout_contains: "verdict          : accepted"
+# Added on purpose by configure-and-reassess: a proposal that loosens a stage
+# without a waiver is still written, and the command exits 1 so a script can
+# see that a reassess would refuse it. 5.6.0 had no such verb and exited 2.
+- id: issue-configure-refused-proposal-exits-1
+  project: regular-issue
+  argv: ["issue", "configure", "--issue", "feature", "--mode", "define=collapsed"]
+  exit: 1
+  stdout_contains: "verdict          : refused"
+# Added on purpose by configure-and-reassess: a call that names no change is
+# an error. 5.6.0 also exited 2, as an unknown choice; from 6.0.0 the verb
+# exists and exits 2 because it was given nothing to propose.
+- id: issue-configure-no-change-given
+  project: regular-issue
+  argv: ["issue", "configure", "--issue", "feature"]
+  exit: 2
+# Added on purpose by configure-and-reassess: --discard with no proposal and
+# no leftover folder is an error and removes nothing. 5.6.0 also exited 2, as
+# an unknown choice.
+- id: issue-configure-discard-nothing
+  project: regular-issue
+  argv: ["issue", "configure", "--issue", "feature", "--discard"]
+  exit: 2
+# Added on purpose by configure-and-reassess: `approach evaluate --reset-config`
+# is a new flag. Without --write it has nothing to drop the layer from and is
+# refused; 5.6.0 rejected the flag as unrecognised (exit 2).
+- id: approach-evaluate-reset-config-needs-write
+  project: regular-issue
+  argv: ["approach", "evaluate", "--issue", "feature", "--reset-config"]
+  exit: 2
+# Added on purpose by configure-and-reassess: with --write, --reset-config
+# drops the issue's config: layer in the reassess it commits. This issue has
+# none, so the generation holds the same configuration and the command exits 0
+# and says "no change". 5.6.0 rejected the flag (exit 2).
+- id: approach-evaluate-write-reset-config
+  project: regular-issue
+  argv: ["approach", "evaluate", "--issue", "feature", "--write", "--reset-config"]
+  exit: 0
+  stdout_contains: "no change"

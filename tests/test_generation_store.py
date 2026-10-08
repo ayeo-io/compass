@@ -432,7 +432,7 @@ def test_gs_6_a_complete_unreferenced_target_is_refused(project, monkeypatch):
     monkeypatch.chdir(root)
     with pytest.raises(CompassError) as caught:
         _commit(root, task_dir)
-    assert "complete" in str(caught.value) and "Delete the folder" in str(caught.value)
+    assert "complete" in str(caught.value) and "delete" not in str(caught.value).lower()
     assert (_gen(task_dir, 1) / "complete").is_file()
 
 
@@ -1077,13 +1077,37 @@ def test_gs_17_messages_name_only_commands_the_cli_has(project, tmp_path):
     named = [words for text in messages for words in _commands_in(text)]
     assert named, "the messages should name the command that fixes the fault"
     assert [w for w in named if not _exists(w)] == []
-    assert not [m for m in messages if "migrate-config" in m or "issue configure" in m]
+    assert ["issue", "configure"] in named
+    assert not [m for m in messages if "migrate-config" in m]
+
+
+def test_cr_10_the_unreferenced_folder_message_gives_the_path_then_both_commands(project):
+    """Scenario CR-10 (issue configure-and-reassess). The ruling for a complete,
+    unreferenced folder: the path first, then the two commands. The fallback
+    of deleting the folder is gone now the commands exist."""
+    from compass_pkg import generation
+    from compass_pkg.core import CompassError
+    root, task_dir = project
+    _commit(root, task_dir)
+    import shutil
+    shutil.copytree(_gen(task_dir, 1), _gen(task_dir, 2))
+    with pytest.raises(CompassError) as caught:
+        _commit(root, task_dir, delivery_approach="full")
+    text = str(caught.value)
+    folder = str(_gen(task_dir, 2))
+    assert text.startswith(folder)
+    assert "compass issue configure --commit" in text
+    assert "compass issue configure --discard" in text
+    assert text.index("compass issue configure --commit") < text.index(
+        "compass issue configure --discard")
+    assert "delete the folder" not in text and "delete" not in text.lower()
+    assert "--reason" in text          # a reason given to the interrupted reassess is kept
 
 
 def test_gs_17_the_wording_check_can_fail():
-    assert _commands_in("run `compass issue migrate-config` to repair") == [
-        ["issue", "migrate-config"]]
-    assert not _exists(["issue", "migrate-config"])
+    assert _commands_in("run `compass issue no-such-verb` to repair") == [
+        ["issue", "no-such-verb"]]
+    assert not _exists(["issue", "no-such-verb"])
     assert _exists(["approach", "evaluate"])
 
 

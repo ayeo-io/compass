@@ -462,6 +462,11 @@ rail:
   colour. `COMPASS_COLOR=always` shows the rail even when the output is piped.
   `NO_COLOR` still removes the colour.
 
+If a project turns on the capability `entry-exit-evaluation`, the line also
+names the entry checks of the current stage that are not met, for example
+`Plan | entry not met: dor-no-open-questions`
+(`docs/entry-exit-evaluation.md`).
+
 ## Where to go next
 
 - **`docs/routing-deep-dive.md`** - how the assess stage actually composes an

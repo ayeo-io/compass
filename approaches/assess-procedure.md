@@ -67,6 +67,17 @@ re-assessment is a normal event. The failure is an issue that outgrows its
 approach unrecorded; a re-assessment with no reason gives `compass retro`
 nothing to read.
 
+A re-assessment also commits the next **generation** of the issue's stored
+configuration (`manifest.yml` names it in `generation:`), and the
+`reassessments:` entry records it as `generation: {from, to}`. To change the
+issue's own configuration, propose the change first with `compass issue
+configure` (for example `--mode refine=full`), read the preview, then
+re-assess: the re-assessment applies the proposal. `--reset-config` drops the
+issue's `config:` layer instead. After an interrupted re-assessment,
+`compass issue configure --commit` adopts the complete folder it left, and
+`compass issue configure --discard` removes it. `docs/issue-configure.md`
+has the details.
+
 Re-assessing is also how a **spike graduates**: the spike's findings become
 an input to a fresh assessment for the real delivery work. If the new approach is
 no longer a spike, remove the `.spike` marker so the TDD strategy is back in

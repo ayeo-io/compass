@@ -190,6 +190,8 @@ def test_vr_g2_the_alias_check_reports_a_section_that_says_too_little():
 
 TERMINOLOGY = ROOT / "governance" / "terminology.yml"
 GLOSSARY = ROOT / "docs" / "glossary.md"
+# The route-noun guard covers only these three directories. Widening it to
+# docs/ and governance/ is a larger sweep, filed as D177.
 SCAN_ROOTS = ("commands", "skills", "agents")
 
 
@@ -256,6 +258,24 @@ def test_vr_g6_epic_initiative_and_milestone_each_have_an_entry():
     assert not re.search(r"\bepic\b[^.]*\b(?:is|was) dropped|"
                          r"\bthat word is dropped", everything), (
         "an entry still says epic is dropped")
+
+
+def test_vr_g6_levels_follow_the_decision_of_8_october():
+    """An epic is one outcome in one milestone under one intent; an
+    initiative is several outcomes across milestones; a milestone is a
+    release checkpoint, not a level."""
+    terms = _terms()
+    epic = _flat(terms["epic"], "means").lower()
+    assert "one outcome" in epic and "one milestone" in epic
+    assert "one intent" in epic
+    initiative = _flat(terms["initiative"], "means").lower()
+    assert "several outcomes" in initiative
+    assert "milestones" in initiative
+    milestone = _flat(terms["milestone"], "means").lower()
+    assert "release checkpoint" in milestone
+    assert "not a level" in milestone
+    glossary = GLOSSARY.read_text(encoding="utf-8")
+    assert "one outcome" in glossary and "release checkpoint" in glossary
 
 
 # --- "route" is a verb only in the prose that teaches ------------------------

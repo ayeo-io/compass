@@ -322,9 +322,9 @@ Lead time, deployment frequency, change failure rate, MTTR - what the process-im
 
 ### epic
 
-A group of related issues that together deliver one capability. Larger than an issue and smaller than an initiative. Compass defines the word and no command or field records an epic yet.
+A group of related issues that deliver one outcome, within one milestone, under one intent. Larger than an issue and smaller than an initiative. Compass defines the word and no command or field records an epic yet.
 
-**Related:** `issue`, `initiative`
+**Related:** `issue`, `initiative`, `milestone`
 
 ### error-budget
 
@@ -400,9 +400,9 @@ The intake that triggers a hotfix: what broke in production, impact, severity. S
 
 ### initiative
 
-A body of work significant enough to need an intent document, delivered across multiple milestones. Owns intent.md, the technical design, the first-slice (80/20) decision, and the rollout strategy.
+A body of work that delivers several outcomes across milestones and needs an intent document. Owns intent.md, the technical design, the first-slice (80/20) decision, and the rollout strategy.
 
-**Not:** An epic, which is a smaller group of related issues inside an initiative.
+**Not:** An epic, which is one outcome within one milestone under one intent.
 
 **GitHub:** Project
 
@@ -480,7 +480,7 @@ The machine-readable file at the root of an issue directory, `.compass/work/<iss
 
 ### milestone
 
-A shippable checkpoint within an initiative: a coherent bundle of delivered issues with a review point. Every milestone leaves the system releasable.
+A release checkpoint, not a level in the work hierarchy: a coherent bundle of delivered issues with a review point. Every milestone leaves the system releasable.
 
 **GitHub:** Milestone
 

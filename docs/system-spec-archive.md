@@ -13139,3 +13139,10 @@
 - **Intent:** `INT-1`
 - **Source issue:** `effective-readers`
 - **Landed:** 2026-10-08
+
+### Given a loaded machine, when a run is interrupted, then the tests wait for the session to start before signalling _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `sigint-tests-under-load`
+- **Landed:** 2026-10-08

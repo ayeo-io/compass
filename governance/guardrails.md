@@ -110,6 +110,10 @@ _(none yet - the shipped default guardrails apply as-is)_
   Definition of Ready and Done checks run only where the capability
   `entry-exit-evaluation` is on; a check a project adds to a list always runs.
   A project with neither sees no change.
+- **An advisory failure** is a check that failed where its effective severity
+  is advisory (`severity: advisory`, or a `blocking_when` the assessment does
+  not match). It is labelled ADVISORY, never PASS or FAIL, is counted apart
+  and does not fail the run. `docs/generation-store.md` has the details.
 - **The pre-tool hook** enforces red-before-green in service of `G1`. It is
   approach-aware and does not block on a spike.
 - **The `verifier` and `reviewer` agents** at Verify, for the parts that remain

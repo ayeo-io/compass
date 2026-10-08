@@ -50,11 +50,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a spike with an advisory guardrail check that fails, then the run passes and shows the failure as advisory
+### Given other threads exist, when an interrupt arrives while the session is created, then the session is ended
 
-- **Scenario id:** `CS-11`
+- **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `check-severity-from-generation`
+- **Source issue:** `signal-hold-all-threads`
 - **Landed:** 2026-10-08
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -353,4 +353,4 @@
 
 ---
 
-1888 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1889 superseded scenario(s) are in `docs/system-spec-archive.md`.

@@ -13168,6 +13168,13 @@
 - **Source issue:** `check-severity-from-generation`
 - **Landed:** 2026-10-08
 
+### Given a spike with an advisory guardrail check that fails, then the run passes and shows the failure as advisory _(archived)_
+
+- **Scenario id:** `CS-11`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
 ### Given a blocking check, when it fails, then the run fails _(archived)_
 
 - **Scenario id:** `CS-2`

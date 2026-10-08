@@ -50,11 +50,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### EffectiveView.evaluator_policy returns the evaluator's policy from the resolved configuration
+### A non-text key anywhere in a layer is refused with L-KEY-NOT-TEXT naming its path and telling the person to quote it
 
-- **Scenario id:** `GS-22`
+- **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `generation-store`
+- **Source issue:** `layer-non-text-key`
 - **Landed:** 2026-10-07
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -353,4 +353,4 @@
 
 ---
 
-1832 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1844 superseded scenario(s) are in `docs/system-spec-archive.md`.

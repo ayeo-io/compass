@@ -199,6 +199,11 @@ def _outside_git(root: Path, env: dict) -> None:
     _must(root, env, "init")
 
 
+def _regular_issue_broken_compass_yml(root: Path, env: dict) -> None:
+    _regular_issue(root, env)
+    (root / "compass.yml").write_text("schema: 1\nstages: oops\n", encoding="utf-8")
+
+
 def _with_broken_governance(root: Path, env: dict) -> None:
     _with_copied_governance(root, env)
     # A routing policy without its required top-level keys is the
@@ -218,6 +223,13 @@ def _with_compass_yml(root: Path, env: dict) -> None:
     (root / "compass.yml").write_text("schema: 1\n", encoding="utf-8")
 
 
+def _with_looser_compass_yml(root: Path, env: dict) -> None:
+    _initialised(root, env)
+    (root / "compass.yml").write_text(
+        "schema: 1\nchecks:\n  suite-passed:\n    set:\n      severity: advisory\n",
+        encoding="utf-8")
+
+
 def _with_broken_compass_yml(root: Path, env: dict) -> None:
     _initialised(root, env)
     (root / "compass.yml").write_text("schema: 1\nstages: oops\n", encoding="utf-8")
@@ -229,10 +241,12 @@ STATES = {
     "quick-fix-started": _quick_fix_started,
     "quick-fix-with-note": _quick_fix_with_note,
     "regular-issue": _regular_issue,
+    "regular-issue-broken-compass-yml": _regular_issue_broken_compass_yml,
     "with-copied-governance": _with_copied_governance,
     "with-broken-governance": _with_broken_governance,
     "with-config": _with_config,
     "with-compass-yml": _with_compass_yml,
+    "with-looser-compass-yml": _with_looser_compass_yml,
     "with-broken-compass-yml": _with_broken_compass_yml,
     "outside-git": _outside_git,
 }

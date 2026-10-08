@@ -434,6 +434,10 @@ def test_hr_e_a_credential_cut_by_the_tail_is_still_redacted(project):
 def test_hr_b_a_run_never_reuses_a_record_number(project):
     _run(project, "--max-cycles", "1", plan=("corrupt",))
     first = _record(project, 1)
+    # A rewritten manifest names no generation, so the stored one would be
+    # refused as unreferenced: reset the issue's configuration with it.
+    import shutil
+    shutil.rmtree(project / ".compass" / "work" / SLUG / "generations", ignore_errors=True)
     (project / ".compass" / "work" / SLUG / "manifest.yml").write_text(
         f"schema_version: '2.0'\nissue: {SLUG}\ncreated: '{CREATED}'\n"
         "status: active\nassessment: {risk: contained, familiarity: "

@@ -1,5 +1,5 @@
-# compass_pkg.policy_cmd - `compass policy lint` and `compass policy effective`
-"""The two verbs over `policy_lint`.
+# compass_pkg.policy_cmd - `compass policy lint`, `effective`, `diff` and `migrate`
+"""The four verbs over `policy_lint`, `replay` and `policy_migrate`.
 
 `policy lint` runs the legacy lint, unchanged, for a project with no
 `compass.yml` that Compass reads and for the framework's own repository, and
@@ -7,12 +7,13 @@ the layered lint for any other project. `compass ci` calls the legacy
 function in `governance` directly, so its behaviour does not move.
 """
 # DEPENDENCY: standard library (os); compass_pkg.core, governance, layers,
-# policy_lint, project_settings, terminal.
+# policy_lint, policy_migrate, project_settings, replay, terminal.
 from __future__ import annotations
 
 import os
 
 from compass_pkg import governance, layers, policy_lint, policy_migrate, project_settings
+from compass_pkg import replay
 from compass_pkg.core import (FRAMEWORK_ROOT, CompassError, find_governance, load_manifest,
                               resolve_issue_dir)
 from compass_pkg.terminal import mark_handled, resolve_mode
@@ -86,6 +87,16 @@ def run_policy_migrate(args):
     return 1 if made.result == "blocked" else 0
 
 
+def run_policy_diff(args):
+    root = layers.find_project_root(os.getcwd())
+    first, second = replay.default_refs(getattr(args, "refs", None) or [])
+    a = replay.resolve_ref(first, root, cwd=os.getcwd())
+    b = replay.resolve_ref(second, root, cwd=os.getcwd())
+    document = replay.diff(a, b, replay.read_archive(root), open=bool(args.open))
+    _emit(args, document, replay.diff_text(document))
+    return 1 if args.exit_code and document["differs"] else 0
+
+
 ISSUE_HELP = ("issue slug: read that issue's `config:` from its manifest. Without it "
               "no issue is read: there is no COMPASS_ISSUE or current-task fallback")
 
@@ -95,7 +106,7 @@ def _issue_option(parser):
 
 
 def register(pls):
-    """Add `lint` and `effective` to the `policy` parsers."""
+    """Add `lint`, `effective`, `diff` and `migrate` to the `policy` parsers."""
     ple = pls.add_parser("effective", help="show every resolved configuration field "
                          "with its source layer")
     _issue_option(ple)
@@ -112,3 +123,15 @@ def register(pls):
     pll.add_argument("--exhaustive", action="store_true",
                      help="run the full grid, not the grouped one (layered projects)")
     pll.set_defaults(func=run_policy_lint, output_kind="report")
+    pld = pls.add_parser("diff", help="compare two configurations by classification "
+                         "and by replaying assessments under both")
+    pld.add_argument("refs", nargs="*", metavar="REF",
+                     help="default@6, project, legacy, git:<revision> or a path to a "
+                     "compass.yml. Two compare A with B, one compares the project with "
+                     "it, none compares the project file at git HEAD with the working file")
+    pld.add_argument("--open", action="store_true",
+                     help="also run each open issue (active, queued or parked) over both, "
+                     "and list the issue waivers that would need re-approval")
+    pld.add_argument("--exit-code", dest="exit_code", action="store_true",
+                     help="exit 1 when anything differs, as git diff --exit-code does")
+    pld.set_defaults(func=run_policy_diff, output_kind="report")

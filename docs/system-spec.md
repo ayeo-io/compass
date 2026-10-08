@@ -50,11 +50,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### The classifier has a public scan with a point callback and locks read no private name
+### Given the count of compared lock cases is partial because pytest-xdist split the file When test_cs_5 runs inside a worker Then it skips instead of failing, and outside a worker it still requires at least 70
 
-- **Scenario id:** `CS-7`
+- **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `classifier-speed`
+- **Source issue:** `lock-proof-under-xdist`
 - **Landed:** 2026-10-07
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -353,4 +353,4 @@
 
 ---
 
-1810 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1843 superseded scenario(s) are in `docs/system-spec-archive.md`.

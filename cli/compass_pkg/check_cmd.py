@@ -221,6 +221,7 @@ class _CheckRun:
 
     def __init__(self, task_dir, task, mode):
         self.task_dir = task_dir
+        self.task = task
         self.slug = os.path.basename(task_dir)
         self.approach = task.get("delivery_approach", "?")
         self.mode_banner = mode_banner(mode)
@@ -356,6 +357,19 @@ def _summary_lines(run):
     return out
 
 
+def _verdicts(results):
+    """`{check: verdict}` from a run's `(gate, check, passed, detail)` rows. A
+    check that appears under more than one gate keeps `fail` if any gate
+    failed it."""
+    verdicts = {}
+    for _, name, passed, _ in results:
+        verdict = ("nothing-to-check" if passed is NOTHING_TO_CHECK
+                   else "pass" if passed else "fail")
+        if name not in verdicts or verdict == "fail":
+            verdicts[name] = verdict
+    return verdicts
+
+
 def _emit_check(run, args):
     """Render the run in the mode the caller asked for, and count a run with
     a failure as one interruption in `.compass/interruptions.log`, never in
@@ -377,6 +391,11 @@ def _emit_check(run, args):
         compass_dir = os.path.dirname(os.path.dirname(
             os.path.normpath(run.task_dir)))
         record(compass_dir, run.slug, "check_failures")
+
+    # The verdicts go into the generation's `results.yml`, which the generation's
+    # marker does not cover. An issue with no generation writes nothing.
+    from compass_pkg import effective
+    effective.record_check_results(run.task_dir, _verdicts(run.results), manifest=run.task)
 
     mark_handled()
     mode = resolve_mode(args)
@@ -426,6 +445,10 @@ def cmd_check(args):
     guardrails = load_yaml(os.path.join(gov, "guardrails.yml"))
     task_dir = resolve_issue_dir(args.task)
     task, _ = load_manifest(task_dir)
+    # A generation that is not whole is the authority being unreadable, so the
+    # check refuses (ADR-036). An issue with no generation is not asked.
+    from compass_pkg import effective
+    effective.require_whole(task_dir)
     readings = task.get("assessment") or {}
     mode = load_mode()
 

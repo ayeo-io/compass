@@ -84,3 +84,11 @@ Proposed while the maintainer was away, and marked for the maintainer's confirma
 - The field table declares it, as `CEILING_DIRECTIONS` in `cli/compass_pkg/catalogue_spec.py`, beside `OBLIGATION_FIELDS`, so the classifier and locks read one table. The caller's `directions` argument overrides it in tests only, and a loader must never fill it from project data.
 - Lower is stricter for the subtask ceiling, the worktree cap and the three budget ceilings (`run_cost_usd`, `run_minutes`, `run_cycles`). No ceiling at all is the loosest.
 - The four correction loops (`builder_attempts`, `review_rounds`, `replans`, `repeated_error`) and any ceiling a project adds stay `none`, for the reason in the consequences above.
+
+## Amendment (2026-10-07): which modules may import `obligations`
+
+Decided while the maintainer was away, and marked for the maintainer's confirmation. The code kept one reader of the obligation comparison, and a test (`test_ob_8_only_classify_and_effective_read_the_new_path`) enforces it.
+
+- `classify` and `effective` may import `obligations`. No other module may.
+- `effective` holds the configuration an issue runs against, so it is the one place that turns it into the evaluator's policy (`EffectiveView.evaluator_policy()`, which calls `obligations.policy_adapter`). The modules that read governance call the effective view and never import `obligations` themselves.
+- The test finds an import in any form, including a parenthesised list, and a planted import in a third module makes it fail.

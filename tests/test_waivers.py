@@ -671,7 +671,7 @@ def test_wv_8_the_module_is_pure():
         assert not re.search(pattern, code), pattern
 
 
-def test_wv_8_only_locks_and_lint_import_it_and_no_command_exposes_it():
+def test_wv_8_only_locks_lint_and_the_replay_import_it_and_the_entry_script_does_not_name_it():
     import re
     pattern = re.compile(r"^\s*(from compass_pkg import [^\n]*\bwaivers\b|"
                          r"from compass_pkg\.waivers import|import compass_pkg\.waivers)",
@@ -682,9 +682,10 @@ def test_wv_8_only_locks_and_lint_import_it_and_no_command_exposes_it():
             continue
         if pattern.search(path.read_text(encoding="utf-8")):
             users.append(path.name)
-    # locks.py routes an unlock through `check` (ADR-039), and the layered
-    # lint reads waivers to report them; neither adds a waiver command.
-    assert users == ["locks.py", "policy_lint.py"], users
+    # locks.py routes an unlock through `check` (ADR-039); the layered lint
+    # and the replay (policy diff) read waivers to report them. None adds a
+    # waiver command.
+    assert users == ["locks.py", "policy_lint.py", "replay.py"], users
     for name in ("cli/compass", "cli/compass_pkg/_all.py"):
         assert "waivers" not in (ROOT / name).read_text(encoding="utf-8"), name
     core = (ROOT / "cli" / "compass_pkg" / "core.py").read_text(encoding="utf-8")

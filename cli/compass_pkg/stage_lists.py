@@ -24,6 +24,8 @@ How a check is judged:
   An unchecked box that carries a typed tag (`(evidence: ...)` or
   `(follow-up: ...)`) that resolves counts as deferred and passes. The tag is
   resolved by `checks.dod_tag_problems`, the code `dod-evidence-typed` uses.
+  A check that lists `approvers:` also needs a current approval by one of
+  them, which `compass_pkg.approval_records` judges.
   A missing document is not a failure when the routed approach lists no such
   document among its artifacts: the row is nothing-to-check.
 - `deterministic`: the registered implementation runs.
@@ -155,7 +157,7 @@ class _Documents:
         return self._cache[side]
 
 
-def _tick(check, side, documents, task, owes):
+def _tick(check_id, check, side, documents, task, owes):
     """`(status, detail)` of a human check, or None when its document is
     recorded as omitted (the check is skipped). `owes` is `(approach, kinds)`,
     the document kinds the routed approach lists among its artifacts, or None
@@ -174,6 +176,9 @@ def _tick(check, side, documents, task, owes):
         return "fail", (f"no checklist item with this statement under '{heading}' "
                         f"in {name}")
     if any(ticked for ticked, _ in matches):
+        if check.get("approvers"):
+            from compass_pkg import approval_records
+            return approval_records.judge(check_id, check, task, documents.task_dir)
         return "pass", f"ticked in {name}"
     from compass_pkg.checks import dod_tag_problems
     registry = {e.get("id"): e for e in (task.get("evidence") or [])
@@ -282,7 +287,7 @@ def evaluate(view, task, task_dir, run=True):
                 severity = _severity(view, check, reading)
                 kind = check.get("kind")
                 status, detail, settled = _outcome(
-                    check, kind, side, stage, producer, modes, task, task_dir,
+                    check_id, check, kind, side, stage, producer, modes, task, task_dir,
                     documents, due, run, owes)
                 if status != "pending":
                     status, detail = _apply(view, check, status, detail, settled, reading)
@@ -311,7 +316,7 @@ def _apply(view, check, status, detail, settled, reading):
 _PASSED = {"pass": True, "fail": False, "nothing-to-check": NOTHING_TO_CHECK}
 
 
-def _outcome(check, kind, side, stage, producer, modes, task, task_dir, documents, due, run,
+def _outcome(check_id, check, kind, side, stage, producer, modes, task, task_dir, documents, due, run,
              owes):
     """`(status, detail, settled)` for one active check, before its severity
     and `on_skipped` are applied. `settled` is true when the status already
@@ -322,7 +327,7 @@ def _outcome(check, kind, side, stage, producer, modes, task, task_dir, document
         return (_skipped(check),
                 f"{source} is {mode}; on_skipped is {check.get('on_skipped')}", True)
     if kind == "human":
-        ticked = _tick(check, side, documents, task, owes)
+        ticked = _tick(check_id, check, side, documents, task, owes)
         if ticked is None:
             return (_skipped(check), f"{CHECKLISTS[side][0]} is recorded as omitted; "
                                      f"on_skipped is {check.get('on_skipped')}", True)

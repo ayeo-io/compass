@@ -65,7 +65,7 @@ same commit.
 | `cli/compass_pkg/classify.py`, `scripts/bench-classifier.py` | `governance/routing-policy.md` |
 | `cli/compass_pkg/policy_lint.py`, `cli/compass_pkg/policy_cmd.py` | `docs/policy-lint.md` |
 | `cli/compass_pkg/generation.py`, `cli/compass_pkg/effective.py`, `scripts/bench-evaluate.py` | `docs/generation-store.md` |
-| `cli/compass_pkg/stage_lists.py` | `docs/entry-exit-evaluation.md` |
+| `cli/compass_pkg/stage_lists.py`, `cli/compass_pkg/approval_records.py`, `tests/test_human_checks.py` | `docs/entry-exit-evaluation.md` |
 | `cli/compass_pkg/replay.py` | `docs/policy-diff.md` |
 | `cli/compass_pkg/policy_migrate.py`, `cli/compass_pkg/shipped_releases.py`, `scripts/generate-shipped-releases.py`, `governance/shipped-releases.yml`, `governance/shipped-releases.tar.xz` | `docs/policy-migrate.md` |
 | `cli/compass_pkg/policy_update.py` | `docs/policy-update.md` |

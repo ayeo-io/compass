@@ -33,6 +33,8 @@ evidence:        # (optional) list of maps - the typed evidence registry gates r
                  #     rollback-plan, security-review, spike-conclusion, test-run]
     path:        #   (optional) string - path to the evidence file
     scenario:    #   (optional) string - the scenario id this evidence is for
+    check:       #   (optional) string - for human-approval, the human check this approves; it counts only
+                 #     with the issue slug in `issue:` and the issue's generation in `generation:`
 
 gates:           # (optional until approach evaluate) list of maps:
   - id:          #   (required in entry) string - e.g. verify.correctness

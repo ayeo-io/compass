@@ -58,6 +58,32 @@ An unchecked box that carries a typed tag (`(evidence: ...)` or
 `checks.dod_tag_problems`, so a tag means one thing. An unchecked box with no
 tag fails as "not ticked".
 
+## Approvers on a human check
+
+A `human` check can declare `approvers:`, a list of person ids. Then a tick
+counts only with a `human-approval` entry in the issue's evidence registry
+that:
+
+- names the check (`check: <id>`) and holds `decision: approved`;
+- holds `approver`, `role`, `scope` and `timestamp`;
+- is by a listed approver (`approver` equals a listed id; `agent` never
+  matches, and a role is read as a person id until roles are resolved);
+- names this issue (`issue: <slug>`);
+- names the issue's current generation (`generation: <n>`, or none when the
+  issue has none).
+
+A record that fails any of these is set aside, so a record by someone else
+cannot block a listed approver's record. The row fails when no record
+remains. Its detail starts with the cause (`no approval record`, `approver
+not listed`, `approval is for another issue`, `approval is for another
+generation`) and names the approvers who may approve. The box must still be
+ticked: an approval does not replace the tick. A deferral with a resolving
+typed tag is not a tick and is unchanged. Without `approvers:`, or with an
+empty list, a tick is enough.
+
+An approver's name is not authenticated, the same limit as every
+`human-approval` record. `cli/compass_pkg/approval_records.py` holds the rule.
+
 Each result goes through the judgement `compass check` gives a gate check, so
 one check id has one verdict. A deterministic check that has nothing to inspect
 follows its `on_skipped`. A check with `severity: advisory`, or a
@@ -128,7 +154,8 @@ detail.
 
 - The templates do not render from the lists, and the tag rule reads only the
   `Definition of Done` section of the verification report.
-- A `human` check is a tick. `approvers:` are not read.
+- A role in `approvers:` is read as a person id. No command writes the
+  approval record; a person adds the registry entry by hand.
 - `judged` and `evidence` checks are not evaluated.
 - A tick is found by the text of the statement. A statement that differs from
   the box fails with "no checklist item".

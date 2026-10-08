@@ -109,7 +109,12 @@ def load_parent(root=None):
     files as one parent layer named `default`, and `{id, version}`. The
     capabilities come from `preset.yml`."""
     directory = os.path.join(os.fspath(root or FRAMEWORK_ROOT), PRESET_DIR)
-    meta = load_yaml_strict(os.path.join(directory, "preset.yml"))
+    preset_file = os.path.join(directory, "preset.yml")
+    try:
+        meta = load_yaml_strict(preset_file)
+    except StrictYamlError as exc:
+        # The text already names the file; a command reports it, never a traceback.
+        raise CompassError(f"the shipped default preset cannot be read: {exc}") from exc
     doc = {"schema": meta.get("schema", 1), "capabilities": dict(meta.get("capabilities") or {})}
     for name in spec.CATALOGUES:
         path = os.path.join(directory, f"{name}.yml")

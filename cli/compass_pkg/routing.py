@@ -572,11 +572,9 @@ def cmd_approach_summary(args):
 # --- command: approach evaluate -----------------------------------------------
 
 def cmd_route_evaluate(args):
-    gov = find_governance()
-    policy = load_yaml(os.path.join(gov, "routing-policy.yml"))
-
     task = None
     task_path = None
+    task_dir = None
     if args.reading and getattr(args, "write", False):
         # Refused before anything prints: a refusal that follows a printed
         # result reads as a result that was written.
@@ -619,8 +617,27 @@ def cmd_route_evaluate(args):
         if key_errors:
             raise CompassError(f"{task_path}: " + "; ".join(key_errors))
 
-    from compass_pkg.core import load_autonomy
-    result = evaluate_route(readings, policy, load_autonomy())
+    # The configuration the approach is computed from. An issue with a
+    # generation is judged by it. `--write` commits the configuration as it is
+    # now, so it computes from that. Only an issue with no generation, in a
+    # project with no `compass.yml`, reads the governance files.
+    from compass_pkg import effective
+    view = effective.view_or_legacy(task_dir, live=bool(args.write))
+    if view is None:
+        gov = find_governance()
+        policy = load_yaml(os.path.join(gov, "routing-policy.yml"))
+        from compass_pkg.core import load_autonomy
+        autonomy = load_autonomy()
+    else:
+        gov = None
+        policy = view.evaluator_policy()
+        autonomy = view.autonomy
+    # The drift report compares a project's copy of the policy with the
+    # framework's. A configuration resolved over such a copy still gets it.
+    drift_gov = gov
+    if view is not None and view.from_governance_copy():
+        drift_gov = find_governance()
+    result = evaluate_route(readings, policy, autonomy)
     if result.get("renamed_routes"):
         sys.stderr.write(
             "compass: governance/routing-policy.yml uses old route names ("
@@ -654,8 +671,8 @@ def cmd_route_evaluate(args):
         # project running a policy that is missing rules the framework ships
         # gets a lighter approach than it should - and a reader has no way to
         # tell that from a genuinely light one. It belongs on the first screen.
-        _drift = governance_drift(gov)
-        if _drift.drifted:
+        _drift = governance_drift(drift_gov) if drift_gov else None
+        if _drift is not None and _drift.drifted:
             _fw = _drift.framework_versions.get("routing-policy.yml", "unknown")
             _concerns.append(
                 "this project's policy is missing %d rule(s) or check(s) that "
@@ -693,10 +710,19 @@ def cmd_route_evaluate(args):
         # but not which policy file produced them, so print the policy
         # first, so a reader can tell a genuinely light route from a
         # stale-governance one.
-        print(f"  policy          : {os.path.join(gov, 'routing-policy.yml')} "
-              f"(v{policy.get('version', 'unknown')})")
-        drift = governance_drift(gov)
-        if drift.drifted:
+        if gov:
+            print(f"  policy          : {os.path.join(gov, 'routing-policy.yml')} "
+                  f"(v{policy.get('version', 'unknown')})")
+        elif view.source == "generation":
+            print(f"  policy          : generation {view.generation} of this issue "
+                  f"(parent {view.parent_version() or 'unknown'})")
+        else:
+            print("  policy          : this project's effective configuration "
+                  "(compass.yml over the shipped default)")
+        drift = governance_drift(drift_gov) if drift_gov else None
+        if drift is None:
+            pass
+        elif drift.drifted:
             fw = drift.framework_versions.get("routing-policy.yml", "unknown")
             print(f"  POLICY DRIFT    : this policy is missing {drift.count} "
                   f"rule(s)/check(s) that framework v{fw} ships - "

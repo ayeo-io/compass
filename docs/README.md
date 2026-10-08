@@ -32,8 +32,8 @@ the table does not exist, and when a doc in this folder is not listed.
 - [releasing.md](releasing.md) - how to cut a release.
 - [configuration.md](configuration.md) - every project setting: what it does, its values, its default and which file holds it.
 - [policy-lint.md](policy-lint.md) - `compass policy lint` and `compass policy effective` on a layered project: the order of the checks, the finding codes and both JSON shapes.
-- [generation-store.md](generation-store.md) - the stored generation of an issue's configuration: its files, the commit order, the states and what reads it.
 - [policy-diff.md](policy-diff.md) - `compass policy diff`: the references, the sets it replays, `--open`, the exit codes and the JSON shape.
+- [generation-store.md](generation-store.md) - the stored generation of an issue's configuration: its files, the commit order, the states and what reads it.
 - [policy-migrate.md](policy-migrate.md) - `compass policy migrate`: how copied governance and the old settings file become a `compass.yml` overlay over the release the copy came from, what it keeps, when it refuses, its exit codes and its JSON shape.
 - [security.md](security.md) - what Compass adds to a repository, and how to review it.
 - [portability.md](portability.md) - the adapter boundary, for running Compass outside Claude Code.

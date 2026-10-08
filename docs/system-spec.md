@@ -50,11 +50,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### No member of the compressed archive of shipped releases holds a rival name
+### The approach diagram of a project with a compass.yml renders the effective configuration
 
-- **Scenario id:** `PM-19`
+- **Scenario id:** `EF-12`
 - **Intent:** `INT-1`
-- **Source issue:** `policy-migrate`
+- **Source issue:** `effective-readers`
 - **Landed:** 2026-10-08
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -353,4 +353,4 @@
 
 ---
 
-1863 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1856 superseded scenario(s) are in `docs/system-spec-archive.md`.

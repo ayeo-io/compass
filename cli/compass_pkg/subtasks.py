@@ -266,7 +266,7 @@ def cmd_subtask_update(args):
             "reason": args.stop_reason.strip(),
             "evidence": _inside(root, args.stop_evidence, "stop evidence"),
             "at": now_iso()}
-    ceilings = loop_ceilings(task)
+    ceilings = loop_ceilings(task, task_dir)
     # A refused try refuses only the try. The rest of the call - the
     # error that caused the refusal among it - is still recorded, or the
     # repeat count could be kept below its ceiling by asking again.
@@ -351,7 +351,7 @@ def cmd_subtask_next(args):
         return 0
     open_ = [s for s in subtasks if s.get("status") != "done"
              and "stopped_reason" not in s]
-    ceilings = loop_ceilings(task)
+    ceilings = loop_ceilings(task, task_dir)
     if not open_ and not unrecorded:
         print("compass issue subtask next: every subtask is done or stopped.")
         return 0
@@ -401,7 +401,7 @@ def cmd_subtask_replan(args):
     if not isinstance(replans, list):
         raise CompassError("compass issue subtask: the manifest's `replans:` "
                            "is not a list.")
-    limit, rid = loop_ceilings(task).get("replans", (None, None))
+    limit, rid = loop_ceilings(task, task_dir).get("replans", (None, None))
     if limit is not None and len(replans) >= limit:
         raise CompassError(
             f"compass issue subtask: refusing another replan: the run has had "

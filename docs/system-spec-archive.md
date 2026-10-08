@@ -12923,128 +12923,79 @@
 - **Source issue:** `layer-non-text-key`
 - **Landed:** 2026-10-07
 
-### A dry run prints the compass.yml it would write and changes no file _(archived)_
+### The reader helper returns the stored view, a live view for a project with a compass.yml, nothing for a legacy project and refuses generation 0 _(archived)_
 
-- **Scenario id:** `PM-1`
+- **Scenario id:** `EF-1`
 - **Intent:** `INT-1`
-- **Source issue:** `policy-migrate`
+- **Source issue:** `effective-readers`
 - **Landed:** 2026-10-08
 
-### The json output has fixed keys, is deterministic and is pinned by an example _(archived)_
+### An issue with no generation reads the governance files and prints what it printed before _(archived)_
 
-- **Scenario id:** `PM-10`
+- **Scenario id:** `EF-10`
 - **Intent:** `INT-1`
-- **Source issue:** `policy-migrate`
+- **Source issue:** `effective-readers`
 - **Landed:** 2026-10-08
 
-### The owning doc, README row, help text and command corpus exist _(archived)_
+### Every read of a governance policy file is in a function that asks the effective view first _(archived)_
 
-- **Scenario id:** `PM-11`
+- **Scenario id:** `EF-11`
 - **Intent:** `INT-1`
-- **Source issue:** `policy-migrate`
+- **Source issue:** `effective-readers`
 - **Landed:** 2026-10-08
 
-### A table of shipped releases is data, and holds every tagged release _(archived)_
+### The accessors of the shipped default's generation equal what the governance files hold _(archived)_
 
-- **Scenario id:** `PM-12`
+- **Scenario id:** `EF-2`
 - **Intent:** `INT-1`
-- **Source issue:** `policy-migrate`
+- **Source issue:** `effective-readers`
 - **Landed:** 2026-10-08
 
-### policy-migrate review round, group 13 _(archived)_
+### compass check judges an issue by its generation after the governance files change or compass.yml is deleted _(archived)_
 
-- **Scenario id:** `PM-13`
+- **Scenario id:** `EF-3`
 - **Intent:** `INT-1`
-- **Source issue:** `policy-migrate`
+- **Source issue:** `effective-readers`
 - **Landed:** 2026-10-08
 
-### policy-migrate review round, group 14 _(archived)_
+### A check with a custom id and the command-passes implementation runs its command from the generation _(archived)_
 
-- **Scenario id:** `PM-14`
+- **Scenario id:** `EF-4`
 - **Intent:** `INT-1`
-- **Source issue:** `policy-migrate`
+- **Source issue:** `effective-readers`
 - **Landed:** 2026-10-08
 
-### policy-migrate review round, group 15 _(archived)_
+### Gate evidence requirements come from the generation in gate pass, the evidence check and the receipt _(archived)_
 
-- **Scenario id:** `PM-15`
+- **Scenario id:** `EF-5`
 - **Intent:** `INT-1`
-- **Source issue:** `policy-migrate`
+- **Source issue:** `effective-readers`
 - **Landed:** 2026-10-08
 
-### policy-migrate review round, group 16 _(archived)_
+### approach evaluate on an issue with a generation computes from the generation _(archived)_
 
-- **Scenario id:** `PM-16`
+- **Scenario id:** `EF-6`
 - **Intent:** `INT-1`
-- **Source issue:** `policy-migrate`
+- **Source issue:** `effective-readers`
 - **Landed:** 2026-10-08
 
-### policy-migrate review round, group 17 _(archived)_
+### Loop ceilings come from the generation _(archived)_
 
-- **Scenario id:** `PM-17`
+- **Scenario id:** `EF-7`
 - **Intent:** `INT-1`
-- **Source issue:** `policy-migrate`
+- **Source issue:** `effective-readers`
 - **Landed:** 2026-10-08
 
-### policy-migrate review round, group 18 _(archived)_
+### Readers with no issue read the live effective configuration of a project with a compass.yml _(archived)_
 
-- **Scenario id:** `PM-18`
+- **Scenario id:** `EF-8`
 - **Intent:** `INT-1`
-- **Source issue:** `policy-migrate`
+- **Source issue:** `effective-readers`
 - **Landed:** 2026-10-08
 
-### An unchanged copy migrates to an empty overlay and classifies equivalent _(archived)_
+### compass check prints the generation, the parent version and a pending config change _(archived)_
 
-- **Scenario id:** `PM-2`
+- **Scenario id:** `EF-9`
 - **Intent:** `INT-1`
-- **Source issue:** `policy-migrate`
-- **Landed:** 2026-10-08
-
-### A changed copy migrates to exactly its differing entries and classifies equivalent _(archived)_
-
-- **Scenario id:** `PM-3`
-- **Intent:** `INT-1`
-- **Source issue:** `policy-migrate`
-- **Landed:** 2026-10-08
-
-### A loosening gets unapproved waiver stubs and blocks apply with exit 1 _(archived)_
-
-- **Scenario id:** `PM-4`
-- **Intent:** `INT-1`
-- **Source issue:** `policy-migrate`
-- **Landed:** 2026-10-08
-
-### Settings fold into compass.yml, state goes to state.yml, and nothing is dropped silently _(archived)_
-
-- **Scenario id:** `PM-5`
-- **Intent:** `INT-1`
-- **Source issue:** `policy-migrate`
-- **Landed:** 2026-10-08
-
-### Apply copies the sources, writes compass.yml last and keeps the governance files _(archived)_
-
-- **Scenario id:** `PM-6`
-- **Intent:** `INT-1`
-- **Source issue:** `policy-migrate`
-- **Landed:** 2026-10-08
-
-### A compass.yml, the framework repository or a lone governance file is refused with exit 2 _(archived)_
-
-- **Scenario id:** `PM-7`
-- **Intent:** `INT-1`
-- **Source issue:** `policy-migrate`
-- **Landed:** 2026-10-08
-
-### An interrupted apply finishes on the next run _(archived)_
-
-- **Scenario id:** `PM-8`
-- **Intent:** `INT-1`
-- **Source issue:** `policy-migrate`
-- **Landed:** 2026-10-08
-
-### A project with nothing to migrate exits 0 and writes nothing _(archived)_
-
-- **Scenario id:** `PM-9`
-- **Intent:** `INT-1`
-- **Source issue:** `policy-migrate`
+- **Source issue:** `effective-readers`
 - **Landed:** 2026-10-08

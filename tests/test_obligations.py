@@ -1143,10 +1143,9 @@ def _obligations_importers(paths):
     return found
 
 
-def test_ob_8_only_classify_effective_and_the_replay_read_the_new_path():
+def test_ob_8_only_classify_and_effective_read_the_new_path():
     """Amended 2026-10-07 (ADR-037): `effective` may import `obligations` as
-    well as `classify`; the readers go through the effective view. The replay
-    (policy diff) runs the same function to list what a change moves."""
+    well as `classify`; the readers go through the effective view."""
     paths = [p for p in sorted((ROOT / "cli").rglob("*.py"))
              if p.name != "obligations.py" and "vendor" not in p.parts]
     users = [str(p.relative_to(ROOT)) for p in _obligations_importers(paths)]

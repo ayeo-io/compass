@@ -782,10 +782,17 @@ def cmd_ci(args):
         # Forward the caller's output mode, so `compass ci --verbose` gives
         # verbose check output. A CI log is the one place a reader cannot
         # re-run a command.
-        if cmd_check(types.SimpleNamespace(
+        # An issue whose configuration cannot be read (generation 0, say) is a
+        # failure of that issue, reported, and the sweep goes on to the next.
+        try:
+            check_failed = cmd_check(types.SimpleNamespace(
                 task=slug, _mode=getattr(args, "_mode", None),
                 evidence_out=getattr(args, "evidence_out", None),
-                no_count=True)):
+                no_count=True))
+        except CompassError as exc:
+            print(f"  gate checks refused - {exc}")
+            check_failed = 1
+        if check_failed:
             failures += 1
 
     print("\n" + "=" * 60)

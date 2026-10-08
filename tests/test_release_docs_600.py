@@ -106,3 +106,42 @@ def test_idr_9_the_release_checks_name_the_full_archive_run_and_contracts_a_to_d
     assert "test_framework_compass_yml" in body
     for rel in ("tests/test_compat_contracts.py", "tests/test_framework_compass_yml.py"):
         assert (ROOT / rel).is_file(), rel
+
+
+# --- the verbs the 6.0.0 entry names exist ------------------------------------
+
+def _named_verbs(entry):
+    """Each `compass <verb> [<subverb>]` code span in `entry`."""
+    spans = re.findall(r"`compass\s+([a-z][a-z-]*(?:\s+[a-z][a-z-]*)?)", entry)
+    return sorted({" ".join(span.split()) for span in spans})
+
+
+def _runs(argv):
+    import subprocess
+    import sys
+    r = subprocess.run([sys.executable, str(ROOT / "cli" / "compass"), *argv,
+                        "--help"], capture_output=True, text=True, timeout=60)
+    return r.returncode == 0, r.stdout
+
+
+def _verb_missing(words):
+    """True when `compass <words> --help` fails, treating a trailing word as an
+    argument only for a verb that has no subcommands."""
+    ok, _ = _runs(words)
+    if ok:
+        return False
+    ok_one, out = _runs(words[:1])
+    return not (ok_one and "{" not in out)
+
+
+def test_the_6_0_0_entry_names_only_verbs_the_cli_has():
+    entry = _section(_read("docs/releasing.md"), "What changed at 6.0.0")
+    verbs = [v.split() for v in _named_verbs(entry)]
+    assert len(verbs) >= 8, verbs
+    missing = [" ".join(v) for v in verbs if _verb_missing(v)]
+    assert not missing, f"the entry names verbs the CLI lacks: {missing}"
+
+
+def test_the_verb_check_fails_on_a_verb_the_cli_lacks():
+    assert _verb_missing(["policy", "no-such-verb"])
+    assert "policy update" in _named_verbs("`compass policy update` moves")

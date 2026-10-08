@@ -36,6 +36,11 @@ it is exempt from assessment.
      configuration. Stop and report that. Offer `compass policy lint` and
      `compass policy effective`, which show every resolved field and the layer
      it came from. Do not overwrite the file.
+   - A `compass.yml` with no `schema:` key. Compass does not read it, so it is
+     another tool's file. Stop and report that. Do not overwrite it and do not
+     write a second file beside it. `compass policy migrate` refuses it for the
+     same reason. Tell the person to move it to another name or to add
+     `schema: 1`.
    - A `.compass/config.yml`, or copied governance: both
      `governance/routing-policy.yml` and `governance/guardrails.yml` in the
      project, a copy made under 5.x. Go to step 2.
@@ -56,7 +61,11 @@ it is exempt from assessment.
      project ran, or when a loosening needs an approval. Report each item it
      names, apply nothing, and let the person decide. It exits 2 when it refuses
      (for example, `compass.yml` already exists). Report the reason it gives.
-   - After `--apply`, run `compass policy lint` and report the result. An issue
+   - After `--apply`, check that `compass.yml` names an `owner`. Migration does
+     not invent one, and without an owner no waiver can be approved, so
+     `compass policy lint` reports `W-NO-OWNER`. Ask who approves waivers and add
+     `owner: <that person>` to `compass.yml`.
+   - Then run `compass policy lint` and report the result. An issue
      that already has a stored configuration keeps it until its next
      reassessment. An issue without one is judged by the new `compass.yml` at
      once.

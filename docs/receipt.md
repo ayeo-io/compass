@@ -69,6 +69,8 @@ The receipt's value is what it *won't* hide. The verdict markers and overall ver
 
 The receipt lists owed follow-ups in a *Follow-ups* section and counts them in the verdict: "landed with caveats - N follow-up(s) owed".
 
+When any list check is active, the receipt adds a *Stage lists* section before the verdict. It shows each entry and exit list with whether it is due, and each check with its state: `pass`, `fail`, `nothing-to-check` or `pending`. A deterministic check shows `pending`, because the receipt does not run checks. The shipped checks are active only where the capability `entry-exit-evaluation` is on, so a project that has not turned it on and added no list check gets no section (`docs/entry-exit-evaluation.md`).
+
 ## The conformance line
 
 A project whose `compass.yml` unlocks a framework entry gets one more line,
@@ -78,8 +80,6 @@ summary`: `Conformance: non-conformant - this project unlocks framework entries:
 project with no `compass.yml`, or one that unlocks nothing, gets no line, so the
 receipt in the example above is unchanged. The line states the configuration,
 not the quality of the work (see `docs/safety-contract.md`).
-
-When any list check is active, the receipt adds a *Stage lists* section before the verdict. It shows each entry and exit list with whether it is due, and each check with its state: `pass`, `fail`, `nothing-to-check` or `pending`. A deterministic check shows `pending`, because the receipt does not run checks. The shipped checks are active only where the capability `entry-exit-evaluation` is on, so a project that has not turned it on and added no list check gets no section (`docs/entry-exit-evaluation.md`).
 
 ## Provenance
 

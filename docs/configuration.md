@@ -72,8 +72,10 @@ The state decides what Compass reads, and no state loses a setting silently:
   either position, as for a lone file. A `compass.yml` that cannot be parsed
   counts as Compass's file, so the old file cannot hide it.
 - **The marker.** Every `compass.yml` that Compass creates carries `schema:`.
-  `compass init` writes no `compass.yml`. Only `/compass:init` and
-  `compass policy migrate` write one.
+  `compass init` writes no `compass.yml`. `/compass:init` and
+  `compass policy migrate` write a project's first one. `compass policy update`
+  rewrites it, and `compass policy init-preset` writes one inside the new preset
+  folder it scaffolds.
 
 ## Settings
 

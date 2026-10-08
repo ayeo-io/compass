@@ -63,6 +63,23 @@ and `governance/decisions/2026-10-06-old-route-names-readable-until-7-0-0.md`).
   against as a numbered generation under `.compass/work/<slug>/generations/`.
   The commands that read configuration read that generation, so a later change
   to `compass.yml` cannot change an issue that is already running.
+- `compass policy update` moves a project to a new major of the shipped default
+  and asks again for approval of each waiver the move affects. `compass policy
+  test` runs a preset's fixtures and checks its locks, and `compass policy
+  init-preset` scaffolds a team preset repository.
+- `compass issue configure` proposes, previews, discards or recovers a change to
+  an issue's own configuration. `compass issue migrate-config` pins an issue's
+  configuration to the installed versions. An implementation major that differs
+  from the one a generation recorded is refused, and a check can be advisory.
+- A project can name git parents, singly or in a chain, and each is pinned by
+  sha and judged against the default like any other layer
+  (`docs/git-parents.md`).
+- A check can be judged: it passes on a recorded review (`docs/judged-checks.md`).
+  `approvers` name who may approve a waiver, a human check or an exit, and an
+  evidence approval is recorded with its approver.
+- `compass issue template` prints a document template with its checklists
+  rendered from the issue's stage lists. The receipt shows where each rule,
+  waiver, lock and check came from.
 - `/compass:init` writes a minimal `compass.yml` for a new project and copies
   nothing. It runs `compass policy migrate` when it finds a
   `.compass/config.yml` or copied governance. `compass init`, which every entry
@@ -314,6 +331,10 @@ Run these on top of steps 1 to 9, before step 10.
    - **A.** No configuration: the shipped default alone.
    - **B.** An empty overlay: a `compass.yml` holding `schema: 1` and
      `extends: compass:default@6` and nothing else.
+   - Under B, two corpus entries are left out because their answer is about
+     the configuration found: `policy-test-no-preset` (exit 1, a project preset
+     with no fixtures) and `policy-update-no-project-file` (exit 0, already on
+     the default). They are still compared under A and C.
    - **C.** A copy of the 5.6.0 shipped governance files, run through the
      legacy adapter. The copy is in `tests/fixtures/compat/v5.6.0-governance.tgz`,
      taken from the `v5.6.0` tag.

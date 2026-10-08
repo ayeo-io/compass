@@ -362,22 +362,32 @@ def configuration_applies(state: str, kind: str) -> bool:
     return True
 
 
+#: The two entries whose answer differs under configuration B on purpose.
+#: Configuration B is an empty overlay: a `compass.yml` holding `schema: 1` and
+#: `extends: compass:default@6`. `policy test` then finds a project preset with
+#: no fixtures (exit 1, where a project with no `compass.yml` gives exit 2),
+#: and `policy update` finds a project that already extends the shipped default
+#: (exit 0, where a project with no `compass.yml` gives exit 2). Both answers
+#: are about the configuration found, so the no-configuration baseline does not
+#: apply. Configuration C and every other entry are still compared.
+_DIFFER_UNDER_B = frozenset({"policy-test-no-preset",
+                             "policy-update-no-project-file"})
+
+
 def entry_applies(entry: dict, kind: str) -> bool:
     """Whether `entry` is a fair question under configuration `kind`. The
     state must not already hold a settings file or governance of its own, and
     the command must not be about the configuration itself:
     `policy migrate` migrates the very files B and C add, and `terminology`
     reads `governance/terminology.yml`, which a two-file governance copy lacks
-    (the 5.6.0 CLI refuses it the same way in such a project)."""
+    (the 5.6.0 CLI refuses it the same way in such a project). Two entries are
+    also left out under B alone: see `_DIFFER_UNDER_B`."""
     if not configuration_applies(entry["project"], kind):
         return False
     argv = entry["argv"]
     if argv[:2] == ["policy", "migrate"]:
         return False
-    # `policy test` and `policy update` act on the configuration they find; a
-    # copied governance folder is a configuration, so the answer differs from
-    # the no-configuration baseline on purpose.
-    if argv[:2] in (["policy", "test"], ["policy", "update"]):
+    if kind == "B" and entry["id"] in _DIFFER_UNDER_B:
         return False
     if kind == "C" and argv[:1] == ["terminology"]:
         return False

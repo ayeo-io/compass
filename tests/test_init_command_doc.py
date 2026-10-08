@@ -54,16 +54,61 @@ def test_idr_1_init_writes_a_minimal_compass_yml_that_lints(tmp_path):
     assert run.returncode == 0, run.stdout + run.stderr
 
 
+def _step(text, number):
+    """The text of one numbered step of the Steps list, alone."""
+    m = re.search(rf"^{number}\. \*\*.*?(?=^{number + 1}\. \*\*)", text,
+                  flags=re.S | re.M)
+    assert m, f"commands/init.md has no step {number}"
+    return m.group(0)
+
+
+def _migrate_step_problems(text):
+    """What is wrong with step 2 (migrate an older project) and step 1 (the
+    trigger), read apart from the rest of the file. Both halves of the
+    scenario's name are checked: a dry run and approval before `--apply`, and
+    no fresh `compass.yml` written beside an older settings file."""
+    one, two = _step(text, 1), _step(text, 2)
+    problems = []
+    if ".compass/config.yml" not in one or "copied governance" not in one:
+        problems.append("step 1 does not name both older shapes")
+    if not re.search(r"schema:.*(?:not|no).*overwrite|no `schema:`.*(?:migrate|refus|do not)",
+                     one, flags=re.S | re.I):
+        problems.append("step 1 does not refuse a compass.yml with no schema key")
+    dry = two.find("compass policy migrate`")
+    apply_ = two.find("compass policy migrate --apply")
+    ask = re.search(r"Apply this migration\?|go-ahead|says yes", two)
+    if dry < 0 or apply_ < 0 or dry > apply_:
+        problems.append("step 2 does not run the dry run before --apply")
+    if not re.search(r"dry run", two, flags=re.I):
+        problems.append("step 2 does not call the first run a dry run")
+    if not ask or ask.start() > apply_:
+        problems.append("step 2 does not ask for approval before --apply")
+    if not re.search(r"Never write a fresh `compass.yml` beside", two):
+        problems.append("step 2 does not forbid writing beside an older file")
+    return problems
+
+
 def test_idr_2_init_migrates_an_older_project_and_never_writes_beside_it():
+    assert _migrate_step_problems(_init_text()) == []
+
+
+def test_idr_2_the_check_fails_on_a_step_2_that_applies_straight_away():
     text = _init_text()
-    assert "compass policy migrate" in text
-    assert "--apply" in text
-    assert re.search(r"dry run", text, flags=re.I), "the dry run comes first"
-    assert re.search(r"go-ahead|says yes|agrees|approv", text, flags=re.I), (
-        "--apply needs the person's go-ahead")
-    # The trigger is stated for both older shapes.
-    assert ".compass/config.yml" in text
-    assert "copied governance" in text or "copied `governance/`" in text
+    two = _step(text, 2)
+    planted = text.replace(two, (
+        "2. **Migrate an older project.** Run `compass policy migrate --apply` "
+        "straight away.\n\n"))
+    assert planted != text
+    problems = _migrate_step_problems(planted)
+    assert any("dry run" in p for p in problems), problems
+    assert any("approval" in p for p in problems), problems
+    assert any("beside" in p for p in problems), problems
+
+
+def test_idr_2_step_2_asks_for_an_owner_after_migrating():
+    two = _step(_init_text(), 2)
+    assert re.search(r"owner", two), (
+        "a migrated project has no owner, and a waiver needs one")
 
 
 def test_idr_3_init_copies_no_governance_into_a_new_project():

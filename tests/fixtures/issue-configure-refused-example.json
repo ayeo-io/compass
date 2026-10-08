@@ -5,7 +5,7 @@
   "proposed": 2,
   "verdict": "refused",
   "reasons": [
-    "C-INCOMPARABLE approaches.stages: at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency live-defect, role engineer, labels none: approaches.checkpoints (controlled) is [\"assess\", \"define\"] in the parent and [\"assess\"] in the child; a waiver on the entry, approved by the layer above, excuses it"
+    "C-LOOSENING approaches.stages: at risk contained, familiarity brownfield-mapped, size standard, goal delivery, role engineer, labels none: approaches.stages (define) is \"full\" in the parent and \"collapsed\" in the child; a waiver on the entry, approved by the layer above, excuses it; fields that are looser or cannot be compared: approaches.stages (define), approaches.checkpoints (balanced), approaches.checkpoints (controlled)"
   ],
   "proposal": ".compass/work/feature/generations/2/proposed.yml",
   "base": "config",
@@ -17,55 +17,58 @@
     }
   ],
   "classification": {
-    "result": "incomparable",
-    "reason": "at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency live-defect, role engineer, labels none: approaches.checkpoints (controlled) is [\"assess\", \"define\"] in the parent and [\"assess\"] in the child",
+    "result": "loosening",
+    "reason": "at risk contained, familiarity brownfield-mapped, size standard, goal delivery, role engineer, labels none: approaches.stages (define) is \"full\" in the parent and \"collapsed\" in the child",
     "scan": "full",
     "first_point": {
       "assessment": {
-        "risk": "trivial",
-        "familiarity": "greenfield",
-        "size": "atomic",
+        "risk": "contained",
+        "familiarity": "brownfield-mapped",
+        "size": "standard",
         "goal": "delivery",
-        "urgency": "live-defect",
         "role": "engineer",
         "labels": []
       },
       "represents": {
         "risk": [
-          "trivial",
           "contained"
         ],
         "familiarity": [
-          "greenfield",
           "brownfield-mapped"
         ],
         "size": [
-          "atomic",
-          "small"
+          "standard"
         ],
         "goal": [
-          "delivery",
-          null
-        ],
-        "urgency": [
-          "live-defect"
+          "delivery"
         ],
         "role": [
-          "engineer",
-          "qa",
-          null
+          "engineer"
         ]
       },
-      "outcome": "mixed",
-      "summary": "at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency live-defect, role engineer, labels none: approaches.checkpoints (controlled) is [\"assess\", \"define\"] in the parent and [\"assess\"] in the child",
+      "outcome": "looser",
+      "summary": "at risk contained, familiarity brownfield-mapped, size standard, goal delivery, role engineer, labels none: approaches.stages (define) is \"full\" in the parent and \"collapsed\" in the child",
       "changes": [
         {
           "fact": "stage_mode",
           "field": "approaches.stages",
           "key": "define",
-          "outcome": "incomparable",
-          "parent": "reproduce-first",
+          "outcome": "looser",
+          "parent": "full",
           "child": "collapsed"
+        },
+        {
+          "fact": "checkpoints",
+          "field": "approaches.checkpoints",
+          "key": "balanced",
+          "outcome": "looser",
+          "parent": [
+            "define",
+            "plan"
+          ],
+          "child": [
+            "plan"
+          ]
         },
         {
           "fact": "checkpoints",
@@ -74,10 +77,14 @@
           "outcome": "looser",
           "parent": [
             "assess",
-            "define"
+            "define",
+            "refine",
+            "plan"
           ],
           "child": [
-            "assess"
+            "assess",
+            "refine",
+            "plan"
           ]
         }
       ]

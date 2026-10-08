@@ -3,8 +3,9 @@
 reassess runs. It answers four questions about a proposed overlay:
 
 - which resolved fields change, against the generation in force;
-- how the classifier reads the issue layer over the project's configuration,
-  and whether the layered lint would refuse the chain at commit;
+- how the classifier reads the issue layer over the project's configuration
+  at the issue's own assessment, and whether the layered lint would refuse
+  the chain at commit;
 - what the issue owes at its own assessment, before and after (the single
   assessment form of the comparison `policy diff` makes over the whole grid,
   so a later `policy diff` calls the same functions for two references);
@@ -62,7 +63,8 @@ def _text(value):
 
 def classification_of(details):
     """`{result, reason, scan, first_point}` for the issue layer over the
-    configuration the project gives, as the classifier reads it."""
+    configuration the project gives, as the classifier reads it at the issue's
+    own assessment (ADR-037): the same point the lint judged it at."""
     chain, configs = details["chain"], details["configs"]
     layer = chain[-1] if chain and chain[-1].kind == "issue" else None
     if layer is None:
@@ -72,7 +74,7 @@ def classification_of(details):
         found = classify.classify(
             configs[-2], configs[-1], parent_capabilities=_capabilities(chain[:-1]),
             child_capabilities=_capabilities(chain), child_issue=layer.doc,
-            parent_name="project", child_name="issue")
+            at=details["loaded"].assessment, parent_name="project", child_name="issue")
     except CompassError as exc:
         return {"result": "not-run", "reason": _text(exc), "scan": "none",
                 "first_point": None}
@@ -127,21 +129,23 @@ def _kind(record_id):
     return "waiver" if str(record_id).startswith("waiver:") else "approval"
 
 
-def plan_resolution(root, task_dir, manifest, slug):
+def plan_resolution(root, task_dir, manifest, slug, fetch=False):
     """`(resolution, invalidated, resolve_with)` for the issue's `manifest`:
     the configuration it resolves to, with each stale issue waiver left out so
     its field reverts to the parent's value; the records that makes invalid
     (`{id: reason}`); and the manifest the resolution was made from. A commit
-    stores the resolution and writes the manifest as it is."""
+    stores the resolution and writes the manifest as it is. `fetch` lets the
+    resolution fetch an uncached git parent; a preview leaves it off and only
+    reads the cache."""
     stored = effective.stored_documents(task_dir, manifest)
-    first = effective.resolve_live(root, manifest, slug, task_dir)
+    first = effective.resolve_live(root, manifest, slug, task_dir, fetch=fetch)
     if stored is None:
         return first, {}, manifest
     stale, entries = effective.stale_waivers(stored, first.details)
     if not entries:
         return first, {}, manifest
     adjusted = effective.without_entries(manifest, entries)
-    return (effective.resolve_live(root, adjusted, slug, task_dir),
+    return (effective.resolve_live(root, adjusted, slug, task_dir, fetch=fetch),
             effective.invalidated_records(stored, stale), adjusted)
 
 

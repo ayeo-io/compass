@@ -369,6 +369,30 @@ entries:
   project: with-compass-yml
   argv: ["policy", "migrate"]
   exit: 2
+# Added on purpose by git-parents: `policy lint --offline` is a new flag. 5.6.0
+# refused it as an unrecognised argument (exit 2). From 6.0.0 it lints from the
+# cache only and, in a project with no git parent, passes (exit 0).
+- id: policy-lint-offline
+  project: with-compass-yml
+  argv: ["policy", "lint", "--offline"]
+  exit: 0
+  stdout_contains: "PASS"
+# Added on purpose by git-parents: a compass.yml whose extends names a remote
+# ref with no sha now fails the lint (exit 1) and runs no git. 5.6.0 did not
+# read the file and exited 0.
+- id: policy-lint-git-parent-no-sha
+  project: with-git-parent-no-sha
+  argv: ["policy", "lint"]
+  exit: 1
+  stdout_contains: "L-PARENT-NO-SHA"
+# Added on purpose by git-parents: a pinned git parent that is not in the cache
+# fails with --offline (exit 1), because the run may not fetch. 5.6.0 did not
+# read the file and exited 0.
+- id: policy-lint-git-parent-uncached-offline
+  project: with-git-parent-uncached
+  argv: ["policy", "lint", "--offline"]
+  exit: 1
+  stdout_contains: "L-PARENT-NOT-CACHED"
 # Added on purpose by policy-update: `policy update` is a new verb. 5.6.0
 # refused it as an unknown choice (exit 2); from 6.0.0 a project already on
 # the only shipped major has nothing to move, writes nothing and exits 0.

@@ -401,6 +401,41 @@ def cmd_issue_artifact_path(args):
     return 0
 
 
+def _record_freshness(task, task_dir, path, entry):
+    """With the capability `artifact-freshness` on, stamp the entry with the
+    digests of its file and its upstream, and save. The lines to show; none
+    when the capability is off, so the verb is the same as before."""
+    from compass_pkg import effective, freshness
+
+    try:
+        view = effective.view_or_legacy(task_dir)
+    except Exception:  # noqa: BLE001 - an unreadable configuration records nothing
+        return []
+    if not freshness.stamp(view, task, task_dir, entry):
+        return []
+    save_manifest(task, path)
+    upstream = sorted(entry.get("upstream") or {})
+    return ["freshness: digest recorded"
+            + (" against %s" % ", ".join(upstream) if upstream else "")]
+
+
+def _refuse_unreadable(task, task_dir, kind):
+    """With the capability `artifact-freshness` on, refuse to register a
+    document that, or an upstream that, exists and cannot be read. Nothing is
+    saved: a status stored with no digest would leave the document untracked."""
+    from compass_pkg import effective, freshness
+
+    try:
+        view = effective.view_or_legacy(task_dir)
+    except Exception:  # noqa: BLE001 - an unreadable configuration records nothing
+        return
+    found = freshness.unreadable(view, task, task_dir, kind)
+    if found:
+        raise CompassError(
+            "%s cannot be read, so its digest cannot be recorded. Make the file "
+            "readable and register the document again." % ", ".join(found))
+
+
 def cmd_issue_artifact(args):
     """`compass issue artifact <kind> --status <s> [--reason ...]`.
 
@@ -448,15 +483,19 @@ def cmd_issue_artifact(args):
                 "that." % (rel, resolved, docs_dir(task_dir)))
         entry["path"] = rel.replace(os.sep, "/")
 
+    if args.status != "omitted":
+        _refuse_unreadable(task, task_dir, args.kind)
     entry["status"] = args.status
     if (args.reason or "").strip():
         entry["reason"] = args.reason.strip()
     task["artifacts"] = arts
     save_manifest(task, path)
+    recorded = _record_freshness(task, task_dir, path, entry)
     from compass_pkg.terminal import say
 
     return say(args, "compass issue artifact: %s -> %s" % (args.kind, args.status),
                detail=["reason: %s" % entry.get("reason", "(none recorded)")]
+               + recorded
                + [line for line in [stale_page_reminder(task_dir)] if line],
                kind=args.kind, status=args.status,
                reason=entry.get("reason"))

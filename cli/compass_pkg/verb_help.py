@@ -60,7 +60,7 @@ VERB_DESCRIPTIONS = {
     'intent ingest':
         'Read a brief that already exists - a local path or an https URL - write a snapshot of it and record where it came from. Fetches over https only: a document altered in transit would shape the acceptance criteria and everything after them. It does NOT write intent.md; reshaping the document is judgement, and happens in the session with questions asked where the source is thin.',
     'issue artifact':
-        "Set a document's status in the issue's review pack. Refuses a document the issue never earned, and an omission must carry a reason - an omission with no reason is indistinguishable from a document nobody got to.",
+        "Set a document's status in the issue's review pack. Refuses a document the issue never earned, and an omission must carry a reason - an omission with no reason is indistinguishable from a document nobody got to. With the capability artifact-freshness on, it also records the digest of the document's file and of each artifact the document depends on, so a later change to one of them marks the document stale; a document whose file has not changed keeps its old record.",
     'issue artifact-path':
         "Print where one of an issue's documents is, resolved through the artifact registry, and exit 0. Exit non-zero and print nothing when it is not there - a caller in bash reads the exit code before it reads the string. The two hooks call this: they are shell and cannot import the resolver, and a second path-resolution implementation in bash is how the shell half and the Python half stop agreeing about where a document lives.",
     'issue template':
@@ -132,7 +132,7 @@ VERB_DESCRIPTIONS = {
     'rework-scan':
         'Scan the archive for add-then-delete patterns across issues - a file added by one and removed by another inside the configured window. A signal for a person, not a gate.',
     'ship-commit':
-        "Commit an issue's recorded changed files and nothing else, so the commit matches what the manifest says the issue touched. Refuses to stage anything the issue never claimed. Takes the message with -m, or from a file with -F.",
+        "Commit an issue's recorded changed files and nothing else, so the commit matches what the manifest says the issue touched. Refuses to stage anything the issue never claimed. Takes the message with -m, or from a file with -F. With the capability artifact-freshness on, it also refuses while a document is stale, because an artifact it depends on changed after it was written.",
     'tdd-green':
         "Run a test command, require that it PASSES, record the green and clear the red marker. Each scenario's green has its own file.",
     'tdd-red':

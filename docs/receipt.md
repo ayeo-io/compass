@@ -71,6 +71,10 @@ The receipt lists owed follow-ups in a *Follow-ups* section and counts them in t
 
 When any list check is active, the receipt adds a *Stage lists* section before the verdict. It shows each entry and exit list with whether it is due, and each check with its state: `pass`, `fail`, `nothing-to-check` or `pending`. A deterministic check shows `pending`, because the receipt does not run checks. The shipped checks are active only where the capability `entry-exit-evaluation` is on, so a project that has not turned it on and added no list check gets no section (`docs/entry-exit-evaluation.md`).
 
+With the capability `artifact-freshness` on, the receipt adds an *Artifact freshness* section before the verdict. It shows each document that records the digests of its upstream as `fresh` or `stale`, with the artifact that changed. It adds nothing when no document is tracked, or when the capability is off (`docs/artifact-freshness.md`).
+
+The sections before the verdict run in this order: *Stage lists*, *Artifact freshness*, *Provenance*, then the conformance lines.
+
 ## Provenance
 
 An issue that runs against a stored generation (`docs/generation-store.md`) gets a *Provenance* section before the verdict. It names where each entry came from, so a reader can trace it to the file that set it. The title carries the generation number, because an issue runs against one generation.

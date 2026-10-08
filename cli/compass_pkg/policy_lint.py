@@ -45,6 +45,7 @@ FINDING_CODES = (
     "L-LOAD", "L-KEY-NOT-TEXT", "L-SCHEMA", "L-SETTINGS-KEY", "L-UNLOCK-PLACEMENT", "L-IMPL-UNKNOWN",
     "L-IMPL-TEMPLATED", "L-IGNORED-FILE",
     "M-REF-UNKNOWN", "M-WEIGHT-TIE", "M-HIT-MISSING", "M-HIT-DISALLOWED", "M-CYCLE",
+    "M-BOOKKEEPING-INPUT", "M-DIRECTORY-DEPENDENCY",
     "M-EFFECT-UNKNOWN",
     "K-LOCK-REFUSED", "K-UNLOCK-REFUSED", "K-UNPROVABLE",
     "E-EVALUATION",
@@ -403,6 +404,38 @@ def _cycles(state):
     return out
 
 
+def _artifact_inputs(state):
+    """What an artifact may not build on. A bookkeeping artifact is a record
+    the framework keeps about the work, so it is never an input. A name that
+    no artifact defines is `M-REF-UNKNOWN`'s to report and a cycle is
+    `M-CYCLE`'s, so neither is repeated here."""
+    catalogue = state["config"].get("artifacts") or {}
+    out = []
+    for artifact_id, entry in catalogue.items():
+        wanted = entry.get("depends_on") if isinstance(entry, dict) else None
+        if not isinstance(wanted, list):
+            continue
+        path = f"artifacts.{artifact_id}.depends_on"
+        bookkeeping = [d for d in wanted if isinstance(d, str)
+                       and isinstance(catalogue.get(d), dict)
+                       and catalogue[d].get("bookkeeping") is True]
+        if bookkeeping:
+            out.append(_finding(
+                "resolved", "M-BOOKKEEPING-INPUT", _layer_of(state, path), path,
+                f"{artifact_id} builds on {', '.join(bookkeeping)}, a bookkeeping "
+                f"artifact; a record the framework keeps is never an input"))
+        directories = [d for d in wanted if isinstance(d, str)
+                       and isinstance(catalogue.get(d), dict)
+                       and str(catalogue[d].get("file") or "").endswith("/")]
+        if directories:
+            out.append(_finding(
+                "resolved", "M-DIRECTORY-DEPENDENCY", _layer_of(state, path), path,
+                f"{artifact_id} builds on {', '.join(directories)}, a directory; an "
+                f"artifact builds on files, so name the artifacts or the evidence "
+                f"ids it cites"))
+    return out
+
+
 def _effect_targets(state):
     """The ids a rule's effects name, checked against the catalogue each
     effect points at (`EFFECT_TARGETS`), and the keys of a `then:` that are
@@ -436,7 +469,7 @@ def _resolved_group(state):
     out += _weight_ties(state) + _hit_policies(state)
     out += [_finding("resolved", code, _layer_of(state, path), path, message)
             for code, path, message in catalogue_check.check_vocabulary(state["config"])]
-    return out + _cycles(state)
+    return out + _artifact_inputs(state) + _cycles(state)
 
 
 EVALUATOR_LEAD = "the evaluator cannot read the configuration: "

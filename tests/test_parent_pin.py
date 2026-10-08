@@ -110,7 +110,7 @@ def test_gp_1_a_map_form_with_a_valid_from_loads_the_parent(tmp_path):
                                "approved_on": "2026-10-06"})
     code, report, err = _lint(root, env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
     assert code == 0, (report, err)
-    assert (_cache(root) / sha / "compass.yml").is_file()
+    assert (_folder(root, sha) / "compass.yml").is_file()
 
 
 def test_gp_1_the_map_form_is_read_through_from(tmp_path):
@@ -141,13 +141,18 @@ def _cache(root):
     return root / ".compass" / "cache" / "parents"
 
 
+def _folder(root, sha, owner="acme", repo="bank"):
+    """Where the cache keeps one commit of one repository."""
+    return _cache(root) / owner / repo / sha
+
+
 def test_gp_3_a_pinned_sha_is_fetched_into_the_cache_with_seen_yml(tmp_path):
     base = tmp_path / "remotes"
     sha = make_remote(base)
     root = _project(tmp_path, _ref(sha))
     code, report, err = _lint(root, env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
     assert code == 0, (report, err)
-    assert (_cache(root) / sha / "compass.yml").read_text(encoding="utf-8") \
+    assert (_folder(root, sha) / "compass.yml").read_text(encoding="utf-8") \
         == yaml.safe_dump(PARENT_DOC)
     seen = yaml.safe_load((_cache(root) / "seen.yml").read_text(encoding="utf-8"))
     entry = seen["refs"]["github:acme/bank@1.2.0"]
@@ -157,7 +162,8 @@ def test_gp_3_a_pinned_sha_is_fetched_into_the_cache_with_seen_yml(tmp_path):
     assert len(entry["fetched"]) == 20 and entry["fetched"].endswith("Z")
     ignored = (root / ".compass" / ".gitignore").read_text(encoding="utf-8").split()
     assert "cache/" in ignored
-    assert sorted(p.name for p in _cache(root).iterdir()) == sorted([sha, "seen.yml"])
+    assert sorted(p.name for p in _cache(root).iterdir()) == ["acme", "seen.yml"]
+    assert [p.name for p in (_cache(root) / "acme" / "bank").iterdir()] == [sha]
 
 
 def test_gp_3_a_commit_the_remote_does_not_have_is_a_fetch_refusal(tmp_path):
@@ -193,24 +199,25 @@ def test_gp_4_a_fetched_commit_that_is_not_the_pin_is_refused_and_not_cached(
         parents.resolve(root, _ref(sha), fetch=True)
     assert caught.value.code == "L-PARENT-SHA-MISMATCH"
     assert sha in str(caught.value) and "c" * 40 in str(caught.value)
-    assert not (_cache(root) / sha).exists()
+    assert not (_folder(root, sha)).exists()
     assert not [p for p in _cache(root).iterdir() if p.name.startswith(".fetch")]
     assert not (_cache(root) / "seen.yml").exists()
 
 
-# --- GP-6: a symlink in the fetched tree -------------------------------------------------
+# --- GP-6: a symlink as the parent file ----------------------------------------------------
 
 @pytest.mark.parametrize("where", ["link", "docs/deep/link"])
-def test_gp_6_a_symlink_anywhere_in_the_fetched_tree_is_refused(tmp_path, where):
+def test_gp_6_a_symlink_elsewhere_in_the_tree_is_not_read_and_does_not_refuse(tmp_path, where):
+    """Only the root `compass.yml` entry is read, so a link beside it is not
+    followed and is no reason to refuse."""
     base = tmp_path / "remotes"
     sha = make_remote(base, files={"compass.yml": yaml.safe_dump(PARENT_DOC),
                                    "docs/deep/readme.md": "x"},
                       symlink=(where, "/etc/passwd"))
     root = _project(tmp_path, _ref(sha))
-    code, report, _ = _lint(root, env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
-    assert code == 1
-    assert _codes(report) == ["L-PARENT-SYMLINK"], report
-    assert not (_cache(root) / sha).exists()
+    code, report, err = _lint(root, env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
+    assert code == 0, (report, err)
+    assert sorted(p.name for p in _folder(root, sha).iterdir()) == ["compass.yml"]
 
 
 def test_gp_6_a_compass_yml_that_is_a_symlink_is_refused(tmp_path):
@@ -327,7 +334,7 @@ def test_gp_7_a_cached_commit_folder_that_is_a_link_is_refused(tmp_path):
     root, sha, _ = _cached_project(tmp_path)
     outside = _outside(tmp_path)
     (outside / "compass.yml").write_text(yaml.safe_dump(PARENT_DOC), encoding="utf-8")
-    folder = _cache(root) / sha
+    folder = _folder(root, sha)
     for child in folder.iterdir():
         child.unlink()
     folder.rmdir()
@@ -341,7 +348,7 @@ def test_gp_7_a_cached_compass_yml_that_is_a_link_is_refused(tmp_path):
     root, sha, _ = _cached_project(tmp_path)
     outside = _outside(tmp_path)
     (outside / "real.yml").write_text(yaml.safe_dump(PARENT_DOC), encoding="utf-8")
-    target = _cache(root) / sha / "compass.yml"
+    target = _folder(root, sha) / "compass.yml"
     target.unlink()
     os.symlink(outside / "real.yml", target)
     _, report, _ = _lint(root, "--offline")
@@ -386,8 +393,9 @@ def test_gp_8_git_runs_with_an_argument_list_no_shell_and_restricted_protocols(
              for argv, _ in calls]
     assert "fetch" in verbs
     fetch = next(argv for argv, _ in calls if "fetch" in argv)
-    after = fetch[fetch.index("--") + 1:]
-    assert after == [f"{base}/acme/bank.git", sha], fetch
+    assert fetch[fetch.index("--") + 1:] == ["origin", sha], fetch
+    add = next(argv for argv, _ in calls if "remote" in argv)
+    assert add[add.index("--") + 1:] == [f"{base}/acme/bank.git"], add
     init = next(argv for argv, _ in calls if "init" in argv)
     assert "--template=" in init, "a template could copy hooks into the scratch repository"
 
@@ -424,8 +432,8 @@ def test_gp_8_variables_that_move_or_script_git_are_not_passed_on(tmp_path, monk
     parents._git(["status"], cwd=tmp_path, local=False)
     assert {k for k in seen if k.startswith("GIT_")} <= {
         "GIT_ALLOW_PROTOCOL", "GIT_TERMINAL_PROMPT", "GIT_ASKPASS", "GIT_SSL_CAINFO",
-        "GIT_CONFIG_GLOBAL", "GIT_CONFIG_NOSYSTEM"}
-    assert seen["GIT_TERMINAL_PROMPT"] == "0"
+        "GIT_CONFIG_GLOBAL", "GIT_CONFIG_NOSYSTEM", "GIT_NO_LAZY_FETCH"}
+    assert seen["GIT_TERMINAL_PROMPT"] == "0" and seen["GIT_NO_LAZY_FETCH"] == "1"
 
 
 @pytest.mark.parametrize("base", ["http://example.com", "ftp://example.com", "-oops",
@@ -601,7 +609,7 @@ def test_gp_12_assessing_an_issue_fetches_the_pin_and_stores_the_parent(tmp_path
     stored = yaml.safe_load((task_dir / "generations" / "1" / "versions.yml")
                             .read_text(encoding="utf-8"))
     assert stored["parents"][-1]["sha"] == sha
-    assert (_cache(root) / sha / "compass.yml").is_file()
+    assert (_folder(root, sha) / "compass.yml").is_file()
 
 
 def test_gp_12_checking_an_issue_never_fetches_an_uncached_pin(tmp_path):
@@ -630,7 +638,7 @@ def test_gp_14_a_short_sha_resolves_against_exactly_one_cached_commit(tmp_path):
 def test_gp_14_a_short_sha_that_names_two_cached_commits_is_ambiguous(tmp_path):
     root = _project(tmp_path, _ref("abcdef0"))
     for tail in ("1" * 33, "2" * 33):
-        folder = _cache(root) / ("abcdef0" + tail)
+        folder = _folder(root, "abcdef0" + tail)
         folder.mkdir(parents=True)
         (folder / "compass.yml").write_text(yaml.safe_dump(PARENT_DOC), encoding="utf-8")
     code, report, _ = _lint(root, "--offline")
@@ -662,7 +670,7 @@ def test_gp_3_a_repository_without_a_usable_compass_yml_is_refused(tmp_path, fil
     code, report, _ = _lint(root, env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
     assert code == 1
     assert _codes(report) == ["L-PARENT-CONTENT"], report
-    assert not (_cache(root) / sha).exists()
+    assert not (_folder(root, sha)).exists()
 
 
 def test_gp_3_a_submodule_in_place_of_compass_yml_is_not_a_parent_file(tmp_path):
@@ -751,3 +759,340 @@ def test_gp_15_seen_yml_and_the_versions_entry_have_the_pinned_keys(tmp_path):
     assert list(seen) == ["refs", "schema"] or sorted(seen) == ["refs", "schema"]
     assert sorted(seen["refs"]["github:acme/bank@1.2.0"]) == [
         "content_digest", "digests", "fetched", "sha", "version"]
+
+
+# --- GP-16: the README and security.md say the fetch happens -------------------------------------
+
+def test_gp_16_the_readme_lists_the_git_fetch_and_no_longer_says_it_has_one_web_request():
+    readme = _text("README.md")
+    section = readme.split("## What Compass runs, sends and fetches")[1].split("\n## ")[0]
+    flat = " ".join(section.split())
+    assert "only web request" not in flat
+    for needle in ("git parent", "compass policy lint", "compass policy effective",
+                   "compass approach evaluate --write", "never `compass check`", "--offline",
+                   "COMPASS_OFFLINE", "COMPASS_PARENT_REMOTE_BASE"):
+        assert needle in flat, needle
+
+
+def test_gp_16_security_says_a_parent_is_data_and_is_fetched():
+    doc = " ".join(_text("docs", "security.md").split())
+    assert "git parent" in doc and "is data" in doc and "fetch" in doc
+    assert "git-parents.md" in doc
+
+
+# --- GP-17: the cache is keyed by repository and sha -----------------------------------------------
+
+def test_gp_17_another_repository_never_loads_a_cached_commit(tmp_path):
+    root, sha, _ = _cached_project(tmp_path)
+    (root / "compass.yml").write_text(
+        yaml.safe_dump({"schema": 1, "extends": _ref(sha, owner="someone", repo="else")}),
+        encoding="utf-8")
+    bin_dir, log = fake_git(tmp_path)
+    code, report, _ = _lint(root, "--offline", env={"PATH": f"{bin_dir}:{REAL_GIT}"})
+    assert code == 1
+    assert _codes(report) == ["L-PARENT-NOT-CACHED"], report
+    assert not log.exists()
+
+
+def test_gp_17_a_short_sha_matches_cached_commits_of_the_same_repository_only(tmp_path):
+    root = _project(tmp_path, _ref("abcdef0", owner="other", repo="repo"))
+    folder = _folder(root, "abcdef0" + "1" * 33)
+    folder.mkdir(parents=True)
+    (folder / "compass.yml").write_text(yaml.safe_dump(PARENT_DOC), encoding="utf-8")
+    code, report, _ = _lint(root, "--offline")
+    assert code == 1
+    assert _codes(report) == ["L-PARENT-FORM"], report
+
+
+def test_gp_17_the_cache_keeps_a_commit_under_owner_repository_and_sha(tmp_path):
+    root, sha, _ = _cached_project(tmp_path)
+    assert (_cache(root) / "acme" / "bank" / sha / "compass.yml").is_file()
+    assert not (_cache(root) / sha).exists()
+
+
+# --- GP-18: what git sees ---------------------------------------------------------------------
+
+def test_gp_18_the_doc_says_the_users_credential_helper_runs_and_ci_needs_credentials():
+    doc = " ".join(_text("docs", "git-parents.md").split())
+    for needle in ("credential helper", "insteadOf", "GIT_CONFIG_GLOBAL", "GIT_ASKPASS",
+                   "CI", "ref label is not checked", "without warning"):
+        assert needle in doc, needle
+    assert "short list" not in doc
+
+
+def test_gp_18_git_receives_home_the_global_config_and_the_askpass_program(monkeypatch, tmp_path):
+    from compass_pkg import parents
+    monkeypatch.setenv("GIT_ASKPASS", "/bin/true")
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", "/tmp/x")
+    monkeypatch.setenv("HOME", "/tmp/h")
+    seen = {}
+
+    def spy(argv, **kwargs):
+        seen.update(kwargs["env"])
+        return subprocess.CompletedProcess(argv, 0, b"", b"")
+
+    monkeypatch.setattr(parents.subprocess, "run", spy)
+    parents._git(["status"], cwd=tmp_path, local=False)
+    assert (seen["GIT_ASKPASS"], seen["GIT_CONFIG_GLOBAL"], seen["HOME"]) \
+        == ("/bin/true", "/tmp/x", "/tmp/h")
+
+
+# --- GP-19: a partial fetch reads only the root entry --------------------------------------------
+
+def _spy_git(monkeypatch):
+    from compass_pkg import parents
+    calls = []
+    real = parents._git
+
+    def spy(argv, **kwargs):
+        calls.append(list(argv))
+        return real(argv, **kwargs)
+
+    monkeypatch.setattr(parents, "_git", spy)
+    return calls
+
+
+def test_gp_19_the_fetch_is_partial_and_only_the_root_entry_is_listed(tmp_path, monkeypatch):
+    from compass_pkg import parents
+    base = tmp_path / "remotes"
+    sha = make_remote(base, files={"compass.yml": yaml.safe_dump(PARENT_DOC),
+                                   "deep/er/file.txt": "x"})
+    root = _project(tmp_path, _ref(sha))
+    monkeypatch.setenv("COMPASS_PARENT_REMOTE_BASE", str(base))
+    calls = _spy_git(monkeypatch)
+    parents.resolve(root, _ref(sha), fetch=True)
+    fetch = next(c for c in calls if "fetch" in c)
+    assert any(a.startswith("--filter=blob:") for a in fetch), fetch
+    listing = next(c for c in calls if "ls-tree" in c)
+    assert "-r" not in listing and listing[-2:] == ["--", "compass.yml"], listing
+
+
+def test_gp_19_a_large_unrelated_file_is_not_fetched(tmp_path, monkeypatch):
+    from compass_pkg import parents
+    base = tmp_path / "remotes"
+    sha = make_remote(base, files={"compass.yml": yaml.safe_dump(PARENT_DOC),
+                                   "big.bin": "x" * (3 * 1024 * 1024)})
+    from parent_fixtures import _git
+    big = _git(base / "acme" / "bank.git", "rev-parse", "HEAD:big.bin")
+    small = _git(base / "acme" / "bank.git", "rev-parse", "HEAD:compass.yml")
+    root = _project(tmp_path, _ref(sha))
+    monkeypatch.setenv("COMPASS_PARENT_REMOTE_BASE", str(base))
+    real = parents._git
+    listed = {}
+
+    def spy(argv, **kwargs):
+        done = real(argv, **kwargs)
+        if "fetch" in argv:
+            missing = real(["rev-list", "--objects", "--missing=print", sha], **kwargs)
+            listed["missing"] = missing.stdout.decode()
+        return done
+
+    monkeypatch.setattr(parents, "_git", spy)
+    parents.resolve(root, _ref(sha), fetch=True)
+    missing = listed["missing"].split()
+    assert f"?{big}" in missing, "the large unrelated file was fetched"
+    assert f"?{small}" not in missing, "the parent file itself must arrive with the fetch"
+
+
+# --- GP-20: guards that the first plants missed ------------------------------------------------
+
+def test_gp_20_compass_yml_below_the_root_is_not_a_parent_file(tmp_path):
+    base = tmp_path / "remotes"
+    sha = make_remote(base, files={"sub/compass.yml": yaml.safe_dump(PARENT_DOC)})
+    root = _project(tmp_path, _ref(sha))
+    _, report, _ = _lint(root, env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
+    assert _codes(report) == ["L-PARENT-CONTENT"], report
+
+
+def test_gp_20_the_fetch_options_are_pinned(tmp_path, monkeypatch):
+    from compass_pkg import parents
+    base = tmp_path / "remotes"
+    sha = make_remote(base)
+    root = _project(tmp_path, _ref(sha))
+    monkeypatch.setenv("COMPASS_PARENT_REMOTE_BASE", str(base))
+    calls = _spy_git(monkeypatch)
+    parents.resolve(root, _ref(sha), fetch=True)
+    fetch = next(c for c in calls if "fetch" in c)
+    assert fetch[fetch.index("--depth") + 1] == "1"
+    assert "--no-recurse-submodules" in fetch and "--no-tags" in fetch
+
+
+def test_gp_20_the_fsck_option_reaches_git(monkeypatch, tmp_path):
+    from compass_pkg import parents
+    seen = {}
+
+    def spy(argv, **kwargs):
+        seen["argv"] = argv
+        return subprocess.CompletedProcess(argv, 0, b"", b"")
+
+    monkeypatch.setattr(parents.subprocess, "run", spy)
+    parents._git(["status"], cwd=tmp_path, local=False)
+    assert "transfer.fsckObjects=true" in seen["argv"]
+
+
+@pytest.mark.parametrize("repo", [".hidden", ".", "..", ".git"])
+def test_gp_20_a_repository_name_starting_with_a_dot_is_refused(repo):
+    from compass_pkg import parents
+    with pytest.raises(parents.ParentError) as caught:
+        parents.spec_of(f"github:acme/{repo}@1#{SHA}")
+    assert caught.value.code == "L-PARENT-FORM"
+
+
+def test_gp_20_the_content_digest_is_the_digest_of_the_cached_bytes(tmp_path):
+    import hashlib
+    root, sha, _ = _cached_project(tmp_path)
+    raw = (_folder(root, sha) / "compass.yml").read_bytes()
+    seen = yaml.safe_load((_cache(root) / "seen.yml").read_text(encoding="utf-8"))
+    assert seen["refs"]["github:acme/bank@1.2.0"]["content_digest"] \
+        == "sha256:" + hashlib.sha256(raw).hexdigest()
+
+
+@pytest.mark.parametrize("ref", ["a..b", "a//b", "a/", "a.", "a.lock", "a/b.lock"])
+def test_gp_20_an_unsound_ref_is_refused(ref):
+    from compass_pkg import parents
+    with pytest.raises(parents.ParentError) as caught:
+        parents.spec_of(f"github:acme/bank@{ref}#{SHA}")
+    assert caught.value.code == "L-PARENT-FORM"
+
+
+@pytest.mark.parametrize("ref", ["1.2.0", "v1.2.0", "feature/x-1", "a.b", "main"])
+def test_gp_20_a_sound_ref_is_accepted(ref):
+    from compass_pkg import parents
+    assert parents.spec_of(f"github:acme/bank@{ref}#{SHA}").ref == ref
+
+
+@pytest.mark.parametrize("ref,version", [
+    ("1.2.0", "1.2.0"), ("v1.2.0", "1.2.0"), ("1.2", "1.2"), ("3", "3"),
+    ("1.0.0-rc.1", "1.0.0-rc.1"), ("main", ""), ("1.2.3.4", ""), ("release-1.2.0", ""),
+    ("v", ""), ("1.2.0/extra", "")])
+def test_gp_20_the_version_is_the_ref_only_when_it_reads_as_one(ref, version):
+    from compass_pkg import parents
+    assert parents.version_of(ref) == version
+
+
+def test_gp_20_the_short_sha_filter_ignores_names_that_are_not_full_shas(tmp_path):
+    root = _project(tmp_path, _ref("abcdef0"))
+    good = _folder(root, "abcdef0" + "1" * 33)
+    good.mkdir(parents=True)
+    (good / "compass.yml").write_text(yaml.safe_dump(PARENT_DOC), encoding="utf-8")
+    for name in ("abcdef0" + "g" * 33, "abcdef0" + "2" * 32, "ABCDEF0" + "2" * 33):
+        (_folder(root, name)).mkdir(parents=True)
+    code, report, err = _lint(root, "--offline")
+    assert code == 0, (report, err)
+
+
+# --- GP-21: a failed read caches nothing, and a cache write race is safe --------------------------
+
+def _failing(monkeypatch, match, returncode=1):
+    from compass_pkg import parents
+    real = parents._git
+
+    def wrapper(argv, **kwargs):
+        if all(word in argv for word in match):
+            return subprocess.CompletedProcess(argv, returncode, b"", b"fatal: no")
+        return real(argv, **kwargs)
+
+    monkeypatch.setattr(parents, "_git", wrapper)
+
+
+@pytest.mark.parametrize("match", [["cat-file", "blob"], ["ls-tree"]])
+def test_gp_21_a_failed_cat_file_caches_nothing(tmp_path, monkeypatch, match):
+    from compass_pkg import parents
+    base = tmp_path / "remotes"
+    sha = make_remote(base)
+    root = _project(tmp_path, _ref(sha))
+    monkeypatch.setenv("COMPASS_PARENT_REMOTE_BASE", str(base))
+    _failing(monkeypatch, match)
+    with pytest.raises(parents.ParentError) as caught:
+        parents.resolve(root, _ref(sha), fetch=True)
+    assert caught.value.code == "L-PARENT-FETCH"
+    assert not _folder(root, sha).exists()
+    assert not (_cache(root) / "seen.yml").exists()
+
+
+def test_gp_21_a_destination_that_appears_during_the_write_is_fine_when_it_matches(
+        tmp_path, monkeypatch):
+    from compass_pkg import parents
+    base = tmp_path / "remotes"
+    sha = make_remote(base)
+    root = _project(tmp_path, _ref(sha))
+    monkeypatch.setenv("COMPASS_PARENT_REMOTE_BASE", str(base))
+    real = os.rename
+
+    def racing(source, target):
+        if os.path.basename(target) == sha:
+            os.makedirs(target)
+            Path(target, "compass.yml").write_text(yaml.safe_dump(PARENT_DOC), encoding="utf-8")
+        return real(source, target)
+
+    monkeypatch.setattr(parents.os, "rename", racing)
+    assert parents.resolve(root, _ref(sha), fetch=True).sha == sha
+    assert not [p for p in _cache(root).iterdir() if p.name.startswith(".fetch")]
+
+
+def test_gp_21_a_destination_that_appears_during_the_write_is_refused_when_it_differs(
+        tmp_path, monkeypatch):
+    from compass_pkg import parents
+    base = tmp_path / "remotes"
+    sha = make_remote(base)
+    root = _project(tmp_path, _ref(sha))
+    monkeypatch.setenv("COMPASS_PARENT_REMOTE_BASE", str(base))
+    real = os.rename
+
+    def racing(source, target):
+        if os.path.basename(target) == sha:
+            os.makedirs(target)
+            Path(target, "compass.yml").write_text("schema: 1\nowner: someone-else\n",
+                                                   encoding="utf-8")
+        return real(source, target)
+
+    monkeypatch.setattr(parents.os, "rename", racing)
+    with pytest.raises(parents.ParentError) as caught:
+        parents.resolve(root, _ref(sha), fetch=True)
+    assert caught.value.code == "L-PARENT-CACHE"
+
+
+def test_gp_21_a_tree_sha_in_place_of_a_commit_is_a_spelling_fault(tmp_path):
+    from parent_fixtures import _git
+    base = tmp_path / "remotes"
+    make_remote(base)
+    tree = _git(base / "acme" / "bank.git", "rev-parse", "HEAD^{tree}")
+    root = _project(tmp_path, _ref(tree))
+    code, report, _ = _lint(root, env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
+    assert code == 1
+    assert _codes(report) in (["L-PARENT-FORM"],), report
+    assert "commit" in report["findings"][0]["message"]
+
+
+# --- GP-22: a waiver in a git parent answers to the parent's owner --------------------------------
+
+def _chain_report(parent_owner, approver, project_owner="project-owner"):
+    from compass_pkg import layers, policy_lint
+    sys.path.insert(0, str(ROOT / "tests"))
+    import waiver_fixtures as fx
+    default, _ = policy_lint.load_parent()
+    doc = {"schema": 1, "checks": {"dor-summary-filled": {
+        "set": {"severity": "advisory"}, "waiver": fx.project_waiver(approved_by=approver)}}}
+    if parent_owner:
+        doc["owner"] = parent_owner
+    parent = layers.Layer("github:a/b@1#abc1234", "parent", doc,
+                          layers.layer_digest(doc, "parent"))
+    own = {"schema": 1, "owner": project_owner}
+    project = layers.Layer("project", "project", own, layers.layer_digest(own, "project"))
+    return policy_lint.lint_chain(default, project, extra_parents=[parent], today=fx.TODAY)
+
+
+def test_gp_22_the_parents_owner_may_approve_the_parents_waiver():
+    report = _chain_report("parent-owner", "parent-owner")
+    assert [f.code for f in report.findings if f.level == "error"] == []
+
+
+def test_gp_22_the_projects_owner_may_not_approve_the_parents_waiver():
+    report = _chain_report("parent-owner", "project-owner")
+    assert [(f.code, f.layer) for f in report.errors] \
+        == [("W-APPROVER-NOT-ALLOWED", "github:a/b@1#abc1234")]
+
+
+def test_gp_22_a_parent_with_no_owner_cannot_carry_a_waiver():
+    report = _chain_report(None, "project-owner")
+    assert [f.code for f in report.errors] == ["W-NO-OWNER"]

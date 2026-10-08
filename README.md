@@ -230,8 +230,17 @@ Compass works on your machine and in your repository. It reaches the network
 only in the cases below, and each one starts only when you ask for it.
 
 - **Fetches** a brief you name over HTTPS, with `compass intent ingest --from
-  <url>`. It is the CLI's only web request, and it refuses any scheme but
-  `https`, on redirects too.
+  <url>`. It refuses any scheme but `https`, on redirects too.
+- **Fetches** a git parent when the project's `extends:` names one
+  (`github:<owner>/<repo>@<ref>#<sha>`). It runs `git` for the one pinned
+  commit, reads its `compass.yml` as data, and caches it under
+  `.compass/cache/parents/`. Only `compass policy lint`, `compass policy
+  effective` and `compass approach evaluate --write` fetch, and only a commit
+  that is not cached yet; never `compass check`. `--offline` or
+  `COMPASS_OFFLINE=1` stops them fetching. `COMPASS_PARENT_REMOTE_BASE`
+  names a mirror in place of `https://github.com`. Git runs with your own git
+  configuration, so your credential helper runs
+  ([docs/git-parents.md](docs/git-parents.md)).
 - **Sends** your delivery record to a git repository you configure, with
   `compass record sync`, which `compass ship-commit` also runs. It happens
   only when `compass.yml` (or `.compass/config.yml` in a project without one)

@@ -37,6 +37,7 @@ def make_remote(base, owner="acme", repo="bank", files=None, symlink=None):
     path.mkdir(parents=True)
     _git(path, "init", "--quiet", "-b", "main")
     _git(path, "config", "uploadpack.allowAnySHA1InWant", "true")
+    _git(path, "config", "uploadpack.allowFilter", "true")
     files = {"compass.yml": yaml.safe_dump(PARENT_DOC)} if files is None else files
     for name, text in files.items():
         (path / name).parent.mkdir(parents=True, exist_ok=True)

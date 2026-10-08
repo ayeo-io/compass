@@ -569,7 +569,12 @@ def _waiver_findings(state, index, layer, parent_config, child_config):
     """`(findings, valid waivers)` for the waivers of one layer."""
     scope = "issue" if layer.kind == "issue" else "project"
     project = next((l.doc for l in state["chain"] if l.kind == "project"), None)
-    shipped = next((l.doc for l in state["chain"] if l.kind == "parent"), None)
+    # The layer above approves a waiver (ADR-039). For a git parent that is the
+    # layer before it, and its own `owner` is the fallback approver, never the
+    # project's.
+    shipped = state["chain"][index - 1].doc
+    if layer.kind == "parent":
+        project = layer.doc
     found, faults = waivers.find(layer.doc, scope)
     out = [_finding("classification", f.code, layer, f.waiver_id, f.message, f.level)
            for f in faults]

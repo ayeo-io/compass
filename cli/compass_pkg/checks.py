@@ -588,6 +588,52 @@ _DOD_ACCEPTED_EVIDENCE_TYPES = {
 }
 
 
+def dod_tag_problems(rest, ev_registry, backfills):
+    """The typed inline tag of an unchecked Definition of Done item, resolved.
+
+    `rest` is the text after the checkbox. Returns None when it carries no
+    evidence or follow-up tag, and otherwise the list of problems with the tag
+    (empty when it resolves). The second and third arguments map ids to the
+    manifest's evidence and follow-up entries. `dod-evidence-typed` and the
+    stage lists both call this, so a tag means one thing."""
+    ev_match = _EVIDENCE_TAG_RE.search(rest)
+    bf_match = _BACKFILL_TAG_RE.search(rest)
+    if not ev_match and not bf_match:
+        return None
+    problems = []
+    if ev_match:
+        ev_id = ev_match.group(1).strip()
+        entry = ev_registry.get(ev_id)
+        if not entry:
+            problems.append(
+                f"DoD item references evidence id '{ev_id}' which is not "
+                f"in manifest.yml evidence registry"
+            )
+        elif entry.get("type") not in _DOD_ACCEPTED_EVIDENCE_TYPES:
+            problems.append(
+                f"DoD item references evidence '{ev_id}' with type "
+                f"'{entry.get('type')}' which is not an accepted DoD "
+                f"evidence type"
+            )
+    if bf_match:
+        bf_id = bf_match.group(1).strip()
+        bf_entry = backfills.get(bf_id)
+        if not bf_entry:
+            problems.append(
+                f"DoD item references follow-up id '{bf_id}' which is not "
+                f"in manifest.yml follow-ups"
+            )
+        elif bf_entry.get("status") not in ("outstanding", "resolved"):
+            problems.append(
+                f"follow-up '{bf_id}' has unrecognised status "
+                f"'{bf_entry.get('status')}' (must be 'outstanding' "
+                "or 'resolved')"
+            )
+        # outstanding and resolved both pass here; resolving is a
+        # separate concern tracked by _check_backfills_paid
+    return problems
+
+
 def _check_dod_evidence_typed(task, task_dir):
     """Parse the DoD section of verification-report.md and enforce the
     inline-tag rule:
@@ -632,10 +678,8 @@ def _check_dod_evidence_typed(task, task_dir):
             continue
 
         # Unchecked - must have an inline tag
-        ev_match = _EVIDENCE_TAG_RE.search(rest)
-        bf_match = _BACKFILL_TAG_RE.search(rest)
-
-        if not ev_match and not bf_match:
+        tag_problems = dod_tag_problems(rest, ev_registry, backfills)
+        if tag_problems is None:
             # Bare unchecked - fails `G4` (evidence, not assertion)
             desc = rest.strip() or raw.strip()
             problems.append(
@@ -645,39 +689,7 @@ def _check_dod_evidence_typed(task, task_dir):
                 f"assertion."
             )
             continue
-
-        if ev_match:
-            ev_id = ev_match.group(1).strip()
-            entry = ev_registry.get(ev_id)
-            if not entry:
-                problems.append(
-                    f"DoD item references evidence id '{ev_id}' which is not "
-                    f"in manifest.yml evidence registry"
-                )
-            elif entry.get("type") not in _DOD_ACCEPTED_EVIDENCE_TYPES:
-                problems.append(
-                    f"DoD item references evidence '{ev_id}' with type "
-                    f"'{entry.get('type')}' which is not an accepted DoD "
-                    f"evidence type"
-                )
-            # else: passes
-
-        if bf_match:
-            bf_id = bf_match.group(1).strip()
-            bf_entry = backfills.get(bf_id)
-            if not bf_entry:
-                problems.append(
-                    f"DoD item references follow-up id '{bf_id}' which is not "
-                    f"in manifest.yml follow-ups"
-                )
-            elif bf_entry.get("status") not in ("outstanding", "resolved"):
-                problems.append(
-                    f"follow-up '{bf_id}' has unrecognised status "
-                    f"'{bf_entry.get('status')}' (must be 'outstanding' "
-                    "or 'resolved')"
-                )
-            # outstanding and resolved both pass here; resolving is a
-            # separate concern tracked by _check_backfills_paid
+        problems.extend(tag_problems)
 
     # Cross-issue check: scan sibling issues for follow-ups that
     # target this issue and are still outstanding. Use the directory name as the slug

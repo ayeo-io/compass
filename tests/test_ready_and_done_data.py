@@ -179,15 +179,20 @@ def test_rd_4_the_views_do_not_name_the_human_checks():
 
 def _owed_checks(preset: dict, approaches: dict, approach: str) -> list[str]:
     """The checks an approach owes through the stage lists: those on a list of
-    one of its stages whose required capabilities are all on. A stage list does
-    not depend on the stage's mode, so a spike's conclude mode lists them too."""
+    one of its stages whose required capabilities are all on and whose `when`
+    allows the approach (`ships` is the one key it reads here). A stage list
+    does not depend on the stage's mode, so a spike's conclude mode lists them
+    too."""
     capabilities = preset["preset"]["capabilities"]
+    ships = approaches[approach].get("ships", True)
     owed = []
     for stage in approaches[approach]["stages"]:
         body = preset["stages"].get(stage, {})
         for check_id in body.get("entry", []) + body.get("exit", []):
-            required = preset["checks"][check_id].get("requires", [])
-            if all(capabilities.get(c) for c in required):
+            check = preset["checks"][check_id]
+            if "ships" in check.get("when", {}) and check["when"]["ships"] != ships:
+                continue
+            if all(capabilities.get(c) for c in check.get("requires", [])):
                 owed.append(check_id)
     return owed
 
@@ -200,11 +205,16 @@ def test_rd_6_a_spike_owes_none_of_the_checks_while_the_capability_is_off():
     preset, approaches = load_preset(), _approaches()
     assert _owed_checks(preset, approaches, "spike") == []
     assert _owed_checks(preset, approaches, "regular") == []
-    # The gap is inert only while the capability is off: with it on, a spike
-    # owes the Definition of Done in conclude mode, which a later increment
-    # must exclude before turning evaluation on.
+    # With the capability on, a spike owes the Definition of Ready checks (each
+    # is not-applicable, because refine is skipped) and no Definition of Done
+    # check: each of those carries `when: {ships: true}`. A delivery owes all.
     planted = copy.deepcopy(preset)
     planted["preset"]["capabilities"][CAPABILITY] = True
+    assert sorted(_owed_checks(planted, approaches, "spike")) == sorted(READY_IDS)
+    assert sorted(_owed_checks(planted, approaches, "regular")) == sorted(READY_IDS + DONE_IDS)
+    # Without the condition a spike owes the Definition of Done again.
+    for check_id in DONE_IDS:
+        del planted["checks"][check_id]["when"]
     assert sorted(_owed_checks(planted, approaches, "spike")) == sorted(READY_IDS + DONE_IDS)
 
 

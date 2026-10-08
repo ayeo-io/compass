@@ -95,8 +95,19 @@ def _resolved_approach(approaches, name, seen=()):
     return merged
 
 
+#: Keys that evaluation derives for a check's `when` (`listing_assessment`).
+#: A dimension of the same name would be overwritten by the derived value, so
+#: a configuration may not define one.
+DERIVED_KEYS = ("ships",)
+
+
 def assessment_vocabulary(dimensions):
     vocabulary = {}
+    for name in DERIVED_KEYS:
+        if name in dimensions:
+            raise CompassError(
+                f"a dimension cannot be named '{name}': evaluation derives that "
+                f"key for a check's `when` from the approach")
     for name, dimension in dimensions.items():
         if dimension.get("type") in ("enum", "ordered-enum"):
             vocabulary[name] = list(dimension.get("values") or [])
@@ -526,10 +537,11 @@ def obligations(config, assessment, autonomy_values=AUTONOMY, capabilities=(),
     checks, gates = config.get("checks") or {}, config.get("gates") or {}
     approach = (config.get("approaches") or {}).get(result["delivery_approach"]) or {}
     review = list(result["gates"])
-    in_force = sorted(set(review) | set(_guardrail_gates(
-        gates, approach.get("ships", True), assessment, orders)))
-    # What a check's `when` reads: the assessment and whether the route ships.
+    # What a `when` of a check or a gate reads: the assessment and whether the
+    # route ships.
     reading = listing_assessment(assessment, approach)
+    in_force = sorted(set(review) | set(_guardrail_gates(
+        gates, approach.get("ships", True), reading, orders)))
 
     entry, exit_ = {}, {}
     for stage, body in (config.get("stages") or {}).items():

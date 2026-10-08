@@ -65,7 +65,7 @@ def test_dpr_5_the_protocol_answers_the_rehearsal_gaps():
 def test_dpr_5_every_command_it_gives_runs_as_written():
     text = _flat(PROTOCOL)
     # Registering a document needs a status.
-    assert "compass issue artifact <kind> --status draft --path <path>" in text
+    assert "compass issue artifact set <kind> --status draft --path <path>" in text
     # A repeated --finding keeps only the last, so each gets its own call.
     assert "one call per finding" in text
     # Only the try flag counts a try.

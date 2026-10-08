@@ -59,7 +59,7 @@ is now measured from the project root.
 
 An issue written under 4.x keeps working without any change: a bare
 filename still resolves beside the manifest, and the CLI says when it used
-that fallback. To move the documents, run `compass issue migrate`. It refuses when
+that fallback. To move the documents, run `compass migrate` (`compass issue migrate` from 6.0.0). It refuses when
 git holds no copy of the work directory, and `--i-have-a-copy` tells it you
 have taken one yourself.
 

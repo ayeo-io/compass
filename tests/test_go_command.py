@@ -29,7 +29,7 @@ GIT = ["git", "-c", "user.email=t@example.com", "-c", "user.name=t"]
 def test_go_is_a_command_that_assesses_shows_the_view_and_continues():
     text = (ROOT / "commands" / "go.md").read_text(encoding="utf-8")
     for step in ("compass init", "compass quick-fix start",
-                 "compass approach summary --issue <slug>", "/compass:assess",
+                 "compass approach show --issue <slug>", "/compass:assess",
                  "--no-commit"):
         assert step in text, step
     assert len(text.split()) < 700, len(text.split())

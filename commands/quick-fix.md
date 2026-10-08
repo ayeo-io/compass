@@ -63,7 +63,7 @@ that appears unannounced gets deleted by hand or committed by accident.
 
 If the approach is heavier than a quick fix, it stops and says so. Continue
 with `/compass:assess`: the manifest holds the values and the approach,
-and the reasons go into its approach record.
+and reasons go into its approach record.
 
 ## 2. Red
 

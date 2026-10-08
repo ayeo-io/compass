@@ -10,8 +10,10 @@ Staleness is computed, never stored. A document is stale when:
 
 - an artifact it depends on has other bytes now than the one recorded, is
   missing now, or was missing when the document was written and is there now;
+- or an artifact it depends on has a file that cannot be read now;
 - or an artifact it depends on is stale itself, so staleness passes down the
-  graph.
+  graph, through tracked documents only;
+- or its own `upstream` record is not a map, which fails closed.
 
 A document with no `upstream` record is not tracked, so a project that turns
 the capability on has nothing stale until its documents are written again.
@@ -65,8 +67,28 @@ def graph(view):
     return found
 
 
+#: What `_digest` gives for a file that exists and cannot be read. It is not a
+#: digest, so it never equals a recorded one: the reader reports the document as
+#: stale instead of failing.
+UNREADABLE = "unreadable"
+
+
 def _digest(task, task_dir, artifact_id):
-    return review_records.file_digest(review_records.input_path(task, task_dir, artifact_id))
+    try:
+        return review_records.file_digest(
+            review_records.input_path(task, task_dir, artifact_id))
+    except OSError:
+        return UNREADABLE
+
+
+def unreadable(view, task, task_dir, kind):
+    """The ids among `kind` and the artifacts it depends on whose file exists
+    and cannot be read. Empty when the capability is off. `compass issue
+    artifact` refuses to record a document while any is unreadable."""
+    if not enabled(view):
+        return []
+    return [one for one in [kind, *(graph(view).get(kind) or [])]
+            if _digest(task, task_dir, one) == UNREADABLE]
 
 
 def stamp(view, task, task_dir, entry):
@@ -77,7 +99,7 @@ def stamp(view, task, task_dir, entry):
     holds an `upstream` record, is left alone: registering a document again
     without changing it must not refresh its upstream, or any registration
     would clear staleness."""
-    if not enabled(view) or entry.get("status") == "omitted":
+    if not enabled(view):
         return False
     kind = entry.get("kind")
     own = _digest(task, task_dir, kind)
@@ -125,7 +147,9 @@ def _moved(recorded, deps, task, task_dir):
         before, after = recorded.get(one), _digest(task, task_dir, one)
         if before == after:
             continue
-        if after is None:
+        if after == UNREADABLE:
+            found.append(f"{one} cannot be read now")
+        elif after is None:
             found.append(f"{one} is missing now")
         elif before is None:
             found.append(f"{one} was not recorded when this was written")
@@ -152,9 +176,14 @@ def evaluate(view, task, task_dir):
     tracked = {}
     for entry in task.get("artifacts") or []:
         if (isinstance(entry, dict) and entry.get("kind") in deps and deps[entry["kind"]]
-                and entry.get("status") != "omitted" and isinstance(entry.get("upstream"), dict)):
+                and entry.get("status") != "omitted" and "upstream" in entry):
             tracked[entry["kind"]] = entry
-    reasons = {kind: _moved(entry["upstream"], deps[kind], task, task_dir)
+    # An `upstream` record that is not a map cannot be compared, so the document
+    # is stale: a document that fails to say what it was written against must
+    # not land.
+    reasons = {kind: (_moved(entry["upstream"], deps[kind], task, task_dir)
+                      if isinstance(entry["upstream"], dict)
+                      else ["upstream record is not a map"])
                for kind, entry in tracked.items()}
     stale = {kind for kind, found in reasons.items() if found}
     changed = True
@@ -168,12 +197,13 @@ def evaluate(view, task, task_dir):
     for kind in stale:
         reasons[kind] = reasons[kind] + [f"{one} is stale" for one in deps[kind]
                                          if one in stale and one != kind]
-    order, reached = stage_lists._positions(view, task, task_dir)
+    order, reached = stage_lists.positions(view, task, task_dir)
     findings = []
     for kind in tracked:
         index, label = _blocks(kind, order)
         findings.append(Finding(kind, kind in stale, tuple(reasons[kind]), label,
-                                reached >= index, tuple(sorted(tracked[kind]["upstream"]))))
+                                reached >= index, tuple(sorted(tracked[kind]["upstream"]))
+                                if isinstance(tracked[kind]["upstream"], dict) else ()))
     return findings
 
 

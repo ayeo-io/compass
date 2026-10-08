@@ -269,9 +269,12 @@ def _stale_entry(task: dict, task_dir: str, stage: str) -> list:
         view = effective.view_or_legacy(task_dir)
         if not freshness.enabled(view):
             return []
-        return freshness.unmet_entry(freshness.evaluate(view, task, task_dir), stage)
     except Exception:  # noqa: BLE001 - the stage line is the answer; this is extra
         return []
+    try:
+        return freshness.unmet_entry(freshness.evaluate(view, task, task_dir), stage)
+    except Exception:  # noqa: BLE001 - with the capability on, a record that cannot be read fails closed
+        return ["artifact freshness cannot be evaluated"] if stage in freshness.CONSUMES else []
 
 
 def _emit(args, task, task_dir, line, current_phase, finished):

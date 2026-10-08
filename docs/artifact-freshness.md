@@ -75,14 +75,21 @@ document that records `upstream` is stale when:
 - an artifact it depends on has no file now (`<id> is missing now`);
 - an artifact it depends on had no recorded digest when the document was
   written and has a file now (`<id> was not recorded when this was written`);
+- an artifact it depends on has a file that cannot be read now
+  (`<id> cannot be read now`);
 - an artifact it depends on is stale itself (`<id> is stale`). Staleness
   passes down the graph, so a change to an acceptance criterion makes the
-  design stale, and the verification report that depends on the design.
+  design stale, and the verification report that depends on the design;
+- its own `upstream` record is not a map (`upstream record is not a map`).
+  A record that cannot be compared fails closed.
 
 A document with no `upstream` record is not tracked. A project that turns the
 capability on has nothing stale until its documents are written again.
-Rewriting a middle document does not clear the one below it, which recorded
-the middle document's old digest.
+Staleness passes down only through tracked documents. If a middle document
+has no `upstream` record, a change above it leaves the document below it
+fresh, because the middle document is never stale. Rewriting a middle
+document does not clear the one below it, which recorded the middle
+document's old digest.
 
 ## What a stale document blocks
 
@@ -133,8 +140,14 @@ compass: compass ship-commit: refusing to land - 1 artifact(s) are stale:
 - `digest` and `upstream` are ordinary manifest data. A hand edit of them
   defeats the check, as a hand edit of `gates:` does. Compass does not
   protect either from a person who edits the manifest.
-- If the configuration cannot be read while the capability is on,
-  `compass issue artifact` records nothing.
+- If the configuration cannot be read, `compass issue artifact` records
+  nothing and still saves the status.
+- `compass issue artifact` refuses, and saves nothing, when the document or
+  an artifact it depends on has a file that cannot be read. It names the
+  files.
+- If freshness cannot be evaluated while the capability is on, `compass
+  ship-commit` refuses to land and says why, the receipt says so in its
+  section, and `compass next` names it at a stage that consumes a document.
 - The stages that consume documents are fixed in the code.
 - A check result is not marked stale. A judged check already fails when its
   inputs change (see `docs/judged-checks.md`).

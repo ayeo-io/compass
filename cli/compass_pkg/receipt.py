@@ -531,9 +531,14 @@ def _receipt_freshness(task, task_dir):
     from compass_pkg import effective, freshness
     try:
         view = effective.view_or_legacy(task_dir)
-        findings = freshness.evaluate(view, task, task_dir)
+        enabled = freshness.enabled(view)
     except Exception:  # noqa: BLE001 - the receipt reports what it can
         return []
+    try:
+        findings = freshness.evaluate(view, task, task_dir)
+    except Exception as exc:  # noqa: BLE001 - with the capability on, say it cannot be read
+        return ["Artifact freshness", "------------------",
+                _receipt_truncate(f"  cannot be evaluated: {exc}")] if enabled else []
     if not findings:
         return []
     lines = ["Artifact freshness", "------------------"]

@@ -66,7 +66,11 @@ def _refuse_stale_artifacts(task, task_dir):
         return
     if not freshness.enabled(view):
         return
-    text = freshness.refusal(freshness.evaluate(view, task, task_dir))
+    try:
+        text = freshness.refusal(freshness.evaluate(view, task, task_dir))
+    except Exception as exc:  # noqa: BLE001 - a record that cannot be read must not land
+        raise CompassError("compass ship-commit: refusing to land - artifact freshness "
+                           "cannot be evaluated: %s" % exc)
     if text:
         raise CompassError(text)
 

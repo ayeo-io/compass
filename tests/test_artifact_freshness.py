@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -344,7 +345,7 @@ def test_fresh_9_a_document_registered_before_the_capability_is_not_stale(tmp_pa
     assert all(r["status"] != "fail" for r in rows.values()), rows
 
 
-# --- rules the first tests left unguarded --------------------------------------------------
+# --- rules of the records: omission, missing upstream, depends_on, unreadable record -------
 
 def test_fresh_3_an_upstream_that_appeared_after_writing_is_stale(tmp_path):
     root, task_dir = _scene(tmp_path, phase="implement", write=False)
@@ -451,3 +452,177 @@ def test_fresh_6_the_refusal_exits_2_and_shows_its_prefix(tmp_path):
     code, out, err = _run(root, "ship-commit", "--issue", SLUG, "-m", "land it")
     assert code == 2, (code, out, err)
     assert err.startswith("compass: compass ship-commit: refusing to land - 2 artifact(s) are stale:"), err
+
+
+# --- fail closed: a malformed record, an unreadable file, an unreadable configuration ------
+
+def _set_upstream(task_dir, kind, value):
+    body = _manifest(task_dir)
+    for entry in body["artifacts"]:
+        if entry["kind"] == kind:
+            entry["upstream"] = value
+    (task_dir / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
+
+
+def _unreadable(path):
+    # A file the owner cannot read. The tests skip as the superuser, who can.
+    if os.geteuid() == 0:
+        import pytest
+        pytest.skip("the superuser reads a file of mode 000")
+    os.chmod(path, 0)
+
+
+def test_fresh_3_an_upstream_record_that_is_not_a_map_is_stale_and_blocks_land(tmp_path):
+    root, task_dir = _landing_scene(tmp_path)
+    _set_upstream(task_dir, "technical-design", "acceptance-criteria")
+    _write(task_dir, "acceptance-criteria", CRITERIA + "changed\n")
+    code, rows, out = _check(root)
+    row = rows["technical-design"]
+    assert row["status"] == "fail" and "upstream record is not a map" in row["detail"], rows
+    head = _git(root, "rev-parse", "HEAD")
+    code, out, err = _run(root, "ship-commit", "--issue", SLUG, "-m", "land it")
+    assert code == 2, (code, out, err)
+    assert "technical-design: upstream record is not a map" in err, err
+    assert _git(root, "rev-parse", "HEAD") == head
+
+
+def test_fresh_3_an_unreadable_upstream_file_is_stale_in_check_and_next(tmp_path):
+    root, task_dir = _scene(tmp_path, phase="implement")
+    _unreadable(task_dir / "acceptance-criteria.md")
+    try:
+        code, rows, out = _check(root)
+        row = rows["technical-design"]
+        assert row["status"] == "fail", rows
+        assert "acceptance-criteria cannot be read" in row["detail"], row
+        assert code == 1
+        text = _run(root, "next", "--issue", SLUG)[1]
+        assert "entry not met: technical-design is stale" in text, text
+    finally:
+        os.chmod(task_dir / "acceptance-criteria.md", 0o644)
+
+
+def test_fresh_6_an_unreadable_upstream_file_refuses_land_with_a_message(tmp_path):
+    root, task_dir = _landing_scene(tmp_path)
+    _unreadable(task_dir / "acceptance-criteria.md")
+    try:
+        head = _git(root, "rev-parse", "HEAD")
+        code, out, err = _run(root, "ship-commit", "--issue", SLUG, "-m", "land it")
+        assert code == 2, (code, out, err)
+        assert "Traceback" not in err, err
+        assert "technical-design: acceptance-criteria cannot be read" in err, err
+        assert _git(root, "rev-parse", "HEAD") == head
+    finally:
+        os.chmod(task_dir / "acceptance-criteria.md", 0o644)
+
+
+def test_fresh_8_an_unreadable_upstream_file_shows_in_the_receipt(tmp_path):
+    root, task_dir = _scene(tmp_path, phase="ship")
+    _unreadable(task_dir / "acceptance-criteria.md")
+    try:
+        code, out, err = _run(root, "issue", "receipt", "--issue", SLUG)
+        assert "Artifact freshness" in out, (out, err)
+        assert "acceptance-criteria cannot be read" in out, out
+    finally:
+        os.chmod(task_dir / "acceptance-criteria.md", 0o644)
+
+
+def test_fresh_2_registering_an_unreadable_document_is_refused_before_it_is_saved(tmp_path):
+    root, task_dir = _scene(tmp_path)
+    before = _entry(task_dir, "technical-design")
+    _unreadable(task_dir / "technical-design.md")
+    try:
+        code, out, err = _run(root, "issue", "artifact", "technical-design", "--status",
+                              "approved", "--issue", SLUG)
+    finally:
+        os.chmod(task_dir / "technical-design.md", 0o644)
+    assert code != 0, out + err
+    assert "Traceback" not in err, err
+    assert "technical-design cannot be read" in err, err
+    assert _entry(task_dir, "technical-design") == before
+
+
+def test_fresh_2_registering_against_an_unreadable_upstream_is_refused_before_it_is_saved(tmp_path):
+    root, task_dir = _scene(tmp_path)
+    before = _entry(task_dir, "technical-design")
+    _unreadable(task_dir / "acceptance-criteria.md")
+    try:
+        code, out, err = _run(root, "issue", "artifact", "technical-design", "--status",
+                              "approved", "--issue", SLUG)
+    finally:
+        os.chmod(task_dir / "acceptance-criteria.md", 0o644)
+    assert code != 0, out + err
+    assert "acceptance-criteria cannot be read" in err, err
+    assert _entry(task_dir, "technical-design") == before
+
+
+def test_fresh_2_an_unreadable_configuration_records_nothing(tmp_path):
+    root, task_dir = _scene(tmp_path, write=False)
+    _write(task_dir, "acceptance-criteria", CRITERIA)
+    (task_dir / "generations" / "1" / "resolved.yml").write_text(": [unbalanced\n", encoding="utf-8")
+    code, out, err = _run(root, "issue", "artifact", "acceptance-criteria", "--status", "draft",
+                          "--issue", SLUG)
+    assert code == 0, out + err
+    entry = _entry(task_dir, "acceptance-criteria")
+    assert entry["status"] == "draft"
+    assert "digest" not in entry and "upstream" not in entry, entry
+    assert "freshness" not in out
+
+
+# --- staleness through more than one document ----------------------------------------------
+
+def test_fresh_4_staleness_passes_up_a_chain_that_runs_against_the_registry_order(tmp_path):
+    # The registry lists acceptance-criteria first and the verification report
+    # last, and the chain runs the other way: the report changes, the map
+    # depends on it, the design on the map, the criteria on the design. One
+    # walk of the registry in order marks only the map and the design.
+    graph = {"distribution-map": {"set": {"depends_on": ["verification-report"]}},
+             "technical-design": {"set": {"depends_on": ["distribution-map"]}},
+             "acceptance-criteria": {"set": {"depends_on": ["technical-design"]}}}
+    root, task_dir = _scene(tmp_path, graph=graph, phase="implement", write=False)
+    for kind, text in (("verification-report", REPORT), ("distribution-map", "# Map\n"),
+                       ("technical-design", DESIGN), ("acceptance-criteria", CRITERIA)):
+        _write(task_dir, kind, text)
+    for kind in ("distribution-map", "technical-design", "acceptance-criteria"):
+        _register(root, kind)
+    kinds = [a["kind"] for a in _manifest(task_dir)["artifacts"]]
+    assert kinds.index("acceptance-criteria") < kinds.index("technical-design") \
+        < kinds.index("distribution-map") < kinds.index("verification-report"), kinds
+    _write(task_dir, "verification-report", REPORT + "changed\n")
+    rows = _check(root)[1]
+    assert "verification-report changed" in rows["distribution-map"]["detail"], rows
+    assert "distribution-map is stale" in rows["technical-design"]["detail"], rows
+    assert "technical-design is stale" in rows["acceptance-criteria"]["detail"], rows
+
+
+def test_fresh_4_a_middle_document_with_no_upstream_record_stops_staleness(tmp_path):
+    root, task_dir = _scene(tmp_path, phase="implement")
+    _set_upstream(task_dir, "technical-design", None)
+    body = _manifest(task_dir)
+    for entry in body["artifacts"]:
+        if entry["kind"] == "technical-design":
+            entry.pop("upstream")
+    (task_dir / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
+    _write(task_dir, "acceptance-criteria", CRITERIA + "changed\n")
+    rows = _check(root)[1]
+    assert "technical-design" not in rows, rows
+    assert rows["verification-report"]["detail"].startswith("fresh"), rows
+
+
+def test_fresh_6_a_record_that_cannot_be_evaluated_fails_closed_in_every_reader(tmp_path):
+    # A digest recorded as a number cannot be compared. ship-commit refuses and says
+    # why, the receipt says so in its section and next names it at implement.
+    root, task_dir = _landing_scene(tmp_path)
+    _set_upstream(task_dir, "technical-design", {"acceptance-criteria": 5})
+    _write(task_dir, "acceptance-criteria", CRITERIA + "changed\n")
+    head = _git(root, "rev-parse", "HEAD")
+    code, out, err = _run(root, "ship-commit", "--issue", SLUG, "-m", "land it")
+    assert code == 2, (code, out, err)
+    assert "Traceback" not in err and "artifact freshness cannot be evaluated" in err, err
+    assert _git(root, "rev-parse", "HEAD") == head
+    out = _run(root, "issue", "receipt", "--issue", SLUG)[1]
+    assert "Artifact freshness" in out and "cannot be evaluated" in out, out
+    body = _manifest(task_dir)
+    body["current_phase"] = "implement"
+    (task_dir / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
+    text = _run(root, "next", "--issue", SLUG)[1]
+    assert "entry not met: artifact freshness cannot be evaluated" in text, text

@@ -419,6 +419,23 @@ def _record_freshness(task, task_dir, path, entry):
             + (" against %s" % ", ".join(upstream) if upstream else "")]
 
 
+def _refuse_unreadable(task, task_dir, kind):
+    """With the capability `artifact-freshness` on, refuse to register a
+    document that, or an upstream that, exists and cannot be read. Nothing is
+    saved: a status stored with no digest would leave the document untracked."""
+    from compass_pkg import effective, freshness
+
+    try:
+        view = effective.view_or_legacy(task_dir)
+    except Exception:  # noqa: BLE001 - an unreadable configuration records nothing
+        return
+    found = freshness.unreadable(view, task, task_dir, kind)
+    if found:
+        raise CompassError(
+            "%s cannot be read, so its digest cannot be recorded. Make the file "
+            "readable and register the document again." % ", ".join(found))
+
+
 def cmd_issue_artifact(args):
     """`compass issue artifact <kind> --status <s> [--reason ...]`.
 
@@ -466,6 +483,8 @@ def cmd_issue_artifact(args):
                 "that." % (rel, resolved, docs_dir(task_dir)))
         entry["path"] = rel.replace(os.sep, "/")
 
+    if args.status != "omitted":
+        _refuse_unreadable(task, task_dir, args.kind)
     entry["status"] = args.status
     if (args.reason or "").strip():
         entry["reason"] = args.reason.strip()

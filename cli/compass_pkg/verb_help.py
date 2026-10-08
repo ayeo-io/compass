@@ -72,7 +72,7 @@ VERB_DESCRIPTIONS = {
     'issue lint':
         'Structurally validate an issue manifest against the schema and report every problem at once, naming the key that is wrong rather than the line. An issue that has not started is not asked for an assessment it cannot have.',
     'issue receipt':
-        'Render a one-screen account of a landed issue: the four-dimension assessment, the approach computed from it, the gates it cleared and the typed evidence each was cleared with. A view over what is recorded, not a re-run of the checks. With the capability entry-exit-evaluation on, it adds a Stage lists section that shows each entry and exit list and the state of each check.',
+        'Render a one-screen account of a landed issue: the four-dimension assessment, the approach computed from it, the gates it cleared and the typed evidence each was cleared with. A view over what is recorded, not a re-run of the checks. With the capability entry-exit-evaluation on, it adds a Stage lists section that shows each entry and exit list and the state of each check. An issue with a stored generation also gets a Provenance section that names the layer, version and generation behind each fired rule, check, lock, unlock and waiver.',
     'issue set-status':
         'Record an issue as queued, active, parked, landed or abandoned. Only landed makes its scenarios eligible for the derived system spec, so no other value can silently acquire that.',
     'migrate':

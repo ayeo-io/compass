@@ -241,6 +241,35 @@ entries:
   project: quick-fix-started
   argv: ["scenario", "add", "TRC-001", "--intent", "INT-1"]
   exit: 2
+# Added on purpose by scenario-tests-verb: `scenario tests` is a new verb. 5.6.0
+# refused it as an unknown choice (exit 2); from 6.0.0 it replaces the tests a
+# scenario declares and exits 0.
+- id: scenario-tests-valid
+  project: quick-fix-started
+  argv: ["scenario", "tests", "TRC-001", "--test", "README.md"]
+  exit: 0
+  stdout_contains: "now declares 1 test"
+# Added on purpose by scenario-tests-verb: an unknown scenario exits 2. 5.6.0
+# also exited 2, for the unknown verb, so this guards that the new verb keeps
+# refusing a scenario the issue does not define.
+- id: scenario-tests-unknown-scenario
+  project: quick-fix-started
+  argv: ["scenario", "tests", "TRC-999", "--test", "README.md"]
+  exit: 2
+# Added on purpose by scenario-tests-verb: a test id that is not on disk exits
+# 2. 5.6.0 also exited 2, for the unknown verb, so this guards that the new verb
+# refuses an id that `declared-tests-resolve` would fail.
+- id: scenario-tests-unresolved
+  project: quick-fix-started
+  argv: ["scenario", "tests", "TRC-001", "--test", "tests/test_greeting.py::test_hello"]
+  exit: 2
+# Added on purpose by scenario-tests-verb: a call with no --test exits 2. 5.6.0
+# also exited 2, for the unknown verb, so this guards that the new verb does not
+# clear a scenario's declared tests.
+- id: scenario-tests-no-test
+  project: quick-fix-started
+  argv: ["scenario", "tests", "TRC-001"]
+  exit: 2
 - id: follow-up-resolve-unknown
   project: quick-fix-started
   argv: ["follow-up", "resolve", "FU-1", "--issue", "greet"]

@@ -25,6 +25,8 @@ VERB_DESCRIPTIONS = {
         "Trace a file this issue changed to the scenario that asked for it. The traceability guardrail is maintained as the work happens rather than reconstructed at the end - a chain assembled afterwards records what someone remembered.",
     'scenario add':
         "Add a scenario to the manifest, mirroring the prose in acceptance-criteria.md. The manifest's copy is what compass check reads, so a scenario that exists only in prose is one nothing can verify.",
+    'scenario tests':
+        "Replace the tests a scenario declares in the manifest, for the case where a declared test id went wrong, such as a test renamed for a good reason. It takes only a test id that `declared-tests-resolve` in compass check would accept, and refuses an unknown scenario, no --test, and an id that does not resolve or is marked skipped. It appends a line naming the old tests, the new tests and --reason to devlog.md when the issue has one. A green recorded before the change does not cover a test file the scenario did not declare before: compass ship-commit refuses it until compass tdd-green runs again.",
     'acceptance record':
         'Close an acceptance record with what was actually observed. The pair exists so work without a natural red still leaves evidence a reader can weigh.',
     'acceptance start':

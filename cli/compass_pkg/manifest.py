@@ -37,6 +37,8 @@ from compass_pkg.terminal import say
 from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, normalize_spine, now_iso, resolve_issue_dir, save_manifest
 from compass_pkg.issue_layout import docs_dir_for
 from compass_pkg.binding import changes_paths, declared_test_paths, _changes_id_at, _newest_bound_record
+# The resolver `declared-tests-resolve` uses, so the verb accepts what the check accepts.
+from compass_pkg.test_ids import _test_id_resolves, _test_is_skipped
 
 
 
@@ -780,6 +782,67 @@ def cmd_scenario_add(args):
     return say(args, f"compass scenario add: {args.scenario_id} added.",
                scenario=args.scenario_id, intent=getattr(args, "intent", None),
                tests=list(args.test or []))
+
+
+def _test_refusal(test_id, project_root):
+    """Why `declared-tests-resolve` would fail this test id, or None."""
+    resolves = _test_id_resolves(test_id, project_root)
+    if resolves is False:
+        return "does not resolve to a test on disk"
+    if resolves and _test_is_skipped(test_id, project_root):
+        return "resolves but is marked skipped, so it never runs"
+    return None
+
+
+def cmd_scenario_tests(args):
+    """Replace the tests a scenario declares. It takes only ids that
+    `declared-tests-resolve` accepts, so a wrong id is corrected here
+    instead of by a hand edit of manifest.yml."""
+    given = [t.strip() for t in (args.test or []) if t and t.strip()]
+    if not given:
+        raise CompassError("compass scenario tests: give the scenario's tests with "
+                           "--test <path::name> (repeatable).")
+    task_dir = resolve_issue_dir(args.task)
+    task, task_path = load_manifest(task_dir)
+    scn = next((s for s in (task.get("scenarios") or [])
+                if isinstance(s, dict) and s.get("id") == args.scenario_id), None)
+    if scn is None:
+        known = sorted(s.get("id") for s in (task.get("scenarios") or [])
+                       if isinstance(s, dict) and s.get("id"))
+        raise CompassError(
+            f"compass scenario tests: '{args.scenario_id}' is not a scenario in this "
+            f"issue's manifest.yml: its scenarios are {known}. Add it first with "
+            f"`compass scenario add`.")
+    project_root = os.path.dirname(find_compass_dir())
+    refused = [f"{t} {why}" for t in given
+               for why in [_test_refusal(t, project_root)] if why]
+    if refused:
+        raise CompassError(
+            "compass scenario tests: " + "; ".join(refused) + ". Name a test that "
+            "exists, as `compass check` reads it (`path/to/test_file.py::test_name`).")
+    previous = list(scn.get("tests") or [])
+    scn["tests"] = given
+    save_manifest(task, task_path)
+    reason = " ".join(str(args.reason or "").split())
+    devlog_path = os.path.join(task_dir, "devlog.md")
+    if os.path.isfile(devlog_path):
+        with open(devlog_path, "a", encoding="utf-8") as fh:
+            fh.write(f"- {datetime.date.today().isoformat()}: scenario "
+                     f"{args.scenario_id} tests changed from "
+                     f"[{', '.join(previous) or 'none'}] to [{', '.join(given)}]"
+                     f" (reason: {reason or 'none given'})\n")
+    # A green is bound to the files the declared tests live in, so a test file
+    # the last green did not cover leaves it stale: ship-commit refuses it.
+    old_files = {t.split("::", 1)[0] for t in previous}
+    new_files = sorted({t.split("::", 1)[0] for t in given} - old_files)
+    detail = ([f"next : {', '.join(new_files)} is new to this scenario, so re-run "
+               f"`compass tdd-green` before `compass ship-commit`, which refuses a "
+               f"green recorded before it."] if new_files else None)
+    noun = "test" if len(given) == 1 else "tests"
+    return say(args, f"compass scenario tests: {args.scenario_id} now declares "
+                     f"{len(given)} {noun}.", detail=detail,
+               scenario=args.scenario_id, issue=os.path.basename(task_dir),
+               tests=given, previous=previous, reason=reason or None)
 
 
 def cmd_scenario_descope(args):

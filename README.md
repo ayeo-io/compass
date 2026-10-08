@@ -175,6 +175,7 @@ compass ship-commit        commit exactly the files the issue recorded
 compass gate pass          mark a gate passed, validating the evidence type
 compass scenario add       add a scenario to the manifest
 compass scenario descope   record a failure mode no scenario covers, and why
+compass scenario tests     replace the tests a scenario declares
 compass changed-file add   trace a changed file to the scenario that asked for it
 compass evidence add       append a typed evidence record
 compass migrate            bring older issue directories up to the current schema

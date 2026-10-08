@@ -8,13 +8,14 @@ makes one change to the shipped default, so its example fixture shows a real
 difference. The command never overwrites a file: it refuses and writes
 nothing when any of its files exists. `docs/policy-test.md` owns the contract.
 """
-# DEPENDENCY: standard library (json, os), yaml; compass_pkg.core
+# DEPENDENCY: standard library (json, os, unicodedata), yaml; compass_pkg.core
 # (CompassError), layers, obligations, policy_lint, preset_test (FIXTURE_DIR,
 # JSON_SCHEMA_VERSION, resolve, shown).
 from __future__ import annotations
 
 import json
 import os
+import unicodedata
 
 import yaml
 
@@ -78,8 +79,9 @@ The command lints `compass.yml` as a parent, so it fails on `unlock:`, a
 settings key, an `impl` that the check registry does not hold and a change to
 a locked entry. It then runs each file in `compass-fixtures/` and reports
 whether the approach, gates, stages and checks match the fixture. Exit 0
-passes, 1 fails, 2 means an input could not be read. `--json` prints a
-documented report for CI.
+passes, 1 fails, 2 means the folder or its `compass.yml` is missing, cannot be
+read or is not UTF-8 text. A `compass.yml` that reads but is not valid YAML is
+a lint error, exit 1. `--json` prints a documented report for CI.
 
 ## Write fixtures
 
@@ -115,7 +117,10 @@ def _example_gates(compass_yml):
 
 
 def _contents(owner):
-    compass_yml = COMPASS_YML.format(owner=json.dumps(owner))   # a quoted string is YAML
+    # A double-quoted JSON string is valid YAML. Without ensure_ascii=False it
+    # would write a character outside the basic plane as two surrogate escapes,
+    # which YAML reads as two broken characters.
+    compass_yml = COMPASS_YML.format(owner=json.dumps(owner, ensure_ascii=False))
     gates = ", ".join(_example_gates(compass_yml))
     return {".gitignore": ".compass/\n", "README.md": README.format(owner=owner),
             f"{FIXTURE_DIR}/example.yml": EXAMPLE_FIXTURE.format(gates=gates),
@@ -128,20 +133,26 @@ def scaffold(folder, owner):
     owner = (owner or "").strip()
     if not owner:
         raise CompassError("--owner needs the name of the team that owns the preset")
+    if any(unicodedata.category(ch) in ("Cc", "Cs", "Zl", "Zp") for ch in owner):
+        raise CompassError("--owner must be one line of text, with no control character")
     folder = os.fspath(folder)
     if os.path.exists(folder) and not os.path.isdir(folder):
         raise CompassError(f"{shown(folder)}: not a folder")
     present = [name for name in FILES if os.path.lexists(os.path.join(folder, name))]
     if present:
         return "refused", present
+    written = []
     try:
         for name, text in _contents(owner).items():
             path = os.path.join(folder, name)
             os.makedirs(os.path.dirname(path), exist_ok=True)
             with open(path, "x", encoding="utf-8") as fh:
                 fh.write(text)
+            written.append(name)
     except OSError as exc:
-        raise CompassError(f"{shown(folder)}: cannot write the preset: {exc.strerror}") from exc
+        left = f"; already written: {', '.join(written)}" if written else "; nothing was written"
+        raise CompassError(f"{shown(folder)}: cannot write the preset: {exc.strerror}"
+                           f"{left}") from exc
     return "written", list(FILES)
 
 

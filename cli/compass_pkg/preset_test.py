@@ -11,12 +11,13 @@ and builds the one report that the text and `--json` views both render.
 It reads files and, through `policy_lint.load_layers`, may fetch a pinned git
 parent. It writes no file of the preset and runs nothing the preset carries.
 """
-# DEPENDENCY: standard library (dataclasses, os); compass_pkg.atomic_io,
+# DEPENDENCY: standard library (dataclasses, os, re); compass_pkg.atomic_io,
 # core (CompassError), layers, merge, obligations, policy_lint.
 from __future__ import annotations
 
 import json
 import os
+import re
 from dataclasses import dataclass, field
 
 from compass_pkg import layers, merge, obligations, policy_lint
@@ -29,6 +30,9 @@ FIXTURE_DIR = "compass-fixtures"
 FIXTURE_SUFFIX = ".yml"
 FIXTURE_KEYS = ("name", "assessment", "expect")
 EXPECT_KEYS = ("approach", "gates", "stages", "checks")
+# A group folder is one path segment of this shape, at most this many deep.
+GROUP_SEGMENT = re.compile(r"[a-z0-9][a-z0-9-]*")
+GROUP_DEPTH = 3
 
 
 @dataclass
@@ -78,6 +82,17 @@ def _lint(folder, fetch):
     return report, chain if report.ok else None
 
 
+def _relabel(report):
+    """Name the preset's layer `preset` in every finding. The loader and the
+    waiver checks call the layer they read `project`; in a preset there is no
+    project layer, and a finding that says so points at the wrong file."""
+    for f in report.findings:
+        if f.layer == "project":
+            f.layer = "preset"
+        if f.path.startswith("project:"):
+            f.path = "preset:" + f.path[len("project:"):]
+
+
 def resolve(chain):
     """`(config, capabilities)` after the chain is merged, root first."""
     config, provenance, on = {}, {}, {}
@@ -102,19 +117,31 @@ def _walk(base, rel, found, problems):
             continue
         path = os.path.join(here, name)
         inside = f"{rel}/{name}" if rel else name
-        if os.path.islink(path) and os.path.isdir(path):
-            problems.append(f"{FIXTURE_DIR}/{inside}: a link to a folder is not followed; "
-                            f"put the fixtures in a folder of {FIXTURE_DIR}/")
-            holds = True
+        where = f"{FIXTURE_DIR}/{inside}"
+        holds = True
+        if os.path.islink(path):
+            # Whatever the link names (a file, a folder, nothing, a place outside
+            # the preset) is neither read nor printed.
+            problems.append(f"{where}: a link, not a file, so it is not followed; put the "
+                            f"fixture itself in {FIXTURE_DIR}/")
         elif os.path.isdir(path):
-            holds = True
-            _walk(base, inside, found, problems)
-        elif name.endswith(".yaml"):
-            problems.append(f"{FIXTURE_DIR}/{inside}: not read; fixture files end in "
-                            f"{FIXTURE_SUFFIX}")
-        elif name.endswith(FIXTURE_SUFFIX) and os.path.isfile(path):
-            found.append((rel or None, inside))
-            holds = True
+            depth = len(inside.split("/"))
+            if not GROUP_SEGMENT.fullmatch(name):
+                problems.append(f"{where}: not read; a group folder is named with lower-case "
+                                f"letters, digits and hyphens, starting with a letter or digit")
+            elif depth > GROUP_DEPTH:
+                problems.append(f"{where}: not read; groups go {GROUP_DEPTH} folders deep at most")
+            else:
+                _walk(base, inside, found, problems)
+        elif os.path.splitext(name)[1].lower() in (FIXTURE_SUFFIX, ".yaml") \
+                and not name.endswith(FIXTURE_SUFFIX):
+            problems.append(f"{where}: not read; fixture files end in {FIXTURE_SUFFIX}, "
+                            f"in lower case")
+        elif name.endswith(FIXTURE_SUFFIX):
+            if os.path.isfile(path):
+                found.append((rel or None, inside))
+            else:
+                problems.append(f"{where}: not a regular file, so it is not run")
     if rel and not holds:
         problems.append(f"{shown}: a group with no fixture file, so nothing in it runs")
 
@@ -131,8 +158,9 @@ def _fixture_files(folder, problems):
     return sorted(found, key=lambda pair: (pair[0] or "", pair[1]))
 
 
-def _format_problem(doc):
-    """What is wrong with a fixture's shape, or None."""
+def _format_problem(doc, dimensions):
+    """What is wrong with a fixture's shape, or None. `dimensions` are the
+    names the configuration's assessment may hold, besides `labels`."""
     if not isinstance(doc, dict):
         return "a fixture is a mapping with an assessment and an expect"
     unknown = sorted(str(k) for k in doc if k not in FIXTURE_KEYS)
@@ -143,6 +171,13 @@ def _format_problem(doc):
     for key in ("assessment", "expect"):
         if not isinstance(doc.get(key), dict) or not doc[key]:
             return f"'{key}' is missing or is not a mapping with something in it"
+    unknown = sorted(str(k) for k in doc["assessment"] if k != "labels" and k not in dimensions)
+    if unknown:
+        return (f"unknown assessment key '{unknown[0]}'; an assessment holds labels and "
+                f"the dimensions {', '.join(sorted(dimensions))}")
+    labels = doc["assessment"].get("labels", [])
+    if not (isinstance(labels, list) and all(isinstance(i, str) for i in labels)):
+        return "assessment.labels must be a list of text"
     unknown = sorted(str(k) for k in doc["expect"] if k not in EXPECT_KEYS)
     if unknown:
         return (f"unknown expect key '{unknown[0]}'; expect holds {', '.join(EXPECT_KEYS)}")
@@ -153,22 +188,26 @@ def _format_problem(doc):
         if key in expect and not (isinstance(expect[key], list)
                                   and all(isinstance(i, str) for i in expect[key])):
             return f"expect.{key} must be a list of ids"
-    stages = expect.get("stages", {})
-    if not (isinstance(stages, dict) and all(isinstance(k, str) and isinstance(v, str)
-                                             for k, v in stages.items())):
-        return "expect.stages must map a stage to a mode"
+    if "stages" in expect:
+        stages = expect["stages"]
+        if not (isinstance(stages, dict) and stages and all(
+                isinstance(k, str) and isinstance(v, str) for k, v in stages.items())):
+            return "expect.stages must map at least one stage to a mode"
     return None
 
 
 def _run_fixture(folder, name, config, capabilities):
     path = os.path.join(folder, FIXTURE_DIR, name)
     stem = os.path.basename(name)[:-len(FIXTURE_SUFFIX)]
+    where = f"{FIXTURE_DIR}/{name}"
     try:
         doc = load_yaml_strict(path)
     except StrictYamlError as exc:
-        return FixtureResult(name, stem, "error",
-                             message=str(exc).replace(path, f"{FIXTURE_DIR}/{name}"))
-    wrong = _format_problem(doc)
+        return FixtureResult(name, stem, "error", message=str(exc).replace(path, where))
+    except (OSError, UnicodeDecodeError) as exc:
+        return FixtureResult(name, stem, "error", message=f"{where} cannot be read: "
+                             f"{getattr(exc, 'strerror', None) or 'not UTF-8 text'}")
+    wrong = _format_problem(doc, set(config.get("dimensions") or {}))
     if wrong:
         return FixtureResult(name, stem, "error", message=wrong)
     stem = doc.get("name") or stem
@@ -215,11 +254,24 @@ def run(folder, fetch=False):
     if not os.path.isdir(folder):
         raise CompassError(f"{shown(folder)}: not a folder; give the folder that holds "
                            f"the preset's {layers.PROJECT_FILE}")
-    if not os.path.isfile(os.path.join(folder, layers.PROJECT_FILE)):
+    path = os.path.join(folder, layers.PROJECT_FILE)
+    if not os.path.isfile(path):
         raise CompassError(f"{shown(folder)}: no {layers.PROJECT_FILE} here; a preset is a "
                            f"folder that holds one")
+    # A file that cannot be read is an input error. One that reads but is not
+    # valid YAML is a lint error (`L-LOAD`), which the report can show.
+    try:
+        with open(path, "rb") as fh:
+            fh.read().decode("utf-8")
+    except OSError as exc:
+        raise CompassError(f"{shown(folder)}: {layers.PROJECT_FILE} cannot be read: "
+                           f"{exc.strerror}") from exc
+    except UnicodeDecodeError as exc:
+        raise CompassError(f"{shown(folder)}: {layers.PROJECT_FILE} cannot be read: it is "
+                           f"not UTF-8 text") from exc
     result = Result(shown(folder))
     result.lint, chain = _lint(folder, fetch)
+    _relabel(result.lint)
     if chain is None:
         return result
     config, capabilities = resolve(chain)
@@ -235,16 +287,17 @@ def run(folder, fetch=False):
 
 
 def group_counts(result):
-    """One `{group, fixtures, passed, failed}` object for each group that holds
+    """One `{group, fixtures, passed, failed, result}` object for each group that holds
     a fixture, by group name. A fixture outside every group is in `totals` only."""
     counts = {}
     for f in result.fixtures:
         if f.group is None:
             continue
         row = counts.setdefault(f.group, {"group": f.group, "fixtures": 0, "passed": 0,
-                                          "failed": 0})
+                                          "failed": 0, "result": "pass"})
         row["fixtures"] += 1
         row["passed" if f.status == "pass" else "failed"] += 1
+        row["result"] = "pass" if row["failed"] == 0 else "fail"
     return [counts[name] for name in sorted(counts)]
 
 
@@ -268,8 +321,8 @@ def text(result):
         for m in f.mismatches:
             lines.append(f"      {m['field']}: expected {_show(m['expected'])}, "
                          f"actual {_show(m['actual'])}")
-        if f.message:
-            lines.append(f"      {f.message}")
+        for line in (f.message or "").splitlines():
+            lines.append(f"      {line.strip()}")
     lines += [f"  group {g['group']}: {g['fixtures']} run, {g['passed']} passed, "
               f"{g['failed']} failed" for g in group_counts(result)]
     lines += [f"  problem: {p}" for p in result.problems]

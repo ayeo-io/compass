@@ -77,6 +77,10 @@ class Resolution:
     # it just before the first write, so a commit that changes nothing never
     # pays for it.
     validate: object = field(default=None, repr=False, compare=False)
+    # Adds the parts of `versions` that cost a scan, such as the stored
+    # classification of a git parent. `commit` calls it with `versions` after
+    # the "no change" decision, so a commit that writes nothing never pays.
+    finish: object = field(default=None, repr=False, compare=False)
 
 
 @dataclass
@@ -364,6 +368,9 @@ def commit(task_dir, resolution, manifest, invalidated=None, render=None):
                 f"the configuration it landed under; it cannot store a new generation")
         if resolution.validate is not None:
             resolution.validate()
+        if resolution.finish is not None:
+            resolution.finish(resolution.versions)
+            documents["versions.yml"] = {"schema": SCHEMA, **resolution.versions}
         _prepare_target(task_dir, target)
         folder = gen_dir(task_dir, target)
         for name in FILES:

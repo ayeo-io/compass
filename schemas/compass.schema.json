@@ -758,6 +758,7 @@
               "type": "string"
             },
             "approved_on": {
+              "format": "date",
               "type": "string"
             },
             "from": {

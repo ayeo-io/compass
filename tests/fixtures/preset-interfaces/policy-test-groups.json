@@ -59,13 +59,15 @@
       "group": "meets/banking",
       "fixtures": 2,
       "passed": 1,
-      "failed": 1
+      "failed": 1,
+      "result": "fail"
     },
     {
       "group": "meets/health",
       "fixtures": 1,
       "passed": 1,
-      "failed": 0
+      "failed": 0,
+      "result": "pass"
     }
   ]
 }

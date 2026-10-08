@@ -6,11 +6,12 @@ This module has four parts: the references (`default@6`, `project`, a path
 and the others) that name a configuration; the replay of the grid, the label
 combinations and the archive; the comparison of open issues; and the one
 document the result becomes. It reads files and runs `git show`, writes no
-file of the project (the `git show` copy goes to a temporary folder), and
+file of the project (the `git show` copy goes to a temporary folder) except
+the git parent cache when a reference names an uncached git parent, and
 changes none of the modules it calls.
 """
 # DEPENDENCY: standard library (dataclasses, itertools, json, os, subprocess,
-# tempfile, textwrap); compass_pkg.atomic_io (digest, load_yaml_strict),
+# sys, tempfile, textwrap); compass_pkg.atomic_io (digest, load_yaml_strict),
 # catalogue_check, catalogue_spec (LABEL_CAP), the classifier module (the
 # classify and build_grid functions, json_shape_errors), core (CompassError,
 # load_yaml), legacy_adapter (adapt), manifest (the issue statuses), merge, the
@@ -25,6 +26,7 @@ import itertools
 import json
 import os
 import subprocess
+import sys
 import tempfile
 import textwrap
 from dataclasses import dataclass, field
@@ -200,11 +202,20 @@ def _parent_ref(ref, root, fetch):
     extends over it, resolved. `ref` is written as in `extends:`. A parent is
     data, so each layer must pass the parent layer check before it merges (no
     settings key, no `unlock:`). Nothing the parent carries is run. An uncached
-    pin is fetched into the project's cache only when `fetch` is true."""
+    pin is fetched into the project's cache only when `fetch` is true, and one
+    line on stderr says so. That cache is the one write `policy diff` makes."""
+    def say(spec):
+        print(f"compass policy diff: fetching {parents.ref_label(spec)}#{spec.sha} into "
+              f".compass/cache/parents/", file=sys.stderr)
+
     try:
-        chain = parents.resolve_chain(root, ref, fetch=fetch)
+        chain = parents.resolve_chain(root, ref, fetch=fetch, notify=say)
     except parents.ParentError as exc:
-        raise CompassError(f"{ref}: {exc}")
+        # The detail names `extends:`, which a reference typed on the command
+        # line is not.
+        detail = exc.detail[len("extends: "):] if exc.detail.startswith("extends: ") \
+            else exc.detail
+        raise CompassError(f"{ref}: {exc.code}: {detail}")
     shipped, meta, config, provenance = _shipped()
     documents = [shipped.doc]
     for found in chain:

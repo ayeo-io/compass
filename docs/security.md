@@ -72,10 +72,12 @@ registry. It refuses a fetched commit that is not the pinned sha, and a
 The fetch runs `git` with an argument list and no shell, only over `https`, with
 hooks off and no prompts. It runs with your own git configuration, so your
 credential helper runs and your `url.*.insteadOf` rules apply. Only `compass
-policy lint`, `compass policy effective` and `compass approach evaluate
---write` fetch. `compass check` never does. A cached parent is read without
+policy lint`, `compass policy effective`, `compass policy diff` (when a
+reference is a git parent) and `compass approach evaluate --write` fetch.
+`compass policy diff` prints a line on stderr before it fetches. `compass check`
+never fetches. A cached parent is read without
 warning if someone edits the cache, until the parent-state check lands. Review
-[git-parents.md](git-parents.md).
+[git-parents.md](https://github.com/ayeo-io/compass/blob/main/docs/git-parents.md).
 
 ## Dependencies
 

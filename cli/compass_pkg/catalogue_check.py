@@ -19,14 +19,14 @@ What this does not check yet: whether an entry is complete enough to add
 (the merge), and whether a value loosens its parent (the classifier).
 """
 # DEPENDENCY: standard library (datetime, re); compass_pkg.catalogue_spec;
-# compass_pkg.vocabulary.
+# compass_pkg.vocabulary; compass_pkg.waivers (its date reader).
 from __future__ import annotations
 
 import datetime
 import re
 
 from compass_pkg import catalogue_spec as spec
-from compass_pkg import vocabulary
+from compass_pkg import vocabulary, waivers
 
 _ID = re.compile(spec.ID_PATTERN)
 
@@ -94,9 +94,12 @@ def _check_extends_map(extends):
                       "string form is")
     if "approved_by" in extends and not isinstance(extends["approved_by"], str):
         errors.append("extends.approved_by: expected text")
-    if "approved_on" in extends and not isinstance(extends["approved_on"],
-                                                   (str, datetime.date)):
-        errors.append("extends.approved_on: expected a date")
+    if "approved_on" in extends:
+        given = waivers._date(extends["approved_on"])
+        if given is None:
+            errors.append("extends.approved_on: expected a date written YYYY-MM-DD")
+        elif given > datetime.date.today():
+            errors.append(f"extends.approved_on: {given.isoformat()} is later than today")
     return errors
 
 
@@ -321,7 +324,7 @@ def schema():
             {"type": "string"},
             {"type": "object", "properties": {
                 "from": {"type": "string"}, "approved_by": {"type": "string"},
-                "approved_on": {"type": "string"}},
+                "approved_on": {"type": "string", "format": "date"}},
              "required": ["from"], "additionalProperties": False}]},
         "owner": {"type": "string"},
         "approvers": {"type": "object",

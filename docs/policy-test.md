@@ -53,7 +53,11 @@ my-preset/
         large-work.yml        # group meets/banking
 ```
 
-A group changes nothing about how a fixture runs: every fixture runs over the
+Each folder in the path is named with lower-case letters, digits and hyphens,
+starting with a letter or digit, and a group is at most 3 folders deep. A folder
+that breaks either rule is a problem and is not read.
+
+The fixture groups of a preset change nothing about how a fixture runs: every fixture runs over the
 same merged configuration. The group is a label that the report carries, with a
 count for each group, so a tool that reads the report can say which named set of
 fixtures a preset passes. The test does not follow a link to a folder, so a link
@@ -75,6 +79,14 @@ The test runs in two steps and does the second only when the first passes.
    | `L-SETTINGS-KEY` | The preset carries a settings key such as `autonomy` or `allow_project_commands`. Settings belong to a project |
    | `L-IMPL-UNKNOWN` | A check names an `impl` that the check registry does not hold |
    | `K-LOCK-REFUSED` | The preset changes a locked entry |
+   | `C-LOOSENING` | The preset owes less than its parent and carries no valid waiver for it |
+   | `W-NO-OWNER` | The preset carries a waiver and declares no `owner` |
+
+   A waiver in a preset is approved by the preset's own `owner`, or by the
+   names in the `approvers.project-waiver` of the layer above it, as for any git
+   parent. The `owner` of the project that runs the test, and of a project that
+   later extends the preset, does not count. Every finding names the layer
+   `preset`.
 
    Any other lint finding fails the test too. The text and JSON reports give
    the finding as `policy lint` does. A preset that extends a pinned git parent
@@ -93,14 +105,14 @@ A fixture is a mapping with these keys.
 | Key | Required | Meaning |
 |---|---|---|
 | `name` | no | The name the report shows. It defaults to the file name without `.yml` |
-| `assessment` | yes | The assessment to evaluate: the dimension values, such as `risk`, `familiarity`, `size`, `goal` and `role`, and `labels` |
+| `assessment` | yes | The assessment to evaluate: a value for each dimension to set, such as `risk`, `familiarity`, `size`, `goal` and `role`, and `labels`, a list of text. Any other key is an error |
 | `expect` | yes | What the evaluation must compute. It holds at least one of the four keys below |
 
 | `expect` key | Value | The fixture passes when |
 |---|---|---|
 | `approach` | an approach name | the computed delivery approach is that name |
 | `gates` | a list of gate ids | the gates in force are exactly those ids, in any order |
-| `stages` | a mapping from a stage to a mode | each stage named has that mode; a stage not named is not compared |
+| `stages` | a mapping from a stage to a mode | each stage named has that mode; a stage not named is not compared. An empty `stages` mapping compares nothing, so it is an error |
 | `checks` | a list of check ids | the checks that the gates in force run are exactly those ids, in any order |
 
 ```yaml
@@ -126,11 +138,14 @@ and within each the fixtures by file name. A fixture has one of three statuses.
 |---|---|
 | `pass` | Every expectation matches |
 | `fail` | At least one expectation differs. Each difference is in `mismatches` |
-| `error` | The fixture cannot be run: the file does not parse, a key is unknown or missing, or the evaluator rejects the assessment (for example a value that the configuration's vocabulary does not hold). The reason is in `message` |
+| `error` | The fixture cannot be run: the file cannot be read or does not parse, a key is unknown or missing, a list or mapping has the wrong shape, or the evaluator rejects the assessment (for example a value that the configuration's vocabulary does not hold). The reason is in `message` |
 
 A mismatch names its `field` as `approach`, `gates`, `checks` or
 `stages.<stage>`, with the `expected` and `actual` values. A list is shown
 sorted. For a stage that the computed result does not hold, `actual` is `null`.
+An empty `gates` or `checks` list is an expectation that none are owed, and it
+compares. In the text report, a message that runs over several lines stays
+indented under its fixture.
 
 ## What fails the run
 
@@ -140,11 +155,12 @@ sorted. For a stage that the computed result does not hold, `actual` is `null`.
 | A fixture with status `fail` or `error` | `fixtures` and `totals` |
 | No fixture files | `problems` holds `no fixtures` |
 | A group folder with no fixture file and no folder in it | `problems` names it, so a group that was meant to hold fixtures cannot pass with none |
-| A link to a folder inside `compass-fixtures/` | `problems` names it. The folder is not followed |
-| A `.yaml` file in `compass-fixtures/` or in a group | `problems` names it. Fixture files end in `.yml` |
+| A group folder whose name is not lower-case letters, digits and hyphens starting with a letter or digit, or that is more than 3 folders deep | `problems` names it. The folder is not read |
+| A link of any kind inside `compass-fixtures/` or a group (to a file, to a folder or to nothing) | `problems` names the link. The test does not follow it, so it reads and prints nothing outside the preset |
+| A file in `compass-fixtures/` or in a group that ends in `.yaml`, or in `.yml` with any capital letter | `problems` names it. Fixture files end in lower-case `.yml` |
+| A `.yml` file that is not a regular file | `problems` names it |
 
-A file that starts with a dot, and a file that ends in neither `.yml` nor
-`.yaml`, are ignored.
+A file that starts with a dot, and a file with any other ending, are ignored.
 
 ## Exit codes
 
@@ -152,7 +168,11 @@ A file that starts with a dot, and a file that ends in neither `.yml` nor
 |---|---|
 | Exit 0 | The lint passed, there is at least one fixture, every fixture passed and `problems` is empty |
 | Exit 1 | A lint error, a fixture that failed or errored, or a problem |
-| Exit 2 | The folder or its `compass.yml` cannot be read |
+| Exit 2 | The folder or its `compass.yml` is missing, cannot be read or is not UTF-8 text |
+
+A `compass.yml` that can be read but is malformed YAML is a lint error
+(`L-LOAD`), so it exits 1 and the report shows the finding. A fixture file that
+cannot be read is an error on that fixture, not exit 2.
 
 ## The `--json` report of `compass policy test`
 
@@ -198,6 +218,7 @@ them.
 | `fixtures` | The number of fixtures in that group, not counting the groups below it |
 | `passed` | How many have status `pass` |
 | `failed` | How many have status `fail` or `error` |
+| `result` | `pass` when `failed` is 0, otherwise `fail` |
 
 ```json
 {
@@ -218,7 +239,7 @@ them.
     }
   ],
   "problems": [],
-  "groups": [{"group": "meets/banking", "fixtures": 1, "passed": 0, "failed": 1}]
+  "groups": [{"group": "meets/banking", "fixtures": 1, "passed": 0, "failed": 1, "result": "fail"}]
 }
 ```
 
@@ -258,7 +279,11 @@ install Compass.
 |---|---|
 | Exit 0 | The files are written |
 | Exit 1 | A file exists; nothing is written |
-| Exit 2 | `DIR` is a file, `--owner` is missing or empty, or a file cannot be written |
+| Exit 2 | `DIR` is a file, `--owner` is missing, empty or holds a control character (so it is one line of text), or a file cannot be written |
+
+A failed write can leave some files in `DIR`. The message names the files
+already written, and a re-run is then refused until they are removed. A link
+that points nowhere counts as an existing file.
 
 ### The `--json` report of `compass policy init-preset`
 

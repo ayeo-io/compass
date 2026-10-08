@@ -31,7 +31,7 @@ extends:
   approved_on: "2026-10-08"
 ```
 
-The map holds `from` (required text), `approved_by` (text) and `approved_on` (text or a date). The two approval keys are read and kept but nothing checks them yet. Any other key, or a `from` that is not text, is `L-SCHEMA`. A bad spelling in `from` has the code the string form gives. The layer digest includes the whole `extends:` value, so the two forms of one parent give the project layer a different digest and the parent layer the same one.
+The map holds `from` (required text), `approved_by` (text) and `approved_on` (text or a date). `approved_by` and `approved_on` are read from the project's own `compass.yml`, in the `extends:` map, and nowhere else. The layer check refuses an `approved_on` that is not a date written `YYYY-MM-DD` (`2026-13-45` and `yesterday` are not) or that is in the future, with `L-SCHEMA`. Nothing else uses the two keys yet: they are not stored in `versions.yml`, and nothing checks `approved_by` against an approver list. Any other key in the map is `L-SCHEMA`. A `from` that is not text is `L-PARENT-FORM`, the same code as a bad spelling in the string form. The layer digest includes the whole `extends:` value, so the two forms of one parent give the project layer a different digest and the parent layer the same one.
 
 Compass refuses every other spelling with `L-PARENT-FORM` before it runs git. That covers
 spaces, shell characters, `..`, a leading `-` in any part, an `https://` URL, an uppercase
@@ -68,6 +68,7 @@ sha is refused.
 |---|---|
 | `compass check`, and any reader of an issue's stored generation | Never. It reads the cache, and an uncached pin is `L-PARENT-NOT-CACHED` |
 | `compass policy lint`, `compass policy effective` | Yes |
+| `compass policy diff`, when a reference is a git parent | Yes, and it prints one line on stderr (`compass policy diff: fetching <ref> into .compass/cache/parents/`) before each fetch. This is the only file `policy diff` writes |
 | `compass approach evaluate --write` (assess and reassess) | Yes |
 | any of the above with `--offline`, or with `COMPASS_OFFLINE=1` in the environment | Never |
 
@@ -174,7 +175,11 @@ Each git parent entry holds the classification of the chain from the shipped def
 
 The result is the one before any waiver. A parent's own waivers were approved by the parent's maintainers, and that approval means nothing to a project that extends it, so a waiver does not change the stored `result`. A later check can read the block without running the classifier again.
 
-Only a commit computes the blocks, with one scan of the grid for each git parent. Reading the live configuration (`policy effective`) does not. The function is `classify_chain` in `cli/compass_pkg/chain_class.py`.
+Only a commit that writes a new generation computes the blocks, with one scan of the grid for each git parent. A commit that finds no change, and a read of the live configuration (`policy effective`), do not. The function is `classify_chain` in `cli/compass_pkg/chain_class.py`.
+
+The cost, measured on 2026-10-08 on a laptop: about 0.6 seconds for one parent with a one-field change, and about 2.3 seconds for a chain of three. A chain of more than eight named labels cannot be committed (the lint cannot prove the locks), so `complete: false` is a guard in the function and not a stored case.
+
+`parents[].version` is the ref when it reads as a version. Reading the version from `preset.version` is not read yet; a later release adds it.
 
 ## Finding codes
 

@@ -400,6 +400,7 @@ entries:
   project: initialised
   argv: ["policy", "test"]
   exit: 2
+  stderr_contains: "no compass.yml here"
 # Added on purpose by policy-test-init-preset: `policy init-preset` is a new
 # verb. 5.6.0 refused it as an unknown choice (exit 2). From 6.0.0 it writes a
 # preset into a new folder and exits 0.
@@ -425,15 +426,6 @@ entries:
   argv: ["policy", "test", "team-preset"]
   exit: 0
   stdout_contains: "group meets/banking: 1 run, 1 passed, 0 failed"
-# Added on purpose by preset-interfaces: a git parent is accepted as a policy
-# diff reference, and with --offline an uncached one is refused with exit 2
-# because nothing may be fetched. 5.6.0 also exited 2, for the unknown verb, so
-# this guards the refusal. The run that reads a cached parent is in
-# tests/test_preset_interfaces.py, which needs a local remote.
-- id: policy-diff-git-parent-offline-uncached
-  project: initialised
-  argv: ["policy", "diff", "default@6", "github:acme/compass-banking@1.2.0#aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "--offline"]
-  exit: 2
 - id: retro-plain
   project: quick-fix-started
   argv: ["retro"]

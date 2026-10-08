@@ -334,6 +334,9 @@ def differences(entry: dict, outcome: Outcome) -> list[str]:
     phrase = entry.get("stdout_contains")
     if phrase and phrase not in outcome.stdout:
         found.append(f"stdout lacks {phrase!r}")
+    phrase = entry.get("stderr_contains")
+    if phrase and phrase not in outcome.stderr:
+        found.append(f"stderr lacks {phrase!r}")
     return found
 
 
@@ -361,6 +364,9 @@ def _dump(entries: list[dict]) -> str:
         if entry.get("stdout_contains"):
             lines.append(
                 f"  stdout_contains: {json.dumps(entry['stdout_contains'])}")
+        if entry.get("stderr_contains"):
+            lines.append(
+                f"  stderr_contains: {json.dumps(entry['stderr_contains'])}")
     return "\n".join(lines) + "\n"
 
 

@@ -57,7 +57,8 @@ change that lint would refuse.
 A git parent is data. Each layer of its chain must pass the parent layer check
 before it merges, so a settings key or an `unlock:` is refused (exit 2) with the
 finding's text. An uncached pin is fetched into the project's
-`.compass/cache/parents/`; `--offline`, or `COMPASS_OFFLINE=1`, reads the cache
+`.compass/cache/parents/`, after one line on stderr (`compass policy diff:
+fetching <ref> into .compass/cache/parents/`); `--offline`, or `COMPASS_OFFLINE=1`, reads the cache
 only and refuses an uncached pin with `L-PARENT-NOT-CACHED`. A bad spelling is
 refused with `L-PARENT-FORM` or `L-PARENT-NO-SHA` before git runs. The
 classification is the raw one, with no waiver applied, so a parent that loosens
@@ -114,7 +115,9 @@ statuses that are not terminal) over both configurations with its own
 An issue that is landed or abandoned is never examined. Until the generation
 store lands there is no stored generation, so `A` stands for what the issue
 runs against and `B` for what it meets at its next reassess. The command
-writes nothing, here or elsewhere.
+writes no file of the project. The one exception is the git parent cache in
+`.compass/cache/parents/`, which it fills when a reference is a git parent that
+is not cached and the run may fetch.
 
 ## Options and exit codes
 

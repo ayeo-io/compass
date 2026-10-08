@@ -3163,3 +3163,7 @@
 - `EE-12` The preset, help text and owning doc describe the lists
 - `EE-13` A project stage list and an unknown check are handled
 - `EE-14` A check whose when does not match is not listed
+
+### scenario-tests-verb (landed 2026-10-08)
+
+- `TRC-001` Given a scenario whose declared test id is wrong, when compass scenario tests names resolving tests, then the manifest declares them

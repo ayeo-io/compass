@@ -39,7 +39,7 @@ def _cli(root, *args):
 
 @pytest.fixture
 def repo(tmp_path):
-    """A repository holding src/old.py, an issue declaring it, gates passed."""
+    """A repository holding one source file, an issue declaring it, gates passed."""
     root = tmp_path / "repo"
     root.mkdir()
     _git(root, "init", "-q")

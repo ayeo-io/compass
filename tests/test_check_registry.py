@@ -3,22 +3,21 @@
 A configuration names its checks by implementation id, and the CLI runs the
 implementation it ships. Recording the id does not preserve the behaviour, so
 each implementation carries a version and a fixture corpus (ADR-038). The
-build fails when a corpus verdict changes and the major version does not.
+build fails when a corpus verdict changes and the major version does not
+(`tests/test_impl_versions.py` holds that rule and the lock file).
 
-The claim is narrow. Across majors the CLI refuses (a later increment, since
-it needs stored generations). Within a major, compatibility is shown on the
-corpus cases only; a change of behaviour that no case exercises is not
-detected. Each corpus case is built by `tests/check_corpus_runner.py`, the
-registry's implementation runs on it, and the computed verdict is compared
-with the case's `expected.yml`; the lock digest is taken from the computed
-verdicts, so a label cannot drift from what the check does.
+The claim is narrow. Across majors the CLI refuses (`tests/test_impl_refusal.py`).
+Within a major, compatibility is shown on the corpus cases only; a change of
+behaviour that no case exercises is not detected. Each corpus case is built by
+`tests/check_corpus_runner.py`, the registry's implementation runs on it, and
+the computed verdict is compared with the case's `expected.yml`, so a label
+cannot drift from what the check does.
 
-Scenario ids: `CR-1` to `CR-5` (issue `check-registry`).
+Scenario ids: `CR-1` to `CR-3` and `CR-5` (issue `check-registry`); `CR-4`, the
+lock file, moved to `IR-6` and `IR-7` in `tests/test_impl_versions.py`.
 """
 from __future__ import annotations
 
-import dataclasses
-import hashlib
 import sys
 from pathlib import Path
 
@@ -34,8 +33,7 @@ from compass_pkg.policy import _lint_errors_guardrails  # noqa: E402
 
 import check_corpus_runner as runner  # noqa: E402
 
-CORPUS = ROOT / "tests" / "fixtures" / "check-corpus"
-LOCK = CORPUS / "versions.lock.yml"
+CORPUS = ROOT / "tests" / "fixtures" / "impls"
 PROOFS = ROOT / "tests" / "mutation_proofs.yml"
 VERDICTS = ("pass", "fail", "nothing-to-check")
 
@@ -61,50 +59,6 @@ def label_problems(scratch: Path, root: Path = CORPUS) -> list[str]:
                 problems.append(f"{impl}/{name} is labelled "
                                 f"{labels[name]['verdict']} but computes "
                                 f"{computed[name]}")
-    return problems
-
-
-def verdict_digest(impl: str, verdicts: dict[str, str]) -> str:
-    """Digest of the computed verdicts only, so rewording an `input` line is
-    not a change of behaviour, and relabelling a case does not move it."""
-    lines = "\n".join(f"{impl}/{name}:{verdict}"
-                      for name, verdict in sorted(verdicts.items()))
-    return hashlib.sha256(lines.encode("utf-8")).hexdigest()
-
-
-def current_digests(scratch: Path) -> dict[str, str]:
-    return {impl: verdict_digest(impl, runner.computed_verdicts(impl, scratch))
-            for impl in check_registry.REGISTRY}
-
-
-def lock_problems(versions: dict[str, str], digests: dict[str, str],
-                  lock: dict[str, dict]) -> list[str]:
-    """ADR-038's build rule, one line per problem, naming the implementation.
-
-    `versions` and `digests` are what the code and corpus say now; `lock` is
-    what the last change recorded."""
-    problems = []
-    for impl, version in sorted(versions.items()):
-        locked = lock.get(impl)
-        if locked is None:
-            problems.append(f"{impl} is not in the lock file")
-            continue
-        major, locked_major = (int(version.split(".")[0]),
-                               int(str(locked["version"]).split(".")[0]))
-        if major > locked_major:
-            problems.append(
-                f"{impl} is at major {major} but the lock file records "
-                f"{locked_major}; update the lock file in the same change")
-        elif major < locked_major:
-            problems.append(
-                f"{impl} is at major {major} but the lock file records "
-                f"{locked_major}; a major never goes back")
-        elif digests[impl] != locked["verdicts"]:
-            problems.append(
-                f"{impl} verdicts changed and its major stayed at {major}; "
-                f"bump the major and update the lock file")
-    for impl in sorted(set(lock) - set(versions)):
-        problems.append(f"{impl} is in the lock file but not in the registry")
     return problems
 
 
@@ -160,55 +114,6 @@ def test_cr_3_a_false_label_is_reported_by_case(tmp_path):
     label.write_text(label.read_text().replace("verdict: fail", "verdict: pass"))
     problems = label_problems(tmp_path / "scratch", copy)
     assert problems == ["suite-passed/broken is labelled pass but computes fail"]
-
-
-# --- the lock file (`CR-4`) -------------------------------------------------------
-
-def _now(scratch):
-    versions = {n: e.version for n, e in check_registry.REGISTRY.items()}
-    return versions, current_digests(scratch)
-
-
-def _locked(versions, digests):
-    return {n: {"version": versions[n], "verdicts": digests[n]} for n in versions}
-
-
-def test_cr_4_the_committed_lock_matches_the_registry_and_computed_verdicts(tmp_path):
-    versions, digests = _now(tmp_path)
-    lock = yaml.safe_load(LOCK.read_text(encoding="utf-8"))["implementations"]
-    assert lock_problems(versions, digests, lock) == []
-
-
-def test_cr_4_a_changed_implementation_verdict_fails_and_names_it(tmp_path, monkeypatch):
-    versions, digests = _now(tmp_path / "before")
-    lock = _locked(versions, digests)
-    # The planted change: the implementation now passes whatever it is given,
-    # with no label edited and no version bumped.
-    entry = check_registry.REGISTRY["suite-passed"]
-    monkeypatch.setitem(check_registry.REGISTRY, "suite-passed",
-                        dataclasses.replace(entry, fn=lambda task, task_dir: (True, "")))
-    problems = lock_problems(versions, current_digests(tmp_path / "after"), lock)
-    assert len(problems) == 1 and problems[0].startswith("suite-passed ")
-    assert "major" in problems[0]
-
-
-def test_cr_4_a_higher_major_than_the_lock_fails_until_the_lock_is_updated(tmp_path):
-    versions, digests = _now(tmp_path)
-    lock = _locked(versions, digests)
-    bumped = dict(versions, **{"suite-passed": "2.0.0"})
-    problems = lock_problems(bumped, digests, lock)
-    assert len(problems) == 1 and "update the lock file" in problems[0]
-    updated = dict(lock, **{"suite-passed": {"version": "2.0.0",
-                                             "verdicts": digests["suite-passed"]}})
-    assert lock_problems(bumped, digests, updated) == []
-
-
-def test_cr_4_a_lower_major_than_the_lock_fails(tmp_path):
-    versions, digests = _now(tmp_path)
-    lock = _locked(versions, digests)
-    lock["suite-passed"]["version"] = "2.0.0"
-    problems = lock_problems(versions, digests, lock)
-    assert len(problems) == 1 and "never goes back" in problems[0]
 
 
 # --- policy lint (`CR-5`) ---------------------------------------------------------

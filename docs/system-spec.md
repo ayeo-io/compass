@@ -50,11 +50,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### help, doc, verb description and corpus state the behaviour
+### Given a spike with an advisory guardrail check that fails, then the run passes and shows the failure as advisory
 
-- **Scenario id:** `UP-16`
+- **Scenario id:** `CS-11`
 - **Intent:** `INT-1`
-- **Source issue:** `policy-update-default`
+- **Source issue:** `check-severity-from-generation`
 - **Landed:** 2026-10-08
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -353,4 +353,4 @@
 
 ---
 
-1893 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1888 superseded scenario(s) are in `docs/system-spec-archive.md`.

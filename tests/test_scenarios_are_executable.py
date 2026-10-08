@@ -216,7 +216,9 @@ def test_trc_c6_the_check_should_be_advisory_unless_the_route_promotes_it(tmp_pa
     contained = make(tmp_path / "a", runner="pytest-bdd", seen=["TRC-A1"],
                      blast="contained")
     line = line_for(check(contained).stdout)
-    assert line.strip().startswith("PASS"), (
+    assert line.strip().startswith("ADVISORY"), (
+        f"a contained-blast-radius finding was not shown as advisory:\n{line}")
+    assert "FAIL" not in line, (
         f"a contained-blast-radius task was blocked by an advisory check:\n{line}")
     assert "TRC-A2" in line or "advisory" in line.lower(), (
         f"advisory mode hides the finding entirely, which helps nobody:\n{line}")

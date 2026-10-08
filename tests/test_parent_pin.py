@@ -974,7 +974,15 @@ def test_gp_20_the_short_sha_filter_ignores_names_that_are_not_full_shas(tmp_pat
     root = _project(tmp_path, _ref("abcdef0"))
     good = _folder(root, "abcdef0" + "1" * 33)
     good.mkdir(parents=True)
-    (good / "compass.yml").write_text(yaml.safe_dump(PARENT_DOC), encoding="utf-8")
+    text = yaml.safe_dump(PARENT_DOC)
+    (good / "compass.yml").write_text(text, encoding="utf-8")
+    # A cache built by hand needs the digest a fetch would have recorded, or the
+    # parent counts as edited (issue `parent-states`).
+    from compass_pkg import parents
+    full = "abcdef0" + "1" * 33
+    (_cache(root) / "seen.yml").write_text(yaml.safe_dump({"schema": 1, "refs": {
+        "github:acme/bank@1.2.0": {"sha": full, "digests": {
+            full: parents.file_digest(text.encode())}}}}), encoding="utf-8")
     for name in ("abcdef0" + "g" * 33, "abcdef0" + "2" * 32, "ABCDEF0" + "2" * 33):
         (_folder(root, name)).mkdir(parents=True)
     code, report, err = _lint(root, "--offline")

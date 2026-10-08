@@ -36,10 +36,12 @@ FINDINGS = {UP_TO_DATE: ("S-PARENT-UP-TO-DATE", "info"),
 State = namedtuple("State", "ref sha state newer why message")
 
 
-def locate(root, sha):
-    """The path of the cached `compass.yml` of one commit. The cache layout is
-    read here and in `seen_path` only."""
-    return os.path.join(parents.cache_dir(root), sha, parents.PARENT_FILE)
+def locate(root, found):
+    """The path of the cached `compass.yml` of a resolved parent. The cache
+    layout is read here and in `seen_path` only: the repository is part of the
+    key, so the owner and repository come from the parent's ref."""
+    spec = parents.spec_of(f"{found.ref}#{found.sha}")
+    return os.path.join(parents.commit_dir(parents.cache_dir(root), spec), parents.PARENT_FILE)
 
 
 def seen_path(root):
@@ -69,13 +71,13 @@ def _recorded_digest(entry, sha):
     return None
 
 
-def _why_modified(root, entry, sha):
+def _why_modified(root, entry, found):
     """`""` when the cached file matches its recorded digest, else the cause."""
-    recorded = _recorded_digest(entry, sha)
+    recorded = _recorded_digest(entry, found.sha)
     if recorded is None:
         return "seen.yml holds no digest for it, so it cannot be shown to match a fetch"
     try:
-        with open(locate(root, sha), "rb") as fh:
+        with open(locate(root, found), "rb") as fh:
             actual = parents.file_digest(fh.read())
     except OSError:
         return "the cached file cannot be read"
@@ -87,7 +89,7 @@ def read(root, found):
     entry = _entry(root, found.ref)
     known = entry.get("sha")
     newer = known if isinstance(known, str) and known != found.sha else ""
-    why = _why_modified(root, entry, found.sha)
+    why = _why_modified(root, entry, found)
     state = BOTH if newer and why else STALE if newer else MODIFIED if why else UP_TO_DATE
     short = found.sha[:7]
     parts = []

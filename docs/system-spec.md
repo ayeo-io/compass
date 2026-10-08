@@ -50,11 +50,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given the compass schema, when a test walks every node, then each node has a non-empty description
+### Given a spike with an advisory guardrail check that fails, then the run passes and shows the failure as advisory
 
-- **Scenario id:** `TRC-001`
+- **Scenario id:** `CS-11`
 - **Intent:** `INT-1`
-- **Source issue:** `schema-descriptions`
+- **Source issue:** `check-severity-from-generation`
 - **Landed:** 2026-10-08
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -353,4 +353,4 @@
 
 ---
 
-1877 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1888 superseded scenario(s) are in `docs/system-spec-archive.md`.

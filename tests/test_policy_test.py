@@ -512,7 +512,7 @@ def test_pt_9_fixtures_run_over_the_pinned_git_parent_and_the_preset(tmp_path):
     preset, env, sha = _extending(tmp_path)
     code, out, err = _test(tmp_path, preset, env=env)
     assert code == 0, (out, err)
-    assert (preset / ".compass" / "cache" / "parents" / sha / "compass.yml").is_file()
+    assert (preset / ".compass" / "cache" / "parents" / "acme" / "base" / sha / "compass.yml").is_file()
 
 
 def test_pt_9_offline_with_the_parent_uncached_fails_with_the_lint_code(tmp_path):

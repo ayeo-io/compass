@@ -22,8 +22,8 @@ is safe to run every time and you do not need to check first.
 **Report the result to the user in one line when it created the project.** A
 `.compass/` directory appearing with no word said is how someone deletes it by
 hand, or commits it without meaning to. It creates project state only - the
-shipped governance defaults stay in force, and adopting your own is what
-`/compass:init` offers separately.
+shipped defaults stay in force, and writing a `compass.yml` for the project is
+what `/compass:init` offers separately.
 
 ## Setup
 

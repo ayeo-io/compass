@@ -253,6 +253,36 @@ entries:
   project: with-judged-check
   argv: ["evidence", "review", "design-review", "--verdict", "pass", "--reason", "Read in full.", "--reviewer", "jed72"]
   exit: 2
+# Added on purpose by artifact-freshness, which reads a project's capability
+# `artifact-freshness`. The four entries below run in one project: a regular
+# issue at implement, the capability on, and a design written before its
+# acceptance criteria changed. The exit codes are the ones the 5.6.0 CLI gave
+# in the same project, measured by running it there. What is new is the
+# phrase each entry names, so the entry fails when the reader is lost. The
+# `check` and `issue receipt` entries name a phrase that only a stale design
+# produces, not the guardrail name or the section heading, which a fresh
+# design produces too. `check` exits 1 at 5.6.0 too, for scenarios with no
+# id, so the exit code alone does not show the stale design: the phrase does.
+- id: check-stale-document
+  project: with-stale-document
+  argv: ["check", "--issue", "feature", "--json"]
+  exit: 1
+  stdout_contains: "stale - acceptance-criteria changed"
+- id: next-stale-document
+  project: with-stale-document
+  argv: ["next", "--issue", "feature"]
+  exit: 0
+  stdout_contains: "entry not met: technical-design is stale"
+- id: receipt-stale-document
+  project: with-stale-document
+  argv: ["issue", "receipt", "--issue", "feature"]
+  exit: 0
+  stdout_contains: "stale - acceptance-criteria changed"
+- id: artifact-records-digests
+  project: with-stale-document
+  argv: ["issue", "artifact", "acceptance-criteria", "--status", "draft", "--issue", "feature"]
+  exit: 0
+  stdout_contains: "freshness: digest recorded"
 # Added on purpose by human-check-approvers: `evidence approve` is a new leaf of
 # the evidence group. 5.6.0 refused it as an unknown choice (exit 2). From 6.0.0
 # it records a person's approval from a terminal. The corpus runs without a

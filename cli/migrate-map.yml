@@ -130,8 +130,8 @@ manifest_keys:
   topology: orchestration
   stream_ceiling: subtask_ceiling
 
-# `.compass/config.yml` block names. This is the one vocabulary file an adopter
-# edits by hand, so their existing spelling is read instead of needing to
-# change.
+# Settings block names, as an adopter wrote them in `compass.yml` or in
+# `.compass/config.yml`. This is the one vocabulary file an adopter edits by
+# hand, so their existing spelling is read instead of needing to change.
 config_keys:
   swarm: multiagent

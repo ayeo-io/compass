@@ -241,7 +241,7 @@ def _severity(view, check, reading):
     return "blocking"
 
 
-def _positions(view, task, task_dir):
+def positions(view, task, task_dir):
     """`(order, reached)`: the stage names in order, and how many stages the
     issue has reached (the index of the current stage). A closed issue, or a
     current stage no list knows, has reached them all."""
@@ -275,7 +275,7 @@ def evaluate(view, task, task_dir, run=True):
     reading = view.listing_assessment(task.get("assessment") or {},
                                       task.get("delivery_approach"))
     capabilities = {name for name, on in view.capabilities.items() if on}
-    order, reached = _positions(view, task, task_dir)
+    order, reached = positions(view, task, task_dir)
     documents = _Documents(task_dir)
     rows = []
     for index, stage in enumerate(order):

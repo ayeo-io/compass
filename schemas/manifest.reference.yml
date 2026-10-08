@@ -93,6 +93,8 @@ artifacts:       # (optional) list of maps - the issue's document registry:
     status:      #   (required in entry) string
     reason:      #   (required in entry) string - why this document exists, or was deliberately not written
     path:        #   (optional) string - project-root-relative path to the document
+    digest:      #   (optional) string - sha256 of the document's file when it was last written (artifact-freshness on)
+    upstream:    #   (optional) map - artifact id to the sha256 of that artifact when this document was written (artifact-freshness on)
 
 # Human approval (guardrail `G5`) is not a separate top-level key: it is a
 # `human-approval` entry in the `evidence:` registry above.

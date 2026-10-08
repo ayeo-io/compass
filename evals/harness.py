@@ -992,8 +992,9 @@ def _prepare_framework_copy(condition: str, framework_source_override: Path | No
     return copy_dir, commit
 
 
-# The pre-tool hook's refusal quotes `.compass/config.yml`'s
-# `initialised.at`, and a real compass session read that date - today's,
+# The pre-tool hook's refusal quotes the state file's (`.compass/state.yml`,
+# or `.compass/config.yml` before ADR-043) `initialised.at`, and a real compass
+# session read that date - today's,
 # because the harness runs `compass init` moments before the prompt - as
 # proof a policy could not be leftover config from another project. An
 # adopter's own project was set up before today, so the harness backdates
@@ -1005,23 +1006,27 @@ _INITIALISED_AT_PATTERN = re.compile(r'^\s*at:\s*"(\d{4}-\d{2}-\d{2})"',
 
 
 def _backdate_setup_date(repo_dir: Path) -> None:
-    """Rewrite the date `compass init` just stamped into
-    `.compass/config.yml` to `_SETUP_BACKDATE_DAYS` before the run.
+    """Rewrite the date `compass init` just stamped into the state file
+    (`.compass/state.yml`, which init writes since ADR-043, or
+    `.compass/config.yml` from a CLI before that) to `_SETUP_BACKDATE_DAYS`
+    before the run.
     `records_signed_since` is stamped from the same template value
     (`cli/compass_pkg/init_cmd.py`), so replacing every occurrence of the
     date `initialised.at` names backdates both fields from the one value
     the CLI wrote, without assuming which fields carry it. Does nothing if
     `compass init` was never run - the bare condition never gets here."""
-    config_path = repo_dir / ".compass" / "config.yml"
-    if not config_path.is_file():
+    for name in ("state.yml", "config.yml"):
+        state_path = repo_dir / ".compass" / name
+        if not state_path.is_file():
+            continue
+        text = state_path.read_text(encoding="utf-8")
+        match = _INITIALISED_AT_PATTERN.search(text)
+        if not match:
+            continue
+        stamped = date.fromisoformat(match.group(1))
+        backdated = (stamped - timedelta(days=_SETUP_BACKDATE_DAYS)).isoformat()
+        state_path.write_text(text.replace(match.group(1), backdated), encoding="utf-8")
         return
-    text = config_path.read_text(encoding="utf-8")
-    match = _INITIALISED_AT_PATTERN.search(text)
-    if not match:
-        return
-    stamped = date.fromisoformat(match.group(1))
-    backdated = (stamped - timedelta(days=_SETUP_BACKDATE_DAYS)).isoformat()
-    config_path.write_text(text.replace(match.group(1), backdated), encoding="utf-8")
 
 
 def _copy_tracked_files(source_dir: Path, dest_dir: Path, env: dict[str, str],

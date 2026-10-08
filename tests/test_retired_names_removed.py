@@ -459,9 +459,10 @@ def test_no_dead_redirect_machinery_survives_the_removal():
 # A list missing a file is a broken promise, not a typo.
 # `docs/releasing.md` is deliberately absent: it is a release note that
 # mentions the new file, not a list of the whole set.
+# `commands/init.md` and `docs/quickstart.md` were lists from 5.x, when
+# `/compass:init` copied the files into the project. From 6.0.0 it copies
+# nothing, so neither enumerates the set and neither is listed.
 GOVERNANCE_ENUMERATIONS = (
-    "commands/init.md",
-    "docs/quickstart.md",
     "governance/README.md",
     "scripts/validate.sh",
     "CLAUDE.md",

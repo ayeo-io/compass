@@ -5,16 +5,18 @@ make sure the project exists before it writes into it.
 
 The split this verb keeps:
 
-  compass init      creates .compass/. Nothing else. Safe to run twice, which
-                    is what lets the entry-point commands call it
-                    unconditionally rather than each testing for the directory.
-  /compass:init     the slash command - calls this, then offers the governance
-                    conversation that copies governance/ into the project.
+  compass init      creates .compass/ and its state file. Nothing else. Safe
+                    to run twice, which is what lets the entry-point commands
+                    call it unconditionally rather than each testing for the
+                    directory.
+  /compass:init     the slash command - writes a minimal compass.yml, or runs
+                    `compass policy migrate` on a project with a
+                    .compass/config.yml or copied governance. It copies nothing.
 
-Auto-initialisation must never adopt governance. Being initialised for you is
-small and reversible; having a governance directory copied into your
-repository because you ran /compass:intent is not, and it would arrive without
-the conversation that is the whole point of adopting it.
+Auto-initialisation must never write configuration. Being initialised for you
+is small and reversible; having a compass.yml written into your repository
+because you ran /compass:intent is not, and it would arrive without the
+conversation that is the whole point of choosing a configuration.
 
 DEPENDENCY: none beyond the standard library and this package. It runs before
 a project exists, so it must not reach for anything that assumes one - in
@@ -129,8 +131,7 @@ def cmd_init(args):
             detail=[
                 "state    : %s" % _state_path(root, compass_dir),
                 "work     : %s" % os.path.join(compass_dir, "work"),
-                "governance: the shipped defaults are in force. Run "
-                "/compass:init to adopt your own.",
+                "settings : defaults in force. /compass:init writes a compass.yml.",
             ],
             decision=True,
             created=True, path=compass_dir, project_root=root,

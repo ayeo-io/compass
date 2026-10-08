@@ -28,9 +28,10 @@ from compass_pkg.tdd import _read_config
 def _project_commands_allowed(task_dir):
     """Has this project opted in to running commands its guardrails declare?
 
-    Default false. Lives in .compass/config.yml rather than in
-    governance/guardrails.yml, because that file is the thing being constrained
-    and a declaration should not be able to authorise itself.
+    Default false. A settings key in compass.yml (or .compass/config.yml, in a
+    project that has not moved), read through project_settings. It sits beside
+    the checks it authorises, so a declaration can authorise itself in the same
+    pull request; the trust decision below is the control, not this key.
 
     This is NOT a security control: the file is in the repository, so a
     contribution can set it. It defends against accidents and defaults. The

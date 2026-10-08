@@ -149,7 +149,7 @@ def test_scn_b2_built_in_match_says_so():
 def test_scn_c1_this_repo_enforces_its_shell_scripts():
     """ADR-011's gap, closed where it applies: Compass's own hooks/ and scripts/
     are the enforcement mechanism, and were outside it."""
-    cfg = yaml.safe_load((ROOT / ".compass" / "config.yml").read_text())
+    cfg = yaml.safe_load((ROOT / "compass.yml").read_text())
     globs = ((cfg or {}).get("enforcement") or {}).get("code_globs") or []
     assert any(g.endswith(".sh") or "hooks/" in g or "scripts/" in g
                for g in globs), (

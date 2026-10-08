@@ -262,6 +262,22 @@ def _unmet_entry(task: dict, task_dir: str, stage: str) -> list:
         return []
 
 
+def _stale_entry(task: dict, task_dir: str, stage: str) -> list:
+    """The stale documents `stage` consumes, as `<kind> is stale`, when the
+    capability `artifact-freshness` is on for the issue; none otherwise."""
+    try:
+        from compass_pkg import effective, freshness
+        view = effective.view_or_legacy(task_dir)
+        if not freshness.enabled(view):
+            return []
+    except Exception:  # noqa: BLE001 - the stage line is the answer; this is extra
+        return []
+    try:
+        return freshness.unmet_entry(freshness.evaluate(view, task, task_dir), stage)
+    except Exception:  # noqa: BLE001 - with the capability on, a record that cannot be read fails closed
+        return ["artifact freshness cannot be evaluated"] if stage in freshness.CONSUMES else []
+
+
 def _emit(args, task, task_dir, line, current_phase, finished):
     """Write `line`, today's output, opened by the rail when a person is
     reading. compass_pkg.render decides that; piped output, `CLAUDECODE`,
@@ -354,7 +370,7 @@ def cmd_next(args):
     parts = [next_phase.capitalize()]
     if pending_gate:
         parts[0] += f" [gate: {pending_gate}]"
-    unmet = _unmet_entry(task, task_dir, next_phase)
+    unmet = _unmet_entry(task, task_dir, next_phase) + _stale_entry(task, task_dir, next_phase)
     if unmet:
         parts.append("entry not met: " + ", ".join(unmet))
     if collapsed:

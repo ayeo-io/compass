@@ -103,9 +103,11 @@ is no worktree - work on the current branch.
 ## Where state lives
 
 ```
+compass.yml                     The one file a person edits: settings, and the project's edits to the shipped default (written by /compass:init or compass policy migrate)
 .compass/
 ├── state.yml                   What the CLI wrote: what initialised the project, and when
-├── config.yml                  Old projects only: settings go in compass.yml at the project root, and init does not write this file
+├── config.yml                  Projects from 5.x only: read until the project moves its settings with compass policy migrate; no 6.0.0 command writes it
+├── legacy/, migration.yml      Written by compass policy migrate: the superseded files, and the digests of them
 ├── current-task                One-line pointer to the active issue
 ├── work/
 │   └── <issue-slug>/            One directory per issue
@@ -120,15 +122,18 @@ is no worktree - work on the current branch.
 │       ├── positioning.md       Marketer messaging (if in play)
 │       ├── launch-readiness.md  Marketer claims gate (if in play)
 │       ├── verification-report.md  (ends with the Definition of Done gate)
+│       ├── generations/<n>/     The configuration the issue runs against (written by compass approach evaluate --write)
 │       ├── evidence/            red/green records + typed gate evidence
 │       └── devlog.md            Append-only running log
 └── flow/
     └── digest-<date>.md         Periodic cross-issue digest
 ```
 
-`governance/` lives at the project root, not under `.compass/`. The CLI reads
-whichever is in force: the project's own if `/compass:init` copied one in, the
-framework's shipped defaults otherwise.
+A new project has no `governance/` directory: the shipped default preset is in
+force, and `compass.yml` holds only what differs from it. A project from 5.x
+that copied `governance/` into its root keeps running on that copy until
+`compass policy migrate` converts it. `compass policy effective` shows what is
+in force.
 
 ## Project lessons
 

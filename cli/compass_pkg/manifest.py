@@ -55,6 +55,26 @@ def _git(args, cwd):
     return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
 
 
+def _refuse_stale_artifacts(task, task_dir):
+    """With the capability `artifact-freshness` on, refuse to land while a
+    document is stale. Nothing happens with the capability off, or for an
+    issue whose configuration cannot be read, as before."""
+    from compass_pkg import effective, freshness
+    try:
+        view = effective.view_or_legacy(task_dir)
+    except Exception:  # noqa: BLE001 - no configuration, no capability
+        return
+    if not freshness.enabled(view):
+        return
+    try:
+        text = freshness.refusal(freshness.evaluate(view, task, task_dir))
+    except Exception as exc:  # noqa: BLE001 - a record that cannot be read must not land
+        raise CompassError("compass ship-commit: refusing to land - artifact freshness "
+                           "cannot be evaluated: %s" % exc)
+    if text:
+        raise CompassError(text)
+
+
 # Files Compass writes itself that live outside any issue's directory. They
 # belong in the commit that ships the issue they describe, but no author
 # declares them as `changed_files` - the framework wrote them.
@@ -288,6 +308,14 @@ def cmd_land_commit(args):
                 continue
             in_head = _git(["cat-file", "-e", f"HEAD:{path}"], cwd).returncode == 0
             if not in_head:
+                # Clean, absent from HEAD and absent from disk: a deletion
+                # that is already committed. A path that was never
+                # committed fails the same test, but git reports it only
+                # when it exists on disk, so it is told apart by history.
+                if not os.path.lexists(os.path.join(cwd, path)) and _git(
+                        ["log", "-1", "--format=%H", "--", path],
+                        cwd).stdout.strip():
+                    continue
                 dirty_or_missing.append(path)
         if dirty_or_missing:
             raise CompassError(
@@ -302,6 +330,7 @@ def cmd_land_commit(args):
         # files must be the ones its newest green tested.
         _refuse_stale_green(head_task, head_task_dir, head_slug, cwd,
                             at_commit="HEAD", judge_landed=True)
+        _refuse_stale_artifacts(head_task, head_task_dir)
 
         # What HEAD itself added must be the issue's: a commit a git hook
         # widened, refused once, must not land when shipped again. Compared
@@ -376,6 +405,7 @@ def cmd_land_commit(args):
                 "nothing was committed.\n" + (tree.stderr or "").strip())
         _refuse_stale_green(_scope_task, _scope_dir, slug, cwd,
                             at_commit=tree.stdout.strip())
+        _refuse_stale_artifacts(_scope_task, _scope_dir)
         # A pre-commit step can stage files too: check the scope again on
         # what is staged now.
         now = [n for n in _git(["diff", "--cached", "--name-only", "-z"],

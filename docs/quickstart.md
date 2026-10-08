@@ -90,9 +90,9 @@ the shipped `governance/` defaults on day one. The shipped defaults are a
 complete governance state on their own: "the shipped defaults and nothing
 project-specific yet" is valid - see `governance/README.md`.
 
-`/compass:init` is how a project adds its own governance later, not a
-prerequisite. When you have opinions to encode, run it once from the project
-root:
+`/compass:init` writes the project's own configuration file later, not a
+prerequisite. When you want to set the project's name and test command, or
+have opinions to encode, run it once from the project root:
 
 ```
 /compass:init
@@ -100,20 +100,24 @@ root:
 
 `init` is exempt from assessment - it changes no application code. It:
 
-1. **Copies `governance/`** into the project - `guardrails.md`,
-   `strategies.md`, `strategies-rationale.md`, `routing-policy.md` - so the
-   team can extend the shipped defaults. It does not make you author anything: the defaults are real,
-   in-force content from the moment they land. The team adds project
-   guardrails and strategies whenever it is ready.
-2. **Writes no settings file.** `compass init` creates only a state file in
-   `.compass/`. Settings such as the test command and the multiagent worktree
-   limits go in `compass.yml` at the project root, and the defaults are sane
-   until you set them. See `docs/configuration.md`.
+1. **Writes a minimal `compass.yml`** at the project root: `schema`, `extends:
+   compass:default@6`, an `owner` who approves waivers, and `project.name` and
+   `project.test_command`. It copies no `governance/` files. The file holds only
+   what differs from the shipped defaults, and the defaults are real, in-force
+   content from the moment you install Compass. The team adds its own edits
+   whenever it is ready. See `docs/configuration.md`.
+2. **Migrates an older project instead.** A project that has a
+   `.compass/config.yml` or copied `governance/` files from a 5.x version gets
+   `compass policy migrate`: a dry run first, and `--apply` only when you say
+   yes. See `docs/policy-migrate.md`.
 3. **Creates `.compass/work/`** - where every issue's state will live. Note
    that `.compass/work/` **is committed**. It is the audit trail, not scratch.
 
-Until `init` is run, the framework's shipped `governance/` defaults apply
-as-is. `init` adds to them; it is not a gate.
+`compass init`, which every entry point runs for you, writes only a state file
+in `.compass/` and no settings file.
+
+Until `/compass:init` is run, the framework's shipped defaults apply as-is.
+`/compass:init` adds to them; it is not a gate.
 
 ---
 
@@ -461,7 +465,10 @@ rail:
 If a project turns on the capability `entry-exit-evaluation`, the line also
 names the entry checks of the current stage that are not met, for example
 `Plan | entry not met: dor-no-open-questions`
-(`docs/entry-exit-evaluation.md`).
+(`docs/entry-exit-evaluation.md`). With the capability `artifact-freshness`
+on, it names a stale document the stage consumes, for example
+`Implement | entry not met: technical-design is stale`
+(`docs/artifact-freshness.md`).
 
 ## Where to go next
 

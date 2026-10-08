@@ -2547,12 +2547,24 @@ def _looks_like_runtime_evidence(path: str) -> bool:
     return path.split("/", 1)[0] == "evidence"
 
 
+# The 5.x settings file. From 6.0.0 this repository keeps its settings in
+# `compass.yml`, so the file is gone here, but the CLI still reads it in a
+# project that has not moved (`compass policy migrate` moves it), and the docs,
+# comments and tests that say so must be able to name it. Only this exact path
+# is excused: `tests/test_old_settings_file_sweep.py` and
+# `tests/test_settings_prose.py` check that each mention also names its
+# replacement.
+_LEGACY_SETTINGS_PATHS = frozenset({".compass/config.yml"})
+
+
 def _find_missing_reference(span: ProseSpan) -> list[Finding]:
     findings = []
     for match in _REFERENCE_RE.finditer(span.text):
         if _reference_exempt(span.text, match):
             continue
         path = match.group(1)
+        if path in _LEGACY_SETTINGS_PATHS:
+            continue
         if _looks_like_issue_citation(path) or _looks_like_runtime_evidence(path):
             continue
         if not (REPO_ROOT / path).exists() and not _exists_in_own_seed(span.path, path):
@@ -2590,6 +2602,18 @@ def test_pbw_a8_a_scenario_path_resolves_only_in_its_own_seed():
     assert _find_missing_reference(missing)
     present = ProseSpan(scenario_file, 1, f"See `{named}`.", "markdown")
     assert not _find_missing_reference(present)
+
+
+def test_pbw_a8_only_the_legacy_settings_path_may_be_missing():
+    """The one path excused is exactly the 5.x settings file. A lookalike, and
+    any other missing path, is still reported."""
+    for line in ("Read `.compass/config.yml` first.",
+                 "In a project from 5.x, `.compass/config.yml` holds it."):
+        assert not _find_missing_reference(ProseSpan("docs/x.md", 1, line, "markdown"))
+    for line in ("Read `.compass/config2.yml` first.",
+                 "Read `.compass/settings.yml` first.",
+                 "Read `docs/no_such_file.md` first."):
+        assert _find_missing_reference(ProseSpan("docs/x.md", 1, line, "markdown")), line
 
 
 _register(Rule(
@@ -3738,8 +3762,9 @@ _GROWING_REACH = {
     # 66 with tests/fixtures/scenario-tests-json-example.json, plain JSON;
     # 67 with tests/fixtures/evidence-review-example.json, plain JSON;
     # 68 with tests/fixtures/preset-interfaces/policy-test-groups.json, plain JSON;
-    # 69 with tests/fixtures/evidence-approve-example.json, plain JSON.
-    "PBW-C4": (lambda path: path.startswith("tests/"), 69),
+    # 69 with tests/fixtures/evidence-approve-example.json, plain JSON;
+    # 70 with tests/fixtures/compat/v5.6.0-governance.tgz, the packed 5.6.0 governance files.
+    "PBW-C4": (lambda path: path.startswith("tests/"), 70),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

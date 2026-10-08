@@ -350,7 +350,8 @@ def settings_key(project_root, key):
 
 def named(project_root, key, value=None):
     """A setting as advice text shows it: `key: value` (or `key:`) in the file
-    read, as in "`mode: enforced` in .compass/config.yml"."""
+    read, as in "`adoption: enforced` in compass.yml" or, in a project that has
+    not moved, "`mode: enforced` in .compass/config.yml"."""
     shown = settings_key(project_root, key) + ":" + (f" {value}" if value else "")
     return f"`{shown}` in {settings_file(project_root)}"
 

@@ -688,7 +688,7 @@ def _is_protected_token(token: Optional[str], cwd: Optional[str] = None,
 def _redirect_targets(cmd: str) -> List[str]:
     """The target of every `>` or `>>` in `cmd`, stripped of quotes - what a
     redirection writes to, never the descriptor number ahead of it, so
-    `2>/dev/null` and `2>.compass/config.yml` are told apart by where they
+    `2>/dev/null` and `2>compass.yml` are told apart by where they
     point, not by the digit."""
     return [m.group(1).strip("'\"") for m in _REDIRECT_TARGET_RE.finditer(cmd)]
 

@@ -49,9 +49,9 @@ def test_bpf_1_the_project_declares_how_its_suite_is_run():
     question."""
     import re
 
-    cfg = (ROOT / ".compass" / "config.yml").read_text(encoding="utf-8")
+    cfg = (ROOT / "compass.yml").read_text(encoding="utf-8")
     m = re.search(r"^\s*test_command:\s*(.+)$", cfg, re.M)
-    assert m, "config.yml declares no test_command key at all"
+    assert m, "compass.yml declares no test_command key at all"
     value = m.group(1).split("#")[0].strip().strip('"\'')
     assert value, (
         "`test_command` is empty, so `compass tdd-green` and the "

@@ -46,7 +46,7 @@ from compass_pkg.manifest import annotate_gate_accepts_text
 # The policy states, as a number, how many parallel subtasks each shape
 # permits, so a cap can be compared against it directly. A null ceiling
 # means UNBOUNDED, not that the number is unknown.
-# Nothing in routing-policy.yml or .compass/config.yml states a multiagent width -
+# Nothing in routing-policy.yml or compass.yml states a multiagent width -
 # the only cap the policy carries is RP-CAP-001's max_worktrees: 1, and the
 # config file says in as many words that the worktree cap is a routing
 # concern it does not hold. A ceiling on multiagent work can only come from a

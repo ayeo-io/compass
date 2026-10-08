@@ -37,8 +37,13 @@ def test_trc_f1_a_project_that_opted_into_nothing_should_see_no_change():
     try:
         shutil.copytree(GOVERNANCE, proj / "governance")
         (proj / ".compass" / "work").mkdir(parents=True)
-        shutil.copyfile(ROOT / ".compass" / "config.yml",
-                        proj / ".compass" / "config.yml")
+        # This repository holds its settings in compass.yml; an older layout
+        # held them in .compass/config.yml. Copy whichever exists.
+        for source, target in ((ROOT / "compass.yml", proj / "compass.yml"),
+                               (ROOT / ".compass" / "config.yml",
+                                proj / ".compass" / "config.yml")):
+            if source.is_file():
+                shutil.copyfile(source, target)
         r = subprocess.run([sys.executable, str(CLI), "ci"], cwd=str(proj),
                            capture_output=True, text=True, timeout=300)
         assert r.returncode == 0, (

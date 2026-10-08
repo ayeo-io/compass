@@ -36,7 +36,7 @@ BDD_KEYS = ("bdd_runner", "bdd_features_dir", "bdd_steps_dir", "bdd_run_command"
 
 def test_trc_f5_no_optin_means_no_change():
     # 1. the shipped config sets none of the bdd keys as live values
-    cfg = yaml.safe_load((ROOT / ".compass" / "config.yml").read_text()) or {}
+    cfg = yaml.safe_load((ROOT / "compass.yml").read_text()) or {}
     project = cfg.get("project") or {}
     for key in BDD_KEYS:
         assert not project.get(key), (
@@ -55,8 +55,7 @@ def test_trc_f5_no_optin_means_no_change():
     try:
         shutil.copytree(ROOT / "governance", proj / "governance")
         (proj / ".compass" / "work").mkdir(parents=True)
-        shutil.copyfile(ROOT / ".compass" / "config.yml",
-                        proj / ".compass" / "config.yml")
+        shutil.copyfile(ROOT / "compass.yml", proj / "compass.yml")
         result = subprocess.run(
             [sys.executable, str(CLI), "ci"],
             cwd=str(proj), capture_output=True, text=True, timeout=300,

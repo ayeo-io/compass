@@ -130,10 +130,23 @@ def _git(root: Path, env: dict, *argv: str) -> None:
                    capture_output=True)
 
 
+#: The configuration the state being built carries, set by `Projects.template`.
+#: It goes into the base commit, so a command that judges what changed since
+#: a quick fix started does not take the configuration for the fix's change,
+#: and an issue is assessed under the configuration from its first command.
+_PENDING = {"kind": "A", "fault": None}
+
+
+def _apply_pending(root: Path) -> None:
+    if _PENDING["kind"] != "A":
+        build_configuration(_PENDING["kind"], root, _PENDING["fault"])
+
+
 def _empty(root: Path, env: dict) -> None:
     root.mkdir(parents=True)
     _git(root, env, "init", "-q", "-b", "main")
     (root / "README.md").write_text("hello\n", encoding="utf-8")
+    _apply_pending(root)
     _git(root, env, "add", "-A")
     _git(root, env, "commit", "-q", "-m", "base")
 
@@ -196,6 +209,7 @@ def _outside_git(root: Path, env: dict) -> None:
     # refused for that reason and not for a missing .compass folder.
     root.mkdir(parents=True)
     (root / "README.md").write_text("hello\n", encoding="utf-8")
+    _apply_pending(root)
     _must(root, env, "init")
 
 
@@ -233,6 +247,37 @@ def _with_judged_check_document(root: Path, env: dict) -> None:
     _with_judged_check(root, env)
     (root / ".compass" / "work" / REGULAR_SLUG / "technical-design.md").write_text(
         "# Design\n", encoding="utf-8")
+
+
+FRESHNESS_COMPASS_YML = """schema: 1
+capabilities:
+  artifact-freshness: true
+artifacts:
+  technical-design:
+    set:
+      depends_on: [acceptance-criteria]
+"""
+
+
+def _with_stale_document(root: Path, env: dict) -> None:
+    # A regular issue at the implement stage, with the capability on and two
+    # documents written and registered: the design depends on the acceptance
+    # criteria, and the criteria were changed after the design was written.
+    _regular_issue(root, env)
+    (root / "compass.yml").write_text(FRESHNESS_COMPASS_YML, encoding="utf-8")
+    _must(root, env, "approach", "evaluate", "--issue", REGULAR_SLUG, "--write")
+    work = root / ".compass" / "work" / REGULAR_SLUG
+    (work / "acceptance-criteria.md").write_text("# Criteria\n", encoding="utf-8")
+    (work / "technical-design.md").write_text("# Design\n", encoding="utf-8")
+    (work / "delivery-approach.md").write_text("# Delivery approach\n", encoding="utf-8")
+    for kind in ("acceptance-criteria", "technical-design"):
+        _must(root, env, "issue", "artifact", kind, "--status", "draft",
+              "--issue", REGULAR_SLUG)
+    manifest = yaml.safe_load((work / "manifest.yml").read_text(encoding="utf-8"))
+    manifest["current_phase"] = "implement"
+    (work / "manifest.yml").write_text(yaml.safe_dump(manifest, sort_keys=False),
+                                       encoding="utf-8")
+    (work / "acceptance-criteria.md").write_text("# Criteria\n\nChanged.\n", encoding="utf-8")
 
 
 def _with_broken_governance(root: Path, env: dict) -> None:
@@ -320,6 +365,7 @@ STATES = {
     "with-copied-governance": _with_copied_governance,
     "with-judged-check": _with_judged_check,
     "with-judged-check-document": _with_judged_check_document,
+    "with-stale-document": _with_stale_document,
     "with-broken-governance": _with_broken_governance,
     "with-config": _with_config,
     "with-compass-yml": _with_compass_yml,
@@ -328,6 +374,61 @@ STATES = {
     "with-broken-compass-yml": _with_broken_compass_yml,
     "outside-git": _outside_git,
 }
+
+
+# Configurations B (an empty overlay in compass.yml) and C (a 5.6.0 governance
+# copy) are added to a built state. A state that already holds a settings file
+# or governance of its own is not given another: it is that configuration, or
+# configuration D, already.
+_HAS_COMPASS_YML = {"regular-issue-broken-compass-yml", "with-compass-yml",
+                    "with-looser-compass-yml", "with-broken-compass-yml"}
+_HAS_GOVERNANCE = {"with-copied-governance", "with-broken-governance"}
+_HAS_OLD_CONFIG = {"with-config"}
+
+
+def configuration_applies(state: str, kind: str) -> bool:
+    if kind == "B":
+        return state not in _HAS_COMPASS_YML | _HAS_GOVERNANCE | _HAS_OLD_CONFIG
+    if kind == "C":
+        return state not in _HAS_COMPASS_YML | _HAS_GOVERNANCE
+    return True
+
+
+#: The two entries whose answer differs under configuration B on purpose.
+#: Configuration B is an empty overlay: a `compass.yml` holding `schema: 1` and
+#: `extends: compass:default@6`. `policy test` then finds a project preset with
+#: no fixtures (exit 1, where a project with no `compass.yml` gives exit 2),
+#: and `policy update` finds a project that already extends the shipped default
+#: (exit 0, where a project with no `compass.yml` gives exit 2). Both answers
+#: are about the configuration found, so the no-configuration baseline does not
+#: apply. Configuration C and every other entry are still compared.
+_DIFFER_UNDER_B = frozenset({"policy-test-no-preset",
+                             "policy-update-no-project-file"})
+
+
+def entry_applies(entry: dict, kind: str) -> bool:
+    """Whether `entry` is a fair question under configuration `kind`. The
+    state must not already hold a settings file or governance of its own, and
+    the command must not be about the configuration itself:
+    `policy migrate` migrates the very files B and C add, and `terminology`
+    reads `governance/terminology.yml`, which a two-file governance copy lacks
+    (the 5.6.0 CLI refuses it the same way in such a project). Two entries are
+    also left out under B alone: see `_DIFFER_UNDER_B`."""
+    if not configuration_applies(entry["project"], kind):
+        return False
+    argv = entry["argv"]
+    if argv[:2] == ["policy", "migrate"]:
+        return False
+    if kind == "B" and entry["id"] in _DIFFER_UNDER_B:
+        return False
+    if kind == "C" and argv[:1] == ["terminology"]:
+        return False
+    return True
+
+
+def build_configuration(kind: str, root: Path, fault: str | None = None) -> None:
+    from compat_baseline import build_configuration as build
+    build(kind, root, fault)
 
 
 class Projects:
@@ -343,23 +444,34 @@ class Projects:
         self._templates: dict[str, Path] = {}
         self._count = 0
 
-    def template(self, state: str) -> Path:
-        if state not in self._templates:
+    def template(self, state: str, configuration: str = "A",
+                 fault: str | None = None) -> Path:
+        key = (state, configuration, fault)
+        if key not in self._templates:
             if state not in STATES:
                 raise KeyError(f"unknown project state {state!r}")
-            dest = self.scratch / "templates" / state
-            STATES[state](dest, self.env)
-            self._templates[state] = dest
-        return self._templates[state]
+            dest = self.scratch / "templates" / "-".join(
+                str(p) for p in key if p)
+            _PENDING.update(kind=configuration, fault=fault)
+            try:
+                STATES[state](dest, self.env)
+            finally:
+                _PENDING.update(kind="A", fault=None)
+            self._templates[key] = dest
+        return self._templates[key]
 
-    def fresh(self, state: str) -> Path:
+    def fresh(self, state: str, configuration: str = "A",
+              fault: str | None = None) -> Path:
         self._count += 1
         dest = self.scratch / "runs" / f"{self._count:03d}" / "project"
-        shutil.copytree(self.template(state), dest, symlinks=True)
+        shutil.copytree(self.template(state, configuration, fault), dest,
+                        symlinks=True)
         return dest
 
-    def run(self, entry: dict) -> Outcome:
-        return _cli(self.fresh(entry["project"]), self.env, *entry["argv"])
+    def run(self, entry: dict, configuration: str = "A",
+            fault: str | None = None) -> Outcome:
+        return _cli(self.fresh(entry["project"], configuration, fault), self.env,
+                    *entry["argv"])
 
 
 def load(path: Path = CORPUS) -> list[dict]:

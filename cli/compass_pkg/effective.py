@@ -314,8 +314,8 @@ def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False, 
     loaded = policy_lint.load_layers(root, manifest=manifest, read_project=counts, fetch=fetch)
     if loaded.findings:
         first = loaded.findings[0]
-        raise CompassError(f"nothing can be resolved: {first.code} {first.path}: "
-                           f"{first.message}")
+        raise CompassError(f"nothing can be resolved: {first.code} [{first.layer}] "
+                           f"{first.path}: {first.message}")
     legacy = None if counts else _legacy_parent(root)
     parent, meta = legacy if legacy else (loaded.parent, loaded.meta)
     if legacy:

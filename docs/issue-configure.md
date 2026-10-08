@@ -22,6 +22,34 @@ discard and adoption) and `cli/compass_pkg/routing.py` (`--reset-config`).
 `/compass:assess --reassess` runs the reassess. The default for `N` is the
 generation after the one in force.
 
+`approach evaluate` computes the approach, stages, gates, checkpoints and
+subtask ceiling from the configuration the issue runs against and from the
+issue's own layer: the approach it names, the stage modes it sets and the
+subtask ceiling it sets. The layer applies before the floors, caps and role
+rules, so a floor still raises an approach the issue named too low. A
+read-only evaluation uses the stored generation's layer, or the manifest's
+`config:` for an issue with no generation. A write commits the layer it
+computed from. The lint refuses a layer that loosens a lock when the
+generation is committed; a read-only evaluation does not run it.
+
+## Where the issue's layer is judged
+
+The lint judges an issue's layer at the issue's own assessment, not over the
+whole grid of assessments. This covers the locks and the classification. An
+issue has one assessment in force, so the layer is compared with the
+configuration above it at that single point, the same point the preview's
+"at this issue's assessment" lines show. A project layer and a parent stay
+judged over the whole grid, because a project layer applies to every
+assessment the project will see (ADR-037).
+
+What follows from judging at the point:
+
+- A route pick is accepted when the issue owes at least as much with it as without it at its own assessment. `--route spike` on a delivery issue is refused by a lock at that assessment. A spike issue that picks `full` is refused by a lock, because it would lose `spike.conclude`.
+- Nothing is accepted or refused by the name or weight of a route. `full` has no subtask ceiling, and no ceiling is the loosest, so `full` on a `regular` issue is refused as incomparable on `approaches.subtask_ceiling`. A route pick that is incomparable or looser at the point is refused, and a route pick has no waiver in 6.0.0.
+- A route pick is compared field by field, never as a heavier or lighter route. A pick that raises a ceiling, or changes a mode the stage ranks leave unordered, is a mixed change and is refused, even when it also tightens other fields. The refusal ends with the fields that make it mixed: `fields that are looser or cannot be compared: ...`. Combine the pick with a flag that removes each of them. On a `regular` issue, `--route regular --ceiling subtask_ceiling=1` is a pure tightening and is accepted.
+- `--route regular` on a `quick-fix` issue cannot be fixed that way. It is refused naming `approaches.subtask_ceiling` (1 to 2, looser), `approaches.stages (breakdown)` (skipped against multiagent, unranked) and `approaches.artifacts` (a different set), and adding `--ceiling subtask_ceiling=1` clears only the first.
+- A stage mode already in force is accepted: `--mode refine=collapsed` on a `quick-fix` issue, where refine is already collapsed, loosens nothing. On a `regular` issue it loosens `refine` and is refused without a waiver.
+
 ## Proposing a change
 
 A call needs at least one change. Flags add to the overlay a call starts from:
@@ -64,7 +92,7 @@ the stored generation. Its parts, in order:
 1. `verdict`: `accepted`, or `refused` with the reasons the layered lint gives. A refused proposal is still written, so the person can edit and try again.
 2. `proposal`: the path of `proposed.yml`.
 3. The resolved fields that change against the generation in force.
-4. The classification of the issue layer over the project's configuration (ADR-037), with its first point when it loosens or cannot be compared.
+4. The classification of the issue layer over the project's configuration at the issue's own assessment (ADR-037), with that point as its first point when the layer loosens or cannot be compared there.
 5. What the issue owes at its own assessment, before and after. Before is the issue's current `config:` resolved now; after is the proposal. The comparison is the classifier's single-assessment form, `classify.compare_at`. `compass policy diff` is not in this tree; when it lands it calls the same functions for two configuration references.
 6. The records the change invalidates: waivers and the approvals behind them. Their files stay on disk; only their status in `records.yml` changes.
 7. The next step.
@@ -190,7 +218,7 @@ approval record behind it.
   "proposed": 2,
   "verdict": "refused",
   "reasons": [
-    "C-INCOMPARABLE approaches.stages: at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency live-defect, role engineer, labels none: approaches.checkpoints (controlled) is [\"assess\", \"define\"] in the parent and [\"assess\"] in the child; a waiver on the entry, approved by the layer above, excuses it"
+    "C-LOOSENING approaches.stages: at risk contained, familiarity brownfield-mapped, size standard, goal delivery, role engineer, labels none: approaches.stages (define) is \"full\" in the parent and \"collapsed\" in the child; a waiver on the entry, approved by the layer above, excuses it; fields that are looser or cannot be compared: approaches.stages (define), approaches.checkpoints (balanced), approaches.checkpoints (controlled)"
   ],
   "proposal": ".compass/work/feature/generations/2/proposed.yml",
   "base": "config",
@@ -202,55 +230,58 @@ approval record behind it.
     }
   ],
   "classification": {
-    "result": "incomparable",
-    "reason": "at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency live-defect, role engineer, labels none: approaches.checkpoints (controlled) is [\"assess\", \"define\"] in the parent and [\"assess\"] in the child",
+    "result": "loosening",
+    "reason": "at risk contained, familiarity brownfield-mapped, size standard, goal delivery, role engineer, labels none: approaches.stages (define) is \"full\" in the parent and \"collapsed\" in the child",
     "scan": "full",
     "first_point": {
       "assessment": {
-        "risk": "trivial",
-        "familiarity": "greenfield",
-        "size": "atomic",
+        "risk": "contained",
+        "familiarity": "brownfield-mapped",
+        "size": "standard",
         "goal": "delivery",
-        "urgency": "live-defect",
         "role": "engineer",
         "labels": []
       },
       "represents": {
         "risk": [
-          "trivial",
           "contained"
         ],
         "familiarity": [
-          "greenfield",
           "brownfield-mapped"
         ],
         "size": [
-          "atomic",
-          "small"
+          "standard"
         ],
         "goal": [
-          "delivery",
-          null
-        ],
-        "urgency": [
-          "live-defect"
+          "delivery"
         ],
         "role": [
-          "engineer",
-          "qa",
-          null
+          "engineer"
         ]
       },
-      "outcome": "mixed",
-      "summary": "at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency live-defect, role engineer, labels none: approaches.checkpoints (controlled) is [\"assess\", \"define\"] in the parent and [\"assess\"] in the child",
+      "outcome": "looser",
+      "summary": "at risk contained, familiarity brownfield-mapped, size standard, goal delivery, role engineer, labels none: approaches.stages (define) is \"full\" in the parent and \"collapsed\" in the child",
       "changes": [
         {
           "fact": "stage_mode",
           "field": "approaches.stages",
           "key": "define",
-          "outcome": "incomparable",
-          "parent": "reproduce-first",
+          "outcome": "looser",
+          "parent": "full",
           "child": "collapsed"
+        },
+        {
+          "fact": "checkpoints",
+          "field": "approaches.checkpoints",
+          "key": "balanced",
+          "outcome": "looser",
+          "parent": [
+            "define",
+            "plan"
+          ],
+          "child": [
+            "plan"
+          ]
         },
         {
           "fact": "checkpoints",
@@ -259,10 +290,14 @@ approval record behind it.
           "outcome": "looser",
           "parent": [
             "assess",
-            "define"
+            "define",
+            "refine",
+            "plan"
           ],
           "child": [
-            "assess"
+            "assess",
+            "refine",
+            "plan"
           ]
         }
       ]
@@ -341,7 +376,12 @@ lint of a configuration that differs from the generation in force, the
 landed check, and the match of a folder to adopt. One case is left to the
 commit: a configuration equal to the generation in force is not linted,
 because whether it commits depends on the computed outcome, so an adoption of
-such a folder can still refuse after the result prints.
+such a folder can still refuse after the result prints. The exception is an
+issue with a `config:` layer whose stored `assessment` differs from the
+`evaluated_assessment` of the last write: its layer is linted at the new
+assessment before anything prints, even when the configuration is equal. A
+route accepted at the old assessment cannot carry onto a spike assessment by
+a reassess that changes nothing else.
 
 1. **The proposal.** A pending proposal becomes the manifest's `config:` in the manifest it writes. It is stale, and the reassess refuses it, when `base_generation` is not the generation in force or `base_config_digest` is not the digest of the manifest's `config:` now. The message names `compass issue configure --discard`.
 2. **`--reset-config`.** It removes `config:` from the manifest it writes. It refuses while a proposal is pending, because it cannot be both applied and dropped.
@@ -408,7 +448,6 @@ first reading's message.
 
 ## Not built yet
 
-- Moving the readers onto the stored generation. `approach evaluate` still computes the outcome from live governance, so a stored overlay changes the generation and the preview, not yet the approach it computes.
 - `compass policy diff`, which will call the preview's comparison for two references.
 - `compass issue migrate-config` and the pending-change line in `compass check`.
 - Check-result records (`result:<check>`) are not invalidated by a configuration change.

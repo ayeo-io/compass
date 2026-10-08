@@ -39,7 +39,7 @@ reads the governance files.
 
 | File | Holds | Written |
 |---|---|---|
-| `resolved.yml` | The configuration after every layer is merged: the eight catalogues, the evidence types, the capability switches, the approach the issue's overlay names, the autonomy value, and the conformance status. | At commit, then fixed. |
+| `resolved.yml` | The configuration after every layer is merged: the eight catalogues, the evidence types, the capability switches, the approach and the ceilings the issue's overlay names, the autonomy value, and the conformance status. | At commit, then fixed. |
 | `provenance.yml` | `fields`: for each field, the layers that wrote it and the operation of each. `waivers`: each waiver with the parent value it saw. `classification`: for the project and issue layers, that the lint raised no error (`result: accepted`) and which waivers the layer holds. It holds no classifier points: a generation stored by this version has no `points` key, and a reader must treat absent points as "not recorded", never as zero. | At commit, then fixed. |
 | `versions.yml` | `resolver` and `cli` versions, `parents` (reference, version, digest, source), `project` (path, digest, git blob), `issue_overlay_digest`, and `implementations`: the version of each check implementation the configuration uses. | At commit, then fixed. |
 | `records.yml` | The status of each approval, waiver and check result at commit: `valid`, `superseded` or `invalidated`, with a reason. | At commit, then fixed. |
@@ -227,6 +227,7 @@ an issue with no `generation:` key (or no issue) in a project with no
 | Call on the view | Returns | Used by |
 |---|---|---|
 | `evaluator_policy()`, `autonomy` | the routing policy and the autonomy value | `routing`, `quick_fix_cmd`, `flow`, `calibration`, `approach_diagram` |
+| `evaluator_issue()` | the issue's own layer as the evaluator takes it: the approach it names, the stage modes it sets and its subtask ceiling, or None | `routing` |
 | `guardrail_gates()` | the guardrails in the legacy shape: `defaults`, `spike_guardrails`, `checks` (each check's `severity`, `on_skipped` and `blocking_when`) and `impl` (the implementation each check runs) | `check_cmd` |
 | `gate_requirements()` | the evidence types each gate accepts, and the known types | `checks`, `manifest`, `receipt` |
 | `command_checks()` | the checks that run a command the project wrote | `checks` |

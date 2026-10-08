@@ -3182,3 +3182,7 @@
 ### scenario-tests-verb (landed 2026-10-08)
 
 - `TRC-001` Given a scenario whose declared test id is wrong, when compass scenario tests names resolving tests, then the manifest declares them
+
+### human-check-approvers (landed 2026-10-08)
+
+- `TRC-001` A human check that lists approvers passes only with a current approval by a listed approver

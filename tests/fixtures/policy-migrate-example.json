@@ -1,0 +1,165 @@
+{
+  "schema": 1,
+  "mode": "dry-run",
+  "result": "ready",
+  "base_release": {
+    "release": "v5.3.0",
+    "chosen_by": "version"
+  },
+  "sources": [
+    {
+      "path": "governance/routing-policy.yml",
+      "digest": "sha256:..."
+    },
+    {
+      "path": "governance/guardrails.yml",
+      "digest": "sha256:..."
+    },
+    {
+      "path": ".compass/config.yml",
+      "digest": "sha256:..."
+    }
+  ],
+  "adopted": [
+    {
+      "catalogue": "approaches",
+      "id": "full",
+      "operation": "set"
+    },
+    {
+      "catalogue": "approaches",
+      "id": "hotfix",
+      "operation": "set"
+    },
+    {
+      "catalogue": "approaches",
+      "id": "quick-fix",
+      "operation": "set"
+    },
+    {
+      "catalogue": "approaches",
+      "id": "regular",
+      "operation": "set"
+    },
+    {
+      "catalogue": "approaches",
+      "id": "spike",
+      "operation": "set"
+    },
+    {
+      "catalogue": "rules",
+      "id": "advisory",
+      "operation": "set"
+    },
+    {
+      "catalogue": "rules",
+      "id": "default_shapes",
+      "operation": "set"
+    },
+    {
+      "catalogue": "rules",
+      "id": "floors",
+      "operation": "set"
+    },
+    {
+      "catalogue": "rules",
+      "id": "loop_ceilings",
+      "operation": "set"
+    },
+    {
+      "catalogue": "checks",
+      "id": "multiagent-run-recorded",
+      "operation": "set"
+    }
+  ],
+  "overlay": {
+    "counts": {
+      "add": 0,
+      "set": 1,
+      "replace": 0,
+      "remove": 0
+    },
+    "entries": [
+      {
+        "catalogue": "rules",
+        "id": "floors",
+        "operation": "set",
+        "waiver": null
+      }
+    ]
+  },
+  "settings": {
+    "moved": [
+      {
+        "key": "mode",
+        "to": "adoption"
+      }
+    ],
+    "state": [],
+    "dropped": [
+      {
+        "key": "version",
+        "reason": "schema: 1 replaces it"
+      }
+    ],
+    "unread": [
+      "roles"
+    ]
+  },
+  "equivalence": {
+    "result": "equivalent",
+    "reason": "the configurations are identical",
+    "points": 0,
+    "scan": "identical"
+  },
+  "behaviour": {
+    "result": "incomparable",
+    "reason": "at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency none, role engineer, labels none: approaches.checkpoints (autonomous) is [\"assess\", \"define\"] in the parent and [] in the child",
+    "points": 0,
+    "changed": 0
+  },
+  "blocked_by": [],
+  "files": [
+    {
+      "action": "copy",
+      "path": "governance/routing-policy.yml",
+      "to": ".compass/legacy/routing-policy.yml"
+    },
+    {
+      "action": "copy",
+      "path": "governance/guardrails.yml",
+      "to": ".compass/legacy/guardrails.yml"
+    },
+    {
+      "action": "copy",
+      "path": ".compass/config.yml",
+      "to": ".compass/legacy/config.yml"
+    },
+    {
+      "action": "write",
+      "path": ".compass/migration.yml",
+      "to": null
+    },
+    {
+      "action": "write",
+      "path": "compass.yml",
+      "to": null
+    },
+    {
+      "action": "remove",
+      "path": ".compass/config.yml",
+      "to": null
+    },
+    {
+      "action": "keep",
+      "path": "governance/routing-policy.yml",
+      "to": null
+    },
+    {
+      "action": "keep",
+      "path": "governance/guardrails.yml",
+      "to": null
+    }
+  ],
+  "compass_yml": "# Written by compass policy migrate. This file holds only what differs from\n# the shipped default preset named in extends, and the project's settings.\nschema: 1\nextends: compass:default@6\nadoption: advisory\nrules:\n  floors:\n    set:\n      rules:\n        set:\n          RP-FLOOR-001:\n            order: 1\n            when:\n              risk: critical\n            then:\n              force_minimum_approach: full\n              never_skip:\n              - define\n              - refine\n              - verify\n              - ship\n            rationale: Critical changes coordinate, or they break things quietly.\n"
+}

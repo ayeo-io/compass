@@ -53,8 +53,11 @@ _RECOMMENDATION = re.compile(
 
 def _routing_labels():
     """Every label a routing-policy rule names in `labels_any`."""
+    from compass_pkg import effective
     try:
-        policy = load_yaml(os.path.join(find_governance(), "routing-policy.yml"))
+        view = effective.view_or_legacy()
+        policy = (view.evaluator_policy() if view is not None else
+                  load_yaml(os.path.join(find_governance(), "routing-policy.yml")))
     except CompassError:
         return set()
     found, stack = set(), [policy]

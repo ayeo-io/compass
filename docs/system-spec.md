@@ -50,12 +50,12 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### EffectiveView.evaluator_policy returns the evaluator's policy from the resolved configuration
+### The approach diagram of a project with a compass.yml renders the effective configuration
 
-- **Scenario id:** `GS-22`
+- **Scenario id:** `EF-12`
 - **Intent:** `INT-1`
-- **Source issue:** `generation-store`
-- **Landed:** 2026-10-07
+- **Source issue:** `effective-readers`
+- **Landed:** 2026-10-08
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
 
@@ -353,4 +353,4 @@
 
 ---
 
-1832 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1875 superseded scenario(s) are in `docs/system-spec-archive.md`.

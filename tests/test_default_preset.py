@@ -670,7 +670,8 @@ def test_dp_5_the_adapter_leaves_its_input_unchanged():
 def test_dp_5_only_the_adapter_and_the_view_generator_read_the_preset():
     """The generator of the two legacy views (issue `generated-legacy-views`)
     is the one reader of the preset besides the adapter that wrote it. It must
-    not import the adapter, so a fault in one cannot hide in both."""
+    not import the adapter, so a fault in one cannot hide in both. The migration
+    command is the one other caller of the adapter."""
     hits = []
     for top in ("cli", "hooks", "scripts"):
         for path in sorted((ROOT / top).rglob("*")):
@@ -689,6 +690,11 @@ def test_dp_5_only_the_adapter_and_the_view_generator_read_the_preset():
                     "cli/compass_pkg/legacy_adapter.py",
                     "cli/compass_pkg/legacy_views.py",
                     "cli/compass_pkg/legacy_views_template.py",
+                    # `compass policy migrate` converts a project's copy with the
+                    # adapter, the bridge ADR-042 keeps for projects that still
+                    # carry copies. It reads no preset file.
+                    "cli/compass_pkg/policy_migrate.py",
+                    "cli/compass_pkg/replay.py",
                     "scripts/generate-legacy-views.py"], hits
     assert "presets/default" not in (ROOT / "cli" / "compass_pkg" / "effective.py").read_text(
         encoding="utf-8")

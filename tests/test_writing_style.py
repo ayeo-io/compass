@@ -3697,9 +3697,11 @@ _GROWING_REACH = {
     # 15 with the check-verdict baseline beside it, which is plain JSON;
     # 59 with the 44 check-corpus case labels, which hold a verdict and one line;
     # 60 with tests/fixtures/classifier-json-example.json, plain JSON;
-    # 61 with tests/fixtures/issue-configure-example.json, plain JSON;
-    # 62 with tests/fixtures/issue-configure-refused-example.json, plain JSON.
-    "PBW-C4": (lambda path: path.startswith("tests/"), 62),
+    # 61 with tests/fixtures/policy-diff-json-example.json, plain JSON;
+    # 62 with tests/fixtures/policy-migrate-example.json, plain JSON;
+    # 63 with tests/fixtures/issue-configure-example.json, plain JSON;
+    # 64 with tests/fixtures/issue-configure-refused-example.json, plain JSON.
+    "PBW-C4": (lambda path: path.startswith("tests/"), 64),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

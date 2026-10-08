@@ -13,12 +13,13 @@ own file. They are split off before anything else, never reach the chain's
 layer, and never count towards a digest: a settings change must not look
 like a change to the configuration an issue was classified against.
 """
-# DEPENDENCY: standard library (os); compass_pkg.atomic_io,
+# DEPENDENCY: standard library (os, re); compass_pkg.atomic_io,
 # compass_pkg.catalogue_check, compass_pkg.catalogue_spec,
 # compass_pkg.core (CompassError, only).
 from __future__ import annotations
 
 import os
+import re
 from collections import namedtuple
 
 from compass_pkg import catalogue_check, catalogue_spec as spec
@@ -31,6 +32,28 @@ PROJECT_FILE = "compass.yml"
 # `project` or `issue` (what the layer may do), `doc` is the parsed layer
 # and `digest` is over its content as `layer_digest` defines it.
 Layer = namedtuple("Layer", "name kind doc digest")
+
+
+# The shipped default is named `compass:default@<major>`: the CLI's own version
+# is the pin, so there is no minor, patch or sha. `policy migrate` writes the
+# string and `policy update` will rewrite the integer, both through these two
+# functions.
+_SHIPPED_PARENT = re.compile(r"^compass:([a-z][a-z0-9-]*)@(\d+)$")
+
+
+def parse_extends(value):
+    """`(name, major)` for a shipped parent written `compass:<name>@<major>`.
+    Raises `CompassError` for any other spelling."""
+    found = _SHIPPED_PARENT.match(value) if isinstance(value, str) else None
+    if not found:
+        raise CompassError(f"extends: {value!r} is not a shipped parent written "
+                           "compass:<name>@<major>")
+    return found.group(1), int(found.group(2))
+
+
+def default_extends(major):
+    """The `extends:` value that names the shipped default at `major`."""
+    return f"compass:default@{int(major)}"
 
 
 def find_project_root(start):
@@ -57,6 +80,51 @@ def split_project_file(doc):
     return layer, settings
 
 
+TOP_LEVEL = "(top level)"
+
+# What a person typed to get each non-text key. YAML reads `on`, `yes` and
+# `true` as True, so the key as written is not recoverable; the example
+# shows the quoted form of the most common spelling.
+_QUOTE_EXAMPLE = {True: "on", False: "off", None: "null"}
+
+
+def non_text_keys(doc, path=""):
+    """`[(dotted path of the mapping, key)]` for every mapping key anywhere
+    in `doc` that is not text. YAML reads an unquoted `on:`, `no:`, `true:`
+    or `1:` as a boolean or a number, and a mapping that mixes those with
+    text keys cannot be sorted for a digest. List positions show as `[n]`."""
+    found = []
+    if isinstance(doc, dict):
+        for key, value in doc.items():
+            if not isinstance(key, str):
+                found.append((path or TOP_LEVEL, key))
+            found += non_text_keys(value, f"{path}.{key}" if path else str(key))
+    elif isinstance(doc, (list, tuple)):
+        for n, item in enumerate(doc):
+            found += non_text_keys(item, f"{path}[{n}]")
+    return found
+
+
+def non_text_key_message(key):
+    """What to tell the person about one non-text key: what YAML read it
+    as, and how to write it as text."""
+    if key is None or isinstance(key, bool):
+        kind, example = ("nothing (null)" if key is None else "a boolean"), \
+            _QUOTE_EXAMPLE[key]
+    else:
+        kind = "a number" if isinstance(key, (int, float)) else f"a {type(key).__name__}"
+        example = str(key)
+    return (f"the key {key!r} is not text: YAML read it as {kind}. "
+            f"Quote it, for example \"{example}\":")
+
+
+def refuse_non_text_keys(doc, where):
+    """Raise `CompassError` naming the first non-text key in `doc`."""
+    for path, key in non_text_keys(doc):
+        raise CompassError(f"{where}: {path}: {non_text_key_message(key)} "
+                           f"(L-KEY-NOT-TEXT)")
+
+
 def layer_digest(doc, kind="project"):
     """The digest of a layer's parsed content. A project or parent layer
     digests its layer keys only, so a settings key or the reserved `preset`
@@ -68,6 +136,7 @@ def layer_digest(doc, kind="project"):
 
 
 def _check(doc, kind, where):
+    refuse_non_text_keys(doc, where)
     errors = catalogue_check.check_layer(doc, kind)
     if errors:
         raise CompassError(f"{where}: " + "; ".join(errors))

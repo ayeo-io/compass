@@ -42,7 +42,7 @@ GROUPS = ("layer", "merge", "resolved", "locks", "classification")
 # Every code the lint names itself. The merge's `M-*` codes and the waivers'
 # `W-*` codes pass through under their own names (`docs/policy-lint.md`).
 FINDING_CODES = (
-    "L-LOAD", "L-SCHEMA", "L-SETTINGS-KEY", "L-UNLOCK-PLACEMENT", "L-IMPL-UNKNOWN",
+    "L-LOAD", "L-KEY-NOT-TEXT", "L-SCHEMA", "L-SETTINGS-KEY", "L-UNLOCK-PLACEMENT", "L-IMPL-UNKNOWN",
     "L-IMPL-TEMPLATED", "L-IGNORED-FILE",
     "M-REF-UNKNOWN", "M-WEIGHT-TIE", "M-HIT-MISSING", "M-HIT-DISALLOWED", "M-CYCLE",
     "M-EFFECT-UNKNOWN",
@@ -109,7 +109,12 @@ def load_parent(root=None):
     files as one parent layer named `default`, and `{id, version}`. The
     capabilities come from `preset.yml`."""
     directory = os.path.join(os.fspath(root or FRAMEWORK_ROOT), PRESET_DIR)
-    meta = load_yaml_strict(os.path.join(directory, "preset.yml"))
+    preset_file = os.path.join(directory, "preset.yml")
+    try:
+        meta = load_yaml_strict(preset_file)
+    except StrictYamlError as exc:
+        # The text already names the file; a command reports it, never a traceback.
+        raise CompassError(f"the shipped default preset cannot be read: {exc}") from exc
     doc = {"schema": meta.get("schema", 1), "capabilities": dict(meta.get("capabilities") or {})}
     for name in spec.CATALOGUES:
         path = os.path.join(directory, f"{name}.yml")
@@ -132,6 +137,17 @@ def _load_finding(layer, path, root, exc):
     shown = _shown(path, root).replace(os.sep, "/")
     message = str(exc).replace(os.path.abspath(path), shown)
     return Finding("L-LOAD", "error", layer, shown, "layer", " ".join(message.split()))
+
+
+def _non_text_findings(out, layer, doc):
+    """Add one `L-KEY-NOT-TEXT` finding per non-text key in `doc` to `out`
+    and say whether there was any. It runs before the layer is digested,
+    because a mapping that mixes such keys with text keys cannot be sorted."""
+    keys = layers.non_text_keys(doc)
+    for path, key in keys:
+        out.findings.append(Finding("L-KEY-NOT-TEXT", "error", layer, path, "layer",
+                                    layers.non_text_key_message(key)))
+    return bool(keys)
 
 
 def _ignored_file(root, cwd):
@@ -165,18 +181,24 @@ def load_layers(root, *, file=None, manifest=None, cwd=None, read_project=True):
     if (read_project or file) and os.path.isfile(path):
         try:
             doc = load_yaml_strict(path)
-            out.project = layers.Layer("project", "project", doc,
-                                       layers.layer_digest(doc, "project")
-                                       if isinstance(doc, dict) else "")
+            if _non_text_findings(out, "project", doc):
+                out.failed = ("project", "project")
+            else:
+                out.project = layers.Layer("project", "project", doc,
+                                           layers.layer_digest(doc, "project")
+                                           if isinstance(doc, dict) else "")
         except StrictYamlError as exc:
             out.findings.append(_load_finding("project", path, root, exc))
             out.failed = ("project", "project")
     if manifest is not None:
         config = manifest.get("config")
         if config is not None:
-            out.issue = layers.Layer("issue", "issue", config,
-                                     layers.layer_digest(config, "issue")
-                                     if isinstance(config, dict) else "")
+            if _non_text_findings(out, "issue", config):
+                out.failed = out.failed or ("issue", "issue")
+            else:
+                out.issue = layers.Layer("issue", "issue", config,
+                                         layers.layer_digest(config, "issue")
+                                         if isinstance(config, dict) else "")
         out.registry = tuple(manifest.get("evidence") or ())
     return out
 

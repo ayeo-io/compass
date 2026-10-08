@@ -648,6 +648,15 @@ def test_rc_1_a_policy_without_the_cost_rule_is_refused_naming_it(project):
         r for r in policy["routing_guardrails"]["loop_ceilings"]
         if r["ceiling"] != "run_cost_usd"]
     (gov / "routing-policy.yml").write_text(yaml.safe_dump(policy))
+    # An issue with a generation is judged by it, whatever the file now says, so
+    # this issue is reset to one with no stored configuration: the file is read.
+    import shutil
+    shutil.rmtree(project / ".compass" / "work" / SLUG / "generations", ignore_errors=True)
+    (project / ".compass" / "work" / SLUG / "manifest.yml").write_text(
+        f"schema_version: '2.0'\nissue: {SLUG}\ncreated: '{CREATED}'\n"
+        "status: active\nassessment: {risk: contained, familiarity: "
+        "brownfield-mapped, size: small, goal: delivery, role: engineer, "
+        "labels: []}\n")
     result = _run(project)
     assert result.returncode == 2 and "RP-LOOP-008" in result.stderr
     assert _calls(project) == []

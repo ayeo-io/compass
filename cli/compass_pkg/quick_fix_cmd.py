@@ -233,18 +233,22 @@ def _split_labels(value):
     return labels
 
 
-def _quick_fix_blockers(readings, task):
+def _quick_fix_blockers(readings, task, task_dir=None):
     """Why the assessment is not a quick fix, read from the policy's own
     quick-fix shape through the evaluator's matching, so a session can act
     on the reason instead of stopping to ask. Every line stays under the
     terminal's 100-character cut, or the instruction at its end is lost."""
-    policy = load_yaml(os.path.join(find_governance(), "routing-policy.yml"))
+    from compass_pkg import effective
+    view = effective.view_or_legacy(task_dir)
+    policy = (view.evaluator_policy() if view is not None else
+              load_yaml(os.path.join(find_governance(), "routing-policy.yml")))
+    matches = view.matches if view is not None else reading_matches
     shapes = (policy.get("routing_strategies") or {}).get("default_shapes") or []
     shape = next((s for s in shapes
                   if canonical_shape(s.get("lean_toward")) == APPROACH_QUICK_FIX), None)
     lines = []
     for key, allowed in ((shape or {}).get("when") or {}).items():
-        if reading_matches({key: allowed}, readings):
+        if matches({key: allowed}, readings):
             continue
         name = WHEN_KEY_MAP.get(key, key)
         if name == "labels_any":
@@ -282,10 +286,15 @@ def cmd_quick_fix_start(args):
     # so an unknown value is refused with the dimension named (QFO-3), the
     # same message `compass approach evaluate` would give, before there is
     # a manifest to write it into.
-    gov = find_governance()
-    policy = load_yaml(os.path.join(gov, "routing-policy.yml"))
-    from compass_pkg.core import load_autonomy
-    advice = (evaluate_route(readings, policy, load_autonomy())
+    from compass_pkg import effective
+    view = effective.view_or_legacy()
+    if view is not None:
+        policy, autonomy = view.evaluator_policy(), view.autonomy
+    else:
+        from compass_pkg.core import load_autonomy
+        policy = load_yaml(os.path.join(find_governance(), "routing-policy.yml"))
+        autonomy = load_autonomy()
+    advice = (evaluate_route(readings, policy, autonomy)
               .get("applicable_strategies") or [])
 
     # The title reaches the living spec at ship; refuse it now, before
@@ -361,7 +370,7 @@ def cmd_quick_fix_start(args):
            detail=[f"issue: {slug}"] + chain_detail + [
                    "the manifest keeps the assessment and the computed approach;",
                    "no approach record and no scenario were written"]
-           + _quick_fix_blockers(readings, task)
+           + _quick_fix_blockers(readings, task, task_dir)
            + ["next: continue with /compass:assess, or, if a rating was wrong,",
               'correct it: /compass:assess --reassess --reason "..."'],
            decision=True, approach=approach)

@@ -20,7 +20,7 @@ different thing and raises.
 # _stage_key_renames),
 # compass_pkg.loop_ceilings (the ceiling names) and compass_pkg.routing
 # (evaluate_route, RoutingConflict, prepare_policy, route_checkpoints), and
-# compass_pkg.stable_ids (the approach ids). Only compass_pkg.classify imports this module.
+# compass_pkg.stable_ids (the approach ids). Only compass_pkg.classify and compass_pkg.effective import this module.
 from __future__ import annotations
 
 import copy

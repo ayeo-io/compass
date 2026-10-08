@@ -42,6 +42,24 @@ from compass_pkg.core import CompassError, canonical_shape, display_shape, find_
 # whether assessment is systematically over- or under-sizing the process.
 # Read-only: it advises and never gates.
 
+def _route_weights():
+    """`{approach: weight}` from the routing policy in force: the project's
+    effective configuration when it has a `compass.yml`, else the governance
+    files. Empty when the policy cannot be read."""
+    from compass_pkg import effective
+    try:
+        view = effective.view_or_legacy()
+        policy = (view.evaluator_policy() if view is not None else
+                  load_yaml(os.path.join(find_governance(), "routing-policy.yml")))
+        # One name per route: an old name, in the policy or in a recorded
+        # re-assessment, is read as its current one.
+        return {canonical_shape(r): s.get("weight")
+                for r, s in (policy.get("route_shapes") or {}).items()
+                if isinstance(s, dict) and isinstance(s.get("weight"), int)}
+    except CompassError:
+        return {}
+
+
 def _load_scope_bloat_phrases():
     """Load scope_bloat_phrases from signals.yml at runtime.
 
@@ -591,16 +609,7 @@ def cmd_calibration(args):
 
     compass_dir = find_compass_dir()
     work = os.path.join(compass_dir, "work")
-    weights = {}
-    try:
-        policy = load_yaml(os.path.join(find_governance(), "routing-policy.yml"))
-        # One name per route: an old name, in the policy or in a recorded
-        # re-assessment, is read as its current one.
-        weights = {canonical_shape(r): s.get("weight")
-                   for r, s in (policy.get("route_shapes") or {}).items()
-                   if isinstance(s, dict) and isinstance(s.get("weight"), int)}
-    except CompassError:
-        pass
+    weights = _route_weights()
 
     tasks, not_mappings = [], []
     if os.path.isdir(work):

@@ -45,7 +45,7 @@ FINDING_CODES = (
     "L-LOAD", "L-KEY-NOT-TEXT", "L-SCHEMA", "L-SETTINGS-KEY", "L-UNLOCK-PLACEMENT", "L-IMPL-UNKNOWN",
     "L-IMPL-TEMPLATED", "L-IGNORED-FILE",
     "M-REF-UNKNOWN", "M-WEIGHT-TIE", "M-HIT-MISSING", "M-HIT-DISALLOWED", "M-CYCLE",
-    "M-EFFECT-UNKNOWN",
+    "M-EFFECT-UNKNOWN", "M-LIST-KIND-UNEVALUATED",
     "K-LOCK-REFUSED", "K-UNLOCK-REFUSED", "K-UNPROVABLE",
     "E-EVALUATION",
     "C-LOOSENING", "C-INCOMPARABLE", "V-VOCABULARY-CHANGE",
@@ -426,8 +426,32 @@ def _effect_targets(state):
     return out
 
 
+#: The kinds of check that `stage_lists` evaluates. A stage list that names
+#: any other kind gets a check that fails closed (see `stage_lists`).
+EVALUATED_LIST_KINDS = ("human", "deterministic")
+
+
+def _list_kinds(state):
+    """A warning for each check a stage list names whose kind this version
+    does not evaluate. The check fails in `compass check`, whatever the
+    capability, so its author must be told."""
+    out, config = [], state["config"]
+    checks = config.get("checks") or {}
+    for stage, body in (config.get("stages") or {}).items():
+        for side in ("entry", "exit"):
+            for check_id in (body.get(side) or []) if isinstance(body, dict) else []:
+                kind = (checks.get(check_id) or {}).get("kind")
+                if kind and kind not in EVALUATED_LIST_KINDS:
+                    path = f"stages.{stage}.{side}"
+                    out.append(_finding(
+                        "resolved", "M-LIST-KIND-UNEVALUATED", _layer_of(state, path), path,
+                        f"names {check_id}, a check of kind {kind}, which this version "
+                        f"does not evaluate; it fails in compass check", "warning"))
+    return out
+
+
 def _resolved_group(state):
-    out = _unknown_references(state) + _effect_targets(state)
+    out = _unknown_references(state) + _effect_targets(state) + _list_kinds(state)
     out += _weight_ties(state) + _hit_policies(state)
     out += [_finding("resolved", code, _layer_of(state, path), path, message)
             for code, path, message in catalogue_check.check_vocabulary(state["config"])]

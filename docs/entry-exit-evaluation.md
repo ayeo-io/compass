@@ -1,7 +1,7 @@
 # Stage entry and exit lists
 
 This page is the owning doc for the evaluation of a stage's `entry` and `exit`
-lists. It states when evaluation is on, when a list is due, how each kind of
+lists. It states what the capability switches, when a list is due, how each kind of
 check is judged, what `on_skipped` does, and where the results show. The code
 is `cli/compass_pkg/stage_lists.py`. `compass check`, `compass next` and
 `compass issue receipt` read it.
@@ -16,12 +16,16 @@ capabilities:
   entry-exit-evaluation: true
 ```
 
-With it off, no command shows or runs a list, and the output is the same as
-before the capability existed. A check in a list that says
-`requires: [entry-exit-evaluation]` is inactive until the capability is on.
-The shipped default lists the seven Definition of Ready checks as the `plan`
-entry and the seven Definition of Done checks as the `verify` exit, and each
-needs the capability.
+The capability switches the shipped checks. The shipped default lists the seven
+Definition of Ready checks as the `plan` entry and the seven Definition of Done
+checks as the `verify` exit, and each says `requires: [entry-exit-evaluation]`.
+With the capability off those fourteen are inactive, and the output of a
+project that has added nothing is the same as before the capability existed.
+
+A check a project adds to a list runs whatever the capability. A project that
+wants its own check to wait for the capability writes
+`requires: [entry-exit-evaluation]` on it. A list that names a check the
+configuration does not define fails with "the check is not defined".
 
 An issue reads the capability from its stored generation (see
 `docs/generation-store.md`). Turning it on changes nothing for an issue until
@@ -45,11 +49,14 @@ receipt shows every list, and says which are not yet due.
 |---|---|
 | `human` | A tick: a checked box (`- [x]`) whose text equals the check's `statement`, under the heading `Definition of Ready` in the requirements review (entry lists) or `Definition of Done` in the verification report (exit lists). |
 | `deterministic` | Its registered implementation runs. The receipt does not run it and shows `pending`. |
-| `judged`, `evidence` | Not evaluated by this version. A blocking check of these kinds fails, so a list cannot pass by naming a check nothing reads. |
+| `judged`, `evidence` | Not evaluated by this version. A blocking check of these kinds fails, so a list cannot pass by naming a check nothing reads. This holds whatever the capability, for a check a project adds, and `compass policy lint` warns (`M-LIST-KIND-UNEVALUATED`, exit code unchanged). The shipped default names none. |
 
 An unchecked box that carries a typed tag (`(evidence: ...)` or
-`(follow-up: ...)`) is not a tick for a `human` check. The existing check
-`dod-evidence-typed` still reads those tags and runs as before.
+`(follow-up: ...)`) counts when the tag resolves, and the detail says
+"deferred with" and the tag. A tag that does not resolve fails with the reason
+`dod-evidence-typed` gives. Both checks call one function,
+`checks.dod_tag_problems`, so a tag means one thing. An unchecked box with no
+tag fails as "not ticked".
 
 A check with `severity: advisory`, or a `blocking_when` that does not match the
 issue's assessment, reports a failure as a pass that says it is advisory.
@@ -75,6 +82,16 @@ A check is skipped in two cases:
 
 `on_skipped` answers "the stage was skipped". It does not say that a list does
 not apply to an approach. A list does not depend on the stage's mode.
+
+A third case is not a skip. When a `human` check's document is missing and the
+approach the issue was routed to does not list that document kind among its
+artifacts, the route owes no such document, and the row is nothing to check,
+for example "quick-fix owes no verification-report". The artifact set is read
+from the configuration, so a project that adds `verification-report` to an
+approach makes the Definition of Done owed there. A document the approach lists
+and that is missing still fails with "not found". Note that the shipped regular
+approach does not list `requirements-review`, so a regular issue with no
+requirements review has nothing to check for the Definition of Ready.
 
 ## A check that an approach does not owe
 
@@ -104,8 +121,8 @@ detail.
 
 ## Limits
 
-- The templates do not render from the lists, and the typed tag does not apply
-  to every exit list yet.
+- The templates do not render from the lists, and the tag rule reads only the
+  `Definition of Done` section of the verification report.
 - A `human` check is a tick. `approvers:` are not read.
 - `judged` and `evidence` checks are not evaluated.
 - A tick is found by the text of the statement. A statement that differs from

@@ -452,14 +452,15 @@ def _emit_check(run, args):
 
 
 def _stage_list_pass(run, view, task, task_dir):
-    """Add one result per due check of each stage list, when the capability
-    `entry-exit-evaluation` is on, and return `(ran, failed, nothing)` for them.
-    A list is a guardrail of its own, labelled `stage:<stage>:<entry|exit>`. A
-    project without the capability, or an issue without a configuration,
-    adds nothing."""
+    """Add one result per due, active check of each stage list, and return
+    `(ran, failed, nothing)` for them. A list is a guardrail of its own,
+    labelled `stage:<stage>:<entry|exit>`. The shipped checks are active only
+    where `entry-exit-evaluation` is on, so a project that has not turned it
+    on and added no check of its own gets none. An issue without a
+    configuration adds nothing."""
     from compass_pkg import stage_lists
 
-    if not stage_lists.enabled(view):
+    if view is None:
         return 0, 0, 0
     try:
         rows = stage_lists.due_rows(stage_lists.evaluate(view, task, task_dir))

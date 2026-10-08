@@ -1,11 +1,13 @@
 # compass_pkg.stage_lists - evaluate each stage's entry and exit lists
-"""Run the stage lists of an issue's configuration, behind a capability.
+"""Run the stage lists of an issue's configuration.
 
 A stage can list checks it needs before work in it starts (`entry`) and before
-it is left (`exit`). With the capability `entry-exit-evaluation` on,
-`evaluate` reads those lists from the issue's effective view and gives each
-check a row. With it off, or for an issue read without a configuration, it
-returns nothing and no reader changes.
+it is left (`exit`). `evaluate` reads those lists from the issue's effective
+view and gives each active check a row. The shipped Definition of Ready and
+Done checks say `requires: [entry-exit-evaluation]`, so they are active only
+where that capability is on. A check a project adds runs whatever the
+capability, unless it asks for it with `requires`. An issue read without a
+configuration has no rows.
 
 Which list is due. `compass next` names the current stage. The entry list of a
 stage is due once the stage is current or behind the issue, and its exit list
@@ -19,7 +21,11 @@ How a check is judged:
   document is the requirements review for an entry list and the verification
   report for an exit list. The box is the one whose text equals the check's
   statement, under the heading `Definition of Ready` or `Definition of Done`.
-  An unchecked box that carries a typed tag is not a tick.
+  An unchecked box that carries a typed tag (`(evidence: ...)` or
+  `(follow-up: ...)`) that resolves counts as deferred and passes. The tag is
+  resolved by `checks.dod_tag_problems`, the code `dod-evidence-typed` uses.
+  A missing document is not a failure when the routed approach lists no such
+  document among its artifacts: the row is nothing-to-check.
 - `deterministic`: the registered implementation runs.
 - `judged` and `evidence`: not evaluated by this version. A blocking one
   fails, so a configuration cannot pass by naming a check nothing reads.
@@ -65,6 +71,7 @@ SKIPPED_STATUS = {"pass": "pass", "not-applicable": "nothing-to-check", "fail": 
 _ITEM = re.compile(r"^\s*-\s+\[([ xX])\]\s*(.*)")
 _COMMENT = re.compile(r"<!--.*?-->", re.S)
 _TAG = re.compile(r"^\((?:evidence|follow-up):[^)]*\)\s*")
+_TAG_ANYWHERE = re.compile(r"\((?:evidence|follow-up):[^)]*\)")
 
 
 @dataclass(frozen=True)
@@ -88,10 +95,6 @@ class Row:
 def label(stage, side):
     """The name `compass check --json` gives the rows of one list."""
     return f"stage:{stage}:{side}"
-
-
-def enabled(view):
-    return view is not None and bool(view.capabilities.get(CAPABILITY))
 
 
 def _normal(text):
@@ -122,7 +125,7 @@ def _items(path, heading):
             items[-1][1] += " " + stripped
         elif stripped.startswith("Next stage:"):
             break
-    return None if inside is None else [(t, _normal(s)) for t, s in items]
+    return None if inside is None else [(t, _normal(s), s) for t, s in items]
 
 
 def _document(task_dir, kind):
@@ -152,21 +155,42 @@ class _Documents:
         return self._cache[side]
 
 
-def _tick(check, side, documents):
+def _tick(check, side, documents, task, owes):
     """`(status, detail)` of a human check, or None when its document is
-    recorded as omitted (the check is skipped)."""
+    recorded as omitted (the check is skipped). `owes` is `(approach, kinds)`,
+    the document kinds the routed approach lists among its artifacts, or None
+    when the approach is not known."""
     state, path, name, heading, items = documents.get(side)
     if state == "omitted":
         return None
+    kind = CHECKLISTS[side][0]
     if state == "absent":
+        if owes is not None and kind not in owes[1]:
+            return "nothing-to-check", f"{owes[0]} owes no {kind}"
         return "fail", f"{name} not found; its '{heading}' section holds the tick"
     wanted = _normal(check.get("statement") or "")
-    matches = [ticked for ticked, text in (items or []) if text == wanted]
+    matches = [(ticked, raw) for ticked, text, raw in (items or []) if text == wanted]
     if not matches:
         return "fail", (f"no checklist item with this statement under '{heading}' "
                         f"in {name}")
-    if any(matches):
+    if any(ticked for ticked, _ in matches):
         return "pass", f"ticked in {name}"
+    from compass_pkg.checks import dod_tag_problems
+    registry = {e.get("id"): e for e in (task.get("evidence") or [])
+                if isinstance(e, dict) and e.get("id")}
+    follow_ups = {f.get("id"): f for f in (task.get("follow_ups") or [])
+                  if isinstance(f, dict) and f.get("id")}
+    problems = []
+    for _, raw in matches:
+        found = dod_tag_problems(raw, registry, follow_ups)
+        if found is None:
+            continue
+        if not found:
+            shown = _TAG_ANYWHERE.search(raw)
+            return "pass", f"deferred with {shown.group(0) if shown else 'a typed tag'}"
+        problems += found
+    if problems:
+        return "fail", "; ".join(problems)
     return "fail", f"not ticked in {name} under '{heading}'"
 
 
@@ -216,12 +240,19 @@ def _positions(view, task, task_dir):
 
 def evaluate(view, task, task_dir, run=True):
     """The rows of every list of the issue, in stage order, entry before exit.
-    An empty list when the capability is off. With `run` false a deterministic
-    check is not run and its row is `pending`: the receipt reads the record and
-    never re-runs a check."""
-    if not enabled(view):
+    An empty list for an issue read without a configuration. A check that
+    says `requires: [entry-exit-evaluation]` (the shipped Definition of Ready
+    and Done) is active only where the capability is on; a check a project adds
+    runs whatever the capability. With `run` false a deterministic check is not
+    run and its row is `pending`: the receipt reads the record and never
+    re-runs a check."""
+    if view is None:
         return []
     config = view.config
+    approach_name = task.get("delivery_approach")
+    approach = (config.get("approaches") or {}).get(approach_name)
+    owes = (None if approach is None
+            else (approach_name, set(approach.get("artifacts") or {})))
     checks = config.get("checks") or {}
     stages = config.get("stages") or {}
     modes = task.get("stages") if isinstance(task.get("stages"), dict) else {}
@@ -251,21 +282,22 @@ def evaluate(view, task, task_dir, run=True):
                 severity = _severity(view, check, reading)
                 kind = check.get("kind")
                 status, detail = _judge(check, kind, side, stage, producer, modes,
-                                        task, task_dir, documents, due, run)
+                                        task, task_dir, documents, due, run, owes)
                 if status == "fail" and severity == "advisory":
                     status, detail = "pass", f"advisory - {detail}"
                 rows.append(Row(stage, side, check_id, status, detail, due, severity))
     return rows
 
 
-def _judge(check, kind, side, stage, producer, modes, task, task_dir, documents, due, run):
+def _judge(check, kind, side, stage, producer, modes, task, task_dir, documents, due, run,
+           owes):
     """`(status, detail)` for one active check."""
     source = producer if kind == "human" else stage
     mode = modes.get(source)
     if mode in SKIPPED_MODES:
         return _skipped(check), f"{source} is {mode}; on_skipped is {check.get('on_skipped')}"
     if kind == "human":
-        ticked = _tick(check, side, documents)
+        ticked = _tick(check, side, documents, task, owes)
         if ticked is None:
             return _skipped(check), (f"{CHECKLISTS[side][0]} is recorded as omitted; "
                                      f"on_skipped is {check.get('on_skipped')}")

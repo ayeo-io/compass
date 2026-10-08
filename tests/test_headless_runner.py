@@ -198,10 +198,11 @@ def test_hr_a_refuses_without_a_stop_file(project):
     assert _calls(project) == []
 
 
-def test_hr_a_refuses_a_stage_other_than_build_or_verify(project):
-    for stage in ("ship", "land", "assess"):
+def test_hr_a_refuses_a_stage_other_than_implement_or_verify(project):
+    for stage in ("ship", "land", "assess", "plan"):
         result = _run(project, stage=stage)
         assert result.returncode != 0, stage
+        assert "Permitted: implement, verify" in result.stderr, result.stderr
     assert _calls(project) == []
 
 
@@ -286,16 +287,19 @@ def test_hr_d_a_verify_run_ends_when_every_gate_passes(project):
     assert run["outcome"] == "done" and "stopped_reason" not in run
 
 
-def test_hr_d_a_build_run_ends_when_every_scenario_is_green(project):
+def test_hr_d_an_implement_run_ends_when_every_scenario_is_green(project):
     task = project / ".compass" / "work" / SLUG
     manifest = task / "manifest.yml"
     manifest.write_text(manifest.read_text() + (
         "scenarios:\n- id: X-1\n  title: Given a thing, then it works.\n"
         "  intent: INT-1\n"))
-    result = _run(project, plan=("touch", "green"), stage="build")
+    result = _run(project, plan=("touch", "green"), stage="implement")
     assert result.returncode == 0, result.stdout + result.stderr
     assert len(_calls(project)) == 2
     assert _last_run(project)["outcome"] == "done"
+    assert _last_run(project)["stage"] == "implement"
+    assert "implement is done after 2 cycle(s)" in result.stdout, result.stdout
+    assert "build" not in result.stdout + _record(project)
 
 
 def test_hr_d_a_session_that_lands_the_issue_stops_the_run(project):
@@ -343,8 +347,8 @@ def test_hr_f_each_cycle_is_a_fresh_unattended_session(project):
         assert "git push" in denied and "ship-commit" in denied
 
 
-def test_hr_f_build_names_the_implement_command(project):
-    _run(project, "--max-cycles", "1", plan=("touch",), stage="build")
+def test_hr_f_implement_names_the_implement_command(project):
+    _run(project, "--max-cycles", "1", plan=("touch",), stage="implement")
     message = _calls(project)[0]
     assert "/compass:implement" in message[message.index("-p") + 1]
 
@@ -706,12 +710,12 @@ def test_st_1_the_record_keeps_each_sessions_last_message(project):
 def test_hd_1_the_doc_says_what_the_ci_demo_shows():
     """The CI demo ran on 2026-10-03 (#313, closing #302). The doc must not
     still open by saying the live acceptance is unmet, and must say what the
-    demo covers: the build stage of a quick fix."""
+    demo covers: the implement stage of a quick fix."""
     doc = (ROOT / "docs" / "headless-runner.md").read_text(encoding="utf-8")
     assert "not met yet" not in doc
     opening = doc.split("## ", 1)[0]
     assert ".github/workflows/compass-run-demo.yml" in opening, opening
-    assert "build stage" in opening, opening
+    assert "implement stage" in opening, opening
     assert "costs money" in opening, opening
 
 

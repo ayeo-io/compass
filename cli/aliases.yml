@@ -55,6 +55,13 @@ aliases:
     new: [issue, subtask, set]
     kind: verb
     released_in: v5.6.0
+  # A value of a flag, not a verb: `old` and `new` are the command, the flag
+  # and the value. The value is rewritten wherever the flag stands after the
+  # command, as `--stage build` or `--stage=build`.
+  - old: [run, --stage, build]
+    new: [run, --stage, implement]
+    kind: value
+    released_in: v5.6.0
 
 hints:
   - old: [policy, effective]
@@ -73,3 +80,7 @@ hints:
     new: [issue, template, show]
   - old: [scenario, tests]
     new: [scenario, tests, set]
+  # A flag no release holds: `issue friction` first shipped with `--stage`
+  # (the entry key was `phase` in the unreleased build before it).
+  - old: [issue, friction, --phase]
+    new: [issue, friction, --stage]

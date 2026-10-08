@@ -46,8 +46,7 @@ KEY_SECTIONS = ("friction_keys",)
 
 # The in-module copy of the tables, for a checkout with no framework install.
 # A table with a row is what turns a retired word into a new one on read and
-# on write. The stage weights, the size and the issue status are wired; the
-# run stage and friction tables follow in a later increment.
+# on write. Every table is wired.
 FALLBACK = {name: {} for name in (*VALUE_SECTIONS, *KEY_SECTIONS)}
 FALLBACK["stage_mode"] = {
     "full": "thorough",
@@ -68,6 +67,8 @@ FALLBACK["issue_status"] = {
     "abandoned": "done",
 }
 FALLBACK["close_reason"] = {"landed": "completed", "abandoned": "not-planned"}
+FALLBACK["run_stage"] = {"build": "implement"}
+FALLBACK["friction_keys"] = {"phase": "stage"}
 
 _READ = None
 

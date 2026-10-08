@@ -152,7 +152,7 @@ failure_modes_descoped: []
 # by `compass _friction-capture` and aggregated by `compass retro
 # --friction`.
 friction: []
-#  - phase: plan
+#  - stage: plan
 #    category: over-weight     # over-weight | under-weight | mis-route |
 #                                # missing-strategy | tooling | docs | other
 #    observation: "The full requirements review added a gate the change didn't need."

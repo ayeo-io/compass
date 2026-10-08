@@ -289,8 +289,6 @@ def test_si_5_the_allow_list_is_honest():
 # so adding one or removing one fails until this table changes.
 STAGE_LEDGER = {
     "lessons.py": (2, 'a lesson source named "verify" is not a pipeline stage'),
-    "run_cmd.py": (2, 'the `compass run` stage argument pairs "build" with "verify"; '
-                      '"build" is not a stage id, so the pair stays together'),
 }
 
 

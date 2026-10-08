@@ -780,8 +780,7 @@ codes:
 # One row per `(field, old, new)`; `new: null` means the old word is no longer
 # stored. The rows are the same triples as the read-side tables in
 # cli/migrate-map.yml (`values:` and `friction_keys:`), and a test keeps the
-# two equal. The stage weights, the size and the issue status are wired; the
-# run stage and friction rows follow with their own increment.
+# two equal. A `friction_keys` row names the old and the new key.
 retired_values:
   - {field: stage_mode, old: full, new: thorough}
   - {field: stage_mode, old: full-plus-backfill, new: thorough-with-follow-up}
@@ -796,6 +795,8 @@ retired_values:
   - {field: issue_status, old: abandoned, new: done}
   - {field: close_reason, old: landed, new: completed}
   - {field: close_reason, old: abandoned, new: not-planned}
+  - {field: run_stage, old: build, new: implement}
+  - {field: friction_keys, old: phase, new: stage}
 
 # =============================================================================
 # BANNED v1 VOCABULARY - the house test scans user-facing surfaces for these.

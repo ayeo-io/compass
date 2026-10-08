@@ -53,11 +53,11 @@ class _Missing:
         raise AssertionError("cli/compass_pkg/word_map.py does not exist")
 
 
-# The sections whose rows ship in `cli/migrate-map.yml`. The machinery tests
-# read these from the file; the sections the file does not hold yet (the
-# status, run stage and friction rows, wired by later increments) are handed
-# in from `ROWS`.
-SHIPPED = ("stage_mode", "artifact_depth", "size")
+# Every section ships in `cli/migrate-map.yml`, and the machinery tests read
+# the rows from the file. `ROWS` is the independent list the shipped rows are
+# compared with (`test_the_shipped_..._rows_are_the_ones_the_tests_inject`).
+SHIPPED = ("stage_mode", "artifact_depth", "size", "issue_status", "close_reason",
+           "run_stage", "friction_keys")
 
 
 @pytest.fixture
@@ -67,7 +67,7 @@ def rows(monkeypatch):
     except ImportError:
         return _Missing()
     shipped = wm.tables()
-    handed = {**copy.deepcopy(ROWS), **{name: dict(shipped[name]) for name in SHIPPED}}
+    handed = {name: dict(shipped[name]) for name in SHIPPED}
     monkeypatch.setattr(wm, "tables", lambda: copy.deepcopy(handed))
     return wm
 
@@ -832,3 +832,155 @@ def test_vr_d23_a_stamped_manifest_is_not_reported_as_legacy_by_the_receipt():
     from compass_pkg import receipt
     text = receipt._receipt_render({"issue": "t", "schema_version": "3.0"}, "t", {})
     assert "(legacy)" not in text.splitlines()[1]
+
+
+# --- VR-D7 and VR-D8: the run stage and the friction key, from the shipped rows ---
+
+def test_the_shipped_run_stage_and_friction_rows_are_the_ones_the_tests_inject():
+    from compass_pkg import word_map
+    shipped = word_map.tables()
+    assert {name: shipped[name] for name in SHIPPED} == ROWS
+
+
+def test_vr_d7_a_run_at_stage_build_and_friction_keyed_phase_read_as_implement_and_stage(
+        tmp_path):
+    task, _ = _loaded(tmp_path, {
+        "runs": [{"n": 1, "stage": "build", "outcome": "done"},
+                 {"n": 2, "stage": "verify", "outcome": "stopped"}],
+        "friction": [
+            {"phase": "build", "category": "tooling", "source": "human", "observation": "a"},
+            {"phase": "plan", "category": "docs", "source": "human", "observation": "b"}]})
+    assert [r["stage"] for r in task["runs"]] == ["implement", "verify"]
+    assert [f["stage"] for f in task["friction"]] == ["implement", "plan"]
+    assert all("phase" not in f for f in task["friction"]), task["friction"]
+
+
+def test_vr_d7_a_friction_entry_already_keyed_stage_keeps_its_stage_mapped(tmp_path):
+    task, _ = _loaded(tmp_path, {"friction": [
+        {"stage": "build", "category": "tooling", "source": "human", "observation": "a"}]})
+    assert task["friction"][0]["stage"] == "implement"
+
+
+EVERY_OLD_WORD = {
+    "status": "landed",
+    "stages": {"define": "full", "refine": "light", "ship": "full-plus-backfill"},
+    "artifacts": [{"id": "A1", "kind": "technical-design", "depth": "full"}],
+    "assessment": {"risk": "contained", "familiarity": "greenfield", "size": "standard",
+                   "goal": "delivery", "role": "engineer", "labels": []},
+    "evaluated_assessment": {"risk": "contained", "size": "standard"},
+    "runs": [{"n": 1, "stage": "build", "outcome": "done"}],
+    "friction": [{"phase": "build", "category": "tooling", "source": "human",
+                  "observation": "a"}],
+}
+
+
+def test_vr_d8_a_save_over_a_manifest_in_every_old_word_writes_none_and_keeps_the_original(
+        tmp_path, capsys):
+    from compass_pkg import core, word_map
+    task, task_dir = _loaded(tmp_path, copy.deepcopy(EVERY_OLD_WORD))
+    path = task_dir / "manifest.yml"
+    original = path.read_text(encoding="utf-8")
+    assert {field for field, _, _ in word_map.old_words(yaml.safe_load(original))} >= {
+        "status", "runs[0].stage", "friction[0].phase", "assessment.size"}
+    capsys.readouterr()
+    core.save_manifest(task, str(path))
+    saved = yaml.safe_load(path.read_text(encoding="utf-8"))
+    assert word_map.old_words(saved) == [], word_map.old_words(saved)
+    assert saved["runs"][0]["stage"] == "implement"
+    assert saved["friction"][0] == {"stage": "implement", "category": "tooling",
+                                    "source": "human", "observation": "a"}
+    assert (task_dir / "manifest.yml.v5.bak").read_text(encoding="utf-8") == original
+    err = capsys.readouterr().err
+    assert "build" in err and "implement" in err and "phase" in err and "stage" in err, err
+
+
+# --- VR-D9: each writer leaves no old word in a fresh project --------------------
+
+def _git(cwd, *argv):
+    done = subprocess.run(["git", *argv], cwd=str(cwd), capture_output=True, text=True)
+    assert done.returncode == 0, done.stderr
+    return done.stdout
+
+
+def _no_old_word(path):
+    from compass_pkg import word_map
+    raw = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+    return word_map.old_words(raw)
+
+
+def test_vr_d9_the_manifest_template_holds_no_old_word():
+    from compass_pkg import word_map
+    text = (ROOT / "templates" / "manifest.yml").read_text(encoding="utf-8")
+    assert word_map.old_words(yaml.safe_load(text)) == []
+    assert "- phase:" not in text, "the friction example is keyed phase"
+    assert "- stage:" in text, "the friction example shows the stage key"
+
+
+def test_vr_d9_no_script_writes_a_manifest_literal_in_an_old_word():
+    """A script that holds a manifest as text writes it as it is, so an old
+    word in the text is an old word on disk."""
+    import re
+    old = re.compile(r"^\s*(?:status: (?:active|queued|parked|landed|abandoned)"
+                     r"|size: standard|phase: \w+)\s*$", re.M)
+    found = []
+    for path in sorted((ROOT / "scripts").glob("*")):
+        if path.suffix not in (".py", ".sh") or not path.is_file():
+            continue
+        for match in old.finditer(path.read_text(encoding="utf-8")):
+            found.append(f"{path.name}: {match.group(0).strip()}")
+    assert not found, found
+
+
+def test_vr_d9_the_scan_for_a_manifest_literal_finds_a_planted_word():
+    import re
+    old = re.compile(r"^\s*(?:status: (?:active|queued|parked|landed|abandoned)"
+                     r"|size: standard|phase: \w+)\s*$", re.M)
+    assert old.search("issue: x\nstatus: active\nassessment:\n")
+    assert not old.search("issue: x\nstatus: backlog\n  size: medium\n")
+
+
+def test_vr_d9_friction_and_capture_write_the_new_keys(tmp_path):
+    root, task_dir = _project(tmp_path)
+    (task_dir / "evidence").mkdir()
+    (task_dir / "evidence" / "red.log").write_text("1 failed\n", encoding="utf-8")
+    note = _cli(root, "issue", "friction", "--issue", "t", "--category", "tooling",
+                "--stage", "implement", "--observed", "evidence/red.log",
+                "--fix", "Run the suite once")
+    assert note[0] == 0, note
+    after_note = yaml.safe_load((task_dir / "manifest.yml").read_text(encoding="utf-8"))
+    assert [e["stage"] for e in after_note["friction"]] == ["implement"], after_note
+    assert _no_old_word(task_dir / "manifest.yml") == []
+    capture = _cli(root, "_friction-capture", "--internal", "--issue", "t",
+                   "--note", "slow", "--note-category", "tooling", "--note-stage", "ship")
+    assert capture[0] == 0, capture
+    saved = yaml.safe_load((task_dir / "manifest.yml").read_text(encoding="utf-8"))
+    assert {e["source"] for e in saved["friction"]} == {"agent", "human"}
+    for entry in saved["friction"]:
+        assert "phase" not in entry and "stage" in entry, entry
+    assert _no_old_word(task_dir / "manifest.yml") == []
+    assert not (task_dir / "manifest.yml.v5.bak").exists(), "nothing old was on disk"
+
+
+def test_vr_d9_a_quick_fix_start_writes_no_old_word(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _git(repo, "init", "-q")
+    _git(repo, "config", "user.email", "t@example.com")
+    _git(repo, "config", "user.name", "t")
+    (repo / "README.md").write_text("hello\n", encoding="utf-8")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "base")
+    started = _cli(repo, "quick-fix", "start", "fresh-fix",
+                   "--risk", "trivial - a one-line text change",
+                   "--familiarity", "brownfield-mapped - the file and its test already exist",
+                   "--size", "atomic - one file, one obvious change",
+                   "--intent", "A quick fix ships with the same three gates.",
+                   "--scenario", "Given the greeting, when it is read, then it says hello.",
+                   "--scenario-id", "TRC-001",
+                   "--test", "tests/test_greeting.py::test_greeting_says_hello")
+    assert started[0] == 0, started
+    manifest = repo / ".compass" / "work" / "fresh-fix" / "manifest.yml"
+    assert _no_old_word(manifest) == []
+    saved = yaml.safe_load(manifest.read_text(encoding="utf-8"))
+    assert "status" not in saved, "work in flight stores no status"
+    assert not (manifest.parent / "manifest.yml.v5.bak").exists()

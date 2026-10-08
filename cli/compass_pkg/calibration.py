@@ -326,14 +326,14 @@ def derive_friction(slug, task, work):
         if reason:
             obs += f": {reason}"
         entries.append({
-            "phase": "assess",
+            "stage": "assess",
             "category": "mis-route",
             "observation": obs,
             "source": "derived",
         })
     for d in _find_reframe_debt([(slug, task)], work):
         entries.append({
-            "phase": "assess",
+            "stage": "assess",
             "category": "mis-route",
             "observation": ("absorbed scope-bloat without a re-assessment: "
                             f"{d['devlog_line']}"),
@@ -367,13 +367,13 @@ def cmd_friction_capture(args):
     note = getattr(args, "note", None)
     if note:
         human = {
-            "phase": getattr(args, "note_phase", None) or None,
+            "stage": getattr(args, "note_stage", None) or None,
             "category": getattr(args, "note_category", None) or "other",
             "observation": note,
             "source": "human",
         }
-        if human["phase"] is None:
-            del human["phase"]
+        if human["stage"] is None:
+            del human["stage"]
         entries.append(human)
 
     # Merge rather than replace. Derived entries are a pure function of the

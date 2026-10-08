@@ -1,8 +1,8 @@
 # The headless runner
 
-`compass run` runs the build or verify stage of one issue with nobody in the session. It starts one fresh `claude -p` session per cycle, and between cycles decides from the manifest and the evidence alone whether to go on. ADR-030 records why Compass starts sessions at all.
+`compass run` runs the implement or verify stage of one issue with nobody in the session. It starts one fresh `claude -p` session per cycle, and between cycles decides from the manifest and the evidence alone whether to go on. ADR-030 records why Compass starts sessions at all.
 
-**What has run live:** the build stage of a quick-fix example, in CI, through `.github/workflows/compass-run-demo.yml` (see "The demo in CI" below). Its first run, on 2026-10-03, finished in one session for 0.21 US dollars. The workflow starts only by hand, because every run costs money. Every test of the runner uses a stub `claude`.
+**What has run live:** the implement stage of a quick-fix example, in CI, through `.github/workflows/compass-run-demo.yml` (see "The demo in CI" below). Its first run, on 2026-10-03, finished in one session for 0.21 US dollars. The workflow starts only by hand, because every run costs money. Every test of the runner uses a stub `claude`.
 
 ## Running it
 
@@ -12,7 +12,7 @@ compass run <slug> --stage verify --stop-file .compass/STOP
 
 | Flag | Meaning |
 |---|---|
-| `--stage` | `build`, which runs `/compass:implement`, or `verify`, which runs `/compass:verify`. Nothing else can run unattended. |
+| `--stage` | `implement`, which runs `/compass:implement`, or `verify`, which runs `/compass:verify`. Nothing else can run unattended. The stage was named `build` before 6.0.0; that spelling works until 7.0.0 and prints a notice on standard error. |
 | `--stop-file` | Required. Create this file to stop the run before its next session. A relative path is read from the project root, not from where the command was started. |
 | `--max-cycles` | Sessions to start at most. At most the RP-LOOP-006 ceiling, 30. |
 | `--max-minutes` | Minutes to run at most; decimals are allowed. At most the RP-LOOP-007 ceiling, 240. |
@@ -27,7 +27,7 @@ One issue runs one stage at a time. A run holds `run.lock` in the issue's folder
 
 Before each cycle the runner stops if the stop file exists, the cycle ceiling is reached, or the minutes are spent. After each session it stops once the money spent reaches the cost ceiling. After each session it stops if:
 
-- the stage is done: every gate passes for the verify stage; every scenario has a green record for the build stage;
+- the stage is done: every gate passes for the verify stage; every scenario has a green record for the implement stage;
 - the session landed the issue, which an unattended run must never do;
 - the manifest cannot be read;
 - the manifest and the evidence did not change for as many cycles in a row as the RP-LOOP-005 ceiling allows, 3.
@@ -66,7 +66,7 @@ A session is matched to an issue only through the `usage.session` its manifest r
 
 ## The demo in CI
 
-`scripts/run-demo.sh` builds a project with one known bug, records its failing test as a quick fix, and runs the build stage on it. In Compass's own repository, `.github/workflows/compass-run-demo.yml` runs it when started by hand. It authenticates by identity federation, as the review job does, so no key is stored: the job's GitHub OIDC token goes to a file named by `ANTHROPIC_IDENTITY_TOKEN_FILE`, and a profile (`ANTHROPIC_CONFIG_DIR`, `ANTHROPIC_PROFILE`) lets the run's several `claude` processes share one exchanged token. The record is kept as the job's artifact.
+`scripts/run-demo.sh` builds a project with one known bug, records its failing test as a quick fix, and runs the implement stage on it. In Compass's own repository, `.github/workflows/compass-run-demo.yml` runs it when started by hand. It authenticates by identity federation, as the review job does, so no key is stored: the job's GitHub OIDC token goes to a file named by `ANTHROPIC_IDENTITY_TOKEN_FILE`, and a profile (`ANTHROPIC_CONFIG_DIR`, `ANTHROPIC_PROFILE`) lets the run's several `claude` processes share one exchanged token. The record is kept as the job's artifact.
 
 ## Credentials
 

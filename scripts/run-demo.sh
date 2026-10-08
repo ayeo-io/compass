@@ -38,7 +38,7 @@ python3 "$COMPASS" quick-fix start fix-upload-limit-unit \
 python3 "$COMPASS" tdd-red --scenario UP-1 --quiet -- python3 -m pytest -q tests/test_upload.py
 
 set +e
-python3 "$COMPASS" run fix-upload-limit-unit --stage build \
+python3 "$COMPASS" run fix-upload-limit-unit --stage implement \
   --stop-file .compass/STOP --max-cycles "${DEMO_MAX_CYCLES:-3}" \
   --max-minutes 15 --max-cost-usd 3 ${CLAUDE_BIN:+--claude "$CLAUDE_BIN"}
 code=$?

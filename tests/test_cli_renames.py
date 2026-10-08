@@ -101,6 +101,12 @@ RELEASED = [
 ]
 
 
+# A released value of a flag: the old value works until 7.0.0 and is rewritten.
+VALUE_ROWS = [
+    (["run", "--stage", "build"], ["run", "--stage", "implement"]),
+]
+
+
 def _ids(pairs):
     return [" ".join(old[:3]) for old, _ in pairs]
 
@@ -163,6 +169,7 @@ RETIRED_SPELLINGS = [
     r"compass issue template(?! show)",
     r"compass scenario tests(?! set)",
     r"compass policy test", r"compass policy init-preset",
+    r"--stage build", r"--stage=build", r"--phase(?![\w-])", r"--note-phase",
 ]
 
 # Paths that record history or are derived from it, so they name old spellings.
@@ -233,10 +240,11 @@ def test_vr_e1_the_retired_spelling_scan_reports_a_planted_line():
 def test_vr_e2_the_table_lists_exactly_the_released_spellings(tmp_path):
     rows = _table()["aliases"]
     listed = sorted(" ".join(r["old"]) for r in rows)
-    expected = sorted(" ".join(old[:len(r["old"])]) for old, _ in RELEASED
-                      for r in rows if old[:len(r["old"])] == r["old"])
+    expected = sorted([" ".join(old[:len(r["old"])]) for old, _ in RELEASED
+                       for r in rows if old[:len(r["old"])] == r["old"]]
+                      + [" ".join(old) for old, _ in VALUE_ROWS])
     assert listed == expected, (listed, expected)
-    assert len(listed) == len(RELEASED) == 7, listed
+    assert len(listed) == len(RELEASED) + len(VALUE_ROWS) == 8, listed
 
 
 @pytest.mark.parametrize("old,new", RELEASED, ids=_ids(RELEASED))
@@ -311,6 +319,8 @@ def test_vr_e4_group_help_lists_new_verbs_and_no_alias(tmp_path):
 def test_vr_e4_no_alias_old_spelling_is_a_verb_in_any_help(tmp_path):
     p = _project(tmp_path / "p")
     for row in _table()["aliases"]:
+        if row["kind"] != "verb":
+            continue            # a value of a flag is not a verb in any help
         old = row["old"]
         parent = old[:-1]
         if not parent:
@@ -347,6 +357,10 @@ UNRELEASED = [
     (["issue", "migrate-config"], "issue migrate --config"),
     (["issue", "template", "requirements-review"], "issue template show"),
     (["scenario", "tests", "SCN-1", "--test", "tests/x.py::t"], "scenario tests set"),
+    (["issue", "friction", "--category", "tooling", "--phase", "assess", "--observed",
+      "evidence/red.log", "--fix", "Run the suite once"], "issue friction --stage"),
+    (["issue", "friction", "--category", "tooling", "--phase=assess", "--observed",
+      "evidence/red.log", "--fix", "Run the suite once"], "issue friction --stage"),
 ]
 
 
@@ -542,6 +556,13 @@ def release_problems(rows, cli, cwd):
         if row["released_in"] != TAG:
             problems.append(f"{name}: names {row['released_in']}, which this test cannot read")
             continue
+        if row.get("kind") == "value":
+            # The command and flag are `old` up to its last token, the value.
+            # The tag holds the spelling when its help lists the value.
+            rc, out, err = _run(row["old"][:-2] + ["--help"], cwd, cli=cli)
+            if rc != 0 or row["old"][-1] not in out:
+                problems.append(f"{name}: {TAG} does not hold this spelling")
+            continue
         rc, out, err = _run(row["old"] + ["--help"], cwd, cli=cli)
         if rc != 0:
             problems.append(f"{name}: {TAG} does not hold this spelling")
@@ -572,7 +593,7 @@ def test_vr_e13_a_planted_row_for_an_unreleased_spelling_fails(tmp_path):
 def test_vr_e13_the_table_file_has_a_release_on_every_row():
     for row in _table()["aliases"]:
         assert row.get("released_in", "").startswith("v"), row
-        assert row["kind"] == "verb", row
+        assert row["kind"] in ("verb", "value"), row
 
 
 # --- VR-E14: one rewrite step; the bare artifact spelling --------------------
@@ -605,3 +626,140 @@ def test_vr_e14_the_rewrite_reads_arguments_only_from_the_command_line():
     argv, _ = aliases.rewrite(["issue", "dashboard", "--check"])
     assert argv == ["issue", "dashboard", "render", "--check"]
     assert aliases.rewrite(["issue", "dashboard", "render"])[1] is None
+
+
+# --- VR-E7, VR-E8, VR-E14 (the run half): the run stage implement -------------
+# The headless-runner tests own the stub `claude` and the project it runs in.
+
+sys.path.insert(0, str(ROOT / "tests"))
+from test_headless_runner import project as headless_project  # noqa: E402,F401
+from test_headless_runner import (_calls as _stub_calls,  # noqa: E402
+                                  _last_run as _stub_last_run,
+                                  _run as _stub_run)
+
+
+def test_vr_e7_run_stage_implement_runs_the_implement_stage(headless_project):
+    result = _stub_run(headless_project, "--max-cycles", "1", plan=("touch",),
+                       stage="implement")
+    assert result.returncode == 4, result.stdout + result.stderr   # one cycle, no stage done
+    assert not _notices(result.stderr), result.stderr
+    assert "usage:" not in result.stderr
+    message = _stub_calls(headless_project)[0]
+    assert "/compass:implement" in message[message.index("-p") + 1]
+    assert _stub_last_run(headless_project)["stage"] == "implement"
+    assert "build" not in result.stdout
+    # The run is a writer too: the manifest it saved holds no old word.
+    from compass_pkg import word_map
+    saved = yaml.safe_load((headless_project / ".compass" / "work" / "multi"
+                            / "manifest.yml").read_text(encoding="utf-8"))
+    assert word_map.old_words(saved) == [], word_map.old_words(saved)
+
+
+def test_vr_e7_the_stage_help_lists_implement_and_not_build(tmp_path):
+    rc, out, err = _run(["run", "--help"], _project(tmp_path / "p"))
+    assert rc == 0, err
+    words = out.lower().replace("|", " ").replace(",", " ").split()
+    assert "implement" in words and "verify" in words, out
+    assert "build" not in words, out
+
+
+def test_vr_e8_run_stage_build_runs_the_implement_stage_and_says_build_is_now_implement(
+        headless_project):
+    result = _stub_run(headless_project, "--max-cycles", "1", plan=("touch",),
+                       stage="build")
+    assert result.returncode == 4, result.stdout + result.stderr
+    notices = _notices(result.stderr)
+    assert len(notices) == 1, result.stderr
+    assert "'run --stage build' is now 'run --stage implement'" in notices[0], notices
+    message = _stub_calls(headless_project)[0]
+    assert "/compass:implement" in message[message.index("-p") + 1]
+    assert _stub_last_run(headless_project)["stage"] == "implement"
+    assert "implement" in result.stdout and "build" not in result.stdout, result.stdout
+
+
+def test_vr_e8_the_equals_form_is_rewritten_too(headless_project):
+    import subprocess as sp
+    done = sp.run([sys.executable, str(CLI), "run", "multi", "--stage=build"],
+                  cwd=str(headless_project), capture_output=True, text=True)
+    assert len(_notices(done.stderr)) == 1, done.stderr
+    assert "--stop-file is required" in done.stderr, done.stderr   # parsed as implement
+
+
+def test_vr_e14_run_stage_build_and_the_bare_artifact_spelling_share_one_rewrite_step():
+    from compass_pkg import aliases
+    argv, notice = aliases.rewrite(["run", "multi", "--stage", "build", "--stop-file", "S"])
+    assert argv == ["run", "multi", "--stage", "implement", "--stop-file", "S"]
+    assert notice and "\n" not in notice
+    assert "'run --stage build' is now 'run --stage implement'" in notice
+    assert aliases.rewrite(["run", "multi", "--stage=build"])[0] == [
+        "run", "multi", "--stage=implement"]
+    # Nothing else is touched: another stage, the new word, another command,
+    # and a slug or a path that spells the old word.
+    for untouched in (["run", "multi", "--stage", "verify"],
+                      ["run", "multi", "--stage", "implement"],
+                      ["run", "build", "--stage", "verify"],
+                      ["flow", "--stage", "build"],
+                      ["run", "multi", "--stop-file", "build"]):
+        assert aliases.rewrite(untouched) == (untouched, None), untouched
+    assert aliases.rewrite(["run", "--help"])[1] is None
+
+
+def test_vr_e14_the_old_and_new_run_spelling_give_the_same_output_and_exit_code(tmp_path):
+    a = _project(tmp_path / "a")
+    b = _project(tmp_path / "b")
+    rc_old, out_old, err_old = _run(["run", "nope", "--stage", "build", "--stop-file", "S"], a)
+    rc_new, out_new, err_new = _run(["run", "nope", "--stage", "implement", "--stop-file", "S"], b)
+    assert rc_old == rc_new != 0
+    assert _norm(out_old, a) == _norm(out_new, b)
+    assert len(_notices(err_old)) == 1 and not _notices(err_new)
+    without = "\n".join(l for l in err_old.splitlines() if "works until 7.0.0" not in l)
+    assert _norm(without.strip(), a) == _norm(err_new.strip(), b)
+
+
+def test_vr_e13_a_planted_value_row_for_an_unreleased_value_fails(tmp_path):
+    cli = _tag_cli()
+    if cli is None:
+        pytest.skip(f"tag {TAG} is not available in this clone")
+    p = _project(tmp_path / "p")
+    held = {"old": ["run", "--stage", "build"], "new": ["run", "--stage", "implement"],
+            "kind": "value", "released_in": TAG}
+    assert release_problems([held], cli, p) == []
+    planted = dict(held, old=["run", "--stage", "implement"], new=["run", "--stage", "x"])
+    assert release_problems([planted], cli, p), "a value the tag does not list must fail"
+
+
+# --- VR-E9: issue friction takes --stage; --phase is an unknown option ---------
+
+def test_vr_e9_issue_friction_with_stage_records_an_entry_keyed_stage(tmp_path):
+    project = _project(tmp_path / "p")
+    task = project / ".compass" / "work" / "sample"
+    (task / "evidence").mkdir()
+    (task / "evidence" / "red.log").write_text("1 failed\n", encoding="utf-8")
+    rc, out, err = _run(["issue", "friction", "--category", "tooling", "--stage",
+                         "implement", "--observed", "evidence/red.log",
+                         "--fix", "Run the suite once"], project)
+    assert rc == 0, (out, err)
+    assert "(tooling, implement)" in out and not _notices(err), (out, err)
+    [entry] = yaml.safe_load((task / "manifest.yml").read_text())["friction"]
+    assert entry["stage"] == "implement" and "phase" not in entry, entry
+
+
+def test_vr_e9_the_stage_flag_lists_the_stage_ids_and_the_help_has_no_phase_flag(tmp_path):
+    rc, out, err = _run(["issue", "friction", "--help"], _project(tmp_path / "p"))
+    assert rc == 0, err
+    assert "--stage" in out and "--phase" not in out, out
+
+
+def test_vr_e9_the_phase_flag_records_nothing(tmp_path):
+    project = _project(tmp_path / "p")
+    task = project / ".compass" / "work" / "sample"
+    (task / "evidence").mkdir()
+    (task / "evidence" / "red.log").write_text("1 failed\n", encoding="utf-8")
+    before = (task / "manifest.yml").read_text()
+    rc, out, err = _run(["issue", "friction", "--category", "tooling", "--phase",
+                         "implement", "--observed", "evidence/red.log",
+                         "--fix", "Run the suite once"], project)
+    assert rc == 2 and out == "", (rc, out, err)
+    assert "'issue friction --phase' is now 'issue friction --stage'" in err, err
+    assert "works until 7.0.0" not in err
+    assert (task / "manifest.yml").read_text() == before

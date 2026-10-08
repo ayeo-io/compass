@@ -135,7 +135,7 @@ def test_friction_block_validates(run_cli, make_task):
     and category and source are constrained to their enums (`TRC-A1`)."""
     body = _valid_task_body(friction=[
         {
-            "phase": "plan",
+            "stage": "plan",
             "category": "over-ceremony",
             "observation": "Standard route's full Clarify added a gate the change didn't need.",
             "proposed_change": "routing-policy.yml: lower Clarify weight for size=small.",

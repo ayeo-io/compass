@@ -9,8 +9,11 @@ keeps the channel useful:
 - the note cites evidence it observed: a file in the issue folder other
   than the manifest, or a devlog line as `devlog.md:<line>`;
 - it names a fix in one line of at most 160 characters;
-- at most three notes per issue, and never the same category and phase
+- at most three notes per issue, and never the same category and stage
   twice.
+
+The note's `stage` key was `phase` before 6.0.0; a stored note keyed `phase`
+is read as `stage` (`cli/migrate-map.yml`, `friction_keys`).
 
 A note about a step a guardrail backs is accepted but marked, because
 friction can change a strategy or an approach's weight, never a guardrail.
@@ -31,7 +34,7 @@ MAX_NOTES = 3
 MAX_FIX = 160
 CATEGORIES = ("over-weight", "under-weight", "mis-route", "missing-strategy",
               "tooling", "docs", "other")
-PHASES = STAGE_IDS
+STAGES = STAGE_IDS
 GUARDRAIL_NOTICE = "guardrail, not changeable by friction"
 
 # A fix asks to change a guardrail-backed step when it both names such a step
@@ -103,20 +106,20 @@ def cmd_issue_friction(args):
         raise CompassError(f"compass issue friction: this issue already has three "
                            f"agent notes, the most it takes. Keep the ones that "
                            f"matter most.")
-    if any(e.get("category") == args.category and e.get("phase") == args.phase
+    if any(e.get("category") == args.category and e.get("stage") == args.stage
            for e in mine):
         raise CompassError(f"compass issue friction: a note for {args.category} in "
-                           f"{args.phase} is already recorded; one root cause gets "
+                           f"{args.stage} is already recorded; one root cause gets "
                            f"one note.")
     guardrail = bool(args.guardrail or names_a_guardrail_step(fix))
-    entry = {"phase": args.phase, "category": args.category, "source": "agent",
+    entry = {"stage": args.stage, "category": args.category, "source": "agent",
              "evidence": args.observed, "proposed_change": fix}
     if guardrail:
         entry["guardrail"] = True
     task["friction"] = existing + [entry]
     save_manifest(task, path)
     print(f"compass issue friction: recorded agent note {len(mine) + 1} of "
-          f"{MAX_NOTES} ({args.category}, {args.phase}).")
+          f"{MAX_NOTES} ({args.category}, {args.stage}).")
     if guardrail:
         print(f"  {GUARDRAIL_NOTICE}: it names a step a guardrail backs, so it is "
               f"reported but never counts towards a lesson.")
@@ -134,7 +137,7 @@ def register(issue_subs):
     p.add_argument("--issue", dest="issue_slug", metavar="SLUG",
                    help="issue slug (default: the current-task pointer)")
     p.add_argument("--category", required=True, choices=CATEGORIES)
-    p.add_argument("--phase", required=True, choices=PHASES)
+    p.add_argument("--stage", required=True, choices=STAGES)
     p.add_argument("--observed", required=True,
                    help="evidence in the issue folder, or devlog.md:<line>")
     p.add_argument("--fix", help=f"the change that would have avoided it, at most "

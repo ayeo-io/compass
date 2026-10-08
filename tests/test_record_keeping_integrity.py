@@ -263,7 +263,7 @@ def test_trc_b1_second_note_appends(run_cli, make_task):
 
     r = run_cli("_friction-capture", "--internal", "--issue", "fric",
                 "--note", "the second note", "--note-category", "tooling",
-                "--note-phase", "land")
+                "--note-stage", "land")
     assert r.returncode == 0, r
 
     got = yaml.safe_load((task_dir / "manifest.yml").read_text())["friction"]
@@ -298,7 +298,7 @@ def test_trc_b1_identical_note_not_appended_twice(run_cli, make_task):
 
     run_cli("_friction-capture", "--internal", "--issue", "fric",
             "--note", "same note", "--note-category", "tooling",
-            "--note-phase", "verify")
+            "--note-stage", "verify")
 
     got = yaml.safe_load((task_dir / "manifest.yml").read_text())["friction"]
     assert len([e for e in got if e["observation"] == "same note"]) == 1, got

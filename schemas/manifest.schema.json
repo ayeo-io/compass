@@ -299,7 +299,7 @@
           },
           "stage": {
             "enum": [
-              "build",
+              "implement",
               "verify"
             ]
           },
@@ -883,9 +883,9 @@
         ],
         "additionalProperties": false,
         "properties": {
-          "phase": {
+          "stage": {
             "enum": ["assess", "define", "refine", "plan", "breakdown", "implement", "verify", "ship", "frame", "specify", "clarify", "distribute", "build", "land"],
-            "description": "The stage the friction was felt in, by its current name. The retired names after `ship` are accepted for archived records; Compass maps them to the current name on load."
+            "description": "The stage the friction was felt in, by its current name. The retired names after `ship` are accepted for archived records; Compass maps them to the current name on load. A record written before schema 3.0 names this key `phase`; it is read as `stage` and rewritten on the next save."
           },
           "category": {
             "enum": [

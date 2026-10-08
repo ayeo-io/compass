@@ -105,7 +105,7 @@ for delivery work; on a spike, follow the graduate-or-discard step in
      `manifest.yml`.
    - Then offer the author **one optional line**: *"anything the framework
      made harder than it should have been?"* - pass it with `--note "..."
-     --note-category <over-weight|tooling|...> --note-phase <stage>`.
+     --note-category <over-weight|tooling|...> --note-stage <stage>`.
      **Recording nothing is a valid, common outcome.**
    - Notes the agent recorded during the run with `compass issue friction`
      are kept. Each cites evidence and a fix; `compass retro --friction`

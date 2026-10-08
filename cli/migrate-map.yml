@@ -63,6 +63,16 @@ values:
   close_reason:
     landed: completed
     abandoned: not-planned
+  # Run stage: `compass run --stage` and a manifest's `runs[].stage`. The
+  # implement stage carries the stage id's own name.
+  run_stage:
+    build: implement
+
+# Manifest keys renamed by the same issue, read in the entries they name: a
+# `friction[]` entry's `phase` key is now `stage`. A `stage` already present
+# wins and `phase` is dropped. The entry's value goes through `stage_keys`.
+friction_keys:
+  phase: stage
 
 # Old route names -> the names the display layer prints. Manifests record
 # the route names themselves; an old name is read through the map above.

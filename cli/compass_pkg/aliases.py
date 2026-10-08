@@ -8,6 +8,12 @@ is one notice on standard error. `hint_for` adds one line to the error of a
 command line that fails to parse, when it starts with an old spelling that no
 release holds. Nothing runs for a hint.
 
+A row can also name a flag. A `kind: value` alias row has `old` and `new` of
+the form `[command..., --flag, value]`: the value is rewritten wherever the
+flag stands after the command, as `--flag value` or `--flag=value`. A hint row
+whose `old` ends in a flag matches when the command line holds that flag after
+the command.
+
 The notice and the hint are built from the table, so the old spellings appear
 in this module only as data.
 
@@ -53,6 +59,52 @@ def _positional(rest, value_flags):
     return None
 
 
+def _split_flag(tokens):
+    """`(command, flag, value)` for a row that names a flag: the tokens before
+    the first `--flag`, the flag, and the token after it (None when the row
+    ends at the flag). `(tokens, None, None)` when the row names no flag."""
+    for i, token in enumerate(tokens):
+        if token.startswith("--"):
+            return list(tokens[:i]), token, (tokens[i + 1] if i + 1 < len(tokens) else None)
+    return list(tokens), None, None
+
+
+def _flag_at(rest, flag, value=None):
+    """The index in `rest` where `flag` stands, with `value` after it or in the
+    `--flag=value` form when a value is given; None when it does not."""
+    for i, token in enumerate(rest):
+        if value is None:
+            if token == flag or token.startswith(flag + "="):
+                return i
+        elif (token == flag and i + 1 < len(rest) and rest[i + 1] == value) or (
+                token == f"{flag}={value}"):
+            return i
+    return None
+
+
+def _rewrite_value(argv, table):
+    """`(argv, notice)` for a `kind: value` row that matches, else None."""
+    for row in table["aliases"]:
+        if row.get("kind") != "value":
+            continue
+        command, flag, value = _split_flag(row["old"])
+        if flag is None or value is None or not _starts_with(argv, command):
+            continue
+        rest = argv[len(command):]
+        at = _flag_at(rest, flag, value)
+        if at is None:
+            continue
+        replacement = row["new"][-1]
+        if rest[at] == flag:
+            rest[at + 1] = replacement
+        else:
+            rest[at] = f"{flag}={replacement}"
+        notice = (f"compass: '{' '.join(row['old'])}' is now "
+                  f"'{' '.join(row['new'])}'; the old spelling works until 7.0.0.")
+        return command + rest, notice
+    return None
+
+
 def rewrite(argv, table=None):
     """`(argv, notice)`: the command line with a released old spelling replaced
     by the new one, and the notice to print; `(argv, None)` when no row
@@ -61,11 +113,11 @@ def rewrite(argv, table=None):
     argv = list(argv)
     best = None
     for row in table["aliases"]:
-        if _starts_with(argv, row["old"]) and (
+        if row.get("kind") != "value" and _starts_with(argv, row["old"]) and (
                 best is None or len(row["old"]) > len(best["old"])):
             best = row
     if best is None:
-        return argv, None
+        return _rewrite_value(argv, table) or (argv, None)
     old, new = best["old"], best["new"]
     rest = argv[len(old):]
     if _starts_with(new, old):
@@ -92,6 +144,11 @@ def hint_for(argv, table=None):
     new one."""
     table = table or load_table()
     for row in table["hints"]:
+        command, flag, _ = _split_flag(row["old"])
+        if flag is not None:
+            if _starts_with(argv, command) and _flag_at(argv[len(command):], flag) is not None:
+                return f"'{' '.join(row['old'])}' is now '{' '.join(row['new'])}'."
+            continue
         if _starts_with(argv, row["old"]) and not _starts_with(argv, row["new"]):
             return f"'{' '.join(row['old'])}' is now '{' '.join(row['new'])}'."
     return None

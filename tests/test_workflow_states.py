@@ -1072,3 +1072,122 @@ def test_vr_c16_the_policy_diff_examines_every_issue_that_is_not_closed():
     assert [i["issue"] for i in document["issues"]] == ["c-backlog", "d-queued", "e-flight"]
     assert [i["status"] for i in document["issues"]] == ["backlog", "queued", "in-progress"]
     assert document["examined"] == 3
+
+
+# --- VR-G9: no retired word in its retired meaning in shipped prose -----------
+# Each pattern names a field, so `full` as a delivery approach, the machine
+# names `landed_by`, `land_commit`, `land_timestamp` and `landed-by-resolves`,
+# and the ordinary verb "to land" all pass. The retired list, the mapping and
+# alias tables and the decision records are not scanned: they must name the
+# old words.
+
+import re
+import subprocess
+
+PROSE_ROOTS = ("commands", "skills", "agents", "docs", "governance")
+PROSE_FILES = ("README.md", "CLAUDE.md", "compass-contract.md")
+PROSE_SUFFIXES = (".md", ".yml", ".yaml", ".txt")
+PROSE_SKIPPED = ("docs/compass/", "docs/system-spec", "docs/upgrade",
+                 "governance/decisions/", "governance/terminology.yml",
+                 "architecture/decisions/")
+PROSE_MARKER = "vocabulary-scan: allow"
+
+RETIRED_PROSE = {
+    "a status field holding a retired status":
+        r"\bstatus: ?`?(?:landed|queued|parked|abandoned|active)\b",
+    "a retired status named as a state":
+        r"`(?:landed|queued|parked|abandoned)`",
+    "'blocks land' for 'blocks shipping'":
+        r"\bblocks? land\b",
+    "the run stage under its old name":
+        r"--stage[ =]build\b",
+    "the friction flag or key under its old name":
+        r"--phase\b|--note-phase\b|\bphase: ?`?(?:assess|define|refine|plan|breakdown|implement|"
+        r"verify|ship)\b",
+    "a depth word used as a stage mode or an artifact depth":
+        r"\b(?:mode|depth)s?: ?`?(?:full|light|full-plus-backfill)\b|`full-plus-backfill`",
+}
+
+
+def _prose_files(root):
+    listed = subprocess.run(["git", "ls-files", "-z"], cwd=str(root), capture_output=True,
+                            text=True)
+    if listed.returncode == 0 and listed.stdout:
+        names = sorted(n for n in listed.stdout.split("\0") if n)
+    else:                                   # not a git checkout: walk the folders
+        names = sorted(str(p.relative_to(root)) for p in
+                       [root / f for f in PROSE_FILES] + [
+                           q for d in PROSE_ROOTS for q in (root / d).rglob("*")]
+                       if p.is_file())
+    for name in names:
+        top = name.split("/", 1)[0]
+        if (top in PROSE_ROOTS or name in PROSE_FILES) and name.endswith(PROSE_SUFFIXES) \
+                and not name.startswith(PROSE_SKIPPED):
+            yield name
+
+
+def retired_prose(root):
+    """`file:line: reason: text` for each line that uses a retired word in its
+    retired meaning."""
+    found = []
+    for name in _prose_files(root):
+        try:
+            text = (Path(root) / name).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        for number, line in enumerate(text.splitlines(), 1):
+            if PROSE_MARKER in line:
+                continue
+            for reason, pattern in RETIRED_PROSE.items():
+                if re.search(pattern, line):
+                    found.append(f"{name}:{number}: {reason}: {line.strip()[:100]}")
+    return found
+
+
+def test_vr_g9_shipped_prose_uses_no_retired_word_in_its_retired_meaning():
+    found = retired_prose(ROOT)
+    assert not found, f"{len(found)} lines:\n" + "\n".join(found[:60])
+
+
+@pytest.mark.parametrize("line", [
+    "The issue has `status: landed` in its manifest.",
+    "Set it with status: parked and a reason.",
+    "An issue is `queued` until it is picked up.",
+    "A failing check blocks land for the whole branch.",
+    "Run `compass run <slug> --stage build` to start.",
+    "Record it with `compass issue friction --phase plan`.",
+    "friction:\n  - phase: implement",
+    "Each stage sets `mode: full` or `depth: light`.",
+    "The slowest mode is `full-plus-backfill`.",
+])
+def test_vr_g9_a_planted_retired_use_is_reported(tmp_path, line):
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "page.md").write_text(line + "\n", encoding="utf-8")
+    found = retired_prose(tmp_path)
+    assert found and found[0].startswith("docs/page.md:"), (line, found)
+
+
+@pytest.mark.parametrize("line", [
+    "The delivery approach is `full`, and a stage runs in `thorough` mode.",
+    "`landed_by` names the commit; `land_commit` and `land_timestamp` hold the record.",
+    "The check `landed-by-resolves` reads the pointer.",
+    "A change lands when ship-commit commits it; the issue is `done`.",
+    "Run `compass run <slug> --stage implement`.",
+    "Record it with `compass issue friction --stage plan`.",
+    "A stage `phase` is the older word for a stage.",
+    "status: backlog",
+    "`status: landed` is read as done  <!-- vocabulary-scan: allow - names the old word -->",
+])
+def test_vr_g9_an_allowed_use_is_not_reported(tmp_path, line):
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "page.md").write_text(line + "\n", encoding="utf-8")
+    assert retired_prose(tmp_path) == []
+
+
+def test_vr_g9_the_retired_list_and_the_decision_records_are_not_scanned(tmp_path):
+    for rel in ("governance/terminology.yml", "governance/decisions/x.md",
+                "docs/compass/2026-10-08-x/note.md", "docs/system-spec.md"):
+        path = tmp_path / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("status: landed and --stage build\n", encoding="utf-8")
+    assert retired_prose(tmp_path) == []

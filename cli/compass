@@ -621,7 +621,7 @@ def build_parser():
     p_fric.add_argument("--note", help=argparse.SUPPRESS)
     p_fric.add_argument("--note-category", dest="note_category",
                         help=argparse.SUPPRESS)
-    p_fric.add_argument("--note-phase", dest="note_phase", help=argparse.SUPPRESS)
+    p_fric.add_argument("--note-stage", dest="note_stage", help=argparse.SUPPRESS)
     p_fric.set_defaults(func=cmd_friction_capture, output_kind="hand-off")
 
     # Private entry point that renders one refusal from the registry in

@@ -113,8 +113,12 @@ Each parent in a chain is pinned by sha, fetched, cached and read as data in the
 | Fault | Code | Reported on |
 |---|---|---|
 | A third parent names a fourth git parent | `L-PARENT-CHAIN` | The third parent. The fourth is not fetched |
-| A parent names a commit that is already in the chain | `L-PARENT-CYCLE` | The parent that names it |
+| A parent names a commit that is already in the chain, at any depth | `L-PARENT-CYCLE` | The parent that names it. A full sha already in the chain is refused before any fetch |
 | An ancestor cannot be fetched, is not cached for a reader that does not fetch, or has a bad spelling | The code of the fault | The parent that names the ancestor (a bad file reports on the ancestor itself) |
+
+The refusal from `compass policy lint`, `compass policy effective` and `compass check` names that parent in the same way. A stored generation does not read the cache at all: it uses the record of its parents, so a deleted cache does not stop `compass check` for an issue that has one.
+
+Compass checks a parent after it has loaded the parent's ancestors. A parent that is refused for a settings key, an `unlock:` or an unknown `impl` may still be fetched along with its ancestors, which were pinned and read as data only. Nothing in them runs.
 
 ## What an issue records
 

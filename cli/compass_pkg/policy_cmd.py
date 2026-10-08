@@ -75,8 +75,8 @@ def run_policy_effective(args):
                                      fetch=_may_fetch(args))
     if loaded.findings:
         first = loaded.findings[0]
-        raise CompassError(f"nothing can be resolved: {first.code} {first.path}: "
-                           f"{first.message}")
+        raise CompassError(f"nothing can be resolved: {first.code} [{first.layer}] "
+                           f"{first.path}: {first.message}")
     effective = policy_lint.resolve_effective(
         loaded.parent, loaded.project, loaded.issue, meta=loaded.meta, slug=slug,
         git_parents=loaded.git_parents)

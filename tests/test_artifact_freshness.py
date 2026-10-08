@@ -342,3 +342,112 @@ def test_fresh_9_a_document_registered_before_the_capability_is_not_stale(tmp_pa
     _write(task_dir, "acceptance-criteria", CRITERIA + "changed\n")
     code, rows, out = _check(root)
     assert all(r["status"] != "fail" for r in rows.values()), rows
+
+
+# --- rules the first tests left unguarded --------------------------------------------------
+
+def test_fresh_3_an_upstream_that_appeared_after_writing_is_stale(tmp_path):
+    root, task_dir = _scene(tmp_path, phase="implement", write=False)
+    _write(task_dir, "technical-design", DESIGN)
+    _register(root, "technical-design")
+    assert _entry(task_dir, "technical-design")["upstream"] == {}
+    _write(task_dir, "acceptance-criteria", CRITERIA)
+    code, rows, out = _check(root)
+    row = rows["technical-design"]
+    assert row["status"] == "fail", rows
+    assert "acceptance-criteria was not recorded when this was written" in row["detail"]
+
+
+def test_fresh_3_a_document_no_stage_consumes_blocks_only_from_ship(tmp_path):
+    for phase, status in (("verify", "pass"), ("ship", "fail")):
+        (tmp_path / phase).mkdir()
+        root, task_dir = _scene(tmp_path / phase, phase=phase)
+        _write(task_dir, "technical-design", DESIGN + "changed\n")
+        code, rows, out = _check(root)
+        report = rows["verification-report"]
+        assert report["status"] == status, (phase, rows)
+        assert report["detail"].startswith("stale"), report
+        assert "blocks land" in report["detail"]
+        assert ("not yet due" in report["detail"]) == (status == "pass")
+
+
+def test_fresh_2_an_omitted_document_is_not_stamped_and_not_tracked(tmp_path):
+    root, task_dir = _scene(tmp_path, phase="implement", write=False)
+    _write(task_dir, "acceptance-criteria", CRITERIA)
+    _write(task_dir, "technical-design", DESIGN)
+    code, out, err = _run(root, "issue", "artifact", "technical-design", "--status", "omitted",
+                          "--reason", "the design is in the issue", "--issue", SLUG)
+    assert code == 0, out + err
+    assert "digest" not in _entry(task_dir, "technical-design")
+    _register(root, "technical-design")
+    _write(task_dir, "acceptance-criteria", CRITERIA + "changed\n")
+    assert _check(root)[1]["technical-design"]["status"] == "fail"
+    code, out, err = _run(root, "issue", "artifact", "technical-design", "--status", "omitted",
+                          "--reason", "the design is in the issue", "--issue", SLUG)
+    assert code == 0, out + err
+    code, rows, out = _check(root)
+    assert "technical-design" not in rows, rows
+
+
+def test_fresh_2_a_missing_upstream_record_is_written_again_on_registering(tmp_path):
+    root, task_dir = _scene(tmp_path)
+    body = _manifest(task_dir)
+    for entry in body["artifacts"]:
+        entry.pop("upstream", None)
+    (task_dir / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
+    _write(task_dir, "acceptance-criteria", CRITERIA + "changed\n")
+    _register(root, "technical-design")
+    assert _entry(task_dir, "technical-design")["upstream"] == {
+        "acceptance-criteria": _sha(CRITERIA + "changed\n")}
+
+
+def test_fresh_2_emptying_depends_on_drops_the_upstream_record(tmp_path):
+    root, task_dir = _scene(tmp_path)
+    assert "upstream" in _entry(task_dir, "technical-design")
+    doc = yaml.safe_load((root / "compass.yml").read_text(encoding="utf-8"))
+    doc["artifacts"]["technical-design"] = {"set": {"depends_on": []}}
+    (root / "compass.yml").write_text(yaml.safe_dump(doc), encoding="utf-8")
+    assert _evaluate_write(root)[0] == 0
+    _write(task_dir, "technical-design", DESIGN + "rewritten\n")
+    _register(root, "technical-design")
+    entry = _entry(task_dir, "technical-design")
+    assert "upstream" not in entry and entry["digest"] == _sha(DESIGN + "rewritten\n")
+
+
+def test_fresh_3_an_unreadable_record_gives_an_error_row_and_fails_check(tmp_path):
+    root, task_dir = _scene(tmp_path, phase="implement")
+    body = _manifest(task_dir)
+    for entry in body["artifacts"]:
+        if entry["kind"] == "technical-design":
+            entry["upstream"] = {"acceptance-criteria": 5}
+    (task_dir / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
+    code, rows, out = _check(root)
+    assert rows["freshness"]["status"] == "fail", rows
+    assert "evaluation errored" in rows["freshness"]["detail"]
+    assert code == 1
+
+
+def test_fresh_4_staleness_passes_over_three_hops_whatever_the_order_of_registering(tmp_path):
+    graph = {"acceptance-criteria": {"set": {"depends_on": ["distribution-map"]}},
+             "technical-design": {"set": {"depends_on": ["acceptance-criteria"]}},
+             "verification-report": {"set": {"depends_on": ["technical-design"]}}}
+    root, task_dir = _scene(tmp_path, graph=graph, phase="implement", write=False)
+    for kind, text in (("distribution-map", "# Map\n"), ("acceptance-criteria", CRITERIA),
+                       ("technical-design", DESIGN), ("verification-report", REPORT)):
+        _write(task_dir, kind, text)
+    for kind in ("verification-report", "technical-design", "acceptance-criteria"):
+        _register(root, kind)
+    assert {r["status"] for r in _check(root)[1].values()} == {"pass"}
+    _write(task_dir, "distribution-map", "# Map\n\nchanged\n")
+    code, rows, out = _check(root)
+    assert "distribution-map changed" in rows["acceptance-criteria"]["detail"]
+    assert "acceptance-criteria is stale" in rows["technical-design"]["detail"]
+    assert "technical-design is stale" in rows["verification-report"]["detail"]
+
+
+def test_fresh_6_the_refusal_exits_2_and_shows_its_prefix(tmp_path):
+    root, task_dir = _landing_scene(tmp_path)
+    _write(task_dir, "acceptance-criteria", CRITERIA + "changed\n")
+    code, out, err = _run(root, "ship-commit", "--issue", SLUG, "-m", "land it")
+    assert code == 2, (code, out, err)
+    assert err.startswith("compass: compass ship-commit: refusing to land - 2 artifact(s) are stale:"), err

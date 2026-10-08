@@ -258,14 +258,16 @@ entries:
 # issue at implement, the capability on, and a design written before its
 # acceptance criteria changed. The exit codes are the ones the 5.6.0 CLI gave
 # in the same project, measured by running it there. What is new is the
-# phrase each entry names, so the entry fails when the reader is lost.
-# `check` exits 1 at 5.6.0 too, for scenarios with no id, so the exit code
-# alone does not show the stale design: the phrase does.
+# phrase each entry names, so the entry fails when the reader is lost. The
+# `check` and `issue receipt` entries name a phrase that only a stale design
+# produces, not the guardrail name or the section heading, which a fresh
+# design produces too. `check` exits 1 at 5.6.0 too, for scenarios with no
+# id, so the exit code alone does not show the stale design: the phrase does.
 - id: check-stale-document
   project: with-stale-document
   argv: ["check", "--issue", "feature", "--json"]
   exit: 1
-  stdout_contains: '"guardrail": "artifact-freshness"'
+  stdout_contains: "stale - acceptance-criteria changed"
 - id: next-stale-document
   project: with-stale-document
   argv: ["next", "--issue", "feature"]
@@ -275,7 +277,7 @@ entries:
   project: with-stale-document
   argv: ["issue", "receipt", "--issue", "feature"]
   exit: 0
-  stdout_contains: "Artifact freshness"
+  stdout_contains: "stale - acceptance-criteria changed"
 - id: artifact-records-digests
   project: with-stale-document
   argv: ["issue", "artifact", "acceptance-criteria", "--status", "draft", "--issue", "feature"]

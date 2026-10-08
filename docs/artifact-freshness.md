@@ -73,8 +73,8 @@ document that records `upstream` is stale when:
 
 - an artifact it depends on has other bytes now than the digest recorded;
 - an artifact it depends on has no file now (`<id> is missing now`);
-- an artifact it depends on had no file when the document was written and has
-  one now (`<id> appeared after this was written`);
+- an artifact it depends on had no recorded digest when the document was
+  written and has a file now (`<id> was not recorded when this was written`);
 - an artifact it depends on is stale itself (`<id> is stale`). Staleness
   passes down the graph, so a change to an acceptance criterion makes the
   design stale, and the verification report that depends on the design.
@@ -113,11 +113,11 @@ detail starts with `fresh` or `stale`:
 verdict, with the same detail for each tracked document. It adds nothing when
 no document is tracked. The receipt has no JSON form.
 
-`compass ship-commit` refuses with exit 1 and this text, naming each stale
-document:
+`compass ship-commit` refuses with exit 2, like its other refusals, and
+prints this text on stderr, naming each stale document:
 
 ```
-compass ship-commit: refusing to land - 1 artifact(s) are stale:
+compass: compass ship-commit: refusing to land - 1 artifact(s) are stale:
   technical-design: acceptance-criteria changed (sha256:... then sha256:...)
 ```
 
@@ -126,6 +126,15 @@ compass ship-commit: refusing to land - 1 artifact(s) are stale:
 - Registering a document records that it was written against the upstream as
   it is now. The CLI cannot tell a document that was rewritten from one that
   was changed by a space. Compass checks bytes, not meaning.
+- Omitting a document stops tracking it. `compass issue artifact <kind>
+  --status omitted --reason ...` is allowed even for a stale document,
+  because an omission carries a recorded reason. An omitted entry is not
+  stamped and is not reported.
+- `digest` and `upstream` are ordinary manifest data. A hand edit of them
+  defeats the check, as a hand edit of `gates:` does. Compass does not
+  protect either from a person who edits the manifest.
+- If the configuration cannot be read while the capability is on,
+  `compass issue artifact` records nothing.
 - The stages that consume documents are fixed in the code.
 - A check result is not marked stale. A judged check already fails when its
   inputs change (see `docs/judged-checks.md`).

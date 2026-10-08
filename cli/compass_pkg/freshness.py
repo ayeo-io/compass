@@ -128,7 +128,7 @@ def _moved(recorded, deps, task, task_dir):
         if after is None:
             found.append(f"{one} is missing now")
         elif before is None:
-            found.append(f"{one} appeared after this was written")
+            found.append(f"{one} was not recorded when this was written")
         else:
             found.append(f"{one} changed ({_short(before)} then {_short(after)})")
     return found

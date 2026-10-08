@@ -797,11 +797,20 @@ def test_jc_12_a_skipped_stage_gives_the_on_skipped_verdict(tmp_path, monkeypatc
     assert row.status == status and "plan is skipped" in row.detail
 
 
-def test_jc_12_an_advisory_judged_check_with_no_record_reports_a_pass_that_says_so(
+def test_jc_12_an_advisory_judged_check_with_no_record_reports_the_advisory_status(
         tmp_path, monkeypatch):
     root, task_dir, view = _scene(tmp_path, monkeypatch, check=_judged(severity="advisory"))
     row = _row(view, task_dir)
-    assert row.status == "pass" and row.detail.startswith("advisory - no review record")
+    assert row.status == "advisory" and "no review record" in row.detail
+
+
+def test_jc_12_policy_lint_does_not_warn_about_a_judged_check_in_a_list(tmp_path):
+    root, task_dir = _project(tmp_path, compass_yml=_cli_config())
+    code, out, err = _run(root, "policy", "lint", "--json")
+    assert code == 0, out + err
+    assert not [f for f in json.loads(out)["findings"]
+                if f["code"] == "M-LIST-KIND-UNEVALUATED"]
+    assert "judged" in __import__("compass_pkg.policy_lint", fromlist=["x"]).EVALUATED_LIST_KINDS
 
 
 def test_jc_12_the_receipt_shows_the_verdict_of_a_judged_check(tmp_path):

@@ -620,9 +620,16 @@ def cmd_land_commit(args):
 # before it is recorded, not discovered later at `compass check`.
 
 
-def _load_gate_requirements():
-    """Return (gate_evidence_requirements, known_evidence_types) from
-    guardrails.yml. Empty/empty on any load failure."""
+def _load_gate_requirements(task_dir=None):
+    """Return (gate_evidence_requirements, known_evidence_types): from the
+    configuration `task_dir`'s issue runs against when it has a generation (or
+    its project has a `compass.yml`), else from guardrails.yml. Empty/empty on
+    any load failure of the file."""
+    if task_dir is not None:
+        from compass_pkg import effective
+        view = effective.view_or_legacy(task_dir)
+        if view is not None:
+            return view.gate_requirements()
     try:
         g = load_yaml(os.path.join(find_governance(), "guardrails.yml"))
     except CompassError:
@@ -654,7 +661,7 @@ def cmd_gate_pass(args):
         raise CompassError("compass gate pass needs --evidence <id> [<id> ...]")
     registry = {e.get("id"): e for e in (task.get("evidence") or [])
                 if isinstance(e, dict)}
-    reqs, _known = _load_gate_requirements()
+    reqs, _known = _load_gate_requirements(task_dir)
     accepted = reqs.get(args.gate_id)
     types_seen = set()
     for eid in ev_ids:
@@ -843,7 +850,7 @@ def cmd_evidence_add(args):
     task, task_path = load_manifest(task_dir)
     if getattr(args, "scenario", None):
         _check_scenario_ids(task, [args.scenario], "evidence add")
-    _reqs, known = _load_gate_requirements()
+    _reqs, known = _load_gate_requirements(task_dir)
     if known and args.type not in known:
         raise CompassError(
             f"compass evidence add: '{args.type}' is not a known evidence type "
@@ -891,12 +898,13 @@ def cmd_evidence_add(args):
                evidence_id=args.evidence_id, type=args.type, path=args.path)
 
 
-def annotate_gate_accepts_text(text):
+def annotate_gate_accepts_text(text, requirements=None):
     """`text` (a manifest) with each gate in the gates block annotated with a
-    `# accepts: [...]` comment naming its accepted evidence types (from
-    guardrails.yml). A seeding nicety - yaml round-trips drop it, so
+    `# accepts: [...]` comment naming its accepted evidence types: those of
+    `requirements` when given (the configuration being committed), else from
+    guardrails.yml. A seeding nicety - yaml round-trips drop it, so
     `approach evaluate --write` applies it to the text it is about to write."""
-    reqs, _known = _load_gate_requirements()
+    reqs = requirements if requirements is not None else _load_gate_requirements()[0]
     if not reqs:
         return text
     lines = text.splitlines()
@@ -919,15 +927,6 @@ def annotate_gate_accepts_text(text):
     return "\n".join(out) + "\n"
 
 
-def _annotate_gate_accepts(task_path):
-    """Annotate the manifest file in place, atomically."""
-    from compass_pkg.atomic_io import atomic_write_text
-    try:
-        with open(task_path, "r", encoding="utf-8") as fh:
-            text = fh.read()
-    except OSError:
-        return
-    atomic_write_text(task_path, annotate_gate_accepts_text(text))
 
 
 # --- compass issue set-status -------------------------------------------------

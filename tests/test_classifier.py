@@ -976,7 +976,7 @@ def test_cl_7_the_benchmark_times_a_grouped_and_a_full_scan_and_prints_numbers()
     assert "grouped" in line and f"{grouped['points']:,}" in line and "s" in line
 
 
-def test_cl_7_only_the_classifier_and_the_replay_import_the_obligations_module():
+def test_cl_7_only_classify_effective_and_the_replay_import_the_obligations_module():
     import re
     pattern = re.compile(r"^\s*(from compass_pkg(\.obligations)? import .*|"
                          r"import compass_pkg\.obligations)", re.M)

@@ -229,7 +229,7 @@ def cmd_run(args):
         raise CompassError(
             f"compass run: the manifest's `runs:` is not a list, so a run "
             f"cannot be recorded. Fix {os.path.relpath(path, root)} first.")
-    ceilings = loop_ceilings(task)
+    ceilings = loop_ceilings(task, task_dir)
     max_cycles, cycles_rule = _limit(args.max_cycles, ceilings.get("run_cycles"),
                                      "cycle", "--max-cycles", "at least 1")
     max_minutes, minutes_rule = _limit(args.max_minutes,

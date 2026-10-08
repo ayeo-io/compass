@@ -112,7 +112,12 @@ def load_parent(root=None, directory=None):
     over `root`."""
     directory = os.fspath(directory) if directory else os.path.join(
         os.fspath(root or FRAMEWORK_ROOT), PRESET_DIR)
-    meta = load_yaml_strict(os.path.join(directory, "preset.yml"))
+    preset_file = os.path.join(directory, "preset.yml")
+    try:
+        meta = load_yaml_strict(preset_file)
+    except StrictYamlError as exc:
+        # The text already names the file; a command reports it, never a traceback.
+        raise CompassError(f"the shipped default preset cannot be read: {exc}") from exc
     doc = {"schema": meta.get("schema", 1), "capabilities": dict(meta.get("capabilities") or {})}
     if meta.get("approvers") is not None:
         doc["approvers"] = meta["approvers"]

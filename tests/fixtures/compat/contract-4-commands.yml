@@ -329,6 +329,30 @@ entries:
   argv: ["policy", "diff", "--exit-code", "default@6", "project"]
   exit: 1
   stdout_contains: "loosening"
+# Added on purpose by policy-migrate: `policy migrate` is a new verb. 5.6.0
+# refused it as an unknown choice (exit 2). From 6.0.0 it is a dry run on a
+# project with copied governance: an unchanged copy gives an empty overlay,
+# shown equivalent, and exits 0 without writing a file.
+- id: policy-migrate-copied
+  project: with-copied-governance
+  argv: ["policy", "migrate"]
+  exit: 0
+  stdout_contains: "dry run"
+# Added on purpose by policy-migrate: a project with nothing to migrate is not
+# an error. 5.6.0 exited 2 on the unknown verb; from 6.0.0 it says so and
+# exits 0.
+- id: policy-migrate-nothing
+  project: initialised
+  argv: ["policy", "migrate"]
+  exit: 0
+  stdout_contains: "nothing to migrate"
+# Added on purpose by policy-migrate: a project that already has a compass.yml
+# is refused (exit 2) and nothing is written. The exit code equals what 5.6.0
+# gave for the unknown verb, but the cause is now the refusal, not the parser.
+- id: policy-migrate-refused
+  project: with-compass-yml
+  argv: ["policy", "migrate"]
+  exit: 2
 # Added on purpose by policy-update: `policy update` is a new verb. 5.6.0
 # refused it as an unknown choice (exit 2); from 6.0.0 a project already on
 # the only shipped major has nothing to move, writes nothing and exits 0.

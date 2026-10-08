@@ -24,7 +24,11 @@ To see every delivery approach at once - its stage weights, the stages that
 wait for a person, its gates and its documents - open
 `docs/approach-diagram.html`. `compass approach diagram` generates it from
 the policy, and a test fails when the committed copy is out of date. Run it
-in a project to see that project's own policy and autonomy setting.
+in a project to see that project's own policy and autonomy setting. In a
+project with a `compass.yml` it renders the effective configuration, the
+`compass.yml` over the shipped default preset, and the page says so. A project
+with no `compass.yml` gets the page from `governance/routing-policy.yml`, as
+before.
 
 Assess applies this policy after reading the four dimensions
 and composing a candidate delivery approach, before writing `delivery-approach.md`. Every routing

@@ -30,12 +30,17 @@ MAX_RULE_WORDS = 150
 
 def _known_ids(gov):
     """The guardrail and strategy ids a rule may name in `enforces`."""
+    from compass_pkg import effective
     ids = set()
-    gr = load_yaml(os.path.join(gov, "guardrails.yml"))
-    for key in ("defaults", "project"):
-        for g in gr.get(key) or []:
-            if isinstance(g, dict) and g.get("id"):
-                ids.add(str(g["id"]))
+    view = effective.view_or_legacy(start=gov)
+    if view is not None:
+        ids |= {str(i) for i in view.known_ids()}
+    else:
+        gr = load_yaml(os.path.join(gov, "guardrails.yml"))
+        for key in ("defaults", "project"):
+            for g in gr.get(key) or []:
+                if isinstance(g, dict) and g.get("id"):
+                    ids.add(str(g["id"]))
     for d in (gov, os.path.join(FRAMEWORK_ROOT, "governance")):
         path = os.path.join(d, "strategies.md")
         if os.path.isfile(path):

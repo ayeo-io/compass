@@ -66,14 +66,14 @@ earlier one. Warnings never stop it and never fail it.
 | `L-IMPL-UNKNOWN` | error | A check names an `impl` that the check registry does not hold |
 | `L-IMPL-TEMPLATED` | error | An `impl` that is a template, not a name |
 | `L-IGNORED-FILE` | warning | A `compass.yml` below the project root, which is not read |
-| `L-PARENT-FORM` | error | An `extends:` that is neither `compass:default@<major>` nor `github:<owner>/<repo>@<ref>#<sha>`, or a sha that is not 7 to 40 lowercase hexadecimal characters, or a short sha that names no cached commit. Git is not run |
+| `L-PARENT-FORM` | error | An `extends:` that is neither `compass:default@<major>` nor `github:<owner>/<repo>@<ref>#<sha>`, or a sha that is not 7 to 40 lowercase hexadecimal characters, or a short sha that names no cached commit of the same repository, or a sha that names a tree or a file. Git is not run for a bad spelling |
 | `L-PARENT-NO-SHA` | error | A remote ref with no sha. A git parent is pinned by commit. Git is not run |
 | `L-PARENT-NOT-CACHED` | error | The pinned commit is not in `.compass/cache/parents/` and this run may not fetch it: `compass check`, a reader of a stored generation, `--offline` or `COMPASS_OFFLINE` |
 | `L-PARENT-FETCH` | error | Git could not fetch the pinned commit, is not installed, timed out, or `COMPASS_PARENT_REMOTE_BASE` is not an `https://` URL or an absolute folder |
-| `L-PARENT-CONTENT` | error | The commit has no `compass.yml` file at its root, or it is larger than 1 MiB |
-| `L-PARENT-SHA-MISMATCH` | error | The fetch returned a commit other than the pinned one. Nothing is cached |
-| `L-PARENT-SYMLINK` | error | The fetched tree holds a symbolic link anywhere. Nothing is cached |
-| `L-PARENT-CACHE` | error | `.compass/cache` or `.compass/cache/parents` is a symbolic link, or a cached parent resolves outside `.compass/` |
+| `L-PARENT-CONTENT` | error | The commit has no regular `compass.yml` file at its root, or it is 1 MiB or larger |
+| `L-PARENT-SHA-MISMATCH` | error | The fetch returned an object other than the pinned one. Nothing is cached |
+| `L-PARENT-SYMLINK` | error | The root `compass.yml` of the fetched commit is a symbolic link. Nothing is cached. No other file in the tree is read |
+| `L-PARENT-CACHE` | error | `.compass/cache` or `.compass/cache/parents` is a symbolic link, a cached parent or its owner or repository folder is a link or resolves outside `.compass/`, or the cache holds a different file for the commit |
 | `L-PARENT-CHAIN` | error | The parent's own `extends:` names a git parent. Chains are not built yet |
 | `L-PARENT-SHA-AMBIGUOUS` | error | A short sha names more than one cached commit |
 | `M-REF-UNKNOWN` | error | A field, or a rule's effect (`EFFECT_TARGETS` in `catalogue_spec.py` says which catalogue each effect names), names an id that no entry defines |

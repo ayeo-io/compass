@@ -10,9 +10,9 @@ Every refusal is a `ParentError` carrying a lint finding code (`L-PARENT-*`),
 so a lint, a check and an effective view name the same cause. Git runs with an
 argument list and never through a shell.
 """
-# DEPENDENCY: standard library (datetime, os, re, shutil, subprocess, tempfile);
-# PyYAML (bundled); compass_pkg.atomic_io, compass_pkg.layers, compass_pkg.core
-# (CompassError, only).
+# DEPENDENCY: standard library (collections, datetime, hashlib, os, re, shutil,
+# subprocess, tempfile); PyYAML (bundled); compass_pkg.atomic_io,
+# compass_pkg.layers, compass_pkg.core (CompassError, only).
 from __future__ import annotations
 
 import datetime
@@ -122,6 +122,9 @@ def _refuse_cache(why):
 
 
 def _inside_compass(root, path):
+    """Defence in depth: the link checks refuse a link in the cache path, and
+    this refuses any path that still resolves outside `.compass/`, for example
+    because `.compass` itself holds a link further up."""
     compass = os.path.realpath(os.path.join(os.path.abspath(os.fspath(root)), ".compass"))
     real = os.path.realpath(path)
     return real == compass or real.startswith(compass + os.sep)
@@ -141,11 +144,20 @@ def cache_dir(root):
     return path
 
 
+def commit_dir(cache, spec):
+    """Where the cache keeps one commit: `<cache>/<owner>/<repo>/<sha>`. The
+    repository is part of the key, so a commit cached for one repository is
+    never read for another."""
+    return os.path.join(cache, spec.owner, spec.repo, spec.sha)
+
+
 def _cached_file(root, folder):
-    """The cached `compass.yml` inside `folder`, refused when the folder or the
-    file is a link or resolves outside `.compass/`."""
+    """The cached `compass.yml` inside `folder`, refused when the folder, the
+    repository folder above it, the owner folder or the file is a link, or
+    the file resolves outside `.compass/`."""
     path = os.path.join(folder, PARENT_FILE)
-    if os.path.islink(folder) or os.path.islink(path) or not _inside_compass(root, path):
+    above = (folder, os.path.dirname(folder), os.path.dirname(os.path.dirname(folder)), path)
+    if any(os.path.islink(part) for part in above) or not _inside_compass(root, path):
         raise _refuse_cache("holds a link in place of a cached parent")
     return path
 
@@ -205,15 +217,23 @@ def remote_base():
 
 
 def _git(argv, *, cwd, local):
-    """Run git with an argument list, never a shell, and a short allow-list of
-    the caller's environment: no variable that moves the repository, names a
-    helper program or injects configuration reaches it."""
+    """Run git with an argument list, never a shell, and an allow-list of the
+    caller's environment. `HOME`, `XDG_CONFIG_HOME`, `GIT_CONFIG_GLOBAL`,
+    `GIT_CONFIG_NOSYSTEM` and `GIT_ASKPASS` pass on purpose: they bring in
+    the user's own git configuration, so the user's credential helper runs
+    and their `url.<base>.insteadOf` rules apply. A private repository needs
+    that. A variable that moves the repository (`GIT_DIR`), names a helper
+    program (`GIT_SSH_COMMAND`, `GIT_EXEC_PATH`) or injects configuration
+    (`GIT_CONFIG_COUNT`) does not pass. Git never fetches a missing object
+    lazily (`GIT_NO_LAZY_FETCH`), so a file the partial fetch left out is not
+    pulled in afterwards."""
     keep = ("PATH", "HOME", "USER", "LANG", "TMPDIR", "SSL_CERT_FILE", "SSL_CERT_DIR",
             "GIT_SSL_CAINFO", "GIT_ASKPASS", "XDG_CONFIG_HOME", "GIT_CONFIG_GLOBAL",
             "GIT_CONFIG_NOSYSTEM", "HTTPS_PROXY", "https_proxy", "ALL_PROXY", "all_proxy",
             "NO_PROXY", "no_proxy")
     env = {k: v for k, v in os.environ.items() if k in keep or k.startswith("LC_")}
     env["GIT_TERMINAL_PROMPT"] = "0"
+    env["GIT_NO_LAZY_FETCH"] = "1"
     env["GIT_ALLOW_PROTOCOL"] = "https:file" if local else "https"
     options = ["-c", "protocol.allow=never", "-c", "protocol.https.allow=always",
                "-c", f"protocol.file.allow={'always' if local else 'never'}",
@@ -234,66 +254,95 @@ def _say(done):
 
 
 def _fetch(cache, spec, local, base):
-    """Fetch `spec.sha` into `<cache>/<sha>/compass.yml`."""
+    """Fetch `spec.sha` into `<cache>/<owner>/<repo>/<sha>/compass.yml`.
+
+    The fetch is partial: blobs of `MAX_BYTES` or more are left out, so the
+    one file Compass reads arrives and an unrelated large file does not. A
+    partial fetch needs a named remote, which only exists in the scratch
+    repository."""
     os.makedirs(cache, exist_ok=True)
     work = tempfile.mkdtemp(prefix=".fetch-", dir=cache)
     try:
         url = f"{base}/{spec.owner}/{spec.repo}.git"
         # An empty template: a configured template folder could copy hooks in.
         steps = (["init", "--quiet", "--bare", "--template=", "."],
+                 ["remote", "add", "origin", "--", url],
                  ["fetch", "--quiet", "--depth", "1", "--no-tags", "--no-recurse-submodules",
-                  "--", url, spec.sha])
+                  f"--filter=blob:limit={MAX_BYTES}", "--", "origin", spec.sha])
         for argv in steps:
             done = _git(argv, cwd=work, local=local)
             if done.returncode != 0:
                 raise ParentError("L-PARENT-FETCH", f"git {argv[0]} of {ref_label(spec)} at "
                                   f"{spec.sha} failed: {_say(done)}")
-        head = _git(["rev-parse", "--verify", "--quiet", "FETCH_HEAD^{commit}"],
-                    cwd=work, local=local)
+        head = _git(["rev-parse", "--verify", "--quiet", "FETCH_HEAD"], cwd=work, local=local)
         got = head.stdout.decode("utf-8", "replace").strip()
         if head.returncode != 0 or got != spec.sha:
             raise ParentError("L-PARENT-SHA-MISMATCH", f"{ref_label(spec)} is pinned to "
                               f"{spec.sha}, but the fetch returned {got or 'no commit'}; "
                               "nothing was cached")
-        listing = _git(["ls-tree", "-r", "-z", "--full-tree", spec.sha], cwd=work, local=local)
+        kind = _git(["cat-file", "-t", got], cwd=work, local=local)
+        if kind.stdout.strip() != b"commit":
+            raise ParentError("L-PARENT-FORM", f"the sha {spec.sha} of {ref_label(spec)} "
+                              "does not name a commit (it may be a tree or a file); write the "
+                              "sha of the commit")
+        # Only the root entry is listed: nothing else in the tree is read.
+        listing = _git(["ls-tree", "-z", "-l", spec.sha, "--", PARENT_FILE], cwd=work,
+                       local=local)
         if listing.returncode != 0:
             raise ParentError("L-PARENT-FETCH", f"git ls-tree of {spec.sha} failed: "
                               f"{_say(listing)}")
-        oid = None
-        for entry in listing.stdout.split(b"\0"):
-            meta, _, path = entry.partition(b"\t")
-            if meta.split()[:1] == [b"120000"]:
-                raise ParentError("L-PARENT-SYMLINK", f"{ref_label(spec)} at {spec.sha} holds "
-                                  f"a symbolic link ({path.decode('utf-8', 'replace')}); "
-                                  "a parent is plain files only, so nothing was cached")
-            if path == PARENT_FILE.encode() and meta.split()[1:2] == [b"blob"]:
-                oid = meta.split()[2].decode()
-        if oid is None:
+        entry = listing.stdout.split(b"\0")[0]
+        meta, _, _path = entry.partition(b"\t")
+        fields = meta.split()
+        if fields[:1] == [b"120000"]:
+            raise ParentError("L-PARENT-SYMLINK", f"{PARENT_FILE} of {ref_label(spec)} at "
+                              f"{spec.sha} is a symbolic link; a parent file is a regular "
+                              "file, so nothing was cached")
+        if fields[1:2] != [b"blob"]:
             raise ParentError("L-PARENT-CONTENT", f"{ref_label(spec)} at {spec.sha} has no "
-                              f"{PARENT_FILE} at its root")
-        size = _git(["cat-file", "-s", oid], cwd=work, local=local).stdout.strip()
-        if not size.isdigit() or int(size) > MAX_BYTES:
+                              f"{PARENT_FILE} file at its root")
+        # The size is a number, or BAD when the partial fetch left the blob out
+        # because it is too large.
+        size = fields[3] if len(fields) > 3 else b""
+        if not size.isdigit() or int(size) >= MAX_BYTES:
             raise ParentError("L-PARENT-CONTENT", f"{PARENT_FILE} of {ref_label(spec)} at "
-                              f"{spec.sha} is larger than {MAX_BYTES} bytes")
-        blob = _git(["cat-file", "blob", oid], cwd=work, local=local).stdout
+                              f"{spec.sha} is {MAX_BYTES} bytes or larger")
+        read = _git(["cat-file", "blob", fields[2].decode()], cwd=work, local=local)
+        if read.returncode != 0:
+            raise ParentError("L-PARENT-FETCH", f"git cat-file of {PARENT_FILE} at {spec.sha} "
+                              f"failed: {_say(read)}; nothing was cached")
+        blob = read.stdout
         folder = os.path.join(work, "out")
         os.mkdir(folder)
         with open(os.path.join(folder, PARENT_FILE), "wb") as fh:
             fh.write(blob)
-        final = os.path.join(cache, spec.sha)
-        if not os.path.exists(final):
+        final = commit_dir(cache, spec)
+        os.makedirs(os.path.dirname(final), exist_ok=True)
+        try:
             os.rename(folder, final)
+        except OSError:
+            # Another run cached the same commit first. That is fine when its
+            # file is the one fetched here, and a fault when it is not.
+            try:
+                with open(os.path.join(final, PARENT_FILE), "rb") as fh:
+                    same = fh.read() == blob
+            except OSError:
+                same = False
+            if not same:
+                raise _refuse_cache(f"already holds a different file for {spec.sha}") \
+                    from None
         _record_seen(cache, spec, spec.sha, blob)
     finally:
         shutil.rmtree(work, ignore_errors=True)
 
 
 def _full_sha(cache, spec):
-    """The one cached commit a short sha names. Git fetches a full sha only,
-    so a short sha that names no cached commit is refused, and one that names
-    two is ambiguous."""
+    """The one cached commit of this repository that a short sha names. Git
+    fetches a full sha only, so a short sha that names no cached commit is
+    refused, and one that names two is ambiguous. Commits cached for another
+    repository are not considered."""
     try:
-        held = sorted(name for name in os.listdir(cache)
+        held = sorted(name for name in os.listdir(os.path.join(cache, spec.owner, spec.repo))
                       if re.fullmatch(r"[0-9a-f]{40}", name) and name.startswith(spec.sha))
     except OSError:
         held = []
@@ -318,7 +367,7 @@ def resolve(root, extends, *, fetch=False):
     cache = cache_dir(root)
     if len(spec.sha) < 40:
         spec = spec._replace(sha=_full_sha(cache, spec))
-    folder = os.path.join(cache, spec.sha)
+    folder = commit_dir(cache, spec)
     if not os.path.isdir(folder) and not os.path.islink(folder):
         if not fetch:
             raise ParentError("L-PARENT-NOT-CACHED", f"{ref_label(spec)} at {spec.sha} is "

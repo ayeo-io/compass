@@ -647,8 +647,9 @@ _register(Rule(
         # it directly - no named exemption needed for those three, and none
         # is listed here.
         Exemption("governance/terminology.yml",
-                   "A 'task' - that word survives only as machine state",
-                   "a not: field naming the retired word on purpose."),
+                   "A 'task' used as another word for an issue",
+                   "a not: field naming the retired sense of the word on "
+                   "purpose."),
         Exemption("governance/terminology.yml",
                    "v1 called this a 'backfill', with states 'owed'",
                    "a not: field naming the retired word on purpose."),
@@ -665,9 +666,21 @@ _register(Rule(
                    "field, which cannot say what the term is NOT without "
                    "naming the retired word."),
         Exemption("docs/glossary.md",
-                   "A 'task' - that word survives only as machine state",
+                   "A 'task' used as another word for an issue",
                    "the derived text of terminology.yml's issue `not:` "
                    "field, same reason as the entry above."),
+        # The word is now also a defined issue type, so the derived glossary
+        # names it as a term: its heading and the Related list of the
+        # issue-type entry. The retired sense is the issue meaning only.
+        Exemption("docs/glossary.md",
+                   "### task",
+                   "the derived heading of the defined issue-type entry "
+                   "`task` in terminology.yml, where the word is the term "
+                   "being defined, not the retired word for an issue."),
+        Exemption("docs/glossary.md",
+                   "`bug`, `task`, `assess`",
+                   "the derived Related list of the issue-type entry, "
+                   "which links to the defined term `task`."),
         Exemption(
             "cli/compass_pkg/analyze.py",
             'records write "full, streams unbounded by policy"',

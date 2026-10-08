@@ -69,7 +69,7 @@ Do not stop to ask whether to go ahead.
   showed is the confirmation, and the person can still override a dimension
   at any point.
 - **Not yet clear what it delivers:** if you cannot state what will be true
-  afterwards, that is exploration. Run `/compass:assess`; it routes a spike.
+  afterwards, that is exploration. Run `/compass:assess`; it routes a spike. <!-- vocabulary-scan: allow - route is a verb here -->
 
 If a command refuses, its message says why and how to clear it. Act on it;
 ask the person only for a decision that is theirs, such as approving an

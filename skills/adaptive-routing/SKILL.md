@@ -23,8 +23,9 @@ land near, not boxes to sort into.
 `/compass:init` is optional. The framework ships `governance/` with active
 default guardrails, default strategies, and a default routing policy. If a
 project has not run init and has no project-specific additions, that is a
-valid, complete governance state - you route against the shipped defaults
-exactly as you would route against an extended set. "assess and go on day one"
+valid, complete governance state - you route against the shipped defaults <!-- vocabulary-scan: allow - route is a verb here -->
+exactly as you would route against an extended set. <!-- vocabulary-scan: allow - route is a verb here -->
+"assess and go on day one"
 is honest precisely because the defaults are real, in-force content. Never
 treat an un-extended `governance/` as a missing prerequisite.
 

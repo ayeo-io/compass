@@ -631,8 +631,12 @@ def test_trc_d4_no_term_is_both_defined_and_banned():
     """
     doc = _terminology()
     banned = _banned_spellings(doc)
+    # ADR-044 narrowed one ban: the word is an issue type, and only its
+    # use for an issue is retired. The ban's patterns carry the narrowing.
+    narrowed = {"task"}
     offenders = sorted(name for name in (doc.get("terms") or {})
-                       if str(name).lower() in banned)
+                       if str(name).lower() in banned
+                       and str(name).lower() not in narrowed)
     assert not offenders, (
         "these are defined as live vocabulary and banned in the same file, so "
         "the generated glossary publishes a retired word as current: "

@@ -11,6 +11,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
+import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 ADRS = ROOT / "architecture" / "decisions"
@@ -183,3 +184,120 @@ def test_vr_g2_the_alias_check_reports_a_section_that_says_too_little():
     assert any("not redirected" in p for p in problems)
     assert alias_section_problems("## Decision\n\nx\n") == [
         "no `## Aliases` section"]
+
+
+# --- the terminology file: issue types, workflow and levels ------------------
+
+TERMINOLOGY = ROOT / "governance" / "terminology.yml"
+GLOSSARY = ROOT / "docs" / "glossary.md"
+SCAN_ROOTS = ("commands", "skills", "agents")
+
+
+def _terms() -> dict:
+    return yaml.safe_load(TERMINOLOGY.read_text(encoding="utf-8"))["terms"]
+
+
+def _flat(entry: dict, key: str = "means") -> str:
+    return " ".join(str(entry.get(key, "")).split())
+
+
+def test_vr_g3_the_issue_type_entry_lists_feature_bug_and_task():
+    terms = _terms()
+    means = _flat(terms["issue-type"])
+    assert re.search(r"\bfeature, bug or task\b", means), means
+    for kind in ("feature", "bug", "task"):
+        assert kind in terms, f"no entry for the issue type {kind}"
+        assert kind in terms["issue-type"]["related"]
+    assert "bug-fix" not in terms, "bug fix is not an issue type; bug is"
+    assert "quick fix, hotfix and spike are delivery approaches" in means
+
+
+def test_vr_g3_quick_fix_hotfix_and_spike_are_delivery_approaches_only():
+    terms = _terms()
+    for name in ("quick-fix", "hotfix", "spike"):
+        entry = terms[name]
+        assert "delivery approach" in _flat(entry), name
+        assert "issue-type" not in (entry.get("related") or []), name
+        assert "issue type" not in _flat(entry), name
+
+
+def test_vr_g4_task_is_flagged_as_an_issue_but_not_as_an_issue_type():
+    from test_terminology import _scan_text
+    as_type = "The issue types are feature, bug and task.\n"
+    as_type_2 = "Set the issue type to task when nothing a user sees changes.\n"
+    as_issue = "Close the task when its tests pass.\n"
+    assert _scan_text(as_type) == []
+    assert _scan_text(as_type_2) == []
+    hits = _scan_text(as_issue)
+    assert len(hits) == 1 and "banned 'task'" in hits[0]
+    mixed = _scan_text(as_type + as_issue)
+    assert len(mixed) == 1 and ":2:" in mixed[0]
+
+
+def test_vr_g5_the_workflow_entries_name_the_states_reasons_and_flag():
+    terms = _terms()
+    states = _flat(terms["workflow-state"])
+    for state in ("backlog", "ready", "in-progress", "in-review", "done"):
+        assert state in states, state
+    reasons = _flat(terms["close-reason"])
+    for reason in ("completed", "not-planned", "duplicate"):
+        assert reason in reasons, reason
+    assert _flat(terms["blocked"]).startswith("A flag, not a state")
+    assert "close-reason" in terms["workflow-state"]["related"]
+
+
+def test_vr_g6_epic_initiative_and_milestone_each_have_an_entry():
+    terms = _terms()
+    for level in ("epic", "initiative", "milestone"):
+        assert level in terms, f"no entry for {level}"
+        assert len(_flat(terms[level]).split()) >= 8, level
+    everything = " ".join(_flat(e, k) for e in terms.values()
+                          for k in ("means", "not"))
+    assert not re.search(r"\bepic\b[^.]*\b(?:is|was) dropped|"
+                         r"\bthat word is dropped", everything), (
+        "an entry still says epic is dropped")
+
+
+# --- "route" is a verb only in the prose that teaches ------------------------
+
+ROUTE_RE = re.compile(r"\b(?:route|routes|routed|off-route)\b", re.I)
+ROUTE_MARKER = "vocabulary-scan: allow - route is a verb here"
+
+
+def route_hits(text: str, name: str) -> list[str]:
+    """Lines that use the word without the reviewed-verb marker."""
+    return [f"{name}:{n}: {line.strip()[:80]}"
+            for n, line in enumerate(text.splitlines(), 1)
+            if ROUTE_RE.search(line) and ROUTE_MARKER not in line]
+
+
+def test_vr_g8_every_use_of_route_in_shipped_prose_carries_the_marker():
+    hits = []
+    for top in SCAN_ROOTS:
+        for path in sorted((ROOT / top).rglob("*.md")):
+            hits += route_hits(path.read_text(encoding="utf-8"),
+                               str(path.relative_to(ROOT)))
+    assert hits == [], "route is a verb only; mark a verb use:\n" + "\n".join(hits)
+
+
+def test_vr_g8_a_planted_noun_fails_and_a_marked_verb_passes():
+    noun = "Where the route plans in full, add section 5a.\n"
+    assert route_hits(noun, "sample.md") == ["sample.md:1: " + noun.strip()]
+    assert route_hits("A stalled issue is off-route.\n", "sample.md")
+    assert route_hits("It routed the work.\n", "sample.md")
+    verb = f"Run assess; it routes a spike. <!-- {ROUTE_MARKER} -->\n"
+    assert route_hits(verb, "sample.md") == []
+
+
+# --- the glossary paragraph on check, gate, guardrail and obligation ---------
+
+def test_vr_g10_one_glossary_paragraph_relates_guardrail_gate_and_obligation():
+    text = GLOSSARY.read_text(encoding="utf-8")
+    paragraphs = [" ".join(p.split()) for p in re.split(r"\n\s*\n", text)]
+    wanted = ("a guardrail is made of checks",
+              "a gate is cleared by evidence",
+              "an obligation is anything the configuration asks for")
+    holders = [p for p in paragraphs
+               if all(w in p.lower() for w in wanted)]
+    assert len(holders) == 1, (
+        "expected one paragraph that says all three; found %d" % len(holders))

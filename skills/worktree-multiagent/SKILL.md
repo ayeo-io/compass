@@ -104,7 +104,7 @@ detection, and integration:
 **A builder** owns its subtask and nothing else:
 
 - Works only inside its assigned worktree. Never touches a sibling's.
-- Routes every cross-subtask need through the orchestrator - "I need to change
+- Routes every cross-subtask need through the orchestrator - "I need to change <!-- vocabulary-scan: allow - route is a verb here -->
   an interface another subtask owns" is an orchestrator message, never a reach
   across.
 - Runs full TDD inside its worktree (see `tdd-discipline`).

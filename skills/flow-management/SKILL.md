@@ -95,10 +95,10 @@ the natural fit). Keep it short enough to read in two minutes.
 - {{decision or guardrail violation - or "nothing"}}
 
 ## Landed since last digest
-- {{issue-slug}} ({{route}}) - {{one line: what shipped}}
+- {{issue-slug}} ({{delivery approach}}) - {{one line: what shipped}}
 
 ## In flight
-- {{issue-slug}} ({{route}}) - {{phase}} - {{health: healthy | stalled | off-route}}
+- {{issue-slug}} ({{delivery approach}}) - {{phase}} - {{health: healthy | stalled | off-track}}
 
 ## Blocked
 - {{issue-slug}} - blocked on {{precise blocker}}; needs {{who/what}}

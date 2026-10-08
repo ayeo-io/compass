@@ -278,8 +278,16 @@ BAN_PATTERNS: dict[str, list[re.Pattern]] = {
         # The `--task` exemption is gone: it was there because --task was a <!-- vocabulary-scan: allow - names the banned term this pattern retires -->
         # live flag spelling, and ADR-014 removed it. Prose teaching it now
         # teaches a flag that does not parse, so the ban should say so.
+        #
+        # NARROWED to the word meaning an issue. It is also one of the three
+        # issue types (feature, bug or task), so the pattern lets it through
+        # where a type is named: after "bug and", "bug or" or "bug," (the
+        # list), after "type is", "type to" or "type:" (a type being set),
+        # and before "type".
         re.compile(
-            r"(?<!current-)(?<!<)\btasks?\b(?!\.yml)(?![-_>])",
+            r"(?<!current-)(?<!<)(?<!bug and )(?<!bug or )(?<!bug, )"
+            r"(?<!type is )(?<!type to )(?<!type: )"
+            r"\btasks?\b(?!\.yml)(?![-_>])(?!\s+types?\b)",
             re.IGNORECASE,
         ),
     ],

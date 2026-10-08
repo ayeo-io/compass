@@ -10,6 +10,7 @@ While reading the file we found the estimate off by an order of magnitude.
 Machine state lives in manifest.yml; the current-task pointer names it; pass
 --issue to override, and the issue-slug and <task-id> forms stay machine state.
 The `<issue-slug>` directory stays machine state during the transition.
+The issue types are feature, bug and task; set the issue type to task for upkeep.
 Please specify the format, clarify your intent, and distribute the load evenly.
 Planes land safely when checklists hold, and boats land their catch.
 The change touches the parser but nothing else.

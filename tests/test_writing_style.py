@@ -3722,8 +3722,9 @@ _GROWING_REACH = {
     # 63 with tests/fixtures/policy-update-json-example.json, plain JSON;
     # 64 with tests/fixtures/issue-configure-example.json, plain JSON;
     # 65 with tests/fixtures/issue-configure-refused-example.json, plain JSON;
-    # 66 with tests/fixtures/scenario-tests-json-example.json, plain JSON.
-    "PBW-C4": (lambda path: path.startswith("tests/"), 66),
+    # 66 with tests/fixtures/scenario-tests-json-example.json, plain JSON;
+    # 67 with tests/fixtures/evidence-review-example.json, plain JSON.
+    "PBW-C4": (lambda path: path.startswith("tests/"), 67),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

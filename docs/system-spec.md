@@ -3183,6 +3183,19 @@
 
 - `TRC-001` Given a scenario whose declared test id is wrong, when compass scenario tests names resolving tests, then the manifest declares them
 
+### policy-test-init-preset (landed 2026-10-08)
+
+- `PT-1` A fixture that matches is reported as passing
+- `PT-2` A fixture whose approach, gates, stages or checks differ fails and names the difference
+- `PT-3` A preset with unlock, a settings key or an unknown impl fails before any fixture runs
+- `PT-4` A malformed fixture is reported as an error and fails the run
+- `PT-5` No fixtures, or a fixture folder not yet read, fails; a missing compass.yml is an input error
+- `PT-6` The --json report has the documented keys in the documented order
+- `PT-7` init-preset scaffolds a preset that passes policy test
+- `PT-8` init-preset never overwrites an existing file
+- `PT-9` A preset that extends a pinned git parent runs its fixtures over the chain
+- `PT-10` Help, verb description, contract corpus and owning doc state the contract
+
 ### parent-chains (landed 2026-10-08)
 
 - `PC-1` A chain of two pinned parents loads furthest first
@@ -3195,14 +3208,17 @@
 - `PC-8` The docs describe the chain, the depth limit and the cycle code
 - `PC-9` A parent's waiver answers to that parent's owner at every depth
 
-### templates-render-lists (landed 2026-10-08)
+### judged-checks (landed 2026-10-08)
 
-- `TR-1` The shipped default renders the requirements review and verification report byte for byte as the template files
-- `TR-2` A project that removes, adds or reorders a Definition of Ready or Done check gets a template that lists exactly its checks
-- `TR-3` A check the template does not hold renders a generated line, an exit-list one carrying an evidence tag
-- `TR-4` An exit or entry list on another stage renders as its own section before Next stage
-- `TR-5` dod-evidence-typed reads every exit list section and fails a bare unticked box in any
-- `TR-6` A tick in an exit list on another stage is judged under that list's own heading
-- `TR-7` compass issue template prints the rendered template for the issue, as JSON on request, refuses an unknown kind, and the refine and verify commands use it
-- `TR-8` Every other template renders unchanged and the 120-line cap of the borrowed templates holds
-- `TR-9` The owning doc says what renders and the router names the module
+- `JC-1` A judged check passes on a review record whose inputs still match
+- `JC-2` A judged check with no review record fails closed
+- `JC-3` A review with verdict fail does not pass
+- `JC-4` A reviewer the check does not list does not pass
+- `JC-5` A changed input or definition re-owes the review
+- `JC-6` The newest record decides and an altered record is not a record
+- `JC-7` compass evidence review writes the record and registers it
+- `JC-8` compass evidence review refuses what it cannot record
+- `JC-9` The --json output is documented and pinned
+- `JC-10` Help text, owning doc and corpus entries describe the verb
+- `JC-11` A project with no judged check behaves as before
+- `JC-12` A judged check follows due, skipped and advisory rules

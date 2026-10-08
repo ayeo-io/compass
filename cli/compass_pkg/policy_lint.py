@@ -511,7 +511,7 @@ def _effect_targets(state):
 
 #: The kinds of check that `stage_lists` evaluates. A stage list that names
 #: any other kind gets a check that fails closed (see `stage_lists`).
-EVALUATED_LIST_KINDS = ("human", "deterministic")
+EVALUATED_LIST_KINDS = ("human", "deterministic", "judged")
 
 
 def _list_kinds(state):

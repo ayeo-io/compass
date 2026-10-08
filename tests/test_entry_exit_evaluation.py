@@ -556,11 +556,12 @@ def test_ee_6_a_skipped_list_does_not_run_the_implementation(tmp_path, monkeypat
 
 # --- EE-7: kinds this increment does not evaluate fail closed ----------------------------------
 
-@pytest.mark.parametrize("kind, extra", [
-    ("judged", {"inputs": ["acceptance-criteria"]}),
-    ("evidence", {"accepts": ["test-run"]}),
+@pytest.mark.parametrize("kind, extra, needle", [
+    ("judged", {"inputs": ["acceptance-criteria"]}, "no review record"),
+    ("evidence", {"accepts": ["test-run"]}, "not evaluated"),
 ])
-def test_ee_7_a_judged_or_evidence_check_fails_closed(tmp_path, monkeypatch, kind, extra):
+def test_ee_7_a_judged_or_evidence_check_fails_closed(tmp_path, monkeypatch, kind, extra,
+                                                       needle):
     root, task_dir = _config_project(tmp_path)
 
     def mutate(resolved):
@@ -569,7 +570,7 @@ def test_ee_7_a_judged_or_evidence_check_fails_closed(tmp_path, monkeypatch, kin
         resolved["stages"]["plan"]["entry"] = ["extra"]
 
     row = _by_check(_rows(_view(root, monkeypatch, mutate), task_dir))["extra"]
-    assert row.status == "fail" and "not evaluated" in row.detail
+    assert row.status == "fail" and needle in row.detail
 
 
 def test_ee_7_an_advisory_check_that_fails_does_not_fail(tmp_path, monkeypatch):
@@ -786,8 +787,8 @@ def test_ee_7_the_shipped_default_names_no_judged_or_evidence_check_in_a_list():
 def _judged_list_config():
     return {"schema": 1,
             "checks": {"design-reviewed": {
-                "statement": "A reviewer read the design.", "kind": "judged",
-                "inputs": ["technical-design"], "severity": "blocking",
+                "statement": "A test run is on record.", "kind": "evidence",
+                "accepts": ["test-run"], "severity": "blocking",
                 "on_skipped": "fail"}},
             "stages": {"plan": {"set": {"entry": {"add": ["design-reviewed"]}}}}}
 
@@ -798,7 +799,7 @@ def test_ee_7_lint_warns_when_a_list_names_a_kind_this_version_does_not_evaluate
     assert code == 0, out + err
     found = [f for f in json.loads(out)["findings"] if f["code"] == "M-LIST-KIND-UNEVALUATED"]
     assert len(found) == 1 and found[0]["level"] == "warning"
-    assert "design-reviewed" in found[0]["message"] and "judged" in found[0]["message"]
+    assert "design-reviewed" in found[0]["message"] and "evidence" in found[0]["message"]
 
 
 def test_ee_7_lint_is_quiet_for_the_shipped_default(tmp_path):
@@ -809,7 +810,7 @@ def test_ee_7_lint_is_quiet_for_the_shipped_default(tmp_path):
                 if f["code"] == "M-LIST-KIND-UNEVALUATED"]
 
 
-def test_ee_7_a_judged_check_a_project_adds_fails_with_the_capability_off(tmp_path, monkeypatch):
+def test_ee_7_an_evidence_check_a_project_adds_fails_with_the_capability_off(tmp_path, monkeypatch):
     root, task_dir = _project(tmp_path, compass_yml=_judged_list_config())
     body = _manifest(task_dir)
     body.update({"delivery_approach": "regular", "current_phase": "plan",

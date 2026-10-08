@@ -225,6 +225,34 @@ entries:
   project: quick-fix-started
   argv: ["evidence", "add", "EV-1", "--type", "artifact", "--path", "nope.txt"]
   exit: 2
+# Added on purpose by judged-checks: `evidence review` is a new leaf of the
+# evidence group. 5.6.0 refused it as an unknown choice (exit 2). From 6.0.0 it
+# records a judgement against a judged check whose input exists, and exits 0.
+- id: evidence-review-recorded
+  project: with-judged-check-document
+  argv: ["evidence", "review", "design-review", "--verdict", "pass", "--reason", "Read in full.", "--reviewer", "jed72"]
+  exit: 0
+  stdout_contains: "design-review - pass recorded"
+# Added on purpose by judged-checks: a check the configuration does not define
+# is refused (exit 2) and nothing is written. The exit code equals what 5.6.0
+# gave for the unknown choice, but the cause is now the missing check.
+- id: evidence-review-unknown-check
+  project: regular-issue
+  argv: ["evidence", "review", "no-such-check", "--verdict", "pass", "--reason", "Read in full.", "--reviewer", "jed72"]
+  exit: 2
+# Added on purpose by judged-checks: only a judged check takes a review. A
+# human check is refused (exit 2), so a tick cannot be replaced by a record.
+- id: evidence-review-not-judged
+  project: with-judged-check-document
+  argv: ["evidence", "review", "dor-summary-filled", "--verdict", "pass", "--reason", "Read in full.", "--reviewer", "jed72"]
+  exit: 2
+# Added on purpose by judged-checks: a review of a document that is not there
+# is refused (exit 2). A record of inputs that cannot be found would match
+# nothing later.
+- id: evidence-review-input-missing
+  project: with-judged-check
+  argv: ["evidence", "review", "design-review", "--verdict", "pass", "--reason", "Read in full.", "--reviewer", "jed72"]
+  exit: 2
 - id: changed-file-add-valid
   project: quick-fix-started
   argv: ["changed-file", "add", "README.md", "--scenario", "TRC-001"]
@@ -422,6 +450,46 @@ entries:
   argv: ["policy", "lint", "--offline"]
   exit: 1
   stdout_contains: "L-PARENT-NOT-CACHED"
+# Added on purpose by policy-test-init-preset: `policy test` is a new verb. 5.6.0
+# refused it as an unknown choice (exit 2). From 6.0.0 it runs the fixtures of
+# the preset folder given and exits 0 when the lint and every fixture pass.
+- id: policy-test-passes
+  project: with-preset
+  argv: ["policy", "test", "team-preset"]
+  exit: 0
+  stdout_contains: "PASS"
+# Added on purpose by policy-test-init-preset: a fixture whose expected approach
+# differs from the computed one fails the run (exit 1). 5.6.0 exited 2 on the
+# unknown verb.
+- id: policy-test-fails
+  project: with-failing-preset
+  argv: ["policy", "test", "team-preset"]
+  exit: 1
+  stdout_contains: "expected full"
+# Added on purpose by policy-test-init-preset: a working folder with no compass.yml
+# is an input error (exit 2). The exit code equals what 5.6.0 gave for the unknown
+# verb, but the cause is now the missing file, not the parser.
+- id: policy-test-no-preset
+  project: initialised
+  argv: ["policy", "test"]
+  exit: 2
+  stderr_contains: "no compass.yml here"
+# Added on purpose by policy-test-init-preset: `policy init-preset` is a new
+# verb. 5.6.0 refused it as an unknown choice (exit 2). From 6.0.0 it writes a
+# preset into a new folder and exits 0.
+- id: policy-init-preset-writes
+  project: initialised
+  argv: ["policy", "init-preset", "team-preset", "--owner", "acme-team"]
+  exit: 0
+  stdout_contains: "wrote a preset"
+# Added on purpose by policy-test-init-preset: a folder that already holds one of
+# the preset's files is refused (exit 1) and nothing is written. 5.6.0 exited 2
+# on the unknown verb.
+- id: policy-init-preset-refused
+  project: with-preset
+  argv: ["policy", "init-preset", "team-preset", "--owner", "acme-team"]
+  exit: 1
+  stdout_contains: "refused"
 # Added on purpose by policy-update: `policy update` is a new verb. 5.6.0
 # refused it as an unknown choice (exit 2); from 6.0.0 a project already on
 # the only shipped major has nothing to move, writes nothing and exits 0.

@@ -1,44 +1,56 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "A project's one configuration file: its overlay on the shipped default and its settings (ADR-043). Generated from cli/compass_pkg/catalogue_spec.py; do not edit by hand.",
+  "description": "A project's one configuration file: its overlay on the shipped default and its settings. Generated from `cli/compass_pkg/catalogue_spec.py`; do not edit by hand.",
   "properties": {
     "adoption": {
+      "description": "Whether a failed check blocks: `enforced` makes `compass check` and `compass ci` exit non-zero, and `advisory` reports the failure and exits 0. The shipped default is `enforced`.",
       "enum": [
         "advisory",
         "enforced"
       ]
     },
     "allow_project_commands": {
+      "description": "Whether `compass check` may run commands that a project guardrail declares, read from the project's own file only. The default is `false`.",
       "type": "boolean"
     },
     "approaches": {
       "additionalProperties": false,
+      "description": "The delivery approaches: which mode each stage runs in, which gates and artifacts are owed, and how far work may be split. Each key is an approach id.",
       "patternProperties": {
         "^[A-Za-z][A-Za-z0-9._-]*$": {
           "additionalProperties": false,
+          "description": "One delivery approach: its weight, the mode of each stage, and what it owes.",
           "properties": {
             "artifacts": {
+              "description": "The artifacts the approach owes, keyed by artifact id. Each value is a depth, `light` or `full`.",
               "type": "object"
             },
             "checkpoints": {
+              "description": "For each autonomy value (`controlled`, `balanced`, `autonomous`), the stages at which a session waits for a person.",
               "type": "object"
             },
             "extends": {
+              "description": "The id of another approach this one builds on, so that it states only what differs.",
               "type": "string"
             },
             "gates": {
+              "description": "The ids of the gates the approach must clear.",
               "oneOf": [
                 {
+                  "description": "The whole list, written out in full.",
                   "type": "array"
                 },
                 {
                   "additionalProperties": false,
+                  "description": "The inherited list changed by adding and removing items.",
                   "properties": {
                     "add": {
+                      "description": "Items to add to the inherited list.",
                       "type": "array"
                     },
                     "remove": {
+                      "description": "Items to remove from the inherited list.",
                       "type": "array"
                     }
                   },
@@ -47,41 +59,53 @@
               ]
             },
             "locked": {
+              "description": "Protects the entry from a change in a later layer that loosens it: `true` lets a project unlock it, `hard` lets no one.",
               "enum": [
                 true,
                 "hard"
               ]
             },
             "remove": {
-              "const": true
+              "const": true,
+              "description": "When `true`, removes the inherited entry. This fails while another entry still refers to it."
             },
             "replace": {
-              "const": true
+              "const": true,
+              "description": "When `true`, the entry in this layer replaces the inherited entry as a whole."
             },
             "set": {
               "additionalProperties": false,
+              "description": "Changes only the fields named here and leaves every other field of the inherited entry as it is.",
               "properties": {
                 "artifacts": {
+                  "description": "The artifacts the approach owes, keyed by artifact id. Each value is a depth, `light` or `full`.",
                   "type": "object"
                 },
                 "checkpoints": {
+                  "description": "For each autonomy value (`controlled`, `balanced`, `autonomous`), the stages at which a session waits for a person.",
                   "type": "object"
                 },
                 "extends": {
+                  "description": "The id of another approach this one builds on, so that it states only what differs.",
                   "type": "string"
                 },
                 "gates": {
+                  "description": "The ids of the gates the approach must clear.",
                   "oneOf": [
                     {
+                      "description": "The whole list, written out in full.",
                       "type": "array"
                     },
                     {
                       "additionalProperties": false,
+                      "description": "The inherited list changed by adding and removing items.",
                       "properties": {
                         "add": {
+                          "description": "Items to add to the inherited list.",
                           "type": "array"
                         },
                         "remove": {
+                          "description": "Items to remove from the inherited list.",
                           "type": "array"
                         }
                       },
@@ -90,42 +114,52 @@
                   ]
                 },
                 "ships": {
+                  "description": "Whether the approach delivers work. It is `true` unless the approach delivers nothing, as the shipped spike does.",
                   "type": "boolean"
                 },
                 "stages": {
+                  "description": "The mode the approach runs each stage in, keyed by stage id.",
                   "type": "object"
                 },
                 "subtask_ceiling": {
+                  "description": "The largest number of subtasks the approach allows, or `null` for no limit, where a lower number is stricter. The shipped default is 1 or 2 for every approach except full, which has no limit.",
                   "type": [
                     "integer",
                     "null"
                   ]
                 },
                 "weight": {
+                  "description": "A whole number that orders approaches from lightest to heaviest, distinct for each approach. A floor compares approaches by it, and the shipped weights run from 0 (spike) to 4 (full).",
                   "type": "integer"
                 }
               },
               "type": "object"
             },
             "ships": {
+              "description": "Whether the approach delivers work. It is `true` unless the approach delivers nothing, as the shipped spike does.",
               "type": "boolean"
             },
             "stages": {
+              "description": "The mode the approach runs each stage in, keyed by stage id.",
               "type": "object"
             },
             "subtask_ceiling": {
+              "description": "The largest number of subtasks the approach allows, or `null` for no limit, where a lower number is stricter. The shipped default is 1 or 2 for every approach except full, which has no limit.",
               "type": [
                 "integer",
                 "null"
               ]
             },
             "unlock": {
-              "const": true
+              "const": true,
+              "description": "When `true`, lifts a lock the shipped default placed on the entry. Only the project file may write it, and only with a waiver its owner approves."
             },
             "waiver": {
+              "description": "An approved departure from the layer above, written in the entry it excuses. It holds `reason`, `approved_by` and, in the project file, `approved_on`.",
               "type": "object"
             },
             "weight": {
+              "description": "A whole number that orders approaches from lightest to heaviest, distinct for each approach. A floor compares approaches by it, and the shipped weights run from 0 (spike) to 4 (full).",
               "type": "integer"
             }
           },
@@ -136,11 +170,14 @@
     },
     "approvers": {
       "additionalProperties": false,
+      "description": "Lists of the people who may approve a waiver, by kind.",
       "properties": {
         "issue-waiver": {
+          "description": "The names that may approve a waiver in an issue. When absent, the owner approves.",
           "type": "array"
         },
         "project-waiver": {
+          "description": "The names that may approve a waiver in the project file. A parent writes the list; when it is absent, the owner approves.",
           "type": "array"
         }
       },
@@ -148,25 +185,33 @@
     },
     "artifacts": {
       "additionalProperties": false,
+      "description": "The documents an issue can owe, such as the acceptance criteria. Each key is an artifact id.",
       "patternProperties": {
         "^[A-Za-z][A-Za-z0-9._-]*$": {
           "additionalProperties": false,
+          "description": "One artifact: the file that holds it and what it builds on.",
           "properties": {
             "bookkeeping": {
+              "description": "Whether the artifact is a record the framework keeps about the work, such as the dashboard, the receipt or the verification report. Such an artifact is never an input to another.",
               "type": "boolean"
             },
             "checks": {
+              "description": "The ids of the checks the artifact carries.",
               "oneOf": [
                 {
+                  "description": "The whole list, written out in full.",
                   "type": "array"
                 },
                 {
                   "additionalProperties": false,
+                  "description": "The inherited list changed by adding and removing items.",
                   "properties": {
                     "add": {
+                      "description": "Items to add to the inherited list.",
                       "type": "array"
                     },
                     "remove": {
+                      "description": "Items to remove from the inherited list.",
                       "type": "array"
                     }
                   },
@@ -175,17 +220,22 @@
               ]
             },
             "depends_on": {
+              "description": "The ids of the artifacts this one builds on. A cycle, a bookkeeping artifact and a directory are each an error.",
               "oneOf": [
                 {
+                  "description": "The whole list, written out in full.",
                   "type": "array"
                 },
                 {
                   "additionalProperties": false,
+                  "description": "The inherited list changed by adding and removing items.",
                   "properties": {
                     "add": {
+                      "description": "Items to add to the inherited list.",
                       "type": "array"
                     },
                     "remove": {
+                      "description": "Items to remove from the inherited list.",
                       "type": "array"
                     }
                   },
@@ -194,38 +244,49 @@
               ]
             },
             "file": {
+              "description": "The file name of the artifact in the issue's folder, for example `acceptance-criteria.md`.",
               "type": "string"
             },
             "locked": {
+              "description": "Protects the entry from a change in a later layer that loosens it: `true` lets a project unlock it, `hard` lets no one.",
               "enum": [
                 true,
                 "hard"
               ]
             },
             "remove": {
-              "const": true
+              "const": true,
+              "description": "When `true`, removes the inherited entry. This fails while another entry still refers to it."
             },
             "replace": {
-              "const": true
+              "const": true,
+              "description": "When `true`, the entry in this layer replaces the inherited entry as a whole."
             },
             "set": {
               "additionalProperties": false,
+              "description": "Changes only the fields named here and leaves every other field of the inherited entry as it is.",
               "properties": {
                 "bookkeeping": {
+                  "description": "Whether the artifact is a record the framework keeps about the work, such as the dashboard, the receipt or the verification report. Such an artifact is never an input to another.",
                   "type": "boolean"
                 },
                 "checks": {
+                  "description": "The ids of the checks the artifact carries.",
                   "oneOf": [
                     {
+                      "description": "The whole list, written out in full.",
                       "type": "array"
                     },
                     {
                       "additionalProperties": false,
+                      "description": "The inherited list changed by adding and removing items.",
                       "properties": {
                         "add": {
+                          "description": "Items to add to the inherited list.",
                           "type": "array"
                         },
                         "remove": {
+                          "description": "Items to remove from the inherited list.",
                           "type": "array"
                         }
                       },
@@ -234,17 +295,22 @@
                   ]
                 },
                 "depends_on": {
+                  "description": "The ids of the artifacts this one builds on. A cycle, a bookkeeping artifact and a directory are each an error.",
                   "oneOf": [
                     {
+                      "description": "The whole list, written out in full.",
                       "type": "array"
                     },
                     {
                       "additionalProperties": false,
+                      "description": "The inherited list changed by adding and removing items.",
                       "properties": {
                         "add": {
+                          "description": "Items to add to the inherited list.",
                           "type": "array"
                         },
                         "remove": {
+                          "description": "Items to remove from the inherited list.",
                           "type": "array"
                         }
                       },
@@ -253,15 +319,18 @@
                   ]
                 },
                 "file": {
+                  "description": "The file name of the artifact in the issue's folder, for example `acceptance-criteria.md`.",
                   "type": "string"
                 }
               },
               "type": "object"
             },
             "unlock": {
-              "const": true
+              "const": true,
+              "description": "When `true`, lifts a lock the shipped default placed on the entry. Only the project file may write it, and only with a waiver its owner approves."
             },
             "waiver": {
+              "description": "An approved departure from the layer above, written in the entry it excuses. It holds `reason`, `approved_by` and, in the project file, `approved_on`.",
               "type": "object"
             }
           },
@@ -271,6 +340,7 @@
       "type": "object"
     },
     "autonomy": {
+      "description": "How often a session stops for a person at a stage hand-off: `controlled` at every listed hand-off, `balanced` at fewer, `autonomous` never. The shipped default is `balanced`.",
       "enum": [
         "controlled",
         "balanced",
@@ -279,11 +349,14 @@
     },
     "capabilities": {
       "additionalProperties": false,
+      "description": "Named switches for new blocking behaviour. Each is off in the shipped default.",
       "properties": {
         "artifact-freshness": {
+          "description": "Whether a change to an artifact marks the artifacts and check results that depend on it as stale. Off in the shipped default.",
           "type": "boolean"
         },
         "entry-exit-evaluation": {
+          "description": "Whether the entry and exit checks of each stage are evaluated. Off in the shipped default.",
           "type": "boolean"
         }
       },
@@ -291,22 +364,29 @@
     },
     "checks": {
       "additionalProperties": false,
+      "description": "The checks a gate is made of. Each key is a check id.",
       "patternProperties": {
         "^[A-Za-z][A-Za-z0-9._-]*$": {
           "additionalProperties": false,
+          "description": "One check: what it asserts, how it is decided and how strictly it applies.",
           "properties": {
             "accepts": {
+              "description": "The evidence types the check accepts. Accepting more types is looser.",
               "oneOf": [
                 {
+                  "description": "The whole list, written out in full.",
                   "type": "array"
                 },
                 {
                   "additionalProperties": false,
+                  "description": "The inherited list changed by adding and removing items.",
                   "properties": {
                     "add": {
+                      "description": "Items to add to the inherited list.",
                       "type": "array"
                     },
                     "remove": {
+                      "description": "Items to remove from the inherited list.",
                       "type": "array"
                     }
                   },
@@ -315,17 +395,22 @@
               ]
             },
             "approvers": {
+              "description": "Who may approve the check. Allowing more approvers is looser.",
               "oneOf": [
                 {
+                  "description": "The whole list, written out in full.",
                   "type": "array"
                 },
                 {
                   "additionalProperties": false,
+                  "description": "The inherited list changed by adding and removing items.",
                   "properties": {
                     "add": {
+                      "description": "Items to add to the inherited list.",
                       "type": "array"
                     },
                     "remove": {
+                      "description": "Items to remove from the inherited list.",
                       "type": "array"
                     }
                   },
@@ -334,23 +419,30 @@
               ]
             },
             "blocking_when": {
+              "description": "A condition on the assessment under which the check blocks.",
               "type": "object"
             },
             "impl": {
+              "description": "The id of the built-in implementation that runs the check. Each implementation carries a version.",
               "type": "string"
             },
             "inputs": {
+              "description": "What the check reads. Reading more is stricter.",
               "oneOf": [
                 {
+                  "description": "The whole list, written out in full.",
                   "type": "array"
                 },
                 {
                   "additionalProperties": false,
+                  "description": "The inherited list changed by adding and removing items.",
                   "properties": {
                     "add": {
+                      "description": "Items to add to the inherited list.",
                       "type": "array"
                     },
                     "remove": {
+                      "description": "Items to remove from the inherited list.",
                       "type": "array"
                     }
                   },
@@ -359,6 +451,7 @@
               ]
             },
             "kind": {
+              "description": "How the check reaches its verdict: `deterministic`, `evidence`, `judged` or `human`.",
               "enum": [
                 "deterministic",
                 "evidence",
@@ -367,12 +460,14 @@
               ]
             },
             "locked": {
+              "description": "Protects the entry from a change in a later layer that loosens it: `true` lets a project unlock it, `hard` lets no one.",
               "enum": [
                 true,
                 "hard"
               ]
             },
             "on_skipped": {
+              "description": "The verdict when the check has nothing to check: `pass`, `not-applicable` or `fail`, in ascending strictness.",
               "enum": [
                 "pass",
                 "not-applicable",
@@ -380,26 +475,34 @@
               ]
             },
             "params": {
+              "description": "Named values the implementation reads. A ceiling in `params` is compared as a number.",
               "type": "object"
             },
             "remove": {
-              "const": true
+              "const": true,
+              "description": "When `true`, removes the inherited entry. This fails while another entry still refers to it."
             },
             "replace": {
-              "const": true
+              "const": true,
+              "description": "When `true`, the entry in this layer replaces the inherited entry as a whole."
             },
             "requires": {
+              "description": "The capabilities that must be on for the check to run.",
               "oneOf": [
                 {
+                  "description": "The whole list, written out in full.",
                   "type": "array"
                 },
                 {
                   "additionalProperties": false,
+                  "description": "The inherited list changed by adding and removing items.",
                   "properties": {
                     "add": {
+                      "description": "Items to add to the inherited list.",
                       "type": "array"
                     },
                     "remove": {
+                      "description": "Items to remove from the inherited list.",
                       "type": "array"
                     }
                   },
@@ -408,17 +511,22 @@
               ]
             },
             "reviewers": {
+              "description": "Who may review the check. Allowing more reviewers is looser.",
               "oneOf": [
                 {
+                  "description": "The whole list, written out in full.",
                   "type": "array"
                 },
                 {
                   "additionalProperties": false,
+                  "description": "The inherited list changed by adding and removing items.",
                   "properties": {
                     "add": {
+                      "description": "Items to add to the inherited list.",
                       "type": "array"
                     },
                     "remove": {
+                      "description": "Items to remove from the inherited list.",
                       "type": "array"
                     }
                   },
@@ -428,19 +536,25 @@
             },
             "set": {
               "additionalProperties": false,
+              "description": "Changes only the fields named here and leaves every other field of the inherited entry as it is.",
               "properties": {
                 "accepts": {
+                  "description": "The evidence types the check accepts. Accepting more types is looser.",
                   "oneOf": [
                     {
+                      "description": "The whole list, written out in full.",
                       "type": "array"
                     },
                     {
                       "additionalProperties": false,
+                      "description": "The inherited list changed by adding and removing items.",
                       "properties": {
                         "add": {
+                          "description": "Items to add to the inherited list.",
                           "type": "array"
                         },
                         "remove": {
+                          "description": "Items to remove from the inherited list.",
                           "type": "array"
                         }
                       },
@@ -449,17 +563,22 @@
                   ]
                 },
                 "approvers": {
+                  "description": "Who may approve the check. Allowing more approvers is looser.",
                   "oneOf": [
                     {
+                      "description": "The whole list, written out in full.",
                       "type": "array"
                     },
                     {
                       "additionalProperties": false,
+                      "description": "The inherited list changed by adding and removing items.",
                       "properties": {
                         "add": {
+                          "description": "Items to add to the inherited list.",
                           "type": "array"
                         },
                         "remove": {
+                          "description": "Items to remove from the inherited list.",
                           "type": "array"
                         }
                       },
@@ -468,23 +587,30 @@
                   ]
                 },
                 "blocking_when": {
+                  "description": "A condition on the assessment under which the check blocks.",
                   "type": "object"
                 },
                 "impl": {
+                  "description": "The id of the built-in implementation that runs the check. Each implementation carries a version.",
                   "type": "string"
                 },
                 "inputs": {
+                  "description": "What the check reads. Reading more is stricter.",
                   "oneOf": [
                     {
+                      "description": "The whole list, written out in full.",
                       "type": "array"
                     },
                     {
                       "additionalProperties": false,
+                      "description": "The inherited list changed by adding and removing items.",
                       "properties": {
                         "add": {
+                          "description": "Items to add to the inherited list.",
                           "type": "array"
                         },
                         "remove": {
+                          "description": "Items to remove from the inherited list.",
                           "type": "array"
                         }
                       },
@@ -493,6 +619,7 @@
                   ]
                 },
                 "kind": {
+                  "description": "How the check reaches its verdict: `deterministic`, `evidence`, `judged` or `human`.",
                   "enum": [
                     "deterministic",
                     "evidence",
@@ -501,12 +628,14 @@
                   ]
                 },
                 "locked": {
+                  "description": "Protects the check from a change that loosens it: `true` lets the project owner unlock it and `hard` lets no one.",
                   "enum": [
                     true,
                     "hard"
                   ]
                 },
                 "on_skipped": {
+                  "description": "The verdict when the check has nothing to check: `pass`, `not-applicable` or `fail`, in ascending strictness.",
                   "enum": [
                     "pass",
                     "not-applicable",
@@ -514,20 +643,26 @@
                   ]
                 },
                 "params": {
+                  "description": "Named values the implementation reads. A ceiling in `params` is compared as a number.",
                   "type": "object"
                 },
                 "requires": {
+                  "description": "The capabilities that must be on for the check to run.",
                   "oneOf": [
                     {
+                      "description": "The whole list, written out in full.",
                       "type": "array"
                     },
                     {
                       "additionalProperties": false,
+                      "description": "The inherited list changed by adding and removing items.",
                       "properties": {
                         "add": {
+                          "description": "Items to add to the inherited list.",
                           "type": "array"
                         },
                         "remove": {
+                          "description": "Items to remove from the inherited list.",
                           "type": "array"
                         }
                       },
@@ -536,17 +671,22 @@
                   ]
                 },
                 "reviewers": {
+                  "description": "Who may review the check. Allowing more reviewers is looser.",
                   "oneOf": [
                     {
+                      "description": "The whole list, written out in full.",
                       "type": "array"
                     },
                     {
                       "additionalProperties": false,
+                      "description": "The inherited list changed by adding and removing items.",
                       "properties": {
                         "add": {
+                          "description": "Items to add to the inherited list.",
                           "type": "array"
                         },
                         "remove": {
+                          "description": "Items to remove from the inherited list.",
                           "type": "array"
                         }
                       },
@@ -555,36 +695,44 @@
                   ]
                 },
                 "severity": {
+                  "description": "Whether a failure blocks (`blocking`) or is only reported (`advisory`). `blocking` is stricter.",
                   "enum": [
                     "advisory",
                     "blocking"
                   ]
                 },
                 "statement": {
+                  "description": "What the check asserts, in plain words. A person reads it to judge a `human` or `judged` check.",
                   "type": "string"
                 },
                 "when": {
+                  "description": "A condition on the assessment, such as `risk: [critical]`, under which the check applies.",
                   "type": "object"
                 }
               },
               "type": "object"
             },
             "severity": {
+              "description": "Whether a failure blocks (`blocking`) or is only reported (`advisory`). `blocking` is stricter.",
               "enum": [
                 "advisory",
                 "blocking"
               ]
             },
             "statement": {
+              "description": "What the check asserts, in plain words. A person reads it to judge a `human` or `judged` check.",
               "type": "string"
             },
             "unlock": {
-              "const": true
+              "const": true,
+              "description": "When `true`, lifts a lock the shipped default placed on the entry. Only the project file may write it, and only with a waiver its owner approves."
             },
             "waiver": {
+              "description": "An approved departure from the layer above, written in the entry it excuses. It holds `reason`, `approved_by` and, in the project file, `approved_on`.",
               "type": "object"
             },
             "when": {
+              "description": "A condition on the assessment, such as `risk: [critical]`, under which the check applies.",
               "type": "object"
             }
           },
@@ -595,22 +743,29 @@
     },
     "dimensions": {
       "additionalProperties": false,
+      "description": "The facts an assessment records about a piece of work, such as risk and size. Each key is a dimension id.",
       "patternProperties": {
         "^[A-Za-z][A-Za-z0-9._-]*$": {
           "additionalProperties": false,
+          "description": "One dimension: how its value is chosen and which values it allows.",
           "properties": {
             "common": {
+              "description": "Values of a `set` that people use often, shown as suggestions. The classifier does not compare them.",
               "oneOf": [
                 {
+                  "description": "The whole list, written out in full.",
                   "type": "array"
                 },
                 {
                   "additionalProperties": false,
+                  "description": "The inherited list changed by adding and removing items.",
                   "properties": {
                     "add": {
+                      "description": "Items to add to the inherited list.",
                       "type": "array"
                     },
                     "remove": {
+                      "description": "Items to remove from the inherited list.",
                       "type": "array"
                     }
                   },
@@ -619,38 +774,49 @@
               ]
             },
             "locked": {
+              "description": "Protects the entry from a change in a later layer that loosens it: `true` lets a project unlock it, `hard` lets no one.",
               "enum": [
                 true,
                 "hard"
               ]
             },
             "open": {
+              "description": "Whether a `set` accepts a value beyond those listed in `common`. The shipped `labels` set is open.",
               "type": "boolean"
             },
             "remove": {
-              "const": true
+              "const": true,
+              "description": "When `true`, removes the inherited entry. This fails while another entry still refers to it."
             },
             "replace": {
-              "const": true
+              "const": true,
+              "description": "When `true`, the entry in this layer replaces the inherited entry as a whole."
             },
             "required": {
+              "description": "Whether an assessment must give the dimension a value. The shipped `risk`, `familiarity` and `size` are required.",
               "type": "boolean"
             },
             "set": {
               "additionalProperties": false,
+              "description": "Changes only the fields named here and leaves every other field of the inherited entry as it is.",
               "properties": {
                 "common": {
+                  "description": "Values of a `set` that people use often, shown as suggestions. The classifier does not compare them.",
                   "oneOf": [
                     {
+                      "description": "The whole list, written out in full.",
                       "type": "array"
                     },
                     {
                       "additionalProperties": false,
+                      "description": "The inherited list changed by adding and removing items.",
                       "properties": {
                         "add": {
+                          "description": "Items to add to the inherited list.",
                           "type": "array"
                         },
                         "remove": {
+                          "description": "Items to remove from the inherited list.",
                           "type": "array"
                         }
                       },
@@ -659,18 +825,22 @@
                   ]
                 },
                 "open": {
+                  "description": "Whether a `set` accepts a value beyond those listed in `common`. The shipped `labels` set is open.",
                   "type": "boolean"
                 },
                 "required": {
+                  "description": "Whether an assessment must give the dimension a value. The shipped `risk`, `familiarity` and `size` are required.",
                   "type": "boolean"
                 },
                 "tighter": {
+                  "description": "Which end of `values` is stricter for an `ordered-enum`: `higher` means the later values and `lower` the earlier ones. The shipped `risk` and `size` use `higher`.",
                   "enum": [
                     "higher",
                     "lower"
                   ]
                 },
                 "type": {
+                  "description": "How a value of the dimension is chosen: `ordered-enum` is one value from an ordered list, `enum` is one value from an unordered list and `set` is any number of values.",
                   "enum": [
                     "ordered-enum",
                     "enum",
@@ -678,17 +848,22 @@
                   ]
                 },
                 "values": {
+                  "description": "The values the dimension allows. For an `ordered-enum` the list is in order, and `tighter` says which end is stricter.",
                   "oneOf": [
                     {
+                      "description": "The whole list, written out in full.",
                       "type": "array"
                     },
                     {
                       "additionalProperties": false,
+                      "description": "The inherited list changed by adding and removing items.",
                       "properties": {
                         "add": {
+                          "description": "Items to add to the inherited list.",
                           "type": "array"
                         },
                         "remove": {
+                          "description": "Items to remove from the inherited list.",
                           "type": "array"
                         }
                       },
@@ -700,12 +875,14 @@
               "type": "object"
             },
             "tighter": {
+              "description": "Which end of `values` is stricter for an `ordered-enum`: `higher` means the later values and `lower` the earlier ones. The shipped `risk` and `size` use `higher`.",
               "enum": [
                 "higher",
                 "lower"
               ]
             },
             "type": {
+              "description": "How a value of the dimension is chosen: `ordered-enum` is one value from an ordered list, `enum` is one value from an unordered list and `set` is any number of values.",
               "enum": [
                 "ordered-enum",
                 "enum",
@@ -713,20 +890,26 @@
               ]
             },
             "unlock": {
-              "const": true
+              "const": true,
+              "description": "When `true`, lifts a lock the shipped default placed on the entry. Only the project file may write it, and only with a waiver its owner approves."
             },
             "values": {
+              "description": "The values the dimension allows. For an `ordered-enum` the list is in order, and `tighter` says which end is stricter.",
               "oneOf": [
                 {
+                  "description": "The whole list, written out in full.",
                   "type": "array"
                 },
                 {
                   "additionalProperties": false,
+                  "description": "The inherited list changed by adding and removing items.",
                   "properties": {
                     "add": {
+                      "description": "Items to add to the inherited list.",
                       "type": "array"
                     },
                     "remove": {
+                      "description": "Items to remove from the inherited list.",
                       "type": "array"
                     }
                   },
@@ -735,6 +918,7 @@
               ]
             },
             "waiver": {
+              "description": "An approved departure from the layer above, written in the entry it excuses. It holds `reason`, `approved_by` and, in the project file, `approved_on`.",
               "type": "object"
             }
           },
@@ -744,23 +928,30 @@
       "type": "object"
     },
     "enforcement": {
+      "description": "Extra paths the pre-tool hook guards. Holds `code_globs`, a list of path patterns the hook treats as code.",
       "type": "object"
     },
     "extends": {
+      "description": "The parent configuration this file builds on.",
       "oneOf": [
         {
+          "description": "A parent named by reference, for example `compass:default@<major>`. A git parent ends in `#<sha>`, which pins its commit.",
           "type": "string"
         },
         {
           "additionalProperties": false,
+          "description": "A parent with the approval that goes with it.",
           "properties": {
             "approved_by": {
+              "description": "The name of the person who approved the parent.",
               "type": "string"
             },
             "approved_on": {
+              "description": "The date of that approval.",
               "type": "string"
             },
             "from": {
+              "description": "The parent reference, in the same form as a plain `extends`.",
               "type": "string"
             }
           },
@@ -773,22 +964,29 @@
     },
     "gates": {
       "additionalProperties": false,
+      "description": "The gates: groups of checks cleared at a stage. Each key is a gate id.",
       "patternProperties": {
         "^[A-Za-z][A-Za-z0-9._-]*$": {
           "additionalProperties": false,
+          "description": "One gate: the checks it groups, the stage it is cleared at and where it applies.",
           "properties": {
             "accepts": {
+              "description": "The evidence types the gate accepts. A gate that lists none accepts any type.",
               "oneOf": [
                 {
+                  "description": "The whole list, written out in full.",
                   "type": "array"
                 },
                 {
                   "additionalProperties": false,
+                  "description": "The inherited list changed by adding and removing items.",
                   "properties": {
                     "add": {
+                      "description": "Items to add to the inherited list.",
                       "type": "array"
                     },
                     "remove": {
+                      "description": "Items to remove from the inherited list.",
                       "type": "array"
                     }
                   },
@@ -797,20 +995,26 @@
               ]
             },
             "applies_to": {
+              "description": "Which approaches the gate applies to, for example `ships: true` for every approach that delivers work.",
               "type": "object"
             },
             "checks": {
+              "description": "The ids of the checks that make up the gate.",
               "oneOf": [
                 {
+                  "description": "The whole list, written out in full.",
                   "type": "array"
                 },
                 {
                   "additionalProperties": false,
+                  "description": "The inherited list changed by adding and removing items.",
                   "properties": {
                     "add": {
+                      "description": "Items to add to the inherited list.",
                       "type": "array"
                     },
                     "remove": {
+                      "description": "Items to remove from the inherited list.",
                       "type": "array"
                     }
                   },
@@ -819,41 +1023,52 @@
               ]
             },
             "kind": {
+              "description": "The kind of gate: `guardrail` or `review`.",
               "enum": [
                 "review",
                 "guardrail"
               ]
             },
             "locked": {
+              "description": "Protects the entry from a change in a later layer that loosens it: `true` lets a project unlock it, `hard` lets no one.",
               "enum": [
                 true,
                 "hard"
               ]
             },
             "name": {
+              "description": "The gate's display name.",
               "type": "string"
             },
             "remove": {
-              "const": true
+              "const": true,
+              "description": "When `true`, removes the inherited entry. This fails while another entry still refers to it."
             },
             "replace": {
-              "const": true
+              "const": true,
+              "description": "When `true`, the entry in this layer replaces the inherited entry as a whole."
             },
             "set": {
               "additionalProperties": false,
+              "description": "Changes only the fields named here and leaves every other field of the inherited entry as it is.",
               "properties": {
                 "accepts": {
+                  "description": "The evidence types the gate accepts. A gate that lists none accepts any type.",
                   "oneOf": [
                     {
+                      "description": "The whole list, written out in full.",
                       "type": "array"
                     },
                     {
                       "additionalProperties": false,
+                      "description": "The inherited list changed by adding and removing items.",
                       "properties": {
                         "add": {
+                          "description": "Items to add to the inherited list.",
                           "type": "array"
                         },
                         "remove": {
+                          "description": "Items to remove from the inherited list.",
                           "type": "array"
                         }
                       },
@@ -862,20 +1077,26 @@
                   ]
                 },
                 "applies_to": {
+                  "description": "Which approaches the gate applies to, for example `ships: true` for every approach that delivers work.",
                   "type": "object"
                 },
                 "checks": {
+                  "description": "The ids of the checks that make up the gate.",
                   "oneOf": [
                     {
+                      "description": "The whole list, written out in full.",
                       "type": "array"
                     },
                     {
                       "additionalProperties": false,
+                      "description": "The inherited list changed by adding and removing items.",
                       "properties": {
                         "add": {
+                          "description": "Items to add to the inherited list.",
                           "type": "array"
                         },
                         "remove": {
+                          "description": "Items to remove from the inherited list.",
                           "type": "array"
                         }
                       },
@@ -884,45 +1105,56 @@
                   ]
                 },
                 "kind": {
+                  "description": "The kind of gate: `guardrail` or `review`.",
                   "enum": [
                     "review",
                     "guardrail"
                   ]
                 },
                 "locked": {
+                  "description": "Protects the gate from a change that loosens it: `true` lets the project owner unlock it and `hard` lets no one.",
                   "enum": [
                     true,
                     "hard"
                   ]
                 },
                 "name": {
+                  "description": "The gate's display name.",
                   "type": "string"
                 },
                 "stage": {
+                  "description": "The id of the stage at which the gate is cleared.",
                   "type": "string"
                 },
                 "statement": {
+                  "description": "What the gate demands, in plain words.",
                   "type": "string"
                 },
                 "when": {
+                  "description": "A condition on the assessment under which the gate applies.",
                   "type": "object"
                 }
               },
               "type": "object"
             },
             "stage": {
+              "description": "The id of the stage at which the gate is cleared.",
               "type": "string"
             },
             "statement": {
+              "description": "What the gate demands, in plain words.",
               "type": "string"
             },
             "unlock": {
-              "const": true
+              "const": true,
+              "description": "When `true`, lifts a lock the shipped default placed on the entry. Only the project file may write it, and only with a waiver its owner approves."
             },
             "waiver": {
+              "description": "An approved departure from the layer above, written in the entry it excuses. It holds `reason`, `approved_by` and, in the project file, `approved_on`.",
               "type": "object"
             },
             "when": {
+              "description": "A condition on the assessment under which the gate applies.",
               "type": "object"
             }
           },
@@ -931,73 +1163,101 @@
       },
       "type": "object"
     },
+    "governance_drift": {
+      "description": "Whether drift from the shipped governance fails: `strict` fails `compass policy lint` and `advisory` only reports it. The default is `advisory`.",
+      "enum": [
+        "advisory",
+        "strict"
+      ]
+    },
     "multiagent": {
+      "description": "Where multiagent worktrees go and how many are allowed. Holds `worktree_root` (default `../.compass-worktrees`) and `max_worktrees` (default 6).",
       "type": "object"
     },
     "owner": {
+      "description": "The name of the person who owns the project's configuration. The owner approves waivers and unlocks unless a list of approvers says otherwise.",
       "type": "string"
     },
     "preset": {
+      "description": "Reserved key for a published preset's own data. It is not part of a layer's digest.",
       "type": "object"
     },
     "preset_index": {
+      "description": "Reserved for published presets. It has no behaviour yet.",
       "type": "string"
     },
     "prices": {
+      "description": "Dollars per million tokens for each model name, used to price the usage of a quick fix. Without it no cost is recorded.",
       "type": "object"
     },
     "project": {
+      "description": "The project's name and test commands. Holds `name`, `test_command`, `test_micro_command` and `bdd_run_command`.",
       "type": "object"
     },
     "record": {
+      "description": "Where the delivery record is kept, with `remote`, `paths` and `names_key`. Without it no record is kept.",
       "type": "object"
     },
     "rules": {
       "additionalProperties": false,
+      "description": "The rule sets the evaluator reads to choose an approach and to raise its minimum. Each key is a rule set id.",
       "patternProperties": {
         "^[A-Za-z][A-Za-z0-9._-]*$": {
           "additionalProperties": false,
+          "description": "One rule set: what kind it is, how matching rules combine and the rules it holds.",
           "properties": {
             "hit": {
+              "description": "How matching rules combine, per effect: `first` stops at the first match, `max` and `min` take the highest or lowest value, and `collect` gathers every match. Each effect allows only some of these.",
               "type": "object"
             },
             "kind": {
+              "description": "What the rule set does. The shipped kinds are `shapes`, `floors`, `caps`, `ceilings`, `immovable-gates`, `role-rules`, `advisory` and `biases`.",
               "type": "string"
             },
             "locked": {
+              "description": "Protects the entry from a change in a later layer that loosens it: `true` lets a project unlock it, `hard` lets no one.",
               "enum": [
                 true,
                 "hard"
               ]
             },
             "remove": {
-              "const": true
+              "const": true,
+              "description": "When `true`, removes the inherited entry. This fails while another entry still refers to it."
             },
             "replace": {
-              "const": true
+              "const": true,
+              "description": "When `true`, the entry in this layer replaces the inherited entry as a whole."
             },
             "rules": {
+              "description": "The rules of the set, keyed by rule id. A rule has an `order`, a `when` condition, a `then` effect and a `rationale`.",
               "type": "object"
             },
             "set": {
               "additionalProperties": false,
+              "description": "Changes only the fields named here and leaves every other field of the inherited entry as it is.",
               "properties": {
                 "hit": {
+                  "description": "How matching rules combine, per effect: `first` stops at the first match, `max` and `min` take the highest or lowest value, and `collect` gathers every match. Each effect allows only some of these.",
                   "type": "object"
                 },
                 "kind": {
+                  "description": "What the rule set does. The shipped kinds are `shapes`, `floors`, `caps`, `ceilings`, `immovable-gates`, `role-rules`, `advisory` and `biases`.",
                   "type": "string"
                 },
                 "rules": {
+                  "description": "The rules of the set, keyed by rule id. A rule has an `order`, a `when` condition, a `then` effect and a `rationale`.",
                   "type": "object"
                 }
               },
               "type": "object"
             },
             "unlock": {
-              "const": true
+              "const": true,
+              "description": "When `true`, lifts a lock the shipped default placed on the entry. Only the project file may write it, and only with a waiver its owner approves."
             },
             "waiver": {
+              "description": "An approved departure from the layer above, written in the entry it excuses. It holds `reason`, `approved_by` and, in the project file, `approved_on`.",
               "type": "object"
             }
           },
@@ -1007,26 +1267,34 @@
       "type": "object"
     },
     "schema": {
+      "description": "The version of the file format. Its presence also marks `compass.yml` as Compass's file.",
       "type": "integer"
     },
     "stages": {
       "additionalProperties": false,
+      "description": "The eight stages of delivery, from assess to ship. Each key is a stage id.",
       "patternProperties": {
         "^[A-Za-z][A-Za-z0-9._-]*$": {
           "additionalProperties": false,
+          "description": "One stage: its place in the order and the modes it can run in.",
           "properties": {
             "entry": {
+              "description": "The ids of the checks that must hold before the stage starts. They run only when the `entry-exit-evaluation` capability is on.",
               "oneOf": [
                 {
+                  "description": "The whole list, written out in full.",
                   "type": "array"
                 },
                 {
                   "additionalProperties": false,
+                  "description": "The inherited list changed by adding and removing items.",
                   "properties": {
                     "add": {
+                      "description": "Items to add to the inherited list.",
                       "type": "array"
                     },
                     "remove": {
+                      "description": "Items to remove from the inherited list.",
                       "type": "array"
                     }
                   },
@@ -1035,17 +1303,22 @@
               ]
             },
             "exit": {
+              "description": "The ids of the checks that must hold before the stage is finished. They run only when the `entry-exit-evaluation` capability is on.",
               "oneOf": [
                 {
+                  "description": "The whole list, written out in full.",
                   "type": "array"
                 },
                 {
                   "additionalProperties": false,
+                  "description": "The inherited list changed by adding and removing items.",
                   "properties": {
                     "add": {
+                      "description": "Items to add to the inherited list.",
                       "type": "array"
                     },
                     "remove": {
+                      "description": "Items to remove from the inherited list.",
                       "type": "array"
                     }
                   },
@@ -1054,41 +1327,53 @@
               ]
             },
             "locked": {
+              "description": "Protects the entry from a change in a later layer that loosens it: `true` lets a project unlock it, `hard` lets no one.",
               "enum": [
                 true,
                 "hard"
               ]
             },
             "mode": {
+              "description": "The mode an issue chooses for the stage. Only an issue's own layer sets it.",
               "type": "string"
             },
             "modes": {
+              "description": "The modes the stage can run in, keyed by mode name. Each mode may set a `rank`, a whole number where a higher rank means more process.",
               "type": "object"
             },
             "order": {
+              "description": "The stage's place in the sequence, as a whole number from 1. The shipped stages run from assess (1) to ship (8).",
               "type": "integer"
             },
             "remove": {
-              "const": true
+              "const": true,
+              "description": "When `true`, removes the inherited entry. This fails while another entry still refers to it."
             },
             "replace": {
-              "const": true
+              "const": true,
+              "description": "When `true`, the entry in this layer replaces the inherited entry as a whole."
             },
             "set": {
               "additionalProperties": false,
+              "description": "Changes only the fields named here and leaves every other field of the inherited entry as it is.",
               "properties": {
                 "entry": {
+                  "description": "The ids of the checks that must hold before the stage starts. They run only when the `entry-exit-evaluation` capability is on.",
                   "oneOf": [
                     {
+                      "description": "The whole list, written out in full.",
                       "type": "array"
                     },
                     {
                       "additionalProperties": false,
+                      "description": "The inherited list changed by adding and removing items.",
                       "properties": {
                         "add": {
+                          "description": "Items to add to the inherited list.",
                           "type": "array"
                         },
                         "remove": {
+                          "description": "Items to remove from the inherited list.",
                           "type": "array"
                         }
                       },
@@ -1097,17 +1382,22 @@
                   ]
                 },
                 "exit": {
+                  "description": "The ids of the checks that must hold before the stage is finished. They run only when the `entry-exit-evaluation` capability is on.",
                   "oneOf": [
                     {
+                      "description": "The whole list, written out in full.",
                       "type": "array"
                     },
                     {
                       "additionalProperties": false,
+                      "description": "The inherited list changed by adding and removing items.",
                       "properties": {
                         "add": {
+                          "description": "Items to add to the inherited list.",
                           "type": "array"
                         },
                         "remove": {
+                          "description": "Items to remove from the inherited list.",
                           "type": "array"
                         }
                       },
@@ -1116,21 +1406,26 @@
                   ]
                 },
                 "mode": {
+                  "description": "The mode an issue chooses for the stage. Only an issue's own layer sets it.",
                   "type": "string"
                 },
                 "modes": {
+                  "description": "The modes the stage can run in, keyed by mode name. Each mode may set a `rank`, a whole number where a higher rank means more process.",
                   "type": "object"
                 },
                 "order": {
+                  "description": "The stage's place in the sequence, as a whole number from 1. The shipped stages run from assess (1) to ship (8).",
                   "type": "integer"
                 }
               },
               "type": "object"
             },
             "unlock": {
-              "const": true
+              "const": true,
+              "description": "When `true`, lifts a lock the shipped default placed on the entry. Only the project file may write it, and only with a waiver its owner approves."
             },
             "waiver": {
+              "description": "An approved departure from the layer above, written in the entry it excuses. It holds `reason`, `approved_by` and, in the project file, `approved_on`.",
               "type": "object"
             }
           },
@@ -1141,22 +1436,29 @@
     },
     "vocabulary": {
       "additionalProperties": false,
+      "description": "The display names and aliases of catalogue entries. Each key is `<catalogue>.<id>`, for example `approaches.quick-fix`.",
       "patternProperties": {
         "^[A-Za-z][A-Za-z0-9._-]*$": {
           "additionalProperties": false,
+          "description": "The display name of one catalogue entry, and the other names a person may type for it.",
           "properties": {
             "aliases": {
+              "description": "Other names a person may type for the entry. A name or alias may belong to only one entry of a catalogue.",
               "oneOf": [
                 {
+                  "description": "The whole list, written out in full.",
                   "type": "array"
                 },
                 {
                   "additionalProperties": false,
+                  "description": "The inherited list changed by adding and removing items.",
                   "properties": {
                     "add": {
+                      "description": "Items to add to the inherited list.",
                       "type": "array"
                     },
                     "remove": {
+                      "description": "Items to remove from the inherited list.",
                       "type": "array"
                     }
                   },
@@ -1165,35 +1467,45 @@
               ]
             },
             "locked": {
+              "description": "Protects the entry from a change in a later layer that loosens it: `true` lets a project unlock it, `hard` lets no one.",
               "enum": [
                 true,
                 "hard"
               ]
             },
             "name": {
+              "description": "The display name of the entry, shown to people in place of its id.",
               "type": "string"
             },
             "remove": {
-              "const": true
+              "const": true,
+              "description": "When `true`, removes the inherited entry. This fails while another entry still refers to it."
             },
             "replace": {
-              "const": true
+              "const": true,
+              "description": "When `true`, the entry in this layer replaces the inherited entry as a whole."
             },
             "set": {
               "additionalProperties": false,
+              "description": "Changes only the fields named here and leaves every other field of the inherited entry as it is.",
               "properties": {
                 "aliases": {
+                  "description": "Other names a person may type for the entry. A name or alias may belong to only one entry of a catalogue.",
                   "oneOf": [
                     {
+                      "description": "The whole list, written out in full.",
                       "type": "array"
                     },
                     {
                       "additionalProperties": false,
+                      "description": "The inherited list changed by adding and removing items.",
                       "properties": {
                         "add": {
+                          "description": "Items to add to the inherited list.",
                           "type": "array"
                         },
                         "remove": {
+                          "description": "Items to remove from the inherited list.",
                           "type": "array"
                         }
                       },
@@ -1202,15 +1514,18 @@
                   ]
                 },
                 "name": {
+                  "description": "The display name of the entry, shown to people in place of its id.",
                   "type": "string"
                 }
               },
               "type": "object"
             },
             "unlock": {
-              "const": true
+              "const": true,
+              "description": "When `true`, lifts a lock the shipped default placed on the entry. Only the project file may write it, and only with a waiver its owner approves."
             },
             "waiver": {
+              "description": "An approved departure from the layer above, written in the entry it excuses. It holds `reason`, `approved_by` and, in the project file, `approved_on`.",
               "type": "object"
             }
           },

@@ -1,0 +1,141 @@
+{
+  "schema": 1,
+  "status": "refused",
+  "written": false,
+  "from": {
+    "ref": "compass:default@6",
+    "major": 6,
+    "version": "6.0.0"
+  },
+  "to": {
+    "ref": "compass:default@7",
+    "major": 7,
+    "version": "7.0.0"
+  },
+  "refusal": {
+    "code": "no-terminal",
+    "message": "there is no terminal to ask on, and these waivers need re-approval by an allowed approver: approaches.regular. Run the command on a terminal, or remove the waiver from compass.yml"
+  },
+  "classification": {
+    "schema": 1,
+    "result": "loosening",
+    "reason": "at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency live-defect, role engineer, labels none: approaches.subtask_ceiling is 1 in the parent and 2 in the child",
+    "scan": "full",
+    "parent": "default@6 + project",
+    "child": "default@7 + project",
+    "exhaustive": false,
+    "complete": true,
+    "grid": {
+      "labels": [
+        "auth",
+        "migrations",
+        "payments",
+        "personal-data"
+      ],
+      "label_count": 4,
+      "label_cap": 8,
+      "points": 4608,
+      "raw_points": 51840,
+      "evaluated": 4608
+    },
+    "counts": {
+      "equal": 4592,
+      "tighter": 0,
+      "looser": 16,
+      "mixed": 0
+    },
+    "first_looser": {
+      "assessment": {
+        "risk": "trivial",
+        "familiarity": "greenfield",
+        "size": "atomic",
+        "goal": "delivery",
+        "urgency": "live-defect",
+        "role": "engineer",
+        "labels": []
+      },
+      "represents": {
+        "risk": [
+          "trivial",
+          "contained"
+        ],
+        "familiarity": [
+          "greenfield",
+          "brownfield-mapped"
+        ],
+        "size": [
+          "atomic",
+          "small"
+        ],
+        "goal": [
+          "delivery",
+          null
+        ],
+        "urgency": [
+          "live-defect"
+        ],
+        "role": [
+          "engineer",
+          "qa",
+          null
+        ]
+      },
+      "outcome": "looser",
+      "summary": "at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency live-defect, role engineer, labels none: approaches.subtask_ceiling is 1 in the parent and 2 in the child",
+      "changes": [
+        {
+          "fact": "ceilings",
+          "field": "approaches.subtask_ceiling",
+          "key": null,
+          "outcome": "looser",
+          "parent": 1,
+          "child": 2
+        }
+      ]
+    },
+    "first_tighter": null,
+    "first_mixed": null
+  },
+  "replay": {
+    "sets": [
+      {
+        "name": "grid",
+        "replayed": 288,
+        "changed": 16,
+        "skipped": null
+      },
+      {
+        "name": "labels",
+        "replayed": 4320,
+        "changed": 0,
+        "skipped": null
+      },
+      {
+        "name": "archive",
+        "replayed": 0,
+        "changed": 0,
+        "skipped": "the project holds no archived issue"
+      }
+    ],
+    "changed": 16
+  },
+  "waivers": [
+    {
+      "id": "project:approaches.regular",
+      "entry": "approaches.regular",
+      "status": "invalidated",
+      "reason": "Our work splits into more parallel subtasks than the default allows.",
+      "approved_by": "jed72",
+      "approved_on": "2026-10-05",
+      "fields": [
+        {
+          "field": "subtask_ceiling",
+          "old": 2,
+          "new": 3,
+          "project": 5,
+          "message": "approaches.regular.subtask_ceiling: the parent value changed from 2 to 3; the project value is 5"
+        }
+      ]
+    }
+  ]
+}

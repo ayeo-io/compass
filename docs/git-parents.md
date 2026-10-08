@@ -63,7 +63,8 @@ sha is refused.
 |---|---|
 | `compass check`, and any reader of an issue's stored generation | Never. It reads the cache, and an uncached pin is `L-PARENT-NOT-CACHED` |
 | `compass policy lint`, `compass policy effective` | Yes |
-| `compass approach evaluate --write` (assess and reassess) | Yes |
+| `compass approach evaluate --write` (assess and reassess, including a reassess that commits a `compass issue configure` proposal) | Yes |
+| `compass issue configure` (the preview and the proposal it records) | Never. It reads the cache and commits no generation, so an uncached pin is `L-PARENT-NOT-CACHED`. Run `compass policy lint` first |
 | any of the above with `--offline`, or with `COMPASS_OFFLINE=1` in the environment | Never |
 
 A fetch asks for the exact commit, so it cannot return different content later.

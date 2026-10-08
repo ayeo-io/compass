@@ -13139,3 +13139,633 @@
 - **Intent:** `INT-1`
 - **Source issue:** `effective-readers`
 - **Landed:** 2026-10-08
+
+### Given a loaded machine, when a run is interrupted, then the tests wait for the session to start before signalling _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `sigint-tests-under-load`
+- **Landed:** 2026-10-08
+
+### Given the compass schema, when a test walks every node, then each node has a non-empty description _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `schema-descriptions`
+- **Landed:** 2026-10-08
+
+### already on the target major: nothing to do, nothing written _(archived)_
+
+- **Scenario id:** `UP-1`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### a dropped entry or an unresolvable file is refused _(archived)_
+
+- **Scenario id:** `UP-10`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### a failed write leaves the file as it was _(archived)_
+
+- **Scenario id:** `UP-11`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### the update shows the classification and the replay counts _(archived)_
+
+- **Scenario id:** `UP-12`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### no terminal and no yes shows the plan and exits 1 _(archived)_
+
+- **Scenario id:** `UP-13`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### json equals the pinned example and never prompts _(archived)_
+
+- **Scenario id:** `UP-14`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### an edit the command cannot make exactly exits 2 before writing _(archived)_
+
+- **Scenario id:** `UP-15`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### help, doc, verb description and corpus state the behaviour _(archived)_
+
+- **Scenario id:** `UP-16`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### a bump with no waiver changes only the integer after @ _(archived)_
+
+- **Scenario id:** `UP-2`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### a target not shipped, older, a foreign extends or no file exits 2 _(archived)_
+
+- **Scenario id:** `UP-3`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### an affected waiver is listed and the move refused without a terminal _(archived)_
+
+- **Scenario id:** `UP-4`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### yes never re-approves a waiver _(archived)_
+
+- **Scenario id:** `UP-5`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### terminal re-approval writes the integer and the approval in one write _(archived)_
+
+- **Scenario id:** `UP-6`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### an approver outside the allowed list is refused _(archived)_
+
+- **Scenario id:** `UP-7`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### declining refuses and writes nothing _(archived)_
+
+- **Scenario id:** `UP-8`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### a waiver whose field is unchanged stays valid _(archived)_
+
+- **Scenario id:** `UP-9`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### Given a generation with an advisory check, when it fails, then the run passes and shows the failure as advisory _(archived)_
+
+- **Scenario id:** `CS-1`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given a landed_by relaxation on a shipped check with on_skipped fail, the verdict is unchanged _(archived)_
+
+- **Scenario id:** `CS-10`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given a spike with an advisory guardrail check that fails, then the run passes and shows the failure as advisory _(archived)_
+
+- **Scenario id:** `CS-11`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given a blocking check, when it fails, then the run fails _(archived)_
+
+- **Scenario id:** `CS-2`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given on_skipped fail and nothing to check, then the run fails and says why _(archived)_
+
+- **Scenario id:** `CS-3`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given on_skipped pass and nothing to check, then the check counts as a pass _(archived)_
+
+- **Scenario id:** `CS-4`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given on_skipped not-applicable and nothing to check, then it is counted apart as before _(archived)_
+
+- **Scenario id:** `CS-5`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given a blocking_when that does not match, an advisory severity is shown as advisory with the condition _(archived)_
+
+- **Scenario id:** `CS-6`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given the shipped preset and an existing issue, then the verdicts are unchanged _(archived)_
+
+- **Scenario id:** `CS-7`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### The JSON shape of an advisory failure is documented and pinned _(archived)_
+
+- **Scenario id:** `CS-8`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given an issue with no generation, then check behaves as before _(archived)_
+
+- **Scenario id:** `CS-9`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### A major difference refuses only that check _(archived)_
+
+- **Scenario id:** `IR-1`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### migrate-config commits nothing when already pinned _(archived)_
+
+- **Scenario id:** `IR-10`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### migrate-config adopts an issue with no generation _(archived)_
+
+- **Scenario id:** `IR-11`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### The coverage page is derived and kept current _(archived)_
+
+- **Scenario id:** `IR-12`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### The refusal names what to do _(archived)_
+
+- **Scenario id:** `IR-2`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### A minor or patch difference is not refused _(archived)_
+
+- **Scenario id:** `IR-3`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### A resolver or schema major difference refuses the run _(archived)_
+
+- **Scenario id:** `IR-4`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### A refused check is reported as refused and records no result _(archived)_
+
+- **Scenario id:** `IR-5`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### A verdict change without a major bump fails the build _(archived)_
+
+- **Scenario id:** `IR-6`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### The lock file holds a version and a verdict digest per implementation _(archived)_
+
+- **Scenario id:** `IR-7`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### migrate-config pins the installed versions and invalidates old results _(archived)_
+
+- **Scenario id:** `IR-8`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### migrate-config refuses a landed issue _(archived)_
+
+- **Scenario id:** `IR-9`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### Given other threads exist, when an interrupt arrives while the session is created, then the session is ended _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `signal-hold-all-threads`
+- **Landed:** 2026-10-08
+
+### configure writes the proposal and leaves the manifest as it was _(archived)_
+
+- **Scenario id:** `CR-1`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### the unreferenced-folder refusal names the folder and both commands, and every named command exists _(archived)_
+
+- **Scenario id:** `CR-10`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### help, owning doc, assess command and command corpus describe the verb _(archived)_
+
+- **Scenario id:** `CR-11`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### configure refuses a landed issue, a symbolic link and a folder that is not a proposal _(archived)_
+
+- **Scenario id:** `CR-12`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### the preview lists fields, classification, assessment effect, invalidations and the next step; exit 0, 1 or 2 _(archived)_
+
+- **Scenario id:** `CR-2`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### the JSON has the documented keys in order and equals the pinned example _(archived)_
+
+- **Scenario id:** `CR-3`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### discard removes a proposal or leftover above the current generation and never the current or older _(archived)_
+
+- **Scenario id:** `CR-4`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### commit adopts a whole unreferenced folder only when a fresh resolution gives the same files _(archived)_
+
+- **Scenario id:** `CR-5`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### a reassess interrupted after each step is resolved by commit or discard _(archived)_
+
+- **Scenario id:** `CR-6`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### reassess commits the pending proposal, refuses a stale one, and reset-config drops the overlay _(archived)_
+
+- **Scenario id:** `CR-7`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### a reassessments entry carries the generation it moved from and to _(archived)_
+
+- **Scenario id:** `CR-8`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### records statuses carry forward and a waiver whose parent value changed is invalidated and reverted _(archived)_
+
+- **Scenario id:** `CR-9`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### Given an artifacts catalogue, When it is linted, Then a bookkeeping artifact used as an input or a dependency on a directory is reported with a code, level, path and group _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `artifact-graph-lint`
+- **Landed:** 2026-10-08
+
+### Given a dependency on a directory, When linted, Then it is reported with code, level, path and group _(archived)_
+
+- **Scenario id:** `TRC-002`
+- **Intent:** `INT-1`
+- **Source issue:** `artifact-graph-lint`
+- **Landed:** 2026-10-08
+
+### Given a dangling or cyclic depends_on, When linted, Then each is reported with its path and the cycle path _(archived)_
+
+- **Scenario id:** `TRC-003`
+- **Intent:** `INT-1`
+- **Source issue:** `artifact-graph-lint`
+- **Landed:** 2026-10-08
+
+### Given the shipped preset, When linted, Then it is clean and the bookkeeping description follows the design _(archived)_
+
+- **Scenario id:** `TRC-004`
+- **Intent:** `INT-1`
+- **Source issue:** `artifact-graph-lint`
+- **Landed:** 2026-10-08
+
+### Given an issue config that sets a stage mode When approach evaluate writes Then the manifest stages hold the mode _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-layer-reaches-evaluator`
+- **Landed:** 2026-10-08
+
+### Given a delivery issue, When it configures --route spike, Then a lock refuses it at the issue's own point _(archived)_
+
+- **Scenario id:** `IP-1`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-layer-at-its-point`
+- **Landed:** 2026-10-08
+
+### Given a spike-assessed issue, When it configures --route full, Then a lock refuses it because spike.conclude is lost _(archived)_
+
+- **Scenario id:** `IP-2`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-layer-at-its-point`
+- **Landed:** 2026-10-08
+
+### Given a quick-fix assessed issue under the shipped default, When it configures --route regular, Then the proposal is accepted and a reassess commits it _(archived)_
+
+- **Scenario id:** `IP-3`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-layer-at-its-point`
+- **Landed:** 2026-10-08
+
+### Given a regular issue, When it configures --route full, Then it is refused as incomparable on the subtask ceiling _(archived)_
+
+- **Scenario id:** `IP-4`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-layer-at-its-point`
+- **Landed:** 2026-10-08
+
+### Given a quick-fix issue where refine is collapsed, When it sets refine=collapsed, Then it is accepted; on a regular issue it is refused without a waiver _(archived)_
+
+- **Scenario id:** `IP-5`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-layer-at-its-point`
+- **Landed:** 2026-10-08
+
+### Given an issue with a route pick and an unchanged configuration, When its stored assessment becomes a spike and it is reassessed, Then the reassess is refused _(archived)_
+
+- **Scenario id:** `IP-6`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-layer-at-its-point`
+- **Landed:** 2026-10-08
+
+### Given a project layer, When it is linted, Then it is still judged over the whole grid _(archived)_
+
+- **Scenario id:** `IP-7`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-layer-at-its-point`
+- **Landed:** 2026-10-08
+
+### Given a proposal that loosens the issue's layer, When the preview is built, Then its classification names the issue's own assessment as the first point _(archived)_
+
+- **Scenario id:** `IP-8`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-layer-at-its-point`
+- **Landed:** 2026-10-08
+
+### Given a route pick that is mixed at the issue's own assessment, When it is refused, Then the refusal names every looser or incomparable field _(archived)_
+
+- **Scenario id:** `IP-9`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-layer-at-its-point`
+- **Landed:** 2026-10-08
+
+### Given a delivery issue under the shipped default, When it configures --route regular on a quick-fix assessment, Then the proposal is accepted because the layer is judged at the issue's own assessment _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-layer-at-its-point`
+- **Landed:** 2026-10-08
+
+### A git extends parses strictly and a spelling outside the form is refused _(archived)_
+
+- **Scenario id:** `GP-1`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### Policy effective shows the parent as the source of its fields _(archived)_
+
+- **Scenario id:** `GP-10`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### A parent that names a git parent is refused _(archived)_
+
+- **Scenario id:** `GP-11`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### versions.yml records the parent ref, sha, version and digest _(archived)_
+
+- **Scenario id:** `GP-12`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### A moved pin does not change an open issue _(archived)_
+
+- **Scenario id:** `GP-13`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### A short sha resolves only against one cached commit _(archived)_
+
+- **Scenario id:** `GP-14`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### The owning doc, help, finding codes and corpus describe the parent _(archived)_
+
+- **Scenario id:** `GP-15`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### README and security.md say the git fetch happens and when _(archived)_
+
+- **Scenario id:** `GP-16`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### The cache is keyed by repository and sha _(archived)_
+
+- **Scenario id:** `GP-17`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### The docs say what environment git sees and that the user's credential helper runs _(archived)_
+
+- **Scenario id:** `GP-18`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### A partial fetch reads only the root compass.yml entry _(archived)_
+
+- **Scenario id:** `GP-19`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### A remote ref with no sha is refused and git is not run _(archived)_
+
+- **Scenario id:** `GP-2`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### Guards that the first plants missed are pinned by tests _(archived)_
+
+- **Scenario id:** `GP-20`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### A failed read caches nothing and a cache write race is safe _(archived)_
+
+- **Scenario id:** `GP-21`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### A pinned sha that is not cached is fetched into the cache with seen.yml _(archived)_
+
+- **Scenario id:** `GP-3`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### A fetched commit that does not match the pin is refused and not cached _(archived)_
+
+- **Scenario id:** `GP-4`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### Check and offline read the cache only _(archived)_
+
+- **Scenario id:** `GP-5`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### A symlink in the fetched tree is refused _(archived)_
+
+- **Scenario id:** `GP-6`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### A cache that leaves .compass is refused _(archived)_
+
+- **Scenario id:** `GP-7`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### Git runs with an argument list, a restricted environment and no shell _(archived)_
+
+- **Scenario id:** `GP-8`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08
+
+### A parent is data only: settings key, unlock and unknown impl fail lint _(archived)_
+
+- **Scenario id:** `GP-9`
+- **Intent:** `INT-1`
+- **Source issue:** `git-parents`
+- **Landed:** 2026-10-08

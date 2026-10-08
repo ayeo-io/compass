@@ -1,0 +1,154 @@
+{
+  "schema": 1,
+  "issue": "feature",
+  "generation": 1,
+  "proposed": 2,
+  "verdict": "refused",
+  "reasons": [
+    "C-LOOSENING approaches.stages: at risk contained, familiarity brownfield-mapped, size standard, goal delivery, role engineer, labels none: approaches.stages (define) is \"full\" in the parent and \"collapsed\" in the child; a waiver on the entry, approved by the layer above, excuses it; fields that are looser or cannot be compared: approaches.stages (define), approaches.checkpoints (balanced), approaches.checkpoints (controlled)"
+  ],
+  "proposal": ".compass/work/feature/generations/2/proposed.yml",
+  "base": "config",
+  "changes": [
+    {
+      "path": "stages.define.mode",
+      "before": "full",
+      "after": "collapsed"
+    }
+  ],
+  "classification": {
+    "result": "loosening",
+    "reason": "at risk contained, familiarity brownfield-mapped, size standard, goal delivery, role engineer, labels none: approaches.stages (define) is \"full\" in the parent and \"collapsed\" in the child",
+    "scan": "full",
+    "first_point": {
+      "assessment": {
+        "risk": "contained",
+        "familiarity": "brownfield-mapped",
+        "size": "standard",
+        "goal": "delivery",
+        "role": "engineer",
+        "labels": []
+      },
+      "represents": {
+        "risk": [
+          "contained"
+        ],
+        "familiarity": [
+          "brownfield-mapped"
+        ],
+        "size": [
+          "standard"
+        ],
+        "goal": [
+          "delivery"
+        ],
+        "role": [
+          "engineer"
+        ]
+      },
+      "outcome": "looser",
+      "summary": "at risk contained, familiarity brownfield-mapped, size standard, goal delivery, role engineer, labels none: approaches.stages (define) is \"full\" in the parent and \"collapsed\" in the child",
+      "changes": [
+        {
+          "fact": "stage_mode",
+          "field": "approaches.stages",
+          "key": "define",
+          "outcome": "looser",
+          "parent": "full",
+          "child": "collapsed"
+        },
+        {
+          "fact": "checkpoints",
+          "field": "approaches.checkpoints",
+          "key": "balanced",
+          "outcome": "looser",
+          "parent": [
+            "define",
+            "plan"
+          ],
+          "child": [
+            "plan"
+          ]
+        },
+        {
+          "fact": "checkpoints",
+          "field": "approaches.checkpoints",
+          "key": "controlled",
+          "outcome": "looser",
+          "parent": [
+            "assess",
+            "define",
+            "refine",
+            "plan"
+          ],
+          "child": [
+            "assess",
+            "refine",
+            "plan"
+          ]
+        }
+      ]
+    }
+  },
+  "assessment": {
+    "approach": {
+      "before": "regular",
+      "after": "regular"
+    },
+    "result": "loosening",
+    "changes": [
+      {
+        "fact": "stage_mode",
+        "field": "approaches.stages",
+        "key": "define",
+        "outcome": "looser",
+        "before": "full",
+        "after": "collapsed"
+      },
+      {
+        "fact": "checkpoints",
+        "field": "approaches.checkpoints",
+        "key": "balanced",
+        "outcome": "looser",
+        "before": [
+          "define",
+          "plan"
+        ],
+        "after": [
+          "plan"
+        ]
+      },
+      {
+        "fact": "checkpoints",
+        "field": "approaches.checkpoints",
+        "key": "controlled",
+        "outcome": "looser",
+        "before": [
+          "assess",
+          "define",
+          "refine",
+          "plan"
+        ],
+        "after": [
+          "assess",
+          "refine",
+          "plan"
+        ]
+      }
+    ],
+    "refused": null
+  },
+  "invalidates": [
+    {
+      "id": "EV-1",
+      "kind": "approval",
+      "reason": "it approved waiver:issue:checks.team-check, which is invalid: checks.team-check.severity: the parent value changed from 'blocking' to 'advisory'; the project value is 'advisory'"
+    },
+    {
+      "id": "waiver:issue:checks.team-check",
+      "kind": "waiver",
+      "reason": "checks.team-check.severity: the parent value changed from 'blocking' to 'advisory'; the project value is 'advisory'"
+    }
+  ],
+  "next": "/compass:assess --reassess --reason \"...\""
+}

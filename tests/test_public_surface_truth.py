@@ -451,6 +451,19 @@ def test_d2_repairs_change_only_retired_names():
     `governance/routing-policy.md` (list_items 53 -> 56, table_rows 7 -> 12)
     gained the speed targets, the measures taken and the scan.
 
+    One more was re-baselined by `check-severity-from-generation`:
+    `governance/guardrails.md` (list_items 46 -> 47) gained the bullet that
+    describes an advisory failure.
+
+    One more was re-baselined by `impl-refusal`: `governance/guardrails.md`
+    (list_items 47 -> 48) gained a bullet saying `compass check` refuses a
+    check whose implementation major differs from the one the generation
+    recorded.
+
+    One more was re-baselined by `issue-layer-at-its-point`:
+    `governance/guardrails.md` (list_items 48 -> 49) gained the bullet saying an
+    issue's `config:` is enforced at the issue's own assessment.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

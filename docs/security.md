@@ -73,11 +73,13 @@ The fetch runs `git` with an argument list and no shell, only over `https`, with
 hooks off and no prompts. It runs with your own git configuration, so your
 credential helper runs and your `url.*.insteadOf` rules apply. Only `compass
 policy lint`, `compass policy effective` and `compass approach evaluate
---write` fetch. `compass check` never does. Compass checks each cached parent
-against a digest it recorded at fetch, and `compass policy lint` fails on a
-mismatch. That catches an accidental edit of the cache, not a deliberate one by
-someone who can write the cache, because the digest sits beside the file and can
-be rewritten with it. If you doubt the cache, delete `.compass/cache/parents/`.
+--write` fetch, including a reassess that commits a `compass issue configure`
+proposal. `compass check` and `compass issue configure` never do. Compass
+checks each cached parent against a digest it recorded at fetch, and `compass
+policy lint` fails on a mismatch. That catches an accidental edit of the cache,
+not a deliberate one by someone who can write the cache, because the digest
+sits beside the file and can be rewritten with it. If you doubt the cache,
+delete `.compass/cache/parents/`.
 Review
 [git-parents.md](https://github.com/ayeo-io/compass/blob/main/docs/git-parents.md).
 

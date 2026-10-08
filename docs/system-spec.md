@@ -50,11 +50,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a loaded machine, when a run is interrupted, then the tests wait for the session to start before signalling
+### A waiver in a git parent is checked against the parent's own owner
 
-- **Scenario id:** `TRC-001`
+- **Scenario id:** `GP-22`
 - **Intent:** `INT-1`
-- **Source issue:** `sigint-tests-under-load`
+- **Source issue:** `git-parents`
 - **Landed:** 2026-10-08
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -353,4 +353,4 @@
 
 ---
 
-1876 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1966 superseded scenario(s) are in `docs/system-spec-archive.md`.

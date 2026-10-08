@@ -54,7 +54,7 @@ and `governance/decisions/2026-10-06-old-route-names-readable-until-7-0-0.md`).
   layer with its parent. A change that loosens the parent needs a waiver with an
   approver, a framework lock cannot be removed by a lower layer, and a project
   that unlocks a framework entry is reported non-conformant.
-- `compass policy lint` checks a layered project. `compass policy effective`
+- `compass policy lint` checks a layered project. `compass policy show`
   prints every resolved field with the layer that set it. `compass policy diff`
   compares two configurations by classification and by replaying assessments.
   `compass policy migrate` turns copied governance and a `.compass/config.yml`
@@ -64,11 +64,11 @@ and `governance/decisions/2026-10-06-old-route-names-readable-until-7-0-0.md`).
   The commands that read configuration read that generation, so a later change
   to `compass.yml` cannot change an issue that is already running.
 - `compass policy update` moves a project to a new major of the shipped default
-  and asks again for approval of each waiver the move affects. `compass policy
-  test` runs a preset's fixtures and checks its locks, and `compass policy
-  init-preset` scaffolds a team preset repository.
+  and asks again for approval of each waiver the move affects. `compass preset
+  test` runs a preset's fixtures and checks its locks, and `compass preset
+  init` scaffolds a team preset repository.
 - `compass issue configure` proposes, previews, discards or recovers a change to
-  an issue's own configuration. `compass issue migrate-config` pins an issue's
+  an issue's own configuration. `compass issue migrate --config` pins an issue's
   configuration to the installed versions. An implementation major that differs
   from the one a generation recorded is refused, and a check can be advisory.
 - A project can name git parents, singly or in a chain, and each is pinned by
@@ -77,7 +77,7 @@ and `governance/decisions/2026-10-06-old-route-names-readable-until-7-0-0.md`).
 - A check can be judged: it passes on a recorded review (`docs/judged-checks.md`).
   `approvers` name who may approve a waiver, a human check or an exit, and an
   evidence approval is recorded with its approver.
-- `compass issue template` prints a document template with its checklists
+- `compass issue template show` prints a document template with its checklists
   rendered from the issue's stage lists. The receipt shows where each rule,
   waiver, lock and check came from.
 - `/compass:init` writes a minimal `compass.yml` for a new project and copies

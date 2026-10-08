@@ -15,7 +15,7 @@ determinism boundary - see `docs/methodology.md` §2.
 Assess works on day one with **zero project setup**: the shipped default
 guardrails, strategies, and routing policy apply as-is, so `/compass:init` is
 optional and not a prerequisite. If a project has run `/compass:init`, its
-`compass.yml` extends those defaults - read `compass policy effective` for
+`compass.yml` extends those defaults - read `compass policy show` for
 what is in force. A project that still holds copied `governance/` files runs
 on them until `compass policy migrate` converts it.
 

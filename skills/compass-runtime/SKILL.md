@@ -132,7 +132,7 @@ compass.yml                     The one file a person edits: settings, and the p
 A new project has no `governance/` directory: the shipped default preset is in
 force, and `compass.yml` holds only what differs from it. A project from 5.x
 that copied `governance/` into its root keeps running on that copy until
-`compass policy migrate` converts it. `compass policy effective` shows what is
+`compass policy migrate` converts it. `compass policy show` shows what is
 in force.
 
 ## Project lessons

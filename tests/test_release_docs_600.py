@@ -82,7 +82,7 @@ def test_idr_8_receipt_md_describes_the_conformance_line():
 def test_idr_9_releasing_md_has_a_6_0_0_entry_with_the_contents():
     text = _read("docs/releasing.md")
     body = _section(text, "What changed at 6.0.0")
-    for needle in ("compass.yml", "policy lint", "policy effective", "policy diff",
+    for needle in ("compass.yml", "policy lint", "policy show", "policy diff",
                    "policy migrate", "generation", "`.compass/config.yml`",
                    "7.0.0"):
         assert needle in body, f"the 6.0.0 entry does not mention {needle!r}"

@@ -79,7 +79,7 @@ The sections before the verdict run in this order: *Stage lists*, *Artifact fres
 
 A project whose `compass.yml` unlocks a framework entry gets one more line,
 above the verdict, on the receipt and on `compass check` and `compass approach
-summary`: `Conformance: non-conformant - this project unlocks framework entries:
+show`: `Conformance: non-conformant - this project unlocks framework entries:
 ...`. A `compass.yml` that cannot be read prints `Conformance: not checked`. A
 project with no `compass.yml`, or one that unlocks nothing, gets no line, so the
 receipt in the example above is unchanged. The line states the configuration,

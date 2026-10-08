@@ -74,7 +74,7 @@ The state decides what Compass reads, and no state loses a setting silently:
 - **The marker.** Every `compass.yml` that Compass creates carries `schema:`.
   `compass init` writes no `compass.yml`. `/compass:init` and
   `compass policy migrate` write a project's first one. `compass policy update`
-  rewrites it, and `compass policy init-preset` writes one inside the new preset
+  rewrites it, and `compass preset init` writes one inside the new preset
   folder it scaffolds.
 
 ## Settings

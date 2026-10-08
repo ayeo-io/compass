@@ -68,7 +68,7 @@ def _write(task_dir, kind, text):
 
 
 def _register(root, kind):
-    code, out, err = _run(root, "issue", "artifact", kind, "--status", "draft",
+    code, out, err = _run(root, "issue", "artifact", "set", kind, "--status", "draft",
                           "--issue", SLUG)
     assert code == 0, out + err
 
@@ -268,7 +268,7 @@ def test_fresh_6_ship_commit_at_head_with_nothing_staged_refuses_a_stale_documen
     code, out, err = _run(root, "ship-commit", "--issue", SLUG, "-m", "land it")
     assert code != 0, out + err
     assert "technical-design" in out + err and "acceptance-criteria changed" in out + err, out + err
-    assert _manifest(task_dir)["status"] != "landed"
+    assert _manifest(task_dir).get("status") != "done"
 
 
 def test_fresh_6_ship_commit_with_the_capability_off_does_not_look(tmp_path):
@@ -317,7 +317,7 @@ def test_fresh_8_the_receipt_lists_each_recorded_document(tmp_path):
 
 def test_fresh_2_the_help_of_the_two_verbs_names_the_capability(tmp_path):
     root, task_dir = _scene(tmp_path, write=False)
-    for argv in (("issue", "artifact", "--help"), ("ship-commit", "--help")):
+    for argv in (("issue", "artifact", "set", "--help"), ("ship-commit", "--help")):
         code, out, err = _run(root, *argv)
         assert code == 0, err
         assert "artifact-freshness" in " ".join(out.split()), (argv, out)
@@ -368,7 +368,7 @@ def test_fresh_3_a_document_no_stage_consumes_blocks_only_from_ship(tmp_path):
         report = rows["verification-report"]
         assert report["status"] == status, (phase, rows)
         assert report["detail"].startswith("stale"), report
-        assert "blocks land" in report["detail"]
+        assert "blocks ship" in report["detail"]
         assert ("not yet due" in report["detail"]) == (status == "pass")
 
 
@@ -376,14 +376,14 @@ def test_fresh_2_an_omitted_document_is_not_stamped_and_not_tracked(tmp_path):
     root, task_dir = _scene(tmp_path, phase="implement", write=False)
     _write(task_dir, "acceptance-criteria", CRITERIA)
     _write(task_dir, "technical-design", DESIGN)
-    code, out, err = _run(root, "issue", "artifact", "technical-design", "--status", "omitted",
+    code, out, err = _run(root, "issue", "artifact", "set", "technical-design", "--status", "omitted",
                           "--reason", "the design is in the issue", "--issue", SLUG)
     assert code == 0, out + err
     assert "digest" not in _entry(task_dir, "technical-design")
     _register(root, "technical-design")
     _write(task_dir, "acceptance-criteria", CRITERIA + "changed\n")
     assert _check(root)[1]["technical-design"]["status"] == "fail"
-    code, out, err = _run(root, "issue", "artifact", "technical-design", "--status", "omitted",
+    code, out, err = _run(root, "issue", "artifact", "set", "technical-design", "--status", "omitted",
                           "--reason", "the design is in the issue", "--issue", SLUG)
     assert code == 0, out + err
     code, rows, out = _check(root)
@@ -531,7 +531,7 @@ def test_fresh_2_registering_an_unreadable_document_is_refused_before_it_is_save
     before = _entry(task_dir, "technical-design")
     _unreadable(task_dir / "technical-design.md")
     try:
-        code, out, err = _run(root, "issue", "artifact", "technical-design", "--status",
+        code, out, err = _run(root, "issue", "artifact", "set", "technical-design", "--status",
                               "approved", "--issue", SLUG)
     finally:
         os.chmod(task_dir / "technical-design.md", 0o644)
@@ -546,7 +546,7 @@ def test_fresh_2_registering_against_an_unreadable_upstream_is_refused_before_it
     before = _entry(task_dir, "technical-design")
     _unreadable(task_dir / "acceptance-criteria.md")
     try:
-        code, out, err = _run(root, "issue", "artifact", "technical-design", "--status",
+        code, out, err = _run(root, "issue", "artifact", "set", "technical-design", "--status",
                               "approved", "--issue", SLUG)
     finally:
         os.chmod(task_dir / "acceptance-criteria.md", 0o644)
@@ -559,7 +559,7 @@ def test_fresh_2_an_unreadable_configuration_records_nothing(tmp_path):
     root, task_dir = _scene(tmp_path, write=False)
     _write(task_dir, "acceptance-criteria", CRITERIA)
     (task_dir / "generations" / "1" / "resolved.yml").write_text(": [unbalanced\n", encoding="utf-8")
-    code, out, err = _run(root, "issue", "artifact", "acceptance-criteria", "--status", "draft",
+    code, out, err = _run(root, "issue", "artifact", "set", "acceptance-criteria", "--status", "draft",
                           "--issue", SLUG)
     assert code == 0, out + err
     entry = _entry(task_dir, "acceptance-criteria")

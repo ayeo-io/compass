@@ -241,7 +241,7 @@ def test_vr_c16_a_closed_issue_has_reached_every_stage(status, extra):
         def stage_order():
             return ["define", "plan", "implement"]
 
-    assert stage_lists._positions(View, _with(status, extra), None) == (
+    assert stage_lists.positions(View, _with(status, extra), None) == (
         ["define", "plan", "implement"], 3)
 
 

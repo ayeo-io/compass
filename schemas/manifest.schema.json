@@ -780,9 +780,29 @@
             "enum": [
               "judgement",
               "policy-correction",
-              "scope-change"
+              "scope-change",
+              "configuration"
             ],
-            "description": "What kind of re-assessment this was. Only 'judgement' feeds compass retro's re-sizing signal - a policy correction or a scope change is not the assessment having misread the work."
+            "description": "What kind of re-assessment this was. Only 'judgement' feeds compass retro's re-sizing signal - a policy correction, a scope change or a change to the issue's own config: layer (configuration) is not the assessment having misread the work."
+          },
+          "generation": {
+            "type": "object",
+            "description": "The generation of the issue's stored configuration this re-assessment moved from and to (ADR-036). The two numbers are equal when the re-assessment committed nothing.",
+            "required": [
+              "from",
+              "to"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "from": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "to": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
           },
           "changed": {
             "type": "object",

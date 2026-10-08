@@ -13426,3 +13426,87 @@
 - **Intent:** `INT-1`
 - **Source issue:** `impl-refusal`
 - **Landed:** 2026-10-08
+
+### Given other threads exist, when an interrupt arrives while the session is created, then the session is ended _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `signal-hold-all-threads`
+- **Landed:** 2026-10-08
+
+### configure writes the proposal and leaves the manifest as it was _(archived)_
+
+- **Scenario id:** `CR-1`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### the unreferenced-folder refusal names the folder and both commands, and every named command exists _(archived)_
+
+- **Scenario id:** `CR-10`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### help, owning doc, assess command and command corpus describe the verb _(archived)_
+
+- **Scenario id:** `CR-11`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### the preview lists fields, classification, assessment effect, invalidations and the next step; exit 0, 1 or 2 _(archived)_
+
+- **Scenario id:** `CR-2`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### the JSON has the documented keys in order and equals the pinned example _(archived)_
+
+- **Scenario id:** `CR-3`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### discard removes a proposal or leftover above the current generation and never the current or older _(archived)_
+
+- **Scenario id:** `CR-4`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### commit adopts a whole unreferenced folder only when a fresh resolution gives the same files _(archived)_
+
+- **Scenario id:** `CR-5`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### a reassess interrupted after each step is resolved by commit or discard _(archived)_
+
+- **Scenario id:** `CR-6`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### reassess commits the pending proposal, refuses a stale one, and reset-config drops the overlay _(archived)_
+
+- **Scenario id:** `CR-7`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### a reassessments entry carries the generation it moved from and to _(archived)_
+
+- **Scenario id:** `CR-8`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### records statuses carry forward and a waiver whose parent value changed is invalidated and reverted _(archived)_
+
+- **Scenario id:** `CR-9`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08

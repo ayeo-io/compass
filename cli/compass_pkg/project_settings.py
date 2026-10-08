@@ -267,10 +267,9 @@ def _text(value):
     return str(value).lower() if isinstance(value, bool) else str(value)
 
 
-def _first_text(data, key):
-    """The first `key:` at any depth of `data`, in document order, as text.
-    This is the old file's lookup for the scripts, and the conflict check uses
-    it so the two cannot disagree about where a key is found."""
+def _first_value(data, key):
+    """The first `key:` at any depth of `data`, in document order, as the
+    value the file holds, or `_MISSING`."""
     seen = set()
 
     def first(node):
@@ -285,7 +284,23 @@ def _first_text(data, key):
                     return found
         return _MISSING
 
-    return _text(first(data))
+    return first(data)
+
+
+def _first_text(data, key):
+    """`_first_value` as text. This is the old file's lookup for the scripts,
+    and the conflict check uses it so the two cannot disagree about where a
+    key is found."""
+    return _text(_first_value(data, key))
+
+
+def found_scalar(data, key):
+    """The value of the first `key:` at any depth of `data`, with its type, or
+    None when it is absent, empty or not a scalar: the same finds as
+    `_first_text`. The migration reads it to move a script setting to the path
+    `compass.yml` documents."""
+    value = _first_value(data, key)
+    return None if _text(value) == "" else value
 
 
 def scalar(project_root, key):

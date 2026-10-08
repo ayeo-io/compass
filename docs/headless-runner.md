@@ -32,7 +32,7 @@ Before each cycle the runner stops if the stop file exists, the cycle ceiling is
 - the manifest cannot be read;
 - the manifest and the evidence did not change for as many cycles in a row as the RP-LOOP-005 ceiling allows, 3.
 
-A session that runs past the minute ceiling is ended, with every process it started. An interrupted run (Ctrl-C, or a cancelled CI job's SIGTERM) ends the running session the same way, records the interruption as its stop reason, and exits with the signal's code.
+A session that runs past the minute ceiling is ended, with every process it started. An interrupted run (Ctrl-C, or a cancelled CI job's SIGTERM) ends the running session the same way, records the interruption as its stop reason, and exits with the signal's code. The launcher holds the interrupt signals while it creates the session and releases them once the session is known, so a signal that lands during creation still ends the session.
 
 ## What each session is told
 

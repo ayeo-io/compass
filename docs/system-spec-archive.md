@@ -12923,6 +12923,139 @@
 - **Source issue:** `layer-non-text-key`
 - **Landed:** 2026-10-07
 
+### A dry run prints the compass.yml it would write and changes no file _(archived)_
+
+- **Scenario id:** `PM-1`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-migrate`
+- **Landed:** 2026-10-08
+
+### The json output has fixed keys, is deterministic and is pinned by an example _(archived)_
+
+- **Scenario id:** `PM-10`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-migrate`
+- **Landed:** 2026-10-08
+
+### The owning doc, README row, help text and command corpus exist _(archived)_
+
+- **Scenario id:** `PM-11`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-migrate`
+- **Landed:** 2026-10-08
+
+### A table of shipped releases is data, and holds every tagged release _(archived)_
+
+- **Scenario id:** `PM-12`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-migrate`
+- **Landed:** 2026-10-08
+
+### policy-migrate review round, group 13 _(archived)_
+
+- **Scenario id:** `PM-13`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-migrate`
+- **Landed:** 2026-10-08
+
+### policy-migrate review round, group 14 _(archived)_
+
+- **Scenario id:** `PM-14`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-migrate`
+- **Landed:** 2026-10-08
+
+### policy-migrate review round, group 15 _(archived)_
+
+- **Scenario id:** `PM-15`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-migrate`
+- **Landed:** 2026-10-08
+
+### policy-migrate review round, group 16 _(archived)_
+
+- **Scenario id:** `PM-16`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-migrate`
+- **Landed:** 2026-10-08
+
+### policy-migrate review round, group 17 _(archived)_
+
+- **Scenario id:** `PM-17`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-migrate`
+- **Landed:** 2026-10-08
+
+### policy-migrate review round, group 18 _(archived)_
+
+- **Scenario id:** `PM-18`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-migrate`
+- **Landed:** 2026-10-08
+
+### No member of the compressed archive of shipped releases holds a rival name _(archived)_
+
+- **Scenario id:** `PM-19`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-migrate`
+- **Landed:** 2026-10-08
+
+### An unchanged copy migrates to an empty overlay and classifies equivalent _(archived)_
+
+- **Scenario id:** `PM-2`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-migrate`
+- **Landed:** 2026-10-08
+
+### A changed copy migrates to exactly its differing entries and classifies equivalent _(archived)_
+
+- **Scenario id:** `PM-3`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-migrate`
+- **Landed:** 2026-10-08
+
+### A loosening gets unapproved waiver stubs and blocks apply with exit 1 _(archived)_
+
+- **Scenario id:** `PM-4`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-migrate`
+- **Landed:** 2026-10-08
+
+### Settings fold into compass.yml, state goes to state.yml, and nothing is dropped silently _(archived)_
+
+- **Scenario id:** `PM-5`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-migrate`
+- **Landed:** 2026-10-08
+
+### Apply copies the sources, writes compass.yml last and keeps the governance files _(archived)_
+
+- **Scenario id:** `PM-6`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-migrate`
+- **Landed:** 2026-10-08
+
+### A compass.yml, the framework repository or a lone governance file is refused with exit 2 _(archived)_
+
+- **Scenario id:** `PM-7`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-migrate`
+- **Landed:** 2026-10-08
+
+### An interrupted apply finishes on the next run _(archived)_
+
+- **Scenario id:** `PM-8`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-migrate`
+- **Landed:** 2026-10-08
+
+### A project with nothing to migrate exits 0 and writes nothing _(archived)_
+
+- **Scenario id:** `PM-9`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-migrate`
+- **Landed:** 2026-10-08
+
 ### The reader helper returns the stored view, a live view for a project with a compass.yml, nothing for a legacy project and refuses generation 0 _(archived)_
 
 - **Scenario id:** `EF-1`
@@ -13005,74 +13138,4 @@
 - **Scenario id:** `EF-9`
 - **Intent:** `INT-1`
 - **Source issue:** `effective-readers`
-- **Landed:** 2026-10-08
-
-### Given a generation with an advisory check, when it fails, then the run passes and shows the failure as advisory _(archived)_
-
-- **Scenario id:** `CS-1`
-- **Intent:** `INT-1`
-- **Source issue:** `check-severity-from-generation`
-- **Landed:** 2026-10-08
-
-### Given a landed_by relaxation on a shipped check with on_skipped fail, the verdict is unchanged _(archived)_
-
-- **Scenario id:** `CS-10`
-- **Intent:** `INT-1`
-- **Source issue:** `check-severity-from-generation`
-- **Landed:** 2026-10-08
-
-### Given a blocking check, when it fails, then the run fails _(archived)_
-
-- **Scenario id:** `CS-2`
-- **Intent:** `INT-1`
-- **Source issue:** `check-severity-from-generation`
-- **Landed:** 2026-10-08
-
-### Given on_skipped fail and nothing to check, then the run fails and says why _(archived)_
-
-- **Scenario id:** `CS-3`
-- **Intent:** `INT-1`
-- **Source issue:** `check-severity-from-generation`
-- **Landed:** 2026-10-08
-
-### Given on_skipped pass and nothing to check, then the check counts as a pass _(archived)_
-
-- **Scenario id:** `CS-4`
-- **Intent:** `INT-1`
-- **Source issue:** `check-severity-from-generation`
-- **Landed:** 2026-10-08
-
-### Given on_skipped not-applicable and nothing to check, then it is counted apart as before _(archived)_
-
-- **Scenario id:** `CS-5`
-- **Intent:** `INT-1`
-- **Source issue:** `check-severity-from-generation`
-- **Landed:** 2026-10-08
-
-### Given a blocking_when that does not match, an advisory severity is shown as advisory with the condition _(archived)_
-
-- **Scenario id:** `CS-6`
-- **Intent:** `INT-1`
-- **Source issue:** `check-severity-from-generation`
-- **Landed:** 2026-10-08
-
-### Given the shipped preset and an existing issue, then the verdicts are unchanged _(archived)_
-
-- **Scenario id:** `CS-7`
-- **Intent:** `INT-1`
-- **Source issue:** `check-severity-from-generation`
-- **Landed:** 2026-10-08
-
-### The JSON shape of an advisory failure is documented and pinned _(archived)_
-
-- **Scenario id:** `CS-8`
-- **Intent:** `INT-1`
-- **Source issue:** `check-severity-from-generation`
-- **Landed:** 2026-10-08
-
-### Given an issue with no generation, then check behaves as before _(archived)_
-
-- **Scenario id:** `CS-9`
-- **Intent:** `INT-1`
-- **Source issue:** `check-severity-from-generation`
 - **Landed:** 2026-10-08

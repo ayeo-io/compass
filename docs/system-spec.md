@@ -50,11 +50,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a spike with an advisory guardrail check that fails, then the run passes and shows the failure as advisory
+### Given a loaded machine, when a run is interrupted, then the tests wait for the session to start before signalling
 
-- **Scenario id:** `CS-11`
+- **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `check-severity-from-generation`
+- **Source issue:** `sigint-tests-under-load`
 - **Landed:** 2026-10-08
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -353,4 +353,4 @@
 
 ---
 
-1867 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1876 superseded scenario(s) are in `docs/system-spec-archive.md`.

@@ -1,5 +1,5 @@
-# compass_pkg.policy_cmd - `compass policy lint`, `effective` and `diff`
-"""The three verbs over `policy_lint` and `replay`.
+# compass_pkg.policy_cmd - `compass policy lint`, `effective`, `diff` and `migrate`
+"""The four verbs over `policy_lint`, `replay` and `policy_migrate`.
 
 `policy lint` runs the legacy lint, unchanged, for a project with no
 `compass.yml` that Compass reads and for the framework's own repository, and
@@ -7,12 +7,13 @@ the layered lint for any other project. `compass ci` calls the legacy
 function in `governance` directly, so its behaviour does not move.
 """
 # DEPENDENCY: standard library (os); compass_pkg.core, governance, layers,
-# policy_lint, project_settings, replay, terminal.
+# policy_lint, policy_migrate, project_settings, replay, terminal.
 from __future__ import annotations
 
 import os
 
-from compass_pkg import governance, layers, policy_lint, project_settings, replay
+from compass_pkg import governance, layers, policy_lint, policy_migrate, project_settings
+from compass_pkg import replay
 from compass_pkg.core import (FRAMEWORK_ROOT, CompassError, find_governance, load_manifest,
                               resolve_issue_dir)
 from compass_pkg.terminal import mark_handled, resolve_mode
@@ -75,6 +76,17 @@ def run_policy_effective(args):
     return 0
 
 
+def run_policy_migrate(args):
+    root = layers.find_project_root(os.getcwd())
+    made = policy_migrate.plan(root)
+    mode = "apply" if getattr(args, "apply", False) else "dry-run"
+    if mode == "apply" and made.result == "ready":
+        policy_migrate.apply(root, made)
+        made.result = "applied"
+    _emit(args, policy_migrate.report_json(made, mode), policy_migrate.report_text(made, mode))
+    return 1 if made.result == "blocked" else 0
+
+
 def run_policy_diff(args):
     root = layers.find_project_root(os.getcwd())
     first, second = replay.default_refs(getattr(args, "refs", None) or [])
@@ -94,11 +106,16 @@ def _issue_option(parser):
 
 
 def register(pls):
-    """Add `lint`, `effective` and `diff` to the `policy` parsers."""
+    """Add `lint`, `effective`, `diff` and `migrate` to the `policy` parsers."""
     ple = pls.add_parser("effective", help="show every resolved configuration field "
                          "with its source layer")
     _issue_option(ple)
     ple.set_defaults(func=run_policy_effective, output_kind="report")
+    plm = pls.add_parser("migrate", help="turn copied governance and the old settings file "
+                         "into a compass.yml overlay over the shipped default")
+    plm.add_argument("--apply", action="store_true",
+                     help="write the files; without it nothing is written")
+    plm.set_defaults(func=run_policy_migrate, output_kind="report")
     pll = pls.add_parser("lint", help="structurally validate the governance YAML")
     _issue_option(pll)
     pll.add_argument("--file", metavar="PATH",

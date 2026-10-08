@@ -286,5 +286,6 @@ input gives the same bytes. `tests/test_policy_lint.py` pins each key list.
 ## What this page does not cover
 
 - The per-issue generation store and `--live`: the effective view reads the live project file until the store exists.
-- `compass policy diff`, which `docs/policy-diff.md` covers, and `policy migrate` and `policy update`.
+- `compass policy diff`, which has its own page: [policy-diff.md](policy-diff.md), and `policy update`.
+- `compass policy migrate`, which has its own page: [policy-migrate.md](policy-migrate.md).
 - The settings-conflict refusal (`compass check` and the pre-tool hook own it).

@@ -1,0 +1,180 @@
+# The governance files each shipped release held, by version and content digest.
+# Written by scripts/generate-shipped-releases.py from the git tags; do not edit.
+# The files are in shipped-releases.tar.xz. compass policy migrate reads both.
+schema: 1
+releases:
+- tag: v1.0.0
+  routing_policy:
+    version: 1.0.0
+    digest: 303b6c46feba0772a7009f4bd919febb131e9274c5eb57207e05dfe75c5806a3
+  guardrails:
+    version: 1.0.0
+    digest: 21f1e0bdce6a52c9e46c60893d5080adefbba2e0cb49dbe5a12d794ff276bd92
+- tag: v1.1.0
+  routing_policy:
+    version: 1.0.0
+    digest: f3cc24b2dc6e46f1a8118d598c66a843f6c7a047fd17677a55ebeb0f2f6fb7ba
+  guardrails:
+    version: 1.0.0
+    digest: 66bc56c2dcb25d476bbc7cbee0fe035840a79614c0bca1287464b71eadd2de52
+- tag: v1.2.0
+  routing_policy:
+    version: 1.0.0
+    digest: f3cc24b2dc6e46f1a8118d598c66a843f6c7a047fd17677a55ebeb0f2f6fb7ba
+  guardrails:
+    version: 1.0.0
+    digest: 66bc56c2dcb25d476bbc7cbee0fe035840a79614c0bca1287464b71eadd2de52
+- tag: v1.3.0
+  routing_policy:
+    version: 1.0.0
+    digest: f3cc24b2dc6e46f1a8118d598c66a843f6c7a047fd17677a55ebeb0f2f6fb7ba
+  guardrails:
+    version: 1.0.0
+    digest: 66bc56c2dcb25d476bbc7cbee0fe035840a79614c0bca1287464b71eadd2de52
+- tag: v1.6.0
+  routing_policy:
+    version: 1.0.0
+    digest: 03778509fab3670f8824a38a0eabd1ed326ad8a8be8eb9395d0fd38aa320daef
+  guardrails:
+    version: 1.0.0
+    digest: 771b2aa6c9342a45ece59ee5c5770adbae9ff03ca459b030c5e8fd00dc58c539
+- tag: v1.7.0
+  routing_policy:
+    version: 1.0.0
+    digest: 03778509fab3670f8824a38a0eabd1ed326ad8a8be8eb9395d0fd38aa320daef
+  guardrails:
+    version: 1.0.0
+    digest: 6dca121c44ee16d1f286ead0c677fe2afd74372e38ebcc7cd2c088f8a86861e4
+- tag: v1.8.0
+  routing_policy:
+    version: 1.3.0
+    digest: 03778509fab3670f8824a38a0eabd1ed326ad8a8be8eb9395d0fd38aa320daef
+  guardrails:
+    version: 1.4.0
+    digest: 42dd57761a979d0e23cc769be84808de58ff290dfe65bad0244092e41ec5fbee
+- tag: v1.8.1
+  routing_policy:
+    version: 1.3.0
+    digest: 03778509fab3670f8824a38a0eabd1ed326ad8a8be8eb9395d0fd38aa320daef
+  guardrails:
+    version: 1.4.0
+    digest: 42dd57761a979d0e23cc769be84808de58ff290dfe65bad0244092e41ec5fbee
+- tag: v2.0.0
+  routing_policy:
+    version: 2.0.0
+    digest: fe187dbf2ed90b1d17f2c80baa67f9cfcac2cf33228a8b71c332cd13e500b681
+  guardrails:
+    version: 1.5.1
+    digest: aa16a0dc567c34c958de66e51c041b55a524c1e7b75cb59689bc1c659d79281a
+- tag: v2.1.0
+  routing_policy:
+    version: 2.0.0
+    digest: fe187dbf2ed90b1d17f2c80baa67f9cfcac2cf33228a8b71c332cd13e500b681
+  guardrails:
+    version: 1.5.1
+    digest: aa16a0dc567c34c958de66e51c041b55a524c1e7b75cb59689bc1c659d79281a
+- tag: v3.0.0
+  routing_policy:
+    version: 2.1.0
+    digest: 16dab6357b49640f5900c84e9cdda1567cd30e61ba3664cff75f17b649605cc3
+  guardrails:
+    version: 1.5.2
+    digest: 83935c01448c0b3cefe36c139b7d84fbbacf8bfee5be3a3e62ac1869c2b85e02
+- tag: v3.1.0
+  routing_policy:
+    version: 2.1.2
+    digest: 80132c0cb3fb764dd6ca1ed1bb95418e568cc98dc746fa3a67740b5b0032c982
+  guardrails:
+    version: 1.6.0
+    digest: bb863f0f6eb84ab68689e6e0c4addd155d228ba34792d093fb77664ebc40d565
+- tag: v3.1.1
+  routing_policy:
+    version: 2.1.2
+    digest: 80132c0cb3fb764dd6ca1ed1bb95418e568cc98dc746fa3a67740b5b0032c982
+  guardrails:
+    version: 1.6.0
+    digest: bb863f0f6eb84ab68689e6e0c4addd155d228ba34792d093fb77664ebc40d565
+- tag: v3.2.0
+  routing_policy:
+    version: 2.1.2
+    digest: 80132c0cb3fb764dd6ca1ed1bb95418e568cc98dc746fa3a67740b5b0032c982
+  guardrails:
+    version: 1.7.0
+    digest: 00573f57a670bd8e7ad6d6d1f64385a6e00e0c70831ac3ef4192442cd209aa8a
+- tag: v3.3.0
+  routing_policy:
+    version: 2.1.2
+    digest: 80132c0cb3fb764dd6ca1ed1bb95418e568cc98dc746fa3a67740b5b0032c982
+  guardrails:
+    version: 1.10.1
+    digest: 580eb407163ef5ef76094330cf6348a3fca941c093addbe7a8f30ba92fb18729
+- tag: v3.4.0
+  routing_policy:
+    version: 2.5.0
+    digest: b715b53298e4627385a14e759c9b7f04228c2f5efe4a22b24a16c3fc2b8f2b29
+  guardrails:
+    version: 1.13.0
+    digest: f1feb8236f75043dfbdfd73b333f86f8ce7b002456788fdb2beb114311c835d4
+- tag: v4.0.0
+  routing_policy:
+    version: 2.10.0
+    digest: 9919bed28898c797bfc988cb1ec28bad63ab13e0c1a848af9bb1da051bf04d6e
+  guardrails:
+    version: 1.18.0
+    digest: 8b480e020d1401b8b9faa7b06f181adf980b8027513ccf1070c0f95480af4827
+- tag: v4.0.1
+  routing_policy:
+    version: 2.10.0
+    digest: 9919bed28898c797bfc988cb1ec28bad63ab13e0c1a848af9bb1da051bf04d6e
+  guardrails:
+    version: 1.18.0
+    digest: 8b480e020d1401b8b9faa7b06f181adf980b8027513ccf1070c0f95480af4827
+- tag: v5.0.0
+  routing_policy:
+    version: 2.12.1
+    digest: 1bb091129af9b4f5611d0552edaadd666d8bc5dc29a257b8a2761a9b8f5abebc
+  guardrails:
+    version: 1.20.0
+    digest: c915a895f776e854511d887a1e3fd14364cb44feafd5fbff3e3b8b2d5775f7e9
+- tag: v5.1.0
+  routing_policy:
+    version: 2.13.0
+    digest: 66a0d4dd0028979cdb255700414671f21806fbaf557b17e280568379fd567c1f
+  guardrails:
+    version: 1.25.0
+    digest: df54d62c0768bc292a7facd4cf9931d8e2e058203d28c19587d5821675d50a17
+- tag: v5.2.0
+  routing_policy:
+    version: 2.13.0
+    digest: 66a0d4dd0028979cdb255700414671f21806fbaf557b17e280568379fd567c1f
+  guardrails:
+    version: 1.25.0
+    digest: df54d62c0768bc292a7facd4cf9931d8e2e058203d28c19587d5821675d50a17
+- tag: v5.3.0
+  routing_policy:
+    version: 2.13.0
+    digest: 66a0d4dd0028979cdb255700414671f21806fbaf557b17e280568379fd567c1f
+  guardrails:
+    version: 1.25.1
+    digest: 149fb544b2d763db17390b75f8a89692a1f083a5b955d344bd84a918df9eff95
+- tag: v5.4.0
+  routing_policy:
+    version: 2.18.0
+    digest: 7e7746160bfe019756015edf0e0ced157f5ef835d1652b238919009a5d64a1e0
+  guardrails:
+    version: 1.26.0
+    digest: ea3ba29a8c597e00a89118d330861d93df22417d3d8af2e1d90f68c55a9d1521
+- tag: v5.5.0
+  routing_policy:
+    version: 2.18.0
+    digest: 7e7746160bfe019756015edf0e0ced157f5ef835d1652b238919009a5d64a1e0
+  guardrails:
+    version: 1.26.0
+    digest: ea3ba29a8c597e00a89118d330861d93df22417d3d8af2e1d90f68c55a9d1521
+- tag: v5.6.0
+  routing_policy:
+    version: 2.18.0
+    digest: 7e7746160bfe019756015edf0e0ced157f5ef835d1652b238919009a5d64a1e0
+  guardrails:
+    version: 1.26.0
+    digest: ea3ba29a8c597e00a89118d330861d93df22417d3d8af2e1d90f68c55a9d1521

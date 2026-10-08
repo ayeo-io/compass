@@ -27,8 +27,11 @@ How a check is judged:
   A missing document is not a failure when the routed approach lists no such
   document among its artifacts: the row is nothing-to-check.
 - `deterministic`: the registered implementation runs.
-- `judged` and `evidence`: not evaluated by this version. A blocking one
-  fails, so a configuration cannot pass by naming a check nothing reads.
+- `judged`: a review record. `review_records.judge` reads the newest record
+  of a listed reviewer and passes it only while the record says pass and
+  matches the check's inputs, definition, issue and generation.
+- `evidence`: not evaluated by this version. A blocking one fails, so a
+  configuration cannot pass by naming a check nothing reads.
 
 When a list is skipped. The stage that produces a human check's document is
 skipped or collapsed (the stage before the listed one for an entry list, the
@@ -41,7 +44,8 @@ An advisory check, by `severity` or by a `blocking_when` that does not match
 the assessment, reports a failure as a pass that says so.
 """
 # DEPENDENCY: standard library (dataclasses, os, re); compass_pkg.check_registry,
-# compass_pkg.check_results, compass_pkg.core, compass_pkg.next_cmd.
+# compass_pkg.check_results, compass_pkg.core, compass_pkg.next_cmd,
+# compass_pkg.review_records.
 # It reads configuration through an EffectiveView and does not import
 # compass_pkg.obligations, which only classify, effective and replay may import.
 from __future__ import annotations
@@ -50,6 +54,7 @@ import os
 import re
 from dataclasses import dataclass
 
+from compass_pkg import review_records
 from compass_pkg.check_registry import CHECK_FNS
 from compass_pkg.check_results import NOTHING_TO_CHECK
 from compass_pkg.core import FOUND, OMITTED, resolve_artifact, unregistered_document
@@ -282,7 +287,7 @@ def evaluate(view, task, task_dir, run=True):
                 severity = _severity(view, check, reading)
                 kind = check.get("kind")
                 status, detail, settled = _outcome(
-                    check, kind, side, stage, producer, modes, task, task_dir,
+                    check_id, check, kind, side, stage, producer, modes, task, task_dir,
                     documents, due, run, owes)
                 if status != "pending":
                     status, detail = _apply(view, check, status, detail, settled, reading)
@@ -311,8 +316,8 @@ def _apply(view, check, status, detail, settled, reading):
 _PASSED = {"pass": True, "fail": False, "nothing-to-check": NOTHING_TO_CHECK}
 
 
-def _outcome(check, kind, side, stage, producer, modes, task, task_dir, documents, due, run,
-             owes):
+def _outcome(check_id, check, kind, side, stage, producer, modes, task, task_dir, documents,
+             due, run, owes):
     """`(status, detail, settled)` for one active check, before its severity
     and `on_skipped` are applied. `settled` is true when the status already
     follows from `on_skipped` or from the route owing no document."""
@@ -335,6 +340,8 @@ def _outcome(check, kind, side, stage, producer, modes, task, task_dir, document
         if not run:
             return "pending", "not run here; `compass check` runs it", False
         return (*_implementation(check, task, task_dir), False)
+    if kind == "judged":
+        return (*review_records.judge(check_id, check, task, task_dir), False)
     return "fail", (f"a check of kind '{kind}' is not evaluated by this version of "
                     f"compass, so it cannot pass"), False
 

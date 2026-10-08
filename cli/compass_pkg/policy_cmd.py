@@ -15,8 +15,7 @@ import os
 import sys
 
 from compass_pkg import governance, layers, parents, policy_lint, policy_migrate
-from compass_pkg import project_settings, replay
-from compass_pkg import policy_update
+from compass_pkg import policy_update, preset_init, preset_test, project_settings, replay
 from compass_pkg.core import (FRAMEWORK_ROOT, CompassError, find_governance, load_manifest,
                               resolve_issue_dir)
 from compass_pkg.terminal import mark_handled, resolve_mode
@@ -78,8 +77,8 @@ def run_policy_effective(args):
                                      fetch=_may_fetch(args))
     if loaded.findings:
         first = loaded.findings[0]
-        raise CompassError(f"nothing can be resolved: {first.code} {first.path}: "
-                           f"{first.message}")
+        raise CompassError(f"nothing can be resolved: {first.code} [{first.layer}] "
+                           f"{first.path}: {first.message}")
     effective = policy_lint.resolve_effective(
         loaded.parent, loaded.project, loaded.issue, meta=loaded.meta, slug=slug,
         git_parents=loaded.git_parents)
@@ -106,6 +105,19 @@ def run_policy_diff(args):
     document = replay.diff(a, b, replay.read_archive(root), open=bool(args.open))
     _emit(args, document, replay.diff_text(document))
     return 1 if args.exit_code and document["differs"] else 0
+
+
+def run_policy_test(args):
+    result = preset_test.run(args.preset_dir, replay.evaluate, fetch=_may_fetch(args))
+    _emit(args, preset_test.report_json(result), preset_test.text(result))
+    return 0 if preset_test.passed(result) else 1
+
+
+def run_policy_init_preset(args):
+    result, files = preset_init.scaffold(args.dir, args.owner, replay.evaluate)
+    _emit(args, preset_init.report_json(args.dir, result, files),
+          preset_init.text(args.dir, result, files))
+    return 0 if result == "written" else 1
 
 
 def _terminal_attached():
@@ -181,6 +193,18 @@ def register(pls):
     pld.add_argument("--exit-code", dest="exit_code", action="store_true",
                      help="exit 1 when anything differs, as git diff --exit-code does")
     pld.set_defaults(func=run_policy_diff, output_kind="report")
+    plt = pls.add_parser("test", help="run a preset's fixtures and check its locks")
+    plt.add_argument("preset_dir", nargs="?", default=".", metavar="PRESET_DIR",
+                     help="the folder that holds the preset's compass.yml (default: the "
+                     "working folder)")
+    plt.add_argument("--offline", action="store_true", help=OFFLINE_HELP)
+    plt.set_defaults(func=run_policy_test, output_kind="report")
+    pli = pls.add_parser("init-preset", help="scaffold a team preset repository")
+    pli.add_argument("dir", metavar="DIR", help="the folder to write the preset into; it is "
+                     "created when it is missing")
+    pli.add_argument("--owner", required=True, metavar="NAME",
+                     help="the team that owns the preset, written to its compass.yml")
+    pli.set_defaults(func=run_policy_init_preset, output_kind="report")
     plu = pls.add_parser("update", help="move the project to another shipped default major, "
                          "re-approving the waivers the move affects")
     plu.add_argument("--to", metavar="MAJOR",

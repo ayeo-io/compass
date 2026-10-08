@@ -812,3 +812,34 @@ def test_cr_7_an_empty_proposal_drops_the_config_layer(tmp_path):
     body = fx.manifest_of(task_dir)
     assert body["generation"] == 3 and "config" not in body
     assert fx.load(fx.gen(task_dir, 3) / "versions.yml")["issue_overlay_digest"] is None
+
+
+# --- the approach is computed from the configuration the reassess commits ----------------------
+
+def _checkpoints(task_dir):
+    return fx.manifest_of(task_dir)["checkpoints"]
+
+
+def test_cr_7_a_proposal_that_changes_autonomy_reaches_the_computed_checkpoints(tmp_path):
+    """In a project with a `compass.yml`, the reassess evaluates the assessment
+    under the configuration it is committing, not the one on disk."""
+    root, task_dir = fx.committed(tmp_path, compass_yml={"schema": 1})
+    before = _checkpoints(task_dir)
+    assert "assess" not in before
+    code, out, err = fx.configure(root, "--autonomy", "controlled")
+    assert code == 0, out + err
+    code, out, err = fx.reassess(root)
+    assert code == 0, out + err
+    after = _checkpoints(task_dir)
+    assert after != before and "assess" in after
+
+
+def test_cr_7_reset_config_gives_the_checkpoints_without_the_layer_in_a_layered_project(
+        tmp_path):
+    body = dict(fx.MANIFEST, config={"autonomy": "controlled"})
+    root, task_dir = fx.project(tmp_path, compass_yml={"schema": 1}, manifest=body)
+    assert fx.reassess(root)[0] == 0
+    assert "assess" in _checkpoints(task_dir)
+    code, out, err = fx.reassess(root, "--reset-config")
+    assert code == 0, out + err
+    assert "assess" not in _checkpoints(task_dir)

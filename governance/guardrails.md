@@ -108,6 +108,10 @@ _(none yet - the shipped default guardrails apply as-is)_
   `entry-exit-evaluation` on, it also checks the entry and exit lists of the
   stages the issue has reached, under the label `stage:<stage>:<entry|exit>`
   (`docs/entry-exit-evaluation.md`). With it off, the output is unchanged.
+- **An advisory failure** is a check that failed where its effective severity
+  is advisory (`severity: advisory`, or a `blocking_when` the assessment does
+  not match). It is labelled ADVISORY, never PASS or FAIL, is counted apart
+  and does not fail the run. `docs/generation-store.md` has the details.
 - **The pre-tool hook** enforces red-before-green in service of `G1`. It is
   approach-aware and does not block on a spike.
 - **The `verifier` and `reviewer` agents** at Verify, for the parts that remain

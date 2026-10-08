@@ -50,12 +50,12 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### A non-text key anywhere in a layer is refused with L-KEY-NOT-TEXT naming its path and telling the person to quote it
+### No member of the compressed archive of shipped releases holds a rival name
 
-- **Scenario id:** `TRC-001`
+- **Scenario id:** `PM-19`
 - **Intent:** `INT-1`
-- **Source issue:** `layer-non-text-key`
-- **Landed:** 2026-10-07
+- **Source issue:** `policy-migrate`
+- **Landed:** 2026-10-08
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
 
@@ -353,4 +353,4 @@
 
 ---
 
-1844 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1863 superseded scenario(s) are in `docs/system-spec-archive.md`.

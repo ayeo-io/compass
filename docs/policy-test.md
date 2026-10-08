@@ -29,10 +29,40 @@ my-preset/
 | Path | Meaning |
 |---|---|
 | `compass.yml` | The preset. It is read as a parent over the shipped default and over any git parent it extends |
-| `compass-fixtures/` | The fixtures, one `.yml` file each, directly in the folder |
+| `compass-fixtures/` | The fixtures, one `.yml` file each, directly in the folder or in a group folder below it |
 
 `compass policy init-preset` writes this layout. The test runs on the folder
 given, or on the working folder when none is given.
+
+## Fixture groups
+
+A folder inside `compass-fixtures/` is a group. Its name is the folder's path
+below `compass-fixtures/`, written with `/`, so the fixtures in
+`compass-fixtures/meets/banking/` are in the group `meets/banking`. A group is
+at most 3 folders deep, and a folder that holds fixtures and folders is a
+group of its own, apart from the groups below it. A fixture directly in `compass-fixtures/`
+has no group.
+
+```
+my-preset/
+  compass.yml
+  compass-fixtures/
+    small-work.yml            # no group
+    meets/
+      banking/
+        large-work.yml        # group meets/banking
+```
+
+Each folder in the path is named with lower-case letters, digits and hyphens,
+starting with a letter or digit, and a group is at most 3 folders deep. A folder
+that breaks either rule is a problem and is not read.
+
+The fixture groups of a preset change nothing about how a fixture runs: every fixture runs over the
+same merged configuration. The group is a label that the report carries, with a
+count for each group, so a tool that reads the report can say which named set of
+fixtures a preset passes. The test does not follow a link of any kind, so a link
+cannot lead the test outside the preset. A folder whose name starts with a dot
+is ignored.
 
 ## What `compass policy test` does
 
@@ -101,8 +131,8 @@ expect:
   stages: {implement: full}
 ```
 
-Fixtures run in the order of their file names. A fixture has one of three
-statuses.
+Fixtures run in this order: the fixtures with no group, then each group by name,
+and within each the fixtures by file name. A fixture has one of three statuses.
 
 | `status` | Meaning |
 |---|---|
@@ -124,9 +154,11 @@ indented under its fixture.
 | A lint error | `lint.ok` is `false`, the fixtures are not run and `fixtures_run` is `false` |
 | A fixture with status `fail` or `error` | `fixtures` and `totals` |
 | No fixture files | `problems` holds `no fixtures` |
-| A folder inside `compass-fixtures/` | `problems` names it. Fixture groups are not read yet, so a fixture in a folder would never run; the test fails instead of passing without it |
-| A file in `compass-fixtures/` that ends in `.yaml`, or in `.yml` with any capital letter | `problems` names it. Fixture files end in lower-case `.yml` |
-| A `.yml` file in `compass-fixtures/` that is not a file, such as a broken link | `problems` names it |
+| A group folder with no fixture file and no folder in it | `problems` names it, so a group that was meant to hold fixtures cannot pass with none |
+| A group folder whose name is not lower-case letters, digits and hyphens starting with a letter or digit, or that is more than 3 folders deep | `problems` names it. The folder is not read |
+| A link of any kind inside `compass-fixtures/` or a group (to a file, to a folder or to nothing) | `problems` names the link. The test does not follow it, so it reads and prints nothing outside the preset |
+| A file in `compass-fixtures/` or in a group that ends in `.yaml`, or in `.yml` with any capital letter | `problems` names it. Fixture files end in lower-case `.yml` |
+| A `.yml` file that is not a regular file | `problems` names it |
 
 A file that starts with a dot, and a file with any other ending, are ignored.
 
@@ -157,6 +189,7 @@ them.
 | `totals` | An object, below |
 | `fixtures` | A list with one object for each fixture, below |
 | `problems` | A list of texts, each one a cause from "What fails the run" |
+| `groups` | A list with one object for each group that holds a fixture, by group name, below. It is empty when no fixture has a group, and when the lint failed before the fixtures ran |
 
 | `lint` key | Value |
 |---|---|
@@ -172,11 +205,20 @@ them.
 
 | `fixtures` key | Value |
 |---|---|
-| `file` | The name of the fixture file in `compass-fixtures/`, such as `small-work.yml` |
+| `file` | The name of the fixture file, such as `small-work.yml`. The folder it is in is `group`, so `group` and `file` together make the path below `compass-fixtures/` |
 | `name` | The fixture's name |
 | `status` | `pass`, `fail` or `error` |
 | `mismatches` | A list of objects with `field`, `expected` and `actual`; empty unless the status is `fail` |
 | `message` | The reason when the status is `error`, otherwise `null` |
+| `group` | The group of the fixture, such as `meets/banking`, or `null` when the file is directly in `compass-fixtures/` |
+
+| `groups` key | Value |
+|---|---|
+| `group` | The group name |
+| `fixtures` | The number of fixtures in that group, not counting the groups below it |
+| `passed` | How many have status `pass` |
+| `failed` | How many have status `fail` or `error` |
+| `result` | `pass` when `failed` is 0, otherwise `fail` |
 
 ```json
 {
@@ -192,21 +234,29 @@ them.
       "name": "Small contained work also gets the clarity review",
       "status": "fail",
       "mismatches": [{"field": "stages.implement", "expected": "light", "actual": "full"}],
-      "message": null
+      "message": null,
+      "group": "meets/banking"
     }
   ],
-  "problems": []
+  "problems": [],
+  "groups": [{"group": "meets/banking", "fixtures": 1, "passed": 0, "failed": 1, "result": "fail"}]
 }
 ```
 
-### What a later release adds
+The text report adds one line for each group after the fixture totals, such as
+`group meets/banking: 2 run, 1 passed, 1 failed`.
 
-A later release reads fixtures in folders under `compass-fixtures/` as
-fixture groups, such as `compass-fixtures/meets/<name>/`, and adds a `--group`
-selector, a `group` key on each fixture and a list of groups with a count of
-fixtures for each group. The additions are new keys at the end of an object.
-No key above changes its meaning or its place. Until then a folder under
-`compass-fixtures/` is a problem, as above.
+The key order of a report with groups is pinned by
+`tests/fixtures/preset-interfaces/policy-test-groups.json`, and
+`tests/test_preset_interfaces.py` compares a real report with it key for key.
+`groups` and `group` are the last keys of their objects, so a reader written for
+the earlier report still finds every key it knew in the same place.
+
+### What the report does not have yet
+
+There is no `--group` selector to run one group. The report holds every group,
+and a tool that wants one reads it from `groups`. A later release can add the
+selector without changing the report.
 
 ## `compass policy init-preset DIR --owner NAME`
 

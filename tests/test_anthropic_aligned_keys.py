@@ -160,7 +160,7 @@ def test_an_archived_gate_id_still_resolves():
 
 def test_the_config_names_multiagent_work_by_its_new_name():
     """`TRC-B7`: shipped template and this repository's own config."""
-    for rel in (".compass/config.yml", "templates/config.yml"):
+    for rel in ("compass.yml", "templates/config.yml"):
         path = ROOT / rel
         if not path.exists():
             continue

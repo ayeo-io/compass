@@ -352,8 +352,8 @@ BDD_CONFIG_KEYS = ("bdd_runner", "bdd_features_dir", "bdd_steps_dir",
 
 
 def test_trc_a8_config_template_documents_bdd_keys(framework_root):
-    # the config /compass:init copies into a project
-    text = (framework_root / ".compass" / "config.yml").read_text(encoding="utf-8")
+    # this repository's compass.yml is the documented reference for the keys
+    text = (framework_root / "compass.yml").read_text(encoding="utf-8")
 
     for key in BDD_CONFIG_KEYS:
         assert key in text, f"{key} is not documented in the shipped config"

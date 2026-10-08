@@ -1,0 +1,105 @@
+# Compass - this repository's own settings.
+#
+# The framework repository is also a Compass project. This file holds settings
+# keys only: no check, gate, rule or route, no waiver, no unlock and no
+# capability. Its governance/ files are the set every adopter gets, so this
+# repository's issues run the shipped default unchanged, and its delivery
+# record stays valid evidence for that default. tests/test_framework_compass_yml.py
+# fails when a catalogue key appears here.
+#
+# `compass policy migrate` refuses in this repository, so this file was written
+# by hand from the keys it would have moved out of .compass/config.yml. The
+# state the CLI wrote (records_signed_since) is in .compass/state.yml. See
+# docs/configuration.md for every setting and its default.
+
+schema: 1
+extends: compass:default@6
+
+# Whether a failed check blocks. `enforced`: compass check and compass ci return
+# non-zero on any failure. `advisory` reports every failure and returns 0.
+adoption: enforced
+
+# How often a session stops to wait for a person at a stage hand-off. This
+# repository runs autonomously at the maintainer's request (5 Oct 2026): every
+# hand-off is shown and logged, none stops. It changes no gate, evidence, hook
+# or `compass check`. Adopters keep the shipped default, `balanced`.
+autonomy: autonomous
+
+# `compass policy lint` compares a project's copied governance/ with the
+# framework's. Advisory reports drift; strict makes `compass ci` fail on it.
+governance_drift: advisory
+
+# Adds to the built-in set of production code that hooks/pre-tool.sh guards.
+# This repository declares its shell scripts, because hooks/*.sh and
+# scripts/*.sh are the production code here: pre-tool.sh is the enforcement
+# mechanism and release.sh cuts releases (ADR-011).
+enforcement:
+  code_globs:
+    - "hooks/*.sh"
+    - "scripts/*.sh"
+
+# A project guardrail may declare `check: command-passes`, which runs a command
+# the project wrote. That is code execution, so it is off unless this is true.
+# It is not a security control: this file is in your repository, so a hostile
+# pull request can add a command and set this key in the same diff. Compass
+# also refuses to run project commands when the CI runner's environment says
+# the contribution is untrusted, and that refusal reads nothing here. See
+# docs/security.md.
+# allow_project_commands: true
+
+project:
+  # The name shown in artifact headers and the devlog.
+  name: "Compass (framework)"
+
+  # The command Compass runs to run the test suite. Passed to `compass
+  # tdd-red` and `compass tdd-green` as the test command, and used by
+  # scripts/integrate.sh for combined regression.
+  test_command: "pytest -q"   # e.g. "npm test", "pytest -q", "go test ./..."
+
+  # Executable BDD (all optional). `compass bdd extract` lifts the Gherkin out
+  # of an issue's acceptance-criteria.md into a .feature file, tagged with each
+  # scenario's TRC id. It works with none of the keys below set. The keys wire
+  # that output to a real BDD runner, and they ship commented out on purpose: a
+  # project that edits nothing has opted into nothing. See
+  # examples/bdd-adapters/ for a worked project per runner.
+  #
+  #   bdd_runner        The BDD runner this project uses. Names the adapter
+  #                     under examples/bdd-adapters/ that matches your setup.
+  # bdd_runner: pytest-bdd        # pytest-bdd | cucumber-js | behave | godog
+  #
+  #   bdd_features_dir  Where `compass bdd extract` writes the .feature file.
+  #                     Unset, it writes `acceptance-criteria.feature` into the
+  #                     issue's own directory. Set it when your runner expects
+  #                     a conventional features/ directory; the file is then
+  #                     written as <dir>/<issue-slug>.feature.
+  # bdd_features_dir: features
+  #
+  #   bdd_steps_dir     Where your step definitions live. Compass does not read
+  #                     this; it is recorded so the runner wiring is in one
+  #                     place and a reader can find both halves.
+  # bdd_steps_dir: tests/steps
+  #
+  #   bdd_run_command   How to run the acceptance suite once the .feature is
+  #                     extracted and the steps are bound.
+  # bdd_run_command: pytest tests/
+
+multiagent:
+  # The worktree root, relative to the project. How many subtasks may run at
+  # once is a routing rule, not a setting.
+  worktree_root: "../.compass-worktrees"
+
+# The delivery record (ADR-031). The issue records, the planning documents and
+# the backlog command are kept out of this public repository. `compass record
+# sync` copies them, with credentials redacted, into a private repository.
+record:
+  remote: https://github.com/ayeo-io/compass-delivery-record.git
+  # Rival product names are replaced by their codes before syncing
+  # (governance/decisions/2026-10-04-rival-names-never-committed.md).
+  names_key: .compass/private/rival-codes.yml
+  paths:
+    - .compass/work
+    - .compass/rulings
+    - docs/compass
+    - docs/analysis
+    - docs/proposals
+    - .claude/commands

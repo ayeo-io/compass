@@ -75,6 +75,16 @@ With the capability `artifact-freshness` on, the receipt adds an *Artifact fresh
 
 The sections before the verdict run in this order: *Stage lists*, *Artifact freshness*, *Provenance*, then the conformance lines.
 
+## The conformance line
+
+A project whose `compass.yml` unlocks a framework entry gets one more line,
+above the verdict, on the receipt and on `compass check` and `compass approach
+summary`: `Conformance: non-conformant - this project unlocks framework entries:
+...`. A `compass.yml` that cannot be read prints `Conformance: not checked`. A
+project with no `compass.yml`, or one that unlocks nothing, gets no line, so the
+receipt in the example above is unchanged. The line states the configuration,
+not the quality of the work (see `docs/safety-contract.md`).
+
 ## Provenance
 
 An issue that runs against a stored generation (`docs/generation-store.md`) gets a *Provenance* section before the verdict. It names where each entry came from, so a reader can trace it to the file that set it. The title carries the generation number, because an issue runs against one generation.

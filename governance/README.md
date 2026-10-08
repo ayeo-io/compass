@@ -31,6 +31,8 @@ project-specific additions. That is a complete, usable governance state, not
 a skipped step. A team starts there and adds strategies as it forms
 opinions, and adds a guardrail only when it hits something that must never
 recur. This is what makes `/compass:init` optional - see `docs/quickstart.md`.
+Since 6.0.0 a team makes those additions in its `compass.yml`, which extends
+the shipped defaults (see `docs/configuration.md`).
 
 **It keeps honest things honest.** Guardrails are *checkable* - a test ran, a
 scan passed, a human approved. Strategies are *assessed* - is this clear, does
@@ -94,9 +96,11 @@ stale, contradictory strategies is its own kind of mess. So:
 | `signals.yml` | Advisory patterns: scope-bloat phrases the stop-hook prompts on, the rework-scan window, public-surface patterns | Soft signals - *not* guardrails; advisory only |
 | `quarantine.yml` | Records of intermittent tests explicitly quarantined with a tracking issue | Pairs with the `no-trusted-rerun` rule on evidence-not-assertion (see `strategies.md` `S5`) |
 
-The framework ships these with sane, active defaults. `/compass:init` copies
-them into a project so the team can extend them; until then, the shipped
-defaults apply as-is. Editing is accretion, not a precondition.
+The framework ships these with sane, active defaults. A project that does
+nothing runs on them as they are. A project that copied them under 5.x runs on
+its copy until `compass policy migrate` turns the copy into a `compass.yml`
+overlay. A new project's `/compass:init` copies nothing. Editing is accretion,
+not a precondition.
 
 ## What happens to the shipped defaults when a project declares its own
 

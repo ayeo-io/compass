@@ -2895,6 +2895,37 @@ def test_backdate_setup_date_rewrites_every_occurrence_of_the_stamped_date(
     assert "2026-09-27" not in text
 
 
+def test_the_backdate_comment_stays_within_100_columns():
+    lines = Path(harness.__file__).read_text(encoding="utf-8").splitlines()
+    start = next(i for i, l in enumerate(lines) if "refusal quotes the state file" in l)
+    block = lines[start:start + 8]
+    assert [l for l in block if len(l) > 100] == []
+
+
+def test_backdate_setup_date_rewrites_the_state_file_compass_init_writes(tmp_path):
+    """`compass init` writes the state file in `.compass/` and no
+    `.compass/config.yml` (ADR-043). The backdate must reach the file the real
+    CLI wrote, or the hook's first refusal quotes today's date again."""
+    repo_dir = tmp_path / "repo"
+    compass_dir = repo_dir / ".compass"
+    compass_dir.mkdir(parents=True)
+    (compass_dir / "state.yml").write_text(
+        "initialised:\n"
+        "  by: \"compass init\"\n"
+        "  at: \"2026-09-27\"\n"
+        "records_signed_since: '2026-09-27'\n",
+        encoding="utf-8",
+    )
+
+    harness._backdate_setup_date(repo_dir)
+
+    text = (compass_dir / "state.yml").read_text(encoding="utf-8")
+    assert 'at: "2026-08-28"' in text
+    assert "records_signed_since: '2026-08-28'" in text
+    assert "2026-09-27" not in text
+    assert not (compass_dir / "config.yml").exists()
+
+
 def test_backdate_setup_date_does_nothing_without_a_config_file(tmp_path):
     repo_dir = tmp_path / "repo"
     repo_dir.mkdir()

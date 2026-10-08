@@ -4,7 +4,8 @@
 #
 # Projects override by editing their own copy of this file (same pattern as
 # guardrails.yml and routing-policy.yml). The framework ships these defaults;
-# `/compass:init` copies them into a consuming project on first use.
+# `/compass:init` copies nothing, so a project that wants different patterns
+# adds its own copy of this file.
 #
 
 version: 1.0.0

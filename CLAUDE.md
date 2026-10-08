@@ -30,8 +30,10 @@ and the things it does not claim.
   creates `.compass/` for you if it is absent and says so.
 - It creates project state only, never `governance/`. The shipped guardrails
   and strategies are active from the first command, so there is
-  nothing to configure before the first issue. `/compass:init` is how a
-  project adds its own governance later.
+  nothing to configure before the first issue. `/compass:init` writes the
+  project's `compass.yml` (or runs `compass policy migrate` on a project that
+  has a `.compass/config.yml` or copied governance), and a project adds its own
+  governance there later.
 
 ## Governance
 

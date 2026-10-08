@@ -108,7 +108,32 @@ def load_routing():
     return lines[0], lines[1:]
 
 
-def routing_differences(policy, header, rows, first_only=False):
+def legacy_spelling(result):
+    """A routing result from the layered path, spelled as 5.6.0 spelled it.
+
+    The shipped preset names a required document by its id (`intent`,
+    `launch-readiness`) and a blocked stage by its current name (`ship`). The
+    5.6.0 policy file named them `intent.md`, `launch-readiness.md` and `land`,
+    and the generated view still does. This maps exactly those three names back
+    and changes nothing else, so any other name still differs from the baseline
+    and a layered result is compared with it field for field."""
+    if "error" in result:
+        return result
+    out = dict(result)
+    out["required_artifacts"] = sorted(
+        SPELLED_AS_5_6_0_ARTIFACT.get(a, a) for a in result["required_artifacts"])
+    out["blocked_phases"] = [
+        dict(b, phase=SPELLED_AS_5_6_0_STAGE.get(b["phase"], b["phase"]))
+        for b in result["blocked_phases"]]
+    return out
+
+
+SPELLED_AS_5_6_0_ARTIFACT = {"intent": "intent.md",
+                             "launch-readiness": "launch-readiness.md"}
+SPELLED_AS_5_6_0_STAGE = {"ship": "land"}
+
+
+def routing_differences(policy, header, rows, first_only=False, layered=False):
     """Every place `policy` routes differently from the baseline, as text.
     Empty when the two agree everywhere the baseline recorded. With
     `first_only`, it stops at the first difference, which is all a test
@@ -118,6 +143,8 @@ def routing_differences(policy, header, rows, first_only=False):
     for row in rows:
         if row["kind"] in ("grid", "archive"):
             now = compact(row["assessment"], policy)
+            if layered:
+                now = legacy_spelling(now)
             if now != row["result"]:
                 found.append(f"{row['kind']} {row['assessment']}: "
                              f"{_first_difference(row['result'], now)}")
@@ -127,7 +154,8 @@ def routing_differences(policy, header, rows, first_only=False):
             assessment = row["assessment"]
             for subset, expected in zip(label_subsets(labels), row["digests"]):
                 readings = dict(assessment, labels=subset)
-                if digest(compact(readings, policy)) != expected:
+                now = compact(readings, policy)
+                if digest(legacy_spelling(now) if layered else now) != expected:
                     found.append(f"labels {subset} on {assessment}: result changed")
                     if first_only:
                         return found
@@ -204,3 +232,90 @@ def archive_differences(recorded, now):
         if old != new:
             found.append(f"{slug}: {_first_difference(old or {}, new or {})}")
     return found
+
+
+# --- configurations B and C ------------------------------------------------------
+#
+# The contracts hold under three configurations: A (nothing, the shipped
+# default alone), B (an empty overlay) and C (a copy of the 5.6.0 governance
+# files, read through the legacy adapter). The files for C are byte copies of
+# what 5.6.0 shipped, taken once with `git show v5.6.0:governance/<file>`.
+
+# Packed, so the prose scans do not read the 5.6.0 wording as this tree's.
+GOVERNANCE_5_6_0 = FIXTURES / "v5.6.0-governance.tgz"
+GOVERNANCE_FILES = ("routing-policy.yml", "guardrails.yml")
+EMPTY_OVERLAY = "schema: 1\nextends: compass:default@6\n"
+# `fault` plants a change in the builder, so a contract run under the
+# configuration has something to see:
+#   routing: a valid configuration that routes differently from 5.6.0;
+#   broken:  a configuration Compass cannot read.
+PLANTED_OVERLAY = EMPTY_OVERLAY + (
+    "approaches:\n  regular:\n    set:\n      subtask_ceiling: 5\n"
+    "      gates: [verify.correctness, verify.governance, verify.traceability,"
+    " verify.clarity, verify.security]\n")
+BROKEN_OVERLAY = EMPTY_OVERLAY + "approaches: oops\n"
+
+
+def add_governance_copy(root, fault=None):
+    """Put the 5.6.0 governance files in `root/governance/`."""
+    folder = Path(root) / "governance"
+    folder.mkdir(parents=True, exist_ok=True)
+    import tarfile
+    with tarfile.open(GOVERNANCE_5_6_0) as tar:
+        for name in GOVERNANCE_FILES:
+            member = tar.extractfile(f"governance/{name}")
+            (folder / name).write_bytes(member.read())
+    policy = folder / "routing-policy.yml"
+    if fault == "routing":
+        import yaml
+        data = yaml.safe_load(policy.read_text(encoding="utf-8"))
+        shape = data["route_shapes"]["standard"]
+        shape["gates"] = [g for g in shape["gates"] if g != "verify.regression"]
+        policy.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+    elif fault == "broken":
+        policy.write_text("version: 1\nroute_shapes: oops\n", encoding="utf-8")
+        (folder / "guardrails.yml").write_text("version: 1\ndefaults: oops\n",
+                                               encoding="utf-8")
+
+
+def build_configuration(kind, root, fault=None):
+    """Add configuration `kind` to a project root that has a `.compass/`."""
+    root = Path(root)
+    if kind == "B":
+        text = {"routing": PLANTED_OVERLAY, "broken": BROKEN_OVERLAY}.get(
+            fault, EMPTY_OVERLAY)
+        (root / "compass.yml").write_text(text, encoding="utf-8")
+    elif kind == "C":
+        add_governance_copy(root, fault)
+    elif kind != "A":
+        raise ValueError(f"unknown configuration {kind!r}")
+
+
+def policy_under(kind, scratch, fault=None):
+    """The routing policy the evaluator reads for a project in configuration
+    `kind`: the resolved configuration, in the shape `evaluate_route` takes."""
+    from compass_pkg import effective
+
+    root = Path(scratch) / "project"
+    (root / ".compass" / "work").mkdir(parents=True)
+    build_configuration(kind, root, fault)
+    resolution = effective.resolve_live(str(root))
+    view = effective.EffectiveView("live", None, None, resolution.resolved,
+                                   resolution.versions)
+    return view.evaluator_policy()
+
+
+def archive_under(kind, fault=None):
+    """A copy of the archive sample with configuration `kind` added. It sits
+    beside the sample's cache, inside this checkout, because some checks ask
+    git about the commits an issue names. The caller removes it."""
+    import shutil
+    import tempfile
+
+    from archive import CACHE, sample_root
+
+    CACHE.mkdir(exist_ok=True)
+    root = Path(tempfile.mkdtemp(dir=CACHE, prefix=f"config-{kind}-"))
+    shutil.copytree(sample_root(), root, dirs_exist_ok=True, symlinks=True)
+    build_configuration(kind, root, fault)
+    return root

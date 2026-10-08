@@ -78,6 +78,7 @@ from compass_pkg.run_cmd import register as register_run_parser  # noqa: E402
 from compass_pkg.record import register as register_record_parser  # noqa: E402
 from compass_pkg.review_rules import register as register_review_rules_parser  # noqa: E402
 from compass_pkg.policy_cmd import register as register_policy_parser  # noqa: E402
+from compass_pkg.review_cmd import register as register_review_parser  # noqa: E402
 from compass_pkg.issue_config_cmd import register as register_issue_configure_parser  # noqa: E402
 
 # Declared literally here as well as in compass_pkg.core: this file is
@@ -541,6 +542,7 @@ def build_parser():
     peva.add_argument("--path", required=True, help="path to the evidence file")
     peva.add_argument("--scenario", help="scenario this evidence is for (optional)")
     peva.set_defaults(func=cmd_evidence_add, output_kind="hand-off")
+    register_review_parser(pevs)
 
     register_quick_fix_parser(sub, issue_arg)
     register_decision_parser(sub)

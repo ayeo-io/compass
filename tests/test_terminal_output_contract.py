@@ -968,6 +968,7 @@ _TAIL_EXEMPT = {
     "check": "measured by its own tests above, on a failing issue",
     "policy lint": "needs a governance tree of its own to say anything",
     "issue lint": "needs a malformed manifest to say anything",
+    "evidence review": "needs a judged check in the stored configuration and an input document, which this fixture lacks; test_judged_checks.py runs it and pins its --json output",
     # Prints one bare path on stdout and nothing else, on purpose: the two
     # hooks read it in a command substitution, and a hand-off tail in the
     # middle of that would end up in the variable.

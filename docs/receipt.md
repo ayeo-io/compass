@@ -73,7 +73,7 @@ When any list check is active, the receipt adds a *Stage lists* section before t
 
 With the capability `artifact-freshness` on, the receipt adds an *Artifact freshness* section before the verdict. It shows each document that records the digests of its upstream as `fresh` or `stale`, with the artifact that changed. It adds nothing when no document is tracked, or when the capability is off (`docs/artifact-freshness.md`).
 
-The sections before the verdict run in this order: *Stage lists*, *Artifact freshness*, *Provenance*, then the conformance lines of `compass locks`.
+The sections before the verdict run in this order: *Stage lists*, *Artifact freshness*, *Provenance*, then the conformance lines.
 
 ## Provenance
 

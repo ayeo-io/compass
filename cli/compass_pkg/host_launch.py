@@ -176,11 +176,20 @@ def launch_claude(claude_exe, message, args, cwd, env, timeout=None, user=None,
                               stdin=subprocess.DEVNULL)
         return Launch(proc.returncode, proc.stdout or "", proc.stderr or "",
                       False)
-    proc = subprocess.Popen(command, cwd=str(cwd), env=env, text=True,
-                            stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE, start_new_session=True,
-                            **as_user)
+    # An interrupt that lands while the session is being created would
+    # raise before `proc` is known, and the session would keep running in
+    # its own group. Hold the interrupt signals until `proc` is set, then
+    # release them inside the `try` below, where the session is ended.
+    held = _hold_interrupts()
+    proc = None
     try:
+        proc = subprocess.Popen(command, cwd=str(cwd), env=env, text=True,
+                                stdin=subprocess.DEVNULL,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE, start_new_session=True,
+                                preexec_fn=_release_interrupts(held),
+                                **as_user)
+        _release_interrupts(held)()
         stdout, stderr = proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
         _end_group(proc)
@@ -189,10 +198,32 @@ def launch_claude(claude_exe, message, args, cwd, env, timeout=None, user=None,
     except BaseException:
         # Interrupted (Ctrl-C, a cancelled CI job): the session has its own
         # group, so the signal did not reach it. End it before going on.
-        _end_group(proc)
-        proc.wait()
+        if proc is not None:
+            _end_group(proc)
+            proc.wait()
         raise
+    finally:
+        _release_interrupts(held)()
     return Launch(proc.returncode, stdout or "", stderr or "", False)
+
+
+def _hold_interrupts():
+    """Block SIGINT and SIGTERM for this thread; return the earlier mask,
+    or None where the platform cannot block signals."""
+    if not hasattr(signal, "pthread_sigmask"):
+        return None
+    return signal.pthread_sigmask(signal.SIG_BLOCK,
+                                  {signal.SIGINT, signal.SIGTERM})
+
+
+def _release_interrupts(held):
+    """A function that restores the mask `_hold_interrupts` returned. The
+    session process runs it before starting, so it does not inherit the
+    block."""
+    def restore():
+        if held is not None:
+            signal.pthread_sigmask(signal.SIG_SETMASK, held)
+    return restore
 
 
 def _end_group(proc):

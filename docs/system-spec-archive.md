@@ -13077,6 +13077,13 @@
 - **Source issue:** `effective-readers`
 - **Landed:** 2026-10-08
 
+### The approach diagram of a project with a compass.yml renders the effective configuration _(archived)_
+
+- **Scenario id:** `EF-12`
+- **Intent:** `INT-1`
+- **Source issue:** `effective-readers`
+- **Landed:** 2026-10-08
+
 ### The accessors of the shipped default's generation equal what the governance files hold _(archived)_
 
 - **Scenario id:** `EF-2`

@@ -50,11 +50,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### The approach diagram of a project with a compass.yml renders the effective configuration
+### Given a loaded machine, when a run is interrupted, then the tests wait for the session to start before signalling
 
-- **Scenario id:** `EF-12`
+- **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `effective-readers`
+- **Source issue:** `sigint-tests-under-load`
 - **Landed:** 2026-10-08
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -353,4 +353,4 @@
 
 ---
 
-1875 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1876 superseded scenario(s) are in `docs/system-spec-archive.md`.

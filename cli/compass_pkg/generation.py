@@ -537,6 +537,12 @@ def preflight(task_dir, resolution, manifest, invalidated=None, adopt=None):
             f"issue {os.path.basename(os.path.normpath(task_dir))} is landed and keeps "
             f"the configuration it landed under; it cannot store a new generation")
     if adopt is not None:
+        if resolution.finish is not None:
+            # The leftover holds the stored classification of each git parent,
+            # which `commit` adds before it compares; compare with the same
+            # document or a leftover that commit would adopt is refused here.
+            resolution.finish(resolution.versions)
+            documents["versions.yml"] = {"schema": SCHEMA, **resolution.versions}
         _check_adoption(task_dir, adopt, n + 1, documents, number(disk))
     if resolution.validate is not None:
         resolution.validate()

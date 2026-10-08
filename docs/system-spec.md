@@ -3289,3 +3289,15 @@
 - `RP-15` A section that cannot be rendered says so
 - `RP-16` The module stays pure
 - `RP-17` The receipt help mentions the section
+
+### artifact-freshness (landed 2026-10-08)
+
+- `FRESH-1` With the capability off, the manifest, compass check, the receipt, compass next and ship-commit behave as before
+- `FRESH-2` With the capability on, registering a document records the digest of its file and of each artifact it depends on
+- `FRESH-3` When an upstream artifact changed after a document was written, compass check reports it stale and fails
+- `FRESH-4` A document is stale when an artifact it depends on transitively is stale
+- `FRESH-5` Re-running a presence check does not clear staleness; only writing the document again does
+- `FRESH-6` ship-commit refuses to land a stale artifact and names it
+- `FRESH-7` Entry to implement is refused while a document it consumes is stale
+- `FRESH-8` The receipt lists the freshness of each recorded document
+- `FRESH-9` A project that declares no depends_on has nothing stale

@@ -574,6 +574,7 @@ def cmd_approach_summary(args):
 def cmd_route_evaluate(args):
     task = None
     task_path = None
+    plan = None
     task_dir = None
     if args.reading and getattr(args, "write", False):
         # Refused before anything prints: a refusal that follows a printed
@@ -616,6 +617,16 @@ def cmd_route_evaluate(args):
         key_errors = assessment_key_errors(readings)
         if key_errors:
             raise CompassError(f"{task_path}: " + "; ".join(key_errors))
+        # The proposal, the waiver re-check and the flags are settled before
+        # anything prints, so a refusal never follows a printed result.
+        if getattr(args, "write", False):
+            from compass_pkg import issue_config_cmd
+            plan = issue_config_cmd.reassess_plan(task, task_dir, args)
+    if plan is None and (getattr(args, "reset_config", False)
+                         or getattr(args, "adopt", None) is not None):
+        flag = "--reset-config" if getattr(args, "reset_config", False) else "--commit"
+        raise CompassError(f"{flag} needs --write and an issue: it works inside the "
+                           f"reassess that commits the next generation")
 
     # The configuration the approach is computed from. An issue with a
     # generation is judged by it. `--write` commits the configuration as it is
@@ -623,6 +634,11 @@ def cmd_route_evaluate(args):
     # project with no `compass.yml`, reads the governance files.
     from compass_pkg import effective
     view = effective.view_or_legacy(task_dir, live=bool(args.write))
+    if plan is not None and view is not None:
+        # The reassess plan holds the configuration this write will commit:
+        # the proposal applied, or `config:` dropped, and a stale waiver left out.
+        view = effective.EffectiveView("live", view.issue, None, plan.resolution.resolved,
+                                       plan.resolution.versions)
     if view is None:
         gov = find_governance()
         policy = load_yaml(os.path.join(gov, "routing-policy.yml"))
@@ -886,27 +902,57 @@ def cmd_route_evaluate(args):
         # files are whole (ADR-036). A configuration that does not resolve
         # raises here, before any file is written.
         from compass_pkg import effective
+
+        # A reassess that changes only the issue's `config:` layer is logged
+        # with its own kind. `compass retro` ignores it: no one misread the work.
+        configuring = not reframed and plan.config_changed
+        if configuring:
+            task.setdefault("reassessments", []).append({
+                "from_route": prior["delivery_approach"] or result["delivery_approach"],
+                "to_route": result["delivery_approach"],
+                "kind": "configuration",
+                "changed": {"config": {"from": plan.config_digests[0],
+                                       "to": plan.config_digests[1]}},
+                "reason": args.reason or "(reason not given - fill this in)",
+                "date": datetime.date.today().isoformat(),
+            })
+
+        def stamp(mapping, old, new):
+            # The entry says which generation the reassess moved from and to;
+            # both are the same number when nothing was committed. A change to
+            # the config: layer always commits, so a configuration entry never
+            # sees the same number twice.
+            if reframed or configuring:
+                mapping["reassessments"][-1]["generation"] = {"from": old, "to": new}
         # The accepted-type comments are written in the same replace, under the lock.
-        committed = effective.commit_generation(task_dir, task,
-                                                render=annotate_gate_accepts_text)
+        committed = effective.commit_generation(
+            task_dir, task, plan.invalidated, annotate_gate_accepts_text,
+            adopt=plan.adopt, proposal=plan.proposal, stamp=stamp,
+            resolution=plan.resolution)
         print(f"\n  wrote the delivery approach, stages and gates -> {task_path}")
         print(f"  {committed.message}")
+        for note in plan.notes:
+            print(f"  {note}")
         from compass_pkg.dashboard import stale_page_reminder
         reminder = stale_page_reminder(task_dir)
         if reminder:
             print(f"  {reminder}")
-        if not reframed and getattr(args, "reason", None):
+        configured = configuring and committed.committed
+        if not reframed and not configured and getattr(args, "reason", None):
             print("  the delivery approach did not change - the --reason was NOT "
                   "recorded. The approach, stages, gates, ceiling and policy "
                   "rules fired are all identical to what was already on record.")
+        if configured:
+            print(f"  RE-ASSESSMENT recorded (configuration): the issue's config: layer "
+                  f"changed, generation {committed.number - 1} -> {committed.number}")
         if reframed:
             print(f"  RE-ASSESSMENT recorded ({task['reassessments'][-1]['kind']}): "
                   f"{prior['delivery_approach']} -> {result['delivery_approach']}"
                   + (f"  [changed: {', '.join(sorted(changed))}]" if changed else ""))
-            if not args.reason:
-                sys.stderr.write(
-                    "compass: re-assessment recorded with no reason. Re-run with "
-                    "--reason \"...\" or edit manifest.yml's last `reassessments` "
-                    "entry - the reason is the calibration signal.\n"
-                )
+        if (reframed or configured) and not args.reason:
+            sys.stderr.write(
+                "compass: re-assessment recorded with no reason. Re-run with "
+                "--reason \"...\" or edit manifest.yml's last `reassessments` "
+                "entry - the reason is the calibration signal.\n"
+            )
     return 0

@@ -13280,6 +13280,13 @@
 - **Source issue:** `check-severity-from-generation`
 - **Landed:** 2026-10-08
 
+### Given a spike with an advisory guardrail check that fails, then the run passes and shows the failure as advisory _(archived)_
+
+- **Scenario id:** `CS-11`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
 ### Given a blocking check, when it fails, then the run fails _(archived)_
 
 - **Scenario id:** `CS-2`
@@ -13334,4 +13341,172 @@
 - **Scenario id:** `CS-9`
 - **Intent:** `INT-1`
 - **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### A major difference refuses only that check _(archived)_
+
+- **Scenario id:** `IR-1`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### migrate-config commits nothing when already pinned _(archived)_
+
+- **Scenario id:** `IR-10`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### migrate-config adopts an issue with no generation _(archived)_
+
+- **Scenario id:** `IR-11`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### The coverage page is derived and kept current _(archived)_
+
+- **Scenario id:** `IR-12`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### The refusal names what to do _(archived)_
+
+- **Scenario id:** `IR-2`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### A minor or patch difference is not refused _(archived)_
+
+- **Scenario id:** `IR-3`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### A resolver or schema major difference refuses the run _(archived)_
+
+- **Scenario id:** `IR-4`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### A refused check is reported as refused and records no result _(archived)_
+
+- **Scenario id:** `IR-5`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### A verdict change without a major bump fails the build _(archived)_
+
+- **Scenario id:** `IR-6`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### The lock file holds a version and a verdict digest per implementation _(archived)_
+
+- **Scenario id:** `IR-7`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### migrate-config pins the installed versions and invalidates old results _(archived)_
+
+- **Scenario id:** `IR-8`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### migrate-config refuses a landed issue _(archived)_
+
+- **Scenario id:** `IR-9`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### Given other threads exist, when an interrupt arrives while the session is created, then the session is ended _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `signal-hold-all-threads`
+- **Landed:** 2026-10-08
+
+### configure writes the proposal and leaves the manifest as it was _(archived)_
+
+- **Scenario id:** `CR-1`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### the unreferenced-folder refusal names the folder and both commands, and every named command exists _(archived)_
+
+- **Scenario id:** `CR-10`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### help, owning doc, assess command and command corpus describe the verb _(archived)_
+
+- **Scenario id:** `CR-11`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### the preview lists fields, classification, assessment effect, invalidations and the next step; exit 0, 1 or 2 _(archived)_
+
+- **Scenario id:** `CR-2`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### the JSON has the documented keys in order and equals the pinned example _(archived)_
+
+- **Scenario id:** `CR-3`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### discard removes a proposal or leftover above the current generation and never the current or older _(archived)_
+
+- **Scenario id:** `CR-4`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### commit adopts a whole unreferenced folder only when a fresh resolution gives the same files _(archived)_
+
+- **Scenario id:** `CR-5`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### a reassess interrupted after each step is resolved by commit or discard _(archived)_
+
+- **Scenario id:** `CR-6`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### reassess commits the pending proposal, refuses a stale one, and reset-config drops the overlay _(archived)_
+
+- **Scenario id:** `CR-7`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### a reassessments entry carries the generation it moved from and to _(archived)_
+
+- **Scenario id:** `CR-8`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### records statuses carry forward and a waiver whose parent value changed is invalidated and reverted _(archived)_
+
+- **Scenario id:** `CR-9`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
 - **Landed:** 2026-10-08

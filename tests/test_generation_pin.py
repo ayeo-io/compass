@@ -56,7 +56,7 @@ def test_gp_13_a_moved_pin_does_not_change_an_issue_with_a_generation(tmp_path, 
     assert (view.source, view.generation) == ("generation", 1)
     assert view.versions["parents"][-1]["sha"] == first
     assert (view.resolved.get("capabilities") is not None) and not (
-        root / ".compass" / "cache" / "parents" / second).exists()
+        root / ".compass" / "cache" / "parents" / "acme" / "bank" / second).exists()
 
 
 def test_gp_13_the_next_generation_takes_the_new_pin(tmp_path, monkeypatch):

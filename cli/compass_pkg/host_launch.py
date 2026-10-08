@@ -10,7 +10,7 @@
 # It starts the process and returns what came back. It reads no credential
 # and adds none: the caller's environment is passed on as it is.
 #
-# DEPENDENCY: standard library (json, os, selectors, signal, subprocess,
+# DEPENDENCY: standard library (json, os, selectors, signal, subprocess, sys,
 # threading, time).
 # =============================================================================
 """Start one `claude -p` call and read the result event it prints."""
@@ -21,6 +21,7 @@ import os
 import selectors
 import signal
 import subprocess
+import sys
 import threading
 import time
 from typing import Callable, NamedTuple
@@ -179,17 +180,17 @@ def launch_claude(claude_exe, message, args, cwd, env, timeout=None, user=None,
     # An interrupt that lands while the session is being created would
     # raise before `proc` is known, and the session would keep running in
     # its own group. Hold the interrupt signals until `proc` is set, then
-    # release them inside the `try` below, where the session is ended.
-    held = _hold_interrupts()
+    # replay them inside the `try` below, where the session is ended.
+    hold = _InterruptHold()
     proc = None
     try:
         proc = subprocess.Popen(command, cwd=str(cwd), env=env, text=True,
                                 stdin=subprocess.DEVNULL,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE, start_new_session=True,
-                                preexec_fn=_release_interrupts(held),
+                                preexec_fn=hold.release_in_child,
                                 **as_user)
-        _release_interrupts(held)()
+        hold.release()
         stdout, stderr = proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
         _end_group(proc)
@@ -201,29 +202,79 @@ def launch_claude(claude_exe, message, args, cwd, env, timeout=None, user=None,
         if proc is not None:
             _end_group(proc)
             proc.wait()
+        if isinstance(sys.exc_info()[1], _DefaultAction):
+            signal.raise_signal(sys.exc_info()[1].signum)
         raise
     finally:
-        _release_interrupts(held)()
+        hold.restore()
     return Launch(proc.returncode, stdout or "", stderr or "", False)
 
 
-def _hold_interrupts():
-    """Block SIGINT and SIGTERM for this thread; return the earlier mask,
-    or None where the platform cannot block signals."""
-    if not hasattr(signal, "pthread_sigmask"):
-        return None
-    return signal.pthread_sigmask(signal.SIG_BLOCK,
-                                  {signal.SIGINT, signal.SIGTERM})
+class _InterruptHold:
+    """Holds SIGINT and SIGTERM while the session is created, then replays
+    what arrived.
+
+    In the main thread it replaces the Python handlers with a recorder.
+    That holds whichever thread the system hands the signal to: a signal
+    mask covers only the thread that set it, and Python raises a handler's
+    exception in the main thread whichever thread took the signal. Outside
+    the main thread Python cannot change a handler, so it blocks the
+    signals in this thread only, which does not cover other threads."""
+
+    SIGNALS = ("SIGINT", "SIGTERM")
+
+    def __init__(self):
+        self.recorded = []
+        self.previous = {}
+        self.mask = None
+        self.active = True
+        names = [getattr(signal, name) for name in self.SIGNALS]
+        if threading.current_thread() is threading.main_thread():
+            for signum in names:
+                self.previous[signum] = signal.signal(signum, self._record)
+        elif hasattr(signal, "pthread_sigmask"):
+            self.mask = signal.pthread_sigmask(signal.SIG_BLOCK, set(names))
+
+    def _record(self, signum, frame):
+        self.recorded.append(signum)
+
+    def release_in_child(self):
+        """Runs in the session process before it starts, so it does not
+        inherit the block."""
+        if self.mask is not None:
+            signal.pthread_sigmask(signal.SIG_SETMASK, self.mask)
+
+    def restore(self):
+        """Put back the handlers and the mask. Safe to call twice."""
+        if not self.active:
+            return
+        self.active = False
+        for signum, handler in self.previous.items():
+            signal.signal(signum, handler)
+        self.release_in_child()
+
+    def release(self):
+        """Restore, then act on a signal that arrived during the hold as
+        its earlier handler would have: raise from a Python handler, end
+        the process for the default action, ignore it when it was ignored.
+        The caller's `except` ends the session on a raise."""
+        self.restore()
+        while self.recorded:
+            signum = self.recorded.pop(0)
+            handler = self.previous.get(signum)
+            if callable(handler):
+                handler(signum, None)
+            elif handler == signal.SIG_DFL:
+                raise _DefaultAction(signum)
 
 
-def _release_interrupts(held):
-    """A function that restores the mask `_hold_interrupts` returned. The
-    session process runs it before starting, so it does not inherit the
-    block."""
-    def restore():
-        if held is not None:
-            signal.pthread_sigmask(signal.SIG_SETMASK, held)
-    return restore
+class _DefaultAction(BaseException):
+    """A held signal whose handler was the default action. The launcher
+    ends the session, then runs the action again with `signal.raise_signal`."""
+
+    def __init__(self, signum):
+        super().__init__(signum)
+        self.signum = signum
 
 
 def _end_group(proc):

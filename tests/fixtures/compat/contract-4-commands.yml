@@ -357,6 +357,22 @@ entries:
   argv: ["policy", "diff", "--exit-code", "default@6", "project"]
   exit: 1
   stdout_contains: "loosening"
+# Added on purpose by impl-refusal: `issue migrate-config` is a new verb. 5.6.0
+# refused it as an unknown choice (exit 2); from 6.0.0 an issue whose generation
+# already holds the installed versions is left as it is, and the verb says so and
+# exits 0.
+- id: issue-migrate-config-already-pinned
+  project: regular-issue
+  argv: ["issue", "migrate-config"]
+  exit: 0
+  stdout_contains: "no change"
+# Added on purpose by impl-refusal: with no current issue the new verb exits 2.
+# 5.6.0 also exited 2, for the unknown verb, so this guards that the new verb
+# refuses to guess which issue to change.
+- id: issue-migrate-config-no-issue
+  project: initialised
+  argv: ["issue", "migrate-config"]
+  exit: 2
 # Added on purpose by policy-migrate: `policy migrate` is a new verb. 5.6.0
 # refused it as an unknown choice (exit 2). From 6.0.0 it is a dry run on a
 # project with copied governance: an unchanged copy gives an empty overlay,
@@ -543,3 +559,50 @@ entries:
   project: regular-issue-broken-compass-yml
   argv: ["approach", "evaluate", "--issue", "feature", "--write"]
   exit: 2
+# Added on purpose by configure-and-reassess: `issue configure` is a new verb.
+# 5.6.0 refused it as an unknown choice (exit 2). From 6.0.0 a change that
+# the layered lint accepts is parked as a proposal in the next generation's
+# folder, the manifest is untouched, and the command exits 0.
+- id: issue-configure-proposes-a-change
+  project: regular-issue
+  argv: ["issue", "configure", "--issue", "feature", "--mode", "refine=full"]
+  exit: 0
+  stdout_contains: "verdict          : accepted"
+# Added on purpose by configure-and-reassess: a proposal that loosens a stage
+# without a waiver is still written, and the command exits 1 so a script can
+# see that a reassess would refuse it. 5.6.0 had no such verb and exited 2.
+- id: issue-configure-refused-proposal-exits-1
+  project: regular-issue
+  argv: ["issue", "configure", "--issue", "feature", "--mode", "define=collapsed"]
+  exit: 1
+  stdout_contains: "verdict          : refused"
+# Added on purpose by configure-and-reassess: a call that names no change is
+# an error. 5.6.0 also exited 2, as an unknown choice; from 6.0.0 the verb
+# exists and exits 2 because it was given nothing to propose.
+- id: issue-configure-no-change-given
+  project: regular-issue
+  argv: ["issue", "configure", "--issue", "feature"]
+  exit: 2
+# Added on purpose by configure-and-reassess: --discard with no proposal and
+# no leftover folder is an error and removes nothing. 5.6.0 also exited 2, as
+# an unknown choice.
+- id: issue-configure-discard-nothing
+  project: regular-issue
+  argv: ["issue", "configure", "--issue", "feature", "--discard"]
+  exit: 2
+# Added on purpose by configure-and-reassess: `approach evaluate --reset-config`
+# is a new flag. Without --write it has nothing to drop the layer from and is
+# refused; 5.6.0 rejected the flag as unrecognised (exit 2).
+- id: approach-evaluate-reset-config-needs-write
+  project: regular-issue
+  argv: ["approach", "evaluate", "--issue", "feature", "--reset-config"]
+  exit: 2
+# Added on purpose by configure-and-reassess: with --write, --reset-config
+# drops the issue's config: layer in the reassess it commits. This issue has
+# none, so the generation holds the same configuration and the command exits 0
+# and says "no change". 5.6.0 rejected the flag (exit 2).
+- id: approach-evaluate-write-reset-config
+  project: regular-issue
+  argv: ["approach", "evaluate", "--issue", "feature", "--write", "--reset-config"]
+  exit: 0
+  stdout_contains: "no change"

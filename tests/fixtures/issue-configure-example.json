@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "issue": "feature",
+  "generation": 1,
+  "proposed": 2,
+  "verdict": "accepted",
+  "reasons": [],
+  "proposal": ".compass/work/feature/generations/2/proposed.yml",
+  "base": "config",
+  "changes": [
+    {
+      "path": "autonomy",
+      "before": "balanced",
+      "after": "controlled"
+    }
+  ],
+  "classification": {
+    "result": "equivalent",
+    "reason": "every point owes the same",
+    "scan": "full",
+    "first_point": null
+  },
+  "assessment": {
+    "approach": {
+      "before": "regular",
+      "after": "regular"
+    },
+    "result": "equivalent",
+    "changes": [],
+    "refused": null
+  },
+  "invalidates": [],
+  "next": "/compass:assess --reassess --reason \"...\""
+}

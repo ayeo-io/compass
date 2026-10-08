@@ -532,6 +532,35 @@ def _stage_list_pass(run, view, task, task_dir):
     return len(rows), failed, nothing
 
 
+def _freshness_pass(run, view, task, task_dir):
+    """Add one result per tracked document, when the capability
+    `artifact-freshness` is on, and return `(ran, failed, nothing)` for them.
+    A stale document fails once the issue has reached the stage whose entry it
+    blocks; before that it passes and the detail says it is stale. A project
+    without the capability, or an issue without a configuration, adds nothing."""
+    from compass_pkg import freshness
+
+    if not freshness.enabled(view):
+        return 0, 0, 0
+    run.guardrail(freshness.GUARDRAIL, "artifact freshness")
+    try:
+        findings = freshness.evaluate(view, task, task_dir)
+    except Exception as exc:                            # noqa: BLE001
+        # A check must not crash the run.
+        run.result("freshness", False, f"evaluation errored: {exc}")
+        return 1, 1, 0
+    if not findings:
+        run.result("freshness", NOTHING_TO_CHECK,
+                   "no document records the digests of its upstream")
+        return 1, 0, 1
+    failed = 0
+    for one in findings:
+        broken = one.stale and one.blocking
+        failed += broken
+        run.result(one.artifact, not broken, one.detail)
+    return len(findings), failed, 0
+
+
 def _assessment_keys_pass(run, task):
     """Report the assessment keys the manifest schema does not allow. The
     release's `issue lint` refuses them, so check must too, or an issue
@@ -795,6 +824,11 @@ def cmd_check(args):
     ran += listed_ran
     failures += listed_failed
     nothing_to_check += listed_nothing
+    # The freshness pass runs when the capability `artifact-freshness` is on.
+    fresh_ran, fresh_failed, fresh_nothing = _freshness_pass(run, view, task, task_dir)
+    ran += fresh_ran
+    failures += fresh_failed
+    nothing_to_check += fresh_nothing
     ran += 1
     if not _assessment_keys_pass(run, task):
         failures += 1

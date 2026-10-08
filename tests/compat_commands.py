@@ -235,6 +235,37 @@ def _with_judged_check_document(root: Path, env: dict) -> None:
         "# Design\n", encoding="utf-8")
 
 
+FRESHNESS_COMPASS_YML = """schema: 1
+capabilities:
+  artifact-freshness: true
+artifacts:
+  technical-design:
+    set:
+      depends_on: [acceptance-criteria]
+"""
+
+
+def _with_stale_document(root: Path, env: dict) -> None:
+    # A regular issue at the implement stage, with the capability on and two
+    # documents written and registered: the design depends on the acceptance
+    # criteria, and the criteria were changed after the design was written.
+    _regular_issue(root, env)
+    (root / "compass.yml").write_text(FRESHNESS_COMPASS_YML, encoding="utf-8")
+    _must(root, env, "approach", "evaluate", "--issue", REGULAR_SLUG, "--write")
+    work = root / ".compass" / "work" / REGULAR_SLUG
+    (work / "acceptance-criteria.md").write_text("# Criteria\n", encoding="utf-8")
+    (work / "technical-design.md").write_text("# Design\n", encoding="utf-8")
+    (work / "delivery-approach.md").write_text("# Delivery approach\n", encoding="utf-8")
+    for kind in ("acceptance-criteria", "technical-design"):
+        _must(root, env, "issue", "artifact", kind, "--status", "draft",
+              "--issue", REGULAR_SLUG)
+    manifest = yaml.safe_load((work / "manifest.yml").read_text(encoding="utf-8"))
+    manifest["current_phase"] = "implement"
+    (work / "manifest.yml").write_text(yaml.safe_dump(manifest, sort_keys=False),
+                                       encoding="utf-8")
+    (work / "acceptance-criteria.md").write_text("# Criteria\n\nChanged.\n", encoding="utf-8")
+
+
 def _with_broken_governance(root: Path, env: dict) -> None:
     _with_copied_governance(root, env)
     # A routing policy without its required top-level keys is the
@@ -276,6 +307,7 @@ STATES = {
     "with-copied-governance": _with_copied_governance,
     "with-judged-check": _with_judged_check,
     "with-judged-check-document": _with_judged_check_document,
+    "with-stale-document": _with_stale_document,
     "with-broken-governance": _with_broken_governance,
     "with-config": _with_config,
     "with-compass-yml": _with_compass_yml,

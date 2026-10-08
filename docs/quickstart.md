@@ -461,7 +461,10 @@ rail:
 If a project turns on the capability `entry-exit-evaluation`, the line also
 names the entry checks of the current stage that are not met, for example
 `Plan | entry not met: dor-no-open-questions`
-(`docs/entry-exit-evaluation.md`).
+(`docs/entry-exit-evaluation.md`). With the capability `artifact-freshness`
+on, it names a stale document the stage consumes, for example
+`Implement | entry not met: technical-design is stale`
+(`docs/artifact-freshness.md`).
 
 ## Where to go next
 

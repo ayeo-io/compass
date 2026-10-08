@@ -523,6 +523,25 @@ def _receipt_stage_lists(task, task_dir):
     return lines
 
 
+def _receipt_freshness(task, task_dir):
+    """The "Artifact freshness" section: each document that records the digests
+    of its upstream, fresh or stale, or no lines when the capability
+    `artifact-freshness` is off, nothing is tracked or the configuration cannot
+    be read."""
+    from compass_pkg import effective, freshness
+    try:
+        view = effective.view_or_legacy(task_dir)
+        findings = freshness.evaluate(view, task, task_dir)
+    except Exception:  # noqa: BLE001 - the receipt reports what it can
+        return []
+    if not findings:
+        return []
+    lines = ["Artifact freshness", "------------------"]
+    for one in findings:
+        lines.append(_receipt_truncate(f"  {one.artifact:<28}  {one.detail}"))
+    return lines
+
+
 def cmd_task_receipt(args):
     # A missing issue is a refusal (exit 2), as in every other verb; exit 1
     # is kept for a check that ran and found something.
@@ -539,6 +558,12 @@ def cmd_task_receipt(args):
     if listed:
         at = text.rindex(_RECEIPT_RULE)
         text = text[:at] + "\n".join(listed) + "\n\n" + text[at:]
+    # The freshness of the documents goes next when the capability
+    # `artifact-freshness` is on and a document records its upstream.
+    fresh = _receipt_freshness(task, task_dir)
+    if fresh:
+        at = text.rindex(_RECEIPT_RULE)
+        text = text[:at] + "\n".join(fresh) + "\n\n" + text[at:]
     # What `locks` reports about conformance goes before the verdict, on every
     # run. A project with no `compass.yml` adds nothing.
     from compass_pkg import locks

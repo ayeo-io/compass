@@ -1,0 +1,133 @@
+# Artifact freshness
+
+This page is the owning doc for the capability `artifact-freshness`. With it
+on, Compass records the digest of a document when the document is written,
+and reports the document as stale when an artifact it depends on has changed
+since. A stale document is refused at land and at the entry of a stage that
+consumes it. The code is `cli/compass_pkg/freshness.py`. `compass issue
+artifact` writes the records, and `compass check`, `compass next`,
+`compass issue receipt` and `compass ship-commit` read them.
+
+The decision to keep it opt-in is in
+`governance/decisions/2026-10-05-artifact-freshness-stays-opt-in.md`. The
+dependencies come from the artifact catalogue, which `compass policy lint`
+checks as a graph (see `docs/policy-lint.md`).
+
+## Switching it on
+
+```yaml
+capabilities:
+  artifact-freshness: true
+```
+
+With the capability off, nothing is recorded and no reader changes: the
+manifest, `compass check`, `compass next`, the receipt and `compass
+ship-commit` give the same output as before the capability existed. An issue
+reads the capability from its stored generation (see
+`docs/generation-store.md`), so turning it on changes nothing for an issue
+until the next `compass approach evaluate --write`.
+
+The shipped default declares no `depends_on`. A project adds the
+dependencies it wants, for example:
+
+```yaml
+artifacts:
+  technical-design:
+    set: {depends_on: [acceptance-criteria]}
+```
+
+## What is recorded
+
+`compass issue artifact <kind> --status ...` stamps the document's entry in
+the manifest's `artifacts:` registry:
+
+```yaml
+artifacts:
+- id: ART-TECHNICAL_DESIGN
+  kind: technical-design
+  status: draft
+  digest: sha256:...
+  upstream:
+    acceptance-criteria: sha256:...
+```
+
+| Field | Meaning |
+|---|---|
+| `digest` | The SHA-256 of the document's file when it was last written |
+| `upstream` | The SHA-256 of each artifact the document `depends_on`, as it was then. An upstream with no file is left out |
+
+The digest is the one a judged check uses for its inputs (see
+`docs/judged-checks.md`). An entry is stamped only when its file has other
+bytes than the `digest` it holds, or when it holds no `upstream` yet.
+Registering a document again without changing it therefore does not refresh
+its `upstream`. A document is written against the upstream as it was when its
+file last changed.
+
+Nothing else writes either field. A presence check, `compass check` and
+`compass issue artifact` on an unchanged file never clear staleness.
+
+## When a document is stale
+
+Staleness is computed from the records and the files as they are now. A
+document that records `upstream` is stale when:
+
+- an artifact it depends on has other bytes now than the digest recorded;
+- an artifact it depends on has no file now (`<id> is missing now`);
+- an artifact it depends on had no file when the document was written and has
+  one now (`<id> appeared after this was written`);
+- an artifact it depends on is stale itself (`<id> is stale`). Staleness
+  passes down the graph, so a change to an acceptance criterion makes the
+  design stale, and the verification report that depends on the design.
+
+A document with no `upstream` record is not tracked. A project that turns the
+capability on has nothing stale until its documents are written again.
+Rewriting a middle document does not clear the one below it, which recorded
+the middle document's old digest.
+
+## What a stale document blocks
+
+| Where | Effect |
+|---|---|
+| `compass ship-commit` | Refuses to land while any tracked document is stale. It names each one and the cause, and commits nothing |
+| Entry to `implement` | The stage consumes `acceptance-criteria` and `technical-design`. `compass check` fails once the issue has reached `implement`, and `compass next` appends `entry not met: <kind> is stale` |
+| `compass check` at `ship` | A document that no stage consumes fails the check once the issue has reached `ship` |
+
+The stages that consume documents are the `CONSUMES` table in
+`freshness.py`. It is code, not configuration, in this version.
+
+## Where it shows
+
+`compass check` adds a guardrail `artifact-freshness`, with one result for
+each tracked document. A row has the four keys of every row: `guardrail`,
+`name`, `status` (`pass`, `fail` or `nothing-to-check`) and `detail`. The
+detail starts with `fresh` or `stale`:
+
+| Detail | Status |
+|---|---|
+| `fresh - written against acceptance-criteria` | `pass` |
+| `stale - acceptance-criteria changed (sha256:... then sha256:...); blocks entry to implement` | `fail` |
+| `stale - ...; blocks entry to implement (not yet due)` | `pass`: the issue has not reached the stage |
+| `no document records the digests of its upstream` | `nothing-to-check`, one row named `freshness` |
+
+`compass issue receipt` adds an "Artifact freshness" section before the
+verdict, with the same detail for each tracked document. It adds nothing when
+no document is tracked. The receipt has no JSON form.
+
+`compass ship-commit` refuses with exit 1 and this text, naming each stale
+document:
+
+```
+compass ship-commit: refusing to land - 1 artifact(s) are stale:
+  technical-design: acceptance-criteria changed (sha256:... then sha256:...)
+```
+
+## Limits
+
+- Registering a document records that it was written against the upstream as
+  it is now. The CLI cannot tell a document that was rewritten from one that
+  was changed by a space. Compass checks bytes, not meaning.
+- The stages that consume documents are fixed in the code.
+- A check result is not marked stale. A judged check already fails when its
+  inputs change (see `docs/judged-checks.md`).
+- The capability stays off in the shipped default until a run has measured
+  its cost.

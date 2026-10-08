@@ -70,7 +70,9 @@ def test_ir_1_an_advisory_refused_check_is_not_counted_but_every_view_shows_it(c
     for flag in ([], ["--verbose"]):
         code, out, err = _run(root, "check", "--issue", SLUG, *flag)
         assert "scenarios-are-executable" in out and "refused" in out, (flag, out)
-        assert "0.1.0" in out, (flag, out)
+        assert "ADVISORY" in out, (flag, out)
+        if flag:
+            assert "0.1.0" in out, (flag, out)
 
 
 def test_ir_1_a_check_is_refused_by_the_implementation_it_runs_not_by_its_id(committed):

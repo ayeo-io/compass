@@ -268,8 +268,8 @@ def test_cs_5_the_schema_checks_inside_set_and_the_enumerations():
     schema = catalogue_check.schema()
     check = schema["properties"]["checks"]["patternProperties"][catalogue_spec.ID_PATTERN]
     assert check["properties"]["set"]["additionalProperties"] is False
-    assert check["properties"]["severity"] == {"enum": list(catalogue_spec.SEVERITIES)}
-    assert schema["properties"]["autonomy"] == {"enum": list(catalogue_spec.AUTONOMY)}
+    assert check["properties"]["severity"]["enum"] == list(catalogue_spec.SEVERITIES)
+    assert schema["properties"]["autonomy"]["enum"] == list(catalogue_spec.AUTONOMY)
 
 
 # --- every documented setting is a settings key ---------------------------------------

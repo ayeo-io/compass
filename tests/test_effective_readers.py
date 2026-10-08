@@ -657,11 +657,13 @@ PACKAGE = ROOT / "cli" / "compass_pkg"
 POLICY_READ = re.compile(r"os\.path\.join\([^\n]*[\"'](routing-policy|guardrails)\.yml[\"']")
 
 #: Modules that may name a policy file without reading it for an issue: the
-#: loaders of the files themselves, the lint, the views generated from the
-#: preset and the text of help messages.
+#: loaders of the files themselves, the lint, the migration (which reads a
+#: project's copies to convert them), the views generated from the preset and
+#: the text of help messages.
 POLICY_FILE_OWNERS = frozenset({
     "core", "effective", "governance", "legacy_adapter", "legacy_views",
-    "legacy_views_template", "policy_cmd", "project_commands", "verb_help"})
+    "legacy_views_template", "policy_cmd", "policy_migrate", "project_commands",
+    "verb_help"})
 
 #: Each read of a policy file outside the owners: `(module, function)` and how
 #: many reads that function makes. Every one of these functions asks

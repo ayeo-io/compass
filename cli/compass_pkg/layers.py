@@ -13,12 +13,13 @@ own file. They are split off before anything else, never reach the chain's
 layer, and never count towards a digest: a settings change must not look
 like a change to the configuration an issue was classified against.
 """
-# DEPENDENCY: standard library (os); compass_pkg.atomic_io,
+# DEPENDENCY: standard library (os, re); compass_pkg.atomic_io,
 # compass_pkg.catalogue_check, compass_pkg.catalogue_spec,
 # compass_pkg.core (CompassError, only).
 from __future__ import annotations
 
 import os
+import re
 from collections import namedtuple
 
 from compass_pkg import catalogue_check, catalogue_spec as spec
@@ -31,6 +32,28 @@ PROJECT_FILE = "compass.yml"
 # `project` or `issue` (what the layer may do), `doc` is the parsed layer
 # and `digest` is over its content as `layer_digest` defines it.
 Layer = namedtuple("Layer", "name kind doc digest")
+
+
+# The shipped default is named `compass:default@<major>`: the CLI's own version
+# is the pin, so there is no minor, patch or sha. `policy migrate` writes the
+# string and `policy update` will rewrite the integer, both through these two
+# functions.
+_SHIPPED_PARENT = re.compile(r"^compass:([a-z][a-z0-9-]*)@(\d+)$")
+
+
+def parse_extends(value):
+    """`(name, major)` for a shipped parent written `compass:<name>@<major>`.
+    Raises `CompassError` for any other spelling."""
+    found = _SHIPPED_PARENT.match(value) if isinstance(value, str) else None
+    if not found:
+        raise CompassError(f"extends: {value!r} is not a shipped parent written "
+                           "compass:<name>@<major>")
+    return found.group(1), int(found.group(2))
+
+
+def default_extends(major):
+    """The `extends:` value that names the shipped default at `major`."""
+    return f"compass:default@{int(major)}"
 
 
 def find_project_root(start):

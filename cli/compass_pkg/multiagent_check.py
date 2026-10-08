@@ -218,7 +218,7 @@ def _check_multiagent_run_recorded(task, task_dir):
     # A subtask with a stop reason is judged on the stop alone.
     ceilings = {}
     if _applies_from(task.get("created"), LOOP_CEILINGS_FROM):
-        ceilings = loop_ceilings(task)
+        ceilings = loop_ceilings(task, task_dir)
     not_done = []
     no_pass = []
     bad_stop = []

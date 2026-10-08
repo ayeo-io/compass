@@ -4,7 +4,6 @@
     "_aggregate_friction",
     "_all_gates_pass",
     "_analyze_task",
-    "_annotate_gate_accepts",
     "_bdd_out_path",
     "_bdd_tag_selector",
     "_check_backfills_paid",

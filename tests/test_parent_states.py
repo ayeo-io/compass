@@ -290,6 +290,17 @@ def test_damaged_seen_does_not_crash(tmp_path):
     _no_traceback(project.run("check", "--issue", "feature"))
 
 
+def test_a_fetch_replaces_a_damaged_seen(tmp_path):
+    """The next fetch writes a fresh seen.yml over one that is not valid text."""
+    project = Project(tmp_path)
+    project.lint()
+    project.seen().write_bytes(b"\xff\xfe\x00 not text \x80")
+    project.move_pin(project.second)
+    code, out, err = _no_traceback(project.run("policy", "lint", "--json"))
+    assert code == 0 and _only_state(json.loads(out))["code"] == "S-PARENT-UP-TO-DATE", (out, err)
+    assert yaml.safe_load(project.seen().read_text(encoding="utf-8"))["schema"] == 1
+
+
 def test_unreadable_project_file_does_not_crash(tmp_path):
     project = Project(tmp_path)
     (project.root / "compass.yml").write_bytes(b"schema: 1\nextends: \xff\xfe\x80\n")

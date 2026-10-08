@@ -3178,3 +3178,7 @@
 - `TRC-010` Given a seen.yml that cannot be read When a command reads the parent state Then it counts as edited and no command crashes
 - `TRC-011` Given a project compass.yml that cannot be read When approach summary runs Then it prints no traceback
 - `TRC-012` Given a seen.yml whose digests entry is not a mapping When a parent is fetched Then the record is rewritten and nothing crashes
+
+### scenario-tests-verb (landed 2026-10-08)
+
+- `TRC-001` Given a scenario whose declared test id is wrong, when compass scenario tests names resolving tests, then the manifest declares them

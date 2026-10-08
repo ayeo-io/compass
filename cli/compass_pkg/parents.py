@@ -193,13 +193,16 @@ def _record_seen(cache, spec, sha, raw):
     path = os.path.join(cache, SEEN)
     try:
         held = load_yaml_strict(path) if os.path.isfile(path) else {}
-    except StrictYamlError:
+    except (StrictYamlError, ValueError):       # a file that is not text is replaced
         held = {}
-    refs = dict((held or {}).get("refs") or {})
+    refs = held.get("refs") if isinstance(held, dict) else None
+    refs = dict(refs) if isinstance(refs, dict) else {}
     # `content_digest` is the digest of the commit fetched last. `digests` keeps one
-    # per commit, so a cached commit can be checked after another is fetched.
+    # per commit, so a cached commit can be checked after another is fetched. A
+    # `digests` entry that is not a mapping was damaged and starts again.
     before = refs.get(ref_label(spec))
-    digests = dict(before.get("digests") or {}) if isinstance(before, dict) else {}
+    kept = before.get("digests") if isinstance(before, dict) else None
+    digests = dict(kept) if isinstance(kept, dict) else {}
     digests[sha] = file_digest(raw)
     refs[ref_label(spec)] = {
         "sha": sha, "content_digest": file_digest(raw), "digests": digests,

@@ -2,7 +2,8 @@
 """A git parent is in one of four states, read from the pin, the cache and `seen.yml`:
 
 - `up to date`: the cache holds the pin, and no other commit is known for the ref;
-- `stale`: `seen.yml` holds another commit for the ref, so a newer one is known;
+- `stale`: `seen.yml` holds another commit for the ref, fetched last on this machine
+  (it can be older than the pin, because a fetch of an exact pin overwrites the sha);
 - `locally modified`: the cached `compass.yml` no longer matches the digest recorded
   when it was fetched;
 - `both`.
@@ -25,7 +26,7 @@ from compass_pkg.atomic_io import StrictYamlError, load_yaml_strict
 UP_TO_DATE, STALE, MODIFIED, BOTH = "up to date", "stale", "locally modified", "both"
 
 # The lint finding code and level of each state. Only a state that puts an edited
-# file into the chain fails the lint; a newer commit is news, not a fault.
+# file into the chain fails the lint; another commit fetched last is news, not a fault.
 FINDINGS = {UP_TO_DATE: ("S-PARENT-UP-TO-DATE", "info"),
             STALE: ("S-PARENT-STALE", "warning"),
             MODIFIED: ("S-PARENT-MODIFIED", "error"),
@@ -53,7 +54,7 @@ def _entry(root, ref):
     file cannot be read."""
     try:
         doc = load_yaml_strict(seen_path(root))
-    except (StrictYamlError, OSError):
+    except (StrictYamlError, OSError, ValueError):     # not valid text counts as no record
         return {}
     held = (doc.get("refs") if isinstance(doc, dict) else None) or {}
     entry = held.get(ref) if isinstance(held, dict) else None
@@ -98,8 +99,8 @@ def read(root, found):
                      f"{why}; delete the cached copy of {short} under "
                      f".compass/cache/parents/ and run compass policy lint to fetch it again")
     if newer:
-        parts.append(f"a newer commit, {newer[:7]}, was fetched on this machine; the pin "
-                     f"stays at {short} until it is moved")
+        parts.append(f"another commit, {newer[:7]}, was fetched last on this machine; the "
+                     f"pin stays at {short} until it is moved")
     message = "; ".join(parts) or f"the cache holds {short}, the pin, and no other commit is known"
     return State(found.ref, found.sha, state, newer, why, message)
 
@@ -117,11 +118,11 @@ def project_states(root, fetch=False):
         if spec is None:
             return [], []
         found = parents.resolve(root, extends, fetch=fetch)
+        return [read(root, found)], []
     except parents.ParentError as exc:
         return [], [f"{exc.code}: {exc.detail}"]
-    except (StrictYamlError, OSError):
+    except (StrictYamlError, OSError, ValueError):
         return [], []
-    return [read(root, found)], []
 
 
 def summary_lines(root):

@@ -815,7 +815,7 @@ def test_gp_17_the_cache_keeps_a_commit_under_owner_repository_and_sha(tmp_path)
 def test_gp_18_the_doc_says_the_users_credential_helper_runs_and_ci_needs_credentials():
     doc = " ".join(_text("docs", "git-parents.md").split())
     for needle in ("credential helper", "insteadOf", "GIT_CONFIG_GLOBAL", "GIT_ASKPASS",
-                   "CI", "ref label is not checked", "without warning"):
+                   "CI", "ref label is not checked", "accidental edit"):
         assert needle in doc, needle
     assert "short list" not in doc
 

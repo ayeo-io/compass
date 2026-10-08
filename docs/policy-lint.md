@@ -77,7 +77,7 @@ earlier one. Warnings never stop it and never fail it.
 | `L-PARENT-CHAIN` | error | The parent's own `extends:` names a git parent. Chains are not built yet |
 | `L-PARENT-SHA-AMBIGUOUS` | error | A short sha names more than one cached commit |
 | `S-PARENT-UP-TO-DATE` | info | A git parent whose cache holds the pin and for which no other commit is known |
-| `S-PARENT-STALE` | warning | `seen.yml` holds another commit for the parent's ref, so a newer one is known. The pin does not move |
+| `S-PARENT-STALE` | warning | `seen.yml` holds another commit for the parent's ref, which this machine fetched last. It can be older or newer than the pin. The pin does not move |
 | `S-PARENT-MODIFIED` | error | The cached `compass.yml` no longer matches the digest recorded when it was fetched, or `seen.yml` holds no digest for it. The lint stops at the first group |
 | `S-PARENT-BOTH` | error | Stale, and the cached file was edited. The lint stops at the first group |
 | `M-REF-UNKNOWN` | error | A field, or a rule's effect (`EFFECT_TARGETS` in `catalogue_spec.py` says which catalogue each effect names), names an id that no entry defines |

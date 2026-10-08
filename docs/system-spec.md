@@ -3234,3 +3234,25 @@
 - `TR-7` compass issue template prints the rendered template for the issue, as JSON on request, refuses an unknown kind, and the refine and verify commands use it
 - `TR-8` Every other template renders unchanged and the 120-line cap of the borrowed templates holds
 - `TR-9` The owning doc says what renders and the router names the module
+
+### policy-update-git-parents (landed 2026-10-08)
+
+- `PUG-1` The ref's new commit is fetched and the pin is rewritten
+- `PUG-2` A ref still at the pin reports nothing to do and writes nothing
+- `PUG-3` A waiver is affected only when a waived field's parent value differs between the two commits
+- `PUG-4` An affected waiver is re-approved on a terminal and written with the new sha once
+- `PUG-5` --yes, no terminal and a declined approval refuse and write nothing
+- `PUG-6` Offline is its own status and writes nothing
+- `PUG-7` A ref the remote does not have is an error naming the ref
+- `PUG-8` A new commit that breaks the parent rules or the merge is refused
+- `PUG-9` An edited cache of the current pin stops the move
+- `PUG-10` A fetched but unwritten move leaves the parent state stale
+- `PUG-11` --to is refused for a git parent
+- `PUG-12` The JSON of a git move keeps its keys and adds sha
+- `PUG-13` The owning docs and the verb help describe the git move
+- `PUG-14` Given a parent whose own ancestor changes a waived field, when the pin moves, then the waiver needs re-approval
+- `PUG-15` Given a new commit whose chain is deeper than three git parents, when the pin moves, then it is refused as new-parent-invalid
+- `PUG-16` Given the cached copy of an ancestor in the current chain was edited, when the pin moves, then the move stops
+- `PUG-17` Given the cached copy of the new commit was edited, when the pin moves, then the move stops and no waiver or approver is read from it
+- `PUG-18` Given a new commit that the full lint refuses, when the pin moves, then it is refused as new-parent-invalid naming the findings
+- `PUG-19` Given a new commit whose own parent cannot be fetched, when the pin moves, then it is refused as new-parent-invalid

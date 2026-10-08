@@ -58,8 +58,12 @@ An unchecked box that carries a typed tag (`(evidence: ...)` or
 `checks.dod_tag_problems`, so a tag means one thing. An unchecked box with no
 tag fails as "not ticked".
 
-A check with `severity: advisory`, or a `blocking_when` that does not match the
-issue's assessment, reports a failure as a pass that says it is advisory.
+Each result goes through the judgement `compass check` gives a gate check, so
+one check id has one verdict. A deterministic check that has nothing to inspect
+follows its `on_skipped`. A check with `severity: advisory`, or a
+`blocking_when` that does not match the issue's assessment, that fails is shown
+as ADVISORY (status `advisory` in `--json`, counted in `advisory`, recorded as
+`advisory` in `results.yml`) and does not fail the run.
 
 ## When a list is skipped, and `on_skipped`
 
@@ -99,7 +103,8 @@ A `when` on a check reads the assessment. Evaluation adds one derived key,
 `ships`, whether the approach the issue was routed to ships. Each Definition of
 Done check in the shipped default says `when: {ships: true}`, so a spike, which
 does not ship, owes none of them and a delivery owes all seven. A project can
-use `ships` in the `when` of its own checks. The key adds no field to the
+use `ships` in the `when` or `blocking_when` of its own checks and in the
+`when` of a guardrail gate. The key adds no field to the
 configuration, so the classifier compares it as it compares any `when`.
 
 ## Where results show

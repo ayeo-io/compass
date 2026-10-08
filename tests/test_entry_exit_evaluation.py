@@ -581,8 +581,196 @@ def test_ee_7_an_advisory_check_that_fails_does_not_fail(tmp_path, monkeypatch):
 
     rows = _by_check(_rows(_view(root, monkeypatch, mutate), task_dir))
     row = rows["dor-summary-filled"]
-    assert row.status == "pass" and row.detail.startswith("advisory")
+    assert row.status == "advisory" and "severity: advisory" in row.detail
     assert rows["dor-problem-traces-up"].status == "fail"
+
+
+def test_ee_7_a_blocking_when_that_does_not_match_makes_a_list_failure_advisory(
+        tmp_path, monkeypatch):
+    root, task_dir = _config_project(tmp_path)    # contained risk
+    _write_review(task_dir, ticked=())
+
+    def mutate(resolved):
+        resolved["checks"]["dor-summary-filled"]["blocking_when"] = {"risk": "critical"}
+
+    rows = _by_check(_rows(_view(root, monkeypatch, mutate), task_dir))
+    assert rows["dor-summary-filled"].status == "advisory"
+    assert "blocks when" in rows["dor-summary-filled"].detail
+    assert rows["dor-problem-traces-up"].status == "fail"
+
+
+def test_ee_7_an_advisory_list_failure_is_shown_counted_and_recorded_as_advisory(tmp_path):
+    root, task_dir = _config_project(tmp_path, capability=False)
+    config = _project_check_config()
+    del config["capabilities"]
+    config["checks"]["list-scenarios-have-tests"]["severity"] = "advisory"
+    (root / "compass.yml").write_text(yaml.safe_dump(config), encoding="utf-8")
+    assert _evaluate_write(root)[0] == 0
+    _write_manifest(task_dir, current_phase="plan")
+    data = json.loads(_run(root, "check", "--issue", SLUG, "--json")[1])
+    row = [r for r in data["checks"] if r["name"] == "list-scenarios-have-tests"][0]
+    assert row["status"] == "advisory" and row["guardrail"] == "stage:plan:entry"
+    assert data["advisory"] >= 1
+    results = yaml.safe_load((task_dir / "generations" / "1" / "results.yml")
+                             .read_text(encoding="utf-8"))
+    assert results["runs"]["list-scenarios-have-tests"]["verdict"] == "advisory"
+    text = _run(root, "check", "--issue", SLUG, "--verbose")[1]
+    assert "ADVISORY list-scenarios-have-tests" in text
+
+
+def _fake_nothing(monkeypatch, on_skipped):
+    from compass_pkg import stage_lists
+    from compass_pkg.check_results import NOTHING_TO_CHECK
+    monkeypatch.setitem(stage_lists.CHECK_FNS, "fake-nothing",
+                        lambda task, task_dir: (NOTHING_TO_CHECK, "no runner is wired"))
+
+    def mutate(resolved):
+        resolved["checks"]["list-fake"] = {
+            "statement": "x", "kind": "deterministic", "impl": "fake-nothing",
+            "severity": "blocking", "on_skipped": on_skipped}
+        resolved["stages"]["plan"]["entry"] = ["list-fake"]
+    return mutate
+
+
+@pytest.mark.parametrize("on_skipped, status", [("fail", "fail"), ("pass", "pass"),
+                                                ("not-applicable", "nothing-to-check")])
+def test_ee_6_a_list_check_with_nothing_to_check_follows_on_skipped_like_a_gate_check(
+        tmp_path, monkeypatch, on_skipped, status):
+    from compass_pkg import check_cmd
+    from compass_pkg.check_results import NOTHING_TO_CHECK
+    root, task_dir = _config_project(tmp_path)
+    row = _by_check(_rows(_view(root, monkeypatch, _fake_nothing(monkeypatch, on_skipped)),
+                          task_dir))["list-fake"]
+    assert row.status == status
+    # One check, one verdict: the gate path gives the same.
+    declared = {"on_skipped": on_skipped}
+    passed, _ = check_cmd._judge(NOTHING_TO_CHECK, "d", declared, lambda *a: True, {})
+    gate = ("nothing-to-check" if passed is NOTHING_TO_CHECK
+            else "pass" if passed else "fail")
+    assert gate == status
+
+
+def test_ee_6_a_check_that_raises_fails(tmp_path, monkeypatch):
+    from compass_pkg import stage_lists
+
+    def boom(task, task_dir):
+        raise RuntimeError("broken")
+
+    monkeypatch.setitem(stage_lists.CHECK_FNS, "boom", boom)
+    root, task_dir = _config_project(tmp_path)
+
+    def mutate(resolved):
+        resolved["checks"]["list-boom"] = {"statement": "x", "kind": "deterministic",
+                                           "impl": "boom", "severity": "blocking",
+                                           "on_skipped": "fail"}
+        resolved["stages"]["plan"]["entry"] = ["list-boom"]
+
+    row = _by_check(_rows(_view(root, monkeypatch, mutate), task_dir))["list-boom"]
+    assert row.status == "fail" and "check errored: broken" in row.detail
+
+
+def test_ee_3_a_ticked_item_that_carries_a_tag_still_matches(tmp_path, monkeypatch):
+    root, task_dir = _config_project(tmp_path)
+    lines = [f"- [x] (evidence: EV-1) {text}" for text in READY]
+    (task_dir / "requirements-review.md").write_text(
+        "### Definition of Ready\n\n" + "\n".join(lines) + "\n", encoding="utf-8")
+    rows = [r for r in _rows(_view(root, monkeypatch), task_dir) if r.due]
+    assert rows and all(r.status == "pass" for r in rows)
+
+
+def test_ee_3_an_item_that_continues_on_the_next_line_matches(tmp_path, monkeypatch):
+    root, task_dir = _config_project(tmp_path)
+    lines = []
+    for text in READY:
+        head, _, tail = text.partition(" - ")
+        lines.append(f"- [x] {head} -\n      {tail}")
+    (task_dir / "requirements-review.md").write_text(
+        "### Definition of Ready\n\n" + "\n".join(lines) + "\n", encoding="utf-8")
+    rows = [r for r in _rows(_view(root, monkeypatch), task_dir) if r.due]
+    assert rows and all(r.status == "pass" for r in rows)
+
+
+def test_ee_5_a_current_stage_that_no_list_knows_has_every_list_due(tmp_path, monkeypatch):
+    root, task_dir = _config_project(tmp_path)
+    _write_manifest(task_dir, current_phase="no-such-stage")
+    rows = _rows(_view(root, monkeypatch), task_dir)
+    assert rows and all(r.due for r in rows)
+
+
+def test_ee_9_next_names_only_the_current_stages_entry_checks(tmp_path):
+    # The plan entry list fails and is due, but the issue is in a later stage.
+    root, task_dir = _committed(tmp_path)
+    _write_manifest(task_dir, current_phase="verify")
+    _write_review(task_dir, ticked=range(3))
+    (task_dir / "delivery-approach.md").write_text("# a\n", encoding="utf-8")
+    out = _run(root, "next", "--issue", SLUG)[1]
+    assert "entry not met" not in out, out
+
+
+def test_ee_10_the_stage_lists_come_before_the_verdict(tmp_path):
+    root, task_dir = _committed(tmp_path)
+    _write_review(task_dir)
+    out = _run(root, "issue", "receipt", "--issue", SLUG)[1]
+    assert out.index("Stage lists") < out.index("Verdict:")
+
+
+def test_ee_8_a_spike_check_counts_its_nothing_to_check_rows(tmp_path):
+    root, task_dir = _config_project(
+        tmp_path, assessment={"risk": "trivial", "familiarity": "greenfield",
+                              "size": "small", "goal": "exploration", "role": "engineer",
+                              "labels": []})
+    assert _evaluate_write(root)[0] == 0
+    _write_manifest(task_dir, current_phase="ship")
+    data = json.loads(_run(root, "check", "--issue", SLUG, "--json")[1])
+    listed = [r for r in data["checks"] if r["guardrail"].startswith("stage:")]
+    assert data["nothing_to_check"] >= len(listed) >= 7
+
+
+def test_ee_2_an_unknown_approach_ships_by_default(tmp_path, monkeypatch):
+    root, _ = _config_project(tmp_path)
+    view = _view(root, monkeypatch)
+    assert view.listing_assessment({"risk": "trivial"}, "no-such-approach")["ships"] is True
+    assert view.listing_assessment({"risk": "trivial"}, None)["ships"] is True
+
+
+def test_ee_2_obligations_read_ships_in_blocking_when_and_in_a_gate_condition(
+        tmp_path, monkeypatch):
+    from compass_pkg import obligations
+    root, _ = _config_project(tmp_path)
+
+    def mutate(resolved):
+        resolved["checks"]["ship-blocks"] = {
+            "statement": "x", "kind": "human", "severity": "blocking",
+            "on_skipped": "fail", "blocking_when": {"ships": True}}
+        resolved["stages"]["verify"]["exit"] += ["ship-blocks"]
+        resolved["gates"]["GX"] = {"kind": "guardrail", "name": "x", "statement": "x",
+                                   "stage": "verify", "checks": [], "when": {"ships": False}}
+
+    config = _view(root, monkeypatch, mutate).config
+    spike = obligations.obligations(config, {"risk": "trivial", "familiarity": "greenfield",
+                                             "size": "small", "goal": "exploration"})
+    regular = obligations.obligations(config, {"risk": "contained",
+                                               "familiarity": "greenfield",
+                                               "size": "standard"})
+    assert spike.checks["ship-blocks"]["severity"] == "advisory"
+    assert regular.checks["ship-blocks"]["severity"] == "blocking"
+    assert "GX" not in regular.gate_set
+    assert "GX" in spike.gate_set
+
+
+def test_ee_2_check_reads_ships_in_a_gate_check_blocking_when(tmp_path):
+    config = {"schema": 1,
+              "checks": {"extra-tests": {
+                  "statement": "Every scenario has a test.", "kind": "deterministic",
+                  "impl": "scenarios-have-tests", "severity": "blocking",
+                  "blocking_when": {"ships": True}, "on_skipped": "fail"}},
+              "gates": {"G1": {"set": {"checks": {"add": ["extra-tests"]}}}}}
+    root, task_dir = _project(tmp_path, compass_yml=config)
+    code, out, err = _evaluate_write(root)
+    assert code == 0, out + err
+    data = json.loads(_run(root, "check", "--issue", SLUG, "--json")[1])
+    row = [r for r in data["checks"] if r["name"] == "extra-tests"][0]
+    assert row["status"] == "fail", row
 
 
 def test_ee_7_the_shipped_default_names_no_judged_or_evidence_check_in_a_list():

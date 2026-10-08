@@ -99,4 +99,5 @@ Decided while the maintainer was away, and marked for the maintainer's confirmat
 
 - `obligations` evaluates a check's `when` and `blocking_when` against the assessment plus one derived key, `ships`: whether the approach the route chose ships (`obligations.listing_assessment`). The goal is optional, so a `when` on it cannot say "not exploration".
 - No comparison rule is added. `ships` adds no field to the table. The classifier already evaluates each check's `when` at every grid point through `obligations`, so removing `when: {ships: true}` from a check shows as the spike owing that check, which is tightening.
+- The same derived reading is used wherever the configuration is evaluated against an assessment: a check's `when` and `blocking_when`, a guardrail gate's `when` (in `obligations` and in `compass check`), and the stage lists.
 - `ships` is not a dimension. The grid does not vary it, and it follows from the approach the other readings route to.

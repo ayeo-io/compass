@@ -503,7 +503,7 @@ def _emit_check(run, args):
 
 def _stage_list_pass(run, view, task, task_dir):
     """Add one result per due, active check of each stage list, and return
-    `(ran, failed, nothing)` for them. A list is a guardrail of its own,
+    `(ran, failed, nothing, advisory)` for them. A list is a guardrail of its own,
     labelled `stage:<stage>:<entry|exit>`. The shipped checks are active only
     where `entry-exit-evaluation` is on, so a project that has not turned it
     on and added no check of its own gets none. An issue without a
@@ -511,26 +511,27 @@ def _stage_list_pass(run, view, task, task_dir):
     from compass_pkg import stage_lists
 
     if view is None:
-        return 0, 0, 0
+        return 0, 0, 0, 0
     try:
         rows = stage_lists.due_rows(stage_lists.evaluate(view, task, task_dir))
     except Exception as exc:                            # noqa: BLE001
         # A check must not crash the run.
         run.guardrail("stage-lists", "stage lists")
         run.result("stage-lists", False, f"evaluation errored: {exc}")
-        return 1, 1, 0
-    failed = nothing = 0
+        return 1, 1, 0, 0
+    failed = nothing = advisory = 0
     current = None
     for row in rows:
         if (row.stage, row.side) != current:
             current = (row.stage, row.side)
             run.guardrail(row.label, "%s checks of %s" % (row.side, row.stage))
-        passed = {"pass": True, "fail": False,
-                  "nothing-to-check": NOTHING_TO_CHECK}[row.status]
+        passed = {"pass": True, "fail": False, "nothing-to-check": NOTHING_TO_CHECK,
+                  "advisory": ADVISORY_FAILURE}[row.status]
         failed += passed is False
         nothing += passed is NOTHING_TO_CHECK
+        advisory += passed is ADVISORY_FAILURE
         run.result(row.check, passed, row.detail)
-    return len(rows), failed, nothing
+    return len(rows), failed, nothing, advisory
 
 
 def _assessment_keys_pass(run, task):
@@ -608,6 +609,10 @@ def cmd_check(args):
     impls = guardrails.get("impl") or {}
     matches = view.matches if view is not None else reading_matches
     readings = task.get("assessment") or {}
+    if view is not None:
+        # A `when`, `applies_when` or `blocking_when` reads one derived key
+        # beside the assessment: `ships` (ADR-037, the amendment of 2026-10-08).
+        readings = view.listing_assessment(readings, task.get("delivery_approach"))
 
     # A spike ships nothing, so the delivery guardrails (`G1`-`G5`) do not apply.
     # It is still controlled: it must conclude, and it must not change
@@ -655,10 +660,12 @@ def cmd_check(args):
                     failures += 1
                 run.result(check_name, passed, detail)
 
-        listed_ran, listed_failed, _nothing = _stage_list_pass(run, view, task, task_dir)
+        listed_ran, listed_failed, listed_nothing, listed_advisory = _stage_list_pass(
+            run, view, task, task_dir)
         ran += listed_ran
         failures += listed_failed
-        run.nothing += _nothing
+        run.nothing += listed_nothing
+        run.advisory += listed_advisory
         ran += 1
         if not _assessment_keys_pass(run, task):
             failures += 1
@@ -792,10 +799,12 @@ def cmd_check(args):
             run.result(check_name, passed, detail)
 
     # The stage lists run when the capability `entry-exit-evaluation` is on.
-    listed_ran, listed_failed, listed_nothing = _stage_list_pass(run, view, task, task_dir)
+    listed_ran, listed_failed, listed_nothing, listed_advisory = _stage_list_pass(
+        run, view, task, task_dir)
     ran += listed_ran
     failures += listed_failed
     nothing_to_check += listed_nothing
+    advisory += listed_advisory
     ran += 1
     if not _assessment_keys_pass(run, task):
         failures += 1

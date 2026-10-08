@@ -281,35 +281,62 @@ def evaluate(view, task, task_dir, run=True):
                     continue
                 severity = _severity(view, check, reading)
                 kind = check.get("kind")
-                status, detail = _judge(check, kind, side, stage, producer, modes,
-                                        task, task_dir, documents, due, run, owes)
-                if status == "fail" and severity == "advisory":
-                    status, detail = "pass", f"advisory - {detail}"
+                status, detail, settled = _outcome(
+                    check, kind, side, stage, producer, modes, task, task_dir,
+                    documents, due, run, owes)
+                if status != "pending":
+                    status, detail = _apply(view, check, status, detail, settled, reading)
                 rows.append(Row(stage, side, check_id, status, detail, due, severity))
     return rows
 
 
-def _judge(check, kind, side, stage, producer, modes, task, task_dir, documents, due, run,
-           owes):
-    """`(status, detail)` for one active check."""
+def _apply(view, check, status, detail, settled, reading):
+    """Give an outcome the verdict `compass check` gives a gate check: its
+    `on_skipped` decides a result of nothing to check, and its effective
+    severity turns a failure into an advisory one. Both come from
+    `check_cmd._judge`, so a check id has one verdict whoever runs it. An
+    outcome that is already settled (a skipped stage has had its `on_skipped`
+    applied, and a route that owes no document is not a skip) does not get
+    `on_skipped` a second time."""
+    from compass_pkg.check_cmd import ADVISORY_FAILURE, _judge as judge
+    declared = {k: v for k, v in check.items() if k != "on_skipped"} if settled else check
+    passed, detail = judge(_PASSED[status], detail, declared, view.matches, reading)
+    if passed is ADVISORY_FAILURE:
+        return "advisory", detail
+    if passed is NOTHING_TO_CHECK:
+        return "nothing-to-check", detail
+    return ("pass" if passed else "fail"), detail
+
+
+_PASSED = {"pass": True, "fail": False, "nothing-to-check": NOTHING_TO_CHECK}
+
+
+def _outcome(check, kind, side, stage, producer, modes, task, task_dir, documents, due, run,
+             owes):
+    """`(status, detail, settled)` for one active check, before its severity
+    and `on_skipped` are applied. `settled` is true when the status already
+    follows from `on_skipped` or from the route owing no document."""
     source = producer if kind == "human" else stage
     mode = modes.get(source)
     if mode in SKIPPED_MODES:
-        return _skipped(check), f"{source} is {mode}; on_skipped is {check.get('on_skipped')}"
+        return (_skipped(check),
+                f"{source} is {mode}; on_skipped is {check.get('on_skipped')}", True)
     if kind == "human":
         ticked = _tick(check, side, documents, task, owes)
         if ticked is None:
-            return _skipped(check), (f"{CHECKLISTS[side][0]} is recorded as omitted; "
-                                     f"on_skipped is {check.get('on_skipped')}")
-        return ticked
+            return (_skipped(check), f"{CHECKLISTS[side][0]} is recorded as omitted; "
+                                     f"on_skipped is {check.get('on_skipped')}", True)
+        # The one nothing-to-check a tick gives is a route that owes no document.
+        return (*ticked, ticked[0] == "nothing-to-check")
     if not due:
-        return "pending", f"runs when {'work in' if side == 'entry' else 'leaving'} {stage} is due"
+        return ("pending", f"runs when {'work in' if side == 'entry' else 'leaving'} "
+                           f"{stage} is due", False)
     if kind == "deterministic":
         if not run:
-            return "pending", "not run here; `compass check` runs it"
-        return _implementation(check, task, task_dir)
+            return "pending", "not run here; `compass check` runs it", False
+        return (*_implementation(check, task, task_dir), False)
     return "fail", (f"a check of kind '{kind}' is not evaluated by this version of "
-                    f"compass, so it cannot pass")
+                    f"compass, so it cannot pass"), False
 
 
 def due_rows(rows):

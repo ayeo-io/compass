@@ -80,6 +80,51 @@ def split_project_file(doc):
     return layer, settings
 
 
+TOP_LEVEL = "(top level)"
+
+# What a person typed to get each non-text key. YAML reads `on`, `yes` and
+# `true` as True, so the key as written is not recoverable; the example
+# shows the quoted form of the most common spelling.
+_QUOTE_EXAMPLE = {True: "on", False: "off", None: "null"}
+
+
+def non_text_keys(doc, path=""):
+    """`[(dotted path of the mapping, key)]` for every mapping key anywhere
+    in `doc` that is not text. YAML reads an unquoted `on:`, `no:`, `true:`
+    or `1:` as a boolean or a number, and a mapping that mixes those with
+    text keys cannot be sorted for a digest. List positions show as `[n]`."""
+    found = []
+    if isinstance(doc, dict):
+        for key, value in doc.items():
+            if not isinstance(key, str):
+                found.append((path or TOP_LEVEL, key))
+            found += non_text_keys(value, f"{path}.{key}" if path else str(key))
+    elif isinstance(doc, (list, tuple)):
+        for n, item in enumerate(doc):
+            found += non_text_keys(item, f"{path}[{n}]")
+    return found
+
+
+def non_text_key_message(key):
+    """What to tell the person about one non-text key: what YAML read it
+    as, and how to write it as text."""
+    if key is None or isinstance(key, bool):
+        kind, example = ("nothing (null)" if key is None else "a boolean"), \
+            _QUOTE_EXAMPLE[key]
+    else:
+        kind = "a number" if isinstance(key, (int, float)) else f"a {type(key).__name__}"
+        example = str(key)
+    return (f"the key {key!r} is not text: YAML read it as {kind}. "
+            f"Quote it, for example \"{example}\":")
+
+
+def refuse_non_text_keys(doc, where):
+    """Raise `CompassError` naming the first non-text key in `doc`."""
+    for path, key in non_text_keys(doc):
+        raise CompassError(f"{where}: {path}: {non_text_key_message(key)} "
+                           f"(L-KEY-NOT-TEXT)")
+
+
 def layer_digest(doc, kind="project"):
     """The digest of a layer's parsed content. A project or parent layer
     digests its layer keys only, so a settings key or the reserved `preset`
@@ -91,6 +136,7 @@ def layer_digest(doc, kind="project"):
 
 
 def _check(doc, kind, where):
+    refuse_non_text_keys(doc, where)
     errors = catalogue_check.check_layer(doc, kind)
     if errors:
         raise CompassError(f"{where}: " + "; ".join(errors))

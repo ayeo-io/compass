@@ -451,6 +451,10 @@ def test_d2_repairs_change_only_retired_names():
     `governance/routing-policy.md` (list_items 53 -> 56, table_rows 7 -> 12)
     gained the speed targets, the measures taken and the scan.
 
+    One more was re-baselined by `issue-layer-at-its-point`:
+    `governance/guardrails.md` (list_items 46 -> 47) gained the bullet saying an
+    issue's `config:` is enforced at the issue's own assessment.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

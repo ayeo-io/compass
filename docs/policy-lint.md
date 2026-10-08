@@ -126,7 +126,7 @@ earlier one. Warnings never stop it and never fail it.
 | Option | Meaning |
 |---|---|
 | `--file PATH` | Lint one `compass.yml` as the project layer, over the shipped default |
-| `--issue SLUG` | Add the issue's `config:` as the issue layer, and look up its approvals in the issue's evidence. Without it no issue is read: there is no `COMPASS_ISSUE` or current-task fallback. A project with no `compass.yml` lints the issue's config over the shipped default |
+| `--issue SLUG` | Add the issue's `config:` as the issue layer, judged at the issue's own assessment and not over the whole grid (a project layer is still judged over the grid), and look up its approvals in the issue's evidence. Without it no issue is read: there is no `COMPASS_ISSUE` or current-task fallback. A project with no `compass.yml` lints the issue's config over the shipped default |
 | `--exhaustive` | Classify with the full grid, not the grouped one |
 | `--json` | Print the document below |
 

@@ -93,8 +93,13 @@ def test_il_3_an_issue_approach_is_the_candidate_of_a_read_only_evaluation(tmp_p
 
 
 def test_il_3_a_lock_refuses_the_commit_of_an_issue_approach(tmp_path):
-    root, task_dir = fx.project(tmp_path, compass_yml=LAYERED,
-                                manifest=dict(fx.MANIFEST, config={"approach": "full"}))
+    """A spike issue that names `full` loses `spike.conclude` at its own
+    assessment (the lock that protects exactly this case). A delivery issue
+    that names `full` is not a lock case: it is incomparable on the subtask
+    ceiling, which `test_issue_layer_at_its_point.py` pins."""
+    body = dict(fx.MANIFEST, config={"approach": "full"})
+    body["assessment"] = dict(fx.MANIFEST["assessment"], goal="exploration")
+    root, task_dir = fx.project(tmp_path, compass_yml=LAYERED, manifest=body)
     before = (task_dir / "manifest.yml").read_bytes()
     code, out, err = fx.run(root, "approach", "evaluate", "--issue", fx.SLUG, "--write")
     assert code != 0

@@ -534,11 +534,14 @@ def test_gp_10_the_text_view_names_the_parent_in_the_layers_and_the_source_colum
 
 # --- GP-11: a parent that names a git parent --------------------------------------------------
 
-def test_gp_11_a_parent_that_names_a_git_parent_is_refused(tmp_path):
+def test_gp_11_a_parent_that_names_a_git_parent_is_fetched_and_a_missing_one_is_refused(
+        tmp_path):
+    # Chains are built (issue `parent-chains`): the inner parent is fetched like any
+    # other, and one the remote does not have is a fetch refusal on the naming parent.
     inner = "github:acme/inner@1.0.0#" + "f" * 40
     code, report, _ = _lint_parent(tmp_path, {"schema": 1, "extends": inner})
     assert code == 1
-    assert _codes(report) == ["L-PARENT-CHAIN"], report
+    assert _codes(report) == ["L-PARENT-FETCH"], report
     finding = report["findings"][0]
     assert finding["layer"].startswith("github:acme/bank@1.2.0#") and finding["path"] == "extends"
 
@@ -694,7 +697,7 @@ def test_gp_15_every_parent_code_is_a_code_the_lint_can_name():
     assert _parent_codes() == [
         "L-PARENT-FORM", "L-PARENT-NO-SHA", "L-PARENT-NOT-CACHED", "L-PARENT-FETCH",
         "L-PARENT-CONTENT", "L-PARENT-SHA-MISMATCH", "L-PARENT-SYMLINK", "L-PARENT-CACHE",
-        "L-PARENT-CHAIN", "L-PARENT-SHA-AMBIGUOUS"]
+        "L-PARENT-CHAIN", "L-PARENT-SHA-AMBIGUOUS", "L-PARENT-CYCLE"]
 
 
 def test_gp_15_the_owning_doc_names_every_code_setting_and_file():

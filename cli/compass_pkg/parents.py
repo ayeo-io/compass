@@ -308,13 +308,10 @@ def _full_sha(cache, spec):
     return held[0]
 
 
-def resolve(root, extends, *, fetch=False):
-    """The `Parent` a project's `extends:` names, or `None` for the shipped
-    form. With `fetch` an uncached commit is fetched; without it the cache is
-    all that is read."""
-    spec = spec_of(extends)
-    if spec is None:
-        return None
+def _load(root, spec, fetch):
+    """`(Parent, the parent's own extends: value)` for one git parent: the
+    fetch, the cache read and the strict load, with no look at what it
+    extends."""
     cache = cache_dir(root)
     if len(spec.sha) < 40:
         spec = spec._replace(sha=_full_sha(cache, spec))
@@ -338,13 +335,67 @@ def resolve(root, extends, *, fetch=False):
                           f"{type(doc).__name__}", name, PARENT_FILE)
     for where, key in layers.non_text_keys(doc):
         raise ParentError("L-KEY-NOT-TEXT", layers.non_text_key_message(key), name, where)
-    try:
-        inner = spec_of(doc.get("extends"))
-    except ParentError as exc:
-        raise ParentError(exc.code, f"the parent's own {exc.detail}", name, "extends") from None
-    if inner:
-        raise ParentError("L-PARENT-CHAIN", f"the parent names a git parent of its own "
-                          f"({ref_label(inner)}); chains of git parents are not built yet, so "
-                          "a parent may extend only compass:default@<major>", name, "extends")
     layer = layers.Layer(name, "parent", doc, layers.layer_digest(doc, "parent"))
-    return Parent(ref_label(spec), spec.sha, version_of(spec.ref), layer.digest, layer)
+    return Parent(ref_label(spec), spec.sha, version_of(spec.ref), layer.digest, layer), \
+        doc.get("extends")
+
+
+# --- chains ---------------------------------------------------------------------------
+
+# The most git parents one chain holds. The shipped default at the root is not
+# counted: it is the CLI's own version, not a fetched parent.
+MAX_DEPTH = 3
+
+
+def _own_spec(parent, extends):
+    """The `GitSpec` a parent's own `extends:` names, or `None`. A bad spelling
+    is reported on that parent."""
+    try:
+        return spec_of(extends)
+    except ParentError as exc:
+        raise ParentError(exc.code, f"the parent's own {exc.detail}", parent.layer.name,
+                          "extends") from None
+
+
+def _on_naming_parent(exc, parent):
+    """A fault found while loading an ancestor belongs to the parent that
+    names it. A fault in the ancestor's own file already names the ancestor."""
+    if exc.layer == "project":
+        return ParentError(exc.code, exc.detail, parent.layer.name, "extends")
+    return exc
+
+
+def resolve_chain(root, extends, *, fetch=False):
+    """The `Parent`s a project's `extends:` names, furthest ancestor first and
+    the direct parent last; empty for the shipped form. Each is pinned,
+    fetched and read like a single parent. A chain holds at most `MAX_DEPTH`
+    git parents (`L-PARENT-CHAIN`) and never the same commit twice
+    (`L-PARENT-CYCLE`). With `fetch` an uncached commit is fetched; without it
+    the cache is all that is read."""
+    spec = spec_of(extends)
+    nearest_first = []
+    while spec is not None:
+        via = nearest_first[-1] if nearest_first else None
+        if len(nearest_first) == MAX_DEPTH:
+            raise ParentError(
+                "L-PARENT-CHAIN", f"the parent names a fourth git parent ({ref_label(spec)}); "
+                "a chain holds at most three git parents, and the shipped default is not "
+                "counted", via.layer.name, "extends")
+        try:
+            found, inner = _load(root, spec, fetch)
+        except ParentError as exc:
+            raise (_on_naming_parent(exc, via) if via else exc) from None
+        if any(found.sha == earlier.sha for earlier in nearest_first):
+            raise ParentError(
+                "L-PARENT-CYCLE", f"the parent names {ref_label(spec)} at {found.sha[:7]}, "
+                "which is already in the chain", via.layer.name, "extends")
+        nearest_first.append(found)
+        spec = _own_spec(found, inner)
+    return nearest_first[::-1]
+
+
+def resolve(root, extends, *, fetch=False):
+    """The direct `Parent` a project's `extends:` names, or `None` for the
+    shipped form. The whole chain is resolved and checked."""
+    chain = resolve_chain(root, extends, fetch=fetch)
+    return chain[-1] if chain else None

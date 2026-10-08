@@ -48,7 +48,7 @@ earlier one. Warnings never stop it and never fail it.
 
 | Group | What it checks | Codes |
 |---|---|---|
-| `layer` | Each layer alone, before anything merges | `L-LOAD`, `L-KEY-NOT-TEXT`, `L-SCHEMA`, `L-SETTINGS-KEY`, `L-UNLOCK-PLACEMENT`, `L-IMPL-UNKNOWN`, `L-IMPL-TEMPLATED`, `W-APPROVED-ON-ISSUE`, `L-IGNORED-FILE` (warning), and the ten `L-PARENT-*` codes below for a git parent |
+| `layer` | Each layer alone, before anything merges | `L-LOAD`, `L-KEY-NOT-TEXT`, `L-SCHEMA`, `L-SETTINGS-KEY`, `L-UNLOCK-PLACEMENT`, `L-IMPL-UNKNOWN`, `L-IMPL-TEMPLATED`, `W-APPROVED-ON-ISSUE`, `L-IGNORED-FILE` (warning), and the eleven `L-PARENT-*` codes below for a git parent |
 | `merge` | The merge grammar, layer by layer. It reports every fault of the first layer that does not apply | the merge's own `M-*` codes, such as `M-ADD-EXISTS`, `M-SET-UNKNOWN`, `M-REF-REMOVED` |
 | `resolved` | The merged result as a whole | `M-REF-UNKNOWN`, `M-WEIGHT-TIE`, `M-HIT-MISSING`, `M-HIT-DISALLOWED`, `M-ALIAS-COLLISION`, `M-CYCLE` |
 | `locks` | What the locks above a layer refuse, and each refused unlock | `K-LOCK-REFUSED`, `K-UNLOCK-REFUSED`, `K-UNPROVABLE`, `E-EVALUATION` |
@@ -74,7 +74,8 @@ earlier one. Warnings never stop it and never fail it.
 | `L-PARENT-SHA-MISMATCH` | error | The fetch returned a commit other than the pinned one. Nothing is cached |
 | `L-PARENT-SYMLINK` | error | The fetched tree holds a symbolic link anywhere. Nothing is cached |
 | `L-PARENT-CACHE` | error | `.compass/cache` or `.compass/cache/parents` is a symbolic link, or a cached parent resolves outside `.compass/` |
-| `L-PARENT-CHAIN` | error | The parent's own `extends:` names a git parent. Chains are not built yet |
+| `L-PARENT-CHAIN` | error | A chain holds more than three git parents. Reported on the third parent, and the fourth is not fetched |
+| `L-PARENT-CYCLE` | error | A parent names a commit that is already in the chain. Reported on the parent that names it |
 | `L-PARENT-SHA-AMBIGUOUS` | error | A short sha names more than one cached commit |
 | `M-REF-UNKNOWN` | error | A field, or a rule's effect (`EFFECT_TARGETS` in `catalogue_spec.py` says which catalogue each effect names), names an id that no entry defines |
 | `M-WEIGHT-TIE` | error | Two delivery approaches have the same weight |

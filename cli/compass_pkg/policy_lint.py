@@ -46,6 +46,7 @@ FINDING_CODES = (
     "L-IMPL-TEMPLATED", "L-IGNORED-FILE", "L-PARENT-FORM", "L-PARENT-NO-SHA",
     "L-PARENT-NOT-CACHED", "L-PARENT-FETCH", "L-PARENT-CONTENT", "L-PARENT-SHA-MISMATCH",
     "L-PARENT-SYMLINK", "L-PARENT-CACHE", "L-PARENT-CHAIN", "L-PARENT-SHA-AMBIGUOUS",
+    "L-PARENT-CYCLE",
     "M-REF-UNKNOWN", "M-WEIGHT-TIE", "M-HIT-MISSING", "M-HIT-DISALLOWED", "M-CYCLE",
     "M-EFFECT-UNKNOWN",
     "K-LOCK-REFUSED", "K-UNLOCK-REFUSED", "K-UNPROVABLE",
@@ -168,18 +169,18 @@ def _ignored_file(root, cwd):
 
 
 def _git_parent(out, root, extends, fetch):
-    """Resolve the project's `extends:` when it names a git parent. A refusal
-    is a finding on the project layer, and ends the lint at the first group."""
+    """Resolve the project's `extends:` when it names a git parent, with the
+    chain of git parents behind it (root first). A refusal is a finding on the
+    layer at fault, and ends the lint at the first group."""
     try:
-        found = parents.resolve(root, extends, fetch=fetch)
+        found = parents.resolve_chain(root, extends, fetch=fetch)
     except parents.ParentError as exc:
         out.findings.append(Finding(exc.code, "error", exc.layer, exc.path, "layer",
                                     exc.detail))
         out.failed = ("project", "project") if exc.layer == "project" \
             else (exc.layer, "parent")
         return
-    if found:
-        out.git_parents.append(found)
+    out.git_parents.extend(found)
 
 
 def load_layers(root, *, file=None, manifest=None, cwd=None, read_project=True,

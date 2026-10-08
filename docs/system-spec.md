@@ -50,11 +50,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a spike with an advisory guardrail check that fails, then the run passes and shows the failure as advisory
+### configure refuses a landed issue, a symbolic link and a folder that is not a proposal
 
-- **Scenario id:** `CS-11`
+- **Scenario id:** `CR-12`
 - **Intent:** `INT-1`
-- **Source issue:** `check-severity-from-generation`
+- **Source issue:** `configure-and-reassess`
 - **Landed:** 2026-10-08
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -353,4 +353,4 @@
 
 ---
 
-1888 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1929 superseded scenario(s) are in `docs/system-spec-archive.md`.

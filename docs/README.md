@@ -23,8 +23,8 @@ the table does not exist, and when a doc in this folder is not listed.
 - [delivery-record.md](delivery-record.md) - `compass record`: the delivery record kept in its own repository.
 - [receipt.md](receipt.md) - the one-screen view of an issue's gates and evidence.
 - [writing-specs-and-plans.md](writing-specs-and-plans.md) - a worked example of a spec and a plan.
-- [system-spec.md](system-spec.md) - the current behaviour, derived from landed issues.
-- [system-spec-archive.md](system-spec-archive.md) - superseded behaviour, derived.
+- [system-spec.md](system-spec.md) - the current behaviour, derived from landed issues: one heading per issue, one line per scenario, no size cap.
+- [system-spec-archive.md](system-spec-archive.md) - scenarios that name a replacement in `superseded_by`, derived.
 
 ## Running and maintaining Compass
 

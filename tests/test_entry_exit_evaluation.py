@@ -370,11 +370,12 @@ def test_ee_6_a_skipped_list_does_not_run_the_implementation(tmp_path, monkeypat
 
 # --- EE-7: kinds this increment does not evaluate fail closed ----------------------------------
 
-@pytest.mark.parametrize("kind, extra", [
-    ("judged", {"inputs": ["acceptance-criteria"]}),
-    ("evidence", {"accepts": ["test-run"]}),
+@pytest.mark.parametrize("kind, extra, needle", [
+    ("judged", {"inputs": ["acceptance-criteria"]}, "no review record"),
+    ("evidence", {"accepts": ["test-run"]}, "not evaluated"),
 ])
-def test_ee_7_a_judged_or_evidence_check_fails_closed(tmp_path, monkeypatch, kind, extra):
+def test_ee_7_a_judged_or_evidence_check_fails_closed(tmp_path, monkeypatch, kind, extra,
+                                                       needle):
     root, task_dir = _config_project(tmp_path)
 
     def mutate(resolved):
@@ -383,7 +384,7 @@ def test_ee_7_a_judged_or_evidence_check_fails_closed(tmp_path, monkeypatch, kin
         resolved["stages"]["plan"]["entry"] = ["extra"]
 
     row = _by_check(_rows(_view(root, monkeypatch, mutate), task_dir))["extra"]
-    assert row.status == "fail" and "not evaluated" in row.detail
+    assert row.status == "fail" and needle in row.detail
 
 
 def test_ee_7_an_advisory_check_that_fails_does_not_fail(tmp_path, monkeypatch):

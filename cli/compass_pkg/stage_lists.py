@@ -21,8 +21,11 @@ How a check is judged:
   statement, under the heading `Definition of Ready` or `Definition of Done`.
   An unchecked box that carries a typed tag is not a tick.
 - `deterministic`: the registered implementation runs.
-- `judged` and `evidence`: not evaluated by this version. A blocking one
-  fails, so a configuration cannot pass by naming a check nothing reads.
+- `judged`: a review record. `review_records.judge` reads the newest record
+  of the check and passes it only while the record says pass, names a listed
+  reviewer and matches the check's inputs and definition.
+- `evidence`: not evaluated by this version. A blocking one fails, so a
+  configuration cannot pass by naming a check nothing reads.
 
 When a list is skipped. The stage that produces a human check's document is
 skipped or collapsed (the stage before the listed one for an entry list, the
@@ -35,7 +38,8 @@ An advisory check, by `severity` or by a `blocking_when` that does not match
 the assessment, reports a failure as a pass that says so.
 """
 # DEPENDENCY: standard library (dataclasses, os, re); compass_pkg.check_registry,
-# compass_pkg.check_results, compass_pkg.core, compass_pkg.next_cmd.
+# compass_pkg.check_results, compass_pkg.core, compass_pkg.next_cmd,
+# compass_pkg.review_records.
 # It reads configuration through an EffectiveView and does not import
 # compass_pkg.obligations, which only classify, effective and replay may import.
 from __future__ import annotations
@@ -44,6 +48,7 @@ import os
 import re
 from dataclasses import dataclass
 
+from compass_pkg import review_records
 from compass_pkg.check_registry import CHECK_FNS
 from compass_pkg.check_results import NOTHING_TO_CHECK
 from compass_pkg.core import FOUND, OMITTED, resolve_artifact, unregistered_document
@@ -250,7 +255,7 @@ def evaluate(view, task, task_dir, run=True):
                     continue
                 severity = _severity(view, check, reading)
                 kind = check.get("kind")
-                status, detail = _judge(check, kind, side, stage, producer, modes,
+                status, detail = _judge(check_id, check, view, kind, side, stage, producer, modes,
                                         task, task_dir, documents, due, run)
                 if status == "fail" and severity == "advisory":
                     status, detail = "pass", f"advisory - {detail}"
@@ -258,7 +263,7 @@ def evaluate(view, task, task_dir, run=True):
     return rows
 
 
-def _judge(check, kind, side, stage, producer, modes, task, task_dir, documents, due, run):
+def _judge(check_id, check, view, kind, side, stage, producer, modes, task, task_dir, documents, due, run):
     """`(status, detail)` for one active check."""
     source = producer if kind == "human" else stage
     mode = modes.get(source)
@@ -276,6 +281,8 @@ def _judge(check, kind, side, stage, producer, modes, task, task_dir, documents,
         if not run:
             return "pending", "not run here; `compass check` runs it"
         return _implementation(check, task, task_dir)
+    if kind == "judged":
+        return review_records.judge(check_id, check, view, task, task_dir)
     return "fail", (f"a check of kind '{kind}' is not evaluated by this version of "
                     f"compass, so it cannot pass")
 

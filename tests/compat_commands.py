@@ -204,6 +204,37 @@ def _regular_issue_broken_compass_yml(root: Path, env: dict) -> None:
     (root / "compass.yml").write_text("schema: 1\nstages: oops\n", encoding="utf-8")
 
 
+JUDGED_COMPASS_YML = """schema: 1
+checks:
+  design-review:
+    statement: The design holds against every scenario.
+    kind: judged
+    inputs: [technical-design]
+    severity: blocking
+    on_skipped: fail
+stages:
+  plan:
+    set:
+      entry:
+        add: [design-review]
+"""
+
+
+def _with_judged_check(root: Path, env: dict) -> None:
+    # A regular issue whose stored configuration holds a judged check, so
+    # `evidence review` has a check to record against. The document the check
+    # reads is not written.
+    _regular_issue(root, env)
+    (root / "compass.yml").write_text(JUDGED_COMPASS_YML, encoding="utf-8")
+    _must(root, env, "approach", "evaluate", "--issue", REGULAR_SLUG, "--write")
+
+
+def _with_judged_check_document(root: Path, env: dict) -> None:
+    _with_judged_check(root, env)
+    (root / ".compass" / "work" / REGULAR_SLUG / "technical-design.md").write_text(
+        "# Design\n", encoding="utf-8")
+
+
 def _with_broken_governance(root: Path, env: dict) -> None:
     _with_copied_governance(root, env)
     # A routing policy without its required top-level keys is the
@@ -243,6 +274,8 @@ STATES = {
     "regular-issue": _regular_issue,
     "regular-issue-broken-compass-yml": _regular_issue_broken_compass_yml,
     "with-copied-governance": _with_copied_governance,
+    "with-judged-check": _with_judged_check,
+    "with-judged-check-document": _with_judged_check_document,
     "with-broken-governance": _with_broken_governance,
     "with-config": _with_config,
     "with-compass-yml": _with_compass_yml,

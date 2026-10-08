@@ -122,11 +122,16 @@ waiver a person re-approves. The two pins take the place of the two defaults.
 3. It fetches the current pin (if it is not cached) and the new commit into the
    cache, each with the chain of git parents behind it (the parents its own
    `extends:` names, at most three deep). A cached copy of any parent in the
-   current chain that was edited stops the move (exit 2): delete it under
-   `.compass/cache/parents/` and run the command again.
-4. It checks every parent in the new chain as the lint checks a parent. A
-   settings key, an `unlock:`, an `impl` outside the registry, a chain that is
-   too deep or a cycle is refused (`new-parent-invalid`).
+   current chain or the new chain that was edited, or that nothing records the
+   fetch of, stops the move (exit 2) before anything is read from it: the cache
+   is ignored by git, so an edit there would otherwise decide the re-check and
+   the approvers. Delete the copy under `.compass/cache/parents/` and run the
+   command again.
+4. It runs every group of `compass policy lint` over the shipped default plus
+   the new chain. Any error is refused as `new-parent-invalid`, naming the
+   findings: a settings key, an `unlock:`, an `impl` outside the registry, a
+   reference to an unknown entry, a loosening of the default with no waiver, a
+   chain that is too deep, a cycle, or an ancestor that cannot be fetched.
 5. It lays the project's file over the shipped default plus the whole chain at
    each pin, so a waived field that an ancestor changed counts as changed, and
    runs the same re-check, classification, replay, questions and single write as

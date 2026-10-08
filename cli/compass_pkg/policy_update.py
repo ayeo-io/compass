@@ -206,16 +206,20 @@ def _resolved(directory):
     return (parent.doc,), meta["version"], config, prov
 
 
-def _resolved_git(directory, chain):
+def _resolved_git(directory, chain, check=False):
     """`_resolved` for a chain of git parents (furthest first) over the default
     in `directory`: the default's version stands for the whole, and the
     parents' own faults are returned as text, not raised, so the move is
     refused with the cause."""
     default = _resolved(directory)
-    problems = [f"{f.code} [{f.layer}] {f.path}: {f.message}" for f in policy_lint._layer_group(
-        {"chain": [found.layer for found in chain], "today": datetime.date.today()})]
-    if problems:
-        return None, problems
+    if check:
+        # Every lint group, as `compass policy lint` runs them, so a pin is
+        # never written that the lint then refuses.
+        base, _ = policy_lint.load_parent(directory=directory)
+        report = policy_lint.lint_chain(base, None, extra_parents=[f.layer for f in chain])
+        problems = [f"{f.code} [{f.layer}] {f.path}: {f.message}" for f in report.errors]
+        if problems:
+            return None, problems
     docs, config, prov = list(default[0]), default[2], default[3]
     for found in chain:
         try:
@@ -344,6 +348,25 @@ _ENVIRONMENT = ("L-PARENT-FETCH", "L-PARENT-CACHE", "L-PARENT-NOT-CACHED",
                 "L-PARENT-SHA-MISMATCH")
 
 
+def _trust_cache(root, chain, where):
+    """Stop the move when a cached copy in `chain` is not the file that was
+    fetched, or cannot be shown to be. The cache is ignored by git, so an edit
+    to it is not visible in review, and it would decide the waiver re-check and
+    the approvers."""
+    for held in chain:
+        state = parent_states.read(root, held)
+        if not state.why:
+            continue
+        # Only a digest that no longer matches means an edit; a missing record
+        # means nothing says what was fetched.
+        edited = "no longer matches" in state.why
+        said = (f"was edited ({state.why})" if edited else
+                f"cannot be checked ({state.why}); nothing records what was fetched")
+        raise CompassError(f"the cached copy of {held.sha[:7]} of {held.ref}, in {where}, "
+                           f"{said}. Delete it under .compass/cache/parents/ and run the "
+                           f"command again to fetch it afresh")
+
+
 def _offline_plan(made, spec, why):
     made.git = GitMove(parents.ref_label(spec), spec.sha)
     made.offline = why
@@ -374,23 +397,25 @@ def _plan_git(made, root, spec, to, defaults):
             return made
         old_chain = _chain_parents(root, extends, fetch=True)
         old = old_chain[-1]
-        for held in old_chain:
-            state = parent_states.read(root, held)
-            if state.why:
-                raise CompassError(f"the cached copy of {held.sha[:7]} of {held.ref}, in the "
-                                   f"chain of the current pin, was edited ({state.why}). "
-                                   f"Delete it under .compass/cache/parents/ and run the "
-                                   f"command again to fetch it afresh")
+        _trust_cache(root, old_chain, "the chain of the current pin")
         made.git = GitMove(label, old.sha, new_sha, old.version or None)
         if old.sha == new_sha:
             return made
         try:
             new_chain = _chain_parents(root, f"{label}#{new_sha}", fetch=True)
         except parents.ParentError as exc:
-            if exc.code in _ENVIRONMENT or parents.unreachable(exc.detail):
+            if parents.unreachable(exc.detail):
+                raise
+            # A fault in the new commit's own ancestors was caused by the parent's
+            # owners, so it is a refusal; a fault fetching the commit itself is not.
+            ours = exc.layer == "project"
+            if exc.code in _ENVIRONMENT and (ours or exc.code != "L-PARENT-FETCH"):
                 raise
             made.invalid = [f"{exc.code} [{exc.layer}] {exc.path}: {exc.detail}"]
             return made
+        # The new chain was fetched before any write, so a copy in the cache can
+        # have been edited since. It is checked before anything is read from it.
+        _trust_cache(root, new_chain, "the chain of the new commit")
     except parents.ParentError as exc:
         if parents.unreachable(exc.detail):
             return _offline_plan(made, spec, f"{label} could not be reached ({exc.detail}); "
@@ -403,7 +428,7 @@ def _plan_git(made, root, spec, to, defaults):
     if before is None:
         raise CompassError(f"the current pin {old.sha[:7]} of {label} fails its own check: "
                            f"{faults[0]} (run compass policy lint)")
-    after, faults = _resolved_git(shipped, new_chain)
+    after, faults = _resolved_git(shipped, new_chain, check=True)
     if after is None:
         made.invalid = faults
         return made

@@ -360,22 +360,20 @@ def test_pug_8_a_new_commit_with_a_settings_key_is_refused(world):
     assert "L-SETTINGS-KEY" in out.refusal[1] and world.text() == before
 
 
+CHECK = {"statement": "The manifest names the team's reviewer.", "kind": "deterministic",
+         "impl": "backfills-paid", "severity": "advisory", "on_skipped": "fail"}
+
+
 def test_pug_8_a_new_commit_that_the_project_cannot_merge_over_is_refused(world):
-    world.advance({"schema": 1, "owner": "platform-team",
-                   "checks": {"backfills-paid": {"remove": True}}})
+    # The new commit adds a check the project also adds: each is valid alone.
+    world.advance({"schema": 1, "owner": "platform-team", "checks": {"team-check": CHECK}})
     world.project("""\
 schema: 1
 extends: github:acme/bank@main#{sha}
 owner: jed72
 
 checks:
-  backfills-paid:
-    set:
-      severity: advisory
-    waiver:
-      reason: Follow-ups are tracked outside the manifest here.
-      approved_by: jed72
-      approved_on: 2026-10-05
+  team-check: """ + json.dumps(CHECK).replace("{", "{{").replace("}", "}}") + """
 """)
     before = world.text()
     out, _ = _run(world, yes=True)
@@ -573,3 +571,76 @@ def test_pug_16_an_edited_cache_of_an_ancestor_of_the_current_pin_stops_the_move
     with pytest.raises(CompassError) as caught:
         _update().plan(world.root)
     assert "edited" in str(caught.value)
+
+
+# --- PUG-17 to PUG-20: the new chain is trusted only as far as it is checked -------------
+
+def _declined_run(world, doc):
+    """Fetch the new commit by declining the move, and return its sha. The commit
+    is then in the cache, which git ignores."""
+    second = world.advance(doc)
+    world.project()
+    out, _ = _run(world, interactive=True, answers=("n",))
+    assert out.status == "refused" and world.cached(second).is_file()
+    return second
+
+
+def test_pug_17_an_edited_cache_of_the_new_commit_cannot_clear_a_waiver(world):
+    from compass_pkg.core import CompassError
+    second = _declined_run(world, MOVED)
+    world.cached(second).write_text(_dump(V1), encoding="utf-8")     # the waived field back to 1
+    before = world.text()
+    with pytest.raises(CompassError) as caught:
+        _run(world, yes=True)
+    assert "edited" in str(caught.value) and second[:7] in str(caught.value)
+    assert world.text() == before
+
+
+def test_pug_17_an_edited_cache_of_the_new_commit_cannot_name_an_approver(world):
+    from compass_pkg.core import CompassError
+    second = _declined_run(world, MOVED)
+    world.cached(second).write_text(
+        _dump({**MOVED, "approvers": {"project-waiver": ["mallory"]}}), encoding="utf-8")
+    before = world.text()
+    with pytest.raises(CompassError) as caught:
+        _run(world, interactive=True, answers=("y", "mallory", "y"))
+    assert "edited" in str(caught.value) and world.text() == before
+
+
+def test_pug_17_a_cache_with_no_record_of_its_fetch_is_cannot_be_checked_not_edited(world):
+    from compass_pkg.core import CompassError
+    _declined_run(world, MOVED)
+    (world.root / ".compass" / "cache" / "parents" / "seen.yml").unlink()
+    with pytest.raises(CompassError) as caught:
+        _run(world, yes=True)
+    text = str(caught.value)
+    assert "cannot be checked" in text and "nothing records what was fetched" in text
+    assert "was edited" not in text
+
+
+@pytest.mark.parametrize("doc, code", [
+    ({"schema": 1, "owner": "platform-team",
+      "approaches": {"regular": {"set": {"subtask_ceiling": 9}}}}, "C-LOOSENING"),
+    ({"schema": 1, "owner": "platform-team",
+      "approaches": {"regular": {"set": {"gates": ["verify.correctness", "verify.nonesuch"]}}}},
+     "M-REF-UNKNOWN"),
+    ({"schema": 1, "owner": "platform-team",
+      "approaches": {"regular": {"set": {"gates": ["verify.clarity"]}}}}, "C-LOOSENING"),
+])
+def test_pug_18_a_new_commit_the_full_lint_refuses_is_refused_by_the_move(world, doc, code):
+    world.advance(doc)
+    world.project(NO_WAIVER)
+    before = world.text()
+    out, _ = _run(world, yes=True)
+    assert (out.status, out.refusal[0], out.written) == ("refused", "new-parent-invalid", False)
+    assert code in out.refusal[1] and world.text() == before
+
+
+def test_pug_19_a_new_commit_that_extends_a_missing_repository_is_refused(world):
+    world.advance({"schema": 1, "owner": "platform-team",
+                   "extends": f"github:acme/missing@main#{'a' * 40}"})
+    world.project(NO_WAIVER)
+    before = world.text()
+    out, _ = _run(world, yes=True)
+    assert (out.status, out.refusal[0]) == ("refused", "new-parent-invalid")
+    assert "L-PARENT-FETCH" in out.refusal[1] and world.text() == before

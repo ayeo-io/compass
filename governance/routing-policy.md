@@ -263,7 +263,11 @@ so `compass check` does not run them and the two views do not name them (a
 legacy `checks:` entry needs an implementation). A Definition of Ready check
 returns `not-applicable` when its stage is skipped, because a collapsed or
 skipped refine meets it by construction. A Definition of Done check returns
-`fail`, as `dod-evidence-typed` does.
+`fail`, as `dod-evidence-typed` does. Each Definition of Done check says
+`when: {ships: true}`, so an approach that does not ship, the spike, owes none
+of them when the capability is on. `ships` is a key that evaluation derives
+from the approach, not a dimension. `docs/entry-exit-evaluation.md` states
+how the lists run once the capability is on.
 
 `governance/legacy-views.yml` holds what the two files contain that the
 catalogues have no field for. Only the generator of the views reads it, and it

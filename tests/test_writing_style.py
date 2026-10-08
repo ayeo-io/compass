@@ -1083,6 +1083,26 @@ _register(Rule(
     "identifier", _find_word_table,
     exemptions=_SHORTER_WORD_TABLE_EXEMPTIONS + (
         Exemption(
+            "cli/compass_pkg/parent_states.py",
+            "- `locally modified`: the cached `compass.yml` no longer",
+            "\"locally modified\" is the name of one of the four parent states, "
+            "shown to people by `compass policy lint` - an identifier "
+            "(section 4), not the verb the word table retires"),
+        Exemption(
+            "docs/git-parents.md", "| `locally modified` | The cached",
+            "\"locally modified\" is the name of one of the four parent states, "
+            "and `S-PARENT-MODIFIED` its finding code - identifiers "
+            "(section 4), not the verb the word table retires"),
+        Exemption(
+            "docs/policy-lint.md", "| `S-PARENT-MODIFIED` | error",
+            "`S-PARENT-MODIFIED` is the finding code of the \"locally "
+            "modified\" parent state - an identifier (section 4), not the "
+            "verb the word table retires"),
+        Exemption(
+            "tests/test_parent_states.py", "| locally modified | the cached",
+            "\"locally modified\" is the name of one of the four parent states "
+            "- an identifier (section 4), not the verb the word table retires"),
+        Exemption(
             "docs/five-minutes.md", "## 5. Verify and ship",
             "\"Verify\" here is the stage name, in the same heading form "
             "as \"1. Assess the work\", \"2. Define acceptance\" and "

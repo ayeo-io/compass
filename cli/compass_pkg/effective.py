@@ -99,6 +99,12 @@ class EffectiveView:
         """Whether a `when:` clause of this configuration holds for an assessment."""
         return reading_matches(when, assessment, self.orders)
 
+    def listing_assessment(self, assessment, approach_name):
+        """What a check's `when` reads for an issue: its assessment and the
+        derived key `ships`, whether the approach it was routed to ships."""
+        approaches = self.resolved.get("approaches") or {}
+        return obligations.listing_assessment(assessment, approaches.get(approach_name))
+
     def guardrail_gates(self):
         """The guardrails in the legacy shape: `defaults` (gates that apply to
         an approach that ships) and `spike_guardrails` (those that do not), each

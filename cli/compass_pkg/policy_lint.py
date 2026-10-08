@@ -29,7 +29,7 @@ import os
 import re
 from dataclasses import dataclass, field
 
-from compass_pkg import catalogue_check, layers, locks, merge, parents, waivers
+from compass_pkg import catalogue_check, layers, locks, merge, parent_states, parents, waivers
 from compass_pkg import catalogue_spec as spec
 from compass_pkg.atomic_io import StrictYamlError, load_yaml_strict
 from compass_pkg.check_registry import REGISTRY
@@ -47,9 +47,10 @@ FINDING_CODES = (
     "L-PARENT-NOT-CACHED", "L-PARENT-FETCH", "L-PARENT-CONTENT", "L-PARENT-SHA-MISMATCH",
     "L-PARENT-SYMLINK", "L-PARENT-CACHE", "L-PARENT-CHAIN", "L-PARENT-SHA-AMBIGUOUS",
     "L-PARENT-CYCLE",
+    "S-PARENT-UP-TO-DATE", "S-PARENT-STALE", "S-PARENT-MODIFIED", "S-PARENT-BOTH",
     "M-REF-UNKNOWN", "M-WEIGHT-TIE", "M-HIT-MISSING", "M-HIT-DISALLOWED", "M-CYCLE",
     "M-BOOKKEEPING-INPUT", "M-DIRECTORY-DEPENDENCY",
-    "M-EFFECT-UNKNOWN",
+    "M-EFFECT-UNKNOWN", "M-LIST-KIND-UNEVALUATED",
     "K-LOCK-REFUSED", "K-UNLOCK-REFUSED", "K-UNPROVABLE",
     "E-EVALUATION",
     "C-LOOSENING", "C-INCOMPARABLE", "V-VOCABULARY-CHANGE",
@@ -189,6 +190,24 @@ def _git_parent(out, root, extends, fetch):
             else (exc.layer, "parent")
         return
     out.git_parents.extend(found)
+    for parent in found:
+        _parent_state(out, root, parent)
+        if out.failed:
+            return
+
+
+def _parent_state(out, root, found):
+    """Report the parent's state (`parent_states`). A newer commit known is a
+    warning. An edited cache is an error, because the chain would run a file
+    that is not the pinned commit's; it ends the lint at the first group."""
+    state = parent_states.read(root, found)
+    code, level = parent_states.FINDINGS[state.state]
+    finding = Finding(code, level, found.layer.name, "extends", "layer", state.message)
+    if level == "error":
+        out.findings.append(finding)
+        out.failed = (found.layer.name, "parent")
+    else:
+        out.warnings.append(finding)
 
 
 def load_layers(root, *, file=None, manifest=None, cwd=None, read_project=True,
@@ -490,8 +509,32 @@ def _effect_targets(state):
     return out
 
 
+#: The kinds of check that `stage_lists` evaluates. A stage list that names
+#: any other kind gets a check that fails closed (see `stage_lists`).
+EVALUATED_LIST_KINDS = ("human", "deterministic")
+
+
+def _list_kinds(state):
+    """A warning for each check a stage list names whose kind this version
+    does not evaluate. The check fails in `compass check`, whatever the
+    capability, so its author must be told."""
+    out, config = [], state["config"]
+    checks = config.get("checks") or {}
+    for stage, body in (config.get("stages") or {}).items():
+        for side in ("entry", "exit"):
+            for check_id in (body.get(side) or []) if isinstance(body, dict) else []:
+                kind = (checks.get(check_id) or {}).get("kind")
+                if kind and kind not in EVALUATED_LIST_KINDS:
+                    path = f"stages.{stage}.{side}"
+                    out.append(_finding(
+                        "resolved", "M-LIST-KIND-UNEVALUATED", _layer_of(state, path), path,
+                        f"names {check_id}, a check of kind {kind}, which this version "
+                        f"does not evaluate; it fails in compass check", "warning"))
+    return out
+
+
 def _resolved_group(state):
-    out = _unknown_references(state) + _effect_targets(state)
+    out = _unknown_references(state) + _effect_targets(state) + _list_kinds(state)
     out += _weight_ties(state) + _hit_policies(state)
     out += [_finding("resolved", code, _layer_of(state, path), path, message)
             for code, path, message in catalogue_check.check_vocabulary(state["config"])]

@@ -228,6 +228,63 @@ def test_pl_2_a_duplicate_key_in_the_project_file_is_a_load_finding(tmp_path):
     assert "duplicate key" in document["findings"][0]["message"]
 
 
+NON_TEXT_CHECK = ("schema: 1\nchecks:\n  docs-mention:\n    statement: x\n"
+                  "    kind: deterministic\n    impl: suite-passed\n"
+                  "    severity: advisory\n    on: [ship]\n")
+
+
+def _one_finding(document, code):
+    assert [f["code"] for f in document["findings"]] == [code], document
+    return document["findings"][0]
+
+
+def test_pl_2_a_non_text_key_in_the_project_file_is_a_finding_not_a_traceback(tmp_path):
+    code, out, err = _run(_project(tmp_path, NON_TEXT_CHECK), "policy", "lint", "--json")
+    assert "Traceback" not in err, err
+    assert code == 1
+    finding = _one_finding(json.loads(out), "L-KEY-NOT-TEXT")
+    assert (finding["level"], finding["layer"], finding["group"]) == (
+        "error", "project", "layer")
+    assert finding["path"] == "checks.docs-mention"
+    assert "True" in finding["message"] and '"on":' in finding["message"]
+
+
+def test_pl_2_a_non_text_key_in_a_settings_section_is_refused_too(tmp_path):
+    root = _project(tmp_path, "schema: 1\nprices:\n  2: 3\n")
+    code, out, err = _run(root, "policy", "lint", "--json")
+    assert "Traceback" not in err, err
+    finding = _one_finding(json.loads(out), "L-KEY-NOT-TEXT")
+    assert finding["path"] == "prices"
+    assert "2" in finding["message"] and '"2":' in finding["message"]
+
+
+def test_pl_2_a_non_text_key_in_an_issue_config_is_a_finding(tmp_path):
+    root = _project(tmp_path, {"schema": 1})
+    issue = root / ".compass" / "work" / "t"
+    issue.mkdir(parents=True)
+    (issue / "manifest.yml").write_text(
+        "schema_version: '2.0'\nissue: t\nconfig:\n  checks:\n    tests-pass:\n"
+        "      set:\n        yes: 1\n", encoding="utf-8")
+    code, out, err = _run(root, "policy", "lint", "--json", "--issue", "t")
+    assert "Traceback" not in err, err
+    finding = _one_finding(json.loads(out), "L-KEY-NOT-TEXT")
+    assert (finding["layer"], finding["path"]) == ("issue", "checks.tests-pass.set")
+
+
+def test_pl_2_policy_effective_refuses_a_non_text_key_with_the_message(tmp_path):
+    code, out, err = _run(_project(tmp_path, NON_TEXT_CHECK), "policy", "effective")
+    assert "Traceback" not in err, err
+    assert code == 2
+    assert "L-KEY-NOT-TEXT" in err and "checks.docs-mention" in err and '"on":' in err
+
+
+def test_pl_2_a_chain_built_from_a_non_text_key_is_refused_by_the_loader():
+    from compass_pkg import layers
+    from compass_pkg.core import CompassError
+    with pytest.raises(CompassError, match=r'checks\.c.*"on":'):
+        layers.build_chain(project=_layer({"schema": 1, "checks": {"c": {True: 1}}}))
+
+
 # --- PL-3: the merge group ---------------------------------------------------------
 
 MERGE_CASES = {

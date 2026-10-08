@@ -43,7 +43,7 @@ earlier one. Warnings never stop it and never fail it.
 
 | Group | What it checks | Codes |
 |---|---|---|
-| `layer` | Each layer alone, before anything merges | `L-LOAD`, `L-SCHEMA`, `L-SETTINGS-KEY`, `L-UNLOCK-PLACEMENT`, `L-IMPL-UNKNOWN`, `L-IMPL-TEMPLATED`, `W-APPROVED-ON-ISSUE`, `L-IGNORED-FILE` (warning) |
+| `layer` | Each layer alone, before anything merges | `L-LOAD`, `L-KEY-NOT-TEXT`, `L-SCHEMA`, `L-SETTINGS-KEY`, `L-UNLOCK-PLACEMENT`, `L-IMPL-UNKNOWN`, `L-IMPL-TEMPLATED`, `W-APPROVED-ON-ISSUE`, `L-IGNORED-FILE` (warning) |
 | `merge` | The merge grammar, layer by layer. It reports every fault of the first layer that does not apply | the merge's own `M-*` codes, such as `M-ADD-EXISTS`, `M-SET-UNKNOWN`, `M-REF-REMOVED` |
 | `resolved` | The merged result as a whole | `M-REF-UNKNOWN`, `M-WEIGHT-TIE`, `M-HIT-MISSING`, `M-HIT-DISALLOWED`, `M-ALIAS-COLLISION`, `M-CYCLE` |
 | `locks` | What the locks above a layer refuse, and each refused unlock | `K-LOCK-REFUSED`, `K-UNLOCK-REFUSED`, `K-UNPROVABLE`, `E-EVALUATION` |
@@ -54,6 +54,7 @@ earlier one. Warnings never stop it and never fail it.
 | Code | Level | Meaning |
 |---|---|---|
 | `L-LOAD` | error | The file does not parse, or repeats a key. The path is from the project root, or the file's own name when it is outside it |
+| `L-KEY-NOT-TEXT` | error | A mapping key anywhere in a layer that YAML reads as a boolean, a number or null, such as an unquoted `on:`, `no:`, `true:` or `1:`. The path is the mapping that holds it, and the message gives the key as parsed and the quoted form to write, such as `"on":`. The layer is not read further, so no later group runs |
 | `L-SCHEMA` | error | A key or value that the layer's schema does not allow |
 | `L-SETTINGS-KEY` | error | A settings key in a parent. Settings belong in the project's own `compass.yml` |
 | `L-UNLOCK-PLACEMENT` | error | An `unlock` outside the project layer, or a top-level `unlocks` |

@@ -116,7 +116,7 @@ the schema of its files in `versions.yml`.
 - A different **implementation** major refuses that check only. It does not run
   and it records no result. Every other check runs. A refused check that blocks
   counts as a failure. One that is advisory for this assessment does not, and the
-  text views name it as a notice. `--json` reports `"status": "refused"` for
+  text views list it as an advisory failure. `--json` reports `"status": "refused"` for
   both. The `detail` names the
   implementation, both versions and `compass issue migrate-config`:
 

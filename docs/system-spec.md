@@ -3289,3 +3289,16 @@
 - `RP-15` A section that cannot be rendered says so
 - `RP-16` The module stays pure
 - `RP-17` The receipt help mentions the section
+
+### init-docs-release (landed 2026-10-08)
+
+- `IDR-1` init writes a minimal compass.yml that lints
+- `IDR-2` init migrates an older project
+- `IDR-3` init copies no governance
+- `IDR-4` the verb points at compass.yml
+- `IDR-5` this repository's compass.yml is settings only
+- `IDR-6` the hook and the self-check read the moved settings
+- `IDR-7` no source names the old file alone
+- `IDR-8` configuration.md describes compass.yml as the settings file
+- `IDR-9` releasing.md has the 6.0.0 entry
+- `IDR-10` the compatibility contracts hold under configurations B and C

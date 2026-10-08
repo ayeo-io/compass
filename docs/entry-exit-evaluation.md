@@ -47,7 +47,7 @@ receipt shows every list, and says which are not yet due.
 
 | Kind | Judged by |
 |---|---|
-| `human` | A tick: a checked box (`- [x]`) whose text equals the check's `statement`, under the heading `Definition of Ready` in the requirements review (entry lists) or `Definition of Done` in the verification report (exit lists). |
+| `human` | A tick: a checked box (`- [x]`) whose text equals the check's `statement`, under the heading `Definition of Ready` in the requirements review (entry lists) or `Definition of Done` in the verification report (exit lists). With `approvers:` the tick also needs a current approval by a listed approver (see [Approvers on a human check](#approvers-on-a-human-check)). |
 | `deterministic` | Its registered implementation runs. The receipt does not run it and shows `pending`. |
 | `judged`, `evidence` | Not evaluated by this version. A blocking check of these kinds fails, so a list cannot pass by naming a check nothing reads. This holds whatever the capability, for a check a project adds, and `compass policy lint` warns (`M-LIST-KIND-UNEVALUATED`, exit code unchanged). The shipped default names none. |
 
@@ -58,38 +58,103 @@ An unchecked box that carries a typed tag (`(evidence: ...)` or
 `checks.dod_tag_problems`, so a tag means one thing. An unchecked box with no
 tag fails as "not ticked".
 
-## Approvers on a human check
-
-A `human` check can declare `approvers:`, a list of person ids. Then a tick
-counts only with a `human-approval` entry in the issue's evidence registry
-that:
-
-- names the check (`check: <id>`) and holds `decision: approved`;
-- holds `approver`, `role`, `scope` and `timestamp`;
-- is by a listed approver (`approver` equals a listed id; `agent` never
-  matches, and a role is read as a person id until roles are resolved);
-- names this issue (`issue: <slug>`);
-- names the issue's current generation (`generation: <n>`, or none when the
-  issue has none).
-
-A record that fails any of these is set aside, so a record by someone else
-cannot block a listed approver's record. The row fails when no record
-remains. Its detail starts with the cause (`no approval record`, `approver
-not listed`, `approval is for another issue`, `approval is for another
-generation`) and names the approvers who may approve. The box must still be
-ticked: an approval does not replace the tick. A deferral with a resolving
-typed tag is not a tick and is unchanged. Without `approvers:`, or with an
-empty list, a tick is enough.
-
-An approver's name is not authenticated, the same limit as every
-`human-approval` record. `cli/compass_pkg/approval_records.py` holds the rule.
-
 Each result goes through the judgement `compass check` gives a gate check, so
 one check id has one verdict. A deterministic check that has nothing to inspect
 follows its `on_skipped`. A check with `severity: advisory`, or a
 `blocking_when` that does not match the issue's assessment, that fails is shown
 as ADVISORY (status `advisory` in `--json`, counted in `advisory`, recorded as
 `advisory` in `results.yml`) and does not fail the run.
+
+## Approvers on a human check
+
+A `human` check can declare `approvers:`, a list of names. Then a tick or a
+deferral tag alone does not clear it. It also needs a `human-approval` entry in
+the issue's evidence registry that:
+
+- names the check (`check: <id>`) and holds a decision, `approved` or
+  `rejected`;
+- holds `approver`, `role`, `scope` and `timestamp`;
+- is by a listed approver (below);
+- names this issue (`issue: <slug>`);
+- names the issue's current generation (`generation: <n>`; both are none when
+  the issue has none, and generation 0 is not none).
+
+A record that fails any of these is set aside, so a record by someone else
+cannot clear the check or block it. Of the records that remain, the newest
+decides: a later rejection by a listed approver withdraws an approval, and a
+later approval restores it. The row fails when no record remains. Its detail
+starts with the cause (`no approval record`, `approver not listed`, `approval
+is for another issue`, `approval is for another generation`, `approval
+withdrawn`), shows the values it read and names the approvers who may approve.
+
+A box must still be ticked: an approval does not replace the tick. A box
+unticked with a resolving typed tag is a deferral, and a deferral does not
+excuse a check that lists approvers, so it also needs a current approval. Both
+tag forms (`evidence` and `follow-up`) behave the same. Without `approvers:`,
+or with an empty list, a tick is enough and a deferral passes.
+
+Who is listed. `owner` names the project's owner (the `owner:` of
+`compass.yml`, the same name waivers use), and names nobody when the project
+declares none. Any other entry is read as a person id, a role included, until
+roles are resolved. The approver `agent` never matches.
+
+What is not protected. An approver's name is not authenticated, the same limit
+as every `human-approval` record. Anyone who can write `manifest.yml`, an
+agent included, can add a record that names a listed person. Two guards exist:
+`compass evidence approve` needs a terminal and refuses the approver `agent`.
+They stop an agent session that calls the verb. They do not stop one that
+edits the manifest.
+
+### `compass evidence approve`
+
+```
+compass evidence approve --check ID --approver NAME --role ROLE --scope TEXT
+                         [--decision approved|rejected] [--issue SLUG]
+```
+
+| Option | Meaning |
+|---|---|
+| `--check` | The id of a human check that lists approvers |
+| `--approver` | The person's id. It must be listed by the check |
+| `--role` | The role the person acts in |
+| `--scope` | What the approval covers |
+| `--decision` | `approved` (the default) or `rejected` |
+
+The command stamps the issue, the issue's generation and the time, and
+registers the record as `EV-APPROVAL-<check>-<n>`. It exits 0 when it wrote the
+record and 2 when it did not. In the second case it writes nothing. It exits 2
+for:
+
+- no terminal on standard input, because an approval is a person's act and an
+  agent session has no terminal;
+- the approver `agent` (or `agent:<id>`), or an empty approver, role or scope;
+- a check that does not exist, is not `human`, or lists no approvers;
+- an approver the check does not list, because the record would not count;
+- a decision other than `approved` or `rejected`.
+
+The `--json` document is a public contract. A change to a key or its order is
+a breaking change. This is the real output for the example above; `at` varies
+and is shown as `...`. The key `answer` holds the decision.
+
+```json
+{
+  "outcome": "compass evidence approve: sign-off - approved by jed72 recorded as EV-APPROVAL-sign-off-1.",
+  "check": "sign-off",
+  "answer": "approved",
+  "evidence_id": "EV-APPROVAL-sign-off-1",
+  "approver": "jed72",
+  "role": "owner",
+  "scope": "the plan",
+  "issue": "feature",
+  "generation": 1,
+  "at": "...",
+  "detail": [
+    "record     : EV-APPROVAL-sign-off-1 in manifest.yml evidence",
+    "issue      : feature",
+    "generation : 1"
+  ]
+}
+```
 
 ## When a list is skipped, and `on_skipped`
 
@@ -154,8 +219,9 @@ detail.
 
 - The templates do not render from the lists, and the tag rule reads only the
   `Definition of Done` section of the verification report.
-- A role in `approvers:` is read as a person id. No command writes the
-  approval record; a person adds the registry entry by hand.
+- A role in `approvers:` other than `owner` is read as a person id. An
+  approval record is not authenticated (see [Approvers on a human
+  check](#approvers-on-a-human-check)).
 - `judged` and `evidence` checks are not evaluated.
 - A tick is found by the text of the statement. A statement that differs from
   the box fails with "no checklist item".

@@ -514,6 +514,18 @@
             "type": "string",
             "description": "For human-approval: what the approval is for."
           },
+          "check": {
+            "type": "string",
+            "description": "For human-approval: the human check this approves. It counts only with the issue slug in issue and the issue's generation in generation."
+          },
+          "issue": {
+            "type": "string",
+            "description": "For human-approval of a check: the issue slug it was given for. A record for another issue does not count."
+          },
+          "generation": {
+            "type": ["integer", "null"],
+            "description": "For human-approval of a check: the issue's generation when it was given, or null when the issue had none."
+          },
           "approver": {
             "type": "string",
             "description": "For human-approval: the approver's identifier."

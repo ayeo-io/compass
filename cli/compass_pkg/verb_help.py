@@ -45,6 +45,8 @@ VERB_DESCRIPTIONS = {
         'Run the full mechanical gate suite - the governance policy lint, then the manifest lint and the guardrail checks for every issue on disk. Intended for continuous integration and required green before a release. Gate checks are skipped for an issue that has not started, and the skip is named rather than hidden.',
     'evidence add':
         'Append a typed record to the manifest. The type is validated at write time, because a gate that accepts the wrong kind of evidence is not a gate.',
+    'evidence approve':
+        "Record a person's approval or rejection against a human check that lists approvers: --check, --approver (a person's id; the project's owner is listed as owner), --role, --scope, and --decision approved (the default) or rejected. The command stamps the issue, the issue's generation and the time, and registers a human-approval entry for the check. The check then passes only while the newest usable record is an approval by a listed approver for this issue and generation; a later rejection withdraws it. The command needs a terminal on standard input, so an agent session cannot call it, and it refuses the approver agent. Exit 0 when the record is written, exit 2 when it is not (no terminal, no such check, a check that is not human or lists no approvers, an approver who is not listed, an empty role or scope).",
     'flow':
         "The cross-issue view: what is blocked, what follow-ups are owed, and the periodic digest. Advisory by design - it never gates and never sets an issue's status, because status is inferred from the artifacts on disk.",
     'follow-up resolve':

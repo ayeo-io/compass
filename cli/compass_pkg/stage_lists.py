@@ -192,7 +192,18 @@ def _tick(check_id, check, side, documents, task, owes):
             continue
         if not found:
             shown = _TAG_ANYWHERE.search(raw)
-            return "pass", f"deferred with {shown.group(0) if shown else 'a typed tag'}"
+            tag = shown.group(0) if shown else "a typed tag"
+            if check.get("approvers"):
+                # A deferral is not an approval, so it cannot excuse a check
+                # that names who may approve.
+                from compass_pkg import approval_records
+                status, detail = approval_records.judge(check_id, check, task,
+                                                        documents.task_dir)
+                if status == "fail":
+                    return status, (f"{detail} (deferred with {tag}; a deferral does "
+                                    f"not excuse approvers)")
+                return status, f"{detail}; deferred with {tag}"
+            return "pass", f"deferred with {tag}"
         problems += found
     if problems:
         return "fail", "; ".join(problems)

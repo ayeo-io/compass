@@ -225,6 +225,19 @@ entries:
   project: quick-fix-started
   argv: ["evidence", "add", "EV-1", "--type", "artifact", "--path", "nope.txt"]
   exit: 2
+# Added on purpose by human-check-approvers: `evidence approve` is a new leaf of
+# the evidence group. 5.6.0 refused it as an unknown choice (exit 2). From 6.0.0
+# it records a person's approval from a terminal. The corpus runs without a
+# terminal that it controls, so both entries are refusals whether or not one is
+# attached: a check the configuration does not define, and the approver agent.
+- id: evidence-approve-unknown-check
+  project: regular-issue
+  argv: ["evidence", "approve", "--check", "no-such-check", "--approver", "jed72", "--role", "owner", "--scope", "the plan"]
+  exit: 2
+- id: evidence-approve-agent-refused
+  project: regular-issue
+  argv: ["evidence", "approve", "--check", "dor-summary-filled", "--approver", "agent", "--role", "owner", "--scope", "the plan"]
+  exit: 2
 - id: changed-file-add-valid
   project: quick-fix-started
   argv: ["changed-file", "add", "README.md", "--scenario", "TRC-001"]

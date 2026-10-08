@@ -38,9 +38,9 @@ given, or on the working folder when none is given.
 
 A folder inside `compass-fixtures/` is a group. Its name is the folder's path
 below `compass-fixtures/`, written with `/`, so the fixtures in
-`compass-fixtures/meets/banking/` are in the group `meets/banking`. A group can
-be at any depth, and a folder that holds fixtures and folders is a group of its
-own, apart from the groups below it. A fixture directly in `compass-fixtures/`
+`compass-fixtures/meets/banking/` are in the group `meets/banking`. A group is
+at most 3 folders deep, and a folder that holds fixtures and folders is a
+group of its own, apart from the groups below it. A fixture directly in `compass-fixtures/`
 has no group.
 
 ```
@@ -60,7 +60,7 @@ that breaks either rule is a problem and is not read.
 The fixture groups of a preset change nothing about how a fixture runs: every fixture runs over the
 same merged configuration. The group is a label that the report carries, with a
 count for each group, so a tool that reads the report can say which named set of
-fixtures a preset passes. The test does not follow a link to a folder, so a link
+fixtures a preset passes. The test does not follow a link of any kind, so a link
 cannot lead the test outside the preset. A folder whose name starts with a dot
 is ignored.
 

@@ -94,7 +94,7 @@ def _date(value):
     return None
 
 
-EXTENDS_MAP_KEYS =("from", "approved_by", "approved_on")
+EXTENDS_MAP_KEYS = ("from", "approved_by", "approved_on")
 
 
 def _check_extends_map(extends):

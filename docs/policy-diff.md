@@ -115,9 +115,10 @@ statuses that are not terminal) over both configurations with its own
 An issue that is landed or abandoned is never examined. Until the generation
 store lands there is no stored generation, so `A` stands for what the issue
 runs against and `B` for what it meets at its next reassess. The command
-writes no file of the project. The one exception is the git parent cache in
-`.compass/cache/parents/`, which it fills when a reference is a git parent that
-is not cached and the run may fetch.
+writes no file of the project, with two exceptions. When a reference is a git
+parent that is not cached and the run may fetch, it fills the git parent cache
+in `.compass/cache/parents/`, and it adds `cache/` to `.compass/.gitignore` if
+that file does not list it.
 
 ## Options and exit codes
 

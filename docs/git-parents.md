@@ -69,7 +69,7 @@ sha is refused.
 |---|---|
 | `compass check`, and any reader of an issue's stored generation | Never. It reads the cache, and an uncached pin is `L-PARENT-NOT-CACHED` |
 | `compass policy lint`, `compass policy effective` | Yes |
-| `compass policy diff`, when a reference is a git parent | Yes, and it prints one line on stderr (`compass policy diff: fetching <ref> into .compass/cache/parents/`) before each fetch. This is the only file `policy diff` writes |
+| `compass policy diff`, when a reference is a git parent | Yes, and it prints one line on stderr (`compass policy diff: fetching <ref> into .compass/cache/parents/`) before each fetch. It also adds `cache/` to `.compass/.gitignore` if the file does not list it. These are the only files `policy diff` writes |
 | `compass approach evaluate --write` (assess and reassess, including a reassess that commits a `compass issue configure` proposal) | Yes |
 | `compass issue configure` (the preview and the proposal it records) | Never. It reads the cache and commits no generation, so an uncached pin is `L-PARENT-NOT-CACHED`. Run `compass policy lint` first |
 | any of the above with `--offline`, or with `COMPASS_OFFLINE=1` in the environment | Never |
@@ -208,7 +208,7 @@ Only a commit that writes a new generation computes the blocks, with one scan of
 
 The cost, measured on 2026-10-08 on a laptop: about 0.6 seconds for one parent with a one-field change, and about 2.3 seconds for a chain of three. A chain of more than eight named labels cannot be committed (the lint cannot prove the locks), so `complete: false` is a guard in the function and not a stored case.
 
-`parents[].version` is the ref when it reads as a version. Reading the version from `preset.version` is not read yet; a later release adds it.
+`parents[].version` is the ref when it reads as a version. `preset.version` is not read yet; a later release adds it.
 
 ## Finding codes
 

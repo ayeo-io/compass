@@ -915,3 +915,20 @@ def test_pi_1_a_group_folder_holding_only_a_file_that_is_not_a_fixture_is_a_prob
     assert any("compass-fixtures/meets/notes" in p and "no fixture" in p
                for p in report["problems"]), report["problems"]
     assert all(g["group"] != "meets/notes" for g in report["groups"])
+
+
+def test_pi_6_policy_diff_docs_and_help_name_both_files_it_writes_in_the_cache_area():
+    diff = " ".join(_doc("docs", "policy-diff.md").split())
+    git = " ".join(_doc("docs", "git-parents.md").split())
+    source = (ROOT / "cli" / "compass_pkg" / "verb_help.py").read_text(encoding="utf-8")
+    line = next(l for l in source.splitlines() if l.strip().startswith('"Compare two conf'))
+    assert ".compass/.gitignore" in diff
+    assert "This is the only file `policy diff` writes" not in git
+    assert "`.compass/.gitignore`" in git.split("`compass policy diff`, when a reference")[1][:500]
+    assert ".compass/.gitignore" in line
+
+
+def test_pi_6_the_policy_test_doc_does_not_say_a_group_has_any_depth():
+    text = " ".join(_doc("docs", "policy-test.md").split())
+    assert "at any depth" not in text
+    assert "at most 3 folders deep" in text

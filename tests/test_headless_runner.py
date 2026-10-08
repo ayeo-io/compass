@@ -749,3 +749,55 @@ def test_hr_h_a_signal_just_after_the_session_starts_still_ends_it(tmp_path):
                 proc.kill()
                 proc.wait()
     assert ended, "the session outlived an interrupted launch"
+
+
+def test_hr_h_a_signal_taken_by_another_thread_still_ends_the_session(tmp_path):
+    """A signal the system hands to another thread, as happens in a process
+    with worker threads, must still end the session. Blocking a signal in the
+    launching thread does not stop another thread from taking it, and Python
+    then raises in the launching thread wherever it is. The test sends the
+    signal to a helper thread from inside the process-creating call."""
+    import signal
+    import threading
+    import time
+    sys.path.insert(0, str(ROOT / "cli"))
+    from compass_pkg import host_launch
+    session = tmp_path / "claude"
+    session.write_text("#!/bin/sh\nsleep 30\n")
+    session.chmod(0o755)
+    release = threading.Event()
+    helper = threading.Thread(target=release.wait, daemon=True)
+    helper.start()
+    started = []
+    real_popen = subprocess.Popen
+
+    def popen_then_signal(*args, **kwargs):
+        proc = real_popen(*args, **kwargs)
+        started.append(proc)
+        signal.pthread_kill(helper.ident, signal.SIGINT)
+        time.sleep(0.3)  # the interrupt is raised in this thread by now
+        return proc
+
+    original = host_launch.subprocess.Popen
+    host_launch.subprocess.Popen = popen_then_signal
+    old_handler = signal.signal(signal.SIGINT, signal.default_int_handler)
+    ended = False
+    try:
+        with pytest.raises(KeyboardInterrupt):
+            host_launch.launch_claude(str(session), "hi", [], tmp_path,
+                                      dict(os.environ), timeout=60)
+        for _ in range(50):
+            if started[0].poll() is not None:
+                ended = True
+                break
+            time.sleep(0.1)
+    finally:
+        signal.signal(signal.SIGINT, old_handler)
+        host_launch.subprocess.Popen = original
+        release.set()
+        helper.join()
+        for proc in started:
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait()
+    assert ended, "the session outlived an interrupted launch"

@@ -19,13 +19,15 @@ This module also builds the `generation.Resolution` a commit stores, and is
 the one place the existing modules reach the store through
 (`commit_generation`, `record_check_results`, `generation_report`).
 """
-# DEPENDENCY: standard library (dataclasses, datetime, os, subprocess);
+# DEPENDENCY: standard library (copy, dataclasses, datetime, os, re, subprocess);
 # compass_pkg.atomic_io, check_registry, core, generation, layers,
 # legacy_adapter, locks, merge, obligations, policy_lint, project_settings, waivers.
 from __future__ import annotations
 
+import copy
 import datetime
 import os
+import re
 import subprocess
 from dataclasses import dataclass, field
 
@@ -38,6 +40,7 @@ from compass_pkg.check_registry import REGISTRY
 from compass_pkg.core import (AUTONOMY_VALUES, COMPASS_VERSION, FRAMEWORK_ROOT,
                               GOVERNANCE_FILES, CompassError, load_manifest, load_yaml,
                               reading_matches)
+from compass_pkg.core import manifest_path
 
 OUTCOME_KEYS = ("delivery_approach", "stages", "gates", "checkpoints",
                 "policy_rules_fired", "subtask_ceiling", "artifacts")
@@ -369,7 +372,8 @@ def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False):
                     "classification": classification},
         versions=versions,
         records=_approval_records(manifest or {}, root, task_dir, waiver_records),
-        validate=check_chain)
+        validate=check_chain,
+        details={"loaded": loaded, "chain": chain, "configs": configs})
 
 
 def _live_view(task_dir, manifest, slug, start=None):
@@ -436,15 +440,25 @@ def view_or_legacy(task_dir=None, live=False, start=None):
     return effective_for(task_dir)
 
 
-def commit_generation(task_dir, manifest, invalidated=None, render=None):
+def commit_generation(task_dir, manifest, invalidated=None, render=None, *, adopt=None,
+                      proposal=None, stamp=None, resolve_with=None, resolution=None):
     """Store the configuration the issue resolves to now as its next
     generation and replace its manifest, as `approach evaluate --write` does.
     `manifest` is the mapping to write, with the computed outcome folded in.
     The chain is resolved first, and linted only when a write follows, so a
-    configuration that does not resolve or lint leaves every file as it was."""
+    configuration that does not resolve or lint leaves every file as it was.
+
+    `resolution` is a resolution already made (the reassess plan makes it
+    before anything prints); otherwise it is made here from `resolve_with`,
+    the manifest to resolve from when it is not the one written (a waiver the
+    reassess invalidated is left out of the resolution and stays in the file).
+    `adopt`, `proposal` and `stamp` are those of `generation.commit`."""
     task_dir = os.path.abspath(os.fspath(task_dir))
     slug = os.path.basename(task_dir)
-    resolution = resolve_live(layers.find_project_root(task_dir), manifest, slug, task_dir)
+    if resolution is None:
+        resolution = resolve_live(layers.find_project_root(task_dir),
+                                  manifest if resolve_with is None else resolve_with,
+                                  slug, task_dir)
     wrapped = None
     if render is not None:
         # `render(text, gate_requirements)` sees the types the generation being
@@ -453,7 +467,163 @@ def commit_generation(task_dir, manifest, invalidated=None, render=None):
                         for gate_id, gate in (resolution.resolved.get("gates") or {}).items()
                         if isinstance(gate, dict) and isinstance(gate.get("accepts"), list)}
         wrapped = lambda text: render(text, requirements)  # noqa: E731
-    return generation.commit(task_dir, resolution, manifest, invalidated, wrapped)
+    return generation.commit(task_dir, resolution, manifest, invalidated, wrapped,
+                             adopt=adopt, proposal=proposal, stamp=stamp)
+
+
+def preflight(task_dir, resolution, manifest, invalidated=None, adopt=None, stored=None):
+    """Settle, before the reassess prints anything, what the commit would
+    refuse later (`generation.preflight`). A refusal that names a waiver the
+    generation in force invalidated gets the reason and the two ways out."""
+    try:
+        generation.preflight(os.fspath(task_dir), resolution, manifest, invalidated, adopt)
+    except CompassError as exc:
+        raise CompassError(str(exc) + _invalidated_advice(str(exc), stored)) from None
+
+
+def ways_out(reason):
+    """What to do about an invalidated waiver, and when it holds again."""
+    seen = re.search(r"changed from (.+?) to ", reason or "")
+    back = seen.group(1) if seen else "what the approval named"
+    return ("To keep the change, approve it again with a new human-approval record that "
+            "names the new values; otherwise remove the entry from config:. It is valid "
+            f"again if the parent value returns to {back}.")
+
+
+def _invalidated_advice(message, stored):
+    """For each waiver of the generation in force that `records.yml` marks
+    invalidated and the message names: why, and how to settle it."""
+    out = []
+    for record in ((stored or {}).get("records") or {}).get("records") or ():
+        if record.get("kind") != "waiver" or record.get("status") != "invalidated":
+            continue
+        if record["id"].split(":", 1)[1] in message:
+            out.append(f" {record['id']} was invalidated in generation "
+                       f"{(stored.get('resolved') or {}).get('generation')}: "
+                       f"{record.get('reason')}. {ways_out(record.get('reason'))}")
+    return "".join(out)
+
+
+def leftover_overlay_digest(task_dir, number):
+    """The `issue_overlay_digest` a whole leftover folder recorded, or the
+    string `unreadable` when the folder is not whole."""
+    try:
+        return generation.load(os.fspath(task_dir), number)["versions"].get(
+            "issue_overlay_digest")
+    except CompassError:
+        return "unreadable"
+
+
+# --- the waiver re-check at reassess ----------------------------------------------------
+
+def _issue_waivers(stored):
+    records = ((stored or {}).get("provenance") or {}).get("waivers") or {}
+    return [r for r in records.values() if isinstance(r, dict) and r.get("scope") == "issue"]
+
+
+def stale_waivers(stored, details):
+    """The issue waivers of the generation in force that the configuration now
+    resolved leaves without an approval: `({waiver id: reason}, [(catalogue,
+    entry)])`, the entries being those the overlay still holds.
+
+    A waiver is stale when the parent value of a waived field changed since the
+    approval was given (`waivers.recheck`), or when the overlay now sets a waived
+    field to another value, because the approval named the values it saw. A
+    waiver the overlay no longer holds is not stale: nothing is left to excuse."""
+    chain, configs = details["chain"], details["configs"]
+    layer = chain[-1] if chain and chain[-1].kind == "issue" else None
+    records = _issue_waivers(stored)
+    if layer is None or not records:
+        return {}, []
+    found, _ = waivers.find(layer.doc, "issue")
+    held = {w.id: w for w in found}
+    parent, child = configs[-2], configs[-1]
+    stale = {}
+    for moved in waivers.recheck([r for r in records if r["id"] in held], parent):
+        stale.setdefault(moved.waiver_id, moved.reason)
+    for record in records:
+        waiver = held.get(record["id"])
+        if waiver is None or record["id"] in stale:
+            continue
+        now = waivers.describe(waiver, parent, child, None)["fields"]
+        for name, seen in record["fields"].items():
+            if now.get(name, {}).get("to") != seen["to"]:
+                stale[record["id"]] = (
+                    f"{record['entry']}.{name}: the issue's value changed from "
+                    f"{seen['to']!r} to {now.get(name, {}).get('to')!r}, so the approval "
+                    f"no longer matches the waiver")
+                break
+    return stale, [(held[w].catalogue, held[w].entry) for w in sorted(stale)]
+
+
+def invalidated_records(stored, stale):
+    """`{record id: reason}` for the waiver records and the approvals that back
+    them, from the `stale` map `stale_waivers` returned."""
+    by_id = {r["id"]: r for r in _issue_waivers(stored)}
+    out = {}
+    for waiver_id, reason in stale.items():
+        out[f"waiver:{waiver_id}"] = reason
+        backing = by_id.get(waiver_id, {}).get("approved_by")
+        if backing:
+            out[str(backing)] = f"it approved waiver:{waiver_id}, which is invalid: {reason}"
+    return out
+
+
+def without_entries(manifest, entries):
+    """A copy of `manifest` whose `config:` no longer holds the given
+    `(catalogue, entry)` pairs, so the field reverts to the parent's value. The
+    manifest that is written keeps them."""
+    if not entries:
+        return manifest
+    out = copy.deepcopy(manifest)
+    config = out.get("config") or {}
+    for catalogue, entry in entries:
+        table = config.get(catalogue)
+        if isinstance(table, dict):
+            table.pop(entry, None)
+            if not table:
+                config.pop(catalogue)
+    if config:
+        out["config"] = config
+    else:
+        out.pop("config", None)
+    return out
+
+
+# --- proposals, leftovers and the stored copy ---------------------------------------
+
+config_digest = generation.config_digest
+generation_number = generation.number
+FIX_ZERO = generation.FIX_ZERO
+
+
+def stored_documents(task_dir, manifest):
+    """The four documents of the generation the manifest names, or None when
+    it names none yet. A generation that is not whole raises `CompassError`."""
+    held = generation.number(manifest)
+    return generation.load(os.fspath(task_dir), held) if held else None
+
+
+def pending_proposal(task_dir, manifest):
+    """The `generation.Proposal` waiting above the generation in force, or None."""
+    return generation.pending_proposal(os.fspath(task_dir), manifest)
+
+
+def write_proposal(task_dir, manifest, overlay):
+    """Park `overlay` as the issue's pending `config:`; the manifest is untouched."""
+    return generation.write_proposal(task_dir, manifest, overlay)
+
+
+def leftover(task_dir, number):
+    """The `GenState` of the folder for generation `number`, or None when
+    there is none."""
+    return next((g for g in generation.states(os.fspath(task_dir)) if g.number == number),
+                None)
+
+
+def discard(task_dir, number=None):
+    """Remove a proposal or leftover folder above the generation in force."""
+    return generation.discard(task_dir, number)
 
 
 def require_whole(task_dir):
@@ -526,3 +696,97 @@ def generation_report(task_dir):
         lines.append(f"  generation {found.number} ({found.state})"
                      + (f": {found.detail}" if found.detail else ""))
     return lines, broken
+
+
+# --- implementation versions and the second commit path (ADR-038) -------------------------
+
+def stored_versions(task_dir, manifest):
+    """`(n, versions)`: the generation the manifest names and what its
+    `versions.yml` records, or `(None, {})` for an issue with no stored
+    generation. The comparison with the installed versions is
+    `impl_versions.refusals`."""
+    held = generation.number(manifest)
+    if not held:
+        return None, {}
+    return held, generation.load(os.fspath(task_dir), held)["versions"]
+
+
+def installed_pins():
+    """The resolver version and file schema this CLI writes."""
+    return {"resolver": generation.RESOLVER_VERSION, "schema": generation.SCHEMA}
+
+
+def _installed_implementations(checks):
+    return {c["impl"]: REGISTRY[c["impl"]].version for c in (checks or {}).values()
+            if isinstance(c, dict) and c.get("impl") in REGISTRY}
+
+
+def _pin(stored):
+    """The stored generation's configuration with its versions replaced by the
+    installed ones. Only `versions.yml` changes: a project edit made since must
+    reach the issue through a reassess, which classifies it, and never through
+    `migrate_generation`."""
+    versions = {k: v for k, v in stored["versions"].items() if k != "schema"}
+    versions.update(resolver=generation.RESOLVER_VERSION, cli=COMPASS_VERSION,
+                    implementations=_installed_implementations(
+                        stored["resolved"].get("checks")))
+    return generation.Resolution(
+        resolved={k: v for k, v in stored["resolved"].items()
+                  if k not in ("schema", "issue", "generation")},
+        provenance={k: v for k, v in stored["provenance"].items() if k != "schema"},
+        versions=versions,
+        records=[r for r in stored["records"].get("records", [])
+                 if r.get("status") == "valid"])
+
+
+def _set_generation_line(path, target):
+    """A function that gives the manifest's own text back with `generation:` set,
+    so its comments, key order and gate comments survive the commit."""
+    def render(_dumped):
+        with open(path, encoding="utf-8") as fh:
+            text = fh.read()
+        line = f"generation: {target}"
+        if re.search(r"^generation:.*$", text, re.M):
+            return re.sub(r"^generation:.*$", line, text, count=1, flags=re.M)
+        return text + ("" if text.endswith("\n") else "\n") + line + "\n"
+    return render
+
+
+def migrate_generation(task_dir):
+    """Store the next generation of the issue pinned to the installed versions
+    (`compass issue migrate-config`), the second of the three commit paths.
+    Returns `(Committed, notes)`. The stored configuration is kept as it is and
+    every check result the old generation recorded is invalidated. An issue
+    with no stored generation is adopted: its live configuration becomes
+    generation 1. Raises `CompassError` for a landed issue, which keeps the
+    configuration it landed under."""
+    task_dir = os.path.abspath(os.fspath(task_dir))
+    slug = os.path.basename(task_dir)
+    path = manifest_path(task_dir)
+    manifest = load_yaml(path)
+    if manifest.get("status") == "landed":
+        raise CompassError(
+            f"issue {slug} is landed and keeps the configuration it landed under, so "
+            f"`compass issue migrate-config` did not change it")
+    held = generation.number(manifest)
+    invalidated = {}
+    if held:
+        stored = generation.load(task_dir, held)
+        resolution = _pin(stored)
+        if all(stored["versions"].get(k) == resolution.versions[k]
+               for k in ("resolver", "cli", "implementations")):
+            return generation.Committed(held, False, (
+                f"no change: generation {held} is already pinned to the installed "
+                f"versions")), []
+        runs = (generation.read_results(task_dir, held) or {}).get("runs") or {}
+        invalidated = {f"result:{name}": f"recorded under the versions of generation {held}"
+                       for name in sorted(runs)}
+    else:
+        resolution = resolve_live(layers.find_project_root(task_dir), manifest, slug,
+                                  task_dir)
+        resolution.provenance["adopted"] = "adopted from live governance"
+    committed = generation.commit(task_dir, resolution, manifest, invalidated,
+                                  render=_set_generation_line(path, (held or 0) + 1),
+                                  force=True)
+    return committed, ([f"{len(invalidated)} recorded result(s) invalidated"]
+                       if invalidated else [])

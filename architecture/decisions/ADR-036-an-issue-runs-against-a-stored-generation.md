@@ -86,3 +86,14 @@ A directory holding only `proposed.yml` is a pending proposal, not a leftover. A
 - ADR-033: the stored copy is the first of four mechanisms its decision depends on.
 - ADR-035 (the configuration format) and ADR-037 (a configuration change is classified by its effect over the assessment grid).
 - `cli/compass_pkg/routing.py` (`--write`), `cli/compass_pkg/session_lease.py:60-73` (the `flock` pattern the commit lock reuses), `schemas/manifest.schema.json`.
+
+## Amendment (2026-10-08): how `compass issue configure` proposes, adopts and discards
+
+Decided while the maintainer was away, and marked for the maintainer's confirmation. The decision above fixed the files, the commit order and the two leftover states. This note fixes what the recovery commands check and how a proposal is stored.
+
+- **Adoption checks more than the listed preconditions.** `compass issue configure --commit [n]` adopts a complete folder only when the manifest names `n-1`, the folder is whole, and a fresh resolution of the project and the issue gives the same digest for each of the four files. That covers the project layer, the pinned parents and the inputs of `records.yml`, and it also covers the CLI and resolver versions that `versions.yml` records. A folder written by an older CLI is therefore discarded, not adopted. The adopted generation is the one a reassess would write now.
+- **A proposal is a file beside no generation.** `compass issue configure` writes `generations/<n+1>/proposed.yml` (`schema`, `issue`, `base_generation`, `base_config_digest` and the whole `overlay`) and never touches the manifest. A reassess applies it as the manifest's `config:` only while the generation and the digest of `config:` still match. The commit removes it after the manifest replace.
+- **A call adds to a pending proposal.** A second `configure` call starts from the pending overlay, and `--from-file` replaces it.
+- **`--discard [n]`** removes any folder above the generation in force, including a proposal and the proposal a leftover holds, and never the generation in force or an older one.
+- **Waivers are re-checked at reassess.** An issue waiver whose waived field changed in the parent, or whose waived field the overlay changed, is marked `invalidated` in `records.yml` with the approval record behind it, and its entry is left out of the resolution so the field reverts to the parent's value. The manifest's `config:` is not rewritten.
+- **`reassessments:` entries gain `generation: {from, to}`.** A change to `config:` that leaves the delivery approach unchanged adds no entry.

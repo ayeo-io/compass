@@ -976,7 +976,7 @@ def test_cl_7_the_benchmark_times_a_grouped_and_a_full_scan_and_prints_numbers()
     assert "grouped" in line and f"{grouped['points']:,}" in line and "s" in line
 
 
-def test_cl_7_only_the_classifier_imports_the_obligations_module():
+def test_cl_7_only_the_classifier_and_the_replay_import_the_obligations_module():
     import re
     pattern = re.compile(r"^\s*(from compass_pkg(\.obligations)? import .*|"
                          r"import compass_pkg\.obligations)", re.M)
@@ -991,7 +991,7 @@ def test_cl_7_only_the_classifier_imports_the_obligations_module():
     assert users == ["classify.py", "effective.py"]
 
 
-def test_cl_7_no_command_exposes_the_classifier_yet():
+def test_cl_7_the_entry_script_and_the_aggregate_do_not_name_the_classifier():
     for name in ("cli/compass", "cli/compass_pkg/_all.py"):
         assert "classify" not in (ROOT / name).read_text(encoding="utf-8"), name
     core = (ROOT / "cli" / "compass_pkg" / "core.py").read_text(encoding="utf-8")

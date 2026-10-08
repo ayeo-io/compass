@@ -10,7 +10,9 @@ resolution).
 
 ## What is built
 
-The store and its commit are built. The modules that read governance
+The store and its commit are built, with the commands that change what it
+holds: `compass issue configure` (propose, preview, `--discard`, `--commit`) and
+`--reset-config` on the reassess ([issue-configure.md](issue-configure.md)). The modules that read governance
 (`routing`, `check_cmd`, `checks`, `receipt`, `manifest`, `calibration`,
 `flow`, `quick_fix_cmd`, `loop_ceilings`, `lessons`) still read live
 governance. `effective_for` returns the stored generation, and a later change
@@ -42,7 +44,7 @@ those readers.
 | `records.yml` | The status of each approval, waiver and check result at commit: `valid`, `superseded` or `invalidated`, with a reason. | At commit, then fixed. |
 | `complete` | A marker holding a digest of each of the four files above. | Last of the four-file commit. |
 | `results.yml` | The latest `compass check` verdict for each check: `verdict` (`pass`, `fail` or `nothing-to-check`), `at`, the implementation id and version, a digest of the check's definition, and `status`. | After each `compass check`, replacing the file. The marker does not cover it. |
-| `proposed.yml` | A pending change. Only the state table below reads it. | Not written yet. |
+| `proposed.yml` | A pending change to the issue's `config:` layer: `schema`, `issue`, `base_generation`, `base_config_digest` and `overlay`. The state table below recognises it, and a reassess applies it. | By `compass issue configure`, in the folder above the generation in force. Removed by the reassess that applies it, or by `--discard`. |
 
 Every file begins `schema: 1`. A digest is `sha256:` and the hex digest of the
 file's parsed content in canonical JSON, so a comment or a line ending does
@@ -77,7 +79,10 @@ must still name the generation the command read, or the commit refuses.
 The commit refuses, writing nothing, when:
 
 - generation n+1 already exists and is complete. The message gives the folder's
-  path; delete the folder and run the command again.
+  path, then the two commands that resolve it: `compass issue configure
+  --commit n+1` to adopt it (with `--reason "..."` to keep the reason of the
+  interrupted reassess) and `compass issue configure --discard n+1` to remove
+  it.
 - `generations/`, the next folder or anything inside the next folder is a
   symbolic link. Compass never follows a link there, because the next folder is
   cleared before it is written.
@@ -88,11 +93,23 @@ The commit refuses, writing nothing, when:
   evaluate` without `--write` still works on such a project.
 
 It overwrites an incomplete folder, including one whose marker does not match
-its files, and keeps `proposed.yml`. Each file keeps the mode of the file it
+its files, and keeps `proposed.yml` until the manifest is replaced. Each file keeps the mode of the file it
 replaces, and a new file gets the mode the umask gives.
 
 The gate comments (`# accepts: ...`) are added to the manifest text inside the
 same replace, under the lock.
+
+Three more things the commit takes from the reassess that calls it, described
+in [issue-configure.md](issue-configure.md):
+
+- a **proposal** it applies: under the lock the commit checks that
+  `proposed.yml` is still the file the reassess read, and removes it after the
+  manifest replace (a last step, `proposal`, that a crash can follow);
+- a **leftover to adopt**, named by `compass issue configure --commit`: the
+  commit writes no file but the manifest, and only when the folder is whole and
+  its four files equal what a fresh resolution gives;
+- a **stamp** that adds `generation: {from, to}` to the `reassessments:` entry
+  the reassess appended, in the same replace.
 
 ## States
 
@@ -108,7 +125,10 @@ same replace, under the lock.
 | `broken` | The manifest names a number whose folder, marker or files do not match | fails the run |
 
 `compass check` refuses an issue whose generation is broken. The CLI never
-adopts a leftover folder on its own.
+adopts a leftover folder on its own: `compass issue configure --commit`
+adopts a complete one when a person runs it, and `compass issue configure
+--discard` removes a proposal or a leftover. [issue-configure.md](issue-configure.md)
+has the recovery for a crash after each step.
 
 ## Reading
 
@@ -135,8 +155,5 @@ configuration. `effective` and `classify` are the only modules that may import
   pending-change line in `compass check`.
 - The refusal of a check implementation whose major version differs, and
   `compass issue migrate-config`.
-- `compass issue configure` (`--commit`, `--discard`) and `--reset-config`.
-  Until they exist, a complete folder nobody adopted is deleted by hand, and the
-  messages name no command that is missing.
 - `policy effective --issue` still resolves the live files and does not read
   the generation.

@@ -659,7 +659,9 @@ def cmd_calibration(args):
             transitions[key] = transitions.get(key, 0) + 1
             # A policy correction records a newer policy, not a misread of
             # the work, so it says nothing about how assessment sizes work.
-            if rf.get("kind") == "policy-correction":
+            # A change to the issue's own config: layer says nothing about
+            # sizing either.
+            if rf.get("kind") in ("policy-correction", "configuration"):
                 continue
             wf, wt = weights.get(canonical_shape(fr)), weights.get(canonical_shape(to))
             if wf is None or wt is None:

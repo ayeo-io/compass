@@ -156,6 +156,7 @@ compass issue lint         structurally validate an issue manifest
 compass issue receipt      one screen: assessment, approach, gates, evidence
 compass issue diagnose     explain one run from its own records: stages, timeline, deviations
 compass issue use          make an issue the current one, for this session
+compass issue configure    propose, preview, discard or recover a change to one issue's own configuration
 compass issue dashboard    the per-issue review page
 compass issue artifact     set a document's status in the review pack
 compass issue artifact-path  where one of an issue's documents is

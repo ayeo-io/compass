@@ -19,13 +19,15 @@ This module also builds the `generation.Resolution` a commit stores, and is
 the one place the existing modules reach the store through
 (`commit_generation`, `record_check_results`, `generation_report`).
 """
-# DEPENDENCY: standard library (dataclasses, datetime, os, subprocess);
+# DEPENDENCY: standard library (copy, dataclasses, datetime, os, re, subprocess);
 # compass_pkg.atomic_io, check_registry, core, generation, layers,
 # legacy_adapter, locks, merge, obligations, policy_lint, project_settings, waivers.
 from __future__ import annotations
 
+import copy
 import datetime
 import os
+import re
 import subprocess
 from dataclasses import dataclass, field
 
@@ -255,7 +257,8 @@ def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False):
                     "classification": classification},
         versions=versions,
         records=_approval_records(manifest or {}, root, task_dir, waiver_records),
-        validate=check_chain)
+        validate=check_chain,
+        details={"loaded": loaded, "chain": chain, "configs": configs})
 
 
 def _live_view(task_dir, manifest, slug):
@@ -284,16 +287,182 @@ def effective_for(task_dir=None):
     return EffectiveView("generation", slug, held, stored["resolved"], stored["versions"])
 
 
-def commit_generation(task_dir, manifest, invalidated=None, render=None):
+def commit_generation(task_dir, manifest, invalidated=None, render=None, *, adopt=None,
+                      proposal=None, stamp=None, resolve_with=None, resolution=None):
     """Store the configuration the issue resolves to now as its next
     generation and replace its manifest, as `approach evaluate --write` does.
     `manifest` is the mapping to write, with the computed outcome folded in.
     The chain is resolved first, and linted only when a write follows, so a
-    configuration that does not resolve or lint leaves every file as it was."""
+    configuration that does not resolve or lint leaves every file as it was.
+
+    `resolution` is a resolution already made (the reassess plan makes it
+    before anything prints); otherwise it is made here from `resolve_with`,
+    the manifest to resolve from when it is not the one written (a waiver the
+    reassess invalidated is left out of the resolution and stays in the file).
+    `adopt`, `proposal` and `stamp` are those of `generation.commit`."""
     task_dir = os.path.abspath(os.fspath(task_dir))
     slug = os.path.basename(task_dir)
-    resolution = resolve_live(layers.find_project_root(task_dir), manifest, slug, task_dir)
-    return generation.commit(task_dir, resolution, manifest, invalidated, render)
+    if resolution is None:
+        resolution = resolve_live(layers.find_project_root(task_dir),
+                                  manifest if resolve_with is None else resolve_with,
+                                  slug, task_dir)
+    return generation.commit(task_dir, resolution, manifest, invalidated, render,
+                             adopt=adopt, proposal=proposal, stamp=stamp)
+
+
+def preflight(task_dir, resolution, manifest, invalidated=None, adopt=None, stored=None):
+    """Settle, before the reassess prints anything, what the commit would
+    refuse later (`generation.preflight`). A refusal that names a waiver the
+    generation in force invalidated gets the reason and the two ways out."""
+    try:
+        generation.preflight(os.fspath(task_dir), resolution, manifest, invalidated, adopt)
+    except CompassError as exc:
+        raise CompassError(str(exc) + _invalidated_advice(str(exc), stored)) from None
+
+
+def ways_out(reason):
+    """What to do about an invalidated waiver, and when it holds again."""
+    seen = re.search(r"changed from (.+?) to ", reason or "")
+    back = seen.group(1) if seen else "what the approval named"
+    return ("To keep the change, approve it again with a new human-approval record that "
+            "names the new values; otherwise remove the entry from config:. It is valid "
+            f"again if the parent value returns to {back}.")
+
+
+def _invalidated_advice(message, stored):
+    """For each waiver of the generation in force that `records.yml` marks
+    invalidated and the message names: why, and how to settle it."""
+    out = []
+    for record in ((stored or {}).get("records") or {}).get("records") or ():
+        if record.get("kind") != "waiver" or record.get("status") != "invalidated":
+            continue
+        if record["id"].split(":", 1)[1] in message:
+            out.append(f" {record['id']} was invalidated in generation "
+                       f"{(stored.get('resolved') or {}).get('generation')}: "
+                       f"{record.get('reason')}. {ways_out(record.get('reason'))}")
+    return "".join(out)
+
+
+def leftover_overlay_digest(task_dir, number):
+    """The `issue_overlay_digest` a whole leftover folder recorded, or the
+    string `unreadable` when the folder is not whole."""
+    try:
+        return generation.load(os.fspath(task_dir), number)["versions"].get(
+            "issue_overlay_digest")
+    except CompassError:
+        return "unreadable"
+
+
+# --- the waiver re-check at reassess ----------------------------------------------------
+
+def _issue_waivers(stored):
+    records = ((stored or {}).get("provenance") or {}).get("waivers") or {}
+    return [r for r in records.values() if isinstance(r, dict) and r.get("scope") == "issue"]
+
+
+def stale_waivers(stored, details):
+    """The issue waivers of the generation in force that the configuration now
+    resolved leaves without an approval: `({waiver id: reason}, [(catalogue,
+    entry)])`, the entries being those the overlay still holds.
+
+    A waiver is stale when the parent value of a waived field changed since the
+    approval was given (`waivers.recheck`), or when the overlay now sets a waived
+    field to another value, because the approval named the values it saw. A
+    waiver the overlay no longer holds is not stale: nothing is left to excuse."""
+    chain, configs = details["chain"], details["configs"]
+    layer = chain[-1] if chain and chain[-1].kind == "issue" else None
+    records = _issue_waivers(stored)
+    if layer is None or not records:
+        return {}, []
+    found, _ = waivers.find(layer.doc, "issue")
+    held = {w.id: w for w in found}
+    parent, child = configs[-2], configs[-1]
+    stale = {}
+    for moved in waivers.recheck([r for r in records if r["id"] in held], parent):
+        stale.setdefault(moved.waiver_id, moved.reason)
+    for record in records:
+        waiver = held.get(record["id"])
+        if waiver is None or record["id"] in stale:
+            continue
+        now = waivers.describe(waiver, parent, child, None)["fields"]
+        for name, seen in record["fields"].items():
+            if now.get(name, {}).get("to") != seen["to"]:
+                stale[record["id"]] = (
+                    f"{record['entry']}.{name}: the issue's value changed from "
+                    f"{seen['to']!r} to {now.get(name, {}).get('to')!r}, so the approval "
+                    f"no longer matches the waiver")
+                break
+    return stale, [(held[w].catalogue, held[w].entry) for w in sorted(stale)]
+
+
+def invalidated_records(stored, stale):
+    """`{record id: reason}` for the waiver records and the approvals that back
+    them, from the `stale` map `stale_waivers` returned."""
+    by_id = {r["id"]: r for r in _issue_waivers(stored)}
+    out = {}
+    for waiver_id, reason in stale.items():
+        out[f"waiver:{waiver_id}"] = reason
+        backing = by_id.get(waiver_id, {}).get("approved_by")
+        if backing:
+            out[str(backing)] = f"it approved waiver:{waiver_id}, which is invalid: {reason}"
+    return out
+
+
+def without_entries(manifest, entries):
+    """A copy of `manifest` whose `config:` no longer holds the given
+    `(catalogue, entry)` pairs, so the field reverts to the parent's value. The
+    manifest that is written keeps them."""
+    if not entries:
+        return manifest
+    out = copy.deepcopy(manifest)
+    config = out.get("config") or {}
+    for catalogue, entry in entries:
+        table = config.get(catalogue)
+        if isinstance(table, dict):
+            table.pop(entry, None)
+            if not table:
+                config.pop(catalogue)
+    if config:
+        out["config"] = config
+    else:
+        out.pop("config", None)
+    return out
+
+
+# --- proposals, leftovers and the stored copy ---------------------------------------
+
+config_digest = generation.config_digest
+generation_number = generation.number
+FIX_ZERO = generation.FIX_ZERO
+
+
+def stored_documents(task_dir, manifest):
+    """The four documents of the generation the manifest names, or None when
+    it names none yet. A generation that is not whole raises `CompassError`."""
+    held = generation.number(manifest)
+    return generation.load(os.fspath(task_dir), held) if held else None
+
+
+def pending_proposal(task_dir, manifest):
+    """The `generation.Proposal` waiting above the generation in force, or None."""
+    return generation.pending_proposal(os.fspath(task_dir), manifest)
+
+
+def write_proposal(task_dir, manifest, overlay):
+    """Park `overlay` as the issue's pending `config:`; the manifest is untouched."""
+    return generation.write_proposal(task_dir, manifest, overlay)
+
+
+def leftover(task_dir, number):
+    """The `GenState` of the folder for generation `number`, or None when
+    there is none."""
+    return next((g for g in generation.states(os.fspath(task_dir)) if g.number == number),
+                None)
+
+
+def discard(task_dir, number=None):
+    """Remove a proposal or leftover folder above the generation in force."""
+    return generation.discard(task_dir, number)
 
 
 def require_whole(task_dir):

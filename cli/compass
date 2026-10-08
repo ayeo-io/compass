@@ -77,6 +77,7 @@ from compass_pkg.run_cmd import register as register_run_parser  # noqa: E402
 from compass_pkg.record import register as register_record_parser  # noqa: E402
 from compass_pkg.review_rules import register as register_review_rules_parser  # noqa: E402
 from compass_pkg.policy_cmd import register as register_policy_parser  # noqa: E402
+from compass_pkg.issue_config_cmd import register as register_issue_configure_parser  # noqa: E402
 
 # Declared literally here as well as in compass_pkg.core: this file is
 # what `compass --version` and the release-consistency test read, and a
@@ -133,11 +134,17 @@ def build_parser():
                           "approach's content changed), record this as the "
                           "reason - it is the retrospective signal")
     pre.add_argument("--kind", choices=["judgement", "policy-correction",
-                                        "scope-change"],
+                                        "scope-change", "configuration"],
                      help="what kind of re-assessment this is (default: "
                           "judgement). Only judgement feeds the retrospective "
                           "re-sizing signal - a policy correction is not "
-                          "assessment mis-reading the work.")
+                          "assessment mis-reading the work. A reassess that "
+                          "changes only the issue's config: layer is recorded "
+                          "as configuration without this flag.")
+    pre.add_argument("--reset-config", dest="reset_config", action="store_true",
+                     help="with --write: drop the issue's config: layer in the "
+                          "generation this commits (refused while a change is "
+                          "proposed; see `compass issue configure`)")
     pre.add_argument("--json", action="store_true", help="emit JSON")
     pre.set_defaults(func=cmd_route_evaluate, output_kind="hand-off")
     prsum = prs.add_parser(
@@ -308,6 +315,7 @@ def build_parser():
     register_issue_use_parser(pts)
     register_refresh_spec_parser(pts)
     register_issue_friction_parser(pts)
+    register_issue_configure_parser(pts, issue_arg)
 
     ptrb = pts.add_parser(
         "raised-by", help="record the issue this one was found in",

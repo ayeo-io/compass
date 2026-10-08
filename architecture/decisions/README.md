@@ -83,6 +83,8 @@ Rules:
 | [ADR-041](ADR-041-the-configuration-vocabulary.md) | The configuration vocabulary, amending ADR-012 | accepted | amends ADR-012 |
 | [ADR-042](ADR-042-shipped-defaults-live-in-a-preset-directory.md) | Shipped defaults live in a preset directory | accepted | with ADR-010 and ADR-033 |
 | [ADR-043](ADR-043-a-project-has-one-configuration-file.md) | A project has one configuration file, compass.yml | accepted | with ADR-042 |
+| [ADR-044](ADR-044-vocabulary-and-cli-naming.md) | Vocabulary and CLI naming: one meaning per word, noun-verb verbs, aliases only for released verbs until 7.0.0 | accepted | amends ADR-012 and ADR-024; with ADR-006 and ADR-014 |
+| [ADR-045](ADR-045-the-issue-lifecycle-is-derived-from-records.md) | The issue lifecycle is derived from records: stored `backlog` or `done`, the rest derived, manifest schema 3.0 | accepted | with ADR-005 and ADR-044 |
 
 ## Principle → ADR mapping
 

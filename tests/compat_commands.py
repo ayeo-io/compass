@@ -374,6 +374,11 @@ def entry_applies(entry: dict, kind: str) -> bool:
     argv = entry["argv"]
     if argv[:2] == ["policy", "migrate"]:
         return False
+    # `policy test` and `policy update` act on the configuration they find; a
+    # copied governance folder is a configuration, so the answer differs from
+    # the no-configuration baseline on purpose.
+    if argv[:2] in (["policy", "test"], ["policy", "update"]):
+        return False
     if kind == "C" and argv[:1] == ["terminology"]:
         return False
     return True

@@ -1105,9 +1105,9 @@ def test_cr_10_the_unreferenced_folder_message_gives_the_path_then_both_commands
 
 
 def test_gs_17_the_wording_check_can_fail():
-    assert _commands_in("run `compass issue migrate-config` to repair") == [
-        ["issue", "migrate-config"]]
-    assert not _exists(["issue", "migrate-config"])
+    assert _commands_in("run `compass issue no-such-verb` to repair") == [
+        ["issue", "no-such-verb"]]
+    assert not _exists(["issue", "no-such-verb"])
     assert _exists(["approach", "evaluate"])
 
 

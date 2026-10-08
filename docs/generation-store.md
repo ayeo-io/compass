@@ -10,9 +10,10 @@ resolution).
 
 ## What is built
 
-The store, its commit and the readers are built, with the commands that
-change what it holds: `compass issue configure` (propose, preview, `--discard`,
-`--commit`) and `--reset-config` on the reassess
+The store, its commit, the readers, the refusal of a check whose implementation
+major differs and the commands that change what it holds are built:
+`compass issue migrate-config`, `compass issue configure` (propose, preview,
+`--discard`, `--commit`) and `--reset-config` on the reassess
 ([issue-configure.md](issue-configure.md)). The modules that read
 configuration (`routing`, `check_cmd`, `checks`, `receipt`, `manifest`,
 `calibration`, `flow`, `quick_fix_cmd`, `loop_ceilings`, `lessons`,
@@ -50,9 +51,9 @@ Every file begins `schema: 1`. A digest is `sha256:` and the hex digest of the
 file's parsed content in canonical JSON, so a comment or a line ending does
 not change it and a changed value does.
 
-`versions.yml` records the check implementation versions so that a later
-change can refuse a run when an implementation's major version differs from
-the one the generation recorded. That refusal is not built yet.
+`versions.yml` records the check implementation versions so that `compass check`
+can refuse a check whose implementation major differs from the one the
+generation recorded (see "Implementation versions" below).
 
 ## A commit
 
@@ -110,6 +111,67 @@ in [issue-configure.md](issue-configure.md):
   its four files equal what a fresh resolution gives;
 - a **stamp** that adds `generation: {from, to}` to the `reassessments:` entry
   the reassess appended, in the same replace.
+
+## Commit paths
+
+A new generation is committed in three ways. Each goes through `generation.commit`.
+
+| Path | Command | Stores |
+|---|---|---|
+| Reassess | `compass approach evaluate --write` | The configuration resolved now. The normal path. |
+| Migrate | `compass issue migrate-config` | The stored configuration, pinned to the installed versions. |
+| Recovery | `compass issue configure --commit` | A leftover generation folder nobody adopted, when it still matches what a fresh resolution gives. |
+
+## Implementation versions
+
+Each check implementation has a version (`check_registry.py`). A generation
+records the version of each implementation it uses, the resolver version and
+the schema of its files in `versions.yml`.
+
+`compass check` compares the major of each with the installed one
+(`cli/compass_pkg/impl_versions.py`):
+
+- A different **implementation** major refuses that check only. It does not run
+  and it records no result. Every other check runs. A refused check that blocks
+  counts as a failure. One that is advisory for this assessment does not, and the
+  text views list it as an advisory failure. `--json` reports `"status": "refused"` for
+  both. The `detail` names the
+  implementation, both versions and `compass issue migrate-config`:
+
+```json
+{
+  "guardrail": "G1",
+  "name": "suite-passed",
+  "status": "refused",
+  "detail": "refused: suite-passed 0.9.0 is recorded, 1.0.0 is installed, a different major, so it did not run. Run `compass issue migrate-config --issue feature` to store a new generation pinned to the installed versions; it invalidates the results recorded under the old ones, so each check runs again."
+}
+```
+
+- A different **resolver** or **schema** major can change what every check means,
+  so `compass check` runs none and exits 2. Other commands do not compare
+  versions yet.
+- The same major, with a different minor or patch, is not refused.
+
+`compass issue migrate-config [--issue SLUG]` fixes both. It stores a new
+generation with the same resolved configuration and provenance, and with
+`versions.yml` set to the installed implementation, resolver and CLI versions.
+It marks every check result the old generation recorded `invalidated` in
+`records.yml`, and the new generation has no `results.yml`, so each check runs
+again. Exit 0, or 2 on error.
+
+- It does not read the project's files. A project edit reaches the issue only
+  through `compass approach evaluate --write`, which classifies it.
+- It refuses a landed issue and writes nothing.
+- When the generation already holds the installed versions it says "no change"
+  and writes nothing.
+- An issue with no `generation:` key, or at generation 0, is adopted: its live
+  configuration becomes generation 1, and `provenance.yml` carries `adopted: adopted from live governance`.
+- It keeps the manifest's text and changes only the `generation:` line.
+
+The build rule that keeps a verdict from changing without a major bump, and the
+list of what each implementation's corpus exercises, are in
+[check-implementations.md](check-implementations.md). Within a major, the corpus is
+the only evidence of compatibility.
 
 ## States
 
@@ -250,8 +312,6 @@ only when `failed` is above zero.
 
 ## Not built yet
 
-- The refusal of a check implementation whose major version differs, and
-  `compass issue migrate-config`.
 - `policy effective --issue` still resolves the live files and does not read
   the generation.
 - The leftover-generation states are reported by `compass ci`, not by

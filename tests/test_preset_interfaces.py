@@ -836,3 +836,82 @@ def test_pi_6_no_merge_conflict_marker_is_left_in_the_tracked_sources():
             if line.startswith(("<<<<<<< ", ">>>>>>>> ")) or line == "=======":
                 left.append(f"{name}:{number}")
     assert left == []
+
+
+# ---- fix round: adoption with a git parent -------------------------------------
+
+def _leftover_generation_two(tmp_path, monkeypatch):
+    """A project with a git parent, generation 1 committed and a second commit
+    stopped after its marker, so generation 2 is complete and unreferenced.
+    Returns `(root, task_dir, manifest to adopt with)`."""
+    from compass_pkg import effective, generation
+    from parent_fixtures import OUTCOME, commit, issue_project
+    base = tmp_path / "remotes"
+    sha = make_remote(base, files={"compass.yml": yaml.safe_dump(_parent(TIGHTENS))})
+    root, task_dir = issue_project(tmp_path, _ref(sha))
+    monkeypatch.setenv("COMPASS_PARENT_REMOTE_BASE", str(base))
+    monkeypatch.chdir(root)
+    assert commit(task_dir).committed
+    manifest = yaml.safe_load((task_dir / "manifest.yml").read_text(encoding="utf-8"))
+    manifest.update(OUTCOME)
+    # An overlay, so that generation 2 holds a different configuration from 1.
+    manifest["config"] = {"checks": {"extra": {
+        "statement": "A check.", "kind": "deterministic", "impl": "suite-passed",
+        "severity": "advisory", "on_skipped": "fail"}}}
+
+    class Stop(Exception):
+        pass
+
+    def stop(step):
+        if step == "marker":
+            raise Stop()
+
+    monkeypatch.setattr(generation, "_after_step", stop)
+    with pytest.raises(Stop):
+        effective.commit_generation(str(task_dir), manifest)
+    monkeypatch.undo()
+    monkeypatch.setenv("COMPASS_PARENT_REMOTE_BASE", str(base))
+    monkeypatch.chdir(root)
+    return root, task_dir, manifest
+
+
+def test_pi_3_a_leftover_generation_is_adopted_when_the_project_has_a_git_parent(
+        tmp_path, monkeypatch):
+    from compass_pkg import effective
+    root, task_dir, manifest = _leftover_generation_two(tmp_path, monkeypatch)
+    resolution = effective.resolve_live(str(root), manifest, "feature", str(task_dir))
+    effective.preflight(str(task_dir), resolution, manifest, None, 2)
+    done = effective.commit_generation(str(task_dir), manifest, adopt=2)
+    assert done.committed and done.number == 2
+    assert "adopted generation 2" in done.message
+
+
+def test_pi_3_adoption_still_refuses_a_leftover_whose_versions_differ(tmp_path, monkeypatch):
+    from compass_pkg import effective, generation
+    from compass_pkg.core import CompassError
+    root, task_dir, manifest = _leftover_generation_two(tmp_path, monkeypatch)
+    versions = task_dir / "generations" / "2" / "versions.yml"
+    doc = yaml.safe_load(versions.read_text(encoding="utf-8"))
+    doc["parents"][1]["classification"]["result"] = "loosening"
+    versions.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+    # Keep the marker whole, so only the comparison with a fresh resolution can refuse.
+    marker = task_dir / "generations" / "2" / generation.MARKER
+    held = yaml.safe_load(marker.read_text(encoding="utf-8"))
+    held["files"]["versions.yml"] = generation.digest({"schema": generation.SCHEMA, **{
+        k: v for k, v in doc.items() if k != "schema"}})
+    marker.write_text(yaml.safe_dump(held, sort_keys=False), encoding="utf-8")
+    resolution = effective.resolve_live(str(root), manifest, "feature", str(task_dir))
+    with pytest.raises(CompassError, match="versions.yml no longer match"):
+        effective.preflight(str(task_dir), resolution, manifest, None, 2)
+
+
+def test_pi_1_a_group_folder_holding_only_a_file_that_is_not_a_fixture_is_a_problem(tmp_path):
+    preset = _preset(tmp_path)
+    folder = preset / "compass-fixtures" / "meets" / "notes"
+    folder.mkdir(parents=True)
+    (folder / "README.md").write_text("Notes, not a fixture.\n", encoding="utf-8")
+    code, report = _json(tmp_path, preset)
+    assert code == 1
+    assert any("compass-fixtures/meets/notes" in p and "no fixture" in p
+               for p in report["problems"]), report["problems"]
+    assert all(g["group"] != "meets/notes" for g in report["groups"])

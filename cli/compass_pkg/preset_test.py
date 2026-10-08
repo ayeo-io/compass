@@ -118,7 +118,10 @@ def _walk(base, rel, found, problems):
         path = os.path.join(here, name)
         inside = f"{rel}/{name}" if rel else name
         where = f"{FIXTURE_DIR}/{inside}"
-        holds = True
+        # A file with any other ending (a README.md) is ignored, so it does not
+        # make the group a group that holds something.
+        holds = holds or os.path.islink(path) or os.path.isdir(path) \
+            or os.path.splitext(name)[1].lower() in (FIXTURE_SUFFIX, ".yaml")
         if os.path.islink(path):
             # Whatever the link names (a file, a folder, nothing, a place outside
             # the preset) is neither read nor printed.

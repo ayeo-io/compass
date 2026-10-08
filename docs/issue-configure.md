@@ -22,6 +22,16 @@ discard and adoption) and `cli/compass_pkg/routing.py` (`--reset-config`).
 `/compass:assess --reassess` runs the reassess. The default for `N` is the
 generation after the one in force.
 
+`approach evaluate` computes the approach, stages, gates, checkpoints and
+subtask ceiling from the configuration the issue runs against and from the
+issue's own layer: the approach it names, the stage modes it sets and the
+subtask ceiling it sets. The layer applies before the floors, caps and role
+rules, so a floor still raises an approach the issue named too low. A
+read-only evaluation uses the stored generation's layer, or the manifest's
+`config:` for an issue with no generation. A write commits the layer it
+computed from. The lint refuses a layer that loosens a lock when the
+generation is committed; a read-only evaluation does not run it.
+
 ## Proposing a change
 
 A call needs at least one change. Flags add to the overlay a call starts from:
@@ -408,7 +418,6 @@ first reading's message.
 
 ## Not built yet
 
-- Moving the readers onto the stored generation. `approach evaluate` still computes the outcome from live governance, so a stored overlay changes the generation and the preview, not yet the approach it computes.
 - `compass policy diff`, which will call the preview's comparison for two references.
 - `compass issue migrate-config` and the pending-change line in `compass check`.
 - Check-result records (`result:<check>`) are not invalidated by a configuration change.

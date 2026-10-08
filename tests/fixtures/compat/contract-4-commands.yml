@@ -665,6 +665,28 @@ entries:
   project: regular-issue-broken-compass-yml
   argv: ["approach", "evaluate", "--issue", "feature", "--write"]
   exit: 2
+# Added on purpose by templates-render-lists: `issue template` is a new verb.
+# 5.6.0 refused it as an unknown choice (exit 2); from 6.0.0 it prints the
+# document template with its checklists rendered from the issue's stage lists
+# and exits 0. The shipped default renders the template file unchanged.
+- id: issue-template-requirements-review
+  project: regular-issue
+  argv: ["issue", "template", "requirements-review", "--issue", "feature"]
+  exit: 0
+  stdout_contains: "Definition of Ready"
+- id: issue-template-verification-report-json
+  project: regular-issue
+  argv: ["issue", "template", "verification-report", "--issue", "feature", "--json"]
+  exit: 0
+  stdout_contains: "\"kind\": \"verification-report\""
+# Added on purpose by templates-render-lists: this entry pins the exit code of
+# the refusal only. 5.6.0 exited 2 on the unknown verb; from 6.0.0 the verb
+# exists and exits 2 for a kind that is not a template. The message is not
+# pinned here.
+- id: issue-template-unknown-kind
+  project: regular-issue
+  argv: ["issue", "template", "no-such-template", "--issue", "feature"]
+  exit: 2
 # Added on purpose by configure-and-reassess: `issue configure` is a new verb.
 # 5.6.0 refused it as an unknown choice (exit 2). From 6.0.0 a change that
 # the layered lint accepts is parked as a proposal in the next generation's

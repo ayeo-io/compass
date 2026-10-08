@@ -821,3 +821,18 @@ def test_pi_6_the_docs_state_the_fetch_of_diff_the_form_code_the_cost_and_the_de
     source = (ROOT / "cli" / "compass_pkg" / "verb_help.py").read_text(encoding="utf-8")
     line = next(l for l in source.splitlines() if l.strip().startswith('"Compare two conf'))
     assert "It writes nothing" not in line and "cache" in line
+
+
+def test_pi_6_no_merge_conflict_marker_is_left_in_the_tracked_sources():
+    import subprocess
+    files = subprocess.run(["git", "ls-files", "cli", "docs", "schemas", "tests"], cwd=ROOT,
+                           capture_output=True, text=True).stdout.split()
+    left = []
+    for name in files:
+        path = ROOT / name
+        if path.suffix not in (".py", ".md", ".yml", ".json") or not path.is_file():
+            continue
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+            if line.startswith(("<<<<<<< ", ">>>>>>>> ")) or line == "=======":
+                left.append(f"{name}:{number}")
+    assert left == []

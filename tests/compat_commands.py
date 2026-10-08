@@ -223,6 +223,12 @@ def _with_compass_yml(root: Path, env: dict) -> None:
     (root / "compass.yml").write_text("schema: 1\n", encoding="utf-8")
 
 
+def _with_default_extends(root: Path, env: dict) -> None:
+    _initialised(root, env)
+    (root / "compass.yml").write_text("schema: 1\nextends: compass:default@6\n",
+                                      encoding="utf-8")
+
+
 def _with_looser_compass_yml(root: Path, env: dict) -> None:
     _initialised(root, env)
     (root / "compass.yml").write_text(
@@ -284,6 +290,7 @@ STATES = {
     "with-broken-governance": _with_broken_governance,
     "with-config": _with_config,
     "with-compass-yml": _with_compass_yml,
+    "with-default-extends": _with_default_extends,
     "with-looser-compass-yml": _with_looser_compass_yml,
     "with-broken-compass-yml": _with_broken_compass_yml,
     "outside-git": _outside_git,

@@ -1,19 +1,22 @@
-# compass_pkg.policy_cmd - `compass policy lint`, `effective`, `diff` and `migrate`
-"""The four verbs over `policy_lint`, `replay` and `policy_migrate`.
+# compass_pkg.policy_cmd - `compass policy lint`, `effective`, `diff`, `migrate` and `update`
+"""The five verbs over `policy_lint`, `replay`, `policy_migrate` and `policy_update`.
 
 `policy lint` runs the legacy lint, unchanged, for a project with no
 `compass.yml` that Compass reads and for the framework's own repository, and
 the layered lint for any other project. `compass ci` calls the legacy
 function in `governance` directly, so its behaviour does not move.
 """
-# DEPENDENCY: standard library (os); compass_pkg.core, governance, layers,
-# parents, policy_lint, policy_migrate, project_settings, replay, terminal.
+# DEPENDENCY: standard library (os, sys); compass_pkg.core, governance, layers,
+# parents, policy_lint, policy_migrate, policy_update, project_settings, replay,
+# terminal.
 from __future__ import annotations
 
 import os
+import sys
 
 from compass_pkg import governance, layers, parents, policy_lint, policy_migrate
 from compass_pkg import preset_init, preset_test, project_settings, replay
+from compass_pkg import policy_update
 from compass_pkg.core import (FRAMEWORK_ROOT, CompassError, find_governance, load_manifest,
                               resolve_issue_dir)
 from compass_pkg.terminal import mark_handled, resolve_mode
@@ -75,8 +78,8 @@ def run_policy_effective(args):
                                      fetch=_may_fetch(args))
     if loaded.findings:
         first = loaded.findings[0]
-        raise CompassError(f"nothing can be resolved: {first.code} {first.path}: "
-                           f"{first.message}")
+        raise CompassError(f"nothing can be resolved: {first.code} [{first.layer}] "
+                           f"{first.path}: {first.message}")
     effective = policy_lint.resolve_effective(
         loaded.parent, loaded.project, loaded.issue, meta=loaded.meta, slug=slug,
         git_parents=loaded.git_parents)
@@ -119,6 +122,36 @@ def run_policy_init_preset(args):
     return 0 if result == "written" else 1
 
 
+def _terminal_attached():
+    """True when a person can answer: input and output are both a terminal."""
+    return sys.stdin.isatty() and sys.stdout.isatty()
+
+
+def _major(value):
+    if value is None:
+        return None
+    if not value.isdecimal():
+        raise CompassError(f"--to takes a major number such as 7, not '{value}'")
+    return int(value)
+
+
+def run_policy_update(args):
+    root = layers.find_project_root(os.getcwd())
+    to = _major(getattr(args, "to", None))
+    as_json = resolve_mode(args) == "json"
+    # A script reading JSON is not at a keyboard, so it is never asked.
+    asking = _terminal_attached() and not as_json
+    out = policy_update.run(root, to, yes=bool(args.yes), interactive=asking, ask=input,
+                            say=print)
+    if as_json:
+        _emit(args, policy_update.document(out), [])
+    elif asking:
+        print("\n".join(policy_update.result_lines(out)))
+    else:
+        print("\n".join(policy_update.text(out)))
+    return out.exit_code
+
+
 ISSUE_HELP = ("issue slug: read that issue's `config:` from its manifest. Without it "
               "no issue is read: there is no COMPASS_ISSUE or current-task fallback")
 
@@ -133,7 +166,7 @@ def _issue_option(parser):
 
 
 def register(pls):
-    """Add `lint`, `effective`, `diff` and `migrate` to the `policy` parsers."""
+    """Add `lint`, `effective`, `diff`, `migrate` and `update` to the `policy` parsers."""
     ple = pls.add_parser("effective", help="show every resolved configuration field "
                          "with its source layer")
     _issue_option(ple)
@@ -176,3 +209,12 @@ def register(pls):
     pli.add_argument("--owner", required=True, metavar="NAME",
                      help="the team that owns the preset, written to its compass.yml")
     pli.set_defaults(func=run_policy_init_preset, output_kind="report")
+    plu = pls.add_parser("update", help="move the project to another shipped default major, "
+                         "re-approving the waivers the move affects")
+    plu.add_argument("--to", metavar="MAJOR",
+                     help="the major to move to, such as 7 (default: the newest major this "
+                     "CLI keeps). A move goes forward only")
+    plu.add_argument("--yes", action="store_true",
+                     help="confirm a move that affects no waiver. It never re-approves a "
+                     "waiver: with one affected it refuses")
+    plu.set_defaults(func=run_policy_update, output_kind="report")

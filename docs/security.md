@@ -73,9 +73,10 @@ The fetch runs `git` with an argument list and no shell, only over `https`, with
 hooks off and no prompts. It runs with your own git configuration, so your
 credential helper runs and your `url.*.insteadOf` rules apply. Only `compass
 policy lint`, `compass policy effective`, `compass policy diff` (when a
-reference is a git parent) and `compass approach evaluate --write` fetch.
+reference is a git parent) and `compass approach evaluate --write` fetch,
+including a reassess that commits a `compass issue configure` proposal.
 `compass policy diff` prints a line on stderr before it fetches. `compass check`
-never fetches. A cached parent is read without
+and `compass issue configure` never fetch. A cached parent is read without
 warning if someone edits the cache, until the parent-state check lands. Review
 [git-parents.md](https://github.com/ayeo-io/compass/blob/main/docs/git-parents.md).
 

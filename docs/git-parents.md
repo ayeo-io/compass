@@ -69,7 +69,8 @@ sha is refused.
 | `compass check`, and any reader of an issue's stored generation | Never. It reads the cache, and an uncached pin is `L-PARENT-NOT-CACHED` |
 | `compass policy lint`, `compass policy effective` | Yes |
 | `compass policy diff`, when a reference is a git parent | Yes, and it prints one line on stderr (`compass policy diff: fetching <ref> into .compass/cache/parents/`) before each fetch. This is the only file `policy diff` writes |
-| `compass approach evaluate --write` (assess and reassess) | Yes |
+| `compass approach evaluate --write` (assess and reassess, including a reassess that commits a `compass issue configure` proposal) | Yes |
+| `compass issue configure` (the preview and the proposal it records) | Never. It reads the cache and commits no generation, so an uncached pin is `L-PARENT-NOT-CACHED`. Run `compass policy lint` first |
 | any of the above with `--offline`, or with `COMPASS_OFFLINE=1` in the environment | Never |
 
 A fetch asks for the exact commit, so it cannot return different content later.
@@ -127,15 +128,17 @@ A parent's own `extends:` may name `compass:default@<major>` or another git pare
 
 A parent can name a git parent, which can name another. A chain holds at most three git parents, to a depth of three: the project's direct parent, its parent and that parent's parent. The shipped default at the root is not counted, because it is the CLI's own version and not a fetched parent.
 
-Each parent in a chain is pinned by sha, fetched, cached and read as data in the same way as a single parent. The chain is `default`, then the git parents from the furthest to the nearest, `project`, then the issue. A later layer overrides an earlier one, so the nearest parent wins over the furthest, and `policy effective` names the parent that wrote each field. The classifier judges each git parent against the shipped default like any other layer, so a parent that loosens the default needs a waiver the same way a project does.
+Each parent in a chain is pinned by sha, fetched, cached and read as data in the same way as a single parent. The chain is `default`, then the git parents from the furthest to the nearest, `project`, then the issue. A later layer overrides an earlier one, so the nearest parent wins over the furthest, and `policy effective` names the parent that wrote each field. The classifier judges each git parent against the shipped default like any other layer, so a parent that loosens the default needs a waiver the same way a project does. A waiver in a git parent, at any depth, is checked against that parent's own `owner`, or the names in the `approvers.project-waiver` of the layer above it. The project's owner does not count. A parent with no `owner` cannot carry a waiver (`W-NO-OWNER`).
 
 | Fault | Code | Reported on |
 |---|---|---|
 | A third parent names a fourth git parent | `L-PARENT-CHAIN` | The third parent. The fourth is not fetched |
-| A parent names a commit that is already in the chain | `L-PARENT-CYCLE` | The parent that names it |
+| A parent names a commit that is already in the chain, at any depth | `L-PARENT-CYCLE` | The parent that names it. A full sha already in the chain is refused before any fetch |
 | An ancestor cannot be fetched, is not cached for a reader that does not fetch, or has a bad spelling | The code of the fault | The parent that names the ancestor (a bad file reports on the ancestor itself) |
 
-A waiver in a git parent is checked against the parent's own `owner`, or the names in the `approvers.project-waiver` of the layer above it. The project's owner does not count. A parent with no `owner` cannot carry a waiver (`W-NO-OWNER`).
+The refusal from `compass policy lint`, `compass policy effective` and `compass check` names that parent in the same way. A stored generation does not read the cache at all: it uses the record of its parents, so a deleted cache does not stop `compass check` for an issue that has one.
+
+Compass checks a parent after it has loaded the parent's ancestors. A parent that is refused for a settings key, an `unlock:` or an unknown `impl` may still be fetched along with its ancestors, which were pinned and read as data only. Nothing in them runs.
 
 ## What an issue records
 

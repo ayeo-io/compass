@@ -18,10 +18,11 @@ entries share.
 What this does not check yet: whether an entry is complete enough to add
 (the merge), and whether a value loosens its parent (the classifier).
 """
-# DEPENDENCY: standard library (datetime, re); compass_pkg.catalogue_spec;
+# DEPENDENCY: standard library (copy, datetime, re); compass_pkg.catalogue_spec;
 # compass_pkg.vocabulary; compass_pkg.waivers (its date reader).
 from __future__ import annotations
 
+import copy
 import datetime
 import re
 
@@ -289,63 +290,85 @@ _JSON_TYPES = {
 
 
 def _field_schema(catalogue, name, field):
+    text = spec.FIELD_DESCRIPTIONS[catalogue][name]
     allowed = _ENUMS.get((catalogue, name))
     if allowed is not None:
-        return {"enum": list(allowed)}
+        return {"description": text, "enum": list(allowed)}
     if field["type"] == "list":
         # A list field also takes the list operations in a layer.
-        return {"oneOf": [{"type": "array"},
-                          {"type": "object", "properties": {
-                              "add": {"type": "array"}, "remove": {"type": "array"}},
-                           "additionalProperties": False}]}
-    return dict(_JSON_TYPES[field["type"]])
+        lists = spec.LIST_DESCRIPTIONS
+        return {"description": text, "oneOf": [
+            {"description": lists["whole"], "type": "array"},
+            {"description": lists["changes"], "type": "object", "properties": {
+                "add": {"description": lists["add"], "type": "array"},
+                "remove": {"description": lists["remove"], "type": "array"}},
+             "additionalProperties": False}]}
+    return {"description": text, **_JSON_TYPES[field["type"]]}
 
 
 def schema():
     """The JSON Schema for a project's `compass.yml`, built from the field
-    table so the two cannot drift."""
+    table so the two cannot drift. Every node carries a description from
+    the same table."""
+    top = spec.TOP_DESCRIPTIONS
+    ops = spec.OPERATION_DESCRIPTIONS
+
     def entry_schema(catalogue):
         fields = {name: _field_schema(catalogue, name, f)
                   for name, f in spec.FIELDS[catalogue].items()}
         properties = dict(fields)
         properties.update({
-            "set": {"type": "object", "properties": dict(fields),
+            "set": {"description": ops["set"], "type": "object",
+                    "properties": copy.deepcopy(fields),
                     "additionalProperties": False},
-            "replace": {"const": True}, "remove": {"const": True},
-            "locked": {"enum": [True, "hard"]}, "unlock": {"const": True},
-            "waiver": {"type": "object"},
+            "replace": {"description": ops["replace"], "const": True},
+            "remove": {"description": ops["remove"], "const": True},
+            "locked": {"description": ops["locked"], "enum": [True, "hard"]},
+            "unlock": {"description": ops["unlock"], "const": True},
+            "waiver": {"description": ops["waiver"], "type": "object"},
         })
-        return {"type": "object", "properties": properties,
-                "additionalProperties": False}
+        return {"description": spec.ENTRY_DESCRIPTIONS[catalogue], "type": "object",
+                "properties": properties, "additionalProperties": False}
 
     properties = {
-        "schema": {"type": "integer"},
-        "extends": {"oneOf": [
-            {"type": "string"},
-            {"type": "object", "properties": {
-                "from": {"type": "string"}, "approved_by": {"type": "string"},
-                "approved_on": {"type": "string", "format": "date"}},
+        "schema": {"description": top["schema"], "type": "integer"},
+        "extends": {"description": top["extends"], "oneOf": [
+            {"description": top["extends.name"], "type": "string"},
+            {"description": top["extends.object"], "type": "object", "properties": {
+                "from": {"description": top["extends.from"], "type": "string"},
+                "approved_by": {"description": top["extends.approved_by"],
+                                "type": "string"},
+                "approved_on": {"description": top["extends.approved_on"],
+                                "format": "date", "type": "string"}},
              "required": ["from"], "additionalProperties": False}]},
-        "owner": {"type": "string"},
-        "approvers": {"type": "object",
-                      "properties": {k: {"type": "array"} for k in spec.APPROVER_KINDS},
+        "owner": {"description": top["owner"], "type": "string"},
+        "approvers": {"description": top["approvers"], "type": "object",
+                      "properties": {k: {"description": top[f"approvers.{k}"],
+                                         "type": "array"}
+                                     for k in spec.APPROVER_KINDS},
                       "additionalProperties": False},
-        "capabilities": {"type": "object",
-                         "properties": {c: {"type": "boolean"} for c in spec.CAPABILITIES},
+        "capabilities": {"description": top["capabilities"], "type": "object",
+                         "properties": {c: {"description": top[f"capabilities.{c}"],
+                                            "type": "boolean"}
+                                        for c in spec.CAPABILITIES},
                          "additionalProperties": False},
-        "autonomy": {"enum": list(spec.AUTONOMY)},
-        "adoption": {"enum": list(spec.ADOPTION)},
-        "allow_project_commands": {"type": "boolean"},
-        "enforcement": {"type": "object"},
-        "record": {"type": "object"},
-        "project": {"type": "object"},
-        "prices": {"type": "object"},
-        "multiagent": {"type": "object"},
-        "preset_index": {"type": "string"},
-        "preset": {"type": "object"},
+        "autonomy": {"description": top["autonomy"], "enum": list(spec.AUTONOMY)},
+        "adoption": {"description": top["adoption"], "enum": list(spec.ADOPTION)},
+        "governance_drift": {"description": top["governance_drift"],
+                             "enum": list(spec.GOVERNANCE_DRIFT)},
+        "allow_project_commands": {"description": top["allow_project_commands"],
+                                   "type": "boolean"},
+        "enforcement": {"description": top["enforcement"], "type": "object"},
+        "record": {"description": top["record"], "type": "object"},
+        "project": {"description": top["project"], "type": "object"},
+        "prices": {"description": top["prices"], "type": "object"},
+        "multiagent": {"description": top["multiagent"], "type": "object"},
+        "preset_index": {"description": top["preset_index"], "type": "string"},
+        "preset": {"description": top["preset"], "type": "object"},
     }
     for catalogue in spec.CATALOGUES:
         properties[catalogue] = {
+            "description": spec.CATALOGUE_DESCRIPTIONS[catalogue],
             "type": "object",
             "patternProperties": {spec.ID_PATTERN: entry_schema(catalogue)},
             "additionalProperties": False,
@@ -353,9 +376,7 @@ def schema():
     return {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "title": "compass.yml",
-        "description": "A project's one configuration file: its overlay on the "
-                       "shipped default and its settings (ADR-043). Generated "
-                       "from cli/compass_pkg/catalogue_spec.py; do not edit by hand.",
+        "description": top[""],
         "type": "object",
         "properties": properties,
         "additionalProperties": False,

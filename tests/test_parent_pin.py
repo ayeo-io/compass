@@ -618,6 +618,44 @@ def test_gp_12_assessing_an_issue_fetches_the_pin_and_stores_the_parent(tmp_path
     assert (_folder(root, sha) / "compass.yml").is_file()
 
 
+def _assessed_then_uncached(tmp_path):
+    """An issue assessed once under a git parent, with the parent's cache then
+    emptied, so a reassess meets an uncached pin. Returns `(root, sha, base)`."""
+    import shutil
+    from parent_fixtures import issue_project
+    base = tmp_path / "remotes"
+    sha = make_remote(base)
+    root, _ = issue_project(tmp_path, _ref(sha))
+    code, _, err = _run(root, "approach", "evaluate", "--issue", "feature", "--write",
+                        env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
+    assert code == 0, err
+    shutil.rmtree(root / ".compass" / "cache" / "parents")
+    return root, sha, base
+
+
+def test_gp_12_a_reassess_fetches_an_uncached_pin(tmp_path):
+    root, sha, base = _assessed_then_uncached(tmp_path)
+    code, _, err = _run(root, "approach", "evaluate", "--issue", "feature", "--write",
+                        env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
+    assert code == 0, err
+    assert (_folder(root, sha) / "compass.yml").is_file()
+
+
+@pytest.mark.parametrize("how", ["flag", "env"])
+def test_gp_12_an_offline_reassess_refuses_an_uncached_pin_without_running_git(tmp_path, how):
+    root, sha, _ = _assessed_then_uncached(tmp_path)
+    bin_dir, log = fake_git(tmp_path)
+    env = {"PATH": f"{bin_dir}:{REAL_GIT}"}
+    argv = ["approach", "evaluate", "--issue", "feature", "--write"]
+    if how == "flag":
+        argv.append("--offline")
+    else:
+        env["COMPASS_OFFLINE"] = "1"
+    code, out, err = _run(root, *argv, env=env)
+    assert code != 0 and "L-PARENT-NOT-CACHED" in err + out
+    assert not log.exists(), "git ran offline"
+
+
 def test_gp_12_checking_an_issue_never_fetches_an_uncached_pin(tmp_path):
     from parent_fixtures import issue_project
     bin_dir, log = fake_git(tmp_path)

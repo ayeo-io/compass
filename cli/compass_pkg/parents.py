@@ -416,6 +416,11 @@ def _on_naming_parent(exc, parent):
     return exc
 
 
+def _cycle(spec, sha, via):
+    return ParentError("L-PARENT-CYCLE", f"the parent names {ref_label(spec)} at {sha[:7]}, "
+                       "which is already in the chain", via.layer.name, "extends")
+
+
 def resolve_chain(root, extends, *, fetch=False, notify=None):
     """The `Parent`s a project's `extends:` names, furthest ancestor first and
     the direct parent last; empty for the shipped form. Each is pinned,
@@ -427,6 +432,9 @@ def resolve_chain(root, extends, *, fetch=False, notify=None):
     nearest_first = []
     while spec is not None:
         via = nearest_first[-1] if nearest_first else None
+        # A full sha already in the chain is a cycle at any depth, and needs no fetch.
+        if via and any(spec.sha == earlier.sha for earlier in nearest_first):
+            raise _cycle(spec, spec.sha, via)
         if len(nearest_first) == MAX_DEPTH:
             raise ParentError(
                 "L-PARENT-CHAIN", f"the parent names a fourth git parent ({ref_label(spec)}); "
@@ -437,9 +445,7 @@ def resolve_chain(root, extends, *, fetch=False, notify=None):
         except ParentError as exc:
             raise (_on_naming_parent(exc, via) if via else exc) from None
         if any(found.sha == earlier.sha for earlier in nearest_first):
-            raise ParentError(
-                "L-PARENT-CYCLE", f"the parent names {ref_label(spec)} at {found.sha[:7]}, "
-                "which is already in the chain", via.layer.name, "extends")
+            raise _cycle(spec, found.sha, via)
         nearest_first.append(found)
         spec = _own_spec(found, inner)
     return nearest_first[::-1]

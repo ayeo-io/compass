@@ -13139,3 +13139,374 @@
 - **Intent:** `INT-1`
 - **Source issue:** `effective-readers`
 - **Landed:** 2026-10-08
+
+### Given a loaded machine, when a run is interrupted, then the tests wait for the session to start before signalling _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `sigint-tests-under-load`
+- **Landed:** 2026-10-08
+
+### Given the compass schema, when a test walks every node, then each node has a non-empty description _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `schema-descriptions`
+- **Landed:** 2026-10-08
+
+### already on the target major: nothing to do, nothing written _(archived)_
+
+- **Scenario id:** `UP-1`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### a dropped entry or an unresolvable file is refused _(archived)_
+
+- **Scenario id:** `UP-10`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### a failed write leaves the file as it was _(archived)_
+
+- **Scenario id:** `UP-11`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### the update shows the classification and the replay counts _(archived)_
+
+- **Scenario id:** `UP-12`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### no terminal and no yes shows the plan and exits 1 _(archived)_
+
+- **Scenario id:** `UP-13`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### json equals the pinned example and never prompts _(archived)_
+
+- **Scenario id:** `UP-14`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### an edit the command cannot make exactly exits 2 before writing _(archived)_
+
+- **Scenario id:** `UP-15`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### help, doc, verb description and corpus state the behaviour _(archived)_
+
+- **Scenario id:** `UP-16`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### a bump with no waiver changes only the integer after @ _(archived)_
+
+- **Scenario id:** `UP-2`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### a target not shipped, older, a foreign extends or no file exits 2 _(archived)_
+
+- **Scenario id:** `UP-3`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### an affected waiver is listed and the move refused without a terminal _(archived)_
+
+- **Scenario id:** `UP-4`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### yes never re-approves a waiver _(archived)_
+
+- **Scenario id:** `UP-5`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### terminal re-approval writes the integer and the approval in one write _(archived)_
+
+- **Scenario id:** `UP-6`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### an approver outside the allowed list is refused _(archived)_
+
+- **Scenario id:** `UP-7`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### declining refuses and writes nothing _(archived)_
+
+- **Scenario id:** `UP-8`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### a waiver whose field is unchanged stays valid _(archived)_
+
+- **Scenario id:** `UP-9`
+- **Intent:** `INT-1`
+- **Source issue:** `policy-update-default`
+- **Landed:** 2026-10-08
+
+### Given a generation with an advisory check, when it fails, then the run passes and shows the failure as advisory _(archived)_
+
+- **Scenario id:** `CS-1`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given a landed_by relaxation on a shipped check with on_skipped fail, the verdict is unchanged _(archived)_
+
+- **Scenario id:** `CS-10`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given a spike with an advisory guardrail check that fails, then the run passes and shows the failure as advisory _(archived)_
+
+- **Scenario id:** `CS-11`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given a blocking check, when it fails, then the run fails _(archived)_
+
+- **Scenario id:** `CS-2`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given on_skipped fail and nothing to check, then the run fails and says why _(archived)_
+
+- **Scenario id:** `CS-3`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given on_skipped pass and nothing to check, then the check counts as a pass _(archived)_
+
+- **Scenario id:** `CS-4`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given on_skipped not-applicable and nothing to check, then it is counted apart as before _(archived)_
+
+- **Scenario id:** `CS-5`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given a blocking_when that does not match, an advisory severity is shown as advisory with the condition _(archived)_
+
+- **Scenario id:** `CS-6`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given the shipped preset and an existing issue, then the verdicts are unchanged _(archived)_
+
+- **Scenario id:** `CS-7`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### The JSON shape of an advisory failure is documented and pinned _(archived)_
+
+- **Scenario id:** `CS-8`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### Given an issue with no generation, then check behaves as before _(archived)_
+
+- **Scenario id:** `CS-9`
+- **Intent:** `INT-1`
+- **Source issue:** `check-severity-from-generation`
+- **Landed:** 2026-10-08
+
+### A major difference refuses only that check _(archived)_
+
+- **Scenario id:** `IR-1`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### migrate-config commits nothing when already pinned _(archived)_
+
+- **Scenario id:** `IR-10`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### migrate-config adopts an issue with no generation _(archived)_
+
+- **Scenario id:** `IR-11`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### The coverage page is derived and kept current _(archived)_
+
+- **Scenario id:** `IR-12`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### The refusal names what to do _(archived)_
+
+- **Scenario id:** `IR-2`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### A minor or patch difference is not refused _(archived)_
+
+- **Scenario id:** `IR-3`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### A resolver or schema major difference refuses the run _(archived)_
+
+- **Scenario id:** `IR-4`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### A refused check is reported as refused and records no result _(archived)_
+
+- **Scenario id:** `IR-5`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### A verdict change without a major bump fails the build _(archived)_
+
+- **Scenario id:** `IR-6`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### The lock file holds a version and a verdict digest per implementation _(archived)_
+
+- **Scenario id:** `IR-7`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### migrate-config pins the installed versions and invalidates old results _(archived)_
+
+- **Scenario id:** `IR-8`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### migrate-config refuses a landed issue _(archived)_
+
+- **Scenario id:** `IR-9`
+- **Intent:** `INT-1`
+- **Source issue:** `impl-refusal`
+- **Landed:** 2026-10-08
+
+### Given other threads exist, when an interrupt arrives while the session is created, then the session is ended _(archived)_
+
+- **Scenario id:** `TRC-001`
+- **Intent:** `INT-1`
+- **Source issue:** `signal-hold-all-threads`
+- **Landed:** 2026-10-08
+
+### configure writes the proposal and leaves the manifest as it was _(archived)_
+
+- **Scenario id:** `CR-1`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### the unreferenced-folder refusal names the folder and both commands, and every named command exists _(archived)_
+
+- **Scenario id:** `CR-10`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### help, owning doc, assess command and command corpus describe the verb _(archived)_
+
+- **Scenario id:** `CR-11`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### the preview lists fields, classification, assessment effect, invalidations and the next step; exit 0, 1 or 2 _(archived)_
+
+- **Scenario id:** `CR-2`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### the JSON has the documented keys in order and equals the pinned example _(archived)_
+
+- **Scenario id:** `CR-3`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### discard removes a proposal or leftover above the current generation and never the current or older _(archived)_
+
+- **Scenario id:** `CR-4`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### commit adopts a whole unreferenced folder only when a fresh resolution gives the same files _(archived)_
+
+- **Scenario id:** `CR-5`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### a reassess interrupted after each step is resolved by commit or discard _(archived)_
+
+- **Scenario id:** `CR-6`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### reassess commits the pending proposal, refuses a stale one, and reset-config drops the overlay _(archived)_
+
+- **Scenario id:** `CR-7`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### a reassessments entry carries the generation it moved from and to _(archived)_
+
+- **Scenario id:** `CR-8`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08
+
+### records statuses carry forward and a waiver whose parent value changed is invalidated and reverted _(archived)_
+
+- **Scenario id:** `CR-9`
+- **Intent:** `INT-1`
+- **Source issue:** `configure-and-reassess`
+- **Landed:** 2026-10-08

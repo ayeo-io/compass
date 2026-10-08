@@ -1,0 +1,147 @@
+{
+  "schema": 1,
+  "issue": "feature",
+  "generation": 1,
+  "proposed": 2,
+  "verdict": "refused",
+  "reasons": [
+    "C-INCOMPARABLE approaches.stages: at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency live-defect, role engineer, labels none: approaches.checkpoints (controlled) is [\"assess\", \"define\"] in the parent and [\"assess\"] in the child; a waiver on the entry, approved by the layer above, excuses it"
+  ],
+  "proposal": ".compass/work/feature/generations/2/proposed.yml",
+  "base": "config",
+  "changes": [
+    {
+      "path": "stages.define.mode",
+      "before": "full",
+      "after": "collapsed"
+    }
+  ],
+  "classification": {
+    "result": "incomparable",
+    "reason": "at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency live-defect, role engineer, labels none: approaches.checkpoints (controlled) is [\"assess\", \"define\"] in the parent and [\"assess\"] in the child",
+    "scan": "full",
+    "first_point": {
+      "assessment": {
+        "risk": "trivial",
+        "familiarity": "greenfield",
+        "size": "atomic",
+        "goal": "delivery",
+        "urgency": "live-defect",
+        "role": "engineer",
+        "labels": []
+      },
+      "represents": {
+        "risk": [
+          "trivial",
+          "contained"
+        ],
+        "familiarity": [
+          "greenfield",
+          "brownfield-mapped"
+        ],
+        "size": [
+          "atomic",
+          "small"
+        ],
+        "goal": [
+          "delivery",
+          null
+        ],
+        "urgency": [
+          "live-defect"
+        ],
+        "role": [
+          "engineer",
+          "qa",
+          null
+        ]
+      },
+      "outcome": "mixed",
+      "summary": "at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency live-defect, role engineer, labels none: approaches.checkpoints (controlled) is [\"assess\", \"define\"] in the parent and [\"assess\"] in the child",
+      "changes": [
+        {
+          "fact": "stage_mode",
+          "field": "approaches.stages",
+          "key": "define",
+          "outcome": "incomparable",
+          "parent": "reproduce-first",
+          "child": "collapsed"
+        },
+        {
+          "fact": "checkpoints",
+          "field": "approaches.checkpoints",
+          "key": "controlled",
+          "outcome": "looser",
+          "parent": [
+            "assess",
+            "define"
+          ],
+          "child": [
+            "assess"
+          ]
+        }
+      ]
+    }
+  },
+  "assessment": {
+    "approach": {
+      "before": "regular",
+      "after": "regular"
+    },
+    "result": "loosening",
+    "changes": [
+      {
+        "fact": "stage_mode",
+        "field": "approaches.stages",
+        "key": "define",
+        "outcome": "looser",
+        "before": "full",
+        "after": "collapsed"
+      },
+      {
+        "fact": "checkpoints",
+        "field": "approaches.checkpoints",
+        "key": "balanced",
+        "outcome": "looser",
+        "before": [
+          "define",
+          "plan"
+        ],
+        "after": [
+          "plan"
+        ]
+      },
+      {
+        "fact": "checkpoints",
+        "field": "approaches.checkpoints",
+        "key": "controlled",
+        "outcome": "looser",
+        "before": [
+          "assess",
+          "define",
+          "refine",
+          "plan"
+        ],
+        "after": [
+          "assess",
+          "refine",
+          "plan"
+        ]
+      }
+    ],
+    "refused": null
+  },
+  "invalidates": [
+    {
+      "id": "EV-1",
+      "kind": "approval",
+      "reason": "it approved waiver:issue:checks.team-check, which is invalid: checks.team-check.severity: the parent value changed from 'blocking' to 'advisory'; the project value is 'advisory'"
+    },
+    {
+      "id": "waiver:issue:checks.team-check",
+      "kind": "waiver",
+      "reason": "checks.team-check.severity: the parent value changed from 'blocking' to 'advisory'; the project value is 'advisory'"
+    }
+  ],
+  "next": "/compass:assess --reassess --reason \"...\""
+}

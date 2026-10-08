@@ -218,26 +218,26 @@ approval record behind it.
   "proposed": 2,
   "verdict": "refused",
   "reasons": [
-    "C-LOOSENING approaches.stages: at risk contained, familiarity brownfield-mapped, size standard, goal delivery, role engineer, labels none: approaches.stages (define) is \"full\" in the parent and \"collapsed\" in the child; a waiver on the entry, approved by the layer above, excuses it; fields that are looser or cannot be compared: approaches.stages (define), approaches.checkpoints (balanced), approaches.checkpoints (controlled)"
+    "C-LOOSENING approaches.stages: at risk contained, familiarity brownfield-mapped, size medium, goal delivery, role engineer, labels none: approaches.stages (define) is \"thorough\" in the parent and \"collapsed\" in the child; a waiver on the entry, approved by the layer above, excuses it; fields that are looser or cannot be compared: approaches.stages (define), approaches.checkpoints (balanced), approaches.checkpoints (controlled)"
   ],
   "proposal": ".compass/work/feature/generations/2/proposed.yml",
   "base": "config",
   "changes": [
     {
       "path": "stages.define.mode",
-      "before": "full",
+      "before": "thorough",
       "after": "collapsed"
     }
   ],
   "classification": {
     "result": "loosening",
-    "reason": "at risk contained, familiarity brownfield-mapped, size standard, goal delivery, role engineer, labels none: approaches.stages (define) is \"full\" in the parent and \"collapsed\" in the child",
+    "reason": "at risk contained, familiarity brownfield-mapped, size medium, goal delivery, role engineer, labels none: approaches.stages (define) is \"thorough\" in the parent and \"collapsed\" in the child",
     "scan": "full",
     "first_point": {
       "assessment": {
         "risk": "contained",
         "familiarity": "brownfield-mapped",
-        "size": "standard",
+        "size": "medium",
         "goal": "delivery",
         "role": "engineer",
         "labels": []
@@ -250,7 +250,7 @@ approval record behind it.
           "brownfield-mapped"
         ],
         "size": [
-          "standard"
+          "medium"
         ],
         "goal": [
           "delivery"
@@ -260,14 +260,14 @@ approval record behind it.
         ]
       },
       "outcome": "looser",
-      "summary": "at risk contained, familiarity brownfield-mapped, size standard, goal delivery, role engineer, labels none: approaches.stages (define) is \"full\" in the parent and \"collapsed\" in the child",
+      "summary": "at risk contained, familiarity brownfield-mapped, size medium, goal delivery, role engineer, labels none: approaches.stages (define) is \"thorough\" in the parent and \"collapsed\" in the child",
       "changes": [
         {
           "fact": "stage_mode",
           "field": "approaches.stages",
           "key": "define",
           "outcome": "looser",
-          "parent": "full",
+          "parent": "thorough",
           "child": "collapsed"
         },
         {
@@ -315,7 +315,7 @@ approval record behind it.
         "field": "approaches.stages",
         "key": "define",
         "outcome": "looser",
-        "before": "full",
+        "before": "thorough",
         "after": "collapsed"
       },
       {

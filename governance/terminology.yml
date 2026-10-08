@@ -23,7 +23,7 @@
 # shrink-only baseline.
 # =============================================================================
 
-version: 2.0.0-pre17
+version: 2.0.0-pre18
 
 terms:
 
@@ -780,8 +780,15 @@ codes:
 # One row per `(field, old, new)`; `new: null` means the old word is no longer
 # stored. The rows are the same triples as the read-side tables in
 # cli/migrate-map.yml (`values:` and `friction_keys:`), and a test keeps the
-# two equal. No row is wired yet.
-retired_values: []
+# two equal. The stage weights and the size are wired; the status, run stage
+# and friction rows follow with their own increments.
+retired_values:
+  - {field: stage_mode, old: full, new: thorough}
+  - {field: stage_mode, old: full-plus-backfill, new: thorough-with-follow-up}
+  - {field: stage_mode, old: light, new: lightweight}
+  - {field: artifact_depth, old: full, new: thorough}
+  - {field: artifact_depth, old: light, new: lightweight}
+  - {field: size, old: standard, new: medium}
 
 # =============================================================================
 # BANNED v1 VOCABULARY - the house test scans user-facing surfaces for these.
@@ -1010,12 +1017,13 @@ scan:
   exempt_regions:
     - path: governance/terminology.yml
       blocks: [banned, retired_machine_names, retired_machine_name_exempt, scan,
-               retired_in_output]
+               retired_in_output, retired_values]
       why: >-
         A ban must name the term it retires and a rename table must name both
         spellings, so these blocks carry every retired word by necessity.
-        `scan:` names the exempt paths, and `retired_in_output:` lists the
-        names the CLI must never print.
+        `scan:` names the exempt paths, `retired_in_output:` lists the
+        names the CLI must never print, and `retired_values:` lists the old and
+        new spelling of each word a field still reads.
         Everything else in the file - `terms:`, `codes:`, `id_prefixes:` - is
         read like any other surface.
 

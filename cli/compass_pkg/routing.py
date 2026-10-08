@@ -35,7 +35,9 @@ import fnmatch
 import re as _re
 from compass_pkg.core import _stage_key_renames, ASSESSMENT_KEY_MAP, CompassError, canonical_shape, display_shape, display_stage, find_governance, load_manifest, load_yaml, reading_matches, resolve_issue_dir, shape_stages
 from compass_pkg.governance import governance_drift
-from compass_pkg.stable_ids import APPROACH_FULL, APPROACH_REGULAR, APPROACH_SPIKE
+from compass_pkg import word_map
+from compass_pkg.stable_ids import (APPROACH_FULL, APPROACH_REGULAR, APPROACH_SPIKE,
+                                    DEPTH_THOROUGH, MODE_LIGHTWEIGHT, MODE_THOROUGH)
 from compass_pkg.render import fired_rule_line
 from compass_pkg.manifest import annotate_gate_accepts_text
 
@@ -159,7 +161,9 @@ def prepare_policy(policy):
     """The `PreparedPolicy` of `policy`. A policy that names one route twice
     raises here, as `evaluate_route` has always raised it first."""
     from compass_pkg.policy import checkpoint_table_errors
-    view, renamed = canonical_view(policy)
+    # A policy copied before the depth words and the size were renamed is
+    # read as the new words, so it routes as it did.
+    view, renamed = canonical_view(word_map.map_policy(policy))
     vocab = {_VOCABULARY_KEYS.get(k, k): v
              for k, v in (view.get("assessment_vocabulary")
                           or view.get("reading_vocabulary") or {}).items()}
@@ -189,18 +193,18 @@ class RoutingConflict(CompassError):
     can treat as a result. Every other error is a fault in an input."""
 
 
-def _below_full(stage, mode, ranks):
-    """Does a floor's lift raise this stage's mode to `full`? With ranks
+def _below_thorough(stage, mode, ranks):
+    """Does a floor's lift raise this stage's mode to `thorough`? With ranks
     (the catalogue form's `stages.<id>.modes.<mode>.rank`, handed over as
-    `stage_mode_ranks`) it lifts a mode ranked below `full`, and leaves a
+    `stage_mode_ranks`) it lifts a mode ranked below `thorough`, and leaves a
     mode with no rank alone. Without them it lifts the three modes that sit
-    below `full` on the depth ladder, which is what the ranks reproduce for
-    the shipped policy."""
+    below `thorough` on the depth ladder, which is what the ranks reproduce
+    for the shipped policy."""
     if ranks is None:
-        return mode in ("collapsed", "skipped", "light")
+        return mode in ("collapsed", "skipped", MODE_LIGHTWEIGHT)
     stage_ranks = ranks.get(stage) or {}
-    mode_rank, full_rank = stage_ranks.get(mode), stage_ranks.get("full")
-    return mode_rank is not None and full_rank is not None and mode_rank < full_rank
+    mode_rank, top_rank = stage_ranks.get(mode), stage_ranks.get(MODE_THOROUGH)
+    return mode_rank is not None and top_rank is not None and mode_rank < top_rank
 
 
 def evaluate_route(readings, policy, autonomy="balanced", issue=None):
@@ -417,8 +421,8 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
         else:
             ignored[stage] = mode
     for p in (never_skip | required_phases):
-        if _below_full(p, phases.get(p), policy.get("stage_mode_ranks")):
-            phases[p] = "full"
+        if _below_thorough(p, phases.get(p), policy.get("stage_mode_ranks")):
+            phases[p] = MODE_THOROUGH
     gates = list(shape.get("gates", []))
     # Immovable gates and role-added gates apply to delivery approaches only. Spike
     # ships nothing - it carries only its own Conclude gate, by design. (A
@@ -459,7 +463,7 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
             # "regular" and "full" are adjectives, so they take a noun.
             "reason": "every %s carries %s" % (
                 display_shape(final) + (" approach" if final in (APPROACH_REGULAR, APPROACH_FULL) else ""),
-                "one" if depth == "full" else "a light one"),
+                "one" if depth == DEPTH_THOROUGH else "a lightweight one"),
         })
     # A role rule already demands documents via `require_artifact` - a marketer
     # needs launch-readiness, a product owner an intent document. That is the same idea
@@ -474,7 +478,7 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
             continue
         artifacts.append({
             "id": "ART-" + str(kind).upper().replace("-", "_"),
-            "kind": kind, "status": "draft", "depth": "full",
+            "kind": kind, "status": "draft", "depth": DEPTH_THOROUGH,
             "reason": why or "added by a policy rule",
         })
 
@@ -573,6 +577,19 @@ def cmd_approach_summary(args):
 
 # --- command: approach evaluate -----------------------------------------------
 
+def read_size(dimension, value):
+    """A size given on the command line, read through the retired-word table:
+    the old word evaluates as the new one and the notice goes to standard
+    error, so the output stays the new command's. A dimension other than
+    `size` comes back unchanged."""
+    new = word_map.tables()["size"].get(value) if dimension == "size" else None
+    if new is None:
+        return value
+    print(f"compass: size {value} is now {new}; the old word is read until 7.0.0.",
+          file=sys.stderr)
+    return new
+
+
 def cmd_route_evaluate(args):
     task = None
     task_path = None
@@ -596,7 +613,7 @@ def cmd_route_evaluate(args):
             if k == "labels":
                 readings[k] = [t.strip() for t in v.split(",") if t.strip()]
             else:
-                readings[k] = v.strip()
+                readings[k] = read_size(k, v.strip())
     else:
         task_dir = resolve_issue_dir(args.task)
         task, task_path = load_manifest(task_dir)

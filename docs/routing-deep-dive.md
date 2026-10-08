@@ -108,7 +108,7 @@ purpose.
 |---|---|---|
 | risk | `contained` | A broken saved-view is annoying and bounded to the dashboard; recoverable, no data loss, no other surface affected. |
 | Familiarity | `brownfield-mapped` | The dashboard's filter behaviour is already captured in scenarios. |
-| Size | `standard` | Several files - a persistence layer, the filter serialisation, the UI - and one or two design decisions, 1–3 days. |
+| Size | `medium` | Several files - a persistence layer, the filter serialisation, the UI - and one or two design decisions, 1–3 days. |
 | Goal and role | `engineer` | No intent document; an engineer is implementing a well-understood feature. |
 
 Domain tags: `labels: [persistence]` might carry, but nothing on the
@@ -337,7 +337,7 @@ approach that compresses the stages *before* verify and never verify itself.
 Hotfix has no worktree to cap - breakdown is skipped and the fix runs solo.
 
 The methodology's own guard applies here: a fix that turns out to be
-`standard`+ in size is *not* a hotfix - it is an incident. Assess it on the
+`medium`+ in size is *not* a hotfix - it is an incident. Assess it on the
 full approach, put someone in incident command, use the multiagent
 orchestration if it helps. Assess scores size precisely so that distinction
 holds.
@@ -448,7 +448,7 @@ document's outcome is "let finance self-serve their month-end numbers."
 Assess reads the goal as the *actual outcome wanted*, not the literal
 request - and "self-serve" implies filters that match what finance actually
 needs, perhaps scheduling, perhaps permissions. Size is no longer `small`;
-it is `standard` or larger. The `product-owner` role rule fires: `intent.md`
+it is `medium` or larger. The `product-owner` role rule fires: `intent.md`
 required, the intent-fidelity gate before the plan stage. Composes to
 **the regular approach or heavier**, with a gate that checks the export scenarios
 actually deliver "self-serve" and not just "a button that produces a file."

@@ -405,19 +405,24 @@ def test_dp_2_every_catalogue_is_filled_and_the_approach_catalogue_is_not_named_
 
 # The architect's ruling: a rank only for the modes on the depth ladder.
 RULED_RANKS = {
-    ("assess", "light"): 2, ("assess", "full"): 3,
-    ("define", "collapsed"): 1, ("define", "light"): 2, ("define", "full"): 3,
+    ("assess", "lightweight"): 2, ("assess", "thorough"): 3,
+    ("define", "collapsed"): 1, ("define", "lightweight"): 2, ("define", "thorough"): 3,
     ("define", "reproduce-first"): None,
     ("refine", "skipped"): 0, ("refine", "collapsed"): 1,
-    ("refine", "light"): 2, ("refine", "full"): 3,
-    ("plan", "collapsed"): 1, ("plan", "full"): 3,
+    ("refine", "lightweight"): 2, ("refine", "thorough"): 3,
+    ("plan", "collapsed"): 1, ("plan", "thorough"): 3,
     ("breakdown", "skipped"): 0, ("breakdown", "multiagent"): None,
-    ("implement", "explore"): None, ("implement", "full"): 3,
+    ("implement", "explore"): None, ("implement", "thorough"): 3,
     ("implement", "expedited"): None,
-    ("verify", "conclude"): None, ("verify", "light"): 2, ("verify", "full"): 3,
-    ("ship", "graduate-or-discard"): None, ("ship", "light"): 2,
-    ("ship", "full"): 3, ("ship", "full-plus-backfill"): 4,
+    ("verify", "conclude"): None, ("verify", "lightweight"): 2, ("verify", "thorough"): 3,
+    ("ship", "graduate-or-discard"): None, ("ship", "lightweight"): 2,
+    ("ship", "thorough"): 3, ("ship", "thorough-with-follow-up"): 4,
 }
+
+# The ruling of 6 October 2026 names the modes by the words they had then. A
+# merged decision record never changes, so it is read through the new names.
+RULING_WORDS = {"lightweight": "light", "thorough": "full",
+                "thorough-with-follow-up": "full-plus-backfill"}
 
 
 def test_dp_3_every_mode_has_the_ruled_rank_or_none():
@@ -446,13 +451,14 @@ def test_dp_3_every_approach_uses_a_mode_its_stage_declares():
 
 
 def test_dp_3_the_ranks_reproduce_todays_lift_to_full():
-    # Today's lift raises collapsed, skipped and light to full and leaves
-    # every other mode alone; a rank below full is exactly those three.
+    # Today's lift raises collapsed, skipped and lightweight to thorough and
+    # leaves every other mode alone; a rank below thorough is exactly those
+    # three.
     stages = _preset()["stages"]
     lifted = {mode for entry in stages.values()
               for mode, body in entry["modes"].items()
               if body.get("rank") is not None and body["rank"] < 3}
-    assert lifted == {"collapsed", "skipped", "light"}
+    assert lifted == {"collapsed", "skipped", "lightweight"}
 
 
 # --- the lock set (`DP-4`) ----------------------------------------------------
@@ -837,7 +843,8 @@ def test_dp_3_the_rank_ruling_is_recorded_in_the_repository():
     assert "| `ship` | `full-plus-backfill` | 4 |" in text
     for (stage, mode), rank in RULED_RANKS.items():
         shown = "none" if rank is None else str(rank)
-        assert f"| `{stage}` | `{mode}` | {shown} |" in text, (stage, mode)
+        was = RULING_WORDS.get(mode, mode)
+        assert f"| `{stage}` | `{was}` | {shown} |" in text, (stage, mode)
 
 
 # --- the sidecar holds spellings, never a changed value (`DP-1`) ---------------

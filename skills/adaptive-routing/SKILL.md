@@ -42,7 +42,7 @@ treat an un-extended `governance/` as a missing prerequisite.
 
 **Familiarity** - *new code, or old code, and is the old code mapped?*
 - `brownfield-unmapped` is not a judgement of code quality - it means the
-  behaviour is not written down as scenarios. At standard size or more, with
+  behaviour is not written down as scenarios. At medium size or more, with
   cross-cutting or critical risk, or with a domain label, it triggers a
   routing guardrail floor: `behaviour-mapping` must run. Do not skip it. On
   an atomic or small change with trivial or contained risk and no domain
@@ -56,7 +56,7 @@ treat an un-extended `governance/` as a missing prerequisite.
   that turned out easy is cheap; discovering during implementation that the
   delivery approach was too light is expensive and demoralising.
 - Anchor on concrete tests: `atomic` is one file and no design decision;
-  `standard` has one or two design decisions; `large` has real architecture and
+  `medium` has one or two design decisions; `large` has real architecture and
   is plausibly parallelisable.
 
 **Goal & role** - *the actual outcome, not the literal request.*

@@ -120,7 +120,7 @@ def test_pt_1_the_expected_stages_and_checks_are_compared(tmp_path):
     owed = obligations.obligations(shipped.config, SMALL, capabilities=shipped.capabilities)
     checks = sorted({c for ids in owed.gate_checks.values() for c in ids})
     fixture = _fixture({"approach": "quick-fix", "gates": QUICK_FIX_GATES, "checks": checks,
-                        "stages": {"implement": "full", "plan": "collapsed"}})
+                        "stages": {"implement": "thorough", "plan": "collapsed"}})
     code, out, err = _test(tmp_path, _preset(tmp_path, fixtures={"all-four": fixture}))
     assert code == 0, (out, err)
 
@@ -136,7 +136,8 @@ def test_pt_1_gates_and_checks_are_sets_and_their_order_in_the_file_does_not_mat
 DIFFERENCES = [
     ("approach", {"approach": "full"}, "full", "quick-fix"),
     ("gates", {"gates": ["G1"]}, ["G1"], QUICK_FIX_GATES),
-    ("stages.implement", {"stages": {"implement": "light"}}, "light", "full"),
+    ("stages.implement", {"stages": {"implement": "lightweight"}}, "lightweight",
+     "thorough"),
     ("checks", {"checks": ["suite-passed"]}, ["suite-passed"], None),
 ]
 
@@ -338,11 +339,11 @@ def test_pt_4_an_empty_gates_or_checks_list_is_an_expectation_that_none_are_owed
 
 
 def test_pt_4_a_stage_the_result_does_not_hold_has_a_null_actual(tmp_path):
-    fixture = _fixture({"stages": {"no-such-stage": "full"}})
+    fixture = _fixture({"stages": {"no-such-stage": "thorough"}})
     code, report = _json(tmp_path, _preset(tmp_path, fixtures={"s": fixture}))
     assert code == 1
     assert report["fixtures"][0]["mismatches"] == [
-        {"field": "stages.no-such-stage", "expected": "full", "actual": None}]
+        {"field": "stages.no-such-stage", "expected": "thorough", "actual": None}]
 
 
 def test_pt_4_a_yaml_error_names_the_fixture_by_its_path_in_the_preset(tmp_path):

@@ -50,47 +50,57 @@ def _floor(*stages):
 
 # --- OB-2: the evaluator lifts by rank when it is given ranks --------------------
 
-RANKS = {"refine": {"skipped": 0, "collapsed": 1, "light": 2, "full": 3,
-                    "thorough": 4, "draft": 0},
-         "implement": {"full": 3}}
+RANKS = {"refine": {"skipped": 0, "collapsed": 1, "lightweight": 2, "thorough": 3,
+                    "exhaustive": 4, "draft": 0},
+         "implement": {"thorough": 3}}
 
 
-def test_ob_2_a_floor_lifts_a_mode_whose_rank_is_below_full():
-    policy = _policy({"refine": "draft", "implement": "full"}, _floor("refine"),
+def test_ob_2_a_floor_lifts_a_mode_whose_rank_is_below_thorough():
+    policy = _policy({"refine": "draft", "implement": "thorough"}, _floor("refine"),
                      RANKS)
     # `draft` is not in the fixed set, so only the rank can lift it.
-    assert evaluate_route(READINGS, policy)["stages"]["refine"] == "full"
+    assert evaluate_route(READINGS, policy)["stages"]["refine"] == "thorough"
 
 
-def test_ob_2_a_floor_leaves_a_mode_of_rank_full_or_above_alone():
-    for mode in ("full", "thorough"):
-        policy = _policy({"refine": mode, "implement": "full"}, _floor("refine"),
+def test_ob_2_a_floor_leaves_a_mode_of_rank_thorough_or_above_alone():
+    for mode in ("thorough", "exhaustive"):
+        policy = _policy({"refine": mode, "implement": "thorough"}, _floor("refine"),
                          RANKS)
         assert evaluate_route(READINGS, policy)["stages"]["refine"] == mode
 
 
 def test_ob_2_a_floor_leaves_a_mode_with_no_rank_alone():
-    policy = _policy({"refine": "expedited", "implement": "full"}, _floor("refine"),
+    policy = _policy({"refine": "expedited", "implement": "thorough"}, _floor("refine"),
                      RANKS)
     assert evaluate_route(READINGS, policy)["stages"]["refine"] == "expedited"
 
 
 def test_ob_2_a_stage_the_floor_does_not_name_is_not_lifted():
-    policy = _policy({"refine": "draft", "implement": "full"}, _floor("implement"),
+    policy = _policy({"refine": "draft", "implement": "thorough"}, _floor("implement"),
                      RANKS)
     assert evaluate_route(READINGS, policy)["stages"]["refine"] == "draft"
 
 
 def test_ob_2_a_policy_with_no_ranks_lifts_exactly_the_fixed_set():
-    for mode, lifted in (("collapsed", True), ("skipped", True), ("light", True),
-                         ("full", False), ("draft", False), ("expedited", False)):
+    for mode, lifted in (("collapsed", True), ("skipped", True), ("lightweight", True),
+                         ("thorough", False), ("draft", False), ("expedited", False)):
         policy = _policy({"refine": mode}, _floor("refine"))
         got = evaluate_route(READINGS, policy)["stages"]["refine"]
-        assert got == ("full" if lifted else mode), mode
+        assert got == ("thorough" if lifted else mode), mode
 
 
-def test_ob_2_a_stage_with_no_full_rank_is_not_lifted_by_rank():
-    # Without a rank for `full` there is nothing to be below.
+def test_ob_2_a_policy_copied_before_the_rename_lifts_the_same_set():
+    """A copied policy that still says `light` and `full` routes as it did."""
+    for mode in ("light", "full"):      # `light` is lifted; `full` is already there
+        policy = _policy({"refine": mode}, _floor("refine"))
+        assert evaluate_route(READINGS, policy)["stages"]["refine"] == "thorough", mode
+    ranked = _policy({"refine": "draft", "implement": "full"}, _floor("refine"),
+                     {"refine": {"light": 2, "full": 3, "draft": 0}, "implement": {"full": 3}})
+    assert evaluate_route(READINGS, ranked)["stages"]["refine"] == "thorough"
+
+
+def test_ob_2_a_stage_with_no_thorough_rank_is_not_lifted_by_rank():
+    # Without a rank for `thorough` there is nothing to be below.
     policy = _policy({"refine": "draft"}, _floor("refine"),
                      {"refine": {"draft": 0}})
     assert evaluate_route(READINGS, policy)["stages"]["refine"] == "draft"
@@ -253,9 +263,9 @@ def test_ob_1_the_generated_fallback_shape_goes_back_to_the_default_route(preset
 def test_ob_1_the_ranks_reach_the_evaluator(preset_config):
     from compass_pkg import obligations
     ranks = obligations.policy_adapter(preset_config)["stage_mode_ranks"]
-    assert ranks["ship"] == {"light": 2, "full": 3, "full-plus-backfill": 4}
+    assert ranks["ship"] == {"lightweight": 2, "thorough": 3, "thorough-with-follow-up": 4}
     assert "reproduce-first" not in ranks["define"]
-    assert ranks["define"]["full"] == 3
+    assert ranks["define"]["thorough"] == 3
 
 
 def test_ob_1_a_planted_rank_on_a_mode_a_floor_reaches_breaks_the_replay(
@@ -307,7 +317,7 @@ def _api(name):
 
 def _assessment(**kw):
     base = {"risk": "contained", "familiarity": "brownfield-mapped",
-            "size": "standard", "goal": "delivery", "urgency": "none",
+            "size": "medium", "goal": "delivery", "urgency": "none",
             "role": "engineer", "labels": []}
     base.update(kw)
     return base
@@ -385,7 +395,7 @@ def test_ob_3_the_facts_equal_the_evaluators_answers(preset_config):
 def test_ob_3_a_critical_change_owes_what_the_policy_says(preset_config):
     got = _api("obligations")(preset_config, _assessment(risk="critical"))
     assert got.approach == "full"
-    assert got.stage_mode["refine"] == "full"
+    assert got.stage_mode["refine"] == "thorough"
     assert {"verify.analyze", "verify.architecture"} <= set(got.gate_set)
     assert got.ceilings["max_worktrees"] == 1
     assert got.ceilings["subtask_ceiling"] == 1
@@ -605,8 +615,11 @@ def test_ob_4_the_refused_points_of_the_grid_are_the_baseline_errors(preset_conf
               for r in grid_rows if "error" in r["result"]}
     assert errors, "the baseline has no refusal, so there is nothing to count"
     refused = {}
+    from compat_baseline import SIZE_NOW        # the baseline predates size `medium`
     for row in grid_rows:
-        got = obligations(preset_config, row["assessment"])
+        readings = dict(row["assessment"])
+        readings["size"] = SIZE_NOW.get(readings["size"], readings["size"])
+        got = obligations(preset_config, readings)
         if isinstance(got, _api("Refused")):
             refused[json_key(row["assessment"])] = got.reason
     assert refused == errors
@@ -730,19 +743,19 @@ def test_ob_5_the_issue_names_the_candidate(preset_config):
     assert _owed(preset_config, _assessment(**SMALL)).approach == "quick-fix"
     got = _owed(config, _assessment(**SMALL), layer)
     assert got.approach == "regular"
-    assert got.stage_mode["plan"] == "full"
+    assert got.stage_mode["plan"] == "thorough"
 
 
 def test_ob_5_without_an_issue_approach_the_first_matching_shape_is_the_candidate(
         preset_config):
-    config, layer = _issue(preset_config, modes={"refine": "light"})
+    config, layer = _issue(preset_config, modes={"refine": "lightweight"})
     assert _owed(config, _assessment(**SMALL), layer).approach == "quick-fix"
 
 
 def test_ob_5_the_issue_changes_a_base_mode(preset_config):
-    config, layer = _issue(preset_config, modes={"refine": "light"})
+    config, layer = _issue(preset_config, modes={"refine": "lightweight"})
     got = _owed(config, _assessment(**SMALL), layer)
-    assert got.stage_mode["refine"] == "light"       # quick-fix has `collapsed`
+    assert got.stage_mode["refine"] == "lightweight"  # quick-fix has `collapsed`
     assert got.stage_mode["plan"] == "collapsed"     # the rest is untouched
 
 
@@ -751,7 +764,7 @@ def test_ob_5_a_floor_lifts_a_mode_the_issue_lowered(preset_config):
     is lifted back. The issue needs no waiver there: it has no effect."""
     config, layer = _issue(preset_config, modes={"define": "collapsed"})
     unmapped = _assessment(familiarity="brownfield-unmapped")
-    assert _owed(config, unmapped, layer).stage_mode["define"] == "full"
+    assert _owed(config, unmapped, layer).stage_mode["define"] == "thorough"
     assert _owed(config, _assessment(), layer).stage_mode["define"] == "collapsed"
 
 
@@ -898,8 +911,8 @@ def test_ob_5_an_issue_autonomy_changes_no_fact(preset_config):
     assert set(plain.checkpoints) == {"controlled", "balanced", "autonomous"}
 
 
-def test_ob_5_a_mode_ranked_equal_to_full_is_not_lifted():
-    ranks = {"refine": {"full": 3, "equal": 3, "light": 2}}
+def test_ob_5_a_mode_ranked_equal_to_thorough_is_not_lifted():
+    ranks = {"refine": {"thorough": 3, "equal": 3, "lightweight": 2}}
     policy = _policy({"refine": "equal"}, _floor("refine"), ranks)
     assert evaluate_route(READINGS, policy)["stages"]["refine"] == "equal"
 
@@ -1251,7 +1264,7 @@ def test_ob_8_the_owning_docs_name_the_module_and_the_evaluator_input():
 def _reordered(config):
     """`size` reordered, with a floor that reads it through `at_least`."""
     config = copy.deepcopy(config)
-    config["dimensions"]["size"]["values"] = ["atomic", "small", "large", "standard",
+    config["dimensions"]["size"]["values"] = ["atomic", "small", "large", "medium",
                                               "product"]
     config["rules"]["floors"]["rules"]["RP-PLANT-ORDER"] = {
         "order": 90, "when": {"size": {"at_least": "large"}},
@@ -1261,11 +1274,11 @@ def _reordered(config):
 
 def test_ob_1_the_evaluator_reads_the_configurations_dimension_orders(preset_config):
     config = _reordered(preset_config)
-    case = _assessment(size="standard")
+    case = _assessment(size="medium")
     adapted = _api("policy_adapter")(config)
     assert adapted["dimension_orders"]["size"] == ["atomic", "small", "large",
-                                                   "standard", "product"]
-    # In the configured order `standard` reaches `large`, so the floor fires.
+                                                   "medium", "product"]
+    # In the configured order `medium` reaches `large`, so the floor fires.
     assert _api("obligations")(config, case).approach == "full"
     assert evaluate_route(case, adapted)["delivery_approach"] == "full"
     # Without the key the evaluator reads the shipped order, and does not.
@@ -1278,7 +1291,7 @@ def test_ob_1_a_blocking_when_reads_the_configurations_orders(preset_config):
     # shipped order while the rest read the configured one would split them.
     config = _reordered(preset_config)
     config["checks"]["suite-passed"]["blocking_when"] = {"size": {"at_least": "large"}}
-    got = _api("obligations")(config, _assessment(size="standard"))
+    got = _api("obligations")(config, _assessment(size="medium"))
     assert got.checks["suite-passed"]["severity"] == "blocking"
 
 

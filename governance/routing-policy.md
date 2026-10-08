@@ -81,9 +81,9 @@ The shipped defaults (see `routing-policy.yml` for the live, id-tagged set):
 
 - **floors** - `RP-FLOOR-001` critical risk → at least the full approach,
   never skip refine/verify/ship; `RP-FLOOR-002` brownfield-unmapped familiarity
-  at standard size or more, with cross-cutting or critical risk, or with one
+  at medium size or more, with cross-cutting or critical risk, or with one
   of the four domain labels → define
-  runs full-weight with `behaviour-mapping` (below that, `RP-ADV-002` gives
+  runs thorough-weight with `behaviour-mapping` (below that, `RP-ADV-002` gives
   the skill as advice); `RP-FLOOR-003`
   touching auth/payments/personal-data/migrations → at least the full approach.
 - **caps** - `RP-CAP-001` critical risk caps worktrees at 1.
@@ -116,7 +116,7 @@ routing_strategies:
   default_shapes:
     - when: { size: [atomic, small], risk: [trivial, contained] }
       lean_toward: quick-fix
-    - when: { size: standard }
+    - when: { size: medium }
       lean_toward: regular
     - when: { size: [large, product] }
       lean_toward: full

@@ -29,8 +29,8 @@ satisfied by construction:
 So there is no separate checklist to fill. On the regular and full approaches
 it is the explicit gate below.
 
-On the regular approach, the review is a light-to-full pass - light, never
-absent. On the full approach it is a full pass with an explicit ambiguity ledger and
+On the regular approach, the review is a lightweight-to-thorough pass - lightweight, never
+absent. On the full approach it is a thorough pass with an explicit ambiguity ledger and
 non-engineering role review.
 
 ## What the define stage already did - and what is left for you

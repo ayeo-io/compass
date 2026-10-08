@@ -44,9 +44,21 @@ VALUE_SECTIONS = ("stage_mode", "artifact_depth", "size", "issue_status",
                   "close_reason", "run_stage")
 KEY_SECTIONS = ("friction_keys",)
 
-# The in-module copy of the tables. No row is wired yet: a table with a row
-# is what turns a retired word into a new one on read and on write.
+# The in-module copy of the tables, for a checkout with no framework install.
+# A table with a row is what turns a retired word into a new one on read and
+# on write. The stage weights and the size are wired; the status, run stage
+# and friction tables follow in later increments.
 FALLBACK = {name: {} for name in (*VALUE_SECTIONS, *KEY_SECTIONS)}
+FALLBACK["stage_mode"] = {
+    "full": "thorough",
+    "light": "lightweight",
+    "full-plus-backfill": "thorough-with-follow-up",
+}
+FALLBACK["artifact_depth"] = {
+    "full": "thorough",
+    "light": "lightweight",
+}
+FALLBACK["size"] = {"standard": "medium"}
 
 _READ = None
 
@@ -235,6 +247,61 @@ def map_fixture(doc, rows=None):
         modes = rows.get("stage_mode") or {}
         expect["stages"] = {stage: _map_word(mode, modes, f"expect.stages.{stage}", changes)
                             for stage, mode in expect["stages"].items()}
+    return out
+
+
+def _stale_shape(shape, modes, depths):
+    if not isinstance(shape, dict):
+        return False
+    stages, artifacts = shape.get("stages"), shape.get("artifacts")
+    return (isinstance(stages, dict) and any(m in modes for m in stages.values())
+            or isinstance(artifacts, dict) and any(d in depths for d in artifacts.values()))
+
+
+def map_policy(policy, rows=None):
+    """A legacy routing policy (`governance/routing-policy.yml`) read through
+    the tables: a project that copied `governance/` before the rename keeps
+    its old words in the stage weights, the artifact depths, the size
+    vocabulary and the size tests of its rules, and routes as it did.
+
+    The evaluator reads the policy once for each assessment, so the check for
+    an old word looks only at the places a word sits and returns `policy`
+    itself, not a copy, when it finds none."""
+    rows = tables() if rows is None else rows
+    modes, depths = rows.get("stage_mode") or {}, rows.get("artifact_depth") or {}
+    sizes = rows.get("size") or {}
+    if not isinstance(policy, dict) or not (modes or depths or sizes):
+        return policy
+    vocabulary = policy.get("assessment_vocabulary") or {}
+    old_size = isinstance(vocabulary, dict) and any(
+        isinstance(w, str) and w in sizes for w in vocabulary.get("size") or ())
+    shapes = policy.get("route_shapes") or {}
+    ranks = policy.get("stage_mode_ranks")
+    old_ranks = isinstance(ranks, dict) and any(
+        isinstance(row, dict) and any(m in modes for m in row) for row in ranks.values())
+    old_shape = isinstance(shapes, dict) and any(
+        _stale_shape(shape, modes, depths) for shape in shapes.values())
+    if not (old_size or old_ranks or old_shape):
+        return policy
+    out, changes = copy.deepcopy(policy), []
+    if old_size:
+        out["assessment_vocabulary"]["size"] = [
+            _map_word(w, sizes, "assessment_vocabulary.size", changes)
+            for w in out["assessment_vocabulary"]["size"]]
+        _walk_predicates(out, "", rows, changes)
+    for name, shape in (out.get("route_shapes") or {}).items():
+        if isinstance(shape, dict):
+            where = f"route_shapes.{name}"
+            if isinstance(shape.get("stages"), dict):
+                shape["stages"] = {k: _map_word(v, modes, f"{where}.stages.{k}", changes)
+                                   for k, v in shape["stages"].items()}
+            if isinstance(shape.get("artifacts"), dict):
+                shape["artifacts"] = {k: _map_word(v, depths, f"{where}.artifacts.{k}", changes)
+                                      for k, v in shape["artifacts"].items()}
+    if old_ranks:
+        out["stage_mode_ranks"] = {
+            stage: {modes.get(m, m): rank for m, rank in row.items()}
+            for stage, row in out["stage_mode_ranks"].items()}
     return out
 
 

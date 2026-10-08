@@ -37,7 +37,7 @@ def test_mm_1_many_manifests_parse_the_map_once(monkeypatch):
     calls = _count_parses(monkeypatch)
     for _ in range(50):
         out = core.normalize_spine(dict(MANIFEST))
-    assert out["stages"] == {"assess": "full", "implement": "full"}
+    assert out["stages"] == {"assess": "thorough", "implement": "thorough"}
     assert len(calls) == 0, len(calls)
 
 

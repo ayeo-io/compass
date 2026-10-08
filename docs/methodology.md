@@ -29,7 +29,7 @@ Every issue begins with an assessment:
 |---|---|---|
 | Risk | How far does a failure reach? | trivial, contained, cross-cutting, critical |
 | Familiarity | How well is the affected system understood? | greenfield, mapped brownfield, unmapped brownfield |
-| Size | How much delivery work is involved? | atomic, small, standard, large, product |
+| Size | How much delivery work is involved? | atomic, small, medium, large, product |
 | Goal and role | What outcome is wanted, and who is entering? | delivery or exploration; product, design, engineering, marketing or QA |
 
 Assessment is judgement. The assessor must explain uncertain or consequential

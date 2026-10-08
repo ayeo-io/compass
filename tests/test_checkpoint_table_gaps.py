@@ -23,7 +23,7 @@ from compass_pkg.policy import checkpoint_table_errors  # noqa: E402
 from compass_pkg.routing import evaluate_route  # noqa: E402
 
 FEATURE = {"risk": "contained", "familiarity": "brownfield-mapped",
-           "size": "standard", "goal": "delivery", "role": "engineer",
+           "size": "medium", "goal": "delivery", "role": "engineer",
            "labels": []}
 EVERY = ["assess", "define", "refine", "plan"]
 

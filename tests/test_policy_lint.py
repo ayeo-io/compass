@@ -1009,13 +1009,13 @@ def test_pl_11_issue_scope_names_the_issue_and_marks_the_issue_layer(tmp_path):
     work.mkdir(parents=True)
     (work / "manifest.yml").write_text(
         "schema_version: '2.0'\nissue: demo\nconfig:\n  stages:\n    define:\n"
-        "      set: {mode: light}\n", encoding="utf-8")
+        "      set: {mode: lightweight}\n", encoding="utf-8")
     code, document, _ = _effective_json(root, "--issue", "demo")
     assert code == 0
     assert document["scope"] == {"kind": "issue", "issue": "demo", "resolved": "live"}
     assert [l["name"] for l in document["layers"]] == ["default", "project", "issue"]
     mode = next(f for f in document["fields"] if f["path"] == "stages.define.mode")
-    assert (mode["value"], mode["source"], mode["op"]) == ("light", "issue", "set")
+    assert (mode["value"], mode["source"], mode["op"]) == ("lightweight", "issue", "set")
 
 
 def test_pl_11_the_same_input_gives_the_same_bytes_and_no_local_path(tmp_path):

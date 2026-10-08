@@ -37,7 +37,7 @@ line is not skippable - it runs.
 |---|---|---|
 | **Risk** | {{trivial \| contained \| cross-cutting \| critical}} | {{Why this value. Consequence, not effort.}} |
 | **Familiarity** | {{greenfield \| brownfield-mapped \| brownfield-unmapped}} | {{Why this value. Is current behaviour written down?}} |
-| **Size** | {{atomic \| small \| standard \| large \| product}} | {{Why this value. When unsure, estimate up.}} |
+| **Size** | {{atomic \| small \| medium \| large \| product}} | {{Why this value. When unsure, estimate up.}} |
 | **Goal & role** | {{engineer \| product-owner \| product-marketer \| designer \| qa}} | {{Who invoked, and the outcome actually wanted - read `intent.md` or the intake if one exists.}} |
 
 **Labels (the manifest's `labels:` field):** {{[auth, payments, personal-data, migrations, public-api, …] or "none"}}
@@ -93,9 +93,9 @@ Candidate review dimensions: {{correctness, governance, traceability, … per th
 
 | Stage | Weight | Notes |
 |---|---|---|
-| Assess | Full | Always. This document is the output. |
-| Define | {{one scenario \| small feature set \| full BDD discovery \| reproduce-first failing test \| collapsed to a question (spike)}} | {{discovery vs. behaviour mapping existing behaviour first; how deep}} |
-| Refine | {{collapsed \| light pass \| full pass \| skipped (spike)}} | {{if collapsed, the de-scope ledger below must justify it}} |
+| Assess | Thorough | Always. This document is the output. |
+| Define | {{one scenario \| small feature set \| thorough BDD discovery \| reproduce-first failing test \| collapsed to a question (spike)}} | {{discovery vs. behaviour mapping existing behaviour first; how deep}} |
+| Refine | {{collapsed \| lightweight pass \| thorough pass \| skipped (spike)}} | {{if collapsed, the de-scope ledger below must justify it}} |
 | Plan | {{one-line edit note \| real technical-design.md \| technical-design.md + distribution-map.md \| timebox sketch (spike)}} | {{design decisions expected; governance check scope}} |
 | Breakdown | {{skipped (solo) \| pair \| multiagent}} | {{subtask count comes from the distribution map}} |
 | Implement | {{test surface target}} | {{scaled to risk - see the TDD skill}} |
@@ -162,7 +162,7 @@ Candidate review dimensions: {{correctness, governance, traceability, … per th
 
 | What was overridden | From → To | Who | Why |
 |---|---|---|---|
-| {{e.g. "Size"}} | {{standard → small}} | {{name}} | {{reason}} |
+| {{e.g. "Size"}} | {{medium → small}} | {{name}} | {{reason}} |
 
 <!-- If none: "No human overrides. Approach confirmed as composed." -->
 

@@ -20,8 +20,10 @@ Each field records:
   assessment), `descriptive` (not compared), `activation` (turns a check on
   or off), `never` (not read by the classifier at all).
 """
-# DEPENDENCY: none.
+# DEPENDENCY: compass_pkg.stable_ids (constants only).
 from __future__ import annotations
+
+from compass_pkg import stable_ids
 
 CATALOGUES = ("dimensions", "stages", "approaches", "rules", "checks", "gates",
               "artifacts", "vocabulary")
@@ -46,7 +48,7 @@ LOCKS = (True, "hard")
 # that uses `at_least:` before any configuration is loaded.
 SHIPPED_ORDERS = {
     "risk": ("trivial", "contained", "cross-cutting", "critical"),
-    "size": ("atomic", "small", "standard", "large", "product"),
+    "size": ("atomic", "small", "medium", "large", "product"),
 }
 
 # Where a retired word can sit in a configuration layer, one row per field:
@@ -261,7 +263,7 @@ CEILING_DIRECTIONS = {
     "rules.ceilings.repeated_error": "none",
 }
 
-ARTIFACT_DEPTHS = ("light", "full")              # ascending strictness
+ARTIFACT_DEPTHS = stable_ids.ARTIFACT_DEPTHS     # ascending strictness
 AUTONOMY = ("controlled", "balanced", "autonomous")
 ADOPTION = ("advisory", "enforced")
 # `governance_drift`: any value other than `strict` reads as `advisory`.
@@ -381,7 +383,7 @@ FIELD_DESCRIPTIONS = {
         "stages": "The mode the approach runs each stage in, keyed by stage id.",
         "gates": "The ids of the gates the approach must clear.",
         "artifacts": "The artifacts the approach owes, keyed by artifact id. Each value is a "
-                     "depth, `light` or `full`.",
+                     "depth, `lightweight` or `thorough`.",
         "subtask_ceiling": "The largest number of subtasks the approach allows, or `null` for no "
                            "limit, where a lower number is stricter. The shipped default is 1 or 2 "
                            "for every approach except full, which has no limit.",

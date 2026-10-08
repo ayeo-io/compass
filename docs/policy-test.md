@@ -174,6 +174,13 @@ A `compass.yml` that can be read but is malformed YAML is a lint error
 (`L-LOAD`), so it exits 1 and the report shows the finding. A fixture file that
 cannot be read is an error on that fixture, not exit 2.
 
+A preset or a fixture written in the retired depth words or the size `standard`
+still runs: the words are read as `thorough`, `lightweight`,
+`thorough-with-follow-up` and `medium`, and an expected stage mode in a fixture
+is read the same way. The run prints one advisory line to standard error for
+each word a layer used (see `docs/policy-lint.md`). The advisory changes no exit
+code.
+
 ## The `--json` report of `compass preset test`
 
 `--json` prints one document. Keys appear in this order, and these are all of

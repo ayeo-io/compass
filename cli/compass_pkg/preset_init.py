@@ -54,7 +54,7 @@ assessment:
 expect:
   approach: quick-fix
   gates: [{gates}]
-  stages: {{implement: full}}
+  stages: {{implement: thorough}}
 """
 
 # The assessment of the example fixture. The fixture's gates are computed from

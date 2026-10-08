@@ -193,7 +193,7 @@ approaches:
 def test_ef_12_a_compass_yml_changes_the_approaches_shown(tmp_path):
     html = _diagram(_layered(tmp_path, LAYERED), "--autonomy", "balanced").stdout
     row = _row(html, "quick-fix")
-    assert "full" in _cell(row, "define")
+    assert "thorough" in _cell(row, "define")      # the layer says `full`, read as `thorough`
     assert "stops for you" in _cell(row, "implement")
     assert "verify.correctness" in row and "verify.security" not in row
     # An approach the file leaves alone keeps the shipped default.

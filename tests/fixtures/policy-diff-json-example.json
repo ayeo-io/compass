@@ -5,14 +5,14 @@
     "ref": "default@6",
     "kind": "default",
     "default_version": "6.0.0",
-    "digest": "sha256:ce3b4224b600724d4aafc098f484e25f7fe5abc7f787e1869b31a3a38199261f",
+    "digest": "sha256:af04b956e48c375abd15bea8801bff4313b03bf90e518c8f42085daa08b0eefc",
     "capabilities": []
   },
   "b": {
     "ref": "project",
     "kind": "project",
     "default_version": "6.0.0",
-    "digest": "sha256:1b6aa156e6afda34401c4f13383f50dc846fbb3be974cc15eff155c0c58cf6d8",
+    "digest": "sha256:733195b8c00fab2be740d0a297a1ef715874b98e04fda7359be9db6effc5de76",
     "capabilities": [
       "artifact-freshness"
     ]

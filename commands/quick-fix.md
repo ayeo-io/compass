@@ -46,7 +46,7 @@ The values, and nothing else:
 
 - risk: `trivial`, `contained`, `cross-cutting` or `critical`
 - familiarity: `greenfield`, `brownfield-mapped` or `brownfield-unmapped`
-- size: `atomic`, `small`, `standard`, `large` or `product`
+- size: `atomic`, `small`, `medium`, `large` or `product`
 
 `--goal` and `--role` default to `delivery` and `engineer`. `--test` can
 repeat. The scenario id is `TRC-001` unless you pass `--scenario-id`.

@@ -376,7 +376,7 @@
           "enum": [
             "atomic",
             "small",
-            "standard",
+            "medium",
             "large",
             "product"
           ]

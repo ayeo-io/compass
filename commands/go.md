@@ -33,7 +33,7 @@ compass quick-fix start <slug> --risk "<VALUE> - <reason>" \
 - risk: `trivial`, `contained`, `cross-cutting` or `critical`
 - familiarity: `greenfield` (new code), `brownfield-mapped` (existing code
   whose behaviour tests or docs pin) or `brownfield-unmapped`
-- size: `atomic`, `small`, `standard`, `large` or `product`
+- size: `atomic`, `small`, `medium`, `large` or `product`
 - `--labels auth`, `payments`, `personal-data` or `migrations` when the
   change touches one; those bring the human sign-off
 

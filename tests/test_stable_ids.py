@@ -171,22 +171,14 @@ def test_si_2_the_scanner_finds_ids_in_five_positions_and_skips_text():
 # (module, a code fragment that identifies the line, why it is not an id). The
 # fragment is never a line number. A stale entry fails SI-5.
 ALLOW = (
-    ("analyze.py", '_SPECIFY_FULL_WEIGHTS = {"full"}',
-     '"full" is a stage weight, not a delivery approach'),
-    ("catalogue_spec.py", 'ARTIFACT_DEPTHS = ("light", "full")',
-     '"full" is an artifact depth, not a delivery approach'),
-    ("catalogue_spec.py", '"size": ("atomic"',
-     '"standard" is a size dimension value, not the retired approach name'),
-    ("legacy_adapter.py", '"full": 3',
-     '"full" is a stage mode name with a rank, not a delivery approach'),
-    ("routing.py", 'stage_ranks.get("full")',
-     '"full" is a stage mode looked up in the rank table, not a delivery approach'),
     ("classify.py", '"scan": ("one of", ("full",',
      '"full" is a scan mode (the whole grid was compared), not the approach id'),
     ("locks.py", 'SCANS = ("footprint", "full")',
      '"full" is a scan mode (every label in the layer), not the approach id'),
-    ("routing.py", 'if depth == "full"',
-     '"full" is an artifact depth, not a delivery approach'),
+    ("word_map.py", '"full": "thorough"',
+     '"full" is the retired stage weight in the in-module copy of the word table'),
+    ("word_map.py", 'FALLBACK["size"] = {"standard": "medium"}',
+     '"standard" is the retired size in the in-module copy of the word table'),
 )
 
 # Only this module may hold a whole-module entry: it holds retired words as the

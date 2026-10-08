@@ -37,7 +37,7 @@ import os
 
 import yaml
 
-from compass_pkg import core
+from compass_pkg import core, stable_ids, word_map
 from compass_pkg.catalogue_spec import CAPABILITIES
 from compass_pkg.routing import canonical_routes
 from compass_pkg.stable_ids import (APPROACH_REGULAR, APPROACH_SPIKE, GATE_G5, GATE_SPIKE_CONCLUDE, STAGE_ASSESS,
@@ -54,11 +54,11 @@ STAGE_ORDER = STAGE_IDS
 
 # A mode has a rank only when it sits on the depth ladder. Every other mode
 # differs in kind, not in depth, so it has no rank and the classifier treats
-# it as incomparable. The one mode above `full` is "full, plus more". The ranks
-# reproduce today's lift, which raises exactly `collapsed`, `skipped` and
-# `light` to `full` and leaves every other mode as it is.
-MODE_RANKS = {"skipped": 0, "collapsed": 1, "light": 2, "full": 3,
-              "full-plus-backfill": 4}  # vocabulary-scan: allow - machine enum value that manifests on disk carry
+# it as incomparable. The one mode above `thorough` is "thorough, plus a
+# follow-up". The ranks reproduce today's lift, which raises exactly
+# `collapsed`, `skipped` and `lightweight` to `thorough` and leaves every other
+# mode as it is.
+MODE_RANKS = stable_ids.MODE_RANKS
 
 # The dimensions that have an order, and which way is stricter.
 ORDERED_DIMENSIONS = ("risk", "size")
@@ -483,7 +483,9 @@ def _vocabulary(approaches, stages, checks, gates):
 # --- the public surface -----------------------------------------------------------
 
 def _convert(policy, guardrails):
-    policy, _renamed = canonical_routes(policy or {})
+    # A policy copied before the depth words and the size were renamed is
+    # converted as the new words.
+    policy, _renamed = canonical_routes(word_map.map_policy(policy or {}))
     guardrails = copy.deepcopy(guardrails or {})
     notes = _Notes()
     approaches = _approaches(policy)
@@ -571,21 +573,9 @@ _HEADER = (
     "# cli/compass_pkg/legacy_adapter.py wrote the first version of these files from\n"
     "# those two files. The preset is the source now; edit it here.\n")
 
-_MODE_NOTE = ("  # vocabulary-scan: allow - machine enum value that manifests on "
-              "disk already carry\n")
-
-
 def _dump(data):
-    text = yaml.safe_dump(data, sort_keys=False, default_flow_style=None,
+    return yaml.safe_dump(data, sort_keys=False, default_flow_style=None,
                           allow_unicode=True, width=100)
-    # A mode id that the vocabulary scan retires is data, not prose, so each
-    # line that holds one carries its own marker rather than a path exemption.
-    lines = []
-    for line in text.splitlines(keepends=True):
-        if "full-plus-backfill" in line:  # vocabulary-scan: allow - the id being marked
-            line = line.rstrip("\n") + _MODE_NOTE
-        lines.append(line)
-    return "".join(lines)
 
 
 def preset_files(policy, guardrails):

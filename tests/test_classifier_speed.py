@@ -29,7 +29,7 @@ def _fixtures():
 
 
 ASSESSMENT = {"risk": "cross-cutting", "familiarity": "brownfield-mapped",
-              "size": "standard", "goal": "delivery", "role": "engineer",
+              "size": "medium", "goal": "delivery", "role": "engineer",
               "labels": ["auth"]}
 
 
@@ -127,7 +127,7 @@ def test_cs_1_old_route_names_give_the_result_the_current_names_give(policy):
     routes = set()
     for labels in ([], ["auth"], ["migrations"], ["auth", "payments"]):
         for risk in ("trivial", "contained", "cross-cutting", "critical"):
-            for size in ("atomic", "small", "standard", "large"):
+            for size in ("atomic", "small", "medium", "large"):
                 for autonomy in ("controlled", "balanced", "autonomous"):
                     assessment = {**ASSESSMENT, "risk": risk, "size": size,
                                   "labels": labels}
@@ -198,7 +198,7 @@ def test_cs_1_each_autonomy_gets_the_checkpoints_the_evaluator_gives_it():
     policy = obligations.policy_adapter(config)
     seen = set()
     for risk in ("trivial", "contained", "cross-cutting", "critical"):
-        for size in ("atomic", "standard", "product"):
+        for size in ("atomic", "medium", "product"):
             for labels in ([], ["auth"], ["migrations"]):
                 assessment = {**ASSESSMENT, "risk": risk, "size": size, "labels": labels}
                 got = obligations.obligations(config, copy.deepcopy(assessment))
@@ -564,7 +564,13 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # Neither decides a verdict: a call without `at` runs the same code over the
 # same grid. Merged with the entry and exit lists' `ships` reading, which
 # raised the version to 2.
-VERDICT_SOURCE_PIN = "60048c9d5e599cdf"
+# Re-pinned for the rename of the depth words and the size `standard`
+# (issue `vocabulary-and-cli-renames`): the evaluator reads a policy written in
+# the old words as the new ones (`word_map.map_policy`) and lifts to `thorough`.
+# No verdict moves: the 5.6.0 routing baseline and the classifications of layers
+# in the old words give the same results (`test_size_medium.py`,
+# `test_old_words_read.py`), so the version stays 2.
+VERDICT_SOURCE_PIN = "fbe4e2b088645ce6"
 
 
 def _verdict_source_digest():
@@ -578,7 +584,7 @@ def _verdict_source_digest():
     text = [inspect.getsource(classify), inspect.getsource(obligations)]
     text += [inspect.getsource(getattr(routing, name)) for name in (
         "evaluate_route", "canonical_routes", "canonical_view", "prepare_policy",
-        "route_checkpoints", "PreparedPolicy", "_below_full")]
+        "route_checkpoints", "PreparedPolicy", "_below_thorough")]
     text += [inspect.getsource(getattr(core, name)) for name in (
         "reading_matches", "shape_stages", "canonical_shape", "_stage_key_renames")]
     text += [inspect.getsource(policy.checkpoint_table_errors)]

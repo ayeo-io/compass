@@ -23,7 +23,7 @@
           "description": "One delivery approach: its weight, the mode of each stage, and what it owes.",
           "properties": {
             "artifacts": {
-              "description": "The artifacts the approach owes, keyed by artifact id. Each value is a depth, `light` or `full`.",
+              "description": "The artifacts the approach owes, keyed by artifact id. Each value is a depth, `lightweight` or `thorough`.",
               "type": "object"
             },
             "checkpoints": {
@@ -78,7 +78,7 @@
               "description": "Changes only the fields named here and leaves every other field of the inherited entry as it is.",
               "properties": {
                 "artifacts": {
-                  "description": "The artifacts the approach owes, keyed by artifact id. Each value is a depth, `light` or `full`.",
+                  "description": "The artifacts the approach owes, keyed by artifact id. Each value is a depth, `lightweight` or `thorough`.",
                   "type": "object"
                 },
                 "checkpoints": {

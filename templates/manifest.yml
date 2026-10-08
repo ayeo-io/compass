@@ -35,7 +35,7 @@ status: active            # lifecycle: active (in-flight) | queued (next up,
 assessment:
   risk: "{{trivial | contained | cross-cutting | critical}}"
   familiarity: "{{greenfield | brownfield-mapped | brownfield-unmapped}}"
-  size: "{{atomic | small | standard | large | product}}"
+  size: "{{atomic | small | medium | large | product}}"
   goal: "{{delivery | exploration}}"
   urgency: "{{none | live-defect}}"          # optional; omit if none
   role: "{{engineer | product-owner | product-marketer | designer | qa}}"
@@ -46,7 +46,7 @@ generation: 0                # 0 = assessed, no stored configuration yet; the ev
 delivery_approach: null      # filled by the evaluator (--write)
 orchestration: null               # filled by the evaluator
 policy_rules_fired: []       # filled by the evaluator - [{id, kind, rationale, changed}]
-stages: {}                   # filled by the evaluator - {assess: full, define: light, …}
+stages: {}                   # filled by the evaluator - {assess: thorough, define: lightweight, …}
 
 # --- evidence (the registry) -----------------------------------------------
 # A typed, id-tagged registry of every piece of evidence this issue has.

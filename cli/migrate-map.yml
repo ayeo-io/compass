@@ -31,6 +31,24 @@ values:
     expedition: full
     feature: regular
     initiative: full
+  # Stage weights (issue vocabulary-and-cli-renames). Each table is read only
+  # in the fields it names, never as bare text: `full` is still the name of a
+  # delivery approach, and `delivery_approach: standard` is the row above, not
+  # a size. `collapsed`, `skipped` and the special modes keep their names.
+  # Stage mode: a manifest's `stages` values and a layer's stage modes.
+  stage_mode:
+    full: thorough
+    light: lightweight
+    full-plus-backfill: thorough-with-follow-up
+  # Artifact depth: a manifest's `artifacts[].depth` and a layer's approach
+  # `artifacts` values.
+  artifact_depth:
+    full: thorough
+    light: lightweight
+  # Size: `assessment.size`, `evaluated_assessment.size`, the size
+  # dimension's values and each `size` atom of a condition.
+  size:
+    standard: medium
 
 # Old route names -> the names the display layer prints. Manifests record
 # the route names themselves; an old name is read through the map above.

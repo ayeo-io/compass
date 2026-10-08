@@ -53,13 +53,22 @@ class _Missing:
         raise AssertionError("cli/compass_pkg/word_map.py does not exist")
 
 
+# The sections whose rows ship in `cli/migrate-map.yml`. The machinery tests
+# read these from the file; the sections the file does not hold yet (the
+# status, run stage and friction rows, wired by later increments) are handed
+# in from `ROWS`.
+SHIPPED = ("stage_mode", "artifact_depth", "size")
+
+
 @pytest.fixture
 def rows(monkeypatch):
     try:
         from compass_pkg import word_map as wm
     except ImportError:
         return _Missing()
-    monkeypatch.setattr(wm, "tables", lambda: copy.deepcopy(ROWS))
+    shipped = wm.tables()
+    handed = {**copy.deepcopy(ROWS), **{name: dict(shipped[name]) for name in SHIPPED}}
+    monkeypatch.setattr(wm, "tables", lambda: copy.deepcopy(handed))
     return wm
 
 
@@ -418,3 +427,281 @@ def test_vr_d9_generation_commit_writes_through_the_same_path(rows, tmp_path, ca
     assert task["status"] == "backlog" and task["parked_reason"] == "waiting"
     assert Path(str(path) + ".v5.bak").is_file()
     assert "parked" in capsys.readouterr().err
+
+
+# =============================================================================
+# The depth words and the size, read from the shipped tables (no injected rows)
+# =============================================================================
+
+import json
+import subprocess
+
+CLI = ROOT / "cli" / "compass"
+
+
+def _cli(cwd, *argv):
+    env = dict(os.environ)
+    env.pop("COMPASS_ISSUE", None)
+    done = subprocess.run([sys.executable, str(CLI), *argv], cwd=str(cwd), env=env,
+                          capture_output=True, text=True, timeout=240)
+    return done.returncode, done.stdout, done.stderr
+
+
+def _project(tmp_path, name="proj", manifest=None, compass_yml=None):
+    root = tmp_path / name
+    task_dir = root / ".compass" / "work" / "t"
+    task_dir.mkdir(parents=True)
+    (root / ".compass" / "config.yml").write_text("version: 1.0.0\n", encoding="utf-8")
+    (root / ".compass" / "current-task").write_text("t\n", encoding="utf-8")
+    body = {"schema_version": "2.0", "issue": "t", "created": "2026-10-08",
+            "assessment": {"risk": "contained", "familiarity": "brownfield-mapped",
+                           "size": "medium", "goal": "delivery", "role": "engineer",
+                           "labels": []}}
+    body.update(manifest or {})
+    (task_dir / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False),
+                                           encoding="utf-8")
+    if compass_yml is not None:
+        (root / "compass.yml").write_text(compass_yml, encoding="utf-8")
+    return root, task_dir
+
+
+def test_the_shipped_depth_and_size_rows_are_the_ones_the_tests_inject():
+    from compass_pkg import word_map
+    shipped = word_map.tables()
+    for name in SHIPPED:
+        assert shipped[name] == ROWS[name], name
+
+
+# --- VR-D5 and VR-D6: a manifest in the old words ------------------------------
+
+def test_vr_d5_old_modes_and_depths_read_as_the_new_words_and_the_approach_stays(tmp_path):
+    from compass_pkg import core
+    (tmp_path / "manifest.yml").write_text(yaml.safe_dump({
+        "schema_version": "2.0", "issue": "t", "delivery_approach": "full",
+        "stages": {"assess": "full", "define": "light", "ship": "full-plus-backfill",
+                   "breakdown": "multiagent", "refine": "collapsed", "plan": "skipped"},
+        "artifacts": [{"id": "A1", "kind": "technical-design", "depth": "full"},
+                      {"id": "A2", "kind": "distribution-map", "depth": "light"}]}),
+        encoding="utf-8")
+    task, _ = core.load_manifest(str(tmp_path))
+    assert task["stages"] == {"assess": "thorough", "define": "lightweight",
+                              "ship": "thorough-with-follow-up",
+                              "breakdown": "multiagent", "refine": "collapsed",
+                              "plan": "skipped"}
+    assert [a["depth"] for a in task["artifacts"]] == ["thorough", "lightweight"]
+    assert task["delivery_approach"] == "full"
+
+
+def test_vr_d6_size_standard_reads_as_medium_in_both_assessments(tmp_path):
+    from compass_pkg import core
+    (tmp_path / "manifest.yml").write_text(yaml.safe_dump({
+        "schema_version": "2.0", "issue": "t",
+        "assessment": {"risk": "contained", "size": "standard"},
+        "evaluated_assessment": {"risk": "contained", "size": "standard"}}),
+        encoding="utf-8")
+    task, _ = core.load_manifest(str(tmp_path))
+    assert task["assessment"]["size"] == "medium"
+    assert task["evaluated_assessment"]["size"] == "medium"
+
+
+# --- VR-D10: a project layer in the old words ----------------------------------
+
+OLD_PROJECT = ("schema: 1\nstages:\n  implement:\n    set:\n"
+               "      modes: {full: {rank: 3}, expedited: {}, explore: {}}\n")
+
+
+def test_vr_d10_policy_show_reads_a_project_stage_mode_full_as_thorough(tmp_path):
+    root, _ = _project(tmp_path, compass_yml=OLD_PROJECT)
+    code, out, err = _cli(root, "policy", "show", "--json")
+    assert code == 0, (out, err)
+    row = next(r for r in json.loads(out)["fields"] if r["path"] == "stages.implement.modes")
+    assert sorted(row["value"]) == ["expedited", "explore", "thorough"], row
+    assert row["source"] == "project" and row["op"] == "set"
+
+
+# --- VR-D11, VR-D15: ranking reads both sides in the new words ------------------
+
+def _old_parent_doc(define):
+    """A parent written before the rename: it sets the regular approach's
+    define stage."""
+    return {"schema": 1, "approaches": {"regular": {"set": {"stages": {
+        "assess": "full", "define": define, "refine": "light", "plan": "full",
+        "breakdown": "multiagent", "implement": "full", "verify": "full",
+        "ship": "full"}}}}}
+
+
+def _classify_chain(doc):
+    from compass_pkg import chain_class, layers, policy_lint
+    shipped, _ = policy_lint.load_parent()
+    layer = layers.Layer("git-parent#abc1234", "parent", doc,
+                         layers.layer_digest(doc, "parent"))
+    return chain_class.classify_chain(shipped, [layer], "compass:default@6")[0]
+
+
+def _new_words(doc):
+    table = {"full": "thorough", "light": "lightweight"}
+    doc = copy.deepcopy(doc)
+    stages = doc["approaches"]["regular"]["set"]["stages"]
+    doc["approaches"]["regular"]["set"]["stages"] = {s: table.get(m, m)
+                                                    for s, m in stages.items()}
+    return doc
+
+
+def test_vr_d11_a_parent_pinned_before_the_rename_classifies_as_its_new_words_do():
+    old = _classify_chain(_old_parent_doc("light"))
+    new = _classify_chain(_new_words(_old_parent_doc("light")))
+    assert old["result"] == new["result"] and old["result"] != "incomparable", (old, new)
+    assert old["result"] == "loosening", old["result"]
+    assert old["first_looser"] is not None
+
+
+PROJECT_LIGHTENS = {"schema": 1, "approaches": {"regular": {"set": {"stages": {
+    "define": "lightweight", "implement": "full", "verify": "full"}}}}}
+
+
+def _in_new_words(parent):
+    """The parent layer with its depth words spelt the new way. Only the mode
+    names and the stage weights change: `full` is also an approach name."""
+    parent = copy.deepcopy(parent)
+    table = {"full": "thorough", "light": "lightweight"}
+    for body in parent["stages"].values():
+        body["modes"] = {table.get(mode, mode): spec for mode, spec in body["modes"].items()}
+    for body in parent["approaches"].values():
+        body["stages"] = {stage: table.get(mode, mode) for stage, mode in body["stages"].items()}
+    return parent
+
+
+def _chain_classification(parent, project):
+    from compass_pkg import classify, layers, merge
+    above = merge.resolve(layers.build_chain(parent=copy.deepcopy(parent)))[0]
+    layer = layers.Layer("project", "project", copy.deepcopy(project), "")
+    below = merge.resolve(layers.build_chain(parent=copy.deepcopy(parent), project=layer))[0]
+    return classify.classify(above, below)
+
+
+def test_vr_d15_a_project_that_says_lightweight_is_looser_than_a_parent_that_says_full(rows):
+    old_parent = _base()                    # modes light and full; every stage full
+    mixed = _chain_classification(old_parent, PROJECT_LIGHTENS)
+    same = _chain_classification(_in_new_words(old_parent), PROJECT_LIGHTENS)
+    assert mixed.result == "loosening" == same.result, (mixed.result, same.result)
+
+
+# --- VR-D14: an issue layer in the old words ------------------------------------
+
+def test_vr_d14_an_issue_layer_in_the_old_words_evaluates_as_the_new_words_do(tmp_path):
+    results = {}
+    for name, word in (("old", "full"), ("new", "thorough")):
+        root, task_dir = _project(tmp_path, name)
+        for argv in (("approach", "evaluate", "--issue", "t", "--write"),
+                     ("issue", "configure", "--issue", "t", "--mode", f"refine={word}"),
+                     ("approach", "evaluate", "--issue", "t", "--write", "--reason", "wider")):
+            code, out, err = _cli(root, *argv)
+            assert code == 0, (name, argv, out, err)
+        # The reassess stores the issue's layer; a read-only evaluation applies it.
+        code, out, err = _cli(root, "approach", "evaluate", "--issue", "t", "--json")
+        assert code == 0, (name, out, err)
+        results[name] = json.loads(out)
+    assert results["old"] == results["new"]
+    assert results["old"]["stages"]["refine"] == "thorough"
+    assert results["old"]["issue_overrides"]["applied"] == {"refine": "thorough"}
+
+
+# --- VR-D19: the advisory for a layer in the old words -------------------------
+
+def test_vr_d19_policy_lint_advises_and_keeps_its_exit_status(tmp_path):
+    old_root, _ = _project(tmp_path, "old", compass_yml=OLD_PROJECT)
+    new_root, _ = _project(tmp_path, "new", compass_yml=OLD_PROJECT.replace("full", "thorough"))
+    old = _cli(old_root, "policy", "lint")
+    new = _cli(new_root, "policy", "lint")
+    assert old[0] == new[0] == 0, (old, new)
+    assert old[1] == new[1], "the report on standard output is the same"
+    assert "stages.implement.set.modes" in old[2] and "thorough" in old[2], old[2]
+    assert "7.0.0" in old[2] and "project" in old[2], old[2]
+    assert new[2] == "", "a layer in the new words gets no advisory"
+
+
+def test_vr_d19_the_advisory_names_the_layer_and_a_git_parent_by_its_sha():
+    from compass_pkg import layers, policy_lint
+    shipped, _ = policy_lint.load_parent()
+    doc = _old_parent_doc("light")
+    git = layers.Layer("github:acme/team@1.0.0#abc1234", "parent", doc,
+                       layers.layer_digest(doc, "parent"))
+    report = policy_lint.lint_chain(shipped, None, extra_parents=[git])
+    lines = report.advisories
+    assert lines and all("github:acme/team@1.0.0#abc1234" in line for line in lines), lines
+    assert any("approaches.regular.set.stages" in line and "lightweight" in line
+               and "7.0.0" in line for line in lines), lines
+
+
+def test_vr_d19_preset_test_advises_and_keeps_its_exit_status(tmp_path):
+    results = {}
+    for name, text in (("old", OLD_PROJECT),
+                       ("new", OLD_PROJECT.replace("full", "thorough"))):
+        folder = tmp_path / name
+        (folder / "compass-fixtures").mkdir(parents=True)
+        (folder / "compass.yml").write_text(text, encoding="utf-8")
+        (folder / "compass-fixtures" / "one.yml").write_text(yaml.safe_dump({
+            "name": "one", "assessment": {"risk": "contained", "familiarity": "greenfield",
+                                          "size": "small"},
+            "expect": {"approach": "regular"}}), encoding="utf-8")
+        results[name] = _cli(tmp_path, "preset", "test", str(folder))
+    assert results["old"][0] == results["new"][0], results
+    assert "7.0.0" in results["old"][2] and "thorough" in results["old"][2], results["old"]
+    assert results["new"][2] == ""
+
+
+def test_vr_d19_compass_check_prints_no_such_advisory(tmp_path):
+    root, _ = _project(tmp_path, compass_yml=OLD_PROJECT)
+    code, out, err = _cli(root, "check", "--issue", "t")
+    assert "7.0.0" not in out + err, (out, err)
+
+
+# --- VR-D21: the backup, from the shipped rows ----------------------------------
+
+def test_vr_d21_a_manifest_in_old_depth_words_is_backed_up_once_and_the_backup_is_ignored(
+        tmp_path):
+    from compass_pkg import core
+    root, task_dir = _project(tmp_path, manifest={
+        "stages": {"define": "full"}, "assessment": {"risk": "contained", "size": "standard"}})
+    path = task_dir / "manifest.yml"
+    original = path.read_text(encoding="utf-8")
+    task, _ = core.load_manifest(str(task_dir))
+    core.save_manifest(task, str(path))
+    backup = task_dir / "manifest.yml.v5.bak"
+    assert backup.read_text(encoding="utf-8") == original
+    saved = yaml.safe_load(path.read_text(encoding="utf-8"))
+    assert saved["stages"] == {"define": "thorough"} and saved["assessment"]["size"] == "medium"
+    task["stages"]["define"] = "lightweight"
+    core.save_manifest(task, str(path))
+    assert backup.read_text(encoding="utf-8") == original, "the second save kept the first"
+    # A copy of the old file put back in place (a restore, a merge) is rewritten
+    # again, and the backup of the first original is still not overwritten.
+    path.write_text(original.replace("full", "light"), encoding="utf-8")
+    task, _ = core.load_manifest(str(task_dir))
+    core.save_manifest(task, str(path))
+    assert backup.read_text(encoding="utf-8") == original, "a later rewrite kept the first backup"
+    backup.write_text("stages: [this is not\n  valid: yaml\n", encoding="utf-8")
+    for argv in (("issue", "lint", "--issue", "t"), ("check", "--issue", "t"),
+                 ("issue", "dashboard", "render", "--issue", "t")):
+        code, out, err = _cli(root, *argv)
+        assert "v5.bak" not in out + err and "Traceback" not in err, (argv, out, err)
+
+
+# --- VR-D22: the notice is on standard error only -------------------------------
+
+def test_vr_d22_a_save_in_old_words_prints_the_same_json_and_a_notice_on_stderr(tmp_path):
+    old_root, _ = _project(tmp_path, "old", manifest={
+        "assessment": {"risk": "contained", "familiarity": "greenfield", "size": "standard",
+                       "goal": "delivery", "role": "engineer", "labels": []},
+        "stages": {"define": "full"}})
+    new_root, _ = _project(tmp_path, "new", manifest={
+        "assessment": {"risk": "contained", "familiarity": "greenfield", "size": "medium",
+                       "goal": "delivery", "role": "engineer", "labels": []},
+        "stages": {"define": "thorough"}})
+    old = _cli(old_root, "approach", "evaluate", "--issue", "t", "--write", "--json")
+    new = _cli(new_root, "approach", "evaluate", "--issue", "t", "--write", "--json")
+    assert old[0] == new[0] == 0, (old, new)
+    assert (old[1].replace(str(old_root.resolve()), "ROOT")
+            == new[1].replace(str(new_root.resolve()), "ROOT")), "standard output is the same"
+    assert "standard" in old[2] and "medium" in old[2] and "manifest.yml.v5.bak" in old[2], old[2]
+    assert new[2] == "", new[2]

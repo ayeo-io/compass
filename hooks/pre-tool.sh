@@ -876,7 +876,8 @@ fi
 # A guardrail beats a strategy, so this runs BEFORE the red check: you cannot
 # write a red for a scenario that does not exist yet.
 #
-# Only `define: full` (or the retired `specify: full`) triggers it, which
+# Only `define: thorough` (or the retired `specify: full`, or `define: full`
+# from before the depth words were renamed) triggers it, which
 # routing-policy.yml gives to the regular and full approaches. A hotfix
 # (reproduce-first) and a spike (collapsed) are exempt by construction, and
 # the .spike early exit above suspends this the same way it suspends
@@ -897,6 +898,7 @@ if [ -f "$TASK_DIR/manifest.yml" ]; then
   G2_VERDICT="$(compass_python - "$TASK_DIR/manifest.yml" 2>"$G2_ERR" <<'PYEOF'
 import sys
 import compass_pkg
+from compass_pkg import stable_ids, word_map
 try:
     import yaml
     with open(sys.argv[1], encoding="utf-8") as fh:
@@ -920,7 +922,12 @@ stages = task.get("stages") or task.get("phases") or {}
 # for every migrated manifest.
 if isinstance(stages, dict):
     weight = stages.get("define", stages.get("specify"))
-    if weight == "full" and not (task.get("scenarios") or []):
+    # The mode is read through the retired-word table, so a manifest written
+    # before the depth words were renamed (`full`) and one written after
+    # (`thorough`) both enforce. Comparing the raw value with one word would
+    # stop matching the other with no error, and the guardrail would be off.
+    weight = word_map.map_manifest({"stages": {"define": weight}})["stages"]["define"]
+    if weight == stable_ids.MODE_THOROUGH and not (task.get("scenarios") or []):
         print("block")
 PYEOF
 )"

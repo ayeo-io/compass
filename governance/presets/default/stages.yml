@@ -11,28 +11,28 @@ stages:
   assess:
     order: 1
     modes:
-      light: {rank: 2}
-      full: {rank: 3}
+      lightweight: {rank: 2}
+      thorough: {rank: 3}
     locked: true
   define:
     order: 2
     modes:
       collapsed: {rank: 1}
-      light: {rank: 2}
-      full: {rank: 3}
+      lightweight: {rank: 2}
+      thorough: {rank: 3}
       reproduce-first: {}
   refine:
     order: 3
     modes:
       skipped: {rank: 0}
       collapsed: {rank: 1}
-      light: {rank: 2}
-      full: {rank: 3}
+      lightweight: {rank: 2}
+      thorough: {rank: 3}
   plan:
     order: 4
     modes:
       collapsed: {rank: 1}
-      full: {rank: 3}
+      thorough: {rank: 3}
     entry: [dor-summary-filled, dor-problem-traces-up, dor-behaviour-is-gwt, dor-traceability-ids,
       dor-affected-surface-named, dor-no-open-questions, dor-approach-still-fits]
   breakdown:
@@ -43,14 +43,14 @@ stages:
   implement:
     order: 6
     modes:
-      full: {rank: 3}
+      thorough: {rank: 3}
       expedited: {}
       explore: {}
   verify:
     order: 7
     modes:
-      light: {rank: 2}
-      full: {rank: 3}
+      lightweight: {rank: 2}
+      thorough: {rank: 3}
       conclude: {}
     exit: [dod-every-scenario-passes, dod-suite-green, dod-coverage-floor, dod-no-lint-errors,
       dod-traceability-intact, dod-living-docs-updated, dod-follow-ups-settled]
@@ -58,8 +58,8 @@ stages:
   ship:
     order: 8
     modes:
-      light: {rank: 2}
-      full: {rank: 3}
-      full-plus-backfill: {rank: 4}  # vocabulary-scan: allow - machine enum value that manifests on disk already carry
+      lightweight: {rank: 2}
+      thorough: {rank: 3}
+      thorough-with-follow-up: {rank: 4}
       graduate-or-discard: {}
     locked: true

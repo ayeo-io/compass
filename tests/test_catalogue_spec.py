@@ -187,7 +187,7 @@ def test_cs_1_the_obligation_table_holds_every_row_adr_037_names():
         "evaluation.blocked_stages": "obligation-set",
         "evaluation.required_artifacts": "obligation-set",
     }
-    assert catalogue_spec.ARTIFACT_DEPTHS == ("light", "full")
+    assert catalogue_spec.ARTIFACT_DEPTHS == ("lightweight", "thorough")
 
 
 def test_cs_2_a_non_string_key_inside_set_is_reported_not_raised():

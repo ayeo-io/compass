@@ -36,10 +36,10 @@ rules:
         when:
           size: [large, product]
         then: {lean_toward: full}
-        rationale: Large work - full weight, plausibly parallel.
+        rationale: Large work - thorough weight, plausibly parallel.
       RP-SHAPE-005:
         order: 5
-        when: {size: standard}
+        when: {size: medium}
         then: {lean_toward: regular}
         rationale: The default working shape.
       RP-SHAPE-FALLBACK:
@@ -64,7 +64,7 @@ rules:
         when:
           familiarity: brownfield-unmapped
           any_of:
-          - size: [standard, large, product]
+          - size: [medium, large, product]
           - risk: [cross-cutting, critical]
           - labels_any: [auth, payments, personal-data, migrations]
         then: {require_phase: define, require_skill: behaviour-mapping}

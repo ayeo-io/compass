@@ -63,13 +63,13 @@ def fake_git(tmp_path):
 ISSUE = {
     "schema_version": "2.0", "issue": "feature", "created": "2026-10-08", "status": "active",
     "assessment": {"risk": "contained", "familiarity": "brownfield-mapped",
-                   "size": "standard", "goal": "delivery", "role": "engineer",
+                   "size": "medium", "goal": "delivery", "role": "engineer",
                    "labels": []},
     "evidence": [],
 }
 OUTCOME = {
     "delivery_approach": "regular",
-    "stages": {"assess": "full", "implement": "full"},
+    "stages": {"assess": "thorough", "implement": "thorough"},
     "gates": [{"id": "verify.correctness", "status": "pending", "evidence": []}],
     "checkpoints": [], "policy_rules_fired": [], "subtask_ceiling": 1, "artifacts": [],
 }

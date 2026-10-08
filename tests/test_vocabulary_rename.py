@@ -158,7 +158,7 @@ def test_trc_b1():
 
     # A manifest already speaking the new keys normalises to itself.
     new = {"schema_version": "2.0", "task": "t",
-           "stages": {v: "full" for v in STAGE_RENAMES.values()}}
+           "stages": {v: "thorough" for v in STAGE_RENAMES.values()}}
     assert normalize_spine(new)["stages"] == new["stages"], (
         "a manifest holding the current keys did not survive normalisation")
 
@@ -1002,7 +1002,7 @@ def test_trc_b8_a_policy_floor_written_with_a_retired_stage_key_still_applies():
     policy = core.load_yaml(
         os.path.join(core.find_governance(), "routing-policy.yml"))
     assessment = {"risk": "contained", "familiarity": "brownfield-unmapped",
-                  "size": "standard", "goal": "delivery", "role": "engineer",
+                  "size": "medium", "goal": "delivery", "role": "engineer",
                   "labels": []}
 
     def refine_weight(spelling):
@@ -1014,10 +1014,10 @@ def test_trc_b8_a_policy_floor_written_with_a_retired_stage_key_still_applies():
         stages = (result[0] if isinstance(result, tuple) else result)["stages"]
         return stages.get("refine")
 
-    assert refine_weight("refine") == "full", (
+    assert refine_weight("refine") == "thorough", (
         "the control failed: `require_phase` does not raise the stage even "
         "under its current name, so this test proves nothing")
-    assert refine_weight("clarify") == "full", (
+    assert refine_weight("clarify") == "thorough", (
         "a floor naming the retired stage key raised nothing - it was looked "
         "up in a map whose keys have already been canonicalised, so it found "
         "no entry and silently did not apply")
@@ -1189,13 +1189,13 @@ def test_trc_b3():
     # `standard` is the v1 SHAPE name; the freeze renamed the value to
     # `feature` as well as the key, and the loader maps both.
     assert v1.get("delivery_approach") == "regular"
-    assert v1.get("stages", {}).get("assess") == "full"
-    assert v1.get("stages", {}).get("define") == "light"
+    assert v1.get("stages", {}).get("assess") == "thorough"
+    assert v1.get("stages", {}).get("define") == "lightweight"
     assert "phases" not in v1 and "route" not in v1
 
     v2 = normalize_spine({"schema_version": "2.0", "delivery_approach": "feature",
-                          "stages": {"assess": "full", "define": "light"}})
-    assert v2["stages"] == {"assess": "full", "define": "light"}, (
+                          "stages": {"assess": "thorough", "define": "lightweight"}})
+    assert v2["stages"] == {"assess": "thorough", "define": "lightweight"}, (
         "the loader changed a manifest that was already current")
 
     # 2. The policy reader: a project routing policy written before the freeze.

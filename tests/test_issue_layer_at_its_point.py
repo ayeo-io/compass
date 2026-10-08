@@ -23,7 +23,7 @@ LAYERED = {"schema": 1}
 QUICK_FIX = {"size": "small"}
 SPIKE = {"goal": "exploration"}
 # How a refusal names the point it was found at: the fixture's own assessment.
-_OWN = "at risk contained, familiarity brownfield-mapped, size standard, goal "
+_OWN = "at risk contained, familiarity brownfield-mapped, size medium, goal "
 DELIVERY_POINT = _OWN + "delivery, role engineer, labels none"
 SPIKE_POINT = _OWN + "exploration, role engineer, labels none"
 

@@ -32,11 +32,11 @@ import re as _re
 
 import fnmatch
 import re as _re
-from compass_pkg import status_words
+from compass_pkg import status_words, word_map
 from compass_pkg.check_cmd import cmd_check
 from compass_pkg.stable_ids import (
     GATE_VERIFY_ANALYZE, STAGE_ASSESS, STAGE_BREAKDOWN, STAGE_DEFINE, STAGE_IDS, STAGE_IMPLEMENT, STAGE_PLAN,
-    STAGE_REFINE, STAGE_SHIP, STAGE_VERIFY)
+    MODE_THOROUGH, STAGE_REFINE, STAGE_SHIP, STAGE_VERIFY)
 from compass_pkg.core import COMPASS_SCHEMA_VERSION, COMPASS_VERSION, CompassError, artifact_path, exit_for_mode, find_compass_dir, load_mode, load_yaml, manifest_path, mode_banner, normalize_spine, now_iso, resolve_issue_dir, save_manifest
 from compass_pkg.governance import cmd_policy_lint
 from compass_pkg.policy import cmd_task_lint
@@ -78,10 +78,11 @@ from compass_pkg.policy import cmd_task_lint
 #   `compass check`'s job
 
 
-# Check for intent.md only when define runs at full weight. Do not default
-# to "full": a defaulted lookup turns a key rename into a false finding
-# instead of an error.
-_SPECIFY_FULL_WEIGHTS = {"full"}
+# Check for intent.md only when define runs at thorough weight. Do not
+# default to a weight: a defaulted lookup turns a key rename into a false
+# finding instead of an error. `normalize_spine` has read an older `full`
+# as `thorough` by the time this looks.
+_SPECIFY_FULL_WEIGHTS = {MODE_THOROUGH}
 
 # The stages this checks for approach-disagreement. Current keys:
 # `normalize_spine` maps a retired key forward on load, so a set written in the
@@ -320,9 +321,9 @@ def _analyze_task(task_dir: str, project_root: str | None = None) -> dict:
         }
 
     # --- 1. Delivery-approach-aware missing-artifact check -------------------
-    # Check for intent.md only when define runs at full weight.
+    # Check for intent.md only when define runs at thorough weight.
     phases = task.get("stages") or {}
-    # Do not default to "full": a defaulted lookup turns a key rename into a
+    # Do not default to a weight: a defaulted lookup turns a key rename into a
     # false finding instead of an error.
     specify_weight = str(phases.get(STAGE_DEFINE, phases.get("specify", ""))).lower()
     if specify_weight in _SPECIFY_FULL_WEIGHTS and not has_brief:
@@ -383,9 +384,16 @@ def _analyze_task(task_dir: str, project_root: str | None = None) -> dict:
     if os.path.isfile(route_md_path):
         route_md_phases = _parse_phase_weights_from_route_md(route_md_path)
         task_phases = {k.lower(): str(v).lower() for k, v in phases.items()}
+        # A record written before the depth words were renamed says `full` or
+        # `light`; the manifest it describes now says `thorough` or
+        # `lightweight`. Both sides are read through the same table, or every
+        # old record would disagree with its own manifest.
+        modes = word_map.tables()["stage_mode"]
         for phase in _KNOWN_PHASES:
             md_weight = route_md_phases.get(phase)
+            md_weight = modes.get(md_weight, md_weight)
             task_weight = task_phases.get(phase)
+            task_weight = modes.get(task_weight, task_weight)
             if md_weight is not None and task_weight is not None:
                 if md_weight != task_weight:
                     findings.append({

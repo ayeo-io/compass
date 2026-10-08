@@ -328,7 +328,9 @@ def test_cr_7_reassess_commits_the_proposal_as_the_config_and_consumes_it(tmp_pa
     body = fx.manifest_of(task_dir)
     assert body["generation"] == 2 and body["config"] == overlay
     assert not (fx.gen(task_dir, 2) / "proposed.yml").exists()
-    assert fx.load(fx.gen(task_dir, 2) / "resolved.yml")["stages"]["refine"]["mode"] == "full"
+    # The overlay keeps the word it was written in; the stored result reads it
+    # as the new one.
+    assert fx.load(fx.gen(task_dir, 2) / "resolved.yml")["stages"]["refine"]["mode"] == "thorough"
     assert fx.load(fx.gen(task_dir, 2) / "versions.yml")["issue_overlay_digest"] == (
         layers.layer_digest(overlay, "issue"))
     assert "applied the proposed configuration" in out

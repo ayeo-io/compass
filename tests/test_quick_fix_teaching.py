@@ -105,7 +105,7 @@ def test_qfo_6_the_skill_keeps_the_scoring_tables():
         assert dimension in text, f"skills/quick-fix/SKILL.md drops {dimension}"
     for value in ("trivial", "contained", "cross-cutting", "critical",
                   "greenfield", "brownfield-mapped", "brownfield-unmapped",
-                  "atomic", "small", "standard"):
+                  "atomic", "small", "medium"):
         assert f"`{value}`" in text, (
             f"skills/quick-fix/SKILL.md drops the `{value}` scoring value")
 
@@ -160,7 +160,7 @@ def test_qfo_6_the_command_lists_every_allowed_value():
     text = _text(COMMAND)
     for value in ("trivial", "contained", "cross-cutting", "critical",
                   "greenfield", "brownfield-mapped", "brownfield-unmapped",
-                  "atomic", "small", "standard", "large", "product"):
+                  "atomic", "small", "medium", "large", "product"):
         assert f"`{value}`" in text, f"commands/quick-fix.md omits {value}"
 
 

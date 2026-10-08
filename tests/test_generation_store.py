@@ -27,7 +27,7 @@ SLUG = "feature"
 MANIFEST = {
     "schema_version": "2.0", "issue": SLUG, "created": "2026-10-07", "status": "active",
     "assessment": {"risk": "contained", "familiarity": "brownfield-mapped",
-                   "size": "standard", "goal": "delivery", "role": "engineer",
+                   "size": "medium", "goal": "delivery", "role": "engineer",
                    "labels": []},
     "evidence": [],
 }
@@ -114,7 +114,7 @@ def test_gs_1_no_issue_resolves_the_project_layers_live(tmp_path, monkeypatch):
 
 OUTCOME = {
     "delivery_approach": "regular",
-    "stages": {"assess": "full", "implement": "full"},
+    "stages": {"assess": "thorough", "implement": "thorough"},
     "gates": [{"id": "verify.correctness", "status": "pending", "evidence": []}],
     "checkpoints": [],
     "policy_rules_fired": [],

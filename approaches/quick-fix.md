@@ -64,7 +64,7 @@ auditable per-issue, not just per-approach.
 - Skip the define stage. "No scenario" is never a quick fix state - the one scenario is
   the minimum, not zero.
 - Be used when risk or size reads high. If risk is `cross-cutting`+ or
-  size is `standard`+, the evaluator computes a heavier approach. quick fix
+  size is `medium`+, the evaluator computes a heavier approach. quick fix
   is for issues that are small on both axes. Unmapped familiarity does not
   block it: the approach record gives `behaviour-mapping` as advice
   (`RP-ADV-002`).

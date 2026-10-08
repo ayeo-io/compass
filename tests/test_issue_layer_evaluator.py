@@ -39,31 +39,31 @@ def _reassess_with(tmp_path, *flags):
 
 def test_il_1_an_issue_stage_mode_changes_the_stages_the_write_commits(tmp_path):
     root, task_dir = fx.committed(tmp_path, compass_yml=LAYERED)
-    assert fx.manifest_of(task_dir)["stages"]["refine"] == "light"
-    code, out, err = fx.configure(root, "--mode", "refine=full")
+    assert fx.manifest_of(task_dir)["stages"]["refine"] == "lightweight"
+    code, out, err = fx.configure(root, "--mode", "refine=thorough")
     assert code == 0, out + err
     code, out, err = fx.reassess(root)
     assert code == 0, out + err
     body = fx.manifest_of(task_dir)
     assert body["generation"] == 2
-    assert body["stages"]["refine"] == "full"
+    assert body["stages"]["refine"] == "thorough"
     assert body["delivery_approach"] == "regular"
 
 
 def test_il_1_a_stored_overlay_is_read_again_by_a_later_evaluation(tmp_path):
     """The generation holds the overlay's effect, so a read-only evaluation
     after the commit still computes the issue's mode."""
-    root, task_dir = _reassess_with(tmp_path, "--mode", "refine=full")
+    root, task_dir = _reassess_with(tmp_path, "--mode", "refine=thorough")
     code, out, err = _evaluate(root)
     assert code == 0, out + err
-    assert json.loads(out)["stages"]["refine"] == "full"
+    assert json.loads(out)["stages"]["refine"] == "thorough"
 
 
 def test_il_1_an_issue_with_no_layer_computes_what_the_project_gives(tmp_path):
     root, task_dir = fx.committed(tmp_path, compass_yml=LAYERED)
     code, out, err = _evaluate(root)
     assert code == 0, out + err
-    assert json.loads(out)["stages"]["refine"] == "light"
+    assert json.loads(out)["stages"]["refine"] == "lightweight"
 
 
 # --- IL-2: the issue's subtask ceiling reaches the evaluator -------------------------------
@@ -126,14 +126,14 @@ def test_il_3_a_loosening_the_policy_does_not_allow_is_refused_with_the_lint_mes
     assert code != 0
     assert "C-INCOMPARABLE" in err or "does not pass the lint" in err
     assert fx.manifest_of(task_dir)["generation"] == 1
-    assert fx.manifest_of(task_dir)["stages"]["define"] == "full"
+    assert fx.manifest_of(task_dir)["stages"]["define"] == "thorough"
 
 
 # --- IL-4: the preview shows what the reassess commits -------------------------------------
 
 def test_il_4_the_preview_and_the_reassess_agree(tmp_path):
     root, task_dir = fx.committed(tmp_path, compass_yml=LAYERED)
-    code, out, err = fx.configure(root, "--mode", "refine=full", "--ceiling",
+    code, out, err = fx.configure(root, "--mode", "refine=thorough", "--ceiling",
                                   "subtask_ceiling=1", "--json")
     assert code == 0, out + err
     shown = json.loads(out)["assessment"]
@@ -154,7 +154,7 @@ def test_il_5_a_project_with_no_compass_yml_computes_as_before(tmp_path):
     code, out, err = _evaluate(root)
     assert code == 0, out + err
     result = json.loads(out)
-    assert result["stages"]["refine"] == "light"
+    assert result["stages"]["refine"] == "lightweight"
     assert result["subtask_ceiling"] == 2
     assert result["delivery_approach"] == "regular"
 
@@ -183,7 +183,7 @@ def test_il_6_check_names_the_committed_approach_not_a_pending_edit(tmp_path):
 
 
 def test_il_6_check_reads_the_stage_modes_the_write_committed(tmp_path):
-    root, task_dir = _reassess_with(tmp_path, "--mode", "refine=full")
+    root, task_dir = _reassess_with(tmp_path, "--mode", "refine=thorough")
     code, out, err = fx.run(root, "check", "--issue", fx.SLUG)
     assert "generation 2" in out
-    assert fx.manifest_of(task_dir)["stages"]["refine"] == "full"
+    assert fx.manifest_of(task_dir)["stages"]["refine"] == "thorough"

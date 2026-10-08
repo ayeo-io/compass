@@ -497,3 +497,82 @@ def test_vr_g11_a_planted_hook_comparison_fails_the_guard():
 def test_vr_g11_a_word_in_a_message_or_a_name_is_not_a_comparison():
     assert status_word_hits('print("the issue landed")\nlanded_by = 1\n', "m.py") == []
     assert hook_status_hits('echo "landed_by is set"\n', "m.sh") == []
+
+
+# --- VR-G12: the depth words come from the one constants module ---------------
+
+DEPTH_WORDS = ("thorough", "lightweight", "thorough-with-follow-up",
+               "light", "full-plus-backfill")
+# `full` is a depth word and a delivery approach. The approach scan
+# (`tests/test_stable_ids.py`) holds every literal `full`; this scan holds the
+# other five, and the constants are the only place that may spell them.
+DEPTH_ALLOW = (
+    ("word_map.py", '"light": "lightweight"',
+     "the in-module copy of the retired-word table, equal to cli/migrate-map.yml by test"),
+    ("word_map.py", '"full-plus-backfill": "thorough-with-follow-up"',
+     "the in-module copy of the retired-word table, equal to cli/migrate-map.yml by test"),
+)
+
+
+def depth_word_hits(source: str, name: str) -> list[tuple[str, int, str, str]]:
+    lines = source.splitlines()
+    return [(name, line, value, lines[line - 1].strip())
+            for line, _col, value in _scan_source()(source)
+            if value in DEPTH_WORDS]
+
+
+def scan_depth_words(sources: dict[str, str]) -> list[tuple[str, int, str, str]]:
+    hits = []
+    for name, text in sorted(sources.items()):
+        if name != "stable_ids.py":
+            hits += depth_word_hits(text, name)
+    return hits
+
+
+def _package_sources() -> dict[str, str]:
+    cli = ROOT / "cli"
+    paths = [*sorted((cli / "compass_pkg").glob("*.py")), cli / "compass"]
+    return {p.name: p.read_text(encoding="utf-8") for p in paths}
+
+
+def test_vr_g12_stable_ids_holds_each_depth_word_once():
+    import sys
+    sys.path.insert(0, str(ROOT / "cli"))
+    from compass_pkg import stable_ids
+    assert stable_ids.MODE_THOROUGH == "thorough"
+    assert stable_ids.MODE_LIGHTWEIGHT == "lightweight"
+    assert stable_ids.MODE_THOROUGH_WITH_FOLLOW_UP == "thorough-with-follow-up"
+    assert stable_ids.DEPTH_THOROUGH == "thorough"
+    assert stable_ids.DEPTH_LIGHTWEIGHT == "lightweight"
+    ranks = yaml.safe_load((ROOT / "governance" / "presets" / "default" / "stages.yml")
+                           .read_text(encoding="utf-8"))["stages"]
+    declared = {mode for body in ranks.values() for mode in body["modes"]}
+    assert {stable_ids.MODE_THOROUGH, stable_ids.MODE_LIGHTWEIGHT,
+            stable_ids.MODE_THOROUGH_WITH_FOLLOW_UP} <= declared
+
+
+def test_vr_g12_no_module_spells_a_depth_word():
+    open_hits = [h for h in scan_depth_words(_package_sources())
+                 if not _allowed(h, DEPTH_ALLOW)]
+    assert open_hits == [], (
+        "import the depth word from compass_pkg.stable_ids:\n"
+        + "\n".join(f"  {n}:{ln} {w!r}: {t}" for n, ln, w, t in open_hits))
+
+
+def test_vr_g12_each_allowed_line_states_a_reason_and_matches_a_finding():
+    hits = scan_depth_words(_package_sources())
+    for module, fragment, reason in DEPTH_ALLOW:
+        assert len(reason.split()) >= 4, (module, fragment, "give a reason")
+        assert any(m == module and fragment in t for m, _l, _w, t in hits), (
+            f"{module}: no finding holds {fragment!r}, so the entry is out of date")
+
+
+def test_vr_g12_a_planted_literal_depth_word_fails_the_scan():
+    sources = _package_sources()
+    for planted in ('if mode == "thorough":\n    pass\n',
+                    'MODES = ("lightweight", "collapsed")\n',
+                    'x = ranks.get("thorough-with-follow-up")\n',
+                    'if depth in {"light"}:\n    pass\n'):
+        hits = scan_depth_words({**sources, "routing.py": sources["routing.py"] + "\n" + planted})
+        assert [h for h in hits if not _allowed(h, DEPTH_ALLOW)], planted
+    assert scan_depth_words({"stable_ids.py": 'MODE_THOROUGH = "thorough"\n'}) == []

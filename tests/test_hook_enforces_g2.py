@@ -246,3 +246,83 @@ def test_scn_a5_a_spine_with_scenarios_still_passes_in_the_current_vocabulary():
             + result.stdout + result.stderr)
     finally:
         shutil.rmtree(project, ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------
+# The depth word `full` is now `thorough` (issue vocabulary-and-cli-renames)
+# ---------------------------------------------------------------------------
+# The hook reads the define stage's raw mode. A manifest written after the
+# rename says `thorough`, one written before says `full`, and both must
+# block. A comparison with the old word alone stops matching the new one and
+# the hook stops enforcing with no error, so the planted copy below proves
+# that failure is real and that these tests see it.
+
+@pytest.mark.parametrize("define", ["thorough", "full"])
+def test_a_thorough_or_full_define_stage_with_no_scenarios_blocks_a_code_edit(define):
+    project = _project_v2(define=define, scenarios=0, red=True)
+    try:
+        result = _run(project)
+        assert result.returncode == 2, (
+            f"define: {define} with no scenarios was allowed\n"
+            + result.stdout + result.stderr)
+        assert "acceptance-before-code" in result.stderr, result.stderr
+    finally:
+        shutil.rmtree(project, ignore_errors=True)
+
+
+@pytest.mark.parametrize("define", ["thorough", "full"])
+def test_a_thorough_or_full_define_stage_with_scenarios_allows_the_edit(define):
+    project = _project_v2(define=define, scenarios=2, red=True)
+    try:
+        result = _run(project)
+        assert result.returncode == 0, result.stdout + result.stderr
+    finally:
+        shutil.rmtree(project, ignore_errors=True)
+
+
+@pytest.mark.parametrize("define", ["lightweight", "light", "collapsed"])
+def test_a_lighter_define_stage_is_still_not_blocked(define):
+    project = _project_v2(define=define, scenarios=0, red=True)
+    try:
+        result = _run(project)
+        assert result.returncode == 0, result.stdout + result.stderr
+    finally:
+        shutil.rmtree(project, ignore_errors=True)
+
+
+def _hook_with_the_old_raw_comparison(tmp_path):
+    """A copy of the plugin whose hook compares the raw define mode with the
+    old word only, as it did before the rename."""
+    root = tmp_path / "plugin"
+    root.mkdir()
+    for entry in ROOT.iterdir():
+        if entry.name not in ("hooks", ".git", ".compass"):
+            (root / entry.name).symlink_to(entry)
+    (root / "hooks").mkdir()
+    text = HOOK.read_text(encoding="utf-8")
+    shipped = 'if weight == stable_ids.MODE_THOROUGH and not (task.get("scenarios") or []):'
+    assert shipped in text, "the hook no longer holds the comparison this test replaces"
+    old_raw = text.replace(shipped, 'if weight == "full" and not (task.get("scenarios") or []):')
+    marker = "    weight = word_map.map_manifest("
+    assert marker in old_raw, "the hook no longer maps the mode before it compares"
+    old_raw = "\n".join(line for line in old_raw.splitlines()
+                        if not line.startswith(marker.rstrip()))
+    (root / "hooks" / "pre-tool.sh").write_text(old_raw + "\n", encoding="utf-8")
+    return root / "hooks" / "pre-tool.sh"
+
+
+def test_a_hook_that_compares_only_the_old_word_stops_enforcing_on_the_new_one(tmp_path):
+    planted = _hook_with_the_old_raw_comparison(tmp_path)
+    project = _project_v2(define="thorough", scenarios=0, red=True)
+    try:
+        env = dict(os.environ, CLAUDE_PROJECT_DIR=str(project))
+        payload = {"tool_name": "Edit", "tool_input": {"file_path": str(project / "src/app.py")}}
+        result = subprocess.run(["bash", str(planted)], input=json.dumps(payload),
+                                capture_output=True, text=True, env=env, timeout=30)
+        assert result.returncode == 0, (
+            "the planted hook still blocked, so the planted fault is not the old "
+            "comparison:\n" + result.stdout + result.stderr)
+        real = _run(project)
+        assert real.returncode == 2, real.stdout + real.stderr
+    finally:
+        shutil.rmtree(project, ignore_errors=True)

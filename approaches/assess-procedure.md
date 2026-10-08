@@ -69,7 +69,7 @@ A re-assessment also commits the next **generation** of the issue's stored
 configuration (`manifest.yml` names it in `generation:`), and the
 `reassessments:` entry records it as `generation: {from, to}`. To change the
 issue's own configuration, propose the change first with `compass issue
-configure` (for example `--mode refine=full`), read the preview, then
+configure` (for example `--mode refine=thorough`), read the preview, then
 re-assess: the re-assessment applies the proposal. `--reset-config` drops the
 issue's `config:` layer instead. After an interrupted re-assessment,
 `compass issue configure --commit` adopts the complete folder it left, and

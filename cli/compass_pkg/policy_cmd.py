@@ -66,6 +66,7 @@ def run_policy_lint(args):
                                      read_project=layered, fetch=_may_fetch(args))
     report = policy_lint.lint_loaded(loaded, exhaustive=bool(getattr(args, "exhaustive", False)))
     _emit(args, policy_lint.lint_json(report), policy_lint.lint_text(report))
+    policy_lint.print_advisories(report)
     return 0 if report.ok else 1
 
 
@@ -111,6 +112,7 @@ def run_policy_diff(args):
 def run_preset_test(args):
     result = preset_test.run(args.preset_dir, replay.evaluate, fetch=_may_fetch(args))
     _emit(args, preset_test.report_json(result), preset_test.text(result))
+    policy_lint.print_advisories(result.lint)
     return 0 if preset_test.passed(result) else 1
 
 

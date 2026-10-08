@@ -104,13 +104,18 @@ class Loaded:
 
 # --- loading -----------------------------------------------------------------------
 
-def load_parent(root=None):
+def load_parent(root=None, directory=None):
     """`(Layer, meta)` for the shipped default preset: its eight catalogue
     files as one parent layer named `default`, and `{id, version}`. The
-    capabilities come from `preset.yml`."""
-    directory = os.path.join(os.fspath(root or FRAMEWORK_ROOT), PRESET_DIR)
+    capabilities come from `preset.yml`. `directory` names another preset
+    folder (a major the framework keeps beside the shipped one) and wins
+    over `root`."""
+    directory = os.fspath(directory) if directory else os.path.join(
+        os.fspath(root or FRAMEWORK_ROOT), PRESET_DIR)
     meta = load_yaml_strict(os.path.join(directory, "preset.yml"))
     doc = {"schema": meta.get("schema", 1), "capabilities": dict(meta.get("capabilities") or {})}
+    if meta.get("approvers") is not None:
+        doc["approvers"] = meta["approvers"]
     for name in spec.CATALOGUES:
         path = os.path.join(directory, f"{name}.yml")
         if os.path.isfile(path):

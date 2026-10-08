@@ -1116,7 +1116,9 @@ def test_pd_10_the_module_declares_its_dependencies_and_only_the_verbs_import_it
     users = [p.name for p in sorted((ROOT / "cli").rglob("*.py"))
              if "vendor" not in p.parts and p.name != "replay.py"
              and pattern.search(p.read_text(encoding="utf-8"))]
-    assert users == ["policy_cmd.py"]
+    # `policy update` runs the same classification and replay to show what a
+    # move of the shipped default changes, so it is the second importer.
+    assert users == ["policy_cmd.py", "policy_update.py"]
 
 
 def test_pd_10_the_module_changes_no_file_but_one_temporary_copy():

@@ -25,7 +25,7 @@ import types
 from dataclasses import dataclass, field
 
 from compass_pkg import catalogue_spec as spec
-from compass_pkg import config_preview, effective, layers
+from compass_pkg import config_preview, effective, layers, parents
 from compass_pkg.atomic_io import StrictYamlError, load_yaml_strict
 from compass_pkg.core import CompassError, load_manifest, resolve_issue_dir
 from compass_pkg.terminal import mark_handled, resolve_mode
@@ -327,7 +327,7 @@ def reassess_plan(manifest, task_dir, args):
                      "the issue had no config: layer to drop")
     root = layers.find_project_root(task_dir)
     resolution, invalidated, resolve_with = config_preview.plan_resolution(
-        root, task_dir, manifest, slug)
+        root, task_dir, manifest, slug, fetch=not parents.offline())
     # What the commit would refuse later is refused now, before anything prints.
     stored = effective.stored_documents(task_dir, manifest)
     effective.preflight(task_dir, resolution, manifest, invalidated, adopt, stored=stored)

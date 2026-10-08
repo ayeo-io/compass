@@ -127,21 +127,23 @@ def _kind(record_id):
     return "waiver" if str(record_id).startswith("waiver:") else "approval"
 
 
-def plan_resolution(root, task_dir, manifest, slug):
+def plan_resolution(root, task_dir, manifest, slug, fetch=False):
     """`(resolution, invalidated, resolve_with)` for the issue's `manifest`:
     the configuration it resolves to, with each stale issue waiver left out so
     its field reverts to the parent's value; the records that makes invalid
     (`{id: reason}`); and the manifest the resolution was made from. A commit
-    stores the resolution and writes the manifest as it is."""
+    stores the resolution and writes the manifest as it is. `fetch` lets the
+    resolution fetch an uncached git parent; a preview leaves it off and only
+    reads the cache."""
     stored = effective.stored_documents(task_dir, manifest)
-    first = effective.resolve_live(root, manifest, slug, task_dir)
+    first = effective.resolve_live(root, manifest, slug, task_dir, fetch=fetch)
     if stored is None:
         return first, {}, manifest
     stale, entries = effective.stale_waivers(stored, first.details)
     if not entries:
         return first, {}, manifest
     adjusted = effective.without_entries(manifest, entries)
-    return (effective.resolve_live(root, adjusted, slug, task_dir),
+    return (effective.resolve_live(root, adjusted, slug, task_dir, fetch=fetch),
             effective.invalidated_records(stored, stale), adjusted)
 
 

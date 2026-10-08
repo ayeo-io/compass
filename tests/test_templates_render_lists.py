@@ -374,6 +374,58 @@ def test_tr_5_the_reader_and_the_tick_agree_on_what_a_section_holds(tmp_path):
     assert [text for _, text, _ in items] == ["shown"]
 
 
+def test_tr_5_a_bare_box_with_a_trailing_comment_fails_the_tag_rule(tmp_path):
+    root, task_dir = _project(tmp_path)
+    _report(task_dir, ("Definition of Done",
+                       ["- [ ] Every scenario passes <!-- still to do -->"]))
+    ok, detail = _tag_rule(task_dir)
+    assert not ok and "Every scenario passes" in detail, detail
+
+
+def test_tr_5_a_ticked_box_with_a_trailing_comment_counts_as_ticked(tmp_path):
+    from compass_pkg import stage_lists
+    root, task_dir = _project(tmp_path)
+    _report(task_dir, ("Definition of Done", ["- [x] Traceability intact <!-- ticked by a person -->"]))
+    items = stage_lists._items(str(task_dir / "verification-report.md"), "Definition of Done")
+    assert [(ticked, text) for ticked, text, _ in items] == [(True, "Traceability intact")]
+    ok, detail = _tag_rule(task_dir)
+    assert ok and "all 1 exit-list item(s)" in detail, detail
+
+
+def test_tr_5_a_box_wholly_inside_a_multi_line_comment_is_still_ignored(tmp_path):
+    root, task_dir = _project(tmp_path)
+    _report(task_dir, ("Definition of Done",
+                       ["- [x] done", "<!-- example", "- [ ] bare example", "- [ ] another -->"]))
+    ok, detail = _tag_rule(task_dir)
+    assert ok and "all 1 exit-list item(s)" in detail, detail
+
+
+def test_tr_5_a_comment_opened_mid_line_masks_only_from_the_opening(tmp_path):
+    root, task_dir = _project(tmp_path)
+    _report(task_dir, ("Definition of Done",
+                       ["- [ ] visible bare box <!-- opens here", "- [ ] hidden bare box",
+                        "still hidden --> - [ ] not a box"]))
+    ok, detail = _tag_rule(task_dir)
+    assert not ok and "visible bare box" in detail and "hidden bare box" not in detail, detail
+
+
+def test_tr_3_a_box_with_a_trailing_comment_is_matched_by_its_statement():
+    from compass_pkg import template_lists
+    text = "# R\n\n### Definition of Done\n\n- [ ] One <!-- note -->\n\nNext stage: x\n"
+    out = template_lists.render(text, _view({"a": "One", "b": "Two"}, verify={"exit": ["a", "b"]}),
+                                "verification-report")
+    assert out == ("# R\n\n### Definition of Done\n\n- [ ] One <!-- note -->\n"
+                   "- [ ] (evidence: {{EV-id}}) Two\n\nNext stage: x\n")
+
+
+def test_tr_5_the_rewritten_statement_and_the_message_read_as_prose():
+    for name in ("governance/guardrails.yml", "governance/presets/default/checks.yml"):
+        assert "tag:`(evidence" not in (ROOT / name).read_text(encoding="utf-8"), name
+    from compass_pkg import checks
+    problems = checks.dod_tag_problems("(evidence: EV-1)", {"EV-1": {"type": "odd"}}, {})
+    assert problems and "accepted DoD evidence type" not in problems[0], problems
+
+
 # --- TR-6: a tick is judged under its own list's heading ------------------------------------------------
 
 def _implement_exit_rows(tmp_path, monkeypatch, report_sections):

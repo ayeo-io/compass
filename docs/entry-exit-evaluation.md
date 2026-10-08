@@ -188,7 +188,8 @@ change them.
 The tick, the tag rule and the renderer read a section the same way
 (`cli/compass_pkg/doc_sections.py`): it starts at a heading and ends at the next
 heading or at a line that starts `Next stage:`, and a line inside an HTML
-comment is not in any section. A stage id can hold a dot, so `Code.review exit
+comment is not in any section. Only the text from `<!--` to `-->` is hidden,
+so a box with a trailing comment is still a box. A stage id can hold a dot, so `Code.review exit
 list` is an exit heading.
 
 ## Limits

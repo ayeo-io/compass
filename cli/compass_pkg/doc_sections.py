@@ -6,8 +6,9 @@ of the document templates (`template_lists`), the tick of a `human` check
 (`stage_lists`) and the typed tag rule of `dod-evidence-typed` (`checks`).
 
 A section starts at a heading and ends at the next heading or at a line that
-starts `Next stage:`. A line inside an HTML comment is not part of any section:
-the templates quote example boxes and example headings in comments.
+starts `Next stage:`. The text of an HTML comment is not part of any section: the templates quote
+example boxes and example headings in comments. Text on a line outside the
+comment is, so a box with a trailing comment is a box.
 
 Headings. The `plan` entry list sits under `Definition of Ready` and the
 `verify` exit list under `Definition of Done`. Any other list sits under
@@ -54,14 +55,37 @@ def normal(text):
     return " ".join(_TAG.sub("", text).replace("**", "").replace("*", "").split())
 
 
-def comment_mask(lines):
-    """For each line, whether it is inside an HTML comment or opens one."""
-    mask, inside = [], False
+def visible(lines):
+    """`lines` with the text of every HTML comment removed, one entry per
+    line. A comment can open mid-line and run onto later lines: only the
+    characters from `<!--` to `-->` go, so a box that carries a trailing
+    comment is still a box."""
+    out, inside = [], False
     for line in lines:
-        mask.append(inside or "<!--" in line)
-        for token in _COMMENT_TOKEN.findall(line):
-            inside = token == "<!--"
-    return mask
+        kept, position = [], 0
+        while position < len(line):
+            if inside:
+                end = line.find("-->", position)
+                if end < 0:
+                    break
+                position, inside = end + 3, False
+            else:
+                start = line.find("<!--", position)
+                if start < 0:
+                    kept.append(line[position:])
+                    break
+                kept.append(line[position:start])
+                position, inside = start + 4, True
+        out.append("".join(kept))
+    return out
+
+
+def comment_mask(lines):
+    """For each line, whether a comment hides all of it: the line held text
+    and none of it is visible. A line with text outside a comment is not
+    masked; read its text through `visible`."""
+    return [bool(line.strip()) and not shown.strip()
+            for line, shown in zip(lines, visible(lines))]
 
 
 def heading_of(line):
@@ -72,15 +96,15 @@ def heading_of(line):
 def sections(lines, mask, wanted):
     """`[(heading, start, end)]` for every section whose heading `wanted`
     accepts, in document order. The body is `lines[start:end]`."""
-    found = []
-    for index, line in enumerate(lines):
+    found, shown = [], visible(lines)
+    for index, line in enumerate(shown):
         heading = None if mask[index] else heading_of(line)
         if heading is None or not wanted(heading):
             continue
         end = len(lines)
         for later in range(index + 1, len(lines)):
-            if not mask[later] and (heading_of(lines[later]) is not None
-                                    or lines[later].startswith("Next stage:")):
+            if not mask[later] and (heading_of(shown[later]) is not None
+                                    or shown[later].startswith("Next stage:")):
                 end = later
                 break
         found.append((heading, index + 1, end))

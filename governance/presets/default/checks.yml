@@ -73,7 +73,7 @@ checks:
     severity: blocking, on_skipped: fail, locked: true}
   dod-evidence-typed: {statement: 'Every unchecked box in an exit list of verification-report.md (the Definition
       of Done, and the `<Stage> exit list` of any other stage) must carry an inline
-      tag:`(evidence: EV-<id>)` referencing a typed evidence registry entry, or `(follow-up: FU-<id>)`
+      tag: `(evidence: EV-<id>)` referencing a typed evidence registry entry, or `(follow-up: FU-<id>)`
       referencing an outstanding follow-up. A bare unchecked box fails. Checked boxes (`- [x]`) pass without
       a tag - the human took responsibility. Narrative notes (devlog ''USER TO APPLY'') never count. Cross-issue:
       when another issue has a follow-up with target_task pointing at this issue, that follow-up must

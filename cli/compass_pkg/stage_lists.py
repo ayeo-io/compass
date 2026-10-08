@@ -56,7 +56,7 @@ from dataclasses import dataclass
 from compass_pkg.check_registry import CHECK_FNS
 from compass_pkg.check_results import NOTHING_TO_CHECK
 from compass_pkg.core import FOUND, OMITTED, resolve_artifact, unregistered_document
-from compass_pkg.doc_sections import comment_mask, list_heading, normal, section
+from compass_pkg.doc_sections import comment_mask, list_heading, normal, section, visible
 
 CAPABILITY = "entry-exit-evaluation"
 SIDES = ("entry", "exit")
@@ -108,9 +108,10 @@ def _items(path, heading):
     body = section(lines, mask, heading)
     if body is None:
         return None
+    shown = visible(lines)
     items = []
     for index in range(*body):
-        line = lines[index]
+        line = shown[index]
         if mask[index]:
             continue
         found = _ITEM.match(line)

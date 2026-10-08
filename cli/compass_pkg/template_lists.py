@@ -19,7 +19,7 @@ list names, in the listed order:
 - a template box no list names is left out.
 
 A list on a stage other than the two named ones renders as its own section,
-headed `stage_lists.list_heading(stage, side)`, before the `Next stage:` line.
+headed `doc_sections.list_heading(stage, side)`, before the `Next stage:` line.
 A list that names no `human` check adds no section. A check of another kind
 evaluates itself and has no box to tick, so it does not render. The render
 does not read `requires` or `when`: the document lists what the configuration
@@ -34,7 +34,7 @@ from __future__ import annotations
 
 import re
 
-from compass_pkg.doc_sections import comment_mask, list_heading, normal, section
+from compass_pkg.doc_sections import comment_mask, list_heading, normal, section, visible
 from compass_pkg.stage_lists import CHECKLIST_DOCUMENTS
 
 #: Written before a generated exit-list line, so the box can be deferred.
@@ -53,15 +53,16 @@ def _blocks(lines, mask, start, end):
     """The boxes in `lines[start:end]` as `(first, last_exclusive, statement)`.
     A box is an item line and the indented lines that continue it."""
     found, index = [], start
+    shown = visible(lines)
     while index < end:
-        if mask[index] or not _ITEM_START.match(lines[index]):
+        if mask[index] or not _ITEM_START.match(shown[index]):
             index += 1
             continue
-        first, text = index, _ITEM_START.sub("", lines[index])
+        first, text = index, _ITEM_START.sub("", shown[index])
         index += 1
-        while (index < end and not mask[index] and lines[index].startswith(" ")
-               and lines[index].strip()):
-            text += " " + lines[index].strip()
+        while (index < end and not mask[index] and shown[index].startswith(" ")
+               and shown[index].strip()):
+            text += " " + shown[index].strip()
             index += 1
         found.append((first, index, normal(text)))
     return found
@@ -129,7 +130,7 @@ def render(text, view, kind):
             lines = lines[:body[1]] + items + [""] + lines[body[1]:]
     if added:
         mask = comment_mask(lines)
-        at = next((i for i, line in enumerate(lines)
+        at = next((i for i, line in enumerate(visible(lines))
                    if not mask[i] and line.startswith("Next stage:")), None)
         extra = [line for new in added for line in new]
         if at is None:

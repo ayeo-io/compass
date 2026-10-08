@@ -557,9 +557,10 @@ def _parse_dod_lines(task_dir):
     # the next heading or at `Next stage:`.
     from compass_pkg import doc_sections
     mask = doc_sections.comment_mask(lines)
+    shown = doc_sections.visible(lines)
     dod_lines = []
     for _, start, end in doc_sections.sections(lines, mask, doc_sections.is_exit_heading):
-        dod_lines.extend(lines[i] for i in range(start, end) if not mask[i])
+        dod_lines.extend(shown[i] for i in range(start, end) if not mask[i])
     return dod_lines
 
 _DOD_ITEM_RE = _re.compile(r"^\s*-\s+\[([ xX])\]\s*(.*)")
@@ -609,8 +610,8 @@ def dod_tag_problems(rest, ev_registry, backfills):
         elif entry.get("type") not in _DOD_ACCEPTED_EVIDENCE_TYPES:
             problems.append(
                 f"exit-list item references evidence '{ev_id}' with type "
-                f"'{entry.get('type')}' which is not an accepted DoD "
-                f"evidence type"
+                f"'{entry.get('type')}' which is not an accepted "
+                f"exit-list evidence type"
             )
     if bf_match:
         bf_id = bf_match.group(1).strip()

@@ -91,7 +91,7 @@ checks:
     description: >
       Every unchecked box in an exit list of verification-report.md (the
       Definition of Done, and the `<Stage> exit list` of any other stage)
-      must carry an inline tag:`(evidence: EV-<id>)` referencing a typed
+      must carry an inline tag: `(evidence: EV-<id>)` referencing a typed
       evidence registry entry, or `(follow-up: FU-<id>)` referencing an
       outstanding follow-up. A bare unchecked box fails. Checked boxes (`-
       [x]`) pass without a tag - the human took responsibility. Narrative

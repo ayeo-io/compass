@@ -19,13 +19,14 @@ This module also builds the `generation.Resolution` a commit stores, and is
 the one place the existing modules reach the store through
 (`commit_generation`, `record_check_results`, `generation_report`).
 """
-# DEPENDENCY: standard library (dataclasses, datetime, os, subprocess);
+# DEPENDENCY: standard library (dataclasses, datetime, os, re, subprocess);
 # compass_pkg.atomic_io, check_registry, core, generation, layers,
 # legacy_adapter, locks, merge, obligations, parents, policy_lint, project_settings, waivers.
 from __future__ import annotations
 
 import datetime
 import os
+import re
 import subprocess
 from dataclasses import dataclass, field
 
@@ -38,6 +39,7 @@ from compass_pkg.check_registry import REGISTRY
 from compass_pkg.core import (AUTONOMY_VALUES, COMPASS_VERSION, FRAMEWORK_ROOT,
                               GOVERNANCE_FILES, CompassError, load_manifest, load_yaml,
                               reading_matches)
+from compass_pkg.core import manifest_path
 
 OUTCOME_KEYS = ("delivery_approach", "stages", "gates", "checkpoints",
                 "policy_rules_fired", "subtask_ceiling", "artifacts")
@@ -90,8 +92,9 @@ class EffectiveView:
         an approach that ships) and `spike_guardrails` (those that do not), each
         entry with `id`, `name`, `statement`, `checks` and `applies_when`;
         `project` is always empty, because a project's own guardrails are
-        gates of the same catalogue. `checks` maps a check id to its
-        `blocking_when`, and `impl` maps it to the implementation it runs."""
+        gates of the same catalogue. `checks` maps a check id to the
+        `severity`, `on_skipped` and `blocking_when` it declares, and `impl`
+        maps it to the implementation it runs."""
         out = {"defaults": [], "project": [], "spike_guardrails": [], "checks": {},
                "impl": {}}
         for gate_id, gate in (self.resolved.get("gates") or {}).items():
@@ -107,8 +110,10 @@ class EffectiveView:
         for check_id, check in (self.resolved.get("checks") or {}).items():
             if not isinstance(check, dict):
                 continue
-            if "blocking_when" in check:
-                out["checks"][check_id] = {"blocking_when": check["blocking_when"]}
+            declared = {key: check[key] for key in ("severity", "on_skipped", "blocking_when")
+                        if key in check}
+            if declared:
+                out["checks"][check_id] = declared
             out["impl"][check_id] = check.get("impl", check_id)
         return out
 
@@ -467,12 +472,12 @@ def require_whole(task_dir):
 
 
 def _verdict_rank(verdict):
-    return ("pass", "nothing-to-check", "fail").index(verdict)
+    return ("pass", "nothing-to-check", "advisory", "fail").index(verdict)
 
 
 def record_check_results(task_dir, verdicts, manifest=None):
     """Rewrite `results.yml` of the generation the issue runs against with the
-    verdict of each check in `verdicts` (`{check id: pass | fail |
+    verdict of each check in `verdicts` (`{check id: pass | fail | advisory |
     nothing-to-check}`): when it ran, which implementation and version ran
     it, and a digest of the check's definition as the generation stores it.
     An issue with no generation gets no file. Returns the number of checks
@@ -525,3 +530,97 @@ def generation_report(task_dir):
         lines.append(f"  generation {found.number} ({found.state})"
                      + (f": {found.detail}" if found.detail else ""))
     return lines, broken
+
+
+# --- implementation versions and the second commit path (ADR-038) -------------------------
+
+def stored_versions(task_dir, manifest):
+    """`(n, versions)`: the generation the manifest names and what its
+    `versions.yml` records, or `(None, {})` for an issue with no stored
+    generation. The comparison with the installed versions is
+    `impl_versions.refusals`."""
+    held = generation.number(manifest)
+    if not held:
+        return None, {}
+    return held, generation.load(os.fspath(task_dir), held)["versions"]
+
+
+def installed_pins():
+    """The resolver version and file schema this CLI writes."""
+    return {"resolver": generation.RESOLVER_VERSION, "schema": generation.SCHEMA}
+
+
+def _installed_implementations(checks):
+    return {c["impl"]: REGISTRY[c["impl"]].version for c in (checks or {}).values()
+            if isinstance(c, dict) and c.get("impl") in REGISTRY}
+
+
+def _pin(stored):
+    """The stored generation's configuration with its versions replaced by the
+    installed ones. Only `versions.yml` changes: a project edit made since must
+    reach the issue through a reassess, which classifies it, and never through
+    `migrate_generation`."""
+    versions = {k: v for k, v in stored["versions"].items() if k != "schema"}
+    versions.update(resolver=generation.RESOLVER_VERSION, cli=COMPASS_VERSION,
+                    implementations=_installed_implementations(
+                        stored["resolved"].get("checks")))
+    return generation.Resolution(
+        resolved={k: v for k, v in stored["resolved"].items()
+                  if k not in ("schema", "issue", "generation")},
+        provenance={k: v for k, v in stored["provenance"].items() if k != "schema"},
+        versions=versions,
+        records=[r for r in stored["records"].get("records", [])
+                 if r.get("status") == "valid"])
+
+
+def _set_generation_line(path, target):
+    """A function that gives the manifest's own text back with `generation:` set,
+    so its comments, key order and gate comments survive the commit."""
+    def render(_dumped):
+        with open(path, encoding="utf-8") as fh:
+            text = fh.read()
+        line = f"generation: {target}"
+        if re.search(r"^generation:.*$", text, re.M):
+            return re.sub(r"^generation:.*$", line, text, count=1, flags=re.M)
+        return text + ("" if text.endswith("\n") else "\n") + line + "\n"
+    return render
+
+
+def migrate_generation(task_dir):
+    """Store the next generation of the issue pinned to the installed versions
+    (`compass issue migrate-config`), the second of the three commit paths.
+    Returns `(Committed, notes)`. The stored configuration is kept as it is and
+    every check result the old generation recorded is invalidated. An issue
+    with no stored generation is adopted: its live configuration becomes
+    generation 1. Raises `CompassError` for a landed issue, which keeps the
+    configuration it landed under."""
+    task_dir = os.path.abspath(os.fspath(task_dir))
+    slug = os.path.basename(task_dir)
+    path = manifest_path(task_dir)
+    manifest = load_yaml(path)
+    if manifest.get("status") == "landed":
+        raise CompassError(
+            f"issue {slug} is landed and keeps the configuration it landed under, so "
+            f"`compass issue migrate-config` did not change it")
+    held = generation.number(manifest)
+    invalidated = {}
+    if held:
+        stored = generation.load(task_dir, held)
+        resolution = _pin(stored)
+        if all(stored["versions"].get(k) == resolution.versions[k]
+               for k in ("resolver", "cli", "implementations")):
+            return generation.Committed(held, False, (
+                f"no change: generation {held} is already pinned to the installed "
+                f"versions")), []
+        runs = (generation.read_results(task_dir, held) or {}).get("runs") or {}
+        invalidated = {f"result:{name}": f"recorded under the versions of generation {held}"
+                       for name in sorted(runs)}
+    else:
+        resolution = resolve_live(layers.find_project_root(task_dir), manifest, slug,
+                                  task_dir)
+        resolution.provenance["adopted"] = "adopted from live governance"
+    committed = generation.commit(task_dir, resolution, manifest, invalidated,
+                                  render=_set_generation_line(path, (held or 0) + 1),
+                                  force=True)
+    return committed, ([f"{len(invalidated)} recorded result(s) invalidated"]
+                       if invalidated else [])

@@ -2,9 +2,11 @@
 
 This page is the owning doc for the evaluation of a stage's `entry` and `exit`
 lists. It states what the capability switches, when a list is due, how each kind of
-check is judged, what `on_skipped` does, and where the results show. The code
-is `cli/compass_pkg/stage_lists.py`. `compass check`, `compass next` and
-`compass issue receipt` read it.
+check is judged, what `on_skipped` does, where the results show, and how the
+document templates render the lists. The code is
+`cli/compass_pkg/stage_lists.py` and, for the templates,
+`cli/compass_pkg/template_lists.py`. `compass check`, `compass next` and
+`compass issue receipt` read the first.
 
 ## Switching it on
 
@@ -47,7 +49,7 @@ receipt shows every list, and says which are not yet due.
 
 | Kind | Judged by |
 |---|---|
-| `human` | A tick: a checked box (`- [x]`) whose text equals the check's `statement`, under the heading `Definition of Ready` in the requirements review (entry lists) or `Definition of Done` in the verification report (exit lists). |
+| `human` | A tick: a checked box (`- [x]`) whose text equals the check's `statement`, under the list's heading in the requirements review (entry lists) or the verification report (exit lists). The headings are in "Where a list sits in a document". |
 | `deterministic` | Its registered implementation runs. The receipt does not run it and shows `pending`. |
 | `judged` | A review record: the newest registered `manual-review` record by a listed reviewer must say `pass` and match the check's inputs, definition, issue and generation. The cause of a failure is the first words of the detail. See [judged-checks.md](judged-checks.md). The receipt reads the record and shows the real verdict. |
 | `evidence` | Not evaluated by this version. A blocking check of this kind fails, so a list cannot pass by naming a check nothing reads. This holds whatever the capability, for a check a project adds, and `compass policy lint` warns (`M-LIST-KIND-UNEVALUATED`, exit code unchanged). The shipped default names none. |
@@ -125,10 +127,74 @@ list is headed with its stage, its side and whether it is due. Each check shows
 its id, its state (`pass`, `fail`, `nothing-to-check` or `pending`) and its
 detail.
 
+## Where a list sits in a document
+
+A list sits under a heading in the document that holds its ticks: the
+requirements review for an entry list and the verification report for an exit
+list.
+
+| List | Heading |
+|---|---|
+| `plan` entry | `Definition of Ready` |
+| `verify` exit | `Definition of Done` |
+| any other stage | `<Stage> <side> list`, for example `Implement exit list` or `Define entry list` |
+
+The typed tag rule of `dod-evidence-typed` reads every exit list's section,
+not only the Definition of Done. An unticked box under an exit heading needs a
+typed tag that resolves, whichever stage the list belongs to. Entry lists have
+no tag rule.
+
+## Rendering the templates
+
+The checklists of `templates/requirements-review.md` and
+`templates/verification-report.md` render from the stage's lists in the issue's
+effective view. `compass issue template <kind> [--issue SLUG] [--json]` prints
+the template of that kind (`requirements-review`, `verification-report` or any
+other template) with its checklists rendered. `/compass:refine` and
+`/compass:verify` write their documents from this output, not from the template
+file. `--json` prints one object with the keys `kind`, `issue`, `source` and
+`text`. `source` is `generation` (the issue's stored configuration), `live` (the
+project's configuration now) or `none` (no configuration is read, so `text` is
+the template file).
+
+For each list, the rendered section holds one box for each `human` check the
+list names, in the listed order:
+
+- A check whose statement the template already words keeps the template's own
+  text, bold label and tag included. A project with the shipped default
+  therefore renders each template file byte for byte.
+- A check the template does not word gets a generated line,
+  `- [ ] <statement>`. In an exit list the line starts
+  `(evidence: {{EV-id}})`, so the box can be deferred with a typed tag.
+- A template box that no list names is left out.
+- A list on a stage other than the two named ones renders as its own section
+  under its heading, before the `Next stage:` line. A list with no `human`
+  check adds no section.
+- A check the list names more than once gives one box.
+
+An exit list on `plan` or on any stage other than `verify` is always in the
+verification report, and an entry list on any stage other than `plan` is always
+in the requirements review. An exit list on `plan` renders into the
+verification report as `Plan exit list`, although the report is written at
+`verify`: the side of a list picks the document, not the stage.
+
+A check of another kind has no box to tick and does not render. The render
+reads neither `requires` nor `when`: the document shows what the configuration
+lists, and evaluation decides what is owed. Any other template, and an issue
+read without a configuration, render as the file. Rendering adds no line to a
+default template. The line cap in `tests/test_borrowed_document_shapes.py`
+covers the threat model and the rollback plan only, and rendering does not
+change them.
+
+The tick, the tag rule and the renderer read a section the same way
+(`cli/compass_pkg/doc_sections.py`): it starts at a heading and ends at the next
+heading or at a line that starts `Next stage:`, and a line inside an HTML
+comment is not in any section. Only the text from `<!--` to `-->` is hidden,
+so a box with a trailing comment is still a box. A stage id can hold a dot, so `Code.review exit
+list` is an exit heading.
+
 ## Limits
 
-- The templates do not render from the lists, and the tag rule reads only the
-  `Definition of Done` section of the verification report.
 - A `human` check is a tick. `approvers:` are not read.
 - `evidence` checks are not evaluated.
 - A tick is found by the text of the statement. A statement that differs from

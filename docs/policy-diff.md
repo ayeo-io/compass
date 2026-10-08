@@ -39,6 +39,7 @@ change. A change to which approach an assessment routes to can be
 | `legacy` | The project's copied `governance/routing-policy.yml` and `governance/guardrails.yml`, through the legacy adapter |
 | `git:<revision>` | The project's `compass.yml` at that git revision over the shipped default, or the shipped default alone when the file did not exist then |
 | a path | One `compass.yml` over the shipped default, as `compass policy lint --file` reads it |
+| `github:<owner>/<repo>@<ref>#<sha>` | A git parent written as in `extends:` ([git-parents.md](git-parents.md)): the shipped default, then the parents it extends from the furthest, then that parent. The project's own `compass.yml` is not part of it |
 | `generation:<slug>:<n>` | Refused: the generation store has not landed |
 
 | Arguments | `A` | `B` |
@@ -52,6 +53,16 @@ working folder. A file that does not parse, fails its own layer check or does
 not merge is refused with its label and a pointer to `compass policy lint
 --file`. The command does not lint: it shows what a change does, including a
 change that lint would refuse.
+
+A git parent is data. Each layer of its chain must pass the parent layer check
+before it merges, so a settings key or an `unlock:` is refused (exit 2) with the
+finding's text. An uncached pin is fetched into the project's
+`.compass/cache/parents/`, after one line on stderr (`compass policy diff:
+fetching <ref> into .compass/cache/parents/`); `--offline`, or `COMPASS_OFFLINE=1`, reads the cache
+only and refuses an uncached pin with `L-PARENT-NOT-CACHED`. A bad spelling is
+refused with `L-PARENT-FORM` or `L-PARENT-NO-SHA` before git runs. The
+classification is the raw one, with no waiver applied, so a parent that loosens
+the default shows `loosening` whether or not its own waiver excuses it.
 
 ## The sets that are replayed
 
@@ -104,7 +115,10 @@ statuses that are not terminal) over both configurations with its own
 An issue that is landed or abandoned is never examined. Until the generation
 store lands there is no stored generation, so `A` stands for what the issue
 runs against and `B` for what it meets at its next reassess. The command
-writes nothing, here or elsewhere.
+writes no file of the project, with two exceptions. When a reference is a git
+parent that is not cached and the run may fetch, it fills the git parent cache
+in `.compass/cache/parents/`, and it adds `cache/` to `.compass/.gitignore` if
+that file does not list it.
 
 ## Options and exit codes
 
@@ -112,6 +126,7 @@ writes nothing, here or elsewhere.
 |---|---|
 | `--open` | Add the open-issue comparison above |
 | `--exit-code` | Exit 1 when anything differs, as `git diff --exit-code` does |
+| `--offline` | Read a git parent from the cache only and fetch nothing |
 | `--json` | Print the document below |
 
 | Exit | Meaning |
@@ -172,8 +187,8 @@ Each side has these keys, in this order:
 
 | Key | Type | Meaning |
 |---|---|---|
-| `ref` | string | The label: `default@6`, `project`, `legacy`, `git:<revision>` or `file:<name>`. A file's name is relative to the project root, or its own name when it is outside the root, so the document holds no machine path |
-| `kind` | string | `default`, `project`, `legacy`, `git` or `file` |
+| `ref` | string | The label: `default@6`, `project`, `legacy`, `git:<revision>`, `file:<name>` or a git parent as it was written. A file's name is relative to the project root, or its own name when it is outside the root, so the document holds no machine path |
+| `kind` | string | `default`, `project`, `legacy`, `git`, `file` or `parent` (a git parent) |
 | `default_version` | string or null | The version of the shipped default beneath it, null for `legacy` |
 | `digest` | string | `sha256:` and a digest of the resolved configuration and its capabilities |
 | `capabilities` | list | The capability switches that are on, sorted |

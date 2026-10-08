@@ -948,6 +948,7 @@
             },
             "approved_on": {
               "description": "The date of that approval.",
+              "format": "date",
               "type": "string"
             },
             "from": {

@@ -20,7 +20,7 @@ the one place the existing modules reach the store through
 (`commit_generation`, `record_check_results`, `generation_report`).
 """
 # DEPENDENCY: standard library (copy, dataclasses, datetime, os, re, subprocess);
-# compass_pkg.atomic_io, check_registry, core, generation, layers,
+# compass_pkg.atomic_io, chain_class, check_registry, core, generation, layers,
 # legacy_adapter, locks, merge, obligations, parents, policy_lint, project_settings, waivers.
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ import re
 import subprocess
 from dataclasses import dataclass, field
 
-from compass_pkg import (generation, layers, legacy_adapter, locks, merge, parents,
+from compass_pkg import (chain_class, generation, layers, legacy_adapter, locks, merge, parents,
                          policy_lint, project_settings, waivers)
 from compass_pkg import obligations
 from compass_pkg import catalogue_spec as spec
@@ -341,7 +341,11 @@ def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False, 
     calls it before it writes, so a generation never stores such a chain. With
     `validate=True` it is called here too. A chain that does not load or merge
     raises `CompassError` at once. A git parent in the project's `extends:` is
-    read from the cache; only `fetch=True` fetches an uncached pin."""
+    read from the cache; only `fetch=True` fetches an uncached pin. The
+    result's `finish` adds, to each git parent's entry in `versions`, the
+    classification of the chain through it against the shipped default, before
+    any waiver. That is a scan of the grid for each parent, so only a commit that
+    writes a new generation calls it."""
     root = os.path.abspath(root)
     counts = project_settings.compass_yml_counts(root)
     loaded = policy_lint.load_layers(root, manifest=manifest, read_project=counts, fetch=fetch)
@@ -403,10 +407,18 @@ def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False, 
         "evidence_types": _evidence_types(root, legacy),
     }
     major = str(meta.get("version", "")).split(".")[0]
+    root_ref = f"compass:{meta['id']}@{major}" if not legacy else "legacy"
+    git_layers = [p.layer for p in loaded.git_parents]
+
+    def finish(stored):
+        held = chain_class.classify_chain(parent, git_layers, root_ref)
+        for entry, block in zip(stored["parents"][1:], held):
+            entry["classification"] = block
+
     versions = {
         "resolver": generation.RESOLVER_VERSION,
         "cli": COMPASS_VERSION,
-        "parents": [{"ref": f"compass:{meta['id']}@{major}" if not legacy else "legacy",
+        "parents": [{"ref": root_ref,
                      "version": meta.get("version", ""), "digest": parent.digest,
                      "source": "legacy" if legacy else "shipped"}]
                    + [{"ref": p.ref, "sha": p.sha, "version": p.version, "digest": p.digest,
@@ -424,7 +436,7 @@ def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False, 
                     "classification": classification},
         versions=versions,
         records=_approval_records(manifest or {}, root, task_dir, waiver_records),
-        validate=check_chain,
+        validate=check_chain, finish=finish if git_layers else None,
         details={"loaded": loaded, "chain": chain, "configs": configs})
 
 

@@ -394,15 +394,15 @@ def test_pt_5_a_preset_with_no_fixture_folder_fails(tmp_path):
     assert any("no fixtures" in p for p in report["problems"])
 
 
-def test_pt_5_a_sub_folder_of_fixtures_fails_and_is_not_skipped_silently(tmp_path):
+def test_pt_5_a_sub_folder_of_fixtures_is_a_group_and_its_fixtures_run(tmp_path):
     preset = _preset(tmp_path)
     group = preset / "compass-fixtures" / "meets" / "banking"
     group.mkdir(parents=True)
     (group / "one.yml").write_text(yaml.safe_dump(GOOD), encoding="utf-8")
     code, report = _json(tmp_path, preset)
-    assert code == 1
-    assert report["totals"]["fixtures"] == 1
-    assert any("compass-fixtures/meets" in p and "not read" in p for p in report["problems"])
+    assert code == 0, report["problems"]
+    assert report["totals"]["fixtures"] == 2
+    assert report["problems"] == []
 
 
 def test_pt_5_a_folder_with_no_compass_yml_is_an_input_error(tmp_path):
@@ -496,12 +496,13 @@ def test_pt_6_the_json_report_has_the_documented_keys_in_the_documented_order(tm
     code, out, _ = _run(tmp_path, "policy", "test", str(preset), "--json")
     report = json.loads(out)
     assert list(report) == ["schema", "preset", "result", "lint", "fixtures_run", "totals",
-                            "fixtures", "problems"]
+                            "fixtures", "problems", "groups"]
     assert report["schema"] == 1
     assert report["preset"] == "preset"
     assert list(report["lint"]) == ["ok", "stopped_after", "findings"]
     assert list(report["totals"]) == ["fixtures", "passed", "failed"]
-    assert list(report["fixtures"][0]) == ["file", "name", "status", "mismatches", "message"]
+    assert list(report["fixtures"][0]) == ["file", "name", "status", "mismatches", "message",
+                                           "group"]
     assert report["fixtures"][0]["file"] == "a-good.yml"
     assert list(report["fixtures"][1]["mismatches"][0]) == ["field", "expected", "actual"]
     assert report["problems"] == []
@@ -840,10 +841,10 @@ def test_pt_10_the_doc_names_every_key_code_status_and_exit_code():
             "pass", "fail", "error", "written", "refused", "assessment", "expect", "approach",
             "gates", "stages", "checks", "--offline", "--owner", "L-UNLOCK-PLACEMENT",
             "L-SETTINGS-KEY", "L-IMPL-UNKNOWN", "K-LOCK-REFUSED", "C-LOOSENING", "W-NO-OWNER",
-            "compass-fixtures/"]
+            "compass-fixtures/", "groups", "group"]
     for word in keys:
         assert f"`{word}`" in text, f"`{word}` is not set in code style in the doc"
-    assert "fixture groups" in text, "the doc says what a later release adds"
+    assert "fixture groups" in text, "the doc states the fixture groups"
     for code in ("Exit 0", "Exit 1", "Exit 2"):
         assert text.count(code) >= 2, f"{code} is stated for both commands"
     for sentence in ("cannot be read", "not UTF-8", "malformed", "some files",

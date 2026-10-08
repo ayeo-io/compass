@@ -10,17 +10,19 @@ file of the project (the `git show` copy goes to a temporary folder) except
 the git parent cache when a reference names an uncached git parent, and
 changes none of the modules it calls.
 """
-# DEPENDENCY: standard library (dataclasses, itertools, json, os, subprocess,
-# sys, tempfile, textwrap); compass_pkg.atomic_io (digest, load_yaml_strict),
-# catalogue_check, catalogue_spec (LABEL_CAP), the classifier module (the
-# classify and build_grid functions, json_shape_errors), core (CompassError,
-# load_yaml), legacy_adapter (adapt), status_words (is_closed, stored), merge, the
+# DEPENDENCY: standard library (copy, dataclasses, itertools, json, os,
+# subprocess, sys, tempfile, textwrap); compass_pkg.atomic_io (digest,
+# load_yaml_strict), catalogue_check, catalogue_spec (LABEL_CAP), the
+# classifier module (the classify and build_grid functions,
+# json_shape_errors), core (CompassError, load_yaml, normalize_spine),
+# lifecycle (state_of), legacy_adapter (adapt), status_words (is_closed), merge, the
 # obligations module (its function of that name, Refused, COMPARED_FACTS,
 # assessment_vocabulary), policy_lint (load_parent) and waivers (find,
 # describe, recheck) and parents (resolve_chain, ParentError). Only
 # compass_pkg.policy_cmd imports it.
 from __future__ import annotations
 
+import copy
 import dataclasses
 import itertools
 import json
@@ -35,7 +37,7 @@ from compass_pkg import catalogue_check, classify, legacy_adapter, merge
 from compass_pkg import catalogue_spec as spec
 from compass_pkg import obligations, parents, policy_lint, status_words, waivers
 from compass_pkg.atomic_io import StrictYamlError, digest, load_yaml_strict
-from compass_pkg.core import CompassError, load_yaml, manifest_path
+from compass_pkg.core import CompassError, load_yaml, manifest_path, normalize_spine
 
 JSON_SCHEMA_VERSION = 1
 
@@ -431,8 +433,12 @@ def read_archive(root):
         except CompassError:
             data = None
         if isinstance(data, dict):
-            found.append(Issue(slug, data.get("status"), data.get("assessment"),
-                               data.get("config")))
+            # The state an issue is in, read from its records: an issue in
+            # flight stores no status.
+            from compass_pkg import lifecycle
+            state = lifecycle.state_of(normalize_spine(copy.deepcopy(data)),
+                                       os.path.join(work, slug))
+            found.append(Issue(slug, state, data.get("assessment"), data.get("config")))
         else:
             found.append(Issue(slug, None, None, None, True))
     return found
@@ -552,7 +558,7 @@ def open_report(a, b, issues):
                 expiring += _invalidated(issue, layer, a, b, sides[0])
         if differences or unresolved:
             listed.append({"issue": issue.slug,
-                           "status": status_words.stored({"status": issue.status}),
+                           "status": issue.status,
                            "assessment": _plain(issue.assessment),
                            "differences": differences, "unresolved": unresolved})
     return {"examined": len(flying), "issues": listed, "waivers": expiring,

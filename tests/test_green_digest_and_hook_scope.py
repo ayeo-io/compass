@@ -150,7 +150,8 @@ def test_gdh2_a_land_at_head_takes_declared_tests_and_the_issue_documents(repo):
 
     result = _cli(repo, "ship-commit", "--issue", SLUG, "-m", "land it")
     assert result.returncode == 0, result.stdout + result.stderr
-    assert _manifest(repo).get("status") == "landed"
+    assert _manifest(repo).get("status") == "done"
+    assert _manifest(repo).get("close_reason") == "completed"
 
 
 def test_gdh2_an_issue_with_no_changed_files_is_not_scope_checked(repo):

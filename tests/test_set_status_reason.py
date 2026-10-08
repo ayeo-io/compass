@@ -20,18 +20,21 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 CLI = REPO_ROOT / "cli" / "compass"
 SCHEMA = REPO_ROOT / "schemas" / "manifest.schema.json"
 
-# Every status the command accepts. Read from the CLI's own help rather than
-# hardcoded, so a status added later is covered without anyone remembering.
-def _accepted_statuses() -> list[str]:
-    r = subprocess.run([sys.executable, str(CLI), "issue", "set-status", "--help"],
+# Every way the command stores a status: the words it takes and the flags that
+# go with `done`. Checked against the CLI's own help, so a word the help drops
+# fails here instead of shrinking the sweep below.
+def _accepted_statuses() -> list[tuple[str, list[str]]]:
+    r = subprocess.run([sys.executable, str(CLI), "issue", "status", "set", "--help"],
                        capture_output=True, text=True, timeout=60)
     text = r.stdout + r.stderr
-    for word in ("queued", "active", "parked", "landed", "abandoned"):
+    for word in ("backlog", "done", "--close-reason", "--duplicate-of", "completed",
+                 "not-planned", "duplicate"):
         assert word in text, (
-            f"`set-status --help` does not mention {word!r}, so this list has "
+            f"`issue status set --help` does not mention {word!r}, so this list has "
             f"drifted from the command and the sweep below covers less than "
             f"it claims:\n{text[:600]}")
-    return ["queued", "active", "parked", "landed", "abandoned"]
+    return [("backlog", []), ("done", ["--close-reason", "not-planned"]),
+            ("done", ["--close-reason", "completed"])]
 
 
 def _project(tmp: Path) -> Path:
@@ -78,18 +81,18 @@ def test_a_reason_on_any_status_leaves_the_manifest_valid():
     statuses = _accepted_statuses()
     broken = []
 
-    for status in statuses:
+    for status, flags in statuses:
         with tempfile.TemporaryDirectory() as raw:
             project = _project(Path(raw))
-            code, out = _run(project, "issue", "set-status", status,
+            code, out = _run(project, "issue", "status", "set", status, *flags,
                              "--issue", "sample",
                              "--reason", "why this transition happened")
             if code != 0:
-                # `landed` legitimately refuses when gates are unmet. That is a
-                # different rule and not what this scenario is about.
-                if "landed" in status and "gate" in out.lower():
+                # `completed` legitimately refuses when gates are unmet. That
+                # is a different rule and not what this scenario is about.
+                if "completed" in flags and "gate" in out.lower():
                     continue
-                broken.append(f"{status}: set-status itself failed:\n{out[-300:]}")
+                broken.append(f"{status}: status set itself failed:\n{out[-300:]}")
                 continue
 
             code, out = _run(project, "issue", "lint", "--issue", "sample")
@@ -132,7 +135,8 @@ def test_the_recorded_reason_says_which_transition_it_belongs_to():
 
     with tempfile.TemporaryDirectory() as raw:
         project = _project(Path(raw))
-        code, out = _run(project, "issue", "set-status", "active",
+        # The fixture holds the issue in backlog; ending the hold records why.
+        code, out = _run(project, "issue", "status", "remove",
                          "--issue", "sample", "--reason", "re-opened for rework")
         assert code == 0, out
         body = (project / ".compass" / "work" / "sample" / "manifest.yml").read_text(

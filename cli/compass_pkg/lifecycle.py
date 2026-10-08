@@ -63,6 +63,49 @@ def _state_of_named_stage(manifest):
     return None
 
 
+#: The states in which the blocked flag counts: work is under way or in review.
+BLOCKABLE_STATES = ("in-progress", "in-review")
+
+
+def blocked_flag(manifest, task_dir):
+    """The `blocked` mapping (`reason` and `at`) while the state allows it,
+    else None. A flag left on a held, ready or closed issue is ignored."""
+    flag = manifest.get("blocked") if isinstance(manifest, dict) else None
+    if not isinstance(flag, dict):
+        return None
+    return flag if state_of(manifest, task_dir) in BLOCKABLE_STATES else None
+
+
+def status_errors(manifest, raw, task_dir):
+    """What `issue lint` reports about the status keys. `manifest` is the
+    loaded issue, `raw` the parsed file as it is on disk (a status word that
+    was mapped on load shows only there)."""
+    errors = []
+    reason = status_words.close_reason(manifest)
+    if status_words.is_closed(manifest) and reason is None:
+        errors.append(
+            "`status: done` has no `close_reason`; give one of "
+            + ", ".join(status_words.CLOSE_REASONS))
+    words = status_words._RETIRED_CLOSE_REASON
+    if isinstance(raw, dict) and raw.get("status") in words:
+        old, given = raw["status"], raw.get("close_reason")
+        stood_for = words[old]
+        fits = given in (None, stood_for) or (
+            stood_for == status_words.NOT_PLANNED and given == status_words.DUPLICATE)
+        if not fits:
+            errors.append(
+                f"`status: {old}` contradicts `close_reason: {given}`; the "
+                f"close reason is used, so change or remove one of them")
+    if manifest.get("duplicate_of") and reason != status_words.DUPLICATE:
+        errors.append("`duplicate_of` is set but the close reason is not duplicate")
+    if status_words.has_blocked_key(manifest) and blocked_flag(manifest, task_dir) is None:
+        errors.append(
+            f"`blocked` is set on an issue that is {state_of(manifest, task_dir)}; "
+            "only an in-progress or in-review issue can be blocked, and readers "
+            "ignore the flag")
+    return errors
+
+
 def state_of(manifest, task_dir):
     if status_words.is_closed(manifest):
         return "done"

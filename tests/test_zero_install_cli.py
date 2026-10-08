@@ -294,7 +294,7 @@ def test_integrate_leaves_status_untouched_ship_commit_lands_without_a_system_py
     _assert_no_install_instruction(ship_result)
 
     written = yaml.safe_load((task_dir / "manifest.yml").read_text())
-    assert written["status"] == "landed"
+    assert written["status"] == "done" and written["close_reason"] == "completed"
     assert "land_timestamp" in written
     assert written["other_field"] == before_other_field == "must-survive-unchanged"
     assert (repo / "docs" / "system-spec.md").is_file(), (

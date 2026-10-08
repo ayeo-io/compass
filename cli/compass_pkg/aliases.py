@@ -38,6 +38,21 @@ def _starts_with(argv, tokens):
     return list(argv[:len(tokens)]) == list(tokens)
 
 
+def _positional(rest, value_flags):
+    """The index of the first positional word in `rest`, or None. An option
+    that takes a value (`value_flags`) is skipped with its value, so a slug
+    that spells a status is not read as one."""
+    i = 0
+    while i < len(rest):
+        if rest[i] in value_flags:
+            i += 2
+        elif rest[i].startswith("-"):
+            i += 1
+        else:
+            return i
+    return None
+
+
 def rewrite(argv, table=None):
     """`(argv, notice)`: the command line with a released old spelling replaced
     by the new one, and the notice to print; `(argv, None)` when no row
@@ -58,6 +73,14 @@ def rewrite(argv, table=None):
         # Already the new spelling, or a request for the group's own help.
         if _starts_with(rest, extra) or (rest and rest[0] in HELP_FLAGS):
             return argv, None
+    values = best.get("values") or {}
+    at = _positional(rest, best.get("value_flags") or ())
+    if at is not None and rest[at] in values:
+        # The old value picks the new command, so the notice names that one.
+        picked = list(values[rest[at]])
+        notice = (f"compass: '{' '.join(old + [rest[at]])}' is now "
+                  f"'{' '.join(picked)}'; the old spelling works until 7.0.0.")
+        return picked + rest[:at] + rest[at + 1:], notice
     notice = (f"compass: '{' '.join(old)}' is now '{' '.join(new)}'; "
               f"the old spelling works until 7.0.0.")
     return list(new) + rest, notice

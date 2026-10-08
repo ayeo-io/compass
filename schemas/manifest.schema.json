@@ -12,7 +12,7 @@
   "properties": {
     "schema_version": {
       "type": "string",
-      "description": "The Compass issue.yml schema version this file follows. The CLI warns/fails on incompatible versions. Optional in 1.0 for back-compat; recommended. '1.1' introduced the optional `status` and `land_timestamp` fields."
+      "description": "The Compass issue.yml schema version this file follows. The CLI warns/fails on incompatible versions. Optional in 1.0 for back-compat; recommended. '1.1' introduced the optional `status` and `land_timestamp` fields. '3.0' stores only `backlog` or `done` as the status, with `close_reason`; a CLI that reads majors 1 and 2 refuses it."
     },
     "issue": {
       "type": "string",
@@ -29,13 +29,32 @@
     "status": {
       "type": "string",
       "enum": [
-        "active",
-        "queued",
-        "parked",
-        "landed",
-        "abandoned"
+        "backlog",
+        "done"
       ],
-      "description": "Optional. Lifecycle status of the issue. 'active' (default when absent) means in-flight; 'queued' means recorded as next up but not started; 'parked' means stopped with the phases so far still valid, so it can resume; 'landed' means ship completed and its scenarios are eligible for the living system spec derivation (ADR-008); 'abandoned' means it will not resume. Only 'landed' grants derivation eligibility - every other value is ineligible, so a new value can never silently get it. Issues with schema_version '1.0' that lack this field are treated as 'active', for backward compatibility."
+      "description": "Optional. The stored status of the issue: 'backlog' is a hold a person set, and 'done' means it is closed, with a `close_reason`. An issue in flight stores no status; its state (backlog, ready, in-progress or in-review) is read from its records. Only 'done' with close reason 'completed' makes its scenarios eligible for the living system spec derivation (ADR-008), so a new value can never silently get it. A manifest written before schema 3.0 may hold queued, parked, active, landed or abandoned; they are read as the words above and rewritten on the next save."
+    },
+    "close_reason": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "not-planned",
+        "duplicate"
+      ],
+      "description": "Optional. Why a 'done' issue was closed: 'completed' means the work was delivered, 'not-planned' means it will not be, and 'duplicate' means another issue covers it (named in `duplicate_of`). Written by `compass issue status set done --close-reason` and by `compass ship-commit`. 'done' with no close reason is not read as completed, and `compass issue lint` reports it."
+    },
+    "duplicate_of": {
+      "type": "string",
+      "description": "Optional. The slug of the issue that covers this one. Only with close reason 'duplicate'. Written by `compass issue status set done --duplicate-of`."
+    },
+    "blocked": {
+      "type": "object",
+      "description": "Optional. Set while an in-progress or in-review issue waits for something. Written by `compass issue blocked set --reason`; cleared by `compass issue blocked remove` and when the issue is closed or set to backlog. A flag on an issue in any other state is ignored by readers and reported by `compass issue lint`.",
+      "additionalProperties": false,
+      "properties": {
+        "reason": {"type": "string", "description": "What the issue waits for."},
+        "at": {"type": "string", "description": "ISO-8601 timestamp of when the flag was set."}
+      }
     },
     "landed_by": {
       "type": "array",

@@ -37,6 +37,7 @@ from compass_pkg import status_words
 from compass_pkg.core import (CompassError, find_compass_dir, find_governance, load_yaml,
                               manifest_path, normalize_spine)
 from compass_pkg.rework import cmd_rework_scan
+from compass_pkg.stable_ids import APPROACH_SPIKE
 
 
 
@@ -183,9 +184,9 @@ def board(work_root, today=None):
     now = datetime.datetime.now(datetime.timezone.utc)
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(work_root)))
     guarded = _routing_labels()
-    out = {"in_progress": [], "stale": [], "held": [], "next_up": [],
-           "landed_this_week": [], "abandoned": [], "other": [], "unreadable": [],
-           "friction": None, "counts": {}, "total": 0}
+    out = {"backlog": [], "ready": [], "in_progress": [], "stale": [],
+           "in_review": [], "done_this_week": [], "closed": [], "other": [],
+           "unreadable": [], "friction": None, "counts": {}, "total": 0}
     categories = {}
     slugs = [d for d in sorted(os.listdir(work_root))
              if os.path.isdir(os.path.join(work_root, d))]
@@ -214,7 +215,7 @@ def board(work_root, today=None):
             out["unreadable"].append({"slug": slug, "note": "malformed manifest.yml "
                                       "(%s)" % type(exc).__name__})
             out["counts"]["unreadable"] = out["counts"].get("unreadable", 0) + 1
-    out["next_up"].sort(key=lambda r: (-(r["age_days"] or 0), r["slug"]))
+    out["backlog"].sort(key=lambda r: (-(r["age_days"] or 0), r["slug"]))
     if categories:
         top = sorted(categories.items(), key=lambda kv: (-kv[1], kv[0]))[0]
         out["friction"] = {"category": top[0], "count": top[1]}
@@ -225,74 +226,106 @@ def _board_place(out, categories, slug, task_dir, m, project_root, today, now,
                  guarded, evidence_state, current_stage):
     """Put one issue's row in its section. Raises on a field of the wrong
     type, which the caller reports as a malformed manifest."""
-    # No stored status means in flight: manifests written before the status
-    # field existed omit it (ADR-006).
-    status = status_words.stored(m)
-    if not isinstance(status, str):
+    from compass_pkg import lifecycle
+    status = m.get("status")
+    if status is not None and not isinstance(status, str):
         raise TypeError("status is not text")
     approach = m.get("delivery_approach") or "not assessed"
-    if status_words.is_in_flight(m):
+    if not (status_words.is_in_flight(m) or status_words.is_held(m)
+            or status_words.is_closed(m)):
+        # A stored word Compass does not set: shown as it is, not placed.
+        out["other"].append({"slug": slug, "delivery_approach": approach,
+                             "status": status})
+        out["counts"][status] = out["counts"].get(status, 0) + 1
+        return
+    # No stored status means in flight: the state comes from the records.
+    state = lifecycle.state_of(m, task_dir)
+    row = {"slug": slug, "delivery_approach": approach, "state": state}
+    flag = lifecycle.blocked_flag(m, task_dir)
+    if flag:
+        row["blocked"] = str(flag.get("reason") or "no reason recorded")
+    if state == "backlog":
+        q = _queue_row(project_root, slug, m, today, guarded)
+        row.update(age_days=q[0] if q else None, signal="; ".join(q[2]) if q else "",
+                   reason=str(m.get("parked_reason") or "") if status_words.is_parked(m) else "")
+        out["backlog"].append(row)
+    elif state == "ready":
+        out["ready"].append(row)
+    elif state == "done":
+        _board_place_done(out, categories, row, m, now)
+    else:
         gates = m.get("gates") or []
         if not isinstance(gates, list):
             raise TypeError("gates is not a list")
         gates = [g for g in gates if isinstance(g, dict)]
         passed = sum(1 for g in gates if g.get("status") == "pass")
-        state = evidence_state(m, task_dir)
-        row = {"slug": slug, "delivery_approach": approach,
-               "stage": current_stage(m, task_dir) or "done",
-               "gates": f"{passed}/{len(gates)}", "evidence": state}
-        out["stale" if state == "stale" else "in_progress"].append(row)
-    elif status_words.is_parked(m):
-        out["held"].append({"slug": slug, "delivery_approach": approach,
-                            "reason": str(m.get("parked_reason") or "no reason recorded")})
-    elif status_words.is_queued(m):
-        q = _queue_row(project_root, slug, m, today, guarded)
-        out["next_up"].append({"slug": slug, "delivery_approach": approach,
-                               "age_days": q[0] if q else None,
-                               "signal": "; ".join(q[2]) if q else ""})
-    elif status_words.is_completed(m):
+        evidence = evidence_state(m, task_dir)
+        row.update(stage=current_stage(m, task_dir) or "done",
+                   gates=f"{passed}/{len(gates)}", evidence=evidence)
+        if evidence == "stale":
+            out["stale"].append(row)
+        else:
+            out["in_progress" if state == "in-progress" else "in_review"].append(row)
+    out["counts"][state] = out["counts"].get(state, 0) + 1
+
+
+def _board_place_done(out, categories, row, m, now):
+    """A closed issue: completed this week, or closed without delivery. A
+    completed issue older than the window is counted and not listed."""
+    reason = status_words.close_reason(m)
+    if status_words.is_completed(m):
         when = _landed_at(m)
         if when and when <= now and (now - when).days < LANDED_WINDOW_DAYS:
-            out["landed_this_week"].append({"slug": slug, "delivery_approach": approach,
-                                            "landed": when.date().isoformat()})
+            row["completed"] = when.date().isoformat()
+            out["done_this_week"].append(row)
             friction = m.get("friction")
             for f in friction if isinstance(friction, list) else []:
                 if isinstance(f, dict) and f.get("category"):
                     c = str(f["category"])
                     categories[c] = categories.get(c, 0) + 1
-    elif status_words.close_reason(m):
-        out["abandoned"].append({"slug": slug, "delivery_approach": approach})
+    elif reason:
+        row["close_reason"] = reason
+        out["closed"].append(row)
     else:
-        out["other"].append({"slug": slug, "delivery_approach": approach,
-                             "status": status})
-    out["counts"][status] = out["counts"].get(status, 0) + 1
+        out["other"].append({"slug": row["slug"], "delivery_approach": row["delivery_approach"],
+                             "status": m.get("status")})
 
 
 _BOARD_SECTIONS = (
     ("in_progress", "IN PROGRESS", "In progress"),
     ("stale", "STALE EVIDENCE - re-run the suite before ship", "Stale evidence"),
-    ("held", "HELD - parked, can resume", "Held"),
-    ("next_up", "NEXT UP - oldest first", "Next up"),
-    ("landed_this_week", "LANDED THIS WEEK", "Landed this week"),
-    ("abandoned", "ABANDONED - will not resume", "Abandoned"),
+    ("in_review", "IN REVIEW", "In review"),
+    ("ready", "READY - defined and refined, work not started", "Ready"),
+    ("backlog", "BACKLOG - oldest first", "Backlog"),
+    ("done_this_week", "DONE THIS WEEK", "Done this week"),
+    ("closed", "CLOSED - not planned, or a duplicate", "Closed"),
     ("other", "OTHER STATUS - not one Compass sets", "Other status"),
     ("unreadable", "UNPLACEABLE - no readable manifest.yml, so no state to report",
      "Unplaceable"),
 )
 
 
+def _blocked_suffix(r):
+    return "  BLOCKED: %s" % r["blocked"] if r.get("blocked") else ""
+
+
 def _board_row(key, r):
-    if key in ("in_progress", "stale"):
-        return "%-40s approach=%s stage=%s gates=%s evidence=%s" % (
-            r["slug"], r["delivery_approach"], r["stage"], r["gates"], r["evidence"])
-    if key == "held":
-        return "%-40s approach=%s  - %s" % (r["slug"], r["delivery_approach"], r["reason"])
-    if key == "next_up":
+    if key in ("in_progress", "stale", "in_review"):
+        return "%-40s approach=%s stage=%s gates=%s evidence=%s%s" % (
+            r["slug"], r["delivery_approach"], r["stage"], r["gates"], r["evidence"],
+            _blocked_suffix(r))
+    if key == "backlog":
         age = "?" if r["age_days"] is None else r["age_days"]
-        return "%-40s approach=%s age=%s days%s" % (
-            r["slug"], r["delivery_approach"], age, "  - " + r["signal"] if r["signal"] else "")
-    if key == "landed_this_week":
-        return "%-40s approach=%s landed=%s" % (r["slug"], r["delivery_approach"], r["landed"])
+        return "%-40s approach=%s age=%s days%s%s" % (
+            r["slug"], r["delivery_approach"], age,
+            "  - " + r["signal"] if r["signal"] else "",
+            "  - held: " + r["reason"] if r["reason"] else "")
+    if key == "done_this_week":
+        return "%-40s approach=%s completed=%s" % (
+            r["slug"], r["delivery_approach"], r["completed"])
+    if key == "closed":
+        return "%-40s approach=%s  - %s" % (
+            r["slug"], r["delivery_approach"], r["close_reason"])
     if key == "unreadable":
         return "%-40s - %s" % (r["slug"], r["note"])
     if key == "other":
@@ -312,10 +345,10 @@ def _render_board(args, data):
     counts = data["counts"]
     rep = Report(args, title="compass flow - delivery board (advisory)")
     rep.summary(
-        "compass flow - %d issue(s) across %d state(s), %d stale, %d landed "
+        "compass flow - %d issue(s) across %d state(s), %d stale, %d done "
         "this week. Advisory: this changes no issue state."
         % (data["total"], len(counts), len(data["stale"]),
-           len(data["landed_this_week"])),
+           len(data["done_this_week"])),
         ", ".join("%s %d" % (k, n) for k, n in sorted(counts.items()))
         or "nothing to report",
         _friction_line(data))
@@ -362,20 +395,20 @@ def _write_board_html(data, target):
     import tempfile
     path = _check_html_target(target)
     e = html.escape
-    cols = {"in_progress": ("Issue", "Approach", "Stage", "Gates", "Evidence"),
-            "stale": ("Issue", "Approach", "Stage", "Gates", "Evidence"),
-            "held": ("Issue", "Approach", "Reason"),
-            "next_up": ("Issue", "Approach", "Age (days)", "Signal"),
-            "landed_this_week": ("Issue", "Approach", "Landed"),
-            "abandoned": ("Issue", "Approach"),
+    work_cols = ("Issue", "Approach", "Stage", "Gates", "Evidence", "Blocked")
+    work_keys = ("slug", "delivery_approach", "stage", "gates", "evidence", "blocked")
+    cols = {"in_progress": work_cols, "stale": work_cols, "in_review": work_cols,
+            "ready": ("Issue", "Approach"),
+            "backlog": ("Issue", "Approach", "Age (days)", "Signal", "Hold reason"),
+            "done_this_week": ("Issue", "Approach", "Completed"),
+            "closed": ("Issue", "Approach", "Close reason"),
             "other": ("Issue", "Approach", "Status"),
             "unreadable": ("Issue", "Why")}
-    keys = {"in_progress": ("slug", "delivery_approach", "stage", "gates", "evidence"),
-            "stale": ("slug", "delivery_approach", "stage", "gates", "evidence"),
-            "held": ("slug", "delivery_approach", "reason"),
-            "next_up": ("slug", "delivery_approach", "age_days", "signal"),
-            "landed_this_week": ("slug", "delivery_approach", "landed"),
-            "abandoned": ("slug", "delivery_approach"),
+    keys = {"in_progress": work_keys, "stale": work_keys, "in_review": work_keys,
+            "ready": ("slug", "delivery_approach"),
+            "backlog": ("slug", "delivery_approach", "age_days", "signal", "reason"),
+            "done_this_week": ("slug", "delivery_approach", "completed"),
+            "closed": ("slug", "delivery_approach", "close_reason"),
             "other": ("slug", "delivery_approach", "status"),
             "unreadable": ("slug", "note")}
     generated = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -529,7 +562,7 @@ LIVING_SPEC_FILES = ("docs/system-spec.md", "docs/system-spec-archive.md")
 
 _DERIVED_HEADER = (
     "<!-- DERIVED FILE - do not hand-edit; `compass _derive-system-spec` "
-    "rebuilds it from the scenarios in each landed issue's manifest.yml - "
+    "rebuilds it from the scenarios in each completed issue's manifest.yml - "
     "edit the scenario there and in the issue's acceptance-criteria.md -->"
 )
 
@@ -539,8 +572,11 @@ _DERIVED_HEADER = (
 # core.py does, so the vocabulary scan does not read it as current prose.
 _SOURCE_LABELS = "(?:issue|" + "ta" + "sk)"
 _SOURCE_ISSUE = re.compile(r"\*\*Source " + _SOURCE_LABELS + r":\*\* `([^`]+)`")
-# The current layout names an issue in its heading, "### <slug> (landed <date>)".
-_ISSUE_HEADING = re.compile(r"^### (\S+) \(landed [0-9-]*\)$", re.M)
+# The current layout names an issue in its heading, "### <slug> (completed
+# <date>)". A spec derived before 6.0.0 says "landed" where this says
+# "completed", and a branch can hold both until its next derivation rewrites
+# every heading, so the reader accepts either word.
+_ISSUE_HEADING = re.compile(r"^### (\S+) \((?:landed|completed) [0-9-]*\)$", re.M)
 
 
 def _issues_named(text):
@@ -548,8 +584,8 @@ def _issues_named(text):
     return set(_SOURCE_ISSUE.findall(text)) | set(_ISSUE_HEADING.findall(text))
 
 
-def _landed_on_this_branch(project_root, landed):
-    """The landed issues that belong to the branch being derived (ADR-034).
+def _completed_on_this_branch(project_root, landed):
+    """The completed issues that belong to the branch being derived (ADR-034).
 
     Issue records are local and not committed, so they hold issues landed on
     other branches too, and deriving all of them gave a branch scenarios it
@@ -586,6 +622,16 @@ def _landed_on_this_branch(project_root, landed):
         return landed
 
 
+def _ships(task):
+    """True when the issue's approach ships. Only the spike does not: the same
+    fact `obligations.EVALUATOR_APPROACHES` and the generated views hold, and
+    a layer cannot change it. This module reads the constant and not the
+    table, because only the classifier, the effective view and the replay may
+    import the obligations module. An approach the table does not name ships,
+    as it did when every completed issue fed the spec."""
+    return task.get("delivery_approach") != APPROACH_SPIKE
+
+
 def derive_system_spec(project_root: str) -> None:
     """Derive docs/system-spec.md from all landed manifest.yml files.
 
@@ -608,6 +654,7 @@ def derive_system_spec(project_root: str) -> None:
     # Issues without a `status` field (schema 1.0) are in flight.
     # Process order: land_timestamp ascending, then issue slug ascending.
     landed = []  # list of dicts: {slug, task_dir, issue, land_timestamp}
+    completed = []  # the same, for every completed issue, spikes included
     if os.path.isdir(compass_work):
         for slug in sorted(os.listdir(compass_work)):
             task_dir = os.path.join(compass_work, slug)
@@ -624,17 +671,21 @@ def derive_system_spec(project_root: str) -> None:
             if not status_words.is_completed(task):
                 continue
             land_ts = task.get("land_timestamp", "")
-            landed.append({
+            item = {
                 "slug": slug,
                 "task_dir": task_dir,
                 "issue": task,
                 "land_timestamp": str(land_ts) if land_ts else "",
-            })
+            }
+            completed.append(item)
+            # A spike is completed too, and records what was learned. It
+            # ships nothing, so it adds no scenario to the spec.
+            if _ships(task):
+                landed.append(item)
 
     # Sort: land_timestamp ascending, issue slug as tiebreaker
     landed.sort(key=lambda x: (x["land_timestamp"], x["slug"]))
-    all_landed = landed
-    landed = _landed_on_this_branch(project_root, landed)
+    landed = _completed_on_this_branch(project_root, landed)
 
     # ---- 2. Build the current-behaviour and archived-behaviour tables ------
     # Key: (slug, scenario id, intent id) -> entry
@@ -713,7 +764,7 @@ def derive_system_spec(project_root: str) -> None:
         for entry in current.values():
             by_issue.setdefault(entry["slug"], []).append(entry)
         for slug, entries in by_issue.items():
-            lines += [f"### {slug} (landed {entries[0]['land_date']})", ""]
+            lines += [f"### {slug} (completed {entries[0]['land_date']})", ""]
             for entry in entries:
                 # A title is one line; spacing inside a line is kept as written.
                 title = " ".join(str(entry["scn_title"] or "").splitlines())
@@ -800,7 +851,7 @@ def derive_system_spec(project_root: str) -> None:
     # Every landed record on disk counts here, kept by the branch rule or
     # not: one the rule left out is not missing, and saying so would send a
     # person to copy a record that is already there.
-    on_disk = {item["slug"] for item in all_landed}
+    on_disk = {item["slug"] for item in completed}
     named = set()
     for path in (out_path, archive_path):
         if os.path.isfile(path):

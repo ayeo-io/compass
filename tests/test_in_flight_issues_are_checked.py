@@ -8,9 +8,10 @@ a test being named. The check is meant to be scoped away from landed
 issues, whose manifests are historical records that a moving codebase would
 fail for no actionable reason.
 
-The check skips only the terminal statuses, `landed` and `abandoned`.
-`queued` and `parked` issues are still in flight, so the check runs on
-them.
+The check skips only a closed issue (`done`, with any close reason). An issue
+in the backlog or in flight is still being worked on, so the check runs on it.
+A manifest written before 6.0.0 reads the same way: `landed` and `abandoned`
+are closed, `queued`, `parked` and `active` are not.
 """
 from __future__ import annotations
 
@@ -25,18 +26,27 @@ ROOT = Path(__file__).resolve().parent.parent
 COMPASS_CLI = ROOT / "cli" / "compass"
 
 sys.path.insert(0, str(ROOT / "cli"))
-from compass_pkg.manifest import TASK_STATUSES  # noqa: E402
+from compass_pkg import status_words  # noqa: E402
 
-#: An issue whose work is over. Its manifest is a record of what was true then,
-#: and re-validating it against a codebase that has moved produces failures
-#: nobody can act on (ADR-006).
-TERMINAL = ("landed", "abandoned")
+#: An issue whose work is over, as `(status, other keys, the status the check
+#: reads)`. Its manifest is a record of what was true then, and re-validating
+#: it against a codebase that has moved produces failures nobody can act on
+#: (ADR-006).
+TERMINAL = (
+    ("done", {"close_reason": "completed"}, "done"),
+    ("done", {"close_reason": "not-planned"}, "done"),
+    ("landed", {}, "done"),
+    ("abandoned", {}, "done"),
+)
 
-#: Still being worked on, whatever the board calls it.
-IN_FLIGHT = tuple(s for s in TASK_STATUSES if s not in TERMINAL)
+#: Still being worked on, whatever the board calls it: no stored status, a
+#: backlog hold, and the words stored before 6.0.0.
+IN_FLIGHT = (
+    (None, {}), ("backlog", {}), ("queued", {}), ("parked", {}), ("active", {}),
+)
 
 
-def _issue(tmp_path, status, slug="an-issue"):
+def _issue(tmp_path, status, slug="an-issue", extra=None):
     """An issue claiming correctness, naming a test that does not exist."""
     work = tmp_path / ".compass" / "work" / slug
     (work / "evidence").mkdir(parents=True)
@@ -48,7 +58,7 @@ def _issue(tmp_path, status, slug="an-issue"):
         '"log_excerpt": "1 passed"}', encoding="utf-8")
     (work / "manifest.yml").write_text(yaml.safe_dump({
         "schema_version": "2.0", "issue": slug, "created": "2026-09-11",
-        "status": status,
+        **({"status": status} if status else {}), **(extra or {}),
         "assessment": {"risk": "trivial", "familiarity": "brownfield-mapped",
                        "size": "atomic", "goal": "delivery", "role": "engineer"},
         "delivery_approach": "express",
@@ -77,11 +87,11 @@ def _check(project, slug="an-issue"):
         capture_output=True, text=True, timeout=120, cwd=str(project))
 
 
-@pytest.mark.parametrize("status", IN_FLIGHT)
+@pytest.mark.parametrize("status,extra", IN_FLIGHT)
 def test_qrl_1_an_in_flight_issue_has_its_declared_tests_checked(
-        tmp_path, status):
-    """The gap, on every status that is not terminal."""
-    _issue(tmp_path, status)
+        tmp_path, status, extra):
+    """The gap, on every status that is not closed."""
+    _issue(tmp_path, status, extra=extra)
     r = _check(tmp_path)
     assert "declared-tests-resolve" in r.stdout
     assert r.returncode != 0, (
@@ -92,26 +102,26 @@ def test_qrl_1_an_in_flight_issue_has_its_declared_tests_checked(
         + r.stdout[-1500:])
 
 
-@pytest.mark.parametrize("status", TERMINAL)
-def test_qrl_1_a_finished_issue_is_still_left_alone(tmp_path, status):
+@pytest.mark.parametrize("status,extra,shown", TERMINAL)
+def test_qrl_1_a_finished_issue_is_still_left_alone(tmp_path, status, extra, shown):
     """The control. Scoping the skip correctly must not start failing the
     records it was written to leave alone."""
-    _issue(tmp_path, status)
+    _issue(tmp_path, status, extra=extra)
     r = _check(tmp_path)
     assert "test_nobody_wrote_this" not in r.stdout, (
         f"an issue with status {status!r} had its historical record "
         f"re-validated against the current tree:\n" + r.stdout[-1500:])
 
 
-@pytest.mark.parametrize("status", TERMINAL)
-def test_qrl_1_the_skip_names_the_status_it_read(tmp_path, status):
+@pytest.mark.parametrize("status,extra,shown", TERMINAL)
+def test_qrl_1_the_skip_names_the_status_it_read(tmp_path, status, extra, shown):
     """The PASS line names the status the manifest records."""
-    _issue(tmp_path, status)
+    _issue(tmp_path, status, extra=extra)
     r = _check(tmp_path)
     line = next((l for l in r.stdout.splitlines()
                  if "declared-tests-resolve" in l), "")
-    assert status in line, (
-        f"the skip line does not name the status it read ({status!r}):\n"
+    assert shown in line, (
+        f"the skip line does not name the status it read ({shown!r}):\n"
         f"  {line.strip()}")
 
 
@@ -121,7 +131,10 @@ def test_qrl_1_the_two_status_sets_cover_the_vocabulary():
     Without this, a sixth status is silently in-flight or silently terminal
     depending on how the condition happens to be written.
     """
-    assert set(TERMINAL) | set(IN_FLIGHT) == set(TASK_STATUSES), (
-        f"the status vocabulary is {sorted(TASK_STATUSES)}, and this file "
-        f"accounts for {sorted(set(TERMINAL) | set(IN_FLIGHT))}")
-    assert not set(TERMINAL) & set(IN_FLIGHT)
+    known = set(status_words.STORED_STATES) | set(status_words.RETIRED_STATUSES)
+    closed = {s for s, _extra, _shown in TERMINAL}
+    open_ = {s for s, _extra in IN_FLIGHT if s}
+    assert closed | open_ == known, (
+        f"the status vocabulary is {sorted(known)}, and this file "
+        f"accounts for {sorted(closed | open_)}")
+    assert closed.isdisjoint(open_)

@@ -102,9 +102,10 @@ that fail in the same way are no difference.
 
 ## `--open`
 
-`--open` runs each issue whose status is `active`, `queued` or `parked` (the
-statuses that are not terminal) over both configurations with its own
-`config:` layer, at its recorded assessment. It lists:
+`--open` runs each issue that is not done (in the backlog, ready, in progress
+or in review) over both configurations with its own `config:` layer, at its
+recorded assessment. Each issue is listed with the state its records show.
+It lists:
 
 - each issue whose obligations differ, with its differences;
 - each issue whose layer one side cannot merge, as `unresolved` with the side
@@ -112,7 +113,7 @@ statuses that are not terminal) over both configurations with its own
 - each issue waiver whose waived field has a different parent value under `B`
   than under `A`, as needing re-approval at the next reassess.
 
-An issue that is landed or abandoned is never examined. Until the generation
+An issue that is done, whatever its close reason, is never examined. Until the generation
 store lands there is no stored generation, so `A` stands for what the issue
 runs against and `B` for what it meets at its next reassess. The command
 writes no file of the project, with two exceptions. When a reference is a git

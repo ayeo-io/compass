@@ -269,7 +269,7 @@ def test_qfo4_finish_traces_checks_passes_the_three_gates_and_lands(repo):
     assert head_after != head_before
 
     manifest = _manifest(repo, slug)
-    assert manifest["status"] == "landed"
+    assert manifest["status"] == "done" and manifest["close_reason"] == "completed"
     for gid in ("verify.correctness", "verify.governance",
                 "verify.traceability"):
         gate = next(g for g in manifest["gates"] if g["id"] == gid)
@@ -965,7 +965,7 @@ def test_qfg2_finish_from_a_subdirectory_traces_stages_and_lands(repo):
     assert _git(repo, "rev-parse", "HEAD") != head_before
 
     manifest = _manifest(repo, slug)
-    assert manifest["status"] == "landed"
+    assert manifest["status"] == "done" and manifest["close_reason"] == "completed"
     assert set(_gate_statuses(repo, slug).values()) == {"pass"}
     changed = {cf["path"] for cf in manifest["changed_files"]}
     assert "data/greeting.txt" in changed

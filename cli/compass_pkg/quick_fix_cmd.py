@@ -45,7 +45,7 @@ from compass_pkg.stable_ids import (
     APPROACH_QUICK_FIX, GATE_VERIFY_CORRECTNESS, GATE_VERIFY_GOVERNANCE, GATE_VERIFY_TRACEABILITY,
     STAGE_BREAKDOWN, STAGE_PLAN, STAGE_REFINE)
 from compass_pkg.core import (
-    CompassError, WHEN_KEY_MAP, _one_segment, canonical_shape, display_shape,
+    COMPASS_SCHEMA_VERSION, CompassError, WHEN_KEY_MAP, _one_segment, canonical_shape, display_shape,
     display_stage, docs_dir, find_governance, find_upwards, reading_matches,
     load_manifest, now_iso, load_yaml, manifest_path, resolve_issue_dir, save_manifest,
 )
@@ -333,10 +333,9 @@ def cmd_quick_fix_start(args):
     os.makedirs(task_dir, exist_ok=True)
     created = datetime.date.today().isoformat()
     start_record = {
-        "schema_version": "2.0",
+        "schema_version": COMPASS_SCHEMA_VERSION,
         "issue": slug,
         "created": created,
-        "status": "active",
         "assessment": dict(readings),
         # Where the assess stage ends; finish reads the session's tokens
         # per stage from here (#375).

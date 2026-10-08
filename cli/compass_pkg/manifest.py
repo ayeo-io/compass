@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # =============================================================================
-# compass_pkg.manifest - `compass ship-commit`, the manifest mutators and
-# `compass issue status set`
+# compass_pkg.manifest - `compass ship-commit` and the manifest mutators
 # =============================================================================
 #
 # DEPENDENCY: PyYAML, bundled at cli/vendor/yaml/ and pinned in
@@ -330,7 +329,7 @@ def cmd_land_commit(args):
                     "again.")
 
         head_id = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
-        head_task["status"] = "landed"
+        status_words.close(head_task, status_words.COMPLETED)
         head_task["land_timestamp"] = now_iso()
         head_task["land_commit"] = head_id
         save_manifest(head_task, head_task_path)
@@ -566,7 +565,7 @@ def cmd_land_commit(args):
                             "finish`.")
                         return 2
                     else:
-                        task["status"] = "landed"
+                        status_words.close(task, status_words.COMPLETED)
                         task["land_timestamp"] = now_iso()
                         # The commit this issue landed in. A green is checked
                         # against its tree after HEAD has moved on.
@@ -992,65 +991,5 @@ def annotate_gate_accepts_text(text, requirements=None):
 
 
 
-
-# --- compass issue status set -------------------------------------------------
-# `compass issue status set`: sets the lifecycle status, so nobody edits the
-# manifest by hand.
-
-#: The words the setter takes until it changes. Whether an issue is closed or
-#: still in flight is `status_words.is_closed`: a finished issue's manifest
-#: records what was true then, and re-validating it against a codebase that
-#: has moved produces failures nobody can act on (ADR-006), while a check that
-#: scopes itself to "not active" silently stops running on a held issue.
-TASK_STATUSES = status_words.RETIRED_STATUSES
-
-
-def cmd_task_set_status(args):
-    status = args.status
-    if status not in TASK_STATUSES:
-        raise CompassError(
-            f"compass issue status set: '{status}' is not an issue status. "
-            f"Permitted: {', '.join(TASK_STATUSES)}.\n"
-            "  queued    - recorded as next up, not started\n"
-            "  active    - in flight\n"
-            "  parked    - stopped, phases so far still valid, can resume\n"
-            "  landed    - shipping completed; only this grants living-spec eligibility\n"
-            "  abandoned - will not resume"
-        )
-
-    task_dir = resolve_issue_dir(getattr(args, "task", None))
-    task, path = load_manifest(task_dir)
-
-    # `ship-commit` refuses to write `landed` over gates that have not passed.
-    # This command must not be an easier way to set the same field, or the
-    # refusal is advice rather than a rule.
-    if status_words.is_completed({"status": status}):
-        unmet =[g.get("id", "?") for g in (task.get("gates") or [])
-                 if isinstance(g, dict) and g.get("status") != "pass"]
-        if unmet:
-            raise CompassError(
-                f"compass issue status set: refusing to mark '{task.get('issue')}' "
-                f"landed - {len(unmet)} gate(s) have not passed "
-                f"({', '.join(unmet)}). Landed means every gate passed. "
-                "Clear the gates and re-run."
-            )
-        task["land_timestamp"] = now_iso()
-
-    task["status"] = status
-    reason = getattr(args, "reason", None)
-    if status_words.is_parked({"status": status}):
-        if reason:
-            task["parked_reason"] = reason
-        task["parked_at"] = now_iso()
-    elif reason:
-        # `status_reason`, not `note`: the schema forbids undeclared keys,
-        # and the name must say which transition it records, as
-        # `parked_reason` does.
-        task["status_reason"] = reason
-
-    save_manifest(task, path)
-    detail = f" ({reason})" if reason else ""
-    return say(args, f"compass issue status set: {task.get('issue')} -> "
-                    f"{status}{detail}.",
-               detail=_stale_page(task_dir),
-               issue=task.get("issue"), status=status, reason=reason or None)
+# The status setter, `compass issue status remove` and `compass issue blocked`
+# are in cli/compass_pkg/status_cmd.py.

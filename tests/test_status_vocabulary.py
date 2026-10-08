@@ -82,7 +82,7 @@ def test_scn_a2_unknown_status_rejected(tmp_path):
     root = _project(tmp_path, {"t": _task("in-flight")})
     r = _run(root, "issue", "lint", "--issue", "t")
     assert r.returncode != 0, "an invented status was accepted"
-    assert "parked" in (r.stdout + r.stderr), (
+    assert "backlog" in (r.stdout + r.stderr), (
         "the failure should name the permitted values")
 
 
@@ -104,7 +104,7 @@ def test_scn_b1_set_status_writes_the_field(tmp_path):
              "--reason", "blocked on a pricing decision")
     assert r.returncode == 0, f"{r.stdout}{r.stderr}"
     body = yaml.safe_load((root / ".compass" / "work" / "t" / "manifest.yml").read_text())
-    assert body["status"] == "parked", body
+    assert body["status"] == "backlog", body   # the old word parked is a backlog hold
     assert body.get("parked_reason") == "blocked on a pricing decision", body
     assert body.get("parked_at"), "a parked task should record when"
     assert _run(root, "issue", "lint", "--issue", "t").returncode == 0
@@ -114,7 +114,7 @@ def test_scn_b2_set_status_refuses_unknown(tmp_path):
     root = _project(tmp_path, {"t": _task()})
     r = _run(root, "issue", "set-status", "finished", "--issue", "t")
     assert r.returncode != 0, "an invented status was written"
-    assert "parked" in (r.stdout + r.stderr)
+    assert "backlog" in (r.stdout + r.stderr)
 
 
 def test_scn_b3_set_status_landed_respects_gates(tmp_path):
@@ -123,7 +123,7 @@ def test_scn_b3_set_status_landed_respects_gates(tmp_path):
     root = _project(tmp_path, {"t": _task(gates_pass=False)})
     r = _run(root, "issue", "set-status", "landed", "--issue", "t")
     body = yaml.safe_load((root / ".compass" / "work" / "t" / "manifest.yml").read_text())
-    assert body.get("status") != "landed", (
+    assert body.get("status") not in ("landed", "done"), (
         f"marked landed over a pending gate:\n{r.stdout}{r.stderr}")
     assert "verify.correctness" in (r.stdout + r.stderr)
 
@@ -136,11 +136,12 @@ def test_scn_c1_flow_separates_parked(tmp_path):
     root = _project(tmp_path, {"live": _task("active"), "stopped": _task("parked")})
     r = _run(root, "flow")
     out = r.stdout
-    assert "parked" in out.lower(), f"flow says nothing about parked work:\n{out}"
+    # A parked issue is a backlog hold now: it is reported under the backlog
+    # heading, apart from the issue under way.
     i_parked, i_live = out.lower().find("stopped"), out.lower().find("live")
     assert i_parked != -1 and i_live != -1, out
-    assert "parked" in out.lower().split("stopped")[0][-400:], (
-        f"the parked task must be reported under its own heading:\n{out}")
+    assert "backlog" in out.lower().split("stopped")[0][-400:], (
+        f"the held task must be reported under its own heading:\n{out}")
 
 
 def test_scn_c2_calibration_excludes_parked_and_abandoned(tmp_path):
@@ -188,13 +189,14 @@ def test_scn_f1_absent_status_is_active(tmp_path):
 
 
 def test_scn_f2_landed_is_the_only_privileged_value(tmp_path):
-    """The schema is the vocabulary's source of truth, and `landed` is the only
-    value that grants eligibility anywhere. Asserted behaviourally: an issue in
-    every other state must be treated as not-landed, so a value added later
-    cannot silently get landed's privileges."""
+    """The schema is the vocabulary's source of truth, and `done` with close
+    reason `completed` is the only state that grants eligibility anywhere.
+    Asserted behaviourally: an issue holding a stored status with no close
+    reason must be treated as not completed, so a value added later cannot
+    silently get that privilege."""
     schema = json.loads(SCHEMA.read_text(encoding="utf-8"))
     enum = schema["properties"]["status"]["enum"]
-    assert set(enum) == {"active", "queued", "parked", "landed", "abandoned"}, enum
+    assert set(enum) == {"backlog", "done"}, enum
 
     sys.path.insert(0, str(ROOT / "cli"))
     from compass_pkg.flow import derive_system_spec

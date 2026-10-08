@@ -84,7 +84,12 @@ def _landed_slugs(work):
     out = set()
     for t in sorted(p for p in work.iterdir() if (p / "manifest.yml").is_file()):
         d = yaml.safe_load((t / "manifest.yml").read_text()) or {}
-        if d.get("status") == "landed" and (d.get("scenarios") or []):
+        # Completed, on an approach that ships; a manifest written before
+        # 6.0.0 says `landed`, and the status words read it as completed.
+        sys.path.insert(0, str(ROOT / "cli"))
+        from compass_pkg import status_words
+        if (status_words.is_completed(d) and d.get("delivery_approach") != "spike"
+                and (d.get("scenarios") or [])):
             out.add(t.name)
     return out
 
@@ -160,8 +165,9 @@ def test_trc_a3_the_committed_spec_should_cover_every_landed_task():
     if not landed:
         return
     text = _committed()
-    # The spec names an issue in its heading, "### <slug> (landed <date>)".
-    named = set(re.findall(r"^### ([a-z0-9-]+) \(landed [0-9-]*\)$", text, re.M))
+    # The spec names an issue in its heading, "### <slug> (completed <date>)";
+    # one derived before 6.0.0 says "landed".
+    named = set(re.findall(r"^### ([a-z0-9-]+) \((?:landed|completed) [0-9-]*\)$", text, re.M))
     missing = sorted(landed - named)
     assert not missing, (
         f"{len(missing)} landed task(s) contribute no scenarios to the living "

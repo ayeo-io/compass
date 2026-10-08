@@ -808,7 +808,7 @@ def test_trc_c2():
                                         "breakdown", "implement", "verify",
                                         "ship"}, manifest["stages"]
         assert "phases" not in manifest and "readings" not in manifest
-        assert str(manifest["schema_version"]).startswith("2")
+        assert str(manifest["schema_version"]) == "3.0"
 
     before = {p: p.read_bytes() for p in sorted(work.rglob("*")) if p.is_file()}
     second = _migrate(project, "--apply")

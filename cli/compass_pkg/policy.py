@@ -555,6 +555,11 @@ def cmd_task_lint(args):
     # The manifest is normalised above, so this reads the current key.
     errs += delivery_approach_errors(task)
     errs += raised_by_errors(task)
+    # The status keys. The loader maps an old status word, so the check for a
+    # contradicting close reason reads the file as it is on disk.
+    from compass_pkg import lifecycle
+    errs += lifecycle.status_errors(task, load_yaml(path),
+                                    os.path.dirname(os.path.abspath(path)))
     if "issue" not in task:
         errs.append("missing `issue:` (the issue slug)")
     # Each block below checks the shape before reading it. This command's whole

@@ -64,6 +64,7 @@ import re as _re
 from compass_pkg import core as _core  # noqa: F401
 from compass_pkg._all import *  # noqa: F401,F403
 from compass_pkg.subtasks import register as register_subtask_parser  # noqa: E402
+from compass_pkg.status_cmd import register as register_status_parser  # noqa: E402
 from compass_pkg.quick_fix_cmd import register as register_quick_fix_parser  # noqa: E402
 from compass_pkg.decisions import register as register_decision_parser  # noqa: E402
 from compass_pkg.spec_refresh import register as register_refresh_spec_parser  # noqa: E402
@@ -371,13 +372,7 @@ def build_parser():
     from compass_pkg.template_lists import cmd_issue_template as _cmd_issue_template
     ptt.set_defaults(func=_cmd_issue_template, output_kind="hand-off")
     register_subtask_parser(pts, issue_arg)
-    ptsg = pts.add_parser("status", help="an issue's lifecycle status")
-    ptss = ptsg.add_subparsers(dest="status_cmd", required=True).add_parser(
-        "set", help="set an issue's lifecycle status (queued|active|parked|landed|abandoned)")
-    ptss.add_argument("status", help="the new status")
-    issue_arg(ptss)
-    ptss.add_argument("--reason", help="why - recorded as parked_reason when parking")
-    ptss.set_defaults(func=cmd_task_set_status, output_kind="hand-off")
+    register_status_parser(pts, issue_arg)
 
     pacc = sub.add_parser(
         "acceptance",

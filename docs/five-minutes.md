@@ -42,8 +42,7 @@ It writes the result under `.compass/work/<issue>/`, and the manifest records th
 judgement it was computed from. The part of `manifest.yml` that matters here:
 
 ```yaml
-schema_version: "2.0"
-status: active
+schema_version: "3.0"
 assessment:
   risk: contained
   familiarity: brownfield-mapped

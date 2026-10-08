@@ -23,7 +23,7 @@ the table does not exist, and when a doc in this folder is not listed.
 - [delivery-record.md](delivery-record.md) - `compass record`: the delivery record kept in its own repository.
 - [receipt.md](receipt.md) - the one-screen view of an issue's gates and evidence.
 - [writing-specs-and-plans.md](writing-specs-and-plans.md) - a worked example of a spec and a plan.
-- [system-spec.md](system-spec.md) - the current behaviour, derived from landed issues: one heading per issue, one line per scenario, no size cap.
+- [system-spec.md](system-spec.md) - the current behaviour, derived from completed issues: one heading per issue, one line per scenario, no size cap.
 - [system-spec-archive.md](system-spec-archive.md) - scenarios that name a replacement in `superseded_by`, derived.
 
 ## Running and maintaining Compass
@@ -91,6 +91,7 @@ same commit.
 | `cli/compass_pkg/subtasks.py`, `cli/compass_pkg/loop_ceilings.py`, `cli/compass_pkg/multiagent_check.py`, `scripts/multiagent.sh`, `scripts/integrate.sh` | `docs/multiagent-protocol.md` |
 | `cli/compass_pkg/run_cmd.py`, `cli/compass_pkg/host_launch.py`, `cli/compass_pkg/redact.py`, `cli/compass_pkg/compliance.py`, `ci/headless-verify.yml` | `docs/headless-runner.md` |
 | `cli/compass_pkg/record.py` | `docs/delivery-record.md` |
+| `cli/compass_pkg/status_words.py`, `cli/compass_pkg/lifecycle.py`, `cli/compass_pkg/status_cmd.py` | `architecture/decisions/ADR-045-the-issue-lifecycle-is-derived-from-records.md` |
 | `cli/compass_pkg/rival_names.py`, `scripts/rival-name-gate.py`, `scripts/rival-name-hashes.txt`, `scripts/rival-name-binary-pins.txt` | `governance/decisions/2026-10-07-checked-binaries-are-pinned-in-the-rival-name-gate.md` |
 | `cli/compass_pkg/flow.py`, `cli/compass_pkg/spec_refresh.py`, `docs/system-spec.md`, `docs/system-spec-archive.md` | `architecture/decisions/ADR-026-ship-commit-lands-and-derives-the-living-spec.md` |
 | `cli/compass_pkg/next_cmd.py`, `cli/compass_pkg/render.py`, `cli/compass_pkg/statusline.py`, `bin/compass-statusline` | `docs/quickstart.md` |

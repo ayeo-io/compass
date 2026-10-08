@@ -97,7 +97,7 @@ def test_apply_migrates_a_v1_tree(tmp_path):
         "the renamed file is still beside the manifest as a document rather "
         f"than as the TRC-E5 pointer:\n{left[:200]}")
     manifest = yaml.safe_load((d / "manifest.yml").read_text())
-    assert str(manifest["schema_version"]) == "2.0"
+    assert str(manifest["schema_version"]) == "3.0"
     assert "assessment" in manifest and "readings" not in manifest
     assert manifest["follow_ups"][0]["status"] == "outstanding", (
         "the 1.x follow-up state did not migrate")

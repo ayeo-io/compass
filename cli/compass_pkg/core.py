@@ -35,7 +35,7 @@ SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))  # rea
 FRAMEWORK_ROOT = os.path.dirname(SCRIPT_DIR)  # cli/.. == the compass repo root
 
 COMPASS_VERSION = "5.6.0"    # the CLI's own version
-COMPASS_SCHEMA_VERSION = "2.0"    # the manifest.yml schema this CLI writes
+COMPASS_SCHEMA_VERSION = "3.0"    # the manifest.yml schema this CLI writes; it reads majors 1 to 3
 COMPASS_SCHEMA_VERSION_11 = "1.1"  # schema version that introduced manifest.yml.status
 
 from compass_pkg import project_settings  # noqa: E402  (defines CompassError)
@@ -353,7 +353,7 @@ def load_manifest(task_dir):
             major = str(sv).split(".")[0]
         except Exception:
             major = None
-        if major is not None and major not in ("1", "2"):
+        if major is not None and major not in ("1", "2", "3"):
             raise CompassError(
                 f"{path}: schema_version is '{sv}', but this CLI handles "
                 f"'{COMPASS_SCHEMA_VERSION}' (and reads 1.x by key "
@@ -650,7 +650,7 @@ def prepare_manifest_write(task, path):
         raw = load_yaml(path) if os.path.isfile(path) else None
     except CompassError:
         raw = None
-    return word_map.prepare(task, path, raw)
+    return word_map.prepare(task, path, raw, COMPASS_SCHEMA_VERSION)
 
 
 def save_manifest(task, path):

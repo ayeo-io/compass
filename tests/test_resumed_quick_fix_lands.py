@@ -34,4 +34,5 @@ def test_rq_1_finish_lands_a_quick_fix_with_no_start_record(repo):
     (repo / record).unlink()        # another session started it
     result = _finish(repo, "fix")
     assert result.returncode == 0, result.stdout + result.stderr
-    assert _manifest(repo, "fix")["status"] == "landed"
+    assert _manifest(repo, "fix")["status"] == "done"
+    assert _manifest(repo, "fix")["close_reason"] == "completed"

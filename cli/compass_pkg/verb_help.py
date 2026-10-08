@@ -74,7 +74,13 @@ VERB_DESCRIPTIONS = {
     'issue receipt':
         'Render a one-screen account of a landed issue: the four-dimension assessment, the approach computed from it, the gates it cleared and the typed evidence each was cleared with. A view over what is recorded, not a re-run of the checks. With the capability entry-exit-evaluation on, it adds a Stage lists section that shows each entry and exit list and the state of each check. An issue with a stored generation also gets a Provenance section that names the layer, version and generation behind each fired rule, check, lock, unlock and waiver.',
     'issue status set':
-        'Record an issue as queued, active, parked, landed or abandoned. Only landed makes its scenarios eligible for the derived system spec, so no other value can silently acquire that.',
+        "Store an issue's status: backlog (a hold, with --reason) or done. Done needs --close-reason completed, not-planned or duplicate; --duplicate-of SLUG implies duplicate and names the issue that covers this one. Completed is refused while a gate has not passed, and only a completed issue on an approach that ships feeds the derived system spec. Ready, in-progress and in-review are refused: the issue's records move those states. Closing or setting aside an issue clears its blocked flag.",
+    'issue status remove':
+        "End a backlog hold by deleting the stored status. The state then follows the issue's records. Refuses an issue with no hold and writes nothing.",
+    'issue blocked set':
+        "Flag an in-progress or in-review issue as blocked, with --reason saying what it waits for. The flag records the reason and the time, the state does not change, and the flow board shows the issue as blocked. Refuses any other state, names the two that allow it and writes nothing.",
+    'issue blocked remove':
+        "Clear the blocked flag. Refuses an issue that is not blocked and writes nothing.",
     'issue migrate':
         'Bring issue directories written under an older vocabulary up to the current schema - renaming artifacts, mapping manifest keys forward, and repointing the manifest at the files it renamed. Dry-run by default. Refuses before writing anything if two retired filenames claim the same current name. With --config it works on one issue instead: it stores a new generation of the issue\'s configuration pinned to the check implementation, resolver and CLI versions this CLI has, and marks every check result recorded under the old versions invalidated so each check runs again. Run that when `compass check` refuses a check because its implementation major differs from the one the generation recorded. It changes no configuration: a project edit reaches the issue only through `compass approach evaluate --write`. An issue with no stored generation is adopted as generation 1. A landed issue is refused, and a generation already pinned to the installed versions is left as it is.',
     'next':

@@ -705,3 +705,130 @@ def test_vr_d22_a_save_in_old_words_prints_the_same_json_and_a_notice_on_stderr(
             == new[1].replace(str(new_root.resolve()), "ROOT")), "standard output is the same"
     assert "standard" in old[2] and "medium" in old[2] and "manifest.yml.v5.bak" in old[2], old[2]
     assert new[2] == "", new[2]
+
+
+# --- VR-D1 to VR-D4: the status words, from the shipped rows ---------------------
+
+def _loaded(tmp_path, manifest):
+    from compass_pkg import core
+    _, task_dir = _project(tmp_path, manifest=manifest)
+    task, _ = core.load_manifest(str(task_dir))
+    return task, task_dir
+
+
+def _design():
+    return {"artifacts": [{"kind": "technical-design", "path": "technical-design.md",
+                           "status": "draft"}]}
+
+
+def test_the_shipped_status_rows_are_the_ones_the_tests_inject():
+    from compass_pkg import word_map
+    shipped = word_map.tables()
+    assert shipped["issue_status"] == ROWS["issue_status"]
+    assert shipped["close_reason"] == ROWS["close_reason"]
+
+
+@pytest.mark.parametrize("old,status,reason", [
+    ("queued", "backlog", None), ("landed", "done", "completed"),
+    ("abandoned", "done", "not-planned")])
+def test_vr_d1_a_retired_status_reads_as_a_hold_or_a_close_with_its_reason(
+        tmp_path, old, status, reason):
+    task, _ = _loaded(tmp_path, {"status": old})
+    assert task["status"] == status
+    assert task.get("close_reason") == reason
+
+
+@pytest.mark.parametrize("moved,state", [(False, "in-progress"), (True, "in-review")])
+def test_vr_d2_d3_active_is_not_stored_and_the_state_follows_the_records(
+        tmp_path, capsys, moved, state):
+    from compass_pkg import core, lifecycle
+    fields = {"status": "active", **_design(),
+              "gates": [{"id": "verify.correctness", "status": "pass" if moved else "pending"}]}
+    task, task_dir = _loaded(tmp_path, fields)
+    assert "status" not in task
+    assert lifecycle.state_of(task, str(task_dir)) == state
+    capsys.readouterr()
+    core.save_manifest(task, str(task_dir / "manifest.yml"))
+    saved = yaml.safe_load((task_dir / "manifest.yml").read_text(encoding="utf-8"))
+    assert "status" not in saved
+    err = capsys.readouterr().err
+    assert "active" in err and state in err and "records" in err, err
+    assert (task_dir / "manifest.yml.v5.bak").is_file()
+
+
+def test_vr_d4_parked_reads_as_a_hold_and_keeps_its_reason_and_time(tmp_path, capsys):
+    from compass_pkg import core
+    task, task_dir = _loaded(tmp_path, {"status": "parked", "parked_reason": "waiting",
+                                        "parked_at": "2026-10-01T09:00:00Z"})
+    assert task["status"] == "backlog"
+    capsys.readouterr()
+    core.save_manifest(task, str(task_dir / "manifest.yml"))
+    saved = yaml.safe_load((task_dir / "manifest.yml").read_text(encoding="utf-8"))
+    assert saved["status"] == "backlog"
+    assert saved["parked_reason"] == "waiting" and saved["parked_at"] == "2026-10-01T09:00:00Z"
+    err = capsys.readouterr().err
+    assert "parked" in err and "backlog" in err, err
+
+
+# --- VR-D20: old and new words in one manifest -----------------------------------
+
+def test_vr_d20_an_explicit_close_reason_wins_over_landed_and_lint_reports_it(tmp_path):
+    task, task_dir = _loaded(tmp_path, {"status": "landed", "close_reason": "not-planned"})
+    assert task["status"] == "done" and task["close_reason"] == "not-planned"
+    code, out, _ = _cli(tmp_path / "proj", "issue", "lint", "--issue", "t")
+    assert code == 1 and "landed" in out and "not-planned" in out, out
+
+
+def test_vr_d20_done_with_no_close_reason_is_not_read_as_completed(tmp_path):
+    from compass_pkg import status_words
+    task, _ = _loaded(tmp_path, {"status": "done"})
+    assert task["status"] == "done" and "close_reason" not in task
+    assert status_words.is_closed(task) and not status_words.is_completed(task)
+
+
+def test_vr_d20_a_stage_key_wins_over_a_phase_key_and_the_mapping_is_idempotent(rows):
+    entry = {"phase": "build", "stage": "plan", "category": "tooling", "observation": "x"}
+    once = rows.map_manifest({"friction": [dict(entry)], "status": "landed"})
+    assert once["friction"][0] == {"stage": "plan", "category": "tooling", "observation": "x"}
+    assert rows.map_manifest(copy.deepcopy(once)) == once
+
+
+def test_vr_d20_lint_reports_a_close_reason_that_contradicts_the_old_status_word(tmp_path):
+    _, task_dir = _loaded(tmp_path, {"status": "abandoned", "close_reason": "completed"})
+    code, out, _ = _cli(tmp_path / "proj", "issue", "lint", "--issue", "t")
+    assert code == 1 and "abandoned" in out and "completed" in out, out
+
+
+def test_vr_d20_lint_reports_a_duplicate_of_without_the_duplicate_reason(tmp_path):
+    _loaded(tmp_path, {"status": "done", "close_reason": "completed", "duplicate_of": "other"})
+    code, out, _ = _cli(tmp_path / "proj", "issue", "lint", "--issue", "t")
+    assert code == 1 and "duplicate_of" in out, out
+
+
+# --- VR-D23: the schema stamp ----------------------------------------------------
+
+def test_vr_d23_a_save_stamps_schema_version_3_0(tmp_path):
+    from compass_pkg import core
+    task, task_dir = _loaded(tmp_path, {})
+    core.save_manifest(task, str(task_dir / "manifest.yml"))
+    saved = yaml.safe_load((task_dir / "manifest.yml").read_text(encoding="utf-8"))
+    assert saved["schema_version"] == "3.0"
+
+
+@pytest.mark.parametrize("version,accepted", [("1.0", True), ("2.0", True), ("3.0", True),
+                                              ("4.0", False)])
+def test_vr_d23_the_reader_accepts_majors_1_to_3_and_refuses_4(tmp_path, version, accepted):
+    from compass_pkg import core
+    _, task_dir = _project(tmp_path, manifest={"schema_version": version})
+    if accepted:
+        core.load_manifest(str(task_dir))
+        return
+    with pytest.raises(core.CompassError) as caught:
+        core.load_manifest(str(task_dir))
+    assert "Update Compass" in str(caught.value)
+
+
+def test_vr_d23_a_stamped_manifest_is_not_reported_as_legacy_by_the_receipt():
+    from compass_pkg import receipt
+    text = receipt._receipt_render({"issue": "t", "schema_version": "3.0"}, "t", {})
+    assert "(legacy)" not in text.splitlines()[1]

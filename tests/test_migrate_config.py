@@ -76,7 +76,7 @@ def test_ir_9_migrate_config_refuses_a_landed_issue_and_writes_nothing(committed
     root, task_dir = committed
     record_versions(task_dir, implementations={"suite-passed": "0.9.0"})
     text = (task_dir / "manifest.yml").read_text(encoding="utf-8")
-    (task_dir / "manifest.yml").write_text(text.replace("status: active", "status: landed"),
+    (task_dir / "manifest.yml").write_text(text + "status: done\nclose_reason: completed\n",
                                            encoding="utf-8")
     held = (task_dir / "manifest.yml").read_bytes()
     code, out, err = _run(root, "issue", "migrate", "--config", "--issue", SLUG)
@@ -88,7 +88,7 @@ def test_ir_9_migrate_config_refuses_a_landed_issue_and_writes_nothing(committed
 def test_ir_9_a_landed_issue_is_refused_even_when_it_is_already_pinned(committed):
     root, task_dir = committed
     text = (task_dir / "manifest.yml").read_text(encoding="utf-8")
-    (task_dir / "manifest.yml").write_text(text.replace("status: active", "status: landed"),
+    (task_dir / "manifest.yml").write_text(text + "status: done\nclose_reason: completed\n",
                                            encoding="utf-8")
     code, out, err = _run(root, "issue", "migrate", "--config", "--issue", SLUG)
     assert code == 2 and "landed" in err, out + err

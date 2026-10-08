@@ -989,6 +989,8 @@ _TAIL_EXEMPT = {
     "decision check": "needs a git repository with a base ref; test_decisions_ledger.py runs it",
     "decision list": "prints the ledger's entries verbatim, one line each; test_decisions_ledger.py runs it",
     "decision show": "prints one entry's text verbatim; test_decisions_ledger.py runs it",
+    "issue status remove": "needs an issue held in backlog, which the fixture does not build; test_workflow_states.py runs it, without measuring its output against this contract",
+    "issue blocked remove": "needs an issue that is blocked, which the fixture does not build; test_workflow_states.py runs it, without measuring its output against this contract",
     "issue subtask add": "needs a git repository and a brief file the fixture does not create; test_subtask_record.py runs it, without measuring its output against this contract",
     "issue subtask set": "needs a recorded subtask the fixture does not create; test_subtask_record.py runs it, without measuring its output against this contract",
     "record sync": "needs a record repository to push to; test_delivery_record.py runs it against a local one, without measuring its output against this contract",
@@ -1037,7 +1039,10 @@ _TAIL_ARGV = {
     "_refusal": ["_refusal", "no-delivery-approach", "slug=demo"],
     "approach evaluate": ["approach", "evaluate"],
     "issue dashboard render": ["issue", "dashboard", "render"],
-    "issue status set": ["issue", "status", "set", "active"],
+    # The fixture issue has a test record, so it is in progress and can be
+    # blocked; `issue blocked set` sorts before `issue status set`, which holds it.
+    "issue blocked set": ["issue", "blocked", "set", "--reason", "waiting on a review"],
+    "issue status set": ["issue", "status", "set", "backlog"],
     "issue subtask next": ["issue", "subtask", "next"],
     # The artifact set is computed by the evaluator, so the fixture runs
     # `approach evaluate --write` first and this names a document the

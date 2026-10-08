@@ -81,13 +81,13 @@ def _run(root, *args):
 
 def test_route_evaluate_writes_a_v2_spine(tmp_path):
     """The evaluator reads a v2 manifest and folds its results back
-    under the v2 keys, stamping schema 2.0 - no v1 key appears in what it
-    writes (TRC-A1)."""
+    under the v2 keys, stamping the current schema (3.0 stores the status as
+    a hold or a close) - no v1 key appears in what it writes (TRC-A1)."""
     root = _project(tmp_path, dict(V2_SPINE))
     r = _run(root, "approach", "evaluate", "--issue", "t", "--write")
     assert r.returncode == 0, r.stderr[-500:] + r.stdout[-500:]
     out = yaml.safe_load((root / ".compass" / "work" / "t" / "manifest.yml").read_text())
-    assert str(out.get("schema_version")) == "2.0"
+    assert str(out.get("schema_version")) == "3.0"
     assert out.get("delivery_approach"), "no delivery_approach recorded"
     assert out.get("stages"), "no stages recorded"
     assert "policy_rules_fired" in out
@@ -104,7 +104,7 @@ def test_a_v1_spine_is_still_readable(tmp_path):
     r = _run(root, "approach", "evaluate", "--issue", "t", "--write")
     assert r.returncode == 0, r.stderr[-500:] + r.stdout[-500:]
     out = yaml.safe_load((root / ".compass" / "work" / "t" / "manifest.yml").read_text())
-    assert str(out.get("schema_version")) == "2.0"
+    assert str(out.get("schema_version")) == "3.0"
     assert out.get("assessment", {}).get("risk") == "contained"
     assert not (V1_TOP_KEYS & set(out)), "normalisation left v1 top-level keys"
 

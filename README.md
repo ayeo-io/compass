@@ -166,7 +166,9 @@ compass issue dashboard render  the per-issue review page
 compass issue artifact set set a document's status in the review pack
 compass issue artifact-path  where one of an issue's documents is
 compass issue template show  a document template with its checklists rendered from the stage lists
-compass issue status set   queued | active | parked | landed | abandoned
+compass issue status set   backlog, or done with --close-reason completed | not-planned | duplicate
+compass issue status remove  end a backlog hold; the state then follows the records
+compass issue blocked set  flag an in-progress or in-review issue as blocked, with a reason
 compass issue subtask      record, resume and package a multiagent run's subtasks
 compass acceptance start   open an honest record where there is no natural red
 compass acceptance record  close it with what was observed

@@ -271,15 +271,14 @@ def test_vr_c16_the_board_places_each_kind_of_close_and_hold(tmp_path):
         f_backlog_hold={"status": "backlog", "parked_reason": "waiting"},
         g_queued={"status": "queued"},
         h_backlog_plain={"status": "backlog"},
-        i_flight={},
+        i_flight={"subtasks": [{"id": "subtask-1"}]},
     )
     where = {k: sorted(r["slug"] for r in out[k]) for k in
-             ("landed_this_week", "abandoned", "held", "next_up", "in_progress", "other")}
+             ("done_this_week", "closed", "backlog", "in_progress", "other")}
     assert where == {
-        "landed_this_week": ["a_landed", "b_done_completed"],
-        "abandoned": ["c_done_not_planned", "d_abandoned"],
-        "held": ["e_parked", "f_backlog_hold"],
-        "next_up": ["g_queued", "h_backlog_plain"],
+        "done_this_week": ["a_landed", "b_done_completed"],
+        "closed": ["c_done_not_planned", "d_abandoned"],
+        "backlog": ["e_parked", "f_backlog_hold", "g_queued", "h_backlog_plain"],
         "in_progress": ["i_flight"],
         "other": [],
     }
@@ -579,7 +578,9 @@ def test_vr_c16_a_closed_issue_cannot_be_configured(tmp_path, monkeypatch, statu
     ("queued", {}, False), ("backlog", {}, False), ("abandoned", {}, False),
     ("done", {"close_reason": "not-planned"}, False),
     ("done", {"close_reason": "duplicate", "duplicate_of": "other"}, False),
-    ("active", {}, True), (None, {}, True), ("parked", {}, True),
+    ("active", {}, True), (None, {}, True),
+    ("parked", {"parked_at": "2026-10-01T09:00:00Z"}, True),
+    ("backlog", {"parked_reason": "waiting"}, True),
     ("landed", {}, True), ("done", {"close_reason": "completed"}, True)])
 def test_vr_c16_lint_asks_for_an_assessment_only_from_an_issue_that_started(
         tmp_path, status, extra, needs_assessment):
@@ -621,23 +622,403 @@ def test_vr_c16_a_completed_issue_is_judged_when_it_is_landed_again(tmp_path, mo
     assert asked
 
 
-def test_vr_c16_the_old_setter_still_takes_the_old_words_and_refuses_a_landing_over_open_gates(
-        tmp_path, monkeypatch):
-    from compass_pkg import manifest
-    from compass_pkg.core import CompassError
+# --- 6b: the status setter, the blocked flag, the board ----------------------
+# Stored status is a `backlog` hold or `done` with a close reason. The three
+# states in flight are read from the records and cannot be set by hand.
+
+OLD_STATUS_WORDS = ("landed", "queued", "parked", "abandoned", "active")
+PENDING = [{"id": "verify.correctness", "status": "pending"},
+           {"id": "verify.architecture", "status": "pending"}]
+PASSED = [{"id": "verify.correctness", "status": "pass"},
+          {"id": "verify.architecture", "status": "pass"}]
+WHY = {"reason": "waiting on a review", "at": "2026-10-08T10:00:00Z"}
+
+
+def _args(**given):
     import types
-    assert set(manifest.TASK_STATUSES) == {"active", "queued", "parked", "landed", "abandoned"}
-    task = _project(tmp_path, gates=[{"id": "verify.correctness", "status": "pending"}])
-    monkeypatch.chdir(tmp_path)
-    with pytest.raises(CompassError) as caught:
-        manifest.cmd_task_set_status(types.SimpleNamespace(
-            status="landed", task="the-issue", reason=None, json=False))
-    assert "have not passed" in str(caught.value)
+    base = dict(status=None, task="the-issue", reason=None, close_reason=None,
+                duplicate_of=None, json=False)
+    base.update(given)
+    return types.SimpleNamespace(**base)
+
+
+def _saved(task_dir):
     import yaml
-    out = manifest.cmd_task_set_status(types.SimpleNamespace(
-        status="parked", task="the-issue", reason="waiting", json=False))
-    saved = yaml.safe_load((task / "manifest.yml").read_text())
-    assert saved["status"] == "parked" and saved["parked_reason"] == "waiting"
+    return yaml.safe_load((task_dir / "manifest.yml").read_text())
+
+
+def _status_cmd():
+    from compass_pkg import status_cmd
+    return status_cmd
+
+
+def _set(tmp_path, monkeypatch, fields, **given):
+    monkeypatch.chdir(tmp_path)
+    task = _project(tmp_path, land_timestamp=None, **fields)
+    return task, lambda **more: _status_cmd().cmd_task_set_status(_args(**{**given, **more}))
+
+
+def test_vr_c1_backlog_stores_a_hold_clears_blocked_and_keeps_the_recorded_work(
+        tmp_path, monkeypatch):
+    work = {"subtasks": [{"id": "subtask-1"}], "blocked": dict(WHY)}
+    task, run = _set(tmp_path, monkeypatch, work)
+    run(status="backlog", reason="paused")
+    saved = _saved(task)
+    assert saved["status"] == "backlog" and "blocked" not in saved
+    assert saved["subtasks"] == [{"id": "subtask-1"}]
+    assert saved["parked_reason"] == "paused" and saved["parked_at"]
+
+
+def test_vr_c2_done_completed_records_the_close_reason_and_a_land_time(tmp_path, monkeypatch):
+    task, run = _set(tmp_path, monkeypatch, {"gates": PASSED})
+    run(status="done", close_reason="completed")
+    saved = _saved(task)
+    assert saved["status"] == "done" and saved["close_reason"] == "completed"
+    assert saved["land_timestamp"]
+
+
+def test_vr_c3_done_completed_over_unpassed_gates_names_each_and_changes_nothing(
+        tmp_path, monkeypatch):
+    from compass_pkg.core import CompassError
+    task, run = _set(tmp_path, monkeypatch, {"gates": PENDING})
+    before = (task / "manifest.yml").read_text()
+    with pytest.raises(CompassError) as caught:
+        run(status="done", close_reason="completed")
+    message = str(caught.value)
+    assert "verify.correctness" in message and "verify.architecture" in message
+    assert (task / "manifest.yml").read_text() == before
+
+
+def test_vr_c4_done_not_planned_needs_no_passed_gate(tmp_path, monkeypatch):
+    task, run = _set(tmp_path, monkeypatch, {"gates": PENDING})
+    run(status="done", close_reason="not-planned")
+    saved = _saved(task)
+    assert saved["status"] == "done" and saved["close_reason"] == "not-planned"
+
+
+def test_vr_c5_duplicate_of_stores_the_other_issue_and_the_duplicate_reason(
+        tmp_path, monkeypatch):
+    task, run = _set(tmp_path, monkeypatch, {})
+    _project(tmp_path, slug="the-first")
+    run(status="done", duplicate_of="the-first")
+    saved = _saved(task)
+    assert saved["status"] == "done" and saved["close_reason"] == "duplicate"
+    assert saved["duplicate_of"] == "the-first"
+
+
+def test_vr_c6_a_duplicate_without_the_other_issue_is_refused(tmp_path, monkeypatch):
+    from compass_pkg.core import CompassError
+    task, run = _set(tmp_path, monkeypatch, {})
+    before = (task / "manifest.yml").read_text()
+    with pytest.raises(CompassError) as caught:
+        run(status="done", close_reason="duplicate")
+    assert "duplicate-of" in str(caught.value)
+    assert (task / "manifest.yml").read_text() == before
+
+
+def test_vr_c7_done_with_no_close_reason_is_refused_and_lists_the_three(tmp_path, monkeypatch):
+    from compass_pkg.core import CompassError
+    task, run = _set(tmp_path, monkeypatch, {})
+    before = (task / "manifest.yml").read_text()
+    with pytest.raises(CompassError) as caught:
+        run(status="done")
+    for reason in ("completed", "not-planned", "duplicate"):
+        assert reason in str(caught.value)
+    assert (task / "manifest.yml").read_text() == before
+
+
+@pytest.mark.parametrize("state", ["ready", "in-progress", "in-review"])
+def test_vr_c8_a_state_the_records_move_cannot_be_set_by_hand(tmp_path, monkeypatch, state):
+    from compass_pkg.core import CompassError
+    task, run = _set(tmp_path, monkeypatch, {})
+    before = (task / "manifest.yml").read_text()
+    with pytest.raises(CompassError) as caught:
+        run(status=state)
+    assert "records" in str(caught.value) and state in str(caught.value)
+    assert (task / "manifest.yml").read_text() == before
+
+
+def test_vr_c8_a_word_that_is_not_a_status_names_the_two_that_are(tmp_path, monkeypatch):
+    from compass_pkg.core import CompassError
+    _task, run = _set(tmp_path, monkeypatch, {})
+    with pytest.raises(CompassError) as caught:
+        run(status="landed")
+    assert "backlog" in str(caught.value) and "done" in str(caught.value)
+
+
+def test_vr_c12_ship_commit_records_done_with_the_completed_reason(cli_path, tmp_path):
+    sys.path.insert(0, str(ROOT / "tests"))
+    from test_ship_commit_derives import _git, _init_repo, _open_issue, _run_ship_commit
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_repo(repo)
+    task_dir = _open_issue(repo, "lands-as-done")
+    done = _run_ship_commit(cli_path, repo, "-m", "land it", "--issue", "lands-as-done")
+    assert done.returncode == 0, done.stdout + done.stderr
+    saved = _saved(task_dir)
+    assert saved["status"] == "done" and saved["close_reason"] == "completed"
+    assert saved["land_timestamp"] and saved["land_commit"]
+    assert "blocked" not in saved
+
+
+def test_vr_c12_ship_commit_clears_a_blocked_flag(cli_path, tmp_path):
+    import yaml
+    sys.path.insert(0, str(ROOT / "tests"))
+    from test_ship_commit_derives import _git, _init_repo, _open_issue, _run_ship_commit
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_repo(repo)
+    task_dir = _open_issue(repo, "was-blocked")
+    body = yaml.safe_load((task_dir / "manifest.yml").read_text())
+    body["blocked"] = dict(WHY)
+    (task_dir / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False))
+    _git(repo, "add", "-A")
+    done = _run_ship_commit(cli_path, repo, "-m", "land it", "--issue", "was-blocked")
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert "blocked" not in _saved(task_dir)
+
+
+def _blocked(tmp_path, monkeypatch, fields, **given):
+    monkeypatch.chdir(tmp_path)
+    task = _project(tmp_path, land_timestamp=None, **fields)
+    return task, lambda verb, **more: getattr(_status_cmd(), "cmd_issue_blocked_" + verb)(
+        _args(**{**given, **more}))
+
+
+IN_PROGRESS = {"subtasks": [{"id": "subtask-1"}]}
+
+
+def test_vr_c13_blocked_set_records_the_reason_and_time_and_the_board_shows_it(
+        tmp_path, monkeypatch):
+    from compass_pkg import flow, lifecycle
+    task, run = _blocked(tmp_path, monkeypatch, IN_PROGRESS)
+    run("set", reason="waiting on a review")
+    saved = _saved(task)
+    assert saved["blocked"]["reason"] == "waiting on a review" and saved["blocked"]["at"]
+    assert lifecycle.state_of(saved, str(task)) == "in-progress"
+    data = flow.board(str(tmp_path / ".compass" / "work"))
+    row = next(r for r in data["in_progress"] if r["slug"] == "the-issue")
+    assert row["blocked"] == "waiting on a review" and row["state"] == "in-progress"
+    assert "BLOCKED: waiting on a review" in flow._board_row("in_progress", row)
+
+
+def test_vr_c13_blocked_remove_deletes_the_flag_and_refuses_when_there_is_none(
+        tmp_path, monkeypatch):
+    from compass_pkg.core import CompassError
+    task, run = _blocked(tmp_path, monkeypatch, {**IN_PROGRESS, "blocked": dict(WHY)})
+    run("remove")
+    assert "blocked" not in _saved(task)
+    before = (task / "manifest.yml").read_text()
+    with pytest.raises(CompassError):
+        run("remove")
+    assert (task / "manifest.yml").read_text() == before
+
+
+@pytest.mark.parametrize("fields", [
+    {"status": "backlog"},
+    {},
+    {"status": "done", "close_reason": "completed"},
+], ids=["backlog", "ready-or-backlog-by-records", "done"])
+def test_vr_c14_blocked_set_outside_progress_and_review_is_refused(tmp_path, monkeypatch, fields):
+    from compass_pkg.core import CompassError
+    task, run = _blocked(tmp_path, monkeypatch, fields)
+    before = (task / "manifest.yml").read_text()
+    with pytest.raises(CompassError) as caught:
+        run("set", reason="stuck")
+    assert "in-progress" in str(caught.value) and "in-review" in str(caught.value)
+    assert (task / "manifest.yml").read_text() == before
+
+
+def test_vr_c14_blocked_set_is_refused_on_a_ready_issue(tmp_path, monkeypatch):
+    from compass_pkg.core import CompassError
+    ready = {"artifacts": [_doc("acceptance-criteria"), _doc("requirements-review")]}
+    task, run = _blocked(tmp_path, monkeypatch, ready)
+    with pytest.raises(CompassError) as caught:
+        run("set", reason="stuck")
+    assert "ready" in str(caught.value) and "in-review" in str(caught.value)
+
+
+def test_vr_c15_the_board_and_its_json_show_new_state_words_only(tmp_path):
+    import json
+    import subprocess
+    from compass_pkg import flow
+    ready = {"artifacts": [_doc("acceptance-criteria"), _doc("requirements-review")]}
+    review = {**IN_PROGRESS, "gates": [{"id": "verify.correctness", "status": "pass"}]}
+    _board(tmp_path,
+           a_backlog={"status": "backlog", "parked_reason": "waiting"},
+           b_ready=ready, c_progress=IN_PROGRESS, d_review=review,
+           e_done={"status": "done", "close_reason": "completed"},
+           f_closed={"status": "done", "close_reason": "not-planned"},
+           g_old_landed={"status": "landed"}, h_old_queued={"status": "queued"},
+           i_old_active={"status": "active", **IN_PROGRESS})
+    root = str(tmp_path / ".compass" / "work")
+    data = flow.board(root)
+    placed = {k: sorted(r["slug"] for r in data[k]) for k in
+              ("backlog", "ready", "in_progress", "in_review", "done_this_week", "closed")}
+    assert placed == {"backlog": ["a_backlog", "h_old_queued"], "ready": ["b_ready"],
+                      "in_progress": ["c_progress", "i_old_active"],
+                      "in_review": ["d_review"],
+                      "done_this_week": ["e_done", "g_old_landed"],
+                      "closed": ["f_closed"]}
+    assert data["counts"] == {"backlog": 2, "ready": 1, "in-progress": 2, "in-review": 1, "done": 3}
+    closed = data["closed"][0]
+    assert closed["close_reason"] == "not-planned" and closed["state"] == "done"
+    for gone in ("held", "next_up", "landed_this_week", "abandoned"):
+        assert gone not in data
+    shown = subprocess.run([sys.executable, str(ROOT / "cli" / "compass"), "flow",
+                            "--work-root", root, "--json"], capture_output=True, text=True,
+                           env={"PATH": __import__("os").environ["PATH"], "HOME": str(tmp_path)})
+    assert shown.returncode == 0, shown.stderr
+    blob = json.dumps(json.loads(shown.stdout))
+    for word in OLD_STATUS_WORDS:
+        assert f'"{word}"' not in blob, word
+    text = subprocess.run([sys.executable, str(ROOT / "cli" / "compass"), "flow",
+                           "--work-root", root], capture_output=True, text=True,
+                          env={"PATH": __import__("os").environ["PATH"], "HOME": str(tmp_path)})
+    assert "IN REVIEW" in text.stdout and "READY" in text.stdout and "BACKLOG" in text.stdout
+    for word in ("ABANDONED", "LANDED THIS WEEK", "NEXT UP", "HELD"):
+        assert word not in text.stdout, word
+
+
+def test_vr_c17_each_old_status_word_runs_the_new_setter_and_names_it():
+    from compass_pkg import aliases
+    wanted = {
+        "active": ["issue", "status", "remove"],
+        "queued": ["issue", "status", "set", "backlog"],
+        "parked": ["issue", "status", "set", "backlog"],
+        "landed": ["issue", "status", "set", "done", "--close-reason", "completed"],
+        "abandoned": ["issue", "status", "set", "done", "--close-reason", "not-planned"],
+        "done": ["issue", "status", "set", "done"],
+    }
+    for word, new in wanted.items():
+        argv, notice = aliases.rewrite(["issue", "set-status", word, "--issue", "x"])
+        assert argv == new + ["--issue", "x"], (word, argv)
+        assert "issue set-status" in notice and "7.0.0" in notice, notice
+        assert " ".join(new[:3]) in notice, notice
+
+
+def test_vr_c17_an_old_word_through_the_command_line_closes_under_the_same_gate_rule(
+        tmp_path):
+    import subprocess
+    task = _project(tmp_path, gates=PENDING, land_timestamp=None)
+    env = {"PATH": __import__("os").environ["PATH"], "HOME": str(tmp_path)}
+    run = lambda *argv: subprocess.run([sys.executable, str(ROOT / "cli" / "compass"), *argv],
+                                       cwd=tmp_path, capture_output=True, text=True, env=env)
+    refused = run("issue", "set-status", "landed", "--issue", "the-issue")
+    assert refused.returncode != 0 and "have not passed" in refused.stdout + refused.stderr
+    assert "is now 'issue status set done --close-reason completed'" in refused.stderr
+    assert "status" not in _saved(task)
+    closed = run("issue", "set-status", "abandoned", "--issue", "the-issue")
+    assert closed.returncode == 0, closed.stderr
+    assert _saved(task)["status"] == "done" and _saved(task)["close_reason"] == "not-planned"
+    run("issue", "status", "set", "backlog", "--issue", "the-issue")
+    assert _saved(task)["status"] == "backlog"
+    ended = run("issue", "set-status", "active", "--issue", "the-issue")
+    assert ended.returncode == 0, ended.stderr
+    assert "status" not in _saved(task)
+
+
+def test_vr_c18_status_remove_ends_a_hold_and_refuses_when_there_is_none(tmp_path, monkeypatch):
+    from compass_pkg.core import CompassError
+    monkeypatch.chdir(tmp_path)
+    task = _project(tmp_path, status="backlog", parked_reason="waiting", **IN_PROGRESS)
+    _status_cmd().cmd_task_status_remove(_args())
+    saved = _saved(task)
+    assert "status" not in saved
+    from compass_pkg import lifecycle
+    assert lifecycle.state_of(saved, str(task)) == "in-progress"
+    before = (task / "manifest.yml").read_text()
+    with pytest.raises(CompassError):
+        _status_cmd().cmd_task_status_remove(_args())
+    assert (task / "manifest.yml").read_text() == before
+
+
+def test_vr_c19_done_with_no_close_reason_is_left_out_of_the_spec_and_lint_names_it(
+        tmp_path):
+    import subprocess
+    from compass_pkg import flow
+    task = _project(tmp_path, status="done", assessment={
+        "risk": "contained", "familiarity": "greenfield", "size": "small"},
+        scenarios=[{"id": "S-1", "title": "kept out", "intent": "INT-1"}])
+    flow.derive_system_spec(str(tmp_path))
+    assert "S-1" not in (tmp_path / "docs" / "system-spec.md").read_text()
+    env = {"PATH": __import__("os").environ["PATH"], "HOME": str(tmp_path)}
+    lint = subprocess.run([sys.executable, str(ROOT / "cli" / "compass"), "issue", "lint",
+                           "--issue", "the-issue"], cwd=tmp_path, capture_output=True,
+                          text=True, env=env)
+    assert lint.returncode == 1 and "close_reason" in lint.stdout, lint.stdout
+
+
+def test_vr_c20_the_template_and_the_quick_fix_start_store_no_status(tmp_path):
+    import re
+    text = (ROOT / "templates" / "manifest.yml").read_text()
+    assert not re.search(r"^status:", text, re.M)
+    sys.path.insert(0, str(ROOT / "tests"))
+    from test_quick_fix_verbs import _git, _start
+    root = tmp_path / "repo"
+    root.mkdir()
+    _git(root, "init", "-q")
+    (root / "README.md").write_text("hello\n")
+    _git(root, "add", "-A")
+    _git(root, "commit", "-q", "-m", "base")
+    started = _start(root, "fix-one")
+    written = root / ".compass" / "work" / "fix-one"
+    assert (written / "manifest.yml").is_file(), started.stdout + started.stderr
+    assert "status" not in _saved(written)
+
+
+def test_vr_c20_recording_work_leaves_the_stored_status_alone(tmp_path):
+    import subprocess
+    task = _project(tmp_path)
+    env = {"PATH": __import__("os").environ["PATH"], "HOME": str(tmp_path)}
+    for argv in (["scenario", "add", "S-9", "--title", "t", "--intent", "INT-1",
+                  "--issue", "the-issue"],
+                 ["changed-file", "add", "cli/compass", "--scenario", "S-9",
+                  "--issue", "the-issue"]):
+        done = subprocess.run([sys.executable, str(ROOT / "cli" / "compass"), *argv],
+                              cwd=tmp_path, capture_output=True, text=True, env=env)
+        assert done.returncode == 0, done.stdout + done.stderr
+    saved = _saved(task)
+    assert saved["scenarios"] and saved["changed_files"]
+    assert "status" not in saved
+
+
+def test_vr_c21_closing_or_holding_a_blocked_issue_clears_the_flag(tmp_path, monkeypatch):
+    task, run = _set(tmp_path, monkeypatch, {**IN_PROGRESS, "blocked": dict(WHY)})
+    run(status="done", close_reason="not-planned")
+    assert "blocked" not in _saved(task)
+
+
+def test_vr_c21_a_flag_on_an_issue_that_cannot_carry_it_is_reported_and_ignored(tmp_path):
+    import subprocess
+    from compass_pkg import lifecycle
+    stale = {"status": "backlog", "blocked": dict(WHY)}
+    task = _project(tmp_path, assessment={"risk": "contained", "familiarity": "greenfield",
+                                          "size": "small"}, **stale)
+    assert lifecycle.blocked_flag(_saved(task), str(task)) is None
+    assert lifecycle.blocked_flag({**IN_PROGRESS, "blocked": dict(WHY)}, None) == WHY
+    env = {"PATH": __import__("os").environ["PATH"], "HOME": str(tmp_path)}
+    lint = subprocess.run([sys.executable, str(ROOT / "cli" / "compass"), "issue", "lint",
+                           "--issue", "the-issue"], cwd=tmp_path, capture_output=True,
+                          text=True, env=env)
+    assert lint.returncode == 1 and "blocked" in lint.stdout, lint.stdout
+    row = _board(tmp_path / "board", x=stale)["backlog"][0]
+    assert "blocked" not in row
+
+
+def test_vr_c22_duplicate_of_refuses_itself_an_unknown_issue_and_another_reason(
+        tmp_path, monkeypatch):
+    from compass_pkg.core import CompassError
+    task, run = _set(tmp_path, monkeypatch, {})
+    _project(tmp_path, slug="the-first")
+    before = (task / "manifest.yml").read_text()
+    for given in ({"duplicate_of": "the-issue"}, {"duplicate_of": "no-such-issue"},
+                  {"duplicate_of": "the-first", "close_reason": "not-planned"}):
+        with pytest.raises(CompassError):
+            run(status="done", **given)
+        assert (task / "manifest.yml").read_text() == before, given
+    run(status="done", duplicate_of="the-first", close_reason="duplicate")
+    assert _saved(task)["close_reason"] == "duplicate"
 
 
 @pytest.mark.parametrize("status,extra,header", [
@@ -686,8 +1067,8 @@ def test_vr_c16_the_policy_diff_examines_every_issue_that_is_not_closed():
     from test_policy_diff import _advisory, _diff, _issue
     archive = [_issue("a-done", status="done"), _issue("b-landed", status="landed"),
                _issue("c-backlog", status="backlog"), _issue("d-queued", status="queued"),
-               _issue("e-flight", status=None), _issue("f-abandoned", status="abandoned")]
+               _issue("e-flight", status="in-progress"), _issue("f-abandoned", status="abandoned")]
     document = _diff(_advisory, archive=archive, open=True)["open"]
     assert [i["issue"] for i in document["issues"]] == ["c-backlog", "d-queued", "e-flight"]
-    assert [i["status"] for i in document["issues"]] == ["backlog", "queued", "active"]
+    assert [i["status"] for i in document["issues"]] == ["backlog", "queued", "in-progress"]
     assert document["examined"] == 3

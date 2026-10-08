@@ -16,8 +16,15 @@ STATES = ("backlog", "ready", "in-progress", "in-review", "done")
 STORED_STATES = ("backlog", "done")
 CLOSE_REASONS = ("completed", "not-planned", "duplicate")
 
-# The five words stored before 6.0.0, which `issue set-status` still takes
-# until the setter changes.
+BACKLOG, DONE = STORED_STATES
+COMPLETED, NOT_PLANNED, DUPLICATE = CLOSE_REASONS
+
+# The states the records move. A person cannot set them: `issue status set`
+# refuses each and says so.
+DERIVED_STATES = ("ready", "in-progress", "in-review")
+
+# The five words stored before 6.0.0. They are read until 7.0.0 and never
+# written.
 RETIRED_STATUSES = ("active", "queued", "parked", "landed", "abandoned")
 
 # Words stored before 6.0.0, read until 7.0.0: the close reason each closing
@@ -95,3 +102,32 @@ def is_parked(manifest):
 def is_queued(manifest):
     """True for a hold that is waiting its turn, not parked with a reason."""
     return is_held(manifest) and not is_parked(manifest)
+
+
+def has_blocked_key(manifest):
+    """True when the manifest carries a `blocked` flag, whatever the state.
+    `lifecycle.blocked_flag` says whether the state lets it count."""
+    return isinstance(manifest, dict) and manifest.get("blocked") is not None
+
+
+# --- writes: the only places that store a status ------------------------------
+
+def hold(manifest):
+    """Store a hold. A held issue is not blocked, so the flag goes, and an
+    issue taken back from a close drops the close it carried."""
+    manifest["status"] = BACKLOG
+    for key in ("blocked", "close_reason", "duplicate_of"):
+        manifest.pop(key, None)
+    return manifest
+
+
+def close(manifest, reason, duplicate_of=None):
+    """Store a close with its reason, and clear the blocked flag."""
+    manifest["status"] = DONE
+    manifest["close_reason"] = reason
+    if duplicate_of:
+        manifest["duplicate_of"] = duplicate_of
+    else:
+        manifest.pop("duplicate_of", None)
+    manifest.pop("blocked", None)
+    return manifest

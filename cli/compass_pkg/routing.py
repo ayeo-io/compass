@@ -33,7 +33,7 @@ import re as _re
 
 import fnmatch
 import re as _re
-from compass_pkg.core import _stage_key_renames, ASSESSMENT_KEY_MAP, CompassError, canonical_shape, display_shape, display_stage, find_governance, load_manifest, load_yaml, reading_matches, resolve_issue_dir, shape_stages
+from compass_pkg.core import _stage_key_renames, ASSESSMENT_KEY_MAP, COMPASS_SCHEMA_VERSION, CompassError, canonical_shape, display_shape, display_stage, find_governance, load_manifest, load_yaml, reading_matches, resolve_issue_dir, shape_stages
 from compass_pkg.governance import governance_drift
 from compass_pkg import word_map
 from compass_pkg.stable_ids import (APPROACH_FULL, APPROACH_REGULAR, APPROACH_SPIKE,
@@ -879,7 +879,7 @@ def cmd_route_evaluate(args):
                 "reason": reason,
                 "date": datetime.date.today().isoformat(),
             })
-        task["schema_version"] = "2.0"
+        task["schema_version"] = COMPASS_SCHEMA_VERSION
         # What this write computed from. Read by the NEXT write to notice a
         # corrected assessment; never read by anything else.
         # A COPY, not the same object. Assigning the reference makes PyYAML

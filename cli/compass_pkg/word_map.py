@@ -46,8 +46,8 @@ KEY_SECTIONS = ("friction_keys",)
 
 # The in-module copy of the tables, for a checkout with no framework install.
 # A table with a row is what turns a retired word into a new one on read and
-# on write. The stage weights and the size are wired; the status, run stage
-# and friction tables follow in later increments.
+# on write. The stage weights, the size and the issue status are wired; the
+# run stage and friction tables follow in a later increment.
 FALLBACK = {name: {} for name in (*VALUE_SECTIONS, *KEY_SECTIONS)}
 FALLBACK["stage_mode"] = {
     "full": "thorough",
@@ -59,6 +59,15 @@ FALLBACK["artifact_depth"] = {
     "light": "lightweight",
 }
 FALLBACK["size"] = {"standard": "medium"}
+# `active` stores nothing: the state of work in flight comes from the records.
+FALLBACK["issue_status"] = {
+    "queued": "backlog",
+    "parked": "backlog",
+    "active": None,
+    "landed": "done",
+    "abandoned": "done",
+}
+FALLBACK["close_reason"] = {"landed": "completed", "abandoned": "not-planned"}
 
 _READ = None
 
@@ -456,19 +465,33 @@ def _status_back(manifest, rows):
 
 # --- the write path -----------------------------------------------------------
 
-def _notice(path, old, new, backup):
+def _reading(manifest, path):
+    """The state the records give a manifest that stores no status, for the
+    notice. None when it cannot be read."""
+    if not isinstance(manifest, dict):
+        return None
+    from compass_pkg import lifecycle   # lifecycle imports core, which imports this module
+    try:
+        return lifecycle.state_of(manifest, os.path.dirname(os.path.abspath(path)))
+    except Exception:                                       # noqa: BLE001
+        return None
+
+
+def _notice(path, old, new, backup, reading=None):
     if new is None:
+        shown = f" ({reading})" if reading else ""
         return (f"compass: {path}: '{old}' is no longer stored; the state now comes "
-                f"from the records. The original is in {backup}.")
+                f"from the records{shown}. The original is in {backup}.")
     return (f"compass: {path}: '{old}' is now '{new}'; the old word is read until "
             f"7.0.0. The original is in {backup}.")
 
 
-def backup_and_notice(path, raw, rows=None):
+def backup_and_notice(path, raw, rows=None, mapped=None):
     """Before a save over a manifest that holds old words: copy the file to
     `<name>.v5.bak` unless that copy exists, and print one notice line per old
     word on standard error. The backup is never overwritten. Returns the
-    changes. `raw` is the parsed file as it is on disk."""
+    changes. `raw` is the parsed file as it is on disk; `mapped` is the
+    manifest being written, which the notice reads a dropped status from."""
     changes = old_words(raw, rows)
     if not changes:
         return []
@@ -480,16 +503,23 @@ def backup_and_notice(path, raw, rows=None):
         key = (where.split(".")[0].split("[")[0], old, new)
         if key not in shown:
             shown.add(key)
-            print(_notice(where, old, new, os.path.basename(backup)), file=sys.stderr)
+            reading = _reading(mapped, path) if new is None else None
+            print(_notice(where, old, new, os.path.basename(backup), reading),
+                  file=sys.stderr)
     return changes
 
 
-def prepare(manifest, path, raw, rows=None):
+def prepare(manifest, path, raw, schema_version=None, rows=None):
     """The mapping to write for `manifest`: it keeps the backup and says what
     it rewrites (`backup_and_notice`), then returns the manifest in the new
-    words. A manifest with nothing to map comes back as the same object."""
+    words. A manifest with nothing to map comes back as the same object.
+    `schema_version` is stamped on the result when it is given, so a CLI that
+    reads only older majors refuses the file instead of misreading it."""
     rows = tables() if rows is None else rows
-    backup_and_notice(path, raw, rows)
+    backup_and_notice(path, raw, rows, mapped=manifest)
     changes, probe = [], copy.deepcopy(manifest)
     _map_manifest(probe, rows, changes)
-    return probe if changes else manifest
+    out = probe if changes else manifest
+    if schema_version and isinstance(out, dict):
+        out["schema_version"] = schema_version
+    return out

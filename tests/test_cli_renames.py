@@ -31,10 +31,9 @@ TAG = "v5.6.0"
 sys.path.insert(0, str(ROOT / "cli"))
 
 MANIFEST = (
-    "schema_version: '2.0'\n"
+    "schema_version: '3.0'\n"
     "issue: sample\n"
     "created: '2026-10-08'\n"
-    "status: active\n"
     "assessment:\n"
     "  risk: contained\n"
     "  familiarity: brownfield-mapped\n"
@@ -90,7 +89,7 @@ def _notices(stderr):
 RELEASED = [
     (["approach", "summary"], ["approach", "show"]),
     (["issue", "set-status", "parked", "--reason", "later"],
-     ["issue", "status", "set", "parked", "--reason", "later"]),
+     ["issue", "status", "set", "backlog", "--reason", "later"]),
     (["policy", "review-rules", "--changed-files", "cli/compass"],
      ["review-rule", "list", "--changed-files", "cli/compass"]),
     (["issue", "dashboard", "--check"], ["issue", "dashboard", "render", "--check"]),
@@ -119,7 +118,7 @@ NEW_SPELLINGS = [
      "TEMPLATE: requirements-review.md"),
     (["issue", "migrate"], 0, "nothing to do"),
     (["issue", "migrate", "--config"], 0, "committed generation 1"),
-    (["issue", "status", "set", "parked"], 0, "sample -> parked"),
+    (["issue", "status", "set", "backlog"], 0, "sample -> backlog"),
 ]
 
 

@@ -55,10 +55,10 @@ if action == "touch":
 elif action == "pass_gates":
     manifest.write_text(manifest.read_text().replace("status: pending", "status: pass"))
 elif action == "land":
-    manifest.write_text(manifest.read_text().replace("status: active", "status: landed"))
+    # A session that still writes the word used before 6.0.0.
+    manifest.write_text(manifest.read_text() + "status: landed\n")
 elif action == "close":
-    manifest.write_text(manifest.read_text().replace(
-        "status: active", "status: done\nclose_reason: completed"))
+    manifest.write_text(manifest.read_text() + "status: done\nclose_reason: completed\n")
 elif action == "stop_file":
     (task / "evidence").mkdir(exist_ok=True)
     (task / "evidence" / f"stub-{n}.txt").write_text("progress\n")
@@ -251,7 +251,7 @@ def test_hr_b_the_cycle_ceiling_stops_the_run_unlanded(project):
     assert run["outcome"] == "stopped" and run["cycles"] == 2
     assert "cycle ceiling" in run["stopped_reason"]["reason"]
     assert run["stopped_reason"]["evidence"] == f"{DOCS}/run-1.md"
-    assert _task(project)["status"] != "landed"
+    assert _task(project).get("status") != "done"
     assert "cycle ceiling" in _record(project)
     lint = subprocess.run([sys.executable, str(CLI), "issue", "lint",
                            "--issue", SLUG], cwd=project, capture_output=True,

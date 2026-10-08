@@ -25,6 +25,16 @@ aliases:
     new: [issue, status, set]
     kind: verb
     released_in: v5.6.0
+    # The old positional status word picks the new command, wherever it stands
+    # among the options. `value_flags` take a value, which is not the status.
+    # A word not listed here is passed on to `issue status set` as it is.
+    value_flags: [--issue, --reason]
+    values:
+      active: [issue, status, remove]
+      queued: [issue, status, set, backlog]
+      parked: [issue, status, set, backlog]
+      landed: [issue, status, set, done, --close-reason, completed]
+      abandoned: [issue, status, set, done, --close-reason, not-planned]
   - old: [policy, review-rules]
     new: [review-rule, list]
     kind: verb

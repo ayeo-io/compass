@@ -564,7 +564,9 @@ def test_pd_5_the_archive_is_read_from_the_manifests_of_the_project(tmp_path):
     issues = _has("read_archive")(root)
     assert [i.slug for i in issues] == ["alpha", "broken", "list", "mid", "zeta"]
     assert [i.unreadable for i in issues] == [False, True, True, False, False]
-    assert [i.status for i in issues if not i.unreadable] == ["active", "abandoned", "landed"]
+    # The state is read from the records: no stored status, no records, so
+    # `alpha` is in the backlog; the other two are closed.
+    assert [i.status for i in issues if not i.unreadable] == ["backlog", "done", "done"]
     assert issues[0].config == {"stages": {}} and issues[3].config is None
     assert issues[0].assessment == ASSESSMENT
     assert _has("read_archive")(tmp_path / "nowhere") == []
@@ -592,20 +594,19 @@ def test_pd_6_without_the_option_the_open_section_is_null():
 
 
 def test_pd_6_only_issues_still_in_flight_are_examined_and_listed_by_slug():
-    archive = [_issue("landed-one", status="landed"), _issue("parked-one", status="parked"),
-               _issue("abandoned-one", status="abandoned"), _issue("active-one"),
-               _issue("queued-one", status="queued", assessment=dict(ASSESSMENT, size="small")),
-               _issue("no-status", status=None)]
-    archive[3].status = "active"
+    # `read_archive` gives each issue the state its records show, so a row
+    # carries a state word and an issue in flight stores no status.
+    archive = [_issue("landed-one", status="done"), _issue("parked-one", status="backlog"),
+               _issue("abandoned-one", status="done"), _issue("active-one", status="in-progress"),
+               _issue("queued-one", status="backlog", assessment=dict(ASSESSMENT, size="small")),
+               _issue("no-status", status="ready")]
     document = _diff(_advisory, archive=archive, open=True)
     section = _open(document)
-    # An issue with no stored status is in flight (it has no status once the
-    # records carry the state), so it is examined, and shown as active.
     assert section["examined"] == 4
     assert [i["issue"] for i in section["issues"]] == ["active-one", "no-status",
                                                       "parked-one", "queued-one"]
-    assert [i["status"] for i in section["issues"]] == ["active", "active", "parked",
-                                                       "queued"]
+    assert [i["status"] for i in section["issues"]] == ["in-progress", "ready", "backlog",
+                                                       "backlog"]
     for entry in section["issues"]:
         assert list(entry) == OPEN_KEYS
         assert entry["unresolved"] is None

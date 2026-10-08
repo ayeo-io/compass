@@ -164,10 +164,10 @@ def plan_issue_dir(task_dir):
         # mismatch as promising more, and just as hard to trust afterwards.
         if repoint_spine_references(task_dir, migrated, renamed):
             notes.append("would repoint the manifest at the renamed files")
-        if str(migrated.get("schema_version", "")).split(".")[0] != "2":
+        if str(migrated.get("schema_version", "")).split(".")[0] not in ("2", "3"):
             migrated["schema_version"] = "2.0"
         if migrated != before:
-            notes.append("would rewrite the manifest to schema 2.0")
+            notes.append("would rewrite the manifest in the current words, schema 3.0")
     notes.extend(plan_relocations(task_dir))
     return notes
 
@@ -706,7 +706,7 @@ def migrate_issue_dir(task_dir):
         # there fails `compass check` on an issue nothing is wrong with.
         if repoint_spine_references(task_dir, migrated, renamed):
             notes.append("manifest references -> the renamed files")
-        if str(migrated.get("schema_version", "")).split(".")[0] != "2":
+        if str(migrated.get("schema_version", "")).split(".")[0] not in ("2", "3"):
             migrated["schema_version"] = "2.0"
         if migrated != before:
             # Serialise first, then replace atomically. `open(manifest, "w")`

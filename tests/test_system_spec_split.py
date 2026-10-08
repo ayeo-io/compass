@@ -81,7 +81,7 @@ def test_an_issue_is_one_heading_and_each_scenario_one_line(tmp_path):
     ])
     derive_system_spec(str(tmp_path))
     spec = (tmp_path / "docs" / "system-spec.md").read_text()
-    assert "### alpha (landed 2026-05-25)\n" in spec
+    assert "### alpha (completed 2026-05-25)\n" in spec
     assert _entries(spec) == ["- `TRC-001` first behaviour",
                               "- `TRC-002` second behaviour"]
 
@@ -107,11 +107,13 @@ def test_the_committed_spec_lists_every_non_superseded_scenario_of_its_issues():
     work = ROOT / ".compass" / "work"
     spec = (ROOT / "docs" / "system-spec.md").read_text(encoding="utf-8")
     headings = [ln for ln in spec.splitlines() if ln.startswith("### ")]
-    assert headings and all(re.fullmatch(r"### \S+ \(landed [0-9-]*\)", h)
+    # A spec derived before 6.0.0 says "landed"; the next derivation says
+    # "completed". Both name an issue.
+    assert headings and all(re.fullmatch(r"### \S+ \((?:landed|completed) [0-9-]*\)", h)
                             for h in headings), "an issue is not one heading"
     expected = 0
     for heading in headings:
-        manifest = work / heading[4:].split(" (landed ")[0] / "manifest.yml"
+        manifest = work / heading[4:].split(" (")[0] / "manifest.yml"
         if not manifest.is_file():
             return  # the local archive of issues lacks one, so cannot count
         scenarios = (yaml.safe_load(manifest.read_text(encoding="utf-8")) or {}).get(

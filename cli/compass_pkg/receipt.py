@@ -238,10 +238,10 @@ def _receipt_render(task, slug, route_readings, gate_requirements=None,
     """
     lines = []
     schema_version = str(task.get("schema_version") or "")
-    # 2.0 is the current schema; anything else (or absent) is legacy - 1.x
-    # manifests are readable by normalisation but reported as legacy. ADR-006:
-    # render meaningfully on pre-feature task.ymls, do not crash.
-    is_legacy = not schema_version.startswith("2.")
+    # Majors 2 and 3 are current schemas; anything else (or absent) is legacy -
+    # 1.x manifests are readable by normalisation but reported as legacy.
+    # ADR-006: render meaningfully on pre-feature task.ymls, do not crash.
+    is_legacy = not schema_version.startswith(("2.", "3."))
     # status: in 1.0 there is no status field - those issues are treated as
     # active by the rest of the CLI, and the receipt does the same. Honesty:
     # a legacy issue with no status cannot be reported as cleanly landed.

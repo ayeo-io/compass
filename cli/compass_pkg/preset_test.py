@@ -38,6 +38,7 @@ class FixtureResult:
     status: str                 # "pass", "fail" or "error"
     mismatches: list = field(default_factory=list)
     message: object = None
+    group: object = None        # the folder below compass-fixtures/, or None
 
 
 @dataclass
@@ -86,26 +87,48 @@ def resolve(chain):
     return config, tuple(sorted(k for k, v in on.items() if v is True))
 
 
+def _walk(base, rel, found, problems):
+    """Collect `(group, file)` pairs from the folder `rel` below `base`, and
+    walk the folders in it. A folder is a group named by its path below
+    `compass-fixtures/`; a fixture directly in `compass-fixtures/` has no
+    group. What cannot be read as a fixture is a problem, so a fixture that was
+    never run cannot pass unseen: a `.yaml` file, a linked folder (not followed,
+    so a link cannot lead outside the preset) and a folder with nothing in it."""
+    here = os.path.join(base, rel) if rel else base
+    shown = f"{FIXTURE_DIR}/{rel}" if rel else FIXTURE_DIR
+    holds = False
+    for name in sorted(os.listdir(here)):
+        if name.startswith("."):
+            continue
+        path = os.path.join(here, name)
+        inside = f"{rel}/{name}" if rel else name
+        if os.path.islink(path) and os.path.isdir(path):
+            problems.append(f"{FIXTURE_DIR}/{inside}: a link to a folder is not followed; "
+                            f"put the fixtures in a folder of {FIXTURE_DIR}/")
+            holds = True
+        elif os.path.isdir(path):
+            holds = True
+            _walk(base, inside, found, problems)
+        elif name.endswith(".yaml"):
+            problems.append(f"{FIXTURE_DIR}/{inside}: not read; fixture files end in "
+                            f"{FIXTURE_SUFFIX}")
+        elif name.endswith(FIXTURE_SUFFIX) and os.path.isfile(path):
+            found.append((rel or None, inside))
+            holds = True
+    if rel and not holds:
+        problems.append(f"{shown}: a group with no fixture file, so nothing in it runs")
+
+
 def _fixture_files(folder, problems):
-    """The fixture file names in order. What cannot be read as a fixture is a
-    problem, so a fixture that was never run cannot pass unseen: a folder
-    (fixture groups are not read yet) and a `.yaml` file."""
+    """`(group, file)` pairs in order: the fixtures directly in
+    `compass-fixtures/` first, then each group by name, each by file name.
+    `file` is the path below `compass-fixtures/`."""
     base = os.path.join(folder, FIXTURE_DIR)
     if not os.path.isdir(base):
         return []
     found = []
-    for name in sorted(os.listdir(base)):
-        if name.startswith("."):
-            continue
-        if os.path.isdir(os.path.join(base, name)):
-            problems.append(f"{FIXTURE_DIR}/{name}: a folder of fixtures is not read yet; "
-                            f"keep the fixtures directly in {FIXTURE_DIR}/")
-        elif name.endswith(".yaml"):
-            problems.append(f"{FIXTURE_DIR}/{name}: not read; fixture files end in "
-                            f"{FIXTURE_SUFFIX}")
-        elif name.endswith(FIXTURE_SUFFIX) and os.path.isfile(os.path.join(base, name)):
-            found.append(name)
-    return found
+    _walk(base, "", found, problems)
+    return sorted(found, key=lambda pair: (pair[0] or "", pair[1]))
 
 
 def _format_problem(doc):
@@ -139,7 +162,7 @@ def _format_problem(doc):
 
 def _run_fixture(folder, name, config, capabilities):
     path = os.path.join(folder, FIXTURE_DIR, name)
-    stem = name[:-len(FIXTURE_SUFFIX)]
+    stem = os.path.basename(name)[:-len(FIXTURE_SUFFIX)]
     try:
         doc = load_yaml_strict(path)
     except StrictYamlError as exc:
@@ -200,13 +223,29 @@ def run(folder, fetch=False):
     if chain is None:
         return result
     config, capabilities = resolve(chain)
-    for name in _fixture_files(folder, result.problems):
-        result.fixtures.append(_run_fixture(folder, name, config, capabilities))
+    for group, name in _fixture_files(folder, result.problems):
+        ran = _run_fixture(folder, name, config, capabilities)
+        ran.group, ran.file = group, os.path.basename(name)
+        result.fixtures.append(ran)
     if not result.fixtures:
         result.problems.insert(0, f"no fixtures: {FIXTURE_DIR}/ holds no {FIXTURE_SUFFIX} "
                                f"file, so nothing shows what the preset computes")
     result.fixtures_run = True
     return result
+
+
+def group_counts(result):
+    """One `{group, fixtures, passed, failed}` object for each group that holds
+    a fixture, by group name. A fixture outside every group is in `totals` only."""
+    counts = {}
+    for f in result.fixtures:
+        if f.group is None:
+            continue
+        row = counts.setdefault(f.group, {"group": f.group, "fixtures": 0, "passed": 0,
+                                          "failed": 0})
+        row["fixtures"] += 1
+        row["passed" if f.status == "pass" else "failed"] += 1
+    return [counts[name] for name in sorted(counts)]
 
 
 def passed(result):
@@ -224,12 +263,15 @@ def text(result):
         return lines + ["  fixtures: not run (the lint failed)"]
     lines.append(f"  fixtures: {count} run, {won} passed, {count - won} failed")
     for f in result.fixtures:
-        lines.append(f"  - {f.status.upper()} {f.name} ({FIXTURE_DIR}/{f.file})")
+        where = f"{FIXTURE_DIR}/{f.group}/{f.file}" if f.group else f"{FIXTURE_DIR}/{f.file}"
+        lines.append(f"  - {f.status.upper()} {f.name} ({where})")
         for m in f.mismatches:
             lines.append(f"      {m['field']}: expected {_show(m['expected'])}, "
                          f"actual {_show(m['actual'])}")
         if f.message:
             lines.append(f"      {f.message}")
+    lines += [f"  group {g['group']}: {g['fixtures']} run, {g['passed']} passed, "
+              f"{g['failed']} failed" for g in group_counts(result)]
     lines += [f"  problem: {p}" for p in result.problems]
     return lines
 
@@ -251,7 +293,8 @@ def report_json(result):
         "fixtures_run": result.fixtures_run,
         "totals": {"fixtures": count, "passed": won, "failed": count - won},
         "fixtures": [{"file": f.file, "name": f.name, "status": f.status,
-                      "mismatches": f.mismatches, "message": f.message}
+                      "mismatches": f.mismatches, "message": f.message, "group": f.group}
                      for f in result.fixtures],
         "problems": result.problems,
+        "groups": group_counts(result),
     }

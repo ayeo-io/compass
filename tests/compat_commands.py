@@ -260,7 +260,16 @@ def _with_failing_preset(root: Path, env: dict) -> None:
         "approach: quick-fix", "approach: full"), encoding="utf-8")
 
 
+def _with_grouped_preset(root: Path, env: dict) -> None:
+    _with_preset(root, env)
+    fixtures = root / "team-preset" / "compass-fixtures"
+    (fixtures / "meets" / "banking").mkdir(parents=True)
+    (fixtures / "meets" / "banking" / "example.yml").write_text(
+        (fixtures / "example.yml").read_text(encoding="utf-8"), encoding="utf-8")
+
+
 STATES = {
+    "with-grouped-preset": _with_grouped_preset,
     "with-preset": _with_preset,
     "with-failing-preset": _with_failing_preset,
     "with-git-parent-no-sha": _with_git_parent_no_sha,

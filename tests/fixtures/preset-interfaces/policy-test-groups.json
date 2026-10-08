@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "preset": "preset",
+  "result": "fail",
+  "lint": {
+    "ok": true,
+    "stopped_after": null,
+    "findings": []
+  },
+  "fixtures_run": true,
+  "totals": {
+    "fixtures": 4,
+    "passed": 3,
+    "failed": 1
+  },
+  "fixtures": [
+    {
+      "file": "a-top.yml",
+      "name": "a-top",
+      "status": "pass",
+      "mismatches": [],
+      "message": null,
+      "group": null
+    },
+    {
+      "file": "one.yml",
+      "name": "one",
+      "status": "pass",
+      "mismatches": [],
+      "message": null,
+      "group": "meets/banking"
+    },
+    {
+      "file": "two.yml",
+      "name": "two",
+      "status": "fail",
+      "mismatches": [
+        {
+          "field": "approach",
+          "expected": "full",
+          "actual": "quick-fix"
+        }
+      ],
+      "message": null,
+      "group": "meets/banking"
+    },
+    {
+      "file": "one.yml",
+      "name": "one",
+      "status": "pass",
+      "mismatches": [],
+      "message": null,
+      "group": "meets/health"
+    }
+  ],
+  "problems": [],
+  "groups": [
+    {
+      "group": "meets/banking",
+      "fixtures": 2,
+      "passed": 1,
+      "failed": 1
+    },
+    {
+      "group": "meets/health",
+      "fixtures": 1,
+      "passed": 1,
+      "failed": 0
+    }
+  ]
+}

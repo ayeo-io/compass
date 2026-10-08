@@ -18,10 +18,11 @@ entries share.
 What this does not check yet: whether an entry is complete enough to add
 (the merge), and whether a value loosens its parent (the classifier).
 """
-# DEPENDENCY: standard library (re); compass_pkg.catalogue_spec;
+# DEPENDENCY: standard library (datetime, re); compass_pkg.catalogue_spec;
 # compass_pkg.vocabulary.
 from __future__ import annotations
 
+import datetime
 import re
 
 from compass_pkg import catalogue_spec as spec
@@ -76,6 +77,29 @@ def _allowed_top_level(layer):
     return keys
 
 
+EXTENDS_MAP_KEYS = ("from", "approved_by", "approved_on")
+
+
+def _check_extends_map(extends):
+    """The problems in the map form of `extends:`. The string form is checked
+    where the parent is resolved, so a string is not looked at here. The map
+    holds `from` (text, required) and the approval of a parent that loosens
+    the default: `approved_by` (text) and `approved_on` (text or a date)."""
+    if not isinstance(extends, dict):
+        return []
+    errors = [f"extends.{key}: not a key of the map form; it holds "
+              f"{', '.join(EXTENDS_MAP_KEYS)}" for key in extends if key not in EXTENDS_MAP_KEYS]
+    if not isinstance(extends.get("from"), str):
+        errors.append("extends.from: the map form needs the parent as text, written as the "
+                      "string form is")
+    if "approved_by" in extends and not isinstance(extends["approved_by"], str):
+        errors.append("extends.approved_by: expected text")
+    if "approved_on" in extends and not isinstance(extends["approved_on"],
+                                                   (str, datetime.date)):
+        errors.append("extends.approved_on: expected a date")
+    return errors
+
+
 def _check_top_values(doc):
     errors = []
     for key, allowed in _SETTINGS_ENUMS.items():
@@ -92,6 +116,10 @@ def _check_top_values(doc):
                                   f"capabilities are {', '.join(spec.CAPABILITIES)}")
                 elif not isinstance(value, bool):
                     errors.append(f"capabilities.{name}: expected true or false")
+    errors += _check_extends_map(doc.get("extends"))
+    if "preset" in doc and not isinstance(doc["preset"], dict):
+        errors.append("preset: expected a mapping; Compass reserves the key and reads "
+                      "nothing from it")
     approvers = doc.get("approvers")
     if approvers is not None:
         if not isinstance(approvers, dict):

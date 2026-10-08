@@ -416,6 +416,24 @@ entries:
   argv: ["policy", "init-preset", "team-preset", "--owner", "acme-team"]
   exit: 1
   stdout_contains: "refused"
+# Added on purpose by preset-interfaces: a folder inside compass-fixtures/ is a
+# fixture group, so its fixtures run and the text report counts the group. 5.6.0
+# exited 2 on the unknown verb. policy-test-init-preset reported such a folder
+# as a problem and exited 1.
+- id: policy-test-groups
+  project: with-grouped-preset
+  argv: ["policy", "test", "team-preset"]
+  exit: 0
+  stdout_contains: "group meets/banking: 1 run, 1 passed, 0 failed"
+# Added on purpose by preset-interfaces: a git parent is accepted as a policy
+# diff reference, and with --offline an uncached one is refused with exit 2
+# because nothing may be fetched. 5.6.0 also exited 2, for the unknown verb, so
+# this guards the refusal. The run that reads a cached parent is in
+# tests/test_preset_interfaces.py, which needs a local remote.
+- id: policy-diff-git-parent-offline-uncached
+  project: initialised
+  argv: ["policy", "diff", "default@6", "github:acme/compass-banking@1.2.0#aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "--offline"]
+  exit: 2
 - id: retro-plain
   project: quick-fix-started
   argv: ["retro"]

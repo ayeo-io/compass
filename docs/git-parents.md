@@ -6,7 +6,8 @@ spelling, how a parent is fetched and cached, what Compass refuses and why, and 
 issue records. From 6.0.0 the spelling, the finding codes, the cache layout and the
 `seen.yml` and `versions.yml` entries are a public contract.
 
-The code is `cli/compass_pkg/parents.py`. `cli/compass_pkg/policy_lint.py` calls it when it
+The code is `cli/compass_pkg/parents.py` and, for the stored classification,
+`cli/compass_pkg/chain_class.py`. `cli/compass_pkg/policy_lint.py` calls `parents.py` when it
 loads the project, and `cli/compass_pkg/effective.py` stores the result in a generation.
 
 ## The spelling
@@ -26,7 +27,11 @@ The map form works too. `from:` holds the same text:
 ```yaml
 extends:
   from: github:acme/compass-banking@1.2.0#3f9c1a2e5b7d4c6a8e0f1b2c3d4e5f6a7b8c9d0e
+  approved_by: acme-team
+  approved_on: "2026-10-08"
 ```
+
+The map holds `from` (required text), `approved_by` (text) and `approved_on` (text or a date). The two approval keys are read and kept but nothing checks them yet. Any other key, or a `from` that is not text, is `L-SCHEMA`. A bad spelling in `from` has the code the string form gives. The layer digest includes the whole `extends:` value, so the two forms of one parent give the project layer a different digest and the parent layer the same one.
 
 Compass refuses every other spelling with `L-PARENT-FORM` before it runs git. That covers
 spaces, shell characters, `..`, a leading `-` in any part, an `https://` URL, an uppercase
@@ -115,6 +120,8 @@ A parent is data. Compass reads its `compass.yml` as strict YAML and runs nothin
 
 A parent's own `extends:` may name `compass:default@<major>` or another git parent, in the same spelling. The settings keys are `autonomy`, `adoption`, `allow_project_commands`, `enforcement`, `record`, `project`, `prices`, `multiagent`, `governance_drift` and `preset_index`. A parent may hold `schema`, `extends`, `owner`, `approvers`, `capabilities`, `preset` and the catalogues, and nothing else. This holds for every parent in a chain.
 
+`preset` is reserved for a description of a published preset. It must be a mapping and may hold anything. Compass reads nothing from it, and the layer digest leaves it out, so a change of description does not look like a change of configuration. `preset_index` is a settings key, so only the project's own file may hold it.
+
 ## Chains
 
 A parent can name a git parent, which can name another. A chain holds at most three git parents, to a depth of three: the project's direct parent, its parent and that parent's parent. The shipped default at the root is not counted, because it is the CLI's own version and not a fetched parent.
@@ -136,10 +143,38 @@ A waiver in a git parent is checked against the parent's own `owner`, or the nam
 ```yaml
 parents:
   - { ref: "compass:default@6", version: 6.0.0, digest: sha256:..., source: shipped }
-  - { ref: "github:acme/compass-banking@1.2.0", sha: 3f9c1a2e..., version: 1.2.0, digest: sha256:..., source: git }
+  - ref: "github:acme/compass-banking@1.2.0"
+    sha: 3f9c1a2e...
+    version: 1.2.0
+    digest: sha256:...
+    source: git
+    classification:
+      against: "compass:default@6"
+      result: loosening
+      points: 4608
+      raw_points: 51840
+      complete: true
+      first_looser: { assessment: { risk: trivial, ... }, summary: "at risk trivial, ...: approaches.stages (define) is ..." }
 ```
 
 `digest` is the digest of the parent's layer keys. An issue with a stored generation keeps the parent it ran against: moving the pin in `compass.yml` changes nothing for it until a new generation is committed.
+
+### The stored classification
+
+Each git parent entry holds the classification of the chain from the shipped default through that parent, compared with the shipped default alone. A chain of three parents stores three blocks, so the nearest parent's block is the whole chain and the others are the chain up to them. The shipped entry has no block. The keys are in this order:
+
+| Key | Value |
+|---|---|
+| `against` | The reference of the shipped entry, such as `compass:default@6` |
+| `result` | `equivalent`, `tightening`, `loosening` or `incomparable`, as the classifier gives it (ADR-037) |
+| `points` | The grouped assessments the classifier compared |
+| `raw_points` | The assessments before grouping |
+| `complete` | `false` when the classifier stopped before the whole grid (more than eight named labels) |
+| `first_looser` | The first assessment at which the chain owes less, as `assessment` and `summary`, or `null` when none does |
+
+The result is the one before any waiver. A parent's own waivers were approved by the parent's maintainers, and that approval means nothing to a project that extends it, so a waiver does not change the stored `result`. A later check can read the block without running the classifier again.
+
+Only a commit computes the blocks, with one scan of the grid for each git parent. Reading the live configuration (`policy effective`) does not. The function is `classify_chain` in `cli/compass_pkg/chain_class.py`.
 
 ## Finding codes
 

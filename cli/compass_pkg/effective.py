@@ -20,7 +20,7 @@ the one place the existing modules reach the store through
 (`commit_generation`, `record_check_results`, `generation_report`).
 """
 # DEPENDENCY: standard library (dataclasses, datetime, os, subprocess);
-# compass_pkg.atomic_io, check_registry, core, generation, layers,
+# compass_pkg.atomic_io, chain_class, check_registry, core, generation, layers,
 # legacy_adapter, locks, merge, obligations, parents, policy_lint, project_settings, waivers.
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ import os
 import subprocess
 from dataclasses import dataclass, field
 
-from compass_pkg import (generation, layers, legacy_adapter, locks, merge, parents,
+from compass_pkg import (chain_class, generation, layers, legacy_adapter, locks, merge, parents,
                          policy_lint, project_settings, waivers)
 from compass_pkg import obligations
 from compass_pkg import catalogue_spec as spec
@@ -277,7 +277,8 @@ def _approval_records(manifest, root, task_dir, waiver_records):
     return out
 
 
-def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False, fetch=False):
+def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False, fetch=False,
+                 classify_parents=False):
     """The `generation.Resolution` of the project's chain now: the shipped
     default (or the project's legacy copies), the project's `compass.yml` and,
     for an issue, its manifest's `config:`. The result carries `validate`, which
@@ -285,7 +286,11 @@ def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False, 
     calls it before it writes, so a generation never stores such a chain. With
     `validate=True` it is called here too. A chain that does not load or merge
     raises `CompassError` at once. A git parent in the project's `extends:` is
-    read from the cache; only `fetch=True` fetches an uncached pin."""
+    read from the cache; only `fetch=True` fetches an uncached pin. With
+    `classify_parents` each git parent's entry in `versions` also holds the
+    classification of the chain through it against the shipped default, before
+    any waiver. That is a scan of the grid for each parent, so only a commit
+    asks for it."""
     root = os.path.abspath(root)
     counts = project_settings.compass_yml_counts(root)
     loaded = policy_lint.load_layers(root, manifest=manifest, read_project=counts, fetch=fetch)
@@ -343,14 +348,18 @@ def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False, 
         "evidence_types": _evidence_types(root, legacy),
     }
     major = str(meta.get("version", "")).split(".")[0]
+    root_ref = f"compass:{meta['id']}@{major}" if not legacy else "legacy"
+    held = (chain_class.classify_chain(parent, [p.layer for p in loaded.git_parents], root_ref)
+            if classify_parents else [])
     versions = {
         "resolver": generation.RESOLVER_VERSION,
         "cli": COMPASS_VERSION,
-        "parents": [{"ref": f"compass:{meta['id']}@{major}" if not legacy else "legacy",
+        "parents": [{"ref": root_ref,
                      "version": meta.get("version", ""), "digest": parent.digest,
                      "source": "legacy" if legacy else "shipped"}]
                    + [{"ref": p.ref, "sha": p.sha, "version": p.version, "digest": p.digest,
-                       "source": "git"} for p in loaded.git_parents],
+                       "source": "git", **({"classification": held[i]} if held else {})}
+                      for i, p in enumerate(loaded.git_parents)],
         "project": ({"path": layers.PROJECT_FILE, "digest": project_digest,
                      "git_blob": _git_blob(project_path)} if loaded.project else None),
         "issue_overlay_digest": loaded.issue.digest if loaded.issue else None,
@@ -443,7 +452,7 @@ def commit_generation(task_dir, manifest, invalidated=None, render=None):
     task_dir = os.path.abspath(os.fspath(task_dir))
     slug = os.path.basename(task_dir)
     resolution = resolve_live(layers.find_project_root(task_dir), manifest, slug, task_dir,
-                              fetch=not parents.offline())
+                              fetch=not parents.offline(), classify_parents=True)
     wrapped = None
     if render is not None:
         # `render(text, gate_requirements)` sees the types the generation being

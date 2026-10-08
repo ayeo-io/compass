@@ -16,7 +16,8 @@ changes none of the modules it calls.
 # load_yaml), legacy_adapter (adapt), manifest (the issue statuses), merge, the
 # obligations module (its function of that name, Refused, COMPARED_FACTS,
 # assessment_vocabulary), policy_lint (load_parent) and waivers (find,
-# describe, recheck). Only compass_pkg.policy_cmd imports it.
+# describe, recheck) and parents (resolve_chain, ParentError). Only
+# compass_pkg.policy_cmd imports it.
 from __future__ import annotations
 
 import dataclasses
@@ -30,7 +31,7 @@ from dataclasses import dataclass, field
 
 from compass_pkg import catalogue_check, classify, legacy_adapter, manifest, merge
 from compass_pkg import catalogue_spec as spec
-from compass_pkg import obligations, policy_lint, waivers
+from compass_pkg import obligations, parents, policy_lint, waivers
 from compass_pkg.atomic_io import StrictYamlError, digest, load_yaml_strict
 from compass_pkg.core import CompassError, load_yaml, manifest_path
 
@@ -50,7 +51,8 @@ class Config:
     """One side of a comparison: the resolved configuration, the capability
     switches that are on, and where it came from. `ref` is the label (never a
     path outside the project) and `kind` is `default`, `project`, `legacy`,
-    `git` or `file`. `default_version` is the version of the shipped default
+    `git`, `file` or `parent` (a git parent written as in `extends:`).
+    `default_version` is the version of the shipped default
     underneath, or None for `legacy`."""
     ref: str
     kind: str
@@ -193,10 +195,41 @@ def _git_ref(ref, root):
         return _load_file(path, ref, "git")
 
 
-def resolve_ref(ref, root, cwd=None):
+def _parent_ref(ref, root, fetch):
+    """The shipped default with the git parent `ref` and the parents it
+    extends over it, resolved. `ref` is written as in `extends:`. A parent is
+    data, so each layer must pass the parent layer check before it merges (no
+    settings key, no `unlock:`). Nothing the parent carries is run. An uncached
+    pin is fetched into the project's cache only when `fetch` is true."""
+    try:
+        chain = parents.resolve_chain(root, ref, fetch=fetch)
+    except parents.ParentError as exc:
+        raise CompassError(f"{ref}: {exc}")
+    shipped, meta, config, provenance = _shipped()
+    documents = [shipped.doc]
+    for found in chain:
+        layer = found.layer
+        problems = catalogue_check.check_layer(layer.doc, "parent")
+        if problems:
+            raise CompassError(f"{ref}: {layer.name}: {problems[0]} ({len(problems)} "
+                               f"problem(s); run compass policy lint)")
+        try:
+            config, provenance = merge.apply(config, layer.doc, "parent", layer.name,
+                                             provenance)
+        except merge.MergeError as exc:
+            said = "; ".join(f"{code} {where}: {message}" for code, where, message in exc.errors)
+            raise CompassError(f"{ref}: {said} (run compass policy lint)")
+        documents.append(layer.doc)
+    return Config(ref, "parent", config, _on(documents), provenance, meta.get("version"))
+
+
+def resolve_ref(ref, root, cwd=None, fetch=False):
     """The `Config` a reference names, or a `CompassError` that names it.
-    The keywords win over a file of the same name."""
+    The keywords win over a file of the same name. `fetch` lets a git parent
+    that is not cached be fetched."""
     root = os.fspath(root)
+    if ref.startswith("github:"):
+        return _parent_ref(ref, root, fetch)
     if ref in (DEFAULT_REF, f"compass:{DEFAULT_REF}") or ref.startswith(
             ("default@", f"compass:{DEFAULT_REF}@")):
         return _default_ref(ref)
@@ -216,7 +249,7 @@ def resolve_ref(ref, root, cwd=None):
         return _load_file(path, f"file:{_shown(path, root)}", "file")
     raise CompassError(f"'{ref}' is not a configuration reference and no such file "
                        f"exists; use default@{SHIPPED_MAJOR}, project, legacy, "
-                       f"git:<revision> or a path to a compass.yml")
+                       f"git:<revision>, a github: git parent or a path to a compass.yml")
 
 
 # --- one assessment under both sides ------------------------------------------------------
@@ -651,7 +684,7 @@ def diff_text(document):
 # `classification` value has the classifier's own shape (`classify.JSON_SHAPE`),
 # which `classify.json_shape_errors` checks.
 SET_NAMES = ("grid", "labels", "archive")
-CONFIG_KINDS = ("default", "project", "legacy", "git", "file")
+CONFIG_KINDS = ("default", "project", "legacy", "git", "file", "parent")
 _CONFIG_SHAPE = {"ref": "string", "kind": ("one of", CONFIG_KINDS),
                  "default_version": ("or null", "string"), "digest": "string",
                  "capabilities": ["string"]}

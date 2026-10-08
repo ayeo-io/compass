@@ -98,8 +98,9 @@ def run_policy_migrate(args):
 def run_policy_diff(args):
     root = layers.find_project_root(os.getcwd())
     first, second = replay.default_refs(getattr(args, "refs", None) or [])
-    a = replay.resolve_ref(first, root, cwd=os.getcwd())
-    b = replay.resolve_ref(second, root, cwd=os.getcwd())
+    fetch = _may_fetch(args)
+    a = replay.resolve_ref(first, root, cwd=os.getcwd(), fetch=fetch)
+    b = replay.resolve_ref(second, root, cwd=os.getcwd(), fetch=fetch)
     document = replay.diff(a, b, replay.read_archive(root), open=bool(args.open))
     _emit(args, document, replay.diff_text(document))
     return 1 if args.exit_code and document["differs"] else 0
@@ -152,9 +153,11 @@ def register(pls):
     pld = pls.add_parser("diff", help="compare two configurations by classification "
                          "and by replaying assessments under both")
     pld.add_argument("refs", nargs="*", metavar="REF",
-                     help="default@6, project, legacy, git:<revision> or a path to a "
+                     help="default@6, project, legacy, git:<revision>, a git parent written "
+                     "as in extends: (github:<owner>/<repo>@<ref>#<sha>) or a path to a "
                      "compass.yml. Two compare A with B, one compares the project with "
                      "it, none compares the project file at git HEAD with the working file")
+    pld.add_argument("--offline", action="store_true", help=OFFLINE_HELP)
     pld.add_argument("--open", action="store_true",
                      help="also run each open issue (active, queued or parked) over both, "
                      "and list the issue waivers that would need re-approval")

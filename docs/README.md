@@ -67,7 +67,7 @@ same commit.
 | `cli/compass_pkg/generation.py`, `cli/compass_pkg/effective.py`, `scripts/bench-evaluate.py` | `docs/generation-store.md` |
 | `cli/compass_pkg/replay.py` | `docs/policy-diff.md` |
 | `cli/compass_pkg/policy_migrate.py`, `cli/compass_pkg/shipped_releases.py`, `scripts/generate-shipped-releases.py`, `governance/shipped-releases.yml`, `governance/shipped-releases.tar.xz` | `docs/policy-migrate.md` |
-| `cli/compass_pkg/parents.py` | `docs/git-parents.md` |
+| `cli/compass_pkg/parents.py`, `cli/compass_pkg/chain_class.py` | `docs/git-parents.md` |
 | `cli/compass_pkg/preset_test.py`, `cli/compass_pkg/preset_init.py` | `docs/policy-test.md` |
 | `cli/compass_pkg/waivers.py` | `architecture/decisions/ADR-039-waivers-locks-and-unlocks.md` |
 | `cli/compass_pkg/layers.py`, `cli/compass_pkg/merge.py` | `architecture/decisions/ADR-035-delivery-approaches-stages-and-modes-are-configuration.md` |

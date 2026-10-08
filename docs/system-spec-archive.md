@@ -13615,3 +13615,94 @@
 - **Intent:** `INT-1`
 - **Source issue:** `issue-layer-at-its-point`
 - **Landed:** 2026-10-08
+
+### With the capability off no reader shows a list _(archived)_
+
+- **Scenario id:** `EE-1`
+- **Intent:** `E2.S2.01`
+- **Source issue:** `entry-exit-evaluation`
+- **Landed:** 2026-10-08
+
+### The receipt shows each list and its state _(archived)_
+
+- **Scenario id:** `EE-10`
+- **Intent:** `E2.S2.01`
+- **Source issue:** `entry-exit-evaluation`
+- **Landed:** 2026-10-08
+
+### The existing Definition of Done check keeps running _(archived)_
+
+- **Scenario id:** `EE-11`
+- **Intent:** `E2.S2.01`
+- **Source issue:** `entry-exit-evaluation`
+- **Landed:** 2026-10-08
+
+### The preset, help text and owning doc describe the lists _(archived)_
+
+- **Scenario id:** `EE-12`
+- **Intent:** `E2.S2.01`
+- **Source issue:** `entry-exit-evaluation`
+- **Landed:** 2026-10-08
+
+### A project stage list and an unknown check are handled _(archived)_
+
+- **Scenario id:** `EE-13`
+- **Intent:** `E2.S2.01`
+- **Source issue:** `entry-exit-evaluation`
+- **Landed:** 2026-10-08
+
+### The Definition of Done is not owed by an approach that does not ship _(archived)_
+
+- **Scenario id:** `EE-2`
+- **Intent:** `E2.S2.01`
+- **Source issue:** `entry-exit-evaluation`
+- **Landed:** 2026-10-08
+
+### A human check is a tick in the issue's checklist _(archived)_
+
+- **Scenario id:** `EE-3`
+- **Intent:** `E2.S2.01`
+- **Source issue:** `entry-exit-evaluation`
+- **Landed:** 2026-10-08
+
+### A skipped list gives the verdict on_skipped names _(archived)_
+
+- **Scenario id:** `EE-4`
+- **Intent:** `E2.S2.01`
+- **Source issue:** `entry-exit-evaluation`
+- **Landed:** 2026-10-08
+
+### A list is due by the current stage _(archived)_
+
+- **Scenario id:** `EE-5`
+- **Intent:** `E2.S2.01`
+- **Source issue:** `entry-exit-evaluation`
+- **Landed:** 2026-10-08
+
+### A deterministic check in a list runs its implementation _(archived)_
+
+- **Scenario id:** `EE-6`
+- **Intent:** `E2.S2.01`
+- **Source issue:** `entry-exit-evaluation`
+- **Landed:** 2026-10-08
+
+### Kinds this increment does not evaluate fail closed; advisory does not fail _(archived)_
+
+- **Scenario id:** `EE-7`
+- **Intent:** `E2.S2.01`
+- **Source issue:** `entry-exit-evaluation`
+- **Landed:** 2026-10-08
+
+### compass check reports and counts the list rows _(archived)_
+
+- **Scenario id:** `EE-8`
+- **Intent:** `E2.S2.01`
+- **Source issue:** `entry-exit-evaluation`
+- **Landed:** 2026-10-08
+
+### compass next names the unmet entry checks _(archived)_
+
+- **Scenario id:** `EE-9`
+- **Intent:** `E2.S2.01`
+- **Source issue:** `entry-exit-evaluation`
+- **Landed:** 2026-10-08

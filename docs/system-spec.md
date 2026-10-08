@@ -36,6 +36,13 @@
 - **Source issue:** `stable-ids`
 - **Landed:** 2026-10-07
 
+### A check whose when does not match is not listed
+
+- **Scenario id:** `EE-14`
+- **Intent:** `E2.S2.01`
+- **Source issue:** `entry-exit-evaluation`
+- **Landed:** 2026-10-08
+
 ### the guard can fail on each new surface
 
 - **Scenario id:** `SS-4`
@@ -353,4 +360,4 @@
 
 ---
 
-1944 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1957 superseded scenario(s) are in `docs/system-spec-archive.md`.

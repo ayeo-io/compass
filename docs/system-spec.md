@@ -50,11 +50,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a route pick that is mixed at the issue's own assessment, When it is refused, Then the refusal names every looser or incomparable field
+### Given a scenario whose declared test id is wrong, when compass scenario tests names resolving tests, then the manifest declares them
 
-- **Scenario id:** `IP-9`
+- **Scenario id:** `TRC-001`
 - **Intent:** `INT-1`
-- **Source issue:** `issue-layer-at-its-point`
+- **Source issue:** `scenario-tests-verb`
 - **Landed:** 2026-10-08
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -353,4 +353,4 @@
 
 ---
 
-1944 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1945 superseded scenario(s) are in `docs/system-spec-archive.md`.

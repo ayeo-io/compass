@@ -13609,6 +13609,13 @@
 - **Source issue:** `issue-layer-at-its-point`
 - **Landed:** 2026-10-08
 
+### Given a route pick that is mixed at the issue's own assessment, When it is refused, Then the refusal names every looser or incomparable field _(archived)_
+
+- **Scenario id:** `IP-9`
+- **Intent:** `INT-1`
+- **Source issue:** `issue-layer-at-its-point`
+- **Landed:** 2026-10-08
+
 ### Given a delivery issue under the shipped default, When it configures --route regular on a quick-fix assessment, Then the proposal is accepted because the layer is judged at the issue's own assessment _(archived)_
 
 - **Scenario id:** `TRC-001`

@@ -304,7 +304,7 @@ detected, and the corpus is small (two cases for each check at first).
 
 **An approval of a waiver is a name and a date, and is not authenticated.** A waiver that loosens the shipped default carries `approved_by` and, for a
 project waiver, `approved_on`. Lint checks a project waiver's approver against the parent's
-`approvers.project-waiver` list, or the owner if the list is empty, and that an issue waiver's
+`approvers.project-waiver` list, or the owner when the parent sets no such list (an empty list lets nobody approve), and that an issue waiver's
 approval is a record in the issue's evidence. It cannot check that the person
 named gave the approval. Anyone who can edit `compass.yml` can write any name
 and date. Repository permissions and review of the pull request that changes

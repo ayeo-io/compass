@@ -92,12 +92,14 @@ class Report:
 @dataclass
 class Loaded:
     """What `load_layers` read: the chain, the parent's identity, the issue's
-    evidence registry and the findings of a layer that did not load."""
+    evidence registry, the issue's assessment (the point its own layer is
+    judged at) and the findings of a layer that did not load."""
     parent: object
     meta: dict
     project: object = None
     issue: object = None
     registry: tuple = ()
+    assessment: object = None
     findings: list = field(default_factory=list)
     warnings: list = field(default_factory=list)
     failed: object = None       # (name, kind) of a layer that did not load
@@ -206,6 +208,8 @@ def load_layers(root, *, file=None, manifest=None, cwd=None, read_project=True):
                                          layers.layer_digest(config, "issue")
                                          if isinstance(config, dict) else "")
         out.registry = tuple(manifest.get("evidence") or ())
+        assessment = manifest.get("assessment")
+        out.assessment = dict(assessment) if isinstance(assessment, dict) else None
     return out
 
 
@@ -510,7 +514,7 @@ def _locks_group(state):
     only the first."""
     try:
         result = locks.enforce_chain(state["chain"], cache=state["cache"],
-                                     early_exit=False)
+                                     early_exit=False, at=state["assessment"])
     except CompassError as exc:
         return [_evaluation_finding("locks", state["chain"][-1], str(exc))]
     return [_lock_finding(r, r.layer or state["chain"][-1].name) for r in result.refusals]
@@ -560,10 +564,22 @@ def _refusal_finding(layer, refusal, parent_config, child_config):
               "outcome": change.get("outcome"), "field": change.get("field"),
               "key": change.get("key"), "parent": change.get("parent"),
               "child": change.get("child")}
+    message = (refusal["reason"] + "; a waiver on the entry, approved by the "
+               "layer above, excuses it")
+    if getattr(layer, "kind", None) == "issue":
+        # An issue's layer is judged at one point, so every field that is not a
+        # tightening there can be named: the person sees what to combine.
+        named = []
+        for c in (point or {}).get("changes", ()):
+            if c["outcome"] != "tighter":
+                label = c["field"] + (f" ({c['key']})" if c["key"] is not None else "")
+                if label not in named:
+                    named.append(label)
+        if named:
+            message += "; fields that are looser or cannot be compared: " + ", ".join(named)
     return _finding("classification", code, layer,
                     _refusal_path(change, parent_config, child_config),
-                    refusal["reason"] + "; a waiver on the entry, approved by the "
-                    "layer above, excuses it", detail=detail)
+                    message, detail=detail)
 
 
 def _waiver_findings(state, index, layer, parent_config, child_config):
@@ -630,6 +646,7 @@ def _classification_group(state):
                 parent_capabilities=_capabilities(chain[:index]),
                 child_capabilities=_capabilities(chain[:index + 1]),
                 child_issue=layer.doc if layer.kind == "issue" else None,
+                at=state["assessment"] if layer.kind == "issue" else None,
                 exhaustive=state["exhaustive"], cache=state["cache"])
         except CompassError as exc:
             if str(exc) not in seen:
@@ -659,14 +676,18 @@ def _order(state, findings):
 
 
 def lint_chain(parent, project, issue=None, *, exhaustive=False, today=None,
-               registry=(), cache=None):
+               registry=(), cache=None, assessment=None):
     """The `Report` for a chain of layers, each a `layers.Layer` or None.
     `today` is the date a waiver's `approved_on` is checked against.
     `registry` is the issue's evidence records. `cache` is shared with the
-    classifier across calls."""
+    classifier across calls. `assessment` is the issue's own: with it, the
+    issue layer is judged at that one point (locks and classification) and not
+    over the grid; a parent and a project layer are always judged over the
+    grid (ADR-037)."""
     chain = [layer for layer in (parent, project, issue) if layer is not None]
     state = {"chain": chain, "today": today or datetime.date.today(),
              "registry": tuple(registry), "exhaustive": exhaustive,
+             "assessment": assessment,
              "cache": {} if cache is None else cache}
     report = Report(layers=[(layer.name, layer.kind) for layer in chain])
     for group, run in GROUP_RUNNERS:
@@ -688,7 +709,8 @@ def lint_loaded(loaded, **kwargs):
         return Report(layers=named,
                       findings=loaded.warnings + loaded.findings, stopped_after="layer")
     report = lint_chain(loaded.parent, loaded.project, loaded.issue,
-                        registry=loaded.registry, **kwargs)
+                        registry=loaded.registry, assessment=loaded.assessment,
+                        **kwargs)
     report.findings = loaded.warnings + report.findings
     return report
 

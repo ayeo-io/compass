@@ -21,7 +21,7 @@ the one place the existing modules reach the store through
 """
 # DEPENDENCY: standard library (copy, dataclasses, datetime, os, re, subprocess);
 # compass_pkg.atomic_io, check_registry, core, generation, layers,
-# legacy_adapter, locks, merge, obligations, policy_lint, project_settings, waivers.
+# legacy_adapter, locks, merge, obligations, parents, policy_lint, project_settings, waivers.
 from __future__ import annotations
 
 import copy
@@ -31,8 +31,8 @@ import re
 import subprocess
 from dataclasses import dataclass, field
 
-from compass_pkg import (generation, layers, legacy_adapter, locks, merge, policy_lint,
-                         project_settings, waivers)
+from compass_pkg import (generation, layers, legacy_adapter, locks, merge, parents,
+                         policy_lint, project_settings, waivers)
 from compass_pkg import obligations
 from compass_pkg import catalogue_spec as spec
 from compass_pkg.atomic_io import digest, load_yaml_strict
@@ -300,17 +300,18 @@ def _approval_records(manifest, root, task_dir, waiver_records):
     return out
 
 
-def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False):
+def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False, fetch=False):
     """The `generation.Resolution` of the project's chain now: the shipped
     default (or the project's legacy copies), the project's `compass.yml` and,
     for an issue, its manifest's `config:`. The result carries `validate`, which
     raises `CompassError` when the layered lint refuses the chain; `commit`
     calls it before it writes, so a generation never stores such a chain. With
     `validate=True` it is called here too. A chain that does not load or merge
-    raises `CompassError` at once."""
+    raises `CompassError` at once. A git parent in the project's `extends:` is
+    read from the cache; only `fetch=True` fetches an uncached pin."""
     root = os.path.abspath(root)
     counts = project_settings.compass_yml_counts(root)
-    loaded = policy_lint.load_layers(root, manifest=manifest, read_project=counts)
+    loaded = policy_lint.load_layers(root, manifest=manifest, read_project=counts, fetch=fetch)
     if loaded.findings:
         first = loaded.findings[0]
         raise CompassError(f"nothing can be resolved: {first.code} {first.path}: "
@@ -322,7 +323,8 @@ def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False):
     # Each layer is checked alone before anything merges. The full lint, which
     # includes the classifier and is slow on a project layer, runs only when a
     # write follows: `generation.commit` calls `validate` then.
-    chain = layers.build_chain(parent, loaded.project, loaded.issue)
+    chain = layers.build_chain(parent, loaded.project, loaded.issue,
+                               extra_parents=[p.layer for p in loaded.git_parents])
 
     def check_chain():
         report = policy_lint.lint_loaded(loaded)
@@ -373,7 +375,9 @@ def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False):
         "cli": COMPASS_VERSION,
         "parents": [{"ref": f"compass:{meta['id']}@{major}" if not legacy else "legacy",
                      "version": meta.get("version", ""), "digest": parent.digest,
-                     "source": "legacy" if legacy else "shipped"}],
+                     "source": "legacy" if legacy else "shipped"}]
+                   + [{"ref": p.ref, "sha": p.sha, "version": p.version, "digest": p.digest,
+                       "source": "git"} for p in loaded.git_parents],
         "project": ({"path": layers.PROJECT_FILE, "digest": project_digest,
                      "git_blob": _git_blob(project_path)} if loaded.project else None),
         "issue_overlay_digest": loaded.issue.digest if loaded.issue else None,
@@ -391,11 +395,11 @@ def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False):
         details={"loaded": loaded, "chain": chain, "configs": configs})
 
 
-def _live_view(task_dir, manifest, slug, start=None):
+def _live_view(task_dir, manifest, slug, start=None, fetch=False):
     start = task_dir or start or os.getcwd()
     root = layers.find_project_root(start)
     try:
-        resolution = resolve_live(root, manifest, slug, task_dir)
+        resolution = resolve_live(root, manifest, slug, task_dir, fetch=fetch)
     except merge.MergeError as exc:
         # A command that only reads the configuration gives the way to see the rest.
         raise CompassError(f"{exc}. Run `compass policy lint"
@@ -449,7 +453,10 @@ def view_or_legacy(task_dir=None, live=False, start=None):
     if not _layered(layers.find_project_root(task_dir or start or os.getcwd())):
         return None
     if live and task_dir is not None:
-        return _live_view(task_dir, manifest, os.path.basename(os.path.normpath(task_dir)))
+        # The command is about to commit the configuration, so it may fetch a
+        # git parent that is not cached yet.
+        return _live_view(task_dir, manifest, os.path.basename(os.path.normpath(task_dir)),
+                          fetch=not parents.offline())
     if task_dir is None:
         return _live_view(None, None, None, start)
     return effective_for(task_dir)
@@ -473,7 +480,7 @@ def commit_generation(task_dir, manifest, invalidated=None, render=None, *, adop
     if resolution is None:
         resolution = resolve_live(layers.find_project_root(task_dir),
                                   manifest if resolve_with is None else resolve_with,
-                                  slug, task_dir)
+                                  slug, task_dir, fetch=not parents.offline())
     wrapped = None
     if render is not None:
         # `render(text, gate_requirements)` sees the types the generation being

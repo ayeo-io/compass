@@ -32,6 +32,11 @@ output and exit code do not change.
 | `project` | `project` | `compass.yml` in the project root |
 | `issue` | `issue` | the `config:` of the issue's `manifest.yml`, only with `--issue SLUG` |
 
+A project whose `extends:` names a git parent has one more `parent` layer
+between `default` and `project`, named `github:<owner>/<repo>@<ref>#<sha7>`
+(the first seven characters of the pinned commit). [git-parents.md](git-parents.md)
+owns how it is pinned, fetched and cached.
+
 A `compass.yml` in a folder below the project root is ignored, and lint
 warns about it.
 
@@ -43,7 +48,7 @@ earlier one. Warnings never stop it and never fail it.
 
 | Group | What it checks | Codes |
 |---|---|---|
-| `layer` | Each layer alone, before anything merges | `L-LOAD`, `L-KEY-NOT-TEXT`, `L-SCHEMA`, `L-SETTINGS-KEY`, `L-UNLOCK-PLACEMENT`, `L-IMPL-UNKNOWN`, `L-IMPL-TEMPLATED`, `W-APPROVED-ON-ISSUE`, `L-IGNORED-FILE` (warning) |
+| `layer` | Each layer alone, before anything merges | `L-LOAD`, `L-KEY-NOT-TEXT`, `L-SCHEMA`, `L-SETTINGS-KEY`, `L-UNLOCK-PLACEMENT`, `L-IMPL-UNKNOWN`, `L-IMPL-TEMPLATED`, `W-APPROVED-ON-ISSUE`, `L-IGNORED-FILE` (warning), and the ten `L-PARENT-*` codes below for a git parent |
 | `merge` | The merge grammar, layer by layer. It reports every fault of the first layer that does not apply | the merge's own `M-*` codes, such as `M-ADD-EXISTS`, `M-SET-UNKNOWN`, `M-REF-REMOVED` |
 | `resolved` | The merged result as a whole | `M-REF-UNKNOWN`, `M-WEIGHT-TIE`, `M-HIT-MISSING`, `M-HIT-DISALLOWED`, `M-ALIAS-COLLISION`, `M-CYCLE`, `M-BOOKKEEPING-INPUT`, `M-DIRECTORY-DEPENDENCY`, `M-LIST-KIND-UNEVALUATED` (warning) |
 | `locks` | What the locks above a layer refuse, and each refused unlock | `K-LOCK-REFUSED`, `K-UNLOCK-REFUSED`, `K-UNPROVABLE`, `E-EVALUATION` |
@@ -61,6 +66,16 @@ earlier one. Warnings never stop it and never fail it.
 | `L-IMPL-UNKNOWN` | error | A check names an `impl` that the check registry does not hold |
 | `L-IMPL-TEMPLATED` | error | An `impl` that is a template, not a name |
 | `L-IGNORED-FILE` | warning | A `compass.yml` below the project root, which is not read |
+| `L-PARENT-FORM` | error | An `extends:` that is neither `compass:default@<major>` nor `github:<owner>/<repo>@<ref>#<sha>`, or a sha that is not 7 to 40 lowercase hexadecimal characters, or a short sha that names no cached commit of the same repository, or a sha that names a tree or a file. Git is not run for a bad spelling |
+| `L-PARENT-NO-SHA` | error | A remote ref with no sha. A git parent is pinned by commit. Git is not run |
+| `L-PARENT-NOT-CACHED` | error | The pinned commit is not in `.compass/cache/parents/` and this run may not fetch it: `compass check`, a reader of a stored generation, `--offline` or `COMPASS_OFFLINE` |
+| `L-PARENT-FETCH` | error | Git could not fetch the pinned commit, is not installed, timed out, or `COMPASS_PARENT_REMOTE_BASE` is not an `https://` URL or an absolute folder |
+| `L-PARENT-CONTENT` | error | The commit has no regular `compass.yml` file at its root, or it is 1 MiB or larger |
+| `L-PARENT-SHA-MISMATCH` | error | The fetch returned an object other than the pinned one. Nothing is cached |
+| `L-PARENT-SYMLINK` | error | The root `compass.yml` of the fetched commit is a symbolic link. Nothing is cached. No other file in the tree is read |
+| `L-PARENT-CACHE` | error | `.compass/cache` or `.compass/cache/parents` is a symbolic link, a cached parent or its owner or repository folder is a link or resolves outside `.compass/`, or the cache holds a different file for the commit |
+| `L-PARENT-CHAIN` | error | The parent's own `extends:` names a git parent. Chains are not built yet |
+| `L-PARENT-SHA-AMBIGUOUS` | error | A short sha names more than one cached commit |
 | `M-REF-UNKNOWN` | error | A field, or a rule's effect (`EFFECT_TARGETS` in `catalogue_spec.py` says which catalogue each effect names), names an id that no entry defines |
 | `M-WEIGHT-TIE` | error | Two delivery approaches have the same weight |
 | `M-LIST-KIND-UNEVALUATED` | warning | A stage's `entry` or `exit` list names a check of a kind this version does not evaluate (`judged` or `evidence`). The check fails in `compass check`, whatever the capability. The exit code does not change |
@@ -131,6 +146,7 @@ earlier one. Warnings never stop it and never fail it.
 | `--file PATH` | Lint one `compass.yml` as the project layer, over the shipped default |
 | `--issue SLUG` | Add the issue's `config:` as the issue layer, judged at the issue's own assessment and not over the whole grid (a project layer is still judged over the grid), and look up its approvals in the issue's evidence. Without it no issue is read: there is no `COMPASS_ISSUE` or current-task fallback. A project with no `compass.yml` lints the issue's config over the shipped default |
 | `--exhaustive` | Classify with the full grid, not the grouped one |
+| `--offline` | Read a git parent from the cache only and fetch nothing; `COMPASS_OFFLINE=1` does the same. `compass policy effective` takes it too |
 | `--json` | Print the document below |
 
 | Exit | Meaning |

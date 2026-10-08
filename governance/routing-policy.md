@@ -22,7 +22,7 @@ rules are what stop it. The flex is real, and it is bounded by this file.
 
 To see every delivery approach at once - its stage weights, the stages that
 wait for a person, its gates and its documents - open
-`docs/approach-diagram.html`. `compass approach diagram` generates it from
+`docs/approach-diagram.html`. `compass approach render` generates it from
 the policy, and a test fails when the committed copy is out of date. Run it
 in a project to see that project's own policy and autonomy setting. In a
 project with a `compass.yml` it renders the effective configuration, the

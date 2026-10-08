@@ -3,7 +3,7 @@
 # compass - where an issue's documents live on disk
 # =============================================================================
 # One answer to "where does this issue's <document> go", used by every writer,
-# by `compass migrate`, by the two hooks and by the repository-wide scans.
+# by `compass issue migrate`, by the two hooks and by the repository-wide scans.
 # Three copies of the same string join is how they stop agreeing.
 #
 # It sits apart from core.py because it is a naming rule, not a reader: nothing
@@ -36,7 +36,7 @@ def is_issue_document(rel_path):
     that enforces today's surface over them reports the account as a defect and
     pushes an author to rewrite history. Every such scan skipped
     `.compass/work/` for that reason; these are the same documents, in the
-    place `compass migrate` moved them to.
+    place `compass issue migrate` moved them to.
 
     THE CALLER DECIDES THE SCOPE. This answers one question and does not anchor
     the path. A scan that treats the worked examples as shipped surface must

@@ -434,7 +434,7 @@ def _copies_project(tmp_path):
     code, out, err = _run(root, "approach", "evaluate", "--issue", SLUG, "--write")
     assert code == 0, out + err
     if "generation:" not in (task_dir / "manifest.yml").read_text(encoding="utf-8"):
-        code, out, err = _run(root, "issue", "migrate-config", "--issue", SLUG)
+        code, out, err = _run(root, "issue", "migrate", "--config", "--issue", SLUG)
         assert code == 0, out + err
     return root, task_dir
 

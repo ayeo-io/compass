@@ -49,7 +49,7 @@ and their integration safe.
    `builder` agent per worktree. Record each step after it - the result, the
    review brief, the reviewed revision, the review round and its findings
    from the reviewer's report, the cost - with `compass issue subtask
-   update`, and the review diff with `compass issue subtask package <id>
+   set`, and the review diff with `compass issue subtask package <id>
    --head <the subtask's branch>`. A session that picks the run up resumes
    from `compass issue subtask next`.
 
@@ -65,7 +65,7 @@ Stop a run, or one subtask, when one of these holds:
 - a decision is needed that no rule settles.
 
 Within the ceilings, decide; do not ask. A ceiling reached is a stop with a
-reason, not a success: record it with `compass issue subtask update <id>
+reason, not a success: record it with `compass issue subtask set <id>
 --stop-reason "<why>" --stop-evidence <file>`, then ask. Have each builder's
 errors recorded with `--error`, as data, not as prose in the conversation.
 
@@ -73,7 +73,7 @@ errors recorded with `--error`, as data, not as prose in the conversation.
 
 Never tell a reviewer what not to flag. A review brief states what to review:
 the subtask, its scenarios, its package. It says nothing about which findings
-are known, handled or out of scope. `compass issue subtask update
+are known, handled or out of scope. `compass issue subtask set
 --review-brief` refuses a brief that matches a fixed list of phrases that do
 this; the list catches common wordings, not every one, so the rule is yours
 to keep. A reviewer told what to ignore reviews your framing, not the change.

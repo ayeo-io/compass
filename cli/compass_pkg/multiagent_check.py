@@ -250,14 +250,14 @@ def _check_multiagent_run_recorded(task, task_dir):
                             % ", ".join(bad_stop))
         return False, (
             "subtask(s) with an incomplete run record - %s. Record status "
-            "with `compass issue subtask update --status done`, a passing "
+            "with `compass issue subtask set --status done`, a passing "
             "round with `--round pass`, or why it stopped with "
             "`--stop-reason` and `--stop-evidence`." % "; ".join(problems))
 
     if past:
         return False, (
             "subtask(s) past a loop ceiling with no stop reason - %s. Record "
-            "why with `compass issue subtask update <id> --stop-reason TEXT "
+            "why with `compass issue subtask set <id> --stop-reason TEXT "
             "--stop-evidence FILE`." % "; ".join(past))
 
     mapped = mapped_subtask_ids(task_dir)

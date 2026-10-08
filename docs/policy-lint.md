@@ -1,7 +1,7 @@
 # Policy lint and the effective view
 
 This page is the owning doc for `compass policy lint` and `compass policy
-effective` on a project that has a `compass.yml`. It states what each
+show` on a project that has a `compass.yml`. It states what each
 command checks or shows, in what order, and the exact shape of the JSON each
 one prints. From 6.0.0 the finding codes and both JSON shapes are a public
 contract: a change to a key, its order or a code is a breaking change.
@@ -151,7 +151,7 @@ earlier one. Warnings never stop it and never fail it.
 | `--file PATH` | Lint one `compass.yml` as the project layer, over the shipped default |
 | `--issue SLUG` | Add the issue's `config:` as the issue layer, judged at the issue's own assessment and not over the whole grid (a project layer is still judged over the grid), and look up its approvals in the issue's evidence. Without it no issue is read: there is no `COMPASS_ISSUE` or current-task fallback. A project with no `compass.yml` lints the issue's config over the shipped default |
 | `--exhaustive` | Classify with the full grid, not the grouped one |
-| `--offline` | Read a git parent from the cache only and fetch nothing; `COMPASS_OFFLINE=1` does the same. `compass policy effective` takes it too |
+| `--offline` | Read a git parent from the cache only and fetch nothing; `COMPASS_OFFLINE=1` does the same. `compass policy show` takes it too |
 | `--json` | Print the document below |
 
 | Exit | Meaning |
@@ -214,9 +214,9 @@ layer (root first), then by `path`, `code` and `message`. The document holds
 no time and no path outside the project, so the same input gives the same
 bytes. `tests/test_policy_lint.py` pins each key list.
 
-## `compass policy effective`
+## `compass policy show`
 
-`compass policy effective` prints what the configuration resolves to. `compass
+`compass policy show` prints what the configuration resolves to. `compass
 check` and the evaluator still read the legacy governance files until the
 generation store lands, so this view is not yet what they use. It prints every
 resolved field of the project, one line each: the path, the value, the source layer, the operation and the
@@ -256,7 +256,7 @@ A project with no `compass.yml` shows the shipped default alone.
 | `replace` | The layer replaced the entry with `replace: true` |
 | `set` | The layer changed the field with `set:` |
 
-## `compass policy effective --json`
+## `compass policy show --json`
 
 ```json
 {

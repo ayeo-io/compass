@@ -3,7 +3,7 @@
 #
 # This module owns the v1-to-v2 on-disk mapping: manifest keys (through
 # core.normalize_spine) and artifact filenames (the map below). The runtime
-# resolves v2 names only; this module reads old trees. `compass migrate`
+# resolves v2 names only; this module reads old trees. `compass issue migrate`
 # wraps migrate_tree with a dry run and a report; the private
 # `_migrate-archive` verb migrates this repository's own archive.
 # =============================================================================
@@ -207,7 +207,7 @@ def _work_root_is_recoverable(root):
 
 
 def cmd_migrate(args):
-    """`compass migrate [root]` - dry-run by default; --apply makes the changes.
+    """`compass issue migrate [root]` - dry-run by default; --apply makes the changes.
 
     Idempotent: a migrated tree reports nothing to do.
 
@@ -217,7 +217,7 @@ def cmd_migrate(args):
     harder to reason about than one that was not touched."""
     root = getattr(args, "root", None) or os.path.join(".compass", "work")
     if not os.path.isdir(root):
-        print(f"compass migrate: no issue directories under {root} - "
+        print(f"compass issue migrate: no issue directories under {root} - "
               "nothing to examine.")
         return 0
     apply_mode = bool(getattr(args, "apply", False))
@@ -274,14 +274,14 @@ def cmd_migrate(args):
             changed[entry] = notes
 
     if not changed and not failed:
-        print("compass migrate: nothing to do - every issue directory "
+        print("compass issue migrate: nothing to do - every issue directory "
               "already speaks schema 2.0.")
         return 0
 
     if changed:
         verb = "migrated" if apply_mode else "would change"
         noun = "issue directory" if len(changed) == 1 else "issue directories"
-        print(f"compass migrate: {len(changed)} {noun} {verb} "
+        print(f"compass issue migrate: {len(changed)} {noun} {verb} "
               f"under {root}:")
         for slug, notes in changed.items():
             print(f"  {slug}")
@@ -291,7 +291,7 @@ def cmd_migrate(args):
     if failed:
         noun = "directory" if len(failed) == 1 else "directories"
         print()
-        print(f"compass migrate: {len(failed)} {noun} could NOT be migrated:")
+        print(f"compass issue migrate: {len(failed)} {noun} could NOT be migrated:")
         for slug, why in failed.items():
             print(f"  {slug}")
             print(f"    - {why}")
@@ -304,7 +304,7 @@ def cmd_migrate(args):
     if not apply_mode:
         print()
         print("This was a dry run - nothing was written. "
-              "Run `compass migrate --apply` to execute.")
+              "Run `compass issue migrate --apply` to execute.")
     return 0
 
 

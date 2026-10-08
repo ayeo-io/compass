@@ -33,7 +33,7 @@ mode: enforced
 # the approach, and approving the acceptance criteria, the requirements review
 # and the technical design). The routing policy's `autonomy_checkpoints:` table
 # says which hand-offs wait for each value and route; `compass approach
-# summary` shows the answer for an issue. No value changes a gate, evidence,
+# show` shows the answer for an issue. No value changes a gate, evidence,
 # the hook or `compass check`.
 #   controlled : wait at every hand-off the table lists: all four on the
 #                regular or full approach, assess and define on a hotfix,

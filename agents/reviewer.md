@@ -120,7 +120,7 @@ point collides with an entry, report it as "settled by <path>", not as a
 defect: reopening it is the person's call, through a new entry.
 
 If the project has `governance/review-rules.yml`, run
-`compass policy review-rules --changed-files <paths>` with the files the
+`compass review-rule list --changed-files <paths>` with the files the
 change touches, and apply the rules it prints as well as the dimensions.
 Report a breach under the RR- id it breaks. It blocks when the rule says
 so, and always when it breaks a guardrail. Do not flag what a rule's `allowed` list permits:

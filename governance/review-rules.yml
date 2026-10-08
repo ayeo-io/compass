@@ -1,7 +1,7 @@
-# Review rules for this repository, read by `compass policy review-rules`.
+# Review rules for this repository, read by `compass review-rule list`.
 #
 # A reviewer, human or agent, runs
-#   compass policy review-rules --changed-files <paths>
+#   compass review-rule list --changed-files <paths>
 # and gets only the rules whose file_patterns match the change, then cites
 # each finding by its RR- id. `compass policy lint` checks this file.
 #

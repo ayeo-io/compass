@@ -92,8 +92,8 @@ CHECK_GUIDANCE = {
     },
     "multiagent-run-recorded": {
         "why": "A multiagent run splits into subtasks that `compass issue subtask` records. Without this check, an issue could clear every gate and land with a subtask never marked done, or one still failing its last review round, and nothing would say so.",
-        "fix": "Record each subtask's progress with `compass issue subtask update`: `--status done` once it is merged, and `--round pass` once its last review passes. The check reports an empty `subtasks:` list, and names any subtask not done or without a passing last round.",
-        "do": 'Record each named subtask done, with a passing round, via `compass issue subtask update`.',
+        "fix": "Record each subtask's progress with `compass issue subtask set`: `--status done` once it is merged, and `--round pass` once its last review passes. The check reports an empty `subtasks:` list, and names any subtask not done or without a passing last round.",
+        "do": 'Record each named subtask done, with a passing round, via `compass issue subtask set`.',
     },
     "no-trusted-rerun": {
         "why": "A green recorded from a run nobody observed is an assertion wearing evidence's clothes. The tested-before-ship guardrail wants the run, not a note about it.",
@@ -107,8 +107,8 @@ CHECK_GUIDANCE = {
     },
     "dashboard-current": {
         "why": "The issue's README is the page a reviewer approves from - it states which documents exist, which one is waiting on them, and what was deliberately left out. Generated from manifest.yml, so once the manifest moves it is an assertion the record contradicts, and a reviewer has no way to tell.",
-        "do": 'Run `compass issue dashboard`, then re-read the page.',
-        "fix": "Run `compass issue dashboard` to regenerate it, then read the page again before approving anything from it. Never hand-edit it - the next regeneration discards the edit.",
+        "do": 'Run `compass issue dashboard render`, then re-read the page.',
+        "fix": "Run `compass issue dashboard render` to regenerate it, then read the page again before approving anything from it. Never hand-edit it - the next regeneration discards the edit.",
     },
     "scenarios-have-tests": {
         "why": "Every scenario must have a test that exercises it - without one, the scenario is a wish, not a checkable acceptance criterion (the acceptance-before-code guardrail). EXCEPT a `verifiable: narrative` scenario (a failure-mode playbook), which is cleared by being documented - a non-empty When/Then in acceptance-criteria.md - not by a fabricated test.",

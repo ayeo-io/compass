@@ -1,4 +1,4 @@
-"""`compass issue migrate-config` pins an issue to the installed versions (ADR-038).
+"""`compass issue migrate --config` pins an issue to the installed versions (ADR-038).
 
 It is the second of the three ways a generation is committed: it stores a new
 generation holding the same configuration, with the versions of the check
@@ -35,7 +35,7 @@ def test_ir_8_migrate_config_pins_the_installed_versions_and_keeps_the_configura
     record_versions(task_dir, cli="5.0.0", implementations={"suite-passed": "0.9.0"})
     _run(root, "check", "--issue", SLUG)                    # records results under generation 1
     before = (task_dir / "manifest.yml").read_text(encoding="utf-8")
-    code, out, err = _run(root, "issue", "migrate-config", "--issue", SLUG)
+    code, out, err = _run(root, "issue", "migrate", "--config", "--issue", SLUG)
     assert code == 0, out + err
     after = (task_dir / "manifest.yml").read_text(encoding="utf-8")
     assert after.replace("generation: 2", "generation: 1") == before
@@ -62,7 +62,7 @@ def test_ir_8_migrate_config_does_not_take_in_a_project_edit_made_since(committe
     (root / "compass.yml").write_text(yaml.safe_dump({"schema": 1, "checks": {"extra": {
         "statement": "A check.", "kind": "deterministic", "impl": "suite-passed",
         "severity": "advisory", "on_skipped": "fail"}}}), encoding="utf-8")
-    code, out, err = _run(root, "issue", "migrate-config", "--issue", SLUG)
+    code, out, err = _run(root, "issue", "migrate", "--config", "--issue", SLUG)
     assert code == 0, out + err
     stored = _load(task_dir / "generations" / "2" / "resolved.yml")
     assert "extra" not in stored["checks"]
@@ -79,7 +79,7 @@ def test_ir_9_migrate_config_refuses_a_landed_issue_and_writes_nothing(committed
     (task_dir / "manifest.yml").write_text(text.replace("status: active", "status: landed"),
                                            encoding="utf-8")
     held = (task_dir / "manifest.yml").read_bytes()
-    code, out, err = _run(root, "issue", "migrate-config", "--issue", SLUG)
+    code, out, err = _run(root, "issue", "migrate", "--config", "--issue", SLUG)
     assert code == 2 and "landed" in err, out + err
     assert (task_dir / "manifest.yml").read_bytes() == held
     assert sorted(p.name for p in (task_dir / "generations").iterdir()) == ["1"]
@@ -90,7 +90,7 @@ def test_ir_9_a_landed_issue_is_refused_even_when_it_is_already_pinned(committed
     text = (task_dir / "manifest.yml").read_text(encoding="utf-8")
     (task_dir / "manifest.yml").write_text(text.replace("status: active", "status: landed"),
                                            encoding="utf-8")
-    code, out, err = _run(root, "issue", "migrate-config", "--issue", SLUG)
+    code, out, err = _run(root, "issue", "migrate", "--config", "--issue", SLUG)
     assert code == 2 and "landed" in err, out + err
 
 
@@ -99,7 +99,7 @@ def test_ir_9_a_landed_issue_is_refused_even_when_it_is_already_pinned(committed
 def test_ir_10_migrate_config_commits_nothing_when_already_pinned(committed):
     root, task_dir = committed
     held = (task_dir / "manifest.yml").read_bytes()
-    code, out, err = _run(root, "issue", "migrate-config", "--issue", SLUG)
+    code, out, err = _run(root, "issue", "migrate", "--config", "--issue", SLUG)
     assert code == 0 and "no change" in out, out + err
     assert (task_dir / "manifest.yml").read_bytes() == held
     assert sorted(p.name for p in (task_dir / "generations").iterdir()) == ["1"]
@@ -112,7 +112,7 @@ def test_ir_11_migrate_config_adopts_an_issue_that_has_no_generation(tmp_path):
     task_dir.mkdir(parents=True)
     (task_dir / "manifest.yml").write_text(
         "# kept as written\n" + yaml.safe_dump(MANIFEST, sort_keys=False), encoding="utf-8")
-    code, out, err = _run(tmp_path, "issue", "migrate-config", "--issue", SLUG)
+    code, out, err = _run(tmp_path, "issue", "migrate", "--config", "--issue", SLUG)
     assert code == 0, out + err
     manifest = (task_dir / "manifest.yml").read_text(encoding="utf-8")
     assert manifest.startswith("# kept as written\n")

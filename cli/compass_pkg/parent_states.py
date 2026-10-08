@@ -9,7 +9,7 @@
 - `both`.
 
 "Known" means this machine fetched it. The state is read from files only: it never
-fetches, so `compass check` and `compass approach summary` can report it offline.
+fetches, so `compass check` and `compass approach show` can report it offline.
 A cached parent that `seen.yml` holds no digest for cannot be shown to match a fetch,
 so it counts as modified.
 """
@@ -126,7 +126,7 @@ def project_states(root, fetch=False):
 
 
 def summary_lines(root):
-    """The lines `compass approach summary` prints for the project's git parent:
+    """The lines `compass approach show` prints for the project's git parent:
     one line, or none for a project with no git parent."""
     states, problems = project_states(root)
     lines = [f"Parent: {s.ref} at {s.sha[:7]} - {s.state}" for s in states]

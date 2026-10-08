@@ -285,7 +285,7 @@ def test_damaged_seen_does_not_crash(tmp_path):
     assert code == 1 and _only_state(report)["code"] == "S-PARENT-MODIFIED", (out, err)
     out = _no_traceback(project.run("approach", "summary", "--issue", "feature"))[1]
     assert "- locally modified" in out, out
-    _no_traceback(project.run("policy", "effective"))
+    _no_traceback(project.run("policy", "show"))
     _no_traceback(project.run("approach", "evaluate", "--issue", "feature", "--write"))
     _no_traceback(project.run("check", "--issue", "feature"))
 

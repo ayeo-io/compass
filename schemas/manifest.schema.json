@@ -933,7 +933,7 @@
     },
     "status_reason": {
       "type": "string",
-      "description": "Optional. Why the status was last changed, for any status other than parked - a re-opening, an abandonment, a landing out of the usual order. Written by `compass issue set-status --reason`. Parking has its own key because a parked issue is the one a reader most often has to decide about."
+      "description": "Optional. Why the status was last changed, for any status other than parked - a re-opening, an abandonment, a landing out of the usual order. Written by `compass issue status set --reason`. Parking has its own key because a parked issue is the one a reader most often has to decide about."
     },
     "parked_at": {
       "type": "string",
@@ -941,7 +941,7 @@
     },
     "artifacts": {
       "type": "array",
-      "description": "The issue's artifact registry: which documents this issue produced, where they are, and WHY each exists - or why it was deliberately not written. The reason is the point. A filename with no reason is a directory listing, so `reason` is required on every entry including the omitted ones. The CLI resolves a registered `path` first and the flat filename beside the manifest second, so an issue with no registry keeps working. An old entry, written before paths became project-relative, holds a bare filename. That filename no longer resolves from the registry, but the CLI still finds it beside the manifest and says that is how it found it, so an unmigrated entry is visible rather than silent. `compass migrate` rewrites them.",
+      "description": "The issue's artifact registry: which documents this issue produced, where they are, and WHY each exists - or why it was deliberately not written. The reason is the point. A filename with no reason is a directory listing, so `reason` is required on every entry including the omitted ones. The CLI resolves a registered `path` first and the flat filename beside the manifest second, so an issue with no registry keeps working. An old entry, written before paths became project-relative, holds a bare filename. That filename no longer resolves from the registry, but the CLI still finds it beside the manifest and says that is how it found it, so an unmigrated entry is visible rather than silent. `compass issue migrate` rewrites them.",
       "items": {
         "type": "object",
         "required": [

@@ -865,7 +865,7 @@ def test_gs_15_check_and_evaluate_create_no_generation_files(tmp_path):
     root, task_dir = _project(tmp_path)
     _run(root, "check", "--issue", SLUG)
     _run(root, "approach", "evaluate", "--issue", SLUG)
-    _run(root, "policy", "effective", "--issue", SLUG)
+    _run(root, "policy", "show", "--issue", SLUG)
     assert not list(root.rglob("generations"))
     assert not list(root.rglob("results.yml"))
     assert "generation" not in _manifest(task_dir)

@@ -2,14 +2,14 @@
 # The v1-to-v2 migration map - DATA, deliberately exempt from the
 # vocabulary scan (`scan.exempt` in governance/terminology.yml).
 #
-# Why this file exists: `compass migrate` and the read-side normaliser must
+# Why this file exists: `compass issue migrate` and the read-side normaliser must
 # name v1 spellings, inside a CLI whose string literals are scanned for those
 # spellings. The mapping lives here as data, so the enforced code never
 # carries a banned word in a literal.
 # =============================================================================
 
 # Manifest value renames. Read-side: the normaliser maps them on load.
-# Write-side: `compass migrate` rewrites them on disk.
+# Write-side: `compass issue migrate` rewrites them on disk.
 values:
   # Evidence type and check name. ADR-023 renamed the concept; archived
   # manifests carry the old spelling and must keep clearing their gate.

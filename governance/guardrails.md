@@ -170,7 +170,7 @@ Why it is enforced rather than warned about:
   the registry does not hold. The runtime ignores `impl:` for now: a check runs
   the implementation that carries its name.
 - `compass check` refuses a check whose implementation major differs from the one
-  the issue's generation recorded, and `compass issue migrate-config` moves the
+  the issue's generation recorded, and `compass issue migrate --config` moves the
   generation on. `docs/generation-store.md` states both.
 
 ## Locks and conformance
@@ -251,7 +251,7 @@ effective` will print what it returns.
   parent or a preset that carries `unlock:` is refused. An unlocked entry is no
   longer enforced for the project or the issue below it.
 - **Conformance.** A project that unlocks a framework entry is non-conformant.
-  `compass check`, `compass issue receipt` and `compass approach summary` print
+  `compass check`, `compass issue receipt` and `compass approach show` print
   `Conformance: non-conformant - this project unlocks framework entries: ...` on
   every run. An unlock of a hard-locked entry, or of an entry the shipped
   default does not lock, is refused, and the commands print `Unlock refused for

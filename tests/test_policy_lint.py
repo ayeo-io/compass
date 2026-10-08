@@ -272,7 +272,7 @@ def test_pl_2_a_non_text_key_in_an_issue_config_is_a_finding(tmp_path):
 
 
 def test_pl_2_policy_effective_refuses_a_non_text_key_with_the_message(tmp_path):
-    code, out, err = _run(_project(tmp_path, NON_TEXT_CHECK), "policy", "effective")
+    code, out, err = _run(_project(tmp_path, NON_TEXT_CHECK), "policy", "show")
     assert "Traceback" not in err, err
     assert code == 2
     assert "L-KEY-NOT-TEXT" in err and "checks.docs-mention" in err and '"on":' in err
@@ -902,15 +902,15 @@ def test_pl_10_the_text_has_one_line_per_field_with_source_operation_and_waiver(
 
 
 def test_pl_10_the_cli_prints_the_preset_with_its_version_and_inactive_lists(tmp_path):
-    code, out, _ = _run(_project(tmp_path, {"schema": 1}), "policy", "effective")
+    code, out, _ = _run(_project(tmp_path, {"schema": 1}), "policy", "show")
     assert code == 0, out
     assert "default@6.0.0" in out
     assert "(inactive: entry-exit-evaluation off)" in out
-    assert out.splitlines()[0].startswith("compass policy effective: project")
+    assert out.splitlines()[0].startswith("compass policy show: project")
 
 
 def test_pl_10_a_project_with_no_compass_yml_shows_the_shipped_default(tmp_path):
-    code, out, _ = _run(_project(tmp_path), "policy", "effective")
+    code, out, _ = _run(_project(tmp_path), "policy", "show")
     assert code == 0 and "default@6.0.0" in out
 
 
@@ -921,9 +921,9 @@ def test_pl_10_issue_resolves_the_manifests_config_over_the_project_file(tmp_pat
     (work / "manifest.yml").write_text(
         "schema_version: '2.0'\nissue: demo\nconfig:\n  stages:\n    define:\n"
         "      set: {mode: light}\n", encoding="utf-8")
-    code, out, _ = _run(root, "policy", "effective", "--issue", "demo")
+    code, out, _ = _run(root, "policy", "show", "--issue", "demo")
     assert code == 0, out
-    assert out.splitlines()[0].startswith("compass policy effective: issue demo")
+    assert out.splitlines()[0].startswith("compass policy show: issue demo")
     line = next(l for l in out.splitlines() if l.startswith("stages.define.mode "))
     assert "issue (set)" in line
 
@@ -938,7 +938,7 @@ WAIVER_KEYS = ["id", "scope", "approved_by", "approved_on"]
 
 
 def _effective_json(root, *argv):
-    code, out, err = _run(root, "policy", "effective", "--json", *argv)
+    code, out, err = _run(root, "policy", "show", "--json", *argv)
     return code, (json.loads(out) if out.strip() else None), err
 
 
@@ -983,7 +983,7 @@ def test_pl_11_every_resolved_field_of_the_preset_is_listed(tmp_path):
 def test_pl_11_json_and_text_list_the_same_fields(tmp_path):
     root = _project(tmp_path, {"schema": 1})
     _, document, _ = _effective_json(root)
-    text = _run(root, "policy", "effective")[1].splitlines()
+    text = _run(root, "policy", "show")[1].splitlines()
     assert len(text) - 2 == len(document["fields"])
 
 
@@ -1020,14 +1020,14 @@ def test_pl_11_issue_scope_names_the_issue_and_marks_the_issue_layer(tmp_path):
 
 def test_pl_11_the_same_input_gives_the_same_bytes_and_no_local_path(tmp_path):
     root = _project(tmp_path, {"schema": 1})
-    one = _run(root, "policy", "effective", "--json")[1]
-    assert one == _run(root, "policy", "effective", "--json")[1]
+    one = _run(root, "policy", "show", "--json")[1]
+    assert one == _run(root, "policy", "show", "--json")[1]
     assert str(tmp_path) not in one
 
 
 def test_pl_11_nothing_to_resolve_exits_2_with_no_document(tmp_path):
     root = _project(tmp_path, {"schema": 1, "stages": "oops"})
-    code, out, err = _run(root, "policy", "effective", "--json")
+    code, out, err = _run(root, "policy", "show", "--json")
     assert code == 2
     assert out.strip() == ""
     assert "policy lint" in err
@@ -1037,7 +1037,7 @@ def test_pl_11_nothing_to_resolve_exits_2_with_no_document(tmp_path):
 
 def test_pl_12_both_verbs_describe_themselves(tmp_path):
     root = _project(tmp_path)
-    out = _run(root, "policy", "effective", "--help")[1]
+    out = _run(root, "policy", "show", "--help")[1]
     assert "source layer" in out and "--issue" in out and "--json" in out
     out = _run(root, "policy", "lint", "--help")[1]
     for option in ("--file", "--exhaustive", "--issue", "--json"):
@@ -1260,7 +1260,7 @@ def _help(root, *argv):
 
 def test_pl_12_issue_help_says_that_no_issue_is_read_without_it(tmp_path):
     root = _project(tmp_path)
-    for verb in ("lint", "effective"):
+    for verb in ("lint", "show"):
         text = _help(root, "policy", verb)
         assert "COMPASS_ISSUE" in text and "current-task" in text, verb
         assert "no issue" in text.lower(), verb
@@ -1281,7 +1281,7 @@ def test_pl_8_a_project_with_no_compass_yml_lints_an_issues_config_over_the_defa
 
 
 def test_pl_10_the_text_says_what_the_view_is_and_what_still_reads_the_old_files(tmp_path):
-    code, out, _ = _run(_project(tmp_path, {"schema": 1}), "policy", "effective")
+    code, out, _ = _run(_project(tmp_path, {"schema": 1}), "policy", "show")
     second = out.splitlines()[1]
     assert "resolves to" in second
     assert "compass check" in second and "evaluator" in second

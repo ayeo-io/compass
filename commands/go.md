@@ -42,7 +42,7 @@ When unsure, rate the size up.
 
 ## 3. Show the plan
 
-Run `compass approach summary --issue <slug>` and show its three lines to
+Run `compass approach show --issue <slug>` and show its three lines to
 the person, unedited, before you edit any file. They are the only Compass
 text the person needs before code: the approach, the gates it must pass,
 and where its files go.

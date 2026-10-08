@@ -105,7 +105,7 @@ PLAIN = {"schema": 1}
 
 
 def _effective(root, env, *extra):
-    code, out, err = _run(root, "policy", "effective", *extra, env=env)
+    code, out, err = _run(root, "policy", "show", *extra, env=env)
     return code, out, err
 
 
@@ -394,7 +394,7 @@ def test_pc_7_effective_and_check_name_the_parent_that_needs_the_missing_ancesto
     _lint(root, env={"COMPASS_PARENT_REMOTE_BASE": str(base)})     # fills the cache
     shutil.rmtree(_held(root, "p1", made[0][1]))
     naming = _label(made[1][1], "p2")
-    for argv in (("policy", "effective", "--offline"), ("check", "--issue", "feature")):
+    for argv in (("policy", "show", "--offline"), ("check", "--issue", "feature")):
         code, out, err = _run(root, *argv)
         assert code != 0 and "L-PARENT-NOT-CACHED" in out + err, (argv, out, err)
         assert naming in out + err, (argv, out + err)

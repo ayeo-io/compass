@@ -460,7 +460,7 @@ def _codes(report):
 
 
 def _effective_layers(root, env=None):
-    code, out, err = _run(root, "policy", "effective", "--json", env=env)
+    code, out, err = _run(root, "policy", "show", "--json", env=env)
     assert code == 0, (out, err)
     return json.loads(out)["layers"]
 

@@ -324,7 +324,7 @@ def manifest_path(task_dir):
     """The issue's manifest, by whichever name it carries on disk.
 
     Current name first, retired name second - the same order every other
-    renamed artifact resolves in. A project that has not run `compass migrate`
+    renamed artifact resolves in. A project that has not run `compass issue migrate`
     still reads, which ADR-006 needs and which matters more here than
     anywhere else: `.compass/work/` is gitignored in this repository, so its
     records have no git history to restore from.
@@ -480,7 +480,7 @@ def normalize_spine(task):
     # Stage keys. `frame` was banned as a stage name at the v2 freeze and
     # survived as a live machine key, because governance/*.yml is not a scanned
     # surface. Archived issues carry the retired spellings, so they
-    # are mapped forward on load and rewritten on disk by `compass migrate`
+    # are mapped forward on load and rewritten on disk by `compass issue migrate`
     # (ADR-006: accept both, remove the old at the major version).
     st = out.get("stages")
     if isinstance(st, dict):
@@ -503,7 +503,7 @@ def normalize_spine(task):
             a2[k2] = v
         out["assessment"] = a2
     # 1.x manifests carry owed/paid; readers see outstanding/resolved, and
-    # `compass migrate` rewrites them on disk. Value map, mirroring the key
+    # `compass issue migrate` rewrites them on disk. Value map, mirroring the key
     # map above.
     if out.get("delivery_approach") in SHAPE_VALUE_MAP:
         out["delivery_approach"] = SHAPE_VALUE_MAP[out["delivery_approach"]]
@@ -1016,7 +1016,7 @@ def _entry_for(task_dir, kind):
 
 
 # Kinds this framework renamed, and the filename a landed issue still holds.
-# Read-side only: the resolver finds the old file, and `compass migrate`
+# Read-side only: the resolver finds the old file, and `compass issue migrate`
 # rewrites it on disk (ADR-006).
 _RENAMED_KIND_FILES = {
     # kind -> the filename a LANDED issue still holds. The values are the

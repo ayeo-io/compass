@@ -73,7 +73,7 @@ contract, QA for coverage. Write it so all five roles can.
 
    **Where it goes.** `docs/compass/<created>-<issue-slug>/acceptance-criteria.md`, where the
    date is the manifest's `created:` field - not today's. Then register it:
-   `compass issue artifact acceptance-criteria --status draft --path <that path>`. The CLI
+   `compass issue artifact set acceptance-criteria --status draft --path <that path>`. The CLI
    refuses a path that climbs out of the project, so the record is checked
    rather than claimed. If you had to create `docs/compass/`, **say so in one
    line** - a directory appearing with nothing said is how it gets deleted by
@@ -132,7 +132,7 @@ Fill in the real path, counts, and group names - a prompt that still says
 Wait for approval only if `define` is in the manifest's `checkpoints:`.
 The project's `autonomy` setting, read from `compass.yml` (or from
 `.compass/config.yml` in a project without one), decides that list,
-and `compass approach summary` shows it. If `define` is not listed, still
+and `compass approach show` shows it. If `define` is not listed, still
 write the acceptance criteria and show this hand-off, then say you are going on without
 waiting and name the setting, with "Next" in place of "On approval". Log
 the skipped checkpoint to `devlog.md`, so the person can review it later and

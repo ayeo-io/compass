@@ -3,7 +3,7 @@
 A generation records the version of every check implementation it uses. When
 the installed major differs from the recorded one, only that check is refused:
 it counts as a failure, names both versions and points to `compass issue
-migrate-config`, and every other check still runs. A different major of the
+migrate --config`, and every other check still runs. A different major of the
 resolver or of the generation schema changes the meaning of every check at
 once, so it refuses the whole run.
 
@@ -53,7 +53,7 @@ def test_ir_1_the_follow_up_check_is_refused_like_any_other(committed):
     record_versions(task_dir, implementations={"backfills-paid": "0.1.0"})
     _, checks, whole = check_json(root)
     assert checks["backfills-paid"]["status"] == "refused"
-    assert "migrate-config" in checks["backfills-paid"]["detail"]
+    assert "migrate --config" in checks["backfills-paid"]["detail"]
     _run(root, "check", "--issue", SLUG)
     results = yaml.safe_load((task_dir / "generations" / "1" / "results.yml")
                              .read_text(encoding="utf-8"))["runs"]
@@ -93,9 +93,9 @@ def test_ir_2_the_refusal_names_both_versions_and_the_fix(committed):
     detail = checks["suite-passed"]["detail"]
     assert "suite-passed" in detail
     assert "0.9.0" in detail and "1.0.0" in detail
-    assert f"compass issue migrate-config --issue {SLUG}" in detail
+    assert f"compass issue migrate --config --issue {SLUG}" in detail
     code, out, err = _run(root, "check", "--issue", SLUG)
-    assert "suite-passed" in out and "migrate-config" in out, out
+    assert "suite-passed" in out and "migrate --config" in out, out
 
 
 # --- IR-3: the same major runs ------------------------------------------------------------
@@ -116,7 +116,7 @@ def test_ir_4_a_resolver_or_schema_major_difference_refuses_the_run(committed, c
     record_versions(task_dir, **change)
     code, out, err = _run(root, "check", "--issue", SLUG, "--json")
     assert code == 2, out + err
-    assert "migrate-config" in err and next(iter(change)) in err, err
+    assert "migrate --config" in err and next(iter(change)) in err, err
     assert "checks" not in out
 
 

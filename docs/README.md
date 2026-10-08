@@ -31,7 +31,7 @@ the table does not exist, and when a doc in this folder is not listed.
 - [install-smoke-test.md](install-smoke-test.md) - the checklist after an install or an install change.
 - [releasing.md](releasing.md) - how to cut a release.
 - [configuration.md](configuration.md) - every project setting: what it does, its values, its default and which file holds it.
-- [policy-lint.md](policy-lint.md) - `compass policy lint` and `compass policy effective` on a layered project: the order of the checks, the finding codes and both JSON shapes.
+- [policy-lint.md](policy-lint.md) - `compass policy lint` and `compass policy show` on a layered project: the order of the checks, the finding codes and both JSON shapes.
 - [check-implementations.md](check-implementations.md) - the version and fixture corpus of each check implementation, the build rule and what a major difference does.
 - [policy-diff.md](policy-diff.md) - `compass policy diff`: the references, the sets it replays, `--open`, the exit codes and the JSON shape.
 - [generation-store.md](generation-store.md) - the stored generation of an issue's configuration: its files, the commit order, the states and what reads it.

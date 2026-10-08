@@ -1,4 +1,4 @@
-# compass_pkg.policy_cmd - `compass policy lint`, `effective`, `diff`, `migrate` and `update`
+# compass_pkg.policy_cmd - `compass policy lint`, `show`, `diff`, `migrate` and `update`
 """The five verbs over `policy_lint`, `replay`, `policy_migrate` and `policy_update`.
 
 `policy lint` runs the legacy lint, unchanged, for a project with no
@@ -165,8 +165,8 @@ def _issue_option(parser):
 
 
 def register(pls):
-    """Add `lint`, `effective`, `diff`, `migrate` and `update` to the `policy` parsers."""
-    ple = pls.add_parser("effective", help="show every resolved configuration field "
+    """Add `lint`, `show`, `diff`, `migrate` and `update` to the `policy` parsers."""
+    ple = pls.add_parser("show", help="show every resolved configuration field "
                          "with its source layer")
     _issue_option(ple)
     ple.set_defaults(func=run_policy_effective, output_kind="report")

@@ -49,7 +49,7 @@ Adopters of v5.6.0 hold manifests, copies of `governance/routing-policy.yml` and
 
 An alias is kept only for a renamed CLI verb, and only when a release tag holds the old spelling. A spelling counts as released only when `git show <tag>:cli/compass` and the registering modules at that tag hold it. The alias ends at 7.0.0.
 
-- The alias table, a data file beside the CLI entry point, lists each alias with the first release tag that holds the old spelling. A test fails when a row has no tag, or when the tag does not hold the old spelling.
+- The alias table is `cli/aliases.yml`, a data file beside the CLI entry point. Its `aliases:` rows list each alias with the first release tag that holds the old spelling. Its `hints:` rows list the old spellings no release holds. A test fails when a row has no tag, or when the tag does not hold the old spelling.
 - A second test fails when the package version is 7.0.0 or later and the table is not empty.
 - A renamed spelling that no release tag holds gets no alias. It is an unknown command whose error message names the new spelling.
 - An alias prints one notice on standard error naming the new spelling. Standard output and the exit code are those of the new command.

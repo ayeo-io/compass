@@ -1079,7 +1079,7 @@ def _help(root, *argv):
 def test_pd_10_the_verb_sits_beside_lint_and_effective_and_describes_itself(tmp_path):
     root = _project(tmp_path)
     listing = _help(root, "policy")
-    for verb in ("lint", "effective", "diff"):
+    for verb in ("lint", "show", "diff"):
         assert verb in listing
     text = _help(root, "policy", "diff")
     for word in ("--open", "--exit-code", "--json", "default@6", "git:", "legacy"):

@@ -951,7 +951,7 @@ def effective_text(effective):
     scope = f"issue {effective.issue}" if effective.issue else "project"
     names = [l["name"] if l["version"] is None else f"{l['name']}@{l['version']}"
              for l in effective.layers]
-    lines = [f"compass policy effective: {scope} - layers: {', '.join(names)}",
+    lines = [f"compass policy show: {scope} - layers: {', '.join(names)}",
              "  This is what the configuration resolves to. compass check and the "
              "evaluator still read the legacy governance files until the generation "
              "store lands."]

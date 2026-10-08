@@ -147,7 +147,7 @@ def _registered(task: dict, kind: str) -> bool:
 def _earned(task: dict, kind: str) -> bool:
     """True when the issue's route earns the `kind` document.
     `approach evaluate` seeds an entry for every document the route earns,
-    and `compass issue artifact` refuses any other kind."""
+    and `compass issue artifact set` refuses any other kind."""
     return any(a.get("kind") == kind for a in _entries(task, "artifacts"))
 
 

@@ -994,7 +994,7 @@ def cmd_quick_fix_finish(args):
         if any("NOT re-derived" in ln or "commit failed" in ln for ln in spec_lines):
             spec_lines.append(
                 "fix it: copy those issue folders into .compass/work/, then "
-                "run `compass issue refresh-spec`")
+                "run `compass spec sync`")
         landed, _ = load_manifest(task_dir)
         committed_files = _commit_files(landed.get("land_commit"), project_root)
         traced_now = {cf.get("path") for cf in (landed.get("changed_files")

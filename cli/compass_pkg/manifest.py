@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # =============================================================================
 # compass_pkg.manifest - `compass ship-commit`, the manifest mutators and
-# `compass issue set-status`
+# `compass issue status set`
 # =============================================================================
 #
 # DEPENDENCY: PyYAML, bundled at cli/vendor/yaml/ and pinned in
@@ -801,7 +801,7 @@ def cmd_scenario_tests(args):
     instead of by a hand edit of manifest.yml."""
     given = [t.strip() for t in (args.test or []) if t and t.strip()]
     if not given:
-        raise CompassError("compass scenario tests: give the scenario's tests with "
+        raise CompassError("compass scenario tests set: give the scenario's tests with "
                            "--test <path::name> (repeatable).")
     task_dir = resolve_issue_dir(args.task)
     task, task_path = load_manifest(task_dir)
@@ -811,7 +811,7 @@ def cmd_scenario_tests(args):
         known = sorted(s.get("id") for s in (task.get("scenarios") or [])
                        if isinstance(s, dict) and s.get("id"))
         raise CompassError(
-            f"compass scenario tests: '{args.scenario_id}' is not a scenario in this "
+            f"compass scenario tests set: '{args.scenario_id}' is not a scenario in this "
             f"issue's manifest.yml: its scenarios are {known}. Add it first with "
             f"`compass scenario add`.")
     project_root = os.path.dirname(find_compass_dir())
@@ -819,7 +819,7 @@ def cmd_scenario_tests(args):
                for why in [_test_refusal(t, project_root)] if why]
     if refused:
         raise CompassError(
-            "compass scenario tests: " + "; ".join(refused) + ". Name a test that "
+            "compass scenario tests set: " + "; ".join(refused) + ". Name a test that "
             "exists, as `compass check` reads it (`path/to/test_file.py::test_name`).")
     previous = list(scn.get("tests") or [])
     scn["tests"] = given
@@ -840,7 +840,7 @@ def cmd_scenario_tests(args):
                f"`compass tdd-green` before `compass ship-commit`, which refuses a "
                f"green recorded before it."] if new_files else None)
     noun = "test" if len(given) == 1 else "tests"
-    return say(args, f"compass scenario tests: {args.scenario_id} now declares "
+    return say(args, f"compass scenario tests set: {args.scenario_id} now declares "
                      f"{len(given)} {noun}.", detail=detail,
                scenario=args.scenario_id, issue=os.path.basename(task_dir),
                tests=given, previous=previous, reason=reason or None)
@@ -993,8 +993,8 @@ def annotate_gate_accepts_text(text, requirements=None):
 
 
 
-# --- compass issue set-status -------------------------------------------------
-# `compass issue set-status`: sets the lifecycle status, so nobody edits the
+# --- compass issue status set -------------------------------------------------
+# `compass issue status set`: sets the lifecycle status, so nobody edits the
 # manifest by hand.
 
 #: The words the setter takes until it changes. Whether an issue is closed or
@@ -1009,7 +1009,7 @@ def cmd_task_set_status(args):
     status = args.status
     if status not in TASK_STATUSES:
         raise CompassError(
-            f"compass issue set-status: '{status}' is not an issue status. "
+            f"compass issue status set: '{status}' is not an issue status. "
             f"Permitted: {', '.join(TASK_STATUSES)}.\n"
             "  queued    - recorded as next up, not started\n"
             "  active    - in flight\n"
@@ -1029,7 +1029,7 @@ def cmd_task_set_status(args):
                  if isinstance(g, dict) and g.get("status") != "pass"]
         if unmet:
             raise CompassError(
-                f"compass issue set-status: refusing to mark '{task.get('issue')}' "
+                f"compass issue status set: refusing to mark '{task.get('issue')}' "
                 f"landed - {len(unmet)} gate(s) have not passed "
                 f"({', '.join(unmet)}). Landed means every gate passed. "
                 "Clear the gates and re-run."
@@ -1050,7 +1050,7 @@ def cmd_task_set_status(args):
 
     save_manifest(task, path)
     detail = f" ({reason})" if reason else ""
-    return say(args, f"compass issue set-status: {task.get('issue')} -> "
+    return say(args, f"compass issue status set: {task.get('issue')} -> "
                     f"{status}{detail}.",
                detail=_stale_page(task_dir),
                issue=task.get("issue"), status=status, reason=reason or None)

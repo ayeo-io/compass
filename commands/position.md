@@ -55,7 +55,7 @@ shipped governance defaults stay in force, and adopting your own is what
 
    **Where it goes.** `docs/compass/<created>-<issue-slug>/positioning.md`, where the
    date is the manifest's `created:` field - not today's. Then register it:
-   `compass issue artifact positioning --status draft --path <that path>`. The CLI
+   `compass issue artifact set positioning --status draft --path <that path>`. The CLI
    refuses a path that climbs out of the project, so the record is checked
    rather than claimed. If you had to create `docs/compass/`, **say so in one
    line** - a directory appearing with nothing said is how it gets deleted by

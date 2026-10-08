@@ -1,4 +1,4 @@
-"""`compass scenario tests` replaces the tests a scenario declares.
+"""`compass scenario tests set` replaces the tests a scenario declares.
 
 Before this verb a scenario whose declared test id was wrong - after a test
 was renamed for a good reason, say - could be fixed only by renaming the test
@@ -64,7 +64,7 @@ def _tests(task_dir, sid="SCN-1"):
 
 
 def test_the_verb_replaces_the_declared_tests(run_cli, issue):
-    result = run_cli("scenario", "tests", "SCN-1", "--test", NEW,
+    result = run_cli("scenario", "tests", "set", "SCN-1", "--test", NEW,
                      "--reason", "test renamed")
     assert result.returncode == 0, result.stdout + result.stderr
     assert _tests(issue) == [NEW]
@@ -73,7 +73,7 @@ def test_the_verb_replaces_the_declared_tests(run_cli, issue):
 
 def test_the_verb_takes_several_tests_in_the_order_given(run_cli, issue):
     second = "tests/test_old.py::test_old_name"
-    result = run_cli("scenario", "tests", "SCN-1", "--test", NEW,
+    result = run_cli("scenario", "tests", "set", "SCN-1", "--test", NEW,
                      "--test", second)
     assert result.returncode == 0, result.stdout + result.stderr
     assert _tests(issue) == [NEW, second]
@@ -81,7 +81,7 @@ def test_the_verb_takes_several_tests_in_the_order_given(run_cli, issue):
 
 def test_an_unknown_scenario_is_refused_and_nothing_is_written(run_cli, issue):
     before = (issue / "manifest.yml").read_text()
-    result = run_cli("scenario", "tests", "SCN-9", "--test", NEW)
+    result = run_cli("scenario", "tests", "set", "SCN-9", "--test", NEW)
     assert result.returncode == 2, result.stdout + result.stderr
     combined = result.stdout + result.stderr
     assert "SCN-9" in combined and "SCN-1" in combined, combined
@@ -90,7 +90,7 @@ def test_an_unknown_scenario_is_refused_and_nothing_is_written(run_cli, issue):
 
 def test_no_test_is_refused(run_cli, issue):
     before = (issue / "manifest.yml").read_text()
-    result = run_cli("scenario", "tests", "SCN-1")
+    result = run_cli("scenario", "tests", "set", "SCN-1")
     assert result.returncode == 2, result.stdout + result.stderr
     assert "--test" in result.stdout + result.stderr
     assert (issue / "manifest.yml").read_text() == before
@@ -102,7 +102,7 @@ def test_no_test_is_refused(run_cli, issue):
 ])
 def test_a_test_that_does_not_resolve_is_refused(run_cli, issue, bad):
     before = (issue / "manifest.yml").read_text()
-    result = run_cli("scenario", "tests", "SCN-1", "--test", bad)
+    result = run_cli("scenario", "tests", "set", "SCN-1", "--test", bad)
     assert result.returncode == 2, result.stdout + result.stderr
     assert bad in result.stdout + result.stderr
     assert (issue / "manifest.yml").read_text() == before
@@ -112,7 +112,7 @@ def test_a_skipped_test_is_refused_as_the_check_refuses_it(run_cli, project,
                                                            issue):
     (project / "tests" / "test_new.py").write_text(
         "import pytest\n\n@pytest.mark.skip\ndef test_new_name():\n    pass\n")
-    result = run_cli("scenario", "tests", "SCN-1", "--test", NEW)
+    result = run_cli("scenario", "tests", "set", "SCN-1", "--test", NEW)
     assert result.returncode == 2, result.stdout + result.stderr
     assert "skipped" in result.stdout + result.stderr
 
@@ -141,7 +141,7 @@ def test_the_check_agrees_after_the_swap(run_cli, issue):
         return "do not resolve" in text
 
     assert verdict(), "the stale id should fail declared-tests-resolve"
-    result = run_cli("scenario", "tests", "SCN-1", "--test", NEW)
+    result = run_cli("scenario", "tests", "set", "SCN-1", "--test", NEW)
     assert result.returncode == 0, result.stdout + result.stderr
     assert not verdict()
 
@@ -149,7 +149,7 @@ def test_the_check_agrees_after_the_swap(run_cli, issue):
 def test_the_devlog_line_names_the_old_and_new_tests_and_the_reason(run_cli,
                                                                     issue):
     (issue / "devlog.md").write_text("# Devlog - swap\n\n")
-    result = run_cli("scenario", "tests", "SCN-1", "--test", NEW,
+    result = run_cli("scenario", "tests", "set", "SCN-1", "--test", NEW,
                      "--reason", "renamed to say what it checks")
     assert result.returncode == 0, result.stdout + result.stderr
     lines = (issue / "devlog.md").read_text().splitlines()
@@ -160,13 +160,13 @@ def test_the_devlog_line_names_the_old_and_new_tests_and_the_reason(run_cli,
 
 
 def test_no_devlog_is_created_when_the_issue_has_none(run_cli, issue):
-    result = run_cli("scenario", "tests", "SCN-1", "--test", NEW)
+    result = run_cli("scenario", "tests", "set", "SCN-1", "--test", NEW)
     assert result.returncode == 0, result.stdout + result.stderr
     assert not (issue / "devlog.md").exists()
 
 
 def test_json_output_matches_the_pinned_fixture(run_cli, issue):
-    result = run_cli("scenario", "tests", "SCN-1", "--test", NEW,
+    result = run_cli("scenario", "tests", "set", "SCN-1", "--test", NEW,
                      "--reason", "test renamed", "--json")
     assert result.returncode == 0, result.stdout + result.stderr
     got = json.loads(result.stdout)
@@ -178,9 +178,9 @@ def test_json_output_matches_the_pinned_fixture(run_cli, issue):
 def test_the_verb_is_in_the_help_and_the_readme():
     from compass_pkg.verb_help import VERB_DESCRIPTIONS
 
-    assert "scenario tests" in VERB_DESCRIPTIONS
+    assert "scenario tests set" in VERB_DESCRIPTIONS
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    assert "compass scenario tests" in readme
+    assert "compass scenario tests set" in readme
 
 
 # --- a changed test list cannot keep a stale green -------------------------
@@ -242,7 +242,7 @@ def test_a_swap_to_a_test_in_another_file_needs_a_green_on_that_file(repo):
     swap, ship-commit refuses and names the new test file; a new tdd-green
     covers it and the commit lands."""
     _green(repo)
-    result = _cli(repo, "scenario", "tests", "S-1", "--issue", SLUG,
+    result = _cli(repo, "scenario", "tests", "set", "S-1", "--issue", SLUG,
                   "--test", "tests/test_b.py::test_b")
     assert result.returncode == 0, result.stdout + result.stderr
     _git(repo, "add", "src/new.py", "tests/test_b.py")

@@ -9,7 +9,7 @@ locked entries: the facts that mention them. A waiver is never an input, so
 no waiver excuses a lock refusal. A project lifts a `true` lock with
 `unlock: true` and a waiver that its `owner` approved; no unlock lifts a hard
 lock. A project that unlocks a framework entry is reported non-conformant by
-`compass check`, `compass issue receipt` and `compass approach summary`.
+`compass check`, `compass issue receipt` and `compass approach show`.
 
 This module reads layer documents and configurations that its caller hands it,
 and reads no preset. The shipped lock set is written once, in the preset's

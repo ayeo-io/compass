@@ -823,7 +823,7 @@ def _set_generation_line(path, target):
 
 def migrate_generation(task_dir):
     """Store the next generation of the issue pinned to the installed versions
-    (`compass issue migrate-config`), the second of the three commit paths.
+    (`compass issue migrate --config`), the second of the three commit paths.
     Returns `(Committed, notes)`. The stored configuration is kept as it is and
     every check result the old generation recorded is invalidated. An issue
     with no stored generation is adopted: its live configuration becomes
@@ -836,7 +836,7 @@ def migrate_generation(task_dir):
     if status_words.is_closed(manifest):
         raise CompassError(
             f"issue {slug} is landed and keeps the configuration it landed under, so "
-            f"`compass issue migrate-config` did not change it")
+            f"`compass issue migrate --config` did not change it")
     held = generation.number(manifest)
     invalidated = {}
     if held:

@@ -57,7 +57,7 @@ the human sign-off; a synonym such as `pii` does not.
 
 It runs `compass init`, records the assessment, computes the approach
 through `compass approach evaluate`, writes `delivery-approach.md`, and
-registers it with `compass issue artifact`. If it prints a `created:` line
+registers it with `compass issue artifact set`. If it prints a `created:` line
 naming `.compass/` or `docs/compass/`, report it to the user: a directory
 that appears unannounced gets deleted by hand or committed by accident.
 

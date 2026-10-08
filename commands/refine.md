@@ -82,13 +82,13 @@ is for. The same split is written from the other side in
    `acceptance-criteria.md`) or record it as an open question with an owner.
    An unresolved ambiguity is not allowed to silently pass into design.
 4. **Write `requirements-review.md`** from the output of
-   `compass issue template requirements-review`, which renders the checklist from the
+   `compass issue template show requirements-review`, which renders the checklist from the
    issue's entry lists: the ambiguity ledger, each entry resolved or assigned.
 
    **Where it goes.** `docs/compass/<created>-<issue-slug>/requirements-review.md`, where the
    date is the manifest's `created:` field - not today's. On an approach that
    earns the document (the full approach), register it:
-   `compass issue artifact requirements-review --status draft --path <that path>`. The CLI
+   `compass issue artifact set requirements-review --status draft --path <that path>`. The CLI
    refuses a path that climbs out of the project, so the record is checked
    rather than claimed. The regular approach does not earn it, and the CLI refuses to
    register it there: write the file and leave it unregistered. `compass next`
@@ -131,7 +131,7 @@ about decisions, not wording.
 Wait for approval only if `refine` is in the manifest's `checkpoints:`.
 The project's `autonomy` setting, read from `compass.yml` (or from
 `.compass/config.yml` in a project without one), decides that list,
-and `compass approach summary` shows it. If `refine` is not listed, still
+and `compass approach show` shows it. If `refine` is not listed, still
 write the ambiguity ledger and show this hand-off, then say you are going on without
 waiting and name the setting, with "Next" in place of "On approval". Log
 the skipped checkpoint to `devlog.md`, so the person can review it later and

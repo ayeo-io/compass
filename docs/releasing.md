@@ -59,7 +59,7 @@ is now measured from the project root.
 
 An issue written under 4.x keeps working without any change: a bare
 filename still resolves beside the manifest, and the CLI says when it used
-that fallback. To move the documents, run `compass migrate`. It refuses when
+that fallback. To move the documents, run `compass issue migrate`. It refuses when
 git holds no copy of the work directory, and `--i-have-a-copy` tells it you
 have taken one yourself.
 
@@ -69,7 +69,7 @@ New in 5.0.0, and nothing removed by it:
   command file and one skill.
 - `compass issue artifact-path <kind>` prints where one of an issue's
   documents is.
-- `compass issue artifact --path` records where a document was written.
+- `compass issue artifact set --path` records where a document was written.
 
 ### What changed at 4.0.0
 
@@ -89,7 +89,7 @@ it, so a project that copied `governance/` under 3.x needs this file too -
 otherwise that link resolves to nothing.
 
 The read-side rename tables are unaffected: an issue directory written
-under an older vocabulary still loads, and `compass migrate` still brings
+under an older vocabulary still loads, and `compass issue migrate` still brings
 one forward (ADR-020). ADR-024 records why the redirects were not carried
 past this boundary.
 

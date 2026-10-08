@@ -642,7 +642,7 @@ def test_pt_7_an_owner_outside_the_basic_plane_is_written_as_the_same_text(tmp_p
     doc = yaml.safe_load(text)
     assert doc["owner"] == owner
     (folder / "compass.yml").read_text(encoding="utf-8").encode("utf-8")
-    code, out, err = _run(folder, "policy", "effective")
+    code, out, err = _run(folder, "policy", "show")
     assert code == 0, err
 
 

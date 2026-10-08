@@ -97,7 +97,7 @@ The exact slug can vary. The issue directory must contain at least
 Generate the review dashboard:
 
 ```bash
-compass issue dashboard --issue <issue-slug>
+compass issue dashboard render --issue <issue-slug>
 ```
 
 Open the generated `README.md`. It must show the delivery approach, artifact

@@ -44,7 +44,7 @@ def _inside_the_scratch_project(tmp_path, monkeypatch):
 
 
 def _render(root, kind, *extra):
-    return _run(root, "issue", "template", kind, "--issue", SLUG, *extra)
+    return _run(root, "issue", "template", "show", kind, "--issue", SLUG, *extra)
 
 
 def _issue(tmp_path, compass_yml=None):
@@ -468,7 +468,7 @@ def test_tr_7_the_verb_renders_for_the_current_issue(tmp_path):
     cfg = {"schema": 1, "stages": {"plan": {"set": {"entry": {"remove": ["dor-no-open-questions"]}}}}}
     root, _ = _issue(tmp_path, cfg)
     (root / ".compass" / "current-task").write_text(SLUG + "\n", encoding="utf-8")
-    code, out, err = _run(root, "issue", "template", "requirements-review")
+    code, out, err = _run(root, "issue", "template", "show", "requirements-review")
     assert code == 0, out + err
     assert "No open questions" not in out and "Summary is filled" in out
 
@@ -488,7 +488,7 @@ def test_tr_7_json_gives_the_kind_the_issue_the_source_and_the_text(tmp_path):
 def test_tr_7_json_names_the_issue_from_the_current_pointer(tmp_path):
     root, _ = _issue(tmp_path)
     (root / ".compass" / "current-task").write_text(SLUG + "\n", encoding="utf-8")
-    code, out, err = _run(root, "issue", "template", "verification-report", "--json")
+    code, out, err = _run(root, "issue", "template", "show", "verification-report", "--json")
     assert code == 0, out + err
     assert json.loads(out)["issue"] == SLUG
 
@@ -511,7 +511,7 @@ def test_tr_7_an_unknown_kind_is_refused_and_names_the_kinds(tmp_path):
 
 def test_tr_7_an_issue_that_does_not_exist_is_refused(tmp_path):
     root, _ = _issue(tmp_path)
-    code, out, err = _run(root, "issue", "template", "requirements-review", "--issue", "nope")
+    code, out, err = _run(root, "issue", "template", "show", "requirements-review", "--issue", "nope")
     assert code == 2 and out == ""
     assert "no issue directory" in err
 
@@ -520,7 +520,7 @@ def test_tr_7_the_verb_is_public_and_says_what_it_does(tmp_path):
     root, _ = _issue(tmp_path)
     code, out, err = _run(root, "issue", "--help")
     assert code == 0 and "template" in out
-    code, out, err = _run(root, "issue", "template", "--help")
+    code, out, err = _run(root, "issue", "template", "show", "--help")
     assert code == 0
     flat = " ".join(out.split())
     assert "stage lists" in flat and "--issue" in flat and "--json" in flat
@@ -534,7 +534,7 @@ COMMANDS = {"refine": "requirements-review", "verify": "verification-report"}
 @pytest.mark.parametrize("command, kind", sorted(COMMANDS.items()))
 def test_tr_7_the_command_that_writes_a_checklist_document_takes_it_from_the_verb(command, kind):
     text = (ROOT / "commands" / f"{command}.md").read_text(encoding="utf-8")
-    assert f"compass issue template {kind}" in text
+    assert f"compass issue template show {kind}" in text
     assert f"templates/{kind}.md" not in text
     allowed = re.search(r"^allowed-tools: (.*)$", text, re.M).group(1)
     assert "Bash" in allowed, "the command runs a compass verb, so it needs Bash"
@@ -578,7 +578,7 @@ def test_tr_8_the_default_render_adds_no_line_to_a_list_template(tmp_path):
 def test_tr_9_the_owning_doc_says_what_renders_and_the_router_names_the_module():
     doc = (ROOT / "docs" / "entry-exit-evaluation.md").read_text(encoding="utf-8")
     flat = " ".join(doc.split())
-    for phrase in ("cli/compass_pkg/template_lists.py", "compass issue template",
+    for phrase in ("cli/compass_pkg/template_lists.py", "compass issue template show",
                    "Definition of Ready", "Implement exit list",
                    "keeps the template's own text", "(evidence: {{EV-id}})",
                    "every exit list", "An exit list on `plan` renders into the verification report",

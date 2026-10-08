@@ -536,7 +536,7 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
 # --- command: approach summary ------------------------------------------------
 
 def cmd_approach_summary(args):
-    """`compass approach summary`: the three lines a person reads before
+    """`compass approach show`: the three lines a person reads before
     any code - the approach and the assessment behind it, the gates it must
     pass, and where the issue's files go. `/compass:go` prints this as its
     decision view, so it stays exactly three lines."""

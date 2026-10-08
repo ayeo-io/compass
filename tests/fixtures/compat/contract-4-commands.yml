@@ -59,15 +59,15 @@ entries:
   exit: 2
 - id: approach-diagram
   project: initialised
-  argv: ["approach", "diagram"]
+  argv: ["approach", "render"]
   exit: 0
 - id: approach-diagram-with-config
   project: with-config
-  argv: ["approach", "diagram"]
+  argv: ["approach", "render"]
   exit: 0
 - id: approach-diagram-unknown-autonomy
   project: initialised
-  argv: ["approach", "diagram", "--autonomy", "relaxed"]
+  argv: ["approach", "render", "--autonomy", "relaxed"]
   exit: 2
 - id: check-quick-fix-enforced
   project: quick-fix-started
@@ -138,11 +138,11 @@ entries:
   exit: 2
 - id: issue-refresh-spec-outside-git
   project: outside-git
-  argv: ["issue", "refresh-spec"]
+  argv: ["spec", "sync"]
   exit: 2
 - id: issue-refresh-spec-no-base
   project: quick-fix-started
-  argv: ["issue", "refresh-spec"]
+  argv: ["spec", "sync"]
   exit: 2
 - id: quick-fix-start-valid
   project: empty
@@ -287,7 +287,7 @@ entries:
 # scenario declares and exits 0.
 - id: scenario-tests-valid
   project: quick-fix-started
-  argv: ["scenario", "tests", "TRC-001", "--test", "README.md"]
+  argv: ["scenario", "tests", "set", "TRC-001", "--test", "README.md"]
   exit: 0
   stdout_contains: "now declares 1 test"
 # Added on purpose by scenario-tests-verb: an unknown scenario exits 2. 5.6.0
@@ -295,21 +295,21 @@ entries:
 # refusing a scenario the issue does not define.
 - id: scenario-tests-unknown-scenario
   project: quick-fix-started
-  argv: ["scenario", "tests", "TRC-999", "--test", "README.md"]
+  argv: ["scenario", "tests", "set", "TRC-999", "--test", "README.md"]
   exit: 2
 # Added on purpose by scenario-tests-verb: a test id that is not on disk exits
 # 2. 5.6.0 also exited 2, for the unknown verb, so this guards that the new verb
 # refuses an id that `declared-tests-resolve` would fail.
 - id: scenario-tests-unresolved
   project: quick-fix-started
-  argv: ["scenario", "tests", "TRC-001", "--test", "tests/test_greeting.py::test_hello"]
+  argv: ["scenario", "tests", "set", "TRC-001", "--test", "tests/test_greeting.py::test_hello"]
   exit: 2
 # Added on purpose by scenario-tests-verb: a call with no --test exits 2. 5.6.0
 # also exited 2, for the unknown verb, so this guards that the new verb does not
 # clear a scenario's declared tests.
 - id: scenario-tests-no-test
   project: quick-fix-started
-  argv: ["scenario", "tests", "TRC-001"]
+  argv: ["scenario", "tests", "set", "TRC-001"]
   exit: 2
 - id: follow-up-resolve-unknown
   project: quick-fix-started
@@ -351,7 +351,7 @@ entries:
 # configuration and exits 0.
 - id: policy-effective-shipped
   project: initialised
-  argv: ["policy", "effective"]
+  argv: ["policy", "show"]
   exit: 0
   stdout_contains: "default@6.0.0"
 # Added on purpose by policy-lint: a root compass.yml that Compass reads is
@@ -405,7 +405,7 @@ entries:
 # exits 0.
 - id: issue-migrate-config-already-pinned
   project: regular-issue
-  argv: ["issue", "migrate-config"]
+  argv: ["issue", "migrate", "--config"]
   exit: 0
   stdout_contains: "no change"
 # Added on purpose by impl-refusal: with no current issue the new verb exits 2.
@@ -413,7 +413,7 @@ entries:
 # refuses to guess which issue to change.
 - id: issue-migrate-config-no-issue
   project: initialised
-  argv: ["issue", "migrate-config"]
+  argv: ["issue", "migrate", "--config"]
   exit: 2
 # Added on purpose by policy-migrate: `policy migrate` is a new verb. 5.6.0
 # refused it as an unknown choice (exit 2). From 6.0.0 it is a dry run on a
@@ -680,12 +680,12 @@ entries:
 # and exits 0. The shipped default renders the template file unchanged.
 - id: issue-template-requirements-review
   project: regular-issue
-  argv: ["issue", "template", "requirements-review", "--issue", "feature"]
+  argv: ["issue", "template", "show", "requirements-review", "--issue", "feature"]
   exit: 0
   stdout_contains: "Definition of Ready"
 - id: issue-template-verification-report-json
   project: regular-issue
-  argv: ["issue", "template", "verification-report", "--issue", "feature", "--json"]
+  argv: ["issue", "template", "show", "verification-report", "--issue", "feature", "--json"]
   exit: 0
   stdout_contains: "\"kind\": \"verification-report\""
 # Added on purpose by templates-render-lists: this entry pins the exit code of
@@ -694,7 +694,7 @@ entries:
 # pinned here.
 - id: issue-template-unknown-kind
   project: regular-issue
-  argv: ["issue", "template", "no-such-template", "--issue", "feature"]
+  argv: ["issue", "template", "show", "no-such-template", "--issue", "feature"]
   exit: 2
 # Added on purpose by configure-and-reassess: `issue configure` is a new verb.
 # 5.6.0 refused it as an unknown choice (exit 2). From 6.0.0 a change that

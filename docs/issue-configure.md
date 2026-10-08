@@ -449,5 +449,5 @@ first reading's message.
 ## Not built yet
 
 - `compass policy diff`, which will call the preview's comparison for two references.
-- `compass issue migrate-config` and the pending-change line in `compass check`.
+- `compass issue migrate --config` and the pending-change line in `compass check`.
 - Check-result records (`result:<check>`) are not invalidated by a configuration change.

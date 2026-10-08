@@ -72,7 +72,7 @@ registry. It refuses a fetched commit that is not the pinned sha, and a
 The fetch runs `git` with an argument list and no shell, only over `https`, with
 hooks off and no prompts. It runs with your own git configuration, so your
 credential helper runs and your `url.*.insteadOf` rules apply. Only `compass
-policy lint`, `compass policy effective`, `compass policy diff` (when a
+policy lint`, `compass policy show`, `compass policy diff` (when a
 reference is a git parent) and `compass approach evaluate --write` fetch,
 including a reassess that commits a `compass issue configure` proposal.
 `compass policy diff` prints a line on stderr before it fetches. `compass check`

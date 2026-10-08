@@ -92,7 +92,7 @@ def test_trc_c1_every_verb_accepts_every_mode_flag():
     # stops, so it never sees anything nested. Naming a nested verb catches
     # that directly and does not go out of date as verbs are added, which a
     # bare count would. The floor is a second, cruder net.
-    for nested in ("issue dashboard", "gate pass", "evidence add", "bdd verify"):
+    for nested in ("issue dashboard render", "gate pass", "evidence add", "bdd verify"):
         assert nested in leaves, (
             "%r was not reached, so the walk over the parser tree is not "
             "recursing into nested subcommand groups. Found: %s"
@@ -963,7 +963,7 @@ _TAIL_EXEMPT = {
     "_migrate-archive": "private, and rewrites a whole work tree",
     "_derive-system-spec": "private, and writes a tracked doc",
     "_derive-glossary": "private, and writes a tracked doc",
-    "migrate": "rewrites a work tree; its own suite covers its output",
+    "issue migrate": "rewrites a work tree, or with --config stores a new generation; its own suites cover its output",
     "ship-commit": "writes a git commit",
     "check": "measured by its own tests above, on a failing issue",
     "policy lint": "needs a governance tree of its own to say anything",
@@ -976,28 +976,27 @@ _TAIL_EXEMPT = {
     "evidence approve": "needs a terminal on standard input and a human check that lists approvers, which this fixture lacks; test_human_checks.py runs it under a pseudo-terminal and pins its --json output",
     # Prints the document and nothing else, on purpose: an agent writes the
     # output to the issue's document, so a hand-off tail would end up in it.
-    "issue template": "prints a document for a caller to write, with no hand-off tail",
+    "issue template show": "prints a document for a caller to write, with no hand-off tail",
     "lesson add": "writes .compass/lessons.yml and needs a git user name the fixture does not set; test_lessons.py runs it",
     "lesson propose": "writes .compass/lessons-pending.yml; test_lessons.py runs it",
     "lesson accept": "needs a pending proposal and a git user name; test_lessons.py runs it",
     "lesson list": "prints the lessons verbatim, one line each; test_lessons.py runs it",
     "lesson remove": "needs an existing lesson; test_lessons.py runs it",
     "scenario descope": "writes the manifest of an existing issue; test_failure_modes.py runs it",
-    "scenario tests": "refuses a test id that is not on disk, and the fixture creates no test file; test_scenario_tests_verb.py runs it and pins its --json output, without measuring its output against this contract",
+    "scenario tests set": "refuses a test id that is not on disk, and the fixture creates no test file; test_scenario_tests_verb.py runs it and pins its --json output, without measuring its output against this contract",
     "lesson decline": "needs a pending proposal; test_lessons.py runs it",
     "decision record": "writes a tracked file and needs a git user name the fixture does not set; test_decisions_ledger.py runs it",
     "decision check": "needs a git repository with a base ref; test_decisions_ledger.py runs it",
     "decision list": "prints the ledger's entries verbatim, one line each; test_decisions_ledger.py runs it",
     "decision show": "prints one entry's text verbatim; test_decisions_ledger.py runs it",
     "issue subtask add": "needs a git repository and a brief file the fixture does not create; test_subtask_record.py runs it, without measuring its output against this contract",
-    "issue subtask update": "needs a recorded subtask the fixture does not create; test_subtask_record.py runs it, without measuring its output against this contract",
+    "issue subtask set": "needs a recorded subtask the fixture does not create; test_subtask_record.py runs it, without measuring its output against this contract",
     "record sync": "needs a record repository to push to; test_delivery_record.py runs it against a local one, without measuring its output against this contract",
     "record restore": "needs a record repository to read; test_delivery_record.py runs it against a local one, without measuring its output against this contract",
     "run": "starts claude sessions, so it needs a stub executable the fixture does not have; test_headless_runner.py runs it against one, without measuring its output against this contract",
     "issue use": "writes the pointer and the session record of an existing issue; test_current_task_lease.py runs it, without measuring its output against this contract",
-    "issue refresh-spec": "merges a base branch and commits; test_living_spec_refresh.py runs it in a temporary repository, without measuring its output against this contract",
+    "spec sync": "merges a base branch and commits; test_living_spec_refresh.py runs it in a temporary repository, without measuring its output against this contract",
     "issue friction": "needs evidence inside an existing issue folder and writes one manifest key; test_agent_friction.py runs it, without measuring its output against this contract",
-    "issue migrate-config": "stores a new generation and prints one line, or two when results are invalidated; test_migrate_config.py runs it, without measuring its output against this contract",
     "issue raised-by": "writes one key to an existing issue's manifest and prints one line, or two with the chain hint; test_lineage.py runs it, without measuring its output against this contract",
     "issue subtask replan": "writes the manifest of an existing multiagent issue; test_loop_ceilings.py runs it, without measuring its output against this contract",
     "issue subtask package": "needs a git history to diff, which the fixture does not have; test_subtask_record.py runs it, without measuring its output against this contract",
@@ -1037,13 +1036,13 @@ _TAIL_ARGV = {
     # registry in cli/compass_pkg/refusals.py with the params given on argv.
     "_refusal": ["_refusal", "no-delivery-approach", "slug=demo"],
     "approach evaluate": ["approach", "evaluate"],
-    "issue dashboard": ["issue", "dashboard"],
-    "issue set-status": ["issue", "set-status", "active"],
+    "issue dashboard render": ["issue", "dashboard", "render"],
+    "issue status set": ["issue", "status", "set", "active"],
     "issue subtask next": ["issue", "subtask", "next"],
     # The artifact set is computed by the evaluator, so the fixture runs
     # `approach evaluate --write` first and this names a document the
     # assessment actually earned.
-    "issue artifact": ["issue", "artifact", "acceptance-criteria",
+    "issue artifact set": ["issue", "artifact", "set", "acceptance-criteria",
                        "--status", "draft"],
     "scenario add": ["scenario", "add", "TRC-9", "--title", "a new one",
                      "--intent", "INT-1"],

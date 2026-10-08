@@ -1,0 +1,61 @@
+# CLI spellings that changed, and what to do when one is typed.
+#
+# aliases: a spelling a release tag holds. It keeps working until 7.0.0: the
+#   argument list is rewritten to the new spelling before it is parsed, and one
+#   notice goes to standard error. `released_in` names the first release tag
+#   that holds the old spelling; tests/test_cli_renames.py checks it against
+#   that tag.
+#
+# hints: a spelling no release holds. It does not run. When the command line
+#   fails to parse, the error adds one line naming the new spelling.
+#
+# A test fails when the package version is 7.0.0 or later and either list is
+# not empty (cli/compass_pkg/aliases.py, removal_problems).
+#
+# `old` and `new` are token lists. When `new` begins with `old` (issue
+# artifact -> issue artifact set), a command line that already holds the extra
+# tokens, or a help flag, is left as it is.
+
+aliases:
+  - old: [approach, summary]
+    new: [approach, show]
+    kind: verb
+    released_in: v5.6.0
+  - old: [issue, set-status]
+    new: [issue, status, set]
+    kind: verb
+    released_in: v5.6.0
+  - old: [policy, review-rules]
+    new: [review-rule, list]
+    kind: verb
+    released_in: v5.6.0
+  - old: [issue, dashboard]
+    new: [issue, dashboard, render]
+    kind: verb
+    released_in: v5.6.0
+  - old: [issue, artifact]
+    new: [issue, artifact, set]
+    kind: verb
+    released_in: v5.6.0
+  - old: [migrate]
+    new: [issue, migrate]
+    kind: verb
+    released_in: v5.6.0
+  - old: [issue, subtask, update]
+    new: [issue, subtask, set]
+    kind: verb
+    released_in: v5.6.0
+
+hints:
+  - old: [policy, effective]
+    new: [policy, show]
+  - old: [approach, diagram]
+    new: [approach, render]
+  - old: [issue, refresh-spec]
+    new: [spec, sync]
+  - old: [issue, migrate-config]
+    new: [issue, migrate, --config]
+  - old: [issue, template]
+    new: [issue, template, show]
+  - old: [scenario, tests]
+    new: [scenario, tests, set]

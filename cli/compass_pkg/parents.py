@@ -263,6 +263,45 @@ def _say(done):
     return " ".join(done.stderr.decode("utf-8", "replace").split())[:300]
 
 
+# What git says when the host cannot be reached at all. A refusal by a host that
+# answered (an unknown repository, a login that failed) is not in this list, so a
+# caller can tell "try again online" from "this will not work online either".
+_UNREACHABLE = re.compile(
+    r"could not resolve host|temporary failure in name resolution|name or service not known"
+    r"|failed to connect|could not connect|connection (?:timed out|refused|reset)"
+    r"|operation timed out|network is unreachable|no route to host"
+    r"|git did not finish in \d+ seconds", re.IGNORECASE)
+
+
+def unreachable(message):
+    """True when git's `message` says the host could not be reached."""
+    return bool(_UNREACHABLE.search(message or ""))
+
+
+def resolve_ref(spec):
+    """The full commit sha the remote's `<ref>` names now, or `None` when the
+    remote has no such ref. A tag is tried before a branch, and an annotated
+    tag gives the commit it points at, not the tag object. This asks git
+    (`ls-remote`) and fetches nothing. A git failure is a `ParentError`; use
+    `unreachable(exc.detail)` to tell a host that cannot be reached."""
+    base, local = remote_base()
+    url = f"{base}/{spec.owner}/{spec.repo}.git"
+    names = [f"refs/tags/{spec.ref}^{{}}", f"refs/tags/{spec.ref}", f"refs/heads/{spec.ref}"]
+    if spec.ref == "HEAD":
+        names.append("HEAD")
+    with tempfile.TemporaryDirectory() as scratch:
+        done = _git(["ls-remote", "--", url, *names], cwd=scratch, local=local)
+    if done.returncode != 0:
+        raise ParentError("L-PARENT-FETCH", f"git ls-remote of {ref_label(spec)} failed: "
+                          f"{_say(done)}")
+    found = {}
+    for line in done.stdout.decode("utf-8", "replace").splitlines():
+        sha, _, name = line.partition("\t")
+        if name in names and re.fullmatch(r"[0-9a-f]{40}", sha):
+            found[name] = sha
+    return next((found[name] for name in names if name in found), None)
+
+
 def _fetch(cache, spec, local, base):
     """Fetch `spec.sha` into `<cache>/<owner>/<repo>/<sha>/compass.yml`.
 

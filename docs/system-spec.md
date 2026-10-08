@@ -50,11 +50,11 @@
 - **Source issue:** `stale-active-issue-sweep`
 - **Landed:** 2026-08-13
 
-### Given a route pick that is mixed at the issue's own assessment, When it is refused, Then the refusal names every looser or incomparable field
+### Given the shipped preset, When linted, Then it is clean and the bookkeeping description follows the design
 
-- **Scenario id:** `IP-9`
+- **Scenario id:** `TRC-004`
 - **Intent:** `INT-1`
-- **Source issue:** `issue-layer-at-its-point`
+- **Source issue:** `artifact-graph-lint`
 - **Landed:** 2026-10-08
 
 ### Backward-compat - guardrail count and gate set unchanged by S6
@@ -353,4 +353,4 @@
 
 ---
 
-1940 superseded scenario(s) are in `docs/system-spec-archive.md`.
+1933 superseded scenario(s) are in `docs/system-spec-archive.md`.

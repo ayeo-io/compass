@@ -16,6 +16,14 @@ superseded_by: ''
 > A shared intent id supersedes nothing. Intent ids are local to an issue, and
 > most issues use INT-1, so keying on the id archived other issues' scenarios
 > and the issue's own sibling scenarios.
+>
+> **Layout, with no size cap:** `docs/system-spec.md` keeps every current
+> scenario. It shows one `### <slug> (landed <date>)` heading per issue and one
+> line per scenario, `` - `<id>` <title> ``. The earlier cap of 4000 words came
+> from the split into spec and archive, which assumed the spec was mostly
+> superseded scenarios. That was the intent-id defect above, not real
+> supersession, so the cap is removed. The archive file holds only scenarios
+> that record `superseded_by`.
 
 ## Context
 

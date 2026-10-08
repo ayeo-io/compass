@@ -538,6 +538,13 @@ _DERIVED_HEADER = (
 # core.py does, so the vocabulary scan does not read it as current prose.
 _SOURCE_LABELS = "(?:issue|" + "ta" + "sk)"
 _SOURCE_ISSUE = re.compile(r"\*\*Source " + _SOURCE_LABELS + r":\*\* `([^`]+)`")
+# The current layout names an issue in its heading, "### <slug> (landed <date>)".
+_ISSUE_HEADING = re.compile(r"^### (\S+) \(landed [0-9-]*\)$", re.M)
+
+
+def _issues_named(text):
+    """Every issue a derived spec names, in the current or the older layout."""
+    return set(_SOURCE_ISSUE.findall(text)) | set(_ISSUE_HEADING.findall(text))
 
 
 def _landed_on_this_branch(project_root, landed):
@@ -561,7 +568,7 @@ def _landed_on_this_branch(project_root, landed):
         for rel in LIVING_SPEC_FILES:
             shown = git("show", f"HEAD:{rel}")
             if shown.returncode == 0:
-                named |= set(_SOURCE_ISSUE.findall(shown.stdout))
+                named |= _issues_named(shown.stdout)
         kept = []
         for item in landed:
             commit = item["issue"].get("land_commit")
@@ -675,7 +682,9 @@ def derive_system_spec(project_root: str) -> None:
                 if scn.get("superseded_by"):
                     archived.append(entry)
                 else:
-                    current[(slug, scn_id, str(one_intent))] = entry
+                    # The current spec lists a scenario once, whatever
+                    # number of intents it serves.
+                    current[(slug, scn_id)] = entry
 
     # ---- 3. Compose the derived spec text ----------------------------------
     lines = [
@@ -697,18 +706,19 @@ def derive_system_spec(project_root: str) -> None:
             "## Current Behaviour",
             "",
         ]
-        # Sort current entries by intent id, then issue, for deterministic output
-        for key in sorted(current.keys(), key=lambda k: (k[2], k[0], str(k[1]))):
-            entry = current[key]
-            lines += [
-                f"### {entry['scn_title'] or entry['scn_id']}",
-                "",
-                f"- **Scenario id:** `{entry['scn_id']}`",
-                f"- **Intent:** `{entry['intent']}`",
-                f"- **Source issue:** `{entry['slug']}`",
-                f"- **Landed:** {entry['land_date']}",
-                "",
-            ]
+        # One heading per issue, in landing order, then one line per
+        # scenario. The spec has no size cap: it keeps every current
+        # scenario, and this layout keeps that readable.
+        by_issue: dict = {}
+        for entry in current.values():
+            by_issue.setdefault(entry["slug"], []).append(entry)
+        for slug, entries in by_issue.items():
+            lines += [f"### {slug} (landed {entries[0]['land_date']})", ""]
+            for entry in entries:
+                # A title is one line; spacing inside a line is kept as written.
+                title = " ".join(str(entry["scn_title"] or "").splitlines())
+                lines.append(f"- `{entry['scn_id']}` {title}".rstrip())
+            lines.append("")
     else:
         lines += [
             "## Current Behaviour",
@@ -795,8 +805,7 @@ def derive_system_spec(project_root: str) -> None:
     for path in (out_path, archive_path):
         if os.path.isfile(path):
             with open(path, encoding="utf-8") as fh:
-                named |= set(re.findall(r"^- \*\*Source " + _SOURCE_LABELS
-                                        + r":\*\* `([^`]+)`", fh.read(), re.M))
+                named |= _issues_named(fh.read())
     missing = sorted(named - on_disk)
     if missing:
         raise CompassError(

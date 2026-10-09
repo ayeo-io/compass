@@ -5,8 +5,8 @@ description: "Answering review comments: check each against the code, push back 
 
 # Receiving Code Review
 
-There are two ways to answer a reviewer badly, and agreeing too readily is the
-more common one.
+There are two ways to answer a reviewer badly; agreeing too readily is the
+more common.
 
 **Check each suggestion against the code before you implement it.** Every
 comment is a hypothesis about code the reviewer read faster than you wrote it.
@@ -20,8 +20,7 @@ review existed to give.
 
 **Push back with technical reasoning when the reviewer is wrong.** Show the case
 their suggestion breaks, the constraint it misses, or the measurement that
-contradicts it - not preference, not seniority, not how long the version
-took. If you
+contradicts it - not preference or seniority. If you
 cannot produce a technical reason, they are probably right.
 
 **Treat "implement this properly" as a question about scope.** Ask what breaks
@@ -29,13 +28,13 @@ today without it. If the answer is nothing, it is a separate issue, not a
 review thread.
 
 **Read the label first** (`${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S12`; an unmigrated 5.x
-project runs on its own copied `governance/`). Issue, suggestion, nitpick, question or
+project uses its own copy). Issue, suggestion, nitpick, question or
 praise tells you what blocks the merge before you read the argument. If it is
 missing, ask rather than guess.
 
 **Say what you did.** Per comment: changed it, or did not and why. A resolved
 thread with no reply is a decision nobody can audit, and a change with no
-recorded reason is an assertion. Keep the reply short: *"Checked -
+recorded reason is an assertion. Keep it short: *"Checked -
 `validate()` runs before the cache write, so that race cannot happen here. It
 can on the batch path; fixed there."*
 

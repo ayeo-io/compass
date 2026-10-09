@@ -64,8 +64,6 @@ def cmd_terminology(args):
         entry = codes[code_key]
         print(f"{code_key}-  (vocabulary {version})")
         print(f"  means:    {' '.join(str(entry.get('means', '')).split())}")
-        if entry.get("not"):
-            print(f"  not:      {' '.join(str(entry['not']).split())}")
         if entry.get("referent"):
             print(f"  refers to: {' '.join(str(entry['referent']).split())}")
         if entry.get("appears_in"):
@@ -89,8 +87,6 @@ def cmd_terminology(args):
         print(f"  github:  {entry['github']}")
     if entry.get("also"):
         print(f"  also:    {entry['also']}")
-    if entry.get("not"):
-        print(f"  not:     {' '.join(str(entry['not']).split())}")
     if entry.get("related"):
         print(f"  related: {', '.join(entry['related'])}")
     return 0
@@ -133,9 +129,6 @@ def render_glossary(vocab: dict) -> str:
         out.append("")
         out.append(_fmt(e.get("means", "")))
         out.append("")
-        if e.get("not"):
-            out.append(f"**Not:** {_fmt(e['not'])}")
-            out.append("")
         out.append(f"**Refers to:** {_fmt(e.get('referent', ''))}")
         out.append("")
         if e.get("appears_in"):
@@ -151,7 +144,7 @@ def render_glossary(vocab: dict) -> str:
         out.append("")
         out.append(_fmt(e.get("means", "")))
         out.append("")
-        for label, key in (("Not", "not"), ("Also", "also"),
+        for label, key in (("Also", "also"),
                            ("GitHub", "github"), ("Related", "related")):
             if e.get(key):
                 out.append(f"**{label}:** {_fmt(e[key])}")

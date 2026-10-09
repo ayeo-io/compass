@@ -175,7 +175,7 @@ def test_vocabulary_carries_receipt_follow_up_and_bump():
         f"version is {doc['version']} - this diff carries a bump past pre6")
     receipt = doc["terms"].get("receipt")
     assert receipt, "no receipt term in the vocabulary"
-    assert "evidence" in str(receipt.get("not", "")), (
+    assert "evidence" in str(receipt.get("means", "")), (
         "the receipt term lacks the evidence disambiguation")
     follow_up = doc["terms"]["follow-up"]
     joined = str(follow_up)

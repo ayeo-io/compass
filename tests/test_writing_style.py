@@ -642,67 +642,6 @@ _register(Rule(
             "the real slug of a past, archived issue - the same protected "
             "citation as the cross-task-architectural-integrity exemption "
             "above."),
-        # Two of terminology.yml's `not:` entries name a retired word on a
-        # simple scalar line, with the "vocabulary-scan: allow" marker on a
-        # real YAML comment line above it - a separate span this sweep
-        # reads, so each needs its own named exemption. Three other `not:`
-        # entries use a folded `>` block instead, where that same marker
-        # text sits inside the value (not a real comment - `#` has no
-        # special meaning there), so it folds into the one span this sweep
-        # reads for the whole field and `ALLOW_MARKER_RE` already matches
-        # it directly. No entry uses that shape now: the glossary printed
-        # the marker, so the three below moved to comment lines.
-        Exemption("governance/terminology.yml",
-                   "A 'task' used as another word for an issue",
-                   "a not: field naming the retired sense of the word on "
-                   "purpose."),
-        Exemption("governance/terminology.yml",
-                   "v1 called this a 'backfill', with states 'owed'",
-                   "a not: field naming the retired word on purpose."),
-        # Three more `not:` entries (assess, requirements-review, ship) name
-        # a retired stage word on one simple scalar line, with the marker on
-        # a real YAML comment line above it. The marker used to sit inside a
-        # folded block, where it printed in the glossary; it now stays in a
-        # comment, so each entry needs a named exemption here and in the
-        # derived glossary below.
-        Exemption("governance/terminology.yml",
-                   "NOT triage. Triage means sorting BETWEEN cases",
-                   "a not: field naming the retired stage name on purpose."),
-        Exemption("governance/terminology.yml",
-                   'v1 called this "Clarify".',
-                   "a not: field naming the retired stage name on purpose."),
-        Exemption("governance/terminology.yml",
-                   'v1 called this "Land".',
-                   "a not: field naming the retired stage name on purpose."),
-        Exemption("docs/glossary.md",
-                   "NOT triage. Triage means sorting BETWEEN cases",
-                   "the derived text of terminology.yml's assess `not:` "
-                   "field, which names the retired stage name on purpose."),
-        Exemption("docs/glossary.md",
-                   'v1 called this "Clarify".',
-                   "the derived text of terminology.yml's requirements-review "
-                   "`not:` field, which names the retired stage name on "
-                   "purpose."),
-        Exemption("docs/glossary.md",
-                   'v1 called this "Land".',
-                   "the derived text of terminology.yml's ship `not:` field, "
-                   "which names the retired stage name on purpose."),
-        # docs/glossary.md is DERIVED from governance/terminology.yml by
-        # `compass _derive-glossary`, so a `not:` field that has to name a
-        # retired word reappears here verbatim. The source entries already
-        # carry their own exemptions; the derived copy is a separate path and
-        # needs its own. Fixing these would mean editing a generated file,
-        # which the drift guard reverts, or removing the ban's own statement
-        # of what it bans.
-        Exemption("docs/glossary.md",
-                   "v1 called this a 'backfill', with states 'owed' and 'paid'",
-                   "the derived text of terminology.yml's follow-up `not:` "
-                   "field, which cannot say what the term is NOT without "
-                   "naming the retired word."),
-        Exemption("docs/glossary.md",
-                   "A 'task' used as another word for an issue",
-                   "the derived text of terminology.yml's issue `not:` "
-                   "field, same reason as the entry above."),
         # The word is now also a defined issue type, so the derived glossary
         # names it as a term: its heading and the Related list of the
         # issue-type entry. The retired sense is the issue meaning only.
@@ -724,32 +663,27 @@ _register(Rule(
         Exemption(
             "cli/compass_pkg/core.py",
             "retired `task` key still load through this row",
-            "documents the retired key SPINE_KEY_MAP maps forward, the same "
-            "purpose terminology.yml's own `not:` fields serve."),
+            "documents the retired key SPINE_KEY_MAP maps forward."),
         Exemption(
             "cli/compass_pkg/core.py",
             "multiagent work, and fan out \"independent subtasks\"; "
             "`topology` and",
-            "documents the two retired words this map reads for back-compat, "
-            "the same purpose terminology.yml's own `not:` fields serve."),
+            "documents the two retired words this map reads for back-compat."),
         Exemption(
             "cli/compass_pkg/core.py",
             "`stream` were Compass-only words for both",
-            "documents the two retired words this map reads for back-compat, "
-            "the same purpose terminology.yml's own `not:` fields serve."),
+            "documents the two retired words this map reads for back-compat."),
         Exemption(
             "cli/compass_pkg/core.py",
             "Evidence types. ADR-023 renamed `coherence-check` to "
             "`consistency-check`;",
             "documents the retired evidence type this map reads for "
-            "back-compat, the same purpose terminology.yml's own `not:` "
-            "fields serve."),
+            "back-compat."),
         Exemption(
             "cli/compass_pkg/core.py",
             "Friction categories. ADR-023 retired `ceremony`, and the enum "
             "holds",
-            "documents the retired word this map reads for back-compat, the "
-            "same purpose terminology.yml's own `not:` fields serve."),
+            "documents the retired word this map reads for back-compat."),
         Exemption(
             "cli/compass_pkg/analyze.py",
             "Extract the reference route name from delivery-approach.md",
@@ -771,8 +705,7 @@ _register(Rule(
             "cli/migrate-map.yml",
             "ADR-023 retired `ceremony`",
             "documents which retired word the data rows below map away "
-            "from, the same purpose terminology.yml's own `not:` fields "
-            "serve - this file is data exempt from the vocabulary scan and "
+            "from - this file is data exempt from the vocabulary scan and "
             "must name retired words on purpose (audit note on this file)."),
         Exemption(
             "cli/compass_pkg/migrate.py",
@@ -799,8 +732,7 @@ _register(Rule(
             'Records written before ADR-023 say "Topology"',
             "documents the retired label a pre-ADR-023 record literally "
             "carries, so this reader can still parse it - the same "
-            "back-compat reading terminology.yml's own not: fields and the "
-            "stream-N exemptions above cover."),
+            "back-compat reading the stream-N exemptions above cover."),
         Exemption(
             "cli/compass_pkg/receipt.py",
             '"Topology" (ADR-006)',

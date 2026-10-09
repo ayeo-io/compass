@@ -689,6 +689,21 @@ def test_vr_g12_a_planted_hook_comparison_fails_the_scan():
     assert hook_old_word_hits("# the hook once said 'full' here\n", "stop.sh") == []
 
 
+def test_the_shipped_example_manifests_are_written_in_the_current_words():
+    """An adopter reads the examples to learn the format, and a saving command
+    run inside one would write a `.v5.bak` beside a tracked file."""
+    import sys
+    sys.path.insert(0, str(ROOT / "cli"))
+    from compass_pkg import core, word_map            # core binds the table reader
+    assert core
+    manifests = sorted((ROOT / "examples").rglob("manifest.yml"))
+    assert len(manifests) >= 9, manifests
+    old = {str(p.relative_to(ROOT)): word_map.old_words(
+               yaml.safe_load(p.read_text(encoding="utf-8")))
+           for p in manifests}
+    assert {k: v for k, v in old.items() if v} == {}
+
+
 def test_the_release_notes_list_the_removed_flow_keys_and_the_aliases():
     notes = (ROOT / "docs" / "releasing.md").read_text(encoding="utf-8")
     section = notes.split("### What changed at 6.0.0", 1)[1].split("**What the release contains**", 1)[0]

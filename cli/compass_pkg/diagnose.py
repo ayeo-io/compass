@@ -21,7 +21,7 @@ import glob
 import json
 import os
 
-from compass_pkg import status_words
+from compass_pkg import lifecycle, status_words, word_map
 from compass_pkg.stable_ids import (
     APPROACH_SPIKE, STAGE_ASSESS, STAGE_BREAKDOWN, STAGE_DEFINE, STAGE_IDS, STAGE_IMPLEMENT, STAGE_PLAN,
     STAGE_REFINE, STAGE_SHIP, STAGE_VERIFY)
@@ -259,12 +259,15 @@ def cmd_issue_diagnose(args):
     m = load_yaml(manifest_path(task_dir))
     if not isinstance(m, dict):
         m = {}
+    # Show the current words. Nothing here compares a mapped word, so reading
+    # the file raw and mapping the copy changes only what is printed.
+    m = word_map.map_manifest(m)
     stages = m.get("stages") if isinstance(m.get("stages"), dict) else {}
     records = _records(task_dir)
     shown = _stage_records(root, task_dir, m, records)
 
     lines = [f"compass issue diagnose: {m.get('issue') or os.path.basename(task_dir)}"
-             f" ({m.get('delivery_approach') or 'no approach'}, {m.get('status') or 'no status'})",
+             f" ({m.get('delivery_approach') or 'no approach'}, {lifecycle.state_of(m, task_dir)})",
              "", "Stages"]
     if not stages:
         lines.append("  the manifest records no stages")

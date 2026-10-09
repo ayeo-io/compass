@@ -1,12 +1,13 @@
-schema_version: '2.0'
+schema_version: '3.0'
 issue: notifications-subsystem
 created: '2026-03-02'
-status: landed
+status: done
+close_reason: completed
 land_timestamp: '2026-08-04T00:00:00Z'
 assessment:
   risk: contained
   familiarity: greenfield
-  size: standard
+  size: medium
   goal: delivery
   role: product-owner
   labels:
@@ -27,14 +28,14 @@ policy_rules_fired:
   - 'phase ''plan'' blocked until: the spec has been checked against intent.md for
     intent fidelity'
 stages:
-  assess: full
-  define: full
-  refine: full
-  plan: full
+  assess: thorough
+  define: thorough
+  refine: thorough
+  plan: thorough
   breakdown: multiagent
-  implement: full
-  verify: full
-  ship: full
+  implement: thorough
+  verify: thorough
+  ship: thorough
 evidence:
 - id: EV-T1
   type: test-run

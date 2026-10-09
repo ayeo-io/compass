@@ -53,7 +53,11 @@ dated digest file (see below).
    with its reason; sets stale evidence apart; lists ready issues; shows the
    backlog with its age, what was done this week and the most common
    friction. Add the health and owner the heuristics above
-   give. `compass flow --html <file>` writes the same board as one page.
+   give. `compass flow --html <file>` writes the board page: the same page
+   `compass board render --out <file>` writes, with a lane for each stage and
+   a panel for each open issue that says why it has its delivery approach.
+   `compass board render` writes that page to one file per checkout and opens
+   it; `docs/board.md` describes it.
 
 4. **Surface blockers.** For every blocked or stalled issue, state what it
    is blocked on and who or what can unblock it. Anything needing a human

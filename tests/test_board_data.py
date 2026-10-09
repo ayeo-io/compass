@@ -1,8 +1,9 @@
 """The board data: the rows `flow.board()` builds for the text board, `--json`
 and the board page.
 
-Scenario ids: TRC-A1, A6, A7, B3, B5, B8, B16, B18, D4 and W11 (issue
-`compass-board`). The tests build small projects in temporary folders, or read
+The tests cover the why fields, the pinned `--json` keys, the stage the board
+shares with `compass next`, lane placement, unplaceable manifests and issues
+read from another tree (issue `compass-board`). They build small projects in temporary folders, or read
 the tracked archive sample, and call `board()` or run `compass flow`.
 """
 from __future__ import annotations
@@ -103,7 +104,7 @@ def _flow_json(root):
     return json.loads(done.stdout)
 
 
-# --- TRC-A1 ------------------------------------------------------------------
+# --- the why for each open issue ----------------------------------------------
 
 RULES = [
     {"id": "RP-ONE", "kind": "requirement", "rationale": "Because the first.",
@@ -151,7 +152,7 @@ def test_swarm_and_the_other_retired_words_read_in_the_6_0_words(tmp_path):
     assert row["assessment"]["size"] == "medium"
 
 
-# --- TRC-A6 ------------------------------------------------------------------
+# --- the pinned --json keys ---------------------------------------------------
 
 PAYLOAD_KEYS = {"summary", "sections", "counts", "board", "friction", "title"}
 SECTION_KEYS = {"in_progress", "stale", "in_review", "ready", "backlog",
@@ -284,7 +285,7 @@ def test_the_text_board_says_set_aside_and_no_retired_hold_word(tmp_path):
     assert not re.search(r"\bheld\b", text, re.I), text
 
 
-# --- TRC-A7 ------------------------------------------------------------------
+# --- the stage is the one compass next computes -------------------------------
 
 def _reopened_sample(tmp_path):
     """The tracked archive sample with every issue open again. Each issue in the
@@ -425,7 +426,7 @@ def test_trc_b18_an_open_issue_past_verify_sits_in_the_ship_lane(tmp_path):
         "ship", "in-review", "done")
 
 
-# --- TRC-D4 ------------------------------------------------------------------
+# --- manifests the page cannot place -------------------------------------------
 
 def test_trc_d4_a_manifest_the_page_cannot_place_hides_no_other_issue(tmp_path):
     root = _project(tmp_path)
@@ -479,7 +480,7 @@ def test_trc_d4_the_board_reads_a_schema_major_of_one_two_or_three_only():
         assert not flow._schema_major_is_read(version), version
 
 
-# --- TRC-W11 -----------------------------------------------------------------
+# --- issues judged by their own tree ------------------------------------------
 
 def test_trc_w11_an_issue_from_another_tree_is_judged_by_that_trees_records(
         tmp_path, monkeypatch):

@@ -461,6 +461,11 @@ def build_parser():
     )
     pfl.set_defaults(func=cmd_flow, output_kind="report")
 
+    # `compass board render|refresh`: registered here, by a local import, so
+    # this file stays under its line cap outside build_parser.
+    from compass_pkg.board_cmd import register as _register_board
+    _register_board(sub)
+
     pnx = sub.add_parser(
         "next",
         help="what comes next on this issue's delivery approach? (read-only; one line)",

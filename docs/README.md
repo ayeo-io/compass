@@ -22,6 +22,7 @@ the table does not exist, and when a doc in this folder is not listed.
 - [headless-runner.md](headless-runner.md) - `compass run`: one stage of one issue with nobody in the session.
 - [delivery-record.md](delivery-record.md) - `compass record`: the delivery record kept in its own repository.
 - [receipt.md](receipt.md) - the one-screen view of an issue's gates and evidence.
+- [board.md](board.md) - `compass board render` and `compass board refresh`: the delivery board as one page, where its file goes and what the commands refuse, what the lanes and cards show, how `--worktrees` reads other trees and what it writes to git's object store, and the release-note items.
 - [github-labels.md](github-labels.md) - the opt-in sync of an issue's domain labels and workflow state to its linked GitHub issue: the setting, the labels Compass owns, when it writes, drift and the failure behaviour.
 - [github-labels-walkthrough.md](github-labels-walkthrough.md) - switch the labels on in `compass.yml`, link an issue and watch the labels change as work moves.
 - [writing-specs-and-plans.md](writing-specs-and-plans.md) - a worked example of a spec and a plan.
@@ -70,6 +71,7 @@ same commit.
 | `cli/compass_pkg/vocabulary.py` | `architecture/decisions/ADR-035-delivery-approaches-stages-and-modes-are-configuration.md` |
 | `cli/compass_pkg/stable_ids.py`, `tests/test_stable_ids.py` | `architecture/decisions/ADR-040-stable-ids-live-in-one-module.md` |
 | `cli/compass_pkg/atomic_io.py` | `architecture/decisions/ADR-036-an-issue-runs-against-a-stored-generation.md` |
+| `cli/compass_pkg/board_cmd.py`, `cli/compass_pkg/board_page.py`, `cli/compass_pkg/board_file.py`, `cli/compass_pkg/board_trees.py` | `docs/board.md` |
 | `cli/compass_pkg/obligations.py` | `architecture/decisions/ADR-037-configuration-changes-are-classified-by-effect.md` |
 | `cli/compass_pkg/classify.py`, `scripts/bench-classifier.py` | `governance/routing-policy.md` |
 | `cli/compass_pkg/policy_lint.py`, `cli/compass_pkg/policy_cmd.py` | `docs/policy-lint.md` |

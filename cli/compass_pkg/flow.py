@@ -538,93 +538,29 @@ def _render_board(args, data):
 
 def _check_html_target(target):
     """Refuse a directory, and a path inside `.compass/` or `docs/compass/`,
-    which hold issue state. Checked before the board is read."""
-    path = os.path.abspath(target)
-    parent = os.path.dirname(path)
-    if not os.path.isdir(parent):
-        raise CompassError(f"compass flow --html: the folder for {target} does not exist")
-    # Resolve symlinks and compare without case: a link, or `.COMPASS` on a
-    # file system that ignores case, must not reach issue state.
-    path = os.path.join(os.path.realpath(parent), os.path.basename(path))
-    if os.path.isdir(path):
-        raise CompassError(f"compass flow --html: {target} is a directory; "
-                           f"name a file, such as board.html")
+    which hold issue state. Checked before the board is read. One guard
+    serves every board file (`board_file.check_target`); only the command
+    name in its message differs."""
+    from compass_pkg import board_file
+    return board_file.check_target(target, "compass flow --html", _html_project_root())
+
+
+def _html_project_root():
     try:
-        project_root = os.path.dirname(find_compass_dir())
+        return os.path.dirname(find_compass_dir())
     except CompassError:
-        project_root = os.getcwd()
-    folded = path.casefold()
-    for guarded, label in ((os.path.join(project_root, ".compass"), ".compass"),
-                           (os.path.join(project_root, "docs", "compass"), "docs/compass")):
-        g = os.path.realpath(guarded).casefold()
-        if folded == g or folded.startswith(g + os.sep):
-            raise CompassError(
-                f"compass flow --html: {target} is inside {label}/, "
-                f"which holds issue state; write the page somewhere else")
-    return path
+        return os.getcwd()
 
 
-def _write_board_html(data, target):
-    """One static page from the board data: every value escaped, inline CSS,
-    no script and no external resource."""
-    import html
-    import tempfile
+def _write_board_html(work_root, target):
+    """Write the board page, the same page `compass board render` writes."""
+    from compass_pkg import board_cmd, board_file
     path = _check_html_target(target)
-    e = html.escape
-    work_cols = ("Issue", "Approach", "Stage", "Gates", "Evidence", "Blocked")
-    work_keys = ("slug", "delivery_approach", "stage", "gates", "evidence", "blocked")
-    cols = {"in_progress": work_cols, "stale": work_cols, "in_review": work_cols,
-            "ready": ("Issue", "Approach"),
-            "backlog": ("Issue", "Approach", "Age (days)", "Signal", "Hold reason"),
-            "done_this_week": ("Issue", "Approach", "Completed"),
-            "closed": ("Issue", "Approach", "Close reason"),
-            "other": ("Issue", "Approach", "Status"),
-            "unreadable": ("Issue", "Why")}
-    keys = {"in_progress": work_keys, "stale": work_keys, "in_review": work_keys,
-            "ready": ("slug", "delivery_approach"),
-            "backlog": ("slug", "delivery_approach", "age_days", "signal", "reason"),
-            "done_this_week": ("slug", "delivery_approach", "completed"),
-            "closed": ("slug", "delivery_approach", "close_reason"),
-            "other": ("slug", "delivery_approach", "status"),
-            "unreadable": ("slug", "note")}
-    generated = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-    parts = ["<!doctype html>", "<html lang=\"en\"><head><meta charset=\"utf-8\">",
-             "<title>Compass delivery board</title>",
-             "<style>body{font-family:system-ui,sans-serif;margin:2rem;max-width:72rem}"
-             "table{border-collapse:collapse;width:100%;margin-bottom:1.5rem}"
-             "th,td{border:1px solid #ccc;padding:.3rem .5rem;text-align:left}"
-             "th{background:#f3f3f3}</style></head><body>",
-             "<h1>Compass delivery board</h1>",
-             "<p>Generated %s. Advisory: this page changes no issue state.</p>" % e(generated),
-             "<p>%s</p>" % e(", ".join("%s %d" % (k, n) for k, n in sorted(data["counts"].items()))),
-             "<p>%s</p>" % e(_friction_line(data))]
-    for key, _, title in _BOARD_SECTIONS:
-        rows = data[key]
-        parts.append("<h2>%s (%d)</h2>" % (e(title), len(rows)))
-        if not rows:
-            parts.append("<p>None.</p>")
-            continue
-        parts.append("<table><tr>" + "".join("<th>%s</th>" % e(c) for c in cols[key]) + "</tr>")
-        for r in rows:
-            parts.append("<tr>" + "".join(
-                "<td>%s</td>" % e("" if r.get(k) is None else str(r.get(k)))
-                for k in keys[key]) + "</tr>")
-        parts.append("</table>")
-    parts.append("</body></html>")
-    directory = os.path.dirname(path) or "."
-    fd, tmp = tempfile.mkstemp(dir=directory, prefix=".board-", suffix=".html")
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            fh.write("\n".join(parts) + "\n")
-        os.chmod(tmp, 0o644)
-        os.replace(tmp, path)
-    except BaseException:
-        if os.path.exists(tmp):
-            os.unlink(tmp)
-        raise
+    page = board_cmd.build_page(_html_project_root(), work_root, False,
+                                datetime.datetime.now())
+    board_file.write_page(path, page, board_file.OUT_MODE)
     print(f"compass flow: wrote the delivery board to {target}")
     return 0
-
 
 
 def cmd_flow(args):
@@ -646,7 +582,9 @@ def cmd_flow(args):
         if do_digest:
             raise CompassError("compass flow: --html writes the board, and "
                                "--digest the digest; give one of them")
-        _check_html_target(html_out)
+        # The target is checked first, and the page is written even when
+        # there are no issues: it shows ten empty lanes and says so.
+        return _write_board_html(work_root, html_out)
     if not do_digest:
         if not os.path.isdir(work_root):
             print("compass flow: no issues found - work root does not exist.")
@@ -655,8 +593,6 @@ def cmd_flow(args):
         if not data["total"]:
             print("compass flow: no issues under work root.")
             return 0
-        if html_out:
-            return _write_board_html(data, html_out)
         return _render_board(args, data)
 
     # --digest mode: produce a digest including rework-scan
@@ -717,13 +653,13 @@ def cmd_flow(args):
 # issue is completed (`status_words.is_completed`).
 #
 # Design constraints honoured here:
-#   `Inv-5`  - annotation over per-issue specs, never a parallel spec; the
+#   Annotation over per-issue specs (invariant 5): never a parallel spec; the
 #            derived file carries the DERIVED FILE header.
-#   `Inv-6`  - all derivation inputs live on disk; no in-memory accumulation
-#            beyond the walk (reconstructibility).
-#   `Inv-8`  - backward compat: manifest.yml files with no `status` field
-#            (schema 1.0) are treated as active (not landed), so they are
-#            excluded from the derivation.
+#   Reconstructibility (invariant 6): all derivation inputs live on disk; no
+#            in-memory accumulation beyond the walk.
+#   Backward compatibility (invariant 8): manifest.yml files with no `status`
+#            field (schema 1.0) are treated as active (not landed), so they
+#            are excluded from the derivation.
 #   ADR-008 §3 - idempotent; deterministic order (land_timestamp, then
 #             issue slug as tiebreaker); supersession (same intent id →
 #             latest-landed wins for current section, earlier → archive).

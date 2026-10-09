@@ -127,6 +127,9 @@ EXPECTED_PUBLIC_SUBCOMMANDS = {
                                   # instead of a dozen, through the same code
                                   # each step already used. A GROUP, so a
                                   # later quick-fix verb has a home.
+    "board",                      # compass-board: `compass board render|refresh`,
+                                  # the delivery board as one page. A GROUP, so
+                                  # a later board verb has a home.
     "lesson",                     # project-lessons (ADR-029)
     "run",                        # headless-runner (ADR-030)
     "record",                     # delivery-record (ADR-031)

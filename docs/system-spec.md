@@ -3459,6 +3459,6 @@
 - `TRC-S10` The stage-weight tables use the stored words
 - `TRC-S11` README status badges name real targets
 
-### glossary-meaning-only (completed 2026-10-09)
+### release-6-0-0 (completed 2026-10-09)
 
-- `TRC-001` Given the vocabulary file, When the glossary is derived or compass terminology is run, Then no Not line and no former name is printed
+- `REL-001` Given the seven version locations and EXPECTED_VERSION, When the version test runs, Then every location and EXPECTED_VERSION read 6.0.0

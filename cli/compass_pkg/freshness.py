@@ -167,7 +167,7 @@ def _blocks(kind, order):
     if consumers:
         return consumers[0], f"entry to {order[consumers[0]]}"
     land = order.index(LAND_STAGE) if LAND_STAGE in order else len(order) - 1
-    return max(land, 0), "ship"
+    return max(land, 0), STAGE_SHIP
 
 
 def evaluate(view, task, task_dir):

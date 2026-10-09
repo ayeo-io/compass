@@ -409,6 +409,8 @@ STATUS_WORD_ALLOW = (
      "the fallback copy of the issue status table in cli/migrate-map.yml"),
     ("word_map.py", 'FALLBACK["close_reason"]',
      "the fallback copy of the close reason table in cli/migrate-map.yml"),
+    ("word_map.py", 'if "parked" in olds and',
+     "the rollback map returns a backlog hold that records why as the old parked word"),
 )
 
 

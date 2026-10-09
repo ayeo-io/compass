@@ -37,8 +37,9 @@ engineering plan stage.)
    force - the guardrails (hard, blocking) and the applicable engineering
    strategies (soft, assessed). `compass policy show` prints the rules the CLI
    runs against, and the reasons are in
-   `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` and `guardrails.md`.
-   `compass policy lint` checks the structure of the project's `compass.yml` -
+   `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` and `guardrails.md`. An
+   unmigrated 5.x project runs on its own copied `governance/` until
+   `compass policy migrate`. `compass policy lint` checks the structure of the project's `compass.yml` -
    run it if the project has changed the rules. A design that crosses a guardrail
    does not pass - revise the design, never waive the guardrail. A design
    that departs from a strategy can pass, but the departure is recorded.

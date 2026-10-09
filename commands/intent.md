@@ -34,7 +34,8 @@ what `/compass:init` offers separately.
 - Read `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` - the product
   strategies there are the ones `intent.md` must be consistent with (and with
   the guardrails in `guardrails.md`, in the same directory). Run
-  `compass policy show` to see the guardrails in force.
+  `compass policy show` to see the guardrails in force. An unmigrated 5.x
+  project runs on its own copied `governance/` until `compass policy migrate`.
 - Invoke the `product-owner` agent.
 
 ## Procedure

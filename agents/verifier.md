@@ -26,7 +26,9 @@ what is actually true. Your deliverable is the evidence portion of
    scenario must have a result.
 3. **Run the full TDD test suite.** Confirm the suite is green and confirm it
    actually exercises the changed code (no silently skipped tests, no coverage
-   gaps below any project guardrail floor shown by `compass policy show`).
+   gaps below any project guardrail floor shown by `compass policy show`; an
+   unmigrated 5.x project runs on its own copied `governance/` until
+   `compass policy migrate`).
 4. **Run regression** when the delivery approach includes the regression dimension
    (the regular approach and heavier): nothing that passed before now fails. On a multiagent,
    the orchestrator runs *combined* regression at ship time - you run per-subtask

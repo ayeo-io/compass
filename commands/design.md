@@ -39,7 +39,8 @@ what `/compass:init` offers separately.
   `${CLAUDE_PLUGIN_ROOT}/governance/guardrails.md` and `strategies.md` - any
   accessibility or UX floor is either a project guardrail (an entry in
   `compass.yml`) or a strategy; the contract must honour the guardrails and
-  respect the strategies.
+  respect the strategies. An unmigrated 5.x project runs on its own copied
+  `governance/` until `compass policy migrate`.
 - Read `intent.md` if one exists - the interaction serves the outcome.
 
 ## Procedure
@@ -50,7 +51,8 @@ what `/compass:init` offers separately.
    loading state, the error state, and the accessibility expectations - not
    just the happy path.
 2. **Honour the guardrails.** Every contract scenario must be consistent
-   with the guardrails in force (`compass policy show`; e.g. a project
+   with the guardrails in force (`compass policy show`; an unmigrated 5.x
+   project runs on its own copied `governance/`; e.g. a project
    accessibility floor). A contract that cannot meet a guardrail is a
    tension to name now, not later.
 3. **Write `ui-contract.md`** into `docs/compass/<created>-<issue-slug>/`,

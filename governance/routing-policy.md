@@ -314,7 +314,8 @@ catalogues into the dictionary `evaluate_route` takes, and the evaluator
 answers. `compass approach evaluate` reads the same resolved configuration: an
 issue's stored generation, or else the `compass.yml` over the shipped default,
 and `--verbose` prints which. Only an issue with no `generation:` in a project
-with no `compass.yml` reads `routing-policy.yml`, the generated view.
+with no `compass.yml` reads `routing-policy.yml`: the generated view, or in an
+unmigrated 5.x project the project's own copy.
 
 The evaluator took four additions, and a call that uses none of them answers
 as before:

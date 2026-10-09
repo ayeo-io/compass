@@ -1,14 +1,17 @@
 <!--
 TEMPLATE: delivery-approach.md
 Produced by: the assess stage (`/compass:assess`).
-Lives at:    docs/compass/<created>-<issue-slug>/delivery-approach.md
+Lives at:    docs/compass/<created>-<issue-slug>/delivery-approach.md on a quick fix
+             (registered); .compass/work/<issue-slug>/delivery-approach.md on
+             any other approach, where the pre-tool hook looks for it.
 Authority:   This is the audit centrepiece. It records the assessment, the
              delivery approach the policy computed, every policy rule that
              fired, and, as its own section, what was skipped and why it is safe.
              Rubric: the delivery-approach reference docs. Policy prose:
              ${CLAUDE_PLUGIN_ROOT}/governance/routing-policy.md (hard rules +
              soft biases); the rules in force are what `compass policy show`
-             prints.
+             prints (an unmigrated 5.x project runs on its own copied
+             governance/ until `compass policy migrate`).
 
 On a spike, assess also writes a `.spike` marker file in the issue
 directory so the pre-tool hook knows to suspend the TDD strategy.
@@ -164,7 +167,8 @@ Candidate review dimensions: {{correctness, governance, traceability, … per th
      or the final approach may be overridden by a human - recorded here with
      who and why. What CANNOT be overridden: an immovable gate, or a floor
      (a hard policy rule is governance speaking; changing it means a
-     waiver-approved change to the project's compass.yml, not overriding one
+     reviewed change to the project's compass.yml (a loosening needs a waiver that
+     the project's owner approves), not overriding one
      issue's approach). -->
 
 | What was overridden | From → To | Who | Why |

@@ -231,6 +231,46 @@ def test_trc_s1_the_scan_reports_the_old_text_and_passes_the_new():
     assert not s1_findings("A project that copied `governance/` under 5.x keeps it.")
 
 
+# `compass policy show` does not read a 5.x project's copied governance/, which
+# `compass approach evaluate` does. So every instruction that sends a reader to
+# it as "the rules in force" must say, nearby, what an unmigrated project runs on.
+S1_COPY_WORDING = re.compile(r"unmigrated\s+5\.x\s+project")
+S1_POLICY_SHOW_FILES = S1_FILES + (
+    "agents/verifier.md", "skills/tdd-discipline/test-surface-and-worktrees.md",
+    "skills/compass-runtime/SKILL.md")
+
+
+def policy_show_without_copy_wording(text):
+    """Line numbers of `compass policy show` mentions with no 'unmigrated 5.x
+    project' wording within eight lines either side. A mention can wrap
+    between `policy` and `show`, so lines are read in pairs."""
+    lines = text.splitlines()
+    found = []
+    for i, line in enumerate(lines):
+        pair = re.sub(r"\s+", " ", " ".join(lines[i:i + 2]))
+        if "compass policy show" in pair and "compass policy show" not in \
+                re.sub(r"\s+", " ", " ".join(lines[i + 1:i + 2])):
+            near = re.sub(r"\s+", " ", " ".join(lines[max(0, i - 8):i + 9]))
+            if not S1_COPY_WORDING.search(near):
+                found.append(i + 1)
+    return found
+
+
+def test_trc_s1_policy_show_is_not_named_alone_as_the_rules_in_force():
+    report = {rel: policy_show_without_copy_wording(_read(rel)) for rel in S1_POLICY_SHOW_FILES}
+    report = {rel: lines for rel, lines in report.items() if lines}
+    assert not report, report
+
+
+def test_trc_s1_the_policy_show_scan_reports_a_mention_without_the_copy_wording():
+    alone = "Run `compass policy show` for the rules in force.\n"
+    assert policy_show_without_copy_wording(alone) == [1]
+    assert not policy_show_without_copy_wording(
+        alone + "An unmigrated 5.x project runs on its own copied `governance/`.\n")
+    assert policy_show_without_copy_wording(
+        alone + "\n" * 20 + "An unmigrated 5.x project runs on its own copy.\n") == [1]
+
+
 def test_trc_s1_the_plugin_ships_the_governance_prose_the_instructions_name():
     """`${CLAUDE_PLUGIN_ROOT}` is the repository root, so the prose is there."""
     for name in ("strategies.md", "guardrails.md", "routing-policy.md"):
@@ -297,6 +337,32 @@ def test_trc_s9_plugin_instructions_use_real_types_verbs_and_fields():
     assert "keeps working through\nan alias until 7.0.0" in runtime
     assert "unknown command rather than a\npointer" not in runtime
     assert "docs/upgrade-6-0-0.md" in runtime
+
+
+def architect_registration_runs(text, tmp_path):
+    """Run the `compass evidence add` command that agents/architect.md documents
+    in a scratch issue whose notes sit where step 4 writes them; return the exit
+    code."""
+    import shlex
+    block = re.search(r"```\n\s*(compass evidence add .*?)```", text, re.S).group(1)
+    argv = shlex.split(block.replace("\\\n", " "))
+    assert argv[:3] == ["compass", "evidence", "add"], argv
+    slug = _scratch_issue(tmp_path, "architect-issue")
+    notes = tmp_path / ".compass" / "work" / slug / "architecture-notes.md"
+    notes.write_text("notes\n", encoding="utf-8")
+    return _cli(tmp_path, *argv[1:], "--issue", slug).returncode
+
+
+def test_trc_s9_the_architect_registration_command_runs(tmp_path):
+    assert architect_registration_runs(_read("agents/architect.md"), tmp_path) == 0
+
+
+def test_trc_s9_the_architect_run_reports_a_path_the_cli_cannot_resolve(tmp_path):
+    wrong = _read("agents/architect.md").replace(
+        "--path architecture-notes.md",
+        "--path docs/compass/<created>-<slug>/architecture-notes.md")
+    assert wrong != _read("agents/architect.md")
+    assert architect_registration_runs(wrong, tmp_path) != 0
 
 
 def test_trc_s9_the_scan_reports_the_old_text():

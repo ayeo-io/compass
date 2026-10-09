@@ -34,7 +34,8 @@ The rest of this command is for delivery work.
   `product-marketer` reviews here too.
 - If this issue is itself a sweep, rename, or cleanup touching many files,
   check it the way `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S9` describes: a fresh agent
-  that has not seen the change, not its author.
+  that has not seen the change, not its author. (An unmigrated 5.x project
+  runs on its own copied `governance/` until `compass policy migrate`.)
 - A guard offered as part of the change is accepted on a demonstrated failure
   rather than a passing test - `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S10` states the
   method.
@@ -65,7 +66,8 @@ The rest of this command is for delivery work.
    lists - `correctness`, `governance`, `traceability`, and as the approach
    needs `regression`, `security` (scaled or full), `clarity`, `claims`.
    The `governance` dimension checks the work against the governance in force
-   (`compass policy show`): the guardrails (hard, evidence-backed -
+   (`compass policy show`; an unmigrated 5.x project runs on its own copied
+   `governance/` until `compass policy migrate`): the guardrails (hard, evidence-backed -
    `compass check` is the mechanical part) and the applicable strategies
    (assessed as judgement, reported distinctly). On a multiagent, check each subtask first, then again on the
    combined result.

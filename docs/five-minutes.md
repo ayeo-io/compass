@@ -79,7 +79,8 @@ them - the stages, the gates, the orchestration - is computed. Run
 The first line shows what the project runs against. The text above is the line
 for a project with a `compass.yml`. A project without one has not changed the
 shipped default, and the line names the shipped `routing-policy.yml` and its
-version instead.
+version instead. Run against an issue that already has a stored generation, the
+line reads `generation N of this issue (parent ...)`.
 
 Generate the issue dashboard:
 

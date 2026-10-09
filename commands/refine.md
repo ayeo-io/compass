@@ -67,7 +67,9 @@ is for. The same split is written from the other side in
 - Load `bdd-specification`; the `spec-author` agent owns this continuation.
 - Run `compass policy show` for the rules in force, and read the reasons in
   `${CLAUDE_PLUGIN_ROOT}/governance/guardrails.md` and `strategies.md` - the
-  spec is QA'd against the guardrails and the applicable strategies.
+  spec is QA'd against the guardrails and the applicable strategies. An
+  unmigrated 5.x project runs on its own copied `governance/` until
+  `compass policy migrate`.
 - If a non-engineering role is in play, this is where they review: invoke
   `product-owner` (intent fidelity against `intent.md`) and/or `product-marketer`
   (every planned claim has a candidate scenario).

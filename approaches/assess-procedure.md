@@ -16,8 +16,8 @@ Assess works on day one with **zero project setup**: the shipped default
 guardrails, strategies, and routing policy apply as-is, so `/compass:init` is
 optional and not a prerequisite. If a project has run `/compass:init`, its
 `compass.yml` extends those defaults - read `compass policy show` for
-what is in force. A project that still holds copied `governance/` files runs
-on them until `compass policy migrate` converts it.
+what is in force. An unmigrated 5.x project runs on its own copied
+`governance/` until `compass policy migrate` converts it.
 
 The issue is the one `/compass:assess` was given.
 
@@ -43,7 +43,9 @@ what `/compass:init` offers separately.
   preset with the project's `compass.yml` over it. The CLI applies its
   **policy floors, caps, immovable gates, and blocking role rules** (hard) and
   its **default shapes and tie-breaking biases** (soft). You do not apply
-  these by hand; the CLI does.
+  these by hand; the CLI does. An unmigrated 5.x project runs on its own
+  copied `governance/`, which `compass policy show` does not print but
+  `compass approach evaluate` reads.
 - Read `compass.yml` for project settings (test command, multiagent
   worktree root), or `.compass/config.yml` in a 5.x project that has no
   `compass.yml`. The same `compass.yml` holds the project's changes to the
@@ -150,8 +152,8 @@ force; if it is still a spike, leave the marker in place.
    approach. Record overrides in `delivery-approach.md` with who and why.
    Immovable gates and floors cannot be overridden; changing one means a
    reviewed change to the project's `compass.yml` (`docs/configuration.md`),
-   not overriding one issue's approach. A loosening needs a waiver that an
-   approver signs. Under `/compass:go`, the approach it already showed is
+   not overriding one issue's approach. A loosening needs a waiver that the
+   project's owner approves. Under `/compass:go`, the approach it already showed is
    the confirmation: do not stop to wait for one, but act on an override
    whenever the person gives it.
    Wait for the confirmation only if `assess` is in the manifest's

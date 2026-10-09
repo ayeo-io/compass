@@ -10,7 +10,8 @@ moment they are applied to a plan, spec, or change. It is not one pass/fail
 against one document - it is three distinct walks against three
 distinct sources, and each has its own standard of proof. The prose is in
 `${CLAUDE_PLUGIN_ROOT}/governance/`; the rules in force are what
-`compass policy show` prints.
+`compass policy show` prints. An unmigrated 5.x project runs on its own copied
+`governance/` until `compass policy migrate`.
 
 - `guardrails.md` - **hard, checkable, blocking.** A guardrail is cleared with
   evidence; a failed guardrail stops the work. A guardrail beats a strategy.
@@ -26,8 +27,10 @@ current file.
 
 **Record which governance you read.** Write the layers that
 `compass policy show` names (for example `default@6.0.0, project`) and the
-issue's `generation:` from `manifest.yml` into the check, the way the
-technical-design template's policy-provenance section does. A check that
+issue's `generation:` from `manifest.yml` into the check, the way section 3a
+(policy provenance) of `${CLAUDE_PLUGIN_ROOT}/templates/delivery-approach.md`
+does. An unmigrated 5.x project runs on its own copied `governance/` until
+`compass policy migrate`. A check that
 names no layers cannot be told apart from one run against wording that has
 since changed, and the prose files carry no version of their own to compare.
 
@@ -37,8 +40,8 @@ Run `compass policy show` to see the rules in force, then read the reasons in
 `${CLAUDE_PLUGIN_ROOT}/governance/guardrails.md`, `strategies.md` and
 `routing-policy.md`. A new project has no `governance/` directory of its own:
 the shipped default preset is in force, and `compass.yml` holds only what the
-project changed. A project from 5.x that copied `governance/` into its root
-reads its own copy until `compass policy migrate` converts it. The shipped
+project changed. An unmigrated 5.x project runs on its own copied
+`governance/` until `compass policy migrate` converts it. The shipped
 defaults alone are a complete governance state: "the shipped default
 guardrails, the shipped default strategies, and zero project additions" is a
 fully legitimate thing to check against. Do not treat an un-extended project
@@ -175,8 +178,8 @@ Confirm the plan is consistent with `routing-policy.md`:
 7. If a guardrail itself seems wrong, that is an amendment conversation
    (a reviewed change to the project's `compass.yml`, checked by
    `compass policy lint`, with the reason in the commit message; the five
-   shipped guardrails are locked, and a loosening needs a waiver that an
-   approver signs) - never a quiet override mid-issue. If a
+   shipped guardrails are locked, and a loosening needs a waiver that the
+   project's owner approves) - never a quiet override mid-issue. If a
    strategy keeps getting overridden the same way, that is a curation signal -
    fix the strategy or write down the thing overriding it.
 

@@ -70,7 +70,9 @@ a parallel spec.
    `technical-design.md` §6 (Design decisions). On the regular or full approach,
    name the well-architected pillars the change touches and any trade-off
    between them (strategy `S15`, pillars from
-   `governance/architecture-sources.yml`). The planner reads this
+   `${CLAUDE_PLUGIN_ROOT}/governance/architecture-sources.yml`; an unmigrated
+   5.x project runs on its own copied `governance/` until
+   `compass policy migrate`). The planner reads this
    section and either cites an existing ADR, names a candidate ADR, or
    records a divergence.
 
@@ -78,8 +80,9 @@ a parallel spec.
    evidence:
    ```
    compass evidence add EV-ARCH-NOTES --type artifact \
-     --path docs/compass/<created>-<slug>/architecture-notes.md
+     --path architecture-notes.md
    ```
+   The path is read from `.compass/work/<task>/`, where step 4 wrote the file.
    This makes sure the notes persist as typed evidence, not just a chat
    message. `artifact` is the type for a written record without a more
    specific one.

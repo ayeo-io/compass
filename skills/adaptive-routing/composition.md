@@ -69,5 +69,5 @@ chooses, routing guardrails *bound* what it is allowed to do. A human can overri
 assessment value or a strategy-biased choice per-issue; a human cannot override a routing
 guardrail per-issue - changing one is a reviewed change to the project's
 `compass.yml` (`docs/configuration.md`), and a loosening needs a waiver that
-an approver signs.
+the project's owner approves.
 

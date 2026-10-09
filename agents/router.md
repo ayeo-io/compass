@@ -31,7 +31,8 @@ read the dimensions.
    `${CLAUDE_PLUGIN_ROOT}/governance/routing-policy.md` for the *why*, and
    skim `guardrails.md` and `strategies.md` in the same directory for
    context. A project needs no setup first: the shipped default preset is in
-   force. If a `intent.md` exists, read it - intent is the *actual outcome
+   force. An unmigrated 5.x project runs on its own copied `governance/` until
+   `compass policy migrate`, which `compass policy show` does not print. If a `intent.md` exists, read it - intent is the *actual outcome
    wanted*, not the literal request.
 2. **Create the manifest.** Make `.compass/work/<issue-slug>/` and write
    `manifest.yml` from `${CLAUDE_PLUGIN_ROOT}/templates/manifest.yml`.
@@ -67,7 +68,7 @@ read the dimensions.
    never hand-edit the computed approach. Record human overrides with who
    and why. A policy `floor` or an `immovable_gate` cannot be
    overridden - that needs a reviewed change to the project's `compass.yml`
-   (a loosening needs a waiver that an approver signs), not overriding one
+   (a loosening needs a waiver that the project's owner approves), not overriding one
    issue's approach.
 7. **Set the `.compass/current-task` pointer** with `compass issue use
    <slug>`, so every later `compass` call resolves to this issue.

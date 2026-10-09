@@ -1,7 +1,9 @@
 # Assess - the sizing rubric
 
 Assess is the component that runs at the start of every issue. It reads four assessment
-dimensions, applies the routing rules in force (`compass policy show`), and writes `delivery-approach.md`. This
+dimensions, applies the routing rules in force (`compass policy show`; an unmigrated 5.x
+project runs on its own copied `governance/` until `compass policy migrate`),
+and writes `delivery-approach.md`. This
 file is its rubric. The `adaptive-routing` skill is the procedural companion;
 this is the reference.
 
@@ -114,7 +116,7 @@ the final approach - overrides are recorded in `delivery-approach.md` too, with 
 What cannot be overridden: an `immovable_gate`, or a `floor` (a routing
 rule is governance speaking; changing it means a reviewed change to the
 project's `compass.yml`, not overriding an approach, and a loosening needs a
-waiver that an approver signs).
+waiver that the project's owner approves).
 
 ---
 

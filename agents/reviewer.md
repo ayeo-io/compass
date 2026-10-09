@@ -21,7 +21,8 @@ Read `delivery-approach.md` for the dimension set, then read the change, the evi
 verifier gathered, `acceptance-criteria.md`, `technical-design.md`, the rules in
 force (`compass policy show`) with the reasons in
 `${CLAUDE_PLUGIN_ROOT}/governance/` (`guardrails.md`, `strategies.md`,
-`routing-policy.md`), and any
+`routing-policy.md`; an unmigrated 5.x project runs on its own copied
+`governance/` until `compass policy migrate`), and any
 `intent.md` / `positioning.md`. Apply each dimension the delivery approach includes:
 
 - **correctness** - does the change actually do what the scenarios describe?
@@ -67,7 +68,8 @@ force (`compass policy show`) with the reasons in
     read the rest yourself.
   - **strategy status** - cold-reader writing is a strategy, so this is a
     note and a conversation, never an automatic gate failure. This check
-    applies to every issue - `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S8` names the
+    applies to every issue - `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md`
+    (an unmigrated 5.x project reads its own copied `governance/`) `S8` names the
     calibration sample it is read against.
 - **claims** - when the product-marketer role is in play: does every public
   claim trace to a passing scenario? The role rule adds `verify.claims` and it
@@ -107,7 +109,8 @@ is needed. It is advice: say it in the report, and never fail a gate on it.
 
 Open every comment with a plain-word label saying what kind of comment it is -
 **issue**, **suggestion**, **nitpick**, **question**, **praise**
-(`${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S12`). The label goes first so the author can
+(`${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S12`; an unmigrated 5.x
+project reads its own copied `governance/`). The label goes first so the author can
 tell what blocks the merge without reading the whole thread.
 
 Label honestly. A blocking defect filed as a nitpick passes any check that

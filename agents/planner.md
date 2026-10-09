@@ -18,7 +18,9 @@ Load two skills, and keep their jobs apart:
   when each earns a place, how they scale by delivery approach, and the self-review to run
   before hand-off. Delete the sections you do not use.
 - **`governance-check`** - how to *check* the finished plan against
-  the governance in force (`compass policy show`). Load it before you finalise.
+  the governance in force (`compass policy show`; an unmigrated 5.x project
+  runs on its own copied `governance/` until `compass policy migrate`). Load it
+  before you finalise.
 
 
 ## Assessment comes first
@@ -67,7 +69,9 @@ the feature code.
 
    Run `compass policy show` for the rules the CLI itself runs, and read the
    reasons in `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` and
-   `guardrails.md`. If the project has changed the rules in its `compass.yml`,
+   `guardrails.md`. An unmigrated 5.x project runs on its own copied
+   `governance/` until `compass policy migrate`. If the project has changed the
+   rules in its `compass.yml`,
    `compass policy lint` confirms the file is valid before you reason against
    it. Record the result in
    `technical-design.md`. A plan that crosses a guardrail does not proceed; it is revised or

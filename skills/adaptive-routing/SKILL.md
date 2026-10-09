@@ -24,7 +24,8 @@ land near, not boxes to sort into.
 default guardrails, default strategies, and a default routing policy, and the
 plugin holds their prose in `${CLAUDE_PLUGIN_ROOT}/governance/`. A project's own
 changes are entries in its `compass.yml`; `compass policy show` prints what is
-in force. If a project has no `compass.yml` and no project-specific additions,
+in force, except that an unmigrated 5.x project runs on its own copied
+`governance/` until `compass policy migrate`. If a project has no `compass.yml` and no project-specific additions,
 that is a valid, complete governance state - you route against the shipped defaults <!-- vocabulary-scan: allow - route is a verb here -->
 exactly as you would route against an extended set. <!-- vocabulary-scan: allow - route is a verb here -->
 "assess and go on day one"

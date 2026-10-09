@@ -140,10 +140,10 @@ An issue's documents are in `docs/compass/<created>-<issue-slug>/`, where
 <kind>` prints where one document is.
 
 A new project has no `governance/` directory: the shipped default preset is in
-force, and `compass.yml` holds only what differs from it. A project from 5.x
-that copied `governance/` into its root keeps running on that copy until
-`compass policy migrate` converts it. `compass policy show` shows what is
-in force.
+force, and `compass.yml` holds only what differs from it. An unmigrated 5.x
+project runs on its own copied `governance/` until `compass policy migrate`
+converts it. `compass policy show` shows what is in force for a project with a
+`compass.yml` or none, but it does not read that copy.
 
 ## Project lessons
 

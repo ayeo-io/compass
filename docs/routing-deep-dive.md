@@ -84,14 +84,15 @@ The delivery approach is the full approach. The policy-rules section of
 
 The engineer sees *why* a typo fix got the full approach. Because the
 delivery approach is advisory until confirmed, they can discuss it - but they
-cannot have it silently routed light. A floor is a rule in
-`governance/routing-policy.yml`; overriding it would mean amending that
-file, not overriding a delivery approach.
+cannot have it silently routed light. A floor is a routing rule in the
+configuration in force (`compass policy show`); overriding it would mean
+changing the project's `compass.yml`, not overriding a delivery approach.
 
 In practice the team might decide the policy is too blunt and narrow the floor
 (`labels: [auth]` only when the change is to auth *logic*, not auth-adjacent
-strings). That is a legitimate, logged amendment to
-`governance/routing-policy.yml` - not a convenience edit mid-issue. Until then,
+strings). That is a legitimate, logged and reviewed change to `compass.yml`
+(`docs/configuration.md`) - not a per-issue override or a convenience edit
+mid-issue. A loosening needs a waiver that the project's owner approves. Until then,
 the typo fix runs the full approach, and that is the system being conservative on
 purpose.
 
@@ -112,8 +113,7 @@ purpose.
 | Goal and role | `engineer` | No intent document; an engineer is implementing a well-understood feature. |
 
 Domain tags: `labels: [persistence]` might carry, but nothing on the
-policy's floor list (`auth`, `payments`, `personal-data`, `migrations`,
-`public-api`).
+policy's floor list (`auth`, `payments`, `personal-data`, `migrations`).
 
 ### Compose
 
@@ -178,26 +178,34 @@ floor list.
 ### Compose
 
 If size alone drove the delivery approach, this would compose towards quick
-fix or a light regular approach - `small` on mapped familiarity. Assess composes the
-candidate from *all four* contributions, and `critical` risk dominates: full
-test surface including adversarial and boundary inputs, the rollback path
-exercised, every review dimension. The candidate already composes heavy -
-towards **full** - on risk alone.
+fix or a light regular approach - `small` on mapped familiarity. The CLI's
+first approach is `regular`: no shape in the policy fits small work at
+`critical` risk, so the policy default applies. The weight comes from the
+rules that follow, which is the point of the case: the dimensions point in
+opposite directions, and the rules settle it.
 
 ### Constrain
 
-Two floors fire, and they reinforce each other:
+`compass approach evaluate --verbose` lists the rules that fired, in this
+order:
 
-- `when: { risk: critical }` → `force_minimum_route: full`,
-  `never_skip: [refine, verify, ship]`. *"Critical changes coordinate or they
-  break things quietly."*
-- `when: { labels: [payments, migrations] }` → `force_minimum_route:
-  full`. *"Domain risk overrides size."*
+- **One floor.** RP-FLOOR-001: `when: { risk: critical }` raises regular to
+  **full** and sets `never_skip: [refine, verify, ship]`. *"Critical changes
+  coordinate, or they break things quietly."* The label floor
+  (RP-FLOOR-003, for `payments` and `migrations`) would force the full
+  approach too, but the risk floor has already done it, so the CLI does not
+  list it.
+- **Six requirement rules.** RP-REQUIRE-001 to RP-REQUIRE-006 each add
+  something the work now owes: the gates `verify.analyze` (RP-REQUIRE-001 and
+  RP-REQUIRE-002) and `verify.architecture` (RP-REQUIRE-003 and
+  RP-REQUIRE-004), the `threat-model` artifact for the payments label
+  (RP-REQUIRE-005) and the `rollback-plan` artifact for the migrations label
+  (RP-REQUIRE-006).
 
-Then a **cap** fires - and this is the subtle part. `when: { risk:
+Then a **cap** fires - and this is the subtle part. RP-CAP-001: `when: { risk:
 critical }` → `max_worktrees: 1`. So this is the full approach
-that is *capped to a single worktree*. It is heavy - full BDD discovery, full
-requirements review, a full `technical-design.md`, every gate - and
+that is *capped to a single worktree*. It is heavy - thorough BDD discovery, a
+thorough requirements review, a thorough `technical-design.md`, every gate - and
 **solo**. That is not a contradiction. The cap encodes a real trade-off:
 parallelism is speed, but a multiagent orchestration has coordination risk,
 and on a critical change the coordination risk costs more than the speed
@@ -212,7 +220,8 @@ blocks.)
 ### Final `delivery-approach.md`
 
 The delivery approach is the full approach, single worktree. The policy-rules
-section records both floors and the cap, each with its rationale. The
+section records the floor, the six requirement rules and the cap, each with its
+rationale. The
 orchestration section (§4c of the template) records the worktree count as
 **cap-driven** - not as a de-scope.
 This distinction matters: the de-scope ledger is for things the delivery
@@ -438,7 +447,7 @@ Size `small`, risk `contained` (an admin tool, bounded), familiarity
 `brownfield-mapped`, role `engineer`, no domain tags. Composes to **quick fix**:
 one scenario ("given a filtered table, when the user exports, then a CSV with
 those rows downloads"), the review collapsed, plan a one-liner, full TDD on a
-small surface, one gate. Done in an afternoon. Assess stays out of the way -
+small surface, three gates. Done in an afternoon. Assess stays out of the way -
 correctly.
 
 ### "Add a CSV export" - product owner, "let finance self-serve"
@@ -537,6 +546,7 @@ session can resume from. That is the deliverable. Assess does not just
 classify the issue - it explains the classification, records every policy
 rule that fired, and writes down every skip with the reason it is safe. The
 adaptivity is real, and it is *bounded*: bounded by the four-dimension rubric,
-bounded by the routing policy rules in `governance/routing-policy.yml`, bounded by
+bounded by the routing rules in force (the shipped default plus the project's
+`compass.yml`, which `compass policy show` prints), bounded by
 the rule that an unjustified skip is not a skip. That is what keeps "adaptive"
 from becoming arbitrary.

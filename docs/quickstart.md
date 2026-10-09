@@ -152,8 +152,11 @@ any machine - it is no longer something an agent composes in its head.
 `/compass:assess` also drops a `.compass/current-task` pointer so the CLI
 and the hooks know which issue is live.
 
-It then **presents the delivery approach and waits**. It is advisory until
-confirmed. You read the four assessment values, you read the de-scope ledger
+It then **presents the delivery approach**. It is advisory until confirmed,
+and the session waits for you at assess only if the project's `autonomy`
+setting lists assess, which `compass approach show` reports. Under the default,
+`balanced`, a regular approach goes on and logs that it did not wait; it waits
+at define and plan. You read the four assessment values, you read the de-scope ledger
 - the regular approach collapses nothing major, so the ledger is short - and you confirm,
 or you override an assessment value and the override is recorded in
 `delivery-approach.md` with your name and reason.

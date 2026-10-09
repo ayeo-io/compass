@@ -88,11 +88,17 @@ Confirm that Compass created:
 
 ```text
 .compass/current-task
-.compass/work/test-the-compass-installation/
+.compass/work/<issue-slug>/manifest.yml
+docs/compass/<date>-<issue-slug>/delivery-approach.md
 ```
 
-The exact slug can vary. The issue directory must contain at least
-`manifest.yml` and `delivery-approach.md`.
+The exact slug can vary. The manifest, evidence and markers are in
+`.compass/work/<issue-slug>/`. The issue's documents are in
+`docs/compass/<date>-<issue-slug>/`, where `<date>` is the manifest's
+`created:` date. A change as small as this one is normally assessed as a quick fix, which
+keeps `delivery-approach.md` there. For a heavier approach the record sits
+beside the manifest. `compass issue artifact-path delivery-approach` prints its
+path either way.
 
 Generate the review dashboard:
 
@@ -100,8 +106,10 @@ Generate the review dashboard:
 compass issue dashboard render --issue <issue-slug>
 ```
 
-Open the generated `README.md`. It must show the delivery approach, artifact
-pack, omissions, approval state and next action.
+Open the generated `README.md` in `.compass/work/<issue-slug>/`. It must show
+the status and approach, the review pack, anything deliberately omitted,
+whether a decision is awaited, and each scenario's traceability. `compass next`
+names the next action.
 
 If `/compass:assess` is unknown, the adapter is not loaded. Restart Claude
 Code, then check the plugin installation or source-install wiring.
@@ -117,9 +125,8 @@ compass check --issue <issue-slug>
 For a newly assessed issue, failure is expected: acceptance, implementation
 and verification evidence do not exist yet. A healthy result:
 
-- identifies the missing check;
-- explains why it matters;
-- gives a next action; and
+- names the failed check;
+- gives a fix; and
 - exits non-zero without a Python traceback.
 
 A traceback or “governance not found” error shows an installation or path
@@ -150,12 +157,14 @@ in a sensitive environment.
 This step applies only to source installs:
 
 ```bash
-bash scripts/install.sh --uninstall
+bash scripts/install.sh --global --uninstall
 bash scripts/install.sh --global
 bash scripts/install.sh --global
 ```
 
-Uninstall must remove only the Claude Code adapter wiring. Both reinstall
+`--uninstall` removes the install that the same scope flag made. Without
+`--global` it looks in the current directory's `.claude` and, after a global
+install, removes nothing. Uninstall must remove only the Claude Code adapter wiring. Both reinstall
 runs must succeed without duplicate hook entries.
 
 ## Troubleshooting

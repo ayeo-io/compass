@@ -115,6 +115,7 @@ compass.yml                     The one file a person edits: settings, and the p
 ├── work/
 │   └── <issue-slug>/            One directory per issue: its machine state
 │       ├── manifest.yml         The manifest
+│       ├── delivery-approach.md The delivery-approach record (prose). A quick fix keeps it in docs/compass/ instead
 │       ├── generations/<n>/     The configuration the issue runs against (written by compass approach evaluate --write)
 │       ├── evidence/            red/green records + typed gate evidence
 │       ├── .red, .spike, ...    The markers the hook reads
@@ -124,7 +125,6 @@ compass.yml                     The one file a person edits: settings, and the p
 
 docs/compass/
 └── <created>-<issue-slug>/      One directory per issue: its documents
-    ├── delivery-approach.md     The delivery-approach record (prose)
     ├── intent.md                Intake (if a product owner was involved)
     ├── ui-contract.md           Designer contracts (if a designer was involved)
     ├── acceptance-criteria.md   The shared artifact every role reads
@@ -136,6 +136,7 @@ docs/compass/
     └── verification-report.md   (ends with the Definition of Done gate)
 ```
 
+An issue's documents are in `docs/compass/<created>-<issue-slug>/`, where
 `<created>` is the manifest's `created:` date. `compass issue artifact-path
 <kind>` prints where one document is.
 

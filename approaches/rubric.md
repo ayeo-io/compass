@@ -95,9 +95,10 @@ or explaining a result. `--verbose` prints which rules fired.
 
 ## Step 4 - Write `delivery-approach.md` and confirm
 
-Assess writes `delivery-approach.md` into the issue's documents directory,
-`docs/compass/<created>-<issue-slug>/`, from `templates/delivery-approach.md`.
-It contains:
+Assess writes `.compass/work/<issue-slug>/delivery-approach.md` from
+`templates/delivery-approach.md`; on a quick fix, `compass quick-fix start`
+writes it to `docs/compass/<created>-<issue-slug>/` and registers it. The
+pre-tool hook finds it either way. It contains:
 
 - the four dimension assessment, each with its one-line justification;
 - the composed candidate approach;

@@ -348,6 +348,229 @@ def test_trc_s10_the_scan_reports_the_old_words():
     assert not s10_findings("| Verify | Lightweight gate: run it. |")
 
 
+# --- TRC-S4: the front pages route a reader to compass.yml and the upgrade page
+
+# 6.0.0 verbs the README command list had left out.
+S4_VERBS = ("approach show", "approach render", "policy migrate", "policy update",
+            "evidence approve", "evidence review", "issue blocked remove")
+
+
+def s4_findings(readme, index, docs_readme, upgrade):
+    found = []
+    start = readme[:readme.index("## What Compass changes")]
+    for needle in ("compass.yml", "docs/configuration.md", "docs/upgrade-6-0-0.md",
+                   "docs/github-labels.md"):
+        if needle not in start:
+            found.append(f"README 'Start here' does not name {needle}")
+    block = readme[readme.index("## The CLI"):readme.index("## What the repository contains")]
+    for verb in S4_VERBS:
+        if not re.search(rf"^compass {re.escape(verb)}\s", block, re.M):
+            found.append(f"README command list lacks compass {verb}")
+    for needle in ("configuration.md", "upgrade-6-0-0.md"):
+        if f"]({needle})" not in index:
+            found.append(f"docs/index.md does not link {needle}")
+    if re.search(r"roll back", docs_readme, re.I):
+        found.append("docs/README.md promises a rollback")
+    if re.search(r"how to roll back", upgrade, re.I):
+        found.append("docs/upgrade-6-0-0.md promises a rollback")
+    for page, text in (("docs/README.md", docs_readme), ("docs/upgrade-6-0-0.md", upgrade)):
+        if "no supported rollback" not in _flat(text):
+            found.append(f"{page} does not say there is no supported rollback")
+    return found
+
+
+def test_trc_s4_front_pages_route_to_compass_yml():
+    found = s4_findings(_read("README.md"), _read("docs/index.md"),
+                        _read("docs/README.md"), _read("docs/upgrade-6-0-0.md"))
+    assert not found, found
+    for verb in S4_VERBS:
+        assert not _verb_missing(verb.split()), verb
+
+
+def test_trc_s4_the_scan_reports_the_old_front_pages():
+    readme = ("## Start here\nx\n## What Compass changes\n## The CLI\n"
+              "compass init   x\n## What the repository contains\n")
+    found = s4_findings(readme, "# Compass\n", "how to roll back.", "6.0.0 has no rollback")
+    assert any("compass.yml" in f for f in found)
+    assert any("compass approach show" in f for f in found)
+    assert any("configuration.md" in f for f in found)
+    assert any("promises a rollback" in f for f in found)
+    assert any("docs/upgrade-6-0-0.md does not say" in f for f in found)
+
+
+# --- TRC-S7: the quickstart, five-minutes and portability pages match the code --
+
+def _policy_line_with_compass_yml(tmp_path):
+    import subprocess
+    import sys
+    (tmp_path / ".compass").mkdir()
+    (tmp_path / "compass.yml").write_text(
+        "schema: 1\nextends: compass:default@6\nowner: me\n", encoding="utf-8")
+    run = subprocess.run(
+        [sys.executable, str(ROOT / "cli" / "compass"), "approach", "evaluate", "--verbose",
+         "--assessment", "risk=contained", "--assessment", "familiarity=brownfield-mapped",
+         "--assessment", "size=atomic", "--assessment", "goal=delivery",
+         "--assessment", "role=engineer"],
+        cwd=tmp_path, capture_output=True, text=True, timeout=60)
+    assert run.returncode == 0, run.stdout + run.stderr
+    return next(line for line in run.stdout.splitlines() if line.strip().startswith("policy"))
+
+
+def skills_listed(text):
+    """The skill names in the `skills/` entry of the adapter layer listing."""
+    block = text[text.index("\nskills/ "):text.index("\nhooks/ ")]
+    return sorted(re.findall(r"[a-z]+(?:-[a-z]+)*", block.replace("skills/", "")))
+
+
+def test_trc_s7_quickstart_five_minutes_and_portability_match_the_code(tmp_path):
+    import yaml
+    # five-minutes shows the line a project with a compass.yml gets.
+    line = _policy_line_with_compass_yml(tmp_path)
+    five = _read("docs/five-minutes.md")
+    assert line in five.splitlines() or line.strip() in five, line
+    assert "<your project>/governance/routing-policy.yml" not in five
+
+    # A regular approach under `balanced` does not wait at assess.
+    policy = yaml.safe_load(_read("governance/routing-policy.yml"))
+    balanced = policy["autonomy_checkpoints"]["balanced"]["regular"]
+    assert balanced == ["define", "plan"]
+    quickstart = _flat(_read("docs/quickstart.md"))
+    assert "presents the delivery approach and waits" not in quickstart
+    assert "a regular approach goes on and logs that it did not wait" in quickstart
+    assert "it waits at define and plan" in quickstart
+
+    # portability lists the skill directories there are.
+    real = sorted(p.name for p in (ROOT / "skills").iterdir() if p.is_dir())
+    assert len(real) == 14
+    assert skills_listed(_read("docs/portability.md")) == real
+
+
+def test_trc_s7_the_skills_scan_reports_the_old_list():
+    old = "\nskills/          adaptive-routing, traceability, role-translation\nhooks/ x"
+    assert "traceability" in skills_listed(old)
+    assert skills_listed(old) != sorted(p.name for p in (ROOT / "skills").iterdir()
+                                        if p.is_dir())
+
+
+# --- TRC-S5: an issue's documents are found where the CLI writes them ---------
+
+# `delivery-approach.md` is left out on purpose: only a quick fix earns it as a
+# registered document, so any other approach keeps it beside the manifest.
+S5_DOCUMENTS = ("acceptance-criteria.md", "technical-design.md", "requirements-review.md",
+                "intent.md", "verification-report.md", "distribution-map.md",
+                "positioning.md", "launch-readiness.md", "ui-contract.md")
+S5_PAGES = ("README.md", "docs/five-minutes.md", "docs/methodology.md",
+            "skills/compass-runtime/SKILL.md")
+
+
+def s5_findings(text):
+    """Documents shown inside a `.compass/work/<issue>/` listing, and the
+    sentences that say the issue's documents are stored there."""
+    found = []
+    for block in re.findall(r"```[a-z]*\n(.*?)```", text, re.S):
+        work = re.split(r"\ndocs/compass/", block)[0]
+        if re.search(r"\.compass/\s*\n|^\.compass/work/", work, re.M):
+            found += [f"{doc} listed under .compass/work" for doc in S5_DOCUMENTS if doc in work]
+    flat = _flat(text)
+    for old in ("Compass stores each issue beneath `.compass/work/<issue>/`.",
+                "It writes the result under `.compass/work/<issue>/`",
+                "leaves a reviewable record under `.compass/work/<issue>/`"):
+        if old in flat:
+            found.append(old)
+    return found
+
+
+def test_trc_s5_documents_are_not_placed_in_the_work_directory():
+    from importlib import import_module
+    import sys
+    sys.path.insert(0, str(ROOT / "cli"))
+    try:
+        layout = import_module("compass_pkg.issue_layout")
+    finally:
+        sys.path.pop(0)
+    assert layout.docs_dir_for("2026-10-09", "my-issue") == "docs/compass/2026-10-09-my-issue"
+
+    report = {rel: s5_findings(_read(rel)) for rel in S5_PAGES}
+    report = {rel: found for rel, found in report.items() if found}
+    assert not report, report
+    for rel in S5_PAGES:
+        assert "docs/compass/<" in _read(rel), f"{rel} does not name docs/compass/<created>-<slug>/"
+
+
+def test_trc_s5_the_scan_reports_the_old_listing():
+    old = "```text\n.compass/work/<issue>/\n├── manifest.yml\n├── acceptance-criteria.md\n```\n"
+    assert s5_findings(old) == ["acceptance-criteria.md listed under .compass/work"]
+    new = ("```text\n.compass/work/<issue>/\n├── manifest.yml\n```\n\n"
+           "```text\ndocs/compass/<date>-<issue>/\n├── acceptance-criteria.md\n```\n")
+    assert not s5_findings(new)
+    assert s5_findings("Compass stores each issue beneath\n`.compass/work/<issue>/`.")
+
+
+# --- TRC-S3: the routing deep dive matches the evaluator ----------------------
+
+def _evaluate_verbose(**assessment):
+    import subprocess
+    import sys
+    args = [sys.executable, str(ROOT / "cli" / "compass"), "approach", "evaluate", "--verbose"]
+    for key, value in assessment.items():
+        args += ["--assessment", f"{key}={value}"]
+    run = subprocess.run(args, cwd=ROOT, capture_output=True, text=True, timeout=60)
+    assert run.returncode == 0, run.stdout + run.stderr
+    return run.stdout
+
+
+def _case_3(text):
+    start = text.index("## Case 3 ")
+    return text[start:text.index("## Case 4 ")]
+
+
+def test_trc_s3_routing_deep_dive_matches_the_evaluator():
+    import yaml
+    text = _flat(_read("docs/routing-deep-dive.md"))
+
+    # The floor list names the labels the floor reads, and no others.
+    policy = yaml.safe_load(_read("governance/routing-policy.yml"))
+    floor = next(r for r in policy["routing_guardrails"]["floors"] if r["id"] == "RP-FLOOR-003")
+    labels = floor["when"]["labels_any"]
+    listed = re.search(r"floor list \(([^)]*)\)", text)
+    assert listed, "the floor list sentence is gone"
+    assert re.findall(r"`([a-z-]+)`", listed.group(1)) == labels, listed.group(1)
+
+    # The CSV quick fix has as many gates as the CLI gives a quick fix.
+    csv = _evaluate_verbose(risk="contained", familiarity="brownfield-mapped",
+                            size="small", goal="delivery", role="engineer")
+    gates = len(re.search(r"gate set\s+:\s+(.*)", csv).group(1).split(","))
+    words = {1: "one", 2: "two", 3: "three", 4: "four"}
+    section = text[text.index('"Add a CSV export" - engineer'):]
+    section = section[:section.index('"Add a CSV export" - product owner')]
+    assert f"{words[gates]} gates" in section, (gates, section)
+
+    # Case 3 names every rule the CLI says fires, and not a floor that does not.
+    out = _evaluate_verbose(risk="critical", familiarity="brownfield-mapped", size="small",
+                            goal="delivery", role="engineer", labels="payments,migrations")
+    fired = re.findall(r"\((RP-[A-Z]+-\d+),", out)
+    case = _case_3(_read("docs/routing-deep-dive.md"))
+    assert "RP-FLOOR-001" in fired and "RP-FLOOR-003" not in fired
+    for rule in fired:
+        assert rule in case, f"Case 3 does not name {rule}, which fires"
+    assert re.search(r"RP-FLOOR-003.{0,200}does not list it", _flat(case)), (
+        "Case 3 must say the label floor is not among the rules the CLI lists")
+    assert "Two floors fire" not in case
+
+    # A routing change is a change to compass.yml, not to the generated file.
+    assert "amending that file" not in text
+    assert "amendment to `governance/routing-policy.yml`" not in text
+    assert "bounded by the routing policy rules in `governance/routing-policy.yml`" not in text
+    assert "`compass.yml`" in text and "`docs/configuration.md`" in text
+
+
+def test_trc_s3_the_case_3_scan_would_report_the_old_text():
+    old = "## Case 3 - x\nTwo floors fire, and they reinforce each other.\n## Case 4 - y"
+    case = _case_3(old)
+    assert "Two floors fire" in case
+    assert "RP-FLOOR-001" not in case
+
+
 # --- TRC-S2: the governance prose describes the 6.0.0 model -------------------
 
 def _flat(text):

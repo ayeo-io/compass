@@ -36,9 +36,11 @@ commands/        the stage interface (the /compass: namespace)
 agents/          router, spec-author, planner, orchestrator, builder,
                  verifier, reviewer, product-owner, product-marketer,
                  architect
-skills/          adaptive-routing, bdd-specification, tdd-discipline,
-                 intent-interview, worktree-multiagent, governance-check,
-                 traceability, evidence-gates, role-translation
+skills/          adaptive-routing, bdd-specification, behaviour-mapping,
+                 compass-runtime, evidence-gates, flow-management,
+                 governance-check, intent-interview, plan-authoring,
+                 quick-fix, receiving-code-review, systematic-debugging,
+                 tdd-discipline, worktree-multiagent
 hooks/           pre-tool.sh, post-tool.sh, stop.sh, session-start.sh
 bin/compass      the shim that puts the kit on PATH
 .claude-plugin/  the plugin manifest and marketplace entry

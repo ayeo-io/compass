@@ -51,6 +51,12 @@ Compass assesses the issue, works out the approach and tells you what needs
 review next. The default guardrails work immediately; project setup is
 optional.
 
+Project settings, and a project's own changes to the shipped defaults, live in
+one file, `compass.yml` ([docs/configuration.md](docs/configuration.md)).
+`compass policy show` prints the configuration in force. Upgrading from 5.x?
+Read [docs/upgrade-6-0-0.md](docs/upgrade-6-0-0.md). To mirror an issue's
+labels on its GitHub issue, see [docs/github-labels.md](docs/github-labels.md).
+
 Compass complements your normal CI. It does not replace tests, linting,
 security scanning, builds or deployment checks.
 
@@ -77,7 +83,9 @@ size are different things.
 
 ## Resumable and auditable
 
-Every issue leaves a reviewable record under `.compass/work/<issue>/`:
+Every issue leaves a reviewable record. Its documents are in
+`docs/compass/<created>-<issue>/`; its manifest, evidence and markers are in
+`.compass/work/<issue>/`. The record holds:
 
 - a dashboard showing the current decision and what needs approval;
 - the delivery approach, including what was deliberately omitted and why;
@@ -137,6 +145,8 @@ The slash commands are the pipeline; the CLI is the mechanism underneath them.
 ```text
 compass init               make this directory a Compass project - create .compass/
 compass approach evaluate  the assessment -> the delivery approach, deterministically
+compass approach show      the three-line decision view: approach, gates, files
+compass approach render    every delivery approach as one HTML table
 compass bdd extract        acceptance criteria -> a runnable .feature
 compass bdd verify         record which scenarios the runner actually ran
 compass check              run the guardrail checks against the manifest and evidence
@@ -155,6 +165,8 @@ compass preset init        scaffold a team preset repository
 compass preset test        run a preset's fixtures and check its locks
 compass review-rule list   the review rules that apply to the changed files
 compass policy diff        compare two configurations: what one accepts that the other does not
+compass policy migrate     turn copied governance and the old settings file into a compass.yml
+compass policy update      move the project to another shipped default major, re-approving waivers
 compass plan lint          scan a technical design for placeholder phrases
 compass intent ingest      read a brief that already exists, by path or https URL
 compass issue lint         structurally validate an issue manifest
@@ -170,6 +182,7 @@ compass issue template show  a document template with its checklists rendered fr
 compass issue status set   backlog, or done with --close-reason completed | not-planned | duplicate
 compass issue status remove  end a backlog hold; the state then follows the records
 compass issue blocked set  flag an in-progress or in-review issue as blocked, with a reason
+compass issue blocked remove  clear the blocked flag
 compass issue link set     link an issue to its GitHub issue, to write its labels there (opt in)
 compass issue labels sync  write an issue's labels to its linked GitHub issue now
 compass issue subtask      record, resume and package a multiagent run's subtasks
@@ -187,6 +200,8 @@ compass scenario descope   record a failure mode no scenario covers, and why
 compass scenario tests set replace the tests a scenario declares
 compass changed-file add   trace a changed file to the scenario that asked for it
 compass evidence add       append a typed evidence record
+compass evidence approve   record a person's approval of a human check
+compass evidence review    record a judgement against a judged check
 compass terminology        what a term means here, from the frozen vocabulary
 compass quick-fix start    assess, evaluate and record a quick fix in one call
 compass quick-fix finish   trace, check, gate and ship a quick fix in one call

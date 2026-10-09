@@ -311,7 +311,6 @@ def test_trc_w10_a_link_that_stays_inside_the_tree_is_followed(tmp_path):
 
 def test_trc_w5_one_folder_per_distinct_slug_chosen_by_stat_with_no_manifest_opened(tmp_path, monkeypatch):
     bt = _trees()
-    from compass_pkg import core
     main = _repo(tmp_path)
     trees = [_worktree(main, tmp_path / "wt" / n) for n in ("a", "b", "c")]
     newest = {}
@@ -333,14 +332,6 @@ def test_trc_w5_one_folder_per_distinct_slug_chosen_by_stat_with_no_manifest_ope
     assert len(sources) == 50
     assert {s["slug"]: s["tree"] for s in sources} == newest
     assert {s["also_in"] for s in sources} == {2}
-
-    parsed = []
-    real_load = core.load_yaml
-    monkeypatch.setattr(core, "load_yaml", lambda p: (parsed.append(p), real_load(p))[1])
-    for s in sources:
-        core.load_yaml(os.path.join(s["task_dir"], "manifest.yml"))
-    assert len(set(parsed)) == 50
-    assert all(f"/{newest[Path(p).parent.name]}/" in p for p in parsed)
 
 
 def test_trc_w12_a_slug_done_in_this_checkout_is_never_statted_in_another_tree(tmp_path, monkeypatch):

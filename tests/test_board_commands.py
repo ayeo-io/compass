@@ -941,4 +941,4 @@ def test_a_slug_with_a_card_is_not_also_listed_for_a_link_out_of_another_tree(ri
     page = rig.page(main, "--worktrees")
     assert [c[0] for c in _cards(page)] == ["tc-only"]
     assert _note(page) == []
-    assert "1 issues" in page
+    assert "<li>1 issue</li>" in page

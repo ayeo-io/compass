@@ -359,6 +359,12 @@ def test_trc_b13_header_summarises_the_board():
     assert page_html.count(GENERATED) == 1
 
 
+def test_trc_b13_header_uses_the_singular_for_one_issue():
+    text = header_text(read(render(row("only"))))
+    assert "1 issue" in text
+    assert "1 issues" not in text
+
+
 def test_trc_b19_legend_says_lane_is_stage_and_word_is_state():
     root = page_root(row("alpha"))
     legend = root.find_all("section", "legend")

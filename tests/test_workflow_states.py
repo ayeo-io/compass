@@ -1129,6 +1129,14 @@ RETIRED_PROSE = {
         r"verify|ship)\b",
     "a depth word used as a stage mode or an artifact depth":
         r"\b(?:mode|depth)s?: ?`?(?:full|light|full-plus-backfill)\b|`full-plus-backfill`",
+    # The evaluator prints `assess : full`; a fixture writes `stages: {x: full}`;
+    # a table row reads `stages.define.mode   light`; a flag reads `--mode a=full`.
+    "a depth word as the value of a named stage":
+        r"\b(?:assess|define|refine|plan|breakdown|implement|verify|ship)\s*:\s*`?(?:full|light)\b"
+        r"|\bstages\.\w+\.mode\s+`?(?:full|light)\b|--mode[ =]\w+=(?:full|light)\b",
+    "a verb under the name it had before it was renamed":
+        r"\bpolicy effective\b|\bsubtask update\b|\bissue set-status\b|\bapproach summary\b"
+        r"|\bpolicy review-rules\b",
 }
 
 
@@ -1182,6 +1190,13 @@ def test_vr_g9_shipped_prose_uses_no_retired_word_in_its_retired_meaning():
     "friction:\n  - phase: implement",
     "Each stage sets `mode: full` or `depth: light`.",
     "The slowest mode is `full-plus-backfill`.",
+    "    assess     : full",
+    "    define     : light",
+    "  stages: {implement: full}",
+    "stages.define.mode   light   issue (set)",
+    "Two calls: `--mode refine=full` then `--ceiling subtask_ceiling=2`.",
+    "See `policy effective --issue` for the live files.",
+    "Run `subtask update --status done` at the end.",
 ])
 def test_vr_g9_a_planted_retired_use_is_reported(tmp_path, line):
     (tmp_path / "docs").mkdir()
@@ -1205,6 +1220,21 @@ def test_vr_g9_an_allowed_use_is_not_reported(tmp_path, line):
     (tmp_path / "docs").mkdir()
     (tmp_path / "docs" / "page.md").write_text(line + "\n", encoding="utf-8")
     assert retired_prose(tmp_path) == []
+
+
+@pytest.mark.parametrize("argv,retired", [
+    (["policy", "diff", "--help"], "active, queued or parked"),
+    (["issue", "migrate", "--help"], "A landed issue is refused"),
+])
+def test_vr_g9_help_text_names_no_retired_state(argv, retired):
+    """The prose scan reads files; help text is built from code, so this reads
+    the help the commands print."""
+    import subprocess
+    r = subprocess.run([sys.executable, str(ROOT / "cli" / "compass"), *argv],
+                       capture_output=True, text=True,
+                       env={"PATH": __import__("os").environ["PATH"], "HOME": "/nonexistent"})
+    assert r.returncode == 0, r.stderr
+    assert retired not in " ".join(r.stdout.split()), r.stdout
 
 
 def test_vr_g9_the_retired_list_and_the_decision_records_are_not_scanned(tmp_path):

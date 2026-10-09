@@ -193,7 +193,7 @@ def register(pls):
                      "it, none compares the project file at git HEAD with the working file")
     pld.add_argument("--offline", action="store_true", help=OFFLINE_HELP)
     pld.add_argument("--open", action="store_true",
-                     help="also run each open issue (active, queued or parked) over both, "
+                     help="also run each issue in flight or in the backlog over both, "
                      "and list the issue waivers that would need re-approval")
     pld.add_argument("--exit-code", dest="exit_code", action="store_true",
                      help="exit 1 when anything differs, as git diff --exit-code does")

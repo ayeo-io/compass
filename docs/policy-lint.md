@@ -244,7 +244,7 @@ waiver. A stage list that a capability switch has not turned on is marked
 ```
 stages.plan.entry   [dor-summary-filled, ...]   default@6.0.0 (add)  (inactive: entry-exit-evaluation off)
 checks.suite-passed.severity   advisory   project (set, waiver by jed72, 2026-10-05)
-stages.define.mode   light   issue (set)
+stages.define.mode   lightweight   issue (set)
 ```
 
 | Option | Meaning |

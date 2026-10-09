@@ -63,7 +63,7 @@ A call needs at least one change. Flags add to the overlay a call starts from:
 | `--from-file PATH` | The whole overlay, replaced by the file's mapping; any flag is applied on top |
 
 The starting overlay is the pending proposal when there is one, otherwise the
-manifest's `config:`. Two calls therefore accumulate: `--mode refine=full`
+manifest's `config:`. Two calls therefore accumulate: `--mode refine=thorough`
 then `--ceiling subtask_ceiling=2` proposes both. `--discard` starts again.
 
 `proposed.yml` holds, in this order:
@@ -79,7 +79,7 @@ then `--ceiling subtask_ceiling=2` proposes both. `--discard` starts again.
 The call refuses, and writes nothing, when:
 
 - the issue has no stored generation (`generation: 0`, or no `generation:` key). The message names `compass approach evaluate --write`;
-- the issue is landed;
+- the issue is closed (done, whatever its close reason);
 - `generations/`, the next folder or anything in it is a symbolic link;
 - the next folder holds anything but a readable `proposed.yml`. A complete leftover is named with `--commit` and `--discard`; an incomplete one with `--discard`;
 - a flag is malformed, `--from-file` is not a mapping, or the project's own layers do not resolve.

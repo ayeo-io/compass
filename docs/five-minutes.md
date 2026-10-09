@@ -63,14 +63,14 @@ them - the stages, the gates, the orchestration - is computed. Run
   policy rules fired: none
   parallel subtasks: up to 1 (a ceiling - breakdown sets the orchestration once the distribution map exists)
   per-stage weight:
-    assess     : full
-    define     : light
+    assess     : thorough
+    define     : lightweight
     refine     : collapsed
     plan       : collapsed
     breakdown  : skipped
-    implement  : full
-    verify     : light
-    ship       : light
+    implement  : thorough
+    verify     : lightweight
+    ship       : lightweight
   gate set        : verify.correctness, verify.governance, verify.traceability
 ```
 

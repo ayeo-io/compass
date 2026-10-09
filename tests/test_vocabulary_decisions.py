@@ -575,3 +575,124 @@ def test_vr_g12_a_planted_literal_depth_word_fails_the_scan():
         hits = scan_depth_words({**sources, "routing.py": sources["routing.py"] + "\n" + planted})
         assert [h for h in hits if not _allowed(h, DEPTH_ALLOW)], planted
     assert scan_depth_words({"stable_ids.py": 'MODE_THOROUGH = "thorough"\n'}) == []
+
+
+# --- VR-G12: retired stored words in a hook, a run stage, a friction key -------
+#
+# The scans above read Python in `cli/` only. Three comparisons escaped them:
+# a quoted `full` inside a Python block of a shell hook, a run's `stage`
+# compared with the retired `build`, and a friction record's retired `phase`
+# key. A word here is retired as a stored value, so a literal use is a finding.
+
+HOOK_OLD_WORD_RE = re.compile(
+    r"""["'](?:full|light|full-plus-backfill|standard|build|phase)["']""")
+
+RETIRED_NAME_WORDS = ("build", "phase")
+
+RETIRED_NAME_ALLOW = (
+    ("analyze.py", '"build": STAGE_IMPLEMENT',
+     "the table that reads a run stage written before the rename"),
+    ("core.py", '"build": "implement"',
+     "the table of retired stage names that the loader reads through"),
+    ("core.py", 'for key in ("phase", "stage"):',
+     "the loader reads a friction record's retired key beside the new one"),
+    ("migrate.py", '"build": "implement",',
+     "the archive migration's table of retired stage names"),
+    ("obligations.py", 'renames.get(b["phase"], b["phase"])',
+     "a blocked-phase record has a phase field that is not a friction key"),
+    ("pytest_report.py", '"__pycache__", "build", "dist"',
+     "build is a directory name to skip, not a stage"),
+    ("routing.py", '{"phase": rr["block_phase"]',
+     "a blocked-phase record has a phase field that is not a friction key"),
+    ("routing.py", '_display_blocked_phase(b["phase"])',
+     "a blocked-phase record has a phase field that is not a friction key"),
+    ("routing.py", "_display_blocked_phase(b['phase'])",
+     "a blocked-phase record has a phase field that is not a friction key"),
+    ("word_map.py", 'FALLBACK["run_stage"] = {"build": "implement"}',
+     "the in-module copy of the retired run stage table"),
+    ("word_map.py", 'FALLBACK["friction_keys"] = {"phase": "stage"}',
+     "the in-module copy of the retired friction key table"),
+)
+
+
+def retired_name_hits(source: str, name: str) -> list[tuple[str, int, str, str]]:
+    lines = source.splitlines()
+    return [(name, line, value, lines[line - 1].strip())
+            for line, _col, value in _scan_source()(source)
+            if value in RETIRED_NAME_WORDS]
+
+
+def scan_retired_names(sources: dict[str, str]) -> list[tuple[str, int, str, str]]:
+    hits = []
+    for name, text in sorted(sources.items()):
+        hits += retired_name_hits(text, name)
+    return hits
+
+
+def hook_old_word_hits(text: str, name: str) -> list[tuple[str, int, str, str]]:
+    """`(name, line, word, line text)` for each quoted retired word on a line
+    of a shell hook that is not a comment. The hooks read these words through
+    `word_map`, so none is expected."""
+    hits = []
+    for n, line in enumerate(text.splitlines(), 1):
+        if line.lstrip().startswith("#"):
+            continue
+        for found in HOOK_OLD_WORD_RE.finditer(line):
+            hits.append((name, n, found.group(0), line.strip()))
+    return hits
+
+
+def _hook_sources() -> dict[str, str]:
+    return {p.name: p.read_text(encoding="utf-8")
+            for p in sorted((ROOT / "hooks").glob("*.sh"))}
+
+
+def test_vr_g12_no_run_stage_or_friction_key_is_spelt_in_its_retired_form():
+    open_hits = [h for h in scan_retired_names(_package_sources())
+                 if not _allowed(h, RETIRED_NAME_ALLOW)]
+    assert open_hits == [], (
+        "read the run stage and the friction key through word_map:\n"
+        + "\n".join(f"  {n}:{ln} {w!r}: {t}" for n, ln, w, t in open_hits))
+
+
+def test_vr_g12_each_retired_name_allowance_states_a_reason_and_matches_a_finding():
+    hits = scan_retired_names(_package_sources())
+    for module, fragment, reason in RETIRED_NAME_ALLOW:
+        assert len(reason.split()) >= 4, (module, fragment, "give a reason")
+        assert any(m == module and fragment in t for m, _l, _w, t in hits), (
+            f"{module}: no finding holds {fragment!r}, so the entry is out of date")
+
+
+def test_vr_g12_a_planted_run_stage_or_friction_comparison_fails_the_scan():
+    sources = _package_sources()
+    for planted in ('open_runs = [r for r in runs if r.get("stage") == "build"]\n',
+                    'if run["stage"] == "build":\n    pass\n',
+                    'old = [f for f in friction if f.get("phase")]\n',
+                    'x = friction_entry["phase"]\n'):
+        hits = scan_retired_names({**sources, "flow.py": sources["flow.py"] + "\n" + planted})
+        assert [h for h in hits if not _allowed(h, RETIRED_NAME_ALLOW)], planted
+
+
+def test_vr_g12_no_hook_spells_a_retired_stored_word():
+    hits = [h for name, text in _hook_sources().items()
+            for h in hook_old_word_hits(text, name)]
+    assert hits == [], "read the word through word_map:\n" + "\n".join(map(str, hits))
+
+
+def test_vr_g12_a_planted_hook_comparison_fails_the_scan():
+    sources = _hook_sources()
+    for planted in ('    if (task.get("stages") or {}).get("verify") == "full":\n',
+                    "    if mode == 'light':\n",
+                    '    size = "standard"\n'):
+        hits = hook_old_word_hits(sources["stop.sh"] + "\n" + planted, "stop.sh")
+        assert hits, planted
+    assert hook_old_word_hits("# the hook once said 'full' here\n", "stop.sh") == []
+
+
+def test_the_release_notes_list_the_removed_flow_keys_and_the_aliases():
+    notes = (ROOT / "docs" / "releasing.md").read_text(encoding="utf-8")
+    section = notes.split("### What changed at 6.0.0", 1)[1].split("**What the release contains**", 1)[0]
+    assert "removes nothing" not in section
+    for needed in ("held", "next_up", "landed_this_week", "abandoned", "schema `3.0`",
+                   "7.0.0", "together", "ship-commit", "thorough"):
+        assert needed in section, needed

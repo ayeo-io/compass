@@ -269,16 +269,16 @@ issue landed: that is `ship-commit`'s alone.
 | Step | Command | Recorded |
 |---|---|---|
 | 2 | `subtask add` | brief, model, budget, base commit, status `dispatched`, `attempts: 1` |
-| 4 | `subtask update --report --cost` | result file, status `reported`, tokens used |
+| 4 | `subtask set --report --cost` | result file, status `reported`, tokens used |
 | 5 | `subtask package` | the review package's path |
-| 5 | `subtask update --reviewed --round` | the commit reviewed, the round's verdict |
-| 5 | `subtask update --finding` | one finding per call |
-| 5 | `subtask update --brief`, with the try flag | a new brief, the earlier one kept, and the try counted |
-| 5 | `subtask update --resolve` | a finding marked resolved |
-| 5 | `subtask update --error` | the error's digest, and how many times in a row it was reported |
+| 5 | `subtask set --reviewed --round` | the commit reviewed, the round's verdict |
+| 5 | `subtask set --finding` | one finding per call |
+| 5 | `subtask set --brief`, with the try flag | a new brief, the earlier one kept, and the try counted |
+| 5 | `subtask set --resolve` | a finding marked resolved |
+| 5 | `subtask set --error` | the error's digest, and how many times in a row it was reported |
 | 5 | `subtask replan` | a replan and its reason |
-| 5 | `subtask update --stop-reason --stop-evidence` | why the subtask stopped, and the file that shows it |
-| 6 | `subtask update --status done` | status `done` |
+| 5 | `subtask set --stop-reason --stop-evidence` | why the subtask stopped, and the file that shows it |
+| 6 | `subtask set --status done` | status `done` |
 
 An interrupted run resumes from `compass issue subtask next`, which names
 what to dispatch, what is in review and what is left, with each finding. It

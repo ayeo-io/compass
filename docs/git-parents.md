@@ -156,7 +156,7 @@ A parent's own `extends:` may name `compass:default@<major>` or another git pare
 
 A parent can name a git parent, which can name another. A chain holds at most three git parents, to a depth of three: the project's direct parent, its parent and that parent's parent. The shipped default at the root is not counted, because it is the CLI's own version and not a fetched parent.
 
-Each parent in a chain is pinned by sha, fetched, cached and read as data in the same way as a single parent. The chain is `default`, then the git parents from the furthest to the nearest, `project`, then the issue. A later layer overrides an earlier one, so the nearest parent wins over the furthest, and `policy effective` names the parent that wrote each field. The classifier judges each git parent against the shipped default like any other layer, so a parent that loosens the default needs a waiver the same way a project does. A waiver in a git parent, at any depth, is checked against that parent's own `owner`, or the names in the `approvers.project-waiver` of the layer above it. The project's owner does not count. A parent with no `owner` cannot carry a waiver (`W-NO-OWNER`).
+Each parent in a chain is pinned by sha, fetched, cached and read as data in the same way as a single parent. The chain is `default`, then the git parents from the furthest to the nearest, `project`, then the issue. A later layer overrides an earlier one, so the nearest parent wins over the furthest, and `policy show` names the parent that wrote each field. The classifier judges each git parent against the shipped default like any other layer, so a parent that loosens the default needs a waiver the same way a project does. A waiver in a git parent, at any depth, is checked against that parent's own `owner`, or the names in the `approvers.project-waiver` of the layer above it. The project's owner does not count. A parent with no `owner` cannot carry a waiver (`W-NO-OWNER`).
 
 | Fault | Code | Reported on |
 |---|---|---|
@@ -206,7 +206,7 @@ Each git parent entry holds the classification of the chain from the shipped def
 
 The result is the one before any waiver. A parent's own waivers were approved by the parent's maintainers, and that approval means nothing to a project that extends it, so a waiver does not change the stored `result`. A later check can read the block without running the classifier again.
 
-Only a commit that writes a new generation computes the blocks, with one scan of the grid for each git parent. A commit that finds no change, and a read of the live configuration (`policy effective`), do not. The function is `classify_chain` in `cli/compass_pkg/chain_class.py`.
+Only a commit that writes a new generation computes the blocks, with one scan of the grid for each git parent. A commit that finds no change, and a read of the live configuration (`policy show`), do not. The function is `classify_chain` in `cli/compass_pkg/chain_class.py`.
 
 The cost, measured on 2026-10-08 on a laptop: about 0.6 seconds for one parent with a one-field change, and about 2.3 seconds for a chain of three. A chain of more than eight named labels cannot be committed (the lint cannot prove the locks), so `complete: false` is a guard in the function and not a stored case.
 

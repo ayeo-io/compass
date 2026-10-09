@@ -87,8 +87,8 @@ The commit refuses, writing nothing, when:
 - `generations/`, the next folder or anything inside the next folder is a
   symbolic link. Compass never follows a link there, because the next folder is
   cleared before it is written.
-- the issue is landed and the result would be a new generation. A landed issue
-  keeps the configuration it landed under. "No change" is still allowed.
+- the issue is closed and the result would be a new generation. A closed issue
+  keeps the configuration it closed under. "No change" is still allowed.
 - the layered lint rejects the configuration. The message names the file, the
   first error and `compass policy lint`, which shows the rest. `approach
   evaluate` without `--write` still works on such a project.
@@ -313,7 +313,7 @@ only when `failed` is above zero.
 
 ## Not built yet
 
-- `policy effective --issue` still resolves the live files and does not read
+- `policy show --issue` still resolves the live files and does not read
   the generation.
 - The leftover-generation states are reported by `compass ci`, not by
   `compass check`.

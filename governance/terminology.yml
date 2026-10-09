@@ -317,18 +317,16 @@ terms:
       step; everything after it is mechanism. Named for what it produces: the
       stage writes an `assessment:` block, the flag is --assessment, and the
       policy section is assessment_vocabulary.
-    not: >
-      # vocabulary-scan: allow - naming the retired stage name is the point
-      # of this field; the reader needs to know which word this replaced.
-      NOT triage. Triage means sorting BETWEEN cases by urgency, which is what
-      `compass flow` does across issues - this stage sizes up ONE piece of
-      work. The retired command name was /compass:triage.
+    # vocabulary-scan: allow - naming the retired stage name is the point of this field; the reader needs to know which word this replaced.
+    not: "NOT triage. Triage means sorting BETWEEN cases by urgency, which is what `compass flow` does across issues - this stage sizes up ONE piece of work. The retired command name was /compass:triage."
     related: [delivery-approach, label, issue-type, assessment]
   delivery-approach:
     means: >
       The chosen shape for an issue: which artifacts exist, which gates
       apply, solo or parallel. Deterministic - same assessment plus same policy
-      always gives the same approach.
+      always gives the same approach. `full` is the name of the heaviest
+      delivery approach and is not a stage mode: its stages run `thorough`,
+      and the old mode word `full` reads as `thorough` until 7.0.0.
     related: [assess, quality-gate]
   check:
     means: >
@@ -354,7 +352,7 @@ terms:
   quality-gate:
     means: >
       A check that must pass before an issue moves state. Which gates apply
-      depends on the issue type and labels.
+      comes from the delivery approach and the label rules.
     related: [workflow-state, definition-of-ready, definition-of-done]
   definition-of-ready:
     means: >
@@ -369,9 +367,9 @@ terms:
       The review pass that hardens requirements before plan or implementation:
       ambiguities resolved into recorded decisions, contradictions and
       gaps closed, intent.md reviewed where one exists. Satisfying it is
-      # vocabulary-scan: allow - a note recording what v1 called this, which
-      # is what someone reading an old record needs to look it up.
-      what makes an issue ready. v1 called this "Clarify".
+      what makes an issue ready.
+    # vocabulary-scan: allow - a note recording what v1 called this, which is what someone reading an old record needs to look it up.
+    not: 'v1 called this "Clarify".'
     related: [intent, definition-of-ready, acceptance-criteria]
   definition-of-done:
     means: >
@@ -460,8 +458,9 @@ terms:
   ship:
     means: >
       Merging and releasing the change: the PR lands, follow-ups are
-      # vocabulary-scan: allow - a note recording what v1 called this.
-      recorded, the derived system spec is regenerated. v1 called this "Land".
+      recorded, the derived system spec is regenerated.
+    # vocabulary-scan: allow - a note recording what v1 called this.
+    not: 'v1 called this "Land".'
     related: [pr, rollout-plan]
   rollout-plan:
     means: >

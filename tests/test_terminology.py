@@ -1856,3 +1856,24 @@ def test_d3_exempt_list_still_covers_history_and_no_live_surface():
     assert not crept, (
         f"the exempt list has grown to cover live surfaces: {crept}. That is "
         f"how a scan reports zero while the drift it exists to catch survives")
+
+
+def test_glossary_prints_no_scanner_marker_and_gates_follow_the_approach():
+    """The glossary reads as plain sentences, and two entries agree.
+
+    A scan allowance sat inside three definitions, so the glossary printed
+    the marker text. `quality-gate` also said the issue type decides which
+    gates apply, which `issue-type` and the code contradict: the delivery
+    approach and the label rules decide. `full` names the heaviest approach,
+    not a stage mode.
+    """
+    glossary = (REPO_ROOT / "docs" / "glossary.md").read_text(encoding="utf-8")
+    assert "vocabulary-scan" not in glossary, (
+        "docs/glossary.md prints scanner marker text; keep the marker in a "
+        "YAML comment above the line it exempts")
+    terms = _terminology()["terms"]
+    gate = " ".join(str(terms["quality-gate"]["means"]).split())
+    assert "depends on the issue type" not in gate
+    assert "delivery approach" in gate and "label" in gate
+    approach = " ".join(str(terms["delivery-approach"]["means"]).split())
+    assert "`full`" in approach and "thorough" in approach and "7.0.0" in approach

@@ -194,7 +194,7 @@ Architecture decision record: one real decision, the alternatives considered, th
 
 Sizing up incoming work: risk, familiarity, size, and goal - producing an issue type, labels, and a delivery approach. The human judgement step; everything after it is mechanism. Named for what it produces: the stage writes an `assessment:` block, the flag is --assessment, and the policy section is assessment_vocabulary.
 
-**Not:** # vocabulary-scan: allow - naming the retired stage name is the point # of this field; the reader needs to know which word this replaced. NOT triage. Triage means sorting BETWEEN cases by urgency, which is what `compass flow` does across issues - this stage sizes up ONE piece of work. The retired command name was /compass:triage.
+**Not:** NOT triage. Triage means sorting BETWEEN cases by urgency, which is what `compass flow` does across issues - this stage sizes up ONE piece of work. The retired command name was /compass:triage.
 
 **Related:** `delivery-approach`, `label`, `issue-type`, `assessment`
 
@@ -294,7 +294,7 @@ The gate between requirements and plan/implementation: acceptance criteria exist
 
 ### delivery-approach
 
-The chosen shape for an issue: which artifacts exist, which gates apply, solo or parallel. Deterministic - same assessment plus same policy always gives the same approach.
+The chosen shape for an issue: which artifacts exist, which gates apply, solo or parallel. Deterministic - same assessment plus same policy always gives the same approach. `full` is the name of the heaviest delivery approach and is not a stage mode: its stages run `thorough`, and the old mode word `full` reads as `thorough` until 7.0.0.
 
 **Related:** `assess`, `quality-gate`
 
@@ -546,7 +546,7 @@ A named, versioned parent layer. `default` is the only preset Compass ships.
 
 ### quality-gate
 
-A check that must pass before an issue moves state. Which gates apply depends on the issue type and labels.
+A check that must pass before an issue moves state. Which gates apply comes from the delivery approach and the label rules.
 
 **Related:** `workflow-state`, `definition-of-ready`, `definition-of-done`
 
@@ -566,7 +566,9 @@ The per-issue proof summary rendered from the manifest and the evidence registry
 
 ### requirements-review
 
-The review pass that hardens requirements before plan or implementation: ambiguities resolved into recorded decisions, contradictions and gaps closed, intent.md reviewed where one exists. Satisfying it is # vocabulary-scan: allow - a note recording what v1 called this, which # is what someone reading an old record needs to look it up. what makes an issue ready. v1 called this "Clarify".
+The review pass that hardens requirements before plan or implementation: ambiguities resolved into recorded decisions, contradictions and gaps closed, intent.md reviewed where one exists. Satisfying it is what makes an issue ready.
+
+**Not:** v1 called this "Clarify".
 
 **Related:** `intent`, `definition-of-ready`, `acceptance-criteria`
 
@@ -616,7 +618,9 @@ A top-level key of `compass.yml` that configures the CLI instead of the process.
 
 ### ship
 
-Merging and releasing the change: the PR lands, follow-ups are # vocabulary-scan: allow - a note recording what v1 called this. recorded, the derived system spec is regenerated. v1 called this "Land".
+Merging and releasing the change: the PR lands, follow-ups are recorded, the derived system spec is regenerated.
+
+**Not:** v1 called this "Land".
 
 **Related:** `pr`, `rollout-plan`
 

@@ -35,6 +35,8 @@ import os
 import stat
 import subprocess
 
+from compass_pkg.core import manifest_path
+
 THIS_CHECKOUT = "this checkout"
 _GIT_TIMEOUT_SECONDS = 60
 
@@ -100,7 +102,7 @@ def _manifest_mtime(task_dir, tree_real=None):
     With `tree_real` set, a manifest that is a link leading out of that tree
     is refused rather than read.
     """
-    path = os.path.join(task_dir, "manifest.yml")
+    path = manifest_path(task_dir)
     try:
         mode = os.lstat(path).st_mode
     except OSError:

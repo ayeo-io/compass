@@ -1143,18 +1143,21 @@ def test_trc_a3():
         assert str(entry.get("means", "")).strip(), (
             "the entry for %r says nothing about what it means" % word)
 
-    # `design` is the word that caused this. Its entry has to say what it is
-    # NOT, or it is a definition of one of five meanings.
-    assert str(terms["design"].get("not", "")).strip(), (
-        "the `design` entry does not say what it is NOT - and naming five "
-        "things without saying which is which is how it stayed ambiguous")
+    # `design` is the word that caused this. Its entry has to say which
+    # stage and which verb carry the engineering meaning, or it is a
+    # definition of one of five meanings.
+    design = " ".join(str(terms["design"].get("means", "")).split())
+    assert "/compass:plan" in design and "compass plan lint" in design, (
+        "the `design` entry does not say where the engineering design and "
+        "the placeholder scan live - naming five things without saying "
+        "which is which is how it stayed ambiguous")
 
     # The engineering artifact. `TDD` in this repository is red-green-refactor
-    # and nothing else, so the abbreviation is banned in the entry itself.
+    # and nothing else, so the entry says the abbreviation is never used.
     td = " ".join(str(v) for v in terms["technical-design"].values())
-    assert "TDD" in td and "NEVER" in td.upper(), (
-        "the technical-design entry does not warn against abbreviating it to "
-        "TDD, which already means red-green-refactor here")
+    assert "TDD" in td and "red-green-refactor" in td, (
+        "the technical-design entry does not say that TDD already means "
+        "red-green-refactor here")
 
     # The intake document. Most teams arrive with a brief written elsewhere,
     # so a definition that presumes authorship would contradict

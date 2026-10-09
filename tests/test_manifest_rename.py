@@ -68,7 +68,7 @@ def test_nir_a1_manifest_has_a_terms_entry():
         "not cover the name of the artifact every command reads")
 
     entry = terms["manifest"]
-    for field in ("means", "not", "related"):
+    for field in ("means", "related"):
         assert entry.get(field), (
             f"the `manifest` term carries no `{field}`. A term entry without "
             f"one is a word in a list, not a definition the scan can hold "

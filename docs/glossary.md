@@ -92,9 +92,7 @@ Lesson proposal. A lesson held in `lessons-pending.yml` in the project's `.compa
 
 ### `LS-`
 
-Lesson. One rule in `lessons.yml` in the project's `.compass` folder that a person in this project had to repeat, injected into later sessions when it applies always. `compass lesson` adds, lists and removes them.
-
-**Not:** A guardrail or a routing rule. A lesson is advice: no check reads it, and a guardrail always wins over it.
+Lesson. One rule in `lessons.yml` in the project's `.compass` folder that a person in this project had to repeat, injected into later sessions when it applies always. `compass lesson` adds, lists and removes them. A lesson is advice: no check reads it, and a guardrail always wins over it.
 
 **Refers to:** One lesson in the project's lessons file.
 
@@ -104,9 +102,7 @@ Lesson. One rule in `lessons.yml` in the project's `.compass` folder that a pers
 
 ### `PX-`
 
-Position exemption. One entry in `scan.position_exemptions` naming a position the vocabulary scan does not read - a source comment, a machine key - together with the reason a string in that position cannot reach a user. The scan reads every position by default, so a PX- entry is the only way a position is excluded.
-
-**Not:** A surface exemption. `scan.exempt` names whole FILES the scan skips; a PX- entry names a POSITION within a file that is scanned.
+Position exemption. One entry in `scan.position_exemptions` naming a position the vocabulary scan does not read - a source comment, a machine key - together with the reason a string in that position cannot reach a user. The scan reads every position by default, so a PX- entry is the only way a position is excluded. A PX- entry names a position within a file that is scanned; `scan.exempt` separately names whole files the scan skips.
 
 **Refers to:** One position exemption: the positions it names, and the reason a string there cannot reach a user.
 
@@ -124,9 +120,7 @@ The retired spelling of RP-. Kept in archived records, which keep the id that fi
 
 ### `RP-`
 
-Routing policy rule. One rule in routing-policy.yml that biases or constrains the computed delivery approach. RP-SHAPE and RP-ADV are soft - they bias the candidate. RP-FLOOR, RP-CAP, RP-GATE and RP-ROLE are hard - they constrain the result. RP-REQUIRE attaches a gate without raising a minimum.
-
-**Not:** A guardrail. `guardrail` means one of the five hard rules cleared with evidence; a routing rule constrains which delivery approach you end up with. The prefix said RG- until 3.0.0, which is why this distinction needs stating.
+Routing policy rule. One rule in routing-policy.yml that biases or constrains the computed delivery approach. RP-SHAPE and RP-ADV are soft - they bias the candidate. RP-FLOOR, RP-CAP, RP-GATE and RP-ROLE are hard - they constrain the result. RP-REQUIRE attaches a gate without raising a minimum. A routing rule constrains which delivery approach an issue ends up with; a guardrail is one of the five hard rules cleared with evidence.
 
 **Refers to:** One rule in the routing policy.
 
@@ -136,9 +130,7 @@ Routing policy rule. One rule in routing-policy.yml that biases or constrains th
 
 ### `RR-`
 
-Review rule. One rule in governance/review-rules.yml that a reviewer applies to the files it names, with the incident that justifies it and what not to flag. `compass review-rule list` prints the rules that match a change.
-
-**Not:** A routing policy rule (RP-), which shapes the delivery approach, or a guardrail, which is cleared with evidence. A review rule guides a reviewer's judgement of a change.
+Review rule. One rule in governance/review-rules.yml that a reviewer applies to the files it names, with the incident that justifies it and what not to flag. `compass review-rule list` prints the rules that match a change. A review rule guides a reviewer's judgement of a change.
 
 **Refers to:** One rule in the review rules file.
 
@@ -192,17 +184,13 @@ Architecture decision record: one real decision, the alternatives considered, th
 
 ### assess
 
-Sizing up incoming work: risk, familiarity, size, and goal - producing an issue type, labels, and a delivery approach. The human judgement step; everything after it is mechanism. Named for what it produces: the stage writes an `assessment:` block, the flag is --assessment, and the policy section is assessment_vocabulary.
-
-**Not:** NOT triage. Triage means sorting BETWEEN cases by urgency, which is what `compass flow` does across issues - this stage sizes up ONE piece of work. The retired command name was /compass:triage.
+Sizing up incoming work: risk, familiarity, size, and goal - producing an issue type, labels, and a delivery approach. The human judgement step; everything after it is mechanism. Named for what it produces: the stage writes an `assessment:` block, the flag is --assessment, and the policy section is assessment_vocabulary. This stage sizes up one piece of work; `compass flow` sorts between issues by urgency.
 
 **Related:** `delivery-approach`, `label`, `issue-type`, `assessment`
 
 ### assessment
 
-The four-dimension judgement the assess stage produces - risk, familiarity, size and goal, plus the domain labels. It is the only judgement field in the issue manifest; everything below it is computed from it deterministically.
-
-**Not:** A choice of process. The assessment is read; `compass approach evaluate` computes the delivery approach from it.
+The four-dimension judgement the assess stage produces - risk, familiarity, size and goal, plus the domain labels. It is the only judgement field in the issue manifest; everything below it is computed from it deterministically. The assessment is read; `compass approach evaluate` computes the delivery approach from it.
 
 **Related:** `assess`, `delivery-approach`, `router`
 
@@ -228,9 +216,7 @@ A user-defined view column (Design, UAT, Staging...). Maps to exactly one workfl
 
 ### bug
 
-An issue type: a defect in existing behaviour, not live-urgent. Starts from a bug report; the failing reproduction test is written before the fix.
-
-**Not:** A live incident, which is fixed through the hotfix delivery approach.
+An issue type: a defect in existing behaviour, not live-urgent. Starts from a bug report; the failing reproduction test is written before the fix. A live incident is fixed through the hotfix delivery approach instead.
 
 **Related:** `bug-report`, `issue-type`, `hotfix`
 
@@ -300,9 +286,7 @@ The chosen shape for an issue: which artifacts exist, which gates apply, solo or
 
 ### design
 
-The DESIGNER's stage and its command, /compass:design. It produces the UI contract (ui-contract.md) - scenarios written Given/When/Then that flow into the acceptance criteria, not mockup annotations. The word reads as UI work to most people, which is why the designer has it.
-
-**Not:** NOT the engineering design. That is the plan stage (/compass:plan), whose output is technical-design.md: the rule is that `design` names the UI contract and `plan` names the technical design, never the other way round. Also NOT the CLI verb: the placeholder scan is `compass plan lint`. Its retired spelling was kept as a hidden second name through 3.x and removed at 4.0.0 (ADR-024); it is now an unknown verb.
+The DESIGNER's stage and its command, /compass:design. It produces the UI contract (ui-contract.md) - scenarios written Given/When/Then that flow into the acceptance criteria, not mockup annotations. The word reads as UI work to most people, which is why the designer has it. `design` names the UI contract and `plan` names the technical design, never the other way round: the engineering design is the plan stage (/compass:plan), whose output is technical-design.md. The placeholder scan is the CLI verb `compass plan lint`.
 
 **Related:** `plan`, `technical-design`, `delivery-approach`
 
@@ -340,17 +324,13 @@ A recorded, typed artifact that clears a gate: a test run, a review, a sign-off.
 
 ### feature
 
-An issue type: a self-contained change with its own acceptance criteria that does not warrant a full intent document. Unqualified "feature" always means this issue type.
-
-**Not:** A feature file (the Gherkin artifact) - always say 'feature file'.
+An issue type: a self-contained change with its own acceptance criteria that does not warrant a full intent document. Unqualified "feature" always means this issue type. The Gherkin artifact is always called a "feature file".
 
 **Related:** `issue-type`, `feature-file`
 
 ### feature-file
 
 A Gherkin file grouping the scenarios for one capability (the `Feature:` keyword). The extraction target for executable acceptance criteria.
-
-**Not:** The feature issue type - unqualified 'feature' means the issue type.
 
 **Related:** `scenario`, `step`, `acceptance-criteria`
 
@@ -369,8 +349,6 @@ The 80/20 cut recorded in intent.md: the slice of an initiative that ships first
 ### follow-up
 
 Work owed after an expedited ship (the hotfix's promoted scenario, the optional postmortem). Tracked with a state pair: outstanding (not yet discharged) and resolved. An issue with an outstanding follow-up does not fully close; `compass follow-up resolve` discharges one.
-
-**Not:** v1 called this a 'backfill', with states 'owed' and 'paid'.
 
 **Related:** `hotfix`, `backlog`
 
@@ -402,17 +380,13 @@ The intake that triggers a hotfix: what broke in production, impact, severity. S
 
 A body of work that delivers several outcomes across milestones and needs an intent document. Owns intent.md, the technical design, the first-slice (80/20) decision, and the rollout strategy.
 
-**Not:** An epic, which is one outcome within one milestone under one intent.
-
 **GitHub:** Project
 
 **Related:** `epic`, `milestone`, `intent`, `slice`
 
 ### intent
 
-Two related things, and the entry covers both deliberately. (1) The document: intent.md, the originator's statement of what is wanted and why, AUTHORED at the intake stage or INGESTED from a brief that already exists - it does not presume authorship. (2) The goal it carries: the outcome a change is meant to produce, the "why" end of the traceability chain, carrying the INT- ids that scenarios trace back to. The document holds the goals, which is why one name serves both. As a document it carries problem, users, goals, non-goals, success signals, constraints, open questions, and the first slice (the 80/20 cut) - iterated through review before the design is built. User stories are welcome inside it as a format; acceptance criteria are derived from them. As a goal it is sourced from intent.md's desired outcome, the UI contract, or the issue description - a goal, not a requirement: the functional requirement is the scenario.
-
-**Not:** A restatement of the request. "Add a CSV export" is a request; "let finance self-serve" is the intent, and it may need filters and permissions the request never mentioned.
+Two related things, and the entry covers both deliberately. (1) The document: intent.md, the originator's statement of what is wanted and why, AUTHORED at the intake stage or INGESTED from a brief that already exists - it does not presume authorship. (2) The goal it carries: the outcome a change is meant to produce, the "why" end of the traceability chain, carrying the INT- ids that scenarios trace back to. The document holds the goals, which is why one name serves both. As a document it carries problem, users, goals, non-goals, success signals, constraints, open questions, and the first slice (the 80/20 cut) - iterated through review before the design is built. User stories are welcome inside it as a format; acceptance criteria are derived from them. As a goal it is sourced from intent.md's desired outcome, the UI contract, or the issue description - a goal, not a requirement: the functional requirement is the scenario. It goes further than the request: "Add a CSV export" is a request; "let finance self-serve" is the intent, and it may need filters and permissions the request never mentioned.
 
 **Also:** The product owner's entry point, `/compass:intent`, captures it.
 
@@ -421,8 +395,6 @@ Two related things, and the entry covers both deliberately. (1) The document: in
 ### issue
 
 The atomic tracked unit of work: one assessed piece of work, one delivery approach, shipping as one PR or a small PR series. Carries a type, labels, and a workflow state.
-
-**Not:** A 'task' used as another word for an issue - say issue. 'task' names one issue type.
 
 **GitHub:** Issue
 
@@ -470,9 +442,7 @@ A mark on an entry that refuses a change from a lower layer that would loosen it
 
 ### manifest
 
-The machine-readable file at the root of an issue directory, `.compass/work/<issue-slug>/manifest.yml`. It holds the assessment, the computed delivery approach, the stages and gates, the scenarios, the evidence registry and the changed files, and it points at the prose artifacts beside it. Every command reads it; `compass check` checks the guardrails against it.
-
-**Not:** Not the prose artifacts it points at, and not "spine" - a metaphor that needed explaining each time it was used. A manifest is what a package.json, a Cargo.toml or a Kubernetes manifest is: a machine-readable list of what a thing contains.
+The machine-readable file at the root of an issue directory, `.compass/work/<issue-slug>/manifest.yml`. It holds the assessment, the computed delivery approach, the stages and gates, the scenarios, the evidence registry and the changed files, and it points at the prose artifacts beside it. Every command reads it; `compass check` checks the guardrails against it. It is what a package.json, a Cargo.toml or a Kubernetes manifest is: a machine-readable list of what a thing contains.
 
 **GitHub:** none
 
@@ -512,9 +482,7 @@ The `#<sha>` suffix on a git `extends:`, which names the parent commit a project
 
 ### plan
 
-The engineering design stage: the command /compass:plan, the machine key `plan` in a manifest's stages block, the `plan-authoring` skill, the `planner` agent, and the CLI verb `compass plan lint`. Its output is technical-design.md.
-
-**Not:** NOT a schedule or a project plan - Compass has no such artifact. NOT the delivery approach either, which is computed at the assess stage and recorded in delivery-approach.md. `plan.md` was this artifact's v1 filename and is retired; a name that was retired can come back for the thing it best describes.
+The engineering design stage: the command /compass:plan, the machine key `plan` in a manifest's stages block, the `plan-authoring` skill, the `planner` agent, and the CLI verb `compass plan lint`. Its output is technical-design.md. The delivery approach is a separate thing: it is computed at the assess stage and recorded in delivery-approach.md.
 
 **Related:** `technical-design`, `delivery-approach`, `design`
 
@@ -558,9 +526,7 @@ A delivery approach for a small, low-risk change on familiar ground. Produces a 
 
 ### receipt
 
-The per-issue proof summary rendered from the manifest and the evidence registry: the assessment, the delivery approach, the gates and what cleared them - one screen, shareable as-is.
-
-**Not:** Evidence - evidence is the typed records that clear gates; the receipt is the read-only summary that cites them.
+The per-issue proof summary rendered from the manifest and the evidence registry: the assessment, the delivery approach, the gates and what cleared them - one screen, shareable as-is. Evidence is the typed records that clear gates; the receipt is the read-only summary that cites them.
 
 **Related:** `evidence`, `quality-gate`
 
@@ -568,13 +534,11 @@ The per-issue proof summary rendered from the manifest and the evidence registry
 
 The review pass that hardens requirements before plan or implementation: ambiguities resolved into recorded decisions, contradictions and gaps closed, intent.md reviewed where one exists. Satisfying it is what makes an issue ready.
 
-**Not:** v1 called this "Clarify".
-
 **Related:** `intent`, `definition-of-ready`, `acceptance-criteria`
 
 ### retrospective-signal
 
-Compass's cross-issue self-check: is assess consistently over- or under-sizing the process? Advisory, surfaced in retro language. v1 called this "calibration".
+Compass's cross-issue self-check: is assess consistently over- or under-sizing the process? Advisory, surfaced in retro language.
 
 **Related:** `dora-metrics`, `assess`
 
@@ -592,9 +556,7 @@ How the change reaches users safely: feature flags, canary or incremental rollou
 
 ### router
 
-The agent that runs assess: reads the four assessment dimensions, hands them to the CLI, and writes the delivery-approach record. It assesses; it does not choose a process. Named for what it does - Anthropic's platform docs call this shape "Routing", classifying input and directing it to a specialised path - and for the file it runs, routing-policy.yml.
-
-**Not:** A decision-maker about process weight. The approach is computed from the assessment by `compass approach evaluate`, which is the determinism boundary.
+The agent that runs assess: reads the four assessment dimensions, hands them to the CLI, and writes the delivery-approach record. It assesses; it does not choose a process. Named for what it does - Anthropic's platform docs call this shape "Routing", classifying input and directing it to a specialised path - and for the file it runs, routing-policy.yml. The approach is computed from the assessment by `compass approach evaluate`, which is the determinism boundary.
 
 **Related:** `assess`, `assessment`, `delivery-approach`
 
@@ -619,8 +581,6 @@ A top-level key of `compass.yml` that configures the CLI instead of the process.
 ### ship
 
 Merging and releasing the change: the PR lands, follow-ups are recorded, the derived system spec is regenerated.
-
-**Not:** v1 called this "Land".
 
 **Related:** `pr`, `rollout-plan`
 
@@ -652,8 +612,6 @@ A delivery approach for time-boxed exploration whose output is knowledge, not sh
 
 How a stage runs for an issue, such as `collapsed`. It is the `mode` field of a stage.
 
-**Not:** Not the adoption setting, which is a separate key in the project file.
-
 **Related:** `catalogue`
 
 ### step
@@ -678,25 +636,19 @@ The breakdown unit within an issue or initiative. A slice is tracked as a sub-is
 
 ### task
 
-An issue type: work that changes nothing a user sees, such as upkeep, a refactor or a migration step.
-
-**Not:** Another word for an issue. Any piece of tracked work is an issue; the type says what kind.
+An issue type: work that changes nothing a user sees, such as upkeep, a refactor or a migration step. Any piece of tracked work is an issue; the type says what kind.
 
 **Related:** `issue-type`, `issue`
 
 ### technical-design
 
-The engineering plan for one issue: the approach, the design decisions as ADR-style notes, the governance check, and the independent work units. Written at the planning stage (/compass:plan) as technical-design.md.
-
-**Not:** NOT the designer's work. That is the UI contract (ui-contract.md), from /compass:design. `design` alone named a command, an artifact, an artifact kind, a CLI verb and a role, and was the only overloaded word in this framework with no entry here. NEVER abbreviate this to TDD: in this repository TDD is red-green-refactor and nothing else.
+The engineering plan for one issue: the approach, the design decisions as ADR-style notes, the governance check, and the independent work units. Written at the planning stage (/compass:plan) as technical-design.md. The designer's work is the UI contract (ui-contract.md), from /compass:design. In this repository TDD is red-green-refactor and nothing else, so this artifact is never abbreviated to TDD.
 
 **Related:** `technical-design`, `delivery-approach`
 
 ### traceability
 
 The chain that makes a change accountable: code traces to a TRC- id, which traces to an INT- id. Maintained as the work happens, not reconstructed at the end. It is one of the five guardrails, and the thing the `TRC-` prefix is named after.
-
-**Not:** A report produced at the end. A chain assembled after the fact records what someone remembered, not what happened.
 
 **Related:** `scenario`, `intent`, `acceptance-criteria`
 

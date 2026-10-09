@@ -254,8 +254,7 @@ def test_vr_g6_epic_initiative_and_milestone_each_have_an_entry():
     for level in ("epic", "initiative", "milestone"):
         assert level in terms, f"no entry for {level}"
         assert len(_flat(terms[level]).split()) >= 8, level
-    everything = " ".join(_flat(e, k) for e in terms.values()
-                          for k in ("means", "not"))
+    everything = " ".join(_flat(e) for e in terms.values())
     assert not re.search(r"\bepic\b[^.]*\b(?:is|was) dropped|"
                          r"\bthat word is dropped", everything), (
         "an entry still says epic is dropped")

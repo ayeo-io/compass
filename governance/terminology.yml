@@ -23,7 +23,7 @@
 # shrink-only baseline.
 # =============================================================================
 
-version: 2.0.0-pre18
+version: 2.0.0-pre19
 
 terms:
 
@@ -35,13 +35,10 @@ terms:
       computed delivery approach, the stages and gates, the scenarios, the
       evidence registry and the changed files, and it points at the prose
       artifacts beside it. Every command reads it; `compass check` checks
-      the guardrails against it.
+      the guardrails against it. It is what a package.json, a Cargo.toml or
+      a Kubernetes manifest is: a machine-readable list of what a thing
+      contains.
     github: none
-    not: >
-      Not the prose artifacts it points at, and not "spine" - a metaphor
-      that needed explaining each time it was used. A manifest is what a
-      package.json, a Cargo.toml or a Kubernetes manifest is: a
-      machine-readable list of what a thing contains.
     related: [issue, evidence, scenario, acceptance-criteria]
 
   # --- Work hierarchy (GitHub-aligned) --------------------------------------
@@ -58,7 +55,6 @@ terms:
       needs an intent document. Owns intent.md, the technical design, the
       first-slice (80/20) decision, and the rollout strategy.
     github: Project
-    not: "An epic, which is one outcome within one milestone under one intent."
     related: [epic, milestone, intent, slice]
   milestone:
     means: >
@@ -73,9 +69,6 @@ terms:
       delivery approach, shipping as one PR or a small PR series. Carries a
       type, labels, and a workflow state.
     github: Issue
-    # vocabulary-scan: allow - a `not:` field says what the term is NOT, which
-    # cannot be written without naming the retired word.
-    not: "A 'task' used as another word for an issue - say issue. 'task' names one issue type."
     related: [sub-issue, issue-type, label, workflow-state]
   sub-issue:
     means: >
@@ -109,24 +102,20 @@ terms:
       An issue type: a self-contained change with its own acceptance
       criteria that does not warrant a full intent document. Unqualified
       "feature" always means this issue
-      type.
-    not: "A feature file (the Gherkin artifact) - always say 'feature file'."
+      type. The Gherkin artifact is always called a "feature file".
     related: [issue-type, feature-file]
   bug:
     means: >
       An issue type: a defect in existing behaviour, not live-urgent. Starts
       from a bug report; the failing reproduction test is written before the
-      fix.
-    not: >
-      A live incident, which is fixed through the hotfix delivery approach.
+      fix. A live incident is fixed through the hotfix delivery approach
+      instead.
     related: [bug-report, issue-type, hotfix]
   task:
     means: >
       An issue type: work that changes nothing a user sees, such as upkeep,
-      a refactor or a migration step.
-    not: >
-      Another word for an issue. Any piece of tracked work is an issue; the
-      type says what kind.
+      a refactor or a migration step. Any piece of tracked work is an issue;
+      the type says what kind.
     related: [issue-type, issue]
   quick-fix:
     means: >
@@ -157,27 +146,18 @@ terms:
       UI contract (ui-contract.md) - scenarios written Given/When/Then that
       flow into the acceptance criteria, not mockup annotations. The word
       reads as UI work to most people, which is why the designer has it.
-    not: >
-      NOT the engineering design. That is the plan stage (/compass:plan),
-      whose output is technical-design.md: the rule is that `design` names
-      the UI contract and `plan` names the technical design, never the
-      other way round. Also NOT the CLI
-      verb: the placeholder scan is `compass plan lint`. Its retired spelling
-      was kept as a hidden second name through 3.x and removed at 4.0.0
-      (ADR-024); it is now an unknown verb.
+      `design` names the UI contract and `plan` names the technical design,
+      never the other way round: the engineering design is the plan stage
+      (/compass:plan), whose output is technical-design.md. The placeholder
+      scan is the CLI verb `compass plan lint`.
     related: [plan, technical-design, delivery-approach]
   plan:
     means: >
       The engineering design stage: the command /compass:plan, the machine
       key `plan` in a manifest's stages block, the `plan-authoring` skill, the
       `planner` agent, and the CLI verb `compass plan lint`. Its output is
-      technical-design.md.
-    not: >
-      NOT a schedule or a project plan - Compass has no such artifact. NOT
-      the delivery approach either, which is computed at the assess stage and
-      recorded in delivery-approach.md. `plan.md` was this artifact's v1
-      filename and is retired; a name that was retired can come back for the
-      thing it best describes.
+      technical-design.md. The delivery approach is a separate thing: it is
+      computed at the assess stage and recorded in delivery-approach.md.
     related: [technical-design, delivery-approach, design]
 
   # --- Intake artifacts -----------------------------------------------------
@@ -186,13 +166,10 @@ terms:
       The engineering plan for one issue: the approach, the design decisions
       as ADR-style notes, the governance check, and the independent work
       units. Written at the planning stage (/compass:plan) as
-      technical-design.md.
-    not: >
-      NOT the designer's work. That is the UI contract (ui-contract.md), from
-      /compass:design. `design` alone named a command, an artifact, an
-      artifact kind, a CLI verb and a role, and was the only overloaded word
-      in this framework with no entry here. NEVER abbreviate this to TDD: in
-      this repository TDD is red-green-refactor and nothing else.
+      technical-design.md. The designer's work is the UI contract
+      (ui-contract.md), from /compass:design. In this repository TDD is
+      red-green-refactor and nothing else, so this artifact is never
+      abbreviated to TDD.
     related: [technical-design, delivery-approach]
   first-slice:
     means: >
@@ -218,16 +195,14 @@ terms:
       A Gherkin file grouping the scenarios for one capability (the
       `Feature:` keyword). The extraction target for executable acceptance
       criteria.
-    not: "The feature issue type - unqualified 'feature' means the issue type."
     related: [scenario, step, acceptance-criteria]
   assessment:
     means: >
       The four-dimension judgement the assess stage produces - risk, familiarity, size
       and goal, plus the domain labels. It is the only judgement field in the
       issue manifest; everything below it is computed from it deterministically.
-    not: >
-      A choice of process. The assessment is read; `compass approach
-      evaluate` computes the delivery approach from it.
+      The assessment is read; `compass approach evaluate` computes the
+      delivery approach from it.
     related: [assess, delivery-approach, router]
   traceability:
     means: >
@@ -235,9 +210,6 @@ terms:
       which traces to an INT- id. Maintained as the work happens, not
       reconstructed at the end. It is one of the five guardrails, and the
       thing the `TRC-` prefix is named after.
-    not: >
-      A report produced at the end. A chain assembled after the fact records
-      what someone remembered, not what happened.
     related: [scenario, intent, acceptance-criteria]
   intent:
     means: >
@@ -254,12 +226,11 @@ terms:
       are welcome inside it as a format; acceptance criteria are derived from
       them. As a goal it is sourced from intent.md's desired outcome, the UI
       contract, or the issue description - a goal, not a requirement: the
-      functional requirement is the scenario.
+      functional requirement is the scenario. It goes further than the
+      request: "Add a CSV export" is a request; "let finance self-serve" is
+      the intent, and it may need filters and permissions the request never
+      mentioned.
     also: The product owner's entry point, `/compass:intent`, captures it.
-    not: >
-      A restatement of the request. "Add a CSV export" is a request; "let
-      finance self-serve" is the intent, and it may need filters and
-      permissions the request never mentioned.
     related: [first-slice, scenario, traceability]
   router:
     means: >
@@ -268,10 +239,8 @@ terms:
       it does not choose a process. Named for what it does - Anthropic's
       platform docs call this shape "Routing", classifying input and directing
       it to a specialised path - and for the file it runs, routing-policy.yml.
-    not: >
-      A decision-maker about process weight. The approach is computed from the
-      assessment by `compass approach evaluate`, which is the determinism
-      boundary.
+      The approach is computed from the assessment by `compass approach
+      evaluate`, which is the determinism boundary.
     related: [assess, assessment, delivery-approach]
   scenario:
     means: >
@@ -316,9 +285,8 @@ terms:
       an issue type, labels, and a delivery approach. The human judgement
       step; everything after it is mechanism. Named for what it produces: the
       stage writes an `assessment:` block, the flag is --assessment, and the
-      policy section is assessment_vocabulary.
-    # vocabulary-scan: allow - naming the retired stage name is the point of this field; the reader needs to know which word this replaced.
-    not: "NOT triage. Triage means sorting BETWEEN cases by urgency, which is what `compass flow` does across issues - this stage sizes up ONE piece of work. The retired command name was /compass:triage."
+      policy section is assessment_vocabulary. This stage sizes up one piece
+      of work; `compass flow` sorts between issues by urgency.
     related: [delivery-approach, label, issue-type, assessment]
   delivery-approach:
     means: >
@@ -368,8 +336,6 @@ terms:
       ambiguities resolved into recorded decisions, contradictions and
       gaps closed, intent.md reviewed where one exists. Satisfying it is
       what makes an issue ready.
-    # vocabulary-scan: allow - a note recording what v1 called this, which is what someone reading an old record needs to look it up.
-    not: 'v1 called this "Clarify".'
     related: [intent, definition-of-ready, acceptance-criteria]
   definition-of-done:
     means: >
@@ -388,18 +354,15 @@ terms:
       optional postmortem). Tracked with a state pair: outstanding (not yet
       discharged) and resolved. An issue with an outstanding follow-up does
       not fully close; `compass follow-up resolve` discharges one.
-    # vocabulary-scan: allow - a note recording what v1 called this.
-    not: "v1 called this a 'backfill', with states 'owed' and 'paid'."
     related: [hotfix, backlog]
 
   receipt:
     means: >
       The per-issue proof summary rendered from the manifest and the evidence
       registry: the assessment, the delivery approach, the gates and what
-      cleared them - one screen, shareable as-is.
-    not: >
-      Evidence - evidence is the typed records that clear gates; the
-      receipt is the read-only summary that cites them.
+      cleared them - one screen, shareable as-is. Evidence is the typed
+      records that clear gates; the receipt is the read-only summary that
+      cites them.
     related: [evidence, quality-gate]
 
   # --- Workflow ---------------------------------------------------------------
@@ -464,8 +427,6 @@ terms:
     means: >
       Merging and releasing the change: the PR lands, follow-ups are
       recorded, the derived system spec is regenerated.
-    # vocabulary-scan: allow - a note recording what v1 called this.
-    not: 'v1 called this "Land".'
     related: [pr, rollout-plan]
   rollout-plan:
     means: >
@@ -525,8 +486,7 @@ terms:
   retrospective-signal:
     means: >
       Compass's cross-issue self-check: is assess consistently over- or
-      under-sizing the process? Advisory, surfaced in retro language. v1
-      called this "calibration".
+      under-sizing the process? Advisory, surfaced in retro language.
     related: [dora-metrics, assess]
 
   # --- Configuration (the configuration vocabulary decision) ----------------
@@ -577,8 +537,6 @@ terms:
     means: >
       How a stage runs for an issue, such as `collapsed`. It is the `mode`
       field of a stage.
-    not: >
-      Not the adoption setting, which is a separate key in the project file.
     related: [catalogue]
   project-file:
     means: >
@@ -712,10 +670,9 @@ codes:
       position the vocabulary scan does not read - a source comment, a machine
       key - together with the reason a string in that position cannot reach a
       user. The scan reads every position by default, so a PX- entry is the
-      only way a position is excluded.
-    not: >
-      A surface exemption. `scan.exempt` names whole FILES the scan skips; a
-      PX- entry names a POSITION within a file that is scanned.
+      only way a position is excluded. A PX- entry names a position within
+      a file that is scanned; `scan.exempt` separately names whole files the
+      scan skips.
     referent: >
       One position exemption: the positions it names, and the reason a
       string there cannot reach a user.
@@ -726,12 +683,9 @@ codes:
       constrains the computed delivery approach. RP-SHAPE and RP-ADV are
       soft - they bias the candidate. RP-FLOOR, RP-CAP, RP-GATE and RP-ROLE
       are hard - they constrain the result. RP-REQUIRE attaches a gate
-      without raising a minimum.
-    not: >
-      A guardrail. `guardrail` means one of the five hard rules cleared with
-      evidence; a routing rule constrains which delivery approach you end up
-      with. The prefix said RG- until 3.0.0, which is why this distinction
-      needs stating.
+      without raising a minimum. A routing rule constrains which delivery
+      approach an issue ends up with; a guardrail is one of the five hard
+      rules cleared with evidence.
     referent: One rule in the routing policy.
     appears_in: [routing-policy.yml, delivery-approach.md, "manifest.yml policy_rules_fired[].id"]
     related: [routing-policy, delivery-approach, guardrail]
@@ -739,10 +693,8 @@ codes:
     means: >
       Lesson. One rule in `lessons.yml` in the project's `.compass` folder that a person in this project
       had to repeat, injected into later sessions when it applies always.
-      `compass lesson` adds, lists and removes them.
-    not: >
-      A guardrail or a routing rule. A lesson is advice: no check reads it,
-      and a guardrail always wins over it.
+      `compass lesson` adds, lists and removes them. A lesson is advice: no
+      check reads it, and a guardrail always wins over it.
     referent: One lesson in the project's lessons file.
     appears_in: [lessons.yml, "compass lesson list"]
     related: [LP, guardrail]
@@ -759,11 +711,8 @@ codes:
       Review rule. One rule in governance/review-rules.yml that a reviewer
       applies to the files it names, with the incident that justifies it and
       what not to flag. `compass review-rule list` prints the rules that
-      match a change.
-    not: >
-      A routing policy rule (RP-), which shapes the delivery approach, or a
-      guardrail, which is cleared with evidence. A review rule guides a
-      reviewer's judgement of a change.
+      match a change. A review rule guides a reviewer's judgement of a
+      change.
     referent: One rule in the review rules file.
     appears_in: [review-rules.yml, review findings]
     related: [RP, guardrail]

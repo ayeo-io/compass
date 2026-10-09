@@ -3458,3 +3458,7 @@
 - `TRC-S9` Plugin instructions use evidence types, verbs and fields that exist
 - `TRC-S10` The stage-weight tables use the stored words
 - `TRC-S11` README status badges name real targets
+
+### glossary-meaning-only (completed 2026-10-09)
+
+- `TRC-001` Given the vocabulary file, When the glossary is derived or compass terminology is run, Then no Not line and no former name is printed

@@ -716,7 +716,7 @@ def test_cr_6_a_landed_issue_is_refused_before_anything_prints(tmp_path):
     fx.write_manifest(task_dir, config={"autonomy": "controlled"}, status="landed")
     code, out, err = fx.reassess(root)
     assert code == 2, out + err
-    assert out.strip() == "" and "landed" in err
+    assert out.strip() == "" and "is closed and keeps" in err
 
 
 # --- the reason a stale waiver gives, and the two ways out -------------------------------------

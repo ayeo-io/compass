@@ -85,7 +85,8 @@ Candidate review dimensions: {{correctness, governance, traceability, … per th
 - Drift: {{"none" - or "N rule(s)/check(s) missing against framework vX.Y.Z; see `compass policy lint`"}}
 
 <!-- Every floor / cap / immovable gate / blocking role rule from
-     ${CLAUDE_PLUGIN_ROOT}/governance/routing-policy.md that matched. Quote each one's rationale.
+     ${CLAUDE_PLUGIN_ROOT}/governance/routing-policy.md (an unmigrated 5.x
+     project runs on its own copied governance/) that matched. Quote each one's rationale.
      If none fired, say so explicitly - silence is not a record. -->
 
 | Rule type | Rule | What it changed | Rationale (quoted from the policy) |

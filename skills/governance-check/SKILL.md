@@ -21,28 +21,25 @@ distinct sources, and each has its own standard of proof. The prose is in
 - `routing-policy.md` - the same split applied to the router: **routing
   guardrails** bound the delivery approach, **routing strategies** bias it.
 
-Read the governance fresh before you start. A guardrail or strategy can
-change between sessions, and a cached memory of an earlier read is not the
-current file.
+Read the governance fresh before you start: a cached memory of an earlier
+read is not the current file.
 
 **Record which governance you read.** Write the layers that
 `compass policy show` names (for example `default@6.0.0, project`) and the
 issue's `generation:` from `manifest.yml` into the check, the way section 3a
 (policy provenance) of `${CLAUDE_PLUGIN_ROOT}/templates/delivery-approach.md`
-does. An unmigrated 5.x project runs on its own copied `governance/` until
-`compass policy migrate`. A check that
-names no layers cannot be told apart from one run against wording that has
-since changed, and the prose files carry no version of their own to compare.
+does. An unmigrated 5.x project has no layers line: record the `version:` of its
+copied `guardrails.yml` and `routing-policy.yml` instead. A check that names
+nothing cannot be told apart from one run against wording that has since
+changed, and the prose files carry no version of their own to compare.
 
 ## Before you start
 
 Run `compass policy show` to see the rules in force, then read the reasons in
 `${CLAUDE_PLUGIN_ROOT}/governance/guardrails.md`, `strategies.md` and
-`routing-policy.md`. A new project has no `governance/` directory of its own:
-the shipped default preset is in force, and `compass.yml` holds only what the
-project changed. An unmigrated 5.x project runs on its own copied
-`governance/` until `compass policy migrate` converts it. The shipped
-defaults alone are a complete governance state: "the shipped default
+`routing-policy.md`. A new project has no `governance/` directory (an
+unmigrated 5.x project keeps its copied one): the shipped default preset is in force, and `compass.yml` holds only what the
+project changed. The shipped defaults alone are a complete governance state: "the shipped default
 guardrails, the shipped default strategies, and zero project additions" is a
 fully legitimate thing to check against. Do not treat an un-extended project
 as a reason to stop.
@@ -120,24 +117,20 @@ compass plan lint
 
 It reports phrases that mean the plan is not actually finished - `TBD`, `TODO`,
 "implement later", "add appropriate error handling" - and work units that
-promise tests without naming any. These are the most common form of plan failure
-in practice: not a wrong decision, but a decision quietly deferred to whoever
+promise tests without naming any: a decision quietly deferred to whoever
 builds it, who then makes it alone and unrecorded.
 
-It belongs in this walk because **a reported hit is a note, rather than a
-stop**. The command always exits 0 - the shell's success code, whatever it
-reports. Assess each hit as judgement: either fill the gap in, or record why
-the placeholder legitimately stands (a genuinely deferred decision with a
-named owner is a plan, an unowned `TBD` is a gap). It never blocks the plan stage on any
-delivery approach, and no floor promotes it to a gate.
+**A reported hit is a note, rather than a stop.** The command always exits 0.
+Assess each hit as judgement: fill the gap in, or record why the placeholder
+legitimately stands (a deferred decision with a named owner is a plan, an
+unowned `TBD` is a gap). It never blocks the plan stage, and no floor promotes
+it to a gate.
 
-Two things it deliberately does not do. It ignores text inside fenced code
-blocks (the triple-backtick kind) and blockquotes (lines opening with `>`),
-because every document explaining the check has to quote the phrases it looks
-for. And it does not judge softer patterns - a work unit described only as
-"similar to the one above", or an approach section that restates the spec
-without saying how. Those need reading, which is your job in this walk, not
-the command's.
+It ignores text inside fenced code blocks and blockquotes (lines opening with
+`>`), because documents explaining the check quote the phrases it looks for.
+It does not judge softer patterns - a work unit described only as "similar to
+the one above", or an approach section that restates the spec without saying
+how. Those need reading, which is your job in this walk.
 
 Two of the default strategies are approach-aware: **BDD** and **TDD**
 are suspended on a spike. If you are checking a Spike, do not flag the
@@ -196,15 +189,12 @@ Confirm the plan is consistent with `routing-policy.md`:
 - **The convenience override** - treating a guardrail as advisory because
   honouring it is inconvenient. A guardrail beats every strategy and every
   deadline; inconvenience is not a counter-argument.
-- **Checking the stale file** - reviewing against a remembered copy of
-  the governance instead of reading it fresh, so the check runs against
-  wording that has since changed. Recording the layers and the generation
-  makes this visible to a later reader instead of invisible.
+- **Checking the stale file** - reviewing against a remembered copy of the
+  governance, so the check runs against wording that has since changed.
+  Recording the layers and the generation makes this visible.
 - **Floor erosion** - reading a project guardrail floor as a target to *hit*
   rather than a minimum to *clear*. Floors only ratchet up.
 - **Silent delivery-approach assumption** - a plan that assumes a lighter
-  delivery approach than the
-  routing guardrails permit, without anyone noticing the policy was bypassed.
-- **Treating an un-extended project as broken** - the shipped defaults
-  alone are a complete governance state; check against whatever is
-  there, defaults included.
+  delivery approach than the routing guardrails permit, unnoticed.
+- **Treating an un-extended project as broken** - the shipped defaults alone
+  are a complete governance state; check against them.

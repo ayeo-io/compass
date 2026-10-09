@@ -235,9 +235,11 @@ def test_trc_s1_the_scan_reports_the_old_text_and_passes_the_new():
 # `compass approach evaluate` does. So every instruction that sends a reader to
 # it as "the rules in force" must say, nearby, what an unmigrated project runs on.
 S1_COPY_WORDING = re.compile(r"unmigrated\s+5\.x\s+project")
-S1_POLICY_SHOW_FILES = S1_FILES + (
-    "agents/verifier.md", "skills/tdd-discipline/test-surface-and-worktrees.md",
-    "skills/compass-runtime/SKILL.md")
+S1_POLICY_SHOW_FILES = tuple(sorted(
+    str(p.relative_to(ROOT)) for pattern in
+    ("commands/*.md", "agents/*.md", "templates/*.md", "approaches/*.md", "skills/**/*.md")
+    for p in ROOT.glob(pattern)
+    if str(p.relative_to(ROOT)) != "commands/init.md"))
 
 
 def policy_show_without_copy_wording(text):

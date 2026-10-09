@@ -33,16 +33,18 @@ The rest of this command is for delivery work.
 - If the product-marketer role is in play, the `claims` dimension applies -
   `product-marketer` reviews here too.
 - If this issue is itself a sweep, rename, or cleanup touching many files,
-  check it the way `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S9` describes: a fresh agent
-  that has not seen the change, not its author. (An unmigrated 5.x project
-  runs on its own copied `governance/` until `compass policy migrate`.)
+  check it the way `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S9` describes
+  (an unmigrated 5.x project runs on its own copied `governance/` until
+  `compass policy migrate`): a fresh agent that has not seen the change, not
+  its author.
 - A guard offered as part of the change is accepted on a demonstrated failure
   rather than a passing test - `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S10` states the
   method.
 - Where a review comment and the author disagree about a quantity - how many
   call sites, how much output, how often it fires - measure the number and
   report it before defending either position
-  (`${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S11`).
+  (`${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S11`; an unmigrated 5.x
+  project reads its own copied `governance/`).
 - QA owns this gate and can send the issue back to the define stage if
   scenarios are uncoverable.
 

@@ -14,7 +14,8 @@ You are not picking a process. You are computing one. The four dimensions are
 four independent questions, and the delivery approach is their composition - heavier where
 they read high, lighter where they read low. The composition is **biased** by
 the routing strategies and **bounded** by the routing guardrails, both in
-`${CLAUDE_PLUGIN_ROOT}/governance/routing-policy.md`. The five reference shapes
+`${CLAUDE_PLUGIN_ROOT}/governance/routing-policy.md` (an unmigrated 5.x project
+runs on its own copied `governance/`). The five reference shapes
 (quick fix/regular/full/hotfix/spike) are shapes the composition tends to
 land near, not boxes to sort into.
 

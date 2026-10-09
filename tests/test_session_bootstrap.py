@@ -260,15 +260,30 @@ def test_sb_c2_a_pin_to_the_plugin_root_says_where_a_project_changes_it():
     text must say that an unmigrated 5.x project runs on its own copy.
     """
     unexplained = []
-    for directory in ("commands", "agents"):
-        for path in sorted((ROOT / directory).glob("*.md")):
-            text = path.read_text(encoding="utf-8")
-            for n in _unexplained_pins(text):
-                unexplained.append(f"{path.relative_to(ROOT)}:{n}")
+    for path in _pin_scan_files():
+        text = path.read_text(encoding="utf-8")
+        for n in _unexplained_pins(text):
+            unexplained.append(f"{path.relative_to(ROOT)}:{n}")
     assert not unexplained, (
         "these pin governance/ to the plugin root without saying, nearby, that "
         "an unmigrated 5.x project runs on its own copy, so that copy would be "
         "ignored:\n  " + "\n  ".join(unexplained))
+
+
+def _pin_scan_files():
+    """Every instruction file an agent reads: commands, agents, skills (and the
+    files beside each skill) and templates."""
+    files = []
+    for directory in ("commands", "agents", "templates"):
+        files += sorted((ROOT / directory).glob("*.md"))
+    files += sorted((ROOT / "skills").rglob("*.md"))
+    return files
+
+
+def test_sb_c2_the_pin_scan_reads_skills_and_templates():
+    names = {str(p.relative_to(ROOT)) for p in _pin_scan_files()}
+    assert {"commands/plan.md", "agents/router.md", "skills/adaptive-routing/SKILL.md",
+            "skills/adaptive-routing/composition.md", "templates/delivery-approach.md"} <= names
 
 
 def _unexplained_pins(text):
@@ -291,6 +306,9 @@ def test_sb_c2_the_pin_check_reports_a_pin_without_the_copy_wording():
     assert _unexplained_pins(pin) == [1]
     near = pin + "An unmigrated 5.x project runs on its own copied `governance/`.\n"
     assert _unexplained_pins(near) == []
+    skill_pin = ("## Walk\n\nThe strategies are judged against\n"
+                 "`${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S9`.\n")
+    assert _unexplained_pins(skill_pin) == [4]
     far = pin + "\n" * 20 + "An unmigrated 5.x project runs on its own copy.\n"
     assert _unexplained_pins(far) == [1]
 

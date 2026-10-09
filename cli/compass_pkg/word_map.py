@@ -52,6 +52,7 @@ FALLBACK["stage_mode"] = {
     "full": "thorough",
     "light": "lightweight",
     "full-plus-backfill": "thorough-with-follow-up",
+    "swarm": "multiagent",  # vocabulary-scan: allow - the retired breakdown mode that archived manifests store (ADR-006)
 }
 FALLBACK["artifact_depth"] = {
     "full": "thorough",

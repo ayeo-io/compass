@@ -26,7 +26,8 @@ sys.path.insert(0, str(ROOT / "tests"))
 # The rows a later increment wires into cli/migrate-map.yml.
 ROWS = {
     "stage_mode": {"full": "thorough", "light": "lightweight",
-                   "full-plus-backfill": "thorough-with-follow-up"},
+                   "full-plus-backfill": "thorough-with-follow-up",
+                   "swarm": "multiagent"},  # vocabulary-scan: allow - the retired breakdown mode archived manifests store (ADR-006)
     "artifact_depth": {"full": "thorough", "light": "lightweight"},
     "size": {"standard": "medium"},
     "issue_status": {"queued": "backlog", "parked": "backlog", "active": None,

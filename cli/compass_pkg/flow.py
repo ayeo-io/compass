@@ -37,7 +37,7 @@ from compass_pkg import status_words
 from compass_pkg.core import (CompassError, find_compass_dir, find_governance, load_yaml,
                               manifest_path, normalize_spine)
 from compass_pkg.rework import cmd_rework_scan
-from compass_pkg.stable_ids import APPROACH_SPIKE
+from compass_pkg.stable_ids import APPROACH_SPIKE, STAGE_IDS
 
 
 
@@ -174,47 +174,113 @@ def _landed_at(m):
     return when
 
 
-def board(work_root, today=None):
+THIS_CHECKOUT = "this checkout"
+_NO_MANIFEST = "no manifest.yml"
+_UNREADABLE = "unreadable manifest.yml"
+_ASSESSMENT_DIMENSIONS = ("risk", "familiarity", "size", "goal", "role")
+
+
+def _schema_major_is_read(schema_version):
+    """True for an absent version or a major of 1, 2 or 3: the majors
+    `core.load_manifest` reads. The board keeps its own copy so that this
+    issue leaves manifest loading alone; the two answer alike."""
+    if not schema_version:
+        return True
+    return str(schema_version).split(".")[0] in ("1", "2", "3")
+
+
+def _issue_folders(work_root):
+    if not os.path.isdir(work_root):
+        return []
+    return [d for d in sorted(os.listdir(work_root))
+            if os.path.isdir(os.path.join(work_root, d))]
+
+
+def _parse_manifest(task_dir):
+    """`(manifest, None)`, or `(None, why it could not be read)`."""
+    tp = manifest_path(task_dir)
+    if not os.path.isfile(tp):
+        return None, _NO_MANIFEST
+    try:
+        m = normalize_spine(load_yaml(tp))
+        if not isinstance(m, dict):
+            raise CompassError("not a mapping")
+    except Exception:                                       # noqa: BLE001
+        return None, _UNREADABLE
+    return m, None
+
+
+def read_checkout(work_root):
+    """Every folder under this checkout's work root, parsed once: slug to the
+    parsed manifest (a dict), or to the reason it could not be read (text).
+    `board(parsed=...)` reuses the result, so a manifest is read once."""
+    found = {}
+    for slug in _issue_folders(work_root):
+        m, why = _parse_manifest(os.path.join(work_root, slug))
+        found[slug] = m if why is None else why
+    return found
+
+
+def _checkout_sources(work_root):
+    """The sources of a board that reads this checkout only."""
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(work_root)))
+    return [{"slug": slug, "task_dir": os.path.join(work_root, slug),
+             "tree": THIS_CHECKOUT, "tree_root": project_root, "also_in": 0,
+             "refused": None} for slug in _issue_folders(work_root)]
+
+
+def _where(src):
+    """The keys every row carries about where its manifest was read."""
+    rel = os.path.relpath(manifest_path(src["task_dir"]), src["tree_root"])
+    return {"tree": src["tree"], "manifest_path": rel.replace(os.sep, "/"),
+            "also_in": src["also_in"]}
+
+
+def _unreadable(out, src, note):
+    out["unreadable"].append(dict({"slug": src["slug"], "note": note}, **_where(src)))
+    out["counts"]["unreadable"] = out["counts"].get("unreadable", 0) + 1
+
+
+def board(work_root, today=None, sources=None, parsed=None):
     """The delivery board as plain data. Reads each manifest once, and runs git
-    (through the evidence check) for in-progress issues only."""
+    (through the evidence check) for in-progress issues only.
+
+    `sources` is None for this checkout (every folder under `work_root`) or a
+    list of source dicts, one per issue folder, which may sit in other trees.
+    `parsed` is `read_checkout`'s result, reused for this checkout's sources;
+    every other source is parsed here, once."""
     from compass_pkg.binding import evidence_state
-    from compass_pkg.next_cmd import _current_phase_from_task
 
     today = today or datetime.date.today()
     now = datetime.datetime.now(datetime.timezone.utc)
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(work_root)))
     guarded = _routing_labels()
     out = {"backlog": [], "ready": [], "in_progress": [], "stale": [],
            "in_review": [], "done_this_week": [], "closed": [], "other": [],
-           "unreadable": [], "friction": None, "counts": {}, "total": 0}
+           "unreadable": [], "friction": None, "counts": {}, "total": 0,
+           "done_by_reason": {reason: 0 for reason in status_words.CLOSE_REASONS}}
     categories = {}
-    slugs = [d for d in sorted(os.listdir(work_root))
-             if os.path.isdir(os.path.join(work_root, d))]
-    out["total"] = len(slugs)
-    for slug in slugs:
-        task_dir = os.path.join(work_root, slug)
-        tp = manifest_path(task_dir)
-        if not os.path.isfile(tp):
-            out["unreadable"].append({"slug": slug, "note": "no manifest.yml"})
-            out["counts"]["unreadable"] = out["counts"].get("unreadable", 0) + 1
+    if sources is None:
+        sources = _checkout_sources(work_root)
+    out["total"] = len(sources)
+    for src in sources:
+        if src.get("refused"):
+            _unreadable(out, src, src["refused"])
+            continue
+        known = parsed.get(src["slug"]) if parsed and src["tree"] == THIS_CHECKOUT else None
+        if isinstance(known, dict):
+            m, why = known, None
+        elif isinstance(known, str):
+            m, why = None, known
+        else:
+            m, why = _parse_manifest(src["task_dir"])
+        if why is not None:
+            _unreadable(out, src, why)
             continue
         try:
-            m = normalize_spine(load_yaml(tp))
-            if not isinstance(m, dict):
-                raise CompassError("not a mapping")
-        except Exception:                                   # noqa: BLE001
-            out["unreadable"].append({"slug": slug, "note": "unreadable manifest.yml"})
-            out["counts"]["unreadable"] = out["counts"].get("unreadable", 0) + 1
-            continue
-        try:
-            _board_place(out, categories, slug, task_dir, m, project_root,
-                         today, now, guarded, evidence_state,
-                         _current_phase_from_task)
+            _board_place(out, categories, src, m, today, now, guarded, evidence_state)
         except Exception as exc:                            # noqa: BLE001
             # One malformed manifest must not hide every other issue.
-            out["unreadable"].append({"slug": slug, "note": "malformed manifest.yml "
-                                      "(%s)" % type(exc).__name__})
-            out["counts"]["unreadable"] = out["counts"].get("unreadable", 0) + 1
+            _unreadable(out, src, "malformed manifest.yml (%s)" % type(exc).__name__)
     out["backlog"].sort(key=lambda r: (-(r["age_days"] or 0), r["slug"]))
     if categories:
         top = sorted(categories.items(), key=lambda kv: (-kv[1], kv[0]))[0]
@@ -222,11 +288,101 @@ def board(work_root, today=None):
     return out
 
 
-def _board_place(out, categories, slug, task_dir, m, project_root, today, now,
-                 guarded, evidence_state, current_stage):
+def _text(value):
+    return None if value is None else str(value)
+
+
+def _gate_facts(m):
+    """`("passed/total", [{id, status}])` for the gates as recorded."""
+    gates = m.get("gates")
+    entries = [g for g in gates if isinstance(g, dict)] if isinstance(gates, list) else []
+    passed = sum(1 for g in entries if g.get("status") == "pass")
+    listed = [{"id": str(g.get("id") or ""), "status": str(g.get("status") or "pending")}
+              for g in entries]
+    return "%d/%d" % (passed, len(entries)), listed
+
+
+def _why_fields(m):
+    """The fields that say why an issue has its delivery approach, and the
+    first reason the page cannot place the issue (None when it can).
+
+    A field of the wrong type reads as empty and is named in the reason; the
+    issue keeps the section it had before these fields were read."""
+    problems = []
+    if not _schema_major_is_read(m.get("schema_version")):
+        problems.append("schema_version %s is not one this Compass reads"
+                        % m.get("schema_version"))
+    named = m.get("current_phase")
+    if isinstance(named, str) and named.strip().lower() not in STAGE_IDS:
+        problems.append("current_phase %r names no stage" % named)
+    assessment, raw = None, m.get("assessment")
+    if isinstance(raw, dict) and raw:
+        labels = raw.get("labels")
+        assessment = {k: _text(raw.get(k)) for k in _ASSESSMENT_DIMENSIONS}
+        assessment["labels"] = [str(x) for x in labels] if isinstance(labels, list) else []
+    elif raw is not None and not isinstance(raw, dict):
+        problems.append("assessment is not a mapping")
+    rules, raw = [], m.get("policy_rules_fired")
+    if isinstance(raw, list):
+        for rule in raw:
+            if not isinstance(rule, dict):
+                problems.append("policy_rules_fired holds an entry that is not a mapping")
+                continue
+            changed = rule.get("changed")
+            changed = [str(c) for c in changed] if isinstance(changed, list) else (
+                [] if changed is None else [str(changed)])
+            rules.append({"id": _text(rule.get("id")), "kind": _text(rule.get("kind")),
+                          "rationale": _text(rule.get("rationale")), "changed": changed})
+    elif raw is not None:
+        problems.append("policy_rules_fired is not a list")
+    depths, raw = {}, m.get("stages")
+    if isinstance(raw, dict):
+        depths = {s: str(raw[s]) for s in STAGE_IDS if raw.get(s) is not None}
+    elif raw is not None:
+        problems.append("stages is not a mapping")
+    if m.get("gates") is not None and not isinstance(m.get("gates"), list):
+        problems.append("gates is not a list")
+    gates, gate_list = _gate_facts(m)
+    created = m.get("created")
+    fields = {"gates": gates, "gate_list": gate_list, "assessment": assessment,
+              "policy_rules_fired": rules, "stage_depths": depths,
+              "created": str(created) if created else None,
+              "set_aside": status_words.is_held(m), "recommendation": False}
+    return fields, (problems[0] if problems else None)
+
+
+def _open_stage(m, task_dir, recorded):
+    """`(stage, problem)` for a held or ready issue, which 6.0.0 gave no stage.
+    An issue with no delivery approach is at assess. The stage function is
+    `compass next`'s, read through its module at call time, so the board and
+    `compass next` cannot disagree."""
+    from compass_pkg import next_cmd
+    if not recorded:
+        return "assess", None
+    try:
+        return next_cmd._current_phase_from_task(m, task_dir) or "done", None
+    except Exception as exc:                                # noqa: BLE001
+        return None, "the stage could not be read (%s)" % type(exc).__name__
+
+
+def _lane_of(row, recorded, held, stage):
+    """The lane the page puts an open issue in (decided here, never again by
+    the page). An unplaceable issue has none."""
+    if row["unplaceable"]:
+        return None
+    if not recorded or held:
+        return "backlog"
+    if stage in STAGE_IDS:
+        return stage
+    return "ship" if stage == "done" else None
+
+
+def _board_place(out, categories, src, m, today, now, guarded, evidence_state):
     """Put one issue's row in its section. Raises on a field of the wrong
     type, which the caller reports as a malformed manifest."""
-    from compass_pkg import lifecycle
+    from compass_pkg import lifecycle, next_cmd
+    slug, task_dir = src["slug"], src["task_dir"]
+    where = _where(src)
     status = m.get("status")
     if status is not None and not isinstance(status, str):
         raise TypeError("status is not text")
@@ -234,8 +390,9 @@ def _board_place(out, categories, slug, task_dir, m, project_root, today, now,
     if not (status_words.is_in_flight(m) or status_words.is_held(m)
             or status_words.is_closed(m)):
         # A stored word Compass does not set: shown as it is, not placed.
-        out["other"].append({"slug": slug, "delivery_approach": approach,
-                             "status": status})
+        out["other"].append(dict(
+            {"slug": slug, "delivery_approach": approach, "status": status,
+             "note": "the stored status %r is not one Compass sets" % status}, **where))
         out["counts"][status] = out["counts"].get(status, 0) + 1
         return
     # No stored status means in flight: the state comes from the records.
@@ -244,24 +401,35 @@ def _board_place(out, categories, slug, task_dir, m, project_root, today, now,
     flag = lifecycle.blocked_flag(m, task_dir)
     if flag:
         row["blocked"] = str(flag.get("reason") or "no reason recorded")
+    fields, problem = _why_fields(m)
+    row.update(fields)
+    row.update(where)
+    recorded, held = bool(m.get("delivery_approach")), status_words.is_held(m)
     if state == "backlog":
-        q = _queue_row(project_root, slug, m, today, guarded)
+        q = _queue_row(src["tree_root"], slug, m, today, guarded)
         row.update(age_days=q[0] if q else None, signal="; ".join(q[2]) if q else "",
                    reason=str(m.get("parked_reason") or "") if status_words.is_parked(m) else "")
+        row["recommendation"] = ("recommendation" in q[2] if q else _has_recommendation(
+            src["tree_root"], slug, str(m.get("created") or "")))
+        row["stage"], stage_problem = _open_stage(m, task_dir, recorded)
+        row["unplaceable"] = problem or stage_problem
+        row["lane"] = _lane_of(row, recorded, held, row["stage"])
         out["backlog"].append(row)
     elif state == "ready":
+        row["stage"], stage_problem = _open_stage(m, task_dir, recorded)
+        row["unplaceable"] = problem or stage_problem
+        row["lane"] = _lane_of(row, recorded, held, row["stage"])
         out["ready"].append(row)
     elif state == "done":
+        row["unplaceable"] = problem
         _board_place_done(out, categories, row, m, now)
     else:
-        gates = m.get("gates") or []
-        if not isinstance(gates, list):
+        if not isinstance(m.get("gates") or [], list):
             raise TypeError("gates is not a list")
-        gates = [g for g in gates if isinstance(g, dict)]
-        passed = sum(1 for g in gates if g.get("status") == "pass")
         evidence = evidence_state(m, task_dir)
-        row.update(stage=current_stage(m, task_dir) or "done",
-                   gates=f"{passed}/{len(gates)}", evidence=evidence)
+        row.update(stage=next_cmd._current_phase_from_task(m, task_dir) or "done",
+                   evidence=evidence, unplaceable=problem)
+        row["lane"] = _lane_of(row, recorded, held, row["stage"])
         if evidence == "stale":
             out["stale"].append(row)
         else:
@@ -273,10 +441,15 @@ def _board_place_done(out, categories, row, m, now):
     """A closed issue: completed this week, or closed without delivery. A
     completed issue older than the window is counted and not listed."""
     reason = status_words.close_reason(m)
+    if reason in out["done_by_reason"]:
+        out["done_by_reason"][reason] += 1
+    row.update(stage=None, lane=None)
     if status_words.is_completed(m):
         when = _landed_at(m)
         if when and when <= now and (now - when).days < LANDED_WINDOW_DAYS:
             row["completed"] = when.date().isoformat()
+            row["close_reason"] = reason
+            row["lane"] = None if row["unplaceable"] else "done"
             out["done_this_week"].append(row)
             friction = m.get("friction")
             for f in friction if isinstance(friction, list) else []:
@@ -288,7 +461,10 @@ def _board_place_done(out, categories, row, m, now):
         out["closed"].append(row)
     else:
         out["other"].append({"slug": row["slug"], "delivery_approach": row["delivery_approach"],
-                             "status": m.get("status")})
+                             "status": m.get("status"),
+                             "note": "done with no close reason",
+                             "tree": row["tree"], "manifest_path": row["manifest_path"],
+                             "also_in": row["also_in"]})
 
 
 _BOARD_SECTIONS = (
@@ -319,7 +495,7 @@ def _board_row(key, r):
         return "%-40s approach=%s age=%s days%s%s" % (
             r["slug"], r["delivery_approach"], age,
             "  - " + r["signal"] if r["signal"] else "",
-            "  - held: " + r["reason"] if r["reason"] else "")
+            "  - set aside: " + r["reason"] if r["reason"] else "")
     if key == "done_this_week":
         return "%-40s approach=%s completed=%s" % (
             r["slug"], r["delivery_approach"], r["completed"])

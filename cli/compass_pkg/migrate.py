@@ -431,11 +431,15 @@ def _reference_slots(data):
     value keeps it:
 
       * `"project"` - the subtask fields (`brief`, `earlier_briefs`,
-        `report`, `review_brief`, `package`), the stop evidence of a subtask
-        and of a run. `compass issue subtask` and `multiagent-run-recorded`
-        join them to the project root.
-      * `"issue"` - an `evidence:` entry's `path` and a `friction:` note's
-        `evidence`, which gates and readers join to the issue directory.
+        `report`, `review_brief`, `package`) and the stop evidence of a
+        subtask and of a run. `compass issue subtask` writes the subtask
+        fields, and `compass run` writes a run's stop evidence, both from the
+        project root. `multiagent-run-recorded` joins a subtask's stop
+        evidence to the project root.
+      * `"issue"` - an `evidence:` entry's `path`, which gates join to the
+        issue directory.
+      * `"issue-line"` - a `friction:` note's `evidence`, which is read from
+        the issue directory and may end in `:<line>`.
 
     `artifacts[].path` is not listed: `_register` rewrites it as each file
     moves. `changed_files[].path` names repository files, not issue
@@ -466,24 +470,87 @@ def _reference_slots(data):
             yield entry, "path", "issue"
     for note in dicts(data.get("friction")):
         if isinstance(note.get("evidence"), str):
-            yield note, "evidence", "issue"
+            yield note, "evidence", "issue-line"
 
 
-def _names_file(task_dir, project, raw, source):
-    """Does `raw` resolve, from the issue directory or the project root, to
-    `source`? Matched by where the path RESOLVES, not by how it is spelled:
-    manifests on disk carry both `technical-design.md` and
-    `.compass/work/<slug>/technical-design.md`."""
+def _split_line(raw):
+    """(path, ':<line>' or '') for a value that may end in a line number."""
+    head, sep, tail = raw.rpartition(":")
+    if sep and head and tail.isdigit():
+        return head, sep + tail
+    return raw, ""
+
+
+def _own_document(task_dir, project, raw, anchor):
+    """The name of the document beside the manifest that `raw` names, or None.
+
+    Matched by where the path RESOLVES for its reader, not by how it is
+    spelled. A project-root field is measured from the project root only. An
+    issue-folder field accepts `technical-design.md` and also
+    `.compass/work/<slug>/technical-design.md`, and manifests on disk carry
+    both.
+    """
     raw = (raw or "").strip()
     if not raw:
-        return False
+        return None
     task_abs = os.path.abspath(task_dir)
-    return source in {os.path.abspath(os.path.join(task_abs, raw)),
-                      os.path.abspath(os.path.join(project, raw))}
+    bases = [project] if anchor == "project" else [task_abs, project]
+    for base in bases:
+        found = os.path.abspath(os.path.join(base, raw))
+        if os.path.dirname(found) == task_abs:
+            return os.path.basename(found)
+    return None
 
 
-def _repoint_references(task_dir, filename, project_rel):
-    """Repoint every manifest field that named a document we just moved.
+def _stale_references(task_dir, data, moving=None):
+    """[(container, key, new value, document name)] for every field that names
+    a document beside the manifest which is no longer there.
+
+    Decided from the state of the tree, as `_pointer_owed` does, not from
+    whether this run moved a file: an archive an earlier release migrated has
+    nothing left to move and still holds the stale fields. A field is stale
+    when it names `<issue folder>/<name>`, that file is gone (or is only the
+    compatibility pointer) and the same document is at its new home.
+
+    `moving` maps the names this run is about to move to their destination, so
+    the dry run reports the same repoints the apply makes.
+    """
+    moving = moving or {}
+    project = _project_root(task_dir)
+    task_abs = os.path.abspath(task_dir)
+    from compass_pkg.core import docs_dir
+    dest_rel = docs_dir(task_dir)
+    out = []
+    for container, key, anchor in _reference_slots(data):
+        path, suffix = container[key], ""
+        if anchor == "issue-line":
+            path, suffix = _split_line(path)
+        name = _own_document(task_dir, project, path, anchor)
+        if name is None:
+            continue
+        if name in moving:
+            new_rel = moving[name]
+        else:
+            old = os.path.join(task_abs, name)
+            if os.path.exists(old) and not _is_pointer(old):
+                continue
+            new_rel = os.path.join(dest_rel, name).replace(os.sep, "/")
+            if not os.path.isfile(os.path.join(project, new_rel)):
+                continue
+        if anchor == "project":
+            new = new_rel
+        else:
+            new = os.path.relpath(os.path.join(project, new_rel),
+                                  task_abs).replace(os.sep, "/")
+        new += suffix
+        if new != container[key]:
+            out.append((container, key, new, name))
+    return out
+
+
+def _repoint_references(task_dir):
+    """Repoint every manifest field that names a document no longer beside the
+    manifest. Returns the sorted names of the documents repointed.
 
     A manifest names its issue's documents in several fields, and each one
     that still names the old place fails a check on an issue nothing is wrong
@@ -500,20 +567,14 @@ def _repoint_references(task_dir, filename, project_rel):
     """
     manifest = manifest_path(task_dir)
     if not os.path.isfile(manifest):
-        return False
+        return []
     with open(manifest, encoding="utf-8") as fh:
         data = yaml.safe_load(fh) or {}
-    project = _project_root(task_dir)
-    from_issue = os.path.relpath(os.path.join(project, project_rel),
-                                 os.path.abspath(task_dir)).replace(os.sep, "/")
-    source = os.path.abspath(os.path.join(task_dir, filename))
-    changed = False
-    for container, key, anchor in list(_reference_slots(data)):
-        if _names_file(task_dir, project, container[key], source):
-            container[key] = project_rel if anchor == "project" else from_issue
-            changed = True
-    if not changed:
-        return False
+    fixes = _stale_references(task_dir, data)
+    if not fixes:
+        return []
+    for container, key, new, _name in fixes:
+        container[key] = new
     data = prepare_manifest_write(data, manifest)
     body = yaml.safe_dump(data, sort_keys=False, default_flow_style=False,
                           allow_unicode=True)
@@ -521,7 +582,7 @@ def _repoint_references(task_dir, filename, project_rel):
     with open(tmp, "w", encoding="utf-8") as fh:
         fh.write(body)
     os.replace(tmp, manifest)
-    return True
+    return sorted({name for _c, _k, _n, name in fixes})
 
 
 def _pointer_owed(task_dir):
@@ -624,20 +685,19 @@ def _register(task_dir, kind, rel):
     return True
 
 
-def _references_cite(task_dir, filename):
-    """Does any manifest field `_reference_slots` lists name this file?"""
+def _stale_names(task_dir, moving=None):
+    """The documents some manifest field names at a place they are no longer
+    at (see `_stale_references`), sorted."""
     manifest = manifest_path(task_dir)
     if not os.path.isfile(manifest):
-        return False
+        return []
     try:
         with open(manifest, encoding="utf-8") as fh:
             data = yaml.safe_load(fh) or {}
     except Exception:                                # noqa: BLE001
-        return False
-    project = _project_root(task_dir)
-    source = os.path.abspath(os.path.join(task_dir, filename))
-    return any(_names_file(task_dir, project, container[key], source)
-               for container, key, _anchor in _reference_slots(data))
+        return []
+    return sorted({name for _c, _k, _n, name
+                   in _stale_references(task_dir, data, moving)})
 
 
 def plan_relocations(task_dir):
@@ -646,8 +706,8 @@ def plan_relocations(task_dir):
     notes = ["would move %s -> %s, and register it" % (name, rel)
              for _kind, name, rel in moves]
     notes += ["would repoint the manifest fields that cite %s" % name
-              for _kind, name, _rel in moves
-              if _references_cite(task_dir, name)]
+              for name in _stale_names(
+                  task_dir, {name: rel for _k, name, rel in moves})]
     notes += ["would register %s, already under docs/compass/ and not in the "
               "registry" % rel for _kind, _name, rel in adoptions]
     # Reported here as well as done in the apply, or the dry run promises
@@ -664,7 +724,8 @@ def relocate_documents(task_dir):
     each one. Idempotent: a relocated issue reports nothing."""
     moves, adoptions = _relocations(task_dir)
     repair = _pointer_owed(task_dir)
-    if not moves and not adoptions and not repair:
+    if not moves and not adoptions and not repair \
+            and not _stale_names(task_dir):
         return []
     project = _project_root(task_dir)
     notes = []
@@ -689,13 +750,15 @@ def relocate_documents(task_dir):
             _compatibility_pointer(task_dir, name, rel)
             note += (", and left a pointer at %s so an install that predates "
                      "the artifact registry is not locked out" % name)
-        if _repoint_references(task_dir, name, rel):
-            note += " (and repointed the manifest fields that cited it)"
         notes.append(note)
     for kind, _name, rel in adoptions:
         if _register(task_dir, kind, rel):
             notes.append("registered %s, which was already under docs/compass/"
                          % rel)
+    # After every move and adoption, so the tree is in its final state. Covers
+    # a document this run moved and one an earlier release moved.
+    for name in _repoint_references(task_dir):
+        notes.append("repointed the manifest fields that cited %s" % name)
     if repair:
         _compatibility_pointer(task_dir, BLOCKING_DOCUMENT, repair)
         notes.append("left a pointer at %s, which an earlier run moved away "

@@ -418,50 +418,102 @@ def _project_root(task_dir):
     return find_upwards(task_dir, ".compass") or task_dir
 
 
-def _repoint_evidence(task_dir, filename, project_rel):
-    """Repoint `evidence:` entries that named a document we just moved.
+#: The subtask keys that hold a path to a document. `compass issue subtask`
+#: writes each one measured from the project root.
+_SUBTASK_PATH_KEYS = ("brief", "report", "review_brief", "package")
 
-    An evidence entry can cite a document - a `verification-report.md` recorded
-    as `artifact` evidence behind a gate is the common one. Its `path` is
-    measured from the ISSUE DIRECTORY and stays that way: the evidence registry
-    is a different key read by different code, and re-anchoring it to the
-    project root would break every gate in a repository at once.
 
-    So the entry is rewritten as a relative path from the issue directory to
-    the document's new home - `../../../docs/compass/...`. Not pretty, and
-    correct: `compass check` joins the issue directory to it, which is exactly
-    what that resolves against. Leaving it alone instead would fail the gate
-    on an issue nothing is wrong with.
+def _reference_slots(data):
+    """Every (container, key, anchor) in a manifest that can hold a path to
+    one of the issue's documents.
+
+    `anchor` is where the reader measures the value from, and a rewritten
+    value keeps it:
+
+      * `"project"` - the subtask fields (`brief`, `earlier_briefs`,
+        `report`, `review_brief`, `package`), the stop evidence of a subtask
+        and of a run. `compass issue subtask` and `multiagent-run-recorded`
+        join them to the project root.
+      * `"issue"` - an `evidence:` entry's `path` and a `friction:` note's
+        `evidence`, which gates and readers join to the issue directory.
+
+    `artifacts[].path` is not listed: `_register` rewrites it as each file
+    moves. `changed_files[].path` names repository files, not issue
+    documents, and `next_task` names an issue by its slug.
+    """
+    def dicts(value):
+        return [v for v in (value or []) if isinstance(v, dict)] \
+            if isinstance(value, list) else []
+
+    for sub in dicts(data.get("subtasks")):
+        for key in _SUBTASK_PATH_KEYS:
+            if isinstance(sub.get(key), str):
+                yield sub, key, "project"
+        earlier = sub.get("earlier_briefs")
+        if isinstance(earlier, list):
+            for i, value in enumerate(earlier):
+                if isinstance(value, str):
+                    yield earlier, i, "project"
+        stop = sub.get("stopped_reason")
+        if isinstance(stop, dict) and isinstance(stop.get("evidence"), str):
+            yield stop, "evidence", "project"
+    for run in dicts(data.get("runs")):
+        stop = run.get("stopped_reason")
+        if isinstance(stop, dict) and isinstance(stop.get("evidence"), str):
+            yield stop, "evidence", "project"
+    for entry in dicts(data.get("evidence")):
+        if isinstance(entry.get("path"), str):
+            yield entry, "path", "issue"
+    for note in dicts(data.get("friction")):
+        if isinstance(note.get("evidence"), str):
+            yield note, "evidence", "issue"
+
+
+def _names_file(task_dir, project, raw, source):
+    """Does `raw` resolve, from the issue directory or the project root, to
+    `source`? Matched by where the path RESOLVES, not by how it is spelled:
+    manifests on disk carry both `technical-design.md` and
+    `.compass/work/<slug>/technical-design.md`."""
+    raw = (raw or "").strip()
+    if not raw:
+        return False
+    task_abs = os.path.abspath(task_dir)
+    return source in {os.path.abspath(os.path.join(task_abs, raw)),
+                      os.path.abspath(os.path.join(project, raw))}
+
+
+def _repoint_references(task_dir, filename, project_rel):
+    """Repoint every manifest field that named a document we just moved.
+
+    A manifest names its issue's documents in several fields, and each one
+    that still names the old place fails a check on an issue nothing is wrong
+    with - an evidence entry fails its gate, a stopped subtask's stop evidence
+    fails `multiagent-run-recorded`. `_reference_slots` lists the fields.
+
+    Each value is rewritten in the form its reader measures from, and the
+    evidence registry stays anchored to the issue directory: re-anchoring it
+    to the project root would break every gate in a repository at once.
+    So an `evidence:` path becomes a relative path from the issue directory
+    to the document's new home - `../../../docs/compass/...` - which is
+    exactly what `compass check` resolves against, and a subtask field
+    becomes `docs/compass/...`.
     """
     manifest = manifest_path(task_dir)
     if not os.path.isfile(manifest):
         return False
     with open(manifest, encoding="utf-8") as fh:
         data = yaml.safe_load(fh) or {}
-    records = [e for e in (data.get("evidence") or []) if isinstance(e, dict)]
     project = _project_root(task_dir)
     from_issue = os.path.relpath(os.path.join(project, project_rel),
                                  os.path.abspath(task_dir)).replace(os.sep, "/")
-    # Matched by WHERE THE PATH RESOLVES, not by how it is spelled. Manifests
-    # on disk carry both spellings: `technical-design.md`, measured from the
-    # issue directory, and `.compass/work/<slug>/technical-design.md`, measured
-    # from the project root. Comparing the string with the bare filename
-    # would rewrite the first and miss the second, which fails the gate on
-    # an issue nothing is wrong with.
     source = os.path.abspath(os.path.join(task_dir, filename))
     changed = False
-    for entry in records:
-        raw = (entry.get("path") or "").strip()
-        if not raw:
-            continue
-        candidates = {os.path.abspath(os.path.join(os.path.abspath(task_dir), raw)),
-                      os.path.abspath(os.path.join(project, raw))}
-        if source in candidates:
-            entry["path"] = from_issue
+    for container, key, anchor in list(_reference_slots(data)):
+        if _names_file(task_dir, project, container[key], source):
+            container[key] = project_rel if anchor == "project" else from_issue
             changed = True
     if not changed:
         return False
-    data["evidence"] = records
     data = prepare_manifest_write(data, manifest)
     body = yaml.safe_dump(data, sort_keys=False, default_flow_style=False,
                           allow_unicode=True)
@@ -572,7 +624,8 @@ def _register(task_dir, kind, rel):
     return True
 
 
-def _evidence_cites(task_dir, filename):
+def _references_cite(task_dir, filename):
+    """Does any manifest field `_reference_slots` lists name this file?"""
     manifest = manifest_path(task_dir)
     if not os.path.isfile(manifest):
         return False
@@ -581,8 +634,10 @@ def _evidence_cites(task_dir, filename):
             data = yaml.safe_load(fh) or {}
     except Exception:                                # noqa: BLE001
         return False
-    return any((e.get("path") or "").strip() == filename
-               for e in (data.get("evidence") or []) if isinstance(e, dict))
+    project = _project_root(task_dir)
+    source = os.path.abspath(os.path.join(task_dir, filename))
+    return any(_names_file(task_dir, project, container[key], source)
+               for container, key, _anchor in _reference_slots(data))
 
 
 def plan_relocations(task_dir):
@@ -590,9 +645,9 @@ def plan_relocations(task_dir):
     moves, adoptions = _relocations(task_dir)
     notes = ["would move %s -> %s, and register it" % (name, rel)
              for _kind, name, rel in moves]
-    notes += ["would repoint the evidence entry that cites %s" % name
+    notes += ["would repoint the manifest fields that cite %s" % name
               for _kind, name, _rel in moves
-              if _evidence_cites(task_dir, name)]
+              if _references_cite(task_dir, name)]
     notes += ["would register %s, already under docs/compass/ and not in the "
               "registry" % rel for _kind, _name, rel in adoptions]
     # Reported here as well as done in the apply, or the dry run promises
@@ -634,8 +689,8 @@ def relocate_documents(task_dir):
             _compatibility_pointer(task_dir, name, rel)
             note += (", and left a pointer at %s so an install that predates "
                      "the artifact registry is not locked out" % name)
-        if _repoint_evidence(task_dir, name, rel):
-            note += " (and repointed the evidence entry that cited it)"
+        if _repoint_references(task_dir, name, rel):
+            note += " (and repointed the manifest fields that cited it)"
         notes.append(note)
     for kind, _name, rel in adoptions:
         if _register(task_dir, kind, rel):

@@ -106,6 +106,16 @@ copied governance and `.compass/config.yml`) are read in their old words until
 - `compass issue template show` prints a document template with its checklists
   rendered from the issue's stage lists. The receipt shows where each rule,
   waiver, lock and check came from.
+- Compass can write an issue's domain labels and workflow state to its linked
+  GitHub issue (`docs/github-labels.md`). It is opt-in: the `github_labels` key
+  in `compass.yml` has two switches, both off by default, and with both off no
+  command calls GitHub. `compass issue link set` links an issue and
+  `compass issue labels sync` writes its labels. The manifest schema gains an
+  optional `github` field (`repo`, `number`). Compass never reads a label back
+  into the manifest.
+- The dashboard, `compass policy show` and `compass issue migrate --help` now
+  describe what the code does, and the release documents state which commands
+  fetch a git parent and which v5.6.0 commands refuse a schema 3.0 manifest.
 - `/compass:init` writes a minimal `compass.yml` for a new project and copies
   nothing. It runs `compass policy migrate` when it finds a
   `.compass/config.yml` or copied governance. `compass init`, which every entry

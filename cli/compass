@@ -90,7 +90,7 @@ from compass_pkg.github_labels import after_command as sync_github_labels  # noq
 # what `compass --version` and the release-consistency test read, and a
 # grep for the constant should find it at the CLI's entry point. The
 # assert fails if the two values differ.
-COMPASS_VERSION = "5.6.0"
+COMPASS_VERSION = "6.0.0"
 assert COMPASS_VERSION == _core.COMPASS_VERSION, (
     "cli/compass and compass_pkg/core.py disagree about the version")
 

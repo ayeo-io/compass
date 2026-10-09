@@ -3458,3 +3458,7 @@
 - `TRC-S9` Plugin instructions use evidence types, verbs and fields that exist
 - `TRC-S10` The stage-weight tables use the stored words
 - `TRC-S11` README status badges name real targets
+
+### release-6-0-0 (completed 2026-10-09)
+
+- `REL-001` Given the seven version locations and EXPECTED_VERSION, When the version test runs, Then every location and EXPECTED_VERSION read 6.0.0

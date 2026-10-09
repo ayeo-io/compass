@@ -438,7 +438,7 @@ The kind of work an issue is: feature, bug or task. The delivery approach, not t
 
 ### label
 
-A plain-word tag on an issue carrying classification and risk surface. Local-first (strings in the issue file); synced 1:1 with GitHub labels when connected. Labels never track workflow state.
+A plain-word tag on an issue carrying classification and risk surface. Local-first (strings in the issue file). Compass writes them to the linked GitHub issue only when the project sets github_labels in compass.yml; with it off, no label leaves the issue file. Compass never reads a GitHub label back into the issue file. Domain labels never track workflow state. The status labels Compass writes do: status:<state>, and on close status:done with close:<reason>.
 
 **GitHub:** Label
 

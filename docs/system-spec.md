@@ -3425,3 +3425,22 @@
 - `TRC-D5` The release documents state the network commands, the upgrade effects and the v5 refusals as they are
 - `TRC-D6` No shipped text treats a landed feature as still to come
 - `TRC-D7` The tests and guards catch the forms the review named
+
+### github-label-sync (completed 2026-10-09)
+
+- `GLS-1` Link an issue by repository and number or by URL
+- `GLS-2` Refuse a link target that is malformed or unsafe
+- `GLS-3` With the settings off no command calls GitHub
+- `GLS-4` Assess writes domain labels and the status label
+- `GLS-5` The status label follows the issue's state
+- `GLS-6` Closing sets the done label and the close-reason label
+- `GLS-7` Each switch works alone
+- `GLS-8` Compass removes only labels it owns
+- `GLS-9` A command that changes the records brings the label current
+- `GLS-10` A missing gh never fails the command
+- `GLS-11` A failing gh is reported and recovers
+- `GLS-12` A label removed on GitHub is reported, not pulled back
+- `GLS-13` issue labels sync refuses what it cannot do
+- `GLS-14` gh gets an argument list and label names are checked
+- `GLS-15` The settings are declared and documented
+- `GLS-16` The glossary and docs say what the sync does

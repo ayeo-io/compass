@@ -736,6 +736,16 @@
         }
       }
     },
+    "github": {
+      "type": "object",
+      "description": "The GitHub issue this issue is linked to. Set by `compass issue link set --github`. When the project sets `github_labels` in compass.yml, Compass writes the issue's labels there; the manifest stays the source of truth.",
+      "required": ["repo", "number"],
+      "additionalProperties": false,
+      "properties": {
+        "repo": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9-]{0,38}/(?!-)(?!\\.{1,2}$)[A-Za-z0-9._-]{1,100}$", "description": "The repository, as owner/repo."},
+        "number": {"type": "integer", "minimum": 1, "maximum": 999999999, "description": "The issue number in that repository."}
+      }
+    },
     "raised_by": {
       "type": "object",
       "description": "The issue this one was found in, and where. Set by `quick-fix start --raised-by --found-at` or `compass issue raised-by`; read by `compass retro --lineage`. Advisory only.",

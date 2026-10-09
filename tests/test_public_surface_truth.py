@@ -464,6 +464,10 @@ def test_d2_repairs_change_only_retired_names():
     `governance/guardrails.md` (list_items 48 -> 49) gained the bullet saying an
     issue's `config:` is enforced at the issue's own assessment.
 
+    One more was re-baselined by `github-label-sync`:
+    `architecture/system-context.md` (table_rows 12 -> 13) gained the row in
+    its external dependencies table for `gh` and GitHub.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

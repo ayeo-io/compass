@@ -671,6 +671,7 @@ POLICY_FILE_OWNERS = frozenset({
 EXPECTED_READS = {
     ("approach_diagram", "cmd_approach_diagram"): 1, ("calibration", "_route_weights"): 1,
     ("check_cmd", "cmd_check"): 2, ("checks", "_check_gate_evidence"): 1,
+    ("github_labels", "declared_labels"): 1,
     ("checks", "_check_command_passes"): 1, ("flow", "_routing_labels"): 1,
     ("lessons", "_guardrail_ids"): 1, ("loop_ceilings", "loop_ceilings"): 1,
     ("manifest", "_load_gate_requirements"): 1, ("quick_fix_cmd", "_quick_fix_blockers"): 1,

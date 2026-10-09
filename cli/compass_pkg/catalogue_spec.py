@@ -281,7 +281,9 @@ CAPABILITIES = ("entry-exit-evaluation", "artifact-freshness")
 LAYER_KEYS = ("schema", "extends", "owner", "approvers", "capabilities") + CATALOGUES
 SETTINGS_KEYS = ("autonomy", "adoption", "allow_project_commands", "enforcement",
                  "record", "project", "prices", "multiagent", "governance_drift",
-                 "preset_index")
+                 "preset_index", "github_labels")
+#: The two switches inside `github_labels`, both off by default.
+GITHUB_LABEL_SWITCHES = ("domain", "status")
 RESERVED_KEYS = ("preset",)
 
 # What an issue's own layer (the manifest's `config:`) may hold.
@@ -504,6 +506,14 @@ TOP_DESCRIPTIONS = {
     "multiagent": "Where multiagent worktrees go and how many are allowed. Holds `worktree_root`"
                   " (default `../.compass-worktrees`) and `max_worktrees` (default 6).",
     "preset_index": "Reserved for published presets. It has no behaviour yet.",
+    "github_labels": "Whether Compass writes an issue's labels to its linked GitHub issue, "
+                     "through the switches `domain` and `status`. Both are off by default, and "
+                     "with both off no command calls GitHub.",
+    "github_labels.domain": "Whether Compass writes the issue's declared domain labels to its "
+                            "GitHub issue. The default is `false`.",
+    "github_labels.status": "Whether Compass writes `status:<state>` to the GitHub issue, and on "
+                            "a closed issue `status:done` and `close:<reason>`. The default is "
+                            "`false`.",
     "preset": "Reserved key for a published preset's own data. It is not part of a layer's "
               "digest.",
 }

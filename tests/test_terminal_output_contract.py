@@ -990,6 +990,8 @@ _TAIL_EXEMPT = {
     "decision list": "prints the ledger's entries verbatim, one line each; test_decisions_ledger.py runs it",
     "decision show": "prints one entry's text verbatim; test_decisions_ledger.py runs it",
     "issue status remove": "needs an issue held in backlog, which the fixture does not build; test_workflow_states.py runs it, without measuring its output against this contract",
+    "issue link set": "needs a GitHub issue target and writes one manifest key; test_github_label_sync.py runs it, without measuring its output against this contract",
+    "issue labels sync": "needs a linked issue and a gh command on PATH; test_github_label_sync.py runs it against a fake gh, without measuring its output against this contract",
     "issue blocked remove": "needs an issue that is blocked, which the fixture does not build; test_workflow_states.py runs it, without measuring its output against this contract",
     "issue subtask add": "needs a git repository and a brief file the fixture does not create; test_subtask_record.py runs it, without measuring its output against this contract",
     "issue subtask set": "needs a recorded subtask the fixture does not create; test_subtask_record.py runs it, without measuring its output against this contract",

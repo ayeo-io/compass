@@ -338,6 +338,15 @@ def test_vr_d25_done_with_close_reason_duplicate_returns_as_not_planned(rows):
     assert (again["status"], again["close_reason"]) == ("done", "not-planned")
 
 
+def test_vr_d25_a_backlog_hold_with_a_parked_record_returns_as_parked(rows):
+    # The rollback plan promises `parked` for a hold that carries `parked_at`
+    # or `parked_reason`, and `queued` for a bare backlog status.
+    for held in ({"parked_at": "2026-10-01T09:00:00Z"}, {"parked_reason": "waiting"}):
+        old = rows.reverse_manifest({"status": "backlog", **held})
+        assert old["status"] == "parked", held
+    assert rows.reverse_manifest({"status": "backlog"})["status"] == "queued"
+
+
 # --- VR-D19: the layer changes are kept for the lint advisory -----------------
 
 def test_vr_d19_each_layer_keeps_the_changes_the_mapping_made(rows):

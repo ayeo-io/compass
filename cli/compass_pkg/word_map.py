@@ -458,10 +458,14 @@ def _status_back(manifest, rows):
             manifest["status"] = old
             manifest.pop("close_reason", None)
     else:
-        for old, new in table.items():
-            if new == status:
-                manifest["status"] = old
-                break
+        olds = [old for old, new in table.items() if new == status]
+        # Two old words share `backlog`: a hold that records why or when it
+        # was set aside was `parked`, and a bare backlog entry was `queued`.
+        if "parked" in olds and (manifest.get("parked_reason")
+                                 or manifest.get("parked_at")):
+            manifest["status"] = "parked"
+        elif olds:
+            manifest["status"] = olds[0]
 
 
 # --- the write path -----------------------------------------------------------

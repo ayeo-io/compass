@@ -16,7 +16,7 @@ Nothing here follows a link out of a tree. A folder in another tree that
 leads out of that tree comes back as a source with `refused` set, and takes
 no part in choosing a copy.
 
-The source dict (technical design 5.2):
+The source dict:
 
     slug       the folder name
     task_dir   absolute path of the issue folder (not read when refused)
@@ -220,7 +220,10 @@ def _plan_trees(project_root, top, listing, trees):
         if entry["bare"] or entry["prunable"] or not os.path.isdir(entry["path"]):
             trees["skipped"] += 1
             continue
-        label = entry["path"] if names.count(name) > 1 else name
+        # A folder named like this checkout's display label would be taken
+        # for this checkout, so it is labelled by its full path, as are two
+        # trees that share a folder name.
+        label = entry["path"] if names.count(name) > 1 or name == THIS_CHECKOUT else name
         tree_root = entry["path"] if rel == "." else os.path.join(entry["path"], rel)
         plan.append((label, entry["path"], tree_root))
         labels.append(label)

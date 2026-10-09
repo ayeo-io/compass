@@ -851,3 +851,94 @@ def test_trc_w12_done_here_not_read_elsewhere(rig, tmp_path, monkeypatch):
     board_cmd.build_page(str(main), str(main / ".compass" / "work"), True,
                          datetime.datetime.now())
     assert seen["skip"] == {"finished"}
+
+
+# --- review round 1 -------------------------------------------------------------
+
+def _count_parses(monkeypatch, twice=False):
+    """Record the manifest every `load_yaml` call in the package reads, through
+    every module that imported the name. With `twice`, the board's own manifest
+    parser is made to parse each manifest a second time."""
+    from compass_pkg import core, flow
+    seen = []
+    real = core.load_yaml
+
+    def counting(path, *args, **kwargs):
+        if str(path) == core.manifest_path(os.path.dirname(str(path))):
+            seen.append(os.path.realpath(str(path)))
+        return real(path, *args, **kwargs)
+
+    for name, module in list(sys.modules.items()):
+        if name.startswith("compass_pkg") and getattr(module, "load_yaml", None) is real:
+            monkeypatch.setattr(module, "load_yaml", counting)
+    if twice:
+        once = flow._parse_manifest
+
+        def parse_twice(task_dir):
+            once(task_dir)
+            return once(task_dir)
+
+        monkeypatch.setattr(flow, "_parse_manifest", parse_twice)
+    return seen
+
+
+def _three_trees_with_fifty_issues(tmp_path):
+    main = _repo(tmp_path)
+    trees = [_worktree(main, tmp_path / "wt" / name) for name in ("a", "b", "c")]
+    newest = {}
+    for i in range(50):
+        slug = f"issue-{i:02d}"
+        winner = i % 3
+        for j, tree in enumerate(trees):
+            _write(tree, slug, mtime=9_000 if j == winner else 1_000 + j,
+                   current_phase="plan", **_assessed())
+        newest[slug] = trees[winner]
+    return main, newest
+
+
+def _board_over_worktrees(main):
+    from compass_pkg import board_trees, flow
+    sources, _ = board_trees.list_sources(str(main), True)
+    return flow.board(str(main / ".compass" / "work"), sources=sources)
+
+
+def test_trc_w5_the_board_parses_one_manifest_per_distinct_slug(tmp_path, monkeypatch):
+    main, newest = _three_trees_with_fifty_issues(tmp_path)
+    seen = _count_parses(monkeypatch)
+    data = _board_over_worktrees(main)
+    assert len(data["in_progress"]) == 50
+    assert len(seen) == 50 and len(set(seen)) == 50, len(seen)
+    assert set(seen) == {os.path.realpath(str(t / ".compass" / "work" / slug / "manifest.yml"))
+                         for slug, t in newest.items()}
+
+
+def test_trc_w5_the_parse_counter_sees_a_second_parse(tmp_path, monkeypatch):
+    main, _ = _three_trees_with_fifty_issues(tmp_path)
+    seen = _count_parses(monkeypatch, twice=True)
+    _board_over_worktrees(main)
+    assert len(seen) != 50 and len(set(seen)) == 50
+
+
+def test_a_tree_folder_named_like_this_checkout_is_not_this_checkout(rig, tmp_path):
+    main = _repo(tmp_path)
+    _write(main, "shared", mtime=1_000, current_phase="implement", **_assessed())
+    lookalike = _worktree(main, tmp_path / "wt" / THIS)
+    _write(lookalike, "shared", mtime=9_000, current_phase="verify", **_assessed())
+    page = rig.page(main, "--worktrees")
+    slug, lane, html = _card(page, "shared")
+    assert lane == _lane("verify")
+    assert "tree " in html and str(lookalike.name) in html
+    assert "Trees read: 2" in page
+
+
+def test_a_slug_with_a_card_is_not_also_listed_for_a_link_out_of_another_tree(rig, tmp_path):
+    main, side = _two_trees(tmp_path)
+    _write(main, "tc-only", current_phase="plan", **_assessed())
+    outside = tmp_path / "outside"
+    _write(tmp_path / "outside-root", "tc-only", current_phase="plan", **_assessed())
+    shutil.move(str(tmp_path / "outside-root" / ".compass" / "work" / "tc-only"), str(outside))
+    os.symlink(outside, side / ".compass" / "work" / "tc-only")
+    page = rig.page(main, "--worktrees")
+    assert [c[0] for c in _cards(page)] == ["tc-only"]
+    assert _note(page) == []
+    assert "1 issues" in page

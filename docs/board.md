@@ -86,7 +86,14 @@ The evidence check for an in-progress issue works out the hash of the files the 
 
 `board()` in `cli/compass_pkg/flow.py` builds the board data once. The text board, `compass flow --json` and the page all read it (ADR-046). It takes the issue folders as an argument, so a caller can give it this checkout's folders or folders from several trees.
 
-`compass flow --json` is additive within a major version. A row gains these keys in addition to the ones it held in 6.0.0: `lane`, `stage`, `gates`, `gate_list`, `assessment`, `policy_rules_fired`, `stage_depths`, `tree`, `manifest_path`, `also_in`, `created`, `set_aside`, `recommendation`, `close_reason` and `unplaceable`. No key is removed, renamed or retyped, and a test pins the full key set. A row the page cannot place stays in the section it had in 6.0.0 and carries an `unplaceable` reason.
+`compass flow --json` is additive within a major version. The keys each kind of row gains, in addition to the ones it held in 6.0.0:
+
+- **Every row in `in_progress`, `stale`, `in_review`, `ready`, `backlog`, `done_this_week` and `closed`** gains `lane`, `stage`, `gates`, `gate_list`, `assessment`, `policy_rules_fired`, `stage_depths`, `tree`, `manifest_path`, `also_in`, `created`, `set_aside`, `recommendation` and `unplaceable`. Of these, `stage` and `gates` were already on the `in_progress`, `stale` and `in_review` rows and keep their meaning.
+- **`done_this_week` rows** also gain `close_reason`, which `closed` rows already held.
+- **`other` rows** gain `tree`, `manifest_path`, `also_in` and `note`.
+- **`unreadable` rows** gain `tree`, `manifest_path` and `also_in`.
+
+No key is removed, renamed or retyped, and a test pins the full key set. A row the page cannot place stays in the section it had in 6.0.0 and carries an `unplaceable` reason.
 
 ## Modules
 

@@ -2,8 +2,8 @@
 
 Each test name carries the id of the scenario it checks. The tests cover the
 lanes, the cards, the header and the legend, then the detail panel, then page
-safety and colour. The rows are built by hand to follow the row contract of the
-technical design, so these tests need no project on disk. The module under
+safety and colour. The rows are built by hand to follow the row keys that
+docs/board.md lists, so these tests need no project on disk. The module under
 test is imported inside each test so a missing module fails the test and not
 the collection.
 """
@@ -129,7 +129,7 @@ def card_named(root, slug):
     return found[0]
 
 
-# --- hand-made rows (section 5.4) ---------------------------------------------
+# --- hand-made rows (the keys docs/board.md lists) ----------------------------
 
 def row(slug, **kw):
     base = {"slug": slug, "delivery_approach": "full", "state": "in-progress",

@@ -261,10 +261,15 @@ def board(work_root, today=None, sources=None, parsed=None):
     categories = {}
     if sources is None:
         sources = _checkout_sources(work_root)
-    out["total"] = len(sources)
+    # A slug is one issue however many trees hold it: count slugs, and do not
+    # list a copy that was not read (a link out of its tree) for a slug whose
+    # other copy has a card.
+    read_slugs = {s["slug"] for s in sources if not s.get("refused")}
+    out["total"] = len({s["slug"] for s in sources})
     for src in sources:
         if src.get("refused"):
-            _unreadable(out, src, src["refused"])
+            if src["slug"] not in read_slugs:
+                _unreadable(out, src, src["refused"])
             continue
         known = parsed.get(src["slug"]) if parsed and src["tree"] == THIS_CHECKOUT else None
         if isinstance(known, dict):

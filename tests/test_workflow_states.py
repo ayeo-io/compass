@@ -920,6 +920,27 @@ def test_vr_c17_an_old_word_through_the_command_line_closes_under_the_same_gate_
     assert "status" not in _saved(task)
 
 
+@pytest.mark.parametrize("closed", [{"status": "landed"},
+                                    {"status": "abandoned"},
+                                    {"status": "done", "close_reason": "completed"},
+                                    {"status": "done", "close_reason": "duplicate",
+                                     "duplicate_of": "other"}])
+def test_vr_c17_the_v5_6_0_active_spelling_still_reopens_a_closed_issue(tmp_path, closed):
+    """v5.6.0 `issue set-status active` reopened a landed issue and exited 0.
+    That script keeps working until 7.0.0."""
+    import subprocess
+    task = _project(tmp_path, gates=PENDING, **closed)
+    env = {"PATH": __import__("os").environ["PATH"], "HOME": str(tmp_path)}
+    run = lambda *argv: subprocess.run([sys.executable, str(ROOT / "cli" / "compass"), *argv],
+                                       cwd=tmp_path, capture_output=True, text=True, env=env)
+    reopened = run("issue", "set-status", "active", "--issue", "the-issue")
+    assert reopened.returncode == 0, reopened.stderr
+    saved = _saved(task)
+    assert not {"status", "close_reason", "duplicate_of"} & set(saved), saved
+    assert saved["status_reason"], "the reopening leaves a reason"
+    assert "issue status remove" in reopened.stderr, reopened.stderr
+
+
 def test_vr_c18_status_remove_ends_a_hold_and_refuses_when_there_is_none(tmp_path, monkeypatch):
     from compass_pkg.core import CompassError
     monkeypatch.chdir(tmp_path)

@@ -37,7 +37,7 @@ A stored in-flight state needs a writer at every place a record is written. A wr
 6. Acceptance defined and the requirements review finished, collapsed or skipped gives `ready`.
 7. Otherwise `backlog`.
 
-No stage command writes `status`. A person cannot set `ready`, `in-progress` or `in-review`: the command refuses and says the records move those states. `issue status remove` ends a hold.
+No stage command writes `status`. A person cannot set `ready`, `in-progress` or `in-review`: the command refuses and says the records move those states. `issue status remove` ends a hold. It also reopens a closed issue, because v5.6.0 `issue set-status active` reopened one and that spelling keeps working until 7.0.0. A reopening deletes `status`, `close_reason` and `duplicate_of`, keeps the land time as history, and records a reason (`--reason`, or a default).
 
 **Only `done` with close reason `completed` is completed work.** The living spec takes its issues from completed work on an approach that ships. Its heading reads `### <slug> (completed <date>)`, and the reader accepts the older `landed` heading.
 

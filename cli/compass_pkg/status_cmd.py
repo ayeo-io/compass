@@ -136,18 +136,28 @@ def cmd_task_status_remove(args):
     verb = "compass issue status remove"
     task_dir = resolve_issue_dir(getattr(args, "task", None))
     task, path = load_manifest(task_dir)
-    if not status_words.is_held(task):
+    reopening = status_words.is_closed(task)
+    if not (status_words.is_held(task) or reopening):
         state = lifecycle.state_of(task, task_dir)
         raise CompassError(
-            f"{verb}: '{task.get('issue')}' has no backlog hold to remove (its "
-            f"state is {state}). Only a hold a person set is removed; nothing "
-            "was written.")
+            f"{verb}: '{task.get('issue')}' has no backlog hold or close to remove "
+            f"(its state is {state}). Only a hold or a close a person set is "
+            "removed; nothing was written.")
+    # v5.6.0 `issue set-status active` reopened a closed issue, and that
+    # spelling keeps working until 7.0.0, so removing a close reopens it too.
+    # The land time stays: it is history, not state.
     del task["status"]
-    if getattr(args, "reason", None):
-        task["status_reason"] = args.reason
+    for key in ("close_reason", "duplicate_of"):
+        task.pop(key, None)
+    reason = getattr(args, "reason", None)
+    if reason:
+        task["status_reason"] = reason
+    elif reopening:
+        task["status_reason"] = "reopened with compass issue status remove"
     save_manifest(task, path)
     state = lifecycle.state_of(task, task_dir)
-    return say(args, f"{verb}: {task.get('issue')} is no longer held; its state "
+    kind = "closed" if reopening else "held"
+    return say(args, f"{verb}: {task.get('issue')} is no longer {kind}; its state "
                      f"is {state}, read from its records.",
                detail=_stale_page(task_dir), issue=task.get("issue"), state=state)
 
@@ -199,7 +209,7 @@ def register(pts, issue_arg):
     setter.add_argument("--duplicate-of", dest="duplicate_of", metavar="SLUG",
                         help="close as a duplicate of this issue (implies --close-reason duplicate)")
     setter.set_defaults(func=cmd_task_set_status, output_kind="hand-off")
-    remover = verbs.add_parser("remove", help="end a backlog hold")
+    remover = verbs.add_parser("remove", help="end a backlog hold, or reopen a closed issue")
     issue_arg(remover)
     remover.add_argument("--reason", help="why the hold ends - recorded as status_reason")
     remover.set_defaults(func=cmd_task_status_remove, output_kind="hand-off")

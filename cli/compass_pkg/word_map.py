@@ -25,14 +25,14 @@ idempotent: a document already in the new words comes back unchanged.
 import `core`: `core` imports it, and the import graph is checked to have no
 cycle (`tests/test_cli_module_split.py`).
 """
-# DEPENDENCY: standard library (copy, os, shutil, sys);
-# compass_pkg.catalogue_spec. It reads cli/migrate-map.yml only through the
-# reader `core` binds, and imports nothing else from the package.
+# DEPENDENCY: standard library (copy, os, sys);
+# compass_pkg.catalogue_spec, and compass_pkg.project_settings for the error it
+# raises on a link. It reads cli/migrate-map.yml only through the reader `core`
+# binds, and imports nothing else from the package.
 from __future__ import annotations
 
 import copy
 import os
-import shutil
 import sys
 
 from compass_pkg import catalogue_spec as spec
@@ -501,8 +501,19 @@ def backup_and_notice(path, raw, rows=None, mapped=None):
     if not changes:
         return []
     backup = path + ".v5.bak"
-    if not os.path.exists(backup):
-        shutil.copyfile(path, backup)
+    # `lexists` sees a dangling link that `exists` calls absent; writing through
+    # one would put the manifest's text at a path chosen by the repository.
+    if os.path.islink(backup):
+        from compass_pkg.project_settings import CompassError
+        raise CompassError(f"{backup} is a link, so the backup of {path} is refused. "
+                           "Remove the link and run the command again.")
+    if not os.path.lexists(backup):
+        flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+        with open(path, "rb") as source:
+            data = source.read()
+        fd = os.open(backup, flags, 0o644)
+        with os.fdopen(fd, "wb") as target:
+            target.write(data)
     shown = set()
     for where, old, new in changes:
         key = (where.split(".")[0].split("[")[0], old, new)

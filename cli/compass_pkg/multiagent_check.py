@@ -85,11 +85,12 @@ def _past_ceilings(subtask, ceilings):
 
 
 def _ready(task):
-    """Has every gate passed, or has the issue landed? A run still in flight
+    """Has every gate passed, or is the issue completed? A run still in flight
     is not judged: a subtask legitimately has no final record yet while the
-    work is under way. A landed issue is ready whatever its gates say - it is
-    not "still in flight" by definition."""
-    if status_words.is_closed(task):
+    work is under way. A completed issue is ready whatever its gates say - it
+    is not "still in flight" by definition. An issue closed as not planned is
+    not ready: its run never finished, and v5.6.0 did not judge it."""
+    if status_words.is_completed(task):
         return True
     gates = [g for g in task.get("gates") or [] if isinstance(g, dict)]
     return bool(gates) and all(g.get("status") == "pass" for g in gates)

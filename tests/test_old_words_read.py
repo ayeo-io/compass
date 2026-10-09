@@ -386,6 +386,39 @@ def test_vr_d21_the_first_write_over_old_words_keeps_one_backup_and_says_so(
     assert capsys.readouterr().err == "", "a manifest with no old word says nothing"
 
 
+def test_vr_d21_a_backup_name_that_is_a_dangling_link_is_refused(
+        rows, tmp_path, capsys):
+    """A repository can carry a link at `manifest.yml.v5.bak`. The backup must
+    not be written through it, because the bytes are the manifest's own text."""
+    from compass_pkg import core
+    project = tmp_path / "project"
+    project.mkdir()
+    outside = tmp_path / "outside.txt"
+    original = "schema_version: '2.0'\nstatus: queued\nassessment:\n  size: standard\n"
+    path = _manifest_file(project, original)
+    os.symlink(str(outside), path + ".v5.bak")
+    task, _ = core.load_manifest(str(project))
+    with pytest.raises(core.CompassError) as raised:
+        core.save_manifest(task, path)
+    assert "link" in str(raised.value)
+    assert not outside.exists(), "the backup was written through the link"
+    assert Path(path).read_text(encoding="utf-8") == original, "the manifest is untouched"
+
+
+def test_vr_d21_the_backup_is_still_written_once_when_nothing_is_in_the_way(
+        rows, tmp_path, capsys):
+    from compass_pkg import core
+    original = "schema_version: '2.0'\nstatus: queued\nassessment:\n  size: standard\n"
+    path = _manifest_file(tmp_path, original)
+    task, _ = core.load_manifest(str(tmp_path))
+    core.save_manifest(task, path)
+    backup = Path(path + ".v5.bak")
+    assert backup.is_file() and not backup.is_symlink()
+    assert backup.read_text(encoding="utf-8") == original
+    core.save_manifest(task, path)
+    assert backup.read_text(encoding="utf-8") == original
+
+
 def test_vr_d21_a_write_that_finds_no_old_word_leaves_no_backup(
         rows, tmp_path, capsys):
     from compass_pkg import core

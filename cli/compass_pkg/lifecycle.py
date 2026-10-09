@@ -39,8 +39,9 @@ def _work_started(manifest, task_dir):
 
 
 def _review_started(manifest):
-    """Ruling 4: a gate that left `pending`, or a verification report
-    registered with a path. Manifest only, no disk read."""
+    """Verify has started when a gate left `pending` or a verification report
+    is registered with a path (the architect's ruling, recorded in ADR-045).
+    Manifest only, no disk read."""
     gates = next_cmd._entries(manifest, "gates")
     if any((g.get("status") or "pending") != "pending" for g in gates):
         return True

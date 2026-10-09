@@ -77,3 +77,24 @@ def test_crm_3_with_no_map_the_check_judges_the_record_as_before(tmp_path):
     _, task_dir, task = _task(tmp_path, ["subtask-1"], with_map=False)
     ok, why = _check_multiagent_run_recorded(task, str(task_dir))
     assert ok is True, why
+
+
+def test_vr_c16_a_not_planned_issue_is_not_judged_for_a_run_that_never_finished(tmp_path):
+    """An abandoned multiagent issue has an unfinished run by definition. Only
+    a completed issue is ready to be judged, as `landed` was on v5.6.0."""
+    from compass_pkg.check_results import NOTHING_TO_CHECK
+    _, task_dir, task = _task(tmp_path, ["subtask-1"])
+    task["status"] = "done"
+    task["close_reason"] = "not-planned"
+    task["gates"] = [{"id": "verify.correctness", "status": "pending"}]
+    ok, why = _check_multiagent_run_recorded(task, str(task_dir))
+    assert ok is NOTHING_TO_CHECK or ok == NOTHING_TO_CHECK, (ok, why)
+
+
+def test_vr_c16_a_completed_issue_is_still_judged_whatever_its_gates_say(tmp_path):
+    _, task_dir, task = _task(tmp_path, ["subtask-1"])
+    task["status"] = "done"
+    task["close_reason"] = "completed"
+    task["gates"] = [{"id": "verify.correctness", "status": "pending"}]
+    ok, why = _check_multiagent_run_recorded(task, str(task_dir))
+    assert ok is False and "subtask-2" in why, (ok, why)

@@ -325,8 +325,8 @@ def write_proposal(task_dir, manifest, overlay):
                                f"now names {_named(number(disk))}); run the command again")
         if status_words.is_closed(disk):
             raise CompassError(
-                f"issue {os.path.basename(os.path.normpath(task_dir))} is landed and keeps "
-                f"the configuration it landed under; it cannot be given a proposal")
+                f"issue {os.path.basename(os.path.normpath(task_dir))} is closed and keeps "
+                f"the configuration it closed under; it cannot be given a proposal")
         _refuse_links(task_dir, target)
         folder = gen_dir(task_dir, target)
         if os.path.isdir(folder):
@@ -539,8 +539,8 @@ def preflight(task_dir, resolution, manifest, invalidated=None, adopt=None):
         return      # the outcome decides, and it is not known yet: `commit` answers
     if status_words.is_closed(disk):
         raise CompassError(
-            f"issue {os.path.basename(os.path.normpath(task_dir))} is landed and keeps "
-            f"the configuration it landed under; it cannot store a new generation")
+            f"issue {os.path.basename(os.path.normpath(task_dir))} is closed and keeps "
+            f"the configuration it closed under; it cannot store a new generation")
     if adopt is not None:
         if resolution.finish is not None:
             # The leftover holds the stored classification of each git parent,
@@ -613,8 +613,8 @@ def commit(task_dir, resolution, manifest, invalidated=None, render=None, *,
                                        f"configuration")
         if status_words.is_closed(disk):
             raise CompassError(
-                f"issue {os.path.basename(os.path.normpath(task_dir))} is landed and keeps "
-                f"the configuration it landed under; it cannot store a new generation")
+                f"issue {os.path.basename(os.path.normpath(task_dir))} is closed and keeps "
+                f"the configuration it closed under; it cannot store a new generation")
         if resolution.validate is not None:
             resolution.validate()
         if resolution.finish is not None:

@@ -117,6 +117,15 @@ def test_second_apply_is_a_no_op(tmp_path):
         "the no-op run does not say it found nothing to do:\n" + r.stdout)
 
 
+def test_the_reports_name_the_schema_the_manifest_is_written_in(tmp_path):
+    """The apply writes schema 3.0, so the report must not say 2.0."""
+    root = _v1_project(tmp_path)
+    applied = _run(root, "migrate", "--apply")
+    assert "schema 3.0" in applied.stdout and "schema 2.0" not in applied.stdout, applied.stdout
+    again = _run(root, "migrate", "--apply")
+    assert "schema 3.0" in again.stdout and "schema 2.0" not in again.stdout, again.stdout
+
+
 def test_mapping_lives_in_the_exempt_data_file():
     """`TRC-4`: the artifact map is data in cli/migrate-map.yml, and the
     migration module consumes it - the enforced CLI never spells a v1

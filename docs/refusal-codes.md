@@ -32,7 +32,7 @@ code from a refusal you hit.
 ### `no-acceptance-criteria`
 
 **Blocked:** edit to {target} (tool: {tool})
-**Why:** the acceptance-before-code guardrail blocks this: define: full is set but manifest.yml has no scenarios.
+**Why:** the acceptance-before-code guardrail blocks this: define: thorough is set but manifest.yml has no scenarios.
 **Fix:** add the scenarios to acceptance-criteria.md and manifest.yml (compass scenario add), or run /compass:assess --reassess if this is exploratory.
 
 ### `no-delivery-approach`

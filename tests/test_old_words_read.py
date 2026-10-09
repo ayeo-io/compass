@@ -419,6 +419,21 @@ def test_vr_d21_the_backup_is_still_written_once_when_nothing_is_in_the_way(
     assert backup.read_text(encoding="utf-8") == original
 
 
+def test_vr_d22_each_rewrite_notice_names_the_issue(rows, tmp_path, capsys):
+    """`issue migrate --apply` prints these for many issues in a row, so a
+    line must say which issue it is about."""
+    from compass_pkg import core
+    issue_dir = tmp_path / "my-old-issue"
+    issue_dir.mkdir()
+    path = _manifest_file(issue_dir, "schema_version: '2.0'\nstatus: queued\n"
+                                     "assessment:\n  size: standard\n")
+    task, _ = core.load_manifest(str(issue_dir))
+    core.save_manifest(task, path)
+    lines = [ln for ln in capsys.readouterr().err.splitlines() if ln.startswith("compass:")]
+    assert len(lines) == 2, lines
+    assert all(ln.startswith("compass: my-old-issue: ") for ln in lines), lines
+
+
 def test_vr_d21_a_write_that_finds_no_old_word_leaves_no_backup(
         rows, tmp_path, capsys):
     from compass_pkg import core

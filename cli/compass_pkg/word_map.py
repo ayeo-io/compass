@@ -482,12 +482,15 @@ def _reading(manifest, path):
         return None
 
 
-def _notice(path, old, new, backup, reading=None):
+def _notice(path, old, new, backup, reading=None, issue=None):
+    # The issue folder's name leads, so a run over many issues says which
+    # issue each line is about.
+    lead = f"compass: {issue}: {path}" if issue else f"compass: {path}"
     if new is None:
         shown = f" ({reading})" if reading else ""
-        return (f"compass: {path}: '{old}' is no longer stored; the state now comes "
+        return (f"{lead}: '{old}' is no longer stored; the state now comes "
                 f"from the records{shown}. The original is in {backup}.")
-    return (f"compass: {path}: '{old}' is now '{new}'; the old word is read until "
+    return (f"{lead}: '{old}' is now '{new}'; the old word is read until "
             f"7.0.0. The original is in {backup}.")
 
 
@@ -515,12 +518,13 @@ def backup_and_notice(path, raw, rows=None, mapped=None):
         with os.fdopen(fd, "wb") as target:
             target.write(data)
     shown = set()
+    issue = os.path.basename(os.path.dirname(os.path.abspath(path))) or None
     for where, old, new in changes:
         key = (where.split(".")[0].split("[")[0], old, new)
         if key not in shown:
             shown.add(key)
             reading = _reading(mapped, path) if new is None else None
-            print(_notice(where, old, new, os.path.basename(backup), reading),
+            print(_notice(where, old, new, os.path.basename(backup), reading, issue),
                   file=sys.stderr)
     return changes
 

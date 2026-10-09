@@ -107,7 +107,7 @@ REFUSALS: dict[str, dict[str, str]] = {
     "no-acceptance-criteria": {
         "what": "edit to {target} (tool: {tool})",
         "why": "the acceptance-before-code guardrail blocks this: define: "
-               "full is set but manifest.yml has no scenarios.",
+               "thorough is set but manifest.yml has no scenarios.",
         "fix": "add the scenarios to acceptance-criteria.md and manifest.yml "
                "(compass scenario add), or run /compass:assess --reassess "
                "if this is "

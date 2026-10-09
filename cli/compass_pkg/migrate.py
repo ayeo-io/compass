@@ -12,7 +12,7 @@ import os
 
 import yaml
 
-from compass_pkg.core import CompassError, manifest_path, normalize_spine, prepare_manifest_write
+from compass_pkg.core import COMPASS_SCHEMA_VERSION, CompassError, manifest_path, normalize_spine, prepare_manifest_write
 
 # v1 filename -> v2 filename, applied inside each issue directory.
 V1_ARTIFACT_NAMES = {
@@ -275,7 +275,7 @@ def cmd_migrate(args):
 
     if not changed and not failed:
         print("compass issue migrate: nothing to do - every issue directory "
-              "already speaks schema 2.0.")
+              "already speaks schema %s." % COMPASS_SCHEMA_VERSION)
         return 0
 
     if changed:
@@ -721,7 +721,7 @@ def migrate_issue_dir(task_dir):
             with open(tmp, "w", encoding="utf-8") as fh:
                 fh.write(body)
             os.replace(tmp, manifest)
-            notes.append("manifest keys and values -> schema 2.0")
+            notes.append("manifest keys and values -> schema %s" % COMPASS_SCHEMA_VERSION)
     # Last, on purpose. The renames above put every document under its current
     # filename, and the manifest is repointed at those names - so relocation
     # moves files whose names are already settled and writes one registry

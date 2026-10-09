@@ -985,7 +985,7 @@ def test_gs_17_a_landed_issue_cannot_store_a_new_generation(project):
               for p in task_dir.rglob("*") if p.is_file() and p.name != ".generation.lock"}
     with pytest.raises(CompassError) as caught:
         _commit(root, task_dir, delivery_approach="full")
-    assert "landed" in str(caught.value) and SLUG in str(caught.value)
+    assert "closed" in str(caught.value) and SLUG in str(caught.value)
     after = {p.relative_to(task_dir).as_posix(): p.read_bytes()
              for p in task_dir.rglob("*") if p.is_file() and p.name != ".generation.lock"}
     assert after == before

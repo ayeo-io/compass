@@ -223,7 +223,7 @@ def run_configure(args):
         raise CompassError(f"issue {slug} has no stored configuration to change yet; "
                            f"run `{FIX} --issue {slug}` first")
     if status_words.is_closed(manifest):
-        raise CompassError(f"issue {slug} is landed and keeps the configuration it landed "
+        raise CompassError(f"issue {slug} is closed and keeps the configuration it closed "
                            f"under; it cannot be given a proposal")
     pending = effective.pending_proposal(task_dir, manifest)
     live = (pending is not None and pending.base_generation == held

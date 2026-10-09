@@ -399,3 +399,10 @@ def test_sh5_the_registry_and_its_doc_hold_no_fixed_settings_file():
     page = (ROOT / "docs" / "refusal-codes.md").read_text(encoding="utf-8")
     section = page.split("### `config-invalid`", 1)[1].split("###", 1)[0]
     assert "{file}" in section and ".compass/config.yml" not in section
+
+
+def test_vr_a2_the_acceptance_refusal_names_the_current_depth_word():
+    """Every manifest written now says `thorough`; the refusal must not say
+    the retired `full`."""
+    text = " ".join(render("no-acceptance-criteria", target="src/app.py", tool="Edit").split())
+    assert "define: thorough is set" in text and "define: full" not in text, text

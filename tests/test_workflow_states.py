@@ -428,8 +428,8 @@ def test_vr_c16_the_diagnosis_lists_a_failed_gate_of_a_completed_issue_only(tmp_
 
 @pytest.mark.parametrize("status,extra,ready", [
     ("landed", {}, True), ("done", {"close_reason": "completed"}, True),
-    ("done", {"close_reason": "not-planned"}, True), ("active", {}, False)])
-def test_vr_c16_a_closed_issue_is_ready_whatever_its_gates_say(status, extra, ready):
+    ("done", {"close_reason": "not-planned"}, False), ("active", {}, False)])
+def test_vr_c16_a_completed_issue_is_ready_whatever_its_gates_say(status, extra, ready):
     from compass_pkg import multiagent_check
     m = _with(status, extra, gates=[{"id": "g", "status": "pending"}])
     assert multiagent_check._ready(m) is ready
@@ -487,7 +487,9 @@ def test_vr_c16_a_landed_by_pointer_holds_between_completed_issues(
 CLOSED_FOR_CONFIG = [("landed", {}), ("abandoned", {}),
                      ("done", {"close_reason": "completed"}),
                      ("done", {"close_reason": "not-planned"})]
-OPEN_FOR_CONFIG = [(None, {}), ("active", {}), ("queued", {}), ("backlog", {})]
+# A not-planned issue never landed, so the refusal says closed, not landed.
+CLOSED_REFUSAL = "is closed and keeps the configuration it closed under"
+OPEN_FOR_CONFIG = [(None, {}),("active", {}), ("queued", {}), ("backlog", {})]
 
 
 def _stored_issue(tmp_path, monkeypatch, status, extra):
@@ -513,7 +515,7 @@ def test_vr_c16_a_closed_issue_cannot_store_a_new_generation(
     root, task_dir, commit = _stored_issue(tmp_path, monkeypatch, status, extra)
     with pytest.raises(CompassError) as caught:
         commit(root, task_dir, delivery_approach="full")
-    assert "keeps" in str(caught.value) and "landed under" in str(caught.value)
+    assert CLOSED_REFUSAL in str(caught.value) and "landed" not in str(caught.value)
 
 
 @pytest.mark.parametrize("status,extra", OPEN_FOR_CONFIG)
@@ -537,7 +539,7 @@ def test_vr_c16_preflight_refuses_a_closed_issue_before_anything_is_printed(
                                         validate=True)
     with pytest.raises(CompassError) as caught:
         generation.preflight(str(task_dir), resolution, manifest)
-    assert "landed under" in str(caught.value)
+    assert CLOSED_REFUSAL in str(caught.value) and "landed" not in str(caught.value)
 
 
 @pytest.mark.parametrize("status,extra", CLOSED_FOR_CONFIG)
@@ -549,7 +551,7 @@ def test_vr_c16_a_closed_issue_cannot_be_given_a_proposal(tmp_path, monkeypatch,
     manifest = yaml.safe_load((task_dir / "manifest.yml").read_text())
     with pytest.raises(CompassError) as caught:
         generation.write_proposal(str(task_dir), manifest, {"checks": {}})
-    assert "landed under" in str(caught.value)
+    assert CLOSED_REFUSAL in str(caught.value) and "landed" not in str(caught.value)
 
 
 @pytest.mark.parametrize("status,extra", CLOSED_FOR_CONFIG)
@@ -560,7 +562,7 @@ def test_vr_c16_a_closed_issue_cannot_migrate_its_configuration(
     root, task_dir, _commit = _stored_issue(tmp_path, monkeypatch, status, extra)
     with pytest.raises(CompassError) as caught:
         effective.migrate_generation(str(task_dir))
-    assert "landed under" in str(caught.value)
+    assert CLOSED_REFUSAL in str(caught.value) and "landed" not in str(caught.value)
 
 
 @pytest.mark.parametrize("status,extra", CLOSED_FOR_CONFIG)
@@ -571,7 +573,7 @@ def test_vr_c16_a_closed_issue_cannot_be_configured(tmp_path, monkeypatch, statu
                         "--issue", task_dir.name, "--mode", "implement=lightweight"],
                        cwd=root, capture_output=True, text=True, timeout=120)
     assert r.returncode != 0
-    assert "landed under" in r.stderr, r.stdout + r.stderr
+    assert CLOSED_REFUSAL in r.stderr and "landed" not in r.stderr, r.stdout + r.stderr
 
 
 @pytest.mark.parametrize("status,extra,needs_assessment", [

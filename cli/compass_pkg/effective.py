@@ -827,15 +827,15 @@ def migrate_generation(task_dir):
     Returns `(Committed, notes)`. The stored configuration is kept as it is and
     every check result the old generation recorded is invalidated. An issue
     with no stored generation is adopted: its live configuration becomes
-    generation 1. Raises `CompassError` for a landed issue, which keeps the
-    configuration it landed under."""
+    generation 1. Raises `CompassError` for a closed issue, which keeps the
+    configuration it closed under."""
     task_dir = os.path.abspath(os.fspath(task_dir))
     slug = os.path.basename(task_dir)
     path = manifest_path(task_dir)
     manifest = load_yaml(path)
     if status_words.is_closed(manifest):
         raise CompassError(
-            f"issue {slug} is landed and keeps the configuration it landed under, so "
+            f"issue {slug} is closed and keeps the configuration it closed under, so "
             f"`compass issue migrate --config` did not change it")
     held = generation.number(manifest)
     invalidated = {}

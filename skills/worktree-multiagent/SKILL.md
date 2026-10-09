@@ -90,7 +90,7 @@ detection, and integration:
   the path; a paste has no bound on what it drags in.
 - States the model and the budget for each dispatch, scaled to the work, and
   records every step with `compass issue subtask` - `add` at dispatch,
-  `update` for the report, the review and the cost, `package` for the review
+  `set` for the report, the review and the cost, `package` for the review
   diff. A cost over the budget becomes a finding.
 - Batches small same-shape work - five renames, three one-line guards - into
   one dispatch rather than five subtasks of setup each.

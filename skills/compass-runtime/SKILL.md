@@ -50,10 +50,13 @@ Cross-issue: `/compass:status` (one issue or a flat list), `/compass:flow`
 (multi-role decisions). `/compass:init` is optional, and it is not what
 creates the project: the entry points above run `compass init` for you.
 
-Retired command names are removed at the next major version rather than
-carried as redirects, so a retired name is an unknown command rather than a
-pointer (ADR-024). `governance/terminology.yml` names each retired word beside
-the one that replaced it, and `docs/glossary.md` says the same in prose; the
+A command spelling that a release held and 6.0.0 renamed keeps working through
+an alias until 7.0.0. The alias prints the new spelling on standard error and
+gives the new command's output and exit code (for example `approach summary`
+is now `approach show`). A spelling that no release held has no alias: its
+unknown-command message names the new spelling. `docs/upgrade-6-0-0.md` lists
+the aliases. `governance/terminology.yml` names each retired word beside the
+one that replaced it, and `docs/glossary.md` says the same in prose; the
 current verbs are whatever `compass --help` lists.
 
 **The binding decides the filename.** `compass tdd-red --scenario <id>` and
@@ -110,24 +113,31 @@ compass.yml                     The one file a person edits: settings, and the p
 ├── legacy/, migration.yml      Written by compass policy migrate: the superseded files, and the digests of them
 ├── current-task                One-line pointer to the active issue
 ├── work/
-│   └── <issue-slug>/            One directory per issue
-│       ├── delivery-approach.md The delivery-approach record (prose)
-│       ├── manifest.yml             The manifest
-│       ├── intent.md            Intake (if a product owner was involved)
-│       ├── ui-contract.md       Designer contracts (if a designer was involved)
-│       ├── acceptance-criteria.md  The shared artifact every role reads
-│       ├── requirements-review.md  (ends with the Definition of Ready gate)
-│       ├── technical-design.md  The design
-│       ├── distribution-map.md  Multiagent orchestration (full-approach scale work)
-│       ├── positioning.md       Marketer messaging (if in play)
-│       ├── launch-readiness.md  Marketer claims gate (if in play)
-│       ├── verification-report.md  (ends with the Definition of Done gate)
+│   └── <issue-slug>/            One directory per issue: its machine state
+│       ├── manifest.yml         The manifest
 │       ├── generations/<n>/     The configuration the issue runs against (written by compass approach evaluate --write)
 │       ├── evidence/            red/green records + typed gate evidence
+│       ├── .red, .spike, ...    The markers the hook reads
 │       └── devlog.md            Append-only running log
 └── flow/
     └── digest-<date>.md         Periodic cross-issue digest
+
+docs/compass/
+└── <created>-<issue-slug>/      One directory per issue: its documents
+    ├── delivery-approach.md     The delivery-approach record (prose)
+    ├── intent.md                Intake (if a product owner was involved)
+    ├── ui-contract.md           Designer contracts (if a designer was involved)
+    ├── acceptance-criteria.md   The shared artifact every role reads
+    ├── requirements-review.md   (ends with the Definition of Ready gate)
+    ├── technical-design.md      The design
+    ├── distribution-map.md      Multiagent orchestration (full-approach scale work)
+    ├── positioning.md           Marketer messaging (if in play)
+    ├── launch-readiness.md      Marketer claims gate (if in play)
+    └── verification-report.md   (ends with the Definition of Done gate)
 ```
+
+`<created>` is the manifest's `created:` date. `compass issue artifact-path
+<kind>` prints where one document is.
 
 A new project has no `governance/` directory: the shipped default preset is in
 force, and `compass.yml` holds only what differs from it. A project from 5.x

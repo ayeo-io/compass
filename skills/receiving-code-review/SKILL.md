@@ -28,7 +28,7 @@ cannot produce a technical reason, they are probably right.
 today without it. If the answer is nothing, it is a separate issue, not a
 review thread.
 
-**Read the label first** (`governance/strategies.md` `S12`). Issue, suggestion, nitpick, question or
+**Read the label first** (`${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S12`). Issue, suggestion, nitpick, question or
 praise tells you what blocks the merge before you read the argument. If it is
 missing, ask rather than guess.
 

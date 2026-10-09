@@ -74,15 +74,15 @@ a parallel spec.
    section and either cites an existing ADR, names a candidate ADR, or
    records a divergence.
 
-5. **Register the artifact.** After writing, add an entry to
-   `manifest.yml.evidence`:
-   ```yaml
-   - id: EV-ARCH-NOTES
-     type: architect-notes
-     path: .compass/work/<task>/architecture-notes.md
+5. **Register the artifact.** After writing, register the notes as typed
+   evidence:
+   ```
+   compass evidence add EV-ARCH-NOTES --type artifact \
+     --path docs/compass/<created>-<slug>/architecture-notes.md
    ```
    This makes sure the notes persist as typed evidence, not just a chat
-   message.
+   message. `artifact` is the type for a written record without a more
+   specific one.
 
 ## What you do NOT do
 

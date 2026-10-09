@@ -8,7 +8,9 @@ description: Checking a design against the guardrails and strategies in force. L
 Two kinds of rule govern Compass, and the governance check is the
 moment they are applied to a plan, spec, or change. It is not one pass/fail
 against one document - it is three distinct walks against three
-distinct files in `governance/`, and each has its own standard of proof.
+distinct sources, and each has its own standard of proof. The prose is in
+`${CLAUDE_PLUGIN_ROOT}/governance/`; the rules in force are what
+`compass policy show` prints.
 
 - `guardrails.md` - **hard, checkable, blocking.** A guardrail is cleared with
   evidence; a failed guardrail stops the work. A guardrail beats a strategy.
@@ -18,28 +20,29 @@ distinct files in `governance/`, and each has its own standard of proof.
 - `routing-policy.md` - the same split applied to the router: **routing
   guardrails** bound the delivery approach, **routing strategies** bias it.
 
-Read `governance/` fresh before you start. A guardrail or strategy can
+Read the governance fresh before you start. A guardrail or strategy can
 change between sessions, and a cached memory of an earlier read is not the
 current file.
 
-**Record which governance you read.** `governance/guardrails.yml` and
-`governance/routing-policy.yml` each declare a `version:`, and
-`tests/fixtures/governance-content-hashes.json` pins their content. Write both
-version numbers into the check, the way the technical-design template's
-policy-provenance section does. A check that names no version cannot be told
-apart from one run against wording that has since changed, and the prose
-files carry no version of their own to compare.
+**Record which governance you read.** Write the layers that
+`compass policy show` names (for example `default@6.0.0, project`) and the
+issue's `generation:` from `manifest.yml` into the check, the way the
+technical-design template's policy-provenance section does. A check that
+names no layers cannot be told apart from one run against wording that has
+since changed, and the prose files carry no version of their own to compare.
 
 ## Before you start
 
-Read the *current* `governance/` files at the project root, and note the
-`version:` each of the two YAML files declares. If `/compass:init`
-has not been run, the framework's shipped
-`governance/` defaults apply as-is - and that is a valid, complete governance
-state, not a missing prerequisite. **The shipped defaults alone are a
-complete governance state**: "the shipped default guardrails, the shipped default strategies,
-and zero project additions" is a fully legitimate thing to check against. Do
-not treat an un-extended `governance/` as a reason to stop.
+Run `compass policy show` to see the rules in force, then read the reasons in
+`${CLAUDE_PLUGIN_ROOT}/governance/guardrails.md`, `strategies.md` and
+`routing-policy.md`. A new project has no `governance/` directory of its own:
+the shipped default preset is in force, and `compass.yml` holds only what the
+project changed. A project from 5.x that copied `governance/` into its root
+reads its own copy until `compass policy migrate` converts it. The shipped
+defaults alone are a complete governance state: "the shipped default
+guardrails, the shipped default strategies, and zero project additions" is a
+fully legitimate thing to check against. Do not treat an un-extended project
+as a reason to stop.
 
 If the project has `governance/decisions/`, read it too. Each entry records a
 product decision a named person made, and never changes. A design that
@@ -153,7 +156,9 @@ Confirm the plan is consistent with `routing-policy.md`:
 
 ## How to run the check (plan stage)
 
-1. Read the current `governance/` files.
+1. Run `compass policy show` and read the prose in
+   `${CLAUDE_PLUGIN_ROOT}/governance/` (or the project's own copy in an
+   unmigrated 5.x project).
 2. Walk 1 - guardrails - against `technical-design.md` and the spec it builds on. Record
    per guardrail: **clears** (with evidence or the plan element that produces
    it) or **fails** (with the specific guardrail).
@@ -168,8 +173,10 @@ Confirm the plan is consistent with `routing-policy.md`:
    departure does **not** stop the plan; record it and, if it matters, raise it.
    That asymmetry is the whole point of the split.
 7. If a guardrail itself seems wrong, that is an amendment conversation
-   (change `guardrails.md`, bump `guardrails.yml`'s `version:` field, and say
-   why in the commit message) - never a quiet override mid-issue. If a
+   (a reviewed change to the project's `compass.yml`, checked by
+   `compass policy lint`, with the reason in the commit message; the five
+   shipped guardrails are locked, and a loosening needs a waiver that an
+   approver signs) - never a quiet override mid-issue. If a
    strategy keeps getting overridden the same way, that is a curation signal -
    fix the strategy or write down the thing overriding it.
 
@@ -187,14 +194,14 @@ Confirm the plan is consistent with `routing-policy.md`:
   honouring it is inconvenient. A guardrail beats every strategy and every
   deadline; inconvenience is not a counter-argument.
 - **Checking the stale file** - reviewing against a remembered copy of
-  `governance/` instead of reading it fresh, so the check runs against
-  wording that has since changed. Recording both `version:` values makes this
-  visible to a later reader instead of invisible.
+  the governance instead of reading it fresh, so the check runs against
+  wording that has since changed. Recording the layers and the generation
+  makes this visible to a later reader instead of invisible.
 - **Floor erosion** - reading a project guardrail floor as a target to *hit*
   rather than a minimum to *clear*. Floors only ratchet up.
 - **Silent delivery-approach assumption** - a plan that assumes a lighter
   delivery approach than the
   routing guardrails permit, without anyone noticing the policy was bypassed.
-- **Treating an un-extended `governance/` as broken** - the shipped defaults
+- **Treating an un-extended project as broken** - the shipped defaults
   alone are a complete governance state; check against whatever is
   there, defaults included.

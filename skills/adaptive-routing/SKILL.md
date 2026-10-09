@@ -14,20 +14,22 @@ You are not picking a process. You are computing one. The four dimensions are
 four independent questions, and the delivery approach is their composition - heavier where
 they read high, lighter where they read low. The composition is **biased** by
 the routing strategies and **bounded** by the routing guardrails, both in
-`governance/routing-policy.md`. The five reference shapes
+`${CLAUDE_PLUGIN_ROOT}/governance/routing-policy.md`. The five reference shapes
 (quick fix/regular/full/hotfix/spike) are shapes the composition tends to
 land near, not boxes to sort into.
 
 ## The shipped defaults are enough - you work with them
 
-`/compass:init` is optional. The framework ships `governance/` with active
-default guardrails, default strategies, and a default routing policy. If a
-project has not run init and has no project-specific additions, that is a
-valid, complete governance state - you route against the shipped defaults <!-- vocabulary-scan: allow - route is a verb here -->
+`/compass:init` is optional. The shipped default preset carries active
+default guardrails, default strategies, and a default routing policy, and the
+plugin holds their prose in `${CLAUDE_PLUGIN_ROOT}/governance/`. A project's own
+changes are entries in its `compass.yml`; `compass policy show` prints what is
+in force. If a project has no `compass.yml` and no project-specific additions,
+that is a valid, complete governance state - you route against the shipped defaults <!-- vocabulary-scan: allow - route is a verb here -->
 exactly as you would route against an extended set. <!-- vocabulary-scan: allow - route is a verb here -->
 "assess and go on day one"
 is honest precisely because the defaults are real, in-force content. Never
-treat an un-extended `governance/` as a missing prerequisite.
+treat a project without a `compass.yml` as missing a prerequisite.
 
 ## Scoring the dimensions - heuristics
 

@@ -9,7 +9,9 @@ the same split as the rest of `governance/`:
   routing rule can force a delivery approach to be at least a certain weight,
   cap how far it may scale up, or add a gate that no delivery approach may
   remove. Assess cannot bypass these, and a human cannot override them
-  per-issue - changing one means amending this file.
+  per-issue - a project changes one in its `compass.yml`
+  (`docs/configuration.md`), and a loosening needs a waiver that the project's
+  owner approves.
 - **Routing strategies** - soft. They *bias* what assess does by default -
   the delivery-approach shapes it reaches for, the way it breaks ties. A
   routing strategy is the starting point; assess (or a human) can depart from
@@ -209,15 +211,25 @@ Routing-strategy keys: `lean_toward`, `suggest_artifact`, free-text `biases`.
 
 ---
 
-## Amending this file
+## Changing routing
+
+A 6.0.0 project does not edit this file or `routing-policy.yml`, which is
+generated (see "The default preset" below). Routing changes go in the
+project's `compass.yml`; `compass policy lint` checks them and
+`compass policy show` prints the result. A project that copied these files
+under 5.x edits its copy until `compass policy migrate` converts it.
 
 - **Loosening a routing rule weakens the framework for everyone,
-  quietly.** It should be deliberate, logged, ideally reviewed - not a
-  convenience edit mid-issue. If a rule keeps being painful, fix the delivery
-  approach that makes it painful; do not remove the rule.
-- **Routing strategies are meant to be tuned.** Adjust `default_shapes` and
-  `biases` freely as the team learns how its work actually distributes. That
-  is the soft layer doing its job.
+  quietly.** It needs a waiver that the project's owner approves, and it should
+  be deliberate, logged, ideally reviewed - not a convenience edit mid-issue.
+  If a rule keeps being painful, fix the delivery approach that makes it
+  painful; do not remove the rule.
+- **Routing strategies are meant to be tuned.** `default_shapes` and `biases`
+  are rule sets in the default preset, and a project changes them through
+  `rules:` in its `compass.yml` as the team learns how its work actually
+  distributes. `compass policy lint` reports any change that loosens the
+  default, and that change then needs a waiver. That is the soft layer doing
+  its job.
 
 ## The default preset
 
@@ -299,8 +311,10 @@ types, artifacts and their depth, required skills, blocked stages, required
 artifacts, checkpoints for each autonomy value, ceilings and each active
 check's compared fields. It does not route. `policy_adapter` turns the merged
 catalogues into the dictionary `evaluate_route` takes, and the evaluator
-answers. Only the classifier reads this path, and `compass approach evaluate` still
-reads `routing-policy.yml`.
+answers. `compass approach evaluate` reads the same resolved configuration: an
+issue's stored generation, or else the `compass.yml` over the shipped default,
+and `--verbose` prints which. Only an issue with no `generation:` in a project
+with no `compass.yml` reads `routing-policy.yml`, the generated view.
 
 The evaluator took four additions, and a call that uses none of them answers
 as before:

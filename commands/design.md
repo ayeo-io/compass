@@ -35,9 +35,11 @@ what `/compass:init` offers separately.
 - Load `bdd-specification` - the contract is written in the same
   Given/When/Then form as the rest of the spec, so it composes cleanly when
   it reaches the define stage.
-- Read `governance/` - any accessibility or UX floor is either a project
-  guardrail (`guardrails.md`) or a strategy (`strategies.md`); the contract
-  must honour the guardrails and respect the strategies.
+- Run `compass policy show` for the rules in force, and read the reasons in
+  `${CLAUDE_PLUGIN_ROOT}/governance/guardrails.md` and `strategies.md` - any
+  accessibility or UX floor is either a project guardrail (an entry in
+  `compass.yml`) or a strategy; the contract must honour the guardrails and
+  respect the strategies.
 - Read `intent.md` if one exists - the interaction serves the outcome.
 
 ## Procedure
@@ -48,7 +50,7 @@ what `/compass:init` offers separately.
    loading state, the error state, and the accessibility expectations - not
    just the happy path.
 2. **Honour the guardrails.** Every contract scenario must be consistent
-   with the guardrails in `governance/guardrails.md` (e.g. a project
+   with the guardrails in force (`compass policy show`; e.g. a project
    accessibility floor). A contract that cannot meet a guardrail is a
    tension to name now, not later.
 3. **Write `ui-contract.md`** into `docs/compass/<created>-<issue-slug>/`,
@@ -67,5 +69,5 @@ copies them without rewriting.
 
 `ui-contract.md` exists; every interaction is a Given/When/Then scenario
 including the non-happy states; it is consistent with the guardrails in
-`governance/`. Next: `/compass:assess` to compute the delivery approach,
+force. Next: `/compass:assess` to compute the delivery approach,
 then `/compass:define` will absorb the contract.

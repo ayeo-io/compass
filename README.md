@@ -244,12 +244,12 @@ only in the cases below, and each one starts only when you ask for it.
 - **Fetches** a git parent when the project's `extends:` names one
   (`github:<owner>/<repo>@<ref>#<sha>`). It runs `git` for the one pinned
   commit, reads its `compass.yml` as data, and caches it under
-  `.compass/cache/parents/`. Only `compass policy lint`, `policy show`,
-  `policy diff` (when a reference is a git parent), `policy update`,
-  `preset test` and `compass approach evaluate --write` fetch, and only a
-  commit that is not cached yet. `policy update` always asks the remote which
-  commit its ref names, unless `COMPASS_OFFLINE=1` is set. `compass check`
-  never fetches. `--offline` or `COMPASS_OFFLINE=1` stops the others
+  `.compass/cache/parents/`. Only `compass policy lint`, `compass policy show`,
+  `compass policy diff` (when a reference is a git parent), `compass policy
+  update`, `compass preset test` and `compass approach evaluate --write` fetch,
+  and only a commit that is not cached yet; never `compass check`. `compass
+  policy update` always asks the remote which commit its ref names, unless
+  `COMPASS_OFFLINE=1` is set. `--offline` or `COMPASS_OFFLINE=1` stops the others
   fetching. `COMPASS_PARENT_REMOTE_BASE`
   names a mirror in place of `https://github.com`. Git runs with your own git
   configuration, so your credential helper runs

@@ -1146,12 +1146,18 @@ RETIRED_PROSE = {
     "the old depth words listed, chosen between or ranged over":
         r"`?\b(?:full|light)\b`?, `?\b(?:light|full)\b`?,? (?:or )?`?(?:collapsed|skipped)\b"
         r"|\b(?:stage|mode|depth|runs?|can be|may be|is)\s+`?(?:full|light)\b`? or `?(?:light|full)\b"
-        r"|`?\b(?:light|full)\b`?[- ]to[- ]`?(?:full|light)\b`?"
-        r"(?=\s+(?:pass|review|requirements|mode|depth|weight|stage)\b|\s*$)",
+        r"|`?\b(?:light|full)\b`?-to-`?(?:full|light)\b`?"
+        r"(?=\s+(?:pass|review|requirements|mode|depth|weight|stage)\b|\s*$)"
+        r"|`?\b(?:light|full)\b`? to `?(?:full|light)\b`?"
+        r"(?=\s+(?:pass|review|requirements|mode|depth|weight|stage)\b)",
+    # `full` is also the name of a delivery approach, which 6.0.0 keeps, so the
+    # rank patterns need the word "rank". A review depth needs italics or
+    # backticks, or the words "never absent": "can be light on detail" is English.
     "an old depth word as the rank of a mode or the depth of a review":
-        r"\b(?:ranked|rank) (?:below |equal to |above )?`(?:full|light)`|\b(?:below|equal to) `full`"
+        r"\b(?:ranked|rank) (?:below |equal to |above )?`(?:full|light)`"
         r"|`(?:collapsed|skipped)`,? (?:and|or) `light`|`light`,? (?:and|or) `(?:collapsed|skipped)`"
-        r"|\b(?:may|can) be \*?`?light\b(?!weight)|\blight\*?,? never \*?absent\b",
+        r"|\b(?:may|can) be (?:\*|`)light\b(?!weight)|\blight\*?,? never \*?absent\b"
+        r"|\bcan be light on the (?:regular|quick)\b",
     "a depth word printed as the value of a mismatch":
         r"[\"']?\b(?:expected|actual)[\"']?\s*:\s*[\"'`]?(?:full|light)\b",
     "the run stage named by its old word":
@@ -1280,6 +1286,12 @@ def test_vr_g9_a_planted_retired_use_is_reported(tmp_path, line):
     "A rank below `thorough` is lifted.",
     "The approach is `full` and the page is light on detail.",
     "Strategies have a valid *light* state: the shipped default.",
+    # `full` names a delivery approach too, and these are not depth words.
+    "The regular approach ranks below `full`.",
+    "A hotfix is equal to `full` in its verify stage.",
+    "The review may be light during the trial.",
+    "The notes can be light on detail.",
+    "The team went from light to full",
 ])
 def test_vr_g9_an_allowed_use_is_not_reported(tmp_path, line):
     (tmp_path / "docs").mkdir()

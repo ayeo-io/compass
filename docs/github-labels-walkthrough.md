@@ -50,11 +50,14 @@ Each command that changes the issue's records brings the labels up to date:
 |---|---|
 | `compass approach evaluate --write` | The assessment's declared labels and the status label for the state. |
 | `compass issue subtask add subtask-1 --brief ...` | `status:in-progress` in place of `status:ready`. |
-| `compass gate pass verify.correctness --evidence ...` | `status:in-review`, once a gate has left `pending`. |
+| `compass tdd-red --scenario <scenario id> -- <test command>`, or `compass evidence add EV-1 --type test-run --path evidence/green.json` | `status:in-progress`, once a test is on record. |
+| `compass gate pass verify.correctness --evidence EV-1` | `status:in-review`, once a gate has left `pending`. |
 | `compass issue status set backlog` | `status:backlog`. |
-| `compass issue status remove` | The state the records show again. |
-| `compass issue status set done --close-reason completed` | `status:done` and `close:completed`. |
+| `compass issue status remove` | The state the records show again, here `status:in-review`. |
+| `compass issue status set done --close-reason not-planned` | `status:done` and `close:not-planned`. |
 | `compass issue status remove` on a closed issue | The `status:done` and `close:` labels are gone. |
+
+Closing as `completed` is refused until every gate has passed, so the table closes as `not-planned`. Once every gate has passed, `compass issue status set done --close-reason completed` writes `status:done` and `close:completed`.
 
 Labels that you or your team added, such as `bug` or `customer-x`, stay. Compass removes only the labels it owns.
 

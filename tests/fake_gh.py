@@ -42,10 +42,13 @@ def main(argv):
     if argv[:2] == ["label", "list"]:
         print(json.dumps([{"name": name} for name in state["repo_labels"]]))
         return 0
+    # GitHub treats label names case-insensitively, so this does too.
     if argv[:2] == ["label", "create"]:
         name = argv[2]
-        if name not in state["repo_labels"]:
-            state["repo_labels"].append(name)
+        if name.casefold() in {n.casefold() for n in state["repo_labels"]}:
+            sys.stderr.write(f'label with name "{name}" already exists\n')
+            return 1
+        state["repo_labels"].append(name)
         state_path.write_text(json.dumps(state), encoding="utf-8")
         return 0
     if argv[:2] in (["issue", "view"], ["issue", "edit"]):
@@ -55,11 +58,10 @@ def main(argv):
             print(json.dumps({"labels": [{"name": name} for name in labels]}))
             return 0
         for name in _flag_values(argv, "--add-label"):
-            if name not in labels:
+            if name.casefold() not in {n.casefold() for n in labels}:
                 labels.append(name)
         for name in _flag_values(argv, "--remove-label"):
-            if name in labels:
-                labels.remove(name)
+            labels[:] = [n for n in labels if n.casefold() != name.casefold()]
         state_path.write_text(json.dumps(state), encoding="utf-8")
         return 0
     sys.stderr.write("fake gh: unknown command: " + " ".join(argv) + "\n")

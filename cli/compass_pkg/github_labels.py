@@ -64,6 +64,13 @@ TRIGGERS = {
     "cmd_gate_pass": None,
     "cmd_issue_artifact": None,
     "cmd_subtask_add": None,
+    "cmd_subtask_replan": None,
+    # A test on record moves an issue from ready to in-progress.
+    "cmd_tdd_red": None,
+    "cmd_tdd_green": None,
+    "cmd_evidence_add": None,
+    "cmd_acceptance_record": None,
+    "cmd_scenario_descope": None,
 }
 
 _OWNER = r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})"
@@ -75,7 +82,9 @@ _REPO = re.compile(rf"{_OWNER}/{_NAME}")
 #: What a label name may hold. No comma, quote, shell character or leading dash,
 #: so a name is safe as one argument to `gh` and as one item of a list.
 _LABEL = re.compile(r"[A-Za-z0-9][A-Za-z0-9 ._:/-]{0,49}")
-_TIMEOUT = 60
+#: Seconds one `gh` call may take. `compass ci` lints every linked issue, so a
+#: hung `gh` must not hold it for long.
+_TIMEOUT = 15
 
 
 class SyncError(Exception):
@@ -198,7 +207,14 @@ def difference(current, wanted, owned):
     """`(add, remove)`: what to write so the issue carries every wanted label
     and no owned label that is not wanted. Labels Compass does not own are
     never in either list."""
-    return sorted(wanted - current), sorted((owned - wanted) & current)
+    # GitHub compares label names without regard to case. The spelling that is
+    # sent is Compass's own: the declared name, or the fixed owned name.
+    have = {name.casefold() for name in current}
+    want = {name.casefold() for name in wanted}
+    add = sorted(name for name in wanted if name.casefold() not in have)
+    remove = sorted(name for name in owned
+                    if name.casefold() in have and name.casefold() not in want)
+    return add, remove
 
 
 # --- gh ----------------------------------------------------------------------------
@@ -252,8 +268,9 @@ def write_labels(repo, number, add, remove):
     if add:
         existing = _names(_gh(["label", "list", "--repo", repo, "--limit", "1000",
                                "--json", "name"]))
+        known = {name.casefold() for name in existing}
         for name in add:
-            if name not in existing:
+            if name.casefold() not in known:
                 _gh(["label", "create", name, "--repo", repo, "--color", _colour(name),
                      "--description", DESCRIPTION])
     edit = ["issue", "edit", str(number), "--repo", repo]
@@ -388,11 +405,16 @@ def lint_notes(task, task_dir):
     """The lines `compass issue lint` prints about the labels. Empty when the
     issue is not linked, no switch is on, or GitHub matches. The lint keeps its
     exit code: a note is a report, not a failure."""
+    domain_on, status_on = switches(_project_root(task_dir))
+    if not (domain_on or status_on):
+        return []
     try:
         target = link_of(task)
-        domain_on, status_on = switches(_project_root(task_dir))
-        if target is None or not (domain_on or status_on):
-            return []
+    except SyncError as exc:
+        return [f"github: {exc}; run `compass issue link` to correct it."]
+    if target is None:
+        return []
+    try:
         problem = read_record(task_dir).get("error")
         if problem:
             return [f"github: out of sync - the last sync failed: {problem}. "

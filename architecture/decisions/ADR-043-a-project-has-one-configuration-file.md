@@ -64,6 +64,8 @@ The key stays project-file-only, so a published preset cannot authorise its own 
 
 **Amendment, 7 October 2026: `governance_drift` is a settings key.** The list above left out `governance_drift`, which `docs/configuration.md` documents and `cli/compass_pkg/governance.py` reads. `SETTINGS_KEYS` now holds it, so a project layer accepts it in `compass.yml` and the loader splits it off as a setting. It is the only documented or read setting that was missing. The settings-conflict set does not change: `OLD_FILE_EXTRA_KEYS` now holds only `mode`.
 
+**Amendment, 9 October 2026: `github_labels` is a settings key.** The list above predates `github_labels`, which holds two booleans, `domain` and `status`, both off by default. They switch on the write of an issue's labels to its linked GitHub issue (`docs/github-labels.md`). `SETTINGS_KEYS` now holds it, so a project layer accepts it in `compass.yml` and the loader splits it off as a setting. A parent cannot carry it, as for every settings key, so a published preset cannot switch on a write to GitHub. The settings-conflict set gains the key, and `OLD_FILE_EXTRA_KEYS` is unchanged.
+
 ## References
 
 - ADR-006: backward compatibility is non-negotiable.

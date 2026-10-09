@@ -428,9 +428,17 @@ def test_gls_14_gh_gets_argv_and_label_names_are_checked(repo, gh):
     for forbidden in ("shell=True", "os.system", "os.popen", "GH_TOKEN", "GITHUB_TOKEN",
                       "hosts.yml", "auth token"):
         assert forbidden not in source, forbidden
+    # The outward write is named where a reader looks for what Compass sends.
+    security = (ROOT / "docs" / "security.md").read_text()
+    assert "github_labels" in security and "gh" in security
+    context = (ROOT / "architecture" / "system-context.md").read_text()
+    assert "GitHub" in context and "github_labels" in context
 
 
 def test_gls_15_settings_are_declared_and_documented(repo, gh):
+    adr = (ROOT / "architecture" / "decisions"
+           / "ADR-043-a-project-has-one-configuration-file.md").read_text()
+    assert "`github_labels`" in adr
     sys.path.insert(0, str(ROOT / "cli"))
     try:
         import compass_pkg
@@ -467,6 +475,8 @@ def test_gls_16_glossary_and_docs_describe_the_sync():
     means = " ".join(entry["means"].split())
     assert "github_labels" in means and "status:" in means and "close:" in means
     assert "synced 1:1" not in means
+    assert "never reads a GitHub label back into the issue file" in means
+    assert "never read back" not in means
     glossary = " ".join((ROOT / "docs" / "glossary.md").read_text().split())
     assert means in glossary
     readme = (ROOT / "docs" / "README.md").read_text()
@@ -481,3 +491,118 @@ def test_gls_16_glossary_and_docs_describe_the_sync():
                    "status:in-progress"):
         assert needle in text, needle
     assert "github-labels-walkthrough.md" in readme
+
+
+def test_gls_16_walkthrough_commands_run(repo, gh):
+    """The sequence in docs/github-labels-walkthrough.md, run against the fake gh."""
+    walkthrough = (ROOT / "docs" / "github-labels-walkthrough.md").read_text()
+    make_issue(repo, gh)
+    settings(repo)
+    assert "compass issue link --github acme/widgets#42" in walkthrough
+    assert link(repo, gh).returncode == 0
+    assert gh.labels() == {"infra", "ci", "status:ready"}
+
+    def step(*args, expect):
+        result = run(repo, gh, *args, "--issue", SLUG)
+        assert result.returncode == 0, (args, result.stdout + result.stderr)
+        assert status_labels(gh.labels()) == expect, args
+
+    step("approach", "evaluate", "--write", expect={"status:ready"})
+    step("issue", "subtask", "add", "subtask-1", "--brief", "README.md", "--model", "m",
+         "--budget", "0", expect={"status:in-progress"})
+    evidence = repo / ".compass" / "work" / SLUG / "evidence"
+    evidence.mkdir(exist_ok=True)
+    (evidence / "green.json").write_text('{"command": "true", "exit_code": 0}')
+    step("evidence", "add", "EV-W", "--type", "test-run", "--path", "evidence/green.json",
+         expect={"status:in-progress"})
+    step("gate", "pass", "verify.correctness", "--evidence", "EV-W",
+         expect={"status:in-review"})
+    step("issue", "status", "set", "backlog", expect={"status:backlog"})
+    step("issue", "status", "remove", expect={"status:in-review"})
+    closed = run(repo, gh, "issue", "status", "set", "done", "--close-reason", "completed",
+                 "--issue", SLUG)
+    assert closed.returncode != 0, "completed is refused while a gate has not passed"
+    assert "status:done" not in gh.labels()
+    step("issue", "status", "set", "done", "--close-reason", "not-planned",
+         expect={"status:done"})
+    assert "close:not-planned" in gh.labels()
+    step("issue", "status", "remove", expect={"status:in-review"})
+    assert "close:not-planned" not in gh.labels()
+    for needle in ("not-planned", "evidence add", "gate pass"):
+        assert needle in walkthrough, needle
+
+
+def test_gls_9_tdd_red_syncs_the_in_progress_label(repo, gh):
+    ready_project(repo, gh)
+    assert status_labels(gh.labels()) == {"status:ready"}
+    red = run(repo, gh, "tdd-red", "--scenario", "TRC-001", "--issue", SLUG,
+              "--", "sh", "-c", "echo '1 failed'; exit 1")
+    assert red.returncode == 0, red.stdout + red.stderr
+    assert status_labels(gh.labels()) == {"status:in-progress"}
+    quiet = run(repo, gh, "issue", "lint", "--issue", SLUG)
+    assert "out of sync" not in quiet.stdout, quiet.stdout
+
+
+def test_gls_9_every_command_that_writes_a_state_input_is_a_trigger():
+    sys.path.insert(0, str(ROOT / "cli"))
+    try:
+        import compass_pkg
+        from compass_pkg import github_labels
+        names = set(github_labels.TRIGGERS)
+    finally:
+        sys.path.remove(str(ROOT / "cli"))
+    owed = {"cmd_tdd_red", "cmd_tdd_green", "cmd_evidence_add", "cmd_acceptance_record",
+            "cmd_scenario_descope", "cmd_subtask_replan"}
+    assert owed <= names, sorted(owed - names)
+    assert "cmd_quick_fix_start" not in names
+
+
+def test_gls_8_label_names_compare_case_insensitively(repo, gh):
+    make_issue(repo, gh)
+    assert link(repo, gh).returncode == 0
+    settings(repo)
+    gh.set_labels(["Infra", "Status:In-Review", "bug"], repo_labels=["Infra", "CI", "bug"])
+    result = sync(repo, gh)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert gh.labels() == {"Infra", "bug", "ci", "status:ready"}
+    created = [c[2] for c in gh.calls() if c[:2] == ["label", "create"]]
+    assert created == ["status:ready"], created
+    again = len(gh.writes())
+    assert sync(repo, gh).returncode == 0
+    assert len(gh.writes()) == again
+
+
+def test_gls_12_a_malformed_link_is_named_not_blamed_on_github(repo, gh):
+    make_issue(repo, gh)
+    assert link(repo, gh).returncode == 0
+    edit_manifest(repo, lambda m: m.update(github={"repo": "acme/-w", "number": 1}))
+    # The exit code depends on whether the optional jsonschema package is
+    # installed, so only the note is checked.
+    off = run(repo, gh, "issue", "lint", "--issue", SLUG)
+    assert "  github:" not in off.stdout, off.stdout
+    settings(repo)
+    on = run(repo, gh, "issue", "lint", "--issue", SLUG)
+    assert "  github: the manifest's `github` field" in on.stdout, on.stdout
+    assert "on GitHub" not in on.stdout
+    assert gh.calls() == []
+
+
+def test_gls_1_the_schema_pattern_refuses_what_the_code_refuses():
+    import re
+    schema = json.loads((ROOT / "schemas" / "manifest.schema.json").read_text())
+    pattern = schema["properties"]["github"]["properties"]["repo"]["pattern"]
+    for bad in ("acme/-w", "acme/..", "acme/.", "-x/widgets", "acme/", "acme"):
+        assert not re.search(pattern, bad), bad
+    for good in ("acme/widgets", "acme/.github", "a/b.c_d-e"):
+        assert re.search(pattern, good), good
+
+
+def test_gls_11_gh_timeout_is_fifteen_seconds():
+    sys.path.insert(0, str(ROOT / "cli"))
+    try:
+        import compass_pkg
+        from compass_pkg import github_labels
+        assert github_labels._TIMEOUT == 15
+    finally:
+        sys.path.remove(str(ROOT / "cli"))
+    assert "15 seconds" in (ROOT / "docs" / "github-labels.md").read_text()

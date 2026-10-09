@@ -85,6 +85,19 @@ delete `.compass/cache/parents/`.
 Review
 [git-parents.md](https://github.com/ayeo-io/compass/blob/main/docs/git-parents.md).
 
+## Labels written to GitHub
+
+When a project sets `github_labels` in `compass.yml`, Compass writes an issue's
+labels to its linked GitHub issue by running `gh`. Both switches are off by
+default, and with both off no command calls GitHub. A published preset cannot
+switch them on, because a parent may not carry a settings key.
+
+Compass runs `gh` with an argument list and no shell, with your own login. It
+stores and reads no token. It checks the repository and issue number against a
+strict pattern before each call, and sends only label names and the issue
+number. A call that takes longer than 15 seconds is abandoned. Review
+[github-labels.md](https://github.com/ayeo-io/compass/blob/main/docs/github-labels.md).
+
 ## Dependencies
 
 The CLI bundles a pinned copy of PyYAML under `cli/vendor/yaml/`. It adds that

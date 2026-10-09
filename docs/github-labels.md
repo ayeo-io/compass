@@ -74,7 +74,9 @@ After one of these commands succeeds on a linked issue, with a switch on:
 - `compass issue link`
 - `compass ship-commit`
 - `compass quick-fix finish`
-- `compass scenario add`, `compass gate pass`, `compass issue artifact set` and `compass issue subtask add`, which change the records that decide the state
+- the commands that change the records that decide the state: `compass scenario add` and `descope`, `compass tdd-red`, `compass tdd-green`, `compass evidence add`, `compass acceptance record`, `compass gate pass`, `compass issue artifact set`, `compass issue subtask add` and `replan`
+
+A label name is compared without regard to case, as GitHub does. Compass sends its own spelling: the declared name, or the fixed owned name.
 
 `compass issue labels sync` does the same on demand, for any issue. Use it after the first link, after turning a switch on, or to put back a label someone removed.
 
@@ -92,7 +94,7 @@ The lint keeps its exit code, so an unreachable GitHub does not fail `compass ci
 
 ## When gh fails
 
-A sync never fails the command that triggered it.
+A sync never fails the command that triggered it. Each `gh` call is abandoned after 15 seconds, so a hung `gh` holds a command, or one linked issue in `compass ci`, for 15 seconds at most.
 
 - If `gh` is not installed, is not logged in, or cannot reach GitHub, the command still succeeds.
 - Compass prints one line on standard error that names the problem, and writes the failure to `github-sync.yml` in the issue's folder. `compass issue lint` then reports the issue as out of sync.

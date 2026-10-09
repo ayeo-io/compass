@@ -255,8 +255,10 @@ def resolve_ref(ref, root, cwd=None, fetch=False):
     if ref.startswith("git:"):
         return _git_ref(ref, root)
     if ref.startswith("generation:"):
-        raise CompassError(f"'{ref}': the generation store has not landed, so a stored "
-                           f"generation cannot be compared yet")
+        slug = (ref.split(":") + ["", ""])[1] or "<slug>"
+        raise CompassError(f"'{ref}': policy diff does not yet compare against a stored "
+                           f"generation. Use `compass policy show --issue {slug}` to see "
+                           f"what the issue resolves to now.")
     path = os.path.join(os.fspath(cwd or os.getcwd()), ref) if ref else ""
     if ref and os.path.isfile(path):
         return _load_file(path, f"file:{_shown(path, root)}", "file")
@@ -533,9 +535,9 @@ def _unreadable(issues):
 
 def open_report(a, b, issues):
     """The open issues a move from A to B would change: each is run over A
-    and over B with its own `config:` layer. Until the generation store
-    exists, A stands for what an issue runs against and B for what it meets
-    at its next reassess."""
+    and over B with its own `config:` layer. The diff does not read a stored
+    generation, so A stands for what an issue runs against and B for what it
+    meets at its next reassess."""
     flying = sorted((i for i in issues if _is_open(i) and not i.unreadable),
                     key=lambda i: i.slug)
     listed, expiring = [], []

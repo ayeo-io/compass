@@ -240,7 +240,7 @@ them.
       "file": "example.yml",
       "name": "Small contained work also gets the clarity review",
       "status": "fail",
-      "mismatches": [{"field": "stages.implement", "expected": "light", "actual": "full"}],
+      "mismatches": [{"field": "stages.implement", "expected": "lightweight", "actual": "thorough"}],
       "message": null,
       "group": "meets/banking"
     }

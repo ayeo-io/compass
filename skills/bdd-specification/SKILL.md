@@ -160,7 +160,7 @@ Walk it for:
 
 Record each ambiguity, its resolution, and who resolved it in
 `requirements-review.md`. The requirements review:
-- can be *light* on the regular approach;
+- can be *lightweight* on the regular approach;
 - can be *collapsed* on quick fix only because the one scenario was
   certified unambiguous;
 - is *skipped* on spike because the unknown is the point;

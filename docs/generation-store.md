@@ -311,7 +311,7 @@ and not a `PASS`.
 `status` is `pass`, `fail`, `advisory` or `nothing-to-check`. A run fails
 only when `failed` is above zero.
 
-## Not built yet
+## Limits
 
 - `policy show --issue` still resolves the live files and does not read
   the generation.

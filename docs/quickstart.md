@@ -187,7 +187,7 @@ your acceptance suite and seed your TDD cycle.
 /compass:refine
 ```
 
-On the regular approach, the requirements review is a light-to-full pass - never skipped. The `spec-author`
+On the regular approach, the requirements review is a lightweight-to-thorough pass - never skipped. The `spec-author`
 QAs the spec against itself (is "the limit" defined? per-client or global? what
 about unauthenticated traffic?) and against governance. Each ambiguity is
 resolved into `acceptance-criteria.md` or recorded in `requirements-review.md` with an
@@ -220,9 +220,11 @@ at a time, driving the cycle through the CLI:
    `compass tdd-red -- <test cmd>`: the CLI runs the test, *asserts it actually
    fails*, writes the red record, and only then writes the
    `.red` marker. If the test passes, `tdd-red` refuses - there is no red to
-   record. The marker only ever means a real failure was observed.
+   record. The CLI writes the marker only after a real failure, but a file
+   can be created by hand, so the hook also reads the red record and refuses
+   the edit when it is missing.
 2. **Green.** Now edit the production code. The `pre-tool.sh` hook sees the
-   `.red` marker and allows the edit. Write the smallest correct change, then
+   `.red` marker and the red record, and allows the edit. Write the smallest correct change, then
    run `compass tdd-green -- <test cmd>`: the CLI asserts the test now passes,
    writes the green record, and clears the `.red` marker.
 

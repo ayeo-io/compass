@@ -3415,3 +3415,13 @@
 - `VR-C31` Given a quick-fix issue with no stored status, refine collapsed and its acceptance criteria registered, when its state is read, then it is ready.
 - `VR-C32` Given an issue with no stored status whose records show only define finished and whose manifest names implement as its current stage, when its state is read, then it is in-progress.
 - `VR-C33` Given an issue with no stored status on an approach whose refine is not collapsed, with acceptance criteria registered and no requirements review, when its state is read, then it is backlog.
+
+### six-zero-release-clean-up (completed 2026-10-09)
+
+- `TRC-D1` The dashboard shows the derived state of an in-flight issue
+- `TRC-D2` policy show states what the view is and what check reads
+- `TRC-D3` issue migrate help names schema 3.0
+- `TRC-D4` The prose old-word guard fails on a retired word in a reader document
+- `TRC-D5` The release documents state the network commands, the upgrade effects and the v5 refusals as they are
+- `TRC-D6` No shipped text treats a landed feature as still to come
+- `TRC-D7` The tests and guards catch the forms the review named

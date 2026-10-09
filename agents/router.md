@@ -94,7 +94,7 @@ points you tune, not a menu:
   the approach composes heavier. Watch for an approach lighter than the
   assessment warrants.
 - **Regular** - the default working shape. The requirements review may be
-  light, never absent.
+  lightweight, never absent.
 - **Full approach** - forced by `critical` risk, `large`/`product` size, or a
   domain floor. Write a distribution map even if a cap makes it solo.
 - **Hotfix** - selected by *urgency*, not size. Still score all four

@@ -103,7 +103,7 @@ If a non-engineering role is in play, they review here.
   Refine collapses *because* of that. If it is not unambiguous, say so and
   send the issue back to the assess stage - quick fix was mis-composed.
 - **regular** - a small feature set: happy path, realistic edges, the failure
-  modes that matter. The requirements review is a light-to-full pass, never absent.
+  modes that matter. The requirements review is a lightweight-to-thorough pass, never absent.
 - **full** - full BDD discovery. Group scenarios by independence; that
   grouping seeds the distribution map the planner will build. Full refine pass
   with an explicit ambiguity ledger.

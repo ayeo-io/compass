@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import os
 
+from compass_pkg import lifecycle, status_words
 from compass_pkg.check_results import NOTHING_TO_CHECK
 from compass_pkg.core import (FOUND, CompassError, _registered_path, canonical_shape, docs_dir,
                              load_yaml, manifest_path, resolve_artifact,
@@ -61,6 +62,22 @@ def _spine(task_dir):
 def _artifacts(task):
     arts = task.get("artifacts")
     return [a for a in arts if isinstance(a, dict)] if isinstance(arts, list) else []
+
+
+def _state_text(task, task_dir):
+    """The state of the issue as `compass flow` reports it. An in-flight issue
+    stores no status, so the state is read from its records; a done issue adds
+    its close reason, and a blocked flag is named."""
+    if not task:
+        return "?"
+    state = lifecycle.state_of(task, task_dir)
+    reason = status_words.close_reason(task)
+    if state == "done" and reason:
+        state = "%s (%s)" % (state, reason)
+    flag = lifecycle.blocked_flag(task, task_dir)
+    if flag:
+        state += " (blocked: %s)" % (flag.get("reason") or "no reason recorded")
+    return state
 
 
 def _decision_line(task, pack):
@@ -208,7 +225,7 @@ def render_dashboard(task_dir):
     gates = [g for g in task.get("gates") or [] if isinstance(g, dict)]
     passed = sum(1 for g in gates if g.get("status") == "pass")
     out += ["**Status:** %s · **Approach:** %s · gates %d/%d" % (
-        task.get("status", "?"), " · ".join(bits), passed, len(gates)), ""]
+        _state_text(task, task_dir), " · ".join(bits), passed, len(gates)), ""]
 
     out += ["## Decision required", "", decision, ""]
     if waiting is not None and waiting.get("path"):

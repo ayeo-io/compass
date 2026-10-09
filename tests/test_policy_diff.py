@@ -213,7 +213,9 @@ def test_pd_1_an_unknown_reference_names_itself(ref, tmp_path):
     message = str(caught.value)
     assert (ref in message) or ref == ""
     if ref.startswith("generation:"):
-        assert "generation store" in message
+        assert "does not yet compare against a stored generation" in message
+        assert "compass policy show --issue demo" in message
+        assert "has not landed" not in message
 
 
 def test_pd_1_a_file_that_does_not_parse_or_merge_names_its_reference(tmp_path):
@@ -773,7 +775,7 @@ def test_pd_7_identical_configurations_exit_0_even_with_exit_code(tmp_path):
 def test_pd_7_an_unreadable_or_unresolvable_input_exits_2(tmp_path, tmp_path_factory):
     root = _project(tmp_path)
     cases = [(("nonsense",), "nonsense"), (("default@6", "generation:demo:1"),
-                                           "generation store"),
+                                           "stored generation"),
              (("--exit-code", "missing.yml"), "missing.yml")]
     for argv, said in cases:
         code, out, err = _diff_cli(root, *argv)

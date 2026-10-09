@@ -959,11 +959,12 @@ def effective_text(effective):
     names = [l["name"] if l["version"] is None else f"{l['name']}@{l['version']}"
              for l in effective.layers]
     lines = [f"compass policy show: {scope} - layers: {', '.join(names)}",
-             "  This is what the configuration resolves to. compass check and the "
-             "evaluator still read the legacy governance files until the generation "
-             "store lands."]
+             "  This is what the configuration resolves to now. compass check and the "
+             "evaluator judge an issue that has a stored generation by that "
+             "generation, which can differ from this view."]
     if effective.issue:
-        lines.append("  Resolved from the live project file; no generation is stored yet.")
+        lines.append("  Resolved from the live project file and the issue's own layer, "
+                     "not from its stored generation.")
     width = min(max((len(r.path) for r in effective.rows), default=0), 56)
     shown = [_show(r.value) for r in effective.rows]
     value_width = max((len(s) for s in shown), default=0)

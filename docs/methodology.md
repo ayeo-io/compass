@@ -69,7 +69,7 @@ Compass has eight methodological stages, one command per stage:
 
 The vocabulary remains stable. The weight changes:
 
-- a stage can be full, light, collapsed or skipped;
+- a stage can be thorough, lightweight, collapsed or skipped;
 - a collapsed stage still records the decision it would otherwise contain;
 - a skipped stage needs an explicit de-scope reason; and
 - assessment always runs for delivery or exploration work that will change
@@ -98,7 +98,9 @@ Compass separates non-negotiable outcomes from context-sensitive practices.
 
 ### Guardrails
 
-Guardrails are few, checkable and blocking:
+Guardrails are few and checkable. `compass check` fails on a breach under
+enforced adoption, and the [safety contract](safety-contract.md) lists what it
+cannot see:
 
 1. Delivery code is tested before it ships. Stated exactly as
    `governance/guardrails.yml` states it, because a reader who finds two

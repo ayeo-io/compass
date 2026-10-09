@@ -105,7 +105,7 @@ def register(issue_subparsers, issue_arg):
     """Add `compass issue migrate` to the `issue` verb."""
     parser = issue_subparsers.add_parser(
         "migrate",
-        help="migrate a 1.x issue tree to schema 2.0 (dry run unless --apply); "
+        help="migrate a 1.x issue tree to schema 3.0 (dry run unless --apply); "
              "with --config, pin one issue's configuration to the installed versions")
     parser.add_argument("root", nargs="?",
                         help="the work root to examine (default: .compass/work)")

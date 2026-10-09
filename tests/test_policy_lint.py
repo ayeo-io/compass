@@ -914,6 +914,23 @@ def test_pl_10_a_project_with_no_compass_yml_shows_the_shipped_default(tmp_path)
     assert code == 0 and "default@6.0.0" in out
 
 
+def test_pl_10_the_notes_say_what_reads_the_stored_generation(tmp_path):
+    """The generation store has landed, so the view must not say that check
+    and the evaluator wait for it (`TRC-D2`)."""
+    root = _project(tmp_path, {"schema": 1})
+    work = root / ".compass" / "work" / "demo"
+    work.mkdir(parents=True)
+    (work / "manifest.yml").write_text("schema_version: '3.0'\nissue: demo\n", encoding="utf-8")
+    for argv in (("policy", "show"), ("policy", "show", "--issue", "demo")):
+        code, out, _ = _run(root, *argv)
+        assert code == 0, out
+        text = " ".join(out.split())
+        assert "generation store lands" not in text, text
+        assert "no generation is stored yet" not in text, text
+        assert "by that generation, which can differ" in text, text
+    assert "not from its stored generation" in text, text
+
+
 def test_pl_10_issue_resolves_the_manifests_config_over_the_project_file(tmp_path):
     root = _project(tmp_path, {"schema": 1})
     work = root / ".compass" / "work" / "demo"
@@ -1280,12 +1297,12 @@ def test_pl_8_a_project_with_no_compass_yml_lints_an_issues_config_over_the_defa
     assert [l["name"] for l in document["layers"]] == ["default", "issue"]
 
 
-def test_pl_10_the_text_says_what_the_view_is_and_what_still_reads_the_old_files(tmp_path):
+def test_pl_10_the_text_says_what_the_view_is_and_what_reads_the_stored_generation(tmp_path):
     code, out, _ = _run(_project(tmp_path, {"schema": 1}), "policy", "show")
     second = out.splitlines()[1]
     assert "resolves to" in second
     assert "compass check" in second and "evaluator" in second
-    assert "generation store" in second
+    assert "stored generation" in second
 
 
 def test_pl_12_the_doc_names_every_code_the_modules_name():

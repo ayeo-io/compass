@@ -74,9 +74,9 @@ Before:
 
 After:
 
-> Ran the requirements review as a light pass, since this was feature-sized work.
+> Ran the requirements review as a lightweight pass, since this was feature-sized work.
 
-What changed: says why the pass was light in the same sentence as what ran, instead of a bare command name with its parameters trailing in parentheses like a log line.
+What changed: says why the pass was lightweight in the same sentence as what ran, instead of a bare command name with its parameters trailing in parentheses like a log line.
 
 ### Pair 5 - a field label does the talking
 

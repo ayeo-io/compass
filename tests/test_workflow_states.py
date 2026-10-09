@@ -1107,7 +1107,8 @@ def test_vr_c16_the_policy_diff_examines_every_issue_that_is_not_closed():
 import re
 import subprocess
 
-PROSE_ROOTS = ("commands", "skills", "agents", "docs", "governance")
+PROSE_ROOTS = ("commands", "skills", "agents", "docs", "governance", "approaches",
+               "templates")
 PROSE_FILES = ("README.md", "CLAUDE.md", "compass-contract.md")
 PROSE_SUFFIXES = (".md", ".yml", ".yaml", ".txt")
 PROSE_SKIPPED = ("docs/compass/", "docs/system-spec", "docs/upgrade",
@@ -1134,6 +1135,35 @@ RETIRED_PROSE = {
     "a depth word as the value of a named stage":
         r"\b(?:assess|define|refine|plan|breakdown|implement|verify|ship)\s*:\s*`?(?:full|light)\b"
         r"|\bstages\.\w+\.mode\s+`?(?:full|light)\b|--mode[ =]\w+=(?:full|light)\b",
+    # Prose lists the depth words in a sentence ("full, light, collapsed or
+    # skipped"), ranges over them ("a light-to-full pass"), or prints them as
+    # the value of a mismatch. None of these names a field, so the patterns
+    # above could not see them.
+    # Each pattern takes an optional backtick, like the ones above, and needs
+    # a word that makes it a stage mode or a stage: "full, light text" and "the
+    # light-to-full spectrum" are English about colour, and "a CI build stage"
+    # is a build. A line that needs an exception takes the marker.
+    "the old depth words listed, chosen between or ranged over":
+        r"`?\b(?:full|light)\b`?, `?\b(?:light|full)\b`?,? (?:or )?`?(?:collapsed|skipped)\b"
+        r"|\b(?:stage|mode|depth|runs?|can be|may be|is)\s+`?(?:full|light)\b`? or `?(?:light|full)\b"
+        r"|`?\b(?:light|full)\b`?-to-`?(?:full|light)\b`?"
+        r"(?=\s+(?:pass|review|requirements|mode|depth|weight|stage)\b|\s*$)"
+        r"|`?\b(?:light|full)\b`? to `?(?:full|light)\b`?"
+        r"(?=\s+(?:pass|review|requirements|mode|depth|weight|stage)\b)",
+    # `full` is also the name of a delivery approach, which 6.0.0 keeps, so the
+    # rank patterns need the word "rank". A review depth needs italics or
+    # backticks, or the words "never absent": "can be light on detail" is English.
+    "an old depth word as the rank of a mode or the depth of a review":
+        r"\b(?:ranked|rank) (?:below |equal to |above )?`(?:full|light)`"
+        r"|`(?:collapsed|skipped)`,? (?:and|or) `light`|`light`,? (?:and|or) `(?:collapsed|skipped)`"
+        r"|\b(?:may|can) be (?:\*|`)light\b(?!weight)|\blight\*?,? never \*?absent\b"
+        r"|\bcan be light on the (?:regular|quick)\b",
+    "a depth word printed as the value of a mismatch":
+        r"[\"']?\b(?:expected|actual)[\"']?\s*:\s*[\"'`]?(?:full|light)\b",
+    "the run stage named by its old word":
+        r"\bthe `?build`? stage\b|`build` stage\b"
+        r"|`?\bbuild\b`? (?:or|and) `?verify\b`? stages?\b"
+        r"|`?\bverify\b`? (?:or|and) `?build\b`? stages?\b",
     "a verb under the name it had before it was renamed":
         r"\bpolicy effective\b|\bsubtask update\b|\bissue set-status\b|\bapproach summary\b"
         r"|\bpolicy review-rules\b",
@@ -1197,6 +1227,30 @@ def test_vr_g9_shipped_prose_uses_no_retired_word_in_its_retired_meaning():
     "Two calls: `--mode refine=full` then `--ceiling subtask_ceiling=2`.",
     "See `policy effective --issue` for the live files.",
     "Run `subtask update --status done` at the end.",
+    # The three forms that reached a reader document unseen.
+    "- a stage can be full, light, collapsed or skipped;",
+    "The requirements review is a light-to-full pass.",
+    "compass run   run the build or verify stage of one issue unattended",
+    '"mismatches": [{"field": "stages.implement", "expected": "light", "actual": "full"}],',
+    # The neighbouring forms: backticks, a choice, a range with spaces, the
+    # stage under its old name, and a mismatch in YAML or single quotes.
+    "- a stage can be `full`, `light`, collapsed or skipped;",
+    "A stage can be full or light.",
+    "A stage runs `light` or `full`.",
+    "The requirements review is a light to full pass.",
+    "The requirements review is a `light`-to-`full` pass.",
+    "The slow stage is the `build` stage.",
+    "Teams run the build and verify stages in turn.",
+    "Teams run the `build` or `verify` stage.",
+    "    expected: light",
+    "{'expected': 'light', 'actual': 'full'}",
+    '{"expected":"light"}',
+    "A lift raises a mode ranked below `full` and leaves the rest alone.",
+    "One ranked equal to `full` or above is left alone.",
+    "The fixed set `collapsed`, `skipped` and `light`.",
+    "The requirements review may be *light*, never *absent*.",
+    "  light, never absent.",
+    "- can be *light* on the regular approach;",
 ])
 def test_vr_g9_a_planted_retired_use_is_reported(tmp_path, line):
     (tmp_path / "docs").mkdir()
@@ -1215,6 +1269,29 @@ def test_vr_g9_a_planted_retired_use_is_reported(tmp_path, line):
     "A stage `phase` is the older word for a stage.",
     "status: backlog",
     "`status: landed` is read as done  <!-- vocabulary-scan: allow - names the old word -->",
+    "- a stage can be thorough, lightweight, collapsed or skipped;",
+    "The requirements review is a lightweight-to-thorough pass.",
+    "compass run   run the implement or verify stage of one issue unattended",
+    "Compass fails the build if the page goes stale, and the light path is short.",
+    '"mismatches": [{"field": "stages.implement", "expected": "lightweight", "actual": "thorough"}],',
+    # Ordinary English that shares a word with a retired use.
+    "Your CI build stage must run the suite.",
+    "Agents can build or verify a claim.",
+    "The page was full, light text on dark.",
+    "The light-to-full spectrum of colour.",
+    "The container image goes through a multi-stage Docker build stage first.",
+    "A full, lightweight install takes a minute.",
+    "- a stage can be thorough or lightweight;",
+    "The requirements review may be *lightweight*, never *absent*.",
+    "A rank below `thorough` is lifted.",
+    "The approach is `full` and the page is light on detail.",
+    "Strategies have a valid *light* state: the shipped default.",
+    # `full` names a delivery approach too, and these are not depth words.
+    "The regular approach ranks below `full`.",
+    "A hotfix is equal to `full` in its verify stage.",
+    "The review may be light during the trial.",
+    "The notes can be light on detail.",
+    "The team went from light to full",
 ])
 def test_vr_g9_an_allowed_use_is_not_reported(tmp_path, line):
     (tmp_path / "docs").mkdir()

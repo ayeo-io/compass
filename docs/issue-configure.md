@@ -446,8 +446,7 @@ refuses, `--commit` tries the reading with `--reset-config`, and adopts the
 folder if that reproduces it. If neither reading does, it refuses with the
 first reading's message.
 
-## Not built yet
+## Limits
 
-- `compass policy diff`, which will call the preview's comparison for two references.
-- `compass issue migrate --config` and the pending-change line in `compass check`.
-- Check-result records (`result:<check>`) are not invalidated by a configuration change.
+- A configuration change does not invalidate check-result records (`result:<check>`). Only a change in the check implementation versions does, through `compass issue migrate --config`.
+- `compass policy diff` does not compare against a stored generation ([policy-diff.md](policy-diff.md)).

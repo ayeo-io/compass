@@ -60,8 +60,8 @@ Writing the artifacts is its own craft: see
 
 ## What Compass changes
 
-Most spec-driven development systems choose one workflow and apply it to
-everything. Compass adapts the depth without abandoning discipline.
+Compass chooses the process for each change from its assessment of risk,
+familiarity, size and goal. It adapts the depth without abandoning discipline.
 
 | Work | Typical Compass response |
 |---|---|

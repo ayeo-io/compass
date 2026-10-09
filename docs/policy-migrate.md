@@ -59,7 +59,7 @@ What happens to each old file:
 
 | File | After `--apply` | Why |
 |---|---|---|
-| `governance/routing-policy.yml`, `governance/guardrails.yml` | Kept in place, and copied | `compass check` and the evaluator still read them, so removing them would change behaviour the overlay does not yet carry |
+| `governance/routing-policy.yml`, `governance/guardrails.yml` | Kept in place, and copied | They stay as the record of what the project ran. Once `compass.yml` exists it judges the project's issues |
 | `.compass/config.yml` | Copied, then removed | A `compass.yml` that Compass reads, with settings left in the old file, is refused as a settings conflict |
 
 The kept copies and the overlay are two sources that can differ. The digest of
@@ -428,4 +428,4 @@ A refusal prints no document: the reason is on stderr and the exit is 2.
 - It does not turn a copied `waived:` entry into a `LEGACY` waiver. The removal gets an `UNAPPROVED` stub like any other.
 - It does not remove the governance copies.
 - It does not run the six compatibility contracts. The classifier is the proof it gives.
-- It does not call `compass policy diff`. When that command lands, the behaviour section can show its per-assessment list for the copy and the migrated project. The dry run classifies directly with `classify.classify`.
+- It does not call `compass policy diff`. The dry run classifies directly with `classify.classify`.

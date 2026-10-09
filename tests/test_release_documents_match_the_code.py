@@ -116,3 +116,33 @@ def test_the_reader_documents_make_no_claim_the_code_contradicts():
     quickstart = _flat(_text("docs", "quickstart.md"))
     assert "The marker only ever means a real failure was observed" not in quickstart
     assert "refuses the edit" in quickstart and "red record" in quickstart
+    assert "Most spec-driven development systems" not in readme
+    assert "Compass chooses the process for each change from its assessment" in readme
+
+
+SHIPPED_TEXT = ("cli/compass_pkg", "hooks", "docs", "README.md", "agents", "skills",
+                "commands", "governance", "schemas")
+NOT_SCANNED = ("docs/compass/", "docs/system-spec", "governance/decisions/",
+               "docs/launch-article")
+# Sentences that treated a feature as still to come after it was built: the
+# generation store, `policy diff` and `issue migrate --config`.
+LANDED_FEATURES_AS_FUTURE = re.compile(
+    r"generation store has not landed|until the generation store|"
+    r"generation store (lands|exists)|store lands|"
+    r"when that command lands|## Not built yet", re.IGNORECASE)
+
+
+def test_no_shipped_text_treats_a_landed_feature_as_still_to_come():
+    """Scenario `TRC-D6`: a sentence that waits for a built feature is wrong."""
+    hits = []
+    for top in SHIPPED_TEXT:
+        base = ROOT / top
+        files = [base] if base.is_file() else sorted(p for p in base.rglob("*") if p.is_file())
+        for path in files:
+            rel = path.relative_to(ROOT).as_posix()
+            if rel.startswith(NOT_SCANNED) or path.suffix not in (".py", ".md", ".yml", ".sh", ".json"):
+                continue
+            for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                if LANDED_FEATURES_AS_FUTURE.search(line):
+                    hits.append(f"{rel}:{number}: {line.strip()[:90]}")
+    assert hits == [], "\n".join(hits)

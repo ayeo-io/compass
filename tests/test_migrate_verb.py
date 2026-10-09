@@ -126,6 +126,15 @@ def test_the_reports_name_the_schema_the_manifest_is_written_in(tmp_path):
     assert "schema 3.0" in again.stdout and "schema 2.0" not in again.stdout, again.stdout
 
 
+def test_the_migrate_help_names_the_schema_it_writes(tmp_path):
+    """The help promised schema 2.0 after the apply began to write 3.0 (`TRC-D3`)."""
+    listing = " ".join(_run(tmp_path, "issue", "--help").stdout.split())
+    assert "to schema 3.0" in listing, listing
+    for argv in (("issue", "--help"), ("issue", "migrate", "--help")):
+        text = " ".join(_run(tmp_path, *argv).stdout.split())
+        assert "schema 2.0" not in text, text
+
+
 def test_mapping_lives_in_the_exempt_data_file():
     """`TRC-4`: the artifact map is data in cli/migrate-map.yml, and the
     migration module consumes it - the enforced CLI never spells a v1

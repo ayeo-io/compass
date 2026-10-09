@@ -72,9 +72,11 @@ registry. It refuses a fetched commit that is not the pinned sha, and a
 The fetch runs `git` with an argument list and no shell, only over `https`, with
 hooks off and no prompts. It runs with your own git configuration, so your
 credential helper runs and your `url.*.insteadOf` rules apply. Only `compass
-policy lint`, `compass policy show`, `compass policy diff` (when a
-reference is a git parent) and `compass approach evaluate --write` fetch,
+policy lint`, `policy show`, `policy diff` (when a reference is a git parent),
+`policy update`, `preset test` and `compass approach evaluate --write` fetch,
 including a reassess that commits a `compass issue configure` proposal.
+`policy update` always asks the remote which commit its ref names, unless
+`COMPASS_OFFLINE=1` is set.
 `compass policy diff` prints a line on stderr before it fetches. `compass check`
 and `compass issue configure` never fetch. Compass
 checks each cached parent against a digest it recorded at fetch, and `compass

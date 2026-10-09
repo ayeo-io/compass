@@ -439,3 +439,59 @@ def test_c7_artifact_status_can_be_moved_from_the_cli(tmp_path):
         "an omission was recorded and the page still reports none")
     assert "no product owner" in page, (
         "the omission is listed without the reason it was omitted")
+
+
+# ---------------------------------------------------------------------------
+# The status line shows the state read from the records (TRC-D1)
+# ---------------------------------------------------------------------------
+
+def _status_line(task_dir: Path) -> str:
+    from compass_pkg.dashboard import render_dashboard
+    page = render_dashboard(str(task_dir))
+    return next(l for l in page.splitlines() if l.startswith("**Status:**"))
+
+
+def _store(task_dir: Path, drop=(), **keys: Any) -> None:
+    """Rewrite the manifest the way a 6.0 CLI leaves an in-flight issue: no
+    stored status, whatever else the test sets."""
+    path = task_dir / "manifest.yml"
+    manifest = yaml.safe_load(path.read_text())
+    for key in drop:
+        manifest.pop(key, None)
+    manifest.update(keys)
+    path.write_text(yaml.safe_dump(manifest, sort_keys=False))
+
+
+DESIGN = [{"id": "ART-TD", "kind": "technical-design", "path": "technical-design.md",
+           "status": "draft", "reason": "regular approach"}]
+
+
+def test_the_status_line_shows_the_derived_state(tmp_path):
+    """An in-flight issue stores no status, so the page reads the state from
+    its records instead of printing a question mark (`TRC-D1`)."""
+    task_dir = _issue(tmp_path, artifacts=DESIGN)
+    _store(task_dir, drop=("status",))
+    line = _status_line(task_dir)
+    assert "in-progress" in line, line
+    assert "?" not in line, line
+
+
+def test_the_status_line_shows_the_close_reason_of_a_done_issue(tmp_path):
+    task_dir = _issue(tmp_path, artifacts=DESIGN)
+    _store(task_dir, status="done", close_reason="not-planned")
+    line = _status_line(task_dir)
+    assert "done (not-planned)" in line, line
+
+
+def test_the_status_line_says_when_an_issue_is_blocked(tmp_path):
+    task_dir = _issue(tmp_path, artifacts=DESIGN)
+    _store(task_dir, drop=("status",),
+           blocked={"reason": "waiting for the schema decision", "at": "2026-10-09"})
+    line = _status_line(task_dir)
+    assert "in-progress" in line and "blocked" in line, line
+
+
+def test_a_held_issue_shows_backlog(tmp_path):
+    task_dir = _issue(tmp_path, artifacts=DESIGN)
+    _store(task_dir, status="backlog")
+    assert "backlog" in _status_line(task_dir)

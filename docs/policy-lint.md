@@ -234,9 +234,10 @@ bytes. `tests/test_policy_lint.py` pins each key list.
 
 ## `compass policy show`
 
-`compass policy show` prints what the configuration resolves to. `compass
-check` and the evaluator still read the legacy governance files until the
-generation store lands, so this view is not yet what they use. It prints every
+`compass policy show` prints what the configuration resolves to now. `compass
+check` and the evaluator judge an issue that has a stored generation by that
+generation, so this view can differ from what they use
+([generation-store.md](generation-store.md)). It prints every
 resolved field of the project, one line each: the path, the value, the source layer, the operation and the
 waiver. A stage list that a capability switch has not turned on is marked
 `(inactive: entry-exit-evaluation off)`.
@@ -297,7 +298,7 @@ A project with no `compass.yml` shows the shipped default alone.
 | Key | Type | Meaning |
 |---|---|---|
 | `schema` | integer | The version of this shape. It is 1 |
-| `scope` | object | `kind` (`project` or `issue`), `issue` (the slug or null) and `resolved` (always `live` until the generation store exists) |
+| `scope` | object | `kind` (`project` or `issue`), `issue` (the slug or null) and `resolved` (always `live`: the view never reads a stored generation) |
 | `layers` | list | Each layer, root first, with `name`, `kind`, `version` and `digest` |
 | `fields` | list | Every resolved field, in the order above |
 
@@ -327,7 +328,7 @@ input gives the same bytes. `tests/test_policy_lint.py` pins each key list.
 
 ## What this page does not cover
 
-- The per-issue generation store and `--live`: the effective view reads the live project file until the store exists.
+- The per-issue generation store: the effective view reads the live project file, never a stored generation. [generation-store.md](generation-store.md) says what reads a generation.
 - `compass policy diff`, which has its own page: [policy-diff.md](policy-diff.md).
 - `compass policy migrate`, which has its own page: [policy-migrate.md](policy-migrate.md).
 - `compass policy update`, which has its own page: [policy-update.md](policy-update.md).

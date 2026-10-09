@@ -1134,6 +1134,15 @@ RETIRED_PROSE = {
     "a depth word as the value of a named stage":
         r"\b(?:assess|define|refine|plan|breakdown|implement|verify|ship)\s*:\s*`?(?:full|light)\b"
         r"|\bstages\.\w+\.mode\s+`?(?:full|light)\b|--mode[ =]\w+=(?:full|light)\b",
+    # Prose lists the depth words in a sentence ("full, light, collapsed or
+    # skipped"), ranges over them ("a light-to-full pass"), or prints them as
+    # the value of a mismatch. None of these names a field, so the patterns
+    # above could not see them.
+    "the old depth words listed or ranged over":
+        r"\bfull, light\b|\blight, full\b|\blight-to-full\b|\bfull-to-light\b"
+        r"|\"(?:expected|actual)\": \"(?:full|light)\"",
+    "the run stage named by its old word":
+        r"\bbuild or verify\b|\bbuild stage\b",
     "a verb under the name it had before it was renamed":
         r"\bpolicy effective\b|\bsubtask update\b|\bissue set-status\b|\bapproach summary\b"
         r"|\bpolicy review-rules\b",
@@ -1197,6 +1206,11 @@ def test_vr_g9_shipped_prose_uses_no_retired_word_in_its_retired_meaning():
     "Two calls: `--mode refine=full` then `--ceiling subtask_ceiling=2`.",
     "See `policy effective --issue` for the live files.",
     "Run `subtask update --status done` at the end.",
+    # The three forms that reached a reader document unseen.
+    "- a stage can be full, light, collapsed or skipped;",
+    "The requirements review is a light-to-full pass.",
+    "compass run   run the build or verify stage of one issue unattended",
+    '"mismatches": [{"field": "stages.implement", "expected": "light", "actual": "full"}],',
 ])
 def test_vr_g9_a_planted_retired_use_is_reported(tmp_path, line):
     (tmp_path / "docs").mkdir()
@@ -1215,6 +1229,11 @@ def test_vr_g9_a_planted_retired_use_is_reported(tmp_path, line):
     "A stage `phase` is the older word for a stage.",
     "status: backlog",
     "`status: landed` is read as done  <!-- vocabulary-scan: allow - names the old word -->",
+    "- a stage can be thorough, lightweight, collapsed or skipped;",
+    "The requirements review is a lightweight-to-thorough pass.",
+    "compass run   run the implement or verify stage of one issue unattended",
+    "Compass fails the build if the page goes stale, and the light path is short.",
+    '"mismatches": [{"field": "stages.implement", "expected": "lightweight", "actual": "thorough"}],',
 ])
 def test_vr_g9_an_allowed_use_is_not_reported(tmp_path, line):
     (tmp_path / "docs").mkdir()

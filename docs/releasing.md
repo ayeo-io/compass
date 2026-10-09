@@ -116,7 +116,7 @@ copied governance and `.compass/config.yml`) are read in their old words until
 | Person | Sees |
 |---|---|
 | A new user | `compass init` creates `.compass/state.yml` and `.compass/work/`. `/compass:init`, if run, writes `compass.yml` and no `governance/` copy. |
-| A 5.x user who does nothing | Nothing changes. The CLI reads `.compass/config.yml` and the copied `governance/` files as 5.6.0 did. |
+| A 5.x user who does nothing | Settings and copied governance are read as 5.6.0 read them: the CLI reads `.compass/config.yml` and the copied `governance/` files. Issue manifests are rewritten to schema 3.0 on first save, and a manifest that holds old words is first copied to `manifest.yml.v5.bak`. Output uses the new words, and `compass flow --json` uses the new keys. |
 | A 5.x user who migrates | `compass policy migrate` shows a dry run, and `--apply` moves the settings to `compass.yml`, the state to `.compass/state.yml`, and the old files to `.compass/legacy/`. |
 | This repository | A settings-only `compass.yml`. It keeps its generated governance files and the legacy lint. |
 
@@ -125,7 +125,8 @@ copied governance and `.compass/config.yml`) are read in their old words until
 - A project with a `compass.yml` sees `approach evaluate` name the intent
   document `intent`, the launch document `launch-readiness` and the last stage
   `ship`, where 5.6.0 printed `intent.md`, `launch-readiness.md` and `land`. A
-  project without a `compass.yml` keeps the 5.6.0 output exactly.
+  project without a `compass.yml` keeps the 5.6.0 document names; its approach
+  and depth words follow the 6.0.0 renames in `docs/upgrade-6-0-0.md`.
 - A `compass.yml` that fails `compass policy lint` makes
   `compass approach evaluate --write` refuse to commit. Without `--write` the
   command still works.

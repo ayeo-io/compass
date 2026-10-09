@@ -1,0 +1,118 @@
+"""Release and reader documents state what the code does (`TRC-D5`).
+
+Each test pins a sentence that was false when it was written: the commands
+that fetch a git parent, what a 5.x user sees, what a project without a
+`compass.yml` keeps, which v5 commands refuse a schema 3.0 manifest, and four
+claims in the README, the methodology and the quickstart. A test that reads a
+document cannot show the document is true, so the fetch list also has a source
+scan: a module that starts to fetch a git parent fails it until the documents
+name the command.
+"""
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+
+# Every command that can reach the network through a git parent, as a reader
+# types it after `compass`.
+FETCHING = ("policy lint", "policy show", "policy diff", "policy update",
+            "preset test", "approach evaluate --write")
+
+# The modules that pass a fetch decision to the code that resolves a git
+# parent, and the commands each one serves.
+FETCH_MODULES = {
+    "effective.py": "approach evaluate --write (the generation it commits)",
+    "issue_config_cmd.py": "approach evaluate --write (the reassess plan)",
+    "policy_cmd.py": "policy lint, policy show, policy diff, preset test",
+    "policy_update.py": "policy update",
+}
+
+
+def _text(*parts: str) -> str:
+    return (ROOT.joinpath(*parts)).read_text(encoding="utf-8")
+
+
+def _flat(text: str) -> str:
+    """The text with backticks removed and every run of white space one space."""
+    return " ".join(text.replace("`", "").split())
+
+
+def _paragraph(text: str, start: str) -> str:
+    """The paragraph or list item that holds `start`."""
+    flat = text.replace("\r", "")
+    head = flat.index(start)
+    begin = flat.rfind("\n\n", 0, head)
+    end = flat.find("\n\n", head)
+    item = flat.rfind("\n- ", 0, head)
+    begin = max(begin, item)
+    return _flat(flat[begin:end if end != -1 else len(flat)])
+
+
+def test_the_source_scan_finds_the_modules_that_fetch_a_git_parent():
+    """A new module that fetches fails here, so the lists below are revisited."""
+    found = set()
+    for path in sorted((ROOT / "cli" / "compass_pkg").glob("*.py")):
+        source = path.read_text(encoding="utf-8")
+        if re.search(r"fetch=not parents\.offline\(\)|fetch=True|fetch=_may_fetch\(|"
+                     r"_may_fetch\(args\)", source):
+            found.add(path.name)
+    assert found == set(FETCH_MODULES), (
+        f"a module now fetches a git parent, or one stopped: {sorted(found)}. "
+        "Name the command in README.md, docs/security.md and docs/git-parents.md.")
+
+
+def test_the_fetch_list_names_every_command_that_fetches():
+    readme = _paragraph(_text("README.md"), "Only `compass")
+    security = _paragraph(_text("docs", "security.md"), "Only `compass")
+    for name, text in (("README.md", readme), ("docs/security.md", security)):
+        for command in FETCHING:
+            assert command in text, f"{name} does not list `compass {command}`: {text}"
+        assert "compass check" in text, name
+    table = _text("docs", "git-parents.md").split("## When Compass fetches", 1)[1]
+    table = _flat(table.split("\n\n", 2)[1])
+    for command in ("policy lint", "policy update", "policy diff", "preset test",
+                    "approach evaluate --write"):
+        assert command in table, f"docs/git-parents.md does not list {command}"
+
+
+def test_the_fetch_lists_say_that_policy_update_always_asks_the_remote():
+    for name, text in (("README.md", _text("README.md")),
+                       ("docs/security.md", _text("docs", "security.md"))):
+        flat = _flat(text)
+        assert ("policy update always asks the remote which commit its ref names, "
+                "unless COMPASS_OFFLINE=1 is set") in flat, name
+
+
+def test_the_release_notes_say_what_happens_to_a_5x_user_who_does_nothing():
+    notes = _text("docs", "releasing.md")
+    row = next(l for l in notes.splitlines() if l.startswith("| A 5.x user who does nothing"))
+    assert "Nothing changes" not in row, row
+    for needed in ("schema 3.0", "manifest.yml.v5.bak", "compass flow --json"):
+        assert needed in _flat(row), (needed, row)
+    assert "keeps the 5.6.0 output exactly" not in notes
+    assert "keeps the 5.6.0 document names" in _flat(notes)
+
+
+def test_the_upgrade_page_names_the_v5_commands_that_refuse_a_3_0_manifest():
+    page = _flat(_text("docs", "upgrade-6-0-0.md"))
+    assert "A v5 command refuses a 3.0 file" not in page
+    sentence = page.split("A 6.0.0 command reads schemas 1, 2 and 3.", 1)[1].split(" The first save of a manifest", 1)[0]
+    for needed in ("v5 check", "issue lint", "ci", "approach evaluate",
+                   "refuse", "next", "flow", "read", "do not run a v5"):
+        assert needed.lower() in sentence.lower(), (needed, sentence)
+    assert "every checkout and plugin" in sentence
+
+
+def test_the_reader_documents_make_no_claim_the_code_contradicts():
+    readme = _flat(_text("README.md"))
+    assert "another compatible agent runtime" not in readme
+    assert "are hard, checkable and blocking" not in readme
+    assert "under enforced adoption" in readme and "cannot see" in readme
+    methodology = _flat(_text("docs", "methodology.md"))
+    assert "Guardrails are few, checkable and blocking" not in methodology
+    assert "under enforced adoption" in methodology
+    quickstart = _flat(_text("docs", "quickstart.md"))
+    assert "The marker only ever means a real failure was observed" not in quickstart
+    assert "refuses the edit" in quickstart and "red record" in quickstart

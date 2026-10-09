@@ -2,7 +2,7 @@
 
 ## Decided by
 
-The architect agent (compass:architect), on the maintainer's behalf while they were away on 8 October 2026. The maintainer can reverse it.
+The architect agent (compass:architect), on the maintainer's behalf, on 8 October 2026, while applying the workflow-state decision the maintainer agreed that day. The maintainer can reverse it.
 
 ## Date
 

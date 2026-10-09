@@ -191,8 +191,8 @@ def test_vr_g2_the_alias_check_reports_a_section_that_says_too_little():
 TERMINOLOGY = ROOT / "governance" / "terminology.yml"
 GLOSSARY = ROOT / "docs" / "glossary.md"
 # The route-noun guard covers only these three directories. Widening it to
-# docs/ and governance/ is a larger sweep, owed as a follow-up on the issue
-# `vocabulary-and-cli-renames`.
+# docs/, governance/ and the other scanned surfaces is a larger sweep, owed
+# before 7.0.0 and tracked in the repository's issue #524.
 SCAN_ROOTS = ("commands", "skills", "agents")
 
 

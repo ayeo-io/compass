@@ -51,5 +51,5 @@ A spelling that no release held has no alias, and its unknown-command message na
 
 - Update every checkout and every installed plugin together.
 - Do not run a v5 `ship-commit` on a 6.0.0 tree. It does not read the new words and drops the issue from the living spec.
-- To roll back, run the reverse map in the rollback plan of the issue `vocabulary-and-cli-renames`. Restoring a `manifest.yml.v5.bak` instead discards everything recorded after the first rewrite.
-- The reverse map loses `duplicate_of`, the difference between `not-planned` and `duplicate`, the `blocked` flag, and the fact that a parked issue had no reason (it returns as a plain queued hold).
+- 6.0.0 offers no supported rollback. A problem is fixed forward in a 6.0.x release.
+- The first rewrite of each manifest keeps the original as `manifest.yml.v5.bak`. Restoring it discards everything recorded after that rewrite.

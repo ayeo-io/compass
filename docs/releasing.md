@@ -55,9 +55,11 @@ a released script that reopened one keeps working.
 
 **Upgrade and rollback.** Update every checkout and every installed plugin
 together. Do not run a v5 `ship-commit` on a 6.0.0 tree: it does not read the
-new words and drops the issue from the living spec. To roll back, run the
-reverse map in the rollback plan; restoring a `manifest.yml.v5.bak` instead
-discards everything recorded after the first rewrite. The reverse map loses
+new words and drops the issue from the living spec. 6.0.0 offers no
+supported rollback: a problem is fixed forward in a 6.0.x release. The first
+rewrite of each manifest keeps the original as `manifest.yml.v5.bak`;
+restoring it discards everything recorded after that rewrite. The internal
+reverse map, used only to rehearse a rollback before the tag, loses
 `duplicate_of`, the difference between `not-planned` and `duplicate`, the
 `blocked` flag, and the fact that a parked issue had no reason (it returns as
 a plain queued hold). The configuration files of a project (`compass.yml`,

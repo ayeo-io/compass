@@ -152,3 +152,14 @@ def test_PM_19_the_member_scan_fails_on_a_planted_name(tmp_path):
     found = _gate_findings(planted, hashes)
     assert [name for name, _, _ in found] == ["guardrails/dirty.yml"]
     assert "zorblax" not in found[0][2].lower(), "the gate printed the name"
+
+
+def test_the_release_procedure_regenerates_the_table_after_tagging():
+    """6.0.0 was tagged without this step, so the table lacked v6.0.0 and
+    test_PM_12 failed wherever tags are fetched (CI checks out with them).
+    The tag step of the release procedure must name the generator."""
+    procedure = (ROOT / "docs" / "releasing.md").read_text(encoding="utf-8")
+    start = procedure.index("**Tag and publish.**")
+    tag_step = procedure[start:procedure.index("\n### ", start)]
+    assert "scripts/generate-shipped-releases.py" in tag_step
+    assert "--check" in tag_step

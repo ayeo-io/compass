@@ -1,10 +1,9 @@
 """The board file: its default path in the system temp folder and the safe write.
 
-Scenario ids: `TRC-E4` (one stable file per checkout), `TRC-E10` (a link or
-another user's file is refused), `TRC-E14` (the default file is private) and
-`TRC-E15` (the page goes through a new, exclusively created temporary file).
-The module under test is imported inside each test so a missing module fails
-the test and not the collection.
+The scenarios: one stable file per checkout, a link or another user's file
+refused, a private default file, and a page written through a new, exclusively
+created temporary file. The module under test is imported inside each test
+so a missing module fails the test and not the collection.
 """
 from __future__ import annotations
 
@@ -50,7 +49,6 @@ def _project(tmp_path, name):
     return root
 
 
-# ---- TRC-E4 -------------------------------------------------------------
 
 def test_trc_e4_default_board_file(tmp_path, temp_folder):
     bf = _board_file()
@@ -75,7 +73,6 @@ def test_trc_e4_default_board_file(tmp_path, temp_folder):
     assert bf.default_board_path(str(link)) == paths["one"]
 
 
-# ---- TRC-E10 ------------------------------------------------------------
 
 def test_trc_e10_a_link_is_refused(tmp_path):
     _need_posix()
@@ -179,7 +176,6 @@ def test_trc_e10_check_target_guards_every_target(tmp_path, monkeypatch):
     assert "does not exist" in str(err.value)
 
 
-# ---- TRC-E14 ------------------------------------------------------------
 
 def test_trc_e14_the_default_file_is_private(tmp_path):
     _need_posix()
@@ -210,7 +206,6 @@ def test_trc_e14_a_refresh_narrows_a_wider_old_file(tmp_path):
     assert stat.S_IMODE(os.stat(board).st_mode) == 0o600
 
 
-# ---- TRC-E15 ------------------------------------------------------------
 
 def test_trc_e15_the_page_goes_through_a_new_temporary_file(tmp_path, monkeypatch):
     bf = _board_file()

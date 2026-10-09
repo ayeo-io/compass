@@ -50,14 +50,31 @@ def _paragraph(text: str, start: str) -> str:
     return _flat(flat[begin:end if end != -1 else len(flat)])
 
 
+# A call that hands a fetch decision on: any `fetch=` keyword except the two
+# that cannot start a fetch (`fetch=False`, and `fetch=fetch`, which passes on
+# a decision the caller made and is counted where it is made).
+FETCH_CALL = re.compile(r"\bfetch=(?!False\b|fetch\b)|_may_fetch\(args\)")
+
+
+def fetching_modules(sources):
+    """The names of the sources that pass a fetch decision to the resolver."""
+    return {name for name, text in sources.items() if FETCH_CALL.search(text)}
+
+
+def test_the_scan_reports_a_new_module_whatever_it_passes_as_the_decision():
+    for planted in ("parents.resolve_chain(root, 'x', fetch=True)",
+                    "parents.resolve_chain(root, 'x', fetch=not offline)",
+                    "parents.resolve_chain(root, 'x', fetch=args.online)"):
+        sources = {"effective.py": "x = 1", "new_module.py": planted}
+        assert fetching_modules(sources) == {"new_module.py"}, planted
+    assert fetching_modules({"a.py": "def f(root, fetch=False): return g(root, fetch=fetch)"}) == set()
+
+
 def test_the_source_scan_finds_the_modules_that_fetch_a_git_parent():
     """A new module that fetches fails here, so the lists below are revisited."""
-    found = set()
-    for path in sorted((ROOT / "cli" / "compass_pkg").glob("*.py")):
-        source = path.read_text(encoding="utf-8")
-        if re.search(r"fetch=not parents\.offline\(\)|fetch=True|fetch=_may_fetch\(|"
-                     r"_may_fetch\(args\)", source):
-            found.add(path.name)
+    sources = {path.name: path.read_text(encoding="utf-8")
+               for path in sorted((ROOT / "cli" / "compass_pkg").glob("*.py"))}
+    found = fetching_modules(sources)
     assert found == set(FETCH_MODULES), (
         f"a module now fetches a git parent, or one stopped: {sorted(found)}. "
         "Name the command in README.md, docs/security.md and docs/git-parents.md.")
@@ -70,6 +87,10 @@ def test_the_fetch_list_names_every_command_that_fetches():
         for command in FETCHING:
             assert command in text, f"{name} does not list `compass {command}`: {text}"
         assert "compass check" in text, name
+    # `issue configure --commit` runs the reassess, which fetches; the preview
+    # and the proposal do not.
+    assert "issue configure --commit" in security, security
+    assert "issue configure never fetch" not in security, security
     table = _text("docs", "git-parents.md").split("## When Compass fetches", 1)[1]
     table = _flat(table.split("\n\n", 2)[1])
     for command in ("policy lint", "policy update", "policy diff", "preset test",

@@ -306,9 +306,9 @@ The evaluator took four additions, and a call that uses none of them answers
 as before:
 
 - `stage_mode_ranks` in the policy (stage, then mode, then rank). A floor's
-  lift raises a mode ranked below `full` and leaves a mode with no rank, or
-  one ranked equal to `full` or above, alone. Without the key the lift is the
-  fixed set `collapsed`, `skipped` and `light`, which is what the shipped ranks
+  lift raises a mode ranked below `thorough` and leaves a mode with no rank, or
+  one ranked equal to `thorough` or above, alone. Without the key the lift is
+  the fixed set `collapsed`, `skipped` and `lightweight`, which is what the shipped ranks
   reproduce
   (`governance/decisions/2026-10-06-stage-mode-ranks-cover-the-depth-ladder-only.md`).
 - `dimension_orders` in the policy (dimension, then its values in ascending
@@ -354,7 +354,7 @@ What the stage-mode rank replay shows:
 
 - The ranked lift gives today's answer over the whole baseline.
 - A rank of 2 on `reproduce-first` is reported, because a floor names `define`.
-- A rank below `full` on `expedited` is not reported over today's policy,
+- A rank below `thorough` on `expedited` is not reported over today's policy,
   because no floor names `implement` and the lift never reaches that stage.
   With one floor added to both paths that names it, the same rank is reported.
 - A dropped floor or gate is reported.

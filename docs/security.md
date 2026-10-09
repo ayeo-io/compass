@@ -78,7 +78,8 @@ including a reassess that commits a `compass issue configure` proposal.
 `policy update` always asks the remote which commit its ref names, unless
 `COMPASS_OFFLINE=1` is set.
 `compass policy diff` prints a line on stderr before it fetches. `compass check`
-and `compass issue configure` never fetch. Compass
+never fetches. `compass issue configure --commit` fetches, because it runs the
+reassess; the preview and the proposal never fetch. Compass
 checks each cached parent against a digest it recorded at fetch, and `compass
 policy lint` fails on a mismatch. That catches an accidental edit of the cache,
 not a deliberate one by someone who can write the cache, because the digest

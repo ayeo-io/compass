@@ -74,8 +74,9 @@ def _state_text(task, task_dir):
     reason = status_words.close_reason(task)
     if state == "done" and reason:
         state = "%s (%s)" % (state, reason)
-    if lifecycle.blocked_flag(task, task_dir):
-        state += " (blocked)"
+    flag = lifecycle.blocked_flag(task, task_dir)
+    if flag:
+        state += " (blocked: %s)" % (flag.get("reason") or "no reason recorded")
     return state
 
 

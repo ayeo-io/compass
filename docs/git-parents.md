@@ -74,6 +74,7 @@ sha is refused.
 | `compass policy diff`, when a reference is a git parent | Yes, and it prints one line on stderr (`compass policy diff: fetching <ref> into .compass/cache/parents/`) before each fetch. It also adds `cache/` to `.compass/.gitignore` if the file does not list it. These are the only files `policy diff` writes |
 | `compass preset test` | Yes, for a git parent the preset names that is not cached. With `--offline` it fetches nothing |
 | `compass approach evaluate --write` (assess and reassess, including a reassess that commits a `compass issue configure` proposal) | Yes |
+| `compass issue configure --commit` | Yes. It runs the reassess, so it fetches as `compass approach evaluate --write` does |
 | `compass issue configure` (the preview and the proposal it records) | Never. It reads the cache and commits no generation, so an uncached pin is `L-PARENT-NOT-CACHED`. Run `compass policy lint` first |
 | any of the above with `--offline`, or with `COMPASS_OFFLINE=1` in the environment | Never |
 

@@ -3462,3 +3462,7 @@
 ### release-6-0-0 (completed 2026-10-09)
 
 - `REL-001` Given the seven version locations and EXPECTED_VERSION, When the version test runs, Then every location and EXPECTED_VERSION read 6.0.0
+
+### glossary-meaning-only (completed 2026-10-09)
+
+- `TRC-001` Given the vocabulary file, When the glossary is derived or compass terminology is run, Then no Not line and no former name is printed

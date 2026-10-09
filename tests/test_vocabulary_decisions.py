@@ -708,6 +708,12 @@ def test_the_release_notes_list_the_removed_flow_keys_and_the_aliases():
     notes = (ROOT / "docs" / "releasing.md").read_text(encoding="utf-8")
     section = notes.split("### What changed at 6.0.0", 1)[1].split("**What the release contains**", 1)[0]
     assert "removes nothing" not in section
+    # The retired words sit on a page the prose guards do not scan.
+    upgrade = (ROOT / "docs" / "upgrade-6-0-0.md").read_text(encoding="utf-8")
+    assert "docs/upgrade-6-0-0.md" in section
     for needed in ("held", "next_up", "landed_this_week", "abandoned", "schema `3.0`",
                    "7.0.0", "together", "ship-commit", "thorough"):
-        assert needed in section, needed
+        assert needed in section + upgrade, needed
+    for needed in ("`approach summary`", "`issue set-status`", "`issue subtask update`",
+                   "`run --stage build`", "`full`", "`standard`", "`phase`", "update every checkout"):
+        assert needed.lower() in upgrade.lower(), needed

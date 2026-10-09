@@ -40,24 +40,19 @@ name that 5.x read is still read, and every released command spelling that 6.0.0
 renames still runs, until 7.0.0 removes them
 (`governance/decisions/2026-10-06-legacy-governance-readable-until-7-0-0.md`
 and `governance/decisions/2026-10-06-old-route-names-readable-until-7-0-0.md`).
-It does remove one output shape, the `compass flow --json` keys listed below.
+It does remove one output shape: the `compass flow --json` keys held, next_up,
+landed_this_week and abandoned, replaced by backlog, ready, in_progress,
+in_review, done_this_week and closed.
 
-**Renamed words and commands at 6.0.0** (`architecture/decisions/ADR-044-vocabulary-and-cli-naming.md`
-and `ADR-045-the-issue-lifecycle-is-derived-from-records.md`)
+**Renamed words and commands at 6.0.0.** 6.0.0 renames the depth words (`full`
+becomes `thorough`, and the other two follow), the size `standard`, the run
+stage `build`, the friction `phase` key, the stored issue statuses and eight
+released command spellings. A manifest is written at schema `3.0`. The old words
+and the eight command spellings work until 7.0.0. The full tables, the notice a
+first save prints and the `manifest.yml.v5.bak` backup are in
+`docs/upgrade-6-0-0.md`. `issue status remove` also reopens a closed issue, so
+a released script that reopened one keeps working.
 
-- Stage modes and artifact depths: `full` is now `thorough`, `light` is now `lightweight` and `full-plus-backfill` is now `thorough-with-follow-up`. The delivery approach `full` keeps its name. <!-- vocabulary-scan: allow - names the old words -->
-- The size `standard` is now `medium`. The run stage `build` is now `implement`, and a friction record's `phase` key is now `stage`.
-- An issue stores only `backlog` or `done`. `queued` and `parked` read as `backlog`, `landed` reads as `done` closed as `completed`, and `abandoned` reads as `done` closed as `not-planned`. <!-- vocabulary-scan: allow - names the old words -->
-- `active` is no longer stored. An issue's state (`backlog`, `ready`, `in-progress`, `in-review` or `done`) is read from its records.
-- A manifest is written at schema `3.0`. A 6.0.0 command reads schemas 1, 2 and
-  3, and a v5 command refuses a 3.0 file. The first save of a manifest that
-  holds old words writes the original to `manifest.yml.v5.bak` beside it and
-  prints one notice per rewritten word, naming the issue.
-- `compass flow --json` no longer has the keys `held`, `next_up`, `landed_this_week` and `abandoned`. <!-- vocabulary-scan: allow - names the removed keys -->
-- The board now has `backlog`, `ready`, `in_progress`, `in_review`, `done_this_week` and `closed`. A `closed` entry carries its `close_reason`. The `counts` are keyed by the new states.
-- Released commands renamed, which keep working through an alias until 7.0.0 and print the new spelling on standard error: `approach summary` (`approach show`), `issue set-status` (`issue status set`, or `issue status remove` for `active`), `policy review-rules` (`review-rule list`), `issue dashboard` (`issue dashboard render`), `issue artifact` (`issue artifact set`), `migrate` (`issue migrate`), `issue subtask update` (`issue subtask set`) and `run --stage build` (`run --stage implement`). <!-- vocabulary-scan: allow - names the old spellings -->
-- A spelling that no release held has no alias, and its unknown-command message names the new one.
-- `issue status remove` also reopens a closed issue, so a v5.6.0 script that ran `issue set-status active` on a landed issue keeps working. <!-- vocabulary-scan: allow - names the old spelling -->
 **Upgrade and rollback.** Update every checkout and every installed plugin
 together. Do not run a v5 `ship-commit` on a 6.0.0 tree: it does not read the
 new words and drops the issue from the living spec. To roll back, run the

@@ -39,7 +39,7 @@ def _work_started(manifest, task_dir):
 
 
 def _review_started(manifest):
-    """Verify has started when a gate left `pending` or a verification report
+    """An issue is in review once a gate left `pending` or a verification report
     is registered with a path (the architect's ruling, recorded in ADR-045).
     Manifest only, no disk read."""
     gates = next_cmd._entries(manifest, "gates")

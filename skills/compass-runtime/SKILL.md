@@ -52,8 +52,7 @@ creates the project: the entry points above run `compass init` for you.
 
 A command spelling that a release held and 6.0.0 renamed keeps working through
 an alias until 7.0.0. The alias prints the new spelling on standard error and
-gives the new command's output and exit code (for example `approach summary`
-is now `approach show`). A spelling that no release held has no alias: its
+gives the new command's output and exit code. A spelling that no release held has no alias: its
 unknown-command message names the new spelling. `docs/upgrade-6-0-0.md` lists
 the aliases. `governance/terminology.yml` names each retired word beside the
 one that replaced it, and `docs/glossary.md` says the same in prose; the

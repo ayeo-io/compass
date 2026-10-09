@@ -78,9 +78,9 @@ dated digest file (see below).
 7. **Run rework-scan.** Run `compass rework-scan --format markdown` and
    embed the output in the report as a "Rework scan" section. This surfaces
    cross-issue add-then-delete patterns within the configured window
-   (`rework_scan.window_days` in `${CLAUDE_PLUGIN_ROOT}/governance/signals.yml`).
-   The scan is a
-   signal - it never gates, never changes issue state, and always exits 0
+   (`rework_scan.window_days` in `${CLAUDE_PLUGIN_ROOT}/governance/signals.yml`,
+   or in the project's own copy of that file, which the scan reads first). The
+   scan is a signal - it never gates, never changes issue state, and always exits 0
    on detection (Flow advises, never gates). If the section is empty,
    record "0 rework instances detected" to confirm the scan ran.
 

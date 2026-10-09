@@ -67,7 +67,7 @@ def test_trc_2_the_smoke_test_is_scanned_for_the_frozen_vocabulary():
     )
 
 
-# --- TRC-S6 (issue `six-zero-docs-sweep`): every step a healthy install passes --
+# --- Every step a healthy install passes (issue `six-zero-docs-sweep`) ---------
 
 def smoke_step_findings(text):
     """Claims in the smoke test that a healthy 6.0.0 install fails."""

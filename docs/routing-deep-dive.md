@@ -195,12 +195,12 @@ order:
   (RP-FLOOR-003, for `payments` and `migrations`) would force the full
   approach too, but the risk floor has already done it, so the CLI does not
   list it.
-- **Six requirement rules.** RP-REQUIRE-001 to RP-REQUIRE-006 each add
-  something the work now owes: the gates `verify.analyze` (RP-REQUIRE-001 and
-  RP-REQUIRE-002) and `verify.architecture` (RP-REQUIRE-003 and
-  RP-REQUIRE-004), the `threat-model` artifact for the payments label
-  (RP-REQUIRE-005) and the `rollback-plan` artifact for the migrations label
-  (RP-REQUIRE-006).
+- **Six requirement rules.** `RP-REQUIRE-001` to `RP-REQUIRE-006` each add
+  something the work now owes: the gates `verify.analyze` (`RP-REQUIRE-001` and
+  `RP-REQUIRE-002`) and `verify.architecture` (`RP-REQUIRE-003` and
+  `RP-REQUIRE-004`), the `threat-model` artifact for the payments label
+  (`RP-REQUIRE-005`) and the `rollback-plan` artifact for the migrations label
+  (`RP-REQUIRE-006`).
 
 Then a **cap** fires - and this is the subtle part. RP-CAP-001: `when: { risk:
 critical }` → `max_worktrees: 1`. So this is the full approach

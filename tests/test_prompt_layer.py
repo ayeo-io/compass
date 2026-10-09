@@ -294,6 +294,8 @@ NOT_ON_THE_LIGHT_PATH = {
     "retro": "cross-issue aggregation, not a step of any one issue",
     "lesson": "offered beside friction capture in the full ship, which a quick fix collapses",
     "scenario": "define records scenarios and de-scoped failure modes with it; a quick fix records its one scenario through compass quick-fix start",
+    "gate": "verify passes each gate by hand with its evidence id; compass quick-fix finish passes the three gates itself",
+    "policy": "verify reads the rules in force with compass policy show for its governance dimension; a quick fix's governance check is the one compass quick-fix finish runs",
 }
 
 #: The five stage commands the quick-fix command inlines.

@@ -33,8 +33,8 @@ what `/compass:init` offers separately.
   the spec will serve.
 - Read `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` - the product
   strategies there are the ones `intent.md` must be consistent with (and with
-  the guardrails in `guardrails.md`, in the same directory). `compass policy
-  show` prints the guardrails in force.
+  the guardrails in `guardrails.md`, in the same directory). Run
+  `compass policy show` to see the guardrails in force.
 - Invoke the `product-owner` agent.
 
 ## Procedure

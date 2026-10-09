@@ -91,7 +91,7 @@ def test_idr_9_releasing_md_has_a_6_0_0_entry_with_the_contents():
 def test_idr_9_the_entry_lists_the_behaviour_changes():
     body = _section(_read("docs/releasing.md"), "What changed at 6.0.0")
     assert re.search(r"fails .{0,40}lint.{0,100}--write.{0,20}refuse", body, re.S | re.I)
-    assert re.search(r"landed.{0,80}(cannot|refus)", body, re.S | re.I)
+    assert re.search(r"(landed|closed).{0,80}(cannot|refus)", body, re.S | re.I)
     assert re.search(r"unreferenced|leftover", body, re.I)
     assert re.search(r"without a generation|no (stored )?generation", body, re.I)
 
@@ -147,7 +147,7 @@ def test_the_verb_check_fails_on_a_verb_the_cli_lacks():
     assert "policy update" in _named_verbs("`compass policy update` moves")
 
 
-# --- TRC-S1: plugin instructions read the shipped governance from the plugin --
+# --- Plugin instructions read the shipped governance from the plugin ----------
 # Issue `six-zero-docs-sweep`. A 6.0.0 project has no `governance/` directory,
 # so an instruction to read `governance/strategies.md` finds nothing. The shipped
 # prose is in the plugin, and the files below are the ones the documentation
@@ -242,7 +242,7 @@ def test_trc_s1_the_plugin_ships_the_governance_prose_the_instructions_name():
         "the plugin is the whole repository, which is why governance/ ships")
 
 
-# --- TRC-S9: instructions use evidence types, verbs and fields that exist -----
+# --- Instructions use evidence types, verbs and fields that exist -------------
 
 def _evidence_types():
     import yaml
@@ -310,7 +310,7 @@ def test_trc_s9_the_scan_reports_the_old_text():
     assert not s9_findings("compass evidence add EV-1 --type artifact --path x", known)
 
 
-# --- TRC-S10: stage-weight tables use the stored words -------------------------
+# --- Stage-weight tables use the stored words ----------------------------------
 
 S10_FILES = tuple(f"approaches/{name}.md"
                   for name in ("quick-fix", "regular", "full", "hotfix", "spike"))
@@ -348,7 +348,64 @@ def test_trc_s10_the_scan_reports_the_old_words():
     assert not s10_findings("| Verify | Lightweight gate: run it. |")
 
 
-# --- TRC-S4: the front pages route a reader to compass.yml and the upgrade page
+# --- README status badges name real targets -----------------------------------
+
+BADGE = re.compile(r"\[!\[([^\]]*)\]\(([^)]+)\)\]\(([^)]+)\)")
+
+
+def badge_findings(readme, workflows):
+    """Badges whose image names a workflow file that does not exist, or that
+    are neither a workflow badge nor a shields.io badge for this repository,
+    and the four badges the README must carry."""
+    found = []
+    badges = BADGE.findall(readme)
+    for alt, image, link in badges:
+        workflow = re.match(
+            r"https://github\.com/ayeo-io/compass/actions/workflows/([\w.-]+)/badge\.svg", image)
+        if workflow:
+            if workflow.group(1) not in workflows:
+                found.append(f"{alt}: no workflow file {workflow.group(1)}")
+        elif not re.match(r"https://img\.shields\.io/github/[\w/-]+/ayeo-io/compass$", image):
+            found.append(f"{alt}: {image} is not a badge for this repository")
+    images = " ".join(image for _, image, _ in badges)
+    links = [link for _, _, link in badges]
+    for needle in ("workflows/compass.yml/badge.svg?branch=main",
+                   "workflows/docs.yml/badge.svg?branch=main",
+                   "shields.io/github/v/release/ayeo-io/compass",
+                   "shields.io/github/license/ayeo-io/compass"):
+        if needle not in images:
+            found.append(f"README lacks the badge {needle}")
+    for target in ("https://github.com/ayeo-io/compass/actions/workflows/compass.yml",
+                   "https://docs.ayeo.io/compass/",
+                   "https://github.com/ayeo-io/compass/releases", "LICENSE"):
+        if target not in links:
+            found.append(f"no badge links to {target}")
+    return found
+
+
+def test_trc_s11_readme_badges_name_real_targets():
+    import yaml
+    workflows = {p.name for p in (ROOT / ".github" / "workflows").glob("*.yml")}
+    readme = _read("README.md")
+    assert badge_findings(readme, workflows) == []
+    assert len(BADGE.findall(readme)) == 4, "no badge beyond the four"
+    site = yaml.safe_load(_read("mkdocs.yml"))["site_url"]
+    assert site == "https://docs.ayeo.io/compass/"
+    assert readme.index("[![") > readme.index("**Adaptive spec-driven development")
+    assert readme.index("[![") < readme.index("> Enough process")
+
+
+def test_trc_s11_the_scan_reports_a_badge_for_a_missing_workflow():
+    row = ("[![x](https://github.com/ayeo-io/compass/actions/workflows/gone.yml/badge.svg)]"
+           "(https://example.com)\n"
+           "[![y](https://img.shields.io/badge/coverage-90-green)](https://example.com)\n")
+    found = badge_findings(row, {"compass.yml", "docs.yml"})
+    assert "x: no workflow file gone.yml" in found
+    assert any("not a badge for this repository" in f for f in found)
+    assert any("lacks the badge" in f for f in found)
+
+
+# --- The front pages route a reader to compass.yml and the upgrade page -------
 
 # 6.0.0 verbs the README command list had left out.
 S4_VERBS = ("approach show", "approach render", "policy migrate", "policy update",
@@ -398,7 +455,7 @@ def test_trc_s4_the_scan_reports_the_old_front_pages():
     assert any("docs/upgrade-6-0-0.md does not say" in f for f in found)
 
 
-# --- TRC-S8: the configuration, upgrade, migrate and CI pages match the code ---
+# --- The configuration, upgrade, migrate and CI pages match the code ----------
 
 def _cli(tmp_path, *argv):
     import subprocess
@@ -498,7 +555,7 @@ def test_trc_s8_the_migrate_closing_note_says_compass_yml_is_read_at_once(tmp_pa
     assert "an issue with no stored generation is judged by it at once" in dry.stdout
 
 
-# --- TRC-S7: the quickstart, five-minutes and portability pages match the code --
+# --- The quickstart, five-minutes and portability pages match the code --------
 
 def _policy_line_with_compass_yml(tmp_path):
     import subprocess
@@ -552,7 +609,7 @@ def test_trc_s7_the_skills_scan_reports_the_old_list():
                                         if p.is_dir())
 
 
-# --- TRC-S5: an issue's documents are found where the CLI writes them ---------
+# --- An issue's documents are found where the CLI writes them -----------------
 
 # `delivery-approach.md` is left out on purpose: only a quick fix earns it as a
 # registered document, so any other approach keeps it beside the manifest.
@@ -606,7 +663,7 @@ def test_trc_s5_the_scan_reports_the_old_listing():
     assert s5_findings("Compass stores each issue beneath\n`.compass/work/<issue>/`.")
 
 
-# --- TRC-S3: the routing deep dive matches the evaluator ----------------------
+# --- The routing deep dive matches the evaluator ------------------------------
 
 def _evaluate_verbose(**assessment):
     import subprocess
@@ -671,7 +728,7 @@ def test_trc_s3_the_case_3_scan_would_report_the_old_text():
     assert "RP-FLOOR-001" not in case
 
 
-# --- TRC-S2: the governance prose describes the 6.0.0 model -------------------
+# --- The governance prose describes the 6.0.0 model ---------------------------
 
 def _flat(text):
     """`text` with every run of whitespace as one space, so a phrase matches

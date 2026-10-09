@@ -246,25 +246,37 @@ def test_sb_c1_plugin_shipped_paths_resolve_from_any_directory():
         + "\n  ".join(bare))
 
 
-def test_sb_c2_governance_is_not_pinned_to_the_plugin_root():
-    """The trap in the obvious sweep.
+def test_sb_c2_a_pin_to_the_plugin_root_says_where_a_project_changes_it():
+    """The shipped governance prose is read from the plugin root.
 
-    `governance/` is NOT always plugin-shipped: `/compass:init` copies it into
-    a project so a team can extend it, and `find_governance()` resolves
-    project-local first, stopping at the project boundary. Rewriting these to
-    `${CLAUDE_PLUGIN_ROOT}/governance/` would silently ignore a project's own
-    governance - the thing /compass:init exists to create.
+    From 6.0.0 `/compass:init` copies no `governance/`: a project changes the
+    rules in its `compass.yml`, and `compass policy show` prints what is in
+    force. So an instruction can read the shipped prose from
+    `${CLAUDE_PLUGIN_ROOT}/governance/`. The trap is a file that pins the
+    prose and says nothing else, which ignores both the project's
+    `compass.yml` and a 5.x project's own copy of `governance/` (which
+    `find_governance()` still resolves project-local first). Each file that
+    pins it must name `compass policy show`, or the project's own copy.
     """
-    pinned = []
+    unexplained = []
     for directory in ("commands", "agents"):
         for path in sorted((ROOT / directory).glob("*.md")):
-            for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-                if re.search(r"CLAUDE_PLUGIN_ROOT[^`\n]*governance/", line):
-                    pinned.append(f"{path.relative_to(ROOT)}:{n}")
-    assert not pinned, (
-        "these pin governance/ to the plugin root, so a project that ran "
-        "/compass:init and extended its own governance would be ignored:\n  "
-        + "\n  ".join(pinned))
+            text = path.read_text(encoding="utf-8")
+            pinned = [n for n, line in enumerate(text.splitlines(), 1)
+                      if re.search(r"CLAUDE_PLUGIN_ROOT[^`\n]*governance/", line)]
+            if pinned and not re.search(r"compass policy show|own copy|copied", text):
+                unexplained.append(f"{path.relative_to(ROOT)}:{pinned[0]}")
+    assert not unexplained, (
+        "these pin governance/ to the plugin root without saying where a "
+        "project's own rules are found, so a project's compass.yml (or a 5.x "
+        "copy) would be ignored:\n  " + "\n  ".join(unexplained))
+
+
+def test_sb_c2_the_pin_check_reports_a_file_that_says_nothing_else():
+    """A pin with no `compass policy show` and no mention of a copy is flagged."""
+    text = "Read `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` first.\n"
+    assert re.search(r"CLAUDE_PLUGIN_ROOT[^`\n]*governance/", text)
+    assert not re.search(r"compass policy show|own copy|copied", text)
 
 
 # ---------------------------------------------------------------------------

@@ -44,7 +44,7 @@ def test_ds_1_the_site_lists_the_core_pages_and_each_exists():
 
 
 def test_trc_s4_site_publishes_configuration_and_upgrade():
-    """Scenario TRC-S4 (issue `six-zero-docs-sweep`): a 5.x reader finds the
+    """Issue `six-zero-docs-sweep`: a 5.x reader finds the
     configuration page and the upgrade page from the site, so both are in the
     navigation and are allowed through the exclude rule."""
     config = _config()

@@ -6,6 +6,11 @@
 
 **Adaptive spec-driven development for Claude Code.**
 
+[![Self-check](https://github.com/ayeo-io/compass/actions/workflows/compass.yml/badge.svg?branch=main)](https://github.com/ayeo-io/compass/actions/workflows/compass.yml)
+[![Docs](https://github.com/ayeo-io/compass/actions/workflows/docs.yml/badge.svg?branch=main)](https://docs.ayeo.io/compass/)
+[![Latest release](https://img.shields.io/github/v/release/ayeo-io/compass)](https://github.com/ayeo-io/compass/releases)
+[![Licence](https://img.shields.io/github/license/ayeo-io/compass)](LICENSE)
+
 > Enough process for the work at hand. No more.
 
 A typo fix should not need an architecture pack. A payments rewrite should

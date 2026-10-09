@@ -176,7 +176,7 @@ def test_a5_replace_or_merge_is_documented():
     # over a document it had not inspected, and its own mutation proof is what
     # caught that.
     body = doc.read_text(encoding="utf-8")
-    marker = "## What happens to the shipped defaults when a project declares its own"
+    marker = "## A project that copied governance under 5.x"
     assert marker in body, (
         "governance/README.md has no section answering what happens to the "
         "shipped defaults when a project declares its own")

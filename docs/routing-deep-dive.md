@@ -117,8 +117,8 @@ policy's floor list (`auth`, `payments`, `personal-data`, `migrations`,
 
 ### Compose
 
-Standard size, contained risk, mapped familiarity. The candidate is
-**regular**, plainly: a small feature set of scenarios, a light-to-full
+Medium size, contained risk, mapped familiarity. The candidate is
+**regular**, plainly: a small feature set of scenarios, a lightweight-to-thorough
 requirements review pass, a real `technical-design.md` with the design decisions recorded, solo or
 pair orchestration, six gates at verify. No deviation from the reference shape is
 warranted - risk is only `contained`, so `security` stays scaled

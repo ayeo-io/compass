@@ -19,7 +19,7 @@ This page lists every word, key and command that 6.0.0 renames, what reads the o
 
 - The delivery approach `full` keeps its name. Only the stage mode and artifact depth words change.
 - An issue's state is `backlog`, `ready`, `in-progress`, `in-review` or `done`. A person sets only `backlog` and `done`.
-- A manifest is written at schema `3.0`. A 6.0.0 command reads schemas 1, 2 and 3. A v5 command refuses a 3.0 file.
+- A manifest is written at schema `3.0`. A 6.0.0 command reads schemas 1, 2 and 3. A v5 `check`, `issue lint`, `ci`, `gate pass`, `approach evaluate` and `approach summary` refuse a 3.0 file and exit 2. Other v5 commands do not: `next`, `flow`, `analyze`, `retro` and `issue dashboard` read it and exit 0, and `tdd-green` writes to it, so they can read it wrongly. Do not run a v5 CLI or plugin on a 6.0.0 tree: every checkout and plugin must be updated together.
 - The first save of a manifest that holds old words writes the original to `manifest.yml.v5.bak` beside it. It prints one notice per rewritten word, and each notice names the issue.
 - `compass issue migrate --apply` rewrites every issue in one run.
 - Configuration files (`compass.yml`, copied governance and `.compass/config.yml`) are read in their old words until 7.0.0. A tool to rewrite them is owed before 7.0.0.

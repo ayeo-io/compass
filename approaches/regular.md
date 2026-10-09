@@ -58,7 +58,7 @@ re-assess - do not push the regular approach through a problem shaped for the fu
 
 - Skip the requirements review entirely. The regular approach's spec is a feature set, not a single
   certified-unambiguous scenario - there is always something to QA. The requirements review
-  may be *light*, never *absent*.
+  may be *lightweight*, never *absent*.
 - Run as a multiagent orchestration. Four or more subtasks is full-approach territory; it needs the
   orchestrator and the full distribution map. If the work needs one, the
   assessment was wrong - re-assess to the full approach.

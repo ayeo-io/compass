@@ -60,8 +60,8 @@ Writing the artifacts is its own craft: see
 
 ## What Compass changes
 
-Most spec-driven development systems choose one workflow and apply it to
-everything. Compass adapts the depth without abandoning discipline.
+Compass chooses the process for each change from its assessment of risk,
+familiarity, size and goal. It adapts the depth without abandoning discipline.
 
 | Work | Typical Compass response |
 |---|---|
@@ -84,8 +84,7 @@ Every issue leaves a reviewable record under `.compass/work/<issue>/`:
 - only the product, requirements, design, test and release artifacts justified
   by the work;
 - traceable evidence behind each gate; and
-- enough state for another session (or another compatible agent runtime) to
-  resume without relying on chat history.
+- enough state for another session to resume without relying on chat history.
 
 The terminal gives you the decision and the document to read. Detailed policy
 output and test logs stay available as evidence rather than taking over the
@@ -95,9 +94,11 @@ conversation.
 
 Compass separates two things that process frameworks often confuse:
 
-- **Guardrails** are hard, checkable and blocking: tested before shipping,
-  acceptance defined before implementation, traceability, evidence rather
-  than assertion, and human approval for irreversible changes.
+- **Guardrails** are few and checkable: tested before shipping, acceptance
+  defined before implementation, traceability, evidence rather than
+  assertion, and human approval for irreversible changes. `compass check`
+  fails on a breach under enforced adoption, and the
+  [safety contract](docs/safety-contract.md) lists what it cannot see.
 - **Strategies** are strong defaults that improve the work without becoming
   bureaucracy: BDD, TDD, ADRs, visual architecture models and other practices
   that apply when they add value.
@@ -199,7 +200,7 @@ compass lesson accept      turn a pending proposal into a lesson
 compass lesson list        each lesson and each pending proposal
 compass lesson remove      delete one lesson
 compass lesson decline     drop a pending proposal; retro will not propose it again
-compass run                run the build or verify stage of one issue unattended (ADR-030)
+compass run                run the implement or verify stage of one issue unattended (ADR-030)
 compass record sync        copy the delivery record to its own repository (ADR-031)
 compass record restore     bring the delivery record back into this project
 ```
@@ -245,10 +246,13 @@ only in the cases below, and each one starts only when you ask for it.
 - **Fetches** a git parent when the project's `extends:` names one
   (`github:<owner>/<repo>@<ref>#<sha>`). It runs `git` for the one pinned
   commit, reads its `compass.yml` as data, and caches it under
-  `.compass/cache/parents/`. Only `compass policy lint`, `compass policy
-  show` and `compass approach evaluate --write` fetch, and only a commit
-  that is not cached yet; never `compass check`. `--offline` or
-  `COMPASS_OFFLINE=1` stops them fetching. `COMPASS_PARENT_REMOTE_BASE`
+  `.compass/cache/parents/`. Only `compass policy lint`, `compass policy show`,
+  `compass policy diff` (when a reference is a git parent), `compass policy
+  update`, `compass preset test` and `compass approach evaluate --write` fetch,
+  and only a commit that is not cached yet; never `compass check`. `compass
+  policy update` always asks the remote which commit its ref names, unless
+  `COMPASS_OFFLINE=1` is set. `--offline` or `COMPASS_OFFLINE=1` stops the others
+  fetching. `COMPASS_PARENT_REMOTE_BASE`
   names a mirror in place of `https://github.com`. Git runs with your own git
   configuration, so your credential helper runs
   ([docs/git-parents.md](docs/git-parents.md)).

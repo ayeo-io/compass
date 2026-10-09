@@ -40,7 +40,7 @@ change. A change to which approach an assessment routes to can be
 | `git:<revision>` | The project's `compass.yml` at that git revision over the shipped default, or the shipped default alone when the file did not exist then |
 | a path | One `compass.yml` over the shipped default, as `compass policy lint --file` reads it |
 | `github:<owner>/<repo>@<ref>#<sha>` | A git parent written as in `extends:` ([git-parents.md](git-parents.md)): the shipped default, then the parents it extends from the furthest, then that parent. The project's own `compass.yml` is not part of it |
-| `generation:<slug>:<n>` | Refused: the generation store has not landed |
+| `generation:<slug>:<n>` | Refused: `policy diff` does not yet compare against a stored generation. Use `compass policy show --issue <slug>` for what an issue resolves to now |
 
 | Arguments | `A` | `B` |
 |---|---|---|
@@ -113,8 +113,8 @@ It lists:
 - each issue waiver whose waived field has a different parent value under `B`
   than under `A`, as needing re-approval at the next reassess.
 
-An issue that is done, whatever its close reason, is never examined. Until the generation
-store lands there is no stored generation, so `A` stands for what the issue
+An issue that is done, whatever its close reason, is never examined. The diff does not read a
+stored generation, so `A` stands for what the issue
 runs against and `B` for what it meets at its next reassess. The command
 writes no file of the project, with two exceptions. When a reference is a git
 parent that is not cached and the run may fetch, it fills the git parent cache

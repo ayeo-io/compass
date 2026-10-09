@@ -22,6 +22,7 @@ import json
 import os
 import re
 import tempfile
+import time
 
 import yaml
 
@@ -36,6 +37,11 @@ FORMAT = 1
 FOLDER = "parsed_yaml"
 
 _ENTRY_NAME = re.compile(r"^[0-9a-f]{64}\.json$")
+_IGNORE_TEXT = "*\n"
+
+#: A temporary file (`.tmp-*`) older than this was left by a killed run. A
+#: younger one may belong to a write in progress.
+_TEMP_MAX_AGE_SECONDS = 60
 _UTC = datetime.timezone.utc
 _MISS = object()
 
@@ -193,19 +199,29 @@ class ParseCache:
     def finish(self):
         """Delete entries this run did not use, only when the folder holds more
         than twice as many entries as this run read. Only names of 64 hex digits
-        and `.json` are touched. Never raises, never prints."""
+        and `.json` are touched, and temporary files (`.tmp-*`) older than a
+        minute, which a killed run leaves behind. Never raises, never prints."""
         if not self._store:
             return
         try:
             with os.scandir(self._folder) as listing:
-                names = [e.name for e in listing if _ENTRY_NAME.match(e.name)]
+                files = list(listing)
+            names = [e.name for e in files if _ENTRY_NAME.match(e.name)]
             if len(names) <= 2 * self._reads:
                 return
             keep = {digest + ".json" for digest in self._used}
-            for name in names:
-                if name not in keep:
+            now = time.time()
+            for entry in files:
+                stale_temp = False
+                if entry.name.startswith(".tmp-"):
                     try:
-                        os.unlink(os.path.join(self._folder, name))
+                        stale_temp = now - entry.stat(follow_symlinks=False).st_mtime \
+                            > _TEMP_MAX_AGE_SECONDS
+                    except OSError:
+                        pass
+                if stale_temp or (entry.name in names and entry.name not in keep):
+                    try:
+                        os.unlink(entry.path)
                     except OSError:
                         pass
         except Exception:                                   # noqa: BLE001
@@ -270,11 +286,34 @@ class ParseCache:
             self._store = False
             return False
         ignore = os.path.join(self._folder, ".gitignore")
-        if not os.path.exists(ignore):
-            with open(ignore, "w", encoding="utf-8") as fh:
-                fh.write("*\n")
+        if not _is_own_ignore(ignore):
+            # Through a temporary file and a replace, as entries are written: a
+            # kill cannot leave the file empty, and a link planted at its name is
+            # replaced, not followed.
+            fd, tmp = tempfile.mkstemp(dir=self._folder, prefix=".tmp-")
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                    fh.write(_IGNORE_TEXT)
+                os.replace(tmp, ignore)
+            except BaseException:
+                try:
+                    os.unlink(tmp)
+                except OSError:
+                    pass
+                raise
         self._ready = True
         return True
+
+
+def _is_own_ignore(path):
+    """Is `path` a regular file (not a link) that holds exactly the ignore rule?"""
+    try:
+        if os.path.islink(path) or not os.path.isfile(path):
+            return False
+        with open(path, "r", encoding="utf-8") as fh:
+            return fh.read() == _IGNORE_TEXT
+    except OSError:
+        return False
 
 
 def _folder_is_safe(folder):

@@ -5,9 +5,11 @@
 The CLI has no setting for the clock and gets none here: this runner sits
 outside `cli/`, so it applies unchanged to a copy of older code. It puts the
 given `cli` folder first on `sys.path` and installs an import hook. After
-each `compass_pkg` module runs, the hook rebinds that module's `datetime`
-module name, and any name bound to the `date` or `datetime` class, to
-stand-ins whose `today()`, `now()` and `utcnow()` return the fixed instant.
+each `compass_pkg` module that reads the clock runs, the hook rebinds that
+module's `datetime` module name, and any name bound to the `date` or
+`datetime` class, to stand-ins whose `today()`, `now()` and `utcnow()` return
+the fixed instant. A module that never reads the clock is left alone, so its
+checks against the real classes (the parse cache's) still hold.
 
 Every value a stand-in builds or returns is a real `date` or `datetime`, and
 `isinstance` against a stand-in behaves as against the real class. The
@@ -22,6 +24,7 @@ import argparse
 import datetime as _real_datetime_module
 import importlib.abc
 import os
+import re
 import runpy
 import sys
 import time
@@ -85,9 +88,25 @@ def make_stand_ins(instant):
     return FixedDate, FixedDatetime, module
 
 
+_CLOCK_READ = re.compile(r"\.(today|now|utcnow)\(")
+
+
+def _reads_the_clock(module):
+    path = getattr(module, "__file__", None)
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            return bool(_CLOCK_READ.search(fh.read()))
+    except (OSError, TypeError):
+        return True
+
+
 def patch_module(module, stand_ins):
     """Rebind the clock names a module holds. Names that are not the real
-    `datetime` module, `date` or `datetime` are left alone."""
+    `datetime` module, `date` or `datetime` are left alone, and so is a module
+    that never reads the clock: it may check types against the real classes
+    (the parse cache does), and a stand-in would make those checks miss."""
+    if not _reads_the_clock(module):
+        return
     fixed_date, fixed_datetime, fixed_module = stand_ins
     for name, value in list(vars(module).items()):
         if value is _real_datetime_module:

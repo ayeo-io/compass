@@ -292,8 +292,9 @@ def test_trc_a17_symlink_reads_target(reader, tmp_path):
 # --- group B: speed ---------------------------------------------------------
 
 @pytest.mark.serial
-@pytest.mark.skipif(not archive.full_archive(), reason=archive.NEEDS_FULL_ARCHIVE)
 def test_trc_b1_flow_within_two_seconds_on_this_repository(tmp_path):
+    if not archive.full_archive():
+        pytest.skip(archive.NEEDS_FULL_ARCHIVE)
     work = ROOT / ".compass" / "work"
     manifests = list(work.glob("*/manifest.yml"))
     assert len(manifests) >= 484, f"only {len(manifests)} manifests"
@@ -438,6 +439,17 @@ def test_fixed_clock_leaves_parsed_dates_real(tmp_path):
         CLI_DIR, ["flow", "--json", "--work-root", str(work)], project, tmp_path,
         clock="2001-02-03T04:05:06Z")
     assert code == 0 and "Traceback" not in err, err
+
+
+def test_fixed_clock_leaves_the_cache_able_to_store_dates(tmp_path):
+    import hashlib
+    project, _work = _sample_project(tmp_path)
+    code, _out, err = _flow(project, tmp_path)
+    assert code == 0, err
+    probe = project / ".compass" / "work" / "parity-probe" / "manifest.yml"
+    digest = hashlib.sha256(probe.read_bytes()).hexdigest()
+    assert (_cache_folder(project) / f"{digest}.json").is_file(), (
+        "a manifest holding dates was not stored while the clock was fixed")
 
 
 def test_no_shipped_file_names_the_fixed_clock():
@@ -821,6 +833,44 @@ def test_trc_f3_flow_leaves_git_status_unchanged_where_work_is_committed(tmp_pat
     assert code == 0, err
     assert _entries(repo), "the run stored nothing, so this checks nothing"
     assert _status(repo) == ""
+
+
+@pytest.mark.parametrize("state", ["a dangling link", "an empty file"])
+def test_trc_f3_the_folders_own_gitignore_is_written_whole_and_not_through_a_link(
+        tmp_path, state):
+    project, work, path = _one_manifest(tmp_path)
+    folder = _cache_folder(project)
+    folder.mkdir(parents=True)
+    outside = tmp_path / "outside-target"
+    if state == "a dangling link":
+        os.symlink(outside, folder / ".gitignore")
+    else:
+        (folder / ".gitignore").write_bytes(b"")
+    _read_in_new_process(work, path)
+    assert not outside.exists()
+    ignore = folder / ".gitignore"
+    assert ignore.is_file() and not ignore.is_symlink()
+    assert ignore.read_bytes() == b"*\n"
+
+
+def test_trc_e4_a_leftover_temporary_entry_is_pruned_when_old(tmp_path):
+    import time
+    from compass_pkg import parse_cache
+    project, work, path = _one_manifest(tmp_path)
+    cache = parse_cache.for_work_root(str(work))
+    cache.load_yaml(str(path))
+    folder = _cache_folder(project)
+    old, fresh = folder / ".tmp-old", folder / ".tmp-fresh"
+    old.write_text("half an entry", encoding="utf-8")
+    fresh.write_text("a write in progress", encoding="utf-8")
+    long_ago = time.time() - 120
+    os.utime(old, (long_ago, long_ago))
+    for index in range(3):
+        (folder / (f"{index:064x}" + ".json")).write_text("{}", encoding="utf-8")
+    cache.finish()
+    assert not old.exists()
+    assert fresh.exists()
+    assert len(_entries(project)) == 1
 
 
 # --- who may use the cache, and what it may import ----------------------------

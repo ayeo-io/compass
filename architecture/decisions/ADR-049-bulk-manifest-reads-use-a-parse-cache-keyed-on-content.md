@@ -9,7 +9,7 @@ superseded_by: ''
 
 ## Context
 
-ADR-013 bundles one pure-Python PyYAML and accepts that it is slow on large files. On this repository's 485 manifests, parsing was about 98.6% of `compass flow`'s time, and the command took 2.33 s (median of three), over its 2.0 s target.
+ADR-013 bundles one pure-Python PyYAML and accepts that it is slow on large files. On this repository's 484 manifests, parsing was about 98.6% of `compass flow`'s time under the profiler. The command took 2.26 s there (median of three) and 2.33 s on 485 manifests later, over its 2.0 s target.
 
 Commands that save a manifest depend on reading the file as it is now. `core.load_yaml` has 77 call sites. Some read, change and save, and `generation.py` re-reads the manifest under a lock to refuse a change made by another process. The archive under `.compass/work/` is not in git in this repository, so a lost update cannot be restored.
 
@@ -20,7 +20,7 @@ Commands that save a manifest depend on reading the file as it is now. `core.loa
 3. **Freshness.** Every read reads the file's bytes. The key is their SHA-256. An entry is used only when its recorded source digest, format and PyYAML version all match. Any doubt parses.
 4. **Safety.**
    - Entries are tagged JSON over a closed set of types, read with `json.loads` only. The module imports no `pickle`, `marshal` or `shelve`.
-   - The cache lives in `<project>/.compass/cache/parsed_yaml/`. It refuses links, refuses a path that resolves outside `.compass`, and holds its own `.gitignore` so `git status` does not change.
+   - The cache lives in `<project>/.compass/cache/parsed_yaml/`. It refuses a link at `.compass/cache` or below it, refuses a path that resolves outside `.compass`, as the parent cache does, and holds its own `.gitignore` so `git status` does not change.
    - A write failure is ignored, and the cache never prints.
 5. **Scope.** `core.load_yaml` and `core.load_manifest` do not use the cache. No path that saves a manifest reads through it. A test fails if any module other than `flow.py` names it. Widening that list is a reviewed change against this record.
 
@@ -45,7 +45,7 @@ Commands that save a manifest depend on reading the file as it is now. `core.loa
 
 **Negative:**
 - A project gains a derived folder, safe to delete at any time.
-- The first run after many manifests change is slower, by about 5% on the 484-manifest measurement. A test bounds it at 10%.
+- The first run after many manifests change is slower, by 5.2% to 6.3% in the measurements (the 484-manifest copy of the sample and this repository's archive). A test bounds it at 10%.
 - Other commands that read many manifests stay slow until they opt in through their own reviewed change.
 - ADR-013 still says "slower on large files" and does not point here, because merged records do not change.
 

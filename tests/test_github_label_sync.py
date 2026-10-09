@@ -120,7 +120,7 @@ def settings(root, domain=True, status=True, extra=""):
 def link(root, gh, target=TARGET, slug=SLUG):
     # `--github=TARGET`: a target that starts with a dash is then the option's
     # value, so the command's own check refuses it, not the argument parser.
-    return run(root, gh, "issue", "link", f"--github={target}", "--issue", slug)
+    return run(root, gh, "issue", "link", "set", f"--github={target}", "--issue", slug)
 
 
 def sync(root, gh, slug=SLUG, **kw):
@@ -388,7 +388,7 @@ def test_gls_13_labels_sync_refuses_what_it_cannot_do(repo, gh):
     settings(repo)
     unlinked = sync(repo, gh)
     assert unlinked.returncode != 0
-    assert "compass issue link" in unlinked.stdout + unlinked.stderr
+    assert "compass issue link set" in unlinked.stdout + unlinked.stderr
     (repo / "compass.yml").unlink()
     assert link(repo, gh).returncode == 0
     nothing = sync(repo, gh)
@@ -487,7 +487,7 @@ def test_gls_16_glossary_and_docs_describe_the_sync():
     walkthrough = ROOT / "docs" / "github-labels-walkthrough.md"
     assert walkthrough.is_file()
     text = walkthrough.read_text()
-    for needle in ("compass.yml", "compass issue link", "compass issue labels sync",
+    for needle in ("compass.yml", "compass issue link set", "compass issue labels sync",
                    "status:in-progress"):
         assert needle in text, needle
     assert "github-labels-walkthrough.md" in readme
@@ -498,7 +498,8 @@ def test_gls_16_walkthrough_commands_run(repo, gh):
     walkthrough = (ROOT / "docs" / "github-labels-walkthrough.md").read_text()
     make_issue(repo, gh)
     settings(repo)
-    assert "compass issue link --github acme/widgets#42" in walkthrough
+    assert "compass issue link set --github acme/widgets#42" in walkthrough
+    assert "evidence/green-<scenario id>.json" in walkthrough
     assert link(repo, gh).returncode == 0
     assert gh.labels() == {"infra", "ci", "status:ready"}
 

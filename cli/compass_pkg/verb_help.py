@@ -77,7 +77,7 @@ VERB_DESCRIPTIONS = {
         "Store an issue's status: backlog (a hold, with --reason) or done. Done needs --close-reason completed, not-planned or duplicate; --duplicate-of SLUG implies duplicate and names the issue that covers this one. Completed is refused while a gate has not passed, and only a completed issue on an approach that ships feeds the derived system spec. Ready, in-progress and in-review are refused: the issue's records move those states. Closing or setting aside an issue clears its blocked flag.",
     'issue status remove':
         "End a backlog hold by deleting the stored status. The state then follows the issue's records. Refuses an issue with no hold and writes nothing.",
-    'issue link':
+    'issue link set':
         "Link an issue to its GitHub issue with --github, as owner/repo#number or the issue's URL on github.com, and store it as the manifest's github field. The target is checked against a strict pattern before it is stored, so nothing that could be read as an option or a shell command reaches gh. Linking writes nothing to GitHub by itself: labels are written only when the project sets github_labels in compass.yml.",
     'issue labels sync':
         "Write the issue's labels to its linked GitHub issue now, as the project's github_labels settings allow: its declared domain labels, and status:<state> with close:<reason> on a closed issue. Compass adds missing labels and removes only labels it owns: the status: and close: labels it writes, and the declared domain labels. Uses gh with the person's own login and stores no token. Refuses an issue that is not linked, says so when no switch is on and calls nothing, and exits non-zero when gh is missing, not logged in or cannot reach GitHub.",

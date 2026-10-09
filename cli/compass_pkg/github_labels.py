@@ -125,7 +125,7 @@ def link_of(task):
 
 
 def cmd_issue_link(args):
-    verb = "compass issue link"
+    verb = "compass issue link set"
     target = parse_target(args.github)
     if target is None:
         raise CompassError(
@@ -378,7 +378,7 @@ def cmd_labels_sync(args):
     if target is None:
         raise CompassError(
             f"{verb}: '{slug}' is not linked to a GitHub issue; run "
-            "`compass issue link --github owner/repo#number` first.")
+            "`compass issue link set --github owner/repo#number` first.")
     if not any(switches(_project_root(task_dir))):
         return say(args, f"{verb}: nothing is switched on, so nothing was sent. Set "
                          "`github_labels` in compass.yml (docs/github-labels.md).",
@@ -411,7 +411,7 @@ def lint_notes(task, task_dir):
     try:
         target = link_of(task)
     except SyncError as exc:
-        return [f"github: {exc}; run `compass issue link` to correct it."]
+        return [f"github: {exc}; run `compass issue link set` to correct it."]
     if target is None:
         return []
     try:
@@ -434,8 +434,10 @@ def lint_notes(task, task_dir):
 
 
 def register(pts, issue_arg):
-    """`link` and `labels sync` under `compass issue`."""
-    linker = pts.add_parser("link", help="link an issue to its GitHub issue")
+    """`link set` and `labels sync` under `compass issue`."""
+    link_group = pts.add_parser("link", help="an issue's link to its GitHub issue")
+    linker = link_group.add_subparsers(dest="link_cmd", required=True).add_parser(
+        "set", help="link an issue to its GitHub issue")
     linker.add_argument("--github", required=True, metavar="TARGET",
                         help="owner/repo#number, or the issue's URL on github.com")
     issue_arg(linker)

@@ -9,7 +9,7 @@ status:          # (optional) [backlog, done] - absent while the issue is in fli
 close_reason:    # (optional) [completed, not-planned, duplicate] - why a done issue closed; done with none is not completed
 duplicate_of:    # (optional) string - the issue that covers this one; only with close reason duplicate
 blocked:         # (optional) map {reason, at} - set while an in-progress or in-review issue waits for something
-github:          # (optional) map {repo, number} - the GitHub issue this issue is linked to (compass issue link --github); labels are written there only when compass.yml sets github_labels
+github:          # (optional) map {repo, number} - the GitHub issue this issue is linked to (compass issue link set --github); labels are written there only when compass.yml sets github_labels
 
 assessment:        # (required) map - the four-dimension JUDGEMENT assessment (assess)
   risk:  # (required) [trivial, contained, cross-cutting, critical]

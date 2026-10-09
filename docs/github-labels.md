@@ -71,7 +71,7 @@ After one of these commands succeeds on a linked issue, with a switch on:
 
 - `compass approach evaluate --write` (assess and reassess)
 - `compass issue status set` and `compass issue status remove` (including a close)
-- `compass issue link`
+- `compass issue link set`
 - `compass ship-commit`
 - `compass quick-fix finish`
 - the commands that change the records that decide the state: `compass scenario add` and `descope`, `compass tdd-red`, `compass tdd-green`, `compass evidence add`, `compass acceptance record`, `compass gate pass`, `compass issue artifact set`, `compass issue subtask add` and `replan`

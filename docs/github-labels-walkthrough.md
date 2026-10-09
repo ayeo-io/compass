@@ -34,8 +34,8 @@ A rule can name a label too. The labels it names in `labels_any` count as declar
 Link the Compass issue to a GitHub issue by repository and number, or by URL:
 
 ```text
-compass issue link --github acme/widgets#42
-compass issue link --github https://github.com/acme/widgets/issues/42
+compass issue link set --github acme/widgets#42
+compass issue link set --github https://github.com/acme/widgets/issues/42
 ```
 
 The command stores `github: {repo: acme/widgets, number: 42}` in the manifest and then writes the labels. If you linked before switching the labels on, run `compass issue labels sync` once.
@@ -50,7 +50,7 @@ Each command that changes the issue's records brings the labels up to date:
 |---|---|
 | `compass approach evaluate --write` | The assessment's declared labels and the status label for the state. |
 | `compass issue subtask add subtask-1 --brief ...` | `status:in-progress` in place of `status:ready`. |
-| `compass tdd-red --scenario <scenario id> -- <test command>`, or `compass evidence add EV-1 --type test-run --path evidence/green.json` | `status:in-progress`, once a test is on record. |
+| `compass tdd-red --scenario <scenario id> -- <test command>`, or `compass evidence add EV-1 --type test-run --path evidence/green-<scenario id>.json` | `status:in-progress`, once a test is on record. |
 | `compass gate pass verify.correctness --evidence EV-1` | `status:in-review`, once a gate has left `pending`. |
 | `compass issue status set backlog` | `status:backlog`. |
 | `compass issue status remove` | The state the records show again, here `status:in-review`. |

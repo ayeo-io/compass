@@ -3466,3 +3466,8 @@
 ### glossary-meaning-only (completed 2026-10-09)
 
 - `TRC-001` Given the vocabulary file, When the glossary is derived or compass terminology is run, Then no Not line and no former name is printed
+
+### shipped-releases-v6 (completed 2026-10-09)
+
+- `TRC-001` The shipped-releases table holds every tagged release, including v6.0.0
+- `TRC-002` The release procedure says to regenerate the shipped-releases table after tagging

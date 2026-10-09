@@ -25,13 +25,13 @@ small variant of an existing pattern, a config change with a known shape.
 
 | Stage | Weight on quick fix |
 |---|---|
-| Assess | Full. Always runs, always writes `delivery-approach.md`. ~minutes. |
+| Assess | Thorough. Always runs, always writes `delivery-approach.md`. ~minutes. |
 | Define | **One scenario.** A single Given/When/Then that names the new behaviour. That scenario is the spec. |
 | Refine | **Collapsed** - permitted only because the one scenario is unambiguous. If it is not unambiguous, the assessment does not produce quick fix. |
 | Plan | **Collapsed** to a one-line "edit which file(s)" note in `delivery-approach.md`. No `technical-design.md`. |
 | Breakdown | **Skipped.** Solo, current branch, no worktree. |
-| Implement | Full TDD: write the failing test for the scenario, make it green, refactor. Test surface = the one scenario plus its obvious edges. |
-| Verify | Light gate: run the new test + the existing suite, paste output. |
+| Implement | Thorough TDD: write the failing test for the scenario, make it green, refactor. Test surface = the one scenario plus its obvious edges. |
+| Verify | Lightweight gate: run the new test + the existing suite, paste output. |
 | Ship | Trivial: commit on the current branch, one-line devlog entry. |
 
 ## Gate set

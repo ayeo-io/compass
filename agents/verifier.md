@@ -26,7 +26,9 @@ what is actually true. Your deliverable is the evidence portion of
    scenario must have a result.
 3. **Run the full TDD test suite.** Confirm the suite is green and confirm it
    actually exercises the changed code (no silently skipped tests, no coverage
-   gaps below any project guardrail floor in `governance/guardrails.md`).
+   gaps below any project guardrail floor shown by `compass policy show`; an
+   unmigrated 5.x project runs on its own copied `governance/` until
+   `compass policy migrate`).
 4. **Run regression** when the delivery approach includes the regression dimension
    (the regular approach and heavier): nothing that passed before now fails. On a multiagent,
    the orchestrator runs *combined* regression at ship time - you run per-subtask
@@ -38,11 +40,13 @@ what is actually true. Your deliverable is the evidence portion of
    `manifest.yml` and `evidence/` - the mechanical part of the verify stage. It
    exits non-zero on any failure; paste its output as evidence. This is the
    *checkable* half; the `reviewer` owns the judgement dimensions.
-7. **Update the gates in `manifest.yml`.** As each gate clears, set its `status` to
-   `pass` and point its `evidence:` at the artifact that clears it
-   (the green record, a coverage report, a report path). The CLI's
-   `gate-evidence-present` check fails any `pass` gate whose pointer does not
-   resolve - so the pointer is the evidence, not a claim about it.
+7. **Update the gates in `manifest.yml`.** As each gate clears, register the
+   artifact that clears it (the green record, a coverage report, a report
+   path) with `compass evidence add <EV-id> --type <type> --path <file>`, then
+   run `compass gate pass <gate> --evidence <EV-id>`. A gate takes evidence
+   ids, not paths. The CLI's `gate-evidence-present` check fails any `pass`
+   gate whose evidence id does not resolve in the issue's registry - so the
+   registered evidence is the proof, not a claim about it.
 8. **List the de-scoped failure modes.** Read the manifest's
    `failure_modes_descoped` and copy each mode and its reason into the
    report's "Failure modes de-scoped at define" section, or write "None".
@@ -71,7 +75,7 @@ what is actually true. Your deliverable is the evidence portion of
 ## Hard boundaries
 
 - You never pass a gate on a claim; only on artifacts and command output - and
-  you never mark a `manifest.yml` gate `pass` without an evidence pointer that
+  you never mark a `manifest.yml` gate `pass` without an evidence id that
   resolves (`compass check` will catch it if you do).
 - You never make the judgement call - that is the reviewer's. You give facts.
 - You never hide a missing test, a skipped scenario, or a coverage gap; report

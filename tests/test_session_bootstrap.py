@@ -246,25 +246,71 @@ def test_sb_c1_plugin_shipped_paths_resolve_from_any_directory():
         + "\n  ".join(bare))
 
 
-def test_sb_c2_governance_is_not_pinned_to_the_plugin_root():
-    """The trap in the obvious sweep.
+def test_sb_c2_a_pin_to_the_plugin_root_says_where_a_project_changes_it():
+    """The shipped governance prose is read from the plugin root.
 
-    `governance/` is NOT always plugin-shipped: `/compass:init` copies it into
-    a project so a team can extend it, and `find_governance()` resolves
-    project-local first, stopping at the project boundary. Rewriting these to
-    `${CLAUDE_PLUGIN_ROOT}/governance/` would silently ignore a project's own
-    governance - the thing /compass:init exists to create.
+    From 6.0.0 `/compass:init` copies no `governance/`: a project changes the
+    rules in its `compass.yml`, and `compass policy show` prints what is in
+    force. So an instruction can read the shipped prose from
+    `${CLAUDE_PLUGIN_ROOT}/governance/`. The trap is a file that pins the
+    prose and says nothing else, which ignores both the project's
+    `compass.yml` and a 5.x project's own copy of `governance/` (which
+    `find_governance()` still resolves project-local first, and `compass
+    policy show` does not read that copy). Within eight lines of each pin the
+    text must say that an unmigrated 5.x project runs on its own copy.
     """
-    pinned = []
-    for directory in ("commands", "agents"):
-        for path in sorted((ROOT / directory).glob("*.md")):
-            for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-                if re.search(r"CLAUDE_PLUGIN_ROOT[^`\n]*governance/", line):
-                    pinned.append(f"{path.relative_to(ROOT)}:{n}")
-    assert not pinned, (
-        "these pin governance/ to the plugin root, so a project that ran "
-        "/compass:init and extended its own governance would be ignored:\n  "
-        + "\n  ".join(pinned))
+    unexplained = []
+    for path in _pin_scan_files():
+        text = path.read_text(encoding="utf-8")
+        for n in _unexplained_pins(text):
+            unexplained.append(f"{path.relative_to(ROOT)}:{n}")
+    assert not unexplained, (
+        "these pin governance/ to the plugin root without saying, nearby, that "
+        "an unmigrated 5.x project runs on its own copy, so that copy would be "
+        "ignored:\n  " + "\n  ".join(unexplained))
+
+
+def _pin_scan_files():
+    """Every instruction file an agent reads: commands, agents, skills (and the
+    files beside each skill) and templates."""
+    files = []
+    for directory in ("commands", "agents", "templates"):
+        files += sorted((ROOT / directory).glob("*.md"))
+    files += sorted((ROOT / "skills").rglob("*.md"))
+    return files
+
+
+def test_sb_c2_the_pin_scan_reads_skills_and_templates():
+    names = {str(p.relative_to(ROOT)) for p in _pin_scan_files()}
+    assert {"commands/plan.md", "agents/router.md", "skills/adaptive-routing/SKILL.md",
+            "skills/adaptive-routing/composition.md", "templates/delivery-approach.md"} <= names
+
+
+def _unexplained_pins(text):
+    """Line numbers of plugin-root governance pins with no 'unmigrated 5.x
+    project' wording within eight lines either side."""
+    lines = text.splitlines()
+    found = []
+    for i, line in enumerate(lines):
+        if re.search(r"CLAUDE_PLUGIN_ROOT[^`\n]*governance/", line):
+            near = " ".join(lines[max(0, i - 8):i + 9])
+            if not re.search(r"unmigrated\s+5\.x\s+project", near):
+                found.append(i + 1)
+    return found
+
+
+def test_sb_c2_the_pin_check_reports_a_pin_without_the_copy_wording():
+    """A pin that names `compass policy show` but not the 5.x copy is flagged,
+    as is one whose explanation sits far away in the same file."""
+    pin = "Read `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` and run `compass policy show`.\n"
+    assert _unexplained_pins(pin) == [1]
+    near = pin + "An unmigrated 5.x project runs on its own copied `governance/`.\n"
+    assert _unexplained_pins(near) == []
+    skill_pin = ("## Walk\n\nThe strategies are judged against\n"
+                 "`${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S9`.\n")
+    assert _unexplained_pins(skill_pin) == [4]
+    far = pin + "\n" * 20 + "An unmigrated 5.x project runs on its own copy.\n"
+    assert _unexplained_pins(far) == [1]
 
 
 # ---------------------------------------------------------------------------

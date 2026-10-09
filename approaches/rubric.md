@@ -1,7 +1,9 @@
 # Assess - the sizing rubric
 
 Assess is the component that runs at the start of every issue. It reads four assessment
-dimensions, applies `governance/routing-policy.md`, and writes `delivery-approach.md`. This
+dimensions, applies the routing rules in force (`compass policy show`; an unmigrated 5.x
+project runs on its own copied `governance/` until `compass policy migrate`),
+and writes `delivery-approach.md`. This
 file is its rubric. The `adaptive-routing` skill is the procedural companion;
 this is the reference.
 
@@ -84,10 +86,11 @@ You do not compose the approach. Run:
 compass approach evaluate --issue <slug> --write
 ```
 
-It applies `governance/routing-policy.yml` to the assessment you just
-recorded - composing the candidate shape, then applying the floors, caps,
-immovable gates and blocking role rules - and folds the result back into the
-manifest. Same assessment plus same policy gives the same approach, every time.
+It applies the routing rules in force (the shipped default preset plus the
+project's `compass.yml`) to the assessment you just recorded - composing the
+candidate shape, then applying the floors, caps, immovable gates and blocking
+role rules - and folds the result back into the manifest. Same assessment plus
+same configuration gives the same approach, every time.
 
 `approaches/composition-reference.md` has the detail, for tuning the policy
 or explaining a result. `--verbose` prints which rules fired.
@@ -95,7 +98,9 @@ or explaining a result. `--verbose` prints which rules fired.
 ## Step 4 - Write `delivery-approach.md` and confirm
 
 Assess writes `.compass/work/<issue-slug>/delivery-approach.md` from
-`templates/delivery-approach.md`. It contains:
+`templates/delivery-approach.md`; on a quick fix, `compass quick-fix start`
+writes it to `docs/compass/<created>-<issue-slug>/` and registers it. The
+pre-tool hook finds it either way. It contains:
 
 - the four dimension assessment, each with its one-line justification;
 - the composed candidate approach;
@@ -109,8 +114,9 @@ Assess writes `.compass/work/<issue-slug>/delivery-approach.md` from
 Routing is **advisory until confirmed**. The human can override any dimension or
 the final approach - overrides are recorded in `delivery-approach.md` too, with who and why.
 What cannot be overridden: an `immovable_gate`, or a `floor` (a routing
-rule is governance speaking; changing it means amending
-`governance/routing-policy.yml`, not overriding an approach).
+rule is governance speaking; changing it means a reviewed change to the
+project's `compass.yml`, not overriding an approach, and a loosening needs a
+waiver that the project's owner approves).
 
 ---
 

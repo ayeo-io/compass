@@ -1,6 +1,6 @@
 # Upgrading to 6.0.0: renamed words and commands
 
-This page lists every word, key and command that 6.0.0 renames, what reads the old form until 7.0.0, and how to roll back. The decisions behind it are in `architecture/decisions/ADR-044-vocabulary-and-cli-naming.md` and `architecture/decisions/ADR-045-the-issue-lifecycle-is-derived-from-records.md`.
+This page lists every word, key and command that 6.0.0 renames, what reads the old form until 7.0.0, and why there is no supported rollback. The decisions behind it are in `architecture/decisions/ADR-044-vocabulary-and-cli-naming.md` and `architecture/decisions/ADR-045-the-issue-lifecycle-is-derived-from-records.md`.
 
 ## Words in a manifest, a policy or a flag
 
@@ -21,7 +21,7 @@ This page lists every word, key and command that 6.0.0 renames, what reads the o
 - An issue's state is `backlog`, `ready`, `in-progress`, `in-review` or `done`. A person sets only `backlog` and `done`.
 - A manifest is written at schema `3.0`. A 6.0.0 command reads schemas 1, 2 and 3. A v5 `check`, `issue lint`, `ci`, `gate pass`, `approach evaluate` and `approach summary` refuse a 3.0 file and exit 2. Other v5 commands do not: `next`, `flow`, `analyze`, `retro` and `issue dashboard` read it and exit 0, and `tdd-green` writes to it, so they can read it wrongly. Do not run a v5 CLI or plugin on a 6.0.0 tree: every checkout and plugin must be updated together.
 - The first save of a manifest that holds old words writes the original to `manifest.yml.v5.bak` beside it. It prints one notice per rewritten word, and each notice names the issue.
-- `compass issue migrate --apply` rewrites every issue in one run.
+- `compass issue migrate --apply` rewrites every issue in one run. When `.compass/work` is not tracked by git, which is the usual case, the command refuses and exits 2 until you take a copy of `.compass/work` outside the repository and add `--i-have-a-copy`.
 - Configuration files (`compass.yml`, copied governance and `.compass/config.yml`) are read in their old words until 7.0.0. A tool to rewrite them is owed before 7.0.0.
 
 ## `compass flow --json`

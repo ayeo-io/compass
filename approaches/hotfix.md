@@ -32,7 +32,7 @@ dimensions - they shape the follow-up - but urgency is what selects the shape.
 
 ## Gate set
 
-Full Verify gate. Review dimensions: `correctness`, `governance`,
+Thorough Verify gate. Review dimensions: `correctness`, `governance`,
 `traceability`, `regression`, `security`. `clarity` is deferred to the
 follow-up. The gate is *not* lighter than the regular approach's - Hotfix compresses the
 stages *before* Verify, never Verify itself.

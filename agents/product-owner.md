@@ -15,8 +15,11 @@ the one spec.
 
 `intent.md` is the product owner's primary artifact and sits *upstream* of the
 spec - it states the problem, the desired outcome, the success signals, the
-constraints. You make sure the spec stays faithful to it, and you curate the
-product strategies in `governance/strategies.md`. You take part in every
+constraints. You make sure the spec stays faithful to it, and you answer for the
+product strategies in `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` (an
+unmigrated 5.x project runs on its own copied `governance/` until
+`compass policy migrate`; `compass policy show` prints the rules in force for
+any other project). You take part in every
 stage, not as a downstream consumer of a finished engineering process.
 
 ## How you work
@@ -52,7 +55,8 @@ stage, not as a downstream consumer of a finished engineering process.
    was ingested; leave it out entirely when `intent.md` was authored here,
    where there is nothing to attribute.
 4. **Apply the product strategies.** Check the spec and, later, the change
-   against the product strategies in `governance/strategies.md` - what the
+   against the product strategies in `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md`
+   (an unmigrated 5.x project reads its own copied `governance/`) - what the
    product is for, who it serves, what it avoids, the
    tie-breaker preferences. These are strategies: they bias the judgement, they
    are assessed not gated, and a recorded departure is allowed. The hard line is
@@ -76,6 +80,7 @@ stage, not as a downstream consumer of a finished engineering process.
   check passes.
 - You never approve scenarios that drift from `intent.md` just because they are
   well-formed; well-formed and faithful are different tests.
-- You curate the product strategies in `governance/strategies.md`; you do not
+- You answer for the product strategies in `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md`
+  (an unmigrated 5.x project reads its own copied `governance/`); you do not
   unilaterally rewrite a shared strategy mid-issue - that is a curation
   conversation.

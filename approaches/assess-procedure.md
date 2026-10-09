@@ -9,15 +9,15 @@ dimensions - that is **judgement** - and then hands them to the CLI, which
 **computes** the delivery approach deterministically. You do not pick a
 process, and you do not compose the approach in your head: you assess the
 work, record the assessment, and `compass approach evaluate` applies
-`governance/routing-policy.yml` to produce the approach. This is the
+the routing rules in force to produce the approach. This is the
 determinism boundary - see `docs/methodology.md` §2.
 
 Assess works on day one with **zero project setup**: the shipped default
 guardrails, strategies, and routing policy apply as-is, so `/compass:init` is
 optional and not a prerequisite. If a project has run `/compass:init`, its
 `compass.yml` extends those defaults - read `compass policy show` for
-what is in force. A project that still holds copied `governance/` files runs
-on them until `compass policy migrate` converts it.
+what is in force. An unmigrated 5.x project runs on its own copied
+`governance/` until `compass policy migrate` converts it.
 
 The issue is the one `/compass:assess` was given.
 
@@ -37,15 +37,19 @@ what `/compass:init` offers separately.
 
 - Load the `adaptive-routing` skill - it is the procedural companion to the
   delivery-approach rubric (`${CLAUDE_PLUGIN_ROOT}/approaches/rubric.md`).
-- Read `governance/routing-policy.md` for the *why*. The machine-readable
-  `governance/routing-policy.yml` is what `compass approach evaluate` actually
-  runs: the CLI applies its **policy floors, caps, immovable gates, and
-  blocking role rules** (hard) and its **default shapes and
-  tie-breaking biases** (soft). You do not apply these by hand; the CLI does.
+- Read `${CLAUDE_PLUGIN_ROOT}/governance/routing-policy.md` for the *why*.
+  What `compass approach evaluate` actually runs is the effective
+  configuration, which `compass policy show` prints: the shipped default
+  preset with the project's `compass.yml` over it. The CLI applies its
+  **policy floors, caps, immovable gates, and blocking role rules** (hard) and
+  its **default shapes and tie-breaking biases** (soft). You do not apply
+  these by hand; the CLI does. An unmigrated 5.x project runs on its own
+  copied `governance/`, which `compass policy show` does not print but
+  `compass approach evaluate` reads.
 - Read `compass.yml` for project settings (test command, multiagent
-  worktree root), or `.compass/config.yml` in a project that has no
-  `compass.yml`. Routing rules are not here - they live in
-  `routing-policy.yml`.
+  worktree root), or `.compass/config.yml` in a 5.x project that has no
+  `compass.yml`. The same `compass.yml` holds the project's changes to the
+  routing rules.
 - For a non-trivial or ambiguous issue, invoke the `router` agent to read
   the four dimensions.
 - If a `intent.md`, `ui-contract.md`, or `positioning.md` already exists for
@@ -89,7 +93,7 @@ force; if it is still a spike, leave the marker in place.
    and write `manifest.yml` from `${CLAUDE_PLUGIN_ROOT}/templates/manifest.yml` into it. This is the
    machine-readable manifest the CLI reads and writes.
 1a. **Load project architecture if present.** If the project has an
-    `architecture/` directory beside `governance/`, write its narrative files,
+    `architecture/` directory at the project root, write its narrative files,
     `invariants.yml` and decision records yourself into
     `architecture-loaded.yml` in the issue directory - that file is what
     downstream agents read for architectural context; no CLI verb does this
@@ -107,10 +111,11 @@ force; if it is still a spike, leave the marker in place.
    is mechanism.
 3. **Compute the delivery approach - this is the mechanism.** Run
    `compass approach evaluate --issue <slug> --write`. The CLI applies
-   `routing-policy.yml` to the assessment: it composes the first approach,
+   the routing rules in force to the assessment: it composes the first approach,
    applies the floors, caps, immovable gates, and blocking role rules, and
    folds the resulting `delivery_approach`, `stages`, `gates` (status
-   pending), `orchestration`, and `policy_rules_fired` back into `manifest.yml`. You
+   pending), `subtask_ceiling`, and `policy_rules_fired` back into
+   `manifest.yml`. Breakdown records the orchestration later. You
    do not compose the approach or apply a policy rule by hand - same
    assessment + same policy => same approach, every time. If the assessment
    is a misclassification, the CLI fails loudly; re-read the dimension it
@@ -145,9 +150,10 @@ force; if it is still a spike, leave the marker in place.
    approach, invite override of any *dimension*, and if a dimension changes,
    re-run `compass approach evaluate --write` - never hand-edit the computed
    approach. Record overrides in `delivery-approach.md` with who and why.
-   Immovable gates and floors cannot be overridden; changing one means
-   amending `governance/routing-policy.yml`, not overriding one issue's
-   approach. Under `/compass:go`, the approach it already showed is
+   Immovable gates and floors cannot be overridden; changing one means a
+   reviewed change to the project's `compass.yml` (`docs/configuration.md`),
+   not overriding one issue's approach. A loosening needs a waiver that the
+   project's owner approves. Under `/compass:go`, the approach it already showed is
    the confirmation: do not stop to wait for one, but act on an override
    whenever the person gives it.
    Wait for the confirmation only if `assess` is in the manifest's

@@ -30,11 +30,12 @@ what `/compass:init` offers separately.
 - Adopt the marketer's vocabulary - claims, voice, audience.
 - Load `intent-interview` and read its `role-translation.md` - positioning is the claims perspective on the
   shared spec.
-- Read `governance/strategies.md` - the marketer curates the voice &
-  positioning strategies there; voice, claims discipline, and the honesty
-  policy come from them. Read `governance/guardrails.md` too - the
-  traceability guardrail keeps every public claim traced to a backing
-  criterion.
+- Read `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` - voice, claims
+  discipline, and the honesty policy come from the voice & positioning
+  strategies there. Read `${CLAUDE_PLUGIN_ROOT}/governance/guardrails.md` too -
+  the traceability guardrail keeps every public claim traced to a backing
+  criterion. `compass policy show` prints the rules in force. An unmigrated 5.x project runs
+  on its own copied `governance/` until `compass policy migrate`.
 - Read `acceptance-criteria.md` if it exists - claims point at scenarios.
 - Invoke the `product-marketer` agent.
 
@@ -76,5 +77,5 @@ adds it on every delivery approach while a marketer is in play.
 
 `positioning.md` and `launch-readiness.md` exist; every claim names a
 backing scenario; voice is consistent with the voice & positioning
-strategies in `governance/`. The claims gate is then carried into
+strategies in force. The claims gate is then carried into
 `/compass:verify` and enforced at `/compass:ship`.

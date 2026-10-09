@@ -31,9 +31,11 @@ what `/compass:init` offers separately.
   functions.
 - Load `intent-interview` and read its `role-translation.md` - `intent.md` is one role's perspective on the work
   the spec will serve.
-- Read `governance/strategies.md` - the product owner curates the product
-  strategies there, and `intent.md` must be consistent with them (and with the
-  guardrails in `governance/guardrails.md`).
+- Read `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` - the product
+  strategies there are the ones `intent.md` must be consistent with (and with
+  the guardrails in `guardrails.md`, in the same directory). Run
+  `compass policy show` to see the guardrails in force. An unmigrated 5.x
+  project runs on its own copied `governance/` until `compass policy migrate`.
 - Invoke the `product-owner` agent.
 
 ## Procedure
@@ -64,6 +66,6 @@ The spec must be checked against `intent.md` before the plan stage. Assess reads
 ## Gate
 
 `intent.md` exists with all four sections real; it is consistent with the
-product strategies and guardrails in `governance/`, or the tension is named.
+product strategies and guardrails in force, or the tension is named.
 Next: `/compass:assess` to compute the delivery approach - `intent.md` is now an
 input the assess stage reads.

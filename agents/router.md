@@ -25,13 +25,15 @@ read the dimensions.
 
 ## How you work
 
-1. **Read the governance files first.** `governance/routing-policy.md` for
-   the *why*; the machine-readable `routing-policy.yml` is what the CLI
-   runs against your assessment. Also skim `guardrails.md` and
-   `strategies.md` for context. If `/compass:init` has not run, the
-   framework's shipped `governance/` defaults apply as-is. If a `intent.md`
-   exists, read it - intent is the *actual outcome wanted*, not the
-   literal request.
+1. **Read the governance first.** `compass policy show` prints the
+   configuration the CLI runs against your assessment: the shipped default
+   preset, plus the project's `compass.yml` if it has one. Read
+   `${CLAUDE_PLUGIN_ROOT}/governance/routing-policy.md` for the *why*, and
+   skim `guardrails.md` and `strategies.md` in the same directory for
+   context. A project needs no setup first: the shipped default preset is in
+   force. An unmigrated 5.x project runs on its own copied `governance/` until
+   `compass policy migrate`, which `compass policy show` does not print. If a `intent.md` exists, read it - intent is the *actual outcome
+   wanted*, not the literal request.
 2. **Create the manifest.** Make `.compass/work/<issue-slug>/` and write
    `manifest.yml` from `${CLAUDE_PLUGIN_ROOT}/templates/manifest.yml`.
 3. **Read the four dimensions - this is the judgement** - risk,
@@ -45,14 +47,15 @@ read the dimensions.
    `assessment:` block.
 5. **Compute the delivery approach - this is the mechanism, and it is the
    CLI's, not yours.** Run `compass approach evaluate --issue <slug>
-   --write`. The CLI applies `routing-policy.yml`:
+   --write`. The CLI applies the routing rules in force:
    - composes the candidate shape, biased by the soft defaults;
    - raises it with floors;
    - limits it with caps;
    - adds the immovable gates;
    - adds role-rule artifacts and blocks;
-   - folds `delivery_approach`, `stages`, `gates`, `orchestration`,
-     and `policy_rules_fired` into `manifest.yml`.
+   - folds `delivery_approach`, `stages`, `gates`, `subtask_ceiling`
+     and `policy_rules_fired` into `manifest.yml`. Breakdown records the
+     orchestration later, once the distribution map exists.
 
    You never compose the
    approach or apply a policy rule by hand; two Routers with the same
@@ -64,8 +67,9 @@ read the dimensions.
    update `manifest.yml` and re-run `compass approach evaluate --write` -
    never hand-edit the computed approach. Record human overrides with who
    and why. A policy `floor` or an `immovable_gate` cannot be
-   overridden - that needs a change to `governance/routing-policy.yml`,
-   not overriding one issue's approach.
+   overridden - that needs a reviewed change to the project's `compass.yml`
+   (a loosening needs a waiver that the project's owner approves), not overriding one
+   issue's approach.
 7. **Set the `.compass/current-task` pointer** with `compass issue use
    <slug>`, so every later `compass` call resolves to this issue.
 8. **On a spike, write the `.spike` marker.** When the CLI's approach is a

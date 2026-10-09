@@ -19,7 +19,8 @@ adversarial inputs - not "tests at all," which is constant.
   project coverage or security guardrail floor requires.
 
 An approach must never go *below* a project coverage-floor guardrail in
-`governance/guardrails.md`. It can need *more* for higher risk, and must
+the rules in force (`compass policy show`; an unmigrated 5.x project runs on
+its own copied `governance/` until `compass policy migrate`). It can need *more* for higher risk, and must
 never need less.
 
 ## Working inside a worktree (multiagent orchestrations)

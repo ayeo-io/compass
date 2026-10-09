@@ -239,12 +239,16 @@ what shows any jargon.
 
 All issue state is files, not conversation:
 
-- `governance/` at the project root - the `.md` files and the `.yml` files
-  the CLI runs - or the framework's shipped defaults if a project has not run
-  init;
-- per-issue artifacts in a `.compass/work/<issue-slug>/` directory, including
-  `manifest.yml` (the manifest) and `evidence/` (the CLI's test and gate
-  records);
+- `compass.yml` at the project root - the one file a person edits: the
+  project's settings and its changes to the shipped default, which stays in
+  force beneath it (`docs/configuration.md`). `compass policy show` prints the
+  configuration in force. A project from 5.x may still hold a
+  `.compass/config.yml` or a copied `governance/` directory; it keeps running
+  on them until `compass policy migrate` (`docs/upgrade-6-0-0.md`);
+- each issue's documents in `docs/compass/<created>-<issue-slug>/`;
+- each issue's machine state in `.compass/work/<issue-slug>/`: `manifest.yml`
+  (the manifest), `evidence/` (the CLI's test and gate records), the markers
+  and `devlog.md`;
 - when the project ships an `architecture/` directory, two derived files the
   assess stage writes when present: `architecture-loaded.yml` (the per-issue
   snapshot of which cross-issue architectural state was loaded) and

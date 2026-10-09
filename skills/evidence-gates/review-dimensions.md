@@ -26,7 +26,8 @@ distinct *is* the check:
   clearly separated from the guardrail evidence. A strategy not followed is a
   note, not an automatic gate failure. On a sweep, rename, or cleanup that
   touches many files, this includes whether verification came from a fresh
-  agent rather than the implementer - `governance/strategies.md` `S9` names
+  agent rather than the implementer - `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md`
+  (an unmigrated 5.x project runs on its own copied `governance/`) `S9` names
   the practice. A new or changed guard is accepted on a demonstrated
   failure, not a passing test (`S10`).
 
@@ -52,7 +53,8 @@ named in `skills/compass-runtime/writing-voice.md` are judged - does the
 artifact communicate a decision, or does it narrate the pipeline? Run
 `scripts/voice-tells.py` over the issue's artifacts for the three tells a fixed string can find; a hit is a note and a conversation, never an automatic gate failure.
 This check applies to every issue - the calibration sample it is read
-against is named in `governance/strategies.md` (`S8`).
+against is named in `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` (`S8`; an
+unmigrated 5.x project runs on its own copied `governance/`).
 
 **claims** - When the product-marketer role is in play (the role rule adds
 the blocking `verify.claims` gate whenever the marketer takes part): does every

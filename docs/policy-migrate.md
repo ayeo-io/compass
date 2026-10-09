@@ -209,9 +209,10 @@ The text output opens with `compass policy migrate: dry run - nothing was
 written`, `BLOCKED - nothing was written`, `applied`, or `nothing to migrate`.
 It then lists what it read, the base release, what the default adopts, the
 overlay, the settings it moved, dropped and did not copy, the equivalence, each
-blocked item, the files, a closing line that edits to `compass.yml` change
-nothing in `compass check` or the evaluator yet, and the `compass.yml` it would
-write.
+blocked item, the files, a closing note that `compass.yml` becomes the
+project's configuration (an issue with no stored generation is judged by it at
+once, and an issue with a generation keeps that generation until its next
+reassess), and the `compass.yml` it would write.
 
 ## `compass policy migrate --json`
 

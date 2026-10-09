@@ -1,12 +1,17 @@
 <!--
 TEMPLATE: delivery-approach.md
 Produced by: the assess stage (`/compass:assess`).
-Lives at:    docs/compass/<created>-<issue-slug>/delivery-approach.md
+Lives at:    docs/compass/<created>-<issue-slug>/delivery-approach.md on a quick fix
+             (registered); .compass/work/<issue-slug>/delivery-approach.md on
+             any other approach, where the pre-tool hook looks for it.
 Authority:   This is the audit centrepiece. It records the assessment, the
              delivery approach the policy computed, every policy rule that
              fired, and, as its own section, what was skipped and why it is safe.
-             Rubric: the delivery-approach reference docs. Policy:
-             governance/routing-policy.md (hard rules + soft biases).
+             Rubric: the delivery-approach reference docs. Policy prose:
+             ${CLAUDE_PLUGIN_ROOT}/governance/routing-policy.md (hard rules +
+             soft biases); the rules in force are what `compass policy show`
+             prints (an unmigrated 5.x project runs on its own copied
+             governance/ until `compass policy migrate`).
 
 On a spike, assess also writes a `.spike` marker file in the issue
 directory so the pre-tool hook knows to suspend the TDD strategy.
@@ -64,19 +69,24 @@ Candidate review dimensions: {{correctness, governance, traceability, … per th
 
 ### 3a. Policy provenance
 
-<!-- WHICH POLICY produced this approach. `compass approach evaluate` prints
-     both lines below - copy them here. Without this, a reader months later
-     cannot tell a genuinely light approach from one computed against stale
-     governance. If the CLI reported drift, record it: an approach computed
-     against a policy missing framework rules is an approach missing
-     gates. -->
+<!-- WHICH POLICY produced this approach. `compass approach evaluate --verbose`
+     prints a `policy` line: in a project with a `compass.yml` it says "this
+     project's effective configuration (compass.yml over the shipped
+     default)", and without one it names the shipped routing-policy.yml and
+     its version. The stored `generation:` in manifest.yml names the
+     configuration the issue runs against. Copy both here. Without this, a
+     reader months later cannot tell a genuinely light approach from one
+     computed against stale governance. If the CLI reported drift, record it:
+     an approach computed against a policy missing framework rules is an
+     approach missing gates. -->
 
-- Policy file: {{path to the routing-policy.yml that was read}}
-- Policy version: {{the `version:` that file declares}}
-- Drift: {{"none - the project's policy matches framework vX.Y.Z" - or "N rule(s)/check(s) missing against framework vX.Y.Z; see `compass policy lint`"}}
+- Policy line: {{the `policy` line from `compass approach evaluate --verbose`}}
+- Generation: {{the manifest's `generation:` number, or "0 - not stored yet"}}
+- Drift: {{"none" - or "N rule(s)/check(s) missing against framework vX.Y.Z; see `compass policy lint`"}}
 
 <!-- Every floor / cap / immovable gate / blocking role rule from
-     governance/routing-policy.md that matched. Quote each one's rationale.
+     ${CLAUDE_PLUGIN_ROOT}/governance/routing-policy.md (an unmigrated 5.x
+     project runs on its own copied governance/) that matched. Quote each one's rationale.
      If none fired, say so explicitly - silence is not a record. -->
 
 | Rule type | Rule | What it changed | Rationale (quoted from the policy) |
@@ -157,8 +167,10 @@ Candidate review dimensions: {{correctness, governance, traceability, … per th
 <!-- The computed approach is advisory until confirmed. Any assessment value
      or the final approach may be overridden by a human - recorded here with
      who and why. What CANNOT be overridden: an immovable gate, or a floor
-     (a hard policy rule is governance speaking; changing it means amending
-     governance/routing-policy.md, not overriding one issue's approach). -->
+     (a hard policy rule is governance speaking; changing it means a
+     reviewed change to the project's compass.yml (a loosening needs a waiver that
+     the project's owner approves), not overriding one
+     issue's approach). -->
 
 | What was overridden | From → To | Who | Why |
 |---|---|---|---|

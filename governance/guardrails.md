@@ -6,10 +6,12 @@ and **sticky** (slow to add, slower to remove). A guardrail always beats a
 strategy.
 
 This file ships with five **default guardrails** active. A project can *add*
-guardrails below them; it can also remove one, and `compass check` reports
-the omission. A project adds its own checks and gates in its `compass.yml`,
-which extends the shipped default (see `docs/configuration.md`). A project that
-copied this file under 5.x keeps running on its copy until `compass policy
+guardrails below them. The five are locked: `compass policy lint` refuses a
+`compass.yml` that removes or loosens one (`K-LOCK-REFUSED`). A project adds
+its own checks and gates in its `compass.yml`, which extends the shipped
+default (see `docs/configuration.md`). Only a project that copied this file
+under 5.x can omit a shipped guardrail, and `compass check` reports the
+omission. That project keeps running on its copy until `compass policy
 migrate` converts it.
 
 **This document explains; `guardrails.yml` enforces.** The companion
@@ -181,8 +183,8 @@ Why it is enforced rather than warned about:
 
 `cli/compass_pkg/locks.py` protects the framework's guarantees when a layer
 changes the shipped default. `architecture/decisions/ADR-039-waivers-locks-and-unlocks.md`
-decides the rules. The module has no command yet, so lint and `policy
-effective` will print what it returns.
+decides the rules. `compass policy lint` reports a refused change as
+`K-LOCK-REFUSED`, and `compass policy show` prints the resolved configuration.
 
 - **A lock** is `locked: true` or `locked: hard` on an entry. The shipped
   preset declares the framework locks, and a lower layer cannot remove one. An

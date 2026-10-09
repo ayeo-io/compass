@@ -43,6 +43,22 @@ def test_ds_1_the_site_lists_the_core_pages_and_each_exists():
         assert (ROOT / "docs" / page).is_file(), page
 
 
+def test_trc_s4_site_publishes_configuration_and_upgrade():
+    """Issue `six-zero-docs-sweep`: a 5.x reader finds the
+    configuration page and the upgrade page from the site, so both are in the
+    navigation and are allowed through the exclude rule."""
+    config = _config()
+    pages = list(_nav_pages(config["nav"]))
+    exclude = config["exclude_docs"]
+    for page in ("configuration.md", "upgrade-6-0-0.md"):
+        assert page in pages, f"{page} is not in the site navigation"
+        assert f"!/{page}" in exclude, f"{page} is excluded from the build"
+        assert (ROOT / "docs" / page).is_file()
+    # The home page links to both, so a reader does not need the navigation.
+    index = (ROOT / "docs" / "index.md").read_text(encoding="utf-8")
+    assert "](configuration.md)" in index and "](upgrade-6-0-0.md)" in index
+
+
 def test_ds_1_every_relative_link_stays_inside_the_site():
     pages = set(_nav_pages(_config()["nav"]))
     for page in pages:

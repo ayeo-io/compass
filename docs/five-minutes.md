@@ -15,7 +15,8 @@ Install Compass inside Claude Code:
 ```
 
 Open a project you are happy to change. Compass will add a `.compass/`
-directory containing the issue record and review artifacts.
+directory for the issue's manifest and evidence, and a `docs/compass/`
+directory for the issue's documents.
 
 ## 1. Assess the work
 
@@ -38,8 +39,9 @@ Judgement goes into the assessment. Everything after it is deterministic: the
 same assessment plus the same policy produces the same approach, every time.
 
 For a contained typo, Compass will normally choose a quick-fix-shaped approach.
-It writes the result under `.compass/work/<issue>/`, and the manifest records the
-judgement it was computed from. The part of `manifest.yml` that matters here:
+It writes the manifest to `.compass/work/<issue>/` and the issue's documents to
+`docs/compass/<date>-<issue>/`, and the manifest records the judgement it was
+computed from. The part of `manifest.yml` that matters here:
 
 ```yaml
 schema_version: "3.0"
@@ -56,7 +58,7 @@ them - the stages, the gates, the orchestration - is computed. Run
 `compass approach evaluate --verbose` against that assessment and it prints:
 
 ```text
-  policy          : <your project>/governance/routing-policy.yml (v<the version that file declares>)
+  policy          : this project's effective configuration (compass.yml over the shipped default)
   assessment      : {"risk": "contained", "familiarity": "brownfield-mapped", "size": "atomic", "goal": "delivery", "role": "engineer"}
   first approach  : quick fix  <- RP-SHAPE-003 (Small on every axis.)
   FINAL APPROACH  : quick fix
@@ -74,6 +76,12 @@ them - the stages, the gates, the orchestration - is computed. Run
   gate set        : verify.correctness, verify.governance, verify.traceability
 ```
 
+The first line shows what the project runs against. The text above is the line
+for a project with a `compass.yml`. A project without one has not changed the
+shipped default, and the line names the shipped `routing-policy.yml` and its
+version instead. Run against an issue that already has a stored generation, the
+line reads `generation N of this issue (parent ...)`.
+
 Generate the issue dashboard:
 
 ```bash
@@ -87,8 +95,9 @@ Then open `.compass/work/<issue>/README.md`. It tells you:
 - which artifacts will be produced;
 - what Compass deliberately omitted, and why;
 - each scenario's red, green and evidence, with a diagram from intent to
-  scenario to test to evidence that renders in a Markdown preview; and
-- the next action.
+  scenario to test to evidence that renders in a Markdown preview.
+
+The page does not name the next action. `compass next` does.
 
 Compass never regenerates the page for you. When a command that writes the
 manifest leaves the page out of date, it prints one line telling you to run
@@ -182,14 +191,18 @@ A small issue typically leaves:
 .compass/work/<issue>/
 ├── README.md
 ├── manifest.yml
-├── delivery-approach.md
-├── acceptance-criteria.md
-├── verification-report.md
 ├── devlog.md
 └── evidence/
+
+docs/compass/<date>-<issue>/
+├── delivery-approach.md
+├── acceptance-criteria.md
+└── verification-report.md
 ```
 
-The exact pack varies with the work. Another person, session or compatible
+`.compass/work/<issue>/` holds the machine state and the dashboard;
+`docs/compass/<date>-<issue>/` holds the documents. The exact pack varies with
+the work. Another person, session or compatible
 runtime can resume from these files without the original chat.
 
 ## The mental model in five points

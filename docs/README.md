@@ -32,7 +32,7 @@ the table does not exist, and when a doc in this folder is not listed.
 
 - [install-smoke-test.md](install-smoke-test.md) - the checklist after an install or an install change.
 - [releasing.md](releasing.md) - how to cut a release.
-- [upgrade-6-0-0.md](upgrade-6-0-0.md) - the words, keys and commands that 6.0.0 renames, what reads the old form until 7.0.0, and how to roll back.
+- [upgrade-6-0-0.md](upgrade-6-0-0.md) - the words, keys and commands that 6.0.0 renames, what reads the old form until 7.0.0, and why there is no supported rollback.
 - [configuration.md](configuration.md) - every project setting: what it does, its values, its default and which file holds it.
 - [policy-lint.md](policy-lint.md) - `compass policy lint` and `compass policy show` on a layered project: the order of the checks, the finding codes and both JSON shapes.
 - [check-implementations.md](check-implementations.md) - the version and fixture corpus of each check implementation, the build rule and what a major difference does.

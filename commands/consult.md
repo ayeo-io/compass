@@ -34,7 +34,10 @@ what `/compass:init` offers separately.
   is actually on disk: `delivery-approach.md`, `intent.md`,
   `acceptance-criteria.md`, `technical-design.md`, `positioning.md`,
   `ui-contract.md` - whichever bear on the question.
-- Read `governance/` - a consult cannot decide its way past a guardrail.
+- Run `compass policy show` for the rules in force, and read the reasons in
+  `${CLAUDE_PLUGIN_ROOT}/governance/guardrails.md` and `strategies.md` - a
+  consult cannot decide its way past a guardrail. An unmigrated 5.x project
+  runs on its own copied `governance/` until `compass policy migrate`.
   Strategy-vs-strategy tension is exactly what a consult *is* for; a
   guardrail is not up for negotiation.
 

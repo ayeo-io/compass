@@ -127,8 +127,9 @@ changed how often a session stops would give no sign.
 
 - `name`: shown in artifact headers and the devlog.
 - `test_command`: the command `compass tdd-red` and `compass tdd-green` run
-  when none is given. Left empty, the hooks detect npm, Make and pytest
-  conventions.
+  when none is given. Left empty, `tdd-red` and `tdd-green` need the command
+  after `--`, and refuse without it. `scripts/integrate.sh` falls back to
+  `npm test` or `make test` for the combined regression run.
 - `test_micro_command`: used before `test_command` for those two commands.
 - `bdd_run_command`: the command the `compass bdd` run step uses when none is given.
 

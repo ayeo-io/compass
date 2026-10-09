@@ -7,7 +7,7 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 
 Refine is the requirements review: it hardens the spec before any design is
 built on it. It resolves ambiguities and QAs `acceptance-criteria.md` against
-itself and against `governance/` - the guardrails and strategies.
+itself and against the governance in force - the guardrails and strategies.
 
 ## First: is the requirements review in play?
 
@@ -65,8 +65,11 @@ is for. The same split is written from the other side in
 ## Setup
 
 - Load `bdd-specification`; the `spec-author` agent owns this continuation.
-- Read `governance/` - the spec is QA'd against the guardrails and the
-  applicable strategies here.
+- Run `compass policy show` for the rules in force, and read the reasons in
+  `${CLAUDE_PLUGIN_ROOT}/governance/guardrails.md` and `strategies.md` - the
+  spec is QA'd against the guardrails and the applicable strategies. An
+  unmigrated 5.x project runs on its own copied `governance/` until
+  `compass policy migrate`.
 - If a non-engineering role is in play, this is where they review: invoke
   `product-owner` (intent fidelity against `intent.md`) and/or `product-marketer`
   (every planned claim has a candidate scenario).

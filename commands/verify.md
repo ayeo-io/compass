@@ -33,15 +33,18 @@ The rest of this command is for delivery work.
 - If the product-marketer role is in play, the `claims` dimension applies -
   `product-marketer` reviews here too.
 - If this issue is itself a sweep, rename, or cleanup touching many files,
-  check it the way `governance/strategies.md` `S9` describes: a fresh agent
-  that has not seen the change, not its author.
+  check it the way `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S9` describes
+  (an unmigrated 5.x project runs on its own copied `governance/` until
+  `compass policy migrate`): a fresh agent that has not seen the change, not
+  its author.
 - A guard offered as part of the change is accepted on a demonstrated failure
-  rather than a passing test - `governance/strategies.md` `S10` states the
+  rather than a passing test - `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S10` states the
   method.
 - Where a review comment and the author disagree about a quantity - how many
   call sites, how much output, how often it fires - measure the number and
   report it before defending either position
-  (`governance/strategies.md` `S11`).
+  (`${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S11`; an unmigrated 5.x
+  project reads its own copied `governance/`).
 - QA owns this gate and can send the issue back to the define stage if
   scenarios are uncoverable.
 
@@ -64,16 +67,20 @@ The rest of this command is for delivery work.
 4. **Review dimensions.** Apply each dimension `delivery-approach.md`
    lists - `correctness`, `governance`, `traceability`, and as the approach
    needs `regression`, `security` (scaled or full), `clarity`, `claims`.
-   The `governance` dimension checks the work against `governance/`: the
-   guardrails (hard, evidence-backed - `compass check` is the mechanical
-   part) and the applicable strategies (assessed as judgement, reported
-   distinctly). On a multiagent, check each subtask first, then again on the
+   The `governance` dimension checks the work against the governance in force
+   (`compass policy show`; an unmigrated 5.x project runs on its own copied
+   `governance/` until `compass policy migrate`): the guardrails (hard, evidence-backed -
+   `compass check` is the mechanical part) and the applicable strategies
+   (assessed as judgement, reported distinctly). On a multiagent, check each subtask first, then again on the
    combined result.
 5. **Update the gates in `manifest.yml`.** As each gate is cleared, the
-   `verifier` sets its `status` to `pass` and points its `evidence:` at the
-   artifact (the scenario-bound green record, a report path). `compass check`'s
-   `gate-evidence-present` check checks every `pass` gate has a pointer
-   that resolves - a gate marked pass with no evidence fails the check.
+   `verifier` registers the evidence, then passes the gate with it:
+   `compass evidence add <EV-id> --type <type> --path <file>`, then
+   `compass gate pass <gate> --evidence <EV-id>`. A gate takes evidence ids from
+   the issue's registry, not file paths, and the CLI checks the type at write
+   time. `compass check`'s `gate-evidence-present` check checks every `pass`
+   gate references an id that resolves - a gate marked pass with no such
+   evidence fails the check.
 6. **Write `verification-report.md`** from the output of
    `compass issue template show verification-report`, which renders the checklist from the
    issue's exit lists: each dimension, each gate, the evidence, pass/fail.

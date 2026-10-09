@@ -43,7 +43,7 @@ acceptance-before-code, and traceability guardrails apply in full.
 
 | Stage | Weight on Spike |
 |---|---|
-| Assess | Light but real. `delivery-approach.md` is written - even a spike is accountable. It records the **question** and the **timebox**. |
+| Assess | Lightweight but real. `delivery-approach.md` is written - even a spike is accountable. It records the **question** and the **timebox**. |
 | Define | **Collapsed** into the question. The spike's spec is "what do we need to learn, and what would a useful answer look like?" - not acceptance criteria for code. |
 | Refine | **Skipped.** There is nothing to QA the spec against - the behaviour is the unknown, and discovering it is the point. |
 | Plan | **Collapsed** to a timebox and an approach sketch in `delivery-approach.md`. |

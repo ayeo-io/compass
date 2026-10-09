@@ -28,11 +28,15 @@ all-or-nothing - you have one or you don't, and a half-written one feels
 broken. Strategies and guardrails have a valid *light* state: the shipped
 default guardrails, the shipped default method strategies, and zero
 project-specific additions. That is a complete, usable governance state, not
-a skipped step. A team starts there and adds strategies as it forms
-opinions, and adds a guardrail only when it hits something that must never
-recur. This is what makes `/compass:init` optional - see `docs/quickstart.md`.
-Since 6.0.0 a team makes those additions in its `compass.yml`, which extends
-the shipped defaults (see `docs/configuration.md`).
+a skipped step. A team starts there and adds a guardrail only when it hits
+something that must never recur. This is what makes `/compass:init` optional -
+see `docs/quickstart.md`. Since 6.0.0 a team makes changes to checks, gates and
+rules in its `compass.yml`, which extends the shipped defaults (see
+`docs/configuration.md`). `compass.yml` cannot hold strategies:
+`compass policy lint` reports `L-SCHEMA` for a `strategies:` key. The shipped
+strategies are the ones in force, and a rule a person has had to repeat can be
+recorded as a project lesson (`compass lesson propose`), which is advice and
+never a gate.
 
 **It keeps honest things honest.** Guardrails are *checkable* - a test ran, a
 scan passed, a human approved. Strategies are *assessed* - is this clear, does
@@ -102,15 +106,20 @@ its copy until `compass policy migrate` turns the copy into a `compass.yml`
 overlay. A new project's `/compass:init` copies nothing. Editing is accretion,
 not a precondition.
 
-## What happens to the shipped defaults when a project declares its own
+## A project that copied governance under 5.x
 
-**Project governance replaces the shipped defaults. It is not added to them.**
+A 6.0.0 project does not copy these files. It edits `compass.yml`, and the
+shipped default stays in force beneath it. The rest of this section is about a
+5.x project that copied `governance/` into its root. That copy keeps working
+until `compass policy migrate` converts it (`docs/upgrade-6-0-0.md`).
 
-`compass check` builds the guardrail set from the one `governance/` directory
-in force - the project's if it has one, the framework's otherwise. A project
-that declares its own therefore keeps only what its files contain. Copy the
-shipped `guardrails.yml` and edit it rather than writing a short one from
-scratch, or the five default guardrails stop applying.
+**A copy replaces the shipped defaults. It is not added to them.**
+
+For such a project `compass check` builds the guardrail set from the one
+`governance/` directory in force - the project's copy. A project that
+declares its own therefore keeps only what its files contain. Edit the copy of
+the shipped `guardrails.yml` rather than writing a short file from scratch, or
+the five default guardrails stop applying.
 
 **A shipped guardrail the project omits is reported, but does not fail the
 run.** When `compass check` meets an issue that one of the framework's defaults

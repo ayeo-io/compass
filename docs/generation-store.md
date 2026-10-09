@@ -161,7 +161,8 @@ again. Exit 0, or 2 on error.
 
 - It does not read the project's files. A project edit reaches the issue only
   through `compass approach evaluate --write`, which classifies it.
-- It refuses a landed issue and writes nothing.
+- It refuses a closed issue (done, whatever its close reason) and writes
+  nothing.
 - When the generation already holds the installed versions it says "no change"
   and writes nothing.
 - An issue with no `generation:` key, or at generation 0, is adopted: its live

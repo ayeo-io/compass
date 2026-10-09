@@ -72,14 +72,17 @@ dated digest file (see below).
    This is the framework's own feedback loop: a framework about
    right-sizing process has to be able to tell whether the right-sizing is
    any good. Report the signal; if most re-assessments go the same way, the
-   fix is in `governance/routing-policy.yml` or the delivery-approach
-   rubric, not in any one issue.
+   fix is in the project's `compass.yml` (a reviewed change to the routing
+   rules) or the delivery-approach rubric, not in any one issue.
 
 7. **Run rework-scan.** Run `compass rework-scan --format markdown` and
    embed the output in the report as a "Rework scan" section. This surfaces
    cross-issue add-then-delete patterns within the configured window
-   (`governance/signals.yml rework_scan.window_days`). The scan is a
-   signal - it never gates, never changes issue state, and always exits 0
+   (`rework_scan.window_days` in `${CLAUDE_PLUGIN_ROOT}/governance/signals.yml`,
+   or in the project's own copy of that file, which the scan reads first; an
+   unmigrated 5.x project runs on its own copied `governance/` until
+   `compass policy migrate`). The
+   scan is a signal - it never gates, never changes issue state, and always exits 0
    on detection (Flow advises, never gates). If the section is empty,
    record "0 rework instances detected" to confirm the scan ran.
 

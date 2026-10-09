@@ -3444,3 +3444,17 @@
 - `GLS-14` gh gets an argument list and label names are checked
 - `GLS-15` The settings are declared and documented
 - `GLS-16` The glossary and docs say what the sync does
+
+### six-zero-docs-sweep (completed 2026-10-09)
+
+- `TRC-S1` Plugin instructions read the shipped governance from the plugin
+- `TRC-S2` The governance prose describes the 6.0.0 model
+- `TRC-S3` The routing deep dive matches the evaluator
+- `TRC-S4` The front pages route a reader to compass.yml and the upgrade page
+- `TRC-S5` An issue's documents are found where the CLI writes them
+- `TRC-S6` The install smoke test passes on a healthy install
+- `TRC-S7` The quickstart, five-minutes and portability pages match the code
+- `TRC-S8` The configuration, upgrade, migrate and CI pages match the code
+- `TRC-S9` Plugin instructions use evidence types, verbs and fields that exist
+- `TRC-S10` The stage-weight tables use the stored words
+- `TRC-S11` README status badges name real targets

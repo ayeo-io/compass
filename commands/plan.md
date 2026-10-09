@@ -33,12 +33,14 @@ engineering plan stage.)
 
 1. **Technical approach.** State the design. Record each design decision as
    an ADR-style note - what was chosen, what was rejected, why.
-2. **Governance check.** Run `governance-check` against `governance/` - the
-   guardrails (hard, blocking) and the applicable engineering strategies
-   (soft, assessed). Read the machine-readable governance the CLI runs
-   against: `guardrails.yml`, `strategies.md`, `routing-policy.yml`.
-   `compass policy lint` checks the structure of the governance YAML - run it
-   if the project has tuned `governance/`. A design that crosses a guardrail
+2. **Governance check.** Run `governance-check` against the governance in
+   force - the guardrails (hard, blocking) and the applicable engineering
+   strategies (soft, assessed). `compass policy show` prints the rules the CLI
+   runs against, and the reasons are in
+   `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` and `guardrails.md`. An
+   unmigrated 5.x project runs on its own copied `governance/` until
+   `compass policy migrate`. `compass policy lint` checks the structure of the project's `compass.yml` -
+   run it if the project has changed the rules. A design that crosses a guardrail
    does not pass - revise the design, never waive the guardrail. A design
    that departs from a strategy can pass, but the departure is recorded.
 3. **Distribution map** (when the work splits into independent units). Read
@@ -74,8 +76,8 @@ the design.
 > `docs/compass/<created>-<issue-slug>/technical-design.md`
 > (and the distribution map to `distribution-map.md`).
 >
-> It records N design decisions, the governance check against all of
-> `governance/`, and M work units.
+> It records N design decisions, the governance check against all of the
+> governance in force, and M work units.
 >
 > Worth a read before implementation. Specifically, look for:
 > - **Design decisions you would make differently** - each records what was

@@ -35,8 +35,9 @@ Every issue begins with an assessment:
 Assessment is judgement. The assessor must explain uncertain or consequential
 choices, and a human can correct them before work proceeds.
 
-Routing is mechanism. Once the assessment exists, the kit applies
-`governance/routing-policy.yml`, including floors, caps and immovable gates.
+Routing is mechanism. Once the assessment exists, the kit applies the
+resolved configuration - the shipped routing policy plus the project's
+`compass.yml` - including floors, caps and immovable gates.
 
 > Judgement goes into the assessment. Everything after it is deterministic:
 > the same assessment plus the same policy produces the same approach, every
@@ -148,16 +149,21 @@ approach, or a human, settles a conflict between strategies.
 
 ## 6. Artifacts are a review pack
 
-Compass stores each issue beneath `.compass/work/<issue>/`.
+Compass stores each issue in two places. The machine state - the manifest, the
+evidence, the markers and the devlog - is in `.compass/work/<issue>/`. The
+documents are in `docs/compass/<created>-<issue>/`, where `<created>` is the
+manifest's `created:` date.
 
-Two files anchor the pack:
+Two files anchor the pack, both in `.compass/work/<issue>/`:
 
-- `README.md` is the human dashboard: delivery approach, status, decisions,
-  approval and next action.
+- `README.md` is the human dashboard: status, delivery approach, the decision
+  awaited, the review pack, what was deliberately omitted and traceability.
+  `compass next` names the next action.
 - `manifest.yml` is the manifest: assessment, stage state, gates,
   traceability and evidence registry.
 
-Other artifacts are selected by the delivery approach. They can include:
+Other artifacts are selected by the delivery approach, and are written to
+`docs/compass/<created>-<issue>/`. They can include:
 
 | Concern | Typical artifacts |
 |---|---|

@@ -57,7 +57,9 @@ What is different about a Spike composition:
 ## Constraining with the routing guardrails
 
 After composing - the candidate already biased by the routing strategies - run
-it through the **routing guardrails** in `governance/routing-policy.md` in this
+it through the **routing guardrails** (explained in
+`${CLAUDE_PLUGIN_ROOT}/governance/routing-policy.md`; an unmigrated 5.x project
+runs on its own copied `governance/`) in this
 order: **floors** raise it, **caps** limit it, **immovable_gates** are added,
 blocking **role_rules** add artifacts and stage blocks. Record every routing
 guardrail that fires *and quote its rationale* in `delivery-approach.md`. Never apply a
@@ -66,6 +68,7 @@ constraint silently - a reader of `delivery-approach.md` must see which bounds w
 The split is the whole point: routing strategies *bias* what the assess stage
 chooses, routing guardrails *bound* what it is allowed to do. A human can override an
 assessment value or a strategy-biased choice per-issue; a human cannot override a routing
-guardrail per-issue - changing one means amending
-`governance/routing-policy.md`.
+guardrail per-issue - changing one is a reviewed change to the project's
+`compass.yml` (`docs/configuration.md`), and a loosening needs a waiver that
+the project's owner approves.
 

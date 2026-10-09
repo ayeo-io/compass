@@ -45,6 +45,8 @@ exclude_docs: |
   !/security.md
   !/portability.md
   !/install-smoke-test.md
+  !/configuration.md
+  !/upgrade-6-0-0.md
 
 nav:
   - Home: index.md
@@ -52,6 +54,8 @@ nav:
       - Five minutes: five-minutes.md
       - Quickstart: quickstart.md
       - Install check: install-smoke-test.md
+      - Configuration: configuration.md
+      - Upgrading to 6.0.0: upgrade-6-0-0.md
   - Guarantees:
       - Safety contract: safety-contract.md
       - Refusal codes: refusal-codes.md

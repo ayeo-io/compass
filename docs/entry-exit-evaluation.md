@@ -42,7 +42,8 @@ the next `compass approach evaluate --write`.
 | entry of a stage | the stage is the current stage, or the issue is past it |
 | exit of a stage | the issue is past the stage |
 
-A landed issue has every list due. `compass check` counts only due checks. The
+A closed issue has every list due, whatever its close reason. `compass check`
+counts only due checks. The
 receipt shows every list, and says which are not yet due.
 
 ## How a check is judged

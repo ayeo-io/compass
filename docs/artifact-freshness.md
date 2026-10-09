@@ -3,9 +3,9 @@
 This page is the owning doc for the capability `artifact-freshness`. With it
 on, Compass records the digest of a document when the document is written,
 and reports the document as stale when an artifact it depends on has changed
-since. A stale document is refused at land and at the entry of a stage that
+since. A stale document is refused at ship and at the entry of a stage that
 consumes it. The code is `cli/compass_pkg/freshness.py`. `compass issue
-artifact` writes the records, and `compass check`, `compass next`,
+artifact set` writes the records, and `compass check`, `compass next`,
 `compass issue receipt` and `compass ship-commit` read them.
 
 The decision to keep it opt-in is in
@@ -38,7 +38,7 @@ artifacts:
 
 ## What is recorded
 
-`compass issue artifact <kind> --status ...` stamps the document's entry in
+`compass issue artifact set <kind> --status ...` stamps the document's entry in
 the manifest's `artifacts:` registry:
 
 ```yaml
@@ -64,7 +64,7 @@ its `upstream`. A document is written against the upstream as it was when its
 file last changed.
 
 Nothing else writes either field. A presence check, `compass check` and
-`compass issue artifact` on an unchanged file never clear staleness.
+`compass issue artifact set` on an unchanged file never clear staleness.
 
 ## When a document is stale
 
@@ -133,16 +133,16 @@ compass: compass ship-commit: refusing to land - 1 artifact(s) are stale:
 - Registering a document records that it was written against the upstream as
   it is now. The CLI cannot tell a document that was rewritten from one that
   was changed by a space. Compass checks bytes, not meaning.
-- Omitting a document stops tracking it. `compass issue artifact <kind>
+- Omitting a document stops tracking it. `compass issue artifact set <kind>
   --status omitted --reason ...` is allowed even for a stale document,
   because an omission carries a recorded reason. An omitted entry is not
   stamped and is not reported.
 - `digest` and `upstream` are ordinary manifest data. A hand edit of them
   defeats the check, as a hand edit of `gates:` does. Compass does not
   protect either from a person who edits the manifest.
-- If the configuration cannot be read, `compass issue artifact` records
+- If the configuration cannot be read, `compass issue artifact set` records
   nothing and still saves the status.
-- `compass issue artifact` refuses, and saves nothing, when the document or
+- `compass issue artifact set` refuses, and saves nothing, when the document or
   an artifact it depends on has a file that cannot be read. It names the
   files.
 - If freshness cannot be evaluated while the capability is on, `compass

@@ -28,7 +28,7 @@ assembles it from per-dimension contributions:
 Concretely, `compass approach evaluate` decides, per stage:
 
 - **Define** - how many scenarios, discovery vs. behaviour mapping, how deep.
-- **Refine** - full pass, light pass, or collapsed (only collapsible when the
+- **Refine** - thorough pass, lightweight pass, or collapsed (only collapsible when the
   spec is a single unambiguous scenario *and* no routing rule needs it).
 - **Plan** - "edit this file" one-liner, a real technical plan, or a plan plus
   a distribution map.
@@ -70,7 +70,7 @@ its own Conclude gate ("was the question answered?"); see `approaches/spike.md`.
 The candidate delivery approach - already biased by the routing strategies
 above - is now bounded by the **routing rules** in `governance/routing-policy.md`:
 
-1. **floors** raise the delivery approach or force stages back to full weight.
+1. **floors** raise the delivery approach or force stages back to thorough weight.
 2. **caps** limit scale-up (e.g. the worktree ceiling on critical risk).
 3. **immovable_gates** are added whatever the delivery approach.
 4. **blocking role_rules** add required artifacts and stage blocks.

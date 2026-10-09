@@ -340,7 +340,7 @@ def test_PM_6_apply_writes_compass_yml_last_and_keeps_every_source(tmp_path):
     assert _settings_view(root) == before
     code, out, err = _run(root, "policy", "lint")
     assert code == 0 and "PASS" in out, out + err
-    assert _run(root, "policy", "effective")[0] == 0
+    assert _run(root, "policy", "show")[0] == 0
 
 
 def test_PM_6_apply_on_a_blocked_plan_writes_nothing_and_exits_1(tmp_path):
@@ -672,7 +672,7 @@ def test_PM_14_the_migrated_project_guardrail_survives_apply_and_lint(tmp_path):
     assert code == 0, out + err
     assert "Q1-lint-passes" in (root / "compass.yml").read_text(encoding="utf-8")
     assert _run(root, "policy", "lint")[0] == 0
-    assert "checks.Q1-lint-passes.params" in _run(root, "policy", "effective")[1]
+    assert "checks.Q1-lint-passes.params" in _run(root, "policy", "show")[1]
 
 
 def test_PM_14_a_value_only_the_legacy_views_hold_blocks_by_name(tmp_path):

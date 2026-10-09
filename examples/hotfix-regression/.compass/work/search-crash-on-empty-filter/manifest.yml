@@ -1,7 +1,8 @@
-schema_version: '2.0'
+schema_version: '3.0'
 issue: search-crash-on-empty-filter
 created: '2026-05-11'
-status: landed
+status: done
+close_reason: completed
 land_timestamp: '2026-08-04T00:00:00Z'
 assessment:
   risk: cross-cutting
@@ -15,13 +16,13 @@ delivery_approach: hotfix
 orchestration: solo
 policy_rules_fired: []
 stages:
-  assess: light
+  assess: lightweight
   define: reproduce-first
   refine: collapsed
   plan: collapsed
   breakdown: skipped
   implement: expedited
-  verify: full
+  verify: thorough
   ship: full-plus-follow-up
 evidence:
 - id: EV-T1

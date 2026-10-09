@@ -34,7 +34,7 @@ it is exempt from assessment.
 1. **Check what the project already has.** Look for these, in order:
    - A `compass.yml` with a top-level `schema:` key. Compass already has its
      configuration. Stop and report that. Offer `compass policy lint` and
-     `compass policy effective`, which show every resolved field and the layer
+     `compass policy show`, which show every resolved field and the layer
      it came from. Do not overwrite the file.
    - A `compass.yml` with no `schema:` key. Compass does not read it, so it is
      another tool's file. Stop and report that. Do not overwrite it and do not
@@ -96,11 +96,11 @@ it is exempt from assessment.
      `adoption` (`advisory` to pilot Compass, `enforced` once the team is
      ready), `enforcement.code_globs`, `multiagent`, `record`. Routing rules do
      not go there.
-   - **Changes to the shipped checks, gates, rules and routes** are entries in
+   - **Changes to the shipped checks, gates, rules and approaches** are entries in
      the file's catalogue keys, and each is checked against the default:
      tightening needs nothing, and loosening needs a waiver with an approver.
      Add one only when the team hits something that must never recur. Run
-     `compass policy lint` after every edit, and `compass policy effective` to
+     `compass policy lint` after every edit, and `compass policy show` to
      see the result.
 
    Replace every `<...>` placeholder from step 3 before you write the file.

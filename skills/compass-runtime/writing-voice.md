@@ -153,7 +153,7 @@ words were jargon. Someone a day inside the vocabulary cannot see them.
 **The four families these come from**, so the next leak is recognisable before a
 reader has to ask:
 
-- **stage weights** - full, light, collapsed, skipped. Say what actually happens
+- **stage weights** - thorough, lightweight, collapsed, skipped. Say what actually happens
   to the step.
 - **borrowed process weight** - the follow-ups list. Say what is outstanding and why.
 - **evidence types** - `test-run`, `command-output`, `manual-review`,

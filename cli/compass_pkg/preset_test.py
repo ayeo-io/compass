@@ -1,4 +1,4 @@
-# compass_pkg.preset_test - `compass policy test`: run a preset's fixtures
+# compass_pkg.preset_test - `compass preset test`: run a preset's fixtures
 """Run a preset's fixture assessments and report how each one went.
 
 A preset is a folder with a `compass.yml` and a `compass-fixtures/` folder.
@@ -12,7 +12,7 @@ It reads files and, through `policy_lint.load_layers`, may fetch a pinned git
 parent. It writes no file of the preset and runs nothing the preset carries.
 """
 # DEPENDENCY: standard library (dataclasses, os, re); compass_pkg.atomic_io,
-# core (CompassError), layers, merge, policy_lint.
+# core (CompassError), layers, merge, policy_lint, word_map.
 from __future__ import annotations
 
 import json
@@ -20,7 +20,7 @@ import os
 import re
 from dataclasses import dataclass, field
 
-from compass_pkg import layers, merge, policy_lint
+from compass_pkg import layers, merge, policy_lint, word_map
 from compass_pkg.atomic_io import StrictYamlError, load_yaml_strict
 from compass_pkg.core import CompassError
 
@@ -210,6 +210,7 @@ def _run_fixture(folder, name, config, capabilities, evaluate):
     except (OSError, UnicodeDecodeError) as exc:
         return FixtureResult(name, stem, "error", message=f"{where} cannot be read: "
                              f"{getattr(exc, 'strerror', None) or 'not UTF-8 text'}")
+    doc = word_map.map_fixture(doc)     # a fixture written in the old words
     wrong = _format_problem(doc, set(config.get("dimensions") or {}))
     if wrong:
         return FixtureResult(name, stem, "error", message=wrong)
@@ -317,7 +318,7 @@ def text(result):
     ok = passed(result)
     count = len(result.fixtures)
     won = sum(1 for f in result.fixtures if f.status == "pass")
-    lines = [f"compass policy test: {'PASS' if ok else 'FAIL'}", f"  preset: {result.preset}"]
+    lines = [f"compass preset test: {'PASS' if ok else 'FAIL'}", f"  preset: {result.preset}"]
     lines += policy_lint.lint_text(result.lint)[1:]
     if not result.fixtures_run:
         return lines + ["  fixtures: not run (the lint failed)"]

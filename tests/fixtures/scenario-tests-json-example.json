@@ -1,5 +1,5 @@
 {
-  "outcome": "compass scenario tests: SCN-1 now declares 1 test.",
+  "outcome": "compass scenario tests set: SCN-1 now declares 1 test.",
   "scenario": "SCN-1",
   "issue": "swap",
   "tests": [

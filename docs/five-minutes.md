@@ -42,8 +42,7 @@ It writes the result under `.compass/work/<issue>/`, and the manifest records th
 judgement it was computed from. The part of `manifest.yml` that matters here:
 
 ```yaml
-schema_version: "2.0"
-status: active
+schema_version: "3.0"
 assessment:
   risk: contained
   familiarity: brownfield-mapped
@@ -64,21 +63,21 @@ them - the stages, the gates, the orchestration - is computed. Run
   policy rules fired: none
   parallel subtasks: up to 1 (a ceiling - breakdown sets the orchestration once the distribution map exists)
   per-stage weight:
-    assess     : full
-    define     : light
+    assess     : thorough
+    define     : lightweight
     refine     : collapsed
     plan       : collapsed
     breakdown  : skipped
-    implement  : full
-    verify     : light
-    ship       : light
+    implement  : thorough
+    verify     : lightweight
+    ship       : lightweight
   gate set        : verify.correctness, verify.governance, verify.traceability
 ```
 
 Generate the issue dashboard:
 
 ```bash
-compass issue dashboard --issue <issue>
+compass issue dashboard render --issue <issue>
 ```
 
 Then open `.compass/work/<issue>/README.md`. It tells you:
@@ -93,12 +92,12 @@ Then open `.compass/work/<issue>/README.md`. It tells you:
 
 Compass never regenerates the page for you. When a command that writes the
 manifest leaves the page out of date, it prints one line telling you to run
-`compass issue dashboard` again.
+`compass issue dashboard render` again.
 
 Correct the assessment if it is wrong: a good delivery approach depends on
 a good assessment. The session waits for your approval only at the
 checkpoints the project's `autonomy` setting lists, which the first line of
-`compass approach summary` names. Regenerate the dashboard after a
+`compass approach show` names. Regenerate the dashboard after a
 stage changes the issue.
 
 ## 2. Define acceptance

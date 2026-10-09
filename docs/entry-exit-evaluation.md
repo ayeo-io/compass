@@ -239,7 +239,7 @@ no tag rule.
 
 The checklists of `templates/requirements-review.md` and
 `templates/verification-report.md` render from the stage's lists in the issue's
-effective view. `compass issue template <kind> [--issue SLUG] [--json]` prints
+effective view. `compass issue template show <kind> [--issue SLUG] [--json]` prints
 the template of that kind (`requirements-review`, `verification-report` or any
 other template) with its checklists rendered. `/compass:refine` and
 `/compass:verify` write their documents from this output, not from the template

@@ -1,12 +1,13 @@
-schema_version: '2.0'
+schema_version: '3.0'
 issue: rate-limit-search-endpoint
 created: '2026-04-21'
-status: landed
+status: done
+close_reason: completed
 land_timestamp: '2026-08-04T00:00:00Z'
 assessment:
   risk: contained
   familiarity: brownfield-mapped
-  size: standard
+  size: medium
   goal: delivery
   role: engineer
   labels: []
@@ -14,14 +15,14 @@ delivery_approach: feature
 orchestration: solo-or-pair
 policy_rules_fired: []
 stages:
-  assess: full
-  define: full
-  refine: light
-  plan: full
+  assess: thorough
+  define: thorough
+  refine: lightweight
+  plan: thorough
   breakdown: solo-or-pair
-  implement: full
-  verify: full
-  ship: full
+  implement: thorough
+  verify: thorough
+  ship: thorough
 evidence:
 - id: EV-T1
   type: test-run

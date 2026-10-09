@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # =============================================================================
-# compass_pkg.review_rules - `compass policy review-rules`, and its lint
+# compass_pkg.review_rules - `compass review-rule list`, and its lint
 # =============================================================================
 #
 # Review rules are data: governance/review-rules.yml holds one rule per
@@ -135,7 +135,7 @@ def cmd_policy_review_rules(args):
     else:
         path = os.path.join(os.path.dirname(find_compass_dir()), RULES_FILE)
         if not os.path.isfile(path):
-            print(f"compass policy review-rules: this project has no "
+            print(f"compass review-rule list: this project has no "
                   f"{RULES_FILE}, so no review rule applies.")
             return 0
     data = load_yaml(path)
@@ -146,16 +146,17 @@ def cmd_policy_review_rules(args):
     files = [os.path.normpath(f).replace(os.sep, "/") for f in args.changed_files]
     found = matching_rules([r for r in rules if isinstance(r, dict)], files)
     if not found:
-        print("compass policy review-rules: no review rule applies to these files.")
+        print("compass review-rule list: no review rule applies to these files.")
         return 0
     print("\n\n".join(_render(r, hit) for r, hit in found))
     return 0
 
 
-def register(policy_subs):
-    """Add `review-rules` to the `compass policy` group."""
-    p = policy_subs.add_parser(
-        "review-rules", help="print the review rules that apply to the changed files")
+def register(sub):
+    """Add the `compass review-rule` group, with `list`."""
+    group = sub.add_parser("review-rule", help="the project's review rules")
+    p = group.add_subparsers(dest="review_rule_cmd", required=True).add_parser(
+        "list", help="print the review rules that apply to the changed files")
     p.add_argument("--changed-files", nargs="+", required=True, metavar="PATH",
                    help="repository-relative paths the change touches")
     p.add_argument("--rules", metavar="PATH",

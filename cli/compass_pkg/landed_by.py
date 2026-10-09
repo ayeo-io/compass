@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import os
 
+from compass_pkg import status_words
 from compass_pkg.check_results import NOTHING_TO_CHECK
 from compass_pkg.core import CompassError, load_yaml, normalize_spine
 
@@ -122,7 +123,7 @@ def _issue_entry_holds(entry, task_dir, mine):
     if other is None:
         return "`landed_by` names issue %r, and there is no such issue in " \
                "this work root" % slug
-    if (other.get("status") or "") != "landed":
+    if not status_words.is_completed(other):
         return ("`landed_by` names issue %r, which has not landed (it is %r). "
                 "A pointer at an unfinished issue is a promise, not a record."
                 % (slug, other.get("status") or "unset"))
@@ -174,11 +175,11 @@ def landed_by_holds(task, task_dir, git_reader=None):
     if not entries:
         return False, None
 
-    if (task.get("status") or "active") != "landed":
+    if not status_words.is_completed(task):
         return False, (
             "`landed_by` has no effect at status %r - it only applies to a "
             "landed issue, and nothing is relaxed here"
-            % (task.get("status") or "active"))
+            % status_words.stored(task))
 
     mine = str(task.get("task") or os.path.basename(os.path.abspath(task_dir)))
     project_root = os.path.dirname(os.path.dirname(
@@ -213,7 +214,7 @@ def _check_landed_by_resolves(task, task_dir):
         return True, detail
     if detail is None:                       # unreachable; kept explicit
         return NOTHING_TO_CHECK, "no `landed_by` pointer on this issue"
-    if (task.get("status") or "active") != "landed":
+    if not status_words.is_completed(task):
         # Inert rather than wrong: say so and pass, so nobody assumes the
         # field is doing something it is not.
         return NOTHING_TO_CHECK, detail

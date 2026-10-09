@@ -111,4 +111,4 @@ is a re-assess, not a thing you push through. Flag it; the router re-assesses.
   what you did, the red and green records, and anything you could not do.
   Not `report.md` - Claude Code tells a subagent not to write a file named
   like a report. The orchestrator records it with `compass issue subtask
-  update`.
+  set`.

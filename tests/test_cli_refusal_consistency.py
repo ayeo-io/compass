@@ -45,7 +45,7 @@ def test_trc_001_an_ad_hoc_write_refuses_before_printing_a_result(projects):
 
 
 def test_trc_001_refresh_spec_outside_git_says_so(projects):
-    out = _run(projects, "outside-git", "issue", "refresh-spec")
+    out = _run(projects, "outside-git", "spec", "sync")
     assert out.exit == 2
     assert "not a git repository" in out.stderr, out.stderr
 

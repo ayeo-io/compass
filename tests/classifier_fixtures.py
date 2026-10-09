@@ -36,21 +36,23 @@ def base():
         },
         "stages": {
             stage: {"order": order,
-                    "modes": {"light": {"rank": 2}, "full": {"rank": 3},
+                    "modes": {"lightweight": {"rank": 2}, "thorough": {"rank": 3},
                               "reproduce-first": {}}}
             for order, stage in enumerate(("define", "implement", "verify"), 1)
         },
         "approaches": {
             "regular": {
                 "weight": 2, "ships": True,
-                "stages": {"define": "full", "implement": "full", "verify": "full"},
+                "stages": {"define": "thorough", "implement": "thorough",
+                           "verify": "thorough"},
                 "gates": ["verify.correctness"], "artifacts": {},
                 "subtask_ceiling": 2,
                 "checkpoints": {"controlled": ["define"], "balanced": [],
                                 "autonomous": []}},
             "full": {
                 "weight": 4, "ships": True,
-                "stages": {"define": "full", "implement": "full", "verify": "full"},
+                "stages": {"define": "thorough", "implement": "thorough",
+                           "verify": "thorough"},
                 "gates": ["verify.correctness", "verify.security"], "artifacts": {},
                 "subtask_ceiling": 2,
                 "checkpoints": {"controlled": ["define"], "balanced": ["define"],
@@ -127,7 +129,7 @@ def with_spike(config, when=None):
     out = copy.deepcopy(config)
     out["approaches"]["spike"] = {
         "weight": 0, "ships": False,
-        "stages": {"define": "light", "implement": "full", "verify": "full"},
+        "stages": {"define": "lightweight", "implement": "thorough", "verify": "thorough"},
         "gates": [], "artifacts": {}, "subtask_ceiling": 1, "checkpoints": {}}
     out["rules"]["default_shapes"]["rules"]["S-0"] = {
         "order": 0, "when": when or {"risk": "critical"},

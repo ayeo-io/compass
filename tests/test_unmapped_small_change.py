@@ -4,7 +4,7 @@ In the comparison run of 30 Sep 2026
 (docs/compass/2026-09-30-eval-comparison-discriminating.md), two of the three
 stops followed a small, contained change rated brownfield-unmapped: the
 small-change shape left it out and the unmapped-familiarity floor
-(`RP-FLOOR-002`) sent it to define at full weight. Such a change now gets no
+(`RP-FLOOR-002`) sent it to define at thorough weight. Such a change now gets no
 blocking question, and unfamiliar ground becomes advice. Critical risk and
 the four domain labels keep their floors (issue #324).
 
@@ -54,7 +54,7 @@ def test_ua_1_a_small_unmapped_change_gets_the_mapped_route(size, risk):
 
 
 @pytest.mark.parametrize("readings", [
-    {"risk": "contained", "size": "standard"},
+    {"risk": "contained", "size": "medium"},
     {"risk": "contained", "size": "large"},
     {"risk": "cross-cutting", "size": "small"},
     {"risk": "critical", "size": "atomic"},
@@ -65,7 +65,7 @@ def test_the_floor_still_applies_beyond_small_unlabelled_work(readings):
     result = _evaluate(familiarity="brownfield-unmapped", intent="delivery",
                        **readings)
     assert "RP-FLOOR-002" in _fired(result)
-    assert result["stages"].get("define") == "full"
+    assert result["stages"].get("define") == "thorough"
     assert "behaviour-mapping" in result["required_skills"]
 
 

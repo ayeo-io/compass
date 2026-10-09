@@ -68,7 +68,7 @@ The five default guardrails:
   a guardrail result, the proof is the artifact.
 - **A human signs off on the irreversible.** Does anything that can lose
   data, move money, or breach auth or privacy have an explicit human checkpoint
-  before it lands? Check the plan routes such work to where the checkpoint
+  before it lands? Check the plan routes such work to where the checkpoint <!-- vocabulary-scan: allow - route is a verb here -->
   happens.
 
 Then any project guardrails - concrete, measurable floors a project has added

@@ -29,7 +29,7 @@ Pass `--labels` when the change touches `auth`, `payments`,
 
 Risk is `trivial`, `contained`, `cross-cutting` or `critical`; familiarity
 is `greenfield`, `brownfield-mapped` or `brownfield-unmapped`; size is
-`atomic`, `small`, `standard`, `large` or `product`. When unsure, choose
+`atomic`, `small`, `medium`, `large` or `product`. When unsure, choose
 the larger. `start` runs `compass init` first; if it prints a `created:`
 line, tell the user. If it lists
 settled decisions, read any that touch the change before writing code.

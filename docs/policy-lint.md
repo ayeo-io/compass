@@ -1,7 +1,7 @@
 # Policy lint and the effective view
 
 This page is the owning doc for `compass policy lint` and `compass policy
-effective` on a project that has a `compass.yml`. It states what each
+show` on a project that has a `compass.yml`. It states what each
 command checks or shows, in what order, and the exact shape of the JSON each
 one prints. From 6.0.0 the finding codes and both JSON shapes are a public
 contract: a change to a key, its order or a code is a breaking change.
@@ -151,7 +151,7 @@ earlier one. Warnings never stop it and never fail it.
 | `--file PATH` | Lint one `compass.yml` as the project layer, over the shipped default |
 | `--issue SLUG` | Add the issue's `config:` as the issue layer, judged at the issue's own assessment and not over the whole grid (a project layer is still judged over the grid), and look up its approvals in the issue's evidence. Without it no issue is read: there is no `COMPASS_ISSUE` or current-task fallback. A project with no `compass.yml` lints the issue's config over the shipped default |
 | `--exhaustive` | Classify with the full grid, not the grouped one |
-| `--offline` | Read a git parent from the cache only and fetch nothing; `COMPASS_OFFLINE=1` does the same. `compass policy effective` takes it too |
+| `--offline` | Read a git parent from the cache only and fetch nothing; `COMPASS_OFFLINE=1` does the same. `compass policy show` takes it too |
 | `--json` | Print the document below |
 
 | Exit | Meaning |
@@ -163,6 +163,24 @@ earlier one. Warnings never stop it and never fail it.
 Text output is `compass policy lint: PASS` or `compass policy lint: FAIL`,
 then one line per finding: `  - CODE [layer] path: message`. A warning line
 starts `  - warning CODE`.
+
+### Advisory for retired words
+
+A layer written before the depth words and the size were renamed still loads:
+`full` reads as `thorough`, `light` as `lightweight`, the longest old stage
+mode as `thorough-with-follow-up` and the size `standard` as `medium`, in the
+fields that hold them and nowhere else. The lint prints one advisory line to standard
+error for each word it read that way. The line names the layer (a git parent by
+its ref and short sha), the path, the new word and that the old word is read
+until 7.0.0:
+
+```
+advisory: project: stages.implement.set.modes reads 'full' as 'thorough'; the old word is read until 7.0.0
+```
+
+An advisory is not a finding. It changes no exit status and no count, it is
+not in the `--json` document. `compass preset test` prints the same lines.
+`compass check` prints none.
 
 ## `compass policy lint --json`
 
@@ -214,9 +232,9 @@ layer (root first), then by `path`, `code` and `message`. The document holds
 no time and no path outside the project, so the same input gives the same
 bytes. `tests/test_policy_lint.py` pins each key list.
 
-## `compass policy effective`
+## `compass policy show`
 
-`compass policy effective` prints what the configuration resolves to. `compass
+`compass policy show` prints what the configuration resolves to. `compass
 check` and the evaluator still read the legacy governance files until the
 generation store lands, so this view is not yet what they use. It prints every
 resolved field of the project, one line each: the path, the value, the source layer, the operation and the
@@ -226,7 +244,7 @@ waiver. A stage list that a capability switch has not turned on is marked
 ```
 stages.plan.entry   [dor-summary-filled, ...]   default@6.0.0 (add)  (inactive: entry-exit-evaluation off)
 checks.suite-passed.severity   advisory   project (set, waiver by jed72, 2026-10-05)
-stages.define.mode   light   issue (set)
+stages.define.mode   lightweight   issue (set)
 ```
 
 | Option | Meaning |
@@ -256,7 +274,7 @@ A project with no `compass.yml` shows the shipped default alone.
 | `replace` | The layer replaced the entry with `replace: true` |
 | `set` | The layer changed the field with `set:` |
 
-## `compass policy effective --json`
+## `compass policy show --json`
 
 ```json
 {

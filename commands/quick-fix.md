@@ -46,7 +46,7 @@ The values, and nothing else:
 
 - risk: `trivial`, `contained`, `cross-cutting` or `critical`
 - familiarity: `greenfield`, `brownfield-mapped` or `brownfield-unmapped`
-- size: `atomic`, `small`, `standard`, `large` or `product`
+- size: `atomic`, `small`, `medium`, `large` or `product`
 
 `--goal` and `--role` default to `delivery` and `engineer`. `--test` can
 repeat. The scenario id is `TRC-001` unless you pass `--scenario-id`.
@@ -57,13 +57,13 @@ the human sign-off; a synonym such as `pii` does not.
 
 It runs `compass init`, records the assessment, computes the approach
 through `compass approach evaluate`, writes `delivery-approach.md`, and
-registers it with `compass issue artifact`. If it prints a `created:` line
+registers it with `compass issue artifact set`. If it prints a `created:` line
 naming `.compass/` or `docs/compass/`, report it to the user: a directory
 that appears unannounced gets deleted by hand or committed by accident.
 
 If the approach is heavier than a quick fix, it stops and says so. Continue
 with `/compass:assess`: the manifest holds the values and the approach,
-and the reasons go into its approach record.
+and reasons go into its approach record.
 
 ## 2. Red
 

@@ -21,7 +21,7 @@
 /.compass/current-task
 
 # The framework's own issue documents, relocated out of `.compass/work/` by
-# `compass migrate`. Same rule as the patterns above and for the same reason:
+# `compass issue migrate`. Same rule as the patterns above and for the same reason:
 # in a project that USES Compass these ARE committed - they are the audit
 # trail a reviewer opens - and only the framework repo ignores its own.
 #

@@ -3,14 +3,14 @@
 This page lists, for each built-in check implementation, its version and the
 cases of its fixture corpus. The decision behind it is ADR-038. The code is
 `cli/compass_pkg/check_registry.py` (versions), `cli/compass_pkg/impl_versions.py`
-(the refusal and `compass issue migrate-config`) and `tests/test_impl_versions.py`
+(the refusal and `compass issue migrate --config`) and `tests/test_impl_versions.py`
 (the build rule).
 
 ## What the corpus shows
 
 - Across a major version, Compass refuses. When an issue's generation records a
   different major of an implementation from the installed one, `compass check`
-  refuses that check only, as a failure, and names `compass issue migrate-config`.
+  refuses that check only, as a failure, and names `compass issue migrate --config`.
   Every other check runs.
 - Within a major version, compatibility is shown on the corpus cases and nowhere
   else. A change of behaviour that no case exercises is not detected.

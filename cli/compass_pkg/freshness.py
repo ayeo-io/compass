@@ -1,7 +1,7 @@
 # compass_pkg.freshness - which documents of an issue are stale, behind a capability
 """Record the digest of a document when it is written, and say when it is stale.
 
-With the capability `artifact-freshness` on, `compass issue artifact` stamps
+With the capability `artifact-freshness` on, `compass issue artifact set` stamps
 the registry entry of a document with `digest` (its own file) and `upstream`
 (the digest of each artifact it `depends_on`, as the artifact catalogue
 declares). Nothing else writes either field.
@@ -44,7 +44,7 @@ from compass_pkg.stable_ids import STAGE_IMPLEMENT, STAGE_SHIP
 CAPABILITY = "artifact-freshness"
 
 #: The documents a stage builds from. Entry to the stage is refused while one
-#: is stale. Every document blocks land, whether or not a stage consumes it.
+#: is stale. Every document blocks ship, whether or not a stage consumes it.
 CONSUMES = {STAGE_IMPLEMENT: ("acceptance-criteria", "technical-design")}
 
 #: The stage whose reaching makes a document that no stage consumes block.
@@ -84,7 +84,7 @@ def _digest(task, task_dir, artifact_id):
 def unreadable(view, task, task_dir, kind):
     """The ids among `kind` and the artifacts it depends on whose file exists
     and cannot be read. Empty when the capability is off. `compass issue
-    artifact` refuses to record a document while any is unreadable."""
+    artifact set` refuses to record a document while any is unreadable."""
     if not enabled(view):
         return []
     return [one for one in [kind, *(graph(view).get(kind) or [])]
@@ -104,7 +104,7 @@ def stamp(view, task, task_dir, entry):
     kind = entry.get("kind")
     own = _digest(task, task_dir, kind)
     # A document whose own file cannot be read would be stamped with
-    # UNREADABLE. `compass issue artifact` refuses before it gets this far (see
+    # UNREADABLE. `compass issue artifact set` refuses before it gets this far (see
     # `unreadable`); this guard keeps any other caller from storing it.
     if own is None or own == UNREADABLE:
         return False
@@ -123,7 +123,7 @@ def stamp(view, task, task_dir, entry):
 @dataclass(frozen=True)
 class Finding:
     """One tracked document. `blocks` names what a stale one stops (`entry to
-    implement` or `land`); `blocking` says whether the issue has reached it."""
+    implement` or `ship`); `blocking` says whether the issue has reached it."""
     artifact: str
     stale: bool
     reasons: tuple
@@ -167,7 +167,7 @@ def _blocks(kind, order):
     if consumers:
         return consumers[0], f"entry to {order[consumers[0]]}"
     land = order.index(LAND_STAGE) if LAND_STAGE in order else len(order) - 1
-    return max(land, 0), "land"
+    return max(land, 0), STAGE_SHIP
 
 
 def evaluate(view, task, task_dir):
@@ -228,7 +228,7 @@ def refusal(findings):
     lines = [f"compass ship-commit: refusing to land - {len(stale)} artifact(s) are stale:"]
     lines += [f"  {one.artifact}: {'; '.join(one.reasons)}" for one in stale]
     lines += ["", "Write each stale document again against the current upstream, then run",
-              "`compass issue artifact <kind> --status <status>` to record it. A document",
+              "`compass issue artifact set <kind> --status <status>` to record it. A document",
               "whose file has not changed keeps its old record, so registering alone",
               "does not clear it."]
     return "\n".join(lines)

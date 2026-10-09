@@ -328,7 +328,7 @@ def cmd_subtask_update(args):
     if refusal:
         then = ("The stop reason given is recorded." if "stopped_reason" in s
                 else f"Record why it stopped with `compass issue subtask "
-                     f"update {args.id} --stop-reason TEXT --stop-evidence "
+                     f"set {args.id} --stop-reason TEXT --stop-evidence "
                      f"FILE`, or replan the work.")
         raise CompassError(
             f"compass issue subtask: refusing another attempt at {args.id}: "
@@ -467,7 +467,7 @@ def register(issue_subparsers, issue_arg):
     a.set_defaults(func=cmd_subtask_add, output_kind="hand-off")
 
     u = sub.add_parser(
-        "update", help="record a subtask's progress",
+        "set", help="record a subtask's progress",
         description="Record a subtask's progress: its status, a new brief for "
                     "another attempt, its result file, the reviewer's brief "
                     "(refused if it matches a fixed list of phrases that say "

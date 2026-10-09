@@ -85,6 +85,7 @@ def render(cwd: str, width: int = 80) -> str:
 
     from compass_pkg.core import (artifact_path, display_shape, display_stage,
                                   load_yaml, manifest_path, normalize_spine)
+    from compass_pkg import status_words
     from compass_pkg.next_cmd import _current_phase_from_task, _typed
 
     path = manifest_path(task_dir)
@@ -100,7 +101,7 @@ def render(cwd: str, width: int = 80) -> str:
     if not os.path.isfile(artifact_path(task_dir, "delivery-approach.md")):
         # `compass next` reports no stage without the approach record.
         stage = None
-    elif task.get("status") == "landed":
+    elif status_words.is_closed(task):
         stage = "done"
     else:
         phase = _current_phase_from_task(task, task_dir)

@@ -4,7 +4,7 @@
 # It goes with the views at 7.0.0.
 schema: 1
 routing_policy:
-  version: 2.19.0
+  version: 2.20.0
   default_route: regular
   generated_rules: [RP-SHAPE-FALLBACK]
   autonomy_checkpoints:

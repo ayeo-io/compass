@@ -4,7 +4,7 @@
 
 ## Assess composes towards the regular approach when
 
-- size is `standard` (several files, 1–3 days, one or two design
+- size is `medium` (several files, 1–3 days, one or two design
   decisions), **and**
 - risk is `contained` or a low end of `cross-cutting`, **and**
 - familiarity is either `greenfield` or brownfield (mapped or unmapped - if

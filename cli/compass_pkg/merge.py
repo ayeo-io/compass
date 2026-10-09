@@ -25,12 +25,13 @@ Checks on the resolved result as a whole (an id nothing defines, equal
 approach weights, rule-set effects) are lint's, not the merge's.
 """
 # DEPENDENCY: standard library (copy); compass_pkg.catalogue_spec,
-# compass_pkg.core (CompassError, only).
+# compass_pkg.core (CompassError, only); compass_pkg.word_map.
 from __future__ import annotations
 
 import copy
 
 from compass_pkg import catalogue_spec as spec
+from compass_pkg import word_map
 from compass_pkg.core import CompassError
 
 # Which field of which catalogue holds ids of another catalogue, and how:
@@ -70,7 +71,12 @@ class MergeError(CompassError):
 def apply(config, layer_doc, kind, name, provenance=None):
     """`(config, provenance)` after applying one layer to `config`.
     `kind` is `parent`, `project` or `issue`; `name` labels the layer in
-    provenance. Raises `MergeError` listing every fault in the layer."""
+    provenance. Raises `MergeError` listing every fault in the layer.
+
+    The layer is read through the retired-word tables again here. A layer that
+    `layers` already mapped costs a walk and changes nothing; one that came by
+    another road (the classifier's chain, a policy test) is mapped too."""
+    layer_doc = word_map.map_layer(layer_doc)[0]
     work = copy.deepcopy(config)
     prov = dict(provenance or {})
     errors = []

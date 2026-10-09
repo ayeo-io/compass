@@ -1,7 +1,7 @@
 """Review rules are data, scoped by file, with what not to flag: the
 review-rules-as-data issue, GitHub issue #255.
 
-`compass policy review-rules --changed-files` prints the rules in
+`compass review-rule list --changed-files` prints the rules in
 `governance/review-rules.yml` whose patterns match the files a change
 touches, and `compass policy lint` refuses a malformed rule.
 """
@@ -71,7 +71,7 @@ def _rules_scoped_only_to(prefixes: tuple) -> set:
 def test_a_hook_change_gets_the_hook_rules_and_no_template_rule():
     """RV-A: hooks/pre-tool.sh gets each hook rule, and no rule scoped only
     to templates or the adopter's reading path."""
-    r = _compass(ROOT, "policy", "review-rules", "--changed-files", "hooks/pre-tool.sh")
+    r = _compass(ROOT, "review-rule", "list", "--changed-files", "hooks/pre-tool.sh")
     assert r.returncode == 0, r.stdout + r.stderr
     got = _ids(r.stdout)
     hook_rules = {r["id"] for r in _rules()
@@ -88,7 +88,7 @@ def test_a_hook_change_gets_the_hook_rules_and_no_template_rule():
 
 def test_a_template_change_gets_the_reading_path_rule_and_no_hook_rule():
     """RV-A, the other way round: the matching is by file, not a fixed list."""
-    r = _compass(ROOT, "policy", "review-rules", "--changed-files",
+    r = _compass(ROOT, "review-rule", "list", "--changed-files",
                  "templates/verification-report.md")
     assert r.returncode == 0, r.stdout + r.stderr
     got = _ids(r.stdout)
@@ -101,7 +101,7 @@ def test_a_template_change_gets_the_reading_path_rule_and_no_hook_rule():
 def test_each_printed_rule_carries_its_incident_and_allowed_list(project):
     """RV-A: a reviewer sees why the rule exists and what not to flag."""
     _write_rules(project, [_rule(allowed=["A comment that quotes the old rule."])])
-    r = _compass(project, "policy", "review-rules", "--changed-files", "hooks/stop.sh",
+    r = _compass(project, "review-rule", "list", "--changed-files", "hooks/stop.sh",
                  "README.md")
     assert r.returncode == 0, r.stdout + r.stderr
     assert "## RR-001 (blocking, enforces G1)" in r.stdout
@@ -113,7 +113,7 @@ def test_each_printed_rule_carries_its_incident_and_allowed_list(project):
 def test_a_file_no_rule_covers_prints_no_rule(project):
     """RV-A: no match is said plainly, not silently."""
     _write_rules(project, [_rule()])
-    r = _compass(project, "policy", "review-rules", "--changed-files", "src/app.py")
+    r = _compass(project, "review-rule", "list", "--changed-files", "src/app.py")
     assert r.returncode == 0, r.stdout + r.stderr
     assert not _ids(r.stdout)
     assert "no review rule applies" in r.stdout
@@ -124,7 +124,7 @@ def test_rules_option_reads_another_file(project, tmp_path):
     _write_rules(project, [_rule()])
     other = tmp_path / "base-rules.yml"
     other.write_text(yaml.safe_dump({"rules": [_rule(id="RR-009")]}), encoding="utf-8")
-    r = _compass(project, "policy", "review-rules", "--rules", str(other),
+    r = _compass(project, "review-rule", "list", "--rules", str(other),
                  "--changed-files", "hooks/pre-tool.sh")
     assert r.returncode == 0, r.stdout + r.stderr
     assert _ids(r.stdout) == {"RR-009"}
@@ -132,7 +132,7 @@ def test_rules_option_reads_another_file(project, tmp_path):
 
 def test_no_rules_file_is_said_and_passes(project):
     """RV-B: a project with no rules file, and the shipped copy is not used."""
-    r = _compass(project, "policy", "review-rules", "--changed-files", "hooks/pre-tool.sh")
+    r = _compass(project, "review-rule", "list", "--changed-files", "hooks/pre-tool.sh")
     assert r.returncode == 0, r.stdout + r.stderr
     assert not _ids(r.stdout)
     assert "governance/review-rules.yml" in r.stdout
@@ -140,7 +140,7 @@ def test_no_rules_file_is_said_and_passes(project):
 
 def test_a_missing_rules_option_file_fails(project, tmp_path):
     """RV-B: a --rules path that does not exist is an error, not no rules."""
-    r = _compass(project, "policy", "review-rules", "--rules", str(tmp_path / "nope.yml"),
+    r = _compass(project, "review-rule", "list", "--rules", str(tmp_path / "nope.yml"),
                  "--changed-files", "a.py")
     assert r.returncode != 0
     assert "nope.yml" in r.stdout + r.stderr
@@ -193,7 +193,7 @@ def test_the_repository_rules_pass_lint():
 def test_reviewer_reads_the_rules():
     """RV-D."""
     text = (ROOT / "agents" / "reviewer.md").read_text(encoding="utf-8")
-    assert "compass policy review-rules --changed-files" in text
+    assert "compass review-rule list --changed-files" in text
     assert "RR-" in text
     assert re.search(r"`allowed`", text)
 
@@ -208,8 +208,8 @@ def test_at_least_ten_rules_each_with_an_openable_incident():
 
 def test_the_verb_is_on_the_public_surface():
     """RV-F."""
-    assert "compass policy review-rules" in (ROOT / "README.md").read_text(encoding="utf-8")
-    assert "policy review-rules" in (ROOT / "cli" / "compass_pkg" / "verb_help.py").read_text(
+    assert "compass review-rule list" in (ROOT / "README.md").read_text(encoding="utf-8")
+    assert "review-rule list" in (ROOT / "cli" / "compass_pkg" / "verb_help.py").read_text(
         encoding="utf-8")
-    help_out = _compass(ROOT, "policy", "--help").stdout
-    assert "review-rules" in help_out
+    help_out = _compass(ROOT, "--help").stdout
+    assert "review-rule" in help_out

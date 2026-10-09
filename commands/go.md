@@ -33,7 +33,7 @@ compass quick-fix start <slug> --risk "<VALUE> - <reason>" \
 - risk: `trivial`, `contained`, `cross-cutting` or `critical`
 - familiarity: `greenfield` (new code), `brownfield-mapped` (existing code
   whose behaviour tests or docs pin) or `brownfield-unmapped`
-- size: `atomic`, `small`, `standard`, `large` or `product`
+- size: `atomic`, `small`, `medium`, `large` or `product`
 - `--labels auth`, `payments`, `personal-data` or `migrations` when the
   change touches one; those bring the human sign-off
 
@@ -42,7 +42,7 @@ When unsure, rate the size up.
 
 ## 3. Show the plan
 
-Run `compass approach summary --issue <slug>` and show its three lines to
+Run `compass approach show --issue <slug>` and show its three lines to
 the person, unedited, before you edit any file. They are the only Compass
 text the person needs before code: the approach, the gates it must pass,
 and where its files go.
@@ -69,7 +69,7 @@ Do not stop to ask whether to go ahead.
   showed is the confirmation, and the person can still override a dimension
   at any point.
 - **Not yet clear what it delivers:** if you cannot state what will be true
-  afterwards, that is exploration. Run `/compass:assess`; it routes a spike.
+  afterwards, that is exploration. Run `/compass:assess`; it routes a spike. <!-- vocabulary-scan: allow - route is a verb here -->
 
 If a command refuses, its message says why and how to clear it. Act on it;
 ask the person only for a decision that is theirs, such as approving an

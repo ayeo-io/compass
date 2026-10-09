@@ -1,9 +1,9 @@
-# compass_pkg.preset_init - `compass policy init-preset`: scaffold a team preset
+# compass_pkg.preset_init - `compass preset init`: scaffold a team preset
 """Write the files of a new preset repository.
 
 A preset is a folder with a `compass.yml` that other projects extend as a git
-parent, and a `compass-fixtures/` folder that `compass policy test` runs. The
-scaffold is a working preset: it passes `policy test` where it stands, and it
+parent, and a `compass-fixtures/` folder that `compass preset test` runs. The
+scaffold is a working preset: it passes `preset test` where it stands, and it
 makes one change to the shipped default, so its example fixture shows a real
 difference. The command never overwrites a file: it refuses and writes
 nothing when any of its files exists. `docs/policy-test.md` owns the contract.
@@ -27,7 +27,7 @@ COMPASS_YML = """\
 # A team preset. Other projects extend this file as a git parent:
 #   extends: github:<owner>/<repo>@<ref>#<sha>
 # A preset is data only: it cannot carry unlock:, a settings key or an impl
-# that the check registry does not hold. Run `compass policy test` after every
+# that the check registry does not hold. Run `compass preset test` after every
 # change.
 schema: 1
 owner: {owner}
@@ -54,7 +54,7 @@ assessment:
 expect:
   approach: quick-fix
   gates: [{gates}]
-  stages: {{implement: full}}
+  stages: {{implement: thorough}}
 """
 
 # The assessment of the example fixture. The fixture's gates are computed from
@@ -72,7 +72,7 @@ default, and other projects extend it as a git parent.
 ## Test it
 
 ```
-compass policy test
+compass preset test
 ```
 
 The command lints `compass.yml` as a parent, so it fails on `unlock:`, a
@@ -167,7 +167,7 @@ def report_json(folder, result, files):
 
 def text(folder, result, files):
     if result == "refused":
-        return [f"compass policy init-preset: refused; {shown(folder)} already holds "
+        return [f"compass preset init: refused; {shown(folder)} already holds "
                 f"{', '.join(files)}", "  nothing was written"]
-    return [f"compass policy init-preset: wrote a preset in {shown(folder)}"] + [
+    return [f"compass preset init: wrote a preset in {shown(folder)}"] + [
         f"  {name}" for name in files]

@@ -83,12 +83,12 @@ def _preset(tmp_path, doc=None, fixtures=None, folder="preset"):
 
 
 def _test(tmp_path, preset, *extra, env=None):
-    code, out, err = _run(tmp_path, "policy", "test", str(preset), *extra, env=env)
+    code, out, err = _run(tmp_path, "preset", "test", str(preset), *extra, env=env)
     return code, out, err
 
 
 def _json(tmp_path, preset, *extra, env=None):
-    code, out, err = _run(tmp_path, "policy", "test", str(preset), "--json", *extra, env=env)
+    code, out, err = _run(tmp_path, "preset", "test", str(preset), "--json", *extra, env=env)
     assert out.strip().startswith("{"), (code, out, err)
     return code, json.loads(out)
 
@@ -120,7 +120,7 @@ def test_pt_1_the_expected_stages_and_checks_are_compared(tmp_path):
     owed = obligations.obligations(shipped.config, SMALL, capabilities=shipped.capabilities)
     checks = sorted({c for ids in owed.gate_checks.values() for c in ids})
     fixture = _fixture({"approach": "quick-fix", "gates": QUICK_FIX_GATES, "checks": checks,
-                        "stages": {"implement": "full", "plan": "collapsed"}})
+                        "stages": {"implement": "thorough", "plan": "collapsed"}})
     code, out, err = _test(tmp_path, _preset(tmp_path, fixtures={"all-four": fixture}))
     assert code == 0, (out, err)
 
@@ -136,7 +136,8 @@ def test_pt_1_gates_and_checks_are_sets_and_their_order_in_the_file_does_not_mat
 DIFFERENCES = [
     ("approach", {"approach": "full"}, "full", "quick-fix"),
     ("gates", {"gates": ["G1"]}, ["G1"], QUICK_FIX_GATES),
-    ("stages.implement", {"stages": {"implement": "light"}}, "light", "full"),
+    ("stages.implement", {"stages": {"implement": "lightweight"}}, "lightweight",
+     "thorough"),
     ("checks", {"checks": ["suite-passed"]}, ["suite-passed"], None),
 ]
 
@@ -199,7 +200,7 @@ def test_pt_3_every_finding_names_the_preset_layer_and_never_the_project(tmp_pat
     for name, (text, code_wanted) in cases.items():
         preset = _preset(tmp_path, fixtures={}, folder=name)
         (preset / "compass.yml").write_text(text, encoding="utf-8")
-        _, out, _ = _run(tmp_path, "policy", "test", str(preset), "--json")
+        _, out, _ = _run(tmp_path, "preset", "test", str(preset), "--json")
         report = json.loads(out)
         found = [f for f in report["lint"]["findings"] if f["code"].startswith(code_wanted)]
         assert found, (name, report["lint"])
@@ -338,11 +339,11 @@ def test_pt_4_an_empty_gates_or_checks_list_is_an_expectation_that_none_are_owed
 
 
 def test_pt_4_a_stage_the_result_does_not_hold_has_a_null_actual(tmp_path):
-    fixture = _fixture({"stages": {"no-such-stage": "full"}})
+    fixture = _fixture({"stages": {"no-such-stage": "thorough"}})
     code, report = _json(tmp_path, _preset(tmp_path, fixtures={"s": fixture}))
     assert code == 1
     assert report["fixtures"][0]["mismatches"] == [
-        {"field": "stages.no-such-stage", "expected": "full", "actual": None}]
+        {"field": "stages.no-such-stage", "expected": "thorough", "actual": None}]
 
 
 def test_pt_4_a_yaml_error_names_the_fixture_by_its_path_in_the_preset(tmp_path):
@@ -354,7 +355,7 @@ def test_pt_4_a_yaml_error_names_the_fixture_by_its_path_in_the_preset(tmp_path)
 
 def test_pt_4_a_multi_line_error_stays_under_its_fixture_in_the_text_report(tmp_path):
     preset = _preset(tmp_path, fixtures={"bad": "assessment: [\n  - a\nexpect: {\n"})
-    _, out, _ = _run(tmp_path, "policy", "test", str(preset))
+    _, out, _ = _run(tmp_path, "preset", "test", str(preset))
     lines = out.splitlines()
     start = next(i for i, line in enumerate(lines) if "ERROR" in line)
     rest = [line for line in lines[start + 1:] if not line.startswith("  problem")]
@@ -407,20 +408,20 @@ def test_pt_5_a_sub_folder_of_fixtures_is_a_group_and_its_fixtures_run(tmp_path)
 
 def test_pt_5_a_folder_with_no_compass_yml_is_an_input_error(tmp_path):
     (tmp_path / "empty").mkdir()
-    code, out, err = _run(tmp_path, "policy", "test", "empty")
+    code, out, err = _run(tmp_path, "preset", "test", "empty")
     assert code == 2
     assert "compass.yml" in out + err
 
 
 def test_pt_5_a_missing_folder_is_an_input_error(tmp_path):
-    code, out, err = _run(tmp_path, "policy", "test", "nowhere")
+    code, out, err = _run(tmp_path, "preset", "test", "nowhere")
     assert code == 2
     assert "nowhere" in out + err and "no such folder" in out + err
 
 
 def test_pt_5_a_file_given_as_the_preset_folder_is_an_input_error(tmp_path):
     (tmp_path / "compass.yml").write_text("schema: 1\n", encoding="utf-8")
-    code, out, err = _run(tmp_path, "policy", "test", "compass.yml")
+    code, out, err = _run(tmp_path, "preset", "test", "compass.yml")
     assert code == 2
     assert "not a folder" in out + err
 
@@ -442,7 +443,7 @@ def test_pt_5_a_compass_yml_that_cannot_be_read_is_an_input_error(tmp_path):
     preset = _preset(tmp_path)
     (preset / "compass.yml").chmod(0)
     try:
-        code, out, err = _run(tmp_path, "policy", "test", str(preset))
+        code, out, err = _run(tmp_path, "preset", "test", str(preset))
     finally:
         (preset / "compass.yml").chmod(0o600)
     assert code == 2
@@ -452,7 +453,7 @@ def test_pt_5_a_compass_yml_that_cannot_be_read_is_an_input_error(tmp_path):
 def test_pt_5_a_compass_yml_that_is_not_utf_8_is_an_input_error(tmp_path):
     preset = _preset(tmp_path)
     (preset / "compass.yml").write_bytes(b"schema: 1\nowner: \xff\xfe\n")
-    code, out, err = _run(tmp_path, "policy", "test", str(preset))
+    code, out, err = _run(tmp_path, "preset", "test", str(preset))
     assert code == 2
     assert "cannot be read" in out + err
 
@@ -485,7 +486,7 @@ def test_pt_5_a_fixture_file_with_another_spelling_of_the_suffix_is_a_problem(tm
 
 def test_pt_5_the_folder_defaults_to_the_working_folder(tmp_path):
     preset = _preset(tmp_path)
-    code, out, err = _run(preset, "policy", "test")
+    code, out, err = _run(preset, "preset", "test")
     assert code == 0, (out, err)
 
 
@@ -493,7 +494,7 @@ def test_pt_5_the_folder_defaults_to_the_working_folder(tmp_path):
 
 def test_pt_6_the_json_report_has_the_documented_keys_in_the_documented_order(tmp_path):
     preset = _preset(tmp_path, fixtures={"a-good": GOOD, "b-bad": _fixture({"approach": "full"})})
-    code, out, _ = _run(tmp_path, "policy", "test", str(preset), "--json")
+    code, out, _ = _run(tmp_path, "preset", "test", str(preset), "--json")
     report = json.loads(out)
     assert list(report) == ["schema", "preset", "result", "lint", "fixtures_run", "totals",
                             "fixtures", "problems", "groups"]
@@ -517,14 +518,14 @@ def test_pt_6_a_lint_finding_has_the_same_keys_as_policy_lint(tmp_path):
 
 def test_pt_6_the_json_report_is_the_same_on_two_runs(tmp_path):
     preset = _preset(tmp_path)
-    first = _run(tmp_path, "policy", "test", str(preset), "--json")[1]
-    second = _run(tmp_path, "policy", "test", str(preset), "--json")[1]
+    first = _run(tmp_path, "preset", "test", str(preset), "--json")[1]
+    second = _run(tmp_path, "preset", "test", str(preset), "--json")[1]
     assert first == second
 
 
 def test_pt_6_the_report_never_holds_an_absolute_path(tmp_path):
     preset = _preset(tmp_path)
-    _, out, _ = _run(tmp_path, "policy", "test", str(preset), "--json")
+    _, out, _ = _run(tmp_path, "preset", "test", str(preset), "--json")
     assert str(tmp_path) not in out
 
 
@@ -532,11 +533,11 @@ def test_pt_6_a_preset_outside_the_working_folder_shows_its_own_name_only(tmp_pa
     preset = _preset(tmp_path, folder="elsewhere")
     other = tmp_path / "work"
     other.mkdir()
-    code, out, _ = _run(other, "policy", "test", str(preset), "--json")
+    code, out, _ = _run(other, "preset", "test", str(preset), "--json")
     report = json.loads(out)
     assert code == 0 and report["preset"] == "elsewhere"
     assert str(tmp_path) not in out
-    code, out, _ = _run(other, "policy", "test", str(preset))
+    code, out, _ = _run(other, "preset", "test", str(preset))
     assert str(tmp_path) not in out
 
 
@@ -556,7 +557,7 @@ def test_pt_6_a_fixture_name_defaults_to_its_file_stem_and_can_be_set(tmp_path):
 # --- PT-7: init-preset scaffolds a preset that passes -----------------------------------------
 
 def test_pt_7_init_preset_writes_the_four_files(tmp_path):
-    code, out, err = _run(tmp_path, "policy", "init-preset", "acme-preset", "--owner", "acme-team")
+    code, out, err = _run(tmp_path, "preset", "init", "acme-preset", "--owner", "acme-team")
     assert code == 0, (out, err)
     folder = tmp_path / "acme-preset"
     names = sorted(str(p.relative_to(folder)) for p in folder.rglob("*") if p.is_file())
@@ -570,14 +571,14 @@ def test_pt_7_init_preset_writes_the_four_files(tmp_path):
 
 
 def test_pt_7_the_scaffold_passes_policy_test_where_it_stands(tmp_path):
-    assert _run(tmp_path, "policy", "init-preset", "acme-preset", "--owner", "acme-team")[0] == 0
-    code, out, err = _run(tmp_path / "acme-preset", "policy", "test")
+    assert _run(tmp_path, "preset", "init", "acme-preset", "--owner", "acme-team")[0] == 0
+    code, out, err = _run(tmp_path / "acme-preset", "preset", "test")
     assert code == 0, (out, err)
     assert "1 passed" in out
 
 
 def test_pt_7_the_scaffold_is_clean_under_policy_lint_and_ignores_the_cache(tmp_path):
-    _run(tmp_path, "policy", "init-preset", "acme-preset", "--owner", "acme-team")
+    _run(tmp_path, "preset", "init", "acme-preset", "--owner", "acme-team")
     folder = tmp_path / "acme-preset"
     code, out, err = _run(folder, "policy", "lint", "--file", "compass.yml")
     assert code == 0, (out, err)
@@ -585,16 +586,16 @@ def test_pt_7_the_scaffold_is_clean_under_policy_lint_and_ignores_the_cache(tmp_
 
 
 def test_pt_7_the_readme_says_how_to_test_and_how_to_extend_it(tmp_path):
-    _run(tmp_path, "policy", "init-preset", "acme-preset", "--owner", "acme-team")
+    _run(tmp_path, "preset", "init", "acme-preset", "--owner", "acme-team")
     text = (tmp_path / "acme-preset" / "README.md").read_text(encoding="utf-8")
-    assert "compass policy test" in text
+    assert "compass preset test" in text
     assert "extends: github:" in text
     assert "compass-fixtures" in text
     assert "docs/policy-test.md" in text
 
 
 def test_pt_7_the_owner_is_required(tmp_path):
-    code, out, err = _run(tmp_path, "policy", "init-preset", "acme-preset")
+    code, out, err = _run(tmp_path, "preset", "init", "acme-preset")
     assert code == 2
     assert "--owner" in out + err
     assert not (tmp_path / "acme-preset").exists()
@@ -602,7 +603,7 @@ def test_pt_7_the_owner_is_required(tmp_path):
 
 @pytest.mark.parametrize("owner", ["", "   "])
 def test_pt_7_an_empty_owner_is_an_input_error(tmp_path, owner):
-    code, out, err = _run(tmp_path, "policy", "init-preset", "acme-preset", "--owner", owner)
+    code, out, err = _run(tmp_path, "preset", "init", "acme-preset", "--owner", owner)
     assert code == 2
     assert "--owner" in out + err
     assert not (tmp_path / "acme-preset").exists()
@@ -610,20 +611,20 @@ def test_pt_7_an_empty_owner_is_an_input_error(tmp_path, owner):
 
 def test_pt_7_an_owner_with_yaml_characters_is_written_as_a_string(tmp_path):
     owner = "Acme: Platform #1 {core}"
-    assert _run(tmp_path, "policy", "init-preset", "acme-preset", "--owner", owner)[0] == 0
+    assert _run(tmp_path, "preset", "init", "acme-preset", "--owner", owner)[0] == 0
     doc = yaml.safe_load((tmp_path / "acme-preset" / "compass.yml").read_text(encoding="utf-8"))
     assert doc["owner"] == owner
-    assert _run(tmp_path / "acme-preset", "policy", "test")[0] == 0
+    assert _run(tmp_path / "acme-preset", "preset", "test")[0] == 0
 
 
 def test_pt_7_an_existing_empty_folder_is_filled(tmp_path):
     (tmp_path / "acme-preset").mkdir()
-    code, _, err = _run(tmp_path, "policy", "init-preset", "acme-preset", "--owner", "acme-team")
+    code, _, err = _run(tmp_path, "preset", "init", "acme-preset", "--owner", "acme-team")
     assert code == 0, err
 
 
 def test_pt_7_the_json_report_lists_what_was_written(tmp_path):
-    code, out, _ = _run(tmp_path, "policy", "init-preset", "acme-preset", "--owner", "acme-team",
+    code, out, _ = _run(tmp_path, "preset", "init", "acme-preset", "--owner", "acme-team",
                         "--json")
     report = json.loads(out)
     assert list(report) == ["schema", "dir", "result", "files"]
@@ -635,27 +636,27 @@ def test_pt_7_the_json_report_lists_what_was_written(tmp_path):
 
 def test_pt_7_an_owner_outside_the_basic_plane_is_written_as_the_same_text(tmp_path):
     owner = "Team \U0001F680 Zoe"
-    assert _run(tmp_path, "policy", "init-preset", "acme-preset", "--owner", owner)[0] == 0
+    assert _run(tmp_path, "preset", "init", "acme-preset", "--owner", owner)[0] == 0
     folder = tmp_path / "acme-preset"
     text = (folder / "compass.yml").read_text(encoding="utf-8")
     assert "\\ud" not in text.lower() and owner in text
     doc = yaml.safe_load(text)
     assert doc["owner"] == owner
     (folder / "compass.yml").read_text(encoding="utf-8").encode("utf-8")
-    code, out, err = _run(folder, "policy", "effective")
+    code, out, err = _run(folder, "policy", "show")
     assert code == 0, err
 
 
 @pytest.mark.parametrize("owner", ["two\nlines", "tab\there", "bell\x07"])
 def test_pt_7_an_owner_with_a_control_character_is_an_input_error(tmp_path, owner):
-    code, out, err = _run(tmp_path, "policy", "init-preset", "acme-preset", "--owner", owner)
+    code, out, err = _run(tmp_path, "preset", "init", "acme-preset", "--owner", owner)
     assert code == 2
     assert "one line" in out + err
     assert not (tmp_path / "acme-preset").exists()
 
 
 def test_pt_7_the_readme_promises_no_ci_workflow(tmp_path):
-    _run(tmp_path, "policy", "init-preset", "acme-preset", "--owner", "acme-team")
+    _run(tmp_path, "preset", "init", "acme-preset", "--owner", "acme-team")
     text = (tmp_path / "acme-preset" / "README.md").read_text(encoding="utf-8")
     assert "workflow" not in text.lower()
 
@@ -668,7 +669,7 @@ def test_pt_8_an_existing_file_is_refused_and_nothing_is_written(tmp_path, exist
     folder = tmp_path / "acme-preset"
     (folder / "compass-fixtures").mkdir(parents=True)
     (folder / existing).write_text("mine\n", encoding="utf-8")
-    code, out, err = _run(tmp_path, "policy", "init-preset", "acme-preset", "--owner", "acme-team")
+    code, out, err = _run(tmp_path, "preset", "init", "acme-preset", "--owner", "acme-team")
     assert code == 1
     assert existing in out + err
     assert (folder / existing).read_text(encoding="utf-8") == "mine\n"
@@ -679,7 +680,7 @@ def test_pt_8_the_refusal_in_json_names_the_files(tmp_path):
     folder = tmp_path / "acme-preset"
     folder.mkdir()
     (folder / "README.md").write_text("mine\n", encoding="utf-8")
-    code, out, _ = _run(tmp_path, "policy", "init-preset", "acme-preset", "--owner", "acme-team",
+    code, out, _ = _run(tmp_path, "preset", "init", "acme-preset", "--owner", "acme-team",
                         "--json")
     report = json.loads(out)
     assert code == 1
@@ -690,7 +691,7 @@ def test_pt_8_a_broken_link_in_the_place_of_a_file_counts_as_an_existing_file(tm
     folder = tmp_path / "acme-preset"
     folder.mkdir()
     os.symlink(tmp_path / "nowhere", folder / "README.md")
-    code, out, err = _run(tmp_path, "policy", "init-preset", "acme-preset", "--owner", "acme-team")
+    code, out, err = _run(tmp_path, "preset", "init", "acme-preset", "--owner", "acme-team")
     assert code == 1 and "README.md" in out + err
     assert sorted(p.name for p in folder.iterdir()) == ["README.md"]
 
@@ -713,7 +714,7 @@ def test_pt_8_a_failed_write_names_the_files_already_written(tmp_path):
     (folder / "compass-fixtures").mkdir(parents=True)
     (folder / "compass-fixtures").chmod(0o500)
     try:
-        code, out, err = _run(tmp_path, "policy", "init-preset", "acme-preset", "--owner",
+        code, out, err = _run(tmp_path, "preset", "init", "acme-preset", "--owner",
                               "acme-team")
     finally:
         (folder / "compass-fixtures").chmod(0o700)
@@ -724,7 +725,7 @@ def test_pt_8_a_failed_write_names_the_files_already_written(tmp_path):
 
 def test_pt_8_a_file_where_the_folder_should_be_is_an_input_error(tmp_path):
     (tmp_path / "acme-preset").write_text("a file\n", encoding="utf-8")
-    code, out, err = _run(tmp_path, "policy", "init-preset", "acme-preset", "--owner", "acme-team")
+    code, out, err = _run(tmp_path, "preset", "init", "acme-preset", "--owner", "acme-team")
     assert code == 2
     assert "acme-preset" in out + err
 
@@ -735,7 +736,7 @@ def test_pt_8_a_folder_that_cannot_be_written_is_an_input_error(tmp_path):
     folder.mkdir()
     folder.chmod(0o500)
     try:
-        code, out, err = _run(tmp_path, "policy", "init-preset", "locked", "--owner", "acme-team")
+        code, out, err = _run(tmp_path, "preset", "init", "locked", "--owner", "acme-team")
     finally:
         folder.chmod(0o700)
     assert code == 2
@@ -793,12 +794,12 @@ DOC = ROOT / "docs" / "policy-test.md"
 
 
 def test_pt_10_the_help_states_the_exit_codes_and_the_options(tmp_path):
-    code, out, _ = _run(tmp_path, "policy", "test", "--help")
+    code, out, _ = _run(tmp_path, "preset", "test", "--help")
     flat = " ".join(out.split())
     assert code == 0
     for word in ("PRESET_DIR", "--json", "--offline", "compass-fixtures", "Exit 0", "1", "2"):
         assert word in flat, word
-    code, out, _ = _run(tmp_path, "policy", "init-preset", "--help")
+    code, out, _ = _run(tmp_path, "preset", "init", "--help")
     flat = " ".join(out.split())
     assert code == 0
     for word in ("DIR", "--owner", "--json", "never overwrites", "Exit 0"):
@@ -807,9 +808,9 @@ def test_pt_10_the_help_states_the_exit_codes_and_the_options(tmp_path):
 
 def test_pt_10_both_verbs_are_described_and_listed_under_policy(tmp_path):
     from compass_pkg.verb_help import VERB_DESCRIPTIONS
-    assert "policy test" in VERB_DESCRIPTIONS and "policy init-preset" in VERB_DESCRIPTIONS
-    code, out, _ = _run(tmp_path, "policy", "--help")
-    assert code == 0 and "test" in out and "init-preset" in out
+    assert "preset test" in VERB_DESCRIPTIONS and "preset init" in VERB_DESCRIPTIONS
+    code, out, _ = _run(tmp_path, "preset", "--help")
+    assert code == 0 and "test" in out and "init" in out
 
 
 def test_pt_10_the_contract_corpus_holds_both_verbs_with_a_true_reason():
@@ -856,8 +857,8 @@ def test_pt_10_the_help_and_the_readme_say_what_exit_two_means():
     from compass_pkg import preset_init
     from compass_pkg.verb_help import VERB_DESCRIPTIONS
     said = "2 when the folder or its compass.yml is missing, cannot be read or is not UTF-8"
-    assert said in VERB_DESCRIPTIONS["policy test"]
-    assert "readable but malformed" in VERB_DESCRIPTIONS["policy test"]
+    assert said in VERB_DESCRIPTIONS["preset test"]
+    assert "readable but malformed" in VERB_DESCRIPTIONS["preset test"]
     assert "2 means the folder or its `compass.yml` is missing, cannot be read or is not UTF-8" \
         in " ".join(preset_init.README.split())
 

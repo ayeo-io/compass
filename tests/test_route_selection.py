@@ -145,13 +145,13 @@ def test_floor_brownfield_unmapped_requires_specify(run_cli):
     r = run_cli("approach", "evaluate", "--json",
                 *_reading_args({"risk": "contained",
                                 "familiarity": "brownfield-unmapped",
-                                "size": "standard",
+                                "size": "medium",
                                 "intent": "delivery"}))
     assert r.returncode == 0, r
     data = json.loads(r.stdout)
     fired = [f["id"] for f in data["policy_rules_fired"]]
     assert "RP-FLOOR-002" in fired
-    assert data["stages"].get("define") == "full"
+    assert data["stages"].get("define") == "thorough"
     assert "behaviour-mapping" in data["required_skills"]
 
 
@@ -249,7 +249,10 @@ def test_existing_combinations_unchanged(run_cli):
 
         actual_route = data.get("delivery_approach")
         actual_ceiling = data.get("subtask_ceiling")
-        actual_phases = data.get("stages", {})
+        # The baseline predates the rename of the depth words and is not
+        # rewritten: the stage weights are compared in the words it recorded.
+        from compat_baseline import DEPTH_WAS
+        actual_phases = {s: DEPTH_WAS.get(m, m) for s, m in data.get("stages", {}).items()}
         actual_gates = set(data.get("gates", []))
 
         if actual_route != expected_route:

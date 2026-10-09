@@ -35,10 +35,36 @@ recorded.
 check. It is a major release because it changes the shipped default's format
 and ships together with the delivery approaches as data (the decision record
 "routing policy as configuration goes ahead", in `governance/decisions/`),
-not because it removes a command. **It removes nothing.** Every file and name
-that 5.x read is still read, and 7.0.0 removes them
+not because it removes a command. **It removes no command.** Every file and
+name that 5.x read is still read, and every released command spelling that 6.0.0
+renames still runs, until 7.0.0 removes them
 (`governance/decisions/2026-10-06-legacy-governance-readable-until-7-0-0.md`
 and `governance/decisions/2026-10-06-old-route-names-readable-until-7-0-0.md`).
+It does remove one output shape: the `compass flow --json` keys held, next_up,
+landed_this_week and abandoned, replaced by backlog, ready, in_progress,
+in_review, done_this_week and closed.
+
+**Renamed words and commands at 6.0.0.** 6.0.0 renames the depth words (`full`
+becomes `thorough`, and the other two follow), the size `standard`, the run
+stage `build`, the friction `phase` key, the stored issue statuses and eight
+released command spellings. A manifest is written at schema `3.0`. The old words
+and the eight command spellings work until 7.0.0. The full tables, the notice a
+first save prints and the `manifest.yml.v5.bak` backup are in
+`docs/upgrade-6-0-0.md`. `issue status remove` also reopens a closed issue, so
+a released script that reopened one keeps working.
+
+**Upgrade and rollback.** Update every checkout and every installed plugin
+together. Do not run a v5 `ship-commit` on a 6.0.0 tree: it does not read the
+new words and drops the issue from the living spec. 6.0.0 offers no
+supported rollback: a problem is fixed forward in a 6.0.x release. The first
+rewrite of each manifest keeps the original as `manifest.yml.v5.bak`;
+restoring it discards everything recorded after that rewrite. The internal
+reverse map, used only to rehearse a rollback before the tag, loses
+`duplicate_of`, the difference between `not-planned` and `duplicate`, the
+`blocked` flag, and the fact that a parked issue had no reason (it returns as
+a plain queued hold). The configuration files of a project (`compass.yml`,
+copied governance and `.compass/config.yml`) are read in their old words until
+7.0.0. A tool to rewrite them is owed before 7.0.0.
 
 **What the release contains**
 
@@ -54,7 +80,7 @@ and `governance/decisions/2026-10-06-old-route-names-readable-until-7-0-0.md`).
   layer with its parent. A change that loosens the parent needs a waiver with an
   approver, a framework lock cannot be removed by a lower layer, and a project
   that unlocks a framework entry is reported non-conformant.
-- `compass policy lint` checks a layered project. `compass policy effective`
+- `compass policy lint` checks a layered project. `compass policy show`
   prints every resolved field with the layer that set it. `compass policy diff`
   compares two configurations by classification and by replaying assessments.
   `compass policy migrate` turns copied governance and a `.compass/config.yml`
@@ -64,11 +90,11 @@ and `governance/decisions/2026-10-06-old-route-names-readable-until-7-0-0.md`).
   The commands that read configuration read that generation, so a later change
   to `compass.yml` cannot change an issue that is already running.
 - `compass policy update` moves a project to a new major of the shipped default
-  and asks again for approval of each waiver the move affects. `compass policy
-  test` runs a preset's fixtures and checks its locks, and `compass policy
-  init-preset` scaffolds a team preset repository.
+  and asks again for approval of each waiver the move affects. `compass preset
+  test` runs a preset's fixtures and checks its locks, and `compass preset
+  init` scaffolds a team preset repository.
 - `compass issue configure` proposes, previews, discards or recovers a change to
-  an issue's own configuration. `compass issue migrate-config` pins an issue's
+  an issue's own configuration. `compass issue migrate --config` pins an issue's
   configuration to the installed versions. An implementation major that differs
   from the one a generation recorded is refused, and a check can be advisory.
 - A project can name git parents, singly or in a chain, and each is pinned by
@@ -77,7 +103,7 @@ and `governance/decisions/2026-10-06-old-route-names-readable-until-7-0-0.md`).
 - A check can be judged: it passes on a recorded review (`docs/judged-checks.md`).
   `approvers` name who may approve a waiver, a human check or an exit, and an
   evidence approval is recorded with its approver.
-- `compass issue template` prints a document template with its checklists
+- `compass issue template show` prints a document template with its checklists
   rendered from the issue's stage lists. The receipt shows where each rule,
   waiver, lock and check came from.
 - `/compass:init` writes a minimal `compass.yml` for a new project and copies
@@ -151,7 +177,7 @@ is now measured from the project root.
 
 An issue written under 4.x keeps working without any change: a bare
 filename still resolves beside the manifest, and the CLI says when it used
-that fallback. To move the documents, run `compass migrate`. It refuses when
+that fallback. To move the documents, run compass migrate (`compass issue migrate` from 6.0.0). It refuses when
 git holds no copy of the work directory, and `--i-have-a-copy` tells it you
 have taken one yourself.
 
@@ -161,7 +187,7 @@ New in 5.0.0, and nothing removed by it:
   command file and one skill.
 - `compass issue artifact-path <kind>` prints where one of an issue's
   documents is.
-- `compass issue artifact --path` records where a document was written.
+- `compass issue artifact set --path` records where a document was written.
 
 ### What changed at 4.0.0
 
@@ -181,7 +207,7 @@ it, so a project that copied `governance/` under 3.x needs this file too -
 otherwise that link resolves to nothing.
 
 The read-side rename tables are unaffected: an issue directory written
-under an older vocabulary still loads, and `compass migrate` still brings
+under an older vocabulary still loads, and `compass issue migrate` still brings
 one forward (ADR-020). ADR-024 records why the redirects were not carried
 past this boundary.
 

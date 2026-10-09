@@ -77,7 +77,9 @@ When an issue is blocked or stalled:
    first, an external dependency, a re-assess.
 3. **Record it where the issue lives** - append a dated line to that issue's
    `devlog.md`. Flow management does not keep a separate blocker list; the
-   devlog is the issue's history and the blocker belongs in it.
+   devlog is the issue's history and the blocker belongs in it. The person
+   working an in-progress or in-review issue can also flag it with
+   `compass issue blocked set --reason`, and the board then shows the reason.
 4. **Escalate by surfacing, not by routing.** Flow management has no authority
    to reassign or reprioritise - it makes the blocker *visible* at the top of
    the flow report and, if a human decision is needed, says so plainly.
@@ -95,10 +97,10 @@ the natural fit). Keep it short enough to read in two minutes.
 - {{decision or guardrail violation - or "nothing"}}
 
 ## Landed since last digest
-- {{issue-slug}} ({{route}}) - {{one line: what shipped}}
+- {{issue-slug}} ({{delivery approach}}) - {{one line: what shipped}}
 
 ## In flight
-- {{issue-slug}} ({{route}}) - {{phase}} - {{health: healthy | stalled | off-route}}
+- {{issue-slug}} ({{delivery approach}}) - {{phase}} - {{health: healthy | stalled | off-track}}
 
 ## Blocked
 - {{issue-slug}} - blocked on {{precise blocker}}; needs {{who/what}}

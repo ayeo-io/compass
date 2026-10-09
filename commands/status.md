@@ -40,9 +40,9 @@ So: **the board is the default. Everything else is drill-down.**
    |---|---|
    | **BLOCKED** | cannot progress without a decision or an owed follow-up being settled: `compass check` fails, an owed follow-up, a missing human approval on an irreversible change |
    | **READY TO SHIP** | all gates green and `compass check` passes, but not yet marked shipped - finished work nobody has closed |
-   | **IN PROGRESS** | started, not finished: a `status: active` issue, or artifacts present without a terminal status |
-   | **NEXT UP** | explicitly queued to start. If the status vocabulary has no queued state, say so plainly rather than guessing - see step 4 |
-   | **DONE** | any terminal status (`landed`, `landed-direct`, `superseded`, `concluded`) |
+   | **IN PROGRESS** | started, not finished: an issue whose state is in-progress or in-review. An issue in flight stores no status; `compass flow` reads its state from its records |
+   | **NEXT UP** | ready to start (defined and refined, no work yet), or held in the backlog |
+   | **DONE** | a stored status of `done`, whatever its close reason |
 
 3. **Write each column as prose, not a table.** Name the issue and say *why
    it is in that column* - the reason is the useful part. Two or three
@@ -52,8 +52,8 @@ So: **the board is the default. Everything else is drill-down.**
    For **DONE**, a count is almost always enough. Nobody scans finished
    work.
 
-4. **Account for what cannot be placed.** An issue with no `manifest.yml`, or no
-   `status:` field, cannot honestly go in any column. Report the count on
+4. **Account for what cannot be placed.** An issue with no readable
+   `manifest.yml` cannot honestly go in any column. Report the count on
    its own line. Do not quietly drop it and do not guess: a board that
    silently omits part of the work looks complete when it is not.
 
@@ -72,17 +72,16 @@ BLOCKED (2)
 
 READY TO SHIP (1)
   pypsa-api-v020-extensions - all six gates green, check passes. Just needs
-  its status flipped.
+  its commit made.
 
 IN PROGRESS (5)
   import-coordinate-crs-normalisation is furthest along (criteria defined and
   designed, not verified). The other four are barely started.
 
 NEXT UP
-  Nothing is marked as queued - Compass has no state for it, so this cannot
-  be answered from disk.
+  Nothing is ready to start, and the backlog is empty.
 
-DONE 131 shipped. 94 more issues have no recorded state at all.
+DONE 131 shipped. 94 more issues have no readable manifest.
 ```
 
 That is the whole report. It fits on a screen, every line supports a

@@ -32,6 +32,7 @@ import re as _re
 
 import fnmatch
 import re as _re
+from compass_pkg import status_words
 from compass_pkg.check_cmd import CHECK_FNS
 from compass_pkg.check_registry import REGISTRY
 from compass_pkg.stable_ids import (
@@ -554,6 +555,11 @@ def cmd_task_lint(args):
     # The manifest is normalised above, so this reads the current key.
     errs += delivery_approach_errors(task)
     errs += raised_by_errors(task)
+    # The status keys. The loader maps an old status word, so the check for a
+    # contradicting close reason reads the file as it is on disk.
+    from compass_pkg import lifecycle
+    errs += lifecycle.status_errors(task, load_yaml(path),
+                                    os.path.dirname(os.path.abspath(path)))
     if "issue" not in task:
         errs.append("missing `issue:` (the issue slug)")
     # Each block below checks the shape before reading it. This command's whole
@@ -561,9 +567,11 @@ def cmd_task_lint(args):
     # a scenario written as a bare string must be reported, not raise
     # AttributeError.
     if "assessment" not in task:
-        # An abandoned issue that never had an assessment was dropped before
-        # it entered the pipeline, which is the same case as a queued one.
-        if (task.get("status") or "active") in ("queued", "abandoned"):
+        # An issue closed without being delivered that never had an assessment
+        # was dropped before it entered the pipeline, which is the same case
+        # as a queued one.
+        if status_words.is_queued(task) or (status_words.close_reason(task)
+                                            and not status_words.is_completed(task)):
             # A queued issue has not been assessed yet, so the lint does not
             # ask it for an assessment. Only that field is skipped: the rest
             # of the lint still runs, because a malformed manifest is

@@ -1,4 +1,4 @@
-# compass_pkg.spec_refresh - `compass issue refresh-spec`
+# compass_pkg.spec_refresh - `compass spec sync`
 """Bring a branch up to date with its base without resolving the derived
 living spec by hand.
 
@@ -24,7 +24,7 @@ def _git(root, *args, check=False):
     proc = subprocess.run(["git", "-C", root, *args], capture_output=True,
                           text=True)
     if check and proc.returncode != 0:
-        raise CompassError(f"compass issue refresh-spec: git {' '.join(args)} failed: "
+        raise CompassError(f"compass spec sync: git {' '.join(args)} failed: "
                            f"{(proc.stderr or proc.stdout).strip()}")
     return proc
 
@@ -36,27 +36,27 @@ def refresh(root, base):
     # would send the person to fetch a branch instead of to the real cause.
     if _git(root, "rev-parse", "--git-dir").returncode != 0:
         raise CompassError(
-            "compass issue refresh-spec: this project is not a git repository, "
+            "compass spec sync: this project is not a git repository, "
             "so there is no base branch to merge.")
     # A merge already under way is the person's: this command never takes
     # it over, and its `merge --abort` must never undo it.
     if _git(root, "rev-parse", "-q", "--verify", "MERGE_HEAD").returncode == 0:
         raise CompassError(
-            "compass issue refresh-spec: a merge is already in progress; finish or "
+            "compass spec sync: a merge is already in progress; finish or "
             "abort it first. This command starts and owns its own merge.")
     if _git(root, "rev-parse", "-q", "--verify", base).returncode != 0:
         raise CompassError(
-            f"compass issue refresh-spec: the base {base} does not exist here; "
+            f"compass spec sync: the base {base} does not exist here; "
             f"fetch it first (git fetch) or name another with --base.")
     dirty = _git(root, "status", "--porcelain", "--untracked-files=no").stdout
     if dirty.strip():
         raise CompassError(
-            "compass issue refresh-spec: the working tree has uncommitted changes; "
+            "compass spec sync: the working tree has uncommitted changes; "
             "commit or stash them first, so the merge holds only the base.")
 
     def abort(why):
         _git(root, "merge", "--abort")
-        raise CompassError(f"compass issue refresh-spec: {why} The merge was aborted "
+        raise CompassError(f"compass spec sync: {why} The merge was aborted "
                            f"and the branch is as it was.")
 
     said = []
@@ -90,9 +90,9 @@ def refresh(root, base):
         derive_system_spec(root)
     except CompassError as exc:
         raise CompassError(
-            f"compass issue refresh-spec: the merge of {base} is committed, but "
+            f"compass spec sync: the merge of {base} is committed, but "
             f"re-deriving the living spec failed: {exc}\nFix that, then run "
-            f"`compass issue refresh-spec --base {base}` again; the merge is not "
+            f"`compass spec sync --base {base}` again; the merge is not "
             f"repeated.")
     present = [rel for rel in LIVING_SPEC_FILES
                if os.path.exists(os.path.join(root, rel))]
@@ -112,20 +112,21 @@ def refresh(root, base):
 def cmd_spec_refresh(args):
     root = os.path.dirname(find_compass_dir())
     lines = refresh(root, args.base)
-    print("compass issue refresh-spec: " + lines[0] + ".")
+    print("compass spec sync: " + lines[0] + ".")
     for line in lines[1:]:
         print(f"  {line}")
     return 0
 
 
-def register(issue_subs):
-    """Add `compass issue refresh-spec` to the `issue` group. Not a top-level
-    verb: Compass grows by groups, and the spec is derived from issues."""
-    r = issue_subs.add_parser(
-        "refresh-spec", help="merge a base branch and re-derive the living spec",
-        description="Merge a base branch into this one, take the base's side "
-                    "where only the derived living spec conflicts, re-derive "
-                    "it and commit. Any other conflict aborts the merge.")
+def register(sub):
+    """Add the `compass spec` group, with `sync`."""
+    group = sub.add_parser("spec", help="the derived living spec")
+    r = group.add_subparsers(dest="spec_cmd", required=True).add_parser(
+        "sync", help="merge a base branch and re-derive the living spec",
+        description="Merges the base branch into this one, takes the base's "
+                    "side where only the derived living spec conflicts, "
+                    "re-derives the living spec and commits. Any other "
+                    "conflict aborts the merge.")
     r.add_argument("--base", default="origin/main",
                    help="the branch to merge (default: origin/main)")
     r.set_defaults(func=cmd_spec_refresh, output_kind="hand-off")

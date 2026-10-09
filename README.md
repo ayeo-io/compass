@@ -143,13 +143,16 @@ compass analyze            where an issue's artifacts disagree with each other
 compass retro              is triage systematically over- or under-sizing the process?
 compass retro --lineage    how many issues were found in another, and how many before it landed
 compass issue raised-by    record the issue this one was found in, and where
-compass issue refresh-spec merge main, resolving only conflicts in the derived living spec
+compass spec sync          merge main, resolving only conflicts in the derived living spec
 compass issue friction     record friction the agent observed, with evidence and a fix
 compass ci                 the full mechanical gate suite, for continuous integration
 compass tdd-red            run a test, assert it FAILS, record the red
 compass tdd-green          run a test, assert it PASSES, record the green
 compass policy lint        structurally validate the governance YAML
-compass policy review-rules  the review rules that apply to the changed files
+compass policy show        every resolved configuration field, with its source layer
+compass preset init        scaffold a team preset repository
+compass preset test        run a preset's fixtures and check its locks
+compass review-rule list   the review rules that apply to the changed files
 compass policy diff        compare two configurations: what one accepts that the other does not
 compass plan lint          scan a technical design for placeholder phrases
 compass intent ingest      read a brief that already exists, by path or https URL
@@ -158,12 +161,14 @@ compass issue receipt      one screen: assessment, approach, gates, evidence
 compass issue diagnose     explain one run from its own records: stages, timeline, deviations
 compass issue use          make an issue the current one, for this session
 compass issue configure    propose, preview, discard or recover a change to one issue's own configuration
-compass issue migrate-config  pin an issue's configuration to the installed check versions
-compass issue dashboard    the per-issue review page
-compass issue artifact     set a document's status in the review pack
+compass issue migrate      bring older issue directories up to the current schema; --config pins an issue's configuration to the installed check versions
+compass issue dashboard render  the per-issue review page
+compass issue artifact set set a document's status in the review pack
 compass issue artifact-path  where one of an issue's documents is
-compass issue template     a document template with its checklists rendered from the stage lists
-compass issue set-status   queued | active | parked | landed | abandoned
+compass issue template show  a document template with its checklists rendered from the stage lists
+compass issue status set   backlog, or done with --close-reason completed | not-planned | duplicate
+compass issue status remove  end a backlog hold; the state then follows the records
+compass issue blocked set  flag an in-progress or in-review issue as blocked, with a reason
 compass issue subtask      record, resume and package a multiagent run's subtasks
 compass acceptance start   open an honest record where there is no natural red
 compass acceptance record  close it with what was observed
@@ -176,10 +181,9 @@ compass ship-commit        commit exactly the files the issue recorded
 compass gate pass          mark a gate passed, validating the evidence type
 compass scenario add       add a scenario to the manifest
 compass scenario descope   record a failure mode no scenario covers, and why
-compass scenario tests     replace the tests a scenario declares
+compass scenario tests set replace the tests a scenario declares
 compass changed-file add   trace a changed file to the scenario that asked for it
 compass evidence add       append a typed evidence record
-compass migrate            bring older issue directories up to the current schema
 compass terminology        what a term means here, from the frozen vocabulary
 compass quick-fix start    assess, evaluate and record a quick fix in one call
 compass quick-fix finish   trace, check, gate and ship a quick fix in one call
@@ -240,7 +244,7 @@ only in the cases below, and each one starts only when you ask for it.
   (`github:<owner>/<repo>@<ref>#<sha>`). It runs `git` for the one pinned
   commit, reads its `compass.yml` as data, and caches it under
   `.compass/cache/parents/`. Only `compass policy lint`, `compass policy
-  effective` and `compass approach evaluate --write` fetch, and only a commit
+  show` and `compass approach evaluate --write` fetch, and only a commit
   that is not cached yet; never `compass check`. `--offline` or
   `COMPASS_OFFLINE=1` stops them fetching. `COMPASS_PARENT_REMOTE_BASE`
   names a mirror in place of `https://github.com`. Git runs with your own git

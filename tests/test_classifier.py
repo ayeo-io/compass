@@ -372,16 +372,16 @@ def test_cl_3_ordered_fields_compare_by_their_declared_order():
 
 def test_cl_3_a_stage_mode_compares_by_rank_and_an_unranked_mode_is_incomparable():
     mode = lambda m: [(("approaches", "regular", "stages", "implement"), m)]
-    assert _verdict(_edit(mode("light"))) == "loosening"
-    assert _verdict(_edit(mode("full")), _edit(mode("light"))) == "tightening"
+    assert _verdict(_edit(mode("lightweight"))) == "loosening"
+    assert _verdict(_edit(mode("thorough")), _edit(mode("lightweight"))) == "tightening"
     assert _verdict(_edit(mode("reproduce-first"))) == "incomparable"
-    assert _verdict(_edit(mode("full")), _edit(mode("reproduce-first"))) == "incomparable"
+    assert _verdict(_edit(mode("thorough")), _edit(mode("reproduce-first"))) == "incomparable"
     assert _verdict(_edit(mode("reproduce-first")),
                     _edit(mode("reproduce-first"))) == "equivalent"
     # Two names that share a rank are not told apart by it.
     sibling = lambda m: _edit(mode(m), _edit(
-        [(("stages", "implement", "modes", "thorough"), {"rank": 3})]))
-    assert _verdict(sibling("thorough"), sibling("full")) == "incomparable"
+        [(("stages", "implement", "modes", "peer"), {"rank": 3})]))
+    assert _verdict(sibling("peer"), sibling("thorough")) == "incomparable"
 
 
 def test_cl_3_a_stage_one_side_lacks_compares_by_existence():

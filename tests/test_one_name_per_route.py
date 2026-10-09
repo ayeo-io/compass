@@ -128,7 +128,7 @@ ASSESSMENTS = [
      **({"labels": labels} if labels else {})}
     for r in ("trivial", "contained", "cross-cutting", "critical")
     for f in ("greenfield", "brownfield-mapped", "brownfield-unmapped")
-    for s in ("atomic", "small", "standard", "large", "product")
+    for s in ("atomic", "small", "medium", "large", "product")
     for labels in (None, ["auth"])
 ]
 

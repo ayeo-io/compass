@@ -158,7 +158,7 @@ def test_trc_b1():
 
     # A manifest already speaking the new keys normalises to itself.
     new = {"schema_version": "2.0", "task": "t",
-           "stages": {v: "full" for v in STAGE_RENAMES.values()}}
+           "stages": {v: "thorough" for v in STAGE_RENAMES.values()}}
     assert normalize_spine(new)["stages"] == new["stages"], (
         "a manifest holding the current keys did not survive normalisation")
 
@@ -631,8 +631,12 @@ def test_trc_d4_no_term_is_both_defined_and_banned():
     """
     doc = _terminology()
     banned = _banned_spellings(doc)
+    # ADR-044 narrowed one ban: the word is an issue type, and only its
+    # use for an issue is retired. The ban's patterns carry the narrowing.
+    narrowed = {"task"}
     offenders = sorted(name for name in (doc.get("terms") or {})
-                       if str(name).lower() in banned)
+                       if str(name).lower() in banned
+                       and str(name).lower() not in narrowed)
     assert not offenders, (
         "these are defined as live vocabulary and banned in the same file, so "
         "the generated glossary publishes a retired word as current: "
@@ -804,7 +808,7 @@ def test_trc_c2():
                                         "breakdown", "implement", "verify",
                                         "ship"}, manifest["stages"]
         assert "phases" not in manifest and "readings" not in manifest
-        assert str(manifest["schema_version"]).startswith("2")
+        assert str(manifest["schema_version"]) == "3.0"
 
     before = {p: p.read_bytes() for p in sorted(work.rglob("*")) if p.is_file()}
     second = _migrate(project, "--apply")
@@ -998,7 +1002,7 @@ def test_trc_b8_a_policy_floor_written_with_a_retired_stage_key_still_applies():
     policy = core.load_yaml(
         os.path.join(core.find_governance(), "routing-policy.yml"))
     assessment = {"risk": "contained", "familiarity": "brownfield-unmapped",
-                  "size": "standard", "goal": "delivery", "role": "engineer",
+                  "size": "medium", "goal": "delivery", "role": "engineer",
                   "labels": []}
 
     def refine_weight(spelling):
@@ -1010,10 +1014,10 @@ def test_trc_b8_a_policy_floor_written_with_a_retired_stage_key_still_applies():
         stages = (result[0] if isinstance(result, tuple) else result)["stages"]
         return stages.get("refine")
 
-    assert refine_weight("refine") == "full", (
+    assert refine_weight("refine") == "thorough", (
         "the control failed: `require_phase` does not raise the stage even "
         "under its current name, so this test proves nothing")
-    assert refine_weight("clarify") == "full", (
+    assert refine_weight("clarify") == "thorough", (
         "a floor naming the retired stage key raised nothing - it was looked "
         "up in a map whose keys have already been canonicalised, so it found "
         "no entry and silently did not apply")
@@ -1185,13 +1189,13 @@ def test_trc_b3():
     # `standard` is the v1 SHAPE name; the freeze renamed the value to
     # `feature` as well as the key, and the loader maps both.
     assert v1.get("delivery_approach") == "regular"
-    assert v1.get("stages", {}).get("assess") == "full"
-    assert v1.get("stages", {}).get("define") == "light"
+    assert v1.get("stages", {}).get("assess") == "thorough"
+    assert v1.get("stages", {}).get("define") == "lightweight"
     assert "phases" not in v1 and "route" not in v1
 
     v2 = normalize_spine({"schema_version": "2.0", "delivery_approach": "feature",
-                          "stages": {"assess": "full", "define": "light"}})
-    assert v2["stages"] == {"assess": "full", "define": "light"}, (
+                          "stages": {"assess": "thorough", "define": "lightweight"}})
+    assert v2["stages"] == {"assess": "thorough", "define": "lightweight"}, (
         "the loader changed a manifest that was already current")
 
     # 2. The policy reader: a project routing policy written before the freeze.

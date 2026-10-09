@@ -143,7 +143,7 @@ def render(text, view, kind):
 
 
 def cmd_issue_template(args):
-    """`compass issue template <kind> [--issue SLUG] [--json]`. Prints the
+    """`compass issue template show <kind> [--issue SLUG] [--json]`. Prints the
     template of `kind` with its checklists rendered from the issue's
     configuration. The text is the whole output, so a caller can write it to
     the document. With `--json` the output is one object:
@@ -166,7 +166,7 @@ def cmd_issue_template(args):
     kind = args.kind
     if kind not in available:
         raise CompassError(
-            f"compass issue template: no template '{kind}'. The templates are: "
+            f"compass issue template show: no template '{kind}'. The templates are: "
             f"{', '.join(available)}.")
     slug = getattr(args, "task", None)
     try:

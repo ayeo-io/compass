@@ -124,7 +124,7 @@ def test_rcd_b3_absence_is_explained_against_the_record(tmp_path):
     """
     project = _project(tmp_path, with_design=False)
     manifest = project / ".compass" / "work" / "demo" / "manifest.yml"
-    manifest.write_text(SPINE.replace("plan: collapsed", "plan: full"),
+    manifest.write_text(SPINE.replace("plan: collapsed", "plan: thorough"),
                      encoding="utf-8")
     run = _lint(project)
     combined = run.stdout + run.stderr
@@ -133,7 +133,7 @@ def test_rcd_b3_absence_is_explained_against_the_record(tmp_path):
         f"the plan stage is recorded as full on this issue, so it cannot have "
         f"collapsed - the message explains away a real absence:\n{combined}"
     )
-    assert "full" in combined and "missing" in combined, (
+    assert "thorough" in combined and "missing" in combined, (
         f"the message does not say the design is expected and absent:\n"
         f"{combined}"
     )

@@ -32,10 +32,11 @@ import re as _re
 
 import fnmatch
 import re as _re
+from compass_pkg import status_words, word_map
 from compass_pkg.check_cmd import cmd_check
 from compass_pkg.stable_ids import (
     GATE_VERIFY_ANALYZE, STAGE_ASSESS, STAGE_BREAKDOWN, STAGE_DEFINE, STAGE_IDS, STAGE_IMPLEMENT, STAGE_PLAN,
-    STAGE_REFINE, STAGE_SHIP, STAGE_VERIFY)
+    MODE_THOROUGH, STAGE_REFINE, STAGE_SHIP, STAGE_VERIFY)
 from compass_pkg.core import COMPASS_SCHEMA_VERSION, COMPASS_VERSION, CompassError, artifact_path, exit_for_mode, find_compass_dir, load_mode, load_yaml, manifest_path, mode_banner, normalize_spine, now_iso, resolve_issue_dir, save_manifest
 from compass_pkg.governance import cmd_policy_lint
 from compass_pkg.policy import cmd_task_lint
@@ -77,10 +78,11 @@ from compass_pkg.policy import cmd_task_lint
 #   `compass check`'s job
 
 
-# Check for intent.md only when define runs at full weight. Do not default
-# to "full": a defaulted lookup turns a key rename into a false finding
-# instead of an error.
-_SPECIFY_FULL_WEIGHTS = {"full"}
+# Check for intent.md only when define runs at thorough weight. Do not
+# default to a weight: a defaulted lookup turns a key rename into a false
+# finding instead of an error. `normalize_spine` has read an older `full`
+# as `thorough` by the time this looks.
+_SPECIFY_FULL_WEIGHTS = {MODE_THOROUGH}
 
 # The stages this checks for approach-disagreement. Current keys:
 # `normalize_spine` maps a retired key forward on load, so a set written in the
@@ -319,9 +321,9 @@ def _analyze_task(task_dir: str, project_root: str | None = None) -> dict:
         }
 
     # --- 1. Delivery-approach-aware missing-artifact check -------------------
-    # Check for intent.md only when define runs at full weight.
+    # Check for intent.md only when define runs at thorough weight.
     phases = task.get("stages") or {}
-    # Do not default to "full": a defaulted lookup turns a key rename into a
+    # Do not default to a weight: a defaulted lookup turns a key rename into a
     # false finding instead of an error.
     specify_weight = str(phases.get(STAGE_DEFINE, phases.get("specify", ""))).lower()
     if specify_weight in _SPECIFY_FULL_WEIGHTS and not has_brief:
@@ -382,9 +384,16 @@ def _analyze_task(task_dir: str, project_root: str | None = None) -> dict:
     if os.path.isfile(route_md_path):
         route_md_phases = _parse_phase_weights_from_route_md(route_md_path)
         task_phases = {k.lower(): str(v).lower() for k, v in phases.items()}
+        # A record written before the depth words were renamed says `full` or
+        # `light`; the manifest it describes now says `thorough` or
+        # `lightweight`. Both sides are read through the same table, or every
+        # old record would disagree with its own manifest.
+        modes = word_map.tables()["stage_mode"]
         for phase in _KNOWN_PHASES:
             md_weight = route_md_phases.get(phase)
+            md_weight = modes.get(md_weight, md_weight)
             task_weight = task_phases.get(phase)
+            task_weight = modes.get(task_weight, task_weight)
             if md_weight is not None and task_weight is not None:
                 if md_weight != task_weight:
                     findings.append({
@@ -608,24 +617,26 @@ def cmd_analyze(args):
 # codes. CI integration is genuinely this small: run `compass ci`, honour the
 # exit code. See ci/README.md.
 
-# Lifecycle states meaning "not active". An issue in one of these has no
-# acceptance criteria yet, by design, so the gate checks have nothing to read.
-_NOT_IN_FLIGHT = ("queued", "parked", "abandoned")
+def _issue_manifest(slug):
+    """The issue's manifest, or {} if it cannot be read.
 
-
-def _issue_status(slug):
-    """The issue's lifecycle status, or '' if it cannot be read.
-
-    An unreadable manifest is not treated as not active: it falls through to
+    An unreadable manifest is not treated as not started: it falls through to
     the checks, which report the problem properly rather than skipping it.
     """
     try:
         manifest = load_yaml(os.path.join(resolve_issue_dir(slug), "manifest.yml"))
     except Exception:
-        return ""
-    if not isinstance(manifest, dict):
-        return ""
-    return (manifest.get("status") or "").strip()
+        return {}
+    return manifest if isinstance(manifest, dict) else {}
+
+
+def _gate_checks_wait(manifest):
+    """True for an issue held back or closed without being delivered. It has
+    no acceptance criteria yet, or never will, so the gate checks have
+    nothing to read."""
+    return bool(status_words.is_held(manifest)
+                or (status_words.close_reason(manifest)
+                    and not status_words.is_completed(manifest)))
 
 
 def _git_out(cwd, *args):
@@ -761,15 +772,15 @@ def cmd_ci(args):
         # complying teaches people to stop. Skip those, name the issue, and
         # say why: an issue that vanished from the output would be worse than
         # one that failed, because nobody would know it was there.
-        status = _issue_status(slug)
-        if status in _NOT_IN_FLIGHT:
-            print(f"  gate checks skipped - status is '{status}', so the "
+        manifest = _issue_manifest(slug)
+        if _gate_checks_wait(manifest):
+            print(f"  gate checks skipped - status is '{status_words.stored(manifest)}', so the "
                   f"acceptance criteria and evidence a check looks for do "
                   f"not exist yet. The manifest itself was still linted.")
             skipped += 1
             continue
         # The resolved commit id, not the caller's string, reaches git.
-        if since and status == "landed" and _landed_before(slug, project, commit, ref_time):
+        if since and status_words.is_completed(manifest) and _landed_before(slug, project, commit, ref_time):
             print(f"  gate checks skipped - landed before {since}. Run "
                   f"compass ci without --since to check it. The manifest "
                   f"itself was still linted.")

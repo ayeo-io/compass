@@ -350,13 +350,13 @@ def test_lm_9_an_operation_a_layer_may_not_use():
 
 
 def test_lm_9_a_stages_mode_outside_the_issue_layer():
-    stages = {"stages": {"verify": {"order": 7, "modes": {"full": {}}}}}
+    stages = {"stages": {"verify": {"order": 7, "modes": {"thorough": {}}}}}
     config, _ = merge.apply({}, stages, "parent", "parent")
-    _fails({"stages": {"verify": {"set": {"mode": "full"}}}},
+    _fails({"stages": {"verify": {"set": {"mode": "thorough"}}}},
            "M-FIELD-LAYER", "stages.verify.set.mode", config=config)
-    resolved, _ = merge.apply(config, {"stages": {"verify": {"set": {"mode": "full"}}}},
+    resolved, _ = merge.apply(config, {"stages": {"verify": {"set": {"mode": "thorough"}}}},
                               "issue", "issue")
-    assert resolved["stages"]["verify"]["mode"] == "full"
+    assert resolved["stages"]["verify"]["mode"] == "thorough"
 
 
 def test_lm_10_removing_an_entry_something_refers_to_names_each_referrer():

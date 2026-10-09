@@ -27,7 +27,7 @@ SLUG = "feature"
 MANIFEST = {
     "schema_version": "2.0", "issue": SLUG, "created": "2026-10-07", "status": "active",
     "assessment": {"risk": "contained", "familiarity": "brownfield-mapped",
-                   "size": "standard", "goal": "delivery", "role": "engineer",
+                   "size": "medium", "goal": "delivery", "role": "engineer",
                    "labels": []},
     "evidence": [],
 }
@@ -114,7 +114,7 @@ def test_gs_1_no_issue_resolves_the_project_layers_live(tmp_path, monkeypatch):
 
 OUTCOME = {
     "delivery_approach": "regular",
-    "stages": {"assess": "full", "implement": "full"},
+    "stages": {"assess": "thorough", "implement": "thorough"},
     "gates": [{"id": "verify.correctness", "status": "pending", "evidence": []}],
     "checkpoints": [],
     "policy_rules_fired": [],
@@ -865,7 +865,7 @@ def test_gs_15_check_and_evaluate_create_no_generation_files(tmp_path):
     root, task_dir = _project(tmp_path)
     _run(root, "check", "--issue", SLUG)
     _run(root, "approach", "evaluate", "--issue", SLUG)
-    _run(root, "policy", "effective", "--issue", SLUG)
+    _run(root, "policy", "show", "--issue", SLUG)
     assert not list(root.rglob("generations"))
     assert not list(root.rglob("results.yml"))
     assert "generation" not in _manifest(task_dir)
@@ -985,7 +985,7 @@ def test_gs_17_a_landed_issue_cannot_store_a_new_generation(project):
               for p in task_dir.rglob("*") if p.is_file() and p.name != ".generation.lock"}
     with pytest.raises(CompassError) as caught:
         _commit(root, task_dir, delivery_approach="full")
-    assert "landed" in str(caught.value) and SLUG in str(caught.value)
+    assert "closed" in str(caught.value) and SLUG in str(caught.value)
     after = {p.relative_to(task_dir).as_posix(): p.read_bytes()
              for p in task_dir.rglob("*") if p.is_file() and p.name != ".generation.lock"}
     assert after == before

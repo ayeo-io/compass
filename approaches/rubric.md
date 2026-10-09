@@ -44,7 +44,7 @@ be `critical`.
 |---|---|
 | `atomic` | One file, one obvious change, < ~30 min, no design decision. |
 | `small` | 1–3 files, a known solution pattern, no new architecture. |
-| `standard` | Several files, 1–3 days, one or two design decisions. |
+| `medium` | Several files, 1–3 days, one or two design decisions. |
 | `large` | Multi-module, 1–2 weeks, real architecture, plausibly parallelisable. |
 | `product` | A new system or subsystem, 2+ weeks, many independent work subtasks. |
 

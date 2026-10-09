@@ -12,7 +12,7 @@ resolution).
 
 The store, its commit, the readers, the refusal of a check whose implementation
 major differs and the commands that change what it holds are built:
-`compass issue migrate-config`, `compass issue configure` (propose, preview,
+`compass issue migrate --config`, `compass issue configure` (propose, preview,
 `--discard`, `--commit`) and `--reset-config` on the reassess
 ([issue-configure.md](issue-configure.md)). The modules that read
 configuration (`routing`, `check_cmd`, `checks`, `receipt`, `manifest`,
@@ -87,8 +87,8 @@ The commit refuses, writing nothing, when:
 - `generations/`, the next folder or anything inside the next folder is a
   symbolic link. Compass never follows a link there, because the next folder is
   cleared before it is written.
-- the issue is landed and the result would be a new generation. A landed issue
-  keeps the configuration it landed under. "No change" is still allowed.
+- the issue is closed and the result would be a new generation. A closed issue
+  keeps the configuration it closed under. "No change" is still allowed.
 - the layered lint rejects the configuration. The message names the file, the
   first error and `compass policy lint`, which shows the rest. `approach
   evaluate` without `--write` still works on such a project.
@@ -119,7 +119,7 @@ A new generation is committed in three ways. Each goes through `generation.commi
 | Path | Command | Stores |
 |---|---|---|
 | Reassess | `compass approach evaluate --write` | The configuration resolved now. The normal path. |
-| Migrate | `compass issue migrate-config` | The stored configuration, pinned to the installed versions. |
+| Migrate | `compass issue migrate --config` | The stored configuration, pinned to the installed versions. |
 | Recovery | `compass issue configure --commit` | A leftover generation folder nobody adopted, when it still matches what a fresh resolution gives. |
 
 ## Implementation versions
@@ -136,14 +136,14 @@ the schema of its files in `versions.yml`.
   counts as a failure. One that is advisory for this assessment does not, and the
   text views list it as an advisory failure. `--json` reports `"status": "refused"` for
   both. The `detail` names the
-  implementation, both versions and `compass issue migrate-config`:
+  implementation, both versions and `compass issue migrate --config`:
 
 ```json
 {
   "guardrail": "G1",
   "name": "suite-passed",
   "status": "refused",
-  "detail": "refused: suite-passed 0.9.0 is recorded, 1.0.0 is installed, a different major, so it did not run. Run `compass issue migrate-config --issue feature` to store a new generation pinned to the installed versions; it invalidates the results recorded under the old ones, so each check runs again."
+  "detail": "refused: suite-passed 0.9.0 is recorded, 1.0.0 is installed, a different major, so it did not run. Run `compass issue migrate --config --issue feature` to store a new generation pinned to the installed versions; it invalidates the results recorded under the old ones, so each check runs again."
 }
 ```
 
@@ -152,7 +152,7 @@ the schema of its files in `versions.yml`.
   versions yet.
 - The same major, with a different minor or patch, is not refused.
 
-`compass issue migrate-config [--issue SLUG]` fixes both. It stores a new
+`compass issue migrate --config [--issue SLUG]` fixes both. It stores a new
 generation with the same resolved configuration and provenance, and with
 `versions.yml` set to the installed implementation, resolver and CLI versions.
 It marks every check result the old generation recorded `invalidated` in
@@ -313,7 +313,7 @@ only when `failed` is above zero.
 
 ## Not built yet
 
-- `policy effective --issue` still resolves the live files and does not read
+- `policy show --issue` still resolves the live files and does not read
   the generation.
 - The leftover-generation states are reported by `compass ci`, not by
   `compass check`.

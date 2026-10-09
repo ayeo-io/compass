@@ -20,7 +20,7 @@ both.
 """
 # DEPENDENCY: standard library (dataclasses, datetime, json, os, re);
 # compass_pkg.atomic_io, catalogue_check, catalogue_spec, check_registry,
-# layers, locks, merge, waivers, core (CompassError, FRAMEWORK_ROOT).
+# layers, locks, merge, waivers, word_map, core (CompassError, FRAMEWORK_ROOT).
 from __future__ import annotations
 
 import datetime
@@ -31,6 +31,7 @@ from dataclasses import dataclass, field
 
 from compass_pkg import catalogue_check, layers, locks, merge, parent_states, parents, waivers
 from compass_pkg import catalogue_spec as spec
+from compass_pkg import word_map
 from compass_pkg.atomic_io import StrictYamlError, load_yaml_strict
 from compass_pkg.check_registry import REGISTRY
 from compass_pkg.core import FRAMEWORK_ROOT, CompassError
@@ -79,6 +80,10 @@ class Report:
     layers: list = field(default_factory=list)      # [(name, kind)]
     findings: list = field(default_factory=list)
     stopped_after: object = None
+    # One line for each retired word a layer used (`word_map.advisory_lines`).
+    # An advisory is not a finding: it changes no status and no count, and
+    # `print_advisories` writes it to standard error.
+    advisories: list = field(default_factory=list)
 
     @property
     def errors(self):
@@ -755,12 +760,17 @@ def lint_chain(parent, project, issue=None, *, exhaustive=False, today=None,
     issue layer is judged at that one point (locks and classification) and not
     over the grid; a parent (shipped or git) and a project layer are always
     judged over the grid (ADR-037)."""
-    chain = [layer for layer in (parent, *extra_parents, project, issue) if layer is not None]
+    # Each layer is read through the retired-word tables before any check sees
+    # it; its digest stays the digest of the raw text.
+    chain = [layers.with_mapping(layer)
+             for layer in (parent, *extra_parents, project, issue) if layer is not None]
     state = {"chain": chain, "today": today or datetime.date.today(),
              "registry": tuple(registry), "exhaustive": exhaustive,
              "assessment": assessment,
              "cache": {} if cache is None else cache}
-    report = Report(layers=[(layer.name, layer.kind) for layer in chain])
+    report = Report(layers=[(layer.name, layer.kind) for layer in chain],
+                    advisories=[line for layer in chain
+                                for line in word_map.advisory_lines(layer)])
     for group, run in GROUP_RUNNERS:
         found = _order(state, run(state))
         report.findings += found
@@ -948,7 +958,7 @@ def effective_text(effective):
     scope = f"issue {effective.issue}" if effective.issue else "project"
     names = [l["name"] if l["version"] is None else f"{l['name']}@{l['version']}"
              for l in effective.layers]
-    lines = [f"compass policy effective: {scope} - layers: {', '.join(names)}",
+    lines = [f"compass policy show: {scope} - layers: {', '.join(names)}",
              "  This is what the configuration resolves to. compass check and the "
              "evaluator still read the legacy governance files until the generation "
              "store lands."]
@@ -1032,6 +1042,15 @@ def lint_text(report):
         mark = f"{f.level} " if f.level != "error" else ""
         lines.append(f"  - {mark}{f.code} [{f.layer}] {f.path}: {f.message}")
     return lines
+
+
+def print_advisories(report):
+    """Write the report's advisories to standard error, one line each. They
+    never reach standard output or the JSON report, so a script that reads
+    either sees what it saw before, and they never change the exit status."""
+    import sys
+    for line in report.advisories:
+        print(line, file=sys.stderr)
 
 
 def dumps(document):

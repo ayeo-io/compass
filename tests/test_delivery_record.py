@@ -134,7 +134,8 @@ def test_dr_c_ship_commit_syncs_the_record_after_landing(cli_path, tmp_path, mon
     assert result.returncode == 0, result.stdout + result.stderr
     assert "record synced" in result.stdout
     clone = _record_files(remote, tmp_path)
-    assert "status: landed" in (clone / ".compass" / "work" / "shipped" / "manifest.yml").read_text()
+    synced = (clone / ".compass" / "work" / "shipped" / "manifest.yml").read_text()
+    assert "status: done" in synced and "close_reason: completed" in synced
 
 
 def test_dr_c_a_failed_sync_fails_ship_loudly(cli_path, tmp_path, monkeypatch):

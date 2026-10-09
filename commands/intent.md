@@ -50,7 +50,7 @@ what `/compass:init` offers separately.
    respect the product strategies? If it pulls against a product strategy,
    name the tension now - do not pass it downstream silently.
 3. **Write `intent.md`** into `docs/compass/<created>-<issue-slug>/`, then
-   register it with `compass issue artifact intent --status draft --path
+   register it with `compass issue artifact set intent --status draft --path
    <that path>`. Say so in one line if you created `docs/compass/`.
 
 ## How this shapes the delivery approach

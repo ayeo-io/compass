@@ -42,13 +42,17 @@ from compass_pkg.core import (FRAMEWORK_ROOT, CompassError, docs_dir,
                               find_upwards, load_manifest, load_yaml,
                               manifest_path, now_iso, resolve_issue_dir,
                               save_manifest)
-from compass_pkg import host_launch
+from compass_pkg import host_launch, status_words
 from compass_pkg.loop_ceilings import loop_ceilings
 from compass_pkg.redact import redact
+from compass_pkg.stable_ids import STAGE_IMPLEMENT, STAGE_VERIFY
 
 #: The stage a run may take, and the command its session runs. A run never
-#: assesses, plans or lands: those need a person.
-STAGES = {"build": "/compass:implement", "verify": "/compass:verify"}
+#: assesses, plans or lands: those need a person. `build` was the name of the
+#: implement stage before 6.0.0; the command line rewrites it before parsing
+#: (`cli/aliases.yml`) and a stored run record is read through
+#: `cli/migrate-map.yml`.
+STAGES = {STAGE_IMPLEMENT: "/compass:implement", STAGE_VERIFY: "/compass:verify"}
 
 #: What a session may do without asking. In `-p` mode nobody can answer a
 #: permission prompt, so anything not listed is refused: the first live run
@@ -149,7 +153,7 @@ def _digest(task, task_dir):
 
 
 def _done(task, stage, task_dir):
-    if stage == "verify":
+    if stage == STAGE_VERIFY:
         gates = [g for g in task.get("gates") or [] if isinstance(g, dict)]
         return bool(gates) and all(g.get("status") == "pass" for g in gates)
     scenarios = [s for s in task.get("scenarios") or [] if isinstance(s, dict)]
@@ -360,7 +364,7 @@ def _run(args, root, task_dir, task, path, claude, stop, ceilings,
                 reason = (f"the minute ceiling of {max_minutes:g} is reached "
                           f"({minutes_rule}); the session was ended")
                 break
-            if task.get("status") == "landed":
+            if status_words.is_closed(task):
                 reason = ("the session landed the issue, which an unattended run "
                           "must never do; a person must check it")
                 break
@@ -427,8 +431,8 @@ def _run(args, root, task_dir, task, path, claude, stop, ceilings,
         print(f"compass run: {args.stage} is done after {len(cycles)} cycle(s). "
               f"Record: {record_rel}")
         return 0
-    print(redact(f"compass run: stopped after {len(cycles)} cycle(s): {reason}. "
-                 f"Record: {record_rel}"))
+    print(redact(f"compass run: {args.stage} stopped after {len(cycles)} cycle(s): "
+                 f"{reason}. Record: {record_rel}"))
     return STOPPED
 
 
@@ -436,7 +440,7 @@ def register(sub):
     """Add `compass run` to the top-level parser."""
     p = sub.add_parser(
         "run", help="run one stage of one issue unattended, one session per cycle",
-        description="Run the build or verify stage of one issue through "
+        description="Run the implement or verify stage of one issue through "
                     "`claude -p`, one fresh session per cycle, deciding "
                     "between cycles from the manifest and evidence alone. "
                     "Stops at the cycle, minute and cost ceilings in "

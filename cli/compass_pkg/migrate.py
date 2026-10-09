@@ -3,7 +3,7 @@
 #
 # This module owns the v1-to-v2 on-disk mapping: manifest keys (through
 # core.normalize_spine) and artifact filenames (the map below). The runtime
-# resolves v2 names only; this module reads old trees. `compass migrate`
+# resolves v2 names only; this module reads old trees. `compass issue migrate`
 # wraps migrate_tree with a dry run and a report; the private
 # `_migrate-archive` verb migrates this repository's own archive.
 # =============================================================================
@@ -12,7 +12,7 @@ import os
 
 import yaml
 
-from compass_pkg.core import CompassError, manifest_path, normalize_spine
+from compass_pkg.core import COMPASS_SCHEMA_VERSION, CompassError, manifest_path, normalize_spine, prepare_manifest_write
 
 # v1 filename -> v2 filename, applied inside each issue directory.
 V1_ARTIFACT_NAMES = {
@@ -164,10 +164,10 @@ def plan_issue_dir(task_dir):
         # mismatch as promising more, and just as hard to trust afterwards.
         if repoint_spine_references(task_dir, migrated, renamed):
             notes.append("would repoint the manifest at the renamed files")
-        if str(migrated.get("schema_version", "")).split(".")[0] != "2":
+        if str(migrated.get("schema_version", "")).split(".")[0] not in ("2", "3"):
             migrated["schema_version"] = "2.0"
         if migrated != before:
-            notes.append("would rewrite the manifest to schema 2.0")
+            notes.append("would rewrite the manifest in the current words, schema 3.0")
     notes.extend(plan_relocations(task_dir))
     return notes
 
@@ -207,7 +207,7 @@ def _work_root_is_recoverable(root):
 
 
 def cmd_migrate(args):
-    """`compass migrate [root]` - dry-run by default; --apply makes the changes.
+    """`compass issue migrate [root]` - dry-run by default; --apply makes the changes.
 
     Idempotent: a migrated tree reports nothing to do.
 
@@ -217,7 +217,7 @@ def cmd_migrate(args):
     harder to reason about than one that was not touched."""
     root = getattr(args, "root", None) or os.path.join(".compass", "work")
     if not os.path.isdir(root):
-        print(f"compass migrate: no issue directories under {root} - "
+        print(f"compass issue migrate: no issue directories under {root} - "
               "nothing to examine.")
         return 0
     apply_mode = bool(getattr(args, "apply", False))
@@ -274,14 +274,14 @@ def cmd_migrate(args):
             changed[entry] = notes
 
     if not changed and not failed:
-        print("compass migrate: nothing to do - every issue directory "
-              "already speaks schema 2.0.")
+        print("compass issue migrate: nothing to do - every issue directory "
+              "already speaks schema %s." % COMPASS_SCHEMA_VERSION)
         return 0
 
     if changed:
         verb = "migrated" if apply_mode else "would change"
         noun = "issue directory" if len(changed) == 1 else "issue directories"
-        print(f"compass migrate: {len(changed)} {noun} {verb} "
+        print(f"compass issue migrate: {len(changed)} {noun} {verb} "
               f"under {root}:")
         for slug, notes in changed.items():
             print(f"  {slug}")
@@ -291,7 +291,7 @@ def cmd_migrate(args):
     if failed:
         noun = "directory" if len(failed) == 1 else "directories"
         print()
-        print(f"compass migrate: {len(failed)} {noun} could NOT be migrated:")
+        print(f"compass issue migrate: {len(failed)} {noun} could NOT be migrated:")
         for slug, why in failed.items():
             print(f"  {slug}")
             print(f"    - {why}")
@@ -304,7 +304,7 @@ def cmd_migrate(args):
     if not apply_mode:
         print()
         print("This was a dry run - nothing was written. "
-              "Run `compass migrate --apply` to execute.")
+              "Run `compass issue migrate --apply` to execute.")
     return 0
 
 
@@ -462,6 +462,7 @@ def _repoint_evidence(task_dir, filename, project_rel):
     if not changed:
         return False
     data["evidence"] = records
+    data = prepare_manifest_write(data, manifest)
     body = yaml.safe_dump(data, sort_keys=False, default_flow_style=False,
                           allow_unicode=True)
     tmp = manifest + ".tmp"
@@ -561,6 +562,7 @@ def _register(task_dir, kind, rel):
         return False
     entry["path"] = rel
     data["artifacts"] = arts
+    data = prepare_manifest_write(data, manifest)
     body = yaml.safe_dump(data, sort_keys=False, default_flow_style=False,
                           allow_unicode=True)
     tmp = manifest + ".tmp"
@@ -704,7 +706,7 @@ def migrate_issue_dir(task_dir):
         # there fails `compass check` on an issue nothing is wrong with.
         if repoint_spine_references(task_dir, migrated, renamed):
             notes.append("manifest references -> the renamed files")
-        if str(migrated.get("schema_version", "")).split(".")[0] != "2":
+        if str(migrated.get("schema_version", "")).split(".")[0] not in ("2", "3"):
             migrated["schema_version"] = "2.0"
         if migrated != before:
             # Serialise first, then replace atomically. `open(manifest, "w")`
@@ -712,13 +714,14 @@ def migrate_issue_dir(task_dir):
             # raises - an unexpected object type in the manifest will do it -
             # would leave manifest.yml empty and the issue with no record at
             # all. os.replace is atomic on every platform Compass supports.
+            migrated = prepare_manifest_write(migrated, manifest)
             body = yaml.safe_dump(migrated, sort_keys=False,
                                   default_flow_style=False, allow_unicode=True)
             tmp = manifest + ".tmp"
             with open(tmp, "w", encoding="utf-8") as fh:
                 fh.write(body)
             os.replace(tmp, manifest)
-            notes.append("manifest keys and values -> schema 2.0")
+            notes.append("manifest keys and values -> schema %s" % COMPASS_SCHEMA_VERSION)
     # Last, on purpose. The renames above put every document under its current
     # filename, and the manifest is repointed at those names - so relocation
     # moves files whose names are already settled and writes one registry

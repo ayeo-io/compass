@@ -93,7 +93,7 @@ routing_strategies:
 routing_guardrails:
 
   # floors - a matching assessment value forces the delivery approach to be AT LEAST a given weight,
-  # and/or forces specific stages/skills back to full weight.
+  # and/or forces specific stages/skills back to thorough weight.
   # Route weight order for force_minimum_route: spike < quick-fix < regular
   # < hotfix < full. The evaluator raises the candidate to the max.
   # NOTE: six of the entries below carry RP-REQUIRE ids because they attach a
@@ -286,7 +286,7 @@ ENTRY_COMMENTS = {
         '# gets behaviour-mapping as advice (RP-ADV-002), not a floor: two of',
         '# the three stops in the comparison run of 30 Sep 2026',
         '# (docs/compass/2026-09-30-eval-comparison-discriminating.md) came',
-        '# from sending it to define at full weight (issue #324).',
+        '# from sending it to define at thorough weight (issue #324).',
     ],
     ('RP-FLOOR-002', 'rationale'): [
         '# A small, contained change on unmapped ground with none of the four',
@@ -311,7 +311,7 @@ ENTRY_COMMENTS = {
     ],
     (APPROACH_QUICK_FIX, 'artifacts'): [
         "# No document beyond `delivery-approach.md`: the manifest's `scenarios:`",
-        '# block and a test-run record already hold what a light',
+        '# block and a test-run record already hold what a lightweight',
         '# acceptance-criteria.md and verification-report.md would repeat - a',
         '# stated criterion before the code (`G2`) and a recorded green after it',
         '# (`G1`). So "a quick fix writes delivery-approach.md and nothing else" is',

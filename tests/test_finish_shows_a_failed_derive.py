@@ -37,4 +37,4 @@ def test_trc_001_finish_names_a_failed_spec_derive(repo):
     out = done.stdout + done.stderr
     assert "living spec NOT re-derived" in out, out
     assert "landed-elsewhere" in out, out
-    assert "compass issue refresh-spec" in out, out
+    assert "compass spec sync" in out, out

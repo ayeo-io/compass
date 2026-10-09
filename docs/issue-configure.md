@@ -63,7 +63,7 @@ A call needs at least one change. Flags add to the overlay a call starts from:
 | `--from-file PATH` | The whole overlay, replaced by the file's mapping; any flag is applied on top |
 
 The starting overlay is the pending proposal when there is one, otherwise the
-manifest's `config:`. Two calls therefore accumulate: `--mode refine=full`
+manifest's `config:`. Two calls therefore accumulate: `--mode refine=thorough`
 then `--ceiling subtask_ceiling=2` proposes both. `--discard` starts again.
 
 `proposed.yml` holds, in this order:
@@ -79,7 +79,7 @@ then `--ceiling subtask_ceiling=2` proposes both. `--discard` starts again.
 The call refuses, and writes nothing, when:
 
 - the issue has no stored generation (`generation: 0`, or no `generation:` key). The message names `compass approach evaluate --write`;
-- the issue is landed;
+- the issue is closed (done, whatever its close reason);
 - `generations/`, the next folder or anything in it is a symbolic link;
 - the next folder holds anything but a readable `proposed.yml`. A complete leftover is named with `--commit` and `--discard`; an incomplete one with `--discard`;
 - a flag is malformed, `--from-file` is not a mapping, or the project's own layers do not resolve.
@@ -218,26 +218,26 @@ approval record behind it.
   "proposed": 2,
   "verdict": "refused",
   "reasons": [
-    "C-LOOSENING approaches.stages: at risk contained, familiarity brownfield-mapped, size standard, goal delivery, role engineer, labels none: approaches.stages (define) is \"full\" in the parent and \"collapsed\" in the child; a waiver on the entry, approved by the layer above, excuses it; fields that are looser or cannot be compared: approaches.stages (define), approaches.checkpoints (balanced), approaches.checkpoints (controlled)"
+    "C-LOOSENING approaches.stages: at risk contained, familiarity brownfield-mapped, size medium, goal delivery, role engineer, labels none: approaches.stages (define) is \"thorough\" in the parent and \"collapsed\" in the child; a waiver on the entry, approved by the layer above, excuses it; fields that are looser or cannot be compared: approaches.stages (define), approaches.checkpoints (balanced), approaches.checkpoints (controlled)"
   ],
   "proposal": ".compass/work/feature/generations/2/proposed.yml",
   "base": "config",
   "changes": [
     {
       "path": "stages.define.mode",
-      "before": "full",
+      "before": "thorough",
       "after": "collapsed"
     }
   ],
   "classification": {
     "result": "loosening",
-    "reason": "at risk contained, familiarity brownfield-mapped, size standard, goal delivery, role engineer, labels none: approaches.stages (define) is \"full\" in the parent and \"collapsed\" in the child",
+    "reason": "at risk contained, familiarity brownfield-mapped, size medium, goal delivery, role engineer, labels none: approaches.stages (define) is \"thorough\" in the parent and \"collapsed\" in the child",
     "scan": "full",
     "first_point": {
       "assessment": {
         "risk": "contained",
         "familiarity": "brownfield-mapped",
-        "size": "standard",
+        "size": "medium",
         "goal": "delivery",
         "role": "engineer",
         "labels": []
@@ -250,7 +250,7 @@ approval record behind it.
           "brownfield-mapped"
         ],
         "size": [
-          "standard"
+          "medium"
         ],
         "goal": [
           "delivery"
@@ -260,14 +260,14 @@ approval record behind it.
         ]
       },
       "outcome": "looser",
-      "summary": "at risk contained, familiarity brownfield-mapped, size standard, goal delivery, role engineer, labels none: approaches.stages (define) is \"full\" in the parent and \"collapsed\" in the child",
+      "summary": "at risk contained, familiarity brownfield-mapped, size medium, goal delivery, role engineer, labels none: approaches.stages (define) is \"thorough\" in the parent and \"collapsed\" in the child",
       "changes": [
         {
           "fact": "stage_mode",
           "field": "approaches.stages",
           "key": "define",
           "outcome": "looser",
-          "parent": "full",
+          "parent": "thorough",
           "child": "collapsed"
         },
         {
@@ -315,7 +315,7 @@ approval record behind it.
         "field": "approaches.stages",
         "key": "define",
         "outcome": "looser",
-        "before": "full",
+        "before": "thorough",
         "after": "collapsed"
       },
       {
@@ -449,5 +449,5 @@ first reading's message.
 ## Not built yet
 
 - `compass policy diff`, which will call the preview's comparison for two references.
-- `compass issue migrate-config` and the pending-change line in `compass check`.
+- `compass issue migrate --config` and the pending-change line in `compass check`.
 - Check-result records (`result:<check>`) are not invalidated by a configuration change.

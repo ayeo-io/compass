@@ -74,7 +74,7 @@ The state decides what Compass reads, and no state loses a setting silently:
 - **The marker.** Every `compass.yml` that Compass creates carries `schema:`.
   `compass init` writes no `compass.yml`. `/compass:init` and
   `compass policy migrate` write a project's first one. `compass policy update`
-  rewrites it, and `compass policy init-preset` writes one inside the new preset
+  rewrites it, and `compass preset init` writes one inside the new preset
   folder it scaffolds.
 
 ## Settings
@@ -108,7 +108,7 @@ than these two reads as `enforced`.
 How often a session stops to wait for a person at a stage hand-off: confirming
 the approach, and approving the acceptance criteria, the requirements review
 and the technical design. The routing policy's `autonomy_checkpoints:` table
-says which hand-offs wait for each value and delivery approach. `compass approach summary`
+says which hand-offs wait for each value and delivery approach. `compass approach show`
 shows the answer for an issue. No value changes a gate, evidence, the hook or
 `compass check`.
 

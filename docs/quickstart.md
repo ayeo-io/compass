@@ -134,7 +134,7 @@ where every engineer starts - at the assess stage.
 
 Assess reads four dimensions - that part is judgement - and records them
 in `.compass/work/add-rate-limiting/manifest.yml`. For this issue it scores
-something like: size `standard` (several files, one or two design
+something like: size `medium` (several files, one or two design
 decisions), risk `cross-cutting` (a misconfigured limiter degrades
 something every API consumer touches), familiarity `brownfield-mapped`, role
 `engineer`. It tags `labels: [public-api]`.

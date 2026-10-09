@@ -35,7 +35,7 @@ SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))  # rea
 FRAMEWORK_ROOT = os.path.dirname(SCRIPT_DIR)  # cli/.. == the compass repo root
 
 COMPASS_VERSION = "5.6.0"    # the CLI's own version
-COMPASS_SCHEMA_VERSION = "2.0"    # the manifest.yml schema this CLI writes
+COMPASS_SCHEMA_VERSION = "3.0"    # the manifest.yml schema this CLI writes; it reads majors 1 to 3
 COMPASS_SCHEMA_VERSION_11 = "1.1"  # schema version that introduced manifest.yml.status
 
 from compass_pkg import project_settings  # noqa: E402  (defines CompassError)
@@ -43,6 +43,7 @@ from compass_pkg.project_settings import CompassError  # noqa: E402,F401
 from compass_pkg.stable_ids import (  # noqa: E402
     APPROACH_IDS, APPROACH_QUICK_FIX, LEGACY_APPROACH_ALIASES, STAGE_ASSESS, STAGE_DEFINE, STAGE_IDS,
     STAGE_PLAN, STAGE_REFINE)
+from compass_pkg import word_map  # noqa: E402
 
 
 # --- small helpers -----------------------------------------------------------
@@ -323,7 +324,7 @@ def manifest_path(task_dir):
     """The issue's manifest, by whichever name it carries on disk.
 
     Current name first, retired name second - the same order every other
-    renamed artifact resolves in. A project that has not run `compass migrate`
+    renamed artifact resolves in. A project that has not run `compass issue migrate`
     still reads, which ADR-006 needs and which matters more here than
     anywhere else: `.compass/work/` is gitignored in this repository, so its
     records have no git history to restore from.
@@ -352,7 +353,7 @@ def load_manifest(task_dir):
             major = str(sv).split(".")[0]
         except Exception:
             major = None
-        if major is not None and major not in ("1", "2"):
+        if major is not None and major not in ("1", "2", "3"):
             raise CompassError(
                 f"{path}: schema_version is '{sv}', but this CLI handles "
                 f"'{COMPASS_SCHEMA_VERSION}' (and reads 1.x by key "
@@ -448,6 +449,9 @@ def migrate_map_section(name, fallback):
     return dict(fallback)
 
 
+word_map.bind(migrate_map_section)  # word_map cannot import core (a cycle)
+
+
 # The fallback copy. Retired spellings in a scanned surface would normally be a
 # violation; this is the one place they are unavoidable, and the scan exemption
 # for it is recorded in governance/terminology.yml.
@@ -476,7 +480,7 @@ def normalize_spine(task):
     # Stage keys. `frame` was banned as a stage name at the v2 freeze and
     # survived as a live machine key, because governance/*.yml is not a scanned
     # surface. Archived issues carry the retired spellings, so they
-    # are mapped forward on load and rewritten on disk by `compass migrate`
+    # are mapped forward on load and rewritten on disk by `compass issue migrate`
     # (ADR-006: accept both, remove the old at the major version).
     st = out.get("stages")
     if isinstance(st, dict):
@@ -499,7 +503,7 @@ def normalize_spine(task):
             a2[k2] = v
         out["assessment"] = a2
     # 1.x manifests carry owed/paid; readers see outstanding/resolved, and
-    # `compass migrate` rewrites them on disk. Value map, mirroring the key
+    # `compass issue migrate` rewrites them on disk. Value map, mirroring the key
     # map above.
     if out.get("delivery_approach") in SHAPE_VALUE_MAP:
         out["delivery_approach"] = SHAPE_VALUE_MAP[out["delivery_approach"]]
@@ -508,10 +512,11 @@ def normalize_spine(task):
         for f in fups:
             if isinstance(f, dict) and f.get("status") in FOLLOW_UP_STATUS_MAP:
                 f["status"] = FOLLOW_UP_STATUS_MAP[f["status"]]
-    # A friction entry's `phase` names a stage, so it maps like a stage key.
+    # A friction entry's stage (key `phase` in earlier releases) maps like a stage key.
     for f in (out.get("friction") if isinstance(out.get("friction"), list) else []):
-        if isinstance(f, dict) and f.get("phase") in _stage_key_renames():
-            f["phase"] = _stage_key_renames()[f["phase"]]
+        for key in ("phase", "stage"):
+            if isinstance(f, dict) and f.get(key) in _stage_key_renames():
+                f[key] = _stage_key_renames()[f[key]]
     # Gate ids. ADR-023 renamed `verify.fitness` to `verify.architecture`.
     # This is not cosmetic: `compass check` looks a gate's accepted evidence
     # types up BY ID, and an id that no longer resolves yields None, which
@@ -558,7 +563,7 @@ def normalize_spine(task):
     # The on-disk schema_version is preserved: readers must be able to say
     # honestly what generation a manifest was written in (the receipt reports
     # legacy manifests). Writers stamp the current version when they save.
-    return out
+    return word_map.map_manifest(out)
 
 
 # The orchestration words a pre-ceiling manifest could carry, and the ceiling
@@ -640,7 +645,17 @@ def display_stage(value):
     return STAGE_DISPLAY.get(str(value or ""), str(value or ""))
 
 
+def prepare_manifest_write(task, path):
+    """The one write path every manifest writer calls (`word_map.prepare`)."""
+    try:
+        raw = load_yaml(path) if os.path.isfile(path) else None
+    except CompassError:
+        raw = None
+    return word_map.prepare(task, path, raw, COMPASS_SCHEMA_VERSION)
+
+
 def save_manifest(task, path):
+    task = prepare_manifest_write(task, path)
     with open(path, "w", encoding="utf-8") as fh:
         yaml.safe_dump(task, fh, sort_keys=False, default_flow_style=False)
 
@@ -1002,7 +1017,7 @@ def _entry_for(task_dir, kind):
 
 
 # Kinds this framework renamed, and the filename a landed issue still holds.
-# Read-side only: the resolver finds the old file, and `compass migrate`
+# Read-side only: the resolver finds the old file, and `compass issue migrate`
 # rewrites it on disk (ADR-006).
 _RENAMED_KIND_FILES = {
     # kind -> the filename a LANDED issue still holds. The values are the

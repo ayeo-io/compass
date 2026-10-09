@@ -1,4 +1,4 @@
-# compass_pkg.policy_cmd - `compass policy lint`, `effective`, `diff`, `migrate` and `update`
+# compass_pkg.policy_cmd - `compass policy lint`, `show`, `diff`, `migrate` and `update`
 """The five verbs over `policy_lint`, `replay`, `policy_migrate` and `policy_update`.
 
 `policy lint` runs the legacy lint, unchanged, for a project with no
@@ -66,6 +66,7 @@ def run_policy_lint(args):
                                      read_project=layered, fetch=_may_fetch(args))
     report = policy_lint.lint_loaded(loaded, exhaustive=bool(getattr(args, "exhaustive", False)))
     _emit(args, policy_lint.lint_json(report), policy_lint.lint_text(report))
+    policy_lint.print_advisories(report)
     return 0 if report.ok else 1
 
 
@@ -108,13 +109,14 @@ def run_policy_diff(args):
     return 1 if args.exit_code and document["differs"] else 0
 
 
-def run_policy_test(args):
+def run_preset_test(args):
     result = preset_test.run(args.preset_dir, replay.evaluate, fetch=_may_fetch(args))
     _emit(args, preset_test.report_json(result), preset_test.text(result))
+    policy_lint.print_advisories(result.lint)
     return 0 if preset_test.passed(result) else 1
 
 
-def run_policy_init_preset(args):
+def run_preset_init(args):
     result, files = preset_init.scaffold(args.dir, args.owner, replay.evaluate)
     _emit(args, preset_init.report_json(args.dir, result, files),
           preset_init.text(args.dir, result, files))
@@ -165,8 +167,8 @@ def _issue_option(parser):
 
 
 def register(pls):
-    """Add `lint`, `effective`, `diff`, `migrate` and `update` to the `policy` parsers."""
-    ple = pls.add_parser("effective", help="show every resolved configuration field "
+    """Add `lint`, `show`, `diff`, `migrate` and `update` to the `policy` parsers."""
+    ple = pls.add_parser("show", help="show every resolved configuration field "
                          "with its source layer")
     _issue_option(ple)
     ple.set_defaults(func=run_policy_effective, output_kind="report")
@@ -191,23 +193,11 @@ def register(pls):
                      "it, none compares the project file at git HEAD with the working file")
     pld.add_argument("--offline", action="store_true", help=OFFLINE_HELP)
     pld.add_argument("--open", action="store_true",
-                     help="also run each open issue (active, queued or parked) over both, "
+                     help="also run each issue in flight or in the backlog over both, "
                      "and list the issue waivers that would need re-approval")
     pld.add_argument("--exit-code", dest="exit_code", action="store_true",
                      help="exit 1 when anything differs, as git diff --exit-code does")
     pld.set_defaults(func=run_policy_diff, output_kind="report")
-    plt = pls.add_parser("test", help="run a preset's fixtures and check its locks")
-    plt.add_argument("preset_dir", nargs="?", default=".", metavar="PRESET_DIR",
-                     help="the folder that holds the preset's compass.yml (default: the "
-                     "working folder)")
-    plt.add_argument("--offline", action="store_true", help=OFFLINE_HELP)
-    plt.set_defaults(func=run_policy_test, output_kind="report")
-    pli = pls.add_parser("init-preset", help="scaffold a team preset repository")
-    pli.add_argument("dir", metavar="DIR", help="the folder to write the preset into; it is "
-                     "created when it is missing")
-    pli.add_argument("--owner", required=True, metavar="NAME",
-                     help="the team that owns the preset, written to its compass.yml")
-    pli.set_defaults(func=run_policy_init_preset, output_kind="report")
     plu = pls.add_parser("update", help="move the project to another shipped default major, "
                          "re-approving the waivers the move affects")
     plu.add_argument("--to", metavar="MAJOR",
@@ -217,3 +207,21 @@ def register(pls):
                      help="confirm a move that affects no waiver. It never re-approves a "
                      "waiver: with one affected it refuses")
     plu.set_defaults(func=run_policy_update, output_kind="report")
+
+
+def register_preset(sub):
+    """Add the `compass preset` group, with `init` and `test`."""
+    group = sub.add_parser("preset", help="team preset repositories")
+    verbs = group.add_subparsers(dest="preset_cmd", required=True)
+    pst = verbs.add_parser("test", help="run a preset's fixtures and check its locks")
+    pst.add_argument("preset_dir", nargs="?", default=".", metavar="PRESET_DIR",
+                     help="the folder that holds the preset's compass.yml (default: the "
+                     "working folder)")
+    pst.add_argument("--offline", action="store_true", help=OFFLINE_HELP)
+    pst.set_defaults(func=run_preset_test, output_kind="report")
+    psi = verbs.add_parser("init", help="scaffold a team preset repository")
+    psi.add_argument("dir", metavar="DIR", help="the folder to write the preset into; it is "
+                     "created when it is missing")
+    psi.add_argument("--owner", required=True, metavar="NAME",
+                     help="the team that owns the preset, written to its compass.yml")
+    psi.set_defaults(func=run_preset_init, output_kind="report")

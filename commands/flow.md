@@ -48,10 +48,11 @@ dated digest file (see below).
    - **Healthy** -> progressing in line with its approach.
 
 3. **Build the board.** Start from `compass flow`: it lists each issue in
-   progress with its approach, stage, gates passed and whether its newest
-   test record still matches its files; sets stale evidence and parked
-   issues apart; shows the queue with its age, what landed this week and
-   the most common friction. Add the health and owner the heuristics above
+   progress or in review with its approach, stage, gates passed and whether
+   its newest test record still matches its files, and marks a blocked issue
+   with its reason; sets stale evidence apart; lists ready issues; shows the
+   backlog with its age, what was done this week and the most common
+   friction. Add the health and owner the heuristics above
    give. `compass flow --html <file>` writes the same board as one page.
 
 4. **Surface blockers.** For every blocked or stalled issue, state what it

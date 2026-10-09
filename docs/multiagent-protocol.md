@@ -34,7 +34,7 @@ The printed plan plus the recorded run is the interface (ADR-025).
    `multiagent.sh` can seed it into each worktree:
 
    ```
-   compass issue artifact <kind> --status draft --path <path>
+   compass issue artifact set <kind> --status draft --path <path>
    ```
 
 ## The order of a run
@@ -114,7 +114,7 @@ overwrite the last, and records the tokens the dispatch used:
 
 ```
 cp <worktree>/result.md docs/compass/<created>-<slug>/subtasks/<id>/result-<try>.md
-compass issue subtask update <id> --status reported --report <that path> --cost <tokens>
+compass issue subtask set <id> --status reported --report <that path> --cost <tokens>
 ```
 
 It also copies the builder's records - its reds and greens - because
@@ -143,7 +143,7 @@ register the brief:
 
 ```
 compass issue subtask package <id> --head <branch>
-compass issue subtask update <id> --status reviewing --review-brief <reviewer brief path>
+compass issue subtask set <id> --status reviewing --review-brief <reviewer brief path>
 ```
 
 The reviewer gets the reviewer brief's path and the package's path, and
@@ -152,8 +152,8 @@ records the reviewed commit and the round, then each finding, one call per
 finding - a repeated `--finding` keeps only the last:
 
 ```
-compass issue subtask update <id> --reviewed <commit> --round pass|fail
-compass issue subtask update <id> --finding "<text>"
+compass issue subtask set <id> --reviewed <commit> --round pass|fail
+compass issue subtask set <id> --finding "<text>"
 ```
 
 The orchestrator may review a round itself, by running the previous
@@ -163,7 +163,7 @@ A failed round goes back to the builder for another try, with the findings
 in a new brief. The earlier brief is kept, and the command counts the try:
 
 ```
-compass issue subtask update <id> --brief <new brief> --attempt --status dispatched
+compass issue subtask set <id> --brief <new brief> --attempt --status dispatched
 ```
 
 A finding answered by a later try, or one the orchestrator decides not to act
@@ -177,7 +177,7 @@ replans. Record each error a builder reports, so the same error in a row is
 counted:
 
 ```
-compass issue subtask update <id> --error "<the error text>"
+compass issue subtask set <id> --error "<the error text>"
 ```
 
 Another try is refused at the try ceiling, or once the same error
@@ -195,7 +195,7 @@ A ceiling reached is a stop, not a success. Stop the subtask with a reason
 and a file that shows it, and ask the person who owns the issue:
 
 ```
-compass issue subtask update <id> --stop-reason "<why>" --stop-evidence <file>
+compass issue subtask set <id> --stop-reason "<why>" --stop-evidence <file>
 ```
 
 **The integrated result.** After the last wave integrates (Step 6), write
@@ -223,7 +223,7 @@ On the **last** wave, add `--no-clean`, so its worktrees stay until the
 integrated result has passed its review. On an earlier wave, leave it off.
 
 ```
-compass issue subtask update <id> --status integrating
+compass issue subtask set <id> --status integrating
 scripts/integrate.sh <slug>                  # a wave before the last
 scripts/integrate.sh <slug> --no-clean       # the last wave
 ```
@@ -242,7 +242,7 @@ issue landed: that is `ship-commit`'s alone.
   each worktree still holds its uncommitted `result.md`, already copied:
 
   ```
-  compass issue subtask update <id> --status done
+  compass issue subtask set <id> --status done
   git worktree remove --force <worktree>       # each, after the review passes
   ```
 
@@ -269,16 +269,16 @@ issue landed: that is `ship-commit`'s alone.
 | Step | Command | Recorded |
 |---|---|---|
 | 2 | `subtask add` | brief, model, budget, base commit, status `dispatched`, `attempts: 1` |
-| 4 | `subtask update --report --cost` | result file, status `reported`, tokens used |
+| 4 | `subtask set --report --cost` | result file, status `reported`, tokens used |
 | 5 | `subtask package` | the review package's path |
-| 5 | `subtask update --reviewed --round` | the commit reviewed, the round's verdict |
-| 5 | `subtask update --finding` | one finding per call |
-| 5 | `subtask update --brief`, with the try flag | a new brief, the earlier one kept, and the try counted |
-| 5 | `subtask update --resolve` | a finding marked resolved |
-| 5 | `subtask update --error` | the error's digest, and how many times in a row it was reported |
+| 5 | `subtask set --reviewed --round` | the commit reviewed, the round's verdict |
+| 5 | `subtask set --finding` | one finding per call |
+| 5 | `subtask set --brief`, with the try flag | a new brief, the earlier one kept, and the try counted |
+| 5 | `subtask set --resolve` | a finding marked resolved |
+| 5 | `subtask set --error` | the error's digest, and how many times in a row it was reported |
 | 5 | `subtask replan` | a replan and its reason |
-| 5 | `subtask update --stop-reason --stop-evidence` | why the subtask stopped, and the file that shows it |
-| 6 | `subtask update --status done` | status `done` |
+| 5 | `subtask set --stop-reason --stop-evidence` | why the subtask stopped, and the file that shows it |
+| 6 | `subtask set --status done` | status `done` |
 
 An interrupted run resumes from `compass issue subtask next`, which names
 what to dispatch, what is in review and what is left, with each finding. It

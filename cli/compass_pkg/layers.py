@@ -15,14 +15,14 @@ like a change to the configuration an issue was classified against.
 """
 # DEPENDENCY: standard library (os, re); compass_pkg.atomic_io,
 # compass_pkg.catalogue_check, compass_pkg.catalogue_spec,
-# compass_pkg.core (CompassError, only).
+# compass_pkg.core (CompassError, only); compass_pkg.word_map.
 from __future__ import annotations
 
 import os
 import re
 from collections import namedtuple
 
-from compass_pkg import catalogue_check, catalogue_spec as spec
+from compass_pkg import catalogue_check, catalogue_spec as spec, word_map
 from compass_pkg.atomic_io import StrictYamlError, digest, load_yaml_strict
 from compass_pkg.core import BOUNDARY_MARKERS, CompassError
 
@@ -31,7 +31,23 @@ PROJECT_FILE = "compass.yml"
 # One link of the chain: `name` shows in provenance, `kind` is `parent`,
 # `project` or `issue` (what the layer may do), `doc` is the parsed layer
 # and `digest` is over its content as `layer_digest` defines it.
-Layer = namedtuple("Layer", "name kind doc digest")
+#
+# `doc` and `digest` describe different text on purpose. `doc` is read through
+# the retired-word tables (`word_map.map_layer`), so every later step sees the
+# new words. `digest` is taken from the raw document, so a layer that has not
+# changed on disk keeps its digest and the rename alone reports no drift.
+# `changes` lists the `(path, old, new)` the mapping made, for the lint
+# advisory.
+Layer = namedtuple("Layer", "name kind doc digest changes", defaults=((),))
+
+
+def with_mapping(layer):
+    """`layer` with its document read through the retired-word tables. The
+    digest is kept. A layer that is already mapped comes back unchanged."""
+    doc, changes = word_map.map_layer(layer.doc)
+    if not changes:
+        return layer
+    return layer._replace(doc=doc, changes=tuple(layer.changes) + tuple(changes))
 
 
 # The shipped default is named `compass:default@<major>`: the CLI's own version
@@ -156,10 +172,12 @@ def load_project_layer(root):
     path = os.path.join(os.fspath(root), PROJECT_FILE)
     if not os.path.isfile(path):
         return None
-    doc = _load(path)
+    raw = _load(path)
+    doc, changes = word_map.map_layer(raw)
     _check(doc, "project", path)
     layer, settings = split_project_file(doc)
-    return Layer("project", "project", layer, layer_digest(layer)), settings
+    return Layer("project", "project", layer, layer_digest(split_project_file(raw)[0]),
+                 tuple(changes)), settings
 
 
 def load_issue_layer(manifest):
@@ -174,11 +192,12 @@ def load_issue_layer(manifest):
         manifest = _load(manifest)
         if not isinstance(manifest, dict):
             raise CompassError(f"{where}: the manifest is not a mapping")
-    config = manifest.get("config")
-    if config is None:
+    raw = manifest.get("config")
+    if raw is None:
         return None
+    config, changes = word_map.map_layer(raw)
     _check(config, "issue", where)
-    return Layer("issue", "issue", config, layer_digest(config, "issue"))
+    return Layer("issue", "issue", config, layer_digest(raw, "issue"), tuple(changes))
 
 
 def _check_parent(doc, name):
@@ -209,19 +228,23 @@ def build_chain(parent=None, project=None, issue=None, parent_name="parent",
     chain = []
     if parent is not None:
         if isinstance(parent, Layer):
-            _slot(parent, "parent")
-            _check_parent(parent.doc, parent.name)
+            parent = with_mapping(_slot(parent, "parent"))
         else:
-            _check_parent(parent, parent_name)
-            parent = Layer(parent_name, "parent", parent, layer_digest(parent, "parent"))
+            parent = with_mapping(Layer(
+                parent_name, "parent", parent,
+                layer_digest(parent, "parent") if isinstance(parent, dict) else ""))
+        _check_parent(parent.doc, parent.name)
         chain.append(parent)
     for extra in extra_parents:
-        _check_parent(_slot(extra, "parent").doc, extra.name)
+        extra = with_mapping(_slot(extra, "parent"))
+        _check_parent(extra.doc, extra.name)
         chain.append(extra)
     if project is not None:
-        _check(_slot(project, "project").doc, "project", project.name)
+        project = with_mapping(_slot(project, "project"))
+        _check(project.doc, "project", project.name)
         chain.append(project)
     if issue is not None:
-        _check(_slot(issue, "issue").doc, "issue", issue.name)
+        issue = with_mapping(_slot(issue, "issue"))
+        _check(issue.doc, "issue", issue.name)
         chain.append(issue)
     return chain

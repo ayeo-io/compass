@@ -64,6 +64,7 @@ import re as _re
 from compass_pkg import core as _core  # noqa: F401
 from compass_pkg._all import *  # noqa: F401,F403
 from compass_pkg.subtasks import register as register_subtask_parser  # noqa: E402
+from compass_pkg.status_cmd import register as register_status_parser  # noqa: E402
 from compass_pkg.quick_fix_cmd import register as register_quick_fix_parser  # noqa: E402
 from compass_pkg.decisions import register as register_decision_parser  # noqa: E402
 from compass_pkg.spec_refresh import register as register_refresh_spec_parser  # noqa: E402
@@ -78,6 +79,7 @@ from compass_pkg.run_cmd import register as register_run_parser  # noqa: E402
 from compass_pkg.record import register as register_record_parser  # noqa: E402
 from compass_pkg.review_rules import register as register_review_rules_parser  # noqa: E402
 from compass_pkg.policy_cmd import register as register_policy_parser  # noqa: E402
+from compass_pkg.policy_cmd import register_preset as register_preset_parser  # noqa: E402
 from compass_pkg.approve_cmd import register as register_approve_parser  # noqa: E402
 from compass_pkg.review_cmd import register as register_review_parser  # noqa: E402
 from compass_pkg.issue_config_cmd import register as register_issue_configure_parser  # noqa: E402
@@ -154,13 +156,13 @@ def build_parser():
     pre.add_argument("--json", action="store_true", help="emit JSON")
     pre.set_defaults(func=cmd_route_evaluate, output_kind="hand-off")
     prsum = prs.add_parser(
-        "summary",
+        "show",
         help="print the three-line decision view: approach, gates, files")
     prsum.add_argument("--issue", dest="task", metavar="SLUG",
                        help="issue slug (default: COMPASS_ISSUE, then the current-task pointer)")
     prsum.set_defaults(func=cmd_approach_summary, output_kind="report")
     prdia = prs.add_parser(
-        "diagram",
+        "render",
         help="render every delivery approach as one HTML table",
         description="Render the delivery approaches from the effective "
                     "routing policy as one HTML table: one row per approach, "
@@ -282,7 +284,9 @@ def build_parser():
     pl = sub.add_parser("policy", help="governance policy tools")
     pls = pl.add_subparsers(dest="subcmd", required=True)
     register_policy_parser(pls)
-    register_review_rules_parser(pls)
+    register_preset_parser(sub)
+    register_review_rules_parser(sub)
+    register_refresh_spec_parser(sub)
 
     # The planning stage's verb is `plan`, the word its key, skill, agent
     # and slash command use. `design` names the designer's stage. ADR-024
@@ -320,7 +324,6 @@ def build_parser():
     register_diagnose_parser(pts, issue_arg)
     register_issue_use_parser(pts)
     register_migrate_config_parser(pts, issue_arg)
-    register_refresh_spec_parser(pts)
     register_issue_friction_parser(pts)
     register_issue_configure_parser(pts, issue_arg)
 
@@ -341,12 +344,16 @@ def build_parser():
     ptr.add_argument("--workdir", help="alternate project root (default: cwd)")
     ptr.set_defaults(func=cmd_task_receipt, output_kind="hand-off")
 
-    ptd = pts.add_parser("dashboard", help="render the per-issue review README from the artifact registry")
+    ptdg = pts.add_parser("dashboard", help="the per-issue review page")
+    ptd = ptdg.add_subparsers(dest="dashboard_cmd", required=True).add_parser(
+        "render", help="render the per-issue review README from the artifact registry")
     issue_arg(ptd)
     ptd.add_argument("--check", action="store_true", help="report whether the README matches the manifest; write nothing")
     ptd.set_defaults(func=cmd_issue_dashboard, output_kind="hand-off")
 
-    pta = pts.add_parser("artifact", help="set a document's status in the issue's review pack")
+    ptag = pts.add_parser("artifact", help="a document's status in the issue's review pack")
+    pta = ptag.add_subparsers(dest="artifact_cmd", required=True).add_parser(
+        "set", help="set a document's status in the issue's review pack")
     pta.add_argument("kind", help="document kind, e.g. design (must be one the issue earned)")
     pta.add_argument("--status", required=True, choices=list(ARTIFACT_STATUSES),
                      help="new status")
@@ -357,18 +364,15 @@ def build_parser():
 
     ptap = pts.add_parser("artifact-path", help="print where one of an issue's documents is; non-zero when it is not there")
     ptap.add_argument("kind", help="document kind, e.g. delivery-approach"); issue_arg(ptap); ptap.set_defaults(func=cmd_issue_artifact_path, output_kind="hand-off")
-    ptt = pts.add_parser("template", help="print a document template with its checklists rendered from the issue's stage lists")
+    pttg = pts.add_parser("template", help="document templates")
+    ptt = pttg.add_subparsers(dest="template_cmd", required=True).add_parser(
+        "show", help="print a document template with its checklists rendered from the issue's stage lists")
     ptt.add_argument("kind", help="template kind, e.g. requirements-review or verification-report")
     issue_arg(ptt)
     from compass_pkg.template_lists import cmd_issue_template as _cmd_issue_template
     ptt.set_defaults(func=_cmd_issue_template, output_kind="hand-off")
     register_subtask_parser(pts, issue_arg)
-    ptss = pts.add_parser("set-status",
-                          help="set an issue's lifecycle status (queued|active|parked|landed|abandoned)")
-    ptss.add_argument("status", help="the new status")
-    issue_arg(ptss)
-    ptss.add_argument("--reason", help="why - recorded as parked_reason when parking")
-    ptss.set_defaults(func=cmd_task_set_status, output_kind="hand-off")
+    register_status_parser(pts, issue_arg)
 
     pacc = sub.add_parser(
         "acceptance",
@@ -522,7 +526,9 @@ def build_parser():
     issue_arg(pscd)
     pscd.add_argument("--reason", required=True, help="why no scenario covers it")
     pscd.set_defaults(func=cmd_scenario_descope, output_kind="hand-off")
-    psct = pscs.add_parser("tests", help="replace the tests a scenario declares")
+    pscg = pscs.add_parser("tests", help="the tests a scenario declares")
+    psct = pscg.add_subparsers(dest="tests_cmd", required=True).add_parser(
+        "set", help="replace the tests a scenario declares")
     psct.add_argument("scenario_id", help="scenario id (e.g. TRC-A1)")
     issue_arg(psct)
     psct.add_argument("--test", action="append",
@@ -556,17 +562,6 @@ def build_parser():
     register_lesson_parser(sub)
     register_run_parser(sub)
     register_record_parser(sub)
-
-    pmig = sub.add_parser(
-        "migrate",
-        help="migrate a 1.x issue tree to schema 2.0 - dry-run by default, "
-             "--apply to execute, idempotent (wraps the core this "
-             "repository's own archive migration proved)")
-    pmig.add_argument("root", nargs="?",
-                      help="the work root to examine (default: .compass/work)")
-    pmig.add_argument("--apply", action="store_true",
-                      help="execute the changes the dry run reports")
-    pmig.add_argument("--i-have-a-copy", action="store_true", help="proceed where git cannot restore the work root, because you have taken a copy"); pmig.set_defaults(func=cmd_migrate, output_kind="report")
 
     pinit = sub.add_parser(
         "init",
@@ -611,7 +606,7 @@ def build_parser():
     p_gloss.set_defaults(func=cmd_derive_glossary, output_kind="report")
 
     # Private entry point for the archive migration core that `compass
-    # migrate` wraps. Hidden like its siblings.
+    # issue migrate` wraps. Hidden like its siblings.
     p_marc = sub.add_parser("_migrate-archive", help=argparse.SUPPRESS)
     p_marc.add_argument("--internal", action="store_true", help=argparse.SUPPRESS)
     p_marc.add_argument("roots", nargs="*", help=argparse.SUPPRESS)
@@ -626,7 +621,7 @@ def build_parser():
     p_fric.add_argument("--note", help=argparse.SUPPRESS)
     p_fric.add_argument("--note-category", dest="note_category",
                         help=argparse.SUPPRESS)
-    p_fric.add_argument("--note-phase", dest="note_phase", help=argparse.SUPPRESS)
+    p_fric.add_argument("--note-stage", dest="note_stage", help=argparse.SUPPRESS)
     p_fric.set_defaults(func=cmd_friction_capture, output_kind="hand-off")
 
     # Private entry point that renders one refusal from the registry in
@@ -695,7 +690,8 @@ def main(argv=None):
     # A retired v1 verb is an unrecognised verb, and argparse reports it
     # (ADR-014). An unknown option is reported against its own verb.
     from compass_pkg.verb_help import parse_command_line
-    args = parse_command_line(build_parser(), raw)
+    from compass_pkg.aliases import parse_with_aliases
+    args = parse_with_aliases(build_parser, raw, parse_command_line)
     # tdd-red/green: strip a leading "--" that argparse REMAINDER keeps
     if getattr(args, "command", None) and args.command and args.command[0] == "--":
         args.command = args.command[1:]

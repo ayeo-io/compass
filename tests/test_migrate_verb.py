@@ -97,7 +97,7 @@ def test_apply_migrates_a_v1_tree(tmp_path):
         "the renamed file is still beside the manifest as a document rather "
         f"than as the TRC-E5 pointer:\n{left[:200]}")
     manifest = yaml.safe_load((d / "manifest.yml").read_text())
-    assert str(manifest["schema_version"]) == "2.0"
+    assert str(manifest["schema_version"]) == "3.0"
     assert "assessment" in manifest and "readings" not in manifest
     assert manifest["follow_ups"][0]["status"] == "outstanding", (
         "the 1.x follow-up state did not migrate")
@@ -115,6 +115,15 @@ def test_second_apply_is_a_no_op(tmp_path):
     assert snapshot == after, "the second apply changed the tree"
     assert "nothing" in r.stdout.lower() or "0 " in r.stdout, (
         "the no-op run does not say it found nothing to do:\n" + r.stdout)
+
+
+def test_the_reports_name_the_schema_the_manifest_is_written_in(tmp_path):
+    """The apply writes schema 3.0, so the report must not say 2.0."""
+    root = _v1_project(tmp_path)
+    applied = _run(root, "migrate", "--apply")
+    assert "schema 3.0" in applied.stdout and "schema 2.0" not in applied.stdout, applied.stdout
+    again = _run(root, "migrate", "--apply")
+    assert "schema 3.0" in again.stdout and "schema 2.0" not in again.stdout, again.stdout
 
 
 def test_mapping_lives_in_the_exempt_data_file():

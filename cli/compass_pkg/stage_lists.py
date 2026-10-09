@@ -243,11 +243,12 @@ def _severity(view, check, reading):
 
 def positions(view, task, task_dir):
     """`(order, reached)`: the stage names in order, and how many stages the
-    issue has reached (the index of the current stage). A landed issue, or a
+    issue has reached (the index of the current stage). A closed issue, or a
     current stage no list knows, has reached them all."""
+    from compass_pkg import status_words
     from compass_pkg.next_cmd import _current_phase_from_task
     order = list(view.stage_order())
-    if task.get("status") == "landed":
+    if status_words.is_closed(task):
         return order, len(order)
     current = _current_phase_from_task(task, task_dir)
     return order, (order.index(current) if current in order else len(order))

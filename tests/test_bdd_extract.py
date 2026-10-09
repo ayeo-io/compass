@@ -311,7 +311,7 @@ EXPECTED_SUBCOMMANDS = {
     "tdd-green", "policy", "plan", "intent", "issue", "adr", "rework-scan", "flow",
     "next", "follow-up", "ship-commit", "gate", "scenario", "changed-file",
     "evidence", "terminology",
-    "migrate",                    # the 1.x-to-2.0 tree migrator
+    "review-rule", "spec", "preset",  # `review-rule list`, `spec sync`, `preset init|test`
     "init",                       # creates .compass/ - safe to run twice
     "acceptance",                 # the acceptance verb group
     "quick-fix",                  # start|finish - the quick-fix verb group

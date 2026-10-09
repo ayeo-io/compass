@@ -212,7 +212,7 @@ def test_canonical_landed_task(run_cli, project):
     assert _section_order(out, [
         "alpha",                              # 1: slug
         _DEFAULT_READING_JUSTIFICATIONS["risk"],  # 2: justification
-        "standard",                           # 3: route name
+        "regular",                            # 3: route name
         "verify.correctness",                 # 4: a gate
         "EV-001",                             # 5: an evidence id
         "landed cleanly",                     # 6: overall verdict

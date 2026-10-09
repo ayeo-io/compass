@@ -93,17 +93,27 @@ def test_task_lint_passes_with_absent_schema_version(run_cli, make_task):
     assert r.returncode == 0, r
 
 
-def test_task_lint_rejects_schema_version_3_0(run_cli, make_task):
-    """A future major version must NOT be silently accepted - the same rule
-    that once rejected 2.0 on a 1.x CLI now rejects 3.0 on the 2.0 CLI
-    (which reads 1.x by key normalisation)."""
+def test_task_lint_accepts_schema_version_3_0(run_cli, make_task):
+    """3.0 is the schema this CLI writes: it stores only a backlog hold or
+    done with a close reason."""
     body = _valid_task_body()
     body["schema_version"] = "3.0"
     make_task("sv-3-0", body)
     r = run_cli("issue", "lint", "--issue", "sv-3-0")
+    assert r.returncode == 0, r
+
+
+def test_task_lint_rejects_schema_version_4_0(run_cli, make_task):
+    """A future major version must NOT be silently accepted - the same rule
+    that once rejected 2.0 on a 1.x CLI now rejects 4.0 on the 3.0 CLI
+    (which reads 1.x by key normalisation)."""
+    body = _valid_task_body()
+    body["schema_version"] = "4.0"
+    make_task("sv-4-0", body)
+    r = run_cli("issue", "lint", "--issue", "sv-4-0")
     assert r.returncode != 0, r
     combined = (r.stdout + r.stderr).lower()
-    assert "schema_version" in combined or "3.0" in combined, r
+    assert "schema_version" in combined or "4.0" in combined, r
 
 
 def test_task_lint_with_explicit_file_path(run_cli, make_task, project):
@@ -125,7 +135,7 @@ def test_friction_block_validates(run_cli, make_task):
     and category and source are constrained to their enums (`TRC-A1`)."""
     body = _valid_task_body(friction=[
         {
-            "phase": "plan",
+            "stage": "plan",
             "category": "over-ceremony",
             "observation": "Standard route's full Clarify added a gate the change didn't need.",
             "proposed_change": "routing-policy.yml: lower Clarify weight for size=small.",

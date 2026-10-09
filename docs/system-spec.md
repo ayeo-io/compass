@@ -1,4 +1,4 @@
-<!-- DERIVED FILE - do not hand-edit; `compass _derive-system-spec` rebuilds it from the scenarios in each landed issue's manifest.yml - edit the scenario there and in the issue's acceptance-criteria.md -->
+<!-- DERIVED FILE - do not hand-edit; `compass _derive-system-spec` rebuilds it from the scenarios in each completed issue's manifest.yml - edit the scenario there and in the issue's acceptance-criteria.md -->
 
 # System Specification (derived)
 
@@ -8,7 +8,7 @@
 
 ## Current Behaviour
 
-### bdd-adapters-and-skill-length (landed )
+### bdd-adapters-and-skill-length (completed )
 
 - `TRC-A1` each runner should have a worked project
 - `TRC-A2` each adapter should run the extracted feature and pass
@@ -18,7 +18,7 @@
 - `TRC-B2` an adapter whose runner is absent should skip loudly, never silently pass
 - `TRC-C1` the review skill should be within its stated length
 
-### cli-module-split (landed )
+### cli-module-split (completed )
 
 - `TRC-A1` the entry point should be thin
 - `TRC-A2` the modules should follow the groupings the code already had
@@ -30,7 +30,7 @@
 - `TRC-F1` a circular import should be impossible by construction
 - `TRC-F2` no function should be renamed, merged or split by this task
 
-### compass-self-architecture (landed )
+### compass-self-architecture (completed )
 
 - `TRC-A1` system-context.md exists with the canonical sections
 - `TRC-A2` relations.md documents the call graph between framework components
@@ -51,7 +51,7 @@
 - `TRC-X1` Malformed ADR frontmatter fails Frame loudly
 - `TRC-X2` ADRs with status: proposed are loaded but flagged
 
-### cross-task-architectural-integrity (landed )
+### cross-task-architectural-integrity (completed )
 
 - `TRC-A1` Frame loads architecture/ into the task's working context
 - `TRC-A2` Frame degrades gracefully when architecture/ is absent
@@ -94,7 +94,7 @@
 - `TRC-X4` Typed DoD does not break tasks that have empty DoD
 - `TRC-X5` Bootstrap - spec-author does not invoke architect-lens that doesn't exist yet
 
-### executable-bdd-and-richer-plans (landed )
+### executable-bdd-and-richer-plans (completed )
 
 - `TRC-A1` extraction should produce a feature file a BDD runner can read
 - `TRC-A2` extraction should be byte-for-byte deterministic
@@ -132,7 +132,7 @@
 - `TRC-F6` the framework should grow by artifacts and skills only
 - `TRC-F7` the skill count should not grow on net
 
-### governance-drift-detection (landed )
+### governance-drift-detection (completed )
 
 - `TRC-A1` the shipped governance should declare a version that has moved
 - `TRC-A2` changing governance content without bumping its version should fail
@@ -158,14 +158,14 @@
 - `TRC-F6` the framework should grow by artifacts and checks only
 - `TRC-F7` the evidence types the CLI writes should be accepted by the task schema
 
-### hook-fails-open-on-broken-vendor (landed )
+### hook-fails-open-on-broken-vendor (completed )
 
 - `TRC-1` the hook blocks an edit it cannot check
 - `TRC-2` the hook says why it could not check
 - `TRC-3` control: the hook still blocks when it can read the spine
 - `TRC-4` the guarded-surface decision fails closed too
 
-### living-spec-and-process-impact (landed )
+### living-spec-and-process-impact (completed )
 
 - `TRC-A1` a stale derived spec should fail a check
 - `TRC-A2` a current derived spec should pass
@@ -175,7 +175,7 @@
 - `TRC-F1` the derivation should stay a derived artifact
 - `TRC-F2` a project with no landed tasks should not be broken by the check
 
-### phase-2-skills-check-and-cli-split (landed )
+### phase-2-skills-check-and-cli-split (completed )
 
 - `TRC-A1` the skill should state a method, in order
 - `TRC-A2` three failed fixes should send the engineer back to Frame
@@ -193,11 +193,11 @@
 - `TRC-F2` adding the check should not change any existing task's result
 - `TRC-F3` the framework should grow by artifacts and checks only
 
-### release-3-3-0 (landed )
+### release-3-3-0 (completed )
 
 - `TRC-001` every version location carries 3.3.0 and the suite is green
 
-### v2-artifact-renames (landed )
+### v2-artifact-renames (completed )
 
 - `TRC-A1` the template set carries the v2 names plus the two new intake templates
 - `TRC-A2` the resolver prefers v2 names and accepts v1
@@ -205,18 +205,18 @@
 - `TRC-A4` extracted runnable Gherkin is named acceptance-criteria.feature
 - `TRC-A5` repository validation knows the v2 template inventory
 
-### version-bump-1-0-0 (landed )
+### version-bump-1-0-0 (completed )
 
 - `TRC-1` Every published version surface reports 1.0.0
 
-### voice-audition-standing (landed )
+### voice-audition-standing (completed )
 
 - `TRC-A1` the strategy records permanence and the calibration sample
 - `TRC-A2` the strategy states its own test and its own failure mode
 - `TRC-B1` the reviewer's clarity dimension finds the audition without knowing it exists
 - `TRC-F1` no new mechanism is introduced
 
-### comparison-requirements (landed 2026-05-25)
+### comparison-requirements (completed 2026-05-25)
 
 - `TRC-A1` coherent artifacts pass cleanly
 - `TRC-A2` a scenario with no upstream intent is flagged as orphaned
@@ -270,7 +270,7 @@
 - `TRC-F5` a hand-edit to task.yml made by a tool is caught by analyze
 - `TRC-F6` next on a task whose route.md is missing reports the missing artifact
 
-### make-receipt-render (landed 2026-05-26)
+### make-receipt-render (completed 2026-05-26)
 
 - `TRC-A1` a landed Standard task with typed evidence renders the canonical receipt
 - `TRC-A2` the rendered receipt fits within a single terminal screen
@@ -284,7 +284,7 @@
 - `TRC-D3` a missing task slug fails cleanly
 - `TRC-E1` rendering the receipt mutates nothing on disk
 
-### friction-loop (landed 2026-06-04)
+### friction-loop (completed 2026-06-04)
 
 - `TRC-A1` an optional friction block validates against the task schema
 - `TRC-A2` Land derives a friction entry from a recorded reframe
@@ -298,7 +298,7 @@
 - `TRC-F2` the friction view is read-only and never auto-tunes governance
 - `TRC-F3` a task.yml without a friction block stays valid and behaviour is unchanged
 
-### framework-field-feedback (landed 2026-06-23)
+### framework-field-feedback (completed 2026-06-23)
 
 - `TRC-R1-1` scenarios-have-tests flags a narrative scenario as FAIL on the current code (baseline)
 - `TRC-R1-2` A documented narrative scenario with no test clears the check
@@ -357,7 +357,7 @@
 - `TRC-R10-5` Backward-compat - an absent baseline never blocks Land
 - `TRC-R10-6` Backward-compat - guardrail count and gate set unchanged by S6
 
-### field-feedback-2026-07 (landed 2026-07-27)
+### field-feedback-2026-07 (completed 2026-07-27)
 
 - `TRC-A1` TRC-A1
 - `TRC-A2` TRC-A2
@@ -374,18 +374,18 @@
 - `TRC-F1` TRC-F1
 - `TRC-F2` TRC-F2
 
-### no-compass-refs-in-product-code (landed 2026-07-27)
+### no-compass-refs-in-product-code (completed 2026-07-27)
 
 - `TRC-A1` TRC-A1
 - `TRC-A2` TRC-A2
 - `TRC-A3` TRC-A3
 - `TRC-A4` TRC-A4
 
-### ci-runs-test-suite (landed 2026-07-29)
+### ci-runs-test-suite (completed 2026-07-29)
 
 - `SCN-001` the CI workflow runs the test suite
 
-### readable-specs-and-flow (landed 2026-08-03)
+### readable-specs-and-flow (completed 2026-08-03)
 
 - `TRC-A1` the Summary should be the first thing a cold reader meets
 - `TRC-A2` the Summary should carry exactly the three named fields
@@ -419,13 +419,13 @@
 - `TRC-F3` the self-review should record why no subagent critic is used
 - `TRC-F4` every file this task adds or changes should pass house style
 
-### release-script-portable-tar (landed 2026-08-03)
+### release-script-portable-tar (completed 2026-08-03)
 
 - `SCN-001` the release script packages a tarball on this platform
 - `SCN-002` dev-only state is excluded without stripping the worked examples
 - `SCN-003` untracked local files never ship
 
-### record-keeping-integrity (landed 2026-08-03)
+### record-keeping-integrity (completed 2026-08-03)
 
 - `TRC-A1` a test id whose file does not exist should be reported
 - `TRC-A2` a test id naming a function the file does not contain should be reported
@@ -444,11 +444,11 @@
 - `TRC-F2` a task.yml written before this change should still load
 - `TRC-F3` every file this task changes should pass house style
 
-### version-bump-1-7-0 (landed 2026-08-03)
+### version-bump-1-7-0 (completed 2026-08-03)
 
 - `TRC-1` every published surface should report 1.7.0
 
-### v2-terminology-freeze (landed 2026-08-06)
+### v2-terminology-freeze (completed 2026-08-06)
 
 - `TRC-A1` the vocabulary file parses and carries its three sections
 - `TRC-A2` every term states its meaning
@@ -463,33 +463,33 @@
 - `TRC-F1` a pending entry that names no real surface is rejected
 - `TRC-F2` an exempt path is never scanned
 
-### v2-implementation-plan (landed 2026-08-06)
+### v2-implementation-plan (completed 2026-08-06)
 
 - `TRC-A1` the implementation plan document is reviewable and complete
 
-### v2-terminology-dangling-refs (landed 2026-08-07)
+### v2-terminology-dangling-refs (completed 2026-08-07)
 
 - `TRC-A1` every related term is defined
 
-### v2-prd-and-freeze-adr (landed 2026-08-07)
+### v2-prd-and-freeze-adr (completed 2026-08-07)
 
 - `TRC-A1` the v2 PRD exists in the v2 register with all required sections
 - `TRC-A2` the vocabulary freeze is recorded as an accepted, indexed decision record
 
-### v2-session-instructions (landed 2026-08-07)
+### v2-session-instructions (completed 2026-08-07)
 
 - `TRC-A1` CLAUDE.md is clean v2 register and operationally exact
 - `TRC-A2` AGENTS.md is clean v2 register with the adapter contract intact
 - `TRC-A3` the compass-runtime skill carries the stage-to-command mapping in the v2 register
 - `TRC-B1` code-quoted machine identifiers stay legal on scanned markdown
 
-### v2-template-prose (landed 2026-08-07)
+### v2-template-prose (completed 2026-08-07)
 
 - `TRC-A1` the templates speak the v2 register and templates/ is enforced, never pending again
 - `TRC-A2` the follow-up ban tolerates its live machine forms (tag, CLI verb, spine key)
 - `TRC-A3` the archive sweeps exclude issues the spine says have not started
 
-### v2-machine-spine (landed 2026-08-07)
+### v2-machine-spine (completed 2026-08-07)
 
 - `TRC-A1` the evaluator writes a v2 spine
 - `TRC-A2` a 1.x spine is still readable by normalisation
@@ -499,12 +499,12 @@
 - `TRC-A6` the spine template speaks v2 and is scanned
 - `TRC-A7` the policy keys speak v2
 
-### retire-route-md-alias (landed 2026-08-07)
+### retire-route-md-alias (completed 2026-08-07)
 
 - `TRC-1` the archive sweep has no in-flight exemption
 - `TRC-2` an issue with only delivery-approach.md passes the pre-tool hook
 
-### v2-command-renames (landed 2026-08-07)
+### v2-command-renames (completed 2026-08-07)
 
 - `TRC-1` the command set carries the v2 names
 - `TRC-2` each renamed v1 command is a redirect stub
@@ -513,7 +513,7 @@
 - `TRC-5` no live instruction surface points at a dead command name
 - `TRC-6` the ruling conditions hold
 
-### v2-cli-voice (landed 2026-08-07)
+### v2-cli-voice (completed 2026-08-07)
 
 - `TRC-1` the v2 verbs exist and work
 - `TRC-2` a retired verb fails loudly and legibly
@@ -524,14 +524,14 @@
 - `TRC-7` the cli surface is enforced and widened
 - `TRC-8` the compass-backfill tolerance is re-tightened
 
-### v2-skills-prose (landed 2026-08-07)
+### v2-skills-prose (completed 2026-08-07)
 
 - `TRC-1` skills is an enforced surface
 - `TRC-2` agents is a scanned enforced never-pending surface
 - `TRC-3` the worktree-swarm skill carries the stash rule
 - `TRC-4` the lens ban catches the concept not the agent identifiers
 
-### v2-docs-prose (landed 2026-08-08)
+### v2-docs-prose (completed 2026-08-08)
 
 - `TRC-1` the ratchet reaches zero
 - `TRC-2` the delivery-approach reference docs carry v2 names
@@ -539,24 +539,24 @@
 - `TRC-4` the remaining docs are enforced surfaces
 - `TRC-5` the install refusal points at the plugin-dir path
 
-### v2-docs-prose-2 (landed 2026-08-08)
+### v2-docs-prose-2 (completed 2026-08-08)
 
 - `TRC-1` the ratchet reaches zero
 - `TRC-2` the four deferred docs are enforced and clean
 
-### v2-migrate (landed 2026-08-08)
+### v2-migrate (completed 2026-08-08)
 
 - `TRC-1` dry run reports and writes nothing
 - `TRC-2` apply migrates a v1 tree to v2
 - `TRC-3` a second apply is a no-op
 - `TRC-4` the mapping lives in the exempt data file
 
-### v2-release (landed 2026-08-08)
+### v2-release (completed 2026-08-08)
 
 - `TRC-1` the version is 2.0.0 in every guarded location
 - `TRC-2` desired-state graduates and is enforced
 
-### human-voice (landed 2026-08-09)
+### human-voice (completed 2026-08-09)
 
 - `TRC-A1` the reference should live under an existing skill and open with the principle
 - `TRC-A2` every before/after pair should be a real passage from the work archive
@@ -576,7 +576,7 @@
 - `TRC-F3` nothing about how Compass behaves should change
 - `TRC-F4` every file this issue writes should clear house style and the frozen vocabulary
 
-### zero-friction-install (landed 2026-08-10)
+### zero-friction-install (completed 2026-08-10)
 
 - `TRC-A1` a first triage completes with no Python package installed
 - `TRC-A2` no CLI verb exits on a missing dependency
@@ -599,34 +599,34 @@
 - `TRC-F6` the distributed plugin actually contains the bundled copy
 - `TRC-F7` recording acceptance for a second scenario does not destroy the first one's evidence
 
-### derive-spec-multi-intent (landed 2026-08-10)
+### derive-spec-multi-intent (completed 2026-08-10)
 
 - `TRC-1` a scenario that serves two intents answers for both
 - `TRC-2` the single-intent form is unchanged
 
-### tests-survive-shallow-clone (landed 2026-08-10)
+### tests-survive-shallow-clone (completed 2026-08-10)
 
 - `TRC-1` the pinned assertions run where the history is absent
 
-### fresh-eyes-verify-sweeps (landed 2026-08-11)
+### fresh-eyes-verify-sweeps (completed 2026-08-11)
 
 - `TRC-A1` the strategy states the trigger, the staffing rule, and the method
 - `TRC-A2` the strategy states the prohibition, the evidence, and carries the file's own conventions
 - `TRC-B1` the verify stage guidance points at the strategy without repeating it
 - `TRC-F1` no new mechanism is introduced
 
-### adr-013-context-tense (landed 2026-08-11)
+### adr-013-context-tense (completed 2026-08-11)
 
 - `TRC-1` no public file claims an outside user
 - `TRC-2` no public file attaches a duration to a user
 - `TRC-3` the guard catches the defect it was written for
 
-### s9-primary-record (landed 2026-08-12)
+### s9-primary-record (completed 2026-08-12)
 
 - `TRC-C1` the entry states the primary-record rule and defines what a primary record is
 - `TRC-C2` the entry carries the ADR-013 worked example and warns the nearest document is often a summary
 
-### archive-quote-verification (landed 2026-08-12)
+### archive-quote-verification (completed 2026-08-12)
 
 - `TRC-1` a fabricated quote fails even without the archive
 - `TRC-2` an unaltered quote is accepted, and the report names what went unverified
@@ -634,46 +634,46 @@
 - `TRC-4` a mismatched quote fails, not skips, when the archive is present
 - `TRC-5` the regeneration path refuses an unverified hash
 
-### sweep-respects-queued (landed 2026-08-12)
+### sweep-respects-queued (completed 2026-08-12)
 
 - `TRC-1` a not-yet-started issue does not fail the sweep
 - `TRC-2` the sweep still names what it did not check
 - `TRC-3` an in-flight issue is still checked
 
-### spine-schema-reassessment-keys (landed 2026-08-12)
+### spine-schema-reassessment-keys (completed 2026-08-12)
 
 - `TRC-1` a recorded re-assessment lints clean
 - `TRC-2` the keys are declared, not merely tolerated
 
-### smoke-test-version-drift (landed 2026-08-12)
+### smoke-test-version-drift (completed 2026-08-12)
 
 - `TRC-1` every documented banner matches what the CLI prints
 - `TRC-2` the banner uses current vocabulary
 
-### smoke-test-speaks-v2 (landed 2026-08-12)
+### smoke-test-speaks-v2 (completed 2026-08-12)
 
 - `TRC-1` the document describes v2 behaviour
 - `TRC-2` the document is scanned for the frozen vocabulary
 
-### version-guard-covers-all (landed 2026-08-12)
+### version-guard-covers-all (completed 2026-08-12)
 
 - `TRC-1` every published location reports the declared version
 - `TRC-2` the guard has a case for every published location
 - `TRC-3` no constant nothing reads
 
-### ci-lints-every-issue (landed 2026-08-12)
+### ci-lints-every-issue (completed 2026-08-12)
 
 - `TRC-1` a malformed spine fails the sweep whatever its status
 - `TRC-2` a well-formed not-yet-started issue still does not fail
 - `TRC-3` the summary reports what was and was not checked
 
-### quote-verifier-rejects-unparsed (landed 2026-08-12)
+### quote-verifier-rejects-unparsed (completed 2026-08-12)
 
 - `TRC-1` an unparsed span is a failure
 - `TRC-2` update refuses to record an unparsed span
 - `TRC-3` a well-formed span still verifies
 
-### tests-that-can-fail (landed 2026-08-12)
+### tests-that-can-fail (completed 2026-08-12)
 
 - `TRC-1` the version guard compares every location it names
 - `TRC-2` the validate guard fails when the lint is skipped
@@ -681,13 +681,13 @@
 - `TRC-4` the reference-location guard fails on a new skill directory
 - `TRC-5` the header scan proves how many modules it read
 
-### mutation-proof-standing (landed 2026-08-12)
+### mutation-proof-standing (completed 2026-08-12)
 
 - `TRC-1` the strategy states the method and the reason
 - `TRC-2` the verify guidance points at the strategy
 - `TRC-3` the id set admits the new strategy deliberately
 
-### rehearsal-recordings (landed 2026-08-13)
+### rehearsal-recordings (completed 2026-08-13)
 
 - `RR-1` the script is the eight-shot re-cut
 - `RR-2` the post-3.0.0 shots are marked pending and listed for re-check
@@ -697,7 +697,7 @@
 - `RR-6` measure-before-arguing is in the operating model
 - `RR-7` the new guard can fail
 
-### rehearsal-cli-defects (landed 2026-08-13)
+### rehearsal-cli-defects (completed 2026-08-13)
 
 - `RCD-A1` the hook finds the project from a subdirectory
 - `RCD-A2` an unresolvable project root fails closed, not open
@@ -723,7 +723,7 @@
 - `RCD-G5` the tightened guard can fail
 - `RCD-H1` the version is consistent across every location
 
-### strategy-rulings-2026-08 (landed 2026-08-13)
+### strategy-rulings-2026-08 (completed 2026-08-13)
 
 - `SR-1` conventional comments is a shipped default
 - `SR-2` the label guard cannot pass on a partial list
@@ -732,14 +732,14 @@
 - `SR-5` prefer-open-technologies is filed, not adopted
 - `SR-6` S7 names the surfaces it governs
 
-### scan-the-remaining-surfaces (landed 2026-08-13)
+### scan-the-remaining-surfaces (completed 2026-08-13)
 
 - `SS-1` the four surfaces are scanned
 - `SS-2` a JSON schema's prose is read, its contract is not
 - `SS-3` the machine contract is untouched
 - `SS-4` the guard can fail on each new surface
 
-### id-prefix-vocabulary-and-glossary (landed 2026-08-13)
+### id-prefix-vocabulary-and-glossary (completed 2026-08-13)
 
 - `GL-A1` traceability, intent and navigator are defined
 - `GL-B1` every id prefix in use is defined
@@ -753,7 +753,7 @@
 - `GL-E1` the follow-up surfaces match the schema
 - `GL-E2` the parser still reads the retired tag
 
-### pr-50-review-findings (landed 2026-08-13)
+### pr-50-review-findings (completed 2026-08-13)
 
 - `PRF-1` the enforcement path exempts by anchored name
 - `PRF-2` the session-end hook reads the spine
@@ -763,14 +763,14 @@
 - `PRF-7` the suite passes on a clean clone
 - `PRF-5` the warners say when they cannot find the project
 
-### consolidate-trc-and-scn-prefixes (landed 2026-08-13)
+### consolidate-trc-and-scn-prefixes (completed 2026-08-13)
 
 - `EX-1` the samples use the current vocabulary
 - `EX-2` the canonical id prefix is used throughout
 - `EX-3` every sample still passes its own checks
 - `EX-4` the guard can fail
 
-### configurable-enforced-set (landed 2026-08-13)
+### configurable-enforced-set (completed 2026-08-13)
 
 - `SCN-A1` a project can add a file type
 - `SCN-A2` a path-shaped glob works too
@@ -782,7 +782,7 @@
 - `SCN-F1` an unreadable config does not block
 - `SCN-F2` test files stay exempt whatever the config says
 
-### g5-trigger-matches-statement (landed 2026-08-13)
+### g5-trigger-matches-statement (completed 2026-08-13)
 
 - `SCN-A1` a critical-blast-radius task requires a human approval
 - `SCN-A2` a critical task with a recorded approval clears G5
@@ -795,7 +795,7 @@
 - `SCN-F1` the published guarantee matches the trigger
 - `SCN-F2` governance carries a new version
 
-### honest-acceptance-for-config-and-refactor (landed 2026-08-13)
+### honest-acceptance-for-config-and-refactor (completed 2026-08-13)
 
 - `SCN-A1` a validation acceptance permits the edit
 - `SCN-A2` a refactor acceptance requires a green baseline first
@@ -810,7 +810,7 @@
 - `SCN-F1` the recorded evidence satisfies the existing checks
 - `SCN-F2` the anti-pattern is named where authors will meet it
 
-### hook-bash-write-bypass (landed 2026-08-13)
+### hook-bash-write-bypass (completed 2026-08-13)
 
 - `SCN-A1` a redirect into a source file is blocked with no red on record
 - `SCN-A2` an in-place edit of a source file is blocked
@@ -825,7 +825,7 @@
 - `SCN-F1` an undetectable write is a documented limit, not a silent one
 - `SCN-F2` the hook adds no meaningful cost to ordinary commands
 
-### release-blockers-2026-08 (landed 2026-08-13)
+### release-blockers-2026-08 (completed 2026-08-13)
 
 - `SCN-01` the repo check must ignore files git does not track
 - `SCN-02` enforcement must not switch itself off based on the checkout path
@@ -845,7 +845,7 @@
 - `SCN-16` documented commands must exist
 - `SCN-17` a different test command must not read as a rerun-to-green
 
-### hook-enforces-g2 (landed 2026-08-13)
+### hook-enforces-g2 (completed 2026-08-13)
 
 - `SCN-A1` a full Specify with no scenarios blocks a code edit
 - `SCN-A2` scenarios present allow the edit
@@ -856,7 +856,7 @@
 - `SCN-F1` an unreadable spine does not block
 - `SCN-F2` G2 is checked before the red
 
-### hotfix-1-8-1-false-blocks-and-land-scope (landed 2026-08-13)
+### hotfix-1-8-1-false-blocks-and-land-scope (completed 2026-08-13)
 
 - `SCN-A1` a read-only open is allowed
 - `SCN-A2` a path named inside written prose is not the write target
@@ -867,11 +867,11 @@
 - `SCN-B3` a task that declares nothing is not silently widened
 - `SCN-F1` the 1.8.0 detection scenarios keep passing
 
-### sha-pin-workflow-actions (landed 2026-08-13)
+### sha-pin-workflow-actions (completed 2026-08-13)
 
 - `SCN-001` Third-party actions in the self-check workflow are SHA-pinned
 
-### spine-records-the-truth (landed 2026-08-13)
+### spine-records-the-truth (completed 2026-08-13)
 
 - `SCN-A1` a re-frame that changes gates but not the route name is logged
 - `SCN-A2` a re-frame with no material change is not logged
@@ -886,7 +886,7 @@
 - `SCN-C2` superseded_by must name a scenario that exists
 - `SCN-F1` task.yml files written before this keep working
 
-### status-vocabulary (landed 2026-08-13)
+### status-vocabulary (completed 2026-08-13)
 
 - `SCN-A1` the new statuses validate
 - `SCN-A2` an unknown status is still rejected
@@ -900,11 +900,11 @@
 - `SCN-F1` a task.yml with no status still behaves as active
 - `SCN-F2` landed is the only privileged value
 
-### swarm-script-strips-markdown (landed 2026-08-13)
+### swarm-script-strips-markdown (completed 2026-08-13)
 
 - `TRC-1` swarm.sh strips markdown punctuation from the branch-name cell
 
-### trace-rot-detection (landed 2026-08-13)
+### trace-rot-detection (completed 2026-08-13)
 
 - `SCN-A1` a missing changed_files path fails a task claiming correctness
 - `SCN-A2` the message offers the new path when git knows the rename
@@ -915,14 +915,14 @@
 - `SCN-F1` a deliberately deleted file is not trace rot
 - `SCN-F2` a project outside git still gets the check
 
-### stale-active-issue-sweep (landed 2026-08-13)
+### stale-active-issue-sweep (completed 2026-08-13)
 
 - `SW-1` no issue claims to be in flight when it is not
 - `SW-2` a status change is justified by evidence
 - `SW-3` nothing is marked landed without its gates
 - `SW-4` the archive still lints and checks clean
 
-### identifiers-and-vocabulary-in-printed-output (landed 2026-08-13)
+### identifiers-and-vocabulary-in-printed-output (completed 2026-08-13)
 
 - `TRC-A1` the identifier-expansion rule is stated where agent speech is governed
 - `TRC-A2` the receipt prints a scenario's title beside its id
@@ -936,7 +936,7 @@
 - `TRC-D2` a real pass is not miscounted
 - `TRC-E1` a shared policy-rule effect is printed once
 
-### dry-run-2-rulings (landed 2026-08-14)
+### dry-run-2-rulings (completed 2026-08-14)
 
 - `TRC-A1` triage states permitted parallel streams and no topology
 - `TRC-A2` the stream ceiling is an integer, not a sentence
@@ -950,11 +950,11 @@
 - `TRC-D2` every position exemption names its reason
 - `TRC-D3` the widened scan can fail in the newly covered position
 
-### cucumber-13-drops-vulnerable-uuid (landed 2026-08-14)
+### cucumber-13-drops-vulnerable-uuid (completed 2026-08-14)
 
 - `CU-1` the cucumber-js adapter declares no vulnerable uuid dependency
 
-### field-feedback-hook-scope-and-restage (landed 2026-08-14)
+### field-feedback-hook-scope-and-restage (completed 2026-08-14)
 
 - `FF-1` the hook allows a code file outside the project
 - `FF-2` the hook still blocks a code file inside the project
@@ -962,7 +962,7 @@
 - `FF-4` the issue's artifact directory is still re-staged
 - `FF-5` no obscure word appears in user-facing text
 
-### plain-language-3-2-0 (landed 2026-08-16)
+### plain-language-3-2-0 (completed 2026-08-16)
 
 - `TRC-A1` published launch copy should be under version control
 - `TRC-A9` a file declaring its own exclusions should not be tracked as publication copy
@@ -1005,7 +1005,7 @@
 - `TRC-X3` a banned word should never be fixed by deleting the identifier
 - `TRC-X4` repairing a banned word should not paraphrase a quoted tool string
 
-### claims-match-what-is-proved (landed 2026-08-22)
+### claims-match-what-is-proved (completed 2026-08-22)
 
 - `TRC-A1` an incomplete project governance directory should be refused rather than quietly replaced
 - `TRC-A2` the refusal should name the file it found and the file it expected
@@ -1025,7 +1025,7 @@
 - `TRC-F1` a project governance directory missing its guardrails should be refused the same way
 - `TRC-F2` narrowing the promise should not weaken what the check actually enforces
 
-### public-docs-tell-the-truth (landed 2026-08-22)
+### public-docs-tell-the-truth (completed 2026-08-22)
 
 - `TRC-A1` no published file should misspell the word the framework renamed to
 - `TRC-A2` the safety contract should be titled for the release it describes
@@ -1050,7 +1050,7 @@
 - `TRC-F1` the decay rule should say what it asks of the reader
 - `TRC-F2` the launch article should read as publication copy throughout
 
-### project-commands-are-a-trust-boundary (landed 2026-08-22)
+### project-commands-are-a-trust-boundary (completed 2026-08-22)
 
 - `TRC-A1` a project command should not run unless the project has opted in
 - `TRC-A2` a project that has opted in should have its command run
@@ -1069,7 +1069,7 @@
 - `TRC-E2` the guarantee about declared guardrails should still hold
 - `TRC-B5` an unrecognised CI provider should be refused rather than trusted
 
-### tdd-green-unbound-record (landed 2026-08-23)
+### tdd-green-unbound-record (completed 2026-08-23)
 
 - `TRC-A1` recording a scenario-bound green leaves the unbound green intact
 - `TRC-A2` recording a scenario-bound acceptance leaves the unbound acceptance intact
@@ -1084,7 +1084,7 @@
 - `TRC-D1` a record written before this change does not fail the check
 - `TRC-D2` an unverifiable record is reported as unverifiable, not as verified
 
-### docs-describe-the-old-evidence-path (landed 2026-08-23)
+### docs-describe-the-old-evidence-path (completed 2026-08-23)
 
 - `TRC-A1` no published surface claims a green is always written to the shared path
 - `TRC-A2` the documentation names both forms and says which is written when
@@ -1092,7 +1092,7 @@
 - `TRC-B1` the guard fails when a surface reintroduces the old claim
 - `TRC-C1` every CLI module's banner describes what the verbs actually write
 
-### agent-speech-is-unchecked (landed 2026-08-23)
+### agent-speech-is-unchecked (completed 2026-08-23)
 
 - `TRC-A1` the always-loaded instructions state the four-part reply shape
 - `TRC-A2` the shape carries its three rules
@@ -1104,7 +1104,7 @@
 - `TRC-D2` no instruction tells a session both to use and to avoid reply headings
 - `TRC-A4` the portable instructions carry the shape too
 
-### the-human-front-door (landed 2026-08-23)
+### the-human-front-door (completed 2026-08-23)
 
 - `TRC-A1` a registered artifact declares its kind, path, status and reason
 - `TRC-A2` an omitted artifact records why it was omitted
@@ -1129,7 +1129,7 @@
 - `TRC-F3` a policy rule can add an artifact the way it adds a gate
 - `TRC-F4` the same assessment computes the same artifact set every time
 
-### the-terminal-output-contract (landed 2026-08-24)
+### the-terminal-output-contract (completed 2026-08-24)
 
 - `TRC-A1` a stage hand-off fits on one screen
 - `TRC-A2` the hand-off says what was decided and what to read
@@ -1153,7 +1153,7 @@
 - `TRC-E1` a verb prints past its budget and the guard says which one
 - `TRC-E2` the budget guard fails when the budget is breached
 
-### adaptive-artifact-composition (landed 2026-08-24)
+### adaptive-artifact-composition (completed 2026-08-24)
 
 - `TRC-A1` the template asks the four questions and no others
 - `TRC-A2` a threat with no scenario is visibly unfinished
@@ -1167,7 +1167,7 @@
 - `TRC-D2` no document was added that nothing asks for
 - `TRC-D3` both templates stay shorter than the framework's own PRD
 
-### the-vocabulary-rename (landed 2026-08-25)
+### the-vocabulary-rename (completed 2026-08-25)
 
 - `TRC-A1` a command, its key and its artifact name the same thing
 - `TRC-A2` the designer's command is design again
@@ -1198,7 +1198,7 @@
 - `TRC-E3` the coherence check reads the stage table the template writes
 - `TRC-E4` every citation into the archive opens
 
-### ingest-an-existing-brief (landed 2026-08-25)
+### ingest-an-existing-brief (completed 2026-08-25)
 
 - `ING-A1` a local file becomes intent.md
 - `ING-A2` the source may be called anything
@@ -1216,15 +1216,15 @@
 - `ING-D4` a URL that is not https is refused
 - `ING-E1` the fidelity gate reports which human the material came from
 
-### ci-fails-a-queued-issue-for-being-queued (landed 2026-08-26)
+### ci-fails-a-queued-issue-for-being-queued (completed 2026-08-26)
 
 - `CIQ-A1` a queued issue is not asked for an assessment it cannot have
 
-### cli-verbs-do-not-describe-themselves (landed 2026-08-26)
+### cli-verbs-do-not-describe-themselves (completed 2026-08-26)
 
 - `CLIV-A1` every verb says what it does
 
-### no-status-for-work-done-elsewhere (landed 2026-08-26)
+### no-status-for-work-done-elsewhere (completed 2026-08-26)
 
 - `DEL-A1` a landed issue with a pointer passes without its own record
 - `DEL-A2` the same issue without the pointer still fails
@@ -1243,19 +1243,19 @@
 - `DEL-D3` a commit with no explanation fails
 - `DEL-D4` without git, the commit form declines rather than passes
 
-### docs-slimming-pass (landed 2026-08-26)
+### docs-slimming-pass (completed 2026-08-26)
 
 - `DOC-A1` every drift guard passes on the slimmed documents
 - `DOC-A2` no document claims more than governance does
 - `DOC-A3` a guard taught a new shape can still fail
 - `DOC-A4` a retired guard says what stopped being covered
 
-### set-status-does-not-name-the-issue (landed 2026-08-26)
+### set-status-does-not-name-the-issue (completed 2026-08-26)
 
 - `SSN-A1` set-status names the issue in both outcomes
 - `SSN-A2` a landed_by entry still reads its own key
 
-### name-the-issue-record (landed 2026-08-27)
+### name-the-issue-record (completed 2026-08-27)
 
 - `NIR-A1` the term is governed like every other
 - `NIR-A2` the name needs no gloss
@@ -1266,7 +1266,7 @@
 - `NIR-D2` the migrator moves the archive
 - `NIR-E1` the freeze ceremony is paid
 
-### instruction-volume (landed 2026-08-27)
+### instruction-volume (completed 2026-08-27)
 
 - `IV-A1` the resident cost is bounded
 - `IV-A2` a quick fix reads what a quick fix needs
@@ -1275,7 +1275,7 @@
 - `IV-C2` a split skill says where its parts are
 - `IV-D1` every frontmatter parses
 
-### session-bootstrap (landed 2026-08-27)
+### session-bootstrap (completed 2026-08-27)
 
 - `SB-A1` a session in a Compass project starts with the contract
 - `SB-A2` the contract is short enough to always carry
@@ -1290,20 +1290,20 @@
 - `SB-D2` the portability mapping names the new adapter feature
 - `SB-D3` a source install enforces what the plugin enforces
 
-### version-guard-cannot-see-a-historical-version (landed 2026-08-27)
+### version-guard-cannot-see-a-historical-version (completed 2026-08-27)
 
 - `VGH-A1` an exemption carries its reason
 - `VGH-A2` the exemption list cannot grow quietly
 - `VGH-A3` the historical reference is exempt and still says 3.3.0
 
-### vocabulary-debt (landed 2026-08-27)
+### vocabulary-debt (completed 2026-08-27)
 
 - `VOC-A1` every file the approaches index names exists
 - `VOC-B1` no document says a shipped rename is still pending
 - `VOC-C1` the deep dive names the gates the policy staples
 - `VOC-C2` the deep dive does not claim scoped gates are immovable
 
-### anthropic-aligned-vocabulary (landed 2026-08-28)
+### anthropic-aligned-vocabulary (completed 2026-08-28)
 
 - `TRC-A1` A retired concept word is reported by the vocabulary scan
 - `TRC-A2` Every retired concept word has a ban entry naming its replacement
@@ -1333,19 +1333,19 @@
 - `TRC-F3` A ban with no working pattern is caught before it ships
 - `TRC-F4` A loose pattern that reports neighbouring text fails the suite
 
-### printed-output-guard-coverage (landed 2026-08-28)
+### printed-output-guard-coverage (completed 2026-08-28)
 
 - `TRC-A1` No printed string names a retired verb or value
 - `TRC-A2` The walk reaches far more than the two commands it replaces
 - `TRC-A3` A planted retired name is reported
 
-### pre-tool-hook-misses-worktree-red (landed 2026-08-28)
+### pre-tool-hook-misses-worktree-red (completed 2026-08-28)
 
 - `TRC-A1` A red in the worktree allows an edit in the worktree
 - `TRC-A2` A red in the session does not unlock a worktree
 - `TRC-A3` A call naming no file still resolves from the session
 
-### what-compass-owes-an-unobserved-adopter (landed 2026-08-28)
+### what-compass-owes-an-unobserved-adopter (completed 2026-08-28)
 
 - `TRC-A1` The decision names an observable quantity
 - `TRC-A2` Publication is refused as evidence of adoption
@@ -1369,53 +1369,53 @@
 - `TRC-F2` A revival condition nobody can observe is refused
 - `TRC-F3` Orphaning Inv-8 fails the change
 
-### release-gate-greps-the-old-manifest-filename (landed 2026-08-30)
+### release-gate-greps-the-old-manifest-filename (completed 2026-08-30)
 
 - `TRC-A1` The examples check names the file that exists
 - `TRC-F1` A check that cannot pass is refused
 
-### set-status-reason-writes-an-invalid-manifest (landed 2026-08-30)
+### set-status-reason-writes-an-invalid-manifest (completed 2026-08-30)
 
 - `TRC-A1` A reason on any status leaves the manifest valid
 - `TRC-A2` The recorded reason says which transition it belongs to
 - `TRC-F1` A key the schema forbids is refused
 
-### reframe-is-documented-but-does-not-exist (landed 2026-08-30)
+### reframe-is-documented-but-does-not-exist (completed 2026-08-30)
 
 - `TRC-A1` No shipped document teaches a flag the CLI rejects
 - `TRC-A2` Nothing promises the retired spelling still works
 - `TRC-F1` A guard that reads no flags is refused
 
-### stale-command-names-in-shipped-prose (landed 2026-08-30)
+### stale-command-names-in-shipped-prose (completed 2026-08-30)
 
 - `TRC-A1` No shipped document names a slash command that does not exist
 - `TRC-B1` The safety contract names one start version
 - `TRC-F1` A guard that reads no commands is refused
 
-### allow-marker-supplies-its-own-reason (landed 2026-08-30)
+### allow-marker-supplies-its-own-reason (completed 2026-08-30)
 
 - `TRC-A1` A marker with no reason is refused
 - `TRC-A2` A marker with a real reason still exempts
 - `TRC-B1` The guards that honour the marker share its definition
 
-### decay-rule-imperative-check-cannot-fail (landed 2026-08-30)
+### decay-rule-imperative-check-cannot-fail (completed 2026-08-30)
 
 - `TRC-A1` The action check reads the rule body, not its own anchor
 - `TRC-A2` The rule still passes when it does state an action
 
-### exemptions-that-exclude-nothing (landed 2026-08-30)
+### exemptions-that-exclude-nothing (completed 2026-08-30)
 
 - `TRC-A1` No exemption excludes nothing
 - `TRC-A2` The grandfather list is empty
 - `TRC-B1` A file that must not be scanned is checked directly
 
-### reassessment-log-drops-reading-only-changes (landed 2026-08-30)
+### reassessment-log-drops-reading-only-changes (completed 2026-08-30)
 
 - `TRC-A1` A corrected reading is logged when the approach does not move
 - `TRC-A2` The reason is not discarded
 - `TRC-B1` A first write records no re-assessment
 
-### docs-compass-artifacts (landed 2026-09-11)
+### docs-compass-artifacts (completed 2026-09-11)
 
 - `TRC-A1` A registered document outside the issue directory resolves
 - `TRC-A2` A registered path is anchored to the project, not to the caller
@@ -1448,27 +1448,27 @@
 - `TRC-G4` A registered path that climbs out of the project
 - `TRC-E5` An older install is not locked out by the move
 
-### bare-pytest-fails-on-two-tests (landed 2026-09-11)
+### bare-pytest-fails-on-two-tests (completed 2026-09-11)
 
 - `BPF-1` A bare pytest run passes on a clean checkout
 
-### queued-issues-read-as-landed (landed 2026-09-11)
+### queued-issues-read-as-landed (completed 2026-09-11)
 
 - `QRL-1` An issue still in flight has its declared tests checked
 
-### rehearsal-guard-fails-on-a-neighbour (landed 2026-09-11)
+### rehearsal-guard-fails-on-a-neighbour (completed 2026-09-11)
 
 - `RGN-1` A recorded rehearsal passes whatever words surround it
 
-### claude-md-plain-english (landed 2026-09-11)
+### claude-md-plain-english (completed 2026-09-11)
 
 - `PE-1` CLAUDE.md tells a session to write plain English with no idiom or metaphor
 
-### plain-english-full-rules (landed 2026-09-11)
+### plain-english-full-rules (completed 2026-09-11)
 
 - `PFR-1` CLAUDE.md and AGENTS.md carry the full plain-English rules
 
-### prose-breaks-the-writing-style (landed 2026-09-23)
+### prose-breaks-the-writing-style (completed 2026-09-23)
 
 - `PBW-A1` No retired v1 word survives in prose, a comment or a test docstring
 - `PBW-A2` The shorter word stands where the word is not an identifier
@@ -1516,21 +1516,21 @@
 - `PBW-F8` A clarity review that read less than the sampling rule is refused
 - `PBW-F9` A batch that does not record its changed files is refused
 
-### release-5-0-0 (landed 2026-09-24)
+### release-5-0-0 (completed 2026-09-24)
 
 - `REL-1` every published surface reports 5.0.0
 - `REL-2` the removal guard accepts a later major
 - `REL-3` the upgrade notes name the removed skills
 
-### contract-facts (landed 2026-09-24)
+### contract-facts (completed 2026-09-24)
 
 - `CF-1` The injected contract names docs/compass as the home of an issue's documents
 
-### validate-scan-vs-archive (landed 2026-09-24)
+### validate-scan-vs-archive (completed 2026-09-24)
 
 - `VSA-1` validate.sh skips an issue's own documents and still fails a broken reference in a living file
 
-### unbound-green-needs-no-red (landed 2026-09-24)
+### unbound-green-needs-no-red (completed 2026-09-24)
 
 - `UGR-1` An issue whose only evidence is an unbound green fails suite-passed
 - `UGR-2` One red of either binding satisfies the rule
@@ -1541,7 +1541,7 @@
 - `UGR-7` An unbound green with no red does not claim a red
 - `UGR-8` The governance text states the rule
 
-### red-record-identity-cutoff (landed 2026-09-24)
+### red-record-identity-cutoff (completed 2026-09-24)
 
 - `RIC-1` An unstamped red written since the cutoff does not unlock
 - `RIC-2` An unstamped red written before the cutoff still unlocks
@@ -1552,7 +1552,7 @@
 - `RIC-7` The hook has no identity rule of its own
 - `RIC-8` The safety contract states the cutoff
 
-### hook-failure-matrix (landed 2026-09-24)
+### hook-failure-matrix (completed 2026-09-24)
 
 - `HFM-1` Every reader that cannot run refuses and names itself
 - `HFM-2` With no python3 the refusal says so
@@ -1561,46 +1561,46 @@
 - `HFM-5` The safety contract scopes the worktree redirect gap
 - `HFM-6` The hooks use no retired word or tool name
 
-### reach-counts-move-with-every-test (landed 2026-09-25)
+### reach-counts-move-with-every-test (completed 2026-09-25)
 
 - `RCM-1` A new file with prose leaves the reach test green
 - `RCM-2` A new file with no prose fails the reach test, naming the rule
 - `RCM-3` A widened reach fails the reach test, naming the rule
 
-### validate-help-prints-headings-only (landed 2026-09-25)
+### validate-help-prints-headings-only (completed 2026-09-25)
 
 - `VHP-1` validate.sh --help prints both exit codes and every check
 
-### created-date-can-be-backdated (landed 2026-09-25)
+### created-date-can-be-backdated (completed 2026-09-25)
 
 - `CDB-1` A backdated issue with evidence dated after the cutoff gets the rule
 - `CDB-2` An issue created and worked before the cutoff keeps its result
 
-### acceptance-declared-after-the-work (landed 2026-09-25)
+### acceptance-declared-after-the-work (completed 2026-09-25)
 
 - `ADW-1` An acceptance declared after the first green does not satisfy suite-passed
 - `ADW-2` An acceptance declared before any green counts
 - `ADW-3` An acceptance record with no declared_at counts as today
 - `ADW-4` compass acceptance record carries declared_at
 
-### coverage-flag-with-autoload-off (landed 2026-09-25)
+### coverage-flag-with-autoload-off (completed 2026-09-25)
 
 - `CFA-1` A command that turns the plugin off gets no coverage flag
 - `CFA-2` The variable in the calling environment gets no flag
 - `CFA-3` A command where the plugin loads keeps the flag
 
-### pointer-path-traversal (landed 2026-09-25)
+### pointer-path-traversal (completed 2026-09-25)
 
 - `CTP-1` A pointer holding a path makes the hook refuse
 - `CTP-2` The CLI refuses a slug holding a path
 - `CTP-3` An ordinary slug behaves as today
 
-### code-globs-as-a-string (landed 2026-09-25)
+### code-globs-as-a-string (completed 2026-09-25)
 
 - `CGS-1` code_globs of the wrong shape refuses and names the config
 - `CGS-2` A list of strings behaves as today
 
-### facts-drift-guard (landed 2026-09-25)
+### facts-drift-guard (completed 2026-09-25)
 
 - `FDG-1` The deep dive's gate counts match the evaluator
 - `FDG-2` The immovable list and never_skip match the policy, and verify.claims is not called immovable
@@ -1608,7 +1608,7 @@
 - `FDG-4` The derived-spec header names the real command and input
 - `FDG-5` Every registered claim is found exactly once
 
-### evidence-binding (landed 2026-09-25)
+### evidence-binding (completed 2026-09-25)
 
 - `EVB-1` A test record names the tree it ran on
 - `EVB-2` A green for a changed tree fails at ship
@@ -1618,7 +1618,7 @@
 - `EVB-6` Records without a tree are not judged
 - `EVB-7` The safety contract states the boundary
 
-### orchestrator-loop-hardening (landed 2026-09-25)
+### orchestrator-loop-hardening (completed 2026-09-25)
 
 - `OLH-1` A dispatch records its subtask
 - `OLH-2` A subtask's progress is recorded
@@ -1630,42 +1630,42 @@
 - `OLH-8` A rehearsal interrupted mid-review and mid-integration resumes
 - `OLH-9` Each half of the review catches its own seeded defect
 
-### claims-called-immovable-elsewhere (landed 2026-09-25)
+### claims-called-immovable-elsewhere (completed 2026-09-25)
 
 - `CCI-1` No shipped Markdown file calls verify.claims immovable
 
-### red-for-a-module-not-yet-written (landed 2026-09-25)
+### red-for-a-module-not-yet-written (completed 2026-09-25)
 
 - `RSF-1` A red for a project module not yet written is recorded as an import red
 - `RSF-2` An ordinary failing assertion is still a red
 - `RSF-3` Any other collection error is refused
 - `RSF-4` A run that hides a collection error, or where no test failed, is refused; the skill names the import red
 
-### changes-id-misses-unlisted-files (landed 2026-09-25)
+### changes-id-misses-unlisted-files (completed 2026-09-25)
 
 - `CUF-1` A declared test changed after the green fails the landed check
 - `CUF-2` The tested files landing pass, whatever HEAD does next
 - `CUF-3` A record built before the change is judged as built
 
-### retro-weighs-only-retired-route-names (landed 2026-09-25)
+### retro-weighs-only-retired-route-names (completed 2026-09-25)
 
 - `RWC-1` Current route names count up and down, and weigh the same as retired ones
 - `RWC-2` A route with no weight is unweighed, not sideways
 - `RWC-3` Retro prints no retired name for assessment
 
-### red-through-a-shell-wrapper (landed 2026-09-25)
+### red-through-a-shell-wrapper (completed 2026-09-25)
 
 - `DSW-1` py.test is recognised and gets the pytest rule
 - `DSW-2` A bash -c pipeline around pytest is judged by pytest's report
 - `DSW-3` A runner that writes no report is marked exit-code
 
-### devlog-logs-edits-outside-the-project (landed 2026-09-25)
+### devlog-logs-edits-outside-the-project (completed 2026-09-25)
 
 - `DLO-1` An edit outside the project is not logged
 - `DLO-2` An edit inside the project is logged relative to it
 - `DLO-3` A relative path is judged by where it resolves; the no-project message names the devlog
 
-### dispatch-protocol (landed 2026-09-25)
+### dispatch-protocol (completed 2026-09-25)
 
 - `DPR-1` A multiagent issue must record its run
 - `DPR-2` The scripts find an issue's documents through the registry
@@ -1675,48 +1675,48 @@
 - `DPR-6` Run 1 is recorded
 - `DPR-7` Only ship-commit marks an issue landed
 
-### changed-file-keeps-one-scenario (landed 2026-09-25)
+### changed-file-keeps-one-scenario (completed 2026-09-25)
 
 - `CKS-1` A repeated scenario flag records every value
 - `CKS-2` A later add keeps the earlier scenarios
 
-### rerun-check-misses-script-changes (landed 2026-09-25)
+### rerun-check-misses-script-changes (completed 2026-09-25)
 
 - `RSE-1` A green after a script edit is not a re-run
 - `RSE-2` A green with nothing changed is still a re-run
 
-### map-cells-reach-git-unchecked (landed 2026-09-25)
+### map-cells-reach-git-unchecked (completed 2026-09-25)
 
 - `MCC-1` A subtask id that could leave the worktree root is refused
 - `MCC-2` A branch git would not accept is refused
 
-### merge-overwrites-an-ignored-record (landed 2026-09-25)
+### merge-overwrites-an-ignored-record (completed 2026-09-25)
 
 - `MIR-1` A branch that committed an ignored record is refused
 - `MIR-2` A branch with no ignored record merges
 
-### tree-id-misses-a-same-second-edit (landed 2026-09-25)
+### tree-id-misses-a-same-second-edit (completed 2026-09-25)
 
 - `TSE-1` A same-size edit in the same second changes the tree id
 
-### check-does-not-compare-record-with-map (landed 2026-09-25)
+### check-does-not-compare-record-with-map (completed 2026-09-25)
 
 - `CRM-1` A mapped subtask the record lacks fails the check
 - `CRM-2` subtask next lists a mapped subtask not yet dispatched
 - `CRM-3` With no map the check judges the record as before
 
-### multiagent-scripts-still-say-ship (landed 2026-09-25)
+### multiagent-scripts-still-say-ship (completed 2026-09-25)
 
 - `DSS-1` No script says integration lands or happens at ship
 - `DSS-2` multiagent.sh names the order of waves and --no-clean
 - `DSS-3` integrate.sh says no regression ran when none did
 - `DSS-4` The protocol's landing command runs as written
 
-### tr-range-fails-on-linux (landed 2026-09-25)
+### tr-range-fails-on-linux (completed 2026-09-25)
 
 - `DTR-1` No tr set in the scripts reads differently on Linux
 
-### skill-prose-pressure-tests (landed 2026-09-27)
+### skill-prose-pressure-tests (completed 2026-09-27)
 
 - `SPT-1` A run is recorded under either condition
 - `SPT-2` Six scenarios cover the failure modes
@@ -1724,17 +1724,17 @@
 - `SPT-4` The releasing guide requires a run
 - `SPT-5` The pilot and one measured change are on record
 
-### source-hash-skips-nested-records (landed 2026-09-27)
+### source-hash-skips-nested-records (completed 2026-09-27)
 
 - `SHN-1` An edit under a nested .compass/ changes the source hash
 - `SHN-2` An edit under the project root's .compass/ does not
 
-### red-without-a-test-unlocks-edits (landed 2026-09-27)
+### red-without-a-test-unlocks-edits (completed 2026-09-27)
 
 - `RWT-1` A silent red naming no test is refused
 - `RWT-2` Reds that print or name a declared test still record
 
-### eval-judge-gaps (landed 2026-09-27)
+### eval-judge-gaps (completed 2026-09-27)
 
 - `EJG-1` EJG-1
 - `EJG-2` EJG-2
@@ -1745,17 +1745,17 @@
 - `EJG-7` EJG-7
 - `EJG-8` EJG-8
 
-### subtask-cost-keeps-last-try-only (landed 2026-09-27)
+### subtask-cost-keeps-last-try-only (completed 2026-09-27)
 
 - `SCT-1` Two tries keep both costs and their total
 - `SCT-2` A second cost for the same try replaces it
 
-### feature-route-omits-the-map (landed 2026-09-27)
+### feature-route-omits-the-map (completed 2026-09-27)
 
 - `FRM-1` A feature assessment earns and registers the map
 - `FRM-2` Every multiagent route earns the map
 
-### eval-gaps-after-d30 (landed 2026-09-27)
+### eval-gaps-after-d30 (completed 2026-09-27)
 
 - `EGA-1` EGA-1
 - `EGA-2` EGA-2
@@ -1765,7 +1765,7 @@
 - `EGA-6` EGA-6
 - `EGA-7` EGA-7
 
-### comparison-suite (landed 2026-09-28)
+### comparison-suite (completed 2026-09-28)
 
 - `CMP-1` CMP-1
 - `CMP-2` CMP-2
@@ -1774,7 +1774,7 @@
 - `CMP-5` CMP-5
 - `CMP-6` CMP-6
 
-### eval-gaps-after-d33 (landed 2026-09-28)
+### eval-gaps-after-d33 (completed 2026-09-28)
 
 - `EGB-1` EGB-1
 - `EGB-2` EGB-2
@@ -1785,12 +1785,12 @@
 - `EGB-7` EGB-7
 - `EGB-8` EGB-8
 
-### resident-footprint-diet (landed 2026-09-28)
+### resident-footprint-diet (completed 2026-09-28)
 
 - `RFD-1` Resident text at or under 900 words
 - `RFD-2` Triggering tests pass unchanged
 
-### quick-fix-overhead (landed 2026-09-28)
+### quick-fix-overhead (completed 2026-09-28)
 
 - `QFO-1` start records the whole assessment in one call
 - `QFO-2` start stops when the approach is not a quick fix
@@ -1801,18 +1801,18 @@
 - `QFO-7` a re-run costs at most twice R1
 - `QFO-8` the breakdown gives calls and tokens by step
 
-### quick-fix-finish-gaps (landed 2026-09-28)
+### quick-fix-finish-gaps (completed 2026-09-28)
 
 - `QFG-1` a second finish reuses the covering green and commits
 - `QFG-2` finish works from a subdirectory
 - `QFG-3` ship-commit refuses a stale green for the issue's files
 - `QFG-4` the safety contract states both limits
 
-### quick-fix-tests-need-a-git-identity (landed 2026-09-28)
+### quick-fix-tests-need-a-git-identity (completed 2026-09-28)
 
 - `QGI-1` Given HOME points at an empty directory, when the quick-fix verb tests run, then every finish test commits and passes
 
-### finish-commits-unrelated-untracked-files (landed 2026-09-29)
+### finish-commits-unrelated-untracked-files (completed 2026-09-29)
 
 - `FUU-1` Given an untracked file present before `quick-fix start` that nobody t
 - `FUU-2` Given a tracked file already modified before `quick-fix start` that no
@@ -1821,14 +1821,14 @@
 - `FUU-5` Given an issue with no record of its start state, when `finish` runs w
 - `FUU-6` Given any successful `finish`, when it prints its hand-off, then the h
 
-### finish-and-ship-commit-edges (landed 2026-09-29)
+### finish-and-ship-commit-edges (completed 2026-09-29)
 
 - `FSE-1` Given a fix that creates a file whose name has a space, a quote or a n
 - `FSE-2` Given a quick fix started with a local file present, when it lands, th
 - `FSE-3` Given a successful `finish`, when it prints its hand-off, then the fil
 - `FSE-4` the safety contract states the three limits
 
-### ship-commit-judges-the-staged-files (landed 2026-09-29)
+### ship-commit-judges-the-staged-files (completed 2026-09-29)
 
 - `SJS-1` Given an issue whose gates have passed, when the staged copy of an iss
 - `SJS-3` Given a multiagent issue whose files are already committed, when a lat
@@ -1837,7 +1837,7 @@
 - `SJS-5` Given a quick fix whose files the agent committed before `finish`, whe
 - `SJS-6` Given a landed quick fix, when it lands, then its start record is gone
 
-### ship-commit-follow-ups (landed 2026-09-29)
+### ship-commit-follow-ups (completed 2026-09-29)
 
 - `SCF-1` Given a git pre-commit hook that stages an untested copy of an issue f
 - `SCF-2` Given pre-commit set up, a tested copy staged and an untested edit on
@@ -1846,18 +1846,18 @@
 - `SCF-6` Given `docs/safety-contract.md`, then it states that a traced symlink
 - `SCF-4` a green without argv is reused on its joined command
 
-### green-digest-and-hook-scope (landed 2026-09-29)
+### green-digest-and-hook-scope (completed 2026-09-29)
 
 - `GDH-1` Given a green record edited after it was written, its stored digest le
 - `GDH-2` Given a git pre-commit hook that stages a file outside the issue's sco
 - `GDH-3` Given a tracked file that matches `.gitignore`, traced by an issue and
 - `GDH-4` Given the safety contract and the post-commit refusal, then the contra
 
-### land-refusal-advice (landed 2026-09-29)
+### land-refusal-advice (completed 2026-09-29)
 
 - `LRA-1` Given a refusal from ship-commit or finish, when its advice is followed, then the refusal clears
 
-### refusal-template (landed 2026-09-29)
+### refusal-template (completed 2026-09-29)
 
 - `RTP-1` Given the refusal registry, when each reason code is rendered with fix
 - `RTP-2` Given every rendered `Fix:` line, then none suggests dropping `--scena
@@ -1866,11 +1866,11 @@
 - `RTP-5` no printed string names a retired word
 - `RTP-6` the measured eval run is compared with the baseline
 
-### judge-sees-quick-fix-start (landed 2026-09-29)
+### judge-sees-quick-fix-start (completed 2026-09-29)
 
 - `JSQ-1` Given a session that ran compass quick-fix start before its first code edit, when the rule judge scores it, then it passes
 
-### refusal-template-follow-ups (landed 2026-09-29)
+### refusal-template-follow-ups (completed 2026-09-29)
 
 - `RTF-1` Given a python3 that fails and prints something, when the hook refuses
 - `RTF-2` Given the registry's Fix lines, then `python-missing` says 3.10+, each
@@ -1879,11 +1879,11 @@
 - `RTF-6` Given the texts, then `docs/refusal-codes.md` does not claim the CLI r
 - `RTF-5` no script prints triage, and the scan covers scripts
 
-### printed-wording-sweep (landed 2026-09-30)
+### printed-wording-sweep (completed 2026-09-30)
 
 - `TRC-001` Given the CLI, hooks and scripts, when their string literals are scanned, then none uses an idiom from the writing-style table or "accretion", the scan fails on a planted breach, the no-reason re-assessment warning names `reassessments`, and the README and five-minutes guide name Python 3.10 or later
 
-### comparison-scenarios-that-discriminate (landed 2026-09-30)
+### comparison-scenarios-that-discriminate (completed 2026-09-30)
 
 - `CSD-1` Each new scenario has every field, its seed's tests pass, and its hidden tests fail on the seed
 - `CSD-2` A correct change passes each new scenario's hidden tests
@@ -1891,54 +1891,54 @@
 - `CSD-4` Each prompt reads as a real request, and two do not state the rule their hidden tests check
 - `CSD-5` A published report gives each condition's hidden-test result per new scenario and says whether they differed
 
-### reframe-to-reassessment (landed 2026-09-30)
+### reframe-to-reassessment (completed 2026-09-30)
 
 - `RRA-1` reframe is a banned term, bound to a pattern that flags a planted use
 - `RRA-2` No scanned surface uses reframe except a marked compatibility line
 - `RRA-3` retro, flow, approach evaluate and the stop hook say re-assessment
 
-### retro-counts-policy-corrections (landed 2026-09-30)
+### retro-counts-policy-corrections (completed 2026-09-30)
 
 - `TRC-001` Given one judgement re-assessment and one policy correction, each moving standard to expedition, when compass retro runs, then it reports 1 up and 0 down
 
-### compare-names-the-compass-commit (landed 2026-09-30)
+### compare-names-the-compass-commit (completed 2026-09-30)
 
 - `TRC-001` Given a compass run record with compass_commit and no framework block, when the comparison report is built, then it shows that commit
 
-### small-change-read-as-unmapped (landed 2026-09-30)
+### small-change-read-as-unmapped (completed 2026-09-30)
 
 - `SCU-1` A small, contained greenfield change is a quick fix; unmapped still gets the heavier process
 - `SCU-2` A heavier quick-fix start names the dimension that blocked it
 - `SCU-3` Re-run of the edge-case and refactor comparison runs under Compass: no session ends without code
 
-### quick-fix-start-drops-labels (landed 2026-10-01)
+### quick-fix-start-drops-labels (completed 2026-10-01)
 
 - `QFL-1` Given `quick-fix start --labels auth` on a small, contained change, then the manifest records `labels: [auth]` and the approach is not a quick fix.
 - `QFL-2` Given that change, then `compass check` treats the human sign-off guardrail as applicable.
 - `QFL-3` Given no `--labels`, then the labels are empty and the result is unchanged; a malformed label is refused before anything is written.
 
-### quick-fix-message-edges (landed 2026-10-01)
+### quick-fix-message-edges (completed 2026-10-01)
 
 - `TRC-001` Given a 45-character slug and a cross-cutting change, when quick-fix start computes a heavier process, then no line passes 100 characters, nothing is cut, and each rule's id and kind share a line
 
-### claude-review-workflow (landed 2026-10-01)
+### claude-review-workflow (completed 2026-10-01)
 
 - `TRC-001` Given the review workflow, when it is read, then every action is pinned to a commit, contents are read-only, and no allowed tool can commit or push
 
-### eval-gaps-after-d34 (landed 2026-10-01)
+### eval-gaps-after-d34 (completed 2026-10-01)
 
 - `TRC-001` Given a hidden test run that skipped a test and exited 1, when the harness corrects its counts, then it leaves them alone, and corrects only a collection error that exited 2
 - `TRC-002` A comparison corrects a record against the hidden-test count its own run recorded
 
-### system-spec-split (landed 2026-10-01)
+### system-spec-split (completed 2026-10-01)
 
 - `TRC-001` Given the landed issues, when the spec is derived, then docs/system-spec.md holds only current behaviour under 4,000 words with a pointer, and docs/system-spec-archive.md holds every archived section unchanged
 
-### claude-review-federation (landed 2026-10-01)
+### claude-review-federation (completed 2026-10-01)
 
 - `TRC-001` Given the review workflow, when it is read, then it authenticates with the federation rule, organisation and service account variables, and no step uses an API key or OAuth token
 
-### one-entry-point (landed 2026-10-01)
+### one-entry-point (completed 2026-10-01)
 
 - `ONE-1` Given `commands/go.md`, then it runs `compass init`, assesses with `compass quick-fix start`, shows `compass approach summary`, and continues into the
 - `ONE-2` Given an assessed issue, when `compass approach summary` runs, then it prints exactly three lines: the approach, its gates, and where the issue's file
@@ -1947,11 +1947,11 @@
 - `ONE-5` Given issues with interruptions, then `compass retro` reports their totals.
 - `ONE-6` Given a fresh repository, when a session types `/compass:go` with a small change, then it lands a quick fix; measured in an eval run (spend asked for
 
-### claude-review-workspace (landed 2026-10-01)
+### claude-review-workspace (completed 2026-10-01)
 
 - `TRC-001` Given the review workflow, when it is read, then it passes anthropic_workspace_id from the ANTHROPIC_WORKSPACE_ID repository variable
 
-### status-line (landed 2026-10-01)
+### status-line (completed 2026-10-01)
 
 - `SL-A` Given no Compass project, or garbage on stdin, then `bin/compass-statusline` prints nothing, writes nothing to stderr and exits 0.
 - `SL-B` Given an issue with a red on record for its scenario, then the line shows `compass`, the slug, the approach, the stage, the gates cleared out of those
@@ -1960,11 +1960,11 @@
 - `SL-E` Given a narrow terminal (COLUMNS), then fields drop right to left and the slug is cut last.
 - `SL-F` Given `bin/compass-statusline`, then it does not load the full CLI, and a run takes under 0.25 s (median of 7).
 
-### review-verdict (landed 2026-10-01)
+### review-verdict (completed 2026-10-01)
 
 - `TRC-001` Given the review workflow, when it is read, then the review returns its verdict as structured output and a later step fails the job unless the verdict is PASS
 
-### progress-rail (landed 2026-10-02)
+### progress-rail (completed 2026-10-02)
 
 - `RL-A` Given stdout is a terminal and neither CLAUDECODE nor NO_COLOR is set, when compass next runs on an issue in progress, then the line after the header is a rail of the route's stages with exactly one current marker.
 - `RL-B` Given stdout is a pipe, when compass next runs, then its output matches the golden file captured before the rail, byte for byte, for every route in the fixtures.
@@ -1975,7 +1975,7 @@
 - `RL-G` Given an issue in progress, then the rail is followed by a Next line naming the command for the current stage.
 - `RL-H` Given the status line, then it fits its line with the shared renderer, so width fitting lives in one module.
 
-### next-never-leaves-assess (landed 2026-10-02)
+### next-never-leaves-assess (completed 2026-10-02)
 
 - `NS-A` Given an issue with its approach record and no other record, when compass next runs, then it reports Define.
 - `NS-B` Given the acceptance criteria registered as draft, and no later record, then it reports Refine on a route that runs refine. Given the requirements review registered as well, then it reports Plan on a route that runs plan. Given scenarios and no later record on a route that collapses refine and plan and skips breakdown, then it reports Implement.
@@ -1987,23 +1987,23 @@
 - `NS-H` Given any issue in NS-A to NS-F, then the status line's stage and the rail's current marker name the same stage as compass next.
 - `NS-I` Given a manifest whose artifacts, evidence, scenarios or subtasks is not a list, or whose ids are not strings, then compass next still prints a stage and exits 0, and the status line still prints its line.
 
-### next-crashes-on-mistyped-manifest (landed 2026-10-02)
+### next-crashes-on-mistyped-manifest (completed 2026-10-02)
 
 - `TRC-001` Given a manifest whose gates is not a list, whose stages is not a mapping, or whose stage weight is not a string, When compass next runs, Then it prints a stage and exits 0 with nothing on stderr, and the status line prints its line
 
-### status-line-gate-count-and-width (landed 2026-10-02)
+### status-line-gate-count-and-width (completed 2026-10-02)
 
 - `TRC-001` Given a manifest with one cleared gate and one malformed gate entry, When the status line runs, Then it shows gates 1/2
 
-### release-5-1-0 (landed 2026-10-02)
+### release-5-1-0 (completed 2026-10-02)
 
 - `TRC-001` Given the release intends 5.1.0, When the version tests run, Then every version location reads 5.1.0
 
-### refine-never-clears-on-a-feature (landed 2026-10-02)
+### refine-never-clears-on-a-feature (completed 2026-10-02)
 
 - `TRC-001` Given a feature issue with its acceptance criteria registered and no technical design, When compass next runs, Then it reports Plan; and given an initiative issue with its criteria registered and no requirements review, Then it reports Refine
 
-### faster-suite-and-release (landed 2026-10-02)
+### faster-suite-and-release (completed 2026-10-02)
 
 - `FS-A` Given pytest-xdist is installed, when make test runs, then the suite runs on parallel workers. Given it is not installed, then make test runs the suite in series, as before.
 - `FS-B` Given the local issue archive, when the suite is collected, then the two archive sweeps in test_phase2_invariants.py and test_record_keeping_integrity.py are one test per issue, each named after its issue. Given no archive, then they skip as before.
@@ -2013,23 +2013,23 @@
 - `FS-F` Given the CI self-check job, then it installs pytest-xdist and runs the suite on parallel workers.
 - `FS-G` Given docs/releasing.md, then it says how to install pytest-xdist, and names COMPASS_FULL_ARCHIVE=1 as the full-archive check to run before a release.
 
-### release-5-2-0 (landed 2026-10-02)
+### release-5-2-0 (completed 2026-10-02)
 
 - `TRC-001` Given the release intends 5.2.0, When the version tests run, Then every version location reads 5.2.0
 
-### ship-restales-a-traced-living-spec (landed 2026-10-02)
+### ship-restales-a-traced-living-spec (completed 2026-10-02)
 
 - `TRC-001` Given a quick fix whose working tree also changes docs/system-spec.md and docs/system-spec-archive.md, When quick-fix finish runs, Then it traces neither file and the issue's changed files are only its own
 
-### owning-doc-router (landed 2026-10-02)
+### owning-doc-router (completed 2026-10-02)
 
 - `TRC-001` Given a doc under docs/ that the docs/README.md index does not list, or a path in its owning-docs table that does not exist, When the suite runs, Then a test fails naming it
 
-### parallel-ci-flakes (landed 2026-10-02)
+### parallel-ci-flakes (completed 2026-10-02)
 
 - `TRC-001` Given the suite runs on parallel workers, When make test or CI runs it, Then tests marked serial, including the two timing tests, run in a second pass on their own
 
-### decisions-ledger (landed 2026-10-02)
+### decisions-ledger (completed 2026-10-02)
 
 - `DL-A` Given compass decision record <slug>, then it writes a new entry from the template, dated today, with Decided by taken from git config compass.decidedBy, else git config user.name. It refuses an existing slug, and refuses when git has neither name set. There is no option to set Decided by.
 - `DL-B` Given compass decision list, then it prints each entry's date, slug and the first line of its decision, newest first. Given compass decision show <slug>, then it prints that entry.
@@ -2039,7 +2039,7 @@
 - `DL-F` Given the verb surface, then decision is in the CLI's baseline and in the README's CLI surface block.
 - `DL-G` Given governance/decisions/, then it holds at least ten entries, each a decision the maintainer made on record and confirmed in their own words.
 
-### review-rules-as-data (landed 2026-10-02)
+### review-rules-as-data (completed 2026-10-02)
 
 - `RV-A` Given compass policy review-rules --changed-files hooks/pre-tool.sh, then it prints each rule whose patterns match that file, including the hook rules, and no rule scoped only to templates or the adopter's reading path.
 - `RV-B` Given --rules PATH, then it reads that file instead of the project's, so CI can pass the base branch's copy. Given a project with no rules file, then it says so and exits 0. It reads the project's own governance/, never the shipped copy.
@@ -2048,19 +2048,19 @@
 - `RV-E` Given governance/review-rules.yml, then it holds at least ten rules, each with an incident naming a pull request, issue or commit a reader can open.
 - `RV-F` Given the verb surface, then policy review-rules is in verb_help.py, the README's CLI block and compass policy --help. The top-level verb set does not change.
 
-### ci-review-reads-review-rules (landed 2026-10-02)
+### ci-review-reads-review-rules (completed 2026-10-02)
 
 - `RB-A` Given a pull request, then the CI review's prompt holds the review rules that match its changed files, taken with the CLI from the base branch
 
-### rules-step-file-cap (landed 2026-10-02)
+### rules-step-file-cap (completed 2026-10-02)
 
 - `RC-A` Given a pull request with more changed files than the files API lists, then the review's rules step fails rather than reviewing with a partial rule set
 
-### rules-step-count-message (landed 2026-10-02)
+### rules-step-count-message (completed 2026-10-02)
 
 - `RD-A` Given the rules step's file count does not match, then its message names the cause it can tell apart: a missing count, the 3,000-file limit, or a count from before a newer push
 
-### python-dependency-said-early (landed 2026-10-02)
+### python-dependency-said-early (completed 2026-10-02)
 
 - `PY-A` Given an opted-in project and no python3 on the PATH, when a session starts, then the hook prints valid JSON with a systemMessage for the person and additionalContext for the model, each saying Compass needs Python 3.10 or later, that edits will be refused until it is installed, and how to fix it.
 - `PY-B` Given an opted-in project and a python3 older than 3.10, when a session starts, then the hook says the same and names the version it found.
@@ -2069,15 +2069,15 @@
 - `PY-E` Given docs/safety-contract.md, then it has a table of what each hook and the CLI do without python3 3.10+, and the table's pre-tool row matches the hook's python-missing refusal.
 - `PY-F` Given ADR-028, then it records the single-file CLI decision with the measured size and startup cost.
 
-### adr-new-row-in-the-table (landed 2026-10-02)
+### adr-new-row-in-the-table (completed 2026-10-02)
 
 - `AN-A` Given an ADR index with sections after its table, then compass adr new puts the new row, as a link, right after the last ADR row
 
-### adapter-contract-gate (landed 2026-10-02)
+### adapter-contract-gate (completed 2026-10-02)
 
 - `AC-A` Given schemas/adapter-contract.yml, then every capability in docs/portability.md has a row, every adapter has a full, partial or none cell with a path, an adapter directory without a column fails, and a new negative-identity check in cli/ or hooks/ fails the scan
 
-### session-diagnosis (landed 2026-10-02)
+### session-diagnosis (completed 2026-10-02)
 
 - `SD-A` Given a landed issue, when compass issue diagnose runs, then it lists each stage the route ran, with the record that shows it ran and its path, and each gate with its status and evidence.
 - `SD-B` Given an issue's records, then the report gives a timeline of every dated record: reds, greens, subtask dispatches, review rounds, reassessments, hook refusals and failed checks from .compass/interruptions.log, and the landing, oldest first, each with its path.
@@ -2085,11 +2085,11 @@
 - `SD-D` Given any issue, then the report ends with the questions its records cannot answer, including edits the hook refused, time between records, and what was said in the session.
 - `SD-E` Given the verb surface, then issue diagnose is in verb_help.py, the README's CLI block and compass issue --help. The top-level verb set does not change.
 
-### diagnose-output-edges (landed 2026-10-02)
+### diagnose-output-edges (completed 2026-10-02)
 
 - `DE-A` Given a landed_by mapping, an unbound green, an early omission or an issue landed through another, then compass issue diagnose prints the value, (unbound), no false deviation, and that the records are in the other issue
 
-### project-lessons (landed 2026-10-02)
+### project-lessons (completed 2026-10-02)
 
 - `PL-A` Given compass lesson add "<rule>", then it writes a lesson to the lessons file with added_by from git config compass.decidedBy, else user.name; there is no option to set it. An exact repeat is refused; a rule that contains an existing one replaces it and records superseded.
 - `PL-B` Given a rule that names a guardrail id from governance/guardrails.yml, a model id or a tool version, or --source verify, then add and propose refuse it with the reason; a near-miss sentence is accepted.
@@ -2101,30 +2101,30 @@
 - `PL-H` Given a lesson that says a gate passes, then compass check gives the same result as without it.
 - `PL-I` Given the verb surface, then lesson is in the CLI baseline, the README's CLI block, verb_help.py and each frozen verb list, and ADR-029 records the decision. The 900-word resident test passes unchanged.
 
-### lesson-proposal-decline (landed 2026-10-02)
+### lesson-proposal-decline (completed 2026-10-02)
 
 - `LD-A` Given a pending lesson proposal, then compass lesson decline removes it and records its text, so compass retro --lessons does not propose it again
 
-### failure-modes-in-define (landed 2026-10-02)
+### failure-modes-in-define (completed 2026-10-02)
 
 - `FM-A` Given commands/define.md and skills/bdd-specification/SKILL.md, then each asks the author which input classes and failure modes the brief implies that no scenario covers, says each answer becomes a scenario or a recorded de-scope, and gives two worked examples.
 - `FM-B` Given compass scenario descope "<mode>" --reason "<why>", then it appends the mode, the reason and the date to the manifest's failure_modes_descoped, and the manifest still passes compass issue lint. It refuses an empty mode or reason, and a mode already recorded.
 - `FM-C` Given an issue with de-scoped failure modes, then agents/verifier.md tells the verifier to list each in the verification report, and templates/verification-report.md has a section for them.
 - `FM-D` Given the verb surface, then scenario descope is in verb_help.py, the README's CLI block and compass scenario --help. The top-level verb set does not change.
 
-### titles-checked-before-ship (landed 2026-10-02)
+### titles-checked-before-ship (completed 2026-10-02)
 
 - `TC-A` Given a scenario title naming a missing file path or an eval scenario or behaviour id, then compass scenario add and quick-fix start refuse it before it can reach the living spec
 
-### queue-ageing-signal (landed 2026-10-02)
+### queue-ageing-signal (completed 2026-10-02)
 
 - `QA-A` Given queued issues, then compass flow --digest lists each with its age and flags those older than the threshold that carry a recommendation heading or a label a routing rule names, and the release guide asks which queued issues touch the release
 
-### spec-derive-keeps-missing-issues (landed 2026-10-02)
+### spec-derive-keeps-missing-issues (completed 2026-10-02)
 
 - `SK-A` Given a committed living spec that names an issue missing from the local archive, then deriving it refuses and names the issue instead of dropping its scenarios
 
-### status-line-launcher (landed 2026-10-02)
+### status-line-launcher (completed 2026-10-02)
 
 - `SL-A` Given a session start with CLAUDE_PLUGIN_DATA set, then a launcher named compass-statusline exists there and runs the current plugin root's status line script, passing stdin through.
 - `SL-B` Given a second session start from a different plugin root, then the launcher is rewritten to the new root; from the same root, the file is left unchanged, with the same modification time.
@@ -2135,17 +2135,17 @@
 - `SL-G` Given a settings file whose statusLine names a versioned Compass path, then the helper offers the launcher path as the replacement and writes it only with --apply.
 - `SL-H` Given the init command and the quickstart, then init has a status line step that runs even when its first step stops for existing governance, and asks before applying; the quickstart gives the launcher path and no longer says to edit the path after each upgrade.
 
-### clickable-paths (landed 2026-10-03)
+### clickable-paths (completed 2026-10-03)
 
 - `CP-A` Given a project, when tdd-red, tdd-green, flow --digest, adr new, issue lint and ci run, then none of them prints the project's absolute path; each path is relative to the project root.
 - `CP-B` Given a scenario defined on a line of the acceptance criteria, when tdd-red or tdd-green runs for it, then the output names that file as path:line.
 - `CP-D` Given the verbs CP-A runs, with their output piped, then it carries no escape code of any kind.
 
-### errors-print-relative-paths (landed 2026-10-03)
+### errors-print-relative-paths (completed 2026-10-03)
 
 - `EP-A` Given an error naming a project file, or compass approach evaluate's Read line, then the path is printed relative to the project root
 
-### issue-overview (landed 2026-10-03)
+### issue-overview (completed 2026-10-03)
 
 - `IO-A` Given an issue's scenarios and its red and green records, then the page has one table row per scenario with its title, a red mark, a green mark and its evidence path, using ✓ and ○.
 - `IO-B` Given the same issue, then the page has a Mermaid flowchart from each intent to its scenarios, tests and evidence, and a scenario with a red but no green is styled as open.
@@ -2153,11 +2153,11 @@
 - `IO-D` Given a green recorded after the page was written, then compass check fails the page as stale and names compass issue dashboard as the fix.
 - `IO-E` Given the status line, then it names the gates passed out of the gates required.
 
-### release-5-3-0 (landed 2026-10-03)
+### release-5-3-0 (completed 2026-10-03)
 
 - `RL-A` Given Compass 5.3.0, then every location that carries the version says 5.3.0
 
-### loop-ceilings (landed 2026-10-03)
+### loop-ceilings (completed 2026-10-03)
 
 - `LC-A` Given the shipped routing policy, then an issue's ceilings resolve from loop_ceilings rules with RP- ids, the lowest matching limit wins, and a policy without the rules gives no ceiling and a drift report naming the missing ids.
 - `LC-B` Given a subtask whose builder reported the same error three times, when another attempt is asked for, then the update refuses it and names the repeated error, and subtask next lists the subtask as refused.
@@ -2166,7 +2166,7 @@
 - `LC-E` Given an issue created before the ceilings existed, then compass check judges it as before, whatever its counts.
 - `LC-F` Given a run at its replan ceiling, when another replan is recorded, then subtask replan refuses it and names the ceiling.
 
-### headless-runner (landed 2026-10-03)
+### headless-runner (completed 2026-10-03)
 
 - `HR-A` Given a project, then compass run exits 2 and starts no session when the project has no .compass, the issue does not exist, the stage is not build or verify, no stop file is given, claude cannot be found, or a ceiling flag is out of range or above its policy ceiling.
 - `HR-B` Given sessions that change the records but never finish the stage, when the run reaches its cycle ceiling, then it exits 4, records a stopped run with a stop reason naming the ceiling and the run record, and the issue is not landed.
@@ -2179,15 +2179,15 @@
 - `HR-I` Given the eval harness, then it starts claude through the same launcher function compass run uses.
 - `HR-J` Given the change, then a decision record states the exception to the rule that Compass launches nothing, as proposed; a reference workflow runs only when started by hand; and the owning doc says the live CI acceptance is not met.
 
-### run-record-edges (landed 2026-10-03)
+### run-record-edges (completed 2026-10-03)
 
 - `RRE-1` Given an interrupted run, a run whose last session finishes the stage but breaks the runs key, or a manifest with an empty runs key, then the run record's outcome and reason match the exit code, and a run starts on the empty key.
 
-### accept-adr-030 (landed 2026-10-03)
+### accept-adr-030 (completed 2026-10-03)
 
 - `AA-1` Given the maintainer accepted ADR-030 on 2026-10-03, then its status, its index row and the owning doc say accepted, and the test pins accepted.
 
-### archive-sample (landed 2026-10-03)
+### archive-sample (completed 2026-10-03)
 
 - `AS-A` Given the local archive, then the sample builder copies a fixed list of landed and abandoned issues with their layout, replaces local and private paths, recomputes the digest of each record it changed, and gives the same files when run twice.
 - `AS-B` Given the sample, then compass check passes for every issue in it, run from the sample's root.
@@ -2196,7 +2196,7 @@
 - `AS-E` Given a clean checkout, then the living-spec currency and archive citation tests skip naming the full-archive switch, run when it is set, and the release guide says to set it.
 - `AS-F` Given the sample, then the self-architecture tests read the issue's real name, and the readable-specs test reads older acceptance criteria without a Summary, so neither returns early on a stale name.
 
-### run-session-issue (landed 2026-10-03)
+### run-session-issue (completed 2026-10-03)
 
 - `SI-A` Given an environment variable that names one issue and a pointer that names another, then the pre-tool hook judges an edit by the issue the variable names.
 - `SI-B` Given the variable, then a CLI command run without an explicit issue works on that issue, and an explicit issue still wins.
@@ -2204,19 +2204,19 @@
 - `SI-D` Given compass run, then every session it starts has the variable set to the run's issue, and the pointer file is unchanged by the run.
 - `SI-E` Given the variable, then the post-tool and stop hooks, the receipt and the status line read the same issue the pre-tool hook does.
 
-### run-cost-ceiling (landed 2026-10-03)
+### run-cost-ceiling (completed 2026-10-03)
 
 - `RC-1` Given a run whose sessions report their cost, then each session gets the money left as its budget, and the run stops with exit 4 once the total reaches the cost ceiling the policy sets.
 
-### run-session-tools (landed 2026-10-03)
+### run-session-tools (completed 2026-10-03)
 
 - `ST-1` Given compass run, then each session is allowed the file tools, Skill and the compass CLI, is denied landing, pushing, merging and starting another run, and the run record keeps each session's last message.
 
-### run-demo-in-ci (landed 2026-10-03)
+### run-demo-in-ci (completed 2026-10-03)
 
 - `RD-1` Given the demo quick fix, then a manually started workflow runs compass run on it in CI, authenticated by federation with no stored key, and keeps the run record.
 
-### delivery-record (landed 2026-10-03)
+### delivery-record (completed 2026-10-03)
 
 - `DR-A` Given a configured record, then record sync adds and updates its paths in the record repository, redacting credentials, commits naming the project's HEAD and pushes; it deletes only with prune, refuses a full sync from a linked worktree and any path outside the project or into git's folder.
 - `DR-B` Given no record in the config, then record sync says none is configured and exits 0, and ship is unchanged.
@@ -2224,43 +2224,43 @@
 - `DR-D` Given a fresh clone and the record repository, then record restore copies the record's paths back, refuses to overwrite a differing file without force, and reports what it restored.
 - `DR-E` Given the change, then a decision record states the choice of a second private repository, and the restore drill has been run once from a fresh clone.
 
-### record-sync-gaps (landed 2026-10-03)
+### record-sync-gaps (completed 2026-10-03)
 
 - `RG-1` Given a record holding a .gitignore or a submodule entry, then sync still records every file or refuses the submodule, a restore that copies nothing says why, and the clone runs with LFS filters off.
 
-### pointer-lease (landed 2026-10-03)
+### pointer-lease (completed 2026-10-03)
 
 - `CL-A` Given a session that edited under one issue, when another session moves the pointer, then that session's next code edit is refused naming both issues and the command to confirm.
 - `CL-B` Given that refusal, then compass issue use run in the session sets the pointer and lets its edits through on the issue it names.
 - `CL-C` Given the session that moved the pointer, then its own edits are not refused, because issue use and quick-fix start record the new issue for the calling session.
 - `CL-D` Given the session-issue variable, no session id, or a session record older than 12 hours, then the hook refuses nothing for a moved pointer.
 
-### session-table-tidy (landed 2026-10-03)
+### session-table-tidy (completed 2026-10-03)
 
 - `ST2-1` Given the session table, then concurrent writes keep every record, stale records are dropped when it is written, the table is ignored by git in any project, and a pointer-moved refusal is counted against the session's own issue.
 
-### grep-q-under-pipefail (landed 2026-10-03)
+### grep-q-under-pipefail (completed 2026-10-03)
 
 - `GQ-1` Given a script that sets pipefail, then it never pipes into grep -q, because a grep that exits at its first match can fail the pipe and turn a found line into a missing one.
 
-### finish-traces-compass-files (landed 2026-10-03)
+### finish-traces-compass-files (completed 2026-10-03)
 
 - `FT-1` Given a quick fix that changes a tracked file under .compass, such as the project config, then finish traces and commits it with one run, while untracked issue state under .compass stays out.
 
-### go-confirms-on-the-heavier-route (landed 2026-10-03)
+### go-confirms-on-the-heavier-route (completed 2026-10-03)
 
 - `GC-1` Given a heavier route started by /compass:go, then go and assess agree that the approach summary already shown is the confirmation, and go does not stop at assess step 7 to wait for one.
 
-### unmapped-small-change-advisory (landed 2026-10-03)
+### unmapped-small-change-advisory (completed 2026-10-03)
 
 - `UA-1` Given an atomic or small change with trivial or contained risk on unmapped ground, when it is assessed, then it gets the mapped route, the unmapped floor does not fire, and behaviour-mapping is advice.
 - `UA-2` Given quick-fix start on a small, contained, unmapped change, then the quick fix starts and its approach record names behaviour-mapping as advice.
 
-### retro-transitions-split-by-old-names (landed 2026-10-03)
+### retro-transitions-split-by-old-names (completed 2026-10-03)
 
 - `RT-1` Given re-assessments recorded under retired and current route names, when compass retro runs, then each transition appears once under its current names with the counts summed.
 
-### autonomy-setting (landed 2026-10-03)
+### autonomy-setting (completed 2026-10-03)
 
 - `AU-1` Given no autonomy setting, when an assessment is evaluated, then the manifest's checkpoints follow the balanced column of the policy's checkpoint table.
 - `AU-2` Given one assessment under each of the three autonomy values, when it is evaluated, then only the checkpoints differ; the route, stages, gates and rules fired stay the same.
@@ -2269,69 +2269,69 @@
 - `AU-5` Given the assess, define, refine and plan commands, then each hand-off waits only when its stage is a listed checkpoint, and otherwise shows the hand-off and logs the skip.
 - `AU-6` Given a checkpoint table that names something other than the four checkpoint stages, when the policy is linted, then it is refused.
 
-### checkpoint-table-gaps (landed 2026-10-03)
+### checkpoint-table-gaps (completed 2026-10-03)
 
 - `CT-1` Given a checkpoint table that leaves out a value or a route, then that case waits at every hand-off the route runs, and a misspelt or repeated route key is refused.
 
-### stops-and-cost-per-condition (landed 2026-10-03)
+### stops-and-cost-per-condition (completed 2026-10-03)
 
 - `SC-1` Given eval session records, when the comparison report is built, then each cell and the summary show the hook blocks and check failures each condition met, and a record without them shows not recorded.
 
-### headless-doc-after-the-demo (landed 2026-10-03)
+### headless-doc-after-the-demo (completed 2026-10-03)
 
 - `HD-1` Given the CI demo workflow exists and has run, then the headless-runner doc does not say the live acceptance is unmet, and says what the demo covers and that each run costs money.
 
-### release-5-4-0 (landed 2026-10-03)
+### release-5-4-0 (completed 2026-10-03)
 
 - `RL-A` Given the expected version is 5.4.0, then every published location carries 5.4.0.
 
-### ci-review-manual-only (landed 2026-10-03)
+### ci-review-manual-only (completed 2026-10-03)
 
 - `CR-1` Given the Claude review workflow, then it starts only by hand and never on a pull request event.
 
-### review-fix-rebinds-land-commit (landed 2026-10-03)
+### review-fix-rebinds-land-commit (completed 2026-10-03)
 
 - `RB-1` Given a landed issue whose files a review fix changes, when its green is re-recorded and ship-commit runs for it with nothing staged, then land_commit names the fix commit and compass check passes; without the new green it is refused.
 
-### premium-scenario-classes (landed 2026-10-03)
+### premium-scenario-classes (completed 2026-10-03)
 
 - `PS-1` Given each of the four new scenarios, then it has a seed, a hidden test, a real-request prompt, the standard reply, and a reference that passes both test sets.
 - `PS-2` Given each of the four new scenarios, when its careless change is applied, then the seed's own tests pass and the hidden tests fail.
 - `PS-3` Given the two scenarios that start from earlier work, then each condition finds it in its usual place and every record states the rule the hidden test checks.
 - `PS-4` Given the eval readme, then it states the decision rule for the run that uses these scenarios before any run.
 
-### red-for-an-unknown-scenario (landed 2026-10-03)
+### red-for-an-unknown-scenario (completed 2026-10-03)
 
 - `US-1` Given an issue whose manifest has no scenario X, when tdd-red or tdd-green runs with scenario X, then it is refused, writes no record, and names compass scenario add.
 
-### eval-record-quotes-a-template (landed 2026-10-03)
+### eval-record-quotes-a-template (completed 2026-10-03)
 
 - `QT-1` Given the eval scenario records for other frameworks, then none holds a sentence copied from that framework's own templates, and their file layout and heading form are unchanged.
 
-### well-architected-strategy (landed 2026-10-03)
+### well-architected-strategy (completed 2026-10-03)
 
 - `WA-1` Given the well-architected register and strategy, then the register lists the three frameworks with sources, pillars and a review date that lint checks, and the strategy, its rationale and the planning texts name it as advice.
 
-### named-patterns-strategy (landed 2026-10-03)
+### named-patterns-strategy (completed 2026-10-03)
 
 - `NP-1` Given the named-patterns strategy, then it asks a design to name its patterns and any it rejected, the reviewer checks both a novel structure where a pattern fits and a pattern where none is needed, and it stays advice.
 
-### quality-static-signals (landed 2026-10-03)
+### quality-static-signals (completed 2026-10-03)
 
 - `QS-1` Given a run record and its scenario, when the final code is rebuilt from the seed and the diff, then the measures cover changed Python files outside tests, and a diff that does not apply gives no measure.
 - `QS-2` Given a before and after version of a file, then complexity added, duplicated lines and lint findings are counted as the design states.
 - `QS-3` Given records for several conditions, then the comparison report shows the three measures per cell and per condition, and not recorded where none exists.
 - `QS-4` Given a diff with unusual paths, deleted or unparsable files, or a git environment pointing elsewhere, then the rebuild measures exactly the right files and touches nothing outside its directory.
 
-### migrate-map-parsed-once (landed 2026-10-03)
+### migrate-map-parsed-once (completed 2026-10-03)
 
 - `MM-1` Given many manifests read in one process, then the migrate map is parsed once, and parsed again only when its path or contents change.
 
-### upgrade-from-5-0-0 (landed 2026-10-03)
+### upgrade-from-5-0-0 (completed 2026-10-03)
 
 - `UP-1` Given a project and an issue made with the 5.0.0 CLI, when the working tree's CLI reads them, then every manifest loads and compass check gives the same gate-by-gate verdict.
 
-### delivery-board (landed 2026-10-03)
+### delivery-board (completed 2026-10-03)
 
 - `DB-1` Given an issue in progress, then its board row shows its route, current stage, gates passed out of total, and whether its newest test record still matches its files.
 - `DB-2` Given in-progress issues whose evidence is stale and parked issues, then each appears in its own section, apart from the issues moving normally.
@@ -2340,15 +2340,15 @@
 - `DB-5` Given this repository's manifests, then the flow board stays within the speed bound its test sets.
 - `DB-6` Given a manifest whose fields have the wrong types, then the board lists it as unreadable and still renders every other issue.
 
-### contribution-guide (landed 2026-10-03)
+### contribution-guide (completed 2026-10-03)
 
 - `CG-1` Given the contribution guide, then it names the required CI check, how review works with the automatic review off, the review rules file, the code owners and the house rules, and every path it names exists.
 
-### title-times-a-user (landed 2026-10-03)
+### title-times-a-user (completed 2026-10-03)
 
 - `TT-1` Given a scenario title that attaches a duration to a user or claims an outside user, then scenario add refuses it when it is recorded, using the same patterns the public-copy check applies.
 
-### rival-names-never-committed (landed 2026-10-04)
+### rival-names-never-committed (completed 2026-10-04)
 
 - `RN-1` Given the tracked tree, when the gate scans every tracked file's text and every tracked path against the committed hashes, then it finds no rival name.
 - `RN-2` Given a name planted in a tracked file, a tracked path, a commit message and a pull request body, then the gate fails on each, and its output gives the place but never the name.
@@ -2360,23 +2360,23 @@
 - `RN-8` Given the key, then the committed hash file is exactly what the generator writes from it, so the gate covers every entry in the key.
 - `RN-9` Given the published comparison runs after the sweep, then every number in them is unchanged and each carries one line saying rival products appear as codes and the maintainer holds the key.
 
-### harness-containment-under-root (landed 2026-10-04)
+### harness-containment-under-root (completed 2026-10-04)
 
 - `HC-1` Given an eval run, then every session runs without writing bytecode, a compass run as root is refused unless its plugin copy is on a read-only mount or --allow-root is given, each record names the uid, Python version and whether it ran as root, and the comparison report states those and how many runs were not contained.
 
-### commit-msg-name-check (landed 2026-10-04)
+### commit-msg-name-check (completed 2026-10-04)
 
 - `CM-1` Given the commit-msg hook is installed, then a commit whose message names a rival product is refused before it is made, a clean message commits, and the refusal names no product.
 
-### check-accepts-a-staged-deletion (landed 2026-10-04)
+### check-accepts-a-staged-deletion (completed 2026-10-04)
 
 - `SD-1` Given a traced file whose deletion is staged but not yet committed, then the traceability check counts its absence as the change; a traced file missing from disk with no deletion staged or committed is still reported.
 
-### terminology-test-shares-a-folder (landed 2026-10-04)
+### terminology-test-shares-a-folder (completed 2026-10-04)
 
 - `TV-1` Given the terminology tests running in parallel workers, then each worker scans its samples in a folder of its own, so no worker removes another's folder.
 
-### tokens-per-stage-interactive (landed 2026-10-04)
+### tokens-per-stage-interactive (completed 2026-10-04)
 
 - `TS-1` Given a Claude Code transcript, then the reader gives each request's time, model and token counts once, though the transcript can repeat a request over several lines (taking the first line's time and the highest count per field), and it includes the session's subagent transcripts by their own times.
 - `TS-2` Given a quick fix finished in a Claude Code session, with or without `--no-commit`, then its manifest records the input, output and cache tokens spent in its assess and implement stages, taken from that session''s transcript between the times the manifest records for the stage boundaries, and records verify and ship as not measured.
@@ -2386,148 +2386,148 @@
 - `TS-7` Given a transcript whose messages hold a sentence of text, then nothing the reader returns or the manifest records contains that sentence, a path or an error message; a reason for not recording comes from a fixed list.
 - `TS-5` Given eval records whose manifests carry tokens per stage, then the comparison report shows each condition's tokens per stage.
 
-### premium-run (landed 2026-10-04)
+### premium-run (completed 2026-10-04)
 
 - `PR-1` Given the 4 October comparison run, then its document is on record with every condition and scenario, the decision rule's verdict for each of the four careful-process scenarios, the cost per condition, the tokens per stage, and what it does not show.
 
-### directory-listing-prep (landed 2026-10-04)
+### directory-listing-prep (completed 2026-10-04)
 
 - `DL-1` Given the plugin as the directory receives it, then the icon is under the 5 MiB per-file limit and still square, and the README lists everything Compass runs on the machine, sends and fetches.
 
-### slug-names-an-eval-scenario (landed 2026-10-04)
+### slug-names-an-eval-scenario (completed 2026-10-04)
 
 - `SN-1` Given an issue slug that contains an eval scenario or behaviour id, then quick-fix start and approach evaluate refuse it before writing anything, and a slug that names none is accepted.
 
-### quick-fix-token-breakdown (landed 2026-10-04)
+### quick-fix-token-breakdown (completed 2026-10-04)
 
 - `TB-1` Given two Compass quick-fix sessions and their no-framework pairs from the 4 October run, then the breakdown is on record: resident load per request, each source's share of the tokens read, and the request counts, with how they were measured and what they do not show.
 
-### keep-the-stop-before-a-breaking-change (landed 2026-10-04)
+### keep-the-stop-before-a-breaking-change (completed 2026-10-04)
 
 - `KS-1` Given the comparison run found Compass stopped to warn of a change that would break a hidden consumer, then the decisions ledger records the maintainer's decision to keep that stop at its measured cost, with its evidence.
 
-### repoint-to-ayeo-io (landed 2026-10-04)
+### repoint-to-ayeo-io (completed 2026-10-04)
 
 - `RA-1` Given the repository now lives at ayeo-io/compass, then no tracked file names the old address as the repository, the plugin manifests name the new one, and the marketplace owner is the organisation.
 
-### quick-fix-shows-settled-decisions (landed 2026-10-04)
+### quick-fix-shows-settled-decisions (completed 2026-10-04)
 
 - `SD-1` Given a project whose decisions ledger holds entries, then quick-fix start lists each live entry's slug and first decision sentence, newest first and capped with a count of the rest, leaves out superseded entries, and adds nothing when the ledger is empty.
 
-### resumed-quick-fix-lands-in-one-command (landed 2026-10-04)
+### resumed-quick-fix-lands-in-one-command (completed 2026-10-04)
 
 - `RQ-1` Given a quick fix resumed by a session that did not start it, then the resume command names the red and quick-fix finish as the way to land it, and quick-fix finish lands it in one call with no start record.
 
-### correct-token-breakdown-categories (landed 2026-10-04)
+### correct-token-breakdown-categories (completed 2026-10-04)
 
 - `CB-1` Given the published breakdown, then it carries a dated correction saying shell calls that ran compass also read files in the same call, so the Compass CLI share is an upper bound, and what those calls read.
 
-### docs-site (landed 2026-10-04)
+### docs-site (completed 2026-10-04)
 
 - `DS-1` Given mkdocs.yml and the docs workflow, then the site lists the five core pages and the pages they link to, every listed page exists, every relative link on them stays inside the site, the build tool is pinned and used only in CI, and the site is published from main only.
 
-### trim-quick-fix-context (landed 2026-10-04)
+### trim-quick-fix-context (completed 2026-10-04)
 
 - `TC-1` Given the session-start contract, then it is at most 2,250 characters, from 2,517, and still holds a pinned phrase for each of its rules - assess first, never skip assessment, trigger on intent, the five guardrails, guardrails hard and strategies soft, evidence not assertion, state on disk, the numbered stages, the instruction to use the CLI, the statement that there are five guardrails, where to look and writing for no context - and deleting any one of them fails the test.
 - `TC-2` Given `--help` for `quick-fix start`, `quick-fix finish`, `tdd-red` and `tdd-green`, then each, printed at 80 columns, is within a budget set from the rewrite (2,600 characters for `quick-fix start`, 1,500 for `quick-fix finish`, 1,450 for `tdd-red`, 1,250 for `tdd-green`) and still lists every option it accepted before.
 
-### quote-the-plugin-root-in-hooks (landed 2026-10-04)
+### quote-the-plugin-root-in-hooks (completed 2026-10-04)
 
 - `HQ-1` Given the plugin installed under a path that contains a space, then each of the four hook commands in hooks.json runs its own script, because each quotes the plugin root.
 
-### plugin-display-name (landed 2026-10-04)
+### plugin-display-name (completed 2026-10-04)
 
 - `PN-1` Given the plugin manifests, then the plugin keeps the name compass, its display name is Compass Adaptive Spec-Driven Development, and its author is ayeo.io in both manifests.
 
-### release-5-5-0 (landed 2026-10-04)
+### release-5-5-0 (completed 2026-10-04)
 
 - `RV-1` Given the release is 5.5.0, then VERSION, the CLI, both plugin manifests and the install smoke test all say 5.5.0 and the version guard agrees.
 
-### docs-site-home-page (landed 2026-10-04)
+### docs-site-home-page (completed 2026-10-04)
 
 - `DH-1` Given the docs site, then its root serves a home page, index.md, that is first in the navigation and links only to pages in the site.
 
-### docs-table-code-wraps (landed 2026-10-04)
+### docs-table-code-wraps (completed 2026-10-04)
 
 - `DT-1` Given a docs page with a table cell holding inline code such as /compass:intent, When the site renders it at desktop width, Then the code stays on one line rather than breaking mid-word
 
-### evaluate-and-check-apply-the-schema (landed 2026-10-04)
+### evaluate-and-check-apply-the-schema (completed 2026-10-04)
 
 - `SK-1` Given an issue manifest whose assessment holds a key the manifest schema does not allow, such as risk_reason, When compass approach evaluate --write or compass check runs on it, Then each refuses and names the unknown key and the allowed keys, as issue lint does, with or without jsonschema installed
 
-### colour-hides-an-import-red (landed 2026-10-04)
+### colour-hides-an-import-red (completed 2026-10-04)
 
 - `CL-1` Given FORCE_COLOR is set in the environment, When compass tdd-red runs a test that imports a project module not yet written, Then it records an import red, and the eval harness reads each test's outcome from coloured pytest output
 
-### seed-walk-skips-pytest-cache (landed 2026-10-04)
+### seed-walk-skips-pytest-cache (completed 2026-10-04)
 
 - `SW-1` Given another test's pytest run has made a pytest-cache-files folder inside a scenario seed, When the scenario-file walks in tests/test_eval_scenarios.py list the files to scan, Then they skip that folder and .pytest_cache, so a folder deleted mid-walk cannot fail them
 
-### pytest-bdd-adapter-tests-run (landed 2026-10-04)
+### pytest-bdd-adapter-tests-run (completed 2026-10-04)
 
 - `PB-1` Given pytest-bdd is installed, When the reference-adapter end-to-end test and the pytest-bdd case of the all-adapters test run, including under make test with plugin autoload off, Then both pass, and the bdd-adapter CI job runs them and fails if either skips
 
-### friction-phase-takes-v2-stages (landed 2026-10-04)
+### friction-phase-takes-v2-stages (completed 2026-10-04)
 
 - `FP-1` Given an issue whose friction entry names a current stage such as implement, When compass issue lint runs with jsonschema installed, Then it passes; and Compass writes and loads friction phases in the current stage names, mapping a retired name such as frame to assess
 
-### entry-point-cap-measures-code (landed 2026-10-04)
+### entry-point-cap-measures-code (completed 2026-10-04)
 
 - `EC-1` Given cli/compass holds the shebang, build_parser and main, When a verb is registered in build_parser, Then the entry-point guard still passes; and when logic is added outside build_parser, or a loop or a new function is added, Then it fails
 
-### ship-commit-takes-a-message-file (landed 2026-10-04)
+### ship-commit-takes-a-message-file (completed 2026-10-04)
 
 - `SF-1` Given a commit message in a file, When compass ship-commit -F <file> runs with staged changes, Then it commits with that message and verifies HEAD advanced; and giving both -m and -F, or neither, is refused
 
-### archive-citation-in-adapter-readme (landed 2026-10-04)
+### archive-citation-in-adapter-readme (completed 2026-10-04)
 
 - `AC-1` Given a checkout with the full archive but without the adapter's generated feature file, When the archive citation guard runs with COMPASS_FULL_ARCHIVE=1, Then the README's mention of the file bdd extract writes is treated as illustrative and the guard passes
 
-### trace-checks-scenario-ids (landed 2026-10-04)
+### trace-checks-scenario-ids (completed 2026-10-04)
 
 - `TS-1` Given an issue with scenarios TRC-1 and TRC-2, When compass changed-file add or compass evidence add is given a scenario id the issue does not define, or several ids in one quoted string, Then it refuses, names the issue's scenarios and writes nothing
 
-### one-fired-rule-formatter-shared (landed 2026-10-04)
+### one-fired-rule-formatter-shared (completed 2026-10-04)
 
 - `FR-1` Given a fired policy rule with a rationale, an id and a kind, When approach evaluate prints its summary or verbose view and issue receipt prints the receipt, Then each line is exactly what it is today, and all three come from one shared formatter
 
-### nothing-inspected-is-not-pass (landed 2026-10-04)
+### nothing-inspected-is-not-pass (completed 2026-10-04)
 
 - `NI-1` Given an issue where some checks have nothing to inspect and one fails, When compass check runs in the verbose and default views, Then those checks are labelled NOTHING TO CHECK rather than PASS, and the failing verdict counts only checks that inspected something and names how many had nothing to check
 
-### printed-route-wording (landed 2026-10-04)
+### printed-route-wording (completed 2026-10-04)
 
 - `RW-1` Given an issue, When approach evaluate --verbose --write, gate pass on an unknown gate, check with no gates and retro print their output, Then none of it says route, candidate shape or phases where it means the delivery approach or its stages
 
-### map-counts-agree (landed 2026-10-04)
+### map-counts-agree (completed 2026-10-04)
 
 - `MC-1` Given a distribution map whose subtask table lists a different number of rows from the Final subtask count after caps it states, When multiagent.sh provisions it, Then it refuses, names both numbers and creates nothing; and a map whose counts agree, or that states no number, is provisioned as before
 
-### suite-from-a-clean-clone (landed 2026-10-04)
+### suite-from-a-clean-clone (completed 2026-10-04)
 
 - `CC-1` Given a checkout with gitignored local state such as .compass/work, When make test-clean runs, Then it clones the committed HEAD into a temporary folder, runs the suite there without that state, and removes the folder afterwards
 
-### supply-chain-pins (landed 2026-10-04)
+### supply-chain-pins (completed 2026-10-04)
 
 - `SP-1` Given the workflows in .github/workflows and the copyable files in ci/, When a test reads every uses: line and every package install, Then each action is pinned by a full commit SHA, each pip install reads a requirements file of exact versions or pins inline with ==, and the cucumber-js job installs with npm ci from its lockfile
 
-### release-5-6-0 (landed 2026-10-05)
+### release-5-6-0 (completed 2026-10-05)
 
 - `RL-1` Given the release procedure's seven version locations and the version test's expected version, When each is bumped to 5.6.0, Then the version consistency and coverage tests pass and compass --version prints 5.6.0
 
-### lint-excuses-unassessed-abandoned (landed 2026-10-05)
+### lint-excuses-unassessed-abandoned (completed 2026-10-05)
 
 - `LA-1` Given an issue with status abandoned and no assessment block, When compass issue lint runs, Then it does not demand an assessment; and an active issue with no assessment is still refused
 
-### security-policy-and-templates (landed 2026-10-05)
+### security-policy-and-templates (completed 2026-10-05)
 
 - `CF-1` Given the repository root and .github, When a contributor looks for a security policy, a code of conduct and issue templates, Then SECURITY.md points to GitHub private vulnerability reporting and names the supported version, CODE_OF_CONDUCT.md adopts the Contributor Covenant 2.1 with conduct@ayeo.io as the contact, and bug and feature templates ask for the Compass version
 
-### record-triage-decisions (landed 2026-10-05)
+### record-triage-decisions (completed 2026-10-05)
 
 - `TD-1` Given the maintainer's choices of 5 October on issues #100, #105, #116 and #121, When the decisions ledger is read, Then each has an entry by jed72 with its decision, its reason and the issue it answers
 
-### harness-root-sanctioned-path (landed 2026-10-05)
+### harness-root-sanctioned-path (completed 2026-10-05)
 
 - `HR-A` Given the harness runs as root with --session-user naming an unprivileged user, then each session runs as that user, owns its working folder, cannot write the plugin copy or the checkout, and the record states its uid.
 - `HR-B` Given a root run with Compass installed and no sanctioned path, then it is refused before any session, naming --session-user and a read-only mount first and --allow-root last.
@@ -2540,15 +2540,15 @@
 - `HR-I` Given a session that left a process running, then the harness ends the session user's processes before it touches the folder again.
 - `HR-J` Given a real root run with a real unprivileged session user, then the run is contained and the session's edit is in the diff.
 
-### retired-terms-from-terminology (landed 2026-10-05)
+### retired-terms-from-terminology (completed 2026-10-05)
 
 - `TRC-001` Given a retired_in_output block in governance/terminology.yml, When the printed-output guard builds its patterns, Then it scans for every name in the block and holds no hand-written list
 
-### review-page-stale-reminder (landed 2026-10-05)
+### review-page-stale-reminder (completed 2026-10-05)
 
 - `TRC-001` Given an issue whose review page matched its manifest, When a verb that writes the manifest leaves the page stale, Then the verb prints one line naming compass issue dashboard, and prints none when the page is still current or there is no page
 
-### mutation-proof-register (landed 2026-10-05)
+### mutation-proof-register (completed 2026-10-05)
 
 - `MPR-1` Given a shipped check with no register entry, when the register test runs, then it fails naming the check
 - `MPR-2` Given a register entry missing a required field, when the register test runs, then it fails naming the check and the field
@@ -2557,20 +2557,20 @@
 - `MPR-5` Given each shipped check, when the register is read, then its entry names a failing-input test and a passing control that exist
 - `MPR-6` Given the change lands, then nothing under governance changes and the project guardrail list stays empty
 
-### harness-post-session-walks (landed 2026-10-05)
+### harness-post-session-walks (completed 2026-10-05)
 
 - `PSW-1` Given a session that planted a folder where a hidden test is copied, When the run finishes, Then the record says not contained and names the path, instead of the run ending with an error
 - `PSW-2` Given a session that replaced .compass with a link, when the run lists its compass files, then it lists nothing and never walks the link
 
-### adr-projects-add-checks-as-data (landed 2026-10-05)
+### adr-projects-add-checks-as-data (completed 2026-10-05)
 
 - `TRC-001` Given the maintainer approved the configurable-framework recommendation on 2026-10-05 When a reader opens architecture/decisions/README.md Then ADR-002 shows superseded by ADR-033, ADR-010 shows accepted, Inv-2 and Inv-3 carry the new wording, and the ledger holds both decisions
 
-### keep-docs-specs-untracked (landed 2026-10-05)
+### keep-docs-specs-untracked (completed 2026-10-05)
 
 - `TRC-001` Given a technical spec written to docs/specs/ When git status runs Then the file is ignored and git ls-files lists nothing under docs/specs/
 
-### harness-session-user-hardening (landed 2026-10-05)
+### harness-session-user-hardening (completed 2026-10-05)
 
 - `SUH-2` Given a session user with running processes or a link in its watched Claude configuration, when a run starts, then it is refused naming what was found
 - `SUH-3` Given a session user with a crontab or a queued at job, when the harness checks it, then the run is refused naming which
@@ -2579,7 +2579,7 @@
 - `SUH-6` Given the three places that start a process as the session user, when their arguments are built, then they come from one helper
 - `SUH-1` Given a session that leaves a process holding its output open, when the call ends, then the harness ends it and records the run as not contained
 
-### one-name-per-route (landed 2026-10-05)
+### one-name-per-route (completed 2026-10-05)
 
 - `RN-2` Given the shipped routing policy, when it is read, then route_shapes and every route reference use the five route names
 - `RN-3` Given the checkpoint routes, the lint route check and the schema, when compared with route_shapes, then they match
@@ -2589,62 +2589,62 @@
 - `RN-7` Given the decisions of 5 October on routing, when this lands, then each is a decision entry
 - `RN-1` Given a policy or manifest with an old route name, when it is read, then it maps to the new name with one warning and the same approach
 
-### lean-assess (landed 2026-10-05)
+### lean-assess (completed 2026-10-05)
 
 - `LA-1` Given commands/assess.md, When its size and the procedure file are checked, Then assess is at most 2,500 characters, names the procedure file for heavier routes and --reassess, and the procedure keeps every step
 
-### repository-autonomy (landed 2026-10-05)
+### repository-autonomy (completed 2026-10-05)
 
 - `RA-1` Given this repository's .compass/config.yml, When an issue on the regular or full approach is evaluated, Then no checkpoint waits for a person
 
-### finish-honours-acceptance (landed 2026-10-05)
+### finish-honours-acceptance (completed 2026-10-05)
 
 - `FA-1` Given a quick fix that recorded an acceptance of kind refactor and no red, When quick-fix finish runs, Then it records the green, passes the three gates and finishes
 
-### stage-tokens-in-report (landed 2026-10-05)
+### stage-tokens-in-report (completed 2026-10-05)
 
 - `ST-1` Given eval records whose manifests measured assess and implement and whose session total is known, When the comparison report is built, Then each cell shows assess, implement, and verify and ship as the remainder, and a cell whose mean assess exceeds its mean implement is flagged
 
-### ledger-listing-cap (landed 2026-10-05)
+### ledger-listing-cap (completed 2026-10-05)
 
 - `TC-3` Given a ledger whose entries have very long first sentences, When quick-fix start lists the settled decisions, Then each line and the whole listing stay within their character budgets and every line still names its entry
 
-### acceptance-timing-gaps (landed 2026-10-05)
+### acceptance-timing-gaps (completed 2026-10-05)
 
 - `AT-1` Given a refactor acceptance recorded with no edit in a repository with no pytest cache, When compass acceptance record runs, Then it refuses because the source tree has not changed
 
-### lineage (landed 2026-10-06)
+### lineage (completed 2026-10-06)
 
 - `LN-1` Given a landed issue, when an issue is created with `quick-fix start --raised-by <it> --found-at review`, or `compass issue raised-by <it> --found-at review` runs on an existing issue, then the manifest carries `raised_by` with that issue and `found_at: review`, and `compass issue lint` accepts it.
 - `LN-2` Given `--raised-by` names no issue in the project, or `--found-at` is not one of define, plan, implement, verify, review, ci, after-landing, or only one of the two flags is given, when either verb runs, then it exits non-zero and writes nothing. A manifest whose `raised_by` has an unknown `found_at` fails `compass issue lint`.
 - `LN-3` Given three issues raised at review and one raised after-landing, when `compass retro --lineage` runs, then it reports three found before landing and one after, counts by `found_at`, names chains of three or more and the parents with the most children, and exits 0. With no raised issues it says so and exits 0.
 - `LN-5` Given issue C raised from B, which was raised from A, when C's `raised_by` is recorded, then one line names A as the root and points at `S14` in `governance/strategies.md`. A second-level issue prints no such line.
 
-### delivery-board-midnight-flake (landed 2026-10-06)
+### delivery-board-midnight-flake (completed 2026-10-06)
 
 - `DM-1` Given the clock moves one day on between the test module loading and board() running, When the queue age test runs, Then it still reports the age it set up
 
-### retro-skips-list-manifest (landed 2026-10-06)
+### retro-skips-list-manifest (completed 2026-10-06)
 
 - `RL-1` Given one manifest under .compass/work written as a YAML list, When compass retro runs, Then it exits 0, reports the other issues and names the skipped manifest
 
-### late-validation-acceptance (landed 2026-10-06)
+### late-validation-acceptance (completed 2026-10-06)
 
 - `LV-1` Given a quick fix whose files changed after quick-fix start, staged or not, When acceptance start --kind validation runs, Then it refuses and names the files; declared before the change, the same work records and finishes
 
-### session-user-follow-ups (landed 2026-10-06)
+### session-user-follow-ups (completed 2026-10-06)
 
 - `SF-1` Given a root eval run with --session-user, When a run changes a folder's mode, installs a job, or leaves an oversized file, or a call is held and the kill-all fails, Then the record or the next run's check shows it, and the call's readers and pipes are closed
 
-### check-mutation-runner (landed 2026-10-06)
+### check-mutation-runner (completed 2026-10-06)
 
 - `CM-1` Given the mutation-proof register, When the runner breaks each check to always pass and then always fail in a copy of the checkout, Then each fails test and each restores test goes red, a weakened, skipped or uncollected test is reported by name with a non-zero exit, and the checkout is unchanged
 
-### decisions-2026-10-06 (landed 2026-10-06)
+### decisions-2026-10-06 (completed 2026-10-06)
 
 - `DE-1` Given the decisions of 5 and 6 October 2026, When governance/decisions/ is read, Then entries record that old route names stay readable until 7.0.0, B39 folds into PRD 22, A16 waits for PRD 19 and this repository may hold a settings-only compass.yml, each superseding what it replaces
 
-### approach-diagram (landed 2026-10-06)
+### approach-diagram (completed 2026-10-06)
 
 - `RD-1` Given the shipped policy and `--autonomy balanced`, when `compass approach diagram` runs, then the regular row marks define and plan as stops for a person, the quick-fix row marks none, and every cell names its weight as a word.
 - `RD-2` Given no `--autonomy`, when it runs, then it uses the project's `autonomy:` setting; an unknown value is refused, naming the values.
@@ -2652,30 +2652,30 @@
 - `RD-5` Given any render, then it names the three ways work comes back: a reassessment, a refusal from the pre-tool hook and a failed `compass check`.
 - `RD-6` Given `docs/approach-diagram.html`, when the suite runs, then a test fails when it differs from a fresh render of the shipped policy under `balanced`, and two renders are byte-identical.
 
-### doc-scans-read-tracked-files (landed 2026-10-06)
+### doc-scans-read-tracked-files (completed 2026-10-06)
 
 - `DS-1` Given a repository with one tracked and one untracked document, When the document scans list their files, Then only the tracked document is listed
 
-### harness-read-only-bind-mount (landed 2026-10-06)
+### harness-read-only-bind-mount (completed 2026-10-06)
 
 - `RM-1` Given the harness running as root on Linux, When it prepares its plugin copy, Then it bind-mounts the copy read-only before any session, records that it did, removes the mount at the end, and falls back to the refusal when the mount fails
 
-### quick-fix-finish-captures-friction (landed 2026-10-06)
+### quick-fix-finish-captures-friction (completed 2026-10-06)
 
 - `QF-1` Given a quick fix whose manifest records a re-assessment, When quick-fix finish runs, Then the manifest's friction list holds the derived entry; with no signal, no friction key is written and no extra line is printed
 
-### mutation-runner-tidy (landed 2026-10-06)
+### mutation-runner-tidy (completed 2026-10-06)
 
 - `MT-1` Given the mutation runner, When --check names no register entry, Then it exits non-zero naming the id; and when a test stays green its output is shown
 
-### living-spec-conflicts (landed 2026-10-06)
+### living-spec-conflicts (completed 2026-10-06)
 
 - `LS-1` Given a git project where an issue is landed in local records, is not named in the spec committed at HEAD and its `land_commit` is not reachable from HEAD, when the spec is derived, then its scenarios are left out; an issue named in HEAD's spec, or whose `land_commit` is reachable, is kept.
 - `LS-2` Given a branch that conflicts with its base only in the two derived spec files, when `compass issue refresh-spec --base <ref>` runs, then the base is merged, the base's spec is taken, the spec is re-derived with the branch's own issue and committed, and no conflict is left.
 - `LS-3` Given a merge that also conflicts in another file, when `compass issue refresh-spec` runs, then it aborts the merge, leaves the branch as it was and names the other files.
 - `LS-4` Given the decision, then an architecture decision record states the new selection rule and how it narrows ADR-008's "reconstructible from landed issues alone".
 
-### session-compliance (landed 2026-10-06)
+### session-compliance (completed 2026-10-06)
 
 - `CS-1` Given issues whose records carry a session id and that session's transcript, when `compass retro --compliance` runs, then each judge behaviour gets sessions, pass, fail, undecided, a pass rate over decided sessions and a 95% Wilson interval, and each failing session is named by issue id and tool-call index; `--json` prints the same; `--days N` and `--issue` narrow it.
 - `CS-2` Given a transcript that no issue's records name, when the report runs, then it is counted as unmatched and never assigned to an issue by time or path.
@@ -2685,22 +2685,22 @@
 - `CS-9` Given the report, then `compass check` does not read it and no gate depends on it.
 - `CS-10` Given a behaviour failing in three or more distinct issues in the window, when the report runs, then it writes a pending lesson with `source: compliance` naming the behaviour and the issues, and nothing takes effect until `compass lesson accept`.
 
-### refresh-spec-message-when-up-to-date (landed 2026-10-06)
+### refresh-spec-message-when-up-to-date (completed 2026-10-06)
 
 - `TRC-001` Given a branch already up to date with its base whose derived spec is stale, when compass issue refresh-spec runs, then it commits the re-derived spec with a message that names no merge
 
-### configuration-decision-records (landed 2026-10-06)
+### configuration-decision-records (completed 2026-10-06)
 
 - `DR-1` Each structural decision of the configuration foundation is a proposed ADR with a rejected alternative, listed in the index
 - `DR-2` Each product decision of 5 and 6 October 2026 for the configurable framework has a ledger entry
 - `DR-3` No record cites a private planning path or names a rival product
 - `DR-4` The vocabulary amendment names the approaches catalogue, the adoption setting and every new term
 
-### finish-runs-the-suite-once (landed 2026-10-06)
+### finish-runs-the-suite-once (completed 2026-10-06)
 
 - `TRC-001` Given a quick fix with two scenarios, each with a red on record, when quick-fix finish runs, then the test command runs once and each scenario gets its own green record
 
-### agent-recorded-friction (landed 2026-10-06)
+### agent-recorded-friction (completed 2026-10-06)
 
 - `TRC-001` Given an issue, when the agent runs compass issue friction with a category, phase, an existing evidence path and a fix, then a source: agent entry is added; a fourth note, a repeated category and phase, a missing fix or an unknown evidence path is refused
 - `TRC-002` Given agent and person friction, when compass retro --friction runs, then agent entries are counted in their own column and never merged with person or derived entries
@@ -2708,39 +2708,39 @@
 - `TRC-004` Given a note about a guardrail-backed step, when it is recorded, then it is accepted, reported as guardrail, not changeable by friction, and never counts toward a lesson or a recurring cluster
 - `TRC-005` Given the instruction to record agent friction, then it adds at most 40 words to resident context and resident context stays under its ceiling
 
-### finish-shows-a-failed-derive (landed 2026-10-06)
+### finish-shows-a-failed-derive (completed 2026-10-06)
 
 - `TRC-001` Given a committed living spec that names an issue whose records are missing, when quick-fix finish lands a fix, then its output says the living spec was not re-derived and names compass issue refresh-spec
 
-### compat-routing-baseline (landed 2026-10-06)
+### compat-routing-baseline (completed 2026-10-06)
 
 - `TRC-001` Given the 5.6.0 evaluator, when the routing baseline is captured, then every one of the 1,200 assessments and every label subset over the four named labels has a recorded result, the test passes on today's code, and it fails when one shipped default changes
 
-### compat-hook-corpus (landed 2026-10-06)
+### compat-hook-corpus (completed 2026-10-06)
 
 - `TRC-001` Given the 5.6.0 pre-tool hook, when the hook corpus is captured, then each recorded tool call gets the recorded decision and refusal code, including both reads of .compass/config.yml, and the test fails when one decision changes
 
-### advisory-mode-wording (landed 2026-10-06)
+### advisory-mode-wording (completed 2026-10-06)
 
 - `TRC-001` Given a project after compass init, when a person reads the mode comment in .compass/config.yml, then it says advisory mode stops checks and CI from failing and that the pre-tool hook still blocks code edits without a failing test, instead of saying nothing blocks
 
-### compat-command-corpus (landed 2026-10-06)
+### compat-command-corpus (completed 2026-10-06)
 
 - `TRC-001` Given the 5.6.0 CLI, when the command corpus is captured, then each recorded invocation exits as recorded, and the test fails when one exit code changes
 
-### compat-archive-baseline (landed 2026-10-06)
+### compat-archive-baseline (completed 2026-10-06)
 
 - `TRC-001` Given the archive sample at 5.6.0, when the archive baseline is captured, then every check's verdict on every sampled issue is recorded, issue lint and issue receipt exit 0 on each, the test passes on today's code, and it fails when one verdict changes
 
-### atomic-io (landed 2026-10-06)
+### atomic-io (completed 2026-10-06)
 
 - `TRC-001` Given atomic_io, when a file is written and the process fails before the rename, then the old file is intact and no temporary file is left; a YAML file with a duplicate key is refused with its line; equal data gives equal canonical JSON and digests
 
-### cli-refusal-consistency (landed 2026-10-06)
+### cli-refusal-consistency (completed 2026-10-06)
 
 - `TRC-001` Given each of the inconsistent refusals the command corpus found, when it runs, then it exits 2, names the real problem and the flag it has, writes to stderr, and the corpus entry records the new exit on purpose
 
-### catalogue-spec (landed 2026-10-06)
+### catalogue-spec (completed 2026-10-06)
 
 - `CS-1` Given the field table, then it names the eight catalogues, each catalogue's fields with their type, merge kind and compare kind, the obligation fields the clas
 - `CS-2` Given a layer document, when it is checked, then an unknown top-level key, an unknown catalogue field, an id that breaks the id pattern, a settings key in a pa
@@ -2748,7 +2748,7 @@
 - `CS-4` Given `when: { risk: { at_least: cross-cutting } }`, when an assessment is matched, then cross-cutting and critical match and trivial and contained do not; eve
 - `CS-5` Given the committed JSON Schema for compass.yml in the schemas folder, then it equals the schema generated from the field table
 
-### layers-and-merge (landed 2026-10-06)
+### layers-and-merge (completed 2026-10-06)
 
 - `LM-1` A project file loads with its layer keys and settings keys split
 - `LM-2` A layer digest covers the layer keys only
@@ -2762,7 +2762,7 @@
 - `LM-10` Removing an entry something refers to names each referrer
 - `LM-11` One error reports every fault in a layer and inputs stay unchanged
 
-### settings-reader-python (landed 2026-10-06)
+### settings-reader-python (completed 2026-10-06)
 
 - `SR-1` Given the same settings in `.compass/config.yml` or in `compass.yml`, when each Python reader runs (adoption mode, autonomy, drift strictness, record
 - `SR-2` Given a missing or broken settings file, when each reader runs, then it behaves as it did at 5.6.0 (the design's table: enforced, balanced or a refus
@@ -2770,7 +2770,7 @@
 - `SR-5` The compatibility contracts 1 to 6 still pass, apart from any entry this change alters on purpose with its reason.
 - `SR-3` Given a project after compass init, then a state file in the .compass folder holds initialised and records_signed_since, no settings file is written, and the cutoff and the hook's explanation still read from it
 
-### vocabulary-catalogue (landed 2026-10-06)
+### vocabulary-catalogue (completed 2026-10-06)
 
 - `VC-1` A display name comes from the vocabulary and a project layer changes it
 - `VC-2` An alias resolves to its id
@@ -2780,7 +2780,7 @@
 - `VC-6` The terminology file says how a project adds names
 - `VC-7` The terms the accepted vocabulary decision defines are in the glossary
 
-### settings-reader-hook (landed 2026-10-06)
+### settings-reader-hook (completed 2026-10-06)
 
 - `SH-1` Given code_globs in compass.yml, the hook blocks a matching path as for the old file; compass.yml wins; an unreadable file blocks naming the file; no file allows an unlisted path
 - `SH-2` Given initialised in state.yml or only the old file, the first refusal says who initialised the project; a broken record adds nothing
@@ -2793,11 +2793,11 @@
 - `SH-9` Given compass.yml, the scripts read only the documented paths (multiagent.worktree_root, multiagent.max_worktrees, project.test_command); the old file keeps the any-depth lookup; an unreadable settings file stops both scripts with exit 1 naming the file
 - `SH-10` Given a project with neither settings file, the hook starts no Python for the code_globs read; the names of the two files live in one allow-listed helper pinned equal to project_settings
 
-### eval-judge-guards-compass-yml (landed 2026-10-07)
+### eval-judge-guards-compass-yml (completed 2026-10-07)
 
 - `TRC-001` Given an eval session transcript that edits compass.yml, When the judge checks protected files, Then it reports the edit as touching a protected file, as it does for .compass/config.yml
 
-### both-settings-files-present (landed 2026-10-07)
+### both-settings-files-present (completed 2026-10-07)
 
 - `BS-1` Given both files and a recognised compass.yml, an old file that holds a settings key makes the hook refuse with settings-conflict and the CLI raise the same text
 - `BS-2` Given both files and a compass.yml with no schema, the old file is read, a warning goes to stderr once, and the hook decides as for the old file alone
@@ -2809,7 +2809,7 @@
 - `BS-8` Given the registry, settings-conflict follows the three-line shape and is listed in the generated refusal codes
 - `BS-9` Given the recorded hook corpus with settings moved to compass.yml with schema, every decision matches
 
-### default-preset-data (landed 2026-10-07)
+### default-preset-data (completed 2026-10-07)
 
 - `DP-1` Today's two policy files convert to the committed preset, and a planted policy change breaks the match
 - `DP-2` The preset is named default at version 6.0.0 with capabilities off and checks as a parent layer
@@ -2818,7 +2818,7 @@
 - `DP-5` The adapter reads old key names, leaves its input unchanged and is read by nothing yet
 - `DP-6` Every reference in the preset resolves and the evidence types match the guardrails file
 
-### check-registry (landed 2026-10-07)
+### check-registry (completed 2026-10-07)
 
 - `CR-1` The registry holds one versioned entry per built-in check and CHECK_FNS is derived from it
 - `CR-2` The registry answers the installed version and major of an implementation
@@ -2826,15 +2826,15 @@
 - `CR-4` The lock file build rule fails on a changed verdict digest without a major bump
 - `CR-5` Policy lint refuses a check naming an impl the registry does not hold
 
-### governance-drift-is-a-settings-key (landed 2026-10-07)
+### governance-drift-is-a-settings-key (completed 2026-10-07)
 
 - `TRC-001` Given a compass.yml with schema: 1 and governance_drift: strict, When the project layer is checked and loaded, Then it is accepted and governance_drift is read as a setting, not a layer key
 
-### rival-gate-new-key (landed 2026-10-07)
+### rival-gate-new-key (completed 2026-10-07)
 
 - `TRC-001` Given a non-UTF-8 file pinned by blob hash and path, when the gate scans the tree, then it passes the file's content; given any change to the file, a UTF-8 file, a path, or a stale pin, then the gate still fails or reports
 
-### generated-legacy-views (landed 2026-10-07)
+### generated-legacy-views (completed 2026-10-07)
 
 - `GV-1` The two views equal the generator's output byte for byte; a stale view names the regenerate command
 - `GV-2` A generated header says generated and names the command; preset, sidecar and template changes change the text
@@ -2842,7 +2842,7 @@
 - `GV-4` Preset digests are pinned and a changed preset file fails naming the digest file
 - `GV-5` The generator script writes, is idempotent, and --check fails on a stale view
 
-### obligations (landed 2026-10-07)
+### obligations (completed 2026-10-07)
 
 - `OB-1` The preset, through the adapter, routes the whole compatibility grid as today's policy does, and a planted preset change breaks the replay
 - `OB-2` The evaluator lifts by rank when given ranks, and by today's fixed set when not
@@ -2853,7 +2853,7 @@
 - `OB-7` The preset's on_skipped values give today's verdicts on the archive sample, apart from the landed_by relaxations
 - `OB-8` The evaluator called as today answers as before, nothing else reads the new module, and it declares its dependencies
 
-### ready-and-done-as-data (landed 2026-10-07)
+### ready-and-done-as-data (completed 2026-10-07)
 
 - `RD-1` The seven Definition of Ready items are human checks equal to the template text, listed as the plan stage's entry
 - `RD-2` The seven Definition of Done items are human checks equal to the template text, listed as the verify stage's exit
@@ -2864,7 +2864,7 @@
 - `RD-7` A stray line in a template section is refused
 - `RD-8` The preset file headers do not claim the adapter wrote the files once
 
-### stable-ids (landed 2026-10-07)
+### stable-ids (completed 2026-10-07)
 
 - `SI-1` stable_ids.py imports nothing and its ids equal the default preset
 - `SI-2` The scanner finds an id in five positions and skips text
@@ -2874,7 +2874,7 @@
 - `SI-6` The stage-id literals left in each module equal the recorded count
 - `SI-7` The rebuilt maps equal today's values and core.py stays within its cap
 
-### classifier (landed 2026-10-07)
+### classifier (completed 2026-10-07)
 
 - `CL-1` The grid: union domains, grouped classes, named labels and subsets, the cap of eight
 - `CL-2` Points combine into equivalent, tightening, loosening or incomparable; refusals are outcomes
@@ -2884,7 +2884,7 @@
 - `CL-6` The verdict has complete, stable, pinned JSON
 - `CL-7` The benchmark, the module's declarations, the owning doc and the unchanged core
 
-### waivers (landed 2026-10-07)
+### waivers (completed 2026-10-07)
 
 - `WV-1` A waiver is found with its id, scope, operation and fields, and its shape is checked
 - `WV-2` The approvers come from the layer above, and no owner fails
@@ -2895,7 +2895,7 @@
 - `WV-7` A waiver that excuses nothing is reported as unneeded
 - `WV-8` The module declares its dependencies, is pure, is unused and has an owning doc
 
-### locks (landed 2026-10-07)
+### locks (completed 2026-10-07)
 
 - `LK-1` Locks are read from layer documents and the shipped preset gives the ADR lock set
 - `LK-2` The footprint of a locked check, gate, stage, rule set or approach
@@ -2907,11 +2907,11 @@
 - `LK-8` Check, the receipt and the summary print the conformance line and nothing else changes
 - `LK-9` The module declares its dependencies and owning doc, and core stays in bounds
 
-### unlock-uses-the-waiver-check (landed 2026-10-07)
+### unlock-uses-the-waiver-check (completed 2026-10-07)
 
 - `TRC-001` Given a project unlock whose waiver has an approved_on date in the future, When the lock chain is enforced, Then the unlock is refused and the entry stays locked
 
-### policy-lint (landed 2026-10-07)
+### policy-lint (completed 2026-10-07)
 
 - `PL-1` A project with no compass.yml and the framework repository keep the legacy lint
 - `PL-2` Per-layer faults are reported and stop the lint before the merge
@@ -2926,7 +2926,7 @@
 - `PL-11` Effective --json has a pinned, deterministic shape
 - `PL-12` Both verbs are documented, in the command corpus and within the line caps
 
-### classifier-speed (landed 2026-10-07)
+### classifier-speed (completed 2026-10-07)
 
 - `CS-1` The evaluator routes without copying the policy
 - `CS-2` A stored classification is reused when both configurations and the classifier version are unchanged
@@ -2936,7 +2936,7 @@
 - `CS-6` A ninth label no locked entry reads is not refused
 - `CS-7` The classifier has a public scan with a point callback and locks read no private name
 
-### policy-diff (landed 2026-10-07)
+### policy-diff (completed 2026-10-07)
 
 - `PD-1` The references resolve to configurations or exit 2
 - `PD-2` The classification is the classifier's own JSON
@@ -2949,7 +2949,7 @@
 - `PD-9` The text output
 - `PD-10` The verb is documented, registered, in the command corpus and within the caps
 
-### generation-store (landed 2026-10-07)
+### generation-store (completed 2026-10-07)
 
 - `GS-1` effective_for reads live with no generation, refuses generation 0, resolves live with no issue
 - `GS-2` A generation holds the four files and the complete marker with the contents ADR-036 names
@@ -2974,15 +2974,15 @@
 - `GS-21` Only classify and effective import obligations, on any import form
 - `GS-22` EffectiveView.evaluator_policy returns the evaluator's policy from the resolved configuration
 
-### lock-proof-under-xdist (landed 2026-10-07)
+### lock-proof-under-xdist (completed 2026-10-07)
 
 - `TRC-001` Given the count of compared lock cases is partial because pytest-xdist split the file When test_cs_5 runs inside a worker Then it skips instead of failing, and outside a worker it still requires at least 70
 
-### layer-non-text-key (landed 2026-10-07)
+### layer-non-text-key (completed 2026-10-07)
 
 - `TRC-001` A non-text key anywhere in a layer is refused with L-KEY-NOT-TEXT naming its path and telling the person to quote it
 
-### policy-migrate (landed 2026-10-08)
+### policy-migrate (completed 2026-10-08)
 
 - `PM-1` A dry run prints the compass.yml it would write and changes no file
 - `PM-2` An unchanged copy migrates to an empty overlay and classifies equivalent
@@ -3004,7 +3004,7 @@
 - `PM-18` policy-migrate review round, group 18
 - `PM-19` No member of the compressed archive of shipped releases holds a rival name
 
-### effective-readers (landed 2026-10-08)
+### effective-readers (completed 2026-10-08)
 
 - `EF-1` The reader helper returns the stored view, a live view for a project with a compass.yml, nothing for a legacy project and refuses generation 0
 - `EF-2` The accessors of the shipped default's generation equal what the governance files hold
@@ -3019,15 +3019,15 @@
 - `EF-11` Every read of a governance policy file is in a function that asks the effective view first
 - `EF-12` The approach diagram of a project with a compass.yml renders the effective configuration
 
-### sigint-tests-under-load (landed 2026-10-08)
+### sigint-tests-under-load (completed 2026-10-08)
 
 - `TRC-001` Given a loaded machine, when a run is interrupted, then the tests wait for the session to start before signalling
 
-### schema-descriptions (landed 2026-10-08)
+### schema-descriptions (completed 2026-10-08)
 
 - `TRC-001` Given the compass schema, when a test walks every node, then each node has a non-empty description
 
-### policy-update-default (landed 2026-10-08)
+### policy-update-default (completed 2026-10-08)
 
 - `UP-1` already on the target major: nothing to do, nothing written
 - `UP-2` a bump with no waiver changes only the integer after @
@@ -3046,7 +3046,7 @@
 - `UP-15` an edit the command cannot make exactly exits 2 before writing
 - `UP-16` help, doc, verb description and corpus state the behaviour
 
-### check-severity-from-generation (landed 2026-10-08)
+### check-severity-from-generation (completed 2026-10-08)
 
 - `CS-1` Given a generation with an advisory check, when it fails, then the run passes and shows the failure as advisory
 - `CS-2` Given a blocking check, when it fails, then the run fails
@@ -3060,7 +3060,7 @@
 - `CS-10` Given a landed_by relaxation on a shipped check with on_skipped fail, the verdict is unchanged
 - `CS-11` Given a spike with an advisory guardrail check that fails, then the run passes and shows the failure as advisory
 
-### impl-refusal (landed 2026-10-08)
+### impl-refusal (completed 2026-10-08)
 
 - `IR-1` A major difference refuses only that check
 - `IR-2` The refusal names what to do
@@ -3075,11 +3075,11 @@
 - `IR-11` migrate-config adopts an issue with no generation
 - `IR-12` The coverage page is derived and kept current
 
-### signal-hold-all-threads (landed 2026-10-08)
+### signal-hold-all-threads (completed 2026-10-08)
 
 - `TRC-001` Given other threads exist, when an interrupt arrives while the session is created, then the session is ended
 
-### configure-and-reassess (landed 2026-10-08)
+### configure-and-reassess (completed 2026-10-08)
 
 - `CR-1` configure writes the proposal and leaves the manifest as it was
 - `CR-2` the preview lists fields, classification, assessment effect, invalidations and the next step; exit 0, 1 or 2
@@ -3094,18 +3094,18 @@
 - `CR-11` help, owning doc, assess command and command corpus describe the verb
 - `CR-12` configure refuses a landed issue, a symbolic link and a folder that is not a proposal
 
-### artifact-graph-lint (landed 2026-10-08)
+### artifact-graph-lint (completed 2026-10-08)
 
 - `TRC-001` Given an artifacts catalogue, When it is linted, Then a bookkeeping artifact used as an input or a dependency on a directory is reported with a code, level, path and group
 - `TRC-002` Given a dependency on a directory, When linted, Then it is reported with code, level, path and group
 - `TRC-003` Given a dangling or cyclic depends_on, When linted, Then each is reported with its path and the cycle path
 - `TRC-004` Given the shipped preset, When linted, Then it is clean and the bookkeeping description follows the design
 
-### issue-layer-reaches-evaluator (landed 2026-10-08)
+### issue-layer-reaches-evaluator (completed 2026-10-08)
 
 - `TRC-001` Given an issue config that sets a stage mode When approach evaluate writes Then the manifest stages hold the mode
 
-### issue-layer-at-its-point (landed 2026-10-08)
+### issue-layer-at-its-point (completed 2026-10-08)
 
 - `TRC-001` Given a delivery issue under the shipped default, When it configures --route regular on a quick-fix assessment, Then the proposal is accepted because the layer is judged at the issue's own assessment
 - `IP-1` Given a delivery issue, When it configures --route spike, Then a lock refuses it at the issue's own point
@@ -3118,7 +3118,7 @@
 - `IP-8` Given a proposal that loosens the issue's layer, When the preview is built, Then its classification names the issue's own assessment as the first point
 - `IP-9` Given a route pick that is mixed at the issue's own assessment, When it is refused, Then the refusal names every looser or incomparable field
 
-### git-parents (landed 2026-10-08)
+### git-parents (completed 2026-10-08)
 
 - `GP-1` A git extends parses strictly and a spelling outside the form is refused
 - `GP-2` A remote ref with no sha is refused and git is not run
@@ -3143,11 +3143,11 @@
 - `GP-21` A failed read caches nothing and a cache write race is safe
 - `GP-22` A waiver in a git parent is checked against the parent's own owner
 
-### living-spec-supersession (landed 2026-10-08)
+### living-spec-supersession (completed 2026-10-08)
 
 - `TRC-001` Given two landed issues that share an intent id, when the living spec is derived, then each issue's scenario stays current
 
-### entry-exit-evaluation (landed 2026-10-08)
+### entry-exit-evaluation (completed 2026-10-08)
 
 - `EE-1` With the capability off no reader shows a list
 - `EE-2` The Definition of Done is not owed by an approach that does not ship
@@ -3164,7 +3164,7 @@
 - `EE-13` A project stage list and an unknown check are handled
 - `EE-14` A check whose when does not match is not listed
 
-### parent-states (landed 2026-10-08)
+### parent-states (completed 2026-10-08)
 
 - `TRC-001` Given a project pinned to a cached parent whose compass.yml is unchanged and no newer commit is known When the parent state is read Then it is up to date
 - `TRC-002` Given a pin whose ref has another commit fetched last When the parent state is read Then it is stale
@@ -3179,11 +3179,11 @@
 - `TRC-011` Given a project compass.yml that cannot be read When approach summary runs Then it prints no traceback
 - `TRC-012` Given a seen.yml whose digests entry is not a mapping When a parent is fetched Then the record is rewritten and nothing crashes
 
-### scenario-tests-verb (landed 2026-10-08)
+### scenario-tests-verb (completed 2026-10-08)
 
 - `TRC-001` Given a scenario whose declared test id is wrong, when compass scenario tests names resolving tests, then the manifest declares them
 
-### policy-test-init-preset (landed 2026-10-08)
+### policy-test-init-preset (completed 2026-10-08)
 
 - `PT-1` A fixture that matches is reported as passing
 - `PT-2` A fixture whose approach, gates, stages or checks differ fails and names the difference
@@ -3196,7 +3196,7 @@
 - `PT-9` A preset that extends a pinned git parent runs its fixtures over the chain
 - `PT-10` Help, verb description, contract corpus and owning doc state the contract
 
-### parent-chains (landed 2026-10-08)
+### parent-chains (completed 2026-10-08)
 
 - `PC-1` A chain of two pinned parents loads furthest first
 - `PC-2` A chain of three loads and a fourth is refused
@@ -3208,7 +3208,7 @@
 - `PC-8` The docs describe the chain, the depth limit and the cycle code
 - `PC-9` A parent's waiver answers to that parent's owner at every depth
 
-### judged-checks (landed 2026-10-08)
+### judged-checks (completed 2026-10-08)
 
 - `JC-1` A judged check passes on a review record whose inputs still match
 - `JC-2` A judged check with no review record fails closed
@@ -3223,7 +3223,7 @@
 - `JC-11` A project with no judged check behaves as before
 - `JC-12` A judged check follows due, skipped and advisory rules
 
-### templates-render-lists (landed 2026-10-08)
+### templates-render-lists (completed 2026-10-08)
 
 - `TR-1` The shipped default renders the requirements review and verification report byte for byte as the template files
 - `TR-2` A project that removes, adds or reorders a Definition of Ready or Done check gets a template that lists exactly its checks
@@ -3235,7 +3235,7 @@
 - `TR-8` Every other template renders unchanged and the 120-line cap of the borrowed templates holds
 - `TR-9` The owning doc says what renders and the router names the module
 
-### policy-update-git-parents (landed 2026-10-08)
+### policy-update-git-parents (completed 2026-10-08)
 
 - `PUG-1` The ref's new commit is fetched and the pin is rewritten
 - `PUG-2` A ref still at the pin reports nothing to do and writes nothing
@@ -3257,7 +3257,7 @@
 - `PUG-18` Given a new commit that the full lint refuses, when the pin moves, then it is refused as new-parent-invalid naming the findings
 - `PUG-19` Given a new commit whose own parent cannot be fetched, when the pin moves, then it is refused as new-parent-invalid
 
-### preset-interfaces (landed 2026-10-08)
+### preset-interfaces (completed 2026-10-08)
 
 - `PI-1` A folder inside compass-fixtures is a fixture group: each fixture carries its group and the report counts each group
 - `PI-2` The policy test --json key order with groups is pinned by a fixture, and the text and help say so
@@ -3266,11 +3266,11 @@
 - `PI-5` The extends map form and the reserved preset key are read without error and do not change a digest
 - `PI-6` Owning docs, contract corpus and terminology state the new interfaces
 
-### human-check-approvers (landed 2026-10-08)
+### human-check-approvers (completed 2026-10-08)
 
 - `TRC-001` A human check that lists approvers passes only with a current approval by a listed approver
 
-### receipt-provenance (landed 2026-10-08)
+### receipt-provenance (completed 2026-10-08)
 
 - `RP-1` A default rule is named with the preset, its version and the generation
 - `RP-2` A project rule names the project, not the default
@@ -3290,7 +3290,7 @@
 - `RP-16` The module stays pure
 - `RP-17` The receipt help mentions the section
 
-### artifact-freshness (landed 2026-10-08)
+### artifact-freshness (completed 2026-10-08)
 
 - `FRESH-1` With the capability off, the manifest, compass check, the receipt, compass next and ship-commit behave as before
 - `FRESH-2` With the capability on, registering a document records the digest of its file and of each artifact it depends on
@@ -3302,7 +3302,7 @@
 - `FRESH-8` The receipt lists the freshness of each recorded document
 - `FRESH-9` A project that declares no depends_on has nothing stale
 
-### init-docs-release (landed 2026-10-08)
+### init-docs-release (completed 2026-10-08)
 
 - `IDR-1` init writes a minimal compass.yml that lints
 - `IDR-2` init migrates an older project
@@ -3314,3 +3314,104 @@
 - `IDR-8` configuration.md describes compass.yml as the settings file
 - `IDR-9` releasing.md has the 6.0.0 entry
 - `IDR-10` the compatibility contracts hold under configurations B and C
+
+### vocabulary-and-cli-renames (completed 2026-10-09)
+
+- `VR-A1` Given the shipped default preset, when its stage modes and artifact depths are read, then each is thorough, lightweight, thorough-with-follow-up, collapsed, skipped or a special mode, and none is full, light or full-plus-backfill.
+- `VR-A2` Given a new issue that evaluates to the full approach, when the approach is written to its manifest, then every stage mode and artifact depth uses the new depth words and the delivery approach is still full.
+- `VR-A3` Given the shipped delivery approaches, when approach show and approach render print them, then each stage weight appears as a new depth word and each approach keeps its name.
+- `VR-A4` Given two stage modes, when the classifier ranks them, then skipped ranks below collapsed, below lightweight, below thorough, below thorough-with-follow-up, the same order the old words had.
+- `VR-A5` Given the special modes, collapsed and skipped, when the manifest schema and the vocabulary list stage modes, then those names are unchanged.
+- `VR-B1` Given the size dimension, when its values are listed, then they are atomic, small, medium, large and product, and standard is not offered.
+- `VR-B2` Given each assessment the routing tests use with size standard, when it is evaluated with size medium instead, then the delivery approach, gates and stage modes equal the results recorded before the rename.
+- `VR-B3` Given a manifest whose delivery approach is the retired name standard, when it loads, then it reads as the regular approach and is not turned into a size.
+- `VR-B4` Given approach evaluate is run with size standard on the command line, when it evaluates, then the result equals size medium and the output says standard is now medium.
+- `VR-C1` Given an in-progress issue with the blocked flag set, when a person sets it to backlog, then the stored status is backlog, the blocked flag is cleared and its recorded work is unchanged.
+- `VR-C2` Given an issue whose gates have all passed, when a person closes it as done with close reason completed, then its status is done, its close reason is completed and a land time is recorded.
+- `VR-C3` Given an issue with a gate that has not passed, when a person closes it as done with close reason completed, then the command refuses, names each unpassed gate and leaves the status unchanged.
+- `VR-C4` Given an issue with gates that have not passed, when a person closes it as done with close reason not-planned, then its status is done with close reason not-planned.
+- `VR-C5` Given two issues, when a person closes the first as a duplicate of the second, then the first is done with close reason duplicate and its manifest names the second issue.
+- `VR-C6` Given an issue, when a person closes it as a duplicate without naming the other issue, then the command refuses and the status is unchanged.
+- `VR-C7` Given an issue, when a person sets it to done with no close reason, then the command refuses and lists completed, not-planned and duplicate.
+- `VR-C8` Given an issue, when a person sets it to ready, in-progress or in-review by hand, then the command refuses and says that the issue's records move those states.
+- `VR-C9` Given an issue with no stored status whose acceptance criteria and requirements review are registered and that has no technical design, distribution map, subtask or test record, when its state is read, then it is ready.
+- `VR-C10` Given an issue with no stored status that reads as ready, when a technical design, distribution map, subtask or test record is registered for it, then its state reads as in-progress.
+- `VR-C11` Given an in-progress issue with no stored status, when one of its gates moves from pending or a verification report is registered with a path, then its state reads as in-review.
+- `VR-C12` Given an in-review issue on an approach that ships with every gate passed, when ship-commit lands it, then its status is done with close reason completed.
+- `VR-C13` Given an in-progress issue, when issue blocked set runs with a reason, then the manifest records the flag with the reason and a time, the state stays in-progress, and flow shows the issue as blocked.
+- `VR-C14` Given an issue whose state is backlog, ready or done, when issue blocked set runs, then the command refuses, names in-progress and in-review as the states that allow it, and writes nothing.
+- `VR-C15` Given issues in each new state, when flow prints the board and its JSON, then every status shown is a new state word and no old status word appears.
+- `VR-C16` Given issues in every state, when a check that skips finished issues runs, then it skips each done issue whatever its close reason and runs on backlog, ready, in-progress and in-review issues.
+- `VR-C17` Given the old status setter spelling with each old status word, when it runs, then active ends a hold, queued and parked set backlog, landed closes as completed under the same gate rule, abandoned closes as not-planned, and a notice names the new command.
+- `VR-D1` Given manifests with status queued, landed and abandoned, when each loads, then queued reads as a backlog hold, landed as done with close reason completed and abandoned as done with close reason not-planned.
+- `VR-D2` Given a manifest with status active, a registered technical design and every gate pending, when a command loads and saves it, then no status is stored, the state reads as in-progress, and a notice on standard error names active, the reading and why.
+- `VR-D3` Given a manifest with status active and a gate that has moved from pending, when a command loads and saves it, then no status is stored, the state reads as in-review, and a notice on standard error names active, the reading and why.
+- `VR-D4` Given a manifest with status parked and a parked reason, when a command loads and saves it, then the stored status is a backlog hold, the parked reason and time are kept, and a notice says parked was read as backlog.
+- `VR-D5` Given a manifest whose stage modes and artifact depths use full, light and full-plus-backfill, when it loads, then they read as thorough, lightweight and thorough-with-follow-up and the delivery approach full is unchanged.
+- `VR-D6` Given a manifest whose assessment and evaluated assessment have size standard, when it loads, then both read as medium.
+- `VR-D7` Given a manifest with a run record at stage build and friction entries keyed phase, when it loads, then the run stage reads as implement and each friction entry is keyed stage.
+- `VR-D8` Given a manifest written in every old word, when a command saves it, then the saved file holds no old word in status, stage modes, artifact depths, size, run stage or friction keys, and a backup file beside it holds the original.
+- `VR-D9` Given a fresh project, when each Compass writer creates its file, then no old word appears in a mapped field of any file written.
+- `VR-D10` Given a project configuration whose implement stage is full, when policy show reads the chain, then the effective mode is thorough and its source is the project layer.
+- `VR-D11` Given a git parent pinned before the rename whose implement stage is light, when the chain is classified against the new shipped default, then the classification equals the one recorded before the rename and is not incomparable.
+- `VR-D12` Given a git parent rule keyed on size standard that adds a gate, when an issue of size medium is evaluated, then that gate is in force.
+- `VR-D13` Given a git parent rule keyed on size standard that tightens the default, when the chain is classified, then the tightening is reported as before and is not read as equivalent.
+- `VR-D14` Given an issue configuration layer written in old words, when the issue is evaluated, then the result equals the same layer written in new words.
+- `VR-D15` Given a parent layer saying full and a project layer saying lightweight for the same stage, when the chain is classified, then the project is looser, as when both use the same set of words.
+- `VR-D16` Given a policy-test fixture with assessment size standard and expected stage modes in old words, when preset test runs it against the new default, then the fixture passes.
+- `VR-D17` Given a stored generation file written before the rename, when an issue pinned to it is evaluated, then the result equals the one recorded at that generation, the file is not rewritten, and no drift is reported because layer digests are taken before the old words are mapped.
+- `VR-D18` Given a configuration or manifest naming a value that is neither an old word nor a new one, when it loads, then it is rejected with the same finding as before the change.
+- `VR-D19` Given a project layer or a pinned parent layer that uses old words, when policy lint or preset test runs, then the exit status is unchanged and an advisory names the layer, the parent's sha, the path, the new word and that the old word reads until 7.0.0, and compass check prints no such advisory.
+- `VR-E1` Given each renamed verb in the rename table, when its new name runs, then it gives the output and exit code the old name gave before the change.
+- `VR-E2` Given each old spelling the alias table lists as released, when it runs, then it does the same work as the new verb and prints one line to standard error naming the new command.
+- `VR-E3` Given an alias run with JSON output, when it finishes, then standard output equals the new verb's JSON and the notice appears only on standard error.
+- `VR-E4` Given the top-level and group help, when it is printed, then it lists each new verb and no alias.
+- `VR-E5` Given the alias table, when the package version is 7.0.0 or later, then a test fails while any alias remains.
+- `VR-E6` Given an old spelling no release holds (policy effective, policy test, policy init-preset, approach diagram, issue refresh-spec, issue migrate-config, issue template, or scenario tests with no verb), when it runs, then it is refused as an unknown command with no alias notice, and its final name runs.
+- `VR-E7` Given compass run with stage implement, when it starts, then it runs the implement stage, and the stage help lists implement and not build.
+- `VR-E8` Given compass run with stage build, when it starts, then it runs the implement stage and prints that build is now implement.
+- `VR-E9` Given issue friction with the stage flag, when it records an entry, then the entry is keyed stage, and the same command with the phase flag is refused as an unknown option because no release holds it.
+- `VR-E10` Given every verb the parser registers, when the convention test runs, then each is in the fixed verb set or in the named exceptions table, each exception with a reason, and a planted verb in neither fails the test.
+- `VR-E11` Given issue artifact-path, when a hook calls it for a document that exists and one that does not, then it prints the path with exit 0 and exits non-zero for the missing one, as before.
+- `VR-E12` Given spec sync, when its help is printed, then it says the command merges the base branch, re-derives the living spec and commits.
+- `VR-F1` Given an empty folder, when preset init runs with an owner, then it writes the same four files the scaffold wrote before, using only new words, and preset test passes on the result.
+- `VR-F2` Given a preset folder, when preset test runs, then its report, keys and exit codes equal what policy test gave before the change.
+- `VR-F3` Given the unreleased policy test spelling, when it is run after the rename, then it is an unknown command and the message names preset test.
+- `VR-F4` Given the preset group help, when it is printed, then it lists init and test.
+- `VR-G1` Given the decision records, when they are read, then one new record amends the vocabulary freeze and the unobserved-adopter rule, and the two amended records are unchanged from main.
+- `VR-G2` Given the new decision record, when its alias section is read, then it limits aliases to renamed released CLI verbs until 7.0.0 and says vocabulary values are read through the rename tables, not redirected.
+- `VR-G3` Given the terminology file, when the issue-type entry is read, then it lists feature, bug and task, and quick-fix, hotfix and spike are defined only as delivery approaches.
+- `VR-G4` Given shipped prose that uses task as an issue type and prose that uses task to mean an issue, when the terminology test runs, then only the second is flagged.
+- `VR-G5` Given the terminology file, when the workflow entries are read, then the states are backlog, ready, in-progress, in-review and done, the close reasons are completed, not-planned and duplicate, and blocked is a flag.
+- `VR-G6` Given the terminology file, when the level entries are read, then epic, initiative and milestone each have an entry and none says epic is dropped.
+- `VR-G7` Given the retired list in the terminology file and the read-side mapping table, when both are read, then they hold exactly the same triples of field, old word and new word.
+- `VR-G8` Given shipped prose, when the terminology test runs, then every use of route, routes, routed or off-route fails unless its line carries the reviewed-verb marker, a planted noun use without the marker fails, and a planted verb use with the marker passes.
+- `VR-G9` Given the shipped commands, skills, agents, docs and governance, when the terminology test runs, then no old word appears in its retired meaning outside the retired list, the mapping table, the alias table and the decision record, and the machine names landed_by, land_commit, land_timestamp and landed-by-resolves are allowed.
+- `VR-G10` Given the glossary, when it is read, then one paragraph says a guardrail is made of checks, a gate is cleared by evidence and an obligation is anything the configuration requires.
+- `VR-H1` Given an issue done with close reason completed on an approach that ships, when the living spec is derived, then its scenarios appear under a heading with its slug, the word completed and the date.
+- `VR-H2` Given issues done with close reason not-planned or duplicate, when the living spec is derived, then neither appears.
+- `VR-H3` Given a spike done with close reason completed, when the living spec is derived, then it does not appear.
+- `VR-H4` Given an issue in progress, in review, ready or backlog, when the living spec is derived, then it does not appear.
+- `VR-H5` Given an old manifest with status landed, when the living spec is derived, then it appears with the same scenarios as before the change, under a completed heading.
+- `VR-H6` Given a living spec with some headings using landed and some using completed, when flow reads its issue headings, then it finds every issue under either word.
+- `VR-H7` Given this repository's issue archive, when the living spec is derived before and after the change, then the same issues and scenarios appear and only the heading word, landed to completed, and the header text differ.
+- `VR-A6` Given the shipped preset in the new depth words, when the legacy routing policy and guardrails views are regenerated and an assessment is evaluated through them, then the views hold no old depth word and the delivery approach, gates and stage modes equal the results recorded before the rename.
+- `VR-C18` Given an issue held in backlog, when issue status remove runs, then the stored hold is deleted and the state reads from the records, and the same command on an issue with no hold refuses and writes nothing.
+- `VR-C19` Given a manifest with status done and no close reason, when the living spec is derived and issue lint runs, then the issue is left out of the spec and lint reports an error naming the missing close reason.
+- `VR-C20` Given a fresh issue, when assess, plan, implement and verify record their work, then none of them writes a stored status and the state shown changes only through the records.
+- `VR-C21` Given a blocked in-progress issue, when it is closed or set to backlog, then the blocked flag is cleared, and a blocked flag left on an issue whose state does not allow it is reported by issue lint and ignored by readers.
+- `VR-C22` Given two issues, when the status setter gets duplicate-of naming the other issue, then the issue closes with close reason duplicate, and the setter refuses a duplicate-of that names the issue itself, names an unknown issue or comes with another close reason.
+- `VR-D20` Given a manifest that holds old and new words together, when it loads, then each value reads in the new words, a friction stage key wins over a phase key, an explicit close reason wins over landed and issue lint reports the contradiction, and done with no close reason is not read as completed.
+- `VR-D21` Given a manifest in old words that is saved twice, when its backup is inspected, then it was written once on the first save, was not overwritten by the second, and compass check, issue lint and the dashboard ignore it.
+- `VR-D22` Given a command run with JSON output on a manifest in old words, when it saves the manifest, then standard output equals the output for the same manifest in new words and the notice appears only on standard error.
+- `VR-D23` Given a manifest saved by the new version, when it is read, then it is stamped schema version 3.0, and the reader accepts major versions 1, 2 and 3 and refuses major version 4 with the message to update Compass.
+- `VR-D24` Given a configuration layer with a when condition on size standard and a check parameter named size with value standard, when it is read, then the condition reads medium, the parameter is unchanged, and no generation file read on the way is rewritten.
+- `VR-D25` Given the reverse word table, when each new status, depth word, size, run stage and friction key is mapped back to the old words and forward again, then each returns its starting value, and done with close reason duplicate is the one value that returns as not-planned.
+- `VR-E13` Given the alias table, when it is read, then every row names the release that first held the old spelling, that release holds it, and no row exists for a spelling no release holds.
+- `VR-E14` Given compass run with stage build and the bare issue artifact spelling, when each runs, then the same rewrite step turns it into the new spelling, prints one notice on standard error, and gives the new command's output and exit code.
+- `VR-G11` Given the modules under the CLI package, when the source guard runs, then no module compares a status value to a retired status word, each allowed exception states a reason, and a planted comparison to landed fails the guard.
+- `VR-G12` Given the depth words used in code, when the stable-id test runs, then each comes from the one constants module and a planted literal depth word in a scanned module fails the test.
+- `VR-H8` Given a branch whose committed living spec has landed headings, when it derives the spec with completed headings, then the branch filter still finds each issue landed on that branch.
+- `VR-C31` Given a quick-fix issue with no stored status, refine collapsed and its acceptance criteria registered, when its state is read, then it is ready.
+- `VR-C32` Given an issue with no stored status whose records show only define finished and whose manifest names implement as its current stage, when its state is read, then it is in-progress.
+- `VR-C33` Given an issue with no stored status on an approach whose refine is not collapsed, with acceptance criteria registered and no requirements review, when its state is read, then it is backlog.

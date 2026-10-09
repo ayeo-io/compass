@@ -16,16 +16,19 @@
 # `compass issue lint` checks it is well-formed.
 # =============================================================================
 
-schema_version: "2.0"     # the manifest schema this file follows
+schema_version: "3.0"     # the manifest schema this file follows
                           # '2.0': the v2 vocabulary keys (assessment, labels,
                           #         delivery_approach, stages, follow_ups,
                           #         reassessments). 1.x manifests are read by key
                           #         normalisation until migrated.
+                          # '3.0': the stored status is only `backlog` (a hold)
+                          #         or `done` with a `close_reason`.
 issue: "{{ISSUE_SLUG}}"
 created: "{{DATE}}"
-status: active            # lifecycle: active (in-flight) | queued (next up,
-                          # not started) | parked (stopped, resumable) |
-                          # landed (complete) | abandoned (will not resume)
+# No `status` line: an issue in flight stores none. Its state (backlog, ready,
+# in-progress, in-review) is read from its records. `compass issue status set`
+# stores `backlog` or `done` (with `--close-reason`), and `compass issue
+# blocked set` flags an in-progress or in-review issue as blocked.
 
 # --- the delivery approach ---------------------------------------------------
 # `assessment` is JUDGEMENT - the assess stage (an LLM or a human) produces it.
@@ -35,7 +38,7 @@ status: active            # lifecycle: active (in-flight) | queued (next up,
 assessment:
   risk: "{{trivial | contained | cross-cutting | critical}}"
   familiarity: "{{greenfield | brownfield-mapped | brownfield-unmapped}}"
-  size: "{{atomic | small | standard | large | product}}"
+  size: "{{atomic | small | medium | large | product}}"
   goal: "{{delivery | exploration}}"
   urgency: "{{none | live-defect}}"          # optional; omit if none
   role: "{{engineer | product-owner | product-marketer | designer | qa}}"
@@ -46,7 +49,7 @@ generation: 0                # 0 = assessed, no stored configuration yet; the ev
 delivery_approach: null      # filled by the evaluator (--write)
 orchestration: null               # filled by the evaluator
 policy_rules_fired: []       # filled by the evaluator - [{id, kind, rationale, changed}]
-stages: {}                   # filled by the evaluator - {assess: full, define: light, …}
+stages: {}                   # filled by the evaluator - {assess: thorough, define: lightweight, …}
 
 # --- evidence (the registry) -----------------------------------------------
 # A typed, id-tagged registry of every piece of evidence this issue has.
@@ -149,7 +152,7 @@ failure_modes_descoped: []
 # by `compass _friction-capture` and aggregated by `compass retro
 # --friction`.
 friction: []
-#  - phase: plan
+#  - stage: plan
 #    category: over-weight     # over-weight | under-weight | mis-route |
 #                                # missing-strategy | tooling | docs | other
 #    observation: "The full requirements review added a gate the change didn't need."

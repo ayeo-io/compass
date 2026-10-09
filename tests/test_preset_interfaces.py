@@ -164,7 +164,7 @@ def test_pi_1_a_lint_failure_runs_no_group_and_lists_none(tmp_path):
 # --- PI-2: the key order is pinned by a fixture ------------------------------------------------
 
 def test_pi_2_the_json_report_with_groups_equals_the_pinned_fixture(tmp_path):
-    _, out, _ = _run(tmp_path, "policy", "test", str(_grouped(tmp_path)), "--json")
+    _, out, _ = _run(tmp_path, "preset", "test", str(_grouped(tmp_path)), "--json")
     golden = json.loads((GOLDEN / "policy-test-groups.json").read_text(encoding="utf-8"))
     assert json.dumps(json.loads(out), indent=1) == json.dumps(golden, indent=1)
 
@@ -460,7 +460,7 @@ def _codes(report):
 
 
 def _effective_layers(root, env=None):
-    code, out, err = _run(root, "policy", "effective", "--json", env=env)
+    code, out, err = _run(root, "policy", "show", "--json", env=env)
     assert code == 0, (out, err)
     return json.loads(out)["layers"]
 
@@ -686,7 +686,7 @@ def test_pi_1_every_link_is_a_problem_and_nothing_outside_is_read_or_printed(
     name = "linked.txt" if kind == "file-not-yml" else "linked.yml" if kind != "folder" \
         else "linked"
     (folder / name).symlink_to(target, target_is_directory=kind == "folder")
-    code, out, err = _run(tmp_path, "policy", "test", str(preset), "--json")
+    code, out, err = _run(tmp_path, "preset", "test", str(preset), "--json")
     report = json.loads(out)
     assert code == 1, out
     shown = f"compass-fixtures/{where + '/' if where else ''}{name}"

@@ -68,7 +68,7 @@ words, the same behaviour."
 
 ## The migrator: every check passed, and the sign-off took real work to earn
 
-The last piece was `compass migrate` - the tool that rewrites someone
+The last piece was `compass issue migrate` - the tool that rewrites someone
 else's 1.x archive to the new schema. It edits a tree it doesn't own,
 the riskiest thing in the cycle, and the `migrations` label floored its
 delivery approach to a full human sign-off gate. `compass check` on the finished issue

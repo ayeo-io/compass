@@ -334,8 +334,9 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
     # not a ban on ever defining a word. Raising it is the deliberate act that
     # says a vocabulary change was intended - the same shape as
     # EXPECTED_VERSION in test_version_consistency.
-    # 74 since ADR-041 added the 14 configuration terms.
-    assert len(terminology["terms"]) == 74, (
+    # 74 since ADR-041 added the 14 configuration terms. 78 since ADR-044:
+    # epic, bug, task, close-reason and check join, and bug-fix goes.
+    assert len(terminology["terms"]) == 78, (
         "governance/terminology.yml gained or lost a term without this count "
         "moving. A vocabulary change is a decision (ADR-012); make it one."
     )
@@ -348,7 +349,7 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
         "approach", "bdd", "check", "analyze", "retro", "ci", "tdd-red",
         "tdd-green", "policy", "plan", "intent", "issue", "acceptance", "adr",
         "rework-scan", "flow", "next", "follow-up", "ship-commit", "gate",
-        "scenario", "changed-file", "evidence", "migrate", "terminology",
+        "scenario", "changed-file", "evidence", "review-rule", "spec", "preset", "terminology",
         "init", "quick-fix",
         "decision",  # decisions-ledger (ADR-027): the settled-decisions ledger
         "lesson",  # project-lessons (ADR-029): lessons for later sessions

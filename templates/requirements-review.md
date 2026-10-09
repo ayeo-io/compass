@@ -20,7 +20,7 @@ resolution → who decided → what it changed.
 # Requirements review - {{ISSUE_SLUG}}
 
 > **Stage:** refine · **Date:** {{DATE}} · **Owning agent:** spec-author
-> **Requirements review weight (from delivery-approach.md):** {{light pass \| full pass}}
+> **Requirements review weight (from delivery-approach.md):** {{lightweight pass \| thorough pass}}
 
 ---
 

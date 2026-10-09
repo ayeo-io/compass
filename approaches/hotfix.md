@@ -67,6 +67,6 @@ A Hotfix that has not completed the follow-up is an open issue.
   not.
 - Close without the follow-up. The follow-up must complete before the issue
   closes.
-- Be used for a fix that is actually `standard`+ in size. That is an
+- Be used for a fix that is actually `medium`+ in size. That is an
   incident: assess it on the full approach, put someone in incident command, and
   use multiagent orchestration if it helps.

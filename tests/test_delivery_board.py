@@ -92,9 +92,10 @@ def test_db_2_stale_evidence_and_parked_issues_are_set_apart(repo):
     data = board(str(repo / ".compass" / "work"), today=TODAY)
     assert "fix-greeting" in [r["slug"] for r in data["stale"]]
     assert "fix-greeting" not in [r["slug"] for r in data["in_progress"]]
-    assert [r["slug"] for r in data["held"]] == ["waiting"]
+    assert [r["slug"] for r in data["backlog"]] == ["waiting"]
+    assert data["backlog"][0]["reason"] == "needs a decision"
     text = _run(repo, "flow").stdout
-    assert "STALE EVIDENCE" in text and "HELD" in text, text
+    assert "STALE EVIDENCE" in text and "BACKLOG" in text, text
 
 
 # --- DB-3 -------------------------------------------------------------------
@@ -114,9 +115,9 @@ def test_db_3_queue_landed_this_week_and_friction(tmp_path):
     _manifest(root, "shipped-long-ago", status="landed", land_timestamp=long_ago,
               friction=[{"category": "spec", "observation": "w"}] * 5)
     data = board(str(root / ".compass" / "work"), today=TODAY)
-    queued = _row(data["next_up"], "old-idea")
+    queued = _row(data["backlog"], "old-idea")
     assert queued["age_days"] == 30, queued
-    assert [r["slug"] for r in data["landed_this_week"]] == ["shipped-today"]
+    assert [r["slug"] for r in data["done_this_week"]] == ["shipped-today"]
     assert data["friction"] == {"category": "tooling", "count": 2}
 
 
@@ -130,7 +131,7 @@ def test_db_4_the_html_page_has_the_sections_and_escapes_every_value(repo, tmp_p
     r = _run(repo, "flow", "--html", str(out))
     assert r.returncode == 0, r.stdout + r.stderr
     page = out.read_text(encoding="utf-8")
-    for heading in ("In progress", "Held", "Next up", "Landed this week"):
+    for heading in ("In progress", "In review", "Ready", "Backlog", "Done this week", "Closed"):
         assert heading in page, heading
     assert "fix-greeting" in page and "waiting" in page
     assert "<script" not in page.lower()
@@ -180,7 +181,7 @@ def test_db_6_a_malformed_manifest_does_not_stop_the_board(tmp_path):
     _manifest(root, "bad-friction", status="landed",
               land_timestamp=datetime.datetime.now(datetime.timezone.utc).isoformat(),
               friction=5)
-    _manifest(root, "bad-gates", status="active", gates=5)
+    _manifest(root, "bad-gates", status="active", gates=5, subtasks=[{"id": "subtask-1"}])
     _manifest(root, "bad-status", status=["a", "b"])
     _manifest(root, "bad-assessment", status="queued", assessment="a string")
     r = subprocess.run([sys.executable, str(ROOT / "cli" / "compass"), "flow"],

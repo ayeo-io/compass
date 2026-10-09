@@ -64,7 +64,7 @@ class TestIntegrateSh:
         gate that has not passed marks nothing landed and derives nothing."""
         manifest_src = (FRAMEWORK_ROOT / "cli" / "compass_pkg" / "manifest.py").read_text(
             encoding="utf-8")
-        landed_marker = 'task["status"] = "landed"'
+        landed_marker = "status_words.close(task, status_words.COMPLETED)"
         derive_call = "_derive_and_commit_living_spec("
         assert landed_marker in manifest_src, (
             f"expected {landed_marker!r} in cli/compass_pkg/manifest.py"

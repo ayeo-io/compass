@@ -11,8 +11,8 @@ approaches:
   spike:
     weight: 0
     ships: false
-    stages: {assess: light, define: collapsed, refine: skipped, plan: collapsed, breakdown: skipped, implement: explore,
-      verify: conclude, ship: graduate-or-discard}
+    stages: {assess: lightweight, define: collapsed, refine: skipped, plan: collapsed, breakdown: skipped,
+      implement: explore, verify: conclude, ship: graduate-or-discard}
     gates: [spike.conclude]
     artifacts: {}
     subtask_ceiling: 1
@@ -24,10 +24,10 @@ approaches:
   quick-fix:
     weight: 1
     ships: true
-    stages: {assess: full, define: light, refine: collapsed, plan: collapsed, breakdown: skipped, implement: full,
-      verify: light, ship: light}
+    stages: {assess: thorough, define: lightweight, refine: collapsed, plan: collapsed, breakdown: skipped,
+      implement: thorough, verify: lightweight, ship: lightweight}
     gates: [verify.correctness, verify.governance, verify.traceability]
-    artifacts: {delivery-approach: light}
+    artifacts: {delivery-approach: lightweight}
     subtask_ceiling: 1
     checkpoints:
       controlled: [assess]
@@ -36,11 +36,12 @@ approaches:
   regular:
     weight: 2
     ships: true
-    stages: {assess: full, define: full, refine: light, plan: full, breakdown: multiagent, implement: full,
-      verify: full, ship: full}
+    stages: {assess: thorough, define: thorough, refine: lightweight, plan: thorough, breakdown: multiagent,
+      implement: thorough, verify: thorough, ship: thorough}
     gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.clarity,
       verify.security]
-    artifacts: {acceptance-criteria: full, technical-design: full, distribution-map: light, verification-report: full}
+    artifacts: {acceptance-criteria: thorough, technical-design: thorough, distribution-map: lightweight,
+      verification-report: thorough}
     subtask_ceiling: 2
     checkpoints:
       controlled: [assess, define, refine, plan]
@@ -49,10 +50,10 @@ approaches:
   hotfix:
     weight: 3
     ships: true
-    stages: {assess: light, define: reproduce-first, refine: collapsed, plan: collapsed, breakdown: skipped,
-      implement: expedited, verify: full, ship: full-plus-backfill}  # vocabulary-scan: allow - machine enum value that manifests on disk already carry
+    stages: {assess: lightweight, define: reproduce-first, refine: collapsed, plan: collapsed, breakdown: skipped,
+      implement: expedited, verify: thorough, ship: thorough-with-follow-up}
     gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.security]
-    artifacts: {acceptance-criteria: light, verification-report: full}
+    artifacts: {acceptance-criteria: lightweight, verification-report: thorough}
     subtask_ceiling: 1
     checkpoints:
       controlled: [assess, define]
@@ -61,12 +62,12 @@ approaches:
   full:
     weight: 4
     ships: true
-    stages: {assess: full, define: full, refine: full, plan: full, breakdown: multiagent, implement: full,
-      verify: full, ship: full}
+    stages: {assess: thorough, define: thorough, refine: thorough, plan: thorough, breakdown: multiagent,
+      implement: thorough, verify: thorough, ship: thorough}
     gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.security,
       verify.clarity, verify.claims]
-    artifacts: {intent: full, acceptance-criteria: full, requirements-review: full, technical-design: full,
-      distribution-map: full, verification-report: full}
+    artifacts: {intent: thorough, acceptance-criteria: thorough, requirements-review: thorough, technical-design: thorough,
+      distribution-map: thorough, verification-report: thorough}
     subtask_ceiling: null
     checkpoints:
       controlled: [assess, define, refine, plan]

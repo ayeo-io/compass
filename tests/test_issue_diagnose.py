@@ -120,6 +120,17 @@ def test_each_stage_names_the_record_that_shows_it(tmp_path):
     assert "verify.correctness" in gates and "pass" in gates and "EV-T-A" in gates
 
 
+def test_a_manifest_in_old_words_is_shown_in_the_new_words(tmp_path):
+    root = _issue(tmp_path, good=True)
+    r = _compass(root, "issue", "diagnose", "--issue", SLUG)
+    assert r.returncode == 0, r.stdout + r.stderr
+    head = r.stdout.splitlines()[0]
+    assert "(feature, done)" in head, head
+    stages = _section(r.stdout, "Stages")
+    assert "thorough" in stages and "lightweight" in stages, stages
+    assert " full " not in stages and " light " not in stages, stages
+
+
 def test_the_timeline_dates_every_record_oldest_first(tmp_path):
     """SD-B."""
     root = _issue(tmp_path, good=False)

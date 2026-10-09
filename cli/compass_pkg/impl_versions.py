@@ -11,7 +11,7 @@ CLI refuses instead of running code the issue was not assessed against.
 - `refusals` is what `compass check` asks. A different implementation major
   refuses that check only. A different resolver or schema major changes what
   every check means, so it refuses the run.
-- `compass issue migrate-config` stores a new generation holding the same
+- `compass issue migrate --config` stores a new generation holding the same
   configuration, pinned to the installed versions, with every recorded check
   result invalidated. It is the second of the three ways a generation is
   committed, and `effective.migrate_generation` does it, because `effective`
@@ -26,9 +26,9 @@ from dataclasses import dataclass, field
 
 from compass_pkg import effective
 from compass_pkg.check_registry import REGISTRY, installed_major
-from compass_pkg.core import resolve_issue_dir
+from compass_pkg.core import CompassError, resolve_issue_dir
 
-COMMAND = "compass issue migrate-config"
+COMMAND = "compass issue migrate --config"
 
 
 @dataclass
@@ -80,9 +80,42 @@ def cmd_issue_migrate_config(args):
     return 0
 
 
+def cmd_issue_migrate(args):
+    """`compass issue migrate`: the work root, or with `--config` one issue's
+    pinned generation. The two take different arguments, so a mix is refused."""
+    if getattr(args, "config", False):
+        stray = [flag for flag, given in (
+            ("work root", getattr(args, "root", None)),
+            ("--apply", getattr(args, "apply", False)),
+            ("--i-have-a-copy", getattr(args, "i_have_a_copy", False))) if given]
+        if stray:
+            raise CompassError(
+                "--config pins one issue's configuration and takes no "
+                + ", no ".join(stray) + "; run `compass issue migrate` for the work root.")
+        return cmd_issue_migrate_config(args)
+    if getattr(args, "task", None):
+        raise CompassError(
+            "--issue is for --config; `compass issue migrate` without it "
+            "examines the work root, which holds every issue.")
+    from compass_pkg.migrate import cmd_migrate
+    return cmd_migrate(args)
+
+
 def register(issue_subparsers, issue_arg):
-    """Add `compass issue migrate-config` to the `issue` verb."""
+    """Add `compass issue migrate` to the `issue` verb."""
     parser = issue_subparsers.add_parser(
-        "migrate-config", help="pin an issue's configuration to the installed versions")
+        "migrate",
+        help="migrate a 1.x issue tree to schema 2.0 (dry run unless --apply); "
+             "with --config, pin one issue's configuration to the installed versions")
+    parser.add_argument("root", nargs="?",
+                        help="the work root to examine (default: .compass/work)")
+    parser.add_argument("--apply", action="store_true",
+                        help="execute the changes the dry run reports")
+    parser.add_argument("--i-have-a-copy", action="store_true",
+                        help="proceed where git cannot restore the work root, because you "
+                             "have taken a copy")
+    parser.add_argument("--config", action="store_true",
+                        help="pin --issue's configuration to the installed versions and "
+                             "invalidate every check result recorded under older ones")
     issue_arg(parser)
-    parser.set_defaults(func=cmd_issue_migrate_config, output_kind="hand-off")
+    parser.set_defaults(func=cmd_issue_migrate, output_kind="report")

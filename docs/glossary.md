@@ -136,7 +136,7 @@ Routing policy rule. One rule in routing-policy.yml that biases or constrains th
 
 ### `RR-`
 
-Review rule. One rule in governance/review-rules.yml that a reviewer applies to the files it names, with the incident that justifies it and what not to flag. `compass policy review-rules` prints the rules that match a change.
+Review rule. One rule in governance/review-rules.yml that a reviewer applies to the files it names, with the incident that justifies it and what not to flag. `compass review-rule list` prints the rules that match a change.
 
 **Not:** A routing policy rule (RP-), which shapes the delivery approach, or a guardrail, which is cleared with evidence. A review rule guides a reviewer's judgement of a change.
 
@@ -194,7 +194,7 @@ Architecture decision record: one real decision, the alternatives considered, th
 
 Sizing up incoming work: risk, familiarity, size, and goal - producing an issue type, labels, and a delivery approach. The human judgement step; everything after it is mechanism. Named for what it produces: the stage writes an `assessment:` block, the flag is --assessment, and the policy section is assessment_vocabulary.
 
-**Not:** # vocabulary-scan: allow - naming the retired stage name is the point # of this field; the reader needs to know which word this replaced. NOT triage. Triage means sorting BETWEEN cases by urgency, which is what `compass flow` does across issues - this stage sizes up ONE piece of work. The retired command name was /compass:triage.
+**Not:** NOT triage. Triage means sorting BETWEEN cases by urgency, which is what `compass flow` does across issues - this stage sizes up ONE piece of work. The retired command name was /compass:triage.
 
 **Related:** `delivery-approach`, `label`, `issue-type`, `assessment`
 
@@ -226,17 +226,19 @@ A user-defined view column (Design, UAT, Staging...). Maps to exactly one workfl
 
 **Related:** `workflow-state`
 
-### bug-fix
+### bug
 
-A defect in existing behaviour, not live-urgent. Starts from a bug report; the failing reproduction test is written before the fix.
+An issue type: a defect in existing behaviour, not live-urgent. Starts from a bug report; the failing reproduction test is written before the fix.
 
-**Related:** `bug-report`, `issue-type`
+**Not:** A live incident, which is fixed through the hotfix delivery approach.
+
+**Related:** `bug-report`, `issue-type`, `hotfix`
 
 ### bug-report
 
 The intake for a bug fix: observed behaviour, expected behaviour, reproduction steps.
 
-**Related:** `bug-fix`
+**Related:** `bug`
 
 ### canary
 
@@ -256,11 +258,23 @@ One of the eight maps of configuration entries keyed by id: `dimensions`, `stage
 
 **Related:** `layer`, `overlay`, `generation`
 
+### check
+
+One test that Compass runs against an issue's work and reports as pass, fail or skipped. A guardrail is made of checks, a gate is cleared by evidence, and an obligation is anything the configuration asks for, such as a check, a gate, an artifact or a stage mode.
+
+**Related:** `guardrail`, `quality-gate`, `evidence`, `obligation`
+
 ### classifier
 
 The component that compares two configurations by their obligations.
 
 **Related:** `obligation`, `lock`
+
+### close-reason
+
+Why an issue is done: completed (the work shipped), not-planned (it will not be built) or duplicate (another issue holds the work, and the record names it). Only completed counts as finished work.
+
+**Related:** `workflow-state`, `issue`
 
 ### definition-of-done
 
@@ -280,7 +294,7 @@ The gate between requirements and plan/implementation: acceptance criteria exist
 
 ### delivery-approach
 
-The chosen shape for an issue: which artifacts exist, which gates apply, solo or parallel. Deterministic - same assessment plus same policy always gives the same approach.
+The chosen shape for an issue: which artifacts exist, which gates apply, solo or parallel. Deterministic - same assessment plus same policy always gives the same approach. `full` is the name of the heaviest delivery approach and is not a stage mode: its stages run `thorough`, and the old mode word `full` reads as `thorough` until 7.0.0.
 
 **Related:** `assess`, `quality-gate`
 
@@ -306,6 +320,12 @@ Lead time, deployment frequency, change failure rate, MTTR - what the process-im
 
 **Related:** `retrospective-signal`
 
+### epic
+
+A group of related issues that deliver one outcome, within one milestone, under one intent. Larger than an issue and smaller than an initiative. Compass defines the word and no command or field records an epic yet.
+
+**Related:** `issue`, `initiative`, `milestone`
+
 ### error-budget
 
 The unreliability an SLO allows. Paces rollout speed on initiatives: budget spent means slow down.
@@ -320,7 +340,7 @@ A recorded, typed artifact that clears a gate: a test run, a review, a sign-off.
 
 ### feature
 
-A self-contained change with its own acceptance criteria that does not warrant a full intent document. Unqualified "feature" always means this issue type.
+An issue type: a self-contained change with its own acceptance criteria that does not warrant a full intent document. Unqualified "feature" always means this issue type.
 
 **Not:** A feature file (the Gherkin artifact) - always say 'feature file'.
 
@@ -368,9 +388,9 @@ A hard rule cleared with evidence; a failed guardrail stops the work. Few by des
 
 ### hotfix
 
-A live-incident fix, expedited: reproduce, fix, ship, then pay the follow-up (promote the reproduction into proper acceptance criteria; optional postmortem).
+A delivery approach for a live-incident fix, expedited: reproduce, fix, ship, then pay the follow-up (promote the reproduction into proper acceptance criteria; optional postmortem).
 
-**Related:** `incident`, `follow-up`, `postmortem`
+**Related:** `delivery-approach`, `incident`, `follow-up`, `postmortem`
 
 ### incident
 
@@ -380,13 +400,13 @@ The intake that triggers a hotfix: what broke in production, impact, severity. S
 
 ### initiative
 
-A body of work significant enough to need an intent document, delivered across multiple milestones. Owns intent.md, the technical design, the first-slice (80/20) decision, and the rollout strategy.
+A body of work that delivers several outcomes across milestones and needs an intent document. Owns intent.md, the technical design, the first-slice (80/20) decision, and the rollout strategy.
 
-**Not:** An epic - that word is dropped; one word per concept.
+**Not:** An epic, which is one outcome within one milestone under one intent.
 
 **GitHub:** Project
 
-**Related:** `milestone`, `intent`, `slice`
+**Related:** `epic`, `milestone`, `intent`, `slice`
 
 ### intent
 
@@ -402,7 +422,7 @@ Two related things, and the entry covers both deliberately. (1) The document: in
 
 The atomic tracked unit of work: one assessed piece of work, one delivery approach, shipping as one PR or a small PR series. Carries a type, labels, and a workflow state.
 
-**Not:** A 'task' - that word survives only as machine state, never prose.
+**Not:** A 'task' used as another word for an issue - say issue. 'task' names one issue type.
 
 **GitHub:** Issue
 
@@ -410,11 +430,11 @@ The atomic tracked unit of work: one assessed piece of work, one delivery approa
 
 ### issue-type
 
-The classification the assess stage assigns to an issue: quick fix, bug fix, hotfix, feature, or spike. Together with labels it determines the delivery approach - which artifacts exist and which gates apply.
+The kind of work an issue is: feature, bug or task. The delivery approach, not the type, decides which artifacts exist and which gates apply. A quick fix, a hotfix and a spike are not issue types: quick fix, hotfix and spike are delivery approaches. No manifest field records the type yet.
 
 **GitHub:** Issue type
 
-**Related:** `issue`, `assess`, `delivery-approach`, `label`
+**Related:** `issue`, `feature`, `bug`, `task`, `assess`, `delivery-approach`, `label`
 
 ### label
 
@@ -460,7 +480,7 @@ The machine-readable file at the root of an issue directory, `.compass/work/<iss
 
 ### milestone
 
-A shippable checkpoint within an initiative: a coherent bundle of delivered issues with a review point. Every milestone leaves the system releasable.
+A release checkpoint, not a level in the work hierarchy: a coherent bundle of delivered issues with a review point. Every milestone leaves the system releasable.
 
 **GitHub:** Milestone
 
@@ -526,15 +546,15 @@ A named, versioned parent layer. `default` is the only preset Compass ships.
 
 ### quality-gate
 
-A check that must pass before an issue moves state. Which gates apply depends on the issue type and labels.
+A check that must pass before an issue moves state. Which gates apply comes from the delivery approach and the label rules.
 
 **Related:** `workflow-state`, `definition-of-ready`, `definition-of-done`
 
 ### quick-fix
 
-A small, low-risk change on familiar ground. Produces a test and a PR - nothing else exists for it.
+A delivery approach for a small, low-risk change on familiar ground. Produces a test and a PR - nothing else exists for it.
 
-**Related:** `issue-type`
+**Related:** `delivery-approach`
 
 ### receipt
 
@@ -546,7 +566,9 @@ The per-issue proof summary rendered from the manifest and the evidence registry
 
 ### requirements-review
 
-The review pass that hardens requirements before plan or implementation: ambiguities resolved into recorded decisions, contradictions and gaps closed, intent.md reviewed where one exists. Satisfying it is # vocabulary-scan: allow - a note recording what v1 called this, which # is what someone reading an old record needs to look it up. what makes an issue ready. v1 called this "Clarify".
+The review pass that hardens requirements before plan or implementation: ambiguities resolved into recorded decisions, contradictions and gaps closed, intent.md reviewed where one exists. Satisfying it is what makes an issue ready.
+
+**Not:** v1 called this "Clarify".
 
 **Related:** `intent`, `definition-of-ready`, `acceptance-criteria`
 
@@ -596,7 +618,9 @@ A top-level key of `compass.yml` that configures the CLI instead of the process.
 
 ### ship
 
-Merging and releasing the change: the PR lands, follow-ups are # vocabulary-scan: allow - a note recording what v1 called this. recorded, the derived system spec is regenerated. v1 called this "Land".
+Merging and releasing the change: the PR lands, follow-ups are recorded, the derived system spec is regenerated.
+
+**Not:** v1 called this "Land".
 
 **Related:** `pr`, `rollout-plan`
 
@@ -620,9 +644,9 @@ Service level objective - the target an SLI must meet. Implies an error budget.
 
 ### spike
 
-Time-boxed exploration whose output is knowledge, not shipped code. Records the question, the timebox, and a conclusion: discard, graduate (a fresh issue owns any real work), or defer. Nothing ships from a spike.
+A delivery approach for time-boxed exploration whose output is knowledge, not shipped code. Records the question, the timebox, and a conclusion: discard, graduate (a fresh issue owns any real work), or defer. Nothing ships from a spike.
 
-**Related:** `issue-type`
+**Related:** `delivery-approach`
 
 ### stage-mode
 
@@ -652,6 +676,14 @@ The breakdown unit within an issue or initiative. A slice is tracked as a sub-is
 
 **Related:** `issue`, `slice`
 
+### task
+
+An issue type: work that changes nothing a user sees, such as upkeep, a refactor or a migration step.
+
+**Not:** Another word for an issue. Any piece of tracked work is an issue; the type says what kind.
+
+**Related:** `issue-type`, `issue`
+
 ### technical-design
 
 The engineering plan for one issue: the approach, the design decisions as ADR-style notes, the governance check, and the independent work units. Written at the planning stage (/compass:plan) as technical-design.md.
@@ -676,6 +708,6 @@ A recorded departure from a parent's value, with a reason and an approver.
 
 ### workflow-state
 
-The fixed semantic lifecycle Compass owns: backlog, ready, in-progress, in-review, done. Gates attach to the transitions; transitions are earned (evidence), not dragged. Board columns are a user-defined projection - every custom column maps to exactly one state.
+The fixed semantic lifecycle Compass owns: backlog, ready, in-progress, in-review, done. Gates attach to the transitions; transitions are earned (evidence), not dragged. A person sets only backlog (a hold) and done (closed, with a close reason); Compass derives the other states from the issue's records. Board columns are a user-defined projection - every custom column maps to exactly one state.
 
-**Related:** `quality-gate`, `board-column`, `blocked`
+**Related:** `quality-gate`, `board-column`, `blocked`, `close-reason`

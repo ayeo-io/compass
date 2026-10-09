@@ -15,6 +15,19 @@ LEGACY_APPROACH_ALIASES = {
     "initiative": APPROACH_FULL,
 }
 
+# The stage weights and artifact depths. `full` is also a delivery approach;
+# the depth that used to share its name is `thorough`. The retired spellings
+# sit in cli/migrate-map.yml (VR-G12), and a test keeps these constants equal
+# to the modes the default preset declares.
+MODE_THOROUGH = "thorough"
+MODE_LIGHTWEIGHT = "lightweight"
+MODE_THOROUGH_WITH_FOLLOW_UP = "thorough-with-follow-up"
+DEPTH_THOROUGH = "thorough"
+DEPTH_LIGHTWEIGHT = "lightweight"
+ARTIFACT_DEPTHS = (DEPTH_LIGHTWEIGHT, DEPTH_THOROUGH)           # ascending strictness
+MODE_RANKS = {"skipped": 0, "collapsed": 1, MODE_LIGHTWEIGHT: 2, MODE_THOROUGH: 3,
+              MODE_THOROUGH_WITH_FOLLOW_UP: 4}
+
 STAGE_ASSESS = "assess"
 STAGE_DEFINE = "define"
 STAGE_REFINE = "refine"

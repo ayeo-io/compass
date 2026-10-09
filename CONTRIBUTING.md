@@ -18,7 +18,7 @@ A pull request merges when all of these hold:
    wait for one.
 3. **It meets the review rules.** `governance/review-rules.yml` lists the rules
    a reviewer applies to the files you changed, each with the incident behind
-   it. `compass policy review-rules --changed-files <paths>` prints the ones
+   it. `compass review-rule list --changed-files <paths>` prints the ones
    that apply.
 
 `.github/CODEOWNERS` names who reviews each path. Today that is the maintainer

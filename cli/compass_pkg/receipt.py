@@ -34,6 +34,7 @@ import re as _re
 
 import fnmatch
 import re as _re
+from compass_pkg import status_words
 from compass_pkg.core import CompassError, artifact_path, display_shape, find_compass_dir, find_upwards, load_yaml, manifest_path, normalize_spine
 from compass_pkg.render import fired_rule_line
 
@@ -237,21 +238,20 @@ def _receipt_render(task, slug, route_readings, gate_requirements=None,
     """
     lines = []
     schema_version = str(task.get("schema_version") or "")
-    # 2.0 is the current schema; anything else (or absent) is legacy - 1.x
-    # manifests are readable by normalisation but reported as legacy. ADR-006:
-    # render meaningfully on pre-feature task.ymls, do not crash.
-    is_legacy = not schema_version.startswith("2.")
+    # Majors 2 and 3 are current schemas; anything else (or absent) is legacy -
+    # 1.x manifests are readable by normalisation but reported as legacy.
+    # ADR-006: render meaningfully on pre-feature task.ymls, do not crash.
+    is_legacy = not schema_version.startswith(("2.", "3."))
     # status: in 1.0 there is no status field - those issues are treated as
     # active by the rest of the CLI, and the receipt does the same. Honesty:
     # a legacy issue with no status cannot be reported as cleanly landed.
-    raw_status = task.get("status")
-    is_landed = (raw_status == "landed")
+    is_landed = status_words.is_completed(task)
     if is_landed:
         header_status = "landed"
-    elif raw_status == "active" or raw_status is None:
+    elif status_words.is_in_flight(task):
         header_status = "IN PROGRESS - not yet landed"
     else:
-        header_status = str(raw_status).upper()
+        header_status = str(task.get("status")).upper()
     schema_note = f" - schema {schema_version or '1.0'} (legacy)" if is_legacy else ""
 
     # 1. header

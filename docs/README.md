@@ -23,15 +23,16 @@ the table does not exist, and when a doc in this folder is not listed.
 - [delivery-record.md](delivery-record.md) - `compass record`: the delivery record kept in its own repository.
 - [receipt.md](receipt.md) - the one-screen view of an issue's gates and evidence.
 - [writing-specs-and-plans.md](writing-specs-and-plans.md) - a worked example of a spec and a plan.
-- [system-spec.md](system-spec.md) - the current behaviour, derived from landed issues: one heading per issue, one line per scenario, no size cap.
+- [system-spec.md](system-spec.md) - the current behaviour, derived from completed issues: one heading per issue, one line per scenario, no size cap.
 - [system-spec-archive.md](system-spec-archive.md) - scenarios that name a replacement in `superseded_by`, derived.
 
 ## Running and maintaining Compass
 
 - [install-smoke-test.md](install-smoke-test.md) - the checklist after an install or an install change.
 - [releasing.md](releasing.md) - how to cut a release.
+- [upgrade-6-0-0.md](upgrade-6-0-0.md) - the words, keys and commands that 6.0.0 renames, what reads the old form until 7.0.0, and how to roll back.
 - [configuration.md](configuration.md) - every project setting: what it does, its values, its default and which file holds it.
-- [policy-lint.md](policy-lint.md) - `compass policy lint` and `compass policy effective` on a layered project: the order of the checks, the finding codes and both JSON shapes.
+- [policy-lint.md](policy-lint.md) - `compass policy lint` and `compass policy show` on a layered project: the order of the checks, the finding codes and both JSON shapes.
 - [check-implementations.md](check-implementations.md) - the version and fixture corpus of each check implementation, the build rule and what a major difference does.
 - [policy-diff.md](policy-diff.md) - `compass policy diff`: the references, the sets it replays, `--open`, the exit codes and the JSON shape.
 - [generation-store.md](generation-store.md) - the stored generation of an issue's configuration: its files, the commit order, the states and what reads it.
@@ -41,7 +42,7 @@ the table does not exist, and when a doc in this folder is not listed.
 - [issue-configure.md](issue-configure.md) - `compass issue configure`: propose, preview, discard and recover a change to one issue's configuration, and how a reassess commits it.
 - [policy-migrate.md](policy-migrate.md) - `compass policy migrate`: how copied governance and the old settings file become a `compass.yml` overlay over the release the copy came from, what it keeps, when it refuses, its exit codes and its JSON shape.
 - [git-parents.md](git-parents.md) - a git parent in `extends:`: the pinned spelling, the fetch and cache, what Compass refuses and what an issue records.
-- [policy-test.md](policy-test.md) - `compass policy test` and `compass policy init-preset`: the preset folder and fixture format, what the test checks, the exit codes and the JSON shape of both reports.
+- [policy-test.md](policy-test.md) - `compass preset test` and `compass preset init`: the preset folder and fixture format, what the test checks, the exit codes and the JSON shape of both reports.
 - [policy-update.md](policy-update.md) - `compass policy update`: the major bump, the waiver re-check, the terminal re-approval, the exit codes and the JSON shape.
 - [security.md](security.md) - what Compass adds to a repository, and how to review it.
 - [portability.md](portability.md) - the adapter boundary, for running Compass outside Claude Code.
@@ -93,6 +94,7 @@ same commit.
 | `cli/compass_pkg/subtasks.py`, `cli/compass_pkg/loop_ceilings.py`, `cli/compass_pkg/multiagent_check.py`, `scripts/multiagent.sh`, `scripts/integrate.sh` | `docs/multiagent-protocol.md` |
 | `cli/compass_pkg/run_cmd.py`, `cli/compass_pkg/host_launch.py`, `cli/compass_pkg/redact.py`, `cli/compass_pkg/compliance.py`, `ci/headless-verify.yml` | `docs/headless-runner.md` |
 | `cli/compass_pkg/record.py` | `docs/delivery-record.md` |
+| `cli/compass_pkg/status_words.py`, `cli/compass_pkg/lifecycle.py`, `cli/compass_pkg/status_cmd.py` | `architecture/decisions/ADR-045-the-issue-lifecycle-is-derived-from-records.md` |
 | `cli/compass_pkg/rival_names.py`, `scripts/rival-name-gate.py`, `scripts/rival-name-hashes.txt`, `scripts/rival-name-binary-pins.txt` | `governance/decisions/2026-10-07-checked-binaries-are-pinned-in-the-rival-name-gate.md` |
 | `cli/compass_pkg/flow.py`, `cli/compass_pkg/spec_refresh.py`, `docs/system-spec.md`, `docs/system-spec-archive.md` | `architecture/decisions/ADR-026-ship-commit-lands-and-derives-the-living-spec.md` |
 | `cli/compass_pkg/next_cmd.py`, `cli/compass_pkg/render.py`, `cli/compass_pkg/statusline.py`, `bin/compass-statusline` | `docs/quickstart.md` |

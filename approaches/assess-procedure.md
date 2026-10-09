@@ -15,7 +15,7 @@ determinism boundary - see `docs/methodology.md` §2.
 Assess works on day one with **zero project setup**: the shipped default
 guardrails, strategies, and routing policy apply as-is, so `/compass:init` is
 optional and not a prerequisite. If a project has run `/compass:init`, its
-`compass.yml` extends those defaults - read `compass policy effective` for
+`compass.yml` extends those defaults - read `compass policy show` for
 what is in force. A project that still holds copied `governance/` files runs
 on them until `compass policy migrate` converts it.
 
@@ -71,7 +71,7 @@ A re-assessment also commits the next **generation** of the issue's stored
 configuration (`manifest.yml` names it in `generation:`), and the
 `reassessments:` entry records it as `generation: {from, to}`. To change the
 issue's own configuration, propose the change first with `compass issue
-configure` (for example `--mode refine=full`), read the preview, then
+configure` (for example `--mode refine=thorough`), read the preview, then
 re-assess: the re-assessment applies the proposal. `--reset-config` drops the
 issue's `config:` layer instead. After an interrupted re-assessment,
 `compass issue configure --commit` adopts the complete folder it left, and

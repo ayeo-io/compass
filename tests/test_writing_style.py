@@ -576,6 +576,12 @@ _register(Rule(
     "PBW-A1", "No retired v1 word survives in prose, a comment "
     "or a test docstring", _find_retired_word,
     exemptions=(
+        Exemption(
+            "docs/upgrade-6-0-0.md",
+            "`full-plus-backfill`",
+            "the upgrade page names the depth word that 6.0.0 renames, so "
+            "an adopter can find it in their own files - the table row is "
+            "the only place the word appears."),
         # PBW-F7's <!-- absorbed: "..." --> markers quote a merge-base
         # sentence verbatim so a reader can see what the rewrite carried
         # forward - the same reason ADR quotes and voice-tells fixtures are
@@ -644,14 +650,43 @@ _register(Rule(
         # text sits inside the value (not a real comment - `#` has no
         # special meaning there), so it folds into the one span this sweep
         # reads for the whole field and `ALLOW_MARKER_RE` already matches
-        # it directly - no named exemption needed for those three, and none
-        # is listed here.
+        # it directly. No entry uses that shape now: the glossary printed
+        # the marker, so the three below moved to comment lines.
         Exemption("governance/terminology.yml",
-                   "A 'task' - that word survives only as machine state",
-                   "a not: field naming the retired word on purpose."),
+                   "A 'task' used as another word for an issue",
+                   "a not: field naming the retired sense of the word on "
+                   "purpose."),
         Exemption("governance/terminology.yml",
                    "v1 called this a 'backfill', with states 'owed'",
                    "a not: field naming the retired word on purpose."),
+        # Three more `not:` entries (assess, requirements-review, ship) name
+        # a retired stage word on one simple scalar line, with the marker on
+        # a real YAML comment line above it. The marker used to sit inside a
+        # folded block, where it printed in the glossary; it now stays in a
+        # comment, so each entry needs a named exemption here and in the
+        # derived glossary below.
+        Exemption("governance/terminology.yml",
+                   "NOT triage. Triage means sorting BETWEEN cases",
+                   "a not: field naming the retired stage name on purpose."),
+        Exemption("governance/terminology.yml",
+                   'v1 called this "Clarify".',
+                   "a not: field naming the retired stage name on purpose."),
+        Exemption("governance/terminology.yml",
+                   'v1 called this "Land".',
+                   "a not: field naming the retired stage name on purpose."),
+        Exemption("docs/glossary.md",
+                   "NOT triage. Triage means sorting BETWEEN cases",
+                   "the derived text of terminology.yml's assess `not:` "
+                   "field, which names the retired stage name on purpose."),
+        Exemption("docs/glossary.md",
+                   'v1 called this "Clarify".',
+                   "the derived text of terminology.yml's requirements-review "
+                   "`not:` field, which names the retired stage name on "
+                   "purpose."),
+        Exemption("docs/glossary.md",
+                   'v1 called this "Land".',
+                   "the derived text of terminology.yml's ship `not:` field, "
+                   "which names the retired stage name on purpose."),
         # docs/glossary.md is DERIVED from governance/terminology.yml by
         # `compass _derive-glossary`, so a `not:` field that has to name a
         # retired word reappears here verbatim. The source entries already
@@ -665,9 +700,21 @@ _register(Rule(
                    "field, which cannot say what the term is NOT without "
                    "naming the retired word."),
         Exemption("docs/glossary.md",
-                   "A 'task' - that word survives only as machine state",
+                   "A 'task' used as another word for an issue",
                    "the derived text of terminology.yml's issue `not:` "
                    "field, same reason as the entry above."),
+        # The word is now also a defined issue type, so the derived glossary
+        # names it as a term: its heading and the Related list of the
+        # issue-type entry. The retired sense is the issue meaning only.
+        Exemption("docs/glossary.md",
+                   "### task",
+                   "the derived heading of the defined issue-type entry "
+                   "`task` in terminology.yml, where the word is the term "
+                   "being defined, not the retired word for an issue."),
+        Exemption("docs/glossary.md",
+                   "`bug`, `task`, `assess`",
+                   "the derived Related list of the issue-type entry, "
+                   "which links to the defined term `task`."),
         Exemption(
             "cli/compass_pkg/analyze.py",
             'records write "full, streams unbounded by policy"',

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # =============================================================================
-# compass_pkg.manifest - `compass ship-commit`, the manifest mutators and
-# `compass issue set-status`
+# compass_pkg.manifest - `compass ship-commit` and the manifest mutators
 # =============================================================================
 #
 # DEPENDENCY: PyYAML, bundled at cli/vendor/yaml/ and pinned in
@@ -33,6 +32,7 @@ import re as _re
 
 import fnmatch
 import re as _re
+from compass_pkg import status_words
 from compass_pkg.terminal import say
 from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, normalize_spine, now_iso, resolve_issue_dir, save_manifest
 from compass_pkg.issue_layout import docs_dir_for
@@ -144,7 +144,7 @@ def _stale_paths(task, task_dir, root, at_commit, judge_landed=False):
     judged until every gate has passed, or when the newest record carries
     no `changes_id` - `compass check` does not judge those either.
     """
-    if task.get("status") == "landed" and not judge_landed:
+    if status_words.is_completed(task) and not judge_landed:
         return None
     gates = [g for g in task.get("gates") or [] if isinstance(g, dict)]
     if not gates or not all(g.get("status") == "pass" for g in gates):
@@ -358,7 +358,7 @@ def cmd_land_commit(args):
                     "again.")
 
         head_id = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
-        head_task["status"] = "landed"
+        status_words.close(head_task, status_words.COMPLETED)
         head_task["land_timestamp"] = now_iso()
         head_task["land_commit"] = head_id
         save_manifest(head_task, head_task_path)
@@ -595,7 +595,7 @@ def cmd_land_commit(args):
                             "finish`.")
                         return 2
                     else:
-                        task["status"] = "landed"
+                        status_words.close(task, status_words.COMPLETED)
                         task["land_timestamp"] = now_iso()
                         # The commit this issue landed in. A green is checked
                         # against its tree after HEAD has moved on.
@@ -830,7 +830,7 @@ def cmd_scenario_tests(args):
     instead of by a hand edit of manifest.yml."""
     given = [t.strip() for t in (args.test or []) if t and t.strip()]
     if not given:
-        raise CompassError("compass scenario tests: give the scenario's tests with "
+        raise CompassError("compass scenario tests set: give the scenario's tests with "
                            "--test <path::name> (repeatable).")
     task_dir = resolve_issue_dir(args.task)
     task, task_path = load_manifest(task_dir)
@@ -840,7 +840,7 @@ def cmd_scenario_tests(args):
         known = sorted(s.get("id") for s in (task.get("scenarios") or [])
                        if isinstance(s, dict) and s.get("id"))
         raise CompassError(
-            f"compass scenario tests: '{args.scenario_id}' is not a scenario in this "
+            f"compass scenario tests set: '{args.scenario_id}' is not a scenario in this "
             f"issue's manifest.yml: its scenarios are {known}. Add it first with "
             f"`compass scenario add`.")
     project_root = os.path.dirname(find_compass_dir())
@@ -848,7 +848,7 @@ def cmd_scenario_tests(args):
                for why in [_test_refusal(t, project_root)] if why]
     if refused:
         raise CompassError(
-            "compass scenario tests: " + "; ".join(refused) + ". Name a test that "
+            "compass scenario tests set: " + "; ".join(refused) + ". Name a test that "
             "exists, as `compass check` reads it (`path/to/test_file.py::test_name`).")
     previous = list(scn.get("tests") or [])
     scn["tests"] = given
@@ -869,7 +869,7 @@ def cmd_scenario_tests(args):
                f"`compass tdd-green` before `compass ship-commit`, which refuses a "
                f"green recorded before it."] if new_files else None)
     noun = "test" if len(given) == 1 else "tests"
-    return say(args, f"compass scenario tests: {args.scenario_id} now declares "
+    return say(args, f"compass scenario tests set: {args.scenario_id} now declares "
                      f"{len(given)} {noun}.", detail=detail,
                scenario=args.scenario_id, issue=os.path.basename(task_dir),
                tests=given, previous=previous, reason=reason or None)
@@ -1021,67 +1021,5 @@ def annotate_gate_accepts_text(text, requirements=None):
 
 
 
-
-# --- compass issue set-status -------------------------------------------------
-# `compass issue set-status`: sets the lifecycle status, so nobody edits the
-# manifest by hand.
-
-TASK_STATUSES = ("active", "queued", "parked", "landed", "abandoned")
-
-#: The two of those whose work is over. A finished issue's manifest records
-#: what was true then, and re-validating it against a codebase that has moved
-#: produces failures nobody can act on (ADR-006). The other three are issues
-#: still in flight, whatever the board calls them - a check that scopes itself
-#: to "not active" silently stops running on `queued` and `parked`.
-TERMINAL_STATUSES = ("landed", "abandoned")
-
-
-def cmd_task_set_status(args):
-    status = args.status
-    if status not in TASK_STATUSES:
-        raise CompassError(
-            f"compass issue set-status: '{status}' is not an issue status. "
-            f"Permitted: {', '.join(TASK_STATUSES)}.\n"
-            "  queued    - recorded as next up, not started\n"
-            "  active    - in flight\n"
-            "  parked    - stopped, phases so far still valid, can resume\n"
-            "  landed    - shipping completed; only this grants living-spec eligibility\n"
-            "  abandoned - will not resume"
-        )
-
-    task_dir = resolve_issue_dir(getattr(args, "task", None))
-    task, path = load_manifest(task_dir)
-
-    # `ship-commit` refuses to write `landed` over gates that have not passed.
-    # This command must not be an easier way to set the same field, or the
-    # refusal is advice rather than a rule.
-    if status == "landed":
-        unmet = [g.get("id", "?") for g in (task.get("gates") or [])
-                 if isinstance(g, dict) and g.get("status") != "pass"]
-        if unmet:
-            raise CompassError(
-                f"compass issue set-status: refusing to mark '{task.get('issue')}' "
-                f"landed - {len(unmet)} gate(s) have not passed "
-                f"({', '.join(unmet)}). Landed means every gate passed. "
-                "Clear the gates and re-run."
-            )
-        task["land_timestamp"] = now_iso()
-
-    task["status"] = status
-    reason = getattr(args, "reason", None)
-    if status == "parked":
-        if reason:
-            task["parked_reason"] = reason
-        task["parked_at"] = now_iso()
-    elif reason:
-        # `status_reason`, not `note`: the schema forbids undeclared keys,
-        # and the name must say which transition it records, as
-        # `parked_reason` does.
-        task["status_reason"] = reason
-
-    save_manifest(task, path)
-    detail = f" ({reason})" if reason else ""
-    return say(args, f"compass issue set-status: {task.get('issue')} -> "
-                    f"{status}{detail}.",
-               detail=_stale_page(task_dir),
-               issue=task.get("issue"), status=status, reason=reason or None)
+# The status setter, `compass issue status remove` and `compass issue blocked`
+# are in cli/compass_pkg/status_cmd.py.

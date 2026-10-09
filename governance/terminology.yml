@@ -23,7 +23,7 @@
 # shrink-only baseline.
 # =============================================================================
 
-version: 2.0.0-pre16
+version: 2.0.0-pre18
 
 terms:
 
@@ -45,20 +45,26 @@ terms:
     related: [issue, evidence, scenario, acceptance-criteria]
 
   # --- Work hierarchy (GitHub-aligned) --------------------------------------
+  epic:
+    means: >
+      A group of related issues that deliver one outcome, within one
+      milestone, under one intent. Larger than an issue and smaller than an
+      initiative. Compass defines the word and no command or field records
+      an epic yet.
+    related: [issue, initiative, milestone]
   initiative:
     means: >
-      A body of work significant enough to need an intent document,
-      delivered across multiple milestones. Owns intent.md, the technical
-      design, the first-slice (80/20)
-      decision, and the rollout strategy.
+      A body of work that delivers several outcomes across milestones and
+      needs an intent document. Owns intent.md, the technical design, the
+      first-slice (80/20) decision, and the rollout strategy.
     github: Project
-    not: "An epic - that word is dropped; one word per concept."
-    related: [milestone, intent, slice]
+    not: "An epic, which is one outcome within one milestone under one intent."
+    related: [epic, milestone, intent, slice]
   milestone:
     means: >
-      A shippable checkpoint within an initiative: a coherent bundle of
-      delivered issues with a review point. Every milestone leaves the
-      system releasable.
+      A release checkpoint, not a level in the work hierarchy: a coherent
+      bundle of delivered issues with a review point. Every milestone leaves
+      the system releasable.
     github: Milestone
     related: [initiative, issue]
   issue:
@@ -69,7 +75,7 @@ terms:
     github: Issue
     # vocabulary-scan: allow - a `not:` field says what the term is NOT, which
     # cannot be written without naming the retired word.
-    not: "A 'task' - that word survives only as machine state, never prose."
+    not: "A 'task' used as another word for an issue - say issue. 'task' names one issue type."
     related: [sub-issue, issue-type, label, workflow-state]
   sub-issue:
     means: >
@@ -91,42 +97,55 @@ terms:
   # --- Issue types (what the assess stage assigns) --------------------------
   issue-type:
     means: >
-      The classification the assess stage assigns to an issue: quick fix,
-      bug fix, hotfix, feature, or spike. Together with labels it determines the
-      delivery approach - which artifacts exist and which gates apply.
+      The kind of work an issue is: feature, bug or task. The delivery
+      approach, not the type, decides which artifacts exist and which gates
+      apply. A quick fix, a hotfix and a spike are not issue types: quick fix,
+      hotfix and spike are delivery approaches. No manifest field records the
+      type yet.
     github: Issue type
-    related: [issue, assess, delivery-approach, label]
-  quick-fix:
-    means: >
-      A small, low-risk change on familiar ground. Produces a test and a PR
-      - nothing else exists for it.
-    related: [issue-type]
-  bug-fix:
-    means: >
-      A defect in existing behaviour, not live-urgent. Starts from a bug
-      report; the failing reproduction test is written before the fix.
-    related: [bug-report, issue-type]
-  hotfix:
-    means: >
-      A live-incident fix, expedited: reproduce, fix, ship, then pay the
-      follow-up (promote the reproduction into proper acceptance criteria;
-      optional postmortem).
-    related: [incident, follow-up, postmortem]
+    related: [issue, feature, bug, task, assess, delivery-approach, label]
   feature:
     means: >
-      A self-contained change with its own acceptance criteria that does not
-      warrant a full intent document. Unqualified "feature" always means
-      this issue
+      An issue type: a self-contained change with its own acceptance
+      criteria that does not warrant a full intent document. Unqualified
+      "feature" always means this issue
       type.
     not: "A feature file (the Gherkin artifact) - always say 'feature file'."
     related: [issue-type, feature-file]
+  bug:
+    means: >
+      An issue type: a defect in existing behaviour, not live-urgent. Starts
+      from a bug report; the failing reproduction test is written before the
+      fix.
+    not: >
+      A live incident, which is fixed through the hotfix delivery approach.
+    related: [bug-report, issue-type, hotfix]
+  task:
+    means: >
+      An issue type: work that changes nothing a user sees, such as upkeep,
+      a refactor or a migration step.
+    not: >
+      Another word for an issue. Any piece of tracked work is an issue; the
+      type says what kind.
+    related: [issue-type, issue]
+  quick-fix:
+    means: >
+      A delivery approach for a small, low-risk change on familiar ground.
+      Produces a test and a PR - nothing else exists for it.
+    related: [delivery-approach]
+  hotfix:
+    means: >
+      A delivery approach for a live-incident fix, expedited: reproduce, fix,
+      ship, then pay the follow-up (promote the reproduction into proper
+      acceptance criteria; optional postmortem).
+    related: [delivery-approach, incident, follow-up, postmortem]
   spike:
     means: >
-      Time-boxed exploration whose output is knowledge, not shipped code.
-      Records the question, the timebox, and a conclusion: discard, graduate
-      (a fresh issue owns any real work), or defer. Nothing ships from a
-      spike.
-    related: [issue-type]
+      A delivery approach for time-boxed exploration whose output is
+      knowledge, not shipped code. Records the question, the timebox, and a
+      conclusion: discard, graduate (a fresh issue owns any real work), or
+      defer. Nothing ships from a spike.
+    related: [delivery-approach]
 
   # --- The two words this rename freed ---------------------------------------
   # `design` needed an entry because it named a command, an artifact, an
@@ -186,7 +205,7 @@ terms:
     means: >
       The intake for a bug fix: observed behaviour, expected behaviour,
       reproduction steps.
-    related: [bug-fix]
+    related: [bug]
   incident:
     means: >
       The intake that triggers a hotfix: what broke in production, impact,
@@ -298,19 +317,24 @@ terms:
       step; everything after it is mechanism. Named for what it produces: the
       stage writes an `assessment:` block, the flag is --assessment, and the
       policy section is assessment_vocabulary.
-    not: >
-      # vocabulary-scan: allow - naming the retired stage name is the point
-      # of this field; the reader needs to know which word this replaced.
-      NOT triage. Triage means sorting BETWEEN cases by urgency, which is what
-      `compass flow` does across issues - this stage sizes up ONE piece of
-      work. The retired command name was /compass:triage.
+    # vocabulary-scan: allow - naming the retired stage name is the point of this field; the reader needs to know which word this replaced.
+    not: "NOT triage. Triage means sorting BETWEEN cases by urgency, which is what `compass flow` does across issues - this stage sizes up ONE piece of work. The retired command name was /compass:triage."
     related: [delivery-approach, label, issue-type, assessment]
   delivery-approach:
     means: >
       The chosen shape for an issue: which artifacts exist, which gates
       apply, solo or parallel. Deterministic - same assessment plus same policy
-      always gives the same approach.
+      always gives the same approach. `full` is the name of the heaviest
+      delivery approach and is not a stage mode: its stages run `thorough`,
+      and the old mode word `full` reads as `thorough` until 7.0.0.
     related: [assess, quality-gate]
+  check:
+    means: >
+      One test that Compass runs against an issue's work and reports as
+      pass, fail or skipped. A guardrail is made of checks, a gate is cleared
+      by evidence, and an obligation is anything the configuration asks for,
+      such as a check, a gate, an artifact or a stage mode.
+    related: [guardrail, quality-gate, evidence, obligation]
   guardrail:
     means: >
       A hard rule cleared with evidence; a failed guardrail stops the work.
@@ -328,7 +352,7 @@ terms:
   quality-gate:
     means: >
       A check that must pass before an issue moves state. Which gates apply
-      depends on the issue type and labels.
+      comes from the delivery approach and the label rules.
     related: [workflow-state, definition-of-ready, definition-of-done]
   definition-of-ready:
     means: >
@@ -343,9 +367,9 @@ terms:
       The review pass that hardens requirements before plan or implementation:
       ambiguities resolved into recorded decisions, contradictions and
       gaps closed, intent.md reviewed where one exists. Satisfying it is
-      # vocabulary-scan: allow - a note recording what v1 called this, which
-      # is what someone reading an old record needs to look it up.
-      what makes an issue ready. v1 called this "Clarify".
+      what makes an issue ready.
+    # vocabulary-scan: allow - a note recording what v1 called this, which is what someone reading an old record needs to look it up.
+    not: 'v1 called this "Clarify".'
     related: [intent, definition-of-ready, acceptance-criteria]
   definition-of-done:
     means: >
@@ -383,10 +407,18 @@ terms:
     means: >
       The fixed semantic lifecycle Compass owns: backlog, ready,
       in-progress, in-review, done. Gates attach to the transitions;
-      transitions are earned (evidence), not dragged. Board columns are a
+      transitions are earned (evidence), not dragged. A person sets only
+      backlog (a hold) and done (closed, with a close reason); Compass
+      derives the other states from the issue's records. Board columns are a
       user-defined projection - every custom column maps to exactly one
       state.
-    related: [quality-gate, board-column, blocked]
+    related: [quality-gate, board-column, blocked, close-reason]
+  close-reason:
+    means: >
+      Why an issue is done: completed (the work shipped), not-planned (it
+      will not be built) or duplicate (another issue holds the work, and the
+      record names it). Only completed counts as finished work.
+    related: [workflow-state, issue]
   board-column:
     means: >
       A user-defined view column (Design, UAT, Staging...). Maps to exactly
@@ -426,8 +458,9 @@ terms:
   ship:
     means: >
       Merging and releasing the change: the PR lands, follow-ups are
-      # vocabulary-scan: allow - a note recording what v1 called this.
-      recorded, the derived system spec is regenerated. v1 called this "Land".
+      recorded, the derived system spec is regenerated.
+    # vocabulary-scan: allow - a note recording what v1 called this.
+    not: 'v1 called this "Land".'
     related: [pr, rollout-plan]
   rollout-plan:
     means: >
@@ -720,7 +753,7 @@ codes:
     means: >
       Review rule. One rule in governance/review-rules.yml that a reviewer
       applies to the files it names, with the incident that justifies it and
-      what not to flag. `compass policy review-rules` prints the rules that
+      what not to flag. `compass review-rule list` prints the rules that
       match a change.
     not: >
       A routing policy rule (RP-), which shapes the delivery approach, or a
@@ -739,6 +772,30 @@ codes:
     referent: A routing policy rule. Same referent as RP-.
     appears_in: [".compass/work/ (archive)"]
     related: [RP]
+
+# =============================================================================
+# RETIRED VALUES - words a field still reads and no longer writes.
+# =============================================================================
+# One row per `(field, old, new)`; `new: null` means the old word is no longer
+# stored. The rows are the same triples as the read-side tables in
+# cli/migrate-map.yml (`values:` and `friction_keys:`), and a test keeps the
+# two equal. A `friction_keys` row names the old and the new key.
+retired_values:
+  - {field: stage_mode, old: full, new: thorough}
+  - {field: stage_mode, old: full-plus-backfill, new: thorough-with-follow-up}
+  - {field: stage_mode, old: light, new: lightweight}
+  - {field: artifact_depth, old: full, new: thorough}
+  - {field: artifact_depth, old: light, new: lightweight}
+  - {field: size, old: standard, new: medium}
+  - {field: issue_status, old: queued, new: backlog}
+  - {field: issue_status, old: parked, new: backlog}
+  - {field: issue_status, old: active, new: null}
+  - {field: issue_status, old: landed, new: done}
+  - {field: issue_status, old: abandoned, new: done}
+  - {field: close_reason, old: landed, new: completed}
+  - {field: close_reason, old: abandoned, new: not-planned}
+  - {field: run_stage, old: build, new: implement}
+  - {field: friction_keys, old: phase, new: stage}
 
 # =============================================================================
 # BANNED v1 VOCABULARY - the house test scans user-facing surfaces for these.
@@ -838,7 +895,7 @@ banned:
     context: "All uses. The CLI verb renamed with the CLI-voice slice (compass follow-up resolve); no tolerated spelling remains."
   - term: "task"
     replacement: issue
-    context: "In human-facing prose only; machine state files exempt during transition."
+    context: "In human-facing prose only, where it means an issue or a piece of tracked work; machine state files exempt during transition. 'task' as an issue type (feature, bug or task) is a defined term and is not banned."
   - term: "G1..G5 / S1..S14 codes, bare"
     replacement: "the code followed by its plain statement, on first use"
     context: "In anything a human reads - agent speech, printed output, generated artifacts. Expand on FIRST use in that piece of output; the bare code is correct and preferable afterwards. Never drop the code: it carries the traceability the machine checks read. `compass check` is the shipped example - it prints 'G5 A human signs off on the irreversible'. Codes may live bare in governance config, which is machine input rather than something a newcomer reads."
@@ -967,12 +1024,13 @@ scan:
   exempt_regions:
     - path: governance/terminology.yml
       blocks: [banned, retired_machine_names, retired_machine_name_exempt, scan,
-               retired_in_output]
+               retired_in_output, retired_values]
       why: >-
         A ban must name the term it retires and a rename table must name both
         spellings, so these blocks carry every retired word by necessity.
-        `scan:` names the exempt paths, and `retired_in_output:` lists the
-        names the CLI must never print.
+        `scan:` names the exempt paths, `retired_in_output:` lists the
+        names the CLI must never print, and `retired_values:` lists the old and
+        new spelling of each word a field still reads.
         Everything else in the file - `terms:`, `codes:`, `id_prefixes:` - is
         read like any other surface.
 

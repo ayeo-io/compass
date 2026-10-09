@@ -19,7 +19,7 @@ dimensions:
     required: true
   size:
     type: ordered-enum
-    values: [atomic, small, standard, large, product]
+    values: [atomic, small, medium, large, product]
     tighter: higher
     required: true
   goal:

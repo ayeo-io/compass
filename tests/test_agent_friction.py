@@ -3,7 +3,7 @@
 Ship captures friction from signals the CLI computed and one optional line
 from the person. `compass issue friction` lets the agent file a note during
 the run under a strict bar: it names evidence in the issue folder
-and a one-line fix, at most three per issue, never the same category and phase
+and a one-line fix, at most three per issue, never the same category and stage
 twice. Agent notes are counted in their own column and never make a lesson on
 their own. A note about a step a guardrail backs is accepted but reported as
 such, because friction cannot change a guardrail.
@@ -50,13 +50,13 @@ def project(tmp_path):
     return root
 
 
-def _note(root, *extra, category="over-weight", phase="assess",
+def _note(root, *extra, category="over-weight", stage="assess",
           observed="evidence/red.log", fix="Skip the second plan read on a quick fix"):
     args = ["issue", "friction", "--issue", "fix-a"]
     if category:
         args += ["--category", category]
-    if phase:
-        args += ["--phase", phase]
+    if stage:
+        args += ["--stage", stage]
     if observed:
         args += ["--observed", observed]
     if fix is not None:
@@ -77,28 +77,44 @@ def test_trc_001_a_note_is_recorded_as_agent_friction(project):
     assert result.returncode == 0, result.stdout + result.stderr
     [entry] = _friction(project)
     assert entry["source"] == "agent"
-    assert entry["category"] == "over-weight" and entry["phase"] == "assess"
+    assert entry["category"] == "over-weight" and entry["stage"] == "assess"
+    assert "phase" not in entry
     assert entry["evidence"] == "evidence/red.log"
     assert entry["proposed_change"] == "Skip the second plan read on a quick fix"
 
 
 def test_trc_001_a_fourth_note_is_refused(project):
     _manifest(project, "fix-a")
-    for phase in ("assess", "define", "implement"):
-        assert _note(project, phase=phase).returncode == 0
-    result = _note(project, phase="verify")
+    for stage in ("assess", "define", "implement"):
+        assert _note(project, stage=stage).returncode == 0
+    result = _note(project, stage="verify")
     assert result.returncode != 0
     assert "three" in result.stderr, result.stderr
     assert len(_friction(project)) == 3
 
 
-def test_trc_001_the_same_category_and_phase_twice_is_refused(project):
+def test_trc_001_the_same_category_and_stage_twice_is_refused(project):
     _manifest(project, "fix-a")
     assert _note(project).returncode == 0
     result = _note(project, fix="Another fix for the same thing")
     assert result.returncode != 0
     assert "over-weight" in result.stderr and "assess" in result.stderr, result.stderr
     assert len(_friction(project)) == 1
+
+
+def test_trc_001_a_stored_note_keyed_phase_counts_as_the_same_stage(project):
+    """A note a release before 6.0.0 stored with the old key is read as
+    `stage`, so a second note for it is refused, and the save rewrites it."""
+    _manifest(project, "fix-a", [{"phase": "assess", "category": "over-weight",
+                                  "source": "agent", "evidence": "evidence/red.log",
+                                  "proposed_change": "Skip the second plan read"}])
+    result = _note(project, fix="Another fix for the same thing")
+    assert result.returncode != 0
+    assert "already recorded" in result.stderr, result.stderr
+    other = _note(project, stage="define")
+    assert other.returncode == 0, other.stderr
+    assert [e["stage"] for e in _friction(project)] == ["assess", "define"]
+    assert all("phase" not in e for e in _friction(project))
 
 
 @pytest.mark.parametrize("change, words", [
@@ -120,7 +136,7 @@ def test_trc_001_a_devlog_line_is_accepted_as_evidence(project):
     devlog = project / ".compass" / "work" / "fix-a" / "devlog.md"
     devlog.write_text("# Devlog\n\nThe plan was read twice.\n", encoding="utf-8")
     assert _note(project, observed="devlog.md:3").returncode == 0
-    assert _note(project, phase="define", observed="devlog.md:9").returncode != 0
+    assert _note(project, stage="define", observed="devlog.md:9").returncode != 0
 
 
 # --- its own column (`TRC-002`) ---
@@ -132,7 +148,7 @@ def test_trc_002_retro_counts_agent_friction_apart(project):
                                             "observation": "slow", "proposed_change": fix}])
     for n in range(3):
         _manifest(project, f"agent-{n}", [{"category": "over-weight", "source": "agent",
-                                           "phase": "plan", "evidence": "evidence/red.log",
+                                           "stage": "plan", "evidence": "evidence/red.log",
                                            "proposed_change": fix}])
     result = _compass(project, "retro", "--friction", "--format", "json")
     agg = json.loads(result.stdout)
@@ -147,7 +163,7 @@ def test_trc_002_retro_counts_agent_friction_apart(project):
 # --- never a lesson alone (`TRC-003`) ---
 
 def _agent_row(fix):
-    return {"category": "over-weight", "source": "agent", "phase": "plan",
+    return {"category": "over-weight", "source": "agent", "stage": "plan",
             "evidence": "evidence/red.log", "proposed_change": fix}
 
 

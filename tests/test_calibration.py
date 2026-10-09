@@ -335,7 +335,7 @@ def _task_with_friction(slug, friction, base_route="standard"):
 
 def _friction(proposed_change, category="over-ceremony", source="human"):
     return {
-        "phase": "plan",
+        "stage": "plan",
         "category": category,
         "observation": "ceremony got in the way",
         "proposed_change": proposed_change,
@@ -452,7 +452,7 @@ def test_friction_recorded_but_unclusterable_is_not_reported_as_none(
     'No friction recorded' - that line is for an empty corpus only. The entry is
     still surfaced (by category), it just hasn't clustered into a trend."""
     make_task("ft1", _task_with_friction("ft1", [
-        {"phase": "build", "category": "tooling",
+        {"stage": "implement", "category": "tooling",
          "observation": "the devlog auto-log is noisy", "source": "human"},
     ]))
     r = run_cli("retro", "--friction")

@@ -56,7 +56,7 @@ python3 cli/compass policy lint
 Expect:
 
 ```text
-compass 5.6.0 (issue schema 2.0)
+compass 5.6.0 (issue schema 3.0)
 PyYAML 6.0.2 at .../cli/vendor/yaml/__init__.py
 ```
 
@@ -97,7 +97,7 @@ The exact slug can vary. The issue directory must contain at least
 Generate the review dashboard:
 
 ```bash
-compass issue dashboard --issue <issue-slug>
+compass issue dashboard render --issue <issue-slug>
 ```
 
 Open the generated `README.md`. It must show the delivery approach, artifact

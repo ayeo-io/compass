@@ -5,12 +5,15 @@
 schema_version:  # (optional, recommended) string - the manifest schema version this file follows
 issue:           # (required) string - the issue slug, matches the directory name
 created:         # (required) string - ISO date the issue was assessed
-status:          # (optional) [active, queued, parked, landed, abandoned] - defaults to active
+status:          # (optional) [backlog, done] - absent while the issue is in flight; its state is read from its records
+close_reason:    # (optional) [completed, not-planned, duplicate] - why a done issue closed; done with none is not completed
+duplicate_of:    # (optional) string - the issue that covers this one; only with close reason duplicate
+blocked:         # (optional) map {reason, at} - set while an in-progress or in-review issue waits for something
 
 assessment:        # (required) map - the four-dimension JUDGEMENT assessment (assess)
   risk:  # (required) [trivial, contained, cross-cutting, critical]
   familiarity:       # (required) [greenfield, brownfield-mapped, brownfield-unmapped]
-  size:     # (required) [atomic, small, standard, large, product]
+  size:     # (required) [atomic, small, medium, large, product]
   goal:          # (optional) [delivery, exploration]   - defaults to delivery
   urgency:       # (optional) [none, live-defect]        - defaults to none
   role:          # (optional) [engineer, product-owner, product-marketer, designer, qa]

@@ -311,7 +311,7 @@ and date. Repository permissions and review of the pull request that changes
 `compass.yml` are the control.
 
 **Conformance is a statement about the configuration, not about the work.** A project that unlocks a framework entry is reported non-conformant on every
-`compass check`, `compass issue receipt` and `compass approach summary`. The
+`compass check`, `compass issue receipt` and `compass approach show`. The
 line states that the configuration departs from the framework's locks. It does
 not say that any work was done badly, and a project that unlocks nothing is not
 shown to have done good work. A hard lock (guarantee 5) cannot be unlocked at

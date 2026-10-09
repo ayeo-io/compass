@@ -69,7 +69,7 @@ sha is refused.
 | Command | Fetches an uncached pin? |
 |---|---|
 | `compass check`, and any reader of an issue's stored generation | Never. It reads the cache, and an uncached pin is `L-PARENT-NOT-CACHED` |
-| `compass policy lint`, `compass policy effective` | Yes |
+| `compass policy lint`, `compass policy show` | Yes |
 | `compass policy update` | Yes, always for the ref (`git ls-remote`), and for the current pin and the new commit when they are not cached. With `COMPASS_OFFLINE=1` it asks nothing and reports `offline` |
 | `compass policy diff`, when a reference is a git parent | Yes, and it prints one line on stderr (`compass policy diff: fetching <ref> into .compass/cache/parents/`) before each fetch. It also adds `cache/` to `.compass/.gitignore` if the file does not list it. These are the only files `policy diff` writes |
 | `compass approach evaluate --write` (assess and reassess, including a reassess that commits a `compass issue configure` proposal) | Yes |
@@ -136,7 +136,7 @@ A fetch of an exact pin overwrites the sha in `seen.yml`, so the other commit ca
 
 An edited cache fails the lint, because the chain would otherwise run a file that is not the pinned commit's. A cached commit that `seen.yml` holds no digest for counts as edited too, since it cannot be shown to match a fetch. To clear either, delete the cached copy of that commit under `.compass/cache/parents/` and run `compass policy lint`, which fetches it again. A `seen.yml` that cannot be read counts as holding no digest. A cached file that no longer parses is reported as `L-LOAD`, before its state is read.
 
-`compass approach summary` adds one line for the project's git parent and nothing for a project with none:
+`compass approach show` adds one line for the project's git parent and nothing for a project with none:
 
 ```
 Parent: github:acme/compass-banking@1.2.0 at 3f9c1a2 - locally modified
@@ -156,7 +156,7 @@ A parent's own `extends:` may name `compass:default@<major>` or another git pare
 
 A parent can name a git parent, which can name another. A chain holds at most three git parents, to a depth of three: the project's direct parent, its parent and that parent's parent. The shipped default at the root is not counted, because it is the CLI's own version and not a fetched parent.
 
-Each parent in a chain is pinned by sha, fetched, cached and read as data in the same way as a single parent. The chain is `default`, then the git parents from the furthest to the nearest, `project`, then the issue. A later layer overrides an earlier one, so the nearest parent wins over the furthest, and `policy effective` names the parent that wrote each field. The classifier judges each git parent against the shipped default like any other layer, so a parent that loosens the default needs a waiver the same way a project does. A waiver in a git parent, at any depth, is checked against that parent's own `owner`, or the names in the `approvers.project-waiver` of the layer above it. The project's owner does not count. A parent with no `owner` cannot carry a waiver (`W-NO-OWNER`).
+Each parent in a chain is pinned by sha, fetched, cached and read as data in the same way as a single parent. The chain is `default`, then the git parents from the furthest to the nearest, `project`, then the issue. A later layer overrides an earlier one, so the nearest parent wins over the furthest, and `policy show` names the parent that wrote each field. The classifier judges each git parent against the shipped default like any other layer, so a parent that loosens the default needs a waiver the same way a project does. A waiver in a git parent, at any depth, is checked against that parent's own `owner`, or the names in the `approvers.project-waiver` of the layer above it. The project's owner does not count. A parent with no `owner` cannot carry a waiver (`W-NO-OWNER`).
 
 | Fault | Code | Reported on |
 |---|---|---|
@@ -164,13 +164,13 @@ Each parent in a chain is pinned by sha, fetched, cached and read as data in the
 | A parent names a commit that is already in the chain, at any depth | `L-PARENT-CYCLE` | The parent that names it. A full sha already in the chain is refused before any fetch |
 | An ancestor cannot be fetched, is not cached for a reader that does not fetch, or has a bad spelling | The code of the fault | The parent that names the ancestor (a bad file reports on the ancestor itself) |
 
-The refusal from `compass policy lint`, `compass policy effective` and `compass check` names that parent in the same way. A stored generation does not read the cache at all: it uses the record of its parents, so a deleted cache does not stop `compass check` for an issue that has one.
+The refusal from `compass policy lint`, `compass policy show` and `compass check` names that parent in the same way. A stored generation does not read the cache at all: it uses the record of its parents, so a deleted cache does not stop `compass check` for an issue that has one.
 
 Compass checks a parent after it has loaded the parent's ancestors. A parent that is refused for a settings key, an `unlock:` or an unknown `impl` may still be fetched along with its ancestors, which were pinned and read as data only. Nothing in them runs.
 
 ## What an issue records
 
-`compass policy effective` shows the parent as the source of every field it wrote, and lists it in `layers` with its version and digest. When an issue's configuration is committed, `versions.yml` lists the shipped default and then each git parent, furthest first, so the order is the order of the merge:
+`compass policy show` shows the parent as the source of every field it wrote, and lists it in `layers` with its version and digest. When an issue's configuration is committed, `versions.yml` lists the shipped default and then each git parent, furthest first, so the order is the order of the merge:
 
 ```yaml
 parents:
@@ -206,7 +206,7 @@ Each git parent entry holds the classification of the chain from the shipped def
 
 The result is the one before any waiver. A parent's own waivers were approved by the parent's maintainers, and that approval means nothing to a project that extends it, so a waiver does not change the stored `result`. A later check can read the block without running the classifier again.
 
-Only a commit that writes a new generation computes the blocks, with one scan of the grid for each git parent. A commit that finds no change, and a read of the live configuration (`policy effective`), do not. The function is `classify_chain` in `cli/compass_pkg/chain_class.py`.
+Only a commit that writes a new generation computes the blocks, with one scan of the grid for each git parent. A commit that finds no change, and a read of the live configuration (`policy show`), do not. The function is `classify_chain` in `cli/compass_pkg/chain_class.py`.
 
 The cost, measured on 2026-10-08 on a laptop: about 0.6 seconds for one parent with a one-field change, and about 2.3 seconds for a chain of three. A chain of more than eight named labels cannot be committed (the lint cannot prove the locks), so `complete: false` is a guard in the function and not a stored case.
 

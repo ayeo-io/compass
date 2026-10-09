@@ -45,7 +45,7 @@ test what the code does now where the change touches it (`RP-ADV-002`).
 |---|---|
 | `atomic` | One file, one obvious change, under about half an hour, no design decision. |
 | `small` | One to three files, a solution pattern that already exists here, no new structure. |
-| `standard` and above | Several files, a day or more, one or more design decisions. |
+| `medium` and above | Several files, a day or more, one or more design decisions. |
 
 Size is the dimension most misread. When unsure, estimate up.
 

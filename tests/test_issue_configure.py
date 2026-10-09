@@ -443,7 +443,7 @@ def test_cr_12_a_landed_issue_cannot_be_given_a_proposal(tmp_path):
     before = _tree(root)
     code, out, err = fx.configure(root, *TIGHTER)
     assert code == 2, out + err
-    assert "landed" in out + err
+    assert "is closed and keeps" in out + err
     assert _tree(root) == before
 
 
@@ -453,7 +453,7 @@ def test_cr_12_the_store_itself_refuses_a_proposal_for_a_landed_issue(tmp_path):
     root, task_dir = fx.committed(tmp_path)
     fx.write_manifest(task_dir, status="landed")
     before = _tree(root)
-    with pytest.raises(CompassError, match="landed"):
+    with pytest.raises(CompassError, match="is closed and keeps"):
         effective.write_proposal(str(task_dir), fx.manifest_of(task_dir), {"autonomy": "balanced"})
     assert _tree(root) == before
 
@@ -475,7 +475,7 @@ def test_cr_12_a_landed_issue_is_refused_before_the_preview_is_computed(
     args = types.SimpleNamespace(task=fx.SLUG, discard=None, commit=None, from_file=None,
                                  mode=["refine=full"], route=None, autonomy=None,
                                  ceiling=None, reason=None, _mode=None, json=False)
-    with pytest.raises(CompassError, match="landed"):
+    with pytest.raises(CompassError, match="is closed and keeps"):
         issue_config_cmd.run_configure(args)
 
 

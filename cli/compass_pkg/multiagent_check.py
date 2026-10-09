@@ -33,6 +33,7 @@ from __future__ import annotations
 import datetime
 import os
 
+from compass_pkg import status_words
 from compass_pkg.check_results import NOTHING_TO_CHECK
 from compass_pkg.core import FOUND, find_upwards, resolve_artifact
 from compass_pkg.stable_ids import STAGE_BREAKDOWN
@@ -84,11 +85,12 @@ def _past_ceilings(subtask, ceilings):
 
 
 def _ready(task):
-    """Has every gate passed, or has the issue landed? A run still in flight
+    """Has every gate passed, or is the issue completed? A run still in flight
     is not judged: a subtask legitimately has no final record yet while the
-    work is under way. A landed issue is ready whatever its gates say - it is
-    not "still in flight" by definition."""
-    if task.get("status") == "landed":
+    work is under way. A completed issue is ready whatever its gates say - it
+    is not "still in flight" by definition. An issue closed as not planned is
+    not ready: its run never finished, and v5.6.0 did not judge it."""
+    if status_words.is_completed(task):
         return True
     gates = [g for g in task.get("gates") or [] if isinstance(g, dict)]
     return bool(gates) and all(g.get("status") == "pass" for g in gates)
@@ -249,14 +251,14 @@ def _check_multiagent_run_recorded(task, task_dir):
                             % ", ".join(bad_stop))
         return False, (
             "subtask(s) with an incomplete run record - %s. Record status "
-            "with `compass issue subtask update --status done`, a passing "
+            "with `compass issue subtask set --status done`, a passing "
             "round with `--round pass`, or why it stopped with "
             "`--stop-reason` and `--stop-evidence`." % "; ".join(problems))
 
     if past:
         return False, (
             "subtask(s) past a loop ceiling with no stop reason - %s. Record "
-            "why with `compass issue subtask update <id> --stop-reason TEXT "
+            "why with `compass issue subtask set <id> --stop-reason TEXT "
             "--stop-evidence FILE`." % "; ".join(past))
 
     mapped = mapped_subtask_ids(task_dir)

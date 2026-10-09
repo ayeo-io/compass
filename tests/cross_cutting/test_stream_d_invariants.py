@@ -79,7 +79,8 @@ EXPECTED_PUBLIC_SUBCOMMANDS = {
     "policy", "issue", "adr",
     "rework-scan", "flow", "follow-up",
     "terminology",                # the CLI-voice slice: the glossary verb
-    "migrate",                    # the 1.x-to-2.0 tree migrator (`slice 8`)
+    "review-rule", "spec",        # `review-rule list` and `spec sync`
+    "preset",                     # `preset init` and `preset test`
     "analyze", "next",            # cross-issue-architectural-integrity
     "ship-commit",                # framework-field-feedback `R5`
     "gate", "scenario", "changed-file", "evidence",  # framework-field-feedback `R6`/`R9`

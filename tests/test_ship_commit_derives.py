@@ -50,6 +50,11 @@ def _head(d: Path) -> str:
     return _git(d, "rev-parse", "HEAD").stdout.strip()
 
 
+def _completed(manifest: dict) -> bool:
+    """ship-commit records an issue as done with close reason completed."""
+    return manifest.get("status") == "done" and manifest.get("close_reason") == "completed"
+
+
 def _log_subjects(d: Path, since: str | None = None, count: int = 5) -> list[str]:
     """Commit subjects, newest first: since `since` (exclusive), or the last
     `count` on HEAD when no `since` is given."""
@@ -130,7 +135,7 @@ def test_ship_commit_lands_and_derives_the_spec(cli_path, tmp_path):
     assert r.returncode == 0, r.stdout + r.stderr
 
     manifest = yaml.safe_load((task_dir / "manifest.yml").read_text())
-    assert manifest["status"] == "landed", manifest
+    assert _completed(manifest), manifest
     assert "land_commit" in manifest, manifest
 
     spec_path = repo / "docs" / "system-spec.md"
@@ -167,7 +172,7 @@ def test_ship_commit_derives_for_a_solo_issue(cli_path, tmp_path):
     assert r.returncode == 0, r.stdout + r.stderr
 
     manifest = yaml.safe_load((task_dir / "manifest.yml").read_text())
-    assert manifest["status"] == "landed", manifest
+    assert _completed(manifest), manifest
 
     spec_path = repo / "docs" / "system-spec.md"
     assert spec_path.is_file(), "docs/system-spec.md was not derived for a solo issue"
@@ -188,7 +193,7 @@ def test_ship_commit_does_not_derive_when_a_gate_has_not_passed(cli_path, tmp_pa
     assert r.returncode == 0, r.stdout + r.stderr  # the commit itself still lands
 
     manifest = yaml.safe_load((task_dir / "manifest.yml").read_text())
-    assert manifest.get("status") != "landed", manifest
+    assert manifest.get("status") != "done", manifest
 
     assert not (repo / "docs" / "system-spec.md").exists(), (
         "docs/system-spec.md must not be derived for an issue that was "
@@ -219,7 +224,8 @@ def test_derive_and_commit_living_spec_excludes_a_stray_staged_file(tmp_path):
     task_dir = repo / ".compass" / "work" / slug
     task_dir.mkdir(parents=True)
     body = _task(slug)
-    body["status"] = "landed"
+    body["status"] = "done"
+    body["close_reason"] = "completed"
     body["land_timestamp"] = "2026-09-25T00:00:00"
     (task_dir / "manifest.yml").write_text(
         yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
@@ -298,7 +304,7 @@ def test_ship_commit_lands_work_already_committed_at_head(cli_path, tmp_path):
     assert subjects == [f"Re-derive the living spec after {slug} landed"], subjects
 
     manifest = yaml.safe_load((task_dir / "manifest.yml").read_text())
-    assert manifest["status"] == "landed", manifest
+    assert _completed(manifest), manifest
     assert manifest["land_commit"] == head, manifest
     assert "land_timestamp" in manifest, manifest
 
@@ -324,7 +330,7 @@ def test_ship_commit_refuses_when_a_gate_has_not_passed_and_nothing_is_staged(cl
     assert "gate" in combined and "verify.correctness" in combined, r
 
     manifest = yaml.safe_load((task_dir / "manifest.yml").read_text())
-    assert manifest.get("status") != "landed", manifest
+    assert manifest.get("status") != "done", manifest
     assert _head(repo) == head, r
 
 
@@ -346,7 +352,7 @@ def test_ship_commit_refuses_a_changed_file_with_an_uncommitted_edit(cli_path, t
     assert "feature.txt" in combined, r
 
     manifest = yaml.safe_load((task_dir / "manifest.yml").read_text())
-    assert manifest.get("status") != "landed", manifest
+    assert manifest.get("status") != "done", manifest
     assert _head(repo) == head, r
 
 

@@ -168,7 +168,7 @@ def test_ee_2_a_spike_owes_no_done_check_and_a_delivery_owes_all_seven(tmp_path,
     assert spike.exit["verify"] == ()
     delivery = obligations.obligations(config, {"risk": "contained",
                                                 "familiarity": "brownfield-mapped",
-                                                "size": "standard", "goal": "delivery"},
+                                                "size": "medium", "goal": "delivery"},
                                        capabilities=on)
     assert delivery.exit["verify"] == tuple(sorted(DONE_IDS))
     assert delivery.entry["plan"] == tuple(sorted(READY_IDS))
@@ -192,7 +192,7 @@ def test_ee_2_a_check_can_name_ships_in_its_when(tmp_path, monkeypatch):
                                              "size": "small", "goal": "exploration"})
     regular = obligations.obligations(config, {"risk": "contained",
                                                "familiarity": "greenfield",
-                                               "size": "standard"})
+                                               "size": "medium"})
     assert "only-not-shipping" in spike.exit["verify"]
     assert "only-shipping" not in spike.exit["verify"]
     assert "only-shipping" in regular.exit["verify"]
@@ -201,7 +201,7 @@ def test_ee_2_a_check_can_name_ships_in_its_when(tmp_path, monkeypatch):
 
 @pytest.mark.parametrize("assessment", [
     {"risk": "trivial", "familiarity": "greenfield", "size": "small", "goal": "exploration"},
-    {"risk": "contained", "familiarity": "brownfield-mapped", "size": "standard",
+    {"risk": "contained", "familiarity": "brownfield-mapped", "size": "medium",
      "goal": "delivery"},
     {"risk": "trivial", "familiarity": "greenfield", "size": "small", "goal": "delivery"},
 ])
@@ -235,7 +235,7 @@ def test_ee_2_a_project_check_can_use_ships_in_its_when_and_lint_accepts_it(tmp_
     view = _view(root, monkeypatch)
     for approach, assessment, listed in (
             ("regular", {"risk": "contained", "familiarity": "greenfield",
-                         "size": "standard", "goal": "delivery"}, True),
+                         "size": "medium", "goal": "delivery"}, True),
             ("spike", {"risk": "trivial", "familiarity": "greenfield",
                        "size": "small", "goal": "exploration"}, False)):
         _write_manifest(task_dir, assessment=assessment, delivery_approach=approach,
@@ -752,7 +752,7 @@ def test_ee_2_obligations_read_ships_in_blocking_when_and_in_a_gate_condition(
                                              "size": "small", "goal": "exploration"})
     regular = obligations.obligations(config, {"risk": "contained",
                                                "familiarity": "greenfield",
-                                               "size": "standard"})
+                                               "size": "medium"})
     assert spike.checks["ship-blocks"]["severity"] == "advisory"
     assert regular.checks["ship-blocks"]["severity"] == "blocking"
     assert "GX" not in regular.gate_set

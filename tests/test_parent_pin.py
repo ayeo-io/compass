@@ -511,7 +511,7 @@ def _effective(tmp_path, *extra):
     base = tmp_path / "remotes"
     sha = make_remote(base, files={"compass.yml": yaml.safe_dump(EFFECTIVE_DOC)})
     root = _project(tmp_path, _ref(sha))
-    code, out, err = _run(root, "policy", "effective", *extra,
+    code, out, err = _run(root, "policy", "show", *extra,
                           env={"COMPASS_PARENT_REMOTE_BASE": str(base)})
     return code, out, err, sha
 
@@ -673,7 +673,7 @@ def test_gp_14_a_short_sha_resolves_against_exactly_one_cached_commit(tmp_path):
     (root / "compass.yml").write_text(
         yaml.safe_dump({"schema": 1, "extends": _ref(sha[:7])}), encoding="utf-8")
     bin_dir, log = fake_git(tmp_path)
-    code, out, err = _run(root, "policy", "effective", "--json", env={"PATH": f"{bin_dir}:{REAL_GIT}"})
+    code, out, err = _run(root, "policy", "show", "--json", env={"PATH": f"{bin_dir}:{REAL_GIT}"})
     assert code == 0, err
     assert not log.exists()
     assert any(layer["name"].endswith(f"#{sha[:7]}") for layer in json.loads(out)["layers"])
@@ -775,7 +775,7 @@ def test_gp_15_the_generation_doc_describes_a_git_parent_entry():
     assert "source: git" in doc and "git-parents.md" in doc
 
 
-@pytest.mark.parametrize("verb", ["lint", "effective"])
+@pytest.mark.parametrize("verb", ["lint", "show"])
 def test_gp_15_help_describes_the_flag_and_the_git_parent(tmp_path, verb):
     from compass_pkg import verb_help
     text = verb_help.VERB_DESCRIPTIONS[f"policy {verb}"]
@@ -812,7 +812,7 @@ def test_gp_16_the_readme_lists_the_git_fetch_and_no_longer_says_it_has_one_web_
     section = readme.split("## What Compass runs, sends and fetches")[1].split("\n## ")[0]
     flat = " ".join(section.split())
     assert "only web request" not in flat
-    for needle in ("git parent", "compass policy lint", "compass policy effective",
+    for needle in ("git parent", "compass policy lint", "compass policy show",
                    "compass approach evaluate --write", "never `compass check`", "--offline",
                    "COMPASS_OFFLINE", "COMPASS_PARENT_REMOTE_BASE"):
         assert needle in flat, needle

@@ -52,7 +52,7 @@ what `/compass:init` offers separately.
    accessibility floor). A contract that cannot meet a guardrail is a
    tension to name now, not later.
 3. **Write `ui-contract.md`** into `docs/compass/<created>-<issue-slug>/`,
-   then register it with `compass issue artifact ui-contract --status draft
+   then register it with `compass issue artifact set ui-contract --status draft
    --path <that path>`. Say so in one line if you created `docs/compass/`.
 
 ## How this connects to the pipeline

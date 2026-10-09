@@ -137,7 +137,9 @@ RETIRED_CLI = __import__("re").compile(
 # one with the reason someone wrote for it.
 # Imported rather than defined: see tests/allow_marker.py.
 from allow_marker import ALLOW_MARKER_RE  # noqa: E402
-MAX_ALLOW_MARKERS = 14
+# 19 since the route guard: five lines in commands/ and skills/ use "route" as
+# a verb and each carries its reviewed-verb marker (tests/test_vocabulary_decisions.py).
+MAX_ALLOW_MARKERS = 19
 
 
 def test_no_live_doc_teaches_a_retired_cli_spelling():

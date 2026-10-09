@@ -101,7 +101,7 @@ def test_human_note_recorded(run_cli, make_task, project):
     ))
     r = _capture(run_cli, "ft-human",
                  "--note", "the pre-tool hook blocked a legitimate doc edit",
-                 "--note-category", "tooling", "--note-phase", "build")
+                 "--note-category", "tooling", "--note-stage", "implement")
     assert r.returncode == 0, r
 
     task = yaml.safe_load((task_dir / "manifest.yml").read_text())

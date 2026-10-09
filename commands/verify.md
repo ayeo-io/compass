@@ -75,12 +75,12 @@ The rest of this command is for delivery work.
    `gate-evidence-present` check checks every `pass` gate has a pointer
    that resolves - a gate marked pass with no evidence fails the check.
 6. **Write `verification-report.md`** from the output of
-   `compass issue template verification-report`, which renders the checklist from the
+   `compass issue template show verification-report`, which renders the checklist from the
    issue's exit lists: each dimension, each gate, the evidence, pass/fail.
 
    **Where it goes.** `docs/compass/<created>-<issue-slug>/verification-report.md`, where the
    date is the manifest's `created:` field - not today's. Then register it:
-   `compass issue artifact verification-report --status draft --path <that path>`. The CLI
+   `compass issue artifact set verification-report --status draft --path <that path>`. The CLI
    refuses a path that climbs out of the project, so the record is checked
    rather than claimed. If you had to create `docs/compass/`, **say so in one
    line** - a directory appearing with nothing said is how it gets deleted by

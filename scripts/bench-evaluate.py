@@ -42,14 +42,13 @@ import time
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SLUG = "bench"
 
-MANIFEST = """schema_version: '2.0'
+MANIFEST = """schema_version: '3.0'
 issue: bench
 created: '2026-10-07'
-status: active
 assessment:
   risk: contained
   familiarity: brownfield-mapped
-  size: standard
+  size: medium
   goal: delivery
   role: engineer
   labels: []

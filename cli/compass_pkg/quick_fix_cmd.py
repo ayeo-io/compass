@@ -45,7 +45,7 @@ from compass_pkg.stable_ids import (
     APPROACH_QUICK_FIX, GATE_VERIFY_CORRECTNESS, GATE_VERIFY_GOVERNANCE, GATE_VERIFY_TRACEABILITY,
     STAGE_BREAKDOWN, STAGE_PLAN, STAGE_REFINE)
 from compass_pkg.core import (
-    CompassError, WHEN_KEY_MAP, _one_segment, canonical_shape, display_shape,
+    COMPASS_SCHEMA_VERSION, CompassError, WHEN_KEY_MAP, _one_segment, canonical_shape, display_shape,
     display_stage, docs_dir, find_governance, find_upwards, reading_matches,
     load_manifest, now_iso, load_yaml, manifest_path, resolve_issue_dir, save_manifest,
 )
@@ -55,7 +55,7 @@ from compass_pkg.manifest import (
     cmd_changed_file_add, cmd_evidence_add, cmd_gate_pass, cmd_land_commit,
     cmd_scenario_add,
 )
-from compass_pkg.routing import cmd_route_evaluate, evaluate_route
+from compass_pkg.routing import cmd_route_evaluate, evaluate_route, read_size
 from compass_pkg.start_state import (  # noqa: F401
     _GENERATED_DIRS, _STATE_PATHS, _git_changed_paths, _is_generated,
     _is_issue_state, _record_path, _tracked_paths, changed_since_start)
@@ -274,6 +274,7 @@ def cmd_quick_fix_start(args):
     risk_v, risk_r = _split_required(args.risk, "risk")
     fam_v, fam_r = _split_required(args.familiarity, "familiarity")
     size_v, size_r = _split_required(args.size, "size")
+    size_v = read_size("size", size_v)      # the retired `standard` reads as `medium`
     goal_v, goal_r = _split_optional(args.goal)
     role_v, role_r = _split_optional(args.role)
 
@@ -332,10 +333,9 @@ def cmd_quick_fix_start(args):
     os.makedirs(task_dir, exist_ok=True)
     created = datetime.date.today().isoformat()
     start_record = {
-        "schema_version": "2.0",
+        "schema_version": COMPASS_SCHEMA_VERSION,
         "issue": slug,
         "created": created,
-        "status": "active",
         "assessment": dict(readings),
         # Where the assess stage ends; finish reads the session's tokens
         # per stage from here (#375).
@@ -994,7 +994,7 @@ def cmd_quick_fix_finish(args):
         if any("NOT re-derived" in ln or "commit failed" in ln for ln in spec_lines):
             spec_lines.append(
                 "fix it: copy those issue folders into .compass/work/, then "
-                "run `compass issue refresh-spec`")
+                "run `compass spec sync`")
         landed, _ = load_manifest(task_dir)
         committed_files = _commit_files(landed.get("land_commit"), project_root)
         traced_now = {cf.get("path") for cf in (landed.get("changed_files")

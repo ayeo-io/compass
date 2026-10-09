@@ -236,7 +236,7 @@ EXPECTED_SUBCOMMANDS = {
     "tdd-green", "policy", "plan", "intent", "issue", "adr", "rework-scan", "flow",
     "next", "follow-up", "ship-commit", "gate", "scenario", "changed-file",
     "evidence", "terminology",
-    "migrate",                    # the 1.x-to-2.0 tree migrator
+    "review-rule", "spec", "preset",  # `review-rule list`, `spec sync`, `preset init|test`
     # `init` creates `.compass/config.yml` and `.compass/work/`, and is safe
     # to run twice. It exists because no other command owns initialisation,
     # and the five entry points call it directly.

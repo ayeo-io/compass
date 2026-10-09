@@ -32,6 +32,7 @@ import re as _re
 
 import fnmatch
 import re as _re
+from compass_pkg import status_words
 from compass_pkg.stable_ids import APPROACH_HOTFIX
 from compass_pkg.core import CompassError, canonical_shape, display_shape, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, migrate_map_section, normalize_spine, resolve_issue_dir, save_manifest
 
@@ -325,14 +326,14 @@ def derive_friction(slug, task, work):
         if reason:
             obs += f": {reason}"
         entries.append({
-            "phase": "assess",
+            "stage": "assess",
             "category": "mis-route",
             "observation": obs,
             "source": "derived",
         })
     for d in _find_reframe_debt([(slug, task)], work):
         entries.append({
-            "phase": "assess",
+            "stage": "assess",
             "category": "mis-route",
             "observation": ("absorbed scope-bloat without a re-assessment: "
                             f"{d['devlog_line']}"),
@@ -366,13 +367,13 @@ def cmd_friction_capture(args):
     note = getattr(args, "note", None)
     if note:
         human = {
-            "phase": getattr(args, "note_phase", None) or None,
+            "stage": getattr(args, "note_stage", None) or None,
             "category": getattr(args, "note_category", None) or "other",
             "observation": note,
             "source": "human",
         }
-        if human["phase"] is None:
-            del human["phase"]
+        if human["stage"] is None:
+            del human["stage"]
         entries.append(human)
 
     # Merge rather than replace. Derived entries are a pure function of the
@@ -444,7 +445,7 @@ def _median(xs):
 
 def compute_impact(tasks):
     """issues: [(slug, data)]. Returns a dict; pure, no I/O, no clock."""
-    landed = [(s, d) for s, d in tasks if (d or {}).get("status") == "landed"]
+    landed = [(s, d) for s, d in tasks if status_words.is_completed(d)]
     hotfixes = [(s, d) for s, d in landed if d.get("delivery_approach") == APPROACH_HOTFIX]
     delivery = [(s, d) for s, d in landed if d.get("delivery_approach") != APPROACH_HOTFIX]
 

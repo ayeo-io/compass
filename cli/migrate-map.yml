@@ -2,14 +2,14 @@
 # The v1-to-v2 migration map - DATA, deliberately exempt from the
 # vocabulary scan (`scan.exempt` in governance/terminology.yml).
 #
-# Why this file exists: `compass migrate` and the read-side normaliser must
+# Why this file exists: `compass issue migrate` and the read-side normaliser must
 # name v1 spellings, inside a CLI whose string literals are scanned for those
 # spellings. The mapping lives here as data, so the enforced code never
 # carries a banned word in a literal.
 # =============================================================================
 
 # Manifest value renames. Read-side: the normaliser maps them on load.
-# Write-side: `compass migrate` rewrites them on disk.
+# Write-side: `compass issue migrate` rewrites them on disk.
 values:
   # Evidence type and check name. ADR-023 renamed the concept; archived
   # manifests carry the old spelling and must keep clearing their gate.
@@ -31,6 +31,48 @@ values:
     expedition: full
     feature: regular
     initiative: full
+  # Stage weights (issue vocabulary-and-cli-renames). Each table is read only
+  # in the fields it names, never as bare text: `full` is still the name of a
+  # delivery approach, and `delivery_approach: standard` is the row above, not
+  # a size. `collapsed`, `skipped` and the special modes keep their names.
+  # Stage mode: a manifest's `stages` values and a layer's stage modes.
+  stage_mode:
+    full: thorough
+    light: lightweight
+    full-plus-backfill: thorough-with-follow-up
+  # Artifact depth: a manifest's `artifacts[].depth` and a layer's approach
+  # `artifacts` values.
+  artifact_depth:
+    full: thorough
+    light: lightweight
+  # Size: `assessment.size`, `evaluated_assessment.size`, the size
+  # dimension's values and each `size` atom of a condition.
+  size:
+    standard: medium
+  # Issue status. A manifest stores only `backlog` (a hold) or `done` with a
+  # close reason; the states of work in flight come from the records. `active`
+  # has no new word: nothing is stored for it, so its value is null.
+  # `close_reason` is keyed by the old status and holds the reason that status
+  # stood for. A close reason the manifest already names wins over it.
+  issue_status:
+    queued: backlog
+    parked: backlog
+    active: null
+    landed: done
+    abandoned: done
+  close_reason:
+    landed: completed
+    abandoned: not-planned
+  # Run stage: `compass run --stage` and a manifest's `runs[].stage`. The
+  # implement stage carries the stage id's own name.
+  run_stage:
+    build: implement
+
+# Manifest keys renamed by the same issue, read in the entries they name: a
+# `friction[]` entry's `phase` key is now `stage`. A `stage` already present
+# wins and `phase` is dropped. The entry's value goes through `stage_keys`.
+friction_keys:
+  phase: stage
 
 # Old route names -> the names the display layer prints. Manifests record
 # the route names themselves; an old name is read through the map above.

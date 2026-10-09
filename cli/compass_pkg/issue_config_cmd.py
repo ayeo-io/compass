@@ -25,7 +25,7 @@ import types
 from dataclasses import dataclass, field
 
 from compass_pkg import catalogue_spec as spec
-from compass_pkg import config_preview, effective, layers, parents
+from compass_pkg import config_preview, effective, layers, parents, status_words
 from compass_pkg.atomic_io import StrictYamlError, load_yaml_strict
 from compass_pkg.core import CompassError, load_manifest, resolve_issue_dir
 from compass_pkg.terminal import mark_handled, resolve_mode
@@ -222,8 +222,8 @@ def run_configure(args):
     if not held:
         raise CompassError(f"issue {slug} has no stored configuration to change yet; "
                            f"run `{FIX} --issue {slug}` first")
-    if manifest.get("status") == "landed":
-        raise CompassError(f"issue {slug} is landed and keeps the configuration it landed "
+    if status_words.is_closed(manifest):
+        raise CompassError(f"issue {slug} is closed and keeps the configuration it closed "
                            f"under; it cannot be given a proposal")
     pending = effective.pending_proposal(task_dir, manifest)
     live = (pending is not None and pending.base_generation == held

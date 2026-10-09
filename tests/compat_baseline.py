@@ -36,10 +36,25 @@ def shipped_policy():
     return load_yaml(str(POLICY))
 
 
+# The baseline was captured at 5.6.0, before the depth words and the size were
+# renamed (issue `vocabulary-and-cli-renames`), and is never regenerated. So a
+# result is compared in the old words: the size an assessment names is read
+# as the new word the evaluator expects, and the stage weights and artifact
+# depths it returns are written back as the old words. This table is the one
+# place the comparison knows the rename. A verdict that differs after the
+# bridge has moved, and the test says which field.
+SIZE_NOW = {"standard": "medium"}
+DEPTH_WAS = {"thorough": "full", "lightweight": "light",
+             "thorough-with-follow-up": "full-plus-backfill"}
+
+
 def compact(readings, policy):
     """The fields the compatibility promise covers, for every autonomy
     setting, or the refusal text when the evaluator refuses."""
     out = {}
+    readings = dict(readings)
+    if "size" in readings:
+        readings["size"] = SIZE_NOW.get(readings["size"], readings["size"])
     for autonomy in AUTONOMY:
         try:
             r = evaluate_route(copy.deepcopy(readings), policy, autonomy=autonomy)
@@ -48,9 +63,10 @@ def compact(readings, policy):
         if not out:
             out = {
                 "delivery_approach": r["delivery_approach"],
-                "stages": r["stages"],
+                "stages": {s: DEPTH_WAS.get(m, m) for s, m in r["stages"].items()},
                 "gates": sorted(r["gates"]),
-                "artifacts": sorted((a["kind"], a["depth"]) for a in r["artifacts"]),
+                "artifacts": sorted((a["kind"], DEPTH_WAS.get(a["depth"], a["depth"]))
+                                    for a in r["artifacts"]),
                 "subtask_ceiling": r["subtask_ceiling"],
                 "required_artifacts": sorted(r["required_artifacts"]),
                 "required_skills": sorted(r["required_skills"]),

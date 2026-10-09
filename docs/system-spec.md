@@ -3314,3 +3314,104 @@
 - `IDR-8` configuration.md describes compass.yml as the settings file
 - `IDR-9` releasing.md has the 6.0.0 entry
 - `IDR-10` the compatibility contracts hold under configurations B and C
+
+### vocabulary-and-cli-renames (completed 2026-10-09)
+
+- `VR-A1` Given the shipped default preset, when its stage modes and artifact depths are read, then each is thorough, lightweight, thorough-with-follow-up, collapsed, skipped or a special mode, and none is full, light or full-plus-backfill.
+- `VR-A2` Given a new issue that evaluates to the full approach, when the approach is written to its manifest, then every stage mode and artifact depth uses the new depth words and the delivery approach is still full.
+- `VR-A3` Given the shipped delivery approaches, when approach show and approach render print them, then each stage weight appears as a new depth word and each approach keeps its name.
+- `VR-A4` Given two stage modes, when the classifier ranks them, then skipped ranks below collapsed, below lightweight, below thorough, below thorough-with-follow-up, the same order the old words had.
+- `VR-A5` Given the special modes, collapsed and skipped, when the manifest schema and the vocabulary list stage modes, then those names are unchanged.
+- `VR-B1` Given the size dimension, when its values are listed, then they are atomic, small, medium, large and product, and standard is not offered.
+- `VR-B2` Given each assessment the routing tests use with size standard, when it is evaluated with size medium instead, then the delivery approach, gates and stage modes equal the results recorded before the rename.
+- `VR-B3` Given a manifest whose delivery approach is the retired name standard, when it loads, then it reads as the regular approach and is not turned into a size.
+- `VR-B4` Given approach evaluate is run with size standard on the command line, when it evaluates, then the result equals size medium and the output says standard is now medium.
+- `VR-C1` Given an in-progress issue with the blocked flag set, when a person sets it to backlog, then the stored status is backlog, the blocked flag is cleared and its recorded work is unchanged.
+- `VR-C2` Given an issue whose gates have all passed, when a person closes it as done with close reason completed, then its status is done, its close reason is completed and a land time is recorded.
+- `VR-C3` Given an issue with a gate that has not passed, when a person closes it as done with close reason completed, then the command refuses, names each unpassed gate and leaves the status unchanged.
+- `VR-C4` Given an issue with gates that have not passed, when a person closes it as done with close reason not-planned, then its status is done with close reason not-planned.
+- `VR-C5` Given two issues, when a person closes the first as a duplicate of the second, then the first is done with close reason duplicate and its manifest names the second issue.
+- `VR-C6` Given an issue, when a person closes it as a duplicate without naming the other issue, then the command refuses and the status is unchanged.
+- `VR-C7` Given an issue, when a person sets it to done with no close reason, then the command refuses and lists completed, not-planned and duplicate.
+- `VR-C8` Given an issue, when a person sets it to ready, in-progress or in-review by hand, then the command refuses and says that the issue's records move those states.
+- `VR-C9` Given an issue with no stored status whose acceptance criteria and requirements review are registered and that has no technical design, distribution map, subtask or test record, when its state is read, then it is ready.
+- `VR-C10` Given an issue with no stored status that reads as ready, when a technical design, distribution map, subtask or test record is registered for it, then its state reads as in-progress.
+- `VR-C11` Given an in-progress issue with no stored status, when one of its gates moves from pending or a verification report is registered with a path, then its state reads as in-review.
+- `VR-C12` Given an in-review issue on an approach that ships with every gate passed, when ship-commit lands it, then its status is done with close reason completed.
+- `VR-C13` Given an in-progress issue, when issue blocked set runs with a reason, then the manifest records the flag with the reason and a time, the state stays in-progress, and flow shows the issue as blocked.
+- `VR-C14` Given an issue whose state is backlog, ready or done, when issue blocked set runs, then the command refuses, names in-progress and in-review as the states that allow it, and writes nothing.
+- `VR-C15` Given issues in each new state, when flow prints the board and its JSON, then every status shown is a new state word and no old status word appears.
+- `VR-C16` Given issues in every state, when a check that skips finished issues runs, then it skips each done issue whatever its close reason and runs on backlog, ready, in-progress and in-review issues.
+- `VR-C17` Given the old status setter spelling with each old status word, when it runs, then active ends a hold, queued and parked set backlog, landed closes as completed under the same gate rule, abandoned closes as not-planned, and a notice names the new command.
+- `VR-D1` Given manifests with status queued, landed and abandoned, when each loads, then queued reads as a backlog hold, landed as done with close reason completed and abandoned as done with close reason not-planned.
+- `VR-D2` Given a manifest with status active, a registered technical design and every gate pending, when a command loads and saves it, then no status is stored, the state reads as in-progress, and a notice on standard error names active, the reading and why.
+- `VR-D3` Given a manifest with status active and a gate that has moved from pending, when a command loads and saves it, then no status is stored, the state reads as in-review, and a notice on standard error names active, the reading and why.
+- `VR-D4` Given a manifest with status parked and a parked reason, when a command loads and saves it, then the stored status is a backlog hold, the parked reason and time are kept, and a notice says parked was read as backlog.
+- `VR-D5` Given a manifest whose stage modes and artifact depths use full, light and full-plus-backfill, when it loads, then they read as thorough, lightweight and thorough-with-follow-up and the delivery approach full is unchanged.
+- `VR-D6` Given a manifest whose assessment and evaluated assessment have size standard, when it loads, then both read as medium.
+- `VR-D7` Given a manifest with a run record at stage build and friction entries keyed phase, when it loads, then the run stage reads as implement and each friction entry is keyed stage.
+- `VR-D8` Given a manifest written in every old word, when a command saves it, then the saved file holds no old word in status, stage modes, artifact depths, size, run stage or friction keys, and a backup file beside it holds the original.
+- `VR-D9` Given a fresh project, when each Compass writer creates its file, then no old word appears in a mapped field of any file written.
+- `VR-D10` Given a project configuration whose implement stage is full, when policy show reads the chain, then the effective mode is thorough and its source is the project layer.
+- `VR-D11` Given a git parent pinned before the rename whose implement stage is light, when the chain is classified against the new shipped default, then the classification equals the one recorded before the rename and is not incomparable.
+- `VR-D12` Given a git parent rule keyed on size standard that adds a gate, when an issue of size medium is evaluated, then that gate is in force.
+- `VR-D13` Given a git parent rule keyed on size standard that tightens the default, when the chain is classified, then the tightening is reported as before and is not read as equivalent.
+- `VR-D14` Given an issue configuration layer written in old words, when the issue is evaluated, then the result equals the same layer written in new words.
+- `VR-D15` Given a parent layer saying full and a project layer saying lightweight for the same stage, when the chain is classified, then the project is looser, as when both use the same set of words.
+- `VR-D16` Given a policy-test fixture with assessment size standard and expected stage modes in old words, when preset test runs it against the new default, then the fixture passes.
+- `VR-D17` Given a stored generation file written before the rename, when an issue pinned to it is evaluated, then the result equals the one recorded at that generation, the file is not rewritten, and no drift is reported because layer digests are taken before the old words are mapped.
+- `VR-D18` Given a configuration or manifest naming a value that is neither an old word nor a new one, when it loads, then it is rejected with the same finding as before the change.
+- `VR-D19` Given a project layer or a pinned parent layer that uses old words, when policy lint or preset test runs, then the exit status is unchanged and an advisory names the layer, the parent's sha, the path, the new word and that the old word reads until 7.0.0, and compass check prints no such advisory.
+- `VR-E1` Given each renamed verb in the rename table, when its new name runs, then it gives the output and exit code the old name gave before the change.
+- `VR-E2` Given each old spelling the alias table lists as released, when it runs, then it does the same work as the new verb and prints one line to standard error naming the new command.
+- `VR-E3` Given an alias run with JSON output, when it finishes, then standard output equals the new verb's JSON and the notice appears only on standard error.
+- `VR-E4` Given the top-level and group help, when it is printed, then it lists each new verb and no alias.
+- `VR-E5` Given the alias table, when the package version is 7.0.0 or later, then a test fails while any alias remains.
+- `VR-E6` Given an old spelling no release holds (policy effective, policy test, policy init-preset, approach diagram, issue refresh-spec, issue migrate-config, issue template, or scenario tests with no verb), when it runs, then it is refused as an unknown command with no alias notice, and its final name runs.
+- `VR-E7` Given compass run with stage implement, when it starts, then it runs the implement stage, and the stage help lists implement and not build.
+- `VR-E8` Given compass run with stage build, when it starts, then it runs the implement stage and prints that build is now implement.
+- `VR-E9` Given issue friction with the stage flag, when it records an entry, then the entry is keyed stage, and the same command with the phase flag is refused as an unknown option because no release holds it.
+- `VR-E10` Given every verb the parser registers, when the convention test runs, then each is in the fixed verb set or in the named exceptions table, each exception with a reason, and a planted verb in neither fails the test.
+- `VR-E11` Given issue artifact-path, when a hook calls it for a document that exists and one that does not, then it prints the path with exit 0 and exits non-zero for the missing one, as before.
+- `VR-E12` Given spec sync, when its help is printed, then it says the command merges the base branch, re-derives the living spec and commits.
+- `VR-F1` Given an empty folder, when preset init runs with an owner, then it writes the same four files the scaffold wrote before, using only new words, and preset test passes on the result.
+- `VR-F2` Given a preset folder, when preset test runs, then its report, keys and exit codes equal what policy test gave before the change.
+- `VR-F3` Given the unreleased policy test spelling, when it is run after the rename, then it is an unknown command and the message names preset test.
+- `VR-F4` Given the preset group help, when it is printed, then it lists init and test.
+- `VR-G1` Given the decision records, when they are read, then one new record amends the vocabulary freeze and the unobserved-adopter rule, and the two amended records are unchanged from main.
+- `VR-G2` Given the new decision record, when its alias section is read, then it limits aliases to renamed released CLI verbs until 7.0.0 and says vocabulary values are read through the rename tables, not redirected.
+- `VR-G3` Given the terminology file, when the issue-type entry is read, then it lists feature, bug and task, and quick-fix, hotfix and spike are defined only as delivery approaches.
+- `VR-G4` Given shipped prose that uses task as an issue type and prose that uses task to mean an issue, when the terminology test runs, then only the second is flagged.
+- `VR-G5` Given the terminology file, when the workflow entries are read, then the states are backlog, ready, in-progress, in-review and done, the close reasons are completed, not-planned and duplicate, and blocked is a flag.
+- `VR-G6` Given the terminology file, when the level entries are read, then epic, initiative and milestone each have an entry and none says epic is dropped.
+- `VR-G7` Given the retired list in the terminology file and the read-side mapping table, when both are read, then they hold exactly the same triples of field, old word and new word.
+- `VR-G8` Given shipped prose, when the terminology test runs, then every use of route, routes, routed or off-route fails unless its line carries the reviewed-verb marker, a planted noun use without the marker fails, and a planted verb use with the marker passes.
+- `VR-G9` Given the shipped commands, skills, agents, docs and governance, when the terminology test runs, then no old word appears in its retired meaning outside the retired list, the mapping table, the alias table and the decision record, and the machine names landed_by, land_commit, land_timestamp and landed-by-resolves are allowed.
+- `VR-G10` Given the glossary, when it is read, then one paragraph says a guardrail is made of checks, a gate is cleared by evidence and an obligation is anything the configuration requires.
+- `VR-H1` Given an issue done with close reason completed on an approach that ships, when the living spec is derived, then its scenarios appear under a heading with its slug, the word completed and the date.
+- `VR-H2` Given issues done with close reason not-planned or duplicate, when the living spec is derived, then neither appears.
+- `VR-H3` Given a spike done with close reason completed, when the living spec is derived, then it does not appear.
+- `VR-H4` Given an issue in progress, in review, ready or backlog, when the living spec is derived, then it does not appear.
+- `VR-H5` Given an old manifest with status landed, when the living spec is derived, then it appears with the same scenarios as before the change, under a completed heading.
+- `VR-H6` Given a living spec with some headings using landed and some using completed, when flow reads its issue headings, then it finds every issue under either word.
+- `VR-H7` Given this repository's issue archive, when the living spec is derived before and after the change, then the same issues and scenarios appear and only the heading word, landed to completed, and the header text differ.
+- `VR-A6` Given the shipped preset in the new depth words, when the legacy routing policy and guardrails views are regenerated and an assessment is evaluated through them, then the views hold no old depth word and the delivery approach, gates and stage modes equal the results recorded before the rename.
+- `VR-C18` Given an issue held in backlog, when issue status remove runs, then the stored hold is deleted and the state reads from the records, and the same command on an issue with no hold refuses and writes nothing.
+- `VR-C19` Given a manifest with status done and no close reason, when the living spec is derived and issue lint runs, then the issue is left out of the spec and lint reports an error naming the missing close reason.
+- `VR-C20` Given a fresh issue, when assess, plan, implement and verify record their work, then none of them writes a stored status and the state shown changes only through the records.
+- `VR-C21` Given a blocked in-progress issue, when it is closed or set to backlog, then the blocked flag is cleared, and a blocked flag left on an issue whose state does not allow it is reported by issue lint and ignored by readers.
+- `VR-C22` Given two issues, when the status setter gets duplicate-of naming the other issue, then the issue closes with close reason duplicate, and the setter refuses a duplicate-of that names the issue itself, names an unknown issue or comes with another close reason.
+- `VR-D20` Given a manifest that holds old and new words together, when it loads, then each value reads in the new words, a friction stage key wins over a phase key, an explicit close reason wins over landed and issue lint reports the contradiction, and done with no close reason is not read as completed.
+- `VR-D21` Given a manifest in old words that is saved twice, when its backup is inspected, then it was written once on the first save, was not overwritten by the second, and compass check, issue lint and the dashboard ignore it.
+- `VR-D22` Given a command run with JSON output on a manifest in old words, when it saves the manifest, then standard output equals the output for the same manifest in new words and the notice appears only on standard error.
+- `VR-D23` Given a manifest saved by the new version, when it is read, then it is stamped schema version 3.0, and the reader accepts major versions 1, 2 and 3 and refuses major version 4 with the message to update Compass.
+- `VR-D24` Given a configuration layer with a when condition on size standard and a check parameter named size with value standard, when it is read, then the condition reads medium, the parameter is unchanged, and no generation file read on the way is rewritten.
+- `VR-D25` Given the reverse word table, when each new status, depth word, size, run stage and friction key is mapped back to the old words and forward again, then each returns its starting value, and done with close reason duplicate is the one value that returns as not-planned.
+- `VR-E13` Given the alias table, when it is read, then every row names the release that first held the old spelling, that release holds it, and no row exists for a spelling no release holds.
+- `VR-E14` Given compass run with stage build and the bare issue artifact spelling, when each runs, then the same rewrite step turns it into the new spelling, prints one notice on standard error, and gives the new command's output and exit code.
+- `VR-G11` Given the modules under the CLI package, when the source guard runs, then no module compares a status value to a retired status word, each allowed exception states a reason, and a planted comparison to landed fails the guard.
+- `VR-G12` Given the depth words used in code, when the stable-id test runs, then each comes from the one constants module and a planted literal depth word in a scanned module fails the test.
+- `VR-H8` Given a branch whose committed living spec has landed headings, when it derives the spec with completed headings, then the branch filter still finds each issue landed on that branch.
+- `VR-C31` Given a quick-fix issue with no stored status, refine collapsed and its acceptance criteria registered, when its state is read, then it is ready.
+- `VR-C32` Given an issue with no stored status whose records show only define finished and whose manifest names implement as its current stage, when its state is read, then it is in-progress.
+- `VR-C33` Given an issue with no stored status on an approach whose refine is not collapsed, with acceptance criteria registered and no requirements review, when its state is read, then it is backlog.

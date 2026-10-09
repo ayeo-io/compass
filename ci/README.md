@@ -103,8 +103,10 @@ adoption: advisory     # report failures, exit 0 - non-blocking
 
 In `advisory` mode every failure is still printed (with the structured
 `what / why / fix` blocks) under a clear `[mode: advisory]` banner - an
-advisory run is never mistaken for an enforced one. Change to `mode:
-enforced` when the team is ready and the gates start blocking landings.
+advisory run is never mistaken for an enforced one. Change to `adoption:
+enforced` (`mode: enforced` in a `.compass/config.yml`) when the team is ready
+and the gates start blocking landings. A `mode:` key in `compass.yml` is
+ignored.
 Teams can adopt Compass in steps - see "Compass enforces nothing in a
 project that has not opted in" in `docs/safety-contract.md`.
 

@@ -130,8 +130,8 @@ copied governance and `.compass/config.yml`) are read in their old words until
 - A `compass.yml` that fails `compass policy lint` makes
   `compass approach evaluate --write` refuse to commit. Without `--write` the
   command still works.
-- A landed issue keeps the configuration it landed under. It cannot store a new
-  generation.
+- A closed issue keeps the configuration it closed under, whatever its close
+  reason. It cannot store a new generation.
 - A script that rewrites a manifest wholesale and drops its `generation:` key
   leaves a complete but unreferenced generation folder. The next
   `compass approach evaluate --write` refuses to write over it, and `compass ci`

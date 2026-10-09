@@ -398,6 +398,106 @@ def test_trc_s4_the_scan_reports_the_old_front_pages():
     assert any("docs/upgrade-6-0-0.md does not say" in f for f in found)
 
 
+# --- TRC-S8: the configuration, upgrade, migrate and CI pages match the code ---
+
+def _cli(tmp_path, *argv):
+    import subprocess
+    import sys
+    return subprocess.run([sys.executable, str(ROOT / "cli" / "compass"), *argv],
+                          cwd=tmp_path, capture_output=True, text=True, timeout=120)
+
+
+def _scratch_issue(tmp_path, slug="scratch-issue"):
+    import subprocess
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    assert _cli(tmp_path, "init").returncode == 0
+    start = _cli(tmp_path, "quick-fix", "start", slug, "--risk", "trivial - scratch",
+                 "--familiarity", "greenfield - scratch", "--size", "atomic - scratch",
+                 "--intent", "scratch", "--scenario", "Given a When b Then c",
+                 "--test", "tests/test_x.py::test_a")
+    assert start.returncode == 0, start.stdout + start.stderr
+    return slug
+
+
+S8_OLD_TEXT = (
+    ("docs/configuration.md", "the hooks detect npm, Make and pytest conventions",
+     "says the hooks detect a test command"),
+    ("docs/policy-migrate.md", "change nothing in `compass check` or the evaluator yet",
+     "says editing compass.yml changes nothing yet"),
+    ("docs/generation-store.md", "It refuses a landed issue", "uses the retired word 'landed'"),
+    ("docs/releasing.md", "A landed issue keeps the configuration it landed under",
+     "uses the retired word 'landed'"),
+    ("docs/entry-exit-evaluation.md", "A landed issue has every list due",
+     "uses the retired word 'landed'"),
+    ("ci/README.md", "Change to `mode: enforced`", "names the key `mode` for compass.yml"),
+)
+
+S8_NEW_TEXT = (
+    ("docs/configuration.md", "`tdd-red` and `tdd-green` need the command after `--`"),
+    ("docs/configuration.md", "`scripts/integrate.sh` falls back to `npm test` or `make test`"),
+    ("docs/policy-migrate.md", "an issue with no stored generation is judged by it at once"),
+    ("docs/generation-store.md", "It refuses a closed issue"),
+    ("docs/releasing.md", "A closed issue keeps the configuration it closed under"),
+    ("docs/entry-exit-evaluation.md", "A closed issue has every list due"),
+    ("ci/README.md", "Change to `adoption: enforced`"),
+)
+
+
+def s8_findings(rel, text):
+    flat = _flat(text)
+    found = [why for r, phrase, why in S8_OLD_TEXT if r == rel and phrase in flat]
+    found += [f"lacks {phrase!r}" for r, phrase in S8_NEW_TEXT if r == rel and phrase not in flat]
+    return found
+
+
+def test_trc_s8_the_scan_reports_the_old_text():
+    assert s8_findings("ci/README.md", "Change to `mode:\nenforced` when ready")
+    assert s8_findings("docs/generation-store.md", "- It refuses a landed issue and")
+    assert not s8_findings("ci/README.md", "Change to `adoption: enforced` when ready")
+
+
+def test_trc_s8_configuration_upgrade_migrate_and_ci_pages_match_the_code(tmp_path):
+    report = {rel: s8_findings(rel, _read(rel)) for rel in sorted({r for r, *_ in S8_OLD_TEXT})}
+    report = {rel: found for rel, found in report.items() if found}
+    assert not report, report
+
+    # With no command and no project.test_command, tdd-red refuses.
+    slug = _scratch_issue(tmp_path)
+    red = _cli(tmp_path, "tdd-red", "--scenario", "TRC-001")
+    assert red.returncode != 0 and "needs a test command" in red.stdout + red.stderr
+
+    # In compass.yml the key is `adoption`; a `mode` key there is ignored.
+    (tmp_path / "compass.yml").write_text(
+        "schema: 1\nextends: compass:default@6\nowner: me\nadoption: advisory\nmode: enforced\n",
+        encoding="utf-8")
+    check = _cli(tmp_path, "check", "--issue", slug)
+    assert "[mode: advisory]" in check.stdout and check.returncode == 0, check.stdout
+
+    # A closed issue keeps the configuration it closed under, whatever the reason.
+    closed = _cli(tmp_path, "issue", "status", "set", "done", "--close-reason", "not-planned",
+                  "--issue", slug)
+    assert closed.returncode == 0, closed.stdout + closed.stderr
+    refused = _cli(tmp_path, "issue", "migrate", "--config", "--issue", slug)
+    assert "is closed and keeps the configuration it closed under" in refused.stdout + refused.stderr
+
+    # issue migrate --apply needs --i-have-a-copy when .compass/work is not tracked.
+    apply_ = _cli(tmp_path, "issue", "migrate", "--apply")
+    assert apply_.returncode == 2 and "--i-have-a-copy" in apply_.stdout + apply_.stderr
+
+
+def test_trc_s8_the_migrate_closing_note_says_compass_yml_is_read_at_once(tmp_path):
+    import shutil
+    import subprocess
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    (tmp_path / "governance").mkdir()
+    for name in ("guardrails.yml", "routing-policy.yml"):
+        shutil.copy(ROOT / "governance" / name, tmp_path / "governance" / name)
+    assert _cli(tmp_path, "init").returncode == 0
+    dry = _cli(tmp_path, "policy", "migrate")
+    assert dry.returncode == 0, dry.stdout + dry.stderr
+    assert "an issue with no stored generation is judged by it at once" in dry.stdout
+
+
 # --- TRC-S7: the quickstart, five-minutes and portability pages match the code --
 
 def _policy_line_with_compass_yml(tmp_path):

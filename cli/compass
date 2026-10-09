@@ -83,6 +83,8 @@ from compass_pkg.policy_cmd import register_preset as register_preset_parser  # 
 from compass_pkg.approve_cmd import register as register_approve_parser  # noqa: E402
 from compass_pkg.review_cmd import register as register_review_parser  # noqa: E402
 from compass_pkg.issue_config_cmd import register as register_issue_configure_parser  # noqa: E402
+from compass_pkg.github_labels import register as register_github_labels_parser  # noqa: E402
+from compass_pkg.github_labels import after_command as sync_github_labels  # noqa: E402
 
 # Declared literally here as well as in compass_pkg.core: this file is
 # what `compass --version` and the release-consistency test read, and a
@@ -373,6 +375,7 @@ def build_parser():
     ptt.set_defaults(func=_cmd_issue_template, output_kind="hand-off")
     register_subtask_parser(pts, issue_arg)
     register_status_parser(pts, issue_arg)
+    register_github_labels_parser(pts, issue_arg)
 
     pacc = sub.add_parser(
         "acceptance",
@@ -696,7 +699,7 @@ def main(argv=None):
     if getattr(args, "command", None) and args.command and args.command[0] == "--":
         args.command = args.command[1:]
     try:
-        return run_with_mode(args, lambda a: args.func(a) or 0) or 0
+        return run_with_mode(args, lambda a: sync_github_labels(a, args.func(a) or 0)) or 0
     except CompassError as exc:
         # Paths in an error open from the project root, like every other
         # path the CLI prints (#293).

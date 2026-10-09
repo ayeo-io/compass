@@ -56,7 +56,7 @@ The state decides what Compass reads, and no state loses a setting silently:
 
 - **What counts as a settings key in the old file:** `mode`, `autonomy`,
   `allow_project_commands`, `enforcement`, `record`, `project`, `prices`,
-  `multiagent`, `preset_index` and `governance_drift`. The three keys the
+  `multiagent`, `preset_index`, `governance_drift` and `github_labels`. The three keys the
   multiagent scripts read, `worktree_root`, `max_worktrees` and `test_command`,
   also count when they sit outside `multiagent:` and `project:`, because the
   scripts find them at any depth in the old file.
@@ -91,6 +91,7 @@ The state decides what Compass reads, and no state loses a setting silently:
 | `allow_project_commands` | Lets `compass check` run commands a project guardrail declares | `true`, `false` | `false` |
 | `governance_drift` | Whether drift from the shipped governance fails | `advisory`, `strict` | `advisory` |
 | `preset_index` | Reserved for published presets; no behaviour yet | - | - |
+| `github_labels` | Whether Compass writes an issue's labels to its linked GitHub issue (see `docs/github-labels.md`) | `domain`, `status`: `true` or `false` each | both `false`; no GitHub call |
 
 ### `adoption`
 
@@ -170,3 +171,17 @@ Project guardrails can declare a command. `compass check` runs one only when
 the contribution is trusted and this setting is `true`. The setting is read
 from the project's own file only, so a published preset cannot authorise its
 own commands. See `docs/security.md`.
+
+### `github_labels`
+
+Two switches, both `false` unless set to `true`. With both off, no command
+calls GitHub.
+
+- `domain`: write the issue's declared domain labels to its linked GitHub
+  issue.
+- `status`: write `status:<state>` and, on a closed issue, `status:done` and
+  `close:<reason>`.
+
+Any other value, such as `"yes"`, reads as off. The setting is read from the
+project's own file only. See `docs/github-labels.md` for the labels, the
+limits and the failure behaviour.

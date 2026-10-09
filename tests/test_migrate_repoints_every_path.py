@@ -437,7 +437,10 @@ EXCLUDED = {
     "artifacts[].digest": "a digest of a document, not a path",
     "changed_files[].path": "a repository file the issue changed, not an "
                             "issue document; rewriting it would falsify history",
-    "evidence[].next_task": "names another issue by its slug",
+    "evidence[].next_task": "the schema describes it as the path to the new "
+                            "issue, and every archive value is a slug; it "
+                            "names an issue, not a document this migration "
+                            "moves",
     "evidence[].record_id": "an identity, not a path",
     "evidence[].scenario": "a scenario id",
     "evidence[].check": "a judged check id",
@@ -453,11 +456,12 @@ EXCLUDED = {
 def _stringy(node):
     if not isinstance(node, dict):
         return False
-    if node.get("type") == "string":
+    kinds = node.get("type")
+    kinds = kinds if isinstance(kinds, list) else [kinds]
+    if "string" in kinds:
         return True
     items = node.get("items")
-    if node.get("type") == "array" and isinstance(items, dict) \
-            and items.get("type") == "string":
+    if "array" in kinds and isinstance(items, dict) and _stringy(items):
         return True
     return any(_stringy(o) for o in node.get("oneOf", []))
 
@@ -501,6 +505,14 @@ def test_mrs_5_a_new_path_field_in_the_schema_is_reported():
     schema["properties"]["subtasks"]["items"]["properties"]["notes_file"] = {
         "type": "string", "description": "A file the builder wrote."}
     assert _unaccounted(schema) == ["subtasks[].notes_file"]
+
+
+def test_mrs_5_a_nullable_path_field_is_reported():
+    """The schema also types a field `["string", "null"]`."""
+    schema = json.loads(SCHEMA.read_text())
+    schema["properties"]["subtasks"]["items"]["properties"]["summary"] = {
+        "type": ["string", "null"], "description": "Path to the summary file."}
+    assert _unaccounted(schema) == ["subtasks[].summary"]
 
 
 def test_mrs_5_the_handled_list_matches_what_the_migration_reads():

@@ -576,6 +576,12 @@ _register(Rule(
     "PBW-A1", "No retired v1 word survives in prose, a comment "
     "or a test docstring", _find_retired_word,
     exemptions=(
+        Exemption(
+            "docs/upgrade-6-0-0.md",
+            "`full-plus-backfill`",
+            "the upgrade page names the depth word that 6.0.0 renames, so "
+            "an adopter can find it in their own files - the table row is "
+            "the only place the word appears."),
         # PBW-F7's <!-- absorbed: "..." --> markers quote a merge-base
         # sentence verbatim so a reader can see what the rewrite carried
         # forward - the same reason ADR quotes and voice-tells fixtures are

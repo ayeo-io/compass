@@ -5,14 +5,15 @@ runs no command, so a test builds rows by hand. It owns the page's escaping:
 every recorded value goes through `_e` and nothing else writes a value into
 the markup. The page holds no script and loads nothing from outside.
 """
+# DEPENDENCY: standard library (html); compass_pkg.core, compass_pkg.stable_ids.
 from __future__ import annotations
 
 import html
 
 from compass_pkg.core import display_stage
+from compass_pkg.stable_ids import STAGE_IDS
 
-LANES = ("backlog", "assess", "define", "refine", "plan", "breakdown",
-         "implement", "verify", "ship", "done")
+LANES = ("backlog", *STAGE_IDS, "done")
 DONE_LANE_NAME = "done, last 7 days"
 
 _SECTIONS = ("backlog", "ready", "in_progress", "stale", "in_review",

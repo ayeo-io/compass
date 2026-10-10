@@ -29,6 +29,7 @@ The source dict:
 The `trees` summary: {"read": [labels], "skipped": int, "note": str or None}.
 `note` says why worktrees could not be listed.
 """
+# DEPENDENCY: standard library (os, stat, subprocess); compass_pkg.core.
 from __future__ import annotations
 
 import os

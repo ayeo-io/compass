@@ -37,7 +37,7 @@ from compass_pkg import parse_cache, status_words
 from compass_pkg.core import (CompassError, find_compass_dir, find_governance, load_yaml,
                               manifest_path, normalize_spine)
 from compass_pkg.rework import cmd_rework_scan
-from compass_pkg.stable_ids import APPROACH_SPIKE, STAGE_IDS
+from compass_pkg.stable_ids import APPROACH_SPIKE, STAGE_ASSESS, STAGE_IDS, STAGE_SHIP
 
 
 
@@ -370,7 +370,7 @@ def _open_stage(m, task_dir, recorded):
     `compass next` cannot disagree."""
     from compass_pkg import next_cmd
     if not recorded:
-        return "assess", None
+        return STAGE_ASSESS, None
     try:
         return next_cmd._current_phase_from_task(m, task_dir) or "done", None
     except Exception as exc:                                # noqa: BLE001
@@ -386,7 +386,7 @@ def _lane_of(row, recorded, held, stage):
         return "backlog"
     if stage in STAGE_IDS:
         return stage
-    return "ship" if stage == "done" else None
+    return STAGE_SHIP if stage == "done" else None
 
 
 def _board_place(out, categories, src, m, today, now, guarded, evidence_state):

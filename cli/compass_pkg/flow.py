@@ -33,7 +33,7 @@ import re as _re
 import fnmatch
 import re as _re
 import glob
-from compass_pkg import status_words
+from compass_pkg import parse_cache, status_words
 from compass_pkg.core import (CompassError, find_compass_dir, find_governance, load_yaml,
                               manifest_path, normalize_spine)
 from compass_pkg.rework import cmd_rework_scan
@@ -184,6 +184,9 @@ def board(work_root, today=None):
     now = datetime.datetime.now(datetime.timezone.utc)
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(work_root)))
     guarded = _routing_labels()
+    # The one reader that stores parses (ADR-049). The board reads and saves
+    # nothing else, so a fault in the cache can only misplace a row here.
+    cache = parse_cache.for_work_root(work_root)
     out = {"backlog": [], "ready": [], "in_progress": [], "stale": [],
            "in_review": [], "done_this_week": [], "closed": [], "other": [],
            "unreadable": [], "friction": None, "counts": {}, "total": 0}
@@ -199,7 +202,7 @@ def board(work_root, today=None):
             out["counts"]["unreadable"] = out["counts"].get("unreadable", 0) + 1
             continue
         try:
-            m = normalize_spine(load_yaml(tp))
+            m = normalize_spine(cache.load_yaml(tp))
             if not isinstance(m, dict):
                 raise CompassError("not a mapping")
         except Exception:                                   # noqa: BLE001
@@ -219,6 +222,7 @@ def board(work_root, today=None):
     if categories:
         top = sorted(categories.items(), key=lambda kv: (-kv[1], kv[0]))[0]
         out["friction"] = {"category": top[0], "count": top[1]}
+    cache.finish()
     return out
 
 

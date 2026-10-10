@@ -133,9 +133,11 @@ def _entries(task: dict, key: str) -> list:
 
 def _registered(task: dict, kind: str) -> bool:
     """True when the manifest registers the `kind` document: an entry with a
-    path at any status but `superseded`, or one recorded as omitted. The
-    stage commands register their documents as `draft`, and nothing marks
-    them approved, so the status cannot be what counts."""
+    path at any status but `superseded`, or one recorded as omitted. A stage
+    command writes the status (`draft` at registration, `approved` once a later
+    stage records its work), but a person can hold a document at `draft` or
+    `awaiting-approval` and the stage is still recorded, so the status cannot
+    be what counts."""
     for a in _entries(task, "artifacts"):
         if a.get("kind") != kind:
             continue
@@ -278,7 +280,7 @@ def _stale_entry(task: dict, task_dir: str, stage: str) -> list:
         return ["artifact freshness cannot be evaluated"] if stage in freshness.CONSUMES else []
 
 
-def _emit(args, task, task_dir, line, current_phase, finished):
+def _emit(args, task, task_dir, line, current_phase, finished, hint=True):
     """Write `line`, today's output, opened by the rail when a person is
     reading. compass_pkg.render decides that; piped output, `CLAUDECODE`,
     `--json`, `--quiet` and `--evidence-out` all get `line` unchanged."""
@@ -300,7 +302,7 @@ def _emit(args, task, task_dir, line, current_phase, finished):
         out += rail([(display_stage(k).capitalize(), st) for k, st in states], style)
         # The plain line is wrapped here only; piped output keeps it whole.
         out += [""] + wrap(line.rstrip("\n"))
-        if not finished and current_phase in _PHASE_ORDER:
+        if hint and not finished and current_phase in _PHASE_ORDER:
             quick = canonical_shape(approach) == APPROACH_QUICK_FIX
             out += wrap("Next: /compass:" + ("quick-fix" if quick else display_stage(current_phase)))
         text = "\n".join(out) + "\n"
@@ -376,5 +378,12 @@ def cmd_next(args):
     if collapsed:
         parts.append(f"{', '.join(collapsed)} collapsed on this route")
 
-    _emit(args, task, task_dir, " | ".join(parts) + "\n", next_phase, False)
+    # A decision an agent took for the person: the issue waits at a checkpoint
+    # for its confirmation, or lists the decisions and goes on (autonomous).
+    from compass_pkg import decisions_taken
+    wait, more = decisions_taken.next_lines(task, _stages_on_record(task, task_dir))
+    line = (wait if wait else " | ".join(parts)) + "\n"
+    _emit(args, task, task_dir, line, next_phase, False, hint=not wait)
+    for extra in more:
+        print(extra)
     return 0

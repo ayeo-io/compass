@@ -105,9 +105,9 @@ def add_records(root, **named):
             encoding="utf-8")
 
 
-def rich_issue(tmp_path):
+def rich_issue(tmp_path, compass_yml=None):
     """A regular issue whose manifest holds every record the eight blocks read."""
-    root = project(tmp_path)
+    root = project(tmp_path, compass_yml=compass_yml)
     body = manifest(root)
     body["scenarios"] = [
         {"id": "TRC-1", "title": "First scenario", "intent": "INT-1",

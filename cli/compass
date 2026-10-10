@@ -85,6 +85,7 @@ from compass_pkg.review_cmd import register as register_review_parser  # noqa: E
 from compass_pkg.issue_config_cmd import register as register_issue_configure_parser  # noqa: E402
 from compass_pkg.github_labels import register as register_github_labels_parser  # noqa: E402
 from compass_pkg.github_labels import after_command as sync_github_labels  # noqa: E402
+from compass_pkg.render_after import after_command as render_after_command  # noqa: E402
 
 # Declared literally here as well as in compass_pkg.core: this file is
 # what `compass --version` and the release-consistency test read, and a
@@ -725,7 +726,10 @@ def main(argv=None):
     if getattr(args, "command", None) and args.command and args.command[0] == "--":
         args.command = args.command[1:]
     try:
-        return run_with_mode(args, lambda a: sync_github_labels(a, args.func(a) or 0)) or 0
+        # After a command exits 0, the labels sync and then the documents render. Each
+        # catches its own failure, so neither hides the other or changes the exit code.
+        return run_with_mode(args, lambda a: render_after_command(
+            a, sync_github_labels(a, args.func(a) or 0))) or 0
     except CompassError as exc:
         # Paths in an error open from the project root, like every other
         # path the CLI prints (#293).

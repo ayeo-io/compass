@@ -12,6 +12,7 @@ checkout's own `.compass/work` or `docs/compass` (DCJ-63 proves it).
 """
 from __future__ import annotations
 
+import json
 import os
 import stat
 import subprocess
@@ -724,3 +725,137 @@ def test_dcj_74_path_checked_at_render_time(tmp_path):
     assert code == 2, out + err
     assert not (Path(tmp_path) / "escape-second").exists()
     assert not (Path(root) / "escape-second").exists()
+
+
+# --- DCJ-11 -----------------------------------------------------------------
+
+def _green(root, scenario="TRC-3"):
+    """A red then a green record for the scenario, as `compass tdd-red` and `tdd-green` write."""
+    code, out, err = run(root, "tdd-red", "--issue", SLUG, "--scenario", scenario, "--",
+                         "sh", "-c", "echo FAILED; exit 1")
+    assert code == 0, out + err
+    return run(root, "tdd-green", "--issue", SLUG, "--scenario", scenario, "--",
+               "sh", "-c", "echo 1 passed")
+
+
+def _approve_as_jed72(root, kind):
+    """Register `kind` as approved, then name jed72 as the approver, as a person's
+    approval would."""
+    code, out, err = sup.register(root, kind, "approved")
+    assert code == 0, out + err
+    body = manifest(root)
+    entry = next(a for a in body["artifacts"] if a["kind"] == kind)
+    entry.update(status="approved", approved_by="jed72", approved_at="2026-10-10T12:00:00Z")
+    manifest_file(root).write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
+    return entry
+
+
+def _entry(root, kind):
+    return next(a for a in manifest(root)["artifacts"] if a["kind"] == kind)
+
+
+def test_dcj_11_approved_document_stays_approved_on_block_render(tmp_path):
+    root = rich_issue(tmp_path)
+    write_doc(root, "acceptance-criteria", "# AC\n\nOne line.\n\n" + block("coverage"))
+    assert render(root)[0] == 0
+    _approve_as_jed72(root, "acceptance-criteria")
+    recorded = _entry(root, "acceptance-criteria")["digest"]
+    before = doc_path(root, "acceptance-criteria").read_text("utf-8")
+    code, out, err = _green(root)
+    assert code == 0, out + err
+    after = doc_path(root, "acceptance-criteria").read_text("utf-8")
+    assert after != before, "the after-command step re-rendered the coverage block"
+    assert sup.register(root, "acceptance-criteria", "draft")[0] == 0
+    found = _entry(root, "acceptance-criteria")
+    assert (found["status"], found["approved_by"], found["approved_at"]) == (
+        "approved", "jed72", "2026-10-10T12:00:00Z")
+    assert found["digest"] == recorded
+    # A line outside the block, edited, moves it back to draft.
+    path = doc_path(root, "acceptance-criteria")
+    path.write_text(path.read_text("utf-8").replace("One line.", "Two lines."), encoding="utf-8")
+    assert sup.register(root, "acceptance-criteria", "draft")[0] == 0
+    found = _entry(root, "acceptance-criteria")
+    assert found["status"] == "draft" and "changed after it was approved" in found["reason"]
+    # A document whose markers are malformed is digested whole, and registering it raises no error.
+    write_doc(root, "verification-report", "# VR\n\n" + OPEN.format(kind="gates") + "\nno end\n")
+    _approve_as_jed72(root, "verification-report")
+    code, out, err = sup.register(root, "verification-report", "draft")
+    assert code == 0, out + err
+    assert _entry(root, "verification-report")["status"] == "approved"
+
+
+@pytest.mark.skip(reason="`compass issue migrate` inserts the empty dod pair and re-stamps the "
+                         "digest in the migration unit (U4)")
+def test_dcj_11_a_migrated_approved_report_stays_approved():
+    raise AssertionError("built in U4")
+
+
+# --- DCJ-69 -----------------------------------------------------------------
+
+def test_dcj_69_every_digest_reads_masked_text(tmp_path, monkeypatch):
+    from compass_pkg import checks, review_records
+    root = rich_issue(tmp_path, compass_yml={"schema": 1, "artifacts": {
+        "technical-design": {"set": {"depends_on": ["acceptance-criteria"]}}}})
+    write_doc(root, "acceptance-criteria", "# AC\n\nOne line.\n\n" + block("coverage"))
+    write_doc(root, "technical-design", "# TD\n\nA design.\n\n" + block("evidence"))
+    assert render(root)[0] == 0
+    # Registering the design after the acceptance criteria records the upstream digest.
+    assert sup.register(root, "technical-design", "draft")[0] == 0
+    task_dir = str(Path(root) / WORK)
+    task = manifest(root)
+    monkeypatch.chdir(root)
+    monkeypatch.setattr(checks, "_read_config", lambda _d: {"project": {"bdd_runner": "behave"}})
+    record = Path(task_dir) / "evidence" / "bdd-run.json"
+    record.write_text(json.dumps({
+        "spec_sha256": checks._spec_sha256(task_dir), "scenarios_seen": ["TRC-1", "TRC-2", "TRC-3"],
+        "method": "tagged"}), encoding="utf-8")
+    judged = {"inputs": ["technical-design"]}
+
+    def readings():
+        task_now = manifest(root)
+        design = next(a for a in task_now["artifacts"] if a["kind"] == "technical-design")
+        return {
+            "bdd": checks._check_scenarios_are_executable(task_now, task_dir),
+            "spec": checks._spec_sha256(task_dir),
+            "judged inputs": review_records.current_digests(judged, task_now, task_dir),
+            "upstream": review_records.file_digest(str(doc_path(root, "acceptance-criteria"))),
+            "recorded upstream": design["upstream"]["acceptance-criteria"],
+            "approval": review_records.file_digest(str(doc_path(root, "technical-design"))),
+        }
+    first = readings()
+    assert first["bdd"][0] is True, first["bdd"]
+    assert first["upstream"] == first["recorded upstream"]
+    text_before = (doc_path(root, "acceptance-criteria").read_text("utf-8"),
+                   doc_path(root, "technical-design").read_text("utf-8"))
+    code, out, err = _green(root)
+    assert code == 0, out + err
+    assert (doc_path(root, "acceptance-criteria").read_text("utf-8"),
+            doc_path(root, "technical-design").read_text("utf-8"))[0] != text_before[0], \
+        "the after-command step re-rendered the coverage block"
+    assert doc_path(root, "technical-design").read_text("utf-8") != text_before[1], \
+        "and the evidence block of the design"
+    second = readings()
+    assert second["bdd"][0] is True, second["bdd"]
+    assert second["spec"] == first["spec"]
+    assert second["judged inputs"] == first["judged inputs"]
+    assert second["upstream"] == second["recorded upstream"] == first["upstream"]
+    assert second["approval"] == first["approval"]
+    # One masking function: replace it, and each consumer follows.
+    rb = _rb()
+    original = rb.masked_text
+    monkeypatch.setattr(rb, "masked_text", lambda text, *a, **k: "X" + original(text, *a, **k))
+    third = readings()
+    for key in ("spec", "upstream", "approval"):
+        assert third[key] != second[key], key
+    assert third["judged inputs"] != second["judged inputs"]
+    monkeypatch.setattr(rb, "masked_text", original)
+    # A line outside any block, edited, is reported by each of the three.
+    path = doc_path(root, "acceptance-criteria")
+    path.write_text(path.read_text("utf-8").replace("One line.", "Two lines."), encoding="utf-8")
+    edited = readings()
+    assert edited["bdd"][0] is False
+    assert edited["upstream"] != edited["recorded upstream"]
+    design_path = doc_path(root, "technical-design")
+    design_path.write_text(design_path.read_text("utf-8").replace("A design.", "A new design."),
+                           encoding="utf-8")
+    assert readings()["judged inputs"] != second["judged inputs"]

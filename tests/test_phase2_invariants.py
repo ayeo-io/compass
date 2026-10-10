@@ -153,6 +153,7 @@ EXPECTED_SUBCOMMANDS = {
     "lesson",  # project-lessons (ADR-029)
     "run",  # headless-runner (ADR-030)
     "record",  # delivery-record (ADR-031)
+    "board",  # compass-board (ADR-046): render|refresh - the delivery board page
 }
 EXPECTED_READING_KEYS = {
     "risk", "familiarity", "size", "goal", "urgency", "role",

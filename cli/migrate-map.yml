@@ -40,6 +40,7 @@ values:
     full: thorough
     light: lightweight
     full-plus-backfill: thorough-with-follow-up
+    swarm: multiagent
   # Artifact depth: a manifest's `artifacts[].depth` and a layer's approach
   # `artifacts` values.
   artifact_depth:

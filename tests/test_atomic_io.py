@@ -112,3 +112,25 @@ def test_lm_1_a_date_digests_as_its_iso_string():
 def test_lm_1_a_value_json_cannot_hold_is_refused_naming_its_type():
     with pytest.raises(TypeError, match="set"):
         atomic_io.canonical_json({"x": {1, 2}})
+
+
+def test_trc_e15_defaults_are_unchanged_by_mode_and_temp_prefix(tmp_path, monkeypatch):
+    """`mode` and `temp_prefix` are keyword-only and default to today's behaviour:
+    the temporary name is formed from the target's name, a replaced file keeps
+    its mode, and a new file gets the mode `open` would have given it."""
+    import inspect
+    import stat
+
+    params = inspect.signature(atomic_io.atomic_write_text).parameters
+    for name in ("mode", "temp_prefix"):
+        assert params[name].kind is inspect.Parameter.KEYWORD_ONLY
+        assert params[name].default is None
+    names = []
+    real = os.replace
+    monkeypatch.setattr(os, "replace", lambda s, d: (names.append(os.path.basename(s)), real(s, d))[1])
+    target = tmp_path / "keep.yml"
+    target.write_text("a")
+    os.chmod(target, 0o640)
+    atomic_io.atomic_write_text(target, "b")
+    assert names[0].startswith(".keep.yml-")
+    assert stat.S_IMODE(os.stat(target).st_mode) == 0o640

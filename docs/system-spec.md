@@ -3521,6 +3521,73 @@
 
 - `REL-001` Given the seven version locations and EXPECTED_VERSION, When the version test runs, Then every location and EXPECTED_VERSION read 6.0.1
 
-### shipped-releases-v6-0-1 (completed 2026-10-10)
+### compass-board (completed 2026-10-10)
 
-- `SR-001` Given the v6.0.1 tag, When the shipped-releases test runs with tags fetched, Then the table holds every tagged release and matches its files
+- `TRC-A1` Board data carries the why for each open issue
+- `TRC-A2` The page, the text board and the JSON place every issue in the same state
+- `TRC-A3` compass flow --html writes the same page as compass board render
+- `TRC-A4` Board data for a realistic archive builds within 2.0 seconds
+- `TRC-A5` compass flow and compass board render each finish within 2.0 seconds on this repository
+- `TRC-B1` The board has a backlog lane, one lane per stage, and a done lane, in pipeline order
+- `TRC-B2` The backlog lane shows ten cards oldest first, then a count of the rest
+- `TRC-B3` The backlog lane holds only unassessed issues and issues held by a stored status
+- `TRC-B4` A set-aside card shows its recorded reason
+- `TRC-B5` A ready issue sits in the lane of its next stage and says ready
+- `TRC-B6` In-progress and in-review cards sit in their current stage's lane and show state, stage and gate fraction
+- `TRC-B7` A blocked issue shows the blocked flag and its reason, visible without colour
+- `TRC-B8` A blocked flag outside in-progress and in-review is not shown
+- `TRC-B9` An issue with stale evidence carries a stale evidence flag in its stage lane
+- `TRC-B10` A card in the backlog state shows the recommendation flag when a recommendation is written
+- `TRC-B11` The done lane shows issues completed in the last seven days, newest first, capped at ten
+- `TRC-B12` Done issues are counted in the header by close reason
+- `TRC-B13` The header summarises the board and says it changes nothing
+- `TRC-B14` No retired status word appears on the page or the text board
+- `TRC-B15` Stage depths show the words the manifest stores, mapping a retired word only where a 6.0 word exists
+- `TRC-B16` An assessed issue sits in the lane compass next computes and shows its derived state
+- `TRC-B17` No issue appears in two lanes
+- `TRC-B18` An open issue past verify sits in the ship lane
+- `TRC-C1` Selecting a card opens its detail panel without script
+- `TRC-C2` The panel shows the five assessment dimensions and the labels
+- `TRC-C3` The panel shows each policy rule fired with its rationale and changed lines
+- `TRC-C4` The panel shows each stage's depth with the current stage marked in text
+- `TRC-C5` The panel shows each gate with its status
+- `TRC-C6` The panel shows the manifest path and the tree
+- `TRC-C7` An unassessed issue's panel says it is not assessed
+- `TRC-C8` The next command for an assessed open issue is the resume command
+- `TRC-C9` The next command for an unassessed issue uses the assess command's real arguments
+- `TRC-C10` A done issue's panel shows its close reason and no next command
+- `TRC-D1` The page has no script, no external resource, no web font and no form
+- `TRC-D2` The page is dark by default, follows the light preference, and meets 4.5:1 contrast in both
+- `TRC-D3` Every recorded value on the page is escaped
+- `TRC-D4` An unreadable manifest goes to the unplaceable note and hides no other issue
+- `TRC-D5` A project with no issues renders an empty board
+- `TRC-E1` board render writes the board file, prints its path and opens it once
+- `TRC-E2` board render --no-open writes the file without opening a browser
+- `TRC-E3` board render --out writes the page to the named file
+- `TRC-E4` The default board file is one stable file per checkout in the system temp folder
+- `TRC-E5` Repeated render and refresh runs leave one board file and nothing else
+- `TRC-E6` board refresh rewrites the board file in place and never opens a browser
+- `TRC-E7` board refresh --out rewrites the named file
+- `TRC-E8` board refresh with no board file yet creates it and says so
+- `TRC-E9` The path guard applies to every board path, for render, refresh and flow --html
+- `TRC-E10` A default board path that is a link or another user's file is refused
+- `TRC-E11` When no browser can be opened the board file is still written
+- `TRC-E12` The board command group follows the CLI naming rule
+- `TRC-E13` board render outside a Compass project is refused
+- `TRC-W1` --worktrees shows issues from other worktrees and names their tree
+- `TRC-W2` A slug found in several trees shows once, from the manifest changed most recently
+- `TRC-W3` Prunable or missing worktrees are skipped and counted
+- `TRC-W4` Without --worktrees the board reads this checkout only
+- `TRC-W5` --worktrees parses one manifest per distinct slug
+- `TRC-W6` --worktrees over ten worktrees holding the archive sample finishes within 5.0 seconds
+- `TRC-W7` --worktrees outside a git repository reads this checkout and says why
+- `TRC-W8` An unreadable manifest in another worktree is named with its tree
+- `TRC-A6` compass flow --json keeps every 6.0.0 key and only adds new ones
+- `TRC-A7` The board places each assessed issue at the stage compass next computes
+- `TRC-B19` The page legend says the lane is the stage and the card word is the state
+- `TRC-E14` The default board file can be read by its owner only
+- `TRC-E15` The board file is written through a new temporary file with an unpredictable name
+- `TRC-W9` Board commands change no issue state in any tree they read
+- `TRC-W10` A link in another tree's work folder that leads out of that tree is not followed
+- `TRC-W11` An issue from another tree is judged by that tree's own records
+- `TRC-W12` An issue done in this checkout is not read from any other tree

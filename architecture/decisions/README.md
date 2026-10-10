@@ -85,6 +85,9 @@ Rules:
 | [ADR-043](ADR-043-a-project-has-one-configuration-file.md) | A project has one configuration file, compass.yml | accepted | with ADR-042 |
 | [ADR-044](ADR-044-vocabulary-and-cli-naming.md) | Vocabulary and CLI naming: one meaning per word, noun-verb verbs, aliases only for released verbs until 7.0.0 | accepted | amends ADR-012 and ADR-024; with ADR-006 and ADR-014 |
 | [ADR-045](ADR-045-the-issue-lifecycle-is-derived-from-records.md) | The issue lifecycle is derived from records: stored `backlog` or `done`, the rest derived, manifest schema 3.0 | accepted | with ADR-005 and ADR-044 |
+| [ADR-046](ADR-046-the-delivery-board-is-one-data-set-with-one-renderer-per-output.md) | The delivery board is one data set with one renderer per output; `--json` is additive within a major version | accepted | with ADR-044 and ADR-045 |
+| [ADR-047](ADR-047-generated-views-are-written-to-one-stable-file-per-checkout-in-the-system-temp-folder.md) | Generated views are written to one stable file per checkout in the system temp folder | accepted | with ADR-036 |
+| [ADR-048](ADR-048-reading-issue-state-across-worktrees.md) | Reading issue state across worktrees, skipping what is done here | accepted | with ADR-005 and ADR-046 |
 | [ADR-049](ADR-049-bulk-manifest-reads-use-a-parse-cache-keyed-on-content.md) | Manifests read in bulk use a parse cache keyed on content, used by `compass flow` only | accepted | within ADR-013; with ADR-003 and ADR-005 |
 
 ## Principle → ADR mapping

@@ -200,8 +200,11 @@ class ParseCache:
         """Delete entries this run did not use, only when the folder holds more
         than twice as many entries as this run read. Only names of 64 hex digits
         and `.json` are touched, and temporary files (`.tmp-*`) older than a
-        minute, which a killed run leaves behind. Never raises, never prints."""
-        if not self._store:
+        minute, which a killed run leaves behind. Never raises, never prints.
+        A run that read nothing has used nothing, so it judges no entry unused:
+        `flow.board(parsed=...)` reads no manifest after `read_checkout` stored
+        them all."""
+        if not self._store or not self._reads:
             return
         try:
             with os.scandir(self._folder) as listing:

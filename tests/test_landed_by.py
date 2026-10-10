@@ -26,7 +26,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # The archive these tests read: the tracked sample, or this checkout's own
 # with COMPASS_FULL_ARCHIVE=1 (tests/archive.py).
 sys.path.insert(0, str(REPO_ROOT / "tests"))
-from archive import archive_root  # noqa: E402
+from archive import archive_root, checkable_root  # noqa: E402
 CLI = REPO_ROOT / "cli" / "compass"
 
 _FULL_RECORD = {
@@ -77,6 +77,9 @@ def _check(project, slug):
     every check, so asserting against the short view would be testing the
     truncation rather than the behaviour.
     """
+    # The issue page is a document the check expects (`rendered-blocks-current`, ADR-051).
+    subprocess.run([sys.executable, str(CLI), "issue", "render", "--issue", slug],
+                   cwd=str(project), capture_output=True, text=True, timeout=120)
     return subprocess.run(
         [sys.executable, str(CLI), "check", "--issue", slug, "--verbose"],
         cwd=str(project), capture_output=True, text=True, timeout=120)
@@ -367,7 +370,7 @@ def test_del_c2_retro_does_not_count_the_delivered_ones_as_abandoned():
     """DEL-C2: the mechanism `compass retro` reads is now telling the truth."""
     _archive_or_skip()
     run = subprocess.run([sys.executable, str(CLI), "retro"],
-                         cwd=str(archive_root()), capture_output=True, text=True,
+                         cwd=str(checkable_root()), capture_output=True, text=True,
                          timeout=180)
     combined = run.stdout + run.stderr
     for slug in ("the-human-review-pack",

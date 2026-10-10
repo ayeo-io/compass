@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -33,7 +34,8 @@ from rendered_blocks_support import tracked_digest  # noqa: E402
 #: The modules this issue adds that render or migrate. Later units extend it.
 NEW_TEST_MODULES = ["tests/test_render_blocks.py", "tests/test_rendered_blocks_check.py",
                     "tests/test_dod_from_manifest.py", "tests/test_verification_note.py",
-                    "tests/test_issue_page.py", "tests/test_issue_index.py"]
+                    "tests/test_issue_page.py", "tests/test_issue_index.py",
+                    "tests/test_migrate_rendered_blocks.py"]
 
 
 def _archive_digest():
@@ -240,3 +242,57 @@ def test_dcj_78_render_all_dry_run_writes_nothing(tmp_path):
     assert _tree(project) == before
     assert sorted(str(p.relative_to(project)) for p in project.rglob("*") if p.is_file()) == listing
     assert not (project / ".compass" / "cache" / "render-skip.json").exists()
+
+
+# --- the archive sample after migration (DCJ-62) -------------------------------------------
+
+def test_dcj_62_archive_sample_meets_measures(tmp_path):
+    from compass_pkg import status_words
+    from compass_pkg.core import canonical_shape, docs_dir
+    project = _sample_project(tmp_path)
+    work = project / ".compass" / "work"
+    code, out, err = sup.run(project, "issue", "migrate", str(work), "--apply",
+                             "--i-have-a-copy", timeout=900)
+    assert code == 0, out + err
+    code, data, text = _all(project)
+    assert code == 0, text[-2000:]
+    index = (project / "docs" / "compass" / "README.md").read_text("utf-8")
+    slugs = sorted(p.name for p in work.iterdir() if (p / "manifest.yml").is_file())
+    assert len(slugs) >= 15
+    for slug in slugs:
+        task_dir = work / slug
+        task = yaml.safe_load((task_dir / "manifest.yml").read_text("utf-8"))
+        # `compass check` is run on the issue and the new check passes, whatever the generation
+        # it was stored under.
+        done = sup.run(project, "check", "--issue", slug, "--json")
+        rows = {c["name"]: c for c in json.loads(done[1])["checks"]}
+        if "rendered-blocks-current" in rows:
+            assert rows["rendered-blocks-current"]["status"] == "pass", (slug, rows)
+        else:
+            # A spike owes none of the gate that holds the check.
+            assert canonical_shape(task.get("delivery_approach")) == "spike", (slug, sorted(rows))
+        folder = project / docs_dir(str(task_dir))
+        # The issue page opens with the ask.
+        page = (folder / "README.md").read_text("utf-8").splitlines()
+        opening = [i for i, line in enumerate(page) if line == "<!-- compass:render ask -->"]
+        assert opening and opening[0] < 20, (slug, opening)
+        # The index lists the issue once.
+        assert index.count("[%s](" % slug) == 1, slug
+        # A quick fix closed as completed has its note.
+        if status_words.is_completed(task) and canonical_shape(task.get("delivery_approach")) \
+                == "quick-fix":
+            assert (folder / "verification-note.md").is_file(), slug
+        # A done issue with a Definition of Done block reads n of n met, or names what it carries.
+        report = folder / "verification-report.md"
+        if status_words.is_closed(task) and report.is_file():
+            block = re.search(r"<!-- compass:render dod -->\n(.*?)<!-- /compass:render -->",
+                              report.read_text("utf-8"), re.S)
+            if block is None:
+                continue
+            first = block.group(1).splitlines()[0]
+            outstanding = [f["id"] for f in task.get("follow_ups") or []
+                           if f.get("status") == "outstanding" and f.get("defers")]
+            if outstanding:
+                assert "carried to ship" in first and all(i in first for i in outstanding), (slug, first)
+            else:
+                assert re.fullmatch(r"Definition of Done: (\d+) of \1 met", first), (slug, first)

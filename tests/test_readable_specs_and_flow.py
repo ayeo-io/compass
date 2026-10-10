@@ -31,7 +31,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 # The archive these tests read: the tracked sample, or this checkout's own
 # with COMPASS_FULL_ARCHIVE=1 (tests/archive.py).
 sys.path.insert(0, str(ROOT / "tests"))
-from archive import archive_root  # noqa: E402
+from archive import archive_root, checkable_root  # noqa: E402
 
 SPEC_TEMPLATE = "templates/acceptance-criteria.md"
 CLARIFICATIONS_TEMPLATE = "templates/requirements-review.md"
@@ -571,7 +571,7 @@ def test_trc_f1_pre_existing_specs_still_pass():
         result = subprocess.run(
             [sys.executable, str(ROOT / "cli" / "compass"), "check", "--issue", slug,
              "--json"],
-            capture_output=True, text=True, timeout=120, cwd=str(archive_root()),
+            capture_output=True, text=True, timeout=120, cwd=str(checkable_root()),
         )
         if result.returncode != 0:
             # An archived issue has no issue page until `compass issue render --all` writes

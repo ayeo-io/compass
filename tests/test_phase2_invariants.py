@@ -27,7 +27,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 # The archive these tests read: the tracked sample, or this checkout's own
 # with COMPASS_FULL_ARCHIVE=1 (tests/archive.py).
 sys.path.insert(0, str(ROOT / "tests"))
-from archive import archive_root  # noqa: E402
+from archive import archive_root, checkable_root  # noqa: E402
 CLI = ROOT / "cli" / "compass"
 GOVERNANCE = ROOT / "governance"
 
@@ -109,7 +109,7 @@ def test_trc_f2_adding_the_check_should_not_change_any_existing_tasks_result(slu
     """
     r = subprocess.run(
         [sys.executable, str(CLI), "check", "--verbose", "--issue", slug],
-        cwd=str(archive_root()), capture_output=True, text=True, timeout=180)
+        cwd=str(checkable_root()), capture_output=True, text=True, timeout=180)
     line = next((l for l in r.stdout.splitlines()
                  if "scenarios-are-executable" in l), "")
     assert line, (

@@ -41,6 +41,14 @@ def _write_green(task_dir):
     (ev / "green.json").write_text(json.dumps({"exit_code": 0, "passed": True}))
 
 
+def _render_pages(run_cli):
+    """Write the issue pages. `rendered-blocks-current` fails an issue that has none (ADR-051),
+    so a fixture that models a well-formed issue renders them, as an adopter does with one
+    `compass issue render --all`."""
+    done = run_cli("issue", "render", "--all")
+    assert done.returncode == 0, done
+
+
 def test_ci_passes_when_no_tasks(run_cli, project):
     """A repo with governance but no issues: governance still lints, ci
     returns 0."""
@@ -54,6 +62,7 @@ def test_ci_passes_when_all_tasks_pass(run_cli, make_task):
     _write_green(task_dir)
     task_dir = make_task("ok-2", _valid_task("ok-2"))
     _write_green(task_dir)
+    _render_pages(run_cli)
     r = run_cli("ci")
     assert r.returncode == 0, r
     assert "PASS" in r.stdout, r
@@ -89,6 +98,7 @@ def test_ci_reports_each_task(run_cli, make_task):
     for slug in ("alpha", "beta"):
         td = make_task(slug, _valid_task(slug))
         _write_green(td)
+    _render_pages(run_cli)
     r = run_cli("ci")
     assert r.returncode == 0, r
     assert "alpha" in r.stdout, r

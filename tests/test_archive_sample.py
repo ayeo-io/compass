@@ -172,22 +172,22 @@ def test_as_b_the_sample_holds_the_issues_the_tests_need():
 
 
 @pytest.fixture(scope="module")
-def rendered_sample(tmp_path_factory):
-    """A copy of the sample with the issue pages and the project index that `compass issue
-    render --all` writes. The sample holds issues from before the pages existed, and
-    `rendered-blocks-current` fails a done issue that has none (ADR-051), so the check is
-    run on the sample as an adopter has it after that one command. The shared unpacked
-    sample is never written."""
-    import shutil
-    copy = tmp_path_factory.mktemp("rendered-sample") / "proj"
-    shutil.copytree(SAMPLE, copy)
-    done = subprocess.run([sys.executable, str(CLI), "issue", "render", "--all"], cwd=copy,
-                          capture_output=True, text=True, timeout=300)
-    assert done.returncode == 0, done.stdout[-2000:] + done.stderr[-500:]
-    return copy
+def rendered_sample():
+    """A copy of the sample as an adopter has it after `compass issue migrate --apply
+    --i-have-a-copy` and `compass issue render --all` (`archive.checkable_root`). The sample
+    holds issues from before the records and the pages existed: `dod-evidence-typed` finds an
+    item open until migration writes the records its pages held, and `rendered-blocks-current`
+    fails a done issue with no page (ADR-051). The copy sits inside this checkout, as the
+    contract copies do, because the check reads the project's mode and asks git about the
+    commits an issue names. The shared unpacked sample is never written."""
+    return archive.checkable_root()
 
 
-@pytest.mark.parametrize("slug", _issues(checkable=True))
+@pytest.mark.parametrize("slug", [
+    pytest.param(s, marks=pytest.mark.xfail(
+        strict=True, reason="its report has no Definition of Done section, so migration carries "
+                            "no record and dod-evidence-typed finds every item open (archive.py)"))
+    if s in archive.NO_DOD_SECTION else s for s in _issues(checkable=True)])
 def test_as_b_every_issue_in_the_sample_passes_compass_check(slug, rendered_sample):
     assert slug != "<no sample>", "tests/fixtures/archive-sample.tar.gz is missing"
     result = subprocess.run([sys.executable, str(CLI), "check", "--issue", slug],

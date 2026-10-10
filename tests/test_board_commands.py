@@ -857,9 +857,10 @@ def test_trc_w12_done_here_not_read_elsewhere(rig, tmp_path, monkeypatch):
 
 def _count_parses(monkeypatch, twice=False):
     """Record the manifest every `load_yaml` call in the package reads, through
-    every module that imported the name. With `twice`, the board's own manifest
-    parser is made to parse each manifest a second time."""
-    from compass_pkg import core, flow
+    every module that imported the name and through the parse cache the board
+    reads with (ADR-049). With `twice`, the board's own manifest parser is made
+    to parse each manifest a second time."""
+    from compass_pkg import core, flow, parse_cache
     seen = []
     real = core.load_yaml
 
@@ -871,12 +872,20 @@ def _count_parses(monkeypatch, twice=False):
     for name, module in list(sys.modules.items()):
         if name.startswith("compass_pkg") and getattr(module, "load_yaml", None) is real:
             monkeypatch.setattr(module, "load_yaml", counting)
+    cached = parse_cache.ParseCache.load_yaml
+
+    def counting_cached(self, path):
+        if str(path) == core.manifest_path(os.path.dirname(str(path))):
+            seen.append(os.path.realpath(str(path)))
+        return cached(self, path)
+
+    monkeypatch.setattr(parse_cache.ParseCache, "load_yaml", counting_cached)
     if twice:
         once = flow._parse_manifest
 
-        def parse_twice(task_dir):
-            once(task_dir)
-            return once(task_dir)
+        def parse_twice(task_dir, cache):
+            once(task_dir, cache)
+            return once(task_dir, cache)
 
         monkeypatch.setattr(flow, "_parse_manifest", parse_twice)
     return seen

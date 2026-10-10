@@ -3466,3 +3466,45 @@
 ### glossary-meaning-only (completed 2026-10-09)
 
 - `TRC-001` Given the vocabulary file, When the glossary is derived or compass terminology is run, Then no Not line and no former name is printed
+
+### shipped-releases-v6 (completed 2026-10-09)
+
+- `TRC-001` The shipped-releases table holds every tagged release, including v6.0.0
+- `TRC-002` The release procedure says to regenerate the shipped-releases table after tagging
+
+### manifest-parse-speed (completed 2026-10-10)
+
+- `TRC-A1` A second read in one process returns the file's new content after a write
+- `TRC-A2` A read after a replace that keeps the byte size and modification time returns the new content
+- `TRC-A3` Each read returns a new object, so changing one result does not change another
+- `TRC-A4` A manifest saved by save_manifest reads back with the saved values in the same process
+- `TRC-A5` Scalars load with the types safe_load gives them
+- `TRC-A6` An anchored value and its alias load as one shared object
+- `TRC-A7` An empty, null or falsy document loads as an empty mapping
+- `TRC-A8` A document that is a list loads as that list
+- `TRC-A9` Malformed YAML is refused with a message naming the file
+- `TRC-A10` A missing path is refused with a message naming it
+- `TRC-A11` A duplicated key keeps its last value without error
+- `TRC-A12` A tag that would build a Python object is refused and nothing runs
+- `TRC-A13` A file that is not UTF-8 raises a decode error
+- `TRC-A14` The locked re-read refuses a change made by another process, even one that keeps size and modification time
+- `TRC-A15` load_manifest reads a manifest under the retired file name and maps retired keys
+- `TRC-A16` load_manifest refuses an unknown schema major version
+- `TRC-A17` A manifest reached through a symbolic link reads the target's current content
+- `TRC-B1` compass flow finishes within 2.0 seconds on this repository
+- `TRC-B2` compass flow over a 484-manifest copy of the archive sample is faster than parsing those manifests once
+- `TRC-C1` Every manifest in the archive sample reads exactly as safe_load returns it, on the first and later reads
+- `TRC-C2` The parity check fails on a planted difference
+- `TRC-C3` Every read uses the bundled pure-Python parser, whatever the machine has installed
+- `TRC-D1` A manifest that becomes malformed after a read is refused on the next read
+- `TRC-D2` A manifest removed after a read is reported missing on the next read
+- `TRC-E1` A cache entry whose recorded digest, format or parser version does not match the current read is never used
+- `TRC-E2` A corrupt cache file is ignored and the read returns what safe_load returns
+- `TRC-E3` A cache file built to run code when loaded runs nothing
+- `TRC-E4` A cache that cannot be written leaves every command's output unchanged
+- `TRC-F1` Read-only commands print the same bytes over the archive sample
+- `TRC-F2` Commands that save a manifest write the same bytes as before
+- `TRC-F3` Running compass flow leaves git status unchanged
+- `TRC-B3` The first compass flow after every manifest changed is at most 10% slower than the code before the change
+- `TRC-C4` The parity check reports no difference for a NaN read exactly
+- `TRC-E5` The cache is written only inside the project's .compass folder

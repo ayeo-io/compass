@@ -33,7 +33,7 @@ import re as _re
 import fnmatch
 import re as _re
 import glob
-from compass_pkg import status_words
+from compass_pkg import parse_cache, status_words
 from compass_pkg.core import (CompassError, find_compass_dir, find_governance, load_yaml,
                               manifest_path, normalize_spine)
 from compass_pkg.rework import cmd_rework_scan
@@ -196,13 +196,14 @@ def _issue_folders(work_root):
             if os.path.isdir(os.path.join(work_root, d))]
 
 
-def _parse_manifest(task_dir):
-    """`(manifest, None)`, or `(None, why it could not be read)`."""
+def _parse_manifest(task_dir, cache):
+    """`(manifest, None)`, or `(None, why it could not be read)`. `cache` is
+    the parse cache of the checkout doing the reading (ADR-049)."""
     tp = manifest_path(task_dir)
     if not os.path.isfile(tp):
         return None, _NO_MANIFEST
     try:
-        m = normalize_spine(load_yaml(tp))
+        m = normalize_spine(cache.load_yaml(tp))
         if not isinstance(m, dict):
             raise CompassError("not a mapping")
     except Exception:                                       # noqa: BLE001
@@ -214,10 +215,12 @@ def read_checkout(work_root):
     """Every folder under this checkout's work root, parsed once: slug to the
     parsed manifest (a dict), or to the reason it could not be read (text).
     `board(parsed=...)` reuses the result, so a manifest is read once."""
+    cache = parse_cache.for_work_root(work_root)
     found = {}
     for slug in _issue_folders(work_root):
-        m, why = _parse_manifest(os.path.join(work_root, slug))
+        m, why = _parse_manifest(os.path.join(work_root, slug), cache)
         found[slug] = m if why is None else why
+    cache.finish()
     return found
 
 
@@ -254,6 +257,9 @@ def board(work_root, today=None, sources=None, parsed=None):
     today = today or datetime.date.today()
     now = datetime.datetime.now(datetime.timezone.utc)
     guarded = _routing_labels()
+    # The one reader that stores parses (ADR-049). The board reads and saves
+    # nothing else, so a fault in the cache can only misplace a row here.
+    cache = parse_cache.for_work_root(work_root)
     out = {"backlog": [], "ready": [], "in_progress": [], "stale": [],
            "in_review": [], "done_this_week": [], "closed": [], "other": [],
            "unreadable": [], "friction": None, "counts": {}, "total": 0,
@@ -277,7 +283,7 @@ def board(work_root, today=None, sources=None, parsed=None):
         elif isinstance(known, str):
             m, why = None, known
         else:
-            m, why = _parse_manifest(src["task_dir"])
+            m, why = _parse_manifest(src["task_dir"], cache)
         if why is not None:
             _unreadable(out, src, why)
             continue
@@ -290,6 +296,7 @@ def board(work_root, today=None, sources=None, parsed=None):
     if categories:
         top = sorted(categories.items(), key=lambda kv: (-kv[1], kv[0]))[0]
         out["friction"] = {"category": top[0], "count": top[1]}
+    cache.finish()
     return out
 
 

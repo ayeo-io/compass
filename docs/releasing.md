@@ -345,7 +345,14 @@ with the version hidden.
 
 10. **Tag and publish.** The release-script run, the out-of-tree smoke
    test, and the seven-locations version bump are the gate; tagging is
-   the consequence.
+   the consequence. After pushing the tag, run
+   `python3 scripts/generate-shipped-releases.py` and land the updated
+   `governance/shipped-releases.yml` and `governance/shipped-releases.tar.xz`
+   through a pull request. `compass policy migrate` reads this table to
+   recognise a project's copied governance, and `test_PM_12` fails wherever
+   tags are fetched until the table lists the new tag.
+   `python3 scripts/generate-shipped-releases.py --check` exits 0 once it
+   does.
 
 ### Checks for 6.0.0
 

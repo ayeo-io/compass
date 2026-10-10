@@ -88,6 +88,7 @@ Rules:
 | [ADR-046](ADR-046-the-delivery-board-is-one-data-set-with-one-renderer-per-output.md) | The delivery board is one data set with one renderer per output; `--json` is additive within a major version | accepted | with ADR-044 and ADR-045 |
 | [ADR-047](ADR-047-generated-views-are-written-to-one-stable-file-per-checkout-in-the-system-temp-folder.md) | Generated views are written to one stable file per checkout in the system temp folder | accepted | with ADR-036 |
 | [ADR-048](ADR-048-reading-issue-state-across-worktrees.md) | Reading issue state across worktrees, skipping what is done here | accepted | with ADR-005 and ADR-046 |
+| [ADR-049](ADR-049-bulk-manifest-reads-use-a-parse-cache-keyed-on-content.md) | Manifests read in bulk use a parse cache keyed on content, used by `compass flow` only | accepted | within ADR-013; with ADR-003 and ADR-005 |
 
 ## Principle → ADR mapping
 

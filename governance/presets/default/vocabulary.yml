@@ -107,6 +107,9 @@ vocabulary:
   checks.backfills-paid:
     name: Follow-ups resolved
     aliases: []
+  checks.artifacts-approved:
+    name: Documents approved
+    aliases: []
   checks.spike-conclusion-present:
     name: Spike conclusion present
     aliases: []

@@ -738,6 +738,7 @@ retired_values:
   - {field: stage_mode, old: full, new: thorough}
   - {field: stage_mode, old: full-plus-backfill, new: thorough-with-follow-up}
   - {field: stage_mode, old: light, new: lightweight}
+  - {field: stage_mode, old: swarm, new: multiagent}
   - {field: artifact_depth, old: full, new: thorough}
   - {field: artifact_depth, old: light, new: lightweight}
   - {field: size, old: standard, new: medium}

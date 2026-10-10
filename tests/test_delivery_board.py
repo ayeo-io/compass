@@ -4,7 +4,8 @@ The board shows each in-progress issue's route, stage, gates passed and
 whether its newest test record still matches its files; sets stale evidence
 and parked issues apart; shows the queue with its age, what landed in the
 last seven days and the most common friction among them. `--html` writes
-the same board as one static page. It stays advisory and under two seconds
+the board page that `compass board render` writes (issue `compass-board`
+replaced the earlier tables). It stays advisory and under two seconds
 (issue #354; the design records the architect's four changes).
 
 Scenario ids: DB-1 to DB-5 (issue `delivery-board`).
@@ -131,8 +132,8 @@ def test_db_4_the_html_page_has_the_sections_and_escapes_every_value(repo, tmp_p
     r = _run(repo, "flow", "--html", str(out))
     assert r.returncode == 0, r.stdout + r.stderr
     page = out.read_text(encoding="utf-8")
-    for heading in ("In progress", "In review", "Ready", "Backlog", "Done this week", "Closed"):
-        assert heading in page, heading
+    # `--html` writes the board page: ten lanes, a card for each issue.
+    assert page.count('<section class="lane"') == 10
     assert "fix-greeting" in page and "waiting" in page
     assert "<script" not in page.lower()
     assert "&lt;script&gt;" in page and "&amp; more" in page

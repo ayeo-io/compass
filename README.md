@@ -103,6 +103,13 @@ The terminal gives you the decision and the document to read. Detailed policy
 output and test logs stay available as evidence rather than taking over the
 conversation.
 
+`compass board render` shows every issue on one page, with a lane for each
+stage. Each card shows the issue's state, its delivery approach, its gates, and
+any blocked or stale-evidence flag. This example is an invented invoicing
+product:
+
+![The Compass board for an invented invoicing product: a backlog lane, one lane per stage from assess to ship, and a done lane, with cards such as sso-saml-login blocked in implement and four issues done this week](assets/board-example.png)
+
 ## Rigour without ritual
 
 Compass separates two things that process frameworks often confuse:
@@ -196,6 +203,8 @@ compass acceptance record  close it with what was observed
 compass adr new            create the next numbered decision record
 compass rework-scan        add-then-delete patterns across issues
 compass flow               blockers, owed follow-ups, the periodic digest
+compass board render       write the delivery board as one page and open it (--no-open, --out, --worktrees)
+compass board refresh      rewrite that page in place, without opening a browser
 compass next               which stage this issue reached, and what comes next
 compass follow-up resolve  settle an owed follow-up
 compass ship-commit        commit exactly the files the issue recorded

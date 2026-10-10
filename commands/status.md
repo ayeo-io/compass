@@ -13,7 +13,9 @@ issue; if empty, render the board across every issue under `.compass/work/`.
 
 `/compass:status` answers *"what should I look at?"*. For the managed
 cross-issue view - triage, blockers, owed-follow-up aggregation, and the
-periodic digest - use `/compass:flow`.
+periodic digest - use `/compass:flow`. To see every issue as a page in the
+browser, with a lane for each stage, run `compass board render`
+(`docs/board.md`).
 
 ## What this command is for
 

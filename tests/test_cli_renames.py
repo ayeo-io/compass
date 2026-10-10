@@ -429,6 +429,7 @@ EXCEPTIONS = {
     "lesson accept": "turns a pending proposal into a lesson",
     "lesson decline": "drops a pending proposal",
     "record restore": "restores a record from its sync",
+    "board refresh": "rewrites the board page in place and never opens a browser; the maintainer chose two commands, so refresh is not a flag of render",
 }
 
 

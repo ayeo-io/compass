@@ -39,13 +39,20 @@ class StrictYamlError(ValueError):
     and, where it can, the line."""
 
 
-def atomic_write_text(path, text, encoding="utf-8"):
+def atomic_write_text(path, text, encoding="utf-8", *, mode=None, temp_prefix=None):
     """Replace `path` with `text` in one step. A reader sees the old file or
     the new one, never part of either; a failure leaves the old file and no
-    temporary file behind."""
+    temporary file behind.
+
+    `mode`, when given, is the permission bits of the new file whatever the
+    old file or the umask had. `temp_prefix`, when given, replaces the prefix
+    of the temporary file's name, which is otherwise formed from the target's
+    name; the rest of the name stays unpredictable."""
     path = os.fspath(path)
     folder = os.path.dirname(os.path.abspath(path))
-    fd, tmp = tempfile.mkstemp(dir=folder, prefix="." + os.path.basename(path) + "-")
+    if temp_prefix is None:
+        temp_prefix = "." + os.path.basename(path) + "-"
+    fd, tmp = tempfile.mkstemp(dir=folder, prefix=temp_prefix)
     try:
         with os.fdopen(fd, "w", encoding=encoding) as fh:
             fh.write(text)
@@ -53,10 +60,11 @@ def atomic_write_text(path, text, encoding="utf-8"):
             os.fsync(fh.fileno())
         # mkstemp makes the file private (0600). Keep the mode of the file being
         # replaced, or give a new file the mode `open` would have given it.
-        try:
-            mode = stat.S_IMODE(os.stat(path).st_mode)
-        except FileNotFoundError:
-            mode = 0o666 & ~_umask()
+        if mode is None:
+            try:
+                mode = stat.S_IMODE(os.stat(path).st_mode)
+            except FileNotFoundError:
+                mode = 0o666 & ~_umask()
         os.chmod(tmp, mode)
         os.replace(tmp, path)
     except BaseException:

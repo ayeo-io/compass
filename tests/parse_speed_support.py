@@ -250,3 +250,15 @@ class SwappableCode:
         os.rename(self._parked[which], self.path)
         self.active = which
         return self.path
+
+
+def parse_cache_users(package_dir):
+    """The modules of a package that name the parse cache, other than the cache
+    itself, by file name (ADR-049, widened by ADR-052)."""
+    import re
+    users = []
+    for path in sorted(Path(package_dir).glob("*.py")):
+        if path.name != "parse_cache.py" and re.search(r"\bparse_cache\b",
+                                                      path.read_text(encoding="utf-8")):
+            users.append(path.name)
+    return users

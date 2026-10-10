@@ -875,13 +875,18 @@ def test_trc_e4_a_leftover_temporary_entry_is_pruned_when_old(tmp_path):
 
 # --- who may use the cache, and what it may import ----------------------------
 
-def test_trc_a14_only_flow_reads_through_the_parse_cache():
-    users = []
-    for path in sorted((CLI_DIR / "compass_pkg").glob("*.py")) + [CLI_DIR / "compass"]:
-        if path.name != "parse_cache.py" and re.search(r"\bparse_cache\b",
-                                                      path.read_text(encoding="utf-8")):
-            users.append(path.name)
-    assert users == ["flow.py"]
+#: The modules that may name the parse cache, each with its reason (ADR-049, widened
+#: by ADR-052). `flow.py` is the board; `project_scan.py` serves `compass issue render`,
+#: the project index and the after-command step, which read other issues' manifests
+#: for blocks that are advisory. Widening this list is a reviewed change against ADR-052.
+CACHE_READERS = ["flow.py", "project_scan.py"]
+
+
+def test_trc_a14_only_the_named_readers_use_the_parse_cache():
+    users = support.parse_cache_users(CLI_DIR / "compass_pkg")
+    users += [CLI_DIR.joinpath("compass").name] if re.search(
+        r"\bparse_cache\b", (CLI_DIR / "compass").read_text(encoding="utf-8")) else []
+    assert users == CACHE_READERS
 
 
 def test_trc_e3_parse_cache_loads_nothing_but_json_and_safe_load():

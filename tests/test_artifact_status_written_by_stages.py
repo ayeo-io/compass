@@ -122,7 +122,7 @@ def test_asw_5_every_artifact_kind_names_its_stage(tmp_path):
         "requirements-review": "refine", "technical-design": "plan",
         "threat-model": "plan", "rollback-plan": "plan",
         "distribution-map": "breakdown", "verification-report": "verify",
-        "launch-readiness": "verify"}
+        "verification-note": "verify", "launch-readiness": "verify"}
 
     root = project(tmp_path / "ok")
     assert run(root, "policy", "lint")[0] == 0

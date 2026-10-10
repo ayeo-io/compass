@@ -171,11 +171,27 @@ def test_as_b_the_sample_holds_the_issues_the_tests_need():
         assert needed in issues, needed
 
 
+@pytest.fixture(scope="module")
+def rendered_sample(tmp_path_factory):
+    """A copy of the sample with the issue pages and the project index that `compass issue
+    render --all` writes. The sample holds issues from before the pages existed, and
+    `rendered-blocks-current` fails a done issue that has none (ADR-051), so the check is
+    run on the sample as an adopter has it after that one command. The shared unpacked
+    sample is never written."""
+    import shutil
+    copy = tmp_path_factory.mktemp("rendered-sample") / "proj"
+    shutil.copytree(SAMPLE, copy)
+    done = subprocess.run([sys.executable, str(CLI), "issue", "render", "--all"], cwd=copy,
+                          capture_output=True, text=True, timeout=300)
+    assert done.returncode == 0, done.stdout[-2000:] + done.stderr[-500:]
+    return copy
+
+
 @pytest.mark.parametrize("slug", _issues(checkable=True))
-def test_as_b_every_issue_in_the_sample_passes_compass_check(slug):
+def test_as_b_every_issue_in_the_sample_passes_compass_check(slug, rendered_sample):
     assert slug != "<no sample>", "tests/fixtures/archive-sample.tar.gz is missing"
     result = subprocess.run([sys.executable, str(CLI), "check", "--issue", slug],
-                            cwd=SAMPLE, capture_output=True, text=True, timeout=120)
+                            cwd=rendered_sample, capture_output=True, text=True, timeout=120)
     assert result.returncode == 0, result.stdout[-2000:] + result.stderr[-500:]
 
 

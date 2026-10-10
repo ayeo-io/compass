@@ -122,7 +122,8 @@ def project(tmp_path):
         "brownfield-mapped, size: small, goal: delivery, role: engineer, "
         "labels: []}\n")
     _evaluate(root)
-    (root / DOCS).mkdir(parents=True)
+    # The render after `approach evaluate --write` has made the folder (it writes the issue page).
+    (root / DOCS).mkdir(parents=True, exist_ok=True)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     stub = bin_dir / "claude"

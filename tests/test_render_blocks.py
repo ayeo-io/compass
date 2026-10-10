@@ -382,11 +382,8 @@ _SOURCES = {
     "follow-up summary": ("runbook", "follow-ups"),
     "decisions_taken resolution": ("verification-report", "decisions-taken"),
     "artifact entry reason": ("technical-design", "artifacts"),
-    "intent.md Problem section": pytest.param(
-        ("intent", "ask"), marks=pytest.mark.skip(reason="the ask block is rendered in U3")),
-    "technical design DD heading": pytest.param(
-        ("technical-design", "decisions"),
-        marks=pytest.mark.skip(reason="the decisions block is rendered in U3")),
+    "intent.md Problem section": ("intent", "ask"),
+    "technical design DD heading": ("technical-design", "decisions"),
 }
 
 
@@ -401,11 +398,19 @@ def _hostile_issue(tmp_path, source):
         body["decisions_taken"][0]["resolution"] = _HOSTILE
     elif source == "artifact entry reason":
         pass
+    elif source == "intent.md Problem section":
+        Path(root, DOCS, "intent.md").write_text(
+            "# Intent\n\n## Problem\n\n" + _HOSTILE + "\n\n## Desired outcome\n\nOne.\n",
+            encoding="utf-8")
     manifest_file(root).write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
     write_doc(root, "acceptance-criteria", "# AC\n\n" + block("coverage"))
     write_doc(root, "verification-report", "# VR\n\n" + block("decisions-taken"))
     write_doc(root, "runbook", "# RB\n\n" + block("follow-ups"))
     write_doc(root, "technical-design", "# TD\n\n" + block("artifacts"))
+    if source == "technical design DD heading":
+        write_doc(root, "technical-design",
+                  "# TD\n\n### DD-1 - Plain start <!-- compass:render gates --> tail HEAD\n\n"
+                  "Scope: project\n\n" + block("artifacts"))
     if source == "artifact entry reason":
         body = manifest(root)
         for entry in body["artifacts"]:
@@ -420,8 +425,7 @@ def _clean(line):
                 or stripped.startswith(("```", "~~~", "<<<<<<<", "=======", ">>>>>>>", "|||||||")))
 
 
-@pytest.mark.parametrize("source", sorted(k for k, v in _SOURCES.items()
-                                          if not hasattr(v, "marks")))
+@pytest.mark.parametrize("source", sorted(_SOURCES))
 def test_dcj_68_recorded_markup_cannot_break_page(tmp_path, monkeypatch, source):
     root = _hostile_issue(tmp_path / "ok", source)
     for _ in range(2):
@@ -435,8 +439,12 @@ def test_dcj_68_recorded_markup_cannot_break_page(tmp_path, monkeypatch, source)
             assert _clean(line), (name, line)
     page = Path(root) / DOCS / "README.md"
     for kind, body in _blocks(page):
-        assert all(_clean(line) for line in body.splitlines()), kind
+        # The one fence a renderer writes is the Mermaid chart of the traceability block
+        # (DCJ-43), opened and closed by these exact lines.
+        chart = ("```mermaid", "```") if kind == "traceability" else ()
+        assert all(_clean(line) or line in chart for line in body.splitlines()), kind
     shown = "".join(b for n in names for _, b in _blocks(doc_path(root, n)))
+    shown += "".join(b for _, b in _blocks(page))
     assert "tail HEAD" in shown and "compass:render gates" in shown     # still readable
 
     # Escaping switched off: the engine's own re-parse refuses, writing nothing.
@@ -857,3 +865,32 @@ def test_dcj_69_every_digest_reads_masked_text(tmp_path, monkeypatch):
     design_path.write_text(design_path.read_text("utf-8").replace("A design.", "A new design."),
                            encoding="utf-8")
     assert readings()["judged inputs"] != second["judged inputs"]
+
+
+# --- DCJ-60 -----------------------------------------------------------------
+
+def test_dcj_60_render_all_names_unreadable_issues(tmp_path):
+    import pages_support as ps
+    root = rich_issue(tmp_path)
+    write_doc(root, "acceptance-criteria", "# AC\n\n" + block("coverage"))
+    ps.add_issue(root, "bad-yaml")
+    (ps.work_of(root, "bad-yaml") / "manifest.yml").write_text("issue: [unclosed\n",
+                                                                 encoding="utf-8")
+    ps.add_issue(root, "marker-issue", artifacts=[
+        {"id": "ART-RUNBOOK", "kind": "runbook", "status": "draft", "depth": "thorough",
+         "reason": "x", "path": f"{ps.docs_of('marker-issue')}/runbook.md"}])
+    bad_doc = Path(root) / ps.docs_of("marker-issue") / "runbook.md"
+    bad_doc.parent.mkdir(parents=True)
+    bad_doc.write_bytes(b"# RB\n\n<!-- compass:render gates -->\nno closing marker\n")
+    bad_manifest = ps.work_of(root, "bad-yaml") / "manifest.yml"
+    before = (bad_doc.read_bytes(), bad_manifest.read_bytes())
+
+    code, out, err = ps.render_all(root)
+
+    assert code == 1, out + err
+    shown = out + err
+    assert "bad-yaml" in shown and "manifest" in shown
+    assert "marker-issue" in shown and "runbook.md:3" in shown
+    assert "stale" not in doc_path(root, "acceptance-criteria").read_text()
+    assert (bad_doc.read_bytes(), bad_manifest.read_bytes()) == before
+    assert not (Path(root) / ps.docs_of("bad-yaml")).exists()

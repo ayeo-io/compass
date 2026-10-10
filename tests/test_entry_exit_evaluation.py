@@ -443,7 +443,8 @@ def test_ee_4_growing_the_quick_fix_artifacts_makes_the_done_checks_owed_everywh
     from compass_pkg import obligations
     config = {"schema": 1, "capabilities": {CAPABILITY: True},
               "approaches": {"quick-fix": {"set": {"artifacts": {
-                  "delivery-approach": "light", "verification-report": "full"}}}}}
+                  "delivery-approach": "light", "verification-note": "light",
+                  "verification-report": "full"}}}}}
     root, task_dir = _project(tmp_path, manifest=dict(
         _manifest_for(QUICK_FIX)), compass_yml=config)
     code, out, err = _evaluate_write(root)

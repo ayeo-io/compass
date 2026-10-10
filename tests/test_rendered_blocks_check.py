@@ -33,9 +33,10 @@ def _verify_issue(tmp_path, phase="verify"):
     root = rich_issue(tmp_path)
     write_doc(root, "acceptance-criteria", "# AC\n\n" + block("coverage"))
     write_doc(root, "verification-report", "# VR\n\n" + block("gates"))
+    # The issue page shows the stage, so the stage is set before the render writes it.
+    sup.base.edit(root, current_phase=phase)
     code, out, err = render(root)
     assert code == 0, out + err
-    sup.base.edit(root, current_phase=phase)
     return root
 
 
@@ -194,6 +195,7 @@ def _as_stored_before(task_dir):
 def test_dcj_76_stored_generation_before_change(tmp_path):
     root = _verify_issue(tmp_path / "a", phase="verify")
     sup.base.edit(root, status="done", current_phase=None)
+    assert render(root)[0] == 0          # the page shows the state
     task_dir = Path(root) / WORK
     _as_stored_before(task_dir)
     code, report = _report(root)
@@ -234,23 +236,6 @@ def test_dcj_76_migrate_pins_a_generation_that_records_a_major_the_cli_lacks():
 
 # --- DCJ-79 -----------------------------------------------------------------
 
-def _stand_in_related(monkeypatch, root):
-    """A `related` renderer, planted because the real one is built in a later
-    unit. It reads the other issues in the project, so it is a cross-issue part."""
-    from compass_pkg import block_renderers
-
-    def related(inputs, doc_rel):
-        names = []
-        for path in sorted((Path(root) / ".compass" / "work").glob("*/manifest.yml")):
-            body = yaml.safe_load(path.read_text("utf-8")) or {}
-            if any(isinstance(f, dict) and f.get("target_task") == inputs.slug
-                   for f in body.get("follow_ups") or []):
-                names.append(path.parent.name)
-        return block_renderers.Part(block_renderers.CROSS, [
-            "Related: " + (", ".join(names) or "none")])
-    monkeypatch.setitem(block_renderers.RENDERERS, "related", related)
-
-
 def _other_issue(root, slug):
     folder = Path(root) / ".compass" / "work" / slug
     folder.mkdir(parents=True)
@@ -267,7 +252,6 @@ def test_dcj_79_ci_checkout_cross_issue_blocks_advisory(tmp_path, monkeypatch):
     write_doc(root, "technical-design", "# TD\n\n" + block("related"))
     for other in ("other-a", "other-b"):
         _other_issue(root, other)
-    _stand_in_related(monkeypatch, root)
     monkeypatch.chdir(root)
     code, out, err = sup.inproc(root, monkeypatch)
     assert code == 0, out + err
@@ -281,7 +265,6 @@ def test_dcj_79_ci_checkout_cross_issue_blocks_advisory(tmp_path, monkeypatch):
     shutil.copytree(Path(root) / WORK, fresh / WORK)
     shutil.copytree(Path(root) / DOCS, fresh / DOCS)
     monkeypatch.chdir(fresh)
-    _stand_in_related(monkeypatch, fresh)
     passed, detail = render_check.check(task, str(fresh / WORK))
     assert passed is ADVISORY_FAILURE, (passed, detail)
     assert "related" in detail and "technical-design.md" in detail, detail
@@ -310,9 +293,9 @@ def _current_issue(tmp_path, layer=None):
     write_doc(root, "acceptance-criteria", "# AC\n\n" + block("coverage"))
     write_doc(root, "verification-report", "# VR\n\n" + "".join(
         block(k) for k in ("coverage", "gates", "evidence", "decisions-taken", "dod")))
+    sup.base.edit(root, current_phase="verify")
     code, out, err = render(root)
     assert code == 0, out + err
-    sup.base.edit(root, current_phase="verify")
     return root
 
 
@@ -371,6 +354,7 @@ def _file_for(root):
 def test_dcj_18_record_changing_command_re_renders(tmp_path, monkeypatch):
     root = _current_issue(tmp_path, layer={**sup.base.HUMAN_DESIGN})
     _write_other(root, "parent-issue")
+    assert render(root)[0] == 0          # the project index lists the new issue
     assert _dry_run_rewrites(root) == []
     for label, argv, terminal in _rows(root):
         if terminal:
@@ -506,7 +490,8 @@ def _stale_follow_ups(root, slug, created):
     folder = Path(root) / "docs" / "compass" / f"{created}-{slug}"
     folder.mkdir(parents=True, exist_ok=True)
     page = folder / "README.md"
-    page.write_text(f"# {slug}\n\n" + block("follow-ups", "stale text"), encoding="utf-8")
+    page.write_text(f"# {slug}\n\n" + block("follow-ups", "stale text")
+                    + block("related", "stale text"), encoding="utf-8")
     return page
 
 
@@ -524,6 +509,15 @@ def test_dcj_21_after_command_renders_linked_issues_only(tmp_path):
     assert code == 0, out + err
     assert "stale text" not in pages["parent"].read_text(encoding="utf-8")
     assert "No follow-ups recorded." in pages["parent"].read_text(encoding="utf-8")
+    # The related blocks and the index rows of both issues are current (RS-11, RS-13).
+    child = (Path(root) / DOCS / "README.md").read_text(encoding="utf-8")
+    assert any("raised from" in x and "parent" in x for x in child.splitlines())
+    assert any("raised here" in x and SLUG in x
+               for x in pages["parent"].read_text(encoding="utf-8").splitlines())
+    index = (Path(root) / "docs" / "compass" / "README.md").read_text(encoding="utf-8")
+    assert f"| [{SLUG}](" in index and "| [parent](" in index and "| [bystander](" in index
+    code, out, err = run(root, "check", "--issue", SLUG, "--verbose")
+    assert "PASS rendered-blocks-current" in out, out
     assert bystander_page.read_bytes() == before
     assert int(bystander_page.stat().st_mtime) == 1_000_000
     # The reverse direction: the parent's own command renders the issue raised from it.

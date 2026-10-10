@@ -32,6 +32,12 @@ DIMENSIONS = ("risk", "familiarity", "size", "goal", "urgency", "role")
 AUTONOMY = ("controlled", "balanced", "autonomous")
 
 
+# 7.0.0 adds one document to the quick fix, the verification note (issue
+# `documents-carry-judgement`, RS-6). The baseline is never regenerated, so a result is
+# compared without it; the tests of that issue pin the note itself.
+ADDED_TO_QUICK_FIX = ("verification-note",)
+
+
 def shipped_policy():
     return load_yaml(str(POLICY))
 
@@ -66,7 +72,9 @@ def compact(readings, policy):
                 "stages": {s: DEPTH_WAS.get(m, m) for s, m in r["stages"].items()},
                 "gates": sorted(r["gates"]),
                 "artifacts": sorted((a["kind"], DEPTH_WAS.get(a["depth"], a["depth"]))
-                                    for a in r["artifacts"]),
+                                    for a in r["artifacts"]
+                                    if not (r["delivery_approach"] == "quick-fix"
+                                            and a["kind"] in ADDED_TO_QUICK_FIX)),
                 "subtask_ceiling": r["subtask_ceiling"],
                 "required_artifacts": sorted(r["required_artifacts"]),
                 "required_skills": sorted(r["required_skills"]),

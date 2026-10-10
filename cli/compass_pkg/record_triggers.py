@@ -54,7 +54,6 @@ RENDER_FURTHER = {
     "cmd_issue_raised_by": None,
     "cmd_scenario_tests": None,
     "cmd_evidence_review": None,
-    "cmd_analyze": None,
     "cmd_issue_blocked_set": None,
     "cmd_issue_blocked_remove": None,
     "cmd_subtask_update": None,
@@ -66,6 +65,9 @@ RENDER_TRIGGERS = {**LABEL_TRIGGERS, **RENDER_FURTHER}
 
 #: Commands that save a manifest and render nothing, each with its reason.
 EXEMPT = {
+    "cmd_analyze": ("in gate-clearing mode it adds one consistency-check evidence entry, and "
+                    "the gate pass that must follow it renders; in advisory mode it saves "
+                    "nothing, so a render here would make a reading command write"),
     "cmd_quick_fix_start": ("creates the issue before any document exists; the first "
                             "command that changes a record renders its page"),
     "cmd_intent_ingest": ("saves the intent record the issue was written from, which no "

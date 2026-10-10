@@ -93,7 +93,8 @@ def _project(tmp_path, *, documents=True, register=True, red=True,
 
     if documents:
         docs = tmp_path / DOCS_REL
-        docs.mkdir(parents=True)
+        # The render after `tdd-red` has made the folder for the issue page.
+        docs.mkdir(parents=True, exist_ok=True)
         (docs / "delivery-approach.md").write_text(
             "# Delivery approach - a-moved-issue\n\nStandard.\n",
             encoding="utf-8")

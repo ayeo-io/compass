@@ -86,6 +86,10 @@ def _project(tmp_path, *, blast="critical", touches=None, approval=False,
 
 
 def _check(root):
+    # The issue page is written by the render after a command; this fixture wrote the
+    # manifest by hand, so render it as that step would.
+    subprocess.run([sys.executable, str(CLI), "issue", "render", "--issue", "t"],
+                   cwd=str(root), capture_output=True, text=True, timeout=60)
     return subprocess.run([sys.executable, str(CLI), "check", "--verbose", "--issue", "t"],
                           cwd=str(root), capture_output=True, text=True, timeout=60)
 

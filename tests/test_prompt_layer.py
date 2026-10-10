@@ -472,6 +472,11 @@ def _quick_fix_issue(project, with_green):
 def _check(project):
     import subprocess
     import sys
+    # The fixture writes its manifest by hand, so write the issue page as the render
+    # after a command would.
+    subprocess.run([sys.executable, str(ROOT / "cli" / "compass"), "issue", "render",
+                    "--issue", "a-quick-fix"], capture_output=True, text=True, timeout=120,
+                   cwd=str(project))
     return subprocess.run(
         [sys.executable, str(ROOT / "cli" / "compass"), "check",
          "--issue", "a-quick-fix", "--verbose"],

@@ -19,7 +19,7 @@ no code with the label sync and imports nothing from it: both read
 `record_triggers`, and each catches its own failure.
 """
 # DEPENDENCY: standard library (os, sys, yaml via compass_pkg.core); compass_pkg.core,
-# record_triggers, render_cmd. It imports neither github_labels nor check_cmd.
+# record_triggers, render_cmd, project_scan. It imports neither github_labels nor check_cmd.
 from __future__ import annotations
 
 import os
@@ -27,7 +27,7 @@ import sys
 
 import yaml
 
-from compass_pkg import record_triggers, render_cmd
+from compass_pkg import project_scan, record_triggers, render_cmd
 from compass_pkg.core import load_manifest, manifest_path, resolve_issue_dir
 
 
@@ -85,9 +85,15 @@ def linked_issue_dirs(task_dir, task):
             if os.path.isfile(manifest_path(os.path.join(work, n)))]
 
 
+#: The project, read once for the issues one command renders (set by `after_command`).
+_scan = None
+
+
 def render_issue(task_dir):
     """Render one issue. Raises on a refusal or a failed write."""
-    return render_cmd.render_issue(task_dir)
+    if _scan is None:
+        return render_cmd.render_issue(task_dir)
+    return render_cmd.render_issue(task_dir, scan=_scan)
 
 
 def _cause(exc):
@@ -118,11 +124,21 @@ def after_command(args, code):
     except Exception:                                   # noqa: BLE001 - never fail the command
         return code
     failures = []
-    for directory in directories:
-        try:
-            render_issue(directory)
-        except Exception as exc:                        # noqa: BLE001 - one failure hides no other
-            failures.append((os.path.basename(os.path.abspath(directory)), exc))
+    global _scan
+    try:
+        # Read once for every issue this step renders; each render still reads its own
+        # manifest without the cache.
+        _scan = project_scan.ProjectScan.build(render_cmd.project_of(task_dir))
+    except Exception:                                   # noqa: BLE001
+        _scan = None
+    try:
+        for directory in directories:
+            try:
+                render_issue(directory)
+            except Exception as exc:                    # noqa: BLE001 - one failure hides no other
+                failures.append((os.path.basename(os.path.abspath(directory)), exc))
+    finally:
+        _scan = None
     if failures:
         sys.stderr.write(_failure_line(failures, len(directories)) + "\n")
     return code

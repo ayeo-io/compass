@@ -49,7 +49,21 @@ def stale_parts(plan):
     """`(own, cross)`: the lines that name each stale block, as
     `<path>: block <kind> ...`, or the missing issue page."""
     own, cross = [], []
+    if plan.hand_page:
+        own.append("%s: the issue page holds no rendered block (a person wrote it) - add the "
+                   "blocks or move it aside, then %s" % (plan.hand_page, FIX))
+    if plan.index_problem:
+        cross.append("%s: the project index cannot be rendered - %s" % (
+            "docs/compass/README.md", plan.index_problem))
     for item in plan.files:
+        if item.is_index:
+            # The index is shared: this issue is judged by its own row only.
+            if item.is_new:
+                cross.append("%s: the project index is missing - %s" % (item.rel, FIX))
+            elif item.row_stale:
+                cross.append("%s: block index: this issue's row no longer matches the records "
+                             "- %s" % (item.rel, FIX))
+            continue
         if item.is_new:
             own.append("%s: the issue page is missing - %s" % (item.rel, FIX))
             continue
@@ -76,6 +90,7 @@ def check(task, task_dir):
         return (False if _blocking(task, task_dir) else ADVISORY_FAILURE), detail
     if cross:
         return ADVISORY_FAILURE, "; ".join(cross)
-    shown = sum(len(f.kinds) for f in plan.files)
+    files = [f for f in plan.files if not f.is_index]
+    shown = sum(len(f.kinds) for f in files)
     return True, "every rendered block matches the records (%d block kind(s) in %d document(s))" % (
-        shown, len(plan.files))
+        shown, len(files))

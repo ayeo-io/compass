@@ -108,11 +108,16 @@ command." See `skills/compass-runtime/writing-voice.md`.
 - `verification-report.md` is written, and the first five items of its
   **Definition of Done** - every scenario passes, the TDD suite is green,
   coverage meets the tested-before-ship guardrail's floor, there are no
-  lint/format/type errors, and traceability is intact - are fully checked.
-  That is the exit gate out of verify.
+  lint/format/type errors, and traceability is intact - are met by a record in
+  the manifest. Record an item with `compass gate pass ... --meets <item>` or
+  `compass evidence add ... --meets <item>`; a person ticks the item that needs
+  a person with `compass evidence approve --check <item>`. The page lists the
+  items and their state (`compass issue render` writes it); a tick written on
+  the page counts for nothing. That is the exit gate out of verify.
 
 The Definition of Done's remaining two items - living docs updated, and
-every owed follow-up settled - are carried into ship. If anything
+every owed follow-up settled - are carried into ship with
+`compass follow-up add FU-<id> --defers <item> --summary "..."`. If anything
 fails, the issue does not advance - fix it or send it back. Log to
 `devlog.md`. Next: `/compass:ship`.
 

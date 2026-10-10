@@ -88,13 +88,6 @@ by hand. `tests/test_impl_versions.py` fails when it is out of date.
 | `broken` | fail | the input the mutation proof breaks: consistency-check evidence that records findings, or none on record |
 | `restored` | pass | the same input put right |
 
-### `dashboard-current` (version 1.0.0)
-
-| Case | Verdict | What the input exercises |
-|---|---|---|
-| `broken` | fail | the input the mutation proof breaks: the manifest moved after the review page was generated |
-| `restored` | pass | the same input put right |
-
 ### `declared-tests-resolve` (version 1.0.0)
 
 | Case | Verdict | What the input exercises |
@@ -102,12 +95,13 @@ by hand. `tests/test_impl_versions.py` fails when it is out of date.
 | `broken` | fail | the input the mutation proof breaks: a declared test id that names a test not on disk |
 | `restored` | pass | the same input put right |
 
-### `dod-evidence-typed` (version 1.0.0)
+### `dod-evidence-typed` (version 2.0.0)
 
 | Case | Verdict | What the input exercises |
 |---|---|---|
-| `broken` | fail | the input the mutation proof breaks: an unchecked Definition of Done box with no evidence tag |
-| `restored` | pass | the same input put right |
+| `broken` | fail | the input the mutation proof breaks: a Definition of Done item with no record in the manifest |
+| `recorded` | pass | every item of the Definition of Done met by an evidence record in the manifest |
+| `restored` | fail | a ticked box on the page and no record in the manifest: the page counts for nothing |
 
 ### `evidence-identity-matches` (version 1.0.0)
 
@@ -156,6 +150,13 @@ by hand. `tests/test_impl_versions.py` fails when it is out of date.
 | Case | Verdict | What the input exercises |
 |---|---|---|
 | `broken` | fail | the input the mutation proof breaks: a test marked rerun-without-change with no quarantine |
+| `restored` | pass | the same input put right |
+
+### `rendered-blocks-current` (version 1.0.0)
+
+| Case | Verdict | What the input exercises |
+|---|---|---|
+| `broken` | fail | the input the mutation proof breaks: a block edited by hand after the last render |
 | `restored` | pass | the same input put right |
 
 ### `scenario-has-id-and-intent` (version 1.0.0)

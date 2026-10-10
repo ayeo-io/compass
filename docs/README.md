@@ -79,7 +79,7 @@ same commit.
 | `cli/compass_pkg/generation.py`, `cli/compass_pkg/effective.py`, `cli/compass_pkg/impl_versions.py`, `scripts/bench-evaluate.py` | `docs/generation-store.md` |
 | `scripts/impl-coverage.py`, `tests/fixtures/impls/versions.lock.yml` | `docs/check-implementations.md` |
 | `cli/compass_pkg/issue_config_cmd.py`, `cli/compass_pkg/config_preview.py` | `docs/issue-configure.md` |
-| `cli/compass_pkg/stage_lists.py`, `cli/compass_pkg/template_lists.py`, `cli/compass_pkg/doc_sections.py`, `cli/compass_pkg/approval_records.py`, `cli/compass_pkg/approve_cmd.py`, `tests/test_human_checks.py`, `tests/fixtures/evidence-approve-example.json` | `docs/entry-exit-evaluation.md` |
+| `cli/compass_pkg/stage_lists.py`, `cli/compass_pkg/item_records.py`, `cli/compass_pkg/follow_up_cmd.py`, `cli/compass_pkg/template_lists.py`, `cli/compass_pkg/doc_sections.py`, `cli/compass_pkg/approval_records.py`, `cli/compass_pkg/approve_cmd.py`, `tests/test_human_checks.py`, `tests/fixtures/evidence-approve-example.json` | `docs/entry-exit-evaluation.md` |
 | `cli/compass_pkg/review_records.py`, `cli/compass_pkg/review_cmd.py`, `tests/fixtures/evidence-review-example.json` | `docs/judged-checks.md` |
 | `cli/compass_pkg/freshness.py` | `docs/artifact-freshness.md` |
 | `cli/compass_pkg/replay.py` | `docs/policy-diff.md` |
@@ -102,7 +102,7 @@ same commit.
 | `cli/compass_pkg/github_labels.py`, `tests/fake_gh.py` | `docs/github-labels.md` |
 | `cli/compass_pkg/status_words.py`, `cli/compass_pkg/lifecycle.py`, `cli/compass_pkg/status_cmd.py` | `architecture/decisions/ADR-045-the-issue-lifecycle-is-derived-from-records.md` |
 | `cli/compass_pkg/artifact_status.py`, `cli/compass_pkg/decisions_taken.py` | `architecture/decisions/ADR-050-artifact-status-is-written-by-stage-exits-and-by-a-persons-approval.md` |
-| `cli/compass_pkg/rendered_blocks.py`, `cli/compass_pkg/block_renderers.py`, `cli/compass_pkg/render_cmd.py` | `docs/rendered-blocks.md` |
+| `cli/compass_pkg/rendered_blocks.py`, `cli/compass_pkg/block_renderers.py`, `cli/compass_pkg/render_cmd.py`, `cli/compass_pkg/render_check.py`, `cli/compass_pkg/render_after.py`, `cli/compass_pkg/record_triggers.py` | `docs/rendered-blocks.md` |
 | `cli/compass_pkg/parse_cache.py` | `architecture/decisions/ADR-049-bulk-manifest-reads-use-a-parse-cache-keyed-on-content.md` |
 | `cli/compass_pkg/rival_names.py`, `scripts/rival-name-gate.py`, `scripts/rival-name-hashes.txt`, `scripts/rival-name-binary-pins.txt` | `governance/decisions/2026-10-07-checked-binaries-are-pinned-in-the-rival-name-gate.md` |
 | `cli/compass_pkg/flow.py`, `cli/compass_pkg/spec_refresh.py`, `docs/system-spec.md`, `docs/system-spec-archive.md` | `architecture/decisions/ADR-026-ship-commit-lands-and-derives-the-living-spec.md` |

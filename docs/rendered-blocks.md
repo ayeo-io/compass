@@ -81,6 +81,60 @@ it is absent. It does this in order:
 There is no rollback across documents. When the third write of three fails, the
 first two stay written and a second run finishes the job.
 
+## After each command that changes a record
+
+The entry point calls `render_after.after_command` after the label sync. It
+renders the documents of the issue a command named and of every issue the
+manifest links to, in either direction (`raised_by`, `parent`, `depends_on`,
+`landed_by`, `delivered` and the `target_task` of a follow-up). An issue the
+manifest does not link to is not read for writing and keeps its bytes and its
+modification time.
+
+- The commands are `RENDER_TRIGGERS` in `cli/compass_pkg/record_triggers.py`:
+  the label sync's table (`LABEL_TRIGGERS`) plus `RENDER_FURTHER`. `EXEMPT`
+  names the commands that save a manifest and render nothing, each with its
+  reason. A test walks the call graph from every command to `save_manifest` and
+  fails, naming a command in none of the three.
+- A command that exits non-zero renders nothing.
+- A render that fails never fails the command and never stops the other
+  renders. One line on standard error gives the count and the first failure:
+  `compass: 2 of 3 renders failed - first: <issue>: <file>:<line>: <fault>`.
+  The label sync prints its own line when it fails.
+- The step prints no reminder. `compass issue dashboard render` and the
+  reminder that named it are gone.
+
+## The check `rendered-blocks-current`
+
+`rendered-blocks-current` (implementation 1.0.0, in guardrail `G4`) runs the
+render of `compass issue render` without writing and compares, so there is one
+definition of current. It reads the issue's own manifest with `load_manifest`,
+never through the parse cache.
+
+| Block | Draws on | At `verify`, `ship` and done | Before `verify` |
+|---|---|---|---|
+| `coverage`, `gates`, `dod`, `dor`, `artifacts`, `evidence`, `follow-ups`, `decisions-taken`, the issue page | the issue's own records | fails | advisory |
+| `related`, the governance lines of `decisions`, the issue's row of the index | other issues or the project | advisory | advisory |
+
+A missing issue page fails at `verify` and is advisory before. The message names
+the file, the block kind and `compass issue render`. A checkout that holds only
+one issue's folders (a CI clone) reports the cross-issue blocks as advisory
+failures and passes the rest.
+
+A stored generation can still list `dashboard-current`, because an issue runs
+against the configuration it was assessed under. `compass check` reports that id
+as `nothing to check`, says it was removed in 7.0.0 and names
+`rendered-blocks-current`, and runs the replacement in the same guardrail
+unless the generation lists it already. The table is `REMOVED` in
+`cli/compass_pkg/check_registry.py`; it is framework-owned and not
+configurable. `compass policy lint` names a removed check in a layer as an
+unknown check and gives its replacement.
+
+## Item records
+
+The `dod` and `dor` blocks, `dod-evidence-typed` (implementation 2.0.0) and the
+stage lists read the Definition of Done and Ready from records in the manifest,
+never from the page (`docs/entry-exit-evaluation.md`, "Item records").
+
 ## Text copied into a block
 
 A line copied from a record or a document goes through

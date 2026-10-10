@@ -28,7 +28,7 @@ what it explicitly does not.
 | Plan | `/compass:plan` | `technical-design.md` (+ `distribution-map.md` on parallel work) |
 | Break down the work | `/compass:breakdown` | worktrees + subtask assignments |
 | Implement | `/compass:implement` | code + the red and green records (named by binding) |
-| Test & review | `/compass:verify` | `verification-report.md` (ends with the Definition of Done) |
+| Test & review | `/compass:verify` | `verification-report.md` (ends with the Definition of Done, a block `compass issue render` writes from the manifest's records) |
 | Ship | `/compass:ship` | the integration commit + settled follow-ups |
 
 `/compass:assess` itself carries only that light path. The full assess

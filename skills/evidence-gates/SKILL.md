@@ -49,6 +49,16 @@ The test is simple: **could someone who does not trust you check it from what
 you recorded?** If yes, it is evidence. If they would have to take your word, it
 is assertion.
 
+## Records that meet a Definition of Done item
+
+An item of the Definition of Done is met by a record in the manifest, never by a
+tick on the page: `compass gate pass ... --meets <item>` or `compass evidence
+add ... --meets <item>` records evidence, `compass follow-up add FU-<id>
+--defers <item> --summary "..."` carries the item to ship, and a person ticks
+an item with `compass evidence approve --check <item>`. `dod-evidence-typed`
+fails an item with no record. `compass issue render` writes the list and each
+item's state into the verification report.
+
 ## Records that also move a document
 
 `compass tdd-red` and `compass acceptance record` are the first records of the

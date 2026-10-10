@@ -356,7 +356,7 @@ def build_parser():
         "render", help="render the blocks of an issue's documents from its records")
     issue_arg(ptrn)
     ptrn.add_argument("--all", action="store_true",
-                      help="render every issue in the project (not built yet)")
+                      help="render every readable issue and the project index; skip an issue whose inputs are unchanged")
     ptrn.add_argument("--dry-run", dest="dry_run", action="store_true",
                       help="list what would change; write nothing")
     ptrn.set_defaults(func=cmd_issue_render, output_kind="hand-off")

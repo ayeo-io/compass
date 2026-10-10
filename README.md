@@ -190,7 +190,7 @@ compass issue diagnose     explain one run from its own records: stages, timelin
 compass issue use          make an issue the current one, for this session
 compass issue configure    propose, preview, discard or recover a change to one issue's own configuration
 compass issue migrate      bring older issue directories up to the current schema, and settle the artifact status of done issues; --config pins an issue's configuration to the installed check versions
-compass issue render       rewrite the rendered blocks of an issue's documents from its records
+compass issue render       rewrite the rendered blocks of an issue's documents and the project index from its records; --all for every issue
 compass issue dashboard render  the per-issue review page
 compass issue artifact set set a document's status in the review pack
 compass issue artifact-path  where one of an issue's documents is

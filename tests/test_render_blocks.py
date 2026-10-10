@@ -790,12 +790,6 @@ def test_dcj_11_approved_document_stays_approved_on_block_render(tmp_path):
     assert _entry(root, "verification-report")["status"] == "approved"
 
 
-@pytest.mark.skip(reason="`compass issue migrate` inserts the empty dod pair and re-stamps the "
-                         "digest in the migration unit (U4)")
-def test_dcj_11_a_migrated_approved_report_stays_approved():
-    raise AssertionError("built in U4")
-
-
 # --- DCJ-69 -----------------------------------------------------------------
 
 def test_dcj_69_every_digest_reads_masked_text(tmp_path, monkeypatch):

@@ -555,7 +555,7 @@ def preflight(task_dir, resolution, manifest, invalidated=None, adopt=None):
 
 
 def commit(task_dir, resolution, manifest, invalidated=None, render=None, *,
-           adopt=None, proposal=None, stamp=None, force=False):
+           adopt=None, proposal=None, stamp=None, force=False, closed_ok=False):
     """Store `resolution` as the next generation of the issue and replace its
     manifest, or commit nothing when generation n already holds the same
     configuration, overlay and outcome. `force` commits even then: the
@@ -574,7 +574,12 @@ def commit(task_dir, resolution, manifest, invalidated=None, render=None, *,
     must still be the one on disk when the lock is held, and its file is
     removed after the manifest replace. `stamp(mapping, from, to)` may change the
     mapping to write, with the generation it moves from and to (the same
-    number twice when nothing is committed)."""
+    number twice when nothing is committed).
+
+    A closed issue keeps its configuration, so it cannot be given a generation, unless
+    `closed_ok`: `compass issue migrate` sets it to pin the versions of a closed issue
+    whose generation records an implementation major the CLI lacks, with the
+    configuration unchanged."""
     task_dir = os.fspath(task_dir)
     render = render or (lambda text: text)
     stamp = stamp or (lambda mapping, old, new: None)
@@ -611,7 +616,7 @@ def commit(task_dir, resolution, manifest, invalidated=None, render=None, *,
                 _remove(os.path.join(gen_dir(task_dir, target), PROPOSED))
             return Committed(n, False, f"no change: generation {n} already holds this "
                                        f"configuration")
-        if status_words.is_closed(disk):
+        if status_words.is_closed(disk) and not closed_ok:
             raise CompassError(
                 f"issue {os.path.basename(os.path.normpath(task_dir))} is closed and keeps "
                 f"the configuration it closed under; it cannot store a new generation")

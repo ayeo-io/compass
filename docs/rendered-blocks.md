@@ -230,6 +230,29 @@ The `dod` and `dor` blocks, `dod-evidence-typed` (implementation 2.0.0) and the
 stage lists read the Definition of Done and Ready from records in the manifest,
 never from the page (`docs/entry-exit-evaluation.md`, "Item records").
 
+## Migration
+
+`compass issue migrate [root]` is a dry run; `--apply` makes the changes, and on a work
+root that git does not track it also needs `--i-have-a-copy`. For an issue written before
+rendered blocks it only adds lines and records (ADR-020, through ADR-051). The code is
+`cli/compass_pkg/migrate_blocks.py`; the rename of the old page and the report are in
+`cli/compass_pkg/migrate.py`.
+
+| What | Rule |
+|---|---|
+| Marker | An empty `dod` pair goes at the end of the "Definition of Done" section of the verification report. The registry digest of the report, and the `upstream` digest of a document that names it, move from the old masked digest to the new one, so the report keeps its status. A digest that was already stale stays stale. |
+| Boxes to items | A box is the item whose statement it reads; when the report has as many boxes as the list has items, an unmatched box is the item at its place. A box that reads no item is reported. |
+| Records | `meets` on the evidence an `(evidence: ...)` tag names, `defers` on the follow-up a `(follow-up: ...)` tag names (a `backfill` tag and a `BF-` id are read too), and a `page_ticks` entry for each ticked box. A tag naming an id the manifest does not hold, evidence of a type the list does not accept, or a follow-up that already defers another item writes no record. The item stays open and the report names the issue, the item and the id. |
+| Page ticks | Only `item_records` reads one. `human-approval-present` and the approval readers never do, so a ticked box is not a person's approval (DCJ-80). |
+| Missing heading | A report with no "Definition of Done" heading gets no marker and no record, and the report says so. `dod-evidence-typed` then finds every item open. |
+| Verification note | An empty note, registered, for each quick fix closed as completed. |
+| Old page | A work-folder `README.md` whose first line is the old generated marker is renamed to `README.md.v6.bak`, with any text a person added under it. A `README.md` without that line is not touched. The page is not generated again. |
+| Stored generation | An issue, open or closed, whose generation records an implementation major this CLI lacks (`dod-evidence-typed` 1.x) is pinned to the installed versions through the `--config` path. A closed issue keeps its configuration; only the versions change. |
+| Open items | The ones above are printed on every run, after the changes, because they need a person. A second `--apply` changes no file. |
+
+After `--apply`, `compass issue render --all` fills the blocks. `--dry-run` of that verb,
+and the dry run of this one, write nothing.
+
 ## Text copied into a block
 
 A line copied from a record or a document goes through

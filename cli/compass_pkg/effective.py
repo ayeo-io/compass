@@ -821,19 +821,21 @@ def _set_generation_line(path, target):
     return render
 
 
-def migrate_generation(task_dir):
+def migrate_generation(task_dir, *, closed_ok=False):
     """Store the next generation of the issue pinned to the installed versions
     (`compass issue migrate --config`), the second of the three commit paths.
     Returns `(Committed, notes)`. The stored configuration is kept as it is and
     every check result the old generation recorded is invalidated. An issue
     with no stored generation is adopted: its live configuration becomes
     generation 1. Raises `CompassError` for a closed issue, which keeps the
-    configuration it closed under."""
+    configuration it closed under. `closed_ok` is for `compass issue migrate`,
+    which pins a closed issue that records an implementation major the CLI lacks
+    so its check runs; it changes the versions only and keeps the configuration."""
     task_dir = os.path.abspath(os.fspath(task_dir))
     slug = os.path.basename(task_dir)
     path = manifest_path(task_dir)
     manifest = load_yaml(path)
-    if status_words.is_closed(manifest):
+    if status_words.is_closed(manifest) and not closed_ok:
         raise CompassError(
             f"issue {slug} is closed and keeps the configuration it closed under, so "
             f"`compass issue migrate --config` did not change it")
@@ -856,6 +858,6 @@ def migrate_generation(task_dir):
         resolution.provenance["adopted"] = "adopted from live governance"
     committed = generation.commit(task_dir, resolution, manifest, invalidated,
                                   render=_set_generation_line(path, (held or 0) + 1),
-                                  force=True)
+                                  force=True, closed_ok=closed_ok)
     return committed, ([f"{len(invalidated)} recorded result(s) invalidated"]
                        if invalidated else [])

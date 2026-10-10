@@ -103,6 +103,13 @@ The terminal gives you the decision and the document to read. Detailed policy
 output and test logs stay available as evidence rather than taking over the
 conversation.
 
+`compass board render` shows every issue on one page, with a lane for each
+stage. Each card shows the issue's state, its delivery approach, its gates, and
+any blocked or stale-evidence flag. This example is an invented invoicing
+product:
+
+![The Compass board for an invented invoicing product: a backlog lane, one lane per stage from assess to ship, and a done lane, with cards such as sso-saml-login blocked in implement and payment-webhook-retries in verify](assets/board-example.png)
+
 ## Rigour without ritual
 
 Compass separates two things that process frameworks often confuse:

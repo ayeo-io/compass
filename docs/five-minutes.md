@@ -103,6 +103,11 @@ Compass never regenerates the page for you. When a command that writes the
 manifest leaves the page out of date, it prints one line telling you to run
 `compass issue dashboard render` again.
 
+To see every issue at once, with a lane for each stage, run
+`compass board render`. It writes one page and opens it in the browser;
+`compass board refresh` rewrites it after the work moves. `docs/board.md`
+describes the page.
+
 Correct the assessment if it is wrong: a good delivery approach depends on
 a good assessment. The session waits for your approval only at the
 checkpoints the project's `autonomy` setting lists, which the first line of

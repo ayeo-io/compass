@@ -6,6 +6,7 @@
    "lint_exit": 0,
    "receipt_exit": 0,
    "verdicts": {
+    "artifacts-approved": "nothing-to-check",
     "assessment-keys": "pass",
     "backfills-paid": "pass",
     "borrowed-documents-answered": "nothing-to-check",
@@ -33,6 +34,7 @@
    "lint_exit": 0,
    "receipt_exit": 0,
    "verdicts": {
+    "artifacts-approved": "nothing-to-check",
     "assessment-keys": "pass",
     "backfills-paid": "pass",
     "borrowed-documents-answered": "nothing-to-check",
@@ -71,6 +73,7 @@
    "lint_exit": 0,
    "receipt_exit": 0,
    "verdicts": {
+    "artifacts-approved": "nothing-to-check",
     "assessment-keys": "pass",
     "backfills-paid": "pass",
     "borrowed-documents-answered": "nothing-to-check",
@@ -98,6 +101,7 @@
    "lint_exit": 0,
    "receipt_exit": 0,
    "verdicts": {
+    "artifacts-approved": "nothing-to-check",
     "assessment-keys": "pass",
     "backfills-paid": "pass",
     "borrowed-documents-answered": "nothing-to-check",
@@ -125,6 +129,7 @@
    "lint_exit": 0,
    "receipt_exit": 0,
    "verdicts": {
+    "artifacts-approved": "nothing-to-check",
     "assessment-keys": "pass",
     "backfills-paid": "pass",
     "borrowed-documents-answered": "nothing-to-check",
@@ -152,6 +157,7 @@
    "lint_exit": 0,
    "receipt_exit": 0,
    "verdicts": {
+    "artifacts-approved": "nothing-to-check",
     "assessment-keys": "pass",
     "backfills-paid": "pass",
     "borrowed-documents-answered": "nothing-to-check",
@@ -179,6 +185,7 @@
    "lint_exit": 0,
    "receipt_exit": 0,
    "verdicts": {
+    "artifacts-approved": "nothing-to-check",
     "assessment-keys": "pass",
     "backfills-paid": "pass",
     "borrowed-documents-answered": "nothing-to-check",
@@ -206,6 +213,7 @@
    "lint_exit": 0,
    "receipt_exit": 0,
    "verdicts": {
+    "artifacts-approved": "nothing-to-check",
     "assessment-keys": "pass",
     "backfills-paid": "pass",
     "borrowed-documents-answered": "nothing-to-check",
@@ -233,6 +241,7 @@
    "lint_exit": 0,
    "receipt_exit": 0,
    "verdicts": {
+    "artifacts-approved": "nothing-to-check",
     "assessment-keys": "pass",
     "backfills-paid": "pass",
     "borrowed-documents-answered": "nothing-to-check",
@@ -260,6 +269,7 @@
    "lint_exit": 0,
    "receipt_exit": 0,
    "verdicts": {
+    "artifacts-approved": "nothing-to-check",
     "assessment-keys": "pass",
     "backfills-paid": "pass",
     "borrowed-documents-answered": "nothing-to-check",
@@ -288,6 +298,7 @@
    "lint_exit": 0,
    "receipt_exit": 0,
    "verdicts": {
+    "artifacts-approved": "nothing-to-check",
     "assessment-keys": "pass",
     "backfills-paid": "pass",
     "borrowed-documents-answered": "nothing-to-check",
@@ -315,6 +326,7 @@
    "lint_exit": 0,
    "receipt_exit": 0,
    "verdicts": {
+    "artifacts-approved": "nothing-to-check",
     "assessment-keys": "pass",
     "backfills-paid": "pass",
     "borrowed-documents-answered": "nothing-to-check",
@@ -342,6 +354,7 @@
    "lint_exit": 0,
    "receipt_exit": 0,
    "verdicts": {
+    "artifacts-approved": "nothing-to-check",
     "assessment-keys": "pass",
     "backfills-paid": "pass",
     "borrowed-documents-answered": "nothing-to-check",
@@ -369,6 +382,7 @@
    "lint_exit": 0,
    "receipt_exit": 0,
    "verdicts": {
+    "artifacts-approved": "nothing-to-check",
     "assessment-keys": "pass",
     "backfills-paid": "pass",
     "borrowed-documents-answered": "nothing-to-check",
@@ -396,6 +410,7 @@
    "lint_exit": 0,
    "receipt_exit": 0,
    "verdicts": {
+    "artifacts-approved": "nothing-to-check",
     "assessment-keys": "pass",
     "backfills-paid": "pass",
     "borrowed-documents-answered": "nothing-to-check",

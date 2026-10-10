@@ -229,7 +229,13 @@ def test_up_2_a_5_6_0_project_with_old_governance_words_evaluates_the_same(relea
         assert after.returncode == 0, after.stdout + after.stderr
         assert before.stdout.startswith(old_name), before.stdout
         assert after.stdout.startswith(new_name), after.stdout
-        assert _evaluate_lines(after) == _evaluate_lines(before), slug
+        # 7.0.0 ships a check (`artifacts-approved`) and an evidence type
+        # (`artifact-approval`) that the 5.6.0 governance copy lacks (ADR-050),
+        # so the drift report adds one concern line. Nothing else moves.
+        gates, choices = _evaluate_lines(after)
+        drift = "this project's policy is missing 2 rule(s) or check(s)"
+        assert len([c for c in choices if drift in c]) == 1, slug
+        assert (gates, [c for c in choices if drift not in c]) == _evaluate_lines(before), slug
         lint = _cli(CLI, root, "issue", "lint", "--issue", slug)
         assert lint.returncode == 0, lint.stdout + lint.stderr
 

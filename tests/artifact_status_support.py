@@ -46,7 +46,13 @@ def env(root):
             "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "NO_COLOR": "1",
             "COLUMNS": "200", "PYTHONDONTWRITEBYTECODE": "1",
             "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
-            "CLAUDE_PROJECT_DIR": str(root)}
+            "CLAUDE_PROJECT_DIR": str(root),
+            # ship-commit commits inside the fixture repository. A CI runner has
+            # no git identity and, unlike macOS, git there guesses none.
+            "GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "user.useConfigOnly",
+            "GIT_CONFIG_VALUE_0": "true",
+            "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
+            "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com"}
 
 
 def git(root, *args):

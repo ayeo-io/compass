@@ -172,6 +172,10 @@ def _repo(path):
     root = Path(path)
     root.mkdir(parents=True)
     git(root, "init", "-q")
+    # quick-fix finish commits through the CLI with the caller's environment,
+    # so the identity must live in the repository: a CI runner has none.
+    git(root, "config", "user.email", "t@example.com")
+    git(root, "config", "user.name", "t")
     (root / "README.md").write_text("hello\n")
     git(root, "add", "-A")
     git(root, "commit", "-q", "-m", "base")

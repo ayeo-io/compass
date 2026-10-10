@@ -44,8 +44,9 @@ at its lightest weight, not a way around it: if `compass approach evaluate`
 returns anything heavier, the rows above are what runs.
 
 Cross-issue: `/compass:status` (one issue or a flat list), `/compass:flow`
-(the managed cross-issue view - advisory, never gating), and `compass board
-render` (the same view as one page in the browser; `docs/board.md`). Role entry points:
+(the managed cross-issue view - advisory, never gating), and
+`compass board render` (the same view as one page in the browser;
+`docs/board.md`). Role entry points:
 `/compass:intent` (product owner), `/compass:position` (marketer),
 `/compass:design` (designer - produces the UI contract), `/compass:consult`
 (multi-role decisions). `/compass:init` is optional, and it is not what

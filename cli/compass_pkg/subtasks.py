@@ -188,8 +188,14 @@ def cmd_subtask_add(args):
                      "status": "dispatched", "attempts": 1,
                      "dispatched_at": now_iso()})
     save_manifest(task, path)
+    # Dispatching a subtask is the record of the breakdown stage (ADR-050).
+    from compass_pkg import artifact_status
+    moved = artifact_status.record_stage(task_dir, artifact_status.STAGE_BREAKDOWN,
+                                         artifact_status.BY_SUBTASK_ADD)
     print(f"compass issue subtask: {args.id} dispatched from {base[:12]} "
           f"({args.model}, budget {args.budget}).")
+    for line in artifact_status.moved_line(moved):
+        print(f"  {line}")
     return 0
 
 

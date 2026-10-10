@@ -43,6 +43,7 @@ REFERENCES = (
     ("stages", "exit", "checks", "list"),
     ("artifacts", "checks", "checks", "list"),
     ("artifacts", "depends_on", "artifacts", "list"),
+    ("artifacts", "stage", "stages", "scalar"),
     ("approaches", "gates", "gates", "list"),
     ("approaches", "artifacts", "artifacts", "map"),
     ("approaches", "stages", "stages", "map"),

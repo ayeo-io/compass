@@ -291,6 +291,7 @@ def test_trc_f1_a_quick_fix_reads_one_command_and_one_skill():
 NOT_ON_THE_LIGHT_PATH = {
     "_friction-capture": "friction capture is a step of the full ship, which a quick fix collapses",
     "follow-up": "a quick fix borrows no process weight, so it owes nothing to pay back",
+    "next": "a quick fix has no checkpoint to wait at, so compass next has no decisions taken for the person to show",
     "retro": "cross-issue aggregation, not a step of any one issue",
     "lesson": "offered beside friction capture in the full ship, which a quick fix collapses",
     "scenario": "define records scenarios and de-scoped failure modes with it; a quick fix records its one scenario through compass quick-fix start",

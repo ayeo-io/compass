@@ -65,6 +65,12 @@ checks:
     impl: human-approval-present, severity: blocking, on_skipped: fail, locked: hard}
   backfills-paid: {statement: The issue manifest's follow-ups list is empty or every item is resolved.,
     kind: deterministic, impl: backfills-paid, severity: blocking, on_skipped: fail}
+  artifacts-approved: {statement: 'Every document the issue registered is accepted when it ships: no
+      artifact reads draft or awaiting-approval, and an omitted artifact records a reason. Judges the
+      state `compass ship-commit` would leave, so a document owned by the ship stage does not fail.
+      Declines to check, rather than passing, until every gate has passed, and for an issue that has
+      closed or does not ship.', kind: deterministic, impl: artifacts-approved, severity: blocking,
+    on_skipped: not-applicable}
   spike-conclusion-present: {statement: A spike has a `spike-conclusion` evidence entry with a recorded
       decision (discard | graduate-to-delivery | defer); graduate-to-delivery links the next issue., kind: deterministic,
     impl: spike-conclusion-present, severity: blocking, on_skipped: fail, locked: true}

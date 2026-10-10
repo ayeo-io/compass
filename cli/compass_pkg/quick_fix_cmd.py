@@ -901,6 +901,13 @@ def cmd_quick_fix_finish(args):
                 f"passed and nothing was committed. Full output: "
                 f"{evidence_path_abs}\n{check_out.strip()[-1500:]}")
 
+        # The check has passed, so the quick fix's document is approved by this
+        # command and ship-commit has nothing left to stop on (ADR-050).
+        from compass_pkg import artifact_status
+        task, task_path = load_manifest(task_dir)
+        if artifact_status.approve_documents(task, artifact_status.BY_QUICK_FIX):
+            save_manifest(task, task_path)
+
         task, _ = load_manifest(task_dir)
         existing_ids = {e.get("id") for e in (task.get("evidence") or [])
                         if isinstance(e, dict)}

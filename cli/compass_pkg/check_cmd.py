@@ -150,6 +150,11 @@ CHECK_GUIDANCE = {
         "do": 'Settle each owed follow-up: `compass follow-up resolve FU-<id>`.',
         "fix": "Complete each unpaid follow-up (writing the deferred artifact, promoting the reproduction scenario, etc.) and set its `status: paid` in manifest.yml.",
     },
+    "artifacts-approved": {
+        "why": "A document that is still a draft, or waiting for a person's approval, has not been accepted by anyone, and shipping it makes the registry say something untrue. Declined until every gate has passed, because the stages approve their own documents as they go.",
+        "do": 'Run the command the failure names for each document.',
+        "fix": "For each document named: `compass issue artifact set <kind> --status approved` when it has no human check, or `compass issue artifact set <kind> --status awaiting-approval` and then `compass evidence approve --artifact <kind>` at a terminal when it has one. A document you chose not to write is `compass issue artifact set <kind> --status omitted --reason \"<why>\"`.",
+    },
     "spike-conclusion-present": {
         "why": "A Spike without a recorded conclusion is just untracked work - the conclusion is what makes the exploration accountable.",
         "do": 'Record the close-out: discard, graduate-to-delivery, or defer.',
@@ -571,6 +576,31 @@ def _freshness_pass(run, view, task, task_dir):
     return len(findings), failed, 0
 
 
+def _approved_pass(run, task, task_dir, refused):
+    """Add the result of the check `artifacts-approved` and return `(ran, failed,
+    nothing, advisory)` for it. It sits in no gate, so it runs here, with the
+    severity the issue's configuration declares for it. A configuration that
+    does not declare it adds nothing, so an issue stored before the check
+    existed gains it at its next `compass approach evaluate --write`."""
+    from compass_pkg import artifact_status
+
+    check = artifact_status.CHECK_ID
+    verdict = artifact_status.judged(task, task_dir, _judge)
+    if verdict is None:
+        return 0, 0, 0, 0
+    run.guardrail("", "approved documents")
+    if check in refused:
+        run.refused.add(check)
+        verdict = (False, refused[check])
+    passed, detail = verdict
+    run.result(check, passed, detail)
+    if passed is ADVISORY_FAILURE:
+        return 1, 0, 0, 1
+    if passed is NOTHING_TO_CHECK:
+        return 1, 0, 1, 0
+    return 1, (0 if passed else 1), 0, 0
+
+
 def _assessment_keys_pass(run, task):
     """Report the assessment keys the manifest schema does not allow. The
     release's `issue lint` refuses them, so check must too, or an issue
@@ -866,6 +896,12 @@ def cmd_check(args):
     ran += fresh_ran
     failures += fresh_failed
     nothing_to_check += fresh_nothing
+    # The check that stops an unapproved document from shipping sits in no gate.
+    done, bad, nothing, soft = _approved_pass(run, task, task_dir, refused)
+    ran += done
+    failures += bad
+    nothing_to_check += nothing
+    advisory += soft
     ran += 1
     if not _assessment_keys_pass(run, task):
         failures += 1

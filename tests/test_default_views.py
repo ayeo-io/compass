@@ -235,13 +235,13 @@ def test_gv_5_the_script_writes_and_checks(tmp_path):
     assert SCRIPT.is_file(), "scripts/generate-legacy-views.py is missing"
     root = _root_copy(tmp_path)
     assert _run("--check", root=root).returncode == 0
-    _edit(root / VIEWS[1], "version: 1.26.0", "version: 1.26.1")
+    _edit(root / VIEWS[1], "version: 1.27.0", "version: 1.27.1")
     checked = _run("--check", root=root)
     assert checked.returncode == 1
     assert VIEWS[1] in checked.stdout + checked.stderr
     assert COMMAND in checked.stdout + checked.stderr
     # `--check` writes nothing.
-    assert "version: 1.26.1" in (root / VIEWS[1]).read_text(encoding="utf-8")
+    assert "version: 1.27.1" in (root / VIEWS[1]).read_text(encoding="utf-8")
     written = _run(root=root)
     assert written.returncode == 0, written.stderr
     first = {v: (root / v).read_bytes() for v in VIEWS}

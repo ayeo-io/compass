@@ -509,6 +509,7 @@
           "type": {
             "enum": [
               "artifact",
+              "artifact-approval",
               "claim-review",
               "consistency-check",
               "command-output",
@@ -589,7 +590,22 @@
           },
           "check": {
             "type": "string",
-            "description": "For manual-review: the id of the judged check this review record is for. `compass evidence review` sets it, and a judged check reads only the records that carry its id."
+            "description": "For manual-review: the id of the judged check this review record is for. `compass evidence review` sets it, and a judged check reads only the records that carry its id. For artifact-approval: the human check the approval meets."
+          },
+          "artifact": {
+            "type": "string",
+            "description": "For artifact-approval: the kind of the artifact the person approved. A record holds exactly one of artifact and decisions."
+          },
+          "decisions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "For artifact-approval: the ids of the decisions taken for the person that this record confirms. A record holds exactly one of artifact and decisions."
+          },
+          "stage": {
+            "type": "string",
+            "description": "For artifact-approval of decisions: the checkpoint stage the issue was at, when it was at one."
           }
         }
       }
@@ -1012,14 +1028,58 @@
           },
           "digest": {
             "type": "string",
-            "description": "Optional. `sha256:` and the digest of the document's file when it was last written. Only `compass issue artifact set` writes it, and only with the capability `artifact-freshness` on."
+            "description": "Optional. `sha256:` and the digest of the document's file when it was last written. Only `compass issue artifact set` writes it, on every registration. It tells a rewrite of an approved document from a repeat registration."
+          },
+          "approved_by": {
+            "type": "string",
+            "description": "Optional. Present when status is approved. A person's id when a person approved the artifact, otherwise the command that approved it, such as `compass tdd-red` or `compass issue migrate`."
+          },
+          "approved_at": {
+            "type": "string",
+            "description": "Optional. ISO 8601 time of the approval. Present exactly when status is approved."
           },
           "upstream": {
             "type": "object",
-            "description": "Optional. The digest of each artifact this document depends on, as it was when the document was written. The document is stale when one of them differs now. Only `compass issue artifact set` writes it, and only with the capability `artifact-freshness` on.",
+            "description": "Optional. The digest of each artifact this document depends on, as it was when the document was written. The document is stale when one of them differs now. Only `compass issue artifact set` writes it. The stale-document refusals need the capability `artifact-freshness` on.",
             "additionalProperties": {
               "type": "string"
             }
+          }
+        }
+      }
+    },
+    "decisions_taken": {
+      "type": "array",
+      "description": "The decisions an agent took for the person, from the requirements review's ambiguity ledger or recorded by hand with `compass issue decision add`. A person confirms them as a set at the stage checkpoint with `compass evidence approve --decisions`.",
+      "items": {
+        "type": "object",
+        "required": ["id", "question", "resolution", "by", "stage", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The ledger id, such as Q1, or the id given by hand. Unique in the issue."
+          },
+          "question": {
+            "type": "string"
+          },
+          "resolution": {
+            "type": "string"
+          },
+          "by": {
+            "type": "string",
+            "description": "The agent that took the decision."
+          },
+          "stage": {
+            "type": "string",
+            "description": "The stage the decision was taken in."
+          },
+          "status": {
+            "enum": ["open", "confirmed", "reopened"]
+          },
+          "reason": {
+            "type": "string",
+            "description": "Written only by a reopen: why the decision came back. Never removed."
           }
         }
       }

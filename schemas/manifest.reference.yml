@@ -32,9 +32,10 @@ checkpoints:     # (optional until approach evaluate) list of the stage hand-off
 
 evidence:        # (optional) list of maps - the typed evidence registry gates reference by id:
   - id:          #   (required in entry) string - e.g. EV-001 or EV-A1
-    type:        #   (required in entry) [artifact, claim-review, consistency-check,
-                 #     command-output, human-approval, manual-review, migration-plan,
-                 #     rollback-plan, security-review, spike-conclusion, test-run]
+    type:        #   (required in entry) [artifact, artifact-approval, claim-review,
+                 #     consistency-check, command-output, human-approval, manual-review,
+                 #     migration-plan, rollback-plan, security-review, spike-conclusion,
+                 #     test-run]
     path:        #   (optional) string - path to the evidence file
     scenario:    #   (optional) string - the scenario id this evidence is for
     check:       #   (optional) string - for manual-review, the judged check this review is for
@@ -47,6 +48,8 @@ evidence:        # (optional) list of maps - the typed evidence registry gates r
     issue:       #   (optional) string - for human-approval of a check, the issue slug; another issue's record does not count
     generation:  #   (optional) integer - for human-approval of a check, the issue's generation when it was given
                  #     (`compass evidence approve` writes check, issue, generation and timestamp)
+    artifact:    #   (optional) string - for artifact-approval, the kind of the document approved
+    decisions:   #   (optional) list of strings - for artifact-approval, the decision ids confirmed
 
 gates:           # (optional until approach evaluate) list of maps:
   - id:          #   (required in entry) string - e.g. verify.correctness
@@ -94,8 +97,19 @@ artifacts:       # (optional) list of maps - the issue's document registry:
     status:      #   (required in entry) string
     reason:      #   (required in entry) string - why this document exists, or was deliberately not written
     path:        #   (optional) string - project-root-relative path to the document
-    digest:      #   (optional) string - sha256 of the document's file when it was last written (artifact-freshness on)
-    upstream:    #   (optional) map - artifact id to the sha256 of that artifact when this document was written (artifact-freshness on)
+    digest:      #   (optional) string - sha256 of the document's file when it was last written (recorded on every registration)
+    upstream:    #   (optional) map - artifact id to the sha256 of that artifact when this document was written
+    approved_by: #   (optional) string - present when status is approved: a person's id, or the command that approved it
+    approved_at: #   (optional) string - ISO 8601 time of the approval; present exactly when status is approved
+
+decisions_taken: # (optional) list of maps - decisions an agent took for the person:
+  - id:          #   (required in entry) string - the ledger id, such as Q1
+    question:    #   (required in entry) string
+    resolution:  #   (required in entry) string
+    by:          #   (required in entry) string - the agent that took it
+    stage:       #   (required in entry) string - the stage it was taken in
+    status:      #   (required in entry) [open, confirmed, reopened]
+    reason:      #   (optional) string - written only by a reopen
 
 # Human approval (guardrail `G5`) is not a separate top-level key: it is a
 # `human-approval` entry in the `evidence:` registry above.

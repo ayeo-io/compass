@@ -228,15 +228,15 @@ reassess), and the `compass.yml` it would write.
   "sources": [
     {
       "path": "governance/routing-policy.yml",
-      "digest": "sha256:2b2bba57040057442ad879e15aa5db381d03bba8d57d4a93f8b831be6b54ddd5"
+      "digest": "sha256:..."
     },
     {
       "path": "governance/guardrails.yml",
-      "digest": "sha256:58bf8365ff3e3fc786771387bbf196bcb3725c7b49bb7b027d0572570d5b6f3c"
+      "digest": "sha256:..."
     },
     {
       "path": ".compass/config.yml",
-      "digest": "sha256:5092212503c46d8d7fe6778a24a8f3cfe625ad76817ca036eb3a87f2c0e9b1a6"
+      "digest": "sha256:..."
     }
   ],
   "adopted": [
@@ -287,6 +287,11 @@ reassess), and the `compass.yml` it would write.
     },
     {
       "catalogue": "checks",
+      "id": "artifacts-approved",
+      "operation": "add"
+    },
+    {
+      "catalogue": "checks",
       "id": "dod-evidence-typed",
       "operation": "set"
     },
@@ -294,6 +299,11 @@ reassess), and the `compass.yml` it would write.
       "catalogue": "checks",
       "id": "multiagent-run-recorded",
       "operation": "set"
+    },
+    {
+      "catalogue": "vocabulary",
+      "id": "checks.artifacts-approved",
+      "operation": "add"
     }
   ],
   "overlay": {
@@ -339,8 +349,8 @@ reassess), and the `compass.yml` it would write.
   "behaviour": {
     "result": "incomparable",
     "reason": "at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency none, role engineer, labels none: approaches.checkpoints (autonomous) is [\"assess\", \"define\"] in the parent and [] in the child",
-    "points": 4608,
-    "changed": 2400
+    "points": 0,
+    "changed": 0
   },
   "blocked_by": [],
   "files": [

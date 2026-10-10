@@ -81,6 +81,20 @@ BASELINE_CHECKS = {
     # rather than becoming a sixth guardrail: ADR-002 caps guardrails at
     # five and grows the framework through new checks instead.
     "multiagent-run-recorded",
+    # Added by artifact-status-written-by-stages (ADR-050). A document that
+    # reads draft or awaiting-approval, or is omitted with no reason, has not
+    # been accepted, so ship refuses it. It sits in no guardrail: a check in
+    # `G4` would be locked, and an issue waiver must be able to excuse it.
+    "artifacts-approved",
+}
+
+# The evidence types a branch may add to guardrails.yml, each named for the
+# change that adds it.
+BASELINE_EVIDENCE_TYPES = {
+    # Added by artifact-status-written-by-stages (ADR-050). A person's approval
+    # of one document or of a set of decisions. No gate accepts it and
+    # `human-approval-present` never reads it, so it cannot clear `G5`.
+    "artifact-approval",
 }
 
 # The legitimate set of gate names in gate_evidence_requirements after landing.
@@ -286,6 +300,14 @@ def test_guardrails_gains_no_mechanism_on_this_branch():
                 f"{sorted(_rename_checks(set(b)) - set(a))}. "
                 "Removing a check silently weakens every adopting project."
             )
+            continue
+        if field == "evidence_types":
+            assert set(a) - set(b) <= BASELINE_EVIDENCE_TYPES, (
+                f"guardrails.yml gained undeclared evidence type(s): "
+                f"{sorted(set(a) - set(b) - BASELINE_EVIDENCE_TYPES)}. Declare it in "
+                "BASELINE_EVIDENCE_TYPES above, with a comment naming the change.")
+            assert set(b) - set(a) == set(), (
+                f"guardrails.yml removed evidence type(s): {sorted(set(b) - set(a))}.")
             continue
         if field == "defaults":
             # A guardrail may gain a declared check; it may not gain or lose a

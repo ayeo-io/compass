@@ -98,7 +98,7 @@ DECLINING_CHECKS = (
     "scenarios-are-executable", "claim-traces-to-scenario", "command-passes",
     "borrowed-documents-answered", "evidence-matches-tree",
     "evidence-identity-matches", "dashboard-current", "landed-by-resolves",
-    "multiagent-run-recorded",
+    "multiagent-run-recorded", "artifacts-approved",
 )
 PASSING_CHECKS = ("declared-tests-resolve",)
 
@@ -446,12 +446,27 @@ def _artifacts(approaches, rules):
             for key in ("add_artifact", "require_artifact", "suggest_artifact"):
                 if key in (rule.get("then") or {}):
                     note(rule["then"][key])
-    return {name: {"file": f"{name}.md"} for name in names}
+    return {name: ({"file": f"{name}.md", "stage": ARTIFACT_STAGES[name]}
+                   if name in ARTIFACT_STAGES else {"file": f"{name}.md"})
+            for name in names}
+
+
+# The stage that owns each shipped artifact (ADR-050). The legacy files have no
+# field for it, so the adapter holds the table the preset's artifacts.yml carries.
+ARTIFACT_STAGES = {
+    "delivery-approach": "assess", "intent": "assess",
+    "acceptance-criteria": "define", "ui-contract": "define",
+    "requirements-review": "refine", "technical-design": "plan",
+    "threat-model": "plan", "rollback-plan": "plan",
+    "distribution-map": "breakdown", "verification-report": "verify",
+    "launch-readiness": "verify",
+}
 
 
 # A display name a person would not guess from the id. The id keeps its
 # name; the display name says what the check asks today.
 DISPLAY_NAMES = {
+    "checks.artifacts-approved": "Documents approved",
     "checks.backfills-paid": "Follow-ups resolved",
     "checks.dod-evidence-typed": "Definition of Done evidence is typed",
     "checks.landed-by-resolves": "Landed-by resolves",

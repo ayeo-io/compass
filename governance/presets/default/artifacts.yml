@@ -8,14 +8,14 @@
 # those two files. The preset is the source now; edit it here.
 schema: 1
 artifacts:
-  delivery-approach: {file: delivery-approach.md}
-  acceptance-criteria: {file: acceptance-criteria.md}
-  technical-design: {file: technical-design.md}
-  distribution-map: {file: distribution-map.md}
-  verification-report: {file: verification-report.md}
-  intent: {file: intent.md}
-  requirements-review: {file: requirements-review.md}
-  threat-model: {file: threat-model.md}
-  rollback-plan: {file: rollback-plan.md}
-  launch-readiness: {file: launch-readiness.md}
-  ui-contract: {file: ui-contract.md}
+  delivery-approach: {file: delivery-approach.md, stage: assess}
+  acceptance-criteria: {file: acceptance-criteria.md, stage: define}
+  technical-design: {file: technical-design.md, stage: plan}
+  distribution-map: {file: distribution-map.md, stage: breakdown}
+  verification-report: {file: verification-report.md, stage: verify}
+  intent: {file: intent.md, stage: assess}
+  requirements-review: {file: requirements-review.md, stage: refine}
+  threat-model: {file: threat-model.md, stage: plan}
+  rollback-plan: {file: rollback-plan.md, stage: plan}
+  launch-readiness: {file: launch-readiness.md, stage: verify}
+  ui-contract: {file: ui-contract.md, stage: define}

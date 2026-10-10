@@ -547,6 +547,29 @@ def _receipt_stage_lists(rows):
     return lines
 
 
+def _receipt_documents(task):
+    """The "Documents" section: each registered document that has left `draft`,
+    with its status and, when it was approved, who approved it and when. A
+    person's approval names the person; a stage's names the command that wrote
+    it. Documents still in draft are counted on one line, so the receipt stays
+    one screen. No lines when every document is a draft or none is registered."""
+    entries = [a for a in task.get("artifacts") or [] if isinstance(a, dict)]
+    moved = [a for a in entries if a.get("status") != "draft"]
+    if not moved:
+        return []
+    lines = ["Documents", "---------"]
+    for entry in moved:
+        who = entry.get("approved_by") or "-"
+        when = entry.get("approved_at") or "-"
+        lines.append(_receipt_truncate(
+            f"  {str(entry.get('kind', '?')):<22}  {str(entry.get('status', '?')):<18}  "
+            f"{who}  {when}"))
+    drafts = len(entries) - len(moved)
+    if drafts:
+        lines.append(f"  {drafts} more still draft")
+    return lines
+
+
 def _receipt_freshness(task, task_dir):
     """The "Artifact freshness" section: each document that records the digests
     of its upstream, fresh or stale, or no lines when the capability
@@ -588,6 +611,11 @@ def cmd_task_receipt(args):
     if listed:
         at = text.rindex(_RECEIPT_RULE)
         text = text[:at] + "\n".join(listed) + "\n\n" + text[at:]
+    # The documents, with who approved each and when, go after the stage lists.
+    documents = _receipt_documents(task)
+    if documents:
+        at = text.rindex(_RECEIPT_RULE)
+        text = text[:at] + "\n".join(documents) + "\n\n" + text[at:]
     # The freshness of the documents goes next when the capability
     # `artifact-freshness` is on and a document records its upstream.
     fresh = _receipt_freshness(task, task_dir)

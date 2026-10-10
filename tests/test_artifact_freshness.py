@@ -1,11 +1,11 @@
 """Artifact freshness: a document is stale when an artifact it depends on changed after it.
 
-The capability `artifact-freshness` is off in the shipped default. With it on,
-`compass issue artifact` records the digest of a document and of each artifact
-it `depends_on`. Staleness is computed from those records and the files as
-they are now. It shows in `compass check`, `compass next`, the receipt and
-the refusal of `compass ship-commit`. With the capability off nothing is
-written and no reader changes.
+The capability `artifact-freshness` is off in the shipped default.
+`compass issue artifact` always records the digest of a document and of each
+artifact it `depends_on` (ADR-050). With the capability on, staleness is
+computed from those records and the files as they are now. It shows in
+`compass check`, `compass next`, the receipt and the refusal of `compass
+ship-commit`. With the capability off no reader changes.
 
 Scenario ids of issue `artifact-freshness`: `FRESH-1` to `FRESH-9`. Each test
 name starts with its scenario id.
@@ -88,9 +88,11 @@ def _check(root):
 def test_fresh_1_with_the_capability_off_nothing_is_recorded_or_shown(tmp_path):
     root, task_dir = _scene(tmp_path, capability=False, phase="implement")
     _write(task_dir, "acceptance-criteria", CRITERIA + "changed\n")
-    for kind in ("acceptance-criteria", "technical-design"):
-        entry = _entry(task_dir, kind)
-        assert "digest" not in entry and "upstream" not in entry, entry
+    # Recording is always on (ADR-050): the digests are written, and every
+    # refusal and every reader still stays off.
+    assert _entry(task_dir, "technical-design")["digest"] == _sha(DESIGN)
+    assert _entry(task_dir, "technical-design")["upstream"] == {
+        "acceptance-criteria": _sha(CRITERIA)}
     code, rows, out = _check(root)
     assert rows == {}
     assert "freshness" not in out and "stale" not in out
@@ -336,6 +338,12 @@ def test_fresh_9_without_depends_on_nothing_is_stale(tmp_path):
 
 def test_fresh_9_a_document_registered_before_the_capability_is_not_stale(tmp_path):
     root, task_dir = _scene(tmp_path, capability=False, phase="implement")
+    # A record an earlier build wrote holds no digest and no upstream.
+    body = _manifest(task_dir)
+    for entry in body["artifacts"]:
+        entry.pop("digest", None)
+        entry.pop("upstream", None)
+    (task_dir / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
     doc = yaml.safe_load((root / "compass.yml").read_text(encoding="utf-8"))
     doc["capabilities"] = {GUARDRAIL: True}
     (root / "compass.yml").write_text(yaml.safe_dump(doc), encoding="utf-8")
@@ -564,8 +572,9 @@ def test_fresh_2_an_unreadable_configuration_records_nothing(tmp_path):
     assert code == 0, out + err
     entry = _entry(task_dir, "acceptance-criteria")
     assert entry["status"] == "draft"
-    assert "digest" not in entry and "upstream" not in entry, entry
-    assert "freshness" not in out
+    # No configuration can be read, so there is no graph to record an
+    # upstream against; the document's own digest is still recorded.
+    assert entry["digest"] == _sha(CRITERIA) and "upstream" not in entry, entry
 
 
 # --- staleness through more than one document ----------------------------------------------

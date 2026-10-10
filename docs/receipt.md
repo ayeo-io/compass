@@ -73,7 +73,9 @@ When any list check is active, the receipt adds a *Stage lists* section before t
 
 With the capability `artifact-freshness` on, the receipt adds an *Artifact freshness* section before the verdict. It shows each document that records the digests of its upstream as `fresh` or `stale`, with the artifact that changed. It adds nothing when no document is tracked, or when the capability is off (`docs/artifact-freshness.md`).
 
-The sections before the verdict run in this order: *Stage lists*, *Artifact freshness*, *Provenance*, then the conformance lines.
+The receipt adds a *Documents* section before the artifact freshness one. It lists each registered document that has left `draft` with its status and, for an approved one, who approved it and when. A person's approval names the person. A stage's approval names the command that wrote it, such as `compass tdd-red`. Documents still in draft are counted on one line, and a receipt whose documents are all drafts has no section.
+
+The sections before the verdict run in this order: *Stage lists*, *Documents*, *Artifact freshness*, *Provenance*, then the conformance lines.
 
 ## The conformance line
 

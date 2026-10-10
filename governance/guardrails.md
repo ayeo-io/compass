@@ -86,6 +86,12 @@ The routing policy (`routing-policy.md`) is what makes sure such changes are
 *routed* to where the checkpoint happens; this guardrail is what makes the
 checkpoint non-negotiable.
 
+Its check, `human-approval-present`, reads only evidence of the type
+`human-approval`. A person's approval of a document or of a set of decisions
+(`compass evidence approve --artifact` and `--decisions`) is recorded as
+`artifact-approval`, which this check never reads, so such an approval never
+clears a sign-off.
+
 ---
 
 ## Project guardrails
@@ -122,6 +128,15 @@ _(none yet - the shipped default guardrails apply as-is)_
   With the capability `artifact-freshness` on, it also reports each tracked
   document as fresh or stale under the label `artifact-freshness`
   (`docs/artifact-freshness.md`). A project with none of these sees no change.
+- **`artifacts-approved`** is a blocking check in no gate, run by `compass
+  check` and by `compass ship-commit` before the commit. It declines until
+  every gate has passed. Then it judges a copy of the issue with the ship exit
+  applied, which is the state `ship-commit` would leave, and fails on a
+  registered document that reads `draft` or `awaiting-approval`, or that is
+  `omitted` with no reason. Each failure names the command that moves the
+  document. It is unlocked, so an issue waiver can make it advisory. An issue
+  stored on an earlier generation gains it at its next `compass approach
+  evaluate --write`. ADR-050 holds the decision.
 - **An advisory failure** is a check that failed where its effective severity
   is advisory (`severity: advisory`, or a `blocking_when` the assessment does
   not match). It is labelled ADVISORY, never PASS or FAIL, is counted apart

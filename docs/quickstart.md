@@ -475,6 +475,26 @@ on, it names a stale document the stage consumes, for example
 `Implement | entry not met: technical-design is stale`
 (`docs/artifact-freshness.md`).
 
+## Decisions an agent took for you
+
+When an agent resolves a requirement question itself, it records the decision
+(`compass issue decision add`, or `--from-ledger` for the requirements review).
+What happens next depends on the project's `autonomy` setting:
+
+- On `balanced` and `controlled`, `compass next` stops at a checkpoint that holds
+  unconfirmed decisions. Its first line reads `Waiting at the define checkpoint:
+  2 decision(s) to confirm`, and the lines below list each decision with its
+  resolution. Confirm them all with `compass evidence approve --decisions
+  --approver <you> --role <role>`, or reopen one with `compass issue decision
+  set <id> --status reopened --reason "<why>"`. A reopened decision keeps the
+  checkpoint waiting.
+- On `autonomous`, `compass next` lists the decisions below its usual line and
+  does not wait. They stay open.
+
+`compass retro --decisions` reports, across the board, how many of these
+decisions were confirmed as taken, how many were changed, and how many were
+never confirmed on a finished issue.
+
 ## Where to go next
 
 - **`docs/routing-deep-dive.md`** - how the assess stage actually composes an

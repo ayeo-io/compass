@@ -670,7 +670,8 @@ POLICY_FILE_OWNERS = frozenset({
 #: `view_or_legacy` first, and a new read, or a second read in one of them, fails.
 EXPECTED_READS = {
     ("approach_diagram", "cmd_approach_diagram"): 1, ("calibration", "_route_weights"): 1,
-    ("check_cmd", "cmd_check"): 2, ("checks", "_check_gate_evidence"): 1,
+    # judged reads guardrails.yml only after view_or_legacy returns None (ADR-050).
+    ("artifact_status", "judged"): 1, ("check_cmd", "cmd_check"): 2, ("checks", "_check_gate_evidence"): 1,
     ("github_labels", "declared_labels"): 1,
     ("checks", "_check_command_passes"): 1, ("flow", "_routing_labels"): 1,
     ("lessons", "_guardrail_ids"): 1, ("loop_ceilings", "loop_ceilings"): 1,

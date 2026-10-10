@@ -84,6 +84,11 @@
   fails: tests/test_check_guardrails.py::test_check_fails_on_unpaid_backfill
   restores: tests/test_check_guardrails.py::test_check_passes_with_paid_backfill
 
+- check: artifacts-approved
+  broken: a registered document left as a draft when every gate has passed
+  fails: tests/test_ship_commit_refuses_unapproved.py::test_asw_16_ship_commit_refuses_draft_design
+  restores: tests/test_ship_commit_refuses_unapproved.py::test_asw_18_omitted_with_reason_passes_ship_commit
+
 - check: spike-conclusion-present
   broken: a spike with no conclusion evidence
   fails: tests/test_spike_safety.py::test_spike_without_conclusion_fails

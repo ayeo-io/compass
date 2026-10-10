@@ -49,6 +49,16 @@ The test is simple: **could someone who does not trust you check it from what
 you recorded?** If yes, it is evidence. If they would have to take your word, it
 is assertion.
 
+## Records that also move a document
+
+`compass tdd-red` and `compass acceptance record` are the first records of the
+implement stage. Each one moves the documents of earlier stages that are still
+`draft` and have a path: to `approved` (with `approved_by` naming the command),
+or to `awaiting-approval` when the document has a human check. A person
+approves that document with `compass evidence approve --artifact <kind>`. That
+approval is recorded as `artifact-approval`, which no gate accepts and the
+sign-off check of `G5` never reads.
+
 ## Properties of real evidence
 
 - **Reproducible** - it includes the command, so it can be re-run.

@@ -335,8 +335,9 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
     # says a vocabulary change was intended - the same shape as
     # EXPECTED_VERSION in test_version_consistency.
     # 74 since ADR-041 added the 14 configuration terms. 78 since ADR-044:
-    # epic, bug, task, close-reason and check join, and bug-fix goes.
-    assert len(terminology["terms"]) == 78, (
+    # epic, bug, task, close-reason and check join, and bug-fix goes. 79 since
+    # ADR-050 added decision-taken.
+    assert len(terminology["terms"]) == 79, (
         "governance/terminology.yml gained or lost a term without this count "
         "moving. A vocabulary change is a decision (ADR-012); make it one."
     )

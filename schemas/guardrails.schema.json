@@ -37,7 +37,8 @@
           "enum": [
             "test-run", "command-output", "manual-review", "human-approval",
             "security-review", "migration-plan", "rollback-plan",
-            "claim-review", "spike-conclusion", "consistency-check", "artifact"
+            "claim-review", "spike-conclusion", "consistency-check", "artifact",
+            "artifact-approval"
           ]
         }
       }

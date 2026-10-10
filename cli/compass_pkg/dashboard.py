@@ -91,8 +91,10 @@ def _decision_line(task, pack):
     if not waiting:
         return None, "No decision required. Nothing is awaiting approval."
     first = waiting[0]
-    return first, "Approve the %s - %s." % (first.get("kind", "document"),
-                                            (first.get("reason") or "").rstrip("."))
+    kind = first.get("kind", "document")
+    return first, ("Approve the %s - %s. Run `compass evidence approve --artifact %s "
+                   "--approver <name> --role <role>`." % (
+                       kind, (first.get("reason") or "").rstrip("."), kind))
 
 
 # Past this many scenarios the flowchart shows one summary node per intent,
@@ -238,7 +240,8 @@ def render_dashboard(task_dir):
     # confidently wrong.
     out += ["## Review pack", ""]
     if present:
-        out += ["| Document | Status | Why it exists |", "|---|---|---|"]
+        out += ["| Document | Status | Approved by | Approved at | Why it exists |",
+                "|---|---|---|---|---|"]
         for a in present:
             kind = a.get("kind", "?")
             state, _p, _why = resolve_artifact(task_dir, kind)
@@ -247,8 +250,11 @@ def render_dashboard(task_dir):
             # wrong path" from "nobody has written it yet" - on disk they are
             # the same absence - so both get the label that is true either way.
             status = a.get("status", "?") if state == FOUND else "not written yet"
-            out.append("| %s | %s | %s |" % (
-                kind, status, (a.get("reason") or "").replace("|", "-")))
+            out.append("| %s | %s | %s | %s | %s |" % (
+                kind, status,
+                (a.get("approved_by") or "-") if status == "approved" else "-",
+                (a.get("approved_at") or "-") if status == "approved" else "-",
+                (a.get("reason") or "").replace("|", "-")))
     else:
         out.append("No documents registered yet.")
     out.append("")
@@ -418,19 +424,45 @@ def cmd_issue_artifact_path(args):
     return 0
 
 
-def _record_freshness(task, task_dir, path, entry):
-    """With the capability `artifact-freshness` on, stamp the entry with the
-    digests of its file and its upstream, and save. The lines to show; none
-    when the capability is off, so the verb is the same as before."""
-    from compass_pkg import effective, freshness
+def _view_or_none(task_dir):
+    """The configuration view of the issue, or None when it has none or it
+    cannot be read: an unreadable configuration records nothing and moves no
+    document to a human check."""
+    from compass_pkg import effective
 
     try:
-        view = effective.view_or_legacy(task_dir)
-    except Exception:  # noqa: BLE001 - an unreadable configuration records nothing
-        return []
+        return effective.view_or_legacy(task_dir)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _own_digest(task, task_dir, entry):
+    """The digest of the entry's file as it is now, read from the path the entry
+    holds in memory, or None when there is no readable file."""
+    from compass_pkg import freshness
+
+    rel = entry.get("path")
+    if not rel:
+        found = freshness._digest(task, task_dir, entry.get("kind"))
+        return None if found == freshness.UNREADABLE else found
+    resolved, refused = _registered_path(task_dir, rel)
+    if refused:
+        return None
+    from compass_pkg import review_records
+    try:
+        return review_records.file_digest(resolved)
+    except OSError:
+        return None
+
+
+def _record_freshness(view, task, task_dir, entry):
+    """Stamp the entry with the digests of its file and its upstream, whatever
+    the capability `artifact-freshness` says: recording is always on and only
+    the refusals are opt-in. The lines to show; none when nothing changed."""
+    from compass_pkg import freshness
+
     if not freshness.stamp(view, task, task_dir, entry):
         return []
-    save_manifest(task, path)
     upstream = sorted(entry.get("upstream") or {})
     return ["freshness: digest recorded"
             + (" against %s" % ", ".join(upstream) if upstream else "")]
@@ -502,17 +534,39 @@ def cmd_issue_artifact(args):
 
     if args.status != "omitted":
         _refuse_unreadable(task, task_dir, args.kind)
-    entry["status"] = args.status
-    if (args.reason or "").strip():
+    from compass_pkg import artifact_status, freshness
+
+    view = _view_or_none(task_dir)
+    digest_now = _own_digest(task, task_dir, entry)
+    rewound = artifact_status.register(task, view, entry, args.status, digest_now)
+    if (args.reason or "").strip() and not rewound:
         entry["reason"] = args.reason.strip()
     task["artifacts"] = arts
+    # Saved before the digest is read: the digest resolves the document through
+    # the registry on disk.
     save_manifest(task, path)
-    recorded = _record_freshness(task, task_dir, path, entry)
+    recorded = _record_freshness(view, task, task_dir, entry)
+    moved = []
+    if entry.get("path") and entry.get("status") in (
+            artifact_status.DRAFT, artifact_status.AWAITING, artifact_status.APPROVED):
+        moved = artifact_status.stage_exit(
+            task, view, artifact_status.owning_stage(view, args.kind),
+            artifact_status.BY_ARTIFACT_SET)
+        # A document the `verify` stage owns, registered after a `verify` gate
+        # passed, is approved now: that pass was the stage's record.
+        if (artifact_status.owning_stage(view, args.kind) == artifact_status.STAGE_VERIFY
+                and entry.get("status") == artifact_status.DRAFT
+                and artifact_status.verify_record_exists(task, view)):
+            moved += artifact_status.stage_exit(
+                task, view, artifact_status.STAGE_VERIFY, artifact_status.BY_ARTIFACT_SET,
+                include_own=True, earlier=False)
+    save_manifest(task, path)
     from compass_pkg.terminal import say
 
-    return say(args, "compass issue artifact set: %s -> %s" % (args.kind, args.status),
+    return say(args, "compass issue artifact set: %s -> %s" % (args.kind, entry["status"]),
                detail=["reason: %s" % entry.get("reason", "(none recorded)")]
-               + recorded
+               + recorded + artifact_status.moved_line(moved)
                + [line for line in [stale_page_reminder(task_dir)] if line],
-               kind=args.kind, status=args.status,
-               reason=entry.get("reason"))
+               kind=args.kind, status=entry["status"],
+               reason=entry.get("reason"), approved_by=entry.get("approved_by"),
+               approved_at=entry.get("approved_at"), moved=moved)

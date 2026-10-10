@@ -242,10 +242,14 @@ def build_parser():
         help="count issues raised from another issue by where they were "
              "found, before or after the parent landed (advisory; exit 0)")
     pcal.add_argument(
+        "--decisions", action="store_true",
+        help="count how decisions agents took for the person were settled: confirmed, "
+             "changed, never confirmed (advisory; exit 0)")
+    pcal.add_argument(
         "--format",
         choices=["markdown", "json"],
         default="markdown",
-        help="output format for --friction (default: markdown)",
+        help="output format for --friction and --decisions (default: markdown)",
     )
     pcal.set_defaults(func=cmd_calibration, output_kind="report")
 
@@ -327,6 +331,8 @@ def build_parser():
     register_issue_use_parser(pts)
     register_migrate_config_parser(pts, issue_arg)
     register_issue_friction_parser(pts)
+    from compass_pkg.decisions_taken import register as register_issue_decision_parser
+    register_issue_decision_parser(pts)
     register_issue_configure_parser(pts, issue_arg)
 
     ptrb = pts.add_parser(

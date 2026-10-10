@@ -240,6 +240,13 @@ file per catalogue, with `preset.yml` and `evidence-types.yml`
 and `guardrails.yml`. The preset is now the source of the shipped defaults, and
 the two files are views generated from it.
 
+Each artifact in `artifacts.yml` names the stage that owns it with `stage:`
+(`architecture/decisions/ADR-050-artifact-status-is-written-by-stage-exits-and-by-a-persons-approval.md`).
+A stage command that writes a later record approves the artifacts of earlier
+stages. An artifact with no `stage` is owned by ship. `checks.yml` holds the
+blocking check `artifacts-approved`, which sits in no gate, and
+`evidence-types.yml` holds the type `artifact-approval`, which no gate accepts.
+
 - Change a default in the preset (or in `legacy-views.yml` for a value only the
   views hold), then run `python3 scripts/generate-legacy-views.py`.
   Never edit `routing-policy.yml` or `guardrails.yml` by hand: their first

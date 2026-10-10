@@ -95,6 +95,9 @@ def _archive():
 
 
 def test_contract_3_check_gives_the_recorded_verdicts_on_the_archive_sample():
+    # 7.0.0 adds the check `artifacts-approved` (ADR-050). It declines on every
+    # sampled issue, which is done, so the baseline gained that one row and no
+    # recorded verdict moved.
     from compat_baseline import archive_differences, archive_results
     root, recorded = _archive()
     assert recorded["version"] == "5.6.0" and len(recorded["issues"]) == 16

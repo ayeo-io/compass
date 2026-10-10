@@ -23,10 +23,10 @@
   restores: tests/test_borrowed_document_shapes.py::test_trc_a2
   record: .compass/work/adaptive-artifact-composition/evidence/mutation-round.txt
 
-- check: dashboard-current
-  broken: the manifest moved after the review page was generated
-  fails: tests/test_issue_dashboard.py::test_d2_stale_dashboard_fails_a_guardrail_check
-  restores: tests/test_issue_dashboard.py::test_d2_stale_dashboard_fails_a_guardrail_check
+- check: rendered-blocks-current
+  broken: a rendered block edited by hand after the last render
+  fails: tests/test_rendered_blocks_check.py::test_dcj_14_stale_block_fails_at_verify
+  restores: tests/test_rendered_blocks_check.py::test_dcj_15_stale_block_before_verify_is_advisory
 
 - check: landed-by-resolves
   broken: a landed_by pointer at an issue that does not exist

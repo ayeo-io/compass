@@ -49,6 +49,8 @@ class FilePlan:
     changed_kinds: list = field(default_factory=list)
     #: Every kind the file holds a rendered block of.
     kinds: list = field(default_factory=list)
+    #: `{kind: scope}` of the changed kinds, `own` or `cross` (see `block_renderers.Part`).
+    scopes: dict = field(default_factory=dict)
 
     @property
     def changed(self):
@@ -133,13 +135,15 @@ def _plan_file(path, rel, raw, inputs, refusals, is_page=False):
         return None
     if not parsed.blocks:
         return None
-    bodies, changed, cache = {}, [], {}
+    bodies, changed, cache, scopes = {}, [], {}, {}
     for index, block in enumerate(parsed.blocks):
         renderer = block_renderers.RENDERERS.get(block.kind)
         if renderer is None:
             continue
         if block.kind not in cache:
-            cache[block.kind] = renderer(inputs, rel).lines
+            part = renderer(inputs, rel)
+            cache[block.kind] = part.lines
+            scopes[block.kind] = part.scope
         lines = cache[block.kind]
         bodies[index] = lines
         current = [x.rstrip("\r\n") for x in parsed.lines[block.start + 1:block.end]]
@@ -153,7 +157,8 @@ def _plan_file(path, rel, raw, inputs, refusals, is_page=False):
     if new_text == text:
         changed = []
     return FilePlan(path, rel, new_text, rb.file_digest(path), False, changed,
-                    sorted({b.kind for b in parsed.blocks}))
+                    sorted({b.kind for b in parsed.blocks}),
+                    {kind: scopes[kind] for kind in changed})
 
 
 def plan_issue(task_dir):
@@ -243,6 +248,15 @@ def apply(plan):
                                f"{_progress(written)}") from exc
         written.append(item)
     return written
+
+
+def render_issue(task_dir):
+    """Render one issue's blocks under its lock: the plan, then the writes.
+    Returns the plans written. Raises `CompassError` on a refusal or a failed
+    write. The after-command step calls this for each issue it renders."""
+    task_dir = os.path.abspath(task_dir)
+    with atomic_io.locked(os.path.join(task_dir, LOCK)):
+        return apply(plan_issue(task_dir))
 
 
 def _progress(written):

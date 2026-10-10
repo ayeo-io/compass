@@ -37,7 +37,6 @@ from compass_pkg.core import CHECK_NAME_MAP, migrate_map_section
 from compass_pkg.landed_by import LANDED_BY_RELAXES, landed_by_holds, _check_landed_by_resolves
 from compass_pkg.checks import NOTHING_TO_CHECK, _check_backfills_paid, _check_changed_code_traces, _check_claim_traces, _check_coherence_check_passes, _check_evidence_identity_matches, _check_command_passes, _check_declared_tests_resolve, _check_dod_evidence_typed, _check_gate_evidence, _check_human_approval, _check_no_trusted_rerun, _check_scenario_has_id_and_intent, _check_scenarios_are_executable, _check_scenarios_have_tests, _check_spike_conclusion_present, _check_spike_no_production_changes, _check_suite_passed
 from compass_pkg.borrowed_docs import _check_borrowed_documents_answered
-from compass_pkg.dashboard import _check_dashboard_current
 from compass_pkg.binding import _check_evidence_matches_tree
 from compass_pkg.multiagent_check import _check_multiagent_run_recorded
 from compass_pkg.core import FRAMEWORK_ROOT, exit_for_mode, find_governance, load_mode, load_manifest, load_yaml, mode_banner, reading_matches, resolve_issue_dir
@@ -46,7 +45,7 @@ from compass_pkg.core import FRAMEWORK_ROOT, exit_for_mode, find_governance, loa
 
 # Derived from the registry, which holds each implementation's version and
 # corpus (ADR-038); kept here so every existing caller keeps its import.
-from compass_pkg.check_registry import CHECK_FNS  # noqa: E402
+from compass_pkg.check_registry import CHECK_FNS, REMOVED  # noqa: E402
 
 # Per-check guidance for structured failure messages. Each entry has the
 # *why it matters* and the *how to fix it* - the bits a check's own detail
@@ -105,10 +104,10 @@ CHECK_GUIDANCE = {
         "fix": 'Run `compass bdd verify` so the record exists, and account for any scenario it reports as unmatched. If this project has wired no BDD runner, there is nothing to check - see examples/bdd-adapters/ to opt in.',
         "do": 'Run `compass bdd verify`, or wire a runner (see examples/bdd-adapters/).',
     },
-    "dashboard-current": {
-        "why": "The issue's README is the page a reviewer approves from - it states which documents exist, which one is waiting on them, and what was deliberately left out. Generated from manifest.yml, so once the manifest moves it is an assertion the record contradicts, and a reviewer has no way to tell.",
-        "do": 'Run `compass issue dashboard render`, then re-read the page.',
-        "fix": "Run `compass issue dashboard render` to regenerate it, then read the page again before approving anything from it. Never hand-edit it - the next regeneration discards the edit.",
+    "rendered-blocks-current": {
+        "why": "A rendered block is text Compass writes from the manifest and the evidence: a coverage table, the gates, the Definition of Done. Once the records move or someone edits the block by hand, the document says something the record does not, and a reader cannot tell.",
+        "do": 'Run `compass issue render`, then re-read the document.',
+        "fix": "Run `compass issue render` to rewrite every block of the issue's documents and its issue page from the records, then read the document again. Never edit a block by hand - the next render discards the edit; edit the record instead.",
     },
     "scenarios-have-tests": {
         "why": "Every scenario must have a test that exercises it - without one, the scenario is a wish, not a checkable acceptance criterion (the acceptance-before-code guardrail). EXCEPT a `verifiable: narrative` scenario (a failure-mode playbook), which is cleared by being documented - a non-empty When/Then in acceptance-criteria.md - not by a fabricated test.",
@@ -654,6 +653,17 @@ def _judge(passed, detail, declared, matches, readings):
     return passed, detail
 
 
+def _with_replacements(names, impls):
+    """`names` with the replacement of each removed check added after the last
+    name, unless the guardrail lists it already."""
+    names = list(names)
+    for name in list(names):
+        removed = REMOVED.get(impls.get(name, name)) or REMOVED.get(name)
+        if removed is not None and removed.replaced_by not in names:
+            names.append(removed.replaced_by)
+    return names
+
+
 def cmd_check(args):
     # The settings are read before anything resolves a configuration, so a
     # conflict between the two settings files is reported as such.
@@ -815,8 +825,17 @@ def cmd_check(args):
                           skipped="not applicable for this assessment - skipped")
             continue
         run.guardrail(gid, g.get("name", ""))
-        for check_name in g.get("checks", []):
+        for check_name in _with_replacements(g.get("checks", []), impls):
             implementation = impls.get(check_name, check_name)
+            removed = REMOVED.get(implementation) or REMOVED.get(check_name)
+            if removed is not None:
+                # A stored generation can still list a check a release removed.
+                # It reports nothing to check and is never judged, so an
+                # `on_skipped: fail` it declares cannot make it a failure.
+                ran += 1
+                nothing_to_check += 1
+                run.result(check_name, NOTHING_TO_CHECK, removed.detail)
+                continue
             fn = CHECK_FNS.get(implementation)
             # A project that ran /compass:init before ADR-023 has its own
             # guardrails.yml naming the retired spelling. The check still

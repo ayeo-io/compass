@@ -329,12 +329,24 @@ def _merge_group(state):
             config, provenance = merge.apply(config, layer.doc, layer.kind, layer.name,
                                              provenance)
         except merge.MergeError as exc:
-            out += [_finding("merge", code, layer, path, message)
+            out += [_finding("merge", code, layer, path, _removed_check_note(path, message))
                     for code, path, message in exc.errors]
             break
         state["configs"].append(config)
     state["config"], state["provenance"] = config, provenance
     return out
+
+
+def _removed_check_note(path, message):
+    """`message`, with a note when `path` is an entry of a check a release
+    removed: it is an unknown check, and the note names what replaced it."""
+    from compass_pkg.check_registry import REMOVED
+    parts = path.split(".")
+    removed = REMOVED.get(parts[1]) if len(parts) >= 2 and parts[0] == "checks" else None
+    if removed is None:
+        return message
+    return ("%s - %s is an unknown check: it was removed in %s, and %s replaces it"
+            % (message, parts[1], removed.removed_in, removed.replaced_by))
 
 
 def _layer_of(state, path):

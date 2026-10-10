@@ -33,9 +33,9 @@ from compass_pkg.checks import (
     _check_scenario_has_id_and_intent, _check_scenarios_are_executable,
     _check_scenarios_have_tests, _check_spike_conclusion_present,
     _check_spike_no_production_changes, _check_suite_passed)
-from compass_pkg.dashboard import _check_dashboard_current
 from compass_pkg.landed_by import _check_landed_by_resolves
 from compass_pkg.multiagent_check import _check_multiagent_run_recorded
+from compass_pkg.render_check import check as _check_rendered_blocks_current
 
 CORPUS_ROOT = "tests/fixtures/impls"
 TIGHTER = ("higher", "lower", "none")
@@ -77,7 +77,9 @@ _ENTRIES = (
     _entry("claim-traces-to-scenario", _check_claim_traces),
     _entry("landed-by-resolves", _check_landed_by_resolves),
     _entry("gate-evidence-present", _check_gate_evidence),
-    _entry("dod-evidence-typed", _check_dod_evidence_typed),
+    # 2.0.0: reads the manifest's item records, never the page (ADR-038: its verdict on a
+# page with a ticked box and no record changed from pass to fail).
+    _entry("dod-evidence-typed", _check_dod_evidence_typed, version="2.0.0"),
     _entry("human-approval-present", _check_human_approval),
     _entry("backfills-paid", _check_backfills_paid),
     _entry("spike-conclusion-present", _check_spike_conclusion_present),
@@ -94,13 +96,34 @@ _ENTRIES = (
            executes_project_code=True),
     _entry("evidence-identity-matches", _check_evidence_identity_matches),
     _entry("evidence-matches-tree", _check_evidence_matches_tree),
-    _entry("dashboard-current", _check_dashboard_current),
+    _entry("rendered-blocks-current", _check_rendered_blocks_current),
     _entry("borrowed-documents-answered", _check_borrowed_documents_answered),
     _entry("multiagent-run-recorded", _check_multiagent_run_recorded),
     _entry("artifacts-approved", _check_artifacts_approved),
 )
 
 REGISTRY: dict[str, CheckImpl] = {e.name: e for e in _ENTRIES}
+
+
+@dataclass(frozen=True)
+class RemovedCheck:
+    """A check id a release removed. An issue stored before the release can still
+    list it in a stored generation (ADR-036 judges an issue by what it was
+    assessed against), so `compass check` reports it as nothing to check, names
+    the release and the check that replaced it, and runs the replacement."""
+    removed_in: str
+    replaced_by: str
+
+    @property
+    def detail(self) -> str:
+        return ("nothing to check - this check was removed in %s; %s runs in its place"
+                % (self.removed_in, self.replaced_by))
+
+
+#: The framework-owned table of removed check ids. It is not configurable.
+REMOVED: dict[str, RemovedCheck] = {
+    "dashboard-current": RemovedCheck("7.0.0", "rendered-blocks-current"),
+}
 
 # Derived, so a check cannot be run without being registered.
 CHECK_FNS: dict[str, Callable] = {n: e.fn for n, e in REGISTRY.items()}

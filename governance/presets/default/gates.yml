@@ -46,14 +46,15 @@ gates:
     kind: guardrail
     name: Evidence, not assertion
     statement: 'A guardrail is cleared with artifacts and command output, never a claim. The Definition
-      of Done is a typed gate: every unchecked DoD box must reference typed evidence or a filed follow-up
-      - narrative notes never clear it.
+      of Done is a typed gate: every item of the Definition of Done is met by a record in the manifest
+      (typed evidence, a person''s approval or a filed follow-up) - a tick on a page or a narrative note
+      never clears it.
 
       '
     stage: verify
     applies_to: {ships: true}
     checks: [gate-evidence-present, dod-evidence-typed, consistency-check-passes, no-trusted-rerun, command-passes,
-      evidence-identity-matches, evidence-matches-tree, dashboard-current, borrowed-documents-answered,
+      evidence-identity-matches, evidence-matches-tree, rendered-blocks-current, borrowed-documents-answered,
       multiagent-run-recorded]
     locked: true
   G5:

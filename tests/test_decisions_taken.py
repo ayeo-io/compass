@@ -274,3 +274,25 @@ def test_asw_33_retro_reports_decision_shares(tmp_path):
     got = json.loads(out)
     assert (got["total"], got["confirmed"], got["changed"], got["never_confirmed"]) == (4, 2, 1, 1)
     assert got["open_in_flight"] == 0
+
+
+# --- D205: a ledger entry now decided by a person ---------------------------------
+
+def test_d205_ledger_entry_decided_by_a_person_is_reported_not_confirmed(tmp_path):
+    root = project(tmp_path, compass_yml=HUMAN_DESIGN)
+    _ledger(root, ("Q1", "First?", "Do the first.", "spec-author"),
+            ("Q2", "Second?", "Do the second.", "spec-author"))
+    assert _from_ledger(root)[0] == 0
+    before = manifest_file(root).read_bytes()
+    _ledger(root, ("Q1", "First?", "Do the first.",
+                   'jed72, 2026-10-10 (in the session: "As recommended")'),
+            ("Q2", "Second?", "Do the second.", "alex, 2026-10-10"))
+    code, out, err = _from_ledger(root)
+    assert code == 0, out + err
+    flat = " ".join(out.split())
+    lines = {"Q1": flat.split("Q1:")[1].split("Q2:")[0], "Q2": flat.split("Q2:")[1]}
+    assert "compass evidence approve --decisions" in lines["Q1"] and "jed72" in lines["Q1"]
+    assert "alex" in lines["Q2"] and "not an approver" in lines["Q2"]
+    # A ledger line is a file an agent can write, so it confirms nothing.
+    assert manifest_file(root).read_bytes() == before
+    assert {d["status"] for d in _decisions(root).values()} == {"open"}

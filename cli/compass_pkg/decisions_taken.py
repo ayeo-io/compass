@@ -174,6 +174,32 @@ def add_from_ledger(task, task_dir):
     return notes
 
 
+def ledger_reports(task, task_dir):
+    """A line for each recorded, unconfirmed decision whose ledger entry now
+    names a person in "Decided by". The ledger is a file an agent can write, so
+    it never confirms a decision: only `compass evidence approve --decisions`
+    does, at a terminal. The line says who the ledger names and whether that
+    person may confirm."""
+    from compass_pkg import approval_records
+    held = {e.get("id"): e for e in task.get("decisions_taken") or [] if isinstance(e, dict)}
+    listed, owner = project_approvers(task_dir)
+    out = []
+    for block in parse_ledger(_review_text(task_dir)):
+        entry = held.get(block["id"])
+        name = re.match(r"[\w.@-]+", block["decided_by"])
+        if entry is None or entry.get("status") == CONFIRMED or not name \
+                or agent_in(block["decided_by"]):
+            continue
+        name = name.group(0)
+        if approval_records.approver_listed(listed or [approval_records.OWNER], name, owner):
+            out.append("%s: the ledger names %s. Only `compass evidence approve "
+                       "--decisions` confirms it." % (block["id"], name))
+        else:
+            out.append("%s: the ledger names %s, not an approver of this project, so "
+                       "it stays %s." % (block["id"], name, entry.get("status") or OPEN))
+    return out
+
+
 def cmd_decision_add(args):
     task_dir = resolve_issue_dir(args.task)
     task, path = load_manifest(task_dir)
@@ -184,10 +210,13 @@ def cmd_decision_add(args):
         notes = add_from_ledger(task, task_dir)
         if notes:
             save_manifest(task, path)
-        return say(args, "compass issue decision add: %s." % (
-                       "%d change(s) from the ledger" % len(notes) if notes
-                       else "nothing to add from the ledger"),
-                   detail=notes, changes=notes)
+        reports = ledger_reports(task, task_dir)
+        outcome = ("%d change(s) from the ledger" % len(notes) if notes
+                   else "nothing to add from the ledger")
+        if reports:
+            outcome += "; %d now decided by a person" % len(reports)
+        return say(args, "compass issue decision add: %s." % outcome,
+                   detail=notes + reports, changes=notes, person_decided=reports)
     missing = [flag for flag, value in (("an id", args.id), ("--question", args.question),
                                         ("--resolution", args.resolution), ("--by", args.by),
                                         ("--stage", args.stage)) if not value]

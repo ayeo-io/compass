@@ -68,6 +68,11 @@
     },
     {
       "catalogue": "checks",
+      "id": "artifacts-approved",
+      "operation": "add"
+    },
+    {
+      "catalogue": "checks",
       "id": "dod-evidence-typed",
       "operation": "set"
     },
@@ -75,6 +80,11 @@
       "catalogue": "checks",
       "id": "multiagent-run-recorded",
       "operation": "set"
+    },
+    {
+      "catalogue": "vocabulary",
+      "id": "checks.artifacts-approved",
+      "operation": "add"
     }
   ],
   "overlay": {

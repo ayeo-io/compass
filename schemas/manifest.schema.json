@@ -594,7 +594,7 @@
           },
           "artifact": {
             "type": "string",
-            "description": "For artifact-approval: the kind of the document the person approved. A record holds exactly one of artifact and decisions."
+            "description": "For artifact-approval: the kind of the artifact the person approved. A record holds exactly one of artifact and decisions."
           },
           "decisions": {
             "type": "array",
@@ -1032,7 +1032,7 @@
           },
           "approved_by": {
             "type": "string",
-            "description": "Optional. Present when status is approved. A person's id when a person approved the document with `compass evidence approve --artifact`, otherwise the command that approved it, such as `compass tdd-red` or `compass issue migrate`."
+            "description": "Optional. Present when status is approved. A person's id when a person approved the artifact, otherwise the command that approved it, such as `compass tdd-red` or `compass issue migrate`."
           },
           "approved_at": {
             "type": "string",

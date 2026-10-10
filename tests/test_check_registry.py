@@ -66,7 +66,7 @@ def label_problems(scratch: Path, root: Path = CORPUS) -> list[str]:
 
 def test_cr_1_one_versioned_entry_per_implementation_and_check_fns_derived():
     proofs = {e["check"] for e in yaml.safe_load(PROOFS.read_text(encoding="utf-8"))}
-    assert set(check_registry.REGISTRY) == proofs and len(proofs) == 22
+    assert set(check_registry.REGISTRY) == proofs and len(proofs) == 23
     for name, entry in check_registry.REGISTRY.items():
         assert entry.version == "1.0.0", name
         assert isinstance(entry.params_spec, dict), name

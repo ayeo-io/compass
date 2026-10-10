@@ -139,6 +139,90 @@ def repoint_spine_references(task_dir, node, renamed):
     return changed
 
 
+MIGRATED_REASON = "migrated from a 6.0.0 record"
+
+
+def _settle_done_artifacts(data, when=None):
+    """Settle the artifact status of a done issue, in place.
+
+    A 6.0.0 record left every document `draft`, because no command wrote
+    anything else. On a done issue each `draft` or `awaiting-approval` entry
+    becomes `approved` for close reason `completed`, and `superseded`
+    otherwise. Every other status is a decision and stays. Returns
+    (approved, superseded); both are 0 for an open issue and for an issue
+    already settled, which makes a second run change nothing.
+    """
+    from compass_pkg import artifact_status as ast, status_words
+    if not status_words.is_closed(data):
+        return 0, 0
+    completed = status_words.is_completed(data)
+    approved = superseded = 0
+    for entry in data.get("artifacts") or []:
+        if not isinstance(entry, dict) \
+                or entry.get("status") not in (ast.DRAFT, ast.AWAITING):
+            continue
+        if completed:
+            ast._set_approved(entry, ast.BY_MIGRATE, when or ast.now())
+            approved += 1
+        else:
+            entry["status"] = ast.SUPERSEDED
+            ast.clear_approver(entry)
+            superseded += 1
+        entry["reason"] = MIGRATED_REASON
+    return approved, superseded
+
+
+def _read_manifest(task_dir):
+    path = manifest_path(task_dir)
+    if not os.path.isfile(path):
+        return path, None
+    with open(path, encoding="utf-8") as fh:
+        return path, yaml.safe_load(fh) or {}
+
+
+def _write_manifest(path, data):
+    """Serialise first, then replace atomically: a dump that raises must not
+    leave an empty manifest behind."""
+    data = prepare_manifest_write(data, path)
+    body = yaml.safe_dump(data, sort_keys=False,
+                          default_flow_style=False, allow_unicode=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        fh.write(body)
+    os.replace(tmp, path)
+
+
+def _status_note(approved, superseded, would):
+    return "%s mark %d artifact entries approved and %d superseded" % (
+        "would" if would else "marked", approved, superseded)
+
+
+def plan_artifact_status(task_dir):
+    """The dry-run twin of settle_artifact_status."""
+    _path, data = _read_manifest(task_dir)
+    if not isinstance(data, dict):
+        return []
+    approved, superseded = _settle_done_artifacts(copy.deepcopy(data))
+    return [_status_note(approved, superseded, True)] if approved + superseded else []
+
+
+def settle_artifact_status(task_dir):
+    """Write the settled status of a done issue and re-render its review page,
+    which is generated from the registry this rewrote."""
+    path, data = _read_manifest(task_dir)
+    if not isinstance(data, dict):
+        return []
+    approved, superseded = _settle_done_artifacts(data)
+    if not approved + superseded:
+        return []
+    _write_manifest(path, data)
+    notes = [_status_note(approved, superseded, False)]
+    if _regenerate_dashboard(task_dir):
+        notes.append("re-rendered README.md, which is generated from the "
+                     "registry this run rewrote")
+    return notes
+
+
 def plan_issue_dir(task_dir):
     """The dry-run twin of migrate_issue_dir: compute the change notes
     without writing anything."""
@@ -169,6 +253,7 @@ def plan_issue_dir(task_dir):
         if migrated != before:
             notes.append("would rewrite the manifest in the current words, schema 3.0")
     notes.extend(plan_relocations(task_dir))
+    notes.extend(plan_artifact_status(task_dir))
     return notes
 
 
@@ -227,7 +312,7 @@ def cmd_migrate(args):
         recoverable, why = _work_root_is_recoverable(root)
         if not recoverable:
             raise CompassError(
-                "this would move documents that cannot be put back: %s.\n\n"
+                "this would change records that cannot be put back: %s.\n\n"
                 "Nothing was changed. Take a copy first:\n"
                 "    cp -R %s <somewhere outside the repository>\n\n"
                 "then re-run with --i-have-a-copy. The flag says you have "
@@ -845,6 +930,7 @@ def migrate_issue_dir(task_dir):
     # moves files whose names are already settled and writes one registry
     # entry per document rather than racing the rename.
     notes.extend(relocate_documents(task_dir))
+    notes.extend(settle_artifact_status(task_dir))
     return notes
 
 

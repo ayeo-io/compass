@@ -352,6 +352,15 @@ def build_parser():
     ptr.add_argument("--workdir", help="alternate project root (default: cwd)")
     ptr.set_defaults(func=cmd_task_receipt, output_kind="hand-off")
 
+    ptrn = pts.add_parser(
+        "render", help="render the blocks of an issue's documents from its records")
+    issue_arg(ptrn)
+    ptrn.add_argument("--all", action="store_true",
+                      help="render every issue in the project (not built yet)")
+    ptrn.add_argument("--dry-run", dest="dry_run", action="store_true",
+                      help="list what would change; write nothing")
+    ptrn.set_defaults(func=cmd_issue_render, output_kind="hand-off")
+
     ptdg = pts.add_parser("dashboard", help="the per-issue review page")
     ptd = ptdg.add_subparsers(dest="dashboard_cmd", required=True).add_parser(
         "render", help="render the per-issue review README from the artifact registry")

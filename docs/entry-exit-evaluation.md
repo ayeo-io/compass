@@ -174,6 +174,29 @@ approval therefore never clears a sign-off.
 a human check and names this command. For a document with none it stays
 allowed and records `approved_by: compass issue artifact set`.
 
+#### Confirming decisions: `--decisions`
+
+An agent that resolves a requirement question for the person records the
+decision in the manifest's `decisions_taken` (ADR-050). `compass evidence
+approve --decisions` confirms them as one set.
+
+- **Which decisions.** At a checkpoint (`compass next` reports `Waiting at the
+  <stage> checkpoint`), every unconfirmed decision taken at that stage or
+  earlier. Away from a checkpoint, every unconfirmed decision.
+- **Who may confirm.** A name in any `approvers:` list of the project file, with
+  `owner` read as the project's owner. When the project file declares no
+  `approvers:`, only its `owner` may confirm.
+- **What it writes.** One record of the type `artifact-approval`, as
+  `EV-APPROVAL-DECISIONS-<n>`, holding `decisions` (the ids), `stage`,
+  `approver`, `role`, `decision`, `timestamp`, `issue` and `generation` (and
+  `scope` when it is given). It sets each decision to `confirmed`. Like a
+  document approval, it is never a `human-approval` record and never clears a
+  sign-off.
+- **When it refuses.** It exits 2 with no change when the approver is not
+  allowed, when nothing is unconfirmed, or when the decision is `rejected`.
+  Send a decision back with `compass issue decision set <id> --status reopened
+  --reason "<why>"`, which needs a terminal and accepts no other status.
+
 The `--json` document of `--check` is a public contract. A change to a key or its order is
 a breaking change. This is the real output for the example above; `at` varies
 and is shown as `...`. The key `answer` holds the decision.

@@ -165,9 +165,12 @@ compass check              run the guardrail checks against the manifest and evi
 compass analyze            where an issue's artifacts disagree with each other
 compass retro              is triage systematically over- or under-sizing the process?
 compass retro --lineage    how many issues were found in another, and how many before it landed
+compass retro --decisions  how many decisions agents took for the person were confirmed, changed or never confirmed
 compass issue raised-by    record the issue this one was found in, and where
 compass spec sync          merge main, resolving only conflicts in the derived living spec
 compass issue friction     record friction the agent observed, with evidence and a fix
+compass issue decision add record a decision an agent took for the person (--from-ledger reads the requirements review)
+compass issue decision set reopen such a decision; it stays unconfirmed and the checkpoint keeps waiting
 compass ci                 the full mechanical gate suite, for continuous integration
 compass tdd-red            run a test, assert it FAILS, record the red
 compass tdd-green          run a test, assert it PASSES, record the green
@@ -186,7 +189,7 @@ compass issue receipt      one screen: assessment, approach, gates, evidence
 compass issue diagnose     explain one run from its own records: stages, timeline, deviations
 compass issue use          make an issue the current one, for this session
 compass issue configure    propose, preview, discard or recover a change to one issue's own configuration
-compass issue migrate      bring older issue directories up to the current schema; --config pins an issue's configuration to the installed check versions
+compass issue migrate      bring older issue directories up to the current schema, and settle the artifact status of done issues; --config pins an issue's configuration to the installed check versions
 compass issue dashboard render  the per-issue review page
 compass issue artifact set set a document's status in the review pack
 compass issue artifact-path  where one of an issue's documents is
@@ -214,7 +217,7 @@ compass scenario descope   record a failure mode no scenario covers, and why
 compass scenario tests set replace the tests a scenario declares
 compass changed-file add   trace a changed file to the scenario that asked for it
 compass evidence add       append a typed evidence record
-compass evidence approve   record a person's approval of a human check
+compass evidence approve   record a person's approval of a human check, a document (--artifact) or the decisions agents took (--decisions)
 compass evidence review    record a judgement against a judged check
 compass terminology        what a term means here, from the frozen vocabulary
 compass quick-fix start    assess, evaluate and record a quick fix in one call

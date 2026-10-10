@@ -99,6 +99,12 @@ is for. The same split is written from the other side in
    line** - a directory appearing with nothing said is how it gets deleted by
    hand or committed by accident.
 
+5. **Record the decisions you took.** Run `compass issue decision add --from-ledger`.
+   It reads the ledger and records each entry whose "Decided by" names an agent, so
+   the person sees those decisions at the next checkpoint. Run it again after you
+   change the ledger: a reworded question is updated, and a changed resolution
+   reopens the decision.
+
 ## Reassessment trigger
 
 If the review reveals the spec is bigger or more ambiguous than the
@@ -139,6 +145,14 @@ write the ambiguity ledger and show this hand-off, then say you are going on wit
 waiting and name the setting, with "Next" in place of "On approval". Log
 the skipped checkpoint to `devlog.md`, so the person can review it later and
 send the issue back.
+
+Before you hand off, run `compass next`. When its first line reads
+`Waiting at the refine checkpoint`, the issue holds decisions that no person has
+confirmed. Show the listed decisions in the hand-off and wait: the person
+confirms them all with `compass evidence approve --decisions` or reopens one with
+`compass issue decision set`. Do not name the next stage while it waits. On
+`autonomous` autonomy `compass next` lists the decisions and does not wait; show
+the list in the hand-off.
 
 ## Voice
 

@@ -3516,3 +3516,7 @@
 - `MRS-3` compass check gives the same verdict before and after migration
 - `MRS-4` An archive an earlier release already migrated is repaired from the tree
 - `MRS-5` Every path-like schema field is handled or excluded with a reason
+
+### release-6-0-1 (completed 2026-10-10)
+
+- `REL-001` Given the seven version locations and EXPECTED_VERSION, When the version test runs, Then every location and EXPECTED_VERSION read 6.0.1

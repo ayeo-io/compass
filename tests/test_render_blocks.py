@@ -49,11 +49,16 @@ def _blocks(path):
 
 
 def _register_at(root, kind, rel):
+    """Point the registry entry of `kind` at `rel` by editing the manifest: the command
+    that does it (`compass issue artifact set`) is followed by a render, which would fill
+    the blocks these tests want to find stale."""
     if kind not in sup.base.entries(root):
         sup.base.add_entry(root, kind, path=False)       # a kind the approach did not earn
-    code, out, err = run(root, "issue", "artifact", "set", kind, "--status", "draft",
-                         "--path", rel, "--issue", SLUG)
-    assert code == 0, out + err
+    body = manifest(root)
+    for entry in body["artifacts"]:
+        if entry["kind"] == kind:
+            entry["path"] = rel
+    sup.base.write_manifest(root, body)
 
 
 def _full_issue(tmp_path):
@@ -519,7 +524,7 @@ def _without_blocks(text):
 
 
 def test_dcj_70_readers_never_read_block_text(tmp_path):
-    from compass_pkg import analyze, bdd, checks, decisions_taken, stage_lists, tdd
+    from compass_pkg import analyze, bdd, checks, decisions_taken, tdd
     root = rich_issue(tmp_path)
     spec = write_doc(root, "acceptance-criteria", _SPEC)
     review = write_doc(root, "requirements-review", _REVIEW)
@@ -543,8 +548,9 @@ def test_dcj_70_readers_never_read_block_text(tmp_path):
                   if text.startswith("| TRC-1 |"))
     assert line is not None and line.endswith(f":{number}")
 
-    # The stage-list tick reads the checklist section only outside a block.
-    checklist = write_doc(root, "verification-report", textwrap.dedent("""\
+    # The checklist reader (the one `compass issue migrate` uses) reads a section only
+    # outside a block.
+    write_doc(root, "verification-report", textwrap.dedent("""\
         # VR
 
         <!-- compass:render dod -->
@@ -555,16 +561,8 @@ def test_dcj_70_readers_never_read_block_text(tmp_path):
         ### Definition of Done
         - [ ] Real box
         """))
-    items = stage_lists._items(str(checklist), "Definition of Done")
-    assert [text for _, text, _ in items] == ["Real box"]
-
-    # The template list renderer follows the same rule.
-    from compass_pkg import effective, template_lists
-    view = effective.view_or_legacy(str(task_dir))
-    with_block = checklist.read_text()
-    shaped = template_lists.render(with_block, view, "verification-report")
-    plain = template_lists.render(_rb().masked_text(with_block), view, "verification-report")
-    assert _rb().masked_text(shaped) == plain
+    found = checks._parse_dod_lines(str(task_dir))
+    assert [x.strip() for x in found if x.strip().startswith("- [")] == ["- [ ] Real box"], found
 
     # compass issue decision add --from-ledger reads the ledger outside blocks.
     task = yaml.safe_load((task_dir / "manifest.yml").read_text())

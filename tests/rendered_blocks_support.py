@@ -75,10 +75,16 @@ def write_doc(root, name, text, *, register_it=True, binary=False):
     else:
         path.write_bytes(text.encode("utf-8"))
     if register_it:
+        # Write the registry entry by hand. `compass issue artifact set` is a command that
+        # changes a record, so the render after it would fill the blocks this helper's
+        # callers want to find as they wrote them.
         if name not in base.entries(root):
             base.add_entry(root, name, path=False)       # a kind the approach did not earn
-        code, out, err = register(root, name)
-        assert code == 0, out + err
+        body = manifest(root)
+        for entry in body["artifacts"]:
+            if entry["kind"] == name:
+                entry["path"] = f"{DOCS}/{name}.md"
+        base.write_manifest(root, body)
     return path
 
 
@@ -108,6 +114,9 @@ def add_records(root, **named):
 def rich_issue(tmp_path, compass_yml=None):
     """A regular issue whose manifest holds every record the eight blocks read."""
     root = project(tmp_path, compass_yml=compass_yml)
+    # The render after `approach evaluate --write` wrote the issue page; the engine tests start
+    # from an issue that has none, so that the first render is the one they watch.
+    (Path(root) / DOCS / "README.md").unlink(missing_ok=True)
     body = manifest(root)
     body["scenarios"] = [
         {"id": "TRC-1", "title": "First scenario", "intent": "INT-1",

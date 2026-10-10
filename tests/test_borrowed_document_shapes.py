@@ -189,8 +189,8 @@ def test_trc_b2():
                 # 7.0.0 adds a person's approval of a document or a decision set (ADR-050).
                 "artifact-approval"}
     assert set(types) == expected, (
-        "the evidence type list changed. This issue amends one description and "
-        "adds nothing:\n  added: %s\n  removed: %s"
+        "the evidence type list changed. Adding a type is a decision (7.0.0 added "
+        "artifact-approval, ADR-050); declare it in `expected` above:\n  added: %s\n  removed: %s"
         % (sorted(set(types) - expected), sorted(expected - set(types))))
 
 

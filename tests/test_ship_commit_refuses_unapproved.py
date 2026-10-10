@@ -18,8 +18,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "cli"))
 
 from artifact_status_support import (DOCS, HUMAN_DESIGN, SLUG, add_entry,  # noqa: E402
-                                     add_evidence, entries, git, manifest, project,
-                                     register, run, write_manifest)
+                                     add_evidence, entries, git, manifest, manifest_file,
+                                     project, register, run, write_manifest)
 import test_quick_fix_verbs as qf  # noqa: E402
 
 BY_SET = "compass issue artifact set"
@@ -211,8 +211,10 @@ def test_asw_20_quick_fix_gains_no_new_stop(tmp_path):
 
 # --- ASW-21 --------------------------------------------------------------------
 
-def _stage_run(root, swap):
-    """A regular issue run with the stage commands only."""
+def _stage_run(root, swap, report_after_gates=False):
+    """A regular issue run with the stage commands only. With
+    `report_after_gates` the verification report is registered after the gates
+    pass, which is the order commands/verify.md gives."""
     qf_brief = root / "brief.md"
     qf_brief.write_text("# brief\n")
     git(root, "add", "-A")
@@ -231,7 +233,8 @@ def _stage_run(root, swap):
     for step in ((red, subtask) if swap else (subtask, red)):
         code, out, err = step()
         assert code == 0, out + err
-    assert register(root, "verification-report")[0] == 0           # `verify` stage
+    if not report_after_gates:
+        assert register(root, "verification-report")[0] == 0       # `verify` stage
     _ready(root)
     body = manifest(root)
     for gate in body["gates"]:
@@ -245,6 +248,8 @@ def _stage_run(root, swap):
         code, out, err = run(root, "gate", "pass", gate, "--evidence", f"EV-G{number}",
                              "--issue", SLUG)
         assert code == 0, out + err
+    if report_after_gates:
+        assert register(root, "verification-report")[0] == 0
     code, out, err = _ship(root)
     assert code == 0, out + err
     return {k: (a["status"], a.get("approved_by"), bool(a.get("approved_at")))
@@ -263,3 +268,36 @@ def test_asw_21_regular_issue_end_to_end_every_artifact_approved(tmp_path):
     assert first["verification-report"][1] == "compass gate pass"
     second = _stage_run(project(tmp_path / "b"), swap=True)
     assert second == first
+
+
+def test_asw_21_a_report_registered_after_the_gates_is_approved_and_ship_lands(tmp_path):
+    # commands/verify.md passes the gates (step 5) before it registers the
+    # report (step 6). A `verify` gate has already passed, so registering the
+    # report is itself the record that approves it.
+    found = _stage_run(project(tmp_path), swap=False, report_after_gates=True)
+    status, by, at = found["verification-report"]
+    assert status == "approved" and by == BY_SET and at
+
+
+def test_asw_19_a_document_with_no_file_cannot_be_approved_or_awaiting(tmp_path):
+    root = project(tmp_path)
+    assert entries(root)["distribution-map"].get("path") is None
+    before = manifest_file(root).read_bytes()
+    for status in ("approved", "awaiting-approval"):
+        code, out, err = run(root, "issue", "artifact", "set", "distribution-map",
+                             "--status", status, "--issue", SLUG)
+        assert code == 2, (status, out + err)
+        assert "no path" in out + err and "--status omitted" in out + err
+    assert manifest_file(root).read_bytes() == before
+
+
+def test_asw_19_a_refusal_for_a_document_never_written_offers_omitting_it(tmp_path):
+    root = project(tmp_path)
+    for kind in ("acceptance-criteria", "technical-design", "verification-report"):
+        assert register(root, kind, "approved")[0] == 0
+    _ready(root)
+    code, out, err = _ship(root)
+    assert code == 2, out + err
+    assert "distribution-map reads draft and has no path" in out + err
+    assert "compass issue artifact set distribution-map --status approved" not in out + err
+    assert 'compass issue artifact set distribution-map --status omitted --reason "<why>"' in out + err

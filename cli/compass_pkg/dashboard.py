@@ -552,6 +552,14 @@ def cmd_issue_artifact(args):
         moved = artifact_status.stage_exit(
             task, view, artifact_status.owning_stage(view, args.kind),
             artifact_status.BY_ARTIFACT_SET)
+        # A document the `verify` stage owns, registered after a `verify` gate
+        # passed, is approved now: that pass was the stage's record.
+        if (artifact_status.owning_stage(view, args.kind) == artifact_status.STAGE_VERIFY
+                and entry.get("status") == artifact_status.DRAFT
+                and artifact_status.verify_record_exists(task, view)):
+            moved += artifact_status.stage_exit(
+                task, view, artifact_status.STAGE_VERIFY, artifact_status.BY_ARTIFACT_SET,
+                include_own=True, earlier=False)
     save_manifest(task, path)
     from compass_pkg.terminal import say
 

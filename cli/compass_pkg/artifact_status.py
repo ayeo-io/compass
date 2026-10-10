@@ -224,6 +224,12 @@ def register(task, view, entry, requested, digest_now, by=BY_ARTIFACT_SET, when=
         return True
     if unchanged and requested in (DRAFT, AWAITING, APPROVED):
         return False
+    if requested in (APPROVED, AWAITING) and not entry.get("path"):
+        raise CompassError(
+            "compass issue artifact set: %s has no path, so no document has been written "
+            "and it cannot be %s. Write it and register it with `compass issue artifact "
+            "set %s --status draft --path <file>`, or run `compass issue artifact set %s "
+            "--status omitted --reason \"<why>\"`." % (kind, requested, kind, kind))
     if requested == APPROVED:
         if human_checks(view, kind):
             raise CompassError(
@@ -242,6 +248,18 @@ def register(task, view, entry, requested, digest_now, by=BY_ARTIFACT_SET, when=
 def _short(digest):
     text = str(digest or "")
     return text[7:19] if text.startswith("sha256:") else text[:12]
+
+
+def verify_record_exists(task, view):
+    """True when a gate of the `verify` stage has already passed. That pass is
+    the record of the stage, so a `verify` document registered afterwards has
+    nothing left to wait for (`commands/verify.md` passes the gates before it
+    registers the report)."""
+    gates = _catalogue(view, "gates") or _shipped("gates")
+    return any(isinstance(g, dict) and g.get("status") == "pass"
+               and isinstance(gates.get(g.get("id")), dict)
+               and gates[g["id"]].get("stage") == STAGE_VERIFY
+               for g in task.get("gates") or [])
 
 
 def ship_projection(task, view):
@@ -267,6 +285,10 @@ def _command_for(entry, view):
         return f"`compass evidence approve --artifact {kind} --approver <name> --role <role> --scope <text>`"
     if status == OMITTED:
         return f'`compass issue artifact set {kind} --status omitted --reason "<why>"`'
+    if not entry.get("path"):
+        return (f"write it and register it with `compass issue artifact set {kind} --status "
+                f"draft --path <file>`, or run "
+                f'`compass issue artifact set {kind} --status omitted --reason "<why>"`')
     if human_checks(view, kind):
         return (f"`compass issue artifact set {kind} --status awaiting-approval`, then "
                 f"`compass evidence approve --artifact {kind} --approver <name> --role <role> "

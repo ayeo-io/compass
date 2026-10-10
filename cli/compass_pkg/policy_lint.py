@@ -33,7 +33,7 @@ from compass_pkg import catalogue_check, layers, locks, merge, parent_states, pa
 from compass_pkg import catalogue_spec as spec
 from compass_pkg import word_map
 from compass_pkg.atomic_io import StrictYamlError, load_yaml_strict
-from compass_pkg.check_registry import REGISTRY
+from compass_pkg.check_registry import REGISTRY, REMOVED
 from compass_pkg.core import FRAMEWORK_ROOT, CompassError
 
 JSON_SCHEMA_VERSION = 1
@@ -291,7 +291,9 @@ def _impl_findings(layer):
                 out.append(_finding("layer", "L-IMPL-TEMPLATED", layer, path,
                                     f"impl '{value}' is a template; name a check "
                                     f"implementation from the registry"))
-            elif value not in REGISTRY:
+            elif value not in REGISTRY and value not in REMOVED:
+                # A removed check's name is accepted: a governance folder copied before the
+                # release still names it, and `compass check` reports it as nothing to check.
                 out.append(_finding("layer", "L-IMPL-UNKNOWN", layer, path,
                                     f"impl '{value}' is not in the check registry "
                                     f"({', '.join(sorted(REGISTRY))})"))

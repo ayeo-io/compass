@@ -228,10 +228,18 @@ def test_dcj_76_a_stored_dod_evidence_typed_major_one_is_refused(tmp_path):
     assert row["status"] == "refused" and "refused" in row["detail"], row
 
 
-@pytest.mark.skip(reason="the generation pin is built with `compass issue migrate`, in the "
-                         "migration unit (U4)")
-def test_dcj_76_migrate_pins_a_generation_that_records_a_major_the_cli_lacks():
-    raise AssertionError("built in U4")
+def test_dcj_62_a_a_copied_governance_folder_naming_the_removed_check_lints():
+    """A governance folder copied from 5.6.0 names `dashboard-current` as a check and as its
+    implementation. The copy is old, not wrong: `compass check` reports it as nothing to check,
+    so the lint accepts the name. An implementation no release held is still refused."""
+    from types import SimpleNamespace
+
+    from compass_pkg import policy_lint
+    layer = SimpleNamespace(name="legacy", kind="project", doc={"checks": {
+        "dashboard-current": {"impl": "dashboard-current"},
+        "typo": {"impl": "no-such-implementation"}}})
+    found = policy_lint._impl_findings(layer)
+    assert [f.path for f in found] == ["checks.typo.impl"], found
 
 
 # --- DCJ-79 -----------------------------------------------------------------

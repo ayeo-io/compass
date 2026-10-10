@@ -292,6 +292,10 @@ list.
 | `verify` exit | `Definition of Done` |
 | any other stage | `<Stage> <side> list`, for example `Implement exit list` or `Define entry list` |
 
+Lines inside a rendered block (`docs/rendered-blocks.md`) are not part of any
+section: the reader of the sections masks them, so a heading or a box inside a
+block is never a checklist.
+
 The typed tag rule of `dod-evidence-typed` reads every exit list's section,
 not only the Definition of Done. An unticked box under an exit heading needs a
 typed tag that resolves, whichever stage the list belongs to. Entry lists have

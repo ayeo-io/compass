@@ -30,26 +30,80 @@ Gates: 7 of 9 pass
 The kinds are `coverage`, `gates`, `dod`, `dor`, `artifacts`, `evidence`,
 `follow-ups`, `decisions-taken`, `header`, `ask`, `decision-required`,
 `acceptance`, `related`, `decisions`, `traceability`, `deliberately-omitted`,
-`verification-note` and `index`. The first eight are rendered now. A block of
-another kind is left as it is until its renderer exists.
+`verification-note` and `index`. All are rendered.
 
 | Kind | What it shows |
 |---|---|
 | `coverage` | One row for each scenario: tests, red, green and acceptance records, and the result (`passed`, `failing test only` or `no test record`). Then the de-scoped failure modes with their reasons |
 | `gates` | `Gates: n of m pass`, then one line for each gate with its status and evidence ids |
 | `dod`, `dor` | `Definition of Done: n of m met`, then one line for each item of the configured `verify` exit list or `plan` entry list: met by an evidence id, ticked by a person, carried to a follow-up, ticked on the page before 7.0.0, or open |
-| `artifacts` | The registered documents with status, approver and reason, each a relative link under `docs/compass/` |
+| `artifacts` | The registered documents that are not omitted, each with status, approver, the name or meaning the entry records (`traditional_name`, `stands_for`) and why it exists. A document is a relative link under `docs/compass/` when its file exists; otherwise its status reads `not written yet` and it has no link |
 | `evidence` | Each evidence entry's id, type and path. A path under `docs/compass/` is a relative link; a path in the work folder is plain text, because that folder is untracked in many projects |
 | `follow-ups` | Each follow-up's id, status, summary, target issue and the check it defers |
 | `decisions-taken` | The decisions an agent took for the person with their state, then the reassessments with their reasons |
+| `header` | The issue, its approach, state (`done (completed)` for a closed issue), stage and gates, then the owner and the created and completed dates, then the command `compass board render` |
+| `ask` | The Problem, Desired outcome, Success signals and Non-goals sections of `intent.md`. Without them, the issue line of `delivery-approach.md` and the scenario titles; without those, `No statement of the ask is recorded.` |
+| `decision-required` | The document that waits for a person's approval, with the command that approves it, or that nothing waits |
+| `acceptance` | `Acceptance: n of m scenarios passed`, then each scenario with its title and `passed` or `not yet passed` |
+| `related` | The issues this one links to and the issues that link to it, each with its state and a link to its page: `depends on`, `depended on by`, `parent`, `child`, `repairs`, `repaired by`, `follow-up target`, `follow-up from`, `delivered by`, `raised from` and `raised here`. A field that is absent gives no line; an issue with no links reads `None`; a link to an issue that does not exist reads `not found` with no link |
+| `decisions` | The `DD-n` headings of `technical-design.md` with their scope and a link to each ADR record that exists, the decisions taken, and the governance decisions whose Evidence section names this exact slug (`- governance:` lines). An issue with none reads `None` |
+| `traceability` | The Mermaid flowchart from intent to scenario to test to evidence, with an unproven scenario drawn open. Past 25 scenarios it draws one summary node for each intent. The arrows are `==>` because a rendered line may not hold `-->` |
+| `deliberately-omitted` | The documents omitted on purpose, with the reason |
+| `verification-note` | A quick fix's scenario, test, red and green records, gates, changed files outside `docs/compass/` and the release line when the manifest records a `release_note` |
+| `index` | The project index: see below |
 
 A block holds no clock, no absolute path and no name taken from git. The same
-records give the same text, so a second render changes no byte.
+records give the same text, so a second render changes no byte. The one fence a
+rendered body may hold is the Mermaid chart, opened and closed by the exact
+lines ```` ```mermaid ```` and ```` ``` ````.
+
+## The issue page
+
+`docs/compass/<created>-<slug>/README.md` holds the page. `compass issue render`
+creates it with ten blocks, in this order: `header`, `ask`, `decision-required`,
+`acceptance`, `related`, `decisions`, `artifacts`, `traceability`,
+`deliberately-omitted`, `follow-ups`. The ask opens within the first 20 lines and the
+header takes at most 12.
+
+The header takes the issue's approach, state, stage and gate count from
+`issue_detail.detail`, the function that `compass flow` calls for the same
+facts, so the board panel and the page cannot disagree. The board can read an
+issue from another worktree (`--worktrees`) while the page reads this checkout.
+The page names the command `compass board render` and does not link the board file,
+which lives in the system temp folder.
+
+A page a person wrote, with no block, is left alone. The render says it is
+hand-written and was not rendered, and `rendered-blocks-current` fails at
+`verify` because the page holds no rendered block.
+
+## The verification note
+
+A quick fix registers `verification-note` at lightweight depth.
+`compass quick-fix finish` writes `verification-note.md` once the three gates
+have passed, registers it, approves it, traces it to the scenarios and fills its
+block. The file is at most 40 lines. A test that fails gets no note. Prose above
+the block is kept by every render.
+
+## The project index
+
+The README.md directly in the folder `docs/compass` holds one `index` block: a table for each of Backlog,
+Ready, In progress, In review, Done in the last 30 days and Closed, then
+Unreadable (a manifest that cannot be read, by slug) and Other documents (the
+Markdown files directly in `docs/compass/`). Each readable issue is in one table,
+as its slug linked to its page. The window of the "Done in the last 30 days"
+table ends at the newest completion the project holds, so the file does not
+change as the days pass. Every line of the block depends on the whole project, so
+it is a cross-issue block. This repository ignores the file, because it ignores
+the issue folders.
+
+A render of one issue also refreshes the index, under
+`.compass/cache/render-index.lock`. `rendered-blocks-current` judges an issue by
+its own row only.
 
 ## `compass issue render`
 
 ```text
-compass issue render [--issue SLUG] [--dry-run]
+compass issue render [--issue SLUG | --all] [--dry-run]
 ```
 
 It renders the blocks of every registered document under `docs/compass/` and of
@@ -76,7 +130,48 @@ it is absent. It does this in order:
 | A malformed marker, a document that is not UTF-8, a registered path that is a link or leaves the project, a breach of a post-condition, a file that changed during the render, or a write failure | 2 |
 
 `--dry-run` lists the documents and kinds that would change and writes nothing.
-`--all` is not built yet and exits 2.
+
+### `--all`
+
+`compass issue render --all` renders every readable issue and then the project
+index. It reads the project once (`project_scan.ProjectScan`), skips an issue whose
+inputs are unchanged, and names each issue it could not render: an unreadable
+manifest or a refused document. It renders the others.
+
+| Outcome | Exit code |
+|---|---|
+| Every issue rendered or skipped | 0 |
+| Some issue failed; each is named, and its documents are as they were | 1 |
+| `--all` with `--issue` | 2 |
+
+`--all --dry-run` lists each file a render would write with its block kinds and
+the issues it would skip. It writes nothing: not a document, not the skip state
+and not an entry of the parse cache. With `--json` the keys are `rendered`,
+`skipped`, `failed`, `dry_run` and `would_write`.
+
+The skip state, `render-skip.json` in the cache folder under `.compass`, maps each issue to a digest of
+what its render reads: the CLI version, the manifest, the folder and evidence
+listings, the stored generations, every registered document and the page, the
+manifests it links to in either direction, the listings of `governance/decisions/`
+and `architecture/decisions/`, and `compass.yml`. It is derived. Delete it and
+the next run renders every issue and changes no byte. A project with 490 issues
+renders in under five seconds with a warm parse cache.
+
+### The parse cache
+
+`project_scan.py` reads the manifests through the parse cache, as the board does
+(ADR-049, widened by ADR-052). The issue's own manifest is read without it, so a
+planted cache entry cannot clear or fail `rendered-blocks-current`. It can only
+mislead a cross-issue block, which is advisory.
+
+## When an issue lands
+
+`compass ship-commit` and `compass quick-fix finish` render the issue's documents, its
+page and the project index as the issue will read once it is done, before they make
+the commit (`manifest._render_landing`). They stage the files the project does not
+ignore. The commit holds the done state, and the render that follows the landing
+changes no byte. The landing does this only when every gate has passed, and a failure
+of the render never stops it.
 
 There is no rollback across documents. When the third write of three fails, the
 first two stay written and a second run finishes the job.

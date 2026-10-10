@@ -406,6 +406,12 @@ The atomic tracked unit of work: one assessed piece of work, one delivery approa
 
 **Related:** `sub-issue`, `issue-type`, `label`, `workflow-state`
 
+### issue-page
+
+The README of an issue's documents folder, `docs/compass/<created>-<slug>/README.md`. Its rendered blocks answer a reader's questions in order: the header, the ask, the decision required, the acceptance, the related issues, the decisions, the documents, the traceability chart, the documents left out on purpose and the follow-ups. `compass issue render` creates it when it is absent.
+
+**Related:** `rendered-block`, `project-index`
+
 ### issue-type
 
 The kind of work an issue is: feature, bug or task. The delivery approach, not the type, decides which artifacts exist and which gates apply. A quick fix, a hotfix and a spike are not issue types: quick fix, hotfix and spike are delivery approaches. No manifest field records the type yet.
@@ -413,6 +419,12 @@ The kind of work an issue is: feature, bug or task. The delivery approach, not t
 **GitHub:** Issue type
 
 **Related:** `issue`, `feature`, `bug`, `task`, `assess`, `delivery-approach`, `label`
+
+### item-record
+
+A record in the manifest that meets an item of the Definition of Done or the Definition of Ready: evidence with `meets`, a person's approval of the check, a follow-up that `defers` it, or a page tick that `compass issue migrate` read from an older document. A command writes each one. An item with none of them is open.
+
+**Related:** `definition-of-done`, `definition-of-ready`, `page-tick`
 
 ### label
 
@@ -480,6 +492,12 @@ A layer file that states only its differences from its parent, so it holds the c
 
 **Related:** `layer`, `preset`
 
+### page-tick
+
+A ticked box that `compass issue migrate` read from a document written before the item records existed, kept in the manifest's `page_ticks`. The Definition of Done and Ready blocks count it as met. No other check reads it, so it is never an approval.
+
+**Related:** `item-record`
+
 ### pin
 
 The `#<sha>` suffix on a git `extends:`, which names the parent commit a project runs against.
@@ -518,6 +536,12 @@ A named, versioned parent layer. `default` is the only preset Compass ships.
 
 **Related:** `layer`, `settings-key`
 
+### project-index
+
+The README.md directly in the folder `docs/compass`, one rendered block that lists every issue once, in a table for its state, with a link to its issue page. The last table is the issues completed in the 30 days before the newest completion the project holds.
+
+**Related:** `rendered-block`, `issue-page`
+
 ### quality-gate
 
 A check that must pass before an issue moves state. Which gates apply comes from the delivery approach and the label rules.
@@ -535,6 +559,12 @@ A delivery approach for a small, low-risk change on familiar ground. Produces a 
 The per-issue proof summary rendered from the manifest and the evidence registry: the assessment, the delivery approach, the gates and what cleared them - one screen, shareable as-is. Evidence is the typed records that clear gates; the receipt is the read-only summary that cites them.
 
 **Related:** `evidence`, `quality-gate`
+
+### rendered-block
+
+The lines between `<!-- compass:render KIND -->` and `<!-- /compass:render -->` in an issue's document. `compass issue render` writes them from the manifest and the evidence and leaves every other byte of the document as it is. A check, `rendered-blocks-current`, compares each block with a fresh render. Every digest of a document and every reader of its text leaves the lines inside a block out.
+
+**Related:** `issue-page`, `verification-note`, `project-index`, `item-record`
 
 ### requirements-review
 
@@ -657,6 +687,12 @@ The engineering plan for one issue: the approach, the design decisions as ADR-st
 The chain that makes a change accountable: code traces to a TRC- id, which traces to an INT- id. Maintained as the work happens, not reconstructed at the end. It is one of the five guardrails, and the thing the `TRC-` prefix is named after.
 
 **Related:** `scenario`, `intent`, `acceptance-criteria`
+
+### verification-note
+
+A quick fix's one-screen record of what was checked: the scenario, its test, the red and green records, each gate with its status and the files changed. It is one rendered block, written by `compass quick-fix finish` and approved by it. A person can write prose above the block.
+
+**Related:** `rendered-block`, `quick-fix`
 
 ### waiver
 

@@ -95,6 +95,8 @@ The evidence check for an in-progress issue works out the hash of the files the 
 
 No key is removed, renamed or retyped, and a test pins the full key set. A row the page cannot place stays in the section it had in 6.0.0 and carries an `unplaceable` reason.
 
+The approach, state, stage and gate count of a row come from `issue_detail.detail` (`cli/compass_pkg/issue_detail.py`), which `board()` calls through its module. The header block of the issue page (`docs/rendered-blocks.md`) calls the same function, so the panel and the page cannot disagree. The board can read an issue from another worktree while the page reads this checkout, and the page names `compass board render` instead of linking the board file.
+
 ## Modules
 
 | Module | Owns |

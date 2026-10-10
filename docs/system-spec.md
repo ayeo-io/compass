@@ -3595,3 +3595,39 @@
 ### shipped-releases-v6-0-1 (completed 2026-10-10)
 
 - `SR-001` Given the v6.0.1 tag, When the shipped-releases test runs with tags fetched, Then the table holds every tagged release and matches its files
+
+### artifact-status-written-by-stages (completed 2026-10-10)
+
+- `ASW-1` A stage exit approves a document with no human check
+- `ASW-2` A stage exit moves a document with a human check to awaiting-approval
+- `ASW-3` A verify gate pass approves the verification report
+- `ASW-4` ship-commit approves the ship stage's own document and lands
+- `ASW-5` Every artifact kind names the stage that owns it
+- `ASW-6` A listed approver approves a document awaiting approval
+- `ASW-7` The receipt and the dashboard show who approved and when
+- `ASW-8` Approving a document that is not awaiting approval is refused
+- `ASW-9` An approval by a name the approvers list does not hold is refused
+- `ASW-10` A document with a human check cannot be approved by artifact set
+- `ASW-11` Rewriting an approved document moves it back to draft with a reason
+- `ASW-12` Registering an approved document again with unchanged contents keeps it approved
+- `ASW-13` Digests are recorded with the capability off, and the stale-document refusals stay off
+- `ASW-14` A new decision entry amends the opt-in freshness decision for recording only
+- `ASW-15` A re-assessment marks a document the new approach no longer registers as superseded
+- `ASW-16` ship-commit refuses an issue with a draft design
+- `ASW-17` ship-commit refuses an issue with a document awaiting approval
+- `ASW-18` An omitted document with a reason does not stop ship-commit
+- `ASW-19` An omitted document with no reason stops ship-commit
+- `ASW-20` A quick fix gains no new stop
+- `ASW-21` A regular issue run end to end leaves every artifact approved with an approver
+- `ASW-22` Migration approves or supersedes every draft on a done issue
+- `ASW-23` The migration dry run reports the status changes and writes nothing
+- `ASW-24` Migration keeps recorded decisions and changes nothing on a second run
+- `ASW-25` Migration still refuses to apply to a work root git cannot restore without a copy
+- `ASW-26` Ledger entries decided by an agent are recorded as decisions taken
+- `ASW-27` A decision taken outside the ledger is recorded by hand
+- `ASW-28` On balanced autonomy the define checkpoint waits once for one approval of two decisions
+- `ASW-29` On controlled autonomy the define checkpoint waits for the decisions too
+- `ASW-30` On autonomous autonomy the decisions are listed and not waited for
+- `ASW-31` Changing one decision reopens it and the checkpoint keeps waiting
+- `ASW-32` A decision recorded after the define checkpoint waits at the next checkpoint
+- `ASW-33` retro reports how agent decisions were settled

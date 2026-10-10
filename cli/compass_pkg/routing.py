@@ -913,8 +913,24 @@ def cmd_route_evaluate(args):
                 merged.append(a)
         # A human-recorded omission of something routing no longer earns is
         # kept: it is a decision someone took, not stale computed output.
+        # A document that was written (it has a path) stays too, as
+        # `superseded`, so the file keeps a record of why it is no longer owed.
+        # An entry with no path records no document and is dropped.
         for kind, a in recorded.items():
-            if a.get("status") == "omitted" and not any(m["kind"] == kind for m in merged):
+            if any(m["kind"] == kind for m in merged):
+                continue
+            if a.get("status") == "omitted":
+                merged.append(a)
+            elif a.get("path") and evaluated_before:
+                from compass_pkg import artifact_status
+                a = dict(a)
+                if a.get("status") != artifact_status.SUPERSEDED:
+                    a["status"] = artifact_status.SUPERSEDED
+                    a["reason"] = ("superseded by the re-assessment of %s, %s to %s" % (
+                        datetime.date.today().isoformat(),
+                        prior["delivery_approach"] or "an earlier approach",
+                        result["delivery_approach"]))
+                artifact_status.clear_approver(a)
                 merged.append(a)
         task["artifacts"] = merged
         # make sure the evidence registry exists at the top level

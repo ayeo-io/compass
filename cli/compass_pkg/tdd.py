@@ -446,6 +446,11 @@ def cmd_tdd_red(args):
     ev_path = _write_evidence(task_dir, red_name, payload)
     open(os.path.join(task_dir, ".red"), "w").close()  # the hook reads this
     payload.pop("_full_log", None)
+    # A red is the first record of the implement stage: it moves the documents
+    # of the stages before it (ADR-050).
+    from compass_pkg import artifact_status
+    moved = artifact_status.moved_line(artifact_status.record_stage(
+        task_dir, artifact_status.STAGE_IMPLEMENT, artifact_status.BY_TDD_RED))
     bound = f" (bound to {scenario})" if scenario else " (unbound - consider --scenario)"
     judged = ([("judged by exit code only: Compass does not recognise this "
                 "runner, and it wrote no pytest report")]
@@ -455,7 +460,8 @@ def cmd_tdd_red(args):
                detail=judged + [f"evidence : {ev_path}"]
                       + [x for x in [_scenario_line(task_dir, scenario)] if x]
                       + [f"marker   : {os.path.join(task_dir, '.red')}",
-                         "           the pre-tool hook will now allow code edits."],
+                         "           the pre-tool hook will now allow code edits."]
+                      + moved,
                scenario=scenario, exit_code=code, evidence=ev_path,
                marker=os.path.join(task_dir, ".red"))
 
@@ -1037,6 +1043,10 @@ def cmd_acceptance_record(args):
     marker = _acceptance_marker(task_dir)
     if os.path.exists(marker):
         os.remove(marker)
+    # An acceptance record is a record of the implement stage, as a red is.
+    from compass_pkg import artifact_status
+    moved = artifact_status.moved_line(artifact_status.record_stage(
+        task_dir, artifact_status.STAGE_IMPLEMENT, artifact_status.BY_ACCEPTANCE))
 
     print(f"compass acceptance record: {kind} acceptance recorded (exit {code}).")
     for w in warnings:
@@ -1048,4 +1058,6 @@ def cmd_acceptance_record(args):
     print(f"  evidence : {relative_to_project(ev_path)}")
     print("  registry : manifest.yml `evidence:` updated with the test-run entry")
     print("  marker   : .acceptance cleared")
+    for line in moved:
+        print("  " + line)
     return 0

@@ -131,11 +131,11 @@ def clear_approver(entry):
 
 
 def stage_exit(task, view, stage, by, when=None, include_own=False, earlier=True):
-    """Move the documents the record of `stage` leaves behind. Mutates `task`
+    """Move the documents the record of `stage` leaves behind. Mutates the manifest
     and returns `[{kind, from, to}]` for each entry moved.
 
     `earlier` moves the `draft` entries with a path that stages before `stage`
-    own; `include_own` also moves those `stage` owns (a verify gate pass and the
+    own; `include_own` also moves those `stage` owns (a `verify` gate pass and the
     ship exit do). A quick fix is left to `compass quick-fix finish`."""
     if task.get("delivery_approach") == APPROACH_QUICK_FIX:
         return []
@@ -246,7 +246,7 @@ def _short(digest):
 
 
 def ship_projection(task, view):
-    """A copy of the task with the ship exit applied: the state `compass
+    """A copy of the manifest with the ship exit applied: the state `compass
     ship-commit` leaves. It approves only the documents ship owns."""
     projected = copy.deepcopy(task)
     stage_exit(projected, view, STAGE_SHIP, BY_SHIP_COMMIT, include_own=True, earlier=False)

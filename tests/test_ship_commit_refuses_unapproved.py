@@ -231,7 +231,7 @@ def _stage_run(root, swap):
     for step in ((red, subtask) if swap else (subtask, red)):
         code, out, err = step()
         assert code == 0, out + err
-    assert register(root, "verification-report")[0] == 0           # verify
+    assert register(root, "verification-report")[0] == 0           # `verify` stage
     _ready(root)
     body = manifest(root)
     for gate in body["gates"]:

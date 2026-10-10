@@ -86,7 +86,10 @@ compass issue subtask add <id> --brief <brief path> --model <model> --budget <to
 ```
 
 This records the base commit (HEAD), the model, the budget and status
-`dispatched`, with `attempts: 1`.
+`dispatched`, with `attempts: 1`. It is also the record of the breakdown stage,
+so it approves the documents of earlier stages that are still `draft` and have
+a path: `approved`, with `approved_by: compass issue subtask add`, or
+`awaiting-approval` for a document with a human check (ADR-050).
 
 ## Step 3 - launch the builders
 

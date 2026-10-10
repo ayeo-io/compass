@@ -1,16 +1,19 @@
 # Artifact freshness
 
-This page is the owning doc for the capability `artifact-freshness`. With it
-on, Compass records the digest of a document when the document is written,
-and reports the document as stale when an artifact it depends on has changed
-since. A stale document is refused at ship and at the entry of a stage that
-consumes it. The code is `cli/compass_pkg/freshness.py`. `compass issue
-artifact set` writes the records, and `compass check`, `compass next`,
-`compass issue receipt` and `compass ship-commit` read them.
+This page is the owning doc for the capability `artifact-freshness`. Compass
+always records the digest of a document when the document is written. With the
+capability on, it also reports the document as stale when an artifact it
+depends on has changed since. A stale document is refused at ship and at the
+entry of a stage that consumes it. The code is
+`cli/compass_pkg/freshness.py`. `compass issue artifact set` writes the
+records, and `compass check`, `compass next`, `compass issue receipt` and
+`compass ship-commit` read them.
 
-The decision to keep it opt-in is in
+The decision to keep the refusals opt-in is in
 `governance/decisions/2026-10-05-artifact-freshness-stays-opt-in.md`. The
-dependencies come from the artifact catalogue, which `compass policy lint`
+decision to record the digests always is in
+`governance/decisions/2026-10-10-artifact-freshness-records-digests-always.md`.
+The dependencies come from the artifact catalogue, which `compass policy lint`
 checks as a graph (see `docs/policy-lint.md`).
 
 ## Switching it on
@@ -20,9 +23,11 @@ capabilities:
   artifact-freshness: true
 ```
 
-With the capability off, nothing is recorded and no reader changes: the
-manifest, `compass check`, `compass next`, the receipt and `compass
-ship-commit` give the same output as before the capability existed. An issue
+With the capability off, the digests are still recorded, and no reader
+changes: `compass check`, `compass next`, the receipt and `compass
+ship-commit` name no stale document and refuse nothing for one. The digest is
+what tells a rewrite of an approved document from a repeat registration (see
+[Rewriting an approved document](#rewriting-an-approved-document)). An issue
 reads the capability from its stored generation (see
 `docs/generation-store.md`), so turning it on changes nothing for an issue
 until the next `compass approach evaluate --write`.
@@ -37,6 +42,10 @@ artifacts:
 ```
 
 ## What is recorded
+
+`compass issue artifact set` records the fields below on every registration,
+whatever the capability says. With no configuration to read, it records the
+document's own digest and no upstream.
 
 `compass issue artifact set <kind> --status ...` stamps the document's entry in
 the manifest's `artifacts:` registry:
@@ -66,6 +75,17 @@ file last changed.
 Nothing else writes either field. A presence check, `compass check` and
 `compass issue artifact set` on an unchanged file never clear staleness.
 
+## Rewriting an approved document
+
+A document that reads `approved` and whose file now has other bytes than its
+recorded `digest` goes back to `draft` when a stage command registers it again,
+whatever `--status` the command passes. Its `approved_by` and `approved_at` are
+removed, the entry records the new digest, and `reason` says the document
+changed after it was approved, by whom and between which digests. An unchanged
+file keeps `approved` with the same approver and time. An approved entry with no
+recorded digest, such as a migrated one, is treated as unchanged and gets its
+digest recorded. ADR-050 holds the decision.
+
 ## When a document is stale
 
 Staleness is computed from the records and the files as they are now. A
@@ -83,8 +103,10 @@ document that records `upstream` is stale when:
 - its own `upstream` record is not a map (`upstream record is not a map`).
   A record that cannot be compared fails closed.
 
-A document with no `upstream` record is not tracked. A project that turns the
-capability on has nothing stale until its documents are written again.
+A document with no `upstream` record is not tracked. A document registered by
+an earlier build, or in a project with no configuration to read, holds none. A
+project that turns the capability on has nothing stale for such a document
+until it is written again.
 Staleness passes down only through tracked documents. If a middle document
 has no `upstream` record, a change above it leaves the document below it
 fresh, because the middle document is never stale. Rewriting a middle
@@ -141,7 +163,7 @@ compass: compass ship-commit: refusing to land - 1 artifact(s) are stale:
   defeats the check, as a hand edit of `gates:` does. Compass does not
   protect either from a person who edits the manifest.
 - If the configuration cannot be read, `compass issue artifact set` records
-  nothing and still saves the status.
+  the document's own digest and no upstream, and still saves the status.
 - `compass issue artifact set` refuses, and saves nothing, when the document or
   an artifact it depends on has a file that cannot be read. It names the
   files.

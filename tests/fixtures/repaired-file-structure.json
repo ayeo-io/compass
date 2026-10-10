@@ -229,9 +229,10 @@
       2,
       2,
       2,
+      2,
       2
     ],
-    "list_items": 17,
+    "list_items": 19,
     "table_rows": 0
   },
   "docs/routing-deep-dive.md": {
@@ -767,7 +768,7 @@
       2,
       2
     ],
-    "list_items": 49,
+    "list_items": 50,
     "table_rows": 0
   },
   "governance/routing-policy.md": {

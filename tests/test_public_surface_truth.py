@@ -468,6 +468,12 @@ def test_d2_repairs_change_only_retired_names():
     `architecture/system-context.md` (table_rows 12 -> 13) gained the row in
     its external dependencies table for `gh` and GitHub.
 
+    Two more were re-baselined by `artifact-status-written-by-stages`:
+    `docs/quickstart.md` (list_items 17 -> 19, one more `##` heading) gained
+    the section on decisions an agent took for the person, and
+    `governance/guardrails.md` (list_items 49 -> 50) gained the bullet
+    describing the check `artifacts-approved`.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

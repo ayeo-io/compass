@@ -77,6 +77,8 @@ def test_asw_22_migrate_approves_or_supersedes_done_drafts(tmp_path):
     open_before = Path(paths["open"]).read_bytes()
     code, out, err = _migrate(root, "--apply", "--i-have-a-copy")
     assert code == 0, out + err
+    assert "marked 2 artifact entries approved and 0 superseded" in out
+    assert "marked mark" not in out
     done = _entries(paths["finished"])
     assert done["acceptance-criteria"]["status"] == "approved"
     assert done["acceptance-criteria"]["approved_by"] == "compass issue migrate"

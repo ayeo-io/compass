@@ -193,8 +193,8 @@ def _write_manifest(path, data):
 
 
 def _status_note(approved, superseded, would):
-    return "%s mark %d artifact entries approved and %d superseded" % (
-        "would" if would else "marked", approved, superseded)
+    return "%s %d artifact entries approved and %d superseded" % (
+        "would mark" if would else "marked", approved, superseded)
 
 
 def plan_artifact_status(task_dir):

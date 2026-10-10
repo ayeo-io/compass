@@ -25,7 +25,7 @@ import pytest
 
 
 FRAMEWORK_ROOT = Path(__file__).resolve().parent.parent
-EXPECTED_VERSION = "6.0.0"
+EXPECTED_VERSION = "6.0.1"
 
 
 def _read_json(path: Path) -> dict:

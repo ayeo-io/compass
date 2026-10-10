@@ -79,9 +79,36 @@ def _check_of(view, check_id):
         raise CompassError(f"compass evidence approve: '{check_id}' is a {check.get('kind')} "
                            f"check, not a human check. Only a human check takes an approval.")
     if not check.get("approvers"):
-        raise CompassError(f"compass evidence approve: '{check_id}' lists no approvers, so "
-                           f"a tick is enough and an approval would not be read; {known}.")
+        # An item of the Definition of Ready or Done is ticked by a person even when
+        # its check lists no approvers (the declared approvers, or the owner, tick it).
+        from compass_pkg import item_records
+        if item_records.unlisted_problem(view, check_id, "compass evidence approve") is None:
+            return check
+        raise CompassError(f"compass evidence approve: '{check_id}' lists no approvers and is "
+                           f"not an item of this issue's Definition of Ready or Done, so an "
+                           f"approval would not be read; {known}.")
     return check
+
+
+def _may_tick(task_dir, approver, check_id):
+    """Who may tick an item whose check lists no approvers: a name in any
+    `approvers:` list of the project file, else its owner."""
+    from compass_pkg import decisions_taken
+    declared, owner = decisions_taken.project_approvers(task_dir)
+    if declared:
+        if approval_records.approver_listed(declared, approver, owner):
+            return
+        raise CompassError(
+            f"compass evidence approve: {approver} is not among the approvers this project "
+            f"declares ({', '.join(sorted(set(declared)))}), so the tick of '{check_id}' "
+            f"would not count.")
+    if approval_records.approver_listed([approval_records.OWNER], approver, owner):
+        return
+    raise CompassError(
+        f"compass evidence approve: this project declares no approvers, so only its owner may "
+        f"tick '{check_id}'" + (f" ({owner})." if owner else
+                              "; it declares no owner either, so add `owner:` or an "
+                              "`approvers:` list to compass.yml."))
 
 
 def _numbered(task, check_id):
@@ -203,11 +230,14 @@ def _approve_check(args):
     approver, role, scope = args.approver, args.role, args.scope
     check = _check_of(effective.view_or_legacy(task_dir), check_id)
     owner = approval_records.project_owner(task_dir)
-    listed = [str(one) for one in check["approvers"]]
-    if not approval_records.approver_listed(listed, approver, owner):
-        raise CompassError(f"compass evidence approve: {approver} is not an approver of "
-                           f"'{check_id}', so the record would not count. "
-                           f"{approval_records.listing(check_id, listed, owner)}.")
+    if check.get("approvers"):
+        listed = [str(one) for one in check["approvers"]]
+        if not approval_records.approver_listed(listed, approver, owner):
+            raise CompassError(f"compass evidence approve: {approver} is not an approver of "
+                               f"'{check_id}', so the record would not count. "
+                               f"{approval_records.listing(check_id, listed, owner)}.")
+    else:
+        _may_tick(task_dir, approver, check_id)
     number, evidence_id = _numbered(task, check_id)
     entry = {"id": evidence_id, "type": "human-approval", "check": check_id,
              "approver": approver, "role": role, "scope": scope, "decision": args.decision,

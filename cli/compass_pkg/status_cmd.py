@@ -26,13 +26,6 @@ from compass_pkg.terminal import say
 TASK_STATUSES = status_words.STORED_STATES
 
 
-def _stale_page(task_dir):
-    """`say` detail lines: the one stale-page reminder, or none."""
-    from compass_pkg.dashboard import stale_page_reminder
-    line = stale_page_reminder(task_dir)
-    return [line] if line else None
-
-
 def _list(words):
     return ", ".join(words)
 
@@ -127,7 +120,6 @@ def cmd_task_set_status(args):
     detail = f" ({reason})" if reason else ""
     shown = status if close_reason is None else f"{status} ({close_reason})"
     return say(args, f"{verb}: {task.get('issue')} -> {shown}{detail}.",
-               detail=_stale_page(task_dir),
                issue=task.get("issue"), status=status, close_reason=close_reason,
                duplicate_of=duplicate_of, reason=reason or None)
 
@@ -159,7 +151,7 @@ def cmd_task_status_remove(args):
     kind = "closed" if reopening else "held"
     return say(args, f"{verb}: {task.get('issue')} is no longer {kind}; its state "
                      f"is {state}, read from its records.",
-               detail=_stale_page(task_dir), issue=task.get("issue"), state=state)
+               issue=task.get("issue"), state=state)
 
 
 def cmd_issue_blocked_set(args):
@@ -178,7 +170,7 @@ def cmd_issue_blocked_set(args):
     task["blocked"] = {"reason": reason, "at": now_iso()}
     save_manifest(task, path)
     return say(args, f"{verb}: {task.get('issue')} is blocked ({reason}); it stays {state}.",
-               detail=_stale_page(task_dir), issue=task.get("issue"), blocked=task["blocked"])
+               issue=task.get("issue"), blocked=task["blocked"])
 
 
 def cmd_issue_blocked_remove(args):
@@ -191,7 +183,7 @@ def cmd_issue_blocked_remove(args):
     del task["blocked"]
     save_manifest(task, path)
     return say(args, f"{verb}: {task.get('issue')} is no longer blocked.",
-               detail=_stale_page(task_dir), issue=task.get("issue"))
+               issue=task.get("issue"))
 
 
 def register(pts, issue_arg):

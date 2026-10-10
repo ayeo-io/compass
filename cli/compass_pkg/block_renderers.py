@@ -207,9 +207,9 @@ def _state_phrase(item):
     return {
         item_records.MET_EVIDENCE: "met by " + ids,
         item_records.TICKED: "ticked by " + ids,
-        item_records.MET_CARRIED: "met, carried to " + ids + " (resolved)",
+        item_records.MET_CARRIED: "met, " + ids + " resolved",
         item_records.PAGE_TICK: "ticked on the page before 7.0.0 (%s)" % ids,
-        item_records.CARRIED: "carried to " + ids,
+        item_records.CARRIED: "carried to ship, " + ids,
         item_records.OPEN: "open",
     }[item.state]
 

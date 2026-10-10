@@ -708,11 +708,29 @@ def _load_gate_requirements(task_dir=None):
             set((g.get("evidence_types") or {}).keys()))
 
 
-def _stale_page(task_dir):
-    """`say` detail lines: the one stale-page reminder, or none."""
-    from compass_pkg.dashboard import stale_page_reminder
-    line = stale_page_reminder(task_dir)
-    return [line] if line else None
+def _validated_meets(args, task_dir, command, types):
+    """The checks `--meets` names, each an item of the issue's Definition of Done
+    or Ready, for evidence of these types. A check the issue does not list, or a
+    type the lists do not accept, raises before anything is written."""
+    meets = list(dict.fromkeys(getattr(args, "meets", None) or []))
+    if not meets:
+        return []
+    from compass_pkg import effective, item_records
+    view = effective.view_or_legacy(task_dir)
+    for check_id in meets:
+        problem = item_records.unlisted_problem(view, check_id, command)
+        if problem:
+            raise CompassError(problem)
+    for kind in sorted(str(t) for t in types):
+        problem = item_records.evidence_type_problem(kind, command)
+        if problem:
+            raise CompassError(problem)
+    return meets
+
+
+def _add_meets(entry, meets):
+    if meets:
+        entry["meets"] = list(dict.fromkeys(list(entry.get("meets") or []) + meets))
 
 
 def cmd_gate_pass(args):
@@ -750,8 +768,11 @@ def cmd_gate_pass(args):
             f"mechanical gate cannot be cleared with the wrong kind of evidence. "
             f"Point it at evidence of an accepted type."
         )
+    meets = _validated_meets(args, task_dir, "compass gate pass", types_seen)
     gate["status"] = "pass"
     gate["evidence"] = list(ev_ids)
+    for eid in ev_ids:
+        _add_meets(registry[eid], meets)
     save_manifest(task, task_path)
     # A pass of a `verify` gate is a record of the `verify` stage: it moves the
     # documents of earlier stages and the `verify` stage's own (ADR-050).
@@ -762,7 +783,7 @@ def cmd_gate_pass(args):
         else [])
     return say(args, f"compass gate pass: {args.gate_id} -> pass "
                     f"(evidence: {', '.join(ev_ids)}).",
-               detail=(_stale_page(task_dir) or []) + artifact_status.moved_line(moved) or None,
+               detail=artifact_status.moved_line(moved) or None,
                gate=args.gate_id, status="pass", evidence=list(ev_ids), moved=moved)
 
 
@@ -999,7 +1020,6 @@ def cmd_changed_file_add(args):
         cfs.append({"path": args.path, "scenarios": sorted(set(given))})
     save_manifest(task, task_path)
     return say(args, f"compass changed-file add: {args.path} -> {', '.join(given)}.",
-               detail=_stale_page(task_dir),
                path=args.path, scenario=given[-1], scenarios=given)
 
 
@@ -1014,6 +1034,7 @@ def cmd_evidence_add(args):
             f"compass evidence add: '{args.type}' is not a known evidence type "
             f"({sorted(known)})."
         )
+    meets = _validated_meets(args, task_dir, "compass evidence add", [args.type])
     reg = task.setdefault("evidence", [])
     if any(isinstance(e, dict) and e.get("id") == args.evidence_id for e in reg):
         raise CompassError(
@@ -1048,11 +1069,11 @@ def cmd_evidence_add(args):
     entry = {"id": args.evidence_id, "type": args.type, "path": args.path}
     if getattr(args, "scenario", None):
         entry["scenario"] = args.scenario
+    _add_meets(entry, meets)
     reg.append(entry)
     save_manifest(task, task_path)
     return say(args, f"compass evidence add: {args.evidence_id} "
                     f"({args.type}) added.",
-               detail=_stale_page(task_dir),
                evidence_id=args.evidence_id, type=args.type, path=args.path)
 
 

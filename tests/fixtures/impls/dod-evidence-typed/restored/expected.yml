@@ -1,2 +1,2 @@
-verdict: pass
-input: the same input put right
+verdict: fail
+input: 'a ticked box on the page and no record in the manifest: the page counts for nothing'

@@ -24,15 +24,12 @@ implementations:
   consistency-check-passes:
     verdict_digest: 208c4262608b2760cd1c26c8edb8b86714518fa28c596331c658a618de56bb81
     version: 1.0.0
-  dashboard-current:
-    verdict_digest: 76dd31dbf957b002628b55d8bd20306caaad21a16d23de666f33b98478208323
-    version: 1.0.0
   declared-tests-resolve:
     verdict_digest: 135069d070419a5861e8a4693bd0be2979076b5f97afb2c1669a44c9a9f159a0
     version: 1.0.0
   dod-evidence-typed:
-    verdict_digest: 10fd64119247fa169b16089d5f9120dbaacf0d2cd1707888fce5e25e11634418
-    version: 1.0.0
+    verdict_digest: ed4b25b3f2949cc152fe8e7808fbd7dfb9879d29b051d68943830149194b7b3d
+    version: 2.0.0
   evidence-identity-matches:
     verdict_digest: a19eb720d6c5908a4e1d1dd236c92d2bd8a22a6ec55faa6e8a35a3a048b90a87
     version: 1.0.0
@@ -53,6 +50,9 @@ implementations:
     version: 1.0.0
   no-trusted-rerun:
     verdict_digest: ad2da5db60a39f075be271164795dce779783d540bfd8f2194757e0574fca505
+    version: 1.0.0
+  rendered-blocks-current:
+    verdict_digest: 8942dbb4d40c6f28e25aa58db3e88567677c04c5e81768042df1ad36ec1134d1
     version: 1.0.0
   scenario-has-id-and-intent:
     verdict_digest: 6ad20aed1f0071aa85c61afe4e62b17c0984bd98a763244787490bf78ae2c2fd

@@ -151,11 +151,8 @@ Scenario: {{scenario title}}
 
 ## Coverage ledger
 
-<!-- Maintained continuously, not at the end. QA reads this at Verify. -->
+<!-- Written by `compass issue render` from the scenarios and the red and green records in
+     the manifest. Do not edit between the markers: the next render replaces it. -->
 
-| Traceability id | Serves intent | Has a failing test (implement) | Passes as acceptance (verify) |
-|---|---|---|---|
-| `TRC-A1` | INT-1 | {{[ ] / [x]}} | {{[ ] / [x]}} |
-| `TRC-A2` | INT-1 | {{[ ]}} | {{[ ]}} |
-| `TRC-B1` | INT-2 | {{[ ]}} | {{[ ]}} |
-| `TRC-F1` | INT-1 | {{[ ]}} | {{[ ]}} |
+<!-- compass:render coverage -->
+<!-- /compass:render -->

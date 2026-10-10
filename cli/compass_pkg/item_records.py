@@ -72,7 +72,7 @@ def _dicts(value):
     return [e for e in value or [] if isinstance(e, dict)]
 
 
-def _accepted_types():
+def accepted_types():
     from compass_pkg.checks import _DOD_ACCEPTED_EVIDENCE_TYPES
     return _DOD_ACCEPTED_EVIDENCE_TYPES
 
@@ -102,9 +102,40 @@ def state_of(task, check_id, accepted):
 
 def items(task, task_dir, view, which):
     """The `Item` of each check in the list `which` (`dod` or `dor`)."""
-    accepted = _accepted_types()
+    accepted = accepted_types()
     out = []
     for check_id, statement in listed_checks(view, which):
         state, records = state_of(task, check_id, accepted)
         out.append(Item(check_id, statement, state, records))
     return out
+
+
+# --- what the commands that record an item check -------------------------------
+
+def unlisted_problem(view, check_id, command):
+    """Why `command` cannot record `check_id`, or None when the issue lists it. The
+    message names the check and lists the items the issue does list."""
+    lists = {which: [c for c, _ in listed_checks(view, which)] for which in LISTS}
+    if any(check_id in ids for ids in lists.values()):
+        return None
+    shown = "; ".join("%s: %s" % (TITLES[w], ", ".join(ids) or "no item")
+                      for w, ids in lists.items())
+    return ("%s: '%s' is not an item of this issue's Definition of Done or Ready. The issue "
+            "lists - %s." % (command, check_id, shown))
+
+
+def evidence_type_problem(evidence_type, command):
+    """Why evidence of this type cannot meet an item, or None."""
+    accepted = accepted_types()
+    if evidence_type in accepted:
+        return None
+    return ("%s: evidence of type '%s' cannot meet an item. The accepted types are %s."
+            % (command, evidence_type, ", ".join(sorted(accepted))))
+
+
+def open_hint(check_id):
+    """What a reader does to record an item that has no record."""
+    return ("record it with `compass evidence add ... --meets %s` or "
+            "`compass gate pass ... --meets %s`, `compass follow-up add ... --defers %s`, "
+            "or a person's `compass evidence approve --check %s`"
+            % (check_id, check_id, check_id, check_id))

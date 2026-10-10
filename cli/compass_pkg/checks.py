@@ -533,6 +533,8 @@ def _check_gate_evidence(task, task_dir):
     return True, f"{len(passed)}/{len(gates)} pass gate(s), all backed by registry evidence of accepted type"
 
 
+# Read only by `compass issue migrate`, which carries archived page ticks into the manifest.
+# Neither `dod-evidence-typed` nor the stage lists read the page.
 def _parse_dod_lines(task_dir):
     """Read verification-report.md from task_dir and return a list of DoD
     line strings found under the "Definition of Done" heading and under the
@@ -633,85 +635,52 @@ def dod_tag_problems(rest, ev_registry, backfills):
 
 
 def _check_dod_evidence_typed(task, task_dir):
-    """Parse every exit list's section of verification-report.md (the
-    Definition of Done, and `<Stage> exit list` for any other stage) and
-    enforce the inline-tag rule:
+    """Every item of the issue's Definition of Done is met by a record in the
+    manifest (implementation 2.0.0, ADR-051).
 
-    - `- [x] ...`                  → passes (human ticked it)
-    - `- [ ] (evidence: EV-id) ...` → passes if EV-id is in the evidence
-                                       registry with an accepted type
-    - `- [ ] (follow-up: FU-id) ...` → passes if FU-id is in manifest.yml
-                                       follow_ups with status: outstanding
-    - `- [ ] <bare description>`   → FAILS (evidence, not assertion - `G4`)
+    The items are the issue's configured `verify` exit list. One of these records
+    meets an item (`item_records`):
+
+    - an evidence entry of an accepted type with `meets: [item]`
+      (`compass gate pass --meets`, `compass evidence add --meets`);
+    - a person's approval for the item (`compass evidence approve --check`);
+    - a follow-up that defers it (`compass follow-up add --defers`), which holds
+      while it is outstanding and the item reads met once it is resolved;
+    - a tick `compass issue migrate` carried from an archived page.
+
+    An item with none of these is open and fails the check: evidence, not
+    assertion (`G4`). The page is never read - an agent can write a tick on a
+    page, but it cannot write a record that the command refused.
 
     Cross-issue half: scan sibling manifest.yml files for follow-ups with
-    target_task equal to this issue's slug and status: outstanding - any such entry
-    blocks shipping this issue.
+    target_task equal to this issue's slug and status: outstanding - any such
+    entry blocks shipping this issue.
     """
-    dod_lines = _parse_dod_lines(task_dir)
-
-    # Build lookup structures from this issue
-    ev_registry = {
-        e.get("id"): e
-        for e in (task.get("evidence") or [])
-        if isinstance(e, dict) and e.get("id")
-    }
-    backfills = {
-        b.get("id"): b
-        for b in (task.get("follow_ups") or [])
-        if isinstance(b, dict) and b.get("id")
-    }
-
-    problems = []
-    item_count = 0
-
-    for raw in dod_lines:
-        m = _DOD_ITEM_RE.match(raw)
-        if not m:
-            continue  # not a checklist item - skip (comments, blank lines, etc.)
-        item_count += 1
-        checked, rest = m.group(1), m.group(2)
-
-        if checked.lower() == "x":
-            # Human-ticked - passes unconditionally
-            continue
-
-        # Unchecked - must have an inline tag
-        tag_problems = dod_tag_problems(rest, ev_registry, backfills)
-        if tag_problems is None:
-            # Bare unchecked - fails `G4` (evidence, not assertion)
-            desc = rest.strip() or raw.strip()
-            problems.append(
-                f"bare unchecked exit-list item (no evidence or follow-up tag): "
-                f"'{desc}' - add (evidence: EV-<id>) or (follow-up: BF-<id>) "
-                f"inline tag, or tick the box if done. Evidence, not "
-                f"assertion."
-            )
-            continue
-        problems.extend(tag_problems)
-
-    # Cross-issue check: scan sibling issues for follow-ups that
-    # target this issue and are still outstanding. Use the directory name as the slug
-    # (authoritative) in preference to task.get("task") which may be a
-    # template placeholder; the directory name is always the true slug.
+    report = artifact_path(task_dir, "verification-report.md")
+    if not os.path.isfile(report):
+        return NOTHING_TO_CHECK, ("no verification report is written yet, so there is no "
+                                  "Definition of Done to evidence (looked for %s)"
+                                  % artifact_location(task_dir, "verification-report.md"))
+    from compass_pkg import effective, item_records
+    try:
+        view = effective.view_or_legacy(task_dir)
+    except Exception as exc:                            # noqa: BLE001
+        return False, "cannot read the issue's configuration to find its Definition of Done: %s" % exc
+    if view is None:
+        return NOTHING_TO_CHECK, ("this issue has no stored configuration, so its Definition "
+                                  "of Done is not known; run `compass approach evaluate --write`")
+    rows = item_records.items(task, task_dir, view, "dod")
+    problems = ["%s is open - %s" % (row.check, item_records.open_hint(row.check))
+                for row in rows if row.state == item_records.OPEN]
+    # The directory name is the true slug; `task` may hold a template placeholder.
     this_slug = os.path.basename(task_dir) or task.get("task") or ""
-    sibling_problems = _check_inbound_backfills(task_dir, this_slug)
-    problems.extend(sibling_problems)
-
+    problems.extend(_check_inbound_backfills(task_dir, this_slug))
     if problems:
         return False, "; ".join(problems)
-
-    # "Nothing to evidence" and "everything is typed" print the same green
-    # line. A check that never found the report says the first. So print
-    # the report's path; `artifact_location` says where it looked when
-    # there is nothing there.
-    where = artifact_location(task_dir, "verification-report.md")
-    if item_count == 0:
-        return True, ("the exit list sections are empty or absent - nothing to evidence "
-                      "(read %s)" % where)
-    return True, ("all %d exit-list item(s) are typed or human-ticked (read %s)"
-                  % (item_count, where))
-
+    if not rows:
+        return True, "the issue's Definition of Done lists no item - nothing to evidence"
+    return True, ("all %d Definition of Done item(s) are met by a record in the manifest"
+                  % len(rows))
 
 
 def _check_inbound_backfills(task_dir, this_slug):

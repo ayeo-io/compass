@@ -17,19 +17,14 @@ counts only due rows.
 
 How a check is judged:
 
-- `human`: a tick, a checked box in a checklist document of the issue. The
-  document is the requirements review for an entry list and the verification
-  report for an exit list. The box is the one whose text equals the check's
-  statement, under the heading of its list (`list_heading`): `Definition of
-  Ready` for the plan entry list, `Definition of Done` for the `verify` exit
-  list and `<Stage> <side> list` for any other.
-  An unchecked box that carries a typed tag (`(evidence: ...)` or
-  `(follow-up: ...)`) that resolves counts as deferred and passes. The tag is
-  resolved by `checks.dod_tag_problems`, the code `dod-evidence-typed` uses.
-  A check that lists `approvers:` also needs a current approval by one of
-  them, which `compass_pkg.approval_records` judges.
-  A missing document is not a failure when the routed approach lists no such
-  document among its artifacts: the row is nothing-to-check.
+- `human`: a record in the manifest, read by `item_records`: evidence that meets
+  the check (`--meets`), a person's approval (`compass evidence approve
+  --check`), or a follow-up that defers it (`--defers`). A tick on a page counts
+  for nothing; the page is never read. A check that lists `approvers:` needs a
+  current approval by one of them, which `compass_pkg.approval_records` judges,
+  and a deferral does not excuse it. A check whose document the routed approach
+  owes no copy of is nothing-to-check, and so is one whose document is recorded
+  as deliberately omitted (skipped).
 - `deterministic`: the registered implementation runs.
 - `judged`: a review record. `review_records.judge` reads the newest record
   of a listed reviewer and passes it only while the record says pass and
@@ -47,22 +42,20 @@ not run.
 An advisory check, by `severity` or by a `blocking_when` that does not match
 the assessment, reports a failure as a pass that says so.
 """
-# DEPENDENCY: standard library (dataclasses, os, re); compass_pkg.check_registry,
-# compass_pkg.check_results, compass_pkg.core, compass_pkg.doc_sections,
+# DEPENDENCY: standard library (dataclasses, os); compass_pkg.check_registry,
+# compass_pkg.check_results, compass_pkg.core, compass_pkg.item_records,
 # compass_pkg.next_cmd, compass_pkg.review_records.
 # It reads configuration through an EffectiveView and does not import
 # compass_pkg.obligations, which only classify, effective and replay may import.
 from __future__ import annotations
 
 import os
-import re
 from dataclasses import dataclass
 
-from compass_pkg import review_records
+from compass_pkg import item_records, review_records
 from compass_pkg.check_registry import CHECK_FNS
 from compass_pkg.check_results import NOTHING_TO_CHECK
 from compass_pkg.core import FOUND, OMITTED, resolve_artifact, unregistered_document
-from compass_pkg.doc_sections import comment_mask, list_heading, normal, section, visible
 
 CAPABILITY = "entry-exit-evaluation"
 SIDES = ("entry", "exit")
@@ -76,8 +69,6 @@ CHECKLIST_DOCUMENTS = {"entry": "requirements-review", "exit": "verification-rep
 #: What a skipped check returns, by its `on_skipped`.
 SKIPPED_STATUS = {"pass": "pass", "not-applicable": "nothing-to-check", "fail": "fail"}
 
-_ITEM = re.compile(r"^\s*-\s+\[([ xX])\]\s*(.*)")
-_TAG_ANYWHERE = re.compile(r"\((?:evidence|follow-up):[^)]*\)")
 
 
 @dataclass(frozen=True)
@@ -103,31 +94,6 @@ def label(stage, side):
     return f"stage:{stage}:{side}"
 
 
-def _items(path, heading):
-    """`[(ticked, normalised text, text)]` for the checkbox items under
-    `heading` of the document at `path`, or None when the document has no such
-    heading. A continuation line is an indented line after an item. The section
-    is read by `doc_sections`, as the renderer and the tag rule read it."""
-    with open(path, encoding="utf-8") as fh:
-        lines = fh.read().split("\n")
-    mask = comment_mask(lines)
-    body = section(lines, mask, heading)
-    if body is None:
-        return None
-    shown = visible(lines)
-    items = []
-    for index in range(*body):
-        line = shown[index]
-        if mask[index]:
-            continue
-        found = _ITEM.match(line)
-        if found:
-            items.append([found.group(1).lower() == "x", found.group(2)])
-        elif items and line.startswith(" ") and line.strip():
-            items[-1][1] += " " + line.strip()
-    return [(t, normal(s), s) for t, s in items]
-
-
 def _document(task_dir, kind):
     """`(state, path, name)`: `found` with the path, `omitted`, or `absent`."""
     state, path, _ = resolve_artifact(task_dir, kind)
@@ -140,73 +106,47 @@ def _document(task_dir, kind):
 
 
 class _Documents:
-    """The checklists of one evaluation, read once each."""
+    """Where the checklist documents of one evaluation stand, read once each."""
 
     def __init__(self, task_dir):
         self.task_dir = task_dir
         self._cache = {}
 
-    def get(self, stage, side):
-        if (stage, side) not in self._cache:
-            kind = CHECKLIST_DOCUMENTS[side]
-            heading = list_heading(stage, side)
-            state, path = _document(self.task_dir, kind)
-            items = _items(path, heading) if state == "found" else None
-            self._cache[(stage, side)] = (state, path, kind + ".md", heading, items)
-        return self._cache[(stage, side)]
+    def state(self, side):
+        """`found`, `omitted` or `absent` for the document of a side's lists."""
+        if side not in self._cache:
+            self._cache[side] = _document(self.task_dir, CHECKLIST_DOCUMENTS[side])[0]
+        return self._cache[side]
 
 
 def _tick(check_id, check, stage, side, documents, task, owes):
     """`(status, detail)` of a human check, or None when its document is
     recorded as omitted (the check is skipped). `owes` is `(approach, kinds)`,
     the document kinds the routed approach lists among its artifacts, or None
-    when the approach is not known."""
-    state, path, name, heading, items = documents.get(stage, side)
+    when the approach is not known. The records of the manifest decide; the
+    document is not read."""
+    state = documents.state(side)
     if state == "omitted":
         return None
     kind = CHECKLIST_DOCUMENTS[side]
-    if state == "absent":
-        if owes is not None and kind not in owes[1]:
-            return "nothing-to-check", f"{owes[0]} owes no {kind}"
-        return "fail", f"{name} not found; its '{heading}' section holds the tick"
-    wanted = normal(check.get("statement") or "")
-    matches = [(ticked, raw) for ticked, text, raw in (items or []) if text == wanted]
-    if not matches:
-        return "fail", (f"no checklist item with this statement under '{heading}' "
-                        f"in {name}")
-    if any(ticked for ticked, _ in matches):
-        if check.get("approvers"):
-            from compass_pkg import approval_records
-            return approval_records.judge(check_id, check, task, documents.task_dir)
-        return "pass", f"ticked in {name}"
-    from compass_pkg.checks import dod_tag_problems
-    registry = {e.get("id"): e for e in (task.get("evidence") or [])
-                if isinstance(e, dict) and e.get("id")}
-    follow_ups = {f.get("id"): f for f in (task.get("follow_ups") or [])
-                  if isinstance(f, dict) and f.get("id")}
-    problems = []
-    for _, raw in matches:
-        found = dod_tag_problems(raw, registry, follow_ups)
-        if found is None:
-            continue
-        if not found:
-            shown = _TAG_ANYWHERE.search(raw)
-            tag = shown.group(0) if shown else "a typed tag"
-            if check.get("approvers"):
-                # A deferral is not an approval, so it cannot excuse a check
-                # that names who may approve.
-                from compass_pkg import approval_records
-                status, detail = approval_records.judge(check_id, check, task,
-                                                        documents.task_dir)
-                if status == "fail":
-                    return status, (f"{detail} (deferred with {tag}; a deferral does "
-                                    f"not excuse approvers)")
-                return status, f"{detail}; deferred with {tag}"
-            return "pass", f"deferred with {tag}"
-        problems += found
-    if problems:
-        return "fail", "; ".join(problems)
-    return "fail", f"not ticked in {name} under '{heading}'"
+    if state == "absent" and owes is not None and kind not in owes[1]:
+        return "nothing-to-check", f"{owes[0]} owes no {kind}"
+    if check.get("approvers"):
+        # A deferral or evidence is not an approval, so neither excuses a check
+        # that names who may approve.
+        from compass_pkg import approval_records
+        return approval_records.judge(check_id, check, task, documents.task_dir)
+    recorded, ids = item_records.state_of(task, check_id, item_records.accepted_types())
+    if recorded == item_records.OPEN:
+        return "fail", f"not recorded: {item_records.open_hint(check_id)}"
+    shown = ", ".join(ids)
+    return "pass", {
+        item_records.MET_EVIDENCE: f"met by {shown}",
+        item_records.TICKED: f"ticked by {shown}",
+        item_records.CARRIED: f"carried to ship, {shown}",
+        item_records.MET_CARRIED: f"met, {shown} resolved",
+        item_records.PAGE_TICK: f"ticked on the page before 7.0.0 ({shown})",
+    }[recorded]
 
 
 def _implementation(check, task, task_dir):

@@ -21,6 +21,8 @@ with the reason no block or label shows what they save. A test walks the call
 graph of the CLI from every command to `save_manifest` and fails, naming the
 command, when one is in none of the three tables (DCJ-75).
 """
+# DEPENDENCY: standard library only (annotations). It imports no other module, so the
+# render step and the label step can both read it.
 from __future__ import annotations
 
 #: Commands after which the issue's labels are brought up to date.

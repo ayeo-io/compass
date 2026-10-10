@@ -77,7 +77,7 @@ def test_asw_4_ship_commit_approves_ship_stage_document(tmp_path):
 # --- ASW-16 --------------------------------------------------------------------
 
 def test_asw_16_ship_commit_refuses_draft_design(tmp_path):
-    root = project(tmp_path)
+    root = project(tmp_path, compass_yml={"schema": 1, "owner": "jed72"})
     _approved(root)
     (root / DOCS / "technical-design.md").write_text("# technical-design\n\nRewritten.\n")
     assert register(root, "technical-design")[0] == 0

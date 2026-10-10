@@ -225,6 +225,25 @@ def _(root):
     return _issue(root, {"follow_ups": [{"id": "FU-1", "status": "resolved"}]})
 
 
+def _approved_issue(root, status):
+    return _issue(root, {
+        "delivery_approach": "regular",
+        "gates": [{"id": "verify.correctness", "status": "pass", "evidence": ["EV-1"]}],
+        "artifacts": [{"id": "ART-TECHNICAL_DESIGN", "kind": "technical-design",
+                       "status": status, "path": "docs/technical-design.md",
+                       "reason": "every regular approach carries one"}]})
+
+
+@case("artifacts-approved", "broken")
+def _(root):
+    return _approved_issue(root, "draft")
+
+
+@case("artifacts-approved", "restored")
+def _(root):
+    return _approved_issue(root, "approved")
+
+
 @case("spike-conclusion-present", "broken")
 def _(root):
     return _issue(root, {})

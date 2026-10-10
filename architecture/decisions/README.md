@@ -85,6 +85,7 @@ Rules:
 | [ADR-043](ADR-043-a-project-has-one-configuration-file.md) | A project has one configuration file, compass.yml | accepted | with ADR-042 |
 | [ADR-044](ADR-044-vocabulary-and-cli-naming.md) | Vocabulary and CLI naming: one meaning per word, noun-verb verbs, aliases only for released verbs until 7.0.0 | accepted | amends ADR-012 and ADR-024; with ADR-006 and ADR-014 |
 | [ADR-045](ADR-045-the-issue-lifecycle-is-derived-from-records.md) | The issue lifecycle is derived from records: stored `backlog` or `done`, the rest derived, manifest schema 3.0 | accepted | with ADR-005 and ADR-044 |
+| [ADR-049](ADR-049-bulk-manifest-reads-use-a-parse-cache-keyed-on-content.md) | Manifests read in bulk use a parse cache keyed on content, used by `compass flow` only | accepted | within ADR-013; with ADR-003 and ADR-005 |
 
 ## Principle → ADR mapping
 

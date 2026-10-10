@@ -140,6 +140,18 @@ def test_trc_a1_board_data_carries_the_why_for_each_open_issue(tmp_path):
     assert row["lane"] == "verify"
 
 
+def test_trc_a4_a_board_built_from_read_checkout_keeps_the_parse_cache(tmp_path):
+    # `board(parsed=...)` reads no manifest itself. Its run must not delete the
+    # entries `read_checkout` just stored, or every later board parses again.
+    root = _project(tmp_path)
+    for slug in ("one", "two", "three"):
+        _write(root, slug, **_assessed())
+    work = str(root / ".compass" / "work")
+    _board(root, parsed=flow.read_checkout(work))
+    folder = root / ".compass" / "cache" / "parsed_yaml"
+    assert len([p for p in folder.iterdir() if p.suffix == ".json"]) == 3
+
+
 def test_swarm_and_the_other_retired_words_read_in_the_6_0_words(tmp_path):
     root = _project(tmp_path)
     _write(root, "archived", delivery_approach="full",

@@ -37,7 +37,8 @@ import os
 from compass_pkg import status_words
 from compass_pkg.check_results import NOTHING_TO_CHECK
 from compass_pkg.core import FRAMEWORK_ROOT, CompassError, load_yaml, reading_matches
-from compass_pkg.stable_ids import APPROACH_QUICK_FIX, APPROACH_SPIKE, STAGE_SHIP
+from compass_pkg.stable_ids import (APPROACH_QUICK_FIX, APPROACH_SPIKE, STAGE_BREAKDOWN,  # noqa: F401
+                                    STAGE_IMPLEMENT, STAGE_SHIP, STAGE_VERIFY)
 
 DRAFT, AWAITING, APPROVED = "draft", "awaiting-approval", "approved"
 SUPERSEDED, OMITTED = "superseded", "omitted"
@@ -52,8 +53,6 @@ BY_SHIP_COMMIT = "compass ship-commit"
 BY_QUICK_FIX = "compass quick-fix finish"
 BY_MIGRATE = "compass issue migrate"
 
-#: The stages that write a record, by the command that writes it.
-STAGE_BREAKDOWN, STAGE_IMPLEMENT, STAGE_VERIFY = "breakdown", "implement", "verify"
 
 CHECK_ID = "artifacts-approved"
 
@@ -290,6 +289,8 @@ def _check_artifacts_approved(task, task_dir):
         return NOTHING_TO_CHECK, "this approach ships nothing, so no document is owed"
     gates = [g for g in (task.get("gates") or []) if isinstance(g, dict)]
     unmet = [g.get("id", "?") for g in gates if g.get("status") != "pass"]
+    if not gates:
+        return NOTHING_TO_CHECK, "the issue has no gates yet, so there is no land to judge"
     if unmet:
         return NOTHING_TO_CHECK, (f"{len(unmet)} gate(s) have not passed, so the documents are "
                                   f"judged when the last one does")

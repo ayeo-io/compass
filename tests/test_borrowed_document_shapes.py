@@ -185,7 +185,9 @@ def test_trc_b2():
     expected = {"test-run", "command-output", "manual-review", "human-approval",
                 "security-review", "migration-plan", "rollback-plan",
                 "claim-review", "spike-conclusion", "consistency-check",
-                "artifact"}
+                "artifact",
+                # 7.0.0 adds a person's approval of a document or a decision set (ADR-050).
+                "artifact-approval"}
     assert set(types) == expected, (
         "the evidence type list changed. This issue amends one description and "
         "adds nothing:\n  added: %s\n  removed: %s"

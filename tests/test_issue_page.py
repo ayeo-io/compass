@@ -138,7 +138,7 @@ def test_dcj_42_header_current_state_words(tmp_path):
 def test_dcj_43_acceptance_and_traceability_blocks(tmp_path):
     root = sup.rich_issue(tmp_path)
     sup.add_records(root, **{"acceptance-TRC-2": "TRC-2"})
-    # TRC-1 has a green record, TRC-2 an acceptance record, TRC-3 a red record only.
+    # The first scenario has a green record, the second an acceptance record, the third a red one.
     (ps.work_of(root, SLUG) / "evidence" / "red-TRC-2.json").unlink()
     sup.add_records(root, **{"red-TRC-3": "TRC-3"})
     _render(root)

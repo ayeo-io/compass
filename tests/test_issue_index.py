@@ -1,4 +1,4 @@
-"""The project index, `docs/compass/README.md` (issue `documents-carry-judgement`,
+"""The project index, the README.md directly in `docs/compass` (issue `documents-carry-judgement`,
 group G: DCJ-54 to DCJ-57).
 
 Each test builds a temporary git repository (`pages_support`). Only the test of

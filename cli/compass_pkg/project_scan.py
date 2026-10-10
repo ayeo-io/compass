@@ -290,22 +290,22 @@ class ProjectScan:
             rows.sort()
         self.reverse = reverse
 
-    def with_task(self, slug, task):
-        """A scan in which `slug` has the manifest `task`: the issue's own manifest,
-        read without the cache, or the manifest as a landing will leave it."""
+    def with_task(self, slug, manifest):
+        """A scan in which `slug` has `manifest`: the issue's own manifest, read without
+        the cache, or the manifest as a landing will leave it."""
         other = ProjectScan(self.project)
         other.__dict__.update(self.__dict__)
         other.manifests = dict(self.manifests)
-        other.manifests[slug] = task
+        other.manifests[slug] = manifest
         other.unreadable = {k: v for k, v in self.unreadable.items() if k != slug}
         other._detail = {k: v for k, v in self._detail.items() if k != slug}
         other._state = {k: v for k, v in self._state.items() if k != slug}
         other._link()
         return other
 
-    def same_links(self, slug, task):
-        """True when `task` links where the scan's copy of the issue does."""
-        return forward_links(task) == forward_links(self.manifests.get(slug))
+    def same_links(self, slug, manifest):
+        """True when `manifest` links where the scan's copy of the issue does."""
+        return forward_links(manifest) == forward_links(self.manifests.get(slug))
 
     # -- asking ----------------------------------------------------------
 

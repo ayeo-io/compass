@@ -19,7 +19,7 @@ The rendered blocks of ADR-051 need the same speed. A block that draws on other 
 the governance lines of `decisions`, the issue's row of the project index) needs every manifest,
 and `compass issue render --all` needs them for 490 issues inside five seconds (DCJ-61). The
 ADR-049 argument stops holding for a committed document and for a check that can block, because
-the cache keys an entry on the source digest and does not verify the payload against it. A corrupted
+the cache keys an entry on the source digest and does not check the payload against it. A corrupted
 or planted entry with the right key is used.
 
 ## Decision
@@ -54,7 +54,7 @@ ADR-049 stays as written. This record names the readers its section 5 left to a 
 
 | Alternative | Why considered | Why rejected |
 |---|---|---|
-| Verify the payload digest on every read | Detects a planted entry | A digest stored beside the payload is planted with it, and a second parse defeats the cache |
+| Check the payload digest on every read | Detects a planted entry | A digest stored beside the payload is planted with it, and a second parse defeats the cache |
 | Read every manifest uncached in the render | No new reader | About 2.3 s for 484 manifests before the render does any work; DCJ-61 has five seconds for all of it |
 | Let the check read the cache too | One read path | A planted entry could clear or fail a blocking check, which ADR-003 forbids for a signal from another issue |
 | Add the cache to `core.load_yaml` | Every command faster | Every save and the locked re-read of `generation.py` would depend on it (ADR-049 rejected this) |

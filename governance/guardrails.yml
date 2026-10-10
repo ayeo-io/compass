@@ -32,7 +32,7 @@
 # schemas/guardrails.schema.json.
 # =============================================================================
 
-version: 1.26.0
+version: 1.27.0
 # -----------------------------------------------------------------------------
 # Named checks - the mechanical checks `compass check` knows how to run. Each
 # guardrail below references one or more of these by name. The check reads
@@ -83,6 +83,8 @@ checks:
     description: "An approval record exists for an irreversible change."
   backfills-paid:
     description: "The issue manifest's follow-ups list is empty or every item is resolved."
+  artifacts-approved:
+    description: "Every document the issue registered is accepted when it ships: no artifact reads draft or awaiting-approval, and an omitted artifact records a reason. Judges the state `compass ship-commit` would leave, so a document owned by the ship stage does not fail. Declines to check, rather than passing, until every gate has passed, and for an issue that has closed or does not ship."
   spike-conclusion-present:
     description: "A spike has a `spike-conclusion` evidence entry with a recorded decision (discard | graduate-to-delivery | defer); graduate-to-delivery links the next issue."
   spike-no-production-changes:
@@ -185,6 +187,8 @@ evidence_types:
     description: "A recorded reviewer judgement - a code review or governance review captured in a file. Stronger than a generic artifact because it is a named review, not a stray note."
   human-approval:
     description: "A recorded human sign-off - for irreversible changes (guardrail `G5`). Has structured fields: approver, role, decision, timestamp, scope, conditions."
+  artifact-approval:
+    description: "A person's approval of one document or of a set of decisions taken for the person. Meets an artifact's human check; never a sign-off for guardrail `G5`."
   security-review:
     description: "A recorded security review or scan result - for security-sensitive changes."
   migration-plan:

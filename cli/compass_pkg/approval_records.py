@@ -2,11 +2,14 @@
 """Say whether a `human` check that lists `approvers:` has a current approval.
 
 A tick does not clear such a check, and neither does a deferral tag. The check
-also needs a `human-approval` entry in the issue's evidence registry that:
+also needs a `human-approval` entry in the issue's evidence registry (or an
+`artifact-approval` entry, which `compass evidence approve --artifact` writes
+and which needs no `scope`) that:
 
 - names the check (`check: <id>`) and holds a decision, `approved` or
   `rejected`,
-- holds `approver`, `role`, `scope` and `timestamp`,
+- holds `approver`, `role`, `scope` and `timestamp` (not `scope` for an
+  `artifact-approval` entry),
 - is by a listed approver,
 - is written for this issue (`issue: <slug>`), and
 - is written for the issue's current generation (`generation: <n>`, absent
@@ -28,6 +31,16 @@ import os
 #: The fields every `human-approval` record holds (the same four
 #: `human-approval-present` and a waiver's approval need).
 REQUIRED = ("approver", "role", "scope", "timestamp")
+
+#: The evidence type `compass evidence approve --artifact` and `--decisions`
+#: write. It meets an artifact's human check here and is read nowhere else:
+#: `human-approval-present`, the check of guardrail `G5`, reads only
+#: `human-approval`, and a waiver's approval needs that type too.
+ARTIFACT_APPROVAL = "artifact-approval"
+
+#: What an `artifact-approval` record holds. It needs no `scope`: the document
+#: is the scope.
+ARTIFACT_REQUIRED = ("approver", "role", "timestamp")
 
 #: The decisions a record can hold; `rejected` withdraws an earlier approval.
 APPROVED, REJECTED = "approved", "rejected"
@@ -81,10 +94,11 @@ def shown(value):
 
 
 def _claims(task, check_id):
-    """The `human-approval` entries of the registry that name the check and
-    hold a decision, oldest first. An entry that is not a map is skipped."""
+    """The `human-approval` and `artifact-approval` entries of the registry that
+    name the check and hold a decision, oldest first. An entry that is not a map
+    is skipped."""
     return [e for e in task.get("evidence") or []
-            if isinstance(e, dict) and e.get("type") == "human-approval"
+            if isinstance(e, dict) and e.get("type") in ("human-approval", ARTIFACT_APPROVAL)
             and e.get("check") == check_id and e.get("decision") in DECISIONS]
 
 
@@ -110,7 +124,8 @@ def judge(check_id, check, task, task_dir):
     first = None
     for entry in reversed(claims):
         name = entry.get("id")
-        missing = [k for k in REQUIRED if not entry.get(k)]
+        needed = ARTIFACT_REQUIRED if entry.get("type") == ARTIFACT_APPROVAL else REQUIRED
+        missing = [k for k in needed if not entry.get(k)]
         if missing:
             first = first or (f"{NO_RECORD}: {name} is missing {', '.join(missing)}; "
                               f"{who}")

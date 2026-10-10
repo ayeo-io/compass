@@ -1,10 +1,12 @@
 # compass_pkg.freshness - which documents of an issue are stale, behind a capability
 """Record the digest of a document when it is written, and say when it is stale.
 
-With the capability `artifact-freshness` on, `compass issue artifact set` stamps
-the registry entry of a document with `digest` (its own file) and `upstream`
-(the digest of each artifact it `depends_on`, as the artifact catalogue
-declares). Nothing else writes either field.
+`compass issue artifact set` always stamps the registry entry of a document
+with `digest` (its own file) and `upstream` (the digest of each artifact it
+`depends_on`, as the artifact catalogue declares). Nothing else writes either
+field. Recording is not a capability: the digest is what tells a rewrite of an
+approved document from a repeat registration (ADR-050). Only the refusals below
+stay behind the capability `artifact-freshness`.
 
 Staleness is computed, never stored. A document is stale when:
 
@@ -28,7 +30,7 @@ Where staleness blocks:
   `compass next` names the document.
 
 With the capability off, or for an issue read without a configuration, every
-function here returns nothing and no reader changes. The digest is the one
+function but `stamp` returns nothing and no reader changes. The digest is the one
 `review_records` uses for the inputs of a judged check.
 """
 # DEPENDENCY: standard library (dataclasses); compass_pkg.review_records and
@@ -59,8 +61,11 @@ def enabled(view):
 
 
 def graph(view):
-    """`{artifact id: [ids it depends on]}` from the artifact catalogue."""
+    """`{artifact id: [ids it depends on]}` from the artifact catalogue, or
+    nothing for an issue read without a configuration."""
     found = {}
+    if view is None:
+        return found
     for artifact_id, body in ((view.config.get("artifacts") or {}).items()):
         if isinstance(body, dict) and isinstance(body.get("depends_on") or [], list):
             found[artifact_id] = [str(one) for one in (body.get("depends_on") or [])]
@@ -92,15 +97,14 @@ def unreadable(view, task, task_dir, kind):
 
 
 def stamp(view, task, task_dir, entry):
-    """Record the digests on a registry entry, as the document is written.
-    Returns True when the entry changed.
+    """Record the digests on a registry entry, as the document is written,
+    whatever the capability. Returns True when the entry changed. With no
+    configuration view it records the document's own digest and no upstream.
 
     An entry whose file has the bytes the record holds, and that already
     holds an `upstream` record, is left alone: registering a document again
     without changing it must not refresh its upstream, or any registration
     would clear staleness."""
-    if not enabled(view):
-        return False
     kind = entry.get("kind")
     own = _digest(task, task_dir, kind)
     # A document whose own file cannot be read would be stamped with

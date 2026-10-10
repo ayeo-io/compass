@@ -124,7 +124,15 @@ def archive_runs():
 
 @pytest.mark.parametrize("kind", BC)
 def test_contract_3_gives_the_recorded_verdicts_under(kind, archive_runs):
-    differences = cb.archive_differences(_recorded()["issues"], archive_runs[kind])
+    recorded = _recorded()["issues"]
+    if kind == "C":
+        # A copied 5.6.0 governance folder cannot declare the 7.0.0 check
+        # `artifacts-approved` (ADR-050), so it records no row for it. Every
+        # other recorded verdict must still match.
+        recorded = {slug: dict(r, verdicts={k: v for k, v in r["verdicts"].items()
+                                            if k != "artifacts-approved"})
+                    for slug, r in recorded.items()}
+    differences = cb.archive_differences(recorded, archive_runs[kind])
     assert differences == [], "\n".join(differences)
 
 

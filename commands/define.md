@@ -138,6 +138,17 @@ waiting and name the setting, with "Next" in place of "On approval". Log
 the skipped checkpoint to `devlog.md`, so the person can review it later and
 send the issue back.
 
+If you resolved a requirement question
+yourself instead of asking, record it:
+`compass issue decision add <id> --question "<q>" --resolution "<r>" --by <your agent> --stage define`.
+Before you hand off, run `compass next`. When its first line reads
+`Waiting at the define checkpoint`, the issue holds decisions that no person has
+confirmed. Show the listed decisions in the hand-off and wait: the person
+confirms them all with `compass evidence approve --decisions` or reopens one with
+`compass issue decision set`. Do not name the next stage while it waits. On
+`autonomous` autonomy `compass next` lists the decisions and does not wait; show
+the list in the hand-off.
+
 ## Gate
 
 On delivery work:

@@ -75,6 +75,40 @@ def _refuse_stale_artifacts(task, task_dir):
         raise CompassError(text)
 
 
+def _refuse_unapproved_artifacts(task, task_dir):
+    """Refuse to land while a registered document is not approved: run the
+    blocking check `artifacts-approved` the way `compass check` runs it, and
+    raise on a failure. A waiver that made it advisory prints one line and the
+    land goes on. Nothing happens for an issue whose configuration does not
+    declare the check."""
+    from compass_pkg import artifact_status
+    from compass_pkg.check_cmd import ADVISORY_FAILURE, _judge
+
+    verdict = artifact_status.judged(task, task_dir, _judge)
+    if verdict is None:
+        return
+    passed, detail = verdict
+    if passed is ADVISORY_FAILURE:
+        print("compass ship-commit: %s did not pass and is advisory, so the land goes on - %s"
+              % (artifact_status.CHECK_ID, detail))
+    elif not passed:
+        raise CompassError(
+            "compass ship-commit: refusing to land - the check %s failed: %s"
+            % (artifact_status.CHECK_ID, detail))
+
+
+def _apply_ship_exit(task, task_dir):
+    """Approve the documents the ship stage owns, in the save that marks the
+    issue done."""
+    from compass_pkg import artifact_status, effective
+    try:
+        view = effective.view_or_legacy(task_dir)
+    except Exception:  # noqa: BLE001 - no configuration, no human checks
+        view = None
+    artifact_status.stage_exit(task, view, artifact_status.STAGE_SHIP,
+                               artifact_status.BY_SHIP_COMMIT, include_own=True, earlier=False)
+
+
 # Files Compass writes itself that live outside any issue's directory. They
 # belong in the commit that ships the issue they describe, but no author
 # declares them as `changed_files` - the framework wrote them.
@@ -331,6 +365,7 @@ def cmd_land_commit(args):
         _refuse_stale_green(head_task, head_task_dir, head_slug, cwd,
                             at_commit="HEAD", judge_landed=True)
         _refuse_stale_artifacts(head_task, head_task_dir)
+        _refuse_unapproved_artifacts(head_task, head_task_dir)
 
         # What HEAD itself added must be the issue's: a commit a git hook
         # widened, refused once, must not land when shipped again. Compared
@@ -358,6 +393,7 @@ def cmd_land_commit(args):
                     "again.")
 
         head_id = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
+        _apply_ship_exit(head_task, head_task_dir)
         status_words.close(head_task, status_words.COMPLETED)
         head_task["land_timestamp"] = now_iso()
         head_task["land_commit"] = head_id
@@ -406,6 +442,7 @@ def cmd_land_commit(args):
         _refuse_stale_green(_scope_task, _scope_dir, slug, cwd,
                             at_commit=tree.stdout.strip())
         _refuse_stale_artifacts(_scope_task, _scope_dir)
+        _refuse_unapproved_artifacts(_scope_task, _scope_dir)
         # A pre-commit step can stage files too: check the scope again on
         # what is staged now.
         now = [n for n in _git(["diff", "--cached", "--name-only", "-z"],
@@ -595,6 +632,7 @@ def cmd_land_commit(args):
                             "finish`.")
                         return 2
                     else:
+                        _apply_ship_exit(task, task_dir)
                         status_words.close(task, status_words.COMPLETED)
                         task["land_timestamp"] = now_iso()
                         # The commit this issue landed in. A green is checked
@@ -715,10 +753,37 @@ def cmd_gate_pass(args):
     gate["status"] = "pass"
     gate["evidence"] = list(ev_ids)
     save_manifest(task, task_path)
+    # A pass of a `verify` gate is a record of the `verify` stage: it moves the
+    # documents of earlier stages and the `verify` stage's own (ADR-050).
+    from compass_pkg import artifact_status
+    moved = (artifact_status.record_stage(
+        task_dir, artifact_status.STAGE_VERIFY, artifact_status.BY_GATE_PASS,
+        include_own=True) if _gate_stage(task_dir, args.gate_id) == artifact_status.STAGE_VERIFY
+        else [])
     return say(args, f"compass gate pass: {args.gate_id} -> pass "
                     f"(evidence: {', '.join(ev_ids)}).",
-               detail=_stale_page(task_dir),
-               gate=args.gate_id, status="pass", evidence=list(ev_ids))
+               detail=(_stale_page(task_dir) or []) + artifact_status.moved_line(moved) or None,
+               gate=args.gate_id, status="pass", evidence=list(ev_ids), moved=moved)
+
+
+def _gate_stage(task_dir, gate_id):
+    """The stage the catalogue gives a gate, or None when it names none."""
+    from compass_pkg import effective
+    try:
+        view = effective.view_or_legacy(task_dir)
+    except Exception:                                   # noqa: BLE001
+        view = None
+    gates = (view.config.get("gates") if view is not None else None)
+    if not isinstance(gates, dict):
+        from compass_pkg.core import FRAMEWORK_ROOT
+        try:
+            doc = load_yaml(os.path.join(FRAMEWORK_ROOT, "governance", "presets", "default",
+                                         "gates.yml"))
+        except CompassError:
+            return None
+        gates = doc.get("gates") if isinstance(doc, dict) else None
+    gate = (gates or {}).get(gate_id)
+    return gate.get("stage") if isinstance(gate, dict) else None
 
 
 # A file path with a directory and an extension, the shape the writing-style check treats

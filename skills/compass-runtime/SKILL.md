@@ -141,6 +141,13 @@ An issue's documents are in `docs/compass/<created>-<issue-slug>/`, where
 `<created>` is the manifest's `created:` date. `compass issue artifact-path
 <kind>` prints where one document is.
 
+The manifest's `artifacts:` registry holds each document's status. The stage
+commands move it: a command that writes the record of a stage approves the
+`draft` documents of earlier stages (`approved_by` names the command), or sets
+`awaiting-approval` for a document with a human check, which a person approves
+with `compass evidence approve --artifact <kind>`. `compass ship-commit`
+refuses a document that is not approved.
+
 A new project has no `governance/` directory: the shipped default preset is in
 force, and `compass.yml` holds only what differs from it. An unmigrated 5.x
 project runs on its own copied `governance/` until `compass policy migrate`

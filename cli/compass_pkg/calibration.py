@@ -610,6 +610,9 @@ def cmd_calibration(args):
 
     compass_dir = find_compass_dir()
     work = os.path.join(compass_dir, "work")
+    if getattr(args, "decisions", False):
+        from compass_pkg.decisions_taken import cmd_retro_decisions
+        return cmd_retro_decisions(args, work)
     weights = _route_weights()
 
     tasks, not_mappings = [], []

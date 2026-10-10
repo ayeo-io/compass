@@ -21,6 +21,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable, Optional
 
+from compass_pkg.artifact_status import _check_artifacts_approved
 from compass_pkg.binding import _check_evidence_matches_tree
 from compass_pkg.borrowed_docs import _check_borrowed_documents_answered
 from compass_pkg.checks import (
@@ -96,6 +97,7 @@ _ENTRIES = (
     _entry("dashboard-current", _check_dashboard_current),
     _entry("borrowed-documents-answered", _check_borrowed_documents_answered),
     _entry("multiagent-run-recorded", _check_multiagent_run_recorded),
+    _entry("artifacts-approved", _check_artifacts_approved),
 )
 
 REGISTRY: dict[str, CheckImpl] = {e.name: e for e in _ENTRIES}

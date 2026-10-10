@@ -23,7 +23,7 @@
 # shrink-only baseline.
 # =============================================================================
 
-version: 2.0.0-pre19
+version: 2.0.0-pre20
 
 terms:
 
@@ -355,6 +355,18 @@ terms:
       discharged) and resolved. An issue with an outstanding follow-up does
       not fully close; `compass follow-up resolve` discharges one.
     related: [hotfix, backlog]
+
+  decision-taken:
+    means: >
+      A requirement decision an agent took for the person: the question, the
+      resolution, which agent took it and at which stage. It is recorded in
+      the manifest's `decisions_taken`, shown to the person at the next
+      checkpoint on `balanced` and `controlled` autonomy, and confirmed as a
+      set by one `compass evidence approve --decisions`. Changing one
+      reopens it and the checkpoint keeps waiting. It is distinct from a
+      decision record in `governance/decisions/`, which a person makes about
+      the product.
+    related: [requirements-review, evidence]
 
   receipt:
     means: >

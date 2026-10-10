@@ -3730,19 +3730,19 @@ _GROWING_REACH = {
     # 13 with tests/fixtures/archive-sample.tar.gz, the packed archive sample;
     # 14 with the packed routing baseline in tests/fixtures/compat/;
     # 15 with the check-verdict baseline beside it, which is plain JSON;
-    # 59 with the 44 check-corpus case labels, which hold a verdict and one line;
-    # 60 with tests/fixtures/classifier-json-example.json, plain JSON;
-    # 61 with tests/fixtures/policy-diff-json-example.json, plain JSON;
-    # 62 with tests/fixtures/policy-migrate-example.json, plain JSON;
-    # 63 with tests/fixtures/policy-update-json-example.json, plain JSON;
-    # 64 with tests/fixtures/issue-configure-example.json, plain JSON;
-    # 65 with tests/fixtures/issue-configure-refused-example.json, plain JSON;
-    # 66 with tests/fixtures/scenario-tests-json-example.json, plain JSON;
-    # 67 with tests/fixtures/evidence-review-example.json, plain JSON;
-    # 68 with tests/fixtures/preset-interfaces/policy-test-groups.json, plain JSON;
-    # 69 with tests/fixtures/evidence-approve-example.json, plain JSON;
-    # 70 with tests/fixtures/compat/v5.6.0-governance.tgz, the packed 5.6.0 governance files.
-    "PBW-C4": (lambda path: path.startswith("tests/"), 70),
+    # 61 with the 46 check-corpus case labels, which hold a verdict and one line;
+    # 62 with tests/fixtures/classifier-json-example.json, plain JSON;
+    # 63 with tests/fixtures/policy-diff-json-example.json, plain JSON;
+    # 64 with tests/fixtures/policy-migrate-example.json, plain JSON;
+    # 65 with tests/fixtures/policy-update-json-example.json, plain JSON;
+    # 66 with tests/fixtures/issue-configure-example.json, plain JSON;
+    # 67 with tests/fixtures/issue-configure-refused-example.json, plain JSON;
+    # 68 with tests/fixtures/scenario-tests-json-example.json, plain JSON;
+    # 69 with tests/fixtures/evidence-review-example.json, plain JSON;
+    # 70 with tests/fixtures/preset-interfaces/policy-test-groups.json, plain JSON;
+    # 71 with tests/fixtures/evidence-approve-example.json, plain JSON;
+    # 72 with tests/fixtures/compat/v5.6.0-governance.tgz, the packed 5.6.0 governance files.
+    "PBW-C4": (lambda path: path.startswith("tests/"), 72),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

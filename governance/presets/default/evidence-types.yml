@@ -20,6 +20,8 @@ evidence_types:
       in a file. Stronger than a generic artifact because it is a named review, not a stray note.'}
   human-approval: {description: 'A recorded human sign-off - for irreversible changes (guardrail `G5`).
       Has structured fields: approver, role, decision, timestamp, scope, conditions.'}
+  artifact-approval: {description: A person's approval of one document or of a set of decisions taken
+      for the person. Meets an artifact's human check; never a sign-off for guardrail `G5`.}
   security-review: {description: A recorded security review or scan result - for security-sensitive changes.}
   migration-plan: {description: 'A recorded plan for a data, schema, or infrastructure migration.'}
   rollback-plan: {description: 'A record showing the rollback was REHEARSED - what was run, when, and

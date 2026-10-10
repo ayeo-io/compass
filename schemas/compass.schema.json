@@ -321,9 +321,17 @@
                 "file": {
                   "description": "The file name of the artifact in the issue's folder, for example `acceptance-criteria.md`.",
                   "type": "string"
+                },
+                "stage": {
+                  "description": "The id of the stage that owns the artifact, for example `plan` for the technical design. An artifact with no stage is owned by ship.",
+                  "type": "string"
                 }
               },
               "type": "object"
+            },
+            "stage": {
+              "description": "The id of the stage that owns the artifact, for example `plan` for the technical design. An artifact with no stage is owned by ship.",
+              "type": "string"
             },
             "unlock": {
               "const": true,

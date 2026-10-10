@@ -140,6 +140,7 @@ FIELDS = {
         "depends_on": _f("list", "list", "obligation-set"),
         "checks": _f("list", "list", "obligation-set"),
         "bookkeeping": _f("boolean", "scalar", "identity"),
+        "stage": _f("string", "scalar", "descriptive"),
     },
     "vocabulary": {
         "name": _f("string", "scalar", "descriptive", required=True),
@@ -448,6 +449,8 @@ FIELD_DESCRIPTIONS = {
         "bookkeeping": "Whether the artifact is a record the framework keeps about the work, "
                        "such as the dashboard, the receipt or the verification report. Such "
                        "an artifact is never an input to another.",
+        "stage": "The id of the stage that owns the artifact, for example `plan` for the "
+                 "technical design. An artifact with no stage is owned by ship.",
     },
     "vocabulary": {
         "name": "The display name of the entry, shown to people in place of its id.",

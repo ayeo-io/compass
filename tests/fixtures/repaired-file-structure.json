@@ -923,7 +923,7 @@
       2
     ],
     "list_items": 5,
-    "table_rows": 10
+    "table_rows": 4
   },
   "templates/distribution-map.md": {
     "fences": 0,
@@ -982,7 +982,7 @@
       2,
       3
     ],
-    "list_items": 24,
+    "list_items": 17,
     "table_rows": 0
   },
   "templates/ui-contract.md": {

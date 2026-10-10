@@ -18,6 +18,7 @@ test-run evidence from them that the verify stage's gates accept.
 
 # These tests assert the current names (technical-design.md, intent.md).
 # Older manifests and documents still load (ADR-006).
+import json
 import re
 import subprocess
 import sys
@@ -161,15 +162,16 @@ def test_trc_a5_spec_author_and_skill_name_summary():
 
 def test_trc_a6_dor_requires_filled_summary():
     """A filled Summary is a condition of leaving the requirements review -
-    enforced by the Definition of Ready checklist, not by the CLI."""
+    enforced by the Definition of Ready, not by the CLI. The Ready items live in the
+    shipped preset (the template holds an empty `dor` block that `compass issue render`
+    fills from them)."""
     body = _section(_read(CLARIFICATIONS_TEMPLATE), "Gate")
 
     assert "definition of ready" in body.lower(), "Definition of Ready section not found"
+    assert "<!-- compass:render dor -->" in body
 
-    # Checklist items wrap over several lines - take each item up to the next
-    # one (or the end of the section) so the whole item is matched, not line 1.
-    items = re.split(r"^\s*- \[ \] ", body, flags=re.M)[1:]
-    summary_items = [i for i in items if "summary" in i.lower()]
+    from test_ready_and_done_data import READY_IDS, statements
+    summary_items = [i for i in statements(READY_IDS) if "summary" in i.lower()]
     assert summary_items, "No Definition of Ready item requiring the spec's Summary"
 
     item = _flat(summary_items[0])
@@ -567,11 +569,22 @@ def test_trc_f1_pre_existing_specs_still_pass():
         if status in not_startable:
             continue
         result = subprocess.run(
-            [sys.executable, str(ROOT / "cli" / "compass"), "check", "--issue", slug],
+            [sys.executable, str(ROOT / "cli" / "compass"), "check", "--issue", slug,
+             "--json"],
             capture_output=True, text=True, timeout=120, cwd=str(archive_root()),
         )
         if result.returncode != 0:
-            failures.append(f"--- {slug} ---\n{result.stdout[-1200:]}")
+            # An archived issue has no issue page until `compass issue render --all` writes
+            # it, and its Definition of Done has no record until `compass issue migrate`
+            # carries the ticks of its page into the manifest. This test does not look at
+            # those two failures. Anything else fails.
+            try:
+                failed = {c["name"] for c in json.loads(result.stdout)["checks"]
+                          if c["status"] == "fail"}
+            except (ValueError, KeyError):
+                failed = {"unreadable"}
+            if failed - {"rendered-blocks-current", "dod-evidence-typed"}:
+                failures.append(f"--- {slug} ---\n{result.stdout[-1200:]}")
 
     assert not failures, (
         f"specs predating the Summary section ({len(without)} of them) must keep "

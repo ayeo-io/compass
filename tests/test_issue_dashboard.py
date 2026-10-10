@@ -313,30 +313,31 @@ def test_d2_stale_dashboard_fails_a_guardrail_check(tmp_path):
 
 
 def test_d3_currency_check_is_registered_under_a_guardrail():
-    """`TRC-D3`: the check is wired into `compass check`, not just importable.
+    """`TRC-D3`: the check that replaced the page check is wired into `compass check`.
 
-    A check function that no guardrail lists never runs. Compass grows by
-    adding checks under the five existing guardrails, never a sixth
-    guardrail (ADR-002), so this asserts both the registration and the
-    guardrail it joined.
+    `dashboard-current` was removed in 7.0.0; `rendered-blocks-current` replaces it under the
+    same guardrail (ADR-002 allows a check under an existing guardrail, not a sixth
+    guardrail). The removed id stays in the framework's removed-check table so a stored
+    generation that lists it reports nothing to check.
     """
     sys.path.insert(0, str(REPO_ROOT / "cli"))
     from compass_pkg.check_cmd import CHECK_FNS, CHECK_GUIDANCE
+    from compass_pkg.check_registry import REMOVED
 
-    assert "dashboard-current" in CHECK_FNS, (
-        "the currency check is not in CHECK_FNS, so naming it in guardrails.yml "
-        "would make `compass check` fail with an unknown-check error")
-    assert "dashboard-current" in CHECK_GUIDANCE, (
+    assert "dashboard-current" not in CHECK_FNS and "dashboard-current" in REMOVED
+    assert REMOVED["dashboard-current"].replaced_by == "rendered-blocks-current"
+    assert "rendered-blocks-current" in CHECK_FNS
+    assert "rendered-blocks-current" in CHECK_GUIDANCE, (
         "the check has no guidance entry, so its failure reads as bureaucracy "
         "rather than telling the reader why it matters and how to fix it")
 
     guardrails = yaml.safe_load(
         (REPO_ROOT / "governance" / "guardrails.yml").read_text())
     g4 = next(g for g in guardrails["defaults"] if g["id"] == "G4")
-    assert "dashboard-current" in g4["checks"], (
+    assert "rendered-blocks-current" in g4["checks"], (
         "the check is registered in code but no guardrail lists it, so it "
         "never runs:\n" + str(g4["checks"]))
-    assert "dashboard-current" in guardrails["checks"], (
+    assert "rendered-blocks-current" in guardrails["checks"], (
         "the check has no description in guardrails.yml's `checks:` catalogue")
 
 

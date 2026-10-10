@@ -992,6 +992,9 @@ def test_ob_7_the_sample_has_every_check_that_declines(preset_config):
     # checks never run on the sample, so they cannot stand down there.
     declining = {n for n, c in preset_config["checks"].items()
                  if c["on_skipped"] == "not-applicable" and has_implementation(c)}
+    # `dod-evidence-typed` 2.0.0 declines when no verification report is written; the sample
+    # was recorded before it did, so the recorded verdicts cannot show it standing down.
+    declining -= {"dod-evidence-typed"}
     assert declining <= stood_down, declining - stood_down
 
 
@@ -1055,7 +1058,7 @@ def _empty_issue_verdicts():
 # `fail`. That an empty issue passes them is a defect in the checks, not in the
 # preset, and is filed apart from this issue.
 PASS_WHEN_EMPTY = {"backfills-paid", "changed-code-traces-to-scenario",
-                "consistency-check-passes", "dod-evidence-typed",
+                "consistency-check-passes", "rendered-blocks-current",
                 "no-trusted-rerun", "spike-no-production-changes"}
 
 

@@ -1067,6 +1067,8 @@ _TAIL_ARGV = {
                          "--", "true"],
     "tdd-red": ["tdd-red", "--scenario", "TRC-1", "--", "sh", "-c", "echo '1 failed'; exit 1"],
     "tdd-green": ["tdd-green", "--scenario", "TRC-1", "--", "true"],
+    "follow-up add": ["follow-up", "add", "FU-9", "--summary", "settle this at ship"],
+    "issue render": ["issue", "render"],
 }
 
 

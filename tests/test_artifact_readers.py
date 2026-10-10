@@ -147,7 +147,7 @@ def test_trc_c3_the_exemption_names_a_module_that_still_exists():
 # --- `TRC-C1`, C4, C5 ----------------------------------------------------------
 
 def _relocated_issue(tmp_path, dod_line, slug="a-moved-issue",
-                     created="2026-09-08"):
+                     created="2026-09-08", meets=()):
     """An issue whose verification report lives under docs/compass/.
 
     Everything the checks need is present and passing except whatever the
@@ -183,7 +183,8 @@ def _relocated_issue(tmp_path, dod_line, slug="a-moved-issue",
                        "kind": "verification-report", "status": "draft",
                        "reason": "every issue carries one", "path": rel}],
         "evidence": [{"id": "EV-T-MV-1", "type": "test-run",
-                      "path": "evidence/green-MV-1.json", "scenario": "MV-1"}],
+                      "path": "evidence/green-MV-1.json", "scenario": "MV-1",
+                      **({"meets": list(meets)} if meets else {})}],
         "gates": [{"id": g, "status": "pending", "evidence": []} for g in
                   ("verify.correctness", "verify.governance",
                    "verify.traceability")],
@@ -198,6 +199,10 @@ def _relocated_issue(tmp_path, dod_line, slug="a-moved-issue",
 
 
 def _check(project, slug="a-moved-issue"):
+    # The issue page is written by the render after a command; this fixture wrote the
+    # manifest by hand, so render it as that step would.
+    subprocess.run([sys.executable, str(COMPASS_CLI), "issue", "render", "--issue", slug],
+                   capture_output=True, text=True, timeout=120, cwd=str(project), check=True)
     return subprocess.run(
         [sys.executable, str(COMPASS_CLI), "check", "--issue", slug,
          "--verbose"],
@@ -217,9 +222,15 @@ def test_trc_c1_a_reader_finds_a_relocated_document(tmp_path):
         f"the resolver found {found}, not the registered document")
 
 
+SHIPPED_DONE = ["dod-every-scenario-passes", "dod-suite-green", "dod-coverage-floor",
+                "dod-no-lint-errors", "dod-traceability-intact", "dod-living-docs-updated",
+                "dod-follow-ups-settled"]
+
+
 def test_trc_c4_the_gate_that_reads_the_report_clears(tmp_path):
-    """`compass check` on an issue whose report has moved."""
-    _relocated_issue(tmp_path, "- [x] the suite is green")
+    """`compass check` on an issue whose report has moved. The items are met by
+    records in the manifest, so the page is not what clears the gate."""
+    _relocated_issue(tmp_path, "- [ ] a box nobody ticked", meets=SHIPPED_DONE)
     r = _check(tmp_path)
     assert "dod-evidence-typed" in r.stdout, (
         "the DoD check did not run at all:\n" + r.stdout[-1500:])
@@ -235,35 +246,28 @@ def test_trc_c4_the_gate_that_reads_the_report_clears(tmp_path):
         f"here cannot be told from a pass on a report it never found:\n  {dod}")
 
 
-def test_trc_c5_an_untagged_dod_item_turns_the_check_red(tmp_path):
+def test_trc_c5_an_item_with_no_record_turns_the_check_red(tmp_path):
     """The expensive failure, pinned.
 
-    `_parse_dod_lines` returns an empty list when the report is absent, and an
-    empty list makes `dod-evidence-typed` PASS. Move the report without moving
-    this reader and a guardrail check goes green on every issue in the
-    repository - not red, not an error. Green.
-
-    So it is not enough that the check fails here; it has to fail *for the
-    right reason*, naming the untagged item rather than passing on the grounds
-    that it found nothing to object to.
+    An item with no record in the manifest fails the check, whatever the page
+    says: a ticked box on a relocated report counts for nothing. The check has
+    to fail *for the right reason*, naming the open item.
     """
-    _relocated_issue(tmp_path, "- [ ] somebody should look at the logs")
+    _relocated_issue(tmp_path, "- [x] somebody looked at the logs")
     r = _check(tmp_path)
     assert r.returncode != 0, (
-        "compass check PASSED on a relocated report carrying an untagged "
-        "Definition of Done item. That is the reader not finding the report "
-        "and the check passing on an empty list:\n" + r.stdout[-2000:])
-    assert "dod-evidence-typed" in r.stdout and "logs" in r.stdout, (
-        "the check failed, but not by naming the untagged item - so it may be "
+        "compass check PASSED on a relocated report whose Definition of Done "
+        "items have no record in the manifest:\n" + r.stdout[-2000:])
+    assert "dod-evidence-typed" in r.stdout and "dod-every-scenario-passes" in r.stdout, (
+        "the check failed, but not by naming the open item - so it may be "
         "failing for an unrelated reason:\n" + r.stdout[-2000:])
 
 
-def test_trc_c5_the_same_item_tagged_with_evidence_passes(tmp_path):
+def test_trc_c5_the_same_items_met_by_records_pass(tmp_path):
     """The other half. Without it, a check that fails on everything would
     also satisfy the test above."""
-    _relocated_issue(
-        tmp_path, "- [ ] (evidence: EV-T-MV-1) the suite is green")
+    _relocated_issue(tmp_path, "- [ ] a box nobody ticked", meets=SHIPPED_DONE)
     r = _check(tmp_path)
     assert r.returncode == 0, (
-        "a Definition of Done item tagged with evidence that resolves was "
-        "still rejected:\n" + r.stdout[-2000:])
+        "a Definition of Done met by records that resolve was still rejected:\n"
+        + r.stdout[-2000:])

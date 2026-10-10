@@ -474,6 +474,13 @@ def test_d2_repairs_change_only_retired_names():
     `governance/guardrails.md` (list_items 49 -> 50) gained the bullet
     describing the check `artifacts-approved`.
 
+    Two more were re-baselined by `documents-carry-judgement`:
+    `templates/acceptance-criteria.md` (table_rows 10 -> 4) lost the hand-kept
+    coverage ledger, which is now an empty `coverage` block, and
+    `templates/requirements-review.md` (list_items 24 -> 17) lost the seven
+    Definition of Ready boxes, which are now an empty `dor` block that
+    `compass issue render` fills from the plan entry list.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

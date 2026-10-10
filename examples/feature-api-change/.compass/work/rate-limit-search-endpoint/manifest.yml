@@ -131,3 +131,19 @@ artifacts:
   status: draft
   reason: found on disk when the documents were relocated
   path: docs/compass/2026-04-21-rate-limit-search-endpoint/verification-report.md
+# Written by `compass issue migrate` from the ticked boxes of the verification report.
+page_ticks:
+- check: dod-every-scenario-passes
+  source: docs/compass/2026-04-21-rate-limit-search-endpoint/verification-report.md
+- check: dod-suite-green
+  source: docs/compass/2026-04-21-rate-limit-search-endpoint/verification-report.md
+- check: dod-coverage-floor
+  source: docs/compass/2026-04-21-rate-limit-search-endpoint/verification-report.md
+- check: dod-no-lint-errors
+  source: docs/compass/2026-04-21-rate-limit-search-endpoint/verification-report.md
+- check: dod-traceability-intact
+  source: docs/compass/2026-04-21-rate-limit-search-endpoint/verification-report.md
+- check: dod-living-docs-updated
+  source: docs/compass/2026-04-21-rate-limit-search-endpoint/verification-report.md
+- check: dod-follow-ups-settled
+  source: docs/compass/2026-04-21-rate-limit-search-endpoint/verification-report.md

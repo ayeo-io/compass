@@ -722,12 +722,6 @@ _register(Rule(
             "the `backfills:` key is an identifier and stays; this is the "
             "same class of identifier."),
         Exemption(
-            "cli/compass_pkg/checks.py",
-            'in preference to task.get("task") which may be a',
-            "quotes the real dict lookup at line 669 below, over the "
-            "legacy `task` root key normalize_spine reads - an identifier, "
-            "not prose."),
-        Exemption(
             "cli/compass_pkg/receipt.py",
             'Records written before ADR-023 say "Topology"',
             "documents the retired label a pre-ADR-023 record literally "
@@ -1461,12 +1455,6 @@ _register(Rule(
             "reviewer agent at verify - judgement",
             "the JSON mirror of the already-exempted governance/signals.yml "
             "line above - names the Verify stage, not the verb."),
-        Exemption(
-            "templates/acceptance-criteria.md",
-            "Passes as acceptance (verify)",
-            "names the Verify stage in the coverage ledger's own column "
-            "header, not the verb - every example's copy of this table is "
-            "exempted the same way above."),
         Exemption(
             "templates/delivery-approach.md",
             "| Verify | {{gate count}}",
@@ -2395,11 +2383,6 @@ _register(Rule(
             "a placeholder scenario id, the same shape as `<test cmd>` "
             "elsewhere on this page - not a real code pointing at meaning "
             "kept outside the file"),
-        Exemption(
-            "templates/verification-report.md", "green-TRC-x.json",
-            "the placeholder evidence filename `compass tdd-green` writes "
-            "for a placeholder scenario id, the same shape as the "
-            "docs/quickstart.md exemption above."),
         Exemption(
             "templates/devlog.md", "green-TRC-3.json",
             "the placeholder evidence filename `compass tdd-green` writes "
@@ -3741,8 +3724,11 @@ _GROWING_REACH = {
     # 69 with tests/fixtures/evidence-review-example.json, plain JSON;
     # 70 with tests/fixtures/preset-interfaces/policy-test-groups.json, plain JSON;
     # 71 with tests/fixtures/evidence-approve-example.json, plain JSON;
-    # 72 with tests/fixtures/compat/v5.6.0-governance.tgz, the packed 5.6.0 governance files.
-    "PBW-C4": (lambda path: path.startswith("tests/"), 72),
+    # 72 with tests/fixtures/compat/v5.6.0-governance.tgz, the packed 5.6.0 governance files;
+    # 73 with the check-corpus case label for the recorded case of dod-evidence-typed, which
+    #    holds a verdict and one line (the dashboard-current labels left and the
+    #    rendered-blocks-current labels came, two each).
+    "PBW-C4": (lambda path: path.startswith("tests/"), 73),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

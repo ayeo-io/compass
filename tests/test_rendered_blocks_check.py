@@ -174,7 +174,7 @@ def _rewrite_generation(task_dir, edit_resolved=None, edit_versions=None, n=1):
 
 
 def _as_stored_before(task_dir):
-    """The generation lists `dashboard-current` under G4 and not
+    """The generation lists `dashboard-current` under `G4` and not
     `rendered-blocks-current`."""
     def resolved(data):
         g4 = data["gates"]["G4"]
@@ -302,7 +302,7 @@ import time
 
 
 def _current_issue(tmp_path, layer=None):
-    """A rich issue at verify whose documents hold every block the eight kinds
+    """A rich issue at `verify` whose documents hold every block the eight kinds
     draw on, rendered, with an issue page."""
     root = rich_issue(tmp_path)
     if layer is not None:
@@ -656,4 +656,5 @@ def test_dcj_75_trigger_table_complete():
         assert other not in imports and f"compass_pkg.{other}" not in imports, (mine, other)
         assert "record_triggers" in text
     entry = (ROOT / "cli" / "compass").read_text("utf-8")
-    assert entry.index("sync_github_labels") < entry.index("render_after")
+    # The label sync runs first: the render step wraps it and receives its exit code.
+    assert "render_after_command(a, github_labels.after_command(a, args.func(a)" in entry

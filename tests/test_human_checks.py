@@ -29,7 +29,7 @@ sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
 
 from test_entry_exit_evaluation import (DONE, _by_check, _config_project,  # noqa: E402
-                                        _deferred_report, _rows, _view, _write_review)
+                                        _rows, _view, _write_report, _write_review)
 from test_generation_store import (CLI, SLUG, _env, _evaluate_write, _manifest,  # noqa: E402
                                    _project, _run, _write_manifest)
 
@@ -51,17 +51,23 @@ def _record(**changes):
     return {k: v for k, v in body.items() if v is not None or k == "generation"}
 
 
+def _add_records(task_dir, records, **manifest_changes):
+    """Append `records` to the evidence the issue already holds."""
+    _write_manifest(task_dir, evidence=_manifest(task_dir).get("evidence", []) + list(records),
+                    **manifest_changes)
+
+
 def _row(tmp_path, monkeypatch, approvers, records=(), **manifest_changes):
     root, task_dir = _config_project(tmp_path)
     _write_review(task_dir)
-    _write_manifest(task_dir, evidence=list(records), **manifest_changes)
+    _add_records(task_dir, records, **manifest_changes)
     mutate = _approver(*approvers) if approvers is not None else None
     return _by_check(_rows(_view(root, monkeypatch, mutate), task_dir))[CHECK]
 
 
 def test_ha_1_a_human_check_without_approvers_passes_on_a_tick(tmp_path, monkeypatch):
     row = _row(tmp_path, monkeypatch, None)
-    assert row.status == "pass" and "ticked" in row.detail
+    assert row.status == "pass" and "met by" in row.detail
 
 
 def test_ha_2_with_approvers_a_tick_alone_fails_and_names_who_may_approve(tmp_path, monkeypatch):
@@ -138,18 +144,19 @@ def test_ha_7_an_approval_missing_a_required_field_does_not_count(tmp_path, monk
     assert row.status == "fail" and "timestamp" in row.detail
 
 
-def test_ha_8_an_approval_does_not_replace_the_tick(tmp_path, monkeypatch):
+def test_ha_8_an_approval_clears_a_check_that_lists_approvers_without_other_records(
+        tmp_path, monkeypatch):
     root, task_dir = _config_project(tmp_path)
     _write_review(task_dir, ticked=[1, 2, 3, 4, 5, 6])
-    _write_manifest(task_dir, evidence=[_record()])
+    _add_records(task_dir, [_record()])
     rows = _by_check(_rows(_view(root, monkeypatch, _approver("alice")), task_dir))
-    assert rows[CHECK].status == "fail" and "not ticked" in rows[CHECK].detail
+    assert rows[CHECK].status == "pass" and "EV-APPROVE-1" in rows[CHECK].detail
 
 
 def test_ha_9_an_approval_binds_one_check_not_its_neighbours(tmp_path, monkeypatch):
     root, task_dir = _config_project(tmp_path)
     _write_review(task_dir)
-    _write_manifest(task_dir, evidence=[_record()])
+    _add_records(task_dir, [_record()])
 
     def mutate(resolved):
         _approver("alice")(resolved)
@@ -164,7 +171,7 @@ def test_ha_9_an_approval_binds_one_check_not_its_neighbours(tmp_path, monkeypat
 def test_ha_9_the_manifest_is_not_changed_by_reading(tmp_path, monkeypatch):
     root, task_dir = _config_project(tmp_path)
     _write_review(task_dir)
-    _write_manifest(task_dir, evidence=[_record()])
+    _add_records(task_dir, [_record()])
     before = copy.deepcopy(_manifest(task_dir))
     _rows(_view(root, monkeypatch, _approver("alice")), task_dir)
     assert _manifest(task_dir) == before
@@ -210,10 +217,11 @@ def test_ha_11_a_rejection_alone_fails(tmp_path, monkeypatch):
 # --- HA-12: a deferral does not excuse a check that lists approvers ------------------
 
 DEFERRED = "dod-every-scenario-passes"
-TAGS = [("(evidence: EV-T1)", {"evidence": [{"id": "EV-T1", "type": "test-run",
-                                              "path": "e.json"}]}),
-        ("(follow-up: FU-1)", {"follow_ups": [{"id": "FU-1", "status": "outstanding",
-                                                "description": "d"}]})]
+#: A record that meets the item without an approval: evidence, and a follow-up that carries it.
+TAGS = [("met by", {"evidence": [{"id": "EV-T1", "type": "test-run", "path": "e.json",
+                                  "meets": [DEFERRED]}]}),
+        ("carried to ship", {"follow_ups": [{"id": "FU-1", "status": "outstanding",
+                                             "summary": "d", "defers": DEFERRED}]})]
 
 
 def _deferred_row(tmp_path, monkeypatch, tag, registry, approvers, records=()):
@@ -221,7 +229,6 @@ def _deferred_row(tmp_path, monkeypatch, tag, registry, approvers, records=()):
     registry = copy.deepcopy(registry)
     registry["evidence"] = registry.get("evidence", []) + list(records)
     _write_manifest(task_dir, current_phase="ship", **registry)
-    _deferred_report(task_dir, tag)
 
     def mutate(resolved):
         if approvers:
@@ -232,13 +239,13 @@ def _deferred_row(tmp_path, monkeypatch, tag, registry, approvers, records=()):
 
 
 @pytest.mark.parametrize("tag, registry", TAGS)
-def test_ha_12_a_deferral_without_approvers_still_passes(tmp_path, monkeypatch, tag, registry):
+def test_ha_12_a_record_without_approvers_still_passes(tmp_path, monkeypatch, tag, registry):
     row = _deferred_row(tmp_path, monkeypatch, tag, registry, None)
-    assert row.status == "pass" and row.detail.startswith("deferred with ")
+    assert row.status == "pass" and row.detail.startswith(tag)
 
 
 @pytest.mark.parametrize("tag, registry", TAGS)
-def test_ha_12_a_deferral_with_approvers_and_no_approval_fails(
+def test_ha_12_a_record_with_approvers_and_no_approval_fails(
         tmp_path, monkeypatch, tag, registry):
     row = _deferred_row(tmp_path, monkeypatch, tag, registry, ["alice"])
     assert row.status == "fail"
@@ -246,7 +253,7 @@ def test_ha_12_a_deferral_with_approvers_and_no_approval_fails(
 
 
 @pytest.mark.parametrize("tag, registry", TAGS)
-def test_ha_12_a_deferral_with_a_current_listed_approval_passes(
+def test_ha_12_a_record_with_a_current_listed_approval_passes(
         tmp_path, monkeypatch, tag, registry):
     record = _record(check=DEFERRED)
     row = _deferred_row(tmp_path, monkeypatch, tag, registry, ["alice"], [record])
@@ -258,7 +265,7 @@ def test_ha_12_a_deferral_with_a_current_listed_approval_passes(
 def _owner_row(tmp_path, monkeypatch, owner, approver):
     root, task_dir = _config_project(tmp_path)
     _write_review(task_dir)
-    _write_manifest(task_dir, evidence=[_record(approver=approver)])
+    _add_records(task_dir, [_record(approver=approver)])
     if owner:
         path = root / "compass.yml"
         body = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -355,7 +362,8 @@ def _cli_project(tmp_path):
     config = {"schema": 1, "owner": "jed72", "capabilities": {"entry-exit-evaluation": True},
               "checks": {SIGN_OFF: dict(human, statement=STATEMENT,
                                         approvers=["owner", "maria"]),
-                         "open-check": dict(human, statement="Anyone may tick this.")},
+                         "open-check": dict(human, statement="Anyone may tick this."),
+                         "unlisted-check": dict(human, statement="Not on any list.")},
               "stages": {"plan": {"set": {"entry": {"add": [SIGN_OFF, "open-check"]}}}}}
     root, task_dir = _project(tmp_path, compass_yml=config)
     assert _evaluate_write(root)[0] == 0
@@ -432,7 +440,7 @@ def test_ha_17_the_scope_is_written_with_its_whitespace_collapsed(tmp_path):
     {"approver": "agent"}, {"approver": "Agent"}, {"approver": "agent:session-1"},
     {"approver": " "}, {"role": " "}, {"scope": ""},
     {"approver": "mallory"}, {"approver": "owner"},
-    {"check": "open-check"}, {"check": "no-such-check"}, {"check": "dor-summary-filled"},
+    {"check": "unlisted-check"}, {"check": "no-such-check"},
 ])
 def test_ha_18_the_verb_refuses_and_writes_nothing(tmp_path, change):
     root, task_dir = _cli_project(tmp_path)
@@ -446,10 +454,17 @@ def test_ha_18_a_refusal_names_the_reason(tmp_path):
     root, _ = _cli_project(tmp_path)
     for name in ("agent", "agent:session-1"):
         assert "an agent cannot approve" in "".join(_approve(root, approver=name)[1:])
-    assert "not a human check" in "".join(_approve(root, check="dashboard-current")[1:])
+    assert "not a human check" in "".join(_approve(root, check="suite-passed")[1:])
     text = "".join(_approve(root, approver="mallory")[1:])
     assert "jed72" in text and "maria" in text
-    assert "lists no approvers" in "".join(_approve(root, check="open-check")[1:])
+    assert "lists no approvers" in "".join(_approve(root, check="unlisted-check")[1:])
+
+
+def test_ha_18_an_item_of_the_lists_that_names_no_approvers_is_ticked_by_a_declared_person(tmp_path):
+    root, task_dir = _cli_project(tmp_path)
+    code, out, err = _approve(root, check="open-check")
+    assert code == 0, out + err
+    assert _manifest(task_dir)["evidence"][-1]["check"] == "open-check"
 
 
 def test_ha_18_a_decision_other_than_approved_or_rejected_is_refused(tmp_path):

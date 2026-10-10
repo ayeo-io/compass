@@ -368,7 +368,7 @@ def _(root):
 
 
 def _rendered(root, stale):
-    """An issue at verify whose acceptance criteria hold a coverage block and
+    """An issue at `verify` whose acceptance criteria hold a coverage block and
     whose issue page exists, rendered. With `stale`, the block was edited by hand."""
     from compass_pkg import render_cmd
     task, task_dir = _issue(root, {

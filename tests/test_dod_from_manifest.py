@@ -316,7 +316,7 @@ def test_dcj_32_dor_block_and_stage_lists_read_records(tmp_path):
 # --- DCJ-33 -----------------------------------------------------------------
 
 def test_dcj_33_blocks_list_configured_items(tmp_path):
-    # `stages.verify` is locked, so removing an item needs a waiver on the entry. A project
+    # The stage `verify` is locked, so removing an item needs a waiver on the entry. A project
     # waiver stands in for the issue layer: the issue layer's waiver needs an approval record
     # that names it, and the blocks read the same resolved list either way.
     layer = {**LAYER,

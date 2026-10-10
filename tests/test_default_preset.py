@@ -822,7 +822,6 @@ EXPECTED_ON_SKIPPED = {
     "borrowed-documents-answered": "not-applicable",
     "evidence-matches-tree": "not-applicable",
     "evidence-identity-matches": "not-applicable",
-    "rendered-blocks-current": "not-applicable",
     "dod-evidence-typed": "not-applicable",
     "landed-by-resolves": "not-applicable",
     "multiagent-run-recorded": "not-applicable",

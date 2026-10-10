@@ -3591,3 +3591,7 @@
 - `TRC-W10` A link in another tree's work folder that leads out of that tree is not followed
 - `TRC-W11` An issue from another tree is judged by that tree's own records
 - `TRC-W12` An issue done in this checkout is not read from any other tree
+
+### shipped-releases-v6-0-1 (completed 2026-10-10)
+
+- `SR-001` Given the v6.0.1 tag, When the shipped-releases test runs with tags fetched, Then the table holds every tagged release and matches its files

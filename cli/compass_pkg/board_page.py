@@ -269,7 +269,10 @@ def _trees_lines(trees):
 def _header(data, generated, trees):
     every = [r for key in _ALL_SECTIONS for r in data.get(key) or []]
     placeable = [r for r in _rows(data) if not r.get("unplaceable")]
-    tiles = ["%d %s" % (len(every), "issue" if len(every) == 1 else "issues")]
+    # The board's total counts every issue read, including completed issues
+    # too old for the done lane, as `compass flow` does.
+    total = data.get("total", len(every))
+    tiles = ["%d %s" % (total, "issue" if total == 1 else "issues")]
     tiles += ["%s %d" % (state, sum(1 for r in placeable if r.get("state") == state))
               for state in _STATES]
     tiles.append("%d unplaceable" % len(_unplaceable(data)))

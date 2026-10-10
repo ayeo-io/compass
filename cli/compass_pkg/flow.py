@@ -296,7 +296,11 @@ def board(work_root, today=None, sources=None, parsed=None):
     if categories:
         top = sorted(categories.items(), key=lambda kv: (-kv[1], kv[0]))[0]
         out["friction"] = {"category": top[0], "count": top[1]}
-    cache.finish()
+    if parsed is None:
+        # With `parsed`, this checkout was read and pruned by `read_checkout`.
+        # This run reads only other trees, so judging which entries went
+        # unused from it would delete this checkout's.
+        cache.finish()
     return out
 
 

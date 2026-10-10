@@ -951,3 +951,36 @@ def test_a_slug_with_a_card_is_not_also_listed_for_a_link_out_of_another_tree(ri
     assert [c[0] for c in _cards(page)] == ["tc-only"]
     assert _note(page) == []
     assert "<li>1 issue</li>" in page
+
+
+# --- review round 3 -------------------------------------------------------------
+
+def test_trc_w6_a_worktrees_board_keeps_this_checkouts_parse_cache(tmp_path):
+    # `build_page` reads this checkout through one cache run and the other
+    # trees through a second. The second run reads few manifests, so it must
+    # not delete the entries the first just stored, or every later board and
+    # every `compass flow` parses this checkout again.
+    from compass_pkg import board_cmd
+    main = _repo(tmp_path)
+    for slug in ("one", "two", "three"):
+        _write(main, slug, current_phase="plan", **_assessed())
+    side = _worktree(main, tmp_path / "wt" / "side")
+    _write(side, "elsewhere", current_phase="plan", **_assessed())
+    board_cmd.build_page(str(main), str(main / ".compass" / "work"), True,
+                         datetime.datetime.now())
+    folder = main / ".compass" / "cache" / "parsed_yaml"
+    assert len([p for p in folder.iterdir() if p.suffix == ".json"]) >= 3
+
+
+def test_trc_b13_the_header_counts_every_issue_including_old_done_ones(tmp_path):
+    # A completed issue older than the done lane's window has no card, but it
+    # is still an issue: the header gives the total `compass flow` gives.
+    from compass_pkg import board_cmd
+    root = _project(tmp_path)
+    _write(root, "open-one", current_phase="plan", **_assessed())
+    _write(root, "done-long-ago", status="done", close_reason="completed",
+           land_timestamp="2026-09-01T10:00:00+00:00", **_assessed())
+    page = board_cmd.build_page(str(root), str(root / ".compass" / "work"), False,
+                                datetime.datetime.now())
+    tiles = re.findall(r"<li>(.*?)</li>", page.split("<header>")[1].split("</header>")[0])
+    assert "2 issues" in tiles, tiles

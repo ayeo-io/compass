@@ -83,7 +83,13 @@ claims:          # (optional; only when a marketer is in play) list of maps:
 follow_ups:       # (optional) list of maps - work still outstanding:
   - id:          #   (required in entry) string
     description: #   (optional) string
+    summary:     #   (optional) string - what is owed (compass follow-up add --summary)
+    defers:      #   (optional) string - the Definition of Done or Ready item it carries to ship
     status:      #   (required in entry) [outstanding, resolved]
+
+page_ticks:      # (optional) list of maps - items ticked on a page before 7.0.0 (compass issue migrate writes it):
+  - check:       #   (required in entry) string - the item's check id
+    source:      #   (required in entry) string - the document the tick was read from
 
 reassessments:   # (optional) list of maps - the append-only re-assessment log:
   - from_route:  #   (required in entry) string - the delivery approach before

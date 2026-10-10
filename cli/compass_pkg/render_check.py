@@ -8,7 +8,7 @@ no second definition of "current" (DD-2).
 Each block has a scope (`block_renderers.Part`):
 
 - an **own** block draws only on this issue's records. A stale one fails the
-  check at verify, ship and done, and is an advisory failure before;
+  check at `verify`, `ship` and done, and is an advisory failure before;
 - a **cross** block draws on other issues or on the project (`related`, the
   governance lines of `decisions`, the issue's row of the project index). A stale
   one is always an advisory failure, because a checkout that holds one issue
@@ -18,13 +18,13 @@ The issue's own manifest is read with `load_manifest`, never through the parse
 cache, so a planted cache entry cannot clear or fail the check (DCJ-77).
 """
 # DEPENDENCY: standard library (os); compass_pkg.render_cmd, block_renderers,
-# next_cmd, status_words, stable_ids. check_cmd is imported inside `check`
-# because check_cmd imports the registry that imports this module.
+# next_cmd, status_words, stable_ids, check_results.
 from __future__ import annotations
 
 import os
 
 from compass_pkg import block_renderers, status_words
+from compass_pkg.check_results import ADVISORY_FAILURE
 from compass_pkg.core import CompassError
 
 CHECK_ID = "rendered-blocks-current"
@@ -32,8 +32,8 @@ FIX = "run `compass issue render`"
 
 
 def _blocking(task, task_dir):
-    """True once the issue has reached verify, or is done: a stale own block
-    then fails the check. Before verify it is an advisory failure."""
+    """True once the issue has reached `verify`, or is done: a stale own block
+    then fails the check. Before `verify` it is an advisory failure."""
     from compass_pkg import next_cmd
     from compass_pkg.stable_ids import STAGE_IDS, STAGE_VERIFY
     if status_words.is_closed(task):
@@ -60,10 +60,9 @@ def stale_parts(plan):
 
 
 def check(task, task_dir):
-    """`(passed, detail)` for `compass check`. `task` is not read: the render
+    """`(passed, detail)` for `compass check`. the manifest argument is not read: the render
     reads the manifest from `task_dir` itself."""
     from compass_pkg import render_cmd
-    from compass_pkg.check_cmd import ADVISORY_FAILURE
     task_dir = os.path.abspath(task_dir)
     try:
         plan = render_cmd.plan_issue(task_dir)

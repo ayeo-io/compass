@@ -14,9 +14,9 @@ checks:
       issue earned neither document.', kind: deterministic, impl: borrowed-documents-answered, severity: blocking,
     on_skipped: not-applicable, locked: true}
   rendered-blocks-current: {statement: 'Every rendered block in the issue''s documents and its issue page matches
-      a fresh render from the records. A block drawn from the issue''s own records fails the check at verify
-      and ship and is advisory before; a block drawn from other issues or the project is always advisory.',
-    kind: deterministic, impl: rendered-blocks-current, severity: blocking, on_skipped: not-applicable,
+      a fresh render from the records. A block drawn from the issue''s own records fails the check at `verify`
+      and `ship` and is advisory before; a block drawn from other issues or the project is always advisory.',
+    kind: deterministic, impl: rendered-blocks-current, severity: blocking, on_skipped: fail,
     locked: true}
   landed-by-resolves: {statement: 'An issue whose work was delivered through a different issue points
       at it with `landed_by:`, and the pointer resolves: the named issue exists, has landed, carries a

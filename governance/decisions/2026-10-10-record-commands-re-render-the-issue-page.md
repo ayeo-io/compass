@@ -29,4 +29,4 @@ Two earlier decisions bound this change:
 
 ## Evidence
 
-Issue `documents-carry-judgement`, scenarios DCJ-18 to DCJ-22 and DCJ-75.
+Issue `documents-carry-judgement`: the acceptance criteria for the render after each command, the trigger table and this supersession.

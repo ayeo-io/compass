@@ -666,21 +666,21 @@ def _check_dod_evidence_typed(task, task_dir):
         view = effective.view_or_legacy(task_dir)
     except Exception as exc:                            # noqa: BLE001
         return False, "cannot read the issue's configuration to find its Definition of Done: %s" % exc
-    if view is None:
-        return NOTHING_TO_CHECK, ("this issue has no stored configuration, so its Definition "
-                                  "of Done is not known; run `compass approach evaluate --write`")
+    # An issue read without a configuration is judged by the shipped default's list.
     rows = item_records.items(task, task_dir, view, "dod")
     problems = ["%s is open - %s" % (row.check, item_records.open_hint(row.check))
                 for row in rows if row.state == item_records.OPEN]
-    # The directory name is the true slug; `task` may hold a template placeholder.
+    # The directory name is the true slug; the manifest passed in may hold a template placeholder.
     this_slug = os.path.basename(task_dir) or task.get("task") or ""
     problems.extend(_check_inbound_backfills(task_dir, this_slug))
     if problems:
         return False, "; ".join(problems)
+    where = artifact_location(task_dir, "verification-report.md")
     if not rows:
-        return True, "the issue's Definition of Done lists no item - nothing to evidence"
-    return True, ("all %d Definition of Done item(s) are met by a record in the manifest"
-                  % len(rows))
+        return True, ("the issue's Definition of Done lists no item - nothing to evidence "
+                      "(read %s)" % where)
+    return True, ("all %d Definition of Done item(s) are met by a record in the manifest "
+                  "(report: %s)" % (len(rows), where))
 
 
 def _check_inbound_backfills(task_dir, this_slug):

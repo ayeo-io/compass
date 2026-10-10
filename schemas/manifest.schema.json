@@ -592,6 +592,11 @@
             "type": "string",
             "description": "For manual-review: the id of the judged check this review record is for. `compass evidence review` sets it, and a judged check reads only the records that carry its id. For artifact-approval: the human check the approval meets."
           },
+          "meets": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "The Definition of Done or Ready items (check ids) this record meets, set with the `--meets` flag of `compass gate pass` and of the `add` verb."
+          },
           "artifact": {
             "type": "string",
             "description": "For artifact-approval: the kind of the artifact the person approved. A record holds exactly one of artifact and decisions."
@@ -772,6 +777,19 @@
         "found_at": {"enum": ["define", "plan", "implement", "verify", "review", "ci", "after-landing"]}
       }
     },
+    "page_ticks": {
+      "type": "array",
+      "description": "Definition of Done or Ready items that were ticked on a page before 7.0.0. Only `compass issue migrate` writes it, and only the item records read it; a person's approval never does.",
+      "items": {
+        "type": "object",
+        "required": ["check", "source"],
+        "additionalProperties": false,
+        "properties": {
+          "check": {"type": "string", "minLength": 1},
+          "source": {"type": "string", "minLength": 1, "description": "The document the tick was read from."}
+        }
+      }
+    },
     "follow_ups": {
       "type": "array",
       "description": "Work this issue deferred and still owes (e.g. a hotfix's). `compass check` fails while any is unresolved. The v2 states are outstanding/resolved; the 1.x spellings (owed/paid) stay schema-legal so an unmigrated manifest still lints - readers normalise them.",
@@ -788,6 +806,14 @@
           },
           "description": {
             "type": "string"
+          },
+          "summary": {
+            "type": "string",
+            "description": "What is owed. `compass follow-up add --summary` writes it."
+          },
+          "defers": {
+            "type": "string",
+            "description": "The Definition of Done or Ready item (a check id) this follow-up carries to ship. The item reads met once the follow-up is resolved."
           },
           "status": {
             "enum": [

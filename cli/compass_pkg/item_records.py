@@ -52,12 +52,12 @@ class Item:
 
 
 def listed_checks(view, which):
-    """`[(check id, statement)]` of the configured list, in order. Empty when
-    the issue is read without a configuration."""
-    if view is None:
-        return []
+    """`[(check id, statement)]` of the configured list, in order. An issue read
+    without a configuration (a project with no `compass.yml`, an issue with no
+    generation) is judged by the shipped default's lists, so the guardrail does not
+    go quiet on it."""
     stage, side = LISTS[which]
-    config = view.config
+    config = view.config if view is not None else _shipped_default()
     named = ((config.get("stages") or {}).get(stage) or {}).get(side) or []
     checks = config.get("checks") or {}
     out = []
@@ -66,6 +66,16 @@ def listed_checks(view, which):
         statement = check.get("statement") if isinstance(check, dict) else None
         out.append((str(check_id), " ".join(str(statement or check_id).split())))
     return out
+
+
+def _shipped_default():
+    """The `stages` and `checks` catalogues of the shipped default preset."""
+    import os
+
+    from compass_pkg.core import FRAMEWORK_ROOT, load_yaml
+    folder = os.path.join(FRAMEWORK_ROOT, "governance", "presets", "default")
+    return {"stages": (load_yaml(os.path.join(folder, "stages.yml")) or {}).get("stages"),
+            "checks": (load_yaml(os.path.join(folder, "checks.yml")) or {}).get("checks")}
 
 
 def _dicts(value):

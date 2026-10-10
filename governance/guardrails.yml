@@ -43,7 +43,7 @@ checks:
   borrowed-documents-answered:
     description: "The threat model and the rollback plan, where they exist, are answered rather than merely written - every threat names a scenario or an accepted risk, and the rollback records a rehearsal that happened. Declines to check, rather than passing, when the issue earned neither document."
   rendered-blocks-current:
-    description: "Every rendered block in the issue's documents and its issue page matches a fresh render from the records. A block drawn from the issue's own records fails the check at verify and ship and is advisory before; a block drawn from other issues or the project is always advisory."
+    description: "Every rendered block in the issue's documents and its issue page matches a fresh render from the records. A block drawn from the issue's own records fails the check at `verify` and `ship` and is advisory before; a block drawn from other issues or the project is always advisory."
   landed-by-resolves:
     description: "An issue whose work was delivered through a different issue points at it with `landed_by:`, and the pointer resolves: the named issue exists, has landed, carries a record of its own, and names this one back in `delivered:`. When it holds, four checks about this issue carrying its OWN record stand down - the claim moves rather than being waived. Declines to check when there is no pointer."
   scenarios-have-tests:

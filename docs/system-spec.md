@@ -3508,3 +3508,11 @@
 - `TRC-B3` The first compass flow after every manifest changed is at most 10% slower than the code before the change
 - `TRC-C4` The parity check reports no difference for a NaN read exactly
 - `TRC-E5` The cache is written only inside the project's .compass folder
+
+### migrate-repoints-stop-evidence (completed 2026-10-10)
+
+- `MRS-1` A stopped subtask keeps its stop evidence after migration
+- `MRS-2` Every path field that names a moved file is repointed
+- `MRS-3` compass check gives the same verdict before and after migration
+- `MRS-4` An archive an earlier release already migrated is repaired from the tree
+- `MRS-5` Every path-like schema field is handled or excluded with a reason

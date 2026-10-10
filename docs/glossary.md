@@ -262,6 +262,12 @@ Why an issue is done: completed (the work shipped), not-planned (it will not be 
 
 **Related:** `workflow-state`, `issue`
 
+### decision-taken
+
+A requirement decision an agent took for the person: the question, the resolution, which agent took it and at which stage. It is recorded in the manifest's `decisions_taken`, shown to the person at the next checkpoint on `balanced` and `controlled` autonomy, and confirmed as a set by one `compass evidence approve --decisions`. Changing one reopens it and the checkpoint keeps waiting. It is distinct from a decision record in `governance/decisions/`, which a person makes about the product.
+
+**Related:** `requirements-review`, `evidence`
+
 ### definition-of-done
 
 The gate before shipping: acceptance criteria pass, applicable guardrails clear, every box backed by evidence.

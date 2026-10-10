@@ -275,6 +275,31 @@ def hygiene_problem(line):
     return None
 
 
+#: The one fence a rendered body may hold: a Mermaid chart, opened and closed by these exact
+#: lines. A chart line is neutralised like any other, so no line inside can close it early.
+CHART_OPEN, CHART_CLOSE = "```mermaid", "```"
+
+
+def body_problem(lines):
+    """`(line, why)` for the first unsafe line of a rendered body, or None. The lines
+    follow `hygiene_problem`, except that one balanced Mermaid fence is allowed: the
+    chart of the traceability block."""
+    in_chart = False
+    for line in lines:
+        if in_chart and line == CHART_CLOSE:
+            in_chart = False
+            continue
+        if not in_chart and line == CHART_OPEN:
+            in_chart = True
+            continue
+        problem = hygiene_problem(line)
+        if problem:
+            return line, problem
+    if in_chart:
+        return CHART_OPEN, "opens a code fence that is never closed"
+    return None
+
+
 # --- building and writing a rendered document ------------------------------
 
 def splice(parsed, bodies):
@@ -307,12 +332,12 @@ def build(path, text, bodies):
     Raises `PostConditionError` otherwise; nothing has been written."""
     parsed = parse(text, path)
     for index, lines in bodies.items():
-        for line in lines:
-            problem = hygiene_problem(line)
-            if problem:
-                raise PostConditionError(
-                    f"{path}: a rendered line in the {parsed.blocks[index].kind} block "
-                    f"{problem}: {line[:80]!r}. The render wrote nothing.")
+        found = body_problem(lines)
+        if found:
+            line, problem = found
+            raise PostConditionError(
+                f"{path}: a rendered line in the {parsed.blocks[index].kind} block "
+                f"{problem}: {line[:80]!r}. The render wrote nothing.")
     new_text = splice(parsed, bodies)
     if masked_text(new_text) != masked_text(text):
         raise PostConditionError(

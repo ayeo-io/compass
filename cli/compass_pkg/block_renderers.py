@@ -4,128 +4,29 @@
 A renderer takes a `RenderInputs` snapshot of the records and the project-
 relative path of the document it renders into, and returns a `Part`: the lines
 of the block and whether they depend on this issue's own records (`own`) or on
-other issues or the project (`cross`). It reads no file, no clock and no git
+other issues or the project (`cross`). It reads no clock and no git
 configuration, so the same records give the same text on every machine and a
-second render changes no byte (DCJ-3). `gather` is the only function here that
-touches the disk, and it does so once, before any renderer runs.
+second render changes no byte (DCJ-3). `render_inputs.gather` is the only function
+that touches the disk before the renderers run.
 
 Every line copied from a record goes through `rendered_blocks.field`,
 `cell` or `neutralise`, so recorded text cannot be read as a marker (DCJ-68).
 They are called through the module, so a test can replace one.
 
-The kinds this module renders are the eight of RS-1. A kind in
-`rendered_blocks.KINDS` with no entry in `RENDERERS` is left as it is.
+This module renders the kinds every document shares (`coverage`, `gates`, `dod`, `dor`,
+`artifacts`, `evidence`, `follow-ups`, `decisions-taken`) and the verification note. The
+page kinds are in `issue_page`, the index in `project_index`; `RENDERERS` holds all of
+them. A kind in `rendered_blocks.KINDS` with no entry in `RENDERERS` is left as it is.
 """
-# DEPENDENCY: standard library (dataclasses, glob, json, os); compass_pkg.rendered_blocks,
-# compass_pkg.item_records, compass_pkg.issue_layout.
+# DEPENDENCY: standard library (os); compass_pkg.render_inputs, item_records,
+# rendered_blocks, issue_page, project_index.
 from __future__ import annotations
-
-import glob
-import json
-import os
-from dataclasses import dataclass, field
 
 from compass_pkg import item_records
 from compass_pkg import rendered_blocks as rb
-from compass_pkg.issue_layout import DOCS_ROOT
-
-OWN, CROSS = "own", "cross"
-
-
-@dataclass(frozen=True)
-class Part:
-    """The lines of one block. `scope` is `own` when they depend only on this
-    issue's records and `cross` when they depend on another issue or the project."""
-    scope: str
-    lines: list
-
-
-@dataclass
-class RenderInputs:
-    """A snapshot of everything the renderers read."""
-    task: dict
-    slug: str
-    #: The project-relative directory of the issue's work folder.
-    work_rel: str
-    view: object = None
-    #: `{(kind, scenario): file name}` for the red, green and acceptance records.
-    records: dict = field(default_factory=dict)
-    unbound: list = field(default_factory=list)
-
-    def list_of(self, key):
-        value = self.task.get(key)
-        return [e for e in value if isinstance(e, dict)] if isinstance(value, list) else []
-
-
-def gather(task, task_dir, project_root, view=None):
-    """The snapshot for one issue: the manifest as loaded, the record files in the
-    issue's `evidence/` folder, and the configuration view (None when the issue
-    is read without one)."""
-    records, unbound = _records(task_dir)
-    work_rel = os.path.relpath(os.path.abspath(task_dir), project_root).replace(os.sep, "/")
-    return RenderInputs(task=task, slug=os.path.basename(os.path.normpath(task_dir)),
-                        work_rel=work_rel, view=view, records=records, unbound=unbound)
-
-
-def _records(task_dir):
-    out, unbound = {}, []
-    for path in sorted(glob.glob(os.path.join(task_dir, "evidence", "*.json"))):
-        name = os.path.basename(path)
-        kind = next((k for k in ("red", "green", "acceptance")
-                     if name == f"{k}.json" or name.startswith(f"{k}-")), None)
-        if kind is None or name == "acceptance-baseline.json":
-            continue
-        try:
-            with open(path, encoding="utf-8") as fh:
-                data = json.load(fh)
-        except (OSError, ValueError):
-            data = {}
-        scenario = (data.get("scenario") if isinstance(data, dict) else None) \
-            or name[len(kind) + 1:-5]
-        if scenario:
-            out.setdefault((kind, str(scenario)), name)
-        else:
-            unbound.append(name)
-    return out, unbound
-
-
-# --- helpers ---------------------------------------------------------------
-
-def _code(text):
-    """Text as inline code: neutralised, and a backtick written as an
-    apostrophe so it cannot end the span."""
-    return "`%s`" % rb.field(text).replace("`", "'")
-
-
-def _link_target(inputs, path):
-    """The project-relative path a manifest path names, or None when it
-    leaves the project. A path under `docs/` or `.compass/` is measured from the
-    project root; any other is measured from the issue's work folder, as the
-    evidence registry's paths are."""
-    path = str(path or "").replace("\\", "/")
-    if not path or os.path.isabs(path):
-        return None
-    if not path.startswith(("docs/", ".compass/")):
-        path = inputs.work_rel + "/" + path
-    norm = os.path.normpath(path).replace(os.sep, "/")
-    return None if norm.startswith("..") else norm
-
-
-def _link(inputs, path, doc_rel, text):
-    """A relative Markdown link to `path`, shown as `text`, when the path is
-    under `docs/compass/` (a folder a project commits); None otherwise. The work
-    folder is untracked in many projects, so a link there would not resolve."""
-    target = _link_target(inputs, path)
-    safe = target is not None and all(c.isalnum() or c in "._-/" for c in target)
-    if not (safe and target.startswith(DOCS_ROOT.replace(os.sep, "/") + "/")):
-        return None
-    relative = os.path.relpath(target, os.path.dirname(doc_rel) or ".").replace(os.sep, "/")
-    return "[%s](%s)" % (rb.field(text).replace("[", "\\[").replace("]", "\\]"), relative)
-
-
-def _shown_path(inputs, path, doc_rel):
-    """A path as the block shows it: a link when `_link` gives one, else code."""
-    return _link(inputs, path, doc_rel, path) or _code(path)
+from compass_pkg.render_inputs import (CROSS, OWN, Part, RenderInputs, code as _code,  # noqa: F401
+                                       gather, link as _link, link_target as _link_target,
+                                       shown_path as _shown_path)
 
 
 # --- the renderers ---------------------------------------------------------
@@ -181,7 +82,7 @@ def gates(inputs, doc_rel):
 
 def _exit_list(which):
     def render(inputs, doc_rel):
-        rows = item_records.items(inputs.task, None, inputs.view, which)
+        rows = item_records.items(inputs.task, None, inputs.get_view(), which)
         title = item_records.TITLES[which]
         if not rows:
             return Part(OWN, ["No %s is configured for this issue." % title])
@@ -215,7 +116,7 @@ def _state_phrase(item):
 
 
 def artifacts(inputs, doc_rel):
-    rows = inputs.list_of("artifacts")
+    rows = [a for a in inputs.list_of("artifacts") if a.get("status") != "omitted"]
     if not rows:
         return Part(OWN, ["No documents registered yet."])
     approved = sum(1 for a in rows if a.get("status") == "approved")
@@ -223,12 +124,18 @@ def artifacts(inputs, doc_rel):
              "| Document | Status | Approved by | Why it exists |", "|---|---|---|---|"]
     for a in rows:
         kind = rb.cell(a.get("kind", "?"))
-        shown = (_link(inputs, a["path"], doc_rel, a.get("kind", "?")) if a.get("path") else None) \
+        target = _link_target(inputs, a["path"]) if a.get("path") else None
+        written = target in inputs.present
+        shown = (_link(inputs, a["path"], doc_rel, a.get("kind", "?")) if written else None) \
             or kind
-        by = a.get("approved_by") if a.get("status") == "approved" else None
+        # A name or meaning the catalogue gives the document is shown when the entry holds it.
+        for key, word in (("traditional_name", "traditional name"), ("stands_for", "stands for")):
+            if a.get(key):
+                shown += ", %s: %s" % (word, rb.cell(a[key]))
+        status = a.get("status", "?") if written else "not written yet"
+        by = a.get("approved_by") if written and a.get("status") == "approved" else None
         lines.append("| %s | %s | %s | %s |" % (
-            shown, rb.cell(a.get("status", "?")), rb.cell(by) if by else "-",
-            rb.cell(a.get("reason") or "")))
+            shown, rb.cell(status), rb.cell(by) if by else "-", rb.cell(a.get("reason") or "")))
     return Part(OWN, lines)
 
 
@@ -285,7 +192,47 @@ def decisions_taken(inputs, doc_rel):
     return Part(OWN, lines)
 
 
-#: Kind to renderer. A new kind is one entry here and one name in `rendered_blocks.KINDS`.
+#: A quick fix has one scenario; the note stays one screen however many it has.
+NOTE_SCENARIOS = 6
+
+
+def verification_note(inputs, doc_rel):
+    scenarios = inputs.list_of("scenarios")
+    lines = []
+    if scenarios:
+        lines += ["| Scenario | Test | Red | Green |", "|---|---|---|---|"]
+        for s in scenarios[:NOTE_SCENARIOS]:
+            sid = str(s.get("id", "?"))
+            green = inputs.records.get(("green", sid)) or inputs.records.get(("acceptance", sid))
+            red = inputs.records.get(("red", sid))
+            tests = ", ".join(_code(x) for x in s.get("tests") or []) or "-"
+            lines.append("| %s | %s | %s | %s |" % (
+                rb.cell("%s - %s" % (sid, s.get("title", ""))), tests,
+                _code(red) if red else "-", _code(green) if green else "-"))
+        if len(scenarios) > NOTE_SCENARIOS:
+            lines.append("and %d more scenarios" % (len(scenarios) - NOTE_SCENARIOS))
+    else:
+        lines.append("No scenario recorded.")
+    gate_rows = inputs.list_of("gates")
+    if gate_rows:
+        lines += ["", "Gates:"]
+        lines += ["- %s: %s" % (_code(g.get("id", "?")), rb.field(g.get("status", "?")))
+                  for g in gate_rows]
+    changed = [c.get("path") for c in inputs.list_of("changed_files")
+               if c.get("path") and not str(c["path"]).startswith("docs/compass/")]
+    if changed:
+        lines += ["", "Changed files:"]
+        lines += ["- %s" % _code(p) for p in changed[:12]]
+        if len(changed) > 12:
+            lines.append("- and %d more" % (len(changed) - 12))
+    release = inputs.task.get("release_note")
+    if release and not isinstance(release, (dict, list)):
+        lines += ["", "Release: %s" % rb.field(release)]
+    return Part(OWN, lines)
+
+
+#: Kind to renderer. A new kind is one entry here (or in the module that owns it) and one
+#: name in `rendered_blocks.KINDS`.
 RENDERERS = {
     "coverage": coverage,
     "gates": gates,
@@ -295,17 +242,33 @@ RENDERERS = {
     "evidence": evidence,
     "follow-ups": follow_ups,
     "decisions-taken": decisions_taken,
+    "verification-note": verification_note,
 }
 
-#: The blocks a new issue page holds until the page kinds are rendered.
-PAGE_KINDS = ("artifacts", "follow-ups")
+
+def _add_modules():
+    from compass_pkg import issue_page, project_index
+    RENDERERS.update(issue_page.RENDERERS)
+    RENDERERS.update(project_index.RENDERERS)
+
+
+_add_modules()
 
 
 def issue_page_text(slug):
-    """The issue page as it is first created: a title and the blocks of the kinds
-    this module renders for it. The blocks are filled by the render that creates
-    the page."""
+    """The issue page as it is first created: a title and the page's blocks, in order.
+    The blocks are filled by the render that creates the page."""
+    from compass_pkg.issue_page import PAGE_KINDS
     parts = ["# %s\n" % rb.field(slug)]
     for kind in PAGE_KINDS:
         parts.append("\n%s\n%s\n" % (rb.OPENING.format(kind=kind), rb.CLOSING))
     return "".join(parts)
+
+
+NOTE_TITLE = "# Verification note - %s\n"
+
+
+def verification_note_text(slug):
+    """The verification note as `quick-fix finish` first creates it: a title and its one block."""
+    return "%s\n%s\n%s\n" % (NOTE_TITLE % rb.field(slug),
+                                rb.OPENING.format(kind="verification-note"), rb.CLOSING)

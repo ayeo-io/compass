@@ -118,7 +118,42 @@ def _apply_ship_exit(task, task_dir):
 # same tree, which is precisely the collision this scope check exists to stop.
 FRAMEWORK_OWNED_PATHS = frozenset({
     ".compass/current-task",
+    # The project index, which every landing re-renders (ADR-051). Not under an issue's folder.
+    "docs/compass/README.md",
 })
+
+
+def _render_landing(task, task_dir, cwd):
+    """Render the issue's documents, its page and the project index as the issue will read
+    once this landing marks it done, and stage the files a project tracks (DD-11, ADR-051).
+
+    The landing commit then holds the done state, and the after-command render that
+    follows it changes no byte. Nothing is done unless every gate has passed, because only
+    then does the landing mark the issue done. A failure here never stops the landing: the
+    documents are then rendered after it, as before."""
+    gates = [g for g in (task.get("gates") or []) if isinstance(g, dict)]
+    if not gates or any(g.get("status") != "pass" for g in gates):
+        return []
+    try:
+        from compass_pkg import artifact_status, effective, render_cmd
+        try:
+            view = effective.view_or_legacy(task_dir)
+        except Exception:                               # noqa: BLE001
+            view = None
+        projected = artifact_status.ship_projection(task, view)
+        status_words.close(projected, status_words.COMPLETED)
+        projected["land_timestamp"] = now_iso()
+        written = render_cmd.render_projected(task_dir, projected)
+        project = os.path.dirname(find_compass_dir())
+        staged = []
+        for item in written:
+            if _git(["check-ignore", "-q", "--", item.path], cwd).returncode == 0:
+                continue
+            if _git(["--literal-pathspecs", "add", "--", item.path], cwd).returncode == 0:
+                staged.append(os.path.relpath(item.path, project))
+        return staged
+    except Exception:                                   # noqa: BLE001 - the landing goes on
+        return []
 
 
 def _land_scope(task, slug):
@@ -425,6 +460,9 @@ def cmd_land_commit(args):
         docs_prefix = _docs_prefix(_scope_task, slug)
     except (CompassError, OSError, KeyError):
         pass
+
+    if slug is not None:
+        _render_landing(_scope_task, _scope_dir, cwd)
 
     def _judge_index():
         """Judge what is staged at this moment, which is what the next

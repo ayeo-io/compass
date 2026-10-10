@@ -458,7 +458,7 @@ ARTIFACT_STAGES = {
     "requirements-review": "refine", "technical-design": "plan",
     "threat-model": "plan", "rollback-plan": "plan",
     "distribution-map": "breakdown", "verification-report": "verify",
-    "launch-readiness": "verify",
+    "verification-note": "verify", "launch-readiness": "verify",
 }
 
 

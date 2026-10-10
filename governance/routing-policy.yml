@@ -22,7 +22,7 @@
 # routing-policy.md.
 # =============================================================================
 
-version: 2.20.0
+version: 2.21.0
 # -----------------------------------------------------------------------------
 # ROUTING STRATEGIES - soft. They BIAS the candidate delivery approach. The evaluator uses
 # them in composition (step 1); a later rule can override the result.
@@ -348,7 +348,7 @@ route_shapes:
     # stated criterion before the code (`G2`) and a recorded green after it
     # (`G1`). So "a quick fix writes delivery-approach.md and nothing else" is
     # a routed decision a check can read, not a convention.
-    artifacts: { delivery-approach: lightweight }
+    artifacts: { delivery-approach: lightweight, verification-note: lightweight }
   regular:
     weight: 2
     stages: { assess: thorough, define: thorough, refine: lightweight, plan: thorough, breakdown: multiagent, implement: thorough, verify: thorough, ship: thorough }

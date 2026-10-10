@@ -740,6 +740,46 @@ def _record_usage(task_dir, finish_started_at):
     save_manifest(task, path)
 
 
+NOTE_KIND = "verification-note"
+
+
+def _write_verification_note(task_dir, slug, scenario_ids):
+    """Write the quick fix's one-screen verification note (RS-6), register it, approve it
+    and fill its block. Returns the note's project-relative path and whether the project
+    commits it (an ignored note is not traced and not staged).
+
+    Called once the three gates have passed, so the note's gate lines are final. It is
+    approved by this command, like the quick fix's other document (ADR-050). A person's
+    prose above the block is kept by every later render."""
+    from compass_pkg import artifact_status, block_renderers, render_cmd
+    rel = docs_dir(task_dir).rstrip("/") + "/" + NOTE_KIND + ".md"
+    path = os.path.join(find_upwards(task_dir, ".compass") or os.getcwd(), *rel.split("/"))
+    task, task_path = load_manifest(task_dir)
+    if not any(isinstance(a, dict) and a.get("kind") == NOTE_KIND for a in task.get("artifacts") or []):
+        # A quick fix started before the approach earned the note.
+        task.setdefault("artifacts", []).append({
+            "id": "ART-VERIFICATION_NOTE", "kind": NOTE_KIND, "status": "draft",
+            "depth": "lightweight", "reason": "One screen of what was checked, for a reader"})
+        save_manifest(task, task_path)
+    if not os.path.isfile(path):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as fh:
+            fh.write(block_renderers.verification_note_text(slug))
+    _quiet_run(cmd_issue_artifact, task=slug, kind=NOTE_KIND, status="draft", path=rel,
+               reason=None)
+    task, task_path = load_manifest(task_dir)
+    if artifact_status.approve_documents(task, artifact_status.BY_QUICK_FIX):
+        save_manifest(task, task_path)
+    render_cmd.render_issue(task_dir)
+    root = find_upwards(task_dir, ".compass") or os.getcwd()
+    if subprocess.run(["git", "check-ignore", "-q", "--", rel], cwd=root).returncode == 0:
+        # A project that ignores its documents commits none of them, so the note is not a
+        # changed file of the fix (the same rule that keeps the other documents out).
+        return rel, False
+    _quiet_run(cmd_changed_file_add, task=slug, path=rel, scenario=list(scenario_ids))
+    return rel, True
+
+
 def cmd_quick_fix_finish(args):
     finish_started_at = now_iso()
     task_dir = resolve_issue_dir(getattr(args, "task", None))
@@ -893,6 +933,10 @@ def cmd_quick_fix_finish(args):
     with _at_project_root(project_root):
         evidence_path_rel = "evidence/check-output.txt"
         evidence_path_abs = os.path.join(task_dir, evidence_path_rel)
+        # The documents are rendered from the records the greens just wrote, so the check
+        # judges what a reader will see (RS-3).
+        from compass_pkg import render_cmd
+        render_cmd.render_issue(task_dir)
         check_out, check_code = _quiet_run(
             cmd_check, mode="summary", task=slug, evidence_out=evidence_path_abs)
         if check_code != 0:
@@ -930,6 +974,8 @@ def cmd_quick_fix_finish(args):
                   evidence=[check_ev_id])
         _quiet_run(cmd_gate_pass, task=slug, gate_id=GATE_VERIFY_TRACEABILITY,
                   evidence=[check_ev_id])
+
+        note_path, note_committed = _write_verification_note(task_dir, slug, scenario_ids)
 
         devlog_path = os.path.join(task_dir, "devlog.md")
         if not os.path.isfile(devlog_path):
@@ -974,7 +1020,7 @@ def cmd_quick_fix_finish(args):
             )
 
         stage_paths = sorted(set(production_paths) | set(artifact_paths)
-                             | {f".compass/work/{slug}"})
+                             | {f".compass/work/{slug}"} | ({note_path} if note_committed else set()))
         ship_out, ship_code = _quiet_run(cmd_land_commit, task=slug,
                                          message=args.message,
                                          files=stage_paths)

@@ -82,9 +82,9 @@ def _refuse_unapproved_artifacts(task, task_dir):
     land goes on. Nothing happens for an issue whose configuration does not
     declare the check."""
     from compass_pkg import artifact_status
-    from compass_pkg.check_cmd import ADVISORY_FAILURE
+    from compass_pkg.check_cmd import ADVISORY_FAILURE, _judge
 
-    verdict = artifact_status.judged(task, task_dir)
+    verdict = artifact_status.judged(task, task_dir, _judge)
     if verdict is None:
         return
     passed, detail = verdict

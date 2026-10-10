@@ -311,13 +311,13 @@ def _check_artifacts_approved(task, task_dir):
     return True, f"{len(entries)} registered document(s) are approved, superseded or omitted with a reason"
 
 
-def judged(task, task_dir):
+def judged(task, task_dir, _judge):
     """The verdict of `artifacts-approved` after what the issue's configuration
     declares for it, or None when the configuration does not declare the check.
-    Returns `(passed, detail)` as `check_cmd._judge` does: `passed` can be
-    `ADVISORY_FAILURE` after a waiver."""
+    `_judge` is `check_cmd._judge`, passed in by the caller so this module
+    imports no command module. Returns `(passed, detail)` as it does: `passed`
+    can be `ADVISORY_FAILURE` after a waiver."""
     from compass_pkg import effective
-    from compass_pkg.check_cmd import _judge
     from compass_pkg.core import find_governance
 
     try:

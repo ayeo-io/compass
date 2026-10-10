@@ -585,7 +585,7 @@ def _approved_pass(run, task, task_dir, refused):
     from compass_pkg import artifact_status
 
     check = artifact_status.CHECK_ID
-    verdict = artifact_status.judged(task, task_dir)
+    verdict = artifact_status.judged(task, task_dir, _judge)
     if verdict is None:
         return 0, 0, 0, 0
     run.guardrail("", "approved documents")

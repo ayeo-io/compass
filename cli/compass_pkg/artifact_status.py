@@ -227,9 +227,10 @@ def register(task, view, entry, requested, digest_now, by=BY_ARTIFACT_SET, when=
     if requested in (APPROVED, AWAITING) and not entry.get("path"):
         raise CompassError(
             "compass issue artifact set: %s has no path, so no document has been written "
-            "and it cannot be %s. Write it and register it with `compass issue artifact "
-            "set %s --status draft --path <file>`, or run `compass issue artifact set %s "
-            "--status omitted --reason \"<why>\"`." % (kind, requested, kind, kind))
+            "and it cannot be %s. Write it and register it with "
+            "`compass issue artifact set %s --status draft --path <file>`, or run "
+            "`compass issue artifact set %s --status omitted --reason \"<why>\"`."
+            % (kind, requested, kind, kind))
     if requested == APPROVED:
         if human_checks(view, kind):
             raise CompassError(

@@ -21,7 +21,8 @@ sys.path.insert(0, str(HERE))
 from rendered_blocks_support import tracked_digest  # noqa: E402
 
 #: The modules this issue adds that render or migrate. Later units extend it.
-NEW_TEST_MODULES = ["tests/test_render_blocks.py"]
+NEW_TEST_MODULES = ["tests/test_render_blocks.py", "tests/test_rendered_blocks_check.py",
+                    "tests/test_dod_from_manifest.py"]
 
 
 def _archive_digest():

@@ -34,7 +34,7 @@ import fnmatch
 import re as _re
 from compass_pkg.stable_ids import GATE_VERIFY_ANALYZE, GATE_VERIFY_CORRECTNESS
 from compass_pkg.core import CompassError, artifact_location, artifact_path, find_compass_dir, find_governance, load_yaml, manifest_path, normalize_spine
-from compass_pkg import status_words
+from compass_pkg import rendered_blocks, status_words
 from compass_pkg.tdd import _read_config, settings_hint
 from compass_pkg.trust import UNKNOWN, UNTRUSTED, contribution_trust, is_ci
 from compass_pkg.check_results import NOTHING_TO_CHECK  # re-exported: callers still import it from here
@@ -55,7 +55,9 @@ def _scenario_documented_in_spec(spec_path, scenario_id):
     if not spec_path or not os.path.isfile(spec_path):
         return False
     try:
-        lines = open(spec_path, encoding="utf-8").read().splitlines()
+        # Block text is not the spec: a coverage block that repeats a
+        # scenario's id must not make it documented.
+        lines = rendered_blocks.read_masked(spec_path).splitlines()
     except OSError:
         return False
     idx = None
@@ -179,10 +181,10 @@ def _spec_sha256(task_dir):
     matters most.
     """
     path = artifact_path(task_dir, "acceptance-criteria.md")
-    if not os.path.isfile(path):
-        return None
-    with open(path, "rb") as fh:
-        return hashlib.sha256(fh.read()).hexdigest()
+    found = rendered_blocks.masked_digest(path)
+    # The same bytes as before for a spec with no block; with blocks, the
+    # lines inside them are left out, so a re-render does not read as an edit.
+    return found[len("sha256:"):] if found else None
 
 
 def _check_scenarios_are_executable(task, task_dir):

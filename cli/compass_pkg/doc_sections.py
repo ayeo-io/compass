@@ -15,12 +15,13 @@ Headings. The `plan` entry list sits under `Definition of Ready` and the
 `<Stage> <side> list`, for example `Implement exit list`.
 """
 # DEPENDENCY: standard library (re); compass_pkg.catalogue_spec,
-# compass_pkg.stable_ids. It imports nothing else, so any reader can use it.
+# compass_pkg.rendered_blocks, compass_pkg.stable_ids. It imports nothing else,
+# so any reader can use it.
 from __future__ import annotations
 
 import re
 
-from compass_pkg import catalogue_spec
+from compass_pkg import catalogue_spec, rendered_blocks
 from compass_pkg.stable_ids import STAGE_PLAN, STAGE_VERIFY
 
 #: The two lists the templates have always worded, each under its own heading.
@@ -83,9 +84,14 @@ def visible(lines):
 def comment_mask(lines):
     """For each line, whether a comment hides all of it: the line held text
     and none of it is visible. A line with text outside a comment is not
-    masked; read its text through `visible`."""
-    return [bool(line.strip()) and not shown.strip()
-            for line, shown in zip(lines, visible(lines))]
+    masked; read its text through `visible`.
+
+    A line inside a rendered block is masked too: block text is derived from
+    the records, so a reader of the document never takes it as the document's
+    own statement. The masking function decides which lines those are."""
+    masked = rendered_blocks.masked_text("\n".join(lines), keep_lines=True).split("\n")
+    return [(bool(line.strip()) and not shown.strip()) or (hidden != line)
+            for line, shown, hidden in zip(lines, visible(lines), masked)]
 
 
 def heading_of(line):

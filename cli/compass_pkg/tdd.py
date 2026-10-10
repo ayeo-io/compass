@@ -776,10 +776,14 @@ def _scenario_line(task_dir, scenario):
     from compass_pkg.terminal import relative_to_project
     path = artifact_path(task_dir, "acceptance-criteria.md")
     try:
-        with open(path, encoding="utf-8") as fh:
-            for n, line in enumerate(fh, 1):
-                if line.lstrip().startswith(f"| {scenario} |"):
-                    return f"scenario : {relative_to_project(path)}:{n}"
+        # Rows inside a rendered block are the block's, not the scenario's
+        # definition. The removed lines stay as empty lines, so the line number
+        # is the line in the file.
+        from compass_pkg import rendered_blocks
+        text = rendered_blocks.read_masked(path, keep_lines=True)
+        for n, line in enumerate(text.split("\n"), 1):
+            if line.lstrip().startswith(f"| {scenario} |"):
+                return f"scenario : {relative_to_project(path)}:{n}"
     except OSError:
         return None
     return None

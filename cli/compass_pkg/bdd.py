@@ -32,6 +32,7 @@ import re as _re
 
 import fnmatch
 import re as _re
+from compass_pkg import rendered_blocks
 from compass_pkg.checks import _spec_sha256
 from compass_pkg.terminal import say
 from compass_pkg.core import CompassError, artifact_path, find_upwards, load_yaml, manifest_path, normalize_spine, now_iso, resolve_issue_dir
@@ -433,8 +434,9 @@ def cmd_bdd_extract(args):
             "no acceptance criteria for issue '%s' - define them first (%s)"
             % (slug, spec_path))
 
-    with open(spec_path, "r", encoding="utf-8") as fh:
-        text = fh.read()
+    # The spec without its rendered blocks: a coverage block that repeats a
+    # scenario must not lift a second scenario.
+    text = rendered_blocks.read_masked(spec_path)
 
     scenarios = scan_spec_markdown(text)
 

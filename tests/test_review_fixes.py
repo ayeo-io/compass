@@ -1,4 +1,4 @@
-"""Fixes from the verify review of issue `documents-carry-judgement` (DCJ-84 to DCJ-87).
+"""Fixes from the review of issue `documents-carry-judgement` (DCJ-84 to DCJ-87).
 
 Each test builds a temporary git repository (`rendered_blocks_support`) and drives
 `cli/compass` the way a person does. No test reads or writes this checkout's own archive.

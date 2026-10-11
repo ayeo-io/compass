@@ -1,5 +1,5 @@
 # compass_pkg.issue_page - the blocks of the issue page
-"""The renderers of the issue page `docs/compass/<created>-<slug>/README.md` (RS-7, ADR-051).
+"""The renderers of the issue page `docs/compass/<created>-<slug>/README.md` (ADR-051).
 
 The page holds ten blocks, in the order a reader's questions come:
 
@@ -18,8 +18,8 @@ The page holds ten blocks, in the order a reader's questions come:
 
 Every renderer is a pure function of a `render_inputs.RenderInputs` snapshot. The header
 takes the facts it shares with the board from `issue_detail.detail`, called through the
-module (RS-8). Text copied from a record or a document goes through
-`rendered_blocks.field`, `cell` or `neutralise`, so it cannot be read as markup (DCJ-68).
+module (ADR-051). Text copied from a record or a document goes through
+`rendered_blocks.field`, `cell` or `neutralise`, so it cannot be read as markup.
 """
 # DEPENDENCY: standard library (re); compass_pkg.render_inputs, rendered_blocks,
 # issue_detail, project_scan, status_words, core.
@@ -68,8 +68,10 @@ def header(inputs, doc_rel):
     lines = ["**%s** - %s - %s - stage %s - gates %d/%d" % (
         code(inputs.slug), rb.field(facts.approach), rb.field(state), stage,
         facts.gates_passed, facts.gates_total),
-        "Owner: %s - %s" % (rb.field(owner) if owner else "not recorded", " - ".join(dates)),
-        BOARD_NOTE]
+        "Owner: %s - %s" % (rb.field(owner) if owner else "not recorded", " - ".join(dates))]
+    if facts.blocked:
+        lines.append("Blocked: %s" % rb.field(facts.blocked))
+    lines.append(BOARD_NOTE)
     return Part(OWN, lines)
 
 
@@ -238,7 +240,9 @@ def related(inputs, doc_rel):
 
 _DD_HEADING = re.compile(r"^#{1,6}\s+(.*\bDD-(\d+)\b.*?)\s*$")
 _ADR_ID = re.compile(r"\bADR-\d+\b")
-_SCOPE = re.compile(r"^\W*(?:\*\*)?Scope:?(?:\*\*)?:?\s*(.+?)\s*$", re.I)
+#: The declared field: `Scope: project`, `- **Scope:** issue` or ``scope: `project` ``, the whole
+#: line, with one of the two values. Prose that merely starts with the word is not a field.
+_SCOPE = re.compile(r"^\s*(?:[-*+]\s+)?(?:\*\*)?[Ss]cope(?::\*\*|\*\*:|:)\s*`?(issue|project)`?\s*$")
 GOVERNANCE_PREFIX = "- governance: "
 
 

@@ -61,7 +61,7 @@ None
 
 <!-- compass:render decisions -->
 - `DD-1` - Security override is a fixed category, not a per-notification flag
-- `DD-2` - Idempotency key on the notification row, once-ever dedup - scope: to; once-ever is simpler and correct.
+- `DD-2` - Idempotency key on the notification row, once-ever dedup
 - `DD-3` - Durability via write-before-deliver, not an in-memory queue
 <!-- /compass:render -->
 

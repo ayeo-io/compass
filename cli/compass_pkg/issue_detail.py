@@ -2,7 +2,7 @@
 """One function that reads an issue's approach, state, stage and gate count.
 
 `compass flow` (the board) and the header block of the issue page both call
-`detail` through this module, so the two cannot disagree (RS-8, ADR-051). They
+`detail` through this module, so the two cannot disagree (ADR-051). They
 call it through the module, not by name, so a test can replace it and see both
 surfaces follow.
 
@@ -35,6 +35,8 @@ class IssueDetail:
     gates_total: int
     #: Why the stage could not be read, else None.
     stage_problem: object = None
+    #: The reason of the blocked flag while it counts (an issue in progress or in review), else None.
+    blocked: object = None
 
     @property
     def gates(self):
@@ -67,8 +69,10 @@ def detail(manifest, task_dir):
     recorded = bool(manifest.get("delivery_approach"))
     stage, problem = _stage(manifest, task_dir, state, recorded)
     passed, total = _gate_counts(manifest)
+    flag = lifecycle.blocked_flag(manifest, task_dir)
     return IssueDetail(str(manifest.get("delivery_approach") or NOT_ASSESSED), state, stage,
-                       passed, total, problem)
+                       passed, total, problem,
+                       str(flag.get("reason") or "no reason recorded") if flag else None)
 
 
 def state_text(manifest, task_dir):

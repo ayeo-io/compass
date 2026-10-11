@@ -132,7 +132,10 @@ def test_contract_3_gives_the_recorded_verdicts_under(kind, archive_runs):
         recorded = {slug: dict(r, verdicts={k: v for k, v in r["verdicts"].items()
                                             if k != "artifacts-approved"})
                     for slug, r in recorded.items()}
-    differences = cb.archive_differences(recorded, archive_runs[kind])
+    # The sample is read after `issue migrate` and `issue render --all`, and exactly the
+    # three row moves of 7.0.0 are allowed (ADR-051, `allow_7_0_0_moves`).
+    old, new = cb.allow_7_0_0_moves(recorded, archive_runs[kind])
+    differences = cb.archive_differences(old, new)
     assert differences == [], "\n".join(differences)
 
 

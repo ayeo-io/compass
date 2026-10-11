@@ -98,11 +98,42 @@ def test_contract_3_check_gives_the_recorded_verdicts_on_the_archive_sample():
     # 7.0.0 adds the check `artifacts-approved` (ADR-050). It declines on every
     # sampled issue, which is done, so the baseline gained that one row and no
     # recorded verdict moved.
-    from compat_baseline import archive_differences, archive_results
-    root, recorded = _archive()
+    #
+    # 7.0.0 also replaces `dashboard-current` by `rendered-blocks-current` and moves
+    # `dod-evidence-typed` to records (ADR-051). The sample is read after
+    # `compass issue migrate` and `compass issue render --all`, and exactly those three
+    # row moves are allowed (`allow_7_0_0_moves`). Any other move still fails.
+    from archive import checkable_root
+    from compat_baseline import allow_7_0_0_moves, archive_differences, archive_results
+    _, recorded = _archive()
     assert recorded["version"] == "5.6.0" and len(recorded["issues"]) == 16
-    differences = archive_differences(recorded["issues"], archive_results(root))
+    old, new = allow_7_0_0_moves(recorded["issues"], archive_results(checkable_root()))
+    differences = archive_differences(old, new)
     assert differences == [], "\n".join(differences)
+
+
+def test_contract_3_allows_only_the_three_moves_of_7_0_0():
+    """The allow-list is exact: a fourth move, or one of the three in another shape, fails."""
+    from compat_baseline import allow_7_0_0_moves, archive_differences
+    base = {"check_exit": 0, "lint_exit": 0, "receipt_exit": 0,
+            "verdicts": {"dashboard-current": "nothing-to-check", "dod-evidence-typed": "pass",
+                         "suite-passed": "pass"}}
+    good = {"check_exit": 0, "lint_exit": 0, "receipt_exit": 0,
+            "verdicts": {"rendered-blocks-current": "pass", "dod-evidence-typed": "nothing-to-check",
+                         "suite-passed": "pass"}}
+
+    def differs(**verdicts):
+        now = dict(good, verdicts=dict(good["verdicts"], **verdicts))
+        return archive_differences(*allow_7_0_0_moves({"x": base}, {"x": now}))
+
+    assert differs() == []
+    assert differs(**{"suite-passed": "fail"})
+    assert differs(**{"rendered-blocks-current": "fail"})
+    assert differs(**{"dod-evidence-typed": "fail"})
+    assert differs(**{"dashboard-current": "fail"})
+    assert differs(**{"extra-check": "pass"})
+    assert archive_differences(*allow_7_0_0_moves(
+        {"x": base}, {"x": dict(good, check_exit=1)}))
 
 
 def test_contract_6_every_sampled_issue_stays_readable():

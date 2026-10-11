@@ -33,7 +33,7 @@ import re
 
 from compass_pkg import issue_detail, parse_cache
 from compass_pkg.core import CompassError, manifest_path, normalize_spine
-from compass_pkg.issue_layout import docs_dir_for
+from compass_pkg.issue_layout import docs_dir_for, is_one_segment
 
 LEDGER = os.path.join("governance", "decisions")
 ADR_FOLDER = os.path.join("architecture", "decisions")
@@ -48,16 +48,35 @@ REVERSE = {"depends on": "depended on by", "parent": "child", "repairs": "repair
            "raised from": "raised here"}
 
 
-def _names(value):
+def _names(value, rejected=None):
     """The issue slugs a link field names: a slug, a `{issue: slug}` mapping or a
-    list of either."""
+    list of either. A name that is not one path segment is not an issue name: it is
+    left out (and added to `rejected` when given), because it would be joined onto the
+    work folder and could leave the project (ADR-051, decision 7)."""
     if isinstance(value, str):
-        return [value.strip()] if value.strip() else []
+        name = value.strip()
+        if name and not is_one_segment(name):
+            if rejected is not None:
+                rejected.append(name)
+            return []
+        return [name] if name else []
     if isinstance(value, dict):
-        return _names(value.get("issue"))
+        return _names(value.get("issue"), rejected)
     if isinstance(value, list):
-        return [name for one in value for name in _names(one)]
+        return [name for one in value for name in _names(one, rejected)]
     return []
+
+
+def rejected_links(task):
+    """The names in a manifest's link fields that are not one path segment."""
+    rejected = []
+    if isinstance(task, dict):
+        for key in ("depends_on", "parent", "repairs", "landed_by", "raised_by", "delivered"):
+            _names(task.get(key), rejected)
+        for follow_up in task.get("follow_ups") or []:
+            if isinstance(follow_up, dict):
+                _names(follow_up.get("target_task"), rejected)
+    return rejected
 
 
 def forward_links(task):

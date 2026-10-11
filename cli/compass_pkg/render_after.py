@@ -10,11 +10,11 @@ it renders:
    on another issue's records (`related`) is current there too.
 
 Nothing else is written: an issue the manifest does not link to keeps its bytes
-and its modification time (DCJ-21).
+and its modification time.
 
 A render that fails never fails the command and never stops the others. When any
 render fails, one line on standard error gives the count and the first failure
-(DCJ-20). A command that exits non-zero renders nothing (DCJ-19). The step shares
+. A command that exits non-zero renders nothing. The step shares
 no code with the label sync and imports nothing from it: both read
 `record_triggers`, and each catches its own failure.
 """
@@ -29,6 +29,7 @@ import yaml
 
 from compass_pkg import project_scan, record_triggers, render_cmd
 from compass_pkg.core import load_manifest, manifest_path, resolve_issue_dir
+from compass_pkg.issue_layout import is_one_segment
 
 
 def _name_of(value):
@@ -50,7 +51,8 @@ def links_of(task):
         if isinstance(follow_up, dict):
             found.add(_name_of(follow_up.get("target_task")))
     found.discard("")
-    return found
+    # A name from a manifest is joined onto the work folder, so it must be one path segment.
+    return {name for name in found if is_one_segment(name)}
 
 
 def linked_issue_dirs(task_dir, task):
@@ -124,6 +126,10 @@ def after_command(args, code):
     except Exception:                                   # noqa: BLE001 - never fail the command
         return code
     failures = []
+    for name in project_scan.rejected_links(task):
+        sys.stderr.write("compass: the link '%s' in %s is not an issue name (an issue name is one "
+                         "path segment), so it was not followed.\n"
+                         % (name, os.path.basename(os.path.abspath(task_dir))))
     global _scan
     try:
         # Read once for every issue this step renders; each render still reads its own

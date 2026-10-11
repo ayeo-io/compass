@@ -36,7 +36,7 @@ from compass_pkg import core  # noqa: E402
 #: The modules that read an issue's documents.
 READER_MODULES = [
     "analyze.py", "checks.py", "check_cmd.py", "policy.py", "receipt.py",
-    "next_cmd.py", "dashboard.py", "bdd.py", "flow.py", "routing.py",
+    "next_cmd.py", "artifact_cmd.py", "bdd.py", "flow.py", "routing.py",
     "ingest.py", "borrowed_docs.py", "migrate.py", "verb_help.py",
 ]
 

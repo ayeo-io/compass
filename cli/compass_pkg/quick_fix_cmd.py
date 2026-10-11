@@ -49,7 +49,7 @@ from compass_pkg.core import (
     display_stage, docs_dir, find_governance, find_upwards, reading_matches,
     load_manifest, now_iso, load_yaml, manifest_path, resolve_issue_dir, save_manifest,
 )
-from compass_pkg.dashboard import cmd_issue_artifact
+from compass_pkg.artifact_cmd import cmd_issue_artifact
 from compass_pkg.init_cmd import ensure_initialised, resolve_project_root
 from compass_pkg.manifest import (
     cmd_changed_file_add, cmd_evidence_add, cmd_gate_pass, cmd_land_commit,

@@ -38,8 +38,8 @@ from compass_pkg.core import CompassError, load_yaml, normalize_spine
 #: a check is added, silently widening the relaxation. A named list fails
 #: loudly when the set changes, which is the moment to think about it.
 #:
-#: What is NOT here is deliberate. `dashboard-current` still applies: the
-#: review page must match the manifest whatever the manifest says. `dod-evidence-typed`
+#: What is NOT here is deliberate. `rendered-blocks-current` still applies: a
+#: rendered block must match the records whatever the records say. `dod-evidence-typed`
 #: and `backfills-paid` still apply: an unchecked box or an owed follow-up is
 #: this issue's own business regardless of who did the work.
 LANDED_BY_RELAXES = (

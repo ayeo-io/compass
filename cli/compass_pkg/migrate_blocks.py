@@ -42,7 +42,8 @@ PAIR = ("dod",)
 
 _ITEM = re.compile(r"^\s*-\s+\[([ xX])\]\s*(.*)")
 _EVIDENCE_TAG = re.compile(r"\(evidence:\s*(EV-[^)]+)\)")
-# Both id spellings and both tag words: archived reports say `backfill` and `BF-`.
+# Both id spellings and both tag words: archived reports use an older tag word and the
+# `BF-` id prefix.
 _FOLLOW_UP_TAG = re.compile(r"\((?:follow-up|backfill):\s*((?:FU|BF)-[^)]+)\)")
 
 

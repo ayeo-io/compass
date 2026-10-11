@@ -109,7 +109,7 @@ def attach_mode_flags(parser):
     Recursion is the whole job. The tree has thirteen nested subparser groups -
     `issue`, `bdd`, `gate`, `evidence`, `adr` and eight more - and the flags
     belong on every leaf. A walk that handles only the top level attaches the
-    flags to `issue` and misses `issue dashboard` entirely, which is how a
+    flags to `issue` and misses `issue render` entirely, which is how a
     guard over this tree passes while checking a fraction of it.
 
     Returns the number of leaves reached, so a caller can tell "walked the

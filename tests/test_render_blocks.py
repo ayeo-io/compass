@@ -888,3 +888,89 @@ def test_dcj_60_render_all_names_unreadable_issues(tmp_path):
     assert "stale" not in doc_path(root, "acceptance-criteria").read_text()
     assert (bad_doc.read_bytes(), bad_manifest.read_bytes()) == before
     assert not (Path(root) / ps.docs_of("bad-yaml")).exists()
+
+
+# --- DCJ-12 and DCJ-13: the old review page verb and check are gone -------------------
+
+def test_dcj_12_dashboard_verb_gone_error_names_render(tmp_path):
+    from compass_pkg import aliases
+    root = rich_issue(tmp_path)
+    before = sup.snapshot(root)
+    manifest_before = (Path(root) / WORK / "manifest.yml").read_bytes()
+    for argv in (("issue", "dashboard", "render"), ("issue", "dashboard", "render", "--check"),
+                 ("issue", "dashboard")):
+        code, out, err = sup.run(root, *argv)
+        assert code == 2, (argv, out, err)
+        assert "compass issue render" in err or "'issue render'" in err, err
+    assert sup.snapshot(root) == before
+    assert (Path(root) / WORK / "manifest.yml").read_bytes() == manifest_before
+    # Help lists render and not dashboard.
+    code, out, err = sup.run(root, "issue", "--help")
+    assert code == 0 and "render" in out and "dashboard" not in out, out
+    # The alias table holds no row for it, and the hint table holds one that runs nothing.
+    table = aliases.load_table()
+    assert not [r for r in table["aliases"] if r["old"][:2] == ["issue", "dashboard"]]
+    rows = [r for r in table["hints"] if r["old"] == ["issue", "dashboard"]]
+    assert rows == [{"old": ["issue", "dashboard"], "new": ["issue", "render"],
+                     "released_in": "v5.6.0", "removed_in": "7.0.0"}]
+    # The alias-removal test accepts a hint row for a removed released verb at 7.0.0, and no
+    # alias row. It fails for an alias row and for a hint no release held.
+    only = {"aliases": [], "hints": rows}
+    assert aliases.removal_problems("7.0.0", only) == []
+    assert aliases.removal_problems("7.0.0", dict(only, aliases=[
+        {"old": ["a", "b"], "new": ["c"], "kind": "verb", "released_in": "v5.6.0"}]))
+    assert aliases.removal_problems("7.0.0", dict(only, hints=rows + [
+        {"old": ["x", "y"], "new": ["z"]}]))
+    assert aliases.removal_problems("7.0.0", dict(only, hints=[
+        {"old": ["x", "y"], "new": ["z"], "released_in": "v5.6.0"}]))
+    assert aliases.removal_problems("6.9.9", {"aliases": [], "hints": rows}) == []
+
+
+#: Where the removed verb and check may still be named (DCJ-13), each with its reason.
+REMOVED_WORDS = ("issue dashboard", "dashboard-current", "stale_page_reminder")
+ALLOWED_PREFIXES = (
+    "architecture/decisions/",           # decision records accepted before this change, and ADR-051
+    "CHANGELOG.md", "docs/system-spec.md",   # the history of the product
+    "docs/upgrade-6-0-0.md",             # the 6.0.0 release notes name the 6.0.0 spellings
+    "docs/upgrade-7-0-0.md",             # the 7.0.0 release notes name what was removed
+    "cli/aliases.yml",                   # the one hint row
+    "cli/compass_pkg/check_registry.py",  # reports a stored generation naming the removed check
+    "cli/compass_pkg/migrate.py",        # matches the old generated marker to rename the page aside
+    "tests/fixtures/",                   # fixtures that model earlier releases
+    "docs/policy-migrate.md",            # its pinned example is a copy of release 5.3.0 governance
+    "docs/rendered-blocks.md",           # explains the replacement
+)
+CHECKED_REMOVAL_TESTS = (
+    "tests/test_render_blocks.py", "tests/test_rendered_blocks_check.py",
+    "tests/test_migrate_rendered_blocks.py", "tests/test_migrate_to_docs_compass.py",
+    "tests/test_cli_renames.py", "tests/compat_baseline.py", "tests/test_compat_contracts.py",
+    "tests/test_stream_c_no_new_checks_or_gates.py",    # the removed check is in its list of removals
+    "tests/test_writing_style.py",                      # a comment on the corpus label count
+)
+
+
+def test_dcj_13_no_tracked_file_names_removed_verb_or_check():
+    ROOT = sup.ROOT
+    listed = subprocess.run(["git", "ls-files", "-z"], cwd=ROOT, capture_output=True,
+                            text=True, check=True).stdout.split("\0")
+    found = []
+    for rel in filter(None, listed):
+        path = ROOT / rel
+        if not path.is_file() or rel.endswith((".tar.gz", ".tar.xz", ".png", ".svg", ".pdf")):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        hits = [w for w in REMOVED_WORDS if w in text]
+        if not hits:
+            continue
+        if rel.startswith(ALLOWED_PREFIXES) or rel in CHECKED_REMOVAL_TESTS:
+            continue
+        if rel.startswith("governance/decisions/"):
+            # Entries dated before this change, and the one that supersedes the reminder.
+            name = rel.rsplit("/", 1)[-1]
+            if name[:10] < "2026-10-10" or name == "2026-10-10-record-commands-re-render-the-issue-page.md":
+                continue
+        found.append((rel, hits))
+    assert found == [], found

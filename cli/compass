@@ -361,13 +361,6 @@ def build_parser():
                       help="list what would change; write nothing")
     ptrn.set_defaults(func=cmd_issue_render, output_kind="hand-off")
 
-    ptdg = pts.add_parser("dashboard", help="the per-issue review page")
-    ptd = ptdg.add_subparsers(dest="dashboard_cmd", required=True).add_parser(
-        "render", help="render the per-issue review README from the artifact registry")
-    issue_arg(ptd)
-    ptd.add_argument("--check", action="store_true", help="report whether the README matches the manifest; write nothing")
-    ptd.set_defaults(func=cmd_issue_dashboard, output_kind="hand-off")
-
     ptag = pts.add_parser("artifact", help="a document's status in the issue's review pack")
     pta = ptag.add_subparsers(dest="artifact_cmd", required=True).add_parser(
         "set", help="set a document's status in the issue's review pack")

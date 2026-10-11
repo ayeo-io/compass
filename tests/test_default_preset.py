@@ -812,7 +812,7 @@ def test_dp_6_the_guardrails_keep_their_names_and_the_spike_ones_apply_off_ships
 
 # Read from the modules that return `NOTHING_TO_CHECK` for the check: checks.py
 # (scenarios-are-executable, claim-traces-to-scenario, command-passes),
-# borrowed_docs.py, binding.py (evidence-matches-tree), dashboard.py,
+# borrowed_docs.py, binding.py (evidence-matches-tree), render_check.py,
 # landed_by.py, multiagent_check.py, artifact_status.py and evidence_identity.py. The check
 # declared-tests-resolve passes with a note instead, so it is `pass`.
 EXPECTED_ON_SKIPPED = {

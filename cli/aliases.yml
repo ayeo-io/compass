@@ -9,8 +9,9 @@
 # hints: a spelling no release holds. It does not run. When the command line
 #   fails to parse, the error adds one line naming the new spelling.
 #
-# A test fails when the package version is 7.0.0 or later and either list is
-# not empty (cli/compass_pkg/aliases.py, removal_problems).
+# A test fails when the package version is 7.0.0 or later and an alias row remains, or a hint
+# row lacks `released_in` and `removed_in`, which together say that a release held the
+# spelling and 7.0.0 removed it (cli/compass_pkg/aliases.py, removal_problems).
 #
 # `old` and `new` are token lists. When `new` begins with `old` (issue
 # artifact -> issue artifact set), a command line that already holds the extra
@@ -39,10 +40,6 @@ aliases:
     new: [review-rule, list]
     kind: verb
     released_in: v5.6.0
-  - old: [issue, dashboard]
-    new: [issue, dashboard, render]
-    kind: verb
-    released_in: v5.6.0
   - old: [issue, artifact]
     new: [issue, artifact, set]
     kind: verb
@@ -64,6 +61,14 @@ aliases:
     released_in: v5.6.0
 
 hints:
+  # A released verb that 7.0.0 removed. It runs nothing: the parse error adds this line.
+  # `released_in` names the first release tag that held the spelling, and `removed_in` the
+  # release that removed it. This is the one hint row that ends at 7.0.0 with both fields
+  # (ADR-051, amending ADR-044, which ended every row at 7.0.0).
+  - old: [issue, dashboard]
+    new: [issue, render]
+    released_in: v5.6.0
+    removed_in: 7.0.0
   - old: [policy, effective]
     new: [policy, show]
   - old: [policy, test]

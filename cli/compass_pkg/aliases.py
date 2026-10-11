@@ -163,14 +163,19 @@ def _version_tuple(version):
 
 
 def removal_problems(version, table=None):
-    """What stops the table from ending at 7.0.0: a row still listed once the
-    package version is 7.0.0 or later."""
+    """What stops the table from ending at 7.0.0: an alias row still listed once the
+    package version is 7.0.0 or later, and a hint row that is not for a verb a release held
+    and 7.0.0 removed (it carries both `released_in` and `removed_in`)."""
     table = table or load_table()
     if _version_tuple(version) < REMOVED_AT:
         return []
-    return [f"{kind}: '{' '.join(row['old'])}' is still listed at version {version}; "
-            f"remove it, the aliases and hints end at 7.0.0"
-            for kind in ("aliases", "hints") for row in table[kind]]
+    found = [f"aliases: '{' '.join(row['old'])}' is still listed at version {version}; "
+             f"remove it, the aliases end at 7.0.0" for row in table["aliases"]]
+    found += [f"hints: '{' '.join(row['old'])}' is still listed at version {version}; "
+              f"remove it, or name the release that held it (released_in) and removed it "
+              f"(removed_in)" for row in table["hints"]
+              if not (row.get("released_in") and row.get("removed_in"))]
+    return found
 
 
 def parse_with_aliases(build_parser, raw, parse):

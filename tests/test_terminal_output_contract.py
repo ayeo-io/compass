@@ -45,7 +45,7 @@ def _leaf_parsers():
 
     Recursive on purpose. The tree has 13 nested subparser groups under 47
     `add_parser` calls, so anything that walks only the top level reaches
-    `issue` and misses `issue dashboard` entirely - which is exactly how a
+    `issue` and misses `issue render` entirely - which is exactly how a
     guard over this tree passes without checking most of it.
     """
     import argparse
@@ -92,7 +92,7 @@ def test_trc_c1_every_verb_accepts_every_mode_flag():
     # stops, so it never sees anything nested. Naming a nested verb catches
     # that directly and does not go out of date as verbs are added, which a
     # bare count would. The floor is a second, cruder net.
-    for nested in ("issue dashboard render", "gate pass", "evidence add", "bdd verify"):
+    for nested in ("issue render", "gate pass", "evidence add", "bdd verify"):
         assert nested in leaves, (
             "%r was not reached, so the walk over the parser tree is not "
             "recursing into nested subcommand groups. Found: %s"
@@ -503,10 +503,10 @@ def test_trc_e1_the_budget_guard_names_the_verb_it_caught():
     """An unactionable failure gets suppressed rather than fixed (`TRC-E1`)."""
     from compass_pkg.terminal import over_budget
 
-    findings = over_budget({"issue dashboard": "\n".join("x" * 3 for _ in range(20))})
+    findings = over_budget({"issue render": "\n".join("x" * 3 for _ in range(20))})
     assert findings, "a 20-line hand-off was not reported as over budget"
     text = " ".join(findings)
-    assert "issue dashboard" in text, "the finding does not name the verb"
+    assert "issue render" in text, "the finding does not name the verb"
     assert "20" in text, "the finding does not give the actual line count"
     assert str(HANDOFF_LINES) in text, "the finding does not give the budget"
 
@@ -1042,7 +1042,7 @@ _TAIL_ARGV = {
     # registry in cli/compass_pkg/refusals.py with the params given on argv.
     "_refusal": ["_refusal", "no-delivery-approach", "slug=demo"],
     "approach evaluate": ["approach", "evaluate"],
-    "issue dashboard render": ["issue", "dashboard", "render"],
+    "issue render": ["issue", "render"],
     # The fixture issue has a test record, so it is in progress and can be
     # blocked; `issue blocked set` sorts before `issue status set`, which holds it.
     "issue blocked set": ["issue", "blocked", "set", "--reason", "waiting on a review"],

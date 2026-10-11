@@ -76,7 +76,7 @@ def _slash_mentions():
                 continue
             if line.lstrip().startswith(">"):
                 continue
-            for m in re.finditer(r"/compass:([a-z][a-z-]*)", line):
+            for m in re.finditer(r"(?<!<!-- )/compass:([a-z][a-z-]*)", line):  # not the closing render marker
                 found.append((path, n, m.group(1)))
     return found
 

@@ -28,7 +28,7 @@ import hashlib
 import json
 import os
 
-from compass_pkg import atomic_io, project_scan
+from compass_pkg import atomic_io, project_scan, project_settings
 from compass_pkg.core import COMPASS_VERSION
 from compass_pkg.issue_layout import docs_dir_for
 
@@ -130,6 +130,6 @@ def project_digest(scan):
     h = hashlib.sha256()
     _listing(h, os.path.join(scan.project, project_scan.LEDGER))
     _listing(h, os.path.join(scan.project, project_scan.ADR_FOLDER))
-    _file(h, os.path.join(scan.project, "compass.yml"))
-    _file(h, os.path.join(scan.project, ".compass", "config.yml"))
+    _file(h, os.path.join(scan.project, project_settings.COMPASS_YML))
+    _file(h, os.path.join(scan.project, project_settings.OLD_CONFIG))
     return h.hexdigest()

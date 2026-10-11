@@ -104,6 +104,10 @@ def test_si_a_the_variable_blocks_when_its_issue_has_no_red(project):
 # --- SI-B: the CLI ------------------------------------------------------------------
 
 def test_si_b_a_command_without_an_issue_uses_the_variable(project):
+    # A missing issue page is an advisory line that lengthens the first line of `check`
+    # until the slug is cut off, so the pages are written first.
+    for slug in ("ready", "bare"):
+        _cli(project, "issue", "render", "--issue", slug)
     result = _cli(project, "check", issue="ready")
     assert "'ready'" in result.stdout, result.stdout + result.stderr
     explicit = _cli(project, "check", "--issue", "bare", issue="ready")

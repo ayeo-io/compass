@@ -488,7 +488,10 @@ def _source_tree_hash(project_root):
     # read a run as a change.
     _EXCLUDED_DIRS = {".git", "__pycache__", ".venv", "node_modules",
                       "evidence", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
-    _EXCLUDED_AT_ROOT = {".compass"}
+    # `docs/compass/` is the tree id's own exclusion too (`binding._OUTSIDE_THE_TREE`): the
+    # CLI renders issue pages and blocks there after a command, and that is not a change
+    # to the code the test runs on. Without it a second identical green is not a rerun.
+    _EXCLUDED_AT_ROOT = {".compass", os.path.join("docs", "compass")}
     _INCLUDED_EXTS = {".py", ".md", ".yml", ".yaml", ".json", ".toml"}
 
     h = hashlib.sha256()
@@ -496,8 +499,9 @@ def _source_tree_hash(project_root):
     for root, dirs, files in os.walk(project_root):
         # Prune excluded directories in-place so os.walk skips them
         at_root = root == project_root   # os.walk yields the root first, as given
+        here = os.path.relpath(root, project_root)
         dirs[:] = sorted(d for d in dirs if d not in _EXCLUDED_DIRS
-                         and not (at_root and d in _EXCLUDED_AT_ROOT))
+                         and os.path.normpath(os.path.join(here, d)) not in _EXCLUDED_AT_ROOT)
         for fname in sorted(files):
             ext = os.path.splitext(fname)[1].lower()
             if ext not in _INCLUDED_EXTS:

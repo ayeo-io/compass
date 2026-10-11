@@ -77,7 +77,7 @@ def _issue(root: Path, route: str, *, scenarios=True, criteria=None, review=Fals
         # Written and left unregistered, as commands/refine.md says to do on
         # a route that does not earn the review.
         docs = root / "docs" / "compass" / f"2026-10-02-{SLUG}"
-        docs.mkdir(parents=True)
+        docs.mkdir(parents=True, exist_ok=True)   # the issue page render may have made it
         (docs / "requirements-review.md").write_text("# Requirements review\n")
     if review:
         arts.append({"id": "ART-RR", "kind": "requirements-review", "status": "draft",

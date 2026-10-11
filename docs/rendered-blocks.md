@@ -154,8 +154,8 @@ what its render reads: the CLI version, the manifest, the folder and evidence
 listings, the stored generations, every registered document and the page, the
 manifests it links to in either direction, the listings of `governance/decisions/`
 and `architecture/decisions/`, and `compass.yml`. It is derived. Delete it and
-the next run renders every issue and changes no byte. A project with 490 issues
-renders in under five seconds with a warm parse cache.
+the next run renders every issue and changes no byte. With it, a second `--all`
+does not read an issue whose inputs have not changed.
 
 ### The parse cache
 

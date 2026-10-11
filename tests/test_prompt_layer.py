@@ -420,7 +420,8 @@ def test_trc_f2_the_quick_fix_shape_requires_no_document():
         f"approach has been renamed and this check is measuring nothing. "
         f"Shapes: {', '.join(sorted(shapes))}")
     artifacts = shapes[QUICK_FIX_SHAPE].get("artifacts") or {}
-    assert set(artifacts) == {"delivery-approach"}, (
+    # ADR-051 adds the one-screen verification note, which a quick fix gets at its finish.
+    assert set(artifacts) == {"delivery-approach", "verification-note"}, (
         "the quick-fix shape does not require exactly delivery-approach.md: "
         + (", ".join(f"{k} ({v})" for k, v in sorted(artifacts.items()))
            or "it requires nothing at all, so nothing checks that a quick fix "

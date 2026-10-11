@@ -73,7 +73,8 @@ def test_cf_1_the_cli_resolves_a_registered_document_under_docs_compass(tmp_path
         cwd=tmp_path, capture_output=True, text=True)
     assert run("approach", "evaluate", "--write").returncode == 0
     rel = docs_dir_for(created, slug) + "/delivery-approach.md"
-    (tmp_path / rel).parent.mkdir(parents=True)
+    # `approach evaluate --write` renders the issue page into this folder, so it may exist.
+    (tmp_path / rel).parent.mkdir(parents=True, exist_ok=True)
     (tmp_path / rel).write_text("# approach\n", encoding="utf-8")
     reg = run("issue", "artifact", "delivery-approach",
               "--status", "draft", "--path", rel)

@@ -1,5 +1,5 @@
 # compass_pkg.project_index - the block of the project index
-"""The `index` block of the README.md directly in `docs/compass` (RS-13, ADR-051).
+"""The `index` block of the README.md directly in `docs/compass` (ADR-051).
 
 One table for each state of an issue, in the order a reader looks for work: Backlog,
 Ready, In progress, In review, Done in the last 30 days, Closed. Each readable issue is
@@ -10,7 +10,7 @@ documents.
 
 The window of the "Done in the last 30 days" table ends at the newest completion
 the project holds, not at today, so the index is the same on every day the records
-are the same (DCJ-55). The block reads no clock.
+are the same. The block reads no clock.
 
 Every line of this block depends on the whole project, so it is a `cross` block: a
 stale row is an advisory failure of `rendered-blocks-current` for that issue, and no

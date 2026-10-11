@@ -6,11 +6,11 @@ relative path of the document it renders into, and returns a `Part`: the lines
 of the block and whether they depend on this issue's own records (`own`) or on
 other issues or the project (`cross`). It reads no clock and no git
 configuration, so the same records give the same text on every machine and a
-second render changes no byte (DCJ-3). `render_inputs.gather` is the only function
+second render changes no byte. `render_inputs.gather` is the only function
 that touches the disk before the renderers run.
 
 Every line copied from a record goes through `rendered_blocks.field`,
-`cell` or `neutralise`, so recorded text cannot be read as a marker (DCJ-68).
+`cell` or `neutralise`, so recorded text cannot be read as a marker.
 They are called through the module, so a test can replace one.
 
 This module renders the kinds every document shares (`coverage`, `gates`, `dod`, `dor`,

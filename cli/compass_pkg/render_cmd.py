@@ -14,7 +14,7 @@ Safety, in the order it acts:
   marker in the last document stops the render before it changes the first;
 - a registered path is checked again here: one that leaves the project, one
   that is or sits under a symbolic link, and the page path are refused;
-- only files under `docs/compass/` are written (DCJ-71);
+- only files under `docs/compass/` are written;
 - each write re-reads the file just before the rename and refuses when it
   changed since the render read it;
 - there is no rollback across files. A failure part way leaves the files already
@@ -26,7 +26,7 @@ render: the index is a cross-issue block (ADR-051).
 
 `--all` plans every readable issue from one `project_scan.ProjectScan`, skips an issue whose
 inputs are unchanged (`render_skip`), and renders the rest. Each issue that cannot be rendered
-is named; the others are rendered and the command exits 1 (RS-14).
+is named; the others are rendered and the command exits 1 (ADR-051).
 """
 # DEPENDENCY: standard library (dataclasses, os); compass_pkg.core, atomic_io,
 # block_renderers, rendered_blocks, issue_layout, terminal, project_scan, project_index,

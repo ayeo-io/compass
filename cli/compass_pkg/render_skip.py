@@ -1,10 +1,10 @@
 # compass_pkg.render_skip - which issues `compass issue render --all` can skip
-"""The derived state that lets `render --all` skip an issue whose inputs are unchanged (RS-14).
+"""The derived state that lets `render --all` skip an issue whose inputs are unchanged (ADR-051).
 
 `render-skip.json`, in the cache folder under `.compass`, maps an issue slug to the digest of everything that issue's
 render reads. When the digest matches, the issue's documents are what a render would write,
 so the run skips it. The file is derived: deleting it makes the next run render every issue and
-change no byte (DCJ-58). A run that cannot read or write it renders everything.
+change no byte. A run that cannot read or write it renders everything.
 
 An issue's key digests:
 

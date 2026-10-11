@@ -517,7 +517,7 @@ def test_dcj_21_after_command_renders_linked_issues_only(tmp_path):
     assert code == 0, out + err
     assert "stale text" not in pages["parent"].read_text(encoding="utf-8")
     assert "No follow-ups recorded." in pages["parent"].read_text(encoding="utf-8")
-    # The related blocks and the index rows of both issues are current (RS-11, RS-13).
+    # The related blocks and the index rows of both issues are current.
     child = (Path(root) / DOCS / "README.md").read_text(encoding="utf-8")
     assert any("raised from" in x and "parent" in x for x in child.splitlines())
     assert any("raised here" in x and SLUG in x

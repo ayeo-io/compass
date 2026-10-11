@@ -19,7 +19,7 @@ only with `--write`), or None.
 `EXEMPT` names the commands that save a manifest and are in neither table, each
 with the reason no block or label shows what they save. A test walks the call
 graph of the CLI from every command to `save_manifest` and fails, naming the
-command, when one is in none of the three tables (DCJ-75).
+command, when one is in none of the three tables.
 """
 # DEPENDENCY: standard library only (annotations). It imports no other module, so the
 # render step and the label step can both read it.

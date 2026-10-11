@@ -33,7 +33,7 @@ AUTONOMY = ("controlled", "balanced", "autonomous")
 
 
 # 7.0.0 adds one document to the quick fix, the verification note (issue
-# `documents-carry-judgement`, RS-6). The baseline is never regenerated, so a result is
+# `documents-carry-judgement`, ADR-051). The baseline is never regenerated, so a result is
 # compared without it; the tests of that issue pin the note itself.
 ADDED_TO_QUICK_FIX = ("verification-note",)
 

@@ -744,7 +744,7 @@ NOTE_KIND = "verification-note"
 
 
 def _write_verification_note(task_dir, slug, scenario_ids):
-    """Write the quick fix's one-screen verification note (RS-6), register it, approve it
+    """Write the quick fix's one-screen verification note (ADR-051), register it, approve it
     and fill its block. Returns the note's project-relative path and whether the project
     commits it (an ignored note is not traced and not staged).
 
@@ -934,7 +934,7 @@ def cmd_quick_fix_finish(args):
         evidence_path_rel = "evidence/check-output.txt"
         evidence_path_abs = os.path.join(task_dir, evidence_path_rel)
         # The documents are rendered from the records the greens just wrote, so the check
-        # judges what a reader will see (RS-3).
+        # judges what a reader will see (ADR-051).
         from compass_pkg import render_cmd
         render_cmd.render_issue(task_dir)
         check_out, check_code = _quiet_run(

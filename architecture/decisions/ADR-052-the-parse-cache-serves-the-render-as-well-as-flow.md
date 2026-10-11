@@ -1,7 +1,7 @@
 ---
 id: ADR-052
 title: The parse cache serves the render as well as flow
-status: proposed
+status: accepted
 date: 2026-10-10
 supersedes: ''
 superseded_by: ''

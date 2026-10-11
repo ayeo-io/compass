@@ -6,7 +6,7 @@ before any renderer runs. A renderer takes a `RenderInputs` and the project-rela
 of the document it renders into, and returns a `Part`: the lines of the block and
 whether they depend on this issue's own records (`own`) or on other issues or
 the project (`cross`). The renderers read no clock, no git configuration and no
-absolute path, so the same records give the same text on every machine (DCJ-3).
+absolute path, so the same records give the same text on every machine.
 
 A document a renderer quotes (`intent.md`, `technical-design.md`,
 `delivery-approach.md`) is read on first use through `RenderInputs.doc_text`, from

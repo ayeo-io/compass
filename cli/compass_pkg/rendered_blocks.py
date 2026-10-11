@@ -33,7 +33,7 @@ from dataclasses import dataclass
 
 from compass_pkg import atomic_io
 
-#: The block kinds. The first eight are the RS-1 kinds; the rest belong to the
+#: The block kinds. The first eight are the kinds of documents the templates carry; the rest belong to the
 #: issue page, the verification note and the project index. Any other name in an
 #: opening marker is a malformed marker.
 KINDS = ("coverage", "gates", "dod", "dor", "artifacts", "evidence", "follow-ups",

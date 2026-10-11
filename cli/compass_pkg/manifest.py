@@ -125,7 +125,7 @@ FRAMEWORK_OWNED_PATHS = frozenset({
 
 def _render_landing(task, task_dir, cwd):
     """Render the issue's documents, its page and the project index as the issue will read
-    once this landing marks it done, and stage the files a project tracks (DD-11, ADR-051).
+    once this landing marks it done, and stage the files a project tracks (ADR-051).
 
     The landing commit then holds the done state, and the after-command render that
     follows it changes no byte. Nothing is done unless every gate has passed, because only

@@ -17,7 +17,7 @@ each:
   `compass issue migrate`.
 
 An item with none of these is open. Only this reader counts a page tick; the
-approval check never does (DCJ-80).
+approval check never does.
 
 This module reads records. It imports no command module and no renderer, so the
 renderers, the stage lists and `dod-evidence-typed` can all use it.

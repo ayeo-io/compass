@@ -399,7 +399,7 @@ def _board_place(out, categories, src, m, today, now, guarded, evidence_state):
         return
     # No stored status means in flight: the state comes from the records. The
     # facts the issue page also shows come from one function, called through its
-    # module so a test can replace it (RS-8).
+    # module so a test can replace it (ADR-051).
     facts = issue_detail.detail(m, task_dir)
     state = facts.state
     row = {"slug": slug, "delivery_approach": approach, "state": state}

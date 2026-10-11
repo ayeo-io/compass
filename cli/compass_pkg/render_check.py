@@ -3,7 +3,7 @@
 
 It runs the render of `render_cmd.plan_issue` without writing and compares. A
 block is current when the render would not change a byte of it, so the check has
-no second definition of "current" (DD-2).
+no second definition of "current" (ADR-051).
 
 Each block has a scope (`block_renderers.Part`):
 
@@ -12,10 +12,10 @@ Each block has a scope (`block_renderers.Part`):
 - a **cross** block draws on other issues or on the project (`related`, the
   governance lines of `decisions`, the issue's row of the project index). A stale
   one is always an advisory failure, because a checkout that holds one issue
-  cannot judge it (DCJ-79).
+  cannot judge it.
 
 The issue's own manifest is read with `load_manifest`, never through the parse
-cache, so a planted cache entry cannot clear or fail the check (DCJ-77).
+cache, so a planted cache entry cannot clear or fail the check.
 """
 # DEPENDENCY: standard library (os); compass_pkg.render_cmd, block_renderers,
 # next_cmd, status_words, stable_ids, check_results.

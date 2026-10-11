@@ -9,7 +9,7 @@ never changes a line of a document (ADR-020, through ADR-051):
   so the report keeps its status;
 - the records the report's boxes held: `meets` on the evidence a tag names,
   `defers` on the follow-up a tag names, and a `page_ticks` entry for each ticked
-  box (a page tick never counts as a person's approval, DCJ-80);
+  box (a page tick never counts as a person's approval);
 - an empty verification note for each quick fix closed as completed.
 
 A tag that names an id the manifest does not hold, or evidence of a type the
@@ -325,7 +325,7 @@ def _hex(masked):
 
 def pin_stale_generation(task_dir, would, out):
     """Pin the stored generation of an issue whose generation records an implementation major
-    the CLI no longer has, through the `--config` path (DD-7). An issue whose generation
+    the CLI no longer has, through the `--config` path (ADR-051). An issue whose generation
     records only majors the CLI has is not touched."""
     from compass_pkg import effective, impl_versions
     from compass_pkg.core import load_manifest

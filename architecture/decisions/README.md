@@ -90,7 +90,7 @@ Rules:
 | [ADR-048](ADR-048-reading-issue-state-across-worktrees.md) | Reading issue state across worktrees, skipping what is done here | accepted | with ADR-005 and ADR-046 |
 | [ADR-049](ADR-049-bulk-manifest-reads-use-a-parse-cache-keyed-on-content.md) | Manifests read in bulk use a parse cache keyed on content, used by `compass flow` only | accepted | within ADR-013; with ADR-003 and ADR-005 |
 | [ADR-050](ADR-050-artifact-status-is-written-by-stage-exits-and-by-a-persons-approval.md) | Artifact status is written by stage exits and by a person's approval | accepted | amends ADR-012; with ADR-006, ADR-022, ADR-026, ADR-039, ADR-044 and ADR-045 |
-| [ADR-051](ADR-051-rendered-blocks-are-derived-in-place-and-checked.md) | Rendered blocks are derived in place and checked | proposed | with ADR-008, ADR-036, ADR-046 and ADR-047 |
+| [ADR-051](ADR-051-rendered-blocks-are-derived-in-place-and-checked.md) | Rendered blocks are derived in place and checked | accepted | amends ADR-012 and ADR-044; with ADR-008, ADR-036, ADR-046 and ADR-047 |
 | [ADR-052](ADR-052-the-parse-cache-serves-the-render-as-well-as-flow.md) | The parse cache serves the render as well as flow | proposed | widens ADR-049; with ADR-003 and ADR-051 |
 
 ## Principle → ADR mapping

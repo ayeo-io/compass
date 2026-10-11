@@ -41,3 +41,62 @@ Stage commands now write the status of each registered document. A document that
 | `compass evidence approve --decisions` | a flag | Confirm the decisions taken for the person |
 | `compass issue decision add`, `compass issue decision set` | verbs | Record a decision taken for the person, or reopen one |
 | `compass retro --decisions` | a flag | Report how decisions taken for the person were settled |
+
+## Rendered blocks and the issue page
+
+Compass now writes the status, ticks and counts in an issue's documents from the manifest and the evidence, and `compass check` fails a document that disagrees with them. Each issue gets an issue page, a quick fix gets a verification note, and the project gets an index. The decision is `architecture/decisions/ADR-051-rendered-blocks-are-derived-in-place-and-checked.md`. The facts are in `docs/rendered-blocks.md`.
+
+### What is removed
+
+- **The verb `compass issue dashboard render` and its alias.** A command line that still types it exits 2 with the parse error and one line: `'issue dashboard' is now 'issue render'`. The line runs nothing. It is the one hint row that stays at 7.0.0, because 5.6.0 held the spelling.
+- **The check `dashboard-current`.** `rendered-blocks-current` replaces it. An issue stored before 7.0.0 can still list the removed check in its generation. `compass check` reports it as "nothing to check", names the release and the replacement, and runs `rendered-blocks-current` in its place.
+- **The reminder after a command.** The line that told you to run the old verb is gone. The documents are rendered for you after each command that changes a record.
+- **The generated `README.md` beside the manifest** in `.compass/work/<issue>/`. Migration keeps each one as `README.md.v6.bak` (see below). The issue page is `docs/compass/<created>-<issue>/README.md`.
+- **A copied 5.6.0 governance folder still works.** A copied folder that names `dashboard-current` still lints, and `compass check` reports it as above.
+
+### What changes
+
+- **Ticks move from the page to the manifest.** The Definition of Done is the `verify` exit list and the Definition of Ready is the `plan` entry list. An item is met by a record, never by a box on a page. A box ticked by hand counts for nothing.
+  - `compass gate pass ... --meets CHECK` and `compass evidence add ... --meets CHECK` meet an item with evidence of an accepted type.
+  - `compass evidence approve --check <item>` records a person's tick. It needs a terminal, as the other approvals do.
+  - `compass follow-up add FU-ID --defers CHECK --summary TEXT` carries an item to a follow-up.
+  - `dod-evidence-typed` is now implementation 2.0.0 and reads these records. A closed issue whose verification report holds neither a Definition of Done heading nor a `dod` block reads "nothing to check". An issue still in flight is judged.
+- **Cross-issue blocks are advisory.** The `related` block, the governance lines of `decisions` and the index row never fail `rendered-blocks-current`, because a checkout may not hold the other issues.
+- **A stale block drawn from the issue's own records fails at `verify`, `ship` and done.** Before that it is advisory. The fix is `compass issue render`.
+- **`ship-commit` renders the done state before it commits.** `compass quick-fix finish` writes the verification note.
+
+### What `compass issue migrate` does
+
+`compass issue migrate` (a dry run) lists, for each issue, what it would write. `--apply` writes it, and needs `--i-have-a-copy` where git does not track the work root. It only adds lines and records:
+
+1. It inserts an empty `dod` marker pair after the Definition of Done section of the verification report, and moves the report's registry digest so it keeps its status.
+2. It writes `meets`, `defers` and `page_ticks` records from the boxes of that section. A tag naming an id the manifest does not hold, or evidence of a type the list does not accept, writes no record. The item stays open and the report names the issue, the item and the id. A ticked box becomes a page tick, which counts as met on the page and is never a person's approval for `G5`.
+3. It writes an empty verification note for each quick fix closed as completed.
+4. It renames each generated `README.md` beside a manifest to `README.md.v6.bak`, byte for byte, with any text you added under it. A `README.md` you wrote is not touched.
+5. It pins the stored generation of an issue, open or closed, that records an implementation major this CLI lacks (`dod-evidence-typed` 1.x), so the check runs instead of being refused. The configuration does not change.
+6. It carries issues in flight the same way as done ones.
+7. It reports a verification report with no Definition of Done heading. That report gets no marker and no record.
+
+The items it could not record are printed after the changes, on every run. A second `--apply` changes no file.
+
+After `--apply`, run `compass issue render --all --dry-run` to see the files and block kinds that would change, then `compass issue render --all`.
+
+### What to do
+
+1. Copy `.compass/work` and `docs/compass` to a folder outside the project.
+2. Run `compass issue migrate`, read the list, then `compass issue migrate --apply --i-have-a-copy`.
+3. Run `compass issue render --all --dry-run`, then `compass issue render --all`.
+4. Record each open item the migration printed, with the commands above.
+5. To go back, restore both folders from the copy (the rollback plan of the issue that added rendered blocks).
+
+### New verbs, flags and keys
+
+| Name | Where | Meaning |
+|---|---|---|
+| `compass issue render [--issue SLUG] [--all] [--dry-run]` | verb | Rewrite the rendered blocks, the issue page and the project index |
+| `compass follow-up add FU-ID [--defers CHECK] --summary TEXT [--target SLUG]` | verb | Record a follow-up, and carry an item to it |
+| `--meets CHECK` | flag of `compass gate pass` and `compass evidence add` | Meet a Definition of Done or Ready item |
+| `compass evidence approve --check <item>` | flag | A person's tick of an item |
+| `rendered-blocks-current` | check in `G4` | Fails a block that disagrees with the records |
+| `evidence[].meets`, `follow_ups[].defers`, `page_ticks` | `manifest.yml` | The records that meet an item. Only migration writes `page_ticks` |
+| `<!-- compass:render KIND -->` | marker in a document | The start of a block Compass writes. Do not edit between the markers |

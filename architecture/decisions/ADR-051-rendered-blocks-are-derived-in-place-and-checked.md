@@ -1,7 +1,7 @@
 ---
 id: ADR-051
 title: Rendered blocks are derived in place and checked
-status: proposed
+status: accepted
 date: 2026-10-10
 supersedes: ''
 superseded_by: ''
@@ -13,7 +13,7 @@ Issue documents hold hand-kept copies of state the manifest already records: the
 
 ADR-008 says derived views are never a source of truth. ADR-046 and ADR-047 apply it to the board, a file Compass owns and writes outside `docs/compass/`. This change writes derived text inside a person's document, in a folder that many projects git-ignore, so a bad write cannot be undone from git. The engine must prove that it changes nothing outside its own markers.
 
-This record covers the engine (grammar, mask, write path), the check, the after-command step and the item records. The units that follow add the pages and the migration, and finish this record.
+This record covers the engine (grammar, mask, write path), the check, the after-command step, the item records, the pages, the migration and the removal of the old verb and check.
 
 ## Decision
 
@@ -30,6 +30,25 @@ This record covers the engine (grammar, mask, write path), the check, the after-
 11. **One trigger table, one render step.** `record_triggers.py` holds the label sync's table, the further commands that change a record a block shows, and an exempt list with a reason for each command. `github_labels` and `render_after` both read it and neither imports the other. The entry point calls the render step after the label sync. A test walks the call graph from every command to `save_manifest` and names a command in none of the three tables. A failed render never fails the command and prints one line with a count.
 12. **Item records.** The Definition of Done (the `verify` exit list) and Ready (the `plan` entry list) are met by records in the manifest: `evidence[].meets`, a `human-approval` record with `check`, `follow_ups[].defers`, and `page_ticks` written only by migration. An agent can no longer tick an item on a page. `dod-evidence-typed` moves to implementation 2.0.0 and reads these records; its verdict on a page with a ticked box and no record changes from pass to fail, so ADR-038 needs a new major. **jed72 approved changing this locked check on 2026-10-10.** Every issue whose stored generation records 1.0.0 is refused until `compass issue migrate` pins a generation that records 2.0.0 (the migration unit). An issue read without a configuration is judged by the shipped default's lists.
 13. **The page is not read.** The stage lists and `dod-evidence-typed` no longer import the checklist section reader; only `compass issue migrate` reads page ticks. The templates carry empty `coverage`, `evidence`, `gates`, `decisions-taken`, `dod` and `dor` blocks in place of the state tables and boxes, and `compass issue template show` prints each template as the file. The delivery-approach tables and each template's Gate checklist wait for the artifact catalogue (follow-up FU-1).
+14. **The old verb and check are removed.** `compass issue dashboard render`, its alias and `dashboard-current` go in 7.0.0, and `dashboard.py` goes with them. The artifact commands it held (`issue artifact set`, `issue artifact-path`) move to `artifact_cmd.py`. A command line that still types the verb exits 2 with the parse error and one line naming `issue render`. The maintainer (jed72) said go to the removal on 2026-10-11, after the migration was green, as the standing rule asks before a CLI verb is deleted.
+15. **One hint row amends ADR-044.** ADR-044 ended every alias and hint row at 7.0.0. A hint row that carries both `released_in` (the first release tag that held the spelling) and `removed_in` stays, because a release did hold that spelling and a person upgrading from it needs the new name. It runs nothing. `aliases.removal_problems` still fails on any alias row and on a hint row without both fields, and `tests/test_cli_renames.py` checks that the tag named in `released_in` holds the spelling. The one row is `issue dashboard` to `issue render`.
+16. **Migration only adds.** `compass issue migrate` adds an empty `dod` marker pair after the Definition of Done section of a verification report and moves the registry digest of that report from its old masked digest to the new one, so the report keeps its status. It writes `meets`, `defers` and `page_ticks` records from the boxes, an empty `verification-note.md` for each quick fix closed as completed, and keeps an old generated work-folder page byte for byte as `README.md.v6.bak`. A tag that names an id the manifest does not hold writes no record, and the item stays open and is reported. A page tick is read only by `item_records`: it is not a person's approval (`human-approval-present` never reads it). Migration pins the stored generation of an issue, open or closed, that records an implementation major this CLI lacks, through the `--config` path; a closed issue keeps its configuration and only its versions move.
+17. **`dod-evidence-typed` stays at 2.0.0, with one more rule.** A closed issue whose verification report holds neither a Definition of Done heading nor a `dod` block reads nothing to check, because an archived page that never held the list has no record to carry. An issue still in flight is judged, so deleting the section does not clear the check. jed72 approved changing this locked check twice: to move it to 2.0.0 on 2026-10-10, and to add this rule on 2026-10-11. The version does not move again because 2.0.0 has not been released and no stored generation records it. The rule changes no verdict in the check's corpus, so the verdict digest in `tests/fixtures/impls/versions.lock.yml` is unchanged, and for an absent section it restores the 1.0.0 behaviour for a closed issue.
+18. **Compatibility contract 3 reads the migrated sample.** The recorded verdicts of `compass check` on the archive sample are compared after `compass issue migrate` and `compass issue render --all`, with an allow-list of exactly three row moves: `dashboard-current` leaves, `rendered-blocks-current` appears, and `dod-evidence-typed` is `pass` or `nothing-to-check` where it was `pass`. Any other move fails. jed72 approved this on 2026-10-11. No baseline was rewritten.
+
+## Now reads as
+
+The earlier records stay as written. From 7.0.0 they read as follows (the style of ADR-044).
+
+- ADR-003: cross-issue blocks are advisory in `rendered-blocks-current`. A cross-task signal still never fails a check.
+- ADR-020: `compass issue migrate` adds markers, records, notes and generation pins and changes no line.
+- ADR-022: the manifest also holds `evidence[].meets`, `follow_ups[].defers`, `follow_ups[].target_task` and `page_ticks`.
+- ADR-026: `ship-commit` renders the done state before it commits.
+- ADR-044: `issue render` and `follow-up add` are leaf verbs and `issue dashboard` is gone. At 7.0.0 a removed verb that a release held may keep one hint row that runs nothing.
+- ADR-046: the board's detail values come from `issue_detail`, shared with the issue page. The `--json` keys are unchanged.
+- ADR-047: the board file is still never written under `docs/compass/`. The issue page names the command and does not link the file.
+- ADR-050: the digest of a document excludes block interiors. `artifacts-approved` is unchanged. `compass quick-fix finish` approves `verification-note.md`.
+- ADR-012: the terms `rendered-block`, `issue-page`, `verification-note`, `project-index`, `item-record` and `page-tick` are added to the frozen vocabulary.
 
 ## Alternatives considered
 
@@ -49,7 +68,7 @@ This record covers the engine (grammar, mask, write path), the check, the after-
 - A document with a block digests without it, so a person who edits only inside a block is not seen as editing the document.
 - A reader that wants block text must read the file itself. None does today.
 - Escaped text reads as written on GitHub, with entities for comment markers.
-- The check, the after-command step, item records, pages and migration build on this engine and are recorded in the units that add them.
+- The check, the after-command step, item records, pages and migration build on this engine; `docs/rendered-blocks.md` owns their facts.
 
 ## References
 

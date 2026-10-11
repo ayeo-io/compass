@@ -195,8 +195,8 @@ modification time.
   renders. One line on standard error gives the count and the first failure:
   `compass: 2 of 3 renders failed - first: <issue>: <file>:<line>: <fault>`.
   The label sync prints its own line when it fails.
-- The step prints no reminder. `compass issue dashboard render` and the
-  reminder that named it are gone.
+- The step prints no reminder. The old review page verb and the reminder that
+  named it are gone.
 
 ## The check `rendered-blocks-current`
 
@@ -242,9 +242,9 @@ rendered blocks it only adds lines and records (ADR-020, through ADR-051). The c
 |---|---|
 | Marker | An empty `dod` pair goes at the end of the "Definition of Done" section of the verification report. The registry digest of the report, and the `upstream` digest of a document that names it, move from the old masked digest to the new one, so the report keeps its status. A digest that was already stale stays stale. |
 | Boxes to items | A box is the item whose statement it reads; when the report has as many boxes as the list has items, an unmatched box is the item at its place. A box that reads no item is reported. |
-| Records | `meets` on the evidence an `(evidence: ...)` tag names, `defers` on the follow-up a `(follow-up: ...)` tag names (a `backfill` tag and a `BF-` id are read too), and a `page_ticks` entry for each ticked box. A tag naming an id the manifest does not hold, evidence of a type the list does not accept, or a follow-up that already defers another item writes no record. The item stays open and the report names the issue, the item and the id. |
-| Page ticks | Only `item_records` reads one. `human-approval-present` and the approval readers never do, so a ticked box is not a person's approval (DCJ-80). |
-| Missing heading | A report with no "Definition of Done" heading gets no marker and no record, and the report says so. `dod-evidence-typed` then finds every item open. |
+| Records | `meets` on the evidence an `(evidence: ...)` tag names, `defers` on the follow-up a `(follow-up: ...)` tag names (an older tag word and the `BF-` id prefix are read too), and a `page_ticks` entry for each ticked box. A tag naming an id the manifest does not hold, evidence of a type the list does not accept, or a follow-up that already defers another item writes no record. The item stays open and the report names the issue, the item and the id. |
+| Page ticks | Only `item_records` reads one. `human-approval-present` and the approval readers never do, so a ticked box is not a person's approval. |
+| Missing heading | A report with no "Definition of Done" heading gets no marker and no record, and the report says so. A closed issue with neither that heading nor a `dod` block then reads "nothing to check" for `dod-evidence-typed`; an issue still in flight is judged, so every item is open. |
 | Verification note | An empty note, registered, for each quick fix closed as completed. |
 | Old page | A work-folder `README.md` whose first line is the old generated marker is renamed to `README.md.v6.bak`, with any text a person added under it. A `README.md` without that line is not touched. The page is not generated again. |
 | Stored generation | An issue, open or closed, whose generation records an implementation major this CLI lacks (`dod-evidence-typed` 1.x) is pinned to the installed versions through the `--config` path. A closed issue keeps its configuration; only the versions change. |

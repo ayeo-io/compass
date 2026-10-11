@@ -412,3 +412,30 @@ def test_dcj_76_a_migrate_pins_a_generation_that_records_a_major_the_cli_lacks(t
     assert code == 0, out + err
     assert manifest(root)["generation"] == 1
     assert "pinned" not in out
+
+
+# --- DCJ-82 (approved 2026-10-11: dod-evidence-typed and a closed issue with no list) -------
+
+def _dod_row(root):
+    return _row(root, "dod-evidence-typed")
+
+
+def test_dcj_82_closed_issue_with_no_definition_of_done_section_has_nothing_to_check(tmp_path):
+    """The shape of four archived issues: a verification report with no Definition of Done
+    heading and no dod block. A closed issue reads nothing to check; an issue in flight is still
+    judged, so deleting the section does not clear the check."""
+    closed = _done_issue(tmp_path / "closed", [], heading=None, evidence=False)
+    row = _dod_row(closed)
+    assert row["status"] == "nothing-to-check", row
+    assert "no Definition of Done" in row["detail"], row
+    flight = _done_issue(tmp_path / "flight", [], heading=None, evidence=False,
+                         status="in-progress")
+    assert _dod_row(flight)["status"] == "fail", _dod_row(flight)
+    # A closed issue that does have the heading is judged: its items are open.
+    listed = _done_issue(tmp_path / "listed", [], evidence=False)
+    assert _dod_row(listed)["status"] == "fail", _dod_row(listed)
+    # A closed issue whose report holds a dod block but no heading is judged too.
+    block = _done_issue(tmp_path / "block", [], heading=None, evidence=False)
+    path = doc_path(block, "verification-report")
+    path.write_text(path.read_text("utf-8") + PAIR, encoding="utf-8")
+    assert _dod_row(block)["status"] == "fail", _dod_row(block)

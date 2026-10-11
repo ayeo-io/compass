@@ -183,11 +183,7 @@ def rendered_sample():
     return archive.checkable_root()
 
 
-@pytest.mark.parametrize("slug", [
-    pytest.param(s, marks=pytest.mark.xfail(
-        strict=True, reason="its report has no Definition of Done section, so migration carries "
-                            "no record and dod-evidence-typed finds every item open (archive.py)"))
-    if s in archive.NO_DOD_SECTION else s for s in _issues(checkable=True)])
+@pytest.mark.parametrize("slug", _issues(checkable=True))
 def test_as_b_every_issue_in_the_sample_passes_compass_check(slug, rendered_sample):
     assert slug != "<no sample>", "tests/fixtures/archive-sample.tar.gz is missing"
     result = subprocess.run([sys.executable, str(CLI), "check", "--issue", slug],

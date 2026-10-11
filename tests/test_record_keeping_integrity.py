@@ -32,7 +32,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 # The archive these tests read: the tracked sample, or this checkout's own
 # with COMPASS_FULL_ARCHIVE=1 (tests/archive.py).
 sys.path.insert(0, str(ROOT / "tests"))
-from archive import NO_DOD_SECTION, archive_root, checkable_root  # noqa: E402
+from archive import archive_root, checkable_root  # noqa: E402
 
 
 def _read(rel):
@@ -396,11 +396,7 @@ def _pre_existing_task_slugs():
 
 # One test per issue, so parallel workers share the sweep. An empty list (no
 # local archive) makes pytest skip the test, as the loop used to return early.
-@pytest.mark.parametrize("slug", [
-    pytest.param(s, marks=pytest.mark.xfail(
-        strict=True, reason="its report has no Definition of Done section, so migration carries "
-                            "no record and dod-evidence-typed finds every item open (archive.py)"))
-    if s in NO_DOD_SECTION else s for s in _pre_existing_task_slugs()])
+@pytest.mark.parametrize("slug", _pre_existing_task_slugs())
 def test_trc_f1_existing_tasks_still_pass(slug):
     """Every issue that predates this change still passes, once the references
     `declared-tests-resolve` exposed have been repaired. Run against the real

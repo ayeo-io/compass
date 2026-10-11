@@ -167,7 +167,7 @@ CHECK_GUIDANCE = {
     },
     "dod-evidence-typed": {
         "why": "The evidence-not-assertion guardrail: the Definition of Done is a typed gate. Every item must be met by a record in the manifest - evidence, a person's approval or a filed follow-up. A tick on a page and a narrative note in devlog.md do not count.",
-        "do": 'Record each open item: `--meets <item>`, `--defers <item>` or `evidence approve --check <item>`.',
+        "do": 'Record each open item: `--meets`, `--defers` or `evidence approve --check`.',
         "fix": (
             "For each open item: (a) `compass gate pass <gate> --evidence EV-<id> --meets <item>` "
             "or `compass evidence add EV-<id> --type <type> --path <file> --meets <item>`, "

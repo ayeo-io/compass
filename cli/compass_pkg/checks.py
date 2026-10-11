@@ -672,7 +672,18 @@ def _check_dod_evidence_typed(task, task_dir):
                 for row in rows if row.state == item_records.OPEN]
     # The directory name is the true slug; the manifest passed in may hold a template placeholder.
     this_slug = os.path.basename(task_dir) or task.get("task") or ""
-    problems.extend(_check_inbound_backfills(task_dir, this_slug))
+    inbound = _check_inbound_backfills(task_dir, this_slug)
+    if _closed_without_a_list(task, report):
+        # An archived issue whose page never held a Definition of Done has no record to
+        # carry. Only a closed issue is excused: one still in flight is judged, so deleting
+        # the section does not clear the check (jed72, 2026-10-11).
+        if inbound:
+            return False, "; ".join(inbound)
+        return NOTHING_TO_CHECK, ("the issue is closed and its verification report holds no "
+                                  "Definition of Done section and no dod block, so there is no "
+                                  "list to evidence (read %s)"
+                                  % artifact_location(task_dir, "verification-report.md"))
+    problems.extend(inbound)
     if problems:
         return False, "; ".join(problems)
     where = artifact_location(task_dir, "verification-report.md")
@@ -681,6 +692,27 @@ def _check_dod_evidence_typed(task, task_dir):
                       "(read %s)" % where)
     return True, ("all %d Definition of Done item(s) are met by a record in the manifest "
                   "(report: %s)" % (len(rows), where))
+
+
+def _closed_without_a_list(task, report):
+    """Whether the issue is closed and `report` has neither a Definition of Done heading (or
+    another stage's exit list heading) nor a `dod` block."""
+    from compass_pkg import doc_sections, rendered_blocks, status_words
+    if not status_words.is_closed(task):
+        return False
+    try:
+        with open(report, encoding="utf-8") as fh:
+            text = fh.read()
+    except (OSError, UnicodeDecodeError):
+        return False
+    try:
+        if any(b.kind == "dod" for b in rendered_blocks.parse(text).blocks):
+            return False
+    except rendered_blocks.MarkerError:
+        return False
+    lines = text.split("\n")
+    mask = doc_sections.comment_mask(lines)
+    return not doc_sections.sections(lines, mask, doc_sections.is_exit_heading)
 
 
 def _check_inbound_backfills(task_dir, this_slug):

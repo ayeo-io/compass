@@ -70,15 +70,6 @@ def sample_root():
     return target
 
 
-#: Sample issues whose verification report has no "Definition of Done" heading. Migration can
-#: carry no record for them (it reports each), so `dod-evidence-typed` finds every item open and
-#: `compass check` fails them, where the earlier check passed an absent section as nothing to
-#: evidence. A decision on whether an archived issue with no list on its page owes one is open,
-#: so the tests that expect a clean check mark these as expected failures, strictly: the mark
-#: turns into a failure when the decision makes them pass.
-NO_DOD_SECTION = ("ci-lints-every-issue", "headless-runner", "issue-overview", "loop-ceilings")
-
-
 def checkable_root():
     """The sample as an adopter has it after `compass issue migrate --apply --i-have-a-copy`
     and `compass issue render --all`: the records the Definition of Done reads, the issue

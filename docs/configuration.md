@@ -35,7 +35,7 @@ every reader of a setting follows the same file.
 |---|---|---|
 | New (no `.compass/`) | `compass init`, run by any entry point, creates `.compass/state.yml` and `.compass/work/`. `/compass:init` then writes a minimal `compass.yml` (`schema`, `extends`, `owner`, `project.name`, `project.test_command`) and copies nothing. | `compass.yml`, over the shipped default |
 | From 5.x with a `.compass/config.yml` or copied governance | Nothing changes until it runs `compass policy migrate`. `/compass:init` runs that command (a dry run, then `--apply` on a yes) in place of writing a fresh file. | The old files, as 5.x did |
-| This repository | A hand-written `compass.yml` that holds settings keys only, and `.compass/state.yml`. `compass policy migrate` refuses here, because the repository's governance files are generated from the shipped default. | `compass.yml` |
+| This repository | A hand-written `compass.yml` that holds settings keys and the owner only, and `.compass/state.yml`. `compass policy migrate` refuses here, because the repository's governance files are generated from the shipped default. | `compass.yml` |
 
 A missing file means every default below. A file the CLI cannot read, or a
 duplicate key in `compass.yml`, is a broken file. Each command then does what

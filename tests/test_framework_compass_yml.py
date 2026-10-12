@@ -1,15 +1,18 @@
-"""This repository keeps its own settings in a settings-only `compass.yml`.
+"""This repository keeps its own settings in a `compass.yml` that holds
+settings keys and its owner only.
 
 The framework repository is also a Compass project. Its governance files are
 the set every adopter gets, so its `compass.yml` extends the shipped default
-and holds settings keys only: no catalogue key, no waiver, no unlock and no
-capability. Its issues then run the shipped default unchanged, which keeps its
-delivery record valid evidence for the default. The old `.compass/config.yml`
-is gone, and the state the CLI wrote (`records_signed_since`) is in the state
-file.
+and holds settings keys and `owner` only: no catalogue key, no waiver, no
+unlock, no capability and no approvers list. `owner` names who confirms
+decisions and approves waivers, and changes no check, gate or rule. Its issues
+then run the shipped default unchanged, which keeps its delivery record valid
+evidence for the default. The old `.compass/config.yml` is gone, and the state
+the CLI wrote (`records_signed_since`) is in the state file.
 
 Scenario ids: IDR-5 and IDR-6, in the acceptance criteria of the issue
-`init-docs-release`.
+`init-docs-release`; OWN-1, in the issue `compass-yml-owner`. The IDR-5 test
+names keep "settings keys only" because a landed issue declares them.
 """
 from __future__ import annotations
 
@@ -23,16 +26,19 @@ from compass_pkg import project_settings  # noqa: E402
 from compass_pkg.atomic_io import load_yaml_strict  # noqa: E402
 from compass_pkg.catalogue_spec import CATALOGUES, SETTINGS_KEYS  # noqa: E402
 
-# `schema` and `extends` make the file a layer. Everything else must be a
-# settings key.
-ALLOWED = set(SETTINGS_KEYS) | {"schema", "extends"}
+# `schema` and `extends` make the file a layer, and `owner` names who confirms
+# decisions. Everything else must be a settings key.
+ALLOWED = set(SETTINGS_KEYS) | {"schema", "extends", "owner"}
 # Layer keys that are not settings and not catalogues, and that this
-# repository's file must not declare either.
-FORBIDDEN_LAYER_KEYS = {"waiver", "waived", "unlock", "capabilities", "approvers", "owner"}
+# repository's file must not declare either. `owner` is allowed: it names who
+# confirms decisions and approves issue waivers, and changes no check, gate or
+# rule (governance decision 2026-10-12-this-repository-names-its-owner).
+FORBIDDEN_LAYER_KEYS = {"waiver", "waived", "unlock", "capabilities", "approvers"}
 
 
 def disallowed_keys(doc):
-    """The top-level keys of `doc` that a settings-only file may not hold."""
+    """The top-level keys of `doc` that a file of settings keys and owner may
+    not hold."""
     return sorted(k for k in doc if k not in ALLOWED
                   or k in CATALOGUES or k in FORBIDDEN_LAYER_KEYS)
 
@@ -42,6 +48,17 @@ def test_idr_5_the_checker_reports_a_planted_catalogue_key():
     assert disallowed_keys({"schema": 1, "checks": {}}) == ["checks"]
     assert disallowed_keys({"schema": 1, "capabilities": {"x": True}}) == ["capabilities"]
     assert disallowed_keys({"schema": 1, "unlock": True}) == ["unlock"]
+
+
+def test_own_1_compass_yml_names_its_owner():
+    # The owner may confirm decisions taken for them and approve issue waivers;
+    # it changes no check, gate or rule (governance decision
+    # 2026-10-12-this-repository-names-its-owner).
+    doc = load_yaml_strict(str(ROOT / "compass.yml"))
+    assert doc.get("owner") == "jed72"
+    assert disallowed_keys({"schema": 1, "owner": "jed72"}) == []
+    for key in ("waiver", "waived", "unlock", "capabilities", "approvers"):
+        assert disallowed_keys({"schema": 1, key: {}}) == [key]
 
 
 def test_idr_5_compass_yml_holds_settings_keys_only_and_extends_the_default():

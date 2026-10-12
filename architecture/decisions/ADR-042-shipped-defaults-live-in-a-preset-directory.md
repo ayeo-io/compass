@@ -57,6 +57,10 @@ On the third, `find_governance()` cannot tell the two cases apart. Run in this r
 
 The two generated views hold values the catalogue form has no field for, such as a guardrail's full `checked_at` list and the legacy spelling of a stage name. They are kept in `governance/legacy-views.yml`, outside the preset directory, so the preset stays the format a third-party preset author copies. Only the generator of the views (in the increment that makes them generated views) reads that file, and no behaviour in 6.x reads it. It is removed with the generated views at 7.0.0. A test rebuilds both legacy files from the preset and this file, and fails if the result differs from today's files in values or in how the evaluator answers.
 
+## Amendment, 12 October 2026: this repository's file may name its owner
+
+Rule 1 of the self-application section now reads: this repository's root `compass.yml` holds settings keys and `owner` only. `owner` names who confirms the decisions agents take for the maintainer and who approves an issue's waiver. It changes no check, gate, rule or route, so this repository still runs the shipped default unchanged. The file still declares no catalogue key, waiver, unlock, capability or approvers list, and the test that enforces this also rejects each of those keys beside `owner`. The ledger entry `2026-10-12-this-repository-names-its-owner` records the decision.
+
 ## References
 
 - ADR-006: backward compatibility is non-negotiable.

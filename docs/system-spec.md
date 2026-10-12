@@ -3631,3 +3631,7 @@
 - `ASW-31` Changing one decision reopens it and the checkpoint keeps waiting
 - `ASW-32` A decision recorded after the define checkpoint waits at the next checkpoint
 - `ASW-33` retro reports how agent decisions were settled
+
+### next-latency-budget (completed 2026-10-12)
+
+- `NLB-1` Given a runner of any speed, when compass next costs more than 2.0 times a reference command, then the latency test fails and prints the figures

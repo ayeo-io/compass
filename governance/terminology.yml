@@ -320,6 +320,25 @@ terms:
       when the condition holds. The one condition today is a minimum number of
       subtasks, so the distribution map is owed from two subtasks.
     related: [audience, delivery-approach]
+  review-round:
+    means: >
+      One review of an issue's work by a reviewer who did not write it. Each
+      round is its own document, `review-<n>.md`, and its own entry in the
+      artifact registry. Rounds count from 1.
+    related: [requirements-review, audience]
+  voluntary-kind:
+    means: >
+      A document kind that no delivery approach, rule or `every_approach`
+      flag names, so nothing owes it. A person registers it when it is
+      written, and a reassessment never supersedes it. `review` is one.
+    related: [required-when, review-round]
+  not-an-artifact-list:
+    means: >
+      The file names and patterns in an issue's documents folder that are
+      documents of no kind, such as `README.md` and the review briefs. The
+      migrate leaves them in place, and `compass issue lint` does not report
+      them.
+    related: [audience, sections]
   check:
     means: >
       One test that Compass runs against an issue's work and reports as

@@ -61,3 +61,17 @@ GATE_IDS = (GATE_G1, GATE_G2, GATE_G3, GATE_G4, GATE_G5, GATE_S1, GATE_S2,
             GATE_VERIFY_GOVERNANCE, GATE_VERIFY_TRACEABILITY, GATE_VERIFY_CLAIMS,
             GATE_VERIFY_CLARITY, GATE_SPIKE_CONCLUDE, GATE_VERIFY_ANALYZE,
             GATE_VERIFY_ARCHITECTURE)
+
+# The names in an issue's documents folder that are not artifacts: the migrate
+# leaves them where they are and does not register them, and `compass issue
+# lint` does not report them. Framework-owned (ADR-040), read by both.
+# `*` stands for any text. `compare.md` and `report.md` are an evaluation run's
+# outputs, and `*.v6.bak` is a distribution map the migrate set aside.
+NOT_AN_ARTIFACT = (
+    "README.md", "devlog.md",
+    "*review-brief*.md",
+    "assignment-subtask-*.md", "brief-subtask-*.md",
+    "architect-ruling.md", "recommendation.md", "released-verbs-v5.6.0.md",
+    "compare.md", "report.md",
+    "*.v6.bak",
+)

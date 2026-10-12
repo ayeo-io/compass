@@ -246,6 +246,10 @@ A stage command that writes a later record approves the artifacts of earlier
 stages. An artifact with no `stage` is owned by ship. `checks.yml` holds the
 blocking check `artifacts-approved`, which sits in no gate, and
 `evidence-types.yml` holds the type `artifact-approval`, which no gate accepts.
+`compass approach evaluate --write` merges the registry by kind and round, so every
+round of a kind that repeats survives a reassessment. It never marks a voluntary entry
+(a kind no approach, rule or `every_approach` flag names) as `superseded`
+(`architecture/decisions/ADR-054-an-artifact-kind-can-repeat-keyed-by-round.md`).
 
 - Change a default in the preset (or in `legacy-views.yml` for a value only the
   views hold), then run `python3 scripts/generate-legacy-views.py`.

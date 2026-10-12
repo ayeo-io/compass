@@ -1052,6 +1052,11 @@
             "type": "integer",
             "description": "Optional. Bumped when the document materially changes; an approval binds to it."
           },
+          "round": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Optional. The round of a kind that repeats, such as `review-<n>.md`: one entry per round, each with its own id and path. Read from the filename. A reader that names no round gets the latest."
+          },
           "digest": {
             "type": "string",
             "description": "Optional. `sha256:` and the digest of the document's file when it was last written. Only `compass issue artifact set` writes it, on every registration. It tells a rewrite of an approved document from a repeat registration."

@@ -338,9 +338,9 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
     # epic, bug, task, close-reason and check join, and bug-fix goes. 79 since
     # ADR-050 added decision-taken. 85 since ADR-051 added rendered-block,
     # issue-page, verification-note, project-index, item-record and page-tick.
-    # 89 since the issue `artifact-catalogue-fields` added audience, stands-for,
-    # sections and required-when.
-    assert len(terminology["terms"]) == 89, (
+    # 92 since the issue `artifact-catalogue-fields` added audience, stands-for,
+    # sections, required-when, review-round, voluntary-kind and not-an-artifact-list.
+    assert len(terminology["terms"]) == 92, (
         "governance/terminology.yml gained or lost a term without this count "
         "moving. A vocabulary change is a decision (ADR-012); make it one."
     )

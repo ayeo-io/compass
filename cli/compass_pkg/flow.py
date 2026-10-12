@@ -408,6 +408,7 @@ def _board_place(out, categories, src, m, today, now, guarded, evidence_state):
         row["blocked"] = str(flag.get("reason") or "no reason recorded")
     fields, problem = _why_fields(m)
     fields["gates"] = facts.gates
+    fields["documents"] = list(facts.documents)
     row.update(fields)
     row.update(where)
     recorded, held = bool(m.get("delivery_approach")), status_words.is_held(m)

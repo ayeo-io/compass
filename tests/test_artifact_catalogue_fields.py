@@ -791,3 +791,255 @@ def test_acf_5(tmp_path):
     from test_glossary_meaning_only import meaning_only_problems
     assert meaning_only_problems(glossary) == [] and meaning_only_problems(doc) == []
 
+
+# --- group C: the registry, rounds, the home of a document and issue lint ----------
+
+CREATED = "2026-10-07"
+SLUG = "feature"
+HOME = f"docs/compass/{CREATED}-{SLUG}"
+
+
+def _registry_project(tmp_path, goal="delivery"):
+    """A scratch project with one issue that has been assessed (generation 1).
+    The assessment is the default regular one, or an exploration for a spike."""
+    from test_generation_store import MANIFEST, _evaluate_write, _project
+    body = dict(MANIFEST)
+    body["assessment"] = dict(body["assessment"], goal=goal)
+    root, task_dir = _project(tmp_path, manifest=body, compass_yml={"schema": 1})
+    assert _evaluate_write(root)[0] == 0
+    return root, task_dir
+
+
+def _manifest_of(task_dir):
+    return yaml.safe_load((task_dir / "manifest.yml").read_text(encoding="utf-8"))
+
+
+def _entries(task_dir, kind):
+    return [a for a in _manifest_of(task_dir).get("artifacts") or [] if a.get("kind") == kind]
+
+
+def _doc(root, name, text="# a document\n"):
+    _write(root / HOME / name, text)
+    return f"{HOME}/{name}"
+
+
+def _set(root, kind, *argv):
+    return _cli(root, "issue", "artifact", "set", kind, "--issue", SLUG, *argv)
+
+
+def test_acf_13(tmp_path):
+    root, task_dir = _registry_project(tmp_path)
+    one, two = _doc(root, "review-1.md"), _doc(root, "review-2.md")
+    assert _set(root, "review", "--status", "draft", "--path", one)[0] == 0
+    assert _set(root, "review", "--status", "draft", "--path", two)[0] == 0
+    found = _entries(task_dir, "review")
+    assert [(e["round"], e["path"]) for e in found] == [(1, one), (2, two)]
+    assert len({e["id"] for e in found}) == 2
+    code, out, err = _cli(root, "issue", "artifact-path", "review", "--issue", SLUG)
+    assert code == 0 and out.strip().endswith("review-2.md"), out + err
+    code, out, err = _cli(root, "issue", "artifact-path", "review", "--round", "1",
+                          "--issue", SLUG)
+    assert code == 0 and out.strip().endswith("review-1.md"), out + err
+    code, out, err = _cli(root, "issue", "artifact-path", "review", "--round", "9",
+                          "--issue", SLUG)
+    assert code != 0 and out == "", out + err
+    code, out, err = _template_show(root, "review", "--depth", "thorough")
+    assert code == 0, err
+    assert _headings_of(out) == ["Scope", "Verdict", "Blocking", "Not blocking", "Security",
+                                 "Probes"]
+    # Registering round 2 again updates it and adds no third entry.
+    assert _set(root, "review", "--status", "approved", "--path", two)[0] == 0
+    found = _entries(task_dir, "review")
+    assert len(found) == 2 and found[1]["status"] == "approved" and found[0]["status"] == "draft"
+    # A round can be named without its path, and updates that round's entry.
+    assert _set(root, "review", "--round", "1", "--status", "approved")[0] == 0
+    assert _entries(task_dir, "review")[0]["status"] == "approved"
+    # A reassessment keeps every round of a voluntary kind as it was: nothing earned
+    # the review, so nothing can unearn it.
+    from test_generation_store import _evaluate_write
+    before_rounds = _entries(task_dir, "review")
+    body = _manifest_of(task_dir)
+    body["assessment"]["size"] = "large"
+    (task_dir / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
+    assert _evaluate_write(root, "--reason", "bigger than assessed")[0] == 0
+    assert _manifest_of(task_dir)["delivery_approach"] == "full"
+    assert _entries(task_dir, "review") == before_rounds
+    # A path that is not review-<n>.md is refused, naming the pattern.
+    before = (task_dir / "manifest.yml").read_bytes()
+    code, out, err = _set(root, "review", "--status", "draft", "--path", _doc(root, "review-final.md"))
+    assert code == 2 and "review-<n>.md" in err, out + err
+    assert (task_dir / "manifest.yml").read_bytes() == before
+    # A round named with a path of another round is refused.
+    code, out, err = _set(root, "review", "--round", "1", "--status", "draft", "--path", two)
+    assert code == 2 and "round" in err, out + err
+    assert (task_dir / "manifest.yml").read_bytes() == before
+
+
+def _pass_every_gate(task_dir):
+    body = _manifest_of(task_dir)
+    for gate in body.get("gates") or []:
+        gate["status"] = "pass"
+    (task_dir / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False),
+                                           encoding="utf-8")
+
+
+def test_acf_58(tmp_path):
+    root, task_dir = _registry_project(tmp_path)
+    for n in (1, 2, 3):
+        path = _doc(root, f"review-{n}.md")
+        assert _set(root, "review", "--status", "draft", "--path", path)[0] == 0
+    for n in (1, 2):
+        assert _set(root, "review", "--round", str(n), "--status", "approved")[0] == 0
+    ids = {n: e["id"] for n, e in enumerate(_entries(task_dir, "review"), 1)}
+    assert len(set(ids.values())) == 3
+    _pass_every_gate(task_dir)
+
+    # compass check: round 3 is the one not approved, named by its entry id.
+    code, out, err = _cli(root, "check", "--issue", SLUG, "--json")
+    rows = {r["name"]: r for r in json.loads(out)["checks"]}
+    detail = rows["artifacts-approved"]["detail"]
+    assert ids[3] in detail and "round 3" in detail, detail
+    assert ids[1] not in detail and ids[2] not in detail, detail
+
+    # The issue page lists each round with its own entry id and path.
+    code, out, err = _cli(root, "issue", "render", "--issue", SLUG)
+    assert code == 0, out + err
+    page = (root / HOME / "README.md").read_text(encoding="utf-8")
+    for n in (1, 2, 3):
+        lines = [line for line in page.splitlines() if ids[n] in line]
+        assert len(lines) == 1 and f"review-{n}.md" in lines[0], (n, lines)
+
+    # The board lists each round too.
+    board = tmp_path / "board.html"
+    code, out, err = _cli(root, "flow", "--html", str(board))
+    assert code == 0, out + err
+    html = board.read_text(encoding="utf-8")
+    for n in (1, 2, 3):
+        assert ids[n] in html and f"review-{n}.md" in html, n
+
+    # The receipt lists each round, draft or not.
+    code, out, err = _cli(root, "issue", "receipt", "--issue", SLUG)
+    assert code == 0, out + err
+    for n in (1, 2, 3):
+        lines = [line for line in out.splitlines() if ids[n] in line]
+        assert len(lines) == 1 and f"review-{n}.md" in lines[0], (n, lines, out)
+
+    # A reader that asks for the review with no round gets round 3.
+    code, out, err = _cli(root, "issue", "artifact-path", "review", "--issue", SLUG)
+    assert code == 0 and out.strip().endswith("review-3.md"), out + err
+    from compass_pkg import core
+    state, path, why = core.resolve_artifact(str(task_dir), "review")
+    assert state == core.FOUND and path.endswith("review-3.md"), (state, path, why)
+    state, path, why = core.resolve_artifact(str(task_dir), "review", round=1)
+    assert state == core.FOUND and path.endswith("review-1.md"), (state, path, why)
+
+
+def test_acf_14(tmp_path):
+    root, task_dir = _registry_project(tmp_path)
+    for kind, name in (("bug-report", "bug-report.md"), ("review", "review-1.md"),
+                       ("architecture-notes", "architecture-notes.md"),
+                       ("product-owner-review", "product-owner-review.md"),
+                       ("spike-conclusion", "spike-conclusion.md"),
+                       ("positioning", "positioning.md"),
+                       ("technical-design", "technical-design.md")):
+        before = (task_dir / "manifest.yml").read_bytes()
+        code, out, err = _set(root, kind, "--status", "draft", "--path",
+                              f".compass/work/{SLUG}/{name}")
+        assert code == 2, (kind, out + err)
+        shown = "review-<n>.md" if kind == "review" else name
+        assert kind in err and f"{HOME}/{shown}" in err, (kind, err)
+        assert (task_dir / "manifest.yml").read_bytes() == before, kind
+    # The home itself is accepted.
+    assert _set(root, "bug-report", "--status", "draft",
+                "--path", _doc(root, "bug-report.md"))[0] == 0
+
+
+def test_acf_15(tmp_path):
+    root, task_dir = _registry_project(tmp_path)
+    code, out, err = _cli(root, "issue", "lint", "--issue", SLUG)
+    assert code == 0, out + err
+    for name in ("review-1.md", "technical-design.md", "notes-on-cache.md", "review-brief.md",
+                 "README.md", "distribution-map.md.v6.bak"):
+        _doc(root, name)
+    code, out, err = _cli(root, "issue", "lint", "--issue", SLUG)
+    assert code == 0, out + err
+    lines = [line for line in (out + err).splitlines() if "notes-on-cache.md" in line]
+    assert len(lines) == 1 and "matches no kind" in lines[0], out + err
+    for name in ("review-1.md", "technical-design.md", "review-brief.md", "README.md",
+                 "distribution-map.md.v6.bak"):
+        assert name not in out + err, name
+
+
+def test_acf_30(tmp_path):
+    root, task_dir = _registry_project(tmp_path, goal="exploration")
+    assert _manifest_of(task_dir)["delivery_approach"] == "spike"
+    path = _doc(root, "spike-conclusion.md")
+    assert _set(root, "spike-conclusion", "--status", "draft", "--path", path)[0] == 0
+
+    def verdict():
+        code, out, err = _cli(root, "check", "--issue", SLUG, "--json")
+        rows = {r["name"]: r for r in json.loads(out)["checks"]}
+        return rows["spike-conclusion-present"]
+
+    row = verdict()
+    assert row["status"] == "fail" and "no `spike-conclusion` evidence" in row["detail"], row
+    body = _manifest_of(task_dir)
+    body["evidence"] = [{"id": "EV-1", "type": "spike-conclusion", "decision": "discard",
+                         "path": path}]
+    (task_dir / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
+    row = verdict()
+    assert row["status"] == "pass" and "discard" in row["detail"], row
+    body["evidence"][0]["decision"] = "graduate-to-delivery"
+    (task_dir / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
+    row = verdict()
+    assert row["status"] == "fail" and "next_task" in row["detail"], row
+    # The definition in the shipped checks catalogue is unchanged and locked.
+    checks = yaml.safe_load((ROOT / "governance" / "presets" / "default" / "checks.yml")
+                            .read_text(encoding="utf-8"))["checks"]
+    one = checks["spike-conclusion-present"]
+    assert (one["kind"], one["impl"], one["severity"], one["on_skipped"], one["locked"]) == (
+        "deterministic", "spike-conclusion-present", "blocking", "fail", True)
+    assert " ".join(one["statement"].split()) == (
+        "A spike has a `spike-conclusion` evidence entry with a recorded decision "
+        "(discard | graduate-to-delivery | defer); graduate-to-delivery links the next issue.")
+
+
+def test_acf_62(tmp_path):
+    root, task_dir = _registry_project(tmp_path, goal="exploration")
+    path = _doc(root, "spike-conclusion.md")
+    code, out, err = _set(root, "spike-conclusion", "--status", "draft", "--path", path,
+                          "--decision", "discard")
+    assert code == 0, out + err
+    held = _entries(task_dir, "spike-conclusion")
+    assert len(held) == 1 and held[0]["path"] == path
+    records = [e for e in _manifest_of(task_dir)["evidence"] if e.get("type") == "spike-conclusion"]
+    assert len(records) == 1 and records[0]["decision"] == "discard", records
+    assert path in str(records[0]["path"]).replace("\\", "/").replace("../", ""), records
+    code, out, err = _cli(root, "check", "--issue", SLUG, "--json")
+    rows = {r["name"]: r for r in json.loads(out)["checks"]}
+    assert rows["spike-conclusion-present"]["status"] == "pass", rows["spike-conclusion-present"]
+    # A graduation without the next issue, and a decision that is not allowed, write nothing.
+    before = (task_dir / "manifest.yml").read_bytes()
+    code, out, err = _set(root, "spike-conclusion", "--status", "draft", "--path", path,
+                          "--decision", "graduate-to-delivery")
+    assert code == 2 and "--next-task" in err, out + err
+    code, out, err = _set(root, "spike-conclusion", "--status", "draft", "--path", path,
+                          "--decision", "keep")
+    assert code == 2, out + err
+    for word in ("discard", "graduate-to-delivery", "defer"):
+        assert word in err
+    code, out, err = _set(root, "bug-report", "--status", "draft",
+                          "--path", _doc(root, "bug-report.md"), "--decision", "discard")
+    assert code == 2 and "--decision" in err, out + err
+    assert (task_dir / "manifest.yml").read_bytes() == before
+    # Running it again with another decision updates the one record.
+    code, out, err = _set(root, "spike-conclusion", "--status", "draft", "--path", path,
+                          "--decision", "defer")
+    assert code == 0, out + err
+    records = [e for e in _manifest_of(task_dir)["evidence"] if e.get("type") == "spike-conclusion"]
+    assert len(records) == 1 and records[0]["decision"] == "defer", records
+    code, out, err = _set(root, "spike-conclusion", "--status", "draft", "--path", path,
+                          "--decision", "graduate-to-delivery", "--next-task", "next-issue")
+    assert code == 0, out + err
+    records = [e for e in _manifest_of(task_dir)["evidence"] if e.get("type") == "spike-conclusion"]
+    assert len(records) == 1 and records[0]["next_task"] == "next-issue", records

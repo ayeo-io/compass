@@ -183,7 +183,7 @@ KEYS_AT_6_0_0 = {
 ADDED_TO_A_PLACED_ROW = {
     "lane", "stage", "gates", "gate_list", "assessment", "policy_rules_fired",
     "stage_depths", "tree", "manifest_path", "also_in", "created", "set_aside",
-    "recommendation", "unplaceable"}
+    "recommendation", "unplaceable", "documents"}
 ADDED_TO_AN_UNPLACED_ROW = {"tree", "manifest_path", "also_in"}
 KEYS_NOW = {
     key: (old | ADDED_TO_AN_UNPLACED_ROW | ({"note"} if key == "other" else set())

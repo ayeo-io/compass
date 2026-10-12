@@ -21,9 +21,12 @@ the obligations it was stored with.
 from __future__ import annotations
 
 import copy
+import fnmatch
 import os
+import re
 
-from compass_pkg.core import FRAMEWORK_ROOT, CompassError, load_yaml
+from compass_pkg.core import FRAMEWORK_ROOT, CompassError, docs_dir, load_yaml
+from compass_pkg.stable_ids import NOT_AN_ARTIFACT
 
 #: The fields read from the shipped default when a stored entry lacks them.
 FILLED_FIELDS = ("stage", "owner", "audience", "stands_for", "sections", "depends_on")
@@ -94,4 +97,99 @@ def rows(artifacts):
             "audience": _flat(body.get("audience", "")),
             "sections": {depth: [str(h) for h in (listed or [])]
                          for depth, listed in (body.get("sections") or {}).items()}})
+    return found
+
+
+#: The rule effects that name a document kind in a rule's `then:`.
+ARTIFACT_EFFECTS = ("add_artifact", "require_artifact", "suggest_artifact")
+
+ROUND_MARK = "<n>"
+
+
+def repeats(entry):
+    """Whether a kind repeats: its `file` holds `<n>`, as `review-<n>.md` does."""
+    return ROUND_MARK in str((entry or {}).get("file") or "")
+
+
+def filename(entry, round=None):
+    """The filename of a kind's document, or of one round of a repeating kind."""
+    name = str((entry or {}).get("file") or "")
+    return name.replace(ROUND_MARK, str(round)) if repeats(entry) and round is not None else name
+
+
+def _pattern(entry):
+    left, _, right = str(entry.get("file") or "").partition(ROUND_MARK)
+    return re.compile(re.escape(left) + "([0-9]+)" + re.escape(right))
+
+
+def round_of(entry, name):
+    """The round a filename holds for a repeating kind, or None when `name` is
+    not that kind's filename. Rounds count from 1 and carry no leading zero, so
+    the filename of a round is the one name that gives that round."""
+    if not repeats(entry):
+        return None
+    found = _pattern(entry).fullmatch(str(name))
+    if not found or found.group(1) != str(int(found.group(1))) or int(found.group(1)) < 1:
+        return None
+    return int(found.group(1))
+
+
+def home(task_dir, entry, round=None):
+    """The project-relative path where an issue keeps a kind's document: its
+    documents folder and the kind's filename."""
+    return "%s/%s" % (docs_dir(task_dir), filename(entry, round))
+
+
+def voluntary(view):
+    """The kinds that no approach, no rule and no `every_approach` flag names.
+    Nothing owes one, so a person registers it when it is written, and a
+    reassessment never supersedes it. With no configuration to read, none."""
+    config = getattr(view, "config", None) if view is not None else None
+    if not isinstance(config, dict) or not isinstance(config.get("artifacts"), dict):
+        return set()
+    named = set()
+    for body in (config.get("approaches") or {}).values():
+        named |= set((body or {}).get("artifacts") or {})
+    for rule_set in (config.get("rules") or {}).values():
+        rules = rule_set.get("rules") if isinstance(rule_set, dict) else None
+        for rule in (rules or {}).values():
+            then = rule.get("then") if isinstance(rule, dict) else None
+            for effect in ARTIFACT_EFFECTS:
+                value = (then or {}).get(effect)
+                named |= set(value if isinstance(value, list) else [value])
+    named |= {kind for kind, body in config["artifacts"].items()
+              if isinstance(body, dict) and body.get("every_approach")}
+    return {kind for kind in config["artifacts"] if kind not in named}
+
+
+def matches_kind(catalogue, name):
+    """Whether a filename in the documents folder is the file of a kind, with
+    `<n>` read as any whole number of a repeating kind."""
+    for body in catalogue.values():
+        if repeats(body):
+            if _pattern(body).fullmatch(name):
+                return True
+        elif body.get("file") == name:
+            return True
+    return False
+
+
+def unmatched_documents(view, task_dir):
+    """The names in the issue's documents folder that are no kind's file and
+    are not on the not-an-artifact list: top-level, non-hidden `.md` files,
+    sorted. The list is framework-owned (`stable_ids.NOT_AN_ARTIFACT`), so the
+    migrate and `compass issue lint` read the same names."""
+    root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.normpath(task_dir))))
+    folder = os.path.join(root, docs_dir(task_dir))
+    if not os.path.isdir(folder):
+        return []
+    known = catalogue(view)
+    found = []
+    for name in sorted(os.listdir(folder)):
+        if (name.startswith(".") or not name.endswith(".md")
+                or not os.path.isfile(os.path.join(folder, name))):
+            continue
+        if matches_kind(known, name) or any(fnmatch.fnmatchcase(name, p) for p in NOT_AN_ARTIFACT):
+            continue
+        found.append(name)
     return found

@@ -27,7 +27,7 @@ ARTIFACT_STATUSES = ("draft", "awaiting-approval", "approved", "superseded",
 
 
 def cmd_issue_artifact_path(args):
-    """`compass issue artifact-path <kind>` - where a document is, one answer.
+    """`compass issue artifact-path <kind> [--round N]` - where a document is, one answer.
 
     Exists for the two hooks. They are shell and cannot import the resolver.
     A second resolver in bash would come to disagree with the Python one
@@ -36,13 +36,17 @@ def cmd_issue_artifact_path(args):
     Exits non-zero and prints nothing when it is not there. A bash caller
     reads the exit code first; a plausible path for a missing document would
     let a hook conclude that assessment ran when it did not.
+
+    A kind that repeats (`review-<n>.md`) answers with its latest round, or
+    with the round `--round` names.
     """
     task_dir = resolve_issue_dir(getattr(args, "task", None))
     kind = args.kind[:-3] if args.kind.endswith(".md") else args.kind
-    state, path, reason = resolve_artifact(task_dir, kind)
+    asked = getattr(args, "round", None)
+    state, path, reason = resolve_artifact(task_dir, kind, asked)
     if state != FOUND:
         raise CompassError(
-            "%s: %s (%s)" % (kind, state, reason))
+            "%s%s: %s (%s)" % (kind, " round %d" % asked if asked else "", state, reason))
     print(path)
     return 0
 
@@ -108,47 +112,150 @@ def _refuse_unreadable(task, task_dir, kind):
             "readable and register the document again." % ", ".join(found))
 
 
+#: The close-out decisions a spike records (`spike-conclusion-present` reads them).
+SPIKE_DECISIONS = ("discard", "graduate-to-delivery", "defer")
+SPIKE_EVIDENCE_ID = "EV-SPIKE-CONCLUSION"
+NEXT_FLAG = "--next-task"  # vocabulary-scan: allow - the flag is spelled as the record's `next_task` key
+
+
+def _label(entry):
+    """A document's name for a message: its kind, and the round of a kind that
+    repeats."""
+    rnd = entry.get("round")
+    return "%s round %d" % (entry.get("kind"), rnd) if isinstance(rnd, int) else str(entry.get("kind"))
+
+
+def _entry_id(kind, rnd=None):
+    base = "ART-" + kind.upper().replace("-", "_")
+    return "%s-%d" % (base, rnd) if rnd else base
+
+
+def _refuse_home(task_dir, kind, spec, rel):
+    """Refuse a path that is not the one home of `kind`: the issue's documents
+    folder and the kind's filename. Returns the round of a kind that repeats."""
+    import posixpath
+
+    from compass_pkg import artifact_kinds
+
+    folder = docs_dir(task_dir)
+    given = posixpath.normpath(rel.replace(os.sep, "/"))
+    if artifact_kinds.repeats(spec):
+        rnd = artifact_kinds.round_of(spec, posixpath.basename(given))
+        if rnd is not None and posixpath.dirname(given) == folder:
+            return rnd
+    elif given == artifact_kinds.home(task_dir, spec):
+        return None
+    pattern = artifact_kinds.repeats(spec)
+    raise CompassError(
+        "%r is not where %s lives. A %s is kept in the issue's documents folder as %s%s - "
+        "write it there and register that path."
+        % (rel, kind, kind, artifact_kinds.home(task_dir, spec),
+           ", where <n> is the round, counted from 1 (a filename like review-1.md)"
+           if pattern else ""))
+
+
+def _decision_arguments(args, kind):
+    """The validated `(decision, next_task)` of `--decision`, or `(None, None)`.
+    Refuses before anything is written."""
+    decision = getattr(args, "decision", None)
+    next_task = getattr(args, "next_task", None)
+    if decision is None and next_task is None:
+        return None, None
+    if kind != "spike-conclusion":
+        raise CompassError(
+            "--decision and %s record how a spike closes, so they apply to "
+            "spike-conclusion only, not to %r." % (NEXT_FLAG, kind))
+    if decision is None:
+        raise CompassError("%s goes with --decision graduate-to-delivery." % NEXT_FLAG)
+    if decision not in SPIKE_DECISIONS:
+        raise CompassError(
+            "--decision %r is not a way a spike closes. The decisions are: %s."
+            % (decision, ", ".join(SPIKE_DECISIONS)))
+    if decision == "graduate-to-delivery" and not (next_task or "").strip():
+        raise CompassError(
+            "--decision graduate-to-delivery needs %s <slug>, the delivery issue "
+            "the spike graduates to. Graduation is a fresh assessment, not a merge." % NEXT_FLAG)
+    if next_task and decision != "graduate-to-delivery":
+        raise CompassError("%s goes with --decision graduate-to-delivery only." % NEXT_FLAG)
+    return decision, (next_task or "").strip() or None
+
+
+def _write_spike_record(task, task_dir, entry, decision, next_task):
+    """Write or update the one `spike-conclusion` evidence record that
+    `spike-conclusion-present` reads, naming the registered document. The check
+    stays as it is; this is the command that gives it the record it needs."""
+    from compass_pkg.core import find_upwards
+
+    if not entry.get("path"):
+        raise CompassError(
+            "--decision records the decision beside the document, so the document needs a "
+            "path: pass --path with the spike conclusion's file.")
+    root = find_upwards(os.path.abspath(task_dir), ".compass") or os.path.abspath(task_dir)
+    named = os.path.relpath(os.path.join(root, entry["path"]), task_dir).replace(os.sep, "/")
+    records = task.setdefault("evidence", [])
+    record = next((e for e in records if isinstance(e, dict)
+                   and e.get("type") == "spike-conclusion"), None)
+    if record is None:
+        record = {"id": SPIKE_EVIDENCE_ID, "type": "spike-conclusion"}
+        records.append(record)
+    record["path"] = named
+    record["decision"] = decision
+    if next_task:
+        record["next_task"] = next_task
+    else:
+        record.pop("next_task", None)
+    return record
+
+
 def cmd_issue_artifact(args):
-    """`compass issue artifact set <kind> --status <s> [--reason ...]`.
+    """`compass issue artifact set <kind> --status <s> [--reason ...] [--round N]`.
 
     Refuses a kind the issue's catalogue does not declare, the way
     `tdd-red --scenario` refuses a scenario id that is not in the manifest - a
     status set on a document nobody could ask for is a typo that would
     otherwise be stored as a decision.
 
+    A path must be the kind's one home, the issue's documents folder and the
+    kind's filename. A kind that repeats (`review-<n>.md`) holds one entry per
+    round; the round is read from the filename, and `--round` names an existing
+    one when no path is given. With no round at all, the latest round is meant.
+
     An omission MUST carry a reason. Without one, a document deliberately
     dropped and a document nobody got to look the same on the page, and telling
     those apart is the reason the registry exists.
+
+    `--decision` on the spike conclusion also writes the evidence record the
+    check `spike-conclusion-present` reads.
     """
+    from compass_pkg import artifact_kinds
+
     task_dir = resolve_issue_dir(getattr(args, "task", None))
     path = manifest_path(task_dir)
     task = load_yaml(path)
     arts = [a for a in (task.get("artifacts") or []) if isinstance(a, dict)]
+    view = _view_or_none(task_dir)
+    known = artifact_kinds.catalogue(view)
+    spec = known.get(args.kind)
+    held = [a for a in arts if a.get("kind") == args.kind]
+    asked = getattr(args, "round", None)
+    decision, next_task = _decision_arguments(args, args.kind)
 
-    entry = next((a for a in arts if a.get("kind") == args.kind), None)
-    if entry is None:
+    if not held and spec is None:
         # A kind the issue's catalogue declares can be registered even when the
         # assessment did not earn it: a reviewer's review or a project's own
         # kind is a document nobody had to ask for. The typo guard is
         # membership of the catalogue.
-        declared = sorted(((getattr(_view_or_none(task_dir), "config", None) or {})
-                           .get("artifacts") or {}))
-        if args.kind not in declared:
-            raise CompassError(
-                "%r is not a kind this issue's catalogue declares (it declares: %s). "
-                "A document the assessment earned is registered by `compass approach "
-                "evaluate --write`; any other kind must be declared in the artifacts "
-                "catalogue first." % (args.kind, ", ".join(declared) or "none"))
-        entry = {"id": "ART-" + args.kind.upper().replace("-", "_"), "kind": args.kind,
-                 "status": "draft",
-                 "reason": "registered by hand; no rule of the assessment asked for it"}
-        arts.append(entry)
-
-    if args.status == "omitted" and not (args.reason or "").strip():
         raise CompassError(
-            "omitting %r needs --reason. An omission with no reason is "
-            "indistinguishable from a document nobody got to, and telling "
-            "those apart is the whole point of recording it." % args.kind)
+            "%r is not a kind this issue's catalogue declares (it declares: %s). "
+            "A document the assessment earned is registered by `compass approach "
+            "evaluate --write`; any other kind must be declared in the artifacts "
+            "catalogue first." % (args.kind, ", ".join(sorted(known)) or "none"))
+    repeating = (spec is not None and artifact_kinds.repeats(spec)) or any(
+        isinstance(a.get("round"), int) for a in held)
+    if asked is not None and not repeating:
+        raise CompassError("%s does not repeat, so --round does not apply to it." % args.kind)
+    if asked is not None and asked < 1:
+        raise CompassError("--round counts from 1, not %d." % asked)
 
     rel = (getattr(args, "path", None) or "").strip()
     if rel:
@@ -163,18 +270,52 @@ def cmd_issue_artifact(args):
                 "measured from the project root, and an issue's document "
                 "lives inside the repository - write it under %s and register "
                 "that." % (rel, resolved, docs_dir(task_dir)))
+    from_path = _refuse_home(task_dir, args.kind, spec, rel) if rel and spec is not None else None
+
+    rnd = None
+    if repeating:
+        if from_path is not None and asked is not None and from_path != asked:
+            raise CompassError(
+                "--round %d does not match %s, which is round %d." % (asked, rel, from_path))
+        rnd = from_path if from_path is not None else asked
+        if rnd is None:
+            latest = [a["round"] for a in held if isinstance(a.get("round"), int)]
+            if not latest:
+                raise CompassError(
+                    "%s repeats, so name the round: pass --path with the round's file "
+                    "(%s) or --round N." % (args.kind, artifact_kinds.filename(spec) if spec
+                                            else args.kind + "-<n>.md"))
+            rnd = max(latest)
+        entry = next((a for a in held if a.get("round") == rnd), None)
+    else:
+        entry = held[0] if held else None
+    if entry is None:
+        entry = {"id": _entry_id(args.kind, rnd), "kind": args.kind, "status": "draft",
+                 "reason": "registered by hand; no rule of the assessment asked for it"}
+        if rnd is not None:
+            entry["round"] = rnd
+        arts.append(entry)
+
+    if args.status == "omitted" and not (args.reason or "").strip():
+        raise CompassError(
+            "omitting %r needs --reason. An omission with no reason is "
+            "indistinguishable from a document nobody got to, and telling "
+            "those apart is the whole point of recording it." % args.kind)
+
+    if rel:
         entry["path"] = rel.replace(os.sep, "/")
 
     if args.status != "omitted":
         _refuse_unreadable(task, task_dir, args.kind)
     from compass_pkg import artifact_status, freshness
 
-    view = _view_or_none(task_dir)
     digest_now = _own_digest(task, task_dir, entry)
     rewound = artifact_status.register(task, view, entry, args.status, digest_now)
     if (args.reason or "").strip() and not rewound:
         entry["reason"] = args.reason.strip()
     task["artifacts"] = arts
+    if decision:
+        _write_spike_record(task, task_dir, entry, decision, next_task)
     # Saved before the digest is read: the digest resolves the document through
     # the registry on disk.
     save_manifest(task, path)
@@ -196,9 +337,12 @@ def cmd_issue_artifact(args):
     save_manifest(task, path)
     from compass_pkg.terminal import say
 
-    return say(args, "compass issue artifact set: %s -> %s" % (args.kind, entry["status"]),
-               detail=["reason: %s" % entry.get("reason", "(none recorded)")]
-               + recorded + artifact_status.moved_line(moved),
-               kind=args.kind, status=entry["status"],
+    detail = ["reason: %s" % entry.get("reason", "(none recorded)")]
+    if decision:
+        detail.append("spike conclusion recorded: %s%s" % (
+            decision, " -> " + next_task if next_task else ""))
+    return say(args, "compass issue artifact set: %s -> %s" % (_label(entry), entry["status"]),
+               detail=detail + recorded + artifact_status.moved_line(moved),
+               kind=args.kind, round=entry.get("round"), status=entry["status"],
                reason=entry.get("reason"), approved_by=entry.get("approved_by"),
                approved_at=entry.get("approved_at"), moved=moved)

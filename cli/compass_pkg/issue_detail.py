@@ -37,6 +37,9 @@ class IssueDetail:
     stage_problem: object = None
     #: The reason of the blocked flag while it counts (an issue in progress or in review), else None.
     blocked: object = None
+    #: One `{id, kind, round, status, path}` for each registered document, in registry order. A
+    #: kind that repeats has one for each round, so no reader shows only the first.
+    documents: tuple = ()
 
     @property
     def gates(self):
@@ -47,6 +50,19 @@ def _gate_counts(manifest):
     gates = manifest.get("gates")
     entries = [g for g in gates if isinstance(g, dict)] if isinstance(gates, list) else []
     return sum(1 for g in entries if g.get("status") == "pass"), len(entries)
+
+
+def _documents(manifest):
+    """The registered documents, each as the facts a reader shows."""
+    found = []
+    for entry in manifest.get("artifacts") or []:
+        if isinstance(entry, dict) and entry.get("kind"):
+            rnd = entry.get("round")
+            found.append({"id": str(entry.get("id") or ""), "kind": str(entry["kind"]),
+                          "round": rnd if isinstance(rnd, int) else None,
+                          "status": str(entry.get("status") or ""),
+                          "path": str(entry.get("path") or "")})
+    return tuple(found)
 
 
 def _stage(manifest, task_dir, state, recorded):
@@ -72,7 +88,8 @@ def detail(manifest, task_dir):
     flag = lifecycle.blocked_flag(manifest, task_dir)
     return IssueDetail(str(manifest.get("delivery_approach") or NOT_ASSESSED), state, stage,
                        passed, total, problem,
-                       str(flag.get("reason") or "no reason recorded") if flag else None)
+                       str(flag.get("reason") or "no reason recorded") if flag else None,
+                       _documents(manifest))
 
 
 def state_text(manifest, task_dir):

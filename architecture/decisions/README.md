@@ -93,6 +93,7 @@ Rules:
 | [ADR-051](ADR-051-rendered-blocks-are-derived-in-place-and-checked.md) | Rendered blocks are derived in place and checked | accepted | amends ADR-012 and ADR-044; with ADR-008, ADR-036, ADR-046 and ADR-047 |
 | [ADR-052](ADR-052-the-parse-cache-serves-the-render-as-well-as-flow.md) | The parse cache serves the render as well as flow | accepted | widens ADR-049; with ADR-003 and ADR-051 |
 | [ADR-053](ADR-053-the-artifact-catalogue-describes-each-document.md) | The artifact catalogue describes each document | proposed | extends ADR-035; changes ADR-050 decision 1 (`stage` is required); with ADR-036 and ADR-037 |
+| [ADR-054](ADR-054-an-artifact-kind-can-repeat-keyed-by-round.md) | An artifact kind can repeat, keyed by round | proposed | extends ADR-022; with ADR-040 and ADR-050 |
 
 ## Principle → ADR mapping
 

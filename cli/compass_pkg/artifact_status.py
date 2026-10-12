@@ -279,22 +279,34 @@ def _ships(view, task):
     return approach != APPROACH_SPIKE
 
 
+def label(entry):
+    """A registered document's name for a message: its kind, and for a round of a
+    kind that repeats, the round and the entry id, so a finding about round 3 is
+    never read as one about round 1."""
+    rnd = entry.get("round")
+    if isinstance(rnd, int):
+        return "%s round %d (%s)" % (entry.get("kind"), rnd, entry.get("id", "?"))
+    return str(entry.get("kind"))
+
+
 def _command_for(entry, view):
     kind = entry.get("kind")
     status = entry.get("status")
+    rnd = entry.get("round")
+    named = "%s --round %d" % (kind, rnd) if isinstance(rnd, int) else kind
     if status == AWAITING:
         return f"`compass evidence approve --artifact {kind} --approver <name> --role <role> --scope <text>`"
     if status == OMITTED:
-        return f'`compass issue artifact set {kind} --status omitted --reason "<why>"`'
+        return f'`compass issue artifact set {named} --status omitted --reason "<why>"`'
     if not entry.get("path"):
-        return (f"write it and register it with `compass issue artifact set {kind} --status "
+        return (f"write it and register it with `compass issue artifact set {named} --status "
                 f"draft --path <file>`, or run "
-                f'`compass issue artifact set {kind} --status omitted --reason "<why>"`')
+                f'`compass issue artifact set {named} --status omitted --reason "<why>"`')
     if human_checks(view, kind):
-        return (f"`compass issue artifact set {kind} --status awaiting-approval`, then "
+        return (f"`compass issue artifact set {named} --status awaiting-approval`, then "
                 f"`compass evidence approve --artifact {kind} --approver <name> --role <role> "
                 f"--scope <text>`")
-    return f"`compass issue artifact set {kind} --status approved`"
+    return f"`compass issue artifact set {named} --status approved`"
 
 
 def _check_artifacts_approved(task, task_dir):
@@ -329,7 +341,7 @@ def _check_artifacts_approved(task, task_dir):
                     "reads draft" if status == DRAFT and entry.get("path") else
                     "reads draft and has no path" if status == DRAFT else
                     "is awaiting approval")
-            problems.append(f"{entry.get('kind')} {what} - run {_command_for(entry, view)}")
+            problems.append(f"{label(entry)} {what} - run {_command_for(entry, view)}")
     if problems:
         return False, (f"{len(problems)} document(s) are not approved: " + "; ".join(problems))
     return True, f"{len(entries)} registered document(s) are approved, superseded or omitted with a reason"

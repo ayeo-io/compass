@@ -552,10 +552,14 @@ def _receipt_documents(task):
     with its status and, when it was approved, who approved it and when. A
     person's approval names the person; a stage's names the command that wrote
     it. Documents still in draft are counted on one line, so the receipt stays
-    one screen. No lines when every document is a draft or none is registered."""
+    one screen. A round of a kind that repeats (`review-<n>.md`) is listed
+    whatever its status, with its entry id and path, so no round is hidden
+    behind the count. No lines when every document is a draft or none is
+    registered."""
     entries = [a for a in task.get("artifacts") or [] if isinstance(a, dict)]
-    moved = [a for a in entries if a.get("status") != "draft"]
-    if not moved:
+    rounds = [a for a in entries if isinstance(a.get("round"), int)]
+    moved = [a for a in entries if a.get("status") != "draft" and a not in rounds]
+    if not moved and not rounds:
         return []
     lines = ["Documents", "---------"]
     for entry in moved:
@@ -564,7 +568,13 @@ def _receipt_documents(task):
         lines.append(_receipt_truncate(
             f"  {str(entry.get('kind', '?')):<22}  {str(entry.get('status', '?')):<18}  "
             f"{who}  {when}"))
-    drafts = len(entries) - len(moved)
+    for entry in rounds:
+        who = entry.get("approved_by") or "-"
+        lines.append(_receipt_truncate(
+            f"  {str(entry.get('kind', '?')) + ' round ' + str(entry['round']):<14}  "
+            f"{str(entry.get('status', '?')):<17}  {str(entry.get('id', '?')):<13} "
+            f"{entry.get('path') or '-'}  {who}"))
+    drafts = len(entries) - len(moved) - len(rounds)
     if drafts:
         lines.append(f"  {drafts} more still draft")
     return lines

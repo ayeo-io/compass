@@ -364,16 +364,21 @@ def build_parser():
     ptag = pts.add_parser("artifact", help="a document's status in the issue's review pack")
     pta = ptag.add_subparsers(dest="artifact_cmd", required=True).add_parser(
         "set", help="set a document's status in the issue's review pack")
-    pta.add_argument("kind", help="document kind, e.g. design (must be one the issue earned)")
+    pta.add_argument("kind", help="document kind, e.g. technical-design (any kind the issue's catalogue declares)")
     pta.add_argument("--status", required=True, choices=list(ARTIFACT_STATUSES),
                      help="new status")
     pta.add_argument("--reason", help="why - required when omitting")
     pta.add_argument("--path", help="where the document was written, relative to the project root (e.g. docs/compass/2026-09-08-my-issue/technical-design.md)")
+    pta.add_argument("--round", type=int, help="the round of a kind that repeats, such as review-<n>.md; default is the round in the path, else the latest")
+    pta.add_argument("--decision", help="spike-conclusion only: how the spike closes (discard, graduate-to-delivery or defer); also writes the evidence record the check reads")
+    pta.add_argument("--next-task", dest="next_task", help="with --decision graduate-to-delivery: the slug of the delivery issue")
     issue_arg(pta)
     pta.set_defaults(func=cmd_issue_artifact, output_kind="hand-off")
 
     ptap = pts.add_parser("artifact-path", help="print where one of an issue's documents is; non-zero when it is not there")
-    ptap.add_argument("kind", help="document kind, e.g. delivery-approach"); issue_arg(ptap); ptap.set_defaults(func=cmd_issue_artifact_path, output_kind="hand-off")
+    ptap.add_argument("kind", help="document kind, e.g. delivery-approach")
+    ptap.add_argument("--round", type=int, help="the round of a kind that repeats, such as review-<n>.md; default is the latest")
+    issue_arg(ptap); ptap.set_defaults(func=cmd_issue_artifact_path, output_kind="hand-off")
     pttg = pts.add_parser("template", help="document templates")
     ptt = pttg.add_subparsers(dest="template_cmd", required=True).add_parser(
         "show", help="print the skeleton of a document kind from the catalogue, or a template that is not a kind as the file")

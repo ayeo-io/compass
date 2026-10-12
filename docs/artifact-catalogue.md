@@ -1,6 +1,6 @@
 # The artifact catalogue
 
-The artifact catalogue describes each kind of document a process writes. A tool reads the description to print a skeleton, to list the kinds and to check a configuration. This page owns the catalogue's fields, the skeleton that `compass issue template show` prints and the table of shipped kinds.
+The artifact catalogue describes each kind of document a process writes. A tool reads the description to print a skeleton, to list the kinds and to check a configuration. This page owns the catalogue's fields, the skeleton that `compass issue template show` prints, the rounds of a kind that repeats, the home of each document and the table of shipped kinds.
 
 The catalogue is the `artifacts:` map in `governance/presets/default/artifacts.yml`. A project or a preset adds a kind in its own `artifacts:` map with the same fields.
 
@@ -33,6 +33,32 @@ The catalogue is the `artifacts:` map in `governance/presets/default/artifacts.y
 A template marks a section the author can leave out with the line `<!-- compass:optional -->` directly under its heading. The skeleton prints an optional section at `thorough`, in its template position, with `(optional)` after the heading. It prints none at `lightweight`. An optional heading is not listed in `sections`.
 
 `tests/test_artifact_catalogue_fields.py` compares each template's unmarked headings with `sections.thorough`, and checks that `sections.lightweight` is an ordered subset of it. A `{{...}}` token in a template heading and a `<...>` token in the catalogue count as the same placeholder.
+
+## Documents that repeat
+
+A kind repeats when its `file` holds `<n>`, as `review-<n>.md` does. The registry holds one entry per round, each with its own id, status and path, and a `round` read from the filename. Rounds count from 1 and carry no leading zero.
+
+- `compass issue artifact set review --path docs/compass/<created>-<slug>/review-2.md` registers round 2. Registering the same round again updates its entry and adds no new one.
+- `--round N` names an existing round when no path is given.
+- A path that is not `review-<n>.md` is refused, and the refusal names the pattern.
+- `compass issue artifact-path review` prints the latest round. `--round N` prints one.
+- `compass check`, the issue page, the board panel and the receipt each list every round. A finding names the round and its entry id.
+
+A kind that no approach, rule or `every_approach` flag names is voluntary: nothing owes it, and a person registers it when it is written. Today `review`, `bug-report`, `architecture-notes`, `product-owner-review` and `positioning` are voluntary. `compass issue artifact set` accepts any kind the issue's catalogue declares, and `compass approach evaluate --write` never marks a voluntary entry `superseded`.
+
+## One home for every kind
+
+`compass issue artifact set --path` accepts only `docs/compass/<created>-<slug>/<file>`, where `<file>` is the kind's `file` (with the round in it for a kind that repeats). The refusal names the kind and its home. The rule reads the catalogue, so a kind a project adds has the same home.
+
+## Files that match no kind
+
+`compass issue lint` reports each top-level `.md` file in the documents folder whose name matches no kind's `file` and is not on the not-an-artifact list. The report is one line for each file, and it does not change the exit code.
+
+The not-an-artifact list is `NOT_AN_ARTIFACT` in `cli/compass_pkg/stable_ids.py`. It holds the names and patterns that the process writes but that are no kind: `README.md`, `devlog.md`, review briefs, subtask assignments and briefs, `architect-ruling.md`, `recommendation.md`, `released-verbs-v5.6.0.md`, `compare.md`, `report.md` and `*.v6.bak`. The migrate reads the same list.
+
+## Closing a spike
+
+`compass issue artifact set spike-conclusion --status draft --path <file> --decision <discard|graduate-to-delivery|defer>` registers the conclusion and writes the one `spike-conclusion` evidence record that the check `spike-conclusion-present` reads, naming the document. `graduate-to-delivery` needs `--next-task <slug>` <!-- vocabulary-scan: allow - the flag is spelled as the record's next_task key -->, the slug of the delivery issue. A second run with another decision updates the record. `--decision` on any other kind is refused. The check itself is unchanged.
 
 ## The quick-fix record
 

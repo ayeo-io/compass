@@ -900,26 +900,36 @@ def cmd_route_evaluate(args):
         # Seed the artifact registry the same way the gate list is seeded:
         # what routing computed, without clobbering a status or path a stage
         # has already recorded against an entry.
-        recorded = {a.get("kind"): a for a in task.get("artifacts", [])
-                    if isinstance(a, dict)}
+        recorded = [a for a in task.get("artifacts", []) if isinstance(a, dict)]
+        # A kind that repeats has one entry per round, so the merge keys by kind and
+        # round: it keeps every round of an earned kind and never collapses them.
+        from compass_pkg import artifact_kinds
+        voluntary = artifact_kinds.voluntary(view)
         merged = []
         for a in result["artifacts"]:
-            keep = recorded.get(a["kind"])
-            if keep:
-                keep = dict(keep)
-                keep["reason"] = a["reason"]      # the rule that earned it
-                merged.append(keep)
-            else:
+            keep = [r for r in recorded if r.get("kind") == a["kind"]]
+            if keep and not any(isinstance(r.get("round"), int) for r in keep):
+                keep = keep[-1:]
+            for kept in keep:
+                kept = dict(kept)
+                kept["reason"] = a["reason"]      # the rule that earned it
+                merged.append(kept)
+            if not keep:
                 merged.append(a)
         # A human-recorded omission of something routing no longer earns is
         # kept: it is a decision someone took, not stale computed output.
         # A document that was written (it has a path) stays too, as
         # `superseded`, so the file keeps a record of why it is no longer owed.
-        # An entry with no path records no document and is dropped.
-        for kind, a in recorded.items():
-            if any(m["kind"] == kind for m in merged):
+        # An entry with no path records no document and is dropped. A voluntary
+        # kind (no approach, rule or flag asks for it) is never superseded: a
+        # reassessment cannot unearn what it never earned.
+        earned = {m["kind"] for m in merged}
+        for a in recorded:
+            if a.get("kind") in earned:
                 continue
             if a.get("status") == "omitted":
+                merged.append(a)
+            elif a.get("path") and a.get("kind") in voluntary:
                 merged.append(a)
             elif a.get("path") and evaluated_before:
                 from compass_pkg import artifact_status

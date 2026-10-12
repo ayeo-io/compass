@@ -480,6 +480,12 @@ A release checkpoint, not a level in the work hierarchy: a coherent bundle of de
 
 **Related:** `initiative`, `issue`
 
+### not-an-artifact-list
+
+The file names and patterns in an issue's documents folder that are documents of no kind, such as `README.md` and the review briefs. The migrate leaves them in place, and `compass issue lint` does not report them.
+
+**Related:** `audience`, `sections`
+
 ### obligation
 
 Anything the configuration asks for at an assessment: a stage mode, a check on an entry or exit list, a gate, an artifact, a checkpoint or a ceiling.
@@ -589,6 +595,12 @@ The review pass that hardens requirements before plan or implementation: ambigui
 Compass's cross-issue self-check: is assess consistently over- or under-sizing the process? Advisory, surfaced in retro language.
 
 **Related:** `dora-metrics`, `assess`
+
+### review-round
+
+One review of an issue's work by a reviewer who did not write it. Each round is its own document, `review-<n>.md`, and its own entry in the artifact registry. Rounds count from 1.
+
+**Related:** `requirements-review`, `audience`
 
 ### rollback-plan
 
@@ -717,6 +729,12 @@ The chain that makes a change accountable: code traces to a TRC- id, which trace
 A quick fix's one-screen record of what was checked: the scenario, its test, the red and green records, each gate with its status and the files changed. It is one rendered block, written by `compass quick-fix finish` and approved by it. A person can write prose above the block.
 
 **Related:** `rendered-block`, `quick-fix`
+
+### voluntary-kind
+
+A document kind that no delivery approach, rule or `every_approach` flag names, so nothing owes it. A person registers it when it is written, and a reassessment never supersedes it. `review` is one.
+
+**Related:** `required-when`, `review-round`
 
 ### waiver
 

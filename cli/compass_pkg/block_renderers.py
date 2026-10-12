@@ -123,10 +123,14 @@ def artifacts(inputs, doc_rel):
     lines = ["Documents: %d registered, %d approved" % (len(rows), approved), "",
              "| Document | Status | Approved by | Why it exists |", "|---|---|---|---|"]
     for a in rows:
-        kind = rb.cell(a.get("kind", "?"))
+        name = str(a.get("kind", "?"))
+        if isinstance(a.get("round"), int):
+            # One row per round of a kind that repeats, each named by its own entry id.
+            name += ", round %d (%s)" % (a["round"], a.get("id", "?"))
+        kind = rb.cell(name)
         target = _link_target(inputs, a["path"]) if a.get("path") else None
         written = target in inputs.present
-        shown = (_link(inputs, a["path"], doc_rel, a.get("kind", "?")) if written else None) \
+        shown = (_link(inputs, a["path"], doc_rel, name) if written else None) \
             or kind
         # A name or meaning the catalogue gives the document is shown when the entry holds it.
         for key, word in (("traditional_name", "traditional name"), ("stands_for", "stands for")):

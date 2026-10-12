@@ -3632,6 +3632,10 @@
 - `ASW-32` A decision recorded after the define checkpoint waits at the next checkpoint
 - `ASW-33` retro reports how agent decisions were settled
 
+### next-latency-budget (completed 2026-10-12)
+
+- `NLB-1` Given a runner of any speed, when compass next costs at least 1.8 times a reference command, then the latency test fails and prints the figures
+
 ### compass-yml-owner (completed 2026-10-12)
 
 - `OWN-1` This repository's compass.yml names jed72 as its owner, and the framework test allows owner while still forbidding waivers, unlocks, capabilities and approvers

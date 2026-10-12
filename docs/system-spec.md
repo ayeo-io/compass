@@ -3632,6 +3632,108 @@
 - `ASW-32` A decision recorded after the define checkpoint waits at the next checkpoint
 - `ASW-33` retro reports how agent decisions were settled
 
+### documents-carry-judgement (completed 2026-10-12)
+
+- `DCJ-1` compass issue render rewrites every block in every registered document from the records
+- `DCJ-2` Text outside the markers is byte-identical after a render
+- `DCJ-3` A second render changes no byte
+- `DCJ-4` The coverage block shows each scenario's tests and records and the de-scoped failure modes
+- `DCJ-5` The gates block shows each gate's status and evidence
+- `DCJ-6` The evidence, follow-ups and decisions-taken blocks list their manifest entries
+- `DCJ-7` A malformed marker is refused with the file and line, and nothing is written
+- `DCJ-8` A document with no rendered block is left alone
+- `DCJ-9` A document that is not UTF-8 is refused and left unchanged
+- `DCJ-10` A failed write leaves the document as it was
+- `DCJ-11` An approved document stays approved when only its blocks change
+- `DCJ-12` The old dashboard verb is gone and the error names compass issue render
+- `DCJ-13` No tracked file outside the allowed set names the removed verb or check
+- `DCJ-14` A stale block fails rendered-blocks-current at verify, naming the file and block
+- `DCJ-15` A stale block before verify is reported as advisory
+- `DCJ-16` A missing issue page fails the check at verify
+- `DCJ-17` rendered-blocks-current replaces dashboard-current in the shipped preset
+- `DCJ-18` A record-changing command re-renders the issue and prints no reminder
+- `DCJ-19` A command that fails renders nothing
+- `DCJ-20` A failed render prints one line on standard error and the command still succeeds
+- `DCJ-21` The after-command step re-renders the issues the manifest names and no others
+- `DCJ-22` A new decision entry supersedes the stale-page reminder decision
+- `DCJ-23` Rendered documents stay out of the model-facing read set
+- `DCJ-24` The Definition of Done block reads as a result
+- `DCJ-25` An item with no record reads open and fails dod-evidence-typed
+- `DCJ-26` Ticked boxes on the page count for nothing
+- `DCJ-27` Recording an item the issue does not list, or with evidence the list does not accept, is refused
+- `DCJ-28` A person ticks an item with no approvers list from the project's declared approvers
+- `DCJ-29` An item deferred to a resolved follow-up counts as met
+- `DCJ-30` dod-evidence-typed has nothing to check before a verification report is written
+- `DCJ-31` An outstanding follow-up from another issue still blocks this issue
+- `DCJ-32` The Definition of Ready block and the stage lists read approval records
+- `DCJ-33` The blocks list the issue's configured Ready and Done items
+- `DCJ-34` The shipped templates carry rendered blocks in place of the hand-kept state tables
+- `DCJ-35` quick-fix finish writes a one-screen verification note and lands in the same run
+- `DCJ-36` The verification note shows the release line only when one is recorded
+- `DCJ-37` Prose above the verification note's block survives a render
+- `DCJ-38` A quick fix whose test fails gets no verification note
+- `DCJ-39` The issue page carries its blocks in the issue-page order
+- `DCJ-40` The ask comes from intent.md and opens on the first screen
+- `DCJ-41` Without intent.md the ask comes from the issue line and the scenario titles
+- `DCJ-42` The header uses current state words for an archived issue
+- `DCJ-43` The acceptance and traceability blocks show each scenario's result
+- `DCJ-44` The artifacts block links each document with its status and approver
+- `DCJ-45` The board panel and the issue page agree because they share one function
+- `DCJ-46` The issue page names the board command and carries no local path
+- `DCJ-47` No rendered block names a person from git
+- `DCJ-48` A hand-written README in the issue folder is left alone and reported
+- `DCJ-49` The related block lists every link in both directions with its state
+- `DCJ-50` Dependency and parent links appear only when the fields are present
+- `DCJ-51` An issue with no links shows None, and a link to a missing issue is not linked
+- `DCJ-52` The decisions block lists design decisions, governance decisions and decisions taken
+- `DCJ-53` A governance decision that names a longer slug is not listed
+- `DCJ-54` The project index lists every issue once, in a table for its state
+- `DCJ-55` The recent-completion window ends at the newest completion, not today
+- `DCJ-56` A stale index row fails rendered-blocks-current for that issue
+- `DCJ-57` This repository ignores the project index
+- `DCJ-58` render --all skips issues whose inputs are unchanged
+- `DCJ-59` A change to a linked issue or a decision entry re-renders the issues that show it
+- `DCJ-60` render --all renders every readable issue and names the unreadable ones
+- `DCJ-61` render --all on 490 issues stays within a 5.0 second bound with the parse cache warm
+- `DCJ-62` After migration and render --all, the archive sample meets the measures
+- `DCJ-63` No test renders or migrates this checkout's own archive
+- `DCJ-64` Migration carries the page's Definition of Done into manifest records and only adds lines
+- `DCJ-65` Migration writes a verification note for each completed quick fix and removes old generated review pages
+- `DCJ-66` The migration dry run writes nothing, and a second apply changes nothing
+- `DCJ-67` Migration still refuses to apply to a work root git cannot restore without a copy
+- `DCJ-68` Recorded text that looks like markup cannot break the page
+- `DCJ-69` Every digest of a document reads it without its block interiors
+- `DCJ-70` Readers of document text never read block text
+- `DCJ-71` render writes only under docs/compass
+- `DCJ-72` A render never overwrites an edit made while it ran, and two renders at once converge
+- `DCJ-73` Duplicate blocks and git conflict markers are handled by place
+- `DCJ-74` A registered path that became a link or left the project is refused at render
+- `DCJ-75` Every command that saves a manifest is in the render trigger table or a named exempt list
+- `DCJ-76` An issue stored before this change is judged by the new check and reports the removed one
+- `DCJ-77` The cache cannot clear or fail a blocking verdict, and only the named readers use it
+- `DCJ-78` render --all --dry-run lists what would change and writes nothing
+- `DCJ-79` In a checkout where other issues are absent, cross-issue blocks are advisory and own blocks still pass
+- `DCJ-80` A page tick written by migration never counts as a person's approval
+- `DCJ-81` The landing commit holds the done issue's page and leaves the tree clean
+- `DCJ-82` A closed issue whose report has no Definition of Done section reads nothing to check
+- `DCJ-83` A render after a command does not make an identical green read as a change
+- `DCJ-84` A link name that leaves the work folder is reported and not followed
+- `DCJ-85` A migrated issue with no list to check does not fail dod-evidence-typed
+- `DCJ-86` A design decision's scope is read from its declared field only
+- `DCJ-87` The issue page shows the blocked flag with its reason
+- `DCJ-88` The after-command render can be switched off by an environment variable
+- `DCJ-89` A command that never renders does not load the render modules
+- `DCJ-90` The lazy check entry for rendered-blocks-current still goes red when the check is broken
+- `DCJ-91` compass next loads no rendered-blocks module
+- `DCJ-92` The entry point stays thin while it loads the render only for a trigger
+- `DCJ-93` An issue with no verification report is blocked by an inbound outstanding follow-up
+- `DCJ-94` A judged check's evidence input keeps a full-byte digest
+- `DCJ-95` Migration does not write a verification note outside the documents folder
+- `DCJ-96` A record change on a hotfix renders the issue it repairs
+- `DCJ-97` A hand-written verification note without a block gets the block at finish
+- `DCJ-98` Migration does not edit a verification report outside the documents folder
+- `DCJ-99` Quick-fix finish refuses a note path that leaves the documents folder
+
 ### compass-yml-owner (completed 2026-10-12)
 
 - `OWN-1` This repository's compass.yml names jed72 as its owner, and the framework test allows owner while still forbidding waivers, unlocks, capabilities and approvers

@@ -10,7 +10,7 @@ jed72
 
 ## Supersedes
 
-Nothing. It adds one key to what `2026-10-06-this-repository-may-hold-a-settings-only-compass-yml` allows, and leaves that entry in force.
+Nothing. It amends `2026-10-06-this-repository-may-hold-a-settings-only-compass-yml`: where that entry says the file holds settings keys only, it now holds settings keys and `owner`. The rest of that entry stands. Merged ledger entries are not edited, so this entry is where the amendment is recorded. ADR-042 carries the same amendment to its self-application rule.
 
 ## Decision
 

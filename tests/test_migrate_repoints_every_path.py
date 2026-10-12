@@ -429,6 +429,9 @@ HANDLED = {
 
 #: Path-like schema fields that are not repointed, each with the reason.
 EXCLUDED = {
+    "page_ticks[].source": "the document an archived tick was read from, kept for a reader "
+                           "of the record; nothing resolves it, and `compass issue migrate` "
+                           "writes it after it has moved the documents",
     "schema_version": "a version string, not a path",
     "issue": "the issue slug, not a path",
     "artifacts[].kind": "a document kind, not a path",

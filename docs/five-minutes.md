@@ -82,13 +82,13 @@ shipped default, and the line names the shipped `routing-policy.yml` and its
 version instead. Run against an issue that already has a stored generation, the
 line reads `generation N of this issue (parent ...)`.
 
-Generate the issue dashboard:
+Render the issue page:
 
 ```bash
-compass issue dashboard render --issue <issue>
+compass issue render --issue <issue>
 ```
 
-Then open `.compass/work/<issue>/README.md`. It tells you:
+Then open `docs/compass/<created>-<issue>/README.md`. It tells you:
 
 - the proposed approach;
 - what needs human approval;
@@ -99,9 +99,9 @@ Then open `.compass/work/<issue>/README.md`. It tells you:
 
 The page does not name the next action. `compass next` does.
 
-Compass never regenerates the page for you. When a command that writes the
-manifest leaves the page out of date, it prints one line telling you to run
-`compass issue dashboard render` again.
+Compass renders the page again after each command that changes a record, and
+`compass check` fails a page that no longer matches the records. Run
+`compass issue render` to repair one by hand.
 
 To see every issue at once, with a lane for each stage, run
 `compass board render`. It writes one page and opens it in the browser;

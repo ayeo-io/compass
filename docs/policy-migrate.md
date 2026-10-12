@@ -292,6 +292,11 @@ reassess), and the `compass.yml` it would write.
     },
     {
       "catalogue": "checks",
+      "id": "dashboard-current",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "checks",
       "id": "dod-evidence-typed",
       "operation": "set"
     },
@@ -301,8 +306,33 @@ reassess), and the `compass.yml` it would write.
       "operation": "set"
     },
     {
+      "catalogue": "checks",
+      "id": "rendered-blocks-current",
+      "operation": "add"
+    },
+    {
+      "catalogue": "gates",
+      "id": "G4",
+      "operation": "set"
+    },
+    {
+      "catalogue": "artifacts",
+      "id": "verification-note",
+      "operation": "add"
+    },
+    {
       "catalogue": "vocabulary",
       "id": "checks.artifacts-approved",
+      "operation": "add"
+    },
+    {
+      "catalogue": "vocabulary",
+      "id": "checks.dashboard-current",
+      "operation": "remove"
+    },
+    {
+      "catalogue": "vocabulary",
+      "id": "checks.rendered-blocks-current",
       "operation": "add"
     }
   ],

@@ -16,6 +16,7 @@ import os
 from compass_pkg import status_words
 from compass_pkg.check_results import NOTHING_TO_CHECK
 from compass_pkg.core import CompassError, load_yaml, normalize_spine
+from compass_pkg.issue_layout import is_one_segment
 
 
 # =============================================================================
@@ -38,8 +39,8 @@ from compass_pkg.core import CompassError, load_yaml, normalize_spine
 #: a check is added, silently widening the relaxation. A named list fails
 #: loudly when the set changes, which is the moment to think about it.
 #:
-#: What is NOT here is deliberate. `dashboard-current` still applies: the
-#: review page must match the manifest whatever the manifest says. `dod-evidence-typed`
+#: What is NOT here is deliberate. `rendered-blocks-current` still applies: a
+#: rendered block must match the records whatever the records say. `dod-evidence-typed`
 #: and `backfills-paid` still apply: an unchecked box or an owed follow-up is
 #: this issue's own business regardless of who did the work.
 LANDED_BY_RELAXES = (
@@ -57,7 +58,12 @@ LANDED_BY_RELAXES = (
 
 
 def _sibling_spine(task_dir, slug):
-    """Another issue's manifest, read from the same work root."""
+    """Another issue's manifest, read from the same work root.
+
+    `slug` comes from the manifest, so it must be one path segment: a `../x`
+    value would otherwise make the check read a manifest outside the work root."""
+    if not is_one_segment(slug):
+        return None
     path = os.path.join(os.path.dirname(os.path.abspath(task_dir)),
                         slug, "manifest.yml")
     if not os.path.isfile(path):

@@ -34,6 +34,15 @@
 # spike conclusion.
 /docs/compass/*/
 
+# The project index, the README.md directly in docs/compass, is rendered by `compass issue render`
+# from the issue folders above, which this repository ignores. It is ignored for the
+# same reason. A project that tracks its issue folders tracks the index with them.
+/docs/compass/README.md
+
+# The lock a render holds while it writes an issue's documents (any depth: the
+# examples keep their issue state in git).
+.render.lock
+
 *.log
 
 # OS / editor noise

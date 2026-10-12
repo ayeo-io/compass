@@ -27,30 +27,41 @@ sys.path.insert(0, str(ROOT / "tests"))
 
 from test_generation_store import (SLUG, _evaluate_write, _manifest, _project,  # noqa: E402
                                    _run, _write_manifest)
-from test_ready_and_done_data import (DONE_IDS, READY_IDS, DONE_TEMPLATE,  # noqa: E402
-                                      READY_TEMPLATE, template_items)
+from test_ready_and_done_data import DONE_IDS, READY_IDS, statements  # noqa: E402
 
 CAPABILITY = "entry-exit-evaluation"
-READY = template_items(READY_TEMPLATE, "### Definition of Ready")
-DONE = template_items(DONE_TEMPLATE, "### Definition of Done")
+READY = statements(READY_IDS)
+DONE = statements(DONE_IDS)
 
 
 # --- helpers ---------------------------------------------------------------------
 
 def _checklist(heading, items, ticked):
-    body = "".join(f"- [{'x' if i in ticked else ' '}] {text}\n"
-                   for i, text in enumerate(items))
-    return f"# Document\n\n### {heading}\n\n{body}\nNext stage: x\n"
+    """A document that holds the list's heading and no box: the page is never read."""
+    return f"# Document\n\n### {heading}\n\nNext stage: x\n"
+
+
+def _record_items(task_dir, ids, ticked):
+    """Meet the items at these positions with an evidence record in the manifest, as
+    `compass evidence add --meets` does; any record made before for these ids goes."""
+    body = _manifest(task_dir)
+    kept = [e for e in body.get("evidence") or []
+            if not str(e.get("id", "")).startswith("EV-ITEM-")]
+    kept += [{"id": f"EV-ITEM-{ids[i]}", "type": "manual-review", "path": "evidence/x.txt",
+              "meets": [ids[i]]} for i in sorted(set(ticked))]
+    _write_manifest(task_dir, evidence=kept)
 
 
 def _write_review(task_dir, ticked=range(7)):
     (task_dir / "requirements-review.md").write_text(
         _checklist("Definition of Ready", READY, set(ticked)), encoding="utf-8")
+    _record_items(task_dir, READY_IDS, ticked)
 
 
 def _write_report(task_dir, ticked=range(7)):
     (task_dir / "verification-report.md").write_text(
         _checklist("Definition of Done", DONE, set(ticked)), encoding="utf-8")
+    _record_items(task_dir, DONE_IDS, ticked)
 
 
 def _config_project(tmp_path, capability=True, manifest=None, **manifest_changes):
@@ -279,52 +290,26 @@ def test_ee_3_a_ticked_box_passes_and_an_unticked_one_fails(tmp_path, monkeypatc
     assert rows["dor-summary-filled"].status == "pass"
     last = rows["dor-approach-still-fits"]
     assert last.status == "fail"
-    assert "not ticked" in last.detail and "requirements-review.md" in last.detail
+    assert "not recorded" in last.detail and "--meets" in last.detail
     assert (last.stage, last.side, last.due) == ("plan", "entry", True)
-
-
-def test_ee_3_an_item_whose_text_differs_is_not_a_tick(tmp_path, monkeypatch):
-    root, task_dir = _config_project(tmp_path)
-    _write_review(task_dir)
-    path = task_dir / "requirements-review.md"
-    path.write_text(path.read_text(encoding="utf-8").replace(
-        "No open questions", "No open questions at all"), encoding="utf-8")
-    rows = _by_check(_rows(_view(root, monkeypatch), task_dir))
-    row = rows["dor-no-open-questions"]
-    assert row.status == "fail" and "no checklist item" in row.detail
 
 
 def test_ee_3_a_missing_document_fails_every_check_it_would_hold(tmp_path, monkeypatch):
     root, task_dir = _config_project(tmp_path, delivery_approach="full")
     rows = [r for r in _rows(_view(root, monkeypatch), task_dir) if r.due]
     assert {r.check for r in rows} == set(READY_IDS)
-    assert all(r.status == "fail" and "not found" in r.detail for r in rows)
+    assert all(r.status == "fail" and "not recorded" in r.detail for r in rows)
 
 
-def test_ee_3_a_tick_after_the_section_ends_does_not_count(tmp_path, monkeypatch):
-    root, task_dir = _config_project(tmp_path)
-    ready = _checklist("Definition of Ready", READY, set()).split("\nNext stage:")[0]
-    later = "".join(f"- [x] {text}\n" for text in READY)
-    (task_dir / "requirements-review.md").write_text(
-        ready + "\n### Later notes\n\n" + later, encoding="utf-8")
-    rows = _rows(_view(root, monkeypatch), task_dir)
-    assert rows and all(r.status == "fail" for r in rows if r.due)
-
-
-def test_ee_3_a_tick_in_another_section_does_not_count(tmp_path, monkeypatch):
-    root, task_dir = _config_project(tmp_path)
-    (task_dir / "requirements-review.md").write_text(
-        _checklist("Something else", READY, set(range(7))), encoding="utf-8")
-    rows = _rows(_view(root, monkeypatch), task_dir)
-    assert all(r.status == "fail" for r in rows if r.due)
-
-
-def _deferred_report(task_dir, tag):
-    """A verification report whose first Definition of Done item is unchecked
-    and carries `tag`, with the other six ticked."""
-    lines = [f"- [ ] {tag} {DONE[0]}"] + [f"- [x] {text}" for text in DONE[1:]]
+def _defer_first(task_dir, **manifest):
+    """A verification report with no box, and the first Definition of Done item met
+    or carried by the records `manifest` holds; the other six are met by evidence."""
     (task_dir / "verification-report.md").write_text(
-        "# R\n\n### Definition of Done\n\n" + "\n".join(lines) + "\n", encoding="utf-8")
+        "# R\n\n### Definition of Done\n\nNext stage: x\n", encoding="utf-8")
+    _write_report(task_dir, ticked=range(1, 7))
+    body = _manifest(task_dir)
+    body.update(manifest)
+    _write_manifest(task_dir, **{k: body[k] for k in body if k in ("evidence", "follow_ups")})
 
 
 def _exit_rows(root, task_dir, monkeypatch):
@@ -332,44 +317,45 @@ def _exit_rows(root, task_dir, monkeypatch):
                      if r.side == "exit")
 
 
-def test_ee_3_an_unticked_box_with_a_tag_that_resolves_is_deferred(tmp_path, monkeypatch):
+def test_ee_3_an_item_met_by_evidence_passes_and_names_the_record(tmp_path, monkeypatch):
     root, task_dir = _config_project(tmp_path)
-    _write_manifest(task_dir, current_phase="ship",
-                    evidence=[{"id": "EV-T1", "type": "test-run", "path": "e.json"}])
-    _deferred_report(task_dir, "(evidence: EV-T1)")
+    _write_manifest(task_dir, current_phase="ship")
+    _defer_first(task_dir, evidence=_manifest(task_dir)["evidence"] + [
+        {"id": "EV-T1", "type": "test-run", "path": "e.json",
+         "meets": ["dod-every-scenario-passes"]}])
     row = _exit_rows(root, task_dir, monkeypatch)["dod-every-scenario-passes"]
-    assert row.status == "pass" and row.detail.startswith("deferred with ")
-    assert "EV-T1" in row.detail
+    assert row.status == "pass" and row.detail == "met by EV-T1"
 
 
-def test_ee_3_an_unticked_box_with_a_follow_up_tag_that_resolves_is_deferred(tmp_path, monkeypatch):
+def test_ee_3_an_item_carried_by_a_follow_up_passes_and_names_it(tmp_path, monkeypatch):
     root, task_dir = _config_project(tmp_path)
-    _write_manifest(task_dir, current_phase="ship",
-                    follow_ups=[{"id": "FU-1", "status": "outstanding", "description": "d"}])
-    _deferred_report(task_dir, "(follow-up: FU-1)")
+    _write_manifest(task_dir, current_phase="ship")
+    _defer_first(task_dir, follow_ups=[{"id": "FU-1", "status": "outstanding",
+                                        "summary": "d", "defers": "dod-every-scenario-passes"}])
     row = _exit_rows(root, task_dir, monkeypatch)["dod-every-scenario-passes"]
-    assert row.status == "pass" and "FU-1" in row.detail
+    assert row.status == "pass" and row.detail == "carried to ship, FU-1"
 
 
-def test_ee_3_an_unticked_box_with_a_tag_that_does_not_resolve_fails(tmp_path, monkeypatch):
+def test_ee_3_evidence_of_a_type_the_list_does_not_accept_meets_nothing(tmp_path, monkeypatch):
     root, task_dir = _config_project(tmp_path)
-    _write_manifest(task_dir, current_phase="ship", evidence=[])
-    _deferred_report(task_dir, "(evidence: EV-MISSING)")
+    _write_manifest(task_dir, current_phase="ship")
+    _defer_first(task_dir, evidence=_manifest(task_dir)["evidence"] + [
+        {"id": "EV-X", "type": "consistency-check", "path": "e.json",
+         "meets": ["dod-every-scenario-passes"]}])
     row = _exit_rows(root, task_dir, monkeypatch)["dod-every-scenario-passes"]
-    assert row.status == "fail"
-    assert "EV-MISSING" in row.detail and "not in manifest.yml evidence registry" in row.detail
+    assert row.status == "fail" and "not recorded" in row.detail
 
 
-def test_ee_3_the_stage_list_and_dod_evidence_typed_agree_on_a_tag(tmp_path, monkeypatch):
-    """Both read one resolver, so a deferred item cannot pass one and fail the other."""
+def test_ee_3_the_stage_list_and_dod_evidence_typed_agree_on_an_open_item(tmp_path, monkeypatch):
+    """Both read the item records, so an item cannot pass one and fail the other."""
     from compass_pkg import checks
     root, task_dir = _config_project(tmp_path)
-    _write_manifest(task_dir, current_phase="ship", evidence=[])
-    _deferred_report(task_dir, "(evidence: EV-MISSING)")
+    _write_manifest(task_dir, current_phase="ship")
+    _defer_first(task_dir)
     task = _manifest(task_dir)
     typed_ok, detail = checks._check_dod_evidence_typed(task, str(task_dir))
     row = _exit_rows(root, task_dir, monkeypatch)["dod-every-scenario-passes"]
-    assert (not typed_ok) and row.status == "fail" and "EV-MISSING" in detail
+    assert (not typed_ok) and row.status == "fail" and "dod-every-scenario-passes" in detail
 
 
 # --- EE-4: a skipped list gives the verdict on_skipped names --------------------------------
@@ -449,7 +435,7 @@ def test_ee_4_a_route_that_owes_the_document_fails_when_it_is_missing(tmp_path, 
     root, task_dir = _config_project(tmp_path, current_phase="ship")   # regular
     rows = [r for r in _rows(_view(root, monkeypatch), task_dir)
             if r.side == "exit" and r.due]
-    assert rows and all(r.status == "fail" and "not found" in r.detail for r in rows)
+    assert rows and all(r.status == "fail" and "not recorded" in r.detail for r in rows)
 
 
 def test_ee_4_growing_the_quick_fix_artifacts_makes_the_done_checks_owed_everywhere(tmp_path):
@@ -457,7 +443,8 @@ def test_ee_4_growing_the_quick_fix_artifacts_makes_the_done_checks_owed_everywh
     from compass_pkg import obligations
     config = {"schema": 1, "capabilities": {CAPABILITY: True},
               "approaches": {"quick-fix": {"set": {"artifacts": {
-                  "delivery-approach": "light", "verification-report": "full"}}}}}
+                  "delivery-approach": "light", "verification-note": "light",
+                  "verification-report": "full"}}}}}
     root, task_dir = _project(tmp_path, manifest=dict(
         _manifest_for(QUICK_FIX)), compass_yml=config)
     code, out, err = _evaluate_write(root)
@@ -469,7 +456,7 @@ def test_ee_4_growing_the_quick_fix_artifacts_makes_the_done_checks_owed_everywh
     rows = [r for r in data["checks"] if r["guardrail"] == "stage:verify:exit"]
     assert [r["name"] for r in rows] == DONE_IDS
     assert {r["status"] for r in rows} == {"fail"}
-    assert "not found" in rows[0]["detail"]
+    assert "not recorded" in rows[0]["detail"]
 
 
 def _manifest_for(assessment):
@@ -668,27 +655,6 @@ def test_ee_6_a_check_that_raises_fails(tmp_path, monkeypatch):
 
     row = _by_check(_rows(_view(root, monkeypatch, mutate), task_dir))["list-boom"]
     assert row.status == "fail" and "check errored: broken" in row.detail
-
-
-def test_ee_3_a_ticked_item_that_carries_a_tag_still_matches(tmp_path, monkeypatch):
-    root, task_dir = _config_project(tmp_path)
-    lines = [f"- [x] (evidence: EV-1) {text}" for text in READY]
-    (task_dir / "requirements-review.md").write_text(
-        "### Definition of Ready\n\n" + "\n".join(lines) + "\n", encoding="utf-8")
-    rows = [r for r in _rows(_view(root, monkeypatch), task_dir) if r.due]
-    assert rows and all(r.status == "pass" for r in rows)
-
-
-def test_ee_3_an_item_that_continues_on_the_next_line_matches(tmp_path, monkeypatch):
-    root, task_dir = _config_project(tmp_path)
-    lines = []
-    for text in READY:
-        head, _, tail = text.partition(" - ")
-        lines.append(f"- [x] {head} -\n      {tail}")
-    (task_dir / "requirements-review.md").write_text(
-        "### Definition of Ready\n\n" + "\n".join(lines) + "\n", encoding="utf-8")
-    rows = [r for r in _rows(_view(root, monkeypatch), task_dir) if r.due]
-    assert rows and all(r.status == "pass" for r in rows)
 
 
 def test_ee_5_a_current_stage_that_no_list_knows_has_every_list_due(tmp_path, monkeypatch):
@@ -960,7 +926,7 @@ def test_ee_11_dod_evidence_typed_still_runs_with_the_capability_on(tmp_path):
     code, out, err = _run(root, "check", "--issue", SLUG, "--json")
     rows = {r["name"]: r for r in json.loads(out)["checks"]}
     assert rows["dod-evidence-typed"]["status"] == "fail"
-    assert "bare unchecked exit-list item" in rows["dod-evidence-typed"]["detail"]
+    assert "dod-every-scenario-passes is open" in rows["dod-evidence-typed"]["detail"]
 
 
 # --- EE-12: the default preset, help text and owning doc -----------------------------------------

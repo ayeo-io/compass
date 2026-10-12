@@ -43,7 +43,10 @@ what is actually true. Your deliverable is the evidence portion of
 7. **Update the gates in `manifest.yml`.** As each gate clears, register the
    artifact that clears it (the green record, a coverage report, a report
    path) with `compass evidence add <EV-id> --type <type> --path <file>`, then
-   run `compass gate pass <gate> --evidence <EV-id>`. A gate takes evidence
+   run `compass gate pass <gate> --evidence <EV-id>`. Add `--meets <item>` (to
+   `gate pass` or `evidence add`) to meet an item of the Definition of Done; the
+   items are listed in the report's `dod` block, which `compass issue render`
+   writes. A tick you write on the page counts for nothing. A gate takes evidence
    ids, not paths. The CLI's `gate-evidence-present` check fails any `pass`
    gate whose evidence id does not resolve in the issue's registry - so the
    registered evidence is the proof, not a claim about it.

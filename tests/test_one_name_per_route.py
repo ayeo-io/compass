@@ -188,13 +188,17 @@ def test_rn_4_issue_lint_reports_an_unknown_approach_without_jsonschema(tmp_path
         assert policy_mod.delivery_approach_errors({"delivery_approach": name}) == []
 
 
-def test_rn_6_the_review_page_shows_the_current_name(tmp_path):
-    from compass_pkg import dashboard
+def test_rn_6_the_issue_page_shows_the_current_name(tmp_path):
+    # The issue page header and the board read one function (`issue_detail`); the review
+    # page this test used to read is gone (ADR-051).
+    from compass_pkg import issue_detail
+    from compass_pkg.core import load_manifest
     task_dir = tmp_path / "work" / "demo"
     task_dir.mkdir(parents=True)
     (task_dir / "manifest.yml").write_text(
         "issue: demo\ndelivery_approach: feature\n", encoding="utf-8")
-    assert dashboard._spine(str(task_dir))["delivery_approach"] == "regular"
+    manifest, _ = load_manifest(str(task_dir))
+    assert issue_detail.detail(manifest, str(task_dir)).approach == "regular"
 
 
 def test_rn_6_the_settings_reference_names_the_current_approaches():

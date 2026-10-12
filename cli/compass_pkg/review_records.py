@@ -6,15 +6,15 @@ CLI checks the record of it and never the reasoning. The record is a YAML file
 in the issue's `evidence/` folder, registered in the manifest as
 `manual-review` evidence with `check: <check id>`.
 """
-# DEPENDENCY: standard library (hashlib, os); PyYAML, bundled at
+# DEPENDENCY: standard library (os); compass_pkg.rendered_blocks; PyYAML, bundled at
 # cli/vendor/yaml/, through compass_pkg.core. It imports no command module, so
 # the evaluator and the command can both use it.
 from __future__ import annotations
 
-import hashlib
 import os
 
 import yaml
+
 
 from compass_pkg.atomic_io import digest
 from compass_pkg.core import FOUND, resolve_artifact
@@ -53,11 +53,15 @@ def declared_inputs(check):
 
 def file_digest(path):
     """`sha256:` and the hex digest of the file's bytes, or None when there is
-    no such file."""
-    if not path or not os.path.isfile(path):
+    no such file. The bytes are the file's masked text (the lines inside a
+    rendered block removed), so a render never changes the digest of a
+    document, and a file with no block digests as it always did. Every digest
+    of a document comes through here: the approval digest, freshness and the
+    document inputs of a judged check (an evidence input uses `raw_digest`)."""
+    from compass_pkg import rendered_blocks
+    if not path:
         return None
-    with open(path, "rb") as fh:
-        return "sha256:" + hashlib.sha256(fh.read()).hexdigest()
+    return rendered_blocks.masked_digest(path)
 
 
 def input_path(task, task_dir, input_id):
@@ -75,8 +79,24 @@ def input_path(task, task_dir, input_id):
 
 def current_digests(check, task, task_dir):
     """`{input id: digest or None}` for each input of the check, as it is now."""
-    return {one: file_digest(input_path(task, task_dir, one))
-            for one in declared_inputs(check)}
+    return {one: (raw_digest if _is_evidence(task, one) else file_digest)(
+        input_path(task, task_dir, one)) for one in declared_inputs(check)}
+
+
+def _is_evidence(task, input_id):
+    return any(isinstance(entry, dict) and entry.get("id") == input_id
+               for entry in task.get("evidence") or [])
+
+
+def raw_digest(path):
+    """`sha256:` and the hex digest of every byte of the file, or None when there is no such
+    file. An evidence file is digested whole: marker lines inside it are not a rendered block,
+    so a change between them must change the digest."""
+    import hashlib
+    if not path or not os.path.isfile(path):
+        return None
+    with open(path, "rb") as fh:
+        return "sha256:" + hashlib.sha256(fh.read()).hexdigest()
 
 
 def definition_digest(check):

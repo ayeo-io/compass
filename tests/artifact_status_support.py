@@ -143,7 +143,8 @@ def project(tmp_path, compass_yml=None, assessment=None, evaluate=True):
         code, out, err = run(root, "approach", "evaluate", "--issue", SLUG, "--write")
         assert code == 0, out + err
     docs = root / DOCS
-    docs.mkdir(parents=True)
+    # The render after `approach evaluate --write` creates the issue page here.
+    docs.mkdir(parents=True, exist_ok=True)
     for kind in ("delivery-approach", "acceptance-criteria", "technical-design",
                  "distribution-map", "verification-report", "requirements-review",
                  "runbook"):

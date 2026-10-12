@@ -71,8 +71,8 @@ vocabulary:
   checks.borrowed-documents-answered:
     name: Borrowed documents answered
     aliases: []
-  checks.dashboard-current:
-    name: Dashboard current
+  checks.rendered-blocks-current:
+    name: Rendered blocks current
     aliases: []
   checks.landed-by-resolves:
     name: Landed-by resolves

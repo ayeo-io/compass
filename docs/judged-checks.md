@@ -34,7 +34,9 @@ checks:
 
 An input that is an evidence id names the file of that evidence entry. Any
 other input is a document of the issue, found as every document is. The digest
-of an input is the SHA-256 of its file.
+of an input is the SHA-256 of its file with the lines inside rendered blocks
+removed (`docs/rendered-blocks.md`), so a render of a block in an input does not
+re-owe the review.
 
 ## The review record
 

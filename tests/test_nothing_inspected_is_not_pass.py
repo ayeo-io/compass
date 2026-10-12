@@ -61,6 +61,8 @@ def test_ni_1_verbose_labels_nothing_to_check_apart(tmp_path):
 
 def test_ni_1_the_failing_verdicts_count_only_checks_that_inspected_something(tmp_path):
     root = _fresh_quick_fix(tmp_path)
+    # The issue page is written first: its absence is one more advisory failure in the count.
+    assert _cli(root, "issue", "render", "--issue", "g-fix")[0] == 0
     data = _json(root)
     inspected = data["ran"] - data["nothing_to_check"]
     code, verbose = _cli(root, "check", "--issue", "g-fix", "--verbose")

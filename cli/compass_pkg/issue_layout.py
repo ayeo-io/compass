@@ -57,6 +57,13 @@ def is_issue_document(rel_path):
     return len(parts) > i + 3 and parts[i + 1] == "compass"
 
 
+def is_one_segment(name):
+    """Whether `name` is one safe path segment: what a slug read from a manifest must be
+    before it is joined onto the work folder or a documents folder."""
+    return (isinstance(name, str) and bool(name.strip()) and name not in (".", "..")
+            and "/" not in name and "\\" not in name and "\0" not in name)
+
+
 def docs_dir_for(created, slug):
     """`docs/compass/<created>-<slug>/`, from the two facts that name it.
 

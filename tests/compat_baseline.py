@@ -32,6 +32,12 @@ DIMENSIONS = ("risk", "familiarity", "size", "goal", "urgency", "role")
 AUTONOMY = ("controlled", "balanced", "autonomous")
 
 
+# 7.0.0 adds one document to the quick fix, the verification note (issue
+# `documents-carry-judgement`, ADR-051). The baseline is never regenerated, so a result is
+# compared without it; the tests of that issue pin the note itself.
+ADDED_TO_QUICK_FIX = ("verification-note",)
+
+
 def shipped_policy():
     return load_yaml(str(POLICY))
 
@@ -66,7 +72,9 @@ def compact(readings, policy):
                 "stages": {s: DEPTH_WAS.get(m, m) for s, m in r["stages"].items()},
                 "gates": sorted(r["gates"]),
                 "artifacts": sorted((a["kind"], DEPTH_WAS.get(a["depth"], a["depth"]))
-                                    for a in r["artifacts"]),
+                                    for a in r["artifacts"]
+                                    if not (r["delivery_approach"] == "quick-fix"
+                                            and a["kind"] in ADDED_TO_QUICK_FIX)),
                 "subtask_ceiling": r["subtask_ceiling"],
                 "required_artifacts": sorted(r["required_artifacts"]),
                 "required_skills": sorted(r["required_skills"]),
@@ -241,6 +249,41 @@ def archive_results(root, only=None):
     return results
 
 
+def allow_7_0_0_moves(recorded, now):
+    """`(recorded, now)` with the three verdict moves 7.0.0 makes taken out of both, each only
+    in the exact shape it was meant to have. Every other difference stays, including the exit
+    code, so a fourth move fails.
+
+    The reason (ADR-051): 7.0.0 replaces `dashboard-current` by `rendered-blocks-current`, and
+    `dod-evidence-typed` 2.0.0 reads records, not the page. The baseline predates both.
+
+    - `dashboard-current` was `nothing-to-check` and is gone (configuration C, a copy of the
+      5.6.0 governance, still lists it, so it may stay `nothing-to-check`);
+    - `rendered-blocks-current` was not a row and now `pass`es;
+    - `dod-evidence-typed` was `pass` and is `pass` or `nothing-to-check`.
+    The caller runs this on the sample after `issue migrate` and `issue render --all`
+    (`archive.checkable_root`), where an issue page and the records exist."""
+    old_all, new_all = {}, {}
+    for slug in set(recorded) | set(now):
+        old = dict(recorded.get(slug) or {})
+        new = dict(now.get(slug) or {})
+        old_v, new_v = dict(old.get("verdicts") or {}), dict(new.get("verdicts") or {})
+        if old_v.get("dashboard-current") == "nothing-to-check" \
+                and new_v.get("dashboard-current") in (None, "nothing-to-check"):
+            old_v.pop("dashboard-current"), new_v.pop("dashboard-current", None)
+        if "rendered-blocks-current" not in old_v and new_v.get("rendered-blocks-current") == "pass":
+            new_v.pop("rendered-blocks-current")
+        if old_v.get("dod-evidence-typed") == "pass" \
+                and new_v.get("dod-evidence-typed") in ("pass", "nothing-to-check"):
+            old_v.pop("dod-evidence-typed"), new_v.pop("dod-evidence-typed")
+        if "verdicts" in old:
+            old["verdicts"] = old_v
+        if "verdicts" in new:
+            new["verdicts"] = new_v
+        old_all[slug], new_all[slug] = old, new
+    return old_all, new_all
+
+
 def archive_differences(recorded, now):
     found = []
     for slug in sorted(set(recorded) | set(now)):
@@ -322,16 +365,17 @@ def policy_under(kind, scratch, fault=None):
 
 
 def archive_under(kind, fault=None):
-    """A copy of the archive sample with configuration `kind` added. It sits
+    """A copy of the archive sample, after `issue migrate` and `issue render --all`
+    (`archive.checkable_root`), with configuration `kind` added. It sits
     beside the sample's cache, inside this checkout, because some checks ask
     git about the commits an issue names. The caller removes it."""
     import shutil
     import tempfile
 
-    from archive import CACHE, sample_root
+    from archive import CACHE, checkable_root
 
     CACHE.mkdir(exist_ok=True)
     root = Path(tempfile.mkdtemp(dir=CACHE, prefix=f"config-{kind}-"))
-    shutil.copytree(sample_root(), root, dirs_exist_ok=True, symlinks=True)
+    shutil.copytree(checkable_root(), root, dirs_exist_ok=True, symlinks=True)
     build_configuration(kind, root, fault)
     return root

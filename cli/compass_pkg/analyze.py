@@ -126,21 +126,22 @@ def _parse_intent_ids_from_brief(brief_path: str) -> set:
       - INT-xxx: ...            (bullet-list intent declaration)
     Returns a set of intent id strings.
     """
+    from compass_pkg import rendered_blocks
     intent_ids = set()
     if not os.path.isfile(brief_path):
         return intent_ids
-    with open(brief_path, "r", encoding="utf-8") as fh:
-        for line in fh:
-            line = line.strip()
-            # comment form: <!-- intent: INT-xxx -->
-            m = _re.match(r'<!--\s*intent:\s*(\S+)\s*-->', line)
-            if m:
-                intent_ids.add(m.group(1))
-                continue
-            # bullet form: - INT-xxx: ...  or  * INT-xxx: ...
-            m = _re.match(r'^[-*]\s+(INT-\S+?):\s+', line)
-            if m:
-                intent_ids.add(m.group(1))
+    # The text outside rendered blocks: block text is derived, not declared.
+    for line in rendered_blocks.read_masked(brief_path).splitlines():
+        line = line.strip()
+        # comment form: <!-- intent: INT-xxx -->
+        m = _re.match(r'<!--\s*intent:\s*(\S+)\s*-->', line)
+        if m:
+            intent_ids.add(m.group(1))
+            continue
+        # bullet form: - INT-xxx: ...  or  * INT-xxx: ...
+        m = _re.match(r'^[-*]\s+(INT-\S+?):\s+', line)
+        if m:
+            intent_ids.add(m.group(1))
     return intent_ids
 
 
@@ -150,19 +151,19 @@ def _parse_scenario_intents_from_spec(spec_path: str) -> dict:
     Looks for lines like:
       <!-- traceability id: TRC-A1 · serves: INT-1 -->
     """
+    from compass_pkg import rendered_blocks
     scenario_intents = {}
     if not os.path.isfile(spec_path):
         return scenario_intents
-    with open(spec_path, "r", encoding="utf-8") as fh:
-        for line in fh:
-            m = _re.search(
-                r'<!--\s*traceability\s+id:\s*(\S+).*?serves:\s*(\S+)',
-                line
-            )
-            if m:
-                scn_id = m.group(1).rstrip(" ·,")
-                intent_id = m.group(2).rstrip(" ·,*/-->")
-                scenario_intents[scn_id] = intent_id
+    for line in rendered_blocks.read_masked(spec_path).splitlines():
+        m = _re.search(
+            r'<!--\s*traceability\s+id:\s*(\S+).*?serves:\s*(\S+)',
+            line
+        )
+        if m:
+            scn_id = m.group(1).rstrip(" ·,")
+            intent_id = m.group(2).rstrip(" ·,*/-->")
+            scenario_intents[scn_id] = intent_id
     return scenario_intents
 
 
@@ -173,19 +174,19 @@ def _parse_claim_ids_from_positioning(positioning_path: str) -> set:
       <!-- claim: CLM-1 -->
       - CLM-1: ...
     """
+    from compass_pkg import rendered_blocks
     claim_ids = set()
     if not os.path.isfile(positioning_path):
         return claim_ids
-    with open(positioning_path, "r", encoding="utf-8") as fh:
-        for line in fh:
-            line = line.strip()
-            m = _re.match(r'<!--\s*claim:\s*(\S+)\s*-->', line)
-            if m:
-                claim_ids.add(m.group(1))
-                continue
-            m = _re.match(r'^[-*]\s+(CLM-\S+?):\s+', line)
-            if m:
-                claim_ids.add(m.group(1))
+    for line in rendered_blocks.read_masked(positioning_path).splitlines():
+        line = line.strip()
+        m = _re.match(r'<!--\s*claim:\s*(\S+)\s*-->', line)
+        if m:
+            claim_ids.add(m.group(1))
+            continue
+        m = _re.match(r'^[-*]\s+(CLM-\S+?):\s+', line)
+        if m:
+            claim_ids.add(m.group(1))
     return claim_ids
 
 
@@ -202,11 +203,11 @@ def _parse_phase_weights_from_route_md(route_md_path: str) -> dict:
     Looks for a Markdown table with a Stage (or Phase) column and a Weight
     column.
     """
+    from compass_pkg import rendered_blocks
     weights = {}
     if not os.path.isfile(route_md_path):
         return weights
-    with open(route_md_path, "r", encoding="utf-8") as fh:
-        lines = fh.readlines()
+    lines = rendered_blocks.read_masked(route_md_path).splitlines(keepends=True)
     in_phase_table = False
     for line in lines:
         stripped = line.strip()
@@ -252,13 +253,13 @@ def _parse_route_from_route_md(route_md_path: str) -> str | None:
     Looks for: **Reference route:** Express  (or similar)
     Returns the route string (lowercase) or None.
     """
+    from compass_pkg import rendered_blocks
     if not os.path.isfile(route_md_path):
         return None
-    with open(route_md_path, "r", encoding="utf-8") as fh:
-        for line in fh:
-            m = _re.search(r'[Rr]eference\s+route[:\s]*[*]*\s*(\w+)', line)
-            if m:
-                return m.group(1).strip().lower()
+    for line in rendered_blocks.read_masked(route_md_path).splitlines():
+        m = _re.search(r'[Rr]eference\s+route[:\s]*[*]*\s*(\w+)', line)
+        if m:
+            return m.group(1).strip().lower()
     return None
 
 

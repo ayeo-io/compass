@@ -99,25 +99,14 @@ a form.
 ### Definition of Ready
 
 <!-- The crisp check that the spec is ready to LEAVE refine and enter Plan.
-     If any box is unchecked, Plan does not start. This is the entry gate;
-     the Definition of Done in verification-report.md is the exit gate. -->
+     This is the entry gate; the Definition of Done in verification-report.md is the
+     exit gate. It is written by `compass issue render` from the manifest: an item is
+     met by evidence recorded with `--meets`, by a person's `compass evidence approve
+     --check`, or carried by `compass follow-up add --defers`. A tick on this page
+     counts for nothing. The items are the plan entry list of the issue's
+     configuration (`compass issue template show requirements-review`). -->
 
-- [ ] **Summary is filled** - `acceptance-criteria.md` opens with a Summary whose
-      three fields (Goal, Approach, Why now / what changes) are written, not
-      left as template placeholders. This is where the requirement is enforced:
-      the CLI never inspects the spec's prose, so an empty Summary is caught
-      here or not at all.
-- [ ] **Problem traces up** - the spec serves the Problem and Desired outcome
-      in `intent.md` (or the issue description, if there is no intent.md). No
-      scenario is orphaned from intent.
-- [ ] **Behaviour is Given/When/Then** - every scenario has an observable
-      `Then`. No scenario is a wish.
-- [ ] **Traceability ids assigned** - every scenario has a `TRC-id` so code and
-      claims can point back to it.
-- [ ] **Affected surface named** - the spec or `delivery-approach.md` identifies what code
-      and which components this touches.
-- [ ] **No open questions** - the ambiguity ledger above is fully resolved.
-- [ ] **Delivery approach still fits** - nothing found in refine makes `delivery-approach.md` wrong;
-      if it does, re-assess (`/compass:assess --reassess`) before plan.
+<!-- compass:render dor -->
+<!-- /compass:render -->
 
 Next stage: **plan** (`/compass:plan`).

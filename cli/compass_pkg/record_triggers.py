@@ -1,0 +1,83 @@
+# compass_pkg.record_triggers - which commands change an issue's records
+"""The commands whose success changes what an issue's records say, in one place.
+
+Two steps run after such a command exits 0, and both read this table:
+
+- `github_labels.after_command` brings the issue's labels on GitHub up to date
+  (`LABEL_TRIGGERS`);
+- `render_after.after_command` renders the issue's documents and the issues the
+  manifest links to (`RENDER_TRIGGERS`, which is `LABEL_TRIGGERS` plus
+  `RENDER_FURTHER`).
+
+Neither step imports the other, so each can fail without hiding the other, and
+a command cannot be in the label table and missing from the render table.
+
+A command is a function name, the `func` of its parser. The value names an
+argument that must be set for the command to count (`approach evaluate` writes
+only with `--write`), or None.
+
+`EXEMPT` names the commands that save a manifest and are in neither table, each
+with the reason no block or label shows what they save. A test walks the call
+graph of the CLI from every command to `save_manifest` and fails, naming the
+command, when one is in none of the three tables.
+"""
+# DEPENDENCY: standard library only (annotations). It imports no other module, so the
+# render step and the label step can both read it.
+from __future__ import annotations
+
+#: Commands after which the issue's labels are brought up to date.
+LABEL_TRIGGERS = {
+    "cmd_route_evaluate": "write",
+    "cmd_task_set_status": None,
+    "cmd_task_status_remove": None,
+    "cmd_issue_link": None,
+    "cmd_land_commit": None,
+    "cmd_quick_fix_finish": None,
+    "cmd_scenario_add": None,
+    "cmd_gate_pass": None,
+    "cmd_issue_artifact": None,
+    "cmd_subtask_add": None,
+    "cmd_subtask_replan": None,
+    # A test on record moves an issue from ready to in-progress.
+    "cmd_tdd_red": None,
+    "cmd_tdd_green": None,
+    "cmd_evidence_add": None,
+    "cmd_acceptance_record": None,
+    "cmd_scenario_descope": None,
+}
+
+#: Commands that change a record a rendered block shows and move no label.
+RENDER_FURTHER = {
+    "cmd_evidence_approve": None,
+    "cmd_follow_up_add": None,
+    "cmd_backfill_pay": None,
+    "cmd_decision_add": None,
+    "cmd_decision_set": None,
+    "cmd_issue_raised_by": None,
+    "cmd_scenario_tests": None,
+    "cmd_evidence_review": None,
+    "cmd_issue_blocked_set": None,
+    "cmd_issue_blocked_remove": None,
+    "cmd_subtask_update": None,
+    # The traceability chart of the issue page draws the files each scenario changed.
+    "cmd_changed_file_add": None,
+}
+
+RENDER_TRIGGERS = {**LABEL_TRIGGERS, **RENDER_FURTHER}
+
+#: Commands that save a manifest and render nothing, each with its reason.
+EXEMPT = {
+    "cmd_analyze": ("in gate-clearing mode it adds one consistency-check evidence entry, and "
+                    "the gate pass that must follow it renders; in advisory mode it saves "
+                    "nothing, so a render here would make a reading command write"),
+    "cmd_quick_fix_start": ("creates the issue before any document exists; the first "
+                            "command that changes a record renders its page"),
+    "cmd_intent_ingest": ("saves the intent record the issue was written from, which no "
+                          "rendered block shows"),
+    "cmd_friction_capture": ("records a friction note in the manifest, which no rendered "
+                             "block shows"),
+    "cmd_issue_friction": ("records a friction note in the manifest, which no rendered "
+                           "block shows"),
+    "cmd_subtask_package": ("writes the subtask brief files; the key it saves names their "
+                            "paths and no rendered block shows it"),
+}

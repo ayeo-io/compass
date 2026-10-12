@@ -125,12 +125,12 @@ def test_trc_s6_smoke_steps_pass_on_a_healthy_install(tmp_path):
     where = run("issue", "artifact-path", "delivery-approach")
     assert where.returncode == 0 and where.stdout.strip().endswith("delivery-approach.md")
 
-    render = run("issue", "dashboard", "render", "--issue", "scratch-issue")
+    render = run("issue", "render", "--issue", "scratch-issue")
     assert render.returncode == 0, render.stdout + render.stderr
-    page = (tmp_path / ".compass" / "work" / "scratch-issue" / "README.md").read_text()
+    page = (created / "README.md").read_text()
     assert "next action" not in page.lower()
-    assert "## Decision required" in page and "## Review pack" in page
-    assert "## Deliberately omitted" in page
+    for kind in ("header", "ask", "decision-required", "acceptance", "traceability"):
+        assert "<!-- compass:render %s -->" % kind in page, kind
 
     check = run("check", "--issue", "scratch-issue")
     assert check.returncode != 0 and "Traceback" not in check.stdout + check.stderr

@@ -341,8 +341,8 @@ def test_trc_b4():
 # `TRC-B2` proved a document written BEFORE the rename still resolves. Nothing
 # asked the other question: does a document written AFTER it resolve? It did
 # not. `_flat_name` replaced the current filename with the retired one instead
-# of falling back to it, so `compass issue dashboard` reported a technical
-# design that was sitting on disk as "not written yet" - the review page
+# of falling back to it, so the old review page reported a technical
+# design that was sitting on disk as "not written yet" - the page
 # denying a document that exists.
 # ---------------------------------------------------------------------------
 

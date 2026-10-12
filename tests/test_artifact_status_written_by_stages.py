@@ -122,7 +122,7 @@ def test_asw_5_every_artifact_kind_names_its_stage(tmp_path):
         "requirements-review": "refine", "technical-design": "plan",
         "threat-model": "plan", "rollback-plan": "plan",
         "distribution-map": "breakdown", "verification-report": "verify",
-        "launch-readiness": "verify"}
+        "verification-note": "verify", "launch-readiness": "verify"}
 
     root = project(tmp_path / "ok")
     assert run(root, "policy", "lint")[0] == 0
@@ -207,14 +207,16 @@ def test_asw_7_receipt_and_dashboard_show_approver_and_time(tmp_path):
     for needle in ("approved", "jed72", "2026-10-10T12:00:00Z", BY_SET, "2026-10-10T11:00:00Z"):
         assert needle in text, (needle, out)
     assert "Documents" in out
-    code, out, err = run(root, "issue", "dashboard", "render", "--issue", SLUG)
+    # The issue page (it replaced the review page in 7.0.0) shows who approved; the time is in
+    # the receipt above.
+    code, out, err = run(root, "issue", "render", "--issue", SLUG)
     assert code == 0, out + err
-    page = (root / ".compass" / "work" / SLUG / "README.md").read_text()
-    assert "Approved by" in page and "Approved at" in page
-    rows = [ln for ln in page.splitlines() if ln.startswith("| technical-design")
-            or ln.startswith("| acceptance-criteria")]
+    page = (root / DOCS / "README.md").read_text()
+    assert "Approved by" in page
+    rows = [ln for ln in page.splitlines() if "technical-design" in ln and ln.startswith("|")
+            or "acceptance-criteria" in ln and ln.startswith("|")]
     joined = "\n".join(rows)
-    for needle in ("jed72", "2026-10-10T12:00:00Z", BY_SET, "2026-10-10T11:00:00Z"):
+    for needle in ("jed72", BY_SET):
         assert needle in joined, (needle, page)
 
 

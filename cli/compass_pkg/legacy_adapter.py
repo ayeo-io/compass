@@ -90,15 +90,14 @@ HARD_GUARDRAILS = (GATE_G5,)
 # What a check reports when it cannot run, read from each module that
 # returns `NOTHING_TO_CHECK` for it: checks.py (scenarios-are-executable,
 # claim-traces-to-scenario, command-passes), borrowed_docs.py, binding.py
-# (evidence-matches-tree), dashboard.py, landed_by.py, multiagent_check.py
+# (evidence-matches-tree), checks.py (dod-evidence-typed), landed_by.py, multiagent_check.py
 # and evidence_identity.py. The check declared-tests-resolve returns a pass
 # with a note. Every other check fails. `tests/test_obligations.py` replays
 # these verdicts against the archive sample.
 DECLINING_CHECKS = (
     "scenarios-are-executable", "claim-traces-to-scenario", "command-passes",
     "borrowed-documents-answered", "evidence-matches-tree",
-    "evidence-identity-matches", "dashboard-current", "landed-by-resolves",
-    "multiagent-run-recorded", "artifacts-approved",
+    "evidence-identity-matches", "dod-evidence-typed", "landed-by-resolves", "multiagent-run-recorded", "artifacts-approved",
 )
 PASSING_CHECKS = ("declared-tests-resolve",)
 
@@ -459,7 +458,7 @@ ARTIFACT_STAGES = {
     "requirements-review": "refine", "technical-design": "plan",
     "threat-model": "plan", "rollback-plan": "plan",
     "distribution-map": "breakdown", "verification-report": "verify",
-    "launch-readiness": "verify",
+    "verification-note": "verify", "launch-readiness": "verify",
 }
 
 

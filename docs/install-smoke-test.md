@@ -100,15 +100,15 @@ keeps `delivery-approach.md` there. For a heavier approach the record sits
 beside the manifest. `compass issue artifact-path delivery-approach` prints its
 path either way.
 
-Generate the review dashboard:
+Render the issue page:
 
 ```bash
-compass issue dashboard render --issue <issue-slug>
+compass issue render --issue <issue-slug>
 ```
 
-Open the generated `README.md` in `.compass/work/<issue-slug>/`. It must show
-the status and approach, the review pack, anything deliberately omitted,
-whether a decision is awaited, and each scenario's traceability. `compass next`
+Open the generated `README.md` in `docs/compass/<created>-<issue-slug>/`. It must show
+the status and approach, the ask, whether a decision is required, the
+acceptance scenarios, and each scenario's traceability. `compass next`
 names the next action.
 
 If `/compass:assess` is unknown, the adapter is not loaded. Restart Claude

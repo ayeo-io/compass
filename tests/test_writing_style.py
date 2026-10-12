@@ -722,12 +722,6 @@ _register(Rule(
             "the `backfills:` key is an identifier and stays; this is the "
             "same class of identifier."),
         Exemption(
-            "cli/compass_pkg/checks.py",
-            'in preference to task.get("task") which may be a',
-            "quotes the real dict lookup at line 669 below, over the "
-            "legacy `task` root key normalize_spine reads - an identifier, "
-            "not prose."),
-        Exemption(
             "cli/compass_pkg/receipt.py",
             'Records written before ADR-023 say "Topology"',
             "documents the retired label a pre-ADR-023 record literally "
@@ -1462,12 +1456,6 @@ _register(Rule(
             "the JSON mirror of the already-exempted governance/signals.yml "
             "line above - names the Verify stage, not the verb."),
         Exemption(
-            "templates/acceptance-criteria.md",
-            "Passes as acceptance (verify)",
-            "names the Verify stage in the coverage ledger's own column "
-            "header, not the verb - every example's copy of this table is "
-            "exempted the same way above."),
-        Exemption(
             "templates/delivery-approach.md",
             "| Verify | {{gate count}}",
             "names the Verify stage in the per-stage weight table, not the "
@@ -2043,8 +2031,23 @@ _CITATION_RE = re.compile(
 
 @lru_cache(maxsize=4096)
 def _git_ignores(rel: str) -> bool:
-    result = subprocess.run(["git", "check-ignore", "-q", rel], cwd=REPO_ROOT)
-    return result.returncode == 0
+    return _ignored_by_committed_rules(rel, REPO_ROOT)
+
+
+def _ignored_by_committed_rules(rel: str, cwd) -> bool:
+    """Whether a tracked ignore file ignores `rel`.
+
+    "Git does not distribute it" is judged from the rules the repository commits.
+    A local run writes an untracked `.gitignore` (for example `.compass/cache/`),
+    and counting that would make the answer depend on what ran before the test."""
+    found = subprocess.run(["git", "check-ignore", "-v", rel], cwd=cwd,
+                           capture_output=True, text=True)
+    if found.returncode != 0:
+        return False
+    source = found.stdout.split(":", 1)[0]
+    tracked = subprocess.run(["git", "ls-files", "--error-unmatch", source], cwd=cwd,
+                             capture_output=True, text=True)
+    return tracked.returncode == 0
 
 
 def _find_citation(span: ProseSpan) -> list[Finding]:
@@ -2395,11 +2398,6 @@ _register(Rule(
             "a placeholder scenario id, the same shape as `<test cmd>` "
             "elsewhere on this page - not a real code pointing at meaning "
             "kept outside the file"),
-        Exemption(
-            "templates/verification-report.md", "green-TRC-x.json",
-            "the placeholder evidence filename `compass tdd-green` writes "
-            "for a placeholder scenario id, the same shape as the "
-            "docs/quickstart.md exemption above."),
         Exemption(
             "templates/devlog.md", "green-TRC-3.json",
             "the placeholder evidence filename `compass tdd-green` writes "
@@ -3741,8 +3739,11 @@ _GROWING_REACH = {
     # 69 with tests/fixtures/evidence-review-example.json, plain JSON;
     # 70 with tests/fixtures/preset-interfaces/policy-test-groups.json, plain JSON;
     # 71 with tests/fixtures/evidence-approve-example.json, plain JSON;
-    # 72 with tests/fixtures/compat/v5.6.0-governance.tgz, the packed 5.6.0 governance files.
-    "PBW-C4": (lambda path: path.startswith("tests/"), 72),
+    # 72 with tests/fixtures/compat/v5.6.0-governance.tgz, the packed 5.6.0 governance files;
+    # 73 with the check-corpus case label for the recorded case of dod-evidence-typed, which
+    #    holds a verdict and one line (the dashboard-current labels left and the
+    #    rendered-blocks-current labels came, two each).
+    "PBW-C4": (lambda path: path.startswith("tests/"), 73),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.
@@ -4966,3 +4967,18 @@ def test_other_frameworks_records_are_left_out_and_nothing_else_is():
     overlays = [r for r in tracked if _is_other_frameworks_record(r)]
     assert overlays, "no other framework's record is tracked"
     assert sorted(r for r in tracked if r not in scanned) == sorted(overlays)
+
+
+def test_dcj_103_pbw_a6_counts_only_committed_ignore_rules(tmp_path):
+    """DCJ-103: a path ignored only by an untracked `.gitignore` is distributed as
+    far as this rule is concerned; one ignored by a tracked `.gitignore` is not."""
+    def git(*args):
+        subprocess.run(["git", *args], cwd=tmp_path, check=True, capture_output=True)
+    git("init", "-q")
+    (tmp_path / "kept").mkdir()
+    (tmp_path / "kept" / ".gitignore").write_text("*\n")
+    (tmp_path / "local").mkdir()
+    (tmp_path / "local" / ".gitignore").write_text("*\n")
+    git("add", "-f", "kept/.gitignore")
+    assert _ignored_by_committed_rules("kept/x.json", tmp_path)
+    assert not _ignored_by_committed_rules("local/x.json", tmp_path)

@@ -1,2 +1,2 @@
 verdict: fail
-input: 'the input the mutation proof breaks: an unchecked Definition of Done box with no evidence tag'
+input: 'the input the mutation proof breaks: a Definition of Done item with no record in the manifest'

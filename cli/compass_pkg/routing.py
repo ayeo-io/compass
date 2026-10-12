@@ -974,10 +974,6 @@ def cmd_route_evaluate(args):
         print(f"  {committed.message}")
         for note in plan.notes:
             print(f"  {note}")
-        from compass_pkg.dashboard import stale_page_reminder
-        reminder = stale_page_reminder(task_dir)
-        if reminder:
-            print(f"  {reminder}")
         configured = configuring and committed.committed
         if not reframed and not configured and getattr(args, "reason", None):
             print("  the delivery approach did not change - the --reason was NOT "

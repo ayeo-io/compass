@@ -32,7 +32,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 # The archive these tests read: the tracked sample, or this checkout's own
 # with COMPASS_FULL_ARCHIVE=1 (tests/archive.py).
 sys.path.insert(0, str(ROOT / "tests"))
-from archive import archive_root  # noqa: E402
+from archive import archive_root, checkable_root  # noqa: E402
 
 
 def _read(rel):
@@ -136,6 +136,7 @@ def test_trc_a3_resolvable_test_id_passes(run_cli, make_task, project):
     task_dir = make_task("resolve-me",
                          _task_claiming_correctness(["tests/test_real.py::test_present"]))
     _green(task_dir)
+    run_cli("issue", "render", "--issue", "resolve-me")
 
     r = run_cli("check", "--verbose", "--issue", "resolve-me")
 
@@ -150,6 +151,7 @@ def test_trc_a3_parametrised_id_resolves(run_cli, make_task, project):
         "resolve-me",
         _task_claiming_correctness(["tests/test_real.py::test_present[case-1]"]))
     _green(task_dir)
+    run_cli("issue", "render", "--issue", "resolve-me")
 
     assert run_cli("check", "--verbose", "--issue", "resolve-me").returncode == 0
 
@@ -161,6 +163,7 @@ def test_trc_a3_non_file_shaped_id_is_skipped(run_cli, make_task, project):
         "resolve-me",
         _task_claiming_correctness(["grep: governance/strategies.md carries S7"]))
     _green(task_dir)
+    run_cli("issue", "render", "--issue", "resolve-me")
 
     r = run_cli("check", "--verbose", "--issue", "resolve-me")
     assert r.returncode == 0, r
@@ -403,7 +406,7 @@ def test_trc_f1_existing_tasks_still_pass(slug):
 
     r = subprocess.run(
         [sys.executable, str(ROOT / "cli" / "compass"), "check", "--verbose", "--issue", slug],
-        capture_output=True, text=True, timeout=120, cwd=str(archive_root()))
+        capture_output=True, text=True, timeout=120, cwd=str(checkable_root()))
     assert r.returncode == 0, (
         f"adding declared-tests-resolve broke {slug}, already on disk:\n"
         f"{r.stdout[-1500:]}")

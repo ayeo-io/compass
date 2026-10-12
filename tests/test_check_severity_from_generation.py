@@ -210,7 +210,7 @@ def test_cs_7_no_shipped_check_that_can_return_nothing_to_check_declares_fail():
                  if body.get("on_skipped") == "not-applicable"}
     assert {"scenarios-are-executable", "claim-traces-to-scenario", "command-passes",
             "borrowed-documents-answered", "evidence-matches-tree",
-            "evidence-identity-matches", "dashboard-current", "landed-by-resolves",
+            "evidence-identity-matches", "dod-evidence-typed", "landed-by-resolves",
             "multiagent-run-recorded"} <= declining
 
 
@@ -251,9 +251,11 @@ def test_cs_8_results_file_records_an_advisory_verdict(tmp_path):
 def test_cs_9_an_issue_with_no_generation_reads_the_governance_files_as_before(tmp_path):
     root, _ = _project(tmp_path)
     _, report, _ = _report(root)
-    assert report["advisory"] == 0
+    # The one advisory finding is not a severity from a generation: the issue has no issue page
+    # yet, which `rendered-blocks-current` reports before verify.
+    advisory = [c["name"] for c in report["checks"] if c["status"] == "advisory"]
+    assert advisory == ["rendered-blocks-current"] and report["advisory"] == 1
     assert "generation" not in report
-    assert all(c["status"] != "advisory" for c in report["checks"])
 
 
 # --- CS-10: a landed_by relaxation is not a skip ---------------------------------------------

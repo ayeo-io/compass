@@ -11,7 +11,7 @@ from compass_pkg.check_cmd import *  # noqa: F401,F403
 from compass_pkg.checks import *  # noqa: F401,F403
 from compass_pkg.core import *  # noqa: F401,F403
 from compass_pkg.borrowed_docs import *  # noqa: F401,F403
-from compass_pkg.dashboard import *  # noqa: F401,F403
+from compass_pkg.artifact_cmd import *  # noqa: F401,F403
 from compass_pkg.terminal import *  # noqa: F401,F403
 from compass_pkg.flow import *  # noqa: F401,F403
 from compass_pkg.governance import *  # noqa: F401,F403
@@ -30,3 +30,10 @@ from compass_pkg.tdd import *  # noqa: F401,F403
 from compass_pkg.init_cmd import *  # noqa: F401,F403
 from compass_pkg.terminology_cmd import *  # noqa: F401,F403
 from compass_pkg.migrate import *  # noqa: F401,F403
+
+
+def cmd_issue_render(args):
+    """`compass issue render`, loading the render modules only when it runs, so
+    that every other command starts without them."""
+    from compass_pkg.render_cmd import cmd_issue_render as run
+    return run(args)

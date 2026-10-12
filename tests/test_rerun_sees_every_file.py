@@ -45,12 +45,12 @@ def project(tmp_path):
     return root
 
 
-def _green(root):
+def _green(root, render="0"):
     result = subprocess.run(
         [sys.executable, str(CLI), "tdd-green", "--issue", SLUG, "--",
          sys.executable, "-c", "pass"],
         cwd=root, capture_output=True, text=True,
-        env={**os.environ, "CLAUDE_PROJECT_DIR": str(root)})
+        env={**os.environ, "CLAUDE_PROJECT_DIR": str(root), "COMPASS_RENDER_AFTER": render})
     assert result.returncode == 0, result.stderr
     path = root / ".compass" / "work" / SLUG / "evidence" / "green.json"
     return json.loads(path.read_text())
@@ -66,4 +66,20 @@ def test_rse_1_a_green_after_a_script_edit_is_not_a_rerun(project):
 def test_rse_2_a_green_with_nothing_changed_is_still_a_rerun(project):
     _green(project)
     record = _green(project)
+    assert record.get("rerun_without_change") is True, record
+
+
+def test_rse_3_the_issue_page_written_after_a_green_does_not_make_the_next_one_a_change(project):
+    """The after-command step writes the issue page under docs/compass after a green. That is
+    the CLI's own output, not a change to the code the test runs on (DCJ-83), so an identical
+    second green is still a rerun even though the page exists and has changed since."""
+    _green(project, render="1")
+    pages = sorted((project / "docs" / "compass").glob("*/README.md"))
+    assert pages, "the after-command step wrote no issue page, so this test proves nothing"
+    page = pages[0]
+    first = page.read_text(encoding="utf-8")
+    # The page changes between the two runs, as it does when a record it shows moves.
+    page.write_text(first + "\nA line added between the runs.\n", encoding="utf-8")
+    record = _green(project, render="1")
+    assert page.read_text(encoding="utf-8") != first
     assert record.get("rerun_without_change") is True, record

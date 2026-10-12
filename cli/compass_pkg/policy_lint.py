@@ -33,7 +33,7 @@ from compass_pkg import catalogue_check, layers, locks, merge, parent_states, pa
 from compass_pkg import catalogue_spec as spec
 from compass_pkg import word_map
 from compass_pkg.atomic_io import StrictYamlError, load_yaml_strict
-from compass_pkg.check_registry import REGISTRY
+from compass_pkg.check_registry import REGISTRY, REMOVED
 from compass_pkg.core import FRAMEWORK_ROOT, CompassError
 
 JSON_SCHEMA_VERSION = 1
@@ -291,7 +291,9 @@ def _impl_findings(layer):
                 out.append(_finding("layer", "L-IMPL-TEMPLATED", layer, path,
                                     f"impl '{value}' is a template; name a check "
                                     f"implementation from the registry"))
-            elif value not in REGISTRY:
+            elif value not in REGISTRY and value not in REMOVED:
+                # A removed check's name is accepted: a governance folder copied before the
+                # release still names it, and `compass check` reports it as nothing to check.
                 out.append(_finding("layer", "L-IMPL-UNKNOWN", layer, path,
                                     f"impl '{value}' is not in the check registry "
                                     f"({', '.join(sorted(REGISTRY))})"))
@@ -329,12 +331,24 @@ def _merge_group(state):
             config, provenance = merge.apply(config, layer.doc, layer.kind, layer.name,
                                              provenance)
         except merge.MergeError as exc:
-            out += [_finding("merge", code, layer, path, message)
+            out += [_finding("merge", code, layer, path, _removed_check_note(path, message))
                     for code, path, message in exc.errors]
             break
         state["configs"].append(config)
     state["config"], state["provenance"] = config, provenance
     return out
+
+
+def _removed_check_note(path, message):
+    """`message`, with a note when `path` is an entry of a check a release
+    removed: it is an unknown check, and the note names what replaced it."""
+    from compass_pkg.check_registry import REMOVED
+    parts = path.split(".")
+    removed = REMOVED.get(parts[1]) if len(parts) >= 2 and parts[0] == "checks" else None
+    if removed is None:
+        return message
+    return ("%s - %s is an unknown check: it was removed in %s, and %s replaces it"
+            % (message, parts[1], removed.removed_in, removed.replaced_by))
 
 
 def _layer_of(state, path):

@@ -37,7 +37,7 @@ from compass_pkg import parse_cache, status_words
 from compass_pkg.core import (CompassError, find_compass_dir, find_governance, load_yaml,
                               manifest_path, normalize_spine)
 from compass_pkg.rework import cmd_rework_scan
-from compass_pkg.stable_ids import APPROACH_SPIKE, STAGE_ASSESS, STAGE_IDS, STAGE_SHIP
+from compass_pkg.stable_ids import APPROACH_SPIKE, STAGE_IDS, STAGE_SHIP
 
 
 
@@ -367,20 +367,6 @@ def _why_fields(m):
     return fields, (problems[0] if problems else None)
 
 
-def _open_stage(m, task_dir, recorded):
-    """`(stage, problem)` for a held or ready issue, which 6.0.0 gave no stage.
-    An issue with no delivery approach is at assess. The stage function is
-    `compass next`'s, read through its module at call time, so the board and
-    `compass next` cannot disagree."""
-    from compass_pkg import next_cmd
-    if not recorded:
-        return STAGE_ASSESS, None
-    try:
-        return next_cmd._current_phase_from_task(m, task_dir) or "done", None
-    except Exception as exc:                                # noqa: BLE001
-        return None, "the stage could not be read (%s)" % type(exc).__name__
-
-
 def _lane_of(row, recorded, held, stage):
     """The lane the page puts an open issue in (decided here, never again by
     the page). An unplaceable issue has none."""
@@ -396,6 +382,7 @@ def _lane_of(row, recorded, held, stage):
 def _board_place(out, categories, src, m, today, now, guarded, evidence_state):
     """Put one issue's row in its section. Raises on a field of the wrong
     type, which the caller reports as a malformed manifest."""
+    from compass_pkg import issue_detail
     from compass_pkg import lifecycle, next_cmd
     slug, task_dir = src["slug"], src["task_dir"]
     where = _where(src)
@@ -411,13 +398,17 @@ def _board_place(out, categories, src, m, today, now, guarded, evidence_state):
              "note": "the stored status %r is not one Compass sets" % status}, **where))
         out["counts"][status] = out["counts"].get(status, 0) + 1
         return
-    # No stored status means in flight: the state comes from the records.
-    state = lifecycle.state_of(m, task_dir)
+    # No stored status means in flight: the state comes from the records. The
+    # facts the issue page also shows come from one function, called through its
+    # module so a test can replace it (ADR-051).
+    facts = issue_detail.detail(m, task_dir)
+    state = facts.state
     row = {"slug": slug, "delivery_approach": approach, "state": state}
     flag = lifecycle.blocked_flag(m, task_dir)
     if flag:
         row["blocked"] = str(flag.get("reason") or "no reason recorded")
     fields, problem = _why_fields(m)
+    fields["gates"] = facts.gates
     row.update(fields)
     row.update(where)
     recorded, held = bool(m.get("delivery_approach")), status_words.is_held(m)
@@ -427,12 +418,12 @@ def _board_place(out, categories, src, m, today, now, guarded, evidence_state):
                    reason=str(m.get("parked_reason") or "") if status_words.is_parked(m) else "")
         row["recommendation"] = ("recommendation" in q[2] if q else _has_recommendation(
             src["tree_root"], slug, str(m.get("created") or "")))
-        row["stage"], stage_problem = _open_stage(m, task_dir, recorded)
+        row["stage"], stage_problem = facts.stage, facts.stage_problem
         row["unplaceable"] = problem or stage_problem
         row["lane"] = _lane_of(row, recorded, held, row["stage"])
         out["backlog"].append(row)
     elif state == "ready":
-        row["stage"], stage_problem = _open_stage(m, task_dir, recorded)
+        row["stage"], stage_problem = facts.stage, facts.stage_problem
         row["unplaceable"] = problem or stage_problem
         row["lane"] = _lane_of(row, recorded, held, row["stage"])
         out["ready"].append(row)
@@ -443,8 +434,9 @@ def _board_place(out, categories, src, m, today, now, guarded, evidence_state):
         if not isinstance(m.get("gates") or [], list):
             raise TypeError("gates is not a list")
         evidence = evidence_state(m, task_dir)
-        row.update(stage=next_cmd._current_phase_from_task(m, task_dir) or "done",
-                   evidence=evidence, unplaceable=problem)
+        if facts.stage_problem:
+            raise TypeError(facts.stage_problem)
+        row.update(stage=facts.stage, evidence=evidence, unplaceable=problem)
         row["lane"] = _lane_of(row, recorded, held, row["stage"])
         if evidence == "stale":
             out["stale"].append(row)

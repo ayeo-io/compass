@@ -34,7 +34,7 @@ import fnmatch
 import re as _re
 from compass_pkg import status_words
 from compass_pkg.check_cmd import CHECK_FNS
-from compass_pkg.check_registry import REGISTRY
+from compass_pkg.check_registry import REGISTRY, REMOVED
 from compass_pkg.stable_ids import (
     APPROACH_FULL, APPROACH_HOTFIX, APPROACH_QUICK_FIX, APPROACH_REGULAR, APPROACH_SPIKE, STAGE_PLAN)
 from compass_pkg.core import (AUTONOMY_VALUES, ROUTE_NAMES, assessment_key_errors, CHECKPOINT_STAGES, CompassError, canonical_shape, FRAMEWORK_ROOT, artifact_path,
@@ -257,6 +257,11 @@ def _lint_errors_guardrails(p):
                 continue
             errs.extend(_check_declaration_errors(
                 g.get("id", "?"), c, (p.get("checks") or {}).get(c)))
+            if c in REMOVED:
+                # A governance copy written before the check was removed still
+                # lists it. `compass check` reports it as nothing to check and runs
+                # its replacement, so the copy is not wrong, only old.
+                continue
             if c not in CHECK_FNS:
                 # The integrity rule: a declared guardrail check the CLI does
                 # not implement would silently become advisory. Lint catches it

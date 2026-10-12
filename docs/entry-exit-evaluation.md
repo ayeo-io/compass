@@ -3,10 +3,11 @@
 This page is the owning doc for the evaluation of a stage's `entry` and `exit`
 lists. It states what the capability switches, when a list is due, how each kind of
 check is judged, what `on_skipped` does, where the results show, and how the
-document templates render the lists. The code is
-`cli/compass_pkg/stage_lists.py` and, for the templates,
-`cli/compass_pkg/template_lists.py`. `compass check`, `compass next` and
-`compass issue receipt` read the first.
+documents show the lists. The code is `cli/compass_pkg/stage_lists.py`, which
+judges a list, `cli/compass_pkg/item_records.py`, which reads the manifest
+records that meet an item, `cli/compass_pkg/follow_up_cmd.py`, which records a
+follow-up, and `cli/compass_pkg/template_lists.py`, which prints a template.
+`compass check`, `compass next` and `compass issue receipt` read the first.
 
 ## Switching it on
 
@@ -50,17 +51,40 @@ receipt shows every list, and says which are not yet due.
 
 | Kind | Judged by |
 |---|---|
-| `human` | A tick: a checked box (`- [x]`) whose text equals the check's `statement`, under the list's heading in the requirements review (entry lists) or the verification report (exit lists). The headings are in "Where a list sits in a document". With `approvers:` the tick also needs a current approval by a listed approver (see [Approvers on a human check](#approvers-on-a-human-check)). |
+| `human` | A record in the manifest (see [Item records](#item-records)): evidence that meets the check, a person's approval, or a follow-up that carries it to ship. A tick on a page counts for nothing, and the page is never read. With `approvers:` the check needs a current approval by a listed approver (see [Approvers on a human check](#approvers-on-a-human-check)). |
 | `deterministic` | Its registered implementation runs. The receipt does not run it and shows `pending`. |
 | `judged` | A review record: the newest registered `manual-review` record by a listed reviewer must say `pass` and match the check's inputs, definition, issue and generation. The cause of a failure is the first words of the detail. See [judged-checks.md](judged-checks.md). The receipt reads the record and shows the real verdict. |
 | `evidence` | Not evaluated by this version. A blocking check of this kind fails, so a list cannot pass by naming a check nothing reads. This holds whatever the capability, for a check a project adds, and `compass policy lint` warns (`M-LIST-KIND-UNEVALUATED`, exit code unchanged). The shipped default names none. |
 
-An unchecked box that carries a typed tag (`(evidence: ...)` or
-`(follow-up: ...)`) counts when the tag resolves, and the detail says
-"deferred with" and the tag. A tag that does not resolve fails with the reason
-`dod-evidence-typed` gives. Both checks call one function,
-`checks.dod_tag_problems`, so a tag means one thing. An unchecked box with no
-tag fails as "not ticked".
+A row passes with the record's name in its detail: `met by EV-T`, `ticked by
+jed72`, `carried to ship, FU-3`, `met, FU-3 resolved`. An item with no record
+fails as `not recorded` and names the commands that record it. `dod-evidence-typed`
+reads the same records, so an item has one state whoever asks.
+
+## Item records
+
+An item is a check id in the issue's `verify` exit list (the Definition of
+Done) or `plan` entry list (the Definition of Ready), whatever the capability
+says: the page shows both lists, and the capability only decides whether the
+stage lists run. One of four records meets an item, and a command writes each:
+
+| Record | Written by | The item reads |
+|---|---|---|
+| `evidence[].meets: [item]` on an entry of an accepted type | `compass gate pass ... --meets ITEM`, `compass evidence add ... --meets ITEM` | `met by EV-id` |
+| a `human-approval` record with `check: item` | `compass evidence approve --check ITEM` | `ticked by <approver>` |
+| `follow_ups[].defers: item` | `compass follow-up add FU-id --defers ITEM --summary TEXT` | `carried to ship, FU-id`, then `met, FU-id resolved` once `compass follow-up resolve` resolves it |
+| a `page_ticks` entry | `compass issue migrate`, from a tick on an archived page | `ticked on the page before 7.0.0` |
+
+An item with none of them is open. `--meets` and `--defers` refuse, with exit 2
+and no change, an item the issue does not list, and `--meets` refuses evidence
+of a type the lists do not accept. `compass follow-up add` also takes
+`--target SLUG`, which blocks that issue's `dod-evidence-typed` while the
+follow-up is outstanding.
+
+`compass evidence approve --check` accepts an item whose check lists no
+`approvers`. The approver must be a name in an `approvers:` list of the project
+file, or the project's owner when it declares none. Only that item reader counts a
+page tick: `human-approval-present` and the approval check never do.
 
 Each result goes through the judgement `compass check` gives a gate check, so
 one check id has one verdict. A deterministic check that has nothing to inspect
@@ -71,8 +95,8 @@ as ADVISORY (status `advisory` in `--json`, counted in `advisory`, recorded as
 
 ## Approvers on a human check
 
-A `human` check can declare `approvers:`, a list of names. Then a tick or a
-deferral tag alone does not clear it. It also needs a `human-approval` entry in
+A `human` check can declare `approvers:`, a list of names. Then evidence or a
+deferral alone does not clear it. It also needs a `human-approval` entry in
 the issue's evidence registry that:
 
 - names the check (`check: <id>`) and holds a decision, `approved` or
@@ -91,11 +115,9 @@ starts with the cause (`no approval record`, `approver not listed`, `approval
 is for another issue`, `approval is for another generation`, `approval
 withdrawn`), shows the values it read and names the approvers who may approve.
 
-A box must still be ticked: an approval does not replace the tick. A box
-unticked with a resolving typed tag is a deferral, and a deferral does not
-excuse a check that lists approvers, so it also needs a current approval. Both
-tag forms (`evidence` and `follow-up`) behave the same. Without `approvers:`,
-or with an empty list, a tick is enough and a deferral passes.
+Evidence and a deferral do not excuse a check that lists approvers, so it
+needs a current approval. Without `approvers:`, or with an empty list, any
+record in [Item records](#item-records) meets it.
 
 Who is listed. `owner` names the project's owner (the `owner:` of
 `compass.yml`, the same name waivers use), and names nobody when the project
@@ -139,7 +161,8 @@ for:
 - no terminal on standard input, because an approval is a person's act and an
   agent session has no terminal;
 - the approver `agent` (or `agent:<id>`), or an empty approver, role or scope;
-- a check that does not exist, is not `human`, or lists no approvers;
+- a check that does not exist, is not `human`, or lists no approvers and is not
+  an item of the Definition of Ready or Done;
 - an approver the check does not list, because the record would not count;
 - a decision other than `approved` or `rejected`.
 
@@ -248,8 +271,7 @@ approach the issue was routed to does not list that document kind among its
 artifacts, the route owes no such document, and the row is nothing to check,
 for example "quick-fix owes no verification-report". The artifact set is read
 from the configuration, so a project that adds `verification-report` to an
-approach makes the Definition of Done owed there. A document the approach lists
-and that is missing still fails with "not found". Note that the shipped regular
+approach makes the Definition of Done owed there. Note that the shipped regular
 approach does not list `requirements-review`, so a regular issue with no
 requirements review has nothing to check for the Definition of Ready.
 
@@ -280,71 +302,32 @@ list is headed with its stage, its side and whether it is due. Each check shows
 its id, its state (`pass`, `fail`, `nothing-to-check` or `pending`) and its
 detail.
 
-## Where a list sits in a document
+## Where a list shows in a document
 
-A list sits under a heading in the document that holds its ticks: the
-requirements review for an entry list and the verification report for an exit
-list.
+The requirements review shows the plan entry list and the verification report
+shows the `verify` exit list, each as a rendered block that `compass issue render`
+writes from the issue's configured list (`docs/rendered-blocks.md`):
 
-| List | Heading |
-|---|---|
-| `plan` entry | `Definition of Ready` |
-| `verify` exit | `Definition of Done` |
-| any other stage | `<Stage> <side> list`, for example `Implement exit list` or `Define entry list` |
+| List | Block | Under the heading |
+|---|---|---|
+| `plan` entry | `dor` | `Definition of Ready` |
+| `verify` exit | `dod` | `Definition of Done` |
 
-The typed tag rule of `dod-evidence-typed` reads every exit list's section,
-not only the Definition of Done. An unticked box under an exit heading needs a
-typed tag that resolves, whichever stage the list belongs to. Entry lists have
-no tag rule.
+The first line of a block reads `Definition of Done: 5 of 7 met, 2 carried to
+ship (FU-3, FU-4)`, then one line gives each item's statement and its state.
+A tick written on the page counts for nothing. A list on another stage has no
+block yet; its checks are judged from the same records and are not written into
+a document.
 
-## Rendering the templates
+## Printing a template
 
-The checklists of `templates/requirements-review.md` and
-`templates/verification-report.md` render from the stage's lists in the issue's
-effective view. `compass issue template show <kind> [--issue SLUG] [--json]` prints
-the template of that kind (`requirements-review`, `verification-report` or any
-other template) with its checklists rendered. `/compass:refine` and
-`/compass:verify` write their documents from this output, not from the template
-file. `--json` prints one object with the keys `kind`, `issue`, `source` and
-`text`. `source` is `generation` (the issue's stored configuration), `live` (the
-project's configuration now) or `none` (no configuration is read, so `text` is
-the template file).
-
-For each list, the rendered section holds one box for each `human` check the
-list names, in the listed order:
-
-- A check whose statement the template already words keeps the template's own
-  text, bold label and tag included. A project with the shipped default
-  therefore renders each template file byte for byte.
-- A check the template does not word gets a generated line,
-  `- [ ] <statement>`. In an exit list the line starts
-  `(evidence: {{EV-id}})`, so the box can be deferred with a typed tag.
-- A template box that no list names is left out.
-- A list on a stage other than the two named ones renders as its own section
-  under its heading, before the `Next stage:` line. A list with no `human`
-  check adds no section.
-- A check the list names more than once gives one box.
-
-An exit list on `plan` or on any stage other than `verify` is always in the
-verification report, and an entry list on any stage other than `plan` is always
-in the requirements review. An exit list on `plan` renders into the
-verification report as `Plan exit list`, although the report is written at
-`verify`: the side of a list picks the document, not the stage.
-
-A check of another kind has no box to tick and does not render. The render
-reads neither `requires` nor `when`: the document shows what the configuration
-lists, and evaluation decides what is owed. Any other template, and an issue
-read without a configuration, render as the file. Rendering adds no line to a
-default template. The line cap in `tests/test_borrowed_document_shapes.py`
-covers the threat model and the rollback plan only, and rendering does not
-change them.
-
-The tick, the tag rule and the renderer read a section the same way
-(`cli/compass_pkg/doc_sections.py`): it starts at a heading and ends at the next
-heading or at a line that starts `Next stage:`, and a line inside an HTML
-comment is not in any section. Only the text from `<!--` to `-->` is hidden,
-so a box with a trailing comment is still a box. A stage id can hold a dot, so `Code.review exit
-list` is an exit heading.
+`compass issue template show <kind> [--issue SLUG] [--json]` prints the template
+of that kind. The requirements review and the verification report hold an empty
+rendered block for each list, so the verb prints each template as the file: the
+blocks fill when the document is registered and `compass issue render` runs.
+`/compass:refine` and `/compass:verify` write their documents from this output.
+`--json` prints one object with the keys `kind`, `issue`, `source` and `text`.
+`source` is `generation`, `live` or `none`.
 
 ## Limits
 
@@ -352,5 +335,5 @@ list` is an exit heading.
   approval record is not authenticated (see [Approvers on a human
   check](#approvers-on-a-human-check)).
 - `evidence` checks are not evaluated.
-- A tick is found by the text of the statement. A statement that differs from
-  the box fails with "no checklist item".
+- A list on a stage other than `plan` and `verify` is judged from the records but
+  has no block in a document.

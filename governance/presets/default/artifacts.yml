@@ -9,6 +9,7 @@
 schema: 1
 artifacts:
   delivery-approach: {file: delivery-approach.md, stage: assess}
+  verification-note: {file: verification-note.md, stage: verify}
   acceptance-criteria: {file: acceptance-criteria.md, stage: define}
   technical-design: {file: technical-design.md, stage: plan}
   distribution-map: {file: distribution-map.md, stage: breakdown}

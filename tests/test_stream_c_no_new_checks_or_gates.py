@@ -22,6 +22,14 @@ GUARDRAILS_YML = "governance/guardrails.yml"
 # The invariant is that guardrails.yml gains no new check names. The
 # structural comparison against main below is the canonical guard; the
 # state-based tests use this list as the known-legitimate set.
+#: Checks a release removed on purpose, each with the change that removed it. Anything
+#: else missing from guardrails.yml fails the comparison with main.
+REMOVED_CHECKS = {
+    # documents-carry-judgement: replaced by `rendered-blocks-current`, which checks
+    # every block Compass writes in an issue's documents and not only the README.
+    "dashboard-current",
+}
+
 BASELINE_CHECKS = {
     # Added by the borrowed document shapes. A threat model that lists
     # threats and mitigates none is the Threat Modeling Manifesto's named
@@ -29,11 +37,11 @@ BASELINE_CHECKS = {
     # One check reads both, under `G4` rather than as a sixth guardrail
     # (ADR-002).
     "borrowed-documents-answered",
-    # Added by the per-issue review dashboard: it is what a reviewer
-    # approves from, so it must not be allowed to disagree with the
-    # manifest it was rendered from. Joins `G4` rather than becoming a
-    # sixth guardrail (ADR-002).
-    "dashboard-current",
+    # Added by documents-carry-judgement, replacing the per-issue review
+    # dashboard check: a block Compass writes into an issue's documents must
+    # not disagree with the manifest and the evidence it was rendered from.
+    # Joins `G4` rather than becoming a sixth guardrail (ADR-002).
+    "rendered-blocks-current",
     "scenarios-have-tests",
     "suite-passed",
     "changed-code-traces-to-scenario",
@@ -295,7 +303,7 @@ def test_guardrails_gains_no_mechanism_on_this_branch():
                 "BASELINE_CHECKS above, with a comment naming the change that "
                 "introduces it, so the addition is visible in review."
             )
-            assert _rename_checks(set(b)) - set(a) == set(), (
+            assert _rename_checks(set(b)) - set(a) <= REMOVED_CHECKS, (
                 f"guardrails.yml removed check(s): "
                 f"{sorted(_rename_checks(set(b)) - set(a))}. "
                 "Removing a check silently weakens every adopting project."
@@ -324,8 +332,8 @@ def test_guardrails_gains_no_mechanism_on_this_branch():
                     f"{gid} gained undeclared check(s): "
                     f"{sorted(gained - BASELINE_CHECKS)}")
                 lost = _rename_checks(set(b[gid]["checks"])) - set(a[gid]["checks"])
-                assert lost == set(), (
-                    f"{gid} lost check(s): {sorted(lost)}")
+                assert lost <= REMOVED_CHECKS, (
+                    f"{gid} lost check(s): {sorted(lost - REMOVED_CHECKS)}")
             continue
         assert b == a, (
             f"guardrails.yml changed mechanism in {field!r} relative to main.\n"

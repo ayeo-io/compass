@@ -790,9 +790,34 @@ def _installed_implementations(checks):
             if isinstance(c, dict) and c.get("impl") in REGISTRY}
 
 
+#: Fields of a locked check that moved with its implementation major, so a pinned generation
+#: takes them from the shipped definition. `dod-evidence-typed` 2.0.0 reads "no verification
+#: report" and "no list on a closed issue's page" as nothing to check; the 6.x definition said
+#: `on_skipped: fail`, which was never reached because 1.0.0 passed both. Pinned to 2.0.0 with
+#: the old value, those issues would fail (ADR-051, decision 17). The check is locked, so the
+#: stored value is the shipped one of its time and never a project's choice.
+_MOVED_WITH_THE_MAJOR = {"dod-evidence-typed": ("on_skipped",)}
+
+
+def _moved_check_fields(resolved):
+    """`resolved` with the fields of `_MOVED_WITH_THE_MAJOR` taken from the shipped checks."""
+    checks = resolved.get("checks")
+    if not isinstance(checks, dict):
+        return resolved
+    shipped = load_yaml(os.path.join(FRAMEWORK_ROOT, "governance", "presets", "default",
+                                     "checks.yml")).get("checks") or {}
+    checks = dict(checks)
+    for check_id, fields in _MOVED_WITH_THE_MAJOR.items():
+        if isinstance(checks.get(check_id), dict) and isinstance(shipped.get(check_id), dict):
+            checks[check_id] = dict(checks[check_id], **{
+                f: shipped[check_id][f] for f in fields if f in shipped[check_id]})
+    return dict(resolved, checks=checks)
+
+
 def _pin(stored):
     """The stored generation's configuration with its versions replaced by the
-    installed ones. Only `versions.yml` changes: a project edit made since must
+    installed ones. Only `versions.yml` changes, and the fields of a locked check that
+    moved with its major (`_MOVED_WITH_THE_MAJOR`): a project edit made since must
     reach the issue through a reassess, which classifies it, and never through
     `migrate_generation`."""
     versions = {k: v for k, v in stored["versions"].items() if k != "schema"}
@@ -800,8 +825,8 @@ def _pin(stored):
                     implementations=_installed_implementations(
                         stored["resolved"].get("checks")))
     return generation.Resolution(
-        resolved={k: v for k, v in stored["resolved"].items()
-                  if k not in ("schema", "issue", "generation")},
+        resolved=_moved_check_fields({k: v for k, v in stored["resolved"].items()
+                                      if k not in ("schema", "issue", "generation")}),
         provenance={k: v for k, v in stored["provenance"].items() if k != "schema"},
         versions=versions,
         records=[r for r in stored["records"].get("records", [])
@@ -821,19 +846,21 @@ def _set_generation_line(path, target):
     return render
 
 
-def migrate_generation(task_dir):
+def migrate_generation(task_dir, *, closed_ok=False):
     """Store the next generation of the issue pinned to the installed versions
     (`compass issue migrate --config`), the second of the three commit paths.
     Returns `(Committed, notes)`. The stored configuration is kept as it is and
     every check result the old generation recorded is invalidated. An issue
     with no stored generation is adopted: its live configuration becomes
     generation 1. Raises `CompassError` for a closed issue, which keeps the
-    configuration it closed under."""
+    configuration it closed under. `closed_ok` is for `compass issue migrate`,
+    which pins a closed issue that records an implementation major the CLI lacks
+    so its check runs; it changes the versions only and keeps the configuration."""
     task_dir = os.path.abspath(os.fspath(task_dir))
     slug = os.path.basename(task_dir)
     path = manifest_path(task_dir)
     manifest = load_yaml(path)
-    if status_words.is_closed(manifest):
+    if status_words.is_closed(manifest) and not closed_ok:
         raise CompassError(
             f"issue {slug} is closed and keeps the configuration it closed under, so "
             f"`compass issue migrate --config` did not change it")
@@ -856,6 +883,6 @@ def migrate_generation(task_dir):
         resolution.provenance["adopted"] = "adopted from live governance"
     committed = generation.commit(task_dir, resolution, manifest, invalidated,
                                   render=_set_generation_line(path, (held or 0) + 1),
-                                  force=True)
+                                  force=True, closed_ok=closed_ok)
     return committed, ([f"{len(invalidated)} recorded result(s) invalidated"]
                        if invalidated else [])

@@ -27,7 +27,7 @@ approaches:
     stages: {assess: thorough, define: lightweight, refine: collapsed, plan: collapsed, breakdown: skipped,
       implement: thorough, verify: lightweight, ship: lightweight}
     gates: [verify.correctness, verify.governance, verify.traceability]
-    artifacts: {delivery-approach: lightweight}
+    artifacts: {delivery-approach: lightweight, verification-note: lightweight}
     subtask_ceiling: 1
     checkpoints:
       controlled: [assess]

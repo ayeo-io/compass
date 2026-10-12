@@ -32,7 +32,7 @@ import sys
 
 import yaml
 
-from compass_pkg import lifecycle, project_settings, status_words
+from compass_pkg import lifecycle, project_settings, record_triggers, status_words
 from compass_pkg.atomic_io import atomic_write_text
 from compass_pkg.core import CompassError, load_manifest, resolve_issue_dir, save_manifest
 from compass_pkg.terminal import say
@@ -51,27 +51,9 @@ COLOURS = {"status": "1d76db", "close": "d73a4a", "domain": "0e8a16"}
 DESCRIPTION = "Set by Compass"
 
 #: Commands that change an issue's records. After one exits 0, the issue's
-#: labels are brought up to date. The value names an argument that must be set
-#: for the command to count (`approach evaluate` writes only with `--write`).
-TRIGGERS = {
-    "cmd_route_evaluate": "write",
-    "cmd_task_set_status": None,
-    "cmd_task_status_remove": None,
-    "cmd_issue_link": None,
-    "cmd_land_commit": None,
-    "cmd_quick_fix_finish": None,
-    "cmd_scenario_add": None,
-    "cmd_gate_pass": None,
-    "cmd_issue_artifact": None,
-    "cmd_subtask_add": None,
-    "cmd_subtask_replan": None,
-    # A test on record moves an issue from ready to in-progress.
-    "cmd_tdd_red": None,
-    "cmd_tdd_green": None,
-    "cmd_evidence_add": None,
-    "cmd_acceptance_record": None,
-    "cmd_scenario_descope": None,
-}
+#: labels are brought up to date. The table lives in `record_triggers`, which
+#: the render step reads too, so neither table can gain a command the other lacks.
+TRIGGERS = record_triggers.LABEL_TRIGGERS
 
 _OWNER = r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})"
 _NAME = r"(?!-)[A-Za-z0-9._-]{1,100}"

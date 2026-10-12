@@ -83,8 +83,8 @@ from compass_pkg.policy_cmd import register_preset as register_preset_parser  # 
 from compass_pkg.approve_cmd import register as register_approve_parser  # noqa: E402
 from compass_pkg.review_cmd import register as register_review_parser  # noqa: E402
 from compass_pkg.issue_config_cmd import register as register_issue_configure_parser  # noqa: E402
-from compass_pkg.github_labels import register as register_github_labels_parser  # noqa: E402
-from compass_pkg.github_labels import after_command as sync_github_labels  # noqa: E402
+from compass_pkg import github_labels  # noqa: E402
+from compass_pkg.render_after_entry import after_command as render_after_command  # noqa: E402
 
 # Declared literally here as well as in compass_pkg.core: this file is
 # what `compass --version` and the release-consistency test read, and a
@@ -352,12 +352,14 @@ def build_parser():
     ptr.add_argument("--workdir", help="alternate project root (default: cwd)")
     ptr.set_defaults(func=cmd_task_receipt, output_kind="hand-off")
 
-    ptdg = pts.add_parser("dashboard", help="the per-issue review page")
-    ptd = ptdg.add_subparsers(dest="dashboard_cmd", required=True).add_parser(
-        "render", help="render the per-issue review README from the artifact registry")
-    issue_arg(ptd)
-    ptd.add_argument("--check", action="store_true", help="report whether the README matches the manifest; write nothing")
-    ptd.set_defaults(func=cmd_issue_dashboard, output_kind="hand-off")
+    ptrn = pts.add_parser(
+        "render", help="render the blocks of an issue's documents from its records")
+    issue_arg(ptrn)
+    ptrn.add_argument("--all", action="store_true",
+                      help="render every readable issue and the project index; skip an issue whose inputs are unchanged")
+    ptrn.add_argument("--dry-run", dest="dry_run", action="store_true",
+                      help="list what would change; write nothing")
+    ptrn.set_defaults(func=cmd_issue_render, output_kind="hand-off")
 
     ptag = pts.add_parser("artifact", help="a document's status in the issue's review pack")
     pta = ptag.add_subparsers(dest="artifact_cmd", required=True).add_parser(
@@ -381,7 +383,7 @@ def build_parser():
     ptt.set_defaults(func=_cmd_issue_template, output_kind="hand-off")
     register_subtask_parser(pts, issue_arg)
     register_status_parser(pts, issue_arg)
-    register_github_labels_parser(pts, issue_arg)
+    github_labels.register(pts, issue_arg)
 
     pacc = sub.add_parser(
         "acceptance",
@@ -497,6 +499,8 @@ def build_parser():
         help="the follow-up id to mark resolved (e.g. BF-1)"
     )
     pbfp.set_defaults(func=cmd_backfill_pay, output_kind="hand-off")
+    from compass_pkg.follow_up_cmd import register as _register_follow_up_add
+    _register_follow_up_add(pbfs)
 
     plc = sub.add_parser(
         "ship-commit",
@@ -523,6 +527,8 @@ def build_parser():
     issue_arg(pgp)
     pgp.add_argument("--evidence", action="append",
                      help="evidence id backing this gate (repeatable)")
+    pgp.add_argument("--meets", action="append", metavar="CHECK",
+                     help="a Definition of Done or Ready item this evidence meets (repeatable)")
     pgp.set_defaults(func=cmd_gate_pass, output_kind="hand-off")
 
     pscn = sub.add_parser("scenario", help="issue scenario tools")
@@ -567,6 +573,8 @@ def build_parser():
     peva.add_argument("--type", required=True, help="evidence type (see guardrails.yml)")
     peva.add_argument("--path", required=True, help="path to the evidence file")
     peva.add_argument("--scenario", help="scenario this evidence is for (optional)")
+    peva.add_argument("--meets", action="append", metavar="CHECK",
+                      help="a Definition of Done or Ready item this evidence meets (repeatable)")
     peva.set_defaults(func=cmd_evidence_add, output_kind="hand-off")
     register_approve_parser(pevs)
     register_review_parser(pevs)
@@ -710,7 +718,7 @@ def main(argv=None):
     if getattr(args, "command", None) and args.command and args.command[0] == "--":
         args.command = args.command[1:]
     try:
-        return run_with_mode(args, lambda a: sync_github_labels(a, args.func(a) or 0)) or 0
+        return run_with_mode(args, lambda a: render_after_command(a, github_labels.after_command(a, args.func(a) or 0))) or 0
     except CompassError as exc:
         # Paths in an error open from the project root, like every other
         # path the CLI prints (#293).

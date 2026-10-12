@@ -316,20 +316,37 @@ def _(root):
     return _stamped(root, {"record_id": "rec-a"})
 
 
+_DOD_ITEMS = ["dod-every-scenario-passes", "dod-suite-green", "dod-coverage-floor",
+              "dod-no-lint-errors", "dod-traceability-intact", "dod-living-docs-updated",
+              "dod-follow-ups-settled"]
+
+
+def _dod(root, page, evidence=()):
+    """A project on the shipped default, so the check finds the seven items of the
+    `verify` exit list, and an issue whose verification report is `page`."""
+    _write(root / "compass.yml", "schema: 1\n")
+    task, task_dir = _issue(root, {"evidence": list(evidence)})
+    _write(task_dir / "verification-report.md", page)
+    return task, task_dir
+
+
 @case("dod-evidence-typed", "broken")
 def _(root):
-    task, task_dir = _issue(root, {})
-    _write(task_dir / "verification-report.md",
-           "## Definition of Done\n\n- [ ] the thing is done\n")
-    return task, task_dir
+    # An item with no record in the manifest.
+    return _dod(root, "## Definition of Done\n\n- [ ] the thing is done\n")
 
 
 @case("dod-evidence-typed", "restored")
 def _(root):
-    task, task_dir = _issue(root, {})
-    _write(task_dir / "verification-report.md",
-           "## Definition of Done\n\n- [x] the thing is done\n")
-    return task, task_dir
+    # A ticked box on the page, and still no record: the page counts for nothing.
+    return _dod(root, "## Definition of Done\n\n- [x] the thing is done\n")
+
+
+@case("dod-evidence-typed", "recorded")
+def _(root):
+    records = [{"id": "EV-%d" % n, "type": "manual-review", "path": "evidence/x.txt",
+                "meets": [item]} for n, item in enumerate(_DOD_ITEMS)]
+    return _dod(root, "## Definition of Done\n", records)
 
 
 # --- checks that read a document or another issue ----------------------------------
@@ -350,24 +367,33 @@ def _(root):
     return task, task_dir
 
 
-def _dashboard(root, move_manifest):
-    from compass_pkg.dashboard import render_dashboard
-    task, task_dir = _issue(root, {"assessment": {"risk": "contained"}})
-    _write(task_dir / "README.md", render_dashboard(str(task_dir)))
-    if move_manifest:
-        task = dict(task, assessment={"risk": "critical"})
-        _write(task_dir / "manifest.yml", yaml.safe_dump(task, sort_keys=False))
+def _rendered(root, stale):
+    """An issue at `verify` whose acceptance criteria hold a coverage block and
+    whose issue page exists, rendered. With `stale`, the block was edited by hand."""
+    from compass_pkg import render_cmd
+    task, task_dir = _issue(root, {
+        "created": "2026-10-10", "current_phase": "verify",
+        "scenarios": [_scenario(title="A scenario")],
+        "artifacts": [{"id": "ART-AC", "kind": "acceptance-criteria", "status": "draft",
+                       "path": "docs/compass/2026-10-10-case/acceptance-criteria.md"}]})
+    doc = root / "docs" / "compass" / "2026-10-10-case" / "acceptance-criteria.md"
+    _write(doc, "# Spec\n\n<!-- compass:render coverage -->\n<!-- /compass:render -->\n")
+    render_cmd.apply(render_cmd.plan_issue(str(task_dir)))
+    if stale:
+        doc.write_text(doc.read_text(encoding="utf-8").replace("Coverage: 0 of 1",
+                                                                "Coverage: 1 of 1"),
+                       encoding="utf-8")
     return task, task_dir
 
 
-@case("dashboard-current", "broken")
+@case("rendered-blocks-current", "broken")
 def _(root):
-    return _dashboard(root, True)
+    return _rendered(root, True)
 
 
-@case("dashboard-current", "restored")
+@case("rendered-blocks-current", "restored")
 def _(root):
-    return _dashboard(root, False)
+    return _rendered(root, False)
 
 
 def _landed_by(root, delivered):

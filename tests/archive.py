@@ -18,6 +18,8 @@ from __future__ import annotations
 import hashlib
 import os
 import shutil
+import subprocess
+import sys
 import tarfile
 import tempfile
 from pathlib import Path
@@ -64,6 +66,42 @@ def sample_root():
         if not target.is_dir():
             # Not another worker winning the race: fail loudly, because a
             # test that returns early on a missing folder would pass on it.
+            raise
+    return target
+
+
+def checkable_root():
+    """The sample as an adopter has it after `compass issue migrate --apply --i-have-a-copy`
+    and `compass issue render --all`: the records the Definition of Done reads, the issue
+    pages and the project index. `compass check` fails an issue that has no page
+    (`rendered-blocks-current`) and an unrecorded Definition of Done item
+    (`dod-evidence-typed`), so a test that runs the check reads this copy. It is a copy of
+    `sample_root()`, which stays as recorded for the contracts that read it. With the
+    switch on it is this checkout's own archive, which a release run migrates itself."""
+    if full_archive():
+        return REPO_ROOT
+    source = sample_root()
+    target = CACHE / (source.name + "-migrated")
+    if target.is_dir():
+        return target
+    staging = Path(tempfile.mkdtemp(dir=CACHE, prefix="migrating-"))
+    shutil.rmtree(staging)
+    shutil.copytree(source, staging)
+    cli = str(REPO_ROOT / "cli" / "compass")
+    env = dict(os.environ, CLAUDE_PROJECT_DIR=str(staging))
+    for argv in (["issue", "migrate", str(staging / ".compass" / "work"), "--apply",
+                  "--i-have-a-copy"], ["issue", "render", "--all"]):
+        done = subprocess.run([sys.executable, cli, *argv], cwd=staging, env=env,
+                              capture_output=True, text=True, timeout=600)
+        if done.returncode != 0:
+            shutil.rmtree(staging, ignore_errors=True)
+            raise RuntimeError("preparing the migrated sample failed: compass %s\n%s%s"
+                               % (" ".join(argv[:2]), done.stdout[-1500:], done.stderr[-1500:]))
+    try:
+        os.rename(staging, target)
+    except OSError:
+        shutil.rmtree(staging, ignore_errors=True)
+        if not target.is_dir():
             raise
     return target
 

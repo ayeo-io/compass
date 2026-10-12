@@ -33,6 +33,7 @@ import json
 import os
 import re
 
+
 from compass_pkg.core import (CompassError, issue_arg, load_manifest, now_iso,
                               resolve_issue_dir, save_manifest)
 from compass_pkg.stable_ids import STAGE_IDS
@@ -116,6 +117,7 @@ def parse_ledger(text):
 def _review_text(task_dir):
     """The requirements review, registered or not: the file `compass next`
     counts as refine's record."""
+    from compass_pkg import rendered_blocks
     from compass_pkg.core import artifact_path, unregistered_document
     name = "requirements-review.md"
     path = artifact_path(task_dir, name)
@@ -127,8 +129,9 @@ def _review_text(task_dir):
             "review to read. Write it at refine first, or record one decision with "
             "`compass issue decision add <id> --question ... --resolution ... --by ... "
             "--stage ...`.")
-    with open(path, encoding="utf-8") as fh:
-        return fh.read()
+    # A rendered block (the decisions taken, say) repeats the ledger; only the
+    # person's own text is the ledger.
+    return rendered_blocks.read_masked(path)
 
 
 def add_from_ledger(task, task_dir):

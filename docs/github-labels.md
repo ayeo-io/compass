@@ -76,6 +76,8 @@ After one of these commands succeeds on a linked issue, with a switch on:
 - `compass quick-fix finish`
 - the commands that change the records that decide the state: `compass scenario add` and `descope`, `compass tdd-red`, `compass tdd-green`, `compass evidence add`, `compass acceptance record`, `compass gate pass`, `compass issue artifact set`, `compass issue subtask add` and `replan`
 
+The commands are listed in `LABEL_TRIGGERS` of `cli/compass_pkg/record_triggers.py`. The step that renders an issue's documents after a command (`docs/rendered-blocks.md`) reads the same list and adds commands of its own, so a command that syncs the labels always renders too.
+
 A label name is compared without regard to case, as GitHub does. Compass sends its own spelling: the declared name, or the fixed owned name.
 
 `compass issue labels sync` does the same on demand, for any issue. Use it after the first link, after turning a switch on, or to put back a label someone removed.

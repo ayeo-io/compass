@@ -13,8 +13,8 @@
 # rollback is a mechanism you exercise rather than a document you write.
 #
 # It lives here rather than in checks.py because it reads those two templates
-# and nothing else in checks.py touches them - the same reason `dashboard.py`
-# holds the check that the review page is up to date.
+# and nothing else in checks.py touches them - the same reason `render_check.py`
+# holds the check that the rendered blocks are current.
 #
 # DEPENDENCY: the resolver in compass_pkg.core, plus os and re from the
 # standard library. It asks the resolver where each document is rather than

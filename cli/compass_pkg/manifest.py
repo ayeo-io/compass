@@ -118,7 +118,42 @@ def _apply_ship_exit(task, task_dir):
 # same tree, which is precisely the collision this scope check exists to stop.
 FRAMEWORK_OWNED_PATHS = frozenset({
     ".compass/current-task",
+    # The project index, which every landing re-renders (ADR-051). Not under an issue's folder.
+    "docs/compass/README.md",
 })
+
+
+def _render_landing(task, task_dir, cwd):
+    """Render the issue's documents, its page and the project index as the issue will read
+    once this landing marks it done, and stage the files a project tracks (ADR-051).
+
+    The landing commit then holds the done state, and the after-command render that
+    follows it changes no byte. Nothing is done unless every gate has passed, because only
+    then does the landing mark the issue done. A failure here never stops the landing: the
+    documents are then rendered after it, as before."""
+    gates = [g for g in (task.get("gates") or []) if isinstance(g, dict)]
+    if not gates or any(g.get("status") != "pass" for g in gates):
+        return []
+    try:
+        from compass_pkg import artifact_status, effective, render_cmd
+        try:
+            view = effective.view_or_legacy(task_dir)
+        except Exception:                               # noqa: BLE001
+            view = None
+        projected = artifact_status.ship_projection(task, view)
+        status_words.close(projected, status_words.COMPLETED)
+        projected["land_timestamp"] = now_iso()
+        written = render_cmd.render_projected(task_dir, projected)
+        project = os.path.dirname(find_compass_dir())
+        staged = []
+        for item in written:
+            if _git(["check-ignore", "-q", "--", item.path], cwd).returncode == 0:
+                continue
+            if _git(["--literal-pathspecs", "add", "--", item.path], cwd).returncode == 0:
+                staged.append(os.path.relpath(item.path, project))
+        return staged
+    except Exception:                                   # noqa: BLE001 - the landing goes on
+        return []
 
 
 def _land_scope(task, slug):
@@ -426,6 +461,9 @@ def cmd_land_commit(args):
     except (CompassError, OSError, KeyError):
         pass
 
+    if slug is not None:
+        _render_landing(_scope_task, _scope_dir, cwd)
+
     def _judge_index():
         """Judge what is staged at this moment, which is what the next
         commit holds. Called right before each commit: the pre-commit step
@@ -708,11 +746,29 @@ def _load_gate_requirements(task_dir=None):
             set((g.get("evidence_types") or {}).keys()))
 
 
-def _stale_page(task_dir):
-    """`say` detail lines: the one stale-page reminder, or none."""
-    from compass_pkg.dashboard import stale_page_reminder
-    line = stale_page_reminder(task_dir)
-    return [line] if line else None
+def _validated_meets(args, task_dir, command, types):
+    """The checks `--meets` names, each an item of the issue's Definition of Done
+    or Ready, for evidence of these types. A check the issue does not list, or a
+    type the lists do not accept, raises before anything is written."""
+    meets = list(dict.fromkeys(getattr(args, "meets", None) or []))
+    if not meets:
+        return []
+    from compass_pkg import effective, item_records
+    view = effective.view_or_legacy(task_dir)
+    for check_id in meets:
+        problem = item_records.unlisted_problem(view, check_id, command)
+        if problem:
+            raise CompassError(problem)
+    for kind in sorted(str(t) for t in types):
+        problem = item_records.evidence_type_problem(kind, command)
+        if problem:
+            raise CompassError(problem)
+    return meets
+
+
+def _add_meets(entry, meets):
+    if meets:
+        entry["meets"] = list(dict.fromkeys(list(entry.get("meets") or []) + meets))
 
 
 def cmd_gate_pass(args):
@@ -750,8 +806,11 @@ def cmd_gate_pass(args):
             f"mechanical gate cannot be cleared with the wrong kind of evidence. "
             f"Point it at evidence of an accepted type."
         )
+    meets = _validated_meets(args, task_dir, "compass gate pass", types_seen)
     gate["status"] = "pass"
     gate["evidence"] = list(ev_ids)
+    for eid in ev_ids:
+        _add_meets(registry[eid], meets)
     save_manifest(task, task_path)
     # A pass of a `verify` gate is a record of the `verify` stage: it moves the
     # documents of earlier stages and the `verify` stage's own (ADR-050).
@@ -762,7 +821,7 @@ def cmd_gate_pass(args):
         else [])
     return say(args, f"compass gate pass: {args.gate_id} -> pass "
                     f"(evidence: {', '.join(ev_ids)}).",
-               detail=(_stale_page(task_dir) or []) + artifact_status.moved_line(moved) or None,
+               detail=artifact_status.moved_line(moved) or None,
                gate=args.gate_id, status="pass", evidence=list(ev_ids), moved=moved)
 
 
@@ -999,7 +1058,6 @@ def cmd_changed_file_add(args):
         cfs.append({"path": args.path, "scenarios": sorted(set(given))})
     save_manifest(task, task_path)
     return say(args, f"compass changed-file add: {args.path} -> {', '.join(given)}.",
-               detail=_stale_page(task_dir),
                path=args.path, scenario=given[-1], scenarios=given)
 
 
@@ -1014,6 +1072,7 @@ def cmd_evidence_add(args):
             f"compass evidence add: '{args.type}' is not a known evidence type "
             f"({sorted(known)})."
         )
+    meets = _validated_meets(args, task_dir, "compass evidence add", [args.type])
     reg = task.setdefault("evidence", [])
     if any(isinstance(e, dict) and e.get("id") == args.evidence_id for e in reg):
         raise CompassError(
@@ -1048,11 +1107,11 @@ def cmd_evidence_add(args):
     entry = {"id": args.evidence_id, "type": args.type, "path": args.path}
     if getattr(args, "scenario", None):
         entry["scenario"] = args.scenario
+    _add_meets(entry, meets)
     reg.append(entry)
     save_manifest(task, task_path)
     return say(args, f"compass evidence add: {args.evidence_id} "
                     f"({args.type}) added.",
-               detail=_stale_page(task_dir),
                evidence_id=args.evidence_id, type=args.type, path=args.path)
 
 

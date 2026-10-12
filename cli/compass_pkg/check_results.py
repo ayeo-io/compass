@@ -29,3 +29,16 @@ class _NothingToCheck(int):
 
 
 NOTHING_TO_CHECK = _NothingToCheck(1)
+
+
+class _AdvisoryFailure(int):
+    """A check that failed and does not block: its effective severity is
+    advisory. Like `NOTHING_TO_CHECK` it is truthy, so every caller that only
+    asks pass or fail sees a run that is not failed; the views ask whether a
+    result `is ADVISORY_FAILURE` so the finding is never shown as a pass."""
+
+    def __repr__(self):
+        return "ADVISORY_FAILURE"
+
+
+ADVISORY_FAILURE = _AdvisoryFailure(1)

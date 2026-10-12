@@ -115,7 +115,7 @@ def _refuse_unreadable(task, task_dir, kind):
 #: The close-out decisions a spike records (`spike-conclusion-present` reads them).
 SPIKE_DECISIONS = ("discard", "graduate-to-delivery", "defer")
 SPIKE_EVIDENCE_ID = "EV-SPIKE-CONCLUSION"
-NEXT_FLAG = "--next-task"  # vocabulary-scan: allow - the flag is spelled as the record's `next_task` key
+NEXT_FLAG = "--next-issue"
 
 
 def _label(entry):
@@ -155,11 +155,11 @@ def _refuse_home(task_dir, kind, spec, rel):
 
 
 def _decision_arguments(args, kind):
-    """The validated `(decision, next_task)` of `--decision`, or `(None, None)`.
+    """The validated `(decision, next_issue)` of `--decision`, or `(None, None)`.
     Refuses before anything is written."""
     decision = getattr(args, "decision", None)
-    next_task = getattr(args, "next_task", None)
-    if decision is None and next_task is None:
+    next_issue = getattr(args, "next_issue", None)
+    if decision is None and next_issue is None:
         return None, None
     if kind != "spike-conclusion":
         raise CompassError(
@@ -171,16 +171,16 @@ def _decision_arguments(args, kind):
         raise CompassError(
             "--decision %r is not a way a spike closes. The decisions are: %s."
             % (decision, ", ".join(SPIKE_DECISIONS)))
-    if decision == "graduate-to-delivery" and not (next_task or "").strip():
+    if decision == "graduate-to-delivery" and not (next_issue or "").strip():
         raise CompassError(
             "--decision graduate-to-delivery needs %s <slug>, the delivery issue "
             "the spike graduates to. Graduation is a fresh assessment, not a merge." % NEXT_FLAG)
-    if next_task and decision != "graduate-to-delivery":
+    if next_issue and decision != "graduate-to-delivery":
         raise CompassError("%s goes with --decision graduate-to-delivery only." % NEXT_FLAG)
-    return decision, (next_task or "").strip() or None
+    return decision, (next_issue or "").strip() or None
 
 
-def _write_spike_record(task, task_dir, entry, decision, next_task):
+def _write_spike_record(task, task_dir, entry, decision, next_issue):
     """Write or update the one `spike-conclusion` evidence record that
     `spike-conclusion-present` reads, naming the registered document. The check
     stays as it is; this is the command that gives it the record it needs."""
@@ -200,8 +200,8 @@ def _write_spike_record(task, task_dir, entry, decision, next_task):
         records.append(record)
     record["path"] = named
     record["decision"] = decision
-    if next_task:
-        record["next_task"] = next_task
+    if next_issue:
+        record["next_task"] = next_issue
     else:
         record.pop("next_task", None)
     return record
@@ -238,7 +238,7 @@ def cmd_issue_artifact(args):
     spec = known.get(args.kind)
     held = [a for a in arts if a.get("kind") == args.kind]
     asked = getattr(args, "round", None)
-    decision, next_task = _decision_arguments(args, args.kind)
+    decision, next_issue = _decision_arguments(args, args.kind)
 
     if not held and spec is None:
         # A kind the issue's catalogue declares can be registered even when the
@@ -315,7 +315,7 @@ def cmd_issue_artifact(args):
         entry["reason"] = args.reason.strip()
     task["artifacts"] = arts
     if decision:
-        _write_spike_record(task, task_dir, entry, decision, next_task)
+        _write_spike_record(task, task_dir, entry, decision, next_issue)
     # Saved before the digest is read: the digest resolves the document through
     # the registry on disk.
     save_manifest(task, path)
@@ -340,7 +340,7 @@ def cmd_issue_artifact(args):
     detail = ["reason: %s" % entry.get("reason", "(none recorded)")]
     if decision:
         detail.append("spike conclusion recorded: %s%s" % (
-            decision, " -> " + next_task if next_task else ""))
+            decision, " -> " + next_issue if next_issue else ""))
     return say(args, "compass issue artifact set: %s -> %s" % (_label(entry), entry["status"]),
                detail=detail + recorded + artifact_status.moved_line(moved),
                kind=args.kind, round=entry.get("round"), status=entry["status"],

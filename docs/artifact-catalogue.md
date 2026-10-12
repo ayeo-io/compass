@@ -58,7 +58,7 @@ The not-an-artifact list is `NOT_AN_ARTIFACT` in `cli/compass_pkg/stable_ids.py`
 
 ## Closing a spike
 
-`compass issue artifact set spike-conclusion --status draft --path <file> --decision <discard|graduate-to-delivery|defer>` registers the conclusion and writes the one `spike-conclusion` evidence record that the check `spike-conclusion-present` reads, naming the document. `graduate-to-delivery` needs `--next-task <slug>` <!-- vocabulary-scan: allow - the flag is spelled as the record's next_task key -->, the slug of the delivery issue. A second run with another decision updates the record. `--decision` on any other kind is refused. The check itself is unchanged.
+`compass issue artifact set spike-conclusion --status draft --path <file> --decision <discard|graduate-to-delivery|defer>` registers the conclusion and writes the one `spike-conclusion` evidence record that the check `spike-conclusion-present` reads, naming the document. `graduate-to-delivery` needs `--next-issue <slug>`, the slug of the delivery issue. A second run with another decision updates the record. `--decision` on any other kind is refused. The check itself is unchanged.
 
 ## The quick-fix record
 

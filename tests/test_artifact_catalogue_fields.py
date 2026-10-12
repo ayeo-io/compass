@@ -1022,7 +1022,7 @@ def test_acf_62(tmp_path):
     before = (task_dir / "manifest.yml").read_bytes()
     code, out, err = _set(root, "spike-conclusion", "--status", "draft", "--path", path,
                           "--decision", "graduate-to-delivery")
-    assert code == 2 and "--next-task" in err, out + err
+    assert code == 2 and "--next-issue" in err, out + err
     code, out, err = _set(root, "spike-conclusion", "--status", "draft", "--path", path,
                           "--decision", "keep")
     assert code == 2, out + err
@@ -1039,7 +1039,7 @@ def test_acf_62(tmp_path):
     records = [e for e in _manifest_of(task_dir)["evidence"] if e.get("type") == "spike-conclusion"]
     assert len(records) == 1 and records[0]["decision"] == "defer", records
     code, out, err = _set(root, "spike-conclusion", "--status", "draft", "--path", path,
-                          "--decision", "graduate-to-delivery", "--next-task", "next-issue")
+                          "--decision", "graduate-to-delivery", "--next-issue", "next-issue")
     assert code == 0, out + err
     records = [e for e in _manifest_of(task_dir)["evidence"] if e.get("type") == "spike-conclusion"]
     assert len(records) == 1 and records[0]["next_task"] == "next-issue", records

@@ -371,7 +371,7 @@ def build_parser():
     pta.add_argument("--path", help="where the document was written, relative to the project root (e.g. docs/compass/2026-09-08-my-issue/technical-design.md)")
     pta.add_argument("--round", type=int, help="the round of a kind that repeats, such as review-<n>.md; default is the round in the path, else the latest")
     pta.add_argument("--decision", help="spike-conclusion only: how the spike closes (discard, graduate-to-delivery or defer); also writes the evidence record the check reads")
-    pta.add_argument("--next-task", dest="next_task", help="with --decision graduate-to-delivery: the slug of the delivery issue")
+    pta.add_argument("--next-issue", dest="next_issue", help="with --decision graduate-to-delivery: the slug of the delivery issue")
     issue_arg(pta)
     pta.set_defaults(func=cmd_issue_artifact, output_kind="hand-off")
 

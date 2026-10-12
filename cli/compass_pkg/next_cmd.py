@@ -321,6 +321,7 @@ def cmd_next(args):
     by the rail when a person reads it at a terminal.
     Strictly read-only.
     """
+    import time; time.sleep(0.05)  # TEMPORARY plant for the CI red; reverted in the next commit
     task_dir = resolve_issue_dir(getattr(args, "task", None))
 
     # --- manifest.yml: must exist (assess check) ---

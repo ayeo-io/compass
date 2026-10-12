@@ -7,7 +7,8 @@ next-uncleared gate, and delivery-approach-aware optional markers.
 Design decisions honoured:
   - Pure read-only (TRC-C7): no files in .compass/work/<task>/ are touched.
   - Derives from manifest.yml + delivery-approach.md only (TRC-C8).
-  - < 200 ms p95 (TRC-C10, provisional BF-1 target).
+  - cost within a multiple of a reference command, and under a ceiling
+    (TRC-C10, BF-1: the 200 ms target scaled by measured machine speed).
   - Reports missing assessment when manifest.yml absent (TRC-C9).
   - Reports missing delivery-approach.md when it is absent (TRC-F6).
   - Reports nothing-remains on a completed issue (TRC-C6).
@@ -476,13 +477,43 @@ class TestNextNoFrame:
 
 
 # ---------------------------------------------------------------------------
-# Next returns under the interactive latency target, <200ms p95 (`TRC-C10`)
+# Next stays within its latency budget, relative to a reference command (`TRC-C10`)
 # ---------------------------------------------------------------------------
 
 class TestNextLatency:
+    # `compass next` mostly loads modules, so its cost scales with how fast the
+    # machine loads and runs Python. A reference command that loads the same
+    # kind of modules and runs a small fixed loop measures that speed in the
+    # same run. Subtracting bare `python -c pass` does not: on a GitHub runner
+    # `compass next` costs about 207ms above start-up against about 95ms here,
+    # so a fixed 200ms limit failed on slow runners for a reason it does not
+    # care about.
+    #
+    # Measured here: reference about 60ms, `compass next` about 92ms above
+    # start-up, ratio 1.4 to 1.55. A planted 50ms delay gives 2.4 to 2.6. The
+    # limit of 2.0 leaves over 30% headroom for noise and still fails the
+    # delay. On a runner 2.2 times slower the same code gives about 1.6. The
+    # absolute ceiling stops a large regression on a fast machine.
+    MAX_RATIO = 2.0
+    CEILING_MS = 400
+    REFERENCE = (
+        "import sys; sys.path.insert(0, {vendor!r})\n"
+        "import argparse, datetime, hashlib, json, re, shlex, subprocess, "
+        "tempfile, fnmatch, shutil, glob, inspect, dataclasses, typing, uuid, "
+        "urllib.request, http.client, yaml\n"
+        "yaml.safe_load('a: [1, 2, {{b: c}}]\\n' * 200)\n"
+        "for i in range(200000):\n"
+        "    x = i * i % 7\n"
+    )
+
     @pytest.mark.serial
-    def test_next_under_200ms_p95(self, tmp_path):
-        """p95 of 20 runs is under 200ms - BF-1 provisional target (`TRC-C10`)."""
+    def test_next_latency_relative_to_reference(self, tmp_path, request):
+        """Median cost of `compass next` is within a multiple of a reference
+        command's cost, and under an absolute ceiling (`TRC-C10`, NLB-1).
+
+        The original BF-1 target was 200ms. That figure holds on a development
+        machine; this test now scales it by measured runner speed.
+        """
         project = make_project(tmp_path)
         task_body = dict(STANDARD_TASK)
         task_body["current_phase"] = "build"
@@ -498,23 +529,33 @@ class TestNextLatency:
             times.sort()
             return times[len(times) // 2] * 1000   # median
 
-        # Measure the interpreter floor on THIS machine and subtract it. The
-        # target is about what `compass next` costs, not about how fast Python
-        # starts - and on a loaded machine bare startup alone can exceed 200ms,
-        # which failed this test for a reason it does not care about.
-        #
-        # Median rather than p95: p95 of 20 samples is literally the 19th value,
-        # so a single scheduler hiccup failed the run. The median is what an
-        # interactive user actually experiences.
+        vendor = str(Path(CLI_PATH).parent / "vendor")
         baseline_ms = measure([sys.executable, "-c", "pass"])
+        reference_ms = measure(
+            [sys.executable, "-c", self.REFERENCE.format(vendor=vendor)]
+        ) - baseline_ms
         total_ms = measure([sys.executable, str(CLI_PATH), "next"])
         marginal_ms = total_ms - baseline_ms
+        ratio = marginal_ms / max(reference_ms, 1.0)
 
-        assert marginal_ms < 200, (
-            f"compass next costs {marginal_ms:.1f}ms above interpreter startup "
-            f"(total {total_ms:.1f}ms, bare python {baseline_ms:.1f}ms) - "
-            "exceeds the 200ms target (TRC-C10 / BF-1). Investigate the "
-            "performance path."
+        line = (
+            f"compass next latency: marginal {marginal_ms:.1f}ms "
+            f"(total {total_ms:.1f}ms, bare python {baseline_ms:.1f}ms), "
+            f"reference {reference_ms:.1f}ms, ratio {ratio:.2f} "
+            f"(limit {self.MAX_RATIO}), ceiling {self.CEILING_MS}ms"
+        )
+        # pytest hides captured output unless a test fails. Suspending the
+        # capture while printing puts the figures in the CI log on a pass.
+        capture = request.config.pluginmanager.getplugin("capturemanager")
+        with capture.global_and_fixture_disabled():
+            print("\n" + line, flush=True)
+
+        assert marginal_ms < self.CEILING_MS, (
+            f"{line} - exceeds the absolute ceiling (TRC-C10 / BF-1)."
+        )
+        assert ratio < self.MAX_RATIO, (
+            f"{line} - compass next is slow relative to the reference "
+            "command (TRC-C10 / BF-1). Investigate the performance path."
         )
 
 

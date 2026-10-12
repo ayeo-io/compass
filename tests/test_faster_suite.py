@@ -142,7 +142,7 @@ def test_each_archive_sweep_is_one_test_per_issue(module):
 
 
 SERIAL_TESTS = {
-    "tests/next/test_compass_next.py::TestNextLatency::test_next_under_200ms_p95",
+    "tests/next/test_compass_next.py::TestNextLatency::test_next_latency_relative_to_reference",
     "tests/test_statusline.py::test_the_shim_is_fast_enough",
 }
 

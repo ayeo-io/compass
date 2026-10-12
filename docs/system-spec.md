@@ -3634,4 +3634,4 @@
 
 ### next-latency-budget (completed 2026-10-12)
 
-- `NLB-1` Given a runner of any speed, when compass next costs more than 2.0 times a reference command, then the latency test fails and prints the figures
+- `NLB-1` Given a runner of any speed, when compass next costs at least 1.8 times a reference command, then the latency test fails and prints the figures

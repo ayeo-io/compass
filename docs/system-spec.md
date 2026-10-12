@@ -3632,6 +3632,14 @@
 - `ASW-32` A decision recorded after the define checkpoint waits at the next checkpoint
 - `ASW-33` retro reports how agent decisions were settled
 
+### next-latency-budget (completed 2026-10-12)
+
+- `NLB-1` Given a runner of any speed, when compass next costs at least 1.8 times a reference command, then the latency test fails and prints the figures
+
+### compass-yml-owner (completed 2026-10-12)
+
+- `OWN-1` This repository's compass.yml names jed72 as its owner, and the framework test allows owner while still forbidding waivers, unlocks, capabilities and approvers
+
 ### documents-carry-judgement (completed 2026-10-12)
 
 - `DCJ-1` compass issue render rewrites every block in every registered document from the records
@@ -3733,11 +3741,6 @@
 - `DCJ-97` A hand-written verification note without a block gets the block at finish
 - `DCJ-98` Migration does not edit a verification report outside the documents folder
 - `DCJ-99` Quick-fix finish refuses a note path that leaves the documents folder
-
-### next-latency-budget (completed 2026-10-12)
-
-- `NLB-1` Given a runner of any speed, when compass next costs at least 1.8 times a reference command, then the latency test fails and prints the figures
-
-### compass-yml-owner (completed 2026-10-12)
-
-- `OWN-1` This repository's compass.yml names jed72 as its owner, and the framework test allows owner while still forbidding waivers, unlocks, capabilities and approvers
+- `DCJ-100` A landed_by slug that leaves the work root is not followed
+- `DCJ-101` Render --all plans from each issue's own manifest, not the parse cache
+- `DCJ-102` Every serial-marked test is listed in SERIAL_TESTS

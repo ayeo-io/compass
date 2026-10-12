@@ -3726,3 +3726,10 @@
 - `DCJ-90` The lazy check entry for rendered-blocks-current still goes red when the check is broken
 - `DCJ-91` compass next loads no rendered-blocks module
 - `DCJ-92` The entry point stays thin while it loads the render only for a trigger
+- `DCJ-93` An issue with no verification report is blocked by an inbound outstanding follow-up
+- `DCJ-94` A judged check's evidence input keeps a full-byte digest
+- `DCJ-95` Migration does not write a verification note outside the documents folder
+- `DCJ-96` A record change on a hotfix renders the issue it repairs
+- `DCJ-97` A hand-written verification note without a block gets the block at finish
+- `DCJ-98` Migration does not edit a verification report outside the documents folder
+- `DCJ-99` Quick-fix finish refuses a note path that leaves the documents folder

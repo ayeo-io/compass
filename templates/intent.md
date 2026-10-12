@@ -1,7 +1,5 @@
 <!--
 TEMPLATE: intent.md
-Produced by: the product owner / manager via `/compass:intent`.
-Lives at:    docs/compass/<created>-<issue-slug>/intent.md
 Role in the pipeline: the intent artifact. It sits UPSTREAM of the spec -
 the BDD scenarios in acceptance-criteria.md are checked back against this intent
 for intent fidelity before plan (the product-owner role_rule in

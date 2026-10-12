@@ -1,7 +1,5 @@
 <!--
 TEMPLATE: technical-design.md
-Produced by: the plan stage (`/compass:plan`); owning agent `planner`.
-Lives at:    docs/compass/<created>-<issue-slug>/technical-design.md
 Role in the pipeline: the technical plan. Records the approach, the design
 decisions as ADR-style notes, the governance check against all of
 governance/, and the independent work units. On a quick fix or hotfix, the plan stage
@@ -29,12 +27,13 @@ Fill every {{PLACEHOLDER}} in the sections you keep.
 
 # Plan - {{ISSUE_SLUG}}
 
-> **Stage:** plan · **Date:** {{DATE}} · **Owning agent:** planner
+> **Date:** {{DATE}}
 > **Plan weight (from delivery-approach.md):** {{real technical-design.md \| technical-design.md + distribution-map.md}}
 
 ---
 
 ## 0. Summary
+<!-- compass:optional -->
 
 <!-- OPTIONAL, and the one most often worth keeping. Include when a reader
      who did not write this plan needs to know what it delivers before
@@ -67,6 +66,7 @@ does.}}
 ---
 
 ## 2. Interaction - sequence diagram
+<!-- compass:optional -->
 
 <!-- OPTIONAL. Include when the change touches two or more collaborating
      components and the order of their exchanges matters. Omit for a change
@@ -93,6 +93,7 @@ the failure path, or the step where ordering constrains the design.}}
 ---
 
 ## 3. Structure - what talks to what
+<!-- compass:optional -->
 
 <!-- OPTIONAL. Include when introducing new components, changing the
      relationships between existing ones, or spelling out a module or class
@@ -118,6 +119,7 @@ classDiagram
 ---
 
 ## 4. Design patterns invoked
+<!-- compass:optional -->
 
 <!-- OPTIONAL, and the easiest optional section to misuse. Include ONLY when a
      real, named pattern is being applied - a GoF pattern, a DDD
@@ -140,6 +142,7 @@ classDiagram
 ---
 
 ## 5. The shape of the change
+<!-- compass:optional -->
 
 <!-- OPTIONAL. Include when the shape of an interface, a type, or an API is
      itself a design decision a reviewer should be able to argue with before
@@ -159,6 +162,7 @@ classDiagram
 ---
 
 ## 5a. Cross-cutting concerns
+<!-- compass:optional -->
 
 <!-- OPTIONAL. Include when the change touches security, privacy, or the
      ability to see what it is doing in production - and say which. Design

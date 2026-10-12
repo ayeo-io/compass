@@ -1,7 +1,5 @@
 <!--
 TEMPLATE: spike-conclusion.md
-Produced by: the person who ran the spike, at its end.
-Lives at:    docs/compass/<created>-<issue-slug>/spike-conclusion.md
 
 Fill every {{PLACEHOLDER}}.
 -->

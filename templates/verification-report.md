@@ -1,9 +1,5 @@
 <!--
 TEMPLATE: verification-report.md
-Produced by: the verify stage (`/compass:verify`); owning role QA, agents
-             `verifier` (runs the suites) and `reviewer` (applies the
-             review dimensions).
-Lives at:    docs/compass/<created>-<issue-slug>/verification-report.md
 Role in the pipeline: the Verify output. Proves the work with EVIDENCE -
 recorded command output and artifacts a reader can open, never assertion. "It works" is not a
 gate-passing statement on any delivery approach. The delivery approach's gate set and review
@@ -16,7 +12,7 @@ evidence block is an automatic fail.
 
 # Verification Report - {{ISSUE_SLUG}}
 
-> **Stage:** verify · **Date:** {{DATE}} · **Owning role:** QA
+> **Date:** {{DATE}}
 > **Agents:** `verifier`, `reviewer`{{, `product-marketer` if the claims dimension applies}}
 > **Approach (from delivery-approach.md):** {{reference shape}} · **Gate count:** {{1 \| 2 \| all}}
 > **Orchestration:** {{solo \| pair \| multiagent orchestration - verifies per subtask, then combined}}

@@ -729,3 +729,189 @@ A recorded departure from a parent's value, with a reason and an approver.
 The fixed semantic lifecycle Compass owns: backlog, ready, in-progress, in-review, done. Gates attach to the transitions; transitions are earned (evidence), not dragged. A person sets only backlog (a hold) and done (closed, with a close reason); Compass derives the other states from the issue's records. Board columns are a user-defined projection - every custom column maps to exactly one state.
 
 **Related:** `quality-gate`, `board-column`, `blocked`, `close-reason`
+
+## Document kinds
+
+The kinds of document a process writes, from the artifacts catalogue of the
+shipped default. Each entry gives who reads the document, the name the
+industry uses for it, and where it lives.
+
+### `acceptance-criteria`
+
+Every role reads it to agree the behaviour that will be built, and the builder turns each scenario into a test.
+
+**Traditional name:** requirements
+
+**Stage:** `define` · **Owner:** spec-author
+
+**Home:** `docs/compass/<created>-<issue-slug>/acceptance-criteria.md`
+
+### `architecture-notes`
+
+The spec author and the planner read it to keep the design inside the system's invariants.
+
+**Traditional name:** architecture-review
+
+**Stage:** `define` · **Owner:** architect
+
+**Home:** `docs/compass/<created>-<issue-slug>/architecture-notes.md`
+
+### `bug-report`
+
+The assessor and the builder read it to reproduce the defect and size the fix.
+
+**Traditional name:** bug-report
+
+**Stage:** `assess` · **Owner:** spec-author
+
+**Home:** `docs/compass/<created>-<issue-slug>/bug-report.md`
+
+### `delivery-approach`
+
+Anyone joining the issue reads it to see how much process the work gets and why.
+
+**Traditional name:** project-plan
+
+**Stage:** `assess` · **Owner:** router
+
+**Home:** `docs/compass/<created>-<issue-slug>/delivery-approach.md`
+
+### `distribution-map`
+
+The orchestrator reads it to decide how many worktrees to start and which scenarios each one owns.
+
+**Traditional name:** work-breakdown
+
+**Stage:** `breakdown` · **Owner:** planner
+
+**Home:** `docs/compass/<created>-<issue-slug>/distribution-map.md`
+
+### `intent`
+
+The product owner and the spec author read it to agree which problem is solved and which outcome counts as success.
+
+**Traditional name:** prd
+
+**Stage:** `assess` · **Owner:** product-owner
+
+**Home:** `docs/compass/<created>-<issue-slug>/intent.md`
+
+### `launch-readiness`
+
+The marketer and the person who ships read it to decide whether every public claim is backed by a passing scenario.
+
+**Traditional name:** release-readiness-review
+
+**Stage:** `verify` · **Owner:** product-marketer
+
+**Home:** `docs/compass/<created>-<issue-slug>/launch-readiness.md`
+
+### `positioning`
+
+The marketer and the reviewer of claims read it to keep every public message tied to a scenario.
+
+**Traditional name:** positioning-statement
+
+**Stage:** `define` · **Owner:** product-marketer
+
+**Home:** `docs/compass/<created>-<issue-slug>/positioning.md`
+
+### `product-owner-review`
+
+The planner reads it to confirm the design still delivers the intent before implementation starts.
+
+**Traditional name:** stakeholder-review
+
+**Stage:** `plan` · **Owner:** product-owner
+
+**Home:** `docs/compass/<created>-<issue-slug>/product-owner-review.md`
+
+### `requirements-review`
+
+The planner and the person who asked read it to confirm every open question is settled before design starts.
+
+**Traditional name:** requirements-review
+
+**Stage:** `refine` · **Owner:** spec-author
+
+**Home:** `docs/compass/<created>-<issue-slug>/requirements-review.md`
+
+### `review`
+
+The builder and the person who ships read each round to decide what must change before the work passes.
+
+**Traditional name:** review-record
+
+**Stage:** `verify` · **Owner:** reviewer
+
+**Home:** `docs/compass/<created>-<issue-slug>/review-<n>.md`
+
+### `rollback-plan`
+
+The person who runs a release reads it to know how to undo the change and whether that was rehearsed.
+
+**Traditional name:** rollback-plan
+
+**Stage:** `plan` · **Owner:** planner
+
+**Home:** `docs/compass/<created>-<issue-slug>/rollback-plan.md`
+
+### `spike-conclusion`
+
+The person who decides reads it to discard, graduate or defer the spike.
+
+**Traditional name:** spike-report
+
+**Stage:** `verify` · **Owner:** builder
+
+**Home:** `docs/compass/<created>-<issue-slug>/spike-conclusion.md`
+
+### `technical-design`
+
+A reviewer reads it to challenge the design before code is written.
+
+**Traditional name:** hld
+
+**Stage:** `plan` · **Owner:** planner
+
+**Home:** `docs/compass/<created>-<issue-slug>/technical-design.md`
+
+### `threat-model`
+
+A security reviewer reads it to judge whether the risks to data and access are handled before the change lands.
+
+**Traditional name:** threat-model
+
+**Stage:** `plan` · **Owner:** planner
+
+**Home:** `docs/compass/<created>-<issue-slug>/threat-model.md`
+
+### `ui-contract`
+
+The builder and the spec author read it to build the screens and states the designer specified.
+
+**Traditional name:** ui-specification
+
+**Stage:** `define` · **Owner:** designer
+
+**Home:** `docs/compass/<created>-<issue-slug>/ui-contract.md`
+
+### `verification-note`
+
+The person who ships a quick fix reads it to see the scenario, its test and the gates on one screen.
+
+**Traditional name:** test-summary
+
+**Stage:** `verify` · **Owner:** verifier
+
+**Home:** `docs/compass/<created>-<issue-slug>/verification-note.md`
+
+### `verification-report`
+
+The person who ships reads it to decide whether the evidence supports landing the change.
+
+**Traditional name:** test-report
+
+**Stage:** `verify` · **Owner:** verifier
+
+**Home:** `docs/compass/<created>-<issue-slug>/verification-report.md`

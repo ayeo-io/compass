@@ -1,9 +1,5 @@
 <!--
 TEMPLATE: distribution-map.md
-Produced by: the plan stage (`/compass:plan`) on pair/multiagent-capable work;
-             consumed by breakdown (`/compass:breakdown`) and the
-             `orchestrator` agent.
-Lives at:    docs/compass/<created>-<issue-slug>/distribution-map.md
 Role in the pipeline: the record of what could run in parallel and why.
 The plan stage produces it; `scripts/multiagent.sh` reads it to create
 worktrees. Full-approach scale work writes this file even if a cap pins it
@@ -19,7 +15,7 @@ Fill every {{PLACEHOLDER}}.
 
 # Distribution Map - {{ISSUE_SLUG}}
 
-> **Stage:** plan · **Date:** {{DATE}} · **Reads from:** technical-design.md §4, acceptance-criteria.md
+> **Date:** {{DATE}} · **Reads from:** technical-design.md §4, acceptance-criteria.md
 > **Consumed by:** breakdown, `scripts/multiagent.sh`, the `orchestrator` agent
 
 ---

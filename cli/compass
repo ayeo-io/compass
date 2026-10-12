@@ -376,8 +376,9 @@ def build_parser():
     ptap.add_argument("kind", help="document kind, e.g. delivery-approach"); issue_arg(ptap); ptap.set_defaults(func=cmd_issue_artifact_path, output_kind="hand-off")
     pttg = pts.add_parser("template", help="document templates")
     ptt = pttg.add_subparsers(dest="template_cmd", required=True).add_parser(
-        "show", help="print a document template with its checklists rendered from the issue's stage lists")
-    ptt.add_argument("kind", help="template kind, e.g. requirements-review or verification-report")
+        "show", help="print the skeleton of a document kind from the catalogue, or a template that is not a kind as the file")
+    ptt.add_argument("kind", help="document kind or template name, e.g. requirements-review or verification-report")
+    ptt.add_argument("--depth", help="the depth to print, lightweight or thorough; default is the depth the issue registers the kind at, else thorough")
     issue_arg(ptt)
     from compass_pkg.template_lists import cmd_issue_template as _cmd_issue_template
     ptt.set_defaults(func=_cmd_issue_template, output_kind="hand-off")
@@ -625,6 +626,7 @@ def build_parser():
     p_gloss.add_argument("--internal", action="store_true", help=argparse.SUPPRESS)
     p_gloss.add_argument("--out", help=argparse.SUPPRESS)
     p_gloss.add_argument("--root", help=argparse.SUPPRESS)
+    p_gloss.add_argument("--catalogue-out", help=argparse.SUPPRESS)
     p_gloss.set_defaults(func=cmd_derive_glossary, output_kind="report")
 
     # Private entry point for the archive migration core that `compass

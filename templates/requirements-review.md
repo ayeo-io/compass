@@ -1,7 +1,5 @@
 <!--
 TEMPLATE: requirements-review.md
-Produced by: the requirements-review stage (`/compass:refine`).
-Lives at:    docs/compass/<created>-<issue-slug>/requirements-review.md
 Role in the pipeline: the ambiguity ledger. The review QAs the criteria
 against themselves and against governance; every ambiguity found, every
 question asked, and every resolution is recorded here. Collapsed on a
@@ -19,7 +17,7 @@ resolution → who decided → what it changed.
 
 # Requirements review - {{ISSUE_SLUG}}
 
-> **Stage:** refine · **Date:** {{DATE}} · **Owning agent:** spec-author
+> **Date:** {{DATE}}
 > **Requirements review weight (from delivery-approach.md):** {{lightweight pass \| thorough pass}}
 
 ---
@@ -70,6 +68,7 @@ resolution → who decided → what it changed.
 ---
 
 ## Worked example
+<!-- compass:optional -->
 
 A decision recorded in the target register, not as a label stack - see
 `skills/compass-runtime/writing-voice-worked-example.md` for a full

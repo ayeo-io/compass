@@ -61,3 +61,37 @@ def entry(view, kind):
             if field not in found and field in default:
                 found[field] = copy.deepcopy(default[field])
     return found
+
+
+def catalogue(view):
+    """Every kind `view`'s configuration declares, as `{kind: entry}` with each
+    entry read by `entry`. With no configuration to read (a project on copied
+    5.x governance, or no project), the shipped default's catalogue."""
+    config = getattr(view, "config", None) if view is not None else None
+    declared = config.get("artifacts") if isinstance(config, dict) else None
+    if not isinstance(declared, dict):
+        return copy.deepcopy(shipped())
+    return {kind: entry(view, kind) for kind in declared
+            if isinstance(declared[kind], dict)}
+
+
+def _flat(text):
+    return " ".join(str(text).split())
+
+
+def rows(artifacts):
+    """One row per kind of `artifacts`, in its order, for the documents that
+    list the catalogue. `sections` is `{depth: [headings]}`; the other fields
+    are the catalogue's own text, on one line."""
+    found = []
+    for kind, body in (artifacts or {}).items():
+        if not isinstance(body, dict):
+            continue
+        found.append({
+            "kind": kind, "file": _flat(body.get("file", "")),
+            "stage": _flat(body.get("stage", "")), "owner": _flat(body.get("owner", "")),
+            "stands_for": _flat(body.get("stands_for", "")),
+            "audience": _flat(body.get("audience", "")),
+            "sections": {depth: [str(h) for h in (listed or [])]
+                         for depth, listed in (body.get("sections") or {}).items()}})
+    return found

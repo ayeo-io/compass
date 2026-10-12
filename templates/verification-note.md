@@ -1,7 +1,5 @@
 <!--
 TEMPLATE: verification-note.md
-Produced by: `compass quick-fix finish`, once the three gates have passed.
-Lives at:    docs/compass/<created>-<issue-slug>/verification-note.md
 
 One screen for a reader: the scenario, its test, the red and green records, each gate
 with its status, the files changed and the release line when the manifest records one.

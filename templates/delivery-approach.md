@@ -1,9 +1,5 @@
 <!--
 TEMPLATE: delivery-approach.md
-Produced by: the assess stage (`/compass:assess`).
-Lives at:    docs/compass/<created>-<issue-slug>/delivery-approach.md on a quick fix
-             (registered); .compass/work/<issue-slug>/delivery-approach.md on
-             any other approach, where the pre-tool hook looks for it.
 Authority:   This is the audit centrepiece. It records the assessment, the
              delivery approach the policy computed, every policy rule that
              fired, and, as its own section, what was skipped and why it is safe.

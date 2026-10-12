@@ -272,6 +272,12 @@ def test_acf_3(tmp_path):
     assert not [line for line in lines if "verification-note" in line], lines
     # A good kind beside them draws nothing.
     assert not [line for line in lines if "artifacts.test-charter" in line]
+    # The note prints its header and its one block marker, and no heading.
+    code, out, err = _cli(_scratch(tmp_path / "plain"), "issue", "template", "show",
+                          "verification-note", "--depth", "lightweight")
+    assert code == 0, err
+    assert "**Audience:**" in out and "<!-- compass:render verification-note -->" in out
+    assert "\n## " not in out and not out.startswith("## ")
 
 
 def test_acf_4(tmp_path):
@@ -435,3 +441,353 @@ def test_acf_33(tmp_path):
     lines = out.splitlines()
     assert lines.count("adds artifact kind test-charter") == 1, lines
     assert not [l for l in lines if l.startswith("classification:") and "test-charter" in l]
+
+
+# --- group B: the skeleton, the templates and the generated documents --------------
+
+PRESET = ROOT / "governance" / "presets" / "default" / "artifacts.yml"
+TEMPLATES = ROOT / "templates"
+OPTIONAL = "<!-- compass:optional -->"
+#: Templates that are not catalogue kinds (ACF-61).
+NOT_KINDS = ("devlog", "incident", "pull-request-body")
+
+
+def _preset():
+    return yaml.safe_load(PRESET.read_text(encoding="utf-8"))["artifacts"]
+
+
+def _canon(heading):
+    """A heading with each `{{...}}` token of a template and each `<...>` token
+    of the catalogue read as one placeholder (ACF-8)."""
+    import re
+    return re.sub(r"\{\{.*?\}\}|<[^<>]*>", "<>", heading).strip()
+
+
+def _template_headings(text):
+    """`(heading, optional)` for each `## ` heading of a template, outside code
+    fences. A heading is optional when the line under it is the marker."""
+    lines = text.splitlines()
+    found, fence = [], False
+    for n, line in enumerate(lines):
+        if line.startswith("```"):
+            fence = not fence
+        elif not fence and line.startswith("## "):
+            under = lines[n + 1].strip() if n + 1 < len(lines) else ""
+            found.append((line[3:].strip(), under == OPTIONAL))
+    return found
+
+
+def _heading_problems(templates, catalogue):
+    """What is wrong between each catalogue kind's template and its sections,
+    one line per fault. Written here, not in the product, so a fault in the
+    skeleton builder cannot change what the test expects."""
+    problems = []
+    for kind, entry in sorted(catalogue.items()):
+        path = Path(templates) / f"{kind}.md"
+        if not path.is_file():
+            problems.append(f"{kind}: no template")
+            continue
+        heads = _template_headings(path.read_text(encoding="utf-8"))
+        required = [h for h, optional in heads if not optional]
+        sections = entry["sections"]
+        marked = {_canon(h) for h, optional in heads if optional}
+        for depth, listed in sorted(sections.items()):
+            for heading in listed:
+                if _canon(heading) in marked:
+                    problems.append(f"{kind} {depth}: {heading!r} is optional and listed")
+        thorough = sections.get("thorough")
+        if thorough is not None:
+            want = [_canon(h) for h in thorough]
+            have = [_canon(h) for h in required]
+            for h in have:
+                if h not in want:
+                    problems.append(f"{kind} thorough: extra heading {h!r}")
+            for h in want:
+                if h not in have:
+                    problems.append(f"{kind} thorough: missing heading {h!r}")
+            if not [p for p in problems if p.startswith(f"{kind} thorough")] and want != have:
+                problems.append(f"{kind} thorough: headings out of order {have!r}")
+        if "lightweight" in sections and thorough is not None:
+            light = [_canon(h) for h in sections["lightweight"]]
+            rest = iter(_canon(h) for h in thorough)
+            if not all(h in rest for h in light):
+                problems.append(f"{kind} lightweight: not an ordered subset of thorough")
+    return problems
+
+
+def _headings_of(output):
+    return [line[3:].strip() for line in output.splitlines() if line.startswith("## ")]
+
+
+def _issue_dir(root, slug="a-slug", created="2026-10-12", registered=()):
+    """A bare issue with the given `(kind, depth)` entries in its registry."""
+    manifest = {"schema_version": "3.0", "issue": slug, "created": created,
+                "delivery_approach": "regular",
+                "artifacts": [{"id": f"ART-{k.upper()}", "kind": k, "status": "draft",
+                               "depth": d} for k, d in registered]}
+    _write(root / ".compass" / "work" / slug / "manifest.yml", yaml.safe_dump(manifest))
+    return slug
+
+
+def _template_show(root, *argv):
+    return _cli(root, "issue", "template", "show", *argv)
+
+
+def test_acf_6(tmp_path):
+    root = _scratch(tmp_path)
+    entry = _preset()["technical-design"]
+    text = (TEMPLATES / "technical-design.md").read_text(encoding="utf-8")
+    code, light, err = _template_show(root, "technical-design", "--depth", "lightweight")
+    assert code == 0, err
+    head = light.split("\n## ", 1)[0]
+    assert entry["audience"] in head
+    assert "plan" in head and "planner" in head
+    assert "docs/compass/<created>-<issue-slug>/technical-design.md" in head
+    assert [_canon(h) for h in _headings_of(light)] == [
+        _canon(h) for h in entry["sections"]["lightweight"]]
+    assert "(optional)" not in light
+    # The template's prose sits under its heading.
+    assert "## 1. Approach" in light and "{{APPROACH}}" in light.split("## 1. Approach", 1)[1]
+    assert "{{APPROACH}}" in text
+    code, thorough, err = _template_show(root, "technical-design", "--depth", "thorough")
+    assert code == 0, err
+    labelled = [h for h in _headings_of(thorough) if h.endswith("(optional)")]
+    assert [_canon(h) for h in _headings_of(thorough) if not h.endswith("(optional)")] == [
+        _canon(h) for h in entry["sections"]["thorough"]]
+    assert len(labelled) == 6, labelled
+    # --json keeps its shape and gains the depth.
+    code, out, err = _template_show(root, "technical-design", "--depth", "lightweight", "--json")
+    assert code == 0, err
+    body = json.loads(out)
+    assert body["depth"] == "lightweight" and body["kind"] == "technical-design"
+    assert body["text"] == light
+    # With --issue the home names the issue's folder.
+    slug = _issue_dir(root, registered=[("technical-design", "lightweight")])
+    code, issue, err = _template_show(root, "technical-design", "--issue", slug)
+    assert code == 0, err
+    assert "docs/compass/2026-10-12-a-slug/technical-design.md" in issue
+    # No --depth: the depth the issue registers the kind at, else thorough.
+    assert [_canon(h) for h in _headings_of(issue)] == [
+        _canon(h) for h in entry["sections"]["lightweight"]]
+    code, none, err = _template_show(_scratch(tmp_path / "plain"), "technical-design")
+    assert code == 0, err
+    assert none == thorough
+
+
+def test_acf_7():
+    stale = []
+    for kind in _preset():
+        text = (TEMPLATES / f"{kind}.md").read_text(encoding="utf-8")
+        for line in text.splitlines():
+            if line.startswith("Produced by:") or line.startswith("Lives at:"):
+                stale.append(f"templates/{kind}.md: {line[:50]}")
+    assert not stale, stale
+
+
+def test_acf_8(tmp_path):
+    catalogue = _preset()
+    assert _heading_problems(TEMPLATES, catalogue) == []
+    copy = tmp_path / "templates"
+    shutil.copytree(TEMPLATES, copy)
+    report = copy / "verification-report.md"
+    original = report.read_text(encoding="utf-8")
+    report.write_text(original.replace("## Gate\n", "## Gate\n\n## An extra heading\n", 1),
+                      encoding="utf-8")
+    found = _heading_problems(copy, catalogue)
+    assert any("verification-report thorough" in p and "An extra heading" in p
+               for p in found), found
+    report.write_text(original.replace("## 2. Test suite evidence\n", "", 1), encoding="utf-8")
+    found = _heading_problems(copy, catalogue)
+    assert any("verification-report thorough" in p and "2. Test suite evidence" in p
+               for p in found), found
+    lines = original.split("\n")
+    a = lines.index("## 1. Scenario acceptance results")
+    b = lines.index("## 2. Test suite evidence")
+    lines[a], lines[b] = lines[b], lines[a]
+    report.write_text("\n".join(lines), encoding="utf-8")
+    found = _heading_problems(copy, catalogue)
+    assert any("verification-report thorough" in p and "out of order" in p
+               for p in found), found
+
+
+def test_acf_60(tmp_path):
+    from compass_pkg import artifact_kinds  # noqa: F401 - the module exists after U1
+
+    catalogue = _preset()
+    text = (TEMPLATES / "technical-design.md").read_text(encoding="utf-8")
+    heads = _template_headings(text)
+    optional = [h for h, marked in heads if marked]
+    assert [h.split(".")[0].split(" ")[0] for h in optional] == ["0", "2", "3", "4", "5", "5a"]
+    assert [h for h, marked in heads if not marked] == catalogue["technical-design"][
+        "sections"]["thorough"]
+    assert [h for h, marked in _template_headings(
+        (TEMPLATES / "requirements-review.md").read_text(encoding="utf-8")) if marked] == [
+        "Worked example"]
+    assert [_canon(h) for h, marked in _template_headings(
+        (TEMPLATES / "acceptance-criteria.md").read_text(encoding="utf-8")) if marked] == [
+        "Scenario group B - <>"]
+    # Every lightweight list is an ordered subset of the thorough list.
+    assert _heading_problems(TEMPLATES, catalogue) == []
+    root = _scratch(tmp_path)
+    code, thorough, err = _template_show(root, "technical-design", "--depth", "thorough")
+    assert code == 0, err
+    assert _headings_of(thorough) == [h + " (optional)" if marked else h
+                                      for h, marked in heads]
+    code, light, err = _template_show(root, "technical-design", "--depth", "lightweight")
+    assert code == 0, err
+    assert not [h for h in optional if h in _headings_of(light)]
+    # A marked heading that is also listed fails the test.
+    copy = tmp_path / "templates"
+    shutil.copytree(TEMPLATES, copy)
+    path = copy / "technical-design.md"
+    path.write_text(text.replace("## 1. Approach\n", "## 1. Approach\n" + OPTIONAL + "\n", 1),
+                    encoding="utf-8")
+    found = _heading_problems(copy, catalogue)
+    assert any("technical-design" in p and "1. Approach" in p and "optional and listed" in p
+               for p in found), found
+
+
+def test_acf_9(tmp_path):
+    root = _scratch(tmp_path)
+    code, out, err = _template_show(root, "charter", "--depth", "thorough")
+    assert code == 2, out + err
+    assert "charter" in err
+    for name in ("intent", "technical-design", "review", "devlog", "incident",
+                 "pull-request-body"):
+        assert name in err, name
+    code, out, err = _template_show(root, "intent", "--depth", "medium")
+    assert code == 2, out + err
+    assert "medium" in err and "thorough" in err
+
+
+def _skeleton_problems(kind, depth, output, catalogue, template_text):
+    """Why `output` is not the skeleton of `kind` at `depth`, from the catalogue
+    file and the template file alone."""
+    problems = []
+    entry = catalogue[kind]
+    sections = entry["sections"][depth]
+    head = output.split("\n## ", 1)[0]
+    for field in ("audience", "stage", "owner", "stands_for"):
+        if str(entry[field]) not in head:
+            problems.append(f"{kind} {depth}: header lacks {field}")
+    if f"docs/compass/<created>-<issue-slug>/{entry['file']}" not in head:
+        problems.append(f"{kind} {depth}: header lacks the home")
+    plain = [_canon(h) for h in _headings_of(output) if not h.endswith("(optional)")]
+    if plain != [_canon(h) for h in sections]:
+        problems.append(f"{kind} {depth}: headings {plain!r} are not {sections!r}")
+    labelled = [_canon(h[:-len(" (optional)")]) for h in _headings_of(output)
+                if h.endswith("(optional)")]
+    marked = [_canon(h) for h, optional in _template_headings(template_text) if optional]
+    if labelled != (marked if depth == "thorough" else []):
+        problems.append(f"{kind} {depth}: optional headings {labelled!r}")
+    return problems
+
+
+def test_acf_10(tmp_path):
+    root = _scratch(tmp_path)
+    catalogue = _preset()
+    assert len(catalogue) == 18
+    outputs = {}
+    for kind, entry in sorted(catalogue.items()):
+        template_text = (TEMPLATES / f"{kind}.md").read_text(encoding="utf-8")
+        for depth in sorted(entry["sections"]):
+            code, out, err = _template_show(root, kind, "--depth", depth)
+            assert code == 0, (kind, depth, err)
+            outputs[kind, depth] = out
+            assert _skeleton_problems(kind, depth, out, catalogue, template_text) == [], (
+                kind, depth)
+    # The check reports a skeleton builder that drops the last lightweight
+    # heading, and one that prints the thorough headings for lightweight.
+    text = (TEMPLATES / "technical-design.md").read_text(encoding="utf-8")
+    dropped = outputs["technical-design", "lightweight"].rsplit("\n## Gate", 1)[0] + "\n"
+    found = _skeleton_problems("technical-design", "lightweight", dropped, catalogue, text)
+    assert found and "technical-design lightweight" in found[0], found
+    found = _skeleton_problems("technical-design", "lightweight",
+                               outputs["technical-design", "thorough"], catalogue, text)
+    assert found and "technical-design lightweight" in found[0], found
+
+
+def test_acf_11(tmp_path):
+    root = _scratch(tmp_path, {"schema": 1, "artifacts": {"test-charter": _charter()}})
+    assert not (TEMPLATES / "test-charter.md").exists()
+    code, out, err = _template_show(root, "test-charter", "--depth", "thorough")
+    assert code == 0, err
+    assert _charter()["audience"] in out
+    assert _headings_of(out) == ["Mission", "Areas"]
+    # No prose sits under the headings: the next line after one is a heading
+    # or the end.
+    body = out.split("## Mission", 1)[1]
+    assert body.replace("## Areas", "").strip() == ""
+
+
+def test_acf_61(tmp_path):
+    root = _scratch(tmp_path)
+    for name in NOT_KINDS:
+        code, out, err = _template_show(root, name)
+        assert code == 0, err
+        assert out == (TEMPLATES / f"{name}.md").read_text(encoding="utf-8"), name
+        assert "**Audience:**" not in out
+    code, out, err = _template_show(root, "devlog", "--depth", "thorough")
+    assert code == 2, out + err
+    assert "devlog" in err and "not a catalogue kind" in err and "no sections" in err
+    # The heading test does not read them.
+    assert not [p for p in _heading_problems(TEMPLATES, _preset()) if "devlog" in p]
+
+
+def _derive(root, tmp_path, name):
+    out = tmp_path / name
+    code, text, err = _cli(root, "_derive-glossary", "--internal", "--root", str(root),
+                           "--out", str(out / "glossary.md"),
+                           "--catalogue-out", str(out / "artifact-catalogue.md"))
+    assert code == 0, text + err
+    return (out / "glossary.md").read_text(encoding="utf-8"), (
+        out / "artifact-catalogue.md").read_text(encoding="utf-8")
+
+
+def _mini_root(tmp_path):
+    """A copy of the files the generator reads and the two it writes."""
+    mini = tmp_path / "mini"
+    for rel in ("governance/terminology.yml", "governance/presets/default/artifacts.yml",
+                "docs/glossary.md", "docs/artifact-catalogue.md"):
+        _write(mini / rel, (ROOT / rel).read_text(encoding="utf-8"))
+    (mini / ".compass").mkdir()
+    return mini
+
+
+def test_acf_5(tmp_path):
+    mini = _mini_root(tmp_path)
+    glossary, doc = _derive(mini, tmp_path, "fresh")
+    # The committed files equal a fresh generation.
+    assert glossary == (ROOT / "docs" / "glossary.md").read_text(encoding="utf-8")
+    assert doc == (ROOT / "docs" / "artifact-catalogue.md").read_text(encoding="utf-8")
+    for kind, entry in _preset().items():
+        for text in (glossary, doc):
+            assert kind in text, kind
+            assert " ".join(entry["audience"].split()) in " ".join(text.split()), kind
+            assert entry["stands_for"] in text, kind
+    owning = (ROOT / "docs" / "README.md").read_text(encoding="utf-8").split(
+        "## Owning docs", 1)[1]
+    row = [r for r in owning.splitlines() if r.startswith("|") and "`docs/artifact-catalogue.md`" in r.split("|")[-2]]
+    assert row and "artifact_kinds.py" in row[0] and "template_lists.py" in row[0]
+    assert not [r for r in owning.splitlines()
+                if "template_lists.py" in r and "entry-exit-evaluation.md" in r]
+    # A kind added to the catalogue without regenerating makes the committed
+    # files stale.
+    path = mini / "governance" / "presets" / "default" / "artifacts.yml"
+    path.write_text(path.read_text(encoding="utf-8") + (
+        "  test-charter:\n    file: test-charter.md\n    stage: plan\n    owner: planner\n"
+        "    audience: A tester reads it to plan the session.\n    stands_for: test-charter\n"
+        "    sections:\n      thorough:\n      - Mission\n    depends_on: []\n"),
+        encoding="utf-8")
+    added_glossary, added_doc = _derive(mini, tmp_path, "added")
+    assert "test-charter" in added_glossary and "test-charter" in added_doc
+    assert added_glossary != glossary and added_doc != doc
+    # A hand edit of a generated entry no longer equals a fresh generation.
+    audience = " ".join(_preset()["intent"]["audience"].split())
+    for fresh in (glossary, doc):
+        edited = fresh.replace(audience, "Edited by hand.")
+        assert edited != fresh
+    # The glossary meaning-only test passes on what was generated.
+    from test_glossary_meaning_only import meaning_only_problems
+    assert meaning_only_problems(glossary) == [] and meaning_only_problems(doc) == []
+

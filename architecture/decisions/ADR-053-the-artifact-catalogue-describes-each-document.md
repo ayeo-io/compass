@@ -61,8 +61,15 @@ entry and the readers of the registry draw on.
 - The legacy adapter now reads the shipped catalogue from disk.
 
 **Neutral / follow-on:**
-- The skeleton, the generated glossary entries, the conditional-artifact function and the stored-generation
-  fallback for the readers are built in later units of the issue. They finish this record.
+- One function, `artifact_owed.owed()`, answers whether an issue owes a kind whose entry holds
+  `required_when`. `compass check`, `compass next`, the issue page, the board panel and the receipt all
+  ask it, so they agree. The subtask count is the length of the manifest's `subtasks:` list, and an
+  absent list counts as zero. A person's `omitted` record wins over the condition.
+- A registered distribution map signals breakdown only while the map is owed (this reads ADR-045), and a
+  kind whose condition is false is left out of `artifacts-approved` (this reads ADR-050 decision 2).
+  A full issue capped to one worktree with one subtask no longer owes the map.
+- The skeleton, the generated glossary entries and the stored-generation fallback for the readers are
+  built in later units of the issue. They finish this record.
 
 ## References
 

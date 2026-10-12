@@ -22,7 +22,7 @@ them. A kind in `rendered_blocks.KINDS` with no entry in `RENDERERS` is left as 
 # rendered_blocks, issue_page, project_index.
 from __future__ import annotations
 
-from compass_pkg import item_records
+from compass_pkg import artifact_owed, item_records
 from compass_pkg import rendered_blocks as rb
 from compass_pkg.render_inputs import (CROSS, OWN, Part, RenderInputs, code as _code,  # noqa: F401
                                        gather, link as _link, link_target as _link_target,
@@ -136,7 +136,10 @@ def artifacts(inputs, doc_rel):
         for key, word in (("traditional_name", "traditional name"), ("stands_for", "stands for")):
             if a.get(key):
                 shown += ", %s: %s" % (word, rb.cell(a[key]))
-        status = a.get("status", "?") if written else "not written yet"
+        # A document whose condition is false reads "not needed: ..." from the one function
+        # every reader asks; it is neither missing nor omitted.
+        status = a.get("status", "?") if written else (
+            artifact_owed.not_needed(inputs.task, inputs.get_view(), a) or "not written yet")
         by = a.get("approved_by") if written and a.get("status") == "approved" else None
         lines.append("| %s | %s | %s | %s |" % (
             shown, rb.cell(status), rb.cell(by) if by else "-", rb.cell(a.get("reason") or "")))

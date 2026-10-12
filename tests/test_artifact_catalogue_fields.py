@@ -1043,3 +1043,166 @@ def test_acf_62(tmp_path):
     assert code == 0, out + err
     records = [e for e in _manifest_of(task_dir)["evidence"] if e.get("type") == "spike-conclusion"]
     assert len(records) == 1 and records[0]["next_task"] == "next-issue", records
+
+
+# --- group E: conditional artifacts ------------------------------------------------
+
+def _with_subtasks(task_dir, count):
+    body = _manifest_of(task_dir)
+    if count is None:
+        body.pop("subtasks", None)
+    else:
+        body["subtasks"] = [{"id": f"subtask-{i}", "status": "dispatched"}
+                            for i in range(1, count + 1)]
+    (task_dir / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False),
+                                           encoding="utf-8")
+
+
+def _approve_others(root, task_dir, leave=("distribution-map",)):
+    """Write and approve every other earned document, so the map is the only open one."""
+    for entry in _manifest_of(task_dir)["artifacts"]:
+        if entry["kind"] in leave:
+            continue
+        path = _doc(root, f"{entry['kind']}.md")
+        assert _set(root, entry["kind"], "--status", "approved", "--path", path)[0] == 0
+
+
+def _check_row(root, name="artifacts-approved"):
+    code, out, err = _cli(root, "check", "--issue", SLUG, "--json")
+    return {r["name"]: r for r in json.loads(out)["checks"]}[name]
+
+
+def test_acf_24(tmp_path):
+    root, task_dir = _registry_project(tmp_path)
+    _with_subtasks(task_dir, 1)
+    # Gates still open: the line that says nothing is judged yet names the map as not needed.
+    row = _check_row(root)
+    assert row["status"] == "nothing-to-check", row
+    assert "distribution-map" in row["detail"] and "not needed: one subtask" in row["detail"], row
+    # Every gate passed: the verdict does not fail on the map, and says it is not needed.
+    _pass_every_gate(task_dir)
+    row = _check_row(root)
+    assert row["status"] == "fail" and "distribution-map reads draft" not in row["detail"], row
+    assert "distribution-map: not needed: one subtask" in row["detail"], row
+    _approve_others(root, task_dir)
+    row = _check_row(root)
+    assert row["status"] == "pass", row
+    assert "distribution-map: not needed: one subtask" in row["detail"], row
+
+
+def test_acf_25(tmp_path):
+    root, task_dir = _registry_project(tmp_path)
+    _with_subtasks(task_dir, 2)
+    _pass_every_gate(task_dir)
+    _approve_others(root, task_dir)
+    row = _check_row(root)
+    assert row["status"] == "fail" and "distribution-map reads draft" in row["detail"], row
+    assert "not needed" not in row["detail"], row
+    path = _doc(root, "distribution-map.md")
+    assert _set(root, "distribution-map", "--status", "approved", "--path", path)[0] == 0
+    row = _check_row(root)
+    assert row["status"] == "pass", row
+
+
+def _shown_everywhere(root, task_dir, tmp_path, text):
+    """The issue page, the board panel and the receipt each carry `text` for the map."""
+    code, out, err = _cli(root, "issue", "render", "--issue", SLUG)
+    assert code == 0, out + err
+    page = (root / HOME / "README.md").read_text(encoding="utf-8")
+    page_lines = [line for line in page.splitlines() if "distribution-map" in line]
+    assert len(page_lines) == 1 and text in page_lines[0], page_lines
+    board = tmp_path / "board.html"
+    code, out, err = _cli(root, "flow", "--html", str(board))
+    assert code == 0, out + err
+    html = board.read_text(encoding="utf-8")
+    panel = [line for line in html.splitlines() if "distribution-map" in line]
+    assert len(panel) == 1 and text in panel[0], panel
+    code, out, err = _cli(root, "issue", "receipt", "--issue", SLUG)
+    assert code == 0, out + err
+    receipt = [line for line in out.splitlines() if "distribution-map" in line]
+    assert len(receipt) == 1 and text in receipt[0], receipt
+    return page, html, out
+
+
+def test_acf_26(tmp_path):
+    root, task_dir = _registry_project(tmp_path)
+    _with_subtasks(task_dir, 1)
+    page, html, receipt = _shown_everywhere(root, task_dir, tmp_path, "not needed: one subtask")
+    for text in (page, html, receipt):
+        assert "missing" not in text.lower() or "distribution-map" not in text.lower().split(
+            "missing")[0][-60:], text
+    assert "omitted" not in [ln for ln in page.splitlines() if "distribution-map" in ln][0]
+    # The three drafts that remain are counted; the map is not one of them.
+    assert "3 more still draft" in receipt, receipt
+    # `compass next` does not name the map as outstanding work.
+    code, out, err = _cli(root, "next", "--issue", SLUG)
+    assert "distribution-map" not in out + err, out + err
+    # The one function: the page and the board take the text from `artifact_owed`.
+    from compass_pkg import artifact_owed, effective
+    task = _manifest_of(task_dir)
+    view = effective.view_or_legacy(str(task_dir))
+    verdict = artifact_owed.owed(task, view, "distribution-map")
+    assert (verdict.owed, verdict.text) == (False, "not needed: one subtask")
+    _with_subtasks(task_dir, 2)
+    verdict = artifact_owed.owed(_manifest_of(task_dir), view, "distribution-map")
+    assert (verdict.owed, verdict.text) == (True, None)
+    assert artifact_owed.subtask_count({}) == 0 and artifact_owed.subtask_count(
+        {"subtasks": [{}, {}, {}]}) == 3
+    assert tuple(artifact_owed.CONDITIONS) == tuple(
+        __import__("compass_pkg.catalogue_spec", fromlist=["x"]).REQUIRED_WHEN_CONDITIONS)
+
+
+def test_acf_27(tmp_path):
+    root, task_dir = _registry_project(tmp_path)
+    _with_subtasks(task_dir, 2)
+    code, out, err = _set(root, "distribution-map", "--status", "omitted",
+                          "--reason", "pair worked from the design")
+    assert code == 0, out + err
+    _pass_every_gate(task_dir)
+    _approve_others(root, task_dir)
+    row = _check_row(root)
+    assert row["status"] == "pass", row
+    assert "not needed" not in row["detail"], row
+    code, out, err = _cli(root, "issue", "render", "--issue", SLUG)
+    assert code == 0, out + err
+    page = (root / HOME / "README.md").read_text(encoding="utf-8")
+    line = [ln for ln in page.splitlines() if "distribution-map" in ln]
+    assert len(line) == 1 and "omitted" not in line[0] or "pair worked from the design" in line[0]
+    assert "pair worked from the design" in line[0] and "not needed" not in page, line
+    # One subtask, the same omission: the person's record still shows, with its reason.
+    _with_subtasks(task_dir, 1)
+    row = _check_row(root)
+    assert "not needed" not in row["detail"], row
+    code, out, err = _cli(root, "issue", "render", "--issue", SLUG)
+    page = (root / HOME / "README.md").read_text(encoding="utf-8")
+    line = [ln for ln in page.splitlines() if "distribution-map" in ln]
+    assert "pair worked from the design" in line[0] and "not needed" not in page, line
+
+
+def test_acf_28(tmp_path):
+    root, task_dir = _registry_project(tmp_path)
+    assert "subtasks" not in _manifest_of(task_dir)
+    row = _check_row(root)
+    assert "distribution-map" in row["detail"], row
+    assert "not needed: no subtasks recorded" in row["detail"], row
+    _pass_every_gate(task_dir)
+    _approve_others(root, task_dir)
+    row = _check_row(root)
+    assert row["status"] == "pass" and "not needed: no subtasks recorded" in row["detail"], row
+    # Breakdown records two subtasks: the map is owed.
+    _with_subtasks(task_dir, 2)
+    row = _check_row(root)
+    assert row["status"] == "fail" and "distribution-map reads draft" in row["detail"], row
+    # A full issue capped at one worktree, with one subtask, does not owe it either.
+    other = tmp_path / "full"
+    other.mkdir()
+    root2, task_dir2 = _registry_project(other, goal="delivery")
+    body = _manifest_of(task_dir2)
+    body["delivery_approach"] = "full"
+    (task_dir2 / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False),
+                                            encoding="utf-8")
+    _with_subtasks(task_dir2, 1)
+    _pass_every_gate(task_dir2)
+    row = _check_row(root2)
+    assert "distribution-map reads draft" not in row["detail"], row
+    assert "not needed: one subtask" in row["detail"], row

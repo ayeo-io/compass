@@ -2,16 +2,15 @@
 TEMPLATE: distribution-map.md
 Role in the pipeline: the record of what could run in parallel and why.
 The plan stage produces it; `scripts/multiagent.sh` reads it to create
-worktrees. Full-approach scale work writes this file even if a cap pins it
-solo - the map is the record of what could have been parallel and why it
-wasn't.
+worktrees. It is owed only when the issue records two or more subtasks.
+With one subtask, or none yet, `compass check` reads it as "not needed" and
+no file is asked for.
 
 Independence has two tests, both must hold: disjoint code AND disjoint
 scenario groups (see the worktree-multiagent skill).
 
 Fill every {{PLACEHOLDER}}.
 -->
-<!-- absorbed: "solo - the map is the" -->
 
 # Distribution Map - {{ISSUE_SLUG}}
 

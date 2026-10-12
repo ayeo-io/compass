@@ -210,7 +210,8 @@ def _documents_block(r):
         out.append('<li class="document"><span class="document-kind">%s</span> '
                    '<span class="document-id">%s</span> <span class="document-status">%s</span> '
                    '<code class="document-path">%s</code></li>' % (
-                       _e(name), _e(d.get("id")), _e(d.get("status")), _e(d.get("path") or "-")))
+                       _e(name), _e(d.get("id")), _e(d.get("text") or d.get("status")),
+                       _e(d.get("path") or "-")))
     out.append('</ul></section>')
     return out
 

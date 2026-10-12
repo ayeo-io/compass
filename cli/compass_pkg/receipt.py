@@ -34,7 +34,7 @@ import re as _re
 
 import fnmatch
 import re as _re
-from compass_pkg import status_words
+from compass_pkg import artifact_owed, status_words
 from compass_pkg.core import CompassError, artifact_path, display_shape, find_compass_dir, find_upwards, load_yaml, manifest_path, normalize_spine
 from compass_pkg.render import fired_rule_line
 
@@ -547,21 +547,37 @@ def _receipt_stage_lists(rows):
     return lines
 
 
-def _receipt_documents(task):
+def _receipt_view(task_dir):
+    from compass_pkg import effective
+    try:
+        return effective.view_or_legacy(task_dir)
+    except Exception:  # noqa: BLE001 - a document is owed when no condition can be read
+        return None
+
+
+def _receipt_documents(task, task_dir=None):
     """The "Documents" section: each registered document that has left `draft`,
     with its status and, when it was approved, who approved it and when. A
     person's approval names the person; a stage's names the command that wrote
     it. Documents still in draft are counted on one line, so the receipt stays
     one screen. A round of a kind that repeats (`review-<n>.md`) is listed
     whatever its status, with its entry id and path, so no round is hidden
-    behind the count. No lines when every document is a draft or none is
-    registered."""
+    behind the count. A document whose condition is false and that has no file is
+    listed as "not needed: ...", from `artifact_owed`, and is not a draft. No lines
+    when every document is a draft or none is registered."""
     entries = [a for a in task.get("artifacts") or [] if isinstance(a, dict)]
+    view = _receipt_view(task_dir) if task_dir else None
+    unneeded = [(a, artifact_owed.not_needed(task, view, a)) for a in entries]
+    unneeded = [(a, text) for a, text in unneeded if text]
+    skipped = [a for a, _ in unneeded]
     rounds = [a for a in entries if isinstance(a.get("round"), int)]
-    moved = [a for a in entries if a.get("status") != "draft" and a not in rounds]
-    if not moved and not rounds:
+    moved = [a for a in entries if a.get("status") != "draft" and a not in rounds
+             and a not in skipped]
+    if not moved and not rounds and not unneeded:
         return []
     lines = ["Documents", "---------"]
+    for entry, text in unneeded:
+        lines.append(_receipt_truncate(f"  {str(entry.get('kind', '?')):<22}  {text}"))
     for entry in moved:
         who = entry.get("approved_by") or "-"
         when = entry.get("approved_at") or "-"
@@ -574,7 +590,7 @@ def _receipt_documents(task):
             f"  {str(entry.get('kind', '?')) + ' round ' + str(entry['round']):<14}  "
             f"{str(entry.get('status', '?')):<17}  {str(entry.get('id', '?')):<13} "
             f"{entry.get('path') or '-'}  {who}"))
-    drafts = len(entries) - len(moved) - len(rounds)
+    drafts = len(entries) - len(moved) - len(rounds) - len(skipped)
     if drafts:
         lines.append(f"  {drafts} more still draft")
     return lines
@@ -622,7 +638,7 @@ def cmd_task_receipt(args):
         at = text.rindex(_RECEIPT_RULE)
         text = text[:at] + "\n".join(listed) + "\n\n" + text[at:]
     # The documents, with who approved each and when, go after the stage lists.
-    documents = _receipt_documents(task)
+    documents = _receipt_documents(task, task_dir)
     if documents:
         at = text.rindex(_RECEIPT_RULE)
         text = text[:at] + "\n".join(documents) + "\n\n" + text[at:]

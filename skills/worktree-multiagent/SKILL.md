@@ -30,9 +30,8 @@ The standing cap: **`critical` risk pins `max_worktrees` to 1.** A
 critical change runs solo even on the full approach. This is deliberate - a multiagent buys
 speed but carries coordination risk, and on a critical change the coordination
 risk costs more than the speed saves. The full approach being heavy *and* solo is
-not a contradiction; it is the cap working. The full approach still writes a
-`distribution-map.md` - it is the record of what could have been parallel and
-why it wasn't.
+not a contradiction; it is the cap working. With one subtask the
+`distribution-map.md` is not needed; it is owed from two subtasks.
 
 ## Decomposing work into independent subtasks (Plan)
 

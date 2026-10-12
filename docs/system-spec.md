@@ -3742,6 +3742,7 @@
 - `DCJ-98` Migration does not edit a verification report outside the documents folder
 - `DCJ-99` Quick-fix finish refuses a note path that leaves the documents folder
 - `DCJ-100` A landed_by slug that leaves the work root is not followed
-- `DCJ-101` Render --all plans from each issue's own manifest, not the parse cache
+- `DCJ-101` A planted cache entry cannot decide a check verdict after render --all
 - `DCJ-102` Every serial-marked test is listed in SERIAL_TESTS
 - `DCJ-103` PBW-A6 judges ignored paths by committed ignore rules only
+- `DCJ-104` A planted cache entry written by render --all fails check, and a single-issue render repairs the page

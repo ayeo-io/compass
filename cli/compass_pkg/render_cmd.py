@@ -486,12 +486,12 @@ def _render_all(args):
         task_dir = scan.task_dir(slug)
         try:
             if dry:
-                plan = plan_issue(task_dir, scan=scan, manifest=scan.manifests[slug], index=False)
+                plan = plan_issue(task_dir, scan=scan, index=False)
                 would += [{"path": f.rel, "kinds": f.changed_kinds or ["new page"]}
                           for f in plan.to_write()]
             else:
                 with atomic_io.locked(os.path.join(task_dir, LOCK)):
-                    apply(plan_issue(task_dir, scan=scan, manifest=scan.manifests[slug], index=False))
+                    apply(plan_issue(task_dir, scan=scan, index=False))
                 kept[slug] = render_skip.key(scan, slug, shared)
             rendered.append(slug)
         except CompassError as exc:

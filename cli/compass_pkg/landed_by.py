@@ -16,6 +16,7 @@ import os
 from compass_pkg import status_words
 from compass_pkg.check_results import NOTHING_TO_CHECK
 from compass_pkg.core import CompassError, load_yaml, normalize_spine
+from compass_pkg.issue_layout import is_one_segment
 
 
 # =============================================================================
@@ -57,7 +58,12 @@ LANDED_BY_RELAXES = (
 
 
 def _sibling_spine(task_dir, slug):
-    """Another issue's manifest, read from the same work root."""
+    """Another issue's manifest, read from the same work root.
+
+    `slug` comes from the manifest, so it must be one path segment: a `../x`
+    value would otherwise make the check read a manifest outside the work root."""
+    if not is_one_segment(slug):
+        return None
     path = os.path.join(os.path.dirname(os.path.abspath(task_dir)),
                         slug, "manifest.yml")
     if not os.path.isfile(path):

@@ -435,3 +435,20 @@ def test_del_a4b_an_ordinary_issue_still_needs_its_assessment(tmp_path):
         "an issue with no assessment and no landed_by passed the lint - the "
         "requirement has been dropped rather than moved")
     assert "assessment" in (run.stdout + run.stderr).lower()
+
+
+def test_dcj_100_a_landed_by_slug_cannot_leave_the_work_root(tmp_path):
+    """DCJ-100: `landed_by: ../outside` must not make the check read a manifest
+    outside `.compass/work/`. The planted record there is landed, has a record
+    and names this issue, so only the path rule can refuse it."""
+    p = _project(tmp_path)
+    outside = _issue(p, "outside", record=True, delivered=["absorbed"])
+    moved = p / ".compass" / "outside"
+    outside.rename(moved)
+    _issue(p, "absorbed", landed_by="../outside")
+    assert (moved / "manifest.yml").is_file()
+
+    run = _check(p, "absorbed")
+    combined = run.stdout + run.stderr
+    assert run.returncode != 0, "a ../ landed_by slug was followed out of the work root:\n" + combined
+    assert "no such issue" in combined, combined

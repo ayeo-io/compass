@@ -112,7 +112,11 @@ One checklist per dimension, in `skills/evidence-gates/review-dimensions.md`. Re
    evidence record and link it from `verification-report.md`, flag every gap.
 3. Reviewer: walk each dimension's checklist against the evidence and the
    change. Record per-dimension **pass** or **no-pass with the specific reason**.
-4. The gate passes only if every applicable dimension passes. One no-pass sends
+4. Before the verification report is complete, make sure that every required
+   review dimension passed with evidence attached, that every gate in the
+   delivery-approach record and every immovable gate is green, and that no
+   evidence block is empty. The report holds no tick boxes.
+5. The gate passes only if every applicable dimension passes. One no-pass sends
    the work back to the implement stage, or to a re-assess. A gate is not "mostly passed."
 
 ## Architecture checks and the verify.architecture gate

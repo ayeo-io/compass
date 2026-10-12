@@ -66,6 +66,40 @@ def _display_blocked_phase(phase):
     return display_stage(_stage_key_renames().get(phase, phase))
 
 
+#: The text a rule's `changed` list holds for a gate it adds. The writer formats it and
+#: `gates_added_by` parses it, so the gate-set block cannot disagree with the evaluator.
+GATE_ADDED = "gate '{gate}' added to the approach's gate set"
+_GATE_ADDED_RE = re.compile("^" + re.escape(GATE_ADDED).replace(r"\{gate\}", "(.+?)") + "$")
+
+
+def gates_added_by(fired):
+    """`{gate id: [rule ids]}` from the policy rules recorded as fired."""
+    found = {}
+    for rule in fired or []:
+        if not isinstance(rule, dict):
+            continue
+        for text in rule.get("changed") or []:
+            match = _GATE_ADDED_RE.match(str(text))
+            if match:
+                found.setdefault(match.group(1), []).append(str(rule.get("id", "?")))
+    return found
+
+
+def policy_line(view, policy_file=None, policy=None):
+    """Which policy computed an approach, in one line. `approach evaluate --verbose` and
+    the delivery-approach record's policy-rules block both print it. `policy_file` is
+    the path of a project's own policy file when the approach was read from one."""
+    if policy_file:
+        version = (policy or {}).get("version", "unknown")
+        return f"{policy_file} (v{version})"
+    if view is not None and view.source == "generation":
+        return (f"generation {view.generation} of this issue "
+                f"(parent {view.parent_version() or 'unknown'})")
+    if view is None:
+        return "this project's governance files"
+    return "this project's effective configuration (compass.yml over the shipped default)"
+
+
 def canonical_routes(policy):
     """`policy` with every route name in its current spelling, and the old
     names it held. A project's policy copied before the routes were renamed
@@ -321,8 +355,7 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
                 display_stage(s) for s in fl["never_skip"]))
         if fl.get("add_gate"):
             floor_gates.append(fl["add_gate"])
-            changed.append(f"gate '{fl['add_gate']}' added to the "
-                           f"approach's gate set")
+            changed.append(GATE_ADDED.format(gate=fl["add_gate"]))
         if fl.get("add_artifact"):
             rule_artifacts.append((fl["add_artifact"], fl.get("rationale", "")))
             changed.append(f"artifact '{fl['add_artifact']}' added to the "
@@ -394,8 +427,7 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
                            f"blocked until: {rr.get('until', '')}")
         if rr.get("gate"):
             role_gates.append(rr["gate"])
-            changed.append(f"gate '{rr['gate']}' added to the "
-                           f"approach's gate set")
+            changed.append(GATE_ADDED.format(gate=rr["gate"]))
         if changed:
             fired.append({"id": rr.get("id", "?"), "kind": "role_rule",
                           "rationale": rr.get("rationale", ""), "changed": changed})
@@ -775,15 +807,8 @@ def cmd_route_evaluate(args):
         # but not which policy file produced them, so print the policy
         # first, so a reader can tell a genuinely light route from a
         # stale-governance one.
-        if gov:
-            print(f"  policy          : {os.path.join(gov, 'routing-policy.yml')} "
-                  f"(v{policy.get('version', 'unknown')})")
-        elif view.source == "generation":
-            print(f"  policy          : generation {view.generation} of this issue "
-                  f"(parent {view.parent_version() or 'unknown'})")
-        else:
-            print("  policy          : this project's effective configuration "
-                  "(compass.yml over the shipped default)")
+        _policy_file = os.path.join(gov, "routing-policy.yml") if gov else None
+        print(f"  policy          : {policy_line(view, _policy_file, policy)}")
         drift = governance_drift(drift_gov) if drift_gov else None
         if drift is None:
             pass

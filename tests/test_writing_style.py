@@ -1456,11 +1456,6 @@ _register(Rule(
             "the JSON mirror of the already-exempted governance/signals.yml "
             "line above - names the Verify stage, not the verb."),
         Exemption(
-            "templates/delivery-approach.md",
-            "| Verify | {{gate count}}",
-            "names the Verify stage in the per-stage weight table, not the "
-            "verb."),
-        Exemption(
             "templates/devlog.md",
             "Implement | Verify}}",
             "names the Verify stage in a placeholder list of stage names, "

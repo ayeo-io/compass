@@ -106,6 +106,13 @@ self-review in `bdd-specification`.
 4. **Magic-number scan** - every threshold, timeout, or budget in the plan has
    a stated source: the spec, an ADR, or a measurement. A number with no
    source is a decision someone will have to re-make during implementation, alone.
+5. **Exit check** - the template holds no tick boxes, because a tick on a page
+   counts for nothing. Before hand-off, make sure that every scenario in
+   `acceptance-criteria.md` is covered by a work unit, that the governance check
+   clears every guardrail with evidence and records any strategy deviation, and
+   that `distribution-map.md` is written next when parallel work is possible. The
+   Plan exit block at the end of `technical-design.md` lists the checks the
+   issue's configuration adds to the plan stage, with their state.
 
 ## Anti-patterns
 

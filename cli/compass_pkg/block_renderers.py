@@ -85,7 +85,8 @@ def _exit_list(which):
         rows = item_records.items(inputs.task, None, inputs.get_view(), which)
         title = item_records.TITLES[which]
         if not rows:
-            return Part(OWN, ["No %s is configured for this issue." % title])
+            return Part(OWN, [item_records.EMPTY.get(which)
+                              or "No %s is configured for this issue." % title])
         met = [i for i in rows if i.state in item_records.MET]
         carried = [i for i in rows if i.state == item_records.CARRIED]
         opened = [i for i in rows if i.state == item_records.OPEN]
@@ -245,6 +246,8 @@ RENDERERS = {
     "gates": gates,
     "dod": _exit_list("dod"),
     "dor": _exit_list("dor"),
+    "plan-exit": _exit_list("plan-exit"),
+    "breakdown-exit": _exit_list("breakdown-exit"),
     "artifacts": artifacts,
     "evidence": evidence,
     "follow-ups": follow_ups,
@@ -254,7 +257,8 @@ RENDERERS = {
 
 
 def _add_modules():
-    from compass_pkg import issue_page, project_index
+    from compass_pkg import approach_blocks, issue_page, project_index
+    RENDERERS.update(approach_blocks.RENDERERS)
     RENDERERS.update(issue_page.RENDERERS)
     RENDERERS.update(project_index.RENDERERS)
 

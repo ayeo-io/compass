@@ -112,10 +112,6 @@ evidence block is an automatic fail.
 
 ## Gate
 
-- [ ] Every required review dimension passed with evidence attached.
-- [ ] Every gate in `delivery-approach.md` and every immovable gate is GREEN.
-- [ ] This report is complete - no empty evidence blocks.
-
 ### Definition of Done
 
 <!-- The crisp exit check. The Definition of Ready (requirements-review.md) was the entry

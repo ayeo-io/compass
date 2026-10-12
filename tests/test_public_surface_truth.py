@@ -481,6 +481,14 @@ def test_d2_repairs_change_only_retired_names():
     Definition of Ready boxes, which are now an empty `dor` block that
     `compass issue render` fills from the plan entry list.
 
+    Three more were re-baselined by `artifact-catalogue-fields`:
+    `templates/distribution-map.md` (list_items 10 -> 7) and
+    `templates/requirements-review.md` (17 -> 14) lost the boxes of their
+    `## Gate` checklists, which are now a `breakdown-exit` block and the
+    existing `dor` block. `skills/worktree-multiagent/SKILL.md` (list_items
+    29 -> 32, one more `##` heading) gained the section that holds the
+    wording of the removed distribution-map boxes.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

@@ -1524,3 +1524,278 @@ def test_acf_29(tmp_path):
     for kind in got:
         code, out, err = _cli(root, "issue", "artifact-path", kind, "--issue", SLUG)
         assert code == 0 and out.strip() == f"{HOME}/{kind}.md", (kind, out + err)
+
+
+# --- group G: the delivery-approach record's rendered blocks (FU-1) ---------------
+
+def _template(name):
+    return (ROOT / "templates" / name).read_text(encoding="utf-8")
+
+
+def _section(text, heading):
+    """The lines under `heading` (a line start), up to the next heading of the same or
+    a higher level."""
+    lines = text.splitlines()
+    start = next(i for i, line in enumerate(lines) if line.startswith(heading))
+    level = len(heading) - len(heading.lstrip("#"))
+    out = []
+    for line in lines[start + 1:]:
+        stripped = line.lstrip("#")
+        if line.startswith("#") and stripped.startswith(" ") and len(line) - len(stripped) <= level:
+            break
+        out.append(line)
+    return "\n".join(out)
+
+
+def _without_comments(text):
+    import re
+    return re.sub(r"<!--(?!\s*/?compass:render).*?-->", "", text, flags=re.S)
+
+
+def test_acf_34():
+    from compass_pkg import block_renderers, rendered_blocks
+    text = _template("delivery-approach.md")
+    sections = {"## 1. ": "assessment", "## 3. ": "policy-rules",
+                "### 4a. ": "stage-weights", "### 4b. ": "gate-set"}
+    for heading, kind in sections.items():
+        body = _section(text, heading)
+        found = [b.kind for b in rendered_blocks.parse(body).blocks]
+        assert found == [kind], (heading, found)
+        outside = _without_comments(rendered_blocks.masked_text(body))
+        assert not [ln for ln in outside.splitlines() if ln.lstrip().startswith("|")], heading
+        assert "{{" not in outside, heading
+        assert kind in rendered_blocks.KINDS
+        assert kind in block_renderers.RENDERERS
+
+
+def _approach_issue(tmp_path, name, *, reasons=None, **assessment):
+    """A fixture issue evaluated and written, with its delivery-approach record copied
+    from the template into the documents folder and registered. Returns (root, task_dir,
+    path of the record). Nothing is rendered."""
+    root, task_dir = _fixture(tmp_path, name, **assessment)
+    values = _manifest_of(task_dir)["assessment"]
+    flags = []
+    for dim in DIMENSIONS:
+        if dim in values:
+            text = (reasons or {}).get(dim) or f"Because the {dim} is {values[dim]}."
+            flags += ["--justify", f"{dim}={text}"]
+    code, out, err = _evaluate(root, *flags)
+    assert code == 0, out + err
+    path = _doc(root, "delivery-approach.md", _template("delivery-approach.md"))
+    code, out, err = _set(root, "delivery-approach", "--status", "draft", "--path", path)
+    assert code == 0, out + err
+    return root, task_dir, root / path
+
+
+def _render(root, *extra):
+    code, out, err = _cli(root, "issue", "render", "--issue", SLUG, *extra)
+    assert code == 0, out + err
+    return out + err
+
+
+def _block(text, kind):
+    from compass_pkg import rendered_blocks
+    parsed = rendered_blocks.parse(text)
+    block = next(b for b in parsed.blocks if b.kind == kind)
+    return "".join(parsed.lines[block.start + 1:block.end])
+
+
+def _rewrite_manifest(task_dir, **changes):
+    body = _manifest_of(task_dir)
+    body.update(changes)
+    (task_dir / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False),
+                                           encoding="utf-8")
+
+
+def test_acf_35(tmp_path):
+    reasons = {"risk": "The migrate moves folders Git cannot restore.",
+               "familiarity": "The catalogue is documented.",
+               "size": "It touches fourteen modules.",
+               "goal": "The outcome wanted is a delivered change.",
+               "role": "An engineer asked for it."}
+    root, task_dir, record = _approach_issue(
+        tmp_path, "full", reasons=reasons, risk="critical", size="large",
+        labels=["cli", "migrations"])
+    _render(root)
+    block = _block(record.read_text(encoding="utf-8"), "assessment")
+    values = _manifest_of(task_dir)["assessment"]
+    assert (values["risk"], values["familiarity"], values["size"]) == (
+        "critical", "brownfield-mapped", "large")
+    rows = [line for line in block.splitlines() if line.startswith("|")]
+    for dim, value in (("risk", "critical"), ("familiarity", "brownfield-mapped"),
+                       ("size", "large"), ("goal", "delivery"), ("role", "engineer")):
+        hit = [r for r in rows if dim.capitalize() in r and value in r and reasons[dim] in r]
+        assert len(hit) == 1, (dim, block)
+    assert "Labels: cli, migrations" in block, block
+    code, out, err = _cli(root, "issue", "receipt", "--issue", SLUG)
+    assert code == 0, out + err
+    for dim in ("risk", "familiarity", "size"):
+        assert reasons[dim] in out, (dim, out)
+    # An archived issue with no justifications key: the receipt reads the record's table.
+    old = tmp_path / "old"
+    old.mkdir()
+    root2, task_dir2 = _fixture(tmp_path, "archived")
+    _rewrite_manifest(task_dir2, assessment=dict(_manifest_of(task_dir2)["assessment"]))
+    body = _manifest_of(task_dir2)
+    body.pop("justifications", None)
+    (task_dir2 / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False),
+                                            encoding="utf-8")
+    _write(root2 / HOME / "delivery-approach.md",
+           "# Delivery approach - feature\n\n| Dimension | Value | One-line justification |\n"
+           "|---|---|---|\n| **Risk** | contained | Hand-written risk reason. |\n"
+           "| **Familiarity** | brownfield-mapped | Hand-written familiarity reason. |\n"
+           "| **Size** | medium | Hand-written size reason. |\n")
+    _set(root2, "delivery-approach", "--status", "draft", "--path",
+         f"{HOME}/delivery-approach.md")
+    code, out, err = _cli(root2, "issue", "receipt", "--issue", SLUG)
+    assert code == 0 and "Hand-written risk reason." in out, out + err
+
+
+def test_acf_36(tmp_path):
+    root, task_dir, record = _approach_issue(tmp_path, "rules")
+    fired = [
+        {"id": "RP-FLOOR-001", "kind": "floor", "rationale": "Migrations are never light.",
+         "changed": ["approach raised to full"]},
+        {"id": "RP-REQUIRE-006", "kind": "requirement",
+         "rationale": "A public API needs a design.", "changed": ["artifact 'technical-design' required"]},
+        {"id": "RP-CAP-001", "kind": "cap", "rationale": "Critical work runs one worktree.",
+         "changed": ["max_worktrees 1"]},
+    ]
+    _rewrite_manifest(task_dir, policy_rules_fired=fired)
+    _render(root)
+    block = _block(record.read_text(encoding="utf-8"), "policy-rules")
+    rows = [line for line in block.splitlines() if line.startswith("|")]
+    for rule in fired:
+        hit = [r for r in rows if rule["id"] in r and rule["kind"] in r
+               and rule["changed"][0] in r and rule["rationale"] in r]
+        assert len(hit) == 1, (rule["id"], block)
+    generation = _manifest_of(task_dir)["generation"]
+    assert "Policy:" in block and f"Generation: {generation}" in block, block
+    # No rule fired.
+    _rewrite_manifest(task_dir, policy_rules_fired=[])
+    _render(root)
+    block = _block(record.read_text(encoding="utf-8"), "policy-rules")
+    assert "No policy rule fired." in block and "RP-" not in block, block
+    assert "Generation: %s" % generation in block, block
+
+
+def test_acf_37(tmp_path):
+    root, task_dir, record = _approach_issue(tmp_path, "gates", risk="critical", size="large")
+    gate_ids = ["plan.exit", "implement.tests", "verify.correctness", "verify.governance",
+                "verify.traceability", "verify.security", "verify.docs", "ship.merge",
+                "ship.follow-ups"]
+    gates = [{"id": g, "status": "pending", "evidence": []} for g in gate_ids]
+    fired = [{"id": "RP-REQUIRE-006", "kind": "floor", "rationale": "A rule.",
+              "changed": [f"gate '{gate_ids[5]}' added to the approach's gate set"]},
+             {"id": "RP-ROLE-002", "kind": "role_rule", "rationale": "Another rule.",
+              "changed": [f"gate '{gate_ids[6]}' added to the approach's gate set"]}]
+    stages = {"assess": "thorough", "define": "thorough", "refine": "lightweight",
+              "plan": "thorough", "breakdown": "skipped", "implement": "thorough",
+              "verify": "thorough", "ship": "lightweight"}
+    _rewrite_manifest(task_dir, gates=gates, policy_rules_fired=fired, stages=stages)
+    _render(root)
+    text = record.read_text(encoding="utf-8")
+    weights = _block(text, "stage-weights")
+    rows = [line for line in weights.splitlines() if line.startswith("|")][2:]
+    assert [r.split("|")[1].strip() for r in rows] == list(stages), weights
+    assert [r.split("|")[2].strip() for r in rows] == list(stages.values()), weights
+    block = _block(text, "gate-set")
+    listed = [line for line in block.splitlines() if line.startswith("- ")]
+    assert [line[2:].split(" ")[0].strip("`") for line in listed] == gate_ids, block
+    assert "RP-REQUIRE-006" in listed[5] and "RP-ROLE-002" in listed[6], block
+    assert not any("RP-" in listed[i] for i in (0, 1, 2, 3, 4, 7, 8)), block
+
+
+def _check_rows(root):
+    code, out, err = _cli(root, "check", "--issue", SLUG, "--json")
+    assert out.strip().startswith("{"), out + err
+    return {c["name"]: c for c in json.loads(out)["checks"]}
+
+
+def test_acf_38(tmp_path):
+    from compass_pkg import rendered_blocks
+    root, task_dir, record = _approach_issue(tmp_path, "stale")
+    _rewrite_manifest(task_dir, current_phase="verify")
+    _render(root)
+    assert _check_rows(root)["rendered-blocks-current"]["status"] == "pass"
+    values = _manifest_of(task_dir)["assessment"]
+    assert values["risk"] == "contained"
+    _rewrite_manifest(task_dir, assessment=dict(values, risk="critical"))
+    row = _check_rows(root)["rendered-blocks-current"]
+    path = f"{HOME}/delivery-approach.md"
+    assert row["status"] == "fail", row
+    assert path in row["detail"] and "assessment" in row["detail"], row["detail"]
+    before = record.read_text(encoding="utf-8")
+    _render(root)
+    assert _check_rows(root)["rendered-blocks-current"]["status"] == "pass"
+    after = record.read_text(encoding="utf-8")
+    assert "critical" in _block(after, "assessment")
+    assert rendered_blocks.masked_text(after) == rendered_blocks.masked_text(before)
+    _render(root)
+    assert record.read_text(encoding="utf-8") == after
+
+
+GATE_TEMPLATES = ("distribution-map.md", "requirements-review.md", "technical-design.md",
+                  "verification-report.md")
+PLAN_CHECK = "plan-reviewed"
+PLAN_LAYER = {"schema": 1,
+              "checks": {PLAN_CHECK: {"statement": "The design was read by a second engineer.",
+                                      "kind": "human", "severity": "blocking",
+                                      "on_skipped": "not-applicable"}},
+              "stages": {"plan": {"set": {"exit": {"add": [PLAN_CHECK]}}}}}
+
+
+def test_acf_39(tmp_path):
+    import re
+    from compass_pkg import rendered_blocks
+    box = re.compile(r"^\s*- \[[ xX]\]", re.M)
+    kinds = {}
+    for name in GATE_TEMPLATES:
+        text = _template(name)
+        assert not box.search(text), name
+        kinds[name] = [b.kind for b in rendered_blocks.parse(text).blocks]
+    review = _template("requirements-review.md")
+    parsed = rendered_blocks.parse(review)
+    last = parsed.blocks[-1]
+    assert last.kind == "dor"
+    tail = "".join(parsed.lines[last.end + 1:]).strip().splitlines()
+    assert all(not ln.startswith("#") for ln in tail) and len(tail) <= 1, tail
+    assert {"gates", "dod"} <= set(kinds["verification-report.md"])
+    assert "plan-exit" in kinds["technical-design.md"]
+    assert "breakdown-exit" in kinds["distribution-map.md"]
+    assert "plan-exit" not in kinds["distribution-map.md"]
+    # The shipped default lists no exit check for plan or breakdown.
+    root, task_dir = _fixture(tmp_path, "shipped")
+    documents = {}
+    for kind in ("technical-design", "distribution-map"):
+        path = _doc(root, f"{kind}.md", _template(f"{kind}.md"))
+        documents[kind] = root / path
+        code, out, err = _set(root, kind, "--status", "draft", "--path", path)
+        assert code == 0, out + err
+    _render(root)
+    assert _block(documents["technical-design"].read_text(encoding="utf-8"), "plan-exit").strip() \
+        == "No exit checks are configured for the plan stage."
+    assert _block(documents["distribution-map"].read_text(encoding="utf-8"),
+                  "breakdown-exit").strip() == "No exit checks are configured for the breakdown stage."
+    # A layer that adds an exit check to plan: the block lists it, with its state.
+    root2, task_dir2 = _fixture(tmp_path, "layered", layer=PLAN_LAYER)
+    path = _doc(root2, "technical-design.md", _template("technical-design.md"))
+    code, out, err = _set(root2, "technical-design", "--status", "draft", "--path", path)
+    assert code == 0, out + err
+    _render(root2)
+    design = root2 / path
+    shown = _block(design.read_text(encoding="utf-8"), "plan-exit")
+    assert PLAN_CHECK in shown and "open" in shown and "0 of 1 met" in shown, shown
+    # A box typed by hand beside the block changes no item's state.
+    design.write_text(design.read_text(encoding="utf-8") + f"\n- [x] {PLAN_CHECK}\n",
+                      encoding="utf-8")
+    _render(root2)
+    assert _block(design.read_text(encoding="utf-8"), "plan-exit") == shown
+    # Evidence recorded for an exit check meets the item: `--meets` accepts a stage exit check.
+    _write(task_dir2 / "evidence.txt", "reviewed\n")
+    code, out, err = _cli(root2, "evidence", "add", "EV-PLAN", "--issue", SLUG, "--type",
+                          "command-output", "--path", "evidence.txt", "--meets", PLAN_CHECK)
+    assert code == 0, out + err
+    _render(root2)
+    shown = _block(design.read_text(encoding="utf-8"), "plan-exit")
+    assert "1 of 1 met" in shown and "met by EV-PLAN" in shown, shown

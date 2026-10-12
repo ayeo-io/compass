@@ -126,6 +126,18 @@ subtask marked `done` is never dispatched again. Where the project gitignores
 `docs/compass/`, a worktree does not carry the brief: name it by its path in
 the main checkout.
 
+## Before the distribution map is done
+
+The map holds no tick boxes. Make sure of three things before you hand it on:
+
+- every scenario in `acceptance-criteria.md` is owned by exactly one subtask;
+- every "independent" verdict in section 2 passed both tests (disjoint code and
+  disjoint scenarios);
+- the final subtask count respects every cap in section 5.
+
+The Breakdown exit block at the end of the map lists the checks the issue's
+configuration adds to the breakdown stage, with their state.
+
 ## Integration discipline (before `/compass:verify`)
 
 1. Confirm every subtask is independently green - the `verifier` has per-subtask

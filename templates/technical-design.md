@@ -261,8 +261,13 @@ Name only the ones it touches.}}
 
 ## Gate
 
-- [ ] Every scenario in `acceptance-criteria.md` is covered by a work unit.
-- [ ] Governance check passes - every guardrail clears with evidence; any strategy deviation is recorded (above).
-- [ ] If parallel work is possible, `distribution-map.md` is written next.
+<!-- The plan stage's exit checks, written by `compass issue render` from the issue's
+     configuration (`compass issue template show technical-design`). An item is met by
+     evidence recorded with `--meets`, a person's `compass evidence approve --check` or a
+     follow-up recorded with `--defers`. A tick on this page counts for nothing. The
+     shipped default lists none. -->
+
+<!-- compass:render plan-exit -->
+<!-- /compass:render -->
 
 Next stage: **break down the work** (`/compass:breakdown`) - or straight to **implement** on solo work.

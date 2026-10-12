@@ -91,10 +91,6 @@ a form.
 
 ## Gate
 
-- [ ] No ambiguity left `open` - every entry is `resolved`.
-- [ ] `acceptance-criteria.md` updated to reflect every resolution.
-- [ ] Non-engineering roles in play have reviewed (full-approach scale work: required at this stage).
-
 ### Definition of Ready
 
 <!-- The crisp check that the spec is ready to LEAVE refine and enter Plan.

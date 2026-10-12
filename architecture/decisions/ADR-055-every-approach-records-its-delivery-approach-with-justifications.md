@@ -36,6 +36,24 @@ assessed.
    absent dimension as "not assessed". "(no reason given)" leaves the code.
 6. **The receipt reads `justifications`, and keeps its reader of the record's table for an issue with no
    such key.**
+7. **The record's tables are rendered blocks.** `approach_blocks.py` renders four kinds through the
+   existing registry in `block_renderers.py` (ADR-051): `assessment` (a row per dimension with its value
+   and its justification, then the labels), `policy-rules` (the policy line, the generation and a row per
+   rule that fired), `stage-weights` (a row per stage in stage order) and `gate-set` (the gates in the
+   manifest's order, with the rules that added a gate beside it). `templates/delivery-approach.md` holds
+   them in sections 1, 3, 4a and 4b in place of its tables.
+8. **The four Gate checklists lose their tick boxes.** `plan-exit` and `breakdown-exit` render the
+   stage exit lists in `technical-design.md` and `distribution-map.md`, through the same function as the
+   Definition of Done. Both are empty in the shipped default and then say that no exit checks are
+   configured for the stage. `item_records.LISTS` gains both, so `--meets` accepts their checks. The
+   wording of the removed boxes moved into `plan-authoring`, `worktree-multiagent`, `bdd-specification`
+   and `evidence-gates` as instructions.
+9. **The quick-fix record keeps its short form.** `quick_fix_cmd` writes its own Assessment and Policy
+   rules sections from the manifest, because they are not an ordered subset of the thorough headings. The
+   document-set issue decides whether it moves to the blocks.
+10. **One function prints the policy line.** `routing.policy_line` serves `approach evaluate --verbose`
+    and the `policy-rules` block, and `routing.GATE_ADDED` with `routing.gates_added_by` write and read the
+    text that says a rule added a gate, so the writer and the reader cannot disagree.
 
 ## Alternatives considered
 
@@ -49,6 +67,8 @@ assessed.
 
 **Positive:**
 - A manifest carries the reason for every assessed value.
+- A reassessment makes the record's blocks stale until `compass issue render`, and `rendered-blocks-current`
+  names the document and the block.
 - The record is a registered document on every approach, found through the registry.
 
 **Negative:**
@@ -60,4 +80,5 @@ assessed.
 - ADR-001: the assessment is judgement.
 - ADR-022: the artifact registry.
 - ADR-036, ADR-037: stored generations and the classifier.
+- ADR-051: rendered blocks.
 - ADR-053: the catalogue entry.

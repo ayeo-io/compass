@@ -901,9 +901,10 @@
       2,
       2,
       2,
+      2,
       2
     ],
-    "list_items": 29,
+    "list_items": 32,
     "table_rows": 5
   },
   "templates/acceptance-criteria.md": {
@@ -936,7 +937,7 @@
       2,
       2
     ],
-    "list_items": 10,
+    "list_items": 7,
     "table_rows": 17
   },
   "templates/launch-readiness.md": {
@@ -982,7 +983,7 @@
       2,
       3
     ],
-    "list_items": 17,
+    "list_items": 14,
     "table_rows": 0
   },
   "templates/ui-contract.md": {

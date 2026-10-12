@@ -3744,3 +3744,4 @@
 - `DCJ-100` A landed_by slug that leaves the work root is not followed
 - `DCJ-101` Render --all plans from each issue's own manifest, not the parse cache
 - `DCJ-102` Every serial-marked test is listed in SERIAL_TESTS
+- `DCJ-103` PBW-A6 judges ignored paths by committed ignore rules only

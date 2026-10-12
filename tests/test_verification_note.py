@@ -196,3 +196,38 @@ def test_dcj_81_landing_commit_holds_done_page_regular(tmp_path):
     assert "docs/compass/README.md" in names, names
     assert "done (completed)" in sup.git(root, "show", f"{landed}:{folder}/README.md")
     assert sup.git(root, "status", "--porcelain", "--", "docs/compass") == ""
+
+
+# --- DCJ-97 -----------------------------------------------------------------
+
+def test_dcj_97_a_hand_written_note_without_a_block_gets_the_block(repo):
+    _ready_to_finish(repo, SLUG)
+    _three_files(repo)
+    note = _note(repo)
+    note.parent.mkdir(parents=True, exist_ok=True)
+    prose = "# My own notes\n\nWritten by a person before the finish.\n"
+    note.write_text(prose, encoding="utf-8")
+    result = _finish(repo, SLUG)
+    text = note.read_text(encoding="utf-8")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert text.startswith(prose)
+    assert [k for k, _ in ps.blocks(note)] == ["verification-note"], text
+    assert "TRC-001" in text
+
+
+# --- DCJ-99 -----------------------------------------------------------------
+
+def test_dcj_99_finish_refuses_a_note_path_that_leaves_the_documents_folder(repo):
+    _ready_to_finish(repo, SLUG)
+    _three_files(repo)
+    body = _manifest(repo, SLUG)
+    for created in ("../../../elsewhere", "../..", "../not-docs"):
+        body["created"] = created
+        qf._save_manifest(repo, SLUG, body)
+        result = _finish(repo, SLUG)
+        text = result.stdout + result.stderr
+        stray = [p for p in repo.parent.rglob("verification-note.md")]
+        assert stray == [], (created, stray)
+        assert result.returncode != 0, (created, text)
+        assert "verification note" in text and "not written" in text, (created, text)
+        assert _manifest(repo, SLUG).get("status") != "done", created

@@ -659,7 +659,14 @@ def _check_dod_evidence_typed(task, task_dir):
     entry blocks shipping this issue.
     """
     report = artifact_path(task_dir, "verification-report.md")
+    # The directory name is the true slug; the manifest passed in may hold a template placeholder.
+    this_slug = os.path.basename(task_dir) or task.get("task") or ""
+    inbound = _check_inbound_backfills(task_dir, this_slug)
     if not os.path.isfile(report):
+        # A quick fix writes no report, but another issue's outstanding follow-up that targets
+        # it still blocks it.
+        if inbound:
+            return False, "; ".join(inbound)
         return NOTHING_TO_CHECK, ("no verification report is written yet, so there is no "
                                   "Definition of Done to evidence (looked for %s)"
                                   % artifact_location(task_dir, "verification-report.md"))
@@ -672,9 +679,6 @@ def _check_dod_evidence_typed(task, task_dir):
     rows = item_records.items(task, task_dir, view, "dod")
     problems = ["%s is open - %s" % (row.check, item_records.open_hint(row.check))
                 for row in rows if row.state == item_records.OPEN]
-    # The directory name is the true slug; the manifest passed in may hold a template placeholder.
-    this_slug = os.path.basename(task_dir) or task.get("task") or ""
-    inbound = _check_inbound_backfills(task_dir, this_slug)
     if _closed_without_a_list(task, report):
         # An archived issue whose page never held a Definition of Done has no record to
         # carry. Only a closed issue is excused: one still in flight is judged, so deleting

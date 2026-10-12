@@ -114,6 +114,22 @@ def _link_problem(project, resolved):
     return None
 
 
+def unsafe_document_path(task_dir, rel, project, allow_work=False):
+    """Why a path built from a manifest cannot be written, or None: it leaves the project, is
+    not under docs/compass (or, with `allow_work`, the issue's own folder), or is, or sits
+    under, a symbolic link. A caller that writes a document checks it before any change."""
+    resolved, refused = _registered_path(task_dir, rel)
+    if refused:
+        return "it resolves outside the project"
+    resolved = os.path.abspath(resolved)
+    folders = [os.path.join(project, "docs", "compass") + os.sep]
+    if allow_work:
+        folders.append(os.path.abspath(task_dir) + os.sep)
+    if not resolved.startswith(tuple(folders)):
+        return "it is not under docs/compass"
+    return _link_problem(project, resolved)
+
+
 def _view(task_dir):
     from compass_pkg import effective
     try:

@@ -48,7 +48,7 @@ def _name_of(value):
 def links_of(task):
     """The slugs of the issues one manifest links to."""
     found = set()
-    for key in ("raised_by", "parent", "depends_on", "landed_by", "delivered"):
+    for key in ("raised_by", "parent", "depends_on", "repairs", "landed_by", "delivered"):
         value = task.get(key)
         for one in value if isinstance(value, list) else [value]:
             found.add(_name_of(one))

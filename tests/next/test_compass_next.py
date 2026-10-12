@@ -489,12 +489,15 @@ class TestNextLatency:
     # so a fixed 200ms limit failed on slow runners for a reason it does not
     # care about.
     #
-    # Measured here: reference about 60ms, `compass next` about 92ms above
-    # start-up, ratio 1.4 to 1.55. A planted 50ms delay gives 2.4 to 2.6. The
-    # limit of 2.0 leaves over 30% headroom for noise and still fails the
-    # delay. On a runner 2.2 times slower the same code gives about 1.6. The
-    # absolute ceiling stops a large regression on a fast machine.
-    MAX_RATIO = 2.0
+    # Measured on a development machine: reference about 60ms, `compass next`
+    # about 92ms above start-up, ratio 1.4 to 1.55. On a GitHub runner:
+    # reference 128ms, `compass next` 195ms, ratio 1.53. A fixed 50ms delay
+    # adds less to the ratio on a slow runner (about 0.4 there, against 0.9
+    # here), so the limit is set from the runner: 1.8 fails the delay there
+    # (1.92) and leaves 0.25 above the ratio today's code gives on either
+    # machine. The ratio fails at the limit or above. The absolute ceiling
+    # stops a large regression on a fast machine.
+    MAX_RATIO = 1.8
     CEILING_MS = 400
     REFERENCE = (
         "import sys; sys.path.insert(0, {vendor!r})\n"

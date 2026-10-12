@@ -3631,3 +3631,7 @@
 - `ASW-31` Changing one decision reopens it and the checkpoint keeps waiting
 - `ASW-32` A decision recorded after the define checkpoint waits at the next checkpoint
 - `ASW-33` retro reports how agent decisions were settled
+
+### compass-yml-owner (completed 2026-10-12)
+
+- `OWN-1` This repository's compass.yml names jed72 as its owner, and the framework test allows owner while still forbidding waivers, unlocks, capabilities and approvers

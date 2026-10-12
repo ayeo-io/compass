@@ -14,7 +14,7 @@ approaches:
     stages: {assess: lightweight, define: collapsed, refine: skipped, plan: collapsed, breakdown: skipped,
       implement: explore, verify: conclude, ship: graduate-or-discard}
     gates: [spike.conclude]
-    artifacts: {}
+    artifacts: {delivery-approach: lightweight, spike-conclusion: thorough}
     subtask_ceiling: 1
     checkpoints:
       controlled: [assess]

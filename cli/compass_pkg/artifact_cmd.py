@@ -111,9 +111,10 @@ def _refuse_unreadable(task, task_dir, kind):
 def cmd_issue_artifact(args):
     """`compass issue artifact set <kind> --status <s> [--reason ...]`.
 
-    Refuses a kind the issue never earned, the way `tdd-red --scenario`
-    refuses a scenario id that is not in the manifest - a status set on a document
-    nobody asked for is a typo that would otherwise be stored as a decision.
+    Refuses a kind the issue's catalogue does not declare, the way
+    `tdd-red --scenario` refuses a scenario id that is not in the manifest - a
+    status set on a document nobody could ask for is a typo that would
+    otherwise be stored as a decision.
 
     An omission MUST carry a reason. Without one, a document deliberately
     dropped and a document nobody got to look the same on the page, and telling
@@ -126,13 +127,22 @@ def cmd_issue_artifact(args):
 
     entry = next((a for a in arts if a.get("kind") == args.kind), None)
     if entry is None:
-        earned = ", ".join(sorted(a.get("kind", "?") for a in arts)) or "none"
-        raise CompassError(
-            "%r is not a document this issue earned (it earned: %s). The "
-            "artifact set is computed from the assessment - re-run "
-            "`compass approach evaluate --write`, or re-assess with "
-            "`/compass:assess --reassess` if the work really changed shape."
-            % (args.kind, earned))
+        # A kind the issue's catalogue declares can be registered even when the
+        # assessment did not earn it: a reviewer's review or a project's own
+        # kind is a document nobody had to ask for. The typo guard is
+        # membership of the catalogue.
+        declared = sorted(((getattr(_view_or_none(task_dir), "config", None) or {})
+                           .get("artifacts") or {}))
+        if args.kind not in declared:
+            raise CompassError(
+                "%r is not a kind this issue's catalogue declares (it declares: %s). "
+                "A document the assessment earned is registered by `compass approach "
+                "evaluate --write`; any other kind must be declared in the artifacts "
+                "catalogue first." % (args.kind, ", ".join(declared) or "none"))
+        entry = {"id": "ART-" + args.kind.upper().replace("-", "_"), "kind": args.kind,
+                 "status": "draft",
+                 "reason": "registered by hand; no rule of the assessment asked for it"}
+        arts.append(entry)
 
     if args.status == "omitted" and not (args.reason or "").strip():
         raise CompassError(

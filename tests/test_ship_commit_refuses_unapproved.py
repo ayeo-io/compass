@@ -60,7 +60,10 @@ def _untouched(root, head):
 
 def test_asw_4_ship_commit_approves_ship_stage_document(tmp_path):
     layer = {"schema": 1, "owner": "jed72", "artifacts": {
-        "release-notes": {"file": "release-notes.md", "stage": "ship"}}}
+        "release-notes": {
+            "file": "release-notes.md", "stage": "ship", "owner": "builder",
+            "audience": "The person who ships reads it to see what the release changes.",
+            "stands_for": "release-notes", "sections": {"thorough": ["Changes"]}}}}
     root = project(tmp_path, compass_yml=layer)
     (root / DOCS / "release-notes.md").write_text("# notes\n")
     _approved(root)

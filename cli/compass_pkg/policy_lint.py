@@ -51,7 +51,7 @@ FINDING_CODES = (
     "S-PARENT-UP-TO-DATE", "S-PARENT-STALE", "S-PARENT-MODIFIED", "S-PARENT-BOTH",
     "M-REF-UNKNOWN", "M-WEIGHT-TIE", "M-HIT-MISSING", "M-HIT-DISALLOWED", "M-CYCLE",
     "M-BOOKKEEPING-INPUT", "M-DIRECTORY-DEPENDENCY",
-    "M-EFFECT-UNKNOWN", "M-LIST-KIND-UNEVALUATED",
+    "M-EFFECT-UNKNOWN", "M-LIST-KIND-UNEVALUATED", "M-FIELD-SHAPE",
     "K-LOCK-REFUSED", "K-UNLOCK-REFUSED", "K-UNPROVABLE",
     "E-EVALUATION",
     "C-LOOSENING", "C-INCOMPARABLE", "V-VOCABULARY-CHANGE",
@@ -528,6 +528,50 @@ def _effect_targets(state):
     return out
 
 
+def _agents_and_roles(config):
+    """The ids an artifact's `owner` may name: the agents the framework ships
+    and the values of the `role` dimension."""
+    owners = set(((config.get("dimensions") or {}).get("role") or {}).get("values") or [])
+    folder = os.path.join(FRAMEWORK_ROOT, "agents")
+    if os.path.isdir(folder):
+        owners |= {name[:-3] for name in os.listdir(folder) if name.endswith(".md")}
+    return owners
+
+
+def _template_text(kind):
+    path = os.path.join(FRAMEWORK_ROOT, "templates", f"{kind}.md")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return fh.read()
+    except OSError:
+        return None
+
+
+def _artifact_fields(state):
+    """Each fault in the descriptive and conditional fields of the artifacts
+    catalogue, all in one run. The required fields are the merge's to demand
+    when a layer adds a kind; a stored generation that lacks them is read, not
+    judged here. A field that is present is checked: the shape of `sections`,
+    `file` and `required_when`, a blank text, and the `owner` it names."""
+    out, config = [], state["config"]
+    owners = _agents_and_roles(config)
+    for kind, entry in (config.get("artifacts") or {}).items():
+        if not isinstance(entry, dict):
+            continue
+        for field_path, message in catalogue_check.artifact_field_problems(
+                entry, _template_text(kind)):
+            path = f"artifacts.{kind}.{field_path}"
+            out.append(_finding("resolved", "M-FIELD-SHAPE", _layer_of(state, path), path,
+                                message))
+        owner = entry.get("owner")
+        if isinstance(owner, str) and owner.strip() and owner not in owners:
+            path = f"artifacts.{kind}.owner"
+            out.append(_finding("resolved", "M-REF-UNKNOWN", _layer_of(state, path), path,
+                                f"names {owner}, which is neither an agent nor a value of "
+                                f"the role dimension"))
+    return out
+
+
 #: The kinds of check that `stage_lists` evaluates. A stage list that names
 #: any other kind gets a check that fails closed (see `stage_lists`).
 EVALUATED_LIST_KINDS = ("human", "deterministic", "judged")
@@ -557,7 +601,7 @@ def _resolved_group(state):
     out += _weight_ties(state) + _hit_policies(state)
     out += [_finding("resolved", code, _layer_of(state, path), path, message)
             for code, path, message in catalogue_check.check_vocabulary(state["config"])]
-    return out + _artifact_inputs(state) + _cycles(state)
+    return out + _artifact_inputs(state) + _cycles(state) + _artifact_fields(state)
 
 
 EVALUATOR_LEAD = "the evaluator cannot read the configuration: "

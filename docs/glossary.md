@@ -194,6 +194,12 @@ The four-dimension judgement the assess stage produces - risk, familiarity, size
 
 **Related:** `assess`, `delivery-approach`, `router`
 
+### audience
+
+The one line in an artifact's catalogue entry that says who reads the document and what the reader decides from it.
+
+**Related:** `delivery-approach`, `technical-design`
+
 ### backlog
 
 Two senses, both standard: the workflow state an issue starts in, and the list of deferred slices and follow-ups. Context disambiguates, as it does on every real team.
@@ -566,6 +572,12 @@ The lines between `<!-- compass:render KIND -->` and `<!-- /compass:render -->` 
 
 **Related:** `issue-page`, `verification-note`, `project-index`, `item-record`
 
+### required-when
+
+A condition in an artifact's catalogue entry. The document is owed only when the condition holds. The one condition today is a minimum number of subtasks, so the distribution map is owed from two subtasks.
+
+**Related:** `audience`, `delivery-approach`
+
 ### requirements-review
 
 The review pass that hardens requirements before plan or implementation: ambiguities resolved into recorded decisions, contradictions and gaps closed, intent.md reviewed where one exists. Satisfying it is what makes an issue ready.
@@ -608,6 +620,12 @@ The atomic unit of acceptance: one behaviour, one Given/When/Then, one executabl
 
 **Related:** `feature-file`, `step`, `acceptance-criteria`
 
+### sections
+
+The headings of an artifact's document, in order, for each depth the document can be written at (`lightweight` and `thorough`). It is a field of the artifact's catalogue entry. A document that is one rendered block has an empty list.
+
+**Related:** `audience`, `rendered-block`
+
 ### settings-key
 
 A top-level key of `compass.yml` that configures the CLI instead of the process.
@@ -649,6 +667,12 @@ A delivery approach for time-boxed exploration whose output is knowledge, not sh
 How a stage runs for an issue, such as `collapsed`. It is the `mode` field of a stage.
 
 **Related:** `catalogue`
+
+### stands-for
+
+The name the industry uses for the kind of document an artifact is, such as `hld` for the technical design. It is a field of the artifact's catalogue entry.
+
+**Related:** `audience`, `technical-design`
 
 ### step
 

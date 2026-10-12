@@ -334,7 +334,9 @@ def _why_fields(m):
     assessment, raw = None, m.get("assessment")
     if isinstance(raw, dict) and raw:
         labels = raw.get("labels")
-        assessment = {k: _text(raw.get(k)) for k in _ASSESSMENT_DIMENSIONS}
+        # A dimension the assessment leaves out (a quick fix records no goal or role it was
+        # not given) reads as not assessed, never as a default.
+        assessment = {k: _text(raw.get(k)) or "not assessed" for k in _ASSESSMENT_DIMENSIONS}
         assessment["labels"] = [str(x) for x in labels] if isinstance(labels, list) else []
     elif raw is not None and not isinstance(raw, dict):
         problems.append("assessment is not a mapping")

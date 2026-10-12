@@ -37,7 +37,8 @@ from compass_pkg.core import _stage_key_renames, ASSESSMENT_KEY_MAP, COMPASS_SCH
 from compass_pkg.governance import governance_drift
 from compass_pkg import word_map
 from compass_pkg.stable_ids import (APPROACH_FULL, APPROACH_REGULAR, APPROACH_SPIKE,
-                                    DEPTH_THOROUGH, MODE_LIGHTWEIGHT, MODE_THOROUGH)
+                                    ARTIFACT_DEPTHS, DEPTH_LIGHTWEIGHT, DEPTH_THOROUGH, MODE_LIGHTWEIGHT,
+                                    MODE_THOROUGH)
 from compass_pkg.render import fired_rule_line
 from compass_pkg.manifest import annotate_gate_accepts_text
 
@@ -465,6 +466,20 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
                 display_shape(final) + (" approach" if final in (APPROACH_REGULAR, APPROACH_FULL) else ""),
                 "one" if depth == DEPTH_THOROUGH else "a lightweight one"),
         })
+    # A kind the catalogue marks `every_approach` joins every approach that does not
+    # name it, at the depth the approach gives the kind's own stage (a stage mode that
+    # is an artifact depth), else lightweight.
+    for kind, owner in (policy.get("every_approach") or {}).items():
+        if any(a["kind"] == kind for a in artifacts):
+            continue
+        mode = phases.get(owner)
+        depth = mode if mode in ARTIFACT_DEPTHS else DEPTH_LIGHTWEIGHT
+        artifacts.append({
+            "id": "ART-" + str(kind).upper().replace("-", "_"),
+            "kind": kind, "status": "draft", "depth": depth,
+            "reason": "every approach carries %s" % (
+                "one" if depth == DEPTH_THOROUGH else "a lightweight one"),
+        })
     # A role rule already demands documents via `require_artifact` - a marketer
     # needs launch-readiness, a product owner an intent document. That is the same idea
     # from the role's side, so it joins the same set rather than living in a
@@ -670,6 +685,15 @@ def cmd_route_evaluate(args):
         gov = None
         policy = view.evaluator_policy()
         autonomy = view.autonomy
+    # The justifications are settled before anything prints or is written, so a
+    # refusal leaves the manifest, the generations and the documents as they were.
+    recorded_reasons = None
+    if getattr(args, "write", False) and task is not None:
+        from compass_pkg import justifications
+        recorded_reasons, missing = justifications.merge(
+            task, readings, justifications.parse(getattr(args, "justify", None)), view)
+        if missing:
+            raise CompassError(justifications.refusal(missing))
     # The drift report compares a project's copy of the policy with the
     # framework's. A configuration resolved over such a copy still gets it.
     drift_gov = gov
@@ -887,6 +911,8 @@ def cmd_route_evaluate(args):
         # load as one dict and the comparison above can never see a
         # difference - the field would be written and be useless.
         task["evaluated_assessment"] = dict(task.get("assessment") or {})
+        if recorded_reasons:
+            task["justifications"] = recorded_reasons
         task["delivery_approach"] = result["delivery_approach"]
         task["policy_rules_fired"] = result["policy_rules_fired"]
         task["stages"] = result["stages"]

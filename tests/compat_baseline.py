@@ -42,6 +42,11 @@ ADDED_TO_QUICK_FIX = ("verification-note",)
 # 5.6.0 recorded it, and a spike's result is compared without the two.
 ADDED_TO_SPIKE = ("delivery-approach", "spike-conclusion")
 
+# 7.0.0 also makes every approach carry its delivery-approach record (the catalogue flag
+# `every_approach`). The baseline names it on the quick fix only, so the result of any
+# other approach is compared without it.
+ADDED_TO_EVERY_APPROACH = ("delivery-approach",)
+
 
 def shipped_policy():
     return load_yaml(str(POLICY))
@@ -78,7 +83,9 @@ def compact(readings, policy):
                 "gates": sorted(r["gates"]),
                 "artifacts": sorted((a["kind"], DEPTH_WAS.get(a["depth"], a["depth"]))
                                     for a in r["artifacts"]
-                                    if not (r["delivery_approach"] == "quick-fix"
+                                    if not (a["kind"] in ADDED_TO_EVERY_APPROACH
+                                            and r["delivery_approach"] != "quick-fix")
+                                    and not (r["delivery_approach"] == "quick-fix"
                                             and a["kind"] in ADDED_TO_QUICK_FIX)
                                     and not (r["delivery_approach"] == "spike"
                                              and a["kind"] in ADDED_TO_SPIKE)),

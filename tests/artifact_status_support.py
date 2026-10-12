@@ -149,6 +149,10 @@ def project(tmp_path, compass_yml=None, assessment=None, evaluate=True):
                  "distribution-map", "verification-report", "requirements-review",
                  "runbook"):
         (docs / f"{kind}.md").write_text(f"# {kind}\n\nFirst version.\n")
+    if evaluate and "delivery-approach" in entries(root):
+        # The assess stage writes the record and registers it (ACF-17); a stage's exit then
+        # approves it, as it does for every document of an earlier stage.
+        assert register(root, "delivery-approach", "draft")[0] == 0
     return root
 
 

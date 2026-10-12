@@ -493,7 +493,11 @@ def test_ef_6_the_result_matches_the_one_the_governance_files_give(tmp_path):
     _project(tmp_path, slug="other")
     code, out, err = _run(root, "approach", "evaluate", "--issue", SLUG, "--write")
     assert code == 0, out + err
-    assert _evaluate_json(root) == _evaluate_json(root, "other")
+    stored, live = _evaluate_json(root), _evaluate_json(root, "other")
+    # The stored generation also carries the delivery-approach record every approach owes
+    # (the catalogue flag `every_approach`); the governance files do not declare the flag.
+    stored["artifacts"] = [a for a in stored["artifacts"] if a["kind"] != "delivery-approach"]
+    assert stored == live
 
 
 def test_ef_6_editing_the_live_policy_does_not_change_the_issue_with_a_generation(tmp_path):

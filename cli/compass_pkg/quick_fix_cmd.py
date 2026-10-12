@@ -98,10 +98,10 @@ def register(sub, issue_arg):
                     help="familiarity value and its reason")
     st.add_argument("--size", required=True, metavar="VALUE - REASON",
                     help="size value and its reason")
-    st.add_argument("--goal", default="delivery", metavar="VALUE[ - REASON]",
-                    help="goal value, reason optional (default: delivery)")
-    st.add_argument("--role", default="engineer", metavar="VALUE[ - REASON]",
-                    help="role value, reason optional (default: engineer)")
+    st.add_argument("--goal", default=None, metavar="VALUE - REASON",
+                    help="goal value and its reason (left out: not assessed)")
+    st.add_argument("--role", default=None, metavar="VALUE - REASON",
+                    help="role value and its reason (left out: not assessed)")
     st.add_argument("--labels", default="", metavar="TAG[,TAG...]",
                     help="domain tags the change touches, comma-separated - "
                          "auth, payments, personal-data or migrations bring "
@@ -162,14 +162,12 @@ def _split_required(raw, dim):
     return value, reason
 
 
-def _split_optional(raw):
-    """'VALUE' or 'VALUE - reason' - goal and role may omit the reason."""
+def _split_optional(raw, dim):
+    """`(None, None)` for a goal or role left out (it records no value, DD-12), else
+    'VALUE - reason', which must carry its reason."""
     if raw is None:
         return None, None
-    if " - " in raw:
-        value, reason = raw.split(" - ", 1)
-        return value.strip(), (reason.strip() or None)
-    return raw.strip(), None
+    return _split_required(raw, dim)
 
 
 def _delivery_approach_md(slug, approach, dims, rules_fired, intent_text,
@@ -185,7 +183,7 @@ def _delivery_approach_md(slug, approach, dims, rules_fired, intent_text,
         "|---|---|---|",
     ]
     for name, value, reason in dims:
-        lines.append(f"| {name} | {value} | {reason or '(no reason given)'} |")
+        lines.append(f"| {name} | {value} | {reason} |")
     lines += ["", "## Policy rules fired", ""]
     if rules_fired:
         for f in rules_fired:
@@ -275,13 +273,15 @@ def cmd_quick_fix_start(args):
     fam_v, fam_r = _split_required(args.familiarity, "familiarity")
     size_v, size_r = _split_required(args.size, "size")
     size_v = read_size("size", size_v)      # the retired `standard` reads as `medium`
-    goal_v, goal_r = _split_optional(args.goal)
-    role_v, role_r = _split_optional(args.role)
+    goal_v, goal_r = _split_optional(args.goal, "goal")
+    role_v, role_r = _split_optional(args.role, "role")
 
-    readings = {
-        "risk": risk_v, "familiarity": fam_v, "size": size_v,
-        "goal": goal_v, "role": role_v, "labels": _split_labels(args.labels),
-    }
+    readings = {"risk": risk_v, "familiarity": fam_v, "size": size_v}
+    reasons = {"risk": risk_r, "familiarity": fam_r, "size": size_r}
+    for name, value, reason in (("goal", goal_v, goal_r), ("role", role_v, role_r)):
+        if value is not None:
+            readings[name], reasons[name] = value, reason
+    readings["labels"] = _split_labels(args.labels)
 
     # Before writing anything: the evaluator runs on the values in memory,
     # so an unknown value is refused with the dimension named (QFO-3), the
@@ -337,6 +337,7 @@ def cmd_quick_fix_start(args):
         "issue": slug,
         "created": created,
         "assessment": dict(readings),
+        "justifications": dict(reasons),
         # Where the assess stage ends; finish reads the session's tokens
         # per stage from here (#375).
         "started_at": now_iso(),
@@ -410,8 +411,9 @@ def cmd_quick_fix_start(args):
     content = _delivery_approach_md(
         slug=slug, approach=approach,
         dims=[("Risk", risk_v, risk_r), ("Familiarity", fam_v, fam_r),
-              ("Size", size_v, size_r), ("Goal", goal_v, goal_r),
-              ("Role", role_v, role_r)],
+              ("Size", size_v, size_r)]
+        + [(name.capitalize(), value, reason) for name, value, reason in
+           (("goal", goal_v, goal_r), ("role", role_v, role_r)) if value is not None],
         rules_fired=task.get("policy_rules_fired") or [],
         intent_text=args.intent, scenario_id=args.scenario_id,
         scenario_text=args.scenario, ledger=ledger, advice=advice,

@@ -48,10 +48,13 @@ CONDITIONS = {"subtasks": (subtask_count, _subtasks_phrase)}
 def owed(task, view, kind, entry=None):
     """Whether the issue owes `kind`. `entry` is the registered entry, when the caller
     holds it. A kind the catalogue does not declare, or declares with no condition, is
-    always owed; so is any kind when no configuration can be read."""
+    always owed. With no configuration to read, the shipped default's condition applies."""
     if isinstance(entry, dict) and entry.get("status") == "omitted":
         return Owed(True)
-    declared = artifact_kinds.entry(view, kind)
+    # With no configuration to read, the shipped default's condition applies, so a page
+    # rendered before a project has a configuration reads as it does after.
+    declared = artifact_kinds.entry(view, kind) if view is not None \
+        else artifact_kinds.shipped().get(kind)
     required = declared.get("required_when") if isinstance(declared, dict) else None
     if not isinstance(required, dict):
         return Owed(True)

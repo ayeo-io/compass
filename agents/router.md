@@ -47,7 +47,10 @@ read the dimensions.
    `assessment:` block.
 5. **Compute the delivery approach - this is the mechanism, and it is the
    CLI's, not yours.** Run `compass approach evaluate --issue <slug>
-   --write`. The CLI applies the routing rules in force:
+   --write --justify risk="<why>" --justify familiarity="<why>" --justify
+   size="<why>"`, with a `--justify` for goal and role when you assessed them.
+   The CLI refuses a new or changed value that has no justification, and
+   records each one under the manifest's `justifications:` key. The CLI applies the routing rules in force:
    - composes the candidate shape, biased by the soft defaults;
    - raises it with floors;
    - limits it with caps;
@@ -62,7 +65,11 @@ read the dimensions.
    assessment must reach the same approach, and the CLI is what guarantees
    it. If the CLI rejects a value as outside the vocabulary, re-read that
    dimension - a misclassification should fail loudly, not pass silently.
-6. **Write `delivery-approach.md`** from the CLI's output and present it.
+6. **Write `delivery-approach.md`** from the CLI's output, at the path
+   `compass issue artifact-path delivery-approach` prints (the issue's
+   documents folder, never beside the manifest). Register it with `compass
+   issue artifact set delivery-approach --status draft --path <that path>`,
+   then present it.
    The assessment is advisory until confirmed; if a dimension changes,
    update `manifest.yml` and re-run `compass approach evaluate --write` -
    never hand-edit the computed approach. Record human overrides with who
@@ -73,8 +80,8 @@ read the dimensions.
 7. **Set the `.compass/current-task` pointer** with `compass issue use
    <slug>`, so every later `compass` call resolves to this issue.
 8. **On a spike, write the `.spike` marker.** When the CLI's approach is a
-   spike, drop a `.compass/work/<issue-slug>/.spike` marker file alongside
-   `delivery-approach.md`. The approach-aware pre-tool hook reads it to
+   spike, drop a `.compass/work/<issue-slug>/.spike` marker file in the
+   issue's work folder, beside `manifest.yml`. The approach-aware pre-tool hook reads it to
    know the TDD strategy is suspended for this issue.
 
 ## Your core craft: the de-scope ledger

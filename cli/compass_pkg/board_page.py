@@ -149,7 +149,7 @@ def _assessment_block(r):
     for name in _DIMENSIONS:
         value = a.get(name)
         out.append('<dt>%s</dt><dd>%s</dd>' % (
-            name, _e(value) if value else "not recorded"))
+            name, _e(value) if value else "not assessed"))
     out.append('</dl>')
     out.append('<ul class="labels">%s</ul></section>' % "".join(
         '<li class="label">%s</li>' % _e(label) for label in a.get("labels") or []))

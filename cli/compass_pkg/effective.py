@@ -76,7 +76,15 @@ class EffectiveView:
         """The routing policy in the shape `evaluate_route` takes, built from
         the resolved configuration. `effective` is, with `classify`, one of the
         two modules that may import `obligations` (ADR-037); readers call this."""
-        return obligations.policy_adapter(self.config)
+        policy = obligations.policy_adapter(self.config)
+        # The kinds every approach carries, with the stage whose depth each takes. The
+        # classifier prepares its policy from `policy_adapter` and does not see this key,
+        # so a stored generation owes nothing new (I-7).
+        every = {kind: body.get("stage") for kind, body in (self.config.get("artifacts") or {}).items()
+                 if isinstance(body, dict) and body.get("every_approach")}
+        if every:
+            policy["every_approach"] = every
+        return policy
 
     def evaluator_issue(self):
         """The issue's own layer in the shape `evaluate_route` takes as `issue`:

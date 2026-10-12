@@ -193,20 +193,6 @@ def _every_scenario_tested(task: dict) -> bool:
     return bool(ids) and all(i in tested for i in ids)
 
 
-def _map_signals_breakdown(task: dict, task_dir: str | None) -> bool:
-    """True when the distribution map is registered and the issue owes it."""
-    if not _registered(task, "distribution-map"):
-        return False
-    from compass_pkg import artifact_owed, effective
-    try:
-        view = effective.view_or_legacy(task_dir) if task_dir else None
-    except Exception:                                       # noqa: BLE001 - owed when unreadable
-        view = None
-    entry = next((a for a in _entries(task, "artifacts") if a.get("kind") == "distribution-map"
-                  and (a.get("path") or a.get("status") == "omitted")), None)
-    return artifact_owed.owed(task, view, "distribution-map", entry).owed
-
-
 def _stages_on_record(task: dict, task_dir: str | None) -> set:
     """The stages the records on disk show as done.
 
@@ -231,8 +217,7 @@ def _stages_on_record(task: dict, task_dir: str | None) -> set:
                    or (not _earned(task, "requirements-review")
                        and _review_written(task_dir))),
         STAGE_PLAN: _registered(task, "technical-design"),
-        # A registered map signals breakdown only while the map is owed (ADR-045, ADR-053).
-        STAGE_BREAKDOWN: bool(_entries(task, "subtasks")) or _map_signals_breakdown(task, task_dir),
+        STAGE_BREAKDOWN: bool(_entries(task, "subtasks")) or _registered(task, "distribution-map"),
         STAGE_IMPLEMENT: _every_scenario_tested(task),
         STAGE_VERIFY: _all_gates_pass(task.get("gates") or []),
         STAGE_SHIP: False,

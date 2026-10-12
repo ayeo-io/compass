@@ -302,6 +302,10 @@ def test_asw_19_a_refusal_for_a_document_never_written_offers_omitting_it(tmp_pa
     root = project(tmp_path)
     for kind in ("acceptance-criteria", "technical-design", "verification-report"):
         assert register(root, kind, "approved")[0] == 0
+    # The map is owed from two subtasks (ACF-25).
+    body = manifest(root)
+    body["subtasks"] = [{"id": "subtask-1"}, {"id": "subtask-2"}]
+    write_manifest(root, body)
     _ready(root)
     code, out, err = _ship(root)
     assert code == 2, out + err

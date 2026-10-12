@@ -1132,8 +1132,9 @@ def test_acf_26(tmp_path):
         assert "missing" not in text.lower() or "distribution-map" not in text.lower().split(
             "missing")[0][-60:], text
     assert "omitted" not in [ln for ln in page.splitlines() if "distribution-map" in ln][0]
-    # The three drafts that remain are counted; the map is not one of them.
-    assert "3 more still draft" in receipt, receipt
+    # The four drafts that remain are counted (the record, criteria, design and report); the
+    # map is not one of them.
+    assert "4 more still draft" in receipt, receipt
     # `compass next` does not name the map as outstanding work.
     code, out, err = _cli(root, "next", "--issue", SLUG)
     assert "distribution-map" not in out + err, out + err
@@ -1206,3 +1207,320 @@ def test_acf_28(tmp_path):
     row = _check_row(root2)
     assert "distribution-map reads draft" not in row["detail"], row
     assert "not needed: one subtask" in row["detail"], row
+
+
+# --- group D: the delivery-approach record on every approach -----------------------
+
+DIMENSIONS = ("risk", "familiarity", "size", "goal", "role", "urgency")
+
+
+def _justify_all(assessment, *skip):
+    """`--justify` for each dimension of `assessment` that has a value."""
+    found = []
+    for name in DIMENSIONS:
+        if name in assessment and name not in skip:
+            found += ["--justify", f"{name}=Because the {name} is {assessment[name]}."]
+    return found
+
+
+def _fixture(tmp_path, name, layer=None, **assessment):
+    """A scratch project with one issue (slug `feature`) assessed with `assessment` over
+    the default regular one. No `evaluate --write` has run."""
+    from test_generation_store import MANIFEST, _project
+    body = dict(MANIFEST)
+    body["assessment"] = dict(body["assessment"], **assessment)
+    (tmp_path / name).mkdir()
+    return _project(tmp_path / name, manifest=body, compass_yml=layer or {"schema": 1})
+
+
+def _evaluate(root, *extra):
+    return _cli(root, "approach", "evaluate", "--issue", SLUG, "--write", *extra)
+
+
+FIVE_APPROACHES = {
+    "quick-fix": ({"risk": "trivial", "size": "atomic"}, "lightweight"),
+    "regular": ({}, "thorough"),
+    "hotfix": ({"urgency": "live-defect", "size": "small"}, "lightweight"),
+    "full": ({"risk": "critical", "size": "large"}, "thorough"),
+    "spike": ({"goal": "exploration"}, "lightweight"),
+}
+
+
+def test_acf_16(tmp_path):
+    for approach, (assessment, depth) in FIVE_APPROACHES.items():
+        root, task_dir = _fixture(tmp_path, approach, **assessment)
+        body = _manifest_of(task_dir)
+        code, out, err = _evaluate(root, *_justify_all(body["assessment"]))
+        assert code == 0, (approach, out + err)
+        body = _manifest_of(task_dir)
+        assert body["delivery_approach"] == approach
+        found = [a for a in body["artifacts"] if a["kind"] == "delivery-approach"]
+        assert len(found) == 1, (approach, body["artifacts"])
+        assert found[0]["status"] == "draft" and found[0]["depth"] == depth, (approach, found)
+        assert "path" not in found[0], (approach, found)
+        code, out, err = _cli(root, "issue", "artifact-path", "delivery-approach",
+                              "--issue", SLUG)
+        assert code == 0 and out.strip() == f"{HOME}/delivery-approach.md", (approach, out + err)
+    # The depth follows the issue's configuration: a layer that lightens regular's
+    # assess stage registers the record at lightweight. The shipped lint refuses such a
+    # loosening without a waiver, so the layer is merged here and evaluated directly.
+    import copy
+
+    from compass_pkg import effective, merge, policy_lint, routing
+    parent, _ = policy_lint.load_parent()
+    base, provenance = merge.apply({}, parent.doc, parent.kind, parent.name, {})
+    layer = {"schema": 1, "approaches": {"regular": {"set": {"stages": {
+        "set": {"assess": "lightweight"}}}}}}
+    child, _ = merge.apply(copy.deepcopy(base), layer, "project", "project", dict(provenance))
+    for config, depth in ((base, "thorough"), (child, "lightweight")):
+        view = effective.EffectiveView("live", SLUG, None, config, {})
+        result = routing.evaluate_route(
+            {"risk": "contained", "familiarity": "brownfield-mapped", "size": "medium",
+             "goal": "delivery", "role": "engineer", "labels": []}, view.evaluator_policy())
+        assert result["delivery_approach"] == "regular"
+        found = [a for a in result["artifacts"] if a["kind"] == "delivery-approach"]
+        assert [a["depth"] for a in found] == [depth], found
+
+
+#: Words that send a writer to the old home, beside the manifest.
+OLD_HOME_TEXTS = (r"\.compass/work/<[^>]*>/delivery-approach\.md",
+                  r"into the issue directory",
+                  r"alongside\s+`delivery-approach\.md`")
+
+
+def test_acf_17(tmp_path):
+    import re
+    root, task_dir = _fixture(tmp_path, "regular")
+    code, out, err = _evaluate(root, *_justify_all(_manifest_of(task_dir)["assessment"]))
+    assert code == 0, out + err
+    code, out, err = _cli(root, "issue", "artifact-path", "delivery-approach", "--issue", SLUG)
+    assert code == 0, out + err
+    path = out.strip()
+    assert path == f"{HOME}/delivery-approach.md", path
+    _write(root / path, "# Delivery approach - feature\n")
+    code, out, err = _set(root, "delivery-approach", "--status", "draft", "--path", path)
+    assert code == 0, out + err
+    entry = _entries(task_dir, "delivery-approach")
+    assert len(entry) == 1 and entry[0]["path"] == path, entry
+    assert (root / path).is_file() and not (task_dir / "delivery-approach.md").exists()
+    # A quick fix writes and registers the record at the same home.
+    qf = _scratch(tmp_path / "qf-holder") if False else tmp_path / "qf"
+    (qf / ".compass").mkdir(parents=True)
+    code, out, err = _cli(qf, "quick-fix", "start", "fix-it",
+                          "--risk", "trivial - one line", "--familiarity",
+                          "brownfield-mapped - mapped", "--size", "atomic - one file",
+                          "--intent", "A quick fix records its approach in the documents folder.",
+                          "--scenario", "A quick fix records its approach in one place",
+                          "--test", "tests/test_x.py::test_x")
+    assert code == 0, out + err
+    qf_home = next((qf / "docs" / "compass").iterdir())
+    assert (qf_home / "delivery-approach.md").is_file()
+    assert not (qf / ".compass" / "work" / "fix-it" / "delivery-approach.md").exists()
+    code, out, err = _cli(qf, "issue", "artifact-path", "delivery-approach", "--issue", "fix-it")
+    assert code == 0 and out.strip().endswith(f"{qf_home.name}/delivery-approach.md"), out + err
+    # No writer's instructions name the old home.
+    for folder in ("commands", "agents", "skills", "approaches"):
+        for text_file in sorted((ROOT / folder).rglob("*.md")):
+            text = text_file.read_text(encoding="utf-8")
+            for pattern in OLD_HOME_TEXTS:
+                assert not re.search(pattern, text), (str(text_file), pattern)
+    for name in ("approaches/assess-procedure.md", "agents/router.md", "approaches/rubric.md"):
+        assert "artifact-path delivery-approach" in (ROOT / name).read_text(encoding="utf-8"), name
+
+
+def _hook_issue(tmp_path, name, *, register, documents, beside):
+    """An issue for the hook tests of `test_hook_artifact_paths`, with the record in
+    the documents folder (`documents`), beside the manifest (`beside`), or both."""
+    from test_hook_artifact_paths import DOCS_REL, SLUG as HSLUG, _project as hook_project
+    (tmp_path / name).mkdir()
+    project = hook_project(tmp_path / name, documents=False, register=register)
+    if documents:
+        _write(project / DOCS_REL / "delivery-approach.md", "# Delivery approach\n")
+    if beside:
+        _write(project / ".compass" / "work" / HSLUG / "delivery-approach.md",
+               "# Delivery approach\n")
+    return project
+
+
+def test_acf_18(tmp_path):
+    from test_hook_artifact_paths import DOCS_REL, _pre_tool
+    project = _hook_issue(tmp_path, "found", register=True, documents=True, beside=False)
+    ran = _pre_tool(project)
+    assert ran.returncode == 0 and "no-delivery-approach" not in ran.stderr, ran.stderr
+    (project / DOCS_REL / "delivery-approach.md").unlink()
+    ran = _pre_tool(project)
+    assert ran.returncode != 0 and "delivery-approach" in ran.stderr, ran.stderr
+    assert "a-moved-issue" in ran.stderr, ran.stderr
+
+
+def test_acf_19(tmp_path):
+    from test_hook_artifact_paths import DOCS_REL, _stop
+    project = _hook_issue(tmp_path, "found", register=True, documents=True, beside=False)
+    assert "MISSING" not in _stop(project).stderr
+    (project / DOCS_REL / "delivery-approach.md").unlink()
+    assert "delivery-approach record is MISSING" in _stop(project).stderr
+
+
+def test_acf_20(tmp_path):
+    from test_hook_artifact_paths import _pre_tool, _stop
+    for name, register, documents, beside in (
+            ("first", False, False, True), ("second", True, False, True),
+            ("third", True, True, False)):
+        project = _hook_issue(tmp_path, name, register=register, documents=documents,
+                              beside=beside)
+        ran = _pre_tool(project)
+        assert ran.returncode == 0 and "delivery-approach" not in ran.stderr, (name, ran.stderr)
+        assert "MISSING" not in _stop(project).stderr, name
+
+
+def _tree_state(root, task_dir):
+    """The bytes the refusal must leave alone: manifest, generations, documents folder."""
+    state = {"manifest": (task_dir / "manifest.yml").read_bytes()}
+    for folder in (task_dir / "generations", root / "docs"):
+        state[folder.name] = sorted(str(p.relative_to(folder)) for p in folder.rglob("*")) \
+            if folder.exists() else None
+    return state
+
+
+@pytest.mark.raw_justify
+def test_acf_21(tmp_path):
+    root, task_dir = _fixture(tmp_path, "one")
+    values = _manifest_of(task_dir)["assessment"]
+    before = _tree_state(root, task_dir)
+    flags = _justify_all(values, "size", "risk")
+    for blank in ("", "   "):
+        code, out, err = _evaluate(root, *flags, "--justify", f"size={blank}",
+                                   "--justify", "risk=ok")
+        assert code == 2 and "size" in err and "risk" not in err.split("size", 1)[0], out + err
+        assert _tree_state(root, task_dir) == before
+    code, out, err = _evaluate(root, *flags, "--justify", "size=", "--justify", "risk=")
+    assert code == 2 and "size" in err and "risk" in err, out + err
+    assert _tree_state(root, task_dir) == before
+    # Every dimension with a value has one: the key holds them and the assessment does not.
+    code, out, err = _evaluate(root, *_justify_all(values))
+    assert code == 0, out + err
+    body = _manifest_of(task_dir)
+    assert set(body["justifications"]) == {"risk", "familiarity", "size", "goal", "role"}
+    assert all(isinstance(v, str) and v.strip() for v in body["justifications"].values())
+    assert body["assessment"] == values and "labels" in body["assessment"]
+    # An unchanged assessment needs no flag, and leaves the key as it was.
+    held = body["justifications"]
+    code, out, err = _evaluate(root)
+    assert code == 0, out + err
+    assert _manifest_of(task_dir)["justifications"] == held
+    # A changed value needs a new line, although the key holds one for the old value.
+    body["assessment"]["risk"] = "critical"
+    (task_dir / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
+    before = _tree_state(root, task_dir)
+    code, out, err = _evaluate(root)
+    assert code == 2 and "risk" in err, out + err
+    assert _tree_state(root, task_dir) == before
+    code, out, err = _evaluate(root, "--justify", "risk=It touches stored folders.",
+                               "--reason", "bigger than assessed")
+    assert code == 0, out + err
+    assert _manifest_of(task_dir)["justifications"]["risk"] == "It touches stored folders."
+    assert _manifest_of(task_dir)["justifications"]["size"] == held["size"]
+    # An archived issue with no key is not refused for an unchanged assessment.
+    body = _manifest_of(task_dir)
+    body.pop("justifications")
+    (task_dir / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
+    code, out, err = _evaluate(root)
+    assert code == 0, out + err
+    assert "justifications" not in _manifest_of(task_dir)
+    # A dimension the assessment leaves without a value needs none.
+    root2, task_dir2 = _fixture(tmp_path, "two")
+    body = _manifest_of(task_dir2)
+    del body["assessment"]["goal"], body["assessment"]["role"]
+    (task_dir2 / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False),
+                                            encoding="utf-8")
+    code, out, err = _evaluate(root2, *_justify_all(body["assessment"]))
+    assert code == 0, out + err
+    assert set(_manifest_of(task_dir2)["justifications"]) == {"risk", "familiarity", "size"}
+
+
+def test_acf_22(tmp_path):
+    qf = tmp_path / "qf"
+    (qf / ".compass").mkdir(parents=True)
+    base = ["quick-fix", "start", "fix-it", "--risk", "trivial - risk reason",
+            "--familiarity", "brownfield-mapped - familiarity reason",
+            "--size", "atomic - size reason",
+            "--intent", "A quick fix records each reason it was given.",
+            "--scenario", "A quick fix shows every reason in its record",
+            "--test", "tests/test_x.py::test_x"]
+    # A goal or role with no reason is refused before anything is written.
+    for flag, word in (("--goal", "goal"), ("--role", "role")):
+        value = "delivery" if word == "goal" else "engineer"
+        code, out, err = _cli(qf, *base, flag, value)
+        assert code == 2 and word in err, out + err
+        assert not (qf / ".compass" / "work" / "fix-it").exists()
+        assert not (qf / "docs").exists()
+    code, out, err = _cli(qf, *base, "--goal", "delivery - goal reason",
+                          "--role", "engineer - role reason")
+    assert code == 0, out + err
+    body = yaml.safe_load((qf / ".compass" / "work" / "fix-it" / "manifest.yml").read_text())
+    assert body["justifications"] == {
+        "risk": "risk reason", "familiarity": "familiarity reason", "size": "size reason",
+        "goal": "goal reason", "role": "role reason"}, body["justifications"]
+    assert set(body["assessment"]) == {"risk", "familiarity", "size", "goal", "role", "labels"}
+    record = (next((qf / "docs" / "compass").iterdir()) / "delivery-approach.md").read_text()
+    for dim, reason in body["justifications"].items():
+        assert any(dim.capitalize() in line and reason in line
+                   for line in record.splitlines()), (dim, record)
+    assert "(no reason given)" not in record
+    for folder in ("cli", "hooks"):
+        for source in (ROOT / folder).rglob("*"):
+            if source.is_file() and "__pycache__" not in str(source) and "vendor" not in str(
+                    source.relative_to(ROOT)):
+                try:
+                    text = source.read_text(encoding="utf-8")
+                except UnicodeDecodeError:
+                    continue
+                assert "(no reason given)" not in text, str(source)
+    # An omitted goal and role record no value and no justification (read as "not assessed").
+    other = tmp_path / "plain"
+    (other / ".compass").mkdir(parents=True)
+    code, out, err = _cli(other, *[a if a != "fix-it" else "plain-fix" for a in base])
+    assert code == 0, out + err
+    plain = yaml.safe_load((other / ".compass" / "work" / "plain-fix" / "manifest.yml").read_text())
+    assert "goal" not in plain["assessment"] and "role" not in plain["assessment"]
+    assert set(plain["justifications"]) == {"risk", "familiarity", "size"}
+    plain_record = (next((other / "docs" / "compass").iterdir()) / "delivery-approach.md").read_text()
+    assert "(no reason given)" not in plain_record and "| Goal |" not in plain_record
+    # The readers print "not assessed" for the absent values.
+    code, out, err = _cli(other, "issue", "receipt", "--issue", "plain-fix")
+    assert code == 0, out + err
+    goal_line = [ln for ln in out.splitlines() if ln.strip().startswith("goal")]
+    assert len(goal_line) == 1 and "not assessed" in goal_line[0], out
+    assert "engineer" not in goal_line[0] and "delivery" not in goal_line[0], goal_line
+    html = other / "board.html"
+    code, out, err = _cli(other, "flow", "--html", str(html))
+    assert code == 0, out + err
+    assert "not assessed" in html.read_text(encoding="utf-8")
+    code, out, err = _cli(other, "flow", "--json")
+    assert code == 0, out + err
+    rows = [r for lane in json.loads(out)["sections"].values() for r in lane
+            if r.get("slug") == "plain-fix"]
+    assert rows and rows[0]["assessment"]["goal"] == "not assessed", rows
+    code, out, err = _cli(other, "retro")
+    assert code == 0 and "None" not in out, out + err
+
+
+def test_acf_29(tmp_path):
+    root = _scratch(tmp_path)
+    shown = _show(root)
+    assert shown["approaches.spike.artifacts"] == {
+        "delivery-approach": "lightweight", "spike-conclusion": "thorough"}
+    assert shown["approaches.spike.locked"] is True
+    root, task_dir = _fixture(tmp_path, "spike", goal="exploration")
+    code, out, err = _evaluate(root, *_justify_all(_manifest_of(task_dir)["assessment"]))
+    assert code == 0, out + err
+    body = _manifest_of(task_dir)
+    assert body["delivery_approach"] == "spike"
+    got = {a["kind"]: a for a in body["artifacts"]}
+    assert set(got) == {"delivery-approach", "spike-conclusion"}
+    assert (got["delivery-approach"]["depth"], got["spike-conclusion"]["depth"]) == (
+        "lightweight", "thorough")
+    assert all("path" not in a for a in got.values())
+    for kind in got:
+        code, out, err = _cli(root, "issue", "artifact-path", kind, "--issue", SLUG)
+        assert code == 0 and out.strip() == f"{HOME}/{kind}.md", (kind, out + err)

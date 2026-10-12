@@ -264,6 +264,7 @@ def _receipt_render(task, slug, route_readings, gate_requirements=None,
     lines.append("Assessment")
     lines.append("----------")
     readings = task.get("assessment") or {}
+    reasons = task.get("justifications") if isinstance(task.get("justifications"), dict) else None
     for label, key in [
         ("risk", "risk"),
         ("familiarity", "familiarity"),
@@ -271,13 +272,29 @@ def _receipt_render(task, slug, route_readings, gate_requirements=None,
         ("goal", "goal"),
     ]:
         if key == "goal":
-            role = readings.get("role") or "engineer"
-            intent_v = readings.get("goal") or "(not recorded)"
-            value = f"{intent_v} ({role})"
+            # An absent goal or role was not assessed; no default is shown for it.
+            goal_v = readings.get("goal") or "not assessed"
+            role_v = readings.get("role")
+            if role_v:
+                value = f"{goal_v} ({role_v})"
+            else:
+                value = goal_v if not readings.get("goal") else f"{goal_v} (role not assessed)"
         else:
             value = str(readings.get(key) or "(not recorded)")
         justification = "(no justification on file)"
-        if key in route_readings:
+        if key == "goal" and not readings.get("goal") and not readings.get("role"):
+            justification = ""          # nothing was assessed, so nothing needs a reason
+        elif isinstance(reasons, dict):
+            # The manifest's `justifications` key is the record.
+            wanted = [str(reasons[k]) for k in (("goal", "role") if key == "goal" else (key,))
+                      if str(reasons.get(k) or "").strip()]
+            if key == "goal" and len(wanted) == 2:
+                wanted[1] = "role: " + wanted[1]
+            if wanted:
+                justification = "; ".join(wanted)
+        elif key in route_readings:
+            # An issue with no `justifications` key keeps the old reader of the
+            # assessment table in the record (jed72 accepted this read-only fallback).
             justification = route_readings[key][1]
         lines.append(_receipt_truncate(
             f"  {label:<14}  {value:<22}  {justification}"))

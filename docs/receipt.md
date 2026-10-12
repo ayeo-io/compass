@@ -10,7 +10,7 @@ The receipt shows Compass's two differentiators made demonstrable in plain text 
 compass issue receipt --issue <slug>
 ```
 
-Optionally `--workdir <path>` to point the receipt at a project rooted somewhere other than the current working directory. The command is **read-only**: it parses `manifest.yml`, `delivery-approach.md`, `evidence/`, and `governance/guardrails.yml`, prints the receipt to stdout, and mutates nothing on disk.
+Optionally `--workdir <path>` to point the receipt at a project rooted somewhere other than the current working directory. The command is **read-only**: it parses `manifest.yml`, `delivery-approach.md`, `evidence/`, and `governance/guardrails.yml`, prints the receipt to stdout, and mutates nothing on disk. The assessment lines show the manifest's `justifications`; an issue with no such key keeps the old reader of the assessment table in `delivery-approach.md`. A goal or role the assessment leaves out reads as `not assessed`.
 
 ## Example
 

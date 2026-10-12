@@ -56,6 +56,20 @@ A kind that no approach, rule or `every_approach` flag names is voluntary: nothi
 
 The not-an-artifact list is `NOT_AN_ARTIFACT` in `cli/compass_pkg/stable_ids.py`. It holds the names and patterns that the process writes but that are no kind: `README.md`, `devlog.md`, review briefs, subtask assignments and briefs, `architect-ruling.md`, `recommendation.md`, `released-verbs-v5.6.0.md`, `compare.md`, `report.md` and `*.v6.bak`. The migrate reads the same list.
 
+## Documents owed only under a condition
+
+An entry can carry `required_when: {subtasks: {min: 2}}`. The shipped `distribution-map` does. One function, `artifact_owed.owed()`, decides whether the issue owes such a document, and `compass check`, the issue page, the board panel and the receipt all ask it. The subtask count is the length of the manifest's `subtasks:` list, and an absent list counts as zero.
+
+While the condition is false, `artifacts-approved` does not judge the document, and the readers show `not needed: one subtask` or `not needed: no subtasks recorded` where it has no file. A document that a person recorded as `omitted` keeps its reason and never reads "not needed". A document written anyway shows its own status. `compass next` is unchanged: a written or omitted map still marks breakdown done.
+
+## The delivery-approach record on every approach
+
+The `delivery-approach` entry carries `every_approach: true`, so `compass approach evaluate --write` registers it for each approach as a draft with a depth and no path. The depth is the approach's mode for the `assess` stage when that mode is an artifact depth, else `lightweight`. The quick fix and the spike name the kind themselves and keep `lightweight`. The assess stage writes the file at the path `compass issue artifact-path delivery-approach` prints, in the issue's documents folder, then registers it with `compass issue artifact set delivery-approach --status draft --path <that path>`. Until the file exists, that verb prints the home for a registered entry that has no path.
+
+## Justifications
+
+The manifest's `justifications` key holds one line for each assessed dimension of type `enum` or `ordered-enum` (risk, familiarity, size, goal, role, urgency). It sits beside `assessment` and never inside it. `compass approach evaluate --write --justify DIM=TEXT` merges the flags over the stored key. It refuses, naming each dimension, when a value is new or changed since the last evaluation and has no non-blank justification, and it writes nothing. An unchanged value keeps its recorded line, or none on an issue that predates the key. `compass issue configure --commit` takes the same flag. `compass quick-fix start` writes the key from the reasons it is given, and refuses a `--goal` or `--role` without a reason. A `--goal` or `--role` left out records no value and no justification, and the readers show it as `not assessed`. `compass issue receipt` reads the key, and falls back to the assessment table of the record for an issue that has none.
+
 ## Closing a spike
 
 `compass issue artifact set spike-conclusion --status draft --path <file> --decision <discard|graduate-to-delivery|defer>` registers the conclusion and writes the one `spike-conclusion` evidence record that the check `spike-conclusion-present` reads, naming the document. `graduate-to-delivery` needs `--next-issue <slug>`, the slug of the delivery issue. A second run with another decision updates the record. `--decision` on any other kind is refused. The check itself is unchanged.

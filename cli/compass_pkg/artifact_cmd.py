@@ -44,11 +44,35 @@ def cmd_issue_artifact_path(args):
     kind = args.kind[:-3] if args.kind.endswith(".md") else args.kind
     asked = getattr(args, "round", None)
     state, path, reason = resolve_artifact(task_dir, kind, asked)
+    if state != FOUND and asked is None:
+        # A kind the issue earned and has not written yet: the verb names the home the
+        # writer must use. The hooks ask the resolver, not this verb, so they still
+        # read an unwritten record as absent.
+        earned = _earned_home(task_dir, kind)
+        if earned:
+            print(earned)
+            return 0
     if state != FOUND:
         raise CompassError(
             "%s%s: %s (%s)" % (kind, " round %d" % asked if asked else "", state, reason))
     print(path)
     return 0
+
+
+def _earned_home(task_dir, kind):
+    """The project-relative home of `kind` when the issue's registry holds an entry for
+    it that names no path yet, else None. A kind that repeats has no one home."""
+    from compass_pkg import artifact_kinds
+    task = load_yaml(manifest_path(task_dir)) or {}
+    held = [a for a in task.get("artifacts") or []
+            if isinstance(a, dict) and a.get("kind") == kind and not a.get("path")
+            and a.get("status") not in ("omitted", "superseded")]
+    if not held:
+        return None
+    declared = artifact_kinds.entry(_view_or_none(task_dir), kind) or artifact_kinds.shipped().get(kind)
+    if not declared or artifact_kinds.repeats(declared):
+        return None
+    return artifact_kinds.home(task_dir, declared)
 
 
 def _view_or_none(task_dir):

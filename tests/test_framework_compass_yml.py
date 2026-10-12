@@ -25,10 +25,12 @@ from compass_pkg.catalogue_spec import CATALOGUES, SETTINGS_KEYS  # noqa: E402
 
 # `schema` and `extends` make the file a layer. Everything else must be a
 # settings key.
-ALLOWED = set(SETTINGS_KEYS) | {"schema", "extends"}
+ALLOWED = set(SETTINGS_KEYS) | {"schema", "extends", "owner"}
 # Layer keys that are not settings and not catalogues, and that this
-# repository's file must not declare either.
-FORBIDDEN_LAYER_KEYS = {"waiver", "waived", "unlock", "capabilities", "approvers", "owner"}
+# repository's file must not declare either. `owner` is allowed: it names who
+# confirms decisions and approves issue waivers, and changes no check, gate or
+# rule (governance decision 2026-10-12-this-repository-names-its-owner).
+FORBIDDEN_LAYER_KEYS = {"waiver", "waived", "unlock", "capabilities", "approvers"}
 
 
 def disallowed_keys(doc):
@@ -42,6 +44,17 @@ def test_idr_5_the_checker_reports_a_planted_catalogue_key():
     assert disallowed_keys({"schema": 1, "checks": {}}) == ["checks"]
     assert disallowed_keys({"schema": 1, "capabilities": {"x": True}}) == ["capabilities"]
     assert disallowed_keys({"schema": 1, "unlock": True}) == ["unlock"]
+
+
+def test_own_1_compass_yml_names_its_owner():
+    # The owner may confirm decisions taken for them and approve issue waivers;
+    # it changes no check, gate or rule (governance decision
+    # 2026-10-12-this-repository-names-its-owner).
+    doc = load_yaml_strict(str(ROOT / "compass.yml"))
+    assert doc.get("owner") == "jed72"
+    assert disallowed_keys({"schema": 1, "owner": "jed72"}) == []
+    for key in ("waiver", "waived", "unlock", "capabilities", "approvers"):
+        assert disallowed_keys({"schema": 1, key: {}}) == [key]
 
 
 def test_idr_5_compass_yml_holds_settings_keys_only_and_extends_the_default():

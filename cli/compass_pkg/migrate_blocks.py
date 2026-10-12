@@ -31,7 +31,7 @@ import os
 import re
 
 from compass_pkg import doc_sections, item_records, rendered_blocks as rb, status_words
-from compass_pkg.core import (FOUND, canonical_shape, docs_dir, resolve_artifact,
+from compass_pkg.core import (FOUND, REFUSED, canonical_shape, docs_dir, resolve_artifact,
                               unregistered_document)
 from compass_pkg.stable_ids import APPROACH_QUICK_FIX
 
@@ -74,11 +74,20 @@ def _view(task_dir):
         return None
 
 
-def _report_path(task_dir):
+def _report_path(task_dir, project):
+    """`(path, why)`: the report to edit, or None and the reason it must not be edited. A path
+    from the registry is checked as a note's is, before the report is read or written; the
+    flat copy beside the manifest is also allowed, since it sits in the issue's own folder."""
     state, path, _ = resolve_artifact(task_dir, REPORT)
-    if state == FOUND:
-        return path
-    return unregistered_document(task_dir, REPORT + ".md")
+    if state == REFUSED:
+        return None, "its registered path resolves outside the project"
+    if state != FOUND:
+        path = unregistered_document(task_dir, REPORT + ".md")
+    if not path:
+        return None, None
+    rel = os.path.relpath(os.path.abspath(path), project).replace(os.sep, "/")
+    why = _unsafe_path(task_dir, rel, project, allow_work=True)
+    return (None, why) if why else (path, None)
 
 
 def _boxes(lines, start, end):
@@ -213,7 +222,9 @@ def _definition_of_done(task_dir, data, project, would, out):
     """Insert the pair and write the records. Returns `(manifest changed, edit)` where `edit`
     is `(path, new text, old digest)` for the report or None."""
     slug = os.path.basename(os.path.normpath(task_dir))
-    path = _report_path(task_dir)
+    path, why = _report_path(task_dir, project)
+    if why:
+        out.problems.append("%s: the verification-report is not edited: %s." % (slug, why))
     if not path:
         return False, None
     try:
@@ -264,6 +275,12 @@ def _definition_of_done(task_dir, data, project, would, out):
     return bool(total), edit
 
 
+def _unsafe_path(task_dir, rel, project, allow_work=False):
+    """Why a path from a manifest cannot be written, or None (the render's rule)."""
+    from compass_pkg import render_cmd
+    return render_cmd.unsafe_document_path(task_dir, rel, project, allow_work)
+
+
 def _verification_note(task_dir, data, project, would, out):
     """An empty note for a quick fix closed as completed. Returns whether `data` changed."""
     if not status_words.is_completed(data) \
@@ -273,8 +290,14 @@ def _verification_note(task_dir, data, project, would, out):
     slug = os.path.basename(os.path.normpath(task_dir))
     entry = next((a for a in data.get("artifacts") or []
                   if isinstance(a, dict) and a.get("kind") == NOTE), None)
-    rel = (entry or {}).get("path") or docs_dir(task_dir).rstrip("/") + "/" + NOTE + ".md"
+    rel = str((entry or {}).get("path") or "") or docs_dir(task_dir).rstrip("/") + "/" + NOTE + ".md"
     path = os.path.join(project, *rel.split("/"))
+    why = _unsafe_path(task_dir, rel, project)
+    if why:
+        # A registered path comes from a manifest, so it is checked as the render checks one
+        # before anything is created or written.
+        out.problems.append("%s: the verification note at %s is not written: %s." % (slug, rel, why))
+        return False
     if os.path.isfile(path) and entry is not None:
         return False
     out.notes.append("%s 1 verification note (%s)" % (_tense(would, "write", "wrote"), rel))

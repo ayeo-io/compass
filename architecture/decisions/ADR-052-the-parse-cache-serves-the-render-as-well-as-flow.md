@@ -33,7 +33,8 @@ or planted entry with the right key is used.
 2. **The blocking read is uncached.** `render_cmd.plan_issue` reads the issue's own manifest with
    `load_manifest`, and substitutes it for the scan's copy before any block is rendered.
    `rendered-blocks-current` therefore judges the own-record blocks from the file. It never reads
-   the cache.
+   the cache. `compass issue render --all` is the exception: it plans each issue from the scan's
+   copy, because an uncached read of every manifest breaks the DCJ-61 time bound.
 3. **Cached reads feed only advisory parts.** A manifest read from the cache can reach a
    `related` block, the governance lines of a `decisions` block, an index row, the index and the
    skip key. Each is a cross-issue part, and `rendered-blocks-current` reports a stale one as an
@@ -43,8 +44,10 @@ or planted entry with the right key is used.
    command changed. A command that reads, changes and saves a manifest still uses `core.load_yaml`.
 5. **A planted payload is accepted for writes and advisory parts only.** A payload with a valid
    key can mislead a rendered cross-issue block or an index row, and `compass issue render` writes
-   what it is given. It cannot clear or fail a gate, a check that blocks, or an approval. The next
-   render, or a render with the cache folder deleted, replaces what it wrote.
+   what it is given. Through `--all` it can also write a wrong own-record block, which makes
+   `rendered-blocks-current` fail, because the check reads the file. It cannot clear a gate, pass a
+   check that blocks, or make an approval. The next single-issue render, or a render with the cache
+   folder deleted, replaces what it wrote.
 6. **A dry run stores nothing.** `compass issue render --all --dry-run` reads the cache and never
    writes an entry, so a dry run changes no byte in the project.
 

@@ -13,10 +13,15 @@ Nothing else is written: an issue the manifest does not link to keeps its bytes
 and its modification time.
 
 A render that fails never fails the command and never stops the others. When any
-render fails, one line on standard error gives the count and the first failure
-. A command that exits non-zero renders nothing. The step shares
+render fails, one line on standard error gives the count and the first failure.
+A command that exits non-zero renders nothing. The step shares
 no code with the label sync and imports nothing from it: both read
 `record_triggers`, and each catches its own failure.
+
+The environment variable `COMPASS_RENDER_AFTER=0` switches the step off. Any other
+value, or none, leaves it on. It exists so a test suite does not pay for rendering
+after every command: the suite sets it to `0` and a test of the step sets it to
+`1`. An explicit `compass issue render` ignores it.
 """
 # DEPENDENCY: standard library (os, sys, yaml via compass_pkg.core); compass_pkg.core,
 # record_triggers, render_cmd, project_scan. It imports neither github_labels nor check_cmd.
@@ -43,7 +48,7 @@ def _name_of(value):
 def links_of(task):
     """The slugs of the issues one manifest links to."""
     found = set()
-    for key in ("raised_by", "parent", "depends_on", "landed_by", "delivered"):
+    for key in ("raised_by", "parent", "depends_on", "repairs", "landed_by", "delivered"):
         value = task.get(key)
         for one in value if isinstance(value, list) else [value]:
             found.add(_name_of(one))
@@ -113,7 +118,7 @@ def _failure_line(failures, total):
 
 def after_command(args, code):
     """Render after a record-changing command, and return `code` unchanged."""
-    if code != 0:
+    if code != 0 or os.environ.get("COMPASS_RENDER_AFTER") == "0":
         return code
     name = getattr(getattr(args, "func", None), "__name__", "")
     table = record_triggers.RENDER_TRIGGERS

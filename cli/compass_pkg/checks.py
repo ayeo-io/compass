@@ -34,7 +34,7 @@ import fnmatch
 import re as _re
 from compass_pkg.stable_ids import GATE_VERIFY_ANALYZE, GATE_VERIFY_CORRECTNESS
 from compass_pkg.core import CompassError, artifact_location, artifact_path, find_compass_dir, find_governance, load_yaml, manifest_path, normalize_spine
-from compass_pkg import rendered_blocks, status_words
+from compass_pkg import status_words
 from compass_pkg.tdd import _read_config, settings_hint
 from compass_pkg.trust import UNKNOWN, UNTRUSTED, contribution_trust, is_ci
 from compass_pkg.check_results import NOTHING_TO_CHECK  # re-exported: callers still import it from here
@@ -52,6 +52,7 @@ def _scenario_documented_in_spec(spec_path, scenario_id):
     acceptance-criteria.md (it has no structured home to duplicate), so
     reading it there is correct - not the mistake of grepping prose for a
     fact the manifest holds."""
+    from compass_pkg import rendered_blocks
     if not spec_path or not os.path.isfile(spec_path):
         return False
     try:
@@ -180,6 +181,7 @@ def _spec_sha256(task_dir):
     read every stale record as current - a false green in exactly the place it
     matters most.
     """
+    from compass_pkg import rendered_blocks
     path = artifact_path(task_dir, "acceptance-criteria.md")
     found = rendered_blocks.masked_digest(path)
     # The same bytes as before for a spec with no block; with blocks, the
@@ -657,7 +659,14 @@ def _check_dod_evidence_typed(task, task_dir):
     entry blocks shipping this issue.
     """
     report = artifact_path(task_dir, "verification-report.md")
+    # The directory name is the true slug; the manifest passed in may hold a template placeholder.
+    this_slug = os.path.basename(task_dir) or task.get("task") or ""
+    inbound = _check_inbound_backfills(task_dir, this_slug)
     if not os.path.isfile(report):
+        # A quick fix writes no report, but another issue's outstanding follow-up that targets
+        # it still blocks it.
+        if inbound:
+            return False, "; ".join(inbound)
         return NOTHING_TO_CHECK, ("no verification report is written yet, so there is no "
                                   "Definition of Done to evidence (looked for %s)"
                                   % artifact_location(task_dir, "verification-report.md"))
@@ -670,9 +679,6 @@ def _check_dod_evidence_typed(task, task_dir):
     rows = item_records.items(task, task_dir, view, "dod")
     problems = ["%s is open - %s" % (row.check, item_records.open_hint(row.check))
                 for row in rows if row.state == item_records.OPEN]
-    # The directory name is the true slug; the manifest passed in may hold a template placeholder.
-    this_slug = os.path.basename(task_dir) or task.get("task") or ""
-    inbound = _check_inbound_backfills(task_dir, this_slug)
     if _closed_without_a_list(task, report):
         # An archived issue whose page never held a Definition of Done has no record to
         # carry. Only a closed issue is excused: one still in flight is judged, so deleting

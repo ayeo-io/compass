@@ -114,6 +114,22 @@ def _link_problem(project, resolved):
     return None
 
 
+def unsafe_document_path(task_dir, rel, project, allow_work=False):
+    """Why a path built from a manifest cannot be written, or None: it leaves the project, is
+    not under docs/compass (or, with `allow_work`, the issue's own folder), or is, or sits
+    under, a symbolic link. A caller that writes a document checks it before any change."""
+    resolved, refused = _registered_path(task_dir, rel)
+    if refused:
+        return "it resolves outside the project"
+    resolved = os.path.abspath(resolved)
+    folders = [os.path.join(project, "docs", "compass") + os.sep]
+    if allow_work:
+        folders.append(os.path.abspath(task_dir) + os.sep)
+    if not resolved.startswith(tuple(folders)):
+        return "it is not under docs/compass"
+    return _link_problem(project, resolved)
+
+
 def _view(task_dir):
     from compass_pkg import effective
     try:
@@ -468,14 +484,18 @@ def _render_all(args):
             kept[slug] = before
             continue
         task_dir = scan.task_dir(slug)
+        # Plans from the scan's cached copy: an uncached read of every manifest
+        # breaks the DCJ-61 time bound. A planted entry can only make
+        # rendered-blocks-current fail, because check reads the file (ADR-052).
+        manifest = scan.manifests[slug]
         try:
             if dry:
-                plan = plan_issue(task_dir, scan=scan, manifest=scan.manifests[slug], index=False)
+                plan = plan_issue(task_dir, scan=scan, manifest=manifest, index=False)
                 would += [{"path": f.rel, "kinds": f.changed_kinds or ["new page"]}
                           for f in plan.to_write()]
             else:
                 with atomic_io.locked(os.path.join(task_dir, LOCK)):
-                    apply(plan_issue(task_dir, scan=scan, manifest=scan.manifests[slug], index=False))
+                    apply(plan_issue(task_dir, scan=scan, manifest=manifest, index=False))
                 kept[slug] = render_skip.key(scan, slug, shared)
             rendered.append(slug)
         except CompassError as exc:

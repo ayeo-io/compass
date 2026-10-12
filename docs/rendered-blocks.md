@@ -166,9 +166,12 @@ does not read an issue whose inputs have not changed.
 ### The parse cache
 
 `project_scan.py` reads the manifests through the parse cache, as the board does
-(ADR-049, widened by ADR-052). The issue's own manifest is read without it, so a
-planted cache entry cannot clear or fail `rendered-blocks-current`. It can only
-mislead a cross-issue block, which is advisory.
+(ADR-049, widened by ADR-052). The check and the single-issue render read the
+issue's own manifest without it, so a planted cache entry cannot clear
+`rendered-blocks-current`. `--all` plans each issue from the scan's copy to stay
+inside its time bound, so a planted entry can make it write a wrong own-record
+block. The check then fails, and `compass issue render --issue <slug>` repairs the
+page.
 
 ## When an issue lands
 
@@ -197,6 +200,10 @@ modification time.
   reason. A test walks the call graph from every command to `save_manifest` and
   fails, naming a command in none of the three.
 - A command that exits non-zero renders nothing.
+- The environment variable `COMPASS_RENDER_AFTER=0` switches the step off; any
+  other value, or none, leaves it on. It exists so a test suite does not pay for
+  rendering after every command. `compass issue render` ignores it. A command
+  outside `RENDER_TRIGGERS` does not load `render_after` or the render modules.
 - A render that fails never fails the command and never stops the other
   renders. One line on standard error gives the count and the first failure:
   `compass: 2 of 3 renders failed - first: <issue>: <file>:<line>: <fault>`.

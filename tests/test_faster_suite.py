@@ -142,8 +142,18 @@ def test_each_archive_sweep_is_one_test_per_issue(module):
 
 
 SERIAL_TESTS = {
-    "tests/next/test_compass_next.py::TestNextLatency::test_next_under_200ms_p95",
+    "tests/next/test_compass_next.py::TestNextLatency::test_next_latency_relative_to_reference",
     "tests/test_statusline.py::test_the_shim_is_fast_enough",
+    "tests/test_board_speed.py::test_trc_a4_board_data_speed_on_realistic_archive",
+    "tests/test_board_speed.py::test_trc_a5_commands_speed_on_full_archive",
+    "tests/test_board_speed.py::test_trc_w6_worktrees_speed",
+    "tests/test_delivery_board.py::test_db_5_the_board_is_quick_over_many_issues",
+    "tests/test_manifest_parse_speed.py::test_trc_b1_flow_within_two_seconds_on_this_repository",
+    "tests/test_manifest_parse_speed.py::test_trc_b2_flow_faster_than_one_parse_on_sample",
+    "tests/test_manifest_parse_speed.py::test_trc_b3_cold_flow_within_ten_percent_of_before[no stored state]",
+    "tests/test_manifest_parse_speed.py::test_trc_b3_cold_flow_within_ten_percent_of_before[stale stored state]",
+    "tests/test_render_all.py::test_dcj_63_no_test_touches_own_archive",
+    "tests/test_render_all.py::test_dcj_61_render_all_490_issues_within_bound",
 }
 
 
@@ -156,7 +166,7 @@ def test_timing_tests_are_marked_serial():
                         *sorted({t.split("::")[0] for t in SERIAL_TESTS})],
                        cwd=ROOT, capture_output=True, text=True,
                        env={**os.environ, "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"})
-    collected = set(r.stdout.split())
+    collected = {line for line in r.stdout.splitlines() if "::" in line}
     assert SERIAL_TESTS <= collected, (SERIAL_TESTS - collected, r.stdout[-500:])
 
 
@@ -175,3 +185,15 @@ def test_ci_runs_serial_tests_in_their_own_pass():
     job = text[text.index("self-check"):text.index("bdd-adapter")]
     assert f'{PARALLEL} -m "not serial"' in job, job
     assert "-m serial" in job.replace('"not serial"', ""), job
+
+
+def test_every_serial_marked_test_is_listed():
+    """DCJ-102: a serial test missing from `SERIAL_TESTS` is not covered by the
+    guard above, so the guard lists every test that carries the marker."""
+    r = subprocess.run([sys.executable, "-m", "pytest", "--collect-only", "-q",
+                        "-o", "addopts=", "-p", "no:cacheprovider", "-m", "serial", "tests"],
+                       cwd=ROOT, capture_output=True, text=True,
+                       env={**os.environ, "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1"})
+    marked = {line for line in r.stdout.splitlines() if "::" in line}
+    assert marked, r.stdout[-500:] + r.stderr[-500:]
+    assert marked <= SERIAL_TESTS, sorted(marked - SERIAL_TESTS)

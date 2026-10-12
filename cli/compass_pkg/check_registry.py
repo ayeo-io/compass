@@ -35,7 +35,7 @@ from compass_pkg.checks import (
     _check_spike_no_production_changes, _check_suite_passed)
 from compass_pkg.landed_by import _check_landed_by_resolves
 from compass_pkg.multiagent_check import _check_multiagent_run_recorded
-from compass_pkg.render_check import check as _check_rendered_blocks_current
+from compass_pkg.render_check_entry import _check_rendered_blocks_current
 
 CORPUS_ROOT = "tests/fixtures/impls"
 TIGHTER = ("higher", "lower", "none")

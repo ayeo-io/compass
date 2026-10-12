@@ -2026,8 +2026,23 @@ _CITATION_RE = re.compile(
 
 @lru_cache(maxsize=4096)
 def _git_ignores(rel: str) -> bool:
-    result = subprocess.run(["git", "check-ignore", "-q", rel], cwd=REPO_ROOT)
-    return result.returncode == 0
+    return _ignored_by_committed_rules(rel, REPO_ROOT)
+
+
+def _ignored_by_committed_rules(rel: str, cwd) -> bool:
+    """Whether a tracked ignore file ignores `rel`.
+
+    "Git does not distribute it" is judged from the rules the repository commits.
+    A local run writes an untracked `.gitignore` (for example `.compass/cache/`),
+    and counting that would make the answer depend on what ran before the test."""
+    found = subprocess.run(["git", "check-ignore", "-v", rel], cwd=cwd,
+                           capture_output=True, text=True)
+    if found.returncode != 0:
+        return False
+    source = found.stdout.split(":", 1)[0]
+    tracked = subprocess.run(["git", "ls-files", "--error-unmatch", source], cwd=cwd,
+                             capture_output=True, text=True)
+    return tracked.returncode == 0
 
 
 def _find_citation(span: ProseSpan) -> list[Finding]:
@@ -4949,3 +4964,18 @@ def test_other_frameworks_records_are_left_out_and_nothing_else_is():
     overlays = [r for r in tracked if _is_other_frameworks_record(r)]
     assert overlays, "no other framework's record is tracked"
     assert sorted(r for r in tracked if r not in scanned) == sorted(overlays)
+
+
+def test_dcj_103_pbw_a6_counts_only_committed_ignore_rules(tmp_path):
+    """DCJ-103: a path ignored only by an untracked `.gitignore` is distributed as
+    far as this rule is concerned; one ignored by a tracked `.gitignore` is not."""
+    def git(*args):
+        subprocess.run(["git", *args], cwd=tmp_path, check=True, capture_output=True)
+    git("init", "-q")
+    (tmp_path / "kept").mkdir()
+    (tmp_path / "kept" / ".gitignore").write_text("*\n")
+    (tmp_path / "local").mkdir()
+    (tmp_path / "local" / ".gitignore").write_text("*\n")
+    git("add", "-f", "kept/.gitignore")
+    assert _ignored_by_committed_rules("kept/x.json", tmp_path)
+    assert not _ignored_by_committed_rules("local/x.json", tmp_path)

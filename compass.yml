@@ -1,8 +1,8 @@
 # Compass - this repository's own settings.
 #
 # The framework repository is also a Compass project. This file holds settings
-# keys only: no check, gate, rule or route, no waiver, no unlock and no
-# capability. Its governance/ files are the set every adopter gets, so this
+# keys and the owner only: no check, gate, rule or route, no waiver, no unlock
+# and no capability. Its governance/ files are the set every adopter gets, so this
 # repository's issues run the shipped default unchanged, and its delivery
 # record stays valid evidence for that default. tests/test_framework_compass_yml.py
 # fails when a catalogue key appears here.
@@ -14,6 +14,12 @@
 
 schema: 1
 extends: compass:default@6
+
+# Who confirms the decisions agents take for the maintainer and approves an
+# issue's waiver. It changes no check, gate or rule, so this repository still
+# runs the shipped default (governance decision
+# 2026-10-12-this-repository-names-its-owner).
+owner: jed72
 
 # Whether a failed check blocks. `enforced`: compass check and compass ci return
 # non-zero on any failure. `advisory` reports every failure and returns 0.

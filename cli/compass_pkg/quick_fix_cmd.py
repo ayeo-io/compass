@@ -745,6 +745,27 @@ def _record_usage(task_dir, finish_started_at):
 NOTE_KIND = "verification-note"
 
 
+def _add_note_block(path, rel):
+    """Make sure a note that already exists holds the `verification-note` block, by adding an
+    empty pair after the person's prose. Without it the render skips the file, and the fix
+    would land with no proof summary."""
+    from compass_pkg import rendered_blocks as rb
+    with open(path, encoding="utf-8", newline="") as fh:
+        text = fh.read()
+    try:
+        held = [b.kind for b in rb.parse(text, rel).blocks]
+    except rb.MarkerError as exc:
+        raise CompassError("compass quick-fix finish: %s cannot take the verification note's "
+                           "block until its render markers are fixed: %s" % (rel, exc))
+    if "verification-note" in held:
+        return
+    eol = rb.line_ending(text)
+    lead = "" if not text or text.endswith("\n") else eol
+    pair = rb.OPENING.format(kind="verification-note") + eol + rb.CLOSING + eol
+    with open(path, "w", encoding="utf-8", newline="") as fh:
+        fh.write(text + lead + (eol if text else "") + pair)
+
+
 def _write_verification_note(task_dir, slug, scenario_ids):
     """Write the quick fix's one-screen verification note (ADR-051), register it, approve it
     and fill its block. Returns the note's project-relative path and whether the project
@@ -767,6 +788,8 @@ def _write_verification_note(task_dir, slug, scenario_ids):
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w", encoding="utf-8") as fh:
             fh.write(block_renderers.verification_note_text(slug))
+    else:
+        _add_note_block(path, rel)
     _quiet_run(cmd_issue_artifact, task=slug, kind=NOTE_KIND, status="draft", path=rel,
                reason=None)
     task, task_path = load_manifest(task_dir)
@@ -828,6 +851,16 @@ def cmd_quick_fix_finish(args):
     # because its own paths are relative to that directory.
     invoked_from = os.getcwd()
     project_root = find_upwards(task_dir, ".compass") or invoked_from
+
+    # The note's path is built from the manifest's `created:`, so it is checked, as the render
+    # checks a path, before the test command runs or anything is written.
+    from compass_pkg import render_cmd
+    note_rel = docs_dir(task_dir).rstrip("/") + "/" + NOTE_KIND + ".md"
+    why = render_cmd.unsafe_document_path(task_dir, note_rel, os.path.abspath(project_root))
+    if why:
+        raise CompassError(
+            f"compass quick-fix finish: the verification note at {note_rel} is not written: "
+            f"{why}. Nothing was changed.")
 
     with _at_project_root(project_root):
         all_paths = _git_changed_paths(project_root)

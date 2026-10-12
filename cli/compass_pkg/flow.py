@@ -33,7 +33,7 @@ import re as _re
 import fnmatch
 import re as _re
 import glob
-from compass_pkg import issue_detail, parse_cache, status_words
+from compass_pkg import parse_cache, status_words
 from compass_pkg.core import (CompassError, find_compass_dir, find_governance, load_yaml,
                               manifest_path, normalize_spine)
 from compass_pkg.rework import cmd_rework_scan
@@ -384,6 +384,7 @@ def _lane_of(row, recorded, held, stage):
 def _board_place(out, categories, src, m, today, now, guarded, evidence_state):
     """Put one issue's row in its section. Raises on a field of the wrong
     type, which the caller reports as a malformed manifest."""
+    from compass_pkg import issue_detail
     from compass_pkg import lifecycle, next_cmd
     slug, task_dir = src["slug"], src["task_dir"]
     where = _where(src)

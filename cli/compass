@@ -84,7 +84,7 @@ from compass_pkg.approve_cmd import register as register_approve_parser  # noqa:
 from compass_pkg.review_cmd import register as register_review_parser  # noqa: E402
 from compass_pkg.issue_config_cmd import register as register_issue_configure_parser  # noqa: E402
 from compass_pkg import github_labels  # noqa: E402
-from compass_pkg.render_after import after_command as render_after_command  # noqa: E402
+from compass_pkg.render_after_entry import after_command as render_after_command  # noqa: E402
 
 # Declared literally here as well as in compass_pkg.core: this file is
 # what `compass --version` and the release-consistency test read, and a

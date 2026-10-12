@@ -32,7 +32,7 @@ import re as _re
 
 import fnmatch
 import re as _re
-from compass_pkg import rendered_blocks
+
 from compass_pkg.checks import _spec_sha256
 from compass_pkg.terminal import say
 from compass_pkg.core import CompassError, artifact_path, find_upwards, load_yaml, manifest_path, normalize_spine, now_iso, resolve_issue_dir
@@ -426,6 +426,7 @@ def cmd_bdd_verify(args):
 
 def cmd_bdd_extract(args):
     """compass bdd extract - acceptance-criteria.md -> a runnable .feature file."""
+    from compass_pkg import rendered_blocks
     task_dir = resolve_issue_dir(getattr(args, "task", None))
     slug = os.path.basename(os.path.normpath(task_dir))
     spec_path = artifact_path(task_dir, "acceptance-criteria.md")

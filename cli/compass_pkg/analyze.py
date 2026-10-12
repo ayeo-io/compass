@@ -32,7 +32,7 @@ import re as _re
 
 import fnmatch
 import re as _re
-from compass_pkg import rendered_blocks, status_words, word_map
+from compass_pkg import status_words, word_map
 from compass_pkg.check_cmd import cmd_check
 from compass_pkg.stable_ids import (
     GATE_VERIFY_ANALYZE, STAGE_ASSESS, STAGE_BREAKDOWN, STAGE_DEFINE, STAGE_IDS, STAGE_IMPLEMENT, STAGE_PLAN,
@@ -126,6 +126,7 @@ def _parse_intent_ids_from_brief(brief_path: str) -> set:
       - INT-xxx: ...            (bullet-list intent declaration)
     Returns a set of intent id strings.
     """
+    from compass_pkg import rendered_blocks
     intent_ids = set()
     if not os.path.isfile(brief_path):
         return intent_ids
@@ -150,6 +151,7 @@ def _parse_scenario_intents_from_spec(spec_path: str) -> dict:
     Looks for lines like:
       <!-- traceability id: TRC-A1 · serves: INT-1 -->
     """
+    from compass_pkg import rendered_blocks
     scenario_intents = {}
     if not os.path.isfile(spec_path):
         return scenario_intents
@@ -172,6 +174,7 @@ def _parse_claim_ids_from_positioning(positioning_path: str) -> set:
       <!-- claim: CLM-1 -->
       - CLM-1: ...
     """
+    from compass_pkg import rendered_blocks
     claim_ids = set()
     if not os.path.isfile(positioning_path):
         return claim_ids
@@ -200,6 +203,7 @@ def _parse_phase_weights_from_route_md(route_md_path: str) -> dict:
     Looks for a Markdown table with a Stage (or Phase) column and a Weight
     column.
     """
+    from compass_pkg import rendered_blocks
     weights = {}
     if not os.path.isfile(route_md_path):
         return weights
@@ -249,6 +253,7 @@ def _parse_route_from_route_md(route_md_path: str) -> str | None:
     Looks for: **Reference route:** Express  (or similar)
     Returns the route string (lowercase) or None.
     """
+    from compass_pkg import rendered_blocks
     if not os.path.isfile(route_md_path):
         return None
     for line in rendered_blocks.read_masked(route_md_path).splitlines():

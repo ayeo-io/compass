@@ -228,9 +228,11 @@ def test_dcj_77_cache_cannot_decide_blocking_verdict(tmp_path):
     assert speed.parse_cache_users(planted) == ["flow.py", "other_reader.py", "project_scan.py"]
 
 
-def test_dcj_101_render_all_reads_each_issues_own_manifest_not_the_cache(tmp_path):
-    """DCJ-101: `render --all` plans from the manifest file, so a planted cache entry
-    cannot write an own-record block (ADR-052)."""
+def test_dcj_104_planted_render_all_fails_check_and_a_single_render_repairs(tmp_path):
+    """DCJ-104: `render --all` plans from the scan, which reads the parse cache, so a
+    planted entry can write a wrong own-record block. Check reads the manifest file,
+    so the plant fails `rendered-blocks-current` and never passes a gate. The
+    single-issue render reads the file and repairs the page (ADR-052)."""
     root = sup.rich_issue(tmp_path)
     from pages_support import SLUG
     sup.base.edit(root, current_phase="verify")
@@ -242,6 +244,12 @@ def test_dcj_101_render_all_reads_each_issues_own_manifest_not_the_cache(tmp_pat
     (Path(root) / ".compass" / "cache" / "render-skip.json").unlink(missing_ok=True)
 
     assert ps.render_all(root)[0] == 0
+    out = sup.run(root, "check", "--issue", SLUG, "--verbose")[1]
+    assert "FAIL rendered-blocks-current" in out, out
+
+    assert sup.render(root)[0] == 0
+    out = sup.run(root, "check", "--issue", SLUG, "--verbose")[1]
+    assert "PASS rendered-blocks-current" in out, out
     assert "gates 7/9" in "\n".join(ps.block(ps.page(root), "header"))
 
 

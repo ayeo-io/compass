@@ -160,9 +160,12 @@ does not read an issue whose inputs have not changed.
 ### The parse cache
 
 `project_scan.py` reads the manifests through the parse cache, as the board does
-(ADR-049, widened by ADR-052). The issue's own manifest is read without it, so a
-planted cache entry cannot clear or fail `rendered-blocks-current`. It can only
-mislead a cross-issue block, which is advisory.
+(ADR-049, widened by ADR-052). The check and the single-issue render read the
+issue's own manifest without it, so a planted cache entry cannot clear
+`rendered-blocks-current`. `--all` plans each issue from the scan's copy to stay
+inside its time bound, so a planted entry can make it write a wrong own-record
+block. The check then fails, and `compass issue render --issue <slug>` repairs the
+page.
 
 ## When an issue lands
 

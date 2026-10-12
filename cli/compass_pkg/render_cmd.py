@@ -484,14 +484,18 @@ def _render_all(args):
             kept[slug] = before
             continue
         task_dir = scan.task_dir(slug)
+        # Plans from the scan's cached copy: an uncached read of every manifest
+        # breaks the DCJ-61 time bound. A planted entry can only make
+        # rendered-blocks-current fail, because check reads the file (ADR-052).
+        manifest = scan.manifests[slug]
         try:
             if dry:
-                plan = plan_issue(task_dir, scan=scan, index=False)
+                plan = plan_issue(task_dir, scan=scan, manifest=manifest, index=False)
                 would += [{"path": f.rel, "kinds": f.changed_kinds or ["new page"]}
                           for f in plan.to_write()]
             else:
                 with atomic_io.locked(os.path.join(task_dir, LOCK)):
-                    apply(plan_issue(task_dir, scan=scan, index=False))
+                    apply(plan_issue(task_dir, scan=scan, manifest=manifest, index=False))
                 kept[slug] = render_skip.key(scan, slug, shared)
             rendered.append(slug)
         except CompassError as exc:

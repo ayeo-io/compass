@@ -3721,3 +3721,8 @@
 - `DCJ-85` A migrated issue with no list to check does not fail dod-evidence-typed
 - `DCJ-86` A design decision's scope is read from its declared field only
 - `DCJ-87` The issue page shows the blocked flag with its reason
+- `DCJ-88` The after-command render can be switched off by an environment variable
+- `DCJ-89` A command that never renders does not load the render modules
+- `DCJ-90` The lazy check entry for rendered-blocks-current still goes red when the check is broken
+- `DCJ-91` compass next loads no rendered-blocks module
+- `DCJ-92` The entry point stays thin while it loads the render only for a trigger

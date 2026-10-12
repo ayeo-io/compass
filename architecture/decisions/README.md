@@ -95,6 +95,7 @@ Rules:
 | [ADR-053](ADR-053-the-artifact-catalogue-describes-each-document.md) | The artifact catalogue describes each document | proposed | extends ADR-035; changes ADR-050 decision 1 (`stage` is required); with ADR-036 and ADR-037 |
 | [ADR-054](ADR-054-an-artifact-kind-can-repeat-keyed-by-round.md) | An artifact kind can repeat, keyed by round | proposed | extends ADR-022; with ADR-040 and ADR-050 |
 | [ADR-055](ADR-055-every-approach-records-its-delivery-approach-with-justifications.md) | Every approach records its delivery approach, with a justification for each assessed value | proposed | extends ADR-001 and ADR-022; with ADR-036, ADR-037 and ADR-053 |
+| [ADR-056](ADR-056-the-migrate-maps-documents-by-a-table-and-registers-before-it-moves.md) | The migrate maps documents by a table, renames reviews by a round rule, and registers a document before it moves it | proposed | extends ADR-006 and ADR-020; with ADR-022, ADR-051 and ADR-054 |
 
 ## Principle → ADR mapping
 

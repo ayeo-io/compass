@@ -92,14 +92,6 @@ def test_trc_e1_migration_moves_documents_and_writes_the_registry(tmp_path):
     for name in DOCUMENTS:
         assert (docs / name).is_file(), (
             f"{name} was not moved to {docs}:\n{r.stdout}")
-        if name == BLOCKING_DOCUMENT:
-            # `TRC-E5` leaves a pointer at this one name, so that an install
-            # predating the artifact registry is not locked out. A pointer is
-            # not a copy: it holds the new path and nothing else.
-            assert _is_pointer(work / name), (
-                f"{name} is still beside the manifest as a document, not as "
-                f"the TRC-E5 pointer - a move, not a copy")
-            continue
         assert not (work / name).exists(), (
             f"{name} is still beside the manifest as well - a move, not a copy")
 
@@ -461,151 +453,65 @@ def test_a_repository_path_is_not_rewritten_by_the_filename_rename(tmp_path):
         f"the rename rewrote paths outside the issue directory: {got}")
 
 
-# --- `TRC-E5` ------------------------------------------------------------------
+# --- `TRC-E5`, as Q3 of artifact-catalogue-fields changed it --------------------
+#
+# The migrate no longer leaves a pointer where the delivery-approach record was. The
+# registry has served the hook since before 5.0.0, and the pointer was generated
+# text that named a path. The migrate removes the pointer an earlier run left.
 
-#: What an older install's pre-tool hook tests for. It has no registry reader,
-#: so the only thing that satisfies it is a file at this name.
 BLOCKING_DOCUMENT = "delivery-approach.md"
+POINTER = "<!-- compass: moved -->\n# Moved\n\nThis issue's delivery-approach.md is now elsewhere.\n"
 
 
-def test_trc_e5_a_pointer_is_left_where_the_record_used_to_be(tmp_path):
-    """An adopter's hook is a copy installed before this change.
-
-    `hooks/pre-tool.sh` treats a missing `delivery-approach.md` beside the
-    manifest as "assessment did not complete" and blocks every code edit in the
-    project. Group D moved THIS framework's hooks onto the resolver; it cannot
-    reach a hook already installed on someone else's machine. The migration is
-    the only part of the system running there when the documents move, so the
-    compatibility has to come from it.
-
-    Not a copy - a pointer. A second copy of the record would drift from the
-    real one and would be indistinguishable from it.
-    """
+def test_trc_e5_no_pointer_is_left_where_the_record_used_to_be(tmp_path):
     work = _old_style_issue(tmp_path)
     _migrate(tmp_path, "--apply")
-
-    stub = work / BLOCKING_DOCUMENT
-    assert stub.is_file(), (
-        "nothing was left where the delivery-approach record used to be, so an "
-        "install that predates the registry blocks every edit in the project")
-    body = stub.read_text(encoding="utf-8")
-    assert f"docs/compass/{CREATED}-{SLUG}/{BLOCKING_DOCUMENT}" in body, (
-        f"the pointer does not name where the record went:\n{body}")
-
-    real = (tmp_path / "docs" / "compass" / f"{CREATED}-{SLUG}"
-            / BLOCKING_DOCUMENT)
+    assert not (work / BLOCKING_DOCUMENT).exists(), (
+        "something was left where the delivery-approach record used to be")
+    real = (tmp_path / "docs" / "compass" / f"{CREATED}-{SLUG}" / BLOCKING_DOCUMENT)
     assert real.is_file(), "the record itself did not move"
-    assert stub.read_text() != real.read_text(), (
-        "the pointer is a copy of the record, not a pointer - two copies drift")
 
 
-def test_trc_e5_a_registry_reader_gets_the_record_not_the_pointer(tmp_path):
-    """The pointer must not shadow the thing it points at."""
+def test_trc_e5_a_registry_reader_gets_the_record(tmp_path):
     work = _old_style_issue(tmp_path)
     _migrate(tmp_path, "--apply")
-
     state, found, reason = core.resolve_artifact(str(work), "delivery-approach")
     assert state == core.FOUND, f"{state}: {reason}"
-    real = (tmp_path / "docs" / "compass" / f"{CREATED}-{SLUG}"
-            / BLOCKING_DOCUMENT)
-    assert os.path.samefile(found, real), (
-        f"the resolver returned {found}, which is the compatibility pointer "
-        f"rather than the record")
+    real = (tmp_path / "docs" / "compass" / f"{CREATED}-{SLUG}" / BLOCKING_DOCUMENT)
+    assert os.path.samefile(found, real)
 
 
-def test_trc_e5_only_the_blocking_document_gets_a_pointer(tmp_path):
-    """One pointer, not fourteen.
-
-    Every other document's absence degrades a warning or a report. Only this
-    one stops work, and leaving a pointer for each of the others would put the
-    whole review pack back beside the manifest - which is what this issue
-    moved it out of.
-    """
+def test_trc_e5_only_the_devlog_stays_beside_the_manifest(tmp_path):
     work = _old_style_issue(tmp_path)
     _migrate(tmp_path, "--apply")
     left = sorted(p.name for p in work.glob("*.md"))
-    assert left == sorted(["devlog.md", BLOCKING_DOCUMENT]), (
-        f"more than the devlog and the one pointer stayed beside the "
-        f"manifest: {left}")
+    assert left == ["devlog.md"], f"more than the devlog stayed beside the manifest: {left}"
 
 
-def test_trc_e5_a_second_run_does_not_move_the_pointer(tmp_path):
-    """The pointer sits at the name the migration moves from.
-
-    Without care, the next run finds `delivery-approach.md` beside the manifest
-    and relocates it over the real record - the migration overwriting its own
-    compatibility file, and the record with it.
-    """
-    work = _old_style_issue(tmp_path)
+def test_trc_e5_a_second_run_leaves_the_record_as_it_is(tmp_path):
+    _old_style_issue(tmp_path)
     _migrate(tmp_path, "--apply")
-    real = (tmp_path / "docs" / "compass" / f"{CREATED}-{SLUG}"
-            / BLOCKING_DOCUMENT)
+    real = (tmp_path / "docs" / "compass" / f"{CREATED}-{SLUG}" / BLOCKING_DOCUMENT)
     before = real.read_text(encoding="utf-8")
-
     r = _migrate(tmp_path, "--apply")
-    assert real.read_text(encoding="utf-8") == before, (
-        "a second run overwrote the record with the pointer:\n" + r.stdout)
-    assert (work / BLOCKING_DOCUMENT).is_file(), (
-        "a second run removed the pointer, so the lockout comes back")
+    assert real.read_text(encoding="utf-8") == before, r.stdout
+    assert "nothing to do" in r.stdout, r.stdout
 
 
-def test_trc_e5_a_tree_migrated_before_the_pointer_existed_is_repaired(tmp_path):
-    """The pointer must not depend on the move happening in this run.
-
-    An earlier version of this migration moved the documents and left nothing
-    behind, so every project it touched - including this repository - is
-    locked out of code edits under an install that predates the artifact
-    registry. Those trees report "nothing to do" on a second run, because there
-    is nothing left to move.
-
-    So the pointer is written whenever the record is registered elsewhere and
-    the old name is empty, not only when this run is the one that moved it.
-    """
+def test_trc_e5_a_pointer_of_an_earlier_run_is_removed(tmp_path):
+    """A tree an earlier release migrated holds the record at its registered path and a
+    pointer beside the manifest. The pointer goes, the record stays, and the dry run says so."""
     work = _old_style_issue(tmp_path)
     _migrate(tmp_path, "--apply")
-    stub = work / BLOCKING_DOCUMENT
-    assert stub.is_file()
-    stub.unlink()                       # the state an earlier run left behind
-
-    r = _migrate(tmp_path, "--apply")
-    assert stub.is_file(), (
-        "a tree migrated before the pointer existed was not repaired, so it "
-        "stays locked out:\n" + r.stdout)
-    assert f"docs/compass/{CREATED}-{SLUG}/{BLOCKING_DOCUMENT}" in stub.read_text(
-        encoding="utf-8")
-
-
-def test_trc_e5_the_repair_is_reported_and_does_not_repeat(tmp_path):
-    """A run that changed something says so, and a run that changed nothing
-    says that instead."""
-    work = _old_style_issue(tmp_path)
-    _migrate(tmp_path, "--apply")
-    (work / BLOCKING_DOCUMENT).unlink()
-
-    first = _migrate(tmp_path, "--apply")
-    assert "pointer" in first.stdout, (
-        "the repair happened without being reported:\n" + first.stdout)
-    second = _migrate(tmp_path, "--apply")
-    assert "nothing to do" in second.stdout, (
-        "the repair repeats on every run:\n" + second.stdout)
-
-
-def test_trc_e2_the_dry_run_reports_the_pointer_repair_too(tmp_path):
-    """The dry run promises exactly what the apply does, repairs included.
-
-    A dry run that says "nothing to do" and an apply that then writes 128
-    pointers is the same class of mismatch as promising a move it cannot make,
-    and just as hard to trust the next time.
-    """
-    work = _old_style_issue(tmp_path)
-    _migrate(tmp_path, "--apply")
-    (work / BLOCKING_DOCUMENT).unlink()
+    (work / BLOCKING_DOCUMENT).write_text(POINTER, encoding="utf-8")
+    real = (tmp_path / "docs" / "compass" / f"{CREATED}-{SLUG}" / BLOCKING_DOCUMENT)
+    before = real.read_bytes()
 
     dry = _migrate(tmp_path)
-    assert "nothing to do" not in dry.stdout, (
-        "the dry run reports nothing on a tree the apply would repair:\n"
-        + dry.stdout)
-    assert BLOCKING_DOCUMENT in dry.stdout and "pointer" in dry.stdout, (
-        "the dry run does not say it would leave a pointer:\n" + dry.stdout)
-    assert not (work / BLOCKING_DOCUMENT).exists(), (
-        "the dry run wrote the pointer")
+    assert "pointer" in dry.stdout and BLOCKING_DOCUMENT in dry.stdout, dry.stdout
+    assert (work / BLOCKING_DOCUMENT).is_file(), "the dry run removed the pointer"
+    r = _migrate(tmp_path, "--apply")
+    assert "pointer" in r.stdout, r.stdout
+    assert not (work / BLOCKING_DOCUMENT).exists()
+    assert real.read_bytes() == before
+    assert "nothing to do" in _migrate(tmp_path, "--apply").stdout

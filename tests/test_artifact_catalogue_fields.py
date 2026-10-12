@@ -1815,3 +1815,549 @@ def test_acf_64():
         assert spans, f"{name} no longer names `approach evaluate --write`"
         bare = [s for s in spans if "--justify" not in s]
         assert not bare, f"{name} shows approach evaluate --write without --justify: {bare}"
+
+
+# --- group H: the migrate maps the ad-hoc kinds ------------------------------------
+
+#: The number of names in tests/fixtures/ad-hoc-kinds.txt, fixed by a dry run of the
+#: 6.x migrate on the archive copy and recorded in requirements-review.md.
+AD_HOC_COUNT = 78
+
+
+def test_acf_41():
+    from compass_pkg import migrate_kinds as mk
+    names = [n for n in AD_HOC_KINDS.read_text(encoding="utf-8").splitlines() if n]
+    assert len(names) == len(set(names)) == AD_HOC_COUNT
+    catalogue = mk.shipped_catalogue()
+    targets = {n: mk.lookup(n + ".md", catalogue) for n in names}
+    for name, target in targets.items():
+        assert target.how != mk.UNMAPPED, f"{name} has no target"
+        if target.how != mk.SKIP:
+            assert target.kind in catalogue, (name, target)
+            assert target.kind != name or name in catalogue, (name, target)
+    # Review rounds are rounds of review; review briefs are not artifacts.
+    rounds = [n for n, t in targets.items() if t.how in (mk.PLAIN, mk.FAMILY)]
+    briefs = [n for n in names if "review-brief" in n]
+    assert all(targets[n].kind == "review" for n in rounds)
+    assert all(targets[n].how == mk.SKIP for n in briefs)
+    assert (len(rounds), len(briefs)) == (29, 26)       # 55 names; the spec said 57
+    assert all(("review" in n or n.startswith("verify-")) for n in rounds)
+    expected = {"design": ("alias", "technical-design"), "prd": ("alias", "intent"),
+                "positioning": ("kind", "positioning")}
+    for name, (how, kind) in expected.items():
+        assert (targets[name].how, targets[name].kind) == (how, kind), name
+    for name in ("recommendation", "compare", "report"):
+        assert mk.lookup(name + ".md", catalogue).how == mk.SKIP, name
+    # The test can fail: remove the row that decides a name and the name loses its target.
+    for name, row in (("design", 3), ("verify-security", 5), ("recommendation", 1)):
+        rules = tuple(r for r in mk.KIND_RULES if r.order != row)
+        assert mk.lookup(name + ".md", catalogue, rules).how == mk.UNMAPPED, name
+    assert mk.lookup("notes-on-cache.md", catalogue).how == mk.UNMAPPED
+
+
+MARKER = "<!-- compass: moved -->"
+STAMP = "2026-09-01"
+
+
+class _Stopped(Exception):
+    """Raised by a test's step hook to stop the migrate where the test wants it."""
+
+
+def _body(slug, name):
+    return f"# {name} of {slug}\n\nBody of {name}.\n"
+
+
+def _m_issue(root, slug, *, created=STAMP, beside=(), docs=(), artifacts=(), approach="regular",
+             texts=None, stages=None, **extra):
+    """An archived issue for the migrate: a manifest, the files beside it and the
+    files in its documents folder, each with bytes of its own."""
+    work = root / ".compass" / "work" / slug
+    docs_home = root / "docs" / "compass" / f"{created}-{slug}"
+    manifest = {"schema_version": "3.0", "issue": slug, "created": created, "status": "active",
+                "delivery_approach": approach, "artifacts": list(artifacts), "evidence": [],
+                "gates": [], "scenarios": [], "changed_files": [], "claims": [],
+                "follow_ups": []}
+    if stages:
+        manifest["stages"] = stages
+    manifest.update(extra)
+    _write(work / "manifest.yml", yaml.safe_dump(manifest, sort_keys=False))
+    for folder, names in ((work, beside), (docs_home, docs)):
+        for name in names:
+            text = (texts or {}).get((folder is work, name)) or _body(slug, name)
+            _write(folder / name, text)
+    (root / ".compass" / "config.yml").write_text("version: 1.0.0\n", encoding="utf-8")
+    return work, docs_home
+
+
+def _entry(kind, slug, name=None, *, created=STAMP, **over):
+    entry = {"id": "ART-" + kind.upper().replace("-", "_"), "kind": kind, "status": "draft"}
+    if name:
+        entry["path"] = f"docs/compass/{created}-{slug}/{name}"
+    entry.update(over)
+    return entry
+
+
+def _digests(root, *only):
+    """The sha256 of every file under .compass/work and docs/compass (or under `only`)."""
+    import hashlib
+    found = {}
+    for sub in only or (".compass/work", "docs/compass"):
+        base = root / sub
+        for path in sorted(base.rglob("*")) if base.is_dir() else []:
+            if path.is_file():
+                found[str(path.relative_to(root))] = hashlib.sha256(path.read_bytes()).hexdigest()
+    return found
+
+
+def _migrate(root, *flags):
+    return _cli(root, "issue", "migrate", *flags)
+
+
+def _timeless_digests(root):
+    """`_digests` with each ISO timestamp masked. The migrate stamps the approval of a
+    done issue's documents with the time it ran, so two runs differ in that text and
+    nowhere else."""
+    import hashlib
+    import re
+    stamp = re.compile(rb"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:[+-]\d\d:\d\d|Z)?")
+    found = {}
+    for sub in (".compass/work", "docs/compass"):
+        for path in sorted((root / sub).rglob("*")):
+            if path.is_file():
+                found[str(path.relative_to(root))] = hashlib.sha256(
+                    stamp.sub(b"<time>", path.read_bytes())).hexdigest()
+    return found
+
+
+def _registry(work):
+    return yaml.safe_load((work / "manifest.yml").read_text(encoding="utf-8")).get("artifacts") or []
+
+
+def test_acf_42(tmp_path):
+    root = tmp_path / "a"
+    work, docs = _m_issue(root, "rounds", docs=["review.md", "review-2.md", "integrated-review-3.md"],
+                          beside=["verify-security-4.md"])
+    sources = {n: (docs / n).read_bytes() for n in ("review.md", "review-2.md", "integrated-review-3.md")}
+    sources["verify-security-4.md"] = (work / "verify-security-4.md").read_bytes()
+    code, out, err = _migrate(root, "--apply")
+    assert code == 0, out + err
+    held = sorted(p.name for p in docs.glob("review*.md"))
+    assert held == ["review-1.md", "review-2.md", "review-3.md", "review-4.md"], held
+    for number, old in ((1, "review.md"), (2, "review-2.md"), (3, "integrated-review-3.md"),
+                        (4, "verify-security-4.md")):
+        assert (docs / f"review-{number}.md").read_bytes() == sources[old], old
+    reviews = {e["round"]: e for e in _registry(work) if e["kind"] == "review"}
+    assert sorted(reviews) == [1, 2, 3, 4]
+    for number, old in ((1, "review.md"), (2, "review-2.md"), (3, "integrated-review-3.md"),
+                        (4, "verify-security-4.md")):
+        assert reviews[number]["path"] == f"docs/compass/{STAMP}-rounds/review-{number}.md"
+        assert old in reviews[number]["reason"], reviews[number]
+    for gone in ("review.md", "integrated-review-3.md"):
+        assert not (docs / gone).exists()
+    assert not (work / "verify-security-4.md").exists()
+    # A plain round keeps its number; another family takes the next free one.
+    second = tmp_path / "b"
+    work2, docs2 = _m_issue(second, "keeps", docs=["review-2.md", "verify-security-2.md"])
+    code, out, err = _migrate(second, "--apply")
+    assert code == 0, out + err
+    assert sorted(p.name for p in docs2.glob("review*.md")) == ["review-2.md", "review-3.md"]
+    assert "verify-security-2.md" in out and "review-3.md" in out and "review-2.md" in out, out
+
+
+def test_acf_43(tmp_path):
+    root = tmp_path / "a"
+    bad, bad_docs = _m_issue(root, "collides", docs=["review.md", "review-1.md"], beside=["devlog.md"])
+    good, good_docs = _m_issue(root, "fine", docs=["review.md"])
+    before = _digests(root, ".compass/work/collides", "docs/compass/2026-09-01-collides")
+    code, out, err = _migrate(root, "--apply")
+    assert code != 0, out + err
+    text = out + err
+    assert "review.md" in text and "review-1.md" in text and "collides" in text, text
+    assert "round 1" in text and "re-run" in text, text
+    assert _digests(root, ".compass/work/collides", "docs/compass/2026-09-01-collides") == before
+    assert (good_docs / "review-1.md").is_file() and not (good_docs / "review.md").exists()
+    # The dry run names the same pair and writes nothing.
+    code, out, err = _migrate(root)
+    assert code != 0 and "review-1.md" in out + err
+
+
+def test_acf_44(tmp_path):
+    root = tmp_path / "a"
+    names = ["bug-report.md", "architecture-notes.md", "spike-conclusion.md", "positioning.md",
+             "design.md", "recommendation.md"]
+    slug = "repointed"
+    arts = [_entry(k, slug, f"{k}.md", status="approved", approved_by="jed72", approved_at="2026-09-02")
+            for k in ("bug-report", "architecture-notes", "spike-conclusion", "positioning", "recommendation")]
+    arts.append(_entry("design", slug, "design.md", status="approved", approved_by="jed72",
+                       approved_at="2026-09-02"))
+    arts.append(_entry("prd", slug))
+    work, docs = _m_issue(root, slug, docs=names, artifacts=arts)
+    recommendation = (docs / "recommendation.md").read_bytes()
+    code, out, err = _migrate(root, "--apply")
+    assert code == 0, out + err
+    found = {e["id"]: e for e in _registry(work)}
+    for kind in ("bug-report", "architecture-notes", "spike-conclusion", "positioning"):
+        assert found[f"ART-{kind.upper().replace('-', '_')}"]["kind"] == kind
+    design = found["ART-DESIGN"]
+    assert design["kind"] == "technical-design" and design["status"] == "approved"
+    assert design["approved_by"] == "jed72"
+    assert design["path"] == f"docs/compass/{STAMP}-{slug}/technical-design.md"   # the table moved the file
+    assert (docs / "technical-design.md").is_file() and not (docs / "design.md").exists()
+    assert found["ART-PRD"]["kind"] == "intent" and found["ART-PRD"]["status"] == "draft"
+    assert "ART-RECOMMENDATION" not in found
+    assert (docs / "recommendation.md").read_bytes() == recommendation
+    # Both old and new kind registered: both stay, and the report names the issue.
+    second = tmp_path / "b"
+    arts = [_entry("design", "both", "design.md"), _entry("technical-design", "both", "technical-design.md")]
+    work2, docs2 = _m_issue(second, "both", docs=["design.md", "technical-design.md"], artifacts=arts)
+    code, out, err = _migrate(second, "--apply")
+    assert code == 0, out + err
+    assert sorted(e["kind"] for e in _registry(work2)) == ["design", "technical-design"]
+    assert (docs2 / "design.md").is_file() and (docs2 / "technical-design.md").is_file()
+    assert "both" in out and "design" in out, out
+
+
+def test_acf_45(tmp_path, monkeypatch):
+    from compass_pkg import artifact_kinds, migrate_kinds, stable_ids
+    root = tmp_path / "a"
+    slug = "leftalone"
+    names = ["devlog.md", "README.md", "assignment-subtask-1.md", "brief-subtask-1.md",
+             "review-brief-2.md", "integrated-review-brief-3.md", "architect-ruling.md",
+             "released-verbs-v5.6.0.md", "compare.md", "report.md"]
+    work, docs = _m_issue(root, slug, beside=names[:5], docs=["technical-design.md"] + names[5:],
+                          artifacts=[_entry("technical-design", slug, "technical-design.md")])
+    before = _digests(root)
+    code, out, err = _migrate(root, "--apply")
+    assert code == 0, out + err
+    after = _digests(root)
+    for name in names:
+        folder = ".compass/work" if name in names[:5] else "docs/compass"
+        key = [k for k in before if k.endswith("/" + name) and k.startswith(folder)]
+        assert key and all(after.get(k) == before[k] for k in key), name
+    kinds = {e["kind"] for e in _registry(work)}
+    assert kinds == {"technical-design"}, kinds
+    code, out, err = _cli(root, "issue", "lint", "--issue", slug)
+    assert not any(n in out + err for n in names[5:]), out + err
+    # One list, read by both commands.
+    assert migrate_kinds.NOT_AN_ARTIFACT is stable_ids.NOT_AN_ARTIFACT is artifact_kinds.NOT_AN_ARTIFACT
+    # Adding a name to the one list changes what both the migrate and issue lint do.
+    longer = stable_ids.NOT_AN_ARTIFACT + ("notes-on-cache.md",)
+    catalogue = migrate_kinds.shipped_catalogue()
+    assert migrate_kinds.lookup("notes-on-cache.md", catalogue).how == migrate_kinds.UNMAPPED
+    _write(docs / "notes-on-cache.md", "# notes\n")
+    assert artifact_kinds.unmatched_documents(None, str(work)) == ["notes-on-cache.md"]
+    monkeypatch.setattr(migrate_kinds, "NOT_AN_ARTIFACT", longer)
+    monkeypatch.setattr(artifact_kinds, "NOT_AN_ARTIFACT", longer)
+    assert migrate_kinds.lookup("notes-on-cache.md", catalogue).how == migrate_kinds.SKIP
+    assert artifact_kinds.unmatched_documents(None, str(work)) == []
+
+
+def test_acf_46(tmp_path):
+    root = tmp_path / "a"
+    slug = "unknown"
+    work, docs = _m_issue(root, slug, docs=["notes-on-cache.md", "technical-design.md"],
+                          beside=["scratch-pad.md"],
+                          artifacts=[_entry("technical-design", slug, "technical-design.md")])
+    before = _digests(root)
+    code, out, err = _migrate(root, "--apply")
+    assert code == 0, out + err
+    assert (docs / "notes-on-cache.md").read_bytes() == _body(slug, "notes-on-cache.md").encode()
+    assert (work / "scratch-pad.md").is_file()
+    assert {e["kind"] for e in _registry(work)} == {"technical-design"}
+    assert "unmapped" in out and slug in out and "notes-on-cache.md" in out and "scratch-pad.md" in out, out
+    assert _digests(root, "docs/compass") == {k: v for k, v in before.items() if k.startswith("docs/")}
+    code, out, err = _cli(root, "issue", "lint", "--issue", slug)
+    lines = [line for line in (out + err).splitlines() if "notes-on-cache.md" in line]
+    assert len(lines) == 1 and "matches no kind" in lines[0], out + err
+
+
+def test_acf_47(tmp_path):
+    root = tmp_path / "a"
+    slug = "cited"
+    work, docs = _m_issue(
+        root, slug, beside=["review.md"],
+        subtasks=[{"id": "subtask-1", "review_brief": f".compass/work/{slug}/review.md"}],
+        gates=[{"id": "verify.clarity", "status": "pass",
+                "evidence": {"type": "command-output", "path": "review.md"}}])
+    manifest = yaml.safe_load((work / "manifest.yml").read_text(encoding="utf-8"))
+    manifest["evidence"] = [{"id": "EV-REVIEW", "type": "command-output", "path": "review.md"}]
+    _write(work / "manifest.yml", yaml.safe_dump(manifest, sort_keys=False))
+    code, out, err = _migrate(root, "--apply")
+    assert code == 0, out + err
+    after = yaml.safe_load((work / "manifest.yml").read_text(encoding="utf-8"))
+    new = f"docs/compass/{STAMP}-{slug}/review-1.md"
+    assert after["subtasks"][0]["review_brief"] == new
+    for found in (after["evidence"][0]["path"], after["gates"][0]["evidence"]["path"]):
+        assert found.endswith("review-1.md") and (work / found).resolve().is_file(), found
+    assert (root / new).is_file()
+    code, out, err = _cli(root, "check", "--issue", slug, "--verbose")
+    assert "does not resolve" not in out + err, out + err
+
+
+def _totals(text):
+    """The count lines at the end of the report, as `{label: [numbers]}`."""
+    found = {}
+    for line in text.splitlines():
+        for label in ("documents by target kind", "left on the not-an-artifact list",
+                      "unmapped files", "compatibility pointers", "distribution maps"):
+            if line.strip().startswith(label):
+                found[label] = [int(n) for n in __import__("re").findall(r"\d+", line.split(":", 1)[1])]
+    return found
+
+
+def test_acf_48(tmp_path):
+    from archive import sample_root
+    root = tmp_path / "sample"
+    shutil.copytree(sample_root(), root)
+    before = _digests(root)
+    code, out, err = _migrate(root)
+    assert code == 0, out + err
+    assert _digests(root) == before
+    assert "would" in out and "register" in out, out
+    totals = _totals(out)
+    assert set(totals) == {"documents by target kind", "left on the not-an-artifact list",
+                           "unmapped files", "compatibility pointers", "distribution maps"}, out
+    assert out.strip().splitlines()[-1].startswith("This was a dry run"), out
+    # A fixture with a known answer for every count; the apply reports the same ones.
+    known = tmp_path / "known"
+    slug = "counted"
+    record = _body(slug, "delivery-approach.md")
+    _m_issue(known, slug, docs=["review.md", "verify-final.md", "distribution-map.md", "notes.md"],
+             beside=["delivery-approach.md", "devlog.md", "review-brief.md"],
+             artifacts=[_entry("distribution-map", slug, "distribution-map.md", depth="lightweight")],
+             subtasks=[{"id": "subtask-1"}])
+    snapshot = _digests(known)
+    code, dry, err = _migrate(known)
+    assert code == 0, dry + err
+    assert _digests(known) == snapshot
+    counts = _totals(dry)
+    assert counts["left on the not-an-artifact list"] == [1]
+    assert counts["unmapped files"] == [1]
+    assert counts["compatibility pointers"] == [0]
+    assert counts["distribution maps"] == [1]
+    assert "delivery-approach 1" in dry and "review 2" in dry, dry
+    code, applied, err = _migrate(known, "--apply")
+    assert code == 0, applied + err
+    assert _totals(applied) == counts, (counts, _totals(applied))
+    assert (known / "docs/compass" / f"{STAMP}-{slug}" / "distribution-map.md.v6.bak").is_file()
+
+
+def _git(cwd, *args):
+    subprocess.run(["git", *args], cwd=cwd, check=True, capture_output=True, text=True,
+                   env={**os.environ, "GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_SYSTEM": "/dev/null"})
+
+
+def test_acf_63(tmp_path):
+    def project(name, tracked, ignored):
+        root = tmp_path / name
+        _m_issue(root, "guarded", docs=["review.md"])
+        _git(root, "init", "-q")
+        (root / ".gitignore").write_text("".join(f"{p}\n" for p in ignored), encoding="utf-8")
+        for folder in tracked:
+            _git(root, "add", "-f", folder)
+        return root
+    root = project("a", [".compass/work"], ["docs/compass/"])
+    before = _digests(root)
+    code, out, err = _migrate(root, "--apply")
+    assert code != 0 and "docs/compass" in out + err and "copy" in out + err, out + err
+    assert _digests(root) == before
+    _git(root, "add", "-f", "docs/compass")
+    code, out, err = _migrate(root, "--apply")
+    assert code == 0, out + err
+    assert (root / "docs/compass" / f"{STAMP}-guarded" / "review-1.md").is_file()
+    again = project("b", [".compass/work"], ["docs/compass/"])
+    code, out, err = _migrate(again, "--apply", "--i-have-a-copy")
+    assert code == 0, out + err
+    inverse = project("c", ["docs/compass"], [".compass/work/"])
+    before = _digests(inverse)
+    code, out, err = _migrate(inverse, "--apply")
+    assert code != 0 and ".compass/work" in out + err, out + err
+    assert _digests(inverse) == before
+
+
+def test_acf_49(tmp_path):
+    root = tmp_path / "a"
+    slug = "beside"
+    work, docs = _m_issue(root, slug, beside=["delivery-approach.md"],
+                          stages={"assess": "thorough"})
+    record = (work / "delivery-approach.md").read_bytes()
+    code, out, err = _migrate(root, "--apply")
+    assert code == 0, out + err
+    assert (docs / "delivery-approach.md").read_bytes() == record
+    entry = next(e for e in _registry(work) if e["kind"] == "delivery-approach")
+    assert entry["path"] == f"docs/compass/{STAMP}-{slug}/delivery-approach.md"
+    assert entry["depth"] == "thorough"
+    assert not (work / "delivery-approach.md").exists()
+    # A record at its registered path and a pointer of an earlier run: the pointer goes.
+    second = tmp_path / "b"
+    work2, docs2 = _m_issue(second, "pointed", docs=["delivery-approach.md"],
+                            beside=["delivery-approach.md"],
+                            artifacts=[_entry("delivery-approach", "pointed", "delivery-approach.md")],
+                            texts={(True, "delivery-approach.md"): f"{MARKER}\n# Moved\n"})
+    code, out, err = _migrate(second, "--apply")
+    assert code == 0, out + err
+    assert not (work2 / "delivery-approach.md").exists()
+    assert (docs2 / "delivery-approach.md").read_bytes() == _body("pointed", "delivery-approach.md").encode()
+    # A file beside the manifest without the marker is left, and the report names it.
+    third = tmp_path / "c"
+    work3, docs3 = _m_issue(third, "unmarked", docs=["delivery-approach.md"],
+                            beside=["delivery-approach.md"],
+                            artifacts=[_entry("delivery-approach", "unmarked", "delivery-approach.md")])
+    kept = (work3 / "delivery-approach.md").read_bytes()
+    code, out, err = _migrate(third, "--apply")
+    assert code == 0, out + err
+    assert (work3 / "delivery-approach.md").read_bytes() == kept
+    assert "unmarked" in out and "delivery-approach.md" in out and "left" in out, out
+
+
+def _copy_sample(tmp_path, name):
+    from archive import sample_root
+    root = tmp_path / name
+    shutil.copytree(sample_root(), root)
+    return root
+
+
+def test_acf_50(tmp_path):
+    root = _copy_sample(tmp_path, "sample")
+    code, out, err = _migrate(root, "--apply")
+    assert code == 0, out + err
+    after = _digests(root)
+    code, out, err = _migrate(root, "--apply")
+    assert code == 0, out + err
+    assert "nothing to do" in out, out
+    assert _digests(root) == after
+
+
+def _stopped_issue(tmp_path, name, *, step):
+    """A hook-test project whose delivery-approach record is beside the manifest and
+    unregistered, with an evidence path that names it, migrated until `step` has run."""
+    from compass_pkg import migrate, migrate_kinds
+    from test_hook_artifact_paths import SLUG as HSLUG
+    project = _hook_issue(tmp_path, name, register=False, documents=False, beside=True)
+    work = project / ".compass" / "work" / HSLUG
+    manifest = yaml.safe_load((work / "manifest.yml").read_text(encoding="utf-8"))
+    manifest["evidence"] = [{"id": "EV-RECORD", "type": "command-output", "path": "delivery-approach.md"}]
+    _write(work / "manifest.yml", yaml.safe_dump(manifest, sort_keys=False))
+    seen = []
+
+    def hook(slug, name_of_step):
+        seen.append(name_of_step)
+        if name_of_step == step:
+            raise _Stopped(step)
+    migrate_kinds.STEP_HOOK = hook
+    try:
+        with pytest.raises(_Stopped):
+            migrate.migrate_issue_dir(str(work))
+    finally:
+        migrate_kinds.STEP_HOOK = lambda slug, name_of_step: None
+    return project, work
+
+
+def _hook_is_content(project):
+    from test_hook_artifact_paths import _pre_tool, _stop
+    ran = _pre_tool(project)
+    assert "no-delivery-approach" not in ran.stderr, ran.stderr
+    assert "MISSING" not in _stop(project).stderr
+
+
+def test_acf_59(tmp_path):
+    from test_hook_artifact_paths import DOCS_REL
+    moved = f"{DOCS_REL}/delivery-approach.md"
+    states = {}
+    for number, step in enumerate(("register", "move", "rewrite", "pointer"), start=1):
+        project, work = _stopped_issue(tmp_path, step, step=step)
+        _hook_is_content(project)
+        manifest = yaml.safe_load((work / "manifest.yml").read_text(encoding="utf-8"))
+        entry = next(e for e in manifest["artifacts"] if e["kind"] == "delivery-approach")
+        states[step] = (entry["path"], (work / "delivery-approach.md").exists(),
+                        (project / moved).exists(), manifest["evidence"][0]["path"])
+    assert all(state[0] == moved for state in states.values()), states
+    assert states["register"][1:3] == (True, False)         # registered, not moved yet
+    assert states["move"][1:3] == (False, True)             # moved, paths not rewritten yet
+    assert states["move"][3] == "delivery-approach.md"
+    assert states["rewrite"][3].endswith("a-moved-issue/delivery-approach.md") \
+        and states["rewrite"][3] != "delivery-approach.md"
+    assert states["pointer"][1:3] == (False, True)
+    # The stop test can fail: moving the file before registering it leaves the hook blocking.
+    from test_hook_artifact_paths import _pre_tool
+    project = _hook_issue(tmp_path, "swapped", register=False, documents=False, beside=True)
+    home = project / DOCS_REL
+    home.mkdir(parents=True, exist_ok=True)
+    os.replace(project / ".compass/work/a-moved-issue/delivery-approach.md", home / "delivery-approach.md")
+    ran = _pre_tool(project)
+    assert ran.returncode != 0 and "no-delivery-approach" in ran.stderr, ran.stderr
+
+
+def test_acf_51(tmp_path):
+    from compass_pkg import migrate, migrate_kinds
+    from test_hook_artifact_paths import _pre_tool, _stop
+    stopped = _copy_sample(tmp_path, "stopped")
+    whole = _copy_sample(tmp_path, "whole")
+    work_root = stopped / ".compass" / "work"
+    victim = next(slug for slug in sorted(os.listdir(work_root))
+                  if (work_root / slug / "delivery-approach.md").is_file()
+                  and not list((stopped / "docs/compass").glob(f"*-{slug}/delivery-approach.md")))
+    seen = []
+
+    def hook(slug, step):
+        seen.append((slug, step))
+        if (slug, step) == (victim, "register"):
+            raise _Stopped(slug)
+    migrate_kinds.STEP_HOOK = hook
+    try:
+        with pytest.raises(_Stopped):
+            migrate.migrate_tree(str(work_root))
+    finally:
+        migrate_kinds.STEP_HOOK = lambda slug, step: None
+    manifest = yaml.safe_load((work_root / victim / "manifest.yml").read_text(encoding="utf-8"))
+    entry = next(e for e in manifest["artifacts"] if e["kind"] == "delivery-approach")
+    assert (stopped / entry["path"]).exists() is False and (work_root / victim / "delivery-approach.md").is_file()
+    (stopped / ".compass" / "current-task").write_text(victim, encoding="utf-8")
+    from test_hook_artifact_paths import _env
+    import json as _json
+    ran = subprocess.run(["bash", str(ROOT / "hooks" / "pre-tool.sh")], cwd=str(stopped), env=_env(stopped),
+                         input=_json.dumps({"tool_name": "Edit",
+                                            "tool_input": {"file_path": str(stopped / "src" / "thing.py")}}),
+                         capture_output=True, text=True, timeout=120)
+    assert "no-delivery-approach" not in ran.stderr, ran.stderr
+    code, out, err = _migrate(stopped, "--apply")
+    assert code == 0, out + err
+    code, out, err = _migrate(whole, "--apply")
+    assert code == 0, out + err
+    assert _timeless_digests(stopped) == _timeless_digests(whole)
+
+
+def test_acf_40():
+    from archive import sample_root
+    import re as _re
+    root = sample_root()
+    work_root = root / ".compass" / "work"
+
+    def find(slug, name):
+        for folder in [work_root / slug, *sorted((root / "docs" / "compass").glob(f"*-{slug}"))]:
+            path = folder / name
+            if path.is_file() and MARKER not in path.read_text(encoding="utf-8")[:400]:
+                return path
+        return None
+    held, tables, ticks = {}, 0, 0
+    for slug in sorted(os.listdir(work_root)):
+        for name in ("delivery-approach.md", "technical-design.md"):
+            path = find(slug, name)
+            if path is not None:
+                lines = path.read_text(encoding="utf-8").splitlines()
+                held[(slug, name)] = lines
+                tables += any(line.startswith("|") for line in lines)
+                ticks += any(_re.match(r"\s*- \[x\]", line) for line in lines)
+    assert tables >= 3 and ticks >= 3, (tables, ticks)
+    import tempfile
+    with tempfile.TemporaryDirectory() as scratch:
+        copy = Path(scratch) / "copy"
+        shutil.copytree(root, copy)
+        code, out, err = _migrate(copy, "--apply")
+        assert code == 0, out + err
+        for (slug, name), lines in held.items():
+            after = next((p for p in sorted((copy / "docs" / "compass").glob(f"*-{slug}/{name}"))), None)
+            assert after is not None, (slug, name)
+            text = after.read_text(encoding="utf-8").splitlines()
+            assert text == lines, (slug, name)
+            assert "compass:render" not in "\n".join(text) or "compass:render" in "\n".join(lines)

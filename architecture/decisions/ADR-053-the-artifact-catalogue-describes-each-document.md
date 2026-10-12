@@ -67,7 +67,12 @@ entry and the readers of the registry draw on.
   absent list counts as zero. A person's `omitted` record wins over the condition.
 - A kind whose condition is false is left out of `artifacts-approved` (this reads ADR-050 decision 2).
   A distribution map that was written or omitted still marks breakdown done, because a person's record
-  wins over the condition (ADR-045 is unchanged).
+  wins over the condition (ADR-045 is unchanged). Four readers keep this older reading on purpose:
+  `compass next`, `lifecycle`, `diagnose` and `multiagent_check`. They ask whether a map exists, not
+  whether one is owed. Asking `owed()` there would turn a map a person wrote, or omitted, on a one-subtask
+  issue into "breakdown not done", which contradicts ACF-27 and the "feature, distribution map omitted"
+  case in `tests/test_next_stage.py`. Only `artifacts-approved`, the issue page, the board panel and the
+  receipt use `owed()`.
   A full issue capped to one worktree with one subtask no longer owes the map.
 - The skeleton, the generated glossary entries and the stored-generation fallback for the readers are
   built in later units of the issue. They finish this record.

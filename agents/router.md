@@ -71,7 +71,7 @@ read the dimensions.
    issue artifact set delivery-approach --status draft --path <that path>`,
    then present it.
    The assessment is advisory until confirmed; if a dimension changes,
-   update `manifest.yml` and re-run `compass approach evaluate --write` -
+   update `manifest.yml` and re-run `compass approach evaluate --write --justify DIM="..."` -
    never hand-edit the computed approach. Record human overrides with who
    and why. A policy `floor` or an `immovable_gate` cannot be
    overridden - that needs a reviewed change to the project's `compass.yml`
@@ -123,7 +123,7 @@ points you tune, not a menu:
 
 If a later stage reveals the assessment was misread, you run again under
 `/compass:assess --reassess`: re-read the dimensions, update the manifest's
-`assessment:` block, re-run `compass approach evaluate --write`, write a
+`assessment:` block, re-run `compass approach evaluate --write --justify DIM="..."`, write a
 new `delivery-approach.md` revision, and record what changed and why. A
 re-assessment is a normal event. The failure is an issue that outgrows its
 approach with no re-assessment.

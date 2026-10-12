@@ -1799,3 +1799,19 @@ def test_acf_39(tmp_path):
     _render(root2)
     shown = _block(design.read_text(encoding="utf-8"), "plan-exit")
     assert "1 of 1 met" in shown and "met by EV-PLAN" in shown, shown
+
+
+ASSESS_TEXTS = ("approaches/assess-procedure.md", "agents/router.md", "commands/assess.md")
+
+
+def test_acf_64():
+    # A re-assessment changes values, and evaluate --write refuses a changed value with
+    # no justification (ACF-21). A text that tells the reader to run it bare sends them
+    # into that refusal.
+    import re
+    for name in ASSESS_TEXTS:
+        text = " ".join((ROOT / name).read_text(encoding="utf-8").split())
+        spans = re.findall(r"`compass approach evaluate --write[^`]*`", text)
+        assert spans, f"{name} no longer names `approach evaluate --write`"
+        bare = [s for s in spans if "--justify" not in s]
+        assert not bare, f"{name} shows approach evaluate --write without --justify: {bare}"

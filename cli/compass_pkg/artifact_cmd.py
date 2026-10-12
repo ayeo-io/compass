@@ -29,9 +29,11 @@ ARTIFACT_STATUSES = ("draft", "awaiting-approval", "approved", "superseded",
 def cmd_issue_artifact_path(args):
     """`compass issue artifact-path <kind> [--round N]` - where a document is, one answer.
 
-    Exists for the two hooks. They are shell and cannot import the resolver.
-    A second resolver in bash would come to disagree with the Python one
-    about where a document lives.
+    The stages use it to learn where to write a document, and to learn the
+    home of a kind the issue earned and has not written yet. The two hooks do
+    not call it: each runs a short Python snippet that calls the resolver in
+    `core` directly, so there is no second resolver in bash to disagree with
+    the Python one about where a document lives.
 
     Exits non-zero and prints nothing when it is not there. A bash caller
     reads the exit code first; a plausible path for a missing document would

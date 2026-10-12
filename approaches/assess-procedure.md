@@ -62,7 +62,8 @@ If `--reassess` is passed, this is a re-assessment during the work, not a new
 assessment - typically because implementation revealed the assessment was
 misread. Read the existing `delivery-approach.md` and `manifest.yml`, re-read the
 four dimensions, update the manifest's `assessment:` block, then re-run
-`compass approach evaluate --write --reason "..."` to recompute the approach.
+`compass approach evaluate --write --reason "..." --justify DIM="..."` to recompute
+the approach, with one `--justify` for each value you changed.
 **Always pass `--reason`** on a re-assessment: when the CLI sees the approach
 change, it records the event in the manifest's `reassessments:` log, and the
 reason is the signal `compass retro` reads. Then write a **new
@@ -155,7 +156,7 @@ force; if it is still a spike, leave the marker in place.
    create this marker on any other approach.
 7. **Confirm.** The assessment is advisory until confirmed. Present the
    approach, invite override of any *dimension*, and if a dimension changes,
-   re-run `compass approach evaluate --write` - never hand-edit the computed
+   re-run `compass approach evaluate --write --justify DIM="..."` - never hand-edit the computed
    approach. Record overrides in `delivery-approach.md` with who and why.
    Immovable gates and floors cannot be overridden; changing one means a
    reviewed change to the project's `compass.yml` (`docs/configuration.md`),

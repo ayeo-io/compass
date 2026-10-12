@@ -9,6 +9,7 @@ Tests for `TRC-A1`, `TRC-A2`, `TRC-A3`, `TRC-A4`, `TRC-A5`, `TRC-A6`, `TRC-A7`,
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -271,8 +272,11 @@ class TestNoTrustedRerunCheck:
             "compass check must fail when rerun_without_change:true and no quarantine"
         )
         combined = r.stdout + r.stderr
-        assert "no-trusted-rerun" in combined, (
-            f"Expected 'no-trusted-rerun' in output: {combined}"
+        # --verbose names every check, and this hand-written fixture also fails
+        # rendered-blocks-current, so only the check's own FAIL line shows that
+        # no-trusted-rerun is what refused.
+        assert re.search(r"^\s*FAIL no-trusted-rerun\b", combined, re.M), (
+            f"Expected no-trusted-rerun to FAIL: {combined}"
         )
 
     def test_g4_passes_when_quarantined_test_links_tracking_task(

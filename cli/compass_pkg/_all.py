@@ -23,7 +23,6 @@ from compass_pkg.policy import *  # noqa: F401,F403
 from compass_pkg.quick_fix_cmd import *  # noqa: F401,F403
 from compass_pkg.receipt import *  # noqa: F401,F403
 from compass_pkg.refusals import *  # noqa: F401,F403
-from compass_pkg.render_cmd import cmd_issue_render  # noqa: F401
 from compass_pkg.rework import *  # noqa: F401,F403
 from compass_pkg.routing import *  # noqa: F401,F403
 from compass_pkg.manifest import *  # noqa: F401,F403
@@ -31,3 +30,10 @@ from compass_pkg.tdd import *  # noqa: F401,F403
 from compass_pkg.init_cmd import *  # noqa: F401,F403
 from compass_pkg.terminology_cmd import *  # noqa: F401,F403
 from compass_pkg.migrate import *  # noqa: F401,F403
+
+
+def cmd_issue_render(args):
+    """`compass issue render`, loading the render modules only when it runs, so
+    that every other command starts without them."""
+    from compass_pkg.render_cmd import cmd_issue_render as run
+    return run(args)

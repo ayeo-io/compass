@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import re
 
-from compass_pkg import catalogue_spec, rendered_blocks
+from compass_pkg import catalogue_spec
 from compass_pkg.stable_ids import STAGE_PLAN, STAGE_VERIFY
 
 #: The two lists the templates have always worded, each under its own heading.
@@ -89,6 +89,7 @@ def comment_mask(lines):
     A line inside a rendered block is masked too: block text is derived from
     the records, so a reader of the document never takes it as the document's
     own statement. The masking function decides which lines those are."""
+    from compass_pkg import rendered_blocks
     masked = rendered_blocks.masked_text("\n".join(lines), keep_lines=True).split("\n")
     return [(bool(line.strip()) and not shown.strip()) or (hidden != line)
             for line, shown, hidden in zip(lines, visible(lines), masked)]

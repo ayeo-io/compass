@@ -15,7 +15,7 @@ import os
 
 import yaml
 
-from compass_pkg import rendered_blocks
+
 from compass_pkg.atomic_io import digest
 from compass_pkg.core import FOUND, resolve_artifact
 from compass_pkg.red_first import content_digest
@@ -58,6 +58,7 @@ def file_digest(path):
     document, and a file with no block digests as it always did. Every digest
     of a document comes through here: the approval digest, freshness and the
     inputs of a judged check."""
+    from compass_pkg import rendered_blocks
     if not path:
         return None
     return rendered_blocks.masked_digest(path)

@@ -16,6 +16,10 @@ from typing import Any, Dict, List, Optional
 
 import pytest
 
+# The after-command render costs time on every record-changing command and most tests
+# do not read its output. Subprocesses inherit this; a test of the render sets it to "1".
+os.environ["COMPASS_RENDER_AFTER"] = "0"
+
 # --- locate the CLI and the framework root ----------------------------------
 # tests/ lives at the framework root, so the CLI is next to it.
 FRAMEWORK_ROOT = Path(__file__).resolve().parent.parent

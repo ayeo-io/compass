@@ -191,6 +191,10 @@ modification time.
   reason. A test walks the call graph from every command to `save_manifest` and
   fails, naming a command in none of the three.
 - A command that exits non-zero renders nothing.
+- The environment variable `COMPASS_RENDER_AFTER=0` switches the step off; any
+  other value, or none, leaves it on. It exists so a test suite does not pay for
+  rendering after every command. `compass issue render` ignores it. A command
+  outside `RENDER_TRIGGERS` does not load `render_after` or the render modules.
 - A render that fails never fails the command and never stops the other
   renders. One line on standard error gives the count and the first failure:
   `compass: 2 of 3 renders failed - first: <issue>: <file>:<line>: <fault>`.

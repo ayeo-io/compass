@@ -111,7 +111,8 @@ def test_dcj_36_release_line_only_when_recorded(repo):
 
 # --- DCJ-37 -----------------------------------------------------------------
 
-def test_dcj_37_prose_above_note_block_survives(repo):
+def test_dcj_37_prose_above_note_block_survives(repo, monkeypatch):
+    monkeypatch.setenv("COMPASS_RENDER_AFTER", "1")
     _finish_ok(repo)
     note = _note(repo)
     text = note.read_text()

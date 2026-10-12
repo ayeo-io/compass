@@ -34,7 +34,7 @@ import fnmatch
 import re as _re
 from compass_pkg.stable_ids import GATE_VERIFY_ANALYZE, GATE_VERIFY_CORRECTNESS
 from compass_pkg.core import CompassError, artifact_location, artifact_path, find_compass_dir, find_governance, load_yaml, manifest_path, normalize_spine
-from compass_pkg import rendered_blocks, status_words
+from compass_pkg import status_words
 from compass_pkg.tdd import _read_config, settings_hint
 from compass_pkg.trust import UNKNOWN, UNTRUSTED, contribution_trust, is_ci
 from compass_pkg.check_results import NOTHING_TO_CHECK  # re-exported: callers still import it from here
@@ -52,6 +52,7 @@ def _scenario_documented_in_spec(spec_path, scenario_id):
     acceptance-criteria.md (it has no structured home to duplicate), so
     reading it there is correct - not the mistake of grepping prose for a
     fact the manifest holds."""
+    from compass_pkg import rendered_blocks
     if not spec_path or not os.path.isfile(spec_path):
         return False
     try:
@@ -180,6 +181,7 @@ def _spec_sha256(task_dir):
     read every stale record as current - a false green in exactly the place it
     matters most.
     """
+    from compass_pkg import rendered_blocks
     path = artifact_path(task_dir, "acceptance-criteria.md")
     found = rendered_blocks.masked_digest(path)
     # The same bytes as before for a spec with no block; with blocks, the

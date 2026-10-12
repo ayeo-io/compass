@@ -390,6 +390,7 @@ def test_dcj_18_every_command_in_the_table_renders_the_named_issue(tmp_path, mon
     root = _current_issue(tmp_path)
     monkeypatch.chdir(root)
     monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(root))
+    monkeypatch.setenv("COMPASS_RENDER_AFTER", "1")
     for name, flag in sorted(record_triggers.RENDER_TRIGGERS.items()):
         called = []
         monkeypatch.setattr(render_after, "render_issue", lambda d, _c=called: _c.append(d) or [])

@@ -124,8 +124,12 @@ add` of HEAD in the system temp folder, named
 - A command still running when the budget ends is absent with "ran over the
   time limit", and the output names it. A command not started by then is
   absent with "not run: the time limit was reached".
-- Each command starts in a new session. At its limit the whole process group
-  is sent SIGKILL, so a child process cannot outlive the run.
+- Each command starts in a new session. When the wait for a command ends, its
+  whole process group is sent SIGTERM, then SIGKILL two seconds later, so a
+  child process cannot outlive the run. This happens when the command exits,
+  when it reaches its limit, when the run is interrupted (Ctrl-C or SIGTERM)
+  and when an error is raised. The group is stopped before the temporary
+  worktree is removed.
 - `COMPASS_READINESS_BUDGET_SECONDS` lowers the 270 seconds, never raises them,
   and only tests set it. A value that is not a positive number is ignored with
   a warning.

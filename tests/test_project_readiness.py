@@ -1,6 +1,6 @@
 """Repository readiness: the signals, the record, the floor and the readers.
 
-Scenario ids PRC-1 to PRC-44 (issue project-readiness-caps-autonomy). Each test
+Scenario ids PRC-1 to PRC-45 (issue project-readiness-caps-autonomy). Each test
 name starts with its scenario id. The file has one section per work unit; a
 later unit writes only under its own heading.
 """
@@ -269,6 +269,7 @@ def test_prc_25(tmp_path):
 # --- U2 the readiness command ---
 
 import datetime  # noqa: E402
+import signal  # noqa: E402
 import subprocess  # noqa: E402
 import time  # noqa: E402
 
@@ -1138,6 +1139,86 @@ def test_prc_11(tmp_path):
     assert "stopped at the time limit: build-declared-and-succeeds" in out
     assert support.signal(record, "agent-instructions-present")["result"] == "present"
     assert record["budget"]["commands_seconds"] == 5
+
+
+#: Runs one readiness command through `readiness_run.run_commands` in a
+#: child Python process, so the test can interrupt the run as a person or a
+#: process supervisor would. argv: cli folder, project, pid folder, mode.
+_PRC_45_RUNNER = '''
+import signal, subprocess, sys, time
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+from compass_pkg import readiness_run
+project, pids, mode = sys.argv[2], Path(sys.argv[3]), sys.argv[4]
+# A run started from a terminal gets KeyboardInterrupt on SIGINT, even when
+# the test runner that started this process ignores SIGINT.
+signal.signal(signal.SIGINT, signal.default_int_handler)
+if mode == "error":
+    real_wait = subprocess.Popen.wait
+    def wait(self, timeout=None):
+        # Only the wait for the project command (a shell text, not a git argv).
+        if timeout is not None and isinstance(self.args, str):
+            deadline = time.monotonic() + 30
+            while not (pids / "child").exists() and time.monotonic() < deadline:
+                time.sleep(0.05)
+            raise RuntimeError("an error raised during the wait")
+        return real_wait(self, timeout)
+    subprocess.Popen.wait = wait
+# `exec`, so the recorded shell id is the process the run waits on.
+tail = "exit 0" if mode == "exit-0" else "exec sleep 300"
+command = (f'echo $$ > "{pids}/shell.tmp" && mv "{pids}/shell.tmp" "{pids}/shell"; '
+           f'sleep 300 & echo $! > "{pids}/child.tmp" && mv "{pids}/child.tmp" "{pids}/child"; '
+           + tail)
+planned = [readiness_run.Planned("build-declared-and-succeeds", "build_command", command)]
+print(readiness_run.run_commands(project, planned, 120)[0].status, flush=True)
+'''
+
+
+def _prc_45_started(pids):
+    """The process ids the command recorded: its shell, then its child."""
+    return [int((pids / name).read_text(encoding="utf-8"))
+            for name in ("shell", "child") if (pids / name).exists()]
+
+
+@pytest.mark.parametrize("ending", ["sigint", "sigterm", "error", "exit-0"])
+def test_prc_45_no_process_outlives_the_run(tmp_path, ending):
+    marks, temp, env = _run_env(tmp_path)
+    pids = tmp_path / "pids"
+    pids.mkdir()
+    project = support.make_project(tmp_path / "p", {"schema": 1})
+    runner = tmp_path / "runner.py"
+    runner.write_text(_PRC_45_RUNNER, encoding="utf-8")
+    run = subprocess.Popen(
+        [sys.executable, str(runner), str(ROOT / "cli"), str(project), str(pids), ending],
+        env={**os.environ, **env}, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    try:
+        if ending in ("sigint", "sigterm"):
+            assert _wait_for(pids / "child", 30), "the command never started its child"
+            run.send_signal(signal.SIGINT if ending == "sigint" else signal.SIGTERM)
+        out, err = run.communicate(timeout=60)
+        started = _prc_45_started(pids)
+        assert len(started) == 2, out + err
+        if ending == "exit-0":
+            assert run.returncode == 0 and out.strip() == "passed", out + err
+        else:
+            assert run.returncode != 0, out + err
+        # Nothing the command started is still running once the run has ended.
+        survivors = [pid for pid in started if not _gone_within(pid, 5)]
+        assert survivors == [], f"still running after the run ended: {survivors}"
+        assert not [p for p in temp.iterdir() if p.name.startswith("compass-readiness-")]
+        assert len(support.worktrees(project)) == 1
+    finally:
+        # Stop only what this test started: the runner, then the command's
+        # process group, which the recorded shell leads, and its child.
+        if run.poll() is None:
+            run.kill()
+            run.wait()
+        for name, kill in (("shell", os.killpg), ("child", os.kill)):
+            if (pids / name).exists():
+                try:
+                    kill(int((pids / name).read_text(encoding="utf-8")), signal.SIGKILL)
+                except (ProcessLookupError, PermissionError):
+                    pass
 
 
 def test_prc_41(tmp_path):

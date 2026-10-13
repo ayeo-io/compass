@@ -9,8 +9,12 @@ temporary worktree of HEAD (ADR-061).
   command writes there is removed with it, so the working tree never changes.
 - It is removed in a `finally` block with `git worktree remove --force`, then
   `git worktree prune`.
-- Each command runs in a new session. At its limit its whole process group is
-  sent SIGKILL, so a build's child process cannot outlive the run.
+- Each command runs in a new session. However the wait for it ends - the
+  command exits, it reaches its limit, the run is interrupted or an error is
+  raised - its whole process group is sent SIGTERM, then SIGKILL after
+  `STOP_GRACE_SECONDS`, so a build's child process cannot outlive the run.
+  SIGTERM to the run raises `SystemExit` while commands run, so this still
+  happens. The group is stopped before the temporary worktree is removed.
 - The commands share `COMMAND_SECONDS`. The timed test command also stops at
   its own limit. `COMPASS_READINESS_BUDGET_SECONDS` can only lower the
   budget, and only tests set it.
@@ -20,7 +24,7 @@ Nothing here decides whether a command may run: the caller asks
 allows and at least one command is declared.
 """
 # DEPENDENCY: standard library (contextlib, dataclasses, os, shutil, signal,
-# subprocess, sys, tempfile, time); imports nothing from Compass.
+# subprocess, sys, tempfile, threading, time); imports nothing from Compass.
 from __future__ import annotations
 
 import os
@@ -29,6 +33,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -158,14 +163,46 @@ def temporary_worktree(root):
         shutil.rmtree(folder, ignore_errors=True)
 
 
-def _stop(proc):
-    """Stop a command that ran over its limit, with every process it
-    started: the command leads its own process group (`start_new_session`),
-    so the group is the command and its children."""
+#: Seconds a command's process group has to end after SIGTERM before it is
+#: sent SIGKILL.
+STOP_GRACE_SECONDS = 2
+
+
+def _group_alive(pgid):
     try:
-        os.killpg(proc.pid, signal.SIGKILL)
-    except (ProcessLookupError, PermissionError):
+        os.killpg(pgid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def _stop(proc):
+    """Stop a command and every process it started, however the wait for it
+    ended. The command leads its own process group (`start_new_session`),
+    so the group is the command and its children, and the group outlives
+    the command while a child is running. The group is sent SIGTERM, given
+    `STOP_GRACE_SECONDS`, then sent SIGKILL. A group with no process left is
+    skipped."""
+    pgid = proc.pid
+    try:
+        os.killpg(pgid, signal.SIGTERM)
+    except ProcessLookupError:
+        proc.wait()
+        return
+    except PermissionError:
         proc.kill()
+    deadline = time.monotonic() + STOP_GRACE_SECONDS
+    while time.monotonic() < deadline:
+        proc.poll()  # reap the command, so its exit does not keep the group
+        if not _group_alive(pgid):
+            break
+        time.sleep(0.05)
+    try:
+        os.killpg(pgid, signal.SIGKILL)
+    except (ProcessLookupError, PermissionError):
+        pass
     proc.wait()
 
 
@@ -181,8 +218,11 @@ def _run_one(entry, cwd, seconds_left):
             code = proc.wait(timeout=limit)
             status = "passed" if code == 0 else "failed"
         except subprocess.TimeoutExpired:
-            _stop(proc)
             code, status = None, "over-limit" if own_limit else "over-budget"
+        finally:
+            # Every exit path, an interrupt and an error included, and a
+            # command that exited but left a background child running.
+            _stop(proc)
         duration = round(time.monotonic() - start, 1)
         output.seek(0)
         tail = output.read()[-OUTPUT_TAIL:]
@@ -196,7 +236,7 @@ def run_commands(root, planned, budget_seconds, started=None):
     started = time.monotonic() if started is None else started
     deadline = started + budget_seconds
     outcomes = []
-    with temporary_worktree(root) as folder:
+    with _sigterm_raises(), temporary_worktree(root) as folder:
         for entry in order(planned):
             seconds_left = deadline - time.monotonic()
             if seconds_left <= 0:
@@ -205,6 +245,26 @@ def run_commands(root, planned, budget_seconds, started=None):
                 continue
             outcomes.append(_run_one(entry, folder, seconds_left))
     return outcomes
+
+
+def _terminated(signum, frame):
+    raise SystemExit(128 + signum)
+
+
+@contextmanager
+def _sigterm_raises():
+    """While the block runs, SIGTERM raises `SystemExit` instead of ending
+    the process at once, so the `finally` blocks that stop a command and
+    remove the temporary worktree still run. Python can set a handler only
+    in the main thread; elsewhere the block runs unchanged."""
+    if threading.current_thread() is not threading.main_thread():
+        yield
+        return
+    previous = signal.signal(signal.SIGTERM, _terminated)
+    try:
+        yield
+    finally:
+        signal.signal(signal.SIGTERM, previous if previous is not None else signal.SIG_DFL)
 
 
 #: The keys the test signal can time; each runs in the `test` place of `ORDER`.

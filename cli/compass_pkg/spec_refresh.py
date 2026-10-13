@@ -20,6 +20,11 @@ from compass_pkg.core import CompassError, find_compass_dir
 from compass_pkg.flow import LIVING_SPEC_FILES, derive_system_spec
 
 
+# The base branch `spec sync` merges by default. `ship-commit` reads it too,
+# to tell a merge of the base apart from a merge of the issue's own work.
+DEFAULT_BASE = "origin/main"
+
+
 def _git(root, *args, check=False):
     proc = subprocess.run(["git", "-C", root, *args], capture_output=True,
                           text=True)
@@ -127,6 +132,6 @@ def register(sub):
                     "side where only the derived living spec conflicts, "
                     "re-derives the living spec and commits. Any other "
                     "conflict aborts the merge.")
-    r.add_argument("--base", default="origin/main",
+    r.add_argument("--base", default=DEFAULT_BASE,
                    help="the branch to merge (default: origin/main)")
     r.set_defaults(func=cmd_spec_refresh, output_kind="hand-off")

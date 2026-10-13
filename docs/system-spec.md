@@ -3747,73 +3747,9 @@
 - `DCJ-103` PBW-A6 judges ignored paths by committed ignore rules only
 - `DCJ-104` A planted cache entry written by render --all fails check, and a single-issue render repairs the page
 
-### artifact-catalogue-fields (completed 2026-10-13)
+### ship-commit-after-a-merge (completed 2026-10-13)
 
-- `ACF-1` Every shipped kind carries the six fields and policy lint passes
-- `ACF-2` policy lint reports a kind that lacks one of the six fields
-- `ACF-3` The catalogue check refuses a malformed field value and names the field
-- `ACF-4` depends_on keeps its meaning for artifact freshness
-- `ACF-5` The glossary and the owning doc list every kind from the catalogue
-- `ACF-6` template show builds the skeleton from the catalogue at a depth
-- `ACF-7` Templates carry no producer or location comment
-- `ACF-8` A template and the catalogue that disagree on headings fail the build
-- `ACF-9` template show refuses an unknown kind or depth
-- `ACF-10` template show equals the template skeleton for every kind and depth
-- `ACF-11` A kind with no template file renders its skeleton from the catalogue alone
-- `ACF-12` The shipped default declares the new kinds
-- `ACF-13` Each review round is its own registered review-n document
-- `ACF-14` A kind registered outside the documents folder is refused
-- `ACF-15` issue lint reports a file in the documents folder that matches no kind, as a finding
-- `ACF-16` evaluate --write registers the delivery approach on every approach with its depth and no path
-- `ACF-17` The assess stage writes the record into the documents folder and nothing beside the manifest
-- `ACF-18` The pre-tool hook finds the record through the registry
-- `ACF-19` stop.sh finds the record through the registry
-- `ACF-20` The hook and stop.sh still find the record on a half-migrated issue
-- `ACF-21` evaluate --write refuses a new or changed assessment value with no justification and names the dimension
-- `ACF-22` No record ever says "(no reason given)"
-- `ACF-23` distribution-map is owed only with two or more subtasks
-- `ACF-24` compass check treats an unmet condition as satisfied with no file
-- `ACF-25` compass check still requires the distribution map with two subtasks
-- `ACF-26` The issue page, the board panel and the receipt show "not needed: one subtask"
-- `ACF-27` omitted keeps its meaning beside "not needed"
-- `ACF-28` The subtask count before breakdown
-- `ACF-29` The spike owes its record and its conclusion
-- `ACF-30` spike-conclusion-present is unchanged and reads only the evidence record
-- `ACF-31` A project adds a kind with the six fields and every reader sees it
-- `ACF-32` An added kind missing a required field is refused
-- `ACF-33` A layer that only adds a kind classifies as equivalent and needs no waiver
-- `ACF-34` The delivery-approach template holds four rendered blocks in place of its tables
-- `ACF-35` The assessment block shows each dimension, its value and its justification
-- `ACF-36` The policy-rules block lists every rule that fired, or says none did
-- `ACF-37` The stage-weights and gate-set blocks follow the manifest
-- `ACF-38` A reassessment makes the delivery-approach blocks stale until they are rendered
-- `ACF-39` The four Gate checklists are rendered blocks met by records
-- `ACF-40` The migrate leaves the hand-written tables of archived documents as they are
-- `ACF-41` The mapping table covers every ad-hoc kind in the fixture
-- `ACF-42` Review rounds are renamed to review-n and registered under review
-- `ACF-43` Two plain review files that claim one round stop that issue's migrate
-- `ACF-44` Registered undeclared kinds are re-pointed to their catalogue kind
-- `ACF-45` Names on the not-an-artifact list are left where they are
-- `ACF-46` A name the table does not know is reported, not registered under its stem
-- `ACF-47` Paths that named a moved file are rewritten
-- `ACF-48` A dry run changes nothing and says what it would do
-- `ACF-49` The migrate moves the delivery-approach record into the documents folder
-- `ACF-50` A second migrate is a no-op
-- `ACF-51` A migrate stopped halfway can be resumed and every issue stays workable
-- `ACF-52` The baseline is recorded on the maintainer's archive copy before the migrate
-- `ACF-53` issue lint names zero unregistered files after the migrate
-- `ACF-54` Every regular issue that held a delivery-approach record has it in its documents folder
-- `ACF-55` No regular issue with one subtask carries a lightweight distribution map
-- `ACF-56` Review rounds are review-n and nothing else
-- `ACF-57` The after measures hold on the maintainer's archive copy
-- `ACF-58` Every reader of the registry sees each review round, and the latest by default
-- `ACF-59` The migrate registers the record's new path before it moves the file, so the hook never finds it absent
-- `ACF-60` A template section marked optional is not a heading the catalogue requires
-- `ACF-61` template show prints a template that is not a catalogue kind as the file
-- `ACF-62` Registering the spike conclusion with its decision writes the evidence record the check reads
-- `ACF-63` The migrate refuses to apply without a copy when the documents folder is not tracked
-- `ACF-64` The assess texts pass --justify to approach evaluate --write
-- `ACF-65` Builder hand-back files are left where they are and not reported
-- `ACF-66` The migrate keeps a registered path that names a file outside the documents folder
-- `ACF-67` The after measure counts only records held before and maps registered at lightweight depth, and prints both exclusions
-- `ACF-68` Production code cites no id that lives only in an issue's documents
+- `TRC-001` Given an issue whose own commit changes only its traced files, When the branch tip is a merge of another branch or a commit that only re-derives docs/system-spec.md, Then ship-commit --issue lands at HEAD; and when the issue's own first-parent commit changes an untraced file, Then it still refuses and names the file
+- `TRC-002` Given an integration merge whose first parent is the base of the merged branch, When that branch holds a file outside the issue's declared scope, Then ship-commit --issue refuses to land at HEAD and names the file
+- `TRC-003` Given a tip that merges a branch holding commits not on the base branch, whatever commit it started from, When that branch brings a file outside the issue's declared scope or the base cannot be resolved, Then ship-commit --issue judges the merge in full, refuses and names the file
+- `TRC-004` Given the first-parent scope walk ship-commit uses at HEAD, When the package's module sizes are checked, Then the walk lives in its own module and cli/compass_pkg/manifest.py stays within the 1200-line limit

@@ -36,6 +36,7 @@ from compass_pkg import status_words
 from compass_pkg.terminal import say
 from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, normalize_spine, now_iso, resolve_issue_dir, save_manifest
 from compass_pkg.issue_layout import docs_dir_for
+from compass_pkg.tip_scope import tip_own_paths
 from compass_pkg.binding import changes_paths, declared_test_paths, _changes_id_at, _newest_bound_record
 # The resolver `declared-tests-resolve` uses, so the verb accepts what the check accepts.
 from compass_pkg.test_ids import _test_id_resolves, _test_is_skipped
@@ -193,57 +194,6 @@ def _out_of_scope(staged, owned, artifact_dir, docs_prefix=None):
         and p not in FRAMEWORK_OWNED_PATHS
         and not p.startswith(prefixes)
     )
-
-
-def _tip_own_paths(cwd):
-    """The paths the issue's own commits at the branch tip changed, walking
-    the first parent from HEAD.
-
-    - A commit that changes only the living spec is passed over: `ship-commit`
-      and `compass spec sync` write it, so it is no issue's change.
-    - A merge whose merged branches were built on its first parent, such
-      as a multiagent integration merge, is judged in full and ends the walk.
-    - Any other merge counts only the paths it changed against every
-      parent, which is its conflict resolution. What the merged-in branch
-      brought is that branch's work, such as main's commits.
-    - The walk stops at the first other commit, which is the issue's newest
-      own commit and is judged in full, or at a commit a merged-in branch
-      already holds, which was the base of that branch and not the issue's.
-    """
-    from compass_pkg.flow import LIVING_SPEC_FILES
-
-    def names(*rng):
-        return {n for n in _git(["diff", "--name-only", "-z", *rng],
-                                cwd).stdout.split("\0") if n}
-
-    paths, sides, commit = set(), [], "HEAD"
-    while True:
-        parents = _git(["rev-parse", f"{commit}^@"], cwd).stdout.split()
-        if not parents:
-            break
-        if any(_git(["merge-base", "--is-ancestor", commit, side],
-                    cwd).returncode == 0 for side in sides):
-            break
-        changed = [names(parent, commit) for parent in parents]
-        if len(parents) > 1 and all(
-                _git(["merge-base", "--is-ancestor", parents[0], side],
-                     cwd).returncode == 0 for side in parents[1:]):
-            # Every merged branch was built on the first parent, as a
-            # multiagent integration merge is: all it brought is the work
-            # being landed, so it is judged in full.
-            paths |= changed[0]
-            break
-        if len(parents) > 1:
-            paths |= set.intersection(*changed)
-            sides += parents[1:]
-            commit = parents[0]
-            continue
-        if changed[0] and changed[0] <= set(LIVING_SPEC_FILES):
-            commit = parents[0]
-            continue
-        paths |= changed[0]
-        break
-    return sorted(paths - set(LIVING_SPEC_FILES))
 
 
 def _stale_paths(task, task_dir, root, at_commit, judge_landed=False):
@@ -455,10 +405,10 @@ def cmd_land_commit(args):
 
         # What the issue's own commits at the tip added must be the issue's:
         # a commit a git hook widened, refused once, must not land when
-        # shipped again. `_tip_own_paths` passes over what a merged-in
-        # branch brought and the living spec `ship-commit` writes itself.
+        # shipped again. `tip_scope.tip_own_paths` passes over a merge of
+        # the base branch and the living spec `ship-commit` writes itself.
         if _git(["rev-parse", "--verify", "-q", "HEAD^1"], cwd).returncode == 0:
-            added = _tip_own_paths(cwd)
+            added, base_note = tip_own_paths(cwd)
             head_owned, head_artifacts = _land_scope(head_task, head_slug)
             stray_head = (_out_of_scope(
                 added, head_owned, head_artifacts,
@@ -475,7 +425,10 @@ def cmd_land_commit(args):
                     "`compass changed-file add <path> --scenario <id>`. If "
                     "they are not this issue's commits, land the issue "
                     "from a branch whose tip is its own commit, then ship "
-                    "again.")
+                    "again."
+                    + (f"\n\nNote: {base_note}. Fetch the base branch "
+                       "(git fetch origin), then ship again."
+                       if base_note else ""))
 
         head_id = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
         _apply_ship_exit(head_task, head_task_dir)

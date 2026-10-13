@@ -157,16 +157,18 @@ exits non-zero.
 With nothing staged, `compass ship-commit --issue <slug>` lands at HEAD
 only when the issue's own commits at the tip stay inside its declared
 scope. It walks the first parent from HEAD. A commit that changes only
-the living spec is passed over. A merge of a branch built on its first
-parent, such as a multiagent integration merge, is judged in full and
-ends the walk. Any other merge, such as one of `origin/main`, counts only
-the paths it changed against every parent, which is its conflict
-resolution. The walk stops at the issue's newest other commit, which is
-judged in full.
+the living spec is passed over. A merge whose merged-in commits are all
+on the base branch, such as a merge of `origin/main`, counts only the
+paths it changed against every parent, which is its conflict resolution.
+Any other merge, such as a multiagent integration merge, is judged in
+full and ends the walk, whatever commit the merged branch started from.
+The walk stops at the issue's newest other commit, which is judged in
+full.
 
-What such another merge brought is not judged. So when a multiagent
-subtask branch was built on an earlier commit than the first parent, a
-stray file in it is not reported here.
+The base branch is the remote's default branch (`origin/HEAD`), or
+`origin/main`, the base `compass spec sync` merges. When neither
+resolves, such as in a clone with no remote, every merge is judged in
+full, and the refusal says that the base was not found.
 
 Teams must keep their normal CI controls.
 

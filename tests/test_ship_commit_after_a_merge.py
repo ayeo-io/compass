@@ -8,13 +8,15 @@ branch brought, and a tip that only re-derived `docs/system-spec.md` listed
 the living spec, which `ship-commit` writes itself. Both were refused.
 
 The check now judges the issue's own commits along the first parent: a
-living-spec-only commit is passed over, a merge of another branch counts
-only what it changed against every parent (a conflict resolution), and the
-walk stops at the issue's newest own commit, which is still judged in full.
-An integration merge of a branch built on the tip is judged in full.
+living-spec-only commit is passed over, a merge whose merged-in commits
+are all on `origin/main` counts only what it changed against every parent
+(a conflict resolution), and the walk stops at the issue's newest own
+commit, which is still judged in full. Any other merge, or any merge when
+the base cannot be found, is judged in full.
 
 Scenario ids: `TRC-001` (the tip lands, and the issue's own commit is
-still judged), `TRC-002` (an integration merge is judged in full).
+still judged), `TRC-002` (an integration merge is judged in full),
+`TRC-003` (a merged branch not on the base is judged in full).
 """
 from __future__ import annotations
 
@@ -43,9 +45,11 @@ def _ship(root):
     return _cli(root, "ship-commit", "--issue", SLUG, "-m", "land it")
 
 
-def _side_branch(root, files):
+def _side_branch(root, files, on_base=True):
     """A branch from the base commit that changes `files`, outside the
-    issue's scope."""
+    issue's scope. With `on_base`, `origin/main` holds its commit, as it
+    does when the branch is main; otherwise `origin/main` stays at the
+    base commit."""
     base = _git(root, "rev-list", "--max-parents=0", "HEAD")
     _git(root, "branch", "side", base)
     current = _git(root, "rev-parse", "--abbrev-ref", "HEAD")
@@ -57,6 +61,8 @@ def _side_branch(root, files):
     _git(root, "add", "-A", *files)
     _git(root, "commit", "-q", "-m", "someone else's work")
     _git(root, "checkout", "-q", current)
+    _git(root, "update-ref", "refs/remotes/origin/main",
+         "side" if on_base else base)
 
 
 def test_trc001_a_living_spec_commit_at_the_tip_lands(repo):
@@ -178,4 +184,37 @@ def test_trc001_an_untraced_file_below_a_spec_commit_is_still_refused(repo):
     combined = result.stdout + result.stderr
     assert result.returncode != 0, combined
     assert "src/app.py" in combined, combined
+    assert not _manifest(repo).get("land_commit")
+
+
+def test_trc003_a_branch_off_the_base_from_an_older_commit_is_refused(repo):
+    """A subtask branch started from a commit older than the tip's first
+    parent, and not on `origin/main`, brings an untraced file: the merge
+    is judged in full and refused."""
+    _issue_commit(repo)
+    _side_branch(repo, {"lib/stray.py": "z = 1\n"}, on_base=False)
+    _git(repo, "merge", "-q", "--no-ff", "-m", "Integrate subtask", "side")
+
+    result = _ship(repo)
+
+    combined = result.stdout + result.stderr
+    assert result.returncode != 0, combined
+    assert "lib/stray.py" in combined, combined
+    assert not _manifest(repo).get("land_commit")
+
+
+def test_trc003_with_no_base_a_merge_is_judged_in_full_and_says_why(repo):
+    """With no `origin/main` to tell main's commits apart, a merge is
+    judged in full, and the refusal says the base could not be found."""
+    _issue_commit(repo)
+    _side_branch(repo, {"lib/stray.py": "z = 1\n"})
+    _git(repo, "update-ref", "-d", "refs/remotes/origin/main")
+    _git(repo, "merge", "-q", "--no-ff", "-m", "Merge side", "side")
+
+    result = _ship(repo)
+
+    combined = result.stdout + result.stderr
+    assert result.returncode != 0, combined
+    assert "lib/stray.py" in combined, combined
+    assert "base" in combined and "origin/main" in combined, combined
     assert not _manifest(repo).get("land_commit")

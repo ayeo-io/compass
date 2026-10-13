@@ -39,7 +39,7 @@ A transcript holds a person's prompts. `session_usage.stage_usage` already reads
    - One outcome is kept per stage. A person's later answer replaces an agent's `skipped`, never the reverse. Outcomes belong to the issue, not to a generation, so an answer never changes a stored generation.
 
 2. **A checkpoint answer is its own evidence type.**
-   - `compass evidence approve --checkpoint <stage>` writes a `checkpoint-approval` record and the `waited` outcome that cites it. The command needs a terminal, refuses the approver `agent` and requires a role.
+   - `compass evidence approve --checkpoint <stage>` writes a `checkpoint-approval` record and the `waited` outcome that cites it. The command needs a terminal, refuses the approver `agent` and needs a role.
    - The record has no `check` key, and `compass evidence add` refuses the type.
    - `human-approval-present`, the human-check reader and the waiver check read only `human-approval` records, with `artifact-approval` also read for human checks. None of them reads this type, so a checkpoint answer never clears `G5`, a human check or a waiver, and no check changes.
    - An agent records a hand-off that autonomy passed with `compass issue checkpoint add <stage> --outcome skipped --by <agent>`, which writes no evidence record.

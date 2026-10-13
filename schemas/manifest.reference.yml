@@ -65,7 +65,7 @@ evidence:        # (optional) list of maps - the typed evidence registry gates r
     artifact:    #   (optional) string - for artifact-approval, the kind of the document approved
     decisions:   #   (optional) list of strings - for artifact-approval, the decision ids confirmed
     checkpoint:  #   (optional) string - for checkpoint-approval, the stage whose hand-off the person
-                 #     answered; the record has no check, so it never meets G5, a human check or a waiver
+                 #     answered; the record has no check, so it never meets guardrail `G5`, a human check or a waiver
 
 gates:           # (optional until approach evaluate) list of maps:
   - id:          #   (required in entry) string - e.g. verify.correctness

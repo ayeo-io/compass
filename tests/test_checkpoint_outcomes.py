@@ -260,3 +260,82 @@ def test_arc_3_agent_records_a_skipped_outcome(tmp_path):
     assert refine[0]["outcome"] == "waited" and refine[0]["by"] == "jed72", refine
     assert generation_files(root) == generations
     assert_no_gh_call(root)
+
+
+# --- the quick fix -----------------------------------------------------------------
+
+GREETING_TEST = (
+    "import pathlib\n\n\n"
+    "def test_greeting_says_hello():\n"
+    "    p = pathlib.Path(__file__).resolve().parent.parent / 'data' / 'greeting.txt'\n"
+    "    assert p.read_text().strip() == 'Hello, %s!'\n")
+GREET_CMD = ["--", sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
+             "tests/test_greeting.py::test_greeting_says_hello"]
+
+
+def quick_fix(root, slug="fix-greeting", cli=CLI):
+    """A started quick fix with its red on record and the fix written: the
+    state `quick-fix finish` lands from."""
+    (root / "data").mkdir(exist_ok=True)
+    (root / "data" / "greeting.txt").write_text("Hi, %s!")
+    (root / "tests").mkdir(exist_ok=True)
+    (root / "tests" / "test_greeting.py").write_text(GREETING_TEST)
+    git(root, "add", "data/greeting.txt", "tests/test_greeting.py")
+    git(root, "commit", "-q", "-m", "greeting")
+    done = run(root, "quick-fix", "start", slug,
+               "--risk", "trivial - a one-line text change",
+               "--familiarity", "brownfield-mapped - the file and its test exist",
+               "--size", "atomic - one file, one obvious change",
+               "--intent", "The greeting says hello.",
+               "--scenario", "Given the greeting, when it is read, then it says hello.",
+               "--scenario-id", "QF-1",
+               "--test", "tests/test_greeting.py::test_greeting_says_hello", cli=cli)
+    assert done.returncode == 0, done
+    done = run(root, "tdd-red", "--issue", slug, "--scenario", "QF-1", *GREET_CMD, cli=cli)
+    assert done.returncode == 0, done
+    (root / "data" / "greeting.txt").write_text("Hello, %s!")
+    return slug
+
+
+# --- ARC-4 ------------------------------------------------------------------------
+
+def test_arc_4_skip_refusals(tmp_path):
+    root = project(tmp_path)
+    refine_done(root)
+    assert approve(root, "define").returncode == 0
+    cases = [
+        (("plan", "spec-author", "skipped"), "plan is a listed checkpoint, so it waits for a person"),
+        (("define", "spec-author", "skipped"), "define already holds a waited outcome"),
+        (("implement", "builder", "skipped"), "'implement' is not a checkpoint stage"),
+        (("refine", "jed72", "skipped"), "--by must name an agent"),
+        (("refine", "spec-author", "waited"), "only a person's approval records waited"),
+    ]
+    for (stage, by, outcome), cause in cases:
+        before = manifest_file(root).read_bytes()
+        done = run(root, "issue", "checkpoint", "add", stage, "--outcome", outcome,
+                   "--by", by, "--issue", SLUG)
+        assert done.returncode == 2, (stage, done)
+        assert cause in done.stderr, (stage, done.stderr)
+        assert manifest_file(root).read_bytes() == before, stage
+        if stage == "plan" or outcome == "waited":
+            assert f"compass evidence approve --checkpoint {stage}" in done.stderr, done.stderr
+
+    slug = quick_fix(root)
+    before = manifest_file(root, slug).read_bytes()
+    done = run(root, "issue", "checkpoint", "add", "refine", "--outcome", "skipped",
+               "--by", "builder", "--issue", slug)
+    assert done.returncode == 2, done
+    assert "the route runs no refine hand-off" in done.stderr, done.stderr
+    assert manifest_file(root, slug).read_bytes() == before
+
+    # An issue assessed before outcomes were recorded is not judged: the verb
+    # refuses it and does not add the key.
+    body = manifest(root)
+    body.pop("checkpoint_outcomes")
+    write_manifest(root, body)
+    before = manifest_file(root).read_bytes()
+    done = skip(root, "refine")
+    assert done.returncode == 2, done
+    assert "is not judged and takes no outcome; nothing was written" in done.stderr, done
+    assert manifest_file(root).read_bytes() == before
+    assert_no_gh_call(root)

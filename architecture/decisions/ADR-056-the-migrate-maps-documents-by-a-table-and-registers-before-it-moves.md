@@ -48,7 +48,9 @@ it also moves files under `docs/compass/`.
    reported.
 5. **Nothing a person wrote is deleted.** A stub distribution map (a lightweight map on an issue with fewer
    than two subtasks) is renamed to `distribution-map.md.v6.bak` and its entry becomes `superseded` with no
-   path. The `recommendation` entry leaves the registry, and its file stays. The migrate adds no rendered
+   path. A map that was never registered is adopted with no depth, so the rule does not judge it: it is
+   kept as a person's map and the report lists it. The `recommendation` entry leaves the registry, and its
+   file stays. The migrate adds no rendered
    block to an archived document (ADR-051 decision 3).
 6. **Paths follow the files.** The paths that named a moved file are rewritten from the registry's
    "migrated from" reasons, so a run stopped after the move rewrites the same paths as one that was not.

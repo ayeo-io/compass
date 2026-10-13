@@ -31,13 +31,18 @@ with the shipped catalogue and the shipped not-an-artifact list:
   as matching no kind;
 - `regular_issues`, `regular_with_record`: regular issues, and those whose
   documents folder holds `delivery-approach.md` registered at that path;
-- `regular_without_record`: regular issues without it;
+- `regular_without_record`: regular issues that held a record before the
+  migrate (on disk in either folder, or registered with a path) and lack it;
+- `regular_never_had_record`: regular issues that never had a record. The
+  migrate writes no judgement, so they are counted apart and not as a fault;
 - `other_without_record`: issues of any other approach that hold a record
   somewhere but not registered in the documents folder;
-- `regular_small_with_map`: regular issues with fewer than two subtasks that
-  carry `distribution-map.md` in the documents folder or an entry for it the
-  check treats as owed. An issue with no subtasks list whose map names two or
-  more subtasks is left out, as the migrate leaves it;
+- `regular_small_with_map`: regular issues with fewer than two subtasks whose
+  map is registered at lightweight depth and sits in the documents folder or
+  is an entry the check treats as owed. An issue with no subtasks list whose
+  map names two or more subtasks is left out, as the migrate leaves it;
+- `regular_small_adopted_map`: the same issues whose map the migrate adopted
+  with no depth. It is a person's map and is kept;
 - `review_not_numbered`: review filenames, registered or sent to review by
   the mapping table, that are not `review-<n>.md`;
 - `review_round_clashes`: issues holding two `review-<n>.md` files with the
@@ -148,6 +153,10 @@ def measure(root: Path, catalogue: Path) -> dict:
 PLAIN_REVIEW = re.compile(r"^review-([1-9]\d*)\.md$")
 
 
+#: The lightweight artifact depth in today's word and the 5.x one.
+LIGHTWEIGHT = ("lightweight", "light")
+
+
 def _markdown(folder: Path) -> list:
     return sorted(n for n in os.listdir(folder)
                   if n.endswith(".md") and (folder / n).is_file()) if folder.is_dir() else []
@@ -158,7 +167,8 @@ def measure_after(root: Path) -> dict:
     catalogue = migrate_kinds.shipped_catalogue()
     work = root / ".compass" / "work"
     issues = {"unregistered_files": [], "regular_without_record": [],
-              "other_without_record": [], "regular_small_with_map": [],
+              "regular_never_had_record": [], "other_without_record": [],
+              "regular_small_with_map": [], "regular_small_adopted_map": [],
               "review_not_numbered": [], "review_round_clashes": []}
     regular = with_record = 0
     tasks = sorted(p for p in work.iterdir() if p.is_dir()) if work.is_dir() else []
@@ -175,11 +185,18 @@ def measure_after(root: Path) -> dict:
         held = "delivery-approach.md" in in_docs and any(
             e.get("kind") == "delivery-approach" and e.get("path") == home for e in entries)
         is_regular = data.get("delivery_approach") == "regular"
+        # An issue held a record before the migrate when a record is on disk in either
+        # folder, or registered with a path. The migrate moves and registers judgement;
+        # it writes none, so an issue that never had a record is counted apart.
+        had = "delivery-approach.md" in in_docs or any(
+            e.get("kind") == "delivery-approach" and e.get("path") for e in entries) or (
+            "delivery-approach.md" in beside and not _is_pointer(task / "delivery-approach.md"))
         if is_regular:
             regular += 1
             with_record += held
             if not held:
-                issues["regular_without_record"].append(task.name)
+                key = "regular_without_record" if had else "regular_never_had_record"
+                issues[key].append(task.name)
         elif not held and ("delivery-approach.md" in in_docs
                            or ("delivery-approach.md" in beside
                                and not _is_pointer(task / "delivery-approach.md"))):
@@ -187,11 +204,17 @@ def measure_after(root: Path) -> dict:
         if is_regular and artifact_owed.subtask_count(data) < 2:
             wide = not isinstance(data.get("subtasks"), list) and \
                 migrate_kinds._map_rows(str(docs / "distribution-map.md")) >= 2
-            owed = [e for e in entries if e.get("kind") == "distribution-map"
-                    and e.get("status") not in ("superseded", "omitted")
-                    and artifact_owed.owed(data, None, "distribution-map", e).owed]
-            if not wide and ("distribution-map.md" in in_docs or owed):
+            maps = [e for e in entries if e.get("kind") == "distribution-map"
+                    and e.get("status") not in ("superseded", "omitted")]
+            # Only a map registered at lightweight depth is a stub the migrate judges. A
+            # map it adopted with no depth is a person's map, kept and counted apart.
+            light = [e for e in maps if e.get("depth") in LIGHTWEIGHT]
+            owed = [e for e in light if artifact_owed.owed(data, None, "distribution-map", e).owed]
+            if not wide and light and ("distribution-map.md" in in_docs or owed):
                 issues["regular_small_with_map"].append(task.name)
+            elif not wide and "distribution-map.md" in in_docs \
+                    and any(not e.get("depth") for e in maps):
+                issues["regular_small_adopted_map"].append(task.name)
         names = {n for n in (*beside, *in_docs)
                  if migrate_kinds.lookup(n, catalogue).kind == migrate_kinds.REVIEW}
         names |= {str(e.get("path")).rsplit("/", 1)[-1] for e in entries
@@ -229,10 +252,14 @@ def main(argv=None) -> int:
         print(f"unregistered files: {result['unregistered_files']}")
         print(f"regular issues with delivery-approach.md registered in the documents folder: "
               f"{result['regular_with_record']} of {result['regular_issues']}")
+        print(f"regular issues that held a record before the migrate and lack it: "
+              f"{result['regular_without_record']}")
+        print(f"regular issues that never had a record: {result['regular_never_had_record']}")
         print(f"other issues holding a record that is not registered in the documents folder: "
               f"{result['other_without_record']}")
-        print(f"regular issues with fewer than two subtasks carrying a distribution map: "
-              f"{result['regular_small_with_map']}")
+        print(f"regular issues with fewer than two subtasks carrying a lightweight distribution "
+              f"map: {result['regular_small_with_map']}")
+        print(f"of those issues, maps adopted with no depth: {result['regular_small_adopted_map']}")
         print(f"review filenames that are not review-<n>.md: {result['review_not_numbered']}")
         print(f"issues with two review files of one round: {result['review_round_clashes']}")
         for key, names in result["issues"].items():

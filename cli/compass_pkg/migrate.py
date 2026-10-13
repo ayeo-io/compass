@@ -831,6 +831,10 @@ def _plan_problems(plan, problems):
     if plan.pointer_kept:
         problems.append("%s: %s has no pointer marker, so it was left where it is"
                         % (plan.slug, os.path.basename(plan.pointer_kept)))
+    if plan.adopted_map:
+        problems.append("%s: %s is kept - it was never registered, so it is registered with "
+                        "no depth and the stub rule does not rename it, although the issue "
+                        "has fewer than two subtasks" % (plan.slug, plan.adopted_map))
 
 
 def _make_plan(task_dir):

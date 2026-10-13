@@ -194,6 +194,7 @@ class Plan:
     pointer: str | None = None                        # project-relative path to remove
     pointer_kept: str | None = None                   # a file that is not the pointer, left in place
     stub: dict | None = None                          # {"entry": id, "from": rel, "to": rel}
+    adopted_map: str | None = None                    # a small map adopted with no depth, kept
 
 
 def load_manifest(task_dir):
@@ -359,7 +360,25 @@ def plan_issue(task_dir, rename_v1=None, pointer_marker="<!-- compass: moved -->
             plan.pointer_kept = rel("beside", "delivery-approach.md")
 
     plan.stub = stub_map(task_dir, data, project, plan)
+    plan.adopted_map = adopted_map(data, project, plan)
     return plan
+
+
+def adopted_map(data, project, plan):
+    """The new path of a distribution map the migrate adopts, unregistered before, on an
+    issue with fewer than two subtasks, or None. It is registered with no depth, so the
+    stub rule, which reads the lightweight depth, does not judge it: it is kept as a
+    person's map and the report lists it (architect ruling on the archive measures)."""
+    if any(isinstance(e, dict) and e.get("kind") == "distribution-map"
+           for e in data.get("artifacts") or []):
+        return None
+    move = next((m for m in plan.moves if m.kind == "distribution-map"), None)
+    if move is None:
+        return None
+    subtasks = data.get("subtasks")
+    count = len(subtasks) if isinstance(subtasks, list) \
+        else _map_rows(os.path.join(project, move.old_rel))
+    return move.new_rel if count < 2 else None
 
 
 def stub_map(task_dir, data, project, plan=None):

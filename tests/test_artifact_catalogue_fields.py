@@ -2514,36 +2514,52 @@ def test_acf_53(tmp_path):
     assert _unregistered(root) == []
 
 
-def _without_record(root):
-    """The regular issues whose documents folder does not hold a registered
-    delivery-approach.md, and the issues of any approach that hold a record somewhere
-    but not there."""
+def _with_a_record(root):
+    """The issues, of any approach, that hold delivery-approach.md in either folder."""
+    return {slug for slug, (data, work, docs) in _issues_of(root).items()
+            if (work / "delivery-approach.md").is_file() or (docs / "delivery-approach.md").is_file()}
+
+
+def _without_record(root, had):
+    """The issues in `had` whose documents folder does not hold delivery-approach.md
+    registered at that path."""
     missing = []
     for slug, (data, work, docs) in _issues_of(root).items():
         home = f"docs/compass/{docs.name}/delivery-approach.md"
         registered = any(e.get("kind") == "delivery-approach" and e.get("path") == home
                          for e in data.get("artifacts") or [] if isinstance(e, dict))
-        held = (docs / "delivery-approach.md").is_file() and registered
-        had = (work / "delivery-approach.md").is_file() or (docs / "delivery-approach.md").is_file()
-        if not held and (data.get("delivery_approach") == "regular" or had):
+        if slug in had and not ((docs / "delivery-approach.md").is_file() and registered):
             missing.append(slug)
     return missing
 
 
 def test_acf_54(tmp_path):
+    # Each issue that held a record before the migrate holds it in its documents folder
+    # after. An issue that never had one gets none: the migrate writes no judgement
+    # (architect ruling on the archive measures).
     root = _planted_sample(tmp_path)
-    before = _without_record(root)
-    assert {"planted-stub", "planted-rounds", "planted-quick"} <= set(before), before
+    _m_issue(root, "planted-none")
+    (root / ".compass" / "config.yml").unlink()
+    had = _with_a_record(root)
+    assert {"planted-stub", "planted-rounds", "planted-quick"} <= had and "planted-none" not in had
+    assert {"planted-stub", "planted-rounds", "planted-quick"} <= set(_without_record(root, had))
     _migrated(root)
-    assert _without_record(root) == []
+    assert _without_record(root, had) == []
+    data, work, docs = _issues_of(root)["planted-none"]
+    assert not (docs / "delivery-approach.md").exists()
     data, work, docs = _issues_of(root)["planted-quick"]
     assert (docs / "delivery-approach.md").read_bytes() == _body("planted-quick", "delivery-approach.md").encode()
 
 
+LIGHTWEIGHT = ("lightweight", "light")       # today's word and the 5.x one
+
+
 def _maps_on_small_regular_issues(root):
-    """Each regular issue with fewer than two subtasks that carries distribution-map.md
-    in its documents folder or holds an entry for it that the check treats as owed. An
-    issue with no subtasks list whose map names two or more subtasks is left out."""
+    """Each regular issue with fewer than two subtasks whose distribution map is
+    registered at lightweight depth and either sits in its documents folder or is an
+    entry the check treats as owed. An issue with no subtasks list whose map names two
+    or more subtasks is left out. A map registered with no depth is a person's map the
+    migrate adopted, and is kept (architect ruling, BD-11's follow-on)."""
     from compass_pkg import artifact_owed, migrate_kinds
     found = []
     for slug, (data, work, docs) in _issues_of(root).items():
@@ -2552,22 +2568,39 @@ def _maps_on_small_regular_issues(root):
         if not isinstance(data.get("subtasks"), list) and \
                 migrate_kinds._map_rows(str(docs / "distribution-map.md")) >= 2:
             continue
-        entries = [e for e in data.get("artifacts") or []
-                   if isinstance(e, dict) and e.get("kind") == "distribution-map"]
-        owed = [e for e in entries if e.get("status") not in ("superseded", "omitted")
-                and artifact_owed.owed(data, None, "distribution-map", e).owed]
-        if (docs / "distribution-map.md").is_file() or owed:
+        entries = [e for e in data.get("artifacts") or [] if isinstance(e, dict)
+                   and e.get("kind") == "distribution-map" and e.get("depth") in LIGHTWEIGHT
+                   and e.get("status") not in ("superseded", "omitted")]
+        owed = [e for e in entries if artifact_owed.owed(data, None, "distribution-map", e).owed]
+        if entries and ((docs / "distribution-map.md").is_file() or owed):
             found.append(slug)
     return found
 
 
+def _plant_adopted_map(root):
+    """A regular issue with one subtask whose map was never registered and sits beside
+    the manifest, as eval-judge-gaps does in the maintainer's archive."""
+    _m_issue(root, "planted-adopted", beside=["delivery-approach.md", "distribution-map.md"],
+             subtasks=[{"id": "subtask-1"}])
+    (root / ".compass" / "config.yml").unlink()
+
+
 def test_acf_55(tmp_path):
     root = _planted_sample(tmp_path)
+    _plant_adopted_map(root)
     assert _maps_on_small_regular_issues(root) == ["planted-stub"]
     stub = (root / "docs" / "compass" / f"{STAMP}-planted-stub" / "distribution-map.md").read_bytes()
     wide = (root / "docs" / "compass" / f"{STAMP}-planted-wide-map" / "distribution-map.md").read_bytes()
-    _migrated(root)
+    out = _migrated(root)
     assert _maps_on_small_regular_issues(root) == []
+    # The adopted map is kept, registered with no depth, and the report lists it.
+    data, work, docs = _issues_of(root)["planted-adopted"]
+    assert (docs / "distribution-map.md").read_bytes() == _body("planted-adopted", "distribution-map.md").encode()
+    entry = next(e for e in data["artifacts"] if e["kind"] == "distribution-map")
+    assert not entry.get("depth") and entry["status"] != "superseded", entry
+    lines = [line for line in out.splitlines() if "planted-adopted" in line and "distribution-map.md" in line
+             and "no depth" in line]
+    assert len(lines) == 1, out
     data, work, docs = _issues_of(root)["planted-stub"]
     assert (docs / "distribution-map.md.v6.bak").read_bytes() == stub
     entry = next(e for e in data["artifacts"] if e["kind"] == "distribution-map")
@@ -2655,8 +2688,29 @@ def test_acf_57(tmp_path):
     _migrated(copy)
     full = _after(copy)
     print(json.dumps(full, indent=2, sort_keys=True))
+    print("regular issues that never had a record: %d; maps adopted with no depth: %d"
+          % (full["regular_never_had_record"], full["regular_small_adopted_map"]))
     assert (full["unregistered_files"], full["regular_without_record"],
             full["regular_small_with_map"], full["review_not_numbered"],
             full["review_round_clashes"]) == (0, 0, 0, 0, 0), full
     assert _unopenable_in(copy) == {}
     assert _digests(ROOT) == held
+
+
+def test_acf_67(tmp_path):
+    # The after measure counts a missing record only on an issue that held one before
+    # the migrate, and a small map only when the migrate registered it at lightweight
+    # depth. It prints both exclusions, so neither is silent (architect ruling on the
+    # archive measures).
+    root = _planted_sample(tmp_path)
+    _m_issue(root, "planted-none")
+    _plant_adopted_map(root)
+    _migrated(root)
+    after = _after(root)
+    assert (after["regular_without_record"], after["regular_never_had_record"]) == (0, 1), after
+    assert (after["regular_small_with_map"], after["regular_small_adopted_map"]) == (0, 1), after
+    assert after["issues"]["regular_never_had_record"] == ["planted-none"], after
+    assert after["issues"]["regular_small_adopted_map"] == ["planted-adopted"], after
+    run = subprocess.run([sys.executable, str(MEASURE), "--root", str(root), "--after"],
+                         capture_output=True, text=True, timeout=600)
+    assert "never had a record: 1" in run.stdout and "no depth: 1" in run.stdout, run.stdout

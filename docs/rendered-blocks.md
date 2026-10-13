@@ -42,11 +42,11 @@ The kinds are `coverage`, `gates`, `dod`, `dor`, `artifacts`, `evidence`,
 | `evidence` | Each evidence entry's id, type and path. A path under `docs/compass/` is a relative link; a path in the work folder is plain text, because that folder is untracked in many projects |
 | `follow-ups` | Each follow-up's id, status, summary, target issue and the check it defers |
 | `decisions-taken` | The decisions an agent took for the person with their state, then the reassessments with their reasons |
-| `header` | The issue, its approach, state (`done (completed)` for a closed issue), stage and gates, then the owner and the created and completed dates, then the command `compass board render` |
+| `header` | The issue, its approach, state (`done (completed)` for a closed issue), stage and gates, then the owner and the created and completed dates, then, while a dependency holds the issue at implement, a second `Blocked: waits for ...` line with the wait (see below), then the command `compass board render` |
 | `ask` | The Problem, Desired outcome, Success signals and Non-goals sections of `intent.md`. Without them, the issue line of `delivery-approach.md` and the scenario titles; without those, `No statement of the ask is recorded.` |
 | `decision-required` | The document that waits for a person's approval, with the command that approves it, or that nothing waits |
 | `acceptance` | `Acceptance: n of m scenarios passed`, then each scenario with its title and `passed` or `not yet passed` |
-| `related` | The issues this one links to and the issues that link to it, each with its state and a link to its page: `depends on`, `depended on by`, `parent`, `child`, `repairs`, `repaired by`, `follow-up target`, `follow-up from`, `delivered by`, `raised from` and `raised here`. A field that is absent gives no line; an issue with no links reads `None`; a link to an issue that does not exist reads `not found` with no link |
+| `related` | The issues this one links to and the issues that link to it, each with its state and a link to its page: `depends on`, `depended on by`, `parent`, `child`, `repairs`, `repaired by`, `follow-up target`, `follow-up from`, `delivered by`, `raised from` and `raised here`. A field that is absent gives no line; an issue with no links reads `None`; a link to an issue that does not exist reads `not found` with no link. A `depends on` line for an issue that was read ends with ` - met`, or with ` - ` and the wait (`waits for b to reach done`); a dependency that is not found, unreadable or in a fault keeps its plain text |
 | `decisions` | The `DD-n` headings of `technical-design.md` with their scope and a link to each ADR record that exists, the decisions taken, and the governance decisions whose Evidence section names this exact slug (`- governance:` lines). An issue with none reads `None` |
 | `traceability` | The Mermaid flowchart from intent to scenario to test to evidence, with an unproven scenario drawn open. Past 25 scenarios it draws one summary node for each intent. The arrows are `==>` because a rendered line may not hold `-->` |
 | `deliberately-omitted` | The documents omitted on purpose, with the reason |
@@ -77,6 +77,17 @@ facts, so the board panel and the page cannot disagree. The board can read an
 issue from another worktree (`--worktrees`) while the page reads this checkout.
 The page names the command `compass board render` and does not link the board file,
 which lives in the system temp folder.
+
+`issue_detail.detail` takes an optional `read` argument, a `lifecycle` reader for the issues
+this one depends on. The page passes `lifecycle.mapping_reader` over the project scan, so the
+header and the `related` block judge each dependency with the copies the scan already
+parsed. Without a scan it passes no reader, and `IssueDetail.waits` and
+`IssueDetail.dependencies` stay empty. The header keeps `Blocked: <stored reason>` from
+`IssueDetail.blocked`, and adds `Blocked: <waits>` on its own line after it when
+`IssueDetail.waits` is set. The renderer gives the header part the `cross_prefix`
+`Blocked: waits for `, so a stale header whose only changed line is the wait counts as a
+cross-issue block, as ADR-062 decision 7 says. `docs/issue-dependencies.md` owns the
+dependency rules.
 
 A page a person wrote, with no block, is left alone. The render says it is
 hand-written and was not rendered, and `rendered-blocks-current` fails at
@@ -195,7 +206,8 @@ manifest does not link to is not read for writing and keeps its bytes and its
 modification time.
 
 - The commands are `RENDER_TRIGGERS` in `cli/compass_pkg/record_triggers.py`:
-  the label sync's table (`LABEL_TRIGGERS`) plus `RENDER_FURTHER`. `EXEMPT`
+  the label sync's table (`LABEL_TRIGGERS`) plus `RENDER_FURTHER`, which includes
+  `compass issue depends add` and `compass issue depends remove`. `EXEMPT`
   names the commands that save a manifest and render nothing, each with its
   reason. A test walks the call graph from every command to `save_manifest` and
   fails, naming a command in none of the three.
@@ -221,7 +233,7 @@ never through the parse cache.
 | Block | Draws on | At `verify`, `ship` and done | Before `verify` |
 |---|---|---|---|
 | `coverage`, `gates`, `dod`, `dor`, `artifacts`, `evidence`, `follow-ups`, `decisions-taken`, `assessment`, `policy-rules`, `stage-weights`, `gate-set`, `plan-exit`, `breakdown-exit`, the issue page | the issue's own records | fails | advisory |
-| `related`, the governance lines of `decisions`, the issue's row of the index | other issues or the project | advisory | advisory |
+| `related`, the governance lines of `decisions`, the issue's row of the index, the `Blocked: waits for` line of `header` | other issues or the project | advisory | advisory |
 
 A missing issue page fails at `verify` and is advisory before. The message names
 the file, the block kind and `compass issue render`. A checkout that holds only

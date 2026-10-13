@@ -201,8 +201,11 @@ first two stay written and a second run finishes the job.
 The entry point calls `render_after.after_command` after the label sync. It
 renders the documents of the issue a command named and of every issue the
 manifest links to, in either direction (`raised_by`, `parent`, `depends_on`,
-`landed_by`, `delivered` and the `target_task` of a follow-up). An issue the
-manifest does not link to is not read for writing and keeps its bytes and its
+`landed_by`, `delivered` and the `target_task` of a follow-up). It also renders
+each issue the command names in `args.unlinked`, when that issue has a manifest.
+A command that removes a link sets it, because the saved manifest no longer
+names the issue it unlinked: `compass issue depends remove` names the dependency
+it removed. Any other issue is not read for writing and keeps its bytes and its
 modification time.
 
 - The commands are `RENDER_TRIGGERS` in `cli/compass_pkg/record_triggers.py`:

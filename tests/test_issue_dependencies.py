@@ -534,6 +534,37 @@ def test_dbi_2_depends_remove_removes_one_entry(tmp_path):
     assert_no_gh_call(project.root)
 
 
+def _page(project, slug):
+    pages = list((project.root / "docs" / "compass").glob("*-%s/README.md" % slug))
+    assert len(pages) == 1, pages
+    return pages[0].read_text(encoding="utf-8")
+
+
+def test_dbi_21_remove_rerenders_the_removed_dependency(tmp_path):
+    project = Project(tmp_path)
+    project.issue("b", "define")
+    project.issue("a", "define", depends=[dep("b")])
+    for slug in ("a", "b"):
+        done = compass(project.root, "issue", "render", "--issue", slug)
+        assert done.returncode == 0, done
+    assert "depended on by: [a]" in _page(project, "b")
+    assert "depends on: [b]" in _page(project, "a")
+    done = compass(project.root, "issue", "depends", "remove", "b", "--issue", "a",
+                   COMPASS_RENDER_AFTER="1")
+    assert done.returncode == 0, done
+    assert "renders failed" not in done.stderr, done
+    # Read without rendering again: the remove itself must have refreshed both pages.
+    assert "depended on by" not in _page(project, "b")
+    assert "depends on: [b]" not in _page(project, "a")
+    # A removed dependency with no manifest has no page, and no render fails for it.
+    project.issue("a", "define", depends=[dep("gone")])
+    done = compass(project.root, "issue", "depends", "remove", "gone", "--issue", "a",
+                   COMPASS_RENDER_AFTER="1")
+    assert done.returncode == 0, done
+    assert "renders failed" not in done.stderr, done
+    assert_no_gh_call(project.root)
+
+
 def test_dbi_3_depends_add_input_checks(tmp_path):
     from compass_pkg import lifecycle
     project = Project(tmp_path)

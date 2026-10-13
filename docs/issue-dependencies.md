@@ -82,7 +82,7 @@ There is no override flag. `compass board render --worktrees` can show the newer
 | `compass issue depends add <slug> --reason "..." [--until <value>]` | Writes the entry. Exit 0, and a lint finding on standard error for a slug with no manifest in this checkout. | a cycle; the issue's own slug; a slug that is not one path segment; an unknown `until`; an empty reason |
 | `compass issue depends remove <slug>` | Removes the entry, and the key with the last entry. The other issue needs no manifest here. | a slug that is not a dependency of the issue |
 
-Both re-render the waiting issue's page and the pages of the issues its manifest links to (`RENDER_TRIGGERS`).
+Both re-render the waiting issue's page and the pages of the issues its manifest links to (`RENDER_TRIGGERS`). `remove` also re-renders the removed dependency's page, when it has a manifest in this checkout, so that page no longer lists the waiting issue.
 
 ## What each reader shows
 

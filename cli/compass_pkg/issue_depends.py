@@ -211,6 +211,9 @@ def cmd_depends_remove(args):
     else:
         del task["depends_on"]
     save_manifest(task, path)
+    # The saved manifest no longer names `other`, so the after-command render
+    # would miss its page, which still lists this issue as depending on it.
+    args.unlinked = [other]
     return say(args, "%s: %s no longer waits for %s." % (REMOVE, own, other),
                issue=own, removed=other)
 

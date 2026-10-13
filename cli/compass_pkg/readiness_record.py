@@ -187,8 +187,8 @@ def fresh(root, record, now=None):
     if not recorded_head:
         return Freshness(False, "the record holds no commit, and this repository has history")
     if _git(root, "cat-file", "-e", f"{recorded_head}^{{commit}}") is None:
-        return Freshness(False, f"the recorded commit {recorded_head[:12]} is not in this "
-                                f"repository")
+        return Freshness(False, f"the recorded commit {recorded_head[:12]} is unknown: it is "
+                                f"not in this repository")
     count = _git(root, "rev-list", "--count", f"{recorded_head}..HEAD")
     if count is None or int(count) > MAX_COMMITS:
         return Freshness(False, f"HEAD is {count} commits past the recorded commit; the "
@@ -243,11 +243,13 @@ def hook_line(root, autonomy, now=None):
         return ""
     summary_ = summary(root, now=now)
     if summary_["status"] != "measured":
-        return (f"{line(summary_)}. `approach evaluate --write` refuses autonomous work "
-                f"until a fresh record meets the readiness floor: {MEASURE}.")
+        shown = line(summary_)
+        measure = "" if "compass readiness" in shown else f": {MEASURE}"
+        return (f"{shown}. Assess will refuse autonomous work (`approach evaluate --write`) "
+                f"until a fresh record meets the readiness floor{measure}.")
     if summary_["floor_met"]:
         return ""
     absent = floor_absent(read(root).record)
     return (f"{line(summary_)}. Below the readiness floor: {', '.join(absent)} absent. "
-            f"`approach evaluate --write` refuses autonomous work until each is present "
-            f"or `autonomy` is changed to balanced or controlled.")
+            f"Assess will refuse autonomous work (`approach evaluate --write`) until each "
+            f"is present or `autonomy` is changed to balanced or controlled.")

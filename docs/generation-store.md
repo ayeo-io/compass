@@ -77,6 +77,12 @@ outcome all equal generation n, nothing is committed and the command says
 "no change"; the manifest is still replaced, as before. The manifest on disk
 must still name the generation the command read, or the commit refuses.
 
+The manifest's `readiness:` key, the repository's readiness summary, is not an
+outcome field. Every `--write` writes it into the manifest, on the "no change"
+path too, and no generation file or digest in `complete` holds it. A new
+`compass readiness` measurement therefore never forces a new generation
+(ADR-060).
+
 The commit refuses, writing nothing, when:
 
 - generation n+1 already exists and is complete. The message gives the folder's

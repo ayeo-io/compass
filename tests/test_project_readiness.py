@@ -1179,6 +1179,596 @@ def test_prc_41(tmp_path):
 
 # --- U3 the floor ---
 
+FLOOR_SLUG = "floor-issue"
+FLOOR_MANIFEST = {
+    "schema_version": "2.0", "issue": FLOOR_SLUG, "created": "2026-10-13",
+    "assessment": {"risk": "contained", "familiarity": "brownfield-mapped",
+                   "size": "medium", "goal": "delivery", "role": "engineer", "labels": []},
+    "evidence": [],
+}
+HOOK = Path("hooks") / "session-start.sh"
+UPGRADE_GUIDE = ROOT / "docs" / "upgrade-7-0-0.md"
+#: The text the session-start hook adds from the readiness record.
+READINESS_LINE = "Repository readiness"
+
+
+def _floor_issue(project, slug=FLOOR_SLUG):
+    """An assessed issue with no generation yet. Not committed: an issue's
+    work folder is never what HEAD measures."""
+    task_dir = Path(project) / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True, exist_ok=True)
+    (task_dir / "manifest.yml").write_text(
+        yaml.safe_dump(dict(FLOOR_MANIFEST, issue=slug), sort_keys=False), encoding="utf-8")
+    return task_dir
+
+
+def _floor_project(folder, autonomy="autonomous", extra=None, files=None):
+    """A fixture project with `autonomy` set (left out when None) and one
+    assessed issue."""
+    settings = {"schema": 1, **({"autonomy": autonomy} if autonomy else {}), **(extra or {})}
+    project = support.make_project(folder, settings, files=files)
+    _floor_issue(project)
+    return project
+
+
+def _catalogue_signals(absent=()):
+    """Every shipped signal, as a record holds it: present unless named in
+    `absent`, and an absent one carries the change that makes it present."""
+    catalogue = yaml.safe_load((PRESET / "readiness.yml").read_text(encoding="utf-8"))
+    signals = []
+    for signal_id, entry in catalogue["readiness"].items():
+        result = "absent" if signal_id in absent else "present"
+        signal = _record_signal(signal_id, result,
+                                required=bool(entry.get("required_for_autonomous")),
+                                impl=entry["impl"], weight=entry["weight"])
+        if result == "absent":
+            signal["fix"] = {"change": f"make {signal_id} present", "file": "compass.yml"}
+        signals.append(signal)
+    return signals
+
+
+def _floor_record(project, absent=(), measured_at=None):
+    """A fresh record for the fixture project, written through the record module."""
+    return _written_record(project, _catalogue_signals(absent), measured_at=measured_at)
+
+
+def _evaluate_write(project, env=None, slug=FLOOR_SLUG):
+    return support.run_compass(project, "approach", "evaluate", "--write", "--issue", slug,
+                               env=env)
+
+
+def _task_dir(project, slug=FLOOR_SLUG):
+    return Path(project) / ".compass" / "work" / slug
+
+
+def _floor_manifest(project, slug=FLOOR_SLUG):
+    return yaml.safe_load((_task_dir(project, slug) / "manifest.yml").read_text(encoding="utf-8"))
+
+
+def _generations(project, slug=FLOOR_SLUG):
+    folder = _task_dir(project, slug) / "generations"
+    return sorted(p.name for p in folder.iterdir()) if folder.is_dir() else []
+
+
+def _manifest_before(project):
+    return (_task_dir(project) / "manifest.yml").read_text(encoding="utf-8")
+
+
+def _assert_refused_unwritten(project, before, code, out, err):
+    """Exit 2, nothing printed before the refusal, no generation, the
+    manifest byte for byte as it was."""
+    assert code == 2, out + err
+    assert "wrote the delivery approach" not in out and "Approach:" not in out, out
+    assert _generations(project) == []
+    assert _manifest_before(project) == before
+
+
+def test_prc_20(tmp_path):
+    project = _floor_project(tmp_path / "p")
+    absent = ("lint-declared-and-clean", "tests-declared-and-under-two-minutes")
+    _floor_record(project, absent=absent)
+    before = _manifest_before(project)
+    code, out, err = _evaluate_write(project)
+    _assert_refused_unwritten(project, before, code, out, err)
+    for signal_id in absent:
+        assert signal_id in err, err
+        assert f"make {signal_id} present" in err, err
+    assert "autonomy" in err and "balanced" in err and "controlled" in err, err
+    assert "never refused" in err, err
+    # Without --write nothing is refused: the default view says what --write
+    # would do, and --json carries the summary.
+    code, out, err = support.run_compass(project, "approach", "evaluate", "--issue", FLOOR_SLUG)
+    assert code == 0, out + err
+    assert "evaluate --write would be refused" in out, out
+    code, out, err = support.run_compass(project, "approach", "evaluate", "--json", "--issue",
+                                         FLOOR_SLUG)
+    assert code == 0, out + err
+    readiness = json.loads(out)["readiness"]
+    assert readiness["status"] == "measured" and readiness["floor_met"] is False, readiness
+    assert readiness["would_refuse"], readiness
+    assert _generations(project) == []
+
+
+def test_prc_21(tmp_path):
+    project = _floor_project(tmp_path / "p")
+    _floor_record(project, absent=("codeowners-present", "secret-scan-declared",
+                                    "pre-commit-hooks-present"))
+    code, out, err = support.run_compass(project, "approach", "evaluate", "--json", "--issue",
+                                         FLOOR_SLUG)
+    assert code == 0, out + err
+    expected = json.loads(out)
+    code, out, err = _evaluate_write(project)
+    assert code == 0, out + err
+    manifest = _floor_manifest(project)
+    assert manifest["delivery_approach"] == expected["delivery_approach"]
+    assert [g["id"] for g in manifest["gates"]] == expected["gates"]
+    assert manifest["checkpoints"] == expected["checkpoints"]
+    assert manifest["stages"] == expected["stages"]
+    assert _generations(project) == ["1"]
+
+
+def _stale_settings(project):
+    """Change compass.yml after the record was written."""
+    path = Path(project) / "compass.yml"
+    path.write_text(path.read_text(encoding="utf-8") + "# changed\n", encoding="utf-8")
+
+
+def _unreadable_record(project):
+    (Path(project) / support.RECORD).write_text("signals: [unclosed\n", encoding="utf-8")
+
+
+def test_prc_22(tmp_path):
+    states = {
+        "all-four-absent": lambda p: _floor_record(p, absent=REQUIRED_SIGNALS),
+        "missing": lambda p: None,
+        "stale": lambda p: (_floor_record(p), _stale_settings(p)),
+        "unreadable": _unreadable_record,
+    }
+    for autonomy in ("balanced", "controlled"):
+        for name, make_state in states.items():
+            project = _floor_project(tmp_path / f"{autonomy}-{name}", autonomy=autonomy)
+            make_state(project)
+            code, out, err = _evaluate_write(project)
+            assert code == 0, (autonomy, name, out + err)
+            assert (_task_dir(project) / "generations" / "1" / "complete").is_file(), (
+                autonomy, name)
+
+
+def _marker_commands_project(folder, autonomy="autonomous"):
+    """A fixture on `autonomy` whose five project commands leave markers when
+    they run, with project commands allowed, and one assessed issue."""
+    project = _five_command_project(folder, allow=True, extra={"autonomy": autonomy})
+    _floor_issue(project)
+    return project
+
+
+def test_prc_23(tmp_path):
+    marks, temp, env = _run_env(tmp_path)
+    source = _marker_commands_project(tmp_path / "source")
+    _floor_record(source)
+    # A fresh clone: the record is per checkout, so the clone has none.
+    clone = tmp_path / "clone"
+    subprocess.run(["git", "clone", "-q", str(source), str(clone)], check=True,
+                   env=support.environment(tmp_path), capture_output=True)
+    (clone / ".compass").mkdir(exist_ok=True)
+    _floor_issue(clone)
+    assert not (clone / support.RECORD).exists()
+    before = _manifest_before(clone)
+    code, out, err = _evaluate_write(clone, env=env)
+    _assert_refused_unwritten(clone, before, code, out, err)
+    assert "not measured in this checkout" in err, err
+    assert "per checkout" in err and "not committed" in err, err
+    assert "compass readiness" in err, err
+    assert "CI job" in err and "before assess" in err, err
+    assert "autonomy" in err, err
+    # evaluate --write runs no signal: no project command ran, no record.
+    assert support.markers(marks) == {}
+    assert not (clone / support.RECORD).exists()
+
+
+def test_prc_24(tmp_path):
+    project = _floor_project(tmp_path / "p")
+    _floor_record(project)
+    _stale_settings(project)
+    before = _manifest_before(project)
+    code, out, err = _evaluate_write(project)
+    _assert_refused_unwritten(project, before, code, out, err)
+    assert "stale" in err and "compass.yml changed" in err, err
+    # The settings digest matches again, but one signal's version is not the
+    # shipped one.
+    support.git(project, "commit", "-q", "-am", "settings change")
+    from compass_pkg import readiness_record
+    record = _floor_record(project)
+    record["signals"][-1]["version"] = "0.0.1"
+    readiness_record.write(str(project), record)
+    code, out, err = _evaluate_write(project)
+    _assert_refused_unwritten(project, before, code, out, err)
+    assert "stale" in err and record["signals"][-1]["id"] in err, err
+    # One new commit that changes neither leaves the record fresh.
+    _floor_record(project)
+    (Path(project) / "notes.txt").write_text("one more commit\n", encoding="utf-8")
+    support.git(project, "add", "notes.txt")
+    support.git(project, "commit", "-q", "-m", "one more")
+    code, out, err = _evaluate_write(project)
+    assert code == 0, out + err
+
+
+def _days_ago(days):
+    from compass_pkg import readiness_record
+    return readiness_record.now_utc() - datetime.timedelta(days=days)
+
+
+def _empty_commits(project, count):
+    for n in range(count):
+        support.git(project, "commit", "-q", "--allow-empty", "-m", f"empty {n}")
+
+
+def _stale_records(project):
+    """Write each stale record PRC-40 names in turn, yielding the words its
+    reason must hold. The project ends 26 commits past its first commit."""
+    from compass_pkg import readiness_record
+    first = support.git(project, "rev-parse", "HEAD").strip()
+    _floor_record(project, measured_at=_days_ago(8))
+    yield "older than seven days"
+    _empty_commits(project, 26)
+    record = _floor_record(project, measured_at=_days_ago(6))
+    record["head"] = first
+    readiness_record.write(str(project), record)
+    yield "26 commits"
+    record["head"] = "0123456789abcdef0123456789abcdef01234567"
+    readiness_record.write(str(project), record)
+    yield "unknown"
+
+
+def test_prc_40(tmp_path):
+    project = _floor_project(tmp_path / "p")
+    before = _manifest_before(project)
+    for expected in _stale_records(project):
+        code, out, err = _evaluate_write(project)
+        _assert_refused_unwritten(project, before, code, out, err)
+        assert expected in err, (expected, err)
+    # 25 commits past the recorded commit is still fresh.
+    from compass_pkg import readiness_record
+    record = _floor_record(project, measured_at=_days_ago(6))
+    record["head"] = support.git(project, "rev-parse", "HEAD~25").strip()
+    readiness_record.write(str(project), record)
+    code, out, err = _evaluate_write(project)
+    assert code == 0, out + err
+    # On balanced each stale record runs, recorded as not measured.
+    balanced = _floor_project(tmp_path / "b", autonomy="balanced")
+    for expected in _stale_records(balanced):
+        code, out, err = _evaluate_write(balanced)
+        assert code == 0, (expected, out + err)
+        readiness = _floor_manifest(balanced)["readiness"]
+        assert readiness["status"] == "not-measured" and readiness["reason"] == "stale", (
+            expected, readiness)
+        assert expected in readiness["detail"], (expected, readiness)
+
+
+def test_prc_39(tmp_path):
+    marks, temp, env = _run_env(tmp_path)
+    project = _marker_commands_project(tmp_path / "p")
+    untrusted = {**env, **_fork_payload(tmp_path)}
+    code, out, err = support.readiness(project, env=untrusted)
+    assert code == 0, out + err
+    record = support.read_record(project)
+    for signal_id in COMMAND_SIGNALS.values():
+        entry = support.signal(record, signal_id)
+        assert entry["result"] == "absent" and entry["not_run"] == "untrusted", entry
+    before = _manifest_before(project)
+    code, out, err = _evaluate_write(project, env=untrusted)
+    _assert_refused_unwritten(project, before, code, out, err)
+    assert "cannot be measured for an untrusted contribution" in err, err
+    assert "not the same as below the readiness floor" in err, err
+    assert "no setting lets an untrusted contribution run unattended" in err, err
+    assert "balanced" in err and "controlled" in err, err
+    assert "compass readiness" not in err, err
+    # A trusted run on the same kind of runner measures, and the floor is met.
+    trusted = {**env, "CI": "true", "COMPASS_CONTRIBUTION_TRUST": "trusted"}
+    code, out, err = support.readiness(project, env=trusted)
+    assert code == 0, out + err
+    assert support.signal(support.read_record(project),
+                          "build-declared-and-succeeds")["result"] == "present"
+    code, out, err = _evaluate_write(project, env=trusted)
+    assert code == 0, out + err
+
+
+def test_prc_39_committed_record(tmp_path):
+    # Trust is read before the record, so a record a contribution committed
+    # cannot clear the floor on an untrusted runner.
+    project = _floor_project(tmp_path / "p")
+    _floor_record(project)
+    support.git(project, "add", "-f", str(support.RECORD))
+    support.git(project, "commit", "-q", "-m", "a contribution commits a record")
+    before = _manifest_before(project)
+    untrusted = {"CI": "true", "COMPASS_CONTRIBUTION_TRUST": "untrusted"}
+    code, out, err = _evaluate_write(project, env=untrusted)
+    _assert_refused_unwritten(project, before, code, out, err)
+    assert "cannot be measured for an untrusted contribution" in err, err
+    # The same record on a laptop meets the floor.
+    code, out, err = _evaluate_write(project)
+    assert code == 0, out + err
+
+
+def _run_hook(project, framework=ROOT, env=None):
+    """Run the session-start hook as a session in `project` starts. Returns
+    `(exit code, the context it adds, stdout)`."""
+    done = subprocess.run(
+        ["bash", str(Path(framework) / HOOK)], cwd=project, capture_output=True, text=True,
+        timeout=60, env=support.environment(project, {"CLAUDE_PROJECT_DIR": str(project),
+                                                      **(env or {})}))
+    context = ""
+    if done.stdout.strip():
+        context = json.loads(done.stdout)["hookSpecificOutput"]["additionalContext"]
+    return done.returncode, context, done.stdout
+
+
+def _contract_heading():
+    return (ROOT / "compass-contract.md").read_text(encoding="utf-8").splitlines()[0]
+
+
+def test_prc_26(tmp_path):
+    marks, temp, env = _run_env(tmp_path)
+    project = _marker_commands_project(tmp_path / "p")
+    _floor_record(project, absent=("build-declared-and-succeeds",))
+    code, context, _ = _run_hook(project, env=env)
+    assert code == 0
+    assert _contract_heading() in context
+    assert "below the readiness floor" in context.lower(), context
+    assert "build-declared-and-succeeds" in context, context
+    assert "assess will refuse" in context.lower(), context
+    assert "autonomy" in context, context
+    # No record, then a stale one.
+    os.remove(project / support.RECORD)
+    code, context, _ = _run_hook(project, env=env)
+    assert code == 0 and "not measured" in context and "compass readiness" in context, context
+    assert not (project / support.RECORD).exists()
+    _floor_record(project)
+    _stale_settings(project)
+    code, context, _ = _run_hook(project, env=env)
+    assert code == 0 and "stale" in context and "compass readiness" in context, context
+    # The hook ran no signal and no project command.
+    assert support.markers(marks) == {}
+    # At the floor, and on balanced, there is no readiness line.
+    floor_met = _floor_project(tmp_path / "met")
+    _floor_record(floor_met)
+    code, context, _ = _run_hook(floor_met, env=env)
+    assert code == 0 and _contract_heading() in context
+    assert READINESS_LINE not in context, context
+    balanced = _floor_project(tmp_path / "balanced", autonomy="balanced")
+    _floor_record(balanced, absent=("build-declared-and-succeeds",))
+    code, context, _ = _run_hook(balanced, env=env)
+    assert code == 0 and _contract_heading() in context
+    assert READINESS_LINE not in context, context
+
+
+def _planted_framework(folder, plant):
+    """A copy of the framework parts the hook runs, with `plant` applied to
+    the copied record module's text. Returns the copy's root."""
+    for part in ("hooks", "cli"):
+        shutil.copytree(ROOT / part, folder / part,
+                        ignore=shutil.ignore_patterns("__pycache__"))
+    shutil.copytree(ROOT / "scripts" / "lib", folder / "scripts" / "lib")
+    shutil.copy2(ROOT / "compass-contract.md", folder / "compass-contract.md")
+    module = folder / "cli" / "compass_pkg" / "readiness_record.py"
+    module.write_text(plant(module.read_text(encoding="utf-8")), encoding="utf-8")
+    return folder
+
+
+def _assert_unreadable_line(context):
+    assert "could not be read" in context, context
+    assert str(support.RECORD) in context and "compass readiness" in context, context
+
+
+def test_prc_44(tmp_path):
+    project = _floor_project(tmp_path / "p")
+    record = project / support.RECORD
+    before = _manifest_before(project)
+    # A record that is not valid YAML.
+    _unreadable_record(project)
+    code, context, _ = _run_hook(project)
+    assert code == 0
+    _assert_unreadable_line(context)
+    code, out, err = _evaluate_write(project)
+    _assert_refused_unwritten(project, before, code, out, err)
+    assert str(support.RECORD) in err and "compass readiness" in err, err
+    # A record the user cannot read.
+    _floor_record(project)
+    record.chmod(0)
+    try:
+        if os.access(record, os.R_OK):
+            pytest.skip("running as a user who can read any file")
+        code, context, _ = _run_hook(project)
+        assert code == 0
+        _assert_unreadable_line(context)
+        code, out, err = _evaluate_write(project)
+        _assert_refused_unwritten(project, before, code, out, err)
+        assert str(support.RECORD) in err and "compass readiness" in err, err
+    finally:
+        record.chmod(0o644)
+    # A compass.yml that is not valid YAML: the contract still reaches the session.
+    broken = _floor_project(tmp_path / "broken")
+    (broken / "compass.yml").write_text("autonomy: [autonomous\n", encoding="utf-8")
+    code, context, _ = _run_hook(broken)
+    assert code == 0 and _contract_heading() in context
+    # The shared module made to raise, in a copy of the framework only this
+    # test runs: the line is lost, the contract is not, and the hook exits 0.
+    _unreadable_record(project)
+    intact = _planted_framework(tmp_path / "intact", lambda text: text)
+    code, context, _ = _run_hook(project, framework=intact)
+    assert code == 0
+    _assert_unreadable_line(context)
+    planted = _planted_framework(
+        tmp_path / "planted",
+        lambda text: text + "\n\ndef hook_line(*args, **kwargs):\n"
+                            "    raise RuntimeError('a fault the test planted')\n")
+    code, context, _ = _run_hook(project, framework=planted)
+    assert code == 0
+    assert _contract_heading() in context, context
+    assert READINESS_LINE not in context, context
+    # On balanced the same two records run, recorded as not measured.
+    for name in ("invalid", "no-permission"):
+        balanced = _floor_project(tmp_path / f"balanced-{name}", autonomy="balanced")
+        target = balanced / support.RECORD
+        if name == "invalid":
+            _unreadable_record(balanced)
+        else:
+            _floor_record(balanced)
+            target.chmod(0)
+        try:
+            code, out, err = _evaluate_write(balanced)
+        finally:
+            target.chmod(0o644)
+        assert code == 0, (name, out + err)
+        readiness = _floor_manifest(balanced)["readiness"]
+        assert readiness["status"] == "not-measured", (name, readiness)
+        assert readiness["reason"] == "unreadable", (name, readiness)
+
+
+def test_prc_27(tmp_path):
+    project = support.make_project(tmp_path / "p", None)
+    _floor_issue(project)
+    code, context, _ = _run_hook(project)
+    assert code == 0 and _contract_heading() in context
+    assert READINESS_LINE not in context, context
+    code, out, err = _evaluate_write(project)
+    assert code == 0, out + err
+    assert _floor_manifest(project)["readiness"]["status"] == "not-measured"
+
+
+def _upgrade_section():
+    text = UPGRADE_GUIDE.read_text(encoding="utf-8")
+    heading = "## Repository readiness and autonomous work"
+    assert heading in text, "the 7.0.0 upgrade guide has no readiness section"
+    body = text.split(heading, 1)[1]
+    following = body.find("\n## ")
+    return body if following < 0 else body[:following]
+
+
+def test_prc_28():
+    flat = " ".join(_upgrade_section().split())
+    assert "refused" in flat and "7.0.0" in flat, flat
+    for signal_id in REQUIRED_SIGNALS:
+        assert f"`{signal_id}`" in flat, signal_id
+    assert "`compass readiness`" in flat
+    # The three ways to carry on.
+    assert "`autonomy`" in flat
+    assert "make the absent signals present" in flat.lower(), flat
+    assert "`required_for_autonomous`" in flat and "project layer" in flat
+    # Who is never refused.
+    assert "`balanced`" in flat and "`controlled`" in flat and "never refused" in flat
+    assert "no settings file" in flat
+    # The record.
+    assert "per checkout" in flat and "never committed" in flat
+    assert "seven days" in flat and "25 commits" in flat
+    assert "plain file" in flat and "edit" in flat
+    # The commands and trust.
+    assert "clean checkout of HEAD" in flat
+    assert "untrusted" in flat and "cannot run an autonomous project" in flat
+
+
+def _complete_marker(project, number):
+    return (_task_dir(project) / "generations" / str(number) / "complete").read_text(
+        encoding="utf-8")
+
+
+def test_prc_29(tmp_path):
+    marks, temp, env = _run_env(tmp_path)
+    project = _floor_project(tmp_path / "p", autonomy="balanced")
+    absent = ("codeowners-present", "secret-scan-declared")
+    measured_at = _days_ago(0) - datetime.timedelta(hours=1)
+    record = _floor_record(project, absent=absent, measured_at=measured_at)
+    code, out, err = _evaluate_write(project, env=env)
+    assert code == 0, out + err
+    assert _floor_manifest(project)["readiness"] == {
+        "status": "measured", "score": 9, "signals": 11, "floor_met": True,
+        "absent": list(absent), "measured_at": record["measured_at"]}
+    code, out, err = support.run_compass(project, "issue", "lint", "--issue", FLOOR_SLUG)
+    assert code == 0, out + err
+    # No generation file holds the summary. The generation may store the
+    # catalogue named `readiness`; it never stores a measurement.
+    for path in (_task_dir(project) / "generations").rglob("*"):
+        if path.is_file():
+            text = path.read_text(encoding="utf-8")
+            assert "floor_met" not in text and record["measured_at"] not in text, path
+    marker = _complete_marker(project, 1)
+    # A second measurement with a different result.
+    code, out, err = support.readiness(project, env=env)
+    assert code == 0, out + err
+    second = support.read_record(project)
+    present = sum(1 for s in second["signals"] if s["result"] == "present")
+    assert present != 9
+    code, out, err = _evaluate_write(project, env=env)
+    assert code == 0, out + err
+    assert _generations(project) == ["1"]
+    assert _complete_marker(project, 1) == marker
+    readiness = _floor_manifest(project)["readiness"]
+    assert readiness["score"] == present and readiness["measured_at"] == second["measured_at"]
+
+
+def _delivery_approach_text(project):
+    found = sorted(Path(project).rglob("delivery-approach.md"))
+    return "\n".join(p.read_text(encoding="utf-8") for p in found)
+
+
+def _not_measured_manifests(tmp_path):
+    """Two balanced issues assessed with no record and with a stale one; each
+    manifest records why readiness is not measured. Returns the stale project."""
+    missing = _floor_project(tmp_path / "missing", autonomy="balanced")
+    stale = _floor_project(tmp_path / "stale", autonomy="balanced")
+    _floor_record(stale)
+    _stale_settings(stale)
+    for project, reason in ((missing, "missing"), (stale, "stale")):
+        code, out, err = _evaluate_write(project)
+        assert code == 0, out + err
+        readiness = _floor_manifest(project)["readiness"]
+        assert readiness["status"] == "not-measured" and readiness["reason"] == reason, (
+            reason, readiness)
+    return stale
+
+
+def test_prc_30_manifest(tmp_path):
+    _not_measured_manifests(tmp_path)
+
+
+# The delivery-approach clause needs the rendered readiness block, which lands
+# later in this issue. Strict, so the change that adds the block fails here
+# until this marker is removed.
+@pytest.mark.xfail(strict=True, reason="the delivery approach has no readiness block yet")
+def test_prc_30(tmp_path):
+    stale = _not_measured_manifests(tmp_path)
+    # The delivery approach says the record was stale, not only that it is missing.
+    code, out, err = support.run_compass(stale, "issue", "render", "--issue", FLOOR_SLUG)
+    assert code == 0, out + err
+    assert "Repository readiness: not measured (record stale" in _delivery_approach_text(stale)
+
+
+def test_prc_36(tmp_path):
+    marks, temp, env = _run_env(tmp_path)
+    folder = tmp_path / "p"
+    folder.mkdir()
+    settings = {"schema": 1, "autonomy": "autonomous", "allow_project_commands": True,
+                "project": {"lint_command": support.marker_script(folder, "lint.sh", "exit 0"),
+                            "test_command": support.marker_script(folder, "test.sh", "exit 0")}}
+    project = support.make_project(folder, settings, files={"AGENTS.md": "# Agents\n"})
+    _floor_issue(project)
+    code, out, err = support.readiness(project, env=env)
+    assert code == 0, out + err
+    assert support.signal(support.read_record(project),
+                          "lint-declared-and-clean")["result"] == "present"
+    before = _manifest_before(project)
+    code, out, err = _evaluate_write(project, env=env)
+    _assert_refused_unwritten(project, before, code, out, err)
+    assert "build-declared-and-succeeds" in err, err
+    settings["autonomy"] = "balanced"
+    (project / "compass.yml").write_text(yaml.safe_dump(settings, sort_keys=False),
+                                         encoding="utf-8")
+    support.git(project, "commit", "-q", "-am", "balanced")
+    code, out, err = support.readiness(project, env=env)
+    assert code == 0, out + err
+    code, out, err = _evaluate_write(project, env=env)
+    assert code == 0, out + err
+
 
 # --- U4 readers, init and retro ---
 

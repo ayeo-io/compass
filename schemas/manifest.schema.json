@@ -1110,6 +1110,22 @@
         }
       }
     },
+    "readiness": {
+      "type": "object",
+      "required": ["status"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {"enum": ["measured", "not-measured"]},
+        "score": {"type": "integer", "minimum": 0},
+        "signals": {"type": "integer", "minimum": 0},
+        "floor_met": {"type": "boolean"},
+        "absent": {"type": "array", "items": {"type": "string"}},
+        "measured_at": {"type": "string"},
+        "reason": {"enum": ["missing", "stale", "unreadable"]},
+        "detail": {"type": "string"}
+      },
+      "description": "Optional. The repository's readiness when the issue was last assessed, from the per-checkout readiness record (ADR-060). `measured` holds the score, the number of readiness signals, floor_met, the absent signal ids and measured_at; `not-measured` holds a reason of missing, stale or unreadable and a detail. Written by every `compass approach evaluate --write`; it is not part of the generation, so a new measurement never forces a new generation. Absent on an issue assessed before 7.0.0, which reads as not measured."
+    },
     "checkpoints": {
       "type": "array",
       "items": {

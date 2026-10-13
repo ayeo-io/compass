@@ -304,10 +304,11 @@
       3,
       3,
       3,
+      3,
       2,
       2
     ],
-    "list_items": 28,
+    "list_items": 31,
     "table_rows": 17
   },
   "examples/README.md": {
@@ -788,7 +789,7 @@
       2,
       2
     ],
-    "list_items": 56,
+    "list_items": 61,
     "table_rows": 12
   },
   "governance/strategies.md": {

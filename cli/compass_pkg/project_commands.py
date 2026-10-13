@@ -38,6 +38,18 @@ class Permission:
     reason: str
 
 
+def untrusted_reason(project_root, env=None):
+    """The trust reason when the contribution is untrusted here, else None.
+    UNKNOWN on CI counts as untrusted, because Compass cannot tell whose work
+    it is. Read from the environment only: `approach evaluate --write` asks
+    this before it reads the readiness record, so a record a contribution
+    committed cannot answer it."""
+    state, reason = contribution_trust(env=env, project_root=project_root)
+    if state == UNKNOWN and is_ci(env):
+        state = UNTRUSTED
+    return reason if state == UNTRUSTED else None
+
+
 def command_permission(project_root, opt_in_from=None, env=None):
     """May Compass run a command this project declares? One answer for
     `command-passes` and `compass readiness` (ADR-061), so the two cannot
@@ -53,11 +65,9 @@ def command_permission(project_root, opt_in_from=None, env=None):
     for `command-passes`, which finds the project upwards from it); it
     defaults to the project root.
     """
-    state, reason = contribution_trust(env=env, project_root=project_root)
-    if state == UNKNOWN and is_ci(env):
-        state = UNTRUSTED
-    if state == UNTRUSTED:
-        return Permission(False, "untrusted", reason)
+    untrusted = untrusted_reason(project_root, env=env)
+    if untrusted is not None:
+        return Permission(False, "untrusted", untrusted)
     if not _project_commands_allowed(opt_in_from or project_root):
         return Permission(False, "disabled", project_settings.named(
             project_root, "allow_project_commands", "true"))

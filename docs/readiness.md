@@ -197,7 +197,29 @@ Repository readiness: not measured (record stale: compass.yml changed since the 
 
 `readiness_record.hook_line` gives the session-start warning: empty unless
 `autonomy` is `autonomous` and the floor is not met or the record is not
-fresh.
+fresh. The warning says assess will refuse autonomous work until the absent
+signals are present or `autonomy` changes, or names `compass readiness` when
+the record is missing, stale or unreadable. `hooks/session-start.sh` adds it
+after the contract, inside its own guard, and never blocks.
+
+## The floor at assess
+
+`compass approach evaluate --write` reads the record through the same module
+and refuses an issue on `autonomous` (ADR-058), with exit 2 and before it
+prints or writes anything, when:
+
+- the CI runner reports an untrusted contribution (read from the environment
+  first, so a committed record cannot clear it);
+- the record is missing, stale or unreadable;
+- the record was measured for an untrusted contribution; or
+- a signal on the floor is absent. The message names each one with its
+  `fix`.
+
+Every refusal names `autonomy` as the setting to change; `balanced` and
+`controlled` are never refused. Every `--write` writes the summary into the
+manifest's `readiness:` key, outside the generation (`docs/generation-store.md`).
+`governance/routing-policy.md` describes the refusal with the other routing
+behaviour.
 
 ## Modules
 

@@ -481,6 +481,12 @@ def test_d2_repairs_change_only_retired_names():
     Definition of Ready boxes, which are now an empty `dor` block that
     `compass issue render` fills from the plan entry list.
 
+    Two more were re-baselined by `project-readiness-caps-autonomy`:
+    `docs/safety-contract.md` (list_items 28 -> 31) gained one `###` heading,
+    "The readiness floor reads a record a person can edit", with three
+    bullets, and `governance/routing-policy.md` (list_items 56 -> 61) gained
+    the bullet on the readiness floor and its four refusal conditions.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

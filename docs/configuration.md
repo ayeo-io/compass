@@ -110,15 +110,21 @@ How often a session stops to wait for a person at a stage hand-off: confirming
 the approach, and approving the acceptance criteria, the requirements review
 and the technical design. The routing policy's `autonomy_checkpoints:` table
 says which hand-offs wait for each value and delivery approach. `compass approach show`
-shows the answer for an issue. No value changes a gate, evidence, the hook or
-`compass check`.
+shows the answer for an issue. No value changes a gate, evidence, the pre-tool
+hook or `compass check`.
 
 - `controlled`: wait at every hand-off the table lists. That is all four on the
   regular or full approach, assess and define on a hotfix, and assess on a
   quick fix or spike.
 - `balanced`: a quick fix does not stop. The regular approach waits at define
   and plan. The full approach waits at all four.
-- `autonomous`: never wait. Every hand-off is shown and logged instead.
+- `autonomous`: never wait. Every hand-off is shown and logged instead. From
+  7.0.0 an issue on `autonomous` must meet the readiness floor:
+  `compass approach evaluate --write` refuses it, with exit 2, while the
+  repository is below the floor, has no fresh readiness record, or the CI
+  runner reports an untrusted contribution. The session-start hook adds one
+  warning line, and never blocks. `balanced` and `controlled` are never
+  refused. See `docs/readiness.md`.
 
 Any other value is refused, naming the file, because a typo that silently
 changed how often a session stops would give no sign.

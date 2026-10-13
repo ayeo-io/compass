@@ -276,7 +276,17 @@ def _run_pytest_on_copies(tmp_path, files, parallel, full_archive=False):
         (folder / name).write_text(text, encoding="utf-8")
     env = {k: v for k, v in os.environ.items()
            if k not in ("COMPASS_FULL_ARCHIVE", "PYTEST_ADDOPTS")}
-    env["PYTHONPATH"] = str(ROOT / "tests") + os.pathsep + str(ROOT / "cli")
+    # CI has no installed PyYAML: the suite reads the copy under cli/vendor. A package
+    # that refuses to import sits last on the path, so the installed copy cannot load
+    # here either and only the vendored copy can.
+    blocker = tmp_path / "no-installed-yaml" / "yaml"
+    blocker.mkdir(parents=True)
+    (blocker / "__init__.py").write_text(
+        "raise ImportError('the installed PyYAML must not load; use cli/vendor')\n",
+        encoding="utf-8")
+    env["PYTHONPATH"] = os.pathsep.join([
+        str(ROOT / "tests"), str(ROOT / "cli"), str(ROOT / "cli" / "vendor"),
+        str(blocker.parent)])
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     # CI sets this, so xdist is only there when asked for with -p. Setting it here
     # gives the same command on a machine that autoloads xdist.
@@ -288,8 +298,13 @@ def _run_pytest_on_copies(tmp_path, files, parallel, full_archive=False):
                "-k", f"test_planted_skip or {GUARDED_REAL_TEST}", str(folder)]
     if parallel:
         command[3:3] = ["-p", "xdist.plugin", "-n", "2"]
-    return subprocess.run(command, cwd=tmp_path, capture_output=True, text=True,
-                          env=env, timeout=300)
+    run = subprocess.run(command, cwd=tmp_path, capture_output=True, text=True,
+                         env=env, timeout=300)
+    # A run that cannot import its module also exits non-zero. Only the planted skip
+    # may be the reason, so any import error fails here, loudly.
+    output = run.stdout + run.stderr
+    assert "ModuleNotFoundError" not in output and "ImportError" not in output, output[-2000:]
+    return run
 
 
 @pytest.mark.parametrize("parallel", [False, True], ids=["alone", "xdist"])

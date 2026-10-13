@@ -66,15 +66,16 @@ def env_for(root, **extra):
     return env
 
 
-def compass(root, *args, cli_dir=CLI_DIR, clock=None, cwd=None, **extra):
-    """Run `compass <args>` in `root`; with `clock`, under the fixed clock."""
+def compass(root, *args, cli_dir=CLI_DIR, clock=None, cwd=None, timeout=120, **extra):
+    """Run `compass <args>` in `root`; with `clock`, under the fixed clock. A
+    walk that does not end fails the test at `timeout` seconds."""
     if clock:
         cmd = [sys.executable, str(FIXED_CLOCK), "--cli", str(cli_dir), "--at", clock,
                "--", *args]
     else:
         cmd = [sys.executable, str(Path(cli_dir) / "compass"), *args]
     return subprocess.run(cmd, cwd=str(cwd or root), env=env_for(root, **extra),
-                          capture_output=True, text=True, timeout=120)
+                          capture_output=True, text=True, timeout=timeout)
 
 
 def assert_no_gh_call(root):
@@ -412,6 +413,142 @@ def test_dbi_8_until_vocabulary(tmp_path):
         else:
             assert "blocked" not in line, (row, line)
         assert rows[waiting].get("blocked") == expected[waiting], (row, rows[waiting])
+    assert_no_gh_call(project.root)
+
+
+# --- DBI-1 to DBI-4: the verbs ----------------------------------------------------
+
+def depends(project, *args, slug="a"):
+    # The cycle walk ends in well under a second; a walk with no visited set
+    # never does, so a short timeout turns it into a failure.
+    return compass(project.root, "issue", "depends", *args, "--issue", slug, timeout=30)
+
+
+def assert_schema_shape(entries):
+    """`depends_on` against its schema node: with jsonschema when installed,
+    and by its declared keys and values either way."""
+    schema = json.loads((ROOT / "schemas" / "manifest.schema.json").read_text(encoding="utf-8"))
+    node = schema["properties"]["depends_on"]
+    try:
+        import jsonschema
+    except ImportError:
+        jsonschema = None
+    if jsonschema is not None:
+        jsonschema.validate(entries, node)
+    item = node["items"]
+    for entry in entries:
+        assert list(entry) == item["required"] == list(item["properties"]), entry
+        assert entry["until"] in item["properties"]["until"]["enum"], entry
+        assert entry["issue"].strip() and entry["reason"].strip(), entry
+
+
+def test_dbi_1_depends_add_writes_the_shape(tmp_path):
+    project = Project(tmp_path)
+    for slug in ("a", "b", "c"):
+        project.issue(slug, "define")
+    assert "depends_on" not in project.manifest("a")
+    done = depends(project, "add", "b", "--reason", "needs the parse cache")
+    assert done.returncode == 0, done
+    manifest = project.manifest("a")
+    assert manifest["depends_on"] == [
+        {"issue": "b", "reason": "needs the parse cache", "until": "done"}]
+    assert list(manifest["depends_on"][0]) == ["issue", "reason", "until"]
+    assert manifest["schema_version"] == "3.0"
+    assert_schema_shape(manifest["depends_on"])
+    assert "a now waits for b to reach done" in done.stdout, done
+    done = depends(project, "add", "c", "--reason", "shares the hook", "--until", "in-review")
+    assert done.returncode == 0, done
+    manifest = project.manifest("a")
+    assert [e["issue"] for e in manifest["depends_on"]] == ["b", "c"]
+    assert manifest["depends_on"][1]["until"] == "in-review"
+    assert_schema_shape(manifest["depends_on"])
+    lint = compass(project.root, "issue", "lint", "--issue", "a")
+    assert "depends_on" not in lint.stdout, lint
+    assert_no_gh_call(project.root)
+
+
+def test_dbi_2_depends_remove_removes_one_entry(tmp_path):
+    project = Project(tmp_path)
+    for slug in ("b", "c"):
+        project.issue(slug, "define")
+    project.issue("a", "define", depends=[dep("b"), dep("c")])
+    done = depends(project, "remove", "b")
+    assert done.returncode == 0, done
+    assert [e["issue"] for e in project.manifest("a")["depends_on"]] == ["c"]
+    done = depends(project, "remove", "c")
+    assert done.returncode == 0, done
+    assert "depends_on" not in project.manifest("a")
+    before = project.bytes("a")
+    done = depends(project, "remove", "b")
+    assert done.returncode == 2, done
+    assert "b is not a dependency of a" in done.stderr, done
+    assert project.bytes("a") == before
+    project.issue("a", "define", depends=[dep("gone")])
+    done = depends(project, "remove", "gone")
+    assert done.returncode == 0, done
+    assert "depends_on" not in project.manifest("a")
+    assert_no_gh_call(project.root)
+
+
+def test_dbi_3_depends_add_input_checks(tmp_path):
+    from compass_pkg import lifecycle
+    project = Project(tmp_path)
+    project.issue("a", "define")
+    project.issue("b", "define")
+    nine = ", ".join(lifecycle.UNTIL_VALUES)
+    assert nine == "done, in-review, define, refine, plan, breakdown, implement, verify, ship"
+    cases = [
+        (["a", "--reason", "self"], "cannot depend on itself", False),
+        (["b", "--reason", "x", "--until", "ready"], "'ready' is not an until value", True),
+        (["b", "--reason", "x", "--until", "Done"], "'Done' is not an until value", True),
+        (["b", "--reason", "   "], "--reason is empty", False),
+        (["b"], "--reason", False),
+        (["../b", "--reason", "x"], "not one path segment", False),
+    ]
+    before = project.bytes("a")
+    for args, problem, lists_values in cases:
+        done = depends(project, "add", *args)
+        assert done.returncode == 2, (args, done)
+        assert problem in done.stderr, (args, done)
+        assert (nine in done.stderr) == lists_values, (args, done)
+        assert project.bytes("a") == before, args
+    project.issue("c", "define")
+    project.issue("a", "define", depends=[dep("c"), dep("b"), dep("x-later")])
+    done = depends(project, "add", "b", "--reason", "new reason", "--until", "plan")
+    assert done.returncode == 0, done
+    assert "updated the entry for b" in done.stdout, done
+    assert project.manifest("a")["depends_on"] == [
+        dep("c"), {"issue": "b", "reason": "new reason", "until": "plan"}, dep("x-later")]
+    assert_no_gh_call(project.root)
+
+
+def test_dbi_4_cycle_is_refused(tmp_path):
+    project = Project(tmp_path)
+    project.issue("a", "define")
+    project.issue("b", "define", depends=[dep("a")])
+    before = project.bytes("a")
+    done = depends(project, "add", "b", "--reason", "x")
+    assert done.returncode == 2, done
+    assert "a -> b -> a" in done.stderr, done
+    assert project.bytes("a") == before
+    project.issue("b", "define", depends=[dep("c")])
+    project.issue("c", "define", depends=[dep("a")])
+    done = depends(project, "add", "b", "--reason", "x")
+    assert done.returncode == 2, done
+    assert "a -> b -> c -> a" in done.stderr, done
+    assert project.bytes("a") == before
+    project.issue("c", "define", depends=[dep("b")])
+    done = depends(project, "add", "b", "--reason", "x")
+    assert done.returncode == 0, done
+    assert project.manifest("a")["depends_on"] == [dep("b", reason="x")]
+    project.issue("a", "define")
+    (project.dir("b") / "manifest.yml").write_text("issue: b\ndepends_on: [unclosed\n")
+    done = depends(project, "add", "b", "--reason", "x")
+    assert done.returncode == 0, done
+    assert project.manifest("a")["depends_on"] == [dep("b", reason="x")]
+    lines = [line for line in done.stderr.splitlines() if line.strip()]
+    assert len(lines) == 1 and "b" in lines[0] and "could not be read" in lines[0] \
+        and "no cycle check ran through it" in lines[0], done
     assert_no_gh_call(project.root)
 
 

@@ -58,6 +58,10 @@ RENDER_FURTHER = {
     "cmd_evidence_review": None,
     "cmd_issue_blocked_set": None,
     "cmd_issue_blocked_remove": None,
+    # The waiting issue's page shows the wait, and the other issue's page
+    # lists who waits for it, so both render.
+    "cmd_depends_add": None,
+    "cmd_depends_remove": None,
     "cmd_subtask_update": None,
     # The traceability chart of the issue page draws the files each scenario changed.
     "cmd_changed_file_add": None,

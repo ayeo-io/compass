@@ -454,6 +454,121 @@ costs.
 
 ---
 
+## Continuous integration
+
+`.github/workflows/compass.yml` runs this repository's checks and tests on
+every pull request and on every push to main. Each decision a job takes is
+made by a script in `scripts/ci-*.py`, so it can be tested on a laptop; the
+tests in `tests/test_ci_workflow_shape.py`, `tests/test_ci_shards.py` and
+`tests/test_ci_already_tested.py` read the workflows as data and run the
+scripts.
+
+### The jobs
+
+| Job | What it does |
+|---|---|
+| `already-tested` | Runs on a push to main only. Decides whether the push may skip every other job (below). |
+| `checks` | The rival-name scan of commit messages, `scripts/validate.sh`, the CLI syntax check and `compass ci`. |
+| `count` | Counts the tests outside the serial pass, with `pytest --collect-only -q -m "not serial" tests/`. |
+| `shard` | A matrix of shard jobs. Each runs its share of the test files on parallel workers and prints its 25 slowest tests. |
+| `serial` | Runs the tests marked `serial` alone, and prints its 20 slowest tests. |
+| `self-check` | Passes only when every job above succeeded and the shard counts add up to the `count` total. |
+| `bdd-adapter`, `bdd-adapter-behave`, `bdd-adapter-cucumber-js`, `bdd-adapter-godog` | Run each BDD reference adapter. |
+| `harness-root` | Runs the real-root harness tests, only when the change touches the files they depend on. |
+| `check-mutation` | Breaks each shipped check and confirms its register tests go red. |
+
+A new push to a pull request cancels the run it replaces. A push to main
+is never cancelled.
+
+### The required checks
+
+The protected-main ruleset needs `self-check`, `check-mutation`,
+`build` and the four `bdd-adapter` jobs, and `pr-text` once it is added
+(below). A skipped required check counts as passed, so none of them can
+skip on a pull request:
+
+- every job in `compass.yml` but `already-tested` runs on the condition
+  `!cancelled() && needs.already-tested.outputs.skip != 'true'`, so it runs
+  whatever the results of the jobs it needs;
+- `self-check` is the aggregator. `scripts/ci-self-check.py aggregate`
+  fails it when any job it needs failed, was cancelled or was skipped, or
+  has no result. Only the push-only `already-tested` is exempt;
+- `docs.yml`'s `build` runs on every pull request. When the change touches
+  none of `docs/`, `mkdocs.yml` and `.github/workflows/docs.yml`, it skips
+  its own steps and ends in success. `harness-root` uses the same change
+  test, `scripts/ci-changed.py`.
+
+### The count check
+
+The shards split the test files, so a file that no shard ran would leave
+every shard green. Each shard counts the tests it collects and publishes
+the count as an artifact named after its index. `self-check` downloads
+them and fails when one is missing or not a whole number, or when their sum
+differs from the `count` job's total. Its log shows every needed job's
+result, every shard count, their sum and the total, on success too.
+
+The number of shards is set in one place, the `shard` job's matrix. Each
+leg passes `strategy.job-total` to the shard command and names its count
+file `shard-<index>-of-<count>`, so the aggregator reads the same number.
+
+To run one shard locally, as CI does:
+
+```bash
+python3 scripts/ci-shard.py 2 4 > /tmp/shard.txt
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 xargs python3 -m pytest -p xdist.plugin -n auto -m "not serial" --durations=25 < /tmp/shard.txt
+```
+
+The shard command lists every file pytest collects from `tests/`, sorted
+by path, and gives file number k to shard k mod the count. A new or renamed
+test file lands in a shard with no list to edit.
+
+### The push skip
+
+A push to main skips every job when its tree was already tested green on
+its pull request. `scripts/ci-already-tested.py` writes `skip=true` only
+when all of these hold, and runs the suite on anything else, including any
+error reading the GitHub API:
+
+1. exactly one pull request was merged into main with the pushed commit as
+   its merge commit;
+2. the pull request's head commit is in the local history, fetched by its
+   pull-request ref when it is missing;
+3. the pushed commit's tree equals the head's tree;
+4. the pushed commit's first parent is an ancestor of the head, so the
+   pull-request run tested this tree;
+5. the latest `self-check` run on the head, from GitHub Actions, succeeded,
+   and none is still running.
+
+A branch that was not brought up to date with main before merging fails
+condition 4, so its push runs the suite.
+
+### The pull request text
+
+`.github/workflows/pr-text.yml` scans the pull request's title and body for
+rival product names. It runs on `edited` too, so an edited title is scanned
+without running the suite; `compass.yml` does not run on `edited`. The
+ruleset must list `pr-text` as a required check: until it does, the check
+runs and shows a failure, but does not block a merge.
+
+### Timeouts
+
+Every job in every workflow has `timeout-minutes`: about twice the job's
+p90 run time, rounded up to a multiple of 5 minutes, at least 5 and at most
+45. A job with no measurement starts from an estimate. `serial` has 20.
+
+### Measuring a run
+
+`scripts/ci-run-minutes.py` reads the JSON that `gh run view RUN --json
+jobs` prints, from a file or standard input. It prints each job's minutes,
+the run's wall time from the first job's start to the last job's end, and
+the sum of job minutes:
+
+```bash
+gh run view 1234567890 --json jobs | python3 scripts/ci-run-minutes.py
+```
+
+---
+
 ## Supply-chain stance
 
 [`docs/security.md`](security.md) is the canonical reference. The

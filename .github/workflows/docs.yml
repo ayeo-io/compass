@@ -3,11 +3,15 @@
 # them builds the site strictly, so a broken link fails before merge; only a
 # push to main publishes. MkDocs is a build tool here, never something
 # Compass users install.
+#
+# `build` is a required check, so it reports on every pull request: a
+# workflow filtered out by paths never reports, and the merge would wait for
+# it. On a pull request that touches none of the site's files, the job runs
+# and skips its own steps, so it ends in success having built nothing.
 name: Docs site
 
 on:
-  pull_request:
-    paths: ["docs/**", "mkdocs.yml", ".github/workflows/docs.yml"]
+  pull_request:           # no paths filter: build reports on every pull request
   push:
     branches: [main]
     paths: ["docs/**", "mkdocs.yml", ".github/workflows/docs.yml"]
@@ -16,28 +20,47 @@ on:
 permissions:
   contents: read
 
+# One group per ref, so a run on one branch never cancels a run on another,
+# and the prefix keeps it apart from other workflows' groups.
 concurrency:
-  group: docs-site
+  group: docs-site-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0          # the change test diffs against the base
+      - id: changed
+        name: Did this change touch the site?
+        # On a push or a manual run there is no base, and the site is built.
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          python3 scripts/ci-changed.py --base "$BASE_SHA" --head "$HEAD_SHA"
+          --output "$GITHUB_OUTPUT" docs/ mkdocs.yml .github/workflows/docs.yml
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        if: steps.changed.outputs.run == 'true'
         with:
           python-version: "3.11"
       - name: Install the site builder
+        if: steps.changed.outputs.run == 'true'
         run: pip install "mkdocs-material==9.7.1"
       - name: Build the site, failing on any warning
+        if: steps.changed.outputs.run == 'true'
         run: mkdocs build --strict --site-dir site
       - name: Check the theme's stylesheets and scripts were published
         # An exclude pattern once removed them, and the site still built.
+        if: steps.changed.outputs.run == 'true'
         run: |
           ls site/assets/stylesheets/main.*.min.css
           ls site/assets/javascripts/bundle.*.min.js
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        if: steps.changed.outputs.run == 'true'
         with:
           path: site
 
@@ -45,6 +68,7 @@ jobs:
     needs: build
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       pages: write
       id-token: write

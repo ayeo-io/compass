@@ -113,6 +113,7 @@ same commit.
 | `cli/compass_pkg/receipt.py`, `cli/compass_pkg/receipt_provenance.py` | `docs/receipt.md` |
 | `cli/compass`, `cli/compass_pkg/verb_help.py`, `cli/compass_pkg/lineage.py` | `README.md` |
 | `scripts/release.sh`, `Makefile`, `VERSION` | `docs/releasing.md` |
+| `.github/workflows/`, `scripts/ci-*.py` | `docs/releasing.md` |
 | `scripts/render-document-set.py`, `architecture/document-set-7-0-0.svg`, `tests/test_document_set_diagram.py` | `docs/methodology.md` |
 | `scripts/install.sh`, `.claude-plugin/` | `docs/install-smoke-test.md` |
 | `hooks/hooks.json`, the adapter boundary | `docs/portability.md` |

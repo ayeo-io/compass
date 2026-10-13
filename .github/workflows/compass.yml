@@ -4,14 +4,20 @@
 # the governance YAML, and the CLI. It is also the live proof of the reference
 # workflow in ci/github-actions.yml - a project copies that one; this is the
 # framework running its own checks on itself.
+#
+# The test suite runs as parallel shards plus one serial job, and the
+# `self-check` job at the end is the check the protected-main ruleset
+# needs: it passes only when every job it needs succeeded and the shards'
+# test counts add up to the whole suite's count. docs/releasing.md
+# ("Continuous integration") describes the jobs.
 
 name: Compass (self-check)
 
 on:
   pull_request:
-    # `edited` as well as the defaults, so a changed title or body is
-    # checked for rival product names again.
-    types: [opened, synchronize, reopened, edited]
+    # Not `edited`: a title or body edit runs only pr-text.yml, which scans
+    # the pull request text, so an edit does not run the suite again.
+    types: [opened, synchronize, reopened]
   push:
     branches: [main]
 
@@ -20,13 +26,41 @@ on:
 # which on many repositories is a read-write token. Compass runs commands a
 # project declares in its governance file, so the token handed to that runner
 # is part of what a compromised command could reach. Reading the checkout is
-# all these jobs need.
+# all these jobs need; already-tested adds two read scopes of its own.
 permissions:
   contents: read
 
+# One group per pull request, so a new push cancels the run it replaces. A
+# push to main gets a group per commit and is never cancelled. The prefix
+# keeps this group apart from other workflows' groups: a group name is shared
+# by every workflow in the repository.
+concurrency:
+  group: compass-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Every job but already-tested needs it and carries the same condition,
+# `!cancelled() && needs.already-tested.outputs.skip != 'true'`:
+# - on a pull request already-tested is skipped with no output, and every
+#   job runs. `!cancelled()` is a status function, so GitHub does not add
+#   the implicit success() that would skip a job whose need was skipped;
+# - on a push already-tested marks as tested, every job skips together;
+# - on any other push, including one where already-tested failed, every job
+#   runs.
+# self-check runs whatever the other jobs' results were, because a skipped
+# required check counts as passed.
 jobs:
-  self-check:
+  already-tested:
+    # A push to main whose tree was already tested green on its pull request
+    # skips every other job. scripts/ci-already-tested.py holds the rule.
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+      checks: read
+    outputs:
+      skip: ${{ steps.decide.outputs.skip }}
     steps:
       # Third-party actions are pinned by SHA, with the human-readable version
       # in a comment so Dependabot can bump them. See docs/security.md on the
@@ -34,26 +68,34 @@ jobs:
       # framework's own CI does too.
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
-          # The whole history, because two guards compare a file against a
-          # named earlier commit: tests/test_printed_strings_unchanged.py
-          # reads every printed line as it was before the writing-style pass,
-          # and tests/test_manifest_rename.py reads tracked content. A shallow
-          # clone has neither commit, so `git show <sha>:<path>` fails for
-          # every file and the guard compares nothing. It says so rather than
-          # passing - "no shell file was compared" is its own self-check - and
-          # that is exactly how this was found, on the first run in
-          # continuous integration.
-          fetch-depth: 0
+          fetch-depth: 0          # the trees and the ancestry come from local git
+      - id: decide
+        name: Was this tree already tested green on its pull request?
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          MERGED: ${{ github.sha }}
+        run: python3 scripts/ci-already-tested.py --repo "$REPO" --commit "$MERGED" --output "$GITHUB_OUTPUT"
+
+  checks:
+    needs: already-tested
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0          # compass ci --since compares with the base branch
 
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.11"
 
-      - name: No rival product name in commit messages or pull request text
+      - name: No rival product name in commit messages
         # governance/decisions/2026-10-04-rival-names-never-committed.md. The
-        # test suite scans tracked files and paths; this step scans what it
-        # cannot see. The title and body are read from the event file by the
-        # gate itself, so no text from them is ever put into a shell command.
+        # test suite scans tracked files and paths; this step scans the
+        # commit messages it cannot see. The title and body are scanned by
+        # pr-text.yml, on every edit too.
         env:
           EVENT_NAME: ${{ github.event_name }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -66,7 +108,6 @@ jobs:
         run: |
           if [ "$EVENT_NAME" = "pull_request" ]; then
             git log --format=%B "$BASE_SHA..$HEAD_SHA" | python3 scripts/rival-name-gate.py --text -
-            python3 scripts/rival-name-gate.py --github-event "$GITHUB_EVENT_PATH"
           elif [ -n "${BEFORE_SHA//0/}" ] && git cat-file -e "$BEFORE_SHA^{commit}" 2>/dev/null; then
             git log --format=%B "$BEFORE_SHA..$AFTER_SHA" | python3 scripts/rival-name-gate.py --text -
           else
@@ -77,11 +118,10 @@ jobs:
         # PyYAML travels inside the plugin (cli/vendor/yaml/); tests/conftest.py
         # resolves it the same way the CLI does, so there is nothing to install
         # for it here. jsonschema turns on full JSON Schema validation in the
-        # lint commands (optional). pytest is for the test suite step
-        # below.
+        # lint commands (optional).
         run: pip install -r .github/requirements/self-check.txt
 
-      - name: Repo structure self-check
+      - name: Repo structure check
         # scripts/validate.sh checks the directory tree, that commands
         # reference skills/agents/templates that exist, and that the kit layer
         # is intact.
@@ -91,9 +131,9 @@ jobs:
         run: python3 -c "import ast; ast.parse(open('cli/compass').read())"
 
       - name: Compass gate suite
-        # The framework repo has no .compass/work/ issues, so this is
-        # `compass policy lint` in practice - it proves the shipped governance
-        # YAML is valid and the CLI runs.
+        # `compass policy lint` in practice: it proves the shipped governance
+        # YAML is valid and the CLI runs. It does not run the tests; the
+        # shard and serial jobs do.
         # On a pull request, compare the decisions ledger with the base
         # branch, so an edited entry fails here (ADR-027). On a push there
         # is no base to compare with, and compass ci says it skipped the check.
@@ -106,31 +146,150 @@ jobs:
             python3 cli/compass ci
           fi
 
-      - name: Test suite
-        # `compass ci` above checks governance and per-issue guardrails; it does
-        # not run the tests. Without this step nothing in tests/ gates a merge,
-        # including the release invariants that cap the guardrail count and the
-        # house-style guards. Plugin autoload is disabled for the same reason
-        # `make test` disables it: third-party pytest plugins sometimes hang on
-        # a clean machine, so pytest-xdist is loaded by name to run the suite
-        # on parallel workers. Runs last because it is the slowest step, so
-        # the cheaper checks above fail first.
-        env:
-          PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
-        # Tests marked serial assert wall-clock limits, so they run after the
-        # parallel pass, on an otherwise idle runner.
+  count:
+    # The number of tests the shards must add up to.
+    needs: already-tested
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    outputs:
+      total: ${{ steps.count.outputs.total }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0          # the same checkout the shards collect from
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11"
+      - name: Install the test runner
+        run: pip install -r .github/requirements/self-check.txt
+      - id: count
+        name: Count the tests outside the serial pass
+        shell: bash
         run: |
-          python3 -m pytest tests/ -q -p xdist.plugin -n auto -m "not serial"
-          python3 -m pytest tests/ -q -m serial
+          python3 -m pytest --collect-only -q -m "not serial" tests/ > "$RUNNER_TEMP/collected.txt"
+          total=$(python3 scripts/ci-self-check.py count "$RUNNER_TEMP/collected.txt")
+          echo "The whole suite collects $total tests outside the serial pass."
+          echo "total=$total" >> "$GITHUB_OUTPUT"
+
+  shard:
+    # The parallel pass, split by test file. The matrix below is the one
+    # place the number of shards is set: each leg passes strategy.job-total
+    # to the shard command and names its count file with it, so self-check
+    # reads the same number.
+    needs: already-tested
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    # Plugin autoload is disabled for the same reason `make test` disables
+    # it: third-party pytest plugins sometimes hang on a clean machine, so
+    # pytest-xdist is loaded by name.
+    env:
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+      SHARD: ${{ matrix.shard }}
+      SHARDS: ${{ strategy.job-total }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          # The whole history, because two guards compare a file against a
+          # named earlier commit: tests/test_printed_strings_unchanged.py
+          # reads every printed line as it was before the writing-style pass,
+          # and tests/test_manifest_rename.py reads tracked content. A shallow
+          # clone has neither commit, so `git show <sha>:<path>` fails for
+          # every file and the guard compares nothing. It says so rather than
+          # passing - "no shell file was compared" is its own self-check - and
+          # that is exactly how this was found, on the first run in
+          # continuous integration.
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11"
+      - name: Install the test runner
+        run: pip install -r .github/requirements/self-check.txt
+      - name: List this shard's test files
+        run: python3 scripts/ci-shard.py "$SHARD" "$SHARDS" > "$RUNNER_TEMP/shard-files.txt"
+      - name: Count this shard's tests
+        shell: bash
+        run: |
+          mapfile -t files < "$RUNNER_TEMP/shard-files.txt"
+          [ "${#files[@]}" -gt 0 ] || { echo "Shard $SHARD has no test files."; exit 1; }
+          python3 -m pytest --collect-only -q -m "not serial" "${files[@]}" > "$RUNNER_TEMP/collected.txt"
+          mkdir -p "$RUNNER_TEMP/count"
+          python3 scripts/ci-self-check.py count "$RUNNER_TEMP/collected.txt" > "$RUNNER_TEMP/count/shard-$SHARD-of-$SHARDS"
+          echo "Shard $SHARD of $SHARDS holds ${#files[@]} files and collects $(cat "$RUNNER_TEMP/count/shard-$SHARD-of-$SHARDS") tests."
+      - name: Run this shard's tests
+        shell: bash
+        run: |
+          mapfile -t files < "$RUNNER_TEMP/shard-files.txt"
+          python3 -m pytest -p xdist.plugin -n auto -m "not serial" --durations=25 "${files[@]}"
+      # Published only after the tests pass, so a failed, cancelled or
+      # skipped shard leaves no count and the aggregator fails on that too.
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: shard-count-${{ matrix.shard }}
+          path: ${{ runner.temp }}/count/shard-${{ matrix.shard }}-of-${{ strategy.job-total }}
+          retention-days: 1
+          if-no-files-found: error
+
+  serial:
+    # Tests marked serial assert wall-clock limits or change this checkout's
+    # own files, so they run alone on a runner of their own.
+    needs: already-tested
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PYTEST_DISABLE_PLUGIN_AUTOLOAD: "1"
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11"
+      - name: Install the test runner
+        run: pip install -r .github/requirements/self-check.txt
+      - name: Tests marked serial
+        run: python3 -m pytest tests/ -m serial --durations=20
+
+  self-check:
+    # The required check. It passes only when every job it needs succeeded
+    # and the shards' counts add up to the count job's total.
+    needs: [already-tested, checks, count, shard, serial]
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        # A missing count must reach the rule below, not stop the job here.
+        continue-on-error: true
+        with:
+          pattern: shard-count-*
+          path: ${{ runner.temp }}/count
+          merge-multiple: true
+      - name: Every needed job succeeded and the shard counts add up
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: >-
+          python3 scripts/ci-self-check.py aggregate
+          --needs-env NEEDS --needed checks,count,shard,serial
+          --exempt already-tested --counts "$RUNNER_TEMP/count"
 
   # ---------------------------------------------------------------------------
   # The BDD reference adapter, in its own job and its own environment.
   #
-  # pytest-bdd is a pytest PLUGIN, and the self-check job above deliberately
-  # runs with PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 - third-party plugins sometimes
-  # hang on init in a clean environment. Under that setting pytest-bdd never
-  # loads, so the adapter test would skip, forever, and a permanently-skipped
-  # test is a green tick over an assertion nobody ran.
+  # pytest-bdd is a pytest PLUGIN, and the shard and serial jobs above
+  # deliberately run with PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 - third-party
+  # plugins sometimes hang on init in a clean environment. Under that setting
+  # pytest-bdd never loads, so the adapter test would skip, forever, and a
+  # permanently-skipped test is a green tick over an assertion nobody ran.
   #
   # So the adapter gets a job where autoload is ON and pytest-bdd is installed,
   # while the main suite keeps its two dependencies (jsonschema, pytest) and
@@ -138,7 +297,10 @@ jobs:
   # tests/test_bdd_adapter_reference.py.
   # ---------------------------------------------------------------------------
   bdd-adapter:
+    needs: already-tested
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
@@ -170,7 +332,7 @@ jobs:
             echo "No scenarios were collected - pytest-bdd did not load."; exit 1; }
 
       - name: Run the suite's own pytest-bdd adapter tests, and fail on a skip
-        # The self-check job has no pytest-bdd, so these tests skip there,
+        # The shard jobs have no pytest-bdd, so these tests skip there,
         # and a stale feature-file path went unseen (#407). Here pytest-bdd
         # is installed, so a skip means a test did not run. `shell: bash`
         # adds pipefail, so a failing run is not hidden by the pipe to tee.
@@ -186,7 +348,10 @@ jobs:
   # An example no job runs is an example nobody can trust. Every directory under
   # examples/bdd-adapters/ has one of these, and tests/test_bdd_adapters_all.py asserts it.
   bdd-adapter-behave:
+    needs: already-tested
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
@@ -208,7 +373,10 @@ jobs:
   # An example no job runs is an example nobody can trust. Every directory under
   # examples/bdd-adapters/ has one of these, and tests/test_bdd_adapters_all.py asserts it.
   bdd-adapter-cucumber-js:
+    needs: already-tested
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
@@ -235,7 +403,10 @@ jobs:
   # An example no job runs is an example nobody can trust. Every directory under
   # examples/bdd-adapters/ has one of these, and tests/test_bdd_adapters_all.py asserts it.
   bdd-adapter-godog:
+    needs: already-tested
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
@@ -263,19 +434,40 @@ jobs:
   # to an unprivileged user. A test that only plays root cannot fail on
   # ownership or privilege, so this job runs tests/test_harness_root_real.py
   # as real root against a real dedicated user. Every other job skips it.
+  # It is not a required check, so it may skip its steps when the change
+  # touches none of the files those tests depend on.
   harness-root:
+    needs: already-tested
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0          # the change test diffs against the base
+
+      - id: changed
+        name: Did this change touch the real-root harness?
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          python3 scripts/ci-changed.py --base "$BASE_SHA" --head "$HEAD_SHA"
+          --output "$GITHUB_OUTPUT"
+          evals/ tests/test_harness_root_real.py tests/test_eval_harness.py
+          .github/requirements/self-check.txt .github/workflows/compass.yml
 
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        if: steps.changed.outputs.run == 'true'
         with:
           python-version: "3.11"
 
       - name: Install the test tooling
+        if: steps.changed.outputs.run == 'true'
         run: pip install -r .github/requirements/self-check.txt
 
       - name: Create the dedicated session user
+        if: steps.changed.outputs.run == 'true'
         run: sudo useradd --create-home evaluser
 
       - name: Run the real-root tests as root, and fail on a skip
@@ -283,6 +475,7 @@ jobs:
         # Root's git must accept a checkout the runner user owns. A skip here
         # means the tests did not run as root, which is the failure this job
         # exists to catch; `shell: bash` adds pipefail so tee hides nothing.
+        if: steps.changed.outputs.run == 'true'
         shell: bash
         run: |
           PY="$(command -v python3)"
@@ -298,7 +491,10 @@ jobs:
     # then always fail, and fails when a test in tests/mutation_proofs.yml
     # does not notice. It takes about half a minute, so it runs on every pull
     # request rather than on a schedule.
+    needs: already-tested
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 

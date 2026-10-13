@@ -21,6 +21,7 @@ cannot be made (`RoundCollision`) stops the issue before anything changes.
 # compass_pkg.stable_ids. It imports no command module.
 from __future__ import annotations
 
+import copy
 import fnmatch
 import os
 import re
@@ -195,6 +196,9 @@ class Plan:
     pointer_kept: str | None = None                   # a file that is not the pointer, left in place
     stub: dict | None = None                          # {"entry": id, "from": rel, "to": rel}
     adopted_map: str | None = None                    # a small map adopted with no depth, kept
+    rekinds: list = field(default_factory=list)       # Rekind: a stem-named entry and its target
+    rekind_problems: list = field(default_factory=list)  # what a person must do, one line each
+    registry_after: list | None = None                # the registry once the rekinds are made
 
 
 def load_manifest(task_dir):
@@ -361,7 +365,131 @@ def plan_issue(task_dir, rename_v1=None, pointer_marker="<!-- compass: moved -->
 
     plan.stub = stub_map(task_dir, data, project, plan)
     plan.adopted_map = adopted_map(data, project, plan)
+    after = copy.deepcopy(registry)
+    plan.rekinds, plan.rekind_problems = rekind_entries(
+        after, plan.moves + [m for m, _note in plan.both_places], project, catalogue)
+    plan.registry_after = after
     return plan
+
+
+# --- the entries the 6.x migrate registered under a filename stem --------------------
+
+#: The fields that say whether a document is approved. They move with the entry's id.
+STATUS_FIELDS = ("status", "approved_by", "approved_at", "digest")
+
+
+@dataclass(frozen=True)
+class Rekind:
+    """One stem-named entry and the kind (and round) its document becomes. `merged`
+    is True when another entry already held that kind and round: the stem entry's id,
+    status and approval move onto it and the stem entry goes."""
+    entry_id: object
+    old_kind: str
+    kind: str
+    round: int | None
+    merged: bool
+
+    @property
+    def label(self):
+        return "%s round %d" % (self.kind, self.round) if self.round else self.kind
+
+
+def is_stem_entry(entry, catalogue):
+    """Was this entry registered under a filename stem the table maps elsewhere?
+    The 6.x migrate wrote `kind: review` with no round, `kind: review-2` and
+    `kind: integrated-review-3`. `design`, `prd` and `recommendation` have their own
+    step, and a name no row of the table maps is left as it is."""
+    kind = entry.get("kind") if isinstance(entry, dict) else None
+    if not isinstance(kind, str) or kind in DROPPED_KINDS or kind in ALIAS_KINDS:
+        return False
+    body = catalogue.get(kind)
+    if isinstance(body, dict):
+        return artifact_kinds.repeats(body) and entry.get("round") is None
+    return lookup(kind + ".md", catalogue).how in (PLAIN, FAMILY, KIND)
+
+
+def _target_of(stem, entries, moves, project, catalogue):
+    """(kind, round) the stem entry's document becomes, or None when nothing says.
+
+    The file decides, not the stem: `integrated-review-3` takes the next free round,
+    which only the plan's move knows. A file an earlier 7.0.0 migrate already renamed
+    is found through the entry that run wrote, whose reason names the old file."""
+    path = str(stem.get("path") or "")
+    if not path:
+        return None
+    base = os.path.basename(path)
+    found = next((m for m in moves if path in (m.old_rel, m.new_rel)), None) \
+        or next((m for m in moves if m.name == base), None)
+    if found is not None:
+        return found.kind, found.round
+    if os.path.isfile(os.path.join(project, path)):
+        return None
+    heir = next((e for e in entries if e is not stem and isinstance(e, dict)
+                 and (e.get("path") == path or e.get("reason") == "migrated from %s" % base)
+                 and not is_stem_entry(e, catalogue)), None)
+    if heir is not None and isinstance(heir.get("kind"), str):
+        return heir["kind"], heir.get("round")
+    return None
+
+
+def _may_merge(stem, held, project):
+    """May the stem entry's record replace what `held` holds? Yes when they name one
+    file, when the stem's file is gone, or when `held` is a draft an earlier migrate
+    wrote. Two entries that name two files that both exist are a person's to settle."""
+    stem_path, held_path = stem.get("path"), held.get("path")
+    if stem_path == held_path or not os.path.isfile(os.path.join(project, str(stem_path))):
+        return True
+    return str(held.get("reason") or "").startswith("migrated from ") \
+        and not held.get("approved_by")
+
+
+def rekind_entries(entries, moves, project, catalogue):
+    """Move each stem-named entry in `entries` onto the kind and round its document
+    becomes, in place. Returns ([Rekind], [problem line]).
+
+    With no entry at that kind and round, the stem entry is re-pointed: its kind and
+    round change and it keeps everything else. With one, the stem entry's id, status
+    and approval move onto it and the stem entry is removed, so each file keeps one
+    entry. The register step then points the entry at the file's new path."""
+    done, problems = [], []
+    for stem in [e for e in entries if is_stem_entry(e, catalogue)]:
+        target = _target_of(stem, entries, moves, project, catalogue)
+        if target is None:
+            problems.append(
+                "the registry entry %s (kind %s) names %s, and no document maps to it - "
+                "remove the entry, or register its file with `compass issue artifact set` "
+                "and then remove it" % (stem.get("id"), stem.get("kind"),
+                                        stem.get("path") or "no file"))
+            continue
+        kind, number = target
+        number = number if artifact_kinds.repeats(catalogue.get(kind) or {}) else None
+        old_kind = stem.get("kind")
+        held = next((e for e in entries if e is not stem and isinstance(e, dict)
+                     and e.get("kind") == kind and e.get("round") == number), None)
+        if held is None:
+            stem["kind"] = kind
+            if number:
+                stem["round"] = number
+            done.append(Rekind(stem.get("id"), old_kind, kind, number, False))
+            continue
+        if not _may_merge(stem, held, project):
+            problems.append(
+                "the registry entries %s (kind %s, at %s) and %s (%s, at %s) name two "
+                "files that both exist - keep one entry, remove the other, and re-run"
+                % (stem.get("id"), old_kind, stem.get("path"), held.get("id"),
+                   Rekind(None, old_kind, kind, number, True).label, held.get("path")))
+            continue
+        held["id"] = stem.get("id")
+        # A draft stem does not undo an approval the round already holds.
+        if stem.get("approved_by") or not held.get("approved_by"):
+            for key in STATUS_FIELDS:
+                if key in stem:
+                    held[key] = stem[key]
+                elif key != "status":
+                    held.pop(key, None)
+        entries.remove(stem)
+        done.append(Rekind(held["id"], old_kind, kind, number, True))
+    return done, problems
 
 
 def adopted_map(data, project, plan):

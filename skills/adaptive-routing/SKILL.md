@@ -81,7 +81,8 @@ unjustified guess is worse than a question, every time.
 ## Composing and constraining
 
 The CLI does both. You read the four dimensions and run
-`compass approach evaluate --write`; it composes the first approach and
+`compass approach evaluate --write --justify DIM="<why>"`, with one
+`--justify` for each new or changed value; it composes the first approach and
 applies the floors, caps, immovable gates and role rules. That split is the
 determinism boundary and it is the point of the whole design: judgement
 produces the assessment, mechanism produces the approach.

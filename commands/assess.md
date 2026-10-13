@@ -55,7 +55,7 @@ before you write anything when any of these holds:
 - the change is not a small one an engineer is making;
 - `quick-fix start` said the approach is heavier than a quick fix;
 - `--reassess` was passed; it re-runs `compass approach evaluate --write
-  --reason "..."`, which commits the next generation with any
+  --reason "..." --justify DIM="..."`, which commits the next generation with any
   `compass issue configure` proposal; `--reset-config` drops `config:`.
 
 It holds the setup, `--reassess`, the full procedure and the gate.

@@ -52,6 +52,12 @@ assessment:
   goal: delivery
   role: engineer
   labels: []
+justifications:
+  risk: A fixture issue for timing.
+  familiarity: A fixture issue for timing.
+  size: A fixture issue for timing.
+  goal: A fixture issue for timing.
+  role: A fixture issue for timing.
 evidence: []
 """
 

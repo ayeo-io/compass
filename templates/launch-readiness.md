@@ -1,7 +1,5 @@
 <!--
 TEMPLATE: launch-readiness.md
-Produced by: the product marketer via `/compass:position`; completed at ship time.
-Lives at:    docs/compass/<created>-<issue-slug>/launch-readiness.md
 Role in the pipeline: the marketer's GATE artifact. The routing-policy
 role_rule for `product-marketer` needs this file and blocks shipping until
 every claim in positioning.md traces to a PASSING scenario. This is where
@@ -15,7 +13,7 @@ ship refuses to close on it.
 
 # Launch Readiness - {{ISSUE_SLUG}}
 
-> **Author:** {{PRODUCT MARKETER NAME}} · **Date:** {{DATE}} · **Owning agent:** `product-marketer`
+> **Author:** {{PRODUCT MARKETER NAME}} · **Date:** {{DATE}}
 > **Reads from:** positioning.md (the claims), verification-report.md (the scenario results)
 > **Gates:** ship - the routing-policy.md role rule adds the blocking `verify.claims` gate.
 

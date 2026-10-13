@@ -116,7 +116,6 @@ compass.yml                     The one file a person edits: settings, and the p
 ├── work/
 │   └── <issue-slug>/            One directory per issue: its machine state
 │       ├── manifest.yml         The manifest
-│       ├── delivery-approach.md The delivery-approach record (prose). A quick fix keeps it in docs/compass/ instead
 │       ├── generations/<n>/     The configuration the issue runs against (written by compass approach evaluate --write)
 │       ├── evidence/            red/green records + typed gate evidence
 │       ├── .red, .spike, ...    The markers the hook reads

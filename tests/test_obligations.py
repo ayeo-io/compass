@@ -421,7 +421,9 @@ def test_ob_3_a_spike_owes_only_its_own_guardrails(preset_config):
         preset_config, _assessment(goal="exploration", size="small", risk="trivial"))
     assert got.approach == "spike"
     assert "S1" in got.gate_set and "G1" not in got.gate_set
-    assert got.artifacts_owed == {}
+    # A spike owes its record and its conclusion (issue `artifact-catalogue-fields`).
+    assert got.artifacts_owed == {"delivery-approach": "lightweight",
+                                  "spike-conclusion": "thorough"}
 
 
 def test_ob_3_loop_ceilings_equal_the_lowest_matching_limit(preset_config):

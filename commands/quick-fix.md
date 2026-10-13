@@ -48,8 +48,7 @@ The values, and nothing else:
 - familiarity: `greenfield`, `brownfield-mapped` or `brownfield-unmapped`
 - size: `atomic`, `small`, `medium`, `large` or `product`
 
-`--goal` and `--role` default to `delivery` and `engineer`. `--test` can
-repeat. The scenario id is `TRC-001` unless you pass `--scenario-id`.
+`--goal` and `--role` are optional (`VALUE - reason`). `--test` can repeat. The scenario id is `TRC-001` unless you pass `--scenario-id`.
 
 Pass `--labels` with the domains touched, comma-separated. Only `auth`,
 `payments`, `personal-data` and `migrations` bring the heavier process and

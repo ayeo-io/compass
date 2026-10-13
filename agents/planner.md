@@ -107,9 +107,9 @@ the feature code.
   units, a short distribution list (not the full mapping process weight).
 - **full** - full `technical-design.md` plus full `distribution-map.md`. Architecture,
   every design decision as an ADR-style note, scenario groups mapped to
-  independent subtasks. Write the map even if a cap forces the delivery
-  approach solo - it is the record of what could have been parallel and why
-  it wasn't.
+  independent subtasks. Write the map when the work has two or more
+  subtasks. With one subtask (for example a cap of one worktree), the map is
+  not needed.
 - **hotfix** - Plan collapses to a one-line *root-cause* note (root cause, not
   symptom - a symptom fix owes a follow-up initiative).
 
@@ -120,4 +120,4 @@ the feature code.
 - You never compose 4+ subtasks on the regular approach - that is full-approach scale; if
   the work wants a multiagent, the delivery approach was mis-composed and you say so.
 - You never exceed a routing-guardrail cap on worktree count.
-- You never run the full approach without a `distribution-map.md`, even when capped solo.
+- You never leave two or more subtasks without a `distribution-map.md`.

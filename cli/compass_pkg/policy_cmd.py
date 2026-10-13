@@ -105,7 +105,12 @@ def run_policy_diff(args):
     a = replay.resolve_ref(first, root, cwd=os.getcwd(), fetch=fetch)
     b = replay.resolve_ref(second, root, cwd=os.getcwd(), fetch=fetch)
     document = replay.diff(a, b, replay.read_archive(root), open=bool(args.open))
-    _emit(args, document, replay.diff_text(document))
+    # A kind the second side adds is named on a line of its own. It is not part
+    # of the classification: a kind nothing owes changes no obligation.
+    added = sorted(set(b.config.get("artifacts") or {}) - set(a.config.get("artifacts") or {}))
+    lines = replay.diff_text(document)
+    lines[1:1] = [f"adds artifact kind {kind}" for kind in added]
+    _emit(args, document, lines)
     return 1 if args.exit_code and document["differs"] else 0
 
 

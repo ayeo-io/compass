@@ -19,7 +19,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from compass_pkg import lifecycle, status_words
+from compass_pkg import artifact_owed, lifecycle, status_words
 from compass_pkg.stable_ids import STAGE_ASSESS
 
 NOT_ASSESSED = "not assessed"
@@ -37,6 +37,9 @@ class IssueDetail:
     stage_problem: object = None
     #: The reason of the blocked flag while it counts (an issue in progress or in review), else None.
     blocked: object = None
+    #: One `{id, kind, round, status, path}` for each registered document, in registry order. A
+    #: kind that repeats has one for each round, so no reader shows only the first.
+    documents: tuple = ()
 
     @property
     def gates(self):
@@ -47,6 +50,35 @@ def _gate_counts(manifest):
     gates = manifest.get("gates")
     entries = [g for g in gates if isinstance(g, dict)] if isinstance(gates, list) else []
     return sum(1 for g in entries if g.get("status") == "pass"), len(entries)
+
+
+def _view(task_dir, manifest=None):
+    from compass_pkg import effective
+    try:
+        return effective.view_or_legacy(task_dir, manifest=manifest)
+    except Exception:                                       # noqa: BLE001 - nothing declares a condition
+        return None
+
+
+def _documents(manifest, task_dir=None):
+    """The registered documents, each as the facts a reader shows. `text` is the
+    "not needed: ..." line of a document whose condition is false and that has no
+    file. It comes from `artifact_owed`, the function the issue page uses."""
+    found = []
+    view, read = None, False
+    for entry in manifest.get("artifacts") or []:
+        if isinstance(entry, dict) and entry.get("kind"):
+            rnd = entry.get("round")
+            text = None
+            if task_dir and not entry.get("path") and entry.get("status") != "omitted":
+                if not read:
+                    view, read = _view(task_dir, manifest), True
+                text = artifact_owed.not_needed(manifest, view, entry)
+            found.append({"id": str(entry.get("id") or ""), "kind": str(entry["kind"]),
+                          "round": rnd if isinstance(rnd, int) else None,
+                          "status": str(entry.get("status") or ""),
+                          "path": str(entry.get("path") or ""), "text": text})
+    return tuple(found)
 
 
 def _stage(manifest, task_dir, state, recorded):
@@ -72,7 +104,8 @@ def detail(manifest, task_dir):
     flag = lifecycle.blocked_flag(manifest, task_dir)
     return IssueDetail(str(manifest.get("delivery_approach") or NOT_ASSESSED), state, stage,
                        passed, total, problem,
-                       str(flag.get("reason") or "no reason recorded") if flag else None)
+                       str(flag.get("reason") or "no reason recorded") if flag else None,
+                       _documents(manifest, task_dir))
 
 
 def state_text(manifest, task_dir):

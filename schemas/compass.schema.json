@@ -189,8 +189,12 @@
       "patternProperties": {
         "^[A-Za-z][A-Za-z0-9._-]*$": {
           "additionalProperties": false,
-          "description": "One artifact: the file that holds it and what it builds on.",
+          "description": "One artifact: the file that holds it, who reads it and who writes it, its headings per depth and what it builds on.",
           "properties": {
+            "audience": {
+              "description": "One line saying who reads the document and what the reader decides from it. The skeleton and the glossary print it.",
+              "type": "string"
+            },
             "bookkeeping": {
               "description": "Whether the artifact is a record the framework keeps about the work, such as the dashboard, the receipt or the verification report. Such an artifact is never an input to another.",
               "type": "boolean"
@@ -243,6 +247,10 @@
                 }
               ]
             },
+            "every_approach": {
+              "description": "Whether every delivery approach owes the document, at the depth of its own stage, unless the approach lists it already.",
+              "type": "boolean"
+            },
             "file": {
               "description": "The file name of the artifact in the issue's folder, for example `acceptance-criteria.md`.",
               "type": "string"
@@ -254,6 +262,10 @@
                 "hard"
               ]
             },
+            "owner": {
+              "description": "The role that writes the document: an agent id or a value of the `role` dimension, for example `planner`. A layer's own top-level `owner` is a different thing: the person who approves that layer's waivers.",
+              "type": "string"
+            },
             "remove": {
               "const": true,
               "description": "When `true`, removes the inherited entry. This fails while another entry still refers to it."
@@ -262,10 +274,22 @@
               "const": true,
               "description": "When `true`, the entry in this layer replaces the inherited entry as a whole."
             },
+            "required_when": {
+              "description": "A condition that must hold for the document to be owed, for example `{subtasks: {min: 2}}`. The document is owed whenever it is absent.",
+              "type": "object"
+            },
+            "sections": {
+              "description": "The headings of the document, in order, for each depth it can be written at (`lightweight`, `thorough`). A list may be empty only for a document that is one rendered block.",
+              "type": "object"
+            },
             "set": {
               "additionalProperties": false,
               "description": "Changes only the fields named here and leaves every other field of the inherited entry as it is.",
               "properties": {
+                "audience": {
+                  "description": "One line saying who reads the document and what the reader decides from it. The skeleton and the glossary print it.",
+                  "type": "string"
+                },
                 "bookkeeping": {
                   "description": "Whether the artifact is a record the framework keeps about the work, such as the dashboard, the receipt or the verification report. Such an artifact is never an input to another.",
                   "type": "boolean"
@@ -318,19 +342,43 @@
                     }
                   ]
                 },
+                "every_approach": {
+                  "description": "Whether every delivery approach owes the document, at the depth of its own stage, unless the approach lists it already.",
+                  "type": "boolean"
+                },
                 "file": {
                   "description": "The file name of the artifact in the issue's folder, for example `acceptance-criteria.md`.",
                   "type": "string"
                 },
+                "owner": {
+                  "description": "The role that writes the document: an agent id or a value of the `role` dimension, for example `planner`. A layer's own top-level `owner` is a different thing: the person who approves that layer's waivers.",
+                  "type": "string"
+                },
+                "required_when": {
+                  "description": "A condition that must hold for the document to be owed, for example `{subtasks: {min: 2}}`. The document is owed whenever it is absent.",
+                  "type": "object"
+                },
+                "sections": {
+                  "description": "The headings of the document, in order, for each depth it can be written at (`lightweight`, `thorough`). A list may be empty only for a document that is one rendered block.",
+                  "type": "object"
+                },
                 "stage": {
-                  "description": "The id of the stage that owns the artifact, for example `plan` for the technical design. An artifact with no stage is owned by ship.",
+                  "description": "The id of the stage that owns the artifact, for example `plan` for the technical design.",
+                  "type": "string"
+                },
+                "stands_for": {
+                  "description": "The name the industry uses for this kind of document, for example `hld` for the technical design. The glossary prints it.",
                   "type": "string"
                 }
               },
               "type": "object"
             },
             "stage": {
-              "description": "The id of the stage that owns the artifact, for example `plan` for the technical design. An artifact with no stage is owned by ship.",
+              "description": "The id of the stage that owns the artifact, for example `plan` for the technical design.",
+              "type": "string"
+            },
+            "stands_for": {
+              "description": "The name the industry uses for this kind of document, for example `hld` for the technical design. The glossary prints it.",
               "type": "string"
             },
             "unlock": {

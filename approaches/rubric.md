@@ -83,8 +83,10 @@ the shape.
 You do not compose the approach. Run:
 
 ```
-compass approach evaluate --issue <slug> --write
+compass approach evaluate --issue <slug> --write --justify risk="<why>" --justify size="<why>" ...
 ```
+
+Each assessed dimension needs a `--justify` when its value is new or changed.
 
 It applies the routing rules in force (the shipped default preset plus the
 project's `compass.yml`) to the assessment you just recorded - composing the
@@ -97,10 +99,11 @@ or explaining a result. `--verbose` prints which rules fired.
 
 ## Step 4 - Write `delivery-approach.md` and confirm
 
-Assess writes `.compass/work/<issue-slug>/delivery-approach.md` from
-`templates/delivery-approach.md`; on a quick fix, `compass quick-fix start`
-writes it to `docs/compass/<created>-<issue-slug>/` and registers it. The
-pre-tool hook finds it either way. It contains:
+Assess writes `delivery-approach.md` from `templates/delivery-approach.md` at
+the path `compass issue artifact-path delivery-approach` prints, in
+`docs/compass/<created>-<issue-slug>/`, and registers it with `compass issue
+artifact set`; on a quick fix, `compass quick-fix start` does both. The
+pre-tool hook finds it through the registry. It contains:
 
 - the four dimension assessment, each with its one-line justification;
 - the composed candidate approach;

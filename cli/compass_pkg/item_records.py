@@ -2,7 +2,8 @@
 """Read the manifest records that meet an exit-list or entry-list item.
 
 The Definition of Done is the issue's configured `verify` exit list and the
-Definition of Ready its `plan` entry list, whatever capability says they are
+Definition of Ready its `plan` entry list. The `plan` and `breakdown` exit lists are
+read the same way, whatever capability says they are
 evaluated (the page that shows them is not the evaluator). An item is a check
 id in one of those lists. One of four records meets it, and a command writes
 each:
@@ -29,11 +30,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from compass_pkg.stable_ids import STAGE_PLAN, STAGE_VERIFY
+from compass_pkg.stable_ids import STAGE_BREAKDOWN, STAGE_PLAN, STAGE_VERIFY
 
 #: The two lists: `dod` is the `verify` exit list, `dor` the `plan` entry list.
-LISTS = {"dod": (STAGE_VERIFY, "exit"), "dor": (STAGE_PLAN, "entry")}
-TITLES = {"dod": "Definition of Done", "dor": "Definition of Ready"}
+LISTS = {"dod": (STAGE_VERIFY, "exit"), "dor": (STAGE_PLAN, "entry"),
+         "plan-exit": (STAGE_PLAN, "exit"), "breakdown-exit": (STAGE_BREAKDOWN, "exit")}
+TITLES = {"dod": "Definition of Done", "dor": "Definition of Ready",
+          "plan-exit": "Plan exit checks", "breakdown-exit": "Breakdown exit checks"}
+#: What a block says when its list is empty. The two stage exit lists are empty in the
+#: shipped default; the Definition of Done and Ready keep one sentence.
+EMPTY = {"plan-exit": "No exit checks are configured for the plan stage.",
+         "breakdown-exit": "No exit checks are configured for the breakdown stage."}
 
 MET_EVIDENCE, TICKED, CARRIED, MET_CARRIED, PAGE_TICK, OPEN = (
     "met-evidence", "ticked", "carried", "met-carried", "page-tick", "open")
@@ -111,7 +118,7 @@ def state_of(task, check_id, accepted):
 
 
 def items(task, task_dir, view, which):
-    """The `Item` of each check in the list `which` (`dod` or `dor`)."""
+    """The `Item` of each check in the list `which` (a key of `LISTS`)."""
     accepted = accepted_types()
     out = []
     for check_id, statement in listed_checks(view, which):
@@ -129,9 +136,9 @@ def unlisted_problem(view, check_id, command):
     if any(check_id in ids for ids in lists.values()):
         return None
     shown = "; ".join("%s: %s" % (TITLES[w], ", ".join(ids) or "no item")
-                      for w, ids in lists.items())
-    return ("%s: '%s' is not an item of this issue's Definition of Done or Ready. The issue "
-            "lists - %s." % (command, check_id, shown))
+                      for w, ids in lists.items() if ids or w in ("dod", "dor"))
+    return ("%s: '%s' is not an item of this issue's Definition of Done or Ready, or of a "
+            "stage exit list. The issue lists - %s." % (command, check_id, shown))
 
 
 def evidence_type_problem(evidence_type, command):

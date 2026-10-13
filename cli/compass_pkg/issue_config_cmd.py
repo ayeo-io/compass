@@ -184,7 +184,8 @@ def _commit(args, task_dir, slug):
     def reassess(reset):
         return routing.cmd_route_evaluate(types.SimpleNamespace(
             reading=None, task=slug, write=True, reason=args.reason, kind=None, _mode=None,
-            evidence_out=None, json=False, reset_config=reset, adopt=target))
+            evidence_out=None, json=False, reset_config=reset, adopt=target,
+            justify=getattr(args, "justify", None)))
     try:
         return reassess(False)
     except CompassError as first:
@@ -374,4 +375,7 @@ def register(issue_subs, issue_arg):
     p.add_argument("--commit", nargs="?", const="next", metavar="N",
                    help="adopt the complete leftover folder N (default: the next one)")
     p.add_argument("--reason", help="with --commit: the reason a reassess records")
+    p.add_argument("--justify", action="append", metavar="DIM=TEXT",
+                   help="with --commit: the reason for an assessed value that changed since "
+                        "the last evaluation (as for `compass approach evaluate --write`)")
     p.set_defaults(func=run_configure, output_kind="report")

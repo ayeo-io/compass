@@ -136,6 +136,11 @@ def build_parser():
     pre.add_argument("--write", action="store_true",
                      help="fold the approach, stages and gates back into the "
                           "issue's manifest.yml")
+    pre.add_argument("--justify", action="append", metavar="DIM=TEXT",
+                     help="with --write: the reason for an assessed value, "
+                          "recorded under the manifest's justifications key "
+                          "(repeatable). A new or changed value of risk, "
+                          "familiarity, size, goal, role or urgency needs one.")
     pre.add_argument("--offline", action="store_true",
                      help="read git parents from the cache only and fetch "
                           "nothing; also set by COMPASS_OFFLINE=1")
@@ -364,20 +369,26 @@ def build_parser():
     ptag = pts.add_parser("artifact", help="a document's status in the issue's review pack")
     pta = ptag.add_subparsers(dest="artifact_cmd", required=True).add_parser(
         "set", help="set a document's status in the issue's review pack")
-    pta.add_argument("kind", help="document kind, e.g. design (must be one the issue earned)")
+    pta.add_argument("kind", help="document kind, e.g. technical-design (any kind the issue's catalogue declares)")
     pta.add_argument("--status", required=True, choices=list(ARTIFACT_STATUSES),
                      help="new status")
     pta.add_argument("--reason", help="why - required when omitting")
     pta.add_argument("--path", help="where the document was written, relative to the project root (e.g. docs/compass/2026-09-08-my-issue/technical-design.md)")
+    pta.add_argument("--round", type=int, help="the round of a kind that repeats, such as review-<n>.md; default is the round in the path, else the latest")
+    pta.add_argument("--decision", help="spike-conclusion only: how the spike closes (discard, graduate-to-delivery or defer); also writes the evidence record the check reads")
+    pta.add_argument("--next-issue", dest="next_issue", help="with --decision graduate-to-delivery: the slug of the delivery issue")
     issue_arg(pta)
     pta.set_defaults(func=cmd_issue_artifact, output_kind="hand-off")
 
     ptap = pts.add_parser("artifact-path", help="print where one of an issue's documents is; non-zero when it is not there")
-    ptap.add_argument("kind", help="document kind, e.g. delivery-approach"); issue_arg(ptap); ptap.set_defaults(func=cmd_issue_artifact_path, output_kind="hand-off")
+    ptap.add_argument("kind", help="document kind, e.g. delivery-approach")
+    ptap.add_argument("--round", type=int, help="the round of a kind that repeats, such as review-<n>.md; default is the latest")
+    issue_arg(ptap); ptap.set_defaults(func=cmd_issue_artifact_path, output_kind="hand-off")
     pttg = pts.add_parser("template", help="document templates")
     ptt = pttg.add_subparsers(dest="template_cmd", required=True).add_parser(
-        "show", help="print a document template with its checklists rendered from the issue's stage lists")
-    ptt.add_argument("kind", help="template kind, e.g. requirements-review or verification-report")
+        "show", help="print the skeleton of a document kind from the catalogue, or a template that is not a kind as the file")
+    ptt.add_argument("kind", help="document kind or template name, e.g. requirements-review or verification-report")
+    ptt.add_argument("--depth", help="the depth to print, lightweight or thorough; default is the depth the issue registers the kind at, else thorough")
     issue_arg(ptt)
     from compass_pkg.template_lists import cmd_issue_template as _cmd_issue_template
     ptt.set_defaults(func=_cmd_issue_template, output_kind="hand-off")
@@ -625,6 +636,7 @@ def build_parser():
     p_gloss.add_argument("--internal", action="store_true", help=argparse.SUPPRESS)
     p_gloss.add_argument("--out", help=argparse.SUPPRESS)
     p_gloss.add_argument("--root", help=argparse.SUPPRESS)
+    p_gloss.add_argument("--catalogue-out", help=argparse.SUPPRESS)
     p_gloss.set_defaults(func=cmd_derive_glossary, output_kind="report")
 
     # Private entry point for the archive migration core that `compass

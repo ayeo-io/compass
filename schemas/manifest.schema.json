@@ -992,6 +992,11 @@
       "description": "Optional. The assessment `compass approach evaluate --write` last computed from. Written by that command and read only by the next run of it, to notice a corrected dimension when the computed approach absorbs the correction. Not a second source of truth: `assessment` holds the four dimensions, and this is a copy of what was last evaluated.",
       "additionalProperties": true
     },
+    "justifications": {
+      "type": "object",
+      "description": "Optional. The reason given for each assessed value, one line per dimension (risk, familiarity, size, goal, role, urgency). It sits beside `assessment` and never inside it. `compass approach evaluate --write --justify DIM=TEXT` and `compass quick-fix start` write it. A new or changed value needs a line; an unchanged value keeps the line it has, or none on an issue that predates the key.",
+      "additionalProperties": {"type": "string"}
+    },
     "generation": {
       "type": "integer",
       "minimum": 0,
@@ -1051,6 +1056,11 @@
           "revision": {
             "type": "integer",
             "description": "Optional. Bumped when the document materially changes; an approval binds to it."
+          },
+          "round": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Optional. The round of a kind that repeats, such as `review-<n>.md`: one entry per round, each with its own id and path. Read from the filename. A reader that names no round gets the latest."
           },
           "digest": {
             "type": "string",

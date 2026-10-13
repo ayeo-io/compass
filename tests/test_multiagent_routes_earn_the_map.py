@@ -28,11 +28,15 @@ def test_frm_1_a_feature_assessment_earns_and_registers_the_map(make_task, run_c
     make_task(SLUG, BODY)
     evaluate = run_cli("approach", "evaluate", "--issue", SLUG, "--write")
     assert evaluate.returncode == 0, evaluate.combined
-    doc = project / "docs" / "compass" / "map.md"
+    # A document has one home: the issue's documents folder.
+    created = yaml.safe_load((project / ".compass" / "work" / SLUG / "manifest.yml")
+                             .read_text())["created"]
+    home = f"docs/compass/{created}-{SLUG}/distribution-map.md"
+    doc = project / home
     doc.parent.mkdir(parents=True, exist_ok=True)
     doc.write_text("# Distribution map\n")
     register = run_cli("issue", "artifact", "distribution-map", "--issue", SLUG,
-                       "--status", "draft", "--path", "docs/compass/map.md")
+                       "--status", "draft", "--path", home)
     assert register.returncode == 0, register.combined
 
 

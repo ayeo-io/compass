@@ -1456,11 +1456,6 @@ _register(Rule(
             "the JSON mirror of the already-exempted governance/signals.yml "
             "line above - names the Verify stage, not the verb."),
         Exemption(
-            "templates/delivery-approach.md",
-            "| Verify | {{gate count}}",
-            "names the Verify stage in the per-stage weight table, not the "
-            "verb."),
-        Exemption(
             "templates/devlog.md",
             "Implement | Verify}}",
             "names the Verify stage in a placeholder list of stage names, "
@@ -3742,8 +3737,10 @@ _GROWING_REACH = {
     # 72 with tests/fixtures/compat/v5.6.0-governance.tgz, the packed 5.6.0 governance files;
     # 73 with the check-corpus case label for the recorded case of dod-evidence-typed, which
     #    holds a verdict and one line (the dashboard-current labels left and the
-    #    rendered-blocks-current labels came, two each).
-    "PBW-C4": (lambda path: path.startswith("tests/"), 73),
+    #    rendered-blocks-current labels came, two each);
+    # 74 with tests/fixtures/ad-hoc-kinds.txt, the kind names the 6.x migrate lists on
+    #    the archive copy, one per line.
+    "PBW-C4": (lambda path: path.startswith("tests/"), 74),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

@@ -37,7 +37,8 @@ from compass_pkg.core import _stage_key_renames, ASSESSMENT_KEY_MAP, COMPASS_SCH
 from compass_pkg.governance import governance_drift
 from compass_pkg import word_map
 from compass_pkg.stable_ids import (APPROACH_FULL, APPROACH_REGULAR, APPROACH_SPIKE,
-                                    DEPTH_THOROUGH, MODE_LIGHTWEIGHT, MODE_THOROUGH)
+                                    ARTIFACT_DEPTHS, DEPTH_LIGHTWEIGHT, DEPTH_THOROUGH, MODE_LIGHTWEIGHT,
+                                    MODE_THOROUGH)
 from compass_pkg.render import fired_rule_line
 from compass_pkg.manifest import annotate_gate_accepts_text
 
@@ -63,6 +64,40 @@ from compass_pkg.manifest import annotate_gate_accepts_text
 # display layer, so nothing prints the retired name.
 def _display_blocked_phase(phase):
     return display_stage(_stage_key_renames().get(phase, phase))
+
+
+#: The text a rule's `changed` list holds for a gate it adds. The writer formats it and
+#: `gates_added_by` parses it, so the gate-set block cannot disagree with the evaluator.
+GATE_ADDED = "gate '{gate}' added to the approach's gate set"
+_GATE_ADDED_RE = re.compile("^" + re.escape(GATE_ADDED).replace(r"\{gate\}", "(.+?)") + "$")
+
+
+def gates_added_by(fired):
+    """`{gate id: [rule ids]}` from the policy rules recorded as fired."""
+    found = {}
+    for rule in fired or []:
+        if not isinstance(rule, dict):
+            continue
+        for text in rule.get("changed") or []:
+            match = _GATE_ADDED_RE.match(str(text))
+            if match:
+                found.setdefault(match.group(1), []).append(str(rule.get("id", "?")))
+    return found
+
+
+def policy_line(view, policy_file=None, policy=None):
+    """Which policy computed an approach, in one line. `approach evaluate --verbose` and
+    the delivery-approach record's policy-rules block both print it. `policy_file` is
+    the path of a project's own policy file when the approach was read from one."""
+    if policy_file:
+        version = (policy or {}).get("version", "unknown")
+        return f"{policy_file} (v{version})"
+    if view is not None and view.source == "generation":
+        return (f"generation {view.generation} of this issue "
+                f"(parent {view.parent_version() or 'unknown'})")
+    if view is None:
+        return "this project's governance files"
+    return "this project's effective configuration (compass.yml over the shipped default)"
 
 
 def canonical_routes(policy):
@@ -320,8 +355,7 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
                 display_stage(s) for s in fl["never_skip"]))
         if fl.get("add_gate"):
             floor_gates.append(fl["add_gate"])
-            changed.append(f"gate '{fl['add_gate']}' added to the "
-                           f"approach's gate set")
+            changed.append(GATE_ADDED.format(gate=fl["add_gate"]))
         if fl.get("add_artifact"):
             rule_artifacts.append((fl["add_artifact"], fl.get("rationale", "")))
             changed.append(f"artifact '{fl['add_artifact']}' added to the "
@@ -393,8 +427,7 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
                            f"blocked until: {rr.get('until', '')}")
         if rr.get("gate"):
             role_gates.append(rr["gate"])
-            changed.append(f"gate '{rr['gate']}' added to the "
-                           f"approach's gate set")
+            changed.append(GATE_ADDED.format(gate=rr["gate"]))
         if changed:
             fired.append({"id": rr.get("id", "?"), "kind": "role_rule",
                           "rationale": rr.get("rationale", ""), "changed": changed})
@@ -463,6 +496,20 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
             # "regular" and "full" are adjectives, so they take a noun.
             "reason": "every %s carries %s" % (
                 display_shape(final) + (" approach" if final in (APPROACH_REGULAR, APPROACH_FULL) else ""),
+                "one" if depth == DEPTH_THOROUGH else "a lightweight one"),
+        })
+    # A kind the catalogue marks `every_approach` joins every approach that does not
+    # name it, at the depth the approach gives the kind's own stage (a stage mode that
+    # is an artifact depth), else lightweight.
+    for kind, owner in (policy.get("every_approach") or {}).items():
+        if any(a["kind"] == kind for a in artifacts):
+            continue
+        mode = phases.get(owner)
+        depth = mode if mode in ARTIFACT_DEPTHS else DEPTH_LIGHTWEIGHT
+        artifacts.append({
+            "id": "ART-" + str(kind).upper().replace("-", "_"),
+            "kind": kind, "status": "draft", "depth": depth,
+            "reason": "every approach carries %s" % (
                 "one" if depth == DEPTH_THOROUGH else "a lightweight one"),
         })
     # A role rule already demands documents via `require_artifact` - a marketer
@@ -670,6 +717,15 @@ def cmd_route_evaluate(args):
         gov = None
         policy = view.evaluator_policy()
         autonomy = view.autonomy
+    # The justifications are settled before anything prints or is written, so a
+    # refusal leaves the manifest, the generations and the documents as they were.
+    recorded_reasons = None
+    if getattr(args, "write", False) and task is not None:
+        from compass_pkg import justifications
+        recorded_reasons, missing = justifications.merge(
+            task, readings, justifications.parse(getattr(args, "justify", None)), view)
+        if missing:
+            raise CompassError(justifications.refusal(missing))
     # The drift report compares a project's copy of the policy with the
     # framework's. A configuration resolved over such a copy still gets it.
     drift_gov = gov
@@ -751,15 +807,8 @@ def cmd_route_evaluate(args):
         # but not which policy file produced them, so print the policy
         # first, so a reader can tell a genuinely light route from a
         # stale-governance one.
-        if gov:
-            print(f"  policy          : {os.path.join(gov, 'routing-policy.yml')} "
-                  f"(v{policy.get('version', 'unknown')})")
-        elif view.source == "generation":
-            print(f"  policy          : generation {view.generation} of this issue "
-                  f"(parent {view.parent_version() or 'unknown'})")
-        else:
-            print("  policy          : this project's effective configuration "
-                  "(compass.yml over the shipped default)")
+        _policy_file = os.path.join(gov, "routing-policy.yml") if gov else None
+        print(f"  policy          : {policy_line(view, _policy_file, policy)}")
         drift = governance_drift(drift_gov) if drift_gov else None
         if drift is None:
             pass
@@ -887,6 +936,8 @@ def cmd_route_evaluate(args):
         # load as one dict and the comparison above can never see a
         # difference - the field would be written and be useless.
         task["evaluated_assessment"] = dict(task.get("assessment") or {})
+        if recorded_reasons:
+            task["justifications"] = recorded_reasons
         task["delivery_approach"] = result["delivery_approach"]
         task["policy_rules_fired"] = result["policy_rules_fired"]
         task["stages"] = result["stages"]
@@ -900,26 +951,36 @@ def cmd_route_evaluate(args):
         # Seed the artifact registry the same way the gate list is seeded:
         # what routing computed, without clobbering a status or path a stage
         # has already recorded against an entry.
-        recorded = {a.get("kind"): a for a in task.get("artifacts", [])
-                    if isinstance(a, dict)}
+        recorded = [a for a in task.get("artifacts", []) if isinstance(a, dict)]
+        # A kind that repeats has one entry per round, so the merge keys by kind and
+        # round: it keeps every round of an earned kind and never collapses them.
+        from compass_pkg import artifact_kinds
+        voluntary = artifact_kinds.voluntary(view)
         merged = []
         for a in result["artifacts"]:
-            keep = recorded.get(a["kind"])
-            if keep:
-                keep = dict(keep)
-                keep["reason"] = a["reason"]      # the rule that earned it
-                merged.append(keep)
-            else:
+            keep = [r for r in recorded if r.get("kind") == a["kind"]]
+            if keep and not any(isinstance(r.get("round"), int) for r in keep):
+                keep = keep[-1:]
+            for kept in keep:
+                kept = dict(kept)
+                kept["reason"] = a["reason"]      # the rule that earned it
+                merged.append(kept)
+            if not keep:
                 merged.append(a)
         # A human-recorded omission of something routing no longer earns is
         # kept: it is a decision someone took, not stale computed output.
         # A document that was written (it has a path) stays too, as
         # `superseded`, so the file keeps a record of why it is no longer owed.
-        # An entry with no path records no document and is dropped.
-        for kind, a in recorded.items():
-            if any(m["kind"] == kind for m in merged):
+        # An entry with no path records no document and is dropped. A voluntary
+        # kind (no approach, rule or flag asks for it) is never superseded: a
+        # reassessment cannot unearn what it never earned.
+        earned = {m["kind"] for m in merged}
+        for a in recorded:
+            if a.get("kind") in earned:
                 continue
             if a.get("status") == "omitted":
+                merged.append(a)
+            elif a.get("path") and a.get("kind") in voluntary:
                 merged.append(a)
             elif a.get("path") and evaluated_before:
                 from compass_pkg import artifact_status

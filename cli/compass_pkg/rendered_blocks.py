@@ -38,7 +38,8 @@ from compass_pkg import atomic_io
 #: opening marker is a malformed marker.
 KINDS = ("coverage", "gates", "dod", "dor", "artifacts", "evidence", "follow-ups",
          "decisions-taken", "header", "ask", "decision-required", "acceptance", "related",
-         "decisions", "traceability", "deliberately-omitted", "verification-note", "index")
+         "decisions", "traceability", "deliberately-omitted", "verification-note", "index",
+         "assessment", "policy-rules", "stage-weights", "gate-set", "plan-exit", "breakdown-exit")
 
 #: The prefix of the temporary files the render writes, so a killed render's
 #: leftover can be told from a person's file.

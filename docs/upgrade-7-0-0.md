@@ -100,3 +100,73 @@ After `--apply`, run `compass issue render --all --dry-run` to see the files and
 | `rendered-blocks-current` | check in `G4` | Fails a block that disagrees with the records |
 | `evidence[].meets`, `follow_ups[].defers`, `page_ticks` | `manifest.yml` | The records that meet an item. Only migration writes `page_ticks` |
 | `<!-- compass:render KIND -->` | marker in a document | The start of a block Compass writes. Do not edit between the markers |
+
+## The artifact catalogue, the delivery-approach record and the archive
+
+The artifact catalogue now describes each document: who writes it, who reads it, its traditional name and its sections. The delivery-approach record lives in the documents folder on every approach, each assessed value carries a justification, and a review round is a file of its own. `compass issue migrate` moves and renames the archive's documents to match. The decisions are ADR-053 to ADR-056 in `architecture/decisions/`. The facts are in `docs/artifact-catalogue.md`.
+
+### What breaks
+
+- **An added artifact kind needs five more fields.** A project layer, or a project that keeps its own copy of the 5.x governance files, that declares a kind the shipped default does not declare stops resolving with `M-ADD-PARTIAL`. The entry needs `stage`, `owner`, `audience`, `stands_for` and `sections` beside `file`. The error names each missing field. There is no flag and no alias, and the legacy adapter does not write placeholder values for a copied 5.x file.
+- **`compass approach evaluate --write` refuses a value with no justification.** A value of an ordered or enumerated dimension (risk, familiarity, size, goal, role or urgency) that is new or changed since the last evaluation needs `--justify DIM=TEXT`. The refusal names every such dimension and writes nothing. A second write with an unchanged assessment, and an archived issue with no `justifications` key, are not refused.
+- **`compass quick-fix start --goal` and `--role` need a reason.** Give `--goal VALUE - REASON`. A value with no reason is refused, naming the dimension, before anything is written. Leave the flag out and the dimension is recorded as not assessed.
+- **`compass issue artifact set --path` refuses a path outside the kind's home.** Each kind has one home, `docs/compass/<created>-<issue>/<file>`. The refusal names it.
+- **The spike conclusion's flag is `--next-issue`.** `compass issue artifact set spike-conclusion --decision graduate-to-delivery --next-issue <slug>` names the delivery issue. The flag is new in 7.0.0 and has no alias. A pre-release build spelled it with the retired word, so only a script written against that build is affected.
+- **The migrate renames and moves documents.** Review rounds become `review-<n>.md`, the delivery-approach record moves into the documents folder, and a one-subtask stub map becomes `distribution-map.md.v6.bak`. A script or note that names an old filename must use the new one. Each registry entry's reason names the old filename.
+- **The migrate removes the compatibility pointer.** A `pre-tool.sh` hook installed before 5.0.0 looks for the record beside the manifest only, so it blocks every edit once the pointer is gone. Update the plugin before you migrate.
+
+### What changes
+
+- **`compass issue template show <kind>` prints a skeleton** built from the catalogue, at `--depth lightweight` or `thorough`. A template that is not a kind is printed as the file.
+- **The delivery-approach record is in the documents folder on every approach.** `compass approach evaluate --write` registers its depth and no path. The hooks still find a record beside the manifest, so an issue the migrate has not reached keeps working.
+- **The distribution map is owed from two subtasks.** With fewer, `compass check` does not judge it, `compass next` does not name it, and the issue page, the board and the receipt say "not needed: one subtask". A map recorded as `omitted` keeps its meaning.
+- **Review rounds are `review-<n>.md`,** registered under the kind `review` with a `round`. `compass issue artifact set` and `compass issue artifact-path` take `--round`; with none they read the latest round.
+- **A spike owes its delivery-approach record and its conclusion.** `compass issue artifact set spike-conclusion --decision <discard|graduate-to-delivery|defer>` also writes the evidence record that `spike-conclusion-present` reads.
+- **Six new kinds:** `architecture-notes`, `bug-report`, `positioning`, `product-owner-review`, `review` and `spike-conclusion`. A kind no approach owes can still be registered.
+- **Six new block kinds:** `assessment`, `policy-rules`, `stage-weights` and `gate-set` in the delivery-approach record, and `plan-exit` and `breakdown-exit` in the Gate sections of the technical design and the distribution map.
+- **`compass issue lint` reports a file in the documents folder whose name matches no kind.** It is one line per file and does not change the exit code. A name on the not-an-artifact list, such as `devlog.md`, a review brief or a builder's `result.md`, is not reported.
+- **Two read-only fallbacks stay for the archive.** An issue stored on an earlier generation reads each missing descriptive field of a shipped kind from the shipped default. The receipt reads the assessment table of a record written before `justifications` existed.
+
+### What `compass issue migrate` does
+
+For each issue, in this order:
+
+1. It plans every move first. Two plain review files that claim one round stop that issue: it is left byte for byte as it was, and the report names it. The other issues go on.
+2. It sets the generated page aside, renames the filenames earlier releases retired and brings the manifest keys up to date, as before.
+3. It re-points a registered `design` to `technical-design` and `prd` to `intent`, keeping each entry's id, status and path. It removes the `recommendation` entry and leaves its file.
+4. It registers each document it moves before it moves it, the delivery-approach record first and then each review round in order. A file named for a kind is registered under that kind, unless the kind is already registered at another file that exists: that path is kept, the file is left where it is, and the report names both. A review round is renamed `review-<n>.md`: a plain `review-<n>` keeps its number, a bare `review` is round 1 when that is free, and the other review names (`verify-*`, `integrated-review-*`, `security-review`, `review-claims`) take the next free numbers.
+5. It rewrites each manifest path that named a moved file: evidence, subtasks and gate evidence.
+6. It removes the compatibility pointer beside the manifest when the registered record exists. A file there without the pointer's marker line is left and reported.
+7. It renames a lightweight distribution map on an issue with fewer than two subtasks to `distribution-map.md.v6.bak`, byte for byte, and marks its entry `superseded` with a reason that names the backup. A map that names two or more subtasks is left. A map that was never registered is adopted with no depth and kept, because nothing says it was written only to meet the regular approach; the report lists it. The migrate writes no delivery-approach record for an issue that never had one.
+8. It leaves a name on the not-an-artifact list where it is, and reports a name the mapping table does not know as unmapped, with the issue. Neither is registered.
+
+Then the steps of the rendered-blocks section above run: the Definition of Done records, the status of done issues and the generation pin.
+
+The dry run lists each move, rename, registration, re-point, pointer removal and stub rename, then the totals: documents by target kind, files left on the not-an-artifact list, unmapped files, pointers to remove and maps to rename. It writes nothing. A second `--apply` reports nothing to do. A migrate stopped part way finishes on the next `--apply`, and every issue stays workable in between, because the registry names the new path before the file moves.
+
+**Copy first.** `--apply` renames files in `docs/compass/` as well as `.compass/work/`. Where git does not track either folder, it refuses without `--i-have-a-copy`, naming the folder. Nothing a person wrote is deleted: renames and moves keep the bytes, and the two things removed (each pointer and the one `recommendation` entry) are in your copy.
+
+### What to do
+
+1. Copy both folders to a folder outside the project: `.compass/work` and `docs/compass`.
+2. Run `compass issue migrate` and read the per-issue lines and the totals. The totals alone do not show a wrong round number.
+3. Run `compass issue migrate --apply --i-have-a-copy`. Its totals should equal the dry run's.
+4. Run `compass issue lint` on every issue. No file should be reported outside the issues step 3 named.
+5. Run `compass issue render --all --dry-run`, then `compass issue render --all`.
+6. To go back, restore both folders from the copy, together. The rollback plan of the issue that added the catalogue fields gives the commands.
+
+### New flags and keys
+
+| Name | Where | Meaning |
+|---|---|---|
+| `owner`, `audience`, `stands_for`, `sections` | an artifact in the catalogue | Who writes the document, who reads it, its traditional name, and its headings per depth. Required with `file` and `stage` |
+| `required_when: {subtasks: {min: N}}` | an artifact in the catalogue | The document is owed only with at least N subtasks |
+| `every_approach: true` | an artifact in the catalogue | Every approach owes the document |
+| `<n>` in `file` | an artifact in the catalogue | The kind repeats, one file per round |
+| `--justify DIM=TEXT` | flag of `compass approach evaluate --write` | The justification of an assessed value |
+| `justifications` | `manifest.yml`, beside `assessment` | One line per assessed dimension |
+| `round` | an artifact entry in `manifest.yml` | The round of a kind that repeats |
+| `--round N` | flag of `compass issue artifact set` and `compass issue artifact-path` | Name one round; the default is the latest |
+| `--depth` | flag of `compass issue template show` | Print the lightweight or thorough skeleton |
+| `--decision`, `--next-issue` | flags of `compass issue artifact set spike-conclusion` | Record how a spike closes |
+| `distribution-map.md.v6.bak` | the documents folder | A stub map the migrate set aside |

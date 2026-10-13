@@ -1,9 +1,5 @@
 <!--
 TEMPLATE: delivery-approach.md
-Produced by: the assess stage (`/compass:assess`).
-Lives at:    docs/compass/<created>-<issue-slug>/delivery-approach.md on a quick fix
-             (registered); .compass/work/<issue-slug>/delivery-approach.md on
-             any other approach, where the pre-tool hook looks for it.
 Authority:   This is the audit centrepiece. It records the assessment, the
              delivery approach the policy computed, every policy rule that
              fired, and, as its own section, what was skipped and why it is safe.
@@ -35,19 +31,13 @@ line is not skippable - it runs.
 
 ## 1. The assessment
 
-<!-- Each dimension gets a value from the reference docs plus a one-line
-     justification. No justification → ask, do not guess. -->
+<!-- Written by `compass issue render` from the manifest's `assessment` and
+     `justifications`: one row per dimension with its value and its reason, then the
+     labels. Record each value and its reason with `compass approach evaluate
+     --write --justify DIM=TEXT`. No justification: ask, do not guess. -->
 
-| Dimension | Value | One-line justification |
-|---|---|---|
-| **Risk** | {{trivial \| contained \| cross-cutting \| critical}} | {{Why this value. Consequence, not effort.}} |
-| **Familiarity** | {{greenfield \| brownfield-mapped \| brownfield-unmapped}} | {{Why this value. Is current behaviour written down?}} |
-| **Size** | {{atomic \| small \| medium \| large \| product}} | {{Why this value. When unsure, estimate up.}} |
-| **Goal & role** | {{engineer \| product-owner \| product-marketer \| designer \| qa}} | {{Who invoked, and the outcome actually wanted - read `intent.md` or the intake if one exists.}} |
-
-**Labels (the manifest's `labels:` field):** {{[auth, payments, personal-data, migrations, public-api, …] or "none"}}
-<!-- These are what the policy's hard floors key on. Be honest - a one-line
-     auth change still carries the auth label. -->
+<!-- compass:render assessment -->
+<!-- /compass:render -->
 
 ---
 
@@ -67,33 +57,16 @@ Candidate review dimensions: {{correctness, governance, traceability, … per th
 
 ## 3. Policy rules that fired
 
-### 3a. Policy provenance
+<!-- Written by `compass issue render` from the manifest's `policy_rules_fired`: the
+     policy line, the generation, and one row per rule that fired with its rationale
+     quoted from the policy. This is the policy provenance: a reader months later can
+     tell a light approach from one computed against stale governance. The version of
+     routing-policy.yml and any policy drift (rules or checks missing against the
+     framework) are reported by `compass policy lint`; if the CLI reported drift,
+     record it in `devlog.md`. -->
 
-<!-- WHICH POLICY produced this approach. `compass approach evaluate --verbose`
-     prints a `policy` line: in a project with a `compass.yml` it says "this
-     project's effective configuration (compass.yml over the shipped
-     default)", and without one it names the shipped routing-policy.yml and
-     its version. The stored `generation:` in manifest.yml names the
-     configuration the issue runs against. Copy both here. Without this, a
-     reader months later cannot tell a genuinely light approach from one
-     computed against stale governance. If the CLI reported drift, record it:
-     an approach computed against a policy missing framework rules is an
-     approach missing gates. -->
-
-- Policy line: {{the `policy` line from `compass approach evaluate --verbose`}}
-- Generation: {{the manifest's `generation:` number, or "0 - not stored yet"}}
-- Drift: {{"none" - or "N rule(s)/check(s) missing against framework vX.Y.Z; see `compass policy lint`"}}
-
-<!-- Every floor / cap / immovable gate / blocking role rule from
-     ${CLAUDE_PLUGIN_ROOT}/governance/routing-policy.md (an unmigrated 5.x
-     project runs on its own copied governance/) that matched. Quote each one's rationale.
-     If none fired, say so explicitly - silence is not a record. -->
-
-| Rule type | Rule | What it changed | Rationale (quoted from the policy) |
-|---|---|---|---|
-| {{floor \| cap \| immovable_gate \| role_rule}} | {{e.g. the auth label}} | {{e.g. "Candidate quick fix raised to full-approach scale process weight."}} | {{"…"}} |
-
-<!-- If nothing fired: "No hard policy rule fired. The candidate stands." -->
+<!-- compass:render policy-rules -->
+<!-- /compass:render -->
 
 ---
 
@@ -101,22 +74,13 @@ Candidate review dimensions: {{correctness, governance, traceability, … per th
 
 ### 4a. Per-stage weight
 
-| Stage | Weight | Notes |
-|---|---|---|
-| Assess | Thorough | Always. This document is the output. |
-| Define | {{one scenario \| small feature set \| thorough BDD discovery \| reproduce-first failing test \| collapsed to a question (spike)}} | {{discovery vs. behaviour mapping existing behaviour first; how deep}} |
-| Refine | {{collapsed \| lightweight pass \| thorough pass \| skipped (spike)}} | {{if collapsed, the de-scope ledger below must justify it}} |
-| Plan | {{one-line edit note \| real technical-design.md \| technical-design.md + distribution-map.md \| timebox sketch (spike)}} | {{design decisions expected; governance check scope}} |
-| Breakdown | {{skipped (solo) \| pair \| multiagent}} | {{subtask count comes from the distribution map}} |
-| Implement | {{test surface target}} | {{scaled to risk - see the TDD skill}} |
-| Verify | {{gate count}} | {{which review dimensions - section 4b}} |
-| Ship | {{trivial commit \| coordinated merge}} | {{which follow-ups are owed - section 6}} |
+<!-- compass:render stage-weights -->
+<!-- /compass:render -->
 
 ### 4b. Gate set
 
-- Number of gates: {{1 \| 2 \| all \| 1 conclude gate (spike)}}
-- Review dimensions applied: {{list - correctness, governance, traceability are always on for delivery work; a spike runs none of these}}
-- Immovable gates added (from routing-policy.md): {{verify.correctness, verify.governance, verify.traceability, …}}
+<!-- compass:render gate-set -->
+<!-- /compass:render -->
 
 ### 4c. Multiagent orchestration
 

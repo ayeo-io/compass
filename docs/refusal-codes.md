@@ -88,3 +88,9 @@ code from a refusal you hit.
 **Blocked:** edit to {target} (tool: {tool})
 **Why:** .compass/config.yml sets {keys}, but compass.yml is read, so those keys guard nothing.
 **Fix:** Move them into compass.yml (write mode as adoption) and delete them from .compass/config.yml, then retry.
+
+### `waits-for-issue`
+
+**Blocked:** edit to {target} (tool: {tool})
+**Why:** issue '{slug}' waits for {dependency} to reach {until}{more}, and this checkout reads {dependency} as {state}.
+**Fix:** if {dependency} is finished in another checkout, bring its .compass/work/{dependency}/ folder here; or run compass issue depends remove {dependency}.

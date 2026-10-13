@@ -475,6 +475,16 @@ on, it names a stale document the stage consumes, for example
 `Implement | entry not met: technical-design is stale`
 (`docs/artifact-freshness.md`).
 
+If the issue is at implement and waits for another issue that has not reached
+the point its `depends_on` entry names (`compass issue depends add`), the line
+ends with what it waits for, for example
+`Implement [gate: verify.correctness] | blocked: waits for b to reach done`.
+The pre-tool hook refuses production-code edits until the wait is met or the
+dependency is removed. Earlier stages show no wait, so a spec and a design can
+be written while the other issue is open. A dependency `compass next` cannot
+judge, such as one on an issue with no manifest in this checkout, is left out
+of the line; `compass issue lint` names it.
+
 ## Decisions an agent took for you
 
 When an agent resolves a requirement question itself, it records the decision

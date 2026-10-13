@@ -3825,3 +3825,27 @@
 - `ACF-67` The after measure counts only records held before and maps registered at lightweight depth, and prints both exclusions
 - `ACF-68` Production code cites no id that lives only in an issue's documents
 - `ACF-69` render --all parses each issue's manifest once
+
+### dependencies-between-issues (completed 2026-10-13)
+
+- `DBI-1` depends add writes the documented shape
+- `DBI-2` depends remove removes one entry
+- `DBI-3` depends add refuses bad input and updates a repeated slug
+- `DBI-4` A cycle is refused with exit 2
+- `DBI-5` A manifest without depends_on reads unchanged
+- `DBI-6` compass next shows the block at implement and lifts it when the dependency is done
+- `DBI-7` Stages before implement are not blocked
+- `DBI-8` The until values are met as the vocabulary table says
+- `DBI-9` The hook refuses a production-code edit at implement and names the dependency
+- `DBI-10` The hook allows the edit on a read fault and says so
+- `DBI-11` The hook reads this checkout only, uncached
+- `DBI-12` The hook stays within its measured cost
+- `DBI-13` The derived block is never written
+- `DBI-14` A dependency on an issue that does not exist is a lint finding
+- `DBI-15` Lint reports every other dependency fault
+- `DBI-16` ship-commit names the issues that were waiting
+- `DBI-17` The board card and panel show the wait
+- `DBI-18` compass flow --json rows gain depends_on
+- `DBI-19` The issue page shows each dependency in the related block
+- `DBI-20` The shape is pinned in the schema and its owning doc
+- `DBI-21` depends remove re-renders the removed dependency's page

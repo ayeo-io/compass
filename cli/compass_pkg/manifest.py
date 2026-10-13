@@ -442,6 +442,7 @@ def cmd_land_commit(args):
             f"already committed - landed at HEAD {head_id[:8]}, no new "
             "commit made." + landed_note
         )
+        _print_waiting(head_task_dir)
         return 0
 
     # The issue's declared scope. Everything below re-stages against this
@@ -713,6 +714,8 @@ def cmd_land_commit(args):
         except Exception as exc:                        # noqa: BLE001
             print(f"compass ship-commit: committed{suffix}. "
                   f"HEAD {head_before[:8]} -> {head_after[:8]}" + landed_note)
+            # The issue is landed even though ship fails here.
+            _print_waiting(task_dir)
             sys.stderr.write(
                 f"compass ship-commit: the commit landed and the issue is "
                 f"marked landed, but the delivery record did not sync: "
@@ -721,7 +724,24 @@ def cmd_land_commit(args):
             return 2
     print(f"compass ship-commit: committed{suffix}. "
           f"HEAD {head_before[:8]} -> {head_after[:8]}" + landed_note)
+    if "issue marked landed" in landed_note:
+        _print_waiting(task_dir)
     return 0
+
+
+def _print_waiting(task_dir):
+    """Name the open issues of this checkout that wait for the issue just
+    landed (ADR-062), so their owners know to look. Printed only after a
+    landing: on a refusal it would say they may go ahead when they may not.
+    It reads every manifest once and never changes the exit code."""
+    from compass_pkg import issue_depends
+    folder = os.path.normpath(str(task_dir))
+    try:
+        lines = issue_depends.waiting_lines(os.path.dirname(folder), os.path.basename(folder))
+    except Exception:                                       # noqa: BLE001 - advice only
+        return
+    for line in lines:
+        print(line)
 
 
 # --- commands: manifest mutators + gate pass ---------------------------------

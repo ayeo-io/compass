@@ -6,21 +6,22 @@
 call it through the module, not by name, so a test can replace it and see both
 surfaces follow.
 
-The function takes the manifest and the issue's folder and reads nothing else.
-The board can read an issue from another worktree (ADR-048) while the page reads
+The function takes the manifest and the issue's folder and reads nothing else,
+unless the caller passes a reader for the issues it depends on (ADR-062). The
+board can read an issue from another worktree (ADR-048) while the page reads
 this checkout, so the two share the function and not the checkout.
 
 This module is a leaf: it imports `lifecycle`, `next_cmd` and `status_words`, and none
 of `flow`, `check_cmd` or `render_cmd`.
 """
-# DEPENDENCY: standard library (dataclasses); compass_pkg.lifecycle, next_cmd,
+# DEPENDENCY: standard library (dataclasses, os); compass_pkg.lifecycle, next_cmd,
 # status_words, stable_ids.
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 
 from compass_pkg import artifact_owed, lifecycle, status_words
-from compass_pkg.stable_ids import STAGE_ASSESS
 
 NOT_ASSESSED = "not assessed"
 
@@ -40,6 +41,11 @@ class IssueDetail:
     #: One `{id, kind, round, status, path}` for each registered document, in registry order. A
     #: kind that repeats has one for each round, so no reader shows only the first.
     documents: tuple = ()
+    #: The dependency block (`lifecycle.dependency_block`) while it counts, else None. Read
+    #: only when the caller passes a reader; `blocked` stays the stored flag's reason.
+    waits: object = None
+    #: Each `depends_on` entry judged (`lifecycle.Dependency`), when the caller passes a reader.
+    dependencies: tuple = ()
 
     @property
     def gates(self):
@@ -81,31 +87,27 @@ def _documents(manifest, task_dir=None):
     return tuple(found)
 
 
-def _stage(manifest, task_dir, state, recorded):
-    """`(stage, problem)`. A closed issue is at `done`; an issue with no delivery
-    approach is at assess; every other issue is where `compass next` puts it."""
-    from compass_pkg import next_cmd
-    if state == "done":
-        return "done", None
-    if state in ("backlog", "ready") and not recorded:
-        return STAGE_ASSESS, None
-    try:
-        return next_cmd._current_phase_from_task(manifest, task_dir) or "done", None
-    except Exception as exc:                                # noqa: BLE001
-        return None, "the stage could not be read (%s)" % type(exc).__name__
+def _stage(manifest, task_dir, state):
+    """`(stage, problem)`, from `lifecycle.stage_of`: the dependency derivation
+    compares stages there, so the board and the derivation read one rule."""
+    return lifecycle.stage_of(manifest, task_dir, state)
 
 
-def detail(manifest, task_dir):
-    """The `IssueDetail` of one issue."""
+def detail(manifest, task_dir, read=None):
+    """The `IssueDetail` of one issue. `read` is a `lifecycle` reader for the
+    issues it depends on; without one, no dependency is judged."""
     state = lifecycle.state_of(manifest, task_dir)
-    recorded = bool(manifest.get("delivery_approach"))
-    stage, problem = _stage(manifest, task_dir, state, recorded)
+    stage, problem = _stage(manifest, task_dir, state)
     passed, total = _gate_counts(manifest)
     flag = lifecycle.blocked_flag(manifest, task_dir)
+    deps, waits = (), None
+    if read is not None:
+        deps = lifecycle.judge(manifest, os.path.basename(os.path.normpath(task_dir)), read)
+        waits = lifecycle.dependency_block(manifest, task_dir, deps, stage=stage)
     return IssueDetail(str(manifest.get("delivery_approach") or NOT_ASSESSED), state, stage,
                        passed, total, problem,
                        str(flag.get("reason") or "no reason recorded") if flag else None,
-                       _documents(manifest, task_dir))
+                       _documents(manifest, task_dir), waits, deps)
 
 
 def state_text(manifest, task_dir):

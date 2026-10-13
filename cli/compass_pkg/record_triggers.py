@@ -58,6 +58,12 @@ RENDER_FURTHER = {
     "cmd_evidence_review": None,
     "cmd_issue_blocked_set": None,
     "cmd_issue_blocked_remove": None,
+    # The waiting issue's page shows the wait, and the other issue's page
+    # lists who waits for it, so both render. After a remove the manifest no
+    # longer names the other issue, so `cmd_depends_remove` names it in
+    # `args.unlinked` for `render_after` to render.
+    "cmd_depends_add": None,
+    "cmd_depends_remove": None,
     "cmd_subtask_update": None,
     # The traceability chart of the issue page draws the files each scenario changed.
     "cmd_changed_file_add": None,

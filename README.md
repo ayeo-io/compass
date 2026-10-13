@@ -198,6 +198,8 @@ compass issue status set   backlog, or done with --close-reason completed | not-
 compass issue status remove  end a backlog hold; the state then follows the records
 compass issue blocked set  flag an in-progress or in-review issue as blocked, with a reason
 compass issue blocked remove  clear the blocked flag
+compass issue depends add  record an issue this one waits for, with --reason and --until; implement is blocked until it is met
+compass issue depends remove  stop waiting for an issue
 compass issue link set     link an issue to its GitHub issue, to write its labels there (opt in)
 compass issue labels sync  write an issue's labels to its linked GitHub issue now
 compass issue subtask      record, resume and package a multiagent run's subtasks

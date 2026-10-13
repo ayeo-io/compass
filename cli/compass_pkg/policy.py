@@ -580,6 +580,10 @@ def cmd_task_lint(args):
     from compass_pkg import lifecycle
     errs += lifecycle.status_errors(task, load_yaml(path),
                                     os.path.dirname(os.path.abspath(path)))
+    # The issues it waits for. A manifest linted by path has no checkout to
+    # read them from, so only the shape of its entries is checked.
+    from compass_pkg import issue_depends
+    errs += issue_depends.lint_errors(task, None if args.file else task_dir)
     if "issue" not in task:
         errs.append("missing `issue:` (the issue slug)")
     # Each block below checks the shape before reading it. This command's whole

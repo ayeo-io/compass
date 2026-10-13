@@ -394,6 +394,8 @@ def build_parser():
     ptt.set_defaults(func=_cmd_issue_template, output_kind="hand-off")
     register_subtask_parser(pts, issue_arg)
     register_status_parser(pts, issue_arg)
+    from compass_pkg import issue_depends
+    issue_depends.register(pts, issue_arg)
     github_labels.register(pts, issue_arg)
 
     pacc = sub.add_parser(

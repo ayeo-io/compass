@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import re
 
-from compass_pkg import issue_detail, project_scan, status_words
+from compass_pkg import issue_detail, lifecycle, project_scan, status_words
 from compass_pkg import rendered_blocks as rb
 from compass_pkg.render_inputs import (CROSS, OWN, Part, code, md_link, relative_to)
 
@@ -51,9 +51,23 @@ def _date(value):
     return text[:10] if re.match(r"^\d{4}-\d{2}-\d{2}", text) else None
 
 
+def _reader(scan):
+    """A `lifecycle` reader over the project scan, or None without one: the page then judges
+    no dependency. The scan holds the copies the page's `related` block already shows."""
+    if scan is None:
+        return None
+    found = {slug: (manifest, scan.task_dir(slug)) for slug, manifest in scan.manifests.items()}
+    found.update(scan.unreadable)
+    return lifecycle.mapping_reader(found)
+
+
+#: The header lines that start with this depend on another issue (ADR-062 decision 7).
+WAITS_PREFIX = "Blocked: waits for "
+
+
 def header(inputs, doc_rel):
     task = inputs.task
-    facts = issue_detail.detail(task, inputs.task_dir)
+    facts = issue_detail.detail(task, inputs.task_dir, read=_reader(inputs.scan))
     state = facts.state
     reason = status_words.close_reason(task)
     if state == "done" and reason:
@@ -71,8 +85,10 @@ def header(inputs, doc_rel):
         "Owner: %s - %s" % (rb.field(owner) if owner else "not recorded", " - ".join(dates))]
     if facts.blocked:
         lines.append("Blocked: %s" % rb.field(facts.blocked))
+    if facts.waits:
+        lines.append("Blocked: %s" % rb.field(facts.waits))
     lines.append(BOARD_NOTE)
-    return Part(OWN, lines)
+    return Part(OWN, lines, cross_prefix=WAITS_PREFIX)
 
 
 # --- the ask ---------------------------------------------------------------
@@ -214,11 +230,23 @@ _ORDER = ("depends on", "depended on by", "parent", "child", "repairs", "follow-
           "delivered by", "raised from", "repaired by", "follow-up from", "raised here")
 
 
+def _dependency_tail(label, dependency):
+    """` - met` or ` - waits for b to reach done` for a "depends on" line whose dependency was
+    judged without a fault; nothing for any other line."""
+    if label != "depends on" or dependency is None or dependency.fault:
+        return ""
+    return " - met" if dependency.met else " - " + rb.field(dependency.waits)
+
+
 def related(inputs, doc_rel):
     forward = project_scan.forward_links(inputs.task)
     back = inputs.scan.reverse.get(inputs.slug, []) if inputs.scan is not None else []
     rows = [(label, slug) for label, slug in forward + list(back) if slug != inputs.slug]
     rows.sort(key=lambda r: (_ORDER.index(r[0]), r[1]))
+    judged = {}
+    if inputs.scan is not None:
+        judged = {d.issue: d for d in issue_detail.detail(
+            inputs.task, inputs.task_dir, read=_reader(inputs.scan)).dependencies}
     lines, seen = [], set()
     for label, slug in rows:
         if (label, slug) in seen:
@@ -226,9 +254,10 @@ def related(inputs, doc_rel):
         seen.add((label, slug))
         scan = inputs.scan
         if scan is not None and slug in scan.manifests:
-            lines.append("- %s: %s - %s" % (
+            line = "- %s: %s - %s" % (
                 label, md_link(slug, relative_to(scan.page_rel(slug), doc_rel)),
-                rb.field(scan.state_text(slug))))
+                rb.field(scan.state_text(slug)))
+            lines.append(line + _dependency_tail(label, judged.get(slug)))
         elif scan is not None and slug in scan.unreadable:
             lines.append("- %s: %s - unreadable" % (label, code(slug)))
         else:

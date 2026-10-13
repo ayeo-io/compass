@@ -3825,3 +3825,28 @@
 - `ACF-67` The after measure counts only records held before and maps registered at lightweight depth, and prints both exclusions
 - `ACF-68` Production code cites no id that lives only in an issue's documents
 - `ACF-69` render --all parses each issue's manifest once
+
+### issue-page-reaches-github (completed 2026-10-13)
+
+- `IPG-1` With page off, no call is added
+- `IPG-2` The first sync creates one comment holding the page
+- `IPG-3` A record change edits the same comment
+- `IPG-4` An unchanged issue costs no GitHub call
+- `IPG-5` Compass finds its own comment by the marker
+- `IPG-6` Repository links open on GitHub
+- `IPG-7` An empty body gets the ask once
+- `IPG-8` A written body and the title are never changed
+- `IPG-9` A gh failure never changes a command exit code
+- `IPG-10` Labels and page fail independently
+- `IPG-11` Lint reports an out-of-date page without calling GitHub for it
+- `IPG-12` The on-demand sync refreshes labels and page together
+- `IPG-13` compass issue labels sync is removed at 7.0.0
+- `IPG-14` Compass never reads GitHub text back
+- `IPG-15` gh gets an argument list, the text goes through standard input, and no token is read
+- `IPG-16` A rival product name refuses the post
+- `IPG-17` Text naming a path the project keeps out of git refuses the post
+- `IPG-18` A credential shape refuses the post
+- `IPG-19` The comment stays within GitHub size limit
+- `IPG-20` The page switch is declared
+- `IPG-21` The owning doc says what the page exposes
+- `IPG-22` The page posts the README its own command rendered

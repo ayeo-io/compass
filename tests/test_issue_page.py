@@ -248,8 +248,9 @@ def test_dcj_45_board_panel_and_issue_page_share_one_function(tmp_path, monkeypa
     # replaced, so a module that bound the function by name keeps the original and shows it.
     real = issue_detail.detail
 
-    def stage_plan(manifest_, task_dir):
-        made = real(manifest_, task_dir)
+    # The board passes a reader for the issues an issue depends on (ADR-062).
+    def stage_plan(manifest_, task_dir, read=None):
+        made = real(manifest_, task_dir, read=read)
         return issue_detail.IssueDetail(made.approach, made.state, "breakdown", made.gates_passed,
                                         made.gates_total, made.stage_problem)
 
@@ -270,7 +271,8 @@ def test_dcj_45_board_panel_and_issue_page_share_one_function(tmp_path, monkeypa
     assert sorted(data) == ["board", "counts", "friction", "sections", "summary", "title"]
     rows = [r for section in data["sections"].values() for r in section]
     mine = next(r for r in rows if r["slug"] == SLUG)
-    assert sorted(mine) == ["also_in", "assessment", "created", "delivery_approach", "documents",
+    assert sorted(mine) == ["also_in", "assessment", "created", "delivery_approach", "depends_on",
+                            "documents",
                             "evidence", "gate_list", "gates", "lane", "manifest_path", "policy_rules_fired",
                             "recommendation", "set_aside", "slug", "stage", "stage_depths",
                             "state", "tree", "unplaceable"]

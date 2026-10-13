@@ -180,7 +180,7 @@ def test_the_report_says_what_the_records_cannot_show(tmp_path):
     tail = r.stdout.split("\nThe records cannot show\n", 1)
     assert len(tail) == 2, r.stdout
     for fragment in ("interruptions.log keeps only its time and kind", "transcript", "gate",
-                     "review round is dated when it was recorded", "token use outside"):
+                     "review round is dated when it was recorded", "token use of a session the hook did not record"):
         assert fragment in tail[1], fragment
 
 

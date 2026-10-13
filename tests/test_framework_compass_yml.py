@@ -8,7 +8,11 @@ unlock, no capability and no approvers list. `owner` names who confirms
 decisions and approves waivers, and changes no check, gate or rule. Its issues
 then run the shipped default unchanged, which keeps its delivery record valid
 evidence for the default. The old `.compass/config.yml` is gone, and the state
-the CLI wrote (`records_signed_since`) is in the state file.
+the CLI wrote (`records_signed_since`) is in the state file. Since governance
+decision 2026-10-13-this-repository-declares-readiness-commands it also turns
+on project commands, declares the readiness commands and holds one readiness
+override, so the repository meets the readiness floor while it runs
+autonomous; any other catalogue key or readiness entry still fails here.
 
 Scenario ids: IDR-5 and IDR-6, in the acceptance criteria of the issue
 `init-docs-release`; OWN-1, in the issue `compass-yml-owner`. The IDR-5 test
@@ -36,11 +40,20 @@ ALLOWED = set(SETTINGS_KEYS) | {"schema", "extends", "owner"}
 FORBIDDEN_LAYER_KEYS = {"waiver", "waived", "unlock", "capabilities", "approvers"}
 
 
+# The one catalogue override this repository may hold: the readiness test
+# signal times the micro suite (governance decision
+# 2026-10-13-this-repository-declares-readiness-commands). Any other
+# `readiness` value is reported like any other catalogue key.
+READINESS_OVERRIDE = {"tests-declared-and-under-two-minutes":
+                      {"set": {"params": {"command": "test_micro_command"}}}}
+
+
 def disallowed_keys(doc):
     """The top-level keys of `doc` that a file of settings keys and owner may
     not hold."""
-    return sorted(k for k in doc if k not in ALLOWED
-                  or k in CATALOGUES or k in FORBIDDEN_LAYER_KEYS)
+    return sorted(k for k in doc if (k not in ALLOWED or k in CATALOGUES
+                                     or k in FORBIDDEN_LAYER_KEYS)
+                  and not (k == "readiness" and doc[k] == READINESS_OVERRIDE))
 
 
 def test_idr_5_the_checker_reports_a_planted_catalogue_key():
@@ -102,3 +115,29 @@ def test_idr_6_the_self_check_requires_compass_yml_not_the_old_file():
     text = (ROOT / "scripts" / "validate.sh").read_text(encoding="utf-8")
     assert "compass.yml" in text
     assert ".compass/config.yml" not in text
+
+
+def test_readiness_override_is_the_only_catalogue_key_allowed():
+    # The exemption is the one value, not the key: any other readiness entry,
+    # or the override beside any other catalogue key, is still reported.
+    doc = load_yaml_strict(str(ROOT / "compass.yml"))
+    assert doc["readiness"] == READINESS_OVERRIDE
+    assert disallowed_keys({"schema": 1, "readiness": READINESS_OVERRIDE}) == []
+    changed = {"tests-declared-and-under-two-minutes":
+               {"set": {"required_for_autonomous": False}}}
+    assert disallowed_keys({"schema": 1, "readiness": changed}) == ["readiness"]
+    extra = dict(READINESS_OVERRIDE, **{"codeowners-present": {"remove": True}})
+    assert disallowed_keys({"schema": 1, "readiness": extra}) == ["readiness"]
+    assert disallowed_keys({"schema": 1, "readiness": READINESS_OVERRIDE,
+                            "checks": {}}) == ["checks"]
+
+
+def test_readiness_commands_are_declared_and_allowed():
+    settings = project_settings.settings(str(ROOT))
+    assert settings["allow_project_commands"] is True
+    project = settings["project"]
+    assert project["build_command"] == "python3 -m compileall -q cli"
+    assert project["lint_command"] == "bash scripts/validate.sh --quiet"
+    assert project["test_micro_command"].startswith("pytest -q ")
+    # It must not run readiness itself, or the timed command recurses.
+    assert "test_project_readiness" not in project["test_micro_command"]

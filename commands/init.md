@@ -99,6 +99,11 @@ it is exempt from assessment.
    `compass readiness` to run later. Do not hold init back for it. Only this
    step passes `--readiness`, so no other entry point runs a project command.
 
+   The readiness record is per checkout and never committed. On an autonomous
+   project, tell the person that each new clone or worktree must run
+   `compass readiness` (up to five minutes) before its first
+   `compass approach evaluate --write`, or assess refuses the issue.
+
 4. **Walk the team through extending the defaults, if it wants to** - a few
    questions at a time, in each role's own language. The team does not need to
    add anything.

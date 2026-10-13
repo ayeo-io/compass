@@ -2019,3 +2019,113 @@ def test_prc_35(tmp_path):
 
 
 # --- U5 this repository and the measures ---
+
+#: The environment this repository's own commands need when the readiness
+#: test runs them: the caller's home and Python selection, so `pytest` on the
+#: PATH resolves as it does for the person or the CI job running the suite.
+PASSED_THROUGH = ("HOME", "PYENV_ROOT", "PYENV_VERSION", "VIRTUAL_ENV")
+
+
+def _this_repository_env():
+    return {k: os.environ[k] for k in PASSED_THROUGH if k in os.environ}
+
+
+def _tracked_state(root):
+    """Tracked changes in the working tree, so a run that writes one shows."""
+    return subprocess.run(["git", "status", "--porcelain", "--untracked-files=no"],
+                          cwd=root, capture_output=True, text=True, check=True).stdout
+
+
+def _expected_signals(root):
+    """This repository's readiness signals as its declarations make them:
+    a command signal is present only when its command is declared and
+    project commands are allowed, so the record a test writes cannot claim
+    more than the settings give."""
+    from compass_pkg import project_settings, readiness_catalogue, readiness_signals
+    allowed = project_settings.settings(str(root)).get("allow_project_commands") is True
+    signals = []
+    for signal_id, entry in readiness_catalogue.catalogue(str(root)).items():
+        if signal_id == "agent-instructions-present":
+            present = any((root / name).is_file() for name in ("AGENTS.md", "CLAUDE.md"))
+        elif signal_id in COMMAND_SIGNALS.values():
+            _, command, _ = readiness_signals.planned_command(str(root), entry)
+            present = allowed and bool(command)
+        else:
+            present = False
+        signal = _record_signal(signal_id, "present" if present else "absent",
+                                required=bool(entry.get("required_for_autonomous")),
+                                impl=entry["impl"], weight=entry["weight"])
+        if not present:
+            signal["fix"] = {"change": f"make {signal_id} present", "file": "compass.yml"}
+        signals.append(signal)
+    return signals
+
+
+@pytest.mark.serial
+def test_prc_37():
+    # Runs the real commands on this checkout, so it is serial: the bound is
+    # a wall-clock limit. The record is per-checkout state; any record already
+    # here is put back afterwards.
+    record_path = ROOT / support.RECORD
+    kept = record_path.read_bytes() if record_path.is_file() else None
+    before = _tracked_state(ROOT)
+    try:
+        started = time.monotonic()
+        code, out, err = support.readiness(ROOT, env=_this_repository_env())
+        elapsed = time.monotonic() - started
+        assert code == 0, out + err
+        assert elapsed <= 60, f"compass readiness took {elapsed:.1f} s on this repository"
+        record = support.read_record(ROOT)
+    finally:
+        if kept is None:
+            record_path.unlink(missing_ok=True)
+        else:
+            record_path.write_bytes(kept)
+    assert _tracked_state(ROOT) == before
+    from compass_pkg import readiness_catalogue
+    in_force = readiness_catalogue.catalogue(str(ROOT))
+    assert sorted(s["id"] for s in record["signals"]) == sorted(in_force), record["signals"]
+    assert support.signal(record, "agent-instructions-present")["result"] == "present"
+    for entry in record["signals"]:
+        if entry["result"] == "absent":
+            line = next((l for l in out.splitlines() if entry["id"] in l), None)
+            assert line is not None and entry["reason"], (entry, out)
+    settings = yaml.safe_load((ROOT / "compass.yml").read_text(encoding="utf-8"))
+    if settings.get("autonomy") == "autonomous":
+        # This repository runs autonomous, so its own measurement must meet
+        # the floor, with each floor command run and passing.
+        for signal_id in REQUIRED_SIGNALS:
+            assert support.signal(record, signal_id)["result"] == "present", (
+                support.signal(record, signal_id), out)
+
+
+def test_prc_38(tmp_path):
+    from compass_pkg import project_settings
+    settings = project_settings.settings(str(ROOT))
+    files = {name: (ROOT / name).read_text(encoding="utf-8")
+             for name in ("AGENTS.md", "CLAUDE.md") if (ROOT / name).is_file()}
+    project = support.make_project(
+        tmp_path / "copy", (ROOT / "compass.yml").read_text(encoding="utf-8"), files=files)
+    _floor_issue(project)
+    _written_record(project, _expected_signals(project))
+    before = _manifest_before(project)
+    code, out, err = support.run_compass(project, "approach", "evaluate", "--json",
+                                         "--issue", FLOOR_SLUG)
+    assert code == 0, out + err
+    readiness = json.loads(out)["readiness"]
+    assert readiness["would_refuse"] is None, readiness["would_refuse"]
+    assert _manifest_before(project) == before and _generations(project) == []
+    if settings.get("autonomy") == "autonomous":
+        # The floor is met by declarations this repository makes, not by the
+        # record: each floor command is declared, project commands are
+        # allowed, and the timed test command is the micro suite.
+        from compass_pkg import readiness_catalogue, readiness_signals
+        assert settings.get("allow_project_commands") is True
+        tests_entry = readiness_catalogue.catalogue(str(ROOT))[
+            "tests-declared-and-under-two-minutes"]
+        key, command, _ = readiness_signals.planned_command(str(ROOT), tests_entry)
+        assert key == "test_micro_command" and command, (key, command)
+        assert "test_project_readiness" not in command
+        for key in ("build_command", "lint_command"):
+            assert project_settings.project_text(str(ROOT), key), key
+        assert files, "no agent instructions file"

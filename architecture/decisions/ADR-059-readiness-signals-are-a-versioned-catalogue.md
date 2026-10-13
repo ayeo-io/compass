@@ -42,7 +42,7 @@ A readiness signal is one binary fact about a repository, such as "a lint comman
 
 **Negative:**
 - Adding a catalogue changes the resolved configuration of every issue, so each issue's next `evaluate --write` after the 7.0.0 upgrade commits a new generation, as any preset change does.
-- This repository's `compass.yml` holds settings only (governance decision `2026-10-06-this-repository-may-hold-a-settings-only-compass-yml`); a readiness layer here needs a new decision by the owner.
+- This repository's `compass.yml` held settings only (governance decision `2026-10-06-this-repository-may-hold-a-settings-only-compass-yml`), so its one readiness override, which times its micro suite, needed a new decision: `2026-10-13-this-repository-declares-readiness-commands`.
 
 **Neutral / follow-on:**
 - Reading host settings, such as branch protection, through an API is not a signal in 7.0.0.

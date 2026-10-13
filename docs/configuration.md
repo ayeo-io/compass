@@ -83,7 +83,7 @@ The state decides what Compass reads, and no state loses a setting silently:
 |---|---|---|---|
 | `adoption` (`mode` in `.compass/config.yml`) | Whether a failed check blocks | `enforced`, `advisory` | `enforced` |
 | `autonomy` | How often a session stops for a person | `controlled`, `balanced`, `autonomous` | `balanced` |
-| `project` | The project's name and test commands | `name`, `test_command`, `test_micro_command`, `bdd_run_command` | none |
+| `project` | The project's name, commands and declarations | `name`, `test_command`, `test_micro_command`, `bdd_run_command`, `lint_command`, `format_check_command`, `build_command`, `typecheck_command`, `secret_scan`, `structured_logging` | none |
 | `enforcement` | Extra paths the pre-tool hook guards | `code_globs`: a list of patterns | none |
 | `record` | Where the delivery record is kept | `remote`, `paths`, `names_key` | no record |
 | `prices` | Dollars per million tokens, to price a quick fix's usage | a mapping from model name | no cost recorded |
@@ -132,6 +132,19 @@ changed how often a session stops would give no sign.
   `npm test` or `make test` for the combined regression run.
 - `test_micro_command`: used before `test_command` for those two commands.
 - `bdd_run_command`: the command the `compass bdd` run step uses when none is given.
+- `lint_command`, `format_check_command`, `build_command` and `typecheck_command`:
+  the commands that decide the repository's readiness signals (see the
+  `readiness` catalogue in `governance/presets/default/readiness.yml`). Each is
+  optional. Declare the check form of a formatter in `format_check_command`, the
+  one that reports a difference and changes no file. Each command runs in a
+  clean checkout of HEAD, so it must set up its own dependencies.
+- `secret_scan` and `structured_logging`: a one-line declaration of the secret
+  scanner the project runs and of its logging convention. A non-empty string makes the
+  matching readiness signal present. Compass runs nothing for either.
+
+A value of any of these six keys that is not a string is refused, naming the key and
+the file. An empty string reads as not declared. `compass tdd-red` and
+`compass tdd-green` read `test_micro_command` and `test_command` only.
 
 ### `enforcement`
 

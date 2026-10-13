@@ -25,10 +25,10 @@ from compass_pkg.core import reading_matches  # noqa: E402
 
 # --- the field table (`CS-1`) ----------------------------------------------------
 
-def test_cs_1_the_table_names_the_eight_catalogues_and_their_fields():
+def test_cs_1_the_table_names_the_nine_catalogues_and_their_fields():
     assert catalogue_spec.CATALOGUES == (
         "dimensions", "stages", "approaches", "rules", "checks", "gates",
-        "artifacts", "vocabulary")
+        "artifacts", "readiness", "vocabulary")
     for name in catalogue_spec.CATALOGUES:
         fields = catalogue_spec.FIELDS[name]
         assert fields, name
@@ -181,6 +181,9 @@ def test_cs_1_the_obligation_table_holds_every_row_adr_037_names():
         "checks.severity": "ordered",
         "checks.on_skipped": "ordered",
         "checks.statement": "identity",
+        "readiness.impl": "identity",
+        "readiness.params": "ceiling",
+        "readiness.required_for_autonomous": "ordered",
         "rules.ceilings": "ceiling",
         "evaluation.max_worktrees": "ceiling",
         "evaluation.required_skills": "obligation-set",

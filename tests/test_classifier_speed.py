@@ -570,7 +570,9 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # No verdict moves: the 5.6.0 routing baseline and the classifications of layers
 # in the old words give the same results (`test_size_medium.py`,
 # `test_old_words_read.py`), so the version stays 2.
-VERDICT_SOURCE_PIN = "fbe4e2b088645ce6"
+# Re-pinned for the readiness comparison: a signal's `impl`, `params` and
+# `required_for_autonomous` are compared, and the version is now 3.
+VERDICT_SOURCE_PIN = "6a0dc6fde610896f"
 
 
 def _verdict_source_digest():

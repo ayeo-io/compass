@@ -45,7 +45,11 @@ JSON_SCHEMA_VERSION = 1
 # Version 2: a check's `when` reads the derived key `ships` (ADR-037, the
 # amendment of 2026-10-08), so a configuration that uses it has a verdict the
 # first version could not give.
-CLASSIFIER_VERSION = 2
+#
+# Version 3: a readiness signal's `impl`, `params` and `required_for_autonomous`
+# are compared, so a configuration that changes the readiness floor has a
+# verdict the second version could not give.
+CLASSIFIER_VERSION = 3
 
 # Keys whose value is a condition on the assessment.
 WHEN_KEYS = ("when", "blocking_when", "applies_when")
@@ -300,7 +304,8 @@ def _rank(field, key, value, side, ctx):
         rank = (modes.get(value) or {}).get("rank")
         return rank if isinstance(rank, int) and not isinstance(rank, bool) else None
     order = {"checks.severity": SEVERITIES, "checks.on_skipped": ON_SKIPPED,
-             "approaches.artifacts.depth": ARTIFACT_DEPTHS}.get(field, ())
+             "approaches.artifacts.depth": ARTIFACT_DEPTHS,
+             "readiness.required_for_autonomous": (False, True)}.get(field, ())
     return order.index(value) if value in order else None
 
 
@@ -326,8 +331,19 @@ def _registry_direction(impl, param):
     return (entry.tighter.get(param, "none") if entry else "none")
 
 
+def _readiness_direction(impl, param):
+    from compass_pkg.readiness_registry import READINESS
+    entry = READINESS.get(impl)
+    return (entry.tighter.get(param, "none") if entry else "none")
+
+
 def _direction(field, key, meta, ctx):
-    if field == "checks.params":
+    if field == "readiness.params":
+        signal, param = meta
+        impls = {((config.get("readiness") or {}).get(signal) or {}).get("impl")
+                 for config in ctx.configs}
+        found = (_readiness_direction(impls.pop(), param) if len(impls) == 1 else "none")
+    elif field == "checks.params":
         check, param = meta
         impls = {(config.get("checks") or {}).get(check, {}).get("impl")
                  for config in ctx.configs}
@@ -439,7 +455,9 @@ for _fact, _fields in {
                      "rules.ceilings"),
         "checks": tuple(f for f in OBLIGATION_FIELDS if f.startswith("checks.")),
         "artifact_depends_on": ("artifacts.depends_on",),
-        "artifact_checks": ("artifacts.checks",)}.items():
+        "artifact_checks": ("artifacts.checks",),
+        "readiness": ("readiness.impl", "readiness.params",
+                      "readiness.required_for_autonomous")}.items():
     for _name in _fields:
         _FACT_OF[_name] = _fact
 
@@ -493,6 +511,17 @@ def _changes(parent, child, ctx):
                              meta=(check, param))
             elif name in pf and name in cf:
                 _compare(f"checks.{name}", check, pf[name], cf[name], ctx, out)
+    for signal in sorted(set(p["readiness"]) | set(c["readiness"])):
+        pf, cf = p["readiness"].get(signal), c["readiness"].get(signal)
+        # A signal only one side has is off the floor on the other side.
+        _compare("readiness.required_for_autonomous", signal,
+                 bool(pf and pf["required_for_autonomous"]),
+                 bool(cf and cf["required_for_autonomous"]), ctx, out)
+        if pf and cf:
+            _compare("readiness.impl", signal, pf["impl"], cf["impl"], ctx, out)
+            for param in sorted(set(pf["params"]) | set(cf["params"])):
+                _compare("readiness.params", f"{signal}.{param}", pf["params"].get(param),
+                         cf["params"].get(param), ctx, out, meta=(signal, param))
     _keyed("artifacts.depends_on", p["artifact_depends_on"],
            c["artifact_depends_on"], ctx, out)
     _keyed("artifacts.checks", p["artifact_checks"], c["artifact_checks"], ctx, out)

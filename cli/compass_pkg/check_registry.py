@@ -35,6 +35,7 @@ from compass_pkg.checks import (
     _check_spike_no_production_changes, _check_suite_passed)
 from compass_pkg.landed_by import _check_landed_by_resolves
 from compass_pkg.multiagent_check import _check_multiagent_run_recorded
+from compass_pkg.readiness_registry import READINESS  # noqa: F401  (re-exported)
 from compass_pkg.render_check_entry import _check_rendered_blocks_current
 
 CORPUS_ROOT = "tests/fixtures/impls"
@@ -124,6 +125,10 @@ class RemovedCheck:
 REMOVED: dict[str, RemovedCheck] = {
     "dashboard-current": RemovedCheck("7.0.0", "rendered-blocks-current"),
 }
+
+# `READINESS` (imported above) holds the readiness signal implementations
+# (ADR-059). They are not checks: they are in neither `REGISTRY` nor `CHECK_FNS`,
+# so `compass check` cannot run one.
 
 # Derived, so a check cannot be run without being registered.
 CHECK_FNS: dict[str, Callable] = {n: e.fn for n, e in REGISTRY.items()}

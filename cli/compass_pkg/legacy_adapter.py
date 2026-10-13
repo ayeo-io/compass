@@ -46,7 +46,7 @@ from compass_pkg.stable_ids import (APPROACH_REGULAR, APPROACH_SPIKE, GATE_G5, G
 PRESET_ID = "default"
 PRESET_VERSION = "6.0.0"
 PRESET_FILES = ("dimensions", "stages", "approaches", "rules", "checks", "gates",
-                "artifacts", "vocabulary")
+                "artifacts", "readiness", "vocabulary")
 
 # The eight stages in the order they run. A stage an approach names that is
 # not here is appended, so an unusual policy still converts.
@@ -478,6 +478,18 @@ def _humanise(identifier):
     return text[:1].upper() + text[1:]
 
 
+def _shipped_readiness():
+    """`(catalogue, display names)` of the readiness signals, read from the
+    shipped preset. The two legacy files have no readiness entry, so this is the
+    one place the adapter takes a catalogue from the preset it is rebuilding
+    (ADR-059): a project with copied governance still has the shipped signals."""
+    directory = os.path.join(core.FRAMEWORK_ROOT, "governance", "presets", "default")
+    catalogue = core.load_yaml(os.path.join(directory, "readiness.yml")).get("readiness") or {}
+    names = core.load_yaml(os.path.join(directory, "vocabulary.yml")).get("vocabulary") or {}
+    return catalogue, {key: copy.deepcopy(value) for key, value in names.items()
+                       if key.startswith("readiness.")}
+
+
 def _vocabulary(approaches, stages, checks, gates):
     out = {}
     for name in approaches:
@@ -491,6 +503,7 @@ def _vocabulary(approaches, stages, checks, gates):
         out[f"checks.{name}"] = {
             "name": DISPLAY_NAMES.get(f"checks.{name}", _humanise(name)),
             "aliases": []}
+    out.update(_shipped_readiness()[1])
     return out
 
 
@@ -516,6 +529,7 @@ def _convert(policy, guardrails):
         "checks": checks,
         "gates": gates,
         "artifacts": _artifacts(approaches, rules),
+        "readiness": _shipped_readiness()[0],
         "vocabulary": _vocabulary(approaches, stages, checks, gates),
     }
     table = policy.get("autonomy_checkpoints") or {}
@@ -545,7 +559,7 @@ def _convert(policy, guardrails):
 
 def adapt(policy, guardrails):
     """One layer document in catalogue form from a routing policy and a
-    guardrails file: `schema: 1` and the eight catalogues."""
+    guardrails file: `schema: 1` and the nine catalogues."""
     return _convert(policy, guardrails)[0]
 
 

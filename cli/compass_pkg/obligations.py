@@ -235,7 +235,7 @@ class Refused:
 
 @dataclass(frozen=True)
 class Obligations:
-    """What a configuration owes an assessment. The first fifteen fields are
+    """What a configuration owes an assessment. The first sixteen fields are
     the facts the classifier compares; `approach`, `rules_fired` and
     `ignored_overrides` are outcomes, which are not obligations (a different
     approach that owes the same is equivalent)."""
@@ -254,6 +254,7 @@ class Obligations:
     checks: dict
     artifact_depends_on: dict
     artifact_checks: dict
+    readiness: dict
     approach: str = ""
     rules_fired: tuple = ()
     ignored_overrides: dict = None   # the issue's stage modes a floor replaced
@@ -292,6 +293,9 @@ FACT_FOR_FIELD = {
     "checks.statement": "checks",
     "artifacts.depends_on": "artifact_depends_on",
     "artifacts.checks": "artifact_checks",
+    "readiness.impl": "readiness",
+    "readiness.params": "readiness",
+    "readiness.required_for_autonomous": "readiness",
     "evaluation.required_skills": "required_skills",
     "evaluation.blocked_stages": "blocked_stages",
     "evaluation.required_artifacts": "required_artifacts",
@@ -389,6 +393,18 @@ def _check_facts(check, assessment, orders):
     if check.get("kind") in STATEMENT_KINDS:
         facts["statement"] = check.get("statement")
     return facts
+
+
+def _readiness_facts(signals):
+    """The fields of each readiness signal that two configurations are
+    compared on. They do not depend on the assessment: the readiness floor is
+    the same at every point. `required_for_autonomous` is false when absent."""
+    return {signal_id: {"impl": entry.get("impl"),
+                        "params": copy.deepcopy(entry.get("params") or {}),
+                        "required_for_autonomous":
+                            entry.get("required_for_autonomous") is True}
+            for signal_id, entry in sorted((signals or {}).items())
+            if isinstance(entry, dict)}
 
 
 def _guardrail_gates(gates, ships, assessment, orders):
@@ -591,6 +607,7 @@ def obligations(config, assessment, autonomy_values=AUTONOMY, capabilities=(),
         ceilings=ceilings,
         checks={c: _check_facts(checks[c], reading, orders) for c in sorted(listed)},
         artifact_depends_on=artifact_depends_on, artifact_checks=artifact_checks,
+        readiness=_readiness_facts(config.get("readiness")),
         approach=result["delivery_approach"],
         rules_fired=tuple(f["id"] for f in result["policy_rules_fired"]),
         ignored_overrides=dict((result.get("issue_overrides") or {}).get("ignored")

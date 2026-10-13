@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -106,7 +107,7 @@ def test_acf_52(tmp_path):
 CLI = ROOT / "cli" / "compass"
 
 #: The stage, owner and traditional name of each shipped kind. Written out here
-#: from the requirements review (Q16, accepted by jed72 as M2) and the design, so
+#: from the issue's requirements review, as jed72 accepted it, and the design, so
 #: the tests do not read the answer from the file they check.
 SHIPPED_KINDS = {
     "intent": ("assess", "product-owner", "prd"),
@@ -2056,7 +2057,7 @@ def test_acf_45(tmp_path, monkeypatch):
 def test_acf_65(tmp_path):
     # A multiagent builder hands back result.md or result-subtask-<n>.md beside the
     # manifest, the same class of file as brief-subtask-<n>.md. No reader needs it
-    # registered, so the migrate must not report it as unmapped (architect ruling AD-4).
+    # registered, so the migrate must not report it as unmapped.
     from compass_pkg import artifact_kinds, migrate_kinds
     catalogue = migrate_kinds.shipped_catalogue()
     for name in ("result.md", "result-subtask-1.md", "result-subtask-12.md"):
@@ -2559,7 +2560,8 @@ def _maps_on_small_regular_issues(root):
     registered at lightweight depth and either sits in its documents folder or is an
     entry the check treats as owed. An issue with no subtasks list whose map names two
     or more subtasks is left out. A map registered with no depth is a person's map the
-    migrate adopted, and is kept (architect ruling, BD-11's follow-on)."""
+    migrate adopted. The stub rule keys on lightweight depth and this map has none,
+    so it is kept."""
     from compass_pkg import artifact_owed, migrate_kinds
     found = []
     for slug, (data, work, docs) in _issues_of(root).items():
@@ -2714,3 +2716,37 @@ def test_acf_67(tmp_path):
     run = subprocess.run([sys.executable, str(MEASURE), "--root", str(root), "--after"],
                          capture_output=True, text=True, timeout=600)
     assert "never had a record: 1" in run.stdout and "no depth: 1" in run.stdout, run.stdout
+
+
+#: Ids that live only in one issue's documents: design decisions (DD-), architect
+#: and builder decisions (AD-, BD-) and requirements-review questions (Q<n>). The
+#: issue documents are not tracked, so a reader of the repository cannot look
+#: one up.
+_ISSUE_LOCAL_ID = re.compile(r"\b(?:AD|BD|DD)-\d+\b|\(Q\d+\)|\bQ\d+ of\b")
+#: Citations on main before this rule existed; each is to be put into words.
+_KNOWN_CITATIONS = {
+    "cli/compass_pkg/checks.py": 2,
+    "scripts/compare-behaviour.py": 2,
+}
+
+
+def _issue_local_citations(root):
+    found = {}
+    for folder in ("cli/compass_pkg", "hooks", "scripts"):
+        for path in sorted((Path(root) / folder).rglob("*")):
+            if path.suffix not in (".py", ".sh") or "__pycache__" in path.parts:
+                continue
+            hits = _ISSUE_LOCAL_ID.findall(path.read_text(encoding="utf-8", errors="replace"))
+            if hits:
+                found[path.relative_to(root).as_posix()] = len(hits)
+    return found
+
+
+def test_acf_68(tmp_path):
+    """ACF-68: production code cites no id that lives only in an issue's documents."""
+    found = _issue_local_citations(ROOT)
+    assert found == _KNOWN_CITATIONS, found
+    planted = tmp_path / "cli" / "compass_pkg"
+    planted.mkdir(parents=True)
+    (planted / "planted.py").write_text('"""Kept as written (DD-3)."""\n', encoding="utf-8")
+    assert _issue_local_citations(tmp_path) == {"cli/compass_pkg/planted.py": 1}

@@ -89,7 +89,7 @@ def test_apply_migrates_a_v1_tree(tmp_path):
         assert "docs/compass" in path.replace("\\", "/"), (
             f"{kind} was renamed but not relocated: {path}")
     assert not (d / "route.md").exists()
-    # Q3 of artifact-catalogue-fields: the migrate leaves no pointer at the old name. The
+    # Since 7.0.0 the migrate leaves no pointer at the old name. The
     # registry has served the hook since before 5.0.0.
     assert not (d / "delivery-approach.md").exists(), (
         "the renamed file is still beside the manifest, as a document or a pointer")

@@ -163,7 +163,7 @@ def _split_required(raw, dim):
 
 
 def _split_optional(raw, dim):
-    """`(None, None)` for a goal or role left out (it records no value, DD-12), else
+    """`(None, None)` for a goal or role left out (it records no value), else
     'VALUE - reason', which must carry its reason."""
     if raw is None:
         return None, None

@@ -1,5 +1,5 @@
 # compass_pkg.approach_blocks - the rendered blocks of the delivery-approach record
-"""Pure renderers for the four blocks of `delivery-approach.md` (ADR-055, DD-10).
+"""Pure renderers for the four blocks of `delivery-approach.md` (ADR-055).
 
 - `assessment`: a row per assessed dimension with its value and the justification the
   manifest records, then the labels;

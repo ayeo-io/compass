@@ -68,7 +68,7 @@ GATE_IDS = (GATE_G1, GATE_G2, GATE_G3, GATE_G4, GATE_G5, GATE_S1, GATE_S2,
 # `*` stands for any text. `compare.md` and `report.md` are an evaluation run's
 # outputs, and `*.v6.bak` is a distribution map the migrate set aside.
 # `result.md` and `result-subtask-*.md` are a multiagent builder's hand-back,
-# the same class of file as its brief (architect ruling AD-4).
+# the same class of file as its brief: no reader needs one registered.
 NOT_AN_ARTIFACT = (
     "README.md", "devlog.md",
     "*review-brief*.md",

@@ -453,7 +453,7 @@ def test_a_repository_path_is_not_rewritten_by_the_filename_rename(tmp_path):
         f"the rename rewrote paths outside the issue directory: {got}")
 
 
-# --- `TRC-E5`, as Q3 of artifact-catalogue-fields changed it --------------------
+# --- `TRC-E5`, as the 7.0.0 migrate changed it: no pointer at the old name -----
 #
 # The migrate no longer leaves a pointer where the delivery-approach record was. The
 # registry has served the hook since before 5.0.0, and the pointer was generated

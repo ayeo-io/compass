@@ -383,7 +383,7 @@ def adopted_map(data, project, plan):
 
 def stub_map(task_dir, data, project, plan=None):
     """The rename of a lightweight distribution map on an issue with fewer than two
-    subtasks, or None. The map is renamed, never deleted (Q5)."""
+    subtasks, or None. The map is renamed, never deleted, so a person can still read it."""
     entry = next((e for e in (data.get("artifacts") or [])
                   if isinstance(e, dict) and e.get("kind") == "distribution-map"), None)
     home = "%s/distribution-map.md" % docs_dir(task_dir)

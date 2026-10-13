@@ -3897,3 +3897,4 @@
 - `PRC-43` A project command that writes files leaves the working tree unchanged
 - `PRC-44` A malformed or unreadable readiness record never blocks a session
 - `PRC-45` No command or child process outlives a readiness run, however it ends
+- `PRC-46` A record measured on a commit outside HEAD's history is stale

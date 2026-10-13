@@ -15,9 +15,11 @@ name: Compass (self-check)
 
 on:
   pull_request:
-    # Not `edited`: a title or body edit runs only pr-text.yml, which scans
-    # the pull request text, so an edit does not run the suite again.
-    types: [opened, synchronize, reopened]
+    # `edited` because GitHub sends it when the base branch changes, and a
+    # run tests the head merged into the base, so the suite must run again
+    # then. On a title or body edit every suite job skips and self-check
+    # reports the earlier result instead (see the self-check job).
+    types: [opened, synchronize, reopened, edited]
   push:
     branches: [main]
 
@@ -33,21 +35,26 @@ permissions:
 # One group per pull request, so a new push cancels the run it replaces. A
 # push to main gets a group per commit and is never cancelled. The prefix
 # keeps this group apart from other workflows' groups: a group name is shared
-# by every workflow in the repository.
+# by every workflow in the repository. A title or body edit gets a group of
+# its own (the `-text` suffix), so it never cancels a suite run; a base
+# change shares the pushes' group and cancels the run it supersedes.
 concurrency:
-  group: compass-${{ github.event.pull_request.number || github.sha }}
+  group: compass-${{ github.event.pull_request.number || github.sha }}${{ github.event.action == 'edited' && github.event.changes.base == null && '-text' || '' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-# Every job but already-tested needs it and carries the same condition,
-# `!cancelled() && needs.already-tested.outputs.skip != 'true'`:
+# Every job but already-tested needs it. Every suite job carries the
+# condition `!cancelled() && needs.already-tested.outputs.skip != 'true'
+# && (github.event.action != 'edited' || github.event.changes.base != null)`:
 # - on a pull request already-tested is skipped with no output, and every
 #   job runs. `!cancelled()` is a status function, so GitHub does not add
 #   the implicit success() that would skip a job whose need was skipped;
+# - on an `edited` event the suite runs only when the base changed;
 # - on a push already-tested marks as tested, every job skips together;
 # - on any other push, including one where already-tested failed, every job
 #   runs.
-# self-check runs whatever the other jobs' results were, because a skipped
-# required check counts as passed.
+# self-check drops the `edited` part and runs on every pull request event,
+# whatever the other jobs' results were, because a skipped required check
+# counts as passed.
 jobs:
   already-tested:
     # A push to main whose tree was already tested green on its pull request
@@ -59,6 +66,7 @@ jobs:
       contents: read
       pull-requests: read
       checks: read
+      issues: read            # the pull request's timeline
     outputs:
       skip: ${{ steps.decide.outputs.skip }}
     steps:
@@ -82,7 +90,7 @@ jobs:
 
   checks:
     needs: already-tested
-    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' }}
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && (github.event.action != 'edited' || github.event.changes.base != null) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -152,7 +160,7 @@ jobs:
   count:
     # The number of tests the shards must add up to.
     needs: already-tested
-    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' }}
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && (github.event.action != 'edited' || github.event.changes.base != null) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
@@ -183,7 +191,7 @@ jobs:
     # to the shard command and names its count file with it, so self-check
     # reads the same number.
     needs: already-tested
-    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' }}
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && (github.event.action != 'edited' || github.event.changes.base != null) }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -244,7 +252,7 @@ jobs:
     # Tests marked serial assert wall-clock limits or change this checkout's
     # own files, so they run alone on a runner of their own.
     needs: already-tested
-    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' }}
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && (github.event.action != 'edited' || github.event.changes.base != null) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -263,17 +271,41 @@ jobs:
 
   self-check:
     # The required check. It passes only when every job it needs succeeded
-    # and the shards' counts add up to the count job's total.
-    needs: [already-tested, checks, count, shard, serial]
+    # and the shards' counts add up to the count job's total. It needs the
+    # other required jobs too, so its result carries theirs.
+    #
+    # On a title or body edit every needed job skips, and GitHub counts a
+    # skipped required check as passed and reads the latest check run of
+    # each name. So self-check does not skip there, which would hide an
+    # earlier failure: it runs, and passes only when the latest earlier
+    # self-check on the head succeeded and the base has not changed since
+    # that run started. scripts/ci-already-tested.py holds that rule.
+    needs:
+      - already-tested
+      - checks
+      - count
+      - shard
+      - serial
+      - check-mutation
+      - bdd-adapter
+      - bdd-adapter-behave
+      - bdd-adapter-cucumber-js
+      - bdd-adapter-godog
     if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+      checks: read
+      issues: read            # the pull request's timeline
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.11"
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        if: github.event.action != 'edited' || github.event.changes.base != null
         # A missing count must reach the rule below, not stop the job here.
         continue-on-error: true
         with:
@@ -281,12 +313,23 @@ jobs:
           path: ${{ runner.temp }}/count
           merge-multiple: true
       - name: Every needed job succeeded and the shard counts add up
+        if: github.event.action != 'edited' || github.event.changes.base != null
         env:
           NEEDS: ${{ toJSON(needs) }}
         run: >-
           python3 scripts/ci-self-check.py aggregate
-          --needs-env NEEDS --needed checks,count,shard,serial
+          --needs-env NEEDS
+          --needed checks,count,shard,serial,check-mutation,bdd-adapter,bdd-adapter-behave,bdd-adapter-cucumber-js,bdd-adapter-godog
           --exempt already-tested --counts "$RUNNER_TEMP/count"
+      - name: A title or body edit reports the earlier suite result
+        if: github.event.action == 'edited' && github.event.changes.base == null
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ github.event.pull_request.number }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          RUN_ID: ${{ github.run_id }}
+        run: python3 scripts/ci-already-tested.py --repo "$REPO" --pull-request "$NUMBER" --head "$HEAD" --this-run "$RUN_ID"
 
   # ---------------------------------------------------------------------------
   # The BDD reference adapter, in its own job and its own environment.
@@ -304,7 +347,7 @@ jobs:
   # ---------------------------------------------------------------------------
   bdd-adapter:
     needs: already-tested
-    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' }}
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && (github.event.action != 'edited' || github.event.changes.base != null) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -355,7 +398,7 @@ jobs:
   # examples/bdd-adapters/ has one of these, and tests/test_bdd_adapters_all.py asserts it.
   bdd-adapter-behave:
     needs: already-tested
-    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' }}
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && (github.event.action != 'edited' || github.event.changes.base != null) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -380,7 +423,7 @@ jobs:
   # examples/bdd-adapters/ has one of these, and tests/test_bdd_adapters_all.py asserts it.
   bdd-adapter-cucumber-js:
     needs: already-tested
-    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' }}
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && (github.event.action != 'edited' || github.event.changes.base != null) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -410,7 +453,7 @@ jobs:
   # examples/bdd-adapters/ has one of these, and tests/test_bdd_adapters_all.py asserts it.
   bdd-adapter-godog:
     needs: already-tested
-    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' }}
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && (github.event.action != 'edited' || github.event.changes.base != null) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -444,13 +487,18 @@ jobs:
   # touches none of the files those tests depend on.
   harness-root:
     needs: already-tested
-    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' }}
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && (github.event.action != 'edited' || github.event.changes.base != null) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0          # the change test diffs against the base
+
+      # Before the change test, which runs Python too.
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11"
 
       - id: changed
         name: Did this change touch the real-root harness?
@@ -462,11 +510,6 @@ jobs:
           --output "$GITHUB_OUTPUT"
           evals/ tests/test_harness_root_real.py tests/test_eval_harness.py
           .github/requirements/self-check.txt .github/workflows/compass.yml
-
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
-        if: steps.changed.outputs.run == 'true'
-        with:
-          python-version: "3.11"
 
       - name: Install the test tooling
         if: steps.changed.outputs.run == 'true'
@@ -498,7 +541,7 @@ jobs:
     # does not notice. It takes about half a minute, so it runs on every pull
     # request rather than on a schedule.
     needs: already-tested
-    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' }}
+    if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && (github.event.action != 'edited' || github.event.changes.base != null) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

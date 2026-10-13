@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
-"""Decide whether a push to main may skip the test suite.
+"""Decide whether a tree was already tested green on its pull request.
 
 Usage: ci-already-tested.py --repo OWNER/NAME --commit M --output FILE
                             [--branch main]
+       ci-already-tested.py --repo OWNER/NAME --pull-request N --head H
+                            --this-run RUN_ID
 
-The `already-tested` job in .github/workflows/compass.yml runs this on a
-push to main. When it appends `skip=true` to FILE (the job's
-$GITHUB_OUTPUT), every other job in the run skips. A wrong skip puts an
-untested tree on main with a green check, so every condition below must
-hold, and any error or unknown answer appends `skip=false`:
+The push skip (first form). The `already-tested` job in
+.github/workflows/compass.yml runs this on a push to main. When it appends
+`skip=true` to FILE (the job's $GITHUB_OUTPUT), every other job in the run
+skips. A wrong skip puts an untested tree on main with a green check, so
+every condition below must hold, and any error or unknown answer appends
+`skip=false`:
 
 1. Exactly one pull request listed for M by the GitHub API has merge
    commit M, a merge time, and base branch --branch.
@@ -23,12 +26,25 @@ hold, and any error or unknown answer appends `skip=false`:
 5. The head's `self-check` check runs from the GitHub Actions app are all
    completed, and the latest (by start time, then id) has conclusion
    success. A later failed run must win over an earlier success.
-
-Only two values read from the API reach a command, the head sha and the
-pull-request number, each checked first and passed as one argument in an
-argument list, never through a shell.
+6. The pull request's timeline shows no base change at or after the time
+   that run started. A pull-request run tests the head merged into the
+   base it had then, so a run from before a retarget says nothing about
+   the base the pull request merged into. A timeline that cannot be read
+   fails this condition.
 
 Exit 0 whenever it wrote the line, 1 when it could not write it.
+
+The earlier result (second form). On a title or body edit the suite jobs
+skip, and GitHub counts a skipped required check as passed, so the
+`self-check` job runs this instead of the aggregator. It exits 0 only when
+conditions 5 and 6 hold for head H and pull request N, leaving out the
+check runs of workflow run RUN_ID, which is this run. The earlier run's
+`self-check` needed every required job, so its result carries theirs.
+Exit 1 otherwise, including on any error.
+
+Only two values read from the API or the event reach a command, the head
+sha and the pull-request number, each checked first and passed as one
+argument in an argument list, never through a shell.
 """
 from __future__ import annotations
 
@@ -37,8 +53,14 @@ import json
 import re
 import subprocess
 import sys
+from datetime import datetime
 
 SHA = re.compile(r"^[0-9a-f]{40}$")
+NUMBER = re.compile(r"^[1-9][0-9]{0,9}$")
+# The timeline events that mean the pull request's base branch changed: a
+# person retargeted it, or GitHub did when the old base was merged and
+# deleted.
+BASE_CHANGES = ("base_ref_changed", "automatic_base_change_succeeded")
 
 
 class Unknown(Exception):
@@ -77,6 +99,29 @@ def _has_commit(sha: str) -> bool:
     return _git("cat-file", "-e", f"{sha}^{{commit}}").returncode == 0
 
 
+def _whole_number(value):
+    """The value as an int from 1 up, or None."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value if value >= 1 else None
+    if isinstance(value, str) and NUMBER.match(value):
+        return int(value)
+    return None
+
+
+def _time(text) -> datetime:
+    if not isinstance(text, str):
+        raise Unknown(f"the time {text!r} is not text")
+    try:
+        when = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise Unknown(f"the time {text!r} cannot be read") from exc
+    if when.tzinfo is None:
+        raise Unknown(f"the time {text!r} has no time zone")
+    return when
+
+
 class Decision:
     def __init__(self):
         self.lines = {
@@ -85,6 +130,7 @@ class Decision:
             "Head tree": "not read",
             "First parent is an ancestor of the head": "not read",
             "Latest self-check conclusion": "not read",
+            "Base changes since that run started": "not read",
         }
         self.reasons: list[str] = []
 
@@ -138,8 +184,20 @@ def _head_commit(pr: dict, d: Decision):
     return head
 
 
-def _latest_self_check(args, head: str, d: Decision):
-    answer = _gh("api", "-X", "GET", f"repos/{args.repo}/commits/{head}/check-runs",
+def _workflow_run(run: dict, repo: str):
+    """The workflow run id in a check run's details URL, or None."""
+    url = run.get("details_url")
+    if not isinstance(url, str):
+        return None
+    m = re.match(rf"^https://github\.com/{re.escape(repo)}/actions/runs/(\d+)/", url)
+    return int(m.group(1)) if m else None
+
+
+def _latest_self_check(repo: str, head: str, d: Decision, *, leave_out=None):
+    """Condition 5. The latest self-check run on the head when it
+    succeeded, else None with the reason recorded. The check runs of
+    workflow run `leave_out` are left out."""
+    answer = _gh("api", "-X", "GET", f"repos/{repo}/commits/{head}/check-runs",
                  "-f", "check_name=self-check", "-f", "filter=all",
                  "-f", "per_page=100")
     if not isinstance(answer, dict) or not isinstance(answer.get("check_runs"), list):
@@ -153,31 +211,63 @@ def _latest_self_check(args, head: str, d: Decision):
         if not isinstance(run, dict):
             raise Unknown("a check run in the answer is not an object")
         app = run.get("app") if isinstance(run.get("app"), dict) else {}
-        if run.get("name") == "self-check" and app.get("slug") == "github-actions":
-            ours.append(run)
+        if run.get("name") != "self-check" or app.get("slug") != "github-actions":
+            continue
+        if leave_out is not None and _workflow_run(run, repo) == leave_out:
+            continue
+        ours.append(run)
+    label = "Latest self-check conclusion"
     if not ours:
-        d.lines["Latest self-check conclusion"] = "no self-check run from GitHub Actions"
-        d.no("the head has no self-check run from GitHub Actions")
-        return
+        d.lines[label] = "no self-check run from GitHub Actions"
+        d.no("the head has no self-check run from GitHub Actions"
+             + (" other than this run's" if leave_out is not None else ""))
+        return None
     running = [r for r in ours if r.get("status") != "completed"]
     if running:
-        d.lines["Latest self-check conclusion"] = (
-            f"{len(running)} of {len(ours)} runs not completed")
+        d.lines[label] = f"{len(running)} of {len(ours)} runs not completed"
         d.no("a self-check run on the head is not completed")
-        return
+        return None
     for run in ours:
         if not isinstance(run.get("started_at"), str) or not isinstance(run.get("id"), int):
             raise Unknown("a self-check run has no start time or id")
-    latest = max(ours, key=lambda r: (r["started_at"], r["id"]))
+    latest = max(ours, key=lambda r: (_time(r["started_at"]), r["id"]))
     conclusion = latest.get("conclusion")
-    d.lines["Latest self-check conclusion"] = (
-        f"{conclusion} (run {latest['id']}, started {latest['started_at']}, "
-        f"latest of {len(ours)})")
+    workflow_run = _workflow_run(latest, repo)
+    d.lines[label] = (
+        f"{conclusion} (run {latest['id']}"
+        + (f" in workflow run {workflow_run}" if workflow_run else "")
+        + f", started {latest['started_at']}, latest of {len(ours)})")
     if conclusion != "success":
         d.no(f"the latest self-check run on the head ended {conclusion}")
+        return None
+    return latest
+
+
+def _base_unchanged_since(repo: str, number: int, run: dict, d: Decision):
+    """Condition 6: no base change at or after the run started."""
+    label = "Base changes since that run started"
+    pages = _gh("api", "--paginate", "--slurp", "-X", "GET",
+                f"repos/{repo}/issues/{number}/timeline", "-f", "per_page=100")
+    if not isinstance(pages, list) or not all(isinstance(p, list) for p in pages):
+        raise Unknown("the timeline answer is not a list of pages")
+    started = _time(run["started_at"])
+    later = []
+    for event in (e for page in pages for e in page):
+        if not isinstance(event, dict):
+            raise Unknown("an event in the timeline is not an object")
+        if event.get("event") in BASE_CHANGES:
+            if _time(event.get("created_at")) >= started:
+                later.append(f"{event['event']} at {event['created_at']}")
+    if later:
+        d.lines[label] = ", ".join(later)
+        d.no("the base branch changed after the self-check run started: "
+             + ", ".join(later))
+    else:
+        d.lines[label] = "none"
 
 
 def decide(args) -> tuple[bool, Decision]:
+    """The first form: may this push to main skip the suite?"""
     d = Decision()
     try:
         if not SHA.match(args.commit):
@@ -201,28 +291,57 @@ def decide(args) -> tuple[bool, Decision]:
             d.no("the merge commit's first parent is not an ancestor of the head")
         else:
             raise Unknown(f"git merge-base failed: {anc.stderr.strip()}")
-        _latest_self_check(args, head, d)
+        latest = _latest_self_check(args.repo, head, d)
+        if latest is not None:
+            number = _whole_number(pr.get("number"))
+            if number is None:
+                d.no(f"the pull request number {pr.get('number')!r} is not a "
+                     "whole number, so its timeline is not read")
+            else:
+                _base_unchanged_since(args.repo, number, latest, d)
     except Unknown as exc:
         d.no(f"error: {exc}")
         return False, d
     return not d.reasons, d
 
 
-def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(prog="ci-already-tested.py")
-    parser.add_argument("--repo", required=True)
-    parser.add_argument("--commit", required=True)
-    parser.add_argument("--output", required=True)
-    parser.add_argument("--branch", default="main")
-    args = parser.parse_args(argv)
+def earlier_result(args) -> tuple[bool, Decision]:
+    """The second form: may self-check pass on a title or body edit?"""
+    d = Decision()
+    for label in ("Merged tree", "Head tree", "First parent is an ancestor of the head"):
+        del d.lines[label]
+    try:
+        number = _whole_number(args.pull_request)
+        if number is None:
+            raise Unknown(f"--pull-request {args.pull_request!r} is not a whole number")
+        if not SHA.match(args.head):
+            raise Unknown(f"--head {args.head!r} is not 40 hex characters")
+        this_run = _whole_number(args.this_run)
+        if this_run is None:
+            raise Unknown(f"--this-run {args.this_run!r} is not a whole number")
+        d.lines["Pull request"] = f"#{number}, head {args.head}"
+        latest = _latest_self_check(args.repo, args.head, d, leave_out=this_run)
+        if latest is not None:
+            _base_unchanged_since(args.repo, number, latest, d)
+    except Unknown as exc:
+        d.no(f"error: {exc}")
+        return False, d
+    return not d.reasons, d
+
+
+def _print_lines(d: Decision):
+    for label, value in d.lines.items():
+        print(f"{label}: {value}")
+
+
+def _push_skip(args) -> int:
     try:
         skip, d = decide(args)
     except Exception as exc:  # any surprise answers "run the suite"
         skip, d = False, Decision()
         d.no(f"error: {type(exc).__name__}: {exc}")
     print(f"Merged commit: {args.commit}")
-    for label, value in d.lines.items():
-        print(f"{label}: {value}")
+    _print_lines(d)
     if skip:
         print("Decision: skip. This tree was tested green on its pull request.")
     else:
@@ -234,6 +353,42 @@ def main(argv: list[str]) -> int:
         sys.stderr.write(f"ci-already-tested.py: cannot write {args.output}: {exc}\n")
         return 1
     return 0
+
+
+def _earlier(args) -> int:
+    try:
+        passes, d = earlier_result(args)
+    except Exception as exc:  # any surprise fails the check
+        passes, d = False, Decision()
+        d.no(f"error: {type(exc).__name__}: {exc}")
+    _print_lines(d)
+    if passes:
+        print("Decision: pass. The latest earlier self-check on this head "
+              "succeeded, and the base has not changed since it started.")
+        return 0
+    print("Decision: fail, because " + "; ".join(d.reasons) + ".")
+    return 1
+
+
+def main(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(prog="ci-already-tested.py")
+    parser.add_argument("--repo", required=True)
+    parser.add_argument("--commit")
+    parser.add_argument("--output")
+    parser.add_argument("--branch", default="main")
+    parser.add_argument("--pull-request")
+    parser.add_argument("--head")
+    parser.add_argument("--this-run")
+    args = parser.parse_args(argv)
+    push = (args.commit, args.output)
+    edit = (args.pull_request, args.head, args.this_run)
+    if all(push) and not any(edit):
+        return _push_skip(args)
+    if all(edit) and not any(push):
+        return _earlier(args)
+    parser.error("give either --commit and --output, "
+                 "or --pull-request, --head and --this-run")
+    return 2
 
 
 if __name__ == "__main__":

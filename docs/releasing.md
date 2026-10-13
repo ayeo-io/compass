@@ -472,13 +472,34 @@ scripts.
 | `count` | Counts the tests outside the serial pass, with `pytest --collect-only -q -m "not serial" tests/`. |
 | `shard` | A matrix of shard jobs. Each runs its share of the test files on parallel workers and prints its 25 slowest tests. |
 | `serial` | Runs the tests marked `serial` alone, and prints its 20 slowest tests. |
-| `self-check` | Passes only when every job above succeeded and the shard counts add up to the `count` total. |
+| `self-check` | Passes only when every job it needs succeeded and the shard counts add up to the `count` total. It needs every job above and the four `bdd-adapter` jobs and `check-mutation`. On a title or body edit it reports the earlier suite result instead (below). |
 | `bdd-adapter`, `bdd-adapter-behave`, `bdd-adapter-cucumber-js`, `bdd-adapter-godog` | Run each BDD reference adapter. |
 | `harness-root` | Runs the real-root harness tests, only when the change touches the files they depend on. |
 | `check-mutation` | Breaks each shipped check and confirms its register tests go red. |
 
-A new push to a pull request cancels the run it replaces. A push to main
-is never cancelled.
+A new push to a pull request, or a change of its base branch, cancels the
+run it replaces. A push to main is never cancelled.
+
+### Edits and base changes
+
+`compass.yml` runs on the pull request types `opened`, `synchronize`,
+`reopened` and `edited`. GitHub sends `edited` for a change of title, body
+or base branch. A run tests the head merged into the base, so a base change
+runs the suite again. A title or body edit does not:
+
+- every suite job carries `github.event.action != 'edited' ||
+  github.event.changes.base != null`, so it skips on a text-only edit;
+- `self-check` still runs, because a skipped required check counts as
+  passed and would hide an earlier failure. It skips its aggregator and
+  runs `scripts/ci-already-tested.py --pull-request N --head H --this-run
+  RUN_ID`, which passes only when the latest earlier `self-check` on the
+  head succeeded, none is still running, and the pull request's timeline
+  shows no base change since that run started. Because `self-check` needs
+  every other required job, its earlier result carries theirs;
+- a text-only edit gets a concurrency group of its own, so it never
+  cancels a suite run. An edit made while the suite is still running fails
+  `self-check`, and the suite run's own `self-check`, which ends later,
+  then replaces that result.
 
 ### The required checks
 
@@ -489,7 +510,8 @@ skip on a pull request:
 
 - every job in `compass.yml` but `already-tested` runs on the condition
   `!cancelled() && needs.already-tested.outputs.skip != 'true'`, so it runs
-  whatever the results of the jobs it needs;
+  whatever the results of the jobs it needs. The suite jobs add the
+  base-change clause above;
 - `self-check` is the aggregator. `scripts/ci-self-check.py aggregate`
   fails it when any job it needs failed, was cancelled or was skipped, or
   has no result. Only the push-only `already-tested` is exempt;
@@ -537,7 +559,11 @@ error reading the GitHub API:
 4. the pushed commit's first parent is an ancestor of the head, so the
    pull-request run tested this tree;
 5. the latest `self-check` run on the head, from GitHub Actions, succeeded,
-   and none is still running.
+   and none is still running;
+6. the pull request's timeline shows no base change (`base_ref_changed`,
+   or `automatic_base_change_succeeded` when GitHub retargets it after the
+   old base is merged) at or after the time that run started. A timeline
+   that cannot be read fails this condition.
 
 A branch that was not brought up to date with main before merging fails
 condition 4, so its push runs the suite.
@@ -546,7 +572,8 @@ condition 4, so its push runs the suite.
 
 `.github/workflows/pr-text.yml` scans the pull request's title and body for
 rival product names. It runs on `edited` too, so an edited title is scanned
-without running the suite; `compass.yml` does not run on `edited`. The
+without running the suite; on a text-only edit `compass.yml` runs only
+`self-check`. The
 ruleset must list `pr-text` as a required check: until it does, the check
 runs and shows a failure, but does not block a merge.
 

@@ -100,10 +100,12 @@ def _pull(merge, head, *, number=7, base="main", merged=True):
 
 
 def _run(conclusion="success", status="completed", started="2026-10-13T10:00:00Z",
-         run_id=1, app="github-actions"):
+         run_id=1, app="github-actions", workflow_run=444):
     return {"id": run_id, "name": "self-check", "status": status,
             "conclusion": conclusion, "started_at": started,
-            "app": {"slug": app}}
+            "app": {"slug": app},
+            "details_url": f"https://github.com/{REPO}/actions/runs/"
+                           f"{workflow_run}/job/{run_id}"}
 
 
 def _checks(*runs):
@@ -174,36 +176,67 @@ def _answer(value):
     return {"stdout": json.dumps(value), "exit": 0}
 
 
-def _decide(tmp_path: Path, history: dict, row):
-    name, merged_key, pulls, head_key, checks, _ = row
-    merged = history[merged_key]
-    head = history.get(head_key, head_key)
+# The pull request's timeline, as `gh api --paginate --slurp` prints it: a
+# list of pages. The default holds events that are not base changes, one of
+# them after every run in the rows, and a commit event with no time.
+QUIET_TIMELINE = [[{"event": "committed"},
+                   {"event": "labeled", "created_at": "2026-10-13T09:00:00Z"}],
+                  [{"event": "head_ref_force_pushed",
+                    "created_at": "2026-10-13T11:00:00Z"}]]
+
+
+def _timeline(*events):
+    return [[{"event": "committed"}, *({"event": e, "created_at": at}
+                                       for e, at in events)]]
+
+
+def _timeline_argv(number=7):
+    return ["api", "--paginate", "--slurp", "-X", "GET",
+            f"repos/{REPO}/issues/{number}/timeline", "-f", "per_page=100"]
+
+
+def _shim(tmp_path: Path, table: list) -> tuple[Path, dict]:
     work = tmp_path / "gh"
     work.mkdir()
     shim = work / "bin" / "gh"
     shim.parent.mkdir()
     shim.write_text(SHIM.format(python=sys.executable))
     shim.chmod(shim.stat().st_mode | stat.S_IEXEC)
-    if isinstance(pulls, str):
-        pulls = _pulls(pulls, dict(history, merged=merged, head=head))
-    table = [
-        {"argv": ["api", f"repos/{REPO}/commits/{merged}/pulls"], **_answer(pulls)},
-        {"argv": ["api", "-X", "GET", f"repos/{REPO}/commits/{head}/check-runs",
-                  "-f", "check_name=self-check", "-f", "filter=all",
-                  "-f", "per_page=100"], **_answer(checks)},
-    ]
     (work / "table.json").write_text(json.dumps(table))
-    output = tmp_path / "github_output"
-    output.write_text("earlier=line\n")
     env = dict(os.environ, FAKE_GH_DIR=str(work),
                PATH=f"{shim.parent}{os.pathsep}{os.environ['PATH']}",
                GIT_TERMINAL_PROMPT="0")
+    return work, env
+
+
+def _unexpected(work: Path) -> str:
+    path = work / "unexpected.jsonl"
+    return path.read_text() if path.exists() else ""
+
+
+def _checks_argv(head):
+    return ["api", "-X", "GET", f"repos/{REPO}/commits/{head}/check-runs",
+            "-f", "check_name=self-check", "-f", "filter=all", "-f", "per_page=100"]
+
+
+def _decide(tmp_path: Path, history: dict, row, timeline=QUIET_TIMELINE):
+    name, merged_key, pulls, head_key, checks, _ = row
+    merged = history[merged_key]
+    head = history.get(head_key, head_key)
+    if isinstance(pulls, str):
+        pulls = _pulls(pulls, dict(history, merged=merged, head=head))
+    work, env = _shim(tmp_path, [
+        {"argv": ["api", f"repos/{REPO}/commits/{merged}/pulls"], **_answer(pulls)},
+        {"argv": _checks_argv(head), **_answer(checks)},
+        {"argv": _timeline_argv(), **_answer(timeline)},
+    ])
+    output = tmp_path / "github_output"
+    output.write_text("earlier=line\n")
     r = subprocess.run([sys.executable, str(SCRIPT), "--repo", REPO,
                         "--commit", merged, "--output", str(output)],
                        cwd=history["repo"], capture_output=True, text=True,
                        env=env, timeout=60)
-    unexpected = (work / "unexpected.jsonl")
-    return r, output.read_text(), unexpected.read_text() if unexpected.exists() else ""
+    return r, output.read_text(), _unexpected(work)
 
 
 @pytest.mark.parametrize("row", ROWS, ids=[r[0] for r in ROWS])
@@ -218,7 +251,8 @@ def test_crt_7_push_skip_decision(tmp_path, history, row):
     assert lines[1:] == [expected], (lines, r.stdout, r.stderr)
     for label in ("Pull request:", "Merged tree:", "Head tree:",
                   "First parent is an ancestor of the head:",
-                  "Latest self-check conclusion:", "Decision:"):
+                  "Latest self-check conclusion:",
+                  "Base changes since that run started:", "Decision:"):
         assert label in r.stdout, (label, r.stdout)
     assert not (history["repo"] / "planted").exists()
 
@@ -229,3 +263,124 @@ def test_crt_7_runs_no_shell():
     source = SCRIPT.read_text(encoding="utf-8")
     for banned in ("shell=True", "os.system", "os.popen"):
         assert banned not in source, banned
+
+
+# --- a base change (CRT-21) -------------------------------------------------
+
+GREEN_ROW = ROWS[0]
+assert GREEN_ROW[0] == "tested green"
+
+# Each row: (name, timeline answer, expected skip, words the output names).
+# The green self-check run in GREEN_ROW started at 10:00:00.
+TIMELINE_ROWS = [
+    ("no base change", QUIET_TIMELINE, True, []),
+    ("a base change before the run started",
+     _timeline(("base_ref_changed", "2026-10-13T09:59:00Z")), True, []),
+    ("a base change after the run started",
+     _timeline(("base_ref_changed", "2026-10-13T10:01:00Z")), False,
+     ["base_ref_changed", "2026-10-13T10:01:00Z"]),
+    ("an automatic base change after the run started",
+     _timeline(("automatic_base_change_succeeded", "2026-10-13T10:01:00Z")), False,
+     ["automatic_base_change_succeeded"]),
+    ("a base change with no time", [[{"event": "base_ref_changed"}]], False,
+     ["error"]),
+    ("the timeline call exits non-zero", ("", 1), False, ["error"]),
+    ("the timeline answer is not JSON", ("<html>rate limited</html>", 0), False,
+     ["error"]),
+    ("the timeline answer is not a list of pages", {"message": "Not Found"}, False,
+     ["error"]),
+]
+
+
+@pytest.mark.parametrize("row", TIMELINE_ROWS, ids=[r[0] for r in TIMELINE_ROWS])
+def test_crt_21_push_skip_reads_the_timeline(tmp_path, history, row):
+    """The push skip never trusts a green run that started before the pull
+    request's last base change, or a timeline it cannot read."""
+    name, timeline, skip, words = row
+    r, output, unexpected = _decide(tmp_path, history, GREEN_ROW, timeline=timeline)
+    assert unexpected == "", unexpected
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert output.splitlines()[1:] == [f"skip={'true' if skip else 'false'}"], (
+        output, r.stdout)
+    assert "Base changes since that run started:" in r.stdout, r.stdout
+    decision = [line for line in r.stdout.splitlines() if line.startswith("Decision:")]
+    assert len(decision) == 1, r.stdout
+    for word in words:
+        assert word in r.stdout, (word, r.stdout)
+
+
+HEAD = "ab" * 20
+THIS_RUN = 555
+
+# Each row: (name, check-runs answer, timeline answer, passes, words named).
+# The run that this self-check reports is run 444; its self-check started
+# at 10:00:00.
+EARLIER_ROWS = [
+    ("a green earlier run, no base change since",
+     _checks(_run()), QUIET_TIMELINE, True, ["success", "444"]),
+    ("this run's own self-check is still in progress",
+     _checks(_run(), _run(None, status="in_progress", run_id=9,
+                          started="2026-10-13T10:20:00Z", workflow_run=THIS_RUN)),
+     QUIET_TIMELINE, True, ["success"]),
+    ("the latest earlier run failed",
+     _checks(_run("success", run_id=1, started="2026-10-13T09:00:00Z"),
+             _run("failure", run_id=2, workflow_run=445)),
+     QUIET_TIMELINE, False, ["failure"]),
+    ("an earlier run is still in progress",
+     _checks(_run(), _run(None, status="in_progress", run_id=3,
+                          started="2026-10-13T10:05:00Z", workflow_run=446)),
+     QUIET_TIMELINE, False, ["not completed"]),
+    ("no earlier run",
+     _checks(_run(None, status="in_progress", run_id=9, workflow_run=THIS_RUN)),
+     QUIET_TIMELINE, False, ["no self-check"]),
+    ("a base change after the earlier run started",
+     _checks(_run()), _timeline(("base_ref_changed", "2026-10-13T10:01:00Z")),
+     False, ["base_ref_changed"]),
+    ("an automatic base change after the earlier run started",
+     _checks(_run()),
+     _timeline(("automatic_base_change_succeeded", "2026-10-13T10:01:00Z")),
+     False, ["automatic_base_change_succeeded"]),
+    ("the timeline cannot be read", _checks(_run()), ("", 1), False, ["error"]),
+    ("the check-runs call exits non-zero", ("", 1), QUIET_TIMELINE, False, ["error"]),
+]
+
+
+def _earlier(tmp_path: Path, checks, timeline, *, number="7", head=HEAD):
+    work, env = _shim(tmp_path, [
+        {"argv": _checks_argv(head), **_answer(checks)},
+        {"argv": _timeline_argv(), **_answer(timeline)},
+    ])
+    r = subprocess.run([sys.executable, str(SCRIPT), "--repo", REPO,
+                        "--pull-request", number, "--head", head,
+                        "--this-run", str(THIS_RUN)],
+                       cwd=tmp_path, capture_output=True, text=True, env=env,
+                       timeout=60)
+    return r, _unexpected(work)
+
+
+@pytest.mark.parametrize("row", EARLIER_ROWS, ids=[r[0] for r in EARLIER_ROWS])
+def test_crt_21_earlier_result(tmp_path, row):
+    """On a title or body edit, self-check passes only when the latest earlier
+    self-check on the head succeeded and the base has not changed since it
+    started."""
+    name, checks, timeline, passes, words = row
+    r, unexpected = _earlier(tmp_path, checks, timeline)
+    assert unexpected == "", unexpected
+    assert r.returncode == (0 if passes else 1), (r.returncode, r.stdout, r.stderr)
+    for label in ("Pull request:", "Latest self-check conclusion:",
+                  "Base changes since that run started:", "Decision:"):
+        assert label in r.stdout, (label, r.stdout)
+    for word in words:
+        assert word in r.stdout, (word, r.stdout)
+
+
+@pytest.mark.parametrize("number,head", [("7; touch planted", HEAD),
+                                         ("0", HEAD), ("7", "$(touch planted)")])
+def test_crt_21_earlier_result_refuses_bad_input(tmp_path, number, head):
+    """A pull request number or head that is not what it claims to be fails
+    the check before any call uses it."""
+    r, _ = _earlier(tmp_path, _checks(_run()), QUIET_TIMELINE, number=number,
+                    head=head)
+    assert r.returncode == 1, (r.stdout, r.stderr)
+    assert "Decision:" in r.stdout
+    assert not (tmp_path / "planted").exists()

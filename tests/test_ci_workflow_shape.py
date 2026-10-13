@@ -67,9 +67,16 @@ def _aggregate_argv(doc: dict, counts_dir: Path) -> tuple[list[str], str]:
     return [sys.executable, str(SELF_CHECK), *argv[2:]], "NEEDS"
 
 
+# The required jobs self-check needs besides the suite's own, so that its
+# result carries theirs on a title or body edit, where they skip (CRT-21).
+OTHER_REQUIRED = ["check-mutation", "bdd-adapter", "bdd-adapter-behave",
+                  "bdd-adapter-cucumber-js", "bdd-adapter-godog"]
+
+
 def _needs(**results) -> dict:
     base = {"already-tested": "skipped", "checks": "success",
-            "count": "success", "shard": "success", "serial": "success"}
+            "count": "success", "shard": "success", "serial": "success",
+            **{jid: "success" for jid in OTHER_REQUIRED}}
     base.update({k.replace("_", "-"): v for k, v in results.items()})
     record = {}
     for job, result in base.items():
@@ -124,7 +131,8 @@ def test_crt_5_aggregator_pass_rule(tmp_path):
     assert reporting == ["self-check"], reporting
     job = jobs["self-check"]
     needs = job["needs"]
-    assert set(needs) == {"already-tested", "checks", "count", "shard", "serial"}, needs
+    assert set(needs) == {"already-tested", "checks", "count", "shard", "serial",
+                          *OTHER_REQUIRED}, needs
     assert "strategy" in jobs["shard"], "the shard job is not the matrix job"
 
     # The jobs the rule checks are exactly the ones self-check needs,
@@ -363,7 +371,9 @@ def test_crt_13_docs_build_always_reports(change_repo, tmp_path):
     running = [s.get("name") or s.get("uses") for s in build["steps"]
                if ci_expr.step_runs(s, github={"event_name": "pull_request"},
                                     steps=skipped)]
-    assert running == [build["steps"][0]["uses"], build["steps"][1]["name"]], running
+    assert running == [build["steps"][0]["uses"], build["steps"][1]["uses"],
+                       build["steps"][2]["name"]], running
+    assert "setup-python" in build["steps"][1]["uses"], build["steps"][1]
     assert not any("continue-on-error" in s for s in build["steps"])
 
     repo, base, change = change_repo
@@ -390,12 +400,13 @@ def test_crt_13_docs_build_always_reports(change_repo, tmp_path):
 # --- triggers, jobs and conditions ------------------------------------------
 
 def test_crt_1_triggers_and_concurrency():
-    """The compass.yml workflow runs on new commits only and cancels a superseded
-    pull-request run."""
+    """The compass.yml workflow runs on new commits and base changes, and
+    cancels a superseded pull-request run."""
     doc = _load("compass.yml")
     on = _on(doc)
     assert set(on) == {"pull_request", "push"}, on
-    assert on["pull_request"]["types"] == ["opened", "synchronize", "reopened"], on
+    assert on["pull_request"]["types"] == ["opened", "synchronize", "reopened",
+                                           "edited"], on
     assert on["push"]["branches"] == ["main"], on
     for trigger, spec in on.items():
         for key in ("paths", "paths-ignore"):
@@ -558,13 +569,12 @@ def test_crt_4_old_self_check_steps_still_run(tmp_path):
 
 
 def test_crt_7_already_tested_job_shape():
-    """The already-tested job runs on a push only, with three read
+    """The already-tested job runs on a push only, with four read
     permissions, and publishes skip."""
     job = _load("compass.yml")["jobs"]["already-tested"]
     assert ci_expr.job_runs(job, github={"event_name": "push"})
     assert not ci_expr.job_runs(job, github={"event_name": "pull_request"})
-    assert job["permissions"] == {"contents": "read", "pull-requests": "read",
-                                  "checks": "read"}
+    assert job["permissions"] == READ_GRANT
     assert job["outputs"] == {"skip": "${{ steps.decide.outputs.skip }}"}
     assert job["steps"][0]["with"]["fetch-depth"] == 0
     decide = next(s for s in job["steps"] if s.get("id") == "decide")
@@ -575,6 +585,11 @@ def test_crt_7_already_tested_job_shape():
                              "REPO": "${{ github.repository }}",
                              "MERGED": "${{ github.sha }}"}
 
+
+# The job-level grant of already-tested and self-check: both read the pull
+# request's check runs and its timeline (issues read covers the timeline).
+READ_GRANT = {"contents": "read", "pull-requests": "read", "checks": "read",
+              "issues": "read"}
 
 REQUIRED = ["self-check", "check-mutation", "bdd-adapter", "bdd-adapter-behave",
             "bdd-adapter-cucumber-js", "bdd-adapter-godog"]
@@ -715,15 +730,14 @@ def test_crt_14_every_job_has_a_timeout(tmp_path):
 
 
 def test_crt_15_token_stays_read_only():
-    """The workflow token stays read-only, with one job-level grant."""
+    """The workflow token stays read-only, with two job-level read grants."""
     for name in ("compass.yml", "pr-text.yml", "docs.yml"):
         assert _load(name)["permissions"] == {"contents": "read"}, name
     for name in ("compass.yml", "pr-text.yml"):
         jobs = _load(name)["jobs"]
         granted = {jid: job["permissions"] for jid, job in jobs.items()
                    if "permissions" in job}
-        expected = ({"already-tested": {"contents": "read", "pull-requests": "read",
-                                        "checks": "read"}}
+        expected = ({"already-tested": READ_GRANT, "self-check": READ_GRANT}
                     if name == "compass.yml" else {})
         assert granted == expected, (name, granted)
         for jid, job in jobs.items():
@@ -738,3 +752,96 @@ def test_crt_15_token_stays_read_only():
     spec.loader.exec_module(posture)
     assert WORKFLOWS / "pr-text.yml" in posture._workflow_files()
     assert posture._declares_permissions(WORKFLOWS / "pr-text.yml")
+
+
+# --- a base change (CRT-21) -------------------------------------------------
+
+SUITE_JOBS = ["checks", "count", "shard", "serial", "check-mutation", "harness-root",
+              "bdd-adapter", "bdd-adapter-behave", "bdd-adapter-cucumber-js",
+              "bdd-adapter-godog"]
+
+# (action, changes, the suite runs). A missing `changes` is what GitHub
+# sends on every action but edited.
+EDIT_ROWS = [
+    ("opened", None, True),
+    ("synchronize", None, True),
+    ("reopened", None, True),
+    ("edited", {"base": {"ref": {"from": "stack"}, "sha": {"from": "a" * 40}}}, True),
+    ("edited", {"title": {"from": "old title"}}, False),
+    ("edited", {"body": {"from": "old body"}}, False),
+]
+
+
+def _pr_event(action, changes, number=12):
+    event = {"action": action, "pull_request": {"number": number}}
+    if changes is not None:
+        event["changes"] = changes
+    return {"event_name": "pull_request", "event": event, "sha": "abc"}
+
+
+def _earlier_result_steps(job):
+    return [s for s in job["steps"] if "ci-already-tested.py" in s.get("run", "")]
+
+
+def test_crt_21_base_change_reruns_the_suite():
+    """A base change runs the suite again; a title or body edit runs only
+    self-check, which reports the earlier suite result, and never cancels a
+    suite run."""
+    doc = _load("compass.yml")
+    jobs = doc["jobs"]
+    assert set(SUITE_JOBS) | {"already-tested", "self-check"} == set(jobs), set(jobs)
+    pr_needs = {"already-tested": {"result": "skipped", "outputs": {}}}
+    wrong = []
+    for action, changes, suite in EDIT_ROWS:
+        github = _pr_event(action, changes)
+        for jid in SUITE_JOBS:
+            if ci_expr.job_runs(jobs[jid], github=github, needs=pr_needs) is not suite:
+                wrong.append(f"{jid} on {action} {changes}: expected runs={suite}")
+    assert not wrong, "\n".join(wrong)
+
+    self_check = jobs["self-check"]
+    assert set(self_check["needs"]) == {"already-tested", "checks", "count", "shard",
+                                        "serial", *OTHER_REQUIRED}, self_check["needs"]
+    aggregate = [s for s in self_check["steps"]
+                 if "ci-self-check.py aggregate" in s.get("run", "")]
+    downloads = [s for s in self_check["steps"]
+                 if "download-artifact" in s.get("uses", "")]
+    earlier = _earlier_result_steps(self_check)
+    assert len(aggregate) == 1 and len(downloads) == 1 and len(earlier) == 1, (
+        self_check["steps"])
+    for action, changes, suite in EDIT_ROWS:
+        github = _pr_event(action, changes)
+        skipped_needs = {jid: {"result": "success" if suite else "skipped",
+                               "outputs": {}} for jid in self_check["needs"]}
+        skipped_needs["already-tested"] = {"result": "skipped", "outputs": {}}
+        assert ci_expr.job_runs(self_check, github=github, needs=skipped_needs), action
+        for step in aggregate + downloads:
+            assert ci_expr.step_runs(step, github=github, steps={}) is suite, (
+                action, changes, step)
+        assert ci_expr.step_runs(earlier[0], github=github, steps={}) is (not suite), (
+            action, changes)
+
+    # The earlier-result command, as the step runs it.
+    step = earlier[0]
+    assert shlex.split(step["run"]) == [
+        "python3", "scripts/ci-already-tested.py", "--repo", "$REPO",
+        "--pull-request", "$NUMBER", "--head", "$HEAD", "--this-run", "$RUN_ID"]
+    assert step["env"] == {"GH_TOKEN": "${{ github.token }}",
+                           "REPO": "${{ github.repository }}",
+                           "NUMBER": "${{ github.event.pull_request.number }}",
+                           "HEAD": "${{ github.event.pull_request.head.sha }}",
+                           "RUN_ID": "${{ github.run_id }}"}
+    assert self_check["permissions"] == READ_GRANT
+
+    # A title edit has a group of its own; a base change shares the push's.
+    group = doc["concurrency"]["group"]
+    cancel = doc["concurrency"]["cancel-in-progress"]
+    push_group = ci_expr.render(group, github=_pr_event("synchronize", None))
+    base_group = ci_expr.render(group, github=_pr_event(*EDIT_ROWS[3][:2]))
+    title_group = ci_expr.render(group, github=_pr_event(*EDIT_ROWS[4][:2]))
+    body_group = ci_expr.render(group, github=_pr_event(*EDIT_ROWS[5][:2]))
+    other_title = ci_expr.render(group, github=_pr_event(*EDIT_ROWS[4][:2], number=13))
+    assert base_group == push_group, (base_group, push_group)
+    assert title_group == body_group != push_group, (title_group, push_group)
+    assert other_title != title_group, other_title
+    assert ci_expr.truthy(ci_expr.evaluate(cancel, github=_pr_event(*EDIT_ROWS[4][:2])))

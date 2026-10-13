@@ -52,10 +52,10 @@ def _gate_counts(manifest):
     return sum(1 for g in entries if g.get("status") == "pass"), len(entries)
 
 
-def _view(task_dir):
+def _view(task_dir, manifest=None):
     from compass_pkg import effective
     try:
-        return effective.view_or_legacy(task_dir)
+        return effective.view_or_legacy(task_dir, manifest=manifest)
     except Exception:                                       # noqa: BLE001 - nothing declares a condition
         return None
 
@@ -72,7 +72,7 @@ def _documents(manifest, task_dir=None):
             text = None
             if task_dir and not entry.get("path") and entry.get("status") != "omitted":
                 if not read:
-                    view, read = _view(task_dir), True
+                    view, read = _view(task_dir, manifest), True
                 text = artifact_owed.not_needed(manifest, view, entry)
             found.append({"id": str(entry.get("id") or ""), "kind": str(entry["kind"]),
                           "round": rnd if isinstance(rnd, int) else None,

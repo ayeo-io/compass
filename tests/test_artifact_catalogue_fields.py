@@ -2750,3 +2750,35 @@ def test_acf_68(tmp_path):
     planted.mkdir(parents=True)
     (planted / "planted.py").write_text('"""Kept as written (DD-3)."""\n', encoding="utf-8")
     assert _issue_local_citations(tmp_path) == {"cli/compass_pkg/planted.py": 1}
+
+
+def test_acf_69(tmp_path, monkeypatch):
+    """ACF-69: `render --all` parses each issue's manifest at most once outside the
+    parse cache. The configuration view the render reads to say whether a document
+    is owed takes the manifest the render already holds."""
+    import argparse
+    from collections import Counter
+
+    import archive
+    from compass_pkg import core, render_cmd
+
+    project = tmp_path / "proj"
+    shutil.copytree(archive.sample_root(), project)
+    monkeypatch.chdir(project)
+    monkeypatch.setenv("HOME", str(tmp_path / "home"))
+    monkeypatch.delenv("COMPASS_ISSUE", raising=False)
+    parsed = Counter()
+    real = core.load_yaml
+
+    def counting(path):
+        if os.path.basename(path) == "manifest.yml":
+            parsed[os.path.realpath(path)] += 1
+        return real(path)
+
+    monkeypatch.setattr(core, "load_yaml", counting)
+    args = argparse.Namespace(all=True, task=None, dry_run=False, json=True)
+    render_cmd.cmd_issue_render(args)
+    issues = [p for p in (project / ".compass" / "work").iterdir() if p.is_dir()]
+    assert len(issues) >= 5, issues
+    twice = {path: n for path, n in parsed.items() if n > 1}
+    assert twice == {}, twice

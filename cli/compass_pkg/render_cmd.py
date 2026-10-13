@@ -130,10 +130,10 @@ def unsafe_document_path(task_dir, rel, project, allow_work=False):
     return _link_problem(project, resolved)
 
 
-def _view(task_dir):
+def _view(task_dir, manifest=None):
     from compass_pkg import effective
     try:
-        return effective.view_or_legacy(task_dir)
+        return effective.view_or_legacy(task_dir, manifest=manifest)
     except Exception:                                   # noqa: BLE001
         return None
 
@@ -264,7 +264,7 @@ def plan_issue(task_dir, scan=None, manifest=None, index=True):
         scan = project_scan.ProjectScan.shared(project)
     if scan.manifests.get(slug) != own:
         scan = scan.with_task(slug, own)
-    inputs = block_renderers.gather(own, task_dir, project, lambda: _view(task_dir), scan)
+    inputs = block_renderers.gather(own, task_dir, project, lambda: _view(task_dir, own), scan)
     plan = IssueRender(slug, task_dir, project)
     plan.index_inputs = inputs
     refusals, seen = [], set()

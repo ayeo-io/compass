@@ -252,6 +252,47 @@ def _capture(cli_dir, out_file):
         encoding="utf-8")
 
 
+def _split_result(text):
+    head, rest = text.split("\n--- stdout\n", 1)
+    stdout, stderr = rest.split("--- stderr\n", 1)
+    return head, stdout, stderr
+
+
+def test_dbi_5_manifest_without_key_reads_unchanged(tmp_path):
+    captured = yaml.safe_load(DBI5_CAPTURES.read_text(encoding="utf-8"))
+    root = build_dbi5_project(tmp_path / "project")
+    manifests = {p: p.read_bytes() for p in (root / ".compass" / "work").glob("*/manifest.yml")}
+    outputs = dbi5_outputs(root)
+    assert list(outputs) == list(captured)
+    for name, text in outputs.items():
+        if name != "flow-json.txt":
+            assert text == captured[name], name
+    # The one difference: each --json row gains "depends_on": [].
+    head, stdout, stderr = _split_result(outputs["flow-json.txt"])
+    was_head, was_stdout, was_stderr = _split_result(captured["flow-json.txt"])
+    assert (head, stderr) == (was_head, was_stderr)
+    now, was = json.loads(stdout), json.loads(was_stdout)
+    rows = [row for section in now["board"].values() for row in section]
+    assert rows and all(row["depends_on"] == [] for row in rows), now
+
+    def strip(node):
+        # A row shows under `board` and again under `sections`.
+        if isinstance(node, dict):
+            if "slug" in node:
+                assert node.pop("depends_on") == [], node
+            for value in node.values():
+                strip(value)
+        elif isinstance(node, list):
+            for value in node:
+                strip(value)
+    strip(now)
+    assert json.dumps(now, indent=1) == json.dumps(was, indent=1)
+    # No manifest is rewritten, so no migrate is needed or offered.
+    assert {p: p.read_bytes() for p in manifests} == manifests
+    assert not any("migrate" in text for text in outputs.values())
+    assert_no_gh_call(root)
+
+
 # --- fixture projects -----------------------------------------------------------
 
 STAGES = {"assess": "thorough", "define": "thorough", "refine": "skipped",

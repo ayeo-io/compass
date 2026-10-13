@@ -3746,3 +3746,8 @@
 - `DCJ-102` Every serial-marked test is listed in SERIAL_TESTS
 - `DCJ-103` PBW-A6 judges ignored paths by committed ignore rules only
 - `DCJ-104` A planted cache entry written by render --all fails check, and a single-issue render repairs the page
+
+### ship-commit-after-a-merge (completed 2026-10-13)
+
+- `TRC-001` Given an issue whose own commit changes only its traced files, When the branch tip is a merge of another branch or a commit that only re-derives docs/system-spec.md, Then ship-commit --issue lands at HEAD; and when the issue's own first-parent commit changes an untraced file, Then it still refuses and names the file
+- `TRC-002` Given an integration merge whose first parent is the base of the merged branch, When that branch holds a file outside the issue's declared scope, Then ship-commit --issue refuses to land at HEAD and names the file

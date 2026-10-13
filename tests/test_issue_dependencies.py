@@ -19,6 +19,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -1102,6 +1103,93 @@ def test_dbi_12_hook_cost_budget(tmp_path):
              MAX_MARGINAL_OVER_REFERENCE))
     assert ratio <= 2.0, median
     assert marginal < MAX_MARGINAL_OVER_REFERENCE, median
+
+
+# --- DBI-16: ship-commit ----------------------------------------------------------------
+
+WAITING = ["compass ship-commit: these issues were waiting for b:",
+           "  a (until done)", "  c (until in-review)"]
+
+
+def _ship_repo(root, waiting, gates_pass=True, at_head=False):
+    """A local git repository where `b` is ready to ship. With `waiting`, `a`
+    and `c` wait for it and a closed issue `e` names it too; without, the same
+    issues name nothing. `d` waits for nothing either way."""
+    root = Path(root)
+    root.mkdir(parents=True)
+    _git(root, "init", "-q")
+    _git(root, "config", "user.email", "t@example.com")
+    _git(root, "config", "user.name", "Test")
+    _git(root, "config", "commit.gpgsign", "false")
+    (root / "README.md").write_text("hello\n")
+    project = Project(root)
+    project.issue("a", "implement", depends=[dep("b")] if waiting else None)
+    project.issue("c", "implement", depends=[dep("b", "in-review")] if waiting else None)
+    project.issue("e", "ship", close="not-planned", depends=[dep("b")] if waiting else None)
+    project.issue("d", "implement")
+    _git(root, "add", "-A")
+    _git(root, "commit", "-q", "-m", "init")
+    b = project.dir("b")
+    b.mkdir(parents=True)
+    (b / "manifest.yml").write_text(yaml.safe_dump({
+        "schema_version": "3.0", "issue": "b", "created": "2026-10-01",
+        "assessment": {"risk": "contained", "familiarity": "greenfield", "size": "small",
+                       "goal": "delivery", "role": "engineer", "labels": []},
+        "delivery_approach": "regular", "stages": {}, "evidence": [],
+        "gates": [{"id": "verify.correctness", "status": "pass" if gates_pass else "pending",
+                   "evidence": []}],
+        "scenarios": [{"id": "B-1", "title": "b works", "intent": "INT-1"}],
+        "changed_files": [{"path": "feature.txt", "scenarios": ["B-1"]}],
+    }, sort_keys=False))
+    (root / "feature.txt").write_text("b's work\n")
+    _git(root, "add", "--", "feature.txt", ".compass/work/b/manifest.yml")
+    if at_head:
+        _git(root, "commit", "-q", "-m", "integrate b")
+    return project
+
+
+def _ship(project):
+    done = compass(project.root, "ship-commit", "-m", "Ship b", "--issue", "b")
+    text = re.sub(r"\b[0-9a-f]{7,40}\b", "<id>",
+                  _masked(done.stdout + "\n--- stderr\n" + done.stderr, project.root))
+    return done.returncode, text
+
+
+def _without_waiting(text):
+    return "\n".join(line for line in text.split("\n") if line not in WAITING)
+
+
+def test_dbi_16_ship_commit_names_waiting_issues(tmp_path):
+    for at_head in (False, True):
+        waiting = _ship_repo(tmp_path / f"waiting-{at_head}", True, at_head=at_head)
+        alone = _ship_repo(tmp_path / f"alone-{at_head}", False, at_head=at_head)
+        code, text = _ship(waiting)
+        alone_code, alone_text = _ship(alone)
+        assert code == alone_code == 0, (text, alone_text)
+        assert status_of(waiting, "b") == ("done", "completed"), text
+        lines = text.split("\n")
+        start = lines.index(WAITING[0])
+        assert lines[start:start + 3] == WAITING, text
+        assert not any(line.startswith(("  d ", "  e ")) for line in lines), text
+        assert _without_waiting(text) == alone_text, (text, alone_text)
+        assert not any(line in WAITING for line in alone_text.split("\n")), alone_text
+        assert_no_gh_call(waiting.root)
+    # A ship that does not land b prints no waiting line, and exits as it would.
+    for at_head in (False, True):
+        waiting = _ship_repo(tmp_path / f"refused-{at_head}", True, gates_pass=False,
+                             at_head=at_head)
+        alone = _ship_repo(tmp_path / f"refused-alone-{at_head}", False, gates_pass=False,
+                           at_head=at_head)
+        code, text = _ship(waiting)
+        alone_code, alone_text = _ship(alone)
+        assert status_of(waiting, "b")[0] != "done", text
+        assert code == alone_code and text == alone_text, (text, alone_text)
+        assert WAITING[0] not in text, text
+
+
+def status_of(project, slug):
+    manifest = project.manifest(slug)
+    return manifest.get("status"), manifest.get("close_reason")
 
 
 if __name__ == "__main__" and sys.argv[1:2] == ["--capture"]:

@@ -730,6 +730,7 @@ def _record_usage(task_dir, finish_started_at):
             except Exception:                              # noqa: BLE001
                 continue
     project_root = os.path.dirname(os.path.dirname(work))
+    previous = task.get("usage") if isinstance(task.get("usage"), dict) else {}
     try:
         prices = project_settings.settings(project_root).get("prices") or {}
         task["usage"] = session_usage.stage_usage(
@@ -737,10 +738,13 @@ def _record_usage(task_dir, finish_started_at):
     except project_settings.SettingsConflict:
         raise
     except Exception:                                    # noqa: BLE001
-        previous = task.get("usage") if isinstance(task.get("usage"), dict) else {}
         task["usage"] = {"recorded": False, "reason": "unreadable",
                          **({"session": previous["session"]}
                             if isinstance(previous.get("session"), str) else {})}
+    # The sessions the pre-tool hook recorded stay; the rest of the block is
+    # the quick fix's own, as before.
+    if isinstance(previous.get("sessions"), list) and previous["sessions"]:
+        task["usage"]["sessions"] = list(previous["sessions"])
     save_manifest(task, path)
 
 

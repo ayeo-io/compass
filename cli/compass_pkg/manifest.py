@@ -32,7 +32,7 @@ import re as _re
 
 import fnmatch
 import re as _re
-from compass_pkg import checkpoint_outcomes, status_words
+from compass_pkg import checkpoint_outcomes, issue_usage, status_words
 from compass_pkg.terminal import say
 from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, normalize_spine, now_iso, resolve_issue_dir, save_manifest
 from compass_pkg.issue_layout import docs_dir_for
@@ -477,7 +477,13 @@ def cmd_land_commit(args):
         status_words.close(head_task, status_words.COMPLETED)
         head_task["land_timestamp"] = now_iso()
         head_task["land_commit"] = head_id
+        # What the issue's sessions cost, read from their transcripts; it never
+        # stops the landing (issue_usage.py).
+        usage_line = issue_usage.record_at_ship(head_task, head_task_dir,
+                                                head_task["land_timestamp"])
         save_manifest(head_task, head_task_path)
+        if usage_line:
+            print(usage_line)
         landed_note = _derive_and_commit_living_spec(cwd, head_slug)
         print(
             f"compass ship-commit: every file '{head_slug}' changed is "
@@ -722,7 +728,11 @@ def cmd_land_commit(args):
                         # The commit this issue landed in. A green is checked
                         # against its tree after HEAD has moved on.
                         task["land_commit"] = head_after
+                        usage_line = issue_usage.record_at_ship(
+                            task, task_dir, task["land_timestamp"])
                         save_manifest(task, task_path)
+                        if usage_line:
+                            print(usage_line)
                         landed_note = "\n  issue marked landed."
                         # ADR-026: ship-commit is the one step that derives
                         # the living spec, and only for an issue it has just

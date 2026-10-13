@@ -584,3 +584,104 @@ def test_arc_12_usage_faults_never_stop_the_landing(tmp_path, monkeypatch):
         locked.chmod(0o644)
     _not_recorded(root, subprocess.CompletedProcess([], code, printed.getvalue(), ""),
                   "too-large", [S1, S2])
+
+
+# --- ARC-15 -----------------------------------------------------------------------
+
+CANARY = "CANARY-7f3a"
+MODELS = ("model-a", "model-b")
+
+
+def canary_transcripts(home):
+    """Transcripts for S1 and S2 that hold the canary in a user prompt, an
+    assistant text, a tool input, a tool result, an error message and their
+    own folder's name."""
+    folder = Path(home) / "projects" / f"-work-{CANARY}"
+    def usage(n):
+        return {"input_tokens": n, "output_tokens": n, "cache_creation_input_tokens": n,
+                "cache_read_input_tokens": n}
+    for session, base in ((S1, "2026-10-13T09"), (S2, "2026-10-13T10")):
+        lines = [
+            {"type": "user", "timestamp": f"{base}:05:00Z", "sessionId": session,
+             "cwd": f"/home/{CANARY}", "message": {"role": "user", "content": f"Fix {CANARY}."}},
+            {"type": "assistant", "timestamp": f"{base}:10:00Z", "requestId": f"{session}-a",
+             "sessionId": session, "message": {"id": f"{session}-ma", "model": "model-a",
+                                               "content": [{"type": "text", "text": CANARY}],
+                                               "usage": usage(10)}},
+            {"type": "assistant", "timestamp": f"{base}:20:00Z", "requestId": f"{session}-b",
+             "sessionId": session, "message": {"id": f"{session}-mb", "model": "model-b",
+                                               "content": [{"type": "tool_use", "id": "toolu_1",
+                                                            "name": "Bash",
+                                                            "input": {"command": f"echo {CANARY}"}}],
+                                               "usage": usage(20)}},
+            {"type": "user", "timestamp": f"{base}:21:00Z", "sessionId": session,
+             "message": {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "toolu_1",
+                                                      "is_error": True,
+                                                      "content": f"Error: {CANARY} failed"}]}},
+            {"type": "system", "timestamp": f"{base}:22:00Z", "sessionId": session,
+             "subtype": "api_error", "error": {"message": f"{CANARY} overloaded"}},
+        ]
+        path = folder / f"{session}.jsonl"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("\n".join(json.dumps(line) for line in lines) + "\n")
+    return folder
+
+
+def _leaves(node, path=()):
+    if isinstance(node, dict):
+        for key, value in node.items():
+            yield from _leaves(value, path + (key,))
+    elif isinstance(node, list):
+        for value in node:
+            yield from _leaves(value, path)
+    else:
+        yield path, node
+
+
+def _is_time(value):
+    from compass_pkg import session_usage
+    return session_usage._parse_time(value) is not None
+
+
+def test_arc_15_no_transcript_text_is_stored(tmp_path):
+    from compass_pkg import session_usage
+    bare = tmp_path / "record.git"
+    co.git(tmp_path, "init", "-q", "--bare", str(bare))
+    root, _ = regular_project(tmp_path / "work", transcripts=None, compass_yml=dict(
+        AUTONOMOUS, record={"remote": str(bare), "paths": [".compass/work", "docs/compass"]}))
+    home = root / ".claude-config"
+    transcripts = canary_transcripts(home)
+
+    outputs = [ship_at(root)]
+    assert outputs[0].returncode == 0, outputs[0]
+    for argv in (("retro", "--impact"), ("retro", "--impact", "--json"),
+                 ("issue", "diagnose", "--issue", co.SLUG)):
+        outputs.append(co.run(root, *argv))
+    assert outputs[1].returncode == 0 and outputs[3].returncode == 0, outputs
+
+    clone = tmp_path / "record-copy"
+    co.git(tmp_path, "clone", "-q", str(bare), str(clone))
+    synced = yaml.safe_load((clone / ".compass" / "work" / co.SLUG / "manifest.yml").read_text())
+    assert synced["usage"] == co.manifest(root)["usage"]
+    history = co.git(clone, "log", "--all", "-p", "--format=%H %s")
+    texts = [o.stdout + o.stderr for o in outputs] + [history]
+    for top in (root / ".compass", root / "docs" / "compass", clone):
+        for path in top.rglob("*"):
+            if path.is_file() and ".git" not in path.relative_to(top).parts:
+                texts.append(str(path.relative_to(top)) + "\n"
+                             + path.read_bytes().decode("utf-8", "replace"))
+    paths = {str(home), os.path.realpath(home), str(transcripts), "-work-", ".jsonl"}
+    for text in texts:
+        assert CANARY not in text, text[:2000]
+        for found in paths:
+            assert found not in text, (found, text[:2000])
+
+    usage = co.manifest(root)["usage"]
+    assert usage["total"]["requests"] == 4, usage
+    sessions = set(usage["sessions"])
+    for where, leaf in _leaves(usage):
+        assert (leaf is None or isinstance(leaf, (bool, int, float))
+                or leaf in MODELS or leaf in sessions or leaf in session_usage.REASONS
+                or leaf == session_usage.SOURCE or (isinstance(leaf, str) and _is_time(leaf))), \
+            (where, leaf)
+    co.assert_no_gh_call(root)

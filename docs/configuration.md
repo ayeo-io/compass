@@ -88,7 +88,7 @@ The state decides what Compass reads, and no state loses a setting silently:
 | `record` | Where the delivery record is kept | `remote`, `paths`, `names_key` | no record |
 | `prices` | Dollars per million tokens, to price a quick fix's usage | a mapping from model name | no cost recorded |
 | `multiagent` | Where multiagent worktrees go | `worktree_root`, `max_worktrees` | `../.compass-worktrees`, 6 |
-| `allow_project_commands` | Lets `compass check` run commands a project guardrail declares | `true`, `false` | `false` |
+| `allow_project_commands` | Lets `compass check` and `compass readiness` run commands the project declares | `true`, `false` | `false` |
 | `governance_drift` | Whether drift from the shipped governance fails | `advisory`, `strict` | `advisory` |
 | `preset_index` | Reserved for published presets; no behaviour yet | - | - |
 | `github_labels` | Whether Compass writes an issue's labels to its linked GitHub issue (see `docs/github-labels.md`) | `domain`, `status`: `true` or `false` each | both `false`; no GitHub call |
@@ -136,8 +136,11 @@ changed how often a session stops would give no sign.
   the commands that decide the repository's readiness signals (see the
   `readiness` catalogue in `governance/presets/default/readiness.yml`). Each is
   optional. Declare the check form of a formatter in `format_check_command`, the
-  one that reports a difference and changes no file. Each command runs in a
-  clean checkout of HEAD, so it must set up its own dependencies.
+  one that reports a difference and changes no file. `compass readiness` runs
+  them, with `test_command`, only when `allow_project_commands` is `true` and the
+  contribution is trusted. Each command runs in a clean checkout of HEAD, so it
+  must set up its own dependencies. See `docs/readiness.md` for the order and the
+  time budget.
 - `secret_scan` and `structured_logging`: a one-line declaration of the secret
   scanner the project runs and of its logging convention. A non-empty string makes the
   matching readiness signal present. Compass runs nothing for either.
@@ -182,7 +185,10 @@ the project to a file of names that must not reach the record. See
 ### `allow_project_commands`
 
 Project guardrails can declare a command. `compass check` runs one only when
-the contribution is trusted and this setting is `true`. The setting is read
+the contribution is trusted and this setting is `true`. `compass readiness`
+runs the project's build, test, lint, type-check and format-check commands
+under the same two conditions, in the same order; with the setting off, each of
+those readiness signals is absent and names this setting. The setting is read
 from the project's own file only, so a published preset cannot authorise its
 own commands. See `docs/security.md`.
 

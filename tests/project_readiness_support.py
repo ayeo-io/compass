@@ -89,3 +89,59 @@ def make_project(tmp_path, compass_yml=None, files=None, scripts=None, commit=Tr
         git(project, "add", "-A")
         git(project, "commit", "-q", "--allow-empty", "-m", "fixture")
     return project
+
+
+RECORD = Path(".compass") / "readiness.yml"
+
+
+def readiness(project, *argv, env=None):
+    """Run `compass readiness` in the fixture project. Returns
+    `(exit code, stdout, stderr)`."""
+    return run_compass(project, "readiness", *argv, env=env)
+
+
+def read_record(project):
+    """The readiness record the last run wrote, as a mapping."""
+    return yaml.safe_load((Path(project) / RECORD).read_text(encoding="utf-8"))
+
+
+def signal(record, signal_id):
+    """One signal's entry in a readiness record or the `--json` output."""
+    found = [s for s in record["signals"] if s["id"] == signal_id]
+    assert len(found) == 1, (signal_id, record["signals"])
+    return found[0]
+
+
+def marker_script(project, name, body):
+    """A shell script under `scripts/` that first appends its name and the
+    time to `$READINESS_MARKERS/<name>`, then runs `body`. The marker folder
+    is outside the project, so a marker survives the temporary worktree.
+    Returns the command that runs it."""
+    path = Path(project) / "scripts" / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("#!/bin/sh\n"
+                    'if [ -n "$READINESS_MARKERS" ]; then\n'
+                    f'  echo "$(python3 -c "import time; print(time.time())") $(pwd)"'
+                    f' >> "$READINESS_MARKERS/{name}"\n'
+                    "fi\n" + body.rstrip("\n") + "\n", encoding="utf-8")
+    path.chmod(path.stat().st_mode | stat.S_IXUSR)
+    return f"sh scripts/{name}"
+
+
+def markers(folder):
+    """`{script name: [(start time, working folder), ...]}` from a marker folder."""
+    found = {}
+    for path in sorted(Path(folder).iterdir()):
+        rows = []
+        for line in path.read_text(encoding="utf-8").splitlines():
+            when, _, where = line.partition(" ")
+            rows.append((float(when), where))
+        found[path.name] = rows
+    return found
+
+
+def worktrees(project):
+    """The paths `git worktree list --porcelain` reports, real paths, sorted."""
+    out = git(project, "worktree", "list", "--porcelain")
+    return sorted(os.path.realpath(line.split(" ", 1)[1])
+                  for line in out.splitlines() if line.startswith("worktree "))

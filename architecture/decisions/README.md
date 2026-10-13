@@ -92,6 +92,10 @@ Rules:
 | [ADR-050](ADR-050-artifact-status-is-written-by-stage-exits-and-by-a-persons-approval.md) | Artifact status is written by stage exits and by a person's approval | accepted | amends ADR-012; with ADR-006, ADR-022, ADR-026, ADR-039, ADR-044 and ADR-045 |
 | [ADR-051](ADR-051-rendered-blocks-are-derived-in-place-and-checked.md) | Rendered blocks are derived in place and checked | accepted | amends ADR-012 and ADR-044; with ADR-008, ADR-036, ADR-046 and ADR-047 |
 | [ADR-052](ADR-052-the-parse-cache-serves-the-render-as-well-as-flow.md) | The parse cache serves the render as well as flow | accepted | widens ADR-049; with ADR-003 and ADR-051 |
+| [ADR-058](ADR-058-the-readiness-floor-caps-autonomous-work.md) | The readiness floor caps autonomous work | proposed | uses ADR-006's major-version provision; with ADR-003 and ADR-036 |
+| [ADR-059](ADR-059-readiness-signals-are-a-versioned-catalogue.md) | Readiness signals are a versioned catalogue | proposed | extends ADR-033, ADR-035 and ADR-038; with ADR-037 and ADR-039 |
+| [ADR-060](ADR-060-readiness-is-a-per-checkout-record-the-manifest-summarises.md) | Readiness is a per-checkout record that the manifest summarises | proposed | with ADR-005 and ADR-036 |
+| [ADR-061](ADR-061-measuring-a-repository-runs-project-commands-under-the-trust-order.md) | Measuring a repository runs project commands under the trust order | proposed | with ADR-009 and ADR-025 |
 
 ## Principle → ADR mapping
 

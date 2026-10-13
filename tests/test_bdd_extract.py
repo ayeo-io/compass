@@ -320,6 +320,7 @@ EXPECTED_SUBCOMMANDS = {
     "record",                     # sync|restore - the delivery record (ADR-031)
     "decision",                   # record|list|show|check - the ledger (ADR-027)
     "board",                      # render|refresh - the delivery board page (ADR-046)
+    "readiness",                  # measures the repository and writes the readiness record
 }
 
 

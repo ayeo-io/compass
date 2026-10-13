@@ -473,6 +473,8 @@ def build_parser():
     # this file stays under its line cap outside build_parser.
     from compass_pkg.board_cmd import register as _register_board
     _register_board(sub)
+    from compass_pkg.readiness_cmd import register as _register_readiness
+    _register_readiness(sub)
 
     pnx = sub.add_parser(
         "next",

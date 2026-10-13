@@ -20,7 +20,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from compass_pkg import artifact_owed, lifecycle, status_words
-from compass_pkg.stable_ids import STAGE_ASSESS
 
 NOT_ASSESSED = "not assessed"
 
@@ -81,25 +80,16 @@ def _documents(manifest, task_dir=None):
     return tuple(found)
 
 
-def _stage(manifest, task_dir, state, recorded):
-    """`(stage, problem)`. A closed issue is at `done`; an issue with no delivery
-    approach is at assess; every other issue is where `compass next` puts it."""
-    from compass_pkg import next_cmd
-    if state == "done":
-        return "done", None
-    if state in ("backlog", "ready") and not recorded:
-        return STAGE_ASSESS, None
-    try:
-        return next_cmd._current_phase_from_task(manifest, task_dir) or "done", None
-    except Exception as exc:                                # noqa: BLE001
-        return None, "the stage could not be read (%s)" % type(exc).__name__
+def _stage(manifest, task_dir, state):
+    """`(stage, problem)`, from `lifecycle.stage_of`: the dependency derivation
+    compares stages there, so the board and the derivation read one rule."""
+    return lifecycle.stage_of(manifest, task_dir, state)
 
 
 def detail(manifest, task_dir):
     """The `IssueDetail` of one issue."""
     state = lifecycle.state_of(manifest, task_dir)
-    recorded = bool(manifest.get("delivery_approach"))
-    stage, problem = _stage(manifest, task_dir, state, recorded)
+    stage, problem = _stage(manifest, task_dir, state)
     passed, total = _gate_counts(manifest)
     flag = lifecycle.blocked_flag(manifest, task_dir)
     return IssueDetail(str(manifest.get("delivery_approach") or NOT_ASSESSED), state, stage,

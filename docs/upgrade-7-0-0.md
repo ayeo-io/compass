@@ -144,7 +144,7 @@ Then the steps of the rendered-blocks section above run: the Definition of Done 
 
 The dry run lists each move, rename, registration, re-point, pointer removal and stub rename, then the totals: documents by target kind, files left on the not-an-artifact list, unmapped files, pointers to remove and maps to rename. It writes nothing. A second `--apply` reports nothing to do. A migrate stopped part way finishes on the next `--apply`, and every issue stays workable in between, because the registry names the new path before the file moves.
 
-**Copy first.** `--apply` renames files in `docs/compass/` as well as `.compass/work/`. Where git does not track a folder, it refuses without `--i-have-a-copy`, naming every folder it cannot restore in one refusal. Nothing a person wrote is deleted: renames and moves keep the bytes, and the two things removed (each pointer and the one `recommendation` entry) are in your copy.
+**Copy first.** `--apply` renames files in `docs/compass/` as well as `.compass/work/`. Where git does not track a folder, it refuses without `--i-have-a-copy`, naming every folder it cannot restore in one refusal. Nothing a person wrote is deleted: renames and moves keep the bytes, and the three things removed are in your copy: each pointer, the one `recommendation` entry, and a registry entry that merges into another entry for the same file. A merged entry can hold an older approval; the migrate keeps the newer approval and names the dropped entry's id and approval in its report, in the dry run as well as the apply.
 
 ### What to do
 

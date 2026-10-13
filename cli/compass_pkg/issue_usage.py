@@ -1,6 +1,8 @@
 # compass_pkg.issue_usage - what an issue's sessions cost, recorded when it lands
 """The `usage` block `compass ship-commit` writes for every approach but the
-quick fix, from the transcripts of the sessions that worked on the issue.
+quick fix, from the transcripts of the sessions that worked on the issue. An
+issue assessed before checkpoint outcomes were recorded (not judged) gets no
+block, so it lands exactly as it did before.
 
 The pre-tool hook lists those sessions in `usage.sessions`
 (`session_record`); the session that runs `ship-commit` is added. Each
@@ -210,9 +212,14 @@ def _others(task_dir):
 
 def record_at_ship(task, task_dir, now) -> str | None:
     """Set the landed issue's `usage` block. Returns the one line to print when
-    usage is not recorded, else None. A quick fix keeps the block its finish
-    wrote. Never raises."""
+    usage is not recorded, else None. Never raises.
+
+    A quick fix keeps the block its finish wrote. An issue assessed before
+    checkpoint outcomes were recorded (not judged) lands exactly as it did
+    before this block existed: nothing is read or written for it."""
     if task.get("delivery_approach") == APPROACH_QUICK_FIX:
+        return None
+    if not checkpoint_outcomes.judged(task):
         return None
     previous = task.get("usage") if isinstance(task.get("usage"), dict) else {}
     try:

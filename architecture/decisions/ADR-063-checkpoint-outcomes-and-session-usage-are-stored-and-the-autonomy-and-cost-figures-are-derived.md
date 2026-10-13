@@ -68,6 +68,7 @@ A transcript holds a person's prompts. `session_usage.stage_usage` already reads
    - After a landing, `ship-commit` reads the transcripts of every session in `usage.sessions`, and of the session running it, line by line. Nothing is sampled.
    - Before reading, it sums the size of every file. Above 1 GiB it reads none and records `recorded: false` with the reason `too-large`.
    - A missing or unreadable transcript records its reason, and an unpriced model leaves its cost null. Usage never stops a landing.
+   - An issue that is not judged (decision 3) gets no block, so it lands exactly as before.
    - Transcripts are only read. The block keeps numbers, booleans, model names, times, session ids and fixed reason words.
    - No transcript text or path is stored. Session ids reach the delivery record inside the manifest it already copies, as the quick fix's `usage.session` does.
    - Requests are divided into stage windows by each stage's ending record. Requests after the last such record are `unattributed`.

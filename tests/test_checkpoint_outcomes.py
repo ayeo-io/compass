@@ -575,6 +575,8 @@ def _masked(text):
 
 def test_arc_5_landing_refuses_a_checkpoint_with_no_outcome(tmp_path, monkeypatch):
     root = project(tmp_path)
+    # A new regular issue's first assessment makes it judged.
+    assert manifest(root)["checkpoint_outcomes"] == []
     register(root, "acceptance-criteria", "approved")
     assert approve(root, "define").returncode == 0
     _ready_to_ship(root)

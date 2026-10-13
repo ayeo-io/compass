@@ -535,6 +535,17 @@ def test_arc_12_usage_faults_never_stop_the_landing(tmp_path, monkeypatch):
     root, _ = regular_project(tmp_path / "none", sessions=None)
     _not_recorded(root, ship_at(root), "not-claude-code", None)
 
+    # An issue assessed before outcomes were recorded lands exactly as the base
+    # commit lands it: no usage line, and no usage block is written.
+    root, _ = regular_project(tmp_path / "older")
+    body = co.manifest(root)
+    body.pop("checkpoint_outcomes")
+    co.write_manifest(root, body)
+    done = ship_at(root)
+    assert done.returncode == 0 and co.manifest(root).get("land_timestamp"), done
+    assert "usage" not in done.stdout + done.stderr, done
+    assert co.manifest(root)["usage"] == {"sessions": [S1, S2]}
+
     root, home = regular_project(tmp_path / "missing")
     (home / "projects" / "-fixture-project" / f"{S2}.jsonl").unlink()
     _not_recorded(root, ship_at(root), "no-transcript", [S1, S2])

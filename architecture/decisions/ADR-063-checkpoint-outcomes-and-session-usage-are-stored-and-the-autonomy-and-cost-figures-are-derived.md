@@ -121,4 +121,4 @@ A transcript holds a person's prompts. `session_usage.stage_usage` already reads
 - ADR-045 and ADR-051: derived state is not written.
 - ADR-048: reading issue state across worktrees.
 - ADR-050: the `artifact-approval` type, the precedent for a person's approval that never clears `G5`.
-- `docs/autonomy-and-cost.md` owns the facts of the outcomes, the session record, the usage block and the derived figures.
+- The doc that owns the facts of the outcomes, the session record, the usage block and the derived figures is named in the "Owning docs" table of `docs/README.md`.

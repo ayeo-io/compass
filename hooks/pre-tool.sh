@@ -929,6 +929,13 @@ if isinstance(stages, dict):
     weight = word_map.map_manifest({"stages": {"define": weight}})["stages"]["define"]
     if weight == stable_ids.MODE_THOROUGH and not (task.get("scenarios") or []):
         print("block")
+        sys.exit(0)
+# The issues this one waits for (ADR-062). Only this reader has the manifest
+# parsed already, so it says whether the dependency reader below needs to run:
+# an issue with no `depends_on`, or an empty one, starts no process for it. A
+# value that is not a list says so too, so the dependency reader can warn.
+if task.get("depends_on") not in (None, []):
+    print("depends")
 PYEOF
 )"
   G2_STATUS=$?
@@ -943,6 +950,60 @@ PYEOF
   rm -f "$G2_ERR"
   if [ "${G2_VERDICT:-}" = "block" ]; then
     compass_block no-acceptance-criteria "target=$TARGET" "tool=${TOOL:-?}"
+  fi
+fi
+
+# --- the issues this one waits for (ADR-062) ----------------------------------
+# An issue at implement whose `depends_on` names an issue that has not reached
+# its `until` is refused here, before the declared-acceptance exit below, so a
+# declared acceptance does not clear a wait. The spike exit above comes first,
+# so a spike is never refused for a dependency.
+#
+# The reader reads each dependency's manifest from this checkout, uncached, and
+# runs no git command (lifecycle.hook_lines). It refuses only on a positive
+# read of an unmet dependency. A dependency it cannot judge - no manifest here,
+# one that does not parse, an unknown `until`, an entry of the wrong shape, a
+# dependency that waits for this issue in turn - allows the edit with one
+# warning line, because a false block teaches people to bypass the hook; lint
+# reports the same fault. A reader that cannot run at all refuses, as every
+# reader in this hook does.
+if [ "${G2_VERDICT:-}" = "depends" ]; then
+  DEP_ERR="$(mktemp 2>/dev/null)" \
+    || compass_reader_failed "dependency reader" tmp
+  set +e
+  DEP_LINES="$(compass_python - "$TASK_DIR" 2>"$DEP_ERR" <<'PYEOF'
+import sys
+
+import compass_pkg                      # noqa: F401 - puts vendor on sys.path
+from compass_pkg import lifecycle
+
+for line in lifecycle.hook_lines(sys.argv[1]):
+    print(line)
+PYEOF
+)"
+  DEP_STATUS=$?
+  set -e
+  if [ "$DEP_STATUS" -ne 0 ]; then
+    compass_reader_failed "dependency reader" "$DEP_STATUS" "$DEP_ERR"
+  fi
+  rm -f "$DEP_ERR"
+  # `warn <text>` lines go to stderr; at most one `wait` line follows, its
+  # fields separated by tabs because a state can hold a space.
+  DEP_WAIT=""
+  while IFS= read -r DEP_LINE; do
+    case "$DEP_LINE" in
+      "warn "*) printf '%s\n' "${DEP_LINE#warn }" >&2 ;;
+      wait*) DEP_WAIT="$DEP_LINE" ;;
+    esac
+  done <<DEPEOF
+$DEP_LINES
+DEPEOF
+  if [ -n "$DEP_WAIT" ]; then
+    IFS="$(printf '\t')" read -r _ DEP_ISSUE DEP_UNTIL DEP_STATE DEP_MORE <<DEPEOF
+$DEP_WAIT
+DEPEOF
+    compass_block waits-for-issue "slug=$TASK_SLUG" "target=$TARGET" "tool=${TOOL:-?}" \
+      "dependency=$DEP_ISSUE" "until=$DEP_UNTIL" "state=$DEP_STATE" "more=${DEP_MORE:-}"
   fi
 fi
 

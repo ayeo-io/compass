@@ -24,6 +24,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 CLI_DIR = ROOT / "cli"
@@ -612,6 +614,494 @@ def test_dbi_15_lint_reports_hand_edited_faults(tmp_path):
         lines = dependency_lines(done.stdout)
         assert any(all(n in line for n in names) for line in lines), (entries, done)
         assert_no_gh_call(project.root)
+
+
+# --- the pre-tool hook ------------------------------------------------------------------
+
+HOOK = ROOT / "hooks" / "pre-tool.sh"
+
+
+def hook(project, target, slug="a", path=None, hook_path=HOOK, **extra):
+    """Run the pre-tool hook on an Edit of `target` for issue `slug`."""
+    (project.root / ".compass" / "current-task").write_text(slug)
+    env = env_for(project.root, CLAUDE_PROJECT_DIR=str(project.root), **extra)
+    if path is not None:
+        env["PATH"] = path
+    event = json.dumps({"tool_name": "Edit", "tool_input": {"file_path": str(target)}})
+    return subprocess.run(["bash", str(hook_path)], input=event, capture_output=True,
+                          text=True, env=env, timeout=120)
+
+
+def code_file(project):
+    return project.root / "src" / "app.py"
+
+
+# --- DBI-6 and DBI-7: compass next and the implement-only scope ------------------------
+
+def test_dbi_6_next_blocks_at_implement_until_done(tmp_path):
+    project = Project(tmp_path)
+    project.issue("b", "implement")
+    project.issue("a", "implement", depends=[dep("b")])
+    before = project.bytes("a")
+    line = next_line(project, "a")
+    assert line.startswith("Implement"), line
+    assert "blocked: waits for b to reach done" in line, line
+    assert project.bytes("a") == before
+    project.issue("c", "define")
+    project.issue("a", "implement", depends=[dep("b"), dep("c", "plan")])
+    before = project.bytes("a")
+    line = next_line(project, "a")
+    assert line.startswith("Implement"), line
+    assert "blocked: waits for b to reach done; waits for c to reach plan" in line, line
+    assert project.bytes("a") == before
+    project.issue("b", "ship", close="completed")
+    project.issue("c", "plan")
+    line = next_line(project, "a")
+    assert line.startswith("Implement") and "blocked" not in line, line
+    assert project.bytes("a") == before
+    assert_no_gh_call(project.root)
+
+
+def _no_reader_blocks(project, slug="a"):
+    """`compass next`, `issue_detail` and the board each report no dependency
+    block for `slug`."""
+    from compass_pkg import issue_detail, lifecycle
+    from compass_pkg.core import load_manifest
+    line = next_line(project, slug)
+    assert "blocked" not in line, line
+    manifest, _path = load_manifest(str(project.dir(slug)))
+    facts = issue_detail.detail(manifest, str(project.dir(slug)),
+                                read=lifecycle.checkout_reader(str(project.work)))
+    assert facts.waits is None and facts.blocked is None, facts
+    assert "blocked" not in flow_rows(project)[slug], flow_rows(project)[slug]
+    return line
+
+
+def test_dbi_7_stages_before_implement_not_blocked(tmp_path):
+    project = Project(tmp_path)
+    project.issue("b", "implement")
+    for stage in ("define", "refine", "plan", "breakdown"):
+        project.issue("a", stage, depends=[dep("b")])
+        line = _no_reader_blocks(project)
+        assert line.lower().startswith(stage), (stage, line)
+        docs = project.root / "docs" / "compass" / "2026-10-01-a"
+        for name in ("acceptance-criteria.md", "technical-design.md"):
+            done = hook(project, docs / name)
+            assert done.returncode == 0, (stage, name, done)
+            assert "depends on" not in done.stderr, (stage, name, done)
+    project.issue("a", "verify", depends=[dep("b")])
+    assert _no_reader_blocks(project).startswith("Verify")
+    for setup in (dict(hold=True), dict(close="not-planned")):
+        project.issue("a", "implement", depends=[dep("b")], marker=True, **setup)
+        _no_reader_blocks(project)
+        done = hook(project, code_file(project))
+        assert done.returncode == 0, (setup, done)
+        assert "depends on" not in done.stderr and "waits-for-issue" not in done.stderr, done
+    assert_no_gh_call(project.root)
+
+
+# --- DBI-18 and DBI-13: the board data ----------------------------------------------------
+
+def test_dbi_18_flow_json_gains_depends_on(tmp_path):
+    project = Project(tmp_path)
+    project.issue("b", "implement")
+    project.issue("d", "plan")
+    project.issue("a", "plan", depends=[dep("b"), dep("gone", "plan", "a later issue")])
+    rows = flow_rows(project)
+    entries = rows["a"]["depends_on"]
+    assert [list(e) for e in entries] == [["issue", "reason", "until", "state", "stage", "met"]] * 2
+    assert entries[0] == {"issue": "b", "reason": "needs it", "until": "done",
+                          "state": "in-progress", "stage": "implement", "met": False}
+    assert entries[1] == {"issue": "gone", "reason": "a later issue", "until": "plan",
+                          "state": None, "stage": None, "met": False}
+    assert rows["d"]["depends_on"] == []
+    assert all(row["depends_on"] == [] for slug, row in rows.items() if slug != "a")
+    # Every key the rows held without depends_on is there with the same value.
+    manifest = project.manifest("a")
+    del manifest["depends_on"]
+    project.write("a", manifest)
+    before = flow_rows(project)
+    for slug, row in rows.items():
+        assert {k: v for k, v in row.items() if k != "depends_on"} == {
+            k: v for k, v in before[slug].items() if k != "depends_on"}, slug
+    assert_no_gh_call(project.root)
+
+
+def test_dbi_13_derived_block_never_written(tmp_path):
+    project = Project(tmp_path)
+    project.issue("b", "implement")
+    project.issue("a", "implement", depends=[dep("b")], marker=True)
+    before = {slug: project.bytes(slug) for slug in ("a", "b")}
+    assert "blocked: waits for b to reach done" in next_line(project, "a")
+    assert flow_rows(project)["a"]["blocked"] == "waits for b to reach done"
+    page = project.root / "board.html"
+    for args in (("board", "render", "--no-open", "--out", str(page)),
+                 ("issue", "render", "--issue", "a")):
+        done = compass(project.root, *args)
+        assert done.returncode == 0, done
+    hook(project, code_file(project))
+    assert {slug: project.bytes(slug) for slug in ("a", "b")} == before
+    assert "blocked" not in project.manifest("a")
+    done = compass(project.root, "issue", "blocked", "set", "--reason", "the vendor",
+                   "--issue", "a")
+    assert done.returncode == 0, done
+    assert project.manifest("a")["blocked"]["reason"] == "the vendor"
+    both = "the vendor; waits for b to reach done"
+    assert flow_rows(project)["a"]["blocked"] == both
+    done = compass(project.root, "flow")
+    assert "BLOCKED: " + both in done.stdout, done
+    done = compass(project.root, "board", "render", "--no-open", "--out", str(page))
+    assert done.returncode == 0, done
+    assert "blocked: " + both in page.read_text(encoding="utf-8")
+    assert_no_gh_call(project.root)
+
+
+# --- DBI-9 to DBI-12: the pre-tool hook ---------------------------------------------------
+
+def _code(done):
+    found = [code for code in ("waits-for-issue", "no-red-on-record", "reader-failed",
+                               "red-marker-no-record") if f"[{code}]" in done.stderr]
+    return found[0] if found else None
+
+
+def test_dbi_9_hook_refuses_at_implement(tmp_path):
+    project = Project(tmp_path)
+    project.issue("b", "implement")
+    project.issue("a", "implement", depends=[dep("b")], marker=True)
+    done = hook(project, code_file(project))
+    assert done.returncode == 2, done
+    lines = done.stderr.strip().splitlines()
+    assert lines[-1].endswith("[waits-for-issue]"), done
+    assert "waits for b to reach done" in done.stderr, done
+    assert "reads b as in-progress" in done.stderr, done
+    assert "compass issue depends remove b" in done.stderr, done
+    assert "`waits-for-issue`" in (ROOT / "docs" / "refusal-codes.md").read_text(encoding="utf-8")
+    # A declared acceptance does not clear the wait.
+    (project.dir("a") / ".red").unlink()
+    (project.dir("a") / ".acceptance").write_text("")
+    done = hook(project, code_file(project))
+    assert done.returncode == 2 and _code(done) == "waits-for-issue", done
+    project.issue("b", "ship", close="completed")
+    done = hook(project, code_file(project))
+    assert done.returncode == 0, done
+    # A spike is never refused for a dependency.
+    project.issue("b", "implement")
+    (project.dir("a") / ".acceptance").unlink()
+    (project.dir("a") / ".spike").write_text("")
+    done = hook(project, code_file(project))
+    assert done.returncode == 0, done
+    # A hand-written cycle of three: the hook reads one level, so it refuses.
+    project = Project(tmp_path / "three")
+    project.issue("a", "implement", depends=[dep("b")], marker=True)
+    project.issue("b", "implement", depends=[dep("c")])
+    project.issue("c", "implement", depends=[dep("a")])
+    done = hook(project, code_file(project))
+    assert done.returncode == 2 and _code(done) == "waits-for-issue", done
+    assert "compass issue depends remove b" in done.stderr, done
+    assert_no_gh_call(project.root)
+
+
+#: A `python3` that fails, as an install that cannot import compass_pkg does,
+#: for the hook reader whose script holds the text in $FAKE_FAIL_ON, and runs
+#: the real interpreter for every other call.
+FAILING_PYTHON = """#!/usr/bin/env bash
+if [ "${1:-}" = "-" ]; then
+  body="$(cat)"
+  if [ -n "${FAKE_FAIL_ON:-}" ] && printf '%s' "$body" | grep -qF -- "$FAKE_FAIL_ON"; then
+    echo "ModuleNotFoundError: No module named 'compass_pkg'" >&2
+    exit 1
+  fi
+  printf '%s\\n' "$body" | REALPY "$@"
+  exit $?
+fi
+exec REALPY "$@"
+"""
+
+
+def test_dbi_10_hook_fails_safe(tmp_path):
+    cases = [
+        ("gone has no manifest", [dep("gone")], None, "gone",
+         "depends on an issue that does not exist"),
+        ("b does not parse", [dep("b")], "unparsable", "b", "cannot be read"),
+        ("until soon", [dep("b", until="soon")], None, "b", "until 'soon' is not a value"),
+        ("a bare string", ["b"], None, "b", "the documented {issue, reason, until} shape"),
+        ("b depends on a", [dep("b")], "cycle", "b", "forms a cycle: a -> b -> a"),
+    ]
+    for number, (case, entries, b_setup, name, lint_text) in enumerate(cases):
+        project = Project(tmp_path / str(number))
+        project.issue("b", "implement", depends=[dep("a")] if b_setup == "cycle" else None)
+        if b_setup == "unparsable":
+            (project.dir("b") / "manifest.yml").write_text("issue: b\nstages: [unclosed\n")
+        project.issue("a", "implement", depends=entries, marker=True)
+        done = hook(project, code_file(project))
+        assert done.returncode == 0, (case, done)
+        warnings = [line for line in done.stderr.splitlines() if line.strip()]
+        assert len(warnings) == 1, (case, done)
+        assert f"'{name}'" in warnings[0] and "compass issue lint" in warnings[0], (case, done)
+        assert "the edit is allowed" in warnings[0], (case, done)
+        done = lint(project)
+        assert done.returncode != 0, (case, done)
+        assert any(lint_text in line for line in dependency_lines(done.stdout)), (case, done)
+        assert_no_gh_call(project.root)
+    # A reader that cannot run at all still refuses, as every hook reader does.
+    project = Project(tmp_path / "broken")
+    project.issue("b", "implement")
+    project.issue("a", "implement", depends=[dep("b")], marker=True)
+    fake = project.root / ".fake-bin"
+    fake.mkdir()
+    (fake / "python3").write_text(FAILING_PYTHON.replace("REALPY", sys.executable))
+    (fake / "python3").chmod(0o755)
+    done = hook(project, code_file(project), FAKE_FAIL_ON="hook_lines(",
+                path=f"{fake}:{env_for(project.root)['PATH']}")
+    assert done.returncode == 2, done
+    assert _code(done) == "reader-failed" and "dependency reader" in done.stderr, done
+
+
+def test_the_dependency_reader_runs_under_a_python3_older_than_3_10(tmp_path):
+    """The hook's readers run under a python3 older than 3.10
+    (docs/safety-contract.md), so the dependency reader must import there too:
+    a reader that cannot import refuses every edit on an issue with a
+    dependency."""
+    old = shutil.which("python3", path="/usr/bin")
+    if not old:
+        pytest.skip("no /usr/bin/python3 on this machine")
+    older = subprocess.run([old, "-c", "import sys; print(sys.version_info[:2] < (3, 10))"],
+                           capture_output=True, text=True).stdout.strip()
+    if older != "True":
+        pytest.skip("/usr/bin/python3 is 3.10 or newer")
+    project = Project(tmp_path)
+    project.issue("b", "implement")
+    project.issue("a", "implement", depends=[dep("b")], marker=True)
+    done = hook(project, code_file(project), path="/usr/bin:/bin")
+    assert done.returncode == 2 and _code(done) == "waits-for-issue", done
+    assert "Traceback" not in done.stderr, done
+
+
+def _plant_cache_entry(project, slug, doc):
+    """A parse-cache entry for `slug`'s manifest bytes that says `doc`."""
+    from compass_pkg import parse_cache
+    raw = (project.dir(slug) / "manifest.yml").read_bytes()
+    digest = hashlib.sha256(raw).hexdigest()
+    folder = project.root / ".compass" / "cache" / "parsed_yaml"
+    folder.mkdir(parents=True, exist_ok=True)
+    entry = folder / f"{digest}.json"
+    entry.write_text('{"format":%d,"pyyaml":%s,"source":"%s","doc":%s}' % (
+        parse_cache.FORMAT, json.dumps(yaml.__version__), digest, parse_cache.encode(doc)))
+    return entry
+
+
+def _git(cwd, *args):
+    subprocess.run(["git", *args], cwd=str(cwd), check=True, capture_output=True, text=True,
+                   env={**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com",
+                        "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.com"})
+
+
+GIT_SHIM = """#!/bin/sh
+echo "git $*" >> "{log}"
+exec "{real}" "$@"
+"""
+
+
+def test_dbi_11_hook_reads_this_checkout_uncached(tmp_path):
+    project = Project(tmp_path / "main")
+    project.issue("b", "implement")
+    project.issue("a", "implement", depends=[dep("b")], marker=True)
+    _git(project.root, "init", "-q")
+    _git(project.root, "add", "-A")
+    _git(project.root, "commit", "-q", "-m", "fixture")
+    other = tmp_path / "other"
+    _git(project.root, "worktree", "add", "-q", str(other))
+    Project(other).issue("b", "ship", close="completed")
+    shim = project.root / ".git-shim"
+    shim.mkdir()
+    log = project.root / ".git-calls"
+    (shim / "git").write_text(GIT_SHIM.format(log=log, real=shutil.which("git")))
+    (shim / "git").chmod(0o755)
+    path = f"{shim}:{env_for(project.root)['PATH']}"
+    done = hook(project, code_file(project), path=path)
+    assert done.returncode == 2 and _code(done) == "waits-for-issue", done
+    assert not log.exists() or not log.read_text().strip(), log.read_text()
+    done = depends(project, "remove", "b")
+    assert done.returncode == 0, done
+    done = hook(project, code_file(project), path=path)
+    assert done.returncode == 0, done
+    # A planted cache entry says b is in progress; b is done here.
+    project.issue("b", "ship", close="completed")
+    project.issue("a", "implement", depends=[dep("b")], marker=True)
+    in_progress = dict(project.manifest("b"))
+    for key in ("status", "close_reason"):
+        in_progress.pop(key)
+    entry = _plant_cache_entry(project, "b", in_progress)
+    audit = _audit_dir(project.root)
+    opened = project.root / ".audit.log"
+    done = hook(project, code_file(project), PYTHONPATH=str(audit), DBI_AUDIT_LOG=str(opened))
+    assert done.returncode == 0, done
+    assert os.path.realpath(entry) not in _events(opened, "open"), "the cache entry was read"
+    # Neither the dependency reader nor the derivation it calls names the cache.
+    reader = HOOK.read_text(encoding="utf-8").split("hook_lines(", 1)[0].rsplit("<<'PYEOF'", 1)[1]
+    assert "parse_cache" not in reader
+    assert "parse_cache" not in (CLI_DIR / "compass_pkg" / "lifecycle.py").read_text(encoding="utf-8")
+    assert_no_gh_call(project.root)
+
+
+#: Logs every file a Python process opens and every folder it lists, to the
+#: file $DBI_AUDIT_LOG names. Loaded at start-up as sitecustomize.
+AUDIT_HOOK = """
+import os
+import sys
+
+_log = os.environ.get("DBI_AUDIT_LOG")
+if _log:
+    _fd = os.open(_log, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o644)
+    _busy = []
+
+    def _audit(event, args):
+        if _busy or event not in ("open", "os.listdir", "os.scandir"):
+            return
+        path = args[0] if args else "."
+        if path is None:
+            path = "."
+        if isinstance(path, int):
+            return
+        if isinstance(path, bytes):
+            path = path.decode("utf-8", "replace")
+        _busy.append(1)
+        try:
+            kind = "open" if event == "open" else "list"
+            os.write(_fd, ("%s %s\\n" % (kind, os.path.realpath(str(path)))).encode())
+        finally:
+            _busy.pop()
+
+    sys.addaudithook(_audit)
+"""
+
+
+def _audit_dir(root):
+    folder = Path(root) / ".audit"
+    folder.mkdir(exist_ok=True)
+    (folder / "sitecustomize.py").write_text(AUDIT_HOOK)
+    return folder
+
+
+def _events(log, kind):
+    if not Path(log).exists():
+        return []
+    return [line.split(" ", 1)[1] for line in Path(log).read_text().splitlines()
+            if line.startswith(kind + " ")]
+
+
+PYTHON_SHIM = """#!/bin/sh
+echo "python3 $*" >> "{log}"
+exec "{real}" "$@"
+"""
+
+#: python3 processes the hook starts for a production-code edit on an issue at
+#: implement with a red on record, measured at fac8899e, before `depends_on`
+#: existed: the delivery-approach reader, the acceptance-criteria reader and
+#: the red-record reader.
+BASE_PYTHON3 = 3
+
+#: The added cost of 5 met dependencies over none, as a multiple of a
+#: reference python3 process that imports compass_pkg and loads one manifest.
+#: Measured on a development machine (Apple silicon, Python 3.11.9), 2026-10-13:
+#: hook medians 0.181s with none, 0.247s with 1 and 0.254s with 5; reference
+#: 0.045s; 5 over none 1.41; the marginal 0.073s is 1.63 references. The
+#: reader is one more python3 process that imports `lifecycle`, so most of the
+#: marginal is a process start, which the reference also measures. The limit
+#: leaves about 50% for a runner whose bash and process start cost more, and a
+#: second added process (about one reference more) fails it. The counts above
+#: are the main check; they do not depend on timing.
+MAX_MARGINAL_OVER_REFERENCE = 2.5
+
+
+def _budget_project(root, deps):
+    project = Project(root)
+    for n in range(34):
+        project.issue(f"other-{n:02d}", "implement")
+    met = [f"met-{n}" for n in range(5)]
+    for slug in met:
+        project.issue(slug, "ship", close="completed")
+    entries = {None: None, "empty": [], 1: [dep(met[0])], 5: [dep(s) for s in met]}[deps]
+    project.issue("a", "implement", depends=entries, marker=True)
+    if entries is None:
+        manifest = project.manifest("a")
+        manifest.pop("depends_on", None)
+        project.write("a", manifest)
+    return project, met[:len(entries or [])]
+
+
+def _work_folders_listed(project, events, allowed):
+    """The `.compass/work` folders listed, other than the waiting issue's and
+    its dependencies' own: the work folder itself, or another issue's folder."""
+    work = os.path.realpath(project.work)
+    bad = []
+    for path in events:
+        if path == work:
+            bad.append(path)
+        elif path.startswith(work + os.sep):
+            slug = path[len(work) + 1:].split(os.sep, 1)[0]
+            if slug not in allowed:
+                bad.append(path)
+    return bad
+
+
+@pytest.mark.serial
+def test_dbi_12_hook_cost_budget(tmp_path):
+    import statistics
+    import time
+    counts = {}
+    projects = {}
+    for deps in (None, "empty", 1, 5):
+        project, met = _budget_project(tmp_path / str(deps), deps)
+        projects[deps] = project
+        shim = project.root / ".py-shim"
+        shim.mkdir()
+        log = project.root / ".python3-calls"
+        (shim / "python3").write_text(PYTHON_SHIM.format(log=log, real=sys.executable))
+        (shim / "python3").chmod(0o755)
+        audit_log = project.root / ".audit.log"
+        done = hook(project, code_file(project), path=f"{shim}:{env_for(project.root)['PATH']}",
+                    PYTHONPATH=str(_audit_dir(project.root)), DBI_AUDIT_LOG=str(audit_log))
+        assert done.returncode == 0, (deps, done)
+        counts[deps] = len(log.read_text().splitlines())
+        opened = _events(audit_log, "open")
+        manifests = {s: opened.count(os.path.realpath(project.dir(s) / "manifest.yml"))
+                     for s in (p.name for p in project.work.iterdir())}
+        assert {s: n for s, n in manifests.items() if n and s != "a"} == {s: 1 for s in met}, \
+            (deps, manifests)
+        # Reading a dependency's own evidence folder for its stage is allowed;
+        # listing the work folder, or any other issue's folder, is not.
+        listed = _events(audit_log, "list")
+        assert not _work_folders_listed(project, listed, {"a", *met}), (deps, listed)
+    assert counts[None] == counts["empty"] == BASE_PYTHON3, counts
+    assert counts[1] <= BASE_PYTHON3 + 1 and counts[5] <= BASE_PYTHON3 + 1, counts
+
+    reference = [sys.executable, "-c",
+                 "import sys; sys.path.insert(0, sys.argv[1]); import compass_pkg; "
+                 "from compass_pkg.core import load_manifest; load_manifest(sys.argv[2])",
+                 str(CLI_DIR), str(projects[5].dir("met-0"))]
+    times = {0: [], 1: [], 5: [], "reference": []}
+    for round_ in range(12):
+        for deps, key in ((None, 0), (1, 1), (5, 5)):
+            start = time.perf_counter()
+            done = hook(projects[deps], code_file(projects[deps]))
+            elapsed = time.perf_counter() - start
+            assert done.returncode == 0, done
+            if round_:
+                times[key].append(elapsed)
+        start = time.perf_counter()
+        subprocess.run(reference, check=True, capture_output=True, timeout=60)
+        if round_:
+            times["reference"].append(time.perf_counter() - start)
+    median = {k: statistics.median(v) for k, v in times.items()}
+    ratio = median[5] / median[0]
+    marginal = (median[5] - median[0]) / median["reference"]
+    print("DBI-12 hook medians: 0 deps %.4fs, 1 dep %.4fs, 5 deps %.4fs; reference %.4fs; "
+          "5 over 0 %.2f (limit 2.0); marginal over reference %.2f (limit %.1f)"
+          % (median[0], median[1], median[5], median["reference"], ratio, marginal,
+             MAX_MARGINAL_OVER_REFERENCE))
+    assert ratio <= 2.0, median
+    assert marginal < MAX_MARGINAL_OVER_REFERENCE, median
 
 
 if __name__ == "__main__" and sys.argv[1:2] == ["--capture"]:

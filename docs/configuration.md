@@ -91,7 +91,7 @@ The state decides what Compass reads, and no state loses a setting silently:
 | `allow_project_commands` | Lets `compass check` run commands a project guardrail declares | `true`, `false` | `false` |
 | `governance_drift` | Whether drift from the shipped governance fails | `advisory`, `strict` | `advisory` |
 | `preset_index` | Reserved for published presets; no behaviour yet | - | - |
-| `github_labels` | Whether Compass writes an issue's labels to its linked GitHub issue (see `docs/github-labels.md`) | `domain`, `status`: `true` or `false` each | both `false`; no GitHub call |
+| `github_labels` | Whether Compass writes an issue's labels and page to its linked GitHub issue (see `docs/github-labels.md`) | `domain`, `status`, `page`: `true` or `false` each | all `false`; no GitHub call |
 
 ### `adoption`
 
@@ -175,13 +175,18 @@ own commands. See `docs/security.md`.
 
 ### `github_labels`
 
-Two switches, both `false` unless set to `true`. With both off, no command
-calls GitHub.
+Three switches, each `false` unless set to `true`. With all three off, no
+command calls GitHub.
 
 - `domain`: write the issue's declared domain labels to its linked GitHub
   issue.
 - `status`: write `status:<state>` and, on a closed issue, `status:done` and
   `close:<reason>`.
+- `page`: keep one comment on the linked GitHub issue equal to the issue's
+  README, and write the ask into an empty issue body once. It widens who
+  reads the issue's documents to everyone who can read the GitHub issue, which
+  is why it is off by default. A post is refused when it would carry a rival
+  product name, a path the project keeps out of git, or a credential.
 
 Any other value, such as `"yes"`, reads as off. The setting is read from the
 project's own file only. See `docs/github-labels.md` for the labels, the

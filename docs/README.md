@@ -23,7 +23,7 @@ the table does not exist, and when a doc in this folder is not listed.
 - [delivery-record.md](delivery-record.md) - `compass record`: the delivery record kept in its own repository.
 - [receipt.md](receipt.md) - the one-screen view of an issue's gates and evidence.
 - [board.md](board.md) - `compass board render` and `compass board refresh`: the delivery board as one page, where its file goes and what the commands refuse, what the lanes and cards show, how `--worktrees` reads other trees and what it writes to git's object store, and the release-note items.
-- [github-labels.md](github-labels.md) - the opt-in sync of an issue's domain labels and workflow state to its linked GitHub issue: the setting, the labels Compass owns, when it writes, drift and the failure behaviour.
+- [github-labels.md](github-labels.md) - the opt-in sync of an issue's domain labels, workflow state and page to its linked GitHub issue: the setting, the labels Compass owns, the page comment and the checks it passes before it is posted, when it writes, drift and the failure behaviour.
 - [github-labels-walkthrough.md](github-labels-walkthrough.md) - switch the labels on in `compass.yml`, link an issue and watch the labels change as work moves.
 - [writing-specs-and-plans.md](writing-specs-and-plans.md) - a worked example of a spec and a plan.
 - [system-spec.md](system-spec.md) - the current behaviour, derived from completed issues: one heading per issue, one line per scenario, no size cap.
@@ -100,7 +100,7 @@ same commit.
 | `cli/compass_pkg/subtasks.py`, `cli/compass_pkg/loop_ceilings.py`, `cli/compass_pkg/multiagent_check.py`, `scripts/multiagent.sh`, `scripts/integrate.sh` | `docs/multiagent-protocol.md` |
 | `cli/compass_pkg/run_cmd.py`, `cli/compass_pkg/host_launch.py`, `cli/compass_pkg/redact.py`, `cli/compass_pkg/compliance.py`, `ci/headless-verify.yml` | `docs/headless-runner.md` |
 | `cli/compass_pkg/record.py` | `docs/delivery-record.md` |
-| `cli/compass_pkg/github_labels.py`, `tests/fake_gh.py` | `docs/github-labels.md` |
+| `cli/compass_pkg/github_labels.py`, `cli/compass_pkg/github_page.py`, `cli/compass_pkg/github_sync_record.py`, `cli/compass_pkg/publish_check.py`, `cli/compass_pkg/github_links.py`, `tests/fake_gh.py` | `docs/github-labels.md` |
 | `cli/compass_pkg/status_words.py`, `cli/compass_pkg/lifecycle.py`, `cli/compass_pkg/status_cmd.py` | `architecture/decisions/ADR-045-the-issue-lifecycle-is-derived-from-records.md` |
 | `cli/compass_pkg/artifact_status.py`, `cli/compass_pkg/decisions_taken.py` | `architecture/decisions/ADR-050-artifact-status-is-written-by-stage-exits-and-by-a-persons-approval.md` |
 | `cli/compass_pkg/rendered_blocks.py`, `cli/compass_pkg/block_renderers.py`, `cli/compass_pkg/render_inputs.py`, `cli/compass_pkg/render_cmd.py`, `cli/compass_pkg/render_check.py`, `cli/compass_pkg/render_after.py`, `cli/compass_pkg/render_after_entry.py`, `cli/compass_pkg/render_check_entry.py`, `cli/compass_pkg/record_triggers.py`, `cli/compass_pkg/issue_page.py`, `cli/compass_pkg/issue_detail.py`, `cli/compass_pkg/project_index.py`, `cli/compass_pkg/project_scan.py`, `cli/compass_pkg/render_skip.py`, `cli/compass_pkg/migrate_blocks.py` | `docs/rendered-blocks.md` |

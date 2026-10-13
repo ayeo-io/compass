@@ -1,16 +1,20 @@
 # compass_pkg.record_triggers - which commands change an issue's records
 """The commands whose success changes what an issue's records say, in one place.
 
-Two steps run after such a command exits 0, and both read this table:
+Three steps run after such a command exits 0, in this order, and all read this
+table:
 
-- `github_labels.after_command` brings the issue's labels on GitHub up to date
-  (`LABEL_TRIGGERS`);
-- `render_after.after_command` renders the issue's documents and the issues the
-  manifest links to (`RENDER_TRIGGERS`, which is `LABEL_TRIGGERS` plus
-  `RENDER_FURTHER`).
+1. `github_labels.after_command` brings the issue's labels on GitHub up to date
+   (`LABEL_TRIGGERS`);
+2. `render_after.after_command` renders the issue's documents and the issues the
+   manifest links to (`RENDER_TRIGGERS`, which is `LABEL_TRIGGERS` plus
+   `RENDER_FURTHER`);
+3. `github_page.after_command` posts the README the render has just written to
+   the linked GitHub issue (`PAGE_TRIGGERS`, the render's table, because any
+   command that can change the README can change the page).
 
-Neither step imports the other, so each can fail without hiding the other, and
-a command cannot be in the label table and missing from the render table.
+No step imports another, so each can fail without hiding the others, and a
+command cannot be in the label table and missing from the render table.
 
 A command is a function name, the `func` of its parser. The value names an
 argument that must be set for the command to count (`approach evaluate` writes
@@ -22,7 +26,7 @@ graph of the CLI from every command to `save_manifest` and fails, naming the
 command, when one is in none of the three tables.
 """
 # DEPENDENCY: standard library only (annotations). It imports no other module, so the
-# render step and the label step can both read it.
+# label step, the render step and the page step can all read it.
 from __future__ import annotations
 
 #: Commands after which the issue's labels are brought up to date.
@@ -64,6 +68,10 @@ RENDER_FURTHER = {
 }
 
 RENDER_TRIGGERS = {**LABEL_TRIGGERS, **RENDER_FURTHER}
+
+#: Commands after which the issue page on GitHub is brought up to date: every command
+#: that can change the README, since the page is the README.
+PAGE_TRIGGERS = RENDER_TRIGGERS
 
 #: Commands that save a manifest and render nothing, each with its reason.
 EXEMPT = {

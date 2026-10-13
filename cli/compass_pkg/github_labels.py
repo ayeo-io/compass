@@ -4,7 +4,9 @@
 A project opts in with the settings key `github_labels` in `compass.yml`:
 `domain` writes the issue's declared domain labels, `status` writes the
 `status:<state>` label and, on a closed issue, `close:<reason>`. Both default
-to off, and with both off nothing in this module reaches `gh`.
+to off, and with both off nothing in this module reaches `gh`. The third
+switch, `page`, belongs to `github_page`, which uses this module's link and
+`gh` runner.
 
 The manifest is the source of truth and GitHub is only written. A sync
 compares the labels Compass owns with the labels on the GitHub issue and
@@ -20,8 +22,8 @@ credentials. Compass stores and reads no token.
 """
 # DEPENDENCY: compass_pkg.core, compass_pkg.lifecycle, compass_pkg.status_words,
 # compass_pkg.project_settings, compass_pkg.layers, compass_pkg.effective,
-# compass_pkg.atomic_io and compass_pkg.terminal. Nothing imports this module
-# except the entry point, `issue lint` and the registry of verbs.
+# compass_pkg.github_sync_record and compass_pkg.terminal. Nothing imports this module
+# except the entry point, `issue lint`, `github_page` and the registry of verbs.
 from __future__ import annotations
 
 import json
@@ -30,10 +32,8 @@ import re
 import subprocess
 import sys
 
-import yaml
-
-from compass_pkg import lifecycle, project_settings, record_triggers, status_words
-from compass_pkg.atomic_io import atomic_write_text
+from compass_pkg import (github_sync_record, lifecycle, project_settings, record_triggers,
+                         status_words)
 from compass_pkg.core import CompassError, load_manifest, resolve_issue_dir, save_manifest
 from compass_pkg.terminal import say
 
@@ -71,6 +71,10 @@ _TIMEOUT = 15
 
 class SyncError(Exception):
     """A sync that could not finish. Its text names the problem for a person."""
+
+
+class NotFound(SyncError):
+    """`gh` reported HTTP 404: the thing asked for is not on GitHub, or not visible."""
 
 
 # --- the link ----------------------------------------------------------------
@@ -208,11 +212,13 @@ def _explain(stderr):
     return "gh failed: " + (text[:160] if text else "no message")
 
 
-def _gh(args):
-    """Run `gh` with an argument list and no shell; return its standard output."""
+def _gh(args, stdin=None):
+    """Run `gh` with an argument list and no shell; return its standard output.
+    Text to post goes in `stdin`, never in `args`, so it cannot be read as an
+    option and does not show in the process list."""
     env = dict(os.environ, GH_PROMPT_DISABLED="1")
     try:
-        done = subprocess.run(["gh", *args], capture_output=True, text=True,
+        done = subprocess.run(["gh", *args], capture_output=True, text=True, input=stdin,
                               timeout=_TIMEOUT, env=env, check=False)
     except FileNotFoundError:
         raise SyncError("gh is not installed or not on PATH") from None
@@ -221,6 +227,8 @@ def _gh(args):
     except OSError as exc:
         raise SyncError(f"gh could not run: {exc}") from None
     if done.returncode != 0:
+        if "HTTP 404" in (done.stderr or ""):
+            raise NotFound(_explain(done.stderr))
         raise SyncError(_explain(done.stderr))
     return done.stdout
 
@@ -270,23 +278,14 @@ def _project_root(task_dir):
     return layers.find_project_root(task_dir)
 
 
-def _record_path(task_dir):
-    return os.path.join(task_dir, "github-sync.yml")
-
-
 def read_record(task_dir):
-    try:
-        with open(_record_path(task_dir), "r", encoding="utf-8") as fh:
-            data = yaml.safe_load(fh)
-    except (OSError, yaml.YAMLError):
-        return {}
-    return data if isinstance(data, dict) else {}
+    """The `labels` section of the issue's `github-sync.yml`."""
+    return github_sync_record.read(task_dir)["labels"]
 
 
-def _write_record(task_dir, **fields):
-    from compass_pkg.core import now_iso
-    text = yaml.safe_dump({"at": now_iso(), **fields}, sort_keys=False)
-    atomic_write_text(_record_path(task_dir), text)
+def record_failure(task_dir, exc):
+    """Record a failed label write, keeping the label state of the last good one."""
+    github_sync_record.update(task_dir, "labels", error=str(exc))
 
 
 def sync_issue(task, task_dir):
@@ -305,7 +304,7 @@ def sync_issue(task, task_dir):
     add, remove = difference(issue_labels(repo, number), wanted, owned)
     if add or remove:
         write_labels(repo, number, add, remove)
-    _write_record(task_dir, error=None, state=sorted(wanted))
+    github_sync_record.update(task_dir, "labels", state=sorted(wanted), error=None)
     return add, remove, skipped
 
 
@@ -316,7 +315,7 @@ def _skipped_line(skipped):
 
 def _fail_line(problem):
     return (f"compass: github labels not synced - {problem}. "
-            "Run `compass issue labels sync` to retry.")
+            "Run `compass issue github sync` to retry.")
 
 
 def after_command(args, code):
@@ -336,7 +335,7 @@ def after_command(args, code):
         try:
             outcome = sync_issue(task, task_dir)
         except SyncError as exc:
-            _write_record(task_dir, error=str(exc))
+            record_failure(task_dir, exc)
             sys.stderr.write(_fail_line(exc) + "\n")
             return code
         if outcome and outcome[2]:
@@ -346,39 +345,6 @@ def after_command(args, code):
             return code
         sys.stderr.write(_fail_line(f"unexpected {type(exc).__name__}") + "\n")
     return code
-
-
-def cmd_labels_sync(args):
-    verb = "compass issue labels sync"
-    task_dir = resolve_issue_dir(getattr(args, "task", None))
-    task, _ = load_manifest(task_dir)
-    slug = task.get("issue")
-    try:
-        target = link_of(task)
-    except SyncError as exc:
-        raise CompassError(f"{verb}: {exc}") from None
-    if target is None:
-        raise CompassError(
-            f"{verb}: '{slug}' is not linked to a GitHub issue; run "
-            "`compass issue link set --github owner/repo#number` first.")
-    if not any(switches(_project_root(task_dir))):
-        return say(args, f"{verb}: nothing is switched on, so nothing was sent. Set "
-                         "`github_labels` in compass.yml (docs/github-labels.md).",
-                   issue=slug)
-    try:
-        add, remove, skipped = sync_issue(task, task_dir)
-    except SyncError as exc:
-        _write_record(task_dir, error=str(exc))
-        raise CompassError(f"{verb}: {exc}") from None
-    if skipped:
-        sys.stderr.write(_skipped_line(skipped) + "\n")
-    where = f"{target[0]}#{target[1]}"
-    if not (add or remove):
-        return say(args, f"{verb}: {slug} already matches {where}.", issue=slug)
-    detail = ([f"added: {', '.join(add)}"] if add else []) \
-        + ([f"removed: {', '.join(remove)}"] if remove else [])
-    return say(args, f"{verb}: {slug} -> {where}.", detail=detail,
-               issue=slug, added=add, removed=remove)
 
 
 # --- issue lint ------------------------------------------------------------------------
@@ -400,7 +366,7 @@ def lint_notes(task, task_dir):
         problem = read_record(task_dir).get("error")
         if problem:
             return [f"github: out of sync - the last sync failed: {problem}. "
-                    "Run `compass issue labels sync`."]
+                    "Run `compass issue github sync`."]
         wanted, owned, _ = wanted_and_owned(task, task_dir, domain_on, status_on)
         add, remove = difference(issue_labels(*target), wanted, owned)
     except SyncError as exc:
@@ -412,11 +378,11 @@ def lint_notes(task, task_dir):
     parts = ([f"missing on GitHub: {', '.join(add)}"] if add else []) \
         + ([f"not wanted on GitHub: {', '.join(remove)}"] if remove else [])
     return ["github: out of sync - " + "; ".join(parts)
-            + ". Run `compass issue labels sync`."]
+            + ". Run `compass issue github sync`."]
 
 
 def register(pts, issue_arg):
-    """`link set` and `labels sync` under `compass issue`."""
+    """`link set` under `compass issue`. `github_page.register` adds `github sync`."""
     link_group = pts.add_parser("link", help="an issue's link to its GitHub issue")
     linker = link_group.add_subparsers(dest="link_cmd", required=True).add_parser(
         "set", help="link an issue to its GitHub issue")
@@ -424,8 +390,3 @@ def register(pts, issue_arg):
                         help="owner/repo#number, or the issue's URL on github.com")
     issue_arg(linker)
     linker.set_defaults(func=cmd_issue_link, output_kind="hand-off")
-    group = pts.add_parser("labels", help="an issue's labels on GitHub")
-    verbs = group.add_subparsers(dest="labels_cmd", required=True)
-    syncer = verbs.add_parser("sync", help="write an issue's labels to its GitHub issue now")
-    issue_arg(syncer)
-    syncer.set_defaults(func=cmd_labels_sync, output_kind="hand-off")

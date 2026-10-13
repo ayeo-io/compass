@@ -96,9 +96,9 @@ Rules:
 | [ADR-054](ADR-054-an-artifact-kind-can-repeat-keyed-by-round.md) | An artifact kind can repeat, keyed by round | proposed | extends ADR-022; with ADR-040 and ADR-050 |
 | [ADR-055](ADR-055-every-approach-records-its-delivery-approach-with-justifications.md) | Every approach records its delivery approach, with a justification for each assessed value | proposed | extends ADR-001 and ADR-022; with ADR-036, ADR-037 and ADR-053 |
 | [ADR-056](ADR-056-the-migrate-maps-documents-by-a-table-and-registers-before-it-moves.md) | The migrate maps documents by a table, renames reviews by a round rule, and registers a document before it moves it | proposed | extends ADR-006 and ADR-020; with ADR-022, ADR-051 and ADR-054 |
-| [ADR-058](ADR-058-the-readiness-floor-caps-autonomous-work.md) | The readiness floor caps autonomous work | proposed | uses ADR-006's major-version provision; with ADR-003 and ADR-036 |
-| [ADR-059](ADR-059-readiness-signals-are-a-versioned-catalogue.md) | Readiness signals are a versioned catalogue | proposed | extends ADR-033, ADR-035 and ADR-038; with ADR-037 and ADR-039 |
-| [ADR-060](ADR-060-readiness-is-a-per-checkout-record-the-manifest-summarises.md) | Readiness is a per-checkout record that the manifest summarises | proposed | with ADR-005 and ADR-036 |
+| [ADR-058](ADR-058-the-readiness-floor-caps-autonomous-work.md) | The readiness floor caps autonomous work | accepted | uses ADR-006's major-version provision; with ADR-003 and ADR-036 |
+| [ADR-059](ADR-059-readiness-signals-are-a-versioned-catalogue.md) | Readiness signals are a versioned catalogue | accepted | extends ADR-033, ADR-035 and ADR-038; with ADR-037 and ADR-039 |
+| [ADR-060](ADR-060-readiness-is-a-per-checkout-record-the-manifest-summarises.md) | Readiness is a per-checkout record that the manifest summarises | accepted | with ADR-005 and ADR-036 |
 | [ADR-061](ADR-061-measuring-a-repository-runs-project-commands-under-the-trust-order.md) | Measuring a repository runs project commands under the trust order | proposed | with ADR-009 and ADR-025 |
 | [ADR-062](ADR-062-a-dependency-is-a-manifest-field-and-the-block-is-derived.md) | A dependency between issues is a manifest field, and the block it causes is derived | accepted | extends ADR-045 and ADR-052 decisions 2 and 3; narrows ADR-003's follow-on note; with ADR-006, ADR-046 and ADR-048 |
 

@@ -1,11 +1,13 @@
 ---
 id: ADR-058
 title: The readiness floor caps autonomous work
-status: proposed
+status: accepted
 date: 2026-10-13
 supersedes: ''
 superseded_by: ''
 ---
+
+Accepted by compass:architect for jed72, under the automation mode jed72 set on 12 October 2026, on 2026-10-13.
 
 ## Context
 

@@ -612,7 +612,7 @@ def test_acf_8(tmp_path):
 
 
 def test_acf_60(tmp_path):
-    from compass_pkg import artifact_kinds  # noqa: F401 - the module exists after U1
+    from compass_pkg import artifact_kinds  # noqa: F401 - fails until artifact_kinds exists
 
     catalogue = _preset()
     text = (TEMPLATES / "technical-design.md").read_text(encoding="utf-8")

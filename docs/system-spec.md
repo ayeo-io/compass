@@ -3877,3 +3877,4 @@
 - `IPG-24` A private path written in any equivalent form refuses the post
 - `IPG-25` A private path in HTML-entity, backslash or trailing-slash form refuses the post, and a tracked symlink posts
 - `IPG-26` Every form found in review is refused, and a published link still posts
+- `IPG-27` An encoded space or plus in an ignored file's name refuses the post

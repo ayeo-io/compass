@@ -189,7 +189,13 @@ def fresh(root, record, now=None):
     if _git(root, "cat-file", "-e", f"{recorded_head}^{{commit}}") is None:
         return Freshness(False, f"the recorded commit {recorded_head[:12]} is unknown: it is "
                                 f"not in this repository")
-    count = _git(root, "rev-list", "--count", f"{recorded_head}..HEAD")
+    # A commit from another branch can be a few commits from HEAD by count
+    # yet describe a tree HEAD never had, so it must be in HEAD's history.
+    if _git(root, "merge-base", "--is-ancestor", recorded_head, "HEAD") is None:
+        return Freshness(False, f"the record was measured on a commit that is not in HEAD's "
+                                f"history ({recorded_head[:12]}); the branch has changed "
+                                f"since it was written")
+    count =_git(root, "rev-list", "--count", f"{recorded_head}..HEAD")
     if count is None or int(count) > MAX_COMMITS:
         return Freshness(False, f"HEAD is {count} commits past the recorded commit; the "
                                 f"limit is {MAX_COMMITS}")

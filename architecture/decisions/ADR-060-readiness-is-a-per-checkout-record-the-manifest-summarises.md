@@ -27,6 +27,14 @@ A measurement can take minutes and runs project commands, so the readiness floor
 5. **The manifest holds a summary, outside every generation digest.** Every `approach evaluate --write` writes the manifest key `readiness:`: `status: measured` with `score`, `signals`, `floor_met`, `absent` and `measured_at`, or `status: not-measured` with `reason` (`missing`, `stale` or `unreadable`) and `detail`. The key is not one of the generation outcome keys, so a new measurement with an unchanged configuration commits no generation; the manifest is still rewritten, as it is today when nothing changed. A manifest with no key reads as "not measured".
 6. **The line reads "Repository readiness: N of M signals, floor met"**, "floor not met", or "not measured" followed by the reason in brackets.
 
+## Amendment (2026-10-13): the recorded commit must be in HEAD's history
+
+Decided by compass:architect for jed72 after a review of the implementation found the gap. It adds a rule to decision 3 and leaves the others as they are.
+
+- A record is fresh only when the recorded commit is an ancestor of HEAD (`git merge-base --is-ancestor <recorded> HEAD`). This rule runs after "the recorded commit exists" and before the 25-commit rule.
+- `git rev-list --count <recorded>..HEAD` counts only the commits HEAD has that the recorded commit lacks. After a branch switch, a commit on the other branch can be a few commits from HEAD by that count, yet describe a tree HEAD never had. An autonomous issue could then pass the floor on a tree that was never measured.
+- A record that fails the rule is stale, and its reason says it was measured on a commit that is not in HEAD's history.
+
 ## Alternatives considered
 
 | Alternative | Why considered | Why rejected |

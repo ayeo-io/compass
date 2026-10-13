@@ -1,6 +1,6 @@
 """Repository readiness: the signals, the record, the floor and the readers.
 
-Scenario ids PRC-1 to PRC-45 (issue project-readiness-caps-autonomy). Each test
+Scenario ids PRC-1 to PRC-46 (issue project-readiness-caps-autonomy). Each test
 name starts with its scenario id. The file has one section per work unit; a
 later unit writes only under its own heading.
 """
@@ -1524,6 +1524,40 @@ def test_prc_40(tmp_path):
         assert readiness["status"] == "not-measured" and readiness["reason"] == "stale", (
             expected, readiness)
         assert expected in readiness["detail"], (expected, readiness)
+
+
+def _record_on_another_branch(project):
+    """Write a fresh-looking record whose commit is on a side branch, then
+    return to the original branch one commit past the fork point, so the
+    commit count from the recorded commit to HEAD is 1 but the recorded
+    commit is not in HEAD's history."""
+    from compass_pkg import readiness_record
+    start = support.git(project, "rev-parse", "--abbrev-ref", "HEAD").strip()
+    support.git(project, "checkout", "-q", "-b", "side")
+    support.git(project, "commit", "-q", "--allow-empty", "-m", "side only")
+    side = support.git(project, "rev-parse", "HEAD").strip()
+    support.git(project, "checkout", "-q", start)
+    support.git(project, "commit", "-q", "--allow-empty", "-m", "main only")
+    record = _floor_record(project, measured_at=_days_ago(1))
+    record["head"] = side
+    readiness_record.write(str(project), record)
+
+
+def test_prc_46(tmp_path):
+    expected = "measured on a commit that is not in HEAD's history"
+    project = _floor_project(tmp_path / "p")
+    before = _manifest_before(project)
+    _record_on_another_branch(project)
+    code, out, err = _evaluate_write(project)
+    _assert_refused_unwritten(project, before, code, out, err)
+    assert expected in err, err
+    balanced = _floor_project(tmp_path / "b", autonomy="balanced")
+    _record_on_another_branch(balanced)
+    code, out, err = _evaluate_write(balanced)
+    assert code == 0, out + err
+    readiness = _floor_manifest(balanced)["readiness"]
+    assert readiness["status"] == "not-measured" and readiness["reason"] == "stale", readiness
+    assert expected in readiness["detail"], readiness
 
 
 def test_prc_39(tmp_path):

@@ -165,7 +165,10 @@ all of these hold, tested in this order:
 2. the shipped catalogue has the digest the record holds, and every recorded
    implementation version is the one this CLI ships;
 3. `measured_at` is at most seven days before now, and not after now;
-4. the recorded commit exists, and HEAD is at most 25 commits past it
+4. the recorded commit exists, and is in HEAD's history
+   (`git merge-base --is-ancestor <recorded> HEAD`), so a record measured on
+   another branch is stale after a branch switch;
+5. HEAD is at most 25 commits past the recorded commit
    (`git rev-list --count <recorded>..HEAD`).
 
 Without Git history only the first three apply; a record with no commit, read

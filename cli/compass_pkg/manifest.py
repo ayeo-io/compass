@@ -36,6 +36,7 @@ from compass_pkg import status_words
 from compass_pkg.terminal import say
 from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, normalize_spine, now_iso, resolve_issue_dir, save_manifest
 from compass_pkg.issue_layout import docs_dir_for
+from compass_pkg.tip_scope import tip_own_paths
 from compass_pkg.binding import changes_paths, declared_test_paths, _changes_id_at, _newest_bound_record
 # The resolver `declared-tests-resolve` uses, so the verb accepts what the check accepts.
 from compass_pkg.test_ids import _test_id_resolves, _test_is_skipped
@@ -402,13 +403,12 @@ def cmd_land_commit(args):
         _refuse_stale_artifacts(head_task, head_task_dir)
         _refuse_unapproved_artifacts(head_task, head_task_dir)
 
-        # What HEAD itself added must be the issue's: a commit a git hook
-        # widened, refused once, must not land when shipped again. Compared
-        # with the first parent, so a multiagent merge lists what it merged.
+        # What the issue's own commits at the tip added must be the issue's:
+        # a commit a git hook widened, refused once, must not land when
+        # shipped again. `tip_scope.tip_own_paths` passes over a merge of
+        # the base branch and the living spec `ship-commit` writes itself.
         if _git(["rev-parse", "--verify", "-q", "HEAD^1"], cwd).returncode == 0:
-            added = [n for n in _git(
-                ["diff", "--name-only", "-z", "HEAD^1", "HEAD"],
-                cwd).stdout.split("\0") if n]
+            added, base_note = tip_own_paths(cwd)
             head_owned, head_artifacts = _land_scope(head_task, head_slug)
             stray_head = (_out_of_scope(
                 added, head_owned, head_artifacts,
@@ -417,15 +417,18 @@ def cmd_land_commit(args):
                 head_short = _git(["rev-parse", "--short", "HEAD"],
                                   cwd).stdout.strip()
                 raise CompassError(
-                    f"compass ship-commit: refusing to land at HEAD - commit "
-                    f"{head_short} holds {len(stray_head)} path(s) outside "
-                    f"issue '{head_slug}'s declared scope:\n  "
+                    f"compass ship-commit: refusing to land at HEAD - the "
+                    f"commits at {head_short} hold {len(stray_head)} path(s) "
+                    f"outside issue '{head_slug}'s declared scope:\n  "
                     + "\n  ".join(stray_head[:20])
                     + "\n\nIf they belong to this issue, trace them with "
                     "`compass changed-file add <path> --scenario <id>`. If "
-                    f"{head_short} is not this issue's commit, land the issue "
+                    "they are not this issue's commits, land the issue "
                     "from a branch whose tip is its own commit, then ship "
-                    "again.")
+                    "again."
+                    + (f"\n\nNote: {base_note}. Fetch the base branch "
+                       "(git fetch origin), then ship again."
+                       if base_note else ""))
 
         head_id = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
         _apply_ship_exit(head_task, head_task_dir)

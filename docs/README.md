@@ -65,6 +65,7 @@ same commit.
 | Area | Owning doc |
 |---|---|
 | `hooks/`, `compass-contract.md` | `docs/safety-contract.md` |
+| `cli/compass_pkg/tip_scope.py` | `docs/safety-contract.md` |
 | `cli/compass_pkg/refusals.py` | `docs/refusal-codes.md` |
 | `cli/compass_pkg/project_settings.py` | `docs/configuration.md` |
 | `cli/compass_pkg/catalogue_spec.py`, `cli/compass_pkg/catalogue_check.py`, `schemas/compass.schema.json` | `architecture/decisions/ADR-035-delivery-approaches-stages-and-modes-are-configuration.md` |

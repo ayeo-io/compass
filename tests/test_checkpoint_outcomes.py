@@ -339,3 +339,102 @@ def test_arc_4_skip_refusals(tmp_path):
     assert "is not judged and takes no outcome; nothing was written" in done.stderr, done
     assert manifest_file(root).read_bytes() == before
     assert_no_gh_call(root)
+
+
+# --- ARC-1 ------------------------------------------------------------------------
+
+def _define_done(root):
+    """The records show define complete and refine not started."""
+    register(root, "acceptance-criteria")
+
+
+def test_arc_1_person_answers_a_checkpoint(tmp_path):
+    root = project(tmp_path)
+    _define_done(root)
+    body = manifest(root)
+    assert body["checkpoints"] == ["define", "plan"] and body["checkpoint_outcomes"] == []
+    before = manifest(root)
+
+    done = approve(root, "define")
+    assert done.returncode == 0, done
+    after = manifest(root)
+    added = after["evidence"][len(before["evidence"]):]
+    assert after["evidence"][:len(before["evidence"])] == before["evidence"]
+    assert len(added) == 1, added
+    record = added[0]
+    assert record["type"] == "checkpoint-approval", record
+    assert {k: v for k, v in record.items() if k not in ("id", "timestamp")} == {
+        "type": "checkpoint-approval", "checkpoint": "define", "approver": "jed72",
+        "role": "product-owner", "scope": "the define hand-off", "decision": "approved",
+        "issue": SLUG, "generation": before["generation"]}, record
+    assert "check" not in record
+    _utc(record["timestamp"])
+    assert not [e for e in after["evidence"] if e.get("type") == "human-approval"]
+    assert after["checkpoint_outcomes"] == [{
+        "stage": "define", "outcome": "waited", "by": "jed72",
+        "at": record["timestamp"], "evidence": record["id"]}]
+    unchanged = {k: v for k, v in before.items() if k not in ("evidence", "checkpoint_outcomes")}
+    assert {k: v for k, v in after.items() if k in unchanged} == unchanged
+    assert set(after) == set(before)
+    assert not schema_errors(after), schema_errors(after)
+    assert_no_gh_call(root)
+
+
+# --- ARC-2 ------------------------------------------------------------------------
+
+def test_arc_2_approve_checkpoint_refusals(tmp_path):
+    root = project(tmp_path)
+    _define_done(root)
+    slug = quick_fix(root)
+    cases = [
+        ("no terminal", dict(stage="define", terminal=False), "needs a terminal"),
+        ("agent", dict(stage="define", approver="agent"), "an agent cannot approve"),
+        ("not listed", dict(stage="define", approver="sam"),
+         "sam is not an approver of this project"),
+        ("not a checkpoint", dict(stage="implement"), "'implement' is not a checkpoint stage"),
+        ("quick fix refine", dict(stage="refine", slug=slug),
+         "the route runs no refine hand-off"),
+        ("plan not run", dict(stage="plan"), "plan has not run"),
+        ("rejected", dict(stage="define", extra=("--decision", "rejected")),
+         "--checkpoint records an approval only"),
+    ]
+    for name, case, cause in cases:
+        target = case.get("slug", SLUG)
+        before = manifest_file(root, target).read_bytes()
+        done = approve(root, case["stage"], *case.get("extra", ()),
+                       approver=case.get("approver", "jed72"), slug=target,
+                       terminal=case.get("terminal", True))
+        assert done.returncode == 2, (name, done)
+        assert cause in done.stderr, (name, done.stderr)
+        assert manifest_file(root, target).read_bytes() == before, name
+
+    (manifest_file(root).parent / "devlog.md").write_text("# Devlog\n")
+    before = manifest_file(root).read_bytes()
+    done = run(root, "evidence", "add", "EV-X", "--type", "checkpoint-approval",
+               "--path", "devlog.md", "--issue", SLUG)
+    assert done.returncode == 2, done
+    assert "compass evidence approve --checkpoint" in done.stderr, done.stderr
+    assert manifest_file(root).read_bytes() == before
+
+    # An issue assessed before outcomes were recorded is not judged: the answer
+    # is refused and the key is not added.
+    body = manifest(root)
+    body.pop("checkpoint_outcomes")
+    write_manifest(root, body)
+    before = manifest_file(root).read_bytes()
+    done = approve(root, "define")
+    assert done.returncode == 2, done
+    assert "is not judged and takes no outcome; nothing was written" in done.stderr, done
+    assert manifest_file(root).read_bytes() == before
+    assert_no_gh_call(root)
+
+    # A project that declares neither approvers nor an owner: any person answers.
+    root = project(tmp_path / "open", compass_yml={"schema": 1, "autonomy": "balanced"})
+    _define_done(root)
+    done = approve(root, "define", approver="sam", role="engineer")
+    assert done.returncode == 0, done
+    lines = [line for line in done.stdout.splitlines() if "declares no approvers" in line]
+    assert lines == ["compass evidence approve: this project declares no approvers or owner, "
+                     "so any person may answer a checkpoint."], done.stdout
+    assert outcomes(root)[0]["by"] == "sam" and outcomes(root)[0]["outcome"] == "waited"
+    assert_no_gh_call(root)

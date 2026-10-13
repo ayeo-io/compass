@@ -134,7 +134,7 @@ edits the manifest.
 ### `compass evidence approve`
 
 ```
-compass evidence approve (--check ID | --artifact KIND | --decisions)
+compass evidence approve (--check ID | --artifact KIND | --decisions | --checkpoint STAGE)
                          --approver NAME --role ROLE [--scope TEXT]
                          [--decision approved|rejected] [--issue SLUG]
 ```
@@ -144,14 +144,15 @@ compass evidence approve (--check ID | --artifact KIND | --decisions)
 | `--check` | The id of a human check that lists approvers |
 | `--artifact` | The kind of a document that reads `awaiting-approval` (below) |
 | `--decisions` | Confirm the decisions an agent took for the person |
+| `--checkpoint` | Answer the hand-off of a checkpoint stage: `assess`, `define`, `refine` or `plan` (below) |
 | `--approver` | The person's id. It must be listed by the check |
 | `--role` | The role the person acts in |
-| `--scope` | What the approval covers. Required with `--check` |
+| `--scope` | What the approval covers. Required with `--check`; with `--checkpoint` it defaults to `the <stage> hand-off` |
 | `--decision` | `approved` (the default) or `rejected` |
 
-Exactly one of `--check`, `--artifact` and `--decisions` is given. The
-terminal requirement and the refusal of the approver `agent` apply to all
-three. The rest of this section describes `--check`.
+Exactly one of `--check`, `--artifact`, `--decisions` and `--checkpoint` is
+given. The terminal requirement and the refusal of the approver `agent` apply
+to all four. The rest of this section describes `--check`.
 
 The command stamps the issue, the issue's generation and the time, and
 registers the record as `EV-APPROVAL-<check>-<n>`. It exits 0 when it wrote the
@@ -219,6 +220,39 @@ approve --decisions` confirms them as one set.
   allowed, when nothing is unconfirmed, or when the decision is `rejected`.
   Send a decision back with `compass issue decision set <id> --status reopened
   --reason "<why>"`, which needs a terminal and accepts no other status.
+
+#### Answering a checkpoint: `--checkpoint`
+
+A checkpoint is a stage hand-off that can wait for a person: `assess`,
+`define`, `refine` or `plan`. `compass evidence approve --checkpoint <stage>`
+records a person's answer to one. ADR-063 owns the decision.
+
+- **What it writes.** One record of the type `checkpoint-approval`, as
+  `EV-CHECKPOINT-<stage>-<n>`, holding `checkpoint` (the stage), `approver`,
+  `role`, `scope`, `decision: approved`, `timestamp`, `issue` and
+  `generation`. The record has no `check` key. It also sets the stage's entry
+  in the manifest's `checkpoint_outcomes` to `{stage, outcome: waited, by, at,
+  evidence}`, where `by` is the approver, `at` the record's timestamp and
+  `evidence` the record's id. The entry replaces a `skipped` outcome an agent
+  recorded with `compass issue checkpoint add`. A second answer for the same
+  stage writes a new record and the outcome then cites it; both records stay.
+- **Who may answer.** A name in any `approvers:` list of the project file, with
+  `owner` read as the project's owner; when the file declares no `approvers:`,
+  only its `owner`. When the project declares neither, any name that is not an
+  agent is accepted, and the command prints one line saying so.
+- **When it refuses.** It exits 2 with no change for an issue whose manifest
+  holds no `checkpoint_outcomes` key (it was assessed before outcomes were
+  recorded, so it is not judged), a stage that is not a checkpoint stage, a
+  stage the route collapses or skips, a stage whose own record is not written
+  yet (`compass next` does not count it done), the decision `rejected`, and a
+  name that may not answer.
+- **What it never clears.** No check reads `checkpoint-approval`:
+  `human-approval-present`, the check of guardrail `G5`, reads only
+  `human-approval`, a human check reads `human-approval` and
+  `artifact-approval`, and a waiver's approval needs `human-approval`. Answering
+  a hand-off is therefore never the sign-off on an irreversible change.
+  `compass evidence add --type checkpoint-approval` is refused, so the type is
+  written only by this command.
 
 The `--json` document of `--check` is a public contract. A change to a key or its order is
 a breaking change. This is the real output for the example above; `at` varies

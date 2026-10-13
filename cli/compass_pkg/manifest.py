@@ -1085,6 +1085,12 @@ def cmd_changed_file_add(args):
 
 
 def cmd_evidence_add(args):
+    # A checkpoint answer is a person's act, so only the verb that needs a
+    # terminal writes one (approve_cmd). Refused before anything is read.
+    if args.type == "checkpoint-approval":
+        raise CompassError(
+            "compass evidence add: a checkpoint-approval record is a person's answer; run "
+            "compass evidence approve --checkpoint <stage> at a terminal.")
     task_dir = resolve_issue_dir(args.task)
     task, task_path = load_manifest(task_dir)
     if getattr(args, "scenario", None):

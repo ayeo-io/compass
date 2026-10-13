@@ -1,0 +1,8 @@
+{
+  "captured_from": "the base commit of autonomy-ratio-and-cost, 401953ec",
+  "entries": {
+    "governance/presets/default/checks.yml#human-approval-present": "  human-approval-present: {statement: An approval record exists for an irreversible change., kind: deterministic,\n    impl: human-approval-present, severity: blocking, on_skipped: fail, locked: hard}\n",
+    "governance/presets/default/gates.yml#G5": "  G5:\n    kind: guardrail\n    name: A human signs off on the irreversible\n    statement: 'A change that can lose data, move money, or breach auth or privacy gets an explicit human\n      checkpoint before it lands.\n\n      '\n    stage: ship\n    applies_to: {ships: true}\n    when:\n      any_of:\n      - labels_any: [auth, payments, personal-data, migrations]\n      - {risk: critical}\n    checks: [human-approval-present]\n    locked: hard\n",
+    "governance/presets/default/preset.yml#locks.hard": "  hard: [checks.human-approval-present, gates.G5]\n"
+  }
+}

@@ -438,3 +438,97 @@ def test_arc_2_approve_checkpoint_refusals(tmp_path):
                      "so any person may answer a checkpoint."], done.stdout
     assert outcomes(root)[0]["by"] == "sam" and outcomes(root)[0]["outcome"] == "waited"
     assert_no_gh_call(root)
+
+
+# --- ARC-7 ------------------------------------------------------------------------
+
+FIXTURES = ROOT / "tests" / "fixtures" / "autonomy-ratio-and-cost"
+
+#: A project whose technical design carries a human check naming jed72, so the
+#: test can ask whether any human check reads a checkpoint answer.
+HUMAN_DESIGN = {
+    "schema": 1, "owner": "jed72", "autonomy": "balanced",
+    "approvers": {"issue-waiver": ["jed72"]},
+    "checks": {"design-review": {
+        "statement": "A person reviewed the design.", "kind": "human",
+        "severity": "blocking", "on_skipped": "not-applicable", "approvers": ["jed72"]}},
+    "artifacts": {"technical-design": {"set": {"checks": ["design-review"]}}},
+}
+
+
+def _entry_text(path, key, indent):
+    lines = (ROOT / path).read_text(encoding="utf-8").splitlines()
+    head = " " * indent + key + ":"
+    start = next(i for i, line in enumerate(lines) if line.startswith(head))
+    out = [lines[start]]
+    for line in lines[start + 1:]:
+        if line.strip() and len(line) - len(line.lstrip()) <= indent:
+            break
+        out.append(line)
+    return "\n".join(out) + "\n"
+
+
+def _check_lines(root, *names):
+    """`compass check`'s exit code, and each line that names one of `names` with
+    the more deeply indented detail lines under it."""
+    done = run(root, "check", "--issue", SLUG, "--verbose")
+    found, depth = [], None
+    for line in (done.stdout + done.stderr).splitlines():
+        indent = len(line) - len(line.lstrip())
+        if any(name in line for name in names):
+            found.append(line)
+            depth = indent
+        elif depth is not None and line.strip() and indent > depth:
+            found.append(line)
+        else:
+            depth = None
+    return done.returncode, found
+
+
+def test_arc_7_checkpoint_record_is_not_the_sign_off(tmp_path):
+    root = project(tmp_path, compass_yml=HUMAN_DESIGN, assessment={"risk": "critical"})
+    _define_done(root)
+    assert "define" in manifest(root)["checkpoints"]
+    without = _check_lines(root, "human-approval-present", "design-review")
+    assert any("FAIL human-approval-present" in line for line in without[1]), without
+    assert any("what: no human-approval evidence" in line for line in without[1]), without
+
+    done = approve(root, "define")
+    assert done.returncode == 0, done
+    with_record = _check_lines(root, "human-approval-present", "design-review")
+    assert with_record == without, (with_record, without)
+    body = manifest(root)
+    approvals = [e for e in body["evidence"] if e.get("type") in (
+        "human-approval", "artifact-approval", "checkpoint-approval")]
+    assert [e["type"] for e in approvals] == ["checkpoint-approval"], approvals
+    record = approvals[0]
+
+    # The locked check, the gate of G5 and the hard locks are as the base commit has them.
+    base = json.loads((FIXTURES / "base-locked-entries.json").read_text())["entries"]
+    assert _entry_text("governance/presets/default/checks.yml", "human-approval-present", 2) \
+        == base["governance/presets/default/checks.yml#human-approval-present"]
+    assert _entry_text("governance/presets/default/gates.yml", "G5", 2) \
+        == base["governance/presets/default/gates.yml#G5"]
+    assert _entry_text("governance/presets/default/preset.yml", "hard", 2) \
+        == base["governance/presets/default/preset.yml#locks.hard"]
+
+    # An issue waiver whose approval names the checkpoint answer is refused with
+    # W-APPROVAL-TYPE, as a waiver naming any record that is not a human-approval
+    # is: by the configuration lint, so the write that would take the waiver
+    # into effect writes nothing, and compass check still fails the sign-off.
+    body["config"] = {"checks": {"artifacts-approved": {
+        "set": {"severity": "advisory"},
+        "waiver": {"reason": "A one-line fix.", "approved_by": record["id"]}}}}
+    write_manifest(root, body)
+    fault = f"W-APPROVAL-TYPE issue:checks.artifacts-approved: {record['id']} is a " \
+            f"checkpoint-approval record, not a human-approval"
+    before = manifest_file(root).read_bytes()
+    done = run(root, "approach", "evaluate", "--issue", SLUG, "--write", "--reason", "waive")
+    assert done.returncode == 2, done
+    assert fault in done.stderr, done.stderr
+    assert manifest_file(root).read_bytes() == before
+    done = run(root, "policy", "lint", "--issue", SLUG)
+    assert done.returncode != 0, done
+    assert "W-APPROVAL-TYPE" in done.stdout and fault.split(": ", 1)[1] in done.stdout, done
+    assert _check_lines(root, "human-approval-present", "design-review") == without
+    assert_no_gh_call(root)

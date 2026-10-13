@@ -50,6 +50,18 @@ _PIECE = re.compile(r"[\w.~/-]+")
 #: A file under the private folder: the folder name followed by a file name.
 #: The folder named on its own is posted, like any folder.
 _PRIVATE_FILE = re.compile(r"\.compass/private/[\w.~-]")
+#: Decoding passes before a text counts as too deeply encoded to check. No
+#: real link is encoded more than twice.
+_ROUNDS = 10
+#: A raw token: the undecoded text cut at whitespace and at the brackets and
+#: quotes around a Markdown link address. Each is decoded on its own, so an
+#: encoded space or plus stays part of the name it is in.
+_TOKEN = re.compile(r"[^\s()\[\]<>\"']+")
+#: A URL scheme at the start of a decoded token.
+_SCHEME = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
+#: A control character: a token holding one is left to the pieces, because
+#: `git check-ignore --stdin` reads one path a line.
+_CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 #: An HTML character reference closed by `;`.
 _REFERENCE = re.compile(r"&(?:#[0-9]+|#[xX][0-9a-fA-F]+|[A-Za-z][A-Za-z0-9]*);")
 #: The authority of a URL, `//host`, at the start of a piece. Without it the
@@ -59,6 +71,10 @@ _AUTHORITY = re.compile(r"^//[^/]*")
 _DOT_SEGMENT = re.compile(r"/\.(?=/|[^\w.~-]|$)")
 #: Folders whose files make up the issue page itself, so naming one is not a leak.
 _POSTED = (".compass/work/", "docs/compass/")
+
+
+class _TooDeep(Exception):
+    """The text is still changing after `_ROUNDS` decoding passes."""
 
 
 @dataclass(frozen=True)
@@ -95,18 +111,21 @@ def _decode(text, loose):
     """`text` with HTML character references and percent-encoding undone until
     it stops changing, so `%252E`, `&#46;` and `&amp;#46;` are all `.`, and a
     backslash read as a slash, as a browser reads it in a web address. Each
-    pass that changes the text shortens it, so the loop ends.
+    pass that changes the text shortens it, so the loop ends; it stops after
+    `_ROUNDS` passes and raises `_TooDeep`, so `%2525...` nested thousands of
+    times costs no more than ten passes.
 
     Markdown reads only references closed by `;`, but an HTML parser also
     reads some without one, such as `&#46` or `&not`. Neither decoding is
     safe alone - the loose one turns `&notes/` into `¬es/` - so the text is
     decoded both ways (`loose` False, then True) and both are checked."""
     unescape = html.unescape if loose else _strict_unescape
-    while True:
+    for _ in range(_ROUNDS):
         decoded = unescape(unquote(text))
         if decoded == text:
             return text.replace("\\", "/")
         text = decoded
+    raise _TooDeep()
 
 
 def _fold_text(text):
@@ -185,17 +204,48 @@ def _scan(decoded, project_root):
         if any(_PRIVATE_FILE.search(form) for form in forms):
             private = match.start() if private is None else min(private, match.start())
             continue
-        for path in written:
-            if path.endswith("/"):
+        asked.extend((path, match.start()) for path in written
+                     if _askable(path, project_root))
+    return asked, private
+
+
+def _askable(path, project_root):
+    """Whether git is asked about a written form: not a folder, not outside the
+    project, and not one of the folders the issue page is made of."""
+    if path.endswith("/"):
+        return False
+    if path.startswith("/") or path == ".." or path.startswith("../"):
+        return False
+    if os.path.isdir(os.path.join(project_root, *path.split("/"))):
+        return False
+    return not path.startswith(_POSTED)
+
+
+def _scan_tokens(raw, project_root):
+    """`(path, index)` for each raw token git must be asked about as one path,
+    and the index of the first token naming a private file, or None. Indexes
+    are into the raw text. A web link's token is left to the other checks:
+    it names a published file."""
+    asked, private = [], None
+    for match in _TOKEN.finditer(raw):
+        for loose in (False, True):
+            token = _decode(match.group(0), loose).rstrip(".,;:")
+            scheme = _SCHEME.match(token)
+            if scheme:
+                if scheme.group(0)[:-1].lower() in ("http", "https"):
+                    continue
+                token = token[scheme.end():]
+            if _CONTROL.search(token):
                 continue
-            # git cannot be asked about a path outside the project.
-            if path.startswith("/") or path == ".." or path.startswith("../"):
-                continue
-            if os.path.isdir(os.path.join(project_root, *path.split("/"))):
-                continue
-            if path.startswith(_POSTED):
-                continue
-            asked.append((path, match.start()))
+            for spelling in dict.fromkeys((token, re.split(r"[?#]", token, maxsplit=1)[0])):
+                if "/" not in spelling:
+                    continue
+                forms, written = _normalise(spelling, project_root)
+                if any(_PRIVATE_FILE.search(form) for form in forms):
+                    private = match.start() if private is None else private
+                    continue
+                asked.extend((path, match.start()) for path in written
+                             if _askable(path, project_root))
     return asked, private
 
 
@@ -213,9 +263,14 @@ def _ignored(paths, project_root):
 
 
 def _private_paths(items, project_root):
-    decoded = [(name, variant) for name, text in items
-               for variant in dict.fromkeys((_decode(text, False), _decode(text, True)))]
-    found = [(name, text, _scan(text, project_root)) for name, text in decoded]
+    try:
+        decoded = [(name, variant) for name, text in items
+                   for variant in dict.fromkeys((_decode(text, False), _decode(text, True)))]
+        found = [(name, text, _scan_tokens(text, project_root)) for name, text in items]
+    except _TooDeep:
+        return Refusal("private-path", "cannot check the page: it holds text encoded more "
+                                       f"than {_ROUNDS} times")
+    found += [(name, text, _scan(text, project_root)) for name, text in decoded]
     for name, text, (_, private) in found:
         if private is not None:
             return _private_refusal(name, text, private)

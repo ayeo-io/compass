@@ -1037,6 +1037,43 @@ def test_ipg_26_every_form_found_in_review_is_refused_and_a_published_link_posts
             assert found is None, (text, texts, found)
 
 
+#: An ignored file whose name holds a space or a plus, written encoded. Each
+#: must refuse; so must a private file under thirty layers of encoding.
+_ENCODED_NAME_REFUSED = (
+    "[draft](docs/my%20draft.md)",
+    "docs/my%20draft.md",
+    "docs/my&#32;draft.md",
+    "[x](docs/a%2Bb.env)",
+    "my%20notes/x.md",
+    "%" + "25" * 30 + "2Ecompass/private/x.yml",
+)
+_ENCODED_NAME_POSTED = (
+    "https://github.com/o/r/blob/main/docs/my%20guide.md",
+    "[guide](docs/guide.md)",
+    "docs/my%20guide.md",
+)
+
+
+@pytest.mark.parametrize("form,refused",
+                         [(f, True) for f in _ENCODED_NAME_REFUSED]
+                         + [(f, False) for f in _ENCODED_NAME_POSTED])
+def test_ipg_27_encoded_space_or_plus_in_an_ignored_name_refuses_the_post(
+        repo, form, refused):
+    # An encoded space or plus belongs to the name: git is asked about each
+    # link address and word decoded on its own, so the name stays whole.
+    from compass_pkg import publish_check
+    (repo / ".gitignore").write_text("docs/my draft.md\ndocs/a+b.env\nmy notes/\n")
+    commit_all(repo, "ignore names with a space or a plus")
+    root = str(Path(repo).resolve())
+    text = "see " + form
+    for texts in ({"comment": text, "body": None}, {"comment": "ok", "body": text}):
+        found = publish_check.check(texts, root)
+        if refused:
+            assert found is not None and found.check == "private-path", (text, texts)
+        else:
+            assert found is None, (text, texts, found)
+
+
 def test_ipg_18_credential_refuses_the_post(repo, gh):
     from compass_pkg import publish_check
     page_issue(repo, gh, page=False)

@@ -3875,3 +3875,4 @@
 - `IPG-22` The page posts the README its own command rendered
 - `IPG-23` A private path inside a URL refuses the post
 - `IPG-24` A private path written in any equivalent form refuses the post
+- `IPG-25` A private path in HTML-entity, backslash or trailing-slash form refuses the post, and a tracked symlink posts

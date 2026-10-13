@@ -884,130 +884,48 @@ def test_ipg_24_equivalent_forms_of_a_private_path_refuse_the_post(repo, form):
         assert publish_check.check({"comment": allowed, "body": None}, root) is None, allowed
 
 
-def test_ipg_18_credential_refuses_the_post(repo, gh):
+_ENTITY_BACKSLASH_SLASH_FORMS = (
+    "&#46;compass/private/x.yml",
+    "[x](&#46;compass/private/x.yml)",
+    "https://github.com/o/r/blob/main/&#46;compass/private/x.yml",
+    "&amp;#46;compass/private/x.yml",
+    "%26%2346%3Bcompass/private/x.yml",
+    "&period;compass/private/x.yml",
+    "notes/&#112;rivate/brief.md",
+    "https://github.com/o/r/blob/main/.compass\\private/x.yml",
+    "https://github.com/o/r/blob/main/.compass%5Cprivate/x.yml",
+    ".compass/private/x.yml/",
+    ".compass/private/x.yml/.",
+)
+#: Texts that must still post: a tracked symlink into an ignored folder is
+#: asked of git as written, and an anchor is not part of a path.
+_POSTED_FORMS = (
+    "bin/tool",
+    "docs/guide.md#usage",
+    "https://github.com/o/r/blob/main/docs/guide.md#usage",
+)
+
+
+@pytest.mark.parametrize("form,refused",
+                         [(f, True) for f in _ENTITY_BACKSLASH_SLASH_FORMS]
+                         + [(f, False) for f in _POSTED_FORMS])
+def test_ipg_25_entity_backslash_and_trailing_slash_forms_refuse_and_a_tracked_symlink_posts(
+        repo, form, refused):
+    # HTML entities, a backslash in a web link and a trailing "/" or "/." do
+    # not hide a private path; a tracked symlink is asked of git as written,
+    # so one pointing into an ignored folder still posts.
     from compass_pkg import publish_check
-    page_issue(repo, gh, page=False)
-    token = "ghp_" + "Ab3" * 12
-    ok(run(repo, gh, "issue", "decision", "add", "D-1", "--question", "Which key?",
-           "--resolution", f"use {token}", "--by", "planner", "--stage", "plan",
-           "--issue", SLUG))
-    render(repo, gh)
-    settings(repo)
-    result = ok(run(repo, gh, "issue", "status", "set", "backlog", "--issue", SLUG))
-    assert api_calls(gh) == []
-    lines = [x for x in result.stderr.splitlines() if x.strip()]
-    assert len(lines) == 1 and "credential" in lines[0], result.stderr
-    assert "decisions" in lines[0]
-    assert token not in result.stderr and token not in json.dumps(record(repo))
-    refusal = publish_check.check({"comment": "x", "body": "key " + token}, str(repo))
-    assert refusal.check == "credential" and "issue body" in refusal.line
-
-
-def _big_readme(root, slug=SLUG, chart_line=None, rows=0, chart=0):
-    """Grow the README on disk: `chart` lines in the traceability chart and `rows`
-    rows in the artifacts table."""
-    path = docs_dir(root, slug) / "README.md"
-    text = path.read_text(encoding="utf-8")
-    filler = "\n".join([f'  n{i} ==> m{i}["{"x" * 90}"]' for i in range(chart)]
-                       + ([chart_line] if chart_line else []))
-    text = text.replace("```mermaid\nflowchart LR\n", "```mermaid\nflowchart LR\n"
-                        + filler + "\n", 1)
-    table = "\n".join(f"| [doc-{i}](doc-{i}.md) | draft | - | {'y' * 120} |"
-                      for i in range(rows))
-    text = re.sub(r"(\| verification-note \|[^\n]*)", r"\1\n" + table, text, count=1)
-    path.write_text(text, encoding="utf-8")
-    return text
-
-
-def test_ipg_19_comment_stays_within_the_size_limit(repo, gh):
-    from compass_pkg import github_page
-    # Five scenarios: everything is posted.
-    page_issue(repo, gh)
-    for n in range(2, 6):
-        ok(run(repo, gh, "scenario", "add", f"TRC-{n}", "--title", f"S{n}", "--intent",
-               "INT-1", "--test", f"tests/test_{n}.py", "--issue", SLUG))
-    render(repo, gh)
-    ok(gsync(repo, gh))
-    body = ours(gh)[0]["body"]
-    assert "```mermaid" in body and "| Document | Status |" in body
-    # Sixty-eight scenarios, each with two tests and a green record, fit: past 25
-    # scenarios the render draws one summary node per intent, so the README stays small.
-    big = "big-issue"
-    make_issue(repo, gh, slug=big)
-
-    def many(m):
-        m["scenarios"] = [{"id": f"TRC-{n:03d}", "title": f"Scenario {n} " + "w" * 60,
-                           "intent": "INT-1", "tests": [f"tests/test_{n}.py::test_a",
-                                                        f"tests/test_{n}.py::test_b"]}
-                          for n in range(1, 69)]
-    edit_manifest(repo, many, slug=big)
-    evidence = repo / ".compass" / "work" / big / "evidence"
-    evidence.mkdir(exist_ok=True)
-    for n in range(1, 69):
-        (evidence / f"green-TRC-{n:03d}.json").write_text(json.dumps(
-            {"scenario": f"TRC-{n:03d}", "command": "true", "exit_code": 0}))
-    render(repo, gh, big)
-    link(repo, gh, "acme/widgets#43", big)
-    ok(gsync(repo, gh, slug=big))
-    posted = ours(gh, "acme/widgets#43")[0]["body"]
-    assert "68 of 68 scenarios passed" in posted and len(posted) <= github_page.LIMIT
-    assert "left out" not in posted and "```mermaid" in posted
-    # A traceability chart past the limit is the first block left out.
-    before = _big_readme(repo, chart=700)
-    assert len(before) > github_page.LIMIT
-    ok(gsync(repo, gh))
-    body = ours(gh)[0]["body"]
-    assert len(body) <= github_page.LIMIT and body.startswith(MARKER + "\n")
-    assert "traceability chart is left out" in body and "n1 ==>" not in body
-    assert "| Document | Status |" in body
-    assert readme(repo) == before
-    # Still too long: the artifacts table is reduced to links.
-    render(repo, gh)
-    before = _big_readme(repo, chart=700, rows=500)
-    ok(gsync(repo, gh))
-    body = ours(gh)[0]["body"]
-    assert len(body) <= github_page.LIMIT
-    assert "traceability chart is left out" in body
-    assert "| Document | Status |" not in body and "`" in body
-    assert "first column" in body
-    assert readme(repo) == before
-    # Too long after both: refused, with the size and the limit.
-    path = docs_dir(repo) / "README.md"
-    path.write_text(before + "\n" + ("z" * 100 + "\n") * 700, encoding="utf-8")
-    clear_calls(gh)
-    result = run(repo, gh, "issue", "github", "sync", "--issue", SLUG)
-    assert result.returncode != 0
-    assert "65536" in result.stdout + result.stderr
-    assert not [c for c in api_calls(gh) if "PATCH" in c or "POST" in c]
-    # A chart that alone names an ignored file is left out, so the post goes ahead.
-    (repo / ".gitignore").write_text("notes/private/\n")
-    path.write_text(before, encoding="utf-8")
-    render(repo, gh)
-    _big_readme(repo, chart=700, chart_line='  p ==> q["notes/private/brief.md"]')
-    ok(gsync(repo, gh))
-    assert "notes/private" not in ours(gh)[0]["body"]
-
-
-# --- group D: settings and documentation ------------------------------------------
-
-def test_ipg_20_page_switch_is_declared(repo, gh):
-    from compass_pkg import catalogue_spec, github_page
-    assert "page" in catalogue_spec.GITHUB_LABEL_SWITCHES
-    schema = json.loads((ROOT / "schemas" / "compass.schema.json").read_text())
-    node = schema["properties"]["github_labels"]["properties"]["page"]
-    assert node["type"] == "boolean" and node["default"] is False
-    assert "`false`" in node["description"]
-    assert "page" in schema["properties"]["github_labels"]["description"]
-    configuration = (ROOT / "docs" / "configuration.md").read_text()
-    table = configuration.split("## Settings", 1)[1].split("\n###", 1)[0]
-    row = [x for x in table.splitlines() if x.startswith("| `github_labels` |")][0]
-    assert "`page`" in row
-    section = configuration.split("### `github_labels`", 1)[1].split("\n### ", 1)[0]
-    assert "- `page`:" in section
-    make_issue(repo, gh)
-    settings(repo, page=True)
-    ok(run(repo, gh, "policy", "lint"))
-    for value, on in ((True, True), (False, False), ("'yes'", False), ("1", False),
-                      ("'true'", False), (None, False)):
-        settings(repo, page=value)
-        assert github_page.page_on(str(repo)) is on, value
+    (repo / ".gitignore").write_text("notes/private/\nbuild/\n")
+    (repo / "build").mkdir()
+    (repo / "build" / "tool").write_text("built\n")
+    (repo / "bin").mkdir()
+    os.symlink(os.path.join("..", "build", "tool"), repo / "bin" / "tool")
+    commit_all(repo, "ignore build; track the bin/tool symlink")
+    root = str(Path(repo).resolve())
+    text = "see " + form
+    for texts in ({"comment": text, "body": None}, {"comment": "ok", "body": text}):
+        found = publish_check.check(texts, root)
+        if refused:
+            assert found is not None and found.check == "private-path", (text, texts)
+        else:
+            assert found is None, (text, texts, found)

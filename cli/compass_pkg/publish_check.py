@@ -11,8 +11,11 @@ exactly as they would be posted, and returns the first refusal or None:
   scheme is not http or https, such as `file://` or `vscode://`, is checked
   like any other path. A web link is posted unless its path names a file
   under `.compass/private/`. Every path is checked in the form it resolves
-  to: `_normalise` percent-decodes it until it stops changing, collapses
-  `./` and `//`, and resolves `..` before either test runs.
+  to: `_normalise` undoes percent-encoding and HTML character references
+  until the path stops changing, reads a backslash in a web link as a slash,
+  collapses `./` and `//`, and resolves `..` before either test runs. git is
+  asked about a path as written; symlinks are followed only for the
+  private-folder test.
 - **credentials**: text that `redact` would replace refuses the post. It is
   given an empty environment, so no environment variable is read.
 
@@ -24,6 +27,7 @@ A hit refuses the whole post: nothing is redacted and sent.
 # Imported only by github_page.
 from __future__ import annotations
 
+import html
 import os
 import re
 import posixpath
@@ -37,9 +41,10 @@ from compass_pkg import redact
 _TIMEOUT = 15
 _BLOCK = re.compile(r"<!-- compass:render ([a-z-]+) -->")
 _URL = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://[^\s)>\]`'\"]+")
-#: A path-like run. `%` is kept so an encoded slash or dot reaches `_normalise`;
-#: a run with no slash once decoded is not a path.
-_CANDIDATE = re.compile(r"[A-Za-z0-9._%/-]+")
+#: A path-like run. `%`, `&`, `#` and `;` are kept so an encoded slash or dot,
+#: or an HTML character reference such as `&#46;`, reaches `_normalise`; a run
+#: with no slash once decoded is not a path.
+_CANDIDATE = re.compile(r"[A-Za-z0-9._%/&#;-]+")
 #: A decoded control character ends the path: `git check-ignore --stdin` reads
 #: one path a line, so a newline would ask git about a different path.
 _CONTROL = re.compile(r"[\x00-\x1f\x7f]")
@@ -77,35 +82,69 @@ def _credentials(items):
 
 
 def _decode(path):
-    """`path` percent-decoded until it stops changing, so `%252E` is `.` too."""
+    """`path` with percent-encoding and HTML character references undone until
+    it stops changing, so `%252E`, `&#46;` and `&amp;#46;` are all `.`."""
     while True:
-        decoded = unquote(path)
+        decoded = html.unescape(unquote(path))
         if decoded == path:
             return _CONTROL.split(path, maxsplit=1)[0]
         path = decoded
 
 
-def _normalise(path, project_root=None):
-    """The form `path` resolves to, which both private-path tests read.
-
-    Without a project root, `path` is the path part of a web link: it is
-    decoded and `./`, `//` and `..` are folded by `posixpath.normpath`. With
-    one, it is a path on disk: it is decoded and resolved against the root
-    with `os.path.realpath`, and returned as a path from the root when it lies
-    inside the project, else as the folded path. A trailing slash is kept,
-    because a directory named without a file is posted."""
-    decoded = _decode(path)
-    trailing = "/" if decoded.endswith("/") else ""
-    if project_root is None:
-        return posixpath.normpath(decoded) + trailing if decoded else decoded
-    root = os.path.realpath(project_root)
-    full = os.path.realpath(os.path.join(root, decoded))
-    if full.startswith(root + os.sep):
-        return os.path.relpath(full, root).replace(os.sep, "/") + trailing
-    folded = posixpath.normpath(decoded)
+def _fold(path):
+    """`path` with `./`, `//` and `..` folded, keeping a trailing slash, because
+    a directory named without a file is posted."""
+    if not path:
+        return path
+    folded = posixpath.normpath(path)
     if folded.startswith("//"):
         folded = "/" + folded.lstrip("/")
-    return folded + trailing
+    return folded + ("/" if path.endswith("/") and folded != "/" else "")
+
+
+def _from_root(path, roots):
+    """An absolute `path` as a path from the first root holding it, or None."""
+    for root in roots:
+        if path.startswith(root.rstrip(os.sep) + os.sep):
+            return os.path.relpath(path, root).replace(os.sep, "/")
+    return None
+
+
+def _normalise(path, project_root=None):
+    """`(forms, written)` for a path as written in the text.
+
+    `forms` is every form the path resolves to, which the private-folder test
+    reads; `written` is the forms git is asked about. The path is decoded by
+    `_decode`, and read both whole and cut at an anchor, because an encoded
+    `#` may be part of a file name.
+
+    Without a project root the path is the path part of a web link: a
+    backslash is a slash there, and each form is folded. With one it is a
+    path on disk. Its written form is folded against the root without
+    following symlinks, because git tracks a symlink by its own path; its
+    resolved form follows them with `os.path.realpath`, so a link into the
+    private folder is still refused. A form inside the project is a path from
+    its root."""
+    decoded = _decode(path)
+    cut = re.split(r"[?#]" if project_root is None else "#", decoded, maxsplit=1)[0]
+    if project_root is None:
+        forms = tuple(dict.fromkeys(_fold(p.replace("\\", "/")) for p in (decoded, cut)))
+        return forms, ()
+    real = os.path.realpath(project_root)
+    roots = (real, os.path.abspath(project_root))
+    written, resolved = [], []
+    for spelling in dict.fromkeys((decoded, cut)):
+        if not spelling:
+            continue
+        trailing = "/" if spelling.endswith("/") else ""
+        lexical = posixpath.normpath(os.path.join(real, spelling))
+        inside = _from_root(lexical, roots)
+        written.append(inside + trailing if inside is not None else _fold(spelling))
+        full = os.path.realpath(os.path.join(real, spelling))
+        inside = _from_root(full, (real,))
+        resolved.append(inside + trailing if inside is not None else _fold(full + trailing))
+    written = tuple(dict.fromkeys(written))
+    return tuple(dict.fromkeys(written + tuple(resolved))), written
 
 
 def _names_private(path):
@@ -127,12 +166,14 @@ def _url_paths(text):
         scheme, rest = url.split("://", 1)
         slash = rest.find("/")
         start = len(scheme) + 3 + (slash if slash >= 0 else len(rest))
-        path = re.split(r"[?#]", url[start:], maxsplit=1)[0]
+        # The query and anchor are cut after decoding, by `_normalise`, so a
+        # `#` inside `&#46;` does not end the path early.
+        path = url[start:]
         if scheme.lower() in _WEB:
-            if _names_private(_normalise(path)) and private is None:
+            if any(_names_private(f) for f in _normalise(path)[0]) and private is None:
                 private = match.start()
             return " " * len(url)
-        return " " * start + path + " " * (len(url) - start - len(path))
+        return " " * start + path
 
     return _URL.sub(keep, text), private
 
@@ -146,22 +187,24 @@ def _candidates(text, project_root):
         raw = match.group(0).rstrip(".,;:")
         if "/" not in _decode(raw):
             continue
-        path = _normalise(raw, project_root)
-        if path.endswith("/"):
-            continue
+        forms, written = _normalise(raw, project_root)
         # A file in the private folder is refused by its name alone, inside the
-        # project or out of it.
-        if _names_private(path):
+        # project or out of it, and before the directory test, so a trailing
+        # "/" or "/." after its name does not pass it as a directory.
+        if any(_names_private(f) for f in forms):
             private = match.start() if private is None else private
             continue
-        # git cannot be asked about a path outside the project.
-        if path.startswith("/") or path == ".." or path.startswith("../"):
-            continue
-        if os.path.isdir(os.path.join(project_root, *path.split("/"))):
-            continue
-        if path.startswith(_POSTED):
-            continue
-        asked.append((path, match.start()))
+        for path in written:
+            if path.endswith("/"):
+                continue
+            # git cannot be asked about a path outside the project.
+            if path.startswith("/") or path == ".." or path.startswith("../"):
+                continue
+            if os.path.isdir(os.path.join(project_root, *path.split("/"))):
+                continue
+            if path.startswith(_POSTED):
+                continue
+            asked.append((path, match.start()))
     return asked, private
 
 

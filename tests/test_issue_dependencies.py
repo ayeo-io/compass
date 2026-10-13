@@ -552,5 +552,67 @@ def test_dbi_4_cycle_is_refused(tmp_path):
     assert_no_gh_call(project.root)
 
 
+# --- DBI-14 and DBI-15: lint ----------------------------------------------------------
+
+def lint(project, slug="a"):
+    # A cycle walk with no visited set never ends; the timeout makes it fail.
+    return compass(project.root, "issue", "lint", "--issue", slug, timeout=30)
+
+
+def dependency_lines(text):
+    return [line for line in text.splitlines() if "depends_on" in line]
+
+
+def test_dbi_14_missing_slug_is_a_lint_finding(tmp_path):
+    project = Project(tmp_path)
+    project.issue("a", "define", depends=[dep("speed-fix")])
+    done = lint(project)
+    assert done.returncode != 0, done
+    finding = [line for line in dependency_lines(done.stdout) if "speed-fix" in line]
+    assert finding and "depends on an issue that does not exist" in finding[0], done
+    project.issue("fresh", "define")
+    done = depends(project, "add", "speed-fix", "--reason", "x", slug="fresh")
+    assert done.returncode == 0, done
+    assert project.manifest("fresh")["depends_on"] == [dep("speed-fix", reason="x")]
+    assert finding[0].strip().lstrip("- ") in done.stderr, (finding, done)
+    project.issue("speed-fix", "define")
+    done = lint(project)
+    assert not dependency_lines(done.stdout), done
+    assert done.returncode == 0, done
+    assert_no_gh_call(project.root)
+
+
+def test_dbi_15_lint_reports_hand_edited_faults(tmp_path):
+    from compass_pkg import lifecycle
+    nine = ", ".join(lifecycle.UNTIL_VALUES)
+    shape = "the documented {issue, reason, until} shape"
+    cases = [
+        ([dep("b", until="soon")], ["until 'soon' is not a value", nine]),
+        (["b"], [shape]),
+        ([{"issue": "b", "until": "done"}], [shape]),
+        ([dict(dep("b"), owner="sam")], [shape]),
+        ([dep("b"), dep("b", until="plan")], ["names b twice"]),
+        ([dep("b")], ["forms a cycle: a -> b -> c -> a"]),
+        ([dep("closed")], ["closed", "not-planned"]),
+    ]
+    for number, (entries, names) in enumerate(cases):
+        project = Project(tmp_path / str(number))
+        project.issue("b", "define")
+        project.issue("closed", "ship", close="not-planned")
+        if names[0].startswith("forms a cycle"):
+            # b also reaches a loop of its own, d and e, that never comes back
+            # to a: the walk must end on it rather than go round it for ever.
+            project.issue("b", "define", depends=[dep("d"), dep("c")])
+            project.issue("c", "define", depends=[dep("a")])
+            project.issue("d", "define", depends=[dep("e")])
+            project.issue("e", "define", depends=[dep("d")])
+        project.issue("a", "define", depends=entries)
+        done = lint(project)
+        assert done.returncode != 0, (entries, done)
+        lines = dependency_lines(done.stdout)
+        assert any(all(n in line for n in names) for line in lines), (entries, done)
+        assert_no_gh_call(project.root)
+
+
 if __name__ == "__main__" and sys.argv[1:2] == ["--capture"]:
     _capture(sys.argv[2], sys.argv[3])

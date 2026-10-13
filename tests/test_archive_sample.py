@@ -28,15 +28,14 @@ BUILDER = ROOT / "scripts" / "build-archive-sample.py"
 sys.path.insert(0, str(ROOT / "cli"))
 sys.path.insert(0, str(ROOT / "tests"))
 import archive  # noqa: E402
+from archive import SHAPE_TESTS  # noqa: E402
 
 SAMPLE = archive.sample_root()
 
-#: The seven tests that read the archive's shape, which read the sample by
-#: default, and the two that are about the real archive, which are opt-in.
-SHAPE_TESTS = ("test_artifact_registry.py", "test_id_prefix_glossary.py",
-               "test_landed_by.py", "test_phase2_invariants.py",
-               "test_record_keeping_integrity.py",
-               "test_readable_specs_and_flow.py", "test_self_architecture.py")
+# The seven tests that read the archive's shape, which read the sample by
+# default, are listed in tests/archive.py as SHAPE_TESTS, because
+# tests/shape_skip_guard.py reads the same list. These two are about the real
+# archive, and are opt-in.
 REAL_ARCHIVE_TESTS = ("test_system_spec_currency.py",
                       "test_archive_citations_resolve.py")
 
@@ -226,15 +225,103 @@ def test_as_d_the_shape_tests_read_the_archive_through_one_helper():
         assert not direct, f"{name} still reads the local archive directly"
 
 
-def test_as_d_the_shape_tests_run_and_do_not_skip():
-    env = {k: v for k, v in os.environ.items() if k != "COMPASS_FULL_ARCHIVE"}
-    result = subprocess.run(
-        [sys.executable, "-m", "pytest", "-q", "-rs", "-p", "no:cacheprovider",
-         *[f"tests/{n}" for n in SHAPE_TESTS]],
-        cwd=ROOT, capture_output=True, text=True, env=env, timeout=900)
-    assert result.returncode == 0, result.stdout[-3000:]
-    skipped = [l for l in result.stdout.splitlines() if l.startswith("SKIPPED")]
-    assert not skipped, "\n".join(skipped)
+def test_as_d_the_shape_tests_run_and_do_not_skip(request, monkeypatch):
+    """The shape tests already run in this session. What this proves is that a
+    skip in one of them fails the session that skipped it: the guard's two hooks
+    are registered here, and every file the list names exists. It starts no
+    process; the guard's behaviour is proved by the planted-skip test below."""
+    def no_process(*args, **kwargs):
+        raise AssertionError("this test must not start a process")
+
+    monkeypatch.setattr(subprocess, "Popen", no_process)
+    import shape_skip_guard
+    plugins = request.config.pluginmanager.get_plugins()
+    for hook in ("pytest_runtest_makereport", "pytest_make_collect_report"):
+        impl = getattr(shape_skip_guard, hook)
+        assert any(getattr(plugin, hook, None) is impl for plugin in plugins), (
+            f"this session did not register the shape-test guard's {hook}")
+    assert SHAPE_TESTS and all((ROOT / "tests" / name).is_file() for name in SHAPE_TESTS)
+
+
+# test_artifact_registry.py is the shape module copied for the planted runs below. It
+# collected fastest of the seven (about 0.3 s in pytest's own count), its imports are
+# light, and its test_a1 reads only a schema file.
+GUARDED_COPY = "test_artifact_registry.py"
+GUARDED_REAL_TEST = "test_a1_entry_declares_kind_path_status_reason"
+
+#: Three ways a test ends up skipped, each as the lines added to the copy.
+PLANTED_SKIPS = {
+    "skip-marker": (
+        "\n\nimport pytest as _pytest\n\n\n"
+        "@_pytest.mark.skip(reason=\"planted skip marker\")\n"
+        "def test_planted_skip():\n    pass\n",
+        "planted skip marker", "test_planted_skip"),
+    "skip-call": (
+        "\n\nimport pytest as _pytest\n\n\n"
+        "def test_planted_skip():\n    _pytest.skip(\"planted skip call\")\n",
+        "planted skip call", "test_planted_skip"),
+    "importorskip": (
+        "\n\nimport pytest as _pytest\n\n_pytest.importorskip(\"no_such_module_planted\")\n",
+        "no_such_module_planted", GUARDED_COPY),
+}
+
+
+def _run_pytest_on_copies(tmp_path, files, parallel, full_archive=False):
+    """Run pytest over `files` ({name: text}) in a folder laid out like this
+    checkout's (tests/ beside schemas/), loading only the skip guard from here."""
+    folder = tmp_path / "tests"
+    folder.mkdir(parents=True)
+    (tmp_path / "schemas").symlink_to(ROOT / "schemas")
+    for name, text in files.items():
+        (folder / name).write_text(text, encoding="utf-8")
+    env = {k: v for k, v in os.environ.items()
+           if k not in ("COMPASS_FULL_ARCHIVE", "PYTEST_ADDOPTS")}
+    env["PYTHONPATH"] = str(ROOT / "tests") + os.pathsep + str(ROOT / "cli")
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    # CI sets this, so xdist is only there when asked for with -p. Setting it here
+    # gives the same command on a machine that autoloads xdist.
+    env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
+    if full_archive:
+        env["COMPASS_FULL_ARCHIVE"] = "1"
+    command = [sys.executable, "-m", "pytest", "-o", "addopts=", "-p", "no:cacheprovider",
+               "-p", "shape_skip_guard", "-q", "-rs",
+               "-k", f"test_planted_skip or {GUARDED_REAL_TEST}", str(folder)]
+    if parallel:
+        command[3:3] = ["-p", "xdist.plugin", "-n", "2"]
+    return subprocess.run(command, cwd=tmp_path, capture_output=True, text=True,
+                          env=env, timeout=300)
+
+
+@pytest.mark.parametrize("parallel", [False, True], ids=["alone", "xdist"])
+@pytest.mark.parametrize("case", sorted(PLANTED_SKIPS))
+def test_as_d_the_skip_guard_fails_on_a_planted_skip(case, parallel, tmp_path):
+    original = (ROOT / "tests" / GUARDED_COPY).read_text(encoding="utf-8")
+    addition, reason, named = PLANTED_SKIPS[case]
+    result = _run_pytest_on_copies(tmp_path, {GUARDED_COPY: original + addition}, parallel)
+    output = result.stdout + result.stderr
+    assert result.returncode != 0, output[-2000:]
+    # The guard's own text, not only the skip report: a run that collects nothing
+    # also exits non-zero and prints the skip reason under -rs.
+    assert "a shape test must not skip" in output, output[-2000:]
+    assert named in output and reason in output, output[-2000:]
+
+
+@pytest.mark.parametrize("parallel", [False, True], ids=["alone", "xdist"])
+def test_as_d_the_skip_guard_leaves_a_clean_copy_and_an_unlisted_module_alone(parallel, tmp_path):
+    original = (ROOT / "tests" / GUARDED_COPY).read_text(encoding="utf-8")
+    clean = _run_pytest_on_copies(tmp_path / "clean", {GUARDED_COPY: original}, parallel)
+    assert clean.returncode == 0, clean.stdout[-2000:] + clean.stderr[-1000:]
+    # The same skips in a module the list does not name: they report as skips.
+    unlisted = {GUARDED_COPY: original,
+                "test_unlisted_one.py": original + PLANTED_SKIPS["skip-marker"][0]
+                + PLANTED_SKIPS["skip-call"][0].replace("test_planted_skip", "test_planted_skip_too"),
+                "test_unlisted_two.py": original + PLANTED_SKIPS["importorskip"][0]}
+    other = _run_pytest_on_copies(tmp_path / "other", unlisted, parallel)
+    assert other.returncode == 0, other.stdout[-2000:] + other.stderr[-1000:]
+    # With the switch on for a release run, the guard is off.
+    planted = {GUARDED_COPY: original + PLANTED_SKIPS["skip-marker"][0]}
+    full = _run_pytest_on_copies(tmp_path / "full", planted, parallel, full_archive=True)
+    assert full.returncode == 0, full.stdout[-2000:] + full.stderr[-1000:]
 
 
 def test_as_d_the_switch_points_the_helper_at_the_real_archive(monkeypatch):

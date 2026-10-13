@@ -1,0 +1,18 @@
+{
+  "jobs": [
+    {"name": "already-tested", "status": "completed", "conclusion": "skipped",
+     "startedAt": "0001-01-01T00:00:00Z", "completedAt": "0001-01-01T00:00:00Z"},
+    {"name": "checks", "status": "completed", "conclusion": "success",
+     "startedAt": "2026-10-13T10:00:05Z", "completedAt": "2026-10-13T10:03:35Z"},
+    {"name": "count", "status": "completed", "conclusion": "success",
+     "startedAt": "2026-10-13T10:00:04Z", "completedAt": "2026-10-13T10:02:34Z"},
+    {"name": "shard (0)", "status": "completed", "conclusion": "success",
+     "startedAt": "2026-10-13T10:00:06Z", "completedAt": "2026-10-13T10:08:06Z"},
+    {"name": "shard (1)", "status": "completed", "conclusion": "success",
+     "startedAt": "2026-10-13T10:00:07Z", "completedAt": "2026-10-13T10:07:37Z"},
+    {"name": "serial", "status": "completed", "conclusion": "success",
+     "startedAt": "2026-10-13T10:00:03Z", "completedAt": "2026-10-13T10:09:33Z"},
+    {"name": "self-check", "status": "completed", "conclusion": "success",
+     "startedAt": "2026-10-13T10:09:40Z", "completedAt": "2026-10-13T10:10:40Z"}
+  ]
+}

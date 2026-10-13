@@ -38,27 +38,105 @@ NEW_TEST_MODULES = ["tests/test_render_blocks.py", "tests/test_rendered_blocks_c
                     "tests/test_migrate_rendered_blocks.py"]
 
 
-def _archive_digest():
-    return tracked_digest(*[p for p in (ROOT / ".compass" / "work", ROOT / "docs" / "compass")
-                            if p.is_dir()])
+def test_dcj_63_no_test_touches_own_archive(request, monkeypatch):
+    """No test run writes into this checkout's archive. The check is the archive
+    guard (tests/archive_guard.py), which takes a digest of `.compass/work` and
+    `docs/compass` when the session starts and again when it ends, so it covers
+    every test in the session. This test shows that the guard is registered, that
+    it does not run as a serial test, and that no module which renders or
+    migrates builds a path from this checkout's archive. It starts no process."""
+    def no_process(*args, **kwargs):
+        raise AssertionError("this test must not start a process")
 
-
-@pytest.mark.serial
-def test_dcj_63_no_test_touches_own_archive():
-    before = _archive_digest()
-    env = dict(os.environ, PYTEST_ADDOPTS="", PYTHONDONTWRITEBYTECODE="1")
-    done = subprocess.run(
-        [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "-x",
-         "-o", "addopts=", *NEW_TEST_MODULES],
-        cwd=ROOT, env=env, capture_output=True, text=True, timeout=1500)
-    assert done.returncode == 0, done.stdout[-3000:] + done.stderr[-2000:]
-    assert _archive_digest() == before
+    monkeypatch.setattr(subprocess, "Popen", no_process)
+    assert request.node.get_closest_marker("serial") is None
+    import archive_guard
+    plugins = request.config.pluginmanager.get_plugins()
+    for hook in ("pytest_sessionstart", "pytest_sessionfinish"):
+        impl = getattr(archive_guard, hook)
+        assert any(getattr(plugin, hook, None) is impl for plugin in plugins), (
+            f"this session did not register the archive guard's {hook}")
     # Every render and migrate those tests run targets a temporary folder: no
     # module builds a path from this checkout's archive.
     for name in NEW_TEST_MODULES + ["tests/rendered_blocks_support.py"]:
         text = (ROOT / name).read_text(encoding="utf-8")
         assert 'ROOT / ".compass"' not in text and "ROOT / 'docs'" not in text, name
         assert 'ROOT / "docs" / "compass"' not in text, name
+
+
+# The planted module does one thing to one file in this checkout's .compass/work
+# folder. The control does nothing to it.
+_PLANTED_MODULE = '''\
+from pathlib import Path
+
+
+def test_changes_the_archive():
+    target = Path({target!r})
+    {action}
+'''
+
+#: What the planted module does, and whether the file exists before it runs.
+_ACTIONS = {
+    "added": ("target.parent.mkdir(parents=True, exist_ok=True); target.write_text('after')", False),
+    "changed": ("target.write_text('after')", True),
+    "removed": ("target.unlink()", True),
+    "untouched": ("assert target.exists()", True),
+}
+
+
+def _run_archive_guard(tmp_path, action, parallel):
+    """Run a planted module under the archive guard. Returns the run and the
+    planted path. The planted file is removed afterwards, and so is `.compass/work`
+    (and `.compass`) when this run made it."""
+    import uuid
+    work = ROOT / ".compass" / "work"
+    made = [d for d in (ROOT / ".compass", work) if not d.exists()]
+    planted = work / f".dcj-63-planted-{uuid.uuid4().hex}"
+    code, exists_before = _ACTIONS[action]
+    module = tmp_path / f"test_{action}_{'xdist' if parallel else 'alone'}.py"
+    module.write_text(_PLANTED_MODULE.format(target=str(planted), action=code),
+                      encoding="utf-8")
+    env ={k: v for k, v in os.environ.items() if k != "PYTEST_ADDOPTS"}
+    env["PYTHONPATH"] = str(HERE)
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    env["PYTEST_DISABLE_PLUGIN_AUTOLOAD"] = "1"
+    command = [sys.executable, "-m", "pytest", "-o", "addopts=", "-p", "no:cacheprovider",
+               "-p", "archive_guard", "-q", str(module)]
+    if parallel:
+        command[3:3] = ["-p", "xdist.plugin", "-n", "2"]
+    try:
+        if exists_before:
+            work.mkdir(parents=True, exist_ok=True)
+            planted.write_text("before", encoding="utf-8")
+        run = subprocess.run(command, cwd=tmp_path, capture_output=True, text=True,
+                             env=env, timeout=300)
+    finally:
+        planted.unlink(missing_ok=True)
+        for folder in reversed(made):
+            try:
+                folder.rmdir()
+            except OSError:
+                pass          # something else is in it: leave it
+    return run, planted
+
+
+@pytest.mark.serial
+def test_dcj_63_guard_fails_on_a_planted_archive_write(tmp_path):
+    """Serial, because while the planted file exists a parallel test that asks
+    whether this checkout has an archive would see one. A file is added, changed
+    and removed in turn, alone and under xdist, where the write happens in a
+    worker and only the controlling process sees the whole session. Changing a
+    file keeps its name, so a guard that compared names alone would miss it."""
+    for parallel in (False, True):
+        how = "xdist" if parallel else "alone"
+        for action in ("added", "changed", "removed"):
+            run, planted = _run_archive_guard(tmp_path, action, parallel)
+            output = run.stdout + run.stderr
+            assert run.returncode != 0, (how, action, output[-2000:])
+            assert f"{action}: .compass/work/{planted.name}" in output, (how, action, output[-2000:])
+            assert not planted.exists()
+        control, _ = _run_archive_guard(tmp_path, "untouched", parallel)
+        assert control.returncode == 0, (how, control.stdout[-2000:] + control.stderr[-1000:])
 
 
 # --- the whole archive (DCJ-58 to DCJ-61, DCJ-77, DCJ-78) ---------------------------------

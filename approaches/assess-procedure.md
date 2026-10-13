@@ -62,7 +62,8 @@ If `--reassess` is passed, this is a re-assessment during the work, not a new
 assessment - typically because implementation revealed the assessment was
 misread. Read the existing `delivery-approach.md` and `manifest.yml`, re-read the
 four dimensions, update the manifest's `assessment:` block, then re-run
-`compass approach evaluate --write --reason "..."` to recompute the approach.
+`compass approach evaluate --write --reason "..." --justify DIM="..."` to recompute
+the approach, with one `--justify` for each value you changed.
 **Always pass `--reason`** on a re-assessment: when the CLI sees the approach
 change, it records the event in the manifest's `reassessments:` log, and the
 reason is the signal `compass retro` reads. Then write a **new
@@ -110,7 +111,11 @@ force; if it is still a spike, leave the marker in place.
    is the only part of the computation that is judgement - everything below
    is mechanism.
 3. **Compute the delivery approach - this is the mechanism.** Run
-   `compass approach evaluate --issue <slug> --write`. The CLI applies
+   `compass approach evaluate --issue <slug> --write --justify
+   <dimension>="<why>"` with one `--justify` for each assessed dimension (a
+   changed value on a re-run needs a new one; an unchanged value keeps its
+   line). The CLI records them under the manifest's `justifications:` key
+   and refuses a new or changed value that has none. It applies
    the routing rules in force to the assessment: it composes the first approach,
    applies the floors, caps, immovable gates, and blocking role rules, and
    folds the resulting `delivery_approach`, `stages`, `gates` (status
@@ -121,7 +126,10 @@ force; if it is still a spike, leave the marker in place.
    is a misclassification, the CLI fails loudly; re-read the dimension it
    rejected.
 4. **Write `delivery-approach.md`** from `${CLAUDE_PLUGIN_ROOT}/templates/delivery-approach.md`
-   into the issue directory, from the CLI's output. It must contain:
+   at the path `compass issue artifact-path delivery-approach` prints (the
+   issue's documents folder), from the CLI's output. Then register it with
+   `compass issue artifact set delivery-approach --status draft --path <that
+   path>`. It must contain:
    - the four dimensions with justifications;
    - the computed approach;
    - every policy rule the CLI reported as fired (with its rationale);
@@ -148,7 +156,7 @@ force; if it is still a spike, leave the marker in place.
    create this marker on any other approach.
 7. **Confirm.** The assessment is advisory until confirmed. Present the
    approach, invite override of any *dimension*, and if a dimension changes,
-   re-run `compass approach evaluate --write` - never hand-edit the computed
+   re-run `compass approach evaluate --write --justify DIM="..."` - never hand-edit the computed
    approach. Record overrides in `delivery-approach.md` with who and why.
    Immovable gates and floors cannot be overridden; changing one means a
    reviewed change to the project's `compass.yml` (`docs/configuration.md`),

@@ -64,6 +64,22 @@ def _adapter_part(preset):
     for stage in part["stages"].values():
         stage.pop("entry", None)
         stage.pop("exit", None)
+    # A kind nothing owes (no approach lists it and no rule adds, demands or
+    # suggests it) is in no legacy file, so the adapter cannot name it. The
+    # adapter also never copies `every_approach`, which would make an old policy
+    # owe a document it did not list.
+    named = set()
+    for approach in (part.get("approaches") or {}).values():
+        named |= set(approach.get("artifacts") or {})
+    for rule_set in (part.get("rules") or {}).values():
+        for rule in rule_set["rules"].values():
+            for key in ("add_artifact", "require_artifact", "suggest_artifact"):
+                value = (rule.get("then") or {}).get(key)
+                named |= {v[:-3] if v.endswith(".md") else v
+                          for v in (value if isinstance(value, list) else [value] if value else [])}
+    if "artifacts" in part:
+        part["artifacts"] = {kind: {k: v for k, v in entry.items() if k != "every_approach"}
+                             for kind, entry in part["artifacts"].items() if kind in named}
     return part
 
 
@@ -349,7 +365,11 @@ def test_dp_1_the_rendered_files_are_what_is_committed():
                           *(f"{n}.yml" for n in catalogue_spec.CATALOGUES)}
     for name, text in files.items():
         committed = (PRESET / name).read_text(encoding="utf-8")
-        if name in ("checks.yml", "stages.yml"):
+        if name == "artifacts.yml":
+            # The preset gained the kinds nothing owes and `every_approach`
+            # after the adapter wrote it.
+            assert _adapter_part(_preset())["artifacts"] == yaml.safe_load(text)["artifacts"]
+        elif name in ("checks.yml", "stages.yml"):
             # These two gained the human checks and the stage lists after the
             # adapter wrote them; what the adapter wrote is unchanged.
             wrote = yaml.safe_load(text)

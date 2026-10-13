@@ -40,7 +40,11 @@ def _only(report, code):
 
 
 def _doc(name, **fields):
-    return {"file": name, **fields}
+    """An artifacts entry with the required descriptive fields, so the graph
+    rules are the only thing the lint has to say about it."""
+    return {"file": name, "stage": "define", "owner": "planner",
+            "audience": "A reader decides from it.", "stands_for": "a-document",
+            "sections": {"thorough": ["One"]}, **fields}
 
 
 # --- a bookkeeping artifact is never an input (TRC-001) -------------------------------

@@ -122,7 +122,9 @@ def test_asw_5_every_artifact_kind_names_its_stage(tmp_path):
         "requirements-review": "refine", "technical-design": "plan",
         "threat-model": "plan", "rollback-plan": "plan",
         "distribution-map": "breakdown", "verification-report": "verify",
-        "verification-note": "verify", "launch-readiness": "verify"}
+        "verification-note": "verify", "launch-readiness": "verify",
+        "bug-report": "assess", "architecture-notes": "define", "positioning": "define",
+        "product-owner-review": "plan", "review": "verify", "spike-conclusion": "verify"}
 
     root = project(tmp_path / "ok")
     assert run(root, "policy", "lint")[0] == 0
@@ -133,8 +135,18 @@ def test_asw_5_every_artifact_kind_names_its_stage(tmp_path):
     code, out, err = run(bad, "policy", "lint")
     assert code != 0 and "technical-design" in out + err and "deploy" in out + err
 
+    # A kind added with no stage is refused: the stage is a required field.
+    unstaged = project(tmp_path / "unstaged", compass_yml={
+        "schema": 1, "owner": "jed72", "artifacts": {"runbook": {"file": "runbook.md"}}},
+        evaluate=False)
+    code, out, err = run(unstaged, "policy", "lint")
+    assert code != 0 and "runbook" in out + err and "stage" in out + err
+
     plain = project(tmp_path / "plain", compass_yml={
-        "schema": 1, "owner": "jed72", "artifacts": {"runbook": {"file": "runbook.md"}}})
+        "schema": 1, "owner": "jed72", "artifacts": {"runbook": {
+            "file": "runbook.md", "stage": "ship", "owner": "builder",
+            "audience": "The person who runs the service reads it to restore it.",
+            "stands_for": "runbook", "sections": {"thorough": ["Steps"]}}}})
     assert run(plain, "policy", "lint")[0] == 0
     add_entry(plain, "runbook")
     add_evidence(plain, "EV-1")

@@ -45,7 +45,11 @@ JSON_SCHEMA_VERSION = 1
 # Version 2: a check's `when` reads the derived key `ships` (ADR-037, the
 # amendment of 2026-10-08), so a configuration that uses it has a verdict the
 # first version could not give.
-CLASSIFIER_VERSION = 2
+#
+# Version 3: an owed artifact's `required_when` is an obligation fact compared by
+# identity, so a change to the condition under which a document is owed is
+# `incomparable`, which version 2 read as `equivalent`.
+CLASSIFIER_VERSION = 3
 
 # Keys whose value is a condition on the assessment.
 WHEN_KEYS = ("when", "blocking_when", "applies_when")
@@ -439,7 +443,8 @@ for _fact, _fields in {
                      "rules.ceilings"),
         "checks": tuple(f for f in OBLIGATION_FIELDS if f.startswith("checks.")),
         "artifact_depends_on": ("artifacts.depends_on",),
-        "artifact_checks": ("artifacts.checks",)}.items():
+        "artifact_checks": ("artifacts.checks",),
+        "artifact_required_when": ("artifacts.required_when",)}.items():
     for _name in _fields:
         _FACT_OF[_name] = _fact
 
@@ -496,6 +501,8 @@ def _changes(parent, child, ctx):
     _keyed("artifacts.depends_on", p["artifact_depends_on"],
            c["artifact_depends_on"], ctx, out)
     _keyed("artifacts.checks", p["artifact_checks"], c["artifact_checks"], ctx, out)
+    _keyed("artifacts.required_when", p["artifact_required_when"],
+           c["artifact_required_when"], ctx, out)
     return out
 
 

@@ -1,8 +1,6 @@
 <!--
 TEMPLATE: rollback-plan.md
-Produced by: the plan stage, on an issue whose assessment carries
-             `migrations` (RP-REQUIRE-006).
-Lives at:    docs/compass/<created>-<issue-slug>/rollback-plan.md
+Written when the assessment carries `migrations` (RP-REQUIRE-006).
 
 THIS IS A REHEARSAL RECORD, NOT A PLAN. Two sources agree and they are the
 reason this template has the shape it has:

@@ -22,7 +22,7 @@
 # routing-policy.md.
 # =============================================================================
 
-version: 2.21.0
+version: 2.22.0
 # -----------------------------------------------------------------------------
 # ROUTING STRATEGIES - soft. They BIAS the candidate delivery approach. The evaluator uses
 # them in composition (step 1); a later rule can override the result.
@@ -333,10 +333,10 @@ route_shapes:
     stages: { assess: lightweight, define: collapsed, refine: skipped, plan: collapsed, breakdown: skipped, implement: explore, verify: conclude, ship: graduate-or-discard }
     gates: [spike.conclude]
     subtask_ceiling: 1
-    # A spike writes no review document. What it owes is a recorded
-    # conclusion - discard, graduate, or defer - and that is typed evidence,
-    # not a document. An empty pack here is the honest answer, not a gap.
-    artifacts: {}
+    # A spike owes its delivery-approach record and a conclusion document:
+    # discard, graduate, or defer. The conclusion is also typed evidence,
+    # which `spike-conclusion-present` reads.
+    artifacts: { delivery-approach: lightweight, spike-conclusion: thorough }
   quick-fix:
     weight: 1
     stages: { assess: thorough, define: lightweight, refine: collapsed, plan: collapsed, breakdown: skipped, implement: thorough, verify: lightweight, ship: lightweight }

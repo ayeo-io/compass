@@ -64,6 +64,18 @@ def is_one_segment(name):
             and "/" not in name and "\\" not in name and "\0" not in name)
 
 
+def pick_entry(entries, kind, round=None):
+    """The registry entry of `kind` among `entries`, or None. A kind that repeats
+    holds one entry per `round`: with a round, that entry; with none, the latest.
+    A kind whose entries hold no round keeps its first entry. It is a pure choice
+    among entries, so core and the leaf modules share it without importing each other."""
+    found = [e for e in entries or () if isinstance(e, dict) and e.get("kind") == kind]
+    if round is not None:
+        return next((e for e in found if e.get("round") == round), None)
+    rounded = [e for e in found if isinstance(e.get("round"), int)]
+    return max(rounded, key=lambda e: e["round"]) if rounded else (found[0] if found else None)
+
+
 def docs_dir_for(created, slug):
     """`docs/compass/<created>-<slug>/`, from the two facts that name it.
 

@@ -193,7 +193,7 @@ compass issue migrate      bring older issue directories up to the current schem
 compass issue render       rewrite the rendered blocks of an issue's documents and the project index from its records; --all for every issue
 compass issue artifact set set a document's status in the review pack
 compass issue artifact-path  where one of an issue's documents is
-compass issue template show  a document template with its checklists rendered from the stage lists
+compass issue template show  the skeleton of a document kind from the catalogue, at a depth; --depth lightweight | thorough
 compass issue status set   backlog, or done with --close-reason completed | not-planned | duplicate
 compass issue status remove  end a backlog hold; the state then follows the records
 compass issue blocked set  flag an in-progress or in-review issue as blocked, with a reason

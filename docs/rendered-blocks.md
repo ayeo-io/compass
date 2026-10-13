@@ -30,7 +30,8 @@ Gates: 7 of 9 pass
 The kinds are `coverage`, `gates`, `dod`, `dor`, `artifacts`, `evidence`,
 `follow-ups`, `decisions-taken`, `header`, `ask`, `decision-required`,
 `acceptance`, `related`, `decisions`, `traceability`, `deliberately-omitted`,
-`verification-note` and `index`. All are rendered.
+`verification-note`, `index`, `assessment`, `policy-rules`, `stage-weights`, `gate-set`,
+`plan-exit` and `breakdown-exit`. All are rendered.
 
 | Kind | What it shows |
 |---|---|
@@ -51,6 +52,11 @@ The kinds are `coverage`, `gates`, `dod`, `dor`, `artifacts`, `evidence`,
 | `deliberately-omitted` | The documents omitted on purpose, with the reason |
 | `verification-note` | A quick fix's scenario, test, red and green records, gates, changed files outside `docs/compass/` and the release line when the manifest records a `release_note` |
 | `index` | The project index: see below |
+| `assessment` | In `delivery-approach.md` section 1. One row for each assessed dimension with its value and the justification the manifest's `justifications` key records (`no justification recorded` on an issue assessed before the key), then `Labels:` |
+| `policy-rules` | In section 3. The policy line, the generation, and one row for each rule that fired (type, id, what it changed, rationale), or `No policy rule fired.` |
+| `stage-weights` | In section 4a. One row for each stage in stage order, with the mode the manifest records |
+| `gate-set` | In section 4b. The gates in the manifest's order, and beside a gate a policy rule added, the ids of those rules |
+| `plan-exit`, `breakdown-exit` | The configured `plan` or `breakdown` exit list under `## Gate` in `technical-design.md` and `distribution-map.md`, read like `dod`. Empty (the shipped default): `No exit checks are configured for the plan stage.` (or `breakdown`) |
 
 A block holds no clock, no absolute path and no name taken from git. The same
 records give the same text, so a second render changes no byte. The one fence a
@@ -234,7 +240,7 @@ never through the parse cache.
 
 | Block | Draws on | At `verify`, `ship` and done | Before `verify` |
 |---|---|---|---|
-| `coverage`, `gates`, `dod`, `dor`, `artifacts`, `evidence`, `follow-ups`, `decisions-taken`, the issue page | the issue's own records | fails | advisory |
+| `coverage`, `gates`, `dod`, `dor`, `artifacts`, `evidence`, `follow-ups`, `decisions-taken`, `assessment`, `policy-rules`, `stage-weights`, `gate-set`, `plan-exit`, `breakdown-exit`, the issue page | the issue's own records | fails | advisory |
 | `related`, the governance lines of `decisions`, the issue's row of the index | other issues or the project | advisory | advisory |
 
 A missing issue page fails at `verify` and is advisory before. The message names

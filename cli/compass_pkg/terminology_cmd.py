@@ -106,7 +106,15 @@ def _fmt(value):
     return " ".join(str(value).split())
 
 
-def render_glossary(vocab: dict) -> str:
+def kind_rows(artifacts: dict) -> list:
+    """One row per document kind of the artifacts catalogue. The glossary and
+    `docs/artifact-catalogue.md` both read it, so they cannot disagree."""
+    from compass_pkg import artifact_kinds
+
+    return artifact_kinds.rows(artifacts)
+
+
+def render_glossary(vocab: dict, artifacts: dict = None) -> str:
     terms = vocab.get("terms") or {}
     codes = vocab.get("codes") or {}
     out = [
@@ -149,7 +157,52 @@ def render_glossary(vocab: dict) -> str:
             if e.get(key):
                 out.append(f"**{label}:** {_fmt(e[key])}")
                 out.append("")
+    rows = kind_rows(artifacts)
+    if rows:
+        out += ["## Document kinds", "",
+                "The kinds of document a process writes, from the artifacts catalogue of the",
+                "shipped default. Each entry gives who reads the document, the name the",
+                "industry uses for it, and where it lives.", ""]
+        for row in sorted(rows, key=lambda r: r["kind"]):
+            out += [f"### `{row['kind']}`", "", row["audience"], "",
+                    f"**Traditional name:** {row['stands_for']}", "",
+                    f"**Stage:** `{row['stage']}` · **Owner:** {row['owner']}", "",
+                    f"**Home:** `docs/compass/<created>-<issue-slug>/{row['file']}`", ""]
     return "\n".join(out).rstrip("\n") + "\n"
+
+
+#: The lines in `docs/artifact-catalogue.md` between which `_derive-glossary`
+#: writes the table of kinds. The text around them is written by hand.
+REGION_START = "<!-- compass:catalogue-table -->"
+REGION_END = "<!-- /compass:catalogue-table -->"
+
+
+def render_catalogue_region(artifacts: dict) -> str:
+    """The table of kinds and the headings of each, as markdown."""
+    rows = kind_rows(artifacts)
+    out = ["| Kind | File | Stage | Owner | Traditional name | Who reads it |",
+           "|---|---|---|---|---|---|"]
+    for r in rows:
+        out.append("| `%s` | `%s` | `%s` | %s | %s | %s |" % (
+            r["kind"], r["file"], r["stage"], r["owner"], r["stands_for"], r["audience"]))
+    out += ["", "Headings of each kind, in order:", ""]
+    for r in rows:
+        for depth in sorted(r["sections"], reverse=True):
+            listed = r["sections"][depth]
+            out.append("- `%s`, %s: %s" % (
+                r["kind"], depth, "; ".join(listed) if listed else "no heading (one rendered block)"))
+    return "\n".join(out) + "\n"
+
+
+def replace_catalogue_region(doc: str, artifacts: dict) -> str:
+    """`doc` with the text between the region markers replaced by a fresh table."""
+    start = doc.find(REGION_START)
+    end = doc.find(REGION_END)
+    if start < 0 or end < start:
+        raise CompassError(
+            f"docs/artifact-catalogue.md has no {REGION_START} ... {REGION_END} region to write.")
+    return (doc[:start + len(REGION_START)] + "\n\n" + render_catalogue_region(artifacts)
+            + "\n" + doc[end:])
 
 
 def cmd_derive_glossary(args):
@@ -159,11 +212,30 @@ def cmd_derive_glossary(args):
         raise CompassError(f"no vocabulary file at {src}")
     with open(src, "r", encoding="utf-8") as fh:
         vocab = yaml.safe_load(fh) or {}
-    text = render_glossary(vocab)
+    catalogue_src = os.path.join(root, "governance", "presets", "default", "artifacts.yml")
+    artifacts = {}
+    if os.path.isfile(catalogue_src):
+        with open(catalogue_src, "r", encoding="utf-8") as fh:
+            artifacts = (yaml.safe_load(fh) or {}).get("artifacts") or {}
+    text = render_glossary(vocab, artifacts)
     out = getattr(args, "out", None) or os.path.join(root, "docs", "glossary.md")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, "w", encoding="utf-8") as fh:
         fh.write(text)
     print(f"compass _derive-glossary: {out} derived "
-          f"({len(vocab.get('codes') or {})} codes, {len(vocab.get('terms') or {})} terms).")
+          f"({len(vocab.get('codes') or {})} codes, {len(vocab.get('terms') or {})} terms, "
+          f"{len(artifacts)} document kinds).")
+    # The owning doc is rewritten beside the glossary: at its place when no
+    # output is named, and at --catalogue-out when one is. A caller that names
+    # only --out gets the glossary and leaves the doc alone.
+    doc_in = os.path.join(root, "docs", "artifact-catalogue.md")
+    doc_out = getattr(args, "catalogue_out", None) or (
+        None if getattr(args, "out", None) else doc_in)
+    if doc_out and os.path.isfile(doc_in):
+        with open(doc_in, "r", encoding="utf-8") as fh:
+            doc = replace_catalogue_region(fh.read(), artifacts)
+        os.makedirs(os.path.dirname(doc_out), exist_ok=True)
+        with open(doc_out, "w", encoding="utf-8") as fh:
+            fh.write(doc)
+        print(f"compass _derive-glossary: {doc_out} derived.")
     return 0

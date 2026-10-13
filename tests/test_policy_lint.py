@@ -391,9 +391,11 @@ def test_pl_4_a_name_or_alias_collision_is_reported():
 
 
 def test_pl_4_a_dependency_cycle_between_artifacts_is_reported_once():
+    fields = {"stage": "define", "owner": "planner", "audience": "A reader decides.",
+              "stands_for": "a-document", "sections": {"thorough": ["One"]}}
     report = _lint(project={"artifacts": {
-        "a": {"file": "a.md", "depends_on": ["b"]},
-        "b": {"file": "b.md", "depends_on": ["a"]}}})
+        "a": {"file": "a.md", "depends_on": ["b"], **fields},
+        "b": {"file": "b.md", "depends_on": ["a"], **fields}}})
     found = _one(report, "M-CYCLE")
     assert found.path == "artifacts.a.depends_on"
     assert "a -> b -> a" in found.message

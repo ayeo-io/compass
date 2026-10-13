@@ -950,7 +950,7 @@ def _registered_path(task_dir, rel):
 # it has its own module. Re-exported here because every existing caller
 # imports these from core.
 from compass_pkg.issue_layout import (  # noqa: E402
-    DOCS_ROOT, docs_dir_for, is_issue_document)
+    DOCS_ROOT, docs_dir_for, is_issue_document, pick_entry)
 
 
 def docs_dir(task_dir):
@@ -1009,11 +1009,9 @@ def _registry(task_dir):
     return arts if isinstance(arts, list) else []
 
 
-def _entry_for(task_dir, kind):
-    for e in _registry(task_dir):
-        if isinstance(e, dict) and e.get("kind") == kind:
-            return e
-    return None
+def _entry_for(task_dir, kind, round=None):
+    """The registry entry of `kind` (of `round`, or the latest), or None."""
+    return pick_entry(_registry(task_dir), kind, round)
 
 
 # Kinds this framework renamed, and the filename a landed issue still holds.
@@ -1069,7 +1067,7 @@ def _first_flat_on_disk(task_dir, kind):
     return None
 
 
-def artifact_path(task_dir, name):
+def artifact_path(task_dir, name, round=None):
     """The on-disk path of a per-issue artifact, by its v2 filename.
 
     A registered path wins; the flat filename is the fallback, so an issue
@@ -1078,7 +1076,7 @@ def artifact_path(task_dir, name):
     Callers that need to know WHY that is the answer want resolve_artifact().
     """
     kind = name[:-3] if name.endswith(".md") else name
-    entry = _entry_for(task_dir, kind)
+    entry = _entry_for(task_dir, kind, round)
     if entry and entry.get("path"):
         registered, refused = _registered_path(task_dir, entry["path"])
         if refused:
@@ -1113,7 +1111,7 @@ def unregistered_document(task_dir, name):
     return path if os.path.isfile(path) else None
 
 
-def resolve_artifact(task_dir, kind):
+def resolve_artifact(task_dir, kind, round=None):
     """Where a document is, and why that is the answer.
 
     Returns (state, path, reason):
@@ -1126,8 +1124,8 @@ def resolve_artifact(task_dir, kind):
       ABSENT       no entry and no file. Ordinary for an issue that predates the
                    registry; not a fault on its own.
     """
-    entry = _entry_for(task_dir, kind)
-    flat = _first_flat_on_disk(task_dir, kind)
+    entry = _entry_for(task_dir, kind, round)
+    flat = _first_flat_on_disk(task_dir, kind) if round is None else None
     # Both names, so a reader chasing an absence is not sent looking for a file
     # the framework does not write any more.
     tried = " or ".join(_flat_names(kind))

@@ -1,8 +1,6 @@
 <!--
 TEMPLATE: ui-contract.md
-Produced by: the designer via `/compass:design`.
-Lives at:    docs/compass/<created>-<issue-slug>/ui-contract.md
-Role in the pipeline: the designer's artifact. The designer feeds INTO
+Role in the pipeline: the designer's artifact, written through `/compass:design`. The designer feeds INTO
 Define - UI behaviour here is authored as Given/When/Then scenarios so it
 flows directly into acceptance-criteria.md as scenarios, not as a separate track.
 That is how the designer is a full participant in the pipeline and not a

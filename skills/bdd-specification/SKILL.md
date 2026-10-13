@@ -159,7 +159,14 @@ Walk it for:
   must-fix; a strategy departure is a note and a conversation.
 
 Record each ambiguity, its resolution, and who resolved it in
-`requirements-review.md`. The requirements review:
+`requirements-review.md`. Before the review is done:
+- no ambiguity is left `open`: every entry is `resolved`;
+- `acceptance-criteria.md` reflects every resolution;
+- the non-engineering roles in play have reviewed (required at this stage on
+  full-approach work).
+
+The Definition of Ready block ends the document and is met by records, not by
+ticks. The requirements review:
 - can be *lightweight* on the regular approach;
 - can be *collapsed* on quick fix only because the one scenario was
   certified unambiguous;

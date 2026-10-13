@@ -149,7 +149,7 @@ def _assessment_block(r):
     for name in _DIMENSIONS:
         value = a.get(name)
         out.append('<dt>%s</dt><dd>%s</dd>' % (
-            name, _e(value) if value else "not recorded"))
+            name, _e(value) if value else "not assessed"))
     out.append('</dl>')
     out.append('<ul class="labels">%s</ul></section>' % "".join(
         '<li class="label">%s</li>' % _e(label) for label in a.get("labels") or []))
@@ -200,6 +200,22 @@ def _gates_block(r):
     return out
 
 
+def _documents_block(r):
+    """Each registered document: a kind that repeats has a line for every round,
+    named by its own entry id."""
+    docs = r.get("documents") or []
+    out = ['<section class="part"><h3>Documents %d</h3>' % len(docs), '<ul class="documents">']
+    for d in docs:
+        name = d["kind"] + (" round %d" % d["round"] if d.get("round") else "")
+        out.append('<li class="document"><span class="document-kind">%s</span> '
+                   '<span class="document-id">%s</span> <span class="document-status">%s</span> '
+                   '<code class="document-path">%s</code></li>' % (
+                       _e(name), _e(d.get("id")), _e(d.get("text") or d.get("status")),
+                       _e(d.get("path") or "-")))
+    out.append('</ul></section>')
+    return out
+
+
 def _where_block(r):
     return ['<section class="part"><h3>Where it is read from</h3>',
             '<p class="path">Manifest <code>%s</code></p>' % _e(r.get("manifest_path") or ""),
@@ -239,6 +255,7 @@ def _panel(r, n):
         out += _rules_block(r)
         out += _depths_block(r)
         out += _gates_block(r)
+        out += _documents_block(r)
     out += _next_block(r)
     out += _where_block(r)
     out.append('</section>')

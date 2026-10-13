@@ -30,9 +30,8 @@ The standing cap: **`critical` risk pins `max_worktrees` to 1.** A
 critical change runs solo even on the full approach. This is deliberate - a multiagent buys
 speed but carries coordination risk, and on a critical change the coordination
 risk costs more than the speed saves. The full approach being heavy *and* solo is
-not a contradiction; it is the cap working. The full approach still writes a
-`distribution-map.md` - it is the record of what could have been parallel and
-why it wasn't.
+not a contradiction; it is the cap working. With one subtask the
+`distribution-map.md` is not needed; it is owed from two subtasks.
 
 ## Decomposing work into independent subtasks (Plan)
 
@@ -126,6 +125,18 @@ and its unresolved findings, and the review cadence the risk calls for. A
 subtask marked `done` is never dispatched again. Where the project gitignores
 `docs/compass/`, a worktree does not carry the brief: name it by its path in
 the main checkout.
+
+## Before the distribution map is done
+
+The map holds no tick boxes. Make sure of three things before you hand it on:
+
+- every scenario in `acceptance-criteria.md` is owned by exactly one subtask;
+- every "independent" verdict in section 2 passed both tests (disjoint code and
+  disjoint scenarios);
+- the final subtask count respects every cap in section 5.
+
+The Breakdown exit block at the end of the map lists the checks the issue's
+configuration adds to the breakdown stage, with their state.
 
 ## Integration discipline (before `/compass:verify`)
 

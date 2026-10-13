@@ -1,8 +1,6 @@
 <!--
 TEMPLATE: threat-model.md
-Produced by: the plan stage, on an issue whose assessment carries `auth`,
-             `payments` or `personal-data` (RP-REQUIRE-005).
-Lives at:    docs/compass/<created>-<issue-slug>/threat-model.md
+Written when the assessment carries `auth`, `payments` or `personal-data` (RP-REQUIRE-005).
 
 THE FOUR QUESTIONS BELOW ARE NOT OURS. They are the Threat Modeling
 Manifesto's (threatmodelingmanifesto.org), verbatim, from a fifteen-person

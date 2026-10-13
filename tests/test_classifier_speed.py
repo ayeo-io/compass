@@ -570,7 +570,13 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # No verdict moves: the 5.6.0 routing baseline and the classifications of layers
 # in the old words give the same results (`test_size_medium.py`,
 # `test_old_words_read.py`), so the version stays 2.
-VERDICT_SOURCE_PIN = "fbe4e2b088645ce6"
+# Re-pinned for `artifacts.required_when`, an obligation fact compared by identity
+# (issue `artifact-catalogue-fields`): a change to when a document is owed is
+# `incomparable`, which version 2 read as `equivalent`, so the version is 3.
+# Re-pinned again for `every_approach` in `routing.evaluate_route` (same issue). The
+# classifier prepares its policy from `obligations.policy_adapter`, which does not carry the
+# key, so no verdict can differ and the version stays 3.
+VERDICT_SOURCE_PIN = "2bcae5c94c3a314a"
 
 
 def _verdict_source_digest():

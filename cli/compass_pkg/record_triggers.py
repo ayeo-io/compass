@@ -86,4 +86,6 @@ EXEMPT = {
                            "block shows"),
     "cmd_subtask_package": ("writes the subtask brief files; the key it saves names their "
                             "paths and no rendered block shows it"),
+    "cmd_checkpoint_add": ("records that a hand-off was passed without waiting, in "
+                           "checkpoint_outcomes, which no rendered block shows"),
 }

@@ -42,6 +42,9 @@
 # The lock a render holds while it writes an issue's documents (any depth: the
 # examples keep their issue state in git).
 .render.lock
+# The lock a manifest write holds, which the pre-tool hook tries without waiting
+# when it records a session (any depth, for the same reason).
+.manifest.lock
 
 *.log
 

@@ -47,6 +47,9 @@ frameworks, so its eval harness, tests and published runs named them in
   already say a rival exists, so the hashes add little.
 - An eval run of a rival condition needs the key; without it the harness
   skips that condition and says so.
+- The issue page (ADR-057) is a second reader of `record.names_key`: it
+  scans the text it would post to GitHub with the same key, and runs that
+  check only when the key is set.
 
 ## References
 

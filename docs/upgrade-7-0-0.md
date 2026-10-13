@@ -100,3 +100,30 @@ After `--apply`, run `compass issue render --all --dry-run` to see the files and
 | `rendered-blocks-current` | check in `G4` | Fails a block that disagrees with the records |
 | `evidence[].meets`, `follow_ups[].defers`, `page_ticks` | `manifest.yml` | The records that meet an item. Only migration writes `page_ticks` |
 | `<!-- compass:render KIND -->` | marker in a document | The start of a block Compass writes. Do not edit between the markers |
+
+## The issue page on GitHub
+
+Compass can now post an issue's README to the linked GitHub issue, and the verb that wrote labels on demand has a new spelling. The decision is `architecture/decisions/ADR-057-derived-views-go-to-github-one-way-behind-a-refusal-check.md`. The facts are in `docs/github-labels.md`.
+
+### What is removed
+
+- **The verb `compass issue labels sync`.** A command line that still types it exits 2, runs nothing and makes no `gh` call. It prints one line: `'issue labels sync' is now 'issue github sync'`. The hint row names release 6.0.0 and removal at 7.0.0.
+
+### What changes
+
+- **`compass issue github sync` replaces it.** It writes the labels and, when `page` is on, the issue page, each whatever the other's result. It exits non-zero when either failed or was refused. The sync failure line and the notes of `compass issue lint` name the new verb.
+- **A new switch, `github_labels.page`, is off by default.** With it on, Compass posts the issue's README as one comment and, once, the ask into an empty issue body. It widens the audience of the issue's documents to the readers of the GitHub issue. Three checks refuse a post that holds a rival product name, a private path or a credential shape.
+- **`github-sync.yml` holds two sections.** A record written by a 6.x CLI reads as the `labels` section. No migration is needed.
+
+### What to do
+
+1. Replace `compass issue labels sync` with `compass issue github sync` in your scripts, notes and CI.
+2. Leave `page` off unless the readers of your GitHub issues may see your issue documents. To turn it on, set `github_labels: {page: true}` in `compass.yml`.
+3. To have the name check run, set `record.names_key` before you turn `page` on. Without it the first post says so on standard error and posts.
+
+### New keys and verbs
+
+| Name | Where | Meaning |
+|---|---|---|
+| `github_labels.page` | `compass.yml` | Post the issue page to the linked GitHub issue |
+| `compass issue github sync` | verb | Write the labels and the issue page on demand |

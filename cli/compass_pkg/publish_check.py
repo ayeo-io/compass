@@ -10,7 +10,9 @@ exactly as they would be posted, and returns the first refusal or None:
   directory named without a file is posted. The path part of a URL whose
   scheme is not http or https, such as `file://` or `vscode://`, is checked
   like any other path. A web link is posted unless its path names a file
-  under `.compass/private/`.
+  under `.compass/private/`. Every path is checked in the form it resolves
+  to: `_normalise` percent-decodes it until it stops changing, collapses
+  `./` and `//`, and resolves `..` before either test runs.
 - **credentials**: text that `redact` would replace refuses the post. It is
   given an empty environment, so no environment variable is read.
 
@@ -24,8 +26,10 @@ from __future__ import annotations
 
 import os
 import re
+import posixpath
 import subprocess
 from dataclasses import dataclass
+from urllib.parse import unquote
 
 from compass_pkg import redact
 
@@ -33,7 +37,12 @@ from compass_pkg import redact
 _TIMEOUT = 15
 _BLOCK = re.compile(r"<!-- compass:render ([a-z-]+) -->")
 _URL = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://[^\s)>\]`'\"]+")
-_CANDIDATE = re.compile(r"[A-Za-z0-9._/-]*/[A-Za-z0-9._/-]*")
+#: A path-like run. `%` is kept so an encoded slash or dot reaches `_normalise`;
+#: a run with no slash once decoded is not a path.
+_CANDIDATE = re.compile(r"[A-Za-z0-9._%/-]+")
+#: A decoded control character ends the path: `git check-ignore --stdin` reads
+#: one path a line, so a newline would ask git about a different path.
+_CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 _PRIVATE = ".compass/private/"
 _WEB = ("http", "https")
 #: A file under the private folder named inside a web link.
@@ -67,6 +76,44 @@ def _credentials(items):
     return None
 
 
+def _decode(path):
+    """`path` percent-decoded until it stops changing, so `%252E` is `.` too."""
+    while True:
+        decoded = unquote(path)
+        if decoded == path:
+            return _CONTROL.split(path, maxsplit=1)[0]
+        path = decoded
+
+
+def _normalise(path, project_root=None):
+    """The form `path` resolves to, which both private-path tests read.
+
+    Without a project root, `path` is the path part of a web link: it is
+    decoded and `./`, `//` and `..` are folded by `posixpath.normpath`. With
+    one, it is a path on disk: it is decoded and resolved against the root
+    with `os.path.realpath`, and returned as a path from the root when it lies
+    inside the project, else as the folded path. A trailing slash is kept,
+    because a directory named without a file is posted."""
+    decoded = _decode(path)
+    trailing = "/" if decoded.endswith("/") else ""
+    if project_root is None:
+        return posixpath.normpath(decoded) + trailing if decoded else decoded
+    root = os.path.realpath(project_root)
+    full = os.path.realpath(os.path.join(root, decoded))
+    if full.startswith(root + os.sep):
+        return os.path.relpath(full, root).replace(os.sep, "/") + trailing
+    folded = posixpath.normpath(decoded)
+    if folded.startswith("//"):
+        folded = "/" + folded.lstrip("/")
+    return folded + trailing
+
+
+def _names_private(path):
+    """Whether a normalised path names a file under `.compass/private/`."""
+    return bool(_PRIVATE_IN_URL.search(path)) and (
+        path.startswith(_PRIVATE) or "/" + _PRIVATE in path)
+
+
 def _url_paths(text):
     """The text with each URL blanked except the path part of a non-web URL, and
     the index of the first web link into `.compass/private/`, or None. A web
@@ -82,21 +129,12 @@ def _url_paths(text):
         start = len(scheme) + 3 + (slash if slash >= 0 else len(rest))
         path = re.split(r"[?#]", url[start:], maxsplit=1)[0]
         if scheme.lower() in _WEB:
-            if _PRIVATE_IN_URL.search(path) and private is None:
+            if _names_private(_normalise(path)) and private is None:
                 private = match.start()
             return " " * len(url)
         return " " * start + path + " " * (len(url) - start - len(path))
 
     return _URL.sub(keep, text), private
-
-
-def _relative(path, project_root):
-    """An absolute path inside the project as a path from its root, or None."""
-    root = os.path.realpath(project_root)
-    full = os.path.realpath(path)
-    if full.startswith(root + os.sep):
-        return os.path.relpath(full, root).replace(os.sep, "/")
-    return None
 
 
 def _candidates(text, project_root):
@@ -105,26 +143,21 @@ def _candidates(text, project_root):
     blanked, private = _url_paths(text)
     asked = []
     for match in _CANDIDATE.finditer(blanked):
-        path = match.group(0).rstrip(".,;:")
-        if "/" not in path or path.endswith("/"):
+        raw = match.group(0).rstrip(".,;:")
+        if "/" not in _decode(raw):
             continue
-        if path.startswith("./"):
-            path = path[2:]
-        parts = path.split("/")
-        # git cannot be asked about an absolute path or one that climbs out of the
-        # project, but a file in the private folder is refused by its name alone.
-        if path.startswith("/") and ".." not in parts:
-            inside = _relative(path, project_root)
-            if inside is not None:
-                path, parts = inside, inside.split("/")
-        if path.startswith("/") or ".." in parts:
-            if "/" + _PRIVATE in path:
-                private = match.start() if private is None else private
+        path = _normalise(raw, project_root)
+        if path.endswith("/"):
             continue
-        if os.path.isdir(os.path.join(project_root, *parts)):
-            continue
-        if path.startswith(_PRIVATE):
+        # A file in the private folder is refused by its name alone, inside the
+        # project or out of it.
+        if _names_private(path):
             private = match.start() if private is None else private
+            continue
+        # git cannot be asked about a path outside the project.
+        if path.startswith("/") or path == ".." or path.startswith("../"):
+            continue
+        if os.path.isdir(os.path.join(project_root, *path.split("/"))):
             continue
         if path.startswith(_POSTED):
             continue

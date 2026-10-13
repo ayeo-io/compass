@@ -847,6 +847,43 @@ def test_ipg_23_private_path_inside_a_url_refuses_the_post(repo):
         assert publish_check.check({"comment": text, "body": None}, root) is None, text
 
 
+_EQUIVALENT_FORMS = (
+    "https://github.com/o/r/blob/main/%2Ecompass/private/x.yml",
+    "https://github.com/o/r/blob/main/.compass%2Fprivate/x.yml",
+    "https://github.com/o/r/blob/main/%252Ecompass/private/x.yml",
+    "file:///Users/j/r/%2Ecompass/private/x.yml",
+    "file://{root}/notes/%70rivate/brief.md",
+    "file://{root}/notes/%2570rivate/brief.md",
+    ".compass%2Fprivate/x.yml",
+    "%2Ecompass/private/x.yml",
+    "{root}/docs/../notes/private/brief.md",
+    "file://{root}/docs/../notes/private/brief.md",
+    "docs/../notes/private/brief.md",
+    "https://h/a/.compass/./private/x.yml",
+    "https://h/a/.compass//private/x.yml",
+    ".compass//private/x.yml",
+    ".compass/./private/x.yml",
+)
+
+
+@pytest.mark.parametrize("form", _EQUIVALENT_FORMS)
+def test_ipg_24_equivalent_forms_of_a_private_path_refuse_the_post(repo, form):
+    # A private path is checked in the form it resolves to: percent-encoding,
+    # "./", "//" and ".." do not hide it from either check.
+    from compass_pkg import publish_check
+    (repo / ".gitignore").write_text("notes/private/\n")
+    commit_all(repo, "ignore")
+    root = str(Path(repo).resolve())
+    text = "see " + form.format(root=root)
+    for texts in ({"comment": text, "body": None}, {"comment": "ok", "body": text}):
+        found = publish_check.check(texts, root)
+        assert found is not None and found.check == "private-path", (text, texts)
+    for allowed in ("see https://github.com/o/r/blob/main/docs/guide.md",
+                    "see https://github.com/o/r/blob/main/docs/%67uide.md",
+                    "see docs/./guide.md"):
+        assert publish_check.check({"comment": allowed, "body": None}, root) is None, allowed
+
+
 def test_ipg_18_credential_refuses_the_post(repo, gh):
     from compass_pkg import publish_check
     page_issue(repo, gh, page=False)

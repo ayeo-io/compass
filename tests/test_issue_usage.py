@@ -208,3 +208,109 @@ def _concurrent_writer_is_merged(tmp_path, monkeypatch):
     session_record.record(folder, "S4", "env")
     assert project.manifest("a")["usage"]["sessions"] == ["S1", "S2", "S5", "S4"]
     assert len(calls) == 2
+
+
+# --- ARC-10 -----------------------------------------------------------------------
+
+#: python3 processes the base commit's hook (401953ec) starts for a
+#: production-code edit on an issue at implement with a red on record, named
+#: by the pointer, in a project of 40 issues: with a session id, the session
+#: lease reader, the delivery-approach reader, the acceptance-criteria reader
+#: and the red-record reader; with none, the last three. A Write to the
+#: issue's acceptance-criteria.md started none either way.
+BASE_PYTHON3_WITH_SESSION = 4
+BASE_PYTHON3_WITHOUT_SESSION = 3
+
+#: The recorded-id call over the call with no session id, and the new-id
+#: call's added time over a reference python3 process that imports compass_pkg
+#: and loads one manifest. Measured on a development machine (Apple silicon,
+#: Python 3.11.9), 2026-10-13, with other test suites running, in two runs:
+#: no session 0.367s and 0.331s, recorded id 0.478s and 0.423s, new id 0.569s
+#: and 0.479s, reference 0.067s and 0.061s; recorded over none 1.30 and 1.28;
+#: new-id marginal 1.36 and 0.93 references. The recorded id adds the base
+#: commit's lease reader and one `grep` to the no-session call, so its ratio
+#: sits near 4 processes over 3; the new id adds one python3 process, which
+#: the reference also measures. Each limit leaves about 50% for a runner whose
+#: bash and process start cost more; a second added process fails the second.
+MAX_RECORDED_OVER_NO_SESSION = 2.0
+MAX_NEW_ID_MARGINAL_OVER_REFERENCE = 2.5
+
+
+def _budget_project(root):
+    project = dbi.Project(root)
+    for n in range(39):
+        project.issue(f"other-{n:02d}", "implement")
+    project.issue("a", "implement", marker=True)
+    (project.root / ".compass" / "current-task").write_text("a\n")
+    return project
+
+
+def _counted(project, session):
+    """The python3 processes the hook starts, and the manifests its Python
+    processes open, for one code edit."""
+    root = project.root
+    shim = root / ".py-shim"
+    shim.mkdir(exist_ok=True)
+    log = root / ".python3-calls"
+    log.unlink(missing_ok=True)
+    (shim / "python3").write_text(dbi.PYTHON_SHIM.format(log=log, real=sys.executable))
+    (shim / "python3").chmod(0o755)
+    audit = root / ".audit.log"
+    audit.unlink(missing_ok=True)
+    done = hook_call(root, "Edit", dbi.code_file(project), session,
+                     path=f"{shim}:{dbi.env_for(root)['PATH']}",
+                     PYTHONPATH=str(dbi._audit_dir(root)), DBI_AUDIT_LOG=str(audit))
+    assert done.returncode == 0, done
+    count = len(log.read_text().splitlines()) if log.exists() else 0
+    opened = {os.path.basename(os.path.dirname(p)) for p in dbi._events(audit, "open")
+              if p.endswith("/manifest.yml")}
+    return count, opened
+
+
+@pytest.mark.serial
+def test_arc_10_hook_budget(tmp_path):
+    import statistics
+    import time
+    project = _budget_project(tmp_path / "p")
+    clean = project.bytes("a")
+    assert _counted(project, None)[0] == BASE_PYTHON3_WITHOUT_SESSION
+
+    new_count, opened = _counted(project, "S-new")
+    assert project.manifest("a")["usage"]["sessions"] == ["S-new"]
+    assert new_count <= BASE_PYTHON3_WITH_SESSION + 1, new_count
+    assert opened <= {"a"}, opened
+    recorded_count, opened = _counted(project, "S-new")
+    assert recorded_count <= BASE_PYTHON3_WITH_SESSION, recorded_count
+    assert opened <= {"a"}, opened
+
+    reference = [sys.executable, "-c",
+                 "import sys; sys.path.insert(0, sys.argv[1]); import compass_pkg; "
+                 "from compass_pkg.core import load_manifest; load_manifest(sys.argv[2])",
+                 str(ROOT / "cli"), str(project.dir("other-00"))]
+    recorded = project.bytes("a")
+    times = {"recorded": [], "new": [], "none": [], "reference": []}
+    for round_ in range(12):
+        for key, session in (("recorded", "S-new"), ("new", f"S-{round_}"), ("none", None)):
+            start = time.perf_counter()
+            done = hook_call(project.root, "Edit", dbi.code_file(project), session)
+            elapsed = time.perf_counter() - start
+            assert done.returncode == 0, done
+            if round_:
+                times[key].append(elapsed)
+        (project.dir("a") / "manifest.yml").write_bytes(recorded)
+        start = time.perf_counter()
+        subprocess.run(reference, check=True, capture_output=True, timeout=60)
+        if round_:
+            times["reference"].append(time.perf_counter() - start)
+    median = {k: statistics.median(v) for k, v in times.items()}
+    ratio = median["recorded"] / median["none"]
+    marginal = (median["new"] - median["recorded"]) / median["reference"]
+    print("ARC-10 hook medians: no session %.4fs, recorded id %.4fs, new id %.4fs; "
+          "reference %.4fs; recorded over none %.2f (limit %.1f); new-id marginal over "
+          "reference %.2f (limit %.1f)"
+          % (median["none"], median["recorded"], median["new"], median["reference"],
+             ratio, MAX_RECORDED_OVER_NO_SESSION, marginal,
+             MAX_NEW_ID_MARGINAL_OVER_REFERENCE))
+    assert ratio < MAX_RECORDED_OVER_NO_SESSION, median
+    assert marginal < MAX_NEW_ID_MARGINAL_OVER_REFERENCE, median
+    assert clean != recorded

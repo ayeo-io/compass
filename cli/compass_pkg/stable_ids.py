@@ -67,10 +67,13 @@ GATE_IDS = (GATE_G1, GATE_G2, GATE_G3, GATE_G4, GATE_G5, GATE_S1, GATE_S2,
 # lint` does not report them. Framework-owned (ADR-040), read by both.
 # `*` stands for any text. `compare.md` and `report.md` are an evaluation run's
 # outputs, and `*.v6.bak` is a distribution map the migrate set aside.
+# `result.md` and `result-subtask-*.md` are a multiagent builder's hand-back,
+# the same class of file as its brief (architect ruling AD-4).
 NOT_AN_ARTIFACT = (
     "README.md", "devlog.md",
     "*review-brief*.md",
     "assignment-subtask-*.md", "brief-subtask-*.md",
+    "result.md", "result-subtask-*.md",
     "architect-ruling.md", "recommendation.md", "released-verbs-v5.6.0.md",
     "compare.md", "report.md",
     "*.v6.bak",

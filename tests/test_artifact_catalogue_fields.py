@@ -2022,22 +2022,23 @@ def test_acf_45(tmp_path, monkeypatch):
     root = tmp_path / "a"
     slug = "leftalone"
     names = ["devlog.md", "README.md", "assignment-subtask-1.md", "brief-subtask-1.md",
-             "review-brief-2.md", "integrated-review-brief-3.md", "architect-ruling.md",
+             "review-brief-2.md", "result.md", "result-subtask-2.md",
+             "integrated-review-brief-3.md", "architect-ruling.md",
              "released-verbs-v5.6.0.md", "compare.md", "report.md"]
-    work, docs = _m_issue(root, slug, beside=names[:5], docs=["technical-design.md"] + names[5:],
+    work, docs = _m_issue(root, slug, beside=names[:7], docs=["technical-design.md"] + names[7:],
                           artifacts=[_entry("technical-design", slug, "technical-design.md")])
     before = _digests(root)
     code, out, err = _migrate(root, "--apply")
     assert code == 0, out + err
     after = _digests(root)
     for name in names:
-        folder = ".compass/work" if name in names[:5] else "docs/compass"
+        folder = ".compass/work" if name in names[:7] else "docs/compass"
         key = [k for k in before if k.endswith("/" + name) and k.startswith(folder)]
         assert key and all(after.get(k) == before[k] for k in key), name
     kinds = {e["kind"] for e in _registry(work)}
     assert kinds == {"technical-design"}, kinds
     code, out, err = _cli(root, "issue", "lint", "--issue", slug)
-    assert not any(n in out + err for n in names[5:]), out + err
+    assert not any(n in out + err for n in names[7:]), out + err
     # One list, read by both commands.
     assert migrate_kinds.NOT_AN_ARTIFACT is stable_ids.NOT_AN_ARTIFACT is artifact_kinds.NOT_AN_ARTIFACT
     # Adding a name to the one list changes what both the migrate and issue lint do.
@@ -2050,6 +2051,32 @@ def test_acf_45(tmp_path, monkeypatch):
     monkeypatch.setattr(artifact_kinds, "NOT_AN_ARTIFACT", longer)
     assert migrate_kinds.lookup("notes-on-cache.md", catalogue).how == migrate_kinds.SKIP
     assert artifact_kinds.unmatched_documents(None, str(work)) == []
+
+
+def test_acf_65(tmp_path):
+    # A multiagent builder hands back result.md or result-subtask-<n>.md beside the
+    # manifest, the same class of file as brief-subtask-<n>.md. No reader needs it
+    # registered, so the migrate must not report it as unmapped (architect ruling AD-4).
+    from compass_pkg import artifact_kinds, migrate_kinds
+    catalogue = migrate_kinds.shipped_catalogue()
+    for name in ("result.md", "result-subtask-1.md", "result-subtask-12.md"):
+        assert migrate_kinds.lookup(name, catalogue).how == migrate_kinds.SKIP, name
+    root = tmp_path / "a"
+    slug = "handedback"
+    names = ["result.md", "result-subtask-3.md"]
+    work, docs = _m_issue(root, slug, beside=names, docs=["technical-design.md"] + names,
+                          artifacts=[_entry("technical-design", slug, "technical-design.md")])
+    before = _digests(root)
+    code, out, err = _migrate(root, "--apply")
+    assert code == 0, out + err
+    assert "unmapped files: 0" in out, out
+    after = _digests(root)
+    held = [k for k in before if k.rsplit("/", 1)[-1] in names]
+    assert len(held) == 4 and all(after.get(k) == before[k] for k in held), held
+    assert {e["kind"] for e in _registry(work)} == {"technical-design"}
+    assert artifact_kinds.unmatched_documents(None, str(work)) == []
+    code, out, err = _cli(root, "issue", "lint", "--issue", slug)
+    assert not any(n in out + err for n in names), out + err
 
 
 def test_acf_46(tmp_path):

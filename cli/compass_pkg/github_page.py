@@ -18,7 +18,7 @@ One sync, in order:
    README with its links rewritten by `github_links` and its size bounded to
    GitHub's limit. Its SHA-256 digest is compared with the one recorded in
    `github-sync.yml`; an unchanged page makes no call.
-2. Run the three checks of `publish_check` on the comment and, until it is
+2. Run the two checks of `publish_check` on the comment and, until it is
    decided once, on the issue body. A hit refuses the whole post.
 3. Edit the comment by its recorded id; when that is gone, edit the oldest
    comment whose first line is the marker; otherwise create one.
@@ -347,18 +347,6 @@ def _refused_line(problem):
             f"`{VERB}`.")
 
 
-def _notice_line():
-    return ("compass: github page - no names key is set (`record.names_key` in compass.yml), "
-            "so no rival-name check ran on the comment Compass created.")
-
-
-def _notice(outcome, task_dir):
-    from compass_pkg import publish_check
-    if outcome == "created" and not publish_check.names_key_set(
-            github_labels._project_root(task_dir)):
-        sys.stderr.write(_notice_line() + "\n")
-
-
 def after_command(args, code):
     """Called by the entry point after the render, for every command. Posts the
     named issue's page when the command can have changed its README, and returns
@@ -376,7 +364,7 @@ def after_command(args, code):
         if task.get("github") is None:
             return code
         try:
-            _notice(sync_page(task, task_dir), task_dir)
+            sync_page(task, task_dir)
         except Refused as exc:
             sys.stderr.write(_refused_line(exc) + "\n")
         except SyncError as exc:
@@ -423,7 +411,6 @@ def cmd_github_sync(args):
         try:
             outcome = sync_page(task, task_dir)
             detail.append(f"page: {outcome}")
-            _notice(outcome, task_dir)
         except Refused as exc:
             problems.append(f"page not posted: {exc}")
         except SyncError as exc:

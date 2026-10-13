@@ -29,15 +29,16 @@ def test_ipg_21_owning_doc_says_what_the_page_exposes():
                    "<!-- compass:issue-ask -->", "counts as empty"):
         assert needle in doc, needle
 
-    # The three checks, what each refuses, and that a refusal is whole.
-    for needle in ("rival product name", "private path", "credential",
+    # The two checks, what each refuses, and that a refusal is whole.
+    for needle in ("Two checks", "private path", "credential",
                    "as it is posted", "refused whole"):
         assert needle in doc, needle
-
-    # The name check depends on record.names_key; the first post without one says so.
-    assert "record.names_key" in doc
-    assert "only when `record.names_key` is set" in doc
-    assert "first post" in doc and "standard error" in doc
+    # The page runs no rival-name check, so no description of the page names one.
+    for name in ("docs/github-labels.md", "docs/security.md", "docs/upgrade-7-0-0.md"):
+        text = _flat(name)
+        part = text[text.find("github_labels.page"):]
+        for needle in ("names_key", "names key", "rival product name", "name check"):
+            assert needle not in part, (name, needle)
 
     # A linked issue's page is refreshed by its own next sync; lint reports it meanwhile.
     assert "own next sync" in doc and "compass issue lint" in doc and "out of date" in doc

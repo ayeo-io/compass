@@ -109,13 +109,12 @@ seconds is abandoned.
   reaches everyone who can read the GitHub issue, so turn the switch on only
   for an issue whose readers may see those documents. The text travels on
   standard input, never as an argument.
-- **Three checks before the page is sent.** They read the text as it is posted
-  and look for rival product names, paths to files the project keeps out of
-  git (and anything under `.compass/private/`), and credential shapes. A hit
-  means the post is refused whole: nothing is sent, nothing is redacted and
-  sent in its place, and one line on standard error names the place and not
-  the hit. The name check runs only when `record.names_key` is set. These
-  checks find those three kinds of text. They do not find other private
+- **Two checks before the page is sent.** They read the text as it is posted
+  and look for paths to files the project keeps out of git (and anything
+  under `.compass/private/`), and credential shapes. A hit means the post is
+  refused whole: nothing is sent, nothing is redacted and sent in its place,
+  and one line on standard error names the place and not the hit. These
+  checks find those two kinds of text. They do not find other private
   prose, so read the README before you turn `page` on.
 - **Read back.** Compass reads only comment ids, the first line of a comment
   and whether the issue body is empty. It stores no text from GitHub.

@@ -1,11 +1,13 @@
 ---
 id: ADR-057
 title: Derived views go to GitHub one way, behind a refusal check
-status: proposed
+status: accepted
 date: 2026-10-13
 supersedes: ''
 superseded_by: ''
 ---
+
+Accepted by jed72 on 2026-10-13.
 
 ## Context
 
@@ -24,8 +26,7 @@ Three facts shaped the decision:
   sync's place would post the README as it was before the command.
 - `github-sync.yml` was rewritten whole by each write, so a second write's
   result would erase the first's.
-- No check stood between the repository's text and GitHub. The rival-name
-  gate in `scripts/` is this repository's own and does not ship.
+- No check stood between the repository's text and GitHub.
 
 The board, a project index issue and any later tracker write would reuse
 whatever rule this issue sets, so the rule is recorded here rather than only
@@ -52,10 +53,8 @@ in the owning doc.
    section of the write that did not run and changes only the section of the
    write that did. Labels and page each keep their own error.
 5. **The refusal check is the boundary.** Before any GitHub call for the
-   page, three checks read the text as it would be posted, after link
+   page, two checks read the text as it would be posted, after link
    rewriting and after the size bound:
-   - rival product names, found with the shipped `rival_names` scan and the
-     key `record.names_key` names (ADR-032);
    - paths to files the project keeps out of git, and any file under
      `.compass/private/`;
    - credential shapes that `redact` would replace.
@@ -72,15 +71,18 @@ in the owning doc.
 - **Render the README in memory inside the page step.** It keeps the old
   order but gives the README a second code path, so the comment and the file
   could disagree. Rejected.
-- **Redact and post.** Replace a found name or path and post the rest. It
+- **Redact and post.** Replace a found path or credential and post the rest. It
   keeps the page current, but a redaction rule that misses one form leaks it,
   and the reader cannot tell what was removed. Refusing is safer; the cost is
   a stale page until the text is fixed, which lint reports.
 - **Check the README file rather than the posted text.** It would refuse a
   page for a chart the size bound leaves out and pass a link rewriting
   produced. Rejected: the check reads what leaves.
-- **Run the name check through `scripts/rival-name-gate.py`.** It does not
-  ship to an adopter, and its hash file is this repository's own.
+- **Scan the page for rival product names.** The page carries the issue's
+  own requirements, which state how things work without naming or comparing
+  other products, so a name scan would guard against text the documents do
+  not hold. Rejected by jed72 on 2026-10-13. The repository's own
+  rival-name gate in `scripts/` is unchanged.
 - **One record file per write.** It removes the overwrite but splits one
   issue's GitHub state across files that lint must join. One writer over one
   file is simpler.
@@ -90,15 +92,11 @@ in the owning doc.
 - A project that turns on the page widens the audience of its issue
   documents to everyone who can read the GitHub issue. The owning doc,
   `docs/github-labels.md`, says so.
-- The name check runs only when `record.names_key` is set. The first post of
-  an issue's comment without one says so on standard error.
 - A refused or failed page stays stale until the next successful sync; lint
   reports it.
 - A command that triggers both writes can wait for the `gh` timeout of each
   call it makes. An unchanged page makes no call, because the digest of the
   text to post is computed from local files and git only.
-- ADR-032 becomes a runtime dependency of an adopter-facing feature, so it
-  must be accepted before this decision is.
 
 ## References
 
@@ -108,7 +106,6 @@ in the owning doc.
   removal rule) and ADR-044: a released verb is removed at the major
   version, which is how the label sync's on-demand verb becomes
   `compass issue github sync` at 7.0.0.
-- ADR-032, rival names in an off-GitHub key.
 - ADR-051, rendered blocks are derived in place; the render step imports
   nothing from the label sync, and the page step imports nothing from the
   render.

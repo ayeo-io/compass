@@ -97,15 +97,12 @@ The README file is never changed.
 
 ### What may not leave the project
 
-Three checks read the comment and the body as it is posted, after the links are rewritten and the size bound applied. A block the size bound leaves out is not posted and is not checked. The checks look for rival product names, private paths and credentials. The first hit refuses the post, and a refused post is refused whole: no part of it is posted, nothing is redacted and posted in its place, and no `gh` call is made. A refusal writes one line on standard error that names the place, never the hit, and records the refusal in `github-sync.yml`.
+Two checks read the comment and the body as it is posted, after the links are rewritten and the size bound applied. A block the size bound leaves out is not posted and is not checked. The checks look for private paths and credentials. The first hit refuses the post, and a refused post is refused whole: no part of it is posted, nothing is redacted and posted in its place, and no `gh` call is made. A refusal writes one line on standard error that names the place, never the hit, and records the refusal in `github-sync.yml`.
 
 | Check | What it refuses |
 |---|---|
-| Rival product name | Text that holds a rival product name found by the shipped name scan, and a configured names key that cannot be read. |
 | Private path | A path under `.compass/private/`, and a path that git ignores. A path under `.compass/work/` or `docs/compass/`, a directory, and a URL are not checked. A relative link that is not rewritten to a URL becomes a plain path and is checked. A failed `git check-ignore` call refuses too. |
 | Credential | Text that holds a credential shape the redaction step would replace. This check reads no environment variable. |
-
-The name check runs only when `record.names_key` is set, because the key is the only place the names are held. The first post of an issue's comment without a key says so on standard error, once, and posts. With the key set but missing, the post is refused and the line names `record.names_key`.
 
 A refused or failed page stays as it was on GitHub until the next successful sync. `compass issue lint` reports it meanwhile.
 
@@ -168,9 +165,9 @@ A sync never fails the command that triggered it. Each `gh` call is abandoned af
 
 - Compass calls `gh` with an argument list and no shell.
 - The repository and issue number are checked against a strict pattern when linking and before every call. A repository name cannot start with a dash.
-- Compass stores no token and reads none. `gh` uses the person's own login. The names key setting, `record.names_key`, holds a path and not a credential.
+- Compass stores no token and reads none. `gh` uses the person's own login.
 - With `page` off, Compass sends label names and the issue number. It sends no issue text, path or evidence.
-- With `page` on, Compass also sends the issue page and the ask, after the three checks above. See [security.md](security.md).
+- With `page` on, Compass also sends the issue page and the ask, after the two checks above. See [security.md](security.md).
 
 ## Limits
 

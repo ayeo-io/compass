@@ -1,12 +1,9 @@
 # compass_pkg.publish_check - the checks text must pass before it leaves the project
-"""Three checks on text Compass is about to post to GitHub, run before any call.
+"""Two checks on text Compass is about to post to GitHub, run before any call.
 
 `check(texts, project_root)` reads the comment and, when given, the issue body,
 exactly as they would be posted, and returns the first refusal or None:
 
-- **rival names**: when `record.names_key` in `compass.yml` names a key, any
-  name, alias or URL it lists refuses the post. With no key configured this
-  check does not run; a key that is configured but cannot be found refuses.
 - **private paths**: a path under `.compass/private/`, or a path to a file git
   ignores in the project, refuses the post. Files under `.compass/work/` and
   `docs/compass/` are posted, because the issue page is made of them, and a
@@ -18,8 +15,7 @@ A refusal names the check and the README block that holds the hit, never the
 hit itself, so the line can go to standard error and to `github-sync.yml`.
 A hit refuses the whole post: nothing is redacted and sent.
 """
-# DEPENDENCY: compass_pkg.rival_names, compass_pkg.redact, compass_pkg.record (names_key),
-# compass_pkg.project_settings, compass_pkg.core; subprocess for `git check-ignore`.
+# DEPENDENCY: compass_pkg.redact; subprocess for `git check-ignore`.
 # Imported only by github_page.
 from __future__ import annotations
 
@@ -28,8 +24,7 @@ import re
 import subprocess
 from dataclasses import dataclass
 
-from compass_pkg import project_settings, redact, rival_names
-from compass_pkg.core import CompassError
+from compass_pkg import redact
 
 #: Seconds `git check-ignore` may take, the same bound as a `gh` call.
 _TIMEOUT = 15
@@ -43,7 +38,7 @@ _POSTED = (".compass/work/", "docs/compass/")
 
 @dataclass(frozen=True)
 class Refusal:
-    check: str     # "rival-name", "names-key-missing", "private-path", "credential", "unreadable"
+    check: str     # "private-path" or "credential"
     line: str      # one line for a person; it names the place, never the hit
 
 
@@ -53,43 +48,6 @@ def _place(name, text, index):
         return "the issue body"
     blocks = [m.group(1) for m in _BLOCK.finditer(text, 0, index)]
     return f"the README's {blocks[-1]} block" if blocks else "the README"
-
-
-def _configured_key(project_root):
-    try:
-        record = project_settings.settings(project_root).get("record")
-    except CompassError:
-        return None
-    return record.get("names_key") if isinstance(record, dict) else None
-
-
-def names_key_set(project_root):
-    """Whether `compass.yml` sets `record.names_key`, so the name check runs."""
-    return bool(_configured_key(project_root))
-
-
-def _names(items, project_root):
-    from compass_pkg import record
-    try:
-        path = record.names_key(project_root)
-    except CompassError:
-        return Refusal("names-key-missing",
-                       f"the names key `record.names_key` sets ({_configured_key(project_root)}) "
-                       "cannot be found, so the rival-name check cannot run")
-    if path is None:
-        return None
-    try:
-        hashes = rival_names.hashes_from_key(rival_names.load_key(path))
-    except CompassError:
-        return Refusal("unreadable", "the names key `record.names_key` sets cannot be read, "
-                                     "so the rival-name check cannot run")
-    for name, text in items:
-        found = rival_names.scan(text, hashes)
-        if found:
-            index = sum(len(x) + 1 for x in text.split("\n")[:found[0] - 1])
-            return Refusal("rival-name",
-                           f"a rival product name was found in {_place(name, text, index)}")
-    return None
 
 
 def _credentials(items):
@@ -173,5 +131,4 @@ def check(texts, project_root):
     `{"comment": str, "body": str | None}`; a body of None is not checked."""
     items = [(name, texts.get(name)) for name in ("comment", "body")
              if isinstance(texts.get(name), str)]
-    return (_names(items, project_root) or _private_paths(items, project_root)
-            or _credentials(items))
+    return _private_paths(items, project_root) or _credentials(items)

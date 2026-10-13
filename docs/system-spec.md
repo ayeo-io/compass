@@ -3843,7 +3843,6 @@
 - `IPG-13` compass issue labels sync is removed at 7.0.0
 - `IPG-14` Compass never reads GitHub text back
 - `IPG-15` gh gets an argument list, the text goes through standard input, and no token is read
-- `IPG-16` A rival product name refuses the post
 - `IPG-17` Text naming a path the project keeps out of git refuses the post
 - `IPG-18` A credential shape refuses the post
 - `IPG-19` The comment stays within GitHub size limit

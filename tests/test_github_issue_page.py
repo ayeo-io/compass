@@ -40,8 +40,6 @@ def gh(tmp_path):
 def run(root, gh, *args, mode="", present=True, fail="", env=None):
     full = gh.env(mode, present)
     full["FAKE_GH_FAIL"] = fail
-    # The names key comes from compass.yml only, never from the person's shell.
-    full.pop("COMPASS_RIVALS_KEY", None)
     full.update(env or {})
     return subprocess.run([sys.executable, str(CLI), *args], cwd=root,
                           capture_output=True, text=True, env=full)
@@ -732,52 +730,52 @@ def test_ipg_15_no_shell_no_token_text_on_stdin(repo, gh):
     assert "env={}" in (ROOT / "cli" / "compass_pkg" / "publish_check.py").read_text()
 
 
-def _names_key(root, path=".compass/private/rivals.yml", write=True):
-    if write:
-        (root / path).parent.mkdir(parents=True, exist_ok=True)
-        (root / path).write_text("rivals:\n  R1:\n    name: Zentrafold\n")
-    return f"record:\n  names_key: {path}\n"
+def _imports_or_calls(path, name):
+    """The lines of `path` that import `name`, or read it as a name or attribute."""
+    import ast
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    hits = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            hits += [node.lineno for a in node.names if a.name.split(".")[-1] == name]
+        elif isinstance(node, ast.ImportFrom):
+            if (node.module or "").split(".")[-1] == name:
+                hits.append(node.lineno)
+            hits += [node.lineno for a in node.names if a.name == name]
+        elif isinstance(node, ast.Name) and node.id == name:
+            hits.append(node.lineno)
+        elif isinstance(node, ast.Attribute) and node.attr == name:
+            hits.append(node.lineno)
+    return hits
 
 
-def test_ipg_16_rival_name_refuses_the_post(repo, gh):
-    from compass_pkg import publish_check
-    page_issue(repo, gh, extra=_names_key(repo))
+def test_ipg_17_the_page_runs_no_rival_name_check(repo, gh, tmp_path):
+    # The page carries the issue's own requirements, which never name another
+    # product, so it runs two checks only: private paths and credentials.
+    for name in ("github_page.py", "publish_check.py"):
+        path = ROOT / "cli" / "compass_pkg" / name
+        assert _imports_or_calls(path, "rival_names") == [], name
+        assert "names_key" not in path.read_text(encoding="utf-8"), name
+    # The guard reports a planted import and a planted call.
+    planted = tmp_path / "planted.py"
+    planted.write_text("from compass_pkg import rival_names\n")
+    assert _imports_or_calls(planted, "rival_names") == [1]
+    planted.write_text("import compass_pkg\ncompass_pkg.rival_names.scan('x', set())\n")
+    assert _imports_or_calls(planted, "rival_names") == [2]
+    # A names key set for `compass record sync` does not stop the post, and no
+    # post writes a line about a names key.
+    key = repo / ".compass" / "private" / "rivals.yml"
+    key.parent.mkdir(parents=True, exist_ok=True)
+    key.write_text("rivals:\n  R1:\n    name: Zentrafold\n")
+    page_issue(repo, gh, extra="record:\n  names_key: .compass/private/rivals.yml\n")
     write_intent(repo, "Readers compare us with Zentrafold every day.")
     render(repo, gh)
-    result = ok(run(repo, gh, "issue", "status", "set", "backlog", "--issue", SLUG))
-    assert api_calls(gh) == []
-    lines = [x for x in result.stderr.splitlines() if x.strip()]
-    assert len(lines) == 1 and "rival product name" in lines[0], result.stderr
-    assert "zentrafold" not in result.stderr.lower()
-    assert "ask" in lines[0]
-    assert record(repo)["page"]["error"]
-    assert "zentrafold" not in json.dumps(record(repo)).lower()
-    lint = run(repo, gh, "issue", "lint", "--issue", SLUG)
-    assert lint.returncode == 0 and "out of date" in lint.stdout
-    assert "zentrafold" not in lint.stdout.lower()
-    # Only the body would name it: the check reads the body too, before any call.
-    refusal = publish_check.check({"comment": MARKER + "\nclean text",
-                                   "body": ASK_MARKER + "\nZentrafold"}, str(repo))
-    assert refusal is not None and refusal.check == "rival-name"
-    assert "issue body" in refusal.line and "zentrafold" not in refusal.line.lower()
-    assert publish_check.check({"comment": "clean", "body": None}, str(repo)) is None
-    # A key that is configured but cannot be found.
-    settings(repo, extra=_names_key(repo, ".compass/private/gone.yml", write=False))
-    result = ok(run(repo, gh, "issue", "status", "remove", "--issue", SLUG))
-    lines = [x for x in result.stderr.splitlines() if x.strip()]
-    assert len(lines) == 1 and "record.names_key" in lines[0], result.stderr
-    assert ".compass/private/gone.yml" in lines[0]
-    assert api_calls(gh) == []
-    # No key configured: the first post says so once.
-    settings(repo)
     result = ok(gsync(repo, gh))
-    assert len(ours(gh)) == 1
-    notice = stderr_lines(result, "record.names_key")
-    assert len(notice) == 1 and "no rival-name check" in notice[0], result.stderr
+    assert len(ours(gh)) == 1 and "Zentrafold" in ours(gh)[0]["body"]
+    assert not stderr_lines(result, "names")
+    settings(repo)
     change_readme(repo, gh, "Edited")
-    again = ok(gsync(repo, gh))
-    assert "Edited" in ours(gh)[0]["body"]
-    assert not stderr_lines(again, "names_key")
+    assert not stderr_lines(ok(gsync(repo, gh)), "names")
 
 
 def test_ipg_17_private_path_refuses_the_post(repo, gh):

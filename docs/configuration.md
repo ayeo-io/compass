@@ -185,8 +185,8 @@ command calls GitHub.
 - `page`: keep one comment on the linked GitHub issue equal to the issue's
   README, and write the ask into an empty issue body once. It widens who
   reads the issue's documents to everyone who can read the GitHub issue, which
-  is why it is off by default. A post is refused when it would carry a rival
-  product name, a path the project keeps out of git, or a credential.
+  is why it is off by default. A post is refused when it would carry a path
+  the project keeps out of git, or a credential.
 
 Any other value, such as `"yes"`, reads as off. The setting is read from the
 project's own file only. See `docs/github-labels.md` for the labels, the

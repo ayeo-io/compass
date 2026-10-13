@@ -182,14 +182,13 @@ Compass can now post an issue's README to the linked GitHub issue, and the verb 
 ### What changes
 
 - **`compass issue github sync` replaces it.** It writes the labels and, when `page` is on, the issue page, each whatever the other's result. It exits non-zero when either failed or was refused. The sync failure line and the notes of `compass issue lint` name the new verb.
-- **A new switch, `github_labels.page`, is off by default.** With it on, Compass posts the issue's README as one comment and, once, the ask into an empty issue body. It widens the audience of the issue's documents to the readers of the GitHub issue. Three checks refuse a post that holds a rival product name, a private path or a credential shape.
+- **A new switch, `github_labels.page`, is off by default.** With it on, Compass posts the issue's README as one comment and, once, the ask into an empty issue body. It widens the audience of the issue's documents to the readers of the GitHub issue. Two checks refuse a post that holds a private path or a credential shape.
 - **`github-sync.yml` holds two sections.** A record written by a 6.x CLI reads as the `labels` section. No migration is needed.
 
 ### What to do
 
 1. Replace `compass issue labels sync` with `compass issue github sync` in your scripts, notes and CI.
 2. Leave `page` off unless the readers of your GitHub issues may see your issue documents. To turn it on, set `github_labels: {page: true}` in `compass.yml`.
-3. To have the name check run, set `record.names_key` before you turn `page` on. Without it the first post says so on standard error and posts.
 
 ### New keys and verbs
 

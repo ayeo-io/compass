@@ -825,8 +825,11 @@ def _move_note(move, would):
 def _rekind_note(rekind, would):
     """One line for an entry the 6.x migrate registered under a filename stem."""
     if rekind.merged:
-        return "%s the registry entry %s (%s) into %s, keeping its id, status and approval" % (
-            "would merge" if would else "merged", rekind.old_kind, rekind.entry_id, rekind.label)
+        # The dry run and the apply print this one line, so the dry run says exactly
+        # what the apply keeps and drops. A dropped approval is always named.
+        return "%s the registry entry %s (%s) into %s (%s), keeping %s; dropping %s" % (
+            "would merge" if would else "merged", rekind.old_kind, rekind.entry_id,
+            rekind.label, rekind.held_id, rekind.kept, rekind.dropped)
     return "%s the registry entry %s (%s) to %s, keeping its id, status and approval" % (
         "would re-point" if would else "re-pointed", rekind.old_kind, rekind.entry_id,
         rekind.label)

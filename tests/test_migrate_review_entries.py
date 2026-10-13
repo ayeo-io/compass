@@ -1,4 +1,4 @@
-"""Scenarios MRE-1 to MRE-3 of the issue `migrate-review-entries`.
+"""Scenarios MRE-1, MRE-2, MRE-3 and MRE-5 of the issue `migrate-review-entries`.
 
 The 6.x migrate registered review files under their filename stems (`kind: review`
 with no round, `kind: review-2`, `kind: integrated-review-3`). These tests check
@@ -15,6 +15,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -172,3 +173,56 @@ def test_mre_3(tmp_path):
     assert "naming every folder it cannot restore" in guide, "refusal sentence"
     step = guide.split("### What to do", 1)[1].split("2. ", 1)[0]
     assert "`.compass/work`" in step and "`docs/compass`" in step, step
+
+
+OLDER = {"status": "approved", "approved_by": "jed72", "approved_at": "2026-09-02T09:00:00Z",
+         "digest": "sha256:OLD"}
+NEWER = {"status": "approved", "approved_by": "jed72", "approved_at": "2026-10-10T09:00:00Z",
+         "digest": "sha256:NEW"}
+DRAFT = {"status": "draft"}
+
+
+def _merge_line(text, verb):
+    lines = [ln for ln in text.splitlines()
+             if f"{verb} the registry entry review (ART-REVIEW)" in ln]
+    assert len(lines) == 1, text
+    return lines[0]
+
+
+@pytest.mark.parametrize("stem, held, kept_id, kept, dropped_id, dropped", [
+    pytest.param(NEWER, OLDER, "ART-REVIEW", NEWER, "ART-REVIEW-1", OLDER, id="stem-newer"),
+    pytest.param(OLDER, NEWER, "ART-REVIEW-1", NEWER, "ART-REVIEW", OLDER, id="round-newer"),
+    pytest.param(DRAFT, NEWER, "ART-REVIEW-1", NEWER, "ART-REVIEW", DRAFT,
+                 id="stem-draft-round-approved"),
+    pytest.param(DRAFT, {"status": "awaiting-approval"}, "ART-REVIEW", DRAFT, "ART-REVIEW-1",
+                 {"status": "awaiting-approval"}, id="both-draft"),
+])
+def test_mre_5(tmp_path, stem, held, kept_id, kept, dropped_id, dropped):
+    # The registry an earlier 7.0.0 migrate left: the stem entry names the file the
+    # rename moved, and the round entry that run wrote names the renamed file.
+    root, work = _project(tmp_path, [
+        {"id": "ART-REVIEW", "kind": "review", **stem, "path": f"{HOME}/review.md"},
+        {"id": "ART-REVIEW-1", "kind": "review", "round": 1, **held,
+         "reason": "migrated from review.md", "path": f"{HOME}/review-1.md"},
+    ], ["review-1.md"])
+    code, dry, err = _migrate(root)
+    assert code == 0, dry + err
+    code, out, err = _migrate(root, "--apply", "--i-have-a-copy")
+    assert code == 0, out + err
+    entries = _registry(work)
+    assert len(entries) == 1, entries
+    entry = entries[0]
+    assert (entry["id"], entry["kind"], entry["round"], entry["path"]) == (
+        kept_id, "review", 1, f"{HOME}/review-1.md"), entry
+    for key in ("status", "approved_by", "approved_at", "digest"):
+        assert entry.get(key) == kept.get(key), (key, entry)
+    # The report names what was kept and what was dropped, the approval included.
+    line = _merge_line(out, "merged")
+    keeping, dropping = line.split(", keeping ", 1)[1].split("; dropping ", 1)
+    assert f"id {kept_id} " in keeping and f"id {dropped_id} " in dropping, line
+    for part, record, other in ((keeping, kept, dropped), (dropping, dropped, kept)):
+        assert (record.get("approved_at") or record["status"]) in part, (part, line)
+        if other.get("approved_at") != record.get("approved_at"):
+            assert str(other.get("approved_at")) not in part, (part, line)
+    # The dry run says what the apply does, word for word.
+    assert _merge_line(dry, "would merge").replace("would merge", "merged", 1) == line, dry

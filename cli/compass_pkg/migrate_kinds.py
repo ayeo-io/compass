@@ -22,6 +22,7 @@ cannot be made (`RoundCollision`) stops the issue before anything changes.
 from __future__ import annotations
 
 import copy
+import datetime
 import fnmatch
 import os
 import re
@@ -381,13 +382,17 @@ STATUS_FIELDS = ("status", "approved_by", "approved_at", "digest")
 @dataclass(frozen=True)
 class Rekind:
     """One stem-named entry and the kind (and round) its document becomes. `merged`
-    is True when another entry already held that kind and round: the stem entry's id,
-    status and approval move onto it and the stem entry goes."""
+    is True when another entry already held that kind and round: one entry stays,
+    with the id and approval `_stem_wins` chose. `kept` and `dropped` say, for the
+    report, which id and approval or status stayed and which went."""
     entry_id: object
     old_kind: str
     kind: str
     round: int | None
     merged: bool
+    held_id: object = None
+    kept: str = ""
+    dropped: str = ""
 
     @property
     def label(self):
@@ -479,17 +484,70 @@ def rekind_entries(entries, moves, project, catalogue):
                 % (stem.get("id"), old_kind, stem.get("path"), held.get("id"),
                    Rekind(None, old_kind, kind, number, True).label, held.get("path")))
             continue
-        held["id"] = stem.get("id")
-        # A draft stem does not undo an approval the round already holds.
-        if stem.get("approved_by") or not held.get("approved_by"):
+        held_id = held.get("id")
+        stem_said = _record_of("the stem entry's", stem)
+        held_said = _record_of("the round entry's", held)
+        if _stem_wins(stem, held):
+            held["id"] = stem.get("id")
             for key in STATUS_FIELDS:
                 if key in stem:
                     held[key] = stem[key]
                 elif key != "status":
                     held.pop(key, None)
+            kept, dropped = stem_said, held_said
+        else:
+            kept, dropped = held_said, stem_said
         entries.remove(stem)
-        done.append(Rekind(held["id"], old_kind, kind, number, True))
+        done.append(Rekind(stem.get("id"), old_kind, kind, number, True,
+                           held_id, kept, dropped))
     return done, problems
+
+
+def _approved(entry):
+    return bool(entry.get("approved_by")) or entry.get("status") == "approved"
+
+
+def _approval_time(entry):
+    """`approved_at` as an aware time, for comparing two approvals. YAML reads an
+    unquoted time as a datetime and a quoted one as a string; both are accepted. A
+    time that cannot be read sorts before any that can."""
+    value = entry.get("approved_at")
+    if isinstance(value, str):
+        try:
+            value = datetime.datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+        except ValueError:
+            value = None
+    elif isinstance(value, datetime.date) and not isinstance(value, datetime.datetime):
+        value = datetime.datetime(value.year, value.month, value.day)
+    if not isinstance(value, datetime.datetime):
+        return datetime.datetime.min.replace(tzinfo=datetime.timezone.utc)
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=datetime.timezone.utc)
+    return value
+
+
+def _stem_wins(stem, held):
+    """Does the merged entry keep the stem entry's id and approval, or the round's?
+
+    The later approval wins, and the id goes with it, so the entry that survives is
+    the one a person approved last. When only one is approved, that one wins. When
+    neither is, the stem entry's id and status are kept, as the older record. A tie
+    keeps the stem entry."""
+    if _approved(stem) != _approved(held):
+        return _approved(stem)
+    if not _approved(stem):
+        return True
+    return _approval_time(stem) >= _approval_time(held)
+
+
+def _record_of(whose, entry):
+    """`whose` id and approval, or id and status, in the words the report uses."""
+    if _approved(entry):
+        said = "its approval by %s at %s" % (entry.get("approved_by") or "no one named",
+                                             entry.get("approved_at") or "no recorded time")
+    else:
+        said = "its status %s, not approved" % (entry.get("status") or "none")
+    return "%s id %s and %s" % (whose, entry.get("id"), said)
 
 
 def adopted_map(data, project, plan):

@@ -54,8 +54,8 @@ def _time(value):
 def stage_ends(task_dir, task) -> dict:
     """`{stage: time or None}` for every stage. A checkpoint stage ends at its
     outcome's `at`; breakdown at the earliest `dispatched_at` of a subtask;
-    implement at the latest red, green or acceptance record. Verify and ship
-    have no dated end. An end later than a later stage's end is dropped,
+    implement at the latest red, green or acceptance record. The `verify` and
+    `ship` stages have no dated end. An end later than a later stage's end is dropped,
     because a person can answer a checkpoint after later work."""
     from compass_pkg.diagnose import _records
     ends = {stage: None for stage in STAGE_IDS}

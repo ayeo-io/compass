@@ -352,7 +352,7 @@ def config_state(home):
 
 
 def quick_fix_usage(tmp_path, cli_dir=CLI_DIR, hook_sessions=False):
-    """Start and finish a quick fix in session S1 under a fixed clock, and
+    """Start and finish a quick fix in the first fixture session under a fixed clock, and
     return its `usage` block and the copy its landing commit holds."""
     root = Path(tmp_path) / "repo"
     root.mkdir(parents=True)
@@ -604,7 +604,7 @@ MODELS = ("model-a", "model-b")
 
 
 def canary_transcripts(home):
-    """Transcripts for S1 and S2 that hold the canary in a user prompt, an
+    """Transcripts for both fixture sessions that hold the canary in a user prompt, an
     assistant text, a tool input, a tool result, an error message and their
     own folder's name."""
     folder = Path(home) / "projects" / f"-work-{CANARY}"

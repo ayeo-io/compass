@@ -1,11 +1,13 @@
 ---
 id: ADR-062
 title: A dependency between issues is a manifest field, and the block it causes is derived
-status: proposed
+status: accepted
 date: 2026-10-13
 supersedes: ''
 superseded_by: ''
 ---
+
+Accepted by jed72 on 2026-10-13.
 
 ## Context
 

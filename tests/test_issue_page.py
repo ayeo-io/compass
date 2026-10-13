@@ -272,8 +272,8 @@ def test_dcj_45_board_panel_and_issue_page_share_one_function(tmp_path, monkeypa
     mine = next(r for r in rows if r["slug"] == SLUG)
     assert sorted(mine) == ["also_in", "assessment", "created", "delivery_approach", "evidence",
                             "gate_list", "gates", "lane", "manifest_path", "policy_rules_fired",
-                            "recommendation", "set_aside", "slug", "stage", "stage_depths",
-                            "state", "tree", "unplaceable"]
+                            "readiness", "recommendation", "set_aside", "slug", "stage",
+                            "stage_depths", "state", "tree", "unplaceable"]
     assert mine["gates"] == "4/9"
 
 

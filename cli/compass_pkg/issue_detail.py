@@ -14,12 +14,12 @@ This module is a leaf: it imports `lifecycle`, `next_cmd` and `status_words`, an
 of `flow`, `check_cmd` or `render_cmd`.
 """
 # DEPENDENCY: standard library (dataclasses); compass_pkg.lifecycle, next_cmd,
-# status_words, stable_ids.
+# readiness_record, status_words, stable_ids.
 from __future__ import annotations
 
 from dataclasses import dataclass
 
-from compass_pkg import lifecycle, status_words
+from compass_pkg import lifecycle, readiness_record, status_words
 from compass_pkg.stable_ids import STAGE_ASSESS
 
 NOT_ASSESSED = "not assessed"
@@ -37,6 +37,8 @@ class IssueDetail:
     stage_problem: object = None
     #: The reason of the blocked flag while it counts (an issue in progress or in review), else None.
     blocked: object = None
+    #: The repository readiness line, from the manifest's `readiness:` summary.
+    readiness: str = ""
 
     @property
     def gates(self):
@@ -72,7 +74,8 @@ def detail(manifest, task_dir):
     flag = lifecycle.blocked_flag(manifest, task_dir)
     return IssueDetail(str(manifest.get("delivery_approach") or NOT_ASSESSED), state, stage,
                        passed, total, problem,
-                       str(flag.get("reason") or "no reason recorded") if flag else None)
+                       str(flag.get("reason") or "no reason recorded") if flag else None,
+                       readiness_record.line(manifest.get("readiness")))
 
 
 def state_text(manifest, task_dir):

@@ -1731,12 +1731,9 @@ def test_prc_30_manifest(tmp_path):
     _not_measured_manifests(tmp_path)
 
 
-# The delivery-approach clause needs the rendered readiness block, which lands
-# later in this issue. Strict, so the change that adds the block fails here
-# until this marker is removed.
-@pytest.mark.xfail(strict=True, reason="the delivery approach has no readiness block yet")
 def test_prc_30(tmp_path):
     stale = _not_measured_manifests(tmp_path)
+    _register_approach(stale, FLOOR_SLUG)
     # The delivery approach says the record was stale, not only that it is missing.
     code, out, err = support.run_compass(stale, "issue", "render", "--issue", FLOOR_SLUG)
     assert code == 0, out + err
@@ -1771,6 +1768,254 @@ def test_prc_36(tmp_path):
 
 
 # --- U4 readers, init and retro ---
+
+READ_SLUG = "read-issue"
+SAMPLE_SLUG = "ci-lints-every-issue"
+NOT_MEASURED_LINE = "Repository readiness: not measured"
+
+
+def _snapshot_tree(*folders):
+    """`{path: bytes}` of every file under the folders, to prove a read wrote nothing."""
+    found = {}
+    for folder in folders:
+        for path in sorted(Path(folder).rglob("*")):
+            if path.is_file():
+                found[str(path)] = path.read_bytes()
+    return found
+
+
+def _board_page(project):
+    page = Path(str(project) + "-board.html")
+    code, out, err = support.run_compass(project, "board", "render", "--no-open",
+                                         "--out", str(page))
+    assert code == 0, out + err
+    return page.read_text(encoding="utf-8")
+
+
+def _receipt(project, slug=READ_SLUG):
+    code, out, err = support.run_compass(project, "issue", "receipt", "--issue", slug)
+    assert code == 0, out + err
+    return out
+
+
+def _readiness_lines(text):
+    return [line.strip() for line in text.splitlines() if "Repository readiness" in line]
+
+
+def _register_approach(project, slug):
+    """Write a delivery approach with the readiness block marker under
+    docs/compass and register it in the issue's manifest. Returns the document."""
+    rel = f"docs/compass/2026-10-13-{slug}/delivery-approach.md"
+    document = Path(project) / rel
+    document.parent.mkdir(parents=True, exist_ok=True)
+    template = (ROOT / "templates" / "delivery-approach.md").read_text(encoding="utf-8")
+    start = template.index("## 1. The assessment")
+    document.write_text(f"# Delivery approach - {slug}\n\n" + template[start:].split("\n---\n")[0],
+                        encoding="utf-8")
+    path = Path(project) / ".compass" / "work" / slug / "manifest.yml"
+    manifest = yaml.safe_load(path.read_text(encoding="utf-8"))
+    manifest["delivery_approach"] = "feature"
+    manifest["artifacts"] = [{"id": "ART-DELIVERY_APPROACH", "kind": "delivery-approach",
+                              "status": "draft", "reason": "fixture", "path": rel}]
+    path.write_text(yaml.safe_dump(manifest, sort_keys=False), encoding="utf-8")
+    return document
+
+
+def _read_project(folder, readiness=None, slug=READ_SLUG):
+    """A fixture project with one assessed issue whose delivery approach is
+    registered under docs/compass and holds the readiness block marker. The
+    manifest's `readiness:` key is `readiness` (left out when None)."""
+    project = support.make_project(folder, {"schema": 1})
+    manifest = dict(FLOOR_MANIFEST, issue=slug)
+    if readiness is not None:
+        manifest["readiness"] = readiness
+    task_dir = Path(project) / ".compass" / "work" / slug
+    task_dir.mkdir(parents=True, exist_ok=True)
+    (task_dir / "manifest.yml").write_text(yaml.safe_dump(manifest, sort_keys=False),
+                                           encoding="utf-8")
+    return project, _register_approach(project, slug)
+
+
+def _measured_summary(project):
+    """The summary of a nine-of-eleven record, written through the record module."""
+    _floor_record(project, absent=("codeowners-present", "secret-scan-declared"))
+    from compass_pkg import readiness_record
+    return readiness_record.summary(str(project))
+
+
+def test_prc_31(tmp_path):
+    from archive import sample_root
+    sample = sample_root()
+    project = support.make_project(tmp_path / "p", {"schema": 1})
+    shutil.copytree(sample / ".compass" / "work" / SAMPLE_SLUG,
+                    Path(project) / ".compass" / "work" / SAMPLE_SLUG)
+    shutil.copytree(sample / "docs" / "compass" / "2026-08-12-ci-lints-every-issue",
+                    Path(project) / "docs" / "compass" / "2026-08-12-ci-lints-every-issue")
+    # The board lists a closed issue only in the week after it landed, so the
+    # copy lands now. This is the only change to the copied manifest.
+    path = Path(project) / ".compass" / "work" / SAMPLE_SLUG / "manifest.yml"
+    manifest = yaml.safe_load(path.read_text(encoding="utf-8"))
+    assert "readiness" not in manifest
+    manifest["land_timestamp"] = datetime.datetime.now(datetime.timezone.utc).strftime(
+        "%Y-%m-%dT%H:%M:%S+00:00")
+    path.write_text(yaml.safe_dump(manifest, sort_keys=False), encoding="utf-8")
+    before = _snapshot_tree(Path(project) / ".compass" / "work", Path(project) / "docs")
+    receipt = _receipt(project, SAMPLE_SLUG)
+    page = _board_page(project)
+    assert any(NOT_MEASURED_LINE in line for line in _readiness_lines(receipt)), receipt
+    assert NOT_MEASURED_LINE in page
+    after = _snapshot_tree(Path(project) / ".compass" / "work", Path(project) / "docs")
+    assert after == before
+    assert not any("generations" in path for path in after)
+
+
+def test_prc_32(tmp_path):
+    project, document = _read_project(tmp_path / "p")
+    summary = _measured_summary(project)
+    assert (summary["score"], summary["signals"], summary["floor_met"]) == (9, 11, True)
+    task = Path(project) / ".compass" / "work" / READ_SLUG / "manifest.yml"
+    manifest = yaml.safe_load(task.read_text(encoding="utf-8"))
+    manifest["readiness"] = summary
+    task.write_text(yaml.safe_dump(manifest, sort_keys=False), encoding="utf-8")
+    line = "Repository readiness: 9 of 11 signals, floor met"
+    code, out, err = support.run_compass(project, "issue", "render", "--issue", READ_SLUG)
+    assert code == 0, out + err
+    text = document.read_text(encoding="utf-8")
+    assert line in text
+    # The line sits under the assessment, inside a readiness block.
+    assert text.index("## 1. The assessment") < text.index(line)
+    assert "<!-- compass:render readiness -->" in text
+    assert _readiness_lines(_receipt(project)) == [line]
+    assert line in _board_page(project)
+
+    # An issue whose record was never measured shows the same words in all three.
+    other, other_document = _read_project(tmp_path / "q", readiness={
+        "status": "not-measured", "reason": "missing",
+        "detail": "no .compass/readiness.yml; run compass readiness"})
+    code, out, err = support.run_compass(other, "issue", "render", "--issue", READ_SLUG)
+    assert code == 0, out + err
+    assert NOT_MEASURED_LINE in other_document.read_text(encoding="utf-8")
+    assert NOT_MEASURED_LINE in "\n".join(_readiness_lines(_receipt(other)))
+    assert NOT_MEASURED_LINE in _board_page(other)
+
+
+
+def _bare_repository(folder, files=None):
+    """A Git repository with no `.compass` directory, as `/compass:init` finds
+    a new project. Returns the folder."""
+    folder = Path(folder)
+    folder.mkdir(parents=True, exist_ok=True)
+    support.git(folder, "init", "-q", "-b", "main")
+    for name, text in (files or {}).items():
+        (folder / name).write_text(text, encoding="utf-8")
+    support.git(folder, "add", "-A")
+    support.git(folder, "commit", "-q", "--allow-empty", "-m", "fixture")
+    return folder
+
+
+def test_prc_33(tmp_path):
+    files = {"AGENTS.md": "# Agents\n"}
+    project = _bare_repository(tmp_path / "p", files)
+    (project / "compass.yml").write_text("schema: 1\n", encoding="utf-8")
+    assert not (project / ".compass").exists()
+    code, out, err = support.run_compass(project, "init", "--readiness")
+    assert code == 0, out + err
+    assert (project / ".compass" / "readiness.yml").is_file()
+    lines = out.splitlines()
+    marks = [i for i, line in enumerate(lines) if line.lstrip().startswith("- [ ] ")]
+    assert marks, out
+    # The list follows the files init wrote and comes before anything else the
+    # measurement prints.
+    first = lines[marks[0]]
+    before = [line for line in lines[:marks[0]] if "readiness" in line.lower()]
+    assert all("absent" in line.lower() or "initialised" in line.lower() for line in before), out
+    listed = [lines[i].split(":", 1)[0].replace("- [ ] ", "").strip() for i in marks]
+    record = support.read_record(project)
+    absent = [s["id"] for s in record["signals"] if s["result"] == "absent"]
+    assert sorted(listed) == sorted(absent), (listed, absent)
+    required = [i for i in listed if i in REQUIRED_SIGNALS]
+    assert listed[:len(required)] == required, listed
+    for i in marks:
+        assert "(compass.yml)" in lines[i] or "(" in lines[i], lines[i]
+    assert first.split(":", 1)[1].strip(), first
+
+    # Plain init measures nothing and runs no project command.
+    marks_folder = tmp_path / "marks"
+    marks_folder.mkdir()
+    other = _bare_repository(tmp_path / "q", files)
+    command = support.marker_script(other, "test.sh", "exit 0")
+    (other / "compass.yml").write_text(yaml.safe_dump({
+        "schema": 1, "allow_project_commands": True, "project": {"test_command": command}}),
+        encoding="utf-8")
+    support.git(other, "add", "-A")
+    support.git(other, "commit", "-q", "-m", "commands")
+    code, out, err = support.run_compass(other, "init",
+                                         env={"READINESS_MARKERS": str(marks_folder)})
+    assert code == 0, out + err
+    assert not (other / ".compass" / "readiness.yml").exists()
+    assert list(marks_folder.iterdir()) == []
+    assert "- [ ] " not in out
+
+    # /compass:init passes the flag after it writes compass.yml.
+    steps = (ROOT / "commands" / "init.md").read_text(encoding="utf-8")
+    assert "compass init --readiness" in steps
+    assert "compass init --readiness" in steps.split("Write a minimal `compass.yml`")[1]
+
+
+@pytest.mark.skipif(hasattr(os, "geteuid") and os.geteuid() == 0,
+                    reason="root can write into a read-only folder")
+def test_prc_34(tmp_path):
+    project = _bare_repository(tmp_path / "p", {"AGENTS.md": "# Agents\n"})
+    (project / "compass.yml").write_text("schema: 1\n", encoding="utf-8")
+    code, out, err = support.run_compass(project, "init")
+    assert code == 0, out + err
+    compass_dir = project / ".compass"
+    mode = compass_dir.stat().st_mode
+    compass_dir.chmod(0o555)
+    try:
+        code, out, err = support.run_compass(project, "init", "--readiness")
+    finally:
+        compass_dir.chmod(mode)
+    assert code == 0, out + err
+    text = out + err
+    assert "readiness was not measured" in text, text
+    assert "Permission denied" in text or "read-only" in text.lower(), text
+    assert "compass readiness" in text
+    assert (project / "compass.yml").read_text(encoding="utf-8") == "schema: 1\n"
+    assert not (project / ".compass" / "readiness.yml").exists()
+
+
+def test_prc_35(tmp_path):
+    project = support.make_project(tmp_path / "p", {"schema": 1})
+    measured = {"status": "measured", "signals": 11, "absent": [], "measured_at": "2026-10-10T10:00:00Z"}
+    issues = [("zulu-issue", "2026-10-01", dict(measured, score=4, floor_met=False)),
+              ("mike-issue", "2026-10-02", {"status": "not-measured", "reason": "missing",
+                                              "detail": "run compass readiness"}),
+              ("alpha-issue", "2026-10-03", dict(measured, score=7, floor_met=True))]
+    # The names run against the dates, so neither the folder order nor the
+    # name order can pass for the order of assessment.
+    for slug, created, summary in (issues[2], issues[0], issues[1]):
+        task_dir = Path(project) / ".compass" / "work" / slug
+        task_dir.mkdir(parents=True)
+        manifest = dict(FLOOR_MANIFEST, issue=slug, created=created, readiness=summary)
+        (task_dir / "manifest.yml").write_text(yaml.safe_dump(manifest, sort_keys=False),
+                                               encoding="utf-8")
+    code, out, err = support.run_compass(project, "retro")
+    assert code == 0, out + err
+    lines = out.splitlines()
+    assert "Repository readiness at assessment:" in lines, out
+    start = lines.index("Repository readiness at assessment:") + 1
+    rows = []
+    for line in lines[start:]:
+        if not line.strip():
+            break
+        rows.append(line)
+    assert len(rows) == 3, out
+    assert [next(s for s, _, _ in issues if s in line) for line in rows] == [
+        "zulu-issue", "mike-issue", "alpha-issue"], out
+    assert "4 of 11" in rows[0] and "floor not met" in rows[0], rows
+    assert "not measured" in rows[1], rows
+    assert "7 of 11" in rows[2] and "floor met" in rows[2] and "not met" not in rows[2], rows
 
 
 # --- U5 this repository and the measures ---

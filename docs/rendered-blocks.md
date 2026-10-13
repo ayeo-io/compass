@@ -30,7 +30,7 @@ Gates: 7 of 9 pass
 The kinds are `coverage`, `gates`, `dod`, `dor`, `artifacts`, `evidence`,
 `follow-ups`, `decisions-taken`, `header`, `ask`, `decision-required`,
 `acceptance`, `related`, `decisions`, `traceability`, `deliberately-omitted`,
-`verification-note` and `index`. All are rendered.
+`verification-note`, `index` and `readiness`. All are rendered.
 
 | Kind | What it shows |
 |---|---|
@@ -51,6 +51,7 @@ The kinds are `coverage`, `gates`, `dod`, `dor`, `artifacts`, `evidence`,
 | `deliberately-omitted` | The documents omitted on purpose, with the reason |
 | `verification-note` | A quick fix's scenario, test, red and green records, gates, changed files outside `docs/compass/` and the release line when the manifest records a `release_note` |
 | `index` | The project index: see below |
+| `readiness` | The one line `Repository readiness: 9 of 11 signals, floor met`, or `Repository readiness: not measured (<why>: <how to fix>)`, from the manifest's `readiness:` summary. The marker is in section 1 of `templates/delivery-approach.md`, under the assessment. A delivery approach written before the block existed has no marker, so the render leaves it alone. The receipt and the board panel print the same line from the same function (`readiness_record.line`), and the manifest key is written by `compass approach evaluate --write`. A render only reads the key |
 
 A block holds no clock, no absolute path and no name taken from git. The same
 records give the same text, so a second render changes no byte. The one fence a

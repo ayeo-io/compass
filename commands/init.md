@@ -65,6 +65,8 @@ it is exempt from assessment.
      not invent one, and without an owner no waiver can be approved, so
      `compass policy lint` reports `W-NO-OWNER`. Ask who approves waivers and add
      `owner: <that person>` to `compass.yml`.
+   - Then run `compass init --readiness` and show the absent signals it
+     prints. It is advice and exits 0 whatever it finds.
    - Then run `compass policy lint` and report the result. An issue
      that already has a stored configuration keeps it until its next
      reassessment. An issue without one is judged by the new `compass.yml` at
@@ -88,6 +90,14 @@ it is exempt from assessment.
    `compass policy lint` and report that it passes. Do not add keys the team has
    not asked for: every other setting has a default (see
    `docs/configuration.md`), and a missing key is a complete state.
+
+   Then run `compass init --readiness`. It measures the repository against the
+   readiness signals and prints the absent ones first, the signals an
+   autonomous project needs before them, each with the one change that makes it
+   present. Show the person that list in plain words. It is advice: the command
+   exits 0 whatever it finds, and when it cannot measure it says why and names
+   `compass readiness` to run later. Do not hold init back for it. Only this
+   step passes `--readiness`, so no other entry point runs a project command.
 
 4. **Walk the team through extending the defaults, if it wants to** - a few
    questions at a time, in each role's own language. The team does not need to

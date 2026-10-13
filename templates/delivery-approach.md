@@ -49,6 +49,9 @@ line is not skippable - it runs.
 <!-- These are what the policy's hard floors key on. Be honest - a one-line
      auth change still carries the auth label. -->
 
+<!-- compass:render readiness -->
+<!-- /compass:render -->
+
 ---
 
 ## 2. The composed candidate

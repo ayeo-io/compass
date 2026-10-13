@@ -236,6 +236,8 @@ def _panel(r, n):
             out += _assessment_block(r)
         else:
             out.append('<p class="note">No assessment recorded.</p>')
+        if r.get("readiness"):
+            out.append('<p class="meta">%s</p>' % _e(r["readiness"]))
         out += _rules_block(r)
         out += _depths_block(r)
         out += _gates_block(r)

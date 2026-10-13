@@ -19,10 +19,10 @@ page kinds are in `issue_page`, the index in `project_index`; `RENDERERS` holds 
 them. A kind in `rendered_blocks.KINDS` with no entry in `RENDERERS` is left as it is.
 """
 # DEPENDENCY: standard library (os); compass_pkg.render_inputs, item_records,
-# rendered_blocks, issue_page, project_index.
+# readiness_record, rendered_blocks, issue_page, project_index.
 from __future__ import annotations
 
-from compass_pkg import item_records
+from compass_pkg import item_records, readiness_record
 from compass_pkg import rendered_blocks as rb
 from compass_pkg.render_inputs import (CROSS, OWN, Part, RenderInputs, code as _code,  # noqa: F401
                                        gather, link as _link, link_target as _link_target,
@@ -192,6 +192,12 @@ def decisions_taken(inputs, doc_rel):
     return Part(OWN, lines)
 
 
+def readiness(inputs, doc_rel):
+    """The repository readiness line, from the manifest's `readiness:` summary. The
+    receipt and the board panel print the same line from the same function."""
+    return Part(OWN, [rb.field(readiness_record.line(inputs.task.get("readiness")))])
+
+
 #: A quick fix has one scenario; the note stays one screen however many it has.
 NOTE_SCENARIOS = 6
 
@@ -243,6 +249,7 @@ RENDERERS = {
     "follow-ups": follow_ups,
     "decisions-taken": decisions_taken,
     "verification-note": verification_note,
+    "readiness": readiness,
 }
 
 

@@ -7,7 +7,10 @@ exactly as they would be posted, and returns the first refusal or None:
 - **private paths**: a path under `.compass/private/`, or a path to a file git
   ignores in the project, refuses the post. Files under `.compass/work/` and
   `docs/compass/` are posted, because the issue page is made of them, and a
-  directory named without a file is posted.
+  directory named without a file is posted. The path part of a URL whose
+  scheme is not http or https, such as `file://` or `vscode://`, is checked
+  like any other path. A web link is posted unless its path names a file
+  under `.compass/private/`.
 - **credentials**: text that `redact` would replace refuses the post. It is
   given an empty environment, so no environment variable is read.
 
@@ -32,6 +35,9 @@ _BLOCK = re.compile(r"<!-- compass:render ([a-z-]+) -->")
 _URL = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://[^\s)>\]`'\"]+")
 _CANDIDATE = re.compile(r"[A-Za-z0-9._/-]*/[A-Za-z0-9._/-]*")
 _PRIVATE = ".compass/private/"
+_WEB = ("http", "https")
+#: A file under the private folder named inside a web link.
+_PRIVATE_IN_URL = re.compile(re.escape(_PRIVATE) + r"[^/?#]")
 #: Folders whose files make up the issue page itself, so naming one is not a leak.
 _POSTED = (".compass/work/", "docs/compass/")
 
@@ -61,11 +67,43 @@ def _credentials(items):
     return None
 
 
+def _url_paths(text):
+    """The text with each URL blanked except the path part of a non-web URL, and
+    the index of the first web link into `.compass/private/`, or None. A web
+    link names a published file, which git cannot be asked about; a `file://`
+    or editor URL names a file on disk, so its path is checked like a path."""
+    private = None
+
+    def keep(match):
+        nonlocal private
+        url = match.group(0)
+        scheme, rest = url.split("://", 1)
+        slash = rest.find("/")
+        start = len(scheme) + 3 + (slash if slash >= 0 else len(rest))
+        path = re.split(r"[?#]", url[start:], maxsplit=1)[0]
+        if scheme.lower() in _WEB:
+            if _PRIVATE_IN_URL.search(path) and private is None:
+                private = match.start()
+            return " " * len(url)
+        return " " * start + path + " " * (len(url) - start - len(path))
+
+    return _URL.sub(keep, text), private
+
+
+def _relative(path, project_root):
+    """An absolute path inside the project as a path from its root, or None."""
+    root = os.path.realpath(project_root)
+    full = os.path.realpath(path)
+    if full.startswith(root + os.sep):
+        return os.path.relpath(full, root).replace(os.sep, "/")
+    return None
+
+
 def _candidates(text, project_root):
     """`(path, index)` for each path-like run that git must be asked about, and the
     index of the first `.compass/private/` path, or None."""
-    blanked = _URL.sub(lambda m: " " * len(m.group(0)), text)
-    asked, private = [], None
+    blanked, private = _url_paths(text)
+    asked = []
     for match in _CANDIDATE.finditer(blanked):
         path = match.group(0).rstrip(".,;:")
         if "/" not in path or path.endswith("/"):
@@ -75,6 +113,10 @@ def _candidates(text, project_root):
         parts = path.split("/")
         # git cannot be asked about an absolute path or one that climbs out of the
         # project, but a file in the private folder is refused by its name alone.
+        if path.startswith("/") and ".." not in parts:
+            inside = _relative(path, project_root)
+            if inside is not None:
+                path, parts = inside, inside.split("/")
         if path.startswith("/") or ".." in parts:
             if "/" + _PRIVATE in path:
                 private = match.start() if private is None else private

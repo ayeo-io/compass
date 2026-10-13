@@ -821,6 +821,32 @@ def test_ipg_17_private_path_refuses_the_post(repo, gh):
         assert found is not None and found.check == "private-path", text
 
 
+def test_ipg_23_private_path_inside_a_url_refuses_the_post(repo):
+    # A URL is not a way round the private-path check: the path part of a
+    # non-web URL is checked like any other path, and a web link into
+    # .compass/private/ is refused by its name.
+    from compass_pkg import publish_check
+    (repo / ".gitignore").write_text("notes/private/\n")
+    commit_all(repo, "ignore")
+    root = str(repo)
+    inside = Path(root).resolve() / "notes" / "private" / "brief.md"
+    refused = ("see file:///Users/j/r/.compass/private/x.yml",
+               "see vscode://file/Users/j/r/.compass/private/x.yml",
+               "see https://github.com/o/r/blob/main/.compass/private/x.yml",
+               "see http://example.com/.compass/private/x.yml?raw=1.",
+               f"see file://{inside}")
+    for text in refused:
+        for texts in ({"comment": text, "body": None}, {"comment": "ok", "body": text}):
+            found = publish_check.check(texts, root)
+            assert found is not None and found.check == "private-path", (text, texts)
+    allowed = ("see https://github.com/o/r/blob/main/docs/guide.md",
+               "see https://example.com/notes/private/a.md",
+               "see https://github.com/o/r/tree/main/.compass/private/",
+               f"see file://{Path(root).resolve() / 'docs' / 'guide.md'}")
+    for text in allowed:
+        assert publish_check.check({"comment": text, "body": None}, root) is None, text
+
+
 def test_ipg_18_credential_refuses_the_post(repo, gh):
     from compass_pkg import publish_check
     page_issue(repo, gh, page=False)

@@ -1136,8 +1136,11 @@ def _evaluate_in_process(root, monkeypatch, capsys):
     import types
     from compass_pkg import routing
     monkeypatch.chdir(root)
+    from conftest import needed_justifications
     args = types.SimpleNamespace(reading=None, task=SLUG, write=True, reason=None,
-                                 kind=None, _mode=None, evidence_out=None)
+                                 kind=None, _mode=None, evidence_out=None,
+                                 justify=needed_justifications(
+                                     root / ".compass" / "work" / SLUG))
     code = routing.cmd_route_evaluate(args)
     capsys.readouterr()
     return code
@@ -1312,6 +1315,9 @@ def test_gs_22_evaluator_policy_is_the_adapter_over_the_resolved_configuration(
     stored = effective.effective_for(str(task_dir))
     for view in (live, stored):
         policy = view.evaluator_policy()
+        # The adapter's policy, plus the kinds every approach carries (the catalogue flag
+        # `every_approach`), which only the evaluator reads.
+        assert policy.pop("every_approach") == {"delivery-approach": "assess"}
         assert policy == obligations.policy_adapter(view.config)
         assert {"route_shapes", "assessment_vocabulary", "routing_strategies"} <= set(policy)
     assert live.evaluator_policy() == stored.evaluator_policy()

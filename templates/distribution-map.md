@@ -1,25 +1,20 @@
 <!--
 TEMPLATE: distribution-map.md
-Produced by: the plan stage (`/compass:plan`) on pair/multiagent-capable work;
-             consumed by breakdown (`/compass:breakdown`) and the
-             `orchestrator` agent.
-Lives at:    docs/compass/<created>-<issue-slug>/distribution-map.md
 Role in the pipeline: the record of what could run in parallel and why.
 The plan stage produces it; `scripts/multiagent.sh` reads it to create
-worktrees. Full-approach scale work writes this file even if a cap pins it
-solo - the map is the record of what could have been parallel and why it
-wasn't.
+worktrees. It is owed only when the issue records two or more subtasks.
+With one subtask, or none yet, `compass check` reads it as "not needed" and
+no file is asked for.
 
 Independence has two tests, both must hold: disjoint code AND disjoint
 scenario groups (see the worktree-multiagent skill).
 
 Fill every {{PLACEHOLDER}}.
 -->
-<!-- absorbed: "solo - the map is the" -->
 
 # Distribution Map - {{ISSUE_SLUG}}
 
-> **Stage:** plan · **Date:** {{DATE}} · **Reads from:** technical-design.md §4, acceptance-criteria.md
+> **Date:** {{DATE}} · **Reads from:** technical-design.md §4, acceptance-criteria.md
 > **Consumed by:** breakdown, `scripts/multiagent.sh`, the `orchestrator` agent
 
 ---
@@ -96,8 +91,13 @@ Fill every {{PLACEHOLDER}}.
 
 ## Gate
 
-- [ ] Every scenario in `acceptance-criteria.md` is owned by exactly one subtask.
-- [ ] Every "independent" verdict in §2 passed both tests (disjoint code AND scenarios).
-- [ ] Final subtask count respects every cap in §5.
+<!-- The breakdown stage's exit checks, written by `compass issue render` from the issue's
+     configuration (`compass issue template show distribution-map`). An item is met by
+     evidence recorded with `--meets`, a person's `compass evidence approve --check` or a
+     follow-up recorded with `--defers`. A tick on this page counts for nothing. The
+     shipped default lists none. -->
+
+<!-- compass:render breakdown-exit -->
+<!-- /compass:render -->
 
 Next stage: **break down the work** (`/compass:breakdown`) - runs `scripts/multiagent.sh` with this map.

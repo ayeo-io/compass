@@ -402,3 +402,75 @@ def _no_forced_colour(monkeypatch):
     colour sets the variable itself."""
     for name in ("FORCE_COLOR", "PY_COLORS", "CLICOLOR_FORCE"):
         monkeypatch.delenv(name, raising=False)
+
+
+def needed_justifications(task_dir):
+    """The `--justify` values (`DIM=TEXT`) a first `approach evaluate --write` of the issue
+    in `task_dir` needs, for a test that calls `cmd_route_evaluate` in this process."""
+    from compass_pkg import justifications
+    from compass_pkg.core import normalize_spine
+    task = normalize_spine(
+        yaml.safe_load((Path(task_dir) / "manifest.yml").read_text(encoding="utf-8")) or {})
+    _, missing = justifications.merge(task, task.get("assessment") or {}, {}, None)
+    return ["%s=Test fixture: the %s was judged." % (name, name) for name in missing]
+
+
+def _justified_argv(argv, cwd):
+    """`argv` with a `--justify` for each assessed value a first `approach evaluate
+    --write` would refuse for lack of one. The rule is tested by its own scenarios, which
+    opt out with the `raw_justify` marker; every other test is about something else and
+    needs the write to run."""
+    words = [str(w) for w in argv]
+    if str(CLI_PATH) not in words:          # another version's CLI does not know --justify
+        return argv
+    for at in range(len(words) - 1):
+        if words[at:at + 2] in (["approach", "evaluate"], ["issue", "configure"]):
+            break
+    else:
+        return argv
+    rest = words[at + 2:]
+    # `approach evaluate --write` and `issue configure --commit` both run the evaluation.
+    if not ({"--write", "--commit"} & set(rest)) or any(w.startswith("--justify") for w in rest):
+        return argv
+    slug = None
+    for i, w in enumerate(rest):
+        if w == "--issue" and i + 1 < len(rest):
+            slug = rest[i + 1]
+        elif w.startswith("--issue="):
+            slug = w.split("=", 1)[1]
+    root = Path(cwd or os.getcwd()).resolve()
+    while not (root / ".compass").is_dir() and root != root.parent:
+        root = root.parent
+    if slug is None:
+        pointer = root / ".compass" / "current-task"
+        slug = pointer.read_text(encoding="utf-8").strip() if pointer.is_file() else None
+    manifest = root / ".compass" / "work" / str(slug) / "manifest.yml"
+    try:
+        from compass_pkg import justifications
+        from compass_pkg.core import normalize_spine
+        task = normalize_spine(yaml.safe_load(manifest.read_text(encoding="utf-8")) or {})
+        _, missing = justifications.merge(task, task.get("assessment") or {}, {}, None)
+    except Exception:                                   # noqa: BLE001 - leave the call as it is
+        return argv
+    extra = []
+    for name in missing:
+        extra += ["--justify", "%s=Test fixture: the %s was judged." % (name, name)]
+    return list(argv) + extra
+
+
+@pytest.fixture(autouse=True)
+def _justify_first_evaluate_writes(request):
+    if request.node.get_closest_marker("raw_justify"):
+        yield
+        return
+    real = subprocess.run
+
+    def run(args, *rest, **kwargs):
+        if isinstance(args, (list, tuple)):
+            args = _justified_argv(args, kwargs.get("cwd"))
+        return real(args, *rest, **kwargs)
+
+    # Its own patcher, so a test that calls `monkeypatch.undo()` keeps the shim.
+    with pytest.MonkeyPatch.context() as patcher:
+        patcher.setattr(subprocess, "run", run)
+        yield

@@ -50,7 +50,7 @@ earlier one. Warnings never stop it and never fail it.
 |---|---|---|
 | `layer` | Each layer alone, before anything merges | `L-LOAD`, `L-KEY-NOT-TEXT`, `L-SCHEMA`, `L-SETTINGS-KEY`, `L-UNLOCK-PLACEMENT`, `L-IMPL-UNKNOWN`, `L-IMPL-TEMPLATED`, `W-APPROVED-ON-ISSUE`, `L-IGNORED-FILE` (warning), the eleven `L-PARENT-*` codes below for a git parent, and the four `S-PARENT-*` state codes |
 | `merge` | The merge grammar, layer by layer. It reports every fault of the first layer that does not apply | the merge's own `M-*` codes, such as `M-ADD-EXISTS`, `M-SET-UNKNOWN`, `M-REF-REMOVED` |
-| `resolved` | The merged result as a whole | `M-REF-UNKNOWN`, `M-WEIGHT-TIE`, `M-HIT-MISSING`, `M-HIT-DISALLOWED`, `M-ALIAS-COLLISION`, `M-CYCLE`, `M-BOOKKEEPING-INPUT`, `M-DIRECTORY-DEPENDENCY`, `M-LIST-KIND-UNEVALUATED` (warning), `M-READINESS-IMPL`, `M-READINESS-PARAM` |
+| `resolved` | The merged result as a whole | `M-REF-UNKNOWN`, `M-WEIGHT-TIE`, `M-HIT-MISSING`, `M-HIT-DISALLOWED`, `M-ALIAS-COLLISION`, `M-CYCLE`, `M-BOOKKEEPING-INPUT`, `M-DIRECTORY-DEPENDENCY`, `M-LIST-KIND-UNEVALUATED` (warning), `M-FIELD-SHAPE`, `M-READINESS-IMPL`, `M-READINESS-PARAM` |
 | `locks` | What the locks above a layer refuse, and each refused unlock | `K-LOCK-REFUSED`, `K-UNLOCK-REFUSED`, `K-UNPROVABLE`, `E-EVALUATION` |
 | `classification` | Waivers, the classifier's verdict on each layer, and the vocabulary | `C-LOOSENING`, `C-INCOMPARABLE`, `V-VOCABULARY-CHANGE`, `W-UNNEEDED`, the waivers' own `W-*` codes, `E-EVALUATION` |
 
@@ -81,7 +81,7 @@ earlier one. Warnings never stop it and never fail it.
 | `S-PARENT-STALE` | warning | `seen.yml` holds another commit for the parent's ref, which this machine fetched last. It can be older or newer than the pin. The pin does not move |
 | `S-PARENT-MODIFIED` | error | The cached `compass.yml` no longer matches the digest recorded when it was fetched, or `seen.yml` holds no digest for it. The lint stops at the first group |
 | `S-PARENT-BOTH` | error | Stale, and the cached file was edited. The lint stops at the first group |
-| `M-REF-UNKNOWN` | error | A field, or a rule's effect (`EFFECT_TARGETS` in `catalogue_spec.py` says which catalogue each effect names), names an id that no entry defines |
+| `M-REF-UNKNOWN` | error | A field, or a rule's effect (`EFFECT_TARGETS` in `catalogue_spec.py` says which catalogue each effect names), names an id that no entry defines, or an artifact's `owner` is neither an agent nor a value of the `role` dimension |
 | `M-WEIGHT-TIE` | error | Two delivery approaches have the same weight |
 | `M-LIST-KIND-UNEVALUATED` | warning | A stage's `entry` or `exit` list names a check of a kind this version does not evaluate (`judged` or `evidence`). The check fails in `compass check`, whatever the capability. The exit code does not change |
 | `M-READINESS-IMPL` | error | A readiness signal names an `impl` that the readiness registry does not hold. The message names the signal and the implementation |
@@ -108,7 +108,7 @@ earlier one. Warnings never stop it and never fail it.
 | `M-MAP-REMOVE-ABSENT` | error | `remove:` of a key the map does not hold |
 | `M-FIELD-UNKNOWN` | error | `set:` names a field the catalogue does not define |
 | `M-FIELD-LAYER` | error | A field this layer may not set, such as a stage's `mode` outside the issue layer |
-| `M-FIELD-SHAPE` | error | A value of the wrong shape, or a blank name or alias |
+| `M-FIELD-SHAPE` | error | A value of the wrong shape, or a blank name or alias. In the `resolved` group it also covers the fields of an artifacts entry: a `sections` key that is not an artifact depth, a `sections` value that is not a list of headings, an empty list for a document that is not one rendered block, a blank `audience`, `owner` or `stands_for`, a `file` that is not a bare file name, and a `required_when` condition that is not `subtasks: {min: N}`. All are reported in one run |
 | `M-REF-REMOVED` | error | `remove: true` on an entry something still refers to |
 | `K-LOCK-REFUSED` | error | A layer loosens, or changes in a way that cannot be compared, an entry a lock covers |
 | `K-UNLOCK-REFUSED` | error | An `unlock` that does not stand: not the owner's, no waiver, a hard lock, or an entry that is not locked |

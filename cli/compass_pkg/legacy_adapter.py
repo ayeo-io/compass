@@ -29,7 +29,7 @@ change shape in the catalogue itself:
   which the design records and does not enforce.
 """
 # DEPENDENCY: PyYAML (bundled); compass_pkg.core, compass_pkg.routing,
-# compass_pkg.catalogue_spec, compass_pkg.stable_ids.
+# compass_pkg.catalogue_spec, compass_pkg.stable_ids, compass_pkg.artifact_kinds.
 from __future__ import annotations
 
 import copy
@@ -37,7 +37,7 @@ import os
 
 import yaml
 
-from compass_pkg import core, stable_ids, word_map
+from compass_pkg import artifact_kinds, core, stable_ids, word_map
 from compass_pkg.catalogue_spec import CAPABILITIES
 from compass_pkg.routing import canonical_routes
 from compass_pkg.stable_ids import (APPROACH_REGULAR, APPROACH_SPIKE, GATE_G5, GATE_SPIKE_CONCLUDE, STAGE_ASSESS,
@@ -445,21 +445,30 @@ def _artifacts(approaches, rules):
             for key in ("add_artifact", "require_artifact", "suggest_artifact"):
                 if key in (rule.get("then") or {}):
                     note(rule["then"][key])
-    return {name: ({"file": f"{name}.md", "stage": ARTIFACT_STAGES[name]}
-                   if name in ARTIFACT_STAGES else {"file": f"{name}.md"})
-            for name in names}
+    shipped = artifact_kinds.shipped()
+    return {name: _artifact_entry(name, shipped) for name in names}
 
 
-# The stage that owns each shipped artifact (ADR-050). The legacy files have no
-# field for it, so the adapter holds the table the preset's artifacts.yml carries.
-ARTIFACT_STAGES = {
-    "delivery-approach": "assess", "intent": "assess",
-    "acceptance-criteria": "define", "ui-contract": "define",
-    "requirements-review": "refine", "technical-design": "plan",
-    "threat-model": "plan", "rollback-plan": "plan",
-    "distribution-map": "breakdown", "verification-report": "verify",
-    "verification-note": "verify", "launch-readiness": "verify",
-}
+# What the legacy files cannot say about a document: they hold its name and the
+# approaches and rules that owe it. For a kind the shipped default declares, the
+# description fields and the condition come from the shipped default, so a
+# project that still carries copies of the two files resolves the same kinds.
+# `every_approach` is not copied: it would make an old policy owe a document it
+# never listed. A name the shipped default does not declare keeps only its file,
+# and the merge then asks the layer for the fields it lacks.
+SHIPPED_FIELDS = ("stage", "owner", "audience", "stands_for", "sections", "depends_on",
+                  "required_when")
+
+
+def _artifact_entry(name, shipped):
+    default = shipped.get(name)
+    if not isinstance(default, dict):
+        return {"file": f"{name}.md"}
+    entry = {"file": default.get("file", f"{name}.md")}
+    for field in SHIPPED_FIELDS:
+        if field in default:
+            entry[field] = copy.deepcopy(default[field])
+    return entry
 
 
 # A display name a person would not guess from the id. The id keeps its

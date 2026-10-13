@@ -140,7 +140,13 @@ FIELDS = {
         "depends_on": _f("list", "list", "obligation-set"),
         "checks": _f("list", "list", "obligation-set"),
         "bookkeeping": _f("boolean", "scalar", "identity"),
-        "stage": _f("string", "scalar", "descriptive"),
+        "stage": _f("string", "scalar", "descriptive", required=True),
+        "owner": _f("string", "scalar", "descriptive", required=True),
+        "audience": _f("string", "scalar", "descriptive", required=True),
+        "stands_for": _f("string", "scalar", "descriptive", required=True),
+        "sections": _f("map", "map", "descriptive", required=True),
+        "required_when": _f("map", "whole", "identity"),
+        "every_approach": _f("boolean", "scalar", "descriptive"),
     },
     "readiness": {
         "statement": _f("string", "scalar", "descriptive", required=True),
@@ -182,6 +188,7 @@ OBLIGATION_FIELDS = {
     "approaches.subtask_ceiling": "ceiling",
     "approaches.ships": "identity",              # a lock's footprint (ADR-039)
     "artifacts.depends_on": "obligation-set",    # what an owed artifact builds on
+    "artifacts.required_when": "identity",       # when an owed artifact is owed
     "artifacts.checks": "obligation-set",        # the checks an owed artifact carries
     "stages.mode": "ordered",                    # an issue's own choice
     "stages.order": "identity",                  # a lock's footprint
@@ -275,6 +282,11 @@ CEILING_DIRECTIONS = {
 }
 
 ARTIFACT_DEPTHS = stable_ids.ARTIFACT_DEPTHS     # ascending strictness
+
+#: The condition keys an artifact's `required_when` may hold. Each names a fact
+#: about the issue that `{min: N}` is compared with. A later condition is one
+#: more name here and one more reader.
+REQUIRED_WHEN_CONDITIONS = ("subtasks",)
 AUTONOMY = ("controlled", "balanced", "autonomous")
 ADOPTION = ("advisory", "enforced")
 # `governance_drift`: any value other than `strict` reads as `advisory`.
@@ -333,7 +345,8 @@ ENTRY_DESCRIPTIONS = {
     "rules": "One rule set: what kind it is, how matching rules combine and the rules it holds.",
     "checks": "One check: what it asserts, how it is decided and how strictly it applies.",
     "gates": "One gate: the checks it groups, the stage it is cleared at and where it applies.",
-    "artifacts": "One artifact: the file that holds it and what it builds on.",
+    "artifacts": "One artifact: the file that holds it, who reads it and who writes it, its "
+                 "headings per depth and what it builds on.",
     "readiness": "One readiness signal: what it asserts, the implementation that decides it and "
                  "whether the readiness floor needs it.",
     "vocabulary": "The display name of one catalogue entry, and the other names a person may type "
@@ -464,7 +477,21 @@ FIELD_DESCRIPTIONS = {
                        "such as the dashboard, the receipt or the verification report. Such "
                        "an artifact is never an input to another.",
         "stage": "The id of the stage that owns the artifact, for example `plan` for the "
-                 "technical design. An artifact with no stage is owned by ship.",
+                 "technical design.",
+        "owner": "The role that writes the document: an agent id or a value of the `role` "
+                 "dimension, for example `planner`. A layer's own top-level `owner` is a "
+                 "different thing: the person who approves that layer's waivers.",
+        "audience": "One line saying who reads the document and what the reader decides from "
+                    "it. The skeleton and the glossary print it.",
+        "stands_for": "The name the industry uses for this kind of document, for example `hld` "
+                      "for the technical design. The glossary prints it.",
+        "sections": "The headings of the document, in order, for each depth it can be written "
+                    "at (`lightweight`, `thorough`). A list may be empty only for a document "
+                    "that is one rendered block.",
+        "required_when": "A condition that must hold for the document to be owed, for example "
+                         "`{subtasks: {min: 2}}`. The document is owed whenever it is absent.",
+        "every_approach": "Whether every delivery approach owes the document, at the depth of "
+                          "its own stage, unless the approach lists it already.",
     },
     "readiness": {
         "statement": "What the readiness signal asserts, in plain words.",

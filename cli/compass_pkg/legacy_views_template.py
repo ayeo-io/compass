@@ -305,9 +305,9 @@ ENTRY_COMMENTS = {
         '# `labels` is an open list of domain tags - common ones, not exhaustive:',
     ],
     (APPROACH_SPIKE, 'artifacts'): [
-        '# A spike writes no review document. What it owes is a recorded',
-        '# conclusion - discard, graduate, or defer - and that is typed evidence,',
-        '# not a document. An empty pack here is the honest answer, not a gap.',
+        '# A spike owes its delivery-approach record and a conclusion document:',
+        '# discard, graduate, or defer. The conclusion is also typed evidence,',
+        '# which `spike-conclusion-present` reads.',
     ],
     (APPROACH_QUICK_FIX, 'artifacts'): [
         "# No document beyond `delivery-approach.md`: the manifest's `scenarios:`",

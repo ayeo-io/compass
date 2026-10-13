@@ -22,7 +22,7 @@ them. A kind in `rendered_blocks.KINDS` with no entry in `RENDERERS` is left as 
 # readiness_record, rendered_blocks, issue_page, project_index.
 from __future__ import annotations
 
-from compass_pkg import item_records, readiness_record
+from compass_pkg import artifact_owed, item_records, readiness_record
 from compass_pkg import rendered_blocks as rb
 from compass_pkg.render_inputs import (CROSS, OWN, Part, RenderInputs, code as _code,  # noqa: F401
                                        gather, link as _link, link_target as _link_target,
@@ -85,7 +85,8 @@ def _exit_list(which):
         rows = item_records.items(inputs.task, None, inputs.get_view(), which)
         title = item_records.TITLES[which]
         if not rows:
-            return Part(OWN, ["No %s is configured for this issue." % title])
+            return Part(OWN, [item_records.EMPTY.get(which)
+                              or "No %s is configured for this issue." % title])
         met = [i for i in rows if i.state in item_records.MET]
         carried = [i for i in rows if i.state == item_records.CARRIED]
         opened = [i for i in rows if i.state == item_records.OPEN]
@@ -123,16 +124,23 @@ def artifacts(inputs, doc_rel):
     lines = ["Documents: %d registered, %d approved" % (len(rows), approved), "",
              "| Document | Status | Approved by | Why it exists |", "|---|---|---|---|"]
     for a in rows:
-        kind = rb.cell(a.get("kind", "?"))
+        name = str(a.get("kind", "?"))
+        if isinstance(a.get("round"), int):
+            # One row per round of a kind that repeats, each named by its own entry id.
+            name += ", round %d (%s)" % (a["round"], a.get("id", "?"))
+        kind = rb.cell(name)
         target = _link_target(inputs, a["path"]) if a.get("path") else None
         written = target in inputs.present
-        shown = (_link(inputs, a["path"], doc_rel, a.get("kind", "?")) if written else None) \
+        shown = (_link(inputs, a["path"], doc_rel, name) if written else None) \
             or kind
         # A name or meaning the catalogue gives the document is shown when the entry holds it.
         for key, word in (("traditional_name", "traditional name"), ("stands_for", "stands for")):
             if a.get(key):
                 shown += ", %s: %s" % (word, rb.cell(a[key]))
-        status = a.get("status", "?") if written else "not written yet"
+        # A document whose condition is false reads "not needed: ..." from the one function
+        # every reader asks; it is neither missing nor omitted.
+        status = a.get("status", "?") if written else (
+            artifact_owed.not_needed(inputs.task, inputs.get_view(), a) or "not written yet")
         by = a.get("approved_by") if written and a.get("status") == "approved" else None
         lines.append("| %s | %s | %s | %s |" % (
             shown, rb.cell(status), rb.cell(by) if by else "-", rb.cell(a.get("reason") or "")))
@@ -244,6 +252,8 @@ RENDERERS = {
     "gates": gates,
     "dod": _exit_list("dod"),
     "dor": _exit_list("dor"),
+    "plan-exit": _exit_list("plan-exit"),
+    "breakdown-exit": _exit_list("breakdown-exit"),
     "artifacts": artifacts,
     "evidence": evidence,
     "follow-ups": follow_ups,
@@ -254,7 +264,8 @@ RENDERERS = {
 
 
 def _add_modules():
-    from compass_pkg import issue_page, project_index
+    from compass_pkg import approach_blocks, issue_page, project_index
+    RENDERERS.update(approach_blocks.RENDERERS)
     RENDERERS.update(issue_page.RENDERERS)
     RENDERERS.update(project_index.RENDERERS)
 

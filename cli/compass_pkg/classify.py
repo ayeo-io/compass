@@ -46,10 +46,14 @@ JSON_SCHEMA_VERSION = 1
 # amendment of 2026-10-08), so a configuration that uses it has a verdict the
 # first version could not give.
 #
-# Version 3: a readiness signal's `impl`, `params` and `required_for_autonomous`
+# Version 3: an owed artifact's `required_when` is an obligation fact compared by
+# identity, so a change to the condition under which a document is owed is
+# `incomparable`, which version 2 read as `equivalent`.
+#
+# Version 4: a readiness signal's `impl`, `params` and `required_for_autonomous`
 # are compared, so a configuration that changes the readiness floor has a
-# verdict the second version could not give.
-CLASSIFIER_VERSION = 3
+# verdict the third version could not give.
+CLASSIFIER_VERSION = 4
 
 # Keys whose value is a condition on the assessment.
 WHEN_KEYS = ("when", "blocking_when", "applies_when")
@@ -456,6 +460,7 @@ for _fact, _fields in {
         "checks": tuple(f for f in OBLIGATION_FIELDS if f.startswith("checks.")),
         "artifact_depends_on": ("artifacts.depends_on",),
         "artifact_checks": ("artifacts.checks",),
+        "artifact_required_when": ("artifacts.required_when",),
         "readiness": ("readiness.impl", "readiness.params",
                       "readiness.required_for_autonomous")}.items():
     for _name in _fields:
@@ -525,6 +530,8 @@ def _changes(parent, child, ctx):
     _keyed("artifacts.depends_on", p["artifact_depends_on"],
            c["artifact_depends_on"], ctx, out)
     _keyed("artifacts.checks", p["artifact_checks"], c["artifact_checks"], ctx, out)
+    _keyed("artifacts.required_when", p["artifact_required_when"],
+           c["artifact_required_when"], ctx, out)
     return out
 
 

@@ -1,8 +1,5 @@
 <!--
 TEMPLATE: acceptance-criteria.md
-Produced by: the define stage (`/compass:define`); refined
-             at requirements review (`/compass:refine`).
-Lives at:    docs/compass/<created>-<issue-slug>/acceptance-criteria.md
 Role in the pipeline: The shared artifact. Every role reads the same
 acceptance criteria from its own perspective. It is read twice: as the
 specification when defined, and as the acceptance check at verify. It
@@ -24,7 +21,7 @@ scenario, concrete Given/When/Then, no implementation detail.
 
 # Spec - {{ISSUE_SLUG}}
 
-> **Stage:** define · **Last updated:** {{DATE}} · **Owning agent:** spec-author
+> **Last updated:** {{DATE}}
 > **Familiarity:** {{greenfield discovery \| existing behaviour mapped first, then new scenarios}}
 
 ## Summary
@@ -84,7 +81,7 @@ today. If nothing observable changes, say so plainly and explain what does.}}
 
 ---
 
-## Scenario group A - {{NAME, e.g. "Export generation"}}
+## Scenario group {{LETTER}} - {{NAME, e.g. "Export generation"}}
 
 <!-- A group is a set of scenarios that touch disjoint code/surface from the
      other groups. Independent groups can become parallel subtasks in the
@@ -116,6 +113,7 @@ Scenario: {{scenario title}}
 ---
 
 ## Scenario group B - {{NAME}}
+<!-- compass:optional -->
 
 **Independence note:** {{…}}
 

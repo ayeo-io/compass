@@ -181,15 +181,26 @@ def test_trc_b2_machine_state_is_named_as_staying(tmp_path):
 
 
 def test_trc_b2_no_human_document_still_claims_the_work_directory():
-    """Every template for a human document says `docs/compass/`.
+    """Every template for a human document puts it under `docs/compass/`.
 
-    The `Lives at:` line is the one an agent copies when it writes the file, so
-    a template that still names `.compass/work/` puts the document back where
-    it started however carefully the command is worded.
+    A catalogue kind's home comes from the catalogue, which declares a bare
+    filename, and the skeleton prints the documents folder; its template says
+    nothing about location. A template that is not a kind keeps a `Lives at:`
+    line, the one an agent copies when it writes the file, so a template that
+    still names `.compass/work/` puts the document back where it started
+    however carefully the command is worded.
     """
+    import yaml
+
+    kinds = set(yaml.safe_load((ROOT / "governance" / "presets" / "default" /
+                                "artifacts.yml").read_text(encoding="utf-8"))["artifacts"])
     stale = []
     for name in sorted(_human_documents()):
         head = (ROOT / "templates" / name).read_text(encoding="utf-8")[:400]
+        if name[:-3] in kinds:
+            if ".compass/work/" in head:
+                stale.append(f"templates/{name}: names .compass/work/")
+            continue
         m = re.search(r"^Lives at:\s*(\S+)", head, re.M)
         if not m:
             stale.append(f"templates/{name}: no `Lives at:` line")

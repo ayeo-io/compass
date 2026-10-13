@@ -15,7 +15,7 @@ discard and adoption) and `cli/compass_pkg/routing.py` (`--reset-config`).
 |---|---|---|
 | `compass issue configure --mode STAGE=MODE` (also `--route NAME`, `--autonomy`, `--ceiling NAME=N`, `--from-file PATH`) | Writes the proposed `config:` layer to `generations/<n+1>/proposed.yml` and prints a preview | No |
 | `compass issue configure --discard [N]` | Removes the proposal, or a leftover folder, above the generation in force | No |
-| `compass issue configure --commit [N]` | Adopts a complete leftover folder, if a fresh resolution gives the same files | Yes: the commit point |
+| `compass issue configure --commit [N]` | Adopts a complete leftover folder, if a fresh resolution gives the same files. Takes `--reason` and `--justify DIM=TEXT` for an assessed value that changed since the last evaluation | Yes: the commit point |
 | `compass approach evaluate --write --reason "..."` | Reassess. Applies a pending proposal as the new `config:` and commits the next generation | Yes |
 | `compass approach evaluate --write --reset-config` | Reassess, dropping the issue's `config:` | Yes |
 

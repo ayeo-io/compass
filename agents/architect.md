@@ -43,8 +43,10 @@ a parallel spec.
    `WARNING: No architecture/ artifacts found - running on heuristics only`
    Then proceed with heuristic analysis of the spec and plan. Do not block
    the stage - the perspective writes its notes and continues regardless.
-4. **Produce `architecture-notes.md`.** Write the file to
-   `.compass/work/<task>/architecture-notes.md` with these five headed sections:
+4. **Produce `architecture-notes.md`.** Write the file to the issue's
+   documents folder, `docs/compass/<created>-<task>/architecture-notes.md`,
+   and register it with `compass issue artifact set architecture-notes
+   --status draft --path <that path>`. Use these five headed sections:
 
    ### 1. System under change
    What surface does this issue touch? Name the modules, services, or

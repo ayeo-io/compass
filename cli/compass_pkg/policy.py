@@ -547,6 +547,21 @@ def raised_by_errors(task):
     return []
 
 
+def _unmatched_document_notes(task_dir):
+    """One line for each file in the issue's documents folder that is no kind's
+    file and not on the not-an-artifact list. A report beside the result: it
+    never changes the exit code, because a person can keep any note there."""
+    from compass_pkg import artifact_kinds, effective
+
+    try:
+        view = effective.view_or_legacy(task_dir)
+        names = artifact_kinds.unmatched_documents(view, task_dir)
+    except Exception:  # noqa: BLE001 - a report must not fail the lint
+        return []
+    return ["%s: a file in the documents folder whose name matches no kind. Rename it to "
+            "a kind's filename, or leave it: nothing owes it." % name for name in names]
+
+
 def cmd_task_lint(args):
     from compass_pkg.terminal import relative_to_project
     if args.file:
@@ -636,6 +651,7 @@ def cmd_task_lint(args):
     if not args.file:
         from compass_pkg import github_labels
         notes = github_labels.lint_notes(task, os.path.dirname(os.path.abspath(path)))
+        notes += _unmatched_document_notes(os.path.dirname(os.path.abspath(path)))
     if errs:
         print(f"compass issue lint: FAIL - {relative_to_project(path)}")
         for e in errs:

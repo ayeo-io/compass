@@ -89,13 +89,10 @@ def test_apply_migrates_a_v1_tree(tmp_path):
         assert "docs/compass" in path.replace("\\", "/"), (
             f"{kind} was renamed but not relocated: {path}")
     assert not (d / "route.md").exists()
-    # `TRC-E5` leaves a pointer at this one name, so an install predating the
-    # artifact registry is not locked out of every code edit. A pointer holds
-    # the new path and nothing else, so it is not the record left behind.
-    left = (d / "delivery-approach.md").read_text(encoding="utf-8")
-    assert "<!-- compass: moved -->" in left, (
-        "the renamed file is still beside the manifest as a document rather "
-        f"than as the TRC-E5 pointer:\n{left[:200]}")
+    # Since 7.0.0 the migrate leaves no pointer at the old name. The
+    # registry has served the hook since before 5.0.0.
+    assert not (d / "delivery-approach.md").exists(), (
+        "the renamed file is still beside the manifest, as a document or a pointer")
     manifest = yaml.safe_load((d / "manifest.yml").read_text())
     assert str(manifest["schema_version"]) == "3.0"
     assert "assessment" in manifest and "readings" not in manifest

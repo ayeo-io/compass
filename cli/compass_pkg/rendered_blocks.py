@@ -39,6 +39,7 @@ from compass_pkg import atomic_io
 KINDS = ("coverage", "gates", "dod", "dor", "artifacts", "evidence", "follow-ups",
          "decisions-taken", "header", "ask", "decision-required", "acceptance", "related",
          "decisions", "traceability", "deliberately-omitted", "verification-note", "index",
+         "assessment", "policy-rules", "stage-weights", "gate-set", "plan-exit", "breakdown-exit",
          "readiness")
 
 #: The prefix of the temporary files the render writes, so a killed render's

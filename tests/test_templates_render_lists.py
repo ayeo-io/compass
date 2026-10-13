@@ -3,8 +3,11 @@
 The requirements review holds the Definition of Ready and the verification
 report holds the Definition of Done as rendered blocks (`dor` and `dod`).
 `compass issue render` writes them from the issue's configured lists, so the
-templates carry no checkbox to follow a list, and the verb prints each template
-as the file. A page tick counts for nothing (`documents-carry-judgement`).
+templates carry no checkbox to follow a list, and the verb prints each block
+marker and each checkbox line of the template as the file holds them. A page
+tick counts for nothing (`documents-carry-judgement`). The verb prints a
+catalogue kind as a skeleton, with a header the catalogue gives
+(`artifact-catalogue-fields`).
 
 Scenario ids: `TR-1` to `TR-9` (issue `templates-render-lists`); TR-2 to TR-6, which
 rendered and read checkboxes, ended with the move to blocks. Each test name starts
@@ -38,6 +41,14 @@ def _inside_the_scratch_project(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
 
 
+def _contract(text):
+    """The lines of a template that a configured list could change: each render
+    marker and each checkbox. The skeleton adds a header and keeps these."""
+    return [line for line in text.splitlines()
+            if line.startswith(("<!-- compass:render", "<!-- /compass:render"))
+            or "- [ ]" in line or "- [x]" in line]
+
+
 def _render(root, kind, *extra):
     return _run(root, "issue", "template", "show", kind, "--issue", SLUG, *extra)
 
@@ -57,22 +68,22 @@ def _manifest_body():
 # --- TR-1: the shipped default renders the template file --------------------------------------
 
 @pytest.mark.parametrize("kind", sorted(KINDS))
-def test_tr_1_the_default_renders_each_template_byte_for_byte(tmp_path, kind):
+def test_tr_1_the_default_renders_each_template_marker_for_marker(tmp_path, kind):
     root, _ = _issue(tmp_path)
     code, out, err = _render(root, kind)
     assert code == 0, out + err
-    assert out == KINDS[kind].read_text(encoding="utf-8")
+    assert _contract(out) == _contract(KINDS[kind].read_text(encoding="utf-8"))
 
 
 @pytest.mark.parametrize("kind", sorted(KINDS))
-def test_tr_1_a_project_with_no_configuration_renders_the_template_file(tmp_path, kind):
+def test_tr_1_a_project_with_no_configuration_renders_the_template_markers(tmp_path, kind):
     (tmp_path / ".compass").mkdir()
     task_dir = tmp_path / ".compass" / "work" / SLUG
     task_dir.mkdir(parents=True)
     (task_dir / "manifest.yml").write_text(yaml.safe_dump(_manifest_body()), encoding="utf-8")
     code, out, err = _render(tmp_path, kind)
     assert code == 0, out + err
-    assert out == KINDS[kind].read_text(encoding="utf-8")
+    assert _contract(out) == _contract(KINDS[kind].read_text(encoding="utf-8"))
 
 
 # --- TR-7: the verb and the commands that use it ---------------------------------------------------------------
@@ -84,8 +95,8 @@ def test_tr_7_the_verb_renders_for_the_current_issue(tmp_path):
     code, out, err = _run(root, "issue", "template", "show", "requirements-review")
     assert code == 0, out + err
     # The Definition of Ready is a block that `compass issue render` writes from the list, so
-    # the verb prints the template as the file whatever the list holds.
-    assert out == READY_TEMPLATE.read_text(encoding="utf-8")
+    # the verb prints the template's markers whatever the list holds.
+    assert _contract(out) == _contract(READY_TEMPLATE.read_text(encoding="utf-8"))
 
 
 def test_tr_7_json_gives_the_kind_the_issue_the_source_and_the_text(tmp_path):
@@ -95,7 +106,7 @@ def test_tr_7_json_gives_the_kind_the_issue_the_source_and_the_text(tmp_path):
     code, out, err = _render(root, "requirements-review", "--json")
     assert code == 0, out + err
     doc = json.loads(out)
-    assert sorted(doc) == ["issue", "kind", "source", "text"]
+    assert sorted(doc) == ["depth", "issue", "kind", "source", "text"]
     assert doc["kind"] == "requirements-review" and doc["issue"] == SLUG
     assert doc["source"] == "generation" and doc["text"] == plain
 
@@ -114,7 +125,8 @@ def test_tr_7_json_says_none_when_no_configuration_is_read(tmp_path):
     task_dir.mkdir(parents=True)
     (task_dir / "manifest.yml").write_text(yaml.safe_dump(_manifest_body()), encoding="utf-8")
     doc = json.loads(_render(tmp_path, "verification-report", "--json")[1])
-    assert doc["source"] == "none" and doc["text"] == DONE_TEMPLATE.read_text(encoding="utf-8")
+    assert doc["source"] == "none"
+    assert _contract(doc["text"]) == _contract(DONE_TEMPLATE.read_text(encoding="utf-8"))
 
 
 def test_tr_7_an_unknown_kind_is_refused_and_names_the_kinds(tmp_path):
@@ -138,7 +150,7 @@ def test_tr_7_the_verb_is_public_and_says_what_it_does(tmp_path):
     code, out, err = _run(root, "issue", "template", "show", "--help")
     assert code == 0
     flat = " ".join(out.split())
-    assert "stage lists" in flat and "--issue" in flat and "--json" in flat
+    assert "skeleton" in flat and "--depth" in flat and "--issue" in flat and "--json" in flat
     code, out, err = _run(root, "--help")
     assert "_render-template" not in out
 
@@ -165,27 +177,33 @@ def test_tr_7_no_skill_or_agent_copies_a_list_template_by_path():
 
 # --- TR-8: nothing else changes, and the cap holds --------------------------------------------------------------
 
-OTHER = sorted(p.stem for p in TEMPLATES.glob("*.md") if p.stem not in KINDS)
+NOT_KINDS = ("devlog", "incident", "pull-request-body")
+CATALOGUE_KINDS = sorted(p.stem for p in TEMPLATES.glob("*.md")
+                         if p.stem not in KINDS and p.stem not in NOT_KINDS)
 
 
 def test_tr_8_other_templates_render_unchanged_and_the_cap_holds(tmp_path):
     from test_borrowed_document_shapes import TEMPLATE_LINE_CAP
     root, _ = _issue(tmp_path)
-    assert len(OTHER) >= 10
-    for kind in OTHER:
+    assert len(CATALOGUE_KINDS) >= 10
+    for kind in NOT_KINDS:
         code, out, err = _render(root, kind)
         assert code == 0, (kind, out + err)
         assert out == (TEMPLATES / f"{kind}.md").read_text(encoding="utf-8"), kind
+    for kind in CATALOGUE_KINDS:
+        code, out, err = _render(root, kind)
+        assert code == 0, (kind, out + err)
+        assert _contract(out) == _contract((TEMPLATES / f"{kind}.md").read_text(encoding="utf-8")), kind
     # The cap in test_borrowed_document_shapes.py covers these two templates.
     for kind in ("threat-model", "rollback-plan"):
         assert len(_render(root, kind)[1].splitlines()) <= TEMPLATE_LINE_CAP, kind
 
 
-def test_tr_8_the_default_render_adds_no_line_to_a_list_template(tmp_path):
+def test_tr_8_the_default_render_adds_no_checkbox_to_a_list_template(tmp_path):
     root, _ = _issue(tmp_path)
     for kind, path in KINDS.items():
         out = _render(root, kind)[1]
-        assert len(out.splitlines()) == len(path.read_text(encoding="utf-8").splitlines())
+        assert out.count("- [ ]") == path.read_text(encoding="utf-8").count("- [ ]")
 
 
 # --- TR-9: the owning doc ---------------------------------------------------------------------------------------
@@ -198,5 +216,6 @@ def test_tr_9_the_owning_doc_says_what_renders_and_the_router_names_the_module()
                    "compass follow-up add", "cli/compass_pkg/item_records.py"):
         assert phrase in flat, phrase
     router = (ROOT / "docs" / "README.md").read_text(encoding="utf-8")
-    assert re.search(r"`cli/compass_pkg/template_lists\.py`[^\n]*\| `docs/entry-exit-evaluation\.md` \|",
+    # The module's owning doc is the artifact catalogue, which owns the skeleton the verb prints.
+    assert re.search(r"`cli/compass_pkg/template_lists\.py`[^\n]*\| `docs/artifact-catalogue\.md` \|",
                      router)

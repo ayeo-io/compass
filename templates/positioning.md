@@ -1,7 +1,5 @@
 <!--
 TEMPLATE: positioning.md
-Produced by: the product marketer via `/compass:position`.
-Lives at:    docs/compass/<created>-<issue-slug>/positioning.md
 Role in the pipeline: the marketer's artifact. The marketer works PARALLEL
 to the spec, not downstream of it. Every claim must point at the scenario id
 in acceptance-criteria.md that backs it - that is the claim→scenario
@@ -17,7 +15,7 @@ the point.
 
 # Positioning - {{ISSUE_SLUG}}
 
-> **Author:** {{PRODUCT MARKETER NAME}} · **Date:** {{DATE}} · **Owning agent:** `product-marketer`
+> **Author:** {{PRODUCT MARKETER NAME}} · **Date:** {{DATE}}
 > **Governance owner check:** consistent with the voice & positioning strategies in `governance/strategies.md`.
 
 ---

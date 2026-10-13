@@ -321,13 +321,15 @@ a document.
 
 ## Printing a template
 
-`compass issue template show <kind> [--issue SLUG] [--json]` prints the template
-of that kind. The requirements review and the verification report hold an empty
-rendered block for each list, so the verb prints each template as the file: the
-blocks fill when the document is registered and `compass issue render` runs.
-`/compass:refine` and `/compass:verify` write their documents from this output.
-`--json` prints one object with the keys `kind`, `issue`, `source` and `text`.
-`source` is `generation`, `live` or `none`.
+`compass issue template show <kind> [--depth D] [--issue SLUG] [--json]` prints
+the skeleton of that kind, which [the artifact catalogue](artifact-catalogue.md)
+describes. The requirements review and the verification report hold an empty
+rendered block for each list, and the skeleton keeps each block marker as the
+template holds it: the blocks fill when the document is registered and
+`compass issue render` runs. `/compass:refine` and `/compass:verify` write
+their documents from this output. `--json` prints one object with the keys
+`kind`, `issue`, `depth`, `source` and `text`. `source` is `generation`, `live`
+or `none`.
 
 ## Limits
 

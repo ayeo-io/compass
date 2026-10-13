@@ -42,8 +42,10 @@ def _reassess_in_process(root, monkeypatch, capsys, boom_at=None, **extra):
         if step == boom_at:
             raise RuntimeError(f"interrupted after {step}")
     monkeypatch.setattr(generation, "_after_step", hook)
+    from conftest import needed_justifications
     fields = dict(reading=None, task=fx.SLUG, write=True, reason="test", kind=None,
-                  _mode=None, evidence_out=None, json=False, reset_config=False, adopt=None)
+                  _mode=None, evidence_out=None, json=False, reset_config=False, adopt=None,
+                  justify=needed_justifications(root / ".compass" / "work" / fx.SLUG))
     fields.update(extra)
     args = types.SimpleNamespace(**fields)
     try:

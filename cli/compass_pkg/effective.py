@@ -76,7 +76,15 @@ class EffectiveView:
         """The routing policy in the shape `evaluate_route` takes, built from
         the resolved configuration. `effective` is, with `classify`, one of the
         two modules that may import `obligations` (ADR-037); readers call this."""
-        return obligations.policy_adapter(self.config)
+        policy = obligations.policy_adapter(self.config)
+        # The kinds every approach carries, with the stage whose depth each takes. The
+        # classifier prepares its policy from `policy_adapter` and does not see this key,
+        # so a stored generation owes nothing new (I-7).
+        every = {kind: body.get("stage") for kind, body in (self.config.get("artifacts") or {}).items()
+                 if isinstance(body, dict) and body.get("every_approach")}
+        if every:
+            policy["every_approach"] = every
+        return policy
 
     def evaluator_issue(self):
         """The issue's own layer in the shape `evaluate_route` takes as `issue`:
@@ -453,13 +461,16 @@ def _live_view(task_dir, manifest, slug, start=None, fetch=False):
                          resolution.provenance)
 
 
-def effective_for(task_dir=None):
+def effective_for(task_dir=None, manifest=None):
     """The `EffectiveView` an issue runs against, or the project's live view
-    for `task_dir=None`. See the module text for the three cases."""
+    for `task_dir=None`. See the module text for the three cases. `manifest`
+    is the issue's manifest when the caller already holds it; otherwise it is
+    read from the file."""
     if task_dir is None:
         return _live_view(None, None, None)
     task_dir = os.fspath(task_dir)
-    manifest, _ = load_manifest(task_dir)
+    if manifest is None:
+        manifest, _ = load_manifest(task_dir)
     slug = os.path.basename(os.path.normpath(task_dir))
     held = generation.number(manifest)
     if held is None:
@@ -482,7 +493,7 @@ def _layered(root):
     return bool(project_settings.compass_yml_counts(root))
 
 
-def view_or_legacy(task_dir=None, live=False, start=None):
+def view_or_legacy(task_dir=None, live=False, start=None, manifest=None):
     """The view a reader module reads, or None when it must read the governance
     files as 5.6.0 did. That is the case only for an issue with no
     `generation:` key (or no issue) in a project with no `compass.yml`.
@@ -491,12 +502,15 @@ def view_or_legacy(task_dir=None, live=False, start=None):
     generation that is not whole. With `live`, a stored generation is not
     read: the command is about to commit the configuration as it is now. With
     no issue, `start` is the directory whose project is meant (else the
-    working directory)."""
+    working directory). `manifest` is the issue's manifest when the caller
+    already holds it, so a render over every issue does not parse each one
+    again; otherwise it is read from the file."""
     if task_dir is not None:
         task_dir = os.fspath(task_dir)
-        manifest, _ = load_manifest(task_dir)
+        if manifest is None:
+            manifest, _ = load_manifest(task_dir)
         if generation.number(manifest) is not None and not live:
-            return effective_for(task_dir)
+            return effective_for(task_dir, manifest)
     if not _layered(layers.find_project_root(task_dir or start or os.getcwd())):
         return None
     if live and task_dir is not None:
@@ -506,7 +520,7 @@ def view_or_legacy(task_dir=None, live=False, start=None):
                           fetch=not parents.offline())
     if task_dir is None:
         return _live_view(None, None, None, start)
-    return effective_for(task_dir)
+    return effective_for(task_dir, manifest)
 
 
 def commit_generation(task_dir, manifest, invalidated=None, render=None, *, adopt=None,

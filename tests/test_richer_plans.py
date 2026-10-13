@@ -122,13 +122,10 @@ def test_trc_c3_existing_sections_survive():
             f"the pre-existing '{required}' section is gone from the template"
         )
 
+    # The gate checklist is a rendered block, met by records (artifact-catalogue-fields).
     gate = _section(text, r"Gate")
-    boxes = re.findall(r"^- \[ \] ", gate, re.M)
-    assert len(boxes) >= 3, (
-        f"the gate checklist lost items; expected at least its original 3, "
-        f"found {len(boxes)}"
-    )
-    assert "distribution-map.md" in gate, "the gate no longer mentions the map"
+    assert not re.findall(r"^- \[[ x]\] ", gate, re.M | re.I), "the gate holds a tick box"
+    assert "<!-- compass:render plan-exit -->" in gate, "the gate lost its plan-exit block"
 
 
 # ---------------------------------------------------------------------------

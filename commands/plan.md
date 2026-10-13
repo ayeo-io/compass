@@ -49,8 +49,8 @@ engineering plan stage.)
    - On the regular approach: a short list of 2-3 units is enough.
    - On the full approach: write the full `distribution-map.md` from its
      template.
-   - On the full approach capped solo: still write the full map - it records
-     what *could* have been parallel and why it wasn't.
+   - On the full approach capped to one worktree with one subtask: the map is
+     not needed. `compass check` owes it only with two or more subtasks.
 
    Subtask count comes from the map; orchestration thresholds from
    the multiagent settings in `compass.yml` (or `.compass/config.yml` in a

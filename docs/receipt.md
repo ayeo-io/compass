@@ -10,7 +10,7 @@ The receipt shows Compass's two differentiators made demonstrable in plain text 
 compass issue receipt --issue <slug>
 ```
 
-Optionally `--workdir <path>` to point the receipt at a project rooted somewhere other than the current working directory. The command is **read-only**: it parses `manifest.yml`, `delivery-approach.md`, `evidence/`, and `governance/guardrails.yml`, prints the receipt to stdout, and mutates nothing on disk.
+Optionally `--workdir <path>` to point the receipt at a project rooted somewhere other than the current working directory. The command is **read-only**: it parses `manifest.yml`, `delivery-approach.md`, `evidence/`, and `governance/guardrails.yml`, prints the receipt to stdout, and mutates nothing on disk. The assessment lines show the manifest's `justifications`; an issue with no such key keeps the old reader of the assessment table in `delivery-approach.md`. A goal or role the assessment leaves out reads as `not assessed`.
 
 ## Example
 
@@ -82,7 +82,7 @@ When any list check is active, the receipt adds a *Stage lists* section before t
 
 With the capability `artifact-freshness` on, the receipt adds an *Artifact freshness* section before the verdict. It shows each document that records the digests of its upstream as `fresh` or `stale`, with the artifact that changed. It adds nothing when no document is tracked, or when the capability is off (`docs/artifact-freshness.md`).
 
-The receipt adds a *Documents* section before the artifact freshness one. It lists each registered document that has left `draft` with its status and, for an approved one, who approved it and when. A person's approval names the person. A stage's approval names the command that wrote it, such as `compass tdd-red`. Documents still in draft are counted on one line, and a receipt whose documents are all drafts has no section.
+The receipt adds a *Documents* section before the artifact freshness one. It lists each registered document that has left `draft` with its status and, for an approved one, who approved it and when. A person's approval names the person. A stage's approval names the command that wrote it, such as `compass tdd-red`. Documents still in draft are counted on one line, and a receipt whose documents are all drafts has no section. A round of a kind that repeats, such as a review, is always listed on its own line with its entry id and path, whatever its status.
 
 The sections before the verdict run in this order: *Stage lists*, *Documents*, *Artifact freshness*, *Provenance*, then the conformance lines.
 

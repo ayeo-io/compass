@@ -171,7 +171,9 @@ def test_the_packaged_plugin_contains_the_bundled_copy(source_clone, bare_interp
     env = bare_interpreter.env()
     result = subprocess.run(
         [str(bare_interpreter.python_path), str(cli_path),
-         "approach", "evaluate", "--issue", slug, "--write"],
+         "approach", "evaluate", "--issue", slug, "--write",
+         "--justify", "risk=A fixture.", "--justify", "familiarity=A fixture.",
+         "--justify", "size=A fixture.", "--justify", "goal=A fixture."],
         cwd=str(project), capture_output=True, text=True, env=env, timeout=20,
     )
     assert result.returncode == 0, result.stdout + result.stderr

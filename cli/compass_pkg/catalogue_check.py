@@ -292,6 +292,77 @@ def at_least(dimension, threshold, value, orders=None):
             and order.index(value) >= order.index(threshold))
 
 
+# --- the descriptive fields of an artifact entry ----------------------------------
+
+_FILE_ROUND = "<n>"
+_DEPTHS = ", ".join(spec.ARTIFACT_DEPTHS)
+
+
+def is_single_block(template_text):
+    """Is this template one rendered block and no `## ` heading? Only a kind
+    whose template is such a document may list no headings at a depth."""
+    return (not re.search(r"^## ", template_text, re.MULTILINE)
+            and template_text.count("<!-- compass:render ") == 1)
+
+
+def artifact_field_problems(entry, template_text=None):
+    """`(field path under the entry, message)` for each descriptive or
+    conditional field of a resolved artifacts entry that is malformed. The
+    reference checks (`stage`, `depends_on`, `owner`) are made where the whole
+    configuration is known. `template_text` is the kind's template, or None
+    when it has none; an empty list of headings is allowed only for a
+    template that is one rendered block."""
+    problems = []
+    for field in ("audience", "owner", "stands_for"):
+        value = entry.get(field)
+        if isinstance(value, str) and not value.strip():
+            problems.append((field, f"is empty; write the {field.replace('_', ' ')}"))
+    file = entry.get("file")
+    if isinstance(file, str):
+        # A directory artifact (`evidence/`) ends in one slash and is still a name.
+        name = file[:-1] if file.endswith("/") else file
+        if "/" in name or "\\" in name or ".." in name or not name.strip():
+            problems.append(("file", f"'{file}' is not a bare file name; it holds a path "
+                                     f"separator, '..' or nothing"))
+        elif file.count(_FILE_ROUND) > 1:
+            problems.append(("file", f"'{file}' holds {_FILE_ROUND} more than once"))
+    sections = entry.get("sections")
+    if isinstance(sections, dict):
+        if not sections:
+            problems.append(("sections", "is empty; list the headings for at least one depth "
+                                         f"({_DEPTHS})"))
+        for depth, headings in sections.items():
+            path = f"sections.{depth}"
+            if depth not in spec.ARTIFACT_DEPTHS:
+                problems.append(("sections", f"'{depth}' is not an artifact depth "
+                                             f"({_DEPTHS})"))
+            elif not isinstance(headings, list) or not all(isinstance(h, str) for h in headings):
+                problems.append((path, f"expected a list of heading texts, found "
+                                       f"{headings!r}"))
+            elif not headings and not (template_text is not None
+                                       and is_single_block(template_text)):
+                problems.append((path, "is an empty list; only a document that is one "
+                                       "rendered block, with no '## ' heading, may list no "
+                                       "headings"))
+            elif any(not h.strip() for h in headings):
+                problems.append((path, "holds a blank heading"))
+    required = entry.get("required_when")
+    if isinstance(required, dict):
+        for key, condition in required.items():
+            if key not in spec.REQUIRED_WHEN_CONDITIONS:
+                problems.append(("required_when", f"'{key}' is not a condition; the "
+                                                  f"conditions are "
+                                                  f"{', '.join(spec.REQUIRED_WHEN_CONDITIONS)}"))
+            else:
+                least = condition.get("min") if isinstance(condition, dict) else None
+                if (not isinstance(least, int) or isinstance(least, bool) or least < 1
+                        or set(condition) - {"min"}):
+                    problems.append(("required_when", f"'{key}' takes {{min: N}} with N a "
+                                                      f"whole number of at least 1, found "
+                                                      f"{condition!r}"))
+    return problems
+
+
 # --- the JSON Schema for compass.yml ---------------------------------------------
 
 _JSON_TYPES = {

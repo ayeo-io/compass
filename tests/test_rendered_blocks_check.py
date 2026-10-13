@@ -664,11 +664,11 @@ def test_dcj_75_trigger_table_complete():
                                         if isinstance(n, ast.ImportFrom)}
         assert other not in imports and f"compass_pkg.{other}" not in imports, (mine, other)
         assert "record_triggers" in text, mine
-    entry = " ".join((ROOT / "cli" / "compass").read_text("utf-8").split())
+    entry = "".join((ROOT / "cli" / "compass").read_text("utf-8").split())
     # The label sync runs first, the render second and the page third: each step wraps
     # the one before it and receives its exit code, so the page reads the README the
     # render has just written.
-    assert ("github_page.after_command( a, render_after_command(a, "
-            "github_labels.after_command(a, args.func(a) or 0)))") in entry
+    assert ("github_page.after_command(a,render_after_command(a,"
+            "github_labels.after_command(a,args.func(a)or0)))") in entry
     from compass_pkg import record_triggers as triggers
     assert triggers.PAGE_TRIGGERS is triggers.RENDER_TRIGGERS

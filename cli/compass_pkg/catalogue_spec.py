@@ -519,8 +519,8 @@ TOP_DESCRIPTIONS = {
                             "`false`.",
     "github_labels.page": "Whether Compass keeps one comment on the GitHub issue equal to the "
                           "issue's README, and writes the ask into an empty issue body once. "
-                          "It widens who reads the issue's documents to the GitHub issue's "
-                          "readers. The default is `false`.",
+                          "The default is `false`, because it widens who reads the issue's "
+                          "documents to the GitHub issue's readers.",
     "preset": "Reserved key for a published preset's own data. It is not part of a layer's "
               "digest.",
 }

@@ -1183,7 +1183,7 @@
         },
         "page": {
           "default": false,
-          "description": "Whether Compass keeps one comment on the GitHub issue equal to the issue's README, and writes the ask into an empty issue body once. It widens who reads the issue's documents to the GitHub issue's readers. The default is `false`.",
+          "description": "Whether Compass keeps one comment on the GitHub issue equal to the issue's README, and writes the ask into an empty issue body once. The default is `false`, because it widens who reads the issue's documents to the GitHub issue's readers.",
           "type": "boolean"
         },
         "status": {

@@ -494,6 +494,12 @@ def test_d2_repairs_change_only_retired_names():
     bullets, and `governance/routing-policy.md` (list_items 56 -> 61) gained
     the bullet on the readiness floor and its four refusal conditions.
 
+    One more was re-baselined by `dependencies-between-issues`:
+    `docs/safety-contract.md` (list_items 28 -> 32, one more `###` heading)
+    gained the section on the pre-tool hook's dependency refusal, listing the
+    four limits of its read. With both sections, `docs/safety-contract.md`
+    has list_items 35 and two more `###` headings than before them.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

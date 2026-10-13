@@ -101,6 +101,16 @@ def _state_word(r):
     return str(r.get("state") or "")
 
 
+def _waiting_for(r):
+    """The slugs an open issue still waits for, in the order they are recorded. An entry
+    whose issue was not read (state null) is not named; the panel says "not found" or
+    "unreadable" for it."""
+    if r.get("state") == "done":
+        return []
+    return [d["issue"] for d in r.get("depends_on") or []
+            if not d.get("met") and d.get("state") is not None]
+
+
 def _card(r, n):
     parts = ['<span class="slug">%s</span>' % _e(r["slug"]),
              '<span class="chips"><span class="chip">%s</span>'
@@ -128,6 +138,9 @@ def _card(r, n):
         where.append("also in %d tree%s" % (also, "" if also == 1 else "s"))
     if where:
         parts.append('<span class="meta">%s</span>' % _e(" - ".join(where)))
+    waits = _waiting_for(r)
+    if waits:
+        parts.append('<span class="meta">waits for %s</span>' % _e(", ".join(waits)))
     stale = r.get("evidence") == "stale"
     edge = "dashed" if r.get("blocked") is not None else "dotted" if stale else ""
     if r.get("blocked") is not None:
@@ -238,7 +251,27 @@ def _next_block(r):
         '<p><code>%s</code></p>' % _e(c) for c in commands] + ['</section>']
 
 
-def _panel(r, n):
+def _dependency_word(entry, unreadable):
+    if entry.get("met"):
+        return "met"
+    if entry["issue"] in unreadable:
+        return "unreadable"
+    if entry.get("state") is None:
+        return "not found"
+    return "waiting"
+
+
+def _dependencies_block(r, unreadable):
+    out = ['<section class="part deps"><h3>Dependencies</h3>', '<ul class="deps">']
+    for d in r["depends_on"]:
+        words = [d["issue"], d.get("reason"), "until %s" % d.get("until"), d.get("state"),
+                 _dependency_word(d, unreadable)]
+        out.append('<li class="dep">%s</li>' % _e(" - ".join(str(w) for w in words if w)))
+    out.append('</ul></section>')
+    return out
+
+
+def _panel(r, n, unreadable=frozenset()):
     out = ['<section class="panel" id="issue-%d">' % n, '<h2>%s</h2>' % _e(r["slug"]),
            '<p class="meta">%s - %s</p>' % (
                _e(r.get("delivery_approach") or "not assessed"), _e(_state_word(r)))]
@@ -258,6 +291,8 @@ def _panel(r, n):
         out += _depths_block(r)
         out += _gates_block(r)
         out += _documents_block(r)
+    if r.get("depends_on"):
+        out += _dependencies_block(r, unreadable)
     out += _next_block(r)
     out += _where_block(r)
     out.append('</section>')
@@ -354,6 +389,7 @@ def render_page(data, generated, trees):
            '<title>Compass board</title>', '<style>' + _STYLE + '</style>', '</head>', '<body>'] + _header(data, generated, trees) + _LEGEND + ['<main>']
     panels = []
     n = 0
+    unreadable = {r["slug"] for r in data.get("unreadable") or []}
     for lane in LANES:
         rows = sorted(by_lane[lane], key=_sort_key(lane))
         name = _e(_lane_name(lane))
@@ -364,7 +400,7 @@ def render_page(data, generated, trees):
             if pos == CAP:
                 out.append('<details><summary>+%d more</summary>' % (len(rows) - CAP))
             out.append(_card(r, n))
-            panels.append(_panel(r, n))
+            panels.append(_panel(r, n, unreadable))
         if len(rows) > CAP:
             out.append('</details>')
         out.append('</section>')

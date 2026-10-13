@@ -449,6 +449,7 @@ EXCLUDED = {
     "evidence[].check": "a judged check id",
     "gates[].evidence": "evidence ids, not paths",
     "landed_by[].issue": "an issue slug",
+    "depends_on[].issue": "an issue slug",
     "land_commit": "a commit id",
     "repairs": "an issue slug",
     "scenarios[].verifiable": "a scenario taxonomy label",

@@ -240,7 +240,9 @@ def _where(src):
 
 
 def _unreadable(out, src, note):
-    out["unreadable"].append(dict({"slug": src["slug"], "note": note}, **_where(src)))
+    # No manifest was read, so no dependency was judged.
+    out["unreadable"].append(dict({"slug": src["slug"], "note": note}, **_where(src),
+                                  depends_on=[]))
     out["counts"]["unreadable"] = out["counts"].get("unreadable", 0) + 1
 
 
@@ -252,6 +254,7 @@ def board(work_root, today=None, sources=None, parsed=None):
     list of source dicts, one per issue folder, which may sit in other trees.
     `parsed` is `read_checkout`'s result, reused for this checkout's sources;
     every other source is parsed here, once."""
+    from compass_pkg import lifecycle
     from compass_pkg.binding import evidence_state
 
     today = today or datetime.date.today()
@@ -272,10 +275,15 @@ def board(work_root, today=None, sources=None, parsed=None):
     # other copy has a card.
     read_slugs = {s["slug"] for s in sources if not s.get("refused")}
     out["total"] = len({s["slug"] for s in sources})
+    # Every source is read before any is placed, so a dependency is judged by
+    # the copy of that issue the board shows (ADR-048), from what was already
+    # parsed: the board only advises, so it may read through the cache
+    # (ADR-062). A folder with no manifest is left out, and reads as not found.
+    read = []
+    found = {}
     for src in sources:
         if src.get("refused"):
-            if src["slug"] not in read_slugs:
-                _unreadable(out, src, src["refused"])
+            read.append((src, None, None))
             continue
         known = parsed.get(src["slug"]) if parsed and src["tree"] == THIS_CHECKOUT else None
         if isinstance(known, dict):
@@ -284,11 +292,22 @@ def board(work_root, today=None, sources=None, parsed=None):
             m, why = None, known
         else:
             m, why = _parse_manifest(src["task_dir"], cache)
+        read.append((src, m, why))
+        if why is None:
+            found[src["slug"]] = (m, src["task_dir"])
+        elif why != _NO_MANIFEST:
+            found[src["slug"]] = why
+    reader = lifecycle.mapping_reader(found)
+    for src, m, why in read:
+        if src.get("refused"):
+            if src["slug"] not in read_slugs:
+                _unreadable(out, src, src["refused"])
+            continue
         if why is not None:
             _unreadable(out, src, why)
             continue
         try:
-            _board_place(out, categories, src, m, today, now, guarded, evidence_state)
+            _board_place(out, categories, src, m, today, now, guarded, evidence_state, reader)
         except Exception as exc:                            # noqa: BLE001
             # One malformed manifest must not hide every other issue.
             _unreadable(out, src, "malformed manifest.yml (%s)" % type(exc).__name__)
@@ -381,7 +400,7 @@ def _lane_of(row, recorded, held, stage):
     return STAGE_SHIP if stage == "done" else None
 
 
-def _board_place(out, categories, src, m, today, now, guarded, evidence_state):
+def _board_place(out, categories, src, m, today, now, guarded, evidence_state, read=None):
     """Put one issue's row in its section. Raises on a field of the wrong
     type, which the caller reports as a malformed manifest."""
     from compass_pkg import issue_detail
@@ -397,19 +416,22 @@ def _board_place(out, categories, src, m, today, now, guarded, evidence_state):
         # A stored word Compass does not set: shown as it is, not placed.
         out["other"].append(dict(
             {"slug": slug, "delivery_approach": approach, "status": status,
-             "note": "the stored status %r is not one Compass sets" % status}, **where))
+             "note": "the stored status %r is not one Compass sets" % status}, **where,
+            depends_on=[d.row() for d in (lifecycle.judge(m, slug, read) if read else ())]))
         out["counts"][status] = out["counts"].get(status, 0) + 1
         return
     # No stored status means in flight: the state comes from the records. The
     # facts the issue page also shows come from one function, called through its
     # module so a test can replace it (ADR-051).
-    facts = issue_detail.detail(m, task_dir)
+    facts = issue_detail.detail(m, task_dir, read=read)
     state = facts.state
     row = {"slug": slug, "delivery_approach": approach, "state": state,
            "readiness": facts.readiness}
-    flag = lifecycle.blocked_flag(m, task_dir)
-    if flag:
-        row["blocked"] = str(flag.get("reason") or "no reason recorded")
+    # The stored flag's reason first, then what the issue waits for (ADR-062).
+    blocked = lifecycle.blocked_text(facts.blocked, facts.waits)
+    if blocked:
+        row["blocked"] = blocked
+    row["depends_on"] = [d.row() for d in facts.dependencies]
     fields, problem = _why_fields(m)
     fields["gates"] = facts.gates
     fields["documents"] = list(facts.documents)
@@ -476,7 +498,7 @@ def _board_place_done(out, categories, row, m, now):
                              "status": m.get("status"),
                              "note": "done with no close reason",
                              "tree": row["tree"], "manifest_path": row["manifest_path"],
-                             "also_in": row["also_in"]})
+                             "also_in": row["also_in"], "depends_on": row["depends_on"]})
 
 
 _BOARD_SECTIONS = (

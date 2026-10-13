@@ -43,6 +43,7 @@ the table does not exist, and when a doc in this folder is not listed.
 - [entry-exit-evaluation.md](entry-exit-evaluation.md) - the capability that evaluates each stage's entry and exit lists: when a list is due, how each kind of check is judged, what `on_skipped` does and where results show.
 - [judged-checks.md](judged-checks.md) - a check of kind `judged`, its review record and `compass evidence review`: what a judged check needs to pass, the four failure causes, how a changed input re-owes the review and the JSON shape.
 - [artifact-freshness.md](artifact-freshness.md) - the capability that records the digest of a document when it is written, and refuses a stale one at land and at the entry of a stage that consumes it: what is recorded, when a document is stale, where it shows and the limits.
+- [issue-dependencies.md](issue-dependencies.md) - `depends_on` and `compass issue depends add|remove`: the entry shape, the nine `until` values, when the block counts at implement, what the hook reads and what it costs, the fail-safe cases, the worktree rule and what each reader shows.
 - [issue-configure.md](issue-configure.md) - `compass issue configure`: propose, preview, discard and recover a change to one issue's configuration, and how a reassess commits it.
 - [policy-migrate.md](policy-migrate.md) - `compass policy migrate`: how copied governance and the old settings file become a `compass.yml` overlay over the release the copy came from, what it keeps, when it refuses, its exit codes and its JSON shape.
 - [git-parents.md](git-parents.md) - a git parent in `extends:`: the pinned spelling, the fetch and cache, what Compass refuses and what an issue records.
@@ -80,6 +81,7 @@ same commit.
 | `cli/compass_pkg/policy_lint.py`, `cli/compass_pkg/policy_cmd.py` | `docs/policy-lint.md` |
 | `cli/compass_pkg/generation.py`, `cli/compass_pkg/effective.py`, `cli/compass_pkg/impl_versions.py`, `scripts/bench-evaluate.py` | `docs/generation-store.md` |
 | `scripts/impl-coverage.py`, `tests/fixtures/impls/versions.lock.yml` | `docs/check-implementations.md` |
+| `cli/compass_pkg/issue_depends.py` | `docs/issue-dependencies.md` |
 | `cli/compass_pkg/issue_config_cmd.py`, `cli/compass_pkg/config_preview.py` | `docs/issue-configure.md` |
 | `cli/compass_pkg/stage_lists.py`, `cli/compass_pkg/item_records.py`, `cli/compass_pkg/follow_up_cmd.py`, `cli/compass_pkg/doc_sections.py`, `cli/compass_pkg/approval_records.py`, `cli/compass_pkg/approve_cmd.py`, `tests/test_human_checks.py`, `tests/fixtures/evidence-approve-example.json` | `docs/entry-exit-evaluation.md` |
 | `cli/compass_pkg/artifact_kinds.py`, `cli/compass_pkg/artifact_cmd.py`, `cli/compass_pkg/artifact_owed.py`, `cli/compass_pkg/justifications.py`, `cli/compass_pkg/template_lists.py`, `templates/*.md`, `scripts/measure-artifact-catalogue.py` | `docs/artifact-catalogue.md` |

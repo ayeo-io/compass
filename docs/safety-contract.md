@@ -272,6 +272,36 @@ forged record from one line of JSON to a dated one, and no further. And
 `.compass/` is not a guarded path, so the line can be deleted like any other
 project setting.
 
+### A dependency between issues is read from this checkout, and a fault never blocks
+
+An issue can record the issues it waits for in its manifest's `depends_on`
+(`compass issue depends add`). While the issue is at the implement stage, and
+neither on hold nor done, the pre-tool hook refuses a production-code edit
+with `waits-for-issue` when a dependency has not reached its `until`. The
+refusal comes before the declared-acceptance exit, so `.acceptance` does not
+clear it; a spike is never refused for it. ADR-062 records the decision.
+
+The hook's read has these limits:
+
+- It reads each dependency's manifest from this checkout's `.compass/work/`,
+  through the manifest loader and never the parse cache, and runs no git
+  command. A dependency finished only in another worktree still refuses here.
+  The refusal names both ways out: bring that issue's folder into this
+  checkout, or run `compass issue depends remove <slug>`. No override flag
+  exists.
+- It refuses only on a positive read of an unmet dependency. A dependency on
+  an issue with no manifest here, a manifest that does not parse, an unknown
+  `until`, an entry of the wrong shape and a dependency that waits for this
+  issue in turn each allow the edit with one warning line on standard error.
+  `compass issue lint` reports the same fault and fails. A reader that cannot
+  run at all, such as a broken install, still refuses.
+- It reads one level. A hand-written cycle of three or more issues, each at
+  implement, refuses all of them until one dependency is removed;
+  `compass issue depends add` refuses to write a cycle, and lint reports one.
+- An issue with no `depends_on`, or an empty one, starts no extra process and
+  opens no other manifest. With dependencies, the hook starts one more
+  python3 process and opens each dependency's manifest once.
+
 ### Shell-write detection is best-effort
 
 The Claude Code pre-tool hook completely covers supported file-editing tools.

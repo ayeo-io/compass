@@ -1,0 +1,2850 @@
+# What compass next, issue lint, flow, flow --json, board render and issue
+# render printed on the project that build_dbi5_project in
+# tests/test_issue_dependencies.py writes, captured from the code before
+# depends_on existed, under a fixed clock. The project's own folder reads
+# <ROOT> and the board page's Generated line is masked.
+next-broken.txt: |
+  exit 2
+  --- stdout
+  --- stderr
+  compass: assess has not run for this issue - manifest.yml is missing.
+    Run /compass:assess to start the issue at: .compass/work/broken
+lint-broken.txt: |
+  exit 2
+  --- stdout
+  --- stderr
+  compass: no manifest.yml in .compass/work/broken - has the issue been assessed? The manifest is what every command reads.
+next-building.txt: |
+  exit 0
+  --- stdout
+  Implement [gate: verify.correctness]
+  --- stderr
+lint-building.txt: |
+  exit 0
+  --- stdout
+  compass issue lint: PASS - .compass/work/building/manifest.yml is structurally valid.
+  --- stderr
+next-dropped.txt: |
+  exit 0
+  --- stdout
+  all phases complete
+  --- stderr
+lint-dropped.txt: |
+  exit 0
+  --- stdout
+  compass issue lint: PASS - .compass/work/dropped/manifest.yml is structurally valid.
+  --- stderr
+next-dup.txt: |
+  exit 0
+  --- stdout
+  all phases complete
+  --- stderr
+lint-dup.txt: |
+  exit 0
+  --- stdout
+  compass issue lint: PASS - .compass/work/dup/manifest.yml is structurally valid.
+  --- stderr
+next-flagged.txt: |
+  exit 0
+  --- stdout
+  Implement [gate: verify.correctness]
+  --- stderr
+lint-flagged.txt: |
+  exit 0
+  --- stdout
+  compass issue lint: PASS - .compass/work/flagged/manifest.yml is structurally valid.
+  --- stderr
+next-held.txt: |
+  exit 0
+  --- stdout
+  Plan [gate: verify.correctness]
+  --- stderr
+lint-held.txt: |
+  exit 0
+  --- stdout
+  compass issue lint: PASS - .compass/work/held/manifest.yml is structurally valid.
+  --- stderr
+next-held-flag.txt: |
+  exit 0
+  --- stdout
+  Plan [gate: verify.correctness]
+  --- stderr
+lint-held-flag.txt: |
+  exit 1
+  --- stdout
+  compass issue lint: FAIL - .compass/work/held-flag/manifest.yml
+    - `blocked` is set on an issue that is backlog; only an in-progress or in-review issue can be blocked, and readers ignore the flag
+  --- stderr
+next-odd.txt: |
+  exit 0
+  --- stdout
+  Plan [gate: verify.correctness]
+  --- stderr
+lint-odd.txt: |
+  exit 1
+  --- stdout
+  compass issue lint: FAIL - .compass/work/odd/manifest.yml
+    - status: 'wibble' is not one of ['backlog', 'done']
+  --- stderr
+next-planning.txt: |
+  exit 0
+  --- stdout
+  Breakdown [gate: verify.correctness]
+  --- stderr
+lint-planning.txt: |
+  exit 0
+  --- stdout
+  compass issue lint: PASS - .compass/work/planning/manifest.yml is structurally valid.
+  --- stderr
+next-queued.txt: |
+  exit 2
+  --- stdout
+  --- stderr
+  compass: delivery-approach.md is missing from .compass/work/queued
+    Run /compass:assess to produce delivery-approach.md before using compass next.
+lint-queued.txt: |
+  exit 1
+  --- stdout
+  compass issue lint: FAIL - .compass/work/queued/manifest.yml
+    - missing `assessment:` - the assess stage records the four dimensions
+  --- stderr
+next-ready.txt: |
+  exit 0
+  --- stdout
+  Plan [gate: verify.correctness]
+  --- stderr
+lint-ready.txt: |
+  exit 0
+  --- stdout
+  compass issue lint: PASS - .compass/work/ready/manifest.yml is structurally valid.
+  --- stderr
+next-refining.txt: |
+  exit 0
+  --- stdout
+  Refine [gate: verify.correctness]
+  --- stderr
+lint-refining.txt: |
+  exit 0
+  --- stdout
+  compass issue lint: PASS - .compass/work/refining/manifest.yml is structurally valid.
+  --- stderr
+next-reviewing.txt: |
+  exit 0
+  --- stdout
+  Verify [gate: verify.traceability]
+  --- stderr
+lint-reviewing.txt: |
+  exit 0
+  --- stdout
+  compass issue lint: PASS - .compass/work/reviewing/manifest.yml is structurally valid.
+  --- stderr
+next-shipped.txt: |
+  exit 0
+  --- stdout
+  all phases complete
+  --- stderr
+lint-shipped.txt: |
+  exit 0
+  --- stdout
+  compass issue lint: PASS - .compass/work/shipped/manifest.yml is structurally valid.
+  --- stderr
+flow.txt: |
+  exit 0
+  --- stdout
+  compass flow - 14 issue(s) across 7 state(s), 0 stale, 1 done this week. Advisory: this changes no …
+  backlog 4, done 3, in-progress 3, in-review 1, ready 1, unreadable 1, wibble 1
+  Friction this week: none recorded.
+
+    IN PROGRESS (3)
+      building                                 approach=regular stage=implement gates=0/2 evidence=none
+      flagged                                  approach=regular stage=implement gates=0/2 evidence=none  BLOCKED: waits for the vendor
+      planning                                 approach=regular stage=breakdown gates=0/2 evidence=none
+
+    IN REVIEW (1)
+      reviewing                                approach=regular stage=verify gates=1/2 evidence=none
+
+    READY - defined and refined, work not started (1)
+      ready                                    approach=regular
+
+    BACKLOG - oldest first (4)
+      queued                                   approach=not assessed age=23 days
+      held                                     approach=regular age=12 days  - set aside: waiting for a budget
+      held-flag                                approach=regular age=12 days
+      refining                                 approach=regular age=12 days
+
+    DONE THIS WEEK (1)
+      shipped                                  approach=regular completed=2026-10-12
+
+    CLOSED - not planned, or a duplicate (2)
+      dropped                                  approach=regular  - not-planned
+      dup                                      approach=regular  - duplicate
+
+    OTHER STATUS - not one Compass sets (1)
+      odd                                      approach=regular status=wibble
+
+    UNPLACEABLE - no readable manifest.yml, so no state to report (1)
+      broken                                   - no manifest.yml
+  --- stderr
+flow-json.txt: |
+  exit 0
+  --- stdout
+  {
+    "summary": [
+      "compass flow - 14 issue(s) across 7 state(s), 0 stale, 1 done this week. Advisory: this changes no issue state.",
+      "backlog 4, done 3, in-progress 3, in-review 1, ready 1, unreadable 1, wibble 1",
+      "Friction this week: none recorded."
+    ],
+    "sections": {
+      "IN PROGRESS": [
+        {
+          "slug": "building",
+          "delivery_approach": "regular",
+          "state": "in-progress",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
+          "gates": "0/2",
+          "gate_list": [
+            {
+              "id": "verify.correctness",
+              "status": "pending"
+            },
+            {
+              "id": "verify.traceability",
+              "status": "pending"
+            }
+          ],
+          "assessment": {
+            "risk": "contained",
+            "familiarity": "brownfield-mapped",
+            "size": "small",
+            "goal": "delivery",
+            "role": "engineer",
+            "labels": [
+              "cli"
+            ]
+          },
+          "policy_rules_fired": [],
+          "stage_depths": {
+            "assess": "thorough",
+            "define": "thorough",
+            "refine": "skipped",
+            "plan": "thorough",
+            "breakdown": "skipped",
+            "implement": "thorough",
+            "verify": "thorough",
+            "ship": "thorough"
+          },
+          "created": "2026-10-01",
+          "set_aside": false,
+          "recommendation": false,
+          "documents": [],
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/building/manifest.yml",
+          "also_in": 0,
+          "stage": "implement",
+          "evidence": "none",
+          "unplaceable": null,
+          "lane": "implement"
+        },
+        {
+          "slug": "flagged",
+          "delivery_approach": "regular",
+          "state": "in-progress",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
+          "blocked": "waits for the vendor",
+          "gates": "0/2",
+          "gate_list": [
+            {
+              "id": "verify.correctness",
+              "status": "pending"
+            },
+            {
+              "id": "verify.traceability",
+              "status": "pending"
+            }
+          ],
+          "assessment": {
+            "risk": "contained",
+            "familiarity": "brownfield-mapped",
+            "size": "small",
+            "goal": "delivery",
+            "role": "engineer",
+            "labels": [
+              "cli"
+            ]
+          },
+          "policy_rules_fired": [],
+          "stage_depths": {
+            "assess": "thorough",
+            "define": "thorough",
+            "refine": "skipped",
+            "plan": "thorough",
+            "breakdown": "skipped",
+            "implement": "thorough",
+            "verify": "thorough",
+            "ship": "thorough"
+          },
+          "created": "2026-10-01",
+          "set_aside": false,
+          "recommendation": false,
+          "documents": [],
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/flagged/manifest.yml",
+          "also_in": 0,
+          "stage": "implement",
+          "evidence": "none",
+          "unplaceable": null,
+          "lane": "implement"
+        },
+        {
+          "slug": "planning",
+          "delivery_approach": "regular",
+          "state": "in-progress",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
+          "gates": "0/2",
+          "gate_list": [
+            {
+              "id": "verify.correctness",
+              "status": "pending"
+            },
+            {
+              "id": "verify.traceability",
+              "status": "pending"
+            }
+          ],
+          "assessment": {
+            "risk": "contained",
+            "familiarity": "brownfield-mapped",
+            "size": "small",
+            "goal": "delivery",
+            "role": "engineer",
+            "labels": [
+              "cli"
+            ]
+          },
+          "policy_rules_fired": [],
+          "stage_depths": {
+            "assess": "thorough",
+            "define": "thorough",
+            "refine": "skipped",
+            "plan": "thorough",
+            "breakdown": "lightweight",
+            "implement": "thorough",
+            "verify": "thorough",
+            "ship": "thorough"
+          },
+          "created": "2026-10-01",
+          "set_aside": false,
+          "recommendation": false,
+          "documents": [
+            {
+              "id": "ART-ACCEPTANCE_CRITERIA",
+              "kind": "acceptance-criteria",
+              "round": null,
+              "status": "approved",
+              "path": "docs/compass/2026-10-01-planning/acceptance-criteria.md",
+              "text": null
+            },
+            {
+              "id": "ART-TECHNICAL_DESIGN",
+              "kind": "technical-design",
+              "round": null,
+              "status": "draft",
+              "path": "docs/compass/2026-10-01-planning/technical-design.md",
+              "text": null
+            }
+          ],
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/planning/manifest.yml",
+          "also_in": 0,
+          "stage": "breakdown",
+          "evidence": "none",
+          "unplaceable": null,
+          "lane": "breakdown"
+        }
+      ],
+      "STALE EVIDENCE - re-run the suite before ship": [],
+      "IN REVIEW": [
+        {
+          "slug": "reviewing",
+          "delivery_approach": "regular",
+          "state": "in-review",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
+          "gates": "1/2",
+          "gate_list": [
+            {
+              "id": "verify.correctness",
+              "status": "pass"
+            },
+            {
+              "id": "verify.traceability",
+              "status": "pending"
+            }
+          ],
+          "assessment": {
+            "risk": "contained",
+            "familiarity": "brownfield-mapped",
+            "size": "small",
+            "goal": "delivery",
+            "role": "engineer",
+            "labels": [
+              "cli"
+            ]
+          },
+          "policy_rules_fired": [],
+          "stage_depths": {
+            "assess": "thorough",
+            "define": "thorough",
+            "refine": "skipped",
+            "plan": "thorough",
+            "breakdown": "skipped",
+            "implement": "thorough",
+            "verify": "thorough",
+            "ship": "thorough"
+          },
+          "created": "2026-10-01",
+          "set_aside": false,
+          "recommendation": false,
+          "documents": [],
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/reviewing/manifest.yml",
+          "also_in": 0,
+          "stage": "verify",
+          "evidence": "none",
+          "unplaceable": null,
+          "lane": "verify"
+        }
+      ],
+      "READY - defined and refined, work not started": [
+        {
+          "slug": "ready",
+          "delivery_approach": "regular",
+          "state": "ready",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
+          "gates": "0/2",
+          "gate_list": [
+            {
+              "id": "verify.correctness",
+              "status": "pending"
+            },
+            {
+              "id": "verify.traceability",
+              "status": "pending"
+            }
+          ],
+          "assessment": {
+            "risk": "contained",
+            "familiarity": "brownfield-mapped",
+            "size": "small",
+            "goal": "delivery",
+            "role": "engineer",
+            "labels": [
+              "cli"
+            ]
+          },
+          "policy_rules_fired": [],
+          "stage_depths": {
+            "assess": "thorough",
+            "define": "thorough",
+            "refine": "skipped",
+            "plan": "thorough",
+            "breakdown": "skipped",
+            "implement": "thorough",
+            "verify": "thorough",
+            "ship": "thorough"
+          },
+          "created": "2026-10-01",
+          "set_aside": false,
+          "recommendation": false,
+          "documents": [
+            {
+              "id": "ART-ACCEPTANCE_CRITERIA",
+              "kind": "acceptance-criteria",
+              "round": null,
+              "status": "approved",
+              "path": "docs/compass/2026-10-01-ready/acceptance-criteria.md",
+              "text": null
+            }
+          ],
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/ready/manifest.yml",
+          "also_in": 0,
+          "stage": "plan",
+          "unplaceable": null,
+          "lane": "plan"
+        }
+      ],
+      "BACKLOG - oldest first": [
+        {
+          "slug": "queued",
+          "delivery_approach": "not assessed",
+          "state": "backlog",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
+          "gates": "0/0",
+          "gate_list": [],
+          "assessment": null,
+          "policy_rules_fired": [],
+          "stage_depths": {},
+          "created": "2026-09-20",
+          "set_aside": false,
+          "recommendation": false,
+          "documents": [],
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/queued/manifest.yml",
+          "also_in": 0,
+          "age_days": 23,
+          "signal": "",
+          "reason": "",
+          "stage": "assess",
+          "unplaceable": null,
+          "lane": "backlog"
+        },
+        {
+          "slug": "held",
+          "delivery_approach": "regular",
+          "state": "backlog",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
+          "gates": "0/2",
+          "gate_list": [
+            {
+              "id": "verify.correctness",
+              "status": "pending"
+            },
+            {
+              "id": "verify.traceability",
+              "status": "pending"
+            }
+          ],
+          "assessment": {
+            "risk": "contained",
+            "familiarity": "brownfield-mapped",
+            "size": "small",
+            "goal": "delivery",
+            "role": "engineer",
+            "labels": [
+              "cli"
+            ]
+          },
+          "policy_rules_fired": [],
+          "stage_depths": {
+            "assess": "thorough",
+            "define": "thorough",
+            "refine": "skipped",
+            "plan": "thorough",
+            "breakdown": "skipped",
+            "implement": "thorough",
+            "verify": "thorough",
+            "ship": "thorough"
+          },
+          "created": "2026-10-01",
+          "set_aside": true,
+          "recommendation": false,
+          "documents": [],
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/held/manifest.yml",
+          "also_in": 0,
+          "age_days": 12,
+          "signal": "",
+          "reason": "waiting for a budget",
+          "stage": "plan",
+          "unplaceable": null,
+          "lane": "backlog"
+        },
+        {
+          "slug": "held-flag",
+          "delivery_approach": "regular",
+          "state": "backlog",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
+          "gates": "0/2",
+          "gate_list": [
+            {
+              "id": "verify.correctness",
+              "status": "pending"
+            },
+            {
+              "id": "verify.traceability",
+              "status": "pending"
+            }
+          ],
+          "assessment": {
+            "risk": "contained",
+            "familiarity": "brownfield-mapped",
+            "size": "small",
+            "goal": "delivery",
+            "role": "engineer",
+            "labels": [
+              "cli"
+            ]
+          },
+          "policy_rules_fired": [],
+          "stage_depths": {
+            "assess": "thorough",
+            "define": "thorough",
+            "refine": "skipped",
+            "plan": "thorough",
+            "breakdown": "skipped",
+            "implement": "thorough",
+            "verify": "thorough",
+            "ship": "thorough"
+          },
+          "created": "2026-10-01",
+          "set_aside": true,
+          "recommendation": false,
+          "documents": [],
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/held-flag/manifest.yml",
+          "also_in": 0,
+          "age_days": 12,
+          "signal": "",
+          "reason": "",
+          "stage": "plan",
+          "unplaceable": null,
+          "lane": "backlog"
+        },
+        {
+          "slug": "refining",
+          "delivery_approach": "regular",
+          "state": "backlog",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
+          "gates": "0/2",
+          "gate_list": [
+            {
+              "id": "verify.correctness",
+              "status": "pending"
+            },
+            {
+              "id": "verify.traceability",
+              "status": "pending"
+            }
+          ],
+          "assessment": {
+            "risk": "contained",
+            "familiarity": "brownfield-mapped",
+            "size": "small",
+            "goal": "delivery",
+            "role": "engineer",
+            "labels": [
+              "cli"
+            ]
+          },
+          "policy_rules_fired": [],
+          "stage_depths": {
+            "assess": "thorough",
+            "define": "thorough",
+            "refine": "lightweight",
+            "plan": "thorough",
+            "breakdown": "skipped",
+            "implement": "thorough",
+            "verify": "thorough",
+            "ship": "thorough"
+          },
+          "created": "2026-10-01",
+          "set_aside": false,
+          "recommendation": false,
+          "documents": [
+            {
+              "id": "ART-ACCEPTANCE_CRITERIA",
+              "kind": "acceptance-criteria",
+              "round": null,
+              "status": "approved",
+              "path": "docs/compass/2026-10-01-refining/acceptance-criteria.md",
+              "text": null
+            }
+          ],
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/refining/manifest.yml",
+          "also_in": 0,
+          "age_days": 12,
+          "signal": "",
+          "reason": "",
+          "stage": "refine",
+          "unplaceable": null,
+          "lane": "refine"
+        }
+      ],
+      "DONE THIS WEEK": [
+        {
+          "slug": "shipped",
+          "delivery_approach": "regular",
+          "state": "done",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
+          "gates": "2/2",
+          "gate_list": [
+            {
+              "id": "verify.correctness",
+              "status": "pass"
+            },
+            {
+              "id": "verify.traceability",
+              "status": "pass"
+            }
+          ],
+          "assessment": {
+            "risk": "contained",
+            "familiarity": "brownfield-mapped",
+            "size": "small",
+            "goal": "delivery",
+            "role": "engineer",
+            "labels": [
+              "cli"
+            ]
+          },
+          "policy_rules_fired": [],
+          "stage_depths": {
+            "assess": "thorough",
+            "define": "thorough",
+            "refine": "skipped",
+            "plan": "thorough",
+            "breakdown": "skipped",
+            "implement": "thorough",
+            "verify": "thorough",
+            "ship": "thorough"
+          },
+          "created": "2026-10-01",
+          "set_aside": false,
+          "recommendation": false,
+          "documents": [],
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/shipped/manifest.yml",
+          "also_in": 0,
+          "unplaceable": null,
+          "stage": null,
+          "lane": "done",
+          "completed": "2026-10-12",
+          "close_reason": "completed"
+        }
+      ],
+      "CLOSED - not planned, or a duplicate": [
+        {
+          "slug": "dropped",
+          "delivery_approach": "regular",
+          "state": "done",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
+          "gates": "0/2",
+          "gate_list": [
+            {
+              "id": "verify.correctness",
+              "status": "pending"
+            },
+            {
+              "id": "verify.traceability",
+              "status": "pending"
+            }
+          ],
+          "assessment": {
+            "risk": "contained",
+            "familiarity": "brownfield-mapped",
+            "size": "small",
+            "goal": "delivery",
+            "role": "engineer",
+            "labels": [
+              "cli"
+            ]
+          },
+          "policy_rules_fired": [],
+          "stage_depths": {
+            "assess": "thorough",
+            "define": "thorough",
+            "refine": "skipped",
+            "plan": "thorough",
+            "breakdown": "skipped",
+            "implement": "thorough",
+            "verify": "thorough",
+            "ship": "thorough"
+          },
+          "created": "2026-10-01",
+          "set_aside": false,
+          "recommendation": false,
+          "documents": [],
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/dropped/manifest.yml",
+          "also_in": 0,
+          "unplaceable": null,
+          "stage": null,
+          "lane": null,
+          "close_reason": "not-planned"
+        },
+        {
+          "slug": "dup",
+          "delivery_approach": "regular",
+          "state": "done",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
+          "gates": "0/2",
+          "gate_list": [
+            {
+              "id": "verify.correctness",
+              "status": "pending"
+            },
+            {
+              "id": "verify.traceability",
+              "status": "pending"
+            }
+          ],
+          "assessment": {
+            "risk": "contained",
+            "familiarity": "brownfield-mapped",
+            "size": "small",
+            "goal": "delivery",
+            "role": "engineer",
+            "labels": [
+              "cli"
+            ]
+          },
+          "policy_rules_fired": [],
+          "stage_depths": {
+            "assess": "thorough",
+            "define": "thorough",
+            "refine": "skipped",
+            "plan": "thorough",
+            "breakdown": "skipped",
+            "implement": "thorough",
+            "verify": "thorough",
+            "ship": "thorough"
+          },
+          "created": "2026-10-01",
+          "set_aside": false,
+          "recommendation": false,
+          "documents": [],
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/dup/manifest.yml",
+          "also_in": 0,
+          "unplaceable": null,
+          "stage": null,
+          "lane": null,
+          "close_reason": "duplicate"
+        }
+      ],
+      "OTHER STATUS - not one Compass sets": [
+        {
+          "slug": "odd",
+          "delivery_approach": "regular",
+          "status": "wibble",
+          "note": "the stored status 'wibble' is not one Compass sets",
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/odd/manifest.yml",
+          "also_in": 0
+        }
+      ],
+      "UNPLACEABLE - no readable manifest.yml, so no state to report": [
+        {
+          "slug": "broken",
+          "note": "no manifest.yml",
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/broken/manifest.yml",
+          "also_in": 0
+        }
+      ]
+    },
+    "counts": {
+      "unreadable": 1,
+      "in-progress": 3,
+      "done": 3,
+      "backlog": 4,
+      "wibble": 1,
+      "ready": 1,
+      "in-review": 1
+    },
+    "board": {
+      "in_progress": [
+        {
+          "slug": "building",
+          "delivery_approach": "regular",
+          "state": "in-progress",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
+          "gates": "0/2",
+          "gate_list": [
+            {
+              "id": "verify.correctness",
+              "status": "pending"
+            },
+            {
+              "id": "verify.traceability",
+              "status": "pending"
+            }
+          ],
+          "assessment": {
+            "risk": "contained",
+            "familiarity": "brownfield-mapped",
+            "size": "small",
+            "goal": "delivery",
+            "role": "engineer",
+            "labels": [
+              "cli"
+            ]
+          },
+          "policy_rules_fired": [],
+          "stage_depths": {
+            "assess": "thorough",
+            "define": "thorough",
+            "refine": "skipped",
+            "plan": "thorough",
+            "breakdown": "skipped",
+            "implement": "thorough",
+            "verify": "thorough",
+            "ship": "thorough"
+          },
+          "created": "2026-10-01",
+          "set_aside": false,
+          "recommendation": false,
+          "documents": [],
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/building/manifest.yml",
+          "also_in": 0,
+          "stage": "implement",
+          "evidence": "none",
+          "unplaceable": null,
+          "lane": "implement"
+        },
+        {
+          "slug": "flagged",
+          "delivery_approach": "regular",
+          "state": "in-progress",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
+          "blocked": "waits for the vendor",
+          "gates": "0/2",
+          "gate_list": [
+            {
+              "id": "verify.correctness",
+              "status": "pending"
+            },
+            {
+              "id": "verify.traceability",
+              "status": "pending"
+            }
+          ],
+          "assessment": {
+            "risk": "contained",
+            "familiarity": "brownfield-mapped",
+            "size": "small",
+            "goal": "delivery",
+            "role": "engineer",
+            "labels": [
+              "cli"
+            ]
+          },
+          "policy_rules_fired": [],
+          "stage_depths": {
+            "assess": "thorough",
+            "define": "thorough",
+            "refine": "skipped",
+            "plan": "thorough",
+            "breakdown": "skipped",
+            "implement": "thorough",
+            "verify": "thorough",
+            "ship": "thorough"
+          },
+          "created": "2026-10-01",
+          "set_aside": false,
+          "recommendation": false,
+          "documents": [],
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/flagged/manifest.yml",
+          "also_in": 0,
+          "stage": "implement",
+          "evidence": "none",
+          "unplaceable": null,
+          "lane": "implement"
+        },
+        {
+          "slug": "planning",
+          "delivery_approach": "regular",
+          "state": "in-progress",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
+          "gates": "0/2",
+          "gate_list": [
+            {
+              "id": "verify.correctness",
+              "status": "pending"
+            },
+            {
+              "id": "verify.traceability",
+              "status": "pending"
+            }
+          ],
+          "assessment": {
+            "risk": "contained",
+            "familiarity": "brownfield-mapped",
+            "size": "small",
+            "goal": "delivery",
+            "role": "engineer",
+            "labels": [
+              "cli"
+            ]
+          },
+          "policy_rules_fired": [],
+          "stage_depths": {
+            "assess": "thorough",
+            "define": "thorough",
+            "refine": "skipped",
+            "plan": "thorough",
+            "breakdown": "lightweight",
+            "implement": "thorough",
+            "verify": "thorough",
+            "ship": "thorough"
+          },
+          "created": "2026-10-01",
+          "set_aside": false,
+          "recommendation": false,
+          "documents": [
+            {
+              "id": "ART-ACCEPTANCE_CRITERIA",
+              "kind": "acceptance-criteria",
+              "round": null,
+              "status": "approved",
+              "path": "docs/compass/2026-10-01-planning/acceptance-criteria.md",
+              "text": null
+            },
+            {
+              "id": "ART-TECHNICAL_DESIGN",
+              "kind": "technical-design",
+              "round": null,
+              "status": "draft",
+              "path": "docs/compass/2026-10-01-planning/technical-design.md",
+              "text": null
+            }
+          ],
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/planning/manifest.yml",
+          "also_in": 0,
+          "stage": "breakdown",
+          "evidence": "none",
+          "unplaceable": null,
+          "lane": "breakdown"
+        }
+      ],
+      "stale": [],
+      "in_review": [
+        {
+          "slug": "reviewing",
+          "delivery_approach": "regular",
+          "state": "in-review",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
+          "gates": "1/2",
+          "gate_list": [
+            {
+              "id": "verify.correctness",
+              "status": "pass"
+            },
+            {
+              "id": "verify.traceability",
+              "status": "pending"
+            }
+          ],
+          "assessment": {
+            "risk": "contained",
+            "familiarity": "brownfield-mapped",
+            "size": "small",
+            "goal": "delivery",
+            "role": "engineer",
+            "labels": [
+              "cli"
+            ]
+          },
+          "policy_rules_fired": [],
+          "stage_depths": {
+            "assess": "thorough",
+            "define": "thorough",
+            "refine": "skipped",
+            "plan": "thorough",
+            "breakdown": "skipped",
+            "implement": "thorough",
+            "verify": "thorough",
+            "ship": "thorough"
+          },
+          "created": "2026-10-01",
+          "set_aside": false,
+          "recommendation": false,
+          "documents": [],
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/reviewing/manifest.yml",
+          "also_in": 0,
+          "stage": "verify",
+          "evidence": "none",
+          "unplaceable": null,
+          "lane": "verify"
+        }
+      ],
+      "ready": [
+        {
+          "slug": "ready",
+          "delivery_approach": "regular",
+          "state": "ready",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
+          "gates": "0/2",
+          "gate_list": [
+            {
+              "id": "verify.correctness",
+              "status": "pending"
+            },
+            {
+              "id": "verify.traceability",
+              "status": "pending"
+            }
+          ],
+          "assessment": {
+            "risk": "contained",
+            "familiarity": "brownfield-mapped",
+            "size": "small",
+            "goal": "delivery",
+            "role": "engineer",
+            "labels": [
+              "cli"
+            ]
+          },
+          "policy_rules_fired": [],
+          "stage_depths": {
+            "assess": "thorough",
+            "define": "thorough",
+            "refine": "skipped",
+            "plan": "thorough",
+            "breakdown": "skipped",
+            "implement": "thorough",
+            "verify": "thorough",
+            "ship": "thorough"
+          },
+          "created": "2026-10-01",
+          "set_aside": false,
+          "recommendation": false,
+          "documents": [
+            {
+              "id": "ART-ACCEPTANCE_CRITERIA",
+              "kind": "acceptance-criteria",
+              "round": null,
+              "status": "approved",
+              "path": "docs/compass/2026-10-01-ready/acceptance-criteria.md",
+              "text": null
+            }
+          ],
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/ready/manifest.yml",
+          "also_in": 0,
+          "stage": "plan",
+          "unplaceable": null,
+          "lane": "plan"
+        }
+      ],
+      "backlog": [
+        {
+          "slug": "queued",
+          "delivery_approach": "not assessed",
+          "state": "backlog",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
+          "gates": "0/0",
+          "gate_list": [],
+          "assessment": null,
+          "policy_rules_fired": [],
+          "stage_depths": {},
+          "created": "2026-09-20",
+          "set_aside": false,
+          "recommendation": false,
+          "documents": [],
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/queued/manifest.yml",
+          "also_in": 0,
+          "age_days": 23,
+          "signal": "",
+          "reason": "",
+          "stage": "assess",
+          "unplaceable": null,
+          "lane": "backlog"
+        },
+        {
+          "slug": "held",
+          "delivery_approach": "regular",
+          "state": "backlog",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
+          "gates": "0/2",
+          "gate_list": [
+            {
+              "id": "verify.correctness",
+              "status": "pending"
+            },
+            {
+              "id": "verify.traceability",
+              "status": "pending"
+            }
+          ],
+          "assessment": {
+            "risk": "contained",
+            "familiarity": "brownfield-mapped",
+            "size": "small",
+            "goal": "delivery",
+            "role": "engineer",
+            "labels": [
+              "cli"
+            ]
+          },
+          "policy_rules_fired": [],
+          "stage_depths": {
+            "assess": "thorough",
+            "define": "thorough",
+            "refine": "skipped",
+            "plan": "thorough",
+            "breakdown": "skipped",
+            "implement": "thorough",
+            "verify": "thorough",
+            "ship": "thorough"
+          },
+          "created": "2026-10-01",
+          "set_aside": true,
+          "recommendation": false,
+          "documents": [],
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/held/manifest.yml",
+          "also_in": 0,
+          "age_days": 12,
+          "signal": "",
+          "reason": "waiting for a budget",
+          "stage": "plan",
+          "unplaceable": null,
+          "lane": "backlog"
+        },
+        {
+          "slug": "held-flag",
+          "delivery_approach": "regular",
+          "state": "backlog",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
+          "gates": "0/2",
+          "gate_list": [
+            {
+              "id": "verify.correctness",
+              "status": "pending"
+            },
+            {
+              "id": "verify.traceability",
+              "status": "pending"
+            }
+          ],
+          "assessment": {
+            "risk": "contained",
+            "familiarity": "brownfield-mapped",
+            "size": "small",
+            "goal": "delivery",
+            "role": "engineer",
+            "labels": [
+              "cli"
+            ]
+          },
+          "policy_rules_fired": [],
+          "stage_depths": {
+            "assess": "thorough",
+            "define": "thorough",
+            "refine": "skipped",
+            "plan": "thorough",
+            "breakdown": "skipped",
+            "implement": "thorough",
+            "verify": "thorough",
+            "ship": "thorough"
+          },
+          "created": "2026-10-01",
+          "set_aside": true,
+          "recommendation": false,
+          "documents": [],
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/held-flag/manifest.yml",
+          "also_in": 0,
+          "age_days": 12,
+          "signal": "",
+          "reason": "",
+          "stage": "plan",
+          "unplaceable": null,
+          "lane": "backlog"
+        },
+        {
+          "slug": "refining",
+          "delivery_approach": "regular",
+          "state": "backlog",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
+          "gates": "0/2",
+          "gate_list": [
+            {
+              "id": "verify.correctness",
+              "status": "pending"
+            },
+            {
+              "id": "verify.traceability",
+              "status": "pending"
+            }
+          ],
+          "assessment": {
+            "risk": "contained",
+            "familiarity": "brownfield-mapped",
+            "size": "small",
+            "goal": "delivery",
+            "role": "engineer",
+            "labels": [
+              "cli"
+            ]
+          },
+          "policy_rules_fired": [],
+          "stage_depths": {
+            "assess": "thorough",
+            "define": "thorough",
+            "refine": "lightweight",
+            "plan": "thorough",
+            "breakdown": "skipped",
+            "implement": "thorough",
+            "verify": "thorough",
+            "ship": "thorough"
+          },
+          "created": "2026-10-01",
+          "set_aside": false,
+          "recommendation": false,
+          "documents": [
+            {
+              "id": "ART-ACCEPTANCE_CRITERIA",
+              "kind": "acceptance-criteria",
+              "round": null,
+              "status": "approved",
+              "path": "docs/compass/2026-10-01-refining/acceptance-criteria.md",
+              "text": null
+            }
+          ],
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/refining/manifest.yml",
+          "also_in": 0,
+          "age_days": 12,
+          "signal": "",
+          "reason": "",
+          "stage": "refine",
+          "unplaceable": null,
+          "lane": "refine"
+        }
+      ],
+      "done_this_week": [
+        {
+          "slug": "shipped",
+          "delivery_approach": "regular",
+          "state": "done",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
+          "gates": "2/2",
+          "gate_list": [
+            {
+              "id": "verify.correctness",
+              "status": "pass"
+            },
+            {
+              "id": "verify.traceability",
+              "status": "pass"
+            }
+          ],
+          "assessment": {
+            "risk": "contained",
+            "familiarity": "brownfield-mapped",
+            "size": "small",
+            "goal": "delivery",
+            "role": "engineer",
+            "labels": [
+              "cli"
+            ]
+          },
+          "policy_rules_fired": [],
+          "stage_depths": {
+            "assess": "thorough",
+            "define": "thorough",
+            "refine": "skipped",
+            "plan": "thorough",
+            "breakdown": "skipped",
+            "implement": "thorough",
+            "verify": "thorough",
+            "ship": "thorough"
+          },
+          "created": "2026-10-01",
+          "set_aside": false,
+          "recommendation": false,
+          "documents": [],
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/shipped/manifest.yml",
+          "also_in": 0,
+          "unplaceable": null,
+          "stage": null,
+          "lane": "done",
+          "completed": "2026-10-12",
+          "close_reason": "completed"
+        }
+      ],
+      "closed": [
+        {
+          "slug": "dropped",
+          "delivery_approach": "regular",
+          "state": "done",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
+          "gates": "0/2",
+          "gate_list": [
+            {
+              "id": "verify.correctness",
+              "status": "pending"
+            },
+            {
+              "id": "verify.traceability",
+              "status": "pending"
+            }
+          ],
+          "assessment": {
+            "risk": "contained",
+            "familiarity": "brownfield-mapped",
+            "size": "small",
+            "goal": "delivery",
+            "role": "engineer",
+            "labels": [
+              "cli"
+            ]
+          },
+          "policy_rules_fired": [],
+          "stage_depths": {
+            "assess": "thorough",
+            "define": "thorough",
+            "refine": "skipped",
+            "plan": "thorough",
+            "breakdown": "skipped",
+            "implement": "thorough",
+            "verify": "thorough",
+            "ship": "thorough"
+          },
+          "created": "2026-10-01",
+          "set_aside": false,
+          "recommendation": false,
+          "documents": [],
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/dropped/manifest.yml",
+          "also_in": 0,
+          "unplaceable": null,
+          "stage": null,
+          "lane": null,
+          "close_reason": "not-planned"
+        },
+        {
+          "slug": "dup",
+          "delivery_approach": "regular",
+          "state": "done",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
+          "gates": "0/2",
+          "gate_list": [
+            {
+              "id": "verify.correctness",
+              "status": "pending"
+            },
+            {
+              "id": "verify.traceability",
+              "status": "pending"
+            }
+          ],
+          "assessment": {
+            "risk": "contained",
+            "familiarity": "brownfield-mapped",
+            "size": "small",
+            "goal": "delivery",
+            "role": "engineer",
+            "labels": [
+              "cli"
+            ]
+          },
+          "policy_rules_fired": [],
+          "stage_depths": {
+            "assess": "thorough",
+            "define": "thorough",
+            "refine": "skipped",
+            "plan": "thorough",
+            "breakdown": "skipped",
+            "implement": "thorough",
+            "verify": "thorough",
+            "ship": "thorough"
+          },
+          "created": "2026-10-01",
+          "set_aside": false,
+          "recommendation": false,
+          "documents": [],
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/dup/manifest.yml",
+          "also_in": 0,
+          "unplaceable": null,
+          "stage": null,
+          "lane": null,
+          "close_reason": "duplicate"
+        }
+      ],
+      "other": [
+        {
+          "slug": "odd",
+          "delivery_approach": "regular",
+          "status": "wibble",
+          "note": "the stored status 'wibble' is not one Compass sets",
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/odd/manifest.yml",
+          "also_in": 0
+        }
+      ],
+      "unreadable": [
+        {
+          "slug": "broken",
+          "note": "no manifest.yml",
+          "tree": "this checkout",
+          "manifest_path": ".compass/work/broken/manifest.yml",
+          "also_in": 0
+        }
+      ]
+    },
+    "friction": null,
+    "title": "compass flow - delivery board (advisory)"
+  }
+  --- stderr
+board-render.txt: |
+  exit 0
+  --- stdout
+  compass board render: created <ROOT>/board.html
+  --- stderr
+board-page.html: |
+  <!doctype html>
+  <html lang="en">
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
+  <title>Compass board</title>
+  <style>
+  :root{--bg:#0d0f12;--surface:#181c22;--line:#3a404a;--text:#e7e9ec;--muted:#98a1ac;--accent:#f0a83a}
+  @media (prefers-color-scheme: light){:root{--bg:#f6f7f9;--surface:#ffffff;--line:#8c95a2;--text:#14171c;--muted:#4f5762;--accent:#8a4f00}}
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px 28px 40px;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px;line-height:1.4}
+  code,.slug{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  h1{margin:0 0 6px;font-size:18px;font-weight:500}
+  h2{margin:0 0 4px;font-size:20px;font-weight:500}
+  h3{margin:0 0 6px;font-size:13px}
+  header p,.meta,.legend p{margin:2px 0;color:var(--muted);font-size:12px}
+  .counts{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0;padding:0;list-style:none}
+  .counts li{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+  .legend{margin:12px 0}
+  main{display:grid;grid-template-columns:repeat(10,minmax(160px,1fr));gap:10px;min-width:1700px;overflow-x:auto}
+  .lane{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;min-height:220px}
+  .lane h3{display:flex;justify-content:space-between}
+  .count{color:var(--muted);font-weight:400}
+  .card{display:flex;flex-direction:column;gap:6px;margin:0 0 8px;padding:8px 10px;background:var(--bg);color:var(--text);text-decoration:none;border-radius:8px;border-color:var(--line);border-width:1px;border-style:solid}
+  .card:hover,.card:focus-visible{border-color:var(--accent);outline:none}
+  .card.dotted{border-style:dotted}
+  .card.dashed{border-style:dashed}
+  .slug{font-size:12px;word-break:break-word}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip,.flag{font-size:11px;padding:1px 6px;border-radius:4px;border:1px solid var(--line)}
+  .flag{color:var(--accent)}
+  details{margin-top:6px}
+  summary{color:var(--muted);cursor:pointer;margin-bottom:6px}
+  .empty{color:var(--muted)}
+  .panel{display:none}
+  .panel:target{display:block}
+  .panel{margin-top:24px;padding:18px 22px;background:var(--surface);border:1px solid var(--line);border-radius:14px}
+  .part{margin:14px 0}
+  .dims{display:grid;grid-template-columns:max-content 1fr;gap:4px 14px}
+  .dims dt{color:var(--muted)}
+  .dims dd{margin:0}
+  .labels,.gates,.stages,.changed{margin:6px 0;padding-left:18px}
+  .current{color:var(--accent)}
+  .note{color:var(--accent)}
+  .rule-id{color:var(--accent)}
+  </style>
+  </head>
+  <body>
+  <header>
+  <h1>Compass board</h1>
+  <ul class="counts">
+  <li>14 issues</li>
+  <li>backlog 4</li>
+  <li>ready 1</li>
+  <li>in-progress 3</li>
+  <li>in-review 1</li>
+  <li>2 unplaceable</li>
+  <li>blocked 1</li>
+  <li>stale evidence 0</li>
+  <li>done (completed) 1</li>
+  <li>done (duplicate) 1</li>
+  <li>done (not-planned) 1</li>
+  </ul>
+  <GENERATED LINE>
+  <p class="trees">Trees read: 1 (this checkout)</p>
+  <p class="advisory">This page is advisory and changes no issue state.</p>
+  </header>
+  <section class="legend" aria-label="Legend">
+  <p>The lane shows where an issue is in the pipeline. The word on each card is its state, read from its records.</p>
+  <p>The backlog lane holds issues not yet assessed and issues set aside.</p>
+  </section>
+  <main>
+  <section class="lane" aria-label="backlog">
+  <h3>backlog <span class="count">3</span></h3>
+  <a class="card" href="#issue-1"><span class="slug">queued</span><span class="chips"><span class="chip">not assessed</span><span class="chip">backlog</span></span><span class="meta">stage assess</span></a>
+  <a class="card" href="#issue-2"><span class="slug">held</span><span class="chips"><span class="chip">regular</span><span class="chip">backlog</span></span><span class="meta">stage plan</span><span class="flag">set aside</span><span class="meta">reason: waiting for a budget</span></a>
+  <a class="card" href="#issue-3"><span class="slug">held-flag</span><span class="chips"><span class="chip">regular</span><span class="chip">backlog</span></span><span class="meta">stage plan</span><span class="flag">set aside</span><span class="meta">no reason recorded</span></a>
+  </section>
+  <section class="lane" aria-label="assess">
+  <h3>assess <span class="count">0</span></h3>
+  </section>
+  <section class="lane" aria-label="define">
+  <h3>define <span class="count">0</span></h3>
+  </section>
+  <section class="lane" aria-label="refine">
+  <h3>refine <span class="count">1</span></h3>
+  <a class="card" href="#issue-4"><span class="slug">refining</span><span class="chips"><span class="chip">regular</span><span class="chip">backlog</span></span><span class="meta">stage refine</span></a>
+  </section>
+  <section class="lane" aria-label="plan">
+  <h3>plan <span class="count">1</span></h3>
+  <a class="card" href="#issue-5"><span class="slug">ready</span><span class="chips"><span class="chip">regular</span><span class="chip">ready</span></span><span class="meta">stage plan</span></a>
+  </section>
+  <section class="lane" aria-label="breakdown">
+  <h3>breakdown <span class="count">1</span></h3>
+  <a class="card" href="#issue-6"><span class="slug">planning</span><span class="chips"><span class="chip">regular</span><span class="chip">in-progress</span></span><span class="meta">stage breakdown - gates 0/2</span></a>
+  </section>
+  <section class="lane" aria-label="implement">
+  <h3>implement <span class="count">2</span></h3>
+  <a class="card" href="#issue-7"><span class="slug">building</span><span class="chips"><span class="chip">regular</span><span class="chip">in-progress</span></span><span class="meta">stage implement - gates 0/2</span></a>
+  <a class="card dashed" href="#issue-8"><span class="slug">flagged</span><span class="chips"><span class="chip">regular</span><span class="chip">in-progress</span></span><span class="meta">stage implement - gates 0/2</span><span class="flag">blocked: waits for the vendor</span></a>
+  </section>
+  <section class="lane" aria-label="verify">
+  <h3>verify <span class="count">1</span></h3>
+  <a class="card" href="#issue-9"><span class="slug">reviewing</span><span class="chips"><span class="chip">regular</span><span class="chip">in-review</span></span><span class="meta">stage verify - gates 1/2</span></a>
+  </section>
+  <section class="lane" aria-label="ship">
+  <h3>ship <span class="count">0</span></h3>
+  </section>
+  <section class="lane" aria-label="done, last 7 days">
+  <h3>done, last 7 days <span class="count">1</span></h3>
+  <a class="card" href="#issue-10"><span class="slug">shipped</span><span class="chips"><span class="chip">regular</span><span class="chip">done (completed)</span></span><span class="meta">2026-10-12</span></a>
+  </section>
+  </main>
+  <section class="unplaceable"><h3>Unplaceable</h3>
+  <p>These folders have no card because the board could not place them.</p><ul>
+  <li><span class="slug">broken</span> - tree this checkout - no manifest.yml</li>
+  <li><span class="slug">odd</span> - tree this checkout - the stored status &#x27;wibble&#x27; is not one Compass sets</li>
+  </ul></section>
+  <section class="panel" id="issue-1">
+  <h2>queued</h2>
+  <p class="meta">not assessed - backlog</p>
+  <p class="note">The assessment, policy rules and stage depths appear once the issue is assessed.</p>
+  <section class="part next"><h3>Next command</h3>
+  <p><code>compass issue use queued</code></p>
+  <p><code>/compass:assess &lt;describe the work in one sentence&gt;</code></p>
+  </section>
+  <section class="part"><h3>Where it is read from</h3>
+  <p class="path">Manifest <code>.compass/work/queued/manifest.yml</code></p>
+  <p>Tree this checkout</p></section>
+  </section>
+  <section class="panel" id="issue-2">
+  <h2>held</h2>
+  <p class="meta">regular - backlog</p>
+  <section class="part"><h3>Assessment</h3>
+  <dl class="dims">
+  <dt>risk</dt><dd>contained</dd>
+  <dt>familiarity</dt><dd>brownfield-mapped</dd>
+  <dt>size</dt><dd>small</dd>
+  <dt>goal</dt><dd>delivery</dd>
+  <dt>role</dt><dd>engineer</dd>
+  </dl>
+  <ul class="labels"><li class="label">cli</li></ul></section>
+  <p class="meta">Repository readiness: not measured (no record: run `compass readiness`)</p>
+  <section class="part"><h3>Policy rules fired</h3>
+  <p>No policy rule fired</p>
+  </section>
+  <section class="part"><h3>Stage depths</h3>
+  <ol class="stages">
+  <li class="stage"><span class="stage-name">assess</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">define</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">refine</span> <span class="depth">skipped</span></li>
+  <li class="stage"><span class="stage-name">plan</span> <span class="depth">thorough</span> <span class="current">current</span></li>
+  <li class="stage"><span class="stage-name">breakdown</span> <span class="depth">skipped</span></li>
+  <li class="stage"><span class="stage-name">implement</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">verify</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">ship</span> <span class="depth">thorough</span></li>
+  </ol></section>
+  <section class="part"><h3>Gates 0/2</h3>
+  <ul class="gates">
+  <li class="gate"><span class="gate-id">verify.correctness</span> <span class="gate-status">pending</span></li>
+  <li class="gate"><span class="gate-id">verify.traceability</span> <span class="gate-status">pending</span></li>
+  </ul></section>
+  <section class="part"><h3>Documents 0</h3>
+  <ul class="documents">
+  </ul></section>
+  <section class="part next"><h3>Next command</h3>
+  <p><code>/compass:resume held</code></p>
+  </section>
+  <section class="part"><h3>Where it is read from</h3>
+  <p class="path">Manifest <code>.compass/work/held/manifest.yml</code></p>
+  <p>Tree this checkout</p></section>
+  </section>
+  <section class="panel" id="issue-3">
+  <h2>held-flag</h2>
+  <p class="meta">regular - backlog</p>
+  <section class="part"><h3>Assessment</h3>
+  <dl class="dims">
+  <dt>risk</dt><dd>contained</dd>
+  <dt>familiarity</dt><dd>brownfield-mapped</dd>
+  <dt>size</dt><dd>small</dd>
+  <dt>goal</dt><dd>delivery</dd>
+  <dt>role</dt><dd>engineer</dd>
+  </dl>
+  <ul class="labels"><li class="label">cli</li></ul></section>
+  <p class="meta">Repository readiness: not measured (no record: run `compass readiness`)</p>
+  <section class="part"><h3>Policy rules fired</h3>
+  <p>No policy rule fired</p>
+  </section>
+  <section class="part"><h3>Stage depths</h3>
+  <ol class="stages">
+  <li class="stage"><span class="stage-name">assess</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">define</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">refine</span> <span class="depth">skipped</span></li>
+  <li class="stage"><span class="stage-name">plan</span> <span class="depth">thorough</span> <span class="current">current</span></li>
+  <li class="stage"><span class="stage-name">breakdown</span> <span class="depth">skipped</span></li>
+  <li class="stage"><span class="stage-name">implement</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">verify</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">ship</span> <span class="depth">thorough</span></li>
+  </ol></section>
+  <section class="part"><h3>Gates 0/2</h3>
+  <ul class="gates">
+  <li class="gate"><span class="gate-id">verify.correctness</span> <span class="gate-status">pending</span></li>
+  <li class="gate"><span class="gate-id">verify.traceability</span> <span class="gate-status">pending</span></li>
+  </ul></section>
+  <section class="part"><h3>Documents 0</h3>
+  <ul class="documents">
+  </ul></section>
+  <section class="part next"><h3>Next command</h3>
+  <p><code>/compass:resume held-flag</code></p>
+  </section>
+  <section class="part"><h3>Where it is read from</h3>
+  <p class="path">Manifest <code>.compass/work/held-flag/manifest.yml</code></p>
+  <p>Tree this checkout</p></section>
+  </section>
+  <section class="panel" id="issue-4">
+  <h2>refining</h2>
+  <p class="meta">regular - backlog</p>
+  <section class="part"><h3>Assessment</h3>
+  <dl class="dims">
+  <dt>risk</dt><dd>contained</dd>
+  <dt>familiarity</dt><dd>brownfield-mapped</dd>
+  <dt>size</dt><dd>small</dd>
+  <dt>goal</dt><dd>delivery</dd>
+  <dt>role</dt><dd>engineer</dd>
+  </dl>
+  <ul class="labels"><li class="label">cli</li></ul></section>
+  <p class="meta">Repository readiness: not measured (no record: run `compass readiness`)</p>
+  <section class="part"><h3>Policy rules fired</h3>
+  <p>No policy rule fired</p>
+  </section>
+  <section class="part"><h3>Stage depths</h3>
+  <ol class="stages">
+  <li class="stage"><span class="stage-name">assess</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">define</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">refine</span> <span class="depth">lightweight</span> <span class="current">current</span></li>
+  <li class="stage"><span class="stage-name">plan</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">breakdown</span> <span class="depth">skipped</span></li>
+  <li class="stage"><span class="stage-name">implement</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">verify</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">ship</span> <span class="depth">thorough</span></li>
+  </ol></section>
+  <section class="part"><h3>Gates 0/2</h3>
+  <ul class="gates">
+  <li class="gate"><span class="gate-id">verify.correctness</span> <span class="gate-status">pending</span></li>
+  <li class="gate"><span class="gate-id">verify.traceability</span> <span class="gate-status">pending</span></li>
+  </ul></section>
+  <section class="part"><h3>Documents 1</h3>
+  <ul class="documents">
+  <li class="document"><span class="document-kind">acceptance-criteria</span> <span class="document-id">ART-ACCEPTANCE_CRITERIA</span> <span class="document-status">approved</span> <code class="document-path">docs/compass/2026-10-01-refining/acceptance-criteria.md</code></li>
+  </ul></section>
+  <section class="part next"><h3>Next command</h3>
+  <p><code>/compass:resume refining</code></p>
+  </section>
+  <section class="part"><h3>Where it is read from</h3>
+  <p class="path">Manifest <code>.compass/work/refining/manifest.yml</code></p>
+  <p>Tree this checkout</p></section>
+  </section>
+  <section class="panel" id="issue-5">
+  <h2>ready</h2>
+  <p class="meta">regular - ready</p>
+  <section class="part"><h3>Assessment</h3>
+  <dl class="dims">
+  <dt>risk</dt><dd>contained</dd>
+  <dt>familiarity</dt><dd>brownfield-mapped</dd>
+  <dt>size</dt><dd>small</dd>
+  <dt>goal</dt><dd>delivery</dd>
+  <dt>role</dt><dd>engineer</dd>
+  </dl>
+  <ul class="labels"><li class="label">cli</li></ul></section>
+  <p class="meta">Repository readiness: not measured (no record: run `compass readiness`)</p>
+  <section class="part"><h3>Policy rules fired</h3>
+  <p>No policy rule fired</p>
+  </section>
+  <section class="part"><h3>Stage depths</h3>
+  <ol class="stages">
+  <li class="stage"><span class="stage-name">assess</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">define</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">refine</span> <span class="depth">skipped</span></li>
+  <li class="stage"><span class="stage-name">plan</span> <span class="depth">thorough</span> <span class="current">current</span></li>
+  <li class="stage"><span class="stage-name">breakdown</span> <span class="depth">skipped</span></li>
+  <li class="stage"><span class="stage-name">implement</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">verify</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">ship</span> <span class="depth">thorough</span></li>
+  </ol></section>
+  <section class="part"><h3>Gates 0/2</h3>
+  <ul class="gates">
+  <li class="gate"><span class="gate-id">verify.correctness</span> <span class="gate-status">pending</span></li>
+  <li class="gate"><span class="gate-id">verify.traceability</span> <span class="gate-status">pending</span></li>
+  </ul></section>
+  <section class="part"><h3>Documents 1</h3>
+  <ul class="documents">
+  <li class="document"><span class="document-kind">acceptance-criteria</span> <span class="document-id">ART-ACCEPTANCE_CRITERIA</span> <span class="document-status">approved</span> <code class="document-path">docs/compass/2026-10-01-ready/acceptance-criteria.md</code></li>
+  </ul></section>
+  <section class="part next"><h3>Next command</h3>
+  <p><code>/compass:resume ready</code></p>
+  </section>
+  <section class="part"><h3>Where it is read from</h3>
+  <p class="path">Manifest <code>.compass/work/ready/manifest.yml</code></p>
+  <p>Tree this checkout</p></section>
+  </section>
+  <section class="panel" id="issue-6">
+  <h2>planning</h2>
+  <p class="meta">regular - in-progress</p>
+  <section class="part"><h3>Assessment</h3>
+  <dl class="dims">
+  <dt>risk</dt><dd>contained</dd>
+  <dt>familiarity</dt><dd>brownfield-mapped</dd>
+  <dt>size</dt><dd>small</dd>
+  <dt>goal</dt><dd>delivery</dd>
+  <dt>role</dt><dd>engineer</dd>
+  </dl>
+  <ul class="labels"><li class="label">cli</li></ul></section>
+  <p class="meta">Repository readiness: not measured (no record: run `compass readiness`)</p>
+  <section class="part"><h3>Policy rules fired</h3>
+  <p>No policy rule fired</p>
+  </section>
+  <section class="part"><h3>Stage depths</h3>
+  <ol class="stages">
+  <li class="stage"><span class="stage-name">assess</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">define</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">refine</span> <span class="depth">skipped</span></li>
+  <li class="stage"><span class="stage-name">plan</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">breakdown</span> <span class="depth">lightweight</span> <span class="current">current</span></li>
+  <li class="stage"><span class="stage-name">implement</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">verify</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">ship</span> <span class="depth">thorough</span></li>
+  </ol></section>
+  <section class="part"><h3>Gates 0/2</h3>
+  <ul class="gates">
+  <li class="gate"><span class="gate-id">verify.correctness</span> <span class="gate-status">pending</span></li>
+  <li class="gate"><span class="gate-id">verify.traceability</span> <span class="gate-status">pending</span></li>
+  </ul></section>
+  <section class="part"><h3>Documents 2</h3>
+  <ul class="documents">
+  <li class="document"><span class="document-kind">acceptance-criteria</span> <span class="document-id">ART-ACCEPTANCE_CRITERIA</span> <span class="document-status">approved</span> <code class="document-path">docs/compass/2026-10-01-planning/acceptance-criteria.md</code></li>
+  <li class="document"><span class="document-kind">technical-design</span> <span class="document-id">ART-TECHNICAL_DESIGN</span> <span class="document-status">draft</span> <code class="document-path">docs/compass/2026-10-01-planning/technical-design.md</code></li>
+  </ul></section>
+  <section class="part next"><h3>Next command</h3>
+  <p><code>/compass:resume planning</code></p>
+  </section>
+  <section class="part"><h3>Where it is read from</h3>
+  <p class="path">Manifest <code>.compass/work/planning/manifest.yml</code></p>
+  <p>Tree this checkout</p></section>
+  </section>
+  <section class="panel" id="issue-7">
+  <h2>building</h2>
+  <p class="meta">regular - in-progress</p>
+  <section class="part"><h3>Assessment</h3>
+  <dl class="dims">
+  <dt>risk</dt><dd>contained</dd>
+  <dt>familiarity</dt><dd>brownfield-mapped</dd>
+  <dt>size</dt><dd>small</dd>
+  <dt>goal</dt><dd>delivery</dd>
+  <dt>role</dt><dd>engineer</dd>
+  </dl>
+  <ul class="labels"><li class="label">cli</li></ul></section>
+  <p class="meta">Repository readiness: not measured (no record: run `compass readiness`)</p>
+  <section class="part"><h3>Policy rules fired</h3>
+  <p>No policy rule fired</p>
+  </section>
+  <section class="part"><h3>Stage depths</h3>
+  <ol class="stages">
+  <li class="stage"><span class="stage-name">assess</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">define</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">refine</span> <span class="depth">skipped</span></li>
+  <li class="stage"><span class="stage-name">plan</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">breakdown</span> <span class="depth">skipped</span></li>
+  <li class="stage"><span class="stage-name">implement</span> <span class="depth">thorough</span> <span class="current">current</span></li>
+  <li class="stage"><span class="stage-name">verify</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">ship</span> <span class="depth">thorough</span></li>
+  </ol></section>
+  <section class="part"><h3>Gates 0/2</h3>
+  <ul class="gates">
+  <li class="gate"><span class="gate-id">verify.correctness</span> <span class="gate-status">pending</span></li>
+  <li class="gate"><span class="gate-id">verify.traceability</span> <span class="gate-status">pending</span></li>
+  </ul></section>
+  <section class="part"><h3>Documents 0</h3>
+  <ul class="documents">
+  </ul></section>
+  <section class="part next"><h3>Next command</h3>
+  <p><code>/compass:resume building</code></p>
+  </section>
+  <section class="part"><h3>Where it is read from</h3>
+  <p class="path">Manifest <code>.compass/work/building/manifest.yml</code></p>
+  <p>Tree this checkout</p></section>
+  </section>
+  <section class="panel" id="issue-8">
+  <h2>flagged</h2>
+  <p class="meta">regular - in-progress</p>
+  <section class="part"><h3>Assessment</h3>
+  <dl class="dims">
+  <dt>risk</dt><dd>contained</dd>
+  <dt>familiarity</dt><dd>brownfield-mapped</dd>
+  <dt>size</dt><dd>small</dd>
+  <dt>goal</dt><dd>delivery</dd>
+  <dt>role</dt><dd>engineer</dd>
+  </dl>
+  <ul class="labels"><li class="label">cli</li></ul></section>
+  <p class="meta">Repository readiness: not measured (no record: run `compass readiness`)</p>
+  <section class="part"><h3>Policy rules fired</h3>
+  <p>No policy rule fired</p>
+  </section>
+  <section class="part"><h3>Stage depths</h3>
+  <ol class="stages">
+  <li class="stage"><span class="stage-name">assess</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">define</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">refine</span> <span class="depth">skipped</span></li>
+  <li class="stage"><span class="stage-name">plan</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">breakdown</span> <span class="depth">skipped</span></li>
+  <li class="stage"><span class="stage-name">implement</span> <span class="depth">thorough</span> <span class="current">current</span></li>
+  <li class="stage"><span class="stage-name">verify</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">ship</span> <span class="depth">thorough</span></li>
+  </ol></section>
+  <section class="part"><h3>Gates 0/2</h3>
+  <ul class="gates">
+  <li class="gate"><span class="gate-id">verify.correctness</span> <span class="gate-status">pending</span></li>
+  <li class="gate"><span class="gate-id">verify.traceability</span> <span class="gate-status">pending</span></li>
+  </ul></section>
+  <section class="part"><h3>Documents 0</h3>
+  <ul class="documents">
+  </ul></section>
+  <section class="part next"><h3>Next command</h3>
+  <p><code>/compass:resume flagged</code></p>
+  </section>
+  <section class="part"><h3>Where it is read from</h3>
+  <p class="path">Manifest <code>.compass/work/flagged/manifest.yml</code></p>
+  <p>Tree this checkout</p></section>
+  </section>
+  <section class="panel" id="issue-9">
+  <h2>reviewing</h2>
+  <p class="meta">regular - in-review</p>
+  <section class="part"><h3>Assessment</h3>
+  <dl class="dims">
+  <dt>risk</dt><dd>contained</dd>
+  <dt>familiarity</dt><dd>brownfield-mapped</dd>
+  <dt>size</dt><dd>small</dd>
+  <dt>goal</dt><dd>delivery</dd>
+  <dt>role</dt><dd>engineer</dd>
+  </dl>
+  <ul class="labels"><li class="label">cli</li></ul></section>
+  <p class="meta">Repository readiness: not measured (no record: run `compass readiness`)</p>
+  <section class="part"><h3>Policy rules fired</h3>
+  <p>No policy rule fired</p>
+  </section>
+  <section class="part"><h3>Stage depths</h3>
+  <ol class="stages">
+  <li class="stage"><span class="stage-name">assess</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">define</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">refine</span> <span class="depth">skipped</span></li>
+  <li class="stage"><span class="stage-name">plan</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">breakdown</span> <span class="depth">skipped</span></li>
+  <li class="stage"><span class="stage-name">implement</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">verify</span> <span class="depth">thorough</span> <span class="current">current</span></li>
+  <li class="stage"><span class="stage-name">ship</span> <span class="depth">thorough</span></li>
+  </ol></section>
+  <section class="part"><h3>Gates 1/2</h3>
+  <ul class="gates">
+  <li class="gate"><span class="gate-id">verify.correctness</span> <span class="gate-status">pass</span></li>
+  <li class="gate"><span class="gate-id">verify.traceability</span> <span class="gate-status">pending</span></li>
+  </ul></section>
+  <section class="part"><h3>Documents 0</h3>
+  <ul class="documents">
+  </ul></section>
+  <section class="part next"><h3>Next command</h3>
+  <p><code>/compass:resume reviewing</code></p>
+  </section>
+  <section class="part"><h3>Where it is read from</h3>
+  <p class="path">Manifest <code>.compass/work/reviewing/manifest.yml</code></p>
+  <p>Tree this checkout</p></section>
+  </section>
+  <section class="panel" id="issue-10">
+  <h2>shipped</h2>
+  <p class="meta">regular - done (completed)</p>
+  <p class="meta">Completed 2026-10-12</p>
+  <section class="part"><h3>Assessment</h3>
+  <dl class="dims">
+  <dt>risk</dt><dd>contained</dd>
+  <dt>familiarity</dt><dd>brownfield-mapped</dd>
+  <dt>size</dt><dd>small</dd>
+  <dt>goal</dt><dd>delivery</dd>
+  <dt>role</dt><dd>engineer</dd>
+  </dl>
+  <ul class="labels"><li class="label">cli</li></ul></section>
+  <p class="meta">Repository readiness: not measured (no record: run `compass readiness`)</p>
+  <section class="part"><h3>Policy rules fired</h3>
+  <p>No policy rule fired</p>
+  </section>
+  <section class="part"><h3>Stage depths</h3>
+  <ol class="stages">
+  <li class="stage"><span class="stage-name">assess</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">define</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">refine</span> <span class="depth">skipped</span></li>
+  <li class="stage"><span class="stage-name">plan</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">breakdown</span> <span class="depth">skipped</span></li>
+  <li class="stage"><span class="stage-name">implement</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">verify</span> <span class="depth">thorough</span></li>
+  <li class="stage"><span class="stage-name">ship</span> <span class="depth">thorough</span></li>
+  </ol></section>
+  <section class="part"><h3>Gates 2/2</h3>
+  <ul class="gates">
+  <li class="gate"><span class="gate-id">verify.correctness</span> <span class="gate-status">pass</span></li>
+  <li class="gate"><span class="gate-id">verify.traceability</span> <span class="gate-status">pass</span></li>
+  </ul></section>
+  <section class="part"><h3>Documents 0</h3>
+  <ul class="documents">
+  </ul></section>
+  <section class="part"><h3>Where it is read from</h3>
+  <p class="path">Manifest <code>.compass/work/shipped/manifest.yml</code></p>
+  <p>Tree this checkout</p></section>
+  </section>
+  </body>
+  </html>
+render-broken.txt: |
+  exit 2
+  --- stdout
+  --- stderr
+  compass: no manifest.yml in .compass/work/broken - has the issue been assessed? The manifest is what every command reads.
+render-building.txt: |
+  exit 0
+  --- stdout
+  compass issue render: building, 1 document(s) rewritten
+    rendered docs/compass/2026-10-01-building/README.md: header, ask, decision-required, acceptance, …
+    rendered docs/compass/README.md: index
+  --- stderr
+page-building.md.txt: |
+  # building
+
+  <!-- compass:render header -->
+  **`building`** - regular - in-progress - stage implement - gates 0/2
+  Owner: not recorded - Created: 2026-10-01
+  To see this issue across the board, run `compass board render`.
+  <!-- /compass:render -->
+
+  <!-- compass:render ask -->
+  **Scenarios**
+
+  - `BUILDING-1` - building works
+  <!-- /compass:render -->
+
+  <!-- compass:render decision-required -->
+  No decision required. Nothing is awaiting approval.
+  <!-- /compass:render -->
+
+  <!-- compass:render acceptance -->
+  Acceptance: 0 of 1 scenarios passed
+
+  - `BUILDING-1` - building works - not yet passed
+  <!-- /compass:render -->
+
+  <!-- compass:render related -->
+  None
+  <!-- /compass:render -->
+
+  <!-- compass:render decisions -->
+  None
+  <!-- /compass:render -->
+
+  <!-- compass:render artifacts -->
+  No documents registered yet.
+  <!-- /compass:render -->
+
+  <!-- compass:render traceability -->
+  ```mermaid
+  flowchart LR
+    classDef open stroke-dasharray: 4 4
+    i_INT_1["INT-1"] ==> s_BUILDING_1["BUILDING-1"]:::open
+    s_BUILDING_1 ==> t_BUILDING_1_tests_test_building_py__test_it["tests/test_building.py::test_it"]
+  ```
+  <!-- /compass:render -->
+
+  <!-- compass:render deliberately-omitted -->
+  Nothing recorded as omitted.
+  <!-- /compass:render -->
+
+  <!-- compass:render follow-ups -->
+  No follow-ups recorded.
+  <!-- /compass:render -->
+render-dropped.txt: |
+  exit 0
+  --- stdout
+  compass issue render: dropped, 1 document(s) rewritten
+    rendered docs/compass/2026-10-01-dropped/README.md: header, ask, decision-required, acceptance, r…
+    current docs/compass/README.md: index
+  --- stderr
+page-dropped.md.txt: |
+  # dropped
+
+  <!-- compass:render header -->
+  **`dropped`** - regular - done (not-planned) - stage done - gates 0/2
+  Owner: not recorded - Created: 2026-10-01
+  To see this issue across the board, run `compass board render`.
+  <!-- /compass:render -->
+
+  <!-- compass:render ask -->
+  **Scenarios**
+
+  - `DROPPED-1` - dropped works
+  <!-- /compass:render -->
+
+  <!-- compass:render decision-required -->
+  No decision required. Nothing is awaiting approval.
+  <!-- /compass:render -->
+
+  <!-- compass:render acceptance -->
+  Acceptance: 0 of 1 scenarios passed
+
+  - `DROPPED-1` - dropped works - not yet passed
+  <!-- /compass:render -->
+
+  <!-- compass:render related -->
+  None
+  <!-- /compass:render -->
+
+  <!-- compass:render decisions -->
+  None
+  <!-- /compass:render -->
+
+  <!-- compass:render artifacts -->
+  No documents registered yet.
+  <!-- /compass:render -->
+
+  <!-- compass:render traceability -->
+  ```mermaid
+  flowchart LR
+    classDef open stroke-dasharray: 4 4
+    i_INT_1["INT-1"] ==> s_DROPPED_1["DROPPED-1"]:::open
+    s_DROPPED_1 ==> t_DROPPED_1_tests_test_dropped_py__test_it["tests/test_dropped.py::test_it"]
+  ```
+  <!-- /compass:render -->
+
+  <!-- compass:render deliberately-omitted -->
+  Nothing recorded as omitted.
+  <!-- /compass:render -->
+
+  <!-- compass:render follow-ups -->
+  No follow-ups recorded.
+  <!-- /compass:render -->
+render-dup.txt: |
+  exit 0
+  --- stdout
+  compass issue render: dup, 1 document(s) rewritten
+    rendered docs/compass/2026-10-01-dup/README.md: header, ask, decision-required, acceptance, relat…
+    current docs/compass/README.md: index
+  --- stderr
+page-dup.md.txt: |
+  # dup
+
+  <!-- compass:render header -->
+  **`dup`** - regular - done (duplicate) - stage done - gates 0/2
+  Owner: not recorded - Created: 2026-10-01
+  To see this issue across the board, run `compass board render`.
+  <!-- /compass:render -->
+
+  <!-- compass:render ask -->
+  **Scenarios**
+
+  - `DUP-1` - dup works
+  <!-- /compass:render -->
+
+  <!-- compass:render decision-required -->
+  No decision required. Nothing is awaiting approval.
+  <!-- /compass:render -->
+
+  <!-- compass:render acceptance -->
+  Acceptance: 0 of 1 scenarios passed
+
+  - `DUP-1` - dup works - not yet passed
+  <!-- /compass:render -->
+
+  <!-- compass:render related -->
+  None
+  <!-- /compass:render -->
+
+  <!-- compass:render decisions -->
+  None
+  <!-- /compass:render -->
+
+  <!-- compass:render artifacts -->
+  No documents registered yet.
+  <!-- /compass:render -->
+
+  <!-- compass:render traceability -->
+  ```mermaid
+  flowchart LR
+    classDef open stroke-dasharray: 4 4
+    i_INT_1["INT-1"] ==> s_DUP_1["DUP-1"]:::open
+    s_DUP_1 ==> t_DUP_1_tests_test_dup_py__test_it["tests/test_dup.py::test_it"]
+  ```
+  <!-- /compass:render -->
+
+  <!-- compass:render deliberately-omitted -->
+  Nothing recorded as omitted.
+  <!-- /compass:render -->
+
+  <!-- compass:render follow-ups -->
+  No follow-ups recorded.
+  <!-- /compass:render -->
+render-flagged.txt: |
+  exit 0
+  --- stdout
+  compass issue render: flagged, 1 document(s) rewritten
+    rendered docs/compass/2026-10-01-flagged/README.md: header, ask, decision-required, acceptance, r…
+    current docs/compass/README.md: index
+  --- stderr
+page-flagged.md.txt: |
+  # flagged
+
+  <!-- compass:render header -->
+  **`flagged`** - regular - in-progress - stage implement - gates 0/2
+  Owner: not recorded - Created: 2026-10-01
+  Blocked: waits for the vendor
+  To see this issue across the board, run `compass board render`.
+  <!-- /compass:render -->
+
+  <!-- compass:render ask -->
+  **Scenarios**
+
+  - `FLAGGED-1` - flagged works
+  <!-- /compass:render -->
+
+  <!-- compass:render decision-required -->
+  No decision required. Nothing is awaiting approval.
+  <!-- /compass:render -->
+
+  <!-- compass:render acceptance -->
+  Acceptance: 0 of 1 scenarios passed
+
+  - `FLAGGED-1` - flagged works - not yet passed
+  <!-- /compass:render -->
+
+  <!-- compass:render related -->
+  None
+  <!-- /compass:render -->
+
+  <!-- compass:render decisions -->
+  None
+  <!-- /compass:render -->
+
+  <!-- compass:render artifacts -->
+  No documents registered yet.
+  <!-- /compass:render -->
+
+  <!-- compass:render traceability -->
+  ```mermaid
+  flowchart LR
+    classDef open stroke-dasharray: 4 4
+    i_INT_1["INT-1"] ==> s_FLAGGED_1["FLAGGED-1"]:::open
+    s_FLAGGED_1 ==> t_FLAGGED_1_tests_test_flagged_py__test_it["tests/test_flagged.py::test_it"]
+  ```
+  <!-- /compass:render -->
+
+  <!-- compass:render deliberately-omitted -->
+  Nothing recorded as omitted.
+  <!-- /compass:render -->
+
+  <!-- compass:render follow-ups -->
+  No follow-ups recorded.
+  <!-- /compass:render -->
+render-held.txt: |
+  exit 0
+  --- stdout
+  compass issue render: held, 1 document(s) rewritten
+    rendered docs/compass/2026-10-01-held/README.md: header, ask, decision-required, acceptance, rela…
+    current docs/compass/README.md: index
+  --- stderr
+page-held.md.txt: |
+  # held
+
+  <!-- compass:render header -->
+  **`held`** - regular - backlog - stage plan - gates 0/2
+  Owner: not recorded - Created: 2026-10-01
+  To see this issue across the board, run `compass board render`.
+  <!-- /compass:render -->
+
+  <!-- compass:render ask -->
+  **Scenarios**
+
+  - `HELD-1` - held works
+  <!-- /compass:render -->
+
+  <!-- compass:render decision-required -->
+  No decision required. Nothing is awaiting approval.
+  <!-- /compass:render -->
+
+  <!-- compass:render acceptance -->
+  Acceptance: 0 of 1 scenarios passed
+
+  - `HELD-1` - held works - not yet passed
+  <!-- /compass:render -->
+
+  <!-- compass:render related -->
+  None
+  <!-- /compass:render -->
+
+  <!-- compass:render decisions -->
+  None
+  <!-- /compass:render -->
+
+  <!-- compass:render artifacts -->
+  No documents registered yet.
+  <!-- /compass:render -->
+
+  <!-- compass:render traceability -->
+  ```mermaid
+  flowchart LR
+    classDef open stroke-dasharray: 4 4
+    i_INT_1["INT-1"] ==> s_HELD_1["HELD-1"]:::open
+    s_HELD_1 ==> t_HELD_1_tests_test_held_py__test_it["tests/test_held.py::test_it"]
+  ```
+  <!-- /compass:render -->
+
+  <!-- compass:render deliberately-omitted -->
+  Nothing recorded as omitted.
+  <!-- /compass:render -->
+
+  <!-- compass:render follow-ups -->
+  No follow-ups recorded.
+  <!-- /compass:render -->
+render-held-flag.txt: |
+  exit 0
+  --- stdout
+  compass issue render: held-flag, 1 document(s) rewritten
+    rendered docs/compass/2026-10-01-held-flag/README.md: header, ask, decision-required, acceptance,…
+    current docs/compass/README.md: index
+  --- stderr
+page-held-flag.md.txt: |
+  # held-flag
+
+  <!-- compass:render header -->
+  **`held-flag`** - regular - backlog - stage plan - gates 0/2
+  Owner: not recorded - Created: 2026-10-01
+  To see this issue across the board, run `compass board render`.
+  <!-- /compass:render -->
+
+  <!-- compass:render ask -->
+  **Scenarios**
+
+  - `HELD-FLAG-1` - held-flag works
+  <!-- /compass:render -->
+
+  <!-- compass:render decision-required -->
+  No decision required. Nothing is awaiting approval.
+  <!-- /compass:render -->
+
+  <!-- compass:render acceptance -->
+  Acceptance: 0 of 1 scenarios passed
+
+  - `HELD-FLAG-1` - held-flag works - not yet passed
+  <!-- /compass:render -->
+
+  <!-- compass:render related -->
+  None
+  <!-- /compass:render -->
+
+  <!-- compass:render decisions -->
+  None
+  <!-- /compass:render -->
+
+  <!-- compass:render artifacts -->
+  No documents registered yet.
+  <!-- /compass:render -->
+
+  <!-- compass:render traceability -->
+  ```mermaid
+  flowchart LR
+    classDef open stroke-dasharray: 4 4
+    i_INT_1["INT-1"] ==> s_HELD_FLAG_1["HELD-FLAG-1"]:::open
+    s_HELD_FLAG_1 ==> t_HELD_FLAG_1_tests_test_held_flag_py__test_it["tests/test_held_flag.py::test_it"]
+  ```
+  <!-- /compass:render -->
+
+  <!-- compass:render deliberately-omitted -->
+  Nothing recorded as omitted.
+  <!-- /compass:render -->
+
+  <!-- compass:render follow-ups -->
+  No follow-ups recorded.
+  <!-- /compass:render -->
+render-odd.txt: |
+  exit 0
+  --- stdout
+  compass issue render: odd, 1 document(s) rewritten
+    rendered docs/compass/2026-10-01-odd/README.md: header, ask, decision-required, acceptance, relat…
+    current docs/compass/README.md: index
+  --- stderr
+page-odd.md.txt: |
+  # odd
+
+  <!-- compass:render header -->
+  **`odd`** - regular - ready - stage plan - gates 0/2
+  Owner: not recorded - Created: 2026-10-01
+  To see this issue across the board, run `compass board render`.
+  <!-- /compass:render -->
+
+  <!-- compass:render ask -->
+  **Scenarios**
+
+  - `ODD-1` - odd works
+  <!-- /compass:render -->
+
+  <!-- compass:render decision-required -->
+  No decision required. Nothing is awaiting approval.
+  <!-- /compass:render -->
+
+  <!-- compass:render acceptance -->
+  Acceptance: 0 of 1 scenarios passed
+
+  - `ODD-1` - odd works - not yet passed
+  <!-- /compass:render -->
+
+  <!-- compass:render related -->
+  None
+  <!-- /compass:render -->
+
+  <!-- compass:render decisions -->
+  None
+  <!-- /compass:render -->
+
+  <!-- compass:render artifacts -->
+  No documents registered yet.
+  <!-- /compass:render -->
+
+  <!-- compass:render traceability -->
+  ```mermaid
+  flowchart LR
+    classDef open stroke-dasharray: 4 4
+    i_INT_1["INT-1"] ==> s_ODD_1["ODD-1"]:::open
+    s_ODD_1 ==> t_ODD_1_tests_test_odd_py__test_it["tests/test_odd.py::test_it"]
+  ```
+  <!-- /compass:render -->
+
+  <!-- compass:render deliberately-omitted -->
+  Nothing recorded as omitted.
+  <!-- /compass:render -->
+
+  <!-- compass:render follow-ups -->
+  No follow-ups recorded.
+  <!-- /compass:render -->
+render-planning.txt: |
+  exit 0
+  --- stdout
+  compass issue render: planning, 1 document(s) rewritten
+    rendered docs/compass/2026-10-01-planning/README.md: header, ask, decision-required, acceptance, …
+    current docs/compass/README.md: index
+  --- stderr
+page-planning.md.txt: |
+  # planning
+
+  <!-- compass:render header -->
+  **`planning`** - regular - in-progress - stage breakdown - gates 0/2
+  Owner: not recorded - Created: 2026-10-01
+  To see this issue across the board, run `compass board render`.
+  <!-- /compass:render -->
+
+  <!-- compass:render ask -->
+  **Scenarios**
+
+  - `PLANNING-1` - planning works
+  <!-- /compass:render -->
+
+  <!-- compass:render decision-required -->
+  No decision required. Nothing is awaiting approval.
+  <!-- /compass:render -->
+
+  <!-- compass:render acceptance -->
+  Acceptance: 0 of 1 scenarios passed
+
+  - `PLANNING-1` - planning works - not yet passed
+  <!-- /compass:render -->
+
+  <!-- compass:render related -->
+  None
+  <!-- /compass:render -->
+
+  <!-- compass:render decisions -->
+  None
+  <!-- /compass:render -->
+
+  <!-- compass:render artifacts -->
+  Documents: 2 registered, 1 approved
+
+  | Document | Status | Approved by | Why it exists |
+  |---|---|---|---|
+  | [acceptance-criteria](acceptance-criteria.md) | approved | - | every regular approach carries one |
+  | [technical-design](technical-design.md) | draft | - | every regular approach carries one |
+  <!-- /compass:render -->
+
+  <!-- compass:render traceability -->
+  ```mermaid
+  flowchart LR
+    classDef open stroke-dasharray: 4 4
+    i_INT_1["INT-1"] ==> s_PLANNING_1["PLANNING-1"]:::open
+    s_PLANNING_1 ==> t_PLANNING_1_tests_test_planning_py__test_it["tests/test_planning.py::test_it"]
+  ```
+  <!-- /compass:render -->
+
+  <!-- compass:render deliberately-omitted -->
+  Nothing recorded as omitted.
+  <!-- /compass:render -->
+
+  <!-- compass:render follow-ups -->
+  No follow-ups recorded.
+  <!-- /compass:render -->
+render-queued.txt: |
+  exit 0
+  --- stdout
+  compass issue render: queued, 1 document(s) rewritten
+    rendered docs/compass/2026-09-20-queued/README.md: header, ask, decision-required, acceptance, re…
+    current docs/compass/README.md: index
+  --- stderr
+page-queued.md.txt: |
+  # queued
+
+  <!-- compass:render header -->
+  **`queued`** - not assessed - backlog - stage assess - gates 0/0
+  Owner: not recorded - Created: 2026-09-20
+  To see this issue across the board, run `compass board render`.
+  <!-- /compass:render -->
+
+  <!-- compass:render ask -->
+  No statement of the ask is recorded.
+  <!-- /compass:render -->
+
+  <!-- compass:render decision-required -->
+  No decision required. Nothing is awaiting approval.
+  <!-- /compass:render -->
+
+  <!-- compass:render acceptance -->
+  No scenarios recorded yet.
+  <!-- /compass:render -->
+
+  <!-- compass:render related -->
+  None
+  <!-- /compass:render -->
+
+  <!-- compass:render decisions -->
+  None
+  <!-- /compass:render -->
+
+  <!-- compass:render artifacts -->
+  No documents registered yet.
+  <!-- /compass:render -->
+
+  <!-- compass:render traceability -->
+  No scenarios recorded yet.
+  <!-- /compass:render -->
+
+  <!-- compass:render deliberately-omitted -->
+  Nothing recorded as omitted.
+  <!-- /compass:render -->
+
+  <!-- compass:render follow-ups -->
+  No follow-ups recorded.
+  <!-- /compass:render -->
+render-ready.txt: |
+  exit 0
+  --- stdout
+  compass issue render: ready, 1 document(s) rewritten
+    rendered docs/compass/2026-10-01-ready/README.md: header, ask, decision-required, acceptance, rel…
+    current docs/compass/README.md: index
+  --- stderr
+page-ready.md.txt: |
+  # ready
+
+  <!-- compass:render header -->
+  **`ready`** - regular - ready - stage plan - gates 0/2
+  Owner: not recorded - Created: 2026-10-01
+  To see this issue across the board, run `compass board render`.
+  <!-- /compass:render -->
+
+  <!-- compass:render ask -->
+  **Scenarios**
+
+  - `READY-1` - ready works
+  <!-- /compass:render -->
+
+  <!-- compass:render decision-required -->
+  No decision required. Nothing is awaiting approval.
+  <!-- /compass:render -->
+
+  <!-- compass:render acceptance -->
+  Acceptance: 0 of 1 scenarios passed
+
+  - `READY-1` - ready works - not yet passed
+  <!-- /compass:render -->
+
+  <!-- compass:render related -->
+  None
+  <!-- /compass:render -->
+
+  <!-- compass:render decisions -->
+  None
+  <!-- /compass:render -->
+
+  <!-- compass:render artifacts -->
+  Documents: 1 registered, 1 approved
+
+  | Document | Status | Approved by | Why it exists |
+  |---|---|---|---|
+  | [acceptance-criteria](acceptance-criteria.md) | approved | - | every regular approach carries one |
+  <!-- /compass:render -->
+
+  <!-- compass:render traceability -->
+  ```mermaid
+  flowchart LR
+    classDef open stroke-dasharray: 4 4
+    i_INT_1["INT-1"] ==> s_READY_1["READY-1"]:::open
+    s_READY_1 ==> t_READY_1_tests_test_ready_py__test_it["tests/test_ready.py::test_it"]
+  ```
+  <!-- /compass:render -->
+
+  <!-- compass:render deliberately-omitted -->
+  Nothing recorded as omitted.
+  <!-- /compass:render -->
+
+  <!-- compass:render follow-ups -->
+  No follow-ups recorded.
+  <!-- /compass:render -->
+render-refining.txt: |
+  exit 0
+  --- stdout
+  compass issue render: refining, 1 document(s) rewritten
+    rendered docs/compass/2026-10-01-refining/README.md: header, ask, decision-required, acceptance, …
+    current docs/compass/README.md: index
+  --- stderr
+page-refining.md.txt: |
+  # refining
+
+  <!-- compass:render header -->
+  **`refining`** - regular - backlog - stage refine - gates 0/2
+  Owner: not recorded - Created: 2026-10-01
+  To see this issue across the board, run `compass board render`.
+  <!-- /compass:render -->
+
+  <!-- compass:render ask -->
+  **Scenarios**
+
+  - `REFINING-1` - refining works
+  <!-- /compass:render -->
+
+  <!-- compass:render decision-required -->
+  No decision required. Nothing is awaiting approval.
+  <!-- /compass:render -->
+
+  <!-- compass:render acceptance -->
+  Acceptance: 0 of 1 scenarios passed
+
+  - `REFINING-1` - refining works - not yet passed
+  <!-- /compass:render -->
+
+  <!-- compass:render related -->
+  None
+  <!-- /compass:render -->
+
+  <!-- compass:render decisions -->
+  None
+  <!-- /compass:render -->
+
+  <!-- compass:render artifacts -->
+  Documents: 1 registered, 1 approved
+
+  | Document | Status | Approved by | Why it exists |
+  |---|---|---|---|
+  | [acceptance-criteria](acceptance-criteria.md) | approved | - | every regular approach carries one |
+  <!-- /compass:render -->
+
+  <!-- compass:render traceability -->
+  ```mermaid
+  flowchart LR
+    classDef open stroke-dasharray: 4 4
+    i_INT_1["INT-1"] ==> s_REFINING_1["REFINING-1"]:::open
+    s_REFINING_1 ==> t_REFINING_1_tests_test_refining_py__test_it["tests/test_refining.py::test_it"]
+  ```
+  <!-- /compass:render -->
+
+  <!-- compass:render deliberately-omitted -->
+  Nothing recorded as omitted.
+  <!-- /compass:render -->
+
+  <!-- compass:render follow-ups -->
+  No follow-ups recorded.
+  <!-- /compass:render -->
+render-reviewing.txt: |
+  exit 0
+  --- stdout
+  compass issue render: reviewing, 1 document(s) rewritten
+    rendered docs/compass/2026-10-01-reviewing/README.md: header, ask, decision-required, acceptance,…
+    current docs/compass/README.md: index
+  --- stderr
+page-reviewing.md.txt: |
+  # reviewing
+
+  <!-- compass:render header -->
+  **`reviewing`** - regular - in-review - stage verify - gates 1/2
+  Owner: not recorded - Created: 2026-10-01
+  To see this issue across the board, run `compass board render`.
+  <!-- /compass:render -->
+
+  <!-- compass:render ask -->
+  **Scenarios**
+
+  - `REVIEWING-1` - reviewing works
+  <!-- /compass:render -->
+
+  <!-- compass:render decision-required -->
+  No decision required. Nothing is awaiting approval.
+  <!-- /compass:render -->
+
+  <!-- compass:render acceptance -->
+  Acceptance: 0 of 1 scenarios passed
+
+  - `REVIEWING-1` - reviewing works - not yet passed
+  <!-- /compass:render -->
+
+  <!-- compass:render related -->
+  None
+  <!-- /compass:render -->
+
+  <!-- compass:render decisions -->
+  None
+  <!-- /compass:render -->
+
+  <!-- compass:render artifacts -->
+  No documents registered yet.
+  <!-- /compass:render -->
+
+  <!-- compass:render traceability -->
+  ```mermaid
+  flowchart LR
+    classDef open stroke-dasharray: 4 4
+    i_INT_1["INT-1"] ==> s_REVIEWING_1["REVIEWING-1"]:::open
+    s_REVIEWING_1 ==> t_REVIEWING_1_tests_test_reviewing_py__test_it["tests/test_reviewing.py::test_it"]
+  ```
+  <!-- /compass:render -->
+
+  <!-- compass:render deliberately-omitted -->
+  Nothing recorded as omitted.
+  <!-- /compass:render -->
+
+  <!-- compass:render follow-ups -->
+  No follow-ups recorded.
+  <!-- /compass:render -->
+render-shipped.txt: |
+  exit 0
+  --- stdout
+  compass issue render: shipped, 1 document(s) rewritten
+    rendered docs/compass/2026-10-01-shipped/README.md: header, ask, decision-required, acceptance, r…
+    current docs/compass/README.md: index
+  --- stderr
+page-shipped.md.txt: |
+  # shipped
+
+  <!-- compass:render header -->
+  **`shipped`** - regular - done (completed) - stage done - gates 2/2
+  Owner: not recorded - Created: 2026-10-01 - Completed: 2026-10-12
+  To see this issue across the board, run `compass board render`.
+  <!-- /compass:render -->
+
+  <!-- compass:render ask -->
+  **Scenarios**
+
+  - `SHIPPED-1` - shipped works
+  <!-- /compass:render -->
+
+  <!-- compass:render decision-required -->
+  No decision required. Nothing is awaiting approval.
+  <!-- /compass:render -->
+
+  <!-- compass:render acceptance -->
+  Acceptance: 0 of 1 scenarios passed
+
+  - `SHIPPED-1` - shipped works - not yet passed
+  <!-- /compass:render -->
+
+  <!-- compass:render related -->
+  None
+  <!-- /compass:render -->
+
+  <!-- compass:render decisions -->
+  None
+  <!-- /compass:render -->
+
+  <!-- compass:render artifacts -->
+  No documents registered yet.
+  <!-- /compass:render -->
+
+  <!-- compass:render traceability -->
+  ```mermaid
+  flowchart LR
+    classDef open stroke-dasharray: 4 4
+    i_INT_1["INT-1"] ==> s_SHIPPED_1["SHIPPED-1"]:::open
+    s_SHIPPED_1 ==> t_SHIPPED_1_tests_test_shipped_py__test_it["tests/test_shipped.py::test_it"]
+  ```
+  <!-- /compass:render -->
+
+  <!-- compass:render deliberately-omitted -->
+  Nothing recorded as omitted.
+  <!-- /compass:render -->
+
+  <!-- compass:render follow-ups -->
+  No follow-ups recorded.
+  <!-- /compass:render -->
+index.md.txt: |
+  # Issues
+
+  <!-- compass:render index -->
+  Issues: 14, 1 unreadable
+
+  ### Backlog (4)
+
+  | Issue | Approach | Stage | Gates | Release |
+  |---|---|---|---|---|
+  | [held](2026-10-01-held/README.md) | regular | plan | 0/2 | - |
+  | [held-flag](2026-10-01-held-flag/README.md) | regular | plan | 0/2 | - |
+  | [queued](2026-09-20-queued/README.md) | not assessed | assess | 0/0 | - |
+  | [refining](2026-10-01-refining/README.md) | regular | refine | 0/2 | - |
+
+  ### Ready (2)
+
+  | Issue | Approach | Stage | Gates | Release |
+  |---|---|---|---|---|
+  | [odd](2026-10-01-odd/README.md) | regular | plan | 0/2 | - |
+  | [ready](2026-10-01-ready/README.md) | regular | plan | 0/2 | - |
+
+  ### In progress (3)
+
+  | Issue | Approach | Stage | Gates | Release |
+  |---|---|---|---|---|
+  | [building](2026-10-01-building/README.md) | regular | implement | 0/2 | - |
+  | [flagged](2026-10-01-flagged/README.md) | regular | implement | 0/2 | - |
+  | [planning](2026-10-01-planning/README.md) | regular | breakdown | 0/2 | - |
+
+  ### In review (1)
+
+  | Issue | Approach | Stage | Gates | Release |
+  |---|---|---|---|---|
+  | [reviewing](2026-10-01-reviewing/README.md) | regular | verify | 1/2 | - |
+
+  ### Done in the last 30 days (1)
+
+  | Issue | Approach | Completed | Release |
+  |---|---|---|---|
+  | [shipped](2026-10-01-shipped/README.md) | regular | 2026-10-12 | - |
+
+  ### Closed (2)
+
+  | Issue | Approach | Reason | Completed | Release |
+  |---|---|---|---|---|
+  | [dropped](2026-10-01-dropped/README.md) | regular | not-planned | - | - |
+  | [dup](2026-10-01-dup/README.md) | regular | duplicate | - | - |
+
+  ### Unreadable
+
+  - broken - no manifest.yml
+  <!-- /compass:render -->

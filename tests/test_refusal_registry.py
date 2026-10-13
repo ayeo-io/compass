@@ -60,6 +60,11 @@ FIXTURES = {
     "red-marker-no-record": dict(slug="demo"),
     "no-red-on-record": dict(slug="demo", target="src/app.py", tool="Edit",
                              guard="the built-in production-code set"),
+    # The longest form: 40-character slugs, more unmet dependencies and a
+    # closed state, so the 60-word cap is checked where it is tightest.
+    "waits-for-issue": dict(slug="a" * 40, target="src/app.py", tool="Edit",
+                            dependency="b" * 40, until="done", more=" (and 4 more)",
+                            state="done (not-planned)"),
 }
 
 

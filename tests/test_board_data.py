@@ -183,8 +183,9 @@ KEYS_AT_6_0_0 = {
 ADDED_TO_A_PLACED_ROW = {
     "lane", "stage", "gates", "gate_list", "assessment", "policy_rules_fired",
     "stage_depths", "tree", "manifest_path", "also_in", "created", "set_aside",
-    "recommendation", "unplaceable", "readiness", "documents"}
-ADDED_TO_AN_UNPLACED_ROW = {"tree", "manifest_path", "also_in"}
+    "recommendation", "unplaceable", "readiness", "documents", "depends_on"}
+# `depends_on` is on every row, an empty list where no manifest was read (ADR-062).
+ADDED_TO_AN_UNPLACED_ROW = {"tree", "manifest_path", "also_in", "depends_on"}
 KEYS_NOW = {
     key: (old | ADDED_TO_AN_UNPLACED_ROW | ({"note"} if key == "other" else set())
           if key in ("other", "unreadable") else old | ADDED_TO_A_PLACED_ROW)
@@ -574,5 +575,5 @@ def test_trc_w11_a_refused_folder_is_never_read(tmp_path, monkeypatch):
     assert [c for c in calls if "escape" in c] == []
     assert data["unreadable"] == [{
         "slug": "escape", "note": "its folder leads out of the tree", "tree": "side",
-        "manifest_path": ".compass/work/escape/manifest.yml", "also_in": 0}]
+        "manifest_path": ".compass/work/escape/manifest.yml", "also_in": 0, "depends_on": []}]
     assert data["total"] == 1

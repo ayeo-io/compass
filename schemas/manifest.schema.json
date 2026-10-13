@@ -56,6 +56,25 @@
         "at": {"type": "string", "description": "ISO-8601 timestamp of when the flag was set."}
       }
     },
+    "depends_on": {
+      "type": "array",
+      "description": "Optional. The issues this issue waits for. Written by `compass issue depends add` and `compass issue depends remove`. While the issue is at the implement stage, an entry whose issue has not reached `until` blocks it: `compass next` and the board show the wait, and the pre-tool hook refuses production-code edits. Nothing stores the block; every reader derives it (ADR-062).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["issue", "reason", "until"],
+        "properties": {
+          "issue": {"type": "string", "minLength": 1, "description": "Slug of the issue waited for: one path segment, not this issue's own slug."},
+          "reason": {"type": "string", "minLength": 1, "description": "Why this issue waits for it."},
+          "until": {
+            "type": "string",
+            "enum": ["done", "in-review", "define", "refine", "plan", "breakdown", "implement", "verify", "ship"],
+            "default": "done",
+            "description": "The point the other issue must reach: done (closed as completed), in-review, or a stage it must be at or past. Written on every entry; done when not given."
+          }
+        }
+      }
+    },
     "landed_by": {
       "type": "array",
       "description": "Optional, and only meaningful on a landed issue. What delivered this issue's work, when the work happened somewhere else. Each entry names another issue or a commit. When it resolves, four checks about this issue carrying its OWN record stand down - the claim moves to whatever carries the evidence rather than being waived. An issue entry must name an issue that exists, has landed, carries a record, and names this one back in `delivered:`; a commit entry must resolve in the project's repository and say what it did. See the `landed-by-resolves` check.",

@@ -338,6 +338,8 @@ def build_parser():
     register_issue_friction_parser(pts)
     from compass_pkg.decisions_taken import register as register_issue_decision_parser
     register_issue_decision_parser(pts)
+    from compass_pkg.checkpoint_outcomes import register as register_issue_checkpoint_parser
+    register_issue_checkpoint_parser(pts, issue_arg)
     register_issue_configure_parser(pts, issue_arg)
 
     ptrb = pts.add_parser(

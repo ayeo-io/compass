@@ -942,6 +942,11 @@ def cmd_route_evaluate(args):
         task["policy_rules_fired"] = result["policy_rules_fired"]
         task["stages"] = result["stages"]
         task["checkpoints"] = result["checkpoints"]
+        # An issue's first assessment makes it one whose hand-offs are recorded
+        # (checkpoint_outcomes.py). A reassessment never adds the key, so an
+        # issue assessed before outcomes existed is never judged by them.
+        if not evaluated_before:
+            task.setdefault("checkpoint_outcomes", [])
         # seed the gate list (status pending) without clobbering existing state
         existing = {g.get("id"): g for g in task.get("gates", []) if isinstance(g, dict)}
         task["gates"] = [

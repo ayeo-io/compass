@@ -341,6 +341,8 @@ def cmd_quick_fix_start(args):
         # Where the assess stage ends; finish reads the session's tokens
         # per stage from here (#375).
         "started_at": now_iso(),
+        # A new issue's hand-offs are recorded (checkpoint_outcomes.py).
+        "checkpoint_outcomes": [],
     }
     if os.environ.get("CLAUDE_CODE_SESSION_ID"):
         start_record["usage"] = {"session": os.environ["CLAUDE_CODE_SESSION_ID"]}

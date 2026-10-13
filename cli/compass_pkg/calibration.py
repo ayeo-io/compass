@@ -515,7 +515,10 @@ def compute_impact(tasks):
     }
 
 
-def render_impact(r):
+def render_impact(r, rows=None):
+    """The retro's impact view. `rows` is `autonomy_cost.impact_rows`; when it
+    is given its lines follow the by-approach block, and every other line keeps
+    its text and its place."""
     out = ["compass retro --impact - process signal (advisory)", ""]
     if not r["n_landed"]:
         out.append("  Nothing to measure yet - no landed issues on record.")
@@ -569,6 +572,11 @@ def render_impact(r):
         else:
             out.append("    %-12s n=%d  lead median %s day(s)  gates=%s"
                        % (route, g["n"], _median(g["lead"]), gates))
+
+    if rows:
+        from compass_pkg import autonomy_cost
+        out.append("")
+        out.extend(autonomy_cost.render_rows(rows))
 
     out.append("")
     if r["withheld"]:
@@ -811,5 +819,30 @@ def _cmd_calibration_impact(args):
                     tasks.append((slug, normalize_spine(load_yaml(path))))
                 except CompassError:
                     continue
-    print(render_impact(compute_impact(tasks)))
+    from compass_pkg import autonomy_cost, terminal
+    result, rows = compute_impact(tasks), autonomy_cost.impact_rows(tasks, work)
+    if terminal.resolve_mode(args) == "json" or getattr(args, "format", "markdown") == "json":
+        # One object for both spellings. The verb renders itself, so the report
+        # layer prints it as it is and does not wrap it in the verb's prose.
+        terminal.mark_handled()
+        print(json.dumps(impact_json(result, rows), indent=2))
+        return 0
+    print(render_impact(result, rows))
     return 0
+
+
+def _plain(value):
+    """`value` with every set as a sorted list, so it serialises."""
+    if isinstance(value, dict):
+        return {k: _plain(v) for k, v in value.items()}
+    if isinstance(value, (set, frozenset)):
+        return sorted(_plain(v) for v in value)
+    if isinstance(value, (list, tuple)):
+        return [_plain(v) for v in value]
+    return value
+
+
+def impact_json(result, rows):
+    """The object `compass retro --impact --json` prints: the numbers
+    `compute_impact` returns and the four rows of `autonomy_cost.impact_rows`."""
+    return {**_plain(result), **rows}

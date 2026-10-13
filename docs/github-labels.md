@@ -102,7 +102,7 @@ Three checks read the comment and the body as it is posted, after the links are 
 | Check | What it refuses |
 |---|---|
 | Rival product name | Text that holds a rival product name found by the shipped name scan, and a configured names key that cannot be read. |
-| Private path | A path under `.compass/private/`, and a path that git ignores. A path under `.compass/work/` or `docs/compass/`, a directory, and a link are not checked. A failed `git check-ignore` call refuses too. |
+| Private path | A path under `.compass/private/`, and a path that git ignores. A path under `.compass/work/` or `docs/compass/`, a directory, and a URL are not checked. A relative link that is not rewritten to a URL becomes a plain path and is checked. A failed `git check-ignore` call refuses too. |
 | Credential | Text that holds a credential shape the redaction step would replace. This check reads no environment variable. |
 
 The name check runs only when `record.names_key` is set, because the key is the only place the names are held. The first post of an issue's comment without a key says so on standard error, once, and posts. With the key set but missing, the post is refused and the line names `record.names_key`.

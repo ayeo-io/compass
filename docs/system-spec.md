@@ -3751,3 +3751,5 @@
 
 - `TRC-001` Given an issue whose own commit changes only its traced files, When the branch tip is a merge of another branch or a commit that only re-derives docs/system-spec.md, Then ship-commit --issue lands at HEAD; and when the issue's own first-parent commit changes an untraced file, Then it still refuses and names the file
 - `TRC-002` Given an integration merge whose first parent is the base of the merged branch, When that branch holds a file outside the issue's declared scope, Then ship-commit --issue refuses to land at HEAD and names the file
+- `TRC-003` Given a tip that merges a branch holding commits not on the base branch, whatever commit it started from, When that branch brings a file outside the issue's declared scope or the base cannot be resolved, Then ship-commit --issue judges the merge in full, refuses and names the file
+- `TRC-004` Given the first-parent scope walk ship-commit uses at HEAD, When the package's module sizes are checked, Then the walk lives in its own module and cli/compass_pkg/manifest.py stays within the 1200-line limit

@@ -115,8 +115,11 @@ def _candidates(text, project_root):
         if path.startswith("./"):
             path = path[2:]
         parts = path.split("/")
-        # An absolute path or one that climbs out of the project names no file in it.
+        # git cannot be asked about an absolute path or one that climbs out of the
+        # project, but a file in the private folder is refused by its name alone.
         if path.startswith("/") or ".." in parts:
+            if "/" + _PRIVATE in path:
+                private = match.start() if private is None else private
             continue
         if os.path.isdir(os.path.join(project_root, *parts)):
             continue

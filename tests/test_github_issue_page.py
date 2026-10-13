@@ -815,6 +815,12 @@ def test_ipg_17_private_path_refuses_the_post(repo, gh):
                                str(repo)).line.find("issue body") >= 0
     assert publish_check.check({"comment": "https://example.com/notes/private/a.md",
                                 "body": None}, str(repo)) is None
+    # git cannot be asked about a path outside the project, but a file under
+    # .compass/private/ is refused by its name alone, however the path is written.
+    for text in ("see /home/u/widgets/.compass/private/rival-codes.yml",
+                 "see ../../../.compass/private/notes.yml"):
+        found = publish_check.check({"comment": text, "body": None}, str(repo))
+        assert found is not None and found.check == "private-path", text
 
 
 def test_ipg_18_credential_refuses_the_post(repo, gh):

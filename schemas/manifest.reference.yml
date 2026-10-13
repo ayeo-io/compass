@@ -33,13 +33,23 @@ subtask_ceiling: # (optional) integer or null - how many parallel subtasks the d
 policy_rules_fired: # (optional) list of maps {id, kind, rationale, changed[]}
 stages:          # (optional until approach evaluate) map of stage -> weight string
 checkpoints:     # (optional until approach evaluate) list of the stage hand-offs that wait for a person: assess, define, refine, plan
+checkpoint_outcomes: # (optional) list of maps - one outcome per checkpoint stage hand-off; the first assessment writes []; an issue without the key is not judged:
+  - stage:       #   (required in entry) [assess, define, refine, plan] - here define
+    outcome:     #   (required in entry) [waited, skipped] - waited: a person answered it with compass evidence approve --checkpoint
+    by:          #   (required in entry) string - the approver of the record it cites, such as jed72
+    at:          #   (required in entry) string - ISO 8601, the record's timestamp
+    evidence:    #   (required for waited) string - the checkpoint-approval record's id, such as EV-CHECKPOINT-define-1
+  - stage:       #   here refine
+    outcome:     #   skipped: the autonomy setting passed it, recorded with compass issue checkpoint add --outcome skipped
+    by:          #   the agent that went on, such as spec-author
+    at:          #   ISO 8601, the time of the command; a skipped outcome has no evidence
 
 evidence:        # (optional) list of maps - the typed evidence registry gates reference by id:
   - id:          #   (required in entry) string - e.g. EV-001 or EV-A1
-    type:        #   (required in entry) [artifact, artifact-approval, claim-review,
-                 #     consistency-check, command-output, human-approval, manual-review,
-                 #     migration-plan, rollback-plan, security-review, spike-conclusion,
-                 #     test-run]
+    type:        #   (required in entry) [artifact, artifact-approval, checkpoint-approval,
+                 #     claim-review, consistency-check, command-output, human-approval,
+                 #     manual-review, migration-plan, rollback-plan, security-review,
+                 #     spike-conclusion, test-run]
     path:        #   (optional) string - path to the evidence file
     scenario:    #   (optional) string - the scenario id this evidence is for
     check:       #   (optional) string - for manual-review, the judged check this review is for
@@ -54,6 +64,8 @@ evidence:        # (optional) list of maps - the typed evidence registry gates r
                  #     (`compass evidence approve` writes check, issue, generation and timestamp)
     artifact:    #   (optional) string - for artifact-approval, the kind of the document approved
     decisions:   #   (optional) list of strings - for artifact-approval, the decision ids confirmed
+    checkpoint:  #   (optional) string - for checkpoint-approval, the stage whose hand-off the person
+                 #     answered; the record has no check, so it never meets G5, a human check or a waiver
 
 gates:           # (optional until approach evaluate) list of maps:
   - id:          #   (required in entry) string - e.g. verify.correctness
@@ -74,7 +86,15 @@ failure_modes_descoped: # (optional) list of maps - failure modes no scenario co
 started_at:      # (optional) string - ISO time `compass quick-fix start` ran; where the assess stage ends
 finish_started_at: # (optional) string - ISO time `compass quick-fix finish` began; where implement ends
 committed_at:    # (optional) string - ISO time `quick-fix finish` recorded usage, just before its commit
-usage:           # (optional) map - tokens per stage from the session's Claude Code transcript: session, source, skipped_lines, stages{assess, implement, ...: requests, subagent_requests, input, output, cache_write, cache_read, cost_usd, shared?}; or recorded: false with a fixed reason. Numbers only.
+usage:           # (optional) map - tokens from the issue's Claude Code transcripts. Numbers only, no text or path. A quick fix's block (quick-fix finish): session, source, skipped_lines, stages{assess, implement, ...: requests, subagent_requests, input, output, cache_write, cache_read, cost_usd, shared?}; or recorded: false with a fixed reason. Any other approach's block (ship-commit):
+  sessions:      #   (optional) list of strings - the session ids that worked on the issue, each once; the pre-tool hook appends them
+  source:        #   string - claude-code
+  skipped_lines: #   integer - transcript lines that were not JSON
+  total:         #   map - every request in the issue's span: requests, subagent_requests, input, output, cache_write, cache_read, cost_usd, shared?
+  unattributed:  #   map - the same keys, for requests after the last stage end; the stages and unattributed add up to total
+  stages:        #   map of stage -> the same keys, or {measured: false, reason: no-window}
+  recorded:      #   (only when nothing is counted) false, with reason: a word in session_usage.REASONS
+                 #     (not-claude-code, bad-session-id, no-transcript, unreadable, too-large, ...); sessions are kept
 changed_files:   # (optional until implement) list of maps:
   - path:        #   (required in entry) string - the production file path
     scenarios:   #   (required in entry) list of scenario ids it traces to

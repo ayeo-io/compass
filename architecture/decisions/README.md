@@ -97,6 +97,7 @@ Rules:
 | [ADR-055](ADR-055-every-approach-records-its-delivery-approach-with-justifications.md) | Every approach records its delivery approach, with a justification for each assessed value | proposed | extends ADR-001 and ADR-022; with ADR-036, ADR-037 and ADR-053 |
 | [ADR-056](ADR-056-the-migrate-maps-documents-by-a-table-and-registers-before-it-moves.md) | The migrate maps documents by a table, renames reviews by a round rule, and registers a document before it moves it | proposed | extends ADR-006 and ADR-020; with ADR-022, ADR-051 and ADR-054 |
 | [ADR-062](ADR-062-a-dependency-is-a-manifest-field-and-the-block-is-derived.md) | A dependency between issues is a manifest field, and the block it causes is derived | accepted | extends ADR-045 and ADR-052 decisions 2 and 3; narrows ADR-003's follow-on note; with ADR-006, ADR-046 and ADR-048 |
+| [ADR-063](ADR-063-checkpoint-outcomes-and-session-usage-are-stored-and-the-autonomy-and-cost-figures-are-derived.md) | Checkpoint outcomes and session usage are stored, and the autonomy and cost figures are derived | proposed | extends ADR-045 and ADR-051; follows ADR-050's `artifact-approval` precedent; with ADR-006, ADR-026, ADR-031, ADR-036 and ADR-048 |
 
 ## Principle → ADR mapping
 

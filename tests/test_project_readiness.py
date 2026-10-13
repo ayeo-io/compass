@@ -2189,7 +2189,11 @@ def test_prc_37():
         code, out, err = support.readiness(ROOT, env=_this_repository_env())
         elapsed = time.monotonic() - started
         assert code == 0, out + err
-        assert elapsed <= 60, f"compass readiness took {elapsed:.1f} s on this repository"
+        # 180 s, not 60: the run took about 31 s locally and 78.1 s on the
+        # GitHub runner (PR #556), because the runner is slower at the
+        # clean-worktree build and the timed command. 180 s keeps margin over
+        # the CI figure and stays well inside the run's own 300 s budget.
+        assert elapsed <= 180, f"compass readiness took {elapsed:.1f} s on this repository"
         record = support.read_record(ROOT)
     finally:
         if kept is None:

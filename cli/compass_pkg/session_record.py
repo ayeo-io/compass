@@ -24,14 +24,12 @@ The hook judges every tool call, so this never stops one:
 and the hook never replace the manifest at the same time. Owning decision:
 `architecture/decisions/ADR-063-*.md`.
 """
-# DEPENDENCY: standard library (copy, datetime, json, os, re); the bundled
-# PyYAML; compass_pkg.atomic_io. It does not import compass_pkg.core, so the
-# hook's one process stays small.
+# DEPENDENCY: standard library (copy, os, re); the bundled PyYAML;
+# compass_pkg.atomic_io, core (the manifest's name) and session_lease (the
+# session table), which the hook's one process imports as other readers do.
 from __future__ import annotations
 
 import copy
-import datetime
-import json
 import os
 import re
 
@@ -54,11 +52,6 @@ TRIES = 3
 #: A session id goes into a regular expression, a file name and the manifest,
 #: so only an id of this shape is recorded (the shape `session_usage` reads).
 _SESSION_ID = re.compile(r"[A-Za-z0-9_-]+")
-
-#: How long a session's record in `.compass/sessions.json` counts; the same
-#: limit as `session_lease.LEASE_HOURS`, which this module does not import to
-#: keep the hook's process small. A test keeps the two equal.
-LEASE_HOURS = 12
 
 
 class _Changed(Exception):
@@ -86,7 +79,8 @@ def _record(task_dir, session, via):
         return
     if via == "pointer" and _moved(task_dir, session):
         return
-    path = os.path.join(task_dir, "manifest.yml")
+    from compass_pkg.core import manifest_path
+    path = manifest_path(task_dir)
     # A rename would replace a file the person made read-only.
     if not os.path.isfile(path) or not os.access(path, os.W_OK):
         return
@@ -118,27 +112,14 @@ def _record(task_dir, session, via):
 
 
 def _moved(task_dir, session):
-    """True when the session's fresh record in `.compass/sessions.json` names
-    another issue: another session moved the pointer, and this session's work
-    is elsewhere. Read without the table's lock; a table that cannot be read
-    moves nothing."""
-    compass_dir = os.path.dirname(os.path.dirname(task_dir))
-    try:
-        with open(os.path.join(compass_dir, "sessions.json"), encoding="utf-8") as fh:
-            entry = (json.load(fh) or {}).get(session)
-    except (OSError, ValueError, AttributeError):
-        return False
-    if not isinstance(entry, dict) or not entry.get("issue"):
-        return False
-    try:
-        at = datetime.datetime.fromisoformat(str(entry.get("at")))
-    except ValueError:
-        return False
-    if at.tzinfo is None:
-        at = at.replace(tzinfo=datetime.timezone.utc)
-    fresh = (datetime.datetime.now(datetime.timezone.utc) - at
-             < datetime.timedelta(hours=LEASE_HOURS))
-    return fresh and entry["issue"] != os.path.basename(task_dir)
+    """True when the session's fresh entry in the session table that
+    `session_lease` keeps names another issue: another session moved the
+    pointer, and this session's work is elsewhere. Read without the table's
+    lock; a table that cannot be read moves nothing."""
+    from compass_pkg import session_lease
+    entry = session_lease._load(os.path.dirname(os.path.dirname(task_dir))).get(session)
+    return (isinstance(entry, dict) and bool(entry.get("issue")) and session_lease._fresh(entry)
+            and entry["issue"] != os.path.basename(task_dir))
 
 
 def _inserted(data, session):

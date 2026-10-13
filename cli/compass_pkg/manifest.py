@@ -308,10 +308,9 @@ def _derive_and_commit_living_spec(cwd, slug):
     return "\n  living spec re-derived and committed."
 
 
-#: The refusals a landing runs before it stages, renders, commits, derives or
-#: syncs anything, in order. Each takes the manifest and the issue folder and
-#: returns the refusal text or None; the first text refuses the landing. A later refusal is appended here rather
-#: than written as a branch of `cmd_land_commit`.
+#: The refusals a landing runs, in order, before it stages, renders, commits,
+#: derives or syncs anything. Each takes the manifest and the issue folder and
+#: returns its text or None; a later refusal is appended here, not branched in.
 LANDING_REFUSALS = [checkpoint_outcomes.landing_refusal]
 
 
@@ -321,27 +320,6 @@ def run_landing_refusals(task, task_dir):
         text = refusal(task, task_dir)
         if text:
             raise CompassError(text)
-
-
-def _landing_issue(args):
-    """The manifest and folder of the issue a landing is for - from `--issue`,
-    `COMPASS_ISSUE` or the current-task pointer - or None when none is named or
-    it cannot be read. The most recently changed issue is never guessed here:
-    a refusal must not judge an issue the landing is not for."""
-    from compass_pkg.core import session_issue
-    try:
-        slug = getattr(args, "task", None) or session_issue()
-        if not slug:
-            pointer = os.path.join(find_compass_dir(), "current-task")
-            with open(pointer, encoding="utf-8") as fh:
-                slug = fh.read().strip()
-        if not slug:
-            return None
-        task_dir = resolve_issue_dir(slug)
-        task, _ = load_manifest(task_dir)
-    except (CompassError, OSError, ValueError, yaml.YAMLError):
-        return None
-    return (task, task_dir) if isinstance(task, dict) else None
 
 
 def cmd_land_commit(args):
@@ -369,7 +347,7 @@ def cmd_land_commit(args):
 
     # The landing refusals run before anything is staged or written, so a
     # refusal leaves every file as it was (ADR-026).
-    landing = _landing_issue(args)
+    landing = checkpoint_outcomes.landing_issue(args)
     if landing is not None:
         run_landing_refusals(*landing)
 
@@ -477,13 +455,7 @@ def cmd_land_commit(args):
         status_words.close(head_task, status_words.COMPLETED)
         head_task["land_timestamp"] = now_iso()
         head_task["land_commit"] = head_id
-        # What the issue's sessions cost, read from their transcripts; it never
-        # stops the landing (issue_usage.py).
-        usage_line = issue_usage.record_at_ship(head_task, head_task_dir,
-                                                head_task["land_timestamp"])
-        save_manifest(head_task, head_task_path)
-        if usage_line:
-            print(usage_line)
+        issue_usage.save_landed(head_task, head_task_dir, head_task_path)
         landed_note = _derive_and_commit_living_spec(cwd, head_slug)
         print(
             f"compass ship-commit: every file '{head_slug}' changed is "
@@ -728,11 +700,7 @@ def cmd_land_commit(args):
                         # The commit this issue landed in. A green is checked
                         # against its tree after HEAD has moved on.
                         task["land_commit"] = head_after
-                        usage_line = issue_usage.record_at_ship(
-                            task, task_dir, task["land_timestamp"])
-                        save_manifest(task, task_path)
-                        if usage_line:
-                            print(usage_line)
+                        issue_usage.save_landed(task, task_dir, task_path)
                         landed_note = "\n  issue marked landed."
                         # ADR-026: ship-commit is the one step that derives
                         # the living spec, and only for an issue it has just
@@ -1137,9 +1105,7 @@ def cmd_changed_file_add(args):
 
 
 def cmd_evidence_add(args):
-    # A checkpoint answer is a person's act, so only the verb that needs a
-    # terminal writes one (approve_cmd). Refused before anything is read.
-    if args.type == "checkpoint-approval":
+    if args.type == "checkpoint-approval":     # a person's act: approve_cmd writes it
         raise CompassError(
             "compass evidence add: a checkpoint-approval record is a person's answer; run "
             "compass evidence approve --checkpoint <stage> at a terminal.")

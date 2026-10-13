@@ -185,9 +185,7 @@ def _concurrent_writer_is_merged(tmp_path, monkeypatch):
     """Two writers at once both end up in the list: a writer that changes the
     file between the recorder's read and its rename is merged, not overwritten.
     In-process, because a shell test cannot stop the hook between the two."""
-    from compass_pkg import session_lease, session_record
-    # The recorder keeps its own copy of the lease limit to stay small.
-    assert session_record.LEASE_HOURS == session_lease.LEASE_HOURS
+    from compass_pkg import session_record
     project = hook_project(tmp_path)
     folder = str(project.dir("a"))
     session_record.record(folder, "S1", "env")
@@ -227,7 +225,9 @@ BASE_PYTHON3_WITHOUT_SESSION = 3
 #: Python 3.11.9), 2026-10-13, with other test suites running, in two runs:
 #: no session 0.367s and 0.331s, recorded id 0.478s and 0.423s, new id 0.569s
 #: and 0.479s, reference 0.067s and 0.061s; recorded over none 1.30 and 1.28;
-#: new-id marginal 1.36 and 0.93 references. The recorded id adds the base
+#: new-id marginal 1.36 and 0.93 references. A third run, after the recorder
+#: came to import compass_pkg.core: 0.267s, 0.340s, 0.412s and 0.057s; 1.27
+#: and 1.28. The recorded id adds the base
 #: commit's lease reader and one `grep` to the no-session call, so its ratio
 #: sits near 4 processes over 3; the new id adds one python3 process, which
 #: the reference also measures. Each limit leaves about 50% for a runner whose

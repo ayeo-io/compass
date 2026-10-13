@@ -238,3 +238,14 @@ def record_at_ship(task, task_dir, now) -> str | None:
     if block.get("recorded") is False:
         return f"compass ship-commit: usage not recorded ({block['reason']})."
     return None
+
+
+def save_landed(task, task_dir, path):
+    """Record the landed issue's usage, save its manifest, and print the one
+    line that says usage was not recorded. `ship-commit` calls it in both of
+    its landing saves, after `land_timestamp` is set."""
+    from compass_pkg.core import save_manifest
+    line = record_at_ship(task, task_dir, task.get("land_timestamp"))
+    save_manifest(task, path)
+    if line:
+        print(line)

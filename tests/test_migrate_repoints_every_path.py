@@ -448,6 +448,7 @@ EXCLUDED = {
     "evidence[].scenario": "a scenario id",
     "evidence[].check": "a judged check id",
     "gates[].evidence": "evidence ids, not paths",
+    "checkpoint_outcomes[].evidence": "the id of a checkpoint-approval record, not a path",
     "landed_by[].issue": "an issue slug",
     "depends_on[].issue": "an issue slug",
     "land_commit": "a commit id",

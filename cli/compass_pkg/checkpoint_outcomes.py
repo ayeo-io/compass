@@ -113,6 +113,27 @@ def landing_refusal(task, task_dir):
            "it": "it" if len(stages) == 1 else "them"})
 
 
+def landing_issue(args):
+    """`(manifest, folder)` of the issue a landing is for - from `--issue`,
+    `COMPASS_ISSUE` or the current-task pointer - or None when none is named or
+    it cannot be read. The most recently changed issue is never guessed: a
+    refusal must not judge an issue the landing is not for."""
+    from compass_pkg.core import find_compass_dir, session_issue
+    try:
+        slug = getattr(args, "task", None) or session_issue()
+        if not slug:
+            with open(os.path.join(find_compass_dir(), "current-task"),
+                      encoding="utf-8") as fh:
+                slug = fh.read().strip()
+        if not slug:
+            return None
+        task_dir = resolve_issue_dir(slug)
+        task, _ = load_manifest(task_dir)
+    except (CompassError, OSError, ValueError):
+        return None
+    return (task, task_dir) if isinstance(task, dict) else None
+
+
 def refuse_unjudged(task, task_dir, verb):
     if not judged(task):
         slug = os.path.basename(os.path.normpath(task_dir))

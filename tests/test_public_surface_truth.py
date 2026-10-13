@@ -494,6 +494,11 @@ def test_d2_repairs_change_only_retired_names():
     gained the section on the pre-tool hook's dependency refusal, listing the
     four limits of its read.
 
+    One more was re-baselined by `autonomy-ratio-and-cost`:
+    `docs/safety-contract.md` (list_items 32 -> 39, one more `###` heading)
+    gained the section on the pre-tool hook's session record, listing how it
+    resolves the issue, what it costs and how it fails safe.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

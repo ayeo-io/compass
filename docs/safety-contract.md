@@ -316,8 +316,9 @@ manifest.
 
 - The issue comes from `COMPASS_ISSUE` or `.compass/current-task`, read in
   shell. With neither, nothing is recorded; the most recently changed issue
-  is never guessed. A session whose fresh entry in `.compass/sessions.json`
-  names another issue is not recorded on the pointer's issue.
+  is never guessed. A session whose fresh entry in the session table behind
+  the `pointer-moved` refusal names another issue is not recorded on the
+  pointer's issue.
 - A session id that is not letters, digits, `-` and `_` is not recorded.
 - An id already in the manifest costs one `grep` and no python3 process. A new
   id starts one python3 process, which opens only that issue's manifest.

@@ -243,9 +243,9 @@ def test_as_d_the_shape_tests_run_and_do_not_skip(request, monkeypatch):
     assert SHAPE_TESTS and all((ROOT / "tests" / name).is_file() for name in SHAPE_TESTS)
 
 
-# test_artifact_registry.py is the shape module copied for the planted runs below. It
-# collected fastest of the seven (about 0.3 s in pytest's own count), its imports are
-# light, and its test_a1 reads only a schema file.
+# test_artifact_registry.py is the shape module copied for the planted runs below. All
+# seven collect in 0.6 to 0.7 s, so collection time does not separate them. This one has
+# the fewest tests (12), light imports, and a test_a1 that reads only a schema file.
 GUARDED_COPY = "test_artifact_registry.py"
 GUARDED_REAL_TEST = "test_a1_entry_declares_kind_path_status_reason"
 

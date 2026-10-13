@@ -3874,3 +3874,4 @@
 - `IPG-21` The owning doc says what the page exposes
 - `IPG-22` The page posts the README its own command rendered
 - `IPG-23` A private path inside a URL refuses the post
+- `IPG-24` A private path written in any equivalent form refuses the post

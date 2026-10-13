@@ -2079,6 +2079,33 @@ def test_acf_65(tmp_path):
     assert not any(n in out + err for n in names), out + err
 
 
+def test_acf_66(tmp_path):
+    # A person registered the report at a file outside the documents folder. The migrate
+    # must not re-point the entry at the copy in the documents folder, or a later step
+    # edits that copy (DCJ-98 of documents-carry-judgement).
+    root = tmp_path / "a"
+    slug = "elsewhere"
+    entry = _entry("verification-report", slug, status="approved")
+    entry["path"] = "notes/report.md"
+    work, docs = _m_issue(root, slug, docs=["verification-report.md"], artifacts=[entry])
+    _write(root / "notes" / "report.md", "# the registered report\n")
+    before = (docs / "verification-report.md").read_bytes()
+    code, out, err = _migrate(root, "--apply")
+    assert code == 0, out + err
+    reports = [e for e in _registry(work) if e["kind"] == "verification-report"]
+    assert [e["path"] for e in reports] == ["notes/report.md"], reports
+    assert (docs / "verification-report.md").read_bytes() == before
+    assert "verification-report.md" in out and "notes/report.md" in out, out
+    # A registered path whose file is gone does not hold the document back.
+    root = tmp_path / "b"
+    entry = dict(entry, path="notes/gone.md")
+    work, docs = _m_issue(root, slug, docs=["verification-report.md"], artifacts=[entry])
+    code, out, err = _migrate(root, "--apply")
+    assert code == 0, out + err
+    reports = [e for e in _registry(work) if e["kind"] == "verification-report"]
+    assert [e["path"] for e in reports] == [f"docs/compass/{STAMP}-{slug}/verification-report.md"], reports
+
+
 def test_acf_46(tmp_path):
     root = tmp_path / "a"
     slug = "unknown"

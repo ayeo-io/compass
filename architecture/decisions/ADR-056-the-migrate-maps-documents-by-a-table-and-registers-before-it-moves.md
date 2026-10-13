@@ -23,7 +23,9 @@ it also moves files under `docs/compass/`.
 1. **A table says what each name becomes.** `migrate_kinds.KIND_RULES` is ordered and the first matching
    row wins:
    - a name on `stable_ids.NOT_AN_ARTIFACT` stays where it is and is not registered;
-   - a name the catalogue declares is that kind;
+   - a name the catalogue declares is that kind, unless the kind is already registered at another file
+     that exists: the registered path is kept, the file stays where it is and the report names both, so
+     no later step edits a copy the person did not register;
    - `design` and `prd` are `technical-design` and `intent`; when both the old and the new kind are
      registered or present, both stay and the report names the issue;
    - `review.md` and `review-<n>.md` are rounds of `review`;

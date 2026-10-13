@@ -188,6 +188,7 @@ class Plan:
     repoints: list = field(default_factory=list)      # (entry id, old kind, new kind)
     dropped: list = field(default_factory=list)       # (entry id, kind)
     both_stay: list = field(default_factory=list)     # (old kind, new kind)
+    kept_elsewhere: list = field(default_factory=list)  # (name, kind, registered path)
     left: list = field(default_factory=list)          # names on the not-an-artifact list
     unmapped: list = field(default_factory=list)      # (where, name)
     pointer: str | None = None                        # project-relative path to remove
@@ -320,6 +321,16 @@ def plan_issue(task_dir, rename_v1=None, pointer_marker="<!-- compass: moved -->
                   and os.path.basename(str(e.get("path") or "")) != name]
         if target.how == ALIAS and (dest_name in held or others):
             plan.both_stay.append((name[:-3], kind))     # both stay (ACF-44)
+            continue
+        # A person registered the kind at another file that exists. Re-pointing the
+        # entry at this one would discard that record, and a later step would edit
+        # this file (ACF-66, DCJ-98). A path whose file is gone holds nothing back,
+        # and neither does an old filename this run renames to this one.
+        elsewhere = [str(e["path"]) for e in others if e.get("path")
+                     and renames.get(os.path.basename(str(e["path"]))) != name
+                     and os.path.isfile(os.path.join(project, str(e["path"])))]
+        if target.how == KIND and elsewhere:
+            plan.kept_elsewhere.append((name, kind, elsewhere[0]))
             continue
         place(Move(kind, None, name, where, rel(where, name), rel("docs", dest_name),
                    "migrated from %s" % name), dest_name)

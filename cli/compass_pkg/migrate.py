@@ -825,6 +825,9 @@ def _plan_problems(plan, problems):
     for old, new in plan.both_stay:
         problems.append("%s: %s and %s are both registered, so both stay as they are"
                         % (plan.slug, old, new))
+    for name, kind, path in plan.kept_elsewhere:
+        problems.append("%s: %s is left where it is - %s is registered at %s, and the "
+                        "migrate keeps that path" % (plan.slug, name, kind, path))
     if plan.pointer_kept:
         problems.append("%s: %s has no pointer marker, so it was left where it is"
                         % (plan.slug, os.path.basename(plan.pointer_kept)))

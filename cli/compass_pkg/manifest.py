@@ -32,7 +32,7 @@ import re as _re
 
 import fnmatch
 import re as _re
-from compass_pkg import status_words
+from compass_pkg import checkpoint_outcomes, status_words
 from compass_pkg.terminal import say
 from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, normalize_spine, now_iso, resolve_issue_dir, save_manifest
 from compass_pkg.issue_layout import docs_dir_for
@@ -308,6 +308,42 @@ def _derive_and_commit_living_spec(cwd, slug):
     return "\n  living spec re-derived and committed."
 
 
+#: The refusals a landing runs before it stages, renders, commits, derives or
+#: syncs anything, in order. Each is `(task, task_dir) -> text | None`; the
+#: first text refuses the landing. A later refusal is appended here rather
+#: than written as a branch of `cmd_land_commit`.
+LANDING_REFUSALS = [checkpoint_outcomes.landing_refusal]
+
+
+def run_landing_refusals(task, task_dir):
+    """Raise the first landing refusal's text as a `CompassError`."""
+    for refusal in LANDING_REFUSALS:
+        text = refusal(task, task_dir)
+        if text:
+            raise CompassError(text)
+
+
+def _landing_issue(args):
+    """`(task, task_dir)` of the issue a landing is for - from `--issue`,
+    `COMPASS_ISSUE` or the current-task pointer - or None when none is named or
+    it cannot be read. The most recently changed issue is never guessed here:
+    a refusal must not judge an issue the landing is not for."""
+    from compass_pkg.core import session_issue
+    try:
+        slug = getattr(args, "task", None) or session_issue()
+        if not slug:
+            pointer = os.path.join(find_compass_dir(), "current-task")
+            with open(pointer, encoding="utf-8") as fh:
+                slug = fh.read().strip()
+        if not slug:
+            return None
+        task_dir = resolve_issue_dir(slug)
+        task, _ = load_manifest(task_dir)
+    except (CompassError, OSError, ValueError, yaml.YAMLError):
+        return None
+    return (task, task_dir) if isinstance(task, dict) else None
+
+
 def cmd_land_commit(args):
     import shutil
     cwd = os.getcwd()
@@ -330,6 +366,12 @@ def cmd_land_commit(args):
     inside = _git(["rev-parse", "--is-inside-work-tree"], cwd)
     if inside.returncode != 0:
         raise CompassError("compass ship-commit: not inside a git repository.")
+
+    # The landing refusals run before anything is staged or written, so a
+    # refusal leaves every file as it was (ADR-026).
+    landing = _landing_issue(args)
+    if landing is not None:
+        run_landing_refusals(*landing)
 
     # Stage any explicitly named paths.
     # A name is a name, not a pattern: `x[1].txt` must not stage `x1.txt`.

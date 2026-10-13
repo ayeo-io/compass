@@ -93,6 +93,26 @@ def set_outcome(task, entry):
     task[KEY] = kept + [entry]
 
 
+def _joined(stages):
+    if len(stages) == 1:
+        return stages[0]
+    return ", ".join(stages[:-1]) + " and " + stages[-1]
+
+
+def landing_refusal(task, task_dir):
+    """The refusal text for a judged issue that lists a checkpoint with no
+    outcome, or None. The first entry of `manifest.LANDING_REFUSALS`."""
+    stages = missing(task)
+    if not stages:
+        return None
+    from compass_pkg import refusals
+    return refusals.render(
+        "checkpoint-no-outcome", slug=os.path.basename(os.path.normpath(task_dir)),
+        stages=_joined(stages), stage=stages[0],
+        **{"is": "is" if len(stages) == 1 else "are",
+           "it": "it" if len(stages) == 1 else "them"})
+
+
 def refuse_unjudged(task, task_dir, verb):
     if not judged(task):
         slug = os.path.basename(os.path.normpath(task_dir))

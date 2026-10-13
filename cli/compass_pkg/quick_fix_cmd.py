@@ -864,6 +864,12 @@ def cmd_quick_fix_finish(args):
             f"compass quick-fix finish: the verification note at {note_rel} is not written: "
             f"{why}. Nothing was changed.")
 
+    # A finish that lands runs the landing refusals with the other
+    # preconditions, before it traces, tests or writes anything.
+    if not getattr(args, "no_commit", False):
+        from compass_pkg.manifest import run_landing_refusals
+        run_landing_refusals(task, task_dir)
+
     with _at_project_root(project_root):
         all_paths = _git_changed_paths(project_root)
         doc_prefix = docs_dir(task_dir) + "/"

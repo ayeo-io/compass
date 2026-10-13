@@ -65,6 +65,10 @@ FIXTURES = {
     "waits-for-issue": dict(slug="a" * 40, target="src/app.py", tool="Edit",
                             dependency="b" * 40, until="done", more=" (and 4 more)",
                             state="done (not-planned)"),
+    # The longest form: a 40-character slug and all four checkpoint stages
+    # with no outcome, so the 60-word cap is checked where it is tightest.
+    "checkpoint-no-outcome": {"slug": "a" * 40, "stages": "assess, define, refine and plan",
+                              "stage": "assess", "is": "are", "it": "them"},
 }
 
 

@@ -532,3 +532,123 @@ def test_arc_7_checkpoint_record_is_not_the_sign_off(tmp_path):
     assert "W-APPROVAL-TYPE" in done.stdout and fault.split(": ", 1)[1] in done.stdout, done
     assert _check_lines(root, "human-approval-present", "design-review") == without
     assert_no_gh_call(root)
+
+
+# --- ARC-5 ------------------------------------------------------------------------
+
+REGULAR_DOCUMENTS = ("delivery-approach", "technical-design", "distribution-map",
+                     "verification-report")
+
+
+def _ready_to_ship(root, cli=CLI):
+    """Every gate passed, one changed file traced and staged, a green on record
+    and every document approved: the state `ship-commit` lands from."""
+    for kind in REGULAR_DOCUMENTS:
+        register(root, kind, "approved", cli=cli)
+    body = manifest(root)
+    for gate in body["gates"]:
+        gate["status"] = "pass"
+    body["changed_files"] = [{"path": "src/new.py", "scenarios": ["S-1"]}]
+    write_manifest(root, body)
+    (root / "src").mkdir(exist_ok=True)
+    (root / "src" / "new.py").write_text("y = 1\n")
+    done = run(root, "tdd-green", "--issue", SLUG, "--", sys.executable, "-c", "pass", cli=cli)
+    assert done.returncode == 0, done
+    git(root, "add", "src/new.py")
+
+
+def _tree(root):
+    """The bytes of every file under .compass and docs/compass."""
+    found = {}
+    for top in (".compass", "docs/compass"):
+        for path in sorted((Path(root) / top).rglob("*")):
+            if path.is_file():
+                found[str(path.relative_to(root))] = path.read_bytes()
+    return found
+
+
+def _masked(text):
+    import re
+    return re.sub(r"\b[0-9a-f]{8,40}\b", "<sha>", text)
+
+
+def test_arc_5_landing_refuses_a_checkpoint_with_no_outcome(tmp_path, monkeypatch):
+    root = project(tmp_path)
+    register(root, "acceptance-criteria", "approved")
+    assert approve(root, "define").returncode == 0
+    _ready_to_ship(root)
+    head, before = git(root, "rev-parse", "HEAD"), _tree(root)
+
+    done = run(root, "ship-commit", "-m", "Ship it")
+    assert done.returncode == 2, done
+    lines = done.stderr.strip().splitlines()
+    assert lines == [
+        f"compass: Blocked: landing of issue '{SLUG}'",
+        "Why: plan is listed in checkpoints with no outcome recorded, so nothing shows a "
+        "person answered it.",
+        "Fix: the person who answers runs compass evidence approve --checkpoint plan "
+        "--approver <you> --role <role>, for each stage named, then ship again. "
+        "[checkpoint-no-outcome]"], done.stderr
+    assert git(root, "rev-parse", "HEAD") == head
+    assert "land_timestamp" not in manifest(root)
+    assert _tree(root) == before
+
+    # The refusal is the first entry of an ordered list; an entry appended
+    # after it runs after it, and only when it does not refuse.
+    from compass_pkg import checkpoint_outcomes, core, manifest as manifest_module
+    assert manifest_module.LANDING_REFUSALS[0] is checkpoint_outcomes.landing_refusal
+    seen = []
+    monkeypatch.setattr(manifest_module, "LANDING_REFUSALS", [
+        *manifest_module.LANDING_REFUSALS, lambda task, task_dir: seen.append("stub")])
+    task = manifest(root)
+    with pytest.raises(core.CompassError):
+        manifest_module.run_landing_refusals(task, str(manifest_file(root).parent))
+    assert seen == []
+    task["checkpoint_outcomes"].append({"stage": "plan", "outcome": "skipped",
+                                        "by": "planner", "at": "2026-10-13T00:00:00Z"})
+    manifest_module.run_landing_refusals(task, str(manifest_file(root).parent))
+    assert seen == ["stub"]
+
+    register(root, "technical-design", "approved")
+    assert approve(root, "plan").returncode == 0
+    git(root, "add", "src/new.py")
+    done = run(root, "ship-commit", "-m", "Ship it", "--issue", SLUG)
+    assert done.returncode == 0, done
+    assert manifest(root).get("land_timestamp") and git(root, "rev-parse", "HEAD") != head
+    assert_no_gh_call(root)
+
+    # An issue that is not judged lands exactly as the base commit lands it.
+    captured = json.loads((FIXTURES / "base-ship-commit-not-judged.json").read_text())
+    assert ship_not_judged(tmp_path / "not-judged") == captured
+    _quick_fix_refused(tmp_path / "quick-fix")
+
+
+def ship_not_judged(tmp_path, cli=CLI):
+    """`ship-commit` on a regular issue with `checkpoints: []` and no
+    `checkpoint_outcomes` key: its exit code and output, hashes masked."""
+    root = project(tmp_path, compass_yml=dict(BALANCED, autonomy="autonomous"), cli=cli)
+    body = manifest(root)
+    assert body["checkpoints"] == []
+    body.pop("checkpoint_outcomes", None)
+    write_manifest(root, body)
+    register(root, "acceptance-criteria", "approved", cli=cli)
+    _ready_to_ship(root, cli=cli)
+    done = run(root, "ship-commit", "-m", "Ship it", "--issue", SLUG, cli=cli)
+    assert manifest(root).get("land_timestamp"), done
+    assert_no_gh_call(root)
+    return {"exit": done.returncode, "stdout": _masked(done.stdout),
+            "stderr": _masked(done.stderr)}
+
+
+def _quick_fix_refused(tmp_path):
+    root = project(tmp_path, compass_yml=dict(BALANCED, autonomy="controlled"))
+    slug = quick_fix(root)
+    body = manifest(root, slug)
+    assert body["checkpoints"] == ["assess"] and body["checkpoint_outcomes"] == []
+    head = git(root, "rev-parse", "HEAD")
+    done = run(root, "quick-fix", "finish", "--issue", slug, "-m", "Fix it", *GREET_CMD)
+    assert done.returncode == 2, done
+    assert "assess is listed in checkpoints with no outcome recorded" in done.stderr, done
+    assert git(root, "rev-parse", "HEAD") == head
+    assert "land_timestamp" not in manifest(root, slug)
+    assert_no_gh_call(root)

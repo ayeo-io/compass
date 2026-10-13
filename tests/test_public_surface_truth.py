@@ -489,6 +489,11 @@ def test_d2_repairs_change_only_retired_names():
     29 -> 32, one more `##` heading) gained the section that holds the
     wording of the removed distribution-map boxes.
 
+    One more was re-baselined by `dependencies-between-issues`:
+    `docs/safety-contract.md` (list_items 28 -> 32, one more `###` heading)
+    gained the section on the pre-tool hook's dependency refusal, listing the
+    four limits of its read.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

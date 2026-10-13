@@ -9,6 +9,11 @@
 # standard library.
 # =============================================================================
 
+# The pre-tool hook's dependency reader imports this module through
+# `lifecycle`, and the hook's readers run under a python3 older than 3.10 too
+# (docs/safety-contract.md), where a `str | None` annotation fails at import.
+from __future__ import annotations
+
 import argparse
 import datetime
 import hashlib
@@ -314,6 +319,24 @@ def _emit(args, task, task_dir, line, current_phase, finished, hint=True):
     sys.stdout.write(text)
 
 
+def _dependency_block(task, task_dir, stage):
+    """The waits of the issues this one depends on, while it is at implement,
+    else None. Read uncached from this checkout, as the pre-tool hook reads
+    them, so the two cannot disagree. An issue without `depends_on` reads
+    nothing."""
+    if not task.get("depends_on"):
+        return None
+    # Imported here: lifecycle imports this module at its top.
+    from compass_pkg import lifecycle
+    # Out of scope (not at implement, held or closed): no dependency is read.
+    if not lifecycle.in_scope(task, task_dir, stage):
+        return None
+    folder = os.path.normpath(task_dir)
+    deps = lifecycle.judge(task, os.path.basename(folder),
+                           lifecycle.checkout_reader(os.path.dirname(folder)))
+    return lifecycle.dependency_block(task, task_dir, deps, stage=stage)
+
+
 def cmd_next(args):
     """compass next - what comes next on this issue's delivery approach?
 
@@ -377,11 +400,18 @@ def cmd_next(args):
         parts.append("entry not met: " + ", ".join(unmet))
     if collapsed:
         parts.append(f"{', '.join(collapsed)} collapsed on this route")
+    # The issues this one waits for (ADR-062). Faults in `depends_on` are not
+    # named here: the line stays one line, and `compass issue lint` names them.
+    blocked = _dependency_block(task, task_dir, next_phase)
+    if blocked:
+        parts.append("blocked: " + blocked)
 
     # A decision an agent took for the person: the issue waits at a checkpoint
     # for its confirmation, or lists the decisions and goes on (autonomous).
     from compass_pkg import decisions_taken
     wait, more = decisions_taken.next_lines(task, _stages_on_record(task, task_dir))
+    if wait and blocked:
+        wait += " | blocked: " + blocked
     line = (wait if wait else " | ".join(parts)) + "\n"
     _emit(args, task, task_dir, line, next_phase, False, hint=not wait)
     for extra in more:

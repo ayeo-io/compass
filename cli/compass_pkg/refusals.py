@@ -121,6 +121,16 @@ REFUSALS: dict[str, dict[str, str]] = {
         "fix": "run compass tdd-red --scenario <id> -- <your failing test "
                "command>.",
     },
+    # The fields come from a one-segment slug, the until vocabulary and the
+    # state words, so none can carry a newline (ADR-062).
+    "waits-for-issue": {
+        "what": "edit to {target} (tool: {tool})",
+        "why": "issue '{slug}' waits for {dependency} to reach {until}{more}, "
+               "and this checkout reads {dependency} as {state}.",
+        "fix": "if {dependency} is finished in another checkout, bring its "
+               ".compass/work/{dependency}/ folder here; or run compass issue "
+               "depends remove {dependency}.",
+    },
     "red-marker-no-record": {
         "what": "this edit",
         "why": "the .red marker for issue '{slug}' has no matching record "

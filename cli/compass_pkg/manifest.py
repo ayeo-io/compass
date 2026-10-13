@@ -309,8 +309,8 @@ def _derive_and_commit_living_spec(cwd, slug):
 
 
 #: The refusals a landing runs before it stages, renders, commits, derives or
-#: syncs anything, in order. Each is `(task, task_dir) -> text | None`; the
-#: first text refuses the landing. A later refusal is appended here rather
+#: syncs anything, in order. Each takes the manifest and the issue folder and
+#: returns the refusal text or None; the first text refuses the landing. A later refusal is appended here rather
 #: than written as a branch of `cmd_land_commit`.
 LANDING_REFUSALS = [checkpoint_outcomes.landing_refusal]
 
@@ -324,7 +324,7 @@ def run_landing_refusals(task, task_dir):
 
 
 def _landing_issue(args):
-    """`(task, task_dir)` of the issue a landing is for - from `--issue`,
+    """The manifest and folder of the issue a landing is for - from `--issue`,
     `COMPASS_ISSUE` or the current-task pointer - or None when none is named or
     it cannot be read. The most recently changed issue is never guessed here:
     a refusal must not judge an issue the landing is not for."""

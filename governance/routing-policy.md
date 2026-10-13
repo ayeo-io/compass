@@ -166,7 +166,16 @@ the answer into the manifest as `checkpoints:`.
 
 - A stage the route collapses or skips has no hand-off, so it never waits.
 - A hand-off that does not wait still writes its document, shows its
-  summary, names the setting and logs the skipped checkpoint to `devlog.md`.
+  summary, names the setting and records its outcome with `compass issue
+  checkpoint add <stage> --outcome skipped --by <agent>`. A person's answer to
+  a hand-off is recorded with `compass evidence approve --checkpoint <stage>`,
+  as a `checkpoint-approval` record and a `waited` outcome; it never meets
+  guardrail `G5`. Both outcomes are kept in the manifest's
+  `checkpoint_outcomes`, one per stage. `compass ship-commit` refuses an
+  issue that lists a checkpoint with no outcome (`checkpoint-no-outcome`).
+  Only an issue whose first assessment wrote `checkpoint_outcomes` is judged;
+  an issue assessed before outcomes were recorded is never refused, and the
+  two commands refuse it.
 - The table can name only the four checkpoint stages. `compass policy lint`
   and the evaluator refuse anything else, so the setting cannot reach a gate,
   evidence, the pre-tool hook, `compass check`, guardrail 5 or the sign-off

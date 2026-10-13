@@ -503,7 +503,8 @@ def test_arc_7_checkpoint_record_is_not_the_sign_off(tmp_path):
     assert [e["type"] for e in approvals] == ["checkpoint-approval"], approvals
     record = approvals[0]
 
-    # The locked check, the gate of G5 and the hard locks are as the base commit has them.
+    # The locked check, the gate of guardrail `G5` and the hard locks are as the base
+    # commit has them.
     base = json.loads((FIXTURES / "base-locked-entries.json").read_text())["entries"]
     assert _entry_text("governance/presets/default/checks.yml", "human-approval-present", 2) \
         == base["governance/presets/default/checks.yml#human-approval-present"]
@@ -652,3 +653,27 @@ def _quick_fix_refused(tmp_path):
     assert git(root, "rev-parse", "HEAD") == head
     assert "land_timestamp" not in manifest(root, slug)
     assert_no_gh_call(root)
+
+
+# --- ARC-8 ------------------------------------------------------------------------
+
+#: Each hand-off text, the stage it hands off and the agent that runs it.
+HAND_OFFS = (("commands/define.md", "define", "spec-author"),
+             ("commands/refine.md", "refine", "spec-author"),
+             ("commands/plan.md", "plan", "planner"),
+             ("approaches/assess-procedure.md", "assess", "router"))
+
+
+def test_arc_8_hand_off_texts_name_the_commands():
+    import re
+    for path, stage, agent in HAND_OFFS:
+        text = (ROOT / path).read_text(encoding="utf-8")
+        flat = " ".join(text.split())
+        assert (f"compass issue checkpoint add {stage} --outcome skipped --by {agent}"
+                in flat), path
+        assert f"compass evidence approve --checkpoint {stage}" in flat, path
+        assert not re.search(r"skipped checkpoint to `?devlog", flat, re.I), path
+        assert not re.search(r"log the skip\w* (checkpoint|hand-off)", flat, re.I), path
+    policy = " ".join((ROOT / "governance" / "routing-policy.md").read_text().split())
+    assert not re.search(r"skipped checkpoint to `?devlog", policy, re.I)
+    assert "compass issue checkpoint add" in policy

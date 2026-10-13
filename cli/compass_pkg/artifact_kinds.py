@@ -178,12 +178,17 @@ def unmatched_documents(view, task_dir):
     """The names in the issue's documents folder that are no kind's file and
     are not on the not-an-artifact list: top-level, non-hidden `.md` files,
     sorted. The list is framework-owned (`stable_ids.NOT_AN_ARTIFACT`), so the
-    migrate and `compass issue lint` read the same names."""
+    migrate and `compass issue lint` read the same names.
+
+    A shipped kind's file is known as well as the configuration's. An issue
+    stored on an earlier generation keeps that generation's catalogue, which
+    may predate a kind the migrate names files for (`review-<n>.md`), and the
+    migrate reads the shipped catalogue."""
     root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.normpath(task_dir))))
     folder = os.path.join(root, docs_dir(task_dir))
     if not os.path.isdir(folder):
         return []
-    known = catalogue(view)
+    known = dict(shipped(), **catalogue(view))
     found = []
     for name in sorted(os.listdir(folder)):
         if (name.startswith(".") or not name.endswith(".md")

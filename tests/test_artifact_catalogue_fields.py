@@ -1,4 +1,4 @@
-"""Scenarios ACF-1 to ACF-63 of the issue `artifact-catalogue-fields`.
+"""Scenarios ACF-1 to ACF-65 of the issue `artifact-catalogue-fields`.
 
 Each test is named for its scenario id, as the manifest declares
 (`tests/test_artifact_catalogue_fields.py::test_acf_<n>`). The scenarios are
@@ -2388,3 +2388,248 @@ def test_acf_40():
             text = after.read_text(encoding="utf-8").splitlines()
             assert text == lines, (slug, name)
             assert "compass:render" not in "\n".join(text) or "compass:render" in "\n".join(lines)
+
+
+# --- group M: the after measures -----------------------------------------------------
+#
+# The archive sample holds no review round and no stub map, so a walk of it alone
+# would pass on an empty set. Each test adds four issues with a known answer to a
+# copy of the sample, and first shows that its walk reports them before the migrate.
+
+WIDE_MAP = ("# Distribution map\n\n| Subtask | Owns |\n|---|---|\n"
+            "| subtask-1 | the reader |\n| subtask-2 | the writer |\n")
+
+
+def _planted_sample(tmp_path):
+    """A copy of the archive sample with four planted issues, not yet migrated."""
+    from archive import sample_root
+    root = tmp_path / "sample"
+    shutil.copytree(sample_root(), root)
+    record = ["delivery-approach.md"]
+    _m_issue(root, "planted-stub", beside=record, docs=["distribution-map.md"],
+             subtasks=[{"id": "subtask-1"}],
+             artifacts=[_entry("distribution-map", "planted-stub", "distribution-map.md",
+                               depth="lightweight")])
+    _m_issue(root, "planted-wide-map", beside=record, docs=["distribution-map.md"],
+             texts={(False, "distribution-map.md"): WIDE_MAP},
+             artifacts=[_entry("distribution-map", "planted-wide-map", "distribution-map.md",
+                               depth="lightweight")])
+    _m_issue(root, "planted-rounds", beside=record + ["verify-final.md", "security-review.md"],
+             docs=["review.md", "review-2.md", "integrated-review-3.md"])
+    _m_issue(root, "planted-quick", approach="quick-fix", beside=record)
+    # The sample has no configuration file; the planted issues must not add one.
+    (root / ".compass" / "config.yml").unlink()
+    return root
+
+
+def _issues_of(root):
+    """{slug: (manifest, work folder, documents folder)} for every issue under `root`."""
+    found = {}
+    work_root = root / ".compass" / "work"
+    for work in sorted(p for p in work_root.iterdir() if (p / "manifest.yml").is_file()):
+        data = yaml.safe_load((work / "manifest.yml").read_text(encoding="utf-8")) or {}
+        docs = root / "docs" / "compass" / f"{data.get('created')}-{work.name}"
+        found[work.name] = (data, work, docs)
+    return found
+
+
+def _md(folder):
+    return sorted(p.name for p in folder.glob("*.md")) if folder.is_dir() else []
+
+
+def _migrated(root):
+    code, out, err = _migrate(root, "--apply", "--i-have-a-copy")
+    assert code == 0, out + err
+    return out
+
+
+def _unregistered(root):
+    """Each documents-folder file `issue lint` reports as matching no kind, as `slug: line`."""
+    found = []
+    for slug in _issues_of(root):
+        code, out, err = _cli(root, "issue", "lint", "--issue", slug)
+        found += ["%s: %s" % (slug, line) for line in (out + err).splitlines()
+                  if "matches no kind" in line]
+    return found
+
+
+def _issue_on_an_older_generation(tmp_path, root):
+    """An issue whose stored generation was written before the catalogue declared
+    review, architecture-notes, product-owner-review and verification-note, as every
+    issue assessed under 6.x is, put into the project at `root` with a review.md and
+    an architecture-notes.md in its documents folder."""
+    from test_rendered_blocks_check import _rewrite_generation
+    (tmp_path / "older").mkdir()
+    _, task = _registry_project(tmp_path / "older")
+    later = ("review", "architecture-notes", "product-owner-review", "verification-note")
+    _rewrite_generation(task, edit_resolved=lambda d: [d["artifacts"].pop(k, None) for k in later])
+    data = yaml.safe_load((task / "manifest.yml").read_text(encoding="utf-8"))
+    shutil.copytree(task, root / ".compass" / "work" / task.name)
+    docs = root / "docs" / "compass" / f"{data['created']}-{task.name}"
+    for name in ("review.md", "architecture-notes.md", "delivery-approach.md"):
+        _write(docs / name, f"# {name}\n")
+    return task.name
+
+
+def test_acf_53(tmp_path):
+    root = _planted_sample(tmp_path)
+    _write(root / "docs" / "compass" / f"{STAMP}-planted-rounds" / "notes-on-cache.md", "# notes\n")
+    older = _issue_on_an_older_generation(tmp_path, root)
+    # The walk sees a file that matches no kind, so it can fail.
+    found = _unregistered(root)
+    assert any("notes-on-cache.md" in line for line in found), found
+    assert any(line.startswith(older + ":") and "review.md" in line for line in found), found
+    (root / "docs" / "compass" / f"{STAMP}-planted-rounds" / "notes-on-cache.md").unlink()
+    out = _migrated(root)
+    assert _totals(out)["unmapped files"] == [0], out
+    # A file the migrate named for a shipped kind is not reported on an issue whose
+    # stored generation predates the kind (the maintainer's archive holds 37 such issues).
+    assert _unregistered(root) == []
+
+
+def _without_record(root):
+    """The regular issues whose documents folder does not hold a registered
+    delivery-approach.md, and the issues of any approach that hold a record somewhere
+    but not there."""
+    missing = []
+    for slug, (data, work, docs) in _issues_of(root).items():
+        home = f"docs/compass/{docs.name}/delivery-approach.md"
+        registered = any(e.get("kind") == "delivery-approach" and e.get("path") == home
+                         for e in data.get("artifacts") or [] if isinstance(e, dict))
+        held = (docs / "delivery-approach.md").is_file() and registered
+        had = (work / "delivery-approach.md").is_file() or (docs / "delivery-approach.md").is_file()
+        if not held and (data.get("delivery_approach") == "regular" or had):
+            missing.append(slug)
+    return missing
+
+
+def test_acf_54(tmp_path):
+    root = _planted_sample(tmp_path)
+    before = _without_record(root)
+    assert {"planted-stub", "planted-rounds", "planted-quick"} <= set(before), before
+    _migrated(root)
+    assert _without_record(root) == []
+    data, work, docs = _issues_of(root)["planted-quick"]
+    assert (docs / "delivery-approach.md").read_bytes() == _body("planted-quick", "delivery-approach.md").encode()
+
+
+def _maps_on_small_regular_issues(root):
+    """Each regular issue with fewer than two subtasks that carries distribution-map.md
+    in its documents folder or holds an entry for it that the check treats as owed. An
+    issue with no subtasks list whose map names two or more subtasks is left out."""
+    from compass_pkg import artifact_owed, migrate_kinds
+    found = []
+    for slug, (data, work, docs) in _issues_of(root).items():
+        if data.get("delivery_approach") != "regular" or artifact_owed.subtask_count(data) >= 2:
+            continue
+        if not isinstance(data.get("subtasks"), list) and \
+                migrate_kinds._map_rows(str(docs / "distribution-map.md")) >= 2:
+            continue
+        entries = [e for e in data.get("artifacts") or []
+                   if isinstance(e, dict) and e.get("kind") == "distribution-map"]
+        owed = [e for e in entries if e.get("status") not in ("superseded", "omitted")
+                and artifact_owed.owed(data, None, "distribution-map", e).owed]
+        if (docs / "distribution-map.md").is_file() or owed:
+            found.append(slug)
+    return found
+
+
+def test_acf_55(tmp_path):
+    root = _planted_sample(tmp_path)
+    assert _maps_on_small_regular_issues(root) == ["planted-stub"]
+    stub = (root / "docs" / "compass" / f"{STAMP}-planted-stub" / "distribution-map.md").read_bytes()
+    wide = (root / "docs" / "compass" / f"{STAMP}-planted-wide-map" / "distribution-map.md").read_bytes()
+    _migrated(root)
+    assert _maps_on_small_regular_issues(root) == []
+    data, work, docs = _issues_of(root)["planted-stub"]
+    assert (docs / "distribution-map.md.v6.bak").read_bytes() == stub
+    entry = next(e for e in data["artifacts"] if e["kind"] == "distribution-map")
+    assert entry["status"] == "superseded" and not entry.get("path"), entry
+    assert "distribution-map.md.v6.bak" in entry["reason"], entry
+    data, work, docs = _issues_of(root)["planted-wide-map"]
+    assert (docs / "distribution-map.md").read_bytes() == wide
+    assert not (docs / "distribution-map.md.v6.bak").exists()
+
+
+def _review_names(root):
+    """Each review filename that is not review-<n>.md, and each issue holding two
+    review files with the same n, from the registry and from every file the mapping
+    table sends to review."""
+    import re as _re
+    from compass_pkg import migrate_kinds
+    catalogue = migrate_kinds.shipped_catalogue()
+    plain = _re.compile(r"^review-([1-9]\d*)\.md$")
+    found = []
+    for slug, (data, work, docs) in _issues_of(root).items():
+        names = [n for folder in (work, docs) for n in _md(folder)
+                 if migrate_kinds.lookup(n, catalogue).kind == "review"]
+        names += [str(e.get("path") or "").rsplit("/", 1)[-1] for e in data.get("artifacts") or []
+                  if isinstance(e, dict) and e.get("kind") == "review" and e.get("path")]
+        found += ["%s: %s" % (slug, n) for n in sorted(set(names)) if not plain.match(n)]
+        numbers = [int(plain.match(n).group(1)) for folder in (work, docs) for n in _md(folder)
+                   if plain.match(n)]
+        found += ["%s: two files are round %d" % (slug, n) for n in sorted(set(numbers))
+                  if numbers.count(n) > 1]
+    return found
+
+
+def test_acf_56(tmp_path):
+    root = _planted_sample(tmp_path)
+    before = _review_names(root)
+    assert {"planted-rounds: review.md", "planted-rounds: verify-final.md",
+            "planted-rounds: security-review.md"} <= set(before), before
+    _migrated(root)
+    assert _review_names(root) == []
+    data, work, docs = _issues_of(root)["planted-rounds"]
+    assert _md(docs) == ["delivery-approach.md"] + ["review-%d.md" % n for n in range(1, 6)]
+
+
+def _after(root):
+    run = subprocess.run([sys.executable, str(MEASURE), "--root", str(root), "--after", "--json"],
+                         capture_output=True, text=True, timeout=600)
+    assert run.returncode == 0, run.stdout + run.stderr
+    return json.loads(run.stdout)
+
+
+def _unopenable_in(root):
+    """The archive citation test's check, resolved against `root` in place of this
+    checkout: each citation on a tracked surface that does not open there."""
+    import test_archive_citations_resolve as cites
+    roots = cites._search_roots()
+    original = cites._search_roots
+    cites._search_roots = lambda: [Path(root)] + roots[1:]
+    try:
+        return cites._unopenable()
+    finally:
+        cites._search_roots = original
+
+
+def test_acf_57(tmp_path):
+    # The after mode on the planted sample: it reports the planted faults before the
+    # migrate and none after.
+    root = _planted_sample(tmp_path)
+    before = _after(root)
+    assert before["regular_without_record"] >= 3 and before["regular_small_with_map"] == 1, before
+    assert before["review_not_numbered"] >= 3, before
+    _migrated(root)
+    after = _after(root)
+    assert (after["unregistered_files"], after["regular_without_record"],
+            after["regular_small_with_map"], after["review_not_numbered"],
+            after["review_round_clashes"]) == (0, 0, 0, 0, 0), after
+    assert after["regular_issues"] == after["regular_with_record"] >= 3, after
+
+    # The maintainer's archive: a copy in a temporary folder, read only with the switch on.
+    if os.environ.get("COMPASS_FULL_ARCHIVE") != "1":
+        return
+    held = _digests(ROOT)
+    copy = tmp_path / "archive-copy"
+    shutil.copytree(ROOT / ".compass" / "work", copy / ".compass" / "work")
+    shutil.copytree(ROOT / "docs" / "compass", copy / "docs" / "compass")
+    _migrated(copy)
+    full = _after(copy)
+    print(json.dumps(full, indent=2, sort_keys=True))
+    assert (full["unregistered_files"], full["regular_without_record"],
+            full["regular_small_with_map"], full["review_not_numbered"],
+            full["review_round_clashes"]) == (0, 0, 0, 0, 0), full
+    assert _unopenable_in(copy) == {}
+    assert _digests(ROOT) == held

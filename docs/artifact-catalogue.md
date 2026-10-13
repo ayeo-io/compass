@@ -52,7 +52,7 @@ A kind that no approach, rule or `every_approach` flag names is voluntary: nothi
 
 ## Files that match no kind
 
-`compass issue lint` reports each top-level `.md` file in the documents folder whose name matches no kind's `file` and is not on the not-an-artifact list. The report is one line for each file, and it does not change the exit code.
+`compass issue lint` reports each top-level `.md` file in the documents folder whose name matches no kind's `file` and is not on the not-an-artifact list. A kind is one the issue's configuration declares or one the shipped default declares: an issue stored on an earlier generation keeps that generation's catalogue, and the migrate names files for the shipped kinds. The report is one line for each file, and it does not change the exit code.
 
 The not-an-artifact list is `NOT_AN_ARTIFACT` in `cli/compass_pkg/stable_ids.py`. It holds the names and patterns that the process writes but that are no kind: `README.md`, `devlog.md`, review briefs, subtask assignments and briefs, a builder's hand-back (`result.md` and `result-subtask-<n>.md`), `architect-ruling.md`, `recommendation.md`, `released-verbs-v5.6.0.md`, `compare.md`, `report.md` and `*.v6.bak`. The migrate reads the same list.
 
@@ -81,6 +81,15 @@ The manifest's `justifications` key holds one line for each assessed dimension o
 ## The quick-fix record
 
 `compass quick-fix start` writes the delivery-approach record with its own short headings: Assessment, Policy rules fired, Advice, Intent, Scenario and De-scope ledger. They are not an ordered subset of the thorough headings. `sections.lightweight` describes the record a hotfix or a spike writes from the template.
+
+## Measuring the archive
+
+`scripts/measure-artifact-catalogue.py --root <copy>` reads a copy of an archive and prints the figures this catalogue was built to move. It only reads, but run it on a copy.
+
+- With no flag, it gives the figures before the 7.0.0 migrate: the kinds declared, the kinds in use that the catalogue does not declare, the regular issues with the record in the documents folder, the regular issues with a stub distribution map, and the distinct review filenames. `--catalogue` reads the kinds from another `artifacts.yml`, and `--list-kinds FILE` writes the undeclared names.
+- With `--after`, it gives the figures after the migrate: files in a documents folder that match no kind, regular issues without the record registered in the documents folder, other issues holding a record that is not registered there, regular issues with fewer than two subtasks that carry a distribution map, review filenames that are not `review-<n>.md`, and issues with two review files of one round. It names the issues behind each figure that is not zero.
+
+`--json` prints either set as JSON.
 
 ## The kinds
 

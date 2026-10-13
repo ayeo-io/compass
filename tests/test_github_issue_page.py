@@ -931,6 +931,112 @@ def test_ipg_25_entity_backslash_and_trailing_slash_forms_refuse_and_a_tracked_s
             assert found is None, (text, texts, found)
 
 
+#: Every form the four reviews of this issue's pull request found, for a file
+#: under .compass/private/ and for a git-ignored file. Each must refuse.
+_REVIEWED_REFUSED = (
+    # inside a URL
+    ".compass/private/x.yml",
+    "file:///Users/j/r/.compass/private/x.yml",
+    "vscode://file/Users/j/r/.compass/private/x.yml",
+    "https://github.com/o/r/blob/main/.compass/private/x.yml",
+    "http://example.com/.compass/private/x.yml?raw=1.",
+    "file://{root}/notes/private/brief.md",
+    "vscode://file{root}/build/tool",
+    # percent-encoding, single, double and mixed case
+    "https://github.com/o/r/blob/main/%2Ecompass/private/x.yml",
+    "https://github.com/o/r/blob/main/%2ecompass/private/x.yml",
+    "https://github.com/o/r/blob/main/.compass%2Fprivate/x.yml",
+    "https://github.com/o/r/blob/main/%252Ecompass/private/x.yml",
+    "file:///Users/j/r/%2Ecompass/private/x.yml",
+    "file://{root}/notes/%70rivate/brief.md",
+    "file://{root}/notes/%2570rivate/brief.md",
+    "notes/%70rivate/brief.md",
+    "%0A.compass/private/k.yml",
+    "notes/private/brief.md%00",
+    # HTML entities
+    "&#46;compass/private/x.yml",
+    "[x](&#46;compass/private/x.yml)",
+    "https://github.com/o/r/blob/main/&#46;compass/private/x.yml",
+    "&amp;#46;compass/private/x.yml",
+    "%26%2346%3Bcompass/private/x.yml",
+    "&period;compass/private/x.yml",
+    "notes/&#112;rivate/brief.md",
+    # backslash
+    "https://github.com/o/r/blob/main/.compass\\private/x.yml",
+    "https://github.com/o/r/blob/main/.compass%5Cprivate/x.yml",
+    # dot segments and doubled slashes
+    "{root}/docs/../notes/private/brief.md",
+    "file://{root}/docs/../notes/private/brief.md",
+    "docs/../notes/private/brief.md",
+    "docs/../build/tool",
+    "https://h/a/.compass/./private/x.yml",
+    "https://h/a/.compass//private/x.yml",
+    ".compass//private/x.yml",
+    ".compass/./private/x.yml",
+    # trailing slash
+    ".compass/private/x.yml/",
+    ".compass/private/x.yml/.",
+    # joined to a word
+    "x;.compass/private/k.yml",
+    "a&.compass/private/k.yml",
+    "Q#.compass/private/k.yml",
+    "x;build/tool",
+    "#build/tool",
+    "see&amp;build/tool",
+    "a&notes/private/brief.md",
+    # an encoded control character before the path
+    "&#10;.compass/private/k.yml",
+    "&#0;.compass/private/k.yml",
+    "&#10;build/tool",
+    "&#0;build/tool",
+    # a tracked symlink into the private folder, and the ignored file itself
+    "lnk/k",
+    "build/tool",
+)
+#: Texts that must post: links to published files, a tracked symlink to an
+#: ignored target, and folders named with no file.
+_REVIEWED_POSTED = (
+    "https://github.com/o/r/blob/main/docs/guide.md",
+    "https://github.com/o/r/blob/main/docs/%67uide.md",
+    "https://github.com/o/r/blob/main/docs/guide.md#usage",
+    "https://example.com/notes/private/a.md",
+    "https://github.com/o/r/tree/main/.compass/private/",
+    "file://{root}/docs/guide.md",
+    "bin/tool",
+    "docs/guide.md#usage",
+    "docs/./guide.md",
+    "`.compass/private/`",
+    "notes/private/",
+    "the build folder",
+)
+
+
+@pytest.mark.parametrize("form,refused",
+                         [(f, True) for f in _REVIEWED_REFUSED]
+                         + [(f, False) for f in _REVIEWED_POSTED])
+def test_ipg_26_every_form_found_in_review_is_refused_and_a_published_link_posts(
+        repo, form, refused):
+    # The whole text is decoded before any path is picked out of it, so no
+    # spelling of a private path, and no word joined to one, gets it past.
+    from compass_pkg import publish_check
+    (repo / ".gitignore").write_text("notes/private/\nbuild/\n")
+    (repo / "build").mkdir()
+    (repo / "build" / "tool").write_text("built\n")
+    (repo / "bin").mkdir()
+    os.symlink(os.path.join("..", "build", "tool"), repo / "bin" / "tool")
+    (repo / "lnk").mkdir()
+    os.symlink(os.path.join("..", ".compass", "private", "k.yml"), repo / "lnk" / "k")
+    commit_all(repo, "ignore build; track the bin/tool and lnk/k symlinks")
+    root = str(Path(repo).resolve())
+    text = "see " + form.format(root=root)
+    for texts in ({"comment": text, "body": None}, {"comment": "ok", "body": text}):
+        found = publish_check.check(texts, root)
+        if refused:
+            assert found is not None and found.check == "private-path", (text, texts)
+        else:
+            assert found is None, (text, texts, found)
+
+
 def test_ipg_18_credential_refuses_the_post(repo, gh):
     from compass_pkg import publish_check
     page_issue(repo, gh, page=False)

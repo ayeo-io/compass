@@ -4,18 +4,21 @@
 `check(texts, project_root)` reads the comment and, when given, the issue body,
 exactly as they would be posted, and returns the first refusal or None:
 
-- **private paths**: a path under `.compass/private/`, or a path to a file git
-  ignores in the project, refuses the post. Files under `.compass/work/` and
-  `docs/compass/` are posted, because the issue page is made of them, and a
-  directory named without a file is posted. The path part of a URL whose
-  scheme is not http or https, such as `file://` or `vscode://`, is checked
-  like any other path. A web link is posted unless its path names a file
-  under `.compass/private/`. Every path is checked in the form it resolves
-  to: `_normalise` undoes percent-encoding and HTML character references
-  until the path stops changing, reads a backslash in a web link as a slash,
-  collapses `./` and `//`, and resolves `..` before either test runs. git is
-  asked about a path as written; symlinks are followed only for the
-  private-folder test.
+- **private paths**: a file under `.compass/private/`, or a file git ignores
+  in the project, refuses the post. The whole text is decoded first, before
+  any path is picked out of it: `_decode` undoes HTML character references
+  and percent-encoding until the text stops changing, and reads a backslash
+  as a slash. It decodes the text twice, once taking only references closed
+  by `;` and once taking those without one too, and checks both results. A
+  decoded text that names a file under `.compass/private/`, at any position
+  and joined to any word, refuses. The decoded text is then cut
+  into pieces at every character that cannot be part of a path, and each
+  piece with a slash is normalised by `_normalise` and asked of git as
+  written; symlinks are followed only for the private-folder test. Files
+  under `.compass/work/` and `docs/compass/` are posted, because the issue
+  page is made of them, a folder named without a file is posted, and a web
+  link names a path outside the project, so only the private-folder test
+  reads it.
 - **credentials**: text that `redact` would replace refuses the post. It is
   given an empty environment, so no environment variable is read.
 
@@ -40,18 +43,20 @@ from compass_pkg import redact
 #: Seconds `git check-ignore` may take, the same bound as a `gh` call.
 _TIMEOUT = 15
 _BLOCK = re.compile(r"<!-- compass:render ([a-z-]+) -->")
-_URL = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://[^\s)>\]`'\"]+")
-#: A path-like run. `%`, `&`, `#` and `;` are kept so an encoded slash or dot,
-#: or an HTML character reference such as `&#46;`, reaches `_normalise`; a run
-#: with no slash once decoded is not a path.
-_CANDIDATE = re.compile(r"[A-Za-z0-9._%/&#;-]+")
-#: A decoded control character ends the path: `git check-ignore --stdin` reads
-#: one path a line, so a newline would ask git about a different path.
-_CONTROL = re.compile(r"[\x00-\x1f\x7f]")
-_PRIVATE = ".compass/private/"
-_WEB = ("http", "https")
-#: A file under the private folder named inside a web link.
-_PRIVATE_IN_URL = re.compile(re.escape(_PRIVATE) + r"[^/?#]")
+#: A piece of decoded text that can be a path. Every other character, such as
+#: whitespace, a control character, `;`, `&`, `#`, `?`, a quote or a bracket,
+#: ends a piece, so a word joined to a path does not hide it.
+_PIECE = re.compile(r"[\w.~/-]+")
+#: A file under the private folder: the folder name followed by a file name.
+#: The folder named on its own is posted, like any folder.
+_PRIVATE_FILE = re.compile(r"\.compass/private/[\w.~-]")
+#: An HTML character reference closed by `;`.
+_REFERENCE = re.compile(r"&(?:#[0-9]+|#[xX][0-9a-fA-F]+|[A-Za-z][A-Za-z0-9]*);")
+#: The authority of a URL, `//host`, at the start of a piece. Without it the
+#: rest is the path the URL names, as `vscode://file/<path>` names `<path>`.
+_AUTHORITY = re.compile(r"^//[^/]*")
+#: `/.` as a whole path segment, which names the folder it ends.
+_DOT_SEGMENT = re.compile(r"/\.(?=/|[^\w.~-]|$)")
 #: Folders whose files make up the issue page itself, so naming one is not a leak.
 _POSTED = (".compass/work/", "docs/compass/")
 
@@ -81,21 +86,42 @@ def _credentials(items):
     return None
 
 
-def _decode(path):
-    """`path` with percent-encoding and HTML character references undone until
-    it stops changing, so `%252E`, `&#46;` and `&amp;#46;` are all `.`."""
+def _strict_unescape(text):
+    """HTML character references closed by `;`, the only ones Markdown reads."""
+    return _REFERENCE.sub(lambda m: html.unescape(m.group(0)), text)
+
+
+def _decode(text, loose):
+    """`text` with HTML character references and percent-encoding undone until
+    it stops changing, so `%252E`, `&#46;` and `&amp;#46;` are all `.`, and a
+    backslash read as a slash, as a browser reads it in a web address. Each
+    pass that changes the text shortens it, so the loop ends.
+
+    Markdown reads only references closed by `;`, but an HTML parser also
+    reads some without one, such as `&#46` or `&not`. Neither decoding is
+    safe alone - the loose one turns `&notes/` into `¬es/` - so the text is
+    decoded both ways (`loose` False, then True) and both are checked."""
+    unescape = html.unescape if loose else _strict_unescape
     while True:
-        decoded = html.unescape(unquote(path))
-        if decoded == path:
-            return _CONTROL.split(path, maxsplit=1)[0]
-        path = decoded
+        decoded = unescape(unquote(text))
+        if decoded == text:
+            return text.replace("\\", "/")
+        text = decoded
+
+
+def _fold_text(text):
+    """`text` with `//` collapsed and `/.` segments dropped, so the folder test
+    reads `.compass/./private/` and `.compass//private/` as the folder."""
+    while True:
+        folded = _DOT_SEGMENT.sub("", re.sub(r"/{2,}", "/", text))
+        if folded == text:
+            return text
+        text = folded
 
 
 def _fold(path):
     """`path` with `./`, `//` and `..` folded, keeping a trailing slash, because
     a directory named without a file is posted."""
-    if not path:
-        return path
     folded = posixpath.normpath(path)
     if folded.startswith("//"):
         folded = "/" + folded.lstrip("/")
@@ -110,89 +136,54 @@ def _from_root(path, roots):
     return None
 
 
-def _normalise(path, project_root=None):
-    """`(forms, written)` for a path as written in the text.
+def _normalise(piece, project_root):
+    """`(forms, written)` for a piece of decoded text.
 
-    `forms` is every form the path resolves to, which the private-folder test
-    reads; `written` is the forms git is asked about. The path is decoded by
-    `_decode`, and read both whole and cut at an anchor, because an encoded
-    `#` may be part of a file name.
-
-    Without a project root the path is the path part of a web link: a
-    backslash is a slash there, and each form is folded. With one it is a
-    path on disk. Its written form is folded against the root without
-    following symlinks, because git tracks a symlink by its own path; its
-    resolved form follows them with `os.path.realpath`, so a link into the
+    `written` is the piece folded against the project root without following
+    symlinks, because git tracks a symlink by its own path: that is the form
+    git is asked about. `forms` adds the form `os.path.realpath` resolves it
+    to, which only the private-folder test reads, so a symlink into the
     private folder is still refused. A form inside the project is a path from
-    its root."""
-    decoded = _decode(path)
-    cut = re.split(r"[?#]" if project_root is None else "#", decoded, maxsplit=1)[0]
-    if project_root is None:
-        forms = tuple(dict.fromkeys(_fold(p.replace("\\", "/")) for p in (decoded, cut)))
-        return forms, ()
+    its root; a web link's path is outside it."""
     real = os.path.realpath(project_root)
     roots = (real, os.path.abspath(project_root))
+    trailing = "/" if piece.endswith("/") else ""
     written, resolved = [], []
-    for spelling in dict.fromkeys((decoded, cut)):
-        if not spelling:
-            continue
-        trailing = "/" if spelling.endswith("/") else ""
+    for spelling in dict.fromkeys((piece, _AUTHORITY.sub("", piece) or piece)):
         lexical = posixpath.normpath(os.path.join(real, spelling))
         inside = _from_root(lexical, roots)
         written.append(inside + trailing if inside is not None else _fold(spelling))
         full = os.path.realpath(os.path.join(real, spelling))
         inside = _from_root(full, (real,))
-        resolved.append(inside + trailing if inside is not None else _fold(full + trailing))
+        resolved.append(inside + trailing if inside is not None
+                        else _fold(full + trailing))
     written = tuple(dict.fromkeys(written))
     return tuple(dict.fromkeys(written + tuple(resolved))), written
 
 
-def _names_private(path):
-    """Whether a normalised path names a file under `.compass/private/`."""
-    return bool(_PRIVATE_IN_URL.search(path)) and (
-        path.startswith(_PRIVATE) or "/" + _PRIVATE in path)
-
-
-def _url_paths(text):
-    """The text with each URL blanked except the path part of a non-web URL, and
-    the index of the first web link into `.compass/private/`, or None. A web
-    link names a published file, which git cannot be asked about; a `file://`
-    or editor URL names a file on disk, so its path is checked like a path."""
+def _scan(decoded, project_root):
+    """`(path, index)` for each piece git must be asked about, and the index of
+    the first file under `.compass/private/`, or None. Indexes are into the
+    decoded text."""
     private = None
-
-    def keep(match):
-        nonlocal private
-        url = match.group(0)
-        scheme, rest = url.split("://", 1)
-        slash = rest.find("/")
-        start = len(scheme) + 3 + (slash if slash >= 0 else len(rest))
-        # The query and anchor are cut after decoding, by `_normalise`, so a
-        # `#` inside `&#46;` does not end the path early.
-        path = url[start:]
-        if scheme.lower() in _WEB:
-            if any(_names_private(f) for f in _normalise(path)[0]) and private is None:
-                private = match.start()
-            return " " * len(url)
-        return " " * start + path
-
-    return _URL.sub(keep, text), private
-
-
-def _candidates(text, project_root):
-    """`(path, index)` for each path-like run that git must be asked about, and the
-    index of the first `.compass/private/` path, or None."""
-    blanked, private = _url_paths(text)
+    if _PRIVATE_FILE.search(_fold_text(decoded)):
+        # The fold drops characters, so the hit is placed at the first
+        # `.compass` whose folded continuation names a private file. The
+        # place is only a label: the post is refused either way.
+        starts = [m.start() for m in re.finditer(r"\.compass", decoded)]
+        private = next((i for i in starts
+                        if _PRIVATE_FILE.match(_fold_text(decoded[i:i + 4096]))),
+                       starts[0] if starts else 0)
     asked = []
-    for match in _CANDIDATE.finditer(blanked):
-        raw = match.group(0).rstrip(".,;:")
-        if "/" not in _decode(raw):
+    for match in _PIECE.finditer(decoded):
+        piece = match.group(0).rstrip(".")
+        if "/" not in piece:
             continue
-        forms, written = _normalise(raw, project_root)
-        # A file in the private folder is refused by its name alone, inside the
-        # project or out of it, and before the directory test, so a trailing
-        # "/" or "/." after its name does not pass it as a directory.
-        if any(_names_private(f) for f in forms):
-            private = match.start() if private is None else private
+        forms, written = _normalise(piece, project_root)
+        # Before the folder test, so a trailing "/" or "/." after a private
+        # file's name does not pass it as a folder.
+        if any(_PRIVATE_FILE.search(form) for form in forms):
+            private = match.start() if private is None else min(private, match.start())
             continue
         for path in written:
             if path.endswith("/"):
@@ -222,18 +213,20 @@ def _ignored(paths, project_root):
 
 
 def _private_paths(items, project_root):
-    found = {name: _candidates(text, project_root) for name, text in items}
-    for name, text in items:
-        if found[name][1] is not None:
-            return _private_refusal(name, text, found[name][1])
-    asked = sorted({path for _, (pairs, _) in found.items() for path, _ in pairs})
+    decoded = [(name, variant) for name, text in items
+               for variant in dict.fromkeys((_decode(text, False), _decode(text, True)))]
+    found = [(name, text, _scan(text, project_root)) for name, text in decoded]
+    for name, text, (_, private) in found:
+        if private is not None:
+            return _private_refusal(name, text, private)
+    asked = sorted({path for _, _, (pairs, _) in found for path, _ in pairs})
     if not asked:
         return None
     ignored = _ignored(asked, project_root)
     if ignored is None:
         return Refusal("private-path", "cannot check ignored files: `git check-ignore` failed")
-    for name, text in items:
-        for path, index in found[name][0]:
+    for name, text, (pairs, _) in found:
+        for path, index in pairs:
             if path in ignored:
                 return _private_refusal(name, text, index)
     return None

@@ -1046,6 +1046,10 @@ _TAIL_ARGV = {
     # The fixture issue has a test record, so it is in progress and can be
     # blocked; `issue blocked set` sorts before `issue status set`, which holds it.
     "issue blocked set": ["issue", "blocked", "set", "--reason", "waiting on a review"],
+    # An issue with no manifest is written, with the lint finding on stderr.
+    # `issue depends add` sorts before `issue depends remove`, which removes it.
+    "issue depends add": ["issue", "depends", "add", "later", "--reason", "needs later"],
+    "issue depends remove": ["issue", "depends", "remove", "later"],
     "issue status set": ["issue", "status", "set", "backlog"],
     "issue subtask next": ["issue", "subtask", "next"],
     # The artifact set is computed by the evaluator, so the fixture runs

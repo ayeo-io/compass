@@ -8,7 +8,10 @@ it renders:
 
 1. the issue the command named, and
 2. every issue the manifest links to in either direction, so a block that draws
-   on another issue's records (`related`) is current there too.
+   on another issue's records (`related`) is current there too, and
+3. every issue the command named in `args.unlinked`: a command that removes a
+   link sets it, because after the save the manifest no longer names the issue
+   it unlinked, whose page still shows the link.
 
 Nothing else is written: an issue the manifest does not link to keeps its bytes
 and its modification time.
@@ -62,12 +65,13 @@ def links_of(task):
     return {name for name in found if is_one_segment(name)}
 
 
-def linked_issue_dirs(task_dir, task):
-    """The work folders of the issues this issue links to and of the issues that
-    link to it, other than itself."""
+def linked_issue_dirs(task_dir, task, unlinked=()):
+    """The work folders of the issues this issue links to, of the issues that
+    link to it and of the issues in `unlinked`, other than itself."""
     work = os.path.dirname(os.path.abspath(task_dir))
     slug = os.path.basename(os.path.abspath(task_dir))
     names = {n for n in links_of(task) if n != slug}
+    names |= {n for n in unlinked if isinstance(n, str) and is_one_segment(n) and n != slug}
     try:
         entries = sorted(os.listdir(work))
     except OSError:
@@ -129,7 +133,8 @@ def after_command(args, code):
     try:
         task_dir = resolve_issue_dir(getattr(args, "task", None))
         task, _ = load_manifest(task_dir)
-        directories = [task_dir] + linked_issue_dirs(task_dir, task)
+        directories = [task_dir] + linked_issue_dirs(task_dir, task,
+                                                     getattr(args, "unlinked", None) or ())
     except Exception:                                   # noqa: BLE001 - never fail the command
         return code
     failures = []

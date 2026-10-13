@@ -195,6 +195,57 @@ def _out_of_scope(staged, owned, artifact_dir, docs_prefix=None):
     )
 
 
+def _tip_own_paths(cwd):
+    """The paths the issue's own commits at the branch tip changed, walking
+    the first parent from HEAD.
+
+    - A commit that changes only the living spec is passed over: `ship-commit`
+      and `compass spec sync` write it, so it is no issue's change.
+    - A merge whose merged branches were built on its first parent, such
+      as a multiagent integration merge, is judged in full and ends the walk.
+    - Any other merge counts only the paths it changed against every
+      parent, which is its conflict resolution. What the merged-in branch
+      brought is that branch's work, such as main's commits.
+    - The walk stops at the first other commit, which is the issue's newest
+      own commit and is judged in full, or at a commit a merged-in branch
+      already holds, which was the base of that branch and not the issue's.
+    """
+    from compass_pkg.flow import LIVING_SPEC_FILES
+
+    def names(*rng):
+        return {n for n in _git(["diff", "--name-only", "-z", *rng],
+                                cwd).stdout.split("\0") if n}
+
+    paths, sides, commit = set(), [], "HEAD"
+    while True:
+        parents = _git(["rev-parse", f"{commit}^@"], cwd).stdout.split()
+        if not parents:
+            break
+        if any(_git(["merge-base", "--is-ancestor", commit, side],
+                    cwd).returncode == 0 for side in sides):
+            break
+        changed = [names(parent, commit) for parent in parents]
+        if len(parents) > 1 and all(
+                _git(["merge-base", "--is-ancestor", parents[0], side],
+                     cwd).returncode == 0 for side in parents[1:]):
+            # Every merged branch was built on the first parent, as a
+            # multiagent integration merge is: all it brought is the work
+            # being landed, so it is judged in full.
+            paths |= changed[0]
+            break
+        if len(parents) > 1:
+            paths |= set.intersection(*changed)
+            sides += parents[1:]
+            commit = parents[0]
+            continue
+        if changed[0] and changed[0] <= set(LIVING_SPEC_FILES):
+            commit = parents[0]
+            continue
+        paths |= changed[0]
+        break
+    return sorted(paths - set(LIVING_SPEC_FILES))
+
+
 def _stale_paths(task, task_dir, root, at_commit, judge_landed=False):
     """The issue files that differ, in `at_commit`, from what the newest
     bound green tested, as (record path, paths), or None when there is
@@ -402,13 +453,12 @@ def cmd_land_commit(args):
         _refuse_stale_artifacts(head_task, head_task_dir)
         _refuse_unapproved_artifacts(head_task, head_task_dir)
 
-        # What HEAD itself added must be the issue's: a commit a git hook
-        # widened, refused once, must not land when shipped again. Compared
-        # with the first parent, so a multiagent merge lists what it merged.
+        # What the issue's own commits at the tip added must be the issue's:
+        # a commit a git hook widened, refused once, must not land when
+        # shipped again. `_tip_own_paths` passes over what a merged-in
+        # branch brought and the living spec `ship-commit` writes itself.
         if _git(["rev-parse", "--verify", "-q", "HEAD^1"], cwd).returncode == 0:
-            added = [n for n in _git(
-                ["diff", "--name-only", "-z", "HEAD^1", "HEAD"],
-                cwd).stdout.split("\0") if n]
+            added = _tip_own_paths(cwd)
             head_owned, head_artifacts = _land_scope(head_task, head_slug)
             stray_head = (_out_of_scope(
                 added, head_owned, head_artifacts,
@@ -417,13 +467,13 @@ def cmd_land_commit(args):
                 head_short = _git(["rev-parse", "--short", "HEAD"],
                                   cwd).stdout.strip()
                 raise CompassError(
-                    f"compass ship-commit: refusing to land at HEAD - commit "
-                    f"{head_short} holds {len(stray_head)} path(s) outside "
-                    f"issue '{head_slug}'s declared scope:\n  "
+                    f"compass ship-commit: refusing to land at HEAD - the "
+                    f"commits at {head_short} hold {len(stray_head)} path(s) "
+                    f"outside issue '{head_slug}'s declared scope:\n  "
                     + "\n  ".join(stray_head[:20])
                     + "\n\nIf they belong to this issue, trace them with "
                     "`compass changed-file add <path> --scenario <id>`. If "
-                    f"{head_short} is not this issue's commit, land the issue "
+                    "they are not this issue's commits, land the issue "
                     "from a branch whose tip is its own commit, then ship "
                     "again.")
 

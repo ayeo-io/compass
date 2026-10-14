@@ -1,7 +1,8 @@
 # Compass - this repository's own settings.
 #
 # The framework repository is also a Compass project. This file holds settings
-# keys, the owner, the readiness commands and one readiness override: no check,
+# keys, the owner, the readiness commands and one readiness override, written
+# in map form so it changes only the timed test command: no check,
 # gate, rule or route, no waiver, no unlock and no capability. Its governance/
 # files are the set every adopter gets, so this repository's issues run the
 # shipped default unchanged, and its delivery record stays valid evidence for
@@ -110,9 +111,14 @@ multiagent:
 # `project.test_micro_command` instead of the full suite. It changes which
 # command the test signal runs, not the floor, a check, a gate or a rule
 # (governance decision 2026-10-13-this-repository-declares-readiness-commands).
+# It is in map form: the inner `set:` changes `command` and keeps the shipped
+# `limit_seconds`. A plain map under `set:` would replace the whole `params`
+# map and drop the limit, which the write-time lint refuses. The swap between
+# the two declared commands classifies as equivalent (governance decision
+# 2026-10-14-a-declared-equivalent-parameter-choice-classifies-as-equivalent).
 readiness:
   tests-declared-and-under-two-minutes:
-    set: {params: {command: test_micro_command}}
+    set: {params: {set: {command: test_micro_command}}}
 
 # The delivery record (ADR-031). The issue records, the planning documents and
 # the backlog command are kept out of this public repository. `compass record

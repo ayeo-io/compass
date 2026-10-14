@@ -1059,8 +1059,10 @@ def test_prc_41_help_states_the_budget_order_and_clean_checkout(tmp_path):
         assert words in text, words
 
 
+# In map form, as docs/readiness.md shows it: the inner `set:` keeps the shipped
+# `limit_seconds`, which a plain map under `set:` would drop.
 MICRO_LAYER = {"tests-declared-and-under-two-minutes": {
-    "set": {"params": {"command": "test_micro_command"}}}}
+    "set": {"params": {"set": {"command": "test_micro_command"}}}}}
 
 
 def test_prc_16(tmp_path):

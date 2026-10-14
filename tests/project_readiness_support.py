@@ -145,3 +145,27 @@ def worktrees(project):
     out = git(project, "worktree", "list", "--porcelain")
     return sorted(os.path.realpath(line.split(" ", 1)[1])
                   for line in out.splitlines() if line.startswith("worktree "))
+
+
+def meet_readiness_floor(project):
+    """Give a fixture project a fresh readiness record in which every shipped
+    readiness signal is present, so `approach evaluate --write` assesses an
+    issue on `autonomy: autonomous` there. Write it after `compass.yml`, whose
+    digest the record holds. The record is excluded through `.git/info/exclude`,
+    so it never changes what the fixture commits or shows as untracked."""
+    sys.path.insert(0, str(ROOT / "cli"))
+    from compass_pkg import readiness_record
+    from compass_pkg.readiness_registry import READINESS
+    catalogue = yaml.safe_load(
+        (ROOT / "governance" / "presets" / "default" / "readiness.yml").read_text(encoding="utf-8"))
+    signals = [{"id": signal_id, "impl": entry["impl"],
+                "version": READINESS[entry["impl"]].version, "weight": entry["weight"],
+                "required_for_autonomous": bool(entry.get("required_for_autonomous")),
+                "result": "present", "reason": f"{signal_id} is present", "not_run": None}
+               for signal_id, entry in catalogue["readiness"].items()]
+    exclude = Path(project) / ".git" / "info" / "exclude"
+    exclude.parent.mkdir(parents=True, exist_ok=True)
+    with exclude.open("a", encoding="utf-8") as handle:
+        handle.write("/.compass/readiness.yml\n")
+    readiness_record.write(str(project), readiness_record.new_record(
+        str(project), signals, {"commands_seconds": 270, "used_seconds": 0.0}))

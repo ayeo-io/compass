@@ -43,9 +43,11 @@ FORBIDDEN_LAYER_KEYS = {"waiver", "waived", "unlock", "capabilities", "approvers
 # The one catalogue override this repository may hold: the readiness test
 # signal times the micro suite (governance decision
 # 2026-10-13-this-repository-declares-readiness-commands). Any other
-# `readiness` value is reported like any other catalogue key.
+# `readiness` value is reported like any other catalogue key. It is in map
+# form, so it sets `command` and keeps the shipped `limit_seconds`; the plain
+# map `{"params": {"command": ...}}` is reported too.
 READINESS_OVERRIDE = {"tests-declared-and-under-two-minutes":
-                      {"set": {"params": {"command": "test_micro_command"}}}}
+                      {"set": {"params": {"set": {"command": "test_micro_command"}}}}}
 
 
 def disallowed_keys(doc):
@@ -141,3 +143,46 @@ def test_readiness_commands_are_declared_and_allowed():
     assert project["test_micro_command"].startswith("pytest -q ")
     # It must not run readiness itself, or the timed command recurses.
     assert "test_project_readiness" not in project["test_micro_command"]
+
+
+# --- ROA-12, ROA-13 (issue readiness-override-assess) ------------------------------
+
+TIMED = "tests-declared-and-under-two-minutes"
+# A plain map under `set:` replaces the whole `params` map, so it drops
+# `limit_seconds`. The settings test and the write-time lint both refuse it.
+PLAIN_MAP_OVERRIDE = {TIMED: {"set": {"params": {"command": "test_micro_command"}}}}
+
+
+def test_roa_12_the_override_is_in_map_form_and_keeps_limit_seconds():
+    from compass_pkg import readiness_catalogue
+    doc = load_yaml_strict(str(ROOT / "compass.yml"))
+    assert doc["autonomy"] == "autonomous"
+    assert doc["readiness"] == {
+        TIMED: {"set": {"params": {"set": {"command": "test_micro_command"}}}}}
+    entry = readiness_catalogue.catalogue(str(ROOT))[TIMED]
+    assert entry["impl"] == "tests-under-limit"
+    assert entry["params"] == {"command": "test_micro_command", "limit_seconds": 120}
+    assert disallowed_keys({"schema": 1, "readiness": doc["readiness"]}) == []
+    assert disallowed_keys({"schema": 1, "readiness": PLAIN_MAP_OVERRIDE}) == ["readiness"]
+
+
+def _lint_errors(file=None):
+    """The write-time lint of this repository's chain, through the loader
+    `effective.resolve_live` uses, or of `file` read as the project layer."""
+    from compass_pkg import policy_lint
+    loaded = policy_lint.load_layers(str(ROOT), file=file, read_project=True)
+    return policy_lint.lint_loaded(loaded).errors
+
+
+def test_roa_13_compass_yml_passes_the_write_time_lint(tmp_path):
+    import yaml
+    errors = _lint_errors()
+    assert errors == [], [(e.code, e.path, e.message) for e in errors]
+
+    doc = load_yaml_strict(str(ROOT / "compass.yml"))
+    doc["readiness"] = PLAIN_MAP_OVERRIDE
+    planted = tmp_path / "compass.yml"
+    planted.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+    errors = _lint_errors(file=str(planted))
+    assert [e.code for e in errors][:1] == ["C-INCOMPARABLE"], errors
+    assert errors[0].path.startswith(f"readiness.{TIMED}"), errors[0].path

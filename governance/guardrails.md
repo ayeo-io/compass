@@ -92,6 +92,12 @@ Its check, `human-approval-present`, reads only evidence of the type
 `artifact-approval`, which this check never reads, so such an approval never
 clears a sign-off.
 
+A person's answer to a checkpoint hand-off (`compass evidence approve
+--checkpoint`) is recorded as `checkpoint-approval`. It has no `check` key, and
+neither this check, a human check nor a waiver reads the type, so a
+`checkpoint-approval` record does not clear `G5`. Answering the define or plan
+hand-off is not the sign-off on an irreversible change.
+
 ---
 
 ## Project guardrails
@@ -215,7 +221,9 @@ Why it is enforced rather than warned about:
 - `cli/compass_pkg/check_registry.py` holds one entry for each built-in check
   implementation. `CHECK_FNS` is derived from it. An entry holds a semantic
   version (all start at `1.0.0`), a parameter spec, a `tighter` value per
-  parameter (`higher`, `lower` or `none`, default `none`), whether the check
+  parameter (`higher`, `lower` or `none`, default `none`; a check parameter
+  cannot declare `equivalent`, because it has no declared choices, and the
+  registry refuses the entry), whether the check
   runs project code (`command-passes` alone), and the path of its fixture
   corpus. It also answers "installed version" and "installed major" of an
   implementation.

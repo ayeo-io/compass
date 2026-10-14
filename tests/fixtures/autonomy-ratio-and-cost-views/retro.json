@@ -1,0 +1,37 @@
+{
+  "impact-ratio": {
+    "exit": 0,
+    "stdout": "compass retro --impact - process signal (advisory)\n\n  lead time     median 4.0 day(s) over 27 issue(s)\n  land freq     not computable (span under a week) per week, over a span of 0 day(s)\n  change-fail   no hotfixes recorded, so change-fail cannot be measured\n\n  by delivery approach:\n    regular      n=27  lead median 4.0 day(s)  gates=4\n\n  Read the by-approach figures as a hypothesis to test, not a\n  verdict. This is single-project observational data: the\n  variables are not controlled, and a heavier approach is chosen\n  BECAUSE work looks riskier, so slower lead times on heavy\n  approaches may reflect the work rather than the process weight.\n",
+    "stderr": ""
+  },
+  "impact-cost": {
+    "exit": 0,
+    "stdout": "compass retro --impact - process signal (advisory)\n\n  lead time     median 4.0 day(s) over 29 issue(s)\n  land freq     not computable (span under a week) per week, over a span of 0 day(s)\n  change-fail   no hotfixes recorded, so change-fail cannot be measured\n\n  by delivery approach:\n    full         n=3  lead median 4.0 day(s)  gates=4\n    quick-fix    n=15  lead median 4.0 day(s)  gates=4\n    regular      n=11  lead median 4.0 day(s)  gates=4\n\n  Read the by-approach figures as a hypothesis to test, not a\n  verdict. This is single-project observational data: the\n  variables are not controlled, and a heavier approach is chosen\n  BECAUSE work looks riskier, so slower lead times on heavy\n  approaches may reflect the work rather than the process weight.\n",
+    "stderr": ""
+  },
+  "impact-decisions": {
+    "exit": 0,
+    "stdout": "compass retro --impact - process signal (advisory)\n\n  lead time     median 4.0 day(s) over 19 issue(s)\n  land freq     not computable (span under a week) per week, over a span of 0 day(s)\n  change-fail   no hotfixes recorded, so change-fail cannot be measured\n\n  by delivery approach:\n    regular      n=19  lead median 4.0 day(s)  gates=4\n\n  CORRELATIONS WITHHELD - 19 landed issue(s); 20 required.\n  Below that sample any correlation between approach, gate count\n  and outcome is noise wearing a number.\n",
+    "stderr": ""
+  },
+  "impact-floors": {
+    "exit": 0,
+    "stdout": "compass retro --impact - process signal (advisory)\n\n  lead time     median 4.0 day(s) over 19 issue(s)\n  land freq     not computable (span under a week) per week, over a span of 0 day(s)\n  change-fail   no hotfixes recorded, so change-fail cannot be measured\n\n  by delivery approach:\n    regular      n=19  lead median 4.0 day(s)  gates=4\n\n  CORRELATIONS WITHHELD - 19 landed issue(s); 20 required.\n  Below that sample any correlation between approach, gate count\n  and outcome is noise wearing a number.\n",
+    "stderr": ""
+  },
+  "impact-nothing": {
+    "exit": 0,
+    "stdout": "compass retro --impact - process signal (advisory)\n\n  Nothing to measure yet - no landed issues on record.\n",
+    "stderr": ""
+  },
+  "decisions": {
+    "exit": 0,
+    "stdout": "compass retro --decisions: 30 agent decisions across 20 issue(s).\n  60% confirmed (18): confirmed as the agent took them\n  17% changed (5): reopened by a person or by a change in the ledger\n  13% never confirmed (4): still open on a done issue\n  3 open on an issue in flight\n",
+    "stderr": ""
+  },
+  "decisions-json": {
+    "exit": 0,
+    "stdout": "{\n  \"total\": 30,\n  \"issues\": 20,\n  \"confirmed\": 18,\n  \"changed\": 5,\n  \"never_confirmed\": 4,\n  \"open_in_flight\": 3,\n  \"share\": {\n    \"confirmed\": 60,\n    \"changed\": 17,\n    \"never_confirmed\": 13\n  }\n}\n",
+    "stderr": ""
+  }
+}

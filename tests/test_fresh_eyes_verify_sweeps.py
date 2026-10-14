@@ -342,7 +342,8 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
     # sections, required-when, review-round, voluntary-kind and not-an-artifact-list.
     # 97 since the repository-readiness terms joined: readiness-signal,
     # readiness-floor, readiness-record, readiness-summary and temporary-worktree.
-    assert len(terminology["terms"]) == 97, (
+    # 98 since ADR-063 added checkpoint-outcome.
+    assert len(terminology["terms"]) == 98, (
         "governance/terminology.yml gained or lost a term without this count "
         "moving. A vocabulary change is a decision (ADR-012); make it one."
     )

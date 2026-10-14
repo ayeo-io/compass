@@ -64,8 +64,18 @@ with a one-line reason. Nothing else is a result.
   ```yaml
   readiness:
     tests-declared-and-under-two-minutes:
-      set: {params: {command: test_micro_command}}
+      set: {params: {set: {command: test_micro_command}}}
   ```
+
+  Write it in map form, as above. The inner `set:` changes `command` and keeps
+  the shipped `limit_seconds`. A plain map, `set: {params: {command: ...}}`,
+  replaces the whole `params` map and drops the limit, and the write-time lint
+  refuses it as `C-INCOMPARABLE`. In the readiness registry,
+  `tests-under-limit.command` has the direction `equivalent`: a swap between
+  its two choices, `test_command` and `test_micro_command`, classifies as
+  equivalent and needs no waiver. `compass policy diff` names the swap on its
+  own line (governance decision
+  2026-10-14-a-declared-equivalent-parameter-choice-classifies-as-equivalent).
 
 - **The flaky-test signal** reads the green records under
   `.compass/work/<issue>/evidence/`. `compass tdd-green` keeps one record per

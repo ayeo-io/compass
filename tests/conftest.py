@@ -35,6 +35,12 @@ sys.path.insert(0, str(FRAMEWORK_ROOT / "cli"))
 import compass_pkg  # noqa: E402  (side effect: puts cli/vendor at sys.path[0])
 import yaml  # noqa: E402
 
+# Two guards that watch the whole session. Importing a hook into this file
+# registers it, so every run is guarded and no option has to be passed.
+from archive_guard import pytest_sessionfinish, pytest_sessionstart  # noqa: E402,F401
+from shape_skip_guard import (  # noqa: E402,F401
+    pytest_make_collect_report, pytest_runtest_makereport)
+
 
 @pytest.fixture(scope="session")
 def cli_path() -> Path:

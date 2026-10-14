@@ -21,6 +21,7 @@ the table does not exist, and when a doc in this folder is not listed.
 - [multiagent-protocol.md](multiagent-protocol.md) - how a multiagent issue is run, step by step.
 - [headless-runner.md](headless-runner.md) - `compass run`: one stage of one issue with nobody in the session.
 - [delivery-record.md](delivery-record.md) - `compass record`: the delivery record kept in its own repository.
+- [autonomy-and-cost.md](autonomy-and-cost.md) - checkpoint outcomes, the landing refusal, the session record and usage at ship, and the autonomy ratio, bands and cost per change that `compass retro --impact` and `compass issue diagnose` derive from them: shapes, commands, definitions, the read limit and the floors.
 - [receipt.md](receipt.md) - the one-screen view of an issue's gates and evidence.
 - [board.md](board.md) - `compass board render` and `compass board refresh`: the delivery board as one page, where its file goes and what the commands refuse, what the lanes and cards show, how `--worktrees` reads other trees and what it writes to git's object store, and the release-note items.
 - [github-labels.md](github-labels.md) - the opt-in sync of an issue's domain labels, workflow state and page to its linked GitHub issue: the setting, the labels Compass owns, the page comment and the checks it passes before it is posted, when it writes, drift and the failure behaviour.
@@ -104,6 +105,7 @@ same commit.
 | `cli/compass_pkg/subtasks.py`, `cli/compass_pkg/loop_ceilings.py`, `cli/compass_pkg/multiagent_check.py`, `scripts/multiagent.sh`, `scripts/integrate.sh` | `docs/multiagent-protocol.md` |
 | `cli/compass_pkg/run_cmd.py`, `cli/compass_pkg/host_launch.py`, `cli/compass_pkg/redact.py`, `cli/compass_pkg/compliance.py`, `ci/headless-verify.yml` | `docs/headless-runner.md` |
 | `cli/compass_pkg/record.py` | `docs/delivery-record.md` |
+| `cli/compass_pkg/checkpoint_outcomes.py`, `cli/compass_pkg/session_record.py`, `cli/compass_pkg/session_usage.py`, `cli/compass_pkg/issue_usage.py`, `cli/compass_pkg/autonomy_cost.py` | `docs/autonomy-and-cost.md` |
 | `cli/compass_pkg/github_labels.py`, `cli/compass_pkg/github_page.py`, `cli/compass_pkg/github_sync_record.py`, `cli/compass_pkg/publish_check.py`, `cli/compass_pkg/github_links.py`, `tests/fake_gh.py` | `docs/github-labels.md` |
 | `cli/compass_pkg/status_words.py`, `cli/compass_pkg/lifecycle.py`, `cli/compass_pkg/status_cmd.py` | `architecture/decisions/ADR-045-the-issue-lifecycle-is-derived-from-records.md` |
 | `cli/compass_pkg/artifact_status.py`, `cli/compass_pkg/decisions_taken.py` | `architecture/decisions/ADR-050-artifact-status-is-written-by-stage-exits-and-by-a-persons-approval.md` |
@@ -112,7 +114,7 @@ same commit.
 | `cli/compass_pkg/dependencies_block.py` | `docs/rendered-blocks.md` |
 | `cli/compass_pkg/verification_plan.py` | `docs/rendered-blocks.md` |
 | `cli/compass_pkg/section_checks.py`, `cli/compass_pkg/outside_gate.py` | `governance/guardrails.md` |
-| `cli/compass_pkg/migrate.py`, `cli/compass_pkg/migrate_kinds.py` | `architecture/decisions/ADR-056-the-migrate-maps-documents-by-a-table-and-registers-before-it-moves.md` |
+| `cli/compass_pkg/migrate.py`, `cli/compass_pkg/migrate_kinds.py` | `architecture/decisions/ADR-056-the-migrate-maps-documents-by-a-table-and-registers-before-it-moves.md`, `docs/upgrade-7-0-0.md` |
 | `cli/compass_pkg/parse_cache.py` | `architecture/decisions/ADR-049-bulk-manifest-reads-use-a-parse-cache-keyed-on-content.md`, widened by `architecture/decisions/ADR-052-the-parse-cache-serves-the-render-as-well-as-flow.md` |
 | `cli/compass_pkg/rival_names.py`, `scripts/rival-name-gate.py`, `scripts/rival-name-hashes.txt`, `scripts/rival-name-binary-pins.txt` | `governance/decisions/2026-10-07-checked-binaries-are-pinned-in-the-rival-name-gate.md` |
 | `cli/compass_pkg/flow.py`, `cli/compass_pkg/spec_refresh.py`, `docs/system-spec.md`, `docs/system-spec-archive.md` | `architecture/decisions/ADR-026-ship-commit-lands-and-derives-the-living-spec.md` |
@@ -120,6 +122,7 @@ same commit.
 | `cli/compass_pkg/receipt.py`, `cli/compass_pkg/receipt_provenance.py` | `docs/receipt.md` |
 | `cli/compass`, `cli/compass_pkg/verb_help.py`, `cli/compass_pkg/lineage.py` | `README.md` |
 | `scripts/release.sh`, `Makefile`, `VERSION` | `docs/releasing.md` |
+| `.github/workflows/`, `scripts/ci-*.py` | `docs/releasing.md` |
 | `scripts/render-document-set.py`, `architecture/document-set-7-0-0.svg`, `tests/test_document_set_diagram.py` | `docs/methodology.md` |
 | `scripts/install.sh`, `.claude-plugin/` | `docs/install-smoke-test.md` |
 | `hooks/hooks.json`, the adapter boundary | `docs/portability.md` |

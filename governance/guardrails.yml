@@ -32,7 +32,7 @@
 # schemas/guardrails.schema.json.
 # =============================================================================
 
-version: 1.28.0
+version: 1.29.0
 # -----------------------------------------------------------------------------
 # Named checks - the mechanical checks `compass check` knows how to run. Each
 # guardrail below references one or more of these by name. The check reads
@@ -193,6 +193,8 @@ evidence_types:
     description: "A recorded human sign-off - for irreversible changes (guardrail `G5`). Has structured fields: approver, role, decision, timestamp, scope, conditions."
   artifact-approval:
     description: "A person's approval of one document or of a set of decisions taken for the person. Meets an artifact's human check; never a sign-off for guardrail `G5`."
+  checkpoint-approval:
+    description: "A person's answer to one checkpoint hand-off, written only by `compass evidence approve --checkpoint`. It never meets guardrail `G5` or a human check."
   security-review:
     description: "A recorded security review or scan result - for security-sensitive changes."
   migration-plan:

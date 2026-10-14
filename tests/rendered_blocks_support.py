@@ -94,8 +94,8 @@ def snapshot(root):
     found = {}
     for top in (Path(root) / DOCS, Path(root) / WORK):
         for path in sorted(top.rglob("*")):
-            # The lock file is empty and exists only to be locked.
-            if path.is_file() and path.name != ".render.lock":
+            # The lock files are empty and exist only to be locked.
+            if path.is_file() and path.name not in (".render.lock", ".manifest.lock"):
                 found[str(path.relative_to(root))] = path.read_bytes()
     return found
 

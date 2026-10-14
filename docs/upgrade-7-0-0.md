@@ -24,7 +24,7 @@ Stage commands now write the status of each registered document. A document that
 
 ### What to do
 
-1. Run `compass issue migrate` for a dry run of the archive changes, then `compass issue migrate --apply --i-have-a-copy` after you copy `.compass/work`.
+1. Run `compass issue migrate` for a dry run of the archive changes, then `compass issue migrate --apply --i-have-a-copy` after you copy `.compass/work` and `docs/compass` to a folder outside the project.
 2. Open issues gain the `artifacts-approved` check at their next `compass approach evaluate --write`. Until then `compass check` and `compass ship-commit` do not run it for them.
 3. Do not run a 6.x CLI on a 7.0.0 tree.
 
@@ -67,7 +67,7 @@ Compass now writes the status, ticks and counts in an issue's documents from the
 
 ### What `compass issue migrate` does
 
-`compass issue migrate` (a dry run) lists, for each issue, what it would write. `--apply` writes it, and needs `--i-have-a-copy` where git does not track the work root. It only adds lines and records:
+`compass issue migrate` (a dry run) lists, for each issue, what it would write. `--apply` writes it, and needs `--i-have-a-copy` where git does not track the work root or `docs/compass`. It only adds lines and records:
 
 1. It inserts an empty `dod` marker pair after the Definition of Done section of the verification report, and moves the report's registry digest so it keeps its status.
 2. It writes `meets`, `defers` and `page_ticks` records from the boxes of that section. A tag naming an id the manifest does not hold, or evidence of a type the list does not accept, writes no record. The item stays open and the report names the issue, the item and the id. A ticked box becomes a page tick, which counts as met on the page and is never a person's approval for `G5`.
@@ -139,7 +139,7 @@ For each issue, in this order:
 
 1. It plans every move first. Two plain review files that claim one round stop that issue: it is left byte for byte as it was, and the report names it. The other issues go on.
 2. It sets the generated page aside, renames the filenames earlier releases retired and brings the manifest keys up to date, as before.
-3. It re-points a registered `design` to `technical-design` and `prd` to `intent`, keeping each entry's id, status and path. It removes the `recommendation` entry and leaves its file.
+3. It re-points a registered `design` to `technical-design` and `prd` to `intent`, keeping each entry's id, status and path. It removes the `recommendation` entry and leaves its file. An entry the 6.x migrate registered under a review filename (`review` with no round, `review-2`, `integrated-review-3`) becomes the round its file becomes, keeping its id, status and approval. Where that round is already registered, by an earlier 7.0.0 run, the two entries become one, so each file keeps one entry. The merged entry keeps the later approval and the id of the entry that held it. When only one entry is approved, it keeps that approval and id. When neither is, it keeps the round entry's id and status, the more current record. Two entries whose files both exist are not merged: the report names both files for you to settle. The dry run and the apply name the id and approval kept and the id and approval dropped. An entry whose file is gone and that no document maps to is left, and the report says what to do.
 4. It registers each document it moves before it moves it, the delivery-approach record first and then each review round in order. A file named for a kind is registered under that kind, unless the kind is already registered at another file that exists: that path is kept, the file is left where it is, and the report names both. A review round is renamed `review-<n>.md`: a plain `review-<n>` keeps its number, a bare `review` is round 1 when that is free, and the other review names (`verify-*`, `integrated-review-*`, `security-review`, `review-claims`) take the next free numbers.
 5. It rewrites each manifest path that named a moved file: evidence, subtasks and gate evidence.
 6. It removes the compatibility pointer beside the manifest when the registered record exists. A file there without the pointer's marker line is left and reported.
@@ -150,7 +150,7 @@ Then the steps of the rendered-blocks section above run: the Definition of Done 
 
 The dry run lists each move, rename, registration, re-point, pointer removal and stub rename, then the totals: documents by target kind, files left on the not-an-artifact list, unmapped files, pointers to remove and maps to rename. It writes nothing. A second `--apply` reports nothing to do. A migrate stopped part way finishes on the next `--apply`, and every issue stays workable in between, because the registry names the new path before the file moves.
 
-**Copy first.** `--apply` renames files in `docs/compass/` as well as `.compass/work/`. Where git does not track either folder, it refuses without `--i-have-a-copy`, naming the folder. Nothing a person wrote is deleted: renames and moves keep the bytes, and the two things removed (each pointer and the one `recommendation` entry) are in your copy.
+**Copy first.** `--apply` renames files in `docs/compass/` as well as `.compass/work/`. Where git does not track a folder, it refuses without `--i-have-a-copy`, naming every folder it cannot restore in one refusal. Nothing a person wrote is deleted: renames and moves keep the bytes, and the three things removed are in your copy: each pointer, the one `recommendation` entry, and a registry entry that merges into another entry for the same file. A merged entry can hold an older approval; the migrate keeps the newer approval and names the dropped entry's id and approval in its report, in the dry run as well as the apply.
 
 ### What to do
 
@@ -176,6 +176,26 @@ The dry run lists each move, rename, registration, re-point, pointer removal and
 | `--depth` | flag of `compass issue template show` | Print the lightweight or thorough skeleton |
 | `--decision`, `--next-issue` | flags of `compass issue artifact set spike-conclusion` | Record how a spike closes |
 | `distribution-map.md.v6.bak` | the documents folder | A stub map the migrate set aside |
+
+## Checkpoint outcomes and usage
+
+Compass now records what happened at each stage hand-off and what each issue cost. The decision is `architecture/decisions/ADR-063-checkpoint-outcomes-and-session-usage-are-stored-and-the-autonomy-and-cost-figures-are-derived.md`, and `docs/autonomy-and-cost.md` owns the facts.
+
+### What changes
+
+- **A person's answer to a hand-off is a record.** `compass evidence approve --checkpoint <stage>` writes a `checkpoint-approval` record and a `waited` outcome. The record is not a `human-approval` record, so it never clears the sign-off of guardrail `G5` or a human check.
+- **An agent records a hand-off that autonomy passed.** `compass issue checkpoint add <stage> --outcome skipped --by <agent>` replaces the devlog line the stage commands asked for.
+- **`compass ship-commit` refuses an unanswered listed checkpoint.** It refuses a judged issue that lists a checkpoint with no outcome, before it writes anything, with the code `checkpoint-no-outcome`. A judged issue is one whose first assessment wrote `checkpoint_outcomes`. An issue assessed before this change is never refused, and no migrate adds the key.
+- **The pre-tool hook records each session.** The first time it judges a tool call for an issue, it appends the session id to `usage.sessions`. It never refuses an edit because of it. Every issue folder gains an empty `.manifest.lock` file.
+- **`compass ship-commit` records usage on every approach but the quick fix.** It reads the full transcripts of the recorded sessions and keeps numbers only. Above 1 GiB of transcript it reads none and records the reason `too-large`.
+- **`compass retro --impact` gains four rows**, the autonomy ratio, the band split, the cost per change and the decisions confirmed, each withheld below its floor. `compass retro --impact --json` and `compass retro --impact --format json` print one object. Before, `--json` printed the report's lines under an `output` key.
+- **`compass issue diagnose` gains a Checkpoints and cost section**, and its last line of what the records cannot show now reads "token use of a session the hook did not record".
+
+### What to do
+
+1. Nothing for issues already assessed. They read, lint and land as before.
+2. Answer each listed hand-off of a new issue with `compass evidence approve --checkpoint <stage>` at a terminal before you ship it.
+3. Add `.manifest.lock` to the `.gitignore` of a project that tracks its issue folders.
 
 ## Repository readiness and autonomous work
 
@@ -271,5 +291,12 @@ Compass can now post an issue's README to the linked GitHub issue, and the verb 
 
 | Name | Where | Meaning |
 |---|---|---|
+| `checkpoint_outcomes` | `manifest.yml` | One outcome, `waited` or `skipped`, for each checkpoint stage |
+| `checkpoint-approval` | the type of an evidence record | A person's answer to one checkpoint hand-off |
+| `usage.sessions`, `usage.total`, `usage.unattributed` | `manifest.yml` | The sessions that worked on the issue, and what they cost |
+| `too-large`, `no-window` | reasons in a `usage` block | Transcripts over the read limit, and a stage no record ends |
+| `checkpoint-no-outcome` | a refusal code | The landing refusal |
+| `compass evidence approve --checkpoint` | a flag | Answer a hand-off |
+| `compass issue checkpoint add` | a verb | Record a hand-off that autonomy passed |
 | `github_labels.page` | `compass.yml` | Post the issue page to the linked GitHub issue |
 | `compass issue github sync` | verb | Write the labels and the issue page on demand |

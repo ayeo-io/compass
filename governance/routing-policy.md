@@ -166,7 +166,16 @@ the answer into the manifest as `checkpoints:`.
 
 - A stage the route collapses or skips has no hand-off, so it never waits.
 - A hand-off that does not wait still writes its document, shows its
-  summary, names the setting and logs the skipped checkpoint to `devlog.md`.
+  summary, names the setting and records its outcome with `compass issue
+  checkpoint add <stage> --outcome skipped --by <agent>`. A person's answer to
+  a hand-off is recorded with `compass evidence approve --checkpoint <stage>`,
+  as a `checkpoint-approval` record and a `waited` outcome; it never meets
+  guardrail `G5`. Both outcomes are kept in the manifest's
+  `checkpoint_outcomes`, one per stage. `compass ship-commit` refuses an
+  issue that lists a checkpoint with no outcome (`checkpoint-no-outcome`).
+  Only an issue whose first assessment wrote `checkpoint_outcomes` is judged;
+  an issue assessed before outcomes were recorded is never refused, and the
+  two commands refuse it.
 - The table can name only the four checkpoint stages. `compass policy lint`
   and the evaluator refuse anything else, so the setting cannot reach a gate,
   evidence, the pre-tool hook, `compass check`, guardrail 5 or the sign-off
@@ -447,6 +456,18 @@ The grid:
   them is `incomparable`. A check parameter's direction comes from the check
   registry. A check that is renamed with an identical definition is
   `incomparable`, because a check keeps its id.
+  A readiness parameter's direction comes from the readiness registry:
+  `higher`, `lower`, `none` or the direction `equivalent`. `equivalent` is
+  declared on `tests-under-limit.command` only. A changed value of such a
+  parameter is `equal` when both sides name the same implementation, both
+  values are present and both are in the implementation's `choices`, and
+  `incomparable` otherwise; it is never `tighter` or `looser`. The registry
+  refuses `equivalent` on a parameter with no `choices`, the check registry
+  refuses it on every parameter, and a catalogue or preset cannot declare it.
+  A readiness parameter one side leaves out is `incomparable` whatever its
+  direction: the classifier fills in no runtime default. `CLASSIFIER_VERSION`
+  is 5 since this rule (governance decision
+  2026-10-14-a-declared-equivalent-parameter-choice-classifies-as-equivalent).
 - `stages.order` and `gates.stage` are the footprint of a lock, not facts the
   classifier reads. Reordering an unlocked stage or moving a gate to another
   stage reads `equivalent` here, and the locks increment compares both.

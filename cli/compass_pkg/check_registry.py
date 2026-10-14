@@ -56,6 +56,16 @@ class CheckImpl:
     # True only where the implementation runs a command the project wrote.
     executes_project_code: bool = False
 
+    def __post_init__(self):
+        # `equivalent` makes a swap between two declared choices equal. A check
+        # parameter has no choices, so no check may declare it.
+        for param, direction in self.tighter.items():
+            if direction == "equivalent":
+                raise ValueError(
+                    f"check implementation '{self.name}': parameter '{param}' declares "
+                    f"the direction equivalent, which needs declared choices, and a "
+                    f"check parameter has none")
+
     @property
     def corpus(self) -> str:
         return f"{CORPUS_ROOT}/{self.name}"

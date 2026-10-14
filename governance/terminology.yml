@@ -411,6 +411,21 @@ terms:
       the product.
     related: [requirements-review, evidence]
 
+  checkpoint-outcome:
+    means: >
+      What happened at one checkpoint stage hand-off, recorded in the
+      manifest's `checkpoint_outcomes` as the stage, the outcome, who and
+      when. The outcome is `waited` when a person answered the hand-off with
+      `compass evidence approve --checkpoint`, which also writes a
+      `checkpoint-approval` record holding their answer, or `skipped` when an
+      agent went on because the autonomy setting passed the hand-off, recorded
+      with `compass issue checkpoint add`. A `checkpoint-approval` record
+      clears no gate and no human check. `compass ship-commit` refuses a
+      judged issue that lists a checkpoint with no outcome, and
+      `compass retro --impact` reads the outcomes to report how much work ran
+      without a person.
+    related: [decision-taken, evidence, issue]
+
   receipt:
     means: >
       The per-issue proof summary rendered from the manifest and the evidence

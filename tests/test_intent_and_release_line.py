@@ -249,3 +249,84 @@ def _approach_properties(schema):
     walk(schema)
     assert found, "the schema declares no approach entry"
     return found[0]
+
+
+# --- IRL-1 ----------------------------------------------------------------------------
+
+def _entries(root, kind, slug=SLUG):
+    return [a for a in manifest(root, slug).get("artifacts") or []
+            if isinstance(a, dict) and a.get("kind") == kind]
+
+
+def test_irl_1_regular_registers_lightweight_intent(tmp_path):
+    root = project(tmp_path)
+    entries = _entries(root, "intent")
+    assert len(entries) == 1, manifest(root).get("artifacts")
+    entry = entries[0]
+    assert entry.get("status") == "draft" and entry.get("depth") == "lightweight", entry
+    assert not entry.get("path"), entry
+    done = run(root, "issue", "artifact-path", "intent", "--issue", SLUG)
+    assert done.returncode == 0, done
+    assert done.stdout.strip() == f"{DOCS}/intent.md", done
+    assert_no_gh_call(root)
+
+
+# --- IRL-2 ----------------------------------------------------------------------------
+
+THOROUGH_INTENT = ["Problem", "Desired outcome", "Success signals", "Constraints", "Non-goals",
+                   "Internal FAQ", "Affected roles",
+                   "Intent-fidelity check (filled at the pre-plan gate)"]
+
+
+def _headings(text):
+    """The `## ` headings outside code fences and HTML comments."""
+    from compass_pkg.template_lists import Template
+    return [s["heading"] for s in Template(text).sections]
+
+
+def _section(text, heading):
+    from compass_pkg.template_lists import Template
+    found = [s for s in Template(text).sections if s["heading"] == heading]
+    assert found, (heading, text)
+    return "\n".join(found[0]["body"])
+
+
+def test_irl_2_template_show_lightweight_intent(tmp_path):
+    light = subprocess.run([sys.executable, str(CLI), "issue", "template", "show", "intent",
+                            "--depth", "lightweight"], cwd=tmp_path, capture_output=True,
+                           text=True, env=env(tmp_path))
+    assert light.returncode == 0, light
+    assert [line for line in light.stdout.splitlines() if line.startswith("## ")] == [
+        "## Problem", "## Desired outcome", "## Success signals", "## Non-goals"], light.stdout
+    assert "- INT-1: <outcome>" in _section(light.stdout, "Desired outcome"), light.stdout
+
+    thorough = subprocess.run([sys.executable, str(CLI), "issue", "template", "show", "intent",
+                               "--depth", "thorough"], cwd=tmp_path, capture_output=True,
+                              text=True, env=env(tmp_path))
+    assert thorough.returncode == 0, thorough
+    assert _headings(thorough.stdout) == THOROUGH_INTENT, thorough.stdout
+
+    root = repo(tmp_path / "lint")
+    done = run(root, "policy", "lint", "--json")
+    report = json.loads(done.stdout)
+    errors = [f for f in report.get("findings") or []
+              if "intent" in json.dumps(f) and f.get("level") == "error"]
+    assert not errors, errors
+    assert report["counts"]["errors"] == 0, report
+
+
+# --- IRL-3 ----------------------------------------------------------------------------
+
+@pytest.mark.parametrize("approach, depth", [
+    ("full", "thorough"), ("quick-fix", None), ("hotfix", None), ("spike", None)])
+def test_irl_3_other_approaches_keep_intent_rules(tmp_path, approach, depth):
+    root = repo(tmp_path)
+    assess(root, approach)
+    entries = _entries(root, "intent")
+    if depth is None:
+        assert entries == [], entries
+    else:
+        assert [e.get("depth") for e in entries] == [depth], entries
+    # The configuration the issue runs against says the same.
+    owed = (generation_config(root)["approaches"][approach].get("artifacts") or {})
+    assert owed.get("intent") == depth, owed

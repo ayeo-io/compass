@@ -131,6 +131,7 @@ Headings of each kind, in order:
 - `distribution-map`, lightweight: 1. Work units; 2. Independence analysis; 3. Scenario-group → subtask mapping; Gate
 - `verification-report`, thorough: 1. Scenario acceptance results; 2. Test suite evidence; 3. Review dimensions; 4. Gate decision; 5. Failure modes de-scoped at define; 6. Decisions taken for the user; Gate
 - `intent`, thorough: Problem; Desired outcome; Success signals; Constraints; Non-goals; Internal FAQ; Affected roles; Intent-fidelity check (filled at the pre-plan gate)
+- `intent`, lightweight: Problem; Desired outcome; Success signals; Non-goals
 - `requirements-review`, thorough: Self-QA of the spec; Governance QA of the spec; Ambiguity ledger; Gate
 - `threat-model`, thorough: What are we working on?; What can go wrong?; What are we going to do about it?; Did we do a good enough job?
 - `rollback-plan`, thorough: What breaks; How we go back; When this was last rehearsed

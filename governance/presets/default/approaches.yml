@@ -42,7 +42,7 @@ approaches:
       implement: thorough, verify: thorough, ship: thorough}
     gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.clarity,
       verify.security]
-    artifacts: {acceptance-criteria: thorough, technical-design: thorough, distribution-map: lightweight,
+    artifacts: {intent: lightweight, acceptance-criteria: thorough, technical-design: thorough, distribution-map: lightweight,
       verification-report: thorough}
     subtask_ceiling: 2
     checkpoints:

@@ -129,6 +129,11 @@ artifacts:
       outcome counts as success.
     stands_for: prd
     sections:
+      lightweight:
+      - Problem
+      - Desired outcome
+      - Success signals
+      - Non-goals
       thorough:
       - Problem
       - Desired outcome

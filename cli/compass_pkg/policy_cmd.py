@@ -2,19 +2,22 @@
 """The five verbs over `policy_lint`, `replay`, `policy_migrate` and `policy_update`.
 
 `policy lint` runs the legacy lint, unchanged, for a project with no
-`compass.yml` that Compass reads and for the framework's own repository, and
-the layered lint for any other project. `compass ci` calls the legacy
-function in `governance` directly, so its behaviour does not move.
+`compass.yml` that Compass reads, and the layered lint for any other project.
+`--issue`, `--file` and `policy show` read the chain the write-time lint reads
+everywhere, the framework's own repository included. There, `policy lint` with
+no arguments runs the legacy lint and then the layered lint, and fails if
+either fails. `compass ci` calls the legacy function in `governance`
+directly, so its behaviour does not move.
 """
-# DEPENDENCY: standard library (os, sys); compass_pkg.core, governance, layers,
-# parents, policy_lint, policy_migrate, policy_update, project_settings, replay,
-# terminal.
+# DEPENDENCY: standard library (os, sys); compass_pkg.classify, core, governance,
+# layers, parents, policy_lint, policy_migrate, policy_update, project_settings,
+# replay, terminal.
 from __future__ import annotations
 
 import os
 import sys
 
-from compass_pkg import governance, layers, parents, policy_lint, policy_migrate
+from compass_pkg import classify, governance, layers, parents, policy_lint, policy_migrate
 from compass_pkg import policy_update, preset_init, preset_test, project_settings, replay
 from compass_pkg.core import (FRAMEWORK_ROOT, CompassError, find_governance, load_manifest,
                               resolve_issue_dir)
@@ -23,11 +26,10 @@ from compass_pkg.terminal import mark_handled, resolve_mode
 
 def _is_layered(root):
     """Layered when the project holds a `compass.yml` Compass reads. The
-    settings reader's own predicate decides, so the two cannot disagree.
-    The framework's repository keeps the legacy lint until its own governance
-    files are generated views of the preset (ADR-042)."""
-    if os.path.realpath(root) == os.path.realpath(FRAMEWORK_ROOT):
-        return False
+    settings reader's own predicate decides, so the two cannot disagree, and
+    `--issue`, `--file` and `policy show` read the chain the write-time lint
+    (`effective.resolve_live`) reads. The framework's repository is no
+    exception: its governance files are generated views of the preset."""
     return project_settings.compass_yml_counts(root)
 
 
@@ -45,26 +47,63 @@ def _may_fetch(args):
     return not (getattr(args, "offline", False) or parents.offline())
 
 
+def _is_framework_root(root):
+    """True in the framework's own repository, whose governance/ files are
+    the shipped set and whose compass.yml is a project layer over them."""
+    return os.path.realpath(root) == os.path.realpath(FRAMEWORK_ROOT)
+
+
+def _legacy_report():
+    gov = find_governance()
+    errors, _ = governance.legacy_structure(gov)
+    return policy_lint.legacy_report(errors, governance.governance_drift(gov),
+                                     governance._drift_is_strict())
+
+
+def _layered_report(args, root, file=None, manifest=None, read_project=True):
+    loaded = policy_lint.load_layers(root, file=file, manifest=manifest, cwd=os.getcwd(),
+                                     read_project=read_project, fetch=_may_fetch(args))
+    return policy_lint.lint_loaded(loaded, exhaustive=bool(getattr(args, "exhaustive", False)))
+
+
+def _lint_framework(args, root):
+    """The no-argument lint in the framework's repository: the legacy lint of
+    governance/, then the layered lint of compass.yml over the shipped default,
+    which is the chain a write reads. It fails when either fails, so CI
+    (`scripts/validate.sh`) reports a chain a write would refuse."""
+    layered = _layered_report(args, root)
+    if resolve_mode(args) == "json":
+        legacy = _legacy_report()
+        both = policy_lint.Report(
+            mode="framework", layers=legacy.layers + layered.layers,
+            findings=legacy.findings + layered.findings,
+            stopped_after=legacy.stopped_after or layered.stopped_after)
+        _emit(args, policy_lint.lint_json(both), [])
+        legacy_ok = legacy.ok
+    else:
+        legacy_ok = governance.cmd_policy_lint(args) == 0
+        print("\n".join(policy_lint.lint_text(layered)))
+    policy_lint.print_advisories(layered)
+    return 0 if legacy_ok and layered.ok else 1
+
+
 def run_policy_lint(args):
     root = layers.find_project_root(os.getcwd())
     file = getattr(args, "file", None)
     slug = getattr(args, "task", None)
     layered = _is_layered(root)
+    if not file and not slug and _is_framework_root(root):
+        return _lint_framework(args, root)
     # An issue's config is linted over the shipped default even where the
     # project has no compass.yml, as `effective` resolves it.
     if not file and not slug and not layered:
         if resolve_mode(args) != "json":
             return governance.cmd_policy_lint(args)
-        gov = find_governance()
-        errors, _ = governance.legacy_structure(gov)
-        report = policy_lint.legacy_report(errors, governance.governance_drift(gov),
-                                           governance._drift_is_strict())
+        report = _legacy_report()
         _emit(args, policy_lint.lint_json(report), [])
         return 0 if report.ok else 1
     manifest = load_manifest(resolve_issue_dir(slug))[0] if slug else None
-    loaded = policy_lint.load_layers(root, file=file, manifest=manifest, cwd=os.getcwd(),
-                                     read_project=layered, fetch=_may_fetch(args))
-    report = policy_lint.lint_loaded(loaded, exhaustive=bool(getattr(args, "exhaustive", False)))
+    report = _layered_report(args, root, file=file, manifest=manifest, read_project=layered)
     _emit(args, policy_lint.lint_json(report), policy_lint.lint_text(report))
     policy_lint.print_advisories(report)
     return 0 if report.ok else 1
@@ -109,7 +148,12 @@ def run_policy_diff(args):
     # of the classification: a kind nothing owes changes no obligation.
     added = sorted(set(b.config.get("artifacts") or {}) - set(a.config.get("artifacts") or {}))
     lines = replay.diff_text(document)
-    lines[1:1] = [f"adds artifact kind {kind}" for kind in added]
+    # A swap between two declared choices of a readiness parameter is
+    # equivalent, so the classification does not show it. It is named on a
+    # line of its own, so it stays visible without a waiver.
+    swaps = [f"changes readiness {signal} {param}: {p} -> {c}"
+             for signal, param, p, c in classify.declared_choice_swaps(a.config, b.config)]
+    lines[1:1] = [f"adds artifact kind {kind}" for kind in added] + swaps
     _emit(args, document, lines)
     return 1 if args.exit_code and document["differs"] else 0
 

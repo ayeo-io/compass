@@ -174,7 +174,9 @@ Why it is enforced rather than warned about:
 - `cli/compass_pkg/check_registry.py` holds one entry for each built-in check
   implementation. `CHECK_FNS` is derived from it. An entry holds a semantic
   version (all start at `1.0.0`), a parameter spec, a `tighter` value per
-  parameter (`higher`, `lower` or `none`, default `none`), whether the check
+  parameter (`higher`, `lower` or `none`, default `none`; a check parameter
+  cannot declare `equivalent`, because it has no declared choices, and the
+  registry refuses the entry), whether the check
   runs project code (`command-passes` alone), and the path of its fixture
   corpus. It also answers "installed version" and "installed major" of an
   implementation.

@@ -578,7 +578,10 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # key, so no verdict can differ and the version stays 3.
 # Re-pinned for the readiness comparison: a signal's `impl`, `params` and
 # `required_for_autonomous` are compared, and the version is now 4.
-VERDICT_SOURCE_PIN = "6dd4f6c0b092b871"
+# Re-pinned for issue `readiness-override-assess`: a declared equivalent parameter
+# choice compares as equal and a missing readiness parameter is incomparable, so the
+# version is now 5.
+VERDICT_SOURCE_PIN = "c58e9e996ea7f9aa"
 
 
 def _verdict_source_digest():

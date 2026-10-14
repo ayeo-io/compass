@@ -53,7 +53,11 @@ JSON_SCHEMA_VERSION = 1
 # Version 4: a readiness signal's `impl`, `params` and `required_for_autonomous`
 # are compared, so a configuration that changes the readiness floor has a
 # verdict the third version could not give.
-CLASSIFIER_VERSION = 4
+#
+# Version 5: a declared equivalent parameter choice compares as equal, and a
+# readiness parameter one side leaves out is incomparable, so swapping the
+# timed test command between its two choices is no longer incomparable.
+CLASSIFIER_VERSION = 5
 
 # Keys whose value is a condition on the assessment.
 WHEN_KEYS = ("when", "blocking_when", "applies_when")
@@ -258,7 +262,7 @@ def grid_at(assessment):
 
 # --- comparing one fact -----------------------------------------------------------
 
-TIGHTER_DIRECTIONS = (*DIRECTIONS, "none")
+TIGHTER_DIRECTIONS = (*DIRECTIONS, "none", "equivalent")
 
 EQUAL, TIGHTER, LOOSER, INCOMPARABLE = "equal", "tighter", "looser", "incomparable"
 
@@ -382,16 +386,63 @@ def _number(value):
     return value
 
 
+def _in_declared_choices(field, meta, p, c, ctx):
+    """Whether a changed readiness parameter whose direction is `equivalent`
+    moved between two of its implementation's declared choices: both sides
+    name the same implementation, both values are present and both are in
+    `choices`. Only the readiness registry can declare `equivalent` on a
+    parameter with choices, so any other field answers no."""
+    if field != "readiness.params" or p is None or c is None:
+        return False
+    signal, param = meta
+    impls = {((config.get("readiness") or {}).get(signal) or {}).get("impl")
+             for config in ctx.configs}
+    if len(impls) != 1:
+        return False
+    from compass_pkg.readiness_registry import READINESS
+    entry = READINESS.get(impls.pop())
+    allowed = entry.choices.get(param, ()) if entry else ()
+    return p in allowed and c in allowed
+
+
 def _ceiling_rule(field, key, p, c, ctx, meta=None):
     """As the registry declares: `higher` or `lower` is the stricter way, and
-    `none` (the default) makes any change incomparable."""
+    `none` (the default) makes any change incomparable. `equivalent` makes a
+    swap between two declared choices equal, and any other change
+    incomparable: it is never tighter or looser."""
     if p == c:
         return EQUAL
+    # A readiness parameter one side leaves out runs with the implementation's
+    # default, not with no limit. The classifier fills in no default, so the
+    # change cannot be ordered.
+    if field == "readiness.params" and (p is None or c is None):
+        return INCOMPARABLE
     direction = _direction(field, key, meta, ctx)
+    if direction == "equivalent":
+        return EQUAL if _in_declared_choices(field, meta, p, c, ctx) else INCOMPARABLE
     np_, nc = _number(p), _number(c)
     if direction == "none" or np_ is None or nc is None:
         return INCOMPARABLE
     return TIGHTER if (nc < np_) == (direction == "lower") else LOOSER
+
+
+def declared_choice_swaps(parent, child):
+    """`(signal, param, parent value, child value)` for each readiness
+    parameter that changed and that the comparison judged equal, which only a
+    swap between two declared choices is. `compass policy diff` prints one line
+    for each, so a swap stays visible although it changes no verdict. The rule
+    is the comparison's own, so the line and the verdict cannot disagree."""
+    ctx = _Context(parent, child, None, None)
+    sides = [(config.get("readiness") or {}) for config in (parent, child)]
+    out = []
+    for signal in sorted(set(sides[0]) & set(sides[1])):
+        p_params, c_params = ((side[signal] or {}).get("params") or {} for side in sides)
+        for param in sorted(set(p_params) | set(c_params)):
+            p, c = p_params.get(param), c_params.get(param)
+            if p != c and _ceiling_rule("readiness.params", f"{signal}.{param}", p, c, ctx,
+                                        meta=(signal, param)) == EQUAL:
+                out.append((signal, param, p, c))
+    return out
 
 
 # The rule for each compare kind of the field table.

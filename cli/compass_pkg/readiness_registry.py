@@ -30,11 +30,22 @@ class ReadinessImpl:
     # Parameter name -> the values it may take. A parameter that is not here
     # takes any value of its type.
     choices: dict = field(default_factory=dict)
-    # Parameter name -> `higher`, `lower` or `none`: which way is stricter.
-    # A missing parameter means `none`, which makes any change incomparable.
+    # Parameter name -> `higher`, `lower`, `none` or `equivalent`: which way is
+    # stricter. A missing parameter means `none`, which makes any change
+    # incomparable. `equivalent` makes a swap between two of the parameter's
+    # `choices` equal, so it needs a `choices` entry.
     tighter: dict = field(default_factory=dict)
     # True only where the implementation runs a command the project wrote.
     runs_project_command: bool = False
+
+    def __post_init__(self):
+        # A leaf module raises ValueError, not CompassError: an entry like this
+        # is a defect in the CLI, found when the module is imported.
+        for param, direction in self.tighter.items():
+            if direction == "equivalent" and param not in self.choices:
+                raise ValueError(
+                    f"readiness implementation '{self.name}': parameter '{param}' "
+                    f"declares the direction equivalent but has no choices entry")
 
     @property
     def major(self) -> int:
@@ -55,7 +66,9 @@ _ENTRIES = (
     _entry("tests-under-limit", "tests_under_limit",
            params_spec={"command": "string", "limit_seconds": "integer"},
            choices={"command": ("test_command", "test_micro_command")},
-           tighter={"limit_seconds": "lower"},
+           # A swap between the two declared commands is equivalent: each
+           # times a test suite the project declares, under the same limit.
+           tighter={"limit_seconds": "lower", "command": "equivalent"},
            runs_project_command=True),
     _entry("no-flaky-records", "no_flaky_records"),
     _entry("project-declaration", "project_declaration",

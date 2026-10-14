@@ -456,6 +456,18 @@ The grid:
   them is `incomparable`. A check parameter's direction comes from the check
   registry. A check that is renamed with an identical definition is
   `incomparable`, because a check keeps its id.
+  A readiness parameter's direction comes from the readiness registry:
+  `higher`, `lower`, `none` or the direction `equivalent`. `equivalent` is
+  declared on `tests-under-limit.command` only. A changed value of such a
+  parameter is `equal` when both sides name the same implementation, both
+  values are present and both are in the implementation's `choices`, and
+  `incomparable` otherwise; it is never `tighter` or `looser`. The registry
+  refuses `equivalent` on a parameter with no `choices`, the check registry
+  refuses it on every parameter, and a catalogue or preset cannot declare it.
+  A readiness parameter one side leaves out is `incomparable` whatever its
+  direction: the classifier fills in no runtime default. `CLASSIFIER_VERSION`
+  is 5 since this rule (governance decision
+  2026-10-14-a-declared-equivalent-parameter-choice-classifies-as-equivalent).
 - `stages.order` and `gates.stage` are the footprint of a lock, not facts the
   classifier reads. Reordering an unlocked stage or moving a gate to another
   stage reads `equivalent` here, and the locks increment compares both.

@@ -576,7 +576,9 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # Re-pinned again for `every_approach` in `routing.evaluate_route` (same issue). The
 # classifier prepares its policy from `obligations.policy_adapter`, which does not carry the
 # key, so no verdict can differ and the version stays 3.
-VERDICT_SOURCE_PIN = "2bcae5c94c3a314a"
+# Re-pinned for the readiness comparison: a signal's `impl`, `params` and
+# `required_for_autonomous` are compared, and the version is now 4.
+VERDICT_SOURCE_PIN = "6dd4f6c0b092b871"
 
 
 def _verdict_source_digest():

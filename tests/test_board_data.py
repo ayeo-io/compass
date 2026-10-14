@@ -183,7 +183,7 @@ KEYS_AT_6_0_0 = {
 ADDED_TO_A_PLACED_ROW = {
     "lane", "stage", "gates", "gate_list", "assessment", "policy_rules_fired",
     "stage_depths", "tree", "manifest_path", "also_in", "created", "set_aside",
-    "recommendation", "unplaceable", "documents", "depends_on"}
+    "recommendation", "unplaceable", "readiness", "documents", "depends_on"}
 # `depends_on` is on every row, an empty list where no manifest was read (ADR-062).
 ADDED_TO_AN_UNPLACED_ROW = {"tree", "manifest_path", "also_in", "depends_on"}
 KEYS_NOW = {

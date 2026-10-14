@@ -218,6 +218,28 @@ env:
 
 Do this only for a job whose trigger and source are genuinely trusted.
 
+### Readiness runs project commands too
+
+`compass readiness` runs up to five commands the project declares: the build,
+test, lint, type-check and format-check commands. It asks the same question in
+the same order as `command-passes`, through one function,
+`project_commands.command_permission`: the trust decision first, then
+`allow_project_commands`. On an untrusted contribution none of them runs and
+the setting is not read.
+
+What differs from `command-passes`:
+
+- each command runs in a temporary worktree of HEAD in the system temp folder,
+  so nothing it writes reaches the working tree, and the worktree is removed
+  when the run ends;
+- each command starts in its own process group, and the whole group is stopped
+  at its time limit;
+- the readiness record it writes is a plain file in the checkout, so it proves
+  nothing about a contribution: a contribution could commit one.
+
+No readiness signal opens a network connection. A declared command can. See
+`docs/readiness.md`.
+
 ## CI hardening
 
 **Compass cannot defend against a contributor with push access.**

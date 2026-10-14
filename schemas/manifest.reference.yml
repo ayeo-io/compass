@@ -43,6 +43,7 @@ checkpoint_outcomes: # (optional) list of maps - one outcome per checkpoint stag
     outcome:     #   skipped: the autonomy setting passed it, recorded with compass issue checkpoint add --outcome skipped
     by:          #   the agent that went on, such as spec-author
     at:          #   ISO 8601, the time of the command; a skipped outcome has no evidence
+readiness:       # (optional) map - the repository's readiness at the last approach evaluate --write: {status: measured, score, signals, floor_met, absent[], measured_at} or {status: not-measured, reason: missing | stale | unreadable, detail}; outside the generation
 
 evidence:        # (optional) list of maps - the typed evidence registry gates reference by id:
   - id:          #   (required in entry) string - e.g. EV-001 or EV-A1

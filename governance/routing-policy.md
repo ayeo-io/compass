@@ -182,6 +182,23 @@ the answer into the manifest as `checkpoints:`.
   the domain labels bring.
 - An `autonomy` value that is not one of the three is refused, not read as
   balanced.
+- **The readiness floor caps `autonomous`** (ADR-058). `approach evaluate
+  --write` refuses, with exit 2 and before it prints or writes anything, an
+  issue whose effective autonomy is `autonomous` when:
+  - the CI runner reports an untrusted contribution, read from the
+    environment before the readiness record, so a committed record cannot
+    clear it; no setting lifts this refusal;
+  - the readiness record is missing, stale or unreadable;
+  - the record was measured for an untrusted contribution; or
+  - a readiness signal with `required_for_autonomous: true` is absent.
+
+  Each message names `autonomy` as the setting to change. `balanced` and
+  `controlled` are never refused. Without `--write` the default view shows
+  whether a write would be refused, and `--json` carries `readiness`. The
+  floor is not a gate or a routing rule: it changes no approach, gate or
+  checkpoint, and `compass check` never reads it. Every `--write` records the
+  readiness summary in the manifest's `readiness:` key. `docs/readiness.md`
+  holds the signals and the record.
 - A policy without the table, or a table that leaves out a value or a
   route, waits at every hand-off the route runs. Only a route listed with an
   empty list never waits. Route keys are the current route names, and a

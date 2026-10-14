@@ -19,6 +19,8 @@
 /.compass/work/
 /.compass/flow/
 /.compass/current-task
+# The readiness record: per-checkout state `compass readiness` writes.
+/.compass/readiness.yml
 
 # The framework's own issue documents, relocated out of `.compass/work/` by
 # `compass issue migrate`. Same rule as the patterns above and for the same reason:

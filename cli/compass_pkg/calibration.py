@@ -43,6 +43,25 @@ from compass_pkg.core import CompassError, canonical_shape, display_shape, find_
 # whether assessment is systematically over- or under-sizing the process.
 # Read-only: it advises and never gates.
 
+def _readiness_rows(tasks):
+    """`[(slug, text, floor)]` in the order the issues were assessed: the readiness each
+    issue's manifest recorded, the score or "not measured", and whether the floor was met
+    ("floor met", "floor not met" or "floor unknown"). An issue sorts by its `created`
+    date, then its slug."""
+    def created(item):
+        return (str(item[1].get("created") or ""), item[0])
+    rows = []
+    for slug, task in sorted(tasks, key=created):
+        summary = task.get("readiness")
+        if isinstance(summary, dict) and summary.get("status") == "measured":
+            floor = "floor met" if summary.get("floor_met") else "floor not met"
+            rows.append((slug, "%s of %s" % (summary.get("score"), summary.get("signals")),
+                         floor))
+        else:
+            rows.append((slug, "not measured", "floor unknown"))
+    return rows
+
+
 def _route_weights():
     """`{approach: weight}` from the routing policy in force: the project's
     effective configuration when it has a `compass.yml`, else the governance
@@ -719,7 +738,9 @@ def cmd_calibration(args):
               reframe_pct=pct_head, up=ups, down=downs, sideways=sideways,
               unweighed=sum(unweighed.values()),
               distribution=dict(dist), no_route=list(no_route),
-              transitions=dict(transitions))
+              transitions=dict(transitions),
+              readiness=[{"issue": s, "readiness": r, "floor": f}
+                         for s, r, f in _readiness_rows(tasks)])
     _buf = _io.StringIO()
     _ctx = _cl.redirect_stdout(_buf)
     _ctx.__enter__()
@@ -748,6 +769,10 @@ def cmd_calibration(args):
         print("  transitions:")
         for k, v in sorted(transitions.items(), key=lambda x: -x[1]):
             print(f"    {_display_transition(k)} : {v}")
+    print()
+    print("Repository readiness at assessment:")
+    for slug, text, floor in _readiness_rows(tasks):
+        print(f"  {slug:<28} {text:<14} {floor}")
     print()
     # Interruptions: each hook block and each failing `compass check`,
     # appended to .compass/interruptions.log as the work happened.

@@ -375,6 +375,24 @@ Compass cannot prevent a person, automation or agent from changing the
 repository outside its adapter and commands. Repository permissions, branch
 protection, review policy and CI remain essential.
 
+### The readiness floor reads a record a person can edit
+
+From 7.0.0 an issue on `autonomy: autonomous` is refused at `compass approach
+evaluate --write` while the repository is below the readiness floor or has no
+fresh readiness record. The floor guards against an unready repository, not
+against a person. The record, `.compass/readiness.yml`, is a plain file in the
+checkout, and anyone who can edit it can mark a readiness signal present, as
+anyone who can edit `compass.yml` can change the commands it runs.
+
+- An untrusted CI contribution is refused before the record is read, so a
+  record committed with the contribution cannot clear the floor.
+- The session-start hook adds one readiness line for an autonomous project
+  below the floor or not measured. It reads the record and runs nothing, and
+  its readiness code has its own guard: a record or settings file it cannot
+  read loses the line, never the contract, and the hook exits 0.
+- The floor is not a guardrail. It decides whether work runs without a
+  person, not whether work lands.
+
 ### A check's compatibility within a major version is shown on its corpus only
 
 Each built-in check implementation carries a version, and a fixture corpus of

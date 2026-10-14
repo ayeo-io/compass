@@ -51,6 +51,7 @@ the table does not exist, and when a doc in this folder is not listed.
 - [policy-test.md](policy-test.md) - `compass preset test` and `compass preset init`: the preset folder and fixture format, what the test checks, the exit codes and the JSON shape of both reports.
 - [policy-update.md](policy-update.md) - `compass policy update`: the major bump, the waiver re-check, the terminal re-approval, the exit codes and the JSON shape.
 - [security.md](security.md) - what Compass adds to a repository, and how to review it.
+- [readiness.md](readiness.md) - `compass readiness`: the readiness signals, the project commands it runs in a temporary worktree within one time budget, the readiness record and when it is fresh.
 - [portability.md](portability.md) - the adapter boundary, for running Compass outside Claude Code.
 
 ## Background
@@ -121,6 +122,7 @@ same commit.
 | `scripts/install.sh`, `.claude-plugin/` | `docs/install-smoke-test.md` |
 | `hooks/hooks.json`, the adapter boundary | `docs/portability.md` |
 | `cli/compass_pkg/project_commands.py`, `cli/compass_pkg/trust.py` | `docs/security.md` |
+| `cli/compass_pkg/readiness_cmd.py`, `cli/compass_pkg/readiness_signals.py`, `cli/compass_pkg/readiness_run.py`, `cli/compass_pkg/readiness_record.py`, `cli/compass_pkg/readiness_registry.py`, `cli/compass_pkg/readiness_catalogue.py`, `schemas/readiness-record.schema.json` | `docs/readiness.md` |
 | `evals/` | `evals/README.md` |
 | `ci/` | `ci/README.md` |
 | `architecture/` | `architecture/decisions/README.md` |

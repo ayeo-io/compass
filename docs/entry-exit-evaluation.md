@@ -134,7 +134,8 @@ edits the manifest.
 ### `compass evidence approve`
 
 ```
-compass evidence approve (--check ID | --artifact KIND | --decisions | --checkpoint STAGE)
+compass evidence approve (--check ID | --guardrail G5 | --artifact KIND | --decisions
+                          | --checkpoint STAGE)
                          --approver NAME --role ROLE [--scope TEXT]
                          [--decision approved|rejected] [--issue SLUG]
 ```
@@ -142,17 +143,19 @@ compass evidence approve (--check ID | --artifact KIND | --decisions | --checkpo
 | Option | Meaning |
 |---|---|
 | `--check` | The id of a human check that lists approvers |
+| `--guardrail` | `G5`: sign off guardrail `G5`, the only guardrail with a sign-off (below) |
 | `--artifact` | The kind of a document that reads `awaiting-approval` (below) |
 | `--decisions` | Confirm the decisions an agent took for the person |
 | `--checkpoint` | Answer the hand-off of a checkpoint stage: `assess`, `define`, `refine` or `plan` (below) |
 | `--approver` | The person's id. It must be listed by the check |
 | `--role` | The role the person acts in |
-| `--scope` | What the approval covers. Required with `--check`; with `--checkpoint` it defaults to `the <stage> hand-off` |
+| `--scope` | What the approval covers. Required with `--check` and `--guardrail`; with `--checkpoint` it defaults to `the <stage> hand-off` |
 | `--decision` | `approved` (the default) or `rejected` |
 
-Exactly one of `--check`, `--artifact`, `--decisions` and `--checkpoint` is
-given. The terminal requirement and the refusal of the approver `agent` apply
-to all four. The rest of this section describes `--check`.
+Exactly one of `--check`, `--guardrail`, `--artifact`, `--decisions` and
+`--checkpoint` is given. The terminal requirement and the refusal of the
+approver `agent` apply to all five. The rest of this section describes
+`--check`.
 
 The command stamps the issue, the issue's generation and the time, and
 registers the record as `EV-APPROVAL-<check>-<n>`. It exits 0 when it wrote the
@@ -253,6 +256,41 @@ records a person's answer to one. ADR-063 owns the decision.
   a hand-off is therefore never the sign-off on an irreversible change.
   `compass evidence add --type checkpoint-approval` is refused, so the type is
   written only by this command.
+
+#### Signing off guardrail `G5`: `--guardrail`
+
+`human-approval-present`, the check of guardrail `G5`, counts only a
+`human-approval` record given for guardrail `G5` (ADR-066). A record names
+its subject: one that holds a `check`, `waiver`, `checkpoint`, `artifact` or
+`decisions` key, whatever the value, was given for that subject and is set
+aside. So is one whose `guardrail` is anything but the exact string `G5`. A
+record with none of these keys counts, which is the form every earlier
+sign-off uses. `approval_records.SUBJECT_KEYS` holds the keys and
+`approval_records.gives_g5` applies the rule; the check and this command both
+import them.
+
+A person records the sign-off with this command:
+
+```
+compass evidence approve --guardrail G5 --approver <name> --role <role> --scope <text>
+```
+
+- **What it writes.** One `human-approval` record, numbered in sequence,
+  whose `guardrail` key holds `G5`, with `approver`, `role`, `scope`,
+  `decision: approved`, `timestamp`, `issue` and `generation`, and no `check` key. No human check,
+  item or waiver reads it, because each of those readers matches on `check`
+  or `waiver`.
+- **Who may sign off.** Any person who is not an agent: guardrail `G5` lists
+  no approvers.
+- **When it refuses.** It exits 2 with no change for a value other than `G5`,
+  the decision `rejected` (a rejected record would not withdraw an earlier
+  sign-off), an empty scope, a second form, the approver `agent` and no
+  terminal.
+- **What the check reports.** It cites the first approved record that counts.
+  When none counts, it names the first record set aside and the subject it
+  was given for, and names this command. On a landed issue that the earlier
+  rule passes (the first approved `human-approval` record, whatever it names,
+  holds all four fields) the check passes and says it is reported only.
 
 The `--json` document of `--check` is a public contract. A change to a key or its order is
 a breaking change. This is the real output for the example above; `at` varies

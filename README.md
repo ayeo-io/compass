@@ -221,7 +221,7 @@ compass scenario descope   record a failure mode no scenario covers, and why
 compass scenario tests set replace the tests a scenario declares
 compass changed-file add   trace a changed file to the scenario that asked for it
 compass evidence add       append a typed evidence record
-compass evidence approve   record a person's approval of a human check, a document (--artifact), the decisions agents took (--decisions) or a checkpoint hand-off (--checkpoint)
+compass evidence approve   record a person's approval of a human check, the sign-off on an irreversible change (--guardrail), a document (--artifact), the decisions agents took (--decisions) or a checkpoint hand-off (--checkpoint)
 compass evidence review    record a judgement against a judged check
 compass terminology        what a term means here, from the frozen vocabulary
 compass quick-fix start    assess, evaluate and record a quick fix in one call

@@ -124,7 +124,7 @@ by hand. `tests/test_impl_versions.py` fails when it is out of date.
 | `broken` | fail | the input the mutation proof breaks: a gate cleared with evidence of a type it does not accept |
 | `restored` | pass | the same input put right |
 
-### `human-approval-present` (version 1.0.0)
+### `human-approval-present` (version 1.1.0)
 
 | Case | Verdict | What the input exercises |
 |---|---|---|

@@ -8,8 +8,9 @@ Every fixture is a set of synthetic manifests under `.compass/work`, so the
 tests run without git and without a network; a `gh` on PATH fails a test if
 anything calls it.
 
-Scenario ids: ARC-14 and ARC-16 to ARC-21, in the acceptance criteria of the
-issue `autonomy-ratio-and-cost`. Each test name starts with its id.
+Scenario ids: ARC-14, ARC-16 to ARC-21 and ARC-27, in the acceptance criteria
+of the issue `autonomy-ratio-and-cost`. Each test name starts with its id.
+ARC-28, the judged-only rule for the ratio, is declared on the ARC-16 test.
 
 Run as a script, this file writes what the base commit printed for the retro
 fixtures:
@@ -120,17 +121,25 @@ AUTONOMOUS_BANDS = {"human_judgement": 0, "guardrailed": 2, "autonomous": 5}
 WAITED_BANDS = {"human_judgement": 2, "guardrailed": 2, "autonomous": 3}
 
 
+def not_judged(slug, **more):
+    """A shipped issue from before outcomes were recorded: it lists no checkpoint
+    and holds no `checkpoint_outcomes` key."""
+    return manifest(slug, checkpoints=(), outcomes="absent", **more)
+
+
 def ratio_fixture():
-    """20 shipped issues measurable for autonomy (12 autonomous, 8 with waited
-    outcomes), 3 shipped issues that list checkpoints with no outcome, and 2
-    in flight."""
+    """20 shipped judged issues measurable for autonomy (12 autonomous, 8 with
+    waited outcomes), 3 shipped judged issues that list checkpoints with no
+    outcome, 4 shipped issues that are not judged, and 2 in flight."""
     issues = {}
     for i in range(12):
-        issues[f"auto-{i:02d}"] = autonomous(f"auto-{i:02d}", outcomes="skipped" if i % 2 else "absent")
+        issues[f"auto-{i:02d}"] = autonomous(f"auto-{i:02d}", outcomes="skipped" if i % 2 else "none")
     for i in range(8):
         issues[f"wait-{i:02d}"] = waited(f"wait-{i:02d}")
     for i in range(3):
         issues[f"old-{i}"] = unmeasurable(f"old-{i}")
+    for i in range(4):
+        issues[f"before-{i}"] = not_judged(f"before-{i}")
     for i in range(2):
         issues[f"flight-{i}"] = in_flight(f"flight-{i}", outcomes="waited",
                                           checkpoints=("define",))
@@ -314,7 +323,7 @@ def test_arc_16_autonomy_ratio_and_band_split(tmp_path):
     text = impact(root)
     assert row_lines(text, "autonomy") == [
         "  autonomy      60.0% of 20 measurable shipped issue(s) ran with no waited "
-        "checkpoint; 3 shipped issue(s) not measurable"]
+        "checkpoint; 7 shipped issue(s) not measurable"]
     # Counted by hand over the 12 autonomous and 8 waited issues of the fixture.
     assert (total("human_judgement"), total("guardrailed"), total("autonomous")) == (16, 40, 84)
     assert row_lines(text, "bands") == [
@@ -322,7 +331,7 @@ def test_arc_16_autonomy_ratio_and_band_split(tmp_path):
         "(gates), autonomous 84 (stages); over 20 issue(s)"]
     # An issue in flight is in no count: dropping both changes nothing.
     issues = {k: v for k, v in ratio_fixture().items() if not k.startswith("flight")}
-    assert len(issues) == 23
+    assert len(issues) == 27
     other = write_project(tmp_path / "q", issues)
     again = impact(other)
     assert row_lines(again, "autonomy") == row_lines(text, "autonomy")
@@ -490,7 +499,7 @@ def test_arc_20_rows_in_json(tmp_path):
 
     ratio = objects["ratio"]
     assert ratio["autonomy_ratio"]["value"] == 60.0
-    assert (ratio["autonomy_ratio"]["issues"], ratio["autonomy_ratio"]["not_measurable"]) == (20, 3)
+    assert (ratio["autonomy_ratio"]["issues"], ratio["autonomy_ratio"]["not_measurable"]) == (20, 7)
     assert ratio["band_split"]["value"]["human_judgement"] == 16
     assert ratio["cost_per_change"]["value"] is None and ratio["cost_per_change"]["issues"] == 0
     assert ratio["cost_per_change"]["withheld"] == "0 shipped issue(s) with complete usage; 20 required"
@@ -501,6 +510,17 @@ def test_arc_20_rows_in_json(tmp_path):
     for row in objects["floors"].values():
         if isinstance(row, dict) and ROW_KEYS <= set(row):
             assert row["value"] is None and "20 required" in row["withheld"], row
+
+
+# --- ARC-27 -------------------------------------------------------------------------
+
+def test_arc_27_format_help_names_impact(tmp_path):
+    """`--format json` gives the --impact rows in JSON (ARC-20), so the help
+    for --format names --impact among its readers."""
+    tmp_path.mkdir(exist_ok=True)
+    done = retro(tmp_path, "--help")
+    assert done.returncode == 0, done
+    assert "for --friction, --decisions and --impact" in " ".join(done.stdout.split()), done.stdout
 
 
 # --- ARC-21 -------------------------------------------------------------------------

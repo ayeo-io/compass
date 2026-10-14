@@ -5,8 +5,9 @@ Nothing here is stored. The retro (`compass retro --impact`) and
 `compass issue diagnose` call these functions on every read, so both give the
 same number for the same issue. The definitions are in `docs/autonomy-and-cost.md`.
 
-- A shipped issue is *measurable* when it lists checkpoints as a list and holds
-  an outcome for each one listed. It is *autonomous* when it is measurable and
+- A shipped issue is *measurable* when it is judged (it holds the
+  `checkpoint_outcomes` key), lists checkpoints as a list and holds an outcome
+  for each one listed. It is *autonomous* when it is measurable and
   no outcome is `waited`.
 - The three *bands* count unlike things, so each carries its unit: human
   judgement counts checkpoints a person answered and human checks they
@@ -59,9 +60,15 @@ def shipped(task) -> bool:
 
 
 def measurable(task) -> bool:
-    """A shipped issue that lists `checkpoints:` as a list and holds an outcome
-    for every checkpoint it lists."""
-    if not shipped(task) or not isinstance(task.get("checkpoints"), list):
+    """A shipped judged issue that lists `checkpoints:` as a list and holds an
+    outcome for every checkpoint it lists. An issue that is not judged holds no
+    record of its hand-offs, so an empty `checkpoints:` list there says no
+    hand-off was listed, not that no person answered one."""
+    if not shipped(task) or not checkpoint_outcomes.judged(task):
+        return False
+    if not isinstance(task.get(checkpoint_outcomes.KEY), list):
+        return False
+    if not isinstance(task.get("checkpoints"), list):
         return False
     have = checkpoint_outcomes.outcomes(task)
     return all(stage in have for stage in checkpoint_outcomes.listed(task))

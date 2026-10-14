@@ -9,7 +9,7 @@ fixed reason words.
 GitHub is off and a `gh` on PATH fails the test if anything calls it.
 Transcripts are fixture files under a temporary `CLAUDE_CONFIG_DIR`.
 
-Scenario ids: ARC-9 to ARC-13 and ARC-15, in the acceptance criteria of the
+Scenario ids: ARC-9 to ARC-13, ARC-15, ARC-25 and ARC-26, in the acceptance criteria of the
 issue `autonomy-ratio-and-cost`. Each test name starts with its id.
 """
 from __future__ import annotations
@@ -695,4 +695,77 @@ def test_arc_15_no_transcript_text_is_stored(tmp_path):
                 or leaf in MODELS or leaf in sessions or leaf in session_usage.REASONS
                 or leaf == session_usage.SOURCE or (isinstance(leaf, str) and _is_time(leaf))), \
             (where, leaf)
+    co.assert_no_gh_call(root)
+
+
+# --- ARC-25 -----------------------------------------------------------------------
+
+def _session_table(compass_dir, session, issue, hours_ago):
+    """The session table `session_lease` keeps, with one entry for `session`."""
+    from datetime import datetime, timedelta, timezone
+    at = datetime.now(timezone.utc) - timedelta(hours=hours_ago)
+    (Path(compass_dir) / "sessions.json").write_text(json.dumps(
+        {session: {"issue": issue, "at": at.isoformat(timespec="seconds")}}))
+
+
+def test_arc_25_moved_pointer_records_nothing(tmp_path):
+    """A session whose fresh entry in the session table names another issue
+    has had the pointer moved by another session: its id is not recorded on
+    the issue the pointer names now. A stale entry moves nothing."""
+    from compass_pkg import session_lease, session_record
+    project = hook_project(tmp_path, slugs=("a", "b"))
+    compass_dir, folder = project.root / ".compass", str(project.dir("a"))
+
+    _session_table(compass_dir, "S1", "b", hours_ago=1)
+    before = project.bytes("a")
+    session_record.record(folder, "S1", "pointer")
+    assert project.bytes("a") == before
+    # COMPASS_ISSUE names the issue outright, so the table is not read.
+    session_record.record(folder, "S1", "env")
+    assert project.manifest("a")["usage"] == {"sessions": ["S1"]}
+
+    _session_table(compass_dir, "S2", "b", hours_ago=session_lease.LEASE_HOURS + 1)
+    session_record.record(folder, "S2", "pointer")
+    assert project.manifest("a")["usage"] == {"sessions": ["S1", "S2"]}
+    # An entry naming this issue is not a move.
+    _session_table(compass_dir, "S3", "a", hours_ago=1)
+    session_record.record(folder, "S3", "pointer")
+    assert project.manifest("a")["usage"] == {"sessions": ["S1", "S2", "S3"]}
+
+
+# --- ARC-26 -----------------------------------------------------------------------
+
+def landed_issue_before(root):
+    """Issue "earlier" records the first fixture session and landed before the
+    issue under test started: its define ends at 08:00, its plan at 08:30 and
+    it landed at 08:45, before the session's first request at 09:05."""
+    folder = Path(root) / ".compass" / "work" / "earlier"
+    folder.mkdir(parents=True)
+    body = {"task": "earlier", "approach": "regular", "usage": {"sessions": [S1]},
+            "land_timestamp": "2026-10-13T08:45:00Z",
+            "checkpoint_outcomes": [
+                {"stage": "define", "outcome": "skipped", "by": "spec-author",
+                 "at": "2026-10-13T08:00:00Z"},
+                {"stage": "plan", "outcome": "skipped", "by": "planner",
+                 "at": "2026-10-13T08:30:00Z"}]}
+    (folder / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False))
+
+
+def test_arc_26_earlier_work_is_not_shared(tmp_path):
+    """Work on another issue that ended before counting starts overlaps no
+    window: the first window starts where counting starts, so nothing is
+    marked shared and every count matches the issue worked alone."""
+    alone, _ = regular_project(tmp_path / "alone")
+    assert ship_at(alone).returncode == 0
+    expected = co.manifest(alone)["usage"]
+
+    root, _ = regular_project(tmp_path / "after")
+    landed_issue_before(root)
+    done = ship_at(root)
+    assert done.returncode == 0, done
+    usage = co.manifest(root)["usage"]
+    blocks = [usage["total"], usage["unattributed"], *usage["stages"].values()]
+    assert not any(b.get("shared") for b in blocks), usage
+    assert usage["stages"] == expected["stages"], usage["stages"]
+    assert usage["total"] == expected["total"]
     co.assert_no_gh_call(root)

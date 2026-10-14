@@ -61,7 +61,7 @@ A judged issue is an issue whose manifest holds the `checkpoint_outcomes` key, a
 
 - An issue that is not judged is never refused. `compass check`, `compass issue lint` and `compass ci` raise no finding for it, and it lands as it did before.
 - `ship-commit` takes the issue from `--issue`, then `COMPASS_ISSUE`, then the current-task pointer. It never guesses the most recently changed issue.
-- The retro counts a shipped issue that lists a checkpoint with no outcome as not measurable.
+- The retro counts a shipped issue that is not judged as not measurable for autonomy, whatever its `checkpoints:` list holds. It counts a judged issue that lists a checkpoint with no outcome the same way.
 
 ## The session record
 
@@ -115,9 +115,9 @@ The stage ends are:
 
 An end later than the end of a later stage is dropped, because a person can answer a checkpoint after later work.
 
-- The route's stages are walked in order from a cursor that starts before every request. A stage with an end after the cursor gets the window from the cursor to its end. A stage without one holds `measured: false` with the reason `no-window`, and its requests fall in the next window.
+- The route's stages are walked in order from a cursor that starts where counting starts: the earliest start of the issue's sessions. A stage with an end after the cursor gets the window from the cursor to its end. A stage without one holds `measured: false` with the reason `no-window`, and its requests fall in the next window.
 - Requests at or after the last end are `unattributed`. `total` is every request in the span, and the stages and `unattributed` add up to it for every count.
-- A window that another issue's span overlaps, where that issue records the same session, is marked `shared: true`, and so is `total`.
+- A window that another issue's span overlaps, where that issue records the same session, is marked `shared: true`, and so is `total`. Work on another issue that ended before counting starts overlaps no window.
 
 ## Derived figures
 
@@ -126,7 +126,7 @@ Every reader calls the functions of `cli/compass_pkg/autonomy_cost.py`, so the r
 | Term | Meaning |
 |---|---|
 | shipped issue | An issue `status_words.is_completed` accepts. |
-| measurable | A shipped issue whose manifest holds `checkpoints:` as a list and an outcome for every listed checkpoint. |
+| measurable | A shipped judged issue whose manifest holds `checkpoints:` as a list and an outcome for every listed checkpoint. |
 | autonomous issue | A measurable issue with no `waited` outcome. |
 | human judgement count | The `waited` outcomes plus the human checks whose approval `approval_records.judge` passes. The unit is checkpoints and human checks. |
 | guardrailed count | The gates with status `pass` and at least one evidence id that names a typed record in `evidence:`. The unit is gates. |

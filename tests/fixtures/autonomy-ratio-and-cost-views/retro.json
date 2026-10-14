@@ -1,7 +1,7 @@
 {
   "impact-ratio": {
     "exit": 0,
-    "stdout": "compass retro --impact - process signal (advisory)\n\n  lead time     median 4.0 day(s) over 23 issue(s)\n  land freq     not computable (span under a week) per week, over a span of 0 day(s)\n  change-fail   no hotfixes recorded, so change-fail cannot be measured\n\n  by delivery approach:\n    regular      n=23  lead median 4.0 day(s)  gates=4\n\n  Read the by-approach figures as a hypothesis to test, not a\n  verdict. This is single-project observational data: the\n  variables are not controlled, and a heavier approach is chosen\n  BECAUSE work looks riskier, so slower lead times on heavy\n  approaches may reflect the work rather than the process weight.\n",
+    "stdout": "compass retro --impact - process signal (advisory)\n\n  lead time     median 4.0 day(s) over 27 issue(s)\n  land freq     not computable (span under a week) per week, over a span of 0 day(s)\n  change-fail   no hotfixes recorded, so change-fail cannot be measured\n\n  by delivery approach:\n    regular      n=27  lead median 4.0 day(s)  gates=4\n\n  Read the by-approach figures as a hypothesis to test, not a\n  verdict. This is single-project observational data: the\n  variables are not controlled, and a heavier approach is chosen\n  BECAUSE work looks riskier, so slower lead times on heavy\n  approaches may reflect the work rather than the process weight.\n",
     "stderr": ""
   },
   "impact-cost": {

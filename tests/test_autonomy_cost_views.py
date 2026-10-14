@@ -7,7 +7,9 @@ anything calls it, transcripts are fixture files under a temporary
 `CLAUDE_CONFIG_DIR`, and git is a local repository only.
 
 Scenario ids: ARC-6 and ARC-22 to ARC-24, in the acceptance criteria of the issue
-`autonomy-ratio-and-cost`. Each test name starts with its id.
+`autonomy-ratio-and-cost`. Each test name starts with its id. ARC-29, a landed
+issue with an empty `checkpoints:` list and no outcomes key, is declared on the
+ARC-6 test.
 
 Run as a script, this file writes the captures the comparisons read:
 
@@ -218,6 +220,17 @@ def test_arc_6_landed_issues_are_not_judged(tmp_path):
     assert (row["autonomy_ratio"]["issues"], row["autonomy_ratio"]["not_measurable"]) == (0, 1)
     dbi.assert_no_gh_call(project.root)
     co.assert_no_gh_call(root)
+
+    # A landed issue that lists no checkpoint and holds no `checkpoint_outcomes`
+    # key is not judged: shipped, not measurable, and never autonomous.
+    from compass_pkg import autonomy_cost
+    before = rac.not_judged("before")
+    assert autonomy_cost.shipped(before)
+    assert not autonomy_cost.measurable(before) and not autonomy_cost.autonomous(before)
+    empty = rac.write_project(tmp_path / "empty", {"before": before})
+    row = json.loads(rac.retro(empty, "--impact", "--json").stdout)
+    assert (row["autonomy_ratio"]["issues"], row["autonomy_ratio"]["not_measurable"]) == (0, 1)
+    dbi.assert_no_gh_call(empty)
 
 
 # --- ARC-22 -------------------------------------------------------------------------

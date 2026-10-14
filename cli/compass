@@ -254,7 +254,7 @@ def build_parser():
         "--format",
         choices=["markdown", "json"],
         default="markdown",
-        help="output format for --friction and --decisions (default: markdown)",
+        help="output format for --friction, --decisions and --impact (default: markdown)",
     )
     pcal.set_defaults(func=cmd_calibration, output_kind="report")
 

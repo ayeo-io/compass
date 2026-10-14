@@ -153,18 +153,22 @@ def usage_block(task_dir, task, others, now, prices) -> dict:
     ends = stage_ends(task_dir, task)
     own_ends = [t for t in ends.values() if t]
     first_end = min(own_ends) if own_ends else now
-    found, spans = [], []
+    found, spans, starts = [], [], []
     for session in sessions:
         sharing = [(d, m) for d, m in others if session in _sessions_of(m)]
         earlier = [t for d, m in sharing for t in _boundaries(d, m) if t < first_end]
         requests = per_session[session]
         start = max(earlier) if earlier else (_time(requests[0]["at"]) if requests else now)
+        starts.append(start)
         found += [r for r in requests if start <= _time(r["at"]) < now]
         for d, m in sharing:
             times = _boundaries(d, m)
             if times:
                 spans.append((min(times), max(times)))
     found.sort(key=lambda r: _time(r["at"]))
+    # The first window starts where counting starts. Another issue's work that
+    # ended before then was never counted here, so it overlaps no window.
+    counted_from = min(starts)
 
     stages, cursor = {}, None
     for stage in STAGE_IDS:
@@ -177,13 +181,13 @@ def usage_block(task_dir, task, others, now, prices) -> dict:
         inside = [r for r in found if (cursor is None or _time(r["at"]) >= cursor)
                   and _time(r["at"]) < end]
         counts = _counts(inside, prices)
-        if _overlaps(spans, cursor or datetime.min.replace(tzinfo=timezone.utc), end):
+        if _overlaps(spans, cursor or counted_from, end):
             counts["shared"] = True
         stages[stage] = counts
         cursor = end
     after = [r for r in found if cursor is None or _time(r["at"]) >= cursor]
     unattributed = _counts(after, prices)
-    if _overlaps(spans, cursor or datetime.min.replace(tzinfo=timezone.utc), now):
+    if _overlaps(spans, cursor or counted_from, now):
         unattributed["shared"] = True
     total = _counts(found, prices)
     if any(b.get("shared") for b in list(stages.values()) + [unattributed]):

@@ -47,7 +47,7 @@ A transcript holds a person's prompts. `session_usage.stage_usage` already reads
 3. **Only issues assessed after this change are judged.**
    - An issue is judged when its manifest holds the `checkpoint_outcomes` key. The first assessment of a new issue writes it as an empty list.
    - A reassessment does not add it, and no migrate back-fills it. The two commands of decision 2 refuse an issue that is not judged, rather than add the key.
-   - An older issue is therefore never refused, and the retro counts it as not measurable when a listed checkpoint has no outcome.
+   - An older issue is therefore never refused, and the retro counts it as not measurable for autonomy, whatever its `checkpoints:` list holds.
 
 4. **The landing refusal is an entry in an ordered list.**
    - `ship-commit` runs a list of landing refusals before it stages, renders, commits, derives or syncs anything. The first entry refuses a judged issue that lists a checkpoint with no outcome.
@@ -75,7 +75,7 @@ A transcript holds a person's prompts. `session_usage.stage_usage` already reads
    - A window that another issue recording the same session overlaps is marked `shared`, and the retro counts that issue as unmeasured for cost.
 
 7. **Unmeasured is not zero.**
-   - An issue without complete usage, without an outcome for each listed checkpoint, or whose configuration cannot be read for its bands, is counted as not measured. It is never counted as zero.
+   - An issue without complete usage, that is not judged, without an outcome for each listed checkpoint, or whose configuration cannot be read for its bands, is counted as not measured. It is never counted as zero.
    - Each figure prints the number of issues it rests on, and is withheld below the existing floors: 20 issues, and 3 per approach group.
 
 ## Alternatives considered

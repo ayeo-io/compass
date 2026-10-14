@@ -364,6 +364,7 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
         "record",  # delivery-record (ADR-031): the record kept off the laptop
         "board",  # compass-board (ADR-046): the delivery board page
         "readiness",  # project-readiness-caps-autonomy (ADR-061): measure the repository
+        "release",  # intent-and-release-line (ADR-065): `release notes`, read-only
     }
     line = next(l for l in result.stdout.splitlines() if l.strip().startswith("{"))
     verbs = set(line.strip().strip("{}").split(","))

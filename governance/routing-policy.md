@@ -321,7 +321,10 @@ how the lists run once the capability is on.
 The regular approach owes `intent` at depth `lightweight`: the four headings
 Problem, Desired outcome, Success signals and Non-goals of
 `artifacts.yml`'s `intent.sections.lightweight`. Full keeps the thorough
-intent; quick fix, hotfix and spike owe none. Quick fix, regular, hotfix and
+intent; quick fix, hotfix and spike owe none. A document a role rule requires
+(`require_artifact`) is owed at `thorough` even when the approach owes it at
+`lightweight`, so a product owner's regular issue still owes the thorough
+intent. Quick fix, regular, hotfix and
 full set the approach field `release_line: true`: an issue whose stored
 generation sets it owes a release line, and every landing refuses it while its
 manifest's `release_note` holds none (`docs/release-line.md`). The spike, which
@@ -478,8 +481,9 @@ The grid:
   refuses it on every parameter, and a catalogue or preset cannot declare it.
   A readiness parameter one side leaves out is `incomparable` whatever its
   direction: the classifier fills in no runtime default. `CLASSIFIER_VERSION`
-  was 5 since this rule (governance decision
-  2026-10-14-a-declared-equivalent-parameter-choice-classifies-as-equivalent).
+  is 5 from this rule (governance decision
+  2026-10-14-a-declared-equivalent-parameter-choice-classifies-as-equivalent)
+  until the next one.
   An approach's `release_line` is compared at each point for the approach the
   assessment chose, `false` below `true`, with no field read as `false`, so
   setting it `false` is `looser`. `CLASSIFIER_VERSION` is 6 since this rule

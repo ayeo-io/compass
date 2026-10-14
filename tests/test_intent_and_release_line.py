@@ -237,7 +237,11 @@ def _flat(path):
 
 
 def test_irl_5_assess_and_define_commands_name_the_intent():
-    assess_text = _flat("commands/assess.md")
+    # `commands/assess.md` keeps to its 2,500-character budget and sends every change
+    # that is not a quick fix to `approaches/assess-procedure.md`, so the assess
+    # command's instruction to draft the intent is in the procedure it loads.
+    assert "approaches/assess-procedure.md" in _flat("commands/assess.md")
+    assess_text = _flat("approaches/assess-procedure.md")
     for phrase in ("registers an `intent` entry with no path",
                    "`compass issue artifact-path intent`",
                    "from the issue description",

@@ -364,4 +364,6 @@ def test_asw_15_reassess_marks_unregistered_document_superseded(tmp_path):
     assert "approved_by" not in review and "approved_at" not in review
     assert found["technical-design"]["status"] == "approved"
     assert found["technical-design"]["approved_by"] == BY_SET
-    assert "intent" not in found
+    # The regular approach owes the intent too, at lightweight (ADR-065), so the entry
+    # with no path stays as regular's own and is not superseded.
+    assert found["intent"]["status"] == "draft" and not found["intent"].get("path"), found["intent"]

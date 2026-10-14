@@ -20,7 +20,7 @@ and the landing refusal agree:
 The owning doc is `docs/release-line.md`.
 """
 # DEPENDENCY: standard library (copy, os); the bundled PyYAML; compass_pkg.atomic_io,
-# core, effective, generation, manifest (title_problem), refusals, status_words.
+# core, effective, manifest (title_problem), refusals, status_words.
 from __future__ import annotations
 
 import copy
@@ -57,12 +57,11 @@ def owes(task, task_dir):
     """True when the issue owes a release line: it is open, it has a stored generation,
     and that generation sets `release_line: true` on its approach. Only the literal
     `true` counts, and a configuration that cannot be read owes nothing."""
-    from compass_pkg import effective, generation
-    if not isinstance(task, dict) or status_words.is_closed(task):
+    from compass_pkg import effective
+    if not isinstance(task, dict) or status_words.is_closed(task) or "generation" not in task:
         return False
     try:
-        if generation.number(task) is None:
-            return False
+        # A generation that is not a whole number, or not whole on disk, raises here.
         view = effective.view_or_legacy(task_dir, manifest=task)
     except Exception:                                   # noqa: BLE001 - nothing to read, nothing owed
         return False

@@ -5,7 +5,7 @@
 #
 # DEPENDENCY: standard library (argparse, os, re, subprocess); compass_pkg.core,
 # record, rival_names, shipped_issues. It must not import compass_pkg.flow or
-# compass_pkg.parse_cache: this verb reads the records directly and writes
+# the manifest cache module: this verb reads the records directly and writes
 # nothing.
 # =============================================================================
 """List the issues completed since a git reference, with their release lines.

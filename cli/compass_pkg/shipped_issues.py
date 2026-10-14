@@ -5,8 +5,8 @@
 # =============================================================================
 #
 # DEPENDENCY: standard library; compass_pkg.core, status_words, stable_ids.
-# It must not import compass_pkg.flow or compass_pkg.parse_cache: the release
-# notes verb reads through this module and must not load the parse cache.
+# It must not import compass_pkg.flow or the manifest cache module: the
+# release notes verb reads through this module and must not load that cache.
 # =============================================================================
 """The facts the living spec derivation and `compass release notes` share.
 

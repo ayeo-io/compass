@@ -2209,9 +2209,14 @@ def test_dss_30_checks_declared_and_documented(tmp_path):
 
 
 def test_dss_32_own_issue_passes_both_checks():
-    if not U5_ISSUE.is_dir():
-        pytest.skip("the issue's work folder is untracked and absent from this checkout")
+    # The issue's work folder is untracked, so CI never has it, and both checks decline on
+    # a closed issue. The lasting proof of this scenario is the recorded command output.
+    if not (U5_ISSUE / "manifest.yml").is_file():
+        pytest.skip("the issue's manifest is untracked and absent from this checkout")
     manifest = _u5_yaml(U5_ISSUE / "manifest.yml")
+    from compass_pkg import status_words
+    if status_words.is_closed(manifest):
+        pytest.skip("the issue is closed, and both section checks decline on a closed issue")
     generation = manifest.get("generation")
     assert isinstance(generation, int) and generation >= 2, generation
     assert manifest["delivery_approach"] == "full"

@@ -439,10 +439,15 @@ def _target_of(stem, entries, moves, project, catalogue):
 
 def _may_merge(stem, held, project):
     """May the stem entry's record replace what `held` holds? Yes when they name one
-    file, when the stem's file is gone, or when `held` is a draft an earlier migrate
-    wrote. Two entries that name two files that both exist are a person's to settle."""
+    file, when either file is gone, or when `held` is a draft an earlier migrate
+    wrote. With only the stem's file present, the rename gives `held`'s path to that
+    file, so the two entries name one document. Two entries that name two files that
+    both exist are a person's to settle."""
     stem_path, held_path = stem.get("path"), held.get("path")
-    if stem_path == held_path or not os.path.isfile(os.path.join(project, str(stem_path))):
+    if stem_path == held_path:
+        return True
+    if not all(os.path.isfile(os.path.join(project, str(path)))
+               for path in (stem_path, held_path)):
         return True
     return str(held.get("reason") or "").startswith("migrated from ") \
         and not held.get("approved_by")
@@ -531,12 +536,13 @@ def _stem_wins(stem, held):
 
     The later approval wins, and the id goes with it, so the entry that survives is
     the one a person approved last. When only one is approved, that one wins. When
-    neither is, the stem entry's id and status are kept, as the older record. A tie
-    keeps the stem entry."""
+    neither is, the round entry's id and status are kept: stage exits write status,
+    so the round entry, the one a stage reads now, holds the more current status. A
+    tie between two approvals keeps the stem entry."""
     if _approved(stem) != _approved(held):
         return _approved(stem)
     if not _approved(stem):
-        return True
+        return False
     return _approval_time(stem) >= _approval_time(held)
 
 

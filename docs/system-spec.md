@@ -3910,3 +3910,5 @@
 - `ARC-27` The retro help names --impact among the --format readers
 - `ARC-28` The autonomy ratio counts judged issues only
 - `ARC-29` A landed issue with an empty checkpoints list and no outcomes key is not measurable
+- `ARC-30` A per-scenario median below the group floor is withheld
+- `ARC-31` Other issues' manifests are not read when the issue has no session

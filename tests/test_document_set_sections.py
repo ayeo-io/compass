@@ -147,7 +147,8 @@ def test_dss_2_no_shipped_heading_carries_a_number(tmp_path):
     assert _headings(out) == _preset()["technical-design"]["sections"]["lightweight"]
     # Every kind's template opens with its title and one header block pair, with no
     # hand-written header line before the first heading. The verification note holds only
-    # its own block (decision Q8). The real parser reads each template, so each marker
+    # its own block, which already names the issue, scenario and gates, so it gets no
+    # header block. The real parser reads each template, so each marker
     # names a registered block kind.
     from compass_pkg import rendered_blocks
     for kind in sorted(_preset()):

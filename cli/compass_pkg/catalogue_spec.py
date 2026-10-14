@@ -411,7 +411,7 @@ FIELD_DESCRIPTIONS = {
         "ships": "Whether the approach delivers work. It is `true` unless the approach delivers "
                  "nothing, as the shipped spike does.",
         "release_line": "Whether an issue on the approach owes a release line, which a landing "
-                        "then requires in the manifest's `release_note`. `true` is stricter, and "
+                        "then needs in the manifest's `release_note`. `true` is stricter, and "
                         "the shipped default sets it on every approach except the spike.",
         "extends": "The id of another approach this one builds on, so that it states only what "
                    "differs.",

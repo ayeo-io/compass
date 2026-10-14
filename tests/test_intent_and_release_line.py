@@ -1145,8 +1145,8 @@ def test_irl_21_key_and_verb_documented(tmp_path):
     assert len(records) == 1, records
     assert "status: proposed" in records[0].read_text().split("---")[1]
     index = (ADR / "README.md").read_text()
-    numbers = [int(n) for n in __import__("re").findall(r"\bADR-(\d{3})\b", index)]
-    listed = list(dict.fromkeys(numbers))
+    # The index rows, by the record each row links in its first cell.
+    listed = [int(n) for n in __import__("re").findall(r"(?m)^\| \[ADR-(\d{3})\]", index)]
     assert 65 in listed and listed == sorted(listed), listed
 
 

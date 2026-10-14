@@ -1,6 +1,6 @@
 ---
 id: ADR-065
-title: Regular issues owe a lightweight intent, and every shipping issue records a release line its landing requires
+title: Regular issues owe a lightweight intent, and every shipping issue records a release line its landing needs
 status: proposed
 date: 2026-10-14
 supersedes: ''

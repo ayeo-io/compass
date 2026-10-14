@@ -66,7 +66,7 @@
               ]
             },
             "release_line": {
-              "description": "Whether an issue on the approach owes a release line, which a landing then requires in the manifest's `release_note`. `true` is stricter, and the shipped default sets it on every approach except the spike.",
+              "description": "Whether an issue on the approach owes a release line, which a landing then needs in the manifest's `release_note`. `true` is stricter, and the shipped default sets it on every approach except the spike.",
               "type": "boolean"
             },
             "remove": {
@@ -118,7 +118,7 @@
                   ]
                 },
                 "release_line": {
-                  "description": "Whether an issue on the approach owes a release line, which a landing then requires in the manifest's `release_note`. `true` is stricter, and the shipped default sets it on every approach except the spike.",
+                  "description": "Whether an issue on the approach owes a release line, which a landing then needs in the manifest's `release_note`. `true` is stricter, and the shipped default sets it on every approach except the spike.",
                   "type": "boolean"
                 },
                 "ships": {

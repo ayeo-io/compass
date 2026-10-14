@@ -24,6 +24,7 @@ the table does not exist, and when a doc in this folder is not listed.
 - [autonomy-and-cost.md](autonomy-and-cost.md) - checkpoint outcomes, the landing refusal, the session record and usage at ship, and the autonomy ratio, bands and cost per change that `compass retro --impact` and `compass issue diagnose` derive from them: shapes, commands, definitions, the read limit and the floors.
 - [receipt.md](receipt.md) - the one-screen view of an issue's gates and evidence.
 - [release-line.md](release-line.md) - the release line each shipping issue records: the `release_note` key, the three commands that write it, the texts they refuse, when a landing refuses an issue with none, and where the line is shown.
+- [release-notes.md](release-notes.md) - `compass release notes --since <ref>`: which completed issues it lists against a git reference, the order, the two closing count lines, and what it never writes.
 - [board.md](board.md) - `compass board render` and `compass board refresh`: the delivery board as one page, where its file goes and what the commands refuse, what the lanes and cards show, how `--worktrees` reads other trees and what it writes to git's object store, and the release-note items.
 - [github-labels.md](github-labels.md) - the opt-in sync of an issue's domain labels, workflow state and page to its linked GitHub issue: the setting, the labels Compass owns, the page comment and the checks it passes before it is posted, when it writes, drift and the failure behaviour.
 - [github-labels-walkthrough.md](github-labels-walkthrough.md) - switch the labels on in `compass.yml`, link an issue and watch the labels change as work moves.
@@ -72,6 +73,7 @@ same commit.
 | `cli/compass_pkg/tip_scope.py` | `docs/safety-contract.md` |
 | `cli/compass_pkg/refusals.py` | `docs/refusal-codes.md` |
 | `cli/compass_pkg/release_line.py` | `docs/release-line.md` |
+| `cli/compass_pkg/release_notes.py`, `cli/compass_pkg/shipped_issues.py` | `docs/release-notes.md` |
 | `cli/compass_pkg/project_settings.py` | `docs/configuration.md` |
 | `cli/compass_pkg/catalogue_spec.py`, `cli/compass_pkg/catalogue_check.py`, `schemas/compass.schema.json` | `architecture/decisions/ADR-035-delivery-approaches-stages-and-modes-are-configuration.md` |
 | `cli/compass_pkg/legacy_adapter.py`, `cli/compass_pkg/legacy_views.py`, `cli/compass_pkg/legacy_views_template.py`, `scripts/generate-legacy-views.py`, `governance/presets/default/`, `tests/fixtures/preset-digests.yml` | `governance/routing-policy.md` |

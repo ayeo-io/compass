@@ -986,7 +986,7 @@ def _u3_judged(results):
 
 
 def test_dss_26_archive_sweep_and_compat_contract(tmp_path):
-    from archive import archive_root, checkable_root, full_archive, sample_root
+    from archive import archive_root, checkable_root, full_archive
     from compat_baseline import (ARCHIVE, allow_7_0_0_moves, archive_differences,
                                  archive_results)
 
@@ -1019,11 +1019,20 @@ def test_dss_26_archive_sweep_and_compat_contract(tmp_path):
     assert archive_differences(*allow_7_0_0_moves({"x": base}, {"x": dict(good, check_exit=1)}))
     test_contract_3_allows_only_the_three_moves_of_7_0_0()
 
-    # On the archive sample, contract 3 passes and neither check judges an issue.
     recorded = json.loads(ARCHIVE.read_text(encoding="utf-8"))
     assert recorded["version"] == "5.6.0" and len(recorded["issues"]) == 16
     # No baseline file was rewritten: the recorded verdicts hold no row for either check.
     assert not any(set(SECTION_CHECKS) & set(r["verdicts"]) for r in recorded["issues"].values())
+    if full_archive():
+        # The maintainer's archive, copied, so a check run never writes into it. Every
+        # row of either check reads nothing to check, and such a row never counts as a
+        # failure, so each issue fails exactly as it did without the two rows.
+        copy = _u3_copy_archive(archive_root(), tmp_path / "archive")
+        results = _u3_sweep(copy)
+        assert len(results) == len(list((copy / ".compass" / "work").glob("*/manifest.yml")))
+        assert _u3_judged(results) == []
+        return
+    # On the archive sample, contract 3 passes and neither check judges an issue.
     now = archive_results(checkable_root())
     old, new = allow_7_0_0_moves(recorded["issues"], now)
     assert archive_differences(old, new) == []
@@ -1032,21 +1041,6 @@ def test_dss_26_archive_sweep_and_compat_contract(tmp_path):
     assert judged == []
     failing = sorted(s for s, r in recorded["issues"].items() if r["check_exit"])
     assert sorted(s for s, r in now.items() if r["check_exit"]) == failing
-    if not full_archive():
-        return
-    # The maintainer's archive, copied, so a check run never writes into it.
-    source = archive_root()
-    copy = tmp_path / "archive"
-    for part in (".compass/work", "docs/compass", "governance"):
-        if (source / part).is_dir():
-            shutil.copytree(source / part, copy / part, symlinks=True)
-    if (source / "compass.yml").is_file():
-        shutil.copy(source / "compass.yml", copy / "compass.yml")
-    results = _u3_sweep(copy)
-    assert _u3_judged(results) == []
-    # A nothing-to-check row never counts as a failure, so the issues that fail are the
-    # issues that fail with both rows left out.
-    assert len(results) == len(list((copy / ".compass" / "work").glob("*/manifest.yml")))
 
 
 def _u3_copy_archive(source, target):
@@ -1091,13 +1085,13 @@ def _u3_heading_lines(text):
     return found
 
 
-def _u3_cli_in(root, *argv):
+def _u3_cli_in(root, *argv, codes=(0,)):
     done = subprocess.run([sys.executable, str(ROOT / "cli" / "compass"), *argv], cwd=root,
                           capture_output=True, text=True, timeout=1800,
                           env={"PATH": "/usr/bin:/bin", "HOME": str(root), "LANG": "C.UTF-8",
                                "NO_COLOR": "1", "CLAUDE_PROJECT_DIR": str(root),
                                "PYTHONDONTWRITEBYTECODE": "1"})
-    assert done.returncode == 0, (argv, done.stdout[-2000:] + done.stderr[-2000:])
+    assert done.returncode in codes, (argv, done.stdout[-2000:] + done.stderr[-2000:])
     return done.stdout
 
 
@@ -1129,7 +1123,10 @@ def _u3_migrate_problems(root, plant=None):
         if (key in digests and digests[key][1] != digest and path in before
                 and before.get(path) == after.get(path)):
             problems.append("%s: the digest of %s moved" % (key[0], path))
-    plan = json.loads(_u3_cli_in(root, "issue", "render", "--all", "--dry-run", "--json"))
+    # A dry run exits 1 when an issue folder cannot be rendered, such as one with no
+    # manifest (the maintainer's archive holds 4); its plan is still printed.
+    plan = json.loads(_u3_cli_in(root, "issue", "render", "--all", "--dry-run", "--json",
+                                 codes=(0, 1)))
     for one in plan.get("would_write") or []:
         hit = {"document-header", "coverage"} & set(one.get("kinds") or [])
         if hit:

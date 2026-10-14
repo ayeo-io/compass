@@ -34,6 +34,8 @@ sys.path.insert(0, str(HERE))
 import compass_pkg  # noqa: E402,F401 - puts the bundled PyYAML first
 import yaml  # noqa: E402
 
+import project_readiness_support as readiness_support  # noqa: E402
+
 import test_checkpoint_outcomes as co  # noqa: E402
 import test_issue_dependencies as dbi  # noqa: E402
 
@@ -100,6 +102,9 @@ def views_project(tmp_path, cli_dir=CLI_DIR, compass_yml=co.BALANCED):
                              "assessment": dict(co.ASSESSMENT), "evidence": []})
     (root / ".compass" / "current-task").write_text(co.SLUG + "\n")
     (root / "compass.yml").write_text(yaml.safe_dump(compass_yml), encoding="utf-8")
+    if compass_yml.get("autonomy") == "autonomous":
+        # An autonomous issue is assessed only above the readiness floor.
+        readiness_support.meet_readiness_floor(root)
     why = [word for name in ("risk", "familiarity", "size", "goal", "role")
            for word in ("--justify", f"{name}=Fixture: the {name} was judged.")]
     done = co.run(root, "approach", "evaluate", "--issue", co.SLUG, "--write", *why, cli=cli)
@@ -387,12 +392,17 @@ def test_arc_23_record_carries_fields_and_no_new_names(tmp_path):
                  if e.get("type") == "checkpoint-approval"}
     waited = [e for e in copied["checkpoint_outcomes"] if e["outcome"] == "waited"]
     assert waited and all(e["by"] == approvers[e["evidence"]] for e in waited), waited
-    # The record holds only copies of files under the configured paths.
+    # The record holds only copies of files under the configured paths, each
+    # passed through `redact` as `record.py` writes it. The readiness catalogue
+    # in a generation's provenance has a key with "secret" in its name, so a
+    # byte-for-byte comparison would fail on the redaction alone.
+    from compass_pkg.redact import redact
     for path in sorted(clone.rglob("*")):
         relative = path.relative_to(clone)
         if path.is_file() and ".git" not in relative.parts:
-            assert (root / relative).is_file() and path.read_bytes() == (root / relative).read_bytes(), \
-                str(relative)
+            source = root / relative
+            assert source.is_file() and path.read_text(encoding="utf-8") == redact(
+                source.read_text(encoding="utf-8")), str(relative)
 
     # A record that lists only docs/compass holds neither field.
     root, clone = answered_issue(tmp_path / "docs-only", ["docs/compass"])

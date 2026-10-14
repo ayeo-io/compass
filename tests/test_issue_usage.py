@@ -382,6 +382,11 @@ def quick_fix_usage(tmp_path, cli_dir=CLI_DIR, hook_sessions=False):
               cli_dir=cli_dir, CLAUDE_CODE_SESSION_ID=S1)
     assert done.returncode == 0, done
     folder = root / ".compass" / "work" / slug
+    # A quick fix owes a release line before it lands (ADR-065). It is put in the
+    # manifest rather than given as a flag, so a CLI from before the flag runs this too.
+    body = yaml.safe_load((folder / "manifest.yml").read_text())
+    body["release_note"] = "Greetings now say hello."
+    (folder / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False))
     if hook_sessions:
         from compass_pkg import session_record
         session_record.record(str(folder), S1, "env")
@@ -431,6 +436,7 @@ def regular_project(tmp_path, sessions=(S1, S2), compass_yml=None, transcripts="
     for gate in body["gates"]:
         gate["status"] = "pass"
     body["changed_files"] = [{"path": "src/new.py", "scenarios": ["S-1"]}]
+    body["release_note"] = co.RELEASE_NOTE
     if sessions:
         body["usage"] = {"sessions": list(sessions)}
     co.write_manifest(root, body)

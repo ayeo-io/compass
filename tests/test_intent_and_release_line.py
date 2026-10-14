@@ -175,6 +175,61 @@ def generation_config(root, slug=SLUG):
     return effective.view_or_legacy(task_dir).config
 
 
+# --- IRL-8 ----------------------------------------------------------------------------
+
+#: `compass check --json` on every done issue of the migrated archive sample, recorded
+#: once with the CLI before this change (bce610c2), with each registry's intent count.
+BEFORE = ROOT / "tests" / "fixtures" / "intent-and-release-line" / "archive-check-before.json"
+
+
+def archive_verdicts(root, slugs, cli=CLI):
+    """The check rows and the intent entries of each issue in `slugs`, read from a copy
+    of `root`, so the run cannot change what other tests read."""
+    import shutil
+    import tempfile
+    work = Path(tempfile.mkdtemp()) / "archive"
+    shutil.copytree(root, work, ignore=shutil.ignore_patterns(".git"))
+    out = {}
+    for slug in sorted(slugs):
+        done = subprocess.run([sys.executable, str(cli), "check", "--issue", slug, "--json"],
+                              cwd=work, capture_output=True, text=True, timeout=300)
+        rows = {c["name"]: c["status"] for c in json.loads(done.stdout)["checks"]}
+        body = yaml.safe_load((work / ".compass" / "work" / slug / "manifest.yml").read_text())
+        out[slug] = {"verdicts": rows, "intent_entries": sum(
+            1 for a in body.get("artifacts") or [] if isinstance(a, dict)
+            and a.get("kind") == "intent")}
+    shutil.rmtree(work.parent, ignore_errors=True)
+    return out
+
+
+def verdict_differences(recorded, now):
+    """Every row the before-run recorded must hold its status. A row it did not record is
+    a difference unless contract 3's allow-list admits it. No registry may gain an
+    intent entry."""
+    from compat_baseline import allow_7_0_0_moves
+    old, new = allow_7_0_0_moves({s: {"verdicts": v["verdicts"]} for s, v in recorded.items()},
+                                 {s: {"verdicts": v["verdicts"]} for s, v in now.items()})
+    found = []
+    for slug in sorted(recorded):
+        before, after = old[slug]["verdicts"], new.get(slug, {}).get("verdicts", {})
+        found += [f"{slug}: {name} was {status}, now {after.get(name)}"
+                  for name, status in sorted(before.items()) if after.get(name) != status]
+        found += [f"{slug}: {name} is new ({after[name]})"
+                  for name in sorted(set(after) - set(before))]
+        if now.get(slug, {}).get("intent_entries") != recorded[slug]["intent_entries"]:
+            found.append(f"{slug}: the registry's intent entries moved")
+    return found
+
+
+def test_irl_8_archive_check_verdicts_unchanged():
+    from archive import checkable_root
+    recorded = json.loads(BEFORE.read_text(encoding="utf-8"))["issues"]
+    assert len(recorded) == 16, sorted(recorded)
+    now = archive_verdicts(checkable_root(), recorded)
+    differences = verdict_differences(recorded, now)
+    assert differences == [], "\n".join(differences)
+
+
 # --- IRL-5 ----------------------------------------------------------------------------
 
 def _flat(path):
@@ -1052,3 +1107,88 @@ def test_irl_7_unwritten_intent_refused_at_landing(tmp_path):
     assert "compass issue artifact set intent" in flat and "--path" in flat, flat
     assert state(root) == before
     assert_no_gh_call(root)
+
+
+# --- IRL-21 ---------------------------------------------------------------------------
+
+ADR = ROOT / "architecture" / "decisions"
+
+
+def test_irl_21_key_and_verb_documented(tmp_path):
+    schema = json.loads((ROOT / "schemas" / "manifest.schema.json").read_text())
+    assert schema["properties"]["release_note"]["type"] == "string", schema["properties"].get(
+        "release_note")
+    assert "release_note" not in (schema.get("required") or [])
+
+    done = subprocess.run([sys.executable, str(CLI), "release", "notes", "--help"],
+                          cwd=tmp_path, capture_output=True, text=True, env=env(tmp_path))
+    assert done.returncode == 0, done
+    help_text = " ".join(done.stdout.split())
+    assert "--since" in help_text, help_text
+    assert "landing time" in help_text, help_text
+    assert "no release line" in help_text and "placed" in help_text, help_text
+
+    # The owning doc of the release line, and of the refusal `ship-commit` runs.
+    doc = _flat("docs/release-line.md")
+    for phrase in ("release-line-missing", "--release-note", "The latest write wins",
+                   "not completed and not closed", "`generation` key", "`release_line: true`",
+                   "names the issue"):
+        assert phrase in doc, phrase
+
+    catalogue = (ROOT / "docs" / "artifact-catalogue.md").read_text().splitlines()
+    assert "- `intent`, lightweight: Problem; Desired outcome; Success signals; Non-goals" \
+        in catalogue
+    report = next(line for line in catalogue if line.startswith("- `verification-report`,"))
+    assert "6. Decisions taken for the user; Release line; Gate" in report, report
+
+    records = sorted(ADR.glob("ADR-065-*.md"))
+    assert len(records) == 1, records
+    assert "status: proposed" in records[0].read_text().split("---")[1]
+    index = (ADR / "README.md").read_text()
+    numbers = [int(n) for n in __import__("re").findall(r"\bADR-(\d{3})\b", index)]
+    listed = list(dict.fromkeys(numbers))
+    assert 65 in listed and listed == sorted(listed), listed
+
+
+# --- IRL-28 ---------------------------------------------------------------------------
+
+#: `rendered_blocks.KINDS` at 5079cef6.
+KINDS_BEFORE = ("coverage", "gates", "dod", "dor", "artifacts", "evidence", "follow-ups",
+                "decisions-taken", "header", "ask", "decision-required", "acceptance", "related",
+                "decisions", "traceability", "deliberately-omitted", "verification-note",
+                "index", "assessment", "policy-rules", "stage-weights", "gate-set", "plan-exit",
+                "breakdown-exit", "readiness")
+
+
+def _owning_row(table, module):
+    rows = [line for line in table.splitlines() if line.startswith("|") and module in line]
+    assert len(rows) == 1, (module, rows)
+    return rows[0].rsplit("|", 2)[1].strip()
+
+
+def test_irl_28_shared_files_hold_both_entries():
+    from compass_pkg import record_triggers, rendered_blocks
+    assert set(KINDS_BEFORE) <= set(rendered_blocks.KINDS)
+    assert "release-line" in rendered_blocks.KINDS
+    for command in ("cmd_land_commit", "cmd_acceptance_record"):
+        assert command in record_triggers.RENDER_TRIGGERS, command
+
+    import test_cli_renames
+    assert test_cli_renames.EXCEPTIONS.get("release notes"), test_cli_renames.EXCEPTIONS
+    env_vars = dict(os.environ, PYTEST_DISABLE_PLUGIN_AUTOLOAD="1")
+    done = subprocess.run(
+        [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
+         "tests/test_cli_renames.py::test_vr_e10_every_registered_verb_follows_the_convention"
+         "_or_is_a_named_exception",
+         "tests/test_rendered_blocks_check.py::test_dcj_75_trigger_table_complete",
+         "tests/test_rendered_blocks_check.py::test_dcj_18_every_command_in_the_table_renders"
+         "_the_named_issue"],
+        cwd=ROOT, capture_output=True, text=True, env=env_vars, timeout=600)
+    assert done.returncode == 0, done.stdout[-2000:]
+
+    table = (ROOT / "docs" / "README.md").read_text().split("## Owning docs", 1)[1]
+    assert _owning_row(table, "`cli/compass_pkg/release_line.py`") == "`docs/release-line.md`"
+    assert _owning_row(table, "`cli/compass_pkg/release_notes.py`") == "`docs/release-notes.md`"
+
+    upgrade = (ROOT / "docs" / "upgrade-7-0-0.md").read_text()
+    assert "\n## The lightweight intent and the release line\n" in upgrade

@@ -122,10 +122,15 @@ def _write_greeting_test(root):
 GREET_CMD = ["--", "python3", "-m", "pytest", "-q",
              "tests/test_greeting.py::test_greeting_says_hello"]
 
+#: The release line every finish here gives: a quick fix on the shipped default owes one,
+#: and a landing refuses it without (ADR-065).
+RELEASE_NOTE = ("--release-note", "Greetings now say hello.")
+
 
 def _finish(root, slug, *extra, command=GREET_CMD):
+    note = () if "--release-note" in extra else RELEASE_NOTE
     return _run(root, "quick-fix", "finish", "--issue", slug, "-m",
-                "Say hello properly", *extra, *command)
+                "Say hello properly", *note, *extra, *command)
 
 
 def _base_greeting(root):
@@ -316,7 +321,8 @@ def test_qfo4_finish_leaves_bytecode_caches_out_and_the_land_checks_clean(repo):
     assert green.returncode == 0, green.stderr
     assert list(repo.rglob("*.pyc")), "the test run should leave a cache"
 
-    finish = _run(repo, "quick-fix", "finish", "--issue", slug, "-m", "Fix add", *cmd)
+    finish = _run(repo, "quick-fix", "finish", "--issue", slug, "-m", "Fix add",
+                  *RELEASE_NOTE, *cmd)
     assert finish.returncode == 0, finish.stderr
 
     changed = {cf["path"] for cf in _manifest(repo, slug)["changed_files"]}
@@ -352,7 +358,8 @@ def test_qfo4_finish_lands_clean_when_every_changed_file_was_tracked(repo):
     green = _run(repo, "tdd-green", "--issue", slug, "--scenario", "TRC-001", *cmd)
     assert green.returncode == 0, green.stderr
 
-    finish = _run(repo, "quick-fix", "finish", "--issue", slug, "-m", "Fix add", *cmd)
+    finish = _run(repo, "quick-fix", "finish", "--issue", slug, "-m", "Fix add",
+                  *RELEASE_NOTE, *cmd)
     assert finish.returncode == 0, finish.stdout + finish.stderr
     check = _run(repo, "check", "--issue", slug)
     assert check.returncode == 0, check.stdout + check.stderr
@@ -958,7 +965,7 @@ def test_qfg2_finish_from_a_subdirectory_traces_stages_and_lands(repo):
     head_before = _git(repo, "rev-parse", "HEAD")
 
     finish = _run_from(repo / "tests", "quick-fix", "finish",
-                       "--issue", slug, "-m", "Say hello properly", "--",
+                       "--issue", slug, "-m", "Say hello properly", *RELEASE_NOTE, "--",
                        "python3", "-m", "pytest", "-q",
                        "test_greeting.py::test_greeting_says_hello")
     assert finish.returncode == 0, finish.stdout + finish.stderr

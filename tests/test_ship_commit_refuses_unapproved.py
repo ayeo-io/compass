@@ -23,8 +23,11 @@ from artifact_status_support import (DOCS, HUMAN_DESIGN, SLUG, add_entry,  # noq
 import test_quick_fix_verbs as qf  # noqa: E402
 
 BY_SET = "compass issue artifact set"
-REGULAR = ("acceptance-criteria", "technical-design", "distribution-map",
+REGULAR = ("intent", "acceptance-criteria", "technical-design", "distribution-map",
            "verification-report")
+
+#: The release line a regular issue on the shipped default owes before it lands (ADR-065).
+RELEASE_NOTE = "Documents are approved before the issue lands."
 
 
 def _hand_offs_recorded(body):
@@ -45,6 +48,7 @@ def _ready(root):
     for gate in body["gates"]:
         gate["status"] = "pass"
     body["changed_files"] = [{"path": "src/new.py", "scenarios": ["S-1"]}]
+    body["release_note"] = RELEASE_NOTE
     _hand_offs_recorded(body)
     write_manifest(root, body)
     (root / "src").mkdir(exist_ok=True)
@@ -146,7 +150,7 @@ def test_asw_17_ship_commit_refuses_awaiting_approval(tmp_path):
 
 def test_asw_18_omitted_with_reason_passes_ship_commit(tmp_path):
     root = project(tmp_path)
-    for kind in ("acceptance-criteria", "technical-design", "verification-report"):
+    for kind in ("intent", "acceptance-criteria", "technical-design", "verification-report"):
         assert register(root, kind, "approved")[0] == 0
     code, out, err = run(root, "issue", "artifact", "set", "distribution-map", "--status",
                          "omitted", "--reason", "single subtask, no parallel work",
@@ -238,6 +242,7 @@ def _stage_run(root, swap, report_after_gates=False):
     qf_brief.write_text("# brief\n")
     git(root, "add", "-A")
     git(root, "commit", "-q", "-m", "brief")
+    assert register(root, "intent")[0] == 0                        # assess
     assert register(root, "acceptance-criteria")[0] == 0           # define
     assert register(root, "technical-design")[0] == 0              # plan
     assert register(root, "distribution-map")[0] == 0              # breakdown

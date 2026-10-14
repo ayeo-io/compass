@@ -505,6 +505,11 @@ def test_d2_repairs_change_only_retired_names():
     gained the section on the pre-tool hook's session record, listing how it
     resolves the issue, what it costs and how it fails safe.
 
+    One more was re-baselined by `intent-and-release-line`:
+    `architecture/relations.md` (table_rows 29 -> 30) gained the row for
+    `compass release notes`, a reader of `.compass/work/` and git that writes
+    nothing.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

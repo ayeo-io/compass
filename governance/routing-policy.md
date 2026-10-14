@@ -318,6 +318,18 @@ of them when the capability is on. `ships` is a key that evaluation derives
 from the approach, not a dimension. `docs/entry-exit-evaluation.md` states
 how the lists run once the capability is on.
 
+The regular approach owes `intent` at depth `lightweight`: the four headings
+Problem, Desired outcome, Success signals and Non-goals of
+`artifacts.yml`'s `intent.sections.lightweight`. Full keeps the thorough
+intent; quick fix, hotfix and spike owe none. Quick fix, regular, hotfix and
+full set the approach field `release_line: true`: an issue whose stored
+generation sets it owes a release line, and every landing refuses it while its
+manifest's `release_note` holds none (`docs/release-line.md`). The spike, which
+is locked, has no such field. The field is compared `false` below `true`, so a
+project that sets it `false` on an approach that has it loosens the approach
+and needs a waiver (ADR-039). The decision is
+`architecture/decisions/ADR-065-regular-issues-owe-an-intent-and-shipping-issues-record-a-release-line.md`.
+
 `governance/legacy-views.yml` holds what the two files contain that the
 catalogues have no field for. Only the generator of the views reads it, and it
 goes with the views at 7.0.0.
@@ -466,8 +478,12 @@ The grid:
   refuses it on every parameter, and a catalogue or preset cannot declare it.
   A readiness parameter one side leaves out is `incomparable` whatever its
   direction: the classifier fills in no runtime default. `CLASSIFIER_VERSION`
-  is 5 since this rule (governance decision
+  was 5 since this rule (governance decision
   2026-10-14-a-declared-equivalent-parameter-choice-classifies-as-equivalent).
+  An approach's `release_line` is compared at each point for the approach the
+  assessment chose, `false` below `true`, with no field read as `false`, so
+  setting it `false` is `looser`. `CLASSIFIER_VERSION` is 6 since this rule
+  (ADR-065).
 - `stages.order` and `gates.stage` are the footprint of a lock, not facts the
   classifier reads. Reordering an unlocked stage or moving a gate to another
   stage reads `equivalent` here, and the locks increment compares both.

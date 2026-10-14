@@ -6,11 +6,12 @@ This module holds every rule about it, so the three verbs that write it
 (`compass acceptance record`, `compass ship-commit`, `compass quick-fix finish`)
 and the landing refusal agree:
 
-- `owes` decides whether an issue owes a line. It owes one only when all four
-  hold: a landing names it, it is neither completed nor closed, its manifest has
-  a `generation` key, and its stored configuration sets `release_line: true` on
-  its approach. An issue that predates the field, or the archive, never owes one.
-- `landing_refusal` is the entry of `manifest.LANDING_REFUSALS`.
+- `owes` decides whether an issue owes a line: it is neither completed nor
+  closed, its manifest has a `generation` key, and its stored configuration sets
+  `release_line: true` on its approach. An issue that predates the field, or the
+  archive, never owes one.
+- `landing_refusal` is the entry of `manifest.LANDING_REFUSALS`, so it judges only
+  the issue a landing names.
 - `clean` and `text_problem` judge a given line before anything is written.
 - `write` is the only writer of `release_note`: a locked re-read and write of
   the one key, so a change another command made to the manifest is kept.
@@ -29,7 +30,7 @@ import yaml
 
 from compass_pkg import atomic_io, status_words
 from compass_pkg.core import (MANIFEST_LOCK, CompassError, load_manifest, load_yaml,
-                              manifest_path, prepare_manifest_write)
+                              prepare_manifest_write)
 
 #: The manifest key the line is kept under.
 KEY = "release_note"
@@ -38,9 +39,7 @@ KEY = "release_note"
 #: after the writer's first read and before its locked write. None in use.
 AFTER_FIRST_READ = None
 
-HELP = ("the release line: text written for a user, one sentence for a quick fix or "
-        "hotfix, a paragraph for regular or full. Stored in the manifest's release_note; "
-        "the latest write wins")
+HELP = "the release line, written for a user; stored as release_note"
 
 
 def _slug(task_dir):

@@ -13,7 +13,10 @@ earlier stages on:
   names the command that wrote the record;
 - with a human check it becomes `awaiting-approval`, and a person approves it
   with `compass evidence approve --artifact <kind>`;
-- an entry with no `path` never moves, because no document has been written.
+- an entry with no `path` never moves, because no document has been written;
+- a document the `verify` stage owns is approved only when every `verify` gate
+  has passed, and reads `draft` until then. A `verify` gate pass moves the
+  documents of earlier stages on the first pass.
 
 The owning stage is the `stage` key of the artifact's catalogue entry. A kind
 with no `stage` is owned by ship. An issue stored before the key existed reads
@@ -135,7 +138,9 @@ def stage_exit(task, view, stage, by, when=None, include_own=False, earlier=True
 
     `earlier` moves the `draft` entries with a path that stages before `stage`
     own; `include_own` also moves those `stage` owns (a `verify` gate pass and the
-    ship exit do). A quick fix is left to `compass quick-fix finish`."""
+    ship exit do). The `verify` stage's own documents move only once every `verify`
+    gate has passed (`verify_gates_passed`); until then they read `draft`. A
+    quick fix is left to `compass quick-fix finish`."""
     if task.get("delivery_approach") == APPROACH_QUICK_FIX:
         return []
     when = when or now()
@@ -148,6 +153,9 @@ def stage_exit(task, view, stage, by, when=None, include_own=False, earlier=True
         kind = entry.get("kind")
         owner = _rank(order, owning_stage(view, kind))
         if not ((earlier and owner < here) or (include_own and owner == here)):
+            continue
+        # A document the `verify` stage owns waits for the stage's last gate.
+        if (stage == STAGE_VERIFY and owner == here and not verify_gates_passed(task, view)):
             continue
         if human_checks(view, kind):
             _set_awaiting(entry)
@@ -251,16 +259,18 @@ def _short(digest):
     return text[7:19] if text.startswith("sha256:") else text[:12]
 
 
-def verify_record_exists(task, view):
-    """True when a gate of the `verify` stage has already passed. That pass is
-    the record of the stage, so a `verify` document registered afterwards has
-    nothing left to wait for (`commands/verify.md` passes the gates before it
-    registers the report)."""
+def verify_gates_passed(task, view):
+    """True when the issue has at least one gate the catalogue places in the
+    `verify` stage and every such gate reads `pass`. The `verify` stage's own
+    documents wait for this, because the stage is finished only when its last
+    gate has passed (`commands/verify.md` passes the gates before it registers
+    the report). A gate of another stage, or one the catalogue does not define,
+    does not count."""
     gates = _catalogue(view, "gates") or _shipped("gates")
-    return any(isinstance(g, dict) and g.get("status") == "pass"
-               and isinstance(gates.get(g.get("id")), dict)
-               and gates[g["id"]].get("stage") == STAGE_VERIFY
-               for g in task.get("gates") or [])
+    verify = [g for g in task.get("gates") or []
+              if isinstance(g, dict) and isinstance(gates.get(g.get("id")), dict)
+              and gates[g["id"]].get("stage") == STAGE_VERIFY]
+    return bool(verify) and all(g.get("status") == "pass" for g in verify)
 
 
 def ship_projection(task, view):

@@ -137,3 +137,36 @@ vocabulary:
   checks.multiagent-run-recorded:
     name: Multiagent run recorded
     aliases: []
+  readiness.agent-instructions-present:
+    name: Agent instructions present
+    aliases: []
+  readiness.lint-declared-and-clean:
+    name: Lint declared and clean
+    aliases: []
+  readiness.typecheck-declared-and-clean:
+    name: Type check declared and clean
+    aliases: []
+  readiness.format-declared-and-clean:
+    name: Format check declared and clean
+    aliases: []
+  readiness.build-declared-and-succeeds:
+    name: Build declared and succeeds
+    aliases: []
+  readiness.tests-declared-and-under-two-minutes:
+    name: Tests declared and under two minutes
+    aliases: []
+  readiness.no-flaky-tests-on-record:
+    name: No flaky tests on record
+    aliases: []
+  readiness.structured-logging-declared:
+    name: Structured logging declared
+    aliases: []
+  readiness.codeowners-present:
+    name: Code owners present
+    aliases: []
+  readiness.pre-commit-hooks-present:
+    name: Pre-commit hooks present
+    aliases: []
+  readiness.secret-scan-declared:
+    name: Secret scan declared
+    aliases: []

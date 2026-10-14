@@ -136,6 +136,11 @@ EXPECTED_PUBLIC_SUBCOMMANDS = {
     "decision",                   # decisions-ledger (ADR-027): record|list|
                                   # show|check, the settled-decisions ledger.
                                   # A GROUP; record reads the decider from git.
+    "readiness",                  # project-readiness-caps-autonomy: `compass
+                                  # readiness`, which measures the repository
+                                  # against the readiness signals and writes
+                                  # .compass/readiness.yml. A verb: it has one
+                                  # action and two output forms.
 }
 
 

@@ -12,13 +12,21 @@ The split this verb keeps:
   /compass:init     the slash command - writes a minimal compass.yml, or runs
                     `compass policy migrate` on a project with a
                     .compass/config.yml or copied governance. It copies nothing.
+                    It then runs `compass init --readiness`, which is the only
+                    caller that measures the repository.
+  compass init --readiness
+                    as `compass init`, then runs `compass readiness` when a
+                    compass.yml exists and prints the absent signals. It exits 0
+                    whatever happens: a failure prints that readiness was not
+                    measured and why.
 
 Auto-initialisation must never write configuration. Being initialised for you
 is small and reversible; having a compass.yml written into your repository
 because you ran /compass:intent is not, and it would arrive without the
 conversation that is the whole point of choosing a configuration.
 
-DEPENDENCY: none beyond the standard library and this package. It runs before
+DEPENDENCY: none beyond the standard library and this package (the readiness modules
+are imported only when `--readiness` is passed). It runs before
 a project exists, so it must not reach for anything that assumes one - in
 particular not core.find_compass_dir(), which raises when there is no
 .compass/ and is exactly the case this verb handles.
@@ -119,10 +127,47 @@ def _state_path(root, compass_dir):
             or os.path.join(compass_dir, "state.yml"))
 
 
+def _measure_readiness(root):
+    """Measure the repository for `compass init --readiness`.
+
+    Returns `(lines, data)`: the lines to print after the files init wrote,
+    and the `--json` fields. It never raises: any failure becomes the one
+    "not measured" line, so init still completes. It measures only when the
+    project has a settings file, because that is what `/compass:init` has
+    just written."""
+    if not os.path.isfile(os.path.join(root, project_settings.COMPASS_YML)):
+        return [], {}
+    try:
+        from compass_pkg import readiness_cmd, readiness_record
+        notes = []
+        record = readiness_cmd.measure(root, notes)
+        absent = readiness_cmd.fix_order(record["signals"])
+        lines = ["Absent readiness signals (the floor first):"]
+        for signal in absent:
+            fix = signal.get("fix") or {}
+            lines.append("- [ ] %s: %s (%s)" % (signal["id"], fix.get("change", signal["reason"]),
+                                                fix.get("file", readiness_record.RECORD)))
+        if not absent:
+            lines.append("none - every readiness signal is present")
+        lines += ["  " + note for note in notes]
+        score_line, score, below = readiness_cmd._score_line(record)
+        lines += [score_line, "wrote %s" % readiness_record.RECORD]
+        return lines, {"readiness": {"measured": True, "score": score,
+                                     "signals": len(record["signals"]),
+                                     "floor_met": not below,
+                                     "absent": [s["id"] for s in absent]}}
+    except Exception as exc:                                # noqa: BLE001
+        reason = " ".join(str(exc).split()) or type(exc).__name__
+        return (["readiness was not measured: %s. Run `compass readiness` later." % reason],
+                {"readiness": {"measured": False, "reason": reason}})
+
+
 def cmd_init(args):
     root = resolve_project_root()
     created, compass_dir = ensure_initialised(
         root, by=getattr(args, "by", None) or "compass init")
+    readiness_lines, readiness_data = (
+        _measure_readiness(root) if getattr(args, "readiness", False) else ([], {}))
 
     if created:
         return say(
@@ -132,14 +177,14 @@ def cmd_init(args):
                 "state    : %s" % _state_path(root, compass_dir),
                 "work     : %s" % os.path.join(compass_dir, "work"),
                 "settings : defaults in force. /compass:init writes a compass.yml.",
-            ],
+            ] + readiness_lines,
             decision=True,
-            created=True, path=compass_dir, project_root=root,
+            created=True, path=compass_dir, project_root=root, **readiness_data,
         )
 
     return say(
         args,
         "compass init: %s is already a Compass project - nothing changed." % root,
-        detail=["state : %s" % _state_path(root, compass_dir)],
-        created=False, path=compass_dir, project_root=root,
+        detail=["state : %s" % _state_path(root, compass_dir)] + readiness_lines,
+        created=False, path=compass_dir, project_root=root, **readiness_data,
     )

@@ -34,12 +34,13 @@ from dataclasses import dataclass
 from compass_pkg import atomic_io
 
 #: The block kinds. The first eight are the kinds of documents the templates carry; the rest belong to the
-#: issue page, the verification note and the project index. Any other name in an
+#: issue page, the verification note, the project index and the delivery approach's readiness line. Any other name in an
 #: opening marker is a malformed marker.
 KINDS = ("coverage", "gates", "dod", "dor", "artifacts", "evidence", "follow-ups",
          "decisions-taken", "header", "ask", "decision-required", "acceptance", "related",
          "decisions", "traceability", "deliberately-omitted", "verification-note", "index",
-         "assessment", "policy-rules", "stage-weights", "gate-set", "plan-exit", "breakdown-exit")
+         "assessment", "policy-rules", "stage-weights", "gate-set", "plan-exit", "breakdown-exit",
+         "readiness")
 
 #: The prefix of the temporary files the render writes, so a killed render's
 #: leftover can be told from a person's file.

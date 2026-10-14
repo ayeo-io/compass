@@ -199,7 +199,8 @@ first two stay written and a second run finishes the job.
 
 ## After each command that changes a record
 
-The entry point calls `render_after.after_command` after the label sync. It
+The entry point calls `render_after.after_command` after the label sync and before the
+page step. It
 renders the documents of the issue a command named and of every issue the
 manifest links to, in either direction (`raised_by`, `parent`, `depends_on`,
 `landed_by`, `delivered` and the `target_task` of a follow-up). It also renders
@@ -226,6 +227,25 @@ modification time.
   The label sync prints its own line when it fails.
 - The step prints no reminder. The old review page verb and the reminder that
   named it are gone.
+
+### The page step, third
+
+Three steps run after a command, in this order, each returning the command's
+exit code unchanged: the label sync, the render, then
+`github_page.after_command`. The page step reads the issue's `README.md` from
+disk, as the render has just written it, and never renders it itself. With
+`github_labels.page` on in `compass.yml` and the issue linked, it posts that
+README as one comment on the linked GitHub issue (`docs/github-labels.md`).
+
+- The commands are `PAGE_TRIGGERS` in `record_triggers.py`, which is
+  `RENDER_TRIGGERS`: any command that can change the README can change the page.
+- It syncs only the issue the command named. An issue linked to it, whose
+  README the render rewrote too, waits for its own next sync, and
+  `compass issue lint` on that issue reports its page as out of date meanwhile.
+- With `COMPASS_RENDER_AFTER=0` the README on disk does not change, so the page
+  is unchanged and no call is made.
+- No step imports another: `github_page` imports nothing from `render_after`,
+  `render_cmd` or `render_after_entry`, and none of them imports `github_page`.
 
 ## The check `rendered-blocks-current`
 

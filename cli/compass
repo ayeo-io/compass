@@ -83,7 +83,7 @@ from compass_pkg.policy_cmd import register_preset as register_preset_parser  # 
 from compass_pkg.approve_cmd import register as register_approve_parser  # noqa: E402
 from compass_pkg.review_cmd import register as register_review_parser  # noqa: E402
 from compass_pkg.issue_config_cmd import register as register_issue_configure_parser  # noqa: E402
-from compass_pkg import github_labels  # noqa: E402
+from compass_pkg import github_labels, github_page  # noqa: E402
 from compass_pkg.render_after_entry import after_command as render_after_command  # noqa: E402
 
 # Declared literally here as well as in compass_pkg.core: this file is
@@ -397,6 +397,7 @@ def build_parser():
     from compass_pkg import issue_depends
     issue_depends.register(pts, issue_arg)
     github_labels.register(pts, issue_arg)
+    github_page.register(pts, issue_arg)
 
     pacc = sub.add_parser(
         "acceptance",
@@ -739,7 +740,7 @@ def main(argv=None):
     if getattr(args, "command", None) and args.command and args.command[0] == "--":
         args.command = args.command[1:]
     try:
-        return run_with_mode(args, lambda a: render_after_command(a, github_labels.after_command(a, args.func(a) or 0))) or 0
+        return run_with_mode(args, lambda a: github_page.after_command(a, render_after_command(a, github_labels.after_command(a, args.func(a) or 0)))) or 0
     except CompassError as exc:
         # Paths in an error open from the project root, like every other
         # path the CLI prints (#293).

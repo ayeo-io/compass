@@ -1222,13 +1222,20 @@
     },
     "github_labels": {
       "additionalProperties": false,
-      "description": "Whether Compass writes an issue's labels to its linked GitHub issue, through the switches `domain` and `status`. Both are off by default, and with both off no command calls GitHub.",
+      "description": "Whether Compass writes an issue's labels and page to its linked GitHub issue, through the switches `domain`, `status` and `page`. All three are off by default, and with all three off no command calls GitHub.",
       "properties": {
         "domain": {
+          "default": false,
           "description": "Whether Compass writes the issue's declared domain labels to its GitHub issue. The default is `false`.",
           "type": "boolean"
         },
+        "page": {
+          "default": false,
+          "description": "Whether Compass keeps one comment on the GitHub issue equal to the issue's README, and writes the ask into an empty issue body once. The default is `false`, because it widens who reads the issue's documents to the GitHub issue's readers.",
+          "type": "boolean"
+        },
         "status": {
+          "default": false,
           "description": "Whether Compass writes `status:<state>` to the GitHub issue, and on a closed issue `status:done` and `close:<reason>`. The default is `false`.",
           "type": "boolean"
         }

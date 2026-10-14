@@ -170,6 +170,7 @@ The dry run lists each move, rename, registration, re-point, pointer removal and
 | `--depth` | flag of `compass issue template show` | Print the lightweight or thorough skeleton |
 | `--decision`, `--next-issue` | flags of `compass issue artifact set spike-conclusion` | Record how a spike closes |
 | `distribution-map.md.v6.bak` | the documents folder | A stub map the migrate set aside |
+
 ## Repository readiness and autonomous work
 
 From 7.0.0 a project on `autonomy: autonomous` must meet the readiness floor before an issue can be assessed. An autonomous project below the floor, or with no fresh readiness record, is refused at `compass approach evaluate --write`, which every assess and reassess runs. The decision is `architecture/decisions/ADR-058-the-readiness-floor-caps-autonomous-work.md`. The facts are in `docs/readiness.md`.
@@ -240,3 +241,29 @@ Then run `compass readiness` again and assess.
 | `required_for_autonomous` | field of a readiness signal | `true` puts the signal on the floor |
 | `.compass/readiness.yml` | per checkout, never committed | The readiness record |
 | `readiness` | `manifest.yml` | The repository's readiness when the issue was assessed |
+
+## The issue page on GitHub
+
+Compass can now post an issue's README to the linked GitHub issue, and the verb that wrote labels on demand has a new spelling. The decision is `architecture/decisions/ADR-057-derived-views-go-to-github-one-way-behind-a-refusal-check.md`. The facts are in `docs/github-labels.md`.
+
+### What is removed
+
+- **The verb `compass issue labels sync`.** A command line that still types it exits 2, runs nothing and makes no `gh` call. It prints one line: `'issue labels sync' is now 'issue github sync'`. The hint row names release 6.0.0 and removal at 7.0.0.
+
+### What changes
+
+- **`compass issue github sync` replaces it.** It writes the labels and, when `page` is on, the issue page, each whatever the other's result. It exits non-zero when either failed or was refused. The sync failure line and the notes of `compass issue lint` name the new verb.
+- **A new switch, `github_labels.page`, is off by default.** With it on, Compass posts the issue's README as one comment and, once, the ask into an empty issue body. It widens the audience of the issue's documents to the readers of the GitHub issue. Two checks refuse a post that holds a private path or a credential shape.
+- **`github-sync.yml` holds two sections.** A record written by a 6.x CLI reads as the `labels` section. No migration is needed.
+
+### What to do
+
+1. Replace `compass issue labels sync` with `compass issue github sync` in your scripts, notes and CI.
+2. Leave `page` off unless the readers of your GitHub issues may see your issue documents. To turn it on, set `github_labels: {page: true}` in `compass.yml`.
+
+### New keys and verbs
+
+| Name | Where | Meaning |
+|---|---|---|
+| `github_labels.page` | `compass.yml` | Post the issue page to the linked GitHub issue |
+| `compass issue github sync` | verb | Write the labels and the issue page on demand |

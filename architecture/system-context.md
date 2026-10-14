@@ -94,7 +94,7 @@ Logical surface: **role pipeline**
 | `.compass/current-task` | One-line pointer resolved by CLI and hooks | high |
 | `architecture/` (this tree) | Assess loads into `architecture-loaded.yml`; architect reads | medium |
 | `templates/` | Worked examples and starting shapes for adopter artifacts | low |
-| `gh` and GitHub | Only when `github_labels` is set in `compass.yml`: Compass writes an issue's labels to its linked GitHub issue and reads the labels back to compare. It stores no token | low |
+| `gh` and GitHub | Only when `github_labels` is set in `compass.yml`: Compass writes an issue's labels to its linked GitHub issue and reads the labels back to compare. With `github_labels.page` on it also writes one comment holding the issue's README and, once, an empty issue body; it reads back only comment ids and whether the body is empty. It stores and reads no token | low |
 | Claude Code session | The execution environment; not a file dependency | n/a |
 
 ## Boundary conditions

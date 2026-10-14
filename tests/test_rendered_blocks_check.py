@@ -649,15 +649,26 @@ def test_dcj_75_trigger_table_complete():
         "def cmd_planted(args):\n    save_manifest({}, 'x')\n    return 0\n"
         "def build(p):\n    p.set_defaults(func=cmd_planted)\n")
     assert uncovered(planted, covered) == ["cmd_planted"]
-    # The render step is its own module, called after the label sync; neither imports the other.
+    # The render step and the page step are their own modules, called after the label
+    # sync; no step imports another.
     pkg = ROOT / "cli" / "compass_pkg"
-    for mine, other in (("render_after.py", "github_labels"), ("github_labels.py", "render_after")):
+    pairs = (("render_after.py", "github_labels"), ("github_labels.py", "render_after"),
+             ("render_after.py", "github_page"), ("render_after_entry.py", "github_page"),
+             ("github_page.py", "render_after"), ("github_page.py", "render_cmd"),
+             ("github_page.py", "render_after_entry"))
+    for mine, other in pairs:
         text = (pkg / mine).read_text("utf-8")
-        imports = {a.name for n in ast.walk(ast.parse(text)) if isinstance(n, ast.ImportFrom)
-                   for a in n.names} | {n.module or "" for n in ast.walk(ast.parse(text))
+        tree = ast.parse(text)
+        imports = {a.name for n in ast.walk(tree) if isinstance(n, (ast.Import, ast.ImportFrom))
+                   for a in n.names} | {n.module or "" for n in ast.walk(tree)
                                         if isinstance(n, ast.ImportFrom)}
         assert other not in imports and f"compass_pkg.{other}" not in imports, (mine, other)
-        assert "record_triggers" in text
-    entry = (ROOT / "cli" / "compass").read_text("utf-8")
-    # The label sync runs first: the render step wraps it and receives its exit code.
-    assert "render_after_command(a, github_labels.after_command(a, args.func(a)" in entry
+        assert "record_triggers" in text, mine
+    entry = "".join((ROOT / "cli" / "compass").read_text("utf-8").split())
+    # The label sync runs first, the render second and the page third: each step wraps
+    # the one before it and receives its exit code, so the page reads the README the
+    # render has just written.
+    assert ("github_page.after_command(a,render_after_command(a,"
+            "github_labels.after_command(a,args.func(a)or0)))") in entry
+    from compass_pkg import record_triggers as triggers
+    assert triggers.PAGE_TRIGGERS is triggers.RENDER_TRIGGERS

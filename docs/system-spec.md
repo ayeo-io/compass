@@ -3927,3 +3927,37 @@
 - `PRC-44` A malformed or unreadable readiness record never blocks a session
 - `PRC-45` No command or child process outlives a readiness run, however it ends
 - `PRC-46` A record measured on a commit outside HEAD's history is stale
+
+### autonomy-ratio-and-cost (completed 2026-10-14)
+
+- `ARC-1` A person answers a checkpoint
+- `ARC-2` A checkpoint answer is refused when it would not mean what it says
+- `ARC-3` An agent records a hand-off that autonomy passed
+- `ARC-4` A skip is refused for a hand-off that must wait
+- `ARC-5` ship-commit refuses a listed checkpoint with no outcome
+- `ARC-6` Issues landed before this change are not judged
+- `ARC-7` A checkpoint answer is not the human sign-off
+- `ARC-8` The hand-off texts run the new commands
+- `ARC-9` The hook records each session once
+- `ARC-10` The hook stays within its cost
+- `ARC-11` ship-commit records usage on a regular issue
+- `ARC-12` Missing usage inputs never stop the landing
+- `ARC-13` The quick fix keeps its usage block
+- `ARC-14` A session shared with another issue is marked
+- `ARC-15` No transcript text is stored
+- `ARC-16` The autonomy ratio and band split
+- `ARC-17` Cost per change by approach and per scenario
+- `ARC-18` The decisions-confirmed row matches retro --decisions
+- `ARC-19` Below the floors the rows say unmeasurable, never 0%
+- `ARC-20` The retro rows in JSON
+- `ARC-21` The fixture issue on balanced and on autonomous
+- `ARC-22` diagnose shows the issue bands and cost
+- `ARC-23` The delivery record carries the new fields and no new names
+- `ARC-24` The fields are documented and old manifests read unchanged
+- `ARC-25` The hook skips a session another session moved the pointer away from
+- `ARC-26` Work before counting starts does not mark the cost shared
+- `ARC-27` The retro help names --impact among the --format readers
+- `ARC-28` The autonomy ratio counts judged issues only
+- `ARC-29` A landed issue with an empty checkpoints list and no outcomes key is not measurable
+- `ARC-30` A per-scenario median below the group floor is withheld
+- `ARC-31` Other issues' manifests are not read when the issue has no session

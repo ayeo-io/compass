@@ -1,4 +1,4 @@
-"""Scenarios MRE-1, MRE-2, MRE-3 and MRE-5 of the issue `migrate-review-entries`.
+"""Scenarios MRE-1, MRE-2, MRE-3 and MRE-5 to MRE-8 of the issue `migrate-review-entries`.
 
 The 6.x migrate registered review files under their filename stems (`kind: review`
 with no round, `kind: review-2`, `kind: integrated-review-3`). These tests check
@@ -189,15 +189,16 @@ def _merge_line(text, verb):
     return lines[0]
 
 
-@pytest.mark.parametrize("stem, held, kept_id, kept, dropped_id, dropped", [
-    pytest.param(NEWER, OLDER, "ART-REVIEW", NEWER, "ART-REVIEW-1", OLDER, id="stem-newer"),
-    pytest.param(OLDER, NEWER, "ART-REVIEW-1", NEWER, "ART-REVIEW", OLDER, id="round-newer"),
-    pytest.param(DRAFT, NEWER, "ART-REVIEW-1", NEWER, "ART-REVIEW", DRAFT,
-                 id="stem-draft-round-approved"),
-    pytest.param(DRAFT, {"status": "awaiting-approval"}, "ART-REVIEW", DRAFT, "ART-REVIEW-1",
-                 {"status": "awaiting-approval"}, id="both-draft"),
-])
-def test_mre_5(tmp_path, stem, held, kept_id, kept, dropped_id, dropped):
+def _said(record):
+    """The words the report uses for a record's approval, or for its status when it
+    is not approved."""
+    if record.get("approved_by"):
+        return "approval by %s at %s" % (record["approved_by"],
+                                         record.get("approved_at") or "no recorded time")
+    return "status %s, not approved" % record["status"]
+
+
+def _check_merge(tmp_path, stem, held, kept_id, kept, dropped_id, dropped):
     # The registry an earlier 7.0.0 migrate left: the stem entry names the file the
     # rename moved, and the round entry that run wrote names the renamed file.
     root, work = _project(tmp_path, [
@@ -216,13 +217,143 @@ def test_mre_5(tmp_path, stem, held, kept_id, kept, dropped_id, dropped):
         kept_id, "review", 1, f"{HOME}/review-1.md"), entry
     for key in ("status", "approved_by", "approved_at", "digest"):
         assert entry.get(key) == kept.get(key), (key, entry)
-    # The report names what was kept and what was dropped, the approval included.
+    # The report names what was kept and what was dropped, the approval or status
+    # included, and neither half carries the other entry's approval or status.
     line = _merge_line(out, "merged")
     keeping, dropping = line.split(", keeping ", 1)[1].split("; dropping ", 1)
     assert f"id {kept_id} " in keeping and f"id {dropped_id} " in dropping, line
     for part, record, other in ((keeping, kept, dropped), (dropping, dropped, kept)):
-        assert (record.get("approved_at") or record["status"]) in part, (part, line)
-        if other.get("approved_at") != record.get("approved_at"):
-            assert str(other.get("approved_at")) not in part, (part, line)
+        assert _said(record) in part, (part, line)
+        if _said(other) != _said(record):
+            assert _said(other) not in part, (part, line)
     # The dry run says what the apply does, word for word.
     assert _merge_line(dry, "would merge").replace("would merge", "merged", 1) == line, dry
+
+
+@pytest.mark.parametrize("stem, held, kept_id, kept, dropped_id, dropped", [
+    pytest.param(NEWER, OLDER, "ART-REVIEW", NEWER, "ART-REVIEW-1", OLDER, id="stem-newer"),
+    pytest.param(OLDER, NEWER, "ART-REVIEW-1", NEWER, "ART-REVIEW", OLDER, id="round-newer"),
+    pytest.param(DRAFT, NEWER, "ART-REVIEW-1", NEWER, "ART-REVIEW", DRAFT,
+                 id="stem-draft-round-approved"),
+])
+def test_mre_5(tmp_path, stem, held, kept_id, kept, dropped_id, dropped):
+    _check_merge(tmp_path, stem, held, kept_id, kept, dropped_id, dropped)
+
+
+def _round_absent_project(tmp_path, stem, held, documents):
+    return _project(tmp_path, [
+        {"id": "ART-REVIEW", "kind": "review", **stem, "path": f"{HOME}/review.md"},
+        {"id": "ART-REVIEW-1", "kind": "review", "round": 1, **held,
+         "path": f"{HOME}/review-1.md"},
+    ], documents)
+
+
+@pytest.mark.parametrize("stem, held, kept_id, kept", [
+    pytest.param(NEWER, OLDER, "ART-REVIEW", NEWER, id="stem-newer"),
+    pytest.param(OLDER, NEWER, "ART-REVIEW-1", NEWER, id="round-newer"),
+])
+def test_mre_6_round_file_absent(tmp_path, stem, held, kept_id, kept):
+    # Both entries are approved and only the stem entry's file exists. The rename of
+    # review.md to review-1.md settles it, so the two merge.
+    root, work = _round_absent_project(tmp_path, stem, held, ["review.md"])
+    before = (work / "manifest.yml").read_bytes()
+    code, dry, err = _migrate(root)
+    assert code == 0, dry + err
+    assert "both exist" not in dry + err, dry + err
+    assert (work / "manifest.yml").read_bytes() == before
+    code, out, err = _migrate(root, "--apply", "--i-have-a-copy")
+    assert code == 0, out + err
+    assert "both exist" not in out + err, out + err
+    entries = _registry(work)
+    assert len(entries) == 1, entries
+    _one_entry_per_file(root, entries)
+    entry = entries[0]
+    assert (entry["id"], entry["round"], entry["path"]) == (
+        kept_id, 1, f"{HOME}/review-1.md"), entry
+    for key in ("status", "approved_by", "approved_at", "digest"):
+        assert entry.get(key) == kept.get(key), (key, entry)
+    assert not (root / HOME / "review.md").exists()
+    assert _merge_line(dry, "would merge").replace("would merge", "merged", 1) == \
+        _merge_line(out, "merged"), dry
+
+
+def test_mre_6_both_files_exist(tmp_path):
+    # Both files exist, so the two entries name two documents: a person settles it.
+    # Here review.md and review-1.md both claim round 1, and the plan refuses the issue.
+    root, work = _round_absent_project(tmp_path, NEWER, OLDER, ["review.md", "review-1.md"])
+    before = _tree(root)
+    for flags in ((), ("--apply", "--i-have-a-copy")):
+        code, out, err = _migrate(root, *flags)
+        text = out + err
+        assert any("review.md" in ln and "review-1.md" in ln and "both claim" in ln
+                   for ln in text.splitlines()), text
+        assert "the registry entry review (ART-REVIEW) into" not in text, text
+        assert _tree(root) == before, (flags, text)
+
+
+def test_mre_6_both_files_exist_elsewhere(tmp_path):
+    # The round entry names a file outside the documents folder, so no rename
+    # collides and the merge step itself must refuse.
+    elsewhere = "notes/review-2.md"
+    root, work = _project(tmp_path, [
+        {"id": "ART-REVIEW-2", "kind": "review-2", **NEWER, "path": f"{HOME}/review-2.md"},
+        {"id": "ART-ROUND-2", "kind": "review", "round": 2, **OLDER, "path": elsewhere},
+    ], ["review-2.md"])
+    (root / "notes").mkdir()
+    (root / elsewhere).write_text("# elsewhere\n", encoding="utf-8")
+    for flags in ((), ("--apply", "--i-have-a-copy")):
+        code, out, err = _migrate(root, *flags)
+        text = out + err
+        line = next((ln for ln in text.splitlines() if "both exist" in ln), "")
+        assert f"{HOME}/review-2.md" in line and elsewhere in line, text
+        assert "the registry entry review-2 (ART-REVIEW-2) into" not in text, text
+        entries = {e["id"]: e for e in _registry(work)}
+        assert set(entries) == {"ART-REVIEW-2", "ART-ROUND-2"}, entries
+        assert entries["ART-REVIEW-2"]["approved_at"] == NEWER["approved_at"], entries
+        assert entries["ART-ROUND-2"]["approved_at"] == OLDER["approved_at"], entries
+        assert (root / HOME / "review-2.md").is_file() and (root / elsewhere).is_file()
+
+
+@pytest.mark.parametrize("stem, held", [
+    pytest.param(DRAFT, {"status": "awaiting-approval", "digest": "sha256:ROUND"},
+                 id="round-awaiting"),
+    pytest.param({"status": "awaiting-approval", "digest": "sha256:STEM"}, DRAFT,
+                 id="round-draft"),
+])
+def test_mre_7(tmp_path, stem, held):
+    # Neither entry is approved. Stage exits write status, so the round entry's is the
+    # more current: its id and status are kept, and the report names the stem
+    # entry's id and status as dropped.
+    _check_merge(tmp_path, stem, held, "ART-REVIEW-1", held, "ART-REVIEW", stem)
+
+
+def _approval(by, at=None, digest=None):
+    record = {"status": "approved", "approved_by": by}
+    if at:
+        record["approved_at"] = at
+    if digest:
+        record["digest"] = digest
+    return record
+
+
+SAME_TIME = "2026-09-02T09:00:00Z"
+STEM_TIMED = _approval("jed72", SAME_TIME, "sha256:STEM")
+ROUND_TIMED = _approval("alice", SAME_TIME, "sha256:ROUND")
+STEM_UNTIMED = _approval("jed72", digest="sha256:STEM")
+ROUND_UNTIMED = _approval("alice", digest="sha256:ROUND")
+
+
+@pytest.mark.parametrize("stem, held, kept_id, kept, dropped_id, dropped", [
+    # A tie keeps the stem entry: equal times carry the same weight.
+    pytest.param(STEM_TIMED, ROUND_TIMED, "ART-REVIEW", STEM_TIMED, "ART-REVIEW-1",
+                 ROUND_TIMED, id="equal-times"),
+    pytest.param(STEM_UNTIMED, ROUND_UNTIMED, "ART-REVIEW", STEM_UNTIMED, "ART-REVIEW-1",
+                 ROUND_UNTIMED, id="both-times-missing"),
+    # A missing time sorts before any recorded time.
+    pytest.param(STEM_UNTIMED, ROUND_TIMED, "ART-REVIEW-1", ROUND_TIMED, "ART-REVIEW",
+                 STEM_UNTIMED, id="stem-time-missing"),
+    pytest.param(STEM_TIMED, ROUND_UNTIMED, "ART-REVIEW", STEM_TIMED, "ART-REVIEW-1",
+                 ROUND_UNTIMED, id="round-time-missing"),
+])
+def test_mre_8(tmp_path, stem, held, kept_id, kept, dropped_id, dropped):
+    _check_merge(tmp_path, stem, held, kept_id, kept, dropped_id, dropped)

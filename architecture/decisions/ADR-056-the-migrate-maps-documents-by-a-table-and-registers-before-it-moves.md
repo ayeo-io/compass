@@ -91,8 +91,9 @@ round or a `review-2` entry. Decisions 3 and 5 are extended, not changed:
 - **Decision 3 gains a step.** Before a file moves, an entry registered under a stem is re-kinded to
   the kind and round the table gives it. When another entry already names that file, the two merge
   into one: the entry with the later approval keeps its id and approval; if only one is approved, that
-  one is kept; if neither is, the stem entry is kept. The dry run prints the same merge line as the
-  apply.
+  one is kept; if neither is, the round entry is kept, because stage exits write status and the
+  round entry holds the more current one. Two entries whose files both exist are not merged; the
+  report names both files for a person. The dry run prints the same merge line as the apply.
 - **Decision 5 gains a removal.** A merged entry is the third thing the migrate removes, beside each
   pointer and the `recommendation` entry. The report names the dropped entry's id and approval, and
   the copy taken before `--apply` holds it.

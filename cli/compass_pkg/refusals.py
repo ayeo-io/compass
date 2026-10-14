@@ -145,6 +145,17 @@ REFUSALS: dict[str, dict[str, str]] = {
         "fix": "run compass tdd-red --scenario <id> -- <your failing test "
                "command>, then retry this edit.",
     },
+    # A landing refusal of `compass ship-commit` and `quick-fix finish`
+    # (checkpoint_outcomes.landing_refusal), not a hook refusal. `is` and `it`
+    # agree with the number of stages named.
+    "checkpoint-no-outcome": {
+        "what": "landing of issue '{slug}'",
+        "why": "{stages} {is} listed in checkpoints with no outcome recorded, so "
+               "nothing shows a person answered {it}.",
+        "fix": "the person who answers runs compass evidence approve "
+               "--checkpoint {stage} --approver <you> --role <role>, for each "
+               "stage named, then ship again.",
+    },
 }
 
 

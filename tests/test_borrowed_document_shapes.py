@@ -187,7 +187,9 @@ def test_trc_b2():
                 "claim-review", "spike-conclusion", "consistency-check",
                 "artifact",
                 # 7.0.0 adds a person's approval of a document or a decision set (ADR-050).
-                "artifact-approval"}
+                "artifact-approval",
+                # 7.0.0 adds a person's answer to one checkpoint hand-off (ADR-063).
+                "checkpoint-approval"}
     assert set(types) == expected, (
         "the evidence type list changed. Adding a type is a decision (7.0.0 added "
         "artifact-approval, ADR-050); declare it in `expected` above:\n  added: %s\n  removed: %s"

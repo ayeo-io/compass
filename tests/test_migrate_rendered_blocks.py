@@ -111,7 +111,7 @@ def _tree(root):
     found = {}
     for top in (Path(root) / ".compass" / "work", Path(root) / "docs"):
         for path in sorted(top.rglob("*")):
-            if path.is_file() and path.name != ".render.lock":
+            if path.is_file() and path.name not in (".render.lock", ".manifest.lock"):
                 found[str(path.relative_to(root))] = _digest_of(path)
     return found
 

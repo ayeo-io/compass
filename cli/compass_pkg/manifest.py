@@ -32,7 +32,7 @@ import re as _re
 
 import fnmatch
 import re as _re
-from compass_pkg import status_words
+from compass_pkg import checkpoint_outcomes, issue_usage, status_words
 from compass_pkg.terminal import say
 from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, normalize_spine, now_iso, resolve_issue_dir, save_manifest
 from compass_pkg.issue_layout import docs_dir_for
@@ -308,6 +308,20 @@ def _derive_and_commit_living_spec(cwd, slug):
     return "\n  living spec re-derived and committed."
 
 
+#: The refusals a landing runs, in order, before it stages, renders, commits,
+#: derives or syncs anything. Each takes the manifest and the issue folder and
+#: returns its text or None; a later refusal is appended here, not branched in.
+LANDING_REFUSALS = [checkpoint_outcomes.landing_refusal]
+
+
+def run_landing_refusals(task, task_dir):
+    """Raise the first landing refusal's text as a `CompassError`."""
+    for refusal in LANDING_REFUSALS:
+        text = refusal(task, task_dir)
+        if text:
+            raise CompassError(text)
+
+
 def cmd_land_commit(args):
     import shutil
     cwd = os.getcwd()
@@ -330,6 +344,12 @@ def cmd_land_commit(args):
     inside = _git(["rev-parse", "--is-inside-work-tree"], cwd)
     if inside.returncode != 0:
         raise CompassError("compass ship-commit: not inside a git repository.")
+
+    # The landing refusals run before anything is staged or written, so a
+    # refusal leaves every file as it was (ADR-026).
+    landing = checkpoint_outcomes.landing_issue(args)
+    if landing is not None:
+        run_landing_refusals(*landing)
 
     # Stage any explicitly named paths.
     # A name is a name, not a pattern: `x[1].txt` must not stage `x1.txt`.
@@ -435,7 +455,7 @@ def cmd_land_commit(args):
         status_words.close(head_task, status_words.COMPLETED)
         head_task["land_timestamp"] = now_iso()
         head_task["land_commit"] = head_id
-        save_manifest(head_task, head_task_path)
+        issue_usage.save_landed(head_task, head_task_dir, head_task_path)
         landed_note = _derive_and_commit_living_spec(cwd, head_slug)
         print(
             f"compass ship-commit: every file '{head_slug}' changed is "
@@ -680,7 +700,7 @@ def cmd_land_commit(args):
                         # The commit this issue landed in. A green is checked
                         # against its tree after HEAD has moved on.
                         task["land_commit"] = head_after
-                        save_manifest(task, task_path)
+                        issue_usage.save_landed(task, task_dir, task_path)
                         landed_note = "\n  issue marked landed."
                         # ADR-026: ship-commit is the one step that derives
                         # the living spec, and only for an issue it has just
@@ -1085,6 +1105,10 @@ def cmd_changed_file_add(args):
 
 
 def cmd_evidence_add(args):
+    if args.type == "checkpoint-approval":     # a person's act: approve_cmd writes it
+        raise CompassError(
+            "compass evidence add: a checkpoint-approval record is a person's answer; run "
+            "compass evidence approve --checkpoint <stage> at a terminal.")
     task_dir = resolve_issue_dir(args.task)
     task, task_path = load_manifest(task_dir)
     if getattr(args, "scenario", None):

@@ -3769,8 +3769,12 @@ _GROWING_REACH = {
     #    the archive copy, one per line;
     # 75 with tests/fixtures/ci-run-time/compat-node-ids.txt, test node ids, one per line;
     # 76 with tests/fixtures/ci-run-time/run-jobs.json, plain JSON;
-    # 77 with tests/ci-durations.json, the shard weights, plain JSON.
-    "PBW-C4": (lambda path: path.startswith("tests/"), 77),
+    # 77 with tests/ci-durations.json, the shard weights, plain JSON;
+    # 86 with the nine files of tests/fixtures/autonomy-ratio-and-cost/: four plain JSON
+    #    captures of the base commit and five fixture transcripts, one JSON object per line;
+    # 88 with retro.json and ships.json of tests/fixtures/autonomy-ratio-and-cost-views/,
+    #    plain JSON captures of the base commit.
+    "PBW-C4": (lambda path: path.startswith("tests/"), 88),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

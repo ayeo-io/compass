@@ -21,7 +21,7 @@ import glob
 import json
 import os
 
-from compass_pkg import lifecycle, status_words, word_map
+from compass_pkg import autonomy_cost, checkpoint_outcomes, lifecycle, status_words, word_map
 from compass_pkg.stable_ids import (
     APPROACH_SPIKE, STAGE_ASSESS, STAGE_BREAKDOWN, STAGE_DEFINE, STAGE_IDS, STAGE_IMPLEMENT, STAGE_PLAN,
     STAGE_REFINE, STAGE_SHIP, STAGE_VERIFY)
@@ -39,7 +39,7 @@ CANNOT_SHOW = (
     "how long anything took between records, and time spent with no record",
     "when a gate was passed: the manifest does not date gate passes",
     "when a review ran: a review round is dated when it was recorded, which can be later",
-    "token use outside the subtasks that record a cost",
+    "token use of a session the hook did not record",
 )
 
 
@@ -188,6 +188,10 @@ def _timeline(root, task_dir, m, records):
             src = ra.get("from_route") or ra.get("from") or "?"
             dst = ra.get("to_route") or ra.get("to") or "?"
             events.append((str(when), f"reassessed {src} -> {dst}", mpath))
+    for stage, entry in checkpoint_outcomes.outcomes(m).items():
+        if entry.get("at"):
+            events.append((str(entry["at"]),
+                           f"checkpoint {stage} {entry['outcome']} by {entry.get('by')}", mpath))
     log = os.path.join(".compass", LOG_NAME)
     for when, kind in _interruptions(root, os.path.basename(os.path.normpath(task_dir))):
         what = "hook refused an edit" if kind == "hook_blocks" else "a check failed"
@@ -199,6 +203,64 @@ def _timeline(root, task_dir, m, records):
                   for w, what, p in events]
         events.append((landed_at, f"landed {_landed_as(m)}".strip(), mpath))
     return sorted(events)
+
+
+def _dollars(value):
+    return "cost unknown" if value is None else "$%.4f" % value
+
+
+def _block(label, counts):
+    """One line for a stage or the requests no stage holds."""
+    if counts.get("measured") is False:
+        return f"    {label:<12} not measured ({counts.get('reason') or 'no reason recorded'})"
+    line = f"    {label:<12} {_dollars(counts.get('cost_usd'))}  {counts.get('requests')} request(s)"
+    return line + ("  (shared with another issue)" if counts.get("shared") else "")
+
+
+def _cost_lines(m):
+    """What the issue's `usage` block says it cost: the total and each stage, or
+    why no cost is recorded."""
+    usage = m.get("usage") if isinstance(m.get("usage"), dict) else None
+    if usage is None:
+        return ["  cost: not recorded (no usage block)"]
+    if usage.get("recorded") is False:
+        return [f"  cost: not recorded ({usage.get('reason') or 'no reason recorded'})"]
+    total = usage.get("total") if isinstance(usage.get("total"), dict) else None
+    stages = [(name, b) for name, b in (usage.get("stages") or {}).items() if isinstance(b, dict)]
+    if total is not None:
+        head = f"  cost: {_dollars(total.get('cost_usd'))} over {total.get('requests')} request(s)"
+    else:
+        # A quick fix's block holds no total: the cost is its measured stages'.
+        cost = autonomy_cost.complete_cost(m)
+        head = f"  cost: {_dollars(cost)}"
+    if total is not None and total.get("shared"):
+        head += "  (shared with another issue)"
+    lines = [head] + [_block(name, b) for name, b in stages]
+    if isinstance(usage.get("unattributed"), dict):
+        lines.append(_block("unattributed", usage["unattributed"]))
+    return lines
+
+
+def _checkpoint_lines(m, task_dir):
+    """The Checkpoints and cost section: each outcome, the three bands and the cost."""
+    lines = []
+    found = checkpoint_outcomes.outcomes(m)
+    for stage in _ORDER:
+        entry = found.get(stage)
+        if entry:
+            lines.append(f"  {stage:<8} {entry['outcome']:<8} by {entry.get('by')}  "
+                         f"at {entry.get('at')}")
+    if not lines:
+        lines.append("  no checkpoint outcomes recorded")
+    band = autonomy_cost.bands(m, task_dir)
+    if band is None:
+        lines.append("  bands: not counted (the issue's configuration cannot be read)")
+    else:
+        units = autonomy_cost.UNITS
+        lines.append("  bands: human judgement %d (%s), guardrailed %d (%s), autonomous %d (%s)"
+                     % (band["human_judgement"], units["human_judgement"], band["guardrailed"],
+                        units["guardrailed"], band["autonomous"], units["autonomous"]))
+    return lines + _cost_lines(m)
 
 
 def _deviations(task_dir, m, stages, shown, records):
@@ -291,6 +353,7 @@ def cmd_issue_diagnose(args):
     if costs:
         lines += ["", "Recorded cost"]
         lines += [f"  {sid}: {cost} tokens" for sid, cost in costs]
+    lines += ["", "Checkpoints and cost"] + _checkpoint_lines(m, task_dir)
     lines += ["", "Timeline"]
     events = _timeline(root, task_dir, m, records)
     lines += [f"  {when}  {what}  {path}" for when, what, path in events] or ["  no dated records"]

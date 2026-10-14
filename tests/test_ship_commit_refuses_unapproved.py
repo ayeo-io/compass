@@ -27,6 +27,17 @@ REGULAR = ("acceptance-criteria", "technical-design", "distribution-map",
            "verification-report")
 
 
+def _hand_offs_recorded(body):
+    """Give each listed checkpoint an outcome. A regular issue assessed on the
+    default autonomy lists the define and plan hand-offs, and `ship-commit`
+    refuses one with no outcome (ADR-063); these tests are about documents,
+    so the hand-offs are on record before the landing."""
+    if "checkpoint_outcomes" in body:
+        body["checkpoint_outcomes"] = [
+            {"stage": stage, "outcome": "skipped", "by": "planner",
+             "at": "2026-10-10T09:00:00Z"} for stage in body.get("checkpoints") or []]
+
+
 def _ready(root):
     """Every gate passed, one changed file traced and a green on record,
     that file staged: the state in which `ship-commit` would land."""
@@ -34,6 +45,7 @@ def _ready(root):
     for gate in body["gates"]:
         gate["status"] = "pass"
     body["changed_files"] = [{"path": "src/new.py", "scenarios": ["S-1"]}]
+    _hand_offs_recorded(body)
     write_manifest(root, body)
     (root / "src").mkdir(exist_ok=True)
     (root / "src" / "new.py").write_text("y = 1\n")

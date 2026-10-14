@@ -256,6 +256,12 @@ One test that Compass runs against an issue's work and reports as pass, fail or 
 
 **Related:** `guardrail`, `quality-gate`, `evidence`, `obligation`
 
+### checkpoint-outcome
+
+What happened at one checkpoint stage hand-off, recorded in the manifest's `checkpoint_outcomes` as the stage, the outcome, who and when. The outcome is `waited` when a person answered the hand-off with `compass evidence approve --checkpoint`, which also writes a `checkpoint-approval` record holding their answer, or `skipped` when an agent went on because the autonomy setting passed the hand-off, recorded with `compass issue checkpoint add`. A `checkpoint-approval` record clears no gate and no human check. `compass ship-commit` refuses a judged issue that lists a checkpoint with no outcome, and `compass retro --impact` reads the outcomes to report how much work ran without a person.
+
+**Related:** `decision-taken`, `evidence`, `issue`
+
 ### classifier
 
 The component that compares two configurations by their obligations.

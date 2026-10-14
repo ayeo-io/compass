@@ -103,6 +103,12 @@ BASELINE_EVIDENCE_TYPES = {
     # of one document or of a set of decisions. No gate accepts it and
     # `human-approval-present` never reads it, so it cannot clear `G5`.
     "artifact-approval",
+    # Added by autonomy-ratio-and-cost (ADR-063). A person's answer to one
+    # checkpoint hand-off, written only by `compass evidence approve
+    # --checkpoint`. It has no `check` key, no gate accepts it and
+    # `human-approval-present` never reads it, so it cannot clear `G5`; a
+    # separate type keeps that locked check unchanged.
+    "checkpoint-approval",
 }
 
 # The legitimate set of gate names in gate_evidence_requirements after landing.

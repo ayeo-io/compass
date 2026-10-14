@@ -171,6 +171,7 @@ compass spec sync          merge main, resolving only conflicts in the derived l
 compass issue friction     record friction the agent observed, with evidence and a fix
 compass issue decision add record a decision an agent took for the person (--from-ledger reads the requirements review)
 compass issue decision set reopen such a decision; it stays unconfirmed and the checkpoint keeps waiting
+compass issue checkpoint add  record a hand-off the autonomy setting passed (--outcome skipped --by <agent>)
 compass ci                 the full mechanical gate suite, for continuous integration
 compass tdd-red            run a test, assert it FAILS, record the red
 compass tdd-green          run a test, assert it PASSES, record the green
@@ -220,7 +221,7 @@ compass scenario descope   record a failure mode no scenario covers, and why
 compass scenario tests set replace the tests a scenario declares
 compass changed-file add   trace a changed file to the scenario that asked for it
 compass evidence add       append a typed evidence record
-compass evidence approve   record a person's approval of a human check, a document (--artifact) or the decisions agents took (--decisions)
+compass evidence approve   record a person's approval of a human check, a document (--artifact), the decisions agents took (--decisions) or a checkpoint hand-off (--checkpoint)
 compass evidence review    record a judgement against a judged check
 compass terminology        what a term means here, from the frozen vocabulary
 compass quick-fix start    assess, evaluate and record a quick fix in one call

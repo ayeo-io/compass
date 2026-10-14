@@ -142,9 +142,13 @@ The project's `autonomy` setting, read from `compass.yml` (or from
 `.compass/config.yml` in a project without one), decides that list,
 and `compass approach show` shows it. If `refine` is not listed, still
 write the ambiguity ledger and show this hand-off, then say you are going on without
-waiting and name the setting, with "Next" in place of "On approval". Log
-the skipped checkpoint to `devlog.md`, so the person can review it later and
-send the issue back.
+waiting and name the setting, with "Next" in place of "On approval". Record
+the passed hand-off with `compass issue checkpoint add refine --outcome skipped
+--by spec-author`, so the person can review it later and send the issue back. If
+`refine` is listed, wait: the person answers with `compass evidence approve
+--checkpoint refine --approver <name> --role <role>` at a terminal, which records
+the answer. An issue assessed before outcomes were recorded is not judged: both
+commands refuse it and write nothing, so say so and go on.
 
 Before you hand off, run `compass next`. When its first line reads
 `Waiting at the refine checkpoint`, the issue holds decisions that no person has

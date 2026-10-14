@@ -69,6 +69,10 @@ hints:
     new: [issue, render]
     released_in: v5.6.0
     removed_in: 7.0.0
+  - old: [issue, labels, sync]
+    new: [issue, github, sync]
+    released_in: v6.0.0
+    removed_in: 7.0.0
   - old: [policy, effective]
     new: [policy, show]
   - old: [policy, test]

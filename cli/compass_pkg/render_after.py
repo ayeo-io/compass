@@ -1,8 +1,9 @@
 # compass_pkg.render_after - render the documents after a command that changed records
 """The after-command render (ADR-051).
 
-The entry point calls `after_command` after `github_labels.after_command`, for
-every command. When the command exits 0 and is in `record_triggers.RENDER_TRIGGERS`,
+The entry point calls `after_command` after `github_labels.after_command` and
+before `github_page.after_command`, for every command; the page step posts the
+README this step writes. When the command exits 0 and is in `record_triggers.RENDER_TRIGGERS`,
 it renders:
 
 1. the issue the command named, and
@@ -27,7 +28,8 @@ after every command: the suite sets it to `0` and a test of the step sets it to
 `1`. An explicit `compass issue render` ignores it.
 """
 # DEPENDENCY: standard library (os, sys, yaml via compass_pkg.core); compass_pkg.core,
-# record_triggers, render_cmd, project_scan. It imports neither github_labels nor check_cmd.
+# record_triggers, render_cmd, project_scan. It imports neither github_labels, github_page
+# nor check_cmd.
 from __future__ import annotations
 
 import os

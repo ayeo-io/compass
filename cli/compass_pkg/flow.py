@@ -34,6 +34,12 @@ import fnmatch
 import re as _re
 import glob
 from compass_pkg import parse_cache, status_words
+# The completed-and-ships rule and the spec's heading pattern live in
+# shipped_issues, which `compass release notes` reads too without the parse
+# cache. The underscore names stay for the callers and tests that use them.
+from compass_pkg.shipped_issues import (LIVING_SPEC_FILES, ISSUE_HEADING as _ISSUE_HEADING,
+                                        completed_issues, issues_named as _issues_named,
+                                        one_line, ships as _ships)
 from compass_pkg.core import (CompassError, find_compass_dir, find_governance, load_yaml,
                               manifest_path, normalize_spine)
 from compass_pkg.rework import cmd_rework_scan
@@ -701,34 +707,11 @@ def cmd_flow(args):
 #             silent overwrite on next ship.
 #   brand-new project with no landed issues produces a stub file.
 
-# The living spec and its archive, project-relative. Only the derivation
-# writes them, and ship-commit commits them at landing, so they are never
-# one issue's change to trace.
-LIVING_SPEC_FILES = ("docs/system-spec.md", "docs/system-spec-archive.md")
-
 _DERIVED_HEADER = (
     "<!-- DERIVED FILE - do not hand-edit; `compass _derive-system-spec` "
     "rebuilds it from the scenarios in each completed issue's manifest.yml - "
     "edit the scenario there and in the issue's acceptance-criteria.md -->"
 )
-
-# Specs written before 2.0.0 label the source with the retired word for an
-# issue; both labels name an issue, and a spec from either release must keep
-# every issue it names. The old word is assembled, as `MANIFEST_NAMES` in
-# core.py does, so the vocabulary scan does not read it as current prose.
-_SOURCE_LABELS = "(?:issue|" + "ta" + "sk)"
-_SOURCE_ISSUE = re.compile(r"\*\*Source " + _SOURCE_LABELS + r":\*\* `([^`]+)`")
-# The current layout names an issue in its heading, "### <slug> (completed
-# <date>)". A spec derived before 6.0.0 says "landed" where this says
-# "completed", and a branch can hold both until its next derivation rewrites
-# every heading, so the reader accepts either word.
-_ISSUE_HEADING = re.compile(r"^### (\S+) \((?:landed|completed) [0-9-]*\)$", re.M)
-
-
-def _issues_named(text):
-    """Every issue a derived spec names, in the current or the older layout."""
-    return set(_SOURCE_ISSUE.findall(text)) | set(_ISSUE_HEADING.findall(text))
-
 
 def _completed_on_this_branch(project_root, landed):
     """The completed issues that belong to the branch being derived (ADR-034).
@@ -768,16 +751,6 @@ def _completed_on_this_branch(project_root, landed):
         return landed
 
 
-def _ships(task):
-    """True when the issue's approach ships. Only the spike does not: the same
-    fact `obligations.EVALUATOR_APPROACHES` and the generated views hold, and
-    a layer cannot change it. This module reads the constant and not the
-    table, because only the classifier, the effective view and the replay may
-    import the obligations module. An approach the table does not name ships,
-    as it did when every completed issue fed the spec."""
-    return task.get("delivery_approach") != APPROACH_SPIKE
-
-
 def derive_system_spec(project_root: str) -> None:
     """Derive docs/system-spec.md from all landed manifest.yml files.
 
@@ -799,35 +772,10 @@ def derive_system_spec(project_root: str) -> None:
     # Walk .compass/work/*/manifest.yml; keep only completed issues.
     # Issues without a `status` field (schema 1.0) are in flight.
     # Process order: land_timestamp ascending, then issue slug ascending.
-    landed = []  # list of dicts: {slug, task_dir, issue, land_timestamp}
-    completed = []  # the same, for every completed issue, spikes included
-    if os.path.isdir(compass_work):
-        for slug in sorted(os.listdir(compass_work)):
-            task_dir = os.path.join(compass_work, slug)
-            yml_path = manifest_path(task_dir)
-            if not os.path.isfile(yml_path):
-                continue
-            try:
-                with open(yml_path, encoding="utf-8") as fh:
-                    task = normalize_spine(yaml.safe_load(fh) or {})
-            except yaml.YAMLError:
-                continue
-            if not isinstance(task, dict):
-                continue
-            if not status_words.is_completed(task):
-                continue
-            land_ts = task.get("land_timestamp", "")
-            item = {
-                "slug": slug,
-                "task_dir": task_dir,
-                "issue": task,
-                "land_timestamp": str(land_ts) if land_ts else "",
-            }
-            completed.append(item)
-            # A spike is completed too, and records what was learned. It
-            # ships nothing, so it adds no scenario to the spec.
-            if _ships(task):
-                landed.append(item)
+    # A spike is completed too, and records what was learned. It ships
+    # nothing, so it adds no scenario to the spec.
+    completed = completed_issues(project_root)  # every completed issue, spikes included
+    landed = [item for item in completed if item["ships"]]
 
     # Sort: land_timestamp ascending, issue slug as tiebreaker
     landed.sort(key=lambda x: (x["land_timestamp"], x["slug"]))
@@ -909,11 +857,19 @@ def derive_system_spec(project_root: str) -> None:
         by_issue: dict = {}
         for entry in current.values():
             by_issue.setdefault(entry["slug"], []).append(entry)
+        release_lines = {item["slug"]: item["issue"].get("release_note")
+                         for item in landed}
         for slug, entries in by_issue.items():
             lines += [f"### {slug} (completed {entries[0]['land_date']})", ""]
+            # The release line is the first text under the heading, as a
+            # paragraph so it does not read as a scenario line. An issue with
+            # none prints exactly what it did before the line existed.
+            release_line = one_line(release_lines.get(slug)).strip()
+            if release_line:
+                lines += [release_line, ""]
             for entry in entries:
                 # A title is one line; spacing inside a line is kept as written.
-                title = " ".join(str(entry["scn_title"] or "").splitlines())
+                title = one_line(entry["scn_title"])
                 lines.append(f"- `{entry['scn_id']}` {title}".rstrip())
             lines.append("")
     else:

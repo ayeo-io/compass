@@ -3879,7 +3879,7 @@
 - `IPG-26` Every form found in review is refused, and a published link still posts
 - `IPG-27` An encoded space or plus in an ignored file's name refuses the post
 
-### project-readiness-caps-autonomy (completed 2026-10-13)
+### project-readiness-caps-autonomy (completed 2026-10-14)
 
 - `PRC-1` The four new project commands are read like test_command
 - `PRC-2` A readiness signal whose command is not declared reads as absent

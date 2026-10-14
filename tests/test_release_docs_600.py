@@ -134,17 +134,33 @@ def _verb_missing(words):
     return not (ok_one and "{" not in out)
 
 
+def _removed_later(words):
+    """True when a hint row in cli/aliases.yml records that a release held this
+    spelling and a later release removed it: release notes keep naming such a verb."""
+    import yaml
+    table = yaml.safe_load(_read("cli/aliases.yml"))
+    return any(row.get("removed_in") and row["old"][:len(words)] == words
+               for row in table.get("hints") or [])
+
+
+def _missing(verbs):
+    return [" ".join(v) for v in verbs if _verb_missing(v) and not _removed_later(v)]
+
+
 def test_the_6_0_0_entry_names_only_verbs_the_cli_has():
     entry = _section(_read("docs/releasing.md"), "What changed at 6.0.0")
     verbs = [v.split() for v in _named_verbs(entry)]
     assert len(verbs) >= 8, verbs
-    missing = [" ".join(v) for v in verbs if _verb_missing(v)]
+    missing = _missing(verbs)
     assert not missing, f"the entry names verbs the CLI lacks: {missing}"
 
 
 def test_the_verb_check_fails_on_a_verb_the_cli_lacks():
     assert _verb_missing(["policy", "no-such-verb"])
     assert "policy update" in _named_verbs("`compass policy update` moves")
+    # A removed verb with its hint row passes; an unknown verb still fails.
+    assert _missing([["issue", "labels"]]) == []
+    assert _missing([["issue", "no-such-verb"]]) == ["issue no-such-verb"]
 
 
 # --- Plugin instructions read the shipped governance from the plugin ----------

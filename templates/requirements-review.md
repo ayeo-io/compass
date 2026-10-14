@@ -17,8 +17,8 @@ resolution → who decided → what it changed.
 
 # Requirements review - {{ISSUE_SLUG}}
 
-> **Date:** {{DATE}}
-> **Requirements review weight (from delivery-approach.md):** {{lightweight pass \| thorough pass}}
+<!-- compass:render document-header -->
+<!-- /compass:render -->
 
 ---
 

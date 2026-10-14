@@ -120,16 +120,16 @@ The table below is generated from the catalogue by `compass _derive-glossary`, w
 
 Headings of each kind, in order:
 
-- `delivery-approach`, thorough: 1. The assessment; 2. The composed candidate; 3. Policy rules that fired; 4. The final delivery approach; 5. The de-scope ledger; 6. Owed follow-ups; 7. Human overrides; 8. Confirmation
-- `delivery-approach`, lightweight: 1. The assessment; 3. Policy rules that fired; 4. The final delivery approach; 5. The de-scope ledger
+- `delivery-approach`, thorough: The assessment; The composed candidate; Policy rules that fired; The final delivery approach; The de-scope ledger; Owed follow-ups; Human overrides; Confirmation
+- `delivery-approach`, lightweight: The assessment; Policy rules that fired; The final delivery approach; The de-scope ledger
 - `verification-note`, lightweight: no heading (one rendered block)
-- `acceptance-criteria`, thorough: Summary; How each role reads this file; Intent links; Scenario group <letter> - <name>; Failure-mode scenarios; Coverage ledger
-- `acceptance-criteria`, lightweight: Summary; Intent links; Scenario group <letter> - <name>; Coverage ledger
-- `technical-design`, thorough: 1. Approach; 6. Design decisions (ADR-style); 7. Governance check; 8. Work units; Gate
-- `technical-design`, lightweight: 1. Approach; 6. Design decisions (ADR-style); 7. Governance check; Gate
-- `distribution-map`, thorough: 1. Work units; 2. Independence analysis; 3. Scenario-group → subtask mapping; 4. Proposed worktree orchestration; 5. The cap that applies; Gate
-- `distribution-map`, lightweight: 1. Work units; 2. Independence analysis; 3. Scenario-group → subtask mapping; Gate
-- `verification-report`, thorough: 1. Scenario acceptance results; 2. Test suite evidence; 3. Review dimensions; 4. Gate decision; 5. Failure modes de-scoped at define; 6. Decisions taken for the user; Gate
+- `acceptance-criteria`, thorough: Summary; Intent links; Scenario group <letter> - <name>; Failure-mode scenarios; Non-functional requirements; Coverage ledger
+- `acceptance-criteria`, lightweight: Summary; Intent links; Scenario group <letter> - <name>; Non-functional requirements; Coverage ledger
+- `technical-design`, thorough: Approach; Design decisions (ADR-style); Data and interfaces; Verification plan; Risks and dependencies; Governance check; Work units; Gate
+- `technical-design`, lightweight: Approach; Design decisions (ADR-style); Data and interfaces; Verification plan; Risks and dependencies; Governance check; Gate
+- `distribution-map`, thorough: Work units; Independence analysis; Scenario-group → subtask mapping; Proposed worktree orchestration; The cap that applies; Gate
+- `distribution-map`, lightweight: Work units; Independence analysis; Scenario-group → subtask mapping; Gate
+- `verification-report`, thorough: Scenario acceptance results; Test suite evidence; Review dimensions; Gate decision; Failure modes de-scoped at define; Decisions taken for the user; Gate
 - `intent`, thorough: Problem; Desired outcome; Success signals; Constraints; Non-goals; Internal FAQ; Affected roles; Intent-fidelity check (filled at the pre-plan gate)
 - `requirements-review`, thorough: Self-QA of the spec; Governance QA of the spec; Ambiguity ledger; Gate
 - `threat-model`, thorough: What are we working on?; What can go wrong?; What are we going to do about it?; Did we do a good enough job?

@@ -32,6 +32,9 @@ OPTIONAL_MARKER = "<!-- compass:optional -->"
 OPTIONAL_LABEL = " (optional)"
 
 _PLACEHOLDER = re.compile(r"\{\{.*?\}\}|<[^<>]*>")
+#: A leading section number such as `1. `, `5a. ` or `4b `. At most two digits, so a heading
+#: that starts with a year is not changed.
+_SECTION_NUMBER = re.compile(r"^\d{1,2}[a-z]?\.?\s+")
 
 
 def kinds():
@@ -46,8 +49,12 @@ def render(text, view, kind):
 
 def same_heading(a, b):
     """Whether two headings are one: a `{{...}}` token of a template and a
-    `<...>` token of the catalogue each stand for one placeholder."""
-    return _PLACEHOLDER.sub("<>", a).strip() == _PLACEHOLDER.sub("<>", b).strip()
+    `<...>` token of the catalogue each stand for one placeholder, and a leading
+    section number is not part of the words. An issue stored before the headings lost
+    their numbers lists `1. Approach`; the template holds `Approach`."""
+    def plain(heading):
+        return _SECTION_NUMBER.sub("", _PLACEHOLDER.sub("<>", heading).strip())
+    return plain(a) == plain(b)
 
 
 class Template:

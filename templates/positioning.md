@@ -15,8 +15,8 @@ the point.
 
 # Positioning - {{ISSUE_SLUG}}
 
-> **Author:** {{PRODUCT MARKETER NAME}} · **Date:** {{DATE}}
-> **Governance owner check:** consistent with the voice & positioning strategies in `governance/strategies.md`.
+<!-- compass:render document-header -->
+<!-- /compass:render -->
 
 ---
 

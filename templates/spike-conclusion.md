@@ -6,7 +6,8 @@ Fill every {{PLACEHOLDER}}.
 
 # Spike conclusion - {{ISSUE_SLUG}}
 
-> **Date:** {{DATE}}
+<!-- compass:render document-header -->
+<!-- /compass:render -->
 
 ## Question
 

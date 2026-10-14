@@ -12,14 +12,12 @@ evidence block is an automatic fail.
 
 # Verification Report - {{ISSUE_SLUG}}
 
-> **Date:** {{DATE}}
-> **Agents:** `verifier`, `reviewer`{{, `product-marketer` if the claims dimension applies}}
-> **Approach (from delivery-approach.md):** {{reference shape}} · **Gate count:** {{1 \| 2 \| all}}
-> **Orchestration:** {{solo \| pair \| multiagent orchestration - verifies per subtask, then combined}}
+<!-- compass:render document-header -->
+<!-- /compass:render -->
 
 ---
 
-## 1. Scenario acceptance results
+## Scenario acceptance results
 
 <!-- Written by `compass issue render` from the scenarios and the red, green and acceptance
      records in the manifest, with the failure modes de-scoped at define. Do not edit between
@@ -28,7 +26,7 @@ evidence block is an automatic fail.
 <!-- compass:render coverage -->
 <!-- /compass:render -->
 
-## 2. Test suite evidence
+## Test suite evidence
 
 <!-- LINKED, NOT REPRODUCED. The run itself lives in an evidence record that
      `compass tdd-green` wrote; this section gives the command, the headline
@@ -50,7 +48,7 @@ evidence block is an automatic fail.
 **Coverage (against the "Tested before it lands" guardrail's floor, `G1`):**
 {{e.g. 87.4% lines, floor 80% - record: `evidence/{{coverage.json}}`}}
 
-## 3. Review dimensions
+## Review dimensions
 
 <!-- Apply each dimension delivery-approach.md lists. correctness, governance,
      traceability are ALWAYS on for delivery work - they are the default
@@ -71,7 +69,7 @@ evidence block is an automatic fail.
 
 | Dimension | Applies on this delivery approach? | Result | Assessed by | Evidence |
 |---|---|---|---|---|
-| correctness | always | {{PASS \| FAIL}} | {{reviewer \| name \| author}} | {{every scenario in §1 passes}} |
+| correctness | always | {{PASS \| FAIL}} | {{reviewer \| name \| author}} | {{every scenario in the Scenario acceptance results passes}} |
 | governance | always | {{PASS \| FAIL}} | {{…}} | {{honours governance/ - guardrails clear with evidence, strategy deviations recorded; cite checks}} |
 | traceability | always | {{PASS \| FAIL}} | {{…}} | {{code→scenario→intent and claim→scenario chains intact}} |
 | regression | {{yes / no}} | {{PASS \| FAIL \| n/a}} | {{…}} | {{nothing that was passing before now fails - link the record}} |
@@ -79,7 +77,7 @@ evidence block is an automatic fail.
 | clarity | {{yes / no}} | {{PASS \| FAIL \| n/a}} | {{…}} | {{a future reader can follow it}} |
 | claims | {{if role / yes}} | {{PASS \| FAIL \| n/a}} | {{…}} | {{see launch-readiness.md - every claim traces to a passing scenario}} |
 
-## 4. Gate decision
+## Gate decision
 
 <!-- A gate passes only with evidence. The block lists every gate the issue runs, from the
      manifest, written by `compass issue render`. -->
@@ -94,13 +92,13 @@ evidence block is an automatic fail.
 
 **If FAIL - disposition:** {{"fix and re-check" \| "sent back to the define stage: scenarios TRC-… are uncoverable because …"}}
 
-## 5. Failure modes de-scoped at define
+## Failure modes de-scoped at define
 
 <!-- Each entry in the manifest's `failure_modes_descoped`, recorded with
-     `compass scenario descope`, is listed under the coverage block in section 1:
+     `compass scenario descope`, is listed under the coverage block in the Scenario acceptance results:
      the mode and why no scenario covers it. -->
 
-## 6. Decisions taken for the user
+## Decisions taken for the user
 
 <!-- Written by `compass issue render` from the decisions an agent took for the person
      (`compass issue decision add`) and the reassessments in the manifest. -->

@@ -548,7 +548,7 @@ def test_acf_6(tmp_path):
         _canon(h) for h in entry["sections"]["lightweight"]]
     assert "(optional)" not in light
     # The template's prose sits under its heading.
-    assert "## 1. Approach" in light and "{{APPROACH}}" in light.split("## 1. Approach", 1)[1]
+    assert "## Approach" in light and "{{APPROACH}}" in light.split("## Approach", 1)[1]
     assert "{{APPROACH}}" in text
     code, thorough, err = _template_show(root, "technical-design", "--depth", "thorough")
     assert code == 0, err
@@ -597,13 +597,13 @@ def test_acf_8(tmp_path):
     found = _heading_problems(copy, catalogue)
     assert any("verification-report thorough" in p and "An extra heading" in p
                for p in found), found
-    report.write_text(original.replace("## 2. Test suite evidence\n", "", 1), encoding="utf-8")
+    report.write_text(original.replace("## Test suite evidence\n", "", 1), encoding="utf-8")
     found = _heading_problems(copy, catalogue)
-    assert any("verification-report thorough" in p and "2. Test suite evidence" in p
+    assert any("verification-report thorough" in p and "Test suite evidence" in p
                for p in found), found
     lines = original.split("\n")
-    a = lines.index("## 1. Scenario acceptance results")
-    b = lines.index("## 2. Test suite evidence")
+    a = lines.index("## Scenario acceptance results")
+    b = lines.index("## Test suite evidence")
     lines[a], lines[b] = lines[b], lines[a]
     report.write_text("\n".join(lines), encoding="utf-8")
     found = _heading_problems(copy, catalogue)
@@ -618,7 +618,9 @@ def test_acf_60(tmp_path):
     text = (TEMPLATES / "technical-design.md").read_text(encoding="utf-8")
     heads = _template_headings(text)
     optional = [h for h, marked in heads if marked]
-    assert [h.split(".")[0].split(" ")[0] for h in optional] == ["0", "2", "3", "4", "5", "5a"]
+    assert optional == ["Summary", "Interaction - sequence diagram",
+                        "Structure - what talks to what", "Design patterns invoked",
+                        "The shape of the change", "Cross-cutting concerns"]
     assert [h for h, marked in heads if not marked] == catalogue["technical-design"][
         "sections"]["thorough"]
     assert [h for h, marked in _template_headings(
@@ -641,10 +643,10 @@ def test_acf_60(tmp_path):
     copy = tmp_path / "templates"
     shutil.copytree(TEMPLATES, copy)
     path = copy / "technical-design.md"
-    path.write_text(text.replace("## 1. Approach\n", "## 1. Approach\n" + OPTIONAL + "\n", 1),
+    path.write_text(text.replace("## Approach\n", "## Approach\n" + OPTIONAL + "\n", 1),
                     encoding="utf-8")
     found = _heading_problems(copy, catalogue)
-    assert any("technical-design" in p and "1. Approach" in p and "optional and listed" in p
+    assert any("technical-design" in p and "Approach" in p and "optional and listed" in p
                for p in found), found
 
 
@@ -1556,8 +1558,8 @@ def _without_comments(text):
 def test_acf_34():
     from compass_pkg import block_renderers, rendered_blocks
     text = _template("delivery-approach.md")
-    sections = {"## 1. ": "assessment", "## 3. ": "policy-rules",
-                "### 4a. ": "stage-weights", "### 4b. ": "gate-set"}
+    sections = {"## The assessment": "assessment", "## Policy rules that fired": "policy-rules",
+                "### Per-stage weight": "stage-weights", "### Gate set": "gate-set"}
     for heading, kind in sections.items():
         body = _section(text, heading)
         found = [b.kind for b in rendered_blocks.parse(body).blocks]

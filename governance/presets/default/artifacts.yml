@@ -16,19 +16,19 @@ artifacts:
     stands_for: project-plan
     sections:
       lightweight:
-      - 1. The assessment
-      - 3. Policy rules that fired
-      - 4. The final delivery approach
-      - 5. The de-scope ledger
+      - The assessment
+      - Policy rules that fired
+      - The final delivery approach
+      - The de-scope ledger
       thorough:
-      - 1. The assessment
-      - 2. The composed candidate
-      - 3. Policy rules that fired
-      - 4. The final delivery approach
-      - 5. The de-scope ledger
-      - 6. Owed follow-ups
-      - 7. Human overrides
-      - 8. Confirmation
+      - The assessment
+      - The composed candidate
+      - Policy rules that fired
+      - The final delivery approach
+      - The de-scope ledger
+      - Owed follow-ups
+      - Human overrides
+      - Confirmation
     depends_on: []
     every_approach: true
   verification-note:
@@ -53,13 +53,14 @@ artifacts:
       - Summary
       - Intent links
       - Scenario group <letter> - <name>
+      - Non-functional requirements
       - Coverage ledger
       thorough:
       - Summary
-      - How each role reads this file
       - Intent links
       - Scenario group <letter> - <name>
       - Failure-mode scenarios
+      - Non-functional requirements
       - Coverage ledger
     depends_on: []
   technical-design:
@@ -70,15 +71,21 @@ artifacts:
     stands_for: hld
     sections:
       lightweight:
-      - 1. Approach
-      - 6. Design decisions (ADR-style)
-      - 7. Governance check
+      - Approach
+      - Design decisions (ADR-style)
+      - Data and interfaces
+      - Verification plan
+      - Risks and dependencies
+      - Governance check
       - Gate
       thorough:
-      - 1. Approach
-      - 6. Design decisions (ADR-style)
-      - 7. Governance check
-      - 8. Work units
+      - Approach
+      - Design decisions (ADR-style)
+      - Data and interfaces
+      - Verification plan
+      - Risks and dependencies
+      - Governance check
+      - Work units
       - Gate
     depends_on: []
   distribution-map:
@@ -90,16 +97,16 @@ artifacts:
     stands_for: work-breakdown
     sections:
       lightweight:
-      - 1. Work units
-      - 2. Independence analysis
-      - 3. Scenario-group → subtask mapping
+      - Work units
+      - Independence analysis
+      - Scenario-group → subtask mapping
       - Gate
       thorough:
-      - 1. Work units
-      - 2. Independence analysis
-      - 3. Scenario-group → subtask mapping
-      - 4. Proposed worktree orchestration
-      - 5. The cap that applies
+      - Work units
+      - Independence analysis
+      - Scenario-group → subtask mapping
+      - Proposed worktree orchestration
+      - The cap that applies
       - Gate
     depends_on: []
     required_when:
@@ -113,12 +120,12 @@ artifacts:
     stands_for: test-report
     sections:
       thorough:
-      - 1. Scenario acceptance results
-      - 2. Test suite evidence
-      - 3. Review dimensions
-      - 4. Gate decision
-      - 5. Failure modes de-scoped at define
-      - 6. Decisions taken for the user
+      - Scenario acceptance results
+      - Test suite evidence
+      - Review dimensions
+      - Gate decision
+      - Failure modes de-scoped at define
+      - Decisions taken for the user
       - Gate
     depends_on: []
   intent:

@@ -257,10 +257,13 @@ RENDERERS = {
 
 
 def _add_modules():
-    from compass_pkg import approach_blocks, issue_page, project_index
+    from compass_pkg import (approach_blocks, dependencies_block, header_block, issue_page,
+                              project_index)
     RENDERERS.update(approach_blocks.RENDERERS)
     RENDERERS.update(issue_page.RENDERERS)
     RENDERERS.update(project_index.RENDERERS)
+    RENDERERS.update(header_block.RENDERERS)
+    RENDERERS.update(dependencies_block.RENDERERS)
 
 
 _add_modules()

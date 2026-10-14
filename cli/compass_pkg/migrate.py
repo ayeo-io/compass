@@ -390,17 +390,24 @@ def cmd_migrate(args):
     # Checked before anything is read, let alone written. A refusal that
     # arrives after the first directory has moved has protected nothing.
     if apply_mode and not getattr(args, "i_have_a_copy", False):
+        # Both folders are asked, so one refusal names every copy a person must
+        # take. Naming only the first would send them back with a copy of one.
+        lost = []
         recoverable, why = _work_root_is_recoverable(root)
-        folder = root
-        if recoverable:
-            recoverable, why, folder = _docs_are_recoverable(root)
         if not recoverable:
+            lost.append((why, root))
+        recoverable, why, folder = _docs_are_recoverable(root)
+        if not recoverable:
+            lost.append((why, folder))
+        if lost:
             raise CompassError(
                 "this would change records that cannot be put back: %s.\n\n"
-                "Nothing was changed. Take a copy first:\n"
-                "    cp -R %s <somewhere outside the repository>\n\n"
+                "Nothing was changed. Take a copy first:\n%s\n\n"
                 "then re-run with --i-have-a-copy. The flag says you have "
-                "the copy; it does not switch the check off." % (why, folder))
+                "the copy; it does not switch the check off." % (
+                    "; and ".join(why for why, _f in lost),
+                    "\n".join("    cp -R %s <somewhere outside the repository>" % folder
+                              for _why, folder in lost)))
     dirs = [e for e in sorted(os.listdir(root))
             if os.path.isdir(os.path.join(root, e))]
 
@@ -815,10 +822,25 @@ def _move_note(move, would):
         "renamed" if move.renamed else "moved", move.old_rel.rsplit("/", 1)[1], move.new_rel, label)
 
 
+def _rekind_note(rekind, would):
+    """One line for an entry the 6.x migrate registered under a filename stem."""
+    if rekind.merged:
+        # The dry run and the apply print this one line, so the dry run says exactly
+        # what the apply keeps and drops. A dropped approval is always named.
+        return "%s the registry entry %s (%s) into %s (%s), keeping %s; dropping %s" % (
+            "would merge" if would else "merged", rekind.old_kind, rekind.entry_id,
+            rekind.label, rekind.held_id, rekind.kept, rekind.dropped)
+    return "%s the registry entry %s (%s) to %s, keeping its id, status and approval" % (
+        "would re-point" if would else "re-pointed", rekind.old_kind, rekind.entry_id,
+        rekind.label)
+
+
 def _plan_problems(plan, problems):
     """What a person must look at, one line each. The same on a dry run and an apply."""
     if problems is None:
         return
+    for line in plan.rekind_problems:
+        problems.append("%s: %s" % (plan.slug, line))
     for where, name in plan.unmapped:
         problems.append("%s: %s (%s) is unmapped - no row of the mapping table names it, so it "
                         "was left where it is" % (plan.slug, name, where))
@@ -845,9 +867,10 @@ def _make_plan(task_dir):
 def plan_relocations(task_dir, problems=None, totals=None):
     """Dry-run notes for the relocation half. Writes nothing."""
     plan = _make_plan(task_dir)
-    data = migrate_kinds.load_manifest(task_dir)
+    data = dict(migrate_kinds.load_manifest(task_dir) or {}, artifacts=plan.registry_after or [])
     counted = [m for m in plan.moves if m.moves or _needs_register(data, m)]
-    notes = [_move_note(m, True) for m in counted]
+    notes = [_rekind_note(r, True) for r in plan.rekinds]
+    notes += [_move_note(m, True) for m in counted]
     notes += [note for _m, note in plan.both_places]
     for _id, old, new in plan.repoints:
         notes.append("would re-point the registry entry %s to %s" % (old, new))
@@ -891,6 +914,13 @@ def relocate_documents(task_dir, problems=None, totals=None):
     data = migrate_kinds.load_manifest(task_dir)
     if data is None:
         return notes
+    if plan.rekinds:
+        entries = data.get("artifacts")
+        done, _problems = migrate_kinds.rekind_entries(
+            entries, plan.moves + [m for m, _note in plan.both_places], project,
+            migrate_kinds.shipped_catalogue())
+        notes.extend(_rekind_note(r, False) for r in done)
+        _write_manifest_data(manifest, data)
     if plan.repoints or plan.dropped:
         wanted = {entry_id: (old, new) for entry_id, old, new in plan.repoints}
         kept = []

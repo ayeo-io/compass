@@ -24,7 +24,7 @@ Stage commands now write the status of each registered document. A document that
 
 ### What to do
 
-1. Run `compass issue migrate` for a dry run of the archive changes, then `compass issue migrate --apply --i-have-a-copy` after you copy `.compass/work`.
+1. Run `compass issue migrate` for a dry run of the archive changes, then `compass issue migrate --apply --i-have-a-copy` after you copy `.compass/work` and `docs/compass` to a folder outside the project.
 2. Open issues gain the `artifacts-approved` check at their next `compass approach evaluate --write`. Until then `compass check` and `compass ship-commit` do not run it for them.
 3. Do not run a 6.x CLI on a 7.0.0 tree.
 
@@ -67,7 +67,7 @@ Compass now writes the status, ticks and counts in an issue's documents from the
 
 ### What `compass issue migrate` does
 
-`compass issue migrate` (a dry run) lists, for each issue, what it would write. `--apply` writes it, and needs `--i-have-a-copy` where git does not track the work root. It only adds lines and records:
+`compass issue migrate` (a dry run) lists, for each issue, what it would write. `--apply` writes it, and needs `--i-have-a-copy` where git does not track the work root or `docs/compass`. It only adds lines and records:
 
 1. It inserts an empty `dod` marker pair after the Definition of Done section of the verification report, and moves the report's registry digest so it keeps its status.
 2. It writes `meets`, `defers` and `page_ticks` records from the boxes of that section. A tag naming an id the manifest does not hold, or evidence of a type the list does not accept, writes no record. The item stays open and the report names the issue, the item and the id. A ticked box becomes a page tick, which counts as met on the page and is never a person's approval for `G5`.
@@ -133,7 +133,7 @@ For each issue, in this order:
 
 1. It plans every move first. Two plain review files that claim one round stop that issue: it is left byte for byte as it was, and the report names it. The other issues go on.
 2. It sets the generated page aside, renames the filenames earlier releases retired and brings the manifest keys up to date, as before.
-3. It re-points a registered `design` to `technical-design` and `prd` to `intent`, keeping each entry's id, status and path. It removes the `recommendation` entry and leaves its file.
+3. It re-points a registered `design` to `technical-design` and `prd` to `intent`, keeping each entry's id, status and path. It removes the `recommendation` entry and leaves its file. An entry the 6.x migrate registered under a review filename (`review` with no round, `review-2`, `integrated-review-3`) becomes the round its file becomes, keeping its id, status and approval. Where that round is already registered, by an earlier 7.0.0 run, the two entries become one, so each file keeps one entry. The merged entry keeps the later approval and the id of the entry that held it. When only one entry is approved, it keeps that approval and id. When neither is, it keeps the old entry's id and status. The dry run and the apply name the id and approval kept and the id and approval dropped. An entry whose file is gone and that no document maps to is left, and the report says what to do.
 4. It registers each document it moves before it moves it, the delivery-approach record first and then each review round in order. A file named for a kind is registered under that kind, unless the kind is already registered at another file that exists: that path is kept, the file is left where it is, and the report names both. A review round is renamed `review-<n>.md`: a plain `review-<n>` keeps its number, a bare `review` is round 1 when that is free, and the other review names (`verify-*`, `integrated-review-*`, `security-review`, `review-claims`) take the next free numbers.
 5. It rewrites each manifest path that named a moved file: evidence, subtasks and gate evidence.
 6. It removes the compatibility pointer beside the manifest when the registered record exists. A file there without the pointer's marker line is left and reported.
@@ -144,7 +144,7 @@ Then the steps of the rendered-blocks section above run: the Definition of Done 
 
 The dry run lists each move, rename, registration, re-point, pointer removal and stub rename, then the totals: documents by target kind, files left on the not-an-artifact list, unmapped files, pointers to remove and maps to rename. It writes nothing. A second `--apply` reports nothing to do. A migrate stopped part way finishes on the next `--apply`, and every issue stays workable in between, because the registry names the new path before the file moves.
 
-**Copy first.** `--apply` renames files in `docs/compass/` as well as `.compass/work/`. Where git does not track either folder, it refuses without `--i-have-a-copy`, naming the folder. Nothing a person wrote is deleted: renames and moves keep the bytes, and the two things removed (each pointer and the one `recommendation` entry) are in your copy.
+**Copy first.** `--apply` renames files in `docs/compass/` as well as `.compass/work/`. Where git does not track a folder, it refuses without `--i-have-a-copy`, naming every folder it cannot restore in one refusal. Nothing a person wrote is deleted: renames and moves keep the bytes, and the three things removed are in your copy: each pointer, the one `recommendation` entry, and a registry entry that merges into another entry for the same file. A merged entry can hold an older approval; the migrate keeps the newer approval and names the dropped entry's id and approval in its report, in the dry run as well as the apply.
 
 ### What to do
 

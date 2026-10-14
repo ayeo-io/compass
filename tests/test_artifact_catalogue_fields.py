@@ -1805,7 +1805,8 @@ def test_acf_39(tmp_path):
     assert "1 of 1 met" in shown and "met by EV-PLAN" in shown, shown
 
 
-ASSESS_TEXTS = ("approaches/assess-procedure.md", "agents/router.md", "commands/assess.md")
+ASSESS_TEXTS = ("approaches/assess-procedure.md", "agents/router.md", "commands/assess.md",
+                "skills/adaptive-routing/SKILL.md")
 
 
 def test_acf_64():

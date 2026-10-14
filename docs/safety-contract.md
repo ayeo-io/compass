@@ -63,6 +63,14 @@ Human approvals are needed for:
 
 The evidence records the approver, role, decision, time, scope and conditions.
 
+Only a `human-approval` record given for guardrail `G5` meets this approval. A
+record that names another subject - a `check`, `waiver`, `checkpoint`,
+`artifact` or `decisions` key, or a `guardrail` other than exactly `G5` - was
+given for that subject and is set aside. A person records the sign-off at a
+terminal with `compass evidence approve --guardrail` and the value `G5`,
+giving `--approver`, `--role` and `--scope`. A record with no subject key, the form earlier sign-offs use, still counts. A landed issue that the earlier rule passed is
+reported, never failed.
+
 A person's answer to a checkpoint hand-off (`compass evidence approve
 --checkpoint`) is a `checkpoint-approval` record, not a `human-approval`, so it
 never meets this approval.
@@ -430,7 +438,7 @@ project guardrails, provided they preserve this contract.
 | 2 (implemented guardrails) | `compass policy lint` and `compass check` |
 | 3 (typed evidence) | Gate type declarations plus the issue evidence registry |
 | 4 (spike containment) | Routing conflict checks and spike invariants |
-| 5 (human approval) | Structured `human-approval` evidence checked before ship |
+| 5 (human approval) | Structured `human-approval` evidence given for guardrail `G5`, checked before ship |
 | 6 (process-integrity CI) | `compass ci` |
 | 7 (resumable state) | the manifest (`templates/manifest.yml`), its artifacts and evidence under `.compass/` |
 

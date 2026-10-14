@@ -107,3 +107,13 @@ A re-run repairs a tree an earlier 7.0.0 migrate left with stale stem entries.
 - ADR-040: framework constants live in one place.
 - ADR-051: decisions 3 and 16, the archived document and `README.md.v6.bak`.
 - ADR-054: a kind that repeats, keyed by round.
+
+## Amendment (14 October 2026, second)
+
+The merge step of the first amendment changes in two ways:
+
+- **When neither merged entry is approved, the round entry is kept.** Stage exits write status, so
+  the round entry holds the more current status. This replaces "if neither is, the stem entry is
+  kept".
+- **Two entries whose files both exist are not merged.** The report names both files for a person
+  to settle.

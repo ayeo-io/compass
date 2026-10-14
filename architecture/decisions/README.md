@@ -98,6 +98,7 @@ Rules:
 | [ADR-056](ADR-056-the-migrate-maps-documents-by-a-table-and-registers-before-it-moves.md) | The migrate maps documents by a table, renames reviews by a round rule, and registers a document before it moves it | proposed | extends ADR-006 and ADR-020; with ADR-022, ADR-051 and ADR-054 |
 | [ADR-057](ADR-057-derived-views-go-to-github-one-way-behind-a-refusal-check.md) | Derived views go to GitHub one way, behind a refusal check | accepted | with ADR-005, ADR-006, ADR-044 and ADR-051 |
 | [ADR-062](ADR-062-a-dependency-is-a-manifest-field-and-the-block-is-derived.md) | A dependency between issues is a manifest field, and the block it causes is derived | accepted | extends ADR-045 and ADR-052 decisions 2 and 3; narrows ADR-003's follow-on note; with ADR-006, ADR-046 and ADR-048 |
+| [ADR-064](ADR-064-the-document-set-gains-named-sections-and-section-checks-never-judge-an-earlier-catalogue.md) | The document set gains named sections, and the section checks never judge an earlier catalogue | proposed | extends ADR-051 and ADR-053; settles ADR-055 decision 9; with ADR-006, ADR-033, ADR-036, ADR-038 and ADR-050 |
 
 ## Principle → ADR mapping
 

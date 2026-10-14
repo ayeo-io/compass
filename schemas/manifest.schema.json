@@ -126,7 +126,40 @@
     },
     "usage": {
       "type": "object",
-      "description": "Optional. Tokens the session spent in each stage, read from its Claude Code transcript by cli/compass_pkg/session_usage.py: `session`, `source`, `skipped_lines`, and either `stages` (`assess` and `implement` each with requests, subagent_requests, input, output, cache_write, cache_read, cost_usd and optionally shared; `verify` and `ship` as `measured: false` with a reason) or `recorded: false` with a fixed `reason` (not-claude-code, bad-session-id, no-transcript, unreadable, no-start-time). Numbers only; no transcript text."
+      "description": "Optional. Tokens the issue's sessions spent, read from their Claude Code transcripts. A quick fix's block is written by `compass quick-fix finish` (cli/compass_pkg/session_usage.py): `session`, `source`, `skipped_lines`, and either `stages` (`assess` and `implement` each with requests, subagent_requests, input, output, cache_write, cache_read, cost_usd and optionally shared; `verify` and `ship` as `measured: false` with a reason) or `recorded: false` with a fixed `reason`. Every other approach's block is written by `compass ship-commit` (cli/compass_pkg/issue_usage.py) for an issue that holds checkpoint_outcomes: `sessions`, `source`, `skipped_lines`, `total`, `unattributed` and `stages`, each count block holding the same keys, or `recorded: false` with a fixed `reason`. The reasons are the words in session_usage.REASONS. Numbers only; no transcript text or path.",
+      "properties": {
+        "sessions": {
+          "type": "array",
+          "items": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"},
+          "description": "The session ids that worked on the issue, each once. The pre-tool hook appends a session the first time it judges a tool call for the issue; `compass ship-commit` adds the session that runs it."
+        },
+        "total": {
+          "type": "object",
+          "description": "Every request in the issue's span: requests, subagent_requests, input, output, cache_write, cache_read and cost_usd, and shared when another issue's span recording the same session overlaps it."
+        },
+        "unattributed": {
+          "type": "object",
+          "description": "The requests in the span after the last stage end: the same keys as total. The stages and unattributed add up to total."
+        }
+      }
+    },
+    "checkpoint_outcomes": {
+      "type": "array",
+      "description": "Optional. What happened at each checkpoint stage hand-off, one entry per stage: `waited` when a person answered it with `compass evidence approve --checkpoint`, citing the checkpoint-approval record, and `skipped` when an agent recorded that the autonomy setting passed it with `compass issue checkpoint add`. The first assessment of an issue writes it as an empty list; an issue without the key is not judged. Derived figures (bands, ratio) are computed by readers and never stored.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["stage", "outcome", "by", "at"],
+        "properties": {
+          "stage": {"enum": ["assess", "define", "refine", "plan"]},
+          "outcome": {"enum": ["waited", "skipped"]},
+          "by": {"type": "string", "description": "The person who answered (the approver of the record cited), or the agent that went on."},
+          "at": {"type": "string", "description": "ISO 8601: the record's timestamp for waited, else the time of the command."},
+          "evidence": {"type": "string", "description": "For waited: the id of the checkpoint-approval record."}
+        },
+        "if": {"properties": {"outcome": {"const": "waited"}}},
+        "then": {"required": ["evidence"]}
+      }
     },
     "land_commit": {
       "type": "string",
@@ -529,6 +562,7 @@
             "enum": [
               "artifact",
               "artifact-approval",
+              "checkpoint-approval",
               "claim-review",
               "consistency-check",
               "command-output",
@@ -630,6 +664,10 @@
           "stage": {
             "type": "string",
             "description": "For artifact-approval of decisions: the checkpoint stage the issue was at, when it was at one."
+          },
+          "checkpoint": {
+            "type": "string",
+            "description": "For checkpoint-approval: the checkpoint stage whose hand-off the person answered. The record has no check key: it meets no check, never guardrail `G5`, a human check or a waiver."
           }
         }
       }
@@ -1138,6 +1176,22 @@
           }
         }
       }
+    },
+    "readiness": {
+      "type": "object",
+      "required": ["status"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {"enum": ["measured", "not-measured"]},
+        "score": {"type": "integer", "minimum": 0},
+        "signals": {"type": "integer", "minimum": 0},
+        "floor_met": {"type": "boolean"},
+        "absent": {"type": "array", "items": {"type": "string"}},
+        "measured_at": {"type": "string"},
+        "reason": {"enum": ["missing", "stale", "unreadable"]},
+        "detail": {"type": "string"}
+      },
+      "description": "Optional. The repository's readiness when the issue was last assessed, from the per-checkout readiness record (ADR-060). `measured` holds the score, the number of readiness signals, floor_met, the absent signal ids and measured_at; `not-measured` holds a reason of missing, stale or unreadable and a detail. Written by every `compass approach evaluate --write`; it is not part of the generation, so a new measurement never forces a new generation. Absent on an issue assessed before 7.0.0, which reads as not measured."
     },
     "checkpoints": {
       "type": "array",

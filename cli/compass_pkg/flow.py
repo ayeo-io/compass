@@ -425,7 +425,8 @@ def _board_place(out, categories, src, m, today, now, guarded, evidence_state, r
     # module so a test can replace it (ADR-051).
     facts = issue_detail.detail(m, task_dir, read=read)
     state = facts.state
-    row = {"slug": slug, "delivery_approach": approach, "state": state}
+    row = {"slug": slug, "delivery_approach": approach, "state": state,
+           "readiness": facts.readiness}
     # The stored flag's reason first, then what the issue waits for (ADR-062).
     blocked = lifecycle.blocked_text(facts.blocked, facts.waits)
     if blocked:

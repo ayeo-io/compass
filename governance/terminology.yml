@@ -411,6 +411,21 @@ terms:
       the product.
     related: [requirements-review, evidence]
 
+  checkpoint-outcome:
+    means: >
+      What happened at one checkpoint stage hand-off, recorded in the
+      manifest's `checkpoint_outcomes` as the stage, the outcome, who and
+      when. The outcome is `waited` when a person answered the hand-off with
+      `compass evidence approve --checkpoint`, which also writes a
+      `checkpoint-approval` record holding their answer, or `skipped` when an
+      agent went on because the autonomy setting passed the hand-off, recorded
+      with `compass issue checkpoint add`. A `checkpoint-approval` record
+      clears no gate and no human check. `compass ship-commit` refuses a
+      judged issue that lists a checkpoint with no outcome, and
+      `compass retro --impact` reads the outcomes to report how much work ran
+      without a person.
+    related: [decision-taken, evidence, issue]
+
   receipt:
     means: >
       The per-issue proof summary rendered from the manifest and the evidence
@@ -600,10 +615,10 @@ terms:
   # --- Configuration (the configuration vocabulary decision) ----------------
   catalogue:
     means: >
-      One of the eight maps of configuration entries keyed by id:
+      One of the nine maps of configuration entries keyed by id:
       `dimensions`, `stages`, `approaches`, `rules`, `checks`, `gates`,
-      `artifacts` and `vocabulary`. An id is stable; a display name lives in
-      the `vocabulary` catalogue.
+      `artifacts`, `readiness` and `vocabulary`. An id is stable; a display
+      name lives in the `vocabulary` catalogue.
     related: [layer, overlay, generation]
   layer:
     means: >
@@ -670,6 +685,39 @@ terms:
     means: >
       The component that compares two configurations by their obligations.
     related: [obligation, lock]
+
+  # --- Repository readiness (ADR-058 to ADR-061) ----------------------------
+  readiness-signal:
+    means: >
+      One binary fact about a repository, such as "a lint command is declared
+      and exits 0". An entry of the `readiness` catalogue, it is either
+      `present` or `absent` and carries a one-line reason.
+    related: [readiness-floor, readiness-record, catalogue]
+  readiness-floor:
+    means: >
+      The readiness signals whose `required_for_autonomous` is true. A project
+      with every one of them present can run `autonomy: autonomous`.
+    related: [readiness-signal, readiness-summary]
+  readiness-record:
+    means: >
+      The per-checkout file in which a project's readiness measurement is
+      kept: each readiness signal's result and implementation version, when
+      and at which commit it was measured, and the digest of the settings
+      file. Compass never commits it.
+    related: [readiness-signal, readiness-summary]
+  readiness-summary:
+    means: >
+      The `readiness:` key of an issue's manifest, written by every
+      `approach evaluate --write`: the score, whether the floor is met and
+      which signals are absent, or `not-measured` with the reason. It sits
+      outside the generation's digests.
+    related: [readiness-record, readiness-floor]
+  temporary-worktree:
+    means: >
+      The detached Git worktree of HEAD that a readiness measurement creates
+      in the system temp folder to run the project's commands. It is removed
+      when the measurement ends.
+    related: [readiness-record]
 
 # =============================================================================
 # CODES - the id prefixes that appear in artifacts

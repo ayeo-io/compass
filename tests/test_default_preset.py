@@ -375,6 +375,10 @@ def test_dp_1_the_rendered_files_are_what_is_committed():
             wrote = yaml.safe_load(text)
             kept = _adapter_part({"checks": {}, "stages": {}, **yaml.safe_load(committed)})
             assert kept[name[:-4]] == wrote[name[:-4]], name
+        elif name == "readiness.yml":
+            # The adapter takes the readiness signals from this file, so only
+            # the data is compared; the committed file also explains the floor.
+            assert yaml.safe_load(committed) == yaml.safe_load(text), name
         else:
             assert committed == text, name
         assert text.startswith("#"), name

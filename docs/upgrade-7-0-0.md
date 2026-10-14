@@ -170,3 +170,127 @@ The dry run lists each move, rename, registration, re-point, pointer removal and
 | `--depth` | flag of `compass issue template show` | Print the lightweight or thorough skeleton |
 | `--decision`, `--next-issue` | flags of `compass issue artifact set spike-conclusion` | Record how a spike closes |
 | `distribution-map.md.v6.bak` | the documents folder | A stub map the migrate set aside |
+
+## Checkpoint outcomes and usage
+
+Compass now records what happened at each stage hand-off and what each issue cost. The decision is `architecture/decisions/ADR-063-checkpoint-outcomes-and-session-usage-are-stored-and-the-autonomy-and-cost-figures-are-derived.md`, and `docs/autonomy-and-cost.md` owns the facts.
+
+### What changes
+
+- **A person's answer to a hand-off is a record.** `compass evidence approve --checkpoint <stage>` writes a `checkpoint-approval` record and a `waited` outcome. The record is not a `human-approval` record, so it never clears the sign-off of guardrail `G5` or a human check.
+- **An agent records a hand-off that autonomy passed.** `compass issue checkpoint add <stage> --outcome skipped --by <agent>` replaces the devlog line the stage commands asked for.
+- **`compass ship-commit` refuses an unanswered listed checkpoint.** It refuses a judged issue that lists a checkpoint with no outcome, before it writes anything, with the code `checkpoint-no-outcome`. A judged issue is one whose first assessment wrote `checkpoint_outcomes`. An issue assessed before this change is never refused, and no migrate adds the key.
+- **The pre-tool hook records each session.** The first time it judges a tool call for an issue, it appends the session id to `usage.sessions`. It never refuses an edit because of it. Every issue folder gains an empty `.manifest.lock` file.
+- **`compass ship-commit` records usage on every approach but the quick fix.** It reads the full transcripts of the recorded sessions and keeps numbers only. Above 1 GiB of transcript it reads none and records the reason `too-large`.
+- **`compass retro --impact` gains four rows**, the autonomy ratio, the band split, the cost per change and the decisions confirmed, each withheld below its floor. `compass retro --impact --json` and `compass retro --impact --format json` print one object. Before, `--json` printed the report's lines under an `output` key.
+- **`compass issue diagnose` gains a Checkpoints and cost section**, and its last line of what the records cannot show now reads "token use of a session the hook did not record".
+
+### What to do
+
+1. Nothing for issues already assessed. They read, lint and land as before.
+2. Answer each listed hand-off of a new issue with `compass evidence approve --checkpoint <stage>` at a terminal before you ship it.
+3. Add `.manifest.lock` to the `.gitignore` of a project that tracks its issue folders.
+
+## Repository readiness and autonomous work
+
+From 7.0.0 a project on `autonomy: autonomous` must meet the readiness floor before an issue can be assessed. An autonomous project below the floor, or with no fresh readiness record, is refused at `compass approach evaluate --write`, which every assess and reassess runs. The decision is `architecture/decisions/ADR-058-the-readiness-floor-caps-autonomous-work.md`. The facts are in `docs/readiness.md`.
+
+### What breaks
+
+- **An autonomous project below the readiness floor is refused at assess.** `approach evaluate --write` exits 2 and writes nothing. The message names each absent readiness signal with the change that makes it present, and names `autonomy` as the setting to change.
+- **An autonomous project with no fresh readiness record is refused.** The message says whether the record is missing, stale or unreadable, and names `compass readiness`.
+- **An untrusted CI contribution cannot run an autonomous project.** Trust is read from the CI runner's environment before the record, so a record committed with the contribution does not count. No setting changes this. Measuring again does not help, so the message does not ask for it.
+
+### What changes
+
+- **The four required signals** form the floor: `agent-instructions-present`, `build-declared-and-succeeds`, `tests-declared-and-under-two-minutes` and `lint-declared-and-clean`. The floor is met when each is present.
+- **`compass readiness`** measures the repository against eleven readiness signals and writes `.compass/readiness.yml`. `compass readiness --fix-list` lists the absent ones, those on the floor first, with the change for each.
+- **Six optional project keys** in `compass.yml`: `project.lint_command`, `project.format_check_command`, `project.build_command` and `project.typecheck_command`, which `compass readiness` runs, and `project.secret_scan` and `project.structured_logging`, which it only reads.
+- **The readiness line.** Every `approach evaluate --write` records the repository's readiness in the manifest's `readiness:` key, outside the generation, so a new measurement never forces a new generation. On an autonomous project below the floor, or with no fresh record, a session starts with one warning line. The session is never blocked.
+- **The floor is not a guardrail.** No gate, routing rule or `compass check` result names a readiness signal.
+
+### Who is never refused
+
+- A project on `balanced` or `controlled`. Its manifest records the readiness summary, or "not measured", and nothing else changes.
+- A project with no settings file, because `autonomy` defaults to `balanced`.
+- An issue whose own `config:` sets `autonomy: balanced` or `controlled`, even on an autonomous project.
+
+`balanced` and `controlled` are never refused.
+
+### The readiness record
+
+- It is per checkout and never committed. A fresh clone has none. Add `/.compass/readiness.yml` to `.gitignore`.
+- It goes stale when the settings file changes, when a readiness signal's implementation version changes, after seven days, or once HEAD is more than 25 commits past the commit it measured.
+- It is a plain file a person can edit, as the project commands themselves are. The floor is a guard against an unready repository, not against a person who edits the record.
+
+### The commands
+
+- `compass readiness` runs a project command only when `allow_project_commands: true` is set and the contribution is trusted.
+- Every project command runs in a clean checkout of HEAD, in a temporary worktree, so a command that needs installed dependencies must set them up itself.
+- One run finishes within five minutes. The test command must pass within two minutes.
+- A CI job that assesses autonomous work runs `compass readiness` as a step before assess, because the CI checkout has no record.
+
+### What to do
+
+On an autonomous project, run `compass readiness`. If it reports the floor as not met, take one of three ways to carry on:
+
+1. **Change `autonomy`** to `balanced` or `controlled` in `compass.yml`. The stage hand-offs that value lists then wait for a person.
+2. **Make the absent signals present.** `compass readiness --fix-list` names the change for each, such as declaring `project.build_command`. For a long suite, set the test signal's `command` parameter to `test_micro_command` in a project layer, and declare a micro suite that passes within two minutes.
+3. **Set `required_for_autonomous: false`** on a readiness signal in a project layer. That takes the signal off the floor, so it needs the owner's waiver in the same entry:
+
+   ```yaml
+   readiness:
+     tests-declared-and-under-two-minutes:
+       set: {required_for_autonomous: false}
+       waiver:
+         reason: our suite runs in a merge queue, not before each change
+         approved_by: <owner>
+         approved_on: 2026-10-13
+   ```
+
+Then run `compass readiness` again and assess.
+
+### New verbs, flags and keys
+
+| Name | Where | Meaning |
+|---|---|---|
+| `compass readiness [--json] [--fix-list]` | verb | Measure the repository and write the readiness record, or list the absent signals from a fresh record |
+| `project.lint_command`, `project.format_check_command`, `project.build_command`, `project.typecheck_command` | `compass.yml` | The project commands `compass readiness` runs |
+| `project.secret_scan`, `project.structured_logging` | `compass.yml` | Declarations; a non-empty string makes the signal present |
+| `readiness` | catalogue in a preset or project layer | The readiness signals |
+| `required_for_autonomous` | field of a readiness signal | `true` puts the signal on the floor |
+| `.compass/readiness.yml` | per checkout, never committed | The readiness record |
+| `readiness` | `manifest.yml` | The repository's readiness when the issue was assessed |
+
+## The issue page on GitHub
+
+Compass can now post an issue's README to the linked GitHub issue, and the verb that wrote labels on demand has a new spelling. The decision is `architecture/decisions/ADR-057-derived-views-go-to-github-one-way-behind-a-refusal-check.md`. The facts are in `docs/github-labels.md`.
+
+### What is removed
+
+- **The verb `compass issue labels sync`.** A command line that still types it exits 2, runs nothing and makes no `gh` call. It prints one line: `'issue labels sync' is now 'issue github sync'`. The hint row names release 6.0.0 and removal at 7.0.0.
+
+### What changes
+
+- **`compass issue github sync` replaces it.** It writes the labels and, when `page` is on, the issue page, each whatever the other's result. It exits non-zero when either failed or was refused. The sync failure line and the notes of `compass issue lint` name the new verb.
+- **A new switch, `github_labels.page`, is off by default.** With it on, Compass posts the issue's README as one comment and, once, the ask into an empty issue body. It widens the audience of the issue's documents to the readers of the GitHub issue. Two checks refuse a post that holds a private path or a credential shape.
+- **`github-sync.yml` holds two sections.** A record written by a 6.x CLI reads as the `labels` section. No migration is needed.
+
+### What to do
+
+1. Replace `compass issue labels sync` with `compass issue github sync` in your scripts, notes and CI.
+2. Leave `page` off unless the readers of your GitHub issues may see your issue documents. To turn it on, set `github_labels: {page: true}` in `compass.yml`.
+
+### New keys and verbs
+
+| Name | Where | Meaning |
+|---|---|---|
+| `checkpoint_outcomes` | `manifest.yml` | One outcome, `waited` or `skipped`, for each checkpoint stage |
+| `checkpoint-approval` | the type of an evidence record | A person's answer to one checkpoint hand-off |
+| `usage.sessions`, `usage.total`, `usage.unattributed` | `manifest.yml` | The sessions that worked on the issue, and what they cost |
+| `too-large`, `no-window` | reasons in a `usage` block | Transcripts over the read limit, and a stage no record ends |
+| `checkpoint-no-outcome` | a refusal code | The landing refusal |
+| `compass evidence approve --checkpoint` | a flag | Answer a hand-off |
+| `compass issue checkpoint add` | a verb | Record a hand-off that autonomy passed |
+| `github_labels.page` | `compass.yml` | Post the issue page to the linked GitHub issue |
+| `compass issue github sync` | verb | Write the labels and the issue page on demand |

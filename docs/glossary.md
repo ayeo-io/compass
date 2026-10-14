@@ -246,7 +246,7 @@ A named switch for new blocking behaviour, off in the shipped default.
 
 ### catalogue
 
-One of the eight maps of configuration entries keyed by id: `dimensions`, `stages`, `approaches`, `rules`, `checks`, `gates`, `artifacts` and `vocabulary`. An id is stable; a display name lives in the `vocabulary` catalogue.
+One of the nine maps of configuration entries keyed by id: `dimensions`, `stages`, `approaches`, `rules`, `checks`, `gates`, `artifacts`, `readiness` and `vocabulary`. An id is stable; a display name lives in the `vocabulary` catalogue.
 
 **Related:** `layer`, `overlay`, `generation`
 
@@ -255,6 +255,12 @@ One of the eight maps of configuration entries keyed by id: `dimensions`, `stage
 One test that Compass runs against an issue's work and reports as pass, fail or skipped. A guardrail is made of checks, a gate is cleared by evidence, and an obligation is anything the configuration asks for, such as a check, a gate, an artifact or a stage mode.
 
 **Related:** `guardrail`, `quality-gate`, `evidence`, `obligation`
+
+### checkpoint-outcome
+
+What happened at one checkpoint stage hand-off, recorded in the manifest's `checkpoint_outcomes` as the stage, the outcome, who and when. The outcome is `waited` when a person answered the hand-off with `compass evidence approve --checkpoint`, which also writes a `checkpoint-approval` record holding their answer, or `skipped` when an agent went on because the autonomy setting passed the hand-off, recorded with `compass issue checkpoint add`. A `checkpoint-approval` record clears no gate and no human check. `compass ship-commit` refuses a judged issue that lists a checkpoint with no outcome, and `compass retro --impact` reads the outcomes to report how much work ran without a person.
+
+**Related:** `decision-taken`, `evidence`, `issue`
 
 ### classifier
 
@@ -566,6 +572,30 @@ A delivery approach for a small, low-risk change on familiar ground. Produces a 
 
 **Related:** `delivery-approach`
 
+### readiness-floor
+
+The readiness signals whose `required_for_autonomous` is true. A project with every one of them present can run `autonomy: autonomous`.
+
+**Related:** `readiness-signal`, `readiness-summary`
+
+### readiness-record
+
+The per-checkout file in which a project's readiness measurement is kept: each readiness signal's result and implementation version, when and at which commit it was measured, and the digest of the settings file. Compass never commits it.
+
+**Related:** `readiness-signal`, `readiness-summary`
+
+### readiness-signal
+
+One binary fact about a repository, such as "a lint command is declared and exits 0". An entry of the `readiness` catalogue, it is either `present` or `absent` and carries a one-line reason.
+
+**Related:** `readiness-floor`, `readiness-record`, `catalogue`
+
+### readiness-summary
+
+The `readiness:` key of an issue's manifest, written by every `approach evaluate --write`: the score, whether the floor is met and which signals are absent, or `not-measured` with the reason. It sits outside the generation's digests.
+
+**Related:** `readiness-record`, `readiness-floor`
+
 ### receipt
 
 The per-issue proof summary rendered from the manifest and the evidence registry: the assessment, the delivery approach, the gates and what cleared them - one screen, shareable as-is. Evidence is the typed records that clear gates; the receipt is the read-only summary that cites them.
@@ -717,6 +747,12 @@ An issue type: work that changes nothing a user sees, such as upkeep, a refactor
 The engineering plan for one issue: the approach, the design decisions as ADR-style notes, the governance check, and the independent work units. Written at the planning stage (/compass:plan) as technical-design.md. The designer's work is the UI contract (ui-contract.md), from /compass:design. In this repository TDD is red-green-refactor and nothing else, so this artifact is never abbreviated to TDD.
 
 **Related:** `technical-design`, `delivery-approach`
+
+### temporary-worktree
+
+The detached Git worktree of HEAD that a readiness measurement creates in the system temp folder to run the project's commands. It is removed when the measurement ends.
+
+**Related:** `readiness-record`
 
 ### traceability
 

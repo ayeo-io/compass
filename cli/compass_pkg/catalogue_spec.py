@@ -26,7 +26,7 @@ from __future__ import annotations
 from compass_pkg import stable_ids
 
 CATALOGUES = ("dimensions", "stages", "approaches", "rules", "checks", "gates",
-              "artifacts", "vocabulary")
+              "artifacts", "readiness", "vocabulary")
 
 MERGE_KINDS = ("scalar", "list", "map", "whole")
 COMPARE_KINDS = ("ordered", "obligation-set", "way-set", "ceiling", "identity",
@@ -148,6 +148,13 @@ FIELDS = {
         "required_when": _f("map", "whole", "identity"),
         "every_approach": _f("boolean", "scalar", "descriptive"),
     },
+    "readiness": {
+        "statement": _f("string", "scalar", "descriptive", required=True),
+        "impl": _f("string", "scalar", "identity", required=True),
+        "weight": _f("integer", "scalar", "descriptive", required=True),
+        "params": _f("map", "map", "ceiling"),
+        "required_for_autonomous": _f("boolean", "scalar", "ordered"),
+    },
     "vocabulary": {
         "name": _f("string", "scalar", "descriptive", required=True),
         "aliases": _f("list", "list", "descriptive"),
@@ -201,6 +208,9 @@ OBLIGATION_FIELDS = {
     "checks.on_skipped": "ordered",
     "checks.statement": "identity",   # compared for human and judged checks only
     "rules.ceilings": "ceiling",                 # each loop ceiling
+    "readiness.impl": "identity",
+    "readiness.params": "ceiling",
+    "readiness.required_for_autonomous": "ordered",   # `true` is stricter
     "evaluation.max_worktrees": "ceiling",
     "evaluation.required_skills": "obligation-set",
     "evaluation.blocked_stages": "obligation-set",
@@ -295,8 +305,8 @@ LAYER_KEYS = ("schema", "extends", "owner", "approvers", "capabilities") + CATAL
 SETTINGS_KEYS = ("autonomy", "adoption", "allow_project_commands", "enforcement",
                  "record", "project", "prices", "multiagent", "governance_drift",
                  "preset_index", "github_labels")
-#: The two switches inside `github_labels`, both off by default.
-GITHUB_LABEL_SWITCHES = ("domain", "status")
+#: The three switches inside `github_labels`, all off by default.
+GITHUB_LABEL_SWITCHES = ("domain", "status", "page")
 RESERVED_KEYS = ("preset",)
 
 # What an issue's own layer (the manifest's `config:`) may hold.
@@ -322,6 +332,8 @@ CATALOGUE_DESCRIPTIONS = {
     "gates": "The gates: groups of checks cleared at a stage. Each key is a gate id.",
     "artifacts": "The documents an issue can owe, such as the acceptance criteria. Each key is an "
                  "artifact id.",
+    "readiness": "The readiness signals: binary facts about a repository that show whether it "
+                 "is fit for unattended agent work. Each key is a readiness signal id.",
     "vocabulary": "The display names and aliases of catalogue entries. Each key is "
                   "`<catalogue>.<id>`, for example `approaches.quick-fix`.",
 }
@@ -335,6 +347,8 @@ ENTRY_DESCRIPTIONS = {
     "gates": "One gate: the checks it groups, the stage it is cleared at and where it applies.",
     "artifacts": "One artifact: the file that holds it, who reads it and who writes it, its "
                  "headings per depth and what it builds on.",
+    "readiness": "One readiness signal: what it asserts, the implementation that decides it and "
+                 "whether the readiness floor needs it.",
     "vocabulary": "The display name of one catalogue entry, and the other names a person may type "
                   "for it.",
 }
@@ -479,6 +493,19 @@ FIELD_DESCRIPTIONS = {
         "every_approach": "Whether every delivery approach owes the document, at the depth of "
                           "its own stage, unless the approach lists it already.",
     },
+    "readiness": {
+        "statement": "What the readiness signal asserts, in plain words.",
+        "impl": "The id of the built-in implementation that decides the signal. Each "
+                "implementation carries a version, and the readiness record keeps it.",
+        "weight": "A whole number that orders the signals in the fix list, higher first. "
+                  "It never changes the score, which counts signals.",
+        "params": "Named values the implementation reads, such as the project setting it "
+                  "checks. Lint refuses a name or value the implementation does not allow.",
+        "required_for_autonomous": "Whether the readiness floor needs the signal to be present "
+                                   "before the project can run `autonomy: autonomous`; `true` is "
+                                   "stricter, and the default is `false`. Setting it to `false` on "
+                                   "a shipped signal needs the owner's waiver.",
+    },
     "vocabulary": {
         "name": "The display name of the entry, shown to people in place of its id.",
         "aliases": "Other names a person may type for the entry. A name or alias may belong "
@@ -529,21 +556,28 @@ TOP_DESCRIPTIONS = {
                    "patterns the hook treats as code.",
     "record": "Where the delivery record is kept, with `remote`, `paths` and `names_key`. "
               "Without it no record is kept.",
-    "project": "The project's name and test commands. Holds `name`, `test_command`, "
-               "`test_micro_command` and `bdd_run_command`.",
+    "project": "The project's name, its commands (`test_command`, `test_micro_command`, "
+               "`bdd_run_command`, `lint_command`, `format_check_command`, `build_command` and "
+               "`typecheck_command`) and two declarations (`secret_scan` and "
+               "`structured_logging`). Declare the check form of a formatter, and note that "
+               "`compass readiness` runs every command in a clean checkout of HEAD.",
     "prices": "Dollars per million tokens for each model name, used to price the usage of a "
               "quick fix. Without it no cost is recorded.",
     "multiagent": "Where multiagent worktrees go and how many are allowed. Holds `worktree_root`"
                   " (default `../.compass-worktrees`) and `max_worktrees` (default 6).",
     "preset_index": "Reserved for published presets. It has no behaviour yet.",
-    "github_labels": "Whether Compass writes an issue's labels to its linked GitHub issue, "
-                     "through the switches `domain` and `status`. Both are off by default, and "
-                     "with both off no command calls GitHub.",
+    "github_labels": "Whether Compass writes an issue's labels and page to its linked GitHub "
+                     "issue, through the switches `domain`, `status` and `page`. All three are "
+                     "off by default, and with all three off no command calls GitHub.",
     "github_labels.domain": "Whether Compass writes the issue's declared domain labels to its "
                             "GitHub issue. The default is `false`.",
     "github_labels.status": "Whether Compass writes `status:<state>` to the GitHub issue, and on "
                             "a closed issue `status:done` and `close:<reason>`. The default is "
                             "`false`.",
+    "github_labels.page": "Whether Compass keeps one comment on the GitHub issue equal to the "
+                          "issue's README, and writes the ask into an empty issue body once. "
+                          "The default is `false`, because it widens who reads the issue's "
+                          "documents to the GitHub issue's readers.",
     "preset": "Reserved key for a published preset's own data. It is not part of a layer's "
               "digest.",
 }

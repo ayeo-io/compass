@@ -258,6 +258,7 @@ EXPECTED_SUBCOMMANDS = {
     "run",  # headless-runner (ADR-030)
     "record",  # delivery-record (ADR-031)
     "board",  # compass-board (ADR-046): render|refresh - the delivery board page
+    "readiness",  # project-readiness-caps-autonomy (ADR-061): measure the repository
 }
 
 

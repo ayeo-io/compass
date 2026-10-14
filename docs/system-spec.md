@@ -3849,3 +3849,140 @@
 - `DBI-19` The issue page shows each dependency in the related block
 - `DBI-20` The shape is pinned in the schema and its owning doc
 - `DBI-21` depends remove re-renders the removed dependency's page
+
+### issue-page-reaches-github (completed 2026-10-13)
+
+- `IPG-1` With page off, no call is added
+- `IPG-2` The first sync creates one comment holding the page
+- `IPG-3` A record change edits the same comment
+- `IPG-4` An unchanged issue costs no GitHub call
+- `IPG-5` Compass finds its own comment by the marker
+- `IPG-6` Repository links open on GitHub
+- `IPG-7` An empty body gets the ask once
+- `IPG-8` A written body and the title are never changed
+- `IPG-9` A gh failure never changes a command exit code
+- `IPG-10` Labels and page fail independently
+- `IPG-11` Lint reports an out-of-date page without calling GitHub for it
+- `IPG-12` The on-demand sync refreshes labels and page together
+- `IPG-13` compass issue labels sync is removed at 7.0.0
+- `IPG-14` Compass never reads GitHub text back
+- `IPG-15` gh gets an argument list, the text goes through standard input, and no token is read
+- `IPG-17` Text naming a path the project keeps out of git refuses the post
+- `IPG-18` A credential shape refuses the post
+- `IPG-19` The comment stays within GitHub size limit
+- `IPG-20` The page switch is declared
+- `IPG-21` The owning doc says what the page exposes
+- `IPG-22` The page posts the README its own command rendered
+- `IPG-23` A private path inside a URL refuses the post
+- `IPG-24` A private path written in any equivalent form refuses the post
+- `IPG-25` A private path in HTML-entity, backslash or trailing-slash form refuses the post, and a tracked symlink posts
+- `IPG-26` Every form found in review is refused, and a published link still posts
+- `IPG-27` An encoded space or plus in an ignored file's name refuses the post
+
+### project-readiness-caps-autonomy (completed 2026-10-14)
+
+- `PRC-1` The four new project commands are read like test_command
+- `PRC-2` A readiness signal whose command is not declared reads as absent
+- `PRC-3` The default preset ships eleven binary readiness signals and the four required ones
+- `PRC-4` Every shipped readiness signal is binary, and a whole run finishes within five minutes on a fixture
+- `PRC-5` A project layer adds, sets or removes a readiness signal through the classifier
+- `PRC-6` No readiness signal reads anything outside the repository and its declared commands
+- `PRC-7` tdd-red keeps running test_command as it does today
+- `PRC-8` readiness prints one line per readiness signal, the score and the floor, and writes the record
+- `PRC-9` readiness --json prints the same content
+- `PRC-10` readiness never edits a tracked file
+- `PRC-11` A project command still running when the time budget ends is stopped and named
+- `PRC-12` readiness --fix-list prints a checklist and writes nothing
+- `PRC-13` Project commands run in a clean temporary worktree of HEAD
+- `PRC-14` The test signal times one run of the timed command and records the duration
+- `PRC-15` A test run over two minutes, or a failing one, makes the test signal absent
+- `PRC-16` A project layer can make the test signal time test_micro_command
+- `PRC-17` The flaky-test readiness signal names a scenario whose last two records disagree
+- `PRC-18` Command readiness signals are absent when project commands are disabled
+- `PRC-19` The untrusted-CI refusal comes before allow_project_commands
+- `PRC-20` An autonomous project below the floor is refused at evaluate --write
+- `PRC-21` An autonomous project at the floor runs unchanged
+- `PRC-22` balanced and controlled are never refused
+- `PRC-23` An autonomous project with no readiness record is refused and told to measure
+- `PRC-24` An autonomous project with a stale readiness record is refused
+- `PRC-25` The floor is not a guardrail
+- `PRC-26` The session-start hook warns below the floor and never blocks
+- `PRC-27` A project with no settings file sees no change
+- `PRC-28` The 7.0.0 upgrade note explains the refusal and the ways out
+- `PRC-29` evaluate --write records the readiness summary in the manifest, outside the generation digests
+- `PRC-30` A missing or stale record is recorded as not-measured
+- `PRC-31` An issue assessed before this change reads as not measured
+- `PRC-32` The delivery approach, the receipt and the board panel show the same readiness line
+- `PRC-33` init prints the absent signals first and does not block
+- `PRC-34` init completes when readiness cannot run
+- `PRC-35` retro reports the readiness at each issue's assessment
+- `PRC-36` A fixture with no build command on autonomous is refused and runs on balanced
+- `PRC-37` readiness on this repository reports every readiness signal within the measured bound
+- `PRC-38` This repository is not refused at assess after merge
+- `PRC-39` An autonomous project on an untrusted CI runner is refused with its own message
+- `PRC-40` A readiness record more than seven days old or 25 commits behind HEAD is stale
+- `PRC-41` Project commands share one time budget, required readiness signals first
+- `PRC-42` The temporary worktree is outside the counted worktrees and removed after a stopped run
+- `PRC-43` A project command that writes files leaves the working tree unchanged
+- `PRC-44` A malformed or unreadable readiness record never blocks a session
+- `PRC-45` No command or child process outlives a readiness run, however it ends
+- `PRC-46` A record measured on a commit outside HEAD's history is stale
+
+### autonomy-ratio-and-cost (completed 2026-10-14)
+
+- `ARC-1` A person answers a checkpoint
+- `ARC-2` A checkpoint answer is refused when it would not mean what it says
+- `ARC-3` An agent records a hand-off that autonomy passed
+- `ARC-4` A skip is refused for a hand-off that must wait
+- `ARC-5` ship-commit refuses a listed checkpoint with no outcome
+- `ARC-6` Issues landed before this change are not judged
+- `ARC-7` A checkpoint answer is not the human sign-off
+- `ARC-8` The hand-off texts run the new commands
+- `ARC-9` The hook records each session once
+- `ARC-10` The hook stays within its cost
+- `ARC-11` ship-commit records usage on a regular issue
+- `ARC-12` Missing usage inputs never stop the landing
+- `ARC-13` The quick fix keeps its usage block
+- `ARC-14` A session shared with another issue is marked
+- `ARC-15` No transcript text is stored
+- `ARC-16` The autonomy ratio and band split
+- `ARC-17` Cost per change by approach and per scenario
+- `ARC-18` The decisions-confirmed row matches retro --decisions
+- `ARC-19` Below the floors the rows say unmeasurable, never 0%
+- `ARC-20` The retro rows in JSON
+- `ARC-21` The fixture issue on balanced and on autonomous
+- `ARC-22` diagnose shows the issue bands and cost
+- `ARC-23` The delivery record carries the new fields and no new names
+- `ARC-24` The fields are documented and old manifests read unchanged
+- `ARC-25` The hook skips a session another session moved the pointer away from
+- `ARC-26` Work before counting starts does not mark the cost shared
+- `ARC-27` The retro help names --impact among the --format readers
+- `ARC-28` The autonomy ratio counts judged issues only
+- `ARC-29` A landed issue with an empty checkpoints list and no outcomes key is not measurable
+- `ARC-30` A per-scenario median below the group floor is withheld
+- `ARC-31` Other issues' manifests are not read when the issue has no session
+
+### ci-run-time (completed 2026-10-14)
+
+- `CRT-1` The main workflow runs on new commits only and cancels superseded pull-request runs
+- `CRT-2` The parallel pass runs as four shards that print their slowest tests
+- `CRT-3` The serial pass runs in its own job
+- `CRT-4` Every check the old self-check job ran still runs on every pull request
+- `CRT-5` The self-check aggregator passes only when every job it needs succeeded
+- `CRT-6` The count check fails when the shards' counts differ from the whole suite
+- `CRT-7` The push to main skips the suite only for a tree tested green on its pull request
+- `CRT-8` The required jobs keep their names, run on every pull request and skip together on a tested push
+- `CRT-9` The real-root harness job runs only when its inputs change
+- `CRT-10` Every test file lands in exactly one shard
+- `CRT-11` The shard command refuses bad arguments
+- `CRT-12` The pull-request text check runs in its own workflow, including on edits
+- `CRT-13` The docs build reports on every pull request and builds only when docs changed
+- `CRT-14` Every job in every workflow has a timeout
+- `CRT-15` The workflow token stays read-only
+- `CRT-16` The archive guard runs in the parallel pass and still fails on a planted archive write
+- `CRT-17` The shape-test skip guard starts no second pytest run and still fails on a planted skip
+- `CRT-18` The compat configuration setup is faster and loses no test
+- `CRT-19` CI prints test counts and the slowest tests
+- `CRT-20` This pull request's own CI runs meet the targets and show each saving
+- `CRT-21` A base-branch change re-runs the suite, and the push skip never trusts a run that started before it
+- `CRT-22` Shards are balanced by recorded test duration, and a shard ends at 45 minutes

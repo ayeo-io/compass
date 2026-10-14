@@ -372,20 +372,39 @@ def test_vr_e6_an_unreleased_spelling_is_refused_and_names_the_new_one(tmp_path,
     assert err.count("is now '") == 1, err
 
 
+def hint_problems(rows, project):
+    """What is wrong with the hint rows against the releases. A row for a verb a
+    release held and 7.0.0 removed (ADR-051) is checked against the tag its own
+    `released_in` names, which must hold the spelling. Any other row is a spelling
+    no release holds, checked against TAG. A row whose tag is not in this clone is
+    skipped."""
+    problems = []
+    for row in rows:
+        name = " ".join(row["old"])
+        tag = row.get("released_in") if row.get("removed_in") else TAG
+        cli = _tag_cli(tag)
+        if cli is None:
+            continue
+        rc, out, err = _run(row["old"] + ["--help"], project, cli=cli)
+        if row.get("removed_in") and rc != 0:
+            problems.append(f"{tag} does not hold {name}, which the row says it does")
+        elif not row.get("removed_in") and rc == 0:
+            problems.append(f"{tag} holds {name}, so it needs an alias, not a hint")
+    return problems
+
+
 def test_vr_e6_no_hint_spelling_is_held_by_a_release(tmp_path):
     """A hint exists because no release holds the old spelling; a spelling the
     tag holds would need an alias, not a hint."""
-    cli = _tag_cli()
-    if cli is None:
+    if _tag_cli() is None:
         pytest.skip(f"tag {TAG} is not available in this clone")
     project = _project(tmp_path / "p")
-    for row in _table()["hints"]:
-        rc, out, err = _run(row["old"] + ["--help"], project, cli=cli)
-        if row.get("removed_in"):
-            # A verb a release held and 7.0.0 removed (ADR-051): the tag must hold it.
-            assert rc == 0, f"{TAG} does not hold {' '.join(row['old'])}, which the row says it does"
-            continue
-        assert rc != 0, f"{TAG} holds {' '.join(row['old'])}, so it needs an alias, not a hint"
+    assert hint_problems(_table()["hints"], project) == []
+    # A removed verb whose named release never held it is reported.
+    planted = [{"old": ["issue", "labels", "sync"], "new": ["issue", "github", "sync"],
+                "released_in": TAG, "removed_in": "7.0.0"}]
+    assert hint_problems(planted, project) == [
+        f"{TAG} does not hold issue labels sync, which the row says it does"]
 
 
 # --- VR-E10: the verb convention ---------------------------------------------
@@ -400,6 +419,7 @@ EXCEPTIONS = {
     "ship-commit": "the commit step inside shipping; named in the contract and the ship command",
     "rework-scan": "a report verb named for what it scans; renaming it needs an alias no release owes yet",
     "terminology": "prints the vocabulary; a noun that is its own command",
+    "readiness": "measures the repository and writes the readiness record; a noun that is its own command, named by the spec that added it",
     "approach evaluate": "applies the routing policy; the determinism boundary is named by this verb in the contract",
     "bdd extract": "turns acceptance criteria into a feature file; a verb of the bdd group",
     "bdd verify": "runs the BDD suite and records the result; a verb of the bdd group",
@@ -529,23 +549,23 @@ def test_vr_e12_spec_sync_help_says_merge_derive_and_commit(tmp_path):
 _TAG_CLI = {}
 
 
-def _tag_cli():
-    """The CLI of the release tag, extracted once; None when the tag is absent."""
-    if "path" in _TAG_CLI:
-        return _TAG_CLI["path"]
-    probe = subprocess.run(["git", "rev-parse", "--verify", "-q", f"{TAG}^{{commit}}"],
+def _tag_cli(tag=TAG):
+    """The CLI of a release tag, extracted once per tag; None when the tag is absent."""
+    if tag in _TAG_CLI:
+        return _TAG_CLI[tag]
+    probe = subprocess.run(["git", "rev-parse", "--verify", "-q", f"{tag}^{{commit}}"],
                            cwd=str(ROOT), capture_output=True, text=True)
     if probe.returncode != 0:
-        _TAG_CLI["path"] = None
+        _TAG_CLI[tag] = None
         return None
     import tempfile
     dest = Path(tempfile.mkdtemp(prefix="compass-tag-"))
-    data = subprocess.run(["git", "archive", TAG, "cli"], cwd=str(ROOT),
+    data = subprocess.run(["git", "archive", tag, "cli"], cwd=str(ROOT),
                           capture_output=True, check=True).stdout
     with tarfile.open(fileobj=io.BytesIO(data)) as tar:
         tar.extractall(dest)
-    _TAG_CLI["path"] = dest / "cli" / "compass"
-    return _TAG_CLI["path"]
+    _TAG_CLI[tag] = dest / "cli" / "compass"
+    return _TAG_CLI[tag]
 
 
 def release_problems(rows, cli, cwd):

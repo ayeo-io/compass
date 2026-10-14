@@ -213,21 +213,27 @@ def test_ci_jobs_that_run_python_set_up_python_first():
     actions/setup-python step. They depended on whatever Python the runner image
     happened to ship, which is exactly the thing a pinned workflow exists to
     stop varying."""
-    workflow = yaml.safe_load(
-        (ROOT / ".github" / "workflows" / "compass.yml").read_text(encoding="utf-8")
-    )
+    # The setup step must also come before the first step that runs Python:
+    # a step that runs earlier still gets the runner image's interpreter.
     missing = []
-    for name, job in workflow["jobs"].items():
-        steps = job.get("steps", [])
-        runs_python = any(
-            "python" in str(s.get("run", "")) or "compass" in str(s.get("run", ""))
-            for s in steps
+    for workflow_name in ("compass.yml", "docs.yml"):
+        workflow = yaml.safe_load(
+            (ROOT / ".github" / "workflows" / workflow_name).read_text(encoding="utf-8")
         )
-        sets_up = any("setup-python" in str(s.get("uses", "")) for s in steps)
-        if runs_python and not sets_up:
-            missing.append(name)
+        for name, job in workflow["jobs"].items():
+            steps = job.get("steps", [])
+            runs = [
+                i for i, s in enumerate(steps)
+                if "python" in str(s.get("run", "")) or "compass" in str(s.get("run", ""))
+            ]
+            sets_up = [
+                i for i, s in enumerate(steps) if "setup-python" in str(s.get("uses", ""))
+            ]
+            if runs and (not sets_up or sets_up[0] > runs[0]):
+                missing.append(f"{workflow_name}: {name}")
     assert not missing, (
-        f"these CI jobs run Python without actions/setup-python: {missing}"
+        "these CI jobs run Python before or without actions/setup-python: "
+        f"{missing}"
     )
 
 

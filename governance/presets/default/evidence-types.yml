@@ -22,6 +22,8 @@ evidence_types:
       Has structured fields: approver, role, decision, timestamp, scope, conditions.'}
   artifact-approval: {description: A person's approval of one document or of a set of decisions taken
       for the person. Meets an artifact's human check; never a sign-off for guardrail `G5`.}
+  checkpoint-approval: {description: 'A person''s answer to one checkpoint hand-off, written only by `compass
+      evidence approve --checkpoint`. It never meets guardrail `G5` or a human check.'}
   security-review: {description: A recorded security review or scan result - for security-sensitive changes.}
   migration-plan: {description: 'A recorded plan for a data, schema, or infrastructure migration.'}
   rollback-plan: {description: 'A record showing the rollback was REHEARSED - what was run, when, and

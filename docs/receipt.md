@@ -28,6 +28,7 @@ Assessment
   size            medium                  the canonical fixture size justification
   goal            delivery (engineer)     the canonical fixture goal justification
   labels          public-api
+  Repository readiness: not measured (no record: run `compass readiness`)
 
 Approach
 --------
@@ -54,6 +55,14 @@ Evidence
 ================================================================================
 Verdict: landed cleanly
 ```
+
+## The readiness line
+
+The Assessment section ends with the repository readiness line, taken from the
+manifest's `readiness:` summary: `Repository readiness: 9 of 11 signals, floor
+met`, or `Repository readiness: not measured (...)` for an issue assessed before
+`compass readiness` existed or without a fresh record. The delivery approach and
+the board panel print the same line. The receipt reads the key and never measures.
 
 ## How the receipt is honest about weak state
 

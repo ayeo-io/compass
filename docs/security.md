@@ -88,17 +88,38 @@ delete `.compass/cache/parents/`.
 Review
 [git-parents.md](https://github.com/ayeo-io/compass/blob/main/docs/git-parents.md).
 
-## Labels written to GitHub
+## Labels and the issue page written to GitHub
 
-When a project sets `github_labels` in `compass.yml`, Compass writes an issue's
-labels to its linked GitHub issue by running `gh`. Both switches are off by
-default, and with both off no command calls GitHub. A published preset cannot
-switch them on, because a parent may not carry a settings key.
+When a project sets `github_labels` in `compass.yml`, Compass writes to the
+linked GitHub issue by running `gh`. All three switches (`domain`, `status`
+and `page`) are off by default, and with all three off no command calls
+GitHub. A published preset cannot switch them on, because a parent may not
+carry a settings key.
 
 Compass runs `gh` with an argument list and no shell, with your own login. It
-stores and reads no token. It checks the repository and issue number against a
-strict pattern before each call, and sends only label names and the issue
-number. A call that takes longer than 15 seconds is abandoned. Review
+reads no token and stores none. It checks the repository and issue number
+against a strict pattern before each call. A call that takes longer than 15
+seconds is abandoned.
+
+- **Labels.** With `domain` or `status` on, Compass sends label names and the
+  issue number.
+- **The issue page.** With `github_labels.page` on, Compass also sends the
+  issue's README as one comment, and the ask from `intent.md` into an empty
+  issue body. That is the issue's own prose, decisions and file names. It
+  reaches everyone who can read the GitHub issue, so turn the switch on only
+  for an issue whose readers may see those documents. The text travels on
+  standard input, never as an argument.
+- **Two checks before the page is sent.** They read the text as it is posted
+  and look for paths to files the project keeps out of git (and anything
+  under `.compass/private/`), and credential shapes. A hit means the post is
+  refused whole: nothing is sent, nothing is redacted and sent in its place,
+  and one line on standard error names the place and not the hit. These
+  checks find those two kinds of text. They do not find other private
+  prose, so read the README before you turn `page` on.
+- **Read back.** Compass reads only comment ids, the first line of a comment
+  and whether the issue body is empty. It stores no text from GitHub.
+
+Review
 [github-labels.md](https://github.com/ayeo-io/compass/blob/main/docs/github-labels.md).
 
 ## Dependencies
@@ -196,6 +217,28 @@ env:
 ```
 
 Do this only for a job whose trigger and source are genuinely trusted.
+
+### Readiness runs project commands too
+
+`compass readiness` runs up to five commands the project declares: the build,
+test, lint, type-check and format-check commands. It asks the same question in
+the same order as `command-passes`, through one function,
+`project_commands.command_permission`: the trust decision first, then
+`allow_project_commands`. On an untrusted contribution none of them runs and
+the setting is not read.
+
+What differs from `command-passes`:
+
+- each command runs in a temporary worktree of HEAD in the system temp folder,
+  so nothing it writes reaches the working tree, and the worktree is removed
+  when the run ends;
+- each command starts in its own process group, and the whole group is stopped
+  at its time limit;
+- the readiness record it writes is a plain file in the checkout, so it proves
+  nothing about a contribution: a contribution could commit one.
+
+No readiness signal opens a network connection. A declared command can. See
+`docs/readiness.md`.
 
 ## CI hardening
 

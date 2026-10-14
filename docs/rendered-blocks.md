@@ -31,7 +31,7 @@ The kinds are `coverage`, `gates`, `dod`, `dor`, `artifacts`, `evidence`,
 `follow-ups`, `decisions-taken`, `header`, `ask`, `decision-required`,
 `acceptance`, `related`, `decisions`, `traceability`, `deliberately-omitted`,
 `verification-note`, `index`, `assessment`, `policy-rules`, `stage-weights`, `gate-set`,
-`plan-exit` and `breakdown-exit`. All are rendered.
+`plan-exit`, `breakdown-exit` and `readiness`. All are rendered.
 
 | Kind | What it shows |
 |---|---|
@@ -57,6 +57,7 @@ The kinds are `coverage`, `gates`, `dod`, `dor`, `artifacts`, `evidence`,
 | `stage-weights` | In section 4a. One row for each stage in stage order, with the mode the manifest records |
 | `gate-set` | In section 4b. The gates in the manifest's order, and beside a gate a policy rule added, the ids of those rules |
 | `plan-exit`, `breakdown-exit` | The configured `plan` or `breakdown` exit list under `## Gate` in `technical-design.md` and `distribution-map.md`, read like `dod`. Empty (the shipped default): `No exit checks are configured for the plan stage.` (or `breakdown`) |
+| `readiness` | The one line `Repository readiness: 9 of 11 signals, floor met`, or `Repository readiness: not measured (<why>: <how to fix>)`, from the manifest's `readiness:` summary. The marker is in section 1 of `templates/delivery-approach.md`, under the assessment. A delivery approach written before the block existed has no marker, so the render leaves it alone. The receipt and the board panel print the same line from the same function (`readiness_record.line`), and the manifest key is written by `compass approach evaluate --write`. A render only reads the key |
 
 A block holds no clock, no absolute path and no name taken from git. The same
 records give the same text, so a second render changes no byte. The one fence a
@@ -198,7 +199,8 @@ first two stay written and a second run finishes the job.
 
 ## After each command that changes a record
 
-The entry point calls `render_after.after_command` after the label sync. It
+The entry point calls `render_after.after_command` after the label sync and before the
+page step. It
 renders the documents of the issue a command named and of every issue the
 manifest links to, in either direction (`raised_by`, `parent`, `depends_on`,
 `landed_by`, `delivered` and the `target_task` of a follow-up). It also renders
@@ -225,6 +227,25 @@ modification time.
   The label sync prints its own line when it fails.
 - The step prints no reminder. The old review page verb and the reminder that
   named it are gone.
+
+### The page step, third
+
+Three steps run after a command, in this order, each returning the command's
+exit code unchanged: the label sync, the render, then
+`github_page.after_command`. The page step reads the issue's `README.md` from
+disk, as the render has just written it, and never renders it itself. With
+`github_labels.page` on in `compass.yml` and the issue linked, it posts that
+README as one comment on the linked GitHub issue (`docs/github-labels.md`).
+
+- The commands are `PAGE_TRIGGERS` in `record_triggers.py`, which is
+  `RENDER_TRIGGERS`: any command that can change the README can change the page.
+- It syncs only the issue the command named. An issue linked to it, whose
+  README the render rewrote too, waits for its own next sync, and
+  `compass issue lint` on that issue reports its page as out of date meanwhile.
+- With `COMPASS_RENDER_AFTER=0` the README on disk does not change, so the page
+  is unchanged and no call is made.
+- No step imports another: `github_page` imports nothing from `render_after`,
+  `render_cmd` or `render_after_entry`, and none of them imports `github_page`.
 
 ## The check `rendered-blocks-current`
 

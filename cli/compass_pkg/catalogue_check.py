@@ -453,7 +453,7 @@ def schema():
         "preset_index": {"description": top["preset_index"], "type": "string"},
         "github_labels": {"description": top["github_labels"], "type": "object",
                           "properties": {s: {"description": top[f"github_labels.{s}"],
-                                             "type": "boolean"}
+                                             "type": "boolean", "default": False}
                                          for s in spec.GITHUB_LABEL_SWITCHES},
                           "additionalProperties": False},
         "preset": {"description": top["preset"], "type": "object"},

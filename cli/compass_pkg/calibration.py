@@ -43,6 +43,25 @@ from compass_pkg.core import CompassError, canonical_shape, display_shape, find_
 # whether assessment is systematically over- or under-sizing the process.
 # Read-only: it advises and never gates.
 
+def _readiness_rows(tasks):
+    """`[(slug, text, floor)]` in the order the issues were assessed: the readiness each
+    issue's manifest recorded, the score or "not measured", and whether the floor was met
+    ("floor met", "floor not met" or "floor unknown"). An issue sorts by its `created`
+    date, then its slug."""
+    def created(item):
+        return (str(item[1].get("created") or ""), item[0])
+    rows = []
+    for slug, task in sorted(tasks, key=created):
+        summary = task.get("readiness")
+        if isinstance(summary, dict) and summary.get("status") == "measured":
+            floor = "floor met" if summary.get("floor_met") else "floor not met"
+            rows.append((slug, "%s of %s" % (summary.get("score"), summary.get("signals")),
+                         floor))
+        else:
+            rows.append((slug, "not measured", "floor unknown"))
+    return rows
+
+
 def _route_weights():
     """`{approach: weight}` from the routing policy in force: the project's
     effective configuration when it has a `compass.yml`, else the governance
@@ -515,7 +534,10 @@ def compute_impact(tasks):
     }
 
 
-def render_impact(r):
+def render_impact(r, rows=None):
+    """The retro's impact view. `rows` is `autonomy_cost.impact_rows`; when it
+    is given its lines follow the by-approach block, and every other line keeps
+    its text and its place."""
     out = ["compass retro --impact - process signal (advisory)", ""]
     if not r["n_landed"]:
         out.append("  Nothing to measure yet - no landed issues on record.")
@@ -569,6 +591,11 @@ def render_impact(r):
         else:
             out.append("    %-12s n=%d  lead median %s day(s)  gates=%s"
                        % (route, g["n"], _median(g["lead"]), gates))
+
+    if rows:
+        from compass_pkg import autonomy_cost
+        out.append("")
+        out.extend(autonomy_cost.render_rows(rows))
 
     out.append("")
     if r["withheld"]:
@@ -711,7 +738,9 @@ def cmd_calibration(args):
               reframe_pct=pct_head, up=ups, down=downs, sideways=sideways,
               unweighed=sum(unweighed.values()),
               distribution=dict(dist), no_route=list(no_route),
-              transitions=dict(transitions))
+              transitions=dict(transitions),
+              readiness=[{"issue": s, "readiness": r, "floor": f}
+                         for s, r, f in _readiness_rows(tasks)])
     _buf = _io.StringIO()
     _ctx = _cl.redirect_stdout(_buf)
     _ctx.__enter__()
@@ -740,6 +769,10 @@ def cmd_calibration(args):
         print("  transitions:")
         for k, v in sorted(transitions.items(), key=lambda x: -x[1]):
             print(f"    {_display_transition(k)} : {v}")
+    print()
+    print("Repository readiness at assessment:")
+    for slug, text, floor in _readiness_rows(tasks):
+        print(f"  {slug:<28} {text:<14} {floor}")
     print()
     # Interruptions: each hook block and each failing `compass check`,
     # appended to .compass/interruptions.log as the work happened.
@@ -811,5 +844,30 @@ def _cmd_calibration_impact(args):
                     tasks.append((slug, normalize_spine(load_yaml(path))))
                 except CompassError:
                     continue
-    print(render_impact(compute_impact(tasks)))
+    from compass_pkg import autonomy_cost, terminal
+    result, rows = compute_impact(tasks), autonomy_cost.impact_rows(tasks, work)
+    if terminal.resolve_mode(args) == "json" or getattr(args, "format", "markdown") == "json":
+        # One object for both spellings. The verb renders itself, so the report
+        # layer prints it as it is and does not wrap it in the verb's prose.
+        terminal.mark_handled()
+        print(json.dumps(impact_json(result, rows), indent=2))
+        return 0
+    print(render_impact(result, rows))
     return 0
+
+
+def _plain(value):
+    """`value` with every set as a sorted list, so it serialises."""
+    if isinstance(value, dict):
+        return {k: _plain(v) for k, v in value.items()}
+    if isinstance(value, (set, frozenset)):
+        return sorted(_plain(v) for v in value)
+    if isinstance(value, (list, tuple)):
+        return [_plain(v) for v in value]
+    return value
+
+
+def impact_json(result, rows):
+    """The object `compass retro --impact --json` prints: the numbers
+    `compute_impact` returns and the four rows of `autonomy_cost.impact_rows`."""
+    return {**_plain(result), **rows}

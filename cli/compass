@@ -83,7 +83,7 @@ from compass_pkg.policy_cmd import register_preset as register_preset_parser  # 
 from compass_pkg.approve_cmd import register as register_approve_parser  # noqa: E402
 from compass_pkg.review_cmd import register as register_review_parser  # noqa: E402
 from compass_pkg.issue_config_cmd import register as register_issue_configure_parser  # noqa: E402
-from compass_pkg import github_labels  # noqa: E402
+from compass_pkg import github_labels, github_page  # noqa: E402
 from compass_pkg.render_after_entry import after_command as render_after_command  # noqa: E402
 
 # Declared literally here as well as in compass_pkg.core: this file is
@@ -254,7 +254,7 @@ def build_parser():
         "--format",
         choices=["markdown", "json"],
         default="markdown",
-        help="output format for --friction and --decisions (default: markdown)",
+        help="output format for --friction, --decisions and --impact (default: markdown)",
     )
     pcal.set_defaults(func=cmd_calibration, output_kind="report")
 
@@ -338,6 +338,8 @@ def build_parser():
     register_issue_friction_parser(pts)
     from compass_pkg.decisions_taken import register as register_issue_decision_parser
     register_issue_decision_parser(pts)
+    from compass_pkg.checkpoint_outcomes import register as register_issue_checkpoint_parser
+    register_issue_checkpoint_parser(pts, issue_arg)
     register_issue_configure_parser(pts, issue_arg)
 
     ptrb = pts.add_parser(
@@ -397,6 +399,7 @@ def build_parser():
     from compass_pkg import issue_depends
     issue_depends.register(pts, issue_arg)
     github_labels.register(pts, issue_arg)
+    github_page.register(pts, issue_arg)
 
     pacc = sub.add_parser(
         "acceptance",
@@ -486,6 +489,8 @@ def build_parser():
     # this file stays under its line cap outside build_parser.
     from compass_pkg.board_cmd import register as _register_board
     _register_board(sub)
+    from compass_pkg.readiness_cmd import register as _register_readiness
+    _register_readiness(sub)
 
     pnx = sub.add_parser(
         "next",
@@ -603,6 +608,11 @@ def build_parser():
         help="make this directory a Compass project - create .compass/ "
              "(safe to run twice)")
     pinit.add_argument("--by", help="what is initialising - the entry-point command, if not a person")
+    pinit.add_argument(
+        "--readiness", action="store_true",
+        help="after initialising, measure the repository when compass.yml exists and "
+             "print the absent readiness signals; exits 0 whatever happens "
+             "(/compass:init passes it)")
     pinit.set_defaults(func=cmd_init, output_kind="hand-off")
     pterm = sub.add_parser(
         "terminology",
@@ -732,7 +742,7 @@ def main(argv=None):
     if getattr(args, "command", None) and args.command and args.command[0] == "--":
         args.command = args.command[1:]
     try:
-        return run_with_mode(args, lambda a: render_after_command(a, github_labels.after_command(a, args.func(a) or 0))) or 0
+        return run_with_mode(args, lambda a: github_page.after_command(a, render_after_command(a, github_labels.after_command(a, args.func(a) or 0)))) or 0
     except CompassError as exc:
         # Paths in an error open from the project root, like every other
         # path the CLI prints (#293).

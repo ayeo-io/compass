@@ -104,22 +104,35 @@ def _recorded():
     return json.loads(cb.ARCHIVE.read_text(encoding="utf-8"))
 
 
+class _ArchiveRuns(dict):
+    """The result of running the CLI over each issue of a project, per
+    configuration: a copy of the archive sample with the configuration's files
+    added. A configuration is built the first time a test asks for it, so a
+    worker that runs only B's tests never builds C. The fixture removes every
+    project it made."""
+
+    def __init__(self):
+        super().__init__()
+        self.roots = []
+
+    def __missing__(self, kind):
+        root = cb.archive_under(kind)
+        self.roots.append(root)       # before the run, so a failing run is still removed
+        self[kind] = cb.archive_results(root)
+        return self[kind]
+
+    def remove_projects(self):
+        for root in self.roots:
+            shutil.rmtree(root, ignore_errors=True)
+
+
 @pytest.fixture(scope="module")
 def archive_runs():
-    """One project per configuration, each a copy of the archive sample with
-    the configuration's files added, and the result of running the CLI over
-    each issue in it."""
-    runs = {}
-    made = []
+    runs = _ArchiveRuns()
     try:
-        for kind in BC:
-            root = cb.archive_under(kind)
-            made.append(root)
-            runs[kind] = cb.archive_results(root)
         yield runs
     finally:
-        for root in made:
-            shutil.rmtree(root, ignore_errors=True)
+        runs.remove_projects()
 
 
 @pytest.mark.parametrize("kind", BC)

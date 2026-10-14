@@ -124,7 +124,7 @@ def link(root, gh, target=TARGET, slug=SLUG):
 
 
 def sync(root, gh, slug=SLUG, **kw):
-    return run(root, gh, "issue", "labels", "sync", "--issue", slug, **kw)
+    return run(root, gh, "issue", "github", "sync", "--issue", slug, **kw)
 
 
 def edit_manifest(root, change, slug=SLUG):
@@ -201,7 +201,7 @@ def test_gls_3_off_by_default_no_command_calls_gh(repo, gh, name):
                  ["issue", "status", "remove"],
                  ["issue", "status", "set", "done", "--close-reason", "not-planned"],
                  ["issue", "status", "remove"],
-                 ["issue", "labels", "sync"],
+                 ["issue", "github", "sync"],
                  ["issue", "lint"]):
         result = run(repo, gh, *args, "--issue", SLUG)
         assert result.returncode == 0, (args, result.stdout + result.stderr)
@@ -487,7 +487,7 @@ def test_gls_16_glossary_and_docs_describe_the_sync():
     walkthrough = ROOT / "docs" / "github-labels-walkthrough.md"
     assert walkthrough.is_file()
     text = walkthrough.read_text()
-    for needle in ("compass.yml", "compass issue link set", "compass issue labels sync",
+    for needle in ("compass.yml", "compass issue link set", "compass issue github sync",
                    "status:in-progress"):
         assert needle in text, needle
     assert "github-labels-walkthrough.md" in readme

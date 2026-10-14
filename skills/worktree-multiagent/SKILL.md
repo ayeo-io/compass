@@ -112,6 +112,12 @@ detection, and integration:
   Not `report.md`: Claude Code tells a subagent not to write a file named
   like a report.
 
+**A new worktree has no readiness record.** The record is per checkout. On a
+project that runs `autonomy: autonomous`, the brief of any worktree that will
+run `compass approach evaluate --write` tells it to run `compass readiness`
+first, which can take up to five minutes; without a fresh record, assess
+refuses the issue.
+
 **Review frequency follows the assessed risk.** `trivial` and `contained`:
 one review of the integrated result. `cross-cutting`: a review of each
 subtask's package before integration, and one after. `critical`: the same,

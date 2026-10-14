@@ -2023,6 +2023,22 @@ _register(Rule(
 _CITATION_RE = re.compile(
     r"`?((?:[\w.][\w-]*/)+[\w.-]+\.(?:md|py|yml|yaml|json|sh|feature))`?")
 
+# Per-checkout state the CLI writes at run time and never commits. The docs
+# name it as the file a command writes, not as a document to open:
+# `compass readiness` writes the readiness record, and this repository ignores
+# it, so it is never in a clean tree. PBW-A6 and PBW-A8 excuse only this exact
+# path; a lookalike is still reported by both (tests below).
+_RUNTIME_STATE_PATHS = frozenset({".compass/readiness.yml"})
+
+
+def test_pbw_a6_only_the_exact_runtime_record_path_may_be_ignored():
+    assert _git_ignores(".compass/readiness.yml")
+    assert not _find_citation(
+        ProseSpan("docs/x.md", 1, "It writes `.compass/readiness.yml`.", "markdown"))
+    for line in ("It writes `.compass/work/readiness.yml`.",
+                 "It writes `docs/compass/x/readiness.yml`."):
+        assert _find_citation(ProseSpan("docs/x.md", 1, line, "markdown")), line
+
 
 @lru_cache(maxsize=4096)
 def _git_ignores(rel: str) -> bool:
@@ -2057,6 +2073,8 @@ def _find_citation(span: ProseSpan) -> list[Finding]:
             # widening for it cannot mask a genuinely broken citation. git
             # check-ignore matches the literal string regardless, so this
             # is excluded rather than reported.
+            continue
+        if path in _RUNTIME_STATE_PATHS:
             continue
         if _git_ignores(path):
             findings.append(Finding(
@@ -2528,13 +2546,22 @@ def _looks_like_runtime_evidence(path: str) -> bool:
 _LEGACY_SETTINGS_PATHS = frozenset({".compass/config.yml"})
 
 
+def test_pbw_a8_only_the_exact_runtime_record_path_may_be_missing():
+    assert not _find_missing_reference(
+        ProseSpan("docs/x.md", 1, "It writes `.compass/readiness.yml`.", "markdown"))
+    for line in ("It writes `.compass/readiness2.yml`.",
+                 "It writes `.compass/work/readiness.yml`.",
+                 "It writes `compass/readiness.yml`."):
+        assert _find_missing_reference(ProseSpan("docs/x.md", 1, line, "markdown")), line
+
+
 def _find_missing_reference(span: ProseSpan) -> list[Finding]:
     findings = []
     for match in _REFERENCE_RE.finditer(span.text):
         if _reference_exempt(span.text, match):
             continue
         path = match.group(1)
-        if path in _LEGACY_SETTINGS_PATHS:
+        if path in _LEGACY_SETTINGS_PATHS or path in _RUNTIME_STATE_PATHS:
             continue
         if _looks_like_issue_citation(path) or _looks_like_runtime_evidence(path):
             continue
@@ -3739,8 +3766,15 @@ _GROWING_REACH = {
     #    holds a verdict and one line (the dashboard-current labels left and the
     #    rendered-blocks-current labels came, two each);
     # 74 with tests/fixtures/ad-hoc-kinds.txt, the kind names the 6.x migrate lists on
-    #    the archive copy, one per line.
-    "PBW-C4": (lambda path: path.startswith("tests/"), 74),
+    #    the archive copy, one per line;
+    # 75 with tests/fixtures/ci-run-time/compat-node-ids.txt, test node ids, one per line;
+    # 76 with tests/fixtures/ci-run-time/run-jobs.json, plain JSON;
+    # 77 with tests/ci-durations.json, the shard weights, plain JSON;
+    # 86 with the nine files of tests/fixtures/autonomy-ratio-and-cost/: four plain JSON
+    #    captures of the base commit and five fixture transcripts, one JSON object per line;
+    # 88 with retro.json and ships.json of tests/fixtures/autonomy-ratio-and-cost-views/,
+    #    plain JSON captures of the base commit.
+    "PBW-C4": (lambda path: path.startswith("tests/"), 88),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

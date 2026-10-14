@@ -281,7 +281,7 @@ def test_rd_8_the_preset_headers_do_not_claim_the_adapter_wrote_the_files_once()
     adapter = (ROOT / "cli" / "compass_pkg" / "legacy_adapter.py").read_text(encoding="utf-8")
     assert "wrote these files once" not in adapter
     files = sorted(PRESET.glob("*.yml"))
-    assert len(files) == 10
+    assert len(files) == 11
     for path in files:
         header = path.read_text(encoding="utf-8").split("schema:")[0]
         assert "wrote these files once" not in header, path.name

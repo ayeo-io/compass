@@ -1222,13 +1222,20 @@
     },
     "github_labels": {
       "additionalProperties": false,
-      "description": "Whether Compass writes an issue's labels to its linked GitHub issue, through the switches `domain` and `status`. Both are off by default, and with both off no command calls GitHub.",
+      "description": "Whether Compass writes an issue's labels and page to its linked GitHub issue, through the switches `domain`, `status` and `page`. All three are off by default, and with all three off no command calls GitHub.",
       "properties": {
         "domain": {
+          "default": false,
           "description": "Whether Compass writes the issue's declared domain labels to its GitHub issue. The default is `false`.",
           "type": "boolean"
         },
+        "page": {
+          "default": false,
+          "description": "Whether Compass keeps one comment on the GitHub issue equal to the issue's README, and writes the ask into an empty issue body once. The default is `false`, because it widens who reads the issue's documents to the GitHub issue's readers.",
+          "type": "boolean"
+        },
         "status": {
+          "default": false,
           "description": "Whether Compass writes `status:<state>` to the GitHub issue, and on a closed issue `status:done` and `close:<reason>`. The default is `false`.",
           "type": "boolean"
         }
@@ -1263,7 +1270,91 @@
       "type": "object"
     },
     "project": {
-      "description": "The project's name and test commands. Holds `name`, `test_command`, `test_micro_command` and `bdd_run_command`.",
+      "description": "The project's name, its commands (`test_command`, `test_micro_command`, `bdd_run_command`, `lint_command`, `format_check_command`, `build_command` and `typecheck_command`) and two declarations (`secret_scan` and `structured_logging`). Declare the check form of a formatter, and note that `compass readiness` runs every command in a clean checkout of HEAD.",
+      "type": "object"
+    },
+    "readiness": {
+      "additionalProperties": false,
+      "description": "The readiness signals: binary facts about a repository that show whether it is fit for unattended agent work. Each key is a readiness signal id.",
+      "patternProperties": {
+        "^[A-Za-z][A-Za-z0-9._-]*$": {
+          "additionalProperties": false,
+          "description": "One readiness signal: what it asserts, the implementation that decides it and whether the readiness floor needs it.",
+          "properties": {
+            "impl": {
+              "description": "The id of the built-in implementation that decides the signal. Each implementation carries a version, and the readiness record keeps it.",
+              "type": "string"
+            },
+            "locked": {
+              "description": "Protects the entry from a change in a later layer that loosens it: `true` lets a project unlock it, `hard` lets no one.",
+              "enum": [
+                true,
+                "hard"
+              ]
+            },
+            "params": {
+              "description": "Named values the implementation reads, such as the project setting it checks. Lint refuses a name or value the implementation does not allow.",
+              "type": "object"
+            },
+            "remove": {
+              "const": true,
+              "description": "When `true`, removes the inherited entry. This fails while another entry still refers to it."
+            },
+            "replace": {
+              "const": true,
+              "description": "When `true`, the entry in this layer replaces the inherited entry as a whole."
+            },
+            "required_for_autonomous": {
+              "description": "Whether the readiness floor needs the signal to be present before the project can run `autonomy: autonomous`; `true` is stricter, and the default is `false`. Setting it to `false` on a shipped signal needs the owner's waiver.",
+              "type": "boolean"
+            },
+            "set": {
+              "additionalProperties": false,
+              "description": "Changes only the fields named here and leaves every other field of the inherited entry as it is.",
+              "properties": {
+                "impl": {
+                  "description": "The id of the built-in implementation that decides the signal. Each implementation carries a version, and the readiness record keeps it.",
+                  "type": "string"
+                },
+                "params": {
+                  "description": "Named values the implementation reads, such as the project setting it checks. Lint refuses a name or value the implementation does not allow.",
+                  "type": "object"
+                },
+                "required_for_autonomous": {
+                  "description": "Whether the readiness floor needs the signal to be present before the project can run `autonomy: autonomous`; `true` is stricter, and the default is `false`. Setting it to `false` on a shipped signal needs the owner's waiver.",
+                  "type": "boolean"
+                },
+                "statement": {
+                  "description": "What the readiness signal asserts, in plain words.",
+                  "type": "string"
+                },
+                "weight": {
+                  "description": "A whole number that orders the signals in the fix list, higher first. It never changes the score, which counts signals.",
+                  "type": "integer"
+                }
+              },
+              "type": "object"
+            },
+            "statement": {
+              "description": "What the readiness signal asserts, in plain words.",
+              "type": "string"
+            },
+            "unlock": {
+              "const": true,
+              "description": "When `true`, lifts a lock the shipped default placed on the entry. Only the project file may write it, and only with a waiver its owner approves."
+            },
+            "waiver": {
+              "description": "An approved departure from the layer above, written in the entry it excuses. It holds `reason`, `approved_by` and, in the project file, `approved_on`.",
+              "type": "object"
+            },
+            "weight": {
+              "description": "A whole number that orders the signals in the fix list, higher first. It never changes the score, which counts signals.",
+              "type": "integer"
+            }
+          },
+          "type": "object"
+        }
+      },
       "type": "object"
     },
     "record": {

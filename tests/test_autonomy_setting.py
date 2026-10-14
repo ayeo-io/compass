@@ -91,9 +91,13 @@ def test_au_2_the_setting_changes_only_the_checkpoints(project, readings):
     for value in ("controlled", "balanced", "autonomous"):
         _set_autonomy(project, value)
         results[value] = _evaluate(project, readings)
-    rest = [{k: v for k, v in r.items() if k != "checkpoints"}
+    # The readiness floor reads `autonomy` too, but only to say whether
+    # --write would be refused; it changes no approach, gate or stage.
+    rest = [{k: v for k, v in r.items() if k not in ("checkpoints", "readiness")}
             for r in results.values()]
     assert rest[0] == rest[1] == rest[2]
+    assert results["controlled"]["readiness"]["would_refuse"] is None
+    assert results["balanced"]["readiness"]["would_refuse"] is None
     assert results["autonomous"]["checkpoints"] == []
     assert "assess" in results["controlled"]["checkpoints"]
 

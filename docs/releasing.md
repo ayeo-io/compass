@@ -470,7 +470,7 @@ scripts.
 | `already-tested` | Runs on a push to main only. Decides whether the push may skip every other job (below). |
 | `checks` | The rival-name scan of commit messages, `scripts/validate.sh`, the CLI syntax check and `compass ci`. |
 | `count` | Counts the tests outside the serial pass, with `pytest --collect-only -q -m "not serial" tests/`. |
-| `shard` | A matrix of shard jobs. Each runs its share of the test files on parallel workers and prints its 25 slowest tests. |
+| `shard` | A matrix of shard jobs. Each runs its share of the test files on parallel workers, prints every test's duration and ends at 45 minutes. |
 | `serial` | Runs the tests marked `serial` alone, and prints its 20 slowest tests. |
 | `self-check` | Passes only when every job it needs succeeded and the shard counts add up to the `count` total. It needs every job above and the four `bdd-adapter` jobs and `check-mutation`. On a title or body edit it reports the earlier suite result instead (below). |
 | `bdd-adapter`, `bdd-adapter-behave`, `bdd-adapter-cucumber-js`, `bdd-adapter-godog` | Run each BDD reference adapter. |
@@ -537,12 +537,36 @@ To run one shard locally, as CI does:
 
 ```bash
 python3 scripts/ci-shard.py 2 4 > /tmp/shard.txt
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 xargs python3 -m pytest -p xdist.plugin -n auto -m "not serial" --durations=25 < /tmp/shard.txt
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 xargs python3 -m pytest -p xdist.plugin -n auto -m "not serial" --durations=0 < /tmp/shard.txt
 ```
 
-The shard command lists every file pytest collects from `tests/`, sorted
-by path, and gives file number k to shard k mod the count. A new or renamed
-test file lands in a shard with no list to edit.
+The shard command lists every file pytest collects from `tests/` and
+splits the list by weight, so the shards take about the same time:
+
+- a file's weight is its entry in `tests/ci-durations.json`, the seconds
+  its tests took in a recorded CI run;
+- a file the table does not hold, such as a new one, weighs the median of
+  the table's entries;
+- files go heaviest first, each to the shard with the least weight so far.
+
+A new or renamed test file lands in a shard with no list to edit. To see
+each shard's predicted load, add `--loads`:
+
+```bash
+for i in 0 1 2 3; do python3 scripts/ci-shard.py "$i" 4 --loads; done
+```
+
+Refresh the table when the shards drift apart in time, for example after a
+change adds slow tests. Take the id of a run whose four shard jobs all
+succeeded, then rebuild the table and commit it:
+
+```bash
+python3 scripts/ci-durations.py RUN_ID
+```
+
+The command reads each shard job's log with `gh` and sums the durations
+pytest printed per file. It refuses a run with a shard job that did not
+succeed, and writes nothing then.
 
 ### The push skip
 

@@ -463,7 +463,7 @@ def test_crt_2_shard_matrix():
     assert 'count/shard-$SHARD-of-$SHARDS' in counting, counting
     running = _step_named(job, "Run this shard's tests")["run"]
     assert ('python3 -m pytest -p xdist.plugin -n auto -m "not serial" '
-            '--durations=25 "${files[@]}"') in running, running
+            '--durations=0 "${files[@]}"') in running, running
     assert " -q" not in running, "pytest.ini already sets -q"
 
     uploads = [s for s in job["steps"] if "upload-artifact" in s.get("uses", "")]
@@ -727,6 +727,17 @@ def test_crt_14_every_job_has_a_timeout(tmp_path):
     copy.write_text(head + marker + first + rest, encoding="utf-8")
     assert _timeout_problems([copy]) == [
         "compass.yml: job count has timeout-minutes None, not a whole number from 5 to 45"]
+
+
+def test_crt_22_shard_timeout_is_45():
+    """A shard ends at 45 minutes, so one slow shard fails clearly rather
+    than at the margin of its usual run time (decision BD-4)."""
+    job = _load("compass.yml")["jobs"]["shard"]
+    assert job["timeout-minutes"] == 45
+    # Every test's duration reaches the log, so scripts/ci-durations.py can
+    # weigh every file rather than only those holding the slowest tests.
+    running = _step_named(job, "Run this shard's tests")["run"]
+    assert " --durations=0 " in running, running
 
 
 def test_crt_15_token_stays_read_only():

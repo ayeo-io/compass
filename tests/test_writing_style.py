@@ -3768,8 +3768,9 @@ _GROWING_REACH = {
     # 74 with tests/fixtures/ad-hoc-kinds.txt, the kind names the 6.x migrate lists on
     #    the archive copy, one per line;
     # 75 with tests/fixtures/ci-run-time/compat-node-ids.txt, test node ids, one per line;
-    # 76 with tests/fixtures/ci-run-time/run-jobs.json, plain JSON.
-    "PBW-C4": (lambda path: path.startswith("tests/"), 76),
+    # 76 with tests/fixtures/ci-run-time/run-jobs.json, plain JSON;
+    # 77 with tests/ci-durations.json, the shard weights, plain JSON.
+    "PBW-C4": (lambda path: path.startswith("tests/"), 77),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

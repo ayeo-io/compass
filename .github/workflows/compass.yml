@@ -193,7 +193,7 @@ jobs:
     needs: already-tested
     if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && (github.event.action != 'edited' || github.event.changes.base != null) }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -234,11 +234,13 @@ jobs:
           mkdir -p "$RUNNER_TEMP/count"
           python3 scripts/ci-self-check.py count "$RUNNER_TEMP/collected.txt" > "$RUNNER_TEMP/count/shard-$SHARD-of-$SHARDS"
           echo "Shard $SHARD of $SHARDS holds ${#files[@]} files and collects $(cat "$RUNNER_TEMP/count/shard-$SHARD-of-$SHARDS") tests."
+      # --durations=0 prints every test's duration, so scripts/ci-durations.py
+      # can rebuild tests/ci-durations.json, the shard weights, from this run.
       - name: Run this shard's tests
         shell: bash
         run: |
           mapfile -t files < "$RUNNER_TEMP/shard-files.txt"
-          python3 -m pytest -p xdist.plugin -n auto -m "not serial" --durations=25 "${files[@]}"
+          python3 -m pytest -p xdist.plugin -n auto -m "not serial" --durations=0 "${files[@]}"
       # Published only after the tests pass, so a failed, cancelled or
       # skipped shard leaves no count and the aggregator fails on that too.
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

@@ -148,5 +148,7 @@ def test_crt_19_ci_prints_counts_and_durations(tmp_path):
         output = run.stdout + run.stderr
         assert run.returncode == 0, (job, output[-2000:])
         assert "3 passed" in output, (job, output[-2000:])
-        assert re.search(r"slowest \d+ durations", output), (job, output[-2000:])
+        # "slowest 20 durations" for a count; "slowest durations" for
+        # --durations=0, which lists every test.
+        assert re.search(r"slowest (\d+ )?durations", output), (job, output[-2000:])
         assert "test_sleeps_a_little" in output, (job, output[-2000:])

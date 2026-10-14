@@ -1,0 +1,33 @@
+# Scans the pull request's title and body for rival product names
+# (governance/decisions/2026-10-04-rival-names-never-committed.md). It runs
+# on `edited` as well, so an edited title is scanned without running the
+# suite. compass.yml scans the commit messages.
+name: Pull request text
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+# The prefix keeps this group apart from compass.yml's, so a title edit
+# never cancels the suite: a group name is shared by every workflow in the
+# repository.
+concurrency:
+  group: pr-text-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  pr-text:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11"
+      - name: No rival product name in the pull request title or body
+        # The gate reads the title and body from the event file itself, so
+        # no text from them is ever put into a shell command.
+        run: python3 scripts/rival-name-gate.py --github-event "$GITHUB_EVENT_PATH"

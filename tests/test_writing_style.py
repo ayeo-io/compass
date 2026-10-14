@@ -3767,11 +3767,14 @@ _GROWING_REACH = {
     #    rendered-blocks-current labels came, two each);
     # 74 with tests/fixtures/ad-hoc-kinds.txt, the kind names the 6.x migrate lists on
     #    the archive copy, one per line;
-    # 83 with the nine files of tests/fixtures/autonomy-ratio-and-cost/: four plain JSON
+    # 75 with tests/fixtures/ci-run-time/compat-node-ids.txt, test node ids, one per line;
+    # 76 with tests/fixtures/ci-run-time/run-jobs.json, plain JSON;
+    # 77 with tests/ci-durations.json, the shard weights, plain JSON;
+    # 86 with the nine files of tests/fixtures/autonomy-ratio-and-cost/: four plain JSON
     #    captures of the base commit and five fixture transcripts, one JSON object per line;
-    # 85 with retro.json and ships.json of tests/fixtures/autonomy-ratio-and-cost-views/,
+    # 88 with retro.json and ships.json of tests/fixtures/autonomy-ratio-and-cost-views/,
     #    plain JSON captures of the base commit.
-    "PBW-C4": (lambda path: path.startswith("tests/"), 85),
+    "PBW-C4": (lambda path: path.startswith("tests/"), 88),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

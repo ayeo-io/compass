@@ -17,6 +17,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 ROOT = Path(__file__).resolve().parent.parent
 PARALLEL = "-p xdist.plugin -n auto"
@@ -85,17 +86,24 @@ def test_release_script_runs_the_suite_on_parallel_workers():
     assert "$XDIST" in step or "${XDIST}" in step, step
 
 
+def _ci_job_text(job_id: str) -> str:
+    """The steps of one job in the CI workflow, as one text."""
+    doc = yaml.safe_load((ROOT / ".github" / "workflows" / "compass.yml")
+                         .read_text(encoding="utf-8"))
+    job = doc["jobs"][job_id]
+    return "\n".join(step.get("run", "") for step in job.get("steps", []))
+
+
 def test_ci_installs_xdist_and_runs_in_parallel():
-    """The CI self-check job installs pytest-xdist and runs the suite on
-    parallel workers (FS-F)."""
-    text = (ROOT / ".github" / "workflows" / "compass.yml").read_text(encoding="utf-8")
-    job = text[text.index("self-check"):text.index("bdd-adapter")]
+    """The CI shard jobs, which run the parallel pass, install pytest-xdist
+    and run the suite on parallel workers (FS-F)."""
+    job = _ci_job_text("shard")
     # The job installs from a requirements file of exact versions (#99).
     req = re.search(r"pip install -r (\S+)", job)
-    assert req, "self-check installs no requirements file"
+    assert req, "the shard job installs no requirements file"
     pins = (ROOT / req.group(1)).read_text(encoding="utf-8")
-    assert re.search(r"^pytest-xdist==", pins, re.M), "self-check does not install pytest-xdist"
-    assert f"pytest tests/ -q {PARALLEL}" in job, "self-check does not run in parallel"
+    assert re.search(r"^pytest-xdist==", pins, re.M), "the shard job does not install pytest-xdist"
+    assert f"pytest {PARALLEL}" in job, "the shard job does not run in parallel"
 
 
 def test_releasing_md_names_xdist_and_the_full_archive_check():
@@ -152,7 +160,7 @@ SERIAL_TESTS = {
     "tests/test_manifest_parse_speed.py::test_trc_b2_flow_faster_than_one_parse_on_sample",
     "tests/test_manifest_parse_speed.py::test_trc_b3_cold_flow_within_ten_percent_of_before[no stored state]",
     "tests/test_manifest_parse_speed.py::test_trc_b3_cold_flow_within_ten_percent_of_before[stale stored state]",
-    "tests/test_render_all.py::test_dcj_63_no_test_touches_own_archive",
+    "tests/test_render_all.py::test_dcj_63_guard_fails_on_a_planted_archive_write",
     "tests/test_render_all.py::test_dcj_61_render_all_490_issues_within_bound",
     "tests/test_project_readiness.py::test_prc_37",
     "tests/test_issue_dependencies.py::test_dbi_12_hook_cost_budget",
@@ -182,12 +190,14 @@ def test_make_test_runs_serial_tests_in_their_own_pass(tmp_path):
 
 
 def test_ci_runs_serial_tests_in_their_own_pass():
-    """The CI self-check job runs the serial tests after the parallel pass
-    (TRC-001 of parallel-ci-flakes)."""
-    text = (ROOT / ".github" / "workflows" / "compass.yml").read_text(encoding="utf-8")
-    job = text[text.index("self-check"):text.index("bdd-adapter")]
-    assert f'{PARALLEL} -m "not serial"' in job, job
-    assert "-m serial" in job.replace('"not serial"', ""), job
+    """CI runs the parallel pass without the serial tests, and the serial
+    tests alone in a job of their own (TRC-001 of parallel-ci-flakes)."""
+    parallel = _ci_job_text("shard")
+    assert f'{PARALLEL} -m "not serial"' in parallel, parallel
+    assert "-m serial" not in parallel.replace('"not serial"', ""), parallel
+    serial = _ci_job_text("serial")
+    assert "pytest tests/ -m serial" in serial, serial
+    assert "xdist" not in serial, serial
 
 
 def test_every_serial_marked_test_is_listed():

@@ -445,23 +445,62 @@ def test_rn_5_the_living_spec_derivation_writes_codes(fake, tmp_path, monkeypatc
 
 # --- RN-6: CI runs the gate over pull request text ---------------------------
 
-def test_rn_6_ci_runs_the_gate_over_commits_title_and_body():
-    workflow = (ROOT / ".github" / "workflows" / "compass.yml").read_text()
-    steps = [step for job in yaml.safe_load(workflow)["jobs"].values()
-             for step in job.get("steps", [])]
-    runs = "\n".join(step.get("run", "") for step in steps)
-    assert "rival-name-gate.py --github-event" in runs
-    assert "git log --format=%B" in runs and "rival-name-gate.py --text -" in runs
-    gate_step = next(step for step in steps
-                     if "rival-name-gate.py" in step.get("run", ""))
-    assert gate_step.get("shell") == "bash", "pipefail needs `shell: bash`"
-    for expression in ("pull_request.title", "pull_request.body",
-                       "head.ref", "head_ref"):
-        assert expression not in workflow, (
-            f"{expression} reaches the workflow text; the gate reads it "
-            f"from the event file")
-    triggers = yaml.safe_load(workflow)[True]["pull_request"]["types"]
-    assert "edited" in triggers
+def _rn_6_problems(workflows: Path) -> list:
+    """What is missing for CI to scan commits, title and body, across every
+    workflow that runs on a pull request. The commit scan and the title and
+    body scan may sit in different workflows."""
+    problems, commit_scan, text_scan = [], False, False
+    for path in sorted(workflows.glob("*.yml")):
+        text = path.read_text(encoding="utf-8")
+        doc = yaml.safe_load(text)
+        on = doc.get("on", doc.get(True)) or {}
+        if not isinstance(on, dict) or "pull_request" not in on:
+            continue
+        for expression in ("pull_request.title", "pull_request.body",
+                           "head.ref", "head_ref"):
+            if expression in text:
+                problems.append(f"{path.name}: {expression} reaches the workflow "
+                                "text; the gate reads it from the event file")
+        types = (on["pull_request"] or {}).get("types", [])
+        for job in doc["jobs"].values():
+            for step in job.get("steps", []):
+                run = step.get("run", "")
+                if "git log --format=%B" in run and "rival-name-gate.py --text -" in run:
+                    commit_scan = True
+                    if step.get("shell") != "bash":
+                        problems.append(f"{path.name}: the commit scan needs "
+                                        "`shell: bash` for pipefail")
+                if "rival-name-gate.py --github-event" in run:
+                    text_scan = True
+                    if "edited" not in types:
+                        problems.append(f"{path.name}: the title and body scan "
+                                        "does not run on `edited`")
+    if not commit_scan:
+        problems.append("no pull-request workflow scans the commit messages")
+    if not text_scan:
+        problems.append("no pull-request workflow scans the title and body")
+    return problems
+
+
+def test_rn_6_ci_runs_the_gate_over_commits_title_and_body(tmp_path):
+    workflows = ROOT / ".github" / "workflows"
+    assert _rn_6_problems(workflows) == []
+
+    # The check fails when the title and body scan is removed from
+    # pr-text.yml, in a copy of the workflows.
+    copy = tmp_path / "workflows"
+    copy.mkdir()
+    for path in workflows.glob("*.yml"):
+        (copy / path.name).write_text(path.read_text(encoding="utf-8"),
+                                      encoding="utf-8")
+    pr_text = copy / "pr-text.yml"
+    doc = yaml.safe_load(pr_text.read_text(encoding="utf-8"))
+    for job in doc["jobs"].values():
+        job["steps"] = [s for s in job["steps"]
+                        if "--github-event" not in s.get("run", "")]
+    pr_text.write_text(yaml.safe_dump(doc), encoding="utf-8")
+    assert _rn_6_problems(copy) == [
+        "no pull-request workflow scans the title and body"]
 
 
 # --- RN-7: the rule is stated where sessions read it -------------------------

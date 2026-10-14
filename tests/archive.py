@@ -34,6 +34,15 @@ FULL_ARCHIVE = "COMPASS_FULL_ARCHIVE"
 NEEDS_FULL_ARCHIVE = ("reads every issue in this checkout's own archive; set "
                       "COMPASS_FULL_ARCHIVE=1 to run it, as a release does")
 
+#: The test files that read the archive's shape. They read the sample by
+#: default, so none of them may skip while the switch is off: a skip there
+#: would mean a check ran against nothing. tests/shape_skip_guard.py fails any
+#: skip in these files, and tests/test_archive_sample.py checks the guard.
+SHAPE_TESTS = ("test_artifact_registry.py", "test_id_prefix_glossary.py",
+               "test_landed_by.py", "test_phase2_invariants.py",
+               "test_record_keeping_integrity.py",
+               "test_readable_specs_and_flow.py", "test_self_architecture.py")
+
 
 def full_archive():
     """Is the switch on?"""

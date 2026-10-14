@@ -444,7 +444,7 @@ def _blocks_of(root):
 
 
 def _four_commands(root):
-    """The output of render, check, receipt, analyze and lint on a fixture issue."""
+    """The output of render, check, receipt, `analyze` and lint on a fixture issue."""
     import rendered_blocks_support as sup
 
     out = {}
@@ -530,5 +530,414 @@ def test_dss_31_template_show_on_an_earlier_generation_keeps_its_prose(tmp_path)
 # --- U3: section checks and the archive boundary ---
 
 # --- U4: coverage Kind column and dependencies block ---
+
+U4_SCENARIOS = ("A1", "A2", "B1", "B2", "C1")
+
+_U4_SPEC = """\
+# Spec
+
+## Scenario group A - Export
+
+### Scenario: Export one
+<!-- traceability id: A1 · serves: INT-1 -->
+
+### Scenario: Export two
+<!-- traceability id: A2 · serves: INT-1 -->
+
+## Scenario group B - Import
+
+### Scenario: Import one
+<!-- traceability id: B1 · serves: INT-1 -->
+
+### Scenario: Import two
+<!-- traceability id: B2 · serves: INT-1 -->
+
+## Failure-mode scenarios
+
+### Scenario: Import a broken file
+<!-- traceability id: C1 · serves: INT-1 -->
+
+## Coverage ledger
+
+"""
+
+_U4_PLAN_ROWS = (("A", "unit"), ("B", "integration"), ("B2", "manual"))
+
+
+def _u4_design(rows, heading="Verification plan"):
+    table = "".join("| %s | %s | a scratch project |\n" % row for row in rows)
+    return ("# Plan\n\n## Approach\n\nOne writer.\n\n## %s\n\n"
+            "| Group | Kind | Fixture or environment |\n|---|---|---|\n%s\n"
+            "## Gate\n\nNone.\n" % (heading, table))
+
+
+def _u4_issue(tmp_path, rows=_U4_PLAN_ROWS, heading="Verification plan"):
+    """A rendered-blocks fixture issue whose spec has groups A and B and one scenario in no
+    group, and whose design holds a Verification plan with `rows`."""
+    import rendered_blocks_support as sup
+
+    root = sup.rich_issue(tmp_path)
+    body = sup.manifest(root)
+    body["scenarios"] = [{"id": sid, "title": "Scenario " + sid, "intent": "INT-1",
+                          "tests": ["tests/test_a.py::test_%s" % sid.lower()]}
+                         for sid in U4_SCENARIOS]
+    sup.base.write_manifest(root, body)
+    sup.write_doc(root, "acceptance-criteria", _U4_SPEC + sup.block("coverage"))
+    if rows is not None:
+        sup.write_doc(root, "technical-design", _u4_design(rows, heading))
+    return root
+
+
+def _u4_block(text, kind):
+    """The interior of the first `kind` block of `text`."""
+    from compass_pkg import rendered_blocks
+
+    parsed = rendered_blocks.parse(text, "doc.md")
+    found = next(b for b in parsed.blocks if b.kind == kind)
+    return "".join(parsed.lines[found.start + 1:found.end])
+
+
+def _u4_coverage(root):
+    """`(header cells, {scenario: cells})` of the spec's coverage table."""
+    import rendered_blocks_support as sup
+
+    block = _u4_block(sup.doc_path(root, "acceptance-criteria").read_text(encoding="utf-8"),
+                      "coverage")
+    rows = [[c.strip() for c in line.strip().strip("|").split(" | ")]
+            for line in block.splitlines() if line.startswith("| ")]
+    return rows[0], {r[0]: r for r in rows[1:]}
+
+
+def _u4_kinds(root):
+    header, rows = _u4_coverage(root)
+    assert "Kind" in header, header
+    at = header.index("Kind")
+    return {sid: cells[at] for sid, cells in rows.items()}
+
+
+def test_dss_18_the_coverage_block_shows_each_scenarios_planned_kind(tmp_path):
+    import rendered_blocks_support as sup
+
+    root = _u4_issue(tmp_path / "planned")
+    code, out, err = sup.render(root)
+    assert code == 0, out + err
+    header, _rows = _u4_coverage(root)
+    assert header == ["Scenario", "Title", "Kind", "Tests", "Red", "Green", "Acceptance",
+                      "Result"], header
+    # An id row wins over its group row; a scenario in no row reads "not planned".
+    assert _u4_kinds(root) == {"A1": "unit", "A2": "unit", "B1": "integration",
+                               "B2": "manual", "C1": "not planned"}
+    code, clean_lint, err = sup.run(root, "issue", "lint", "--issue", sup.SLUG)
+    assert "smoke" not in clean_lint and "Verification plan" not in clean_lint, clean_lint
+    lint_code = code
+
+    # A kind that is not one of the five reads "unknown (<word>)", and lint reports the row
+    # without changing its exit code.
+    smoky = _u4_issue(tmp_path / "smoke", rows=_U4_PLAN_ROWS + (("C1", "smoke"),))
+    code, out, err = sup.render(smoky)
+    assert code == 0, out + err
+    assert _u4_kinds(smoky)["C1"] == "unknown (smoke)"
+    code, lint, err = sup.run(smoky, "issue", "lint", "--issue", sup.SLUG)
+    assert code == lint_code, lint + err
+    note = [line for line in lint.splitlines() if "smoke" in line]
+    assert len(note) == 1 and "Verification plan" in note[0] and "C1" in note[0], lint
+
+
+def _u4_check_rows(root, slug=None):
+    """`{check name: row}` of `compass check --json` on the fixture issue."""
+    import rendered_blocks_support as sup
+
+    code, out, err = sup.run(root, "check", "--issue", slug or sup.SLUG, "--json")
+    assert out.strip().startswith("{"), out + err
+    return code, {c["name"]: c for c in json.loads(out)["checks"]}
+
+
+def _u4_statuses(rows):
+    return {name: row.get("status") for name, row in rows.items()}
+
+
+def test_dss_19_compass_check_reads_the_plan_only_through_the_coverage_block(tmp_path):
+    import rendered_blocks_support as sup
+
+    root = _u4_issue(tmp_path)
+    sup.edit(root, current_phase="verify")
+    code, out, err = sup.render(root)
+    assert code == 0, out + err
+    _code, before = _u4_check_rows(root)
+    assert before["rendered-blocks-current"]["status"] == "pass", before["rendered-blocks-current"]
+
+    # The row "B" changes to acceptance and no render follows.
+    edited = [("A", "unit"), ("B", "acceptance"), ("B2", "manual")]
+    sup.doc_path(root, "technical-design").write_text(_u4_design(edited), encoding="utf-8")
+    _code, stale = _u4_check_rows(root)
+    row = stale["rendered-blocks-current"]
+    assert row["status"] == "fail", row
+    assert "coverage" in row["detail"] and "acceptance-criteria.md" in row["detail"], row
+    others = {k: v for k, v in _u4_statuses(stale).items() if k != "rendered-blocks-current"}
+    assert others == {k: v for k, v in _u4_statuses(before).items()
+                      if k != "rendered-blocks-current"}
+
+    code, out, err = sup.render(root)
+    assert code == 0, out + err
+    assert _u4_kinds(root)["B1"] == "acceptance"
+    _code, after = _u4_check_rows(root)
+    assert _u4_statuses(after) == _u4_statuses(before)
+
+
+#: A design with no Verification plan heading: the words appear only in prose, in a comment
+#: and in a code fence, none of which is a heading.
+_U4_NO_PLAN_DESIGN = """\
+# Plan
+
+## Approach
+
+The Verification plan is not written for this issue.
+
+<!--
+## Verification plan
+-->
+
+```markdown
+## Verification plan
+
+| Group | Kind | Fixture or environment |
+|---|---|---|
+| A | unit | a scratch project |
+```
+
+### Verification plan
+
+| Group | Kind | Fixture or environment |
+|---|---|---|
+| A | unit | a level-three heading is not the section |
+
+## Gate
+
+None.
+"""
+
+
+def _u4_old_coverage(root):
+    """The coverage block exactly as the renderer wrote it before the Kind column existed,
+    for the DSS-20 fixture's records."""
+    import rendered_blocks_support as sup
+
+    rows = []
+    for sid in U4_SCENARIOS:
+        red = "`red-%s.json`" % sid if sid == "A1" else "-"
+        green = "`green-%s.json`" % sid if sid == "A1" else "-"
+        rows.append("| %s | Scenario %s | `tests/test_a.py::test_%s` | %s | %s | - | %s |" % (
+            sid, sid, sid.lower(), red, green, "passed" if sid == "A1" else "no test record"))
+    modes = sup.manifest(root)["failure_modes_descoped"]
+    return "\n".join(
+        ["Coverage: 1 of %d scenarios passed" % len(U4_SCENARIOS), "",
+         "| Scenario | Title | Tests | Red | Green | Acceptance | Result |",
+         "|---|---|---|---|---|---|---|"] + rows
+        + ["", "De-scoped failure modes:"]
+        + ["- %s - %s" % (m["mode"], m["reason"]) for m in modes]) + "\n"
+
+
+def _u4_coverage_blocks(root):
+    """`{(document, n): interior}` for every coverage block under `docs/compass/`."""
+    from compass_pkg import rendered_blocks
+
+    found = {}
+    for path in sorted((Path(root) / "docs" / "compass").rglob("*.md")):
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if "compass:render coverage" not in text:
+            continue
+        parsed = rendered_blocks.parse(text, path.name)
+        blocks = [b for b in parsed.blocks if b.kind == "coverage"]
+        for n, b in enumerate(blocks):
+            found[(str(path.relative_to(root)), n)] = "".join(parsed.lines[b.start + 1:b.end])
+    return found
+
+
+def _u4_archive_copy(source, target):
+    """A copy of the project at `source` holding what `render --all` reads, with no skip
+    state, so every issue is rendered again."""
+    target.mkdir(parents=True)
+    for rel in (".compass/work", "docs/compass", "governance", "architecture"):
+        if (Path(source) / rel).is_dir():
+            shutil.copytree(Path(source) / rel, target / rel, symlinks=True)
+    for rel in ("compass.yml",):
+        if (Path(source) / rel).is_file():
+            shutil.copy2(Path(source) / rel, target / rel)
+    return target
+
+
+def _u4_render_all_keeps_coverage(source, scratch):
+    """`(blocks before, blocks after, outcome line)` of `compass issue render --all` on a copy
+    of the project at `source`."""
+    import rendered_blocks_support as sup
+
+    copy = _u4_archive_copy(source, scratch)
+    before = _u4_coverage_blocks(copy)
+    done = subprocess.run([sys.executable, str(sup.CLI), "issue", "render", "--all"], cwd=copy,
+                          env=sup.env(copy), capture_output=True, text=True, timeout=1800,
+                          stdin=subprocess.DEVNULL)
+    outcome = (done.stdout + done.stderr).strip().splitlines()
+    return before, _u4_coverage_blocks(copy), outcome[0] if outcome else ""
+
+
+def test_dss_20_a_design_with_no_verification_plan_keeps_the_old_coverage_block(tmp_path):
+    import archive
+    import rendered_blocks_support as sup
+
+    root = _u4_issue(tmp_path / "no-plan", rows=None)
+    sup.write_doc(root, "technical-design", _U4_NO_PLAN_DESIGN)
+    sup.add_records(root, **{"red-A1": "A1", "green-A1": "A1"})
+    sup.edit(root, current_phase="verify")
+    code, out, err = sup.render(root)
+    assert code == 0, out + err
+    spec = sup.doc_path(root, "acceptance-criteria")
+    assert _u4_block(spec.read_text(encoding="utf-8"), "coverage") == _u4_old_coverage(root)
+    first = spec.read_bytes()
+    code, out, err = sup.render(root)
+    assert code == 0, out + err
+    assert spec.read_bytes() == first
+    _code, rows = _u4_check_rows(root)
+    assert rows["rendered-blocks-current"]["status"] == "pass", rows["rendered-blocks-current"]
+
+    # The migrated archive sample (or, with COMPASS_FULL_ARCHIVE=1, this checkout's archive):
+    # render --all changes no byte of any existing coverage block.
+    before, after, outcome = _u4_render_all_keeps_coverage(
+        archive.checkable_root(), tmp_path / "archive")
+    assert re.search(r"render --all: [1-9]\d* issue\(s\) rendered", outcome), outcome
+    changed = sorted(k for k in before if after.get(k) != before[k])
+    assert not changed, "%d of %d coverage blocks changed: %s" % (
+        len(changed), len(before), changed[:5])
+
+
+_U4_STAGES = {"assess": "thorough", "define": "thorough", "refine": "skipped",
+              "plan": "thorough", "breakdown": "skipped", "implement": "thorough",
+              "verify": "thorough", "ship": "thorough"}
+
+#: The waiting issue's `depends_on`: "b" is done, "c" is at plan, "d" has no manifest and
+#: "e" has a manifest that cannot be read.
+_U4_DEPENDS = [{"issue": "b", "reason": "needs the parse cache", "until": "done"},
+               {"issue": "c", "reason": "shares the hook", "until": "done"},
+               {"issue": "d", "reason": "reads its schema", "until": "done"},
+               {"issue": "e", "reason": "reuses its fixture", "until": "done"}]
+
+
+def _u4_other_issue(root, slug, close=None):
+    """Issue `slug` at plan, or closed with `close`, in the fixture project."""
+    import rendered_blocks_support as sup
+
+    task_dir = Path(root) / ".compass" / "work" / slug
+    (task_dir / "evidence").mkdir(parents=True, exist_ok=True)
+    body = {"schema_version": "3.0", "issue": slug, "created": "2026-10-01",
+            "assessment": {"risk": "contained", "familiarity": "brownfield-mapped",
+                           "size": "small", "goal": "delivery", "role": "engineer"},
+            "delivery_approach": "regular", "stages": dict(_U4_STAGES),
+            "gates": [{"id": "verify.correctness", "status": "pending", "evidence": []}],
+            "scenarios": [{"id": slug.upper() + "-1", "title": slug + " works",
+                           "intent": "INT-1", "tests": ["tests/test_x.py::test_it"]}],
+            "artifacts": [], "evidence": []}
+    if close:
+        body.update(status="done", close_reason=close)
+    sup.base.write_manifest(root, body, slug=slug)
+    return task_dir
+
+
+def _u4_dependencies_issue(tmp_path, depends=_U4_DEPENDS):
+    """A fixture project whose issue (the waiting issue "a" of DSS-22) has a design holding
+    a dependencies block, and `depends` as its `depends_on`."""
+    import rendered_blocks_support as sup
+
+    root = sup.project(tmp_path)
+    _u4_other_issue(root, "b", close="completed")
+    _u4_other_issue(root, "c")
+    broken = Path(root) / ".compass" / "work" / "e"
+    broken.mkdir(parents=True)
+    (broken / "manifest.yml").write_text("issue: e\nstatus: [unclosed\n", encoding="utf-8")
+    sup.write_doc(root, "technical-design", "# Plan\n\n## Risks and dependencies\n\n"
+                  "Dependencies on other issues:\n\n" + sup.block("dependencies"))
+    if depends is not None:
+        sup.edit(root, depends_on=depends)
+    return root
+
+
+def _u4_dependency_lines(root):
+    import rendered_blocks_support as sup
+
+    text = sup.doc_path(root, "technical-design").read_text(encoding="utf-8")
+    return _u4_block(text, "dependencies").splitlines()
+
+
+def _u4_board_words(root):
+    """`{dependency: word}` as the board panel words each entry of the waiting issue, from
+    `compass flow --json` through the panel's own function."""
+    import rendered_blocks_support as sup
+    from compass_pkg import board_page
+
+    code, out, err = sup.run(root, "flow", "--json")
+    assert code == 0, out + err
+    board = json.loads(out)["board"]
+    rows = {r["slug"]: r for lane in board.values() for r in lane}
+    unreadable = {r["slug"] for r in board.get("unreadable") or []}
+    assert "e" in unreadable, board.get("unreadable")
+    return {d["issue"]: board_page._dependency_word(d, unreadable)
+            for d in rows[sup.SLUG]["depends_on"]}, rows
+
+
+def test_dss_22_the_dependencies_block_lists_depends_on_in_the_boards_words(tmp_path):
+    import rendered_blocks_support as sup
+
+    root = _u4_dependencies_issue(tmp_path / "waits")
+    code, out, err = sup.render(root)
+    assert code == 0, out + err
+    lines = _u4_dependency_lines(root)
+    assert lines == ["- b - needs the parse cache - until done - met",
+                     "- c - shares the hook - until done - waiting",
+                     "- d - reads its schema - until done - not found",
+                     "- e - reuses its fixture - until done - unreadable"], lines
+    # Each word is the word the board panel shows for that entry.
+    words, rows = _u4_board_words(root)
+    assert rows["c"]["stage"] == "plan", rows["c"]
+    assert {line.split(" - ")[0][2:]: line.rsplit(" - ", 1)[1] for line in lines} == words
+
+    # An issue with no depends_on reads "None".
+    none = _u4_dependencies_issue(tmp_path / "free", depends=None)
+    code, out, err = sup.render(none)
+    assert code == 0, out + err
+    assert _u4_dependency_lines(none) == ["None"]
+
+
+def test_dss_23_a_dependencys_change_makes_the_block_stale_only_as_an_advisory(tmp_path):
+    import rendered_blocks_support as sup
+
+    root = _u4_dependencies_issue(tmp_path)
+    sup.edit(root, current_phase="verify")
+    code, out, err = sup.render(root)
+    assert code == 0, out + err
+    clean_code, before = _u4_check_rows(root)
+    assert before["rendered-blocks-current"]["status"] == "pass", before["rendered-blocks-current"]
+
+    # Issue "c" reaches done and "a" is not rendered.
+    _u4_other_issue(root, "c", close="completed")
+    stale_code, stale = _u4_check_rows(root)
+    row = stale["rendered-blocks-current"]
+    assert row["status"] == "advisory", row
+    assert "dependencies" in row["detail"] and "technical-design.md" in row["detail"], row
+    # The advisory does not fail the check: the exit code and every other verdict stand.
+    assert stale_code == clean_code
+    assert {k: v for k, v in _u4_statuses(stale).items() if k != "rendered-blocks-current"} \
+        == {k: v for k, v in _u4_statuses(before).items() if k != "rendered-blocks-current"}
+
+    # depends remove and depends add re-render the block.
+    code, out, err = sup.run(root, "issue", "depends", "remove", "d", "--issue", sup.SLUG)
+    assert code == 0, out + err
+    assert _u4_dependency_lines(root) == [
+        "- b - needs the parse cache - until done - met",
+        "- c - shares the hook - until done - met",
+        "- e - reuses its fixture - until done - unreadable"]
+    code, out, err = sup.run(root, "issue", "depends", "add", "b2", "--reason", "shares the cache",
+                             "--until", "plan", "--issue", sup.SLUG)
+    assert code == 0, out + err
+    assert _u4_dependency_lines(root)[-1] == "- b2 - shares the cache - until plan - not found"
+    _code, after = _u4_check_rows(root)
+    assert after["rendered-blocks-current"]["status"] == "pass", after["rendered-blocks-current"]
 
 # --- U5: owning docs, public surface and this issue's checks ---

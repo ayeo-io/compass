@@ -91,9 +91,8 @@ round or a `review-2` entry. Decisions 3 and 5 are extended, not changed:
 - **Decision 3 gains a step.** Before a file moves, an entry registered under a stem is re-kinded to
   the kind and round the table gives it. When another entry already names that file, the two merge
   into one: the entry with the later approval keeps its id and approval; if only one is approved, that
-  one is kept; if neither is, the round entry is kept, because stage exits write status and the
-  round entry holds the more current one. Two entries whose files both exist are not merged; the
-  report names both files for a person. The dry run prints the same merge line as the apply.
+  one is kept; if neither is, the stem entry is kept. The dry run prints the same merge line as the
+  apply.
 - **Decision 5 gains a removal.** A merged entry is the third thing the migrate removes, beside each
   pointer and the `recommendation` entry. The report names the dropped entry's id and approval, and
   the copy taken before `--apply` holds it.
@@ -108,3 +107,13 @@ A re-run repairs a tree an earlier 7.0.0 migrate left with stale stem entries.
 - ADR-040: framework constants live in one place.
 - ADR-051: decisions 3 and 16, the archived document and `README.md.v6.bak`.
 - ADR-054: a kind that repeats, keyed by round.
+
+## Amendment (14 October 2026, second)
+
+The merge step of the first amendment changes in two ways:
+
+- **When neither merged entry is approved, the round entry is kept.** Stage exits write status, so
+  the round entry holds the more current status. This replaces "if neither is, the stem entry is
+  kept".
+- **Two entries whose files both exist are not merged.** The report names both files for a person
+  to settle.

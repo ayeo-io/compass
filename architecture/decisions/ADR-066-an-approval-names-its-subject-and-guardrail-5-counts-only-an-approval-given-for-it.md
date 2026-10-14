@@ -1,8 +1,8 @@
 ---
 id: ADR-066
 title: An approval names its subject, and guardrail 5 counts only an approval given for it
-status: proposed
-date: 2026-10-14
+status: accepted
+date: 2026-10-15
 supersedes: ''
 superseded_by: ''
 ---

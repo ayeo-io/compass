@@ -420,7 +420,7 @@ def test_agf_12_docs_and_decision_entry_state_the_rule():
     adrs = sorted((ROOT / "architecture" / "decisions").glob("ADR-066-*.md"))
     assert len(adrs) == 1, adrs
     adr = _flat(adrs[0].read_text(encoding="utf-8"))
-    for needle in ("status: proposed", "SUBJECT_KEYS", "landed", "1.1.0", "ADR-038",
+    for needle in ("status: accepted", "SUBJECT_KEYS", "landed", "1.1.0", "ADR-038",
                    "ADR-063"):
         assert needle in adr, f"ADR-066 does not say {needle!r}"
     index = (ROOT / "architecture" / "decisions" / "README.md").read_text(encoding="utf-8")

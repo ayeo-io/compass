@@ -2220,8 +2220,11 @@ def test_dss_32_own_issue_passes_both_checks():
     generation = manifest.get("generation")
     assert isinstance(generation, int) and generation >= 2, generation
     assert manifest["delivery_approach"] == "full"
-    reasons = [one.get("reason") for one in manifest.get("reassessments") or []]
-    assert any(reasons), reasons
+    # approach evaluate logs a reassessment only when the approach changes, and this
+    # one did not, so the stored generation's completion record is the proof of the move.
+    complete = _u5_yaml(U5_ISSUE / "generations" / str(generation) / "complete")
+    for name in ("resolved.yml", "provenance.yml", "versions.yml", "records.yml"):
+        assert name in complete["files"], (name, complete)
     resolved = _u5_yaml(U5_ISSUE / "generations" / str(generation) / "resolved.yml")
     for name in U5_CHECKS:
         assert name in resolved["checks"], name
@@ -2229,7 +2232,17 @@ def test_dss_32_own_issue_passes_both_checks():
               for heading in (entry.get("sections") or {}).get("thorough") or []}
     for heading in U5_SECTIONS:
         assert heading in listed, heading
-    code, out, err = _cli(ROOT, "check", "--issue", "document-set-sections", "--json")
+    # Every check run rewrites the generation's results.yml with a timestamp, and no
+    # test may change the archive, so the file is put back as it was.
+    results = U5_ISSUE / "generations" / str(generation) / "results.yml"
+    before = results.read_bytes() if results.is_file() else None
+    try:
+        code, out, err = _cli(ROOT, "check", "--issue", "document-set-sections", "--json")
+    finally:
+        if before is None:
+            results.unlink(missing_ok=True)
+        else:
+            results.write_bytes(before)
     rows = {row["name"]: row for row in json.loads(out)["checks"]}
     for name in U5_CHECKS:
         assert rows[name]["status"] == "pass", rows[name]

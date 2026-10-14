@@ -260,8 +260,8 @@ def test_roa_15_the_decision_entry_records_the_rule(tmp_path):
     assert sections["Decided by"] == "jed72" and sections["Date"] == "2026-10-14"
     decision = sections["Decision"]
     for statement in (
-            "Only the readiness registry and the check registry, which ship with the CLI, "
-            "can declare the direction `equivalent`",
+            "Only the readiness registry, which ships with the CLI, can declare the "
+            "direction `equivalent`",
             "refuses `equivalent` on a parameter that has no `choices` entry",
             "A catalogue or a preset cannot declare `equivalent`",
             "both sides name the same implementation, both values are present and both "
@@ -378,7 +378,8 @@ def test_roa_14_assess_and_quick_fix_start_under_this_compass_yml(tmp_path):
     assert code == 0, out + err
     assert _generation_1(project, "probe-b").is_file()
 
-    # A repeat of D258: the plain-map override drops `limit_seconds`, and both
+    # A repeat of the readiness override that blocked every assessment: the
+    # plain-map override drops `limit_seconds`, and both
     # writes are refused before anything is written.
     planted = _project_with(tmp_path, "plain", real.replace(MAP_FORM, PLAIN_MAP))
     task = _probe_manifest(planted, "probe-c")

@@ -16,7 +16,7 @@ Nothing. This entry amends no entry. `2026-10-13-this-repository-declares-readin
 
 A registry entry can declare a fourth direction for a parameter, `equivalent`, beside `higher`, `lower` and `none`. The classifier compares a parameter whose direction is `equivalent` as follows.
 
-- Only the readiness registry and the check registry, which ship with the CLI, can declare the direction `equivalent`. The readiness registry declares it on `tests-under-limit.command` only.
+- Only the readiness registry, which ships with the CLI, can declare the direction `equivalent`. It declares it on `tests-under-limit.command` only.
 - A registry refuses `equivalent` on a parameter that has no `choices` entry. A check parameter has no `choices`, so the check registry refuses it on every parameter.
 - A catalogue or a preset cannot declare `equivalent`: a dimension's direction stays `higher` or `lower`, and the catalogue check refuses any other value.
 - A changed value is equivalent only when both sides name the same implementation, both values are present and both are in that implementation's `choices` for the parameter. An unchanged value is equal, as for every other direction.

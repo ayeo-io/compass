@@ -24,6 +24,8 @@ The repository must be private: Compass cannot check that. A project with no `re
 - `ship-commit` runs the sync after every landing. If the sync fails for any reason, ship exits 2: the commit stands and the issue is landed, and `compass record sync` is the fix once the cause is fixed.
 - `compass record restore` copies the record back into this project, such as a fresh clone. It refuses to overwrite a file that differs from the record unless `--force` is given.
 
+Where `.compass/work` is a record path, the record holds each manifest as it stands, so it carries the `checkpoint_outcomes` and the `usage` block of every issue, with the session ids and the cost, and the `approver` of every `checkpoint-approval` record. No transcript text, no transcript path and no summary file is added. A record that lists only `docs/compass` carries neither. `docs/autonomy-and-cost.md` owns those fields.
+
 A record path must be a folder or file inside the project; `.`, `.git` and anything inside `.git` are refused. Symbolic links are not followed. Text that is not UTF-8 is copied as it is, without redaction.
 
 Nothing in the record is trusted. A record that holds a symbolic link or a submodule entry is refused by sync and restore; a `.gitignore` in the record cannot hide files from a sync; the clone runs with LFS filters off, so a record cannot make git contact another server. A restore that finds nothing under the configured paths says so.

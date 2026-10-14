@@ -169,8 +169,13 @@ force; if it is still a spike, leave the marker in place.
    `compass.yml` decides (or `.compass/config.yml` in a project without
    one). If it is not listed, present the
    approach, say you are going on without waiting and name the setting,
-   and log the skipped checkpoint to `devlog.md`. `/compass:go` does not
-   wait here even when `assess` is listed.
+   and record the passed hand-off with `compass issue checkpoint add assess
+   --outcome skipped --by router`. If `assess` is listed, the person answers
+   with `compass evidence approve --checkpoint assess --approver <name> --role
+   <role>` at a terminal, which records the answer. An issue assessed before
+   outcomes were recorded is not judged: both commands refuse it and write
+   nothing, so say so and go on. `/compass:go` does not wait here even when
+   `assess` is listed.
 
 ## Voice
 

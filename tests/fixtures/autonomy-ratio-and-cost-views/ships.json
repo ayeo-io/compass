@@ -1,0 +1,12 @@
+{
+  "flight-listed": {
+    "exit": 0,
+    "stdout": "compass ship-commit: committed. HEAD <sha> -> <sha>\n  issue marked landed.\n  living spec re-derived and committed.\n",
+    "stderr": ""
+  },
+  "flight-nokey": {
+    "exit": 0,
+    "stdout": "compass ship-commit: committed. HEAD <sha> -> <sha>\n  issue marked landed.\n  living spec re-derived and committed.\n",
+    "stderr": ""
+  }
+}

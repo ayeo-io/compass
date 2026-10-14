@@ -490,7 +490,7 @@ def test_gs_7_a_failed_write_leaves_no_temporary_file(project, monkeypatch):
     with pytest.raises(OSError):
         _commit(root, task_dir)
     monkeypatch.undo()
-    leftovers = [p.name for p in task_dir.rglob(".*") if p.is_file() and p.name != ".generation.lock"]
+    leftovers = [p.name for p in task_dir.rglob(".*") if p.is_file() and p.name not in (".generation.lock", ".manifest.lock")]
     assert leftovers == []
     assert _manifest(task_dir).get("generation") is None
     assert not (_gen(task_dir, 1) / "provenance.yml").exists()
@@ -982,12 +982,12 @@ def test_gs_17_a_landed_issue_cannot_store_a_new_generation(project):
     _commit(root, task_dir)
     _write_manifest(task_dir, status="landed")
     before = {p.relative_to(task_dir).as_posix(): p.read_bytes()
-              for p in task_dir.rglob("*") if p.is_file() and p.name != ".generation.lock"}
+              for p in task_dir.rglob("*") if p.is_file() and p.name not in (".generation.lock", ".manifest.lock")}
     with pytest.raises(CompassError) as caught:
         _commit(root, task_dir, delivery_approach="full")
     assert "closed" in str(caught.value) and SLUG in str(caught.value)
     after = {p.relative_to(task_dir).as_posix(): p.read_bytes()
-             for p in task_dir.rglob("*") if p.is_file() and p.name != ".generation.lock"}
+             for p in task_dir.rglob("*") if p.is_file() and p.name not in (".generation.lock", ".manifest.lock")}
     assert after == before
 
 

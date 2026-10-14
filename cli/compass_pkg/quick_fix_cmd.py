@@ -341,6 +341,8 @@ def cmd_quick_fix_start(args):
         # Where the assess stage ends; finish reads the session's tokens
         # per stage from here (#375).
         "started_at": now_iso(),
+        # A new issue's hand-offs are recorded (checkpoint_outcomes.py).
+        "checkpoint_outcomes": [],
     }
     if os.environ.get("CLAUDE_CODE_SESSION_ID"):
         start_record["usage"] = {"session": os.environ["CLAUDE_CODE_SESSION_ID"]}
@@ -728,6 +730,7 @@ def _record_usage(task_dir, finish_started_at):
             except Exception:                              # noqa: BLE001
                 continue
     project_root = os.path.dirname(os.path.dirname(work))
+    previous = task.get("usage") if isinstance(task.get("usage"), dict) else {}
     try:
         prices = project_settings.settings(project_root).get("prices") or {}
         task["usage"] = session_usage.stage_usage(
@@ -735,10 +738,13 @@ def _record_usage(task_dir, finish_started_at):
     except project_settings.SettingsConflict:
         raise
     except Exception:                                    # noqa: BLE001
-        previous = task.get("usage") if isinstance(task.get("usage"), dict) else {}
         task["usage"] = {"recorded": False, "reason": "unreadable",
                          **({"session": previous["session"]}
                             if isinstance(previous.get("session"), str) else {})}
+    # The sessions the pre-tool hook recorded stay; the rest of the block is
+    # the quick fix's own, as before.
+    if isinstance(previous.get("sessions"), list) and previous["sessions"]:
+        task["usage"]["sessions"] = list(previous["sessions"])
     save_manifest(task, path)
 
 
@@ -861,6 +867,12 @@ def cmd_quick_fix_finish(args):
         raise CompassError(
             f"compass quick-fix finish: the verification note at {note_rel} is not written: "
             f"{why}. Nothing was changed.")
+
+    # A finish that lands runs the landing refusals with the other
+    # preconditions, before it traces, tests or writes anything.
+    if not getattr(args, "no_commit", False):
+        from compass_pkg.manifest import run_landing_refusals
+        run_landing_refusals(task, task_dir)
 
     with _at_project_root(project_root):
         all_paths = _git_changed_paths(project_root)

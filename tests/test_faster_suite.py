@@ -156,6 +156,7 @@ SERIAL_TESTS = {
     "tests/test_render_all.py::test_dcj_61_render_all_490_issues_within_bound",
     "tests/test_project_readiness.py::test_prc_37",
     "tests/test_issue_dependencies.py::test_dbi_12_hook_cost_budget",
+    "tests/test_issue_usage.py::test_arc_10_hook_budget",
 }
 
 

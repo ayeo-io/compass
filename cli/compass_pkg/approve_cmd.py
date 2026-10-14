@@ -2,7 +2,7 @@
 """Record a person's approval: of a human check, of a document or of a set of
 decisions taken for the person.
 
-The verb takes exactly one of three forms:
+The verb takes exactly one of four forms:
 
 - `--check <id>` reads the check from the issue's effective view and registers
   a `human-approval` entry in the manifest's evidence, with `check: <id>`.
@@ -14,6 +14,11 @@ The verb takes exactly one of three forms:
   record, so it cannot clear the sign-off of guardrail `G5`.
 - `--decisions` confirms the decisions an agent took for the person, through
   `decisions_taken.approve_set`.
+- `--checkpoint <stage>` records a person's answer to a checkpoint hand-off:
+  one `checkpoint-approval` record, with `checkpoint: <stage>` and no `check`,
+  and the stage's `waited` outcome citing it (`checkpoint_outcomes`). No check
+  reads the type, so the answer never clears guardrail `G5`, a human check or
+  a waiver. `compass evidence add` refuses the type.
 
 A record holds the issue, the issue's generation and the time, which the verb
 stamps itself, so a person cannot record an approval for another issue or
@@ -38,6 +43,10 @@ from compass_pkg.terminal import say
 
 DECISIONS = approval_records.DECISIONS
 ARTIFACT_APPROVAL = approval_records.ARTIFACT_APPROVAL
+#: A person's answer to one checkpoint hand-off. Kept apart from
+#: `human-approval` because `human-approval-present`, the check of guardrail
+#: `G5`, accepts any approved `human-approval` record and is locked.
+CHECKPOINT_APPROVAL = "checkpoint-approval"
 
 
 def _terminal_attached():
@@ -124,11 +133,12 @@ def _numbered(task, check_id):
 
 
 def _checks_for(args):
-    """Refuse a call that has not one of the three forms (argparse also does)."""
-    forms = [bool(args.check), bool(args.artifact), bool(args.decisions)]
+    """Refuse a call that has not one of the four forms (argparse also does)."""
+    forms = [bool(args.check), bool(args.artifact), bool(args.decisions),
+             bool(getattr(args, "checkpoint", None))]
     if sum(forms) != 1:
         raise CompassError("compass evidence approve: give exactly one of --check, "
-                           "--artifact or --decisions.")
+                           "--artifact, --decisions or --checkpoint.")
 
 
 def cmd_evidence_approve(args):
@@ -153,7 +163,72 @@ def cmd_evidence_approve(args):
     if args.decisions:
         from compass_pkg import decisions_taken
         return decisions_taken.approve_set(args)
+    if getattr(args, "checkpoint", None):
+        return _approve_checkpoint(args)
     return _approve_check(args)
+
+
+def _checkpoint_approver(task_dir, approver):
+    """Refuse a name that may not answer a checkpoint: a name in any
+    `approvers:` list of the project file, else its owner. Returns the line to
+    print when the project declares neither, so any person may answer."""
+    from compass_pkg import decisions_taken
+    declared, owner = decisions_taken.project_approvers(task_dir)
+    if not declared and not owner:
+        return ("compass evidence approve: this project declares no approvers or owner, "
+                "so any person may answer a checkpoint.")
+    allowed = declared or [approval_records.OWNER]
+    if approval_records.approver_listed(allowed, approver, owner):
+        return None
+    named = (f"it declares {', '.join(sorted(set(declared)))}" if declared
+             else f"its owner is {owner}")
+    raise CompassError(f"compass evidence approve: {approver} is not an approver of this "
+                       f"project ({named}), so the answer would not count. Nothing was "
+                       f"written.")
+
+
+def _approve_checkpoint(args):
+    from compass_pkg import checkpoint_outcomes, next_cmd
+    verb = "compass evidence approve"
+    stage = args.checkpoint
+    if args.decision != approval_records.APPROVED:
+        raise CompassError(f"{verb}: --checkpoint records an approval only, not "
+                           f"--decision {args.decision}. To send the issue back, say so at "
+                           f"the {stage} hand-off. Nothing was written.")
+    task_dir = resolve_issue_dir(args.task)
+    task, task_path = load_manifest(task_dir)
+    checkpoint_outcomes.refuse_unjudged(task, task_dir, verb)
+    checkpoint_outcomes.refuse_stage(task, stage, verb)
+    if stage not in next_cmd._stages_on_record(next_cmd._typed(task), task_dir):
+        raise CompassError(f"{verb}: {stage} has not run: its record is not written, so "
+                           f"there is no hand-off to answer yet. Nothing was written.")
+    note = _checkpoint_approver(task_dir, args.approver)
+    stamp = now_iso().replace("+00:00", "Z")
+    taken = {e.get("id") for e in task.get("evidence") or [] if isinstance(e, dict)}
+    number = 1
+    while f"EV-CHECKPOINT-{stage}-{number}" in taken:
+        number += 1
+    evidence_id = f"EV-CHECKPOINT-{stage}-{number}"
+    entry = {"id": evidence_id, "type": CHECKPOINT_APPROVAL, "checkpoint": stage,
+             "approver": args.approver, "role": args.role,
+             "scope": args.scope or f"the {stage} hand-off",
+             "decision": approval_records.APPROVED, "timestamp": stamp,
+             "issue": os.path.basename(os.path.normpath(task_dir)),
+             "generation": task.get("generation")}
+    task.setdefault("evidence", []).append(entry)
+    checkpoint_outcomes.set_outcome(task, {
+        "stage": stage, "outcome": checkpoint_outcomes.WAITED, "by": args.approver,
+        "at": stamp, "evidence": evidence_id})
+    save_manifest(task, task_path)
+    if note:
+        print(note)
+    return say(args, f"{verb}: the {stage} checkpoint - answered by {args.approver}, "
+                     f"recorded as {evidence_id}.",
+               detail=[f"record     : {evidence_id} in manifest.yml evidence",
+                       f"outcome    : {stage} -> waited"],
+               checkpoint=stage, answer=entry["decision"], evidence_id=evidence_id,
+               approver=args.approver, role=args.role, scope=entry["scope"],
+               issue=entry["issue"], generation=entry["generation"], at=stamp)
 
 
 def _stamp(task, task_dir, evidence_id, **fields):
@@ -267,6 +342,9 @@ def register(evidence_subs):
                       help="approve this document, which reads awaiting-approval")
     form.add_argument("--decisions", action="store_true",
                       help="confirm the decisions taken for the person")
+    form.add_argument("--checkpoint", metavar="STAGE",
+                      help="answer the hand-off of this checkpoint stage (assess, define, "
+                           "refine or plan)")
     issue_arg(p)
     p.add_argument("--approver", required=True, help="the approver's person id")
     p.add_argument("--role", required=True, help="the role the approver acts in")

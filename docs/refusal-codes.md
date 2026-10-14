@@ -1,7 +1,8 @@
 # Refusal codes
 
-Every reason code the pre-tool hook can refuse with, generated
-from `cli/compass_pkg/refusals.py` by `compass _refusal --list`. Do not
+Every reason code the pre-tool hook can refuse with, and the landing refusals
+of `compass ship-commit` and `compass quick-fix finish` (`checkpoint-no-outcome`),
+generated from `cli/compass_pkg/refusals.py` by `compass _refusal --list`. Do not
 hand-edit the list below - regenerate it after any change to the registry,
 and `tests/test_refusal_registry.py` fails the build if it goes stale.
 
@@ -22,6 +23,12 @@ code from a refusal you hit.
 **Blocked:** this edit
 **Why:** COMPASS_ISSUE names '{slug}', which is not an issue directly under .compass/work/. It names this session's issue ahead of .compass/current-task, so the edit is not judged by another issue instead.
 **Fix:** set COMPASS_ISSUE to a real issue slug, or unset it to use .compass/current-task, then retry.
+
+### `checkpoint-no-outcome`
+
+**Blocked:** landing of issue '{slug}'
+**Why:** {stages} {is} listed in checkpoints with no outcome recorded, so nothing shows a person answered {it}.
+**Fix:** the person who answers runs compass evidence approve --checkpoint {stage} --approver <you> --role <role>, for each stage named, then ship again.
 
 ### `config-invalid`
 

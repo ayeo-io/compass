@@ -43,7 +43,7 @@ from compass_pkg.project_settings import CompassError  # noqa: E402,F401
 from compass_pkg.stable_ids import (  # noqa: E402
     APPROACH_IDS, APPROACH_QUICK_FIX, LEGACY_APPROACH_ALIASES, STAGE_ASSESS, STAGE_DEFINE, STAGE_IDS,
     STAGE_PLAN, STAGE_REFINE)
-from compass_pkg import word_map  # noqa: E402
+from compass_pkg import atomic_io, word_map  # noqa: E402
 
 
 # --- small helpers -----------------------------------------------------------
@@ -654,10 +654,12 @@ def prepare_manifest_write(task, path):
     return word_map.prepare(task, path, raw, COMPASS_SCHEMA_VERSION)
 
 
+MANIFEST_LOCK = ".manifest.lock"  # held while a manifest is written (session_record.py)
 def save_manifest(task, path):
-    task = prepare_manifest_write(task, path)
-    with open(path, "w", encoding="utf-8") as fh:
-        yaml.safe_dump(task, fh, sort_keys=False, default_flow_style=False)
+    with atomic_io.locked(os.path.join(os.path.dirname(os.path.abspath(path)), MANIFEST_LOCK)):
+        task = prepare_manifest_write(task, path)
+        with open(path, "w", encoding="utf-8") as fh:
+            yaml.safe_dump(task, fh, sort_keys=False, default_flow_style=False)
 
 
 # --- architecture loading (assess) --------------------------------------------

@@ -63,6 +63,10 @@ Human approvals are needed for:
 
 The evidence records the approver, role, decision, time, scope and conditions.
 
+A person's answer to a checkpoint hand-off (`compass evidence approve
+--checkpoint`) is a `checkpoint-approval` record, not a `human-approval`, so it
+never meets this approval.
+
 ### 6. Compass CI checks process integrity
 
 `compass ci` checks routing, issue schemas, evidence, approvals, traceability
@@ -301,6 +305,38 @@ The hook's read has these limits:
 - An issue with no `depends_on`, or an empty one, starts no extra process and
   opens no other manifest. With dependencies, the hook starts one more
   python3 process and opens each dependency's manifest once.
+
+### The hook records each session on its issue, and a fault never blocks
+
+On every Edit, Write or Bash call it judges, the pre-tool hook adds the
+call's session id to the issue's `usage.sessions`, once, so `compass
+ship-commit` can read that session's transcript when the issue lands. ADR-063
+records the decision; this is the one place the hook writes an issue's
+manifest.
+
+- The issue comes from `COMPASS_ISSUE` or `.compass/current-task`, read in
+  shell. With neither, nothing is recorded; the most recently changed issue
+  is never guessed. A session whose fresh entry in the session table behind
+  the `pointer-moved` refusal names another issue is not recorded on the
+  pointer's issue.
+- A session id that is not letters, digits, `-` and `_` is not recorded.
+- An id already in the manifest costs one `grep` and no python3 process. A new
+  id starts one python3 process, which opens only that issue's manifest.
+- The write never waits. It tries the issue's `.manifest.lock` once, without
+  blocking, and records nothing when another writer holds it; a later call
+  records the id. `compass` commands hold the same lock while they write a
+  manifest.
+- It inserts the id into the file's text and checks that the parsed result
+  changed only `usage.sessions`, so no other byte moves. It replaces the file
+  atomically, after comparing the bytes on disk with those it read; a writer
+  that changed the file in between is merged, not overwritten.
+- Any fault - a read-only manifest or folder, a failed write, a recorder that
+  cannot run - leaves the manifest as it was and no temporary file behind, and
+  the hook judges the call as before. Recording never refuses a call. A broken
+  install still refuses through the hook's other readers.
+- A session that makes no tool call the hook sees is not recorded, and a
+  command that loaded the manifest before the hook wrote can drop the id when
+  it saves. The next call then records it again.
 
 ### Shell-write detection is best-effort
 

@@ -171,6 +171,26 @@ The dry run lists each move, rename, registration, re-point, pointer removal and
 | `--decision`, `--next-issue` | flags of `compass issue artifact set spike-conclusion` | Record how a spike closes |
 | `distribution-map.md.v6.bak` | the documents folder | A stub map the migrate set aside |
 
+## Checkpoint outcomes and usage
+
+Compass now records what happened at each stage hand-off and what each issue cost. The decision is `architecture/decisions/ADR-063-checkpoint-outcomes-and-session-usage-are-stored-and-the-autonomy-and-cost-figures-are-derived.md`, and `docs/autonomy-and-cost.md` owns the facts.
+
+### What changes
+
+- **A person's answer to a hand-off is a record.** `compass evidence approve --checkpoint <stage>` writes a `checkpoint-approval` record and a `waited` outcome. The record is not a `human-approval` record, so it never clears the sign-off of guardrail `G5` or a human check.
+- **An agent records a hand-off that autonomy passed.** `compass issue checkpoint add <stage> --outcome skipped --by <agent>` replaces the devlog line the stage commands asked for.
+- **`compass ship-commit` refuses an unanswered listed checkpoint.** It refuses a judged issue that lists a checkpoint with no outcome, before it writes anything, with the code `checkpoint-no-outcome`. A judged issue is one whose first assessment wrote `checkpoint_outcomes`. An issue assessed before this change is never refused, and no migrate adds the key.
+- **The pre-tool hook records each session.** The first time it judges a tool call for an issue, it appends the session id to `usage.sessions`. It never refuses an edit because of it. Every issue folder gains an empty `.manifest.lock` file.
+- **`compass ship-commit` records usage on every approach but the quick fix.** It reads the full transcripts of the recorded sessions and keeps numbers only. Above 1 GiB of transcript it reads none and records the reason `too-large`.
+- **`compass retro --impact` gains four rows**, the autonomy ratio, the band split, the cost per change and the decisions confirmed, each withheld below its floor. `compass retro --impact --json` and `compass retro --impact --format json` print one object. Before, `--json` printed the report's lines under an `output` key.
+- **`compass issue diagnose` gains a Checkpoints and cost section**, and its last line of what the records cannot show now reads "token use of a session the hook did not record".
+
+### What to do
+
+1. Nothing for issues already assessed. They read, lint and land as before.
+2. Answer each listed hand-off of a new issue with `compass evidence approve --checkpoint <stage>` at a terminal before you ship it.
+3. Add `.manifest.lock` to the `.gitignore` of a project that tracks its issue folders.
+
 ## Repository readiness and autonomous work
 
 From 7.0.0 a project on `autonomy: autonomous` must meet the readiness floor before an issue can be assessed. An autonomous project below the floor, or with no fresh readiness record, is refused at `compass approach evaluate --write`, which every assess and reassess runs. The decision is `architecture/decisions/ADR-058-the-readiness-floor-caps-autonomous-work.md`. The facts are in `docs/readiness.md`.
@@ -265,5 +285,12 @@ Compass can now post an issue's README to the linked GitHub issue, and the verb 
 
 | Name | Where | Meaning |
 |---|---|---|
+| `checkpoint_outcomes` | `manifest.yml` | One outcome, `waited` or `skipped`, for each checkpoint stage |
+| `checkpoint-approval` | the type of an evidence record | A person's answer to one checkpoint hand-off |
+| `usage.sessions`, `usage.total`, `usage.unattributed` | `manifest.yml` | The sessions that worked on the issue, and what they cost |
+| `too-large`, `no-window` | reasons in a `usage` block | Transcripts over the read limit, and a stage no record ends |
+| `checkpoint-no-outcome` | a refusal code | The landing refusal |
+| `compass evidence approve --checkpoint` | a flag | Answer a hand-off |
+| `compass issue checkpoint add` | a verb | Record a hand-off that autonomy passed |
 | `github_labels.page` | `compass.yml` | Post the issue page to the linked GitHub issue |
 | `compass issue github sync` | verb | Write the labels and the issue page on demand |

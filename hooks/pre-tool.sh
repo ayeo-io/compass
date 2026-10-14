@@ -346,6 +346,49 @@ else
   resolve_project "${TARGET:-}"
 fi
 
+# --- record the session on the issue (usage.sessions) ------------------------
+# `compass ship-commit` reads the transcripts of every session that worked on
+# an issue, so the hook notes each session id in the issue's manifest the
+# first time it sees one. It runs before the path classification, so a
+# document write and a Bash call are recorded too.
+#
+# The issue comes from COMPASS_ISSUE or the pointer only, read in shell: with
+# neither, nothing is recorded, and the most recently changed issue is never
+# guessed. An id already recorded costs one `grep` and no python3 process; a
+# new one starts one, which tries the manifest lock once without waiting
+# (cli/compass_pkg/session_record.py). This never refuses a call: every
+# fault, a bad id or a recorder that cannot run returns 0 with its output
+# discarded, and the checks below judge the call as before. A broken install
+# still refuses through those checks.
+compass_record_session() {
+  [ "${PROJECT_RESOLVED:-0}" -eq 1 ] || return 0
+  case "${SESSION_ID:-}" in ""|*[!A-Za-z0-9_-]*) return 0 ;; esac
+  local slug="" via="pointer" pointer="$PROJECT_DIR/.compass/current-task"
+  if [ -n "${COMPASS_ISSUE:-}" ]; then
+    slug="$COMPASS_ISSUE"; via="env"
+  elif [ -f "$pointer" ]; then
+    IFS= read -r slug < "$pointer" || true
+    slug="${slug//[[:space:]]/}"
+  fi
+  case "$slug" in ""|.|..|*/*|*\\*) return 0 ;; esac
+  local folder="$PROJECT_DIR/.compass/work/$slug"
+  [ -f "$folder/manifest.yml" ] || return 0
+  grep -qE "^[[:space:]]*- ['\"]?${SESSION_ID}['\"]?[[:space:]]*\$" \
+    "$folder/manifest.yml" 2>/dev/null && return 0
+  compass_python - "$folder" "$SESSION_ID" "$via" >/dev/null 2>&1 <<'PYEOF' || true
+import sys
+
+import compass_pkg                      # noqa: F401 - puts vendor on sys.path
+from compass_pkg.session_record import record
+
+record(*sys.argv[1:])
+PYEOF
+  return 0
+}
+set +e
+compass_record_session
+set -e
+
 
 # --- classify a target file -------------------------------------------------
 # A "code file" here means: a production-impacting file whose change must be

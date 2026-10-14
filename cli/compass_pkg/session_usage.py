@@ -33,7 +33,13 @@ NOT_MEASURED = {"measured": False,
                 "reason": "inside one command, where the model makes no requests"}
 COUNTS = ("input", "output", "cache_write", "cache_read")
 REASONS = ("not-claude-code", "bad-session-id", "no-transcript",
-           "unreadable", "no-start-time")
+           "unreadable", "no-start-time", "too-large", "no-window")
+
+#: The most transcript bytes `compass ship-commit` reads for one issue, summed
+#: over every file of every session. Above it nothing is read and the usage
+#: block records `too-large`, so a landing never waits on a huge transcript
+#: and no count is a sample.
+USAGE_READ_LIMIT_BYTES = 1024 ** 3
 
 # A session id goes into a file pattern, so only an id of this shape is
 # used: anything else could match other sessions' files or leave the

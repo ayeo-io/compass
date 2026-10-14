@@ -77,3 +77,15 @@ Define, refine, plan and breakdown have no command that records the end of the s
 - ADR-045: the stage is derived from records, which the exit rule follows.
 - `2026-10-06-evidence-types-stay-framework-owned`: the framework adds `artifact-approval` in a release.
 - `2026-10-10-artifact-freshness-records-digests-always`: the recording half of artifact freshness.
+
+## Amendment, 14 October 2026: a `verify` document waits for every `verify` gate
+
+Decided by the spec-author for jed72 under the automation mode of 12 October 2026, from the fix jed72 approved on 14 October 2026. It replaces the parts of decision 2 that move a document the `verify` stage owns. The rest of this record stands.
+
+- A document the `verify` stage owns moves only when every gate of the issue that the gate catalogue places in the `verify` stage reads `pass`. A gate of another stage, or one the catalogue does not define, does not count. Until then the document reads `draft`, with no `approved_by` and no `approved_at`.
+- With a human check, the document moves to `awaiting-approval` at that same moment, and not before.
+- `compass gate pass` on a `verify` gate still moves the `draft` documents of earlier stages on the first pass.
+- `compass issue artifact set` approves a `verify` document it registers only when every `verify` gate has passed. Registered earlier, the document reads `draft`, and the last `verify` gate pass moves it.
+- A document the earlier rule approved keeps its status. No command rewrites it, so no migration runs.
+
+Under the earlier rule the first `verify` gate pass approved the verification report, even when the report's verdict was FAIL and other `verify` gates were pending. The governance decision `2026-10-14-a-verification-document-waits-for-its-last-gate` records the change.

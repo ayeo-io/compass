@@ -166,6 +166,13 @@ REFUSALS: dict[str, dict[str, str]] = {
         "fix": "give it with --release-note \"<text written for a user>\", then "
                "run the command again.",
     },
+    "release-line-heading": {
+        "what": "the release line of issue '{slug}'",
+        "why": "it starts with #, and the living spec reads a line such as "
+               "### <slug> (completed <date>) as one of its issue headings.",
+        "fix": "write the release line as plain text that does not start with #, "
+               "then run the command again.",
+    },
 }
 
 

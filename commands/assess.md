@@ -42,7 +42,9 @@ compass quick-fix finish -m "<commit message>" --no-commit -- <test command>
 ```
 
 `finish` records the green, runs the checks and passes the gates. Leave out
-`--no-commit` only if the user asked for a commit. If `start` says the
+`--no-commit` only if the user asked for a commit, and then give
+`--release-note "<one sentence for a user>"`: a landing refuses a quick fix
+with no release line. If `start` says the
 approach is heavier than a quick fix, the manifest holds the values and
 the approach: read the full procedure named below and continue from its step 4,
 giving each value its reason there.
@@ -59,3 +61,17 @@ before you write anything when any of these holds:
   `compass issue configure` proposal; `--reset-config` drops `config:`.
 
 It holds the setup, `--reassess`, the full procedure and the gate.
+
+## The intent
+
+When the computed approach registers an `intent` entry with no path, as the
+regular approach does at depth `lightweight`, draft the intent before you hand
+off:
+
+1. Run `compass issue artifact-path intent` for its home.
+2. Write the file at that home from the issue description, under the headings
+   `compass issue template show intent --depth <depth>` prints for the
+   registered depth, with one `- INT-n: <outcome>` line for each outcome.
+3. Register it with `compass issue artifact set intent --status draft --path <home>`.
+
+The spec author corrects it at define.

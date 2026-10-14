@@ -71,6 +71,7 @@ FIXTURES = {
                               "stage": "assess", "is": "are", "it": "them"},
     # A 40-character slug, named twice, so the 60-word cap is checked where it is tightest.
     "release-line-missing": dict(slug="a" * 40),
+    "release-line-heading": dict(slug="a" * 40),
 }
 
 

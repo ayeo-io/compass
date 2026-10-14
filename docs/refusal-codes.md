@@ -1,8 +1,9 @@
 # Refusal codes
 
 Every reason code the pre-tool hook can refuse with, and the landing refusals
-of `compass ship-commit` and `compass quick-fix finish` (`checkpoint-no-outcome`
-and `release-line-missing`, which `docs/release-line.md` describes), generated from `cli/compass_pkg/refusals.py` by `compass _refusal --list`. Do not
+of `compass ship-commit` and `compass quick-fix finish` (`checkpoint-no-outcome`,
+and `release-line-missing` and `release-line-heading`, which `docs/release-line.md`
+describes), generated from `cli/compass_pkg/refusals.py` by `compass _refusal --list`. Do not
 hand-edit the list below - regenerate it after any change to the registry,
 and `tests/test_refusal_registry.py` fails the build if it goes stale.
 
@@ -89,6 +90,12 @@ code from a refusal you hit.
 **Blocked:** this edit
 **Why:** the red record for issue '{slug}' carries no identity - no content_digest - and this project needs one for records written since records_signed_since: {since_date}.
 **Fix:** run compass tdd-red --scenario <id> -- <your failing test command>.
+
+### `release-line-heading`
+
+**Blocked:** the release line of issue '{slug}'
+**Why:** it starts with #, and the living spec reads a line such as ### <slug> (completed <date>) as one of its issue headings.
+**Fix:** write the release line as plain text that does not start with #, then run the command again.
 
 ### `release-line-missing`
 

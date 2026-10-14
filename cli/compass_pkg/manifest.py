@@ -348,8 +348,9 @@ def cmd_land_commit(args):
     # The landing refusals run before anything is staged or written, so a
     # refusal leaves every file as it was (ADR-026).
     landing = checkpoint_outcomes.landing_issue(args)
+    note = release_line.landing_text(args, landing, "compass ship-commit")
     if landing is not None:
-        run_landing_refusals(*landing)
+        run_landing_refusals(release_line.project(landing[0], note), landing[1])
 
     # Stage any explicitly named paths.
     # A name is a name, not a pattern: `x[1].txt` must not stage `x1.txt`.
@@ -451,6 +452,7 @@ def cmd_land_commit(args):
                        if base_note else ""))
 
         head_id = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
+        release_line.store(head_task_dir, note, "compass ship-commit", head_task)
         _apply_ship_exit(head_task, head_task_dir)
         status_words.close(head_task, status_words.COMPLETED)
         head_task["land_timestamp"] = now_iso()
@@ -476,6 +478,7 @@ def cmd_land_commit(args):
     # way.
     owned, artifact_dir, slug = set(), "\0none", None
     docs_prefix = None
+    release_line.store(landing and landing[1], note, "compass ship-commit")
     try:
         _scope_dir = resolve_issue_dir(getattr(args, "task", None))
         _scope_task, _ = load_manifest(_scope_dir)
@@ -486,6 +489,7 @@ def cmd_land_commit(args):
         pass
 
     if slug is not None:
+        _refuse_unapproved_artifacts(_scope_task, _scope_dir)  # before the render stages anything
         _render_landing(_scope_task, _scope_dir, cwd)
 
     def _judge_index():

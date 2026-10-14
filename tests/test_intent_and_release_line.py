@@ -175,6 +175,75 @@ def generation_config(root, slug=SLUG):
     return effective.view_or_legacy(task_dir).config
 
 
+# --- IRL-5 ----------------------------------------------------------------------------
+
+def _flat(path):
+    return " ".join((ROOT / path).read_text(encoding="utf-8").split())
+
+
+def test_irl_5_assess_and_define_commands_name_the_intent():
+    assess_text = _flat("commands/assess.md")
+    for phrase in ("registers an `intent` entry with no path",
+                   "`compass issue artifact-path intent`",
+                   "from the issue description",
+                   "`compass issue template show intent --depth <depth>`",
+                   "`compass issue artifact set intent --status draft --path <home>`"):
+        assert phrase in assess_text, phrase
+    define_text = _flat("commands/define.md").lower()
+    for phrase in ("read `intent.md` and correct it before you write any scenario",
+                   "present the intent with the scenarios at the define checkpoint"):
+        assert phrase in define_text, phrase
+
+
+# --- IRL-6 ----------------------------------------------------------------------------
+
+LIGHT_INTENT = """# Intent - feature
+
+## Problem
+
+Cards do not show who is waiting.
+
+## Desired outcome
+
+- INT-1: A person sees who each card waits on.
+- INT-2: A person sees how long it has waited.
+
+## Success signals
+
+- Fewer questions about who holds a card.
+
+## Non-goals
+
+- No notifications.
+"""
+
+
+def _orphaned(root):
+    done = run(root, "analyze", "--issue", SLUG, "--json")
+    assert done.returncode == 0, done
+    findings = (json.loads(done.stdout).get("sections") or {}).get("findings") or []
+    return [f for f in findings if f.get("type") == "orphaned-intent"]
+
+
+def test_irl_6_analyze_reads_lightweight_intent(tmp_path):
+    root = project(tmp_path)
+    assert "verify.analyze" not in [g["id"] for g in manifest(root)["gates"]]
+    register(root, "intent", status="draft", text=LIGHT_INTENT)
+    set_keys(root, scenarios=[{"id": "X-1", "title": "A card shows its waiter",
+                               "intent": "INT-3", "tests": []}])
+    found = _orphaned(root)
+    assert len(found) == 1, found
+    assert "X-1" in json.dumps(found[0]) and "INT-3" in json.dumps(found[0]), found
+    set_keys(root, scenarios=[{"id": "X-1", "title": "A card shows its waiter",
+                               "intent": "INT-2", "tests": []}])
+    assert _orphaned(root) == []
+
+    verify_text = _flat("commands/verify.md")
+    for phrase in ("run `compass analyze` on an issue that registers an intent",
+                   "as `command-output` evidence for `verify.traceability`"):
+        assert phrase in verify_text, phrase
+
+
 # --- IRL-23 ---------------------------------------------------------------------------
 
 PRESET = ROOT / "governance" / "presets" / "default"
@@ -539,4 +608,447 @@ def test_irl_15_verification_report_release_line_block(tmp_path):
     at = sections.index("Release line")
     assert sections[at - 1:at + 2] == ["6. Decisions taken for the user", "Release line",
                                        "Gate"], sections
+    assert_no_gh_call(root)
+
+
+# --- IRL-9 ----------------------------------------------------------------------------
+
+BOARD = "Board cards now show who is waiting on whom."
+
+
+def check_row(root, name, slug=SLUG):
+    done = run(root, "check", "--issue", slug, "--json")
+    report = json.loads(done.stdout)
+    rows = [c for c in report["checks"] if c["name"] == name]
+    assert rows, [c["name"] for c in report["checks"]]
+    return rows[0]
+
+
+def test_irl_9_ship_commit_stores_release_line(tmp_path):
+    root = project(tmp_path)
+    write_report(root)
+    ready_to_ship(root)
+    assert "release_note" not in manifest(root)
+    done = run(root, "ship-commit", "-m", "Ship it", "--issue", SLUG, "--release-note", BOARD)
+    assert done.returncode == 0, done
+    landed = manifest(root)
+    assert landed.get("land_timestamp") and landed.get("status") == "done", landed
+    assert landed["release_note"] == BOARD, landed
+    land = landed["land_commit"]
+    index = git(root, "show", f"{land}:docs/compass/README.md")
+    row = [line for line in index.splitlines() if f"{SLUG}" in line and "|" in line]
+    assert row and BOARD in row[0], index
+    report = git(root, "show", f"{land}:{REPORT}")
+    assert block(report, "release-line") == BOARD, report
+    assert check_row(root, "rendered-blocks-current")["status"] == "pass"
+    assert_no_gh_call(root)
+
+
+# --- IRL-12 ---------------------------------------------------------------------------
+
+PASS = ["--", sys.executable, "-c", "pass"]
+FAIL = ["--", sys.executable, "-c", "import sys; sys.exit(1)"]
+
+
+def declare_acceptance(root, slug=SLUG):
+    done = run(root, "acceptance", "start", "--kind", "validation", "--issue", slug, *PASS)
+    assert done.returncode == 0, done
+
+
+def test_irl_12_acceptance_record_and_latest_write_wins(tmp_path):
+    root = project(tmp_path / "a")
+    declare_acceptance(root)
+    # A failed acceptance run stores nothing.
+    before = manifest_file(root).read_bytes()
+    done = run(root, "acceptance", "record", "--issue", SLUG, "--release-note", "Other text.",
+               *FAIL)
+    assert done.returncode != 0, done
+    assert manifest_file(root).read_bytes() == before
+    done = run(root, "acceptance", "record", "--issue", SLUG, "--release-note", "First text.",
+               *PASS)
+    assert done.returncode == 0, done
+    assert manifest(root)["release_note"] == "First text."
+    ready_to_ship(root)
+    done = run(root, "ship-commit", "-m", "Ship it", "--issue", SLUG)
+    assert done.returncode == 0, done
+    assert manifest(root).get("land_timestamp"), manifest(root)
+    assert manifest(root)["release_note"] == "First text."
+
+    # The same issue before landing, with the first text stored: the latest write wins,
+    # and the output says which text it replaced.
+    root = project(tmp_path / "b")
+    set_keys(root, release_note="First text.")
+    ready_to_ship(root)
+    done = run(root, "ship-commit", "-m", "Ship it", "--issue", SLUG,
+               "--release-note", "Second text.")
+    assert done.returncode == 0, done
+    assert manifest(root)["release_note"] == "Second text."
+    replaced = [line for line in done.stdout.splitlines() if "replaced" in line]
+    assert replaced == ["compass ship-commit: release line replaced (was: First text.)"], \
+        done.stdout
+    assert_no_gh_call(root)
+
+
+# --- IRL-13 ---------------------------------------------------------------------------
+
+def title_reason(root, text, slug=SLUG):
+    """The reason `compass scenario add` gives for `text` as a title."""
+    done = run(root, "scenario", "add", "X-1", "--title", text, "--intent", "INT-1",
+               "--issue", slug)
+    assert done.returncode != 0, done
+    reason = done.stderr.split("title refused: ", 1)[1].strip()
+    assert reason, done.stderr
+    return reason
+
+
+@pytest.mark.parametrize("command, text", [
+    ("ship-commit", "Fixed in docs/no-such-file.md"),
+    ("acceptance record", "Users now see the page in under a second")])
+def test_irl_13_release_line_title_rules(tmp_path, command, text):
+    root = project(tmp_path)
+    ready_to_ship(root)
+    set_keys(root, release_note="Stored text.")
+    declare_acceptance(root)
+    reason = title_reason(root, text)
+    before = state(root)
+    argv = (["ship-commit", "-m", "Ship it", "--issue", SLUG] if command == "ship-commit"
+            else ["acceptance", "record", "--issue", SLUG])
+    done = run(root, *argv, "--release-note", text, *([] if command == "ship-commit" else PASS))
+    assert done.returncode != 0, done
+    assert reason in " ".join(done.stderr.split()), (reason, done.stderr)
+    assert state(root) == before
+    assert manifest(root)["release_note"] == "Stored text."
+    assert_no_gh_call(root)
+
+
+# --- IRL-26 ---------------------------------------------------------------------------
+
+HEADINGS = "the living spec reads a line such as ### <slug> (completed <date>) as one of its issue headings"
+
+
+def derive(root):
+    done = run(root, "_derive-system-spec", "--internal")
+    assert done.returncode == 0, done
+    return (root / "docs" / "system-spec.md").read_bytes()
+
+
+def test_irl_26_heading_mark_refused_and_one_line_derived(tmp_path):
+    root = project(tmp_path)
+    # One scenario, so the living spec lists the issue once it lands.
+    set_keys(root, scenarios=[{"id": "S-1", "title": "The board lists the cards",
+                               "intent": "INT-1", "tests": []}])
+    ready_to_ship(root)
+    for text, expected in (("### other-issue (completed 2026-10-14)", HEADINGS),
+                           ("  # Release", HEADINGS), ("   ", MISSING)):
+        before = state(root)
+        done = run(root, "ship-commit", "-m", "Ship it", "--issue", SLUG, "--release-note", text)
+        assert done.returncode != 0, (text, done)
+        assert expected in " ".join(done.stderr.split()), (text, done.stderr)
+        assert state(root) == before, text
+    done = run(root, "ship-commit", "-m", "Ship it", "--issue", SLUG, "--release-note",
+               "  Adds the board.\nWith filters.  ")
+    assert done.returncode == 0, done
+    stored = manifest(root)["release_note"]
+    assert stored == stored.strip() and stored.startswith("Adds the board."), stored
+
+    first = derive(root)
+    text = first.decode("utf-8")
+    heading = next(line for line in text.splitlines() if line.startswith(f"### {SLUG} "))
+    after = text.split(heading + "\n", 1)[1].lstrip("\n").splitlines()[0]
+    assert after == "Adds the board. With filters.", text
+    assert derive(root) == first
+    assert_no_gh_call(root)
+
+
+# --- IRL-14 ---------------------------------------------------------------------------
+
+GREETING_TEST = (
+    "import pathlib\n\n\n"
+    "def test_{name}_says_hello():\n"
+    "    p = pathlib.Path(__file__).resolve().parent.parent / 'data' / '{name}.txt'\n"
+    "    assert p.read_text().strip() == 'Hello, %s!'\n")
+
+
+def greet_command(name, marker=None):
+    """The test command of the quick fix `name`. With `marker`, it first writes that
+    file, so a test can tell whether it ran."""
+    test = f"tests/test_{name}.py::test_{name}_says_hello"
+    if marker is None:
+        return ["--", sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", test]
+    script = (f"import pathlib, subprocess, sys; pathlib.Path({marker!r}).write_text('ran'); "
+              f"sys.exit(subprocess.call([sys.executable, '-m', 'pytest', '-q', '-p', "
+              f"'no:cacheprovider', {test!r}]))")
+    return ["--", sys.executable, "-c", script]
+
+
+def quick_fix(root, slug, name):
+    """A started quick fix with its red on record and the fix written: the state
+    `quick-fix finish` lands from."""
+    (root / "data").mkdir(exist_ok=True)
+    (root / "data" / f"{name}.txt").write_text("Hi, %s!")
+    (root / "tests").mkdir(exist_ok=True)
+    (root / "tests" / f"test_{name}.py").write_text(GREETING_TEST.format(name=name))
+    # Every file is committed first: finish never commits a path that was already
+    # changed or untracked when the quick fix started.
+    git(root, "add", "-A")
+    git(root, "commit", "-q", "-m", name)
+    done = run(root, "quick-fix", "start", slug,
+               "--risk", "trivial - a one-line text change",
+               "--familiarity", "brownfield-mapped - the file and its test exist",
+               "--size", "atomic - one file, one obvious change",
+               "--intent", "The greeting says hello.",
+               "--scenario", "Given the greeting, when it is read, then it says hello.",
+               "--scenario-id", "QF-1",
+               "--test", f"tests/test_{name}.py::test_{name}_says_hello")
+    assert done.returncode == 0, done
+    done = run(root, "tdd-red", "--issue", slug, "--scenario", "QF-1", *greet_command(name))
+    assert done.returncode == 0, done
+    (root / "data" / f"{name}.txt").write_text("Hello, %s!")
+    return slug
+
+
+def note_path(root, slug):
+    body = manifest(root, slug)
+    return f"docs/compass/{body['created']}-{slug}/verification-note.md"
+
+
+def test_irl_14_quick_fix_finish_release_line(tmp_path):
+    root = repo(tmp_path)
+    slug = quick_fix(root, "fix-greeting", "greeting")
+    done = run(root, "quick-fix", "finish", "--issue", slug, "-m", "Fix the greeting",
+               "--release-note", "Greetings now say hello.", *greet_command("greeting"))
+    assert done.returncode == 0, done
+    landed = manifest(root, slug)
+    assert landed.get("land_timestamp") and landed["release_note"] == "Greetings now say hello."
+    note = git(root, "show", f"{landed['land_commit']}:{note_path(root, slug)}")
+    assert "Release: Greetings now say hello." in note, note
+
+    slug = quick_fix(root, "fix-farewell", "farewell")
+    before = manifest_file(root, slug).read_bytes()
+    marker = root / "ran.txt"
+    done = run(root, "quick-fix", "finish", "--issue", slug, "-m", "Fix the farewell",
+               *greet_command("farewell", marker=str(marker)))
+    assert done.returncode != 0, done
+    assert "--release-note" in done.stderr and MISSING in done.stderr, done.stderr
+    assert not marker.exists(), "the test command ran before the refusal"
+    assert manifest_file(root, slug).read_bytes() == before
+    assert not (root / note_path(root, slug)).exists()
+    assert not list((root / ".compass" / "work" / slug / "evidence").glob("green-*"))
+    assert_no_gh_call(root)
+
+
+# --- IRL-24 ---------------------------------------------------------------------------
+
+def test_irl_24_landed_issue_not_refused_or_rewritten(tmp_path):
+    root = project(tmp_path)
+    ready_to_ship(root)
+    done = run(root, "ship-commit", "-m", "Ship it", "--issue", SLUG, "--release-note", BOARD)
+    assert done.returncode == 0, done
+    # A completed issue at a generation that declares the field, with no line: every
+    # issue landed before this change looks like this.
+    set_keys(root, release_note=ABSENT)
+    first_land = manifest(root)["land_commit"]
+
+    # A review fix on top of the landing, its green re-recorded, nothing staged.
+    (root / "src" / "new.py").write_text("y = 2\n")
+    git(root, "add", "src/new.py")
+    git(root, "commit", "-q", "-m", "review fix")
+    done = run(root, "tdd-green", "--issue", SLUG, "--", sys.executable, "-c", "pass")
+    assert done.returncode == 0, done
+    done = run(root, "ship-commit", "-m", "Land again", "--issue", SLUG)
+    output = done.stdout + done.stderr
+    assert done.returncode == 0, done
+    assert "landed at HEAD" in done.stdout, done.stdout
+    assert "release line" not in output and "release-line" not in output, output
+    landed = manifest(root)
+    assert landed["land_commit"] != first_land and "release_note" not in landed, landed
+
+    declare_acceptance(root)
+    done = run(root, "acceptance", "record", "--issue", SLUG, "--release-note", "Late text.",
+               *PASS)
+    assert done.returncode != 0, done
+    assert f"'{SLUG}' is completed" in done.stderr, done.stderr
+    assert "release_note" not in manifest(root)
+
+    set_keys(root, close_reason="not-planned")
+    before = manifest_file(root).read_bytes()
+    done = run(root, "acceptance", "record", "--issue", SLUG, "--release-note", "Late text.",
+               *PASS)
+    assert done.returncode != 0, done
+    assert f"'{SLUG}' is closed" in done.stderr, done.stderr
+    assert manifest_file(root).read_bytes() == before
+    assert_no_gh_call(root)
+
+
+# --- IRL-27 ---------------------------------------------------------------------------
+
+#: `compass acceptance record --release-note "Second text."` run in-process, with the
+#: test hook set: after the writer's first read, it sets another key and a different
+#: release line on disk. argv: the cli folder to import, the project, the slug.
+LOCKED_WRITE_RUN = r"""
+import argparse, os, sys
+sys.path.insert(0, sys.argv[1])
+import compass_pkg  # noqa: F401 - the bundled PyYAML first
+import yaml
+from compass_pkg import release_line, tdd
+
+root, slug = sys.argv[2], sys.argv[3]
+os.chdir(root)
+
+
+def hook(task_dir):
+    path = os.path.join(task_dir, "manifest.yml")
+    body = yaml.safe_load(open(path, encoding="utf-8"))
+    body["follow_ups"] = [{"id": "FU-HOOK", "summary": "set by the hook"}]
+    body["release_note"] = "Disk text."
+    with open(path, "w", encoding="utf-8") as fh:
+        yaml.safe_dump(body, fh, sort_keys=False)
+
+
+release_line.AFTER_FIRST_READ = hook
+tdd.cmd_acceptance_record(argparse.Namespace(
+    task=slug, scenario=None, command=[sys.executable, "-c", "pass"],
+    release_note="Second text.", _mode="summary", json=False, evidence_out=None))
+"""
+
+
+def locked_write(root, cli_folder):
+    """Run the in-process write against `cli_folder`; returns the process and the
+    manifest it left."""
+    declare_acceptance(root)
+    set_keys(root, release_note="First text.")
+    done = subprocess.run([sys.executable, "-c", LOCKED_WRITE_RUN, str(cli_folder), str(root),
+                           SLUG], capture_output=True, text=True, env=env(root), timeout=300)
+    return done, manifest(root)
+
+
+def locked_write_holds(done, body):
+    replaced = [line for line in done.stdout.splitlines() if "replaced" in line]
+    return (done.returncode == 0 and body.get("release_note") == "Second text."
+            and body.get("follow_ups") == [{"id": "FU-HOOK", "summary": "set by the hook"}]
+            and replaced == ["compass acceptance record: release line replaced "
+                             "(was: Disk text.)"])
+
+
+def test_irl_27_locked_reread_keeps_other_write(tmp_path):
+    import shutil
+    root = project(tmp_path / "real")
+    done, body = locked_write(root, ROOT / "cli")
+    assert locked_write_holds(done, body), (done, body)
+
+    # With the re-read inside the lock removed in a copy, the same run fails: the
+    # writer keeps its first read and loses the hook's change.
+    copy = tmp_path / "planted" / "cli"
+    shutil.copytree(ROOT / "cli", copy, ignore=shutil.ignore_patterns("__pycache__"))
+    module = copy / "compass_pkg" / "release_line.py"
+    source = module.read_text(encoding="utf-8")
+    assert source.count("current = load_yaml(path)") == 1, "the re-read moved"
+    module.write_text(source.replace("current = load_yaml(path)", "current = dict(task)"),
+                      encoding="utf-8")
+    root = project(tmp_path / "plant")
+    done, body = locked_write(root, copy)
+    assert not locked_write_holds(done, body), (done, body)
+
+
+# --- IRL-11 ---------------------------------------------------------------------------
+
+def test_irl_11_spike_and_issueless_commit_not_refused(tmp_path):
+    root = project(tmp_path / "spike", "spike")
+    assert "release_line" not in generation_config(root)["approaches"]["spike"]
+    register(root, "spike-conclusion", text="# Spike conclusion\n\nThe question is answered.\n")
+    ready_to_ship(root)
+    from compass_pkg import release_line
+    task_dir = str(root / ".compass" / "work" / SLUG)
+    assert release_line.landing_refusal(manifest(root), task_dir) is None
+    done = run(root, "ship-commit", "-m", "Conclude the spike", "--issue", SLUG)
+    output = done.stdout + done.stderr
+    assert "release line" not in output and "release-line" not in output, output
+
+    root = repo(tmp_path / "plain")
+    (root / "notes.txt").write_text("a note\n")
+    git(root, "add", "notes.txt")
+    head = git(root, "rev-parse", "HEAD")
+    done = run(root, "ship-commit", "-m", "Add a note")
+    output = done.stdout + done.stderr
+    assert done.returncode == 0, done
+    assert git(root, "rev-parse", "HEAD") != head
+    assert "release line" not in output and "release-line" not in output, output
+    assert_no_gh_call(root)
+
+
+# --- IRL-4 ----------------------------------------------------------------------------
+
+def _before_this_change(resolved):
+    """The regular approach as the shipped default held it before this change."""
+    entry = resolved["approaches"]["regular"]
+    entry.pop("release_line", None)
+    entry["artifacts"].pop("intent", None)
+
+
+def predating_issue(tmp_path):
+    """An open regular issue at generation 1, stored before this change: no intent in its
+    registry and no `release_line` in its stored configuration."""
+    root = project(tmp_path)
+    rewrite_stored(root, _before_this_change)
+    body = manifest(root)
+    body["artifacts"] = [a for a in body["artifacts"] if a.get("kind") != "intent"]
+    write_manifest(root, body)
+    assert manifest(root)["generation"] == 1
+    return root
+
+
+def _names(text):
+    flat = " ".join(text.split())
+    return [word for word in ("intent", "release line", "release-line", "release_line")
+            if word in flat]
+
+
+def test_irl_4_assessed_regular_owes_no_intent_until_reassessed(tmp_path):
+    root = predating_issue(tmp_path / "a")
+    ready_to_ship(root)
+    done = run(root, "check", "--issue", SLUG, "--json")
+    report = json.loads(done.stdout)
+    # A check's detail names the kind `intent` or the release line only when it judges
+    # them; the check `scenario-has-id-and-intent` is about a scenario's intent id.
+    named = [c for c in report["checks"] if _names(str(c.get("detail") or ""))]
+    assert not named, named
+    done = run(root, "ship-commit", "-m", "Ship it", "--issue", SLUG)
+    assert done.returncode == 0, done
+    assert not _names(done.stdout + done.stderr), done
+    assert manifest(root).get("land_timestamp")
+
+    root = predating_issue(tmp_path / "b")
+    done = run(root, "approach", "evaluate", "--issue", SLUG, "--write", "--reason",
+               "the new shipped default")
+    assert done.returncode == 0, done
+    body = manifest(root)
+    assert body["generation"] == 2, body.get("generation")
+    entries = _entries(root, "intent")
+    assert [(e.get("status"), e.get("depth")) for e in entries] == [("draft", "lightweight")], \
+        entries
+    register(root, "intent", text="# Intent\n\n## Problem\n\nA problem.\n")
+    ready_to_ship(root)
+    before = state(root)
+    done = run(root, "ship-commit", "-m", "Ship it", "--issue", SLUG)
+    assert done.returncode != 0, done
+    assert MISSING in done.stderr, done.stderr
+    assert state(root) == before
+    assert_no_gh_call(root)
+
+
+# --- IRL-7 ----------------------------------------------------------------------------
+
+def test_irl_7_unwritten_intent_refused_at_landing(tmp_path):
+    root = project(tmp_path)
+    ready_to_ship(root, skip=("intent",))
+    set_keys(root, release_note=BOARD)
+    assert [not e.get("path") for e in _entries(root, "intent")] == [True]
+    before = state(root)
+    done = run(root, "ship-commit", "-m", "Ship it", "--issue", SLUG)
+    assert done.returncode != 0, done
+    flat = " ".join(done.stderr.split())
+    assert "artifacts-approved" in flat and "intent" in flat, flat
+    assert 'compass issue artifact set intent --status omitted --reason "<why>"' in flat, flat
+    assert "compass issue artifact set intent" in flat and "--path" in flat, flat
+    assert state(root) == before
     assert_no_gh_call(root)

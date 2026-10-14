@@ -3994,3 +3994,6 @@
 - `MRE-3` Given neither the work folder nor the documents folder is tracked, When the migrate applies without the copy flag, Then one refusal names both folders
 - `MRE-4` Given the assess texts include the adaptive-routing skill, When the test reads each approach evaluate write span, Then every span carries the justify flag
 - `MRE-5` Given two registry entries for one review file, When the migrate merges them, Then the newer approval and its id are kept and the report names what was dropped
+- `MRE-6` Given a stem entry whose file exists and an approved round entry whose file does not, When the migrate runs, Then the two merge keeping the newer approval; with both files present it still refuses
+- `MRE-7` Given two entries for one file and neither approved, When the migrate merges them, Then the round entry's id and status are kept and the report names the stem entry's as dropped
+- `MRE-8` Given two approved entries for one file with equal or missing approval times, When the migrate merges them, Then a tie keeps the stem entry, a missing time loses to a recorded one, and the report names each side's own approval

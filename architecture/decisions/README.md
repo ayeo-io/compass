@@ -103,6 +103,7 @@ Rules:
 | [ADR-061](ADR-061-measuring-a-repository-runs-project-commands-under-the-trust-order.md) | Measuring a repository runs project commands under the trust order | proposed | with ADR-009 and ADR-025 |
 | [ADR-062](ADR-062-a-dependency-is-a-manifest-field-and-the-block-is-derived.md) | A dependency between issues is a manifest field, and the block it causes is derived | accepted | extends ADR-045 and ADR-052 decisions 2 and 3; narrows ADR-003's follow-on note; with ADR-006, ADR-046 and ADR-048 |
 | [ADR-063](ADR-063-checkpoint-outcomes-and-session-usage-are-stored-and-the-autonomy-and-cost-figures-are-derived.md) | Checkpoint outcomes and session usage are stored, and the autonomy and cost figures are derived | accepted | extends ADR-045 and ADR-051; follows ADR-050's `artifact-approval` precedent; with ADR-006, ADR-026, ADR-031, ADR-036 and ADR-048 |
+| [ADR-065](ADR-065-regular-issues-owe-an-intent-and-shipping-issues-record-a-release-line.md) | Regular issues owe a lightweight intent, and every shipping issue records a release line its landing requires | proposed | extends ADR-026, ADR-035 and ADR-053; follows ADR-063's landing-refusal precedent; with ADR-034, ADR-036, ADR-039, ADR-044 and ADR-051 |
 
 ## Principle → ADR mapping
 

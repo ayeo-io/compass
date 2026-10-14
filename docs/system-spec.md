@@ -3951,3 +3951,4 @@
 - `CRT-19` CI prints test counts and the slowest tests
 - `CRT-20` This pull request's own CI runs meet the targets and show each saving
 - `CRT-21` A base-branch change re-runs the suite, and the push skip never trusts a run that started before it
+- `CRT-22` Shards are balanced by recorded test duration, and a shard ends at 45 minutes

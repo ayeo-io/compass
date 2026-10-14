@@ -367,7 +367,10 @@ def answered_issue(tmp_path, paths):
     done = iu.ship_at(root)
     assert done.returncode == 0, done
     clone = tmp_path / "record-copy"
-    co.git(tmp_path, "clone", "-q", str(bare), str(clone))
+    # The record pushes to main, but a bare repository's HEAD follows
+    # init.defaultBranch, which is master on CI. A plain clone would then
+    # check out nothing and exit 0; naming the branch makes it fail instead.
+    co.git(tmp_path, "clone", "-q", "-b", "main", str(bare), str(clone))
     return root, clone
 
 

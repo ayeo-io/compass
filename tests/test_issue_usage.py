@@ -671,7 +671,10 @@ def test_arc_15_no_transcript_text_is_stored(tmp_path):
     assert outputs[1].returncode == 0 and outputs[3].returncode == 0, outputs
 
     clone = tmp_path / "record-copy"
-    co.git(tmp_path, "clone", "-q", str(bare), str(clone))
+    # The record pushes to main, but a bare repository's HEAD follows
+    # init.defaultBranch, which is master on CI. A plain clone would then
+    # check out nothing and exit 0; naming the branch makes it fail instead.
+    co.git(tmp_path, "clone", "-q", "-b", "main", str(bare), str(clone))
     synced = yaml.safe_load((clone / ".compass" / "work" / co.SLUG / "manifest.yml").read_text())
     assert synced["usage"] == co.manifest(root)["usage"]
     history = co.git(clone, "log", "--all", "-p", "--format=%H %s")

@@ -108,6 +108,15 @@ evidence block is an automatic fail.
 <!-- compass:render decisions-taken -->
 <!-- /compass:render -->
 
+## Release line
+
+<!-- The line for the release notes, written for a user: one sentence for a quick fix or
+     hotfix, a paragraph for regular or full. It is kept in the manifest's `release_note`
+     and written by `compass ship-commit --release-note "<text>"`. -->
+
+<!-- compass:render release-line -->
+<!-- /compass:render -->
+
 ---
 
 ## Gate

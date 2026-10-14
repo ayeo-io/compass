@@ -119,6 +119,7 @@ artifacts:
       - 4. Gate decision
       - 5. Failure modes de-scoped at define
       - 6. Decisions taken for the user
+      - Release line
       - Gate
     depends_on: []
   intent:

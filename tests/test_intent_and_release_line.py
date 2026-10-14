@@ -330,3 +330,213 @@ def test_irl_3_other_approaches_keep_intent_rules(tmp_path, approach, depth):
     # The configuration the issue runs against says the same.
     owed = (generation_config(root)["approaches"][approach].get("artifacts") or {})
     assert owed.get("intent") == depth, owed
+
+
+# --- landing an issue -------------------------------------------------------------------
+
+#: The texts of the release-line refusals, as a reader sees them.
+MISSING = "has no release line"
+FLAG = '--release-note "<text written for a user>"'
+
+
+def register(root, kind, status="approved", slug=SLUG, text=None):
+    """Write the document, unless it exists, and register it."""
+    path = Path(root) / DOCS / f"{kind}.md"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if text is not None or not path.exists():
+        path.write_text(text if text is not None else f"# {kind}\n\nFirst version.\n")
+    done = run(root, "issue", "artifact", "set", kind, "--status", status,
+               "--path", f"{DOCS}/{kind}.md", "--issue", slug)
+    assert done.returncode == 0, done
+    return done
+
+
+def set_keys(root, slug=SLUG, **changes):
+    body = manifest(root, slug)
+    for key, value in changes.items():
+        if value is ABSENT:
+            body.pop(key, None)
+        else:
+            body[key] = value
+    write_manifest(root, body, slug)
+    return body
+
+
+class _Absent:
+    def __repr__(self):
+        return "no key"
+
+
+ABSENT = _Absent()
+
+
+def ready_to_ship(root, slug=SLUG, skip=(), path="src/new.py"):
+    """Every gate passed, every registered document approved, one changed file traced,
+    a green on record and the file staged: the state `ship-commit` lands from."""
+    for entry in manifest(root, slug).get("artifacts") or []:
+        if entry.get("kind") not in skip and entry.get("status") != "approved":
+            register(root, entry["kind"], slug=slug)
+    body = manifest(root, slug)
+    for gate in body["gates"]:
+        gate["status"] = "pass"
+    body["changed_files"] = [{"path": path, "scenarios": ["S-1"]}]
+    write_manifest(root, body, slug)
+    (root / path).parent.mkdir(parents=True, exist_ok=True)
+    (root / path).write_text("y = 1\n")
+    done = run(root, "tdd-green", "--issue", slug, "--", sys.executable, "-c", "pass")
+    assert done.returncode == 0, done
+    git(root, "add", path)
+
+
+def state(root, slug=SLUG):
+    """What a refused landing must leave as it was: the manifest's bytes, what is
+    staged and HEAD."""
+    return (manifest_file(root, slug).read_bytes(), git(root, "diff", "--cached"),
+            git(root, "rev-parse", "HEAD"))
+
+
+# --- IRL-10 ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("approach, stored", [
+    ("quick-fix", ABSENT), ("regular", ABSENT), ("hotfix", ""), ("full", "   ")])
+def test_irl_10_ship_commit_refuses_missing_release_line(tmp_path, approach, stored):
+    root = project(tmp_path, approach)
+    assert generation_config(root)["approaches"][approach]["release_line"] is True
+    ready_to_ship(root)
+    set_keys(root, release_note=stored)
+    before = state(root)
+    done = run(root, "ship-commit", "-m", "Ship it", "--issue", SLUG)
+    assert done.returncode != 0, done
+    assert f"'{SLUG}'" in done.stderr and MISSING in done.stderr, done.stderr
+    assert FLAG in done.stderr, done.stderr
+    assert "[release-line-missing]" in done.stderr, done.stderr
+    assert state(root) == before
+    assert "land_timestamp" not in manifest(root)
+    assert_no_gh_call(root)
+
+
+# --- IRL-22 ---------------------------------------------------------------------------
+
+def rewrite_stored(root, change, slug=SLUG):
+    """Change the stored generation's resolved configuration, as a generation stored
+    before this change, or under another configuration, holds it, and seal it again so
+    it reads as whole."""
+    from compass_pkg import atomic_io, generation
+    task_dir = root / ".compass" / "work" / slug
+    n = manifest(root, slug)["generation"]
+    folder = Path(generation.gen_dir(task_dir, n))
+    resolved = yaml.safe_load((folder / "resolved.yml").read_text())
+    change(resolved)
+    (folder / "resolved.yml").write_text(yaml.safe_dump(resolved, sort_keys=False))
+    marker = yaml.safe_load((folder / "complete").read_text())
+    marker["files"]["resolved.yml"] = atomic_io.digest(resolved)
+    (folder / "complete").write_text(yaml.safe_dump(marker, sort_keys=False))
+    assert generation.is_whole(task_dir, n)[0], generation.is_whole(task_dir, n)
+
+
+def _approach_field(resolved, approach, value):
+    entry = resolved["approaches"][approach]
+    if value is ABSENT:
+        entry.pop("release_line", None)
+    else:
+        entry["release_line"] = value
+
+
+def _no_issue_named(root):
+    (root / ".compass" / "current-task").unlink()
+    return ()
+
+
+def _status(reason):
+    def apply(root):
+        set_keys(root, status="done", close_reason=reason)
+        return ("--issue", SLUG)
+    return apply
+
+
+def _no_generation(root):
+    set_keys(root, generation=ABSENT)
+    return ("--issue", SLUG)
+
+
+def _stored(value):
+    def apply(root):
+        rewrite_stored(root, lambda resolved: _approach_field(resolved, "regular", value))
+        return ("--issue", SLUG)
+    return apply
+
+
+@pytest.mark.parametrize("case", [
+    "no issue named", "completed", "closed", "no generation key", "no release_line field",
+    "release_line false"])
+def test_irl_22_refusal_declines_on_each_condition(tmp_path, case):
+    setup = {"no issue named": _no_issue_named, "completed": _status("completed"),
+             "closed": _status("not-planned"), "no generation key": _no_generation,
+             "no release_line field": _stored(ABSENT),
+             "release_line false": _stored(False)}[case]
+    root = project(tmp_path)
+    ready_to_ship(root)
+    extra = setup(root)
+    assert "release_note" not in manifest(root)
+    from compass_pkg import release_line
+    task_dir = str(root / ".compass" / "work" / SLUG)
+    if case != "no issue named":
+        assert release_line.landing_refusal(manifest(root), task_dir) is None, case
+    done = run(root, "ship-commit", "-m", "Ship it", *extra)
+    output = done.stdout + done.stderr
+    assert "release line" not in output and "release-line" not in output, (case, output)
+    assert done.returncode == 0, (case, done)
+    assert_no_gh_call(root)
+
+
+# --- IRL-15 ---------------------------------------------------------------------------
+
+REPORT = f"{DOCS}/verification-report.md"
+
+
+def write_report(root, slug=SLUG):
+    """The verification report as `compass issue template show` gives it for the issue."""
+    done = run(root, "issue", "template", "show", "verification-report", "--issue", slug)
+    assert done.returncode == 0, done
+    path = root / REPORT
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(done.stdout)
+    register(root, "verification-report", status="draft", slug=slug)
+    return path
+
+
+def block(text, kind):
+    """The body of the one rendered block of `kind` in `text`."""
+    opening, closing = f"<!-- compass:render {kind} -->", "<!-- /compass:render -->"
+    assert text.count(opening) == 1, (kind, text)
+    return text.split(opening, 1)[1].split(closing, 1)[0].strip("\n")
+
+
+def test_irl_15_verification_report_release_line_block(tmp_path):
+    root = project(tmp_path)
+    path = write_report(root)
+    headings = _headings(path.read_text())
+    at = headings.index("Release line")
+    assert headings[at - 1] == "6. Decisions taken for the user", headings
+    assert headings[at + 1] == "Gate", headings
+    assert _section(path.read_text(), "Release line").count(
+        "<!-- compass:render release-line -->") == 1
+
+    set_keys(root, release_note="Adds the board.")
+    done = run(root, "issue", "render", "--issue", SLUG)
+    assert done.returncode == 0, done
+    assert block(path.read_text(), "release-line") == "Adds the board.", path.read_text()
+
+    set_keys(root, release_note=ABSENT)
+    done = run(root, "issue", "render", "--issue", SLUG)
+    assert done.returncode == 0, done
+    empty = block(path.read_text(), "release-line")
+    assert "No release line recorded yet." in empty, empty
+    assert "compass ship-commit --release-note" in empty, empty
+
+    sections = yaml.safe_load((PRESET / "artifacts.yml").read_text())["artifacts"][
+        "verification-report"]["sections"]["thorough"]
+    at = sections.index("Release line")
+    assert sections[at - 1:at + 2] == ["6. Decisions taken for the user", "Release line",
+                                       "Gate"], sections
+    assert_no_gh_call(root)

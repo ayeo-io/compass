@@ -5,7 +5,7 @@
 default@6.0.0:
   files:
     approaches.yml: sha256:e0b9f6b1e91d3f9f4e2ee656a847969ef8a75175becb3a8f92db9a4384c778d4
-    artifacts.yml: sha256:d53e653950dfbe2dc7fa98aa5790d0ac7f22ecad4f172ba861a71f08ac4fa776
+    artifacts.yml: sha256:badff2ebd037c736ca3d9b23e410444572326022c8e24895fb4e65d81edc1962
     checks.yml: sha256:523347b4e691a0d900f3893e87b7098ca0c6bd5a20bee36bf2a1775341fcaa9c
     dimensions.yml: sha256:4be2637d0a8e46ecf55cb475b033d78cb6d637a46bb3177a422bbc58b773f911
     evidence-types.yml: sha256:3c8e7df7f1259124175148f71cc321621ad1e924fa78e6a1fdfbbacaea97a060
@@ -15,4 +15,4 @@ default@6.0.0:
     rules.yml: sha256:6f8beb6d74ad97d8e65ee3e7fb82b5bc635e77741534909b5ec922f24163ac52
     stages.yml: sha256:ae48f1af2f41356057eef5661512b664feac27c284dc065d069571446f4345e0
     vocabulary.yml: sha256:402f0fc8979fd66edb7fe599ae3b0e7ead9b5fea7fc4b54b437ba1fb7885cefd
-  preset: sha256:288a789804ee567126606ada452bfd1fa2f8f880a0ad37c03e65d053433a048d
+  preset: sha256:1c1cbeccf441dfb55781100314c511055f42b8bf98c9a735fd82f5172def738a

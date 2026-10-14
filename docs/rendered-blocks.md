@@ -31,7 +31,7 @@ The kinds are `coverage`, `gates`, `dod`, `dor`, `artifacts`, `evidence`,
 `follow-ups`, `decisions-taken`, `header`, `ask`, `decision-required`,
 `acceptance`, `related`, `decisions`, `traceability`, `deliberately-omitted`,
 `verification-note`, `index`, `assessment`, `policy-rules`, `stage-weights`, `gate-set`,
-`plan-exit`, `breakdown-exit` and `readiness`. All are rendered.
+`plan-exit`, `breakdown-exit`, `readiness` and `release-line`. All are rendered.
 
 | Kind | What it shows |
 |---|---|
@@ -58,6 +58,7 @@ The kinds are `coverage`, `gates`, `dod`, `dor`, `artifacts`, `evidence`,
 | `gate-set` | In section 4b. The gates in the manifest's order, and beside a gate a policy rule added, the ids of those rules |
 | `plan-exit`, `breakdown-exit` | The configured `plan` or `breakdown` exit list under `## Gate` in `technical-design.md` and `distribution-map.md`, read like `dod`. Empty (the shipped default): `No exit checks are configured for the plan stage.` (or `breakdown`) |
 | `readiness` | The one line `Repository readiness: 9 of 11 signals, floor met`, or `Repository readiness: not measured (<why>: <how to fix>)`, from the manifest's `readiness:` summary. The marker is in section 1 of `templates/delivery-approach.md`, under the assessment. A delivery approach written before the block existed has no marker, so the render leaves it alone. The receipt and the board panel print the same line from the same function (`readiness_record.line`), and the manifest key is written by `compass approach evaluate --write`. A render only reads the key |
+| `release-line` | In the `## Release line` section of `templates/verification-report.md`, after "Decisions taken for the user" and before `## Gate`. The manifest's `release_note` on one line, or `No release line recorded yet.` with the command `compass ship-commit --release-note "<text written for a user>"`. The manifest is the only copy of the line (`docs/release-line.md`). A report written before the block existed has no marker, so the render leaves it alone |
 
 A block holds no clock, no absolute path and no name taken from git. The same
 records give the same text, so a second render changes no byte. The one fence a

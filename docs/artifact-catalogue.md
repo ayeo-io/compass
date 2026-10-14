@@ -129,7 +129,7 @@ Headings of each kind, in order:
 - `technical-design`, lightweight: 1. Approach; 6. Design decisions (ADR-style); 7. Governance check; Gate
 - `distribution-map`, thorough: 1. Work units; 2. Independence analysis; 3. Scenario-group → subtask mapping; 4. Proposed worktree orchestration; 5. The cap that applies; Gate
 - `distribution-map`, lightweight: 1. Work units; 2. Independence analysis; 3. Scenario-group → subtask mapping; Gate
-- `verification-report`, thorough: 1. Scenario acceptance results; 2. Test suite evidence; 3. Review dimensions; 4. Gate decision; 5. Failure modes de-scoped at define; 6. Decisions taken for the user; Gate
+- `verification-report`, thorough: 1. Scenario acceptance results; 2. Test suite evidence; 3. Review dimensions; 4. Gate decision; 5. Failure modes de-scoped at define; 6. Decisions taken for the user; Release line; Gate
 - `intent`, thorough: Problem; Desired outcome; Success signals; Constraints; Non-goals; Internal FAQ; Affected roles; Intent-fidelity check (filled at the pre-plan gate)
 - `intent`, lightweight: Problem; Desired outcome; Success signals; Non-goals
 - `requirements-review`, thorough: Self-QA of the spec; Governance QA of the spec; Ambiguity ledger; Gate

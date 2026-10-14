@@ -191,6 +191,25 @@ Compass now records what happened at each stage hand-off and what each issue cos
 2. Answer each listed hand-off of a new issue with `compass evidence approve --checkpoint <stage>` at a terminal before you ship it.
 3. Add `.manifest.lock` to the `.gitignore` of a project that tracks its issue folders.
 
+## The issue page on GitHub
+
+Compass can now post an issue's README to the linked GitHub issue, and the verb that wrote labels on demand has a new spelling. The decision is `architecture/decisions/ADR-057-derived-views-go-to-github-one-way-behind-a-refusal-check.md`. The facts are in `docs/github-labels.md`.
+
+### What is removed
+
+- **The verb `compass issue labels sync`.** A command line that still types it exits 2, runs nothing and makes no `gh` call. It prints one line: `'issue labels sync' is now 'issue github sync'`. The hint row names release 6.0.0 and removal at 7.0.0.
+
+### What changes
+
+- **`compass issue github sync` replaces it.** It writes the labels and, when `page` is on, the issue page, each whatever the other's result. It exits non-zero when either failed or was refused. The sync failure line and the notes of `compass issue lint` name the new verb.
+- **A new switch, `github_labels.page`, is off by default.** With it on, Compass posts the issue's README as one comment and, once, the ask into an empty issue body. It widens the audience of the issue's documents to the readers of the GitHub issue. Two checks refuse a post that holds a private path or a credential shape.
+- **`github-sync.yml` holds two sections.** A record written by a 6.x CLI reads as the `labels` section. No migration is needed.
+
+### What to do
+
+1. Replace `compass issue labels sync` with `compass issue github sync` in your scripts, notes and CI.
+2. Leave `page` off unless the readers of your GitHub issues may see your issue documents. To turn it on, set `github_labels: {page: true}` in `compass.yml`.
+
 ### New keys and verbs
 
 | Name | Where | Meaning |
@@ -202,3 +221,5 @@ Compass now records what happened at each stage hand-off and what each issue cos
 | `checkpoint-no-outcome` | a refusal code | The landing refusal |
 | `compass evidence approve --checkpoint` | a flag | Answer a hand-off |
 | `compass issue checkpoint add` | a verb | Record a hand-off that autonomy passed |
+| `github_labels.page` | `compass.yml` | Post the issue page to the linked GitHub issue |
+| `compass issue github sync` | verb | Write the labels and the issue page on demand |

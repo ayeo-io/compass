@@ -13,7 +13,7 @@ github_labels:
   status: true
 ```
 
-Both switches are off until you set them to `true`. With them off, Compass never calls GitHub.
+Both switches are off until you set them to `true`. A third switch, `page`, posts the issue's README to the GitHub issue as one comment; this walkthrough leaves it off, and [github-labels.md](github-labels.md) describes it. With all three off, Compass never calls GitHub.
 
 ## 2. Declare the labels your rules use
 
@@ -38,7 +38,7 @@ compass issue link set --github acme/widgets#42
 compass issue link set --github https://github.com/acme/widgets/issues/42
 ```
 
-The command stores `github: {repo: acme/widgets, number: 42}` in the manifest and then writes the labels. If you linked before switching the labels on, run `compass issue labels sync` once.
+The command stores `github: {repo: acme/widgets, number: 42}` in the manifest and then writes the labels. If you linked before switching the labels on, run `compass issue github sync` once.
 
 On GitHub, the issue now carries its domain labels, such as `infra`, and one status label, such as `status:ready`. Compass created any label the repository lacked.
 
@@ -72,9 +72,9 @@ compass issue lint
 The result is unchanged, and a line under it says the issue is out of sync and that `infra` is missing. Lint reads GitHub and writes nothing. To put the label back, run:
 
 ```text
-compass issue labels sync
+compass issue github sync
 ```
 
 ## 6. When gh is missing or logged out
 
-The command you ran still succeeds. Compass prints one line on standard error, such as `gh is not logged in (run gh auth login)`, and `compass issue lint` reports the issue as out of sync until `compass issue labels sync` works.
+The command you ran still succeeds. Compass prints one line on standard error, such as `gh is not logged in (run gh auth login)`, and `compass issue lint` reports the issue as out of sync until `compass issue github sync` works.

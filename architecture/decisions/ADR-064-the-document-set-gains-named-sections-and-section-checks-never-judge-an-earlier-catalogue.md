@@ -1,13 +1,13 @@
 ---
 id: ADR-064
 title: The document set gains named sections, and the section checks never judge an earlier catalogue
-status: proposed
+status: accepted
 date: 2026-10-14
 supersedes: ''
 superseded_by: ''
 ---
 
-Proposed by the planner for document-set-sections on 2026-10-14, from the candidate record in that issue's architecture notes. compass:architect accepts or revises it for jed72 at verify.
+Accepted by jed72 on 2026-10-14, through compass:architect under automation mode.
 
 ## Context
 
@@ -32,7 +32,7 @@ Most of the archive predates generations. In the maintainer's checkout on 2026-1
    2. the issue is closed;
    3. the document the check reads is not registered with a path;
    4. the issue's stored catalogue does not list the section at the depth the issue registers the document.
-   A stored generation that does not declare a check never runs it; the issue gains it at its next `compass approach evaluate --write`. Each check's corpus holds these shapes with the verdict `nothing-to-check`. `contracts-declared` reads its trigger patterns from its `params` in `checks.yml`, which a project layer can extend.
+   A stored generation that does not declare a check never runs it; the issue gains it at its next `compass approach evaluate --write`. Each check's corpus holds these shapes with the verdict `nothing-to-check`. `contracts-declared` reads its trigger patterns from its `params` in `checks.yml`. A project extends them by setting the whole list in its layer, with a project waiver, because the merge grammar has no `add:` for a check's `params`.
 
 3. **Two new block kinds and a conditional column.** `document-header` opens every catalogue document except the verification note and shows the issue, approach, stage, owner, status, date, upstream documents and audience, read from the records only. `dependencies` lists `depends_on` in the board's words through `lifecycle.judge` and is a cross-issue part. The `coverage` block gains a `Kind` column only when the issue's technical design holds a `Verification plan` heading, so no archived coverage block changes. No check parses the verification plan.
 

@@ -340,7 +340,9 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
     # issue-page, verification-note, project-index, item-record and page-tick.
     # 92 since the issue `artifact-catalogue-fields` added audience, stands-for,
     # sections, required-when, review-round, voluntary-kind and not-an-artifact-list.
-    assert len(terminology["terms"]) == 92, (
+    # 97 since the repository-readiness terms joined: readiness-signal,
+    # readiness-floor, readiness-record, readiness-summary and temporary-worktree.
+    assert len(terminology["terms"]) == 97, (
         "governance/terminology.yml gained or lost a term without this count "
         "moving. A vocabulary change is a decision (ADR-012); make it one."
     )
@@ -360,6 +362,7 @@ def test_trc_f1_no_new_gate_guardrail_check_cli_verb_or_vocabulary():
         "run",  # headless-runner (ADR-030): a stage run with nobody in the session
         "record",  # delivery-record (ADR-031): the record kept off the laptop
         "board",  # compass-board (ADR-046): the delivery board page
+        "readiness",  # project-readiness-caps-autonomy (ADR-061): measure the repository
     }
     line = next(l for l in result.stdout.splitlines() if l.strip().startswith("{"))
     verbs = set(line.strip().strip("{}").split(","))

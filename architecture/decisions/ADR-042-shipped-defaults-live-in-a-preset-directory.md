@@ -61,6 +61,10 @@ The two generated views hold values the catalogue form has no field for, such as
 
 Rule 1 of the self-application section now reads: this repository's root `compass.yml` holds settings keys and `owner` only. `owner` names who confirms the decisions agents take for the maintainer and who approves an issue's waiver. It changes no check, gate, rule or route, so this repository still runs the shipped default unchanged. The file still declares no catalogue key, waiver, unlock, capability or approvers list, and the test that enforces this also rejects each of those keys beside `owner`. The ledger entry `2026-10-12-this-repository-names-its-owner` records the decision.
 
+## Amendment, 13 October 2026: this repository's file declares the readiness commands
+
+Rule 1 now also allows what the readiness floor needs while this repository runs `autonomy: autonomous`: `allow_project_commands: true`, `project.build_command`, `project.lint_command`, `project.test_micro_command`, and one `readiness` override that sets the test signal's `command` parameter to `test_micro_command`. The override changes which command the test signal times, not the floor, a check, a gate or a rule. The test that enforces rule 1 accepts that one `readiness` value and still rejects any other `readiness` entry and every other catalogue key. The ledger entry `2026-10-13-this-repository-declares-readiness-commands` records the decision.
+
 ## References
 
 - ADR-006: backward compatibility is non-negotiable.

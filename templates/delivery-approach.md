@@ -38,6 +38,9 @@ line is not skippable - it runs.
 <!-- compass:render assessment -->
 <!-- /compass:render -->
 
+<!-- compass:render readiness -->
+<!-- /compass:render -->
+
 ---
 
 ## The composed candidate

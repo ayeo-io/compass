@@ -302,6 +302,8 @@ def _receipt_render(task, slug, route_readings, gate_requirements=None,
     if touches:
         lines.append(_receipt_truncate(
             f"  {'labels':<14}  {', '.join(touches)}"))
+    from compass_pkg import readiness_record
+    lines.append(_receipt_truncate("  " + readiness_record.line(task.get("readiness"))))
     lines.append("")
 
     # 3. the delivery approach + fired policy rules

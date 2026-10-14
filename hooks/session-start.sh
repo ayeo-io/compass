@@ -115,8 +115,15 @@ esac
 # The project's `always` lessons follow the contract, under their own
 # 150-word cap (cli/compass_pkg/lessons.py, ADR-029). A failure to read them
 # loses the lessons, never the contract.
+#
+# Then one readiness line, for an autonomous project that is below the
+# readiness floor or has no fresh readiness record: assess will refuse it, and
+# the session should know before it starts (cli/compass_pkg/readiness_record.py,
+# ADR-058). It reads the record and runs nothing. It has its own guard, so a
+# record or settings file that cannot be read loses the line, never the
+# contract, and the hook still exits 0.
 PYTHONPATH="$FRAMEWORK_ROOT/cli${PYTHONPATH:+:$PYTHONPATH}" \
-python3 - "$CONTRACT" "$PROJECT_DIR/.compass" <<'PY' 2>/dev/null || exit 0
+python3 - "$CONTRACT" "$PROJECT_DIR/.compass" "$PROJECT_DIR" <<'PY' 2>/dev/null || exit 0
 import json
 import sys
 
@@ -130,6 +137,15 @@ except BaseException:  # noqa: BLE001 - the contract must still reach the sessio
     lessons = ""
 if lessons:
     contract = contract.rstrip("\n") + "\n\n" + lessons + "\n"
+
+try:
+    from compass_pkg import project_settings, readiness_record
+    autonomy = str(project_settings.settings(sys.argv[3]).get("autonomy") or "balanced")
+    readiness = readiness_record.hook_line(sys.argv[3], autonomy.strip().lower())
+except BaseException:  # noqa: BLE001 - the contract must still reach the session
+    readiness = ""
+if readiness:
+    contract = contract.rstrip("\n") + "\n\n" + readiness + "\n"
 
 print(json.dumps({
     "hookSpecificOutput": {

@@ -155,7 +155,7 @@ The slash commands are the pipeline; the CLI is the mechanism underneath them.
 `compass check`. It is what makes the checks real rather than aspirational.
 
 ```text
-compass init               make this directory a Compass project - create .compass/
+compass init               make this directory a Compass project - create .compass/ (--readiness: then measure and list the absent signals; /compass:init passes it)
 compass approach evaluate  the assessment -> the delivery approach, deterministically
 compass approach show      the three-line decision view: approach, gates, files
 compass approach render    every delivery approach as one HTML table
@@ -210,6 +210,7 @@ compass rework-scan        add-then-delete patterns across issues
 compass flow               blockers, owed follow-ups, the periodic digest
 compass board render       write the delivery board as one page and open it (--no-open, --out, --worktrees)
 compass board refresh      rewrite that page in place, without opening a browser
+compass readiness          measure whether the repository is fit for unattended agent work (--json, --fix-list)
 compass next               which stage this issue reached, and what comes next
 compass follow-up resolve  settle an owed follow-up
 compass ship-commit        commit exactly the files the issue recorded

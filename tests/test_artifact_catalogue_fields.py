@@ -1574,17 +1574,21 @@ def _without_comments(text):
 def test_acf_34():
     from compass_pkg import block_renderers, rendered_blocks
     text = _template("delivery-approach.md")
-    sections = {"## The assessment": "assessment", "## Policy rules that fired": "policy-rules",
-                "### Per-stage weight": "stage-weights", "### Gate set": "gate-set"}
-    for heading, kind in sections.items():
+    # The assessment section also ends with the repository readiness line, a block of
+    # its own (issue `project-readiness-caps-autonomy`), under the assessment.
+    sections = {"## The assessment": ["assessment", "readiness"],
+                "## Policy rules that fired": ["policy-rules"],
+                "### Per-stage weight": ["stage-weights"], "### Gate set": ["gate-set"]}
+    for heading, kinds in sections.items():
         body = _section(text, heading)
         found = [b.kind for b in rendered_blocks.parse(body).blocks]
-        assert found == [kind], (heading, found)
+        assert found == kinds, (heading, found)
         outside = _without_comments(rendered_blocks.masked_text(body))
         assert not [ln for ln in outside.splitlines() if ln.lstrip().startswith("|")], heading
         assert "{{" not in outside, heading
-        assert kind in rendered_blocks.KINDS
-        assert kind in block_renderers.RENDERERS
+        for kind in kinds:
+            assert kind in rendered_blocks.KINDS
+            assert kind in block_renderers.RENDERERS
 
 
 def _approach_issue(tmp_path, name, *, reasons=None, **assessment):

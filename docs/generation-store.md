@@ -39,7 +39,7 @@ reads the governance files.
 
 | File | Holds | Written |
 |---|---|---|
-| `resolved.yml` | The configuration after every layer is merged: the eight catalogues, the evidence types, the capability switches, the approach and the ceilings the issue's overlay names, the autonomy value, and the conformance status. | At commit, then fixed. |
+| `resolved.yml` | The configuration after every layer is merged: the nine catalogues, the evidence types, the capability switches, the approach and the ceilings the issue's overlay names, the autonomy value, and the conformance status. | At commit, then fixed. |
 | `provenance.yml` | `fields`: for each field, the layers that wrote it and the operation of each. Each rule has a path of its own, `rules.<set>.rules.<id>`, with a step for the layer that added, changed or removed it, because the rule set is one field and would not show which layer a rule came from. A generation stored before this has no such paths, and a reader must not guess a rule's layer from the rule set. `waivers`: each waiver with the parent value it saw. `classification`: for the project and issue layers, that the lint raised no error (`result: accepted`) and which waivers the layer holds. It holds no classifier points: a generation stored by this version has no `points` key, and a reader must treat absent points as "not recorded", never as zero. | At commit, then fixed. |
 | `versions.yml` | `resolver` and `cli` versions, `parents` (reference, version, digest, source; a git parent adds `sha`, with `source: git`, and the `classification` of the chain through it against the shipped default, see [git-parents.md](git-parents.md)), `project` (path, digest, git blob), `issue_overlay_digest`, and `implementations`: the version of each check implementation the configuration uses. | At commit, then fixed. |
 | `records.yml` | The status of each approval, waiver and check result at commit: `valid`, `superseded` or `invalidated`, with a reason. | At commit, then fixed. |
@@ -76,6 +76,12 @@ whole. If the resolved configuration, the issue overlay and the computed
 outcome all equal generation n, nothing is committed and the command says
 "no change"; the manifest is still replaced, as before. The manifest on disk
 must still name the generation the command read, or the commit refuses.
+
+The manifest's `readiness:` key, the repository's readiness summary, is not an
+outcome field. Every `--write` writes it into the manifest, on the "no change"
+path too, and no generation file or digest in `complete` holds it. A new
+`compass readiness` measurement therefore never forces a new generation
+(ADR-060).
 
 The commit refuses, writing nothing, when:
 

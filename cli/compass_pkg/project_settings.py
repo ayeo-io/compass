@@ -340,6 +340,29 @@ def settings_file(project_root):
     return OLD_CONFIG
 
 
+def project_text(project_root, key):
+    """One text value of the `project:` section, or None when it is not
+    declared: a command (`lint_command`, `format_check_command`,
+    `build_command`, `typecheck_command`) or a declaration (`secret_scan`,
+    `structured_logging`). An empty or blank string reads as undeclared.
+
+    A value that is not a string raises `CompassError` naming the key and the
+    file, so a readiness run that would otherwise ignore it is refused. The
+    scripts read no such key, so `SCRIPT_SETTINGS` does not list them."""
+    section = settings(project_root).get("project")
+    where = settings_file(project_root)
+    if section is None:
+        return None
+    if not isinstance(section, dict):
+        raise CompassError(f"project in {where} must be a mapping")
+    value = section.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise CompassError(f"project.{key} in {where} must be a string")
+    return value if value.strip() else None
+
+
 def settings_key(project_root, key):
     """`key` as the file `settings_file` names calls it: the adoption setting
     is `adoption` in `compass.yml` and `mode` in the old file."""

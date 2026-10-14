@@ -584,7 +584,7 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # Re-pinned for issue `intent-and-release-line`: an approach's `release_line` is
 # compared, `false` below `true`, so turning it off is a loosening; the version is now 6.
 # Re-pinned in the same issue for `routing.evaluate_route`: a document a role rule
-# requires is thorough even when the approach owes it at lightweight, which keeps a
+# asks for is thorough even when the approach owes it at lightweight, which keeps a
 # product owner's regular intent thorough. Version 6 covers both changes.
 VERDICT_SOURCE_PIN = "d17e607d8900c305"
 

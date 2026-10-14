@@ -321,7 +321,7 @@ how the lists run once the capability is on.
 The regular approach owes `intent` at depth `lightweight`: the four headings
 Problem, Desired outcome, Success signals and Non-goals of
 `artifacts.yml`'s `intent.sections.lightweight`. Full keeps the thorough
-intent; quick fix, hotfix and spike owe none. A document a role rule requires
+intent; quick fix, hotfix and spike owe none. A document a role rule asks for
 (`require_artifact`) is owed at `thorough` even when the approach owes it at
 `lightweight`, so a product owner's regular issue still owes the thorough
 intent. Quick fix, regular, hotfix and

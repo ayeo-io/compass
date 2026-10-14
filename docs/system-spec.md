@@ -3878,3 +3878,27 @@
 - `IPG-25` A private path in HTML-entity, backslash or trailing-slash form refuses the post, and a tracked symlink posts
 - `IPG-26` Every form found in review is refused, and a published link still posts
 - `IPG-27` An encoded space or plus in an ignored file's name refuses the post
+
+### ci-run-time (completed 2026-10-13)
+
+- `CRT-1` The main workflow runs on new commits only and cancels superseded pull-request runs
+- `CRT-2` The parallel pass runs as four shards that print their slowest tests
+- `CRT-3` The serial pass runs in its own job
+- `CRT-4` Every check the old self-check job ran still runs on every pull request
+- `CRT-5` The self-check aggregator passes only when every job it needs succeeded
+- `CRT-6` The count check fails when the shards' counts differ from the whole suite
+- `CRT-7` The push to main skips the suite only for a tree tested green on its pull request
+- `CRT-8` The required jobs keep their names, run on every pull request and skip together on a tested push
+- `CRT-9` The real-root harness job runs only when its inputs change
+- `CRT-10` Every test file lands in exactly one shard
+- `CRT-11` The shard command refuses bad arguments
+- `CRT-12` The pull-request text check runs in its own workflow, including on edits
+- `CRT-13` The docs build reports on every pull request and builds only when docs changed
+- `CRT-14` Every job in every workflow has a timeout
+- `CRT-15` The workflow token stays read-only
+- `CRT-16` The archive guard runs in the parallel pass and still fails on a planted archive write
+- `CRT-17` The shape-test skip guard starts no second pytest run and still fails on a planted skip
+- `CRT-18` The compat configuration setup is faster and loses no test
+- `CRT-19` CI prints test counts and the slowest tests
+- `CRT-20` This pull request's own CI runs meet the targets and show each saving
+- `CRT-21` A base-branch change re-runs the suite, and the push skip never trusts a run that started before it

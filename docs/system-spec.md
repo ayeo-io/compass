@@ -3879,7 +3879,7 @@
 - `IPG-26` Every form found in review is refused, and a published link still posts
 - `IPG-27` An encoded space or plus in an ignored file's name refuses the post
 
-### ci-run-time (completed 2026-10-13)
+### ci-run-time (completed 2026-10-14)
 
 - `CRT-1` The main workflow runs on new commits only and cancels superseded pull-request runs
 - `CRT-2` The parallel pass runs as four shards that print their slowest tests

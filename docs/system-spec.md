@@ -4017,3 +4017,17 @@
 - `ROA-15` The governance decision entry records the rule and amends nothing
 - `ROA-16` The docs describe the rule and the one lint chain
 - `ROA-17` This issue is reassessed under the restored compass.yml before verify
+
+### verify-report-approved-when-gates-pass (completed 2026-10-14)
+
+- `VRA-1` One verify gate pass leaves the verification report a draft
+- `VRA-2` The last verify gate pass approves the verification report
+- `VRA-3` The order of the gate passes does not matter
+- `VRA-4` Earlier-stage documents still move on the first verify gate pass
+- `VRA-5` A verify-stage document with a human check waits for the last gate too
+- `VRA-6` Gates of other stages do not hold a verify-stage document
+- `VRA-7` Every document the verify stage owns follows the rule
+- `VRA-8` Registering the report after every verify gate passed approves it
+- `VRA-9` Registering the report after only some verify gates passed leaves it a draft
+- `VRA-10` Documents the old rule approved keep their status
+- `VRA-11` The changed rule is recorded and documented

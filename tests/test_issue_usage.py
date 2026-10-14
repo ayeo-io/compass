@@ -769,3 +769,21 @@ def test_arc_26_earlier_work_is_not_shared(tmp_path):
     assert usage["stages"] == expected["stages"], usage["stages"]
     assert usage["total"] == expected["total"]
     co.assert_no_gh_call(root)
+
+
+def test_arc_31_other_manifests_are_not_read_without_a_session(tmp_path, monkeypatch):
+    """An issue with no session lands without reading any other issue's manifest."""
+    from compass_pkg import issue_usage
+    work = tmp_path / "work"
+    for slug in ("mine", "other-1", "other-2"):
+        (work / slug).mkdir(parents=True)
+        (work / slug / "manifest.yml").write_text("issue: x\n", encoding="utf-8")
+    task_dir = work / "mine"
+    reads = []
+    real = issue_usage.load_yaml
+    monkeypatch.setattr(issue_usage, "load_yaml", lambda p: reads.append(p) or real(p))
+    monkeypatch.delenv("CLAUDE_CODE_SESSION_ID", raising=False)
+    task = {"delivery_approach": "regular", "checkpoint_outcomes": []}
+    line = issue_usage.record_at_ship(task, str(task_dir), "2026-10-13T12:00:00Z")
+    assert line == "compass ship-commit: usage not recorded (not-claude-code)."
+    assert reads == [], reads

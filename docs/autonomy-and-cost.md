@@ -136,7 +136,7 @@ Every reader calls the functions of `cli/compass_pkg/autonomy_cost.py`, so the r
 The three bands count unlike things, so each is printed with its unit and they are never added together. When the issue's configuration cannot be read, its bands are not counted: the issue is left out of the band totals and counted as not measurable for them.
 
 - The autonomy ratio is the autonomous issues over the measurable issues, both shipped. A shipped issue that is not measurable is counted and reported, and is never treated as autonomous or as not.
-- The cost per change is the median cost of the issues with complete usage, for each delivery approach, and the median of each cost divided by the issue's scenario count. An issue without complete usage is counted as unmeasured, never as zero. An issue with no scenarios is left out of the per-scenario figure and counted.
+- The cost per change is the median cost of the issues with complete usage, for each delivery approach, and the median of each cost divided by the issue's scenario count. An issue without complete usage is counted as unmeasured, never as zero. An issue with no scenarios is left out of the per-scenario figure and counted. The per-scenario median has the same group floor, counted in issues with scenarios: below it the row prints `per scenario unmeasurable` with that count, and the JSON gives `median_per_scenario_usd: null` and a `per_scenario_withheld` reason.
 
 ## The retro rows
 

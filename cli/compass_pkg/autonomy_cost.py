@@ -221,13 +221,18 @@ def cost_row(tasks, floor, group_floor) -> dict:
         per = [cost / len(d["scenarios"]) for cost, d in group
                if isinstance(d.get("scenarios"), list) and d["scenarios"]]
         small = len(group) < group_floor
+        # The per-scenario figure has its own floor: it rests on the issues with scenarios.
+        thin = len(per) < group_floor
         value[approach] = {
             "issues": len(group),
             "median_usd": None if small else round(_median([c for c, _ in group]), 6),
-            "median_per_scenario_usd": (None if small or not per
+            "median_per_scenario_usd": (None if small or thin
                                         else round(_median(per), 6)),
             "per_scenario_issues": len(per), "without_scenarios": len(group) - len(per),
-            "withheld": ("%d issue(s); %d required" % (len(group), group_floor)) if small else None}
+            "withheld": ("%d issue(s); %d required" % (len(group), group_floor)) if small else None,
+            "per_scenario_withheld": (
+                "%d issue(s) with scenarios; %d required" % (len(per), group_floor)
+                if thin and not small else None)}
     return _row(value, measured, len(ships) - measured, withheld)
 
 
@@ -298,9 +303,11 @@ def render_rows(rows) -> list:
                 out.append("                %-10s n=%d  (under %d - not summarised)"
                            % (approach, g["issues"], _group_floor()))
                 continue
+            per_scenario = ("unmeasurable - %s" % g["per_scenario_withheld"]
+                            if g.get("per_scenario_withheld")
+                            else _dollars(g["median_per_scenario_usd"]))
             line = ("                %-10s n=%d  median %s  per scenario %s"
-                    % (approach, g["issues"], _dollars(g["median_usd"]),
-                       _dollars(g["median_per_scenario_usd"])))
+                    % (approach, g["issues"], _dollars(g["median_usd"]), per_scenario))
             if g["without_scenarios"]:
                 line += "  (%d without scenarios left out)" % g["without_scenarios"]
             out.append(line)

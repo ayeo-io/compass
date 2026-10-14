@@ -650,6 +650,30 @@ def test_arc_14_shared_session_is_marked(tmp_path):
     co.assert_no_gh_call(alone)
 
 
+def test_arc_30_per_scenario_median_below_floor_is_withheld():
+    """20 regular issues with complete usage, one with scenarios: the median
+    cost shows, the per-scenario median is withheld with its reason."""
+    from compass_pkg import autonomy_cost
+    issues = [(f"r-{i}", manifest(f"r-{i}", "regular", scenarios=2 if i == 0 else 0,
+                                  usage=complete_usage(1.0))) for i in range(20)]
+    row = autonomy_cost.cost_row(issues, 20, 3)
+    group = row["value"]["regular"]
+    assert group["median_usd"] == 1.0, group
+    assert group["per_scenario_issues"] == 1 and group["without_scenarios"] == 19, group
+    assert group["median_per_scenario_usd"] is None, group
+    assert group["per_scenario_withheld"] == "1 issue(s) with scenarios; 3 required", group
+    stub = {"withheld": "stub", "not_measurable": 0}
+    rows = {k: stub for k in ("autonomy_ratio", "band_split", "decisions_confirmed")}
+    lines = autonomy_cost.render_rows({**rows, "cost_per_change": row})
+    text = [line for line in lines if line.strip().startswith("regular")]
+    assert len(text) == 1 and "per scenario unmeasurable" in text[0], text
+    assert "1 issue(s) with scenarios; 3 required" in text[0], text
+    ok = [(f"s-{i}", manifest(f"s-{i}", "regular", usage=complete_usage(1.0)))
+          for i in range(3)]
+    kept = autonomy_cost.cost_row(ok, 3, 3)["value"]["regular"]
+    assert kept["median_per_scenario_usd"] == 0.5 and kept["per_scenario_withheld"] is None, kept
+
+
 if __name__ == "__main__":
     if len(sys.argv) == 4 and sys.argv[1] == "--capture":
         _capture(Path(sys.argv[2]), sys.argv[3])

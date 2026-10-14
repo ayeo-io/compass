@@ -118,8 +118,10 @@ def _overlaps(spans, begin, end):
 
 
 def usage_block(task_dir, task, others, now, prices) -> dict:
-    """The `usage` block of a landed issue. `others` holds `(folder, manifest)`
-    for the project's other issues; `now` is the landing time."""
+    """The `usage` block of a landed issue. `others` is a callable that returns
+    `(folder, manifest)` for the project's other issues. It is called only once
+    sessions and transcripts are known to exist, because loading every manifest
+    is slow. `now` is the landing time."""
     previous = task.get("usage") if isinstance(task.get("usage"), dict) else {}
     sessions = []
     shipping = os.environ.get("CLAUDE_CODE_SESSION_ID")
@@ -154,6 +156,7 @@ def usage_block(task_dir, task, others, now, prices) -> dict:
     own_ends = [t for t in ends.values() if t]
     first_end = min(own_ends) if own_ends else now
     found, spans, starts = [], [], []
+    others = others()
     for session in sessions:
         sharing = [(d, m) for d, m in others if session in _sessions_of(m)]
         earlier = [t for d, m in sharing for t in _boundaries(d, m) if t < first_end]
@@ -230,7 +233,7 @@ def record_at_ship(task, task_dir, now) -> str | None:
         project = os.path.dirname(os.path.dirname(os.path.dirname(
             os.path.normpath(task_dir))))
         prices = project_settings.settings(project).get("prices") or {}
-        block = usage_block(task_dir, task, _others(task_dir),
+        block = usage_block(task_dir, task, lambda: _others(task_dir),
                             _time(now) or datetime.now(timezone.utc),
                             prices if isinstance(prices, dict) else {})
     except Exception:                                  # noqa: BLE001 - never stop a landing

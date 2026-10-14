@@ -88,6 +88,18 @@ by hand. `tests/test_impl_versions.py` fails when it is out of date.
 | `broken` | fail | the input the mutation proof breaks: consistency-check evidence that records findings, or none on record |
 | `restored` | pass | the same input put right |
 
+### `contracts-declared` (version 1.0.0)
+
+| Case | Verdict | What the input exercises |
+|---|---|---|
+| `broken` | fail | a schema change and a Data and interfaces section holding only prose and a commented-out table |
+| `closed` | nothing-to-check | a closed issue on a generation that declares the check, with a schema change and a design lacking the section |
+| `no-depth` | nothing-to-check | an open issue on a generation that declares the check, with a schema change, whose design entry has no depth key |
+| `no-generation` | nothing-to-check | an issue with no generation key and a schema change, whose design lacks the section |
+| `no-section` | nothing-to-check | an open issue on a generation that declares the check, with a schema change, whose catalogue does not list the section |
+| `not-registered` | nothing-to-check | an open issue on a generation that declares the check, with a schema change and the design not registered with a path |
+| `restored` | pass | the same schema change with a field table of one data row in the section |
+
 ### `declared-tests-resolve` (version 1.0.0)
 
 | Case | Verdict | What the input exercises |
@@ -144,6 +156,18 @@ by hand. `tests/test_impl_versions.py` fails when it is out of date.
 |---|---|---|
 | `broken` | fail | the input the mutation proof breaks: a subtask left not done |
 | `restored` | pass | the same input put right |
+
+### `nfr-rows-resolved` (version 1.0.0)
+
+| Case | Verdict | What the input exercises |
+|---|---|---|
+| `broken` | fail | a concern row with neither a scenario nor a reason, in a spec registered at thorough |
+| `closed` | nothing-to-check | a closed issue on a generation that declares the check, whose spec lacks the section |
+| `no-depth` | nothing-to-check | an open issue on a generation that declares the check, whose spec entry has no depth key |
+| `no-generation` | nothing-to-check | an issue with no generation key, whose spec lacks the section |
+| `no-section` | nothing-to-check | an open issue on a generation that declares the check, whose catalogue does not list the section |
+| `not-registered` | nothing-to-check | an open issue on a generation that declares the check, with the spec not registered with a path |
+| `restored` | pass | every concern row resolved, by a scenario with a number in its Then or by a reason |
 
 ### `no-trusted-rerun` (version 1.0.0)
 

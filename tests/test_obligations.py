@@ -997,6 +997,9 @@ def test_ob_7_the_sample_has_every_check_that_declines(preset_config):
     # `dod-evidence-typed` 2.0.0 declines when no verification report is written; the sample
     # was recorded before it did, so the recorded verdicts cannot show it standing down.
     declining -= {"dod-evidence-typed"}
+    # The two section checks of 7.0.0 (ADR-064) did not exist when the sample was recorded;
+    # each corpus holds every shape on which they stand down.
+    declining -= {"nfr-rows-resolved", "contracts-declared"}
     assert declining <= stood_down, declining - stood_down
 
 

@@ -94,6 +94,11 @@ BASELINE_CHECKS = {
     # been accepted, so ship refuses it. It sits in no guardrail: a check in
     # `G4` would be locked, and an issue waiver must be able to excuse it.
     "artifacts-approved",
+    # Added by document-set-sections (ADR-064). The spec's Non-functional
+    # requirements rows and the design's declared contracts. Both sit in no
+    # guardrail, as `artifacts-approved` does: `G2` and `G4` are locked.
+    "nfr-rows-resolved",
+    "contracts-declared",
 }
 
 # The evidence types a branch may add to guardrails.yml, each named for the

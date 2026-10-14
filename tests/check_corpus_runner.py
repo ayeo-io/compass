@@ -431,6 +431,152 @@ def _(root):
                                "review_rounds": [{"verdict": "pass"}]}])
 
 
+# --- checks that read one section of the spec or the design (ADR-064) ---------------
+#
+# Each corpus holds the archive shapes the checks must decline to judge: no `generation`
+# key, a closed issue, a document not registered with a path, a catalogue that does not
+# list the section, and a registry entry with no depth. In each the document lacks the
+# section, so a check that judged the shape would fail it.
+
+_SECTION_FILES = {"acceptance-criteria": "docs/spec.md", "technical-design": "docs/design.md"}
+_NO_SECTION = "# A document written before the section existed\n\nNo such section.\n"
+
+
+def _sectioned(root, kind, doc, *, generation=True, closed=False, registered=True,
+               depth="thorough", sections=None, changed=()):
+    """An issue in a project with a `compass.yml`, registering `kind` at `depth` with
+    the document `doc`. With `generation`, its configuration is committed as generation
+    1 from the shipped default; `sections` replaces the catalogue's sections of `kind`
+    in that configuration. `closed` marks the issue done once it is committed."""
+    from compass_pkg import effective
+    from compass_pkg.core import load_manifest
+
+    layer = {"schema": 1}
+    if sections is not None:
+        layer["artifacts"] = {kind: {"set": {"sections": sections}}}
+    _write(root / "compass.yml", yaml.safe_dump(layer, sort_keys=False))
+    entry = {"id": "ART-" + kind.upper().replace("-", "_"), "kind": kind, "status": "draft"}
+    if depth:
+        entry["depth"] = depth
+    if registered:
+        entry["path"] = _SECTION_FILES[kind]
+        _write(root / _SECTION_FILES[kind], doc)
+    _, task_dir = _issue(root, {
+        "schema_version": "3.0", "issue": SLUG, "created": "2026-10-14",
+        "assessment": {"risk": "contained", "familiarity": "brownfield-mapped",
+                       "size": "medium", "goal": "delivery", "role": "engineer",
+                       "labels": []},
+        "delivery_approach": "regular", "evidence": [],
+        "scenarios": [_scenario(title="Export is fast")],
+        "artifacts": [entry], "changed_files": list(changed)})
+    if generation:
+        effective.commit_generation(str(task_dir), load_manifest(str(task_dir))[0])
+    if closed:
+        task, _ = load_manifest(str(task_dir))
+        _write(task_dir / "manifest.yml", yaml.safe_dump(dict(task, status="done"),
+                                                         sort_keys=False))
+    return load_manifest(str(task_dir))[0], task_dir
+
+
+def _declining_cases(impl, kind):
+    """Register the five declining shapes for `impl`, which reads `kind`."""
+    shapes = {
+        "no-generation": ("an issue with no generation key, whose document lacks the section",
+                          {"generation": False}),
+        "closed": ("a closed issue on a generation that declares the check, whose document "
+                   "lacks the section", {"closed": True}),
+        "not-registered": ("an open issue on a generation that declares the check, with "
+                           "the document not registered with a path", {"registered": False}),
+        "no-section": ("an open issue on a generation that declares the check, whose "
+                       "catalogue does not list the section", {"sections": {
+                           "thorough": ["Summary"], "lightweight": ["Summary"]}}),
+        "no-depth": ("an open issue on a generation that declares the check, whose registry "
+                     "entry has no depth key", {"depth": None}),
+    }
+    for name, (_, options) in shapes.items():
+        def build(root, options=options):
+            return _sectioned(root, kind, _NO_SECTION, changed=_CONTRACT_CHANGE, **options)
+        CASES[(impl, name)] = build
+    return {name: text for name, (text, _) in shapes.items()}
+
+
+#: A changed file that is a trigger path of `contracts-declared`; the spec check ignores it.
+_CONTRACT_CHANGE = ({"path": "schemas/manifest.schema.json", "scenarios": ["S-1"]},)
+
+_NFR_SPEC = """\
+# Spec
+
+### Scenario: Export is fast
+<!-- traceability id: S-1 · serves: INT-1 -->
+
+```gherkin
+Scenario: Export is fast
+  When the ledger is exported
+  Then the file is written within 3 seconds
+```
+
+## Non-functional requirements
+
+| Concern | Scenario | Reason it does not apply |
+|---|---|---|
+| performance | S-1 | |
+| capacity | | No stored data grows. |
+| compatibility | | Nothing stored changes shape. |
+| security | {security} |
+| privacy | | No personal data is read. |
+| operability | | Nothing runs unattended. |
+| accessibility | | No interface changes. |
+"""
+
+NFR_DECLINING = _declining_cases("nfr-rows-resolved", "acceptance-criteria")
+
+
+@case("nfr-rows-resolved", "broken")
+def _(root):
+    return _sectioned(root, "acceptance-criteria", _NFR_SPEC.format(security=" | "))
+
+
+@case("nfr-rows-resolved", "restored")
+def _(root):
+    return _sectioned(root, "acceptance-criteria",
+                      _NFR_SPEC.format(security=" | No input crosses a trust boundary. "))
+
+
+_DESIGN = """\
+# Plan
+
+## Data and interfaces
+
+<!-- A field table here would not count: it sits in a comment.
+| Name | Type | Required | Meaning | Written by | Read by |
+|---|---|---|---|---|---|
+| a | b | c | d | e | f |
+-->
+
+{body}
+## Gate
+
+None.
+"""
+
+CONTRACTS_DECLINING = _declining_cases("contracts-declared", "technical-design")
+
+
+@case("contracts-declared", "broken")
+def _(root):
+    return _sectioned(root, "technical-design", _DESIGN.format(body="None.\n"),
+                      changed=_CONTRACT_CHANGE)
+
+
+@case("contracts-declared", "restored")
+def _(root):
+    table = ("| Name | Type | Required | Meaning | Written by | Read by |\n"
+             "|---|---|---|---|---|---|\n"
+             "| `generation` | integer | no | the stored configuration | assess | check |\n")
+    return _sectioned(root, "technical-design", _DESIGN.format(body=table),
+                      changed=_CONTRACT_CHANGE)
+
+
 # --- checks that read git or run a project command ---------------------------------
 
 def _git(root: Path, *args: str) -> None:

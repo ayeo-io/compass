@@ -3739,8 +3739,10 @@ _GROWING_REACH = {
     #    holds a verdict and one line (the dashboard-current labels left and the
     #    rendered-blocks-current labels came, two each);
     # 74 with tests/fixtures/ad-hoc-kinds.txt, the kind names the 6.x migrate lists on
-    #    the archive copy, one per line.
-    "PBW-C4": (lambda path: path.startswith("tests/"), 74),
+    #    the archive copy, one per line;
+    # 88 with the 14 check-corpus case labels of nfr-rows-resolved and contracts-declared,
+    #    seven each, which hold a verdict and one line.
+    "PBW-C4": (lambda path: path.startswith("tests/"), 88),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

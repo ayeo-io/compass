@@ -102,7 +102,8 @@ def test_contract_3_check_gives_the_recorded_verdicts_on_the_archive_sample():
     # 7.0.0 also replaces `dashboard-current` by `rendered-blocks-current` and moves
     # `dod-evidence-typed` to records (ADR-051). The sample is read after
     # `compass issue migrate` and `compass issue render --all`, and exactly those three
-    # row moves are allowed (`allow_7_0_0_moves`). Any other move still fails.
+    # row moves are allowed (`allow_7_0_0_moves`). Any other move still fails. The two
+    # section checks it adds outside every gate may appear only as nothing to check.
     from archive import checkable_root
     from compat_baseline import allow_7_0_0_moves, archive_differences, archive_results
     _, recorded = _archive()
@@ -134,6 +135,12 @@ def test_contract_3_allows_only_the_three_moves_of_7_0_0():
     assert differs(**{"extra-check": "pass"})
     assert archive_differences(*allow_7_0_0_moves(
         {"x": base}, {"x": dict(good, check_exit=1)}))
+    # The two section checks of 7.0.0 (ADR-064) may appear only as nothing to check: a pass
+    # or a failure would mean they judged an archived issue.
+    for check in ("nfr-rows-resolved", "contracts-declared"):
+        assert differs(**{check: "nothing-to-check"}) == []
+        assert differs(**{check: "fail"})
+        assert differs(**{check: "pass"})
 
 
 def test_contract_6_every_sampled_issue_stays_readable():

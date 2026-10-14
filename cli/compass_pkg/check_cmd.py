@@ -47,6 +47,7 @@ from compass_pkg.core import FRAMEWORK_ROOT, exit_for_mode, find_governance, loa
 # Derived from the registry, which holds each implementation's version and
 # corpus (ADR-038); kept here so every existing caller keeps its import.
 from compass_pkg.check_registry import CHECK_FNS, REMOVED  # noqa: E402
+from compass_pkg import outside_gate  # noqa: E402
 
 # Per-check guidance for structured failure messages. Each entry has the
 # *why it matters* and the *how to fix it* - the bits a check's own detail
@@ -154,6 +155,16 @@ CHECK_GUIDANCE = {
         "why": "A document that is still a draft, or waiting for a person's approval, has not been accepted by anyone, and shipping it makes the registry say something untrue. Declined until every gate has passed, because the stages approve their own documents as they go.",
         "do": 'Run the command the failure names for each document.',
         "fix": "For each document named: `compass issue artifact set <kind> --status approved` when it has no human check, or `compass issue artifact set <kind> --status awaiting-approval` and then `compass evidence approve --artifact <kind>` at a terminal when it has one. A document you chose not to write is `compass issue artifact set <kind> --status omitted --reason \"<why>\"`.",
+    },
+    "nfr-rows-resolved": {
+        "why": "A non-functional concern with neither a scenario nor a reason has not been decided, and a cited scenario whose Then states no number cannot be measured, so nobody can tell whether the build meets it.",
+        "do": "Give each row the failure names a scenario id or a reason.",
+        "fix": "In the spec's Non-functional requirements table, give each concern the detail names a Scenario cell of ids the manifest holds or a Reason it does not apply. At thorough depth, put a number in the Then line of each cited scenario. Add a missing concern row; remove an id the manifest does not hold.",
+    },
+    "contracts-declared": {
+        "why": "A change to a schema, a preset or a command line changes a contract other code and people rely on. Unless the design declares it, a reviewer cannot judge the change before it lands.",
+        "do": "Declare a field table, contract table or erDiagram under Data and interfaces.",
+        "fix": "In the technical design's Data and interfaces section, add a field table (Name, Type, Required, Meaning, Written by, Read by) or a contract table (Inputs, Outputs, Exit codes, Errors) with a row for each changed structure or command, or an erDiagram, for the trigger paths the detail names.",
     },
     "spike-conclusion-present": {
         "why": "A Spike without a recorded conclusion is just untracked work - the conclusion is what makes the exploration accountable.",
@@ -564,29 +575,32 @@ def _freshness_pass(run, view, task, task_dir):
     return len(findings), failed, 0
 
 
-def _approved_pass(run, task, task_dir, refused):
-    """Add the result of the check `artifacts-approved` and return `(ran, failed,
-    nothing, advisory)` for it. It sits in no gate, so it runs here, with the
-    severity the issue's configuration declares for it. A configuration that
-    does not declare it adds nothing, so an issue stored before the check
-    existed gains it at its next `compass approach evaluate --write`."""
-    from compass_pkg import artifact_status
-
-    check = artifact_status.CHECK_ID
-    verdict = artifact_status.judged(task, task_dir, _judge)
-    if verdict is None:
-        return 0, 0, 0, 0
-    run.guardrail("", "approved documents")
-    if check in refused:
-        run.refused.add(check)
-        verdict = (False, refused[check])
-    passed, detail = verdict
-    run.result(check, passed, detail)
-    if passed is ADVISORY_FAILURE:
-        return 1, 0, 0, 1
-    if passed is NOTHING_TO_CHECK:
-        return 1, 0, 1, 0
-    return 1, (0 if passed else 1), 0, 0
+def _outside_gate_pass(run, task, task_dir, refused, checks=None):
+    """Add the result of each check that sits in no gate (`outside_gate.CHECKS`,
+    or `checks`) and return `(ran, failed, nothing, advisory)` for them. Each runs
+    here, with the severity the issue's configuration declares for it. A
+    configuration that does not declare a check adds no row for it, so an issue
+    stored before the check existed gains it at its next `compass approach
+    evaluate --write`."""
+    ran = failed = nothing = advisory = 0
+    for check in outside_gate.CHECKS if checks is None else checks:
+        verdict = outside_gate.judged(check, CHECK_FNS.get(check), task, task_dir, _judge)
+        if verdict is None:
+            continue
+        run.guardrail("", outside_gate.LABELS[check])
+        if check in refused:
+            run.refused.add(check)
+            verdict = (False, refused[check])
+        passed, detail = verdict
+        run.result(check, passed, detail)
+        ran += 1
+        if passed is ADVISORY_FAILURE:
+            advisory += 1
+        elif passed is NOTHING_TO_CHECK:
+            nothing += 1
+        elif not passed:
+            failed += 1
+    return ran, failed, nothing, advisory
 
 
 def _assessment_keys_pass(run, task):
@@ -743,6 +757,12 @@ def cmd_check(args):
         failures += listed_failed
         run.nothing += listed_nothing
         run.advisory += listed_advisory
+        done, bad, nothing, soft = _outside_gate_pass(run, task, task_dir, refused,
+                                                      outside_gate.SPIKE_CHECKS)
+        ran += done
+        failures += bad
+        run.nothing += nothing
+        run.advisory += soft
         ran += 1
         if not _assessment_keys_pass(run, task):
             failures += 1
@@ -904,8 +924,9 @@ def cmd_check(args):
     ran += fresh_ran
     failures += fresh_failed
     nothing_to_check += fresh_nothing
-    # The check that stops an unapproved document from shipping sits in no gate.
-    done, bad, nothing, soft = _approved_pass(run, task, task_dir, refused)
+    # The checks that sit in no gate: `artifacts-approved`, which stops an unapproved
+    # document from shipping, and the two section checks of the spec and the design.
+    done, bad, nothing, soft = _outside_gate_pass(run, task, task_dir, refused)
     ran += done
     failures += bad
     nothing_to_check += nothing

@@ -439,10 +439,12 @@ def _target_of(stem, entries, moves, project, catalogue):
 
 def _may_merge(stem, held, project):
     """May the stem entry's record replace what `held` holds? Yes when they name one
-    file, when either file is gone, or when `held` is a draft an earlier migrate
-    wrote. With only the stem's file present, the rename gives `held`'s path to that
-    file, so the two entries name one document. Two entries that name two files that
-    both exist are a person's to settle."""
+    file, when only the stem's file exists, or when `held` is a draft an earlier
+    migrate wrote. With only the stem's file present, the rename gives `held`'s path
+    to that file, so the two entries name one document. With only the round entry's
+    file present, nothing merges: the stem entry has no document to map to, and the
+    report says no document maps to it. Two entries that name two files that both
+    exist are a person's to settle."""
     stem_path, held_path = stem.get("path"), held.get("path")
     if stem_path == held_path:
         return True

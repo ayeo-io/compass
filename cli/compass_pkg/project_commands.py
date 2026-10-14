@@ -21,8 +21,57 @@
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass
 
+from compass_pkg import project_settings
 from compass_pkg.tdd import _read_config
+from compass_pkg.trust import UNKNOWN, UNTRUSTED, contribution_trust, is_ci
+
+
+@dataclass(frozen=True)
+class Permission:
+    """Whether a project command may run here. `kind` is `allowed`,
+    `untrusted` or `disabled`; `reason` is the trust reason for `untrusted`
+    and the setting to change for `disabled`."""
+    allowed: bool
+    kind: str
+    reason: str
+
+
+def untrusted_reason(project_root, env=None):
+    """The trust reason when the contribution is untrusted here, else None.
+    UNKNOWN on CI counts as untrusted, because Compass cannot tell whose work
+    it is. Read from the environment only: `approach evaluate --write` asks
+    this before it reads the readiness record, so a record a contribution
+    committed cannot answer it."""
+    state, reason = contribution_trust(env=env, project_root=project_root)
+    if state == UNKNOWN and is_ci(env):
+        state = UNTRUSTED
+    return reason if state == UNTRUSTED else None
+
+
+def command_permission(project_root, opt_in_from=None, env=None):
+    """May Compass run a command this project declares? One answer for
+    `command-passes` and `compass readiness` (ADR-061), so the two cannot
+    order the decision differently.
+
+    The trust decision comes first and the opt-in is read only when trust
+    allows: a contribution can turn the opt-in on, but it cannot change what
+    the CI runner reports about where the contribution came from. UNKNOWN on
+    a laptop is ordinary and runs; UNKNOWN on CI is refused, because Compass
+    cannot tell whose work it is.
+
+    `opt_in_from` is the folder the opt-in is looked up from (the issue folder
+    for `command-passes`, which finds the project upwards from it); it
+    defaults to the project root.
+    """
+    untrusted = untrusted_reason(project_root, env=env)
+    if untrusted is not None:
+        return Permission(False, "untrusted", untrusted)
+    if not _project_commands_allowed(opt_in_from or project_root):
+        return Permission(False, "disabled", project_settings.named(
+            project_root, "allow_project_commands", "true"))
+    return Permission(True, "allowed", "")
 
 
 def _project_commands_allowed(task_dir):

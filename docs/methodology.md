@@ -246,7 +246,9 @@ reason instead of absorbing the change silently.
 
 Across issues, Compass exposes advisory signals:
 
-- `compass retro` shows whether delivery approaches are commonly increased or reduced;
+- `compass retro` shows whether delivery approaches are commonly increased or reduced,
+  and, in order of assessment, the repository readiness each issue recorded (the score or
+  "not measured", and whether the floor was met);
 - `compass rework-scan` identifies configured cross-issue churn patterns;
 - `compass flow` surfaces status, blockers and follow-ups; and
 - friction records highlight recurring over-weight, under-weight or

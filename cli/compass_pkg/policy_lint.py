@@ -33,7 +33,7 @@ from compass_pkg import catalogue_check, layers, locks, merge, parent_states, pa
 from compass_pkg import catalogue_spec as spec
 from compass_pkg import word_map
 from compass_pkg.atomic_io import StrictYamlError, load_yaml_strict
-from compass_pkg.check_registry import REGISTRY, REMOVED
+from compass_pkg.check_registry import READINESS, REGISTRY, REMOVED
 from compass_pkg.core import FRAMEWORK_ROOT, CompassError
 
 JSON_SCHEMA_VERSION = 1
@@ -51,7 +51,8 @@ FINDING_CODES = (
     "S-PARENT-UP-TO-DATE", "S-PARENT-STALE", "S-PARENT-MODIFIED", "S-PARENT-BOTH",
     "M-REF-UNKNOWN", "M-WEIGHT-TIE", "M-HIT-MISSING", "M-HIT-DISALLOWED", "M-CYCLE",
     "M-BOOKKEEPING-INPUT", "M-DIRECTORY-DEPENDENCY",
-    "M-EFFECT-UNKNOWN", "M-LIST-KIND-UNEVALUATED", "M-FIELD-SHAPE",
+    "M-EFFECT-UNKNOWN", "M-LIST-KIND-UNEVALUATED", "M-FIELD-SHAPE", "M-READINESS-IMPL",
+    "M-READINESS-PARAM",
     "K-LOCK-REFUSED", "K-UNLOCK-REFUSED", "K-UNPROVABLE",
     "E-EVALUATION",
     "C-LOOSENING", "C-INCOMPARABLE", "V-VOCABULARY-CHANGE",
@@ -118,7 +119,7 @@ class Loaded:
 # --- loading -----------------------------------------------------------------------
 
 def load_parent(root=None, directory=None):
-    """`(Layer, meta)` for the shipped default preset: its eight catalogue
+    """`(Layer, meta)` for the shipped default preset: its nine catalogue
     files as one parent layer named `default`, and `{id, version}`. The
     capabilities come from `preset.yml`. `directory` names another preset
     folder (a major the framework keeps beside the shipped one) and wins
@@ -596,8 +597,55 @@ def _list_kinds(state):
     return out
 
 
+_PARAM_TYPES = {"string": str, "integer": int}
+
+
+def _readiness_findings(state):
+    """An error for each resolved readiness signal that names an implementation
+    the readiness registry does not hold, a parameter the implementation does
+    not take, a parameter of the wrong type or a value outside the choices the
+    implementation allows (ADR-059). The resolved entry is read, not the
+    layer, so a layer that only sets `params` on a shipped signal is judged
+    against that signal's implementation."""
+    out = []
+    for signal, entry in sorted((state["config"].get("readiness") or {}).items()):
+        if not isinstance(entry, dict):
+            continue
+        impl = entry.get("impl")
+        path = f"readiness.{signal}.impl"
+        known = READINESS.get(impl)
+        if known is None:
+            out.append(_finding(
+                "resolved", "M-READINESS-IMPL", _layer_of(state, path), path,
+                f"readiness signal '{signal}' names the implementation '{impl}', which "
+                f"the readiness registry does not hold ({', '.join(sorted(READINESS))})"))
+            continue
+        params = entry.get("params")
+        for name, value in sorted((params if isinstance(params, dict) else {}).items(),
+                                  key=lambda item: str(item[0])):
+            path = f"readiness.{signal}.params.{name}"
+            where = _layer_of(state, path)
+            wanted = known.params_spec.get(name)
+            if wanted is None:
+                allowed = ", ".join(sorted(known.params_spec)) or "none"
+                message = (f"readiness signal '{signal}' sets the parameter '{name}', which "
+                           f"'{impl}' does not take (it takes: {allowed})")
+            elif (not isinstance(value, _PARAM_TYPES[wanted])
+                  or isinstance(value, bool)):
+                message = (f"readiness signal '{signal}': parameter '{name}' must be a "
+                           f"{wanted}, found {value!r}")
+            elif name in known.choices and value not in known.choices[name]:
+                message = (f"readiness signal '{signal}': parameter '{name}' is {value!r}; "
+                           f"'{impl}' allows {', '.join(known.choices[name])}")
+            else:
+                continue
+            out.append(_finding("resolved", "M-READINESS-PARAM", where, path, message))
+    return out
+
+
 def _resolved_group(state):
     out = _unknown_references(state) + _effect_targets(state) + _list_kinds(state)
+    out += _readiness_findings(state)
     out += _weight_ties(state) + _hit_policies(state)
     out += [_finding("resolved", code, _layer_of(state, path), path, message)
             for code, path, message in catalogue_check.check_vocabulary(state["config"])]

@@ -487,6 +487,8 @@ def build_parser():
     # this file stays under its line cap outside build_parser.
     from compass_pkg.board_cmd import register as _register_board
     _register_board(sub)
+    from compass_pkg.readiness_cmd import register as _register_readiness
+    _register_readiness(sub)
 
     pnx = sub.add_parser(
         "next",
@@ -604,6 +606,11 @@ def build_parser():
         help="make this directory a Compass project - create .compass/ "
              "(safe to run twice)")
     pinit.add_argument("--by", help="what is initialising - the entry-point command, if not a person")
+    pinit.add_argument(
+        "--readiness", action="store_true",
+        help="after initialising, measure the repository when compass.yml exists and "
+             "print the absent readiness signals; exits 0 whatever happens "
+             "(/compass:init passes it)")
     pinit.set_defaults(func=cmd_init, output_kind="hand-off")
     pterm = sub.add_parser(
         "terminology",

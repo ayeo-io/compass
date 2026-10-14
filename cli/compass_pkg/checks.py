@@ -36,10 +36,9 @@ from compass_pkg.stable_ids import GATE_VERIFY_ANALYZE, GATE_VERIFY_CORRECTNESS
 from compass_pkg.core import CompassError, artifact_location, artifact_path, find_compass_dir, find_governance, load_yaml, manifest_path, normalize_spine
 from compass_pkg import status_words
 from compass_pkg.tdd import _read_config, settings_hint
-from compass_pkg.trust import UNKNOWN, UNTRUSTED, contribution_trust, is_ci
 from compass_pkg.check_results import NOTHING_TO_CHECK  # re-exported: callers still import it from here
 from compass_pkg.evidence_identity import _check_evidence_identity_matches
-from compass_pkg.project_commands import _contained_script, _project_commands_allowed
+from compass_pkg.project_commands import _contained_script, command_permission
 
 
 
@@ -1042,17 +1041,18 @@ def _check_command_passes(task, task_dir):
     # turn the opt-in on together; it cannot change what the CI runner
     # reports about where the contribution came from. See
     # cli/compass_pkg/trust.py.
+    #
+    # `command_permission` holds that order for this check and for
+    # `compass readiness`: trust first (UNKNOWN on CI is refused, because
+    # Compass cannot tell whose work it is), then the opt-in. It looks the
+    # opt-in up from the issue folder, as this check always has.
+    permission = None
     if cp_guardrails:
-        state, reason = contribution_trust(project_root=project_root)
-        # Fail closed on a runner we cannot read. UNKNOWN on a laptop is
-        # ordinary and runs; UNKNOWN on CI means something is being checked and
-        # Compass cannot tell whose work it is, which is the case that refuses.
-        if state == UNKNOWN and is_ci():
-            state = UNTRUSTED
-        if state == UNTRUSTED:
+        permission = command_permission(project_root, opt_in_from=task_dir)
+        if permission.kind == "untrusted":
             return False, (
                 f"refused to run {len(cp_guardrails)} project command(s): "
-                f"{reason}. Any `allow_project_commands` setting in this "
+                f"{permission.reason}. Any `allow_project_commands` setting in this "
                 f"repository is ignored here and was not read - the refusal "
                 f"is decided from the CI runner's own environment, which a "
                 f"contribution cannot edit"
@@ -1076,7 +1076,7 @@ def _check_command_passes(task, task_dir):
     # build of every project that declared a command before upgrading. Nothing-
     # to-check does not fail the run and is counted apart from the passes, so a
     # guardrail that stopped running is visible rather than silent.
-    if not _project_commands_allowed(task_dir):
+    if permission.kind == "disabled":
         names = ", ".join(
             f"{g.get('id', '?')} ({g.get('name', 'unnamed')})" for g in cp_guardrails)
         return NOTHING_TO_CHECK, (

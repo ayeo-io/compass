@@ -200,6 +200,7 @@ flow-json.txt: |
           "slug": "building",
           "delivery_approach": "regular",
           "state": "in-progress",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
           "gates": "0/2",
           "gate_list": [
             {
@@ -248,6 +249,7 @@ flow-json.txt: |
           "slug": "flagged",
           "delivery_approach": "regular",
           "state": "in-progress",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
           "blocked": "waits for the vendor",
           "gates": "0/2",
           "gate_list": [
@@ -297,6 +299,7 @@ flow-json.txt: |
           "slug": "planning",
           "delivery_approach": "regular",
           "state": "in-progress",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
           "gates": "0/2",
           "gate_list": [
             {
@@ -365,6 +368,7 @@ flow-json.txt: |
           "slug": "reviewing",
           "delivery_approach": "regular",
           "state": "in-review",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
           "gates": "1/2",
           "gate_list": [
             {
@@ -415,6 +419,7 @@ flow-json.txt: |
           "slug": "ready",
           "delivery_approach": "regular",
           "state": "ready",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
           "gates": "0/2",
           "gate_list": [
             {
@@ -473,6 +478,7 @@ flow-json.txt: |
           "slug": "queued",
           "delivery_approach": "not assessed",
           "state": "backlog",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
           "gates": "0/0",
           "gate_list": [],
           "assessment": null,
@@ -496,6 +502,7 @@ flow-json.txt: |
           "slug": "held",
           "delivery_approach": "regular",
           "state": "backlog",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
           "gates": "0/2",
           "gate_list": [
             {
@@ -546,6 +553,7 @@ flow-json.txt: |
           "slug": "held-flag",
           "delivery_approach": "regular",
           "state": "backlog",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
           "gates": "0/2",
           "gate_list": [
             {
@@ -596,6 +604,7 @@ flow-json.txt: |
           "slug": "refining",
           "delivery_approach": "regular",
           "state": "backlog",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
           "gates": "0/2",
           "gate_list": [
             {
@@ -657,6 +666,7 @@ flow-json.txt: |
           "slug": "shipped",
           "delivery_approach": "regular",
           "state": "done",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
           "gates": "2/2",
           "gate_list": [
             {
@@ -708,6 +718,7 @@ flow-json.txt: |
           "slug": "dropped",
           "delivery_approach": "regular",
           "state": "done",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
           "gates": "0/2",
           "gate_list": [
             {
@@ -756,6 +767,7 @@ flow-json.txt: |
           "slug": "dup",
           "delivery_approach": "regular",
           "state": "done",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
           "gates": "0/2",
           "gate_list": [
             {
@@ -837,6 +849,7 @@ flow-json.txt: |
           "slug": "building",
           "delivery_approach": "regular",
           "state": "in-progress",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
           "gates": "0/2",
           "gate_list": [
             {
@@ -885,6 +898,7 @@ flow-json.txt: |
           "slug": "flagged",
           "delivery_approach": "regular",
           "state": "in-progress",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
           "blocked": "waits for the vendor",
           "gates": "0/2",
           "gate_list": [
@@ -934,6 +948,7 @@ flow-json.txt: |
           "slug": "planning",
           "delivery_approach": "regular",
           "state": "in-progress",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
           "gates": "0/2",
           "gate_list": [
             {
@@ -1002,6 +1017,7 @@ flow-json.txt: |
           "slug": "reviewing",
           "delivery_approach": "regular",
           "state": "in-review",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
           "gates": "1/2",
           "gate_list": [
             {
@@ -1052,6 +1068,7 @@ flow-json.txt: |
           "slug": "ready",
           "delivery_approach": "regular",
           "state": "ready",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
           "gates": "0/2",
           "gate_list": [
             {
@@ -1110,6 +1127,7 @@ flow-json.txt: |
           "slug": "queued",
           "delivery_approach": "not assessed",
           "state": "backlog",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
           "gates": "0/0",
           "gate_list": [],
           "assessment": null,
@@ -1133,6 +1151,7 @@ flow-json.txt: |
           "slug": "held",
           "delivery_approach": "regular",
           "state": "backlog",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
           "gates": "0/2",
           "gate_list": [
             {
@@ -1183,6 +1202,7 @@ flow-json.txt: |
           "slug": "held-flag",
           "delivery_approach": "regular",
           "state": "backlog",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
           "gates": "0/2",
           "gate_list": [
             {
@@ -1233,6 +1253,7 @@ flow-json.txt: |
           "slug": "refining",
           "delivery_approach": "regular",
           "state": "backlog",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
           "gates": "0/2",
           "gate_list": [
             {
@@ -1294,6 +1315,7 @@ flow-json.txt: |
           "slug": "shipped",
           "delivery_approach": "regular",
           "state": "done",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
           "gates": "2/2",
           "gate_list": [
             {
@@ -1345,6 +1367,7 @@ flow-json.txt: |
           "slug": "dropped",
           "delivery_approach": "regular",
           "state": "done",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
           "gates": "0/2",
           "gate_list": [
             {
@@ -1393,6 +1416,7 @@ flow-json.txt: |
           "slug": "dup",
           "delivery_approach": "regular",
           "state": "done",
+          "readiness": "Repository readiness: not measured (no record: run `compass readiness`)",
           "gates": "0/2",
           "gate_list": [
             {
@@ -1611,6 +1635,7 @@ board-page.html: |
   <dt>role</dt><dd>engineer</dd>
   </dl>
   <ul class="labels"><li class="label">cli</li></ul></section>
+  <p class="meta">Repository readiness: not measured (no record: run `compass readiness`)</p>
   <section class="part"><h3>Policy rules fired</h3>
   <p>No policy rule fired</p>
   </section>
@@ -1652,6 +1677,7 @@ board-page.html: |
   <dt>role</dt><dd>engineer</dd>
   </dl>
   <ul class="labels"><li class="label">cli</li></ul></section>
+  <p class="meta">Repository readiness: not measured (no record: run `compass readiness`)</p>
   <section class="part"><h3>Policy rules fired</h3>
   <p>No policy rule fired</p>
   </section>
@@ -1693,6 +1719,7 @@ board-page.html: |
   <dt>role</dt><dd>engineer</dd>
   </dl>
   <ul class="labels"><li class="label">cli</li></ul></section>
+  <p class="meta">Repository readiness: not measured (no record: run `compass readiness`)</p>
   <section class="part"><h3>Policy rules fired</h3>
   <p>No policy rule fired</p>
   </section>
@@ -1735,6 +1762,7 @@ board-page.html: |
   <dt>role</dt><dd>engineer</dd>
   </dl>
   <ul class="labels"><li class="label">cli</li></ul></section>
+  <p class="meta">Repository readiness: not measured (no record: run `compass readiness`)</p>
   <section class="part"><h3>Policy rules fired</h3>
   <p>No policy rule fired</p>
   </section>
@@ -1777,6 +1805,7 @@ board-page.html: |
   <dt>role</dt><dd>engineer</dd>
   </dl>
   <ul class="labels"><li class="label">cli</li></ul></section>
+  <p class="meta">Repository readiness: not measured (no record: run `compass readiness`)</p>
   <section class="part"><h3>Policy rules fired</h3>
   <p>No policy rule fired</p>
   </section>
@@ -1820,6 +1849,7 @@ board-page.html: |
   <dt>role</dt><dd>engineer</dd>
   </dl>
   <ul class="labels"><li class="label">cli</li></ul></section>
+  <p class="meta">Repository readiness: not measured (no record: run `compass readiness`)</p>
   <section class="part"><h3>Policy rules fired</h3>
   <p>No policy rule fired</p>
   </section>
@@ -1861,6 +1891,7 @@ board-page.html: |
   <dt>role</dt><dd>engineer</dd>
   </dl>
   <ul class="labels"><li class="label">cli</li></ul></section>
+  <p class="meta">Repository readiness: not measured (no record: run `compass readiness`)</p>
   <section class="part"><h3>Policy rules fired</h3>
   <p>No policy rule fired</p>
   </section>
@@ -1902,6 +1933,7 @@ board-page.html: |
   <dt>role</dt><dd>engineer</dd>
   </dl>
   <ul class="labels"><li class="label">cli</li></ul></section>
+  <p class="meta">Repository readiness: not measured (no record: run `compass readiness`)</p>
   <section class="part"><h3>Policy rules fired</h3>
   <p>No policy rule fired</p>
   </section>
@@ -1944,6 +1976,7 @@ board-page.html: |
   <dt>role</dt><dd>engineer</dd>
   </dl>
   <ul class="labels"><li class="label">cli</li></ul></section>
+  <p class="meta">Repository readiness: not measured (no record: run `compass readiness`)</p>
   <section class="part"><h3>Policy rules fired</h3>
   <p>No policy rule fired</p>
   </section>

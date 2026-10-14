@@ -33,6 +33,7 @@ subtask_ceiling: # (optional) integer or null - how many parallel subtasks the d
 policy_rules_fired: # (optional) list of maps {id, kind, rationale, changed[]}
 stages:          # (optional until approach evaluate) map of stage -> weight string
 checkpoints:     # (optional until approach evaluate) list of the stage hand-offs that wait for a person: assess, define, refine, plan
+readiness:       # (optional) map - the repository's readiness at the last approach evaluate --write: {status: measured, score, signals, floor_met, absent[], measured_at} or {status: not-measured, reason: missing | stale | unreadable, detail}; outside the generation
 
 evidence:        # (optional) list of maps - the typed evidence registry gates reference by id:
   - id:          #   (required in entry) string - e.g. EV-001 or EV-A1

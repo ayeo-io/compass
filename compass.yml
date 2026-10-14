@@ -1,11 +1,13 @@
 # Compass - this repository's own settings.
 #
 # The framework repository is also a Compass project. This file holds settings
-# keys and the owner only: no check, gate, rule or route, no waiver, no unlock
-# and no capability. Its governance/ files are the set every adopter gets, so this
-# repository's issues run the shipped default unchanged, and its delivery
-# record stays valid evidence for that default. tests/test_framework_compass_yml.py
-# fails when a catalogue key appears here.
+# keys, the owner, the readiness commands and one readiness override: no check,
+# gate, rule or route, no waiver, no unlock and no capability. Its governance/
+# files are the set every adopter gets, so this repository's issues run the
+# shipped default unchanged, and its delivery record stays valid evidence for
+# that default. tests/test_framework_compass_yml.py fails when any other
+# catalogue key, or any other readiness entry, appears here (governance
+# decision 2026-10-13-this-repository-declares-readiness-commands).
 #
 # `compass policy migrate` refuses in this repository, so this file was written
 # by hand from the keys it would have moved out of .compass/config.yml. The
@@ -50,8 +52,9 @@ enforcement:
 # pull request can add a command and set this key in the same diff. Compass
 # also refuses to run project commands when the CI runner's environment says
 # the contribution is untrusted, and that refusal reads nothing here. See
-# docs/security.md.
-# allow_project_commands: true
+# docs/security.md. This repository turns it on so `compass readiness` can run
+# the build, lint and micro test commands below.
+allow_project_commands: true
 
 project:
   # The name shown in artifact headers and the devlog.
@@ -61,6 +64,15 @@ project:
   # tdd-red` and `compass tdd-green` as the test command, and used by
   # scripts/integrate.sh for combined regression.
   test_command: "pytest -q"   # e.g. "npm test", "pytest -q", "go test ./..."
+
+  # The commands `compass readiness` runs, each in a clean checkout of HEAD
+  # (docs/readiness.md). The full suite takes about ten minutes, so the timed
+  # test command is a micro suite of tests that need no ignored file; it must
+  # pass within two minutes. It leaves out tests/test_project_readiness.py,
+  # which runs readiness itself.
+  build_command: "python3 -m compileall -q cli"
+  lint_command: "bash scripts/validate.sh --quiet"
+  test_micro_command: "pytest -q tests/test_framework_compass_yml.py tests/test_house_style.py tests/test_terminology.py tests/test_check_guardrails.py tests/test_classifier.py"
 
   # Executable BDD (all optional). `compass bdd extract` lifts the Gherkin out
   # of an issue's acceptance-criteria.md into a .feature file, tagged with each
@@ -93,6 +105,14 @@ multiagent:
   # The worktree root, relative to the project. How many subtasks may run at
   # once is a routing rule, not a setting.
   worktree_root: "../.compass-worktrees"
+
+# The one catalogue override this repository holds: the readiness floor times
+# `project.test_micro_command` instead of the full suite. It changes which
+# command the test signal runs, not the floor, a check, a gate or a rule
+# (governance decision 2026-10-13-this-repository-declares-readiness-commands).
+readiness:
+  tests-declared-and-under-two-minutes:
+    set: {params: {command: test_micro_command}}
 
 # The delivery record (ADR-031). The issue records, the planning documents and
 # the backlog command are kept out of this public repository. `compass record

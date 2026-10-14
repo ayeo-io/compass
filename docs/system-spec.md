@@ -3986,3 +3986,11 @@
 - `CRT-20` This pull request's own CI runs meet the targets and show each saving
 - `CRT-21` A base-branch change re-runs the suite, and the push skip never trusts a run that started before it
 - `CRT-22` Shards are balanced by recorded test duration, and a shard ends at 45 minutes
+
+### migrate-review-entries (completed 2026-10-14)
+
+- `MRE-1` Given stem-named review entries in the registry, When the migrate applies, Then each review file has one entry of kind review with its round, keeping the old id, status and approval
+- `MRE-2` Given a registry an earlier 7.0.0 migrate left stale, When the migrate runs again, Then it repairs the entries to one per file or names what a person must do
+- `MRE-3` Given neither the work folder nor the documents folder is tracked, When the migrate applies without the copy flag, Then one refusal names both folders
+- `MRE-4` Given the assess texts include the adaptive-routing skill, When the test reads each approach evaluate write span, Then every span carries the justify flag
+- `MRE-5` Given two registry entries for one review file, When the migrate merges them, Then the newer approval and its id are kept and the report names what was dropped

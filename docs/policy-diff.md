@@ -143,6 +143,17 @@ A list that differs prints what was removed and what was added. The full list is
 `--json`. Identical configurations print the heading and one line that says
 there is no difference.
 
+Two kinds of change print a line of their own after the heading, outside the
+classification, because neither changes what a configuration owes:
+
+- `adds artifact kind <kind>` for each artifact kind the second side adds;
+- `changes readiness <signal> <param>: <parent value> -> <child value>` for
+  each readiness parameter swapped between two of its declared choices, such
+  as `changes readiness tests-declared-and-under-two-minutes command:
+  test_command -> test_micro_command`. The classifier reads that swap as
+  equivalent (`classify.declared_choice_swaps`), so the line keeps it visible
+  without a waiver.
+
 ## `compass policy diff --json`
 
 ```json

@@ -3997,3 +3997,23 @@
 - `MRE-6` Given a stem entry whose file exists and an approved round entry whose file does not, When the migrate runs, Then the two merge keeping the newer approval; with both files present it still refuses
 - `MRE-7` Given two entries for one file and neither approved, When the migrate merges them, Then the round entry's id and status are kept and the report names the stem entry's as dropped
 - `MRE-8` Given two approved entries for one file with equal or missing approval times, When the migrate merges them, Then a tie keeps the stem entry, a missing time loses to a recorded one, and the report names each side's own approval
+
+### readiness-override-assess (completed 2026-10-14)
+
+- `ROA-1` Swapping the timed test command between its two choices is equivalent
+- `ROA-2` A changed command outside the declared choices is incomparable
+- `ROA-3` A command missing on one side is incomparable
+- `ROA-4` A swap across different implementations is incomparable
+- `ROA-5` Every other choice parameter stays incomparable
+- `ROA-6` Only the registries that ship with the CLI can declare an equivalence
+- `ROA-7` The classifier version is 5, and a classification stored under 4 is computed again
+- `ROA-8` compass policy diff names a command swap on its own line
+- `ROA-9` Every policy command that takes an issue or file loads this repository compass.yml
+- `ROA-10` The write-time lint and compass policy lint --issue agree
+- `ROA-11` compass policy lint with no arguments lints compass.yml in this repository
+- `ROA-12` compass.yml writes the override in map form and keeps limit_seconds
+- `ROA-13` This repository compass.yml passes the write-time lint
+- `ROA-14` An issue can be assessed and a quick fix started under this repository compass.yml
+- `ROA-15` The governance decision entry records the rule and amends nothing
+- `ROA-16` The docs describe the rule and the one lint chain
+- `ROA-17` This issue is reassessed under the restored compass.yml before verify

@@ -1298,3 +1298,190 @@ def test_cl_6_the_tightening_reason_is_pinned():
     assert got.reason == "4 of 4 points owe more and none owe less"
     assert _classify(_base(), _base(), parent_name="a").reason == \
         "the configurations are identical"
+
+
+# --- ROA-1 to ROA-7: a declared equivalent parameter choice ----------------------
+# Issue `readiness-override-assess`. The readiness registry declares the direction
+# `equivalent` on `tests-under-limit.command`, so a swap between its two choices
+# compares as equal and every other change of a choice parameter stays incomparable.
+
+TIMED = "tests-declared-and-under-two-minutes"
+
+
+def _timed(params=None, impl="tests-under-limit"):
+    """A base configuration whose readiness catalogue holds the timed test signal."""
+    config = _base()
+    config["readiness"] = {TIMED: {
+        "statement": "A test command passes within two minutes.", "impl": impl,
+        "params": ({"command": "test_command", "limit_seconds": 120}
+                   if params is None else params),
+        "weight": 3, "required_for_autonomous": True}}
+    return config
+
+
+def _micro():
+    return _timed({"command": "test_micro_command", "limit_seconds": 120})
+
+
+def _no_point_differs(got):
+    return got.counts["tighter"] == got.counts["looser"] == got.counts["mixed"] == 0
+
+
+def test_roa_1_a_declared_choice_swap_is_equivalent(monkeypatch):
+    for parent, child in ((_timed(), _micro()), (_micro(), _timed())):
+        got = _classify(parent, child)
+        assert got.result == "equivalent", got.reason
+        assert _no_point_differs(got), got.counts
+
+    # Without the declaration the same swap is incomparable, so the declaration
+    # is what makes it equal.
+    import dataclasses
+    from compass_pkg import readiness_registry
+    entry = readiness_registry.READINESS["tests-under-limit"]
+    monkeypatch.setitem(readiness_registry.READINESS, "tests-under-limit",
+                        dataclasses.replace(entry, tighter={"limit_seconds": "lower"}))
+    got = _classify(_timed(), _micro())
+    assert got.result == "incomparable"
+    assert f"{TIMED}.command" in got.reason, got.reason
+
+
+def test_roa_2_a_changed_value_outside_choices_is_incomparable():
+    # `build_command` is a project command, but not a choice of tests-under-limit.
+    outside = _timed({"command": "build_command", "limit_seconds": 120})
+    got = _classify(_timed(), outside)
+    assert got.result == "incomparable", got.reason
+    assert f"{TIMED}.command" in got.reason, got.reason
+    got = _classify(outside, _micro())
+    assert got.result == "incomparable", got.reason
+    assert f"{TIMED}.command" in got.reason, got.reason
+
+
+def test_roa_3_a_value_missing_on_one_side_is_incomparable():
+    # The classifier fills in no runtime default for a missing parameter.
+    got = _classify(_timed(), _timed({"limit_seconds": 120}))
+    assert got.result == "incomparable", got.reason
+    assert f"{TIMED}.command" in got.reason, got.reason
+    # The plain-map override `set: {params: {command: test_micro_command}}`
+    # resolves to this: the command swap is equal, the dropped limit is not.
+    got = _classify(_timed(), _timed({"command": "test_micro_command"}))
+    assert got.result == "incomparable", got.reason
+    assert f"{TIMED}.limit_seconds" in got.reason, got.reason
+
+
+def test_roa_4_different_implementations_are_incomparable():
+    child = _timed({"key": "build_command"}, impl="project-command-succeeds")
+    got = _classify(_timed(), child)
+    assert got.result == "incomparable", got.reason
+    # The implementation change itself is what the verdict names first.
+    assert f"readiness.impl ({TIMED})" in got.reason, got.reason
+
+
+def _choice_signal(impl, key):
+    config = _base()
+    config["readiness"] = {"declared": {
+        "statement": "A declared signal.", "impl": impl, "params": {"key": key},
+        "weight": 1, "required_for_autonomous": True}}
+    return config
+
+
+def test_roa_5_undeclared_choice_parameters_stay_incomparable():
+    # Each pair moves between two choices of one implementation, but these
+    # choices name different floors, so no equivalence is declared for them.
+    for impl, first, second in (
+            ("project-command-succeeds", "lint_command", "build_command"),
+            ("project-declaration", "secret_scan", "structured_logging")):
+        got = _classify(_choice_signal(impl, first), _choice_signal(impl, second))
+        assert got.result == "incomparable", (impl, got.reason)
+        assert "readiness.params (declared.key)" in got.reason, got.reason
+
+
+def test_roa_6_only_the_shipped_registries_declare_equivalent():
+    from compass_pkg import catalogue_check, catalogue_spec
+    from compass_pkg.check_registry import REGISTRY, CheckImpl
+    from compass_pkg.readiness_registry import READINESS, ReadinessImpl
+    declared = sorted(f"{name}.{param}"
+                      for table in (READINESS, REGISTRY)
+                      for name, entry in table.items()
+                      for param, direction in entry.tighter.items()
+                      if direction == "equivalent")
+    assert declared == ["tests-under-limit.command"]
+
+    # A readiness entry cannot declare it on a parameter with no choices.
+    with pytest.raises(ValueError) as refused:
+        ReadinessImpl("planted-impl", "planted", params_spec={"limit": "integer"},
+                      tighter={"limit": "equivalent"})
+    assert "planted-impl" in str(refused.value) and "limit" in str(refused.value)
+    # A check entry has no choices, so it cannot declare it on any parameter.
+    with pytest.raises(ValueError) as refused:
+        CheckImpl("planted-check", fn=lambda *a: None, params_spec={"command": "string"},
+                  tighter={"command": "equivalent"})
+    assert "planted-check" in str(refused.value) and "command" in str(refused.value)
+
+    # A catalogue or preset cannot declare it: a dimension's direction is one
+    # of the two the catalogue format allows.
+    assert catalogue_spec.TIGHTER == ("higher", "lower")
+    layer = {"schema": 1, "extends": "compass:default@6", "dimensions": {
+        "planted": {"type": "ordered-enum", "values": ["a", "b"],
+                    "tighter": "equivalent"}}}
+    errors = catalogue_check.check_layer(layer, "project")
+    assert any(e.startswith("dimensions.planted.tighter") for e in errors), errors
+
+
+MAP_FORM_PROJECT = (
+    "schema: 1\nextends: compass:default@6\n"
+    "readiness:\n  tests-declared-and-under-two-minutes:\n"
+    "    set: {params: {set: {command: test_micro_command}}}\n")
+
+
+def _issue_with_generation_1(project):
+    """A project whose issue `probe` holds a stored generation 1, written as
+    a version 4 classifier left it. Returns the issue folder."""
+    task = project / ".compass" / "work" / "probe"
+    stored = task / "generations" / "1"
+    stored.mkdir(parents=True)
+    (project / "compass.yml").write_text(MAP_FORM_PROJECT, encoding="utf-8")
+    (task / "manifest.yml").write_text(
+        "schema_version: '3.0'\nissue: probe\ngeneration: 1\n", encoding="utf-8")
+    (stored / "versions.yml").write_text("classifier: 4\n", encoding="utf-8")
+    (stored / "resolved.yml").write_text("readiness: incomparable\n", encoding="utf-8")
+    (stored / "complete").write_text("", encoding="utf-8")
+    return task
+
+
+def test_roa_7_classifier_version_5_recomputes_a_stored_classification(
+        monkeypatch, tmp_path):
+    import dataclasses
+    from compass_pkg import classify, readiness_registry
+    assert classify.CLASSIFIER_VERSION == 5
+    text = MODULE.read_text(encoding="utf-8")
+    assert ("# Version 5: a declared equivalent parameter choice compares as equal"
+            in text)
+
+    # A classification stored under version 4, before the declaration, said
+    # incomparable. Version 5 does not serve it: it computes the pair again and
+    # stores the result under a new key.
+    store = {}
+    entry = readiness_registry.READINESS["tests-under-limit"]
+    with monkeypatch.context() as old:
+        old.setattr(classify, "CLASSIFIER_VERSION", 4)
+        old.setitem(readiness_registry.READINESS, "tests-under-limit",
+                    dataclasses.replace(entry, tighter={"limit_seconds": "lower"}))
+        assert classify.classify_stored(store, _timed(), _micro()).result == "incomparable"
+        old_key = classify.classification_key(_timed(), _micro())
+    assert list(store) == [old_key]
+    assert classify.classify_stored(store, _timed(), _micro()).result == "equivalent"
+    new_key = classify.classification_key(_timed(), _micro())
+    assert new_key != old_key and store[new_key]["result"] == "equivalent"
+    assert store[old_key]["result"] == "incomparable"
+
+    # A generation an issue stored is not rewritten: the write-time lint of the
+    # issue's chain, which runs the classifier, leaves every file as it was.
+    from compass_pkg import effective
+    project = tmp_path / "project"
+    (project / ".compass").mkdir(parents=True)
+    task = _issue_with_generation_1(project)
+    before = {p: p.read_bytes() for p in sorted(task.rglob("*")) if p.is_file()}
+    effective.resolve_live(str(project), manifest={"issue": "probe", "generation": 1},
+                           slug="probe", task_dir=str(task), validate=True)
+    after = {p: p.read_bytes() for p in sorted(task.rglob("*")) if p.is_file()}
+    assert after == before

@@ -16,13 +16,28 @@ and locks), ADR-042 (the shipped preset) and ADR-043 (one project file).
 | Project | What `compass policy lint` runs |
 |---|---|
 | No `compass.yml`, or a `compass.yml` that Compass does not read | The legacy lint, with the output it always had |
-| The framework's own repository | The legacy lint |
+| The framework's own repository, with no arguments | The legacy lint, then the layered lint of its `compass.yml` |
 | A root `compass.yml` that Compass reads | The layered lint below |
 | `--file PATH` | The layered lint over that one file, with the shipped default as its parent |
 
 A `compass.yml` is read when it is the only settings file, or when it has a
 top-level `schema:` key. `compass ci` calls the legacy lint directly, so its
 output and exit code do not change.
+
+`--issue`, `--file` and `compass policy show` read the chain a write reads
+(`effective.resolve_live`) in every project, the framework's own repository
+included, so they report what `compass approach evaluate --write` would
+refuse.
+
+With no arguments in the framework's own repository, `compass policy lint`
+runs the legacy lint and then the layered lint, and fails if either fails.
+The text output is the legacy lint's lines, then the layered lint's. With
+`--json` it prints one document whose `mode` is `framework`: `layers` lists
+the `legacy` layer and then the layered chain, `findings` holds both sets,
+`counts` and `result` cover both, and `stopped_after` is the legacy lint's
+stop, or the layered lint's when the legacy lint did not stop.
+`scripts/validate.sh` runs this lint, so CI fails on a `compass.yml` a write
+would refuse.
 
 ## The layers
 
@@ -204,7 +219,7 @@ not in the `--json` document. `compass preset test` prints the same lines.
 | Key | Type | Meaning |
 |---|---|---|
 | `schema` | integer | The version of this shape. It is 1 |
-| `mode` | `layered` or `legacy` | Which lint ran |
+| `mode` | `layered`, `legacy` or `framework` | Which lint ran. `framework` is both, in the framework's own repository |
 | `result` | `pass` or `fail` | `fail` when `counts.errors` is above 0 |
 | `layers` | list | Each layer in order, root first, as `name` and `kind`. A project file that did not load is still named. Legacy mode has one: `legacy` |
 | `stopped_after` | string or null | The group after which the lint stopped, or null |

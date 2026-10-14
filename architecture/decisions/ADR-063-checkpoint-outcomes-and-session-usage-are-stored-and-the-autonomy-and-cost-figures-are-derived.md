@@ -1,11 +1,13 @@
 ---
 id: ADR-063
 title: Checkpoint outcomes and session usage are stored, and the autonomy and cost figures are derived
-status: proposed
+status: accepted
 date: 2026-10-13
 supersedes: ''
 superseded_by: ''
 ---
+
+Accepted by jed72 on 2026-10-14, through compass:architect under automation mode.
 
 ## Context
 

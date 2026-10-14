@@ -2121,3 +2121,111 @@ def test_dss_23_a_dependencys_change_makes_the_block_stale_only_as_an_advisory(t
     assert after["rendered-blocks-current"]["status"] == "pass", after["rendered-blocks-current"]
 
 # --- U5: owning docs, public surface and this issue's checks ---
+
+U5_PRESET = ROOT / "governance" / "presets" / "default"
+U5_CHECKS = ("nfr-rows-resolved", "contracts-declared")
+U5_SECTIONS = ("Non-functional requirements", "Data and interfaces", "Verification plan",
+               "Risks and dependencies")
+U5_DOCS = ("docs/artifact-catalogue.md", "docs/rendered-blocks.md", "docs/upgrade-7-0-0.md")
+#: What each of the three docs must name: the four sections, the two checks, the two
+#: new blocks and the Kind column.
+U5_NAMES = U5_SECTIONS + U5_CHECKS + ("document-header", "dependencies", "Kind")
+U5_ISSUE = ROOT / ".compass" / "work" / "document-set-sections"
+
+
+def _u5_yaml(path):
+    return yaml.safe_load(path.read_text(encoding="utf-8"))
+
+
+def _u5_code(path):
+    """The lines of a preset file that are not comments."""
+    return "\n".join(line for line in path.read_text(encoding="utf-8").splitlines()
+                     if not line.lstrip().startswith("#"))
+
+
+def _u5_derive(tmp_path):
+    """`(glossary, catalogue document)` of a fresh generation in a copy of the files the
+    generator reads."""
+    mini = tmp_path / "mini"
+    for rel in ("governance/terminology.yml", "governance/presets/default/artifacts.yml",
+                "docs/glossary.md", "docs/artifact-catalogue.md"):
+        target = mini / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text((ROOT / rel).read_text(encoding="utf-8"), encoding="utf-8")
+    (mini / ".compass").mkdir()
+    out = tmp_path / "fresh"
+    code, text, err = _cli(mini, "_derive-glossary", "--internal", "--root", str(mini),
+                           "--out", str(out / "glossary.md"),
+                           "--catalogue-out", str(out / "artifact-catalogue.md"))
+    assert code == 0, text + err
+    return ((out / "glossary.md").read_text(encoding="utf-8"),
+            (out / "artifact-catalogue.md").read_text(encoding="utf-8"))
+
+
+def test_dss_30_checks_declared_and_documented(tmp_path):
+    from compass_pkg import check_registry, outside_gate
+
+    code, out, err = _cli(ROOT, "policy", "lint")
+    assert code == 0, out + err
+    # Declared, blocking, not-applicable when skipped, and unlocked.
+    checks = _u5_yaml(U5_PRESET / "checks.yml")["checks"]
+    for name in U5_CHECKS:
+        entry = checks[name]
+        assert entry["severity"] == "blocking", name
+        assert entry["on_skipped"] == "not-applicable", name
+        assert "locked" not in entry, name
+        assert entry["impl"] == name
+    # In no gate and no stage, so no locked guardrail changes.
+    for name in ("gates.yml", "stages.yml"):
+        text = _u5_code(U5_PRESET / name)
+        for check in U5_CHECKS:
+            assert check not in text, (name, check)
+    # An implementation at 1.0.0, a corpus and a row in the versions lock.
+    lock = _u5_yaml(ROOT / "tests/fixtures/impls/versions.lock.yml")["implementations"]
+    for name in U5_CHECKS:
+        assert check_registry.installed_version(name) == "1.0.0", name
+        assert lock[name]["version"] == "1.0.0", name
+        assert list((ROOT / "tests/fixtures/impls" / name).iterdir()), name
+    # `compass check` runs the three through one helper.
+    assert outside_gate.CHECKS == ("artifacts-approved",) + U5_CHECKS
+    source = (ROOT / "cli/compass_pkg/check_cmd.py").read_text(encoding="utf-8")
+    assert source.count("outside_gate.judged(") == 1
+    assert source.count("def _outside_gate_pass(") == 1
+    # The three docs name the sections, the checks, the blocks and the Kind column.
+    for rel in U5_DOCS:
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        missing = [name for name in U5_NAMES if name not in text]
+        assert not missing, (rel, missing)
+    # The generated table and the glossary equal a fresh generation.
+    glossary, document = _u5_derive(tmp_path)
+    assert glossary == (ROOT / "docs/glossary.md").read_text(encoding="utf-8")
+    assert document == (ROOT / "docs/artifact-catalogue.md").read_text(encoding="utf-8")
+    # No capability switch and no alias governs the checks.
+    assert set(_u5_yaml(U5_PRESET / "preset.yml")["capabilities"]) == {
+        "entry-exit-evaluation", "artifact-freshness"}
+    vocabulary = _u5_yaml(U5_PRESET / "vocabulary.yml")["vocabulary"]
+    for name in U5_CHECKS:
+        assert vocabulary["checks." + name]["aliases"] == [], name
+
+
+def test_dss_32_own_issue_passes_both_checks():
+    if not U5_ISSUE.is_dir():
+        pytest.skip("the issue's work folder is untracked and absent from this checkout")
+    manifest = _u5_yaml(U5_ISSUE / "manifest.yml")
+    generation = manifest.get("generation")
+    assert isinstance(generation, int) and generation >= 2, generation
+    assert manifest["delivery_approach"] == "full"
+    reasons = [one.get("reason") for one in manifest.get("reassessments") or []]
+    assert any(reasons), reasons
+    resolved = _u5_yaml(U5_ISSUE / "generations" / str(generation) / "resolved.yml")
+    for name in U5_CHECKS:
+        assert name in resolved["checks"], name
+    listed = {heading for entry in resolved["artifacts"].values()
+              for heading in (entry.get("sections") or {}).get("thorough") or []}
+    for heading in U5_SECTIONS:
+        assert heading in listed, heading
+    code, out, err = _cli(ROOT, "check", "--issue", "document-set-sections", "--json")
+    rows = {row["name"]: row for row in json.loads(out)["checks"]}
+    for name in U5_CHECKS:
+        assert rows[name]["status"] == "pass", rows[name]
+        assert "nothing to check" not in rows[name]["detail"], rows[name]

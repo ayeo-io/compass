@@ -500,6 +500,12 @@ def test_d2_repairs_change_only_retired_names():
     four limits of its read. With both sections, `docs/safety-contract.md`
     has list_items 35 and two more `###` headings than before them.
 
+    One more was re-baselined by `document-set-sections`:
+    `governance/guardrails.md` (list_items 50 -> 61) gained the bullet on the
+    two section checks, `nfr-rows-resolved` and `contracts-declared`, with the
+    sub-bullets for each check, the trigger paths, the four declining
+    conditions and the spike rule.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

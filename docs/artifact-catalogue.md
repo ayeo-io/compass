@@ -24,13 +24,24 @@ The catalogue is the `artifacts:` map in `governance/presets/default/artifacts.y
 
 `compass issue template show <kind> [--depth D]` prints the skeleton of a kind. The catalogue entry gives the header and the headings, and `templates/<kind>.md` gives the prose under each heading.
 
-- The header holds the audience line, the stage, the owner, the home path and the traditional name.
-- The headings are `sections[<depth>]`, in order.
+- The header is a `document-header` block of six lines (see `docs/rendered-blocks.md`): the issue and approach, the stage and owner, the status, the date, what the document reads and the audience line. `template show` prints the kind's real stage, owner and audience, the issue's slug when one is selected, and a `{{...}}` placeholder for the rest. The home path and the traditional name are not in the header; the table below and the glossary hold them.
+- The headings are `sections[<depth>]`, in order. A heading carries no number. The reading order is the list order, and a reader finds a section by its name.
 - With no `--depth`, the depth is the one the issue registers the kind at, else `thorough`.
-- A kind with no template prints its headings with no prose.
+- A kind with no template prints its headings with no prose, after a `document-header` block. `verification-note` has no header block.
 - A template that is not a catalogue kind (`devlog`, `incident` and `pull-request-body`) prints as the file. `--depth` on one is refused.
 
 A template marks a section the author can leave out with the line `<!-- compass:optional -->` directly under its heading. The skeleton prints an optional section at `thorough`, in its template position, with `(optional)` after the heading. It prints none at `lightweight`. An optional heading is not listed in `sections`.
+
+Four sections are named in the catalogue and read by name, so a checker finds them whatever number an older document gave them:
+
+| Section | Kind | Read by |
+|---|---|---|
+| Non-functional requirements | `acceptance-criteria` | the check `nfr-rows-resolved` |
+| Data and interfaces | `technical-design` | the check `contracts-declared` |
+| Verification plan | `technical-design` | the `coverage` block, which adds a Kind column when the heading is present |
+| Risks and dependencies | `technical-design` | the `dependencies` block under its risk table |
+
+The role guide (`How each role reads the spec`) lives in `docs/roles-guide.md`; no template and no section list holds it. Both checks are blocking, sit in no gate and decline to judge an archived issue: see `governance/guardrails.md`.
 
 `tests/test_artifact_catalogue_fields.py` compares each template's unmarked headings with `sections.thorough`, and checks that `sections.lightweight` is an ordered subset of it. A `{{...}}` token in a template heading and a `<...>` token in the catalogue count as the same placeholder.
 
@@ -76,11 +87,11 @@ The manifest's `justifications` key holds one line for each assessed dimension o
 
 ## The rendered blocks of the record
 
-`templates/delivery-approach.md` holds four rendered blocks in place of its tables: `assessment` (section 1), `policy-rules` (section 3), `stage-weights` (section 4a) and `gate-set` (section 4b). `compass issue render` writes them from the manifest, and `rendered-blocks-current` fails at the verification stage when a reassessment leaves one stale. The four templates with a `## Gate` section hold blocks, not tick boxes: `plan-exit` in `technical-design.md`, `breakdown-exit` in `distribution-map.md`, and the existing `dor` and `dod` blocks. `docs/rendered-blocks.md` describes each kind.
+`templates/delivery-approach.md` holds four rendered blocks in place of its tables: `assessment` (under The assessment), `policy-rules` (under Policy rules that fired), `stage-weights` (under Per-stage weight) and `gate-set` (under Gate set). `compass issue render` writes them from the manifest, and `rendered-blocks-current` fails at the verification stage when a reassessment leaves one stale. The four templates with a `## Gate` section hold blocks, not tick boxes: `plan-exit` in `technical-design.md`, `breakdown-exit` in `distribution-map.md`, and the existing `dor` and `dod` blocks. `docs/rendered-blocks.md` describes each kind.
 
 ## The quick-fix record
 
-`compass quick-fix start` writes the delivery-approach record with its own short headings: Assessment, Policy rules fired, Advice, Intent, Scenario and De-scope ledger. They are not an ordered subset of the thorough headings. `sections.lightweight` describes the record a hotfix or a spike writes from the template.
+`compass quick-fix start` writes the delivery-approach record with its own short headings: Assessment, Policy rules fired, Advice, Intent, Scenario and De-scope ledger. After the title the record holds a `document-header` block. Under Assessment it holds an `assessment` block, and under Policy rules fired a `policy-rules` block, both filled by the render. The record has no `**Approach:**` line, because the header block names the approach. A record written before the blocks existed keeps its tables. They are not an ordered subset of the thorough headings. `sections.lightweight` describes the record a hotfix or a spike writes from the template.
 
 ## Measuring the archive
 

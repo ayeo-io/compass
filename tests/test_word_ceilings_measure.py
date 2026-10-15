@@ -127,7 +127,7 @@ BASELINE_COUNT = 38
 
 def _measure_evidence():
     """The manifest and the figures of the latest command-output record that holds
-    the measure's output, so that a re-run at verify is the one judged."""
+    the measure's output, so that a later re-run is the one judged."""
     manifest = ROOT / ".compass" / "work" / ISSUE / "manifest.yml"
     if not manifest.is_file():
         return None, None

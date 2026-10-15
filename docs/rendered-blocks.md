@@ -281,8 +281,9 @@ never from the page (`docs/entry-exit-evaluation.md`, "Item records").
 
 ## Migration
 
-`compass issue migrate [root]` is a dry run; `--apply` makes the changes, and on a work
-root that git does not track it also needs `--i-have-a-copy`. For an issue written before
+`compass issue migrate [root]` is a dry run; `--apply` makes the changes, and where git
+could not restore an issue folder it also needs `--i-have-a-copy` (`docs/upgrade-7-0-0.md`,
+"Copy first"). For an issue written before
 rendered blocks it only adds lines and records (ADR-020, through ADR-051). The code is
 `cli/compass_pkg/migrate_blocks.py`; the rename of the old page and the report are in
 `cli/compass_pkg/migrate.py`.

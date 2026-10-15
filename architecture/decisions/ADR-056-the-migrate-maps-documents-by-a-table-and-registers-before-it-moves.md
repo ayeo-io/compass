@@ -117,3 +117,27 @@ The merge step of the first amendment changes in two ways:
   kept".
 - **Two entries whose files both exist are not merged.** The report names both files for a person
   to settle.
+
+## Amendment (15 October 2026, third)
+
+Decision 7 changes. Decision 8 and the second amendment are extended.
+
+- **Decision 7: the copy check judges each issue folder.** `--apply` without `--i-have-a-copy` runs
+  only when, in every issue folder under `.compass/work/` and `docs/compass/`, the HEAD commit holds
+  every file the migrate can change, with the bytes on disk. Those files are the manifest under its
+  current or retired name, each file the rename map names, and every `.md` file directly in the
+  folder. A staged file that is not committed, or a committed file changed since, does not count.
+  Files directly under either folder are not judged. Outside a Git repository, or where Git cannot be
+  run, the check passes as before; inside one, a Git call that fails refuses. One refusal names each
+  folder that fails, the count of its issue folders that cannot be restored and the first five in
+  sorted order, with one `cp -R` line for each. This replaces "refuses when `.compass/work/` or
+  `docs/compass/` is not tracked by Git".
+- **Decision 8: the dry run lists what the next `--apply` changes, and nothing more.** The dry run runs
+  the apply's registry steps on a copy of the manifest held in memory, through the functions the apply
+  calls, and prints a change line only where the apply would change something. A document in both
+  places is a change on the run that registers the copy under `docs/compass/`. On every later run,
+  dry or apply, it is an item for a person that names both copies, until a person deletes one.
+- **Second amendment: a reported pair stays as it is.** When the merge step reports two entries whose
+  files both exist, the plan holds back both entries and both files. No step registers, moves or
+  renames either file, and no later run merges them, so every later dry run still names the pair. The
+  other documents of the issue migrate as usual.

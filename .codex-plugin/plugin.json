@@ -1,0 +1,6 @@
+{
+  "name": "compass",
+  "description": "Assess, specify, implement and verify changes with Compass's shared instructions and unchanged policy CLI.",
+  "skills": "./adapters/codex/skills/",
+  "hooks": "./adapters/codex/hooks.json"
+}

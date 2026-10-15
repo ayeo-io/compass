@@ -1011,9 +1011,9 @@ def _registry(task_dir):
     return arts if isinstance(arts, list) else []
 
 
-def _entry_for(task_dir, kind, round=None):
-    """The registry entry of `kind` (of `round`, or the latest), or None."""
-    return pick_entry(_registry(task_dir), kind, round)
+def _entry_for(task_dir, kind, round=None, unit=None):
+    """The registry entry of `kind` (of `round`, or the latest; or of `unit`), or None."""
+    return pick_entry(_registry(task_dir), kind, round, unit)
 
 
 # Kinds this framework renamed, and the filename a landed issue still holds.
@@ -1113,8 +1113,10 @@ def unregistered_document(task_dir, name):
     return path if os.path.isfile(path) else None
 
 
-def resolve_artifact(task_dir, kind, round=None):
-    """Where a document is, and why that is the answer.
+def resolve_artifact(task_dir, kind, round=None, unit=None):
+    """Where a document is, and why that is the answer. `round` names one round of
+    a kind that repeats, and `unit` one work unit of a kind with a document per
+    unit; neither falls back to a file beside the manifest.
 
     Returns (state, path, reason):
 
@@ -1126,8 +1128,8 @@ def resolve_artifact(task_dir, kind, round=None):
       ABSENT       no entry and no file. Ordinary for an issue that predates the
                    registry; not a fault on its own.
     """
-    entry = _entry_for(task_dir, kind, round)
-    flat = _first_flat_on_disk(task_dir, kind) if round is None else None
+    entry = _entry_for(task_dir, kind, round, unit)
+    flat = _first_flat_on_disk(task_dir, kind) if round is None and unit is None else None
     # Both names, so a reader chasing an absence is not sent looking for a file
     # the framework does not write any more.
     tried = " or ".join(_flat_names(kind))

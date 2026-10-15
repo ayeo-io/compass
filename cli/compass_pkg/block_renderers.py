@@ -139,6 +139,9 @@ def artifacts(inputs, doc_rel):
         if isinstance(a.get("round"), int):
             # One row per round of a kind that repeats, each named by its own entry id.
             name += ", round %d (%s)" % (a["round"], a.get("id", "?"))
+        elif a.get("unit"):
+            # One row per work unit of a kind with a document per unit, named the same way.
+            name += ", %s (%s)" % (a["unit"], a.get("id", "?"))
         kind = rb.cell(name)
         target = _link_target(inputs, a["path"]) if a.get("path") else None
         written = target in inputs.present

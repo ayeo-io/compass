@@ -215,11 +215,14 @@ def _gates_block(r):
 
 def _documents_block(r):
     """Each registered document: a kind that repeats has a line for every round,
-    named by its own entry id."""
+    and a kind with a document per work unit a line for every unit, each named by
+    its own entry id."""
     docs = r.get("documents") or []
     out = ['<section class="part"><h3>Documents %d</h3>' % len(docs), '<ul class="documents">']
     for d in docs:
         name = d["kind"] + (" round %d" % d["round"] if d.get("round") else "")
+        if d.get("unit"):
+            name += " " + d["unit"]
         out.append('<li class="document"><span class="document-kind">%s</span> '
                    '<span class="document-id">%s</span> <span class="document-status">%s</span> '
                    '<code class="document-path">%s</code></li>' % (

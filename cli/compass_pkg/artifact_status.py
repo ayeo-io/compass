@@ -293,10 +293,13 @@ def _ships(view, task):
 def label(entry):
     """A registered document's name for a message: its kind, and for a round of a
     kind that repeats, the round and the entry id, so a finding about round 3 is
-    never read as one about round 1."""
+    never read as one about round 1. A unit of a kind with one document per work
+    unit is named the same way."""
     rnd = entry.get("round")
     if isinstance(rnd, int):
         return "%s round %d (%s)" % (entry.get("kind"), rnd, entry.get("id", "?"))
+    if entry.get("unit"):
+        return "%s %s (%s)" % (entry.get("kind"), entry["unit"], entry.get("id", "?"))
     return str(entry.get("kind"))
 
 
@@ -305,6 +308,8 @@ def _command_for(entry, view):
     status = entry.get("status")
     rnd = entry.get("round")
     named = "%s --round %d" % (kind, rnd) if isinstance(rnd, int) else kind
+    if entry.get("unit"):
+        named = "%s --unit %s" % (kind, entry["unit"])
     if status == AWAITING:
         return f"`compass evidence approve --artifact {kind} --approver <name> --role <role> --scope <text>`"
     if status == OMITTED:

@@ -377,6 +377,7 @@ def build_parser():
     pta.add_argument("--reason", help="why - required when omitting")
     pta.add_argument("--path", help="where the document was written, relative to the project root (e.g. docs/compass/2026-09-08-my-issue/technical-design.md)")
     pta.add_argument("--round", type=int, help="the round of a kind that repeats, such as review-<n>.md; default is the round in the path, else the latest")
+    pta.add_argument("--unit", help="the work unit of a kind with one document per unit, such as low-level-design/<unit>.md (U1, U2, ...); default is the unit in the path")
     pta.add_argument("--decision", help="spike-conclusion only: how the spike closes (discard, graduate-to-delivery or defer); also writes the evidence record the check reads")
     pta.add_argument("--next-issue", dest="next_issue", help="with --decision graduate-to-delivery: the slug of the delivery issue")
     issue_arg(pta)
@@ -385,6 +386,7 @@ def build_parser():
     ptap = pts.add_parser("artifact-path", help="print where one of an issue's documents is; non-zero when it is not there")
     ptap.add_argument("kind", help="document kind, e.g. delivery-approach")
     ptap.add_argument("--round", type=int, help="the round of a kind that repeats, such as review-<n>.md; default is the latest")
+    ptap.add_argument("--unit", help="the work unit of a kind with one document per unit (U1, U2, ...); needed when two or more units are registered")
     issue_arg(ptap); ptap.set_defaults(func=cmd_issue_artifact_path, output_kind="hand-off")
     pttg = pts.add_parser("template", help="document templates")
     ptt = pttg.add_subparsers(dest="template_cmd", required=True).add_parser(

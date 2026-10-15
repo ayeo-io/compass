@@ -49,6 +49,25 @@ with the shipped catalogue and the shipped not-an-artifact list:
   same n.
 
 `issues` names the issues behind each figure that is not zero.
+
+`--design-size` reports the size of the technical designs, for a copy
+the 7.0.0 migrate has run on and `compass issue render --all` has rendered:
+
+- `approaches`: per delivery approach, the number of designs and the median
+  size in bytes. The median of an even count is the mean of the middle two,
+  rounded down;
+- `regular_limit` and `regular_within_limit`: 1.5 times 2,577 bytes, and
+  whether the regular median is at most that. Both are for information only
+  and no gate reads them;
+- `regular_new_catalogue`: the count and median of the regular designs whose
+  issue stored a catalogue that lists Data and interfaces for
+  `technical-design` at the design's depth. They are too few to set a limit;
+- `issues`: the issues behind each approach's figure.
+
+A design is the path registered for `technical-design`, else
+`technical-design.md` in the issue's documents folder. An issue with neither
+is left out. The mode refuses a `--root` that holds `.git` (exit 2), so it
+never reads a working checkout.
 """
 from __future__ import annotations
 
@@ -231,6 +250,82 @@ def measure_after(root: Path) -> dict:
     return result
 
 
+#: 1.5 times the median regular design of 10 October 2026, 2,577 bytes.
+REGULAR_LIMIT = 3865
+
+#: The depth read when the registry entry names none.
+DEFAULT_DEPTH = "thorough"
+
+
+def _median(sizes: list) -> int:
+    ordered = sorted(sizes)
+    mid = len(ordered) // 2
+    return ordered[mid] if len(ordered) % 2 else (ordered[mid - 1] + ordered[mid]) // 2
+
+
+def _design(root: Path, data: dict, slug: str):
+    """The (path, depth) of the issue's design, or (None, depth) when it has none."""
+    entries = [e for e in data.get("artifacts") or []
+               if isinstance(e, dict) and e.get("kind") == "technical-design"]
+    registered = [e for e in entries if e.get("path")]
+    depth = str((registered or entries or [{}])[-1].get("depth") or DEFAULT_DEPTH)
+    if registered:
+        path = (root / str(registered[-1]["path"])).resolve()
+        inside = path == root or root in path.parents
+        return (path if inside and path.is_file() else None), depth
+    path = root / docs_dir_for(str(data.get("created") or "").strip(), slug) / "technical-design.md"
+    return (path if path.is_file() else None), depth
+
+
+def _lists_data_and_interfaces(task: Path, data: dict, depth: str) -> bool:
+    """True when the issue's stored catalogue lists Data and interfaces at this depth."""
+    generation = data.get("generation")
+    if not isinstance(generation, int) or isinstance(generation, bool):
+        return False
+    try:
+        resolved = load_yaml(str(task / "generations" / str(generation) / "resolved.yml"))
+    except CompassError:
+        return False
+    try:
+        sections = resolved["artifacts"]["technical-design"]["sections"][depth]
+    except (KeyError, TypeError):
+        return False
+    return isinstance(sections, list) and "Data and interfaces" in sections
+
+
+def measure_design_size(root: Path) -> dict:
+    root = root.resolve()
+    work = root / ".compass" / "work"
+    sizes: dict = {}
+    names: dict = {}
+    new_catalogue: list = []
+    tasks = sorted(p for p in work.iterdir() if p.is_dir()) if work.is_dir() else []
+    for task in tasks:
+        data = _manifest(task)
+        if data is None:
+            continue
+        design, depth = _design(root, data, task.name)
+        if design is None:
+            continue
+        approach = str(data.get("delivery_approach") or "unknown")
+        size = design.stat().st_size
+        sizes.setdefault(approach, []).append(size)
+        names.setdefault(approach, []).append(task.name)
+        if approach == "regular" and _lists_data_and_interfaces(task, data, depth):
+            new_catalogue.append(size)
+    regular = sizes.get("regular")
+    median = _median(regular) if regular else None
+    return {
+        "approaches": {a: {"count": len(v), "median_bytes": _median(v)}
+                       for a, v in sorted(sizes.items())},
+        "regular_limit": REGULAR_LIMIT,
+        "regular_within_limit": None if median is None else median <= REGULAR_LIMIT,
+        "regular_new_catalogue": {"count": len(new_catalogue),
+                                  "median_bytes": _median(new_catalogue) if new_catalogue else None},
+        "issues": {a: sorted(v) for a, v in sorted(names.items())},
+    }
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--root", default=str(ROOT),
@@ -243,7 +338,27 @@ def main(argv=None) -> int:
                         help="write the undeclared kind names, one per line, to FILE")
     parser.add_argument("--after", action="store_true",
                         help="the after figures, for a copy the 7.0.0 migrate has run on")
+    parser.add_argument("--design-size", action="store_true",
+                        help="the median size of the technical designs, per delivery approach")
     args = parser.parse_args(argv)
+    if args.design_size:
+        root = Path(args.root)
+        if (root / ".git").exists():
+            print("measure-artifact-catalogue: %s holds .git, so it is a working checkout. "
+                  "Run --design-size on a copy of the archive." % root, file=sys.stderr)
+            return 2
+        result = measure_design_size(root)
+        if args.json:
+            print(json.dumps(result, indent=2, sort_keys=True))
+            return 0
+        for approach, figures in result["approaches"].items():
+            print(f"{approach} designs: {figures['count']}, median {figures['median_bytes']} bytes")
+        print(f"regular limit: {result['regular_limit']} bytes, "
+              f"within it: {result['regular_within_limit']}")
+        new = result["regular_new_catalogue"]
+        print(f"regular designs on a catalogue that lists Data and interfaces: "
+              f"{new['count']}, median {new['median_bytes']} bytes")
+        return 0
     if args.after:
         result = measure_after(Path(args.root))
         if args.json:

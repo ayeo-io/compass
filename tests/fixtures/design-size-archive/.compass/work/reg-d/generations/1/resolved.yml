@@ -1,0 +1,11 @@
+schema: 1
+issue: reg-d
+generation: 1
+artifacts:
+  technical-design:
+    file: technical-design.md
+    sections:
+      lightweight:
+      - Approach
+      - Data and interfaces
+      - Gate

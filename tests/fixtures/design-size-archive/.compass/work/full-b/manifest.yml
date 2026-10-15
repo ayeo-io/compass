@@ -1,0 +1,9 @@
+schema_version: '3.0'
+issue: full-b
+created: '2026-10-07'
+delivery_approach: full
+artifacts:
+- id: ART-TECHNICAL_DESIGN
+  kind: technical-design
+  status: approved
+  depth: lightweight

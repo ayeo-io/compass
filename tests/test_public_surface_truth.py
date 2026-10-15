@@ -511,6 +511,12 @@ def test_d2_repairs_change_only_retired_names():
     sub-bullets for each check, the trigger paths, the four declining
     conditions and the spike rule.
 
+    Three more were re-baselined by `spec-author-has-no-shell`:
+    `agents/spec-author.md` (list_items 21 -> 27, one more `##` heading)
+    gained the section listing the six compass steps it runs itself, and
+    `agents/product-owner.md` and `agents/product-marketer.md` (one more `##`
+    heading each) gained the section saying they have no shell.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

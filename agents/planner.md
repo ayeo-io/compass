@@ -1,7 +1,7 @@
 ---
 name: planner
 description: "Owns the plan stage: technical design, governance check, parallel orchestration."
-tools: Read, Glob, Grep, Write, Edit
+tools: Read, Glob, Grep, Write, Edit, Bash
 model: opus
 ---
 

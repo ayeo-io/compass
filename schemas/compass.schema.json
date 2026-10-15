@@ -65,6 +65,10 @@
                 "hard"
               ]
             },
+            "release_line": {
+              "description": "Whether an issue on the approach owes a release line, which a landing then needs in the manifest's `release_note`. `true` is stricter, and the shipped default sets it on every approach except the spike.",
+              "type": "boolean"
+            },
             "remove": {
               "const": true,
               "description": "When `true`, removes the inherited entry. This fails while another entry still refers to it."
@@ -112,6 +116,10 @@
                       "type": "object"
                     }
                   ]
+                },
+                "release_line": {
+                  "description": "Whether an issue on the approach owes a release line, which a landing then needs in the manifest's `release_note`. `true` is stricter, and the shipped default sets it on every approach except the spike.",
+                  "type": "boolean"
                 },
                 "ships": {
                   "description": "Whether the approach delivers work. It is `true` unless the approach delivers nothing, as the shipped spike does.",

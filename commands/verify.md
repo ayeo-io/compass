@@ -64,6 +64,12 @@ The rest of this command is for delivery work.
    failure. The `reviewer` agent still does the *judgement* dimensions
    (clarity, security depth, governance-as-assessed) - `compass check` is
    the mechanical part, not the whole gate.
+
+   Then run `compass analyze` on an issue that registers an intent, as every
+   regular issue does: it reports a scenario whose intent id `intent.md` does
+   not declare. Record its output as `command-output` evidence for
+   `verify.traceability` (`compass evidence add <EV-id> --type command-output
+   --path <file>`). It blocks nothing unless the issue holds `verify.analyze`.
 4. **Review dimensions.** Apply each dimension `delivery-approach.md`
    lists - `correctness`, `governance`, `traceability`, and as the approach
    needs `regression`, `security` (scaled or full), `clarity`, `claims`.

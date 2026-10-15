@@ -57,7 +57,11 @@ JSON_SCHEMA_VERSION = 1
 # Version 5: a declared equivalent parameter choice compares as equal, and a
 # readiness parameter one side leaves out is incomparable, so swapping the
 # timed test command between its two choices is no longer incomparable.
-CLASSIFIER_VERSION = 5
+#
+# Version 6: an approach's `release_line` is compared, `false` below `true`, so
+# a configuration that stops an approach owing a release line is a loosening
+# (ADR-065), which version 5 read as equivalent.
+CLASSIFIER_VERSION = 6
 
 # Keys whose value is a condition on the assessment.
 WHEN_KEYS = ("when", "blocking_when", "applies_when")
@@ -313,7 +317,8 @@ def _rank(field, key, value, side, ctx):
         return rank if isinstance(rank, int) and not isinstance(rank, bool) else None
     order = {"checks.severity": SEVERITIES, "checks.on_skipped": ON_SKIPPED,
              "approaches.artifacts.depth": ARTIFACT_DEPTHS,
-             "readiness.required_for_autonomous": (False, True)}.get(field, ())
+             "readiness.required_for_autonomous": (False, True),
+             "approaches.release_line": (False, True)}.get(field, ())
     return order.index(value) if value in order else None
 
 
@@ -513,7 +518,8 @@ for _fact, _fields in {
         "artifact_checks": ("artifacts.checks",),
         "artifact_required_when": ("artifacts.required_when",),
         "readiness": ("readiness.impl", "readiness.params",
-                      "readiness.required_for_autonomous")}.items():
+                      "readiness.required_for_autonomous"),
+        "release_line": ("approaches.release_line",)}.items():
     for _name in _fields:
         _FACT_OF[_name] = _fact
 
@@ -583,6 +589,7 @@ def _changes(parent, child, ctx):
     _keyed("artifacts.checks", p["artifact_checks"], c["artifact_checks"], ctx, out)
     _keyed("artifacts.required_when", p["artifact_required_when"],
            c["artifact_required_when"], ctx, out)
+    _compare("approaches.release_line", None, p["release_line"], c["release_line"], ctx, out)
     return out
 
 

@@ -256,6 +256,16 @@ def verification_note(inputs, doc_rel):
     return Part(OWN, lines)
 
 
+def release_line(inputs, doc_rel):
+    """The issue's release line, the manifest's `release_note`, on one line (ADR-065).
+    The manifest is the only copy; this block shows it in the verification report."""
+    release = inputs.task.get("release_note")
+    if isinstance(release, str) and release.strip():
+        return Part(OWN, [rb.field(release)])
+    return Part(OWN, ["No release line recorded yet. Record one with "
+                      "`compass ship-commit --release-note \"<text written for a user>\"`."])
+
+
 #: Kind to renderer. A new kind is one entry here (or in the module that owns it) and one
 #: name in `rendered_blocks.KINDS`.
 RENDERERS = {
@@ -271,6 +281,7 @@ RENDERERS = {
     "decisions-taken": decisions_taken,
     "verification-note": verification_note,
     "readiness": readiness,
+    "release-line": release_line,
 }
 
 

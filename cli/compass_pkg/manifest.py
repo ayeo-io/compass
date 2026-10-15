@@ -32,7 +32,7 @@ import re as _re
 
 import fnmatch
 import re as _re
-from compass_pkg import checkpoint_outcomes, issue_usage, status_words
+from compass_pkg import checkpoint_outcomes, issue_usage, release_line, status_words
 from compass_pkg.terminal import say
 from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, normalize_spine, now_iso, resolve_issue_dir, save_manifest
 from compass_pkg.issue_layout import docs_dir_for
@@ -312,7 +312,7 @@ def _derive_and_commit_living_spec(cwd, slug):
 #: The refusals a landing runs, in order, before it stages, renders, commits,
 #: derives or syncs anything. Each takes the manifest and the issue folder and
 #: returns its text or None; a later refusal is appended here, not branched in.
-LANDING_REFUSALS = [checkpoint_outcomes.landing_refusal]
+LANDING_REFUSALS = [checkpoint_outcomes.landing_refusal, release_line.landing_refusal]
 
 
 def run_landing_refusals(task, task_dir):
@@ -349,8 +349,7 @@ def cmd_land_commit(args):
     # The landing refusals run before anything is staged or written, so a
     # refusal leaves every file as it was (ADR-026).
     landing = checkpoint_outcomes.landing_issue(args)
-    if landing is not None:
-        run_landing_refusals(*landing)
+    note = release_line.judge_landing(args, landing, "compass ship-commit", run_landing_refusals)
 
     # Stage any explicitly named paths.
     # A name is a name, not a pattern: `x[1].txt` must not stage `x1.txt`.
@@ -452,6 +451,7 @@ def cmd_land_commit(args):
                        if base_note else ""))
 
         head_id = _git(["rev-parse", "HEAD"], cwd).stdout.strip()
+        release_line.store(head_task_dir, note, "compass ship-commit", head_task)
         _apply_ship_exit(head_task, head_task_dir)
         status_words.close(head_task, status_words.COMPLETED)
         head_task["land_timestamp"] = now_iso()
@@ -477,6 +477,7 @@ def cmd_land_commit(args):
     # way.
     owned, artifact_dir, slug = set(), "\0none", None
     docs_prefix = None
+    release_line.store(landing and landing[1], note, "compass ship-commit")
     try:
         _scope_dir = resolve_issue_dir(getattr(args, "task", None))
         _scope_task, _ = load_manifest(_scope_dir)
@@ -487,6 +488,7 @@ def cmd_land_commit(args):
         pass
 
     if slug is not None:
+        _refuse_unapproved_artifacts(_scope_task, _scope_dir)  # before the render stages anything
         _render_landing(_scope_task, _scope_dir, cwd)
 
     def _judge_index():

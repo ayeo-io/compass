@@ -420,6 +420,7 @@ EXCEPTIONS = {
     "rework-scan": "a report verb named for what it scans; renaming it needs an alias no release owes yet",
     "terminology": "prints the vocabulary; a noun that is its own command",
     "readiness": "measures the repository and writes the readiness record; a noun that is its own command, named by the spec that added it",
+    "release notes": "prints the release lines since a ref; the spelling the requirement that added it names",
     "approach evaluate": "applies the routing policy; the determinism boundary is named by this verb in the contract",
     "bdd extract": "turns acceptance criteria into a feature file; a verb of the bdd group",
     "bdd verify": "runs the BDD suite and records the result; a verb of the bdd group",

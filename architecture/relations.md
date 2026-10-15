@@ -42,6 +42,7 @@ components. Relations are ordered by the calling component.
 | `architect` (agent) | `.compass/work/<issue>/architecture-notes.md` | file write | writes its output (annotations, boundary risks, candidate ADR titles) | medium |
 | `agents/spec-author.md` | `architecture/decisions/ADR-*.md` | via `architecture-loaded.yml` | reads ADR summaries (id, title, status) to avoid re-litigating closed decisions | low |
 | `agents/planner.md` | `.compass/work/<issue>/architecture-notes.md` | file read | planner reads architect output to compose `technical-design.md §2` design decisions | medium |
+| `cli/compass` (`release notes`) | `.compass/work/` and git | file read, `git` read | `compass release notes --since <ref>` reads completed issue manifests with `load_yaml`, the living spec committed at HEAD and at the ref, and commit reachability; it writes nothing (ADR-065) | low |
 | `templates/architecture/` | n/a | reference only | templates are never read by the CLI; they are human-referenced when an adopter bootstraps their own `architecture/` tree | n/a |
 
 ## Prohibited relations

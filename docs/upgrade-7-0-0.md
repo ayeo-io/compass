@@ -334,6 +334,36 @@ Compass can now post an issue's README to the linked GitHub issue, and the verb 
 | `compass evidence approve --guardrail` | a flag, whose only value is `G5` | Record the sign-off of guardrail `G5` |
 | `guardrail` | an evidence record of type `human-approval` | The guardrail the sign-off is for; only `G5` is read |
 
+## The lightweight intent and the release line
+
+A regular issue now opens with a short intent, and every issue that ships records one release line for the release notes. The decision is `architecture/decisions/ADR-065-regular-issues-owe-an-intent-and-shipping-issues-record-a-release-line.md`. `docs/release-line.md` owns the facts of the release line, and `docs/release-notes.md` those of the release notes.
+
+### What changes
+
+- **The regular approach owes `intent` at depth `lightweight`.** It has four headings: Problem, Desired outcome, Success signals and Non-goals. The router drafts it at assess from the issue description, and the spec author corrects it at define. `compass analyze` checks each scenario's intent id against it, and `compass ship-commit` refuses a regular issue while the intent is unwritten, through the check `artifacts-approved`.
+- **A new approach field, `release_line`.** Quick fix, regular, hotfix and full set it `true` in the shipped default. The spike has no such field. Setting it `false` on an approach that has it is a loosening and needs a waiver.
+- **A new manifest key, `release_note`.** `compass acceptance record`, `compass ship-commit` and `compass quick-fix finish` write it with `--release-note "<text>"`. The latest write wins. A blank line, a line that starts with `#`, and a line the living spec's title rules refuse are refused before anything is written.
+- **Every landing refuses an issue that owes a line and has none**, with the code `release-line-missing`. An issue owes one only when its stored generation sets `release_line: true` on its approach and the issue is neither completed nor closed.
+- **The verification report gains a `## Release line` section** with the rendered block `release-line`. A report written before this change has no marker and is left as it is.
+- **A new verb, `compass release notes --since <ref>`**, prints the release line of each shipping issue completed after a git reference. It writes nothing.
+
+### What to do
+
+1. Nothing for issues already assessed. An open issue owes an intent and a release line only after `compass approach evaluate --write` commits a generation from the new default. A completed or closed issue never does.
+2. Give each new shipping issue its line before it lands: `compass ship-commit --issue <slug> --release-note "<text written for a user>"`, or the same flag on `quick-fix finish` or `acceptance record`.
+3. Update agent instructions and scripts that run a quick fix to `compass quick-fix finish -m "<message>" --release-note "<one sentence for a user>" --no-commit -- <test command>`. Without the flag, the `compass ship-commit` command that `--no-commit` prints asks for `--release-note`.
+
+### New keys and verbs
+
+| Name | Where | Meaning |
+|---|---|---|
+| `release_line` | an approach in the catalogue | Whether an issue on the approach owes a release line |
+| `release_note` | `manifest.yml` | The issue's release line |
+| `--release-note` | a flag of `compass ship-commit`, `compass acceptance record` and `compass quick-fix finish` | Write the release line |
+| `release-line-missing`, `release-line-heading` | refusal codes | A landing of an issue that owes a line and has none, and a line that starts with `#` |
+| `release-line` | a rendered block kind | The release line in the verification report |
+| `compass release notes --since <ref>` | a verb | Print the release lines since a git reference |
+
 ## Approving inside Claude Code, and delegated approvals
 
 A person approves or rejects by typing `/compass:approve` or `/compass:reject` in the Claude Code session they are in. They never open a terminal or copy a command. A person can also let one named agent approve for them, for at most 24 hours and a stated scope, and review what it approved. GitHub issue #571 is fixed: the guardrail `G5` sign-off can be recorded on a project with no configuration of its own. The decisions are `architecture/decisions/ADR-068-a-person-approves-inside-claude-code-through-an-event-the-model-cannot-raise.md` and `architecture/decisions/ADR-069-a-person-can-delegate-approvals-to-a-named-agent-for-a-stated-time-and-scope.md`.

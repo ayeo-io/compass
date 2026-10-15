@@ -30,9 +30,13 @@ engineering's - do not pre-solve the problem here.
 ## Desired outcome
 
 <!-- The world after this is done, described as an outcome a user
-     experiences - not a UI, not an implementation. One or two sentences. -->
+     experiences - not a UI, not an implementation. One or two sentences
+     per outcome, each on its own line with an intent id. Every scenario
+     names the id it serves, and `compass analyze` reports a scenario whose
+     id is not declared here. At the lightweight depth a regular issue
+     owes, keep the whole intent to about half a page. -->
 
-{{DESIRED OUTCOME}}
+- INT-1: <outcome>
 
 ## Success signals
 

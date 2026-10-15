@@ -149,6 +149,15 @@ evidence request --artifact <kind>`; the person approves by typing
 terminal. `compass ship-commit`
 refuses a document that is not approved.
 
+A regular issue owes `intent.md` at depth `lightweight`: the router drafts it
+at assess and the spec author corrects it at define. Every issue whose stored
+configuration sets `release_line: true` on its approach (quick fix, regular,
+hotfix and full on the shipped default) owes a release line, the manifest's
+`release_note` (`schemas/manifest.schema.json`). Give it with
+`--release-note "<text written for a user>"` on `compass ship-commit`,
+`compass quick-fix finish` or `compass acceptance record`; a landing refuses
+the issue without one (`docs/release-line.md`).
+
 A new project has no `governance/` directory: the shipped default preset is in
 force, and `compass.yml` holds only what differs from it. An unmigrated 5.x
 project runs on its own copied `governance/` until `compass policy migrate`

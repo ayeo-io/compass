@@ -71,6 +71,11 @@ request --artifact <kind>`, or with `compass evidence approve --artifact <kind>`
 at a terminal. That approval is recorded as `artifact-approval`, which no gate accepts and the
 sign-off check of `G5` never reads.
 
+`compass acceptance record --release-note "<text>"` also stores the issue's
+release line in `release_note`, once the command passes. A failed run stores
+nothing, and the flag is refused on a completed or closed issue
+(`docs/release-line.md`).
+
 ## Properties of real evidence
 
 - **Reproducible** - it includes the command, so it can be re-run.

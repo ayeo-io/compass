@@ -60,9 +60,12 @@ CONTRACT_BUDGET = 2620
 # --raised-by and --found-at (lineage): two options cannot fit in the 21
 # characters that were left, and hiding them would leave a session no way
 # to learn them from --help.
+# quick-fix finish rose by about 155 characters on 2026-10-14 for
+# --release-note (ADR-065): a landing refuses a quick fix with no release
+# line, so the flag must be learnable from --help, and 16 characters were left.
 HELP_BUDGETS = {
     ("quick-fix", "start"): 2800,
-    ("quick-fix", "finish"): 1500,
+    ("quick-fix", "finish"): 1650,
     ("tdd-red",): 1450,
     ("tdd-green",): 1250,
 }
@@ -76,8 +79,8 @@ OPTIONS = {
     ("quick-fix", "start"): {"--risk", "--familiarity", "--size", "--goal",
                              "--role", "--intent", "--scenario",
                              "--scenario-id", "--test", "--labels"} | COMMON,
-    ("quick-fix", "finish"): {"-m", "--message", "--no-commit", "--issue"}
-                             | COMMON,
+    ("quick-fix", "finish"): {"-m", "--message", "--no-commit", "--issue",
+                              "--release-note"} | COMMON,
     ("tdd-red",): {"--scenario", "--issue", "--verified-by"} | COMMON,
     ("tdd-green",): {"--scenario", "--issue", "--verified-by"} | COMMON,
 }

@@ -155,6 +155,7 @@ EXPECTED_SUBCOMMANDS = {
     "record",  # delivery-record (ADR-031)
     "board",  # compass-board (ADR-046): render|refresh - the delivery board page
     "readiness",  # project-readiness-caps-autonomy (ADR-061): measure the repository
+    "release",  # intent-and-release-line (ADR-065): `release notes`, read-only
 }
 EXPECTED_READING_KEYS = {
     "risk", "familiarity", "size", "goal", "urgency", "role",

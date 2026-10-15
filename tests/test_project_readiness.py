@@ -1926,7 +1926,7 @@ def _register_approach(project, slug):
     document = Path(project) / rel
     document.parent.mkdir(parents=True, exist_ok=True)
     template = (ROOT / "templates" / "delivery-approach.md").read_text(encoding="utf-8")
-    start = template.index("## 1. The assessment")
+    start = template.index("## The assessment")
     document.write_text(f"# Delivery approach - {slug}\n\n" + template[start:].split("\n---\n")[0],
                         encoding="utf-8")
     path = Path(project) / ".compass" / "work" / slug / "manifest.yml"
@@ -2000,7 +2000,7 @@ def test_prc_32(tmp_path):
     text = document.read_text(encoding="utf-8")
     assert line in text
     # The line sits under the assessment, inside a readiness block.
-    assert text.index("## 1. The assessment") < text.index(line)
+    assert text.index("## The assessment") < text.index(line)
     assert "<!-- compass:render readiness -->" in text
     assert _readiness_lines(_receipt(project)) == [line]
     assert line in _board_page(project)

@@ -21,8 +21,8 @@ scenario, concrete Given/When/Then, no implementation detail.
 
 # Spec - {{ISSUE_SLUG}}
 
-> **Last updated:** {{DATE}}
-> **Familiarity:** {{greenfield discovery \| existing behaviour mapped first, then new scenarios}}
+<!-- compass:render document-header -->
+<!-- /compass:render -->
 
 ## Summary
 
@@ -53,19 +53,6 @@ scenarios below will cover.}}
 **Why now / what changes:** {{One short paragraph - the visible outcome, and
 what a user or an adjacent role would notice afterwards that they do not notice
 today. If nothing observable changes, say so plainly and explain what does.}}
-
----
-
-## How each role reads this file
-
-<!-- Do not edit this block - it is the same on every spec. It is here so
-     any role opening the file knows it is theirs too. -->
-
-- **Product owner / manager** - reads for *intent fidelity*: do these scenarios deliver the outcome in `intent.md`?
-- **Product marketer** - reads for *claims*: every line of launch copy must point at a scenario id here.
-- **Engineer** - reads for *tests*: scenarios are the acceptance suite and seed the TDD red→green cycle.
-- **QA** - reads for *coverage*: which scenarios are exercised, which edges are not.
-- **Designer** - UI behaviour authored in `ui-contract.md` flows in here as scenarios.
 
 ---
 
@@ -144,6 +131,29 @@ Scenario: {{scenario title}}
   When {{the thing that goes wrong}}
   Then {{the system's correct, safe response}}
 ```
+
+---
+
+## Non-functional requirements
+
+<!-- One row for each of the seven concerns, in this order. Resolve a row one of
+     two ways:
+       - name the scenario ids that cover it in the Scenario column, comma
+         separated. At thorough depth the Then line of each scenario states a
+         number, such as "within 3 seconds", so the requirement can be tested;
+       - or write a reason it does not apply in the last column.
+     A row left as a placeholder is open. `compass check` fails a spec with an
+     open row. Add a row for a concern of your own below the seven. -->
+
+| Concern | Scenario | Reason it does not apply |
+|---|---|---|
+| performance | {{scenario ids, e.g. TRC-A1}} | {{or the reason it does not apply}} |
+| capacity | {{…}} | {{…}} |
+| compatibility | {{…}} | {{…}} |
+| security | {{…}} | {{…}} |
+| privacy | {{…}} | {{…}} |
+| operability | {{…}} | {{…}} |
+| accessibility | {{…}} | {{…}} |
 
 ---
 

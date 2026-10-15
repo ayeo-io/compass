@@ -66,7 +66,7 @@ def label_problems(scratch: Path, root: Path = CORPUS) -> list[str]:
 
 def test_cr_1_one_versioned_entry_per_implementation_and_check_fns_derived():
     proofs = {e["check"] for e in yaml.safe_load(PROOFS.read_text(encoding="utf-8"))}
-    assert set(check_registry.REGISTRY) == proofs and len(proofs) == 23
+    assert set(check_registry.REGISTRY) == proofs and len(proofs) == 25
     for name, entry in check_registry.REGISTRY.items():
         # dod-evidence-typed moved to 2.0.0: its verdict on a ticked page with no record changed.
         # human-approval-present moved to 1.1.0: it counts only an approval given for

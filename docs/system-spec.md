@@ -4052,3 +4052,40 @@
 - `AGF-16` The guardrail 5 form records an approval only
 - `AGF-17` The check moves to version 1.1.0 within major 1
 - `AGF-18` Every CLI writer of a human-approval record names its subject
+
+### document-set-sections (completed 2026-10-15)
+
+- `DSS-1` The catalogue and template show carry the four sections
+- `DSS-2` No shipped heading carries a number
+- `DSS-3` The role block lives only in the roles guide
+- `DSS-4` Readers find sections in numbered and named documents alike
+- `DSS-31` template show on an earlier generation keeps its prose
+- `DSS-5` Every catalogue template opens with a title and a header block
+- `DSS-6` The header block shows the document's facts from the records
+- `DSS-7` The header block is stable and never moves a document back to draft
+- `DSS-8` The spec template holds the concern table
+- `DSS-9` nfr-rows-resolved passes a fully resolved table
+- `DSS-10` nfr-rows-resolved fails an unresolved, missing or unknown row
+- `DSS-11` Thorough needs a numbered Then and lightweight does not
+- `DSS-12` nfr-rows-resolved has nothing to check where no spec is written
+- `DSS-13` The design template shows the three declaration forms
+- `DSS-14` contracts-declared fails a trigger path with no declaration
+- `DSS-15` contracts-declared passes a declared contract
+- `DSS-16` contracts-declared has nothing to check without a trigger or a design
+- `DSS-17` The design template holds the verification plan table
+- `DSS-18` The coverage block shows each scenario's planned kind
+- `DSS-19` compass check reads the plan only through the coverage block
+- `DSS-20` A design with no verification plan keeps the old coverage block
+- `DSS-21` The design template holds the risk table and the dependencies block
+- `DSS-22` The dependencies block lists depends_on in the board's words
+- `DSS-23` A dependency's change makes the block stale only as an advisory
+- `DSS-24` An issue on an earlier stored generation does not run the new checks
+- `DSS-25` Both checks decline to judge a pre-generation, closed or out-of-catalogue issue
+- `DSS-26` The archive sweep finds no new failure and the compatibility contract admits only nothing to check
+- `DSS-27` The migrate rewrites no archived document or digest for the new set
+- `DSS-32` This issue reassesses onto the new catalogue and both checks pass on it
+- `DSS-28` quick-fix start renders the Assessment and Policy rules fired sections
+- `DSS-29` A changed quick-fix assessment makes the record stale until rendered
+- `DSS-33` The receipt reads a rendered quick-fix record
+- `DSS-30` The two checks are declared, implemented and documented
+- `DSS-34` The mutation job has time for the two added checks

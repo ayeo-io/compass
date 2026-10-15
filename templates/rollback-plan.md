@@ -26,8 +26,8 @@ Keep it under 120 lines. Delete this comment block when you fill it in.
 
 # Rollback plan - {{ISSUE_SLUG}}
 
-> **Date:** {{DATE}} · **Owner:** {{who runs this if it is needed}}
-> **Triggered by:** {{the label that earned it - migrations}}
+<!-- compass:render document-header -->
+<!-- /compass:render -->
 
 ## What breaks
 

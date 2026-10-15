@@ -19,7 +19,7 @@ An issue's manifest holds an optional list:
 
 `schemas/manifest.schema.json` (with `additionalProperties: false` on an entry) and `schemas/manifest.reference.yml` state the same shape. A test compares the key names in the schema, the reference manifest and this document, so a change of shape fails until all three agree.
 
-The technical design's Risks and dependencies section, which a later change renders, reads this shape and no other. A renderer calls `lifecycle.entries` and `lifecycle.judge` rather than reading the key itself, so it shows the same words as the board.
+The technical design's Risks and dependencies section holds a `dependencies` block, which `compass issue render` writes from this shape and no other. A renderer calls `lifecycle.entries` and `lifecycle.judge` rather than reading the key itself, so it shows the same words as the board.
 
 ## The `until` values
 
@@ -92,6 +92,7 @@ Both re-render the waiting issue's page and the pages of the issues its manifest
 | The board card | The line "waits for b" for an open issue with an unmet dependency whose issue was read, and the blocked flag with the wait while the issue is at implement. |
 | The board panel | A Dependencies part: for each entry the slug, the reason, `until <value>`, the state, and one word - `met`, `waiting`, `not found` or `unreadable`. |
 | `compass flow --json` | Every row holds `depends_on`: a list of objects with the keys `issue`, `reason`, `until`, `state`, `stage` and `met`. The list is empty for an issue with none. A dependency that was not read has `state` and `stage` null and `met` false. |
+| The design's `dependencies` block | In Risks and dependencies, one line for each entry: `- <slug> - <reason> - until <until> - <word>`, with the board panel's word (`met`, `waiting`, `not found` or `unreadable`). `None` when there are no entries. `compass issue depends add` and `remove` render it again, and a stale block is an advisory failure of `rendered-blocks-current`. See `docs/rendered-blocks.md`. |
 | The issue page | The header adds `Blocked: waits for ...` on its own line while the block counts. A `depends on` line in the `related` block ends with ` - met` or the wait. |
 | `ship-commit` | After a landing, "these issues were waiting for b:" and a line for each open issue that names it. |
 

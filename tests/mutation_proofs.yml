@@ -89,6 +89,16 @@
   fails: tests/test_ship_commit_refuses_unapproved.py::test_asw_16_ship_commit_refuses_draft_design
   restores: tests/test_ship_commit_refuses_unapproved.py::test_asw_18_omitted_with_reason_passes_ship_commit
 
+- check: nfr-rows-resolved
+  broken: a concern row with neither a scenario nor a reason, a missing row, an unknown id
+  fails: tests/test_document_set_sections.py::test_dss_10_nfr_fails_bad_rows
+  restores: tests/test_document_set_sections.py::test_dss_9_nfr_passes_resolved_table
+
+- check: contracts-declared
+  broken: a schema change with a Data and interfaces section that declares no contract
+  fails: tests/test_document_set_sections.py::test_dss_14_contracts_fails_undeclared
+  restores: tests/test_document_set_sections.py::test_dss_15_contracts_passes_declared
+
 - check: spike-conclusion-present
   broken: a spike with no conclusion evidence
   fails: tests/test_spike_safety.py::test_spike_without_conclusion_fails

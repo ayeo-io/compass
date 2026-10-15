@@ -14,20 +14,20 @@ Fill every {{PLACEHOLDER}}.
 
 # Distribution Map - {{ISSUE_SLUG}}
 
-> **Date:** {{DATE}} · **Reads from:** technical-design.md §4, acceptance-criteria.md
-> **Consumed by:** breakdown, `scripts/multiagent.sh`, the `orchestrator` agent
+<!-- compass:render document-header -->
+<!-- /compass:render -->
 
 ---
 
-## 1. Work units
+## Work units
 
 | Unit | From technical-design.md | Scenario group(s) | Code surface |
 |---|---|---|---|
-| U1 | {{plan §4 U1}} | {{group A}} | {{files / modules}} |
-| U2 | {{plan §4 U2}} | {{group B}} | {{…}} |
+| U1 | {{plan Work units, U1}} | {{group A}} | {{files / modules}} |
+| U2 | {{plan Work units, U2}} | {{group B}} | {{…}} |
 | U3 | {{…}} | {{…}} | {{…}} |
 
-## 2. Independence analysis
+## Independence analysis
 
 <!-- For each pair of units, are they independent? Independent = disjoint
      code AND disjoint scenarios. Shared surface = either fold into one
@@ -41,7 +41,7 @@ Fill every {{PLACEHOLDER}}.
 
 **Shared foundations pulled forward:** {{e.g. "U0: the shared `Money` type - lands first, others branch from it" - or "none"}}
 
-## 3. Scenario-group → subtask mapping
+## Scenario-group → subtask mapping
 
 <!-- One subtask per independent unit. Each subtask owns a disjoint set of
      scenarios from acceptance-criteria.md. -->
@@ -67,14 +67,14 @@ Fill every {{PLACEHOLDER}}.
      that wave's row count rather than the map's total. With no Wave column,
      as above, every subtask is one wave. -->
 
-## 4. Proposed worktree orchestration
+## Proposed worktree orchestration
 
 - Proposed orchestration: {{solo \| pair (2–3) \| multiagent (4+)}}
 - Proposed subtask count: {{N}}
 - Worktree root: {{`multiagent.worktree_root` in compass.yml (or .compass/config.yml without one), default ../.compass-worktrees}}
 - One worktree + one `builder` per subtask; {{plus one `orchestrator` (multiagent) \| lead builder integrates (pair)}}.
 
-## 5. The cap that applies
+## The cap that applies
 
 <!-- Orchestration is a routed decision. The worktree cap comes from the
      routing-guardrail `caps` in governance/routing-policy.yml, recorded in

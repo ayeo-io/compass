@@ -71,6 +71,8 @@ RENDER_FURTHER = {
     "cmd_subtask_update": None,
     # The traceability chart of the issue page draws the files each scenario changed.
     "cmd_changed_file_add": None,
+    # The quick fix's record holds the header, assessment and policy-rules blocks.
+    "cmd_quick_fix_start": None,
 }
 
 RENDER_TRIGGERS = {**LABEL_TRIGGERS, **RENDER_FURTHER}
@@ -84,8 +86,6 @@ EXEMPT = {
     "cmd_analyze": ("in gate-clearing mode it adds one consistency-check evidence entry, and "
                     "the gate pass that must follow it renders; in advisory mode it saves "
                     "nothing, so a render here would make a reading command write"),
-    "cmd_quick_fix_start": ("creates the issue before any document exists; the first "
-                            "command that changes a record renders its page"),
     "cmd_intent_ingest": ("saves the intent record the issue was written from, which no "
                           "rendered block shows"),
     "cmd_friction_capture": ("records a friction note in the manifest, which no rendered "

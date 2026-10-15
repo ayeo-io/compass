@@ -10,7 +10,8 @@ Fill every {{PLACEHOLDER}}.
 
 # Bug report - {{ISSUE_SLUG}}
 
-> **Issue type:** bug fix · **Reported:** {{DATE}} · **Reporter:** {{NAME / role}}
+<!-- compass:render document-header -->
+<!-- /compass:render -->
 
 ## Observed behaviour
 

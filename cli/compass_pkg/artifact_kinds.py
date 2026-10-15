@@ -105,16 +105,44 @@ ARTIFACT_EFFECTS = ("add_artifact", "require_artifact", "suggest_artifact")
 
 ROUND_MARK = "<n>"
 
+#: The placeholder of a kind written once per work unit, as
+#: `low-level-design/<unit>.md` is. A unit is `U` and a whole number from 1
+#: with no leading zero, so each unit has one filename.
+UNIT_MARK = "<unit>"
+UNIT_PATTERN = re.compile(r"U[1-9][0-9]*")
+
 
 def repeats(entry):
     """Whether a kind repeats: its `file` holds `<n>`, as `review-<n>.md` does."""
     return ROUND_MARK in str((entry or {}).get("file") or "")
 
 
-def filename(entry, round=None):
-    """The filename of a kind's document, or of one round of a repeating kind."""
+def per_unit(entry):
+    """Whether a kind has one document per work unit: its `file` holds `<unit>`."""
+    return UNIT_MARK in str((entry or {}).get("file") or "")
+
+
+def filename(entry, round=None, unit=None):
+    """The filename of a kind's document, of one round of a repeating kind, or
+    of one unit of a per-unit kind."""
     name = str((entry or {}).get("file") or "")
-    return name.replace(ROUND_MARK, str(round)) if repeats(entry) and round is not None else name
+    if repeats(entry) and round is not None:
+        name = name.replace(ROUND_MARK, str(round))
+    if per_unit(entry) and unit is not None:
+        name = name.replace(UNIT_MARK, str(unit))
+    return name
+
+
+def unit_of(entry, relpath):
+    """The unit a path inside the documents folder holds for a per-unit kind,
+    such as `U3` for the third unit's low-level design, or None when `relpath`
+    is not that kind's filename for a well-formed unit."""
+    if not per_unit(entry):
+        return None
+    left, _, right = str(entry.get("file") or "").partition(UNIT_MARK)
+    found = re.fullmatch(re.escape(left) + "(" + UNIT_PATTERN.pattern + ")" + re.escape(right),
+                         str(relpath))
+    return found.group(1) if found else None
 
 
 def _pattern(entry):
@@ -134,10 +162,10 @@ def round_of(entry, name):
     return int(found.group(1))
 
 
-def home(task_dir, entry, round=None):
+def home(task_dir, entry, round=None, unit=None):
     """The project-relative path where an issue keeps a kind's document: its
     documents folder and the kind's filename."""
-    return "%s/%s" % (docs_dir(task_dir), filename(entry, round))
+    return "%s/%s" % (docs_dir(task_dir), filename(entry, round, unit))
 
 
 def voluntary(view):
@@ -164,8 +192,11 @@ def voluntary(view):
 
 def matches_kind(catalogue, name):
     """Whether a filename in the documents folder is the file of a kind, with
-    `<n>` read as any whole number of a repeating kind."""
+    `<n>` read as any whole number of a repeating kind. A per-unit kind keeps
+    its documents in a folder of their own, so it matches no top-level name."""
     for body in catalogue.values():
+        if per_unit(body):
+            continue
         if repeats(body):
             if _pattern(body).fullmatch(name):
                 return True

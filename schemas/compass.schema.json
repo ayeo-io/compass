@@ -252,7 +252,7 @@
               "type": "boolean"
             },
             "file": {
-              "description": "The file name of the artifact in the issue's folder, for example `acceptance-criteria.md`.",
+              "description": "The file name of the artifact in the issue's folder, for example `acceptance-criteria.md`. `<n>` stands for a round, as in `review-<n>.md`, and `<unit>` for a work unit, which alone allows one folder, as in `low-level-design/<unit>.md`.",
               "type": "string"
             },
             "locked": {
@@ -347,7 +347,7 @@
                   "type": "boolean"
                 },
                 "file": {
-                  "description": "The file name of the artifact in the issue's folder, for example `acceptance-criteria.md`.",
+                  "description": "The file name of the artifact in the issue's folder, for example `acceptance-criteria.md`. `<n>` stands for a round, as in `review-<n>.md`, and `<unit>` for a work unit, which alone allows one folder, as in `low-level-design/<unit>.md`.",
                   "type": "string"
                 },
                 "owner": {
@@ -369,6 +369,10 @@
                 "stands_for": {
                   "description": "The name the industry uses for this kind of document, for example `hld` for the technical design. The glossary prints it.",
                   "type": "string"
+                },
+                "word_ceiling": {
+                  "description": "The most words the document should hold at each depth it can be written at, each a whole number of at least 1, for example `{thorough: 4000, lightweight: 1200}`. Rendered blocks and HTML comments are not counted.",
+                  "type": "object"
                 }
               },
               "type": "object"
@@ -387,6 +391,10 @@
             },
             "waiver": {
               "description": "An approved departure from the layer above, written in the entry it excuses. It holds `reason`, `approved_by` and, in the project file, `approved_on`.",
+              "type": "object"
+            },
+            "word_ceiling": {
+              "description": "The most words the document should hold at each depth it can be written at, each a whole number of at least 1, for example `{thorough: 4000, lightweight: 1200}`. Rendered blocks and HTML comments are not counted.",
               "type": "object"
             }
           },

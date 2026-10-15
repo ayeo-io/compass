@@ -1452,7 +1452,8 @@ def test_roa_7_classifier_version_5_recomputes_a_stored_classification(
         monkeypatch, tmp_path):
     import dataclasses
     from compass_pkg import classify, readiness_registry
-    assert classify.CLASSIFIER_VERSION == 5
+    # Version 6 (word limits) keeps the version 5 rule this test proves.
+    assert classify.CLASSIFIER_VERSION >= 5
     text = MODULE.read_text(encoding="utf-8")
     assert ("# Version 5: a declared equivalent parameter choice compares as equal"
             in text)

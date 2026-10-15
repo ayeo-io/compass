@@ -563,7 +563,11 @@ def test_PM_13_an_unedited_copy_of_the_current_files_adopts_nothing(tmp_path):
     _copy_governance(root)
     made = _plan(root)
     assert made.base_release == {"release": "current", "chosen_by": "version"}
-    assert made.adopted == [] and made.behaviour["result"] == "equivalent"
+    # The one difference is the word limits: the legacy files cannot hold
+    # `word_ceiling` and the adapter never fills it, so the migrated project
+    # gains the shipped limits the copy does not have.
+    assert made.adopted == [] and made.behaviour["result"] == "incomparable", made.behaviour
+    assert "word_ceiling" in made.behaviour["reason"], made.behaviour
 
 
 LOOSENINGS = {

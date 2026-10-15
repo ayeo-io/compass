@@ -467,7 +467,8 @@ def _artifacts(approaches, rules):
 # description fields and the condition come from the shipped default, so a
 # project that still carries copies of the two files resolves the same kinds.
 # `every_approach` is not copied: it would make an old policy owe a document it
-# never listed. A name the shipped default does not declare keeps only its file,
+# never listed. `word_ceiling` is not copied either: a project on copied 5.x
+# governance gets no word limit it never had. A name the shipped default does not declare keeps only its file,
 # and the merge then asks the layer for the fields it lacks.
 SHIPPED_FIELDS = ("stage", "owner", "audience", "stands_for", "sections", "depends_on",
                   "required_when")

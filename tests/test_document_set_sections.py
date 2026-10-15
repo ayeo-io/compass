@@ -647,7 +647,7 @@ def test_dss_5_templates_open_with_header_block(tmp_path):
             out = _u2_show(tmp_path, kind, depth)
             assert _u2_header_problems(f"{kind} {depth}", out, entry) == [], out[:3000]
         checked.append(kind)
-    assert len(checked) == 17, checked
+    assert len(checked) == 18, checked
     # The verification note keeps its one block and gains no header block.
     note = (TEMPLATES / "verification-note.md").read_text(encoding="utf-8")
     assert [b.kind for b in rendered_blocks.parse(note, "verification-note.md").blocks] == [

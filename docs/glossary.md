@@ -460,9 +460,9 @@ One source of configuration: the shipped preset, a team parent, the project file
 
 ### lld
 
-Low-level design: optional per-component detail on initiative-scale work only. Empty is a valid state.
+Low-level design: the signatures, contracts, file plan and tests of one work unit, in its own document, `low-level-design/U<n>.md`. The planner writes one per unit of the technical design's Work units table, so the design stays short and each builder reads only its own unit. No approach owes one; on the full approach, `compass issue lint` notes a unit that has none.
 
-**Related:** `design-doc`
+**Related:** `design-doc`, `word_ceiling`
 
 ### lock
 
@@ -778,6 +778,12 @@ A recorded departure from a parent's value, with a reason and an approver.
 
 **Related:** `lock`
 
+### word_ceiling
+
+The word limit a document kind carries in the artifacts catalogue, per depth, such as 4,000 words for a thorough technical design. Words are counted from the visible text only: rendered blocks and HTML comments do not count. `compass issue lint` notes a document over its limit, and the check `design-within-word-ceiling` refuses a technical design over 1.5 times its limit once plan exit is due. An issue stored before a kind had a limit keeps no limit.
+
+**Related:** `lld`, `design-doc`
+
 ### workflow-state
 
 The fixed semantic lifecycle Compass owns: backlog, ready, in-progress, in-review, done. Gates attach to the transitions; transitions are earned (evidence), not dragged. A person sets only backlog (a hold) and done (closed, with a close reason); Compass derives the other states from the issue's records. Board columns are a user-defined projection - every custom column maps to exactly one state.
@@ -859,6 +865,16 @@ The marketer and the person who ships read it to decide whether every public cla
 **Stage:** `verify` · **Owner:** product-marketer
 
 **Home:** `docs/compass/<created>-<issue-slug>/launch-readiness.md`
+
+### `low-level-design`
+
+The builder of one work unit reads it for the signatures, contracts, files and tests that unit owns.
+
+**Traditional name:** lld
+
+**Stage:** `plan` · **Owner:** planner
+
+**Home:** `docs/compass/<created>-<issue-slug>/low-level-design/<unit>.md`
 
 ### `positioning`
 

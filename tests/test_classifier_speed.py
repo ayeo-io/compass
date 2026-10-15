@@ -581,7 +581,11 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # Re-pinned for issue `readiness-override-assess`: a declared equivalent parameter
 # choice compares as equal and a missing readiness parameter is incomparable, so the
 # version is now 5.
-VERDICT_SOURCE_PIN = "c58e9e996ea7f9aa"
+# Re-pinned for `artifacts.word_ceiling`, an obligation fact compared by identity
+# for a kind both sides owe (issue `word-ceilings-and-lld`): a change to a document's
+# word limit is `incomparable`, which version 5 read as `equivalent`, so the version
+# is now 6.
+VERDICT_SOURCE_PIN = "ec8c75dd522961da"
 
 
 def _verdict_source_digest():

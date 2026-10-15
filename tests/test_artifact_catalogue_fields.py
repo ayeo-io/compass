@@ -119,6 +119,7 @@ SHIPPED_KINDS = {
     "positioning": ("define", "product-marketer", "positioning-statement"),
     "requirements-review": ("refine", "spec-author", "requirements-review"),
     "technical-design": ("plan", "planner", "hld"),
+    "low-level-design": ("plan", "planner", "lld"),
     "threat-model": ("plan", "planner", "threat-model"),
     "rollback-plan": ("plan", "planner", "rollback-plan"),
     "product-owner-review": ("plan", "product-owner", "stakeholder-review"),
@@ -704,7 +705,7 @@ def _skeleton_problems(kind, depth, output, catalogue, template_text):
 def test_acf_10(tmp_path):
     root = _scratch(tmp_path)
     catalogue = _preset()
-    assert len(catalogue) == 18
+    assert len(catalogue) == 19
     outputs = {}
     for kind, entry in sorted(catalogue.items()):
         template_text = (TEMPLATES / f"{kind}.md").read_text(encoding="utf-8")

@@ -9,7 +9,7 @@ superseded_by: ''
 
 ## Context
 
-ADR-068 lets a person approve inside Claude Code by typing `/compass:approve`, and says the agent only requests. On 2026-10-15 jed72 widened the goal: "I DO want either a human, or a delegated agent to provide the approval and THAT to be recorded. I just want AN approval to be given and recorded." A new adopter approves each item. Later they want to leave a well-formed spec running overnight and delegate the approvals, including irreversible items such as an archive `issue migrate --apply` and a VERSION bump and tag ("yes it can").
+ADR-068 lets a person approve inside Claude Code by typing `/compass:approve`, and says the agent only requests. On 2026-10-15 jed72 widened the goal: either a person or an agent they delegated to gives the approval, and that approval is recorded ("I just want AN approval to be given and recorded."). A new adopter approves each item. Later they want to leave a well-formed spec running overnight and delegate the approvals, including irreversible items such as an archive `issue migrate --apply` and a VERSION bump and tag ("yes it can").
 
 Four facts bound the answer:
 

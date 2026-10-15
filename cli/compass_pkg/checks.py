@@ -825,7 +825,8 @@ def _judge_g5_approval(task, approved):
                        f"evidence entry must record who approved, in what role, "
                        f"the scope, and when.")
     return True, (f"approval on record: {a.get('id', '?')} by {a.get('approver')} "
-                  f"({a.get('role')}) - scope: {a.get('scope')}")
+                  f"{approval_records.provenance(a)} ({a.get('role')}) - scope: "
+                  f"{a.get('scope')}")
 
 
 def _check_backfills_paid(task, task_dir):

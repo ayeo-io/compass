@@ -86,6 +86,23 @@ HOW = ("run `compass evidence approve --check ID --approver NAME --role ROLE "
        "timestamp, issue and generation")
 
 
+def provenance(record):
+    """How a record was made, in words, from its `via` key (ADR-068
+    decision 7). No verdict reads it: the detail of `human-approval-present`
+    and the receipt show it. A record with no `via` still counts."""
+    via = record.get("via")
+    if via == "prompt":
+        return "via a typed prompt"
+    if via == "terminal":
+        return "via a terminal"
+    if via == "delegation":
+        return (f"via {record.get('approved_by_agent') or 'an agent'} under "
+                f"{record.get('delegation') or 'a delegation'}")
+    if via is None:
+        return "written without a Compass command"
+    return f"via {shown(via)}"
+
+
 def project_owner(task_dir):
     """The `owner:` of the project file above the issue, or None when there is
     no project file or it names no owner. Waivers read the owner from the same

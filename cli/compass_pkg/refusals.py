@@ -145,6 +145,28 @@ REFUSALS: dict[str, dict[str, str]] = {
         "fix": "run compass tdd-red --scenario <id> -- <your failing test "
                "command>, then retry this edit.",
     },
+    # The approval guards (approval_guard.py, ADR-068 decision 10, ADR-069).
+    "approval-request-protected": {
+        "what": "{target} (tool: {tool})",
+        "why": "approval requests and the approval hook belong to Compass; an "
+               "approval binds to the request a person was shown.",
+        "fix": "ask for an approval with compass evidence request, then ask the "
+               "person to type /compass:approve.",
+    },
+    "delegation-protected": {
+        "what": "{target} (tool: {tool})",
+        "why": "a delegation is a person's decision, written only from a typed "
+               "/compass:delegate.",
+        "fix": "ask the person to type /compass:delegate or /compass:revoke; "
+               "never write a delegation yourself.",
+    },
+    "delegation-caller-mismatch": {
+        "what": "delegated approval (--as {named})",
+        "why": "Claude Code reports this call as {caller}, and a delegated "
+               "approval must name exactly the agent that makes it.",
+        "fix": "run it from the agent the delegation names, with --as set to "
+               "that agent's full name, or ask with compass evidence request.",
+    },
     # A landing refusal of `compass ship-commit` and `quick-fix finish`
     # (checkpoint_outcomes.landing_refusal), not a hook refusal. `is` and `it`
     # agree with the number of stages named.

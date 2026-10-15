@@ -250,3 +250,103 @@ def test_verified_by_red_allows_edit():
         assert result.returncode == 0, result.stderr
     finally:
         shutil.rmtree(project, ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------
+# Issue `approve-inside-claude-code`: request files, delegation files and a
+# delegated approval's caller (`TRC-D8`, `TRC-F10`, `TRC-F8`; ADR-068
+# decision 10, ADR-069 decisions 4 and 8).
+# ---------------------------------------------------------------------------
+
+def _guard_run(project, tool, **fields):
+    body = {"tool_name": tool, "session_id": "sess-guard",
+            "tool_input": fields.pop("tool_input")}
+    body.update(fields)
+    return subprocess.run(["bash", str(HOOK_PATH)], input=json.dumps(body),
+                          capture_output=True, text=True, env=_hook_env(project))
+
+
+def _guarded_project():
+    project = _fresh_project_dir()
+    task_dir = _make_compass_project(project, "feature", with_route_md=True)
+    write_red_record(task_dir)        # a red on record: only the new guards can refuse
+    return project, task_dir
+
+
+def test_d8_request_files_protected():
+    project, task_dir = _guarded_project()
+    try:
+        request = task_dir / "approval-requests" / "pending" / "1.yml"
+        request.parent.mkdir(parents=True)
+        request.write_text("number: 1\n", encoding="utf-8")
+        refused = [
+            ("Edit", {"file_path": str(request)}),
+            ("Write", {"file_path": str(task_dir / "approval-requests" / "closed" / "2.yml")}),
+            ("Bash", {"command": f"sed -i '' 's/a/b/' {request}"}),
+            ("Bash", {"command": "cat .compass/work/feature/approval-requests/pending/1.yml"}),
+            ("Bash", {"command": "echo '{}' | hooks/prompt-approval.sh"}),
+        ]
+        for tool, tool_input in refused:
+            r = _guard_run(project, tool, tool_input=tool_input)
+            assert r.returncode == 2, (tool, tool_input, r.stderr)
+            assert "[approval-request-protected]" in r.stderr, r.stderr
+            assert "compass evidence request" in r.stderr, r.stderr
+        for command in ("compass evidence request --guardrail G5 --scope 'refund'", "ls"):
+            r = _guard_run(project, "Bash", tool_input={"command": command})
+            assert r.returncode == 0, (command, r.stderr)
+    finally:
+        shutil.rmtree(project, ignore_errors=True)
+
+
+def test_f10_delegation_files_protected():
+    project, _ = _guarded_project()
+    try:
+        delegation = project / ".compass" / "delegations" / "DL-1.yml"
+        delegation.parent.mkdir(parents=True)
+        delegation.write_text("id: DL-1\n", encoding="utf-8")
+        for tool, tool_input in (("Edit", {"file_path": str(delegation)}),
+                                 ("Write", {"file_path": str(delegation.parent / "DL-2.yml")}),
+                                 ("Bash", {"command": "rm .compass/delegations/DL-1.yml"})):
+            r = _guard_run(project, tool, tool_input=tool_input)
+            assert r.returncode == 2, (tool, tool_input, r.stderr)
+            assert "[delegation-protected]" in r.stderr, r.stderr
+    finally:
+        shutil.rmtree(project, ignore_errors=True)
+
+
+def test_f8_delegated_call_needs_matching_agent_type():
+    project, _ = _guarded_project()
+    approve = "compass evidence approve --check dod-reviewed --delegated --as {}"
+    try:
+        refused = [
+            # The main agent: neither field.
+            (approve.format("compass:architect"), {}),
+            # Another plugin subagent.
+            (approve.format("compass:architect"),
+             {"agent_type": "compass:builder", "agent_id": "a1"}),
+            # An agent id with no agent type, or an empty one, is not the main agent.
+            (approve.format("main"), {"agent_id": "a2"}),
+            (approve.format("main"), {"agent_id": "a3", "agent_type": ""}),
+            # The name must match exactly, plugin prefix included.
+            (approve.format("architect"),
+             {"agent_type": "compass:architect", "agent_id": "a4"}),
+            # A delegated call must say who it is.
+            ("compass evidence approve --check dod-reviewed --delegated",
+             {"agent_type": "compass:architect", "agent_id": "a5"}),
+        ]
+        for command, who in refused:
+            r = _guard_run(project, "Bash", tool_input={"command": command}, **who)
+            assert r.returncode == 2, (command, who, r.stderr)
+            assert "[delegation-caller-mismatch]" in r.stderr, r.stderr
+        allowed = [
+            (approve.format("compass:architect"),
+             {"agent_type": "compass:architect", "agent_id": "a6"}),
+            (approve.format("main"), {}),
+            # A session started with `--agent X` reports X and no agent id.
+            (approve.format("compass:architect"), {"agent_type": "compass:architect"}),
+        ]
+        for command, who in allowed:
+            r = _guard_run(project, "Bash", tool_input={"command": command}, **who)
+            assert r.returncode == 0, (command, who, r.stderr)
+    finally:
+        shutil.rmtree(project, ignore_errors=True)

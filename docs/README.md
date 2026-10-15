@@ -67,7 +67,7 @@ same commit.
 
 | Area | Owning doc |
 |---|---|
-| `hooks/`, `compass-contract.md` | `docs/safety-contract.md` |
+| `hooks/`, `compass-contract.md`, `cli/compass_pkg/approval_guard.py` | `docs/safety-contract.md` |
 | `cli/compass_pkg/tip_scope.py` | `docs/safety-contract.md` |
 | `cli/compass_pkg/refusals.py` | `docs/refusal-codes.md` |
 | `cli/compass_pkg/project_settings.py` | `docs/configuration.md` |

@@ -26,7 +26,7 @@ def _request(root, *argv, **extra_env):
     return run(root, "evidence", "request", "--issue", SLUG, *argv, **extra_env)
 
 
-# --- TRC-B1: the agent asks for an approval with the CLI -----------------------------------
+# --- the agent asks for an approval with the CLI (`TRC-B1`) -------------------------------
 
 def test_b1_request_written_with_derived_facts(tmp_path):
     root = project(tmp_path)
@@ -48,7 +48,7 @@ def test_b1_request_written_with_derived_facts(tmp_path):
     assert manifest_of(root)["evidence"] == []
 
 
-# --- TRC-B3: a new request for the same subject replaces the pending one ---------------------
+# --- a new request for the same subject replaces the pending one (`TRC-B3`) ---------------
 
 def test_b3_same_subject_replaces(tmp_path):
     root = project(tmp_path)
@@ -65,7 +65,7 @@ def test_b3_same_subject_replaces(tmp_path):
     assert sorted(f.name for f in pending_dir(root).glob("*.yml")) == ["2.yml", "3.yml"]
 
 
-# --- TRC-B4: a request the approval would refuse is refused when asked ------------------------
+# --- a request the approval would refuse is refused when asked (`TRC-B4`) -----------------
 
 def test_b4_request_refuses_like_approve(tmp_path):
     root = project(tmp_path)
@@ -90,7 +90,7 @@ def test_b4_request_refuses_like_approve(tmp_path):
     assert not pending_dir(root).exists() or not list(pending_dir(root).glob("*.yml"))
 
 
-# --- TRC-D1: the request shows facts the CLI derived beside the agent's words --------------------
+# --- the request shows facts the CLI derived beside the agent's words (`TRC-D1`) ----------
 
 def test_d1_display_shows_derived_facts_and_agent_scope(tmp_path):
     from compass_pkg import approval_requests
@@ -108,7 +108,7 @@ def test_d1_display_shows_derived_facts_and_agent_scope(tmp_path):
     assert text.index("payments") < text.index("fix a README typo")
 
 
-# --- TRC-E3: a host whose adapter cannot show a typed command uses the terminal ------------------
+# --- a host whose adapter cannot show a typed command uses the terminal (`TRC-E3`) --------
 
 def test_e3_no_prompt_host_prints_terminal_command(tmp_path):
     root = project(tmp_path)

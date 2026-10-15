@@ -76,7 +76,7 @@ LOCK = ".approval.lock"
 class Answer:
     """One person's answer to one subject, however it was gathered."""
     form: str                  # one of FORMS
-    value: str | None          # check id, "G5", artifact kind, stage; None for decisions
+    value: str | None          # check id, guardrail (`G5`), document kind, stage, or None
     decision: str              # "approved" or "rejected"
     approver: str
     role: str

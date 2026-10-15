@@ -20,7 +20,7 @@ from test_approval_scoped_to_guardrail_5 import (  # noqa: E402
     DOD, NO_SUBJECT, _approve, _check_row, _manifest, _project)
 
 
-# --- TRC-E1: the terminal fallback keeps working ------------------------------------------
+# --- the terminal fallback keeps working (`TRC-E1`) ---------------------------------------
 
 def test_e1_terminal_record_holds_via(tmp_path):
     root = _project(tmp_path / "terminal", [DOD])
@@ -39,3 +39,26 @@ def test_e1_terminal_record_holds_via(tmp_path):
     assert "via" not in _manifest(earlier)["evidence"][-1]
     _, row = _check_row(earlier)
     assert row["status"] == "pass", row
+
+
+# --- the agent writes an approval into the manifest by hand (`TRC-D3`) --------------------
+
+def test_d3_hand_written_record_named(tmp_path):
+    from test_approval_scoped_to_guardrail_5 import G5, _run, SLUG
+    cases = [
+        ({}, "written without a Compass command"),
+        ({"via": "terminal"}, "via a terminal"),
+        ({"via": "prompt", "host": "claude-code", "session_id": "s1", "prompt_id": "p1",
+          "request": 1, "nonce": "n1"}, "via a typed prompt"),
+    ]
+    for number, (extra, words) in enumerate(cases):
+        record = dict(G5, **extra)
+        root = _project(tmp_path / f"case-{number}", [record])
+        _, row = _check_row(root)
+        assert row["status"] == "pass", row
+        assert words in row["detail"], (words, row)
+        code, out, err = _run(root, "issue", "receipt", "--issue", SLUG)
+        assert code == 0, out + err
+        lines = out.splitlines()
+        at = [i for i, one in enumerate(lines) if "EV-G5" in one and "human-approval" in one]
+        assert at and words == lines[at[0] + 1].strip(), (words, out)

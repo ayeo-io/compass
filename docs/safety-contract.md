@@ -75,6 +75,28 @@ A person's answer to a checkpoint hand-off (`compass evidence approve
 --checkpoint`) is a `checkpoint-approval` record, not a `human-approval`, so it
 never meets this approval.
 
+The pre-tool hook refuses the agent's tool calls on approval state
+(`cli/compass_pkg/approval_guard.py`):
+
+- Edit or Write on an issue's `approval-requests/` files, and a Bash command
+  that names that folder or `hooks/prompt-approval.sh`
+  (`approval-request-protected`);
+- Edit or Write under `.compass/delegations/`, and a Bash command that names
+  that folder (`delegation-protected`);
+- a delegated approval whose `--as` is not exactly the agent Claude Code
+  reports (`delegation-caller-mismatch`). The call is the main agent only
+  when the hook input has neither `agent_type` nor `agent_id`.
+
+The Bash checks match text, so they stop the agent's ordinary use and not a
+deliberate workaround. A process running as the same operating system user
+can still write these files, or `manifest.yml`.
+
+How each record was made shows, and is never judged. A record holds `via`:
+`terminal`, `prompt` or `delegation`. The detail of `human-approval-present`
+and the receipt say "via a terminal", "via a typed prompt", "via <agent>
+under <delegation>", or "written without a Compass command" for a record
+with no `via`, which still counts.
+
 ### 6. Compass CI checks process integrity
 
 `compass ci` checks routing, issue schemas, evidence, approvals, traceability

@@ -191,6 +191,32 @@ def mark_shown(task_dir, request):
     return request
 
 
+def stop_message(compass_dir, env):
+    """The Stop hook's message: each pending request of the session's issue
+    that has not been shown, in Compass's words, stamped as shown. Empty when
+    there is none or the issue cannot be named; the issue is `COMPASS_ISSUE`,
+    else the pointer, and is never guessed."""
+    work = os.path.join(compass_dir, "work")
+    slug = (env.get("COMPASS_ISSUE") or "").strip()
+    if not slug:
+        try:
+            with open(os.path.join(compass_dir, "current-task"), encoding="utf-8") as fh:
+                slug = fh.read().strip()
+        except OSError:
+            return ""
+    if not slug or "/" in slug or slug in (".", "..") or not os.path.isdir(
+            os.path.join(work, slug)):
+        return ""
+    task_dir = os.path.join(work, slug)
+    shown = []
+    with approvals.lock(task_dir):
+        for request in pending(task_dir):
+            if request.get("shown_at") or request.get("issue") != slug:
+                continue
+            shown.append(shown_text(mark_shown(task_dir, request)))
+    return "\n".join(shown)
+
+
 def document_digest(task_dir, task, kind):
     """The digest of a registered document's file as it is now, or None."""
     from compass_pkg import artifact_cmd

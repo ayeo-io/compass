@@ -42,6 +42,17 @@
           }
         ]
       }
+    ],
+    "UserPromptExpansion": [
+      {
+        "matcher": "compass:approve|compass:reject|compass:delegate|compass:revoke",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/prompt-approval.sh\""
+          }
+        ]
+      }
     ]
   }
 }

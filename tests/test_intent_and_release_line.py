@@ -406,6 +406,12 @@ THOROUGH_INTENT = ["Problem", "Desired outcome", "Success signals", "Constraints
                    "Intent-fidelity check (filled at the pre-plan gate)"]
 
 
+def _named(heading):
+    """A heading without a leading section number such as `6. `."""
+    import re
+    return re.sub(r"^\d+\.\s*", "", heading)
+
+
 def _headings(text):
     """The `## ` headings outside code fences and HTML comments."""
     from compass_pkg.template_lists import Template
@@ -645,7 +651,9 @@ def test_irl_15_verification_report_release_line_block(tmp_path):
     path = write_report(root)
     headings = _headings(path.read_text())
     at = headings.index("Release line")
-    assert headings[at - 1] == "6. Decisions taken for the user", headings
+    # The neighbour is named by its text, numbered or not (the named sections dropped
+    # the numbers).
+    assert _named(headings[at - 1]) == "Decisions taken for the user", headings
     assert headings[at + 1] == "Gate", headings
     assert _section(path.read_text(), "Release line").count(
         "<!-- compass:render release-line -->") == 1
@@ -665,8 +673,8 @@ def test_irl_15_verification_report_release_line_block(tmp_path):
     sections = yaml.safe_load((PRESET / "artifacts.yml").read_text())["artifacts"][
         "verification-report"]["sections"]["thorough"]
     at = sections.index("Release line")
-    assert sections[at - 1:at + 2] == ["6. Decisions taken for the user", "Release line",
-                                       "Gate"], sections
+    assert [_named(s) for s in sections[at - 1:at + 2]] == [
+        "Decisions taken for the user", "Release line", "Gate"], sections
     assert_no_gh_call(root)
 
 
@@ -1153,7 +1161,7 @@ def test_irl_21_key_and_verb_documented(tmp_path):
     assert "- `intent`, lightweight: Problem; Desired outcome; Success signals; Non-goals" \
         in catalogue
     report = next(line for line in catalogue if line.startswith("- `verification-report`,"))
-    assert "6. Decisions taken for the user; Release line; Gate" in report, report
+    assert "Decisions taken for the user; Release line; Gate" in report, report
 
     records = sorted(ADR.glob("ADR-065-*.md"))
     assert len(records) == 1, records
@@ -1238,7 +1246,7 @@ def test_irl_30_documented_quick_fix_flow_lands(tmp_path):
         finish = _documented("commands/quick-fix.md", "compass quick-fix finish")
         argv = _argv(finish, {"<commit message>": "Fix the greeting",
                               "<test command>": " ".join(test),
-                              "<one sentence for a user>": "Greetings now say hello."})
+                              "<line>": "Greetings now say hello."})
         if not given:
             # With --no-commit the line is the person's to give now or at the commit.
             at = argv.index("--release-note")

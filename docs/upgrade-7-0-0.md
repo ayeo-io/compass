@@ -363,3 +363,40 @@ A regular issue now opens with a short intent, and every issue that ships record
 | `release-line-missing`, `release-line-heading` | refusal codes | A landing of an issue that owes a line and has none, and a line that starts with `#` |
 | `release-line` | a rendered block kind | The release line in the verification report |
 | `compass release notes --since <ref>` | a verb | Print the release lines since a git reference |
+
+## Word limits and low-level designs
+
+The catalogue gives a document kind a word limit per depth, `compass check` refuses a technical design far over its limit once the plan stage is over, and the full approach gains one low-level design per work unit. The decision is `architecture/decisions/ADR-067-word-limits-are-catalogue-obligations-and-a-low-level-design-is-one-document-per-work-unit.md`. `docs/artifact-catalogue.md` owns the field, the word rule and the kind, and `governance/guardrails.md` the check.
+
+### What breaks
+
+- **A new blocking check, `design-within-word-ceiling`, can fail an issue after plan.** It fails a technical design whose word count is over its limit times 1.5: 6,000 words at thorough and 1,800 at lightweight. Registered low-level designs do not lift it; only a shorter design does. It sits in no gate, so no locked guardrail changes, and an issue waiver can make it advisory.
+- **`compass policy migrate` reports an unedited copy of the 5.x governance files as `incomparable`.** The 5.x files cannot hold `word_ceiling`, and the adapter never fills it, so the copied catalogue owes no word limit where the shipped default does. This is expected; the migrate itself is not blocked.
+
+### What changes
+
+- **A new catalogue field, `word_ceiling`**, a map from depth to a whole number of words. The shipped default sets `technical-design` to 4,000 (thorough) and 1,200 (lightweight), and `acceptance-criteria` to 5,000 and 1,500. A stored generation never gains it from the shipped default, and the classifier compares it by identity, so a layer that changes a shipped kind's limit needs a waiver.
+- **A word is a whitespace-separated token of the visible text.** Rendered block interiors, marker lines and HTML comments are left out; headings, prose, tables and code fences count.
+- **`compass issue lint` prints two new notes**, neither of which changes the exit code: a registered document over its limit, and on the full approach a work unit of the design's Work units table with no registered low-level design.
+- **A new kind, `low-level-design`**, with the file `low-level-design/<unit>.md`, where a unit is `U` and a whole number from 1. It holds a unit's signatures, contracts, file-level plan and tests. No approach owes it: the planner writes and registers one per unit at plan.
+- **`compass issue artifact set` and `compass issue artifact-path` take `--unit U<n>`.** Each unit is one registry entry. `artifact-path` with no `--unit` refuses when two or more units are registered, and names them.
+- **The design template's Work units table gains a Low-level design column**, which links each unit's file on the full approach.
+- **`scripts/measure-artifact-catalogue.py --design-size --json`** reports the median design size per approach on a copy of an archive. It refuses a root that holds `.git`.
+
+### What to do
+
+1. Nothing for issues already assessed. An issue adopts the word limits, the check and the kind at its next `compass approach evaluate --write`. An issue with no stored generation, a closed issue and an issue whose catalogue has no word limit are never judged.
+2. On the full approach, write `low-level-design/U<n>.md` for each unit at plan and register it with `compass issue artifact set low-level-design --unit U<n> --status draft --path <file>`.
+3. Keep a technical design at or under 6,000 words at thorough. Move each unit's signatures, contracts, file plan and tests to its low-level design.
+
+### New keys, flags and kinds
+
+| Name | Where | Meaning |
+|---|---|---|
+| `word_ceiling` | an artifact in the catalogue | The word limit per depth |
+| `<unit>` in `file` | an artifact in the catalogue | The kind has one document per work unit |
+| `low-level-design` | a kind in the catalogue | One unit's signatures, contracts, file plan and tests |
+| `unit` | an artifact entry in `manifest.yml` | The work unit of a low-level design |
+| `--unit U<n>` | a flag of `compass issue artifact set` and `compass issue artifact-path` | Name one unit |
+| `design-within-word-ceiling` | a check outside every gate | Refuse a design over 1.5 times its word limit after plan |
+| `--design-size` | a flag of `scripts/measure-artifact-catalogue.py` | Report the median design size per approach |

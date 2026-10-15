@@ -1,0 +1,10 @@
+schema_version: '3.0'
+issue: reg-d
+created: '2026-10-04'
+delivery_approach: regular
+generation: 1
+artifacts:
+- id: ART-TECHNICAL_DESIGN
+  kind: technical-design
+  status: approved
+  depth: lightweight

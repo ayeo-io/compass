@@ -854,6 +854,7 @@ EXPECTED_ON_SKIPPED = {
     "artifacts-approved": "not-applicable",
     "nfr-rows-resolved": "not-applicable",
     "contracts-declared": "not-applicable",
+    "design-within-word-ceiling": "not-applicable",
     "declared-tests-resolve": "pass",
 }
 

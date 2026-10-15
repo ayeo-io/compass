@@ -166,6 +166,11 @@ CHECK_GUIDANCE = {
         "do": "Declare a field table, contract table or erDiagram under Data and interfaces.",
         "fix": "In the technical design's Data and interfaces section, add a field table (Name, Type, Required, Meaning, Written by, Read by) or a contract table (Inputs, Outputs, Exit codes, Errors) with a row for each changed structure or command, or an erDiagram, for the trigger paths the detail names.",
     },
+    "design-within-word-ceiling": {
+        "why": "A technical design far over its word limit is too long for a reviewer to read before code is written, so the review it exists for does not happen.",
+        "do": "Shorten the design to the threshold the failure names.",
+        "fix": "Move each work unit's signatures, contracts, file plan and tests to low-level-design/<unit>.md, register each with `compass issue artifact set low-level-design --unit U<n> --path <file>`, and cut the design until its word count is at or under the threshold. Unit files alone do not clear the check: the design's own count decides.",
+    },
     "spike-conclusion-present": {
         "why": "A Spike without a recorded conclusion is just untracked work - the conclusion is what makes the exploration accountable.",
         "do": 'Record the close-out: discard, graduate-to-delivery, or defer.',

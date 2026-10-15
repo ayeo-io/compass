@@ -577,6 +577,93 @@ def _(root):
                       changed=_CONTRACT_CHANGE)
 
 
+# --- the design-size check (ADR-067) -------------------------------------------------
+#
+# The corpus holds the archive shapes the check must decline to judge: no `generation`
+# key, a closed issue, a design not registered with a path, a catalogue with no
+# word_ceiling, and an open issue before plan exit is due. In each the design is 7,000
+# words, far over the shipped threshold of 6,000, so a check that judged it would fail it.
+
+_SIZE_WAIVER = {"reason": "A corpus case stored before word limits existed.",
+                "approved_by": "jed72", "approved_on": "2026-10-15"}
+
+
+def _sized_design(words):
+    """A design of `words` whitespace tokens: a 2-token title, then filler, then a
+    Work units table of 16 tokens."""
+    table = "## Work units\n\n| Unit |\n|---|\n| U1 |\n| U2 |\n| U3 |\n"
+    head = "# Plan\n\n"
+    filler = words - 2 - 16
+    return head + " ".join("w%d" % n for n in range(filler)) + "\n\n" + table
+
+
+def _sized(root, words, *, generation=True, closed=False, registered=True, ceiling=True,
+           stage="implement"):
+    """A full issue at `stage` registering a technical design of `words` words at
+    thorough. `ceiling` false stores a catalogue whose design has no word_ceiling."""
+    from compass_pkg import effective
+    from compass_pkg.core import load_manifest
+
+    layer = {"schema": 1, "owner": "jed72"}
+    if not ceiling:
+        preset = Path(__file__).resolve().parent.parent / "governance" / "presets" / "default"
+        design = dict(yaml.safe_load((preset / "artifacts.yml").read_text(encoding="utf-8"))
+                      ["artifacts"]["technical-design"])
+        design.pop("word_ceiling")
+        layer["artifacts"] = {"technical-design": dict(design, replace=True,
+                                                       waiver=_SIZE_WAIVER)}
+    _write(root / "compass.yml", yaml.safe_dump(layer, sort_keys=False))
+    entry = {"id": "ART-TECHNICAL_DESIGN", "kind": "technical-design", "status": "draft",
+             "depth": "thorough"}
+    if registered:
+        entry["path"] = _SECTION_FILES["technical-design"]
+        _write(root / entry["path"], _sized_design(words))
+    _, task_dir = _issue(root, {
+        "schema_version": "3.0", "issue": SLUG, "created": "2026-10-15",
+        "assessment": {"risk": "cross-cutting", "familiarity": "brownfield-mapped",
+                       "size": "large", "goal": "delivery", "role": "engineer",
+                       "labels": []},
+        "delivery_approach": "full", "current_phase": stage, "evidence": [],
+        "scenarios": [_scenario(title="Export is fast")], "artifacts": [entry]})
+    if generation:
+        effective.commit_generation(str(task_dir), load_manifest(str(task_dir))[0])
+    if closed:
+        task, _ = load_manifest(str(task_dir))
+        _write(task_dir / "manifest.yml", yaml.safe_dump(dict(task, status="done"),
+                                                         sort_keys=False))
+    return load_manifest(str(task_dir))[0], task_dir
+
+
+#: The input each corpus case of the design-size check describes in its expected.yml.
+SIZE_CASES = {
+    "no-generation": ("an issue with no generation key, whose 7,000-word design names 3 "
+                      "units", {"generation": False}),
+    "closed": ("a closed issue on a generation that declares the check, with a 7,000-word "
+               "design", {"closed": True}),
+    "not-registered": ("an open issue on a generation that declares the check, with the "
+                       "design not registered with a path", {"registered": False}),
+    "no-ceiling": ("an open issue on a generation whose catalogue has no word_ceiling for "
+                   "the design, with a 7,000-word design", {"ceiling": False}),
+    "before-plan-exit": ("an open issue at the plan stage, with a 7,000-word design",
+                         {"stage": "plan"}),
+}
+
+for _name, (_, _options) in SIZE_CASES.items():
+    def _build(root, options=_options):
+        return _sized(root, 7000, **options)
+    CASES[("design-within-word-ceiling", _name)] = _build
+
+
+@case("design-within-word-ceiling", "broken")
+def _(root):
+    return _sized(root, 6001)
+
+
+@case("design-within-word-ceiling", "restored")
+def _(root):
+    return _sized(root, 6000)
+
+
 # --- checks that read git or run a project command ---------------------------------
 
 def _git(root: Path, *args: str) -> None:

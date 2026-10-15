@@ -348,9 +348,7 @@ def cmd_land_commit(args):
     # The landing refusals run before anything is staged or written, so a
     # refusal leaves every file as it was (ADR-026).
     landing = checkpoint_outcomes.landing_issue(args)
-    note = release_line.landing_text(args, landing, "compass ship-commit")
-    if landing is not None:
-        run_landing_refusals(release_line.project(landing[0], note), landing[1])
+    note = release_line.judge_landing(args, landing, "compass ship-commit", run_landing_refusals)
 
     # Stage any explicitly named paths.
     # A name is a name, not a pattern: `x[1].txt` must not stage `x1.txt`.

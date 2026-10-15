@@ -209,3 +209,12 @@ def landing_text(args, landing, verb):
             f"{verb}: --release-note needs the issue it belongs to, and no issue is named. "
             f"Name it with --issue <slug>. Nothing was staged or written.")
     return given(args, landing[1], verb, landing[0]) if landing is not None else None
+
+
+def judge_landing(args, landing, verb, run_refusals):
+    """`landing_text`, then the landing refusals on the manifest with the given line
+    applied, before anything is staged or written. Returns the line, or None."""
+    text = landing_text(args, landing, verb)
+    if landing is not None:
+        run_refusals(project(landing[0], text), landing[1])
+    return text

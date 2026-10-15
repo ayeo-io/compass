@@ -761,8 +761,11 @@ def _check_inbound_backfills(task_dir, this_slug):
 
 
 #: How a person records the sign-off of guardrail `G5`, for a failure detail.
-_G5_HOW = ("run `compass evidence approve --guardrail G5` with `--approver <name> --role "
-           "<role> --scope <text>` in a terminal")
+_G5_HOW = ("in Claude Code the person types `/compass:approve` for the request the agent "
+           "made with `compass evidence request --guardrail G5`; or an agent they delegated "
+           "g5 to runs it with `--delegated --as <agent>`; or the person runs `compass "
+           "evidence approve --guardrail G5` with `--approver <name> --role <role> --scope "
+           "<text>` in a terminal")
 
 
 def _earlier_rule_passes(approved):

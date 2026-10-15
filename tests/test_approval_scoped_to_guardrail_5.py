@@ -272,7 +272,7 @@ def test_agf_9_approve_guardrail_refusals(tmp_path, argv, terminal, cause):
     assert _manifest_path(root).read_bytes() == before
 
 
-# --- TRC-D7: the agent runs the terminal verb from its shell ------------------------------
+# --- the agent runs the terminal verb from its shell (`TRC-D7`) ---------------------------
 
 def test_d7_terminal_refusal_names_request(tmp_path):
     root = _project(tmp_path, [DOD])
@@ -282,6 +282,21 @@ def test_d7_terminal_refusal_names_request(tmp_path):
     assert code != 0, out + err
     assert "needs a terminal" in out + err, out + err
     assert "compass evidence request" in out + err, out + err
+    assert _manifest_path(root).read_bytes() == before
+
+
+# --- evidence add refuses a human-approval record (`TRC-G2`) ------------------------------
+
+def test_g2_evidence_add_refuses_human_approval(tmp_path):
+    root = _project(tmp_path, [DOD])
+    (root / ".compass" / "work" / SLUG / "evidence").mkdir(exist_ok=True)
+    (root / ".compass" / "work" / SLUG / "evidence" / "note.md").write_text("# note\n")
+    before = _manifest_path(root).read_bytes()
+    code, out, err = _run(root, "evidence", "add", "--issue", SLUG, "EV-NOTE",
+                          "--type", "human-approval", "--path", "evidence/note.md")
+    assert code != 0, out + err
+    for needle in ("/compass:approve", "delegat", "compass evidence approve"):
+        assert needle in out + err, (needle, out + err)
     assert _manifest_path(root).read_bytes() == before
 
 
@@ -567,12 +582,5 @@ def test_agf_18_every_writer_names_a_subject(tmp_path):
     record = manifest_of(task_dir)["evidence"][-1]
     assert record["type"] == "human-approval" and subject_named(record)
 
-    # `compass evidence add --type human-approval` writes a record with no
-    # decision, which no approval reader counts.
-    (root / ".compass" / "work" / SLUG / "evidence").mkdir(exist_ok=True)
-    (root / ".compass" / "work" / SLUG / "evidence" / "note.md").write_text("# note\n")
-    code, out, err = _run(root, "evidence", "add", "--issue", SLUG, "EV-NOTE",
-                          "--type", "human-approval", "--path", "evidence/note.md")
-    assert code == 0, out + err
-    added = [e for e in _manifest(root)["evidence"] if e["id"] == "EV-NOTE"]
-    assert added and "decision" not in added[0]
+    # `compass evidence add --type human-approval` is refused (`TRC-G2`), so it
+    # is not a writer.

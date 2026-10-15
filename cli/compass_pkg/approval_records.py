@@ -81,9 +81,11 @@ OTHER_GENERATION = "approval is for another generation"
 WITHDRAWN = "approval withdrawn"
 
 #: What a person does to record an approval, for a failure detail.
-HOW = ("run `compass evidence approve --check ID --approver NAME --role ROLE "
-       "--scope TEXT`; a record holds check, decision, approver, role, scope, "
-       "timestamp, issue and generation")
+HOW = ("the agent asks with `compass evidence request --check ID` and the person "
+       "types `/compass:approve` in Claude Code, or the person runs `compass evidence "
+       "approve --check ID --approver NAME --role ROLE --scope TEXT` at a terminal; a "
+       "record holds check, decision, approver, role, scope, timestamp, issue and "
+       "generation")
 
 
 def provenance(record):

@@ -136,6 +136,17 @@ def test_wcl_2_policy_lint_refuses_malformed(tmp_path):
     code, report, text = _lint(_scratch(tmp_path / "intent", layer))
     assert code == 0, text
     assert not [line for line in _words(report) if "word_ceiling" in line], text
+    # A project limit on a shipped kind at a depth the shipped sections do not
+    # list is an error, as on a project's own kind: no later layer narrowed them.
+    layer = {"schema": 1, "owner": "jed72", "artifacts": {"intent": {
+        "set": {"word_ceiling": {"lightweight": 500}},
+        "waiver": {"reason": "Our intents stay short.", "approved_by": "jed72",
+                   "approved_on": "2026-10-15"}}}}
+    code, report, text = _lint(_scratch(tmp_path / "intent-depth", layer))
+    assert code != 0, text
+    lines = [line for line in _words(report) if "word_ceiling" in line]
+    assert len(lines) == 1 and lines[0].startswith(
+        "error artifacts.intent.word_ceiling.lightweight"), _words(report)
     # A file holding both placeholders is refused, naming the kind.
     layer = {"schema": 1, "artifacts": {
         "charter-both": _charter(file="charter-both/<unit>-<n>.md")}}

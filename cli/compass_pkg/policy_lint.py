@@ -562,6 +562,13 @@ def _artifact_fields(state):
     a project that drops a depth keeps a configuration that passes."""
     out, config = [], state["config"]
     owners = _agents_and_roles(config)
+    order = [layer.name for layer in state["chain"]]
+
+    def later(first, second):
+        # Whether layer `second` comes after layer `first` in the chain.
+        return (first in order and second in order
+                and order.index(second) > order.index(first))
+
     for kind, entry in (config.get("artifacts") or {}).items():
         if not isinstance(entry, dict):
             continue
@@ -572,7 +579,7 @@ def _artifact_fields(state):
             depth = field_path.partition(".")[2]
             if (field_path.startswith("word_ceiling.")
                     and catalogue_check.word_ceiling_depth_unlisted(depth, entry.get("sections"))
-                    and layer != _layer_of(state, f"artifacts.{kind}.sections")):
+                    and later(layer, _layer_of(state, f"artifacts.{kind}.sections"))):
                 out.append(_finding("resolved", "M-FIELD-SHAPE", layer, path,
                                     message + "; a later layer narrowed the sections, so this "
                                     "limit never applies", "warning"))

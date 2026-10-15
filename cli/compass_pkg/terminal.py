@@ -671,6 +671,26 @@ def was_handled():
 
 
 def run_with_mode(args, fn):
+    """Run a verb, and exit quietly if the reader closes our output pipe.
+
+    A reader such as `head` closes the pipe once it has enough. That is not a
+    fault, so show no traceback. Point stdout at devnull so the flush at
+    interpreter exit cannot raise the error again, then return 128 + SIGPIPE
+    (141), the status a shell reports for a process that SIGPIPE ended. The
+    non-zero status tells a script under `set -o pipefail` that the output
+    was cut short.
+    """
+    try:
+        return _run_with_mode(args, fn)
+    except BrokenPipeError:
+        try:
+            os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+        except (OSError, ValueError):
+            pass
+        return 141
+
+
+def _run_with_mode(args, fn):
     """Run a verb, and honour the output flags even if the verb does not.
 
     Every verb accepts --quiet, --json and --evidence-out, because they are
@@ -722,3 +742,4 @@ def run_with_mode(args, fn):
     if out_path:
         print(_path_line("Written to: ", out_path))
     return code
+

@@ -511,6 +511,11 @@ def test_d2_repairs_change_only_retired_names():
     sub-bullets for each check, the trigger paths, the four declining
     conditions and the spike rule.
 
+    One more was re-baselined by `intent-and-release-line`:
+    `architecture/relations.md` (table_rows 29 -> 30) gained the row for
+    `compass release notes`, a reader of `.compass/work/` and git that writes
+    nothing.
+
     Three more were re-baselined by `spec-author-has-no-shell`:
     `agents/spec-author.md` (list_items 21 -> 27, one more `##` heading)
     gained the section listing the six compass steps it runs itself, and

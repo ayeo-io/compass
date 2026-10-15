@@ -516,12 +516,20 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
     # needs launch-readiness, a product owner an intent document. That is the same idea
     # from the role's side, so it joins the same set rather than living in a
     # second list nothing renders.
+    required_kinds = set()
     for req in required_artifacts:
         kind = req[:-3] if str(req).endswith(".md") else str(req)
         rule_artifacts.append((kind, "a role in play requires it"))
+        required_kinds.add(kind)
 
     for kind, why in rule_artifacts:
-        if any(a["kind"] == kind for a in artifacts):
+        held = next((a for a in artifacts if a["kind"] == kind), None)
+        if held is not None:
+            # A role asks for the whole document. The regular approach owes the
+            # intent at lightweight, and a product owner's intent stays thorough
+            # (ADR-065).
+            if kind in required_kinds and held["depth"] != DEPTH_THOROUGH:
+                held.update(depth=DEPTH_THOROUGH, reason=why)
             continue
         artifacts.append({
             "id": "ART-" + str(kind).upper().replace("-", "_"),

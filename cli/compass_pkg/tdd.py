@@ -975,7 +975,11 @@ def cmd_acceptance_start(args):
 
 
 def cmd_acceptance_record(args):
+    from compass_pkg import release_line
     task_dir = resolve_issue_dir(getattr(args, "task", None))
+    # A given release line is judged before the command runs, and stored only after
+    # it passes, so a refused line or a failed run writes nothing (ADR-065).
+    note = release_line.given(args, task_dir, "compass acceptance record")
     state = _acceptance_state(task_dir)
     if not state:
         raise CompassError(
@@ -1048,6 +1052,7 @@ def cmd_acceptance_record(args):
     _upsert_test_run_evidence(task_dir, scenario, rel_path,
                               record_id=payload.get("record_id"),
                               content_digest=payload.get("content_digest"))
+    release_line.store(task_dir, note, "compass acceptance record")
     marker = _acceptance_marker(task_dir)
     if os.path.exists(marker):
         os.remove(marker)

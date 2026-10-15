@@ -214,7 +214,8 @@ compass board refresh      rewrite that page in place, without opening a browser
 compass readiness          measure whether the repository is fit for unattended agent work (--json, --fix-list)
 compass next               which stage this issue reached, and what comes next
 compass follow-up resolve  settle an owed follow-up
-compass ship-commit        commit exactly the files the issue recorded
+compass ship-commit        commit exactly the files the issue recorded (--release-note: the issue's release line)
+compass release notes      the release lines of the issues completed since a git reference (--since)
 compass gate pass          mark a gate passed, validating the evidence type
 compass scenario add       add a scenario to the manifest
 compass scenario descope   record a failure mode no scenario covers, and why

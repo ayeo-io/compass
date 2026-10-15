@@ -88,8 +88,15 @@ def test_dcj_35_finish_writes_one_screen_verification_note(repo):
 # --- DCJ-36 -----------------------------------------------------------------
 
 def test_dcj_36_release_line_only_when_recorded(repo):
+    # A quick fix lands with a release line (ADR-065), so the note without one is
+    # reached by removing the key and rendering, not by a finish that gives none.
     _finish_ok(repo)
     note = _note(repo)
+    body = _manifest(repo, SLUG)
+    del body["release_note"]
+    qf._save_manifest(repo, SLUG, body)
+    code = _run(repo, "issue", "render", "--issue", SLUG)
+    assert code.returncode == 0, code.stdout + code.stderr
     assert "Release" not in note.read_text()
 
     body = _manifest(repo, SLUG)
@@ -157,7 +164,7 @@ def test_dcj_81_landing_commit_holds_done_page(repo):
     body = _manifest(repo, SLUG)
     body["release_note"] = "Says hello."
     qf._save_manifest(repo, SLUG, body)
-    result = _finish(repo, SLUG)
+    result = _finish(repo, SLUG, "--release-note", "Says hello.")
     assert result.returncode == 0, result.stdout + result.stderr
 
     landed = _manifest(repo, SLUG)["land_commit"]

@@ -4089,3 +4089,39 @@
 - `DSS-33` The receipt reads a rendered quick-fix record
 - `DSS-30` The two checks are declared, implemented and documented
 - `DSS-34` The mutation job has time for the two added checks
+
+### intent-and-release-line (completed 2026-10-15)
+
+Regular issues now owe a short intent with four sections: Problem, Desired outcome, Success signals and Non-goals. The router drafts it at assess, and compass analyze checks the scenarios against it. Every issue that ships now records a release line written for its users, given with --release-note on compass ship-commit, compass acceptance record or compass quick-fix finish. Once an issue is on a configuration that asks for a release line, a landing without one is refused. The new compass release notes --since command lists the release lines of every issue completed since a git tag.
+
+- `IRL-1` A new regular issue registers a lightweight intent
+- `IRL-2` template show prints the four lightweight intent headings
+- `IRL-3` The other approaches keep their intent rules
+- `IRL-4` An issue already assessed as regular owes no intent until it is reassessed
+- `IRL-5` The assess and define commands draft and confirm the intent
+- `IRL-6` compass analyze checks scenario intent ids against the lightweight intent
+- `IRL-7` A regular issue cannot land with its intent unwritten
+- `IRL-8` The archive keeps its check verdicts under the new intent rule
+- `IRL-9` ship-commit stores the release line it is given
+- `IRL-10` ship-commit refuses a shipping issue with no release line
+- `IRL-11` A spike, or a commit with no issue, lands with no release line
+- `IRL-12` acceptance record stores the release line and the latest write wins
+- `IRL-13` A release line the living spec would reject is refused
+- `IRL-14` quick-fix finish takes the release line and refuses without one
+- `IRL-15` The verification report shows the release line
+- `IRL-16` The living spec shows the release line under the issue heading
+- `IRL-17` release notes lists the issues completed since a tag
+- `IRL-18` release notes names an older issue with no release line
+- `IRL-19` release notes leaves out what did not ship and refuses an unknown tag
+- `IRL-20` The archive derives and renders unchanged under the release line
+- `IRL-21` The release_note key and the new verb are documented
+- `IRL-22` The release-line refusal judges only an issue that owes a line
+- `IRL-23` The shipped default marks the four shipping approaches as owing a release line
+- `IRL-24` A landed issue is neither refused nor rewritten by the release line
+- `IRL-25` release notes places a squash-merged issue by the committed living spec
+- `IRL-26` A release line that starts with a heading mark is refused
+- `IRL-27` The release line write keeps a change another command made
+- `IRL-28` Files shared with document-set-sections hold this issue's entries beside the existing ones
+- `IRL-29` release notes prints a name from the names key as its code
+- `IRL-30` The documented quick-fix commands land a fresh quick fix
+- `IRL-31` The merge with the named document sections keeps both features

@@ -33,6 +33,12 @@ contract, QA for coverage. Write it so all five roles can.
 - Read any upstream role artifacts for this issue: `intent.md` (the outcome to
   hit), `ui-contract.md` (designer scenarios that flow in here),
   `positioning.md` (claims that will need backing scenarios).
+- When the issue registers an intent, as a regular issue does, the router
+  drafted it at assess. Read `intent.md` and correct it before you write any
+  scenario: the problem, the outcomes and their `INT-n` ids, the success
+  signals and the non-goals. Each scenario names the `INT-n` id it serves, and
+  you present the intent with the scenarios at the define checkpoint where the
+  issue has one.
 
 ## Procedure
 

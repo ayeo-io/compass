@@ -126,6 +126,8 @@ def register(sub, issue_arg):
     fi.add_argument("--no-commit", action="store_true",
                     help="pass the gates and write the records, but leave the "
                          "commit to the user")
+    from compass_pkg.release_line import add_argument as add_release_note
+    add_release_note(fi)
     issue_arg(fi)
     fi.add_argument("command", nargs=argparse.REMAINDER,
                     help="the test command (after --); finish records the "
@@ -860,10 +862,14 @@ def cmd_quick_fix_finish(args):
             f"{why}. Nothing was changed.")
 
     # A finish that lands runs the landing refusals with the other
-    # preconditions, before it traces, tests or writes anything.
+    # preconditions, before it traces, tests or writes anything. They judge the
+    # manifest with a given release line applied; the line itself is judged here
+    # too, and written only once the gates pass (ADR-065).
+    from compass_pkg import release_line
+    note = release_line.given(args, task_dir, "compass quick-fix finish", task)
     if not getattr(args, "no_commit", False):
         from compass_pkg.manifest import run_landing_refusals
-        run_landing_refusals(task, task_dir)
+        run_landing_refusals(release_line.project(task, note), task_dir)
 
     with _at_project_root(project_root):
         all_paths = _git_changed_paths(project_root)
@@ -1012,6 +1018,9 @@ def cmd_quick_fix_finish(args):
                   evidence=[check_ev_id])
         _quiet_run(cmd_gate_pass, task=slug, gate_id=GATE_VERIFY_TRACEABILITY,
                   evidence=[check_ev_id])
+        if getattr(args, "no_commit", False):
+            # Nothing lands here, so the line is stored now; a landing writes it itself.
+            release_line.store(task_dir, note, "compass quick-fix finish")
 
         note_path, note_committed = _write_verification_note(task_dir, slug, scenario_ids)
 
@@ -1047,12 +1056,18 @@ def cmd_quick_fix_finish(args):
         # A commit is the user's to ask for. With --no-commit the gates and
         # records are complete and the change is left in the working tree.
         if getattr(args, "no_commit", False):
+            # The landing refuses an issue that owes a line and holds none, so the
+            # printed command asks for one unless it is stored (ADR-065).
+            task, _ = load_manifest(task_dir)
+            note_flag = (' --release-note "<release line>"'
+                         if release_line.landing_refusal(task, task_dir) else "")
             return say(
                 args,
                 f"compass quick-fix finish: '{slug}' checked, not committed.",
+                # The command has a line of its own, so the output layer never cuts it.
                 detail=detail + [
-                    f"commit   : when asked, `compass ship-commit --issue {slug} "
-                    f"-m \"<message>\"` after staging the traced files"],
+                    "commit   : when asked, stage the traced files, then run",
+                    f"`compass ship-commit --issue {slug} -m \"<message>\"{note_flag}`"],
                 decision=True, gates=list(THREE_GATES), evidence=evidence_ids,
                 committed=False,
             )
@@ -1061,7 +1076,7 @@ def cmd_quick_fix_finish(args):
                              | {f".compass/work/{slug}"} | ({note_path} if note_committed else set()))
         ship_out, ship_code = _quiet_run(cmd_land_commit, task=slug,
                                          message=args.message,
-                                         files=stage_paths)
+                                         files=stage_paths, release_note=note)
         if ship_code != 0:
             # The commit may stand, but the issue did not land: a hook
             # changed an issue file during the commit. The start record

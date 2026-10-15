@@ -62,13 +62,16 @@ def _inside(path, folder):
     return path == folder or path.startswith(folder + os.sep)
 
 
-def _env(root, path_first=None):
+def _env(root, path_first=None, path_only=None):
     """A small environment: no GIT_* variable from the caller, and git never looks
     above the fixture's own folder for a repository. `path_first` is a folder put at
-    the front of PATH, for a test that replaces git."""
+    the front of PATH, for a test that replaces git; `path_only` is the whole PATH, for
+    a test that hides git."""
     path = os.environ.get("PATH", "/usr/bin:/bin")
     if path_first:
         path = str(path_first) + os.pathsep + path
+    if path_only:
+        path = str(path_only)
     return {"PATH": path, "HOME": str(root),
             "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8", "NO_COLOR": "1", "COLUMNS": "200",
             "PYTHONDONTWRITEBYTECODE": "1", "PYTEST_DISABLE_PLUGIN_AUTOLOAD": "1",
@@ -82,16 +85,17 @@ def _check_root(root):
     assert not _inside(root, ROOT), f"{root} is inside the repository"
 
 
-def _migrate(root, *flags, path_first=None):
+def _migrate(root, *flags, path_first=None, path_only=None):
     """`compass issue migrate` on the project at `root`, which must be a fixture in
     the temporary folder. Returns (exit code, stdout + stderr)."""
     _check_root(root)
-    if path_first:
-        _check_root(path_first)
+    for folder in (path_first, path_only):
+        if folder:
+            _check_root(folder)
     run = subprocess.run(
         [sys.executable, str(CLI), "issue", "migrate", str(Path(root) / ".compass" / "work"),
-         *flags], cwd=root, env=_env(root, path_first), capture_output=True, text=True,
-        timeout=300)
+         *flags], cwd=root, env=_env(root, path_first, path_only), capture_output=True,
+        text=True, timeout=300)
     return run.returncode, run.stdout + run.stderr
 
 
@@ -591,6 +595,42 @@ def test_mas_15_assume_unchanged_edit_is_judged_by_its_bytes(tmp_path):
     out = _refused_and_kept(folder, manifest, edited)
     line = next((ln for ln in out.splitlines() if "cannot be restored" in ln), "")
     assert ".compass/work" in line and line.endswith(": alpha"), out
+
+
+def test_mas_16_git_missing_inside_a_repository_refuses(tmp_path):
+    # A `.git` folder on disk and no git on PATH: there is a repository, and git cannot
+    # be asked about it, so an uncommitted edit must not be lost to the apply.
+    folder = tmp_path / "project"
+    _two_issues(folder)
+    manifest = folder / ".compass/work/alpha/manifest.yml"
+    edited = manifest.read_text(encoding="utf-8") + "# edited, not committed\n"
+    manifest.write_text(edited, encoding="utf-8")
+    no_git = tmp_path / "no-git-on-path"
+    no_git.mkdir()
+    before = _tree(folder)
+    code, out = _migrate(folder, "--apply", path_only=no_git)
+    assert code == 2, out
+    assert _tree(folder) == before, out
+    assert manifest.read_text(encoding="utf-8") == edited, out
+    assert "git could not be asked" in out, out
+
+
+def test_mas_17_registered_file_outside_both_roots_is_not_judged(tmp_path):
+    # The migrate never edits a registered file outside .compass/work and docs/compass,
+    # so an untracked one there does not stop the apply.
+    folder = tmp_path / "project"
+    _plant(folder, "alpha", artifacts=[{"id": "ART-ROUND-1", "kind": "review", "round": 1,
+                                        "status": "draft", "path": "notes/review-1.md"}],
+           docs={"technical-design.md": "# Design of alpha\n"})
+    _git(folder, "init", "-q", "-b", "main")
+    _git(folder, "add", "-A")
+    _git(folder, "commit", "-q", "-m", "base")
+    notes = folder / "notes" / "review-1.md"
+    _write(notes, "# Review 1\n")
+    code, out = _migrate(folder, "--apply")
+    assert code == 0, out
+    assert "cannot be put back" not in out, out
+    assert notes.read_text(encoding="utf-8") == "# Review 1\n"
 
 
 # --- the documents -------------------------------------------------------------------

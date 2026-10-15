@@ -20,9 +20,9 @@ from dataclasses import dataclass, field
 class Judgement:
     """What the copy check found for one root (`.compass/work` or `docs/compass`).
 
-    `state` is "no-git" (git cannot be run, or the root is not in a work tree, so
-    there is no reset to promise), "judged", or "git-failed" (the root is in a
-    repository and git could not be asked, so nothing counts as restorable).
+    `state` is "no-git" (no `.git` in the root or a folder above it, so there is no
+    reset to promise), "judged", or "git-failed" (the root is in a repository and git
+    could not be run or asked, so nothing counts as restorable).
     `unrestorable` holds the issue folder names, sorted."""
     root: str
     state: str
@@ -61,8 +61,8 @@ def registered_files(work_root, docs_root, project):
     """The files the registries name outside the top level of an issue folder, as
     ({work folder: [path]}, {documents folder: [path]}). The migrate edits a registered
     document wherever it is (a verification report in `reports/`, a distribution map it
-    renames), so each is judged with the issue folder that holds it, or with the issue's
-    work folder when it is in neither root."""
+    renames), so each is judged with the issue folder that holds it. A registered file
+    outside both roots is not judged: it is not issue state the migrate rewrites."""
     from compass_pkg import migrate_kinds
     work, docs = {}, {}
     work_root, docs_root = os.path.realpath(work_root), os.path.realpath(docs_root)
@@ -78,8 +78,6 @@ def registered_files(work_root, docs_root, project):
                 if path.startswith(base + os.sep):
                     found.setdefault(os.path.relpath(path, base).split(os.sep)[0], []).append(path)
                     break
-            else:
-                work.setdefault(slug, []).append(path)
     return work, docs
 
 
@@ -109,9 +107,9 @@ def unrestorable_folders(root, label=None, extra=None):
     `git hash-object` makes of the file, and `git status` reports no staged change.
     The files judged are those `changeable_files` names, plus `extra` ({folder: [path]}),
     the registered files in subfolders. Files directly under `root` are not judged.
-    Outside a repository, or where git cannot be run at all, there is no reset to
-    promise and the root passes. Inside one, any git call that fails or times out
-    refuses every folder that holds a judged file. None of the calls writes to `.git`."""
+    Outside a repository there is no reset to promise and the root passes. Inside one,
+    any git call that fails, times out or cannot be run refuses every folder that holds
+    a judged file. None of the calls writes to `.git`."""
     label = label or root
     folders = {}
     if os.path.isdir(root):
@@ -135,7 +133,7 @@ def unrestorable_folders(root, label=None, extra=None):
     try:
         inside = git("rev-parse", "--is-inside-work-tree", "--show-toplevel", timeout=30)
     except OSError:
-        return Judgement(label, "no-git")          # git cannot be run at all
+        return failed          # a repository is on disk and git cannot be run to ask it
     except subprocess.SubprocessError:
         return failed
     lines = os.fsdecode(inside.stdout).splitlines()

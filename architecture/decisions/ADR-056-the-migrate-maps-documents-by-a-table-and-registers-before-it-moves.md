@@ -126,11 +126,12 @@ Decision 7 changes. Decision 8 and the second amendment are extended.
   only when, in every issue folder under `.compass/work/` and `docs/compass/`, the HEAD commit holds
   every file the migrate can change, with the bytes on disk. Those files are the manifest under its
   current or retired name, each file the rename map names, every `.md` file directly in the
-  folder, and every file the registry names, in a subfolder too. A file counts when the blob HEAD
-  holds for it equals the bytes on disk. A staged file that is not committed, or a committed file
-  changed since, does not count. Files directly under either folder are not judged. Outside a Git
-  repository (no `.git` in the folder or above it), or where Git is not installed, the check passes
-  as before; inside one, a Git call that fails refuses. One refusal names each
+  folder, and every file the registry names inside the issue folder, in a subfolder too. A file
+  counts when the blob HEAD holds for it equals the bytes on disk. A staged file that is not
+  committed, or a committed file changed since, does not count. Files directly under either folder,
+  and registered files outside both, are not judged. Outside a Git repository (no `.git` in the
+  folder or above it) the check passes as before; inside one, a Git call that fails, or a Git that
+  cannot be run, refuses. One refusal names each
   folder that fails, the count of its issue folders that cannot be restored and the first five in
   sorted order, with one `cp -R` line for each. This replaces "refuses when `.compass/work/` or
   `docs/compass/` is not tracked by Git".

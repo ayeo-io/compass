@@ -1710,6 +1710,14 @@ def test_dss_25_checks_decline_archive_shapes(tmp_path, monkeypatch):
                 found = _u3_corpus_mismatches(check, tmp_path / ("planted-" + case) / check)
                 assert found == [case], (check, found)
 
+
+def test_dss_34_mutation_job_timeout():
+    # The two section checks join the mutation proofs, and the job ran past 5 minutes
+    # in CI with them, so it needs a longer limit.
+    workflow = yaml.safe_load((ROOT / ".github" / "workflows" / "compass.yml")
+                              .read_text(encoding="utf-8"))
+    assert workflow["jobs"]["check-mutation"]["timeout-minutes"] >= 15
+
 # --- U4: coverage Kind column and dependencies block ---
 
 U4_SCENARIOS = ("A1", "A2", "B1", "B2", "C1")

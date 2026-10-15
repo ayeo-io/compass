@@ -155,7 +155,7 @@ classDiagram
      body IS the decision.
 
      On the full approach, put each unit's signatures in that unit's
-     low-level design (low-level-design/U<n>.md) and keep here only the
+     low-level design (low-level-design/<unit>.md) and keep here only the
      contract a reviewer argues with. -->
 
 ```{{language}}

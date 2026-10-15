@@ -1,6 +1,6 @@
 # The artifact catalogue
 
-The artifact catalogue describes each kind of document a process writes. A tool reads the description to print a skeleton, to list the kinds and to check a configuration. This page owns the catalogue's fields, the skeleton that `compass issue template show` prints, the rounds of a kind that repeats, the home of each document and the table of shipped kinds.
+The artifact catalogue describes each kind of document a process writes. A tool reads the description to print a skeleton, to list the kinds and to check a configuration. This page owns the catalogue's fields, the skeleton that `compass issue template show` prints, the word limits, the rounds of a kind that repeats, the documents written once per work unit, the home of each document and the table of shipped kinds.
 
 The catalogue is the `artifacts:` map in `governance/presets/default/artifacts.yml`. A project or a preset adds a kind in its own `artifacts:` map with the same fields.
 
@@ -8,7 +8,7 @@ The catalogue is the `artifacts:` map in `governance/presets/default/artifacts.y
 
 | Field | Needed | What it holds |
 |---|---|---|
-| `file` | yes | The document's filename, with no directory. `<n>` marks a kind that repeats, such as `review-<n>.md` |
+| `file` | yes | The document's filename, with no directory. `<n>` marks a kind that repeats, such as `review-<n>.md`. `<unit>` marks a kind written once per work unit, and only such a kind may hold one folder, such as `low-level-design/<unit>.md` |
 | `stage` | yes | The stage that owns the document: a stage id of the stages catalogue |
 | `owner` | yes | The role that writes it: an agent id in `agents/`, or a value of the `role` dimension |
 | `audience` | yes | One line saying who reads the document and what they decide from it |
@@ -17,8 +17,9 @@ The catalogue is the `artifacts:` map in `governance/presets/default/artifacts.y
 | `depends_on` | no | The kinds this one is checked against for freshness. Empty when absent |
 | `required_when` | no | A condition under which the document is owed. Today `subtasks: {min: N}` |
 | `every_approach` | no | When true, every approach owes the kind |
+| `word_ceiling` | no | The word limit per depth: a map from a depth the kind's `sections` lists to a whole number of at least 1. See Word limits below |
 
-`compass policy lint` reports a kind that lacks a needed field, or holds a malformed value, as an error. A list in `sections` can be empty only for a kind whose template holds no `## ` heading and exactly one rendered block. `verification-note` is the one shipped kind like that.
+`compass policy lint` reports a kind that lacks a needed field, or holds a malformed value, as an error. For `word_ceiling` that is a value that is not a map, a limit that is not a whole number of at least 1, and a depth the kind's `sections` does not list. For `file` it is a name that holds both `<n>` and `<unit>`, a placeholder written twice, and a folder in a name with no `<unit>`. A list in `sections` can be empty only for a kind whose template holds no `## ` heading and exactly one rendered block. `verification-note` is the one shipped kind like that.
 
 ## The skeleton
 
@@ -45,6 +46,21 @@ The role guide (`How each role reads the spec`) lives in `docs/roles-guide.md`; 
 
 `tests/test_artifact_catalogue_fields.py` compares each template's unmarked headings with `sections.thorough`, and checks that `sections.lightweight` is an ordered subset of it. A `{{...}}` token in a template heading and a `<...>` token in the catalogue count as the same placeholder.
 
+## Word limits
+
+A kind's `word_ceiling` sets the most words its document should hold at each depth. The shipped default sets two, and no other kind has one:
+
+| Kind | `thorough` | `lightweight` |
+|---|---|---|
+| `technical-design` | 4,000 | 1,200 |
+| `acceptance-criteria` | 5,000 | 1,500 |
+
+- One function counts the words: `count_words` in `cli/compass_pkg/word_ceiling.py`. A word is a whitespace-separated token of the visible text. The lines inside a rendered block, the block's marker lines and every HTML comment are left out. Headings, prose, tables and code fences count. A render that changes only block text therefore changes no count.
+- The limit applies at the depth the issue registers the document at. `word_ceiling.limit` reads it from the issue's own catalogue.
+- The field is an obligation field. An issue stored on a generation from before the field existed has no limit, because the reading of an earlier generation never fills the field from the shipped default. The classifier compares it by identity, as it compares `required_when`: a layer that changes a shipped kind's limit needs a waiver.
+- `compass issue lint` prints a note for each registered document over its limit, naming the document, its count, the limit and the depth. The note never changes the exit code. It is silent on an issue with no `generation` key, a closed issue, a document registered with no path and a catalogue with no limit at the registered depth.
+- The check `design-within-word-ceiling` refuses a technical design over 1.5 times its limit once plan exit is due. It sits in no gate: see `governance/guardrails.md`.
+
 ## Documents that repeat
 
 A kind repeats when its `file` holds `<n>`, as `review-<n>.md` does. The registry holds one entry per round, each with its own id, status and path, and a `round` read from the filename. Rounds count from 1 and carry no leading zero.
@@ -55,15 +71,29 @@ A kind repeats when its `file` holds `<n>`, as `review-<n>.md` does. The registr
 - `compass issue artifact-path review` prints the latest round. `--round N` prints one.
 - `compass check`, the issue page, the board panel and the receipt each list every round. A finding names the round and its entry id.
 
-A kind that no approach, rule or `every_approach` flag names is voluntary: nothing owes it, and a person registers it when it is written. Today `review`, `bug-report`, `architecture-notes`, `product-owner-review` and `positioning` are voluntary. `compass issue artifact set` accepts any kind the issue's catalogue declares, and `compass approach evaluate --write` never marks a voluntary entry `superseded`.
+## Documents per work unit
+
+A kind is written once per work unit when its `file` holds `<unit>`, as `low-level-design/<unit>.md` does. A unit is `U` followed by a whole number from 1 with no leading zero, such as `U3`. The units are the rows of the technical design's Work units table.
+
+- The registry holds one entry per unit, with a `unit` key and the id `ART-LOW_LEVEL_DESIGN-U<n>`.
+- `compass issue artifact set low-level-design --unit U<n> --status draft --path docs/compass/<created>-<slug>/low-level-design/U<n>.md` registers unit `U<n>`. Registering the same unit again updates its entry and adds no new one.
+- A unit such as `U0`, `U01` or `core` is refused, and so is a path that is not `low-level-design/<unit>.md` in the documents folder. The refusal names the pattern.
+- `compass issue artifact-path low-level-design --unit U3` prints the home of unit 3. With no `--unit` it refuses when two or more units are registered, and names them.
+- `compass check`, the issue page, the board panel and the receipt list one line per unit.
+- No approach names the kind, so `compass approach evaluate --write` registers no entry for it. The planner writes one file per unit at the plan stage and registers each one.
+- On a full issue, `compass issue lint` prints a note for each Work units row with no registered low-level design. The note never changes the exit code.
+
+The technical design keeps the approach, the decisions, the interfaces, the verification plan, the risks and the Work units table. The signatures, contracts, file plan and tests of each unit go in its low-level design.
+
+A kind that no approach, rule or `every_approach` flag names is voluntary: nothing owes it, and a person registers it when it is written. Today `review`, `bug-report`, `architecture-notes`, `product-owner-review`, `positioning` and `low-level-design` are voluntary. `compass issue artifact set` accepts any kind the issue's catalogue declares, and `compass approach evaluate --write` never marks a voluntary entry `superseded`.
 
 ## One home for every kind
 
-`compass issue artifact set --path` accepts only `docs/compass/<created>-<slug>/<file>`, where `<file>` is the kind's `file` (with the round in it for a kind that repeats). The refusal names the kind and its home. The rule reads the catalogue, so a kind a project adds has the same home.
+`compass issue artifact set --path` accepts only `docs/compass/<created>-<slug>/<file>`, where `<file>` is the kind's `file` (with the round in it for a kind that repeats, and the unit for a kind written per unit). The refusal names the kind and its home. The rule reads the catalogue, so a kind a project adds has the same home.
 
 ## Files that match no kind
 
-`compass issue lint` reports each top-level `.md` file in the documents folder whose name matches no kind's `file` and is not on the not-an-artifact list. A kind is one the issue's configuration declares or one the shipped default declares: an issue stored on an earlier generation keeps that generation's catalogue, and the migrate names files for the shipped kinds. The report is one line for each file, and it does not change the exit code.
+`compass issue lint` reports each top-level `.md` file in the documents folder whose name matches no kind's `file` and is not on the not-an-artifact list. A kind is one the issue's configuration declares or one the shipped default declares: an issue stored on an earlier generation keeps that generation's catalogue, and the migrate names files for the shipped kinds. The report is one line for each file, and it does not change the exit code. Only the top level is read, so the files in `low-level-design/` are never reported.
 
 The not-an-artifact list is `NOT_AN_ARTIFACT` in `cli/compass_pkg/stable_ids.py`. It holds the names and patterns that the process writes but that are no kind: `README.md`, `devlog.md`, review briefs, subtask assignments and briefs, a builder's hand-back (`result.md` and `result-subtask-<n>.md`), `architect-ruling.md`, `recommendation.md`, `released-verbs-v5.6.0.md`, `compare.md`, `report.md` and `*.v6.bak`. The migrate reads the same list.
 
@@ -99,6 +129,7 @@ The manifest's `justifications` key holds one line for each assessed dimension o
 
 - With no flag, it gives the figures before the 7.0.0 migrate: the kinds declared, the kinds in use that the catalogue does not declare, the regular issues with the record in the documents folder, the regular issues with a stub distribution map, and the distinct review filenames. `--catalogue` reads the kinds from another `artifacts.yml`, and `--list-kinds FILE` writes the undeclared names.
 - With `--after`, it gives the figures after the migrate: files in a documents folder that match no kind, regular issues that held a record before the migrate and lack it registered in the documents folder, other issues holding a record that is not registered there, regular issues with fewer than two subtasks that carry a map registered at lightweight depth, review filenames that are not `review-<n>.md`, and issues with two review files of one round. It names the issues behind each figure that is not zero. It also prints two counts that are not faults: regular issues that never had a record, for which the migrate writes none, and small maps the migrate adopted with no depth, which it keeps.
+- With `--design-size`, it gives, per approach, the count and the median byte size of the `technical-design.md` files, the regular limit of 3,865 bytes (1.5 times 2,577) and whether the regular median is within it. It adds an informational regular figure for the issues whose stored catalogue lists the Data and interfaces section; no limit applies to that figure. It refuses a `--root` that holds `.git`, so it never reads a working checkout.
 
 `--json` prints either set as JSON.
 
@@ -114,6 +145,7 @@ The table below is generated from the catalogue by `compass _derive-glossary`, w
 | `verification-note` | `verification-note.md` | `verify` | verifier | test-summary | The person who ships a quick fix reads it to see the scenario, its test and the gates on one screen. |
 | `acceptance-criteria` | `acceptance-criteria.md` | `define` | spec-author | requirements | Every role reads it to agree the behaviour that will be built, and the builder turns each scenario into a test. |
 | `technical-design` | `technical-design.md` | `plan` | planner | hld | A reviewer reads it to challenge the design before code is written. |
+| `low-level-design` | `low-level-design/<unit>.md` | `plan` | planner | lld | The builder of one work unit reads it for the signatures, contracts, files and tests that unit owns. |
 | `distribution-map` | `distribution-map.md` | `breakdown` | planner | work-breakdown | The orchestrator reads it to decide how many worktrees to start and which scenarios each one owns. |
 | `verification-report` | `verification-report.md` | `verify` | verifier | test-report | The person who ships reads it to decide whether the evidence supports landing the change. |
 | `intent` | `intent.md` | `assess` | product-owner | prd | The product owner and the spec author read it to agree which problem is solved and which outcome counts as success. |
@@ -138,6 +170,7 @@ Headings of each kind, in order:
 - `acceptance-criteria`, lightweight: Summary; Intent links; Scenario group <letter> - <name>; Non-functional requirements; Coverage ledger
 - `technical-design`, thorough: Approach; Design decisions (ADR-style); Data and interfaces; Verification plan; Risks and dependencies; Governance check; Work units; Gate
 - `technical-design`, lightweight: Approach; Design decisions (ADR-style); Data and interfaces; Verification plan; Risks and dependencies; Governance check; Gate
+- `low-level-design`, thorough: Signatures; Contracts; File-level plan; Tests this unit writes
 - `distribution-map`, thorough: Work units; Independence analysis; Scenario-group → subtask mapping; Proposed worktree orchestration; The cap that applies; Gate
 - `distribution-map`, lightweight: Work units; Independence analysis; Scenario-group → subtask mapping; Gate
 - `verification-report`, thorough: Scenario acceptance results; Test suite evidence; Review dimensions; Gate decision; Failure modes de-scoped at define; Decisions taken for the user; Gate

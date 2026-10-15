@@ -63,6 +63,9 @@ artifacts:
       - Non-functional requirements
       - Coverage ledger
     depends_on: []
+    word_ceiling:
+      thorough: 5000
+      lightweight: 1500
   technical-design:
     file: technical-design.md
     stage: plan
@@ -88,6 +91,24 @@ artifacts:
       - Work units
       - Gate
     depends_on: []
+    word_ceiling:
+      thorough: 4000
+      lightweight: 1200
+  low-level-design:
+    file: low-level-design/<unit>.md
+    stage: plan
+    owner: planner
+    audience: The builder of one work unit reads it for the signatures, contracts, files and tests
+      that unit owns.
+    stands_for: lld
+    sections:
+      thorough:
+      - Signatures
+      - Contracts
+      - File-level plan
+      - Tests this unit writes
+    depends_on:
+    - technical-design
   distribution-map:
     file: distribution-map.md
     stage: breakdown

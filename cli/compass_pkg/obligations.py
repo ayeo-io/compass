@@ -235,8 +235,8 @@ class Refused:
 
 @dataclass(frozen=True)
 class Obligations:
-    """What a configuration owes an assessment. The first sixteen fields are
-    the facts the classifier compares; `approach`, `rules_fired` and
+    """What a configuration owes an assessment. The fields before `approach`
+    are the facts the classifier compares; `approach`, `rules_fired` and
     `ignored_overrides` are outcomes, which are not obligations (a different
     approach that owes the same is equivalent)."""
     stage_mode: dict
@@ -256,6 +256,7 @@ class Obligations:
     artifact_checks: dict
     readiness: dict
     artifact_required_when: dict
+    artifact_word_ceiling: dict
     approach: str = ""
     rules_fired: tuple = ()
     ignored_overrides: dict = None   # the issue's stage modes a floor replaced
@@ -295,6 +296,7 @@ FACT_FOR_FIELD = {
     "artifacts.depends_on": "artifact_depends_on",
     "artifacts.checks": "artifact_checks",
     "artifacts.required_when": "artifact_required_when",
+    "artifacts.word_ceiling": "artifact_word_ceiling",
     "readiness.impl": "readiness",
     "readiness.params": "readiness",
     "readiness.required_for_autonomous": "readiness",
@@ -583,6 +585,8 @@ def obligations(config, assessment, autonomy_values=AUTONOMY, capabilities=(),
                            for kind, body in held.items()}
     artifact_required_when = {kind: body["required_when"] for kind, body in held.items()
                               if body.get("required_when")}
+    artifact_word_ceiling = {kind: body["word_ceiling"] for kind, body in held.items()
+                             if body.get("word_ceiling")}
     listed.update(*artifact_checks.values())
     renames = _stage_key_renames()
     ceilings = {"subtask_ceiling": result["subtask_ceiling"],
@@ -609,7 +613,8 @@ def obligations(config, assessment, autonomy_values=AUTONOMY, capabilities=(),
         checks={c: _check_facts(checks[c], reading, orders) for c in sorted(listed)},
         artifact_depends_on=artifact_depends_on, artifact_checks=artifact_checks,
         readiness=_readiness_facts(config.get("readiness")),
-        artifact_required_when=artifact_required_when, approach=result["delivery_approach"],
+        artifact_required_when=artifact_required_when,
+        artifact_word_ceiling=artifact_word_ceiling, approach=result["delivery_approach"],
         rules_fired=tuple(f["id"] for f in result["policy_rules_fired"]),
         ignored_overrides=dict((result.get("issue_overrides") or {}).get("ignored")
                                or {}),

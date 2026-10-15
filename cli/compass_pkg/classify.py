@@ -57,7 +57,11 @@ JSON_SCHEMA_VERSION = 1
 # Version 5: a declared equivalent parameter choice compares as equal, and a
 # readiness parameter one side leaves out is incomparable, so swapping the
 # timed test command between its two choices is no longer incomparable.
-CLASSIFIER_VERSION = 5
+#
+# Version 6: an owed artifact's `word_ceiling` is an obligation fact compared by
+# identity, as `required_when` is, for a kind both sides owe, so a change to a
+# document's word limit is `incomparable`, which version 5 read as `equivalent`.
+CLASSIFIER_VERSION = 6
 
 # Keys whose value is a condition on the assessment.
 WHEN_KEYS = ("when", "blocking_when", "applies_when")
@@ -512,6 +516,7 @@ for _fact, _fields in {
         "artifact_depends_on": ("artifacts.depends_on",),
         "artifact_checks": ("artifacts.checks",),
         "artifact_required_when": ("artifacts.required_when",),
+        "artifact_word_ceiling": ("artifacts.word_ceiling",),
         "readiness": ("readiness.impl", "readiness.params",
                       "readiness.required_for_autonomous")}.items():
     for _name in _fields:
@@ -583,6 +588,12 @@ def _changes(parent, child, ctx):
     _keyed("artifacts.checks", p["artifact_checks"], c["artifact_checks"], ctx, out)
     _keyed("artifacts.required_when", p["artifact_required_when"],
            c["artifact_required_when"], ctx, out)
+    # A word limit is compared only for a kind both sides owe. A kind one side
+    # stops owing is already a change of `approaches.artifacts`, and its limit
+    # going with it would make a plain loosening incomparable.
+    _keyed("artifacts.word_ceiling", p["artifact_word_ceiling"],
+           c["artifact_word_ceiling"], ctx, out,
+           keys=sorted(set(p["artifacts_owed"]) & set(c["artifacts_owed"])))
     return out
 
 

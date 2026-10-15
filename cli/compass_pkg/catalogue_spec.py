@@ -146,6 +146,7 @@ FIELDS = {
         "stands_for": _f("string", "scalar", "descriptive", required=True),
         "sections": _f("map", "map", "descriptive", required=True),
         "required_when": _f("map", "whole", "identity"),
+        "word_ceiling": _f("map", "whole", "identity"),
         "every_approach": _f("boolean", "scalar", "descriptive"),
     },
     "readiness": {
@@ -189,6 +190,7 @@ OBLIGATION_FIELDS = {
     "approaches.ships": "identity",              # a lock's footprint (ADR-039)
     "artifacts.depends_on": "obligation-set",    # what an owed artifact builds on
     "artifacts.required_when": "identity",       # when an owed artifact is owed
+    "artifacts.word_ceiling": "identity",        # the word limit a check judges
     "artifacts.checks": "obligation-set",        # the checks an owed artifact carries
     "stages.mode": "ordered",                    # an issue's own choice
     "stages.order": "identity",                  # a lock's footprint
@@ -469,7 +471,9 @@ FIELD_DESCRIPTIONS = {
     },
     "artifacts": {
         "file": "The file name of the artifact in the issue's folder, for example "
-                "`acceptance-criteria.md`.",
+                "`acceptance-criteria.md`. `<n>` stands for a round, as in "
+                "`review-<n>.md`. `<unit>` stands for a work unit and allows one folder, "
+                "as in `low-level-design/<unit>.md`.",
         "depends_on": "The ids of the artifacts this one builds on. A cycle, a bookkeeping "
                       "artifact and a directory are each an error.",
         "checks": "The ids of the checks the artifact carries.",
@@ -490,6 +494,11 @@ FIELD_DESCRIPTIONS = {
                     "that is one rendered block.",
         "required_when": "A condition that must hold for the document to be owed, for example "
                          "`{subtasks: {min: 2}}`. The document is owed whenever it is absent.",
+        "word_ceiling": "The most words the document should hold at each depth it can be "
+                        "written at, for example `{thorough: 4000, lightweight: 1200}`. Each "
+                        "value is a whole number of at least 1. Rendered blocks and HTML "
+                        "comments are not counted. A generation stored before the field "
+                        "existed has no limit.",
         "every_approach": "Whether every delivery approach owes the document, at the depth of "
                           "its own stage, unless the approach lists it already.",
     },

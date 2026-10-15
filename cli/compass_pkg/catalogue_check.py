@@ -295,6 +295,7 @@ def at_least(dimension, threshold, value, orders=None):
 # --- the descriptive fields of an artifact entry ----------------------------------
 
 _FILE_ROUND = "<n>"
+_FILE_UNIT = "<unit>"
 _DEPTHS = ", ".join(spec.ARTIFACT_DEPTHS)
 
 
@@ -303,6 +304,60 @@ def is_single_block(template_text):
     whose template is such a document may list no headings at a depth."""
     return (not re.search(r"^## ", template_text, re.MULTILINE)
             and template_text.count("<!-- compass:render ") == 1)
+
+
+def _file_problems(file):
+    """What is wrong with a kind's `file`. It is a bare file name, except that
+    a per-unit kind (`<unit>`) may hold one folder, as
+    `low-level-design/<unit>.md` does. A kind repeats by round (`<n>`) or by
+    work unit (`<unit>`), never both, and holds each placeholder at most once."""
+    if _FILE_ROUND in file and _FILE_UNIT in file:
+        return [f"'{file}' holds both {_FILE_ROUND} and {_FILE_UNIT}; a kind repeats by "
+                f"round or by work unit, not both"]
+    if _FILE_UNIT in file:
+        parts = file.split("/")
+        if (len(parts) > 2 or "\\" in file or ".." in file
+                or not all(part.strip() for part in parts)):
+            return [f"'{file}' is not a file name with at most one folder; it holds two "
+                    f"folders, a backslash, '..' or an empty part"]
+    else:
+        # A directory artifact (`evidence/`) ends in one slash and is still a name.
+        name = file[:-1] if file.endswith("/") else file
+        if "/" in name or "\\" in name or ".." in name or not name.strip():
+            return [f"'{file}' is not a bare file name; it holds a path separator, '..' "
+                    f"or nothing"]
+    for mark in (_FILE_ROUND, _FILE_UNIT):
+        if file.count(mark) > 1:
+            return [f"'{file}' holds {mark} more than once"]
+    return []
+
+
+def _word_ceiling_problems(ceiling, sections, present):
+    """What is wrong with a kind's `word_ceiling`: a map from a depth the kind's
+    `sections` lists to a whole number of at least 1. A problem with one depth
+    is reported at `word_ceiling.<depth>`, so a reader can tell which layer
+    wrote the limit and which wrote the sections."""
+    if not present:
+        return []
+    if not isinstance(ceiling, dict):
+        return [("word_ceiling", f"expected a map from depth to a whole number of words, "
+                                 f"found {ceiling!r}")]
+    problems = []
+    for depth, value in ceiling.items():
+        if word_ceiling_depth_unlisted(depth, sections):
+            listed = ", ".join(sorted(sections)) or "none"
+            problems.append((f"word_ceiling.{depth}", f"'{depth}' is not a depth the kind's "
+                                                      f"sections list ({listed})"))
+        elif not isinstance(value, int) or isinstance(value, bool) or value < 1:
+            problems.append((f"word_ceiling.{depth}", f"'{depth}' takes a whole number of at "
+                                                      f"least 1, found {value!r}"))
+    return problems
+
+
+def word_ceiling_depth_unlisted(depth, sections):
+    """Whether a `word_ceiling` key names a depth the kind's `sections` does not
+    list. With no `sections` map to read, nothing is judged."""
+    return isinstance(sections, dict) and depth not in sections
 
 
 def artifact_field_problems(entry, template_text=None):
@@ -319,14 +374,10 @@ def artifact_field_problems(entry, template_text=None):
             problems.append((field, f"is empty; write the {field.replace('_', ' ')}"))
     file = entry.get("file")
     if isinstance(file, str):
-        # A directory artifact (`evidence/`) ends in one slash and is still a name.
-        name = file[:-1] if file.endswith("/") else file
-        if "/" in name or "\\" in name or ".." in name or not name.strip():
-            problems.append(("file", f"'{file}' is not a bare file name; it holds a path "
-                                     f"separator, '..' or nothing"))
-        elif file.count(_FILE_ROUND) > 1:
-            problems.append(("file", f"'{file}' holds {_FILE_ROUND} more than once"))
+        problems += [("file", message) for message in _file_problems(file)]
     sections = entry.get("sections")
+    problems += _word_ceiling_problems(entry.get("word_ceiling", None), sections,
+                                       "word_ceiling" in entry)
     if isinstance(sections, dict):
         if not sections:
             problems.append(("sections", "is empty; list the headings for at least one depth "

@@ -52,6 +52,12 @@ place to restate them. Length scales with the delivery approach the same way sce
 does: quick fix one to two sentences per field, the regular approach ordinary
 paragraphs, the full approach up to 200 words per field where the work warrants it.
 
+## Settle edge cases before scenarios
+
+For an id or header field, agree the missing, empty and whitespace cases with
+the person before you write a scenario. Do the same for any message the request
+leaves out. Reproduce a reported bug on current code, not an old build.
+
 ## Failure modes the brief implies
 
 After the happy path and the edges, ask which

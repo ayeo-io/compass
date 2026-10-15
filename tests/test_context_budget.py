@@ -43,14 +43,38 @@ RULES = {
     "approvals": "**Approvals.**",
 }
 
+# The four rules for sign-off, staging, lint fixes and edge cases (issue
+# `contract-handoff-and-staging-rules`). Compared with whitespace collapsed,
+# because the contract wraps its lines inside a phrase.
+NEW_RULES = {
+    "signoff heading": "**A person's approval is theirs to give.**",
+    "signoff no bang": "no `!` prefix",
+    "staging heading": "**Commit only what you mean to.**",
+    "staging by path": "Stage each file by its path",
+    "staging no compass": "never `.compass/`",
+    "lint fix": "A lint fix never weakens an assertion",
+    "edge cases heading": "**Settle edge cases before scenarios.**",
+}
+
 # Raised from 2,250 by the one line that asks the agent to record friction it
 # observes (issue `agent-recorded-friction`, which allows 40 resident words):
 # the agent meets that friction mid-run, so the line must be resident.
+<<<<<<< HEAD
 # Raised again, to 2,700, by the approval rule (issue `approve-inside-claude-code`,
 # ADR-068 and ADR-069): the agent must know, before it acts, that it records an
 # approval only under a delegation and otherwise asks, so the rule must be
 # resident. Decided by compass:architect under jed72's overnight delegation.
 CONTRACT_BUDGET = 2700
+=======
+#
+# Raised from 2,400 to 2,600 by the sign-off, staging, lint-fix and
+# edge-case rules (issue `contract-handoff-and-staging-rules`), net of the
+# passages tightened to make room: 2,599 characters measured, rounded up to
+# the next 50. These rules apply at moments a session cannot predict, in any
+# stage including a quick fix, which reads only its own command and skill, so
+# the rules must be resident in the contract.
+CONTRACT_BUDGET = 2600
+>>>>>>> 3e97cc7f (Add sign-off, staging, lint and edge-case rules to the contract)
 
 # Set from the rewrite of 2026-10-04 (2,581, 1,476, 1,436 and 1,216
 # characters at 80 columns), with a little room; before it, 2,805, 1,643,
@@ -86,7 +110,12 @@ OPTIONS = {
 }
 
 
+RULES.update(NEW_RULES)
+
+
 def missing_rules(text):
+    # Whitespace collapsed, because the contract wraps lines inside a phrase.
+    text = " ".join(text.split())
     return [name for name, phrase in RULES.items() if phrase not in text]
 
 
@@ -98,8 +127,9 @@ def test_tc_1_the_contract_keeps_every_rule_within_its_budget():
 
 def test_tc_1_deleting_any_rule_is_caught():
     text = CONTRACT.read_text(encoding="utf-8")
+    flat = " ".join(text.split())
     for name, phrase in RULES.items():
-        assert name in missing_rules(text.replace(phrase, "")), name
+        assert name in missing_rules(flat.replace(phrase, "")), name
 
 
 def _help(verb):
@@ -137,3 +167,106 @@ def test_tc_3_the_settled_decisions_listing_stays_within_its_budget(tmp_path):
     assert len("\n".join(lines)) <= decisions.LISTING_BUDGET, lines
     for day in range(5, 10):
         assert any(line.startswith(f"rule-{day}:") for line in lines), lines
+
+
+# --- CHS: the sign-off, staging, lint and edge-case rules -----------------------
+
+def _flat(text):
+    return " ".join(text.split())
+
+
+def _contract_flat():
+    return _flat(CONTRACT.read_text(encoding="utf-8"))
+
+
+def test_contract_states_signoff_handoff():
+    text = _contract_flat()
+    assert "**A person's approval is theirs to give.**" in text
+    assert "Never record it for them" in text
+    assert "no `!` prefix" in text
+    assert "Print the exact command for their own terminal" in text
+    assert "no `!` prefix, and stop." in text
+
+
+def test_contract_states_staging_rule():
+    text = _contract_flat()
+    assert "**Commit only what you mean to.**" in text
+    assert "Stage each file by its path" in text
+    assert "never `.compass/`" in text
+    assert "check the staged list and the commit's authors" in text
+    assert ("If something is staged by mistake, say so and stop; "
+            "do not retry a refused unstage.") in text
+
+
+def test_contract_states_lint_fix_rule():
+    text = _contract_flat()
+    assert "A lint fix never weakens an assertion" in text
+    assert "re-run the affected tests" in text
+
+
+def test_contract_states_id_and_header_rule():
+    """The contract keeps the heading and points at the skill that holds the
+    rule (a pointer, because the full text put the resident words over the
+    900-word ceiling)."""
+    text = _contract_flat()
+    assert "**Settle edge cases before scenarios.**" in text
+    assert "skills/bdd-specification/SKILL.md" in text
+    skill = _flat((ROOT / "skills" / "bdd-specification" / "SKILL.md")
+                  .read_text(encoding="utf-8"))
+    assert "id or header field" in skill
+    assert "missing, empty and whitespace cases" in skill
+    assert "Reproduce a reported bug on current code" in skill
+
+
+def test_each_rule_phrase_pin_can_fail():
+    """Each rule has a pin in RULES, and removing the phrase is reported by
+    name."""
+    text = CONTRACT.read_text(encoding="utf-8")
+    assert missing_rules(text) == []
+    for name in NEW_RULES:
+        assert name in RULES, name
+    for name in NEW_RULES:
+        assert name not in missing_rules(text), name
+        broken = _flat(text).replace(NEW_RULES[name], "")
+        assert name in missing_rules(broken), name
+
+
+def _budget_comment():
+    source = Path(__file__).read_text(encoding="utf-8")
+    start = source.index("CONTRACT_BUDGET = ")
+    return source[:start].rsplit("\n\n", 1)[-1]
+
+
+def test_contract_budget_is_measured_length_rounded_up():
+    length = len(CONTRACT.read_text(encoding="utf-8"))
+    assert length <= CONTRACT_BUDGET, length
+    assert CONTRACT_BUDGET == -(-length // 50) * 50, (length, CONTRACT_BUDGET)
+
+
+def test_contract_budget_comment_states_reason():
+    comment = " ".join(_budget_comment().replace("#", " ").split())
+    assert "cannot predict" in comment
+    assert "any stage" in comment and "quick fix" in comment
+    assert "resident" in comment
+
+
+def assert_within_budget(text):
+    assert len(text) <= CONTRACT_BUDGET, f"{len(text)} > {CONTRACT_BUDGET}"
+
+
+def test_contract_budget_can_fail():
+    text = CONTRACT.read_text(encoding="utf-8")
+    longer = text + "x" * (CONTRACT_BUDGET - len(text) + 1)
+    with pytest.raises(AssertionError) as caught:
+        assert_within_budget(longer)
+    assert f"{CONTRACT_BUDGET + 1} > {CONTRACT_BUDGET}" in str(caught.value)
+
+
+def test_rule_four_pointer_keeps_heading():
+    text = _contract_flat()
+    assert "**Settle edge cases before scenarios.**" in text
+    skill = ROOT / "skills" / "bdd-specification" / "SKILL.md"
+    if "skills/bdd-specification/SKILL.md" in text:
+        body = skill.read_text(encoding="utf-8")
+        assert "Reproduce a reported bug on current code" in _flat(body)
+        assert len(body.splitlines()) <= 200

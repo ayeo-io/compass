@@ -41,10 +41,11 @@ tells the agent to ask with `compass evidence request` instead. The verb also
 refuses the approver `agent`. Nothing else guards the record: anyone who can
 write `manifest.yml` can add one by hand.
 """
-# DEPENDENCY: standard library (sys); compass_pkg.approval_records, approvals,
+# DEPENDENCY: standard library (os, sys); compass_pkg.approval_records, approvals,
 # core, terminal.
 from __future__ import annotations
 
+import os
 import sys
 
 from compass_pkg import approval_records, approvals
@@ -86,11 +87,21 @@ def answer_of(args, provenance):
 
 
 def cmd_evidence_approve(args):
+    if getattr(args, "delegated", False):
+        return _delegated(args)
+    if getattr(args, "as_agent", None):
+        raise CompassError("compass evidence approve: --as names the agent of a delegated "
+                           "approval, so it needs --delegated.")
     if not _terminal_attached():
         raise CompassError("compass evidence approve: this needs a terminal on standard "
                            "input. An approval is a person's act, so run the command "
                            "yourself in a terminal; an agent session cannot record one. "
                            "An agent asks for an approval with `compass evidence request`.")
+    missing = [flag for flag, value in (("--approver", args.approver), ("--role", args.role))
+               if value is None]
+    if missing:
+        raise CompassError(f"compass evidence approve: the following arguments are required: "
+                           f"{', '.join(missing)}.")
     answer = approvals.checked(answer_of(args, TERMINAL))
     task_dir = resolve_issue_dir(args.task)
     with approvals.lock(task_dir):
@@ -98,6 +109,41 @@ def cmd_evidence_approve(args):
     if done.note:
         print(done.note)
     return say(args, done.outcome, detail=done.detail, **done.data)
+
+
+def _delegated(args):
+    """An agent's approval under a delegation a person typed (ADR-069). It needs
+    no terminal: the delegation is the person's decision. The record names the
+    person as `approver`, the agent and the delegation. The pre-tool hook has
+    already checked that `--as` is the agent Claude Code reports."""
+    from compass_pkg import delegations
+    agent = " ".join(str(args.as_agent or "").split())
+    if not agent:
+        raise CompassError("compass evidence approve: --delegated needs --as <agent>, the "
+                           "agent's full name, such as compass:architect.")
+    if args.approver or args.role:
+        raise CompassError("compass evidence approve: a delegated approval names the person "
+                           "who delegated; give no --approver or --role.")
+    if args.decision != approval_records.APPROVED:
+        raise CompassError("compass evidence approve: a delegation never covers a rejection. "
+                           "Tell the person what you found, and stop.")
+    draft = answer_of(args, {})
+    task_dir = resolve_issue_dir(args.task)
+    with approvals.lock(task_dir):
+        delegation = delegations.authorise(task_dir, draft.form, draft.value, agent)
+        provenance = {"via": "delegation", "approved_by_agent": agent,
+                      "delegation": delegation["id"],
+                      "session_id": os.environ.get("CLAUDE_CODE_SESSION_ID", "")}
+        answer = approvals.checked(approvals.Answer(
+            draft.form, draft.value, approval_records.APPROVED,
+            delegation["delegated_by"], delegation.get("role") or "owner", draft.scope,
+            provenance))
+        done = approvals.record(task_dir, answer)
+        delegations.record_use(task_dir, delegation, agent, done, done.outcome)
+    if done.note:
+        print(done.note)
+    return say(args, done.outcome + f" Under {delegation['id']}, by {agent}.",
+               detail=done.detail, **done.data)
 
 
 def register(evidence_subs):
@@ -118,8 +164,13 @@ def register(evidence_subs):
                       help="answer the hand-off of this checkpoint stage (assess, define, "
                            "refine or plan)")
     issue_arg(p)
-    p.add_argument("--approver", required=True, help="the approver's person id")
-    p.add_argument("--role", required=True, help="the role the approver acts in")
+    p.add_argument("--approver", help="the approver's person id; required unless --delegated")
+    p.add_argument("--role", help="the role the approver acts in; required unless --delegated")
+    p.add_argument("--delegated", action="store_true",
+                   help="record as the agent a person delegated to (/compass:delegate); "
+                        "needs --as and no terminal")
+    p.add_argument("--as", dest="as_agent", metavar="AGENT",
+                   help="with --delegated: the agent's full name, as Claude Code reports it")
     p.add_argument("--scope", default="",
                    help="what the approval covers; required with --check and --guardrail")
     p.add_argument("--decision", default="approved", choices=DECISIONS,

@@ -43,3 +43,58 @@ def test_g3_fix_text_names_approval_path(tmp_path):
         lowered = text.lower()
         assert not ("manifest.yml" in lowered
                     and any(w in lowered for w in ("add ", "edit ", "append "))), text
+
+
+# --- a project with no configuration records the sign-off (`TRC-G1`) -------------------------
+
+def test_g1_each_path_passes_on_default_preset(tmp_path):
+    import datetime
+    import re
+    from approval_support import event
+    from compass_pkg import approval_requests, prompt_approval
+    from test_approval_scoped_to_guardrail_5 import _approve, _check_row, _manifest
+
+    env = {"COMPASS_APPROVER": "jed72"}
+
+    def fresh(name):
+        root = _project(tmp_path / name)
+        assert not (root / "compass.yml").exists()
+        (root / ".compass" / "current-task").write_text(SLUG + "\n")
+        return root, root / ".compass" / "work" / SLUG
+
+    def passes(root):
+        code, row = _check_row(root)
+        assert row["status"] == "pass", row
+        assert _manifest(root)["generation"] == 1
+
+    # A typed /compass:approve.
+    root, task = fresh("prompt")
+    req = approval_requests.write(str(task), "guardrail", "G5", "refund migration")
+    approval_requests.mark_shown(str(task), req)
+    result = prompt_approval.handle(event(root), env, plugin_root=str(ROOT))
+    assert not result.block, result
+    passes(root)
+
+    # An agent under a delegation that covers g5.
+    root, task = fresh("delegated")
+    until = datetime.datetime.now().astimezone() + datetime.timedelta(hours=2)
+    first = prompt_approval.handle(
+        event(root, command="compass:delegate",
+              args=f"compass:architect until {until:%H:%M} for g5"), env,
+        plugin_root=str(ROOT))
+    code = re.search(r"confirm (\S+)", first.message).group(1)
+    done = prompt_approval.handle(event(root, command="compass:delegate",
+                                        args=f"confirm {code}"), env, plugin_root=str(ROOT))
+    assert not done.block, done
+    code, out, err = _run(root, "evidence", "approve", "--issue", SLUG, "--guardrail", "G5",
+                          "--scope", "refund migration", "--delegated", "--as",
+                          "compass:architect")
+    assert code == 0, out + err
+    passes(root)
+
+    # A person at a terminal.
+    root, _ = fresh("terminal")
+    code, out, err = _approve(root, "--guardrail", "G5", "--approver", "jed72", "--role",
+                              "owner", "--scope", "refund migration")
+    assert code == 0, out + err
+    passes(root)

@@ -350,3 +350,25 @@ def test_f8_delegated_call_needs_matching_agent_type():
             assert r.returncode == 0, (command, who, r.stderr)
     finally:
         shutil.rmtree(project, ignore_errors=True)
+
+
+def test_f8_cli_refuses_an_agent_the_delegation_does_not_name(tmp_path):
+    """`TRC-F8`, the CLI half: a call that reaches the CLI with another
+    agent's name is refused because the delegation does not name it."""
+    import datetime
+    import sys
+    sys.path.insert(0, str(FRAMEWORK_ROOT / "tests"))
+    from approval_support import CHECK, SLUG, event, project, run, task_dir
+    from compass_pkg import prompt_approval
+    root = project(tmp_path)
+    until = (datetime.datetime.now().astimezone() + datetime.timedelta(hours=2))
+    done = prompt_approval.handle(
+        event(root, command="compass:delegate",
+              args=f"compass:architect until {until:%H:%M}"), {},
+        plugin_root=str(FRAMEWORK_ROOT))
+    assert not done.block, done
+    before = (task_dir(root) / "manifest.yml").read_bytes()
+    code, out, err = run(root, "evidence", "approve", "--issue", SLUG, "--check", CHECK,
+                         "--scope", "x", "--delegated", "--as", "compass:builder")
+    assert code != 0 and "no delegation in force names compass:builder" in out + err
+    assert (task_dir(root) / "manifest.yml").read_bytes() == before

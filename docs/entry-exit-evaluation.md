@@ -323,6 +323,40 @@ and is shown as `...`. The key `answer` holds the decision.
 }
 ```
 
+### Approving in Claude Code, and delegated approvals
+
+In Claude Code a person answers a request by typing `/compass:approve [n]` or
+`/compass:reject [n] <reason>`. The `UserPromptExpansion` hook
+(`hooks/prompt-approval.sh`, `cli/compass_pkg/prompt_approval.py`) records
+the answer through `approvals.record`, with `via: prompt`, the session id,
+the prompt id, the request number and its nonce. It records only one pending
+request of the session's issue that Compass has shown and that has not
+changed since, and blocks with the reason otherwise. A rejected check gets a
+`rejected` record; a rejected document returns to draft and stays there while
+its file is unchanged; a rejected guardrail 5, checkpoint or decisions request
+writes no record.
+
+A person can let one named agent approve for them with `/compass:delegate
+<agent> until <time> [on <issues>] [for <forms>] [labels <labels>] [max <n>]`
+(`cli/compass_pkg/delegations.py`, ADR-069). The end time is at most 24 hours
+ahead, at most five delegations are in force, and `g5` is covered only when
+typed, after the person types back a code the hook shows them.
+`/compass:revoke [DL-n]` ends delegations early. The agent records with:
+
+```
+compass evidence approve (--check ID | --guardrail G5 | --artifact KIND | --decisions
+                          | --checkpoint STAGE) [--scope TEXT] --delegated --as AGENT
+```
+
+It needs no terminal and no `--approver` or `--role`: the record names the
+person who delegated as `approver`, with `approved_by_agent`, `delegation` and
+`via: delegation`, and a line goes to the issue's devlog. It refuses, writing
+nothing, when no delegation in force names the agent, or the one that does has
+ended, was revoked, reached its `max`, was not written by a typed command, or
+does not cover the issue, its generation, the form or the labels. The
+pre-tool hook also refuses the call when `--as` is not exactly the agent
+Claude Code reports.
+
 ### `compass evidence request`
 
 An agent asks a person for an approval with this command. It never records

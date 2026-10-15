@@ -135,8 +135,10 @@ def _handle(event, env, plugin_root):
             return _approve(session)
         if command == "reject":
             return _reject(session)
-        raise Refused(f"Compass: /compass:{command} is not available yet. Nothing was "
-                      f"written.")
+        from compass_pkg import delegations
+        if command == "delegate":
+            return delegations.handle_delegate(session)
+        return delegations.handle_revoke(session)
 
 
 def _framework_root():

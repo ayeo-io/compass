@@ -16,7 +16,7 @@ Four earlier decisions bound the answer:
 - **ADR-036 and ADR-064 decision 2.** An issue is judged by the configuration it was stored with. 454 of 501 archived manifests have no `generation` key and read the live view, so a new reader must decline on them first.
 - **ADR-053 decision 5.** `artifact_kinds.entry` fills an earlier generation's absent descriptive fields from the shipped default. A field that decides a verdict must not be filled.
 - **ADR-054.** A catalogue `file` knows one placeholder, `<n>`, for rounds. Rounds have a latest; work units do not.
-- **ADR-033 and the locked guardrails.** G2 and G4 and the `assess`, `verify` and `ship` stages are locked. A check in a stage list changes the `plan-exit` block of every archived issue.
+- **ADR-033 and the locked guardrails.** The `G2` and `G4` guardrails and the `assess`, `verify` and `ship` stages are locked. A check in a stage list changes the `plan-exit` block of every archived issue.
 
 compass:architect ruled the boundaries for jed72 on 2026-10-15 (AD-1 to AD-9 in the issue `word-ceilings-and-lld`).
 
@@ -42,7 +42,7 @@ compass:architect ruled the boundaries for jed72 on 2026-10-15 (AD-1 to AD-9 in 
 |---|---|---|
 | A bare `ceiling` key, as DS-6 writes it | The PRD's wording | "Ceiling" already names subtask and loop limits (ADR-044) |
 | The check in `stages.plan.exit` | Plan exit is where DS-6 places it | Every archived `plan-exit` block goes stale |
-| The check in a gate | Gates already run at verify | G2 and G4 are locked |
+| The check in a gate | Gates already run at the `verify` stage | `G2` and `G4` are locked |
 | Units as rounds (`low-level-design-<n>.md`) | Reuses ADR-054 | "Round" gains a second meaning, and the latest-round default is wrong for units |
 | One registry entry for the whole folder | Fewer entries | The registry, approval and digest readers expect one file per entry |
 | A pass when every unit has a file | DS-6's "unless the overflow has moved" | A stub file per unit would pass a design that kept its overflow |
@@ -59,5 +59,5 @@ compass:architect ruled the boundaries for jed72 on 2026-10-15 (AD-1 to AD-9 in 
 ## References
 
 - ADR-006, ADR-033, ADR-036, ADR-038, ADR-044, ADR-050, ADR-051, ADR-053, ADR-054, ADR-064.
-- `docs/compass/2026-10-15-word-ceilings-and-lld/architecture-notes.md` (rulings AD-1 to AD-9) and `technical-design.md` (DD-1, DD-2, DD-3, DD-5, DD-6 and DD-8).
-- `cli/compass_pkg/word_ceiling.py`, `cli/compass_pkg/design_size.py`, `cli/compass_pkg/artifact_kinds.py`, `governance/presets/default/artifacts.yml`, `governance/presets/default/checks.yml`.
+- The architecture notes and the technical design of the issue `word-ceilings-and-lld`, which give the rulings and design decisions behind this record.
+- The word-ceiling check, the design-size check, the artifact-kinds module, the default preset's artifact catalogue and its checks file. The units that build them will name the files.

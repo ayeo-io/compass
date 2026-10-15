@@ -125,10 +125,12 @@ Decision 7 changes. Decision 8 and the second amendment are extended.
 - **Decision 7: the copy check judges each issue folder.** `--apply` without `--i-have-a-copy` runs
   only when, in every issue folder under `.compass/work/` and `docs/compass/`, the HEAD commit holds
   every file the migrate can change, with the bytes on disk. Those files are the manifest under its
-  current or retired name, each file the rename map names, and every `.md` file directly in the
-  folder. A staged file that is not committed, or a committed file changed since, does not count.
-  Files directly under either folder are not judged. Outside a Git repository, or where Git cannot be
-  run, the check passes as before; inside one, a Git call that fails refuses. One refusal names each
+  current or retired name, each file the rename map names, every `.md` file directly in the
+  folder, and every file the registry names, in a subfolder too. A file counts when the blob HEAD
+  holds for it equals the bytes on disk. A staged file that is not committed, or a committed file
+  changed since, does not count. Files directly under either folder are not judged. Outside a Git
+  repository (no `.git` in the folder or above it), or where Git is not installed, the check passes
+  as before; inside one, a Git call that fails refuses. One refusal names each
   folder that fails, the count of its issue folders that cannot be restored and the first five in
   sorted order, with one `cp -R` line for each. This replaces "refuses when `.compass/work/` or
   `docs/compass/` is not tracked by Git".

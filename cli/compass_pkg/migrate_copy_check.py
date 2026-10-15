@@ -57,16 +57,61 @@ def _git_text(name):
     return unicodedata.normalize("NFC", os.fsdecode(name))
 
 
-def unrestorable_folders(root, label=None):
-    """Which issue folders directly under `root` could `git reset --hard` not put back?
+def registered_files(work_root, docs_root, project):
+    """The files the registries name outside the top level of an issue folder, as
+    ({work folder: [path]}, {documents folder: [path]}). The migrate edits a registered
+    document wherever it is (a verification report in `reports/`, a distribution map it
+    renames), so each is judged with the issue folder that holds it, or with the issue's
+    work folder when it is in neither root."""
+    from compass_pkg import migrate_kinds
+    work, docs = {}, {}
+    work_root, docs_root = os.path.realpath(work_root), os.path.realpath(docs_root)
+    names = sorted(os.listdir(work_root)) if os.path.isdir(work_root) else []
+    for slug in names:
+        data = migrate_kinds.load_manifest(os.path.join(work_root, slug)) or {}
+        for entry in data.get("artifacts") or []:
+            rel = entry.get("path") if isinstance(entry, dict) else None
+            path = os.path.realpath(os.path.join(project, rel)) if isinstance(rel, str) else ""
+            if not rel or not os.path.isfile(path):
+                continue
+            for base, found in ((docs_root, docs), (work_root, work)):
+                if path.startswith(base + os.sep):
+                    found.setdefault(os.path.relpath(path, base).split(os.sep)[0], []).append(path)
+                    break
+            else:
+                work.setdefault(slug, []).append(path)
+    return work, docs
+
+
+def _in_a_repository(path):
+    """Is `path` inside a git repository? A `.git` in it or a folder above it, below
+    any of GIT_CEILING_DIRECTORIES, or GIT_DIR set. Asked of the disk, not of git, so a
+    repository git cannot read is still a repository."""
+    if os.environ.get("GIT_DIR"):
+        return True
+    ceilings = {os.path.realpath(c) for c in
+                os.environ.get("GIT_CEILING_DIRECTORIES", "").split(os.pathsep) if c}
+    here = os.path.realpath(path)
+    while True:
+        if os.path.exists(os.path.join(here, ".git")):
+            return True
+        parent = os.path.dirname(here)
+        if parent == here or parent in ceilings:
+            return False
+        here = parent
+
+
+def unrestorable_folders(root, label=None, extra=None):
+    """Which issue folders under `root` could `git reset --hard` not put back?
 
     A folder is restorable when the HEAD commit holds every file in it the migrate can
-    change, with the bytes on disk: listed by `git ls-tree HEAD`, and not reported by
-    `git status` as staged or changed. Files directly under `root` are not judged.
-    Outside a work tree, or where git cannot be run, there is no reset to promise and
-    the root passes. Inside one, a git call that fails or times out refuses every
-    folder that holds a changeable file. Four git calls per root, none of which writes
-    to `.git`."""
+    change with the bytes on disk: the blob `git ls-tree HEAD` names equals the one
+    `git hash-object` makes of the file, and `git status` reports no staged change.
+    The files judged are those `changeable_files` names, plus `extra` ({folder: [path]}),
+    the registered files in subfolders. Files directly under `root` are not judged.
+    Outside a repository, or where git cannot be run at all, there is no reset to
+    promise and the root passes. Inside one, any git call that fails or times out
+    refuses every folder that holds a judged file. None of the calls writes to `.git`."""
     label = label or root
     folders = {}
     if os.path.isdir(root):
@@ -74,34 +119,59 @@ def unrestorable_folders(root, label=None):
             files = changeable_files(os.path.join(root, name))
             if files:
                 folders[name] = files
+    for name, paths in (extra or {}).items():
+        held_paths = folders.setdefault(name, [])
+        held_paths += [p for p in paths if p not in held_paths]
     if not folders:
         return Judgement(label, "judged")
+    if not _in_a_repository(root):
+        return Judgement(label, "no-git")
     env = dict(os.environ, GIT_OPTIONAL_LOCKS="0")
+    failed = Judgement(label, "git-failed", sorted(folders))
 
-    def git(*args, timeout=60, cwd=None):
+    def git(*args, timeout=60, cwd=None, data=None):
         return subprocess.run(["git", "-C", cwd or root, "--literal-pathspecs", *args],
-                              capture_output=True, env=env, timeout=timeout)
+                              capture_output=True, env=env, timeout=timeout, input=data)
     try:
         inside = git("rev-parse", "--is-inside-work-tree", "--show-toplevel", timeout=30)
-    except (OSError, subprocess.SubprocessError):
-        return Judgement(label, "no-git")
+    except OSError:
+        return Judgement(label, "no-git")          # git cannot be run at all
+    except subprocess.SubprocessError:
+        return failed
     lines = os.fsdecode(inside.stdout).splitlines()
-    if inside.returncode != 0 or not lines or lines[0].strip() != "true" or len(lines) < 2:
-        return Judgement(label, "no-git")
+    if inside.returncode != 0 or len(lines) < 2 or lines[0].strip() != "true":
+        return failed
     top = os.path.realpath(lines[1])
-    failed = Judgement(label, "git-failed", sorted(folders))
     rel_root = os.path.relpath(os.path.realpath(root), top)
+    judged = {name: [_git_text(os.path.relpath(os.path.realpath(p), top).replace(os.sep, "/"))
+                     for p in paths] for name, paths in folders.items()}
+    wanted = sorted({rel for rels in judged.values() for rel in rels})
+    # The root, and each registered file outside it, so the argument list stays short.
+    prefix = "" if rel_root == "." else rel_root.replace(os.sep, "/") + "/"
+    specs = [rel_root] + [rel for rel in wanted if not rel.startswith(prefix)]
     try:
         head = git("rev-parse", "--verify", "-q", "HEAD", cwd=top, timeout=30)
-        held = set()
+        held = {}
         if head.returncode == 0:
-            tree = git("ls-tree", "-r", "-z", "--name-only", "--full-tree", "HEAD", "--",
-                       rel_root, cwd=top)
+            tree = git("ls-tree", "-r", "-z", "--full-tree", "HEAD", "--", *specs, cwd=top)
             if tree.returncode != 0:
                 return failed
-            held = {_git_text(p) for p in tree.stdout.split(b"\0") if p}
+            for record in tree.stdout.split(b"\0"):
+                meta, _tab, path = record.partition(b"\t")
+                if path and len(meta.split()) == 3:
+                    held[_git_text(path)] = meta.split()[2]
+        # One call hashes every file HEAD holds, through the same filters `git add` uses.
+        asked = [rel for rel in wanted if rel in held and "\n" not in rel]
+        made = {}
+        if asked:
+            hashed = git("hash-object", "--stdin-paths", cwd=top,
+                         data=os.fsencode("\n".join(asked) + "\n"))
+            sums = hashed.stdout.split()
+            if hashed.returncode != 0 or len(sums) != len(asked):
+                return failed
+            made = dict(zip(asked, sums))
         status = git("status", "--porcelain=v1", "-z", "--untracked-files=no", "--",
-                     rel_root, cwd=top)
+                     *specs, cwd=top)
     except (OSError, subprocess.SubprocessError):
         return failed
     if status.returncode != 0:
@@ -119,13 +189,9 @@ def unrestorable_folders(root, label=None):
             if i < len(fields) and fields[i]:
                 changed.add(_git_text(fields[i]))
             i += 1
-    lost = []
-    for name, files in folders.items():
-        for path in files:
-            rel = _git_text(os.path.relpath(os.path.realpath(path), top).replace(os.sep, "/"))
-            if rel not in held or rel in changed:
-                lost.append(name)
-                break
+    lost = sorted(name for name, rels in judged.items()
+                  if any(made.get(rel) is None or made[rel] != held.get(rel) or rel in changed
+                         for rel in rels))
     return Judgement(label, "judged", lost)
 
 

@@ -535,6 +535,64 @@ def test_mas_12_refusal_opening_says_git_could_not_be_asked(tmp_path):
     assert "git could not be asked" not in out, out
 
 
+def _refused_and_kept(folder, path, text):
+    """`--apply` without the flag refuses, changes nothing, and `path` still holds `text`."""
+    before = _tree(folder)
+    code, out = _migrate(folder, "--apply")
+    assert code == 2, out
+    assert _tree(folder) == before, out
+    assert path.read_text(encoding="utf-8") == text, out
+    return out
+
+
+def test_mas_13_git_failure_inside_a_repository_refuses(tmp_path):
+    # A repository whose config git cannot read: every git call exits non-zero. That is
+    # not "outside git", so an uncommitted edit must not be lost to the apply.
+    folder = tmp_path / "project"
+    _two_issues(folder)
+    manifest = folder / ".compass/work/alpha/manifest.yml"
+    edited = manifest.read_text(encoding="utf-8") + "# edited, not committed\n"
+    manifest.write_text(edited, encoding="utf-8")
+    (folder / ".git" / "config").write_text("[core\nthis is not a config\n", encoding="utf-8")
+    out = _refused_and_kept(folder, manifest, edited)
+    assert "git could not be asked" in out, out
+
+
+def test_mas_14_registered_file_in_a_subfolder_is_judged(tmp_path):
+    # The migrate edits a verification report wherever the registry puts it, so an
+    # untracked report in a subfolder of a documents folder cannot be restored.
+    folder = tmp_path / "project"
+    report = f"{_home('alpha')}/reports/verification-report.md"
+    _plant(folder, "alpha", artifacts=[{"id": "ART-VERIFICATION_REPORT",
+                                        "kind": "verification-report", "status": "draft",
+                                        "path": report}],
+           docs={"technical-design.md": "# Design of alpha\n"})
+    _git(folder, "init", "-q", "-b", "main")
+    _git(folder, "add", "-A")
+    _git(folder, "commit", "-q", "-m", "base")
+    text = "# Verification report\n\n## Definition of Done\n\n- [ ] Every scenario has a test.\n"
+    _write(folder / report, text)
+    out = _refused_and_kept(folder, folder / report, text)
+    line = next((ln for ln in out.splitlines() if "cannot be restored" in ln), "")
+    assert "docs/compass" in line and line.endswith(f"{CREATED}-alpha"), out
+
+
+def test_mas_15_assume_unchanged_edit_is_judged_by_its_bytes(tmp_path):
+    # git status does not report a file flagged assume-unchanged, so only a comparison
+    # of the bytes on disk with the HEAD blob sees the edit.
+    folder = tmp_path / "project"
+    _two_issues(folder)
+    rel = ".compass/work/alpha/manifest.yml"
+    _git(folder, "update-index", "--assume-unchanged", rel)
+    manifest = folder / rel
+    edited = manifest.read_text(encoding="utf-8") + "# edited, flagged unchanged\n"
+    manifest.write_text(edited, encoding="utf-8")
+    assert _git(folder, "status", "--porcelain") == ""
+    out = _refused_and_kept(folder, manifest, edited)
+    line = next((ln for ln in out.splitlines() if "cannot be restored" in ln), "")
+    assert ".compass/work" in line and line.endswith(": alpha"), out
+
+
 # --- the documents -------------------------------------------------------------------
 
 

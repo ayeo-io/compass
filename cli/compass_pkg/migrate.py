@@ -336,8 +336,9 @@ def cmd_migrate(args):
         if os.path.isabs(root) or shown.startswith(os.pardir):
             shown = docs
         from compass_pkg import migrate_copy_check as check
-        lost = [found for found in (check.unrestorable_folders(root),
-                                    check.unrestorable_folders(docs, shown))
+        in_work, in_docs = check.registered_files(root, docs, _project_root(root))
+        lost = [found for found in (check.unrestorable_folders(root, None, in_work),
+                                    check.unrestorable_folders(docs, shown, in_docs))
                 if found.unrestorable]
         if lost:
             raise CompassError(check.refusal(lost))

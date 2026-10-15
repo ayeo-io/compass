@@ -96,11 +96,9 @@ and a reader knows where their evidence went without guessing.
 
 The full set is in `agents/`. The files in `agents/` are the authority.
 
-An agent has Bash when its instructions run a `compass` verb: `router`,
-`spec-author`, `planner`, `architect`, `orchestrator`, `builder`, `verifier`
-and `reviewer`. The `product-owner` and `product-marketer` agents have no
-shell; the calling session runs any verb their entry point names. No agent
-edits `manifest.yml` by hand. `tests/test_agent_tools.py` pins each list.
+An agent has Bash when its instructions run a `compass` verb. Only
+`product-owner` and `product-marketer` have no shell; the calling session runs
+their verbs. No agent edits `manifest.yml` by hand (`tests/test_agent_tools.py`).
 
 ## Worktrees and multiagent
 

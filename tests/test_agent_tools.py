@@ -56,7 +56,7 @@ def test_every_agent_file_is_classified():
 
 
 def test_spec_author_has_a_shell_and_never_hand_edits_the_manifest():
-    """TRC-001."""
+    """`spec-author` has a shell and never hand-edits the manifest (`TRC-001`)."""
     assert "Bash" in _tools("spec-author")
     _, text = _frontmatter("spec-author")
     flat = _flat(text)
@@ -71,7 +71,7 @@ def test_spec_author_has_a_shell_and_never_hand_edits_the_manifest():
 
 @pytest.mark.parametrize("name", sorted(SHELL) + list(NO_SHELL))
 def test_agent_shell_access_matches_the_compass_steps_it_runs(name):
-    """TRC-002."""
+    """An agent has a shell exactly when it runs compass verbs (`TRC-002`)."""
     tools = _tools(name)
     if name in SHELL:
         assert "Bash" in tools, f"{name}: {SHELL[name]}"
@@ -87,7 +87,7 @@ def test_agent_shell_access_matches_the_compass_steps_it_runs(name):
 
 @pytest.mark.parametrize("command", ["define", "plan"])
 def test_define_and_plan_commands_allow_bash(command):
-    """TRC-003."""
+    """The define and plan commands allow Bash (`TRC-003`)."""
     text = (COMMANDS / f"{command}.md").read_text(encoding="utf-8")
     allowed = re.search(r"^allowed-tools: (.*)$", text, re.M).group(1)
     assert "Bash" in [t.strip() for t in allowed.split(",")]

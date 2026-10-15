@@ -34,7 +34,7 @@ import fnmatch
 import re as _re
 from compass_pkg.stable_ids import GATE_VERIFY_ANALYZE, GATE_VERIFY_CORRECTNESS
 from compass_pkg.core import CompassError, artifact_location, artifact_path, find_compass_dir, find_governance, load_yaml, manifest_path, normalize_spine
-from compass_pkg import status_words
+from compass_pkg import approval_records, status_words
 from compass_pkg.tdd import _read_config, settings_hint
 from compass_pkg.check_results import NOTHING_TO_CHECK  # re-exported: callers still import it from here
 from compass_pkg.evidence_identity import _check_evidence_identity_matches
@@ -760,15 +760,39 @@ def _check_inbound_backfills(task_dir, this_slug):
     return problems
 
 
+#: How a person records the sign-off of guardrail `G5`, for a failure detail.
+_G5_HOW = ("run `compass evidence approve --guardrail G5` with `--approver <name> --role "
+           "<role> --scope <text>` in a terminal")
+
+
+def _earlier_rule_passes(approved):
+    """The verdict of `human-approval-present` 1.0.0: the first approved
+    `human-approval` record, whatever it was given for, holds all four
+    fields. Kept as the floor of a landed issue (ADR-066), so a landed issue
+    that the earlier rule passed never fails."""
+    return bool(approved) and all(approved[0].get(k) for k in approval_records.REQUIRED)
+
+
 def _check_human_approval(task, task_dir):
     # Approvals are typed evidence in the registry. `G5` applies when the issue
     # touches irreversible surface (the routing policy sets its approach to
-    # initiative at least); this check looks for a `human-approval` entry
-    # with decision=approved and the needed structured fields.
+    # initiative at least). This check counts only a `human-approval` record
+    # given for `G5` (ADR-066): approved, naming no other subject, and holding
+    # the needed structured fields. It cites the first that counts.
     registry = task.get("evidence") or []
     approvals = [e for e in registry if isinstance(e, dict)
                  and e.get("type") == "human-approval"]
     approved = [a for a in approvals if a.get("decision") == "approved"]
+    ok, detail = _judge_g5_approval(task, approved)
+    if ok or status_words.is_in_flight(task) or not _earlier_rule_passes(approved):
+        return ok, detail
+    return True, (f"{detail} - the issue has landed and the earlier rule passes it (the "
+                  f"first approved human-approval record holds all four fields), so this "
+                  f"is reported only")
+
+
+def _judge_g5_approval(task, approved):
+    """`(ok, detail)` under the rule of ADR-066, before the landed floor."""
     if not approved:
         # `G5` also fires on critical risk. A landed issue cleared the gates in
         # force when it landed, so report this and do not fail it. There is
@@ -783,18 +807,24 @@ def _check_human_approval(task, task_dir):
                        "touches irreversible surface, or its risk is critical "
                        "(which the "
                        "router defines as: can lose data, lose money, breach "
-                       "auth/privacy, or resist a clean rollback). Add a "
-                       "`human-approval` entry to the evidence registry with "
-                       "approver, role, scope, decision, and timestamp.")
-    a = approved[0]
-    missing = [k for k in ("approver", "role", "scope", "timestamp")
-               if not a.get(k)]
+                       "auth/privacy, or resist a clean rollback). A person "
+                       f"records the sign-off: {_G5_HOW}.")
+    counting = [a for a in approved if approval_records.gives_g5(a)]
+    if not counting:
+        first = approved[0]
+        others = len(approved) - 1
+        aside = (f" ({others} other approved record(s) also set aside)" if others else "")
+        return False, (f"no approval was given for guardrail `G5`: {first.get('id', '?')} was "
+                       f"given for {approval_records.subject_of(first)}, not for guardrail "
+                       f"`G5`{aside}. A person records the sign-off: {_G5_HOW}.")
+    a = counting[0]
+    missing = [k for k in approval_records.REQUIRED if not a.get(k)]
     if missing:
         return False, (f"approval {a.get('id', '?')} is missing required "
                        f"field(s): {', '.join(missing)}. A human-approval "
                        f"evidence entry must record who approved, in what role, "
                        f"the scope, and when.")
-    return True, (f"approval on record: {a.get('approver')} "
+    return True, (f"approval on record: {a.get('id', '?')} by {a.get('approver')} "
                   f"({a.get('role')}) - scope: {a.get('scope')}")
 
 

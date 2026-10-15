@@ -1,5 +1,16 @@
-# compass_pkg.approval_records - the approvals of a human check
-"""Say whether a `human` check that lists `approvers:` has a current approval.
+# compass_pkg.approval_records - the approvals of a human check and of guardrail `G5`
+"""Say what an approval record was given for, and whether a `human` check that
+lists `approvers:` has a current approval.
+
+An approval names its subject (ADR-066). A `human-approval` record that holds
+any key of `SUBJECT_KEYS` was given for that check, waiver, checkpoint,
+document or set of decisions. A record that holds none of them, and whose
+`guardrail` key is absent or exactly `G5`, was given for guardrail `G5`:
+`gives_g5` says so, and `human-approval-present`, the check of `G5`, counts
+only such a record. `compass evidence approve --guardrail` writes one, given
+the value `G5`.
+
+The rest of this module reads the approvals of a human check.
 
 A tick does not clear such a check, and neither does a deferral tag. The check
 also needs a `human-approval` entry in the issue's evidence registry (or an
@@ -21,12 +32,15 @@ rejection withdraws an approval. An approver's name is not authenticated, the
 same limit as every `human-approval` record. `compass evidence approve`
 writes a record; anyone who can write `manifest.yml` can also add one.
 """
-# DEPENDENCY: standard library (os); compass_pkg.layers (the project's owner).
+# DEPENDENCY: standard library (os); compass_pkg.layers (the project's owner);
+# compass_pkg.stable_ids (the id of guardrail `G5`).
 # It imports no command module, so the stage-list evaluator and the
 # `compass evidence approve` command can both use it.
 from __future__ import annotations
 
 import os
+
+from compass_pkg.stable_ids import GATE_G5
 
 #: The fields every `human-approval` record holds (the same four
 #: `human-approval-present` and a waiver's approval need).
@@ -45,6 +59,16 @@ ARTIFACT_REQUIRED = ("approver", "role", "timestamp")
 #: The decisions a record can hold; `rejected` withdraws an earlier approval.
 APPROVED, REJECTED = "approved", "rejected"
 DECISIONS = (APPROVED, REJECTED)
+
+#: The keys that name what an approval was given for. A `human-approval`
+#: record that holds any of them, whatever the value, was given for that
+#: subject, so it is not the sign-off of guardrail `G5`. A deny-list, because
+#: earlier sign-offs hold extra keys such as `path` or `conditions`. A writer
+#: that adds a subject key adds it here (ADR-066).
+SUBJECT_KEYS = ("check", "waiver", "checkpoint", "artifact", "decisions")
+
+#: The only guardrail with a sign-off, and the only value of `guardrail` read.
+G5 = GATE_G5
 
 #: What `approvers:` lists when it lists the project's owner.
 OWNER = "owner"
@@ -91,6 +115,26 @@ def approver_listed(listed, approver, owner=None):
 def shown(value):
     """A value as the detail shows it: `none` when absent, else its repr."""
     return "none" if value is None else repr(value)
+
+
+def subject_of(record):
+    """None when the record names no subject but guardrail `G5`; else the
+    subject it names, as a failure detail shows it: "check 'dod-reviewed'",
+    "waiver", "guardrail 'g5'". A map value is shown by its key alone."""
+    for key in SUBJECT_KEYS:
+        if key in record:
+            value = record[key]
+            return key if isinstance(value, dict) else f"{key} {shown(value)}"
+    if "guardrail" in record and not (isinstance(record["guardrail"], str)
+                                      and record["guardrail"] == G5):
+        return f"guardrail {shown(record['guardrail'])}"
+    return None
+
+
+def gives_g5(record):
+    """Was this record given for guardrail `G5`? True when it holds no key of
+    `SUBJECT_KEYS` and its `guardrail` key is absent or exactly `G5`."""
+    return subject_of(record) is None
 
 
 def _claims(task, check_id):

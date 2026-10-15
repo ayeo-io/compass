@@ -99,10 +99,20 @@ def test_asw_2_stage_exit_moves_human_check_document_to_awaiting_approval(tmp_pa
 def test_asw_3_verify_gate_pass_approves_verification_report(tmp_path):
     root = project(tmp_path)
     assert register(root, "verification-report")[0] == 0
-    add_evidence(root, "EV-1")
-    code, out, err = run(root, "gate", "pass", "verify.correctness", "--evidence", "EV-1",
-                         "--issue", SLUG)
-    assert code == 0, out + err
+    kinds = {"verify.correctness": "test-run", "verify.governance": "command-output",
+             "verify.traceability": "command-output", "verify.regression": "test-run",
+             "verify.clarity": "artifact", "verify.security": "command-output"}
+    body = manifest(root)
+    for gate in body["gates"]:
+        gate["status"], gate["evidence"] = "pending", []
+    edit(root, gates=body["gates"])
+    # The report is approved by the last `verify` gate pass, not the first.
+    for number, (gate, kind) in enumerate(kinds.items(), 1):
+        assert entries(root)["verification-report"]["status"] == "draft", gate
+        add_evidence(root, f"EV-{number}", kind)
+        code, out, err = run(root, "gate", "pass", gate, "--evidence", f"EV-{number}",
+                             "--issue", SLUG)
+        assert code == 0, out + err
     found = entries(root)["verification-report"]
     assert found["status"] == "approved"
     assert found["approved_by"] == "compass gate pass"

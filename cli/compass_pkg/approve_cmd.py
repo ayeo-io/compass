@@ -2,11 +2,18 @@
 """Record a person's approval: of a human check, of a document or of a set of
 decisions taken for the person.
 
-The verb takes exactly one of four forms:
+The verb takes exactly one of five forms:
 
 - `--check <id>` reads the check from the issue's effective view and registers
   a `human-approval` entry in the manifest's evidence, with `check: <id>`.
-  `compass check` then reads it through `approval_records`.
+  `compass check` then reads it through `approval_records`. The record names
+  a check, so it never clears the sign-off of guardrail `G5`.
+- `--guardrail`, with the value `G5`, records the sign-off of that
+  guardrail: one `human-approval` record whose `guardrail` key holds `G5`,
+  with no other subject key, which `human-approval-present` counts
+  (`approval_records.gives_g5`). Guardrail `G5` is the only guardrail with a
+  sign-off, and the form records an approval only, so it refuses any other
+  value and `--decision rejected`.
 - `--artifact <kind>` approves a document that reads `awaiting-approval`. It
   registers one `artifact-approval` record for each human check on the
   document, which `approval_records` counts for that check, and sets the
@@ -44,8 +51,8 @@ from compass_pkg.terminal import say
 DECISIONS = approval_records.DECISIONS
 ARTIFACT_APPROVAL = approval_records.ARTIFACT_APPROVAL
 #: A person's answer to one checkpoint hand-off. Kept apart from
-#: `human-approval` because `human-approval-present`, the check of guardrail
-#: `G5`, accepts any approved `human-approval` record and is locked.
+#: `human-approval` so that no reader of that type, `human-approval-present`
+#: (the check of guardrail `G5`), a human check or a waiver, meets it.
 CHECKPOINT_APPROVAL = "checkpoint-approval"
 
 
@@ -133,12 +140,26 @@ def _numbered(task, check_id):
 
 
 def _checks_for(args):
-    """Refuse a call that has not one of the four forms (argparse also does)."""
-    forms = [bool(args.check), bool(args.artifact), bool(args.decisions),
-             bool(getattr(args, "checkpoint", None))]
+    """Refuse a call that has not one of the five forms (argparse also does)."""
+    forms = [bool(args.check), bool(getattr(args, "guardrail", None)), bool(args.artifact),
+             bool(args.decisions), bool(getattr(args, "checkpoint", None))]
     if sum(forms) != 1:
         raise CompassError("compass evidence approve: give exactly one of --check, "
-                           "--artifact, --decisions or --checkpoint.")
+                           "--guardrail, --artifact, --decisions or --checkpoint.")
+
+
+def _guardrail_form(args):
+    """Refuse a `--guardrail` call the form cannot record, before anything is
+    read: a guardrail other than `G5`, or a rejection."""
+    value = args.guardrail
+    if value != approval_records.G5:
+        raise CompassError(f"compass evidence approve: --guardrail takes `G5` only, not "
+                           f"'{value}'; `G5` is the only guardrail with a sign-off. Nothing "
+                           f"was written.")
+    if args.decision != approval_records.APPROVED:
+        raise CompassError(f"compass evidence approve: `--guardrail G5` records an approval "
+                           f"only, not --decision {args.decision}. A rejected record would "
+                           f"not withdraw an earlier sign-off. Nothing was written.")
 
 
 def cmd_evidence_approve(args):
@@ -150,9 +171,13 @@ def cmd_evidence_approve(args):
     if args.decision not in DECISIONS:
         raise CompassError(f"compass evidence approve: the decision must be one of "
                            f"{' or '.join(DECISIONS)}, not '{args.decision}'.")
+    guardrail = getattr(args, "guardrail", None)
+    if guardrail:
+        _guardrail_form(args)
     approver = _approver(args.approver)
     role, scope = _text(args.role), _text(args.scope)
-    required = (("--role", role), ("--scope", scope)) if args.check else (("--role", role),)
+    required = ((("--role", role), ("--scope", scope)) if args.check or guardrail
+                else (("--role", role),))
     for flag, value in required:
         if not value:
             raise CompassError(f"compass evidence approve: {flag} must not be empty; a "
@@ -165,7 +190,42 @@ def cmd_evidence_approve(args):
         return decisions_taken.approve_set(args)
     if getattr(args, "checkpoint", None):
         return _approve_checkpoint(args)
+    if guardrail:
+        return _approve_guardrail(args)
     return _approve_check(args)
+
+
+def _approve_guardrail(args):
+    """Register the sign-off of guardrail `G5`. It names no other subject, so
+    `human-approval-present` counts it and no human check, item or waiver
+    reads it. No approver list is checked: guardrail `G5` lists none."""
+    task_dir = resolve_issue_dir(args.task)
+    task, task_path = load_manifest(task_dir)
+    taken = {e.get("id") for e in task.get("evidence") or [] if isinstance(e, dict)}
+    number = 1 + len([e for e in task.get("evidence") or []
+                      if isinstance(e, dict) and e.get("type") == "human-approval"
+                      and e.get("decision") in DECISIONS
+                      and approval_records.gives_g5(e)])
+    while f"EV-APPROVAL-G5-{number}" in taken:
+        number += 1
+    evidence_id = f"EV-APPROVAL-G5-{number}"
+    entry = {"id": evidence_id, "type": "human-approval", "guardrail": approval_records.G5,
+             "approver": args.approver, "role": args.role, "scope": args.scope,
+             "decision": approval_records.APPROVED,
+             "timestamp": now_iso().replace("+00:00", "Z"),
+             "issue": os.path.basename(os.path.normpath(task_dir)),
+             "generation": task.get("generation")}
+    task.setdefault("evidence", []).append(entry)
+    save_manifest(task, task_path)
+    return say(args, f"compass evidence approve: guardrail `G5` - signed off by {args.approver} "
+                     f"recorded as {evidence_id}.",
+               detail=[f"record     : {evidence_id} in manifest.yml evidence",
+                       f"issue      : {entry['issue']}",
+                       f"generation : {approval_records.shown(entry['generation'])}"],
+               guardrail=approval_records.G5, answer=entry["decision"],
+               evidence_id=evidence_id, approver=args.approver, role=args.role,
+               scope=args.scope, issue=entry["issue"], generation=entry["generation"],
+               at=entry["timestamp"])
 
 
 def _checkpoint_approver(task_dir, approver):
@@ -338,6 +398,9 @@ def register(evidence_subs):
                         "decisions taken for the person")
     form = p.add_mutually_exclusive_group(required=True)
     form.add_argument("--check", help="id of the human check")
+    form.add_argument("--guardrail", metavar=approval_records.G5,
+                      help="sign off guardrail `G5`, the only guardrail with a sign-off; "
+                           "needs --scope and records an approval only")
     form.add_argument("--artifact", metavar="KIND",
                       help="approve this document, which reads awaiting-approval")
     form.add_argument("--decisions", action="store_true",
@@ -349,7 +412,7 @@ def register(evidence_subs):
     p.add_argument("--approver", required=True, help="the approver's person id")
     p.add_argument("--role", required=True, help="the role the approver acts in")
     p.add_argument("--scope", default="",
-                   help="what the approval covers; required with --check")
+                   help="what the approval covers; required with --check and --guardrail")
     p.add_argument("--decision", default="approved", choices=DECISIONS,
                    help="approved (default) or rejected; a later rejection withdraws an "
                         "approval")

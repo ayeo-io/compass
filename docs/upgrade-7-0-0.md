@@ -300,3 +300,36 @@ Compass can now post an issue's README to the linked GitHub issue, and the verb 
 | `compass issue checkpoint add` | a verb | Record a hand-off that autonomy passed |
 | `github_labels.page` | `compass.yml` | Post the issue page to the linked GitHub issue |
 | `compass issue github sync` | verb | Write the labels and the issue page on demand |
+
+## Guardrail `G5` counts only its own sign-off
+
+`human-approval-present`, the check of guardrail `G5` ("a human signs off on the irreversible"), counts only a `human-approval` record given for guardrail `G5`. An approval given for another human check no longer clears the sign-off on an irreversible change. The decision is `architecture/decisions/ADR-066-an-approval-names-its-subject-and-guardrail-5-counts-only-an-approval-given-for-it.md`.
+
+### What breaks
+
+- **An in-flight issue whose only approval names another subject now fails.** A `human-approval` record that holds a `check`, `waiver`, `checkpoint`, `artifact` or `decisions` key, or a `guardrail` other than exactly `G5`, is set aside. So `compass evidence approve --check dod-reviewed` no longer clears the payments sign-off. The failure names the record, the subject it was given for and the command below.
+
+### What changes
+
+- **A person records the sign-off with `compass evidence approve --guardrail` and the value `G5`.** The full command is below. It needs a terminal and refuses the approver `agent`. It writes a `human-approval` record whose `guardrail` key holds `G5`, with no `check` key. It records an approval only, so it refuses `--decision rejected`, and it refuses any guardrail but `G5`.
+- **A sign-off recorded the earlier way still counts.** A `human-approval` record with no subject key is a sign-off given for guardrail `G5`. No stored record is rewritten.
+- **An in-flight issue can now pass where it failed.** The check cites the first approved record given for guardrail `G5`. An incomplete approval of another subject recorded first no longer hides a complete sign-off, so that issue moves from fail to pass.
+- **A landed issue is reported, never failed.** When the new rule fails a landed issue and the earlier rule passes it, the check passes and says it is reported only.
+- **The check is version 1.1.0.** Its fixture corpus verdicts did not change, so it keeps major version 1, and `compass check` judges an issue whose generation recorded 1.0.0.
+
+### What to do
+
+1. Run `compass check` on each open issue that guardrail `G5` applies to. Where `human-approval-present` fails with "no approval was given for guardrail `G5`", a person runs this before the issue lands:
+
+   ```
+   compass evidence approve --guardrail G5 --approver <name> --role <role> --scope <text>
+   ```
+
+2. Update scripts that write `human-approval` records for the sign-off: set the `guardrail` key to `G5`, or write no subject key.
+
+### New keys and verbs
+
+| Name | Where | Meaning |
+|---|---|---|
+| `compass evidence approve --guardrail` | a flag, whose only value is `G5` | Record the sign-off of guardrail `G5` |
+| `guardrail` | an evidence record of type `human-approval` | The guardrail the sign-off is for; only `G5` is read |

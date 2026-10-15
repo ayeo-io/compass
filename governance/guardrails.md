@@ -92,6 +92,18 @@ Its check, `human-approval-present`, reads only evidence of the type
 `artifact-approval`, which this check never reads, so such an approval never
 clears a sign-off.
 
+Of the `human-approval` records, the check counts only one given for
+guardrail `G5` (ADR-066). A record that holds a `check`, `waiver`,
+`checkpoint`, `artifact` or `decisions` key, or a `guardrail` other than
+exactly `G5`, was given for that subject and is set aside, so approving an
+unrelated human check never clears the sign-off. A record with none of these
+keys, the form earlier sign-offs use, still counts. A person records the
+sign-off with `compass evidence approve --guardrail` and the value `G5`,
+giving `--approver`, `--role` and `--scope`. A landed issue that the earlier rule passed is
+reported, never failed. The implementation is version 1.1.0: the fixture
+corpus verdicts did not change, so it keeps major version 1, and no stored
+generation is refused.
+
 A person's answer to a checkpoint hand-off (`compass evidence approve
 --checkpoint`) is recorded as `checkpoint-approval`. It has no `check` key, and
 neither this check, a human check nor a waiver reads the type, so a

@@ -92,7 +92,9 @@ _ENTRIES = (
     # 2.0.0: reads the manifest's item records, never the page (ADR-038: its verdict on a
 # page with a ticked box and no record changed from pass to fail).
     _entry("dod-evidence-typed", _check_dod_evidence_typed, version="2.0.0"),
-    _entry("human-approval-present", _check_human_approval),
+    # 1.1.0: counts only an approval given for guardrail `G5`, with the earlier rule as
+    # the floor of a landed issue; the corpus verdicts hold, so the major stays (ADR-066).
+    _entry("human-approval-present", _check_human_approval, version="1.1.0"),
     _entry("backfills-paid", _check_backfills_paid),
     _entry("spike-conclusion-present", _check_spike_conclusion_present),
     _entry("spike-no-production-changes", _check_spike_no_production_changes),

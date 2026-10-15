@@ -67,6 +67,11 @@ evidence:        # (optional) list of maps - the typed evidence registry gates r
     decisions:   #   (optional) list of strings - for artifact-approval, the decision ids confirmed
     checkpoint:  #   (optional) string - for checkpoint-approval, the stage whose hand-off the person
                  #     answered; the record has no check, so it never meets guardrail `G5`, a human check or a waiver
+    guardrail:   #   (optional) string - for human-approval, the guardrail this sign-off is for; only `G5` is read
+                 #     (`compass evidence approve --guardrail` writes it, with the value `G5`)
+    waiver:      #   (optional) map - for human-approval of a waiver, the waiver it approves (its scope and entry)
+                 #     A human-approval record that holds check, waiver, checkpoint, artifact or decisions, or a
+                 #     guardrail other than `G5`, never clears `human-approval-present` (ADR-066)
 
 gates:           # (optional until approach evaluate) list of maps:
   - id:          #   (required in entry) string - e.g. verify.correctness

@@ -860,7 +860,8 @@ def cmd_gate_pass(args):
         _add_meets(registry[eid], meets)
     save_manifest(task, task_path)
     # A pass of a `verify` gate is a record of the `verify` stage: it moves the
-    # documents of earlier stages and the `verify` stage's own (ADR-050).
+    # documents of earlier stages on the first pass, and the `verify` stage's own
+    # once every `verify` gate has passed (ADR-050).
     from compass_pkg import artifact_status
     moved = (artifact_status.record_stage(
         task_dir, artifact_status.STAGE_VERIFY, artifact_status.BY_GATE_PASS,

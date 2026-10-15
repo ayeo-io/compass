@@ -672,6 +672,14 @@
           "checkpoint": {
             "type": "string",
             "description": "For checkpoint-approval: the checkpoint stage whose hand-off the person answered. The record has no check key: it meets no check, never guardrail `G5`, a human check or a waiver."
+          },
+          "guardrail": {
+            "type": "string",
+            "description": "For human-approval: the guardrail this sign-off is for; only `G5` is read. `compass evidence approve --guardrail` writes it, with the value `G5`. A human-approval record whose guardrail is not exactly `G5` never clears `human-approval-present`."
+          },
+          "waiver": {
+            "type": "object",
+            "description": "For human-approval of a waiver: the waiver this approval is for, naming its scope and entry. The record was given for that waiver, so it never clears `human-approval-present`, the check of guardrail `G5`."
           }
         }
       }

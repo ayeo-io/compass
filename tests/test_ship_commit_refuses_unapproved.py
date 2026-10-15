@@ -296,7 +296,7 @@ def test_asw_21_regular_issue_end_to_end_every_artifact_approved(tmp_path):
 
 def test_asw_21_a_report_registered_after_the_gates_is_approved_and_ship_lands(tmp_path):
     # commands/verify.md passes the gates (step 5) before it registers the
-    # report (step 6). A `verify` gate has already passed, so registering the
+    # report (step 6). Every `verify` gate has already passed, so registering the
     # report is itself the record that approves it.
     found = _stage_run(project(tmp_path), swap=False, report_after_gates=True)
     status, by, at = found["verification-report"]

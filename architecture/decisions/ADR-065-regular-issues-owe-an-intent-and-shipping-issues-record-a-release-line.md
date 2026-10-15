@@ -7,7 +7,7 @@ supersedes: ''
 superseded_by: ''
 ---
 
-Proposed by the architect for intent-and-release-line on 2026-10-14. Accepted by compass:architect for jed72 at verify on 2026-10-15.
+Proposed by the architect for intent-and-release-line on 2026-10-14. Accepted by compass:architect for jed72 at the `verify` stage on 2026-10-15.
 
 ## Context
 

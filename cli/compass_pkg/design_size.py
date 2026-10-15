@@ -30,6 +30,7 @@ through `word_ceiling.count_words`, so a note and a verdict agree.
 # function that needs them. Nothing here imports a command module at load time.
 from __future__ import annotations
 
+import math
 import os
 
 from compass_pkg import section_checks, status_words
@@ -171,7 +172,9 @@ def _check_design_within_word_ceiling(task, task_dir):
     if text is None:
         return False, unreadable
     count = word_ceiling.count_words(text)
-    threshold = limit * factor
+    # A whole number of words: 800 times 1.15 is 919.9999999999999 in floating
+    # point, and a 920-word design must pass. The small margin absorbs that error.
+    threshold = math.floor(limit * factor + 1e-9)
     measure = "%s holds %s words, %s the threshold of %s (%s times the %s limit of %s)." % (
         os.path.basename(str(entry.get("path"))), _number(count),
         "over" if count > threshold else "at or under", _number(threshold), "%g" % factor,
@@ -234,6 +237,7 @@ def lint_notes(task, task_dir):
     result: it never changes the exit code, and a configuration that cannot be
     read gives no note."""
     try:
-        return _word_limit_notes(task, task_dir) + _missing_unit_notes(task, task_dir)
+        _view(task_dir)
     except Exception:                                   # noqa: BLE001 - a report must not fail the lint
         return []
+    return _word_limit_notes(task, task_dir) + _missing_unit_notes(task, task_dir)

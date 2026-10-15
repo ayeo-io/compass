@@ -313,6 +313,24 @@ def test_wcl_8_refusal_threshold(tmp_path):
         assert status == expected, (count, detail)
 
 
+def test_wcl_8_threshold_is_a_whole_number_of_words(tmp_path, monkeypatch):
+    # 800 times 1.15 is 919.9999999999999 in floating point. The threshold is the
+    # whole number of words, 920, so a 920-word design passes and 921 fails.
+    from compass_pkg import design_size, word_ceiling
+
+    root = _project(tmp_path, assessment=FULL)
+    task_dir = str(root / ".compass" / "work" / sup.SLUG)
+    monkeypatch.setattr(word_ceiling, "limit",
+                        lambda view, kind, depth: 800 if kind == "technical-design" else None)
+    monkeypatch.setattr(design_size, "_factor", lambda task_dir: (1.15, None))
+    for count, expected in ((920, True), (921, False)):
+        _write(root, "technical-design", _document(count, UNITS))
+        passed, detail = design_size._check_design_within_word_ceiling(sup.manifest(root),
+                                                                        task_dir)
+        assert passed is expected, (count, detail)
+        assert "threshold of 920 " in detail, detail
+
+
 def test_wcl_9_unit_files_do_not_lift(tmp_path):
     root = _full_over(tmp_path / "full")
     _register_units(root, UNITS)
@@ -539,6 +557,9 @@ def test_wcl_19_archive_sweep_and_compat_contract(tmp_path):
         from test_document_set_sections import _u3_sweep
         copy = _u3_copy_archive(checkable_root(), tmp_path / "archive")
         results = _u3_sweep(copy)
+        # The maintainer's archive has no recorded baseline to compare with, so this
+        # path shows that the check judges no issue and lint prints no new note.
+        assert len(results) == len(list((copy / ".compass" / "work").glob("*/manifest.yml")))
         assert sorted(s for s, (_, rows) in results.items()
                       if rows.get(CHECK, "nothing-to-check") != "nothing-to-check") == []
         assert _lint_notes_on(copy) == []

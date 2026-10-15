@@ -345,6 +345,7 @@ A regular issue now opens with a short intent, and every issue that ships record
 
 1. Nothing for issues already assessed. An open issue owes an intent and a release line only after `compass approach evaluate --write` commits a generation from the new default. A completed or closed issue never does.
 2. Give each new shipping issue its line before it lands: `compass ship-commit --issue <slug> --release-note "<text written for a user>"`, or the same flag on `quick-fix finish` or `acceptance record`.
+3. Update agent instructions and scripts that run a quick fix to `compass quick-fix finish -m "<message>" --release-note "<one sentence for a user>" --no-commit -- <test command>`. Without the flag, the `compass ship-commit` command that `--no-commit` prints asks for `--release-note`.
 
 ### New keys and verbs
 

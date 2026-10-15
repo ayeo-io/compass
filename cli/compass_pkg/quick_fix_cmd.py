@@ -1065,12 +1065,18 @@ def cmd_quick_fix_finish(args):
         # A commit is the user's to ask for. With --no-commit the gates and
         # records are complete and the change is left in the working tree.
         if getattr(args, "no_commit", False):
+            # The landing refuses an issue that owes a line and holds none, so the
+            # printed command asks for one unless it is stored (ADR-065).
+            task, _ = load_manifest(task_dir)
+            note_flag = (' --release-note "<release line>"'
+                         if release_line.landing_refusal(task, task_dir) else "")
             return say(
                 args,
                 f"compass quick-fix finish: '{slug}' checked, not committed.",
+                # The command has a line of its own, so the output layer never cuts it.
                 detail=detail + [
-                    f"commit   : when asked, `compass ship-commit --issue {slug} "
-                    f"-m \"<message>\"` after staging the traced files"],
+                    "commit   : when asked, stage the traced files, then run",
+                    f"`compass ship-commit --issue {slug} -m \"<message>\"{note_flag}`"],
                 decision=True, gates=list(THREE_GATES), evidence=evidence_ids,
                 committed=False,
             )

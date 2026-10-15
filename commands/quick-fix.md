@@ -78,12 +78,14 @@ Then write the smallest correct change. Never touch the markers by hand.
 ## 3. Finish
 
 ```
-compass quick-fix finish -m "<commit message>" --no-commit -- <test command>
+compass quick-fix finish -m "<commit message>" --release-note "<one sentence for a user>" --no-commit -- <test command>
 ```
 
 It traces the changed files, records the green through `compass tdd-green`
 with your test command, or the declared acceptance, runs `compass check`, records its output through
 `compass evidence`, passes the three gates and writes the devlog line.
+`--release-note` stores the release line a quick fix owes; its landing is
+refused without one.
 
 Leave out `--no-commit` only when the user asked for a commit: it then
 commits through `compass ship-commit`. With `--no-commit`, say the change

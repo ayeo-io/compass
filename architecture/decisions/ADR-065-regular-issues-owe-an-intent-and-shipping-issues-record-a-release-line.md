@@ -11,7 +11,7 @@ Proposed by the architect for intent-and-release-line on 2026-10-14. compass:arc
 
 ## Context
 
-PRD 35 asks for two records a software team expects from each change (DS-8, DS-9). Only 1 of 40 regular issues has an intent, so a regular spec has nothing written to be checked against. No issue records a sentence for release notes, though `release_note:` is already read by the verification note and the project index.
+A software team expects two records from each change: a short statement of the problem and the outcome before the work starts, and one line for the release notes when it ships. Only 1 of 40 regular issues has an intent, so a regular spec has nothing written to be checked against. No issue records a sentence for release notes, though `release_note:` is already read by the verification note and the project index.
 
 Four earlier decisions bound the answer:
 
@@ -36,7 +36,7 @@ Most archived manifests hold no `generation` key and read the live configuration
 | Refuse every open issue on a shipping approach | Simplest rule | Changes open issues on a CLI upgrade, against ADR-036, and refuses a completed issue landed again at HEAD |
 | Decide by the CLI version in `versions.yml` | No new field | Couples a rule to version numbers; a reassess that changes nothing commits no generation, so some open issues would never gain the rule |
 | A check in `compass check` | One place for rules | Judges the archive, most of which reads the live configuration |
-| Keep the line in the verification report | DS-9 names the report | Two copies drift; the quick-fix note already renders the manifest value |
+| Keep the line in the verification report | The requirement for the release line names the report | Two copies drift; the quick-fix note already renders the manifest value |
 | Place issues by `land_commit` reachability alone | One git call per issue | Drops every squash-merged issue, as ADR-034 found |
 
 ## Consequences

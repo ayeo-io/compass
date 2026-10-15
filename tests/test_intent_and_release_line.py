@@ -922,6 +922,15 @@ def test_irl_24_landed_issue_not_refused_or_rewritten(tmp_path):
     landed = manifest(root)
     assert landed["land_commit"] != first_land and "release_note" not in landed, landed
 
+    # Landing it again at HEAD with --release-note is refused: a landed record is not
+    # rewritten, and nothing moves.
+    before = state(root)
+    done = run(root, "ship-commit", "-m", "Land again", "--issue", SLUG,
+               "--release-note", "Late text.")
+    assert done.returncode != 0, done
+    assert f"'{SLUG}' is completed" in done.stderr, done.stderr
+    assert state(root) == before and "release_note" not in manifest(root)
+
     declare_acceptance(root)
     done = run(root, "acceptance", "record", "--issue", SLUG, "--release-note", "Late text.",
                *PASS)
@@ -1022,6 +1031,7 @@ def test_irl_11_spike_and_issueless_commit_not_refused(tmp_path):
     done = run(root, "ship-commit", "-m", "Conclude the spike", "--issue", SLUG)
     output = done.stdout + done.stderr
     assert "release line" not in output and "release-line" not in output, output
+    assert done.returncode == 0, done
 
     root = repo(tmp_path / "plain")
     (root / "notes.txt").write_text("a note\n")
@@ -1196,3 +1206,57 @@ def test_irl_28_shared_files_hold_both_entries():
 
     upgrade = (ROOT / "docs" / "upgrade-7-0-0.md").read_text()
     assert "\n## The lightweight intent and the release line\n" in upgrade
+
+
+# --- IRL-30 ---------------------------------------------------------------------------
+
+def _documented(path, starts):
+    """The one command line in `path` that starts with `starts`."""
+    lines = [line.strip() for line in (ROOT / path).read_text().splitlines()
+             if line.strip().startswith(starts)]
+    assert len(lines) == 1, (path, starts, lines)
+    return lines[0]
+
+
+def _argv(line, fills):
+    """A documented command line as an argument list, with its placeholders filled."""
+    import shlex
+    for placeholder, value in fills.items():
+        line = line.replace(placeholder, value)
+    assert "<" not in line, line
+    return shlex.split(line)[1:]
+
+
+def test_irl_30_documented_quick_fix_flow_lands(tmp_path):
+    # The ship command tells a person to give the release line on ship-commit.
+    ship = " ".join((ROOT / "commands" / "ship.md").read_text().split())
+    assert '--release-note "<text written for a user>"' in ship, "commands/ship.md"
+    for given in (True, False):
+        root = repo(tmp_path / str(given))
+        slug = quick_fix(root, "fix-greeting", "greeting")
+        test = greet_command("greeting")[1:]
+        finish = _documented("commands/quick-fix.md", "compass quick-fix finish")
+        argv = _argv(finish, {"<commit message>": "Fix the greeting",
+                              "<test command>": " ".join(test),
+                              "<one sentence for a user>": "Greetings now say hello."})
+        if not given:
+            # With --no-commit the line is the person's to give now or at the commit.
+            at = argv.index("--release-note")
+            del argv[at:at + 2]
+        cut = argv.index("--")
+        done = run(root, *argv[:cut], "--issue", slug, *argv[cut:])
+        assert done.returncode == 0, done
+        printed = next(line for line in done.stdout.splitlines() if "compass ship-commit" in line)
+        command = printed.split("`")[1]
+        assert ("--release-note" in command) is not given, command
+        git(root, "add", "-A")
+        done = run(root, *_argv(command, {"<message>": "Fix the greeting",
+                                          "<release line>": "Greetings now say hello."}))
+        assert done.returncode == 0, done
+        assert "[release-line-missing]" not in done.stderr
+        landed = manifest(root, slug)
+        assert landed.get("land_timestamp") and landed["release_note"] == "Greetings now say hello."
+        assert_no_gh_call(root)
+    upgrade = " ".join((ROOT / "docs" / "upgrade-7-0-0.md").read_text().split())
+    section = upgrade.split("## The lightweight intent and the release line")[1]
+    assert "compass quick-fix finish" in section and "--no-commit" in section, section

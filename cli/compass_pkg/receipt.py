@@ -158,6 +158,7 @@ _RECEIPT_EVIDENCE_EXTRAS = {
     "test-run": ("scenario",),
     "manual-review": ("reviewer",),
     "human-approval": ("approver", "role", "decision"),
+    "approval-withdrawal": ("withdraws", "by"),
     "spike-conclusion": ("decision", "next_task"),
 }
 

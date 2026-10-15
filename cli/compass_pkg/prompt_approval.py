@@ -380,6 +380,12 @@ def _approve(session):
         if not session.args.isdigit():
             raise Refused(f"Compass: {_usage('approve')} Nothing was written.")
         number = int(session.args)
+    elif not _pending(session)[0]:
+        # Nothing is waiting: the command marks delegated approvals reviewed.
+        from compass_pkg import delegations
+        reviewed = delegations.mark_reviewed(session)
+        if reviewed is not None:
+            return reviewed
     request = _choose(session, number)
     _current(session, request)
     answer = approvals.Answer(request["form"], request.get("value"),
@@ -401,6 +407,10 @@ def _approve(session):
 
 def _reject(session):
     number, reason = _parse_number(session.args)
+    if number is None and reason.startswith("EV-"):
+        # A record id: overrule an approval made under a delegation (ADR-069).
+        from compass_pkg import delegations
+        return delegations.overrule(session, reason)
     request = _choose(session, number)
     _current(session, request)
     form, value = request["form"], request.get("value")

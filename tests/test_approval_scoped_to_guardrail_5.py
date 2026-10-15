@@ -372,17 +372,18 @@ def test_agf_11_major_1_and_locked_entries_unchanged():
             == digest, f"{section}.{key} changed"
 
 
-# --- AGF-17: version 1.1.0, and a generation that recorded 1.0.0 is judged ---------------
+# --- AGF-17: version 1.2.0 (ADR-069 moved it on from 1.1.0), and a generation that ------
+# --- recorded 1.0.0 is judged -----------------------------------------------------------
 
 def test_agf_17_version_1_1_0_within_major_1(tmp_path):
     from compass_pkg.check_registry import REGISTRY
     from impl_versions_support import record_versions
-    assert REGISTRY[CHECK].version == "1.1.0"
+    assert REGISTRY[CHECK].version == "1.2.0"
     lock = yaml.safe_load((ROOT / "tests" / "fixtures" / "impls" / "versions.lock.yml")
                           .read_text(encoding="utf-8"))["implementations"][CHECK]
-    assert str(lock["version"]) == "1.1.0"
+    assert str(lock["version"]) == "1.2.0"
     page = (ROOT / "docs" / "check-implementations.md").read_text(encoding="utf-8")
-    assert f"### `{CHECK}` (version 1.1.0)" in page
+    assert f"### `{CHECK}` (version 1.2.0)" in page
     root = _project(tmp_path, [G5])
     record_versions(root / ".compass" / "work" / SLUG, implementations={CHECK: "1.0.0"})
     _, row = _check_row(root)

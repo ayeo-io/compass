@@ -404,3 +404,171 @@ def record_use(task_dir, delegation, agent, done, subject):
     devlog = os.path.join(task_dir, "devlog.md")
     with open(devlog, "a", encoding="utf-8") as fh:
         fh.write(line)
+
+
+# --- the person's review of delegated approvals ----------------------------------------------
+
+#: The record that withdraws a guardrail 5 sign-off made under a delegation.
+WITHDRAWAL = "approval-withdrawal"
+#: The record types an approval under a delegation can write.
+DELEGATED_TYPES = ("human-approval", "artifact-approval", "checkpoint-approval")
+
+
+def _issue_dirs(compass_dir):
+    work = os.path.join(compass_dir, "work")
+    if not os.path.isdir(work):
+        return []
+    return [os.path.join(work, name) for name in sorted(os.listdir(work))
+            if os.path.isfile(os.path.join(work, name, "manifest.yml"))]
+
+
+def _waiting(record):
+    return (isinstance(record, dict) and record.get("via") == "delegation"
+            and record.get("type") in DELEGATED_TYPES and not record.get("reviewed_at"))
+
+
+def unreviewed(compass_dir):
+    """`[(task_dir, task, record)]` for each approval made under a delegation
+    that the person has not marked reviewed, across the project's issues."""
+    found = []
+    for task_dir in _issue_dirs(compass_dir):
+        try:
+            task, _ = load_manifest(task_dir)
+        except CompassError:
+            continue
+        found += [(task_dir, task, r) for r in task.get("evidence") or [] if _waiting(r)]
+    return found
+
+
+def _subject(record):
+    if record.get("type") == "artifact-approval" and record.get("artifact"):
+        return f"document '{record['artifact']}'"
+    if record.get("type") == "artifact-approval" and record.get("decisions"):
+        return "the decisions taken for you"
+    if record.get("type") == "checkpoint-approval":
+        return f"the {record.get('checkpoint')} checkpoint"
+    if record.get("check"):
+        return f"human check '{record['check']}'"
+    return "guardrail 5 sign-off"
+
+
+def _self_written(task, record):
+    """True when the agent approved a document registered in the same session."""
+    if record.get("type") != "artifact-approval" or not record.get("artifact"):
+        return False
+    entry = next((a for a in task.get("artifacts") or []
+                  if isinstance(a, dict) and a.get("kind") == record["artifact"]), {})
+    session = record.get("session_id")
+    return bool(session) and entry.get("registered_session") == session
+
+
+def review_summary(compass_dir):
+    """The display-only summary of delegated approvals not yet reviewed, or ''.
+    It never writes a record."""
+    rows = unreviewed(compass_dir)
+    if not rows:
+        return ""
+    lines = [f"Compass: {len(rows)} approval(s) made under a delegation wait for your "
+             f"review:"]
+    for task_dir, task, record in rows:
+        flag = (" - the agent approved a document it wrote in the same session"
+                if _self_written(task, record) else "")
+        lines.append(f"  {record.get('id')} - {_subject(record)}, issue "
+                     f"{os.path.basename(task_dir)}, by {record.get('approved_by_agent')} "
+                     f"under {record.get('delegation')} at {record.get('timestamp')}{flag}")
+    lines.append("Type /compass:approve to mark them reviewed, or /compass:reject <record id> "
+                 "<reason> to overrule one.")
+    return "\n".join(lines)
+
+
+@contextlib.contextmanager
+def _held():
+    """The session's own issue: its approval lock is already held."""
+    yield
+
+
+def mark_reviewed(session):
+    """`/compass:approve` with no request pending: mark every delegated approval
+    reviewed. None when there is nothing to review."""
+    from compass_pkg.core import save_manifest
+    from compass_pkg.prompt_approval import HookResult
+    compass_dir = os.path.dirname(os.path.dirname(session.task_dir))
+    rows = unreviewed(compass_dir)
+    if not rows:
+        return None
+    stamp = _iso(_now())
+    ids = []
+    for task_dir in sorted({row[0] for row in rows}):
+        own = os.path.abspath(task_dir) == os.path.abspath(session.task_dir)
+        with (_held() if own else approvals.lock(task_dir)):
+            task, path = load_manifest(task_dir)
+            for record in task.get("evidence") or []:
+                if _waiting(record):
+                    record.update(reviewed_by=session.approver, reviewed_at=stamp)
+                    ids.append(record.get("id"))
+            save_manifest(task, path)
+    return HookResult(False, f"Compass: marked {len(ids)} delegated approval(s) reviewed by "
+                             f"{session.approver}: {', '.join(ids)}.",
+                      f"The person reviewed the delegated approvals {', '.join(ids)}.")
+
+
+def overrule(session, args):
+    """`/compass:reject <record id> <reason>`: overrule one approval made under
+    a delegation. A check gets a `rejected` record, a document returns to
+    draft, and a guardrail 5 sign-off gets an `approval-withdrawal` record.
+    None of these reverses anything the agent already did."""
+    from compass_pkg import approval_records
+    from compass_pkg.core import save_manifest
+    from compass_pkg.prompt_approval import HookResult, _send_back
+    record_id, _, reason = args.partition(" ")
+    reason = reason.strip()
+    task, path = load_manifest(session.task_dir)
+    evidence = [r for r in task.get("evidence") or [] if isinstance(r, dict)]
+    record = next((r for r in evidence if r.get("id") == record_id), None)
+    if record is None or record.get("via") != "delegation":
+        raise _refused(f"{record_id} is not an approval made under a delegation on issue "
+                       f"{session.slug}. /compass:reject <record id> overrules only those; "
+                       f"answer a request with /compass:reject <n> <reason>.")
+    if any(record_id in (r.get("overrules"), r.get("withdraws")) for r in evidence):
+        raise _refused(f"{record_id} was already overruled.")
+    subject = _subject(record)
+    stamp = _iso(_now())
+    record.update(reviewed_by=session.approver, reviewed_at=stamp)
+    if record.get("type") == "human-approval" and approval_records.gives_g5(record):
+        taken = {r.get("id") for r in evidence}
+        number = 1
+        while f"EV-WITHDRAWAL-{number}" in taken:
+            number += 1
+        written = f"EV-WITHDRAWAL-{number}"
+        task.setdefault("evidence", []).append({
+            "id": written, "type": WITHDRAWAL, "withdraws": record_id,
+            "by": session.approver, "at": stamp, "reason": reason, "via": "prompt",
+            "issue": session.slug, "generation": task.get("generation"),
+            "session_id": session.session_id, "prompt_id": session.prompt_id})
+        save_manifest(task, path)
+    elif record.get("type") == "human-approval" and record.get("check"):
+        save_manifest(task, path)
+        provenance = {"via": "prompt", "host": "claude-code",
+                      "session_id": session.session_id, "prompt_id": session.prompt_id,
+                      "approver_source": session.approver_source, "overrules": record_id}
+        if reason:
+            provenance["reason"] = reason
+        answer = approvals.Answer("check", record["check"], approval_records.REJECTED,
+                                  session.approver, session.role,
+                                  record.get("scope") or "", provenance)
+        written = ", ".join(approvals.record(session.task_dir, answer).evidence_ids)
+    elif record.get("type") == "artifact-approval" and record.get("artifact"):
+        save_manifest(task, path)
+        _send_back(session, record["artifact"], reason)
+        written = f"{record['artifact']} back to draft"
+    else:
+        raise _refused(f"{record_id} ({subject}) cannot be overruled with /compass:reject; "
+                       f"reopen a decision with compass issue decision set.")
+    said = f": {reason}" if reason else ""
+    return HookResult(
+        False,
+        f"Compass: overruled {record_id} ({subject}) for {session.approver}{said} - "
+        f"{written}. This records your disagreement; it does not reverse anything the "
+        f"agent already did.",
+        f"The person overruled {record_id} ({subject}){said}. Do not rely on that "
+        f"approval; ask the person what should change.")

@@ -330,6 +330,12 @@ def cmd_issue_artifact(args):
 
     if rel:
         entry["path"] = rel.replace(os.sep, "/")
+        # The Claude Code session that registered the document, so the review
+        # summary can flag an agent that approves, under a delegation, a
+        # document it wrote in the same session (ADR-069 decision 5).
+        session = os.environ.get("CLAUDE_CODE_SESSION_ID")
+        if session:
+            entry["registered_session"] = session
 
     if args.status != "omitted":
         _refuse_unreadable(task, task_dir, args.kind)

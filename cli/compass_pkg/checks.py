@@ -782,11 +782,22 @@ def _check_human_approval(task, task_dir):
     # initiative at least). This check counts only a `human-approval` record
     # given for `G5` (ADR-066): approved, naming no other subject, and holding
     # the needed structured fields. It cites the first that counts.
+    # Version 1.2.0 (ADR-069 decision 6): a record that an
+    # `approval-withdrawal` names no longer counts. The landed floor below still
+    # reads every approved record, so a withdrawal never fails a landed issue.
     registry = task.get("evidence") or []
     approvals = [e for e in registry if isinstance(e, dict)
                  and e.get("type") == "human-approval"]
     approved = [a for a in approvals if a.get("decision") == "approved"]
-    ok, detail = _judge_g5_approval(task, approved)
+    withdrawn = {e.get("withdraws"): e.get("id") for e in registry
+                 if isinstance(e, dict) and e.get("type") == "approval-withdrawal"}
+    standing = [a for a in approved if a.get("id") not in withdrawn]
+    ok, detail = _judge_g5_approval(task, standing)
+    gone = [a.get("id") for a in approved
+            if a.get("id") in withdrawn and approval_records.gives_g5(a)]
+    if not ok and gone:
+        detail = (f"approval withdrawn: {', '.join(gone)} was withdrawn by "
+                  f"{', '.join(withdrawn[g] for g in gone)}; {detail}")
     if ok or status_words.is_in_flight(task) or not _earlier_rule_passes(approved):
         return ok, detail
     return True, (f"{detail} - the issue has landed and the earlier rule passes it (the "

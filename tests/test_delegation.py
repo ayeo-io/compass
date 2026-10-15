@@ -240,3 +240,100 @@ def test_f11_revoke_ends_delegation(tmp_path):
     assert code != 0 and "DL-1" in out + err and "revoked" in out + err, out + err
     # Nothing in force: revoke says so and writes nothing.
     assert _type(root, "", command="compass:revoke").block
+
+
+# --- the person sees what was approved under a delegation (`TRC-F12`) -------------------------
+
+def _hook_json(script, root, body, **env_extra):
+    import json
+    import os
+    import subprocess
+    env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(root / ".home"),
+           "CLAUDE_CONFIG_DIR": str(root / ".claude-config"), "LANG": "C.UTF-8",
+           "CLAUDE_PROJECT_DIR": str(root), "PYTHONDONTWRITEBYTECODE": "1"}
+    env.update(env_extra)
+    r = subprocess.run(["bash", str(ROOT / "hooks" / script)], input=json.dumps(body),
+                       cwd=root, env=env, capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, r.stderr
+    return json.loads(r.stdout) if r.stdout.strip() else {}
+
+
+def _overnight(root):
+    """Three approvals under DL-1: a check, a document the agent registered in
+    the same session, and the decisions taken."""
+    body = manifest_of(root)
+    (root / "docs").mkdir(exist_ok=True)
+    (root / "docs" / "td.md").write_text("# design\n", encoding="utf-8")
+    body["artifacts"] = [{"id": "ART-TD", "kind": "technical-design",
+                          "status": "awaiting-approval", "path": "docs/td.md",
+                          "registered_session": "sess-agent"}]
+    body["decisions_taken"] = [{"id": "DEC-1", "question": "q", "resolution": "r",
+                                "by": "spec-author", "stage": "define", "status": "open"}]
+    save_manifest(root, body)
+    assert not _type(root, f"{ARCHITECT} until {_soon()}").block
+    for argv in (["--check", CHECK, "--scope", "the review"],
+                 ["--artifact", "technical-design"], ["--decisions"]):
+        code, out, err = run(root, "evidence", "approve", "--issue", SLUG, *argv,
+                             "--delegated", "--as", ARCHITECT,
+                             CLAUDE_CODE_SESSION_ID="sess-agent")
+        assert code == 0, out + err
+    return [e["id"] for e in manifest_of(root)["evidence"] if e.get("via") == "delegation"]
+
+
+def test_f12_review_summary_until_acknowledged(tmp_path):
+    root = project(tmp_path)
+    ids = _overnight(root)
+    assert len(ids) == 3, ids
+    start = _hook_json("session-start.sh", root, {"session_id": "s", "source": "startup"})
+    prompt = _hook_json("approval-summary.sh", root,
+                        {"session_id": "s", "hook_event_name": "UserPromptSubmit",
+                         "prompt": "good morning", "cwd": str(root)})
+    for shown in (start["systemMessage"], prompt["systemMessage"]):
+        for needle in ids + [SLUG, ARCHITECT, "/compass:approve", "/compass:reject"]:
+            assert needle in shown, (needle, shown)
+        flagged = [line for line in shown.splitlines() if "technical-design" in line]
+        assert flagged and "wrote" in flagged[0], shown
+    # Shown again until the person marks them reviewed; nothing was written.
+    before = (task_dir(root) / "manifest.yml").read_bytes()
+    again = _hook_json("approval-summary.sh", root,
+                       {"session_id": "s", "hook_event_name": "UserPromptSubmit",
+                        "prompt": "next", "cwd": str(root)})
+    assert again["systemMessage"] == prompt["systemMessage"]
+    assert (task_dir(root) / "manifest.yml").read_bytes() == before
+    result = _type(root, "", command="compass:approve")
+    assert not result.block and "3" in result.message, result
+    for rec in manifest_of(root)["evidence"]:
+        if rec["id"] in ids:
+            assert rec["reviewed_by"] == OWNER and rec["reviewed_at"], rec
+    after = _hook_json("approval-summary.sh", root,
+                       {"session_id": "s", "hook_event_name": "UserPromptSubmit",
+                        "prompt": "next", "cwd": str(root)})
+    assert "systemMessage" not in after, after
+
+
+# --- the person overrules a delegated check or document approval (`TRC-F14`) ------------------
+
+def test_f14_overrule_check_and_document(tmp_path):
+    from compass_pkg import approval_records, effective, review_records
+    root = project(tmp_path)
+    ids = _overnight(root)
+    check_id = next(i for i in ids if CHECK in i)
+    doc_id = next(i for i in ids if "ARTIFACT" in i)
+    result = _type(root, f"{check_id} the review missed the migration",
+                   command="compass:reject")
+    assert not result.block, result
+    last = manifest_of(root)["evidence"][-1]
+    assert last["check"] == CHECK and last["decision"] == "rejected"
+    assert last["overrules"] == check_id and last["via"] == "prompt"
+    view = effective.view_or_legacy(str(task_dir(root)))
+    status, detail = approval_records.judge(CHECK, view.config["checks"][CHECK],
+                                            manifest_of(root), str(task_dir(root)))
+    assert status == "fail" and detail.startswith("approval withdrawn"), detail
+    result = _type(root, f"{doc_id} the threat model is missing", command="compass:reject")
+    assert not result.block, result
+    entry = manifest_of(root)["artifacts"][0]
+    assert entry["status"] == "draft" and entry["rejected_by"] == OWNER
+    assert entry["rejected_digest"] == review_records.file_digest(str(root / "docs" / "td.md"))
+    # A record that was not made under a delegation is not overruled this way.
+    result = _type(root, "EV-NOPE reason", command="compass:reject")
+    assert result.block

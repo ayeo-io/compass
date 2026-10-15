@@ -105,6 +105,8 @@ Rules:
 | [ADR-063](ADR-063-checkpoint-outcomes-and-session-usage-are-stored-and-the-autonomy-and-cost-figures-are-derived.md) | Checkpoint outcomes and session usage are stored, and the autonomy and cost figures are derived | accepted | extends ADR-045 and ADR-051; follows ADR-050's `artifact-approval` precedent; with ADR-006, ADR-026, ADR-031, ADR-036 and ADR-048 |
 | [ADR-064](ADR-064-the-document-set-gains-named-sections-and-section-checks-never-judge-an-earlier-catalogue.md) | The document set gains named sections, and the section checks never judge an earlier catalogue | accepted | extends ADR-051 and ADR-053; settles ADR-055 decision 9; with ADR-006, ADR-033, ADR-036, ADR-038 and ADR-050 |
 | [ADR-066](ADR-066-an-approval-names-its-subject-and-guardrail-5-counts-only-an-approval-given-for-it.md) | An approval names its subject, and guardrail 5 counts only an approval given for it | accepted | extends ADR-038 and ADR-063; with ADR-006 and ADR-039 |
+| [ADR-068](ADR-068-a-person-approves-inside-claude-code-through-an-event-the-model-cannot-raise.md) | A person approves inside Claude Code through an event the model cannot raise, and the agent only requests | proposed | amends ADR-050 decision 2; with ADR-006 and ADR-066 |
+| [ADR-069](ADR-069-a-person-can-delegate-approvals-to-a-named-agent-for-a-stated-time-and-scope.md) | A person can delegate approvals to a named agent for a stated time and scope | proposed | amends ADR-068 decision 1; with ADR-038 and ADR-066 |
 
 ## Principle → ADR mapping
 

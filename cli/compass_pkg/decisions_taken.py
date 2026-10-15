@@ -16,7 +16,8 @@ This module owns:
 - `compass issue decision set`, which reopens a decision and needs a terminal;
 - `waiting`, which `compass next` calls to decide whether the issue waits at a
   checkpoint;
-- `approve_set`, the `--decisions` form of `compass evidence approve`;
+- `approve_set`, the `decisions` form of an approval, which
+  `approvals.record` calls for every approval path;
 - `report`, which `compass retro --decisions` prints.
 
 Only `approve_set` writes `confirmed`, as one `artifact-approval` record for
@@ -382,17 +383,19 @@ def _may_confirm(task_dir, approver):
             "an `approvers:` list to compass.yml"))
 
 
-def approve_set(args):
-    """The `--decisions` form of `compass evidence approve`. The verb has
-    already checked the terminal and the approver's name."""
+def approve_set(task_dir, answer, save=True):
+    """The `decisions` form of an approval (`approvals.record`). The caller
+    has already checked the approver's name. Returns `(outcome, detail, data,
+    evidence_ids)`; with `save` false, refuses as it would and writes
+    nothing."""
     from compass_pkg import next_cmd
-    if args.decision != "approved":
+    if answer.decision != "approved":
         raise CompassError("compass evidence approve: --decisions records a confirmation "
                            "only. To send a decision back, run `compass issue decision set "
                            "<id> --status reopened --reason \"<why>\"`.")
-    task_dir = resolve_issue_dir(args.task)
     task, path = load_manifest(task_dir)
-    _may_confirm(task_dir, args.approver)
+    if answer.approver is not None:
+        _may_confirm(task_dir, answer.approver)
     done = next_cmd._stages_on_record(next_cmd._typed(task), task_dir)
     stage, entries = waiting(task, done)
     if stage is None:
@@ -409,21 +412,24 @@ def approve_set(args):
         number += 1
     evidence_id = "EV-APPROVAL-DECISIONS-%d" % number
     record = {"id": evidence_id, "type": "artifact-approval", "decisions": ids, "stage": stage,
-              "approver": args.approver, "role": args.role, "decision": args.decision,
+              "approver": answer.approver, "role": answer.role, "decision": answer.decision,
               "timestamp": stamp}
-    if args.scope:
-        record["scope"] = args.scope
+    if answer.scope:
+        record["scope"] = answer.scope
     record.update(issue=os.path.basename(os.path.normpath(task_dir)),
                   generation=task.get("generation"))
-    task.setdefault("evidence", []).append(record)
-    for entry in entries:
-        entry["status"] = CONFIRMED
-    save_manifest(task, path)
-    return say(args, "compass evidence approve: %d decision(s) confirmed by %s, recorded as %s."
-               % (len(ids), args.approver, evidence_id),
-               detail=["decisions : %s" % ", ".join(ids),
-                       "record    : %s in manifest.yml evidence" % evidence_id],
-               decisions=ids, evidence_id=evidence_id, approver=args.approver, at=stamp)
+    record.update(answer.provenance)
+    if save:
+        task.setdefault("evidence", []).append(record)
+        for entry in entries:
+            entry["status"] = CONFIRMED
+        save_manifest(task, path)
+    return ("compass evidence approve: %d decision(s) confirmed by %s, recorded as %s."
+            % (len(ids), answer.approver, evidence_id),
+            ["decisions : %s" % ", ".join(ids),
+             "record    : %s in manifest.yml evidence" % evidence_id],
+            dict(decisions=ids, evidence_id=evidence_id, approver=answer.approver, at=stamp),
+            [evidence_id])
 
 
 # --- retro --------------------------------------------------------------------------

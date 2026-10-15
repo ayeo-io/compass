@@ -191,7 +191,10 @@ def test_tr_8_other_templates_render_unchanged_and_the_cap_holds(tmp_path):
         assert code == 0, (kind, out + err)
         assert out == (TEMPLATES / f"{kind}.md").read_text(encoding="utf-8"), kind
     for kind in CATALOGUE_KINDS:
-        code, out, err = _render(root, kind)
+        # A regular issue registers the intent at lightweight, whose four sections hold
+        # no checkbox; the thorough depth prints the whole template.
+        code, out, err = _render(root, kind, *(("--depth", "thorough") if kind == "intent"
+                                                else ()))
         assert code == 0, (kind, out + err)
         assert _contract(out) == _contract((TEMPLATES / f"{kind}.md").read_text(encoding="utf-8")), kind
     # The cap in test_borrowed_document_shapes.py covers these two templates.

@@ -165,6 +165,10 @@
       "type": "string",
       "description": "The commit ship-commit made when it marked the issue landed. evidence-matches-tree compares the newest green's tree_id with this commit's tree."
     },
+    "release_note": {
+      "type": "string",
+      "description": "The issue's release line: text written for a user, for the release notes. Written only by --release-note on compass acceptance record, compass ship-commit and compass quick-fix finish; the latest write wins. Optional: a landing refuses an issue whose stored configuration sets release_line: true on its approach and that holds none (docs/release-line.md)."
+    },
     "subtasks": {
       "type": "array",
       "description": "The subtasks of a multiagent run, written only by `compass issue subtask`. Each records the files that crossed a boundary, the base commit, model, budget and cost, and the progress a resume needs. Optional: a manifest without it loads.",

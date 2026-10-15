@@ -140,6 +140,15 @@ force; if it is still a spike, leave the marker in place.
 
    `delivery-approach.md` is the human-readable version of what `manifest.yml`
    records mechanically.
+
+   When the computed approach registers an `intent` entry with no path, as the
+   regular approach does at depth `lightweight`, draft the intent too. Run
+   `compass issue artifact-path intent` for its home, write the file there
+   from the issue description, under the headings
+   `compass issue template show intent --depth <depth>` prints for the
+   registered depth, with one `- INT-n: <outcome>` line for each outcome, and
+   register it with `compass issue artifact set intent --status draft --path <home>`.
+   The spec author corrects it at define.
 5. **Set the `.compass/current-task` pointer** with `compass issue use
    <slug>`, so every later `compass` call resolves to this issue without an
    `--issue` flag, and another session working on another issue is told

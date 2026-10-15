@@ -91,14 +91,14 @@ HARD_GUARDRAILS = (GATE_G5,)
 # returns `NOTHING_TO_CHECK` for it: checks.py (scenarios-are-executable,
 # claim-traces-to-scenario, command-passes), borrowed_docs.py, binding.py
 # (evidence-matches-tree), checks.py (dod-evidence-typed), landed_by.py, multiagent_check.py,
-# evidence_identity.py, artifact_status.py and section_checks.py. The check
-# declared-tests-resolve returns a pass with a note. Every other check fails.
-# `tests/test_obligations.py` replays these verdicts against the archive sample.
+# evidence_identity.py, artifact_status.py, section_checks.py and design_size.py.
+# The check declared-tests-resolve returns a pass with a note. Every other check
+# fails. `tests/test_obligations.py` replays these verdicts against the archive sample.
 DECLINING_CHECKS = (
     "scenarios-are-executable", "claim-traces-to-scenario", "command-passes",
     "borrowed-documents-answered", "evidence-matches-tree",
     "evidence-identity-matches", "dod-evidence-typed", "landed-by-resolves", "multiagent-run-recorded", "artifacts-approved",
-    "nfr-rows-resolved", "contracts-declared",
+    "nfr-rows-resolved", "contracts-declared", "design-within-word-ceiling",
 )
 PASSING_CHECKS = ("declared-tests-resolve",)
 
@@ -106,6 +106,7 @@ PASSING_CHECKS = ("declared-tests-resolve",)
 # guardrails file has no field for them, so the adapter holds the table the
 # preset's checks.yml carries.
 CHECK_PARAMS = {
+    "design-within-word-ceiling": {"factor": 1.5},
     "contracts-declared": {
         "trigger_paths": ["schemas/*", "governance/presets/*", "*.schema.json"],
         "trigger_contents": [{"path": "*.py", "contains": "add_parser("}],

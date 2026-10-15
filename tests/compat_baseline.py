@@ -266,6 +266,10 @@ def archive_results(root, only=None):
 #: The checks 7.0.0 adds outside every gate that read a section of the spec or the design.
 SECTION_CHECKS = ("nfr-rows-resolved", "contracts-declared")
 
+#: Every check 7.0.0 adds outside every gate that may appear on an archived issue only
+#: as nothing to check: the two section checks and the design-size check (ADR-067).
+OUTSIDE_GATE_7_0_0 = SECTION_CHECKS + ("design-within-word-ceiling",)
+
 
 def allow_7_0_0_moves(recorded, now):
     """`(recorded, now)` with the three verdict moves 7.0.0 makes taken out of both, each only
@@ -282,9 +286,10 @@ def allow_7_0_0_moves(recorded, now):
     The caller runs this on the sample after `issue migrate` and `issue render --all`
     (`archive.checkable_root`), where an issue page and the records exist.
 
-    7.0.0 also adds the two section checks, which sit in no gate (ADR-064). Each may appear
-    only where the recorded verdicts have no row for it, and only as `nothing-to-check`: any
-    other verdict means the check judged an archived issue, and stays a difference."""
+    7.0.0 also adds the two section checks (ADR-064) and the design-size check (ADR-067),
+    which sit in no gate. Each may appear only where the recorded verdicts have no row for
+    it, and only as `nothing-to-check`: any other verdict means the check judged an archived
+    issue, and stays a difference."""
     old_all, new_all = {}, {}
     for slug in set(recorded) | set(now):
         old = dict(recorded.get(slug) or {})
@@ -298,7 +303,7 @@ def allow_7_0_0_moves(recorded, now):
         if old_v.get("dod-evidence-typed") == "pass" \
                 and new_v.get("dod-evidence-typed") in ("pass", "nothing-to-check"):
             old_v.pop("dod-evidence-typed"), new_v.pop("dod-evidence-typed")
-        for check in SECTION_CHECKS:
+        for check in OUTSIDE_GATE_7_0_0:
             if check not in old_v and new_v.get(check) == "nothing-to-check":
                 new_v.pop(check)
         if "verdicts" in old:

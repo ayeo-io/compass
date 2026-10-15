@@ -302,6 +302,11 @@ reassess), and the `compass.yml` it would write.
     },
     {
       "catalogue": "checks",
+      "id": "design-within-word-ceiling",
+      "operation": "add"
+    },
+    {
+      "catalogue": "checks",
       "id": "dod-evidence-typed",
       "operation": "set"
     },
@@ -349,6 +354,11 @@ reassess), and the `compass.yml` it would write.
       "catalogue": "vocabulary",
       "id": "checks.dashboard-current",
       "operation": "remove"
+    },
+    {
+      "catalogue": "vocabulary",
+      "id": "checks.design-within-word-ceiling",
+      "operation": "add"
     },
     {
       "catalogue": "vocabulary",

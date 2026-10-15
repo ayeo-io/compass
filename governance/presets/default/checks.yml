@@ -88,6 +88,13 @@ checks:
     kind: deterministic, impl: contracts-declared, severity: blocking, on_skipped: not-applicable,
     params: {trigger_paths: ['schemas/*', 'governance/presets/*', '*.schema.json'], trigger_contents: [
         {path: '*.py', contains: add_parser(}]}}
+  design-within-word-ceiling: {statement: 'Once plan exit is due, the technical design holds no more
+      words than its word_ceiling at the depth it is registered at, times the factor in params. Words
+      are counted from the visible text, and unit files never lift the limit. Declines to check, rather
+      than passing, for an issue with no generation, a closed issue, a design not registered with a
+      path, a catalogue with no word_ceiling for the design at its depth, and an issue that has not
+      passed the plan stage.', kind: deterministic, impl: design-within-word-ceiling, severity: blocking,
+    on_skipped: not-applicable, params: {factor: 1.5}}
   spike-conclusion-present: {statement: A spike has a `spike-conclusion` evidence entry with a recorded
       decision (discard | graduate-to-delivery | defer); graduate-to-delivery links the next issue., kind: deterministic,
     impl: spike-conclusion-present, severity: blocking, on_skipped: fail, locked: true}

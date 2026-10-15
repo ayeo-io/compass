@@ -33,6 +33,7 @@ from compass_pkg.checks import (
     _check_scenario_has_id_and_intent, _check_scenarios_are_executable,
     _check_scenarios_have_tests, _check_spike_conclusion_present,
     _check_spike_no_production_changes, _check_suite_passed)
+from compass_pkg.design_size import _check_design_within_word_ceiling
 from compass_pkg.landed_by import _check_landed_by_resolves
 from compass_pkg.multiagent_check import _check_multiagent_run_recorded
 from compass_pkg.readiness_registry import READINESS  # noqa: F401  (re-exported)
@@ -120,6 +121,9 @@ _ENTRIES = (
     _entry("contracts-declared", _check_contracts_declared,
            params_spec={"trigger_paths": "list", "trigger_contents": "list"},
            tighter={"trigger_paths": "none", "trigger_contents": "none"}),
+    # A lower factor refuses more designs, so lowering it tightens the check.
+    _entry("design-within-word-ceiling", _check_design_within_word_ceiling,
+           params_spec={"factor": "number"}, tighter={"factor": "lower"}),
 )
 
 REGISTRY: dict[str, CheckImpl] = {e.name: e for e in _ENTRIES}

@@ -202,6 +202,27 @@ _(none yet - the shipped default guardrails apply as-is)_
     `ship-commit` runs `artifacts-approved` only.
   - An issue stored on an earlier generation gains both checks at its next
     `compass approach evaluate --write`.
+- **`design-within-word-ceiling`** is a blocking check that fails a technical
+  design whose word count is over its `word_ceiling` at the registered depth
+  times `params.factor`, 1.5 in the shipped default: 6,000 words at thorough
+  and 1,800 at lightweight. It is unlocked, has `on_skipped:
+  not-applicable`, and sits in no gate and no stage list. `compass check` runs
+  it after the section checks, through `outside_gate.judged`. ADR-067 holds
+  the decision.
+  - Words are the whitespace tokens of the visible text: rendered block
+    interiors, marker lines and HTML comments are left out, and headings,
+    prose, tables and code fences count. `compass issue lint` counts the same
+    way for its word-limit note.
+  - The design's own count decides. Registered low-level designs never lift
+    the refusal; on the full approach the failure names each work unit with
+    none.
+  - It declines, reporting `nothing to check`, on the four conditions of the
+    section checks, with the design as the document and "has no word_ceiling
+    for technical-design at depth D" as the fourth, and on a fifth: plan exit
+    is not yet due, "plan exit is not yet due: the issue is at S".
+  - A spike runs it and reads `nothing to check`, because it registers no
+    design. An issue stored on an earlier generation gains it at its next
+    `compass approach evaluate --write`.
 - **An advisory failure** is a check that failed where its effective severity
   is advisory (`severity: advisory`, or a `blocking_when` the assessment does
   not match). It is labelled ADVISORY, never PASS or FAIL, is counted apart

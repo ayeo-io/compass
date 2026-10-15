@@ -511,6 +511,11 @@ def test_d2_repairs_change_only_retired_names():
     sub-bullets for each check, the trigger paths, the four declining
     conditions and the spike rule.
 
+    One more was re-baselined by `word-ceilings-and-lld`:
+    `governance/guardrails.md` (list_items 61 -> 66) gained the bullet on the
+    check `design-within-word-ceiling`, with sub-bullets for the word rule,
+    the design's own count, the declining conditions and the spike rule.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

@@ -496,7 +496,14 @@ def test_dss_4_readers_find_sections_in_numbered_and_named_documents_alike(tmp_p
     # A planted fault is reported: a document read differently once its headings are named.
     broken = dict(second)
     broken["lint"] = (0, second["lint"][1] + "\n  a numbered heading: 6. Design decisions\n")
-    assert _differences(first, broken) == ["lint"]
+    # The design-size check (ADR-067) counts each heading number as a word, so only the
+    # count in its detail differs between the two designs.
+
+    def sizeless(run):
+        code, text = run["check"]
+        return dict(run, check=(code, re.sub(r"holds [\d,]+ words", "holds N words", text)))
+
+    assert _differences(sizeless(first), sizeless(broken)) == ["lint"]
 
 
 def test_dss_31_template_show_on_an_earlier_generation_keeps_its_prose(tmp_path):
@@ -2195,8 +2202,10 @@ def test_dss_30_checks_declared_and_documented(tmp_path):
         assert check_registry.installed_version(name) == "1.0.0", name
         assert lock[name]["version"] == "1.0.0", name
         assert list((ROOT / "tests/fixtures/impls" / name).iterdir()), name
-    # `compass check` runs the three through one helper.
-    assert outside_gate.CHECKS == ("artifacts-approved",) + U5_CHECKS
+    # `compass check` runs the three through one helper. The design-size check of
+    # ADR-067 runs after them through the same helper.
+    assert outside_gate.CHECKS == ("artifacts-approved",) + U5_CHECKS + (
+        "design-within-word-ceiling",)
     source = (ROOT / "cli/compass_pkg/check_cmd.py").read_text(encoding="utf-8")
     assert source.count("outside_gate.judged(") == 1
     assert source.count("def _outside_gate_pass(") == 1

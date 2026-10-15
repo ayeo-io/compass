@@ -1210,8 +1210,9 @@ def test_ob_8_the_module_declares_its_dependencies_and_stays_small():
     text = path.read_text(encoding="utf-8")
     assert "# DEPENDENCY:" in text
     # The design's target was 600; the readiness fact (one function and its
-    # table rows) takes the cap to 620.
-    assert len(text.splitlines()) < 620
+    # table rows) takes the cap to 620, and the word-limit fact (one field and
+    # its row) to 625.
+    assert len(text.splitlines()) < 625
     core = (ROOT / "cli" / "compass_pkg" / "core.py").read_text(encoding="utf-8")
     assert len(core.splitlines()) <= 1200
 

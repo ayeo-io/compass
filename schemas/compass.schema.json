@@ -252,7 +252,7 @@
               "type": "boolean"
             },
             "file": {
-              "description": "The file name of the artifact in the issue's folder, for example `acceptance-criteria.md`. `<n>` stands for a round, as in `review-<n>.md`. `<unit>` stands for a work unit and allows one folder, as in `low-level-design/<unit>.md`.",
+              "description": "The file name of the artifact in the issue's folder, for example `acceptance-criteria.md`. `<n>` stands for a round, as in `review-<n>.md`, and `<unit>` for a work unit, which alone allows one folder, as in `low-level-design/<unit>.md`.",
               "type": "string"
             },
             "locked": {
@@ -347,7 +347,7 @@
                   "type": "boolean"
                 },
                 "file": {
-                  "description": "The file name of the artifact in the issue's folder, for example `acceptance-criteria.md`. `<n>` stands for a round, as in `review-<n>.md`. `<unit>` stands for a work unit and allows one folder, as in `low-level-design/<unit>.md`.",
+                  "description": "The file name of the artifact in the issue's folder, for example `acceptance-criteria.md`. `<n>` stands for a round, as in `review-<n>.md`, and `<unit>` for a work unit, which alone allows one folder, as in `low-level-design/<unit>.md`.",
                   "type": "string"
                 },
                 "owner": {
@@ -371,7 +371,7 @@
                   "type": "string"
                 },
                 "word_ceiling": {
-                  "description": "The most words the document should hold at each depth it can be written at, for example `{thorough: 4000, lightweight: 1200}`. Each value is a whole number of at least 1. Rendered blocks and HTML comments are not counted. A generation stored before the field existed has no limit.",
+                  "description": "The most words the document should hold at each depth it can be written at, each a whole number of at least 1, for example `{thorough: 4000, lightweight: 1200}`. Rendered blocks and HTML comments are not counted.",
                   "type": "object"
                 }
               },
@@ -394,7 +394,7 @@
               "type": "object"
             },
             "word_ceiling": {
-              "description": "The most words the document should hold at each depth it can be written at, for example `{thorough: 4000, lightweight: 1200}`. Each value is a whole number of at least 1. Rendered blocks and HTML comments are not counted. A generation stored before the field existed has no limit.",
+              "description": "The most words the document should hold at each depth it can be written at, each a whole number of at least 1, for example `{thorough: 4000, lightweight: 1200}`. Rendered blocks and HTML comments are not counted.",
               "type": "object"
             }
           },

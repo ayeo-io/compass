@@ -31,11 +31,11 @@ The kinds are `coverage`, `gates`, `dod`, `dor`, `artifacts`, `evidence`,
 `follow-ups`, `decisions-taken`, `header`, `ask`, `decision-required`,
 `acceptance`, `related`, `decisions`, `traceability`, `deliberately-omitted`,
 `verification-note`, `index`, `assessment`, `policy-rules`, `stage-weights`, `gate-set`,
-`plan-exit`, `breakdown-exit`, `readiness` and `release-line`. All are rendered.
+`plan-exit`, `breakdown-exit`, `readiness`, `document-header`, `dependencies` and `release-line`. All are rendered.
 
 | Kind | What it shows |
 |---|---|
-| `coverage` | One row for each scenario: tests, red, green and acceptance records, and the result (`passed`, `failing test only` or `no test record`). Then the de-scoped failure modes with their reasons |
+| `coverage` | One row for each scenario: tests, red, green and acceptance records, and the result (`passed`, `failing test only` or `no test record`). Then the de-scoped failure modes with their reasons. When the technical design holds a `## Verification plan` heading, a Kind column sits between Title and Tests: see "The Kind column" below. A design with no such heading gets the columns it had before |
 | `gates` | `Gates: n of m pass`, then one line for each gate with its status and evidence ids |
 | `dod`, `dor` | `Definition of Done: n of m met`, then one line for each item of the configured `verify` exit list or `plan` entry list: met by an evidence id, ticked by a person, carried to a follow-up, ticked on the page before 7.0.0, or open |
 | `artifacts` | The registered documents that are not omitted, each with status, approver, the name or meaning the entry records (`traditional_name`, `stands_for`) and why it exists. A document is a relative link under `docs/compass/` when its file exists; otherwise its status reads `not written yet` and it has no link |
@@ -52,18 +52,102 @@ The kinds are `coverage`, `gates`, `dod`, `dor`, `artifacts`, `evidence`,
 | `deliberately-omitted` | The documents omitted on purpose, with the reason |
 | `verification-note` | A quick fix's scenario, test, red and green records, gates, changed files outside `docs/compass/` and the release line when the manifest records a `release_note` |
 | `index` | The project index: see below |
-| `assessment` | In `delivery-approach.md` section 1. One row for each assessed dimension with its value and the justification the manifest's `justifications` key records (`no justification recorded` on an issue assessed before the key), then `Labels:` |
-| `policy-rules` | In section 3. The policy line, the generation, and one row for each rule that fired (type, id, what it changed, rationale), or `No policy rule fired.` |
-| `stage-weights` | In section 4a. One row for each stage in stage order, with the mode the manifest records |
-| `gate-set` | In section 4b. The gates in the manifest's order, and beside a gate a policy rule added, the ids of those rules |
+| `document-header` | The header of every document written from a template, and of the quick-fix record: six lines, each read from a record, none from a file or the clock. See "The `document-header` block" below |
+| `dependencies` | The design's Risks and dependencies list: one line for each `depends_on` entry. See "The `dependencies` block" below |
+| `assessment` | In `delivery-approach.md` under The assessment, and in the quick-fix record under Assessment. One row for each assessed dimension with its value and the justification the manifest's `justifications` key records (`no justification recorded` on an issue assessed before the key), then `Labels:` |
+| `policy-rules` | In `delivery-approach.md` under Policy rules that fired, and in the quick-fix record under Policy rules fired. The policy line, the generation, and one row for each rule that fired (type, id, what it changed, rationale), or `No policy rule fired.` |
+| `stage-weights` | In `delivery-approach.md` under Per-stage weight. One row for each stage in stage order, with the mode the manifest records |
+| `gate-set` | In `delivery-approach.md` under Gate set. The gates in the manifest's order, and beside a gate a policy rule added, the ids of those rules |
 | `plan-exit`, `breakdown-exit` | The configured `plan` or `breakdown` exit list under `## Gate` in `technical-design.md` and `distribution-map.md`, read like `dod`. Empty (the shipped default): `No exit checks are configured for the plan stage.` (or `breakdown`) |
-| `readiness` | The one line `Repository readiness: 9 of 11 signals, floor met`, or `Repository readiness: not measured (<why>: <how to fix>)`, from the manifest's `readiness:` summary. The marker is in section 1 of `templates/delivery-approach.md`, under the assessment. A delivery approach written before the block existed has no marker, so the render leaves it alone. The receipt and the board panel print the same line from the same function (`readiness_record.line`), and the manifest key is written by `compass approach evaluate --write`. A render only reads the key |
+| `readiness` | The one line `Repository readiness: 9 of 11 signals, floor met`, or `Repository readiness: not measured (<why>: <how to fix>)`, from the manifest's `readiness:` summary. The marker is in `templates/delivery-approach.md`, under The assessment. A delivery approach written before the block existed has no marker, so the render leaves it alone. The receipt and the board panel print the same line from the same function (`readiness_record.line`), and the manifest key is written by `compass approach evaluate --write`. A render only reads the key |
 | `release-line` | In the `## Release line` section of `templates/verification-report.md`, after "Decisions taken for the user" and before `## Gate`. The manifest's `release_note` on one line, or `No release line recorded yet.` with the command `compass ship-commit --release-note "<text written for a user>"`. The manifest is the only copy of the line (`docs/release-line.md`). A report written before the block existed has no marker, so the render leaves it alone |
 
 A block holds no clock, no absolute path and no name taken from git. The same
 records give the same text, so a second render changes no byte. The one fence a
 rendered body may hold is the Mermaid chart, opened and closed by the exact
 lines ```` ```mermaid ```` and ```` ``` ````.
+
+## The `document-header` block
+
+Every template in the artifact catalogue opens with a title and one `document-header` block, except
+`verification-note`, which has no header block. The block has six lines. Each is read from a record,
+so a render on another day changes nothing.
+
+| Line | Source |
+|---|---|
+| `Issue` and `Approach` | The manifest: the slug and `delivery_approach` |
+| `Stage` and `Owner` | The kind's catalogue entry |
+| `Status` | The document's registry entry, or `not registered` |
+| `Date` | The day of `approved_at` when the document is approved, else the manifest's `created` |
+| `Reads` | The registered documents whose kind's stage comes before this kind's stage, ordered by stage and then file name. A document is listed when its entry holds a path, not when the file exists. An entry with status `superseded` or `omitted` is skipped |
+| `Audience` | The kind's catalogue entry |
+
+Status and Date are separate lines, so an approval changes two lines. The renderer reads no file and no clock.
+It is an own-record block: `rendered-blocks-current` fails at `verify` and in a done issue when the block is
+stale, and treats it as advisory before. `compass issue template show` prints the same six lines with the
+kind's real stage, owner and audience and a `{{...}}` placeholder for each fact only an issue's records give.
+A document already written keeps its own prose: an archived document with no marker pair is never rewritten.
+
+## The `dependencies` block
+
+The technical design's Risks and dependencies section holds a `dependencies` block under its risk table. It
+lists the issue's `depends_on` entries, one line each:
+
+```text
+- <slug> - <reason> - until <until> - <word>
+```
+
+The word is the one the board panel shows: `met`, `waiting`, `not found` or `unreadable`. It comes from the same
+judgement as the panel (`lifecycle.judge`), so the two cannot disagree. A malformed entry takes the line
+`compass issue lint` prints for it. `None` means the issue has no entries. `not judged` replaces the word when
+the render read no project scan, so no other issue could be judged.
+
+The block reads other issues' manifests, so it is a cross-issue block: a stale block is an advisory failure of
+`rendered-blocks-current` and never blocks the issue. `compass issue depends add` and `compass issue depends
+remove` render it again. The shape of `depends_on` is in `docs/issue-dependencies.md`.
+
+## The Kind column
+
+When the technical design holds a `## Verification plan` heading, the `coverage` block adds a Kind column
+between Title and Tests. `cli/compass_pkg/verification_plan.py` reads the plan:
+
+- The first table under the heading whose header holds Group and Kind is the plan. A row that still holds a
+  `{{...}}` placeholder is skipped. A heading counts under the section-number rule of the catalogue, and a
+  heading inside a fence or a comment does not count.
+- The kinds are `unit`, `integration`, `acceptance`, `judged review` and `manual`.
+- A row names a scenario group letter, or scenario ids, in its Group cell. A scenario takes the kind of the
+  row that names its id, else the row that names its group. Between rows of one precedence, the first wins.
+  The group of a scenario is the letter of the `## Scenario group <L>` heading above its traceability line.
+- `not planned` means no row covers the scenario. `unknown (<word>)` means the row names a kind outside the
+  five. `compass issue lint` prints a note for each row with an unknown kind.
+- A design without the heading gets the columns it had before. Archived coverage blocks keep their bytes.
+
+No check parses the plan. It reaches `compass check` only as staleness of the `coverage` block in
+`rendered-blocks-current`, which is why an edited plan fails there until the block is rendered again.
+
+## Sections that blocks and checks read by name
+
+Four sections are read by name, whatever number an older document gave their heading. Two feed blocks and two
+feed checks:
+
+| Section | Read by |
+|---|---|
+| Verification plan (design) | The `coverage` block, which adds the Kind column |
+| Risks and dependencies (design) | The `dependencies` block under its risk table |
+| Non-functional requirements (spec) | The check `nfr-rows-resolved`, which is not a block |
+| Data and interfaces (design) | The check `contracts-declared`, which is not a block |
+
+The two checks read the document through the masked text of this page's "Masked text" section, so a table inside a
+comment or a fence does not count. `governance/guardrails.md` holds their rules.
+
+## The quick-fix record
+
+`compass quick-fix start` writes the delivery-approach record with its own short headings. The record holds a
+`document-header` block after the title, an `assessment` block under Assessment and a `policy-rules` block under
+Policy rules fired, and no `**Approach:**` line. The command writes the marker pairs and no block text of its
+own, then renders the record. The after-command render then renders the issue page and the project index.
+The command is in `RENDER_FURTHER`, not `EXEMPT`, for that reason. A record written before the blocks existed
+keeps its tables.
 
 ## The issue page
 
@@ -213,7 +297,8 @@ modification time.
 
 - The commands are `RENDER_TRIGGERS` in `cli/compass_pkg/record_triggers.py`:
   the label sync's table (`LABEL_TRIGGERS`) plus `RENDER_FURTHER`, which includes
-  `compass issue depends add` and `compass issue depends remove`. `EXEMPT`
+  `compass issue depends add`, `compass issue depends remove` and
+  `compass quick-fix start`, whose record holds blocks. `EXEMPT`
   names the commands that save a manifest and render nothing, each with its
   reason. A test walks the call graph from every command to `save_manifest` and
   fails, naming a command in none of the three.
@@ -257,8 +342,8 @@ never through the parse cache.
 
 | Block | Draws on | At `verify`, `ship` and done | Before `verify` |
 |---|---|---|---|
-| `coverage`, `gates`, `dod`, `dor`, `artifacts`, `evidence`, `follow-ups`, `decisions-taken`, `assessment`, `policy-rules`, `stage-weights`, `gate-set`, `plan-exit`, `breakdown-exit`, the issue page | the issue's own records | fails | advisory |
-| `related`, the governance lines of `decisions`, the issue's row of the index, the `Blocked: waits for` line of `header` | other issues or the project | advisory | advisory |
+| `coverage`, `gates`, `dod`, `dor`, `artifacts`, `evidence`, `follow-ups`, `decisions-taken`, `assessment`, `policy-rules`, `stage-weights`, `gate-set`, `plan-exit`, `breakdown-exit`, `document-header`, the issue page | the issue's own records | fails | advisory |
+| `related`, `dependencies`, the governance lines of `decisions`, the issue's row of the index, the `Blocked: waits for` line of `header` | other issues or the project | advisory | advisory |
 
 A missing issue page fails at `verify` and is advisory before. The message names
 the file, the block kind and `compass issue render`. A checkout that holds only

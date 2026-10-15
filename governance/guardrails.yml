@@ -85,6 +85,10 @@ checks:
     description: "The issue manifest's follow-ups list is empty or every item is resolved."
   artifacts-approved:
     description: "Every document the issue registered is accepted when it ships: no artifact reads draft or awaiting-approval, and an omitted artifact records a reason. Judges the state `compass ship-commit` would leave, so a document owned by the ship stage does not fail. Declines to check, rather than passing, until every gate has passed, and for an issue that has closed or does not ship."
+  nfr-rows-resolved:
+    description: "Every concern row of the spec's Non-functional requirements table (performance, capacity, compatibility, security, privacy, operability, accessibility, and any row added) names scenario ids the manifest holds or a reason the concern does not apply. At thorough depth each cited scenario states a number in its Then. Declines to check, rather than passing, for an issue with no generation, a closed issue, a spec not registered with a path, and a catalogue that does not list the section at the depth the spec is registered at."
+  contracts-declared:
+    description: "When a changed file matches a trigger pattern, the technical design's Data and interfaces section declares a contract: a field table (Name, Type, Required, Meaning, Written by, Read by) or a contract table (Inputs, Outputs, Exit codes, Errors) with a data row, or an erDiagram. A path pattern matches the project-relative path, and a contents pattern also needs the file to hold its text. Declines to check, rather than passing, when no changed file matches, and for an issue with no generation, a closed issue, a design not registered with a path, and a catalogue that does not list the section at the depth the design is registered at."
   spike-conclusion-present:
     description: "A spike has a `spike-conclusion` evidence entry with a recorded decision (discard | graduate-to-delivery | defer); graduate-to-delivery links the next issue."
   spike-no-production-changes:

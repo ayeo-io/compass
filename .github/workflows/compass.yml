@@ -540,12 +540,12 @@ jobs:
   check-mutation:
     # Breaks each shipped check, in a copy of the checkout, to always pass and
     # then always fail, and fails when a test in tests/mutation_proofs.yml
-    # does not notice. It takes about half a minute, so it runs on every pull
-    # request rather than on a schedule.
+    # does not notice. It runs on every pull request rather than on a schedule.
     needs: already-tested
     if: ${{ !cancelled() && needs.already-tested.outputs.skip != 'true' && (github.event.action != 'edited' || github.event.changes.base != null) }}
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    # The runner took 221 s locally on 2026-10-15; this allows about three times that.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 

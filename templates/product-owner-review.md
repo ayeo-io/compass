@@ -10,7 +10,8 @@ Fill every {{PLACEHOLDER}}.
 
 # Product-owner review - {{ISSUE_SLUG}}
 
-> **Date:** {{DATE}} · **Read:** {{the documents read}}
+<!-- compass:render document-header -->
+<!-- /compass:render -->
 
 ## Verdict
 

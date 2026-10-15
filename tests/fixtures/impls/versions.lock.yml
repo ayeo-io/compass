@@ -24,6 +24,9 @@ implementations:
   consistency-check-passes:
     verdict_digest: 208c4262608b2760cd1c26c8edb8b86714518fa28c596331c658a618de56bb81
     version: 1.0.0
+  contracts-declared:
+    verdict_digest: 96de578c9906d02aecacad67edc3aa19ee80f1da5a06a28e98a2e0da40c5ef6f
+    version: 1.0.0
   declared-tests-resolve:
     verdict_digest: 135069d070419a5861e8a4693bd0be2979076b5f97afb2c1669a44c9a9f159a0
     version: 1.0.0
@@ -47,6 +50,9 @@ implementations:
     version: 1.0.0
   multiagent-run-recorded:
     verdict_digest: 31e31868b5a0bb6885734f2817617272e4e7bf1356cd55fd6ea8da3c492c7201
+    version: 1.0.0
+  nfr-rows-resolved:
+    verdict_digest: 17cdacf146eaedcfa44275a3cc748d75e4239f9952b7f5cbe83ee1f3069934c8
     version: 1.0.0
   no-trusted-rerun:
     verdict_digest: ad2da5db60a39f075be271164795dce779783d540bfd8f2194757e0574fca505

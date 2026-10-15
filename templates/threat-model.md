@@ -26,8 +26,8 @@ Keep it under 120 lines. Delete this comment block when you fill it in.
 
 # Threat model - {{ISSUE_SLUG}}
 
-> **Date:** {{DATE}} · **Present:** {{who was in the room}}
-> **Triggered by:** {{the label that earned it - auth | payments | personal-data}}
+<!-- compass:render document-header -->
+<!-- /compass:render -->
 
 ## What are we working on?
 

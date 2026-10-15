@@ -771,7 +771,7 @@
       2,
       2
     ],
-    "list_items": 50,
+    "list_items": 61,
     "table_rows": 0
   },
   "governance/routing-policy.md": {
@@ -917,17 +917,17 @@
       2,
       2,
       2,
-      2,
       3,
       3,
       2,
       3,
       2,
       3,
+      2,
       2
     ],
-    "list_items": 5,
-    "table_rows": 4
+    "list_items": 2,
+    "table_rows": 13
   },
   "templates/distribution-map.md": {
     "fences": 0,

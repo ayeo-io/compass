@@ -172,27 +172,19 @@ def _split_optional(raw, dim):
     return _split_required(raw, dim)
 
 
-def _delivery_approach_md(slug, approach, dims, rules_fired, intent_text,
-                          scenario_id, scenario_text, ledger, advice=()):
-    lines = [
-        f"# Delivery approach - {slug}",
-        "",
-        f"**Approach:** {display_shape(approach)}",
-        "",
-        "## Assessment",
-        "",
-        "| Dimension | Value | Reason |",
-        "|---|---|---|",
-    ]
-    for name, value, reason in dims:
-        lines.append(f"| {name} | {value} | {reason} |")
-    lines += ["", "## Policy rules fired", ""]
-    if rules_fired:
-        for f in rules_fired:
-            rationale = str(f.get("rationale", "")).rstrip().rstrip(".")
-            lines.append(f"- {rationale} ({f.get('id', '?')}, {f.get('kind', '?')})")
-    else:
-        lines.append("none")
+def _empty_block(kind):
+    from compass_pkg import rendered_blocks as rb
+    return [rb.OPENING.format(kind=kind), rb.CLOSING]
+
+
+def _delivery_approach_md(slug, intent_text, scenario_id, scenario_text, ledger, advice=()):
+    """The quick fix's record as this command writes it. The header, the assessment and
+    the policy rules that fired are empty block pairs: `compass issue render` fills them
+    from the manifest, so the record is never stale against it (ADR-051 decision 2). The
+    advice, intent, scenario and de-scope ledger are prose this command writes once."""
+    lines = [f"# Delivery approach - {slug}", "", *_empty_block("document-header"),
+             "", "## Assessment", "", *_empty_block("assessment"),
+             "", "## Policy rules fired", "", *_empty_block("policy-rules")]
     if advice:
         # Advisory strategies: they never block, so the record is the only
         # place a session meets them.
@@ -413,13 +405,7 @@ def cmd_quick_fix_start(args):
         created_dirs.append("docs/compass/")
     os.makedirs(os.path.dirname(doc_path_abs), exist_ok=True)
     content = _delivery_approach_md(
-        slug=slug, approach=approach,
-        dims=[("Risk", risk_v, risk_r), ("Familiarity", fam_v, fam_r),
-              ("Size", size_v, size_r)]
-        + [(name.capitalize(), value, reason) for name, value, reason in
-           (("goal", goal_v, goal_r), ("role", role_v, role_r)) if value is not None],
-        rules_fired=task.get("policy_rules_fired") or [],
-        intent_text=args.intent, scenario_id=args.scenario_id,
+        slug=slug, intent_text=args.intent, scenario_id=args.scenario_id,
         scenario_text=args.scenario, ledger=ledger, advice=advice,
     )
     with open(doc_path_abs, "w", encoding="utf-8") as fh:
@@ -429,6 +415,11 @@ def cmd_quick_fix_start(args):
               status="draft", reason=None, path=doc_path_rel)
     _quiet_run(cmd_scenario_add, task=slug, scenario_id=args.scenario_id,
               title=args.scenario, intent="INT-1", test=tests)
+    # The record's blocks are filled from the manifest here, as `quick-fix finish` fills the
+    # verification note's, so the record is current from its first line. The after-command
+    # render fills them too, but a project or a test suite can switch that step off.
+    from compass_pkg import render_cmd
+    render_cmd.render_issue(task_dir)
 
     from compass_pkg.decisions import settled
     decisions = settled(project_root)

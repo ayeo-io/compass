@@ -13,9 +13,8 @@ ship refuses to close on it.
 
 # Launch Readiness - {{ISSUE_SLUG}}
 
-> **Author:** {{PRODUCT MARKETER NAME}} · **Date:** {{DATE}}
-> **Reads from:** positioning.md (the claims), verification-report.md (the scenario results)
-> **Gates:** ship - the routing-policy.md role rule adds the blocking `verify.claims` gate.
+<!-- compass:render document-header -->
+<!-- /compass:render -->
 
 ---
 

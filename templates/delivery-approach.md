@@ -19,9 +19,8 @@ line is not skippable - it runs.
 
 # Delivery approach - {{ISSUE_SLUG}}
 
-> **Issue:** {{ONE-LINE DESCRIPTION AS INVOKED}}
-> **Assessed:** {{DATE}} by {{WHO}} · **Revision:** {{N}} (revision 1 = first assessment; bump on `--reassess`)
-> **Reference shape:** {{quick fix | regular | full | hotfix | spike}}
+<!-- compass:render document-header -->
+<!-- /compass:render -->
 
 <!-- On a re-assessment (`--reassess`), keep the prior revision below this
      line under a "## Superseded - revision <N-1>" heading so the history
@@ -29,7 +28,7 @@ line is not skippable - it runs.
 
 ---
 
-## 1. The assessment
+## The assessment
 
 <!-- Written by `compass issue render` from the manifest's `assessment` and
      `justifications`: one row per dimension with its value and its reason, then the
@@ -44,7 +43,7 @@ line is not skippable - it runs.
 
 ---
 
-## 2. The composed candidate
+## The composed candidate
 
 <!-- The delivery approach assembled from the assessment, biased by the
      policy's soft defaults, BEFORE the hard rules are applied. Name the
@@ -58,7 +57,7 @@ Candidate review dimensions: {{correctness, governance, traceability, … per th
 
 ---
 
-## 3. Policy rules that fired
+## Policy rules that fired
 
 <!-- Written by `compass issue render` from the manifest's `policy_rules_fired`: the
      policy line, the generation, and one row per rule that fired with its rationale
@@ -73,19 +72,19 @@ Candidate review dimensions: {{correctness, governance, traceability, … per th
 
 ---
 
-## 4. The final delivery approach
+## The final delivery approach
 
-### 4a. Per-stage weight
+### Per-stage weight
 
 <!-- compass:render stage-weights -->
 <!-- /compass:render -->
 
-### 4b. Gate set
+### Gate set
 
 <!-- compass:render gate-set -->
 <!-- /compass:render -->
 
-### 4c. Multiagent orchestration
+### Multiagent orchestration
 
 - Orchestration: {{solo \| pair (2-3 subtasks) \| multiagent (4+ subtasks)}}
 - Subtask count: {{N - from distribution-map.md, or "n/a (solo)"}}
@@ -95,13 +94,13 @@ Candidate review dimensions: {{correctness, governance, traceability, … per th
 
 ---
 
-## 5. The de-scope ledger
+## The de-scope ledger
 
 <!-- THE AUDIT CENTREPIECE. Every stage or check that is collapsed or
      skipped, each with an explicit "safe to skip because…" line. A stage
      with no justification CANNOT be skipped - it runs. On full-approach scale
      work this table is empty by definition; cap-driven reductions go in
-     section 4c, not here. On a spike the standing justification for every
+     the Multiagent orchestration section, not here. On a spike the standing justification for every
      row is the same: nothing ships from a spike. -->
 
 | Stage / check | Action | Safe to skip / collapse because… |
@@ -116,7 +115,7 @@ Candidate review dimensions: {{correctness, governance, traceability, … per th
 
 ---
 
-## 6. Owed follow-ups
+## Owed follow-ups
 
 <!-- Work the issue deferred to go faster, which must be done at ship before
      the issue can close. A hotfix always owes one;
@@ -129,7 +128,7 @@ Candidate review dimensions: {{correctness, governance, traceability, … per th
 
 ---
 
-## 7. Human overrides
+## Human overrides
 
 <!-- The computed approach is advisory until confirmed. Any assessment value
      or the final approach may be overridden by a human - recorded here with
@@ -147,11 +146,11 @@ Candidate review dimensions: {{correctness, governance, traceability, … per th
 
 ---
 
-## 8. Confirmation
+## Confirmation
 
-- [ ] Approach presented to the invoker and confirmed (or overridden - see §7).
-- [ ] Every dimension in §1 has a justification.
-- [ ] Every skipped/collapsed stage in §5 has a "safe to skip because…" line.
+- [ ] Approach presented to the invoker and confirmed (or overridden - see Human overrides).
+- [ ] Every dimension in The assessment has a justification.
+- [ ] Every skipped/collapsed stage in The de-scope ledger has a "safe to skip because…" line.
 - [ ] On a spike: the `.spike` marker file is written to the issue directory.
 - [ ] `devlog.md` opened with the assess entry.
 

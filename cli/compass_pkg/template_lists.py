@@ -1,11 +1,14 @@
 # compass_pkg.template_lists - `compass issue template show`
 """Print a document template for an issue.
 
-A template of a catalogue kind prints as a skeleton: a title, a header built
-from the kind's catalogue entry (the reader, the stage, the owner, the home and
-the traditional name), then the kind's headings at one depth, each with the
-template's prose for it. The catalogue says who reads the document and which
-headings it has; the template holds only prose. A template that is not a
+A template of a catalogue kind prints as a skeleton: a title, the template's
+`document-header` block holding the kind's stage, owner and reader from its
+catalogue entry and a placeholder for each fact an issue's records give, then the
+kind's headings at one depth, each with the template's prose for it. A kind with no
+template gets the block after its title; a template that holds no such block (the
+verification note) gets none. The catalogue says who reads the document and which
+headings it has; the template holds only prose. The kind's home file and traditional
+name are in the glossary, not in the document. A template that is not a
 catalogue kind (`devlog`, `incident`, `pull-request-body`) prints as the file.
 
 The requirements review holds the Definition of Ready and the verification
@@ -17,7 +20,9 @@ another stage has no block kind yet; its checks are judged from the manifest's
 records by the stage lists and are not written into the documents.
 """
 # DEPENDENCY: standard library; compass_pkg.stage_lists (for the document kinds),
-# compass_pkg.artifact_kinds, effective, terminal and core inside the verb.
+# compass_pkg.rendered_blocks and compass_pkg.header_block inside `skeleton`, so a
+# command that only lists stages loads no render module; compass_pkg.artifact_kinds,
+# effective, terminal and core inside the verb.
 from __future__ import annotations
 
 import re
@@ -32,6 +37,9 @@ OPTIONAL_MARKER = "<!-- compass:optional -->"
 OPTIONAL_LABEL = " (optional)"
 
 _PLACEHOLDER = re.compile(r"\{\{.*?\}\}|<[^<>]*>")
+#: A leading section number such as `1. `, `5a. ` or `4b `. At most two digits, so a heading
+#: that starts with a year is not changed.
+_SECTION_NUMBER = re.compile(r"^\d{1,2}[a-z]?\.?\s+")
 
 
 def kinds():
@@ -46,8 +54,12 @@ def render(text, view, kind):
 
 def same_heading(a, b):
     """Whether two headings are one: a `{{...}}` token of a template and a
-    `<...>` token of the catalogue each stand for one placeholder."""
-    return _PLACEHOLDER.sub("<>", a).strip() == _PLACEHOLDER.sub("<>", b).strip()
+    `<...>` token of the catalogue each stand for one placeholder, and a leading
+    section number is not part of the words. An issue stored before the headings lost
+    their numbers lists `1. Approach`; the template holds `Approach`."""
+    def plain(heading):
+        return _SECTION_NUMBER.sub("", _PLACEHOLDER.sub("<>", heading).strip())
+    return plain(a) == plain(b)
 
 
 class Template:
@@ -93,29 +105,51 @@ def _lines(heading, body):
     return ["## " + heading] + list(body)
 
 
+def _header_pair():
+    """The marker pair of the block that opens a catalogue document. Read here, not at
+    import, because a command that only lists stages imports this module and must not
+    load the render modules."""
+    from compass_pkg import rendered_blocks
+    return rendered_blocks.OPENING.format(kind="document-header"), rendered_blocks.CLOSING
+
+
+def _with_header(preamble, header):
+    """The template's preamble with its `document-header` pair holding `header`. A
+    preamble with no such pair is returned as it is."""
+    opening, closing = _header_pair()
+    lines = list(preamble)
+    if opening not in lines:
+        return lines
+    start = lines.index(opening)
+    end = next((i for i in range(start + 1, len(lines)) if lines[i] == closing), None)
+    if end is None:
+        return lines
+    return lines[:start + 1] + list(header) + lines[end:]
+
+
 def skeleton(kind, entry, template_text, depth, issue=None):
     """What `template show` prints for a catalogue kind at one depth.
 
     `entry` is the kind's catalogue entry and `template_text` its template, or
     None when the kind has no template (its headings print with no prose).
     `issue` is `(slug, documents folder)` for an issue, or None for the
-    placeholders `<created>-<issue-slug>`."""
-    slug, folder = issue if issue else ("<issue-slug>", "docs/compass/<created>-<issue-slug>")
+    `{{ISSUE_SLUG}}` placeholder."""
+    from compass_pkg import header_block
+
+    slug = issue[0] if issue else None
     template = Template(template_text) if template_text is not None else None
     title = (template.title if template and template.title
              else kind[:1].upper() + kind[1:].replace("-", " ") + " - {{ISSUE_SLUG}}")
     if issue:
         title = title.replace("{{ISSUE_SLUG}}", slug)
     out = list(template.head) if template else []
-    out += ["# " + title, "",
-            "> **Audience:** " + " ".join(str(entry.get("audience", "")).split()),
-            "> **Stage:** %s · **Owner:** %s · **Home:** %s/%s" % (
-                entry.get("stage"), entry.get("owner"), folder, entry.get("file")),
-            "> **Traditional name:** %s · **Depth:** %s" % (entry.get("stands_for"), depth)]
-    preamble = list(template.preamble) if template else [""]
-    if preamble and preamble[0].strip():
-        out.append("")
-    out += preamble
+    out.append("# " + title)
+    header = header_block.placeholder_lines(entry, slug)
+    if template is None:
+        opening, closing = _header_pair()
+        out += ["", opening, *header, closing, ""]
+    else:
+        out += _with_header(template.preamble, header)
     wanted = list((entry.get("sections") or {}).get(depth) or [])
     found = template.sections if template else []
     labelled = depth == DEPTH_THOROUGH

@@ -1260,3 +1260,17 @@ def test_irl_30_documented_quick_fix_flow_lands(tmp_path):
     upgrade = " ".join((ROOT / "docs" / "upgrade-7-0-0.md").read_text().split())
     section = upgrade.split("## The lightweight intent and the release line")[1]
     assert "compass quick-fix finish" in section and "--no-commit" in section, section
+
+
+# --- IRL-31 ---------------------------------------------------------------------------
+
+def test_irl_31_merge_keeps_both_features():
+    """After the merge with the named document sections, both features' block kinds and
+    the report's named headings with the release line are in place."""
+    from compass_pkg import rendered_blocks
+    for kind in ("release-line", "document-header", "dependencies", *KINDS_BEFORE):
+        assert kind in rendered_blocks.KINDS, kind
+    sections = yaml.safe_load((PRESET / "artifacts.yml").read_text())["artifacts"][
+        "verification-report"]["sections"]["thorough"]
+    assert sections[-3:] == ["Decisions taken for the user", "Release line", "Gate"], sections
+    assert not [s for s in sections if s[:1].isdigit()], sections

@@ -14,8 +14,8 @@ Fill every {{PLACEHOLDER}}.
 
 # Review - {{ISSUE_SLUG}}
 
-> **Date:** {{DATE}} · **Reviewer:** {{AGENT OR PERSON}} (not the author)
-> **Round:** {{N}} · **Head reviewed:** {{COMMIT}}
+<!-- compass:render document-header -->
+<!-- /compass:render -->
 
 ## Scope
 

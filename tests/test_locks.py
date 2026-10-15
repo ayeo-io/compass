@@ -987,6 +987,10 @@ COMMANDS = {"check": ("check",), "receipt": ("issue", "receipt"),
 
 
 def _outputs(root):
+    # The issue page names the project file's owner, so a page rendered before the file
+    # was written is stale against it. Render first, so the outputs compare the
+    # conformance report and nothing else.
+    _run(root, "issue", "render")
     got = {}
     for name, args in COMMANDS.items():
         done = _run(root, *args)

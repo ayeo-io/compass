@@ -90,16 +90,27 @@ HARD_GUARDRAILS = (GATE_G5,)
 # What a check reports when it cannot run, read from each module that
 # returns `NOTHING_TO_CHECK` for it: checks.py (scenarios-are-executable,
 # claim-traces-to-scenario, command-passes), borrowed_docs.py, binding.py
-# (evidence-matches-tree), checks.py (dod-evidence-typed), landed_by.py, multiagent_check.py
-# and evidence_identity.py. The check declared-tests-resolve returns a pass
-# with a note. Every other check fails. `tests/test_obligations.py` replays
-# these verdicts against the archive sample.
+# (evidence-matches-tree), checks.py (dod-evidence-typed), landed_by.py, multiagent_check.py,
+# evidence_identity.py, artifact_status.py and section_checks.py. The check
+# declared-tests-resolve returns a pass with a note. Every other check fails.
+# `tests/test_obligations.py` replays these verdicts against the archive sample.
 DECLINING_CHECKS = (
     "scenarios-are-executable", "claim-traces-to-scenario", "command-passes",
     "borrowed-documents-answered", "evidence-matches-tree",
     "evidence-identity-matches", "dod-evidence-typed", "landed-by-resolves", "multiagent-run-recorded", "artifacts-approved",
+    "nfr-rows-resolved", "contracts-declared",
 )
 PASSING_CHECKS = ("declared-tests-resolve",)
+
+# The parameters of each shipped check that takes some (ADR-064). The legacy
+# guardrails file has no field for them, so the adapter holds the table the
+# preset's checks.yml carries.
+CHECK_PARAMS = {
+    "contracts-declared": {
+        "trigger_paths": ["schemas/*", "governance/presets/*", "*.schema.json"],
+        "trigger_contents": [{"path": "*.py", "contains": "add_parser("}],
+    },
+}
 
 # The order the generator rebuilds a rule or a guardrail in unless the
 # sidecar says the legacy file differs.
@@ -355,6 +366,8 @@ def _checks(guardrails, notes):
                                else "pass" if name in PASSING_CHECKS else "fail")
         if name in locks:
             entry["locked"] = locks[name]
+        if name in CHECK_PARAMS:
+            entry["params"] = copy.deepcopy(CHECK_PARAMS[name])
         out[name] = entry
     # A project guardrail runs the project's own command through the generic
     # `command-passes` check; its parameters belong to the check it becomes.
@@ -481,6 +494,7 @@ DISPLAY_NAMES = {
     "checks.backfills-paid": "Follow-ups resolved",
     "checks.dod-evidence-typed": "Definition of Done evidence is typed",
     "checks.landed-by-resolves": "Landed-by resolves",
+    "checks.nfr-rows-resolved": "Non-functional rows resolved",
     "checks.spike-no-production-changes": "Spike changes no production code",
 }
 

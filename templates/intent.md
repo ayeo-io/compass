@@ -14,9 +14,8 @@ engineering's - do not pre-solve the problem here.
 
 # Intent - {{ISSUE_SLUG}}
 
-> **Author:** {{PRODUCT OWNER / MANAGER NAME}} · **Date:** {{DATE}}
-> **Governance owner check:** this intent should be consistent with the
-> product strategies in `governance/strategies.md`.
+<!-- compass:render document-header -->
+<!-- /compass:render -->
 
 ---
 

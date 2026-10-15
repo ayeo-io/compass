@@ -83,7 +83,7 @@ A kind is written once per work unit when its `file` holds `<unit>`, as `low-lev
 - No approach names the kind, so `compass approach evaluate --write` registers no entry for it. The planner writes one file per unit at the plan stage and registers each one.
 - On a full issue, `compass issue lint` prints a note for each Work units row with no registered low-level design. The note never changes the exit code.
 
-The technical design keeps the approach, the decisions, the interfaces, the verification plan, the risks and the Work units table. The signatures, contracts, file plan and tests of each unit go in its low-level design.
+The technical design keeps the approach, the decisions, the interfaces, the verification plan, the risks and the Work units table. The signatures, contracts, file plan and tests of each unit go in its low-level design. The template's Work units table has a Low-level design column, which links each unit's file on the full approach and holds a dash elsewhere. Unit stays the first column, so the distribution map reads the table as before.
 
 A kind that no approach, rule or `every_approach` flag names is voluntary: nothing owes it, and a person registers it when it is written. Today `review`, `bug-report`, `architecture-notes`, `product-owner-review`, `positioning` and `low-level-design` are voluntary. `compass issue artifact set` accepts any kind the issue's catalogue declares, and `compass approach evaluate --write` never marks a voluntary entry `superseded`.
 

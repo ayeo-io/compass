@@ -1,13 +1,13 @@
 ---
 id: ADR-065
 title: Regular issues owe a lightweight intent, and every shipping issue records a release line its landing needs
-status: proposed
-date: 2026-10-14
+status: accepted
+date: 2026-10-15
 supersedes: ''
 superseded_by: ''
 ---
 
-Proposed by the architect for intent-and-release-line on 2026-10-14. compass:architect accepts or revises it for jed72 at verify.
+Proposed by the architect for intent-and-release-line on 2026-10-14. Accepted by compass:architect for jed72 at verify on 2026-10-15.
 
 ## Context
 

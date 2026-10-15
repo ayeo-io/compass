@@ -351,7 +351,7 @@ def cmd_issue_artifact(args):
             artifact_status.DRAFT, artifact_status.AWAITING, artifact_status.APPROVED):
         moved = artifact_status.stage_exit(
             task, view, artifact_status.owning_stage(view, args.kind),
-            artifact_status.BY_ARTIFACT_SET)
+            artifact_status.BY_ARTIFACT_SET, task_dir=task_dir)
         # A document the `verify` stage owns, registered once every `verify` gate
         # has passed, is approved now. Registered earlier, it reads `draft` and
         # the last `verify` gate pass moves it.
@@ -360,7 +360,7 @@ def cmd_issue_artifact(args):
                 and artifact_status.verify_gates_passed(task, view)):
             moved += artifact_status.stage_exit(
                 task, view, artifact_status.STAGE_VERIFY, artifact_status.BY_ARTIFACT_SET,
-                include_own=True, earlier=False)
+                include_own=True, earlier=False, task_dir=task_dir)
     save_manifest(task, path)
     from compass_pkg.terminal import say
 

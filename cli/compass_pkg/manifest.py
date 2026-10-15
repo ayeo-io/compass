@@ -107,7 +107,8 @@ def _apply_ship_exit(task, task_dir):
     except Exception:  # noqa: BLE001 - no configuration, no human checks
         view = None
     artifact_status.stage_exit(task, view, artifact_status.STAGE_SHIP,
-                               artifact_status.BY_SHIP_COMMIT, include_own=True, earlier=False)
+                               artifact_status.BY_SHIP_COMMIT, include_own=True, earlier=False,
+                               task_dir=task_dir)
 
 
 # Files Compass writes itself that live outside any issue's directory. They

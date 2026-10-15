@@ -239,6 +239,12 @@ def _git(root, *args):
 
 def _landing_scene(tmp_path, capability=True):
     root, task_dir = _scene(tmp_path, capability=capability, phase="ship")
+    # A landing refuses an issue that owes a release line and has none (ADR-065).
+    # These tests are about stale documents, so the line is on record.
+    body = _manifest(task_dir)
+    body["release_note"] = "Stale documents stop a landing."
+    (task_dir / "manifest.yml").write_text(yaml.safe_dump(body, sort_keys=False),
+                                           encoding="utf-8")
     _git(root, "init", "-q")
     _git(root, "add", "-A")
     _git(root, "commit", "-q", "-m", "base")

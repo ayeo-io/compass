@@ -96,6 +96,7 @@ FIELDS = {
     "approaches": {
         "weight": _f("integer", "scalar", "never", required=True),
         "ships": _f("boolean", "scalar", "identity"),
+        "release_line": _f("boolean", "scalar", "ordered"),
         "extends": _f("string", "scalar", "descriptive"),
         "stages": _f("map", "map", "ordered", required=True),
         "gates": _f("list", "list", "obligation-set"),
@@ -188,6 +189,7 @@ OBLIGATION_FIELDS = {
     "approaches.checkpoints": "obligation-set",
     "approaches.subtask_ceiling": "ceiling",
     "approaches.ships": "identity",              # a lock's footprint (ADR-039)
+    "approaches.release_line": "ordered",        # `true` is stricter (ADR-065)
     "artifacts.depends_on": "obligation-set",    # what an owed artifact builds on
     "artifacts.required_when": "identity",       # when an owed artifact is owed
     "artifacts.word_ceiling": "identity",        # the word limit a check judges
@@ -410,6 +412,9 @@ FIELD_DESCRIPTIONS = {
                   "run from 0 (spike) to 4 (full).",
         "ships": "Whether the approach delivers work. It is `true` unless the approach delivers "
                  "nothing, as the shipped spike does.",
+        "release_line": "Whether an issue on the approach owes a release line, which a landing "
+                        "then needs in the manifest's `release_note`. `true` is stricter, and "
+                        "the shipped default sets it on every approach except the spike.",
         "extends": "The id of another approach this one builds on, so that it states only what "
                    "differs.",
         "stages": "The mode the approach runs each stage in, keyed by stage id.",

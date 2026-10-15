@@ -162,6 +162,7 @@ def test_cs_1_the_obligation_table_holds_every_row_adr_037_names():
         "approaches.checkpoints": "obligation-set",
         "approaches.subtask_ceiling": "ceiling",
         "approaches.ships": "identity",
+        "approaches.release_line": "ordered",
         "artifacts.depends_on": "obligation-set",
         "artifacts.required_when": "identity",
         "artifacts.word_ceiling": "identity",

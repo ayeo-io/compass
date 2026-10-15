@@ -581,11 +581,16 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # Re-pinned for issue `readiness-override-assess`: a declared equivalent parameter
 # choice compares as equal and a missing readiness parameter is incomparable, so the
 # version is now 5.
+# Re-pinned for issue `intent-and-release-line`: an approach's `release_line` is
+# compared, `false` below `true`, so turning it off is a loosening; the version is now 6.
+# Re-pinned in the same issue for `routing.evaluate_route`: a document a role rule
+# asks for is thorough even when the approach owes it at lightweight, which keeps a
+# product owner's regular intent thorough. Version 6 covers both changes.
 # Re-pinned for `artifacts.word_ceiling`, an obligation fact compared by identity
 # for a kind both sides owe (issue `word-ceilings-and-lld`): a change to a document's
-# word limit is `incomparable`, which version 5 read as `equivalent`, so the version
-# is now 6.
-VERDICT_SOURCE_PIN = "ec8c75dd522961da"
+# word limit is `incomparable`, which version 6 read as `equivalent`, so the version
+# is now 7.
+VERDICT_SOURCE_PIN = "74d8c738615589c1"
 
 
 def _verdict_source_digest():

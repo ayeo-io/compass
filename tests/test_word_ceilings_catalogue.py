@@ -125,10 +125,9 @@ def test_wcl_2_policy_lint_refuses_malformed(tmp_path):
     code, report, text = _lint(_scratch(tmp_path / "bool", layer))
     assert code != 0 and [line for line in _words(report)
                           if "charter-bool" in line and "word_ceiling" in line], text
-    # A valid map on intent passes: any kind may carry a limit. Intent lists
-    # headings at thorough only, so that is the one depth it can limit. The
-    # field is compared by identity, so a project that changes a shipped kind's
-    # limit names the change in a waiver, as it would for `required_when`.
+    # A valid map on intent passes: any kind may carry a limit. The field is
+    # compared by identity, so a project that changes a shipped kind's limit
+    # names the change in a waiver, as it would for `required_when`.
     layer = {"schema": 1, "owner": "jed72", "artifacts": {"intent": {
         "set": {"word_ceiling": {"thorough": 2000}},
         "waiver": {"reason": "Our intents stay short.", "approved_by": "jed72",
@@ -138,15 +137,16 @@ def test_wcl_2_policy_lint_refuses_malformed(tmp_path):
     assert not [line for line in _words(report) if "word_ceiling" in line], text
     # A project limit on a shipped kind at a depth the shipped sections do not
     # list is an error, as on a project's own kind: no later layer narrowed them.
-    layer = {"schema": 1, "owner": "jed72", "artifacts": {"intent": {
+    # The requirements review lists headings at thorough only.
+    layer = {"schema": 1, "owner": "jed72", "artifacts": {"requirements-review": {
         "set": {"word_ceiling": {"lightweight": 500}},
-        "waiver": {"reason": "Our intents stay short.", "approved_by": "jed72",
+        "waiver": {"reason": "Our reviews stay short.", "approved_by": "jed72",
                    "approved_on": "2026-10-15"}}}}
-    code, report, text = _lint(_scratch(tmp_path / "intent-depth", layer))
+    code, report, text = _lint(_scratch(tmp_path / "review-depth", layer))
     assert code != 0, text
     lines = [line for line in _words(report) if "word_ceiling" in line]
     assert len(lines) == 1 and lines[0].startswith(
-        "error artifacts.intent.word_ceiling.lightweight"), _words(report)
+        "error artifacts.requirements-review.word_ceiling.lightweight"), _words(report)
     # A file holding both placeholders is refused, naming the kind.
     layer = {"schema": 1, "artifacts": {
         "charter-both": _charter(file="charter-both/<unit>-<n>.md")}}
@@ -190,8 +190,9 @@ def test_the_classifier_compares_a_word_limit_by_identity():
     unowed = {"schema": 1, "artifacts": {"review": {"set": {
         "word_ceiling": {"thorough": 900}}}}}
     assert verdict(unowed) == "equivalent"
+    # Version 6 is the release line's (ADR-065); the word limit is version 7.
     from compass_pkg import classify as module
-    assert module.CLASSIFIER_VERSION == 6
+    assert module.CLASSIFIER_VERSION == 7
 
 
 def test_a_project_that_narrows_the_sections_keeps_a_passing_lint(tmp_path):

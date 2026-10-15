@@ -133,6 +133,9 @@ EXPECTED_PUBLIC_SUBCOMMANDS = {
     "lesson",                     # project-lessons (ADR-029)
     "run",                        # headless-runner (ADR-030)
     "record",                     # delivery-record (ADR-031)
+    "release",                    # intent-and-release-line (ADR-065): `compass
+                                  # release notes --since <ref>`, read-only. A
+                                  # GROUP, so a later release verb has a home.
     "decision",                   # decisions-ledger (ADR-027): record|list|
                                   # show|check, the settled-decisions ledger.
                                   # A GROUP; record reads the decider from git.

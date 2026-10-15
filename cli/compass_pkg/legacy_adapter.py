@@ -195,9 +195,12 @@ def _approaches(policy):
     table = policy.get("autonomy_checkpoints") or {}
     out = {}
     for name, shape in shapes.items():
-        entry = {
-            "weight": shape["weight"],
-            "ships": name != APPROACH_SPIKE,
+        entry = {"weight": shape["weight"], "ships": name != APPROACH_SPIKE}
+        # Every approach that ships owes a release line, as the shipped default says;
+        # like `ships`, no legacy file holds the field, so it follows the approach (ADR-065).
+        if name != APPROACH_SPIKE:
+            entry["release_line"] = True
+        entry.update({
             # `shape_stages` also reads the retired `phases:` block.
             "stages": core.shape_stages(shape),
             "gates": list(shape.get("gates") or []),
@@ -205,7 +208,7 @@ def _approaches(policy):
                           for k, v in (shape.get("artifacts") or {}).items()},
             # A shape with no ceiling allows one subtask, as the evaluator reads it.
             "subtask_ceiling": shape.get("subtask_ceiling", 1),
-        }
+        })
         # An autonomy level or approach the table leaves out waits at every
         # hand-off, so it is left out here too rather than given an empty list.
         checkpoints = {level: [_stage(s) for s in row[name]]

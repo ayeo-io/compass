@@ -58,10 +58,15 @@ JSON_SCHEMA_VERSION = 1
 # readiness parameter one side leaves out is incomparable, so swapping the
 # timed test command between its two choices is no longer incomparable.
 #
-# Version 6: an owed artifact's `word_ceiling` is an obligation fact compared by
+# Version 6: an approach's `release_line` is compared, `false` below `true`, so
+# a configuration that stops an approach owing a release line is a loosening
+# (ADR-065), which version 5 read as equivalent.
+#
+# Version 7: an owed artifact's `word_ceiling` is an obligation fact compared by
 # identity, as `required_when` is, for a kind both sides owe, so a change to a
-# document's word limit is `incomparable`, which version 5 read as `equivalent`.
-CLASSIFIER_VERSION = 6
+# document's word limit is `incomparable`, which version 6 read as `equivalent`
+# (ADR-067).
+CLASSIFIER_VERSION = 7
 
 # Keys whose value is a condition on the assessment.
 WHEN_KEYS = ("when", "blocking_when", "applies_when")
@@ -317,7 +322,8 @@ def _rank(field, key, value, side, ctx):
         return rank if isinstance(rank, int) and not isinstance(rank, bool) else None
     order = {"checks.severity": SEVERITIES, "checks.on_skipped": ON_SKIPPED,
              "approaches.artifacts.depth": ARTIFACT_DEPTHS,
-             "readiness.required_for_autonomous": (False, True)}.get(field, ())
+             "readiness.required_for_autonomous": (False, True),
+             "approaches.release_line": (False, True)}.get(field, ())
     return order.index(value) if value in order else None
 
 
@@ -518,7 +524,8 @@ for _fact, _fields in {
         "artifact_required_when": ("artifacts.required_when",),
         "artifact_word_ceiling": ("artifacts.word_ceiling",),
         "readiness": ("readiness.impl", "readiness.params",
-                      "readiness.required_for_autonomous")}.items():
+                      "readiness.required_for_autonomous"),
+        "release_line": ("approaches.release_line",)}.items():
     for _name in _fields:
         _FACT_OF[_name] = _fact
 
@@ -594,6 +601,7 @@ def _changes(parent, child, ctx):
     _keyed("artifacts.word_ceiling", p["artifact_word_ceiling"],
            c["artifact_word_ceiling"], ctx, out,
            keys=sorted(set(p["artifacts_owed"]) & set(c["artifacts_owed"])))
+    _compare("approaches.release_line", None, p["release_line"], c["release_line"], ctx, out)
     return out
 
 

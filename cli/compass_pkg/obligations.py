@@ -235,10 +235,11 @@ class Refused:
 
 @dataclass(frozen=True)
 class Obligations:
-    """What a configuration owes an assessment. The fields before `approach`
-    are the facts the classifier compares; `approach`, `rules_fired` and
-    `ignored_overrides` are outcomes, which are not obligations (a different
-    approach that owes the same is equivalent)."""
+    """What a configuration owes an assessment. Every field but `approach`,
+    `rules_fired` and `ignored_overrides` is a fact the classifier compares;
+    those three are outcomes, not obligations (a different approach that owes
+    the same is equivalent). `release_line` (ADR-065) is last because it has a
+    default."""
     stage_mode: dict
     entry: dict
     exit: dict
@@ -260,6 +261,7 @@ class Obligations:
     approach: str = ""
     rules_fired: tuple = ()
     ignored_overrides: dict = None   # the issue's stage modes a floor replaced
+    release_line: bool = False
 
     def compared(self):
         return {f.name: getattr(self, f.name) for f in fields(self)
@@ -303,6 +305,7 @@ FACT_FOR_FIELD = {
     "evaluation.required_skills": "required_skills",
     "evaluation.blocked_stages": "blocked_stages",
     "evaluation.required_artifacts": "required_artifacts",
+    "approaches.release_line": "release_line",
 }
 FOOTPRINT_ONLY = ("approaches.ships", "stages.order", "gates.stage")
 COMPARED_FACTS = frozenset(FACT_FOR_FIELD.values())
@@ -618,4 +621,5 @@ def obligations(config, assessment, autonomy_values=AUTONOMY, capabilities=(),
         rules_fired=tuple(f["id"] for f in result["policy_rules_fired"]),
         ignored_overrides=dict((result.get("issue_overrides") or {}).get("ignored")
                                or {}),
+        release_line=approach.get("release_line") is True,
     )

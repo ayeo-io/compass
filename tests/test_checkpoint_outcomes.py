@@ -543,19 +543,24 @@ def test_arc_7_checkpoint_record_is_not_the_sign_off(tmp_path):
 
 # --- ARC-5 ------------------------------------------------------------------------
 
-REGULAR_DOCUMENTS = ("delivery-approach", "technical-design", "distribution-map",
+REGULAR_DOCUMENTS = ("delivery-approach", "intent", "technical-design", "distribution-map",
                      "verification-report")
+
+#: The release line a regular issue on the shipped default owes before it lands (ADR-065).
+RELEASE_NOTE = "Each stage hand-off is on record."
 
 
 def _ready_to_ship(root, cli=CLI):
-    """Every gate passed, one changed file traced and staged, a green on record
-    and every document approved: the state `ship-commit` lands from."""
+    """Every gate passed, one changed file traced and staged, a green on record,
+    every document approved and the release line recorded: the state `ship-commit`
+    lands from."""
     for kind in REGULAR_DOCUMENTS:
         register(root, kind, "approved", cli=cli)
     body = manifest(root)
     for gate in body["gates"]:
         gate["status"] = "pass"
     body["changed_files"] = [{"path": "src/new.py", "scenarios": ["S-1"]}]
+    body["release_note"] = RELEASE_NOTE
     write_manifest(root, body)
     (root / "src").mkdir(exist_ok=True)
     (root / "src" / "new.py").write_text("y = 1\n")

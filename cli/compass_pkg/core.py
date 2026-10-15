@@ -1114,9 +1114,7 @@ def unregistered_document(task_dir, name):
 
 
 def resolve_artifact(task_dir, kind, round=None, unit=None):
-    """Where a document is, and why that is the answer. `round` names one round of
-    a kind that repeats, and `unit` one work unit of a kind with a document per
-    unit; neither falls back to a file beside the manifest.
+    """Where a document is, and why; `round` or `unit` names one entry, never a flat file.
 
     Returns (state, path, reason):
 

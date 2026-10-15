@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -23,8 +24,8 @@ FIXTURE = ROOT / "tests" / "fixtures" / "design-size-archive"
 REGULAR_LIMIT = 3865
 ISSUE = "word-ceilings-and-lld"
 
-# The designs of the fixture, by issue: (approach, size in bytes, on a catalogue
-# that lists Data and interfaces). reg-b registers its design at a path of its own.
+# The designs of the fixture, by issue: (approach, on a catalogue that lists
+# Data and interfaces). reg-b registers its design at a path of its own.
 EXPECTED = {
     "reg-a": ("regular", False),
     "reg-b": ("regular", False),
@@ -98,15 +99,41 @@ def test_wcl_21_measure_script_fixture(tmp_path):
     assert refused.returncode == 2
     assert "copy" in refused.stderr
     assert refused.stdout == ""
+    shutil.rmtree(copy / ".git")
+
+    # Regular designs past the limit read as not within it.
+    for slug, (approach, _) in EXPECTED.items():
+        if approach == "regular":
+            folder = next((copy / "docs" / "compass").glob("*-%s" % slug))
+            design = folder / DESIGN_FILES.get(slug, "technical-design.md")
+            design.write_text(design.read_text(encoding="utf-8") + "x" * REGULAR_LIMIT,
+                              encoding="utf-8")
+    grown = json.loads(_run(copy).stdout)
+    assert grown["regular_within_limit"] is False
+
+    # A registered design that is missing on disk leaves its issue out: there is
+    # no fall back to the default filename.
+    folder = next((copy / "docs" / "compass").glob("*-reg-b"))
+    (folder / "design-alt.md").unlink()
+    (folder / "technical-design.md").write_text("# not the registered design\n", encoding="utf-8")
+    missing = json.loads(_run(copy).stdout)
+    assert "reg-b" not in missing["issues"]["regular"]
+    assert missing["approaches"]["regular"]["count"] == 4
+
+
+#: The regular count the size limit was set on, on 10 October 2026.
+BASELINE_COUNT = 38
 
 
 def _measure_evidence():
+    """The manifest and the figures of the latest command-output record that holds
+    the measure's output, so that a re-run at verify is the one judged."""
     manifest = ROOT / ".compass" / "work" / ISSUE / "manifest.yml"
     if not manifest.is_file():
         return None, None
     from compass_pkg.core import load_yaml
     data = load_yaml(str(manifest))
-    for item in data.get("evidence") or []:
+    for item in reversed(data.get("evidence") or []):
         if not isinstance(item, dict) or item.get("type") != "command-output":
             continue
         path = (manifest.parent / str(item.get("path") or "")).resolve()
@@ -119,12 +146,21 @@ def _measure_evidence():
     return data, None
 
 
-def test_wcl_22_regular_median_reported():
-    sys.path.insert(0, str(ROOT / "cli"))
+def test_wcl_22_regular_median_reported(monkeypatch):
+    monkeypatch.syspath_prepend(str(ROOT / "cli"))
     data, figures = _measure_evidence()
     if figures is None:
         pytest.skip("no command-output evidence of the size measure here: CI has no archive")
     regular = figures["approaches"]["regular"]
     assert regular["median_bytes"] <= REGULAR_LIMIT
     report = ROOT / "docs" / "compass" / ("%s-%s" % (data["created"], ISSUE)) / "verification-report.md"
-    assert str(regular["count"]) in report.read_text(encoding="utf-8")
+    text = report.read_text(encoding="utf-8")
+    # The count must be stated as a count of regular issues, not found as a digit
+    # run inside another figure such as the limit 3865.
+    stated = re.compile(r"(?<![\d,])%d(?![\d,])\s+regular\s+(?:issues|designs)" % regular["count"])
+    assert stated.search(text), "the report does not state the count of regular issues"
+    if regular["count"] != BASELINE_COUNT:
+        # The report must name the issues that explain the difference.
+        assert "since 10 October 2026" in text, (
+            "the count differs from %d and the report names no issue added or removed"
+            % BASELINE_COUNT)

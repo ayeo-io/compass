@@ -1,5 +1,5 @@
 ---
-description: End delegated approvals now
+description: End delegated approvals
 argument-hint: "[DL-n]"
 disable-model-invocation: true
 ---

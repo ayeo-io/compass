@@ -97,11 +97,24 @@ guardrail `G5` (ADR-066). A record that holds a `check`, `waiver`,
 `checkpoint`, `artifact` or `decisions` key, or a `guardrail` other than
 exactly `G5`, was given for that subject and is set aside, so approving an
 unrelated human check never clears the sign-off. A record with none of these
-keys, the form earlier sign-offs use, still counts. A person records the
-sign-off with `compass evidence approve --guardrail` and the value `G5`,
-giving `--approver`, `--role` and `--scope`. A landed issue that the earlier rule passed is
-reported, never failed. The implementation is version 1.1.0: the fixture
-corpus verdicts did not change, so it keeps major version 1, and no stored
+keys, the form earlier sign-offs use, still counts. In Claude Code a person
+records the sign-off by typing `/compass:approve` for the request the agent
+made with `compass evidence request`; the prompt hook records it, and the
+model cannot raise that event (ADR-068). A person can also delegate the
+sign-off, for a named agent, a stated time of at most 24 hours and a stated
+scope, with `/compass:delegate ... for g5`; the agent then records it with
+`compass evidence approve --guardrail` and the value `G5`, with
+`--delegated --as <agent>` (ADR-069).
+So the guardrail reads, in practice: a person signs off, or delegates the
+sign-off for a named agent, time and scope. The person can withdraw a
+delegated sign-off with `/compass:reject <record id>`, which writes an
+`approval-withdrawal` record; it reverses nothing already done. At a terminal
+a person records it with `compass evidence approve --guardrail` and
+the value `G5`, giving `--approver`, `--role` and `--scope`. A landed issue that the earlier rule passed is
+reported, never failed. The implementation is version 1.2.0: version 1.1.0
+counted only a record given for `G5`, and 1.2.0 also skips a record that an
+`approval-withdrawal` names while the issue is in flight. The fixture corpus
+verdicts did not change, so it keeps major version 1, and no stored
 generation is refused.
 
 A person's answer to a checkpoint hand-off (`compass evidence approve

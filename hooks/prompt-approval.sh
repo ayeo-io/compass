@@ -6,7 +6,7 @@
 # commands /compass:approve, /compass:reject, /compass:delegate and
 # /compass:revoke (hooks/hooks.json). Each command file sets
 # `disable-model-invocation: true`, so the model cannot invoke it and a
-# scheduled task delivers it as plain text with no expansion (the U0
+# scheduled job delivers it as plain text with no expansion (the U0
 # measurement, ADR-068). The decision is made in
 # cli/compass_pkg/prompt_approval.py; this script only runs it.
 #

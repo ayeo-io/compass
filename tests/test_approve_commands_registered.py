@@ -1,7 +1,7 @@
 """The plugin registers the approval commands and the prompt hook (issue
 `approve-inside-claude-code`, ADR-068 decision 2, ADR-069 decision 1).
 
-U0 measured on Claude Code 2.1.300 that a scheduled task fires
+U0 measured on Claude Code 2.1.300 that a scheduled job fires
 `UserPromptExpansion` for a command without `disable-model-invocation: true`,
 with the same fields as a typed one. So every command the hook serves sets the
 flag, and the hook refuses a command whose file does not.

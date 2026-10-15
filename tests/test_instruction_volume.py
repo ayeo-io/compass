@@ -47,6 +47,12 @@ def _description_words(path):
     return len(d.group(1).split()) if d else 0
 
 
+def _model_cannot_invoke(path):
+    m = re.match(r"---\n(.*?)\n---", path.read_text(encoding="utf-8"), re.S)
+    return bool(m) and re.search(r"^disable-model-invocation:\s*true\s*$", m.group(1),
+                                 re.M) is not None
+
+
 def _resident_breakdown():
     out = {}
     for label, paths in (
@@ -54,7 +60,11 @@ def _resident_breakdown():
         ("commands", sorted((ROOT / "commands").glob("*.md"))),
         ("agents", sorted((ROOT / "agents").glob("*.md"))),
     ):
-        out[label] = sum(_description_words(p) for p in paths)
+        # A command with `disable-model-invocation: true` is not in the model's
+        # context: Claude Code keeps only invocable descriptions loaded. The
+        # four approval commands set it (ADR-068), so they cost no resident words.
+        out[label] = sum(_description_words(p) for p in paths
+                         if not _model_cannot_invoke(p))
     contract = ROOT / "compass-contract.md"
     out["contract"] = _words(contract) if contract.is_file() else 0
     return out

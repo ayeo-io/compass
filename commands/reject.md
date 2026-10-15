@@ -1,5 +1,5 @@
 ---
-description: Reject the request Compass showed you, or overrule an approval made under a delegation
+description: Reject a request, or overrule a delegated approval
 argument-hint: "[request number | record id] <reason>"
 disable-model-invocation: true
 ---

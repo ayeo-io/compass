@@ -8,8 +8,8 @@ only one shown, current request for the session's issue, through
 `approvals.record`, then closes the request. These tests drive it in-process
 with hook input in the shape U0 measured on Claude Code 2.1.300.
 
-Scenario ids: `TRC-A1` to `TRC-A5`, `TRC-C1` to `TRC-C8`, `TRC-C11`,
-`TRC-C12`, `TRC-D2`. Each test name starts with its scenario id.
+Scenario ids: `TRC-A1` to `TRC-A5`, `TRC-C1` to `TRC-C8`, `TRC-C11`, `TRC-C12`
+and `TRC-D2`. Each test name starts with its scenario id.
 """
 from __future__ import annotations
 

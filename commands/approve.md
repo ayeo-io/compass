@@ -1,5 +1,5 @@
 ---
-description: Approve the request Compass showed you, typed by you in Claude Code
+description: Approve the request Compass showed you
 argument-hint: "[request number]"
 disable-model-invocation: true
 ---

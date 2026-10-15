@@ -1,5 +1,5 @@
 ---
-description: Let a named agent approve for you, within a stated scope, until a stated time
+description: Let a named agent approve for you
 argument-hint: "<agent> until <time> [on <issues>] [for <forms>] [labels <labels>] [max <n>]"
 disable-model-invocation: true
 ---

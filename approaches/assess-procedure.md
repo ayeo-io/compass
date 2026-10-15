@@ -170,8 +170,9 @@ force; if it is still a spike, leave the marker in place.
    one). If it is not listed, present the
    approach, say you are going on without waiting and name the setting,
    and record the passed hand-off with `compass issue checkpoint add assess
-   --outcome skipped --by router`. If `assess` is listed, the person answers
-   with `compass evidence approve --checkpoint assess --approver <name> --role
+   --outcome skipped --by router`. If `assess` is listed, ask with `compass
+   evidence request --checkpoint assess`; the person types `/compass:approve`, or
+   runs `compass evidence approve --checkpoint assess --approver <name> --role
    <role>` at a terminal, which records the answer. An issue assessed before
    outcomes were recorded is not judged: both commands refuse it and write
    nothing, so say so and go on. `/compass:go` does not wait here even when

@@ -353,7 +353,7 @@ def test_f8_delegated_call_needs_matching_agent_type():
 
 
 def test_f8_cli_refuses_an_agent_the_delegation_does_not_name(tmp_path):
-    """`TRC-F8`, the CLI half: a call that reaches the CLI with another
+    """The CLI half of `TRC-F8`: a call that reaches the CLI with another
     agent's name is refused because the delegation does not name it."""
     import datetime
     import sys

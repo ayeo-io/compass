@@ -66,9 +66,40 @@ The evidence records the approver, role, decision, time, scope and conditions.
 Only a `human-approval` record given for guardrail `G5` meets this approval. A
 record that names another subject - a `check`, `waiver`, `checkpoint`,
 `artifact` or `decisions` key, or a `guardrail` other than exactly `G5` - was
-given for that subject and is set aside. A person records the sign-off at a
-terminal with `compass evidence approve --guardrail` and the value `G5`,
-giving `--approver`, `--role` and `--scope`. A record with no subject key, the form earlier sign-offs use, still counts. A landed issue that the earlier rule passed is
+given for that subject and is set aside. In Claude Code a person records
+the sign-off by typing `/compass:approve`: the agent asks with `compass
+evidence request`, the Stop hook shows the request in Compass's words, and a
+`UserPromptExpansion` hook records the typed command (ADR-068). At a
+terminal a person runs `compass evidence approve --guardrail` and the value `G5`,
+giving `--approver`, `--role` and `--scope`; on a host whose adapter
+has no person-only approval event, such as Codex, that is the only path.
+
+From 7.0.0 a person can also delegate approvals to one named agent with
+`/compass:delegate`, for at most 24 hours and a stated scope (ADR-069). The
+guardrail 5 sign-off is covered only when typed, and only after the person
+types back a code the hook showed them. The record names the person, the
+agent and the delegation. The person sees a summary of delegated approvals
+until they mark them reviewed, and `/compass:reject <record id>` overrules
+one; for the sign-off it writes an `approval-withdrawal` record, which never
+reverses an action already taken and never fails a landed issue.
+
+What holds the boundary, and what does not:
+
+- Only a person's typed command records an approval in Claude Code. The
+  command files set `disable-model-invocation: true`, so the Skill tool and
+  a scheduled job cannot raise the event, and the hook refuses a command
+  file without the flag. A command in another session's message or in a
+  subagent's report never expands. This was measured on Claude Code 2.1.300.
+- The hook refuses a nested `claude -p` session, which reports a
+  `CLAUDE_CODE_ENTRYPOINT` starting with `sdk-`. Entrypoint values of IDE
+  and desktop sessions were not measured, so only `sdk-` is refused.
+- A prompt suggestion accepted with Tab can submit arguments the model
+  worded. The approval binds to the request Compass showed, and a g5
+  delegation needs the typed-back code.
+- The guarantee is as strong as the terminal check, and no stronger: a
+  process running as the same operating system user can still write a
+  record, a request or a delegation file, pipe forged input into the hook,
+  or drive a session through a pseudo-terminal. A record with no subject key, the form earlier sign-offs use, still counts. A landed issue that the earlier rule passed is
 reported, never failed.
 
 A person's answer to a checkpoint hand-off (`compass evidence approve

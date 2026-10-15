@@ -143,8 +143,10 @@ An issue's documents are in `docs/compass/<created>-<issue-slug>/`, where
 The manifest's `artifacts:` registry holds each document's status. The stage
 commands move it: a command that writes the record of a stage approves the
 `draft` documents of earlier stages (`approved_by` names the command), or sets
-`awaiting-approval` for a document with a human check, which a person approves
-with `compass evidence approve --artifact <kind>`. `compass ship-commit`
+`awaiting-approval` for a document with a human check. Ask with `compass
+evidence request --artifact <kind>`; the person approves by typing
+`/compass:approve`, or with `compass evidence approve --artifact <kind>` at a
+terminal. `compass ship-commit`
 refuses a document that is not approved.
 
 A new project has no `governance/` directory: the shipped default preset is in

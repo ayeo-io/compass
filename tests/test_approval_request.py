@@ -119,6 +119,16 @@ def test_e3_no_prompt_host_prints_terminal_command(tmp_path):
             "--role <role> --scope 'refund migration'") in out, out
     assert "with no `!` prefix" in out, out
     assert "/compass:approve" not in out
+    # The adapter contract names the capability, and what an adapter must show.
+    import yaml
+    contract = yaml.safe_load((ROOT / "schemas" / "adapter-contract.yml").read_text())
+    row = next(c for c in contract["capabilities"]
+               if c["capability"] == "Person-only approval event")
+    assert row["claude-code"] == {"status": "full", "path": "hooks/prompt-approval.sh"}
+    portability = " ".join((ROOT / "docs" / "portability.md").read_text().split())
+    for needle in ("Person-only approval event", "dated measurement",
+                   "COMPASS_APPROVAL_CHANNEL=terminal", "Codex"):
+        assert needle in portability, needle
     # No code under cli/ or hooks/ branches on an adapter's name.
     for folder in ("cli/compass_pkg", "hooks"):
         for path in (ROOT / folder).rglob("*"):

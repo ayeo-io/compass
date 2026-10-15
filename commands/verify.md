@@ -111,7 +111,9 @@ command." See `skills/compass-runtime/writing-voice.md`.
   lint/format/type errors, and traceability is intact - are met by a record in
   the manifest. Record an item with `compass gate pass ... --meets <item>` or
   `compass evidence add ... --meets <item>`; a person ticks the item that needs
-  a person with `compass evidence approve --check <item>`. The page lists the
+  a person by typing `/compass:approve` after you ask with `compass evidence
+  request --check <item>`, or with `compass evidence approve --check <item>` at a
+  terminal. The page lists the
   items and their state (`compass issue render` writes it); a tick written on
   the page counts for nothing. That is the exit gate out of verify.
 

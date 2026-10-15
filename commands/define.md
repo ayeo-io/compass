@@ -137,9 +137,10 @@ write the acceptance criteria and show this hand-off, then say you are going on 
 waiting and name the setting, with "Next" in place of "On approval". Record
 the passed hand-off with `compass issue checkpoint add define --outcome skipped
 --by spec-author`, so the person can review it later and send the issue back. If
-`define` is listed, wait: the person answers with `compass evidence approve
---checkpoint define --approver <name> --role <role>` at a terminal, which records
-the answer. An issue assessed before outcomes were recorded is not judged: both
+`define` is listed, ask with `compass evidence request --checkpoint define` and
+wait: the person types `/compass:approve` in Claude Code, or runs `compass
+evidence approve --checkpoint define --approver <name> --role <role>` at a
+terminal, which records the answer. An issue assessed before outcomes were recorded is not judged: both
 commands refuse it and write nothing, so say so and go on.
 
 If you resolved a requirement question
@@ -148,7 +149,9 @@ yourself instead of asking, record it:
 Before you hand off, run `compass next`. When its first line reads
 `Waiting at the define checkpoint`, the issue holds decisions that no person has
 confirmed. Show the listed decisions in the hand-off and wait: the person
-confirms them all with `compass evidence approve --decisions` or reopens one with
+confirms them all by typing `/compass:approve` after you run `compass evidence
+request --decisions` (or `compass evidence approve --decisions` at a terminal), or
+reopens one with
 `compass issue decision set`. Do not name the next stage while it waits. On
 `autonomous` autonomy `compass next` lists the decisions and does not wait; show
 the list in the hand-off.

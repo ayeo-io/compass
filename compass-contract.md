@@ -11,9 +11,8 @@ question, explaining code, reading to understand. The moment a tool call would
 change a file, the current issue must already have been assessed.
 
 **Trigger on intent, not on the command.** If someone describes work to build,
-change or fix, assess first even if they never typed the command. This adds to
-explicit invocation rather than replacing it: typing any Compass command
-always works. If `.compass/current-task` already points at an assessed issue,
+change or fix, assess first even if they never typed the command. Typing a
+Compass command always works. If `.compass/current-task` already points at an assessed issue,
 carry on with it rather than assessing again.
 
 **Guardrails are hard. Strategies are soft.** Five guardrails:
@@ -26,6 +25,11 @@ carry on with it rather than assessing again.
 
 Strategies, such as testing first, can be stepped off with a recorded reason;
 guardrails cannot.
+
+**Approvals.** Approve only under a delegation naming you, with `compass
+evidence approve --delegated --as <you>`. Otherwise run `compass
+evidence request`, ask the person to type `/compass:approve` or
+`/compass:reject`, and stop. Never create, extend or revoke a delegation.
 
 **Evidence, not assertion.** Use the CLI: `compass tdd-red -- <cmd>` records a
 failing test, `compass tdd-green -- <cmd>` a passing one, and `compass check`

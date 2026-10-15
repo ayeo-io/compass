@@ -51,6 +51,9 @@ capabilities:
   - capability: CI integration
     obligation: 3
     claude-code: {status: full, path: .github/workflows/compass.yml}
+  - capability: Person-only approval event
+    obligation: 4
+    claude-code: {status: full, path: hooks/prompt-approval.sh}
   - capability: Install surface (`bin/compass`, `.claude-plugin/`)
     obligation: 3
     claude-code: {status: full, path: .claude-plugin/plugin.json}

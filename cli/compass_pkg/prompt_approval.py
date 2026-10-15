@@ -8,8 +8,8 @@ The hook acts only on the expansion of a plugin command a person typed:
 nothing recorded. For one of the four it refuses, writing nothing, when:
 
 - the command file it serves does not set `disable-model-invocation: true`.
-  U0 measured that a scheduled task fires the event for a command without
-  the flag, so the flag is what keeps the model's scheduled tasks out;
+  U0 measured that a scheduled job fires the event for a command without
+  the flag, so the flag is what keeps the model's scheduled jobs out;
 - `CLAUDE_CODE_ENTRYPOINT` starts with `sdk-`, which a nested `claude -p`
   session reports (the owner's answer of 2026-10-15). IDE and desktop values
   were not measured, so only `sdk-` is refused;
@@ -26,7 +26,7 @@ end of the agent's turn (the Stop hook); the hook records a request only
 while its digest equals the one shown. Each refusal names its cause, and the
 block reason reaches the person only. A recorded answer goes through
 `approvals.record`, the writer the terminal verb uses, and the request then
-moves to `closed/` (ADR-068 decision 4, DD-6).
+moves to `closed/` (ADR-068 decision 4; the design's record-then-close rule).
 
 Every path holds the issue's approval lock, and any error blocks: the hook
 fails closed.

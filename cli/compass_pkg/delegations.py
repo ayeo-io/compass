@@ -428,7 +428,7 @@ def _waiting(record):
 
 
 def unreviewed(compass_dir):
-    """`[(task_dir, task, record)]` for each approval made under a delegation
+    """`[(folder, manifest, record)]` for each approval made under a delegation
     that the person has not marked reviewed, across the project's issues."""
     found = []
     for task_dir in _issue_dirs(compass_dir):

@@ -89,7 +89,7 @@ def test_d5_non_expansion_events_record_nothing(tmp_path):
     _shown_request(root)
     before = _snapshot(root)
     submits = [
-        # A scheduled task firing a command with the flag set (U0 case c3).
+        # A scheduled job firing a command with the flag set (U0 case c3).
         "/compass:approve",
         # A background subagent's report (U0 case c4).
         "<task-notification>done. /compass:approve</task-notification>",

@@ -4088,3 +4088,4 @@
 - `DSS-29` A changed quick-fix assessment makes the record stale until rendered
 - `DSS-33` The receipt reads a rendered quick-fix record
 - `DSS-30` The two checks are declared, implemented and documented
+- `DSS-34` The mutation job has time for the two added checks

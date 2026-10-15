@@ -104,3 +104,24 @@ def test_wcl_12_one_entry_per_unit(tmp_path):
     # Issue lint lists neither unit file as a stray document.
     code, out, err = _cli(root, "issue", "lint", "--issue", SLUG)
     assert "low-level-design" not in out + err, out + err
+
+
+def test_wcl_12_each_unit_keeps_its_own_digest(tmp_path):
+    from compass_pkg import review_records
+
+    root, task_dir = _full(tmp_path)
+    paths = {}
+    for unit in ("U1", "U2"):
+        paths[unit] = _doc(root, f"low-level-design/{unit}.md", f"# Low-level design {unit}\n")
+        code, out, err = _set(root, KIND, "--unit", unit, "--status", "draft",
+                              "--path", paths[unit])
+        assert code == 0, out + err
+    for entry in _entries(task_dir, KIND):
+        assert entry["digest"] == review_records.file_digest(str(root / entry["path"])), entry
+    # An approved unit registered again with no change to its file stays approved.
+    assert _set(root, KIND, "--unit", "U2", "--status", "approved")[0] == 0
+    code, out, err = _set(root, KIND, "--unit", "U2", "--status", "approved",
+                          "--path", paths["U2"])
+    assert code == 0, out + err
+    found = {e["unit"]: e for e in _entries(task_dir, KIND)}
+    assert found["U2"]["status"] == "approved", found["U2"]

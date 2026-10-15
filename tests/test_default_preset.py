@@ -850,6 +850,8 @@ EXPECTED_ON_SKIPPED = {
     "landed-by-resolves": "not-applicable",
     "multiagent-run-recorded": "not-applicable",
     "artifacts-approved": "not-applicable",
+    "nfr-rows-resolved": "not-applicable",
+    "contracts-declared": "not-applicable",
     "declared-tests-resolve": "pass",
 }
 

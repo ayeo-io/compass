@@ -32,11 +32,18 @@ from compass_pkg.render_inputs import (CROSS, OWN, Part, RenderInputs, code as _
 # --- the renderers ---------------------------------------------------------
 
 def coverage(inputs, doc_rel):
+    # The Kind column shows only when the design holds a Verification plan, so a coverage
+    # block written before the plan existed keeps every byte (ADR-064 decision 3).
+    from compass_pkg import verification_plan
+
     scenarios = inputs.list_of("scenarios")
     lines = []
     if not scenarios:
         lines.append("No scenarios recorded yet.")
     else:
+        plan = verification_plan.read(
+            inputs.doc_text("technical-design"), inputs.doc_text("acceptance-criteria"),
+            [str(s.get("id", "?")) for s in scenarios])
         rows, passed = [], 0
         for s in scenarios:
             sid = str(s.get("id", "?"))
@@ -51,13 +58,17 @@ def coverage(inputs, doc_rel):
             else:
                 result = "no test record"
             tests = ", ".join(_code(t) for t in s.get("tests") or []) or "-"
-            rows.append("| %s | %s | %s | %s | %s | %s | %s |" % (
-                rb.cell(sid), rb.cell(s.get("title", "")), tests,
-                _code(red) if red else "-", _code(green) if green else "-",
-                _code(accept) if accept else "-", result))
+            cells = [rb.cell(sid), rb.cell(s.get("title", "")), tests,
+                     _code(red) if red else "-", _code(green) if green else "-",
+                     _code(accept) if accept else "-", result]
+            if plan is not None:
+                cells.insert(2, rb.cell(plan.kinds[sid]))
+            rows.append("| %s |" % " | ".join(cells))
+        header = ["Scenario", "Title", "Tests", "Red", "Green", "Acceptance", "Result"]
+        if plan is not None:
+            header.insert(2, "Kind")
         lines += ["Coverage: %d of %d scenarios passed" % (passed, len(scenarios)), "",
-                  "| Scenario | Title | Tests | Red | Green | Acceptance | Result |",
-                  "|---|---|---|---|---|---|---|"] + rows
+                  "| %s |" % " | ".join(header), "|%s" % ("---|" * len(header))] + rows
     modes = inputs.list_of("failure_modes_descoped")
     if modes:
         lines += ["", "De-scoped failure modes:"]
@@ -264,10 +275,13 @@ RENDERERS = {
 
 
 def _add_modules():
-    from compass_pkg import approach_blocks, issue_page, project_index
+    from compass_pkg import (approach_blocks, dependencies_block, header_block, issue_page,
+                              project_index)
     RENDERERS.update(approach_blocks.RENDERERS)
     RENDERERS.update(issue_page.RENDERERS)
     RENDERERS.update(project_index.RENDERERS)
+    RENDERERS.update(header_block.RENDERERS)
+    RENDERERS.update(dependencies_block.RENDERERS)
 
 
 _add_modules()

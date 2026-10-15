@@ -13,9 +13,8 @@ shape the spec uses - so the handoff into the define stage is mechanical.
 
 # UI Contract - {{ISSUE_SLUG}}
 
-> **Author:** {{DESIGNER NAME}} · **Date:** {{DATE}}
-> **Feeds into:** acceptance-criteria.md (the scenarios below become spec scenarios)
-> **Governance check:** accessibility commitments honour the project's accessibility strategy, if `governance/strategies.md` has one.
+<!-- compass:render document-header -->
+<!-- /compass:render -->
 
 ---
 

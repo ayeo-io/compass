@@ -273,11 +273,11 @@ def test_acf_3(tmp_path):
     assert not [line for line in lines if "verification-note" in line], lines
     # A good kind beside them draws nothing.
     assert not [line for line in lines if "artifacts.test-charter" in line]
-    # The note prints its header and its one block marker, and no heading.
+    # The note prints its one block marker, no header block and no heading.
     code, out, err = _cli(_scratch(tmp_path / "plain"), "issue", "template", "show",
                           "verification-note", "--depth", "lightweight")
     assert code == 0, err
-    assert "**Audience:**" in out and "<!-- compass:render verification-note -->" in out
+    assert "**Audience:**" not in out and "<!-- compass:render verification-note -->" in out
     assert "\n## " not in out and not out.startswith("## ")
 
 
@@ -541,14 +541,19 @@ def test_acf_6(tmp_path):
     code, light, err = _template_show(root, "technical-design", "--depth", "lightweight")
     assert code == 0, err
     head = light.split("\n## ", 1)[0]
-    assert entry["audience"] in head
-    assert "plan" in head and "planner" in head
-    assert "docs/compass/<created>-<issue-slug>/technical-design.md" in head
+    # The header block holds the reader, the stage and the owner; the home and the
+    # traditional name are the glossary's, not the document's.
+    block = head.split("<!-- compass:render document-header -->\n", 1)[1].split(
+        "<!-- /compass:render -->", 1)[0]
+    assert entry["audience"] in block
+    assert "> **Stage:** plan · **Owner:** planner" in block
+    assert "> **Issue:** {{ISSUE_SLUG}}" in block
+    assert "**Home:**" not in light and "**Traditional name:**" not in light
     assert [_canon(h) for h in _headings_of(light)] == [
         _canon(h) for h in entry["sections"]["lightweight"]]
     assert "(optional)" not in light
     # The template's prose sits under its heading.
-    assert "## 1. Approach" in light and "{{APPROACH}}" in light.split("## 1. Approach", 1)[1]
+    assert "## Approach" in light and "{{APPROACH}}" in light.split("## Approach", 1)[1]
     assert "{{APPROACH}}" in text
     code, thorough, err = _template_show(root, "technical-design", "--depth", "thorough")
     assert code == 0, err
@@ -562,11 +567,11 @@ def test_acf_6(tmp_path):
     body = json.loads(out)
     assert body["depth"] == "lightweight" and body["kind"] == "technical-design"
     assert body["text"] == light
-    # With --issue the home names the issue's folder.
+    # With --issue the header block names the issue.
     slug = _issue_dir(root, registered=[("technical-design", "lightweight")])
     code, issue, err = _template_show(root, "technical-design", "--issue", slug)
     assert code == 0, err
-    assert "docs/compass/2026-10-12-a-slug/technical-design.md" in issue
+    assert f"> **Issue:** {slug} · **Approach:** {{{{APPROACH}}}}" in issue
     # No --depth: the depth the issue registers the kind at, else thorough.
     assert [_canon(h) for h in _headings_of(issue)] == [
         _canon(h) for h in entry["sections"]["lightweight"]]
@@ -597,13 +602,13 @@ def test_acf_8(tmp_path):
     found = _heading_problems(copy, catalogue)
     assert any("verification-report thorough" in p and "An extra heading" in p
                for p in found), found
-    report.write_text(original.replace("## 2. Test suite evidence\n", "", 1), encoding="utf-8")
+    report.write_text(original.replace("## Test suite evidence\n", "", 1), encoding="utf-8")
     found = _heading_problems(copy, catalogue)
-    assert any("verification-report thorough" in p and "2. Test suite evidence" in p
+    assert any("verification-report thorough" in p and "Test suite evidence" in p
                for p in found), found
     lines = original.split("\n")
-    a = lines.index("## 1. Scenario acceptance results")
-    b = lines.index("## 2. Test suite evidence")
+    a = lines.index("## Scenario acceptance results")
+    b = lines.index("## Test suite evidence")
     lines[a], lines[b] = lines[b], lines[a]
     report.write_text("\n".join(lines), encoding="utf-8")
     found = _heading_problems(copy, catalogue)
@@ -618,7 +623,9 @@ def test_acf_60(tmp_path):
     text = (TEMPLATES / "technical-design.md").read_text(encoding="utf-8")
     heads = _template_headings(text)
     optional = [h for h, marked in heads if marked]
-    assert [h.split(".")[0].split(" ")[0] for h in optional] == ["0", "2", "3", "4", "5", "5a"]
+    assert optional == ["Summary", "Interaction - sequence diagram",
+                        "Structure - what talks to what", "Design patterns invoked",
+                        "The shape of the change", "Cross-cutting concerns"]
     assert [h for h, marked in heads if not marked] == catalogue["technical-design"][
         "sections"]["thorough"]
     assert [h for h, marked in _template_headings(
@@ -641,10 +648,10 @@ def test_acf_60(tmp_path):
     copy = tmp_path / "templates"
     shutil.copytree(TEMPLATES, copy)
     path = copy / "technical-design.md"
-    path.write_text(text.replace("## 1. Approach\n", "## 1. Approach\n" + OPTIONAL + "\n", 1),
+    path.write_text(text.replace("## Approach\n", "## Approach\n" + OPTIONAL + "\n", 1),
                     encoding="utf-8")
     found = _heading_problems(copy, catalogue)
-    assert any("technical-design" in p and "1. Approach" in p and "optional and listed" in p
+    assert any("technical-design" in p and "Approach" in p and "optional and listed" in p
                for p in found), found
 
 
@@ -668,11 +675,21 @@ def _skeleton_problems(kind, depth, output, catalogue, template_text):
     entry = catalogue[kind]
     sections = entry["sections"][depth]
     head = output.split("\n## ", 1)[0]
-    for field in ("audience", "stage", "owner", "stands_for"):
-        if str(entry[field]) not in head:
-            problems.append(f"{kind} {depth}: header lacks {field}")
-    if f"docs/compass/<created>-<issue-slug>/{entry['file']}" not in head:
-        problems.append(f"{kind} {depth}: header lacks the home")
+    opening = "<!-- compass:render document-header -->\n"
+    if kind == "verification-note":
+        # Its one block is the note; it carries no header block.
+        if opening in head:
+            problems.append(f"{kind} {depth}: holds a header block")
+    elif opening not in head:
+        problems.append(f"{kind} {depth}: no header block")
+    else:
+        block = head.split(opening, 1)[1].split("<!-- /compass:render -->", 1)[0]
+        for field in ("audience", "stage", "owner"):
+            if " ".join(str(entry[field]).split()) not in block:
+                problems.append(f"{kind} {depth}: header lacks {field}")
+    for dropped in ("**Home:**", "**Traditional name:**", "**Depth:**"):
+        if dropped in output:
+            problems.append(f"{kind} {depth}: prints {dropped}")
     plain = [_canon(h) for h in _headings_of(output) if not h.endswith("(optional)")]
     if plain != [_canon(h) for h in sections]:
         problems.append(f"{kind} {depth}: headings {plain!r} are not {sections!r}")
@@ -1314,7 +1331,7 @@ def test_acf_17(tmp_path):
                           "--scenario", "A quick fix records its approach in one place",
                           "--test", "tests/test_x.py::test_x")
     assert code == 0, out + err
-    qf_home = next((qf / "docs" / "compass").iterdir())
+    qf_home = next((qf / "docs" / "compass").glob("*-fix-it"))
     assert (qf_home / "delivery-approach.md").is_file()
     assert not (qf / ".compass" / "work" / "fix-it" / "delivery-approach.md").exists()
     code, out, err = _cli(qf, "issue", "artifact-path", "delivery-approach", "--issue", "fix-it")
@@ -1463,7 +1480,7 @@ def test_acf_22(tmp_path):
         "risk": "risk reason", "familiarity": "familiarity reason", "size": "size reason",
         "goal": "goal reason", "role": "role reason"}, body["justifications"]
     assert set(body["assessment"]) == {"risk", "familiarity", "size", "goal", "role", "labels"}
-    record = (next((qf / "docs" / "compass").iterdir()) / "delivery-approach.md").read_text()
+    record = (next((qf / "docs" / "compass").glob("*-fix-it")) / "delivery-approach.md").read_text()
     for dim, reason in body["justifications"].items():
         assert any(dim.capitalize() in line and reason in line
                    for line in record.splitlines()), (dim, record)
@@ -1485,7 +1502,8 @@ def test_acf_22(tmp_path):
     plain = yaml.safe_load((other / ".compass" / "work" / "plain-fix" / "manifest.yml").read_text())
     assert "goal" not in plain["assessment"] and "role" not in plain["assessment"]
     assert set(plain["justifications"]) == {"risk", "familiarity", "size"}
-    plain_record = (next((other / "docs" / "compass").iterdir()) / "delivery-approach.md").read_text()
+    plain_record = (next((other / "docs" / "compass").glob("*-plain-fix"))
+                    / "delivery-approach.md").read_text()
     assert "(no reason given)" not in plain_record and "| Goal |" not in plain_record
     # The readers print "not assessed" for the absent values.
     code, out, err = _cli(other, "issue", "receipt", "--issue", "plain-fix")
@@ -1556,10 +1574,11 @@ def _without_comments(text):
 def test_acf_34():
     from compass_pkg import block_renderers, rendered_blocks
     text = _template("delivery-approach.md")
-    # Section 1 also ends with the repository readiness line, a block of its own
-    # (issue `project-readiness-caps-autonomy`), under the assessment.
-    sections = {"## 1. ": ["assessment", "readiness"], "## 3. ": ["policy-rules"],
-                "### 4a. ": ["stage-weights"], "### 4b. ": ["gate-set"]}
+    # The assessment section also ends with the repository readiness line, a block of
+    # its own (issue `project-readiness-caps-autonomy`), under the assessment.
+    sections = {"## The assessment": ["assessment", "readiness"],
+                "## Policy rules that fired": ["policy-rules"],
+                "### Per-stage weight": ["stage-weights"], "### Gate set": ["gate-set"]}
     for heading, kinds in sections.items():
         body = _section(text, heading)
         found = [b.kind for b in rendered_blocks.parse(body).blocks]

@@ -155,6 +155,53 @@ _(none yet - the shipped default guardrails apply as-is)_
   document. It is unlocked, so an issue waiver can make it advisory. An issue
   stored on an earlier generation gains it at its next `compass approach
   evaluate --write`. ADR-050 holds the decision.
+- **`nfr-rows-resolved` and `contracts-declared`** are two blocking checks that
+  read one named section of an issue document. Each is unlocked, has
+  `on_skipped: not-applicable`, and sits in no gate and no stage list, so no
+  locked guardrail changes and an issue waiver can make either advisory.
+  `compass check` runs them, and `artifacts-approved`, after the gate loop
+  through one helper, `outside_gate.judged`. ADR-064 holds the decision.
+  - `nfr-rows-resolved` reads the spec's Non-functional requirements table. A
+    row for each of seven concerns (performance, capacity, compatibility,
+    security, privacy, operability, accessibility) names scenario ids the
+    manifest holds, or a reason the concern does not apply. At `thorough` depth
+    each cited scenario states a number in its Then: a digit on the Then line,
+    or on a Then, And or But line after it. A `{{...}}` cell counts as empty.
+    The pass detail is "n of n concerns resolved".
+  - `contracts-declared` reads the technical design's Data and interfaces
+    section when a changed file is a trigger path. The section must hold a
+    field table (Name, Type, Required, Meaning, Written by, Read by) or a
+    contract table (Inputs, Outputs, Exit codes, Errors) with a data row, or an
+    `erDiagram` fence. A table or fence that holds a `{{...}}` placeholder does
+    not count.
+  - **Trigger paths** are the check's `params` in the configuration:
+    `trigger_paths` and `trigger_contents`. A pattern is an `fnmatch` glob on
+    the project-relative path, where `*` also matches `/`. A contents pattern
+    names a path glob and a text, and the file must hold the text. A project
+    cannot extend the list with `add:`, because `params` is a map and the merge
+    grammar applies `add:` only to a catalogue field. A project sets the whole
+    `trigger_paths` list, the shipped patterns and its own, in its layer, with a
+    project waiver, because `tighter` is `none` for the key.
+  - **Four conditions make either check decline**, reporting `nothing to
+    check`, before it reads a document. The first that holds decides the
+    detail:
+    1. The manifest has no `generation` key: "the issue predates the section
+       checks: its manifest names no stored configuration".
+    2. The issue is closed: "the issue is closed".
+    3. The document the check reads is not registered with a path: "no
+       acceptance-criteria is registered with a path" (or `technical-design`).
+    4. The catalogue of the issue's generation does not list the section at the
+       depth the document is registered at, and an entry with no `depth` lists
+       nothing: "the catalogue of generation N does not list ... for ... at depth
+       D".
+
+    `contracts-declared` also declines, with its own detail, when no changed
+    file matches a trigger pattern.
+  - **A spike** runs these two checks and reads `nothing to check`, because it
+    registers no spec or design. A spike does not run `artifacts-approved`.
+    `ship-commit` runs `artifacts-approved` only.
+  - An issue stored on an earlier generation gains both checks at its next
+    `compass approach evaluate --write`.
 - **An advisory failure** is a check that failed where its effective severity
   is advisory (`severity: advisory`, or a `blocking_when` the assessment does
   not match). It is labelled ADVISORY, never PASS or FAIL, is counted apart

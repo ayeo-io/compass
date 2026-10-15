@@ -13,7 +13,8 @@ Fill every {{PLACEHOLDER}}.
 
 # Architecture notes - {{ISSUE_SLUG}}
 
-> **Date:** {{DATE}} · **Reads:** {{the documents, decision records and code read}}
+<!-- compass:render document-header -->
+<!-- /compass:render -->
 
 ## System under change
 

@@ -505,6 +505,12 @@ def test_d2_repairs_change_only_retired_names():
     gained the section on the pre-tool hook's session record, listing how it
     resolves the issue, what it costs and how it fails safe.
 
+    One more was re-baselined by `document-set-sections`:
+    `governance/guardrails.md` (list_items 50 -> 61) gained the bullet on the
+    two section checks, `nfr-rows-resolved` and `contracts-declared`, with the
+    sub-bullets for each check, the trigger paths, the four declining
+    conditions and the spike rule.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

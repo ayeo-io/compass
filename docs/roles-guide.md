@@ -19,6 +19,18 @@ behaviours, read from different professional perspectives.
 A role changes the issue's assessment, artifacts and gates. It is not merely a
 label for a reviewer added at the end.
 
+## How each role reads the spec
+
+Every spec is read by all five roles. Each reads it for a different reason:
+
+- **Product owner / manager** - reads for *intent fidelity*: do these scenarios deliver the outcome in `intent.md`?
+- **Product marketer** - reads for *claims*: every line of launch copy must point at a scenario id here.
+- **Engineer** - reads for *tests*: scenarios are the acceptance suite and seed the TDD red→green cycle.
+- **QA** - reads for *coverage*: which scenarios are exercised, which edges are not.
+- **Designer** - UI behaviour authored in `ui-contract.md` flows in here as scenarios.
+
+This guide holds the only copy of these lines for new specs.
+
 ## One scenario, five perspectives
 
 Consider a saved-export feature:

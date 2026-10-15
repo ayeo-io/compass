@@ -10,7 +10,8 @@ real file; on full-approach scale work it is paired with distribution-map.md.
 The governance check here is run by the `governance-check` skill. How to
 choose and write the sections below is the `plan-authoring` skill.
 
-SECTIONS 0, 2-5 AND 5a ARE OPTIONAL. They exist so a reviewer can *see* the shape
+THE SECTIONS MARKED OPTIONAL (Summary, Interaction, Structure, Design patterns
+invoked, The shape of the change and Cross-cutting concerns) EXIST so a reviewer can *see* the shape
 of a change before it is built - an interaction, a structure, a named pattern,
 the shape of a key type. Used well they replace paragraphs of prose. Used
 badly they are padding, and a padded plan is read less carefully than a short
@@ -27,17 +28,17 @@ Fill every {{PLACEHOLDER}} in the sections you keep.
 
 # Plan - {{ISSUE_SLUG}}
 
-> **Date:** {{DATE}}
-> **Plan weight (from delivery-approach.md):** {{real technical-design.md \| technical-design.md + distribution-map.md}}
+<!-- compass:render document-header -->
+<!-- /compass:render -->
 
 ---
 
-## 0. Summary
+## Summary
 <!-- compass:optional -->
 
 <!-- OPTIONAL, and the one most often worth keeping. Include when a reader
      who did not write this plan needs to know what it delivers before
-     judging how. Omit on a plan short enough that section 1 already is the
+     judging how. Omit on a plan short enough that the Approach already is the
      summary - restating three paragraphs in three paragraphs helps nobody.
 
      Three fields, same shape and same reason as the Summary in
@@ -56,7 +57,7 @@ does.}}
 
 ---
 
-## 1. Approach
+## Approach
 
 <!-- The technical approach in a few paragraphs. How the scenarios in
      acceptance-criteria.md get satisfied. What changes, where, in what order. -->
@@ -65,7 +66,7 @@ does.}}
 
 ---
 
-## 2. Interaction - sequence diagram
+## Interaction - sequence diagram
 <!-- compass:optional -->
 
 <!-- OPTIONAL. Include when the change touches two or more collaborating
@@ -92,7 +93,7 @@ the failure path, or the step where ordering constrains the design.}}
 
 ---
 
-## 3. Structure - what talks to what
+## Structure - what talks to what
 <!-- compass:optional -->
 
 <!-- OPTIONAL. Include when introducing new components, changing the
@@ -118,7 +119,7 @@ classDiagram
 
 ---
 
-## 4. Design patterns invoked
+## Design patterns invoked
 <!-- compass:optional -->
 
 <!-- OPTIONAL, and the easiest optional section to misuse. Include ONLY when a
@@ -141,12 +142,12 @@ classDiagram
 
 ---
 
-## 5. The shape of the change
+## The shape of the change
 <!-- compass:optional -->
 
 <!-- OPTIONAL. Include when the shape of an interface, a type, or an API is
      itself a design decision a reviewer should be able to argue with before
-     it is built. Omit when the shape is obvious from section 1, and omit when
+     it is built. Omit when the shape is obvious from the Approach, and omit when
      you find yourself writing the implementation - this is a sketch of the
      contract, not the work. The implement stage writes the code.
 
@@ -161,7 +162,7 @@ classDiagram
 
 ---
 
-## 5a. Cross-cutting concerns
+## Cross-cutting concerns
 <!-- compass:optional -->
 
 <!-- OPTIONAL. Include when the change touches security, privacy, or the
@@ -199,7 +200,7 @@ Name only the ones it touches.}}
 
 ---
 
-## 6. Design decisions (ADR-style)
+## Design decisions (ADR-style)
 
 <!-- One block per real design decision. A decision with no alternative
      considered is usually not a decision yet. A quick fix has none of these by
@@ -223,7 +224,77 @@ Name only the ones it touches.}}
 
 ---
 
-## 7. Governance check
+## Data and interfaces
+
+Declare every structure this change stores or sends, and a contract for every new verb,
+endpoint and hook. `compass check` judges this section only when a changed file is a trigger
+path or holds a trigger text, such as a schema file or a file that adds a command. Declare a
+contract in the other cases too: a reader cannot review an interface that is not written down.
+
+<!-- A declaration is one of three forms. Fill the ones that fit and delete the rest.
+     An unfilled placeholder row does not count as a declaration. -->
+
+**Fields.** One row for each persisted or exchanged field.
+
+| Name | Type | Required | Meaning | Written by | Read by |
+|---|---|---|---|---|---|
+| {{field name}} | {{type}} | {{yes \| no}} | {{what it means}} | {{the code or person that writes it}} | {{the code that reads it}} |
+
+**Relationships.** Use when the change adds or links record types.
+
+```mermaid
+erDiagram
+    {{PARENT}} ||--o{ {{CHILD}} : {{holds}}
+    {{PARENT}} {
+        {{type}} {{field}}
+    }
+```
+
+**Contracts.** One row for each new verb, endpoint or hook.
+
+| Inputs | Outputs | Exit codes | Errors |
+|---|---|---|---|
+| {{arguments, request or event}} | {{what it returns or writes}} | {{codes and what each means}} | {{what it refuses, and the message}} |
+
+---
+
+## Verification plan
+
+<!-- One row for each scenario group, or for a single scenario that needs a different kind
+     of test from its group. Group is a comma-separated list of group letters and scenario
+     ids. A scenario id wins over its group's row. The coverage ledger shows the Kind of
+     each scenario. No check reads this table, so keep it short and true. -->
+
+Kinds: `unit`, `integration`, `acceptance`, `judged review` and `manual`.
+
+| Group | Kind | Fixture or environment |
+|---|---|---|
+| {{A}} | {{unit \| integration \| acceptance \| judged review \| manual}} | {{where the test runs and what it needs}} |
+
+Not tested:
+- {{what is not tested}} - {{the reason it is not}}
+
+---
+
+## Risks and dependencies
+
+<!-- One row for each way this change can go wrong. Addressed by names the design decision,
+     scenario or check that answers the risk. The dependencies block below is written by
+     `compass issue render` from the issue's `depends_on` entries
+     (`compass issue depends add`). Do not edit between the markers. -->
+
+| Risk | Likelihood | Effect | Addressed by |
+|---|---|---|---|
+| {{what could go wrong}} | {{low \| medium \| high}} | {{what it affects if it does}} | {{the decision, scenario or check that answers it}} |
+
+Dependencies on other issues:
+
+<!-- compass:render dependencies -->
+<!-- /compass:render -->
+
+---
+
+## Governance check
 
 <!-- Run against ALL of governance/ - guardrails.md, strategies.md, and
      routing-policy.md. Not strategies-rationale.md: it holds the incidents
@@ -244,7 +315,7 @@ Name only the ones it touches.}}
 
 ---
 
-## 8. Work units
+## Work units
 
 <!-- The independent (or shared-surface) units of work. On the regular approach this is
      a short list; on full-approach scale work it becomes the input to distribution-map.md.

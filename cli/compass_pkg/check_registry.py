@@ -37,6 +37,7 @@ from compass_pkg.landed_by import _check_landed_by_resolves
 from compass_pkg.multiagent_check import _check_multiagent_run_recorded
 from compass_pkg.readiness_registry import READINESS  # noqa: F401  (re-exported)
 from compass_pkg.render_check_entry import _check_rendered_blocks_current
+from compass_pkg.section_checks import _check_contracts_declared, _check_nfr_rows_resolved
 
 CORPUS_ROOT = "tests/fixtures/impls"
 TIGHTER = ("higher", "lower", "none")
@@ -113,6 +114,12 @@ _ENTRIES = (
     _entry("borrowed-documents-answered", _check_borrowed_documents_answered),
     _entry("multiagent-run-recorded", _check_multiagent_run_recorded),
     _entry("artifacts-approved", _check_artifacts_approved),
+    _entry("nfr-rows-resolved", _check_nfr_rows_resolved),
+    # The trigger patterns are declared data a project layer can extend (ADR-033);
+    # a list has no order to compare, so any change to one needs a waiver.
+    _entry("contracts-declared", _check_contracts_declared,
+           params_spec={"trigger_paths": "list", "trigger_contents": "list"},
+           tighter={"trigger_paths": "none", "trigger_contents": "none"}),
 )
 
 REGISTRY: dict[str, CheckImpl] = {e.name: e for e in _ENTRIES}

@@ -347,7 +347,7 @@ def test_trc_c1_review_table_has_assessor_column():
 
 def test_trc_c2_template_explains_assessor_column():
     tpl = _read("templates/verification-report.md")
-    i = tpl.find("## 3. Review dimensions")
+    i = tpl.find("## Review dimensions")
     assert i >= 0
     flat = _flat(tpl[i:i + 2000])
 

@@ -292,6 +292,11 @@ reassess), and the `compass.yml` it would write.
     },
     {
       "catalogue": "checks",
+      "id": "contracts-declared",
+      "operation": "add"
+    },
+    {
+      "catalogue": "checks",
       "id": "dashboard-current",
       "operation": "remove"
     },
@@ -304,6 +309,11 @@ reassess), and the `compass.yml` it would write.
       "catalogue": "checks",
       "id": "multiagent-run-recorded",
       "operation": "set"
+    },
+    {
+      "catalogue": "checks",
+      "id": "nfr-rows-resolved",
+      "operation": "add"
     },
     {
       "catalogue": "checks",
@@ -332,8 +342,18 @@ reassess), and the `compass.yml` it would write.
     },
     {
       "catalogue": "vocabulary",
+      "id": "checks.contracts-declared",
+      "operation": "add"
+    },
+    {
+      "catalogue": "vocabulary",
       "id": "checks.dashboard-current",
       "operation": "remove"
+    },
+    {
+      "catalogue": "vocabulary",
+      "id": "checks.nfr-rows-resolved",
+      "operation": "add"
     },
     {
       "catalogue": "vocabulary",

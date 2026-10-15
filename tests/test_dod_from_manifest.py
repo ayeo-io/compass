@@ -364,6 +364,10 @@ def test_dcj_34_templates_carry_blocks_not_state_tables(tmp_path):
         assert [b.kind for b in found.blocks] == kinds or set(kinds) <= {b.kind for b in found.blocks}, \
             (kind, [b.kind for b in found.blocks])
         for block_ in found.blocks:
+            if block_.kind == "document-header":
+                # The header block holds the kind's stage, owner and reader, and a
+                # placeholder for each fact the issue's records give.
+                continue
             assert block_.end == block_.start + 1, "a block is empty between its markers"
         for table in STATE_TABLES[kind]:
             assert table not in out, (kind, table)

@@ -25,7 +25,7 @@ next-building.txt: |
 check-building.txt: |
   exit 1
   --- stdout
-  FAIL - 1 of 11 check(s) failed, 10 had nothing to check, 1 failed as advisory (does not block) on '…
+  FAIL - 1 of 11 check(s) failed, 12 had nothing to check, 1 failed as advisory (does not block) on '…
   [mode: enforced]
 
   ADVISORY rendered-blocks-current: docs/compass/2026-10-01-building/README.md: the issue page is mis…
@@ -46,7 +46,7 @@ next-dropped.txt: |
 check-dropped.txt: |
   exit 1
   --- stdout
-  FAIL - 2 of 11 check(s) failed, 10 had nothing to check on 'dropped' (regular)
+  FAIL - 2 of 11 check(s) failed, 12 had nothing to check on 'dropped' (regular)
   [mode: enforced]
 
   FAIL suite-passed: no test-run evidence in the registry - run `compass tdd-green` to record a passi…
@@ -67,7 +67,7 @@ next-dup.txt: |
 check-dup.txt: |
   exit 1
   --- stdout
-  FAIL - 2 of 11 check(s) failed, 10 had nothing to check on 'dup' (regular)
+  FAIL - 2 of 11 check(s) failed, 12 had nothing to check on 'dup' (regular)
   [mode: enforced]
 
   FAIL suite-passed: no test-run evidence in the registry - run `compass tdd-green` to record a passi…
@@ -88,7 +88,7 @@ next-flagged.txt: |
 check-flagged.txt: |
   exit 1
   --- stdout
-  FAIL - 1 of 11 check(s) failed, 10 had nothing to check, 1 failed as advisory (does not block) on '…
+  FAIL - 1 of 11 check(s) failed, 12 had nothing to check, 1 failed as advisory (does not block) on '…
   [mode: enforced]
 
   ADVISORY rendered-blocks-current: docs/compass/2026-10-01-flagged/README.md: the issue page is miss…
@@ -109,7 +109,7 @@ next-held.txt: |
 check-held.txt: |
   exit 1
   --- stdout
-  FAIL - 1 of 11 check(s) failed, 10 had nothing to check, 1 failed as advisory (does not block) on '…
+  FAIL - 1 of 11 check(s) failed, 12 had nothing to check, 1 failed as advisory (does not block) on '…
   [mode: enforced]
 
   ADVISORY rendered-blocks-current: docs/compass/2026-10-01-held/README.md: the issue page is missing…
@@ -130,7 +130,7 @@ next-held-flag.txt: |
 check-held-flag.txt: |
   exit 1
   --- stdout
-  FAIL - 1 of 11 check(s) failed, 10 had nothing to check, 1 failed as advisory (does not block) on '…
+  FAIL - 1 of 11 check(s) failed, 12 had nothing to check, 1 failed as advisory (does not block) on '…
   [mode: enforced]
 
   ADVISORY rendered-blocks-current: docs/compass/2026-10-01-held-flag/README.md: the issue page is mi…
@@ -152,7 +152,7 @@ next-odd.txt: |
 check-odd.txt: |
   exit 1
   --- stdout
-  FAIL - 1 of 11 check(s) failed, 10 had nothing to check, 1 failed as advisory (does not block) on '…
+  FAIL - 1 of 11 check(s) failed, 12 had nothing to check, 1 failed as advisory (does not block) on '…
   [mode: enforced]
 
   ADVISORY rendered-blocks-current: docs/compass/2026-10-01-odd/README.md: the issue page is missing …
@@ -174,7 +174,7 @@ next-planning.txt: |
 check-planning.txt: |
   exit 1
   --- stdout
-  FAIL - 1 of 11 check(s) failed, 10 had nothing to check, 1 failed as advisory (does not block) on '…
+  FAIL - 1 of 11 check(s) failed, 12 had nothing to check, 1 failed as advisory (does not block) on '…
   [mode: enforced]
 
   ADVISORY rendered-blocks-current: docs/compass/2026-10-01-planning/README.md: the issue page is mis…
@@ -196,7 +196,7 @@ next-queued.txt: |
 check-queued.txt: |
   exit 1
   --- stdout
-  FAIL - 4 of 11 check(s) failed, 10 had nothing to check, 1 failed as advisory (does not block) on '…
+  FAIL - 4 of 11 check(s) failed, 12 had nothing to check, 1 failed as advisory (does not block) on '…
   [mode: enforced]
 
   ADVISORY rendered-blocks-current: docs/compass/2026-09-20-queued/README.md: the issue page is missi…
@@ -223,7 +223,7 @@ next-ready.txt: |
 check-ready.txt: |
   exit 1
   --- stdout
-  FAIL - 1 of 11 check(s) failed, 10 had nothing to check, 1 failed as advisory (does not block) on '…
+  FAIL - 1 of 11 check(s) failed, 12 had nothing to check, 1 failed as advisory (does not block) on '…
   [mode: enforced]
 
   ADVISORY rendered-blocks-current: docs/compass/2026-10-01-ready/README.md: the issue page is missin…
@@ -244,7 +244,7 @@ next-refining.txt: |
 check-refining.txt: |
   exit 1
   --- stdout
-  FAIL - 1 of 11 check(s) failed, 10 had nothing to check, 1 failed as advisory (does not block) on '…
+  FAIL - 1 of 11 check(s) failed, 12 had nothing to check, 1 failed as advisory (does not block) on '…
   [mode: enforced]
 
   ADVISORY rendered-blocks-current: docs/compass/2026-10-01-refining/README.md: the issue page is mis…
@@ -265,7 +265,7 @@ next-reviewing.txt: |
 check-reviewing.txt: |
   exit 1
   --- stdout
-  FAIL - 4 of 11 check(s) failed, 10 had nothing to check on 'reviewing' (regular)
+  FAIL - 4 of 11 check(s) failed, 12 had nothing to check on 'reviewing' (regular)
   [mode: enforced]
 
   FAIL declared-tests-resolve: declared test(s) do not resolve to a test on disk: REVIEWING-1: tests/test_reviewing.py::test_it
@@ -289,7 +289,7 @@ next-shipped.txt: |
 check-shipped.txt: |
   exit 1
   --- stdout
-  FAIL - 3 of 11 check(s) failed, 10 had nothing to check on 'shipped' (regular)
+  FAIL - 3 of 11 check(s) failed, 12 had nothing to check on 'shipped' (regular)
   [mode: enforced]
 
   FAIL suite-passed: no test-run evidence in the registry - run `compass tdd-green` to record a passi…

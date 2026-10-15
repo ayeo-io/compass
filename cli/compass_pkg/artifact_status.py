@@ -30,7 +30,8 @@ it alone and `compass quick-fix finish` approves it.
 which is the state `ship-commit` would leave.
 """
 # DEPENDENCY: standard library (copy, os); compass_pkg.core, compass_pkg.stable_ids,
-# compass_pkg.status_words, compass_pkg.check_results. It imports no command
+# compass_pkg.status_words, compass_pkg.check_results, compass_pkg.outside_gate
+# (inside `judged`). It imports no command
 # module at load time, so every writer can import it.
 from __future__ import annotations
 
@@ -39,7 +40,7 @@ import os
 
 from compass_pkg import artifact_owed, status_words
 from compass_pkg.check_results import NOTHING_TO_CHECK
-from compass_pkg.core import FRAMEWORK_ROOT, CompassError, load_yaml, reading_matches
+from compass_pkg.core import FRAMEWORK_ROOT, CompassError, load_yaml
 from compass_pkg.stable_ids import (APPROACH_QUICK_FIX, APPROACH_SPIKE, STAGE_BREAKDOWN,  # noqa: F401
                                     STAGE_IMPLEMENT, STAGE_SHIP, STAGE_VERIFY)
 
@@ -374,30 +375,9 @@ def judged(task, task_dir, _judge):
     declares for it, or None when the configuration does not declare the check.
     `_judge` is `check_cmd._judge`, passed in by the caller so this module
     imports no command module. Returns `(passed, detail)` as it does: `passed`
-    can be `ADVISORY_FAILURE` after a waiver."""
-    from compass_pkg import effective
-    from compass_pkg.core import find_governance
+    can be `ADVISORY_FAILURE` after a waiver. `compass ship-commit` calls it;
+    `compass check` runs every check outside a gate through the same helper."""
+    from compass_pkg import outside_gate
 
-    try:
-        view = effective.view_or_legacy(task_dir)
-        if view is None:
-            guardrails = load_yaml(os.path.join(find_governance(), "guardrails.yml"))
-            matches = reading_matches
-            readings = task.get("assessment") or {}
-        else:
-            guardrails = view.guardrail_gates()
-            matches = view.matches
-            readings = view.listing_assessment(task.get("assessment") or {},
-                                               task.get("delivery_approach"))
-    except Exception:                                   # noqa: BLE001 - no configuration, nothing declared
-        return None
-    if CHECK_ID not in (guardrails.get("impl") or {}) and CHECK_ID not in (
-            guardrails.get("checks") or {}):
-        return None
-    try:
-        passed, detail = _check_artifacts_approved(task, task_dir)
-    except Exception as exc:                            # noqa: BLE001 - a check must not crash the run
-        passed, detail = False, f"check errored: {exc}"
-    return _judge(passed, detail, (guardrails.get("checks") or {}).get(CHECK_ID) or {},
-                  matches, readings)
+    return outside_gate.judged(CHECK_ID, _check_artifacts_approved, task, task_dir, _judge)
 

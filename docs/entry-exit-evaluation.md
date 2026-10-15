@@ -157,13 +157,20 @@ Exactly one of `--check`, `--guardrail`, `--artifact`, `--decisions` and
 approver `agent` apply to all five. The rest of this section describes
 `--check`.
 
+Every path that records an approval writes it through one function,
+`approvals.record` (`cli/compass_pkg/approvals.py`): this command, and in
+Claude Code the hook that records a typed `/compass:approve`. A record
+from this command also holds `via: terminal`. No verdict reads `via`, and a
+record without it still counts.
+
 The command stamps the issue, the issue's generation and the time, and
 registers the record as `EV-APPROVAL-<check>-<n>`. It exits 0 when it wrote the
 record and 2 when it did not. In the second case it writes nothing. It exits 2
 for:
 
 - no terminal on standard input, because an approval is a person's act and an
-  agent session has no terminal;
+  agent session has no terminal; the refusal tells an agent to ask with
+  `compass evidence request`;
 - the approver `agent` (or `agent:<id>`), or an empty approver, role or scope;
 - a check that does not exist, is not `human`, or lists no approvers and is not
   an item of the Definition of Ready or Done;
@@ -315,6 +322,32 @@ and is shown as `...`. The key `answer` holds the decision.
   ]
 }
 ```
+
+### `compass evidence request`
+
+An agent asks a person for an approval with this command. It never records
+one.
+
+```
+compass evidence request (--check ID | --guardrail G5 | --artifact KIND | --decisions
+                          | --checkpoint STAGE) [--scope TEXT] [--issue SLUG]
+```
+
+- **What it writes.** One file,
+  `.compass/work/<slug>/approval-requests/pending/<n>.yml`, with facts the
+  command derives (issue, generation, labels, subject, and a document's
+  digest), the agent's `--scope`, the time and a single-use `nonce`. A
+  pending request for the same subject closes as `replaced`. A request is not
+  evidence, and no check reads it. The code is
+  `cli/compass_pkg/approval_requests.py`.
+- **When it refuses.** It runs every refusal `compass evidence approve` gives
+  for the subject, with the same words, except those that depend on who
+  answers. It exits 2 and writes nothing.
+- **What it prints.** The line to say to the person: type `/compass:approve`
+  or `/compass:reject`. Where an adapter sets
+  `COMPASS_APPROVAL_CHANNEL=terminal`, because its host has no event only a
+  person can raise, it prints the exact `compass evidence approve` command
+  for the person's own terminal instead.
 
 ## When a list is skipped, and `on_skipped`
 

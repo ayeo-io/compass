@@ -1,9 +1,9 @@
 ---
 name: compass
-description: Use Compass to assess, define, refine, plan, break down, implement, verify and ship a change, or resume an issue, using the shared kit and stage instructions.
+description: Use Compass stages and roles to deliver a change or resume an issue, using the shared kit and instructions.
 ---
 
-Read `../../INSTRUCTIONS.md` relative to this skill directory before acting.
+Read `adapters/codex/INSTRUCTIONS.md` at the framework root before acting.
 The adapter root is two levels above this directory. Its `runtime.py context`
 command prints the absolute framework root and shared instruction paths.
 Use that root to read `compass-contract.md`, then `skills/compass-runtime/SKILL.md`.

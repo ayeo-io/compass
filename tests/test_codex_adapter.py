@@ -1,4 +1,4 @@
-"""Codex adapter acceptance: CX-1 to CX-8, PRD 10 shared-source installation."""
+"""Codex adapter acceptance: CX-1 to CX-8, shared-source installation."""
 from __future__ import annotations
 
 import json

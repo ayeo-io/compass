@@ -23,7 +23,7 @@ only in assigned isolated workspaces. If delegation or isolation is unavailable,
 record a solo plan within the computed ceiling before implementing.
 
 Project installation adds instructions, the entry skill and local hooks. A
-plugin installation supplies the same skill and hook adapter. Choose one
+plugin installation gives the same skill and hook adapter. Choose one
 installation method per project to avoid duplicate hook calls. Restart after
 installation and review the hooks in Codex's trust interface. Installation does
 not grant trust or change sandbox permissions. Do not bypass that review.
@@ -31,7 +31,7 @@ not grant trust or change sandbox permissions. Do not bypass that review.
 Pre-action hooks adapt patch headers and pass them to Compass's existing
 checks. Hooks are a partial control: Codex can skip untrusted hooks, and a host
 timeout or unsupported tool path can allow an action without a completed check.
-Always record red/green with the kit and run `check` at verify and before ship.
+Always record red/green with the kit and run `check` at `verify` and before `ship`.
 Never treat a missing hook response as passing evidence. Keep human approval
 for irreversible actions. Native Windows is outside this adapter's scope
 because the shared hooks need Bash. See `docs/codex.md` for tested scope.

@@ -46,8 +46,8 @@ class Client:
             selector.close()
 
 
-@pytest.mark.skipif(shutil.which("codex") is None, reason="native Codex CLI is not installed")
 def test_native_install_matches_usage_and_preserves_hook_trust(tmp_path):
+    assert shutil.which("codex"), "Install Codex before running this explicit native smoke test"
     project, home = tmp_path / "project", tmp_path / "codex-home"
     project.mkdir()
     home.mkdir()

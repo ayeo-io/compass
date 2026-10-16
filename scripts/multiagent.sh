@@ -30,8 +30,9 @@
 #   - compass.yml  multiagent.max_worktrees   (default 6) - hard ceiling
 #     Both are read through compass_setting, which falls back to the settings
 #     file of a project that has no compass.yml.
-#   - the cap in manifest.yml: critical risk (assessment.risk) or a fired
-#     RP-CAP-001 rule gives max_worktrees 1.
+#   - the kit's stored subtask_ceiling in manifest.yml bounds each wave.
+#     A missing or null ceiling keeps the assessment/config fallback.
+#     Critical risk (assessment.risk) or a fired RP-CAP-001 rule still caps at 1.
 #     If the cap is below the subtask count, the cap WINS and multiagent.sh refuses to
 #     over-provision - it tells you to fold/sequence subtasks in the map first.
 #
@@ -170,7 +171,7 @@ esac
 # The standing cap (RP-CAP-001): critical risk => max_worktrees 1. We read
 # it from assessment.risk and policy_rules_fired. Absent assessment is a hard
 # error - never a silent cap, never a fall back to prose.
-CAP_INFO="$(compass_python - "$TASK_YML" <<'PY'
+CAP_INFO="$(compass_python - "$TASK_YML" "$MAX_WORKTREES" <<'PY'
 import sys
 import compass_pkg
 try:
@@ -190,12 +191,23 @@ fired = d.get("policy_rules_fired") or d.get("fired_guardrails") or []
 CAP_IDS = ("RP-CAP-001", "RG-CAP-001")
 capped = (br == "critical") or any(
     isinstance(f, dict) and f.get("id") in CAP_IDS for f in fired)
-print("OK:" + ("1" if capped else "0"))
+ceiling = d.get("subtask_ceiling")
+if ceiling is not None:
+    if type(ceiling) is not int or ceiling < 1:
+        print("ERR:subtask_ceiling must be a positive integer or null"); sys.exit(0)
+    cap = min(ceiling, 1) if capped else ceiling
+    try:
+        cap = min(cap, int(sys.argv[2]))
+    except ValueError:
+        print("ERR:configured maximum must be an integer"); sys.exit(0)
+else:
+    cap = 1 if capped else 0
+print("OK:" + str(cap))
 PY
 )"
 case "$CAP_INFO" in
-  OK:1) CAP=1 ;;
   OK:0) CAP="$MAX_WORKTREES" ;;
+  OK:*) CAP="${CAP_INFO#OK:}" ;;
   *)    echo "multiagent.sh: cannot read the cap from manifest.yml (${CAP_INFO#ERR:})." >&2
         echo "          The worktree cap is a machine fact in assessment.risk +" >&2
         echo "          fired_guardrails - fix manifest.yml. multiagent.sh does NOT fall back to" >&2

@@ -44,6 +44,8 @@ exclude_docs: |
   !/roles-guide.md
   !/security.md
   !/portability.md
+  !/codex.md
+  !/adapter-conformance.md
   !/install-smoke-test.md
   !/configuration.md
   !/upgrade-6-0-0.md
@@ -64,3 +66,5 @@ nav:
       - Methodology: methodology.md
       - Roles: roles-guide.md
       - Portability: portability.md
+      - Codex: codex.md
+      - Adapter behaviour checks: adapter-conformance.md

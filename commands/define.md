@@ -1,6 +1,6 @@
 ---
 description: Acceptance criteria as BDD scenarios every role reads
-allowed-tools: Read, Write, Edit, Glob, Grep
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 ---
 
 # /compass:define
@@ -84,9 +84,13 @@ contract, QA for coverage. Write it so all five roles can.
    rather than claimed. If you had to create `docs/compass/`, **say so in one
    line** - a directory appearing with nothing said is how it gets deleted by
    hand or committed by accident.
-6. **Write the `scenarios:` block of `manifest.yml`** - the machine-readable
-   index of the prose spec. Each scenario gets a stable `id`, a `title`, a
-   linked `intent` id, and the `tests` that exercise it. This is what
+6. **Record each scenario with `compass scenario add`** - the manifest's
+   `scenarios:` block is the machine-readable index of the prose spec. Run
+   `compass scenario add <id> --title "<title>" --intent <intent id> --test
+   <test>` for each scenario, so it gets a stable `id`, a `title`, a linked
+   `intent` id, and the `tests` that exercise it. Do not edit `manifest.yml`
+   by hand: an unquoted ` #` in a value breaks its YAML for every command on
+   the issue. The block is what
    `compass check` reads to check the acceptance-before-code and
    traceability guardrails; implementation then traces `changed_files` to
    these ids. On a spike, there are no scenarios - the block stays empty.

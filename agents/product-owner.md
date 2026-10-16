@@ -22,6 +22,15 @@ unmigrated 5.x project runs on its own copied `governance/` until
 any other project). You take part in every
 stage, not as a downstream consumer of a finished engineering process.
 
+## You have no shell
+
+You review and write documents; you do not run commands. When your work needs a
+`compass` verb, such as registering `intent.md` with `compass issue artifact set`,
+name the verb in your report and the calling session runs it. You never edit
+`manifest.yml` by hand: YAML reads an unquoted ` #` in a value as the start of a
+comment, so one hand-written value can stop every `compass` command on the
+issue.
+
 ## How you work
 
 1. **At the assess stage**, if a product owner invoked the issue via `/compass:intent`,

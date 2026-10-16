@@ -32,6 +32,7 @@
       2,
       2,
       2,
+      2,
       2
     ],
     "list_items": 11,
@@ -40,6 +41,7 @@
   "agents/product-owner.md": {
     "fences": 0,
     "heading_levels": [
+      2,
       2,
       2,
       2,
@@ -56,9 +58,10 @@
       2,
       2,
       2,
+      2,
       2
     ],
-    "list_items": 21,
+    "list_items": 27,
     "table_rows": 0
   },
   "approaches/regular.md": {

@@ -516,6 +516,12 @@ def test_d2_repairs_change_only_retired_names():
     `compass release notes`, a reader of `.compass/work/` and git that writes
     nothing.
 
+    Three more were re-baselined by `spec-author-has-no-shell`:
+    `agents/spec-author.md` (list_items 21 -> 27, one more `##` heading)
+    gained the section listing the six compass steps it runs itself, and
+    `agents/product-owner.md` and `agents/product-marketer.md` (one more `##`
+    heading each) gained the section saying they have no shell.
+
     One more was re-baselined by `word-ceilings-and-lld`:
     `governance/guardrails.md` (list_items 61 -> 66) gained the bullet on the
     check `design-within-word-ceiling`, with sub-bullets for the word rule,

@@ -389,6 +389,73 @@ set +e
 compass_record_session
 set -e
 
+# --- approval state the agent must not touch ---------------------------------
+# Request files, delegation files, the prompt hook's entry point, the session
+# transcript (which holds the code that confirms a g5 delegation) and a
+# delegated approval's caller (cli/compass_pkg/approval_guard.py; ADR-068
+# decision 10, ADR-069 decisions 3, 4 and 8). This runs before the path
+# classification, which exempts every `.compass/` path from the red check.
+# python3 starts only when the call names one of these, so an ordinary call
+# costs one `case`. A guard that cannot run refuses. Every input names the
+# transcript, so the match is on the command and the target, not the input.
+GUARD_RUN=0
+case "${TOOL:-}" in
+  Read|Grep) case "${TARGET:-}" in *projects*) GUARD_RUN=1 ;; esac ;;
+  *) case "${COMMAND:-}${TARGET:-}" in
+       *approval-requests*|*prompt-approval.sh*|*.compass/delegations*|*--del*|\
+       *.claude*projects*|*CLAUDE_CONFIG_DIR*) GUARD_RUN=1 ;;
+     esac ;;
+esac
+case "$GUARD_RUN" in
+  1)
+    GUARD_ERR="$(mktemp 2>/dev/null)" || compass_reader_failed "approval guard" tmp
+    set +e
+    GUARD="$(printf '%s' "$INPUT" | compass_python -c '
+import json, sys
+
+import compass_pkg                      # noqa: F401 - puts vendor on sys.path
+from compass_pkg.approval_guard import check
+
+try:
+    event = json.load(sys.stdin)
+except ValueError:
+    event = {}
+found = check(event if isinstance(event, dict) else {})
+if found:
+    code, params = found
+    print(code)
+    for key, value in params.items():
+        print("%s=%s" % (key, " ".join(str(value).split())))
+' 2>"$GUARD_ERR")"
+    GUARD_STATUS=$?
+    set -e
+    [ "$GUARD_STATUS" -eq 0 ] || compass_reader_failed "approval guard" "$GUARD_STATUS" "$GUARD_ERR"
+    rm -f "$GUARD_ERR"
+    if [ -n "$GUARD" ]; then
+      GUARD_CODE="$(printf '%s\n' "$GUARD" | sed -n '1p')"
+      GUARD_PARAMS=()
+      while IFS= read -r line; do
+        [ -n "$line" ] && GUARD_PARAMS+=("$line")
+      done <<GUARDPARAMS
+$(printf '%s\n' "$GUARD" | sed -n '2,$p')
+GUARDPARAMS
+      case "$GUARD_CODE" in
+        approval-request-protected)
+          compass_block approval-request-protected "${GUARD_PARAMS[@]}" ;;
+        delegation-protected)
+          compass_block delegation-protected "${GUARD_PARAMS[@]}" ;;
+        delegation-caller-mismatch)
+          compass_block delegation-caller-mismatch "${GUARD_PARAMS[@]}" ;;
+        transcript-protected)
+          compass_block transcript-protected "${GUARD_PARAMS[@]}" ;;
+      esac
+    fi
+    ;;
+esac
+# Read and Grep are matched only for the transcript check above; reading a
+# file never needs a red.
+case "${TOOL:-}" in Read|Grep) exit 0 ;; esac
+
 
 # --- classify a target file -------------------------------------------------
 # A "code file" here means: a production-impacting file whose change must be

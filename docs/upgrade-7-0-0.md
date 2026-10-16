@@ -363,3 +363,39 @@ A regular issue now opens with a short intent, and every issue that ships record
 | `release-line-missing`, `release-line-heading` | refusal codes | A landing of an issue that owes a line and has none, and a line that starts with `#` |
 | `release-line` | a rendered block kind | The release line in the verification report |
 | `compass release notes --since <ref>` | a verb | Print the release lines since a git reference |
+
+## Approving inside Claude Code, and delegated approvals
+
+A person approves or rejects by typing `/compass:approve` or `/compass:reject` in the Claude Code session they are in. They never open a terminal or copy a command. A person can also let one named agent approve for them, for at most 24 hours and a stated scope, and review what it approved. GitHub issue #571 is fixed: the guardrail `G5` sign-off can be recorded on a project with no configuration of its own. The decisions are `architecture/decisions/ADR-068-a-person-approves-inside-claude-code-through-an-event-the-model-cannot-raise.md` and `architecture/decisions/ADR-069-a-person-can-delegate-approvals-to-a-named-agent-for-a-stated-time-and-scope.md`.
+
+### What breaks
+
+- **`compass evidence add --type human-approval` is refused.** It wrote a record with no subject, decision or approver, which no check could count. The refusal names the three approval paths.
+- **An in-flight issue whose only guardrail `G5` sign-off is withdrawn fails.** `human-approval-present` is version 1.2.0: it skips a record that an `approval-withdrawal` names. A landed issue is reported, never failed.
+- **The plugin registers two new hooks.** `UserPromptExpansion` runs `hooks/prompt-approval.sh` for the four approval commands, and `UserPromptSubmit` runs `hooks/approval-summary.sh`, which only displays. A Claude Code version without `UserPromptExpansion` falls back to the terminal command.
+
+### What changes
+
+- **The agent asks; Compass shows; the person answers.** The agent runs `compass evidence request` with the subject. At the end of its turn Compass shows the request in its own words. The person types `/compass:approve` or `/compass:reject <reason>`, and the hook records the answer through the same writer as the terminal command, with `via: prompt`.
+- **`compass evidence approve` at a terminal still works.** Its records hold `via: terminal`. It is the only path on a host without a person-only approval event, such as Codex.
+- **A rejected document stays in draft until its file changes.** This amends ADR-050 decision 2.
+- **Delegation.** `/compass:delegate <agent> until <time>` lets one named agent, such as `compass:architect`, approve with `compass evidence approve ... --delegated --as <agent>`. `g5` is covered only when typed, after the person types back a code shown to them. `/compass:revoke` ends it. Each delegated approval names the person, the agent and the delegation; the person sees a summary until they mark it reviewed, and `/compass:reject <record id>` overrules one.
+
+### What to do
+
+1. Update the Compass plugin, so the new hooks and commands are registered.
+2. Put `owner: <your id>` in `compass.yml`, or set `COMPASS_APPROVER` before starting Claude Code: the prompt hook names the approver from them.
+3. Replace scripts that ran `compass evidence add --type human-approval` with `compass evidence request` and the person's `/compass:approve`, or `compass evidence approve` at a terminal.
+
+### New keys and verbs
+
+| Name | Where | Meaning |
+|---|---|---|
+| `compass evidence request` | a verb | Ask a person for an approval |
+| `/compass:approve`, `/compass:reject` | commands a person types | Answer the request Compass showed |
+| `/compass:delegate`, `/compass:revoke` | commands a person types | Start or end a delegation |
+| `compass evidence approve --delegated --as` | flags | Record an approval under a delegation |
+| `via` | an approval record | `prompt`, `terminal` or `delegation` |
+| `approval-withdrawal` | an evidence type | Withdraws a delegated guardrail `G5` sign-off |
+| `.compass/delegations/DL-<n>.yml` | a file | One delegation |
+| `approval-requests/` | the issue's folder under `.compass/work/` | Pending and closed requests |

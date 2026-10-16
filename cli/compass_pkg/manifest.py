@@ -107,7 +107,8 @@ def _apply_ship_exit(task, task_dir):
     except Exception:  # noqa: BLE001 - no configuration, no human checks
         view = None
     artifact_status.stage_exit(task, view, artifact_status.STAGE_SHIP,
-                               artifact_status.BY_SHIP_COMMIT, include_own=True, earlier=False)
+                               artifact_status.BY_SHIP_COMMIT, include_own=True, earlier=False,
+                               task_dir=task_dir)
 
 
 # Files Compass writes itself that live outside any issue's directory. They
@@ -1108,10 +1109,9 @@ def cmd_changed_file_add(args):
 
 
 def cmd_evidence_add(args):
-    if args.type == "checkpoint-approval":     # a person's act: approve_cmd writes it
-        raise CompassError(
-            "compass evidence add: a checkpoint-approval record is a person's answer; run "
-            "compass evidence approve --checkpoint <stage> at a terminal.")
+    from compass_pkg.approvals import EVIDENCE_ADD_REFUSALS
+    if args.type in EVIDENCE_ADD_REFUSALS:     # a person's act: an approval writer writes it
+        raise CompassError(EVIDENCE_ADD_REFUSALS[args.type])
     task_dir = resolve_issue_dir(args.task)
     task, task_path = load_manifest(task_dir)
     if getattr(args, "scenario", None):

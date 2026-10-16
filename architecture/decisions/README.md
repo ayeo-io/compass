@@ -106,6 +106,8 @@ Rules:
 | [ADR-064](ADR-064-the-document-set-gains-named-sections-and-section-checks-never-judge-an-earlier-catalogue.md) | The document set gains named sections, and the section checks never judge an earlier catalogue | accepted | extends ADR-051 and ADR-053; settles ADR-055 decision 9; with ADR-006, ADR-033, ADR-036, ADR-038 and ADR-050 |
 | [ADR-065](ADR-065-regular-issues-owe-an-intent-and-shipping-issues-record-a-release-line.md) | Regular issues owe a lightweight intent, and every shipping issue records a release line its landing needs | accepted | extends ADR-026, ADR-035 and ADR-053; follows ADR-063's landing-refusal precedent; with ADR-034, ADR-036, ADR-039, ADR-044 and ADR-051 |
 | [ADR-066](ADR-066-an-approval-names-its-subject-and-guardrail-5-counts-only-an-approval-given-for-it.md) | An approval names its subject, and guardrail 5 counts only an approval given for it | accepted | extends ADR-038 and ADR-063; with ADR-006 and ADR-039 |
+| [ADR-068](ADR-068-a-person-approves-inside-claude-code-through-an-event-the-model-cannot-raise.md) | A person approves inside Claude Code through an event the model cannot raise, and the agent only requests | accepted | amends ADR-050 decision 2; with ADR-006 and ADR-066 |
+| [ADR-069](ADR-069-a-person-can-delegate-approvals-to-a-named-agent-for-a-stated-time-and-scope.md) | A person can delegate approvals to a named agent for a stated time and scope | accepted | amends ADR-068 decision 1; with ADR-038 and ADR-066 |
 
 ## Principle → ADR mapping
 

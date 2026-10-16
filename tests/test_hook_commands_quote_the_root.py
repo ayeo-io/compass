@@ -27,7 +27,8 @@ def test_hq_1_each_hook_command_runs_from_a_path_with_a_space(tmp_path):
     root = tmp_path / "plugin root"
     (root / "hooks").mkdir(parents=True)
     commands = _commands()
-    assert len(commands) == 4
+    # pre-tool, post-tool, stop, session-start, prompt-approval and approval-summary.
+    assert len(commands) == 6
     for command in commands:
         name = command.rsplit("/", 1)[-1].strip('"')
         stub = root / "hooks" / name

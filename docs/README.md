@@ -73,7 +73,7 @@ same commit.
 |---|---|
 | `adapters/codex/`, `.codex-plugin/` | `docs/codex.md` |
 | `tests/adapter_conformance/`, `tests/test_adapter_behaviour.py` | `docs/adapter-conformance.md` |
-| `hooks/`, `compass-contract.md` | `docs/safety-contract.md` |
+| `hooks/`, `compass-contract.md`, `cli/compass_pkg/approval_guard.py` | `docs/safety-contract.md` |
 | `cli/compass_pkg/tip_scope.py` | `docs/safety-contract.md` |
 | `cli/compass_pkg/refusals.py` | `docs/refusal-codes.md` |
 | `cli/compass_pkg/release_line.py` | `docs/release-line.md` |
@@ -92,7 +92,7 @@ same commit.
 | `scripts/impl-coverage.py`, `tests/fixtures/impls/versions.lock.yml` | `docs/check-implementations.md` |
 | `cli/compass_pkg/issue_depends.py` | `docs/issue-dependencies.md` |
 | `cli/compass_pkg/issue_config_cmd.py`, `cli/compass_pkg/config_preview.py` | `docs/issue-configure.md` |
-| `cli/compass_pkg/stage_lists.py`, `cli/compass_pkg/item_records.py`, `cli/compass_pkg/follow_up_cmd.py`, `cli/compass_pkg/doc_sections.py`, `cli/compass_pkg/approval_records.py`, `cli/compass_pkg/approve_cmd.py`, `tests/test_human_checks.py`, `tests/fixtures/evidence-approve-example.json` | `docs/entry-exit-evaluation.md` |
+| `cli/compass_pkg/stage_lists.py`, `cli/compass_pkg/item_records.py`, `cli/compass_pkg/follow_up_cmd.py`, `cli/compass_pkg/doc_sections.py`, `cli/compass_pkg/approval_records.py`, `cli/compass_pkg/approvals.py`, `cli/compass_pkg/approval_requests.py`, `cli/compass_pkg/prompt_approval.py`, `cli/compass_pkg/delegations.py`, `cli/compass_pkg/approve_cmd.py`, `tests/test_human_checks.py`, `tests/fixtures/evidence-approve-example.json` | `docs/entry-exit-evaluation.md` |
 | `cli/compass_pkg/artifact_kinds.py`, `cli/compass_pkg/artifact_cmd.py`, `cli/compass_pkg/artifact_owed.py`, `cli/compass_pkg/justifications.py`, `cli/compass_pkg/template_lists.py`, `templates/*.md`, `scripts/measure-artifact-catalogue.py` | `docs/artifact-catalogue.md` |
 | `cli/compass_pkg/review_records.py`, `cli/compass_pkg/review_cmd.py`, `tests/fixtures/evidence-review-example.json` | `docs/judged-checks.md` |
 | `cli/compass_pkg/freshness.py` | `docs/artifact-freshness.md` |

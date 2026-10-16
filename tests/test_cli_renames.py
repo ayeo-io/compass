@@ -443,6 +443,7 @@ EXCEPTIONS = {
     "scenario descope": "records a failure mode no scenario covers",
     "evidence approve": "records a person's approval; the maintainer named it an exception",
     "evidence review": "records a judgement against a judged check; the maintainer named it an exception",
+    "evidence request": "asks a person for an approval; named in ADR-068 and approved by compass:architect under jed72's overnight delegation",
     "quick-fix start": "assesses and records a quick fix in one call",
     "quick-fix finish": "traces, checks, gates and lands a quick fix in one call",
     "decision record": "writes a decision entry",

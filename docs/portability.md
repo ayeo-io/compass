@@ -41,7 +41,8 @@ skills/          adaptive-routing, bdd-specification, behaviour-mapping,
                  governance-check, intent-interview, plan-authoring,
                  quick-fix, receiving-code-review, systematic-debugging,
                  tdd-discipline, worktree-multiagent
-hooks/           pre-tool.sh, post-tool.sh, stop.sh, session-start.sh
+hooks/           pre-tool.sh, post-tool.sh, stop.sh, session-start.sh,
+                 prompt-approval.sh, approval-summary.sh
 bin/compass      the shim that puts the kit on PATH
 .claude-plugin/  the plugin manifest and marketplace entry
 ```
@@ -114,6 +115,16 @@ BDD and TDD are default strategies. When the runtime supports pre-action hooks,
 the adapter enforces red-before-green mechanically, with the hook made
 approach-aware so it does not block spikes. Without hooks, the adapter must
 make the check an explicit implementation step.
+
+**A person-only approval event.** In Claude Code a person approves by
+typing `/compass:approve`; `hooks/prompt-approval.sh` records it on the
+`UserPromptExpansion` event (ADR-068). An adapter may wire such a prompt path
+only after a dated measurement on its host shows that the event fires for a
+command a person typed and that the model cannot raise it, through a tool, a
+scheduled job, a subagent or another session. Until then the adapter sets
+`COMPASS_APPROVAL_CHANNEL=terminal`, and `compass evidence request` prints the
+exact `compass evidence approve` command for the person's own terminal. Codex
+has no such event today, so its users approve at their terminal.
 
 An adapter limitation can reduce convenience or parallelism. It must not
 silently weaken a guardrail.
@@ -188,6 +199,7 @@ A port must document the capability mapping below it too.
 | Distinct agent contexts |  |  |
 | Isolated parallel workspaces |  |  |
 | CI integration |  |  |
+| Person-only approval event |  |  |
 | Install surface (`bin/compass`, `.claude-plugin/`) |  |  |
 
 An empty cell is a design question, not evidence of equivalence.

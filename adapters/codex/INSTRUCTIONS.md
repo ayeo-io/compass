@@ -33,5 +33,7 @@ checks. Hooks are a partial control: Codex can skip untrusted hooks, and a host
 timeout or unsupported tool path can allow an action without a completed check.
 Always record red/green with the kit and run `check` at `verify` and before `ship`.
 Never treat a missing hook response as passing evidence. Keep human approval
-for irreversible actions. Native Windows is outside this adapter's scope
+for irreversible actions. Codex has no event only a person can raise, so run
+`compass evidence request` with `COMPASS_APPROVAL_CHANNEL=terminal` set, and
+give the person the exact terminal command it prints. Native Windows is outside this adapter's scope
 because the shared hooks need Bash. See `docs/codex.md` for tested scope.

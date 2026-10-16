@@ -84,7 +84,9 @@ for delivery work; on a spike, follow the graduate-or-discard step in
 
    - `- [ ] (evidence: EV-<id>) <description>` - passes if `EV-<id>` is in
      `manifest.yml`'s evidence registry with an accepted type (`test-run`,
-     `command-output`, `manual-review`, `human-approval`, `artifact`, etc.).
+     `command-output`, `manual-review`, `artifact`, etc.). A `human-approval`
+     record comes only from an approval (`/compass:approve`, a delegated
+     agent, or `compass evidence approve`); `compass evidence add` refuses it.
    - `- [ ] (follow-up: FU-<id>) <description>` - passes if `FU-<id>` is in
      `manifest.yml`'s `follow_ups:` with `status: outstanding`. The follow-up
      can carry an optional `target_task: <slug>` field; when set, the named

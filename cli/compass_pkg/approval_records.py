@@ -81,9 +81,51 @@ OTHER_GENERATION = "approval is for another generation"
 WITHDRAWN = "approval withdrawn"
 
 #: What a person does to record an approval, for a failure detail.
-HOW = ("run `compass evidence approve --check ID --approver NAME --role ROLE "
-       "--scope TEXT`; a record holds check, decision, approver, role, scope, "
-       "timestamp, issue and generation")
+HOW = ("the agent asks with `compass evidence request --check ID` and the person "
+       "types `/compass:approve` in Claude Code, or the person runs `compass evidence "
+       "approve --check ID --approver NAME --role ROLE --scope TEXT` at a terminal; a "
+       "record holds check, decision, approver, role, scope, timestamp, issue and "
+       "generation")
+
+#: How a person records the sign-off of guardrail `G5`, for a failure detail.
+G5_HOW = ("in Claude Code the person types `/compass:approve` for the request the agent "
+          "made with `compass evidence request --guardrail G5`; or an agent they delegated "
+          "g5 to runs it with `--delegated --as <agent>`; or the person runs `compass "
+          "evidence approve --guardrail G5` with `--approver <name> --role <role> --scope "
+          "<text>` in a terminal")
+
+#: The record that withdraws an approval made under a delegation (ADR-069).
+WITHDRAWAL = "approval-withdrawal"
+
+
+def not_withdrawn(approved, registry):
+    """`(standing, note)`: the approved records that no `approval-withdrawal`
+    in the registry names, and a failure note naming the guardrail `G5`
+    sign-offs that were withdrawn ('' when none was)."""
+    withdrawn = {e.get("withdraws"): e.get("id") for e in registry
+                 if isinstance(e, dict) and e.get("type") == WITHDRAWAL}
+    standing = [a for a in approved if a.get("id") not in withdrawn]
+    gone = [a.get("id") for a in approved if a.get("id") in withdrawn and gives_g5(a)]
+    note = (f"{WITHDRAWN}: {', '.join(gone)} was withdrawn by "
+            f"{', '.join(withdrawn[g] for g in gone)}" if gone else "")
+    return standing, note
+
+
+def provenance(record):
+    """How a record was made, in words, from its `via` key (ADR-068
+    decision 7). No verdict reads it: the detail of `human-approval-present`
+    and the receipt show it. A record with no `via` still counts."""
+    via = record.get("via")
+    if via == "prompt":
+        return "via a typed prompt"
+    if via == "terminal":
+        return "via a terminal"
+    if via == "delegation":
+        return (f"via {record.get('approved_by_agent') or 'an agent'} under "
+                f"{record.get('delegation') or 'a delegation'}")
+    if via is None:
+        return "written without a Compass command"
+    return f"via {shown(via)}"
 
 
 def project_owner(task_dir):

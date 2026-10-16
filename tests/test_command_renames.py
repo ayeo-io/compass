@@ -24,6 +24,9 @@ V2_COMMANDS = {
     # safe change rather than delegating to the five stage commands, so the
     # light path costs one command file and one skill instead of thirteen files.
     "quick-fix",
+    # approve-inside-claude-code (ADR-068, ADR-069): the four commands a person
+    # types to answer, delegate and revoke approvals. The model cannot invoke them.
+    "approve", "reject", "delegate", "revoke",
     # one-entry-point: the single command for the ordinary path. It assesses
     # with quick-fix start and continues into the computed approach.
     "go",

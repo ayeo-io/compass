@@ -9,7 +9,7 @@ no arguments runs the legacy lint and then the layered lint, and fails if
 either fails. `compass ci` calls the legacy function in `governance`
 directly, so its behaviour does not move.
 """
-# DEPENDENCY: standard library (os, sys); compass_pkg.classify, core, governance,
+# DEPENDENCY: standard library (os, sys); compass_pkg.classify, config_words, core, governance,
 # layers, parents, policy_lint, policy_migrate, policy_update, project_settings,
 # replay, terminal.
 from __future__ import annotations
@@ -17,7 +17,7 @@ from __future__ import annotations
 import os
 import sys
 
-from compass_pkg import classify, governance, layers, parents, policy_lint, policy_migrate
+from compass_pkg import classify, config_words, governance, layers, parents, policy_lint, policy_migrate
 from compass_pkg import policy_update, preset_init, preset_test, project_settings, replay
 from compass_pkg.core import (FRAMEWORK_ROOT, CompassError, find_governance, load_manifest,
                               resolve_issue_dir)
@@ -132,6 +132,11 @@ def run_policy_effective(args):
 
 def run_policy_migrate(args):
     root = layers.find_project_root(os.getcwd())
+    if getattr(args, "words", False):
+        return _run_words(args, root)
+    if getattr(args, "dir", None) is not None or getattr(args, "have_copy", False):
+        raise CompassError("policy migrate: DIR and --i-have-a-copy belong to --words, "
+                           "which rewrites the project's configuration in the 6.0.0 words")
     made = policy_migrate.plan(root)
     mode = "apply" if getattr(args, "apply", False) else "dry-run"
     if mode == "apply" and made.result == "ready":
@@ -139,6 +144,17 @@ def run_policy_migrate(args):
         made.result = "applied"
     _emit(args, policy_migrate.report_json(made, mode), policy_migrate.report_text(made, mode))
     return 1 if made.result == "blocked" else 0
+
+
+def _run_words(args, root):
+    """`policy migrate --words`: rewrite compass.yml and the fixtures in DIR."""
+    folder = os.path.join(os.getcwd(), args.dir) if args.dir else root
+    made = config_words.plan(root, folder)
+    mode = "apply" if getattr(args, "apply", False) else "dry-run"
+    if mode == "apply":
+        config_words.apply(made, getattr(args, "have_copy", False))
+    _emit(args, config_words.report_json(made, mode), config_words.report_text(made, mode))
+    return config_words.exit_code(made)
 
 
 def run_policy_diff(args):
@@ -229,6 +245,16 @@ def register(pls):
                          "into a compass.yml overlay over the shipped default")
     plm.add_argument("--apply", action="store_true",
                      help="write the files; without it nothing is written")
+    plm.add_argument("--words", action="store_true",
+                     help="instead, rewrite the project's compass.yml and its "
+                     "compass-fixtures/ in the 6.0.0 words, keeping comments and layout")
+    plm.add_argument("dir", nargs="?", metavar="DIR",
+                     help="with --words: the folder that holds compass.yml and "
+                     "compass-fixtures/ (default: the project root); it must be inside "
+                     "the project")
+    plm.add_argument("--i-have-a-copy", dest="have_copy", action="store_true",
+                     help="with --words --apply: write files git cannot restore, because "
+                     "you have a copy")
     plm.set_defaults(func=run_policy_migrate, output_kind="report")
     pll = pls.add_parser("lint", help="structurally validate the governance YAML")
     _issue_option(pll)

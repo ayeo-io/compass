@@ -182,6 +182,7 @@ compass preset test        run a preset's fixtures and check its locks
 compass review-rule list   the review rules that apply to the changed files
 compass policy diff        compare two configurations: what one accepts that the other does not
 compass policy migrate     turn copied governance and the old settings file into a compass.yml
+compass policy migrate --words  rewrite compass.yml and policy-test fixtures in the 6.0.0 words
 compass policy update      move the project to another shipped default major, re-approving waivers
 compass plan lint          scan a technical design for placeholder phrases
 compass intent ingest      read a brief that already exists, by path or https URL

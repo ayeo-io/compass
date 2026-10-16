@@ -201,6 +201,8 @@ advisory: project: stages.implement.set.modes reads 'full' as 'thorough'; the ol
 An advisory is not a finding. It changes no exit status and no count, it is
 not in the `--json` document. `compass preset test` prints the same lines.
 `compass check` prints none.
+`compass policy migrate --words` rewrites the layer and its fixtures in the
+new words, so the advisory goes (`docs/policy-migrate.md`).
 
 ## `compass policy lint --json`
 

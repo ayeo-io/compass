@@ -5,6 +5,9 @@ It judges each issue folder under `.compass/work` and `docs/compass`. A folder i
 restorable when the HEAD commit holds every file in it the migrate can change, with
 the bytes on disk. Without `--i-have-a-copy`, a root that holds a folder git cannot
 restore stops the run with one refusal that names a copy command for each such root.
+
+`compass policy migrate --words` judges its configuration files with the same
+check, one file at a time (`unrestorable_files`).
 """
 # DEPENDENCY: standard library; compass_pkg.core. compass_pkg.migrate is imported
 # inside `changeable_files`, because migrate imports this module.
@@ -143,6 +146,21 @@ def unrestorable_folders(root, label=None, extra=None, project=None):
     for name, paths in (extra or {}).items():
         held_paths = folders.setdefault(name, [])
         held_paths += [p for p in paths if p not in held_paths]
+    return _judge(root, folders, label)
+
+
+def unrestorable_files(root, paths, label=None):
+    """Which of `paths`, files below `root`, could `git reset --hard` not put back?
+
+    The same judgement as `unrestorable_folders`, one file at a time:
+    `unrestorable` holds the paths as given. `compass policy migrate --words`
+    runs it before it rewrites a project's configuration files."""
+    return _judge(root, {path: [path] for path in paths}, label or root)
+
+
+def _judge(root, folders, label):
+    """The judgement of `folders` ({name: [path]}) below `root`: a name is
+    unrestorable when git cannot restore one of its paths."""
     if not folders:
         return Judgement(label, "judged")
     if _outside_the_project_repository(root, project):

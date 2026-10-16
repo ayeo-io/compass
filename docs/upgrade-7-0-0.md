@@ -511,3 +511,32 @@ More Bash writes to production code are refused without a failing test on record
 ### What to do
 
 Nothing. A command that is now refused needs a failing test on record, as an Edit of the same file does.
+
+## Rewriting your configuration in the 6.0.0 words
+
+6.0.0 renamed Compass's vocabulary and kept reading the old words in a project's own `compass.yml`, a team preset and its policy-test fixtures, with a lint advisory. `compass policy migrate --words` rewrites those files in the new words. `docs/policy-migrate.md` owns the command.
+
+### What breaks
+
+Nothing. The command is new, and it writes only when you pass `--apply`.
+
+### What changes
+
+- **`compass policy migrate --words [DIR]` rewrites `compass.yml` and the fixtures under `compass-fixtures/`.** It uses the word mapping `compass policy lint` and `compass preset test` read the files through, so a word changes only in the field that holds it: `light` as a stage mode becomes `lightweight`, and `full` as an approach name stays. Comments, order and quoting stay.
+- **A dry run comes first.** Without `--apply` it prints a diff and writes nothing.
+- **`--apply` refuses a write git cannot undo.** It refuses when a file it would write is uncommitted, or the project is in no git repository, unless you pass `--i-have-a-copy`. It writes every file or none, and never outside the project.
+- **A condition that reads `role` is listed, not rewritten.** The command names it with the `M-WHEN-RETIRED` message from `compass policy lint`, and exits 1 until you change it.
+
+### What to do
+
+1. Commit your configuration, then run `compass policy migrate --words` and read the diff.
+2. Run `compass policy migrate --words --apply`.
+3. If it lists a hand edit, key the rule on a document with `artifacts_any`, or on a label, as the section "Role is not an assessment dimension" says.
+4. For a team preset in another repository, run the same two commands there, then `compass preset test`.
+
+### New keys and verbs
+
+| Name | Where | Meaning |
+|---|---|---|
+| `--words` | `compass policy migrate` | Rewrite the project's configuration in the 6.0.0 words |
+| `--i-have-a-copy` | `compass policy migrate --words --apply` | Write files git cannot restore |

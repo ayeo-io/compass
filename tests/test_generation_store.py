@@ -442,10 +442,8 @@ def test_gs_6_an_incomplete_target_is_overwritten(project, monkeypatch):
     folder = _gen(task_dir, 1)
     folder.mkdir(parents=True)
     (folder / "resolved.yml").write_text("garbage: true\n", encoding="utf-8")
-    (folder / "stray.yml").write_text("x: 1\n", encoding="utf-8")
     result = _commit(root, task_dir)
     assert result.committed
-    assert not (folder / "stray.yml").exists()
     assert _load(folder / "resolved.yml")["schema"] == 1
     assert {g.number: g.state for g in generation.states(str(task_dir))} == {1: "current"}
 
@@ -460,6 +458,67 @@ def test_gs_6_a_proposal_is_kept(project):
     assert _commit(root, task_dir, delivery_approach="full").number == 2
     assert _load(folder / "proposed.yml")["base_generation"] == 1
     assert (folder / "complete").is_file()
+
+
+# --- GCK: a commit deletes only what a commit writes (generation-commit-keeps-unjudged) ------
+
+def _snapshot(folder):
+    return {str(p.relative_to(folder)): p.read_bytes() for p in sorted(folder.rglob("*"))
+            if p.is_file()}
+
+
+@pytest.mark.parametrize("stray", ["notes.md", "results.yml", "subfolder",
+                                   ".resolved.yml-my-backup"])
+def test_gck_1_a_file_the_commit_did_not_write_is_refused(project, stray):
+    """A file or folder in the next generation folder that no commit writes is issue
+    state nothing else protects: the migrate's copy check never judges it. The commit
+    refuses, names it and changes nothing."""
+    from compass_pkg.core import CompassError
+    root, task_dir = project
+    folder = _gen(task_dir, 1)
+    folder.mkdir(parents=True)
+    (folder / "resolved.yml").write_text("garbage: true\n", encoding="utf-8")
+    if stray == "subfolder":
+        (folder / "kept").mkdir()
+        (folder / "kept" / "note.txt").write_text("mine\n", encoding="utf-8")
+        named = "kept"
+    else:
+        (folder / stray).write_text("a person's words\n", encoding="utf-8")
+        named = stray
+    before = _snapshot(folder)
+    manifest_before = (task_dir / "manifest.yml").read_bytes()
+    with pytest.raises(CompassError) as caught:
+        _commit(root, task_dir)
+    message = str(caught.value)
+    assert named in message and str(folder) in message, message
+    # The issue is named: a person may be pointed at another issue, and `--discard`
+    # without it would remove that issue's folder instead.
+    assert "compass issue configure --issue feature --discard 1" in message, message
+    assert "everything in it" in message, message
+    assert _snapshot(folder) == before
+    assert (task_dir / "manifest.yml").read_bytes() == manifest_before
+
+
+def test_gck_3_files_a_commit_writes_are_still_overwritten(project):
+    """Partial output of an interrupted commit is the commit's own, so it is overwritten
+    as before, and `proposed.yml` is kept."""
+    root, task_dir = project
+    folder = _gen(task_dir, 1)
+    folder.mkdir(parents=True)
+    (folder / "resolved.yml").write_text("garbage: true\n", encoding="utf-8")
+    (folder / "complete").write_text("files: {}\n", encoding="utf-8")
+    # The temporary files `atomic_write_text` leaves when a write is interrupted:
+    # `mkstemp` adds eight characters to the prefix.
+    (folder / ".versions.yml-abc12_9z").write_text("half\n", encoding="utf-8")
+    (folder / ".proposed.yml-k3j0x7qa").write_text("half\n", encoding="utf-8")
+    (folder / "proposed.yml").write_text("schema: 1\nbase_generation: 0\noverlay: {}\n",
+                                         encoding="utf-8")
+    result = _commit(root, task_dir)
+    assert (result.number, result.committed) == (1, True)
+    assert not (folder / ".versions.yml-abc12_9z").exists()
+    assert not (folder / ".proposed.yml-k3j0x7qa").exists()
+    assert _load(folder / "proposed.yml")["base_generation"] == 0
+    assert _load(folder / "resolved.yml")["schema"] == 1
 
 
 # --- GS-7: atomic writes -----------------------------------------------------------------

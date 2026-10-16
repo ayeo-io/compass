@@ -1,7 +1,7 @@
 ---
 name: product-owner
 description: "Product owner perspective: checks the spec against `intent.md` and gates the plan stage."
-tools: Read, Glob, Grep, Write, Edit
+tools: Read, Glob, Grep, Write, Edit, Skill
 model: sonnet
 ---
 

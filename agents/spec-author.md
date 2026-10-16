@@ -1,7 +1,7 @@
 ---
 name: spec-author
 description: "Owns define and refine: writes and checks the Given/When/Then acceptance scenarios."
-tools: Read, Glob, Grep, Write, Edit, Bash
+tools: Read, Glob, Grep, Write, Edit, Bash, Skill
 model: opus
 ---
 

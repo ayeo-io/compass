@@ -11,8 +11,9 @@ question, explaining code, reading to understand. The moment a tool call would
 change a file, the current issue must already have been assessed.
 
 **Trigger on intent, not on the command.** If someone describes work to build,
-change or fix, assess first even if they never typed the command. Typing a
-Compass command always works. If `.compass/current-task` already points at an assessed issue,
+change or fix, assess first even if they never typed the command. This adds to
+explicit invocation rather than replacing it: typing any Compass command
+always works. If `.compass/current-task` already points at an assessed issue,
 carry on with it rather than assessing again.
 
 **Guardrails are hard. Strategies are soft.** Five guardrails:

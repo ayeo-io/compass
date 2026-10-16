@@ -87,6 +87,29 @@ HOW = ("the agent asks with `compass evidence request --check ID` and the person
        "record holds check, decision, approver, role, scope, timestamp, issue and "
        "generation")
 
+#: How a person records the sign-off of guardrail `G5`, for a failure detail.
+G5_HOW = ("in Claude Code the person types `/compass:approve` for the request the agent "
+          "made with `compass evidence request --guardrail G5`; or an agent they delegated "
+          "g5 to runs it with `--delegated --as <agent>`; or the person runs `compass "
+          "evidence approve --guardrail G5` with `--approver <name> --role <role> --scope "
+          "<text>` in a terminal")
+
+#: The record that withdraws an approval made under a delegation (ADR-069).
+WITHDRAWAL = "approval-withdrawal"
+
+
+def not_withdrawn(approved, registry):
+    """`(standing, note)`: the approved records that no `approval-withdrawal`
+    in the registry names, and a failure note naming the guardrail `G5`
+    sign-offs that were withdrawn ('' when none was)."""
+    withdrawn = {e.get("withdraws"): e.get("id") for e in registry
+                 if isinstance(e, dict) and e.get("type") == WITHDRAWAL}
+    standing = [a for a in approved if a.get("id") not in withdrawn]
+    gone = [a.get("id") for a in approved if a.get("id") in withdrawn and gives_g5(a)]
+    note = (f"{WITHDRAWN}: {', '.join(gone)} was withdrawn by "
+            f"{', '.join(withdrawn[g] for g in gone)}" if gone else "")
+    return standing, note
+
 
 def provenance(record):
     """How a record was made, in words, from its `via` key (ADR-068

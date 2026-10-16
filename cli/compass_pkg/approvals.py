@@ -65,6 +65,22 @@ ARTIFACT_APPROVAL = approval_records.ARTIFACT_APPROVAL
 #: (the check of guardrail `G5`), a human check or a waiver, meets it.
 CHECKPOINT_APPROVAL = "checkpoint-approval"
 
+#: The approval types `compass evidence add` refuses, and why. Each is a
+#: person's act, written only by the writers here. A `human-approval` record
+#: added by hand held only an id, a type and a path, which no approval reader
+#: counts (GitHub issue #571).
+EVIDENCE_ADD_REFUSALS = {
+    CHECKPOINT_APPROVAL: (
+        "compass evidence add: a checkpoint-approval record is a person's answer; run "
+        "compass evidence approve --checkpoint <stage> at a terminal."),
+    "human-approval": (
+        "compass evidence add: a human-approval record is a person's approval. In "
+        "Claude Code the person types /compass:approve after the agent asks with "
+        "compass evidence request; an agent the person delegated to runs compass "
+        "evidence approve --delegated --as <agent>; at a terminal the person runs "
+        "compass evidence approve. Nothing was written."),
+}
+
 #: The five subject forms, as `Answer.form` names them.
 FORMS = ("check", "guardrail", "artifact", "checkpoint", "decisions")
 

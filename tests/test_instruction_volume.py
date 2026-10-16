@@ -28,7 +28,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 # The success signals from intent.md, in words.
-RESIDENT_CEILING = 900
+# Raised from 900 by the approval rule in the contract (issue
+# `approve-inside-claude-code`), decided by compass:architect under jed72's
+# overnight delegation.
+RESIDENT_CEILING = 920
 QUICK_FIX_CEILING = 12000
 SKILL_LINE_CEILING = 200
 

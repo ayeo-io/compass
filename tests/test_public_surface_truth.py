@@ -378,6 +378,8 @@ def test_d2_repairs_change_only_retired_names():
     `python-dependency-said-early` added a "Compass needs Python 3.10 or
     later" section, one `###` heading and a six-row table of what each
     hook and the CLI do without it.
+    `approve-inside-claude-code` added seven list items: the three guards
+    on approval state, and the four limits of the typed approval path.
 
     Two were re-baselined by `orchestrator-loop-hardening`, which adopted the
     multiagent loop's rules: `agents/orchestrator.md` gained a

@@ -35,7 +35,11 @@ CLAUDE_MD = ROOT / "CLAUDE.md"
 RUNTIME_SKILL = ROOT / "skills" / "compass-runtime" / "SKILL.md"
 AGENTS_MD = ROOT / "AGENTS.md"
 
-MAX_CONTRACT_WORDS = 400
+# Raised from 400 by the approval rule (issue `approve-inside-claude-code`,
+# ADR-068 and ADR-069): the agent must know before it acts that it records an
+# approval only under a delegation and otherwise asks. Decided by
+# compass:architect under jed72's overnight delegation.
+MAX_CONTRACT_WORDS = 420
 
 
 # ---------------------------------------------------------------------------

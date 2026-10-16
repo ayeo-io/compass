@@ -281,7 +281,8 @@ def _held_nonces(task_dir):
 
 def _pending(session):
     """The session's pending requests. A request whose nonce a record already
-    holds was answered and is closed now (DD-6); one for another issue is
+    holds was answered and is closed now, since the record is written before
+    the request is closed; one for another issue is
     never shown or recorded here."""
     held = _held_nonces(session.task_dir)
     pending, answered = [], set()

@@ -150,10 +150,12 @@ ensure_settings() {
   [ -f "$SETTINGS" ] || echo '{}' > "$SETTINGS"
 }
 
-# --- helper: register the four hooks in settings.json -----------------------
+# --- helper: register the hooks in settings.json ----------------------------
 # Compass needs PreToolUse (pre-tool.sh), PostToolUse (post-tool.sh), Stop
-# (stop.sh) and SessionStart (session-start.sh). We splice them in with jq,
-# keyed so re-running does not duplicate.
+# (stop.sh), SessionStart (session-start.sh), UserPromptExpansion
+# (prompt-approval.sh, which records a typed /compass:approve) and
+# UserPromptSubmit (approval-summary.sh, display only). We splice them in
+# with jq, keyed so re-running does not duplicate.
 #
 # The matchers must match hooks/hooks.json, which is what a plugin install
 # gets. Without Bash in the matcher, a source install does not check shell
@@ -165,6 +167,8 @@ register_hooks() {
   local post="$COMPASS_HOME/hooks/post-tool.sh"
   local stop="$COMPASS_HOME/hooks/stop.sh"
   local session="$COMPASS_HOME/hooks/session-start.sh"
+  local approval="$COMPASS_HOME/hooks/prompt-approval.sh"
+  local summary="$COMPASS_HOME/hooks/approval-summary.sh"
 
   if ! command -v jq >/dev/null 2>&1; then
     echo ""
@@ -178,7 +182,10 @@ register_hooks() {
                              "hooks": [ { "type": "command", "command": "$post" } ] } ],
           "Stop":        [ { "hooks": [ { "type": "command", "command": "$stop" } ] } ],
           "SessionStart": [ { "matcher": "startup|clear|compact",
-                             "hooks": [ { "type": "command", "command": "$session" } ] } ]
+                             "hooks": [ { "type": "command", "command": "$session" } ] } ],
+          "UserPromptExpansion": [ { "matcher": "compass:approve|compass:reject|compass:delegate|compass:revoke",
+                             "hooks": [ { "type": "command", "command": "$approval" } ] } ],
+          "UserPromptSubmit": [ { "hooks": [ { "type": "command", "command": "$summary" } ] } ]
         }
 EOF
     return 0
@@ -190,7 +197,8 @@ EOF
   local tmp
   tmp="$(mktemp)"
   jq \
-    --arg pre "$pre" --arg post "$post" --arg stop "$stop" --arg session "$session" '
+    --arg pre "$pre" --arg post "$post" --arg stop "$stop" --arg session "$session" \
+    --arg approval "$approval" --arg summary "$summary" '
     # drop any prior Compass entries so re-running does not duplicate
     def notcompass($paths): [ .hooks[]?.command ] as $cmds
       | ($cmds | map(. as $c | $paths | index($c)) | all(. == null));
@@ -202,10 +210,15 @@ EOF
     .hooks.Stop        = ( (.hooks.Stop        // []) | map(select(notcompass([$stop]))) )
       + [ { hooks: [ { type: "command", command: $stop } ] } ] |
     .hooks.SessionStart = ( (.hooks.SessionStart // []) | map(select(notcompass([$session]))) )
-      + [ { matcher: "startup|clear|compact", hooks: [ { type: "command", command: $session } ] } ]
+      + [ { matcher: "startup|clear|compact", hooks: [ { type: "command", command: $session } ] } ] |
+    .hooks.UserPromptExpansion = ( (.hooks.UserPromptExpansion // []) | map(select(notcompass([$approval]))) )
+      + [ { matcher: "compass:approve|compass:reject|compass:delegate|compass:revoke",
+            hooks: [ { type: "command", command: $approval } ] } ] |
+    .hooks.UserPromptSubmit = ( (.hooks.UserPromptSubmit // []) | map(select(notcompass([$summary]))) )
+      + [ { hooks: [ { type: "command", command: $summary } ] } ]
   ' "$SETTINGS" > "$tmp"
   mv "$tmp" "$SETTINGS"
-  echo "  registered hooks in $SETTINGS (PreToolUse, PostToolUse, Stop, SessionStart)"
+  echo "  registered hooks in $SETTINGS (PreToolUse, PostToolUse, Stop, SessionStart, UserPromptExpansion, UserPromptSubmit)"
 }
 
 unregister_hooks() {
@@ -215,14 +228,19 @@ unregister_hooks() {
   local post="$COMPASS_HOME/hooks/post-tool.sh"
   local stop="$COMPASS_HOME/hooks/stop.sh"
   local session="$COMPASS_HOME/hooks/session-start.sh"
+  local approval="$COMPASS_HOME/hooks/prompt-approval.sh"
+  local summary="$COMPASS_HOME/hooks/approval-summary.sh"
   local tmp; tmp="$(mktemp)"
-  jq --arg pre "$pre" --arg post "$post" --arg stop "$stop" --arg session "$session" '
+  jq --arg pre "$pre" --arg post "$post" --arg stop "$stop" --arg session "$session" \
+     --arg approval "$approval" --arg summary "$summary" '
     def strip($p): map(select(([ .hooks[]?.command ] | index($p)) == null));
     if .hooks then
       .hooks.PreToolUse   = ((.hooks.PreToolUse   // []) | strip($pre)) |
       .hooks.PostToolUse  = ((.hooks.PostToolUse  // []) | strip($post)) |
       .hooks.Stop         = ((.hooks.Stop         // []) | strip($stop)) |
-      .hooks.SessionStart = ((.hooks.SessionStart // []) | strip($session))
+      .hooks.SessionStart = ((.hooks.SessionStart // []) | strip($session)) |
+      .hooks.UserPromptExpansion = ((.hooks.UserPromptExpansion // []) | strip($approval)) |
+      .hooks.UserPromptSubmit = ((.hooks.UserPromptSubmit // []) | strip($summary))
     else . end
   ' "$SETTINGS" > "$tmp"
   mv "$tmp" "$SETTINGS"

@@ -1109,20 +1109,9 @@ def cmd_changed_file_add(args):
 
 
 def cmd_evidence_add(args):
-    if args.type == "checkpoint-approval":     # a person's act: approve_cmd writes it
-        raise CompassError(
-            "compass evidence add: a checkpoint-approval record is a person's answer; run "
-            "compass evidence approve --checkpoint <stage> at a terminal.")
-    if args.type == "human-approval":          # a person's act, or their delegate's
-        # A record added here holds only an id, a type and a path, which no
-        # approval reader counts (GitHub issue #571). The approval writers
-        # stamp the subject, decision, approver, role, issue and generation.
-        raise CompassError(
-            "compass evidence add: a human-approval record is a person's approval. In "
-            "Claude Code the person types /compass:approve after the agent asks with "
-            "compass evidence request; an agent the person delegated to runs compass "
-            "evidence approve --delegated --as <agent>; at a terminal the person runs "
-            "compass evidence approve. Nothing was written.")
+    from compass_pkg.approvals import EVIDENCE_ADD_REFUSALS
+    if args.type in EVIDENCE_ADD_REFUSALS:     # a person's act: an approval writer writes it
+        raise CompassError(EVIDENCE_ADD_REFUSALS[args.type])
     task_dir = resolve_issue_dir(args.task)
     task, task_path = load_manifest(task_dir)
     if getattr(args, "scenario", None):

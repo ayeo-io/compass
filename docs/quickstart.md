@@ -42,10 +42,9 @@ bash scripts/install.sh --global      # or: bash scripts/install.sh  (project-lo
 
 `install.sh` symlinks `commands/`, `agents/`, and `skills/` into your Claude
 Code config as a `compass` subdirectory (so nothing collides with your own
-files) and registers the hooks `pre-tool.sh`, `post-tool.sh`, `stop.sh` and
-`session-start.sh` in `settings.json`. The approval hooks, `prompt-approval.sh`
-and `approval-summary.sh`, come with the plugin install; without them
-`/compass:approve` records nothing and a person approves at a terminal. It is idempotent: re-running refreshes the
+files) and registers its hooks - `pre-tool.sh`, `post-tool.sh`, `stop.sh`,
+`session-start.sh`, `prompt-approval.sh` and `approval-summary.sh` - in
+`settings.json`. It is idempotent: re-running refreshes the
 links and never clobbers a file Compass did not create. `--global` makes the
 `/compass:*` commands available in every project; `--copy` installs copies
 instead of symlinks if you prefer. Compass needs Python 3. The YAML parser it

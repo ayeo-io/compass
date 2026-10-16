@@ -418,8 +418,9 @@ def _issue_dirs(compass_dir):
     work = os.path.join(compass_dir, "work")
     if not os.path.isdir(work):
         return []
+    from compass_pkg.core import manifest_path
     return [os.path.join(work, name) for name in sorted(os.listdir(work))
-            if os.path.isfile(os.path.join(work, name, "manifest.yml"))]
+            if os.path.isfile(manifest_path(os.path.join(work, name)))]
 
 
 def _waiting(record):

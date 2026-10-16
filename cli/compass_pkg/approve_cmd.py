@@ -177,3 +177,7 @@ def register(evidence_subs):
                    help="approved (default) or rejected; a later rejection withdraws an "
                         "approval")
     p.set_defaults(func=cmd_evidence_approve, output_kind="hand-off")
+    # `compass evidence request`, which asks for what this verb records, is
+    # registered beside it so the entry point stays thin.
+    from compass_pkg import approval_requests
+    approval_requests.register(evidence_subs)

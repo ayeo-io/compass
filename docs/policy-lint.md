@@ -65,7 +65,7 @@ earlier one. Warnings never stop it and never fail it.
 |---|---|---|
 | `layer` | Each layer alone, before anything merges | `L-LOAD`, `L-KEY-NOT-TEXT`, `L-SCHEMA`, `L-SETTINGS-KEY`, `L-UNLOCK-PLACEMENT`, `L-IMPL-UNKNOWN`, `L-IMPL-TEMPLATED`, `W-APPROVED-ON-ISSUE`, `L-IGNORED-FILE` (warning), the eleven `L-PARENT-*` codes below for a git parent, and the four `S-PARENT-*` state codes |
 | `merge` | The merge grammar, layer by layer. It reports every fault of the first layer that does not apply | the merge's own `M-*` codes, such as `M-ADD-EXISTS`, `M-SET-UNKNOWN`, `M-REF-REMOVED` |
-| `resolved` | The merged result as a whole | `M-REF-UNKNOWN`, `M-WEIGHT-TIE`, `M-HIT-MISSING`, `M-HIT-DISALLOWED`, `M-ALIAS-COLLISION`, `M-CYCLE`, `M-BOOKKEEPING-INPUT`, `M-DIRECTORY-DEPENDENCY`, `M-LIST-KIND-UNEVALUATED` (warning), `M-FIELD-SHAPE`, `M-READINESS-IMPL`, `M-READINESS-PARAM` |
+| `resolved` | The merged result as a whole | `M-REF-UNKNOWN`, `M-WEIGHT-TIE`, `M-HIT-MISSING`, `M-HIT-DISALLOWED`, `M-ALIAS-COLLISION`, `M-CYCLE`, `M-BOOKKEEPING-INPUT`, `M-DIRECTORY-DEPENDENCY`, `M-LIST-KIND-UNEVALUATED` (warning), `M-FIELD-SHAPE`, `M-READINESS-IMPL`, `M-READINESS-PARAM`, `M-WHEN-RETIRED`, `M-WHEN-DOCUMENTS` |
 | `locks` | What the locks above a layer refuse, and each refused unlock | `K-LOCK-REFUSED`, `K-UNLOCK-REFUSED`, `K-UNPROVABLE`, `E-EVALUATION` |
 | `classification` | Waivers, the classifier's verdict on each layer, and the vocabulary | `C-LOOSENING`, `C-INCOMPARABLE`, `V-VOCABULARY-CHANGE`, `W-UNNEEDED`, the waivers' own `W-*` codes, `E-EVALUATION` |
 
@@ -96,7 +96,9 @@ earlier one. Warnings never stop it and never fail it.
 | `S-PARENT-STALE` | warning | `seen.yml` holds another commit for the parent's ref, which this machine fetched last. It can be older or newer than the pin. The pin does not move |
 | `S-PARENT-MODIFIED` | error | The cached `compass.yml` no longer matches the digest recorded when it was fetched, or `seen.yml` holds no digest for it. The lint stops at the first group |
 | `S-PARENT-BOTH` | error | Stale, and the cached file was edited. The lint stops at the first group |
-| `M-REF-UNKNOWN` | error | A field, or a rule's effect (`EFFECT_TARGETS` in `catalogue_spec.py` says which catalogue each effect names), names an id that no entry defines, or an artifact's `owner` is neither an agent nor a value of the `role` dimension |
+| `M-REF-UNKNOWN` | error | A field, or a rule's effect (`EFFECT_TARGETS` in `catalogue_spec.py` says which catalogue each effect names), names an id that no entry defines, or an artifact's `owner` is neither an agent, a perspective (engineer, product-owner, product-marketer, designer or qa) nor a value of a `role` dimension the project declares |
+| `M-WHEN-RETIRED` | error | A rule, check or gate's `when` reads `role`, which 7.0.0 removed from the assessment, in a configuration that declares no `role` dimension. A rule can read the documents on disk with `artifacts_any` instead, and any `when` can read a label (ADR-070) |
+| `M-WHEN-DOCUMENTS` | error | A check or gate's `when` reads `artifacts_any`. Only a rule's evaluation reads the documents on disk; `compass check` does not, so the condition would never match there (ADR-070) |
 | `M-WEIGHT-TIE` | error | Two delivery approaches have the same weight |
 | `M-LIST-KIND-UNEVALUATED` | warning | A stage's `entry` or `exit` list names a check of a kind this version does not evaluate (`judged` or `evidence`). The check fails in `compass check`, whatever the capability. The exit code does not change |
 | `M-READINESS-IMPL` | error | A readiness signal names an `impl` that the readiness registry does not hold. The message names the signal and the implementation |

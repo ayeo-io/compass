@@ -59,7 +59,7 @@ user does not type an explicit Compass command.
 
 Before the first delivery change it must:
 
-1. assess risk, familiarity, size, goal and role;
+1. assess risk, familiarity, size and goal;
 2. record the assessment in the manifest;
 3. call `compass approach evaluate --write`; and
 4. present the human-readable approach for approval.
@@ -135,7 +135,7 @@ The runtime needs distinct entry paths for product, design, engineering,
 marketing and QA. All five contribute to the same acceptance specification and
 produce their normal Compass artifacts.
 
-The adapter must preserve role-dependent gates such as intent fidelity and
+The adapter must preserve the gates the documents bring, such as intent fidelity and
 claim traceability. Otherwise the role is decorative rather than operational.
 
 ### 6. Persist state on disk

@@ -4,7 +4,7 @@
     "version": "1.32.0"
   },
   "routing-policy.yml": {
-    "sha256": "837ee8f99d502f6b549dc53e1aacb40ce339a9fc9d5bd83a65c51f573b714d8b",
-    "version": "2.23.0"
+    "sha256": "f7cb1afe7db34098254516ee75a1ce127ddc5aeb1127be3e0847343afd4a0e4c",
+    "version": "3.0.0"
   }
 }

@@ -36,11 +36,12 @@ import json
 import os
 import re
 import subprocess
+import sys
 import textwrap
 
 from compass_pkg.binding import ids_for
 from compass_pkg.check_cmd import cmd_check
-from compass_pkg import project_settings
+from compass_pkg import project_settings, retired
 from compass_pkg.stable_ids import (
     APPROACH_QUICK_FIX, GATE_VERIFY_CORRECTNESS, GATE_VERIFY_GOVERNANCE, GATE_VERIFY_TRACEABILITY,
     STAGE_BREAKDOWN, STAGE_PLAN, STAGE_REFINE)
@@ -101,7 +102,7 @@ def register(sub, issue_arg):
     st.add_argument("--goal", default=None, metavar="VALUE - REASON",
                     help="goal value and its reason (left out: not assessed)")
     st.add_argument("--role", default=None, metavar="VALUE - REASON",
-                    help="role value and its reason (left out: not assessed)")
+                    help="ignored from 7.0.0 (ADR-070)")
     st.add_argument("--labels", default="", metavar="TAG[,TAG...]",
                     help="domain tags the change touches, comma-separated - "
                          "auth, payments, personal-data or migrations bring "
@@ -272,9 +273,8 @@ def cmd_quick_fix_start(args):
 
     readings = {"risk": risk_v, "familiarity": fam_v, "size": size_v}
     reasons = {"risk": risk_r, "familiarity": fam_r, "size": size_r}
-    for name, value, reason in (("goal", goal_v, goal_r), ("role", role_v, role_r)):
-        if value is not None:
-            readings[name], reasons[name] = value, reason
+    if goal_v is not None:
+        readings["goal"], reasons["goal"] = goal_v, goal_r
     readings["labels"] = _split_labels(args.labels)
 
     # Before writing anything: the evaluator runs on the values in memory,
@@ -289,6 +289,13 @@ def cmd_quick_fix_start(args):
         from compass_pkg.core import load_autonomy
         policy = load_yaml(os.path.join(find_governance(), "routing-policy.yml"))
         autonomy = load_autonomy()
+    if role_v is not None:
+        # Role is read only where the policy still declares it: copied 6.x
+        # governance. Anywhere else it is accepted and ignored (ADR-070).
+        if "role" in (policy.get("assessment_vocabulary") or {}):
+            readings["role"], reasons["role"] = role_v, role_r
+        else:
+            sys.stderr.write(retired.notice("quick-fix start --role") + "\n")
     advice = (evaluate_route(readings, policy, autonomy)
               .get("applicable_strategies") or [])
 

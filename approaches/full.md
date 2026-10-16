@@ -31,7 +31,7 @@ launch's worth of work.
 ## Gate set
 
 All gates. Review dimensions: `correctness`, `governance`, `traceability`,
-`regression`, `security` (full, not scaled), `clarity`, `claims`. Plus every
+`regression`, `security` (full, not scaled), `clarity`. `claims` is added if `positioning.md` is present. Plus every
 `immovable_gate` from the routing policy. Plus a mid-implementation
 checkpoint gate per worktree.
 

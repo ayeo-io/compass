@@ -15,23 +15,25 @@ pytestmark = pytest.mark.raw_justify
 
 def test_adapter_entries_compose_the_same_policy(tmp_path):
     cases = [
-        ("trivial", "atomic", "delivery", "engineer", "quick-fix"),
-        ("contained", "medium", "delivery", "engineer", "regular"),
-        ("contained", "medium", "exploration", "engineer", "spike"),
-        ("contained", "medium", "delivery", "product-marketer", None),
+        ("trivial", "atomic", "delivery", "", "quick-fix"),
+        ("contained", "medium", "delivery", "", "regular"),
+        ("contained", "medium", "exploration", "", "spike"),
+        ("contained", "medium", "delivery", "positioning", None),
     ]
-    for index, (risk, size, goal, role, expected) in enumerate(cases):
+    # The last column was a role before 7.0.0; a document on disk now brings
+    # the claims gate (ADR-070).
+    for index, (risk, size, goal, documents, expected) in enumerate(cases):
         results = []
         for name in ("claude-code", "codex"):
             adapter = Adapter(name, tmp_path / str(index) / name)
             result = adapter.evaluate(risk=risk, familiarity="brownfield-mapped",
-                                      size=size, goal=goal, role=role)
+                                      size=size, goal=goal, artifacts=documents)
             assert adapter.calls[-1]["argv"][:len(adapter.entry)] == adapter.entry
             results.append(result)
         assert results[0] == results[1]
         if expected:
             assert results[0]["delivery_approach"] == expected
-        if role == "product-marketer":
+        if documents == "positioning":
             assert "verify.claims" in results[0]["gates"]
 
 

@@ -218,6 +218,40 @@
             }
           }
         },
+        "artifact_rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "when",
+              "rationale"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "when": {
+                "type": "object"
+              },
+              "require_artifact": {
+                "type": "string"
+              },
+              "gate": {
+                "type": "string"
+              },
+              "block_phase": {
+                "type": "string"
+              },
+              "until": {
+                "type": "string"
+              },
+              "rationale": {
+                "type": "string"
+              }
+            }
+          }
+        },
         "role_rules": {
           "type": "array",
           "items": {

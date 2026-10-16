@@ -44,8 +44,8 @@ issue.
    - **gaps** - a success signal with no scenario behind it.
    - **scope creep** - scenarios that go beyond `intent.md` without a recorded
      decision.
-3. **Gate Plan.** Per the routing policy's blocking `role_rules`, when the
-   product-owner role is in play, the spec **must be checked against `intent.md`
+3. **Gate Plan.** Per the routing policy's blocking artifact rule (RP-ART-002), when
+   `intent.md` is present, the spec **must be checked against `intent.md`
    before Plan**. You are that check. Plan does not start until you have signed
    off intent fidelity or sent the spec back to the Spec Author.
 

@@ -42,7 +42,9 @@ def test_contract_1_the_baseline_covers_the_whole_grid():
 
 def test_contract_1_the_shipped_policy_routes_as_the_baseline():
     header, rows = load_routing()
-    differences = routing_differences(shipped_policy(), header, rows)
+    # From 7.0.0 the generated view spells documents and stages as the
+    # catalogue does (ADR-070), so it is compared in the 5.6.0 spelling.
+    differences = routing_differences(shipped_policy(), header, rows, layered=True)
     assert differences == [], "\n".join(differences[:10])
 
 
@@ -51,7 +53,7 @@ def test_contract_1_can_fail_when_one_default_changes():
     policy = copy.deepcopy(shipped_policy())
     policy["route_shapes"]["regular"]["gates"] = [
         g for g in policy["route_shapes"]["regular"]["gates"] if g != "verify.regression"]
-    assert routing_differences(policy, header, rows, first_only=True), \
+    assert routing_differences(policy, header, rows, first_only=True, layered=True), \
         "a dropped gate went unseen"
 
 
@@ -63,7 +65,7 @@ def test_contract_1_a_change_only_a_label_reaches_is_seen():
         if "migrations" in str(rule.get("when")):
             rule["when"] = {"labels_any": ["nothing-matches"]}
     assert named_labels(shipped_policy()) == header["labels"]
-    assert routing_differences(policy, header, rows, first_only=True), \
+    assert routing_differences(policy, header, rows, first_only=True, layered=True), \
         "a label-only change went unseen"
 
 

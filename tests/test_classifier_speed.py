@@ -289,7 +289,7 @@ def test_cs_3_the_benchmark_pair_at_four_labels_keeps_its_grid_verdict_and_count
     parent, child = _bench().pair(4)
     got = classify.classify(parent, child)
     assert (got.result, got.scan, got.complete) == ("equivalent", "full", True)
-    assert got.grid.points == 4608 and got.grid.raw_points == 51840
+    assert got.grid.points == 4608 and got.grid.raw_points == 34560
     assert got.grid.label_count == 4
     assert got.counts == {"equal": 4608, "tighter": 0, "looser": 0, "mixed": 0}
     assert len(calls) == 2 * 4608, "the evaluator runs once for each side at each point"
@@ -591,7 +591,10 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # word limit is `incomparable`, which version 7 read as `equivalent`, so the version
 # is now 8 (version 7 is the removal of the role dimension). Re-pinned again in the
 # same issue for the merged `Obligations` docstring; no verdict moves.
-VERDICT_SOURCE_PIN = "5b5c53c6276b3fd7"
+# Re-pinned for issue `remove-role-from-assessment`: a point carries the documents on
+# disk beside the labels, and the evaluator reads artifact rules and drops a role the
+# policy does not declare (ADR-070); the version is now 9, version 7 never released.
+VERDICT_SOURCE_PIN = "58a682187436e0f6"
 
 
 def _verdict_source_digest():

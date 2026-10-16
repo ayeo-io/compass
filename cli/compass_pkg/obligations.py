@@ -55,9 +55,10 @@ DEFAULT_HIT = "collect"
 EVALUATOR_APPROACHES = {APPROACH_SPIKE: False, APPROACH_QUICK_FIX: True, APPROACH_REGULAR: True,
                         APPROACH_HOTFIX: True, APPROACH_FULL: True}
 
-# Which legacy block a rule set's `kind` fills.
+# Which legacy block a rule set's `kind` fills (`role-rules`: a 6.x generation).
 _GUARDRAIL_BLOCKS = {"floors": "floors", "caps": "caps", "ceilings": "loop_ceilings",
-                     "immovable-gates": "immovable_gates", "role-rules": "role_rules"}
+                     "immovable-gates": "immovable_gates", "artifact-rules": "artifact_rules",
+                     "role-rules": "role_rules"}
 
 
 def _ordered(rule_set):
@@ -95,19 +96,17 @@ def _resolved_approach(approaches, name, seen=()):
     return merged
 
 
-#: Keys that evaluation derives for a check's `when` (`listing_assessment`).
-#: A dimension of the same name would be overwritten by the derived value, so
-#: a configuration may not define one.
-DERIVED_KEYS = ("ships",)
+#: Keys evaluation derives: `ships` for a check's `when` (`listing_assessment`)
+#: and `artifacts`, the documents on disk (ADR-070). A dimension of the same name
+#: would be overwritten by the derived value, so a configuration may not define one.
+DERIVED_KEYS = ("ships", "artifacts")
 
 
 def assessment_vocabulary(dimensions):
     vocabulary = {}
-    for name in DERIVED_KEYS:
-        if name in dimensions:
-            raise CompassError(
-                f"a dimension cannot be named '{name}': evaluation derives that "
-                f"key for a check's `when` from the approach")
+    for name in [n for n in DERIVED_KEYS if n in dimensions]:
+        raise CompassError(f"a dimension cannot be named '{name}': evaluation derives "
+                           f"that key from the approach or the documents on disk")
     for name, dimension in dimensions.items():
         if dimension.get("type") in ("enum", "ordered-enum"):
             vocabulary[name] = list(dimension.get("values") or [])

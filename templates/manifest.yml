@@ -41,7 +41,6 @@ assessment:
   size: "{{atomic | small | medium | large | product}}"
   goal: "{{delivery | exploration}}"
   urgency: "{{none | live-defect}}"          # optional; omit if none
-  role: "{{engineer | product-owner | product-marketer | designer | qa}}"
   labels: []                                 # domain labels: [auth, payments, …]
 
 generation: 0                # 0 = assessed, no stored configuration yet; the evaluator
@@ -102,7 +101,7 @@ changed_files: []
 #  - path: "src/api/ledger_export.py"
 #    scenarios: [TRC-001]
 
-# --- claims (filled by positioning - only if a marketer is in play) ---------
+# --- claims (filled by positioning - only if positioning.md is present) ---------
 # Every public/marketing claim, each traced to a backing scenario id.
 # This is the claim -> criterion half of the traceability guardrail.
 claims: []

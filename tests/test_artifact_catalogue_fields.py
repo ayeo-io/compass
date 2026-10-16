@@ -1419,7 +1419,7 @@ def test_acf_21(tmp_path):
     code, out, err = _evaluate(root, *_justify_all(values))
     assert code == 0, out + err
     body = _manifest_of(task_dir)
-    assert set(body["justifications"]) == {"risk", "familiarity", "size", "goal", "role"}
+    assert set(body["justifications"]) == {"risk", "familiarity", "size", "goal"}
     assert all(isinstance(v, str) and v.strip() for v in body["justifications"].values())
     assert body["assessment"] == values and "labels" in body["assessment"]
     # An unchanged assessment needs no flag, and leaves the key as it was.
@@ -1477,10 +1477,11 @@ def test_acf_22(tmp_path):
                           "--role", "engineer - role reason")
     assert code == 0, out + err
     body = yaml.safe_load((qf / ".compass" / "work" / "fix-it" / "manifest.yml").read_text())
+    # A role is accepted and ignored: it is not an assessment dimension from 7.0.0 (ADR-070).
     assert body["justifications"] == {
         "risk": "risk reason", "familiarity": "familiarity reason", "size": "size reason",
-        "goal": "goal reason", "role": "role reason"}, body["justifications"]
-    assert set(body["assessment"]) == {"risk", "familiarity", "size", "goal", "role", "labels"}
+        "goal": "goal reason"}, body["justifications"]
+    assert set(body["assessment"]) == {"risk", "familiarity", "size", "goal", "labels"}
     record = (next((qf / "docs" / "compass").glob("*-fix-it")) / "delivery-approach.md").read_text()
     for dim, reason in body["justifications"].items():
         assert any(dim.capitalize() in line and reason in line
@@ -1647,9 +1648,10 @@ def test_acf_35(tmp_path):
         "critical", "brownfield-mapped", "large")
     rows = [line for line in block.splitlines() if line.startswith("|")]
     for dim, value in (("risk", "critical"), ("familiarity", "brownfield-mapped"),
-                       ("size", "large"), ("goal", "delivery"), ("role", "engineer")):
+                       ("size", "large"), ("goal", "delivery")):
         hit = [r for r in rows if dim.capitalize() in r and value in r and reasons[dim] in r]
         assert len(hit) == 1, (dim, block)
+    assert not [r for r in rows if "Role" in r], block      # role is not read (ADR-070)
     assert "Labels: cli, migrations" in block, block
     code, out, err = _cli(root, "issue", "receipt", "--issue", SLUG)
     assert code == 0, out + err

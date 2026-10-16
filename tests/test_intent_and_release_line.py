@@ -242,11 +242,14 @@ def test_irl_5_assess_and_define_commands_name_the_intent():
     # command's instruction to draft the intent is in the procedure it loads.
     assert "approaches/assess-procedure.md" in _flat("commands/assess.md")
     assess_text = _flat("approaches/assess-procedure.md")
-    for phrase in ("registers an `intent` entry with no path",
-                   "`compass issue artifact-path intent`",
+    # From 7.0.0 the intent is drafted before the approach is written, so the
+    # artifact rule RP-ART-002 reads it (ADR-070).
+    for phrase in ("without `--write`",
+                   "draft the intent before the write",
+                   "`docs/compass/<created>-<slug>/intent.md`",
                    "from the issue description",
                    "`compass issue template show intent --depth <depth>`",
-                   "`compass issue artifact set intent --status draft --path <home>`"):
+                   "`compass issue artifact set intent --status draft --path <that path>`"):
         assert phrase in assess_text, phrase
     define_text = _flat("commands/define.md").lower()
     for phrase in ("read `intent.md` and correct it before you write any scenario",

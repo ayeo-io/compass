@@ -57,7 +57,8 @@ def test_vr_b2_every_baseline_assessment_of_size_standard_routes_alike_as_medium
     wrong = []
     for row in wanted:
         medium = dict(row["assessment"], size="medium")
-        now = cb.compact(medium, policy)
+        # From 7.0.0 the view spells documents and stages as the catalogue does (ADR-070).
+        now = cb.legacy_spelling(cb.compact(medium, policy))
         if now != row["result"]:
             wrong.append(f"{medium}: {cb._first_difference(row['result'], now)}")
     assert wrong == [], "\n".join(wrong[:10])

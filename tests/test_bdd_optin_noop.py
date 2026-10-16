@@ -101,8 +101,9 @@ EXPECTED_GATE_IDS = {
     "verify.analyze", "verify.architecture", "spike.conclude",
 }
 
+# Role left the assessment at 7.0.0 (ADR-070); nothing took its place.
 EXPECTED_READING_KEYS = {
-    "risk", "familiarity", "size", "goal", "urgency", "role",
+    "risk", "familiarity", "size", "goal", "urgency",
     "labels_common",
 }
 
@@ -122,7 +123,7 @@ def test_trc_f6_no_new_guardrail_gate_or_dimension():
         f"\n  missing   : {sorted(EXPECTED_GUARDRAIL_IDS - ids)}"
     )
 
-    # the four assessment dimensions plus urgency, role, labels - no fifth
+    # the four assessment dimensions plus urgency and labels - no fifth
     vocab = set(policy["assessment_vocabulary"].keys())
     assert vocab == EXPECTED_READING_KEYS, (
         f"the reading vocabulary changed.\n  unexpected: "
@@ -134,7 +135,7 @@ def test_trc_f6_no_new_guardrail_gate_or_dimension():
     seen = set()
     for shape in policy["route_shapes"].values():
         seen.update(shape.get("gates", []))
-    for group in ("floors", "immovable_gates", "role_rules"):
+    for group in ("floors", "immovable_gates", "artifact_rules"):
         for rule in policy["routing_guardrails"].get(group, []):
             for key in ("gate", "add_gate"):
                 if rule.get(key):

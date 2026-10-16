@@ -35,7 +35,7 @@ choices in it.
 
 Six gates: `correctness`, `governance`, `traceability`,
 `regression`, `clarity`, and `security` *scaled to risk*. `claims` is
-added if the product-marketer role is in play.
+added if `positioning.md` is present.
 
 ## Multiagent orchestration
 

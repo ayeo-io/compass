@@ -57,7 +57,7 @@ def test_command_passes_is_a_check_under_g4_not_a_new_guardrail():
 
 # -----------------------------------------------------------------------------
 # `TRC-F4` - routing dimensions stay at four (rubric framing) - the supporting
-# keys (role, urgency, labels_common) are unchanged too.
+# keys (urgency, labels_common) are unchanged too. Role left at 7.0.0 (ADR-070).
 # -----------------------------------------------------------------------------
 
 def test_routing_dimensions_are_unchanged():
@@ -69,9 +69,10 @@ def test_routing_dimensions_are_unchanged():
     assert "familiarity" in vocab
     assert "size" in vocab
     assert "goal" in vocab
-    # The supporting keys (urgency, role, labels_common) are unchanged too
+    # The supporting keys (urgency, labels_common) are unchanged too; role is
+    # no longer an assessment dimension (ADR-070)
     assert "urgency" in vocab
-    assert "role" in vocab
+    assert "role" not in vocab
     assert "labels_common" in vocab
 
 
@@ -80,7 +81,7 @@ def test_no_fifth_routing_dimension_added():
     policy = yaml.safe_load((REPO_ROOT / "governance/routing-policy.yml").read_text())
     vocab_keys = set(policy["assessment_vocabulary"].keys())
     # The legitimate set; if anything beyond this exists, the framework grew a dimension
-    legitimate = {"risk", "familiarity", "size", "goal", "urgency", "role", "labels_common"}
+    legitimate = {"risk", "familiarity", "size", "goal", "urgency", "labels_common"}
     extra = vocab_keys - legitimate
     assert not extra, (
         f"reading_vocabulary gained unexpected keys: {extra}. ADR-002 forbids new dimensions."

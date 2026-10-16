@@ -16,7 +16,7 @@ guarantee with no version beside it has held since the contract began.
 
 ### 1. Routing is deterministic after assessment
 
-Risk, familiarity, size, goal and role need judgement. Once those values
+Risk, familiarity, size and goal need judgement. Once those values
 are recorded, `compass approach evaluate` applies the routing policy as a pure
 function.
 

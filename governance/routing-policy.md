@@ -39,7 +39,7 @@ rule that fires is recorded in `delivery-approach.md` with its rationale - so an
 
 **This document explains; `routing-policy.yml` enforces.** The companion
 `governance/routing-policy.yml` is the machine-readable, authoritative policy -
-it has the live floors, caps, immovable gates, role rules, and default shapes,
+it has the live floors, caps, immovable gates, artifact rules, and default shapes,
 each with a stable id, and `compass approach evaluate` runs it deterministically.
 The YAML excerpts below are *illustrative*; where this prose and that file
 could be read to differ, the `.yml` wins. The crucial boundary: the
@@ -73,11 +73,16 @@ Delivery approaches adapt *which* review dimensions apply. Immovable gates
 are the floor under that adaptation: no assessment value, and no delivery
 approach, can drop one.
 
-### blocking `role_rules` - a role's involvement enforces a gate
+### blocking `artifact_rules` - a document on disk enforces a gate
 
-When a role's involvement makes a gate non-negotiable, that is a routing
-rule. The two defaults wire the non-engineering roles in as enforced
-participants, not optional consultees.
+When a document in the issue's directory makes a gate non-negotiable, that is
+a routing rule. The `artifacts_any` condition matches the documents the CLI
+finds for the issue. The CLI reads them at every evaluation and never writes
+them into the assessment. A document written after assess takes effect at the
+next evaluation, so re-assess the issue after writing one: until then a
+landing refuses with `artifact-rule-not-applied`. A stored 6.x
+generation keeps its `role_rules` until the issue is re-assessed, and a
+project's copied 6.x governance keeps them until `compass policy migrate` runs.
 
 The shipped defaults (see `routing-policy.yml` for the live, id-tagged set):
 
@@ -92,10 +97,12 @@ The shipped defaults (see `routing-policy.yml` for the live, id-tagged set):
 - **immovable_gates** - `RP-GATE-001..003`: `verify.correctness`,
   `verify.governance`, `verify.traceability`. Deliberately not here:
   `verify.regression` is scoped by the delivery approach and
-  `verify.claims` by the role in play, so neither is immovable.
-- **role_rules** - `RP-ROLE-001` the product-marketer's involvement blocks shipping
-  until claims trace to scenarios; `RP-ROLE-002` the product-owner's involvement
-  gates Plan on the spec being checked against `intent.md`.
+  `verify.claims` by the document present (`positioning.md`), so neither is
+  immovable.
+- **artifact_rules** - `RP-ART-001` a `positioning.md` adds `verify.claims`,
+  asks for `launch-readiness.md` and blocks shipping until claims trace to
+  scenarios; `RP-ART-002` an `intent.md` gates Plan on the spec being checked
+  against it.
 
 The `verify.governance` immovable gate is what makes `G5` (a human signs off
 on the irreversible) hold: a change labelled with an irreversible surface is
@@ -132,17 +139,8 @@ routing_strategies:
     - "When size is genuinely unclear, estimate up - it is cheaper to
        collapse a stage that turned out easy than to discover mid-implementation
        that the approach was too light."
-    - "A non-engineering role in play usually pulls the route heavier, because
-       it adds artifacts and assessed strategies - but this is a bias, not a
-       floor. A marketer glancing at a tiny change need not trigger the full approach."
     - "Prefer the lightest route that still clears the routing guardrails and
        the applicable gates. Process weight is a cost; spend it where it buys safety."
-
-  # Advisory role defaults (the blocking versions are routing guardrails above).
-  role_defaults:
-    - when: { role: designer }
-      suggest_artifact: ui-contract.md
-      rationale: "A new user-facing surface usually wants a UI contract; advisory."
 ```
 
 ---
@@ -214,7 +212,8 @@ human-readable field-by-field companion is `schemas/routing-policy.reference.yml
 In brief:
 
 `when` conditions match against the assessment - `risk`, `familiarity`,
-`size`, `goal`, `role`, `urgency` - or `labels_any` (a domain-tag list:
+`size`, `goal`, `urgency` - or `artifacts_any` (the documents present for
+the issue, such as `positioning` or `intent`) or `labels_any` (a domain-tag list:
 `auth`, `payments`, `personal-data`, `migrations`, `public-api`, …). A list
 value means "any of".
 
@@ -321,10 +320,12 @@ how the lists run once the capability is on.
 The regular approach owes `intent` at depth `lightweight`: the four headings
 Problem, Desired outcome, Success signals and Non-goals of
 `artifacts.yml`'s `intent.sections.lightweight`. Full keeps the thorough
-intent; quick fix, hotfix and spike owe none. A document a role rule asks for
+intent; quick fix, hotfix and spike owe none. A document an artifact rule asks for
 (`require_artifact`) is owed at `thorough` even when the approach owes it at
-`lightweight`, so a product owner's regular issue still owes the thorough
-intent. Quick fix, regular, hotfix and
+`lightweight`: RP-ART-001 owes `launch-readiness` that way. RP-ART-002 asks for
+no document, because `intent.md` is already there, so the intent's depth follows
+the approach; only a 6.x product-owner role rule in a stored generation kept it
+thorough. Quick fix, regular, hotfix and
 full set the approach field `release_line: true`: an issue whose stored
 generation sets it owes a release line, and every landing refuses it while its
 manifest's `release_note` holds none (`docs/release-line.md`). The spike, which
@@ -384,7 +385,7 @@ as before:
 - `issue`, an issue's own layer, applied in the order
   `governance/decisions/2026-10-05-floors-win-over-the-issue-layer.md` fixes.
   It names the candidate, replaces the candidate's base stage modes and can
-  lower the subtask ceiling. The floors, caps and role rules apply after it,
+  lower the subtask ceiling. The floors, caps and artifact rules apply after it,
   so a floor lifts a mode the issue lowered, and a floor that replaces the
   candidate drops the issue's modes (the result lists them as ignored). A cap
   lowers an issue's ceiling and an issue never raises one.
@@ -443,10 +444,10 @@ The grid:
 
 - A closed dimension runs over the union of both configurations' values.
   Values that no predicate in either configuration can tell apart are one
-  class, and one value of the class is evaluated. The shipped policy has 288
-  grouped closed points and, with its four named labels, 4,608 grouped points
-  of 51,840 raw points. The raw count includes an assessment that omits each
-  optional dimension (`goal`, `urgency` and `role` in the shipped preset); the
+  class, and one value of the class is evaluated. The shipped policy has 72
+  grouped closed points and, with its four named labels and the two documents
+  its artifact rules read, 4,608 grouped points of 34,560 raw points. The raw count includes an assessment that omits each
+  optional dimension (`goal` and `urgency` in the shipped preset); the
   evaluator needs only `risk`, `familiarity` and `size`. An omitted dimension is
   a value of its own, so a rule that reads it is told apart from every value.
   `exhaustive=True` runs every raw point. It is an argument of `classify`, and
@@ -454,9 +455,10 @@ The grid:
 - A value only one configuration accepts is its own class. Where a predicate
   reads it, the point is `incomparable`. Where none does, the class is left
   out of the grid, because no assessment holds in both configurations.
-- The named labels are the labels any predicate names. Every subset is a
-  point. More than eight classify the layer `incomparable` with the count and
-  no scan, even for two configurations that differ in nothing else, except
+- The named labels are the labels any predicate names, and the named
+  documents are the kinds any `artifacts_any` condition names. Every subset of
+  each is a point. More than eight named labels, or more than four named
+  documents, classify the layer `incomparable` with the count and no scan, even for two configurations that differ in nothing else, except
   that identical configurations are `equivalent` without a scan.
 - Each fact is compared by the kind the field table gives it
   (`catalogue_spec.OBLIGATION_FIELDS`). A field the table omits is not
@@ -503,7 +505,7 @@ the same order for every verdict, and a point that does not exist is `null`:
  "scan": "full", "parent": "default@6", "child": "project",
  "exhaustive": false, "complete": true,
  "grid": {"labels": [], "label_count": 0, "label_cap": 8,
-          "points": 4, "raw_points": 16, "evaluated": 4},
+          "points": 4, "raw_points": 16, "evaluated": 4, "artifacts": []},
  "counts": {"equal": 4, "tighter": 0, "looser": 0, "mixed": 0},
  "first_looser": null, "first_tighter": null, "first_mixed": null}
 ```

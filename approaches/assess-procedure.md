@@ -41,7 +41,7 @@ what `/compass:init` offers separately.
   What `compass approach evaluate` actually runs is the effective
   configuration, which `compass policy show` prints: the shipped default
   preset with the project's `compass.yml` over it. The CLI applies its
-  **policy floors, caps, immovable gates, and blocking role rules** (hard) and
+  **policy floors, caps, immovable gates, and blocking artifact rules** (hard) and
   its **default shapes and tie-breaking biases** (soft). You do not apply
   these by hand; the CLI does. An unmigrated 5.x project runs on its own
   copied `governance/`, which `compass policy show` does not print but
@@ -102,7 +102,7 @@ force; if it is still a spike, leave the marker in place.
     into the manifest's `assessment:` block; that block is the judgement only.
 
 2. **Read the four dimensions - this is the judgement** - risk, familiarity,
-   size, goal & role, plus the `labels:` domain tags. Each gets a value and a
+   size and goal, plus the `labels:` domain tags. Each gets a value and a
    one-line justification. If a value cannot be justified, ask the user
    rather than guessing. When size is unsure, estimate *up*. Note:
    **exploration goal** - "I cannot state this well enough to deliver it
@@ -110,14 +110,23 @@ force; if it is still a spike, leave the marker in place.
    a hotfix. Write these into the manifest's `assessment:` block. The assessment
    is the only part of the computation that is judgement - everything below
    is mechanism.
-3. **Compute the delivery approach - this is the mechanism.** Run
+3. **Compute the delivery approach - this is the mechanism.** First run
+   `compass approach evaluate --issue <slug>` without `--write`. When the
+   approach it prints owes an `intent` (regular at `lightweight`, full at
+   `thorough`) and the issue has none, draft the intent before the write, so
+   the artifact rule RP-ART-002 sees it on disk: write
+   `docs/compass/<created>-<slug>/intent.md` from the issue description,
+   under the headings `compass issue template show intent --depth <depth>`
+   prints, with one `- INT-n: <outcome>` line for each outcome, and register
+   it with `compass issue artifact set intent --status draft --path <that
+   path>`. The spec author corrects it at define. Then run
    `compass approach evaluate --issue <slug> --write --justify
    <dimension>="<why>"` with one `--justify` for each assessed dimension (a
    changed value on a re-run needs a new one; an unchanged value keeps its
    line). The CLI records them under the manifest's `justifications:` key
    and refuses a new or changed value that has none. It applies
    the routing rules in force to the assessment: it composes the first approach,
-   applies the floors, caps, immovable gates, and blocking role rules, and
+   applies the floors, caps, immovable gates, and blocking artifact rules, and
    folds the resulting `delivery_approach`, `stages`, `gates` (status
    pending), `subtask_ceiling`, and `policy_rules_fired` back into
    `manifest.yml`. Breakdown records the orchestration later. You
@@ -141,14 +150,11 @@ force; if it is still a spike, leave the marker in place.
    `delivery-approach.md` is the human-readable version of what `manifest.yml`
    records mechanically.
 
-   When the computed approach registers an `intent` entry with no path, as the
-   regular approach does at depth `lightweight`, draft the intent too. Run
-   `compass issue artifact-path intent` for its home, write the file there
-   from the issue description, under the headings
-   `compass issue template show intent --depth <depth>` prints for the
-   registered depth, with one `- INT-n: <outcome>` line for each outcome, and
-   register it with `compass issue artifact set intent --status draft --path <home>`.
-   The spec author corrects it at define.
+   Arriving from `compass quick-fix start`, the approach was written before
+   any intent existed. When it owes one, draft and register it as step 3
+   says, then run `compass approach evaluate --issue <slug> --write` again so
+   RP-ART-002 applies.
+
 5. **Set the `.compass/current-task` pointer** with `compass issue use
    <slug>`, so every later `compass` call resolves to this issue without an
    `--issue` flag, and another session working on another issue is told

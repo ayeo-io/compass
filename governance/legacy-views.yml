@@ -4,7 +4,7 @@
 # It goes with the views at 7.0.0.
 schema: 1
 routing_policy:
-  version: 2.23.0
+  version: 3.0.0
   default_route: regular
   generated_rules: [RP-SHAPE-FALLBACK]
   autonomy_checkpoints:
@@ -16,10 +16,11 @@ routing_policy:
     RP-LOOP-003: [id, ceiling, when, limit, rationale]
     RP-ADV-001: [id, strategy, when, rationale]
     RP-ADV-002: [id, strategy, when, rationale]
-  legacy_values:
-    RP-ROLE-001: {require_artifact: launch-readiness.md, block_phase: land}
-    RP-ROLE-002: {require_artifact: intent.md}
-    RP-SROLE-001: {suggest_artifact: ui-contract.md}
+  legacy_values: {}
+  retired_rules:
+    RP-ROLE-001: {replaced_by: RP-ART-001, retired_in: 7.0.0}
+    RP-ROLE-002: {replaced_by: RP-ART-002, retired_in: 7.0.0}
+    RP-SROLE-001: {replaced_by: null, retired_in: 7.0.0}
 guardrails:
   version: 1.32.0
   project: []

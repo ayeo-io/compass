@@ -177,21 +177,22 @@ rules:
         then: {gate: verify.traceability}
         rationale: Protects the audit trail - code -> criterion -> intent stays intact.
     locked: true
-  role_rules:
-    kind: role-rules
+  artifact_rules:
+    kind: artifact-rules
     hit: {require_artifact: collect, gate: collect, block_phase: collect}
     rules:
-      RP-ROLE-001:
+      RP-ART-001:
         order: 1
-        when: {role: product-marketer}
+        when:
+          artifacts_any: [positioning]
         then: {require_artifact: launch-readiness, gate: verify.claims, block_phase: ship, until: every
             claim in positioning.md traces to a passing scenario}
         rationale: A launch claim with no backing scenario must not ship.
-      RP-ROLE-002:
+      RP-ART-002:
         order: 2
-        when: {role: product-owner}
-        then: {require_artifact: intent, block_phase: plan, until: the spec has been checked against intent.md
-            for intent fidelity}
+        when:
+          artifacts_any: [intent]
+        then: {block_phase: plan, until: the spec has been checked against intent.md for intent fidelity}
         rationale: Built-the-thing-right and built-the-right-thing are different checks.
   advisory:
     kind: advisory
@@ -217,15 +218,6 @@ rules:
         rationale: 'Unmapped ground on a small change - before editing, write a test that pins what the
           code does now where the change touches it, so the change cannot break behaviour nobody wrote
           down. Advice, not a floor: a larger, riskier or domain-labelled unmapped change meets RP-FLOOR-002.'
-  role_defaults:
-    kind: advisory
-    hit: {suggest_artifact: collect}
-    rules:
-      RP-SROLE-001:
-        order: 1
-        when: {role: designer}
-        then: {suggest_artifact: ui-contract}
-        rationale: A new user-facing surface usually wants a UI contract.
   biases:
     kind: biases
     hit: {}
@@ -233,8 +225,6 @@ rules:
       RP-BIAS-001: {order: 1, rationale: 'When size is genuinely unclear, estimate up - it is cheaper
           to collapse a stage that turned out easy than to discover mid-implementation that the approach
           was too light.'}
-      RP-BIAS-002: {order: 2, rationale: 'A non-engineering role in play usually pulls the delivery approach
-          heavier, because it adds artifacts and assessed strategies - but this is a bias, not a floor.'}
-      RP-BIAS-003: {order: 3, rationale: Prefer the lightest delivery approach that still clears every
+      RP-BIAS-002: {order: 2, rationale: Prefer the lightest delivery approach that still clears every
           routing guardrail and the applicable gates. Process weight is a cost; spend it where it buys
           safety.}

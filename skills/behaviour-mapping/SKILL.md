@@ -34,6 +34,8 @@ These go into `acceptance-criteria.md` marked as baseline scenarios. They become
 2. **Find the interfaces.** Identify the inputs and outputs of the bounded surface -
    the function signatures, the endpoints, the events, the stored state. These
    are where your `When` and `Then` will attach.
+   A new user-facing surface usually wants a `ui-contract.md`, from
+   `/compass:design`.
 3. **Read behaviour, not intent.** Trace what the code actually does for each
    input class. Resist writing what you think it *should* do - that is the new
    spec's job, and conflating them is the central behaviour mapping mistake.

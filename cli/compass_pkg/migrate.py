@@ -13,7 +13,7 @@ import re
 
 import yaml
 
-from compass_pkg import migrate_kinds
+from compass_pkg import migrate_kinds, retired
 from compass_pkg.core import COMPASS_SCHEMA_VERSION, CompassError, docs_dir, manifest_path, normalize_spine, prepare_manifest_write
 
 # v1 filename -> v2 filename, applied inside each issue directory.
@@ -311,6 +311,29 @@ def _print_open_items(open_items):
         print("  - %s" % line)
 
 
+def _unread_fields(task_dir):
+    """The manifest fields of one issue that no command reads any more. The
+    migrate keeps them: the manifest is a record, and a field nothing reads
+    loses nothing by staying (ADR-070)."""
+    try:
+        raw = _read_manifest(task_dir)[1]
+    except Exception:                               # noqa: BLE001 - reported elsewhere
+        return []
+    assessment = raw.get("assessment") if isinstance(raw, dict) else None
+    return [f"assessment.{name}" for name in retired.DIMENSIONS
+            if isinstance(assessment, dict) and name in assessment]
+
+
+def _print_unread(unread):
+    if not unread:
+        return
+    print()
+    print("compass issue migrate: %d field(s) no longer read, kept as they are (%s):"
+          % (len(unread), retired.NOT_READ))
+    for slug, field in unread:
+        print(f"  {slug}: {field}")
+
+
 def cmd_migrate(args):
     """`compass issue migrate [root]` - dry-run by default; --apply makes the changes.
 
@@ -390,10 +413,13 @@ def cmd_migrate(args):
         if notes:
             changed[entry] = notes
 
+    unread = [(entry, field) for entry in dirs
+              for field in _unread_fields(os.path.join(root, entry))]
     if not changed and not failed and not collided:
         print("compass issue migrate: nothing to do - every issue directory "
               "already speaks schema %s." % COMPASS_SCHEMA_VERSION)
         _print_open_items(open_items)
+        _print_unread(unread)
         return 0
 
     if changed:
@@ -412,6 +438,7 @@ def cmd_migrate(args):
             print(line)
 
     _print_open_items(open_items)
+    _print_unread(unread)
 
     if collided:
         print()

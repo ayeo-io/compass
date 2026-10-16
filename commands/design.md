@@ -65,7 +65,8 @@ what `/compass:init` offers separately.
 runs, it folds the UI contract scenarios into `acceptance-criteria.md` -
 they become acceptance checks and seed the TDD cycle like any other
 scenario. Because the contract is already Given/When/Then, spec-author
-copies them without rewriting.
+copies them without rewriting. The design role is a perspective; it does not
+change the assessment.
 
 ## Gate
 

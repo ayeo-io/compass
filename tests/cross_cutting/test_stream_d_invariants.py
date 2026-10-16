@@ -186,19 +186,22 @@ def test_trc_d3_no_tier_ladder_in_routing_policy():
         assert forbidden not in text, (
             f"routing-policy.yml must not introduce '{forbidden}' - would be a tier-ladder"
         )
-    # Reading vocabulary keys are unchanged (the four dimensions + urgency + role)
+    # Reading vocabulary keys: the dimensions + urgency. Role left the
+    # assessment at 7.0.0 (ADR-070); nothing took its place.
     policy = yaml.safe_load(text)
     vocab = policy.get("assessment_vocabulary", {})
-    expected_dims = {"risk", "familiarity", "size", "goal", "urgency", "role"}
-    assert expected_dims.issubset(set(vocab.keys())), (
-        f"assessment_vocabulary must contain {expected_dims}; got {set(vocab.keys())}"
+    expected_dims = {"risk", "familiarity", "size", "goal", "urgency", "labels_common"}
+    assert set(vocab.keys()) == expected_dims, (
+        f"assessment_vocabulary must be {expected_dims}; got {set(vocab.keys())}"
     )
 
 
 # ---------------------------------------------------------------------------
 # The five roles are unchanged; no new agent persona was added (`TRC-D4`)
-# Source-of-truth: agents/*.md and governance/routing-policy.yml's role
-# enum. The agent count cannot grow, and the role enum stays at five.
+# Source-of-truth: agents/*.md and the perspectives a document's owner may
+# name. The agent count cannot grow, and the five roles stay the
+# perspectives a session consults; they left the assessment at 7.0.0
+# (ADR-070).
 # ---------------------------------------------------------------------------
 PRE_TASK_AGENT_FILES = {
     "spec-author.md", "planner.md", "builder.md", "orchestrator.md",
@@ -220,13 +223,11 @@ def test_trc_d4_no_new_agent_persona_no_new_role():
     assert not new_agents, (
         f"no new role/lens agent file may be added by this task; observed new: {new_agents}"
     )
-    # Role enum unchanged
-    policy = yaml.safe_load(
-        (ROOT / "governance" / "routing-policy.yml").read_text(encoding="utf-8")
-    )
-    actual_roles = set(policy["assessment_vocabulary"]["role"])
+    # The five roles stay the perspectives a document may be owned by
+    from compass_pkg import policy_lint
+    actual_roles = set(policy_lint.PERSPECTIVES)
     assert actual_roles == EXPECTED_ROLES, (
-        f"the role enum must remain {EXPECTED_ROLES}; got {actual_roles}"
+        f"the perspectives must remain {EXPECTED_ROLES}; got {actual_roles}"
     )
 
 

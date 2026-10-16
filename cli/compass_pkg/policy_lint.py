@@ -20,7 +20,7 @@ both.
 """
 # DEPENDENCY: standard library (dataclasses, datetime, json, os, re);
 # compass_pkg.atomic_io, catalogue_check, catalogue_spec, check_registry,
-# layers, locks, merge, waivers, word_map, core (CompassError, FRAMEWORK_ROOT).
+# documents_present, layers, locks, merge, retired, waivers, word_map, core.
 from __future__ import annotations
 
 import datetime
@@ -29,9 +29,10 @@ import os
 import re
 from dataclasses import dataclass, field
 
-from compass_pkg import catalogue_check, layers, locks, merge, parent_states, parents, waivers
+from compass_pkg import catalogue_check, documents_present, layers, locks
+from compass_pkg import merge, parent_states, parents, waivers
 from compass_pkg import catalogue_spec as spec
-from compass_pkg import word_map
+from compass_pkg import retired, word_map
 from compass_pkg.atomic_io import StrictYamlError, load_yaml_strict
 from compass_pkg.check_registry import READINESS, REGISTRY, REMOVED
 from compass_pkg.core import FRAMEWORK_ROOT, CompassError
@@ -52,7 +53,7 @@ FINDING_CODES = (
     "M-REF-UNKNOWN", "M-WEIGHT-TIE", "M-HIT-MISSING", "M-HIT-DISALLOWED", "M-CYCLE",
     "M-BOOKKEEPING-INPUT", "M-DIRECTORY-DEPENDENCY",
     "M-EFFECT-UNKNOWN", "M-LIST-KIND-UNEVALUATED", "M-FIELD-SHAPE", "M-READINESS-IMPL",
-    "M-READINESS-PARAM",
+    "M-READINESS-PARAM", "M-WHEN-RETIRED", "M-WHEN-DOCUMENTS",
     "K-LOCK-REFUSED", "K-UNLOCK-REFUSED", "K-UNPROVABLE",
     "E-EVALUATION",
     "C-LOOSENING", "C-INCOMPARABLE", "V-VOCABULARY-CHANGE",
@@ -217,7 +218,7 @@ def _parent_state(out, root, found):
 
 
 def load_layers(root, *, file=None, manifest=None, cwd=None, read_project=True,
-                fetch=False):
+                fetch=False, task_dir=None):
     """The chain for a project. `file` lints one `compass.yml` over the
     shipped parent instead of the project's own. `manifest` is a parsed issue
     manifest, whose `config:` is the issue layer and whose `evidence:` is the
@@ -257,6 +258,10 @@ def load_layers(root, *, file=None, manifest=None, cwd=None, read_project=True,
         out.registry = tuple(manifest.get("evidence") or ())
         assessment = manifest.get("assessment")
         out.assessment = dict(assessment) if isinstance(assessment, dict) else None
+        if out.assessment is not None and task_dir:     # its documents, as evaluated (ADR-070)
+            docs = [d.doc for d in (parent, *[g.layer for g in out.git_parents],
+                                    out.project, out.issue) if d]
+            out.assessment = documents_present.with_presence(out.assessment, task_dir, docs)
     return out
 
 
@@ -529,10 +534,16 @@ def _effect_targets(state):
     return out
 
 
+#: The perspectives that can own a document besides the shipped agents (ADR-070).
+PERSPECTIVES = ("engineer", "product-owner", "product-marketer", "designer", "qa")
+
+
 def _agents_and_roles(config):
-    """The ids an artifact's `owner` may name: the agents the framework ships
-    and the values of the `role` dimension."""
-    owners = set(((config.get("dimensions") or {}).get("role") or {}).get("values") or [])
+    """The ids an artifact's `owner` may name: the agents the framework ships,
+    the fixed perspectives, and the values of a `role` dimension a project
+    still declares."""
+    owners = set(PERSPECTIVES) | set(
+        ((config.get("dimensions") or {}).get("role") or {}).get("values") or [])
     folder = os.path.join(FRAMEWORK_ROOT, "agents")
     if os.path.isdir(folder):
         owners |= {name[:-3] for name in os.listdir(folder) if name.endswith(".md")}
@@ -666,6 +677,8 @@ def _readiness_findings(state):
 
 def _resolved_group(state):
     out = _unknown_references(state) + _effect_targets(state) + _list_kinds(state)
+    out += [_finding("resolved", code, _layer_of(state, path), path, message)
+            for code, path, message in retired.condition_findings(state["config"])]
     out += _readiness_findings(state)
     out += _weight_ties(state) + _hit_policies(state)
     out += [_finding("resolved", code, _layer_of(state, path), path, message)

@@ -1300,8 +1300,6 @@ _register(Rule(
         Exemption("approaches/quick-fix.md",
                    "One review point, at Verify, clearing three gates",
                    "names the Verify stage, not the verb."),
-        Exemption("approaches/rubric.md", "Owns the Verify gate",
-                   "names the Verify gate, not the verb."),
         Exemption("approaches/spike.md", "| Verify | **= Conclude.**",
                    "names the Verify stage, not the verb."),
         Exemption("architecture/ownership.md", "(verify → ship gate)",
@@ -1586,10 +1584,10 @@ _register(Rule(
                    "RP-REQUIRE is an id prefix, not the verb; a quote of "
                    "the CLI's actual printed output."),
         Exemption("governance/terminology.yml",
-                   "the result. RP-REQUIRE attaches a gate",
+                   "or intent.md. RP-REQUIRE attaches a gate",
                    "RP-REQUIRE is an id prefix, not the verb."),
         Exemption("docs/glossary.md",
-                   "the result. RP-REQUIRE attaches a gate",
+                   "or intent.md. RP-REQUIRE attaches a gate",
                    "the derived text of the same terminology.yml line - "
                    "RP-REQUIRE is an id prefix, not the verb the word table "
                    "retires."),

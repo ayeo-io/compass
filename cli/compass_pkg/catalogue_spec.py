@@ -300,6 +300,9 @@ APPROVER_KINDS = ("issue-waiver", "project-waiver")
 
 # The classifier compares at most this many named set values (ADR-037).
 LABEL_CAP = 8
+#: The most document kinds the classifier crosses; the shipped default names two
+#: (ADR-070). Each doubles the grid, as a label does, so it has a cap of its own.
+DOCUMENT_CAP = 4
 
 # Named switches for new blocking behaviour, off in the shipped default.
 CAPABILITIES = ("entry-exit-evaluation", "artifact-freshness")
@@ -428,8 +431,9 @@ FIELD_DESCRIPTIONS = {
                        "stages at which a session waits for a person.",
     },
     "rules": {
-        "kind": "What the rule set does. The shipped kinds are `shapes`, `floors`, `caps`, "
-                "`ceilings`, `immovable-gates`, `role-rules`, `advisory` and `biases`.",
+        "kind": "What the rule set does: the shipped kinds are `shapes`, `floors`, `caps`, "
+                "`ceilings`, `immovable-gates`, `artifact-rules`, `advisory` and `biases`. "
+                "A stored 6.x generation can also hold `role-rules`.",
         "hit": "How matching rules combine, per effect: `first` stops at the first match, `max` "
                "and `min` take the highest or lowest value, and `collect` gathers every match. "
                "Each effect allows only some of these.",

@@ -318,7 +318,7 @@ def _api(name):
 def _assessment(**kw):
     base = {"risk": "contained", "familiarity": "brownfield-mapped",
             "size": "medium", "goal": "delivery", "urgency": "none",
-            "role": "engineer", "labels": []}
+            "labels": []}
     base.update(kw)
     return base
 
@@ -368,8 +368,8 @@ def test_ob_3_the_facts_equal_the_evaluators_answers(preset_config):
         _assessment(),
         _assessment(risk="critical", size="large", labels=["auth", "migrations"]),
         _assessment(size="atomic", risk="trivial", urgency="live-defect"),
-        _assessment(role="product-marketer"),
-        _assessment(role="product-owner", familiarity="brownfield-unmapped"),
+        _assessment(artifacts=["positioning"]),
+        _assessment(artifacts=["intent"], familiarity="brownfield-unmapped"),
         _assessment(goal="exploration", size="small", risk="trivial"),
     ]
     for case in cases:
@@ -513,10 +513,10 @@ def test_ob_3_the_checks_an_artifact_adds_are_listed(preset_config):
 
 def test_ob_3_required_artifacts_equal_the_evaluators_answer(preset_config):
     adapted = _api("policy_adapter")(preset_config)
-    for role, expected in (("product-owner", ("intent",)),
-                           ("product-marketer", ("launch-readiness",)),
-                           ("engineer", ())):
-        case = _assessment(role=role)
+    for artifacts, expected in ((["intent"], ()),
+                                (["positioning"], ("launch-readiness",)),
+                                ([], ())):
+        case = _assessment(artifacts=artifacts)
         got = _api("obligations")(preset_config, case)
         legacy = evaluate_route(case, adapted)["required_artifacts"]
         assert got.required_artifacts == tuple(sorted(
@@ -525,10 +525,10 @@ def test_ob_3_required_artifacts_equal_the_evaluators_answer(preset_config):
 
 def test_ob_3_a_legacy_document_name_with_a_suffix_is_its_id(preset_config):
     config = copy.deepcopy(preset_config)
-    config["rules"]["role_rules"]["rules"]["RP-ROLE-002"]["then"][
-        "require_artifact"] = "intent.md"
-    got = _api("obligations")(config, _assessment(role="product-owner"))
-    assert got.required_artifacts == ("intent",)
+    config["rules"]["artifact_rules"]["rules"]["RP-ART-001"]["then"][
+        "require_artifact"] = "launch-readiness.md"
+    got = _api("obligations")(config, _assessment(artifacts=["positioning"]))
+    assert got.required_artifacts == ("launch-readiness",)
 
 
 def test_ob_3_the_replays_spelling_follows_cores_tables_and_the_adapters_rule(
@@ -932,8 +932,8 @@ def test_ob_5_a_skipped_stage_still_lists_its_active_checks(preset_config):
 def test_ob_5_a_retired_stage_name_in_a_policy_is_read_as_the_current_one(
         preset_config):
     config = copy.deepcopy(preset_config)
-    config["rules"]["role_rules"]["rules"]["RP-ROLE-001"]["then"]["block_phase"] = "land"
-    got = _owed(config, _assessment(role="product-marketer"))
+    config["rules"]["artifact_rules"]["rules"]["RP-ART-001"]["then"]["block_phase"] = "land"
+    got = _owed(config, _assessment(artifacts=["positioning"]))
     assert got.blocked_stages == ("ship",)
 
 

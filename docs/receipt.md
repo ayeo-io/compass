@@ -26,7 +26,7 @@ Assessment
   risk            contained               the canonical fixture risk justification
   familiarity     brownfield-mapped       the canonical fixture familiarity justification
   size            medium                  the canonical fixture size justification
-  goal            delivery (engineer)     the canonical fixture goal justification
+  goal            delivery                the canonical fixture goal justification
   labels          public-api
   Repository readiness: not measured (no record: run `compass readiness`)
 

@@ -23,7 +23,7 @@ Reads each scenario asking: *does this deliver the outcome in `intent.md`?*
   it. A signal with no scenario is a gap; a scenario that solves the literal
   request but misses the outcome is drift.
 - Enters *upstream* of the spec - `intent.md` exists before the scenarios - and
-  gates the plan stage: per the routing policy's blocking `role_rules`, the spec must be
+  gates the plan stage: per the routing policy's blocking artifact rule (RP-ART-002), the spec must be
   checked against `intent.md` before the plan stage starts. Applied by the `product-owner`
   agent.
 
@@ -33,7 +33,7 @@ scenario exists and passes?*
 - Every line of launch copy in `positioning.md` must point at a backing
   scenario. `launch-readiness.md` is the ledger: claim → scenario → status.
 - Works *parallel* to the spec and gates shipping - `verify.claims` is a
-  blocking role gate; no claim ships on a missing, red, or skipped scenario. Applied by the
+  blocking gate, added when `positioning.md` is present; no claim ships on a missing, red, or skipped scenario. Applied by the
   `product-marketer` agent.
 
 ### Engineer - the **tests** perspective
@@ -87,14 +87,13 @@ moments for it:
 
 ## How a non-engineering role enters the pipeline
 
-A role is not a consultation; it is an entry point that *changes the delivery
-approach*.
+A role is a perspective a session consults. It is not an assessment dimension.
 When `/compass:intent`, `/compass:position`, or `/compass:design` opens a
-session - or `/compass:consult` convenes several - the assess stage reads the role
-as the fourth dimension. A non-engineering role almost always pulls the delivery approach
-heavier: it adds artifacts (`intent.md`, `positioning.md`, `ui-contract.md`) and
-gates (the intent check, the claims gate). That weight is the framework working
-as designed, not overhead to trim.
+session - or `/compass:consult` convenes several - the session writes the
+role's document (`intent.md`, `positioning.md`, `ui-contract.md`). The
+documents on disk bring the gates: `intent.md` adds the intent check and
+`positioning.md` adds the claims gate. Re-assess an assessed issue after
+writing one. That weight is the framework working as designed, not overhead to trim.
 
 ## Anti-patterns
 

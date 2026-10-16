@@ -29,7 +29,8 @@ change shape in the catalogue itself:
   which the design records and does not enforce.
 """
 # DEPENDENCY: PyYAML (bundled); compass_pkg.core, compass_pkg.routing,
-# compass_pkg.catalogue_spec, compass_pkg.stable_ids, compass_pkg.artifact_kinds.
+# compass_pkg.catalogue_spec, compass_pkg.stable_ids, compass_pkg.artifact_kinds,
+# compass_pkg.retired.
 from __future__ import annotations
 
 import copy
@@ -37,7 +38,7 @@ import os
 
 import yaml
 
-from compass_pkg import artifact_kinds, core, stable_ids, word_map
+from compass_pkg import artifact_kinds, core, retired, stable_ids, word_map
 from compass_pkg.catalogue_spec import CAPABILITIES
 from compass_pkg.routing import canonical_routes
 from compass_pkg.stable_ids import (APPROACH_REGULAR, APPROACH_SPIKE, GATE_G5, GATE_SPIKE_CONCLUDE, STAGE_ASSESS,
@@ -318,9 +319,17 @@ def _rules(policy, notes):
     out["loop_ceilings"] = _rule_set("ceilings", converted(guard.get("loop_ceilings")))
     out["immovable_gates"] = _rule_set(
         "immovable-gates", converted(guard.get("immovable_gates")), locked=True)
-    out["role_rules"] = _rule_set("role-rules", converted(guard.get("role_rules")))
+    # A 7.0.0 policy holds `artifact_rules`; a 6.x copy holds `role_rules` and
+    # `role_defaults`, which convert as they always did (ADR-070). A block the
+    # policy does not hold makes no rule set.
+    if "artifact_rules" in guard or "role_rules" not in guard:
+        out["artifact_rules"] = _rule_set("artifact-rules",
+                                          converted(guard.get("artifact_rules")))
+    if "role_rules" in guard:
+        out["role_rules"] = _rule_set("role-rules", converted(guard.get("role_rules")))
     out["advisory"] = _rule_set("advisory", converted(strategies.get("advisory_strategies")))
-    out["role_defaults"] = _rule_set("advisory", converted(strategies.get("role_defaults")))
+    if "role_defaults" in strategies:
+        out["role_defaults"] = _rule_set("advisory", converted(strategies.get("role_defaults")))
     out["biases"] = _rule_set("biases", [
         (f"RP-BIAS-{i:03d}", None, {}, {"rationale": str(text)})
         for i, text in enumerate(strategies.get("biases") or [], start=1)])
@@ -573,6 +582,10 @@ def _convert(policy, guardrails):
             "when_keys": notes.policy_when,
             "rule_key_order": notes.rule_key_order,
             "legacy_values": notes.legacy_values,
+            # The rule ids 7.0.0 removed and what replaces each, for `policy
+            # migrate`, the merge and the rewrite tool (ADR-070).
+            "retired_rules": {rule_id: {"replaced_by": new, "retired_in": retired.RELEASE}
+                              for rule_id, new in retired.RULES.items()},
         },
         "guardrails": {
             "version": guardrails.get("version"),

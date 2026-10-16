@@ -269,9 +269,9 @@ runtime. Everything below them is reused unchanged.
 ## Five roles, one pipeline
 
 Five roles, four of them non-engineering, each with its own entry point and
-artifacts: engineer, product owner, designer, product marketer and QA. A
-non-engineering entry point changes the delivery approach rather than adding a
-consultation - see the [roles guide](docs/roles-guide.md).
+artifacts: engineer, product owner, designer, product marketer and QA. A role
+is a perspective a session consults. It does not change the assessment. The
+documents on disk bring the gates - see the [roles guide](docs/roles-guide.md).
 
 ## What Compass runs, sends and fetches
 

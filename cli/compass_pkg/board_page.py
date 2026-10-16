@@ -153,7 +153,7 @@ def _card(r, n):
         " " + edge if edge else "", n, "".join(parts))
 
 
-_DIMENSIONS = ("risk", "familiarity", "size", "goal", "role")
+_DIMENSIONS = ("risk", "familiarity", "size", "goal")
 
 
 def _assessment_block(r):

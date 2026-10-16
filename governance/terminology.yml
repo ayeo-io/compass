@@ -851,8 +851,9 @@ codes:
     means: >
       Routing policy rule. One rule in routing-policy.yml that biases or
       constrains the computed delivery approach. RP-SHAPE and RP-ADV are
-      soft - they bias the candidate. RP-FLOOR, RP-CAP, RP-GATE and RP-ROLE
-      are hard - they constrain the result. RP-REQUIRE attaches a gate
+      soft - they bias the candidate. RP-FLOOR, RP-CAP, RP-GATE and RP-ART
+      are hard - they constrain the result. RP-ART is an artifact rule: it reads
+      the documents on disk, such as positioning.md or intent.md. RP-REQUIRE attaches a gate
       without raising a minimum. A routing rule constrains which delivery
       approach an issue ends up with; a guardrail is one of the five hard
       rules cleared with evidence.

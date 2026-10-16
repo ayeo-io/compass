@@ -55,22 +55,22 @@ When unsure, the assess stage estimates *up* - it is cheaper to collapse a
 stage that turned out easy than to discover mid-implementation that the
 approach was too light.
 
-### Goal and role - *who is invoking, and what outcome are they after?*
+### Goal - *what outcome are they after?*
 
-| Value | Entry point | What it changes |
-|---|---|---|
-| `engineer` | `/compass:assess` | Standard pipeline ownership. |
-| `product-owner` | `/compass:intent` | Adds `intent.md` upstream of the spec; inserts the intent-fidelity gate before Plan. |
-| `product-marketer` | `/compass:position` | Adds `positioning.md` / `launch-readiness.md`; blocks shipping on the claims gate. |
-| `designer` | `/compass:design` | Adds `ui-contract.md`; UI contracts enter the define stage as scenarios. |
-| `qa` | joins at `/compass:verify` | Owns the Verify gate; can send an issue back to define if scenarios are uncoverable. |
+Goal is `delivery` or `exploration`. Role is not an assessment dimension. The
+product owner, product marketer, designer and QA are perspectives a session
+consults. The documents on disk bring the gates:
+
+| Document present | What it changes |
+|---|---|
+| `intent.md` | Blocks Plan until the spec is checked against it (the intent-fidelity gate). |
+| `positioning.md` | Adds `launch-readiness.md` and the claims gate; blocks shipping until every claim traces to a passing scenario. |
 
 Intent is also *the actual outcome wanted*, not just the literal request. "Add
-a CSV export" invoked by a product owner whose `intent.md` says "let finance
-self-serve" may need more than a button. Assess reads `intent.md` if one
-exists.
+a CSV export" with an `intent.md` that says "let finance self-serve" may need
+more than a button. Assess reads `intent.md` if one exists.
 
-One goal value is not a role: **exploration** - "I cannot frame this well
+One goal value is **exploration** - "I cannot frame this well
 enough to deliver it yet." An `exploration` goal composes towards the **Spike**
 approach (see `approaches/spike.md`), the way live-defect urgency composes towards
 Hotfix. Assess still scores all four dimensions; the goal is what selects
@@ -91,7 +91,7 @@ Each assessed dimension needs a `--justify` when its value is new or changed.
 It applies the routing rules in force (the shipped default preset plus the
 project's `compass.yml`) to the assessment you just recorded - composing the
 candidate shape, then applying the floors, caps, immovable gates and blocking
-role rules - and folds the result back into the manifest. Same assessment plus
+artifact rules - and folds the result back into the manifest. Same assessment plus
 same configuration gives the same approach, every time.
 
 `approaches/composition-reference.md` has the detail, for tuning the policy

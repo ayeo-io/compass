@@ -985,7 +985,7 @@ def test_pd_8_the_command_prints_the_documented_shape_and_no_path(looser_run):
     assert _key_tree(document["open"]["waivers"]) == _key_tree(example["open"]["waivers"])
     assert str(root) not in json.dumps(document)
     assert [s["name"] for s in document["replay"]["sets"]] == ["grid", "labels", "archive"]
-    assert document["replay"]["sets"][0]["replayed"] == 288
+    assert document["replay"]["sets"][0]["replayed"] == 72
     # The issue that holds the waiver already runs at the looser value, so only
     # the issue with no layer changes.
     assert [i["issue"] for i in document["open"]["issues"]] == ["plain-issue"]
@@ -1059,8 +1059,10 @@ def test_pd_9_the_command_prints_the_same_lines(looser_text):
     code, out, _ = looser_text
     assert out.splitlines()[0] == "compass policy diff: default@6 -> project"
     assert "classification: loosening" in out
-    assert "  grid: 288 replayed, 144 changed" in out
-    assert "  labels: 4320 replayed, 2160 changed" in out
+    # 72 closed points; the labels set crosses four labels and the two
+    # documents the artifact rules read (ADR-070).
+    assert "  grid: 72 replayed, 36 changed" in out
+    assert "  labels: 4536 replayed, 2268 changed" in out
     assert "  archive: 3 replayed, 3 changed" in out
     assert 'severity: "blocking" -> "advisory"' in out
     assert "--json lists every one" in out

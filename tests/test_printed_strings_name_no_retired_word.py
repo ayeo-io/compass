@@ -72,16 +72,16 @@ def _word(name):
 
 
 def test_approach_evaluate_default_view_names_ship_not_land(run_cli):
-    """`RP-ROLE-001` blocks a stage until a claim traces to a scenario. The
-    policy's own key for that stage is still the retired `land` - the
-    default view must not print it raw."""
+    """`RP-ART-001` blocks a stage until a claim traces to a scenario. A 6.x
+    copy of the policy keys that stage as the retired `land` - the default
+    view must not print it raw."""
     r = run_cli(
         "approach", "evaluate",
         "--assessment", "risk=contained",
         "--assessment", "familiarity=brownfield-mapped",
         "--assessment", "size=small",
         "--assessment", "goal=delivery",
-        "--assessment", "role=product-marketer",
+        "--assessment", "artifacts=positioning",
         "--assessment", "labels=auth",
     )
     assert r.returncode == 0, r
@@ -103,7 +103,7 @@ def test_approach_evaluate_verbose_names_ship_not_land(run_cli):
         "--assessment", "familiarity=brownfield-mapped",
         "--assessment", "size=small",
         "--assessment", "goal=delivery",
-        "--assessment", "role=product-marketer",
+        "--assessment", "artifacts=positioning",
         "--assessment", "labels=auth",
     )
     assert r.returncode == 0, r

@@ -5,8 +5,8 @@ to the spec, not downstream of it. Every claim must point at the scenario id
 in acceptance-criteria.md that backs it - that is the claim→scenario
 half of the traceability guardrail. The voice & positioning
 strategies in governance/strategies.md govern how it is said. Unbacked
-claims are resolved at ship time via launch-readiness.md; the marketer role_rule
-blocks shipping until they are.
+claims are resolved at ship time via launch-readiness.md; the artifact rule
+RP-ART-001 blocks shipping until they are.
 
 Fill every {{PLACEHOLDER}}. Leave the "backing scenario" slot blank if no
 scenario backs the claim yet - an empty slot is a visible gap, which is

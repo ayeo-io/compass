@@ -26,7 +26,7 @@ import json
 from dataclasses import dataclass, field
 
 from compass_pkg import obligations
-from compass_pkg.catalogue_spec import (ARTIFACT_DEPTHS, CEILING_DIRECTIONS, LABEL_CAP,
+from compass_pkg.catalogue_spec import (ARTIFACT_DEPTHS, CEILING_DIRECTIONS, DOCUMENT_CAP, LABEL_CAP,
                                         OBLIGATION_FIELDS, ON_SKIPPED, SEVERITIES)
 from compass_pkg.catalogue_spec import TIGHTER as DIRECTIONS
 from compass_pkg.core import WHEN_KEY_MAP, CompassError, reading_matches
@@ -66,7 +66,13 @@ JSON_SCHEMA_VERSION = 1
 # identity, as `required_when` is, for a kind both sides owe, so a change to a
 # document's word limit is `incomparable`, which version 7 read as `equivalent`
 # (ADR-067).
-CLASSIFIER_VERSION = 8
+#
+# Version 9: a point carries the documents on disk (`artifacts`) as well as
+# labels, crossed over the kinds an `artifacts_any` condition names, so a
+# configuration that drops an artifact rule is a loosening (ADR-070), which
+# version 8 could not see. Version 7 was never released: this change held it
+# before version 8 merged first.
+CLASSIFIER_VERSION = 9
 
 # Keys whose value is a condition on the assessment.
 WHEN_KEYS = ("when", "blocking_when", "applies_when")
@@ -77,8 +83,9 @@ CLOSED = ("enum", "ordered-enum")
 
 def atoms_of(when):
     """The tests one condition makes of the assessment, as the evaluator reads
-    it: `("in", dimension, values)`, `("at_least", dimension, threshold)` and
-    `("labels_any", values)`, in the order they are written."""
+    it: `("in", dimension, values)`, `("at_least", dimension, threshold)`,
+    `("labels_any", values)` and `("artifacts_any", kinds)`, in the order
+    they are written."""
     out = []
     if not isinstance(when, dict):
         return out
@@ -89,8 +96,8 @@ def atoms_of(when):
                 out.extend(atoms_of(clause))
         elif isinstance(val, dict) and "at_least" in val:
             out.append(("at_least", key, val["at_least"]))
-        elif key == "labels_any":
-            out.append(("labels_any", tuple(val if isinstance(val, list) else [val])))
+        elif key in ("labels_any", "artifacts_any"):
+            out.append((key, tuple(val if isinstance(val, list) else [val])))
         else:
             out.append(("in", key, tuple(val if isinstance(val, list) else [val])))
     return out
@@ -105,7 +112,7 @@ def collect_atoms(*documents, label_site=None):
     where `path` is the keys from the document's root to the entry that holds
     the condition (`("rules", "floors", "rules", "F-1")`). It answers whether
     the labels at that site can matter. Only the
-    `labels_any` atoms of a site it rejects are dropped: every other atom stays,
+    `labels_any` and `artifacts_any` atoms of a site it rejects are dropped: every other atom stays,
     so the classes of each dimension are the ones the full collection gives."""
     found = []
 
@@ -120,7 +127,7 @@ def collect_atoms(*documents, label_site=None):
                 if key in WHEN_KEYS and isinstance(value, dict):
                     atoms = atoms_of(value)
                     if label_site is not None and not label_site(path):
-                        atoms = [a for a in atoms if a[0] != "labels_any"]
+                        atoms = [a for a in atoms if a[0] not in ("labels_any", "artifacts_any")]
                     add(atoms)
                 else:
                     walk(value, (*path, key))
@@ -148,6 +155,7 @@ class ValueClass:
 class Grid:
     dimensions: tuple = ()          # ((name, (ValueClass, ...)), ...)
     labels: tuple = ()
+    artifacts: tuple = ()           # the document kinds the conditions name
     domain_sizes: tuple = ()        # the union domain of each dimension
     stopped: bool = False           # the cap stopped the run before a grid
     evaluated: int = 0
@@ -171,7 +179,7 @@ class Grid:
             return self.stored_points
         if self.at is not None:
             return 1
-        return self.closed_points * 2 ** len(self.labels)
+        return self.closed_points * 2 ** self.set_count
 
     @property
     def raw_points(self):
@@ -179,16 +187,46 @@ class Grid:
             return self.stored_raw_points
         if self.at is not None:
             return 1
-        return 0 if self.stopped else _product(self.domain_sizes) * 2 ** len(self.labels)
+        return 0 if self.stopped else _product(self.domain_sizes) * 2 ** self.set_count
 
     @property
     def label_count(self):
         return len(self.labels)
 
+    @property
+    def set_count(self):
+        """The named set values the grid crosses: labels and documents."""
+        return len(self.labels) + len(self.artifacts)
+
     def label_subsets(self):
         """Every subset of the named labels, by size and then name."""
         return [combo for size in range(len(self.labels) + 1)
                 for combo in itertools.combinations(self.labels, size)]
+
+    def over_cap(self):
+        """Why the grid is too large to scan, or "": more than eight named
+        labels, or more than four named documents."""
+        if len(self.labels) > LABEL_CAP:
+            return (f"more than eight named set values: {len(self.labels)} "
+                    f"({', '.join(self.labels)})")
+        if len(self.artifacts) > DOCUMENT_CAP:
+            return (f"more than four named documents: {len(self.artifacts)} "
+                    f"({', '.join(self.artifacts)})")
+        return ""
+
+    def set_points(self):
+        """Every `(labels, artifacts)` pair: each subset of the named labels
+        with each subset of the named documents, labels first."""
+        documents = [combo for size in range(len(self.artifacts) + 1)
+                     for combo in itertools.combinations(self.artifacts, size)]
+        return [(labels, docs) for docs in documents for labels in self.label_subsets()]
+
+    def with_sets(self, assessment, labels, docs):
+        """`assessment` with the labels and, when the grid names any, the documents."""
+        out = dict(assessment, labels=list(labels))
+        if self.artifacts:
+            out["artifacts"] = list(docs)
+        return out
 
 
 def _product(numbers):
@@ -256,7 +294,9 @@ def build_grid(parent, child, atoms=None, exhaustive=False, parent_issue=None,
         dimensions.append((name, tuple(classes)))
     labels = tuple(sorted({label for atom in atoms if atom[0] == "labels_any"
                            for label in atom[1]}))
-    return Grid(dimensions=tuple(dimensions), labels=labels,
+    documents = tuple(sorted({kind for atom in atoms if atom[0] == "artifacts_any"
+                              for kind in atom[1]}))
+    return Grid(dimensions=tuple(dimensions), labels=labels, artifacts=documents,
                 domain_sizes=tuple(len(domains[n]) for n in names))
 
 
@@ -633,9 +673,12 @@ def _digest(*parts):
 
 
 def where(assessment):
-    shown = [f"{k} {v}" for k, v in assessment.items() if k != "labels"]
+    shown = [f"{k} {v}" for k, v in assessment.items() if k not in ("labels", "artifacts")]
     labels = assessment.get("labels") or []
     shown.append("labels " + (", ".join(labels) if labels else "none"))
+    if "artifacts" in assessment:
+        docs = assessment.get("artifacts") or []
+        shown.append("documents " + (", ".join(docs) if docs else "none"))
     return ", ".join(shown)
 
 
@@ -749,17 +792,16 @@ class Scan:
         assessment = dict(assessment)
         changes = self._changes_at(assessment)
         represents = {name: [value] for name, value in assessment.items()
-                      if name != "labels"}
+                      if name not in ("labels", "artifacts")}
         point = Point(assessment, represents, _point_outcome(changes), "", tuple(changes))
         if changes:
             point.summary = _summary(assessment, changes)
         return point
 
-    def point(self, classes, subset):
-        assessment = {name: cls.values[0]
-                      for (name, _), cls in zip(self.dimensions, classes)
-                      if cls.values[0] is not None}
-        assessment["labels"] = list(subset)
+    def point(self, classes, subset, docs=()):
+        assessment = self.grid.with_sets(
+            {name: cls.values[0] for (name, _), cls in zip(self.dimensions, classes)
+             if cls.values[0] is not None}, subset, docs)
         represents = {name: list(cls.values)
                       for (name, _), cls in zip(self.dimensions, classes)}
         one_side = [(name, cls) for (name, _), cls in zip(self.dimensions, classes)
@@ -778,18 +820,18 @@ class Scan:
 
     def run(self, on_point=None):
         """Visit every point of the grid, the dimensions first and then the
-        subsets of the labels, and call `on_point(point, scan)` after each. A
+        subsets of the labels and the documents, and call `on_point(point, scan)` after each. A
         callback that answers yes stops the scan. Returns the number of points
         visited, the one that stopped it included."""
         if self.grid.at is not None:
             if on_point is not None:
                 on_point(self.point_at(self.grid.at), self)
             return 1
-        subsets = self.grid.label_subsets()
+        subsets = self.grid.set_points()
         scanned = 0
         for classes in itertools.product(*[cs for _, cs in self.dimensions]):
-            for subset in subsets:
-                point = self.point(classes, subset)
+            for subset, docs in subsets:
+                point = self.point(classes, subset, docs)
                 scanned += 1
                 if on_point is not None and on_point(point, self):
                     return scanned
@@ -863,7 +905,8 @@ class Classification:
         if errors:
             raise CompassError(f"not a classification: {errors[0]}")
         shown = doc["grid"]
-        grid = Grid(labels=tuple(shown["labels"]), stopped=doc["scan"] == "cap",
+        grid = Grid(labels=tuple(shown["labels"]), artifacts=tuple(shown["artifacts"]),
+                    stopped=doc["scan"] == "cap",
                     evaluated=shown["evaluated"], stored_points=shown["points"],
                     stored_raw_points=shown["raw_points"])
         return cls(
@@ -891,7 +934,8 @@ class Classification:
             "complete": self.complete,
             "grid": {"labels": list(grid.labels), "label_count": grid.label_count,
                      "label_cap": LABEL_CAP, "points": grid.points,
-                     "raw_points": grid.raw_points, "evaluated": grid.evaluated},
+                     "raw_points": grid.raw_points, "evaluated": grid.evaluated,
+                     "artifacts": list(grid.artifacts)},
             "counts": {name: self.counts[name] for name in COUNT_NAMES},
             "first_looser": _point_json(self.first_looser),
             "first_tighter": _point_json(self.first_tighter),
@@ -917,12 +961,10 @@ def classify(parent, child, *, parent_capabilities=(), child_capabilities=(),
             and parent_issue == child_issue):
         return Classification("equivalent", "the configurations are identical",
                               grid, exhaustive, True, "identical", **named)
-    if len(grid.labels) > LABEL_CAP:
+    if grid.over_cap():
         grid.stopped = True
         return Classification(
-            "incomparable",
-            f"more than eight named set values: {len(grid.labels)} "
-            f"({', '.join(grid.labels)}); the grid is not sampled",
+            "incomparable", grid.over_cap() + "; the grid is not sampled",
             grid, exhaustive, False, "cap", **named)
     out = Classification(grid=grid, exhaustive=exhaustive, **named)
 
@@ -1072,7 +1114,8 @@ JSON_SHAPE = {
     "exhaustive": "boolean",
     "complete": "boolean",
     "grid": {"labels": ["string"], "label_count": "integer", "label_cap": "integer",
-             "points": "integer", "raw_points": "integer", "evaluated": "integer"},
+             "points": "integer", "raw_points": "integer", "evaluated": "integer",
+             "artifacts": ["string"]},
     "counts": {name: "integer" for name in COUNT_NAMES},
     "first_looser": ("or null", _POINT_SHAPE),
     "first_tighter": ("or null", _POINT_SHAPE),

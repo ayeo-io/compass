@@ -845,7 +845,7 @@ WHEN_KEY_MAP = {
 
 def reading_matches(when, assessment, orders=None):
     """Does a `when:` condition match the assessment? List value == any-of.
-    Special key `labels_any`: intersect against the assessment's `labels`.
+    `labels_any` and `artifacts_any`: intersect with `labels` or `artifacts`.
     Special key `any_of`: a list of sub-conditions, matching if ANY matches.
     `{at_least: v}` on an ordered dimension: see `catalogue_check.at_least`.
 
@@ -866,9 +866,9 @@ def reading_matches(when, assessment, orders=None):
             from compass_pkg.catalogue_check import at_least
             if not at_least(key, val["at_least"], assessment.get(key), orders):
                 return False
-        elif key == "labels_any":
+        elif key in ("labels_any", "artifacts_any"):     # `artifacts` is derived
             wanted = val if isinstance(val, list) else [val]
-            have = assessment.get("labels") or []
+            have = assessment.get(key[:-len("_any")]) or []
             if not any(t in have for t in wanted):
                 return False
         else:

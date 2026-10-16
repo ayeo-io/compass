@@ -25,13 +25,13 @@ Checks on the resolved result as a whole (an id nothing defines, equal
 approach weights, rule-set effects) are lint's, not the merge's.
 """
 # DEPENDENCY: standard library (copy); compass_pkg.catalogue_spec,
-# compass_pkg.core (CompassError, only); compass_pkg.word_map.
+# compass_pkg.core (CompassError, only); compass_pkg.word_map; compass_pkg.retired.
 from __future__ import annotations
 
 import copy
 
 from compass_pkg import catalogue_spec as spec
-from compass_pkg import word_map
+from compass_pkg import retired, word_map
 from compass_pkg.core import CompassError
 
 # Which field of which catalogue holds ids of another catalogue, and how:
@@ -187,19 +187,22 @@ def _apply_entry(ctx, table, catalogue, entry_id, entry):
     present = entry_id in table
     if is_remove:
         if not present:
-            ctx.fail("M-REMOVE-UNKNOWN", path, "remove: the parent does not hold this id")
+            ctx.fail("M-REMOVE-UNKNOWN", path, "remove: the parent does not hold this id"
+                     + retired.merge_hint(path))
             return False
         del table[entry_id]
         ctx.forget(path, catalogue)
         return True
     if is_set:
         if not present:
-            ctx.fail("M-SET-UNKNOWN", path, "set: the parent does not hold this id")
+            ctx.fail("M-SET-UNKNOWN", path, "set: the parent does not hold this id"
+                     + retired.merge_hint(path))
             return False
         _apply_set(ctx, table[entry_id], catalogue, path, entry)
         return False
     if is_replace and not present:
-        ctx.fail("M-REPLACE-UNKNOWN", path, "replace: the parent does not hold this id")
+        ctx.fail("M-REPLACE-UNKNOWN", path, "replace: the parent does not hold this id"
+                     + retired.merge_hint(path))
         return False
     if is_replace and not body:
         ctx.fail("M-ADD-PARTIAL", path, "replace: true needs a full entry")

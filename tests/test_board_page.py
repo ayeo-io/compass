@@ -400,11 +400,13 @@ ASSESSMENT = {"risk": "cross-cutting", "familiarity": "brownfield-mapped", "size
               "goal": "delivery", "role": "engineer", "labels": ["public-api", "cli"]}
 
 
-def test_trc_c2_panel_shows_the_five_dimensions_and_labels():
+def test_trc_c2_panel_shows_the_four_dimensions_and_labels():
     panel = panel_of(render(row("alpha", assessment=ASSESSMENT)), "alpha")
     dims = {dt.text(): dd.text() for dt, dd in zip(panel.find_all("dt"), panel.find_all("dd"))}
-    for name in ("risk", "familiarity", "size", "goal", "role"):
+    for name in ("risk", "familiarity", "size", "goal"):
         assert dims[name] == ASSESSMENT[name]
+    # Role is no longer an assessment dimension (ADR-070), so a recorded one is not shown.
+    assert "role" not in dims
     labels = [n.text() for n in panel.find_all("li", "label")]
     assert labels == ["public-api", "cli"]
 
@@ -594,9 +596,9 @@ def test_trc_d2_dark_by_default_light_by_preference_and_4_5_contrast():
 def test_trc_d3_every_recorded_value_is_escaped():
     bad = lambda what: 'x<script>alert("%s")</script>' % what  # noqa: E731
     values = {k: bad(k) for k in ("slug", "rationale", "changed", "label", "reason",
-                                  "blocked", "tree", "id", "kind", "path", "role",
+                                  "blocked", "tree", "id", "kind", "path", "goal",
                                   "gate", "approach")}
-    assessment = dict(ASSESSMENT, labels=[values["label"]], role=values["role"])
+    assessment = dict(ASSESSMENT, labels=[values["label"]], goal=values["goal"])
     r = row(values["slug"], delivery_approach=values["approach"], assessment=assessment,
             policy_rules_fired=[{"id": values["id"], "kind": values["kind"],
                                  "rationale": values["rationale"],

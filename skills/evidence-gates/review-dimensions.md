@@ -56,8 +56,8 @@ This check applies to every issue - the calibration sample it is read
 against is named in `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` (`S8`; an
 unmigrated 5.x project runs on its own copied `governance/`).
 
-**claims** - When the product-marketer role is in play (the role rule adds
-the blocking `verify.claims` gate whenever the marketer takes part): does every
+**claims** - When `positioning.md` is present (the artifact rule adds
+the blocking `verify.claims` gate): does every
 public claim trace to a *passing* scenario? Evidence is `launch-readiness.md`
 with no red rows.
 

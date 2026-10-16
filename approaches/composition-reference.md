@@ -4,7 +4,7 @@ Assess does not load this file.
 
 This describes what `compass approach evaluate` does: how a candidate shape
 is composed from the four dimensions, and how floors, caps, immovable gates
-and role rules then constrain it. A session does not do any of it by hand -
+and artifact rules then constrain it. A session does not do any of it by hand -
 that is the determinism boundary. The CLI computes; you read the dimensions
 and run the command.
 
@@ -23,7 +23,7 @@ assembles it from per-dimension contributions:
 | risk is `cross-cutting`/`critical` | risk is `trivial` |
 | familiarity is `brownfield-unmapped`, unless the change is atomic or small with trivial or contained risk and no domain label | familiarity is `greenfield` or `brownfield-mapped` |
 | size is `large`/`product` | size is `atomic`/`small` |
-| a non-engineering role is involved (more artifacts, more gates) | only `engineer` is involved |
+| `intent.md` or `positioning.md` is present (more artifacts, more gates) | neither document is present |
 
 Concretely, `compass approach evaluate` decides, per stage:
 
@@ -55,10 +55,10 @@ the security dimension because risk is cross-cutting" is a normal output.
 | regression | - | ✓ | ✓ | ✓ | - |
 | security | - | scaled | ✓ | ✓ | - |
 | clarity | - | ✓ | ✓ | - | - |
-| claims | if role | if role | ✓ | if role | - |
+| claims | if positioning | if positioning | if positioning | if positioning | - |
 
-"scaled" = applied in proportion to risk. "if role" = applied when the
-product-marketer role is in play. `correctness`, `governance`, `traceability`
+"scaled" = applied in proportion to risk. "if positioning" = applied when
+`positioning.md` is present (rule RP-ART-001). `correctness`, `governance`, `traceability`
 are on for every delivery approach because they *are* the default guardrails in
 review form. **Spike** runs none of these - it ships nothing, so it has only
 its own Conclude gate ("was the question answered?"); see `approaches/spike.md`.
@@ -73,7 +73,8 @@ above - is now bounded by the **routing rules** in `governance/routing-policy.md
 1. **floors** raise the delivery approach or force stages back to thorough weight.
 2. **caps** limit scale-up (e.g. the worktree ceiling on critical risk).
 3. **immovable_gates** are added whatever the delivery approach.
-4. **blocking role_rules** add required artifacts and stage blocks.
+4. **blocking artifact_rules** add required artifacts and stage blocks, from the
+   documents present.
 
 Every routing rule that fires is recorded. Assess never applies a
 constraint silently - if quick fix became the full approach, `delivery-approach.md` says which floor

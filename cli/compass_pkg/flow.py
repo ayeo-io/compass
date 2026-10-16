@@ -183,7 +183,8 @@ def _landed_at(m):
 THIS_CHECKOUT = "this checkout"
 _NO_MANIFEST = "no manifest.yml"
 _UNREADABLE = "unreadable manifest.yml"
-_ASSESSMENT_DIMENSIONS = ("risk", "familiarity", "size", "goal", "role")
+# Role is no longer an assessment dimension (ADR-070), so a recorded one is not shown.
+_ASSESSMENT_DIMENSIONS = ("risk", "familiarity", "size", "goal")
 
 
 def _schema_major_is_read(schema_version):
@@ -359,7 +360,7 @@ def _why_fields(m):
     assessment, raw = None, m.get("assessment")
     if isinstance(raw, dict) and raw:
         labels = raw.get("labels")
-        # A dimension the assessment leaves out (a quick fix records no goal or role it was
+        # A dimension the assessment leaves out (a quick fix records no goal it was
         # not given) reads as not assessed, never as a default.
         assessment = {k: _text(raw.get(k)) or "not assessed" for k in _ASSESSMENT_DIMENSIONS}
         assessment["labels"] = [str(x) for x in labels] if isinstance(labels, list) else []

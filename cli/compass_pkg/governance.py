@@ -58,6 +58,7 @@ _DRIFT_RULE_SOURCES = (
     ("routing-policy.yml", ("routing_guardrails", "caps"), "cap"),
     ("routing-policy.yml", ("routing_guardrails", "loop_ceilings"), "loop ceiling"),
     ("routing-policy.yml", ("routing_guardrails", "immovable_gates"), "immovable gate"),
+    ("routing-policy.yml", ("routing_guardrails", "artifact_rules"), "artifact rule"),
     ("routing-policy.yml", ("routing_guardrails", "role_rules"), "role rule"),
     ("routing-policy.yml", ("routing_strategies", "default_shapes"), "route shape"),
     ("routing-policy.yml", ("routing_strategies", "advisory_strategies"), "advisory strategy"),

@@ -15,8 +15,8 @@ weights in this document are what that command implements.
 - size is `atomic` or `small`, **and**
 - risk is `trivial` or `contained`, **and**
 - no floor raises the approach, **and**
-- role is `engineer` (a non-engineering role in play almost always pulls the
-  approach up, because it adds artifacts and gates).
+- no `intent.md` or `positioning.md` is present (either one adds artifacts and
+  gates, which pull the approach up).
 
 Typical issues: copy fixes, a bounded bug fix with an obvious cause, adding a
 small variant of an existing pattern, a config change with a known shape.

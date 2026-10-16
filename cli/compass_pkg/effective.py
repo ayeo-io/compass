@@ -356,7 +356,8 @@ def resolve_live(root, manifest=None, slug=None, task_dir=None, validate=False, 
     writes a new generation calls it."""
     root = os.path.abspath(root)
     counts = project_settings.compass_yml_counts(root)
-    loaded = policy_lint.load_layers(root, manifest=manifest, read_project=counts, fetch=fetch)
+    loaded = policy_lint.load_layers(root, manifest=manifest, read_project=counts, fetch=fetch,
+                                     task_dir=task_dir)
     if loaded.findings:
         first = loaded.findings[0]
         raise CompassError(f"nothing can be resolved: {first.code} [{first.layer}] "

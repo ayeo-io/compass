@@ -401,6 +401,55 @@ The catalogue gives a document kind a word limit per depth, `compass check` refu
 | `design-within-word-ceiling` | a check outside every gate | Refuse a design over 1.5 times its word limit after plan |
 | `--design-size` | a flag of `scripts/measure-artifact-catalogue.py` | Report the median design size per approach |
 
+## Role is not an assessment dimension
+
+The assessment no longer reads a role. The claims gate and the intent-fidelity block now follow the documents on the issue's disk, and the product-owner, product-marketer and designer stay as perspectives a session consults. The decision is `architecture/decisions/ADR-070-role-is-not-an-assessment-dimension-and-documents-on-disk-bring-the-claims-gate-and-the-intent-block.md`. `governance/routing-policy.md` owns the rules.
+
+### What breaks
+
+- **The shipped default has no `role` dimension, no role rules and no role default.** RP-ROLE-001, RP-ROLE-002 and RP-SROLE-001 are gone from the preset and from `governance/routing-policy.yml`, which moves to version 3.0.0.
+- **The full approach no longer carries `verify.claims`.** An issue owes the gate only when it has a `positioning.md`.
+- **A `compass.yml` that edits a retired entry is refused.** A `set`, `replace` or `remove` of `dimensions.role`, `rules.role_rules` or `rules.role_defaults` fails the merge, and the refusal names the rule that replaces it.
+- **A project rule, check or gate whose `when` reads `role` fails `compass policy lint`** with `M-WHEN-RETIRED`, unless the project declares a `role` dimension of its own. A check or gate whose `when` reads `artifacts_any` fails with `M-WHEN-DOCUMENTS`.
+- **`compass policy migrate` blocks on a copied role rule the project edited**, with `M-RETIRED`, naming the replacement. An unedited copy migrates with no waiver.
+
+### What changes
+
+- **Two artifact rules replace the role rules.** They read the issue's documents on disk with the condition `artifacts_any`:
+  - RP-ART-001: with `positioning.md`, the issue gains `verify.claims`, owes `launch-readiness.md`, and the ship stage is blocked until every claim traces to a passing scenario.
+  - RP-ART-002: with `intent.md`, the plan stage is blocked until the spec is checked against it.
+- **Presence is read at every evaluation.** A document counts when its registry entry names a path that exists, or its file is in the issue's documents folder. It is never written into the manifest's `assessment:` block. A document written after the last evaluation takes effect at the next one.
+- **A recorded role is not read.** A manifest that holds `assessment.role` evaluates and checks as before, without it.
+- **An issue with a stored 6.x generation keeps its role rules** until it is re-assessed. **A project on copied 6.x governance keeps them** until it runs `compass policy migrate`.
+- **An issue with no stored generation, in a project with a `compass.yml`, takes the new default at once.** A recorded role no longer routes it, and on the full approach it no longer owes `verify.claims`.
+- **`--justify role=` and `compass quick-fix start --role` are accepted and ignored until 8.0.0.** Each prints a notice on standard error and records nothing. Evaluating an issue whose manifest records a role prints the same notice.
+- **A landing refuses an artifact rule the approach does not hold.** When a document is on disk whose artifact rule adds a gate or asks for a document and the last evaluation did not fire it, such as a `positioning.md` written after assess, `compass ship-commit` and `compass quick-fix finish` refuse with `artifact-rule-not-applied` and name the `compass approach evaluate --issue <slug> --write` that applies it.
+- **Assess drafts the intent before it writes the approach**, so RP-ART-002 fires on a regular or full issue (`approaches/assess-procedure.md`, step 3).
+- **`compass issue migrate` lists each recorded `assessment.role` as no longer read**, in the dry run and on `--apply`, and leaves the field in place.
+- **`compass preset test` reads a fixture that records a role without it**, and notes that it did.
+- **The classifier crosses the documents a condition names, as it crosses labels.** The grid JSON of `compass policy diff --json` and `compass policy migrate --json` gains `artifacts`. The cap of eight named labels is unchanged, and a grid names at most four documents.
+- **The bias ids move.** The role bias RP-BIAS-002 is gone, so the bias that was RP-BIAS-003 is now RP-BIAS-002. Biases route nothing; a `compass.yml` that edited one of the two ids edits a different bias text now.
+
+### What to do
+
+1. Check the open issues that have no `generation:` key. In a project with a `compass.yml` they take the new default at once: an issue that relied on a product-owner or marketer role needs its `intent.md` or `positioning.md` on disk, and a re-assessment. An issue with a stored generation keeps its routing until `compass approach evaluate --write` commits a new one.
+2. Stop passing `--justify role=` and `--role`. They do nothing now.
+3. If `compass policy lint` reports `M-WHEN-RETIRED`, key a rule on a document with `artifacts_any: [<kind>]`, or on a label. Key a check or gate on a label: only a rule reads the documents, and `M-WHEN-DOCUMENTS` refuses `artifacts_any` anywhere else.
+4. If a merge or `compass policy migrate` names a retired rule, make the same edit to its replacement (RP-ART-001 or RP-ART-002) in `compass.yml`.
+5. On an issue already assessed, re-assess after writing `positioning.md`, so `verify.claims` joins the gate set. A landing refuses until you do.
+
+### New keys and verbs
+
+| Name | Where | Meaning |
+|---|---|---|
+| `artifacts_any` | a `when` condition | Matches when the issue has any of the listed documents on disk |
+| `artifact-rules` | a rule set `kind` | Rules that add a gate, a required document or a stage block |
+| `artifact_rules` | `governance/routing-policy.yml` | The view's block for those rules |
+| `retired_rules` | `governance/legacy-views.yml` | Each retired rule id and its replacement |
+| `M-WHEN-RETIRED`, `M-WHEN-DOCUMENTS`, `M-RETIRED` | lint and migrate codes | A condition that reads `role`, a check or gate condition that reads `artifacts_any`, and an edited retired rule |
+| `artifact-rule-not-applied` | a landing refusal code | A document on disk earns an artifact rule, with a gate or a document, that the recorded approach does not hold |
+| `artifacts` | the classifier's grid JSON | The document kinds the grid crosses |
+
 ## Approving inside Claude Code, and delegated approvals
 
 A person approves or rejects by typing `/compass:approve` or `/compass:reject` in the Claude Code session they are in. They never open a terminal or copy a command. A person can also let one named agent approve for them, for at most 24 hours and a stated scope, and review what it approved. GitHub issue #571 is fixed: the guardrail `G5` sign-off can be recorded on a project with no configuration of its own. The decisions are `architecture/decisions/ADR-068-a-person-approves-inside-claude-code-through-an-event-the-model-cannot-raise.md` and `architecture/decisions/ADR-069-a-person-can-delegate-approvals-to-a-named-agent-for-a-stated-time-and-scope.md`.

@@ -33,7 +33,7 @@ Compass assesses four dimensions:
 | Risk | What happens if this goes wrong? |
 | Familiarity | Is the affected code understood? |
 | Size | How much delivery work is involved? |
-| Goal and role | What outcome is wanted, and who is asking? |
+| Goal | What outcome is wanted? |
 
 Judgement goes into the assessment. Everything after it is deterministic: the
 same assessment plus the same policy produces the same approach, every time.
@@ -50,7 +50,6 @@ assessment:
   familiarity: brownfield-mapped
   size: atomic
   goal: delivery
-  role: engineer
 ```
 
 Those four dimensions are the only judgement in the routing. Everything after
@@ -59,7 +58,7 @@ them - the stages, the gates, the orchestration - is computed. Run
 
 ```text
   policy          : this project's effective configuration (compass.yml over the shipped default)
-  assessment      : {"risk": "contained", "familiarity": "brownfield-mapped", "size": "atomic", "goal": "delivery", "role": "engineer"}
+  assessment      : {"risk": "contained", "familiarity": "brownfield-mapped", "size": "atomic", "goal": "delivery"}
   first approach  : quick fix  <- RP-SHAPE-003 (Small on every axis.)
   FINAL APPROACH  : quick fix
   policy rules fired: none

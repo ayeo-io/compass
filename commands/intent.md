@@ -57,10 +57,9 @@ what `/compass:init` offers separately.
 
 ## How this shapes the delivery approach
 
-When an issue with an `intent.md` is assessed, the `product-owner` role adds
-two things (see the delivery-approach rubric and the routing policy's
-`role_rules`): the `intent.md` artifact, and the **intent-fidelity gate**.
-The spec must be checked against `intent.md` before the plan stage. Assess reads
+When an issue with an `intent.md` is assessed, the artifact rule RP-ART-002
+(see the routing policy) blocks the plan stage until the spec is checked
+against `intent.md` (the **intent-fidelity gate**). Assess reads
 `intent.md` as the *actual outcome wanted*, not just the literal request.
 
 ## Gate

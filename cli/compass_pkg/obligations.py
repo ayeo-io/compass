@@ -237,9 +237,8 @@ class Refused:
 class Obligations:
     """What a configuration owes an assessment. Every field but `approach`,
     `rules_fired` and `ignored_overrides` is a fact the classifier compares;
-    those three are outcomes, not obligations (a different approach that owes
-    the same is equivalent). `release_line` (ADR-065) is last because it has a
-    default."""
+    those three are outcomes, not obligations. `release_line` (ADR-065) is
+    last because it has a default."""
     stage_mode: dict
     entry: dict
     exit: dict

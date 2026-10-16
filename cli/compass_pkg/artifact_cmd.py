@@ -86,8 +86,12 @@ def _refuse_unit_name(unit):
 
 
 def _registered_units(task_dir, kind):
-    """The units of the registry entries of `kind`, in registry order."""
-    task = load_yaml(manifest_path(task_dir)) or {}
+    """The units of the registry entries of `kind`, in registry order. An issue
+    with no manifest has none, and the resolver answers for it as before."""
+    try:
+        task = load_yaml(manifest_path(task_dir)) or {}
+    except CompassError:
+        return []
     return [str(a["unit"]) for a in task.get("artifacts") or []
             if isinstance(a, dict) and a.get("kind") == kind and a.get("unit")]
 

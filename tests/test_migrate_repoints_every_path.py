@@ -438,6 +438,7 @@ EXCLUDED = {
     "artifacts[].path": "rewritten by _register as each document moves",
     "artifacts[].reason": "prose",
     "artifacts[].digest": "a digest of a document, not a path",
+    "artifacts[].unit": "a work unit id such as U3, not a path",
     "changed_files[].path": "a repository file the issue changed, not an "
                             "issue document; rewriting it would falsify history",
     "evidence[].next_task": "the schema describes it as the path to the new "

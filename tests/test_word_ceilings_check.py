@@ -379,7 +379,7 @@ def test_wcl_10_waits_for_plan_exit(tmp_path):
     assert code == _u3_exit_without(rows, (CHECK,))
 
 
-# --- WCL-14 and WCL-16: the missing-unit note and the PRD measure -------------------
+# --- WCL-14 and WCL-16: the missing-unit note and the three-unit measure -----------
 
 def test_wcl_14_missing_unit_note(tmp_path, monkeypatch):
     from compass_pkg import design_size, section_checks

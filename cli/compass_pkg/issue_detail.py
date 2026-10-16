@@ -83,11 +83,15 @@ def _documents(manifest, task_dir=None):
                 if not read:
                     view, read = _view(task_dir, manifest), True
                 text = artifact_owed.not_needed(manifest, view, entry)
-            found.append({"id": str(entry.get("id") or ""), "kind": str(entry["kind"]),
-                          "round": rnd if isinstance(rnd, int) else None,
-                          "unit": str(entry["unit"]) if entry.get("unit") else None,
-                          "status": str(entry.get("status") or ""),
-                          "path": str(entry.get("path") or ""), "text": text})
+            fact = {"id": str(entry.get("id") or ""), "kind": str(entry["kind"]),
+                    "round": rnd if isinstance(rnd, int) else None,
+                    "status": str(entry.get("status") or ""),
+                    "path": str(entry.get("path") or ""), "text": text}
+            # Only a unit's entry carries the key, so the `--json` of every other
+            # document reads as it did before units existed.
+            if entry.get("unit"):
+                fact["unit"] = str(entry["unit"])
+            found.append(fact)
     return tuple(found)
 
 

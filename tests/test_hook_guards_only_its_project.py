@@ -24,6 +24,8 @@ import json
 import pathlib
 import subprocess
 
+import pytest
+
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 HOOK = ROOT / "hooks" / "pre-tool.sh"
 
@@ -114,3 +116,206 @@ def test_ff_2b_a_relative_path_is_still_guarded(tmp_path):
     assert r.returncode == 2, (
         f"a relative path inside the project was allowed - the containment "
         f"check compared it without resolving it first:\n{r.stdout}{r.stderr}")
+
+
+# ---------------------------------------------------------------------------
+# A variable set in the same Bash command (issue #172). A Bash write often
+# names a scratch file through a variable the command sets, such as
+# `S=/tmp/x && cat > $S/plant.ts`. Read literally and joined to the project
+# root, `$S/plant.ts` was judged to be production code and refused: a usage
+# audit counted 116 such refusals. The hook now expands a variable only when
+# the command states its value for certain. Every other case must be refused
+# exactly as before, because the hook is the red-before-green boundary.
+#
+# Commands are templates: {sc} is a scratch directory outside the project and
+# {root} is the project.
+# ---------------------------------------------------------------------------
+
+def _bash_hook(root, command, extra_env=None):
+    payload = json.dumps({"tool_name": "Bash",
+                          "tool_input": {"command": command}})
+    env = {"PATH": "/usr/bin:/bin:/usr/local/bin",
+           "HOME": str(root), "CLAUDE_PROJECT_DIR": str(root)}
+    env.update(extra_env or {})
+    return subprocess.run(
+        ["bash", str(HOOK)], input=payload, capture_output=True, text=True,
+        cwd=str(root), timeout=60, env=env)
+
+
+def _judge(tmp_path, template, extra_env=None):
+    root = _project(tmp_path)
+    scratch = tmp_path / "scratch"
+    command = template.format(sc=scratch, root=root)
+    return command, _bash_hook(root, command, extra_env)
+
+
+@pytest.mark.parametrize("template", [
+    pytest.param("S={sc}; mkdir -p $S && echo x > $S/plant.py", id="semicolon"),
+    pytest.param("S={sc} && cat > $S/plant.py <<'EOF'\nprint(1)\nEOF",
+                 id="and-heredoc"),
+    pytest.param("S={sc}; echo x > ${{S}}/plant.py", id="braces"),
+    pytest.param('S="{sc}"; echo x > $S/plant.py', id="double-quoted"),
+    pytest.param("S='{sc}'; echo x > $S/plant.py", id="single-quoted"),
+    pytest.param("export S={sc}; echo x > $S/plant.py", id="export"),
+    pytest.param("S={sc}\necho x > $S/plant.py", id="newline"),
+    pytest.param("F={sc}/plant.py; echo x > $F", id="whole-file"),
+    pytest.param("S={sc}; T={sc}/t; echo x > $T/plant.py", id="second-variable"),
+    pytest.param("S={sc}; echo x | tee $S/plant.py", id="tee"),
+    pytest.param("S={sc}; cp /etc/hosts $S/plant.py", id="cp"),
+    pytest.param("cd {root}; S={sc}; echo x > $S/plant.py", id="after-cd"),
+    pytest.param("cd {root} && S={sc} && mkdir -p $S && echo x > $S/plant.py",
+                 id="and-chain-after-cd"),
+    pytest.param("export A=1 B=2; set -e; S={sc}; echo x > $S/plant.py",
+                 id="after-plain-commands"),
+    pytest.param('S={sc}; python3 -c "print((1))" > $S/plant.py',
+                 id="call-with-double-parentheses"),
+])
+def test_ff_3_a_variable_set_in_the_command_is_expanded(tmp_path, template):
+    """A scratch file named through the command's own variable is allowed
+    (scenario `TRC-A1`)."""
+    command, r = _judge(tmp_path, template)
+    assert r.returncode == 0, (
+        f"the hook refused a write to a scratch file outside the project, "
+        f"named through a variable the command itself set:\n{command}\n"
+        f"{r.stdout}{r.stderr}")
+
+
+@pytest.mark.parametrize("template", [
+    pytest.param("S={root}/src; echo x > $S/app.py", id="src"),
+    pytest.param("S={root}; echo x > $S/src/app.py", id="root"),
+    pytest.param("S={sc}; S={root}/src; echo x > $S/app.py", id="last-wins"),
+])
+def test_ff_4_a_variable_that_points_inside_the_project_is_still_blocked(
+        tmp_path, template):
+    """Expanding the variable must find the project, not lose it (scenario
+    `TRC-A2`)."""
+    command, r = _judge(tmp_path, template)
+    assert r.returncode == 2, (
+        f"a write into the project through a variable was allowed:\n"
+        f"{command}\n{r.stdout}{r.stderr}")
+
+
+@pytest.mark.parametrize("template", [
+    pytest.param("S={sc}; echo x > src/app.py", id="redirect"),
+    pytest.param("S={sc}; cp $S/a.py src/app.py", id="cp-from-scratch"),
+    pytest.param("S={sc}; echo x | tee $S/log.txt src/app.py", id="tee-both"),
+    pytest.param("S={sc}; echo x > $S/plant.py; echo y > src/app.py",
+                 id="second-write"),
+    pytest.param("S={sc}; cp $S/a.py src/app.py; ls $S", id="cp-then-command"),
+])
+def test_ff_5_a_project_write_beside_a_scratch_variable_is_still_blocked(
+        tmp_path, template):
+    """A scratch variable does not excuse the command's other writes
+    (scenario `TRC-A3`)."""
+    command, r = _judge(tmp_path, template)
+    assert r.returncode == 2, (
+        f"a guarded write was allowed because the command also set a scratch "
+        f"variable:\n{command}\n{r.stdout}{r.stderr}")
+
+
+@pytest.mark.parametrize("template, extra_env", [
+    pytest.param("S=$(pwd)/src; echo x > $S/app.py", None,
+                 id="command-substitution"),
+    pytest.param("S=`pwd`/src; echo x > $S/app.py", None, id="backticks"),
+    pytest.param("S=/$(echo {root})/src; echo x > $S/app.py", None,
+                 id="substitution-after-slash"),
+    pytest.param("echo x > $S/app.py", {"S": "{sc}"},
+                 id="environment-scratch"),
+    pytest.param("echo x > $S/app.py", {"S": "{root}/src"},
+                 id="environment-project"),
+    pytest.param("T={sc}; S=$T; echo x > $S/app.py", None,
+                 id="another-variable"),
+    pytest.param("S=${{HOME}}/src; echo x > $S/app.py", None,
+                 id="built-from-home"),
+    pytest.param("S=~/src; echo x > $S/app.py", None, id="tilde"),
+    pytest.param("S=src; echo x > $S/app.py", None, id="relative"),
+    pytest.param("S={sc}; echo x > $S/$T/app.py", None,
+                 id="second-variable-in-the-rest"),
+])
+def test_ff_6_a_variable_the_command_does_not_state_is_not_expanded(
+        tmp_path, template, extra_env):
+    """A value from a substitution, the environment or another variable is
+    unknown to the hook, so the target is judged inside the project, as it
+    was before the expansion existed (scenario `TRC-F1`)."""
+    root = _project(tmp_path)
+    scratch = tmp_path / "scratch"
+    command = template.format(sc=scratch, root=root)
+    env = {k: v.format(sc=scratch, root=root)
+           for k, v in (extra_env or {}).items()}
+    r = _bash_hook(root, command, env)
+    assert r.returncode == 2, (
+        f"the hook expanded a variable whose value the command does not "
+        f"state:\n{command}\nenv: {env}\n{r.stdout}{r.stderr}")
+
+
+@pytest.mark.parametrize("template", [
+    pytest.param("S={sc}; S=src; echo x > $S/app.py", id="reassigned"),
+    pytest.param("S={sc} && S={root}/src && echo x > $S/app.py",
+                 id="reassigned-in-the-leading-statements"),
+    pytest.param("S={sc}; cd {root}; S=src; echo x > $S/app.py",
+                 id="reassigned-after-another-command"),
+    pytest.param("S={sc}; S+=/../proj/src; echo x > $S/app.py", id="append"),
+    pytest.param("S={sc}; read S < /dev/null; echo x > $S/app.py", id="read"),
+    pytest.param("S={sc}; for S in src; do echo x > $S/app.py; done",
+                 id="for-loop"),
+    pytest.param("S={sc}; export S=src; echo x > $S/app.py", id="export-again"),
+    pytest.param("S={sc}; unset S; echo x > $S/app.py", id="unset"),
+    pytest.param("S={sc} true; echo x > $S/app.py", id="one-command-only"),
+    pytest.param("false && S={sc}; echo x > $S/app.py", id="after-and"),
+    pytest.param("(S={sc}); echo x > $S/app.py", id="subshell"),
+    pytest.param("echo x > $S/app.py; S={sc}", id="assigned-after-use"),
+    pytest.param('S={sc}; eval "$X"; echo x > $S/app.py', id="eval"),
+    pytest.param("S={sc}; source ./env.sh; echo x > $S/app.py", id="source"),
+    pytest.param("S={sc}; . ./env.sh; echo x > $S/app.py", id="dot"),
+    pytest.param('S={sc}; V=S; printf -v "$V" src; echo x > $S/app.py',
+                 id="printf-v"),
+    pytest.param('S={sc}; V=S; declare "$V=src"; echo x > $S/app.py',
+                 id="declare"),
+    pytest.param('S={sc}; trap "$X" DEBUG; echo x > $S/app.py', id="trap"),
+    pytest.param("S={sc}; V=S; (( $V = 1 )); echo x > $S/app.py",
+                 id="arithmetic"),
+    pytest.param("cd {root} && S={sc}; echo x > $S/app.py",
+                 id="and-then-semicolon"),
+    pytest.param("cd {root} && S={sc} && true; echo x > $S/app.py",
+                 id="and-chain-broken-later"),
+    pytest.param("cd {root} && S={sc} || echo x > $S/app.py", id="and-then-or"),
+    pytest.param("readonly S; S={sc}; echo x > $S/app.py", id="read-only-first"),
+    pytest.param("source ./env.sh; S={sc}; echo x > $S/app.py",
+                 id="source-first"),
+    pytest.param("trap x DEBUG; S={sc}; echo x > $S/app.py", id="trap-first"),
+    pytest.param("if true; then S={sc}; fi; echo x > $S/app.py", id="in-if"),
+    pytest.param("while false; do S={sc}; done; echo x > $S/app.py",
+                 id="in-loop"),
+    pytest.param("S={sc}; mkdir -p $S; read S; echo x > $S/app.py",
+                 id="read-after-plain-command"),
+    # A body longer than a pipe buffer: a check written as `printf | grep -q`
+    # stops reading at the first match, printf dies of SIGPIPE, and under
+    # pipefail the check reads as "no match" - which would expand.
+    pytest.param("S={sc}; read S; echo x > $S/app.py; cat <<'E'\n"
+                 + ("filler line\n" * 20000) + "E",
+                 id="read-before-a-long-heredoc"),
+])
+def test_ff_7_a_variable_set_again_or_only_sometimes_is_not_expanded(
+        tmp_path, template):
+    """The value at the write is certain only when the command assigns the
+    variable once, in a leading statement that always runs before the
+    write, and nothing after can change it (scenario `TRC-F2`)."""
+    command, r = _judge(tmp_path, template)
+    assert r.returncode == 2, (
+        f"the hook expanded a variable whose value at the write is not "
+        f"certain:\n{command}\n{r.stdout}{r.stderr}")
+
+
+@pytest.mark.parametrize("template", [
+    pytest.param("S={sc}/../proj/src; echo x > $S/app.py", id="in-the-value"),
+    pytest.param("S={sc}; echo x > $S/../proj/src/app.py", id="in-the-rest"),
+])
+def test_ff_8_a_parent_directory_step_is_not_expanded(tmp_path, template):
+    """A `..` step must never reach the containment check from an expansion,
+    because the check compares text. `{sc}/..` is the parent of the
+    project directory, so these write into the project's src directory
+    (scenario `TRC-F3`)."""
+    command, r = _judge(tmp_path, template)
+    assert r.returncode == 2, (
+        f"a '..' step moved a write into the project past the containment "
+        f"check:\n{command}\n{r.stdout}{r.stderr}")

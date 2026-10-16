@@ -87,6 +87,35 @@ BLOCKED_SHAPES = [
     pytest.param('mv /tmp/thing.py src/app.py', id="SCN-A3-mv"),
     pytest.param('patch -p1 < /tmp/fix.diff', id="SCN-A3-patch"),
     pytest.param('git apply /tmp/fix.diff', id="SCN-A3-git-apply"),
+    # Scenario `TRC-B3`: each of these writes the guarded app file through
+    # tee, cp or mv, which are found in their own simple command. Taking the last word
+    # of the whole line, the hook used to allow the cp shapes with `sudo`,
+    # `(...)`, `2>&1` or a command after them.
+    pytest.param('echo x|tee src/app.py', id="TRC-B3-tee-no-space"),
+    pytest.param('echo x | tee -a /tmp/log.txt src/app.py', id="TRC-B3-tee-two-files"),
+    pytest.param('echo x | sudo tee src/app.py > /dev/null', id="TRC-B3-sudo-tee"),
+    pytest.param('echo x > >(tee src/app.py)', id="TRC-B3-tee-process-substitution"),
+    pytest.param('make && cp a.py src/app.py', id="TRC-B3-cp-after-and"),
+    pytest.param('cp a.py src/app.py; echo done', id="TRC-B3-cp-then-command"),
+    pytest.param('cp a.py src/app.py 2>&1', id="TRC-B3-cp-dup-stderr"),
+    pytest.param('cp a.py src/app.py 2>/dev/null', id="TRC-B3-cp-stderr-to-null"),
+    pytest.param('sudo cp a.py src/app.py', id="TRC-B3-sudo-cp"),
+    pytest.param('(cp a.py src/app.py)', id="TRC-B3-cp-subshell"),
+    pytest.param('{ cp a.py src/app.py; }', id="TRC-B3-cp-group"),
+    pytest.param('if true; then cp a.py src/app.py; fi', id="TRC-B3-cp-in-if"),
+    pytest.param('cp a.py src/app.py\necho done', id="TRC-B3-cp-own-line"),
+    pytest.param('mv -f a.py src/app.py && ls', id="TRC-B3-mv-then-command"),
+    pytest.param('git mv a.py src/app.py', id="TRC-B3-git-mv"),
+    # A wrapper or a spelled-out path in front of the command word must not
+    # hide the write: the hook before this change refused each of these.
+    pytest.param('make && timeout 10 cp a.py src/app.py', id="TRC-B3-timeout-cp"),
+    pytest.param('echo x | xargs tee src/app.py', id="TRC-B3-xargs-tee"),
+    pytest.param('echo x | nice -n 5 tee src/app.py', id="TRC-B3-nice-tee"),
+    pytest.param('make && /bin/cp a.py src/app.py', id="TRC-B3-path-cp"),
+    pytest.param('ls && \\cp a.py src/app.py', id="TRC-B3-escaped-cp"),
+    pytest.param('echo x | /usr/bin/tee src/app.py', id="TRC-B3-path-tee"),
+    pytest.param('x=$(cp a.py src/app.py)', id="TRC-B3-cp-in-substitution"),
+    pytest.param('make && cp a.py src/app.py # copy', id="TRC-B3-cp-then-comment"),
 ]
 
 
@@ -141,6 +170,15 @@ ALLOWED_COMMANDS = [
     pytest.param('echo hi > /dev/null', id="SCN-B3-dev-null"),
     pytest.param('git checkout -- src/app.py', id="SCN-B4-git-checkout"),
     pytest.param('git restore src/app.py', id="SCN-B4-git-restore"),
+    # Scenario `TRC-B1`: tee writes only its own arguments. The command that feeds it
+    # runs the script; it does not write it.
+    pytest.param('python3 src/cmp.py a.json | tee /tmp/x/out.txt', id="TRC-B1-tee-input"),
+    pytest.param('python3 /tmp/x/cmp.py a.json | tee /tmp/x/out.txt', id="TRC-B1-tee-scratch"),
+    # Scenario `TRC-B2`: cp and mv write only their own last argument, not a file that a
+    # later command in the same line reads.
+    pytest.param('cp /tmp/a.py /tmp/b/ && grep -n x src/app.py', id="TRC-B2-cp-then-read"),
+    pytest.param('mv /tmp/a.py /tmp/b.py; cat src/app.py', id="TRC-B2-mv-then-read"),
+    pytest.param('cp src/app.py /tmp/app.py', id="TRC-B2-cp-source"),
 ]
 
 

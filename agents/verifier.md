@@ -1,7 +1,7 @@
 ---
 name: verifier
 description: "The mechanical half of the verify stage: runs the scenarios and the full suite, and gathers evidence."
-tools: Read, Glob, Grep, Bash, Write, Edit
+tools: Read, Glob, Grep, Bash, Write, Edit, Skill
 model: sonnet
 ---
 

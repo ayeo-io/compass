@@ -49,10 +49,10 @@ test what the code does now where the change touches it (`RP-ADV-002`).
 
 Size is the dimension most misread. When unsure, estimate up.
 
-### Goal and role
+### Goal
 
-`delivery` on this path, driven by an engineer. A product owner, marketer or
-designer in play pulls the approach up out of quick fix. So does a goal of
+`delivery` on this path. An `intent.md` or `positioning.md` on disk pulls the
+approach up out of quick fix. So does a goal of
 `exploration` - "I cannot state this well enough to deliver it yet" - which
 is a spike, not a small change.
 

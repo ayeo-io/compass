@@ -53,6 +53,45 @@ ADDED_TO_EVERY_APPROACH = ("delivery-approach",)
 ADDED_TO_REGULAR = ("intent",)
 
 
+# 7.0.0 removes role from the assessment (issue `remove-role-from-assessment`,
+# ADR-070). The baseline still records a role on every row, so a row is evaluated
+# with the document that role brought instead, and compared after exactly the
+# intended differences are taken out:
+# - RP-ROLE-001 and RP-ROLE-002 are now RP-ART-001 and RP-ART-002;
+# - RP-ART-002 asks for no intent and leaves its depth to the approach, since the
+#   document is there by definition, where RP-ROLE-002 asked for a thorough one;
+# - the full approach no longer builds in verify.claims, so an issue without a
+#   positioning document no longer owes it.
+# The generated view now spells a document by its id and the ship stage `ship`,
+# as the catalogue does, so it is compared through `legacy_spelling`.
+DOCUMENT_OF_ROLE = {"product-owner": "intent", "product-marketer": "positioning"}
+RULE_WAS = {"RP-ART-001": "RP-ROLE-001", "RP-ART-002": "RP-ROLE-002"}
+
+
+def _role_as_documents(readings, policy):
+    """A policy that still declares role (copied 6.x governance) reads the row as
+    recorded; any other reads the document the role brought."""
+    readings = dict(readings)
+    if "role" in (policy.get("assessment_vocabulary") or {}):
+        return readings, None
+    role = readings.pop("role", None)
+    if role in DOCUMENT_OF_ROLE:
+        readings["artifacts"] = [DOCUMENT_OF_ROLE[role]]
+    return readings, role
+
+
+def _as_recorded_with_role(out, role):
+    """A 7.0.0 result in the shape 5.6.0 recorded for the same role."""
+    out["rules_fired"] = [RULE_WAS.get(r, r) for r in out["rules_fired"]]
+    if role == "product-owner" and "RP-ROLE-002" in out["rules_fired"]:
+        out["required_artifacts"] = sorted(out["required_artifacts"] + ["intent"])
+        out["artifacts"] = sorted([a for a in out["artifacts"] if a[0] != "intent"]
+                                  + [("intent", "full")])
+    if out["delivery_approach"] == "full" and "verify.claims" not in out["gates"]:
+        out["gates"] = sorted(out["gates"] + ["verify.claims"])
+    return out
+
+
 def shipped_policy():
     return load_yaml(str(POLICY))
 
@@ -73,7 +112,7 @@ def compact(readings, policy):
     """The fields the compatibility promise covers, for every autonomy
     setting, or the refusal text when the evaluator refuses."""
     out = {}
-    readings = dict(readings)
+    readings, role = _role_as_documents(readings, policy)
     if "size" in readings:
         readings["size"] = SIZE_NOW.get(readings["size"], readings["size"])
     for autonomy in AUTONOMY:
@@ -106,6 +145,8 @@ def compact(readings, policy):
                 "checkpoints": {},
             }
         out["checkpoints"][autonomy] = r["checkpoints"]
+    if role is not None or "role" not in (policy.get("assessment_vocabulary") or {}):
+        out = _as_recorded_with_role(out, role)
     # Through JSON, so a tuple and a list compare alike after a round trip.
     return json.loads(json.dumps(out, sort_keys=True))
 
@@ -116,9 +157,11 @@ def digest(result):
 
 
 def grid(vocabulary):
-    """Every closed assessment, in a fixed order, with no labels."""
-    for values in itertools.product(*(vocabulary[d] for d in DIMENSIONS)):
-        readings = dict(zip(DIMENSIONS, values))
+    """Every closed assessment, in a fixed order, with no labels. A dimension
+    the vocabulary does not hold (role, from 7.0.0) is left out."""
+    names = [d for d in DIMENSIONS if d in vocabulary]
+    for values in itertools.product(*(vocabulary[d] for d in names)):
+        readings = dict(zip(names, values))
         readings["labels"] = []
         yield readings
 

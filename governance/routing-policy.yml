@@ -10,7 +10,7 @@
 # is what the deterministic evaluator (`compass approach evaluate`) actually runs.
 #
 # The split that matters: the four-dimension *assessment* (risk, familiarity,
-# size, goal, role, labels) is JUDGEMENT - the assess stage, an LLM or a
+# size, goal, plus urgency and labels) is JUDGEMENT - the assess stage, an LLM or a
 # human, produces it, and it is not mechanisable, because that judgement
 # IS the adaptivity. This file governs only what happens *after* the assessment
 # is recorded: composing and constraining the delivery approach. That part is deterministic and
@@ -22,7 +22,7 @@
 # routing-policy.md.
 # =============================================================================
 
-version: 2.23.0
+version: 3.0.0
 # -----------------------------------------------------------------------------
 # ROUTING STRATEGIES - soft. They BIAS the candidate delivery approach. The evaluator uses
 # them in composition (step 1); a later rule can override the result.
@@ -68,20 +68,9 @@ routing_strategies:
     - "When size is genuinely unclear, estimate up - it is cheaper to
        collapse a stage that turned out easy than to discover
        mid-implementation that the approach was too light."
-    - "A non-engineering role in play usually pulls the delivery approach
-       heavier, because it adds artifacts and assessed strategies - but this
-       is a bias, not a floor."
     - "Prefer the lightest delivery approach that still clears every routing
        guardrail and the applicable gates. Process weight is a cost; spend
        it where it buys safety."
-
-  # role_defaults - advisory artifacts a role's involvement suggests. The
-  # BLOCKING versions live under routing_guardrails.role_rules.
-  role_defaults:
-    - id: RP-SROLE-001
-      when: { role: designer }
-      suggest_artifact: ui-contract.md
-      rationale: "A new user-facing surface usually wants a UI contract."
 
   # advisory_strategies - soft strategies the evaluator surfaces (in
   # `applicable_strategies`) when their `when` matches the assessment. They BIAS
@@ -240,9 +229,8 @@ routing_guardrails:
   # future custom or tuned approach still cannot drop them. NOTE what is NOT
   # here: verify.regression is route-scoped (quick fix, being atomic+trivial,
   # does not run it - that is quick fix's whole point), and verify.claims is
-  # role-scoped (added by RP-ROLE-001 when a marketer is in play, and built
-  # into the full approach). Immovable means immovable *everywhere* - keep the set to
-  # what genuinely is.
+  # document-scoped (added by RP-ART-001 when the issue has positioning.md).
+  # Immovable means immovable *everywhere* - keep the set to what genuinely is.
   immovable_gates:
     - id: RP-GATE-001
       gate: verify.correctness
@@ -254,18 +242,21 @@ routing_guardrails:
       gate: verify.traceability
       rationale: "Protects the audit trail - code -> criterion -> intent stays intact."
 
-  # role_rules - a role's involvement that ENFORCES a gate or a stage block.
-  role_rules:
-    - id: RP-ROLE-001
-      when: { role: product-marketer }
-      require_artifact: launch-readiness.md
+  # artifact_rules - a document on disk that ENFORCES a gate or a stage block.
+  # `artifacts_any` matches the documents the CLI finds for the issue, which it
+  # reads at every evaluation and never writes into the assessment (ADR-070).
+  # A 6.x copy of this file holds `role_rules` instead, keyed on a declared
+  # role; the evaluator still reads that block where a copy has it.
+  artifact_rules:
+    - id: RP-ART-001
+      when: { artifacts_any: [positioning] }
+      require_artifact: launch-readiness
       gate: verify.claims                # adds the claims gate to the route's set
-      block_phase: land
+      block_phase: ship
       until: "every claim in positioning.md traces to a passing scenario"
       rationale: "A launch claim with no backing scenario must not ship."
-    - id: RP-ROLE-002
-      when: { role: product-owner }
-      require_artifact: intent.md
+    - id: RP-ART-002
+      when: { artifacts_any: [intent] }
       block_phase: plan
       until: "the spec has been checked against intent.md for intent fidelity"
       rationale: "Built-the-thing-right and built-the-right-thing are different checks."
@@ -281,7 +272,6 @@ assessment_vocabulary:
   size: [atomic, small, medium, large, product]
   goal: [delivery, exploration]
   urgency: [none, live-defect]
-  role: [engineer, product-owner, product-marketer, designer, qa]
   # `labels` is an open list of domain tags - common ones, not exhaustive:
   labels_common: [auth, payments, personal-data, migrations, public-api, infra, ci]
 
@@ -369,6 +359,6 @@ route_shapes:
   full:
     weight: 4
     stages: { assess: thorough, define: thorough, refine: thorough, plan: thorough, breakdown: multiagent, implement: thorough, verify: thorough, ship: thorough }
-    gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.security, verify.clarity, verify.claims]
+    gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.security, verify.clarity]
     subtask_ceiling: null
     artifacts: { intent: thorough, acceptance-criteria: thorough, requirements-review: thorough, technical-design: thorough, distribution-map: thorough, verification-report: thorough }

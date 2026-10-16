@@ -218,5 +218,6 @@ def test_vr_a6_the_regenerated_views_evaluate_as_before_the_rename():
     import compat_baseline as cb
     header, rows = cb.load_routing()
     grid_rows = [r for r in rows if r["kind"] in ("grid", "archive")]
-    differences = cb.routing_differences(cb.shipped_policy(), header, grid_rows)
+    # From 7.0.0 the view spells documents and stages as the catalogue does (ADR-070).
+    differences = cb.routing_differences(cb.shipped_policy(), header, grid_rows, layered=True)
     assert differences == [], "\n".join(differences[:10])

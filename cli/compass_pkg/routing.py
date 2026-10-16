@@ -35,7 +35,7 @@ import fnmatch
 import re as _re
 from compass_pkg.core import _stage_key_renames, ASSESSMENT_KEY_MAP, COMPASS_SCHEMA_VERSION, CompassError, canonical_shape, display_shape, display_stage, find_governance, load_manifest, load_yaml, reading_matches, resolve_issue_dir, shape_stages
 from compass_pkg.governance import governance_drift
-from compass_pkg import word_map
+from compass_pkg import retired, word_map
 from compass_pkg.stable_ids import (APPROACH_FULL, APPROACH_REGULAR, APPROACH_SPIKE,
                                     ARTIFACT_DEPTHS, DEPTH_LIGHTWEIGHT, DEPTH_THOROUGH, MODE_LIGHTWEIGHT,
                                     MODE_THOROUGH)
@@ -57,7 +57,7 @@ from compass_pkg.manifest import annotate_gate_accepts_text
 # words.
 
 
-# A `block_phase` value comes straight from routing-policy.yml, which still
+# A `block_phase` value comes straight from a routing policy, and a 6.x copy
 # spells the ship stage `land` (RP-ROLE-001) - the policy file is not a
 # manifest, so `normalize_spine` never touches it. Canonicalise it the same
 # way a manifest's stage keys already are on load, then hand it to the
@@ -252,7 +252,7 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
     `governance/decisions/2026-10-05-floors-win-over-the-issue-layer.md`
     fixes: it names the candidate (`approach`), replaces the candidate's
     base stage modes (`stage_modes`) and can lower the approach's subtask
-    ceiling (`subtask_ceiling`), and then the floors, caps and role rules
+    ceiling (`subtask_ceiling`), and then the floors, caps and document rules
     apply, so they win over it. A floor that replaces the candidate brings
     the new approach's own modes, so the issue's modes are reported as
     ignored. With no `issue` the result is what it was before the argument
@@ -271,6 +271,11 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
     strategies = policy.get("routing_strategies", {})
     guardrails = policy.get("routing_guardrails", {})
 
+    # A dimension 7.0.0 retired (`role`) is read only by a policy that still
+    # declares it: a stored 6.x generation or copied governance (ADR-070).
+    readings = {k: v for k, v in readings.items()
+                if k not in retired.DIMENSIONS or k in vocab}
+
     # --- check the assessment: a misclassification fails loudly -------------
     errors = []
     for dim in ("risk", "familiarity", "size"):
@@ -281,7 +286,7 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
                 f"reading {dim}={readings[dim]!r} is not in the vocabulary "
                 f"{vocab[dim]}"
             )
-    for dim in ("goal", "urgency", "role"):
+    for dim in ("goal", "urgency", *retired.DIMENSIONS):
         if dim in readings and dim in vocab and readings[dim] not in vocab[dim]:
             errors.append(
                 f"reading {dim}={readings[dim]!r} is not in the vocabulary "
@@ -306,7 +311,7 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
     final = candidate
     fired = []
     never_skip, required_phases, required_skills = set(), set(), set()
-    required_artifacts, blocked_phases, role_gates = [], [], []
+    required_artifacts, blocked_phases, document_gates = [], [], []
     max_worktrees, forbidden = None, set()
 
     def weight(route):
@@ -412,8 +417,12 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
             fired.append({"id": cap.get("id", "?"), "kind": "cap",
                           "rationale": cap.get("rationale", ""), "changed": changed})
 
-    # --- 4. role rules add enforced artifacts / blocks ----------------------
-    for rr in guardrails.get("role_rules", []):
+    # --- 4. document rules add enforced artifacts, gates and blocks ---------
+    # The artifact rules read the documents on disk. A stored 6.x generation
+    # or copied governance can still hold `role_rules`, which apply the same
+    # way until the issue is re-assessed (ADR-036, ADR-070).
+    for kind, rr in [("artifact_rule", r) for r in guardrails.get("artifact_rules", [])] + [
+            ("role_rule", r) for r in guardrails.get("role_rules", [])]:
         if not matches(rr.get("when")):
             continue
         changed = []
@@ -426,10 +435,10 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
             changed.append(f"stage '{_display_blocked_phase(rr['block_phase'])}' "
                            f"blocked until: {rr.get('until', '')}")
         if rr.get("gate"):
-            role_gates.append(rr["gate"])
+            document_gates.append(rr["gate"])
             changed.append(GATE_ADDED.format(gate=rr["gate"]))
         if changed:
-            fired.append({"id": rr.get("id", "?"), "kind": "role_rule",
+            fired.append({"id": rr.get("id", "?"), "kind": kind,
                           "rationale": rr.get("rationale", ""), "changed": changed})
 
     if final in forbidden:
@@ -457,14 +466,14 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
         if _below_thorough(p, phases.get(p), policy.get("stage_mode_ranks")):
             phases[p] = MODE_THOROUGH
     gates = list(shape.get("gates", []))
-    # Immovable gates and role-added gates apply to delivery approaches only. Spike
+    # Immovable gates and rule-added gates apply to delivery approaches only. Spike
     # ships nothing - it carries only its own Conclude gate, by design. (A
     # spike that needs a delivery gate is not a spike; it graduates.)
     if final != APPROACH_SPIKE:
         for ig in guardrails.get("immovable_gates", []):
             if ig.get("gate") and ig["gate"] not in gates:
                 gates.append(ig["gate"])
-        for rg_gate in role_gates:  # gates added by a role rule (e.g. verify.claims)
+        for rg_gate in document_gates:  # gates a document rule adds (verify.claims)
             if rg_gate not in gates:
                 gates.append(rg_gate)
         for fl_gate in floor_gates:  # gates added by a floor's add_gate (ADR-007)
@@ -512,21 +521,20 @@ def evaluate_route(readings, policy, autonomy="balanced", issue=None):
             "reason": "every approach carries %s" % (
                 "one" if depth == DEPTH_THOROUGH else "a lightweight one"),
         })
-    # A role rule already demands documents via `require_artifact` - a marketer
-    # needs launch-readiness, a product owner an intent document. That is the same idea
-    # from the role's side, so it joins the same set rather than living in a
-    # second list nothing renders.
+    # A document rule demands documents via `require_artifact`: a positioning
+    # document needs launch-readiness. That joins the same set rather than
+    # living in a second list nothing renders.
     required_kinds = set()
     for req in required_artifacts:
         kind = req[:-3] if str(req).endswith(".md") else str(req)
-        rule_artifacts.append((kind, "a role in play requires it"))
+        rule_artifacts.append((kind, "a document rule requires it"))
         required_kinds.add(kind)
 
     for kind, why in rule_artifacts:
         held = next((a for a in artifacts if a["kind"] == kind), None)
         if held is not None:
-            # A role asks for the whole document. The regular approach owes the
-            # intent at lightweight, and a product owner's intent stays thorough
+            # A rule asks for the whole document. The regular approach owes the
+            # intent at lightweight; a 6.x product-owner rule keeps it thorough
             # (ADR-065).
             if kind in required_kinds and held["depth"] != DEPTH_THOROUGH:
                 held.update(depth=DEPTH_THOROUGH, reason=why)
@@ -756,7 +764,7 @@ def cmd_route_evaluate(args):
                 raise CompassError(f"--assessment expects key=value, got: {pair}")
             k, v = pair.split("=", 1)
             k = ASSESSMENT_KEY_MAP.get(k, k)
-            if k == "labels":
+            if k in ("labels", "artifacts"):
                 readings[k] = [t.strip() for t in v.split(",") if t.strip()]
             else:
                 readings[k] = read_size(k, v.strip())
@@ -835,9 +843,12 @@ def cmd_route_evaluate(args):
     drift_gov = gov
     if view is not None and view.from_governance_copy():
         drift_gov = find_governance()
-    # The issue's own layer applies before the floors, caps and role rules, as
+    # The issue's own layer applies before the floors, caps and document rules, as
     # `obligations` applies it for the classifier.
-    result = evaluate_route(readings, policy, autonomy,
+    # The documents on disk are read now, beside the assessment and never into it.
+    from compass_pkg import documents_present
+    result = evaluate_route(documents_present.with_presence(readings, task_dir, policy),
+                            policy, autonomy,
                             issue=view.evaluator_issue() if view is not None else None)
     if result.get("renamed_routes"):
         sys.stderr.write(

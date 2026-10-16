@@ -12,7 +12,7 @@ routing_strategies:    # (required) map - the SOFT layer; biases the candidate d
       rationale:       #     (required) string
   default_route:       #   (required) string - fallback when no shape matches
   biases:              #   (optional) list of strings - free-text tie-breakers
-  role_defaults:       #   (optional) list of maps {id, when, suggest_artifact, rationale}
+  role_defaults:       #   (optional, 6.x copies only) list of maps {id, when, suggest_artifact, rationale}
 
 routing_guardrails:    # (required) map - the HARD layer; bounds the delivery approach
   floors:              #   (optional) list of maps:
@@ -34,7 +34,15 @@ routing_guardrails:    # (required) map - the HARD layer; bounds the delivery ap
     - id:              #     (required) string - e.g. RP-GATE-001
       gate:            #     (required) string - a gate id, e.g. verify.correctness
       rationale:       #     (required) string
-  role_rules:          #   (optional) list of maps:
+  artifact_rules:      #   (optional) list of maps - a document on disk that enforces a gate or a block:
+    - id:              #     (required) string - e.g. RP-ART-001
+      when:            #     (required) map - typically {artifacts_any: [<kind>]}
+      require_artifact: #    (optional) string
+      gate:            #     (optional) string - a gate id to add to the delivery approach's set
+      block_phase:     #     (optional) string - stage blocked until `until`
+      until:           #     (optional) string - the unblock condition
+      rationale:       #     (required) string
+  role_rules:          #   (optional, 6.x copies only) list of maps, read as artifact_rules are:
     - id:              #     (required) string - e.g. RP-ROLE-001
       when:            #     (required) map - typically {role: <role>}
       require_artifact: #    (optional) string
@@ -47,9 +55,10 @@ routing_guardrails:    # (required) map - the HARD layer; bounds the delivery ap
       reason:          #     (required) string
 
 # `when` match conditions: keys are assessment dimension names (risk,
-# familiarity, size, goal, urgency, role) with a scalar or list value
+# familiarity, size, goal, urgency) with a scalar or list value
 # (list = any-of), OR the special key `labels_any` with a list value
-# (intersect with assessment.labels).
+# (intersect with assessment.labels), OR `artifacts_any` with a list of
+# document kinds (intersect with the issue's documents on disk).
 
 assessment_vocabulary: # (required) map - the closed value sets per assessment dimension
   risk:        #   (required) list of strings
@@ -57,7 +66,7 @@ assessment_vocabulary: # (required) map - the closed value sets per assessment d
   size:           #   (required) list of strings
   goal:              #   (required) list of strings
   urgency:             #   (optional) list of strings
-  role:                #   (optional) list of strings
+  role:                #   (optional, 6.x copies only) list of strings
   labels_common:      #   (optional) list of strings - illustrative, not closed
 autonomy_checkpoints: # (optional) map of autonomy value -> map of route -> list of checkpoint stages (assess, define, refine, plan) that wait for a person; without it every hand-off the route runs waits
 

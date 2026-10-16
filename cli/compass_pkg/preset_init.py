@@ -49,7 +49,6 @@ assessment:
   familiarity: brownfield-mapped
   size: small
   goal: delivery
-  role: engineer
   labels: []
 expect:
   approach: quick-fix
@@ -61,7 +60,7 @@ expect:
 # the scaffold's own `compass.yml` over the shipped default, so the example
 # stays true when the shipped default changes.
 EXAMPLE_ASSESSMENT = {"risk": "contained", "familiarity": "brownfield-mapped", "size": "small",
-                      "goal": "delivery", "role": "engineer", "labels": []}
+                      "goal": "delivery", "labels": []}
 
 README = """\
 # {owner} Compass preset

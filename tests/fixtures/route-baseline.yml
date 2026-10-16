@@ -1,7 +1,9 @@
 # Do not regenerate this file by re-running the evaluator: that would record
 # a routing regression as the expected result. Each expected value is what
 # the evaluator produced at commit fb092c0; the stage keys were translated to
-# the current names, not re-captured.
+# the current names, not re-captured. One expected value was edited by hand
+# for an intended change: 7.0.0 no longer builds verify.claims into the full
+# approach (ADR-070), so `expedition` lists it no more.
 - name: spike
   assessment:
     risk: trivial
@@ -123,6 +125,5 @@
   - verify.regression
   - verify.security
   - verify.clarity
-  - verify.claims
   - verify.architecture
   expected_subtask_ceiling: null

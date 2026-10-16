@@ -793,7 +793,7 @@ QF_LAYER = {"schema": 1, "rules": {"floors": {"set": {"rules": {"set": {"RP-PROJ
     "rationale": "A docs-only fix still gets a consistency check."}}}}}}}
 QF_REASONS = {"risk": ("trivial", "risk reason"), "familiarity": ("brownfield-mapped",
               "familiarity reason"), "size": ("atomic", "size reason"),
-              "goal": ("delivery", "goal reason"), "role": ("engineer", "role reason")}
+              "goal": ("delivery", "goal reason")}
 #: The record `quick-fix start` wrote before its sections were rendered blocks.
 QF_ARCHIVED = """\
 # Delivery approach - old-fix
@@ -825,7 +825,7 @@ TRC-001: A quick fix shows its reasons
 
 
 def _u2_quick_fix(root, slug):
-    """Run `quick-fix start` for `slug` in `root` with a reason for each of the 5 dimensions
+    """Run `quick-fix start` for `slug` in `root` with a reason for each of the 4 dimensions
     and the label that fires the project's rule; the record's path."""
     argv = ["quick-fix", "start", slug, "--labels", "docs-only", "--intent", "Fix it.",
             "--scenario", "A quick fix shows its reasons", "--test", "tests/test_x.py::test_x"]
@@ -913,10 +913,10 @@ def test_dss_33_receipt_reads_rendered_record(tmp_path):
             value, reason = QF_REASONS[name]
             assert value in shown[slug][name] and reason in shown[slug][name], (slug, section)
         goal = shown[slug]["goal"]
-        assert "delivery (engineer)" in goal and "goal reason" in goal, (slug, section)
-    # The rendered record's reasons come from the manifest, which holds the role's too; the
-    # archived record's come from its table, which the receipt reads for the goal only.
-    assert "role: role reason" in shown["fix-it"]["goal"]
+        assert "delivery" in goal and "goal reason" in goal, (slug, section)
+        # Role is no longer an assessment dimension (ADR-070): the archived record's
+        # Role row is not shown either.
+        assert "engineer" not in goal and "role" not in goal, (slug, section)
     assert shown["old-fix"]["goal"].rstrip().endswith("goal reason")
 
 

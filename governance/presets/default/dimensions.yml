@@ -28,9 +28,6 @@ dimensions:
   urgency:
     type: enum
     values: [none, live-defect]
-  role:
-    type: enum
-    values: [engineer, product-owner, product-marketer, designer, qa]
   labels:
     type: set
     open: true

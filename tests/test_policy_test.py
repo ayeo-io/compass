@@ -29,7 +29,7 @@ from parent_fixtures import REAL_GIT, make_remote  # noqa: E402
 CLI = ROOT / "cli" / "compass"
 
 SMALL = {"risk": "contained", "familiarity": "brownfield-mapped", "size": "small",
-         "goal": "delivery", "role": "engineer", "labels": []}
+         "goal": "delivery", "labels": []}
 QUICK_FIX_GATES = ["G1", "G2", "G3", "G4", "verify.correctness", "verify.governance",
                    "verify.traceability"]
 PRESET = {"schema": 1, "owner": "acme-team"}

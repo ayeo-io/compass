@@ -34,7 +34,8 @@
       "label_cap": 8,
       "points": 4,
       "raw_points": 16,
-      "evaluated": 4
+      "evaluated": 4,
+      "artifacts": []
     },
     "counts": {
       "equal": 0,

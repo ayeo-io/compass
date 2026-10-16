@@ -11,6 +11,8 @@ like done*. Read one and you have seen a delivery approach end to end; read
 all five and you have seen the whole adaptive range - from a one-string fix
 with almost no process, to a multiagent subsystem that runs every gate.
 
+The examples were assessed under 6.x, when role was an assessment dimension. Their records keep it.
+
 Each example is self-contained and verifiable. From inside any example's issue
 directory:
 

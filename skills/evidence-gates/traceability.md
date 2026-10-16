@@ -32,7 +32,7 @@ and that is a no-pass at the verify stage.
 - Every public claim - launch copy, docs, marketing, a sentence in the
   changelog - traces down to a scenario that, when it passes, makes the claim
   true. This is the marketer's `launch-readiness.md` ledger, and
-  `verify.claims` blocks shipping on it while a marketer is in play.
+  `verify.claims` blocks shipping on it while `positioning.md` is present.
 
 ## How to maintain it continuously
 

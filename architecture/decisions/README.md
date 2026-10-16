@@ -106,6 +106,7 @@ Rules:
 | [ADR-064](ADR-064-the-document-set-gains-named-sections-and-section-checks-never-judge-an-earlier-catalogue.md) | The document set gains named sections, and the section checks never judge an earlier catalogue | accepted | extends ADR-051 and ADR-053; settles ADR-055 decision 9; with ADR-006, ADR-033, ADR-036, ADR-038 and ADR-050 |
 | [ADR-065](ADR-065-regular-issues-owe-an-intent-and-shipping-issues-record-a-release-line.md) | Regular issues owe a lightweight intent, and every shipping issue records a release line its landing needs | accepted | extends ADR-026, ADR-035 and ADR-053; follows ADR-063's landing-refusal precedent; with ADR-034, ADR-036, ADR-039, ADR-044 and ADR-051 |
 | [ADR-066](ADR-066-an-approval-names-its-subject-and-guardrail-5-counts-only-an-approval-given-for-it.md) | An approval names its subject, and guardrail 5 counts only an approval given for it | accepted | extends ADR-038 and ADR-063; with ADR-006 and ADR-039 |
+| [ADR-070](ADR-070-role-is-not-an-assessment-dimension-and-documents-on-disk-bring-the-claims-gate-and-the-intent-block.md) | Role is not an assessment dimension, and the documents on disk bring the claims gate and the intent block | proposed | narrows ADR-004 and ADR-007; with ADR-001, ADR-006, ADR-036 and ADR-037 |
 
 ## Principle → ADR mapping
 

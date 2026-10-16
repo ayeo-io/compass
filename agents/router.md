@@ -37,7 +37,7 @@ read the dimensions.
 2. **Create the manifest.** Make `.compass/work/<issue-slug>/` and write
    `manifest.yml` from `${CLAUDE_PLUGIN_ROOT}/templates/manifest.yml`.
 3. **Read the four dimensions - this is the judgement** - risk,
-   familiarity, size, goal & role - each with a one-line written
+   familiarity, size and goal - each with a one-line written
    justification. Risk is about consequence, never effort. When size is
    genuinely unclear, estimate *up*. If you cannot justify a value, ask
    the human; an unjustified assessment is worse than a question.
@@ -48,14 +48,14 @@ read the dimensions.
 5. **Compute the delivery approach - this is the mechanism, and it is the
    CLI's, not yours.** Run `compass approach evaluate --issue <slug>
    --write --justify risk="<why>" --justify familiarity="<why>" --justify
-   size="<why>"`, with a `--justify` for goal and role when you assessed them.
+   size="<why>"`, with a `--justify` for goal when you assessed it.
    The CLI refuses a new or changed value that has no justification, and
    records each one under the manifest's `justifications:` key. The CLI applies the routing rules in force:
    - composes the candidate shape, biased by the soft defaults;
    - raises it with floors;
    - limits it with caps;
    - adds the immovable gates;
-   - adds role-rule artifacts and blocks;
+   - adds artifact-rule artifacts and blocks;
    - folds `delivery_approach`, `stages`, `gates`, `subtask_ceiling`
      and `policy_rules_fired` into `manifest.yml`. Breakdown records the
      orchestration later, once the distribution map exists.

@@ -105,7 +105,7 @@ A fixture is a mapping with these keys.
 | Key | Required | Meaning |
 |---|---|---|
 | `name` | no | The name the report shows. It defaults to the file name without `.yml` |
-| `assessment` | yes | The assessment to evaluate: a value for each dimension to set, such as `risk`, `familiarity`, `size`, `goal` and `role`, and `labels`, a list of text. Any other key is an error |
+| `assessment` | yes | The assessment to evaluate: a value for each dimension to set, such as `risk`, `familiarity`, `size` and `goal`, and `labels`, a list of text. Any other key is an error |
 | `expect` | yes | What the evaluation must compute. It holds at least one of the four keys below |
 
 | `expect` key | Value | The fixture passes when |
@@ -122,7 +122,6 @@ assessment:
   familiarity: brownfield-mapped
   size: small
   goal: delivery
-  role: engineer
   labels: []
 expect:
   approach: quick-fix

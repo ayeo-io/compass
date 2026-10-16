@@ -69,7 +69,7 @@ approaches:
     stages: {assess: thorough, define: thorough, refine: thorough, plan: thorough, breakdown: multiagent,
       implement: thorough, verify: thorough, ship: thorough}
     gates: [verify.correctness, verify.governance, verify.traceability, verify.regression, verify.security,
-      verify.clarity, verify.claims]
+      verify.clarity]
     artifacts: {intent: thorough, acceptance-criteria: thorough, requirements-review: thorough, technical-design: thorough,
       distribution-map: thorough, verification-report: thorough}
     subtask_ceiling: null

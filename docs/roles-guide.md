@@ -16,8 +16,10 @@ behaviours, read from different professional perspectives.
 | Engineer | `/compass:assess` | approach, design, code and tests | How will each scenario become tested software? |
 | QA | `/compass:verify` | `verification-report.md` | Is the behaviour covered, and is the evidence enough? |
 
-A role changes the issue's assessment, artifacts and gates. It is not merely a
-label for a reviewer added at the end.
+A role is a perspective a session consults. It does not change the issue's
+assessment. The documents on disk decide: `positioning.md` adds the claims
+gate, and `intent.md` blocks the plan stage until the spec is checked against
+it. If you write one after the issue is assessed, re-assess the issue.
 
 ## How each role reads the spec
 

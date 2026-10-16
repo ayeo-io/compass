@@ -39,7 +39,7 @@ POLICY_TEMPLATE = """\
 # is what the deterministic evaluator (`compass approach evaluate`) actually runs.
 #
 # The split that matters: the four-dimension *assessment* (risk, familiarity,
-# size, goal, role, labels) is JUDGEMENT - the assess stage, an LLM or a
+# size, goal, plus urgency and labels) is JUDGEMENT - the assess stage, an LLM or a
 # human, produces it, and it is not mechanisable, because that judgement
 # IS the adaptivity. This file governs only what happens *after* the assessment
 # is recorded: composing and constraining the delivery approach. That part is deterministic and
@@ -71,11 +71,6 @@ routing_strategies:
   # Not machine-evaluated; surfaced to the assess stage and recorded for audit.
   biases:
 <<biases>>
-
-  # role_defaults - advisory artifacts a role's involvement suggests. The
-  # BLOCKING versions live under routing_guardrails.role_rules.
-  role_defaults:
-<<role_defaults>>
 
   # advisory_strategies - soft strategies the evaluator surfaces (in
   # `applicable_strategies`) when their `when` matches the assessment. They BIAS
@@ -126,15 +121,18 @@ routing_guardrails:
   # future custom or tuned approach still cannot drop them. NOTE what is NOT
   # here: verify.regression is route-scoped (quick fix, being atomic+trivial,
   # does not run it - that is quick fix's whole point), and verify.claims is
-  # role-scoped (added by RP-ROLE-001 when a marketer is in play, and built
-  # into the full approach). Immovable means immovable *everywhere* - keep the set to
-  # what genuinely is.
+  # document-scoped (added by RP-ART-001 when the issue has positioning.md).
+  # Immovable means immovable *everywhere* - keep the set to what genuinely is.
   immovable_gates:
 <<immovable_gates>>
 
-  # role_rules - a role's involvement that ENFORCES a gate or a stage block.
-  role_rules:
-<<role_rules>>
+  # artifact_rules - a document on disk that ENFORCES a gate or a stage block.
+  # `artifacts_any` matches the documents the CLI finds for the issue, which it
+  # reads at every evaluation and never writes into the assessment (ADR-070).
+  # A 6.x copy of this file holds `role_rules` instead, keyed on a declared
+  # role; the evaluator still reads that block where a copy has it.
+  artifact_rules:
+<<artifact_rules>>
 
 # -----------------------------------------------------------------------------
 # Assessment vocabulary - the legal values the assessment may take. The evaluator
@@ -362,7 +360,7 @@ ENTRY_COMMENTS = {
 
 # A comment on the same line as a value, as (spaces before it, the comment).
 INLINE_COMMENTS = {
-    ('RP-ROLE-001', 'gate'): (16, "# adds the claims gate to the route's set"),
+    ('RP-ART-001', 'gate'): (16, "# adds the claims gate to the route's set"),
     ('gate_evidence_requirements', GATE_VERIFY_CLARITY): (7, '# inherently judgement - and now visibly so'),
     ('gate_evidence_requirements', GATE_SPIKE_CONCLUDE): (14, '# SPECIFIC: a generic artifact will not do'),
     ('gate_evidence_requirements', GATE_VERIFY_ANALYZE): (14, '# SPECIFIC: advisory command-output does NOT clear this gate'),

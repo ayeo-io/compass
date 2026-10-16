@@ -13,15 +13,15 @@ becomes something you can watch happen.
 
 Every issue, every time, the assess stage runs the same four steps:
 
-1. **Score the four dimensions** - risk, familiarity, size, goal and
-   role - each with a one-line written justification. If a value cannot be
+1. **Score the four dimensions** - risk, familiarity, size and
+   goal - each with a one-line written justification. If a value cannot be
    justified, the assess stage asks rather than guesses.
 2. **Compose the candidate delivery approach** - assemble per-stage weight
    from the dimension contributions, biased by the routing strategies, name
    the reference shape for shared vocabulary, list any deviations.
 3. **Constrain with the routing policy rules** - floors raise the candidate,
-   caps limit it, immovable gates are always added, blocking role rules add
-   artifacts and blocks. Every rule that fires is recorded with its
+   caps limit it, immovable gates are always added, blocking artifact rules add
+   artifacts and blocks, according to the documents present. Every rule that fires is recorded with its
    rationale.
 4. **Write `delivery-approach.md` and confirm** - including the de-scope ledger, where
    every collapsed or skipped stage carries an explicit "safe to skip
@@ -47,7 +47,7 @@ What follows is six cases. Read them in order; they build on each other.
 | risk | `trivial` | The wrong outcome is a misspelt word in an error string - cosmetic, instantly obvious, instantly reversible. No data, no money, no auth *behaviour* touched. |
 | Familiarity | `brownfield-mapped` | Existing code; the error path is trivially readable. |
 | Size | `atomic` | One file, one string, no design decision, well under thirty minutes. |
-| Goal and role | `engineer` | Feature pipeline ownership; no intent document, no other role. |
+| Goal | `delivery` | Feature pipeline ownership; no `intent.md` or `positioning.md` is present. |
 
 Assess also assigns domain tags. The change is *in* the JWT module, so it
 tags `labels: [auth]` - honestly, because the tag is about where the change
@@ -55,7 +55,7 @@ lives, not how scary it looks.
 
 ### Compose
 
-Atomic size, trivial risk, mapped familiarity, engineer role. This is
+Atomic size, trivial risk, mapped familiarity, a delivery goal. This is
 the textbook quick fix case. The candidate delivery approach is **quick
 fix**: one scenario, the requirements review collapsed, plan collapsed to a
 one-liner, breakdown skipped, full TDD on a tiny surface, three gates at
@@ -110,7 +110,7 @@ purpose.
 | risk | `contained` | A broken saved-view is annoying and bounded to the dashboard; recoverable, no data loss, no other surface affected. |
 | Familiarity | `brownfield-mapped` | The dashboard's filter behaviour is already captured in scenarios. |
 | Size | `medium` | Several files - a persistence layer, the filter serialisation, the UI - and one or two design decisions, 1–3 days. |
-| Goal and role | `engineer` | No intent document; an engineer is implementing a well-understood feature. |
+| Goal | `delivery` | No `intent.md`; a well-understood feature is being implemented. |
 
 Domain tags: `labels: [persistence]` might carry, but nothing on the
 policy's floor list (`auth`, `payments`, `personal-data`, `migrations`).
@@ -132,9 +132,9 @@ No floor matches - no domain tag on the floor list, risk is not
 (`verify.correctness`, `verify.governance`, `verify.traceability`) are
 always added. `verify.regression` is in this approach's own gate set rather
 than added separately - it is approach-scoped, and a quick fix does not run it, which
-is the point of a quick fix. `verify.claims` is role-scoped and does not
-appear at all here, because no marketer is involved. No `role_rules` fire -
-only an engineer.
+is the point of a quick fix. `verify.claims` is added only when `positioning.md` is present, so it does not
+appear here. No artifact rule fires, because neither `intent.md` nor
+`positioning.md` exists.
 
 ### Final `delivery-approach.md`
 
@@ -166,7 +166,7 @@ extra process.
 | risk | `critical` | A wrong migration can corrupt stored payment tokens - data loss, money, and a path that does not cleanly roll back. |
 | Familiarity | `brownfield-mapped` | The token storage and read path are mapped. |
 | Size | `small` | Honestly: one column, one follow-up script, one read-path change. 1–3 files, a known pattern. |
-| Goal and role | `engineer` | An engineer running a contained migration. |
+| Goal | `delivery` | A contained migration. |
 
 This is the case the methodology opens with: *a migration that touches one
 file is small but not safe.* Size and risk are different axes, and
@@ -248,7 +248,7 @@ map is the record of *what could have been parallel and why it wasn't* - here,
 | risk | `cross-cutting` | Notifications touch many features; a delivery failure degrades something many users see. Recovery needs coordination, but it is not data-loss or money - not `critical`. |
 | Familiarity | `greenfield` | Net-new code; no existing behaviour to preserve. |
 | Size | `product` | A new subsystem - three delivery channels, a preferences model, a delivery log. 2+ weeks, many independent work subtasks. |
-| Goal and role | `engineer` | An engineering lead, though a designer and a product owner may well join (preferences are a user-facing surface; the subsystem serves a stated outcome). |
+| Goal | `delivery` | A subsystem that serves a stated outcome. A designer and a product owner may well be consulted (preferences are a user-facing surface). |
 
 Domain tags: `labels: [personal-data]` might carry if the preferences or
 delivery log store anything personal - the assess stage tags honestly and
@@ -285,10 +285,10 @@ genuinely different orchestration - because the dimensions read differently.
 The delivery approach is the full approach at full weight, multiagent orchestration,
 empty de-scope ledger (the full approach's
 ledger is empty by definition - it is what the other approaches are measured
-against). If a designer and product owner did join, their `role_rules` would
-fire: `intent.md` required and the intent-fidelity gate before the plan
-stage; the designer's `ui-contract.md` flowing into the define stage as
-scenarios. Each would be recorded in the policy-rules section.
+against). If the product owner wrote an `intent.md`, the artifact rule RP-ART-002 would
+fire: the intent-fidelity gate blocks the plan stage. The designer's
+`ui-contract.md` would flow into the define stage as scenarios. Each rule
+that fires is recorded in the policy-rules section.
 
 ---
 
@@ -308,7 +308,7 @@ rather than by the size / risk / familiarity composition.
 | risk | `cross-cutting` | Checkout is down for every cart with a discount code - many users affected, and recovery needs coordination with the payments team. No data is lost, no money is misrouted, and the deploy can be rolled back cleanly, so it stops short of `critical`. |
 | Familiarity | `brownfield-mapped` | The checkout and discount paths are mapped. |
 | Size | `small` | The defect is bounded; the fix is expected to be 1–3 files once the cause is found. |
-| Goal and role | `engineer`, often paired with `qa` | An engineer fixing a live defect, QA checking. |
+| Goal | `delivery` | Fixing a live defect. |
 
 ### Compose
 
@@ -381,7 +381,7 @@ as the goal.
 | risk | `contained` | The investigation itself touches nothing irreversible - reading logs, adding instrumentation behind a flag, reproducing in a sandbox. |
 | Familiarity | `brownfield-unmapped` | The queue's behaviour under load is exactly what is *not* written down. |
 | Size | `small` | The investigation is timeboxed; the eventual fix is unknown and not in scope here. |
-| Goal and role | `exploration` (engineer) | "I need to understand this before I can assess it" - not a delivery request. |
+| Goal | `exploration` | "I need to understand this before I can assess it" - not a delivery request. |
 
 ### Compose
 
@@ -444,7 +444,7 @@ the delivery approach from the *assessment*, not the words.
 ### "Add a CSV export" - engineer, internal admin tool
 
 Size `small`, risk `contained` (an admin tool, bounded), familiarity
-`brownfield-mapped`, role `engineer`, no domain tags. Composes to **quick fix**:
+`brownfield-mapped`, goal `delivery`, no domain tags. Composes to **quick fix**:
 one scenario ("given a filtered table, when the user exports, then a CSV with
 those rows downloads"), the review collapsed, plan a one-liner, full TDD on a
 small surface, three gates. Done in an afternoon. Assess stays out of the way -
@@ -457,8 +457,8 @@ document's outcome is "let finance self-serve their month-end numbers."
 Assess reads the goal as the *actual outcome wanted*, not the literal
 request - and "self-serve" implies filters that match what finance actually
 needs, perhaps scheduling, perhaps permissions. Size is no longer `small`;
-it is `medium` or larger. The `product-owner` role rule fires: `intent.md`
-required, the intent-fidelity gate before the plan stage. Composes to
+it is `medium` or larger. Because `intent.md` is present, the artifact rule RP-ART-002 fires: the
+intent-fidelity gate blocks the plan stage. Composes to
 **the regular approach or heavier**, with a gate that checks the export scenarios
 actually deliver "self-serve" and not just "a button that produces a file."
 Same words, a genuinely bigger delivery approach - because the goal under
@@ -477,14 +477,15 @@ full. A "small" feature, the full approach, because of what it touches.
 
 ### "Add a CSV export" - product marketer, a launch feature
 
-A marketer invokes `/compass:position` for an export feature being launched.
-The `product-marketer` role rule fires: `positioning.md` and
-`launch-readiness.md` required, the `claims` review dimension on, and **shipping
+A marketer invokes `/compass:position` for an export feature being launched,
+then the issue is re-assessed so the new document counts.
+Because `positioning.md` is present, the artifact rule RP-ART-001 fires:
+`launch-readiness.md` is required, the `claims` review dimension on, and **shipping
 blocked** until every claim ("export your data in one click", "works with
 spreadsheets you already use") traces to a passing scenario. The engineering
 work might be quick fix-sized, but the delivery approach carries the claims
-gate to ship regardless - `verify.claims` blocks shipping whenever a marketer
-is in play. Same three words; an extra gate that did not exist in the other
+gate to ship regardless - `verify.claims` blocks shipping whenever
+`positioning.md` is present. Same three words; an extra gate that did not exist in the other
 three cases.
 
 Four delivery approaches, one request. The request did not change. The

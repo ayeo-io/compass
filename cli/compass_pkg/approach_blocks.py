@@ -27,10 +27,13 @@ NO_JUSTIFICATION = "no justification recorded"
 
 
 def _dimension_order(view, assessed):
-    from compass_pkg import justifications
+    """The configuration's dimensions first, then any other recorded key, except
+    a dimension 7.0.0 retired that the configuration does not declare (ADR-070)."""
+    from compass_pkg import justifications, retired
     ordered = [name for name in justifications.justified_dimensions(view) if name in assessed]
     rest = sorted(k for k, v in assessed.items()
-                  if k not in ordered and k != "labels" and not isinstance(v, (list, dict)))
+                  if k not in ordered and k != "labels" and k not in retired.DIMENSIONS
+                  and not isinstance(v, (list, dict)))
     return ordered + rest
 
 

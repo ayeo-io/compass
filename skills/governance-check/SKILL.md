@@ -143,7 +143,7 @@ Confirm the plan is consistent with `routing-policy.md`:
 
 - **Routing guardrails** - did every floor that should have fired, fire? Is the
   delivery approach the plan assumes consistent with the caps (e.g. the worktree cap on
-  critical risk)? Are the `immovable_gates` and blocking `role_rules`
+  critical risk)? Are the `immovable_gates` and blocking `artifact_rules`
   reflected in the plan's gate set and artifact list? A plan that quietly
   assumes a lighter delivery approach than the routing guardrails allow fails here.
 - **Routing strategies** - did the delivery approach follow the default shapes and biases,

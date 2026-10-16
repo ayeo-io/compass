@@ -126,9 +126,10 @@ def test_trc_a1_board_data_carries_the_why_for_each_open_issue(tmp_path):
                     "labels": ["public-api", "cli"], "unlisted": "not copied"}))
     out = _flow_json(root)
     row = next(r for r in out["board"]["in_review"] if r["slug"] == "why-me")
+    # A recorded role is not copied: it is not an assessment dimension (ADR-070).
     assert row["assessment"] == {
         "risk": "cross-cutting", "familiarity": "brownfield-mapped", "size": "large",
-        "goal": "delivery", "role": "engineer", "labels": ["public-api", "cli"]}
+        "goal": "delivery", "labels": ["public-api", "cli"]}
     assert row["policy_rules_fired"] == RULES
     assert row["stage_depths"] == _stages()
     assert list(row["stage_depths"]) == list(STAGE_IDS)

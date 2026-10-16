@@ -63,13 +63,13 @@ treat a project without a `compass.yml` as missing a prerequisite.
   `medium` has one or two design decisions; `large` has real architecture and
   is plausibly parallelisable.
 
-**Goal & role** - *the actual outcome, not the literal request.*
+**Goal** - *the actual outcome, not the literal request.*
 - Read `intent.md` if it exists. "Add a CSV export" under an `intent.md` that says "let
   finance self-serve" may need filters, scheduling, and permissions - the
   literal request under-describes the intent.
-- A non-engineering role in play almost always pulls the delivery approach up: it adds
-  artifacts and assessed strategies. That is the framework working, not overhead.
-- One goal value is not a role: **exploration** - "I cannot frame this well
+- Role is not scored. An `intent.md` or `positioning.md` on disk adds artifacts
+  and gates through the artifact rules. That is the framework working, not overhead.
+- One goal value is **exploration** - "I cannot frame this well
   enough to deliver it yet." Exploration composes towards the **spike** delivery approach the
   way live-defect urgency composes towards hotfix. Still score all four
   dimensions; the goal is what selects the shape. See "Composing a spike"
@@ -83,7 +83,7 @@ unjustified guess is worse than a question, every time.
 The CLI does both. You read the four dimensions and run
 `compass approach evaluate --write --justify DIM="<why>"`, with one
 `--justify` for each new or changed value; it composes the first approach and
-applies the floors, caps, immovable gates and role rules. That split is the
+applies the floors, caps, immovable gates and artifact rules. That split is the
 determinism boundary and it is the point of the whole design: judgement
 produces the assessment, mechanism produces the approach.
 

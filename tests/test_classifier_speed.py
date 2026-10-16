@@ -289,7 +289,7 @@ def test_cs_3_the_benchmark_pair_at_four_labels_keeps_its_grid_verdict_and_count
     parent, child = _bench().pair(4)
     got = classify.classify(parent, child)
     assert (got.result, got.scan, got.complete) == ("equivalent", "full", True)
-    assert got.grid.points == 4608 and got.grid.raw_points == 51840
+    assert got.grid.points == 4608 and got.grid.raw_points == 34560
     assert got.grid.label_count == 4
     assert got.counts == {"equal": 4608, "tighter": 0, "looser": 0, "mixed": 0}
     assert len(calls) == 2 * 4608, "the evaluator runs once for each side at each point"
@@ -586,7 +586,10 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # Re-pinned in the same issue for `routing.evaluate_route`: a document a role rule
 # asks for is thorough even when the approach owes it at lightweight, which keeps a
 # product owner's regular intent thorough. Version 6 covers both changes.
-VERDICT_SOURCE_PIN = "d17e607d8900c305"
+# Re-pinned for issue `remove-role-from-assessment`: a point carries the documents on
+# disk beside the labels, and the evaluator reads artifact rules and drops a role the
+# policy does not declare (ADR-070); the version is now 7.
+VERDICT_SOURCE_PIN = "85522327d5d6ed01"
 
 
 def _verdict_source_digest():

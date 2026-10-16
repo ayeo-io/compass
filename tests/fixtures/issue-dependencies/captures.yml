@@ -217,7 +217,6 @@ flow-json.txt: |
             "familiarity": "brownfield-mapped",
             "size": "small",
             "goal": "delivery",
-            "role": "engineer",
             "labels": [
               "cli"
             ]
@@ -267,7 +266,6 @@ flow-json.txt: |
             "familiarity": "brownfield-mapped",
             "size": "small",
             "goal": "delivery",
-            "role": "engineer",
             "labels": [
               "cli"
             ]
@@ -316,7 +314,6 @@ flow-json.txt: |
             "familiarity": "brownfield-mapped",
             "size": "small",
             "goal": "delivery",
-            "role": "engineer",
             "labels": [
               "cli"
             ]
@@ -385,7 +382,6 @@ flow-json.txt: |
             "familiarity": "brownfield-mapped",
             "size": "small",
             "goal": "delivery",
-            "role": "engineer",
             "labels": [
               "cli"
             ]
@@ -436,7 +432,6 @@ flow-json.txt: |
             "familiarity": "brownfield-mapped",
             "size": "small",
             "goal": "delivery",
-            "role": "engineer",
             "labels": [
               "cli"
             ]
@@ -519,7 +514,6 @@ flow-json.txt: |
             "familiarity": "brownfield-mapped",
             "size": "small",
             "goal": "delivery",
-            "role": "engineer",
             "labels": [
               "cli"
             ]
@@ -570,7 +564,6 @@ flow-json.txt: |
             "familiarity": "brownfield-mapped",
             "size": "small",
             "goal": "delivery",
-            "role": "engineer",
             "labels": [
               "cli"
             ]
@@ -621,7 +614,6 @@ flow-json.txt: |
             "familiarity": "brownfield-mapped",
             "size": "small",
             "goal": "delivery",
-            "role": "engineer",
             "labels": [
               "cli"
             ]
@@ -683,7 +675,6 @@ flow-json.txt: |
             "familiarity": "brownfield-mapped",
             "size": "small",
             "goal": "delivery",
-            "role": "engineer",
             "labels": [
               "cli"
             ]
@@ -735,7 +726,6 @@ flow-json.txt: |
             "familiarity": "brownfield-mapped",
             "size": "small",
             "goal": "delivery",
-            "role": "engineer",
             "labels": [
               "cli"
             ]
@@ -784,7 +774,6 @@ flow-json.txt: |
             "familiarity": "brownfield-mapped",
             "size": "small",
             "goal": "delivery",
-            "role": "engineer",
             "labels": [
               "cli"
             ]
@@ -866,7 +855,6 @@ flow-json.txt: |
             "familiarity": "brownfield-mapped",
             "size": "small",
             "goal": "delivery",
-            "role": "engineer",
             "labels": [
               "cli"
             ]
@@ -916,7 +904,6 @@ flow-json.txt: |
             "familiarity": "brownfield-mapped",
             "size": "small",
             "goal": "delivery",
-            "role": "engineer",
             "labels": [
               "cli"
             ]
@@ -965,7 +952,6 @@ flow-json.txt: |
             "familiarity": "brownfield-mapped",
             "size": "small",
             "goal": "delivery",
-            "role": "engineer",
             "labels": [
               "cli"
             ]
@@ -1034,7 +1020,6 @@ flow-json.txt: |
             "familiarity": "brownfield-mapped",
             "size": "small",
             "goal": "delivery",
-            "role": "engineer",
             "labels": [
               "cli"
             ]
@@ -1085,7 +1070,6 @@ flow-json.txt: |
             "familiarity": "brownfield-mapped",
             "size": "small",
             "goal": "delivery",
-            "role": "engineer",
             "labels": [
               "cli"
             ]
@@ -1168,7 +1152,6 @@ flow-json.txt: |
             "familiarity": "brownfield-mapped",
             "size": "small",
             "goal": "delivery",
-            "role": "engineer",
             "labels": [
               "cli"
             ]
@@ -1219,7 +1202,6 @@ flow-json.txt: |
             "familiarity": "brownfield-mapped",
             "size": "small",
             "goal": "delivery",
-            "role": "engineer",
             "labels": [
               "cli"
             ]
@@ -1270,7 +1252,6 @@ flow-json.txt: |
             "familiarity": "brownfield-mapped",
             "size": "small",
             "goal": "delivery",
-            "role": "engineer",
             "labels": [
               "cli"
             ]
@@ -1332,7 +1313,6 @@ flow-json.txt: |
             "familiarity": "brownfield-mapped",
             "size": "small",
             "goal": "delivery",
-            "role": "engineer",
             "labels": [
               "cli"
             ]
@@ -1384,7 +1364,6 @@ flow-json.txt: |
             "familiarity": "brownfield-mapped",
             "size": "small",
             "goal": "delivery",
-            "role": "engineer",
             "labels": [
               "cli"
             ]
@@ -1433,7 +1412,6 @@ flow-json.txt: |
             "familiarity": "brownfield-mapped",
             "size": "small",
             "goal": "delivery",
-            "role": "engineer",
             "labels": [
               "cli"
             ]
@@ -1632,7 +1610,6 @@ board-page.html: |
   <dt>familiarity</dt><dd>brownfield-mapped</dd>
   <dt>size</dt><dd>small</dd>
   <dt>goal</dt><dd>delivery</dd>
-  <dt>role</dt><dd>engineer</dd>
   </dl>
   <ul class="labels"><li class="label">cli</li></ul></section>
   <p class="meta">Repository readiness: not measured (no record: run `compass readiness`)</p>
@@ -1674,7 +1651,6 @@ board-page.html: |
   <dt>familiarity</dt><dd>brownfield-mapped</dd>
   <dt>size</dt><dd>small</dd>
   <dt>goal</dt><dd>delivery</dd>
-  <dt>role</dt><dd>engineer</dd>
   </dl>
   <ul class="labels"><li class="label">cli</li></ul></section>
   <p class="meta">Repository readiness: not measured (no record: run `compass readiness`)</p>
@@ -1716,7 +1692,6 @@ board-page.html: |
   <dt>familiarity</dt><dd>brownfield-mapped</dd>
   <dt>size</dt><dd>small</dd>
   <dt>goal</dt><dd>delivery</dd>
-  <dt>role</dt><dd>engineer</dd>
   </dl>
   <ul class="labels"><li class="label">cli</li></ul></section>
   <p class="meta">Repository readiness: not measured (no record: run `compass readiness`)</p>
@@ -1759,7 +1734,6 @@ board-page.html: |
   <dt>familiarity</dt><dd>brownfield-mapped</dd>
   <dt>size</dt><dd>small</dd>
   <dt>goal</dt><dd>delivery</dd>
-  <dt>role</dt><dd>engineer</dd>
   </dl>
   <ul class="labels"><li class="label">cli</li></ul></section>
   <p class="meta">Repository readiness: not measured (no record: run `compass readiness`)</p>
@@ -1802,7 +1776,6 @@ board-page.html: |
   <dt>familiarity</dt><dd>brownfield-mapped</dd>
   <dt>size</dt><dd>small</dd>
   <dt>goal</dt><dd>delivery</dd>
-  <dt>role</dt><dd>engineer</dd>
   </dl>
   <ul class="labels"><li class="label">cli</li></ul></section>
   <p class="meta">Repository readiness: not measured (no record: run `compass readiness`)</p>
@@ -1846,7 +1819,6 @@ board-page.html: |
   <dt>familiarity</dt><dd>brownfield-mapped</dd>
   <dt>size</dt><dd>small</dd>
   <dt>goal</dt><dd>delivery</dd>
-  <dt>role</dt><dd>engineer</dd>
   </dl>
   <ul class="labels"><li class="label">cli</li></ul></section>
   <p class="meta">Repository readiness: not measured (no record: run `compass readiness`)</p>
@@ -1888,7 +1860,6 @@ board-page.html: |
   <dt>familiarity</dt><dd>brownfield-mapped</dd>
   <dt>size</dt><dd>small</dd>
   <dt>goal</dt><dd>delivery</dd>
-  <dt>role</dt><dd>engineer</dd>
   </dl>
   <ul class="labels"><li class="label">cli</li></ul></section>
   <p class="meta">Repository readiness: not measured (no record: run `compass readiness`)</p>
@@ -1930,7 +1901,6 @@ board-page.html: |
   <dt>familiarity</dt><dd>brownfield-mapped</dd>
   <dt>size</dt><dd>small</dd>
   <dt>goal</dt><dd>delivery</dd>
-  <dt>role</dt><dd>engineer</dd>
   </dl>
   <ul class="labels"><li class="label">cli</li></ul></section>
   <p class="meta">Repository readiness: not measured (no record: run `compass readiness`)</p>
@@ -1973,7 +1943,6 @@ board-page.html: |
   <dt>familiarity</dt><dd>brownfield-mapped</dd>
   <dt>size</dt><dd>small</dd>
   <dt>goal</dt><dd>delivery</dd>
-  <dt>role</dt><dd>engineer</dd>
   </dl>
   <ul class="labels"><li class="label">cli</li></ul></section>
   <p class="meta">Repository readiness: not measured (no record: run `compass readiness`)</p>

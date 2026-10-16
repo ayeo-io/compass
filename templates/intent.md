@@ -2,7 +2,7 @@
 TEMPLATE: intent.md
 Role in the pipeline: the intent artifact. It sits UPSTREAM of the spec -
 the BDD scenarios in acceptance-criteria.md are checked back against this intent
-for intent fidelity before plan (the product-owner role_rule in
+for intent fidelity before plan (the artifact rule RP-ART-002 in
 governance/routing-policy.md). The assess stage reads this: intent is
 the outcome wanted, not just the literal request.
 
@@ -91,8 +91,8 @@ team accepts should be visible here, not discovered later.}}
 
 ## Affected roles
 
-<!-- Which of the five roles this intent pulls into the pipeline. The assess
-     stage uses this when scoring the goal & role dimension. -->
+<!-- Which perspectives to consult for this intent. A role does not change the
+     assessment; the documents you write do. -->
 
 - {{e.g. designer - there is a new user-facing surface; expect a ui-contract.md}}
 - {{e.g. product-marketer - this is launch-visible; expect positioning.md}}
@@ -101,7 +101,7 @@ team accepts should be visible here, not discovered later.}}
 
 ## Intent-fidelity check (filled at the pre-plan gate)
 
-<!-- The product-owner role_rule blocks plan until the spec is checked
+<!-- The artifact rule RP-ART-002 blocks plan until the spec is checked
      against this intent. Record the check here. -->
 
 - [ ] Every success signal above maps to at least one scenario in `acceptance-criteria.md`.

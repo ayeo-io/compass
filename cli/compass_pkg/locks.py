@@ -621,6 +621,11 @@ def _scan(fp, locks, before, after, kwargs, early_exit, out, scan="footprint", a
     atoms = classify.collect_atoms(before, after, None, kwargs["child_issue"],
                                    label_site=reader)
     grid = classify.build_grid(before, after, atoms, False, None, kwargs["child_issue"])
+    if len(grid.artifacts) > spec.DOCUMENT_CAP and len(grid.labels) <= spec.LABEL_CAP:
+        out.refusals += (_unprovable("grid", grid.over_cap() + ". The scan does not sample, "
+                                     "so every change is refused until the layer names "
+                                     "no more than four documents"),)
+        return
     if len(grid.labels) > spec.LABEL_CAP:
         hard = any(level == "hard" for level in fp.levels.values())
         remedy = ("a hard lock: nothing else lifts it" if hard else

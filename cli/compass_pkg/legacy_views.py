@@ -107,14 +107,13 @@ def rebuild(root):
             "default_shapes": rules_of("default_shapes", rp["generated_rules"]),
             "default_route": rp["default_route"],
             "biases": [r["rationale"] for r in preset["rules"]["biases"]["rules"].values()],
-            "role_defaults": rules_of("role_defaults"),
             "advisory_strategies": rules_of("advisory"),
         },
         "routing_guardrails": {
             "floors": rules_of("floors"), "caps": rules_of("caps"),
             "loop_ceilings": rules_of("loop_ceilings"),
             "immovable_gates": rules_of("immovable_gates"),
-            "role_rules": rules_of("role_rules"),
+            "artifact_rules": rules_of("artifact_rules"),
         },
         "assessment_vocabulary": vocabulary,
         "autonomy_checkpoints": {
@@ -380,7 +379,6 @@ def render_policy(root):
         "default_shapes": _entries("default_shapes", strategies["default_shapes"], 4),
         "default_route": _scalar(strategies["default_route"]),
         "biases": biases,
-        "role_defaults": _entries("role_defaults", strategies["role_defaults"], 4),
         "advisory_strategies": _entries("advisory", strategies["advisory_strategies"], 4),
         **{name: _entries(name, rules[name], 4) for name in rules},
         "assessment_vocabulary": _flow_map("assessment_vocabulary",

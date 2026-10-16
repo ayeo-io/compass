@@ -60,9 +60,10 @@ def _legacy_report():
                                      governance._drift_is_strict())
 
 
-def _layered_report(args, root, file=None, manifest=None, read_project=True):
+def _layered_report(args, root, file=None, manifest=None, read_project=True, task_dir=None):
     loaded = policy_lint.load_layers(root, file=file, manifest=manifest, cwd=os.getcwd(),
-                                     read_project=read_project, fetch=_may_fetch(args))
+                                     read_project=read_project, fetch=_may_fetch(args),
+                                     task_dir=task_dir)
     return policy_lint.lint_loaded(loaded, exhaustive=bool(getattr(args, "exhaustive", False)))
 
 
@@ -102,8 +103,10 @@ def run_policy_lint(args):
         report = _legacy_report()
         _emit(args, policy_lint.lint_json(report), [])
         return 0 if report.ok else 1
-    manifest = load_manifest(resolve_issue_dir(slug))[0] if slug else None
-    report = _layered_report(args, root, file=file, manifest=manifest, read_project=layered)
+    task_dir = resolve_issue_dir(slug) if slug else None
+    manifest = load_manifest(task_dir)[0] if slug else None
+    report = _layered_report(args, root, file=file, manifest=manifest, read_project=layered,
+                             task_dir=task_dir)
     _emit(args, policy_lint.lint_json(report), policy_lint.lint_text(report))
     policy_lint.print_advisories(report)
     return 0 if report.ok else 1
@@ -112,9 +115,10 @@ def run_policy_lint(args):
 def run_policy_effective(args):
     root = layers.find_project_root(os.getcwd())
     slug = getattr(args, "task", None)
-    manifest = load_manifest(resolve_issue_dir(slug))[0] if slug else None
+    task_dir = resolve_issue_dir(slug) if slug else None
+    manifest = load_manifest(task_dir)[0] if slug else None
     loaded = policy_lint.load_layers(root, manifest=manifest, read_project=_is_layered(root),
-                                     fetch=_may_fetch(args))
+                                     fetch=_may_fetch(args), task_dir=task_dir)
     if loaded.findings:
         first = loaded.findings[0]
         raise CompassError(f"nothing can be resolved: {first.code} [{first.layer}] "

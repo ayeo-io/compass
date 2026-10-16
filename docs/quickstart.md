@@ -4,8 +4,8 @@ This walks you from an empty machine to a finished first issue. It is
 deliberately concrete: real commands, in order, with the artifact each one
 leaves on disk and what the gates feel like when you hit them. There are three
 walkthroughs - an engineer, a product owner, a marketer - because Compass has
-five roles and the entry point you use shapes the delivery approach the
-assess stage composes.
+five roles. Each entry point writes that role's document, and the documents
+on disk shape the delivery approach.
 
 This document uses Compass's vocabulary: the eight-stage pipeline, the four
 dimensions, the default guardrails, the assess stage. Each term is
@@ -136,8 +136,7 @@ Assess reads four dimensions - that part is judgement - and records them
 in `.compass/work/add-rate-limiting/manifest.yml`. For this issue it scores
 something like: size `medium` (several files, one or two design
 decisions), risk `cross-cutting` (a misconfigured limiter degrades
-something every API consumer touches), familiarity `brownfield-mapped`, role
-`engineer`. It tags `labels: [public-api]`.
+something every API consumer touches), familiarity `brownfield-mapped`. It tags `labels: [public-api]`.
 
 Then the mechanism takes over. `/compass:assess` shells out to
 `compass approach evaluate --write`, which applies `governance/routing-policy.yml`
@@ -312,12 +311,11 @@ request routes differently depending on the intent document behind it.
 /compass:assess "CSV export for finance month-end numbers"
 ```
 
-Assess reads `intent.md` as part of the goal and role dimensions - the goal is
-the *actual outcome wanted*, not the literal request. The `product-owner`
-entry point does two things to the delivery approach: it adds `intent.md` as
-a required artifact, and it inserts the **intent-fidelity gate** before Plan.
-The delivery approach comes out heavier than a bare engineering "add an
-export" would - that extra weight is the framework working, not overhead.
+Assess reads `intent.md` as part of the goal dimension - the goal is
+the *actual outcome wanted*, not the literal request. The `intent.md`
+on disk blocks Plan until the spec is checked against it (the
+**intent-fidelity gate**). The approach is the one the four dimensions give;
+the document adds the check, not extra weight.
 
 ### Define the acceptance criteria, then refine them
 
@@ -335,7 +333,7 @@ recorded decision).
 /compass:plan
 ```
 
-Per the routing policy's `role_rules`, when a product owner is involved the
+Per the routing policy's artifact rule RP-ART-002, when `intent.md` is present the
 spec **must be checked against `intent.md` before Plan completes**. The
 `product-owner` agent runs that check. If the spec drifts from the intent
 document - well-formed scenarios that nonetheless miss the outcome - Plan
@@ -378,10 +376,11 @@ audience - reads the voice & positioning strategies in
 
 ### How this shapes the route, and the gate at ship time
 
-The `product-marketer` entry point turns on the `claims` review dimension and -
-per the `role_rules` - **blocks shipping until every claim in `positioning.md`
-traces to a passing scenario**. `verify.claims` is a blocking role gate: the
-role rule adds it on every delivery approach while a marketer is in play.
+A `positioning.md` on disk turns on the `claims` review dimension and -
+per the artifact rule RP-ART-001 - **blocks shipping until every claim in `positioning.md`
+traces to a passing scenario**. `verify.claims` is a blocking gate: the
+artifact rule adds it on every delivery approach while `positioning.md` is present.
+On an issue already assessed, re-assess after writing `positioning.md`.
 
 So the marketer's gate applies right up to the end. At `/compass:ship`, the
 `product-marketer` agent walks `launch-readiness.md`. Every row must be green: a

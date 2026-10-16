@@ -46,7 +46,7 @@ returns anything heavier, the rows above are what runs.
 Cross-issue: `/compass:status` (one issue or a flat list), `/compass:flow`
 (the managed cross-issue view - advisory, never gating), and
 `compass board render` (the same view as one page in the browser;
-`docs/board.md`). Role entry points:
+`docs/board.md`). Entry points for the consulted perspectives:
 `/compass:intent` (product owner), `/compass:position` (marketer),
 `/compass:design` (designer - produces the UI contract), `/compass:consult`
 (multi-role decisions). `/compass:init` is optional, and it is not what
@@ -135,8 +135,8 @@ docs/compass/
     ├── requirements-review.md   (ends with the Definition of Ready gate)
     ├── technical-design.md      The design
     ├── distribution-map.md      Multiagent orchestration (full-approach scale work)
-    ├── positioning.md           Marketer messaging (if in play)
-    ├── launch-readiness.md      Marketer claims gate (if in play)
+    ├── positioning.md           Marketer messaging (if written)
+    ├── launch-readiness.md      Marketer claims gate (if `positioning.md` exists)
     └── verification-report.md   (ends with the Definition of Done gate)
 ```
 

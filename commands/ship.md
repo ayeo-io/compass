@@ -51,7 +51,7 @@ for delivery work; on a spike, follow the graduate-or-discard step in
    integrated green. Record the run and link the record.
 3. **Update living docs.** Bring READMEs, architecture notes, and any docs
    the change touched in line with reality. If the change is launch-visible
-   (the product-marketer role is in play), draft the release notes here
+   (`positioning.md` is present), draft the release notes here
    too - pulled from `positioning.md`, so every line in the notes is already
    a scenario-backed claim. `product-marketer` owns their wording.
 4. **Settle owed follow-ups.** Check `delivery-approach.md`'s de-scope
@@ -63,11 +63,11 @@ for delivery work; on a spike, follow the graduate-or-discard step in
      `manifest.yml`'s `scenarios:`, traceable to the defect; a root-cause line
      in the `devlog.md`. Mark the matching `follow_ups:` entry `paid` -
      `compass check` fails at ship while any is owed.
-   - **Marketer claims gate** (when the product-marketer role is in play):
+   - **Marketer claims gate** (when `positioning.md` is present):
      every claim in `manifest.yml`'s `claims:` traces to a passing scenario id.
      Invoke `product-marketer` to confirm; `compass check`'s
      `claim-traces-to-scenario` check is the mechanical backing. This gate
-     blocks shipping per the routing policy's `role_rules`.
+     blocks shipping per the routing policy's artifact rule RP-ART-001.
    - Any other de-scoped artifact the ledger marked as owed.
 5. **Run `compass check` as the final mechanical gate.** It runs every
    `guardrails.yml` check against `manifest.yml` and `evidence/` - suite

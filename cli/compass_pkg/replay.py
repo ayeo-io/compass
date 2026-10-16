@@ -378,9 +378,9 @@ def _point(name, issue, assessment, represents, differences):
 
 
 def _scan_grid(run, grid, name, subsets):
-    """The changes at each point of the grouped grid, for the given label
-    subsets, in the order the classifier scans: each combination of value
-    classes, then each subset. `(replayed, changes)`."""
+    """The changes at each point of the grouped grid, for the given
+    `(labels, documents)` subsets, in the order the classifier scans: each
+    combination of value classes, then each subset. `(replayed, changes)`."""
     replayed, changes = 0, []
     for combo in itertools.product(*[classes for _, classes in grid.dimensions]):
         assessment = {dim: cls.values[0] for (dim, _), cls in zip(grid.dimensions, combo)
@@ -388,8 +388,8 @@ def _scan_grid(run, grid, name, subsets):
         represents = {dim: list(cls.values) for (dim, _), cls in zip(grid.dimensions, combo)}
         one_side = [(dim, cls) for (dim, _), cls in zip(grid.dimensions, combo)
                     if cls.kind == "one-side"]
-        for subset in subsets:
-            point = dict(assessment, labels=list(subset))
+        for subset, docs in subsets:
+            point = grid.with_sets(assessment, subset, docs)
             replayed += 1
             if one_side:
                 found = [_difference("dimensions.values", dim,
@@ -410,12 +410,24 @@ class Issue:
     """What a replay reads of one issue: its slug, lifecycle status, recorded
     assessment (None when it has none) and its own `config:` layer (None when
     it has none). `unreadable` is true for a manifest that does not parse as a
-    mapping: it is named in the document and nothing else is read from it."""
+    mapping: it is named in the document and nothing else is read from it.
+    `folder` is where its documents are read from (ADR-070)."""
     slug: str
     status: object
     assessment: object
     config: object = None
     unreadable: bool = False
+    folder: object = None
+
+
+def _point_of(issue, a, b):
+    """The issue's assessment with the documents on disk that either side's
+    conditions name, as an evaluation of the issue would read it."""
+    if not issue.folder or not isinstance(issue.assessment, dict):
+        return issue.assessment
+    from compass_pkg import documents_present
+    return documents_present.with_presence(issue.assessment, issue.folder,
+                                           [a.config, b.config, issue.config])
 
 
 def read_archive(root):
@@ -440,7 +452,8 @@ def read_archive(root):
             from compass_pkg import lifecycle
             state = lifecycle.state_of(normalize_spine(copy.deepcopy(data)),
                                        os.path.join(work, slug))
-            found.append(Issue(slug, state, data.get("assessment"), data.get("config")))
+            found.append(Issue(slug, state, data.get("assessment"), data.get("config"),
+                               folder=os.path.join(work, slug)))
         else:
             found.append(Issue(slug, None, None, None, True))
     return found
@@ -452,9 +465,10 @@ def _replay_archive(run, archive):
         if not isinstance(issue.assessment, dict):
             continue
         replayed += 1
-        found = run.differences(issue.assessment)
+        point = _point_of(issue, *run.sides)
+        found = run.differences(point)
         if found:
-            changes.append(_point("archive", issue.slug, issue.assessment, None, found))
+            changes.append(_point("archive", issue.slug, point, None, found))
     return replayed, changes
 
 
@@ -473,14 +487,13 @@ def replay_sets(a, b, archive=()):
                 for name in ("grid", "labels", "archive")], []
     run = _Replay(a, b)
     grid = classify.build_grid(a.config, b.config)
-    replayed, grid_changes = _scan_grid(run, grid, "grid", [()])
+    replayed, grid_changes = _scan_grid(run, grid, "grid", [((), ())])
     sets, changes = [_set_entry("grid", replayed, grid_changes)], list(grid_changes)
-    if len(grid.labels) > spec.LABEL_CAP:
+    if grid.over_cap():
         sets.append(_set_entry("labels", 0, [], (
-            f"more than eight named labels: {len(grid.labels)} "
-            f"({', '.join(grid.labels)}); the grid is not sampled")))
+            grid.over_cap().replace("set values", "labels") + "; the grid is not sampled")))
     else:
-        replayed, found = _scan_grid(run, grid, "labels", grid.label_subsets()[1:])
+        replayed, found = _scan_grid(run, grid, "labels", grid.set_points()[1:])
         sets.append(_set_entry("labels", replayed, found))
         changes += found
     replayed, found = _replay_archive(run, archive)
@@ -550,18 +563,18 @@ def open_report(a, b, issues):
                 unresolved = {"side": name, "message": problem}
                 break
             sides.append(merged)
-        differences = []
+        differences, point = [], _point_of(issue, a, b)
         if unresolved is None:
             if isinstance(issue.assessment, dict):
                 differences = _differences(
-                    _outcome(sides[0], a.capabilities, issue.assessment, layer),
-                    _outcome(sides[1], b.capabilities, issue.assessment, layer))
+                    _outcome(sides[0], a.capabilities, point, layer),
+                    _outcome(sides[1], b.capabilities, point, layer))
             if layer is not None:
                 expiring += _invalidated(issue, layer, a, b, sides[0])
         if differences or unresolved:
             listed.append({"issue": issue.slug,
                            "status": issue.status,
-                           "assessment": _plain(issue.assessment),
+                           "assessment": _plain(point),
                            "differences": differences, "unresolved": unresolved})
     return {"examined": len(flying), "issues": listed, "waivers": expiring,
             "unreadable": _unreadable(issues)}
@@ -613,10 +626,12 @@ def _where(change):
     of the configuration (a grid point says them), then the labels."""
     assessment = change["assessment"] or {}
     order = list(change["represents"]) if change["represents"] else sorted(assessment)
-    shown = [f"{k} {assessment[k]}" for k in order if k in assessment and k != "labels"]
-    labels = assessment.get("labels")
-    if "labels" in assessment:
-        shown.append("labels " + (", ".join(labels) if labels else "none"))
+    shown = [f"{k} {assessment[k]}" for k in order
+             if k in assessment and k not in ("labels", "artifacts")]
+    for key, word in (("labels", "labels"), ("artifacts", "documents")):
+        if key in assessment:
+            values = assessment.get(key)
+            shown.append(f"{word} " + (", ".join(values) if values else "none"))
     return ", ".join(shown)
 
 

@@ -30,7 +30,7 @@ The rest of this command is for delivery work.
 - Load the `evidence-gates` skill.
 - Invoke the `verifier` agent (runs the suites) and the `reviewer` agent
   (applies the review dimensions).
-- If the product-marketer role is in play, the `claims` dimension applies -
+- If `positioning.md` is present, the `claims` dimension applies -
   `product-marketer` reviews here too.
 - If this issue is itself a sweep, rename, or cleanup touching many files,
   check it the way `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md` `S9` describes

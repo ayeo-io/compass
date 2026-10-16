@@ -41,7 +41,7 @@ what `/compass:init` offers separately.
   What `compass approach evaluate` actually runs is the effective
   configuration, which `compass policy show` prints: the shipped default
   preset with the project's `compass.yml` over it. The CLI applies its
-  **policy floors, caps, immovable gates, and blocking role rules** (hard) and
+  **policy floors, caps, immovable gates, and blocking artifact rules** (hard) and
   its **default shapes and tie-breaking biases** (soft). You do not apply
   these by hand; the CLI does. An unmigrated 5.x project runs on its own
   copied `governance/`, which `compass policy show` does not print but
@@ -102,7 +102,7 @@ force; if it is still a spike, leave the marker in place.
     into the manifest's `assessment:` block; that block is the judgement only.
 
 2. **Read the four dimensions - this is the judgement** - risk, familiarity,
-   size, goal & role, plus the `labels:` domain tags. Each gets a value and a
+   size and goal, plus the `labels:` domain tags. Each gets a value and a
    one-line justification. If a value cannot be justified, ask the user
    rather than guessing. When size is unsure, estimate *up*. Note:
    **exploration goal** - "I cannot state this well enough to deliver it
@@ -117,7 +117,7 @@ force; if it is still a spike, leave the marker in place.
    line). The CLI records them under the manifest's `justifications:` key
    and refuses a new or changed value that has none. It applies
    the routing rules in force to the assessment: it composes the first approach,
-   applies the floors, caps, immovable gates, and blocking role rules, and
+   applies the floors, caps, immovable gates, and blocking artifact rules, and
    folds the resulting `delivery_approach`, `stages`, `gates` (status
    pending), `subtask_ceiling`, and `policy_rules_fired` back into
    `manifest.yml`. Breakdown records the orchestration later. You

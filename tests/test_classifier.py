@@ -215,9 +215,11 @@ def test_cl_1_the_shipped_policy_has_the_grid_the_decision_records():
     config = classifier_fixtures.preset()
     grid = classify.build_grid(config, config)
     assert grid.labels == ("auth", "migrations", "payments", "personal-data")
-    assert grid.closed_points == 288
+    # The two documents the artifact rules read cross the grid as labels do (ADR-070).
+    assert grid.artifacts == ("intent", "positioning")
+    assert grid.closed_points == 72
     assert grid.points == 4608
-    assert grid.raw_points == 51840          # 3,240 assessments with each optional one omitted too
+    assert grid.raw_points == 34560          # 540 assessments with each optional one omitted too
 
 
 # --- CL-2: points combine into a verdict -------------------------------------------
@@ -851,7 +853,7 @@ import json  # noqa: E402
 
 TOP_KEYS = ["schema", "result", "reason", "scan", "parent", "child", "exhaustive",
             "complete", "grid", "counts", "first_looser", "first_tighter", "first_mixed"]
-GRID_KEYS = ["labels", "label_count", "label_cap", "points", "raw_points", "evaluated"]
+GRID_KEYS = ["labels", "label_count", "label_cap", "points", "raw_points", "evaluated", "artifacts"]
 COUNT_KEYS = ["equal", "tighter", "looser", "mixed"]
 POINT_KEYS = ["assessment", "represents", "outcome", "summary", "changes"]
 CHANGE_KEYS = ["fact", "field", "key", "outcome", "parent", "child"]

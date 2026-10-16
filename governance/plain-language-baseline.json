@@ -1667,11 +1667,6 @@
     },
     {
       "file": "governance/routing-policy.yml",
-      "line": 68,
-      "code": "RP-SROLE-001"
-    },
-    {
-      "file": "governance/routing-policy.yml",
       "line": 76,
       "code": "S6"
     },
@@ -1727,11 +1722,6 @@
     },
     {
       "file": "governance/routing-policy.yml",
-      "line": 156,
-      "code": "RP-ROLE-001"
-    },
-    {
-      "file": "governance/routing-policy.yml",
       "line": 160,
       "code": "RP-GATE-001"
     },
@@ -1744,16 +1734,6 @@
       "file": "governance/routing-policy.yml",
       "line": 166,
       "code": "RP-GATE-003"
-    },
-    {
-      "file": "governance/routing-policy.yml",
-      "line": 172,
-      "code": "RP-ROLE-001"
-    },
-    {
-      "file": "governance/routing-policy.yml",
-      "line": 179,
-      "code": "RP-ROLE-002"
     },
     {
       "file": "governance/guardrails.yml",

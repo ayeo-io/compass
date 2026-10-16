@@ -24,8 +24,9 @@ QUICK_FIX = {"size": "small"}
 SPIKE = {"goal": "exploration"}
 # How a refusal names the point it was found at: the fixture's own assessment.
 _OWN = "at risk contained, familiarity brownfield-mapped, size medium, goal "
-DELIVERY_POINT = _OWN + "delivery, role engineer, labels none"
-SPIKE_POINT = _OWN + "exploration, role engineer, labels none"
+# The issue's own point carries the documents it has on disk (ADR-070).
+DELIVERY_POINT = _OWN + "delivery, role engineer, labels none, documents none"
+SPIKE_POINT = _OWN + "exploration, role engineer, labels none, documents none"
 
 
 def _issue(tmp_path, assessment=None, **extra):
@@ -174,7 +175,7 @@ def test_ip_8_the_preview_classification_is_at_the_issues_own_assessment(tmp_pat
     assert code == 1 and doc["classification"]["result"] == "loosening"
     point = doc["classification"]["first_point"]
     own = fx.manifest_of(task_dir)["assessment"]
-    assert point["assessment"] == own
+    assert point["assessment"] == dict(own, artifacts=[])
     assert point["represents"] == {k: [v] for k, v in own.items() if k != "labels"}
     assert doc["classification"]["scan"] == "full"
 

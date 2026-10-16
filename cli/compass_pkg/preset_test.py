@@ -12,7 +12,7 @@ It reads files and, through `policy_lint.load_layers`, may fetch a pinned git
 parent. It writes no file of the preset and runs nothing the preset carries.
 """
 # DEPENDENCY: standard library (dataclasses, os, re); compass_pkg.atomic_io,
-# core (CompassError), layers, merge, policy_lint, word_map.
+# core (CompassError), layers, merge, policy_lint, retired, word_map.
 from __future__ import annotations
 
 import json
@@ -20,7 +20,7 @@ import os
 import re
 from dataclasses import dataclass, field
 
-from compass_pkg import layers, merge, policy_lint, word_map
+from compass_pkg import layers, merge, policy_lint, retired, word_map
 from compass_pkg.atomic_io import StrictYamlError, load_yaml_strict
 from compass_pkg.core import CompassError
 
@@ -211,7 +211,17 @@ def _run_fixture(folder, name, config, capabilities, evaluate):
         return FixtureResult(name, stem, "error", message=f"{where} cannot be read: "
                              f"{getattr(exc, 'strerror', None) or 'not UTF-8 text'}")
     doc = word_map.map_fixture(doc)     # a fixture written in the old words
-    wrong = _format_problem(doc, set(config.get("dimensions") or {}))
+    note = None
+    dimensions = set(config.get("dimensions") or {})
+    if isinstance(doc, dict) and isinstance(doc.get("assessment"), dict):
+        # A 6.x fixture can record a role; it is read without it (ADR-070).
+        dropped = [k for k in retired.DIMENSIONS
+                   if k in doc["assessment"] and k not in dimensions]
+        if dropped:
+            doc = dict(doc, assessment={k: v for k, v in doc["assessment"].items()
+                                        if k not in dropped})
+            note = retired.NOT_READ
+    wrong = _format_problem(doc, dimensions)
     if wrong:
         return FixtureResult(name, stem, "error", message=wrong)
     stem = doc.get("name") or stem
@@ -225,7 +235,8 @@ def _run_fixture(folder, name, config, capabilities, evaluate):
     if kind != "runs":
         return FixtureResult(name, stem, "error", message=f"the assessment cannot run: {got}")
     mismatches = _compare(doc["expect"], got)
-    return FixtureResult(name, stem, "fail" if mismatches else "pass", mismatches)
+    return FixtureResult(name, stem, "fail" if mismatches else "pass", mismatches,
+                         message=note)
 
 
 def _mismatch(field_name, expected, actual):

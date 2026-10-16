@@ -216,7 +216,7 @@ the next reassess.
   "classification": {
     "schema": 1,
     "result": "loosening",
-    "reason": "at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency live-defect, role engineer, labels none: approaches.subtask_ceiling is 1 in the parent and 2 in the child",
+    "reason": "at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency live-defect, labels none, documents none: approaches.subtask_ceiling is 1 in the parent and 2 in the child",
     "scan": "full",
     "parent": "default@6 + project",
     "child": "default@7 + project",
@@ -232,8 +232,12 @@ the next reassess.
       "label_count": 4,
       "label_cap": 8,
       "points": 4608,
-      "raw_points": 51840,
-      "evaluated": 4608
+      "raw_points": 34560,
+      "evaluated": 4608,
+      "artifacts": [
+        "intent",
+        "positioning"
+      ]
     },
     "counts": {
       "equal": 4592,
@@ -248,8 +252,8 @@ the next reassess.
         "size": "atomic",
         "goal": "delivery",
         "urgency": "live-defect",
-        "role": "engineer",
-        "labels": []
+        "labels": [],
+        "artifacts": []
       },
       "represents": {
         "risk": [
@@ -270,15 +274,10 @@ the next reassess.
         ],
         "urgency": [
           "live-defect"
-        ],
-        "role": [
-          "engineer",
-          "qa",
-          null
         ]
       },
       "outcome": "looser",
-      "summary": "at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency live-defect, role engineer, labels none: approaches.subtask_ceiling is 1 in the parent and 2 in the child",
+      "summary": "at risk trivial, familiarity greenfield, size atomic, goal delivery, urgency live-defect, labels none, documents none: approaches.subtask_ceiling is 1 in the parent and 2 in the child",
       "changes": [
         {
           "fact": "ceilings",
@@ -297,14 +296,14 @@ the next reassess.
     "sets": [
       {
         "name": "grid",
-        "replayed": 288,
-        "changed": 16,
+        "replayed": 72,
+        "changed": 4,
         "skipped": null
       },
       {
         "name": "labels",
-        "replayed": 4320,
-        "changed": 0,
+        "replayed": 4536,
+        "changed": 12,
         "skipped": null
       },
       {

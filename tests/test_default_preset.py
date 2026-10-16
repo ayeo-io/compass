@@ -153,14 +153,13 @@ def _rebuild(preset, sidecar, types):
             "default_shapes": rules_of("default_shapes", rp["generated_rules"]),
             "default_route": rp["default_route"],
             "biases": [r["rationale"] for r in preset["rules"]["biases"]["rules"].values()],
-            "role_defaults": rules_of("role_defaults"),
             "advisory_strategies": rules_of("advisory"),
         },
         "routing_guardrails": {
             "floors": rules_of("floors"), "caps": rules_of("caps"),
             "loop_ceilings": rules_of("loop_ceilings"),
             "immovable_gates": rules_of("immovable_gates"),
-            "role_rules": rules_of("role_rules"),
+            "artifact_rules": rules_of("artifact_rules"),
         },
         "assessment_vocabulary": vocabulary,
         "autonomy_checkpoints": {
@@ -236,13 +235,13 @@ def _evaluations(policy):
     from compass_pkg.routing import evaluate_route
     vocabulary = policy["assessment_vocabulary"]
     out = []
-    for risk, fam, size, goal, urgency, role, labels in itertools.product(
+    # The documents on disk replace the role the grid crossed before 7.0.0 (ADR-070).
+    for risk, fam, size, goal, urgency, artifacts, labels in itertools.product(
             vocabulary["risk"], vocabulary["familiarity"], vocabulary["size"],
-            vocabulary["goal"], vocabulary["urgency"], ["engineer", "product-owner",
-                                                        "product-marketer"],
+            vocabulary["goal"], vocabulary["urgency"], ([], ["intent"], ["positioning"]),
             ([], ["auth"], ["migrations", "public-api"])):
         reading = {"risk": risk, "familiarity": fam, "size": size, "goal": goal,
-                   "urgency": urgency, "role": role, "labels": labels}
+                   "urgency": urgency, "artifacts": artifacts, "labels": labels}
         for autonomy in ("controlled", "balanced", "autonomous"):
             try:
                 result = evaluate_route(reading, policy, autonomy)
@@ -265,7 +264,7 @@ def test_dp_1_a_changed_block_phase_or_checked_at_fails_the_rebuild_comparison()
     policy, guardrails = _today()
     assert SIDECAR.is_file(), "governance/legacy-views.yml is missing"
     sidecar = _load(SIDECAR)
-    sidecar["routing_policy"]["legacy_values"]["RP-ROLE-001"]["block_phase"] = "plan"
+    sidecar["routing_policy"]["legacy_values"]["RP-ART-001"] = {"block_phase": "plan"}
     changed_policy, _ = _rebuilt(sidecar=sidecar)
     assert changed_policy != policy
     assert _evaluations(changed_policy) != _evaluations(policy)
@@ -295,9 +294,9 @@ def _planted_rebuilds():
         edit(preset, sidecar)
         return _rebuilt(preset, sidecar)
 
-    def drop_role_effects(p, s):
-        del p["rules"]["role_rules"]["rules"]["RP-ROLE-002"]["then"]["block_phase"]
-        del p["rules"]["role_rules"]["rules"]["RP-ROLE-002"]["then"]["require_artifact"]
+    def drop_artifact_rule_effects(p, s):
+        del p["rules"]["artifact_rules"]["rules"]["RP-ART-002"]["then"]["block_phase"]
+        del p["rules"]["artifact_rules"]["rules"]["RP-ART-001"]["then"]["require_artifact"]
 
     def drop_caps(p, s):
         p["rules"]["caps"]["rules"].clear()
@@ -315,8 +314,8 @@ def _planted_rebuilds():
     def last_checked_at(p, s):
         s["guardrails"]["checked_at"]["G1"] = s["guardrails"]["checked_at"]["G1"][-1:]
 
-    def drop_sidecar_value(p, s):
-        s["routing_policy"]["legacy_values"]["RP-ROLE-001"].pop("block_phase")
+    def change_sidecar_value(p, s):
+        s["routing_policy"]["legacy_values"]["RP-ART-001"] = {"block_phase": "land"}
 
     def drop_fallback_marker(p, s):
         s["routing_policy"]["generated_rules"] = []
@@ -328,8 +327,8 @@ def _planted_rebuilds():
         s["guardrails"]["when_keys"] = {}
 
     return {fn.__name__: planted(fn) for fn in (
-        drop_role_effects, drop_caps, raise_loop_limits, null_ceiling, drop_biases,
-        last_checked_at, drop_sidecar_value, drop_fallback_marker, change_row_order,
+        drop_artifact_rule_effects, drop_caps, raise_loop_limits, null_ceiling, drop_biases,
+        last_checked_at, change_sidecar_value, drop_fallback_marker, change_row_order,
         lose_when_spelling)}
 
 
@@ -345,17 +344,17 @@ def test_dp_1_each_planted_loss_makes_the_rebuild_differ():
         assert not same, f"the rebuild did not notice: {name}"
 
 
-def test_dp_1_the_role_rules_keep_every_effect_the_policy_gives_them():
+def test_dp_1_the_artifact_rules_keep_every_effect_the_policy_gives_them():
     policy, _ = _today()
-    rules = _preset()["rules"]["role_rules"]["rules"]
-    for legacy in policy["routing_guardrails"]["role_rules"]:
+    rules = _preset()["rules"]["artifact_rules"]["rules"]
+    for legacy in policy["routing_guardrails"]["artifact_rules"]:
         then = rules[legacy["id"]]["then"]
         for key in ("require_artifact", "gate", "block_phase", "until"):
             assert (key in legacy) == (key in then), (legacy["id"], key)
-    second = rules["RP-ROLE-002"]["then"]
-    assert second.get("require_artifact") == "intent"
+    second = rules["RP-ART-002"]["then"]
+    assert "require_artifact" not in second
     assert second.get("block_phase") == "plan"
-    assert "until" in second and "until" not in rules["RP-ROLE-002"]
+    assert "until" in second and "until" not in rules["RP-ART-002"]
 
 
 def test_dp_1_the_rendered_files_are_what_is_committed():
@@ -661,10 +660,21 @@ def test_dp_5_a_cap_with_forbid_route_and_no_worktree_limit_converts():
 def test_dp_5_a_role_rule_with_a_gate_and_no_artifact_converts():
     policy, guardrails = _today()
     planted = copy.deepcopy(policy)
-    planted["routing_guardrails"]["role_rules"].append(
+    # A 6.x copy still holds role rules; the adapter converts them as before.
+    planted["routing_guardrails"].setdefault("role_rules", []).append(
         {"id": "RP-ROLE-900", "when": {"role": "qa"}, "gate": "verify.claims",
          "rationale": "A planted rule."})
     rule = _adapted(planted, guardrails)["rules"]["role_rules"]["rules"]["RP-ROLE-900"]
+    assert rule["then"] == {"gate": "verify.claims"}
+
+
+def test_dp_5_an_artifact_rule_with_a_gate_and_no_artifact_converts():
+    policy, guardrails = _today()
+    planted = copy.deepcopy(policy)
+    planted["routing_guardrails"]["artifact_rules"].append(
+        {"id": "RP-ART-900", "when": {"artifacts_any": ["ui-contract"]},
+         "gate": "verify.claims", "rationale": "A planted rule."})
+    rule = _adapted(planted, guardrails)["rules"]["artifact_rules"]["rules"]["RP-ART-900"]
     assert rule["then"] == {"gate": "verify.claims"}
 
 
@@ -905,9 +915,11 @@ def test_dp_1_every_sidecar_value_is_only_another_spelling_of_the_preset_value()
     with pytest.raises(AssertionError):
         _assert_sidecar_only_respells(preset, sidecar)
     changed = _preset()
-    changed["rules"]["role_rules"]["rules"]["RP-ROLE-001"]["then"]["block_phase"] = "plan"
+    changed["rules"]["artifact_rules"]["rules"]["RP-ART-001"]["then"]["block_phase"] = "plan"
+    sidecar = _load(SIDECAR)
+    sidecar["routing_policy"]["legacy_values"]["RP-ART-001"] = {"block_phase": "land"}
     with pytest.raises(AssertionError):
-        _assert_sidecar_only_respells(changed, _load(SIDECAR))
+        _assert_sidecar_only_respells(changed, sidecar)
 
 
 def test_dp_1_each_gate_stage_is_the_first_stage_of_its_checked_at_list():

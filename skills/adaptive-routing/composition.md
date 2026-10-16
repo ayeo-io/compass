@@ -61,7 +61,7 @@ it through the **routing guardrails** (explained in
 `${CLAUDE_PLUGIN_ROOT}/governance/routing-policy.md`; an unmigrated 5.x project
 runs on its own copied `governance/`) in this
 order: **floors** raise it, **caps** limit it, **immovable_gates** are added,
-blocking **role_rules** add artifacts and stage blocks. Record every routing
+blocking **artifact_rules** add artifacts and stage blocks, from the documents present. Record every routing
 guardrail that fires *and quote its rationale* in `delivery-approach.md`. Never apply a
 constraint silently - a reader of `delivery-approach.md` must see which bounds were active.
 

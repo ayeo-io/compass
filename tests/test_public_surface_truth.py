@@ -522,6 +522,12 @@ def test_d2_repairs_change_only_retired_names():
     `agents/product-owner.md` and `agents/product-marketer.md` (one more `##`
     heading each) gained the section saying they have no shell.
 
+    Two more were re-baselined by `remove-role-from-assessment` (ADR-070):
+    `approaches/rubric.md` (table_rows 25 -> 22) replaced its five-row table
+    of roles with a table of the two documents that now bring a gate or a
+    block, and `governance/routing-policy.md` (list_items 61 -> 59) lost the
+    role rule and role default items.
+
     The other 46 are untouched, and a NEW structural change to any of the 59
     still fails.
     """

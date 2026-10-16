@@ -71,8 +71,8 @@ force (`compass policy show`) with the reasons in
     applies to every issue - `${CLAUDE_PLUGIN_ROOT}/governance/strategies.md`
     (an unmigrated 5.x project reads its own copied `governance/`) `S8` names the
     calibration sample it is read against.
-- **claims** - when the product-marketer role is in play: does every public
-  claim trace to a passing scenario? The role rule adds `verify.claims` and it
+- **claims** - when `positioning.md` is present: does every public
+  claim trace to a passing scenario? The artifact rule adds `verify.claims` and it
   blocks shipping; coordinate with `product-marketer`.
 
 `correctness`, `governance`, and `traceability` run on *every* delivery approach -

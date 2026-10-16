@@ -157,8 +157,9 @@ EXPECTED_SUBCOMMANDS = {
     "readiness",  # project-readiness-caps-autonomy (ADR-061): measure the repository
     "release",  # intent-and-release-line (ADR-065): `release notes`, read-only
 }
+# Role left the assessment at 7.0.0 (ADR-070); nothing took its place.
 EXPECTED_READING_KEYS = {
-    "risk", "familiarity", "size", "goal", "urgency", "role",
+    "risk", "familiarity", "size", "goal", "urgency",
     "labels_common",
 }
 

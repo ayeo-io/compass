@@ -316,7 +316,7 @@ decides the rules. `compass policy lint` reports a refused change as
   - a gate that is not locked, adds nothing a locked rule set adds, and holds no
     locked check.
 
-  Labels in floors, shapes, caps, role rules and immovable gates always count,
+  Labels in floors, shapes, caps, artifact rules and immovable gates always count,
   because they decide the approach and so the gates in force. Once more than
   eight labels a locked entry can read are named, every change to the layer is
   refused, and the refusal reaches the layers below it. An issue's `config:` is

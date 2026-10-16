@@ -1,11 +1,11 @@
 <!--
 TEMPLATE: launch-readiness.md
 Role in the pipeline: the marketer's GATE artifact. The routing-policy
-role_rule for `product-marketer` needs this file and blocks shipping until
+artifact rule RP-ART-001 needs this file and blocks shipping until
 every claim in positioning.md traces to a PASSING scenario. This is where
 the claims→scenario chain is proven before anything ships publicly. The
-`claims` review dimension and the `verify.claims` gate, which the role rule
-adds while a marketer is in play, both read this file.
+`claims` review dimension and the `verify.claims` gate, which the artifact rule
+adds while positioning.md is present, both read this file.
 
 Fill every {{PLACEHOLDER}}. A claim with no passing scenario is a no-go -
 ship refuses to close on it.

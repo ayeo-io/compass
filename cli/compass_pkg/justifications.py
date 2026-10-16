@@ -9,12 +9,15 @@ last write evaluated (`evaluated_assessment`). A value that is unchanged keeps
 its recorded justification, or none on an issue that predates the key, so a
 repeated write records no new judgement and owes no new reason.
 """
-# DEPENDENCY: standard library; compass_pkg.core (FRAMEWORK_ROOT, load_yaml, CompassError).
+# DEPENDENCY: standard library; compass_pkg.core (FRAMEWORK_ROOT, load_yaml, CompassError),
+# compass_pkg.retired (the retired dimension and its notice).
 # It is a leaf: it imports no command module.
 from __future__ import annotations
 
 import os
+import sys
 
+from compass_pkg import retired
 from compass_pkg.core import FRAMEWORK_ROOT, CompassError, load_yaml
 
 #: The dimension types a justification is owed for. A `set` (labels) needs none.
@@ -52,6 +55,11 @@ def merge(task, readings, flags, view):
     """`(merged, missing)`: the justifications the write will record, and the
     dimensions that are owed one and have none. `flags` is the output of `parse`."""
     known = justified_dimensions(view)
+    # A 6.x call can still justify the retired `role`. It is accepted and not
+    # recorded, unless the configuration in force still declares it (ADR-070).
+    for name in [n for n in flags if n not in known and n in retired.DIMENSIONS]:
+        flags = {k: v for k, v in flags.items() if k != name}
+        sys.stderr.write(retired.notice(f"--justify {name}") + "\n")
     unknown = [name for name in flags if name not in known]
     if unknown:
         raise CompassError("--justify names %s, which is not a dimension that needs one (%s)"

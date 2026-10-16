@@ -20,8 +20,8 @@ not written over.
 """
 # DEPENDENCY: standard library (copy, hashlib, os); the bundled PyYAML;
 # compass_pkg.atomic_io, catalogue_spec, classify, core, layers,
-# legacy_adapter, merge, policy_lint, project_settings, shipped_releases and
-# waivers.
+# legacy_adapter, merge, policy_lint, project_settings, retired,
+# shipped_releases and waivers.
 from __future__ import annotations
 
 import copy
@@ -33,7 +33,7 @@ import yaml
 
 from compass_pkg import catalogue_spec as spec
 from compass_pkg import (classify, layers, legacy_adapter, merge, policy_lint,
-                         project_settings, shipped_releases, waivers)
+                         project_settings, retired, shipped_releases, waivers)
 from compass_pkg.atomic_io import atomic_write_text
 from compass_pkg.core import FRAMEWORK_ROOT, CompassError, load_yaml, migrate_map_section
 
@@ -485,6 +485,7 @@ def _derive(root, made, settings):
                     for op in overlay_between(base, current)[1]]
     overlay, ops = overlay_between(base, legacy)
     made.ops = ops
+    made.blocked += _retired_edits(overlay)
     base_views = legacy_adapter.legacy_views(*_release_files(release))
     made.blocked += _unexpressed(base_views, legacy_adapter.legacy_views(policy, guardrails))
     parent, _meta = policy_lint.load_parent()
@@ -520,6 +521,43 @@ def _derive(root, made, settings):
                                         f"{made.equivalence['result']} to the copy: "
                                         f"{made.equivalence['reason']}"})
     return True
+
+
+#: The code of a local edit to a rule 7.0.0 retired (ADR-070).
+RETIRED = "M-RETIRED"
+
+
+def _retired_table():
+    """`retired_rules` from governance/legacy-views.yml: each rule id 7.0.0
+    removed, and what replaces it."""
+    path = os.path.join(FRAMEWORK_ROOT, "governance", "legacy-views.yml")
+    return ((load_yaml(path) or {}).get("routing_policy") or {}).get("retired_rules") or {}
+
+
+def _retired_edits(overlay):
+    """One blocking entry for each retired rule the copy edited. Its edit
+    cannot be carried to the new default, which no longer holds the rule; the
+    message names the rule that replaces it, so a person can make the same edit
+    there."""
+    table, found = _retired_table(), []
+
+    def walk(node):
+        if isinstance(node, dict):
+            for key, value in node.items():
+                if key in table and key not in found:
+                    found.append(key)
+                walk(value)
+
+    for set_id in retired.RULE_SETS:
+        walk(((overlay.get("rules") or {}).get(set_id)) or {})
+    out = []
+    for rule_id in found:
+        new = (table.get(rule_id) or {}).get("replaced_by")
+        out.append({"code": RETIRED, "path": f"rules.{rule_id}",
+                    "message": retired.rule_line(rule_id) + (
+                        f"; make the same edit to {new} in compass.yml" if new
+                        else "; drop the edit")})
+    return out
 
 
 class _NoAlias(yaml.SafeDumper):

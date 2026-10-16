@@ -110,6 +110,13 @@ def _copy(target):
     for rel in (".compass/work/" + SLUG, "docs/compass/%s-%s" % (task["created"], SLUG)):
         shutil.copytree(ROOT / rel, target / rel)
     shutil.copy(ROOT / "compass.yml", target / "compass.yml")
+    # Once the issue lands, the check declines on it as a closed issue. The copy is
+    # reopened so the test judges the design as verify did.
+    manifest = target / ".compass" / "work" / SLUG / "manifest.yml"
+    body = _yaml(manifest)
+    for key in ("status", "close_reason", "land_commit"):
+        body.pop(key, None)
+    manifest.write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
     return target
 
 

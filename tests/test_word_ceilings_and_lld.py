@@ -111,7 +111,7 @@ def _copy(target):
         shutil.copytree(ROOT / rel, target / rel)
     shutil.copy(ROOT / "compass.yml", target / "compass.yml")
     # Once the issue lands, the check declines on it as a closed issue. The copy is
-    # reopened so the test judges the design as verify did.
+    # reopened so the test judges the design as it was judged before landing.
     manifest = target / ".compass" / "work" / SLUG / "manifest.yml"
     body = _yaml(manifest)
     for key in ("status", "close_reason", "land_commit"):

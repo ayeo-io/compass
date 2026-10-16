@@ -1,7 +1,7 @@
 ---
 id: ADR-067
 title: Word limits are catalogue obligations, the design-size check never judges an earlier catalogue, and a low-level design is one registered document per work unit
-status: proposed
+status: accepted
 date: 2026-10-15
 supersedes: ''
 superseded_by: ''

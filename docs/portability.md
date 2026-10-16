@@ -250,6 +250,12 @@ Test this in both directions: start an issue in each runtime and resume it in
 the other. Differences in terminal presentation are acceptable. Differences
 in policy outcome or persisted meaning are not.
 
+The [adapter behaviour checks](adapter-conformance.md) exercise real subprocess
+entries, persisted records and equivalent hook payloads. Their local results do
+not establish native instruction loading, trusted host dispatch, cold resumption
+or context compaction. Native and independent acceptance need separate captures;
+the guide defines their required fields and keeps unmeasured results visible.
+
 ## Porting sequence
 
 1. Complete the conformance mapping.

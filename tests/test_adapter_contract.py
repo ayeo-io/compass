@@ -103,20 +103,21 @@ def _copy(tmp_path: Path) -> Path:
         (root / rel).write_text((ROOT / rel).read_text(encoding="utf-8"), encoding="utf-8")
     data = yaml.safe_load((root / "schemas/adapter-contract.yml").read_text(encoding="utf-8"))
     for row in data["capabilities"]:
-        path = row["claude-code"].get("path")
-        if path and path.endswith("/"):
-            (root / path).mkdir(parents=True, exist_ok=True)
-        elif path:
-            (root / path).parent.mkdir(parents=True, exist_ok=True)
-            (root / path).touch()
+        for adapter in data["adapters"]:
+            path = row[adapter].get("path")
+            if path and path.endswith("/"):
+                (root / path).mkdir(parents=True, exist_ok=True)
+            elif path:
+                (root / path).parent.mkdir(parents=True, exist_ok=True)
+                (root / path).touch()
     return root
 
 
 def test_an_adapter_directory_without_a_column_fails(tmp_path):
     root = _copy(tmp_path)
     assert contract_problems(root) == []
-    (root / "adapters" / "codex").mkdir(parents=True)
-    assert any("adapters/codex/ has no column" in p for p in contract_problems(root))
+    (root / "adapters" / "unlisted").mkdir(parents=True)
+    assert any("adapters/unlisted/ has no column" in p for p in contract_problems(root))
 
 
 @pytest.mark.parametrize("cell, says", [

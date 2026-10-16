@@ -345,14 +345,15 @@ EARLIER_ROWS = [
 ]
 
 
-def _earlier(tmp_path: Path, checks, timeline, *, number="7", head=HEAD):
+def _earlier(tmp_path: Path, checks, timeline, *, number="7", head=HEAD,
+             this_run=str(THIS_RUN)):
     work, env = _shim(tmp_path, [
         {"argv": _checks_argv(head), **_answer(checks)},
         {"argv": _timeline_argv(), **_answer(timeline)},
     ])
     r = subprocess.run([sys.executable, str(SCRIPT), "--repo", REPO,
                         "--pull-request", number, "--head", head,
-                        "--this-run", str(THIS_RUN)],
+                        "--this-run", this_run],
                        cwd=tmp_path, capture_output=True, text=True, env=env,
                        timeout=60)
     return r, _unexpected(work)
@@ -384,3 +385,30 @@ def test_crt_21_earlier_result_refuses_bad_input(tmp_path, number, head):
     assert r.returncode == 1, (r.stdout, r.stderr)
     assert "Decision:" in r.stdout
     assert not (tmp_path / "planted").exists()
+
+
+# GitHub Actions run ids passed 10 digits in October 2026: run 38832496788
+# failed self-check on pull request #573 with "--this-run '38832496788' is
+# not a whole number". 19 digits is the most a signed 64-bit id holds.
+@pytest.mark.parametrize("this_run", ["38832496788", "9" * 19])
+def test_crt_21_earlier_result_long_ids(tmp_path, this_run):
+    """A run id of 11 to 19 digits is a whole number: this run's own
+    self-check is left out and the earlier green run passes."""
+    checks = _checks(_run(workflow_run=38832490000),
+                     _run(None, status="in_progress", run_id=9,
+                          started="2026-10-13T10:20:00Z",
+                          workflow_run=int(this_run)))
+    r, unexpected = _earlier(tmp_path, checks, QUIET_TIMELINE,
+                             this_run=this_run)
+    assert unexpected == "", unexpected
+    assert r.returncode == 0, (r.stdout, r.stderr)
+    assert "success" in r.stdout, r.stdout
+
+
+@pytest.mark.parametrize("this_run", ["1" + "0" * 19, "038832496788"])
+def test_crt_21_earlier_result_refuses_bad_run_id(tmp_path, this_run):
+    """A run id of 20 digits, or one with a leading zero, fails the check."""
+    r, _ = _earlier(tmp_path, _checks(_run()), QUIET_TIMELINE,
+                    this_run=this_run)
+    assert r.returncode == 1, (r.stdout, r.stderr)
+    assert "is not a whole number" in r.stdout, r.stdout

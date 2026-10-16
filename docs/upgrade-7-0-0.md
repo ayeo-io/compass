@@ -73,7 +73,7 @@ Compass now writes the status, ticks and counts in an issue's documents from the
 2. It writes `meets`, `defers` and `page_ticks` records from the boxes of that section. A tag naming an id the manifest does not hold, or evidence of a type the list does not accept, writes no record. The item stays open and the report names the issue, the item and the id. A ticked box becomes a page tick, which counts as met on the page and is never a person's approval for `G5`.
 3. It writes an empty verification note for each quick fix closed as completed.
 4. It renames each generated `README.md` beside a manifest to `README.md.v6.bak`, byte for byte, with any text you added under it. A `README.md` you wrote is not touched.
-5. It pins the stored generation of an issue, open or closed, that records an implementation major this CLI lacks (`dod-evidence-typed` 1.x), so the check runs instead of being refused. The configuration does not change.
+5. It pins the stored generation of an issue, open or closed, that records an implementation major this CLI lacks (`dod-evidence-typed` 1.x), so the check runs instead of being refused. The configuration does not change. When the next generation folder of that issue holds a file a generation commit does not write, the issue is not pinned: the report names the file among the items left for a person, on the dry run and on the apply, and the file is kept.
 6. It carries issues in flight the same way as done ones.
 7. It reports a verification report with no Definition of Done heading. That report gets no marker and no record.
 

@@ -421,7 +421,7 @@ keeps running against a whole generation.
 | Interrupted after | Manifest names | State | Resolve with |
 |---|---|---|---|
 | nothing written | n | none | run the reassess again |
-| `resolved.yml`, `provenance.yml`, `versions.yml` or `records.yml` | n | `incomplete` | `compass issue configure --discard`, or run the reassess again, which overwrites it. `--commit` refuses it |
+| `resolved.yml`, `provenance.yml`, `versions.yml` or `records.yml` | n | `incomplete` | `compass issue configure --discard`, or run the reassess again, which overwrites it when the folder holds only files a commit writes. `--commit` refuses it |
 | `complete` | n | `complete-unreferenced` | `compass issue configure --commit` or `--discard` |
 | the manifest replace | n+1 | `current` | nothing; a `proposed.yml` left in the folder is ignored |
 | removing `proposed.yml` | n+1 | `current` | nothing |

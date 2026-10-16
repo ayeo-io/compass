@@ -97,3 +97,11 @@ Decided while the maintainer was away, and marked for the maintainer's confirmat
 - **`--discard [n]`** removes any folder above the generation in force, including a proposal and the proposal a leftover holds, and never the generation in force or an older one.
 - **Waivers are re-checked at reassess.** An issue waiver whose waived field changed in the parent, or whose waived field the overlay changed, is marked `invalidated` in `records.yml` with the approval record behind it, and its entry is left out of the resolution so the field reverts to the parent's value. The manifest's `config:` is not rewritten.
 - **`reassessments:` entries gain `generation: {from, to}`.** A change to `config:` that leaves the delivery approach unchanged adds no entry.
+
+## Amendment (2026-10-16): a commit deletes only what a commit writes
+
+The decision above says the next reassess overwrites an incomplete folder. A commit cleared that folder of everything but `proposed.yml`, including files a person put there. `compass issue migrate --apply` makes such a commit when it pins a stale generation, and its copy check never judges a generation folder, so the commit could delete a file no copy held (ayeo-io/compass-delivery-record#25).
+
+- **The commit removes only its own files.** Those are the four files, the `complete` marker and the temporary files `atomic_write_text` makes for them or for `proposed.yml` (`.<name>-` and the eight characters `mkstemp` adds). `proposed.yml` is kept, as before.
+- **Anything else is refused.** When the next folder holds any other file, or any subfolder, the commit writes nothing, deletes nothing and names each entry with `compass issue configure --issue <slug> --discard`, so the command acts on that issue whichever issue the pointer names. This is the same rule as adoption: the store does not guess about a folder it cannot account for.
+- **The migrate asks first.** The pin checks the folder before it commits. When the commit would refuse, the migrate does not pin that issue and names the files among the items left for a person, on the dry run and on the apply.

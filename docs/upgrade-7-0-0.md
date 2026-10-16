@@ -498,6 +498,8 @@ More Bash writes to production code are refused without a failing test on record
 - **A quoted target.** `echo x > "src/app.ts"` and `tee 'src/app.ts'` are judged as the unquoted path.
 - **A path spelled to look outside the project.** `/tmp/../<project>/src/app.ts`, `//<project>/src/app.ts` and a path that differs from the project only in letter case are judged inside it.
 - **A write inside a substitution, after `>|`, or split by a line continuation.** `x=$(cp a.ts src/app.ts)`, `echo x >| src/app.ts` and `cp a.ts \` followed by `src/app.ts` on the next line are refused.
+- **A destination after a substitution that holds a quoted bracket.** `cp "$(echo '(')" src/app.ts` is refused.
+- **A test or `.compass/` directory named before a `..` after an unknown part.** `echo x > $X/../tests/../src/app.ts` and `echo x > $X/../.compass/../src/app.ts` are judged as production code, and so is `echo x > $X/../.compass/notes.ts`. A test file name, such as `$X/../src/test_app.ts`, and a document are still exempt.
 
 ### What is newly allowed
 

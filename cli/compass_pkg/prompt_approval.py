@@ -8,7 +8,8 @@ The hook acts only on the expansion of a plugin command a person typed:
 nothing recorded. For one of the four it refuses, writing nothing, when:
 
 - the command file it serves does not set `disable-model-invocation: true`.
-  U0 measured that a scheduled job fires the event for a command without
+  The host measurement on Claude Code 2.1.300 (ADR-068) showed that a
+  scheduled job fires the event for a command without
   the flag, so the flag is what keeps the model's scheduled jobs out;
 - `CLAUDE_CODE_ENTRYPOINT` starts with `sdk-`, which a nested `claude -p`
   session reports (the owner's answer of 2026-10-15). IDE and desktop values

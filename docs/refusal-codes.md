@@ -127,6 +127,12 @@ code from a refusal you hit.
 **Why:** .compass/config.yml sets {keys}, but compass.yml is read, so those keys guard nothing.
 **Fix:** Move them into compass.yml (write mode as adoption) and delete them from .compass/config.yml, then retry.
 
+### `transcript-protected`
+
+**Blocked:** {target} (tool: {tool})
+**Why:** the session transcript holds what Compass showed only to the person, such as the code that confirms a delegation.
+**Fix:** work from the conversation and the files in the project; ask the person for anything you need from the transcript.
+
 ### `waits-for-issue`
 
 **Blocked:** edit to {target} (tool: {tool})

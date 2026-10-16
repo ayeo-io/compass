@@ -125,7 +125,9 @@ def test_f3_limits_refused(tmp_path, clock):
                         (f"{ARCHITECT} until 23:00 tomorrow", "end time"),
                         ("any until 08:00", "any"),
                         (f"{ARCHITECT} until 08:00 for everything", "everything"),
-                        (f"{ARCHITECT} until 08:00 on no-such-issue", "no-such-issue")):
+                        (f"{ARCHITECT} until 08:00 on no-such-issue", "no-such-issue"),
+                        (f"{ARCHITECT} until 08:00 on ..", "'..'"),
+                        (f"{ARCHITECT} until 08:00 on .", "'.'")):
         result = _type(root, args)
         assert result.block and cause in result.message, (args, result.message)
     end = clock + datetime.timedelta(hours=25)
@@ -240,6 +242,13 @@ def test_f11_revoke_ends_delegation(tmp_path):
     assert code != 0 and "DL-1" in out + err and "revoked" in out + err, out + err
     # Nothing in force: revoke says so and writes nothing.
     assert _type(root, "", command="compass:revoke").block
+    # A use counted from a copy read before the revoke keeps the revoke.
+    from compass_pkg import approvals, delegations
+    stale = dict(dl, revoked_by=None, revoked_at=None)
+    done = approvals.Recorded("x", [], {}, ["EV-X"])
+    delegations.record_use(str(task_dir(root)), stale, ARCHITECT, done, "x")
+    after = _delegations(root)["DL-1"]
+    assert after["revoked_at"] == dl["revoked_at"] and after["uses"] == 1
 
 
 # --- the person sees what was approved under a delegation (`TRC-F12`) -------------------------
@@ -280,8 +289,15 @@ def _overnight(root):
     return [e["id"] for e in manifest_of(root)["evidence"] if e.get("via") == "delegation"]
 
 
-def test_f12_review_summary_until_acknowledged(tmp_path):
+def test_f12_review_summary_until_acknowledged(tmp_path, monkeypatch):
     root = project(tmp_path)
+    # With no delegation file the summary reads no manifest, so a prompt in a
+    # project with hundreds of issues costs nothing.
+    from compass_pkg import delegations
+    monkeypatch.setattr(delegations, "load_manifest",
+                        lambda *_a: (_ for _ in ()).throw(AssertionError("scanned")))
+    assert delegations.review_summary(str(root / ".compass")) == ""
+    monkeypatch.undo()
     ids = _overnight(root)
     assert len(ids) == 3, ids
     start = _hook_json("session-start.sh", root, {"session_id": "s", "source": "startup"})

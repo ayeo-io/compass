@@ -9,7 +9,7 @@
 - `.compass/current-task` names the issue.
 
 `event(...)` builds the `UserPromptExpansion` input Claude Code sends, in the
-shape U0 measured on Claude Code 2.1.300.
+shape measured on Claude Code 2.1.300 (ADR-068).
 """
 from __future__ import annotations
 

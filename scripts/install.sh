@@ -176,7 +176,7 @@ register_hooks() {
     echo "        Add these to $SETTINGS by hand:"
     cat <<EOF
         "hooks": {
-          "PreToolUse":  [ { "matcher": "Edit|Write|Bash",
+          "PreToolUse":  [ { "matcher": "Edit|Write|Bash|Read|Grep",
                              "hooks": [ { "type": "command", "command": "$pre" } ] } ],
           "PostToolUse": [ { "matcher": "Edit|Write",
                              "hooks": [ { "type": "command", "command": "$post" } ] } ],
@@ -204,7 +204,7 @@ EOF
       | ($cmds | map(. as $c | $paths | index($c)) | all(. == null));
     .hooks //= {} |
     .hooks.PreToolUse  = ( (.hooks.PreToolUse  // []) | map(select(notcompass([$pre])))  )
-      + [ { matcher: "Edit|Write|Bash", hooks: [ { type: "command", command: $pre } ] } ] |
+      + [ { matcher: "Edit|Write|Bash|Read|Grep", hooks: [ { type: "command", command: $pre } ] } ] |
     .hooks.PostToolUse = ( (.hooks.PostToolUse // []) | map(select(notcompass([$post]))) )
       + [ { matcher: "Edit|Write", hooks: [ { type: "command", command: $post } ] } ] |
     .hooks.Stop        = ( (.hooks.Stop        // []) | map(select(notcompass([$stop]))) )

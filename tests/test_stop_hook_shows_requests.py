@@ -1,7 +1,7 @@
 """The Stop hook shows the person each unshown approval request (issue
 `approve-inside-claude-code`, ADR-068 decision 1).
 
-U0 measured on Claude Code 2.1.300 that a Stop hook's `systemMessage` is
+A measurement on Claude Code 2.1.300 (ADR-068) showed that a Stop hook's `systemMessage` is
 shown to the person under the reply, and that the model does not see it.
 
 Scenario id: `TRC-B2`. The test name starts with it.

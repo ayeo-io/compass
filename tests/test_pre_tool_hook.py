@@ -333,6 +333,10 @@ def test_f8_delegated_call_needs_matching_agent_type():
             # A delegated call must say who it is.
             ("compass evidence approve --check dod-reviewed --delegated",
              {"agent_type": "compass:architect", "agent_id": "a5"}),
+            # An abbreviated flag, or extra spaces, is still a delegated call.
+            ("compass evidence approve --check dod-reviewed --deleg --as compass:architect", {}),
+            ("compass evidence  approve --check dod-reviewed --delegated --as compass:architect",
+             {}),
         ]
         for command, who in refused:
             r = _guard_run(project, "Bash", tool_input={"command": command}, **who)
@@ -371,4 +375,40 @@ def test_f8_cli_refuses_an_agent_the_delegation_does_not_name(tmp_path):
     code, out, err = run(root, "evidence", "approve", "--issue", SLUG, "--check", CHECK,
                          "--scope", "x", "--delegated", "--as", "compass:builder")
     assert code != 0 and "no delegation in force names compass:builder" in out + err
+    # The CLI takes no abbreviated flag, so the pre-tool check cannot be passed by one.
+    code, out, err = run(root, "evidence", "approve", "--issue", SLUG, "--check", CHECK,
+                         "--scope", "x", "--deleg", "--as", "compass:architect")
+    assert code != 0 and "--deleg" in out + err, out + err
     assert (task_dir(root) / "manifest.yml").read_bytes() == before
+
+
+def test_f2_transcript_holds_the_code_and_is_protected():
+    """The transcript half of `TRC-F2`: a hook's block message, which carries
+    the g5 confirmation code, is written to the session transcript (measured
+    on Claude Code 2.1.301), so the agent's tools may not read it."""
+    project, _ = _guarded_project()
+    try:
+        folder = project / ".claude-test-config" / "projects" / "-tmp-proj"
+        folder.mkdir(parents=True)
+        transcript = folder / "sess.jsonl"
+        transcript.write_text('{"content": "code 1a2b3c4d"}\n', encoding="utf-8")
+        common = {"transcript_path": str(transcript)}
+        refused = [
+            ("Read", {"file_path": str(transcript)}),
+            ("Grep", {"pattern": "confirm", "path": str(folder)}),
+            ("Bash", {"command": f"cat {transcript}"}),
+            ("Bash", {"command": "grep confirm ~/.claude-ayeo/projects/*/*.jsonl"}),
+            ("Bash", {"command": 'tail "$CLAUDE_CONFIG_DIR"/projects/x/y.jsonl'}),
+        ]
+        for tool, tool_input in refused:
+            r = _guard_run(project, tool, tool_input=tool_input, **common)
+            assert r.returncode == 2, (tool, tool_input, r.stderr)
+            assert "[transcript-protected]" in r.stderr, r.stderr
+        # Reading any other file, code included, is not refused.
+        for tool, tool_input in (("Read", {"file_path": str(project / "src" / "app.py")}),
+                                 ("Grep", {"pattern": "x", "path": str(project)}),
+                                 ("Bash", {"command": "ls ~/dev/projects"})):
+            r = _guard_run(project, tool, tool_input=tool_input, **common)
+            assert r.returncode == 0, (tool, tool_input, r.stderr)
+    finally:
+        shutil.rmtree(project, ignore_errors=True)

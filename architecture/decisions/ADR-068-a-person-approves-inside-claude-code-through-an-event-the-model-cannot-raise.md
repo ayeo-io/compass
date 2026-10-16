@@ -11,7 +11,7 @@ superseded_by: ''
 
 `compass evidence approve` records a person's approval, including the sign-off of guardrail `G5`. It refuses unless standard input is a terminal (`cli/compass_pkg/approve_cmd.py`), and a shell that Claude Code runs has none. So an agent prints the command and the person pastes it into a terminal. jed72 decided on 2026-10-15 that a person must approve or reject by typing a short prompt inside Claude Code, never by copying a command or opening a terminal, and that the agent never records an approval.
 
-Five facts bound the answer. The Claude Code facts come from the official documentation, read on 2026-10-15 (`code.claude.com/docs/en/hooks`, `/scheduled-tasks`, `/cross-session-messaging` and `/skills`), and from a measurement on Claude Code 2.1.300 the same day (`.compass/work/approve-inside-claude-code/evidence/u0-host-measurement/u0-results.txt`).
+Five facts bound the answer. The Claude Code facts come from the official documentation, read on 2026-10-15 (`code.claude.com/docs/en/hooks`, `/scheduled-tasks`, `/cross-session-messaging` and `/skills`), and from a measurement on Claude Code 2.1.300 the same day (the host measurement of 2026-10-15).
 
 - **`UserPromptSubmit` is not person-only.** It fires when a scheduled task fires, when a background subagent reports back and when another session sends a message. The model can create a scheduled task with the `CronCreate` tool. The input holds the common fields (`session_id`, `transcript_path`, `cwd`, `permission_mode`, `hook_event_name`) and `prompt`, and no field says who produced the prompt.
 - **`UserPromptExpansion` fires when a command expands, and its input does not say who typed it.** It fires for a command a person types. It also fires, with the same fields, for a scheduled task whose prompt is a command without `disable-model-invocation: true`, and for a nested `claude -p "/<command>"`. Its input holds the common fields, `prompt_id`, `expansion_type`, `command_name`, `command_args`, `command_source` and `prompt`. `prompt_id` is a UUID, the same on every event of one turn and new on the next. Its output can block, with a reason shown to the person and not to the model, or add `additionalContext`. `systemMessage` is shown to the person.
@@ -60,5 +60,5 @@ ADR-069 amends decision 1: an agent may also record an approval, under a delegat
 
 - ADR-006 (backward compatibility), ADR-050 decision 2 (documents move at a stage record), ADR-066 (an approval names its subject), ADR-069 (delegation).
 - `cli/compass_pkg/approvals.py` (the one writer), `cli/compass_pkg/approval_requests.py` (`compass evidence request`), `cli/compass_pkg/prompt_approval.py` (the prompt hook), `cli/compass_pkg/approve_cmd.py` (the terminal verb), `hooks/prompt-approval.sh`.
-- The U0 host measurement: `.compass/work/approve-inside-claude-code/evidence/u0-host-measurement/u0-results.txt`.
+- The host measurement on Claude Code 2.1.300 of 2026-10-15, whose results this record states; the raw logs are kept with the issue's evidence, outside the repository.
 - `tests/test_approval_request.py`, `tests/test_prompt_approval.py`, `tests/test_approval_provenance.py`.

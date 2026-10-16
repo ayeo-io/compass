@@ -167,6 +167,13 @@ REFUSALS: dict[str, dict[str, str]] = {
         "fix": "run it from the agent the delegation names, with --as set to "
                "that agent's full name, or ask with compass evidence request.",
     },
+    "transcript-protected": {
+        "what": "{target} (tool: {tool})",
+        "why": "the session transcript holds what Compass showed only to the "
+               "person, such as the code that confirms a delegation.",
+        "fix": "work from the conversation and the files in the project; ask the "
+               "person for anything you need from the transcript.",
+    },
     # A landing refusal of `compass ship-commit` and `quick-fix finish`
     # (checkpoint_outcomes.landing_refusal), not a hook refusal. `is` and `it`
     # agree with the number of stages named.

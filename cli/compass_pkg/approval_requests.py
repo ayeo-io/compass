@@ -307,7 +307,7 @@ def register(evidence_subs):
     """Add `request` to the `evidence` group."""
     p = evidence_subs.add_parser(
         "request", help="ask a person for an approval: write a pending request that Compass "
-                        "shows them")
+                        "shows them", allow_abbrev=False)
     form = p.add_mutually_exclusive_group(required=True)
     form.add_argument("--check", help="id of the human check")
     form.add_argument("--guardrail", metavar=approval_records.G5,

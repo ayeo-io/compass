@@ -69,6 +69,7 @@ FIXTURES = {
         target=".compass/work/feature/approval-requests/pending/1.yml", tool="Edit"),
     "delegation-protected": dict(target=".compass/delegations/DL-1.yml", tool="Write"),
     "delegation-caller-mismatch": dict(named="compass:architect", caller="compass:builder"),
+    "transcript-protected": dict(target="/Users/x/.claude/projects/-p/s.jsonl", tool="Read"),
     # The longest form: a 40-character slug and all four checkpoint stages
     # with no outcome, so the 60-word cap is checked where it is tightest.
     "checkpoint-no-outcome": {"slug": "a" * 40, "stages": "assess, define, refine and plan",

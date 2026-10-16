@@ -6,7 +6,7 @@ ADR-068).
 block with a reason, or a recorded answer with a confirmation. It records
 only one shown, current request for the session's issue, through
 `approvals.record`, then closes the request. These tests drive it in-process
-with hook input in the shape U0 measured on Claude Code 2.1.300.
+with hook input in the shape measured on Claude Code 2.1.300 (ADR-068).
 
 Scenario ids: `TRC-A1` to `TRC-A5`, `TRC-C1` to `TRC-C8`, `TRC-C11`, `TRC-C12`
 and `TRC-D2`. Each test name starts with its scenario id.

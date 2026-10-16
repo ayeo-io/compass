@@ -99,8 +99,14 @@ What holds the boundary, and what does not:
 - The guarantee is as strong as the terminal check, and no stronger: a
   process running as the same operating system user can still write a
   record, a request or a delegation file, pipe forged input into the hook,
-  or drive a session through a pseudo-terminal. A record with no subject key, the form earlier sign-offs use, still counts. A landed issue that the earlier rule passed is
-reported, never failed.
+  or drive a session through a pseudo-terminal.
+- The prompt path needs the plugin install: the hook acts only on a command
+  whose `command_source` is `plugin`. A source install
+  (`scripts/install.sh`) registers the hook, but its commands are not plugin
+  commands, so a person there approves at a terminal.
+
+A record with no subject key, the form earlier sign-offs use, still counts. A
+landed issue that the earlier rule passed is reported, never failed.
 
 A person's answer to a checkpoint hand-off (`compass evidence approve
 --checkpoint`) is a `checkpoint-approval` record, not a `human-approval`, so it
@@ -116,7 +122,12 @@ The pre-tool hook refuses the agent's tool calls on approval state
   that folder (`delegation-protected`);
 - a delegated approval whose `--as` is not exactly the agent Claude Code
   reports (`delegation-caller-mismatch`). The call is the main agent only
-  when the hook input has neither `agent_type` nor `agent_id`.
+  when the hook input has neither `agent_type` nor `agent_id`, and the CLI
+  takes no abbreviated flag, so `--deleg` cannot pass unseen;
+- Read or Grep on the session transcript, and a Bash command that names it or
+  a `.claude*/projects` folder (`transcript-protected`). Claude Code writes a
+  hook's block message to the transcript (measured on 2.1.301), and the block
+  message is where the person sees the code that confirms a g5 delegation.
 
 The Bash checks match text, so they stop the agent's ordinary use and not a
 deliberate workaround. A process running as the same operating system user

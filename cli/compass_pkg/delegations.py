@@ -19,8 +19,11 @@ writes one. It names:
 At most five are in force at once. A delegation that covers `g5` takes effect
 only when the person types back a code the hook showed them in its block
 message (`confirm`), because a prompt suggestion accepted with Tab lets the
-model word the first command (U0; the owner's answer of 2026-10-15). Only a
-hash of the code is stored.
+model word the first command (measured on Claude Code 2.1.300; the owner's
+answer of 2026-10-15). Only a hash of the code is stored. Claude Code also
+writes the block message to the session transcript (measured on 2.1.301), so
+the pre-tool hook refuses the agent's tools on the transcript
+(`approval_guard`).
 
 The named agent approves with `compass evidence approve <form> --delegated
 --as <agent>` (`authorise`, then `record_use`). The record's `approver` is the
@@ -90,6 +93,10 @@ def _lock(compass_dir):
     os.makedirs(folder(compass_dir), exist_ok=True)
     with atomic_io.locked(os.path.join(folder(compass_dir), approvals.LOCK)):
         yield
+
+
+#: The delegation lock, for a caller that also holds an issue's approval lock.
+locked = _lock
 
 
 def _write(path, body):
@@ -207,8 +214,9 @@ def parse(args, session, now):
     issues = {}
     for slug in found.get("on", session.slug).split(","):
         task_dir = os.path.join(compass_dir, "work", slug)
-        if not slug or "/" in slug or not os.path.isdir(task_dir):
-            raise _refused(f"'{slug}' is not an issue in this project.")
+        if (not slug or slug in (".", "..") or "/" in slug or "\\" in slug
+                or not os.path.isdir(task_dir)):
+            raise _refused(f"'{slug}', named after `on`, is not an issue in this project.")
         task, _ = load_manifest(task_dir)
         issues[slug] = task.get("generation")
     body = {"agent": agent, "delegated_by": session.approver, "role": session.role,
@@ -430,9 +438,16 @@ def _waiting(record):
 
 def unreviewed(compass_dir):
     """`[(folder, manifest, record)]` for each approval made under a delegation
-    that the person has not marked reviewed, across the project's issues."""
+    that the person has not marked reviewed. Only the issues a delegation names
+    are read, so a project with no delegation reads no manifest: the summary
+    runs on every prompt."""
+    named = set()
+    for delegation in all_delegations(compass_dir):
+        named.update(delegation.get("issues") or {})
     found = []
     for task_dir in _issue_dirs(compass_dir):
+        if os.path.basename(task_dir) not in named:
+            continue
         try:
             task, _ = load_manifest(task_dir)
         except CompassError:
@@ -548,7 +563,6 @@ def overrule(session, args):
             "session_id": session.session_id, "prompt_id": session.prompt_id})
         save_manifest(task, path)
     elif record.get("type") == "human-approval" and record.get("check"):
-        save_manifest(task, path)
         provenance = {"via": "prompt", "host": "claude-code",
                       "session_id": session.session_id, "prompt_id": session.prompt_id,
                       "approver_source": session.approver_source, "overrules": record_id}
@@ -557,6 +571,9 @@ def overrule(session, args):
         answer = approvals.Answer("check", record["check"], approval_records.REJECTED,
                                   session.approver, session.role,
                                   record.get("scope") or "", provenance)
+        # Refuse before anything is saved, so a refusal writes nothing.
+        approvals.record(session.task_dir, answer, save=False)
+        save_manifest(task, path)
         written = ", ".join(approvals.record(session.task_dir, answer).evidence_ids)
     elif record.get("type") == "artifact-approval" and record.get("artifact"):
         save_manifest(task, path)

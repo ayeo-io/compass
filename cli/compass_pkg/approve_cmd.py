@@ -129,7 +129,10 @@ def _delegated(args):
                            "Tell the person what you found, and stop.")
     draft = answer_of(args, {})
     task_dir = resolve_issue_dir(args.task)
-    with approvals.lock(task_dir):
+    # The delegation lock, taken inside the issue lock in the order the prompt
+    # hook takes them, keeps a /compass:revoke or another use from landing
+    # between the check and the count.
+    with approvals.lock(task_dir), delegations.locked(os.path.dirname(os.path.dirname(task_dir))):
         delegation = delegations.authorise(task_dir, draft.form, draft.value, agent)
         provenance = {"via": "delegation", "approved_by_agent": agent,
                       "delegation": delegation["id"],
@@ -150,7 +153,10 @@ def register(evidence_subs):
     """Add `approve` to the `evidence` group."""
     p = evidence_subs.add_parser(
         "approve", help="record a person's approval of a human check, a document or the "
-                        "decisions taken for the person")
+                        "decisions taken for the person",
+        # No abbreviated flag: the pre-tool hook recognises `--delegated` by name,
+        # and a prefix such as `--deleg` must not reach the delegated path unseen.
+        allow_abbrev=False)
     form = p.add_mutually_exclusive_group(required=True)
     form.add_argument("--check", help="id of the human check")
     form.add_argument("--guardrail", metavar=approval_records.G5,

@@ -42,7 +42,8 @@
 #   stdin : JSON session-stop payload (unused - we inspect disk state).
 #   stdout: {"systemMessage": ...} when an approval request of the session's
 #           issue has not been shown yet (below). Claude Code shows it to the
-#           person under the reply; the model does not see it (U0).
+#           person under the reply; the model does not see it (measured on
+#           Claude Code 2.1.300, ADR-068).
 #   exit  : always 0. Warnings go to stderr. This hook never blocks a stop.
 #
 # APPROVAL REQUESTS (ADR-068 decision 1)

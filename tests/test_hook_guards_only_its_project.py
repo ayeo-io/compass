@@ -388,3 +388,59 @@ def test_ff_10_a_path_that_resolves_elsewhere_is_judged_there(
     assert r.returncode == 0, (
         f"a write that resolves outside the project, or to a test or a "
         f"document, was refused:\n{command}\n{r.stdout}{r.stderr}")
+
+
+@pytest.mark.parametrize("template", [
+    pytest.param("cp \"$(echo '(')\" {sc}/out.py", id="cp"),
+    pytest.param("mv \"$(grep -l 'x(' a)\" {sc}/out.py", id="mv"),
+])
+def test_ff_11_a_scratch_destination_after_a_quoted_bracket_is_allowed(
+        tmp_path, template):
+    """Closing a span at its real end must find the real destination, not
+    refuse every command it reads (scenario `TRC-S2`,
+    ayeo-io/compass-delivery-record#186)."""
+    command, r = _judge(tmp_path, template)
+    assert r.returncode == 0, (
+        f"a write outside the project after a span with a quoted bracket "
+        f"was refused:\n{command}\n{r.stdout}{r.stderr}")
+
+
+# ---------------------------------------------------------------------------
+# A `..` after a part the hook cannot know (ayeo-io/compass-delivery-record
+# #187). Such a path is judged by its text, as written, and the text before
+# the last `..` says nothing about where the file lands. So it must not
+# borrow the `.compass/` or test-directory exemption.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("template", [
+    pytest.param("echo x > $X/../.compass/../src/app.py", id="compass"),
+    pytest.param("echo x > $X/../tests/../src/app.py", id="tests"),
+    pytest.param("echo x > ${{X}}/../.compass/../src/app.py", id="braces"),
+    pytest.param("echo x > ~/../tests/../src/app.py", id="tilde"),
+    pytest.param("cp a.py $X/../.compass/../src/app.py", id="cp"),
+    pytest.param("echo x > {root}/$X/../spec/../src/app.py",
+                 id="absolute-spec"),
+])
+def test_ff_12_a_dot_dot_after_an_unknown_part_borrows_no_exemption(
+        tmp_path, template):
+    """Scenario `TRC-E1`."""
+    command, r = _judge(tmp_path, template)
+    assert r.returncode == 2, (
+        f"a path with a '..' after an unknown part borrowed an exemption:\n"
+        f"{command}\n{r.stdout}{r.stderr}")
+
+
+@pytest.mark.parametrize("template", [
+    pytest.param("echo x > $X/../src/test_app.py", id="test-file-name"),
+    pytest.param("echo x > $X/../src/app_test.py", id="test-file-suffix"),
+    pytest.param("echo x > $X/../notes.md", id="document"),
+    pytest.param("echo x > $X/../tests/conftest.py", id="conftest"),
+])
+def test_ff_13_a_test_file_name_or_document_after_an_unknown_part_is_allowed(
+        tmp_path, template):
+    """A `..` step cannot change the last part of a path, so the file-name
+    and extension exemptions still hold (scenario `TRC-E2`)."""
+    command, r = _judge(tmp_path, template)
+    assert r.returncode == 0, (
+        f"a test file or document after an unknown part was refused:\n"
+        f"{command}\n{r.stdout}{r.stderr}")

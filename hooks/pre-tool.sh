@@ -570,8 +570,19 @@ is_enforced_path() {
   fi
 
   # Always exempt: Compass artifacts, docs, lockfiles, the obvious non-code.
+  #
+  # A path judged by its text after an unknown part and a `..` step does not
+  # get the `.compass/` exemption, or the test-directory one below: the
+  # directories named before the last `..` say nothing about where the file
+  # lands, so `$X/../.compass/../src/app.py` may be `src/app.py`
+  # (ayeo-io/compass-delivery-record#187). The file-name and extension rules
+  # still apply, because a `..` step cannot change the last part of a path.
+  if [ "$unknowable" -eq 0 ]; then
+    case "$target" in
+      *.compass/*|*/.compass/*) return 1 ;;
+    esac
+  fi
   case "$target" in
-    *.compass/*|*/.compass/*) return 1 ;;
     *.md|*.markdown|*.txt|*.rst|*.adoc) return 1 ;;
     *.lock|*.gitignore|*.gitkeep|*.gitattributes|*.editorconfig) return 1 ;;
   esac
@@ -599,10 +610,12 @@ is_enforced_path() {
     *Test.*|*Spec.*|*Tests.*|*Specs.*) return 1 ;;
     conftest.py) return 1 ;;
   esac
-  case "$rel" in
-    tests/*|*/tests/*|test/*|*/test/*|spec/*|*/spec/*|\
-    __tests__/*|*/__tests__/*|testdata/*|*/testdata/*) return 1 ;;
-  esac
+  if [ "$unknowable" -eq 0 ]; then
+    case "$rel" in
+      tests/*|*/tests/*|test/*|*/test/*|spec/*|*/spec/*|\
+      __tests__/*|*/__tests__/*|testdata/*|*/testdata/*) return 1 ;;
+    esac
+  fi
 
   # (a) recognised application source extensions.
   case "$target" in
@@ -787,37 +800,88 @@ bash_write_targets() {
     # word, so `cp $(mktemp) src/app.ts` keeps its destination. The text of
     # each span is then judged as a command of its own, so a write inside
     # one, such as `x=$(cp a src/app.ts)`, is still found.
+    #
+    # The flattening runs twice and the targets of both passes count
+    # (ayeo-io/compass-delivery-record#186). The first pass counts brackets
+    # without regard to quotes, and a span it cannot close takes the rest of
+    # the text. So a quoted `(`, as in `cp "$(echo '(')" src/app.ts`, keeps
+    # the span open and hides the destination. The second pass ignores a
+    # bracket inside quotes or after a backslash, and follows a `$(` inside
+    # double quotes. A span it still cannot close stays as text, so the words
+    # after it are still read. Either pass can misread a command the other
+    # reads correctly, and an extra target can only add a refusal, so the
+    # hook keeps both. A line both passes print is printed once.
     case "$cmd" in
       *tee*|*cp*|*mv*)
         printf '%s\n' "$cmd" \
           | awk '
-              { s = s $0 "\n" }
-              END {
-                gsub(/\\\n/, " ", s)
+              function emit(line) {
+                if (!(line in seen)) { seen[line] = 1; print line }
+              }
+              function flatten(s, quoted,    q, n, k, t, out, rest, e, d, j, L, ch, st, top, closed) {
                 q[1] = s; n = 1
                 for (k = 1; k <= n; k++) {
                   t = q[k]; out = ""
                   while (match(t, /[$<>]\(|`/)) {
-                    out = out substr(t, 1, RSTART - 1) "_SPAN_"
                     if (substr(t, RSTART, 1) == "`") {
                       rest = substr(t, RSTART + 1)
                       e = index(rest, "`")
+                      if (e == 0 && quoted) {
+                        out = out substr(t, 1, RSTART); t = rest; continue
+                      }
+                      out = out substr(t, 1, RSTART - 1) "_SPAN_"
                       if (e == 0) { q[++n] = rest; t = "" }
                       else { q[++n] = substr(rest, 1, e - 1); t = substr(rest, e + 1) }
+                      continue
+                    }
+                    j = RSTART + 2; L = length(t)
+                    if (quoted) {
+                      # A stack of open contexts, innermost last: P is code
+                      # inside a span or bracket, S a single-quoted string
+                      # and D a double-quoted one.
+                      st = "P"
+                      while (j <= L && st != "") {
+                        ch = substr(t, j, 1); top = substr(st, length(st))
+                        if (top == "S") {
+                          if (ch == "\047") st = substr(st, 1, length(st) - 1)
+                        } else if (ch == "\\") {
+                          j++
+                        } else if (top == "D") {
+                          if (ch == "\"") st = substr(st, 1, length(st) - 1)
+                          else if (ch == "$" && substr(t, j + 1, 1) == "(") { st = st "P"; j++ }
+                        } else if (ch == "\047") st = st "S"
+                        else if (ch == "\"") st = st "D"
+                        else if (ch == "(") st = st "P"
+                        else if (ch == ")") st = substr(st, 1, length(st) - 1)
+                        j++
+                      }
+                      closed = (st == "")
+                      if (!closed) {
+                        out = out substr(t, 1, RSTART + 1); t = substr(t, RSTART + 2)
+                        continue
+                      }
                     } else {
-                      d = 1; j = RSTART + 2; L = length(t)
+                      d = 1
                       while (j <= L && d > 0) {
                         ch = substr(t, j, 1)
                         if (ch == "(") d++
                         else if (ch == ")") d--
                         j++
                       }
-                      q[++n] = substr(t, RSTART + 2, (d == 0 ? j - 1 : j) - RSTART - 2)
-                      t = substr(t, j)
+                      closed = (d == 0)
                     }
+                    out = out substr(t, 1, RSTART - 1) "_SPAN_"
+                    q[++n] = substr(t, RSTART + 2, (closed ? j - 1 : j) - RSTART - 2)
+                    t = substr(t, j)
                   }
-                  print out t
+                  emit(out t)
                 }
+              }
+              { s = s $0 "\n" }
+              END {
+                gsub(/\\\n/, " ", s)
+                flatten(s, 0)
+                flatten(s, 1)
               }' \
           | tr ';&|(' '\n\n\n\n' \
           | sed -E 's/(^|[[:space:]])#.*//; s/[0-9]*>>?[[:space:]]*[^[:space:]]*//g; s/<[[:space:]]*[^[:space:]]*//g; s/\)//g' \

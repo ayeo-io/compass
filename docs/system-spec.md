@@ -4182,3 +4182,14 @@ The dry run of `compass issue migrate` now prints the same count of artifact ent
 - `DRS-2` Given a completed quick fix with no verification note, When the dry run and then the apply run, Then the dry run's artifact status line equals the apply's
 - `DRS-3` Given a not-planned issue with a stub distribution map, When the dry run and then the apply run, Then the dry run's artifact status line equals the apply's
 - `DRS-4` Given a completed issue whose stub distribution map already has a kept copy, When the dry run and then the apply run, Then the dry run's artifact status line equals the apply's
+
+### migrate-copy-check-gaps (completed 2026-10-16)
+
+`compass issue migrate` no longer lists a distribution map rename in the dry run when `distribution-map.md.v6.bak` already exists, since `--apply` keeps the backup. `--apply` without `--i-have-a-copy` now refuses when `.compass/work` or `docs/compass` is a symbolic link to a folder outside the project's git repository, and its copy command follows the link. The migrate no longer renames a distribution map whose path lies outside the project; both runs report it instead.
+
+- `MCG-1` Given a done issue with a lightweight distribution map and a distribution-map.md.v6.bak already in its documents folder, When the dry run and then the apply run, Then neither prints the map's rename line and both count 0 maps to rename
+- `MCG-2` Given a committed repository whose docs/compass is a symbolic link to a folder outside it, When --apply runs without --i-have-a-copy, Then it refuses, names docs/compass and changes no file
+- `MCG-3` Given a committed repository whose .compass/work is a symbolic link to a folder outside it, When --apply runs without --i-have-a-copy, Then it refuses, names .compass/work and changes no file
+- `MCG-4` Given a committed repository whose docs/compass is a symbolic link to a committed folder inside it, When --apply runs without --i-have-a-copy, Then it runs
+- `MCG-5` Given a lightweight distribution map registered at a path above the project root, When the dry run and then the apply run, Then the file outside the project is not renamed, both runs report it on the same line and neither counts a rename
+- `MCG-6` Given a committed repository whose docs/compass is a symbolic link to a folder inside the project, holding a lightweight distribution map, When the dry run and then the apply run, Then both rename the map to its backup and count it

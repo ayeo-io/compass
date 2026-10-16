@@ -48,7 +48,10 @@ it also moves files under `docs/compass/`.
    reported.
 5. **Nothing a person wrote is deleted.** A stub distribution map (a lightweight map on an issue with fewer
    than two subtasks) is renamed to `distribution-map.md.v6.bak` and its entry becomes `superseded` with no
-   path. A map that was never registered is adopted with no depth, so the rule does not judge it: it is
+   path. The rename is not made over a `distribution-map.md.v6.bak` that is already there, nor at a
+   registered path whose real path is outside the project; the report lists a map refused for its
+   path. A map
+   that was never registered is adopted with no depth, so the rule does not judge it: it is
    kept as a person's map and the report lists it. The `recommendation` entry leaves the registry, and its
    file stays. The migrate adds no rendered
    block to an archived document (ADR-051 decision 3).
@@ -131,9 +134,12 @@ Decision 7 changes. Decision 8 and the second amendment are extended.
   committed, or a committed file changed since, does not count. Files directly under either folder,
   and registered files outside both, are not judged. Outside a Git repository (no `.git` in the
   folder or above it) the check passes as before; inside one, a Git call that fails, or a Git that
-  cannot be run, refuses. One refusal names each
+  cannot be run, refuses. When the project is in a Git repository, a folder whose real path lies
+  outside that repository refuses, because a symbolic link can take it out of reach of
+  `git reset --hard`. One refusal names each
   folder that fails, the count of its issue folders that cannot be restored and the first five in
-  sorted order, with one `cp -R` line for each. This replaces "refuses when `.compass/work/` or
+  sorted order, with one `cp -RH` line for each, which follows a folder that is a
+  symbolic link. This replaces "refuses when `.compass/work/` or
   `docs/compass/` is not tracked by Git".
 - **Decision 8: the dry run lists what the next `--apply` changes, and nothing more.** The dry run runs
   the apply's registry steps on a copy of the manifest held in memory, through the functions the apply

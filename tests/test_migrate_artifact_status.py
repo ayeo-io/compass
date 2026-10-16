@@ -4,8 +4,9 @@
 Every test builds a fixture work root in a temporary folder. None of them
 touches a real archive.
 
-Scenario ids: `ASW-22` to `ASW-25`, and `DRS-1` to `DRS-4` for the dry run's agreement
-with the apply. Each test name starts with its scenario id.
+Scenario ids: `ASW-22` to `ASW-25`, `DRS-1` to `DRS-4` for the dry run's agreement
+with the apply, and `MCG-1` for the stub map's rename line. Each test name starts with
+its scenario id.
 """
 from __future__ import annotations
 
@@ -226,3 +227,35 @@ def test_drs_4_dry_run_counts_a_stub_map_the_apply_keeps(tmp_path):
     dry, applied = _dry_then_apply(root)
     assert applied == "marked 2 artifact entries approved and 0 superseded"
     assert dry == "would mark" + applied[len("marked"):]
+
+
+# MCG-1: the dry run lists, and counts, the stub map's rename only where the apply makes it.
+
+def _stub_lines(out):
+    """The lines that rename a map to its backup, and the totals line that counts them."""
+    renames = [ln.strip() for ln in out.splitlines()
+               if "rename distribution-map.md to distribution-map.md.v6.bak" in ln
+               or "renamed distribution-map.md to distribution-map.md.v6.bak" in ln]
+    totals = [ln.strip() for ln in out.splitlines()
+              if ln.strip().startswith("distribution maps to rename")]
+    return renames, totals
+
+
+def test_mcg_1_dry_run_skips_a_rename_the_apply_skips(tmp_path):
+    root, folder = _one_issue(tmp_path, "regular", "completed",
+                              [_entry("acceptance-criteria", "draft"),
+                               {**_entry("distribution-map", "draft"), "depth": "lightweight"}])
+    (folder / "distribution-map.md").write_text("# Distribution map\n\nSolo.\n",
+                                                encoding="utf-8")
+    # No project marker above the issue folder, so the documents folder is under it.
+    docs = folder / "docs" / "compass" / "2026-10-01-settled"
+    docs.mkdir(parents=True)
+    (docs / "distribution-map.md.v6.bak").write_text("# Kept\n", encoding="utf-8")
+    code, dry, err = _migrate(root)
+    assert code == 0, dry + err
+    code, applied, err = _migrate(root, "--apply", "--i-have-a-copy")
+    assert code == 0, applied + err
+    wanted = "distribution maps to rename to distribution-map.md.v6.bak: 0"
+    assert _stub_lines(applied) == ([], [wanted]), applied
+    assert _stub_lines(dry) == ([], [wanted]), dry
+    assert (docs / "distribution-map.md.v6.bak").read_text(encoding="utf-8") == "# Kept\n"

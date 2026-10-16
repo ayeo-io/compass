@@ -62,11 +62,11 @@ JSON_SCHEMA_VERSION = 1
 # a configuration that stops an approach owing a release line is a loosening
 # (ADR-065), which version 5 read as equivalent.
 #
-# Version 7: an owed artifact's `word_ceiling` is an obligation fact compared by
+# Version 8: an owed artifact's `word_ceiling` is an obligation fact compared by
 # identity, as `required_when` is, for a kind both sides owe, so a change to a
-# document's word limit is `incomparable`, which version 6 read as `equivalent`
+# document's word limit is `incomparable`, which version 7 read as `equivalent`
 # (ADR-067).
-CLASSIFIER_VERSION = 7
+CLASSIFIER_VERSION = 8
 
 # Keys whose value is a condition on the assessment.
 WHEN_KEYS = ("when", "blocking_when", "applies_when")

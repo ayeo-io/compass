@@ -190,9 +190,10 @@ def test_the_classifier_compares_a_word_limit_by_identity():
     unowed = {"schema": 1, "artifacts": {"review": {"set": {
         "word_ceiling": {"thorough": 900}}}}}
     assert verdict(unowed) == "equivalent"
-    # Version 6 is the release line's (ADR-065); the word limit is version 7.
+    # Version 6 is the release line's (ADR-065) and version 7 the removal of the role
+    # dimension; the word limit is version 8.
     from compass_pkg import classify as module
-    assert module.CLASSIFIER_VERSION == 7
+    assert module.CLASSIFIER_VERSION == 8
 
 
 def test_a_project_that_narrows_the_sections_keeps_a_passing_lint(tmp_path):

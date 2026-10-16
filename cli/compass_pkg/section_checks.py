@@ -198,6 +198,12 @@ def _value(cell):
     return "" if _PLACEHOLDER_ONLY.match(text) else text
 
 
+#: The two readers `design_size` uses too, under names that are part of this
+#: module's interface: a registered document's text, and a table cell's value.
+read_registered = _read
+cell_value = _value
+
+
 def _column(header, test):
     for index, name in enumerate(header):
         if test(name.strip().strip("*").strip().lower()):

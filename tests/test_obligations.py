@@ -997,9 +997,10 @@ def test_ob_7_the_sample_has_every_check_that_declines(preset_config):
     # `dod-evidence-typed` 2.0.0 declines when no verification report is written; the sample
     # was recorded before it did, so the recorded verdicts cannot show it standing down.
     declining -= {"dod-evidence-typed"}
-    # The two section checks of 7.0.0 (ADR-064) did not exist when the sample was recorded;
-    # each corpus holds every shape on which they stand down.
-    declining -= {"nfr-rows-resolved", "contracts-declared"}
+    # The two section checks of 7.0.0 (ADR-064) and the design-size check (ADR-067) did not
+    # exist when the sample was recorded; each corpus holds every shape on which they stand
+    # down.
+    declining -= {"nfr-rows-resolved", "contracts-declared", "design-within-word-ceiling"}
     assert declining <= stood_down, declining - stood_down
 
 
@@ -1210,8 +1211,9 @@ def test_ob_8_the_module_declares_its_dependencies_and_stays_small():
     text = path.read_text(encoding="utf-8")
     assert "# DEPENDENCY:" in text
     # The design's target was 600; the readiness fact (one function and its
-    # table rows) takes the cap to 620.
-    assert len(text.splitlines()) < 620
+    # table rows) takes the cap to 620, and the word-limit fact (one field and
+    # its row) to 625.
+    assert len(text.splitlines()) < 625
     core = (ROOT / "cli" / "compass_pkg" / "core.py").read_text(encoding="utf-8")
     assert len(core.splitlines()) <= 1200
 

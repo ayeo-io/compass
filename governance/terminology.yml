@@ -269,9 +269,23 @@ terms:
     related: [lld, adr, operability]
   lld:
     means: >
-      Low-level design: optional per-component detail on initiative-scale
-      work only. Empty is a valid state.
-    related: [design-doc]
+      Low-level design: the signatures, contracts, file plan and tests of one
+      work unit, in its own document, `low-level-design/U<n>.md`. The planner
+      writes one per unit of the technical design's Work units table, so the
+      design stays short and each builder reads only its own unit. No approach
+      owes one; on the full approach, `compass issue lint` notes a unit that
+      has none.
+    related: [design-doc, word_ceiling]
+  word_ceiling:
+    means: >
+      The word limit a document kind carries in the artifacts catalogue, per
+      depth, such as 4,000 words for a thorough technical design. Words are
+      counted from the visible text only: rendered blocks and HTML comments
+      do not count. `compass issue lint` notes a document over its limit, and
+      the check `design-within-word-ceiling` refuses a technical design over
+      1.5 times its limit once plan exit is due. An issue stored before a kind
+      had a limit keeps no limit.
+    related: [lld, design-doc]
   adr:
     means: >
       Architecture decision record: one real decision, the alternatives

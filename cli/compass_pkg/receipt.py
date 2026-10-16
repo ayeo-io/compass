@@ -582,7 +582,8 @@ def _receipt_documents(task, task_dir=None):
     it. Documents still in draft are counted on one line, so the receipt stays
     one screen. A round of a kind that repeats (`review-<n>.md`) is listed
     whatever its status, with its entry id and path, so no round is hidden
-    behind the count. A document whose condition is false and that has no file is
+    behind the count, and so is each unit of a kind with a document per work
+    unit (`low-level-design/<unit>.md`). A document whose condition is false and that has no file is
     listed as "not needed: ...", from `artifact_owed`, and is not a draft. No lines
     when every document is a draft or none is registered."""
     entries = [a for a in task.get("artifacts") or [] if isinstance(a, dict)]
@@ -590,7 +591,7 @@ def _receipt_documents(task, task_dir=None):
     unneeded = [(a, artifact_owed.not_needed(task, view, a)) for a in entries]
     unneeded = [(a, text) for a, text in unneeded if text]
     skipped = [a for a, _ in unneeded]
-    rounds = [a for a in entries if isinstance(a.get("round"), int)]
+    rounds = [a for a in entries if isinstance(a.get("round"), int) or a.get("unit")]
     moved = [a for a in entries if a.get("status") != "draft" and a not in rounds
              and a not in skipped]
     if not moved and not rounds and not unneeded:
@@ -606,8 +607,10 @@ def _receipt_documents(task, task_dir=None):
             f"{who}  {when}"))
     for entry in rounds:
         who = entry.get("approved_by") or "-"
+        which = (" round " + str(entry["round"]) if isinstance(entry.get("round"), int)
+                 else " " + str(entry["unit"]))
         lines.append(_receipt_truncate(
-            f"  {str(entry.get('kind', '?')) + ' round ' + str(entry['round']):<14}  "
+            f"  {str(entry.get('kind', '?')) + which:<14}  "
             f"{str(entry.get('status', '?')):<17}  {str(entry.get('id', '?')):<13} "
             f"{entry.get('path') or '-'}  {who}"))
     drafts = len(entries) - len(moved) - len(rounds) - len(skipped)

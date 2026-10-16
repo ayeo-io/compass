@@ -130,7 +130,7 @@ def test_asw_5_every_artifact_kind_names_its_stage(tmp_path):
         "delivery-approach": "assess", "intent": "assess",
         "acceptance-criteria": "define", "ui-contract": "define",
         "requirements-review": "refine", "technical-design": "plan",
-        "threat-model": "plan", "rollback-plan": "plan",
+        "low-level-design": "plan", "threat-model": "plan", "rollback-plan": "plan",
         "distribution-map": "breakdown", "verification-report": "verify",
         "verification-note": "verify", "launch-readiness": "verify",
         "bug-report": "assess", "architecture-notes": "define", "positioning": "define",

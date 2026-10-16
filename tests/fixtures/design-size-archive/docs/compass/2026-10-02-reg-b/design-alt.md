@@ -1,0 +1,39 @@
+# Technical design - reg-b
+
+alpha0 delta0 golf0 juliet0 mike0 papa0 sierra0 bravo0 echo0
+bravo0 echo0 hotel0 kilo0 november0 quebec0 tango0 charlie0 foxtrot0
+charlie0 foxtrot0 india0 lima0 oscar0 romeo0 alpha0 delta0 golf0
+delta0 golf0 juliet0 mike0 papa0 sierra0 bravo0 echo0 hotel0
+echo0 hotel0 kilo0 november0 quebec0 tango0 charlie0 foxtrot0 india0
+foxtrot0 india0 lima0 oscar0 romeo0 alpha0 delta0 golf0 juliet0
+golf0 juliet0 mike0 papa0 sierra0 bravo0 echo0 hotel0 kilo0
+hotel0 kilo0 november0 quebec0 tango0 charlie0 foxtrot0 india0 lima0
+india0 lima0 oscar0 romeo0 alpha0 delta0 golf0 juliet0 mike0
+juliet0 mike0 papa0 sierra0 bravo0 echo0 hotel0 kilo0 november0
+kilo0 november0 quebec0 tango0 charlie0 foxtrot0 india0 lima0 oscar0
+lima0 oscar0 romeo0 alpha0 delta0 golf0 juliet0 mike0 papa0
+mike0 papa0 sierra0 bravo0 echo0 hotel0 kilo0 november0 quebec0
+november0 quebec0 tango0 charlie0 foxtrot0 india0 lima0 oscar0 romeo0
+oscar0 romeo0 alpha0 delta0 golf0 juliet0 mike0 papa0 sierra0
+papa0 sierra0 bravo0 echo0 hotel0 kilo0 november0 quebec0 tango0
+quebec0 tango0 charlie0 foxtrot0 india0 lima0 oscar0 romeo0 alpha0
+romeo0 alpha0 delta0 golf0 juliet0 mike0 papa0 sierra0 bravo0
+sierra0 bravo0 echo0 hotel0 kilo0 november0 quebec0 tango0 charlie0
+tango0 charlie0 foxtrot0 india0 lima0 oscar0 romeo0 alpha0 delta0
+alpha1 delta1 golf1 juliet1 mike1 papa1 sierra1 bravo1 echo1
+bravo1 echo1 hotel1 kilo1 november1 quebec1 tango1 charlie1 foxtrot1
+charlie1 foxtrot1 india1 lima1 oscar1 romeo1 alpha1 delta1 golf1
+delta1 golf1 juliet1 mike1 papa1 sierra1 bravo1 echo1 hotel1
+echo1 hotel1 kilo1 november1 quebec1 tango1 charlie1 foxtrot1 india1
+foxtrot1 india1 lima1 oscar1 romeo1 alpha1 delta1 golf1 juliet1
+golf1 juliet1 mike1 papa1 sierra1 bravo1 echo1 hotel1 kilo1
+hotel1 kilo1 november1 quebec1 tango1 charlie1 foxtrot1 india1 lima1
+india1 lima1 oscar1 romeo1 alpha1 delta1 golf1 juliet1 mike1
+juliet1 mike1 papa1 sierra1 bravo1 echo1 hotel1 kilo1 november1
+kilo1 november1 quebec1 tango1 charlie1 foxtrot1 india1 lima1 oscar1
+lima1 oscar1 romeo1 alpha1 delta1 golf1 juliet1 mike1 papa1
+mike1 papa1 sierra1 bravo1 echo1 hotel1 kilo1 november1 quebec1
+november1 quebec1 tango1 charlie1 foxtrot1 india1 lima1 oscar1 romeo1
+oscar1 romeo1 alpha1 delta1 golf1 juliet1 mike1 papa1 sierra1
+papa1 sierra1 bravo1 echo1 hotel1 kilo1 november1 quebec1 tango1
+wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww

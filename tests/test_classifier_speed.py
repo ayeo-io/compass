@@ -586,10 +586,15 @@ def test_cs_2_identical_configurations_need_no_scan_and_no_entry(monkeypatch):
 # Re-pinned in the same issue for `routing.evaluate_route`: a document a role rule
 # asks for is thorough even when the approach owes it at lightweight, which keeps a
 # product owner's regular intent thorough. Version 6 covers both changes.
+# Re-pinned for `artifacts.word_ceiling`, an obligation fact compared by identity
+# for a kind both sides owe (issue `word-ceilings-and-lld`): a change to a document's
+# word limit is `incomparable`, which version 7 read as `equivalent`, so the version
+# is now 8 (version 7 is the removal of the role dimension). Re-pinned again in the
+# same issue for the merged `Obligations` docstring; no verdict moves.
 # Re-pinned for issue `remove-role-from-assessment`: a point carries the documents on
 # disk beside the labels, and the evaluator reads artifact rules and drops a role the
-# policy does not declare (ADR-070); the version is now 7.
-VERDICT_SOURCE_PIN = "85522327d5d6ed01"
+# policy does not declare (ADR-070); the version is now 9, version 7 never released.
+VERDICT_SOURCE_PIN = "58a682187436e0f6"
 
 
 def _verdict_source_digest():

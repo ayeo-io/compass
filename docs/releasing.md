@@ -492,14 +492,24 @@ runs the suite again. A title or body edit does not:
 - `self-check` still runs, because a skipped required check counts as
   passed and would hide an earlier failure. It skips its aggregator and
   runs `scripts/ci-already-tested.py --pull-request N --head H --this-run
-  RUN_ID`, which passes only when the latest earlier `self-check` on the
-  head succeeded, none is still running, and the pull request's timeline
-  shows no base change since that run started. Because `self-check` needs
-  every other required job, its earlier result carries theirs;
+  RUN_ID --wait-minutes 55`. That reads the pull request's earlier runs of
+  `compass.yml` on the head from the Actions API, and counts only suite
+  runs: a run is left out when it is this run, lists another pull request,
+  skipped its `checks` job (a text edit) or was cancelled. It passes only
+  when the latest counted run's `self-check` succeeded and the pull
+  request's timeline shows no base change since that run was created.
+  Because `self-check` needs every other required job, its result carries
+  theirs;
+- an edit made while the suite run is still running waits for it,
+  checking every 60 seconds for up to 55 minutes, and then passes or fails
+  with it. It does not read the `self-check` check runs, because GitHub
+  creates a job's check run only once the jobs it needs have finished, so
+  a running suite run has none yet. A wait that runs out fails the check;
 - a text-only edit gets a concurrency group of its own, so it never
-  cancels a suite run. An edit made while the suite is still running fails
-  `self-check`, and the suite run's own `self-check`, which ends later,
-  then replaces that result.
+  cancels a suite run. A second edit cancels the first edit's run;
+- GitHub lists no pull request on the runs of a pull request from a fork,
+  so a text edit on one fails `self-check`. Push to the branch again to
+  re-run the suite.
 
 ### The required checks
 
@@ -606,6 +616,9 @@ runs and shows a failure, but does not block a merge.
 Every job in every workflow has `timeout-minutes`: about twice the job's
 p90 run time, rounded up to a multiple of 5 minutes, at least 5 and at most
 45. A job with no measurement starts from an estimate. `serial` has 20.
+`self-check` has 60, the one job over 45, because on a title or body edit
+it waits up to 55 minutes for the suite run; its aggregate step has a
+5-minute limit of its own, as does each of its other steps.
 
 ### Measuring a run
 

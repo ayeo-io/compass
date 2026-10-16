@@ -116,6 +116,9 @@ vocabulary:
   checks.contracts-declared:
     name: Contracts declared
     aliases: []
+  checks.design-within-word-ceiling:
+    name: Design within word ceiling
+    aliases: []
   checks.spike-conclusion-present:
     name: Spike conclusion present
     aliases: []

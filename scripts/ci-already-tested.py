@@ -4,7 +4,8 @@
 Usage: ci-already-tested.py --repo OWNER/NAME --commit M --output FILE
                             [--branch main]
        ci-already-tested.py --repo OWNER/NAME --pull-request N --head H
-                            --this-run RUN_ID
+                            --this-run RUN_ID [--wait-minutes M]
+                            [--poll-seconds S]
 
 The push skip (first form). The `already-tested` job in
 .github/workflows/compass.yml runs this on a push to main. When it appends
@@ -36,15 +37,31 @@ Exit 0 whenever it wrote the line, 1 when it could not write it.
 
 The earlier result (second form). On a title or body edit the suite jobs
 skip, and GitHub counts a skipped required check as passed, so the
-`self-check` job runs this instead of the aggregator. It exits 0 only when
-conditions 5 and 6 hold for head H and pull request N, leaving out the
-check runs of workflow run RUN_ID, which is this run. The earlier run's
-`self-check` needed every required job, so its result carries theirs.
+`self-check` job runs this instead of the aggregator. It reads the runs of
+this run's workflow for head H from the Actions API, not the `self-check`
+check runs: GitHub creates a job's check run only once the jobs it needs
+have finished, so a suite run still in progress has no `self-check` check
+run yet (ayeo-io/compass#578, run 38849230839). A run counts as the
+earlier result only when all of these hold:
+
+- it is not RUN_ID, which is this run;
+- its head is H and it lists pull request N;
+- its `checks` job ran. A title or body edit skips `checks`, so text-edit
+  runs never count, whatever their result;
+- it was not cancelled.
+
+While such a run is still running, or a run has not yet listed its
+`checks` job, the command waits: it polls every S seconds (60 by default)
+for at most M minutes (0 by default), then fails, naming the run. With
+nothing running it exits 0 only when the latest counted run, by creation
+time then id, has a `self-check` job that succeeded, and the pull
+request's timeline shows no base change at or after that run was created.
+That `self-check` needed every required job, so its result carries theirs.
 Exit 1 otherwise, including on any error.
 
-Only two values read from the API or the event reach a command, the head
-sha and the pull-request number, each checked first and passed as one
-argument in an argument list, never through a shell.
+Only these values read from the API or the event reach a command: the head
+sha, the pull-request number and run and workflow ids, each checked first
+and passed as one argument in an argument list, never through a shell.
 """
 from __future__ import annotations
 
@@ -53,6 +70,7 @@ import json
 import re
 import subprocess
 import sys
+import time
 from datetime import datetime
 
 SHA = re.compile(r"^[0-9a-f]{40}$")
@@ -124,17 +142,20 @@ def _time(text) -> datetime:
     return when
 
 
+PUSH_LINES = ("Pull request", "Merged tree", "Head tree",
+              "First parent is an ancestor of the head",
+              "Latest self-check conclusion", "Base changes since that run started")
+EDIT_LINES = ("Pull request", "Latest suite run",
+              "Base changes since that run was created")
+
+
 class Decision:
-    def __init__(self):
-        self.lines = {
-            "Pull request": "not read",
-            "Merged tree": "not read",
-            "Head tree": "not read",
-            "First parent is an ancestor of the head": "not read",
-            "Latest self-check conclusion": "not read",
-            "Base changes since that run started": "not read",
-        }
+    def __init__(self, labels=PUSH_LINES):
+        self.lines = {label: "not read" for label in labels}
         self.reasons: list[str] = []
+        # The counted runs on the head that are still running. The text-edit
+        # form waits while this is not empty.
+        self.running: list[int] = []
 
     def no(self, reason: str):
         self.reasons.append(reason)
@@ -195,10 +216,9 @@ def _workflow_run(run: dict, repo: str):
     return int(m.group(1)) if m else None
 
 
-def _latest_self_check(repo: str, head: str, d: Decision, *, leave_out=None):
+def _latest_self_check(repo: str, head: str, d: Decision):
     """Condition 5. The latest self-check run on the head when it
-    succeeded, else None with the reason recorded. The check runs of
-    workflow run `leave_out` are left out."""
+    succeeded, else None with the reason recorded."""
     answer = _gh("api", "-X", "GET", f"repos/{repo}/commits/{head}/check-runs",
                  "-f", "check_name=self-check", "-f", "filter=all",
                  "-f", "per_page=100")
@@ -215,14 +235,11 @@ def _latest_self_check(repo: str, head: str, d: Decision, *, leave_out=None):
         app = run.get("app") if isinstance(run.get("app"), dict) else {}
         if run.get("name") != "self-check" or app.get("slug") != "github-actions":
             continue
-        if leave_out is not None and _workflow_run(run, repo) == leave_out:
-            continue
         ours.append(run)
     label = "Latest self-check conclusion"
     if not ours:
         d.lines[label] = "no self-check run from GitHub Actions"
-        d.no("the head has no self-check run from GitHub Actions"
-             + (" other than this run's" if leave_out is not None else ""))
+        d.no("the head has no self-check run from GitHub Actions")
         return None
     running = [r for r in ours if r.get("status") != "completed"]
     if running:
@@ -245,14 +262,14 @@ def _latest_self_check(repo: str, head: str, d: Decision, *, leave_out=None):
     return latest
 
 
-def _base_unchanged_since(repo: str, number: int, run: dict, d: Decision):
-    """Condition 6: no base change at or after the run started."""
-    label = "Base changes since that run started"
+def _base_unchanged_since(repo: str, number: int, since: str, d: Decision,
+                          label="Base changes since that run started"):
+    """Condition 6: no base change at or after the time `since`."""
     pages = _gh("api", "--paginate", "--slurp", "-X", "GET",
                 f"repos/{repo}/issues/{number}/timeline", "-f", "per_page=100")
     if not isinstance(pages, list) or not all(isinstance(p, list) for p in pages):
         raise Unknown("the timeline answer is not a list of pages")
-    started = _time(run["started_at"])
+    started = _time(since)
     later = []
     for event in (e for page in pages for e in page):
         if not isinstance(event, dict):
@@ -262,7 +279,9 @@ def _base_unchanged_since(repo: str, number: int, run: dict, d: Decision):
                 later.append(f"{event['event']} at {event['created_at']}")
     if later:
         d.lines[label] = ", ".join(later)
-        d.no("the base branch changed after the self-check run started: "
+        d.no("the base branch changed after the "
+             + ("self-check run started: " if label.endswith("started")
+                else "suite run was created: ")
              + ", ".join(later))
     else:
         d.lines[label] = "none"
@@ -300,18 +319,93 @@ def decide(args) -> tuple[bool, Decision]:
                 d.no(f"the pull request number {pr.get('number')!r} is not a "
                      "whole number, so its timeline is not read")
             else:
-                _base_unchanged_since(args.repo, number, latest, d)
+                _base_unchanged_since(args.repo, number, latest["started_at"], d)
     except Unknown as exc:
         d.no(f"error: {exc}")
         return False, d
     return not d.reasons, d
 
 
+def _listed(answer, key: str, what: str) -> list:
+    """The list under `key` of a one-page API answer, refused unless the
+    page holds every item the answer counts."""
+    if not isinstance(answer, dict) or not isinstance(answer.get(key), list):
+        raise Unknown(f"the {what} answer has no {key} list")
+    items = answer[key]
+    if answer.get("total_count") != len(items):
+        raise Unknown(f"the {what} answer lists {len(items)} of "
+                      f"{answer.get('total_count')!r}")
+    for item in items:
+        if not isinstance(item, dict):
+            raise Unknown(f"an item in the {what} answer is not an object")
+    return items
+
+
+def _lists_pull_request(run: dict, number: int) -> bool:
+    prs = run.get("pull_requests")
+    if not isinstance(prs, list):
+        raise Unknown(f"workflow run {run.get('id')!r} has no pull_requests list")
+    return any(isinstance(pr, dict) and _whole_number(pr.get("number")) == number
+               for pr in prs)
+
+
+# This run's workflow id, read once: a wait polls many times, and the
+# workflow token allows 1,000 API requests an hour for the whole repository.
+_WORKFLOW_IDS: dict[int, int] = {}
+
+
+def _suite_runs(repo: str, number: int, head: str, this_run: int, d: Decision):
+    """The completed runs of this run's workflow that count as the earlier
+    result for pull request `number` at `head`, as (id, created_at,
+    self-check conclusion). The runs still running go to d.running."""
+    if this_run not in _WORKFLOW_IDS:
+        this = _gh("api", f"repos/{repo}/actions/runs/{this_run}")
+        workflow = (_whole_number(this.get("workflow_id"))
+                    if isinstance(this, dict) else None)
+        if workflow is None:
+            raise Unknown(f"workflow run {this_run} names no workflow id")
+        _WORKFLOW_IDS[this_run] = workflow
+    workflow = _WORKFLOW_IDS[this_run]
+    runs = _listed(_gh("api", "-X", "GET",
+                       f"repos/{repo}/actions/workflows/{workflow}/runs",
+                       "-f", f"head_sha={head}", "-f", "event=pull_request",
+                       "-f", "per_page=100"), "workflow_runs", "workflow runs")
+    counted = []
+    for run in runs:
+        run_id = _whole_number(run.get("id"))
+        if run_id is None:
+            raise Unknown(f"a workflow run has the id {run.get('id')!r}")
+        if (run_id == this_run or run.get("head_sha") != head
+                or not _lists_pull_request(run, number)):
+            continue
+        jobs = _listed(_gh("api", "-X", "GET",
+                           f"repos/{repo}/actions/runs/{run_id}/jobs",
+                           "-f", "filter=latest", "-f", "per_page=100"),
+                       "jobs", f"jobs of run {run_id}")
+        checks = [j for j in jobs if j.get("name") == "checks"]
+        if checks and all(j.get("conclusion") == "skipped" for j in checks):
+            continue  # a title or body edit: its result is not the suite's
+        if run.get("status") != "completed":
+            # Running, or too new to have listed its checks job yet.
+            d.running.append(run_id)
+            continue
+        if run.get("conclusion") == "cancelled" or not checks:
+            # A completed run with no checks job never ran the suite.
+            continue
+        if not isinstance(run.get("created_at"), str):
+            raise Unknown(f"workflow run {run_id} has no creation time")
+        self_check = [j for j in jobs if j.get("name") == "self-check"]
+        conclusion = (self_check[0].get("conclusion") if len(self_check) == 1
+                      else "missing: no self-check job")
+        counted.append((run_id, run["created_at"], conclusion))
+    return counted
+
+
 def earlier_result(args) -> tuple[bool, Decision]:
-    """The second form: may self-check pass on a title or body edit?"""
-    d = Decision()
-    for label in ("Merged tree", "Head tree", "First parent is an ancestor of the head"):
-        del d.lines[label]
+    """The second form: may self-check pass on a title or body edit? A
+    run still running fails it here and is named in d.running, so the
+    caller can wait and ask again."""
+    d = Decision(EDIT_LINES)
     try:
         number = _whole_number(args.pull_request)
         if number is None:
@@ -322,9 +416,27 @@ def earlier_result(args) -> tuple[bool, Decision]:
         if this_run is None:
             raise Unknown(f"--this-run {args.this_run!r} is not a whole number")
         d.lines["Pull request"] = f"#{number}, head {args.head}"
-        latest = _latest_self_check(args.repo, args.head, d, leave_out=this_run)
-        if latest is not None:
-            _base_unchanged_since(args.repo, number, latest, d)
+        label = "Latest suite run"
+        counted = _suite_runs(args.repo, number, args.head, this_run, d)
+        if d.running:
+            runs = ", ".join(str(r) for r in d.running)
+            d.lines[label] = f"workflow run {runs} still running"
+            d.no(f"workflow run {runs} on the head is still running")
+            return False, d
+        if not counted:
+            d.lines[label] = "none"
+            d.no(f"the head has no suite run for #{number} other than this run")
+            return False, d
+        run_id, created, conclusion = max(
+            counted, key=lambda r: (_time(r[1]), r[0]))
+        d.lines[label] = (f"workflow run {run_id}, created {created}, self-check "
+                          f"{conclusion} (latest of {len(counted)})")
+        if conclusion != "success":
+            d.no(f"the self-check of the latest suite run, {run_id}, "
+                 f"ended {conclusion}")
+            return False, d
+        _base_unchanged_since(args.repo, number, created, d,
+                              label="Base changes since that run was created")
     except Unknown as exc:
         d.no(f"error: {exc}")
         return False, d
@@ -358,18 +470,39 @@ def _push_skip(args) -> int:
 
 
 def _earlier(args) -> int:
-    try:
-        passes, d = earlier_result(args)
-    except Exception as exc:  # any surprise fails the check
-        passes, d = False, Decision()
-        d.no(f"error: {type(exc).__name__}: {exc}")
+    deadline = time.monotonic() + args.wait_minutes * 60
+    while True:
+        try:
+            passes, d = earlier_result(args)
+        except Exception as exc:  # any surprise fails the check
+            passes, d = False, Decision(EDIT_LINES)
+            d.no(f"error: {type(exc).__name__}: {exc}")
+        if not d.running:
+            break
+        if time.monotonic() >= deadline:
+            d.no(f"it was still running after a wait of {args.wait_minutes:g} minutes")
+            break
+        runs = ", ".join(str(r) for r in d.running)
+        print(f"Waiting for workflow run {runs} on the head to finish; "
+              f"checking again in {args.poll_seconds:g} seconds.", flush=True)
+        time.sleep(args.poll_seconds)
     _print_lines(d)
     if passes:
-        print("Decision: pass. The latest earlier self-check on this head "
-              "succeeded, and the base has not changed since it started.")
+        print("Decision: pass. The latest suite run on this head succeeded, "
+              "and the base has not changed since it was created.")
         return 0
     print("Decision: fail, because " + "; ".join(d.reasons) + ".")
     return 1
+
+
+def _not_negative(text: str) -> float:
+    try:
+        value = float(text)
+    except ValueError:
+        value = -1.0
+    if not 0 <= value < float("inf"):
+        raise argparse.ArgumentTypeError(f"{text!r} is not a number of 0 or more")
+    return value
 
 
 def main(argv: list[str]) -> int:
@@ -381,6 +514,8 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--pull-request")
     parser.add_argument("--head")
     parser.add_argument("--this-run")
+    parser.add_argument("--wait-minutes", type=_not_negative, default=0.0)
+    parser.add_argument("--poll-seconds", type=_not_negative, default=60.0)
     args = parser.parse_args(argv)
     push = (args.commit, args.output)
     edit = (args.pull_request, args.head, args.this_run)

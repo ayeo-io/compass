@@ -3775,8 +3775,11 @@ _GROWING_REACH = {
     # 102 with the 14 check-corpus case labels of nfr-rows-resolved and contracts-declared,
     #    seven each, which hold a verdict and one line;
     # 103 with tests/fixtures/intent-and-release-line/archive-check-before.json, the
-    #    archive sample's check verdicts captured at the base commit, plain JSON.
-    "PBW-C4": (lambda path: path.startswith("tests/"), 103),
+    #    archive sample's check verdicts captured at the base commit, plain JSON;
+    # 112 with the nine manifests and stored catalogues of tests/fixtures/design-size-archive/,
+    #    which hold key-value lines and no prose;
+    # 121 with the 9 check-corpus case labels of design-within-word-ceiling.
+    "PBW-C4": (lambda path: path.startswith("tests/"), 121),
 }
 
 #: The rules whose reach is a fixed set of files, pinned exactly.

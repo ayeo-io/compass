@@ -152,7 +152,11 @@ classDiagram
      contract, not the work. The implement stage writes the code.
 
      Show the signature and the boundary; leave the body as `...` unless the
-     body IS the decision. -->
+     body IS the decision.
+
+     On the full approach, put each unit's signatures in that unit's
+     low-level design (low-level-design/<unit>.md) and keep here only the
+     contract a reviewer argues with. -->
 
 ```{{language}}
 {{The interface, type, or signature whose shape is the decision.}}
@@ -319,12 +323,17 @@ Dependencies on other issues:
 
 <!-- The independent (or shared-surface) units of work. On the regular approach this is
      a short list; on full-approach scale work it becomes the input to distribution-map.md.
-     Independence = disjoint code AND disjoint scenario groups. -->
+     Independence = disjoint code AND disjoint scenario groups.
 
-| Unit | Scenario group(s) it satisfies | Code surface it touches | Independent of |
-|---|---|---|---|
-| U1 | {{group A - `TRC-A1`, `TRC-A2`}} | {{files / modules}} | {{U2, U3 - or "shares surface with U2"}} |
-| U2 | {{group B - `TRC-B1`}} | {{…}} | {{…}} |
+     Low-level design: on the full approach, a link to the unit's own file,
+     low-level-design/<unit>.md, registered with
+     `compass issue artifact set low-level-design --unit U<n> --path ...`.
+     Elsewhere, a dash. -->
+
+| Unit | Scenario group(s) it satisfies | Code surface it touches | Independent of | Low-level design |
+|---|---|---|---|---|
+| U1 | {{group A - `TRC-A1`, `TRC-A2`}} | {{files / modules}} | {{U2, U3 - or "shares surface with U2"}} | {{a link to low-level-design/<unit>.md on full, or -}} |
+| U2 | {{group B - `TRC-B1`}} | {{…}} | {{…}} | {{…}} |
 
 **Parallelism assessment:** {{"U1 and U2 are genuinely independent → candidate pair/multiagent" - or "all units share surface → solo"}}
 

@@ -4,7 +4,8 @@
 Every test builds a fixture work root in a temporary folder. None of them
 touches a real archive.
 
-Scenario ids: `ASW-22` to `ASW-25`. Each test name starts with its scenario id.
+Scenario ids: `ASW-22` to `ASW-25`, and `DRS-1` to `DRS-4` for the dry run's agreement
+with the apply. Each test name starts with its scenario id.
 """
 from __future__ import annotations
 
@@ -145,3 +146,83 @@ def test_asw_25_migrate_apply_needs_a_copy_on_untracked_root(tmp_path):
     assert "change records that cannot be put back" in out + err
     assert Path(path).read_bytes() == before
     assert _entries(path)["acceptance-criteria"]["status"] == "draft"
+
+
+# --- DRS-1 to DRS-3: the dry run's status line equals the apply's ----------------
+#
+# The apply changes the registry before it settles artifact status: it registers
+# documents it relocates, registers a verification note on a completed quick fix,
+# and supersedes a stub distribution map. The dry run must settle the registry as
+# those steps leave it, or it promises a different count from the one the apply makes.
+
+def _status_line(out):
+    lines = [line.strip() for line in out.splitlines() if "artifact entries approved" in line]
+    assert len(lines) == 1, out
+    return lines[0].lstrip("- ")
+
+
+def _dry_then_apply(root):
+    code, dry, err = _migrate(root)
+    assert code == 0, dry + err
+    code, applied, err = _migrate(root, "--apply", "--i-have-a-copy")
+    assert code == 0, applied + err
+    return _status_line(dry), _status_line(applied)
+
+
+def _one_issue(tmp_path, approach, close_reason, artifacts):
+    root = tmp_path / "work"
+    path = _issue(root, "settled", "done", close_reason, artifacts=artifacts)
+    body = yaml.safe_load(path.read_text(encoding="utf-8"))
+    body["delivery_approach"] = approach
+    path.write_text(yaml.safe_dump(body, sort_keys=False), encoding="utf-8")
+    return root, path.parent
+
+
+def test_drs_1_dry_run_counts_registered_documents(tmp_path):
+    root, folder = _one_issue(tmp_path, "regular", "completed",
+                              [_entry("acceptance-criteria", "draft")])
+    (folder / "intent.md").write_text("# Intent\n\nWhat is wanted.\n", encoding="utf-8")
+    before = {p: p.read_bytes() for p in folder.iterdir()}
+    code, out, err = _migrate(root)
+    assert code == 0, out + err
+    assert {p: p.read_bytes() for p in folder.iterdir()} == before
+    dry, applied = _dry_then_apply(root)
+    assert applied == "marked 2 artifact entries approved and 0 superseded"
+    assert dry == "would mark" + applied[len("marked"):]
+
+
+def test_drs_2_dry_run_counts_the_verification_note(tmp_path):
+    root, _folder = _one_issue(tmp_path, "quick-fix", "completed",
+                               [_entry("acceptance-criteria", "draft")])
+    dry, applied = _dry_then_apply(root)
+    assert applied == "marked 2 artifact entries approved and 0 superseded"
+    assert dry == "would mark" + applied[len("marked"):]
+
+
+def test_drs_3_dry_run_skips_the_superseded_stub_map(tmp_path):
+    root, folder = _one_issue(tmp_path, "regular", "not-planned",
+                              [_entry("acceptance-criteria", "draft"),
+                               {**_entry("distribution-map", "draft"), "depth": "lightweight"}])
+    (folder / "distribution-map.md").write_text("# Distribution map\n\nSolo.\n",
+                                                encoding="utf-8")
+    dry, applied = _dry_then_apply(root)
+    assert applied == "marked 0 artifact entries approved and 1 superseded"
+    assert dry == "would mark" + applied[len("marked"):]
+
+
+def test_drs_4_dry_run_counts_a_stub_map_the_apply_keeps(tmp_path):
+    # The apply leaves the map and its entry alone when the kept copy already exists,
+    # so it settles the entry as any other draft.
+    root, folder = _one_issue(tmp_path, "regular", "completed",
+                              [_entry("acceptance-criteria", "draft"),
+                               {**_entry("distribution-map", "draft"), "depth": "lightweight"}])
+    (folder / "distribution-map.md").write_text("# Distribution map\n\nSolo.\n",
+                                                encoding="utf-8")
+    # The fixture has no project marker above the issue folder, so the migrate
+    # takes the issue folder as the project root and its documents folder is under it.
+    docs = folder / "docs" / "compass" / "2026-10-01-settled"
+    docs.mkdir(parents=True)
+    (docs / "distribution-map.md.v6.bak").write_text("# Kept\n", encoding="utf-8")
+    dry, applied = _dry_then_apply(root)
+    assert applied == "marked 2 artifact entries approved and 0 superseded"
+    assert dry == "would mark" + applied[len("marked"):]

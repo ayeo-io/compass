@@ -301,18 +301,27 @@ def _verification_note(task_dir, data, project, would, out):
     if os.path.isfile(path) and entry is not None:
         return False
     out.notes.append("%s 1 verification note (%s)" % (_tense(would, "write", "wrote"), rel))
+    # Registered before the dry run returns: the dry run's copy of the manifest then
+    # holds the entry the apply adds, and the status step counts it as the apply does.
+    if entry is None:
+        data.setdefault("artifacts", []).append({
+            "id": "ART-VERIFICATION_NOTE", "kind": NOTE, "status": "draft",
+            "depth": "lightweight", "path": rel,
+            "reason": "One screen of what was checked, for a reader (written by migration)"})
     if would:
         return True
     if not os.path.isfile(path):
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w", encoding="utf-8", newline="") as fh:
             fh.write(verification_note_text(slug))
-    if entry is None:
-        data.setdefault("artifacts", []).append({
-            "id": "ART-VERIFICATION_NOTE", "kind": NOTE, "status": "draft",
-            "depth": "lightweight", "path": rel,
-            "reason": "One screen of what was checked, for a reader (written by migration)"})
     return entry is None
+
+
+def register_planned(task_dir, data):
+    """Add to the dry run's in-memory manifest `data` the registry entries `run` adds in
+    the apply. The notes are discarded: `run` prints them from the disk."""
+    from compass_pkg import migrate as base
+    _verification_note(task_dir, data, base._project_root(task_dir), True, Outcome())
 
 
 def run(task_dir, would, out=None):

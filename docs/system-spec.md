@@ -4126,6 +4126,26 @@ Regular issues now owe a short intent with four sections: Problem, Desired outco
 - `IRL-30` The documented quick-fix commands land a fresh quick fix
 - `IRL-31` The merge with the named document sections keeps both features
 
+### migrate-archive-safety (completed 2026-10-16)
+
+- `MAS-1` A document in both places is a change once and an item for a person after that
+- `MAS-2` On the archive sample, each dry run lists what the next apply does
+- `MAS-3` A reported pair whose stem file is already at its round name is left untouched
+- `MAS-4` A reported pair whose stem file would be renamed is left untouched, and the rest of the issue migrates
+- `MAS-5` On the archive sample, the rollback signal for a pair survives two applies
+- `MAS-6` On the archive sample, one committed file under each root does not make the archive restorable
+- `MAS-7` A folder counts as restorable only when the HEAD commit holds every file the migrate can change, unchanged
+- `MAS-8` The refusal stays readable when many folders cannot be restored
+- `MAS-10` The upgrade guide and ADR-056 state the three rules
+- `MAS-9` No test reads or writes the real archive
+- `MAS-11` The copy check lives in its own module, so the migrate module stays within the size limit
+- `MAS-12` When git cannot be asked, the refusal's opening says so
+- `MAS-13` A git failure inside a repository refuses, so an uncommitted edit survives
+- `MAS-14` A registered file in a subfolder of an issue folder is judged
+- `MAS-15` A file is restorable only when its bytes on disk match the HEAD blob
+- `MAS-16` Inside a repository, a git that cannot be run refuses, so an uncommitted edit survives
+- `MAS-17` A registered file outside both roots is not judged
+
 ### word-ceilings-and-lld (completed 2026-10-16)
 
 A document kind can now carry a word limit per depth, compass check refuses a technical design more than 1.5 times over its limit once plan is over, and the full approach keeps one low-level design per work unit, registered with --unit.
@@ -4154,22 +4174,11 @@ A document kind can now carry a word limit per depth, compass check refuses a te
 - `WCL-22` The regular median stays within 1.5 times 2,577 bytes on the re-rendered archive
 - `WCL-23` The check, the field and the kind are declared and documented
 
-### migrate-archive-safety (completed 2026-10-16)
+### migrate-dry-run-status-line (completed 2026-10-16)
 
-- `MAS-1` A document in both places is a change once and an item for a person after that
-- `MAS-2` On the archive sample, each dry run lists what the next apply does
-- `MAS-3` A reported pair whose stem file is already at its round name is left untouched
-- `MAS-4` A reported pair whose stem file would be renamed is left untouched, and the rest of the issue migrates
-- `MAS-5` On the archive sample, the rollback signal for a pair survives two applies
-- `MAS-6` On the archive sample, one committed file under each root does not make the archive restorable
-- `MAS-7` A folder counts as restorable only when the HEAD commit holds every file the migrate can change, unchanged
-- `MAS-8` The refusal stays readable when many folders cannot be restored
-- `MAS-10` The upgrade guide and ADR-056 state the three rules
-- `MAS-9` No test reads or writes the real archive
-- `MAS-11` The copy check lives in its own module, so the migrate module stays within the size limit
-- `MAS-12` When git cannot be asked, the refusal's opening says so
-- `MAS-13` A git failure inside a repository refuses, so an uncommitted edit survives
-- `MAS-14` A registered file in a subfolder of an issue folder is judged
-- `MAS-15` A file is restorable only when its bytes on disk match the HEAD blob
-- `MAS-16` Inside a repository, a git that cannot be run refuses, so an uncommitted edit survives
-- `MAS-17` A registered file outside both roots is not judged
+The dry run of `compass issue migrate` now prints the same count of artifact entries approved and superseded as `--apply`. It counts the documents and verification notes the apply registers first, and leaves out a stub distribution map the apply supersedes, so you can check the counts before migrating your archive.
+
+- `DRS-1` Given a completed issue with a document the apply registers, When the dry run and then the apply run, Then the dry run's artifact status line equals the apply's
+- `DRS-2` Given a completed quick fix with no verification note, When the dry run and then the apply run, Then the dry run's artifact status line equals the apply's
+- `DRS-3` Given a not-planned issue with a stub distribution map, When the dry run and then the apply run, Then the dry run's artifact status line equals the apply's
+- `DRS-4` Given a completed issue whose stub distribution map already has a kept copy, When the dry run and then the apply run, Then the dry run's artifact status line equals the apply's

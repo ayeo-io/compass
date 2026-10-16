@@ -240,9 +240,12 @@ def _status_note(approved, superseded, would):
         "would mark" if would else "marked", approved, superseded)
 
 
-def plan_artifact_status(task_dir):
-    """The dry-run twin of settle_artifact_status."""
-    _path, data = _read_manifest(task_dir)
+def plan_artifact_status(task_dir, data=None):
+    """The dry-run twin of settle_artifact_status. `data` is the manifest as the dry run
+    has changed it in memory; the apply settles the manifest after its earlier steps have
+    registered and superseded entries, so settling the disk would count other entries."""
+    if data is None:
+        _path, data = _read_manifest(task_dir)
     if not isinstance(data, dict):
         return []
     approved, superseded = _settle_done_artifacts(copy.deepcopy(data))
@@ -279,6 +282,11 @@ def plan_issue_dir(task_dir, problems=None, totals=None):
     # the same pass. Looking the manifest up by its old name here would find
     # nothing, and the issue would keep the retired root key.
     manifest = manifest_path(task_dir)
+    # The registry as the apply leaves it before its status step, held in memory:
+    # the rewrite into current words, the relocation registrations, the stub map's
+    # supersession and the verification note's entry. The status step settles it,
+    # so the dry run counts what the apply counts.
+    simulated = None
     if os.path.isfile(manifest):
         with open(manifest, encoding="utf-8") as fh:
             raw = yaml.safe_load(fh) or {}
@@ -293,9 +301,14 @@ def plan_issue_dir(task_dir, problems=None, totals=None):
             migrated["schema_version"] = "2.0"
         if migrated != before:
             notes.append("would rewrite the manifest in the current words, schema 3.0")
-    notes.extend(plan_relocations(task_dir, problems, totals))
+        if isinstance(migrated, dict):
+            simulated = copy.deepcopy(migrated)
+    notes.extend(plan_relocations(task_dir, problems, totals, simulated))
     notes.extend(_blocks(task_dir, True, problems))
-    notes.extend(plan_artifact_status(task_dir))
+    if simulated is not None:
+        from compass_pkg import migrate_blocks
+        migrate_blocks.register_planned(task_dir, simulated)
+    notes.extend(plan_artifact_status(task_dir, simulated))
     notes.extend(_pin_generation(task_dir, True, problems))
     return notes
 
@@ -870,18 +883,20 @@ def _registry_step3(task_dir, data, plan, would):
     return notes
 
 
-def _simulate(task_dir, plan):
+def _simulate(task_dir, plan, data=None):
     """The apply's registry steps, run on a copy of the manifest held in memory.
 
     Step 3 runs first, then the plan is made again against the edited copy, as the
     apply makes it again from disk, and each registration runs in the apply's order
     against a registry the earlier ones have changed. Returns (step 3 notes, the second
     plan, [(move, changed)], [(move, note, changed)]). A folder with no manifest the
-    plan can read is left alone, as the apply leaves it."""
-    data = migrate_kinds.load_manifest(task_dir)
+    plan can read is left alone, as the apply leaves it. `data`, when given, is the
+    caller's in-memory copy, and the steps change it in place."""
     if data is None:
-        return [], plan, [], []
-    data = copy.deepcopy(data)
+        data = migrate_kinds.load_manifest(task_dir)
+        if data is None:
+            return [], plan, [], []
+        data = copy.deepcopy(data)
     notes = _registry_step3(task_dir, data, plan, True)
     second = _make_plan(task_dir, data=data)
     moves = [(move, _register_in(data, move)) for move in second.moves]
@@ -889,10 +904,12 @@ def _simulate(task_dir, plan):
     return notes, second, moves, both
 
 
-def plan_relocations(task_dir, problems=None, totals=None):
+def plan_relocations(task_dir, problems=None, totals=None, data=None):
     """Dry-run notes for the relocation half. Writes nothing. A change line is printed
-    only where the apply's own registry steps, run in memory, change something."""
-    notes, plan, moves, both = _simulate(task_dir, _make_plan(task_dir))
+    only where the apply's own registry steps, run in memory, change something. `data`,
+    when given, is the dry run's in-memory manifest, and it is left as the apply's
+    relocation leaves the manifest on disk."""
+    notes, plan, moves, both = _simulate(task_dir, _make_plan(task_dir), data)
     counted = [m for m, changed in moves if m.moves or changed]
     notes += [_move_note(m, True) for m in counted]
     notes += [note for _m, note, changed in both if changed]
@@ -907,6 +924,11 @@ def plan_relocations(task_dir, problems=None, totals=None):
     if plan.stub:
         notes.append("would rename %s to %s and mark its registry entry superseded"
                      % (os.path.basename(plan.stub["from"]), os.path.basename(plan.stub["to"])))
+        # The apply supersedes the entry only when it renames the map, and it does not
+        # rename over a kept copy that is already there.
+        kept = os.path.join(_project_root(task_dir), plan.stub["to"])
+        if data is not None and not os.path.exists(kept):
+            _supersede_stub_entry(data, plan.stub)
         if totals is not None:
             totals.stubs += 1
     _plan_problems(plan, problems, [m for m, _note, changed in both if not changed])
@@ -987,17 +1009,25 @@ def relocate_documents(task_dir, problems=None, totals=None):
     return notes
 
 
-def _stub_apply(task_dir, project, stub):
+def _supersede_stub_entry(data, stub):
+    """Mark the stub distribution map's registry entry superseded in `data`. The apply
+    writes the result; the dry run keeps it in memory for the status step."""
     from compass_pkg import artifact_status as ast
-    manifest = manifest_path(task_dir)
-    data = migrate_kinds.load_manifest(task_dir)
-    os.replace(os.path.join(project, stub["from"]), os.path.join(project, stub["to"]))
     entry = _find_entry(data.get("artifacts") or [], "distribution-map", None)
+    if entry is None:
+        return
     entry["status"] = ast.SUPERSEDED
     entry.pop("path", None)
     ast.clear_approver(entry)
     entry["reason"] = ("a map for fewer than two subtasks, kept as %s by the 7.0.0 migrate"
                        % os.path.basename(stub["to"]))
+
+
+def _stub_apply(task_dir, project, stub):
+    manifest = manifest_path(task_dir)
+    data = migrate_kinds.load_manifest(task_dir)
+    os.replace(os.path.join(project, stub["from"]), os.path.join(project, stub["to"]))
+    _supersede_stub_entry(data, stub)
     _write_manifest_data(manifest, data)
     return "renamed %s to %s and marked its registry entry superseded" % (
         os.path.basename(stub["from"]), os.path.basename(stub["to"]))

@@ -319,3 +319,72 @@ def test_ff_8_a_parent_directory_step_is_not_expanded(tmp_path, template):
     assert r.returncode == 2, (
         f"a '..' step moved a write into the project past the containment "
         f"check:\n{command}\n{r.stdout}{r.stderr}")
+
+
+# ---------------------------------------------------------------------------
+# A path is judged where it points, not how it is spelled
+# (ayeo-io/compass-delivery-record#185). The containment check compared text,
+# so `/tmp/../<project>/src/app.py`, a leading `//`, a `.` step or a
+# different letter case reached a guarded file and was judged outside.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("template", [
+    pytest.param("echo x > {sc}/../proj/src/app.py", id="dot-dot-into-project"),
+    pytest.param("echo x > /tmp/..{root}/src/app.py", id="dot-dot-from-tmp"),
+    pytest.param("echo x > /{root}/src/app.py", id="double-slash"),
+    pytest.param("echo x > {root}/./src/app.py", id="dot-step"),
+    pytest.param("echo x > {root}/src//app.py", id="inner-double-slash"),
+    pytest.param("echo x > {upper}/src/app.py", id="letter-case"),
+    pytest.param("S=/{root}; echo x > $S/src/app.py", id="double-slash-variable"),
+    # A `..` after a part the hook cannot know - an unexpanded variable, a
+    # substitution, `~` or a brace list - must not cancel that part: where
+    # the path points is unknowable, so it is judged inside, as before.
+    pytest.param("S=/tmp/x; echo x > $S/../..{root}/src/app.py",
+                 id="dot-dot-after-unexpanded-variable"),
+    pytest.param("echo x > $X/../src/app.py", id="dot-dot-after-environment-variable"),
+    pytest.param("echo x > {root}/$X/../../x/src/app.py",
+                 id="dot-dot-after-variable-inside-project"),
+    pytest.param("echo x > ~/../..{root}/src/app.py", id="dot-dot-after-tilde"),
+])
+def test_ff_9_a_path_that_resolves_into_the_project_is_guarded(
+        tmp_path, template):
+    """A spelling of a path that resolves into the project is judged inside
+    it (scenario `TRC-N1`)."""
+    root = _project(tmp_path)
+    command = template.format(sc=tmp_path / "scratch", root=root,
+                              upper=str(root).upper())
+    r = _bash_hook(root, command)
+    assert r.returncode == 2, (
+        f"a write into the project was judged outside it because of how "
+        f"its path is spelled:\n{command}\n{r.stdout}{r.stderr}")
+
+
+@pytest.mark.parametrize("spelling", [
+    pytest.param("{sc}/../proj/src/app.py", id="dot-dot"),
+    pytest.param("/{root}/src/app.py", id="double-slash"),
+])
+def test_ff_9b_an_edit_through_such_a_path_is_guarded(tmp_path, spelling):
+    """The same holds for an Edit or Write call, which names its file
+    (scenario `TRC-N1`)."""
+    root = _project(tmp_path)
+    r = _hook(root, spelling.format(sc=tmp_path / "scratch", root=root))
+    assert r.returncode == 2, f"{r.stdout}{r.stderr}"
+
+
+@pytest.mark.parametrize("template", [
+    pytest.param("echo x > {root}/../elsewhere/app.py", id="steps-out"),
+    pytest.param("echo x > {root}/src/../tests/test_app.py",
+                 id="steps-into-tests"),
+    pytest.param("echo x > {root}/src/../docs/notes.md", id="steps-into-docs"),
+])
+def test_ff_10_a_path_that_resolves_elsewhere_is_judged_there(
+        tmp_path, template):
+    """Resolving a path also finds a write that only looks guarded: one
+    that steps out of the project, or into its tests or docs (scenario
+    `TRC-N2`)."""
+    root = _project(tmp_path)
+    command = template.format(root=root)
+    r = _bash_hook(root, command)
+    assert r.returncode == 0, (
+        f"a write that resolves outside the project, or to a test or a "
+        f"document, was refused:\n{command}\n{r.stdout}{r.stderr}")

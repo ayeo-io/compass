@@ -443,13 +443,19 @@ The pre-tool hook reads more exactly which files a Bash command writes. `docs/sa
 
 ### What breaks
 
-- **More `cp` and `mv` shapes are refused without a failing test on record.** The hook used to take the last word of each line. It now takes the last argument of each `cp` or `mv`, so these are refused when the destination is production code: `sudo cp a.ts src/app.ts`, `(cp a.ts src/app.ts)`, `cp a.ts src/app.ts 2>&1` and `cp a.ts src/app.ts; echo done`.
+More Bash writes to production code are refused without a failing test on record:
 
-### What changes
+- **`cp` and `mv` shapes the hook used to miss.** The hook took the last word of each line. It now takes the last argument of each `cp` or `mv`, so these are refused: `sudo cp a.ts src/app.ts`, `(cp a.ts src/app.ts)`, `cp a.ts src/app.ts 2>&1` and `cp a.ts src/app.ts; echo done`.
+- **A quoted target.** `echo x > "src/app.ts"` and `tee 'src/app.ts'` are judged as the unquoted path.
+- **A path spelled to look outside the project.** `/tmp/../<project>/src/app.ts`, `//<project>/src/app.ts` and a path that differs from the project only in letter case are judged inside it.
+- **A write inside a substitution, after `>|`, or split by a line continuation.** `x=$(cp a.ts src/app.ts)`, `echo x >| src/app.ts` and `cp a.ts \` followed by `src/app.ts` on the next line are refused.
 
-- **A variable the command sets is expanded.** `S=/tmp/scratch && cat > $S/plant.ts` is judged at `/tmp/scratch/plant.ts`, outside the project, and allowed. A variable whose value the command does not state for certain is judged inside the project, as before.
-- **`tee` writes only its own arguments.** `node src/cmp.ts | tee out.txt` no longer counts as a write to `src/cmp.ts`.
-- **A file read after `cp` or `mv` is not a target.** `cp a b && grep x src/app.ts` no longer counts as a write to `src/app.ts`.
+### What is newly allowed
+
+- **A scratch file named through a variable the command sets.** `S=/tmp/scratch && cat > $S/plant.ts` is judged at `/tmp/scratch/plant.ts`, outside the project. A variable whose value the command does not state for certain is judged inside the project, as before.
+- **The input of `tee`.** `node src/cmp.ts | tee out.txt` no longer counts as a write to `src/cmp.ts`: `tee` writes only its own arguments.
+- **A file read after `cp` or `mv`.** `cp a b && grep x src/app.ts` no longer counts as a write to `src/app.ts`.
+- **A path that resolves outside the project, or to a test or a document.** `<project>/../elsewhere/app.ts` and `src/../tests/test_app.ts` are judged where they point.
 
 ### What to do
 

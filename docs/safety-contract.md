@@ -415,12 +415,15 @@ manifest.
 The Claude Code pre-tool hook completely covers supported file-editing tools.
 For shell commands it recognises these write shapes, and only these:
 
-- `>` and `>>` redirects, including the `cat > file <<EOF` heredoc form
+- `>`, `>>` and `>|` redirects, including the `cat > file <<EOF` heredoc
+  form and a quoted target such as `> "src/app.ts"`
 - `sed -i`, `perl -i`
 - the arguments of `tee`, and the last argument of `cp` and `mv`, found in
   the same simple command as the `tee`, `cp` or `mv` word, including behind
   a wrapper such as `sudo` or `timeout`; a file that another command in the
-  same line only reads is not a target
+  same line only reads is not a target, a `$(...)`, `<(...)`, backtick span
+  or line continuation inside the command does not split it, and a write
+  inside such a span is found
 - `patch -p<n>` and `git apply` - writers with unknowable targets
 - an inline interpreter script (`python3 -c`, `node -e`, a heredoc) that opens
   a file for writing
@@ -443,6 +446,13 @@ judged as a path inside the project, so a write through it needs a failing
 test on record. The hook reads the command's text and does not run it, so a
 command written to mislead that reading is not detected, like any other
 write through a script.
+
+A path is judged where it points, not how it is spelled. Before the hook
+decides whether a path is inside the project, it resolves `.`, `..` and
+repeated slashes as text, and a path that differs from the project only in
+letter case counts as inside it. A `..` after a part the hook cannot know,
+such as an unexpanded variable or `~`, leaves the real location unknown, so
+that path is judged inside the project. A symbolic link is not followed.
 
 Shell scripts, makefiles and extensionless scripts are not classified
 as production-code file types for red-before-green enforcement.

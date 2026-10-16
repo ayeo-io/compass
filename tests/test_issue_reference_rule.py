@@ -4,7 +4,8 @@ An internal row id means nothing to a person reading a report or a table, so
 the rule must be where every runtime reads it: `AGENTS.md` for runtimes other
 than Claude Code, and `CLAUDE.md` for Claude Code.
 
-Scenario id TRC-001 traces to the quick fix that added the rule.
+The quick fix that added the rule has one scenario, `TRC-001`, which this
+file checks.
 """
 from __future__ import annotations
 

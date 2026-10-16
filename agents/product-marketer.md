@@ -1,7 +1,7 @@
 ---
 name: product-marketer
 description: "Marketer perspective: every public claim traces to a passing scenario; owns the claims gate."
-tools: Read, Glob, Grep, Write, Edit
+tools: Read, Glob, Grep, Write, Edit, Skill
 model: sonnet
 ---
 

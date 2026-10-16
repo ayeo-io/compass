@@ -1,7 +1,7 @@
 ---
 name: orchestrator
-description: Owns multiagent breakdown and integration, and alone resolves a cross-subtask conflict.
-tools: Read, Glob, Grep, Write, Edit, Bash
+description: "Owns multiagent breakdown and integration, and alone resolves a cross-subtask conflict. Not for planning or building one issue: use planner or builder."
+tools: Read, Glob, Grep, Write, Edit, Bash, Skill
 model: opus
 ---
 

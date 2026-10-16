@@ -96,8 +96,8 @@ and a reader knows where their evidence went without guessing.
 
 The full set is in `agents/`. The files in `agents/` are the authority.
 
-An agent has Bash when its instructions run a `compass` verb. Only
-`product-owner` and `product-marketer` have no shell; the calling session runs
+An agent has Bash when it runs a `compass` verb, and Skill when it loads a
+skill. `product-owner` and `product-marketer` have no shell; their caller runs
 their verbs. No agent edits `manifest.yml` by hand (`tests/test_agent_tools.py`).
 
 ## Worktrees and multiagent

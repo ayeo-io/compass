@@ -1,7 +1,7 @@
 ---
 name: reviewer
 description: "The judgement half of the verify stage: applies the review dimensions and decides the gates."
-tools: Read, Glob, Grep, Bash, Write, Edit
+tools: Read, Glob, Grep, Bash, Write, Edit, Skill
 model: opus
 ---
 

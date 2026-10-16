@@ -417,7 +417,10 @@ For shell commands it recognises these write shapes, and only these:
 
 - `>` and `>>` redirects, including the `cat > file <<EOF` heredoc form
 - `sed -i`, `perl -i`
-- `tee`, and the destination argument of `cp` and `mv`
+- the arguments of `tee`, and the last argument of `cp` and `mv`, found in
+  the same simple command as the `tee`, `cp` or `mv` word, including behind
+  a wrapper such as `sudo` or `timeout`; a file that another command in the
+  same line only reads is not a target
 - `patch -p<n>` and `git apply` - writers with unknowable targets
 - an inline interpreter script (`python3 -c`, `node -e`, a heredoc) that opens
   a file for writing
@@ -425,6 +428,21 @@ For shell commands it recognises these write shapes, and only these:
 Anything else runs unchecked: a write through a script, a build step, or an
 interpreter reached via a wrapper is not detected. Unknown commands are allowed
 rather than blocking ordinary development indiscriminately.
+
+A target that starts with a variable, such as `$S/plant.ts`, is judged at the
+variable's value only when the same command states that value for certain:
+
+- the command assigns the variable once, to a plain absolute path with no
+  `..` step, in a statement that always runs before the write;
+- nothing after the assignment names the variable, other than to use it, or
+  runs `eval`, `source`, `read`, `declare` or another command that can set a
+  variable without naming it.
+
+Any other variable, including one from the environment or from `$(...)`, is
+judged as a path inside the project, so a write through it needs a failing
+test on record. The hook reads the command's text and does not run it, so a
+command written to mislead that reading is not detected, like any other
+write through a script.
 
 Shell scripts, makefiles and extensionless scripts are not classified
 as production-code file types for red-before-green enforcement.

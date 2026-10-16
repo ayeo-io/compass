@@ -691,18 +691,43 @@ bash_write_targets() {
       | grep -oE '[0-9]?>>?[[:space:]]*[^&<>|;()[:space:]]+' \
       | sed -E 's/^[0-9]?>>?[[:space:]]*//' || true
 
-    # In-place editors and explicit writers: hand over every argument and let
-    # the classifier decide which of them is a production file.
+    # In-place editors: hand over every argument and let the classifier
+    # decide which of them is a production file.
     case "$cmd" in
-      *"sed -i"*|*"perl -i"*|*"tee "*)
+      *"sed -i"*|*"perl -i"*)
         printf '%s\n' "$cmd" | tr ' \t' '\n\n' | grep -vE '^-' || true ;;
     esac
 
-    # Copy and move write to their LAST argument. Only the destination counts -
-    # reading a source file is not a change to it.
+    # `tee` writes its own arguments; `cp` and `mv` write the LAST argument of
+    # their own command. Neither writes a file that another command in the
+    # same line names: in `python3 x.py | tee out.txt` the script is only run,
+    # and in `cp a b && grep x src/app.ts` the source file is only read.
+    #
+    # So the command is cut into simple commands at `;`, `&`, `|`, `(`, a
+    # backtick and line ends, and redirects and comments are removed. In each
+    # simple command, any word that names tee, cp or mv - `/bin/cp` and `\cp`
+    # included - counts, wherever it stands, so a write behind a wrapper such
+    # as `sudo`, `timeout 10`, `xargs` or `git` is still found. A word after
+    # `tee` is a target; for `cp` and `mv` the last word is. This over-reports
+    # (`grep -n tee src/app.ts`), as the hook did before; it must never miss a
+    # write the earlier, broader rules caught.
     case "$cmd" in
-      cp\ *|mv\ *|*[\;\&\|]\ *cp\ *|*[\;\&\|]\ *mv\ *)
-        printf '%s\n' "$cmd" | awk '{print $NF}' || true ;;
+      *tee*|*cp*|*mv*)
+        printf '%s\n' "$cmd" | tr ';&|(`' '\n\n\n\n\n' \
+          | sed -E 's/(^|[[:space:]])#.*//; s/[0-9]*>>?[[:space:]]*[^[:space:]]*//g; s/<[[:space:]]*[^[:space:]]*//g; s/\)//g' \
+          | awk '
+              {
+                for (i = 1; i <= NF; i++) {
+                  w = $i
+                  sub(/^\\/, "", w)
+                  sub(/^.*\//, "", w)
+                  if (w == "tee") {
+                    for (j = i + 1; j <= NF; j++) if ($j !~ /^-/) print $j
+                  } else if ((w == "cp" || w == "mv") && NF > i) {
+                    print $NF
+                  }
+                }
+              }' || true ;;
     esac
 
     # An inline interpreter script that opens a file FOR WRITING - the shape
@@ -748,6 +773,155 @@ bash_write_targets() {
   } | grep -vE '^[[:space:]]*$' || true
 }
 
+# --- a variable the command itself sets --------------------------------------
+# A Bash write often names its target through a variable that the same
+# command sets: `S=/tmp/scratch && cat > $S/plant.ts`. Read literally,
+# `$S/plant.ts` is a relative path. is_enforced_path() joins it to the project
+# root and refuses a scratch file outside the project as production code. A
+# usage audit on 16 October 2026 counted 116 such refusals.
+#
+# This prints the target with a leading $NAME or ${NAME} replaced by its
+# value, but only when the command states that value for certain. Otherwise
+# it prints the target unchanged, and is_enforced_path() judges it inside the
+# project exactly as before. An expansion can therefore only allow a write
+# whose real path the hook can see; it never guesses.
+#
+# "For certain" means all of these hold:
+#   - The command opens with leading statements, each ended by `;`, `&&` or
+#     a line end. Each is either `[export ]NAME=value`, or a plain command
+#     such as `cd /x`, `set -e` or `export A=1`: words of path characters
+#     only, with no word that opens a block (`if`, `for`, `{`), defines a
+#     function or trap, sources a file, evaluates text or makes a variable
+#     read-only. NAME is assigned exactly once among them. Any other
+#     assignment does not count, because at the write the variable may still
+#     hold the environment's value: one inside a block or subshell, one after
+#     `||`, or `S=x cmd`, which sets S for that one command only.
+#   - If `&&` comes before the assignment, the assignment runs only when the
+#     commands before it succeed. Every use of NAME must then be in the same
+#     `&&` chain, so that it runs only if the assignment did.
+#   - The value is a plain absolute path: no `$`, backtick, `~`, space or
+#     `..` step. So the shell uses the same text the hook judges, and `..`
+#     cannot step back into the project past a containment check that
+#     compares text.
+#   - After the assignment, NAME appears only as `$NAME` or `${NAME}`, and
+#     nothing runs that can set a variable without naming it: eval, source,
+#     `.`, trap, declare, typeset, local, readonly, export, read, mapfile,
+#     readarray, unset, getopts, let, `printf -v` or `((`.
+#   - NAME is not one the shell sets itself, such as PWD (changed by cd), _,
+#     REPLY or UID (read-only, so the assignment fails).
+# These checks read the command's text; they do not parse the shell. A word
+# that only looks like one of them, such as `S` in a heredoc body, leaves the
+# target unexpanded, which refuses as before. A function inherited from the
+# environment that reassigns NAME, a builtin spelt to dodge the list
+# (`ev""al`), or an arithmetic context that evaluates another variable's
+# text, is deliberate evasion, which shell-write detection does not claim to
+# stop (docs/safety-contract.md).
+expand_command_variable() {
+  local target="$1" cmd="$2" name rest rem value="" count=0 full
+  local sep="start" before="" after_sep="" after_name="" stmt w len deny
+  local ref1 ref2 head head2
+  local sq="'" dq='"' bt='`' nl=$'\n'
+  local path_re='^(/[A-Za-z0-9._+@%:,=-]*)*$'
+  local dotdot_re='(^|/)\.\.(/|$)'
+  local brace_re='^\$\{([A-Za-z_][A-Za-z0-9_]*)\}(.*)$'
+  local bare_re='^\$([A-Za-z_][A-Za-z0-9_]*)(.*)$'
+  local value_re="(${sq}[^${sq}]*${sq}|${dq}[^${dq}]*${dq}|[^[:space:];&|<>()${sq}${dq}${bt}\\\$]*)"
+  local assign_re="^[[:space:]]*(export[[:blank:]]+)?([A-Za-z_][A-Za-z0-9_]*)=${value_re}[[:blank:]]*(;|&&|${nl})"
+  local special_re='^(_|PWD|OLDPWD|UID|EUID|PPID|BASHPID|RANDOM|SRANDOM|SECONDS|EPOCHSECONDS|EPOCHREALTIME|LINENO|HISTCMD|REPLY|OPTARG|OPTIND|GROUPS|DIRSTACK|PIPESTATUS|FUNCNAME|SHELLOPTS|BASHOPTS|MAPFILE|COPROC|BASH_[A-Z_]*|BASH)$'
+  local binder_re='(^|[^A-Za-z0-9_./-])(eval|source|trap|declare|typeset|local|readonly|export|read|mapfile|readarray|unset|getopts|let)([^A-Za-z0-9_./-]|$)|(^|[;&|({'"${nl}"']|then|do|else)[[:space:]]*\.[[:space:]]|printf[[:space:]]+-v|(^|[^A-Za-z0-9_)])\(\('
+  local stripped mention_re
+  local plain_re="^[[:space:]]*([A-Za-z0-9._+@%:,=/~-]+([[:blank:]]+[A-Za-z0-9._+@%:,=/~-]+)*)[[:blank:]]*(;|&&|${nl})"
+  local deny_re='^(eval|source|\.|declare|typeset|local|readonly|trap|alias|enable|builtin|command|shopt|function|if|then|else|elif|fi|case|esac|for|select|while|until|do|done|coproc)$'
+
+  if [[ $target =~ $brace_re ]] || [[ $target =~ $bare_re ]]; then
+    name="${BASH_REMATCH[1]}"
+    rest="${BASH_REMATCH[2]}"
+  else
+    printf '%s\n' "$target"; return 0
+  fi
+  if [[ $name =~ $special_re ]] || ! [[ $rest =~ $path_re ]]; then
+    printf '%s\n' "$target"; return 0
+  fi
+
+  # Walk the leading statements. `sep` is the separator that ended the
+  # previous one; `after_name` is the command after NAME's assignment.
+  rem="$cmd"
+  while :; do
+    if [[ $rem =~ $assign_re ]]; then
+      len=${#BASH_REMATCH[0]}
+      if [ "${BASH_REMATCH[2]}" = "$name" ]; then
+        count=$((count + 1))
+        value="${BASH_REMATCH[3]}"
+        before="$sep"
+        after_sep="${BASH_REMATCH[4]}"
+        after_name="${rem:$len}"
+      fi
+      sep="${BASH_REMATCH[4]}"
+    elif [[ $rem =~ $plain_re ]]; then
+      len=${#BASH_REMATCH[0]}
+      stmt="${BASH_REMATCH[1]}"
+      sep="${BASH_REMATCH[3]}"
+      deny=0
+      for w in $stmt; do
+        if [[ $w =~ $deny_re ]]; then deny=1; fi
+      done
+      [ "$deny" -eq 1 ] && break
+    else
+      break
+    fi
+    rem="${rem:$len}"
+  done
+  if [ "$count" -ne 1 ]; then
+    printf '%s\n' "$target"; return 0
+  fi
+
+  # After `&&`, the assignment may not run. Then the text up to the last use
+  # of NAME must be one `&&` chain: no `;`, line end, `||` or lone `&`.
+  if [ "$before" = "&&" ]; then
+    ref1='$'"$name"
+    ref2='${'"$name"'}'
+    head=""
+    case "$after_name" in *"$ref1"*) head="${after_name%"$ref1"*}" ;; esac
+    case "$after_name" in *"$ref2"*)
+      head2="${after_name%"$ref2"*}"
+      [ "${#head2}" -gt "${#head}" ] && head="$head2" ;;
+    esac
+    head2="${head//&&/}"
+    if [ "$after_sep" != "&&" ] || [[ $head == *";"* ]] || [[ $head == *"$nl"* ]] \
+        || [[ $head == *"||"* ]] || [[ $head2 == *"&"* ]]; then
+      printf '%s\n' "$target"; return 0
+    fi
+  fi
+
+  case "$value" in
+    \'*\') value="${value#\'}"; value="${value%\'}" ;;
+    \"*\") value="${value#\"}"; value="${value%\"}" ;;
+  esac
+  full="$value$rest"
+  if [ -z "$value" ] || ! [[ $value =~ $path_re ]] || [[ $full =~ $dotdot_re ]]; then
+    printf '%s\n' "$target"; return 0
+  fi
+
+  # Everything after the assignment: remove the plain references, then
+  # refuse to expand if NAME is still mentioned, or if something that can
+  # set a variable without naming it runs.
+  # The tests are bash regex matches on the whole text, not `printf | grep
+  # -q`: under pipefail, grep -q stops at its first match, printf then dies
+  # of SIGPIPE on a long command, and the pipeline reads as "no match" -
+  # which here would expand. Newlines count as separators in both patterns.
+  stripped="$(printf '%s\n' "$after_name" \
+    | sed -E "s/[\$][{]${name}[}]//g; s/[\$]${name}([^A-Za-z0-9_])/\\1/g; s/[\$]${name}\$//")"
+  mention_re="(^|[^A-Za-z0-9_])${name}([^A-Za-z0-9_]|\$)"
+  if [[ $stripped =~ $mention_re ]]; then
+    printf '%s\n' "$target"; return 0
+  fi
+  if [[ $after_name =~ $binder_re ]]; then
+    printf '%s\n' "$target"; return 0
+  fi
+
+  printf '%s\n' "$full"
+}
+
 # --- decide whether this tool call needs a red on record ---------------------
 if [ "${TOOL:-}" = "Bash" ]; then
   [ -z "${COMMAND:-}" ] && exit 0
@@ -772,6 +946,7 @@ if [ "${TOOL:-}" = "Bash" ]; then
   if [ -z "$DETECTED" ]; then
     while IFS= read -r candidate; do
       [ -z "$candidate" ] && continue
+      candidate="$(expand_command_variable "$candidate" "$COMMAND")"
       if is_enforced_path "$candidate"; then
         DETECTED="$candidate"
         break

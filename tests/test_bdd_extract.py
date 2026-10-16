@@ -321,6 +321,7 @@ EXPECTED_SUBCOMMANDS = {
     "decision",                   # record|list|show|check - the ledger (ADR-027)
     "board",                      # render|refresh - the delivery board page (ADR-046)
     "readiness",                  # measures the repository and writes the readiness record
+    "release",                    # notes - the release lines since a git reference (ADR-065)
 }
 
 

@@ -47,6 +47,11 @@ ADDED_TO_SPIKE = ("delivery-approach", "spike-conclusion")
 # other approach is compared without it.
 ADDED_TO_EVERY_APPROACH = ("delivery-approach",)
 
+# 7.0.0 also makes a regular issue owe a lightweight intent (issue `intent-and-release-line`,
+# ADR-065). A regular result is compared without an intent at the light depth; a product
+# owner's regular issue still owes the thorough intent its role rule asks for, as 5.6.0 did.
+ADDED_TO_REGULAR = ("intent",)
+
 
 def shipped_policy():
     return load_yaml(str(POLICY))
@@ -88,7 +93,10 @@ def compact(readings, policy):
                                     and not (r["delivery_approach"] == "quick-fix"
                                             and a["kind"] in ADDED_TO_QUICK_FIX)
                                     and not (r["delivery_approach"] == "spike"
-                                             and a["kind"] in ADDED_TO_SPIKE)),
+                                             and a["kind"] in ADDED_TO_SPIKE)
+                                    and not (r["delivery_approach"] == "regular"
+                                             and a["kind"] in ADDED_TO_REGULAR
+                                             and DEPTH_WAS.get(a["depth"]) == "light")),
                 "subtask_ceiling": r["subtask_ceiling"],
                 "required_artifacts": sorted(r["required_artifacts"]),
                 "required_skills": sorted(r["required_skills"]),

@@ -156,6 +156,23 @@ REFUSALS: dict[str, dict[str, str]] = {
                "--checkpoint {stage} --approver <you> --role <role>, for each "
                "stage named, then ship again.",
     },
+    # The release-line refusals (release_line.py, ADR-065): a landing of an issue
+    # that owes a line and has none, and a line the living spec would read as an
+    # issue heading. `compass acceptance record` gives the first for a blank line.
+    "release-line-missing": {
+        "what": "landing of issue '{slug}'",
+        "why": "issue '{slug}' has no release line, and its approach owes one: a "
+               "sentence for users that the release notes list.",
+        "fix": "give it with --release-note \"<text written for a user>\", then "
+               "run the command again.",
+    },
+    "release-line-heading": {
+        "what": "the release line of issue '{slug}'",
+        "why": "it starts with #, and the living spec reads a line such as "
+               "### <slug> (completed <date>) as one of its issue headings.",
+        "fix": "write the release line as plain text that does not start with #, "
+               "then run the command again.",
+    },
 }
 
 

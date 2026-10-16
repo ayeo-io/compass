@@ -422,7 +422,8 @@ For shell commands it recognises these write shapes, and only these:
   the same simple command as the `tee`, `cp` or `mv` word, including behind
   a wrapper such as `sudo` or `timeout`; a file that another command in the
   same line only reads is not a target, a `$(...)`, `<(...)`, backtick span
-  or line continuation inside the command does not split it, and a write
+  or line continuation inside the command does not split it, a quoted
+  bracket inside a span does not hide the words after it, and a write
   inside such a span is found
 - `patch -p<n>` and `git apply` - writers with unknowable targets
 - an inline interpreter script (`python3 -c`, `node -e`, a heredoc) that opens
@@ -430,7 +431,22 @@ For shell commands it recognises these write shapes, and only these:
 
 Anything else runs unchecked: a write through a script, a build step, or an
 interpreter reached via a wrapper is not detected. Unknown commands are allowed
-rather than blocking ordinary development indiscriminately.
+rather than blocking ordinary development indiscriminately. These writes to
+production code, for example, are not detected:
+
+- a destination that is itself a substitution, or ends in one:
+  `cp a.ts $(echo src/app.ts)` and `cp a.ts src/app.ts$(true)`
+- a destination given by an option rather than as the last argument:
+  `cp -t src /tmp/a.ts`
+- a `cp` or `mv` that another command runs, where a word follows the
+  destination: `find . -name a.ts -exec cp {} src/app.ts \;`
+- a command inside a string that a nested shell runs:
+  `sudo sh -c 'cp a.ts src/app.ts'`
+- a quoted `;`, `&`, `|` or `(` outside a substitution, before the
+  destination, which the hook reads as the end of the command:
+  `cp "a;b" src/app.ts`
+- a `case` pattern inside a substitution, whose `)` the hook reads as the
+  end of the substitution: `cp "$(case x in x) echo y;; esac)" src/app.ts`
 
 A target that starts with a variable, such as `$S/plant.ts`, is judged at the
 variable's value only when the same command states that value for certain:
@@ -452,7 +468,9 @@ decides whether a path is inside the project, it resolves `.`, `..` and
 repeated slashes as text, and a path that differs from the project only in
 letter case counts as inside it. A `..` after a part the hook cannot know,
 such as an unexpanded variable or `~`, leaves the real location unknown, so
-that path is judged inside the project. A symbolic link is not followed.
+that path is judged inside the project, and the directories named before
+the `..` do not exempt it: `$X/../tests/../src/app.ts` is judged as
+production code, not as a test. A symbolic link is not followed.
 
 Shell scripts, makefiles and extensionless scripts are not classified
 as production-code file types for red-before-green enforcement.

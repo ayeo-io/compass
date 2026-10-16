@@ -142,6 +142,18 @@ BLOCKED_SHAPES = [
     pytest.param('echo x >> "src/app.py"', id="TRC-Q1-quoted-append"),
     pytest.param('echo x | tee "src/app.py"', id="TRC-Q1-quoted-tee"),
     pytest.param("cp a.py 'src/app.py'", id="TRC-Q1-quoted-cp"),
+    # Scenario `TRC-S1`: a quoted bracket inside a substitution must not
+    # keep the span open to the end of the line and hide the destination
+    # (ayeo-io/compass-delivery-record#186). The hook before
+    # ayeo-io/compass#583 refused each of these.
+    pytest.param("cp \"$(echo '(')\" src/app.py", id="TRC-S1-single-quoted-bracket"),
+    pytest.param('cp "$(echo "(")" src/app.py', id="TRC-S1-double-quoted-bracket"),
+    pytest.param("cp $(echo '(') src/app.py", id="TRC-S1-unquoted-span"),
+    pytest.param("cp \"$(echo \"$(echo '(')\")\" src/app.py", id="TRC-S1-nested-span"),
+    pytest.param('cp "$(echo \\()" src/app.py', id="TRC-S1-escaped-bracket"),
+    pytest.param("cp a.py \"$(echo '(')\" src/app.py", id="TRC-S1-span-in-the-middle"),
+    pytest.param("mv \"$(grep -l 'x(' a)\" src/app.py", id="TRC-S1-mv"),
+    pytest.param("tee \"$(echo '(')\" src/app.py", id="TRC-S1-tee"),
 ]
 
 
@@ -275,6 +287,39 @@ def test_safety_contract_states_the_shell_detection_limit():
         "the contract must name the shell write shapes that are detected, so a "
         "reader can tell which side of the line their command falls on."
     )
+
+
+UNDETECTED_WRITES = [
+    "cp a.ts $(echo src/app.ts)",
+    "cp a.ts src/app.ts$(true)",
+    "cp -t src /tmp/a.ts",
+    "find . -name a.ts -exec cp {} src/app.ts \\;",
+    "sudo sh -c 'cp a.ts src/app.ts'",
+    'cp "a;b" src/app.ts',
+    'cp "$(case x in x) echo y;; esac)" src/app.ts',
+]
+
+
+@pytest.mark.parametrize("command", UNDETECTED_WRITES)
+def test_safety_contract_lists_the_writes_the_hook_does_not_detect(command):
+    """Scenario `TRC-D1`: each write shape the hook is known to miss is named in the
+    contract (ayeo-io/compass-delivery-record#188). The hook must still allow
+    each example: if it starts to detect one, this fails, and the list must
+    change with it, so the contract never names a gap that is closed."""
+    contract = (FRAMEWORK_ROOT / "docs" / "safety-contract.md").read_text(encoding="utf-8")
+    assert f"`{command}`" in contract, (
+        f"docs/safety-contract.md must list {command!r} among the writes the "
+        f"hook does not detect"
+    )
+    project, _ = _project(red=False)
+    try:
+        result = _run(project, _bash(command))
+        assert result.returncode == 0, (
+            f"the hook now refuses {command!r}; remove it from the list of "
+            f"undetected writes in docs/safety-contract.md\n{result.stderr}"
+        )
+    finally:
+        shutil.rmtree(project, ignore_errors=True)
 
 
 def test_read_only_command_does_not_consult_task_state():

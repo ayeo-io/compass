@@ -167,10 +167,11 @@ def test_mre_3(tmp_path):
     copies = [ln.strip() for ln in text.splitlines() if ln.strip().startswith("cp -R")]
     assert any(".compass/work" in ln for ln in copies), text
     assert any("docs/compass" in ln for ln in copies), text
-    # The upgrade guide says the refusal names every such folder, and its copy step
-    # names both.
+    # The upgrade guide says the refusal names each root it cannot restore, and its copy
+    # step names both.
     guide = " ".join((ROOT / "docs" / "upgrade-7-0-0.md").read_text(encoding="utf-8").split())
-    assert "naming every folder it cannot restore" in guide, "refusal sentence"
+    assert "naming each root it cannot restore, with a count and the first five folders" \
+        in guide, "refusal sentence"
     step = guide.split("### What to do", 1)[1].split("2. ", 1)[0]
     assert "`.compass/work`" in step and "`docs/compass`" in step, step
 

@@ -2240,6 +2240,8 @@ def test_acf_63(tmp_path):
     assert code != 0 and "docs/compass" in out + err and "copy" in out + err, out + err
     assert _digests(root) == before
     _git(root, "add", "-f", "docs/compass")
+    # Staged is not enough: `git reset --hard` deletes a staged file nobody committed.
+    _git(root, "-c", "user.name=t", "-c", "user.email=t@example.com", "commit", "-qm", "base")
     code, out, err = _migrate(root, "--apply")
     assert code == 0, out + err
     assert (root / "docs/compass" / f"{STAMP}-guarded" / "review-1.md").is_file()

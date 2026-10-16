@@ -1,7 +1,7 @@
 ---
 name: router
 description: Runs the assess stage and computes the delivery approach through the CLI.
-tools: Read, Glob, Grep, Write, Edit, Bash
+tools: Read, Glob, Grep, Write, Edit, Bash, Skill
 model: opus
 ---
 

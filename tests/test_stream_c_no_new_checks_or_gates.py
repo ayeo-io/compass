@@ -99,6 +99,10 @@ BASELINE_CHECKS = {
     # guardrail, as `artifacts-approved` does: `G2` and `G4` are locked.
     "nfr-rows-resolved",
     "contracts-declared",
+    # Added by word-ceilings-and-lld (ADR-067). A technical design far over its
+    # word limit once plan exit is due. It sits in no guardrail for the same
+    # reason as the two section checks.
+    "design-within-word-ceiling",
 }
 
 # The evidence types a branch may add to guardrails.yml, each named for the

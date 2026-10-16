@@ -41,7 +41,8 @@ class IssueDetail:
     #: The repository readiness line, from the manifest's `readiness:` summary.
     readiness: str = ""
     #: One `{id, kind, round, status, path}` for each registered document, in registry order. A
-    #: kind that repeats has one for each round, so no reader shows only the first.
+    #: kind that repeats has one for each round, so no reader shows only the first, and a
+    #: kind with a document per work unit has one for each `unit`.
     documents: tuple = ()
     #: The dependency block (`lifecycle.dependency_block`) while it counts, else None. Read
     #: only when the caller passes a reader; `blocked` stays the stored flag's reason.
@@ -82,10 +83,15 @@ def _documents(manifest, task_dir=None):
                 if not read:
                     view, read = _view(task_dir, manifest), True
                 text = artifact_owed.not_needed(manifest, view, entry)
-            found.append({"id": str(entry.get("id") or ""), "kind": str(entry["kind"]),
-                          "round": rnd if isinstance(rnd, int) else None,
-                          "status": str(entry.get("status") or ""),
-                          "path": str(entry.get("path") or ""), "text": text})
+            fact = {"id": str(entry.get("id") or ""), "kind": str(entry["kind"]),
+                    "round": rnd if isinstance(rnd, int) else None,
+                    "status": str(entry.get("status") or ""),
+                    "path": str(entry.get("path") or ""), "text": text}
+            # Only a unit's entry carries the key, so the `--json` of every other
+            # document reads as it did before units existed.
+            if entry.get("unit"):
+                fact["unit"] = str(entry["unit"])
+            found.append(fact)
     return tuple(found)
 
 

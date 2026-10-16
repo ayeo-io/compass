@@ -1,0 +1,10 @@
+schema_version: '3.0'
+issue: reg-b
+created: '2026-10-02'
+delivery_approach: regular
+artifacts:
+- id: ART-TECHNICAL_DESIGN
+  kind: technical-design
+  status: approved
+  depth: lightweight
+  path: docs/compass/2026-10-02-reg-b/design-alt.md

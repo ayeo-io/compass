@@ -553,17 +553,38 @@ def _artifact_fields(state):
     catalogue, all in one run. The required fields are the merge's to demand
     when a layer adds a kind; a stored generation that lacks them is read, not
     judged here. A field that is present is checked: the shape of `sections`,
-    `file` and `required_when`, a blank text, and the `owner` it names."""
+    `file`, `required_when` and `word_ceiling`, a blank text, and the `owner` it
+    names.
+
+    A word limit at a depth the sections do not list is an error in the layer
+    that writes the limit. When a later layer narrows the sections, the limit
+    it inherits at the removed depth never applies, so it is a warning there:
+    a project that drops a depth keeps a configuration that passes."""
     out, config = [], state["config"]
     owners = _agents_and_roles(config)
+    order = [layer.name for layer in state["chain"]]
+
+    def later(first, second):
+        # Whether layer `second` comes after layer `first` in the chain.
+        return (first in order and second in order
+                and order.index(second) > order.index(first))
+
     for kind, entry in (config.get("artifacts") or {}).items():
         if not isinstance(entry, dict):
             continue
         for field_path, message in catalogue_check.artifact_field_problems(
                 entry, _template_text(kind)):
             path = f"artifacts.{kind}.{field_path}"
-            out.append(_finding("resolved", "M-FIELD-SHAPE", _layer_of(state, path), path,
-                                message))
+            layer = _layer_of(state, path)
+            depth = field_path.partition(".")[2]
+            if (field_path.startswith("word_ceiling.")
+                    and catalogue_check.word_ceiling_depth_unlisted(depth, entry.get("sections"))
+                    and later(layer, _layer_of(state, f"artifacts.{kind}.sections"))):
+                out.append(_finding("resolved", "M-FIELD-SHAPE", layer, path,
+                                    message + "; a later layer narrowed the sections, so this "
+                                    "limit never applies", "warning"))
+                continue
+            out.append(_finding("resolved", "M-FIELD-SHAPE", layer, path, message))
         owner = entry.get("owner")
         if isinstance(owner, str) and owner.strip() and owner not in owners:
             path = f"artifacts.{kind}.owner"

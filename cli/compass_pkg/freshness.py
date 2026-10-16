@@ -38,6 +38,7 @@ function but `stamp` returns nothing and no reader changes. The digest is the on
 # has reached.
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 
 from compass_pkg import review_records, stage_lists
@@ -86,6 +87,24 @@ def _digest(task, task_dir, artifact_id):
         return UNREADABLE
 
 
+def _own_digest(task, task_dir, entry):
+    """The digest of the file the entry itself names, so each unit of a kind with a
+    document per work unit, and each round of a repeating kind, is stamped with its
+    own bytes. An entry with no path is found through the kind, as before."""
+    rel = entry.get("path")
+    if not rel:
+        return _digest(task, task_dir, entry.get("kind"))
+    from compass_pkg.core import _registered_path
+
+    resolved, refused = _registered_path(task_dir, rel)
+    if refused or not os.path.isfile(resolved):
+        return None
+    try:
+        return review_records.file_digest(resolved)
+    except OSError:
+        return UNREADABLE
+
+
 def unreadable(view, task, task_dir, kind):
     """The ids among `kind` and the artifacts it depends on whose file exists
     and cannot be read. Empty when the capability is off. `compass issue
@@ -106,7 +125,7 @@ def stamp(view, task, task_dir, entry):
     without changing it must not refresh its upstream, or any registration
     would clear staleness."""
     kind = entry.get("kind")
-    own = _digest(task, task_dir, kind)
+    own = _own_digest(task, task_dir, entry)
     # A document whose own file cannot be read would be stamped with
     # UNREADABLE. `compass issue artifact set` refuses before it gets this far (see
     # `unreadable`); this guard keeps any other caller from storing it.

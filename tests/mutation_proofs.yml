@@ -99,6 +99,11 @@
   fails: tests/test_document_set_sections.py::test_dss_14_contracts_fails_undeclared
   restores: tests/test_document_set_sections.py::test_dss_15_contracts_passes_declared
 
+- check: design-within-word-ceiling
+  broken: a 6,001-word technical design at implement, over the threshold of 6,000
+  fails: tests/test_word_ceilings_check.py::test_wcl_7_check_refuses_far_over
+  restores: tests/test_word_ceilings_check.py::test_wcl_16_prd_measure_full_fixture
+
 - check: spike-conclusion-present
   broken: a spike with no conclusion evidence
   fails: tests/test_spike_safety.py::test_spike_without_conclusion_fails

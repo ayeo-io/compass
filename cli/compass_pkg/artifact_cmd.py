@@ -40,13 +40,26 @@ def cmd_issue_artifact_path(args):
     let a hook conclude that assessment ran when it did not.
 
     A kind that repeats (`review-<n>.md`) answers with its latest round, or
-    with the round `--round` names.
+    with the round `--round` names. A kind with one document per work unit
+    (`low-level-design/<unit>.md`) answers with the unit `--unit` names. Units
+    have no order, so with no `--unit` it answers only when one unit is
+    registered, and refuses, naming the units, when there are more.
     """
     task_dir = resolve_issue_dir(getattr(args, "task", None))
     kind = args.kind[:-3] if args.kind.endswith(".md") else args.kind
     asked = getattr(args, "round", None)
-    state, path, reason = resolve_artifact(task_dir, kind, asked)
-    if state != FOUND and asked is None:
+    unit = getattr(args, "unit", None)
+    if unit is not None:
+        _refuse_unit_name(unit)
+        _refuse_unit_on_kind(task_dir, kind)
+    else:
+        units = _registered_units(task_dir, kind)
+        if len(units) > 1:
+            raise CompassError(
+                "%s has one document per work unit and %d are registered (%s). Name one "
+                "with --unit." % (kind, len(units), ", ".join(units)))
+    state, path, reason = resolve_artifact(task_dir, kind, asked, unit)
+    if state != FOUND and asked is None and unit is None:
         # A kind the issue earned and has not written yet: the verb names the home the
         # writer must use. The hooks ask the resolver, not this verb, so they still
         # read an unwritten record as absent.
@@ -56,14 +69,50 @@ def cmd_issue_artifact_path(args):
             return 0
     if state != FOUND:
         raise CompassError(
-            "%s%s: %s (%s)" % (kind, " round %d" % asked if asked else "", state, reason))
+            "%s%s%s: %s (%s)" % (kind, " round %d" % asked if asked else "",
+                                 " " + unit if unit else "", state, reason))
     print(path)
     return 0
 
 
+#: How a refusal names a well-formed work unit.
+UNIT_RULE = "U followed by a whole number from 1, with no leading zero (U1, U2, ...)"
+
+
+def _refuse_unit_name(unit):
+    from compass_pkg import artifact_kinds
+
+    if not artifact_kinds.UNIT_PATTERN.fullmatch(str(unit)):
+        raise CompassError("--unit %r is not a work unit. A unit is %s." % (unit, UNIT_RULE))
+
+
+def _refuse_unit_on_kind(task_dir, kind):
+    """Refuse `--unit` on a kind the catalogue gives no document per work unit, as
+    `issue artifact set` does."""
+    from compass_pkg import artifact_kinds
+
+    spec = artifact_kinds.entry(_view_or_none(task_dir), kind) or artifact_kinds.shipped().get(kind)
+    if spec is not None and not artifact_kinds.per_unit(spec) and not _registered_units(
+            task_dir, kind):
+        raise CompassError("%s has no document per work unit, so --unit does not apply to it."
+                           % kind)
+
+
+def _registered_units(task_dir, kind):
+    """The units of the registry entries of `kind`, in registry order. An issue
+    with no manifest has none, and the resolver answers for it as before."""
+    try:
+        task = load_yaml(manifest_path(task_dir)) or {}
+    except CompassError:
+        return []
+    return [str(a["unit"]) for a in task.get("artifacts") or []
+            if isinstance(a, dict) and a.get("kind") == kind and a.get("unit")]
+
+
 def _earned_home(task_dir, kind):
     """The project-relative home of `kind` when the issue's registry holds an entry for
-    it that names no path yet, else None. A kind that repeats has no one home."""
+    it that names no path yet, else None. A kind that repeats, or that has one
+    document per work unit, has no one home."""
     from compass_pkg import artifact_kinds
     task = load_yaml(manifest_path(task_dir)) or {}
     held = [a for a in task.get("artifacts") or []
@@ -72,7 +121,7 @@ def _earned_home(task_dir, kind):
     if not held:
         return None
     declared = artifact_kinds.entry(_view_or_none(task_dir), kind) or artifact_kinds.shipped().get(kind)
-    if not declared or artifact_kinds.repeats(declared):
+    if not declared or artifact_kinds.repeats(declared) or artifact_kinds.per_unit(declared):
         return None
     return artifact_kinds.home(task_dir, declared)
 
@@ -146,25 +195,41 @@ NEXT_FLAG = "--next-issue"
 
 def _label(entry):
     """A document's name for a message: its kind, and the round of a kind that
-    repeats."""
+    repeats or the unit of a kind with one document per work unit."""
     rnd = entry.get("round")
-    return "%s round %d" % (entry.get("kind"), rnd) if isinstance(rnd, int) else str(entry.get("kind"))
+    if isinstance(rnd, int):
+        return "%s round %d" % (entry.get("kind"), rnd)
+    if entry.get("unit"):
+        return "%s %s" % (entry.get("kind"), entry["unit"])
+    return str(entry.get("kind"))
 
 
-def _entry_id(kind, rnd=None):
+def _entry_id(kind, rnd=None, unit=None):
     base = "ART-" + kind.upper().replace("-", "_")
+    if unit:
+        return "%s-%s" % (base, unit)
     return "%s-%d" % (base, rnd) if rnd else base
 
 
 def _refuse_home(task_dir, kind, spec, rel):
     """Refuse a path that is not the one home of `kind`: the issue's documents
-    folder and the kind's filename. Returns the round of a kind that repeats."""
+    folder and the kind's filename. Returns the round of a kind that repeats,
+    or the unit of a kind with one document per work unit."""
     import posixpath
 
     from compass_pkg import artifact_kinds
 
     folder = docs_dir(task_dir)
     given = posixpath.normpath(rel.replace(os.sep, "/"))
+    if artifact_kinds.per_unit(spec):
+        inside = given[len(folder) + 1:] if given.startswith(folder + "/") else None
+        unit = artifact_kinds.unit_of(spec, inside) if inside is not None else None
+        if unit is not None:
+            return unit
+        raise CompassError(
+            "%r is not where %s lives. A %s is kept in the issue's documents folder as "
+            "%s, where <unit> is %s - write it there and register that path."
+            % (rel, kind, kind, artifact_kinds.home(task_dir, spec), UNIT_RULE))
     if artifact_kinds.repeats(spec):
         rnd = artifact_kinds.round_of(spec, posixpath.basename(given))
         if rnd is not None and posixpath.dirname(given) == folder:
@@ -282,6 +347,14 @@ def cmd_issue_artifact(args):
         raise CompassError("%s does not repeat, so --round does not apply to it." % args.kind)
     if asked is not None and asked < 1:
         raise CompassError("--round counts from 1, not %d." % asked)
+    unit_asked = getattr(args, "unit", None)
+    by_unit = (spec is not None and artifact_kinds.per_unit(spec)) or any(
+        a.get("unit") for a in held)
+    if unit_asked is not None and not by_unit:
+        raise CompassError("%s has no document per work unit, so --unit does not apply to it."
+                           % args.kind)
+    if unit_asked is not None:
+        _refuse_unit_name(unit_asked)
 
     rel = (getattr(args, "path", None) or "").strip()
     if rel:
@@ -298,8 +371,20 @@ def cmd_issue_artifact(args):
                 "that." % (rel, resolved, docs_dir(task_dir)))
     from_path = _refuse_home(task_dir, args.kind, spec, rel) if rel and spec is not None else None
 
-    rnd = None
-    if repeating:
+    rnd = unit = None
+    if by_unit:
+        if from_path is not None and unit_asked is not None and from_path != unit_asked:
+            raise CompassError(
+                "--unit %s does not match %s, which is the file of %s." % (unit_asked, rel,
+                                                                           from_path))
+        unit = from_path if from_path is not None else unit_asked
+        if unit is None:
+            raise CompassError(
+                "%s has one document per work unit, so name the unit: pass --path with the "
+                "unit's file (%s) or --unit U<n>." % (
+                    args.kind, artifact_kinds.filename(spec) if spec else args.kind))
+        entry = next((a for a in held if a.get("unit") == unit), None)
+    elif repeating:
         if from_path is not None and asked is not None and from_path != asked:
             raise CompassError(
                 "--round %d does not match %s, which is round %d." % (asked, rel, from_path))
@@ -316,10 +401,12 @@ def cmd_issue_artifact(args):
     else:
         entry = held[0] if held else None
     if entry is None:
-        entry = {"id": _entry_id(args.kind, rnd), "kind": args.kind, "status": "draft",
+        entry = {"id": _entry_id(args.kind, rnd, unit), "kind": args.kind, "status": "draft",
                  "reason": "registered by hand; no rule of the assessment asked for it"}
         if rnd is not None:
             entry["round"] = rnd
+        if unit is not None:
+            entry["unit"] = unit
         arts.append(entry)
 
     if args.status == "omitted" and not (args.reason or "").strip():
@@ -376,6 +463,7 @@ def cmd_issue_artifact(args):
             decision, " -> " + next_issue if next_issue else ""))
     return say(args, "compass issue artifact set: %s -> %s" % (_label(entry), entry["status"]),
                detail=detail + recorded + artifact_status.moved_line(moved),
-               kind=args.kind, round=entry.get("round"), status=entry["status"],
+               kind=args.kind, round=entry.get("round"), unit=entry.get("unit"),
+               status=entry["status"],
                reason=entry.get("reason"), approved_by=entry.get("approved_by"),
                approved_at=entry.get("approved_at"), moved=moved)

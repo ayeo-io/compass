@@ -524,6 +524,11 @@ def test_d2_repairs_change_only_retired_names():
     `agents/product-owner.md` and `agents/product-marketer.md` (one more `##`
     heading each) gained the section saying they have no shell.
 
+    One more was re-baselined by `word-ceilings-and-lld`:
+    `governance/guardrails.md` (list_items 61 -> 66) gained the bullet on the
+    check `design-within-word-ceiling`, with sub-bullets for the word rule,
+    the design's own count, the declining conditions and the spike rule.
+
     One more was re-baselined by `hook-expands-variables`:
     `docs/safety-contract.md` (list_items 51 -> 53) gained the two conditions
     under which the pre-tool hook expands a variable in a Bash write target.

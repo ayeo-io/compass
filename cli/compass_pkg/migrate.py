@@ -372,9 +372,10 @@ def cmd_migrate(args):
         if os.path.isabs(root) or shown.startswith(os.pardir):
             shown = docs
         from compass_pkg import migrate_copy_check as check
-        in_work, in_docs = check.registered_files(root, docs, _project_root(root))
-        lost = [found for found in (check.unrestorable_folders(root, None, in_work),
-                                    check.unrestorable_folders(docs, shown, in_docs))
+        project = _project_root(root)
+        in_work, in_docs = check.registered_files(root, docs, project)
+        lost = [found for found in (check.unrestorable_folders(root, None, in_work, project),
+                                    check.unrestorable_folders(docs, shown, in_docs, project))
                 if found.unrestorable]
         if lost:
             raise CompassError(check.refusal(lost))
@@ -921,16 +922,16 @@ def plan_relocations(task_dir, problems=None, totals=None, data=None):
         notes.append("would remove the compatibility pointer %s" % os.path.basename(plan.pointer))
         if totals is not None:
             totals.pointers += 1
-    if plan.stub:
+    # The apply renames the map, and supersedes its entry, only where the stub rule
+    # does not block it: not over a kept copy, and not at a path the writers refuse.
+    if plan.stub and not plan.stub.get("blocked"):
         notes.append("would rename %s to %s and mark its registry entry superseded"
                      % (os.path.basename(plan.stub["from"]), os.path.basename(plan.stub["to"])))
-        # The apply supersedes the entry only when it renames the map, and it does not
-        # rename over a kept copy that is already there.
-        kept = os.path.join(_project_root(task_dir), plan.stub["to"])
-        if data is not None and not os.path.exists(kept):
+        if data is not None:
             _supersede_stub_entry(data, plan.stub)
         if totals is not None:
             totals.stubs += 1
+    _stub_problem(plan.slug, plan.stub, problems)
     _plan_problems(plan, problems, [m for m, _note, changed in both if not changed])
     _count(totals, plan, counted)
     return notes
@@ -999,14 +1000,24 @@ def relocate_documents(task_dir, problems=None, totals=None):
                 totals.pointers += 1
     step.STEP_HOOK(slug, "pointer")
     stub = migrate_kinds.stub_map(task_dir, migrate_kinds.load_manifest(task_dir) or {}, project)
-    if stub and not os.path.exists(os.path.join(project, stub["to"])):
+    if stub and not stub.get("blocked"):
         notes.append(_stub_apply(task_dir, project, stub))
         if totals is not None:
             totals.stubs += 1
+    _stub_problem(slug, stub, problems)
     step.STEP_HOOK(slug, "stub")
     _plan_problems(plan, problems, unchanged_both)
     _count(totals, plan, counted)
     return notes
+
+
+def _stub_problem(slug, stub, problems):
+    """Report a stub map the rename refuses because of its path, on both runs alike. A
+    map whose backup is already there needs no line: the backup is the earlier rename."""
+    why = (stub or {}).get("blocked")
+    if problems is not None and why and why != "kept":
+        problems.append("%s: the distribution map at %s is not renamed: %s"
+                        % (slug, stub["from"], why))
 
 
 def _supersede_stub_entry(data, stub):

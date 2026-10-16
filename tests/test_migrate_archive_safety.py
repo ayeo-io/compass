@@ -1,4 +1,5 @@
-"""Scenarios MAS-1 to MAS-10 of the issue `migrate-archive-safety`.
+"""Scenarios MAS-1 to MAS-17 of the issue `migrate-archive-safety`, and MCG-2 to MCG-6
+of the issue `migrate-copy-check-gaps`.
 
 `compass issue migrate` must be safe to run on an archive nobody can rebuild:
 
@@ -7,7 +8,10 @@
     and files, on every run (MAS-3 to MAS-5);
   * `--apply` without `--i-have-a-copy` runs only when the HEAD commit holds,
     with the bytes on disk, every file the migrate can change in each issue
-    folder (MAS-6 to MAS-8).
+    folder (MAS-6 to MAS-8), and the root's real path is inside the project's
+    repository (MCG-2 to MCG-4);
+  * a distribution map whose real path is outside the project is never renamed (MCG-5),
+    and one under a link that stays inside the project still is (MCG-6).
 
 Every test works on a copy of the archive sample, or a fixture, in pytest's
 temporary folder. Each one reaches the migrate only through `_migrate`, which
@@ -631,6 +635,125 @@ def test_mas_17_registered_file_outside_both_roots_is_not_judged(tmp_path):
     assert code == 0, out
     assert "cannot be put back" not in out, out
     assert notes.read_text(encoding="utf-8") == "# Review 1\n"
+
+
+# --- MCG: a root outside the repository, a map registered outside the project ----------
+
+
+def _link_out(folder, rel, target):
+    """Move the folder at `rel` in the project to `target` and leave a symbolic link to it."""
+    shutil.move(str(folder / rel), str(target))
+    os.symlink(target, folder / rel)
+
+
+def _outside_line(out, root_name):
+    return [ln for ln in out.splitlines() if "cannot be restored" in ln and root_name in ln]
+
+
+def test_mcg_2_documents_root_outside_the_repository_is_refused(tmp_path):
+    # Git cannot restore a file whose real path is outside the repository, and the
+    # check must not take "no .git above the real folder" to mean "nothing to restore".
+    folder = tmp_path / "project"
+    _two_issues(folder)
+    outside = tmp_path / "outside-docs"
+    _link_out(folder, "docs/compass", outside)
+    only_copy = outside / f"{CREATED}-alpha" / "uncommitted.md"
+    _write(only_copy, "# The only copy\n")
+    before, before_outside = _tree(folder), _tree(outside)
+    code, out = _migrate(folder, "--apply")
+    assert code == 2, out
+    assert _tree(folder) == before and _tree(outside) == before_outside, out
+    refused = _outside_line(out, "docs/compass")
+    assert len(refused) == 1 and "outside the repository" in refused[0], out
+    assert not _outside_line(out, ".compass/work"), out
+    assert "outside the repository" in _opening(out), out
+    code, out = _migrate(folder, "--apply", "--i-have-a-copy")
+    assert code == 0, out
+    assert only_copy.read_text(encoding="utf-8") == "# The only copy\n"
+
+
+def test_mcg_3_work_root_outside_the_repository_is_refused(tmp_path):
+    folder = tmp_path / "project"
+    _two_issues(folder)
+    outside = tmp_path / "outside-work"
+    _link_out(folder, ".compass/work", outside)
+    before, before_outside = _tree(folder), _tree(outside)
+    code, out = _migrate(folder, "--apply")
+    assert code == 2, out
+    assert _tree(folder) == before and _tree(outside) == before_outside, out
+    refused = _outside_line(out, ".compass/work")
+    assert len(refused) == 1 and "outside the repository" in refused[0], out
+    assert refused[0].endswith(": alpha, beta"), out
+
+
+def test_mcg_4_linked_root_inside_the_repository_is_judged(tmp_path):
+    # A link whose real path stays inside the repository is judged by git as before.
+    folder = tmp_path / "project"
+    _two_issues(folder)
+    _link_out(folder, "docs/compass", folder / "kept-docs")
+    _git(folder, "add", "-A")
+    _git(folder, "commit", "-q", "-m", "documents behind a link")
+    code, out = _migrate(folder, "--apply")
+    assert code == 0, out
+    assert "cannot be put back" not in out, out
+
+
+def test_mcg_5_map_registered_outside_the_project_is_not_renamed(tmp_path):
+    # The migrate changes no file outside the project, whatever the manifest names.
+    folder = tmp_path / "project"
+    _plant(folder, "alpha", artifacts=[{"id": "ART-DISTRIBUTION_MAP", "kind": "distribution-map",
+                                        "status": "approved", "depth": "lightweight",
+                                        "path": "../outside/distribution-map.md"}],
+           docs={"technical-design.md": "# Design of alpha\n"})
+    _git(folder, "init", "-q", "-b", "main")
+    _git(folder, "add", "-A")
+    _git(folder, "commit", "-q", "-m", "base")
+    outside = tmp_path / "outside"
+    text = "# Map\n\n| Subtask | Brief |\n|---|---|\n| subtask-1 | x |\n"
+    _write(outside / "distribution-map.md", text)
+    entry_before = _registry(folder, "alpha")[0]
+    runs = []
+    for flags in ((), ("--apply",)):
+        code, out = _migrate(folder, *flags)
+        assert code == 0, out
+        runs.append(out)
+        assert sorted(p.name for p in outside.iterdir()) == ["distribution-map.md"], out
+        assert (outside / "distribution-map.md").read_text(encoding="utf-8") == text
+    for out in runs:
+        assert ".v6.bak" not in "\n".join(_sections(out).get("alpha", [])), out
+        totals = [ln.strip() for ln in out.splitlines() if "distribution maps to rename" in ln]
+        assert all(ln.endswith(": 0") for ln in totals), out
+    dry_items, applied_items = (_issue_items(out, "alpha") for out in runs)
+    refused = [item for item in applied_items if "distribution map" in item]
+    assert len(refused) == 1 and "is not renamed" in refused[0] \
+        and "outside the project" in refused[0], runs[1]
+    assert refused[0] in dry_items, runs[0]
+    entry = _registry(folder, "alpha")[0]
+    assert (entry.get("path"), entry.get("status")) == (entry_before["path"],
+                                                         entry_before["status"])
+
+
+def test_mcg_6_map_under_a_link_inside_the_project_is_renamed(tmp_path):
+    # A documents folder linked to a folder inside the project keeps every file in the
+    # project, so the stub rule renames a map there as it renames any other.
+    folder = tmp_path / "project"
+    _plant(folder, "alpha", artifacts=[{"id": "ART-DISTRIBUTION_MAP", "kind": "distribution-map",
+                                        "status": "approved", "depth": "lightweight"}],
+           docs={"distribution-map.md": "# Map\n\nSolo.\n"})
+    _link_out(folder, "docs/compass", folder / "kept-docs")
+    _git(folder, "init", "-q", "-b", "main")
+    _git(folder, "add", "-A")
+    _git(folder, "commit", "-q", "-m", "documents behind a link")
+    renames = []
+    for flags in ((), ("--apply",)):
+        code, out = _migrate(folder, *flags)
+        assert code == 0, out
+        assert not [item for item in _issue_items(out, "alpha") if "distribution map" in item], out
+        renames.append([n for n in _sections(out).get("alpha", []) if ".v6.bak" in n])
+        assert "distribution maps to rename to distribution-map.md.v6.bak: 1" in out, out
+    assert len(renames[0]) == len(renames[1]) == 1, renames
+    kept = folder / "kept-docs" / f"{CREATED}-alpha"
+    assert sorted(p.name for p in kept.iterdir()) == ["distribution-map.md.v6.bak"]
 
 
 # --- the documents -------------------------------------------------------------------

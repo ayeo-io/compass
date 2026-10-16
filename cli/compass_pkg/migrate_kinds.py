@@ -635,7 +635,30 @@ def stub_map(task_dir, data, project, plan=None):
     count = len(subtasks) if isinstance(subtasks, list) else _map_rows(source)
     if count >= 2:
         return None
-    return {"entry": entry.get("id"), "from": rel, "to": rel + ".v6.bak"}
+    stub = {"entry": entry.get("id"), "from": rel, "to": rel + ".v6.bak"}
+    # `blocked` says why the rename is not made, so the dry run and the apply skip the
+    # same maps. The path comes from a manifest, and the migrate changes no file whose
+    # real path is outside the project. A symbolic link that stays inside the project is
+    # followed, as the move step before this one follows it.
+    why = _outside_the_project(task_dir, rel, project)
+    if why:
+        stub["blocked"] = why
+    elif os.path.exists(os.path.join(project, stub["to"])):
+        stub["blocked"] = "kept"            # the apply never renames over a kept copy
+    return stub
+
+
+def _outside_the_project(task_dir, rel, project):
+    """Why the registered path `rel` leaves the project, or None: the registry's own
+    rule refuses it (absolute, or climbing out), or its real path is not under the
+    project's real path."""
+    from compass_pkg.core import _registered_path
+    resolved, refused = _registered_path(task_dir, rel)
+    top = os.path.realpath(project)
+    real = os.path.realpath(resolved)
+    if refused or not (real == top or real.startswith(top.rstrip(os.sep) + os.sep)):
+        return "it resolves outside the project"
+    return None
 
 
 def _map_rows(path):

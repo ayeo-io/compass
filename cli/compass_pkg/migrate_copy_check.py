@@ -21,8 +21,10 @@ class Judgement:
     """What the copy check found for one root (`.compass/work` or `docs/compass`).
 
     `state` is "no-git" (no `.git` in the root or a folder above it, so there is no
-    reset to promise), "judged", or "git-failed" (the root is in a repository and git
-    could not be run or asked, so nothing counts as restorable).
+    reset to promise), "judged", "git-failed" (the root is in a repository and git
+    could not be run or asked, so nothing counts as restorable), or "outside" (the
+    project is in a repository and the root's real path is not, so nothing counts as
+    restorable).
     `unrestorable` holds the issue folder names, sorted."""
     root: str
     state: str
@@ -81,25 +83,43 @@ def registered_files(work_root, docs_root, project):
     return work, docs
 
 
-def _in_a_repository(path):
-    """Is `path` inside a git repository? A `.git` in it or a folder above it, below
-    any of GIT_CEILING_DIRECTORIES, or GIT_DIR set. Asked of the disk, not of git, so a
-    repository git cannot read is still a repository."""
-    if os.environ.get("GIT_DIR"):
-        return True
+def _repository_top(path):
+    """The folder that holds the `.git` of the repository `path` is in, or None: walked
+    up from the real path, stopping below any of GIT_CEILING_DIRECTORIES. Asked of the
+    disk, not of git, so a repository git cannot read still has a top."""
     ceilings = {os.path.realpath(c) for c in
                 os.environ.get("GIT_CEILING_DIRECTORIES", "").split(os.pathsep) if c}
     here = os.path.realpath(path)
     while True:
         if os.path.exists(os.path.join(here, ".git")):
-            return True
+            return here
         parent = os.path.dirname(here)
         if parent == here or parent in ceilings:
-            return False
+            return None
         here = parent
 
 
-def unrestorable_folders(root, label=None, extra=None):
+def _in_a_repository(path):
+    """Is `path` inside a git repository? A `.git` in it or a folder above it, below
+    any of GIT_CEILING_DIRECTORIES, or GIT_DIR set."""
+    return bool(os.environ.get("GIT_DIR")) or _repository_top(path) is not None
+
+
+def _outside_the_project_repository(root, project):
+    """Is the project in a repository, and the real path of `root` outside it? Then
+    `git reset --hard` in the project cannot restore what the migrate changes there,
+    whether or not some other repository holds the real folder. With GIT_DIR set the
+    repository's top is not on the disk to read, so the answer is no."""
+    if project is None or os.environ.get("GIT_DIR"):
+        return False
+    top = _repository_top(project)
+    if top is None:
+        return False
+    real = os.path.realpath(root)
+    return real != top and not real.startswith(top.rstrip(os.sep) + os.sep)
+
+
+def unrestorable_folders(root, label=None, extra=None, project=None):
     """Which issue folders under `root` could `git reset --hard` not put back?
 
     A folder is restorable when the HEAD commit holds every file in it the migrate can
@@ -107,6 +127,9 @@ def unrestorable_folders(root, label=None, extra=None):
     `git hash-object` makes of the file, and `git status` reports no staged change.
     The files judged are those `changeable_files` names, plus `extra` ({folder: [path]}),
     the registered files in subfolders. Files directly under `root` are not judged.
+    When `project` is in a repository and the real path of `root` is outside it, every
+    folder that holds a judged file is refused (state "outside"): a symbolic link can
+    take a root out of the repository that would restore it.
     Outside a repository there is no reset to promise and the root passes. Inside one,
     any git call that fails, times out or cannot be run refuses every folder that holds
     a judged file. None of the calls writes to `.git`."""
@@ -122,6 +145,8 @@ def unrestorable_folders(root, label=None, extra=None):
         held_paths += [p for p in paths if p not in held_paths]
     if not folders:
         return Judgement(label, "judged")
+    if _outside_the_project_repository(root, project):
+        return Judgement(label, "outside", sorted(folders))
     if not _in_a_repository(root):
         return Judgement(label, "no-git")
     env = dict(os.environ, GIT_OPTIONAL_LOCKS="0")
@@ -193,9 +218,15 @@ def unrestorable_folders(root, label=None, extra=None):
     return Judgement(label, "judged", lost)
 
 
+#: What a root's refusal line says before its count, for a state that is not a file change.
+_STATE_PREFIX = {"git-failed": "git could not be asked, so ",
+                 "outside": "its real path lies outside the repository, so "}
+
+
 def refusal(judgements):
     """The one refusal for every root that holds a folder git cannot restore: per root,
-    the count and the first few folders, then one `cp -R` line per root."""
+    the count and the first few folders, then one `cp -RH` line per root. `-H` follows
+    a root that is a symbolic link, where `cp -R` would copy only the link."""
     lines = []
     for found in judgements:
         names = found.unrestorable
@@ -203,12 +234,14 @@ def refusal(judgements):
         if len(names) > REFUSAL_NAMES:
             shown += ", and %d more" % (len(names) - REFUSAL_NAMES)
         lines.append("  %s: %s%d issue folder%s cannot be restored: %s" % (
-            found.root, "git could not be asked, so " if found.state == "git-failed" else "",
+            found.root, _STATE_PREFIX.get(found.state, ""),
             len(names), "" if len(names) == 1 else "s", shown))
     why = ("a file the migrate can change in each is not tracked, is gitignored, or is "
            "staged or edited since the last commit")
     if any(found.state == "git-failed" for found in judgements):
         why += ", or git could not be asked"
+    if any(found.state == "outside" for found in judgements):
+        why += ", or the root that holds it lies outside the repository"
     return (
         "this would change records that cannot be put back. `git reset --hard` could not "
         "restore the issue folders below, because %s:\n%s\n\n"
@@ -216,5 +249,5 @@ def refusal(judgements):
         "To go on, commit those folders or take a copy, then re-run with --i-have-a-copy. "
         "The flag says you have the copy; it does not switch the check off." % (
             why, "\n".join(lines),
-            "\n".join("    cp -R %s <somewhere outside the repository>" % found.root
+            "\n".join("    cp -RH %s <somewhere outside the repository>" % found.root
                       for found in judgements)))

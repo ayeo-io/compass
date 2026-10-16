@@ -369,6 +369,20 @@ def pin_stale_generation(task_dir, would, out):
     if not stale:
         return
     held = effective.generation.number(data)
+    target = (held or 0) + 1
+    others = effective.generation.unwritten_files(task_dir, target)
+    if others:
+        # The pin's commit would refuse this folder rather than delete files it did not
+        # write, which the copy check never judged. Asked here, so the dry run and the
+        # apply report the same open item and the rest of the issue is still migrated.
+        out.problems.append(
+            "%s: generation %s %s pinned to the installed versions, because "
+            "generations/%s/ holds %s, which a generation commit does not write and will "
+            "not delete. %s, then re-run the migrate" % (
+                os.path.basename(os.path.normpath(task_dir)), held,
+                _tense(would, "not be", "was not"), target, ", ".join(others),
+                effective.generation.unwritten_advice(task_dir, target, others)))
+        return
     out.notes.append("%s generation %s to the installed versions, because it records a major of "
                      "%s that this CLI lacks" % (_tense(would, "pin", "pinned"), held,
                                                  ", ".join(stale)))

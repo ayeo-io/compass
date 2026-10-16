@@ -90,6 +90,14 @@ The commit refuses, writing nothing, when:
   --commit n+1` to adopt it (with `--reason "..."` to keep the reason of the
   interrupted reassess) and `compass issue configure --discard n+1` to remove
   it.
+- the next folder holds anything a commit does not write: a file other than
+  the four files, the `complete` marker, `proposed.yml` and the temporary files
+  an interrupted write of one of them leaves (`.<name>-` and the eight
+  characters `mkstemp` adds), or any subfolder. A commit cannot tell a
+  person's file from debris, and nothing else protects it: the copy check of
+  `compass issue migrate --apply` never judges a generation folder. The message
+  names each entry and `compass issue configure --issue <slug> --discard n+1`,
+  which removes the folder and everything in it.
 - `generations/`, the next folder or anything inside the next folder is a
   symbolic link. Compass never follows a link there, because the next folder is
   cleared before it is written.
@@ -100,7 +108,8 @@ The commit refuses, writing nothing, when:
   evaluate` without `--write` still works on such a project.
 
 It overwrites an incomplete folder, including one whose marker does not match
-its files, and keeps `proposed.yml` until the manifest is replaced. Each file keeps the mode of the file it
+its files, when the folder holds only files a commit writes. It keeps
+`proposed.yml` until the manifest is replaced. Each file keeps the mode of the file it
 replaces, and a new file gets the mode the umask gives.
 
 The gate comments (`# accepts: ...`) are added to the manifest text inside the

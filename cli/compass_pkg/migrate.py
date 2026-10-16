@@ -309,7 +309,7 @@ def plan_issue_dir(task_dir, problems=None, totals=None):
         from compass_pkg import migrate_blocks
         migrate_blocks.register_planned(task_dir, simulated)
     notes.extend(plan_artifact_status(task_dir, simulated))
-    notes.extend(_pin_generation(task_dir, True))
+    notes.extend(_pin_generation(task_dir, True, problems))
     return notes
 
 
@@ -1042,10 +1042,12 @@ def _blocks(task_dir, would, problems):
     return out.notes
 
 
-def _pin_generation(task_dir, would):
+def _pin_generation(task_dir, would, problems):
     from compass_pkg import migrate_blocks
     out = migrate_blocks.Outcome()
     migrate_blocks.pin_stale_generation(task_dir, would, out)
+    if problems is not None:
+        problems.extend(out.problems)
     return out.notes
 
 
@@ -1107,7 +1109,7 @@ def migrate_issue_dir(task_dir, problems=None, totals=None):
     notes.extend(_blocks(task_dir, False, problems))
     notes.extend(settle_artifact_status(task_dir))
     # Last: the pin keeps the manifest's own text and sets one line.
-    notes.extend(_pin_generation(task_dir, False))
+    notes.extend(_pin_generation(task_dir, False, problems))
     return notes
 
 

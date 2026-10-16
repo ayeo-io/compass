@@ -25,13 +25,14 @@ the four files, the marker, then the manifest. The manifest replace is the
 commit point: a crash before it leaves the manifest naming the generation
 that was whole. This module never adopts a leftover folder on its own.
 """
-# DEPENDENCY: standard library (dataclasses, datetime, os, shutil);
+# DEPENDENCY: standard library (dataclasses, datetime, os, re, shutil);
 # PyYAML (bundled); compass_pkg.atomic_io, compass_pkg.core (CompassError,
 # load_yaml and manifest_path, only).
 from __future__ import annotations
 
 import datetime
 import os
+import re
 import shutil
 from dataclasses import dataclass, field
 
@@ -463,10 +464,50 @@ def _refuse_links(task_dir, target):
                 f"folder or file, or remove the link, then run the command again")
 
 
+# The temporary file `atomic_write_text` makes for a file of a generation folder,
+# which an interrupted write can leave behind: `mkstemp` adds eight characters to the
+# prefix `.<name>-`. A longer or different name, such as a person's backup, is not one.
+_TEMPORARY = re.compile(r"\.(%s)-[a-z0-9_]{8}" % "|".join(
+    re.escape(name) for name in (*FILES, MARKER, PROPOSED)))
+
+
+def _written_by_compass(name):
+    """Is `name` a file Compass writes into a generation folder that a commit
+    may remove: one of the four files, the marker, or a temporary file?"""
+    return name in FILES or name == MARKER or _TEMPORARY.fullmatch(name) is not None
+
+
+def unwritten_files(task_dir, target):
+    """The entries of generation folder `target`, sorted, that a commit would
+    have to delete and Compass did not write: anything but the files a commit
+    writes, their temporary files and `proposed.yml`. Nothing else in Compass
+    protects them; the migrate's copy check, for one, never judges a generation
+    folder."""
+    folder = gen_dir(task_dir, target)
+    if not os.path.isdir(folder):
+        return []
+    return sorted(name for name in os.listdir(folder)
+                  if name != PROPOSED and not (_written_by_compass(name)
+                                               and os.path.isfile(os.path.join(folder, name))))
+
+
+def unwritten_advice(task_dir, target, others):
+    """What a person does about `others` in generation folder `target`. The
+    command names the issue: a person can be pointed at another issue, and
+    `--discard` without `--issue` would remove that issue's folder."""
+    slug = os.path.basename(os.path.normpath(os.fspath(task_dir)))
+    return (f"Move {'it' if len(others) == 1 else 'them'} out of the folder, or run "
+            f"`compass issue configure --issue {slug} --discard {target}`, which removes "
+            f"the folder and everything in it")
+
+
 def _prepare_target(task_dir, target):
     """Make the next folder ready to write into, or refuse. A folder holding a
-    complete generation nothing names is the person's to adopt or discard; any
-    other leftover is overwritten, except `proposed.yml`, which is kept."""
+    complete generation nothing names is the person's to adopt or discard. A
+    folder holding anything a commit does not write is refused, because the
+    commit cannot tell a person's file from debris and must not delete it.
+    Otherwise the leftover files are removed, except `proposed.yml`, which is
+    kept."""
     _refuse_links(task_dir, target)
     folder = gen_dir(task_dir, target)
     if not os.path.isdir(folder):
@@ -479,11 +520,15 @@ def _prepare_target(task_dir, target):
             f"{target}` to adopt it (add `--reason \"...\"` to keep the reason of the "
             f"interrupted reassess), or `compass issue configure --discard {target}` to "
             f"remove it, then run the command again")
+    others = unwritten_files(task_dir, target)
+    if others:
+        raise CompassError(
+            f"{folder} holds entries a commit does not write: {', '.join(others)}. "
+            f"Nothing was written and nothing was deleted. "
+            f"{unwritten_advice(task_dir, target, others)}; then run the command again")
     for name in os.listdir(folder):
-        if name == PROPOSED:
-            continue
-        path = os.path.join(folder, name)
-        shutil.rmtree(path) if os.path.isdir(path) else os.unlink(path)
+        if name != PROPOSED:
+            os.unlink(os.path.join(folder, name))
 
 
 def _remove(path):

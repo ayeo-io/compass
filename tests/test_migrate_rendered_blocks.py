@@ -414,6 +414,42 @@ def test_dcj_76_a_migrate_pins_a_generation_that_records_a_major_the_cli_lacks(t
     assert "pinned" not in out
 
 
+# --- GCK-2 (generation-commit-keeps-unjudged) -------------------------------------
+
+def test_gck_2_a_migrate_pin_keeps_a_file_the_copy_check_never_judged(tmp_path):
+    """The copy check judges the files the migrate can change, not the next generation
+    folder. The pin's commit must therefore not delete a file there that it did not
+    write: the dry run and the apply both name it, and the apply leaves it in place."""
+    root = _done_issue(tmp_path, MARKS, status="in-progress")
+    task_dir = Path(root) / WORK
+    _rewrite_generation(task_dir, lambda d: d["implementations"].update(
+        {"dod-evidence-typed": "1.0.0"}))
+    sup.git(root, "add", "-A", "--force")
+    sup.git(root, "commit", "-q", "-m", "everything tracked")
+    notes = task_dir / "generations" / "2" / "notes.md"
+    notes.parent.mkdir()
+    notes.write_text("untracked notes nobody has a copy of\n", encoding="utf-8")
+    def refused(text):
+        return [line.strip() for line in text.splitlines() if "pinned to the installed" in line]
+
+    code, out, err = _migrate(root)
+    assert code == 0, out + err
+    planned = refused(out)
+    assert len(planned) == 1 and "would not be pinned" in planned[0], out
+    assert "generations/2/ holds notes.md" in planned[0], planned
+    # The migrate covers every issue, so the command must name this one.
+    assert "compass issue configure --issue feature --discard 2" in planned[0], planned
+    assert "everything in it" in planned[0], planned
+    # No --i-have-a-copy: the copy check lets the run start.
+    code, out, err = _migrate(root, "--apply")
+    assert code == 0, out + err
+    assert "cannot be restored" not in out + err, out + err
+    done = refused(out)
+    assert done == [planned[0].replace("would not be pinned", "was not pinned")], (planned, done)
+    assert notes.read_text(encoding="utf-8") == "untracked notes nobody has a copy of\n"
+    assert manifest(root)["generation"] == 1
+
+
 # --- DCJ-82 (approved 2026-10-11: dod-evidence-typed and a closed issue with no list) -------
 
 def _dod_row(root):

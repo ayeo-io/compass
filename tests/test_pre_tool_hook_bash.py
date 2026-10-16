@@ -116,6 +116,32 @@ BLOCKED_SHAPES = [
     pytest.param('echo x | /usr/bin/tee src/app.py', id="TRC-B3-path-tee"),
     pytest.param('x=$(cp a.py src/app.py)', id="TRC-B3-cp-in-substitution"),
     pytest.param('make && cp a.py src/app.py # copy', id="TRC-B3-cp-then-comment"),
+    # Scenario `TRC-W1`: a substitution, a process substitution, backticks
+    # or a line continuation inside a tee, cp or mv command must not cut it
+    # in two. The hook before ayeo-io/compass#583 refused each of these; the
+    # post-merge review of that PR found #583 allowed them.
+    pytest.param('cp $(git rev-parse --show-toplevel)/a.py src/app.py', id="TRC-W1-cp-substitution"),
+    pytest.param('cp "$(mktemp)" src/app.py', id="TRC-W1-cp-quoted-substitution"),
+    pytest.param('cp `mktemp` src/app.py', id="TRC-W1-cp-backticks"),
+    pytest.param('cp <(echo x) src/app.py', id="TRC-W1-cp-process-substitution"),
+    pytest.param('mv $(ls /tmp/*.py) src/app.py', id="TRC-W1-mv-substitution"),
+    pytest.param('S=/tmp/x; cp $(ls $S/*.py) src/app.py', id="TRC-W1-cp-substitution-with-variable"),
+    pytest.param('echo x | tee $(echo /tmp/log.txt) src/app.py', id="TRC-W1-tee-substitution"),
+    pytest.param('echo x | tee >(cat) src/app.py', id="TRC-W1-tee-process-substitution"),
+    pytest.param('cp a.py \\\n  src/app.py', id="TRC-W1-cp-continuation"),
+    pytest.param('echo x | tee \\\n  src/app.py', id="TRC-W1-tee-continuation"),
+    pytest.param('mv -f /tmp/a.py \\\n  src/app.py', id="TRC-W1-mv-continuation"),
+    pytest.param('x=`cp a.py src/app.py`', id="TRC-W1-cp-inside-backticks"),
+    pytest.param('echo "$(cp a.py src/app.py)"', id="TRC-W1-cp-inside-quoted-substitution"),
+    pytest.param('echo x > \\\n  src/app.py', id="TRC-W1-redirect-continuation"),
+    pytest.param('echo x >| src/app.py', id="TRC-W1-clobber-redirect"),
+    # Scenario `TRC-Q1`: a quoted target names the same file as an unquoted
+    # one (ayeo-io/compass-delivery-record#184).
+    pytest.param('echo x > "src/app.py"', id="TRC-Q1-double-quoted-redirect"),
+    pytest.param("echo x > 'src/app.py'", id="TRC-Q1-single-quoted-redirect"),
+    pytest.param('echo x >> "src/app.py"', id="TRC-Q1-quoted-append"),
+    pytest.param('echo x | tee "src/app.py"', id="TRC-Q1-quoted-tee"),
+    pytest.param("cp a.py 'src/app.py'", id="TRC-Q1-quoted-cp"),
 ]
 
 
@@ -179,6 +205,11 @@ ALLOWED_COMMANDS = [
     pytest.param('cp /tmp/a.py /tmp/b/ && grep -n x src/app.py', id="TRC-B2-cp-then-read"),
     pytest.param('mv /tmp/a.py /tmp/b.py; cat src/app.py', id="TRC-B2-mv-then-read"),
     pytest.param('cp src/app.py /tmp/app.py', id="TRC-B2-cp-source"),
+    # Scenario `TRC-Q1`: a quoted target that is not production code stays
+    # allowed once its quotes are removed.
+    pytest.param('echo x > "docs/notes.md"', id="TRC-Q1-quoted-markdown"),
+    pytest.param("echo x > 'tests/test_app.py'", id="TRC-Q1-quoted-test-file"),
+    pytest.param('echo x > "/tmp/x/app.py"', id="TRC-Q1-quoted-outside"),
 ]
 
 

@@ -273,11 +273,36 @@ fi
 # further down.
 SESSION_DIR="$(pwd)"
 
+# Resolve `.`, `..` and repeated slashes in an absolute path, as text, into
+# NORMALISED. A global, not a printed value, so the hook starts no subshell
+# for every candidate. `..` above the root stays at the root, as the kernel
+# treats it.
+normalise_path() {
+  local part out=""
+  local -a parts stack=()
+  IFS=/ read -r -a parts <<<"$1"
+  # `${a[@]+"${a[@]}"}`: bash 3.2 under `set -u` calls an empty array unbound.
+  for part in ${parts[@]+"${parts[@]}"}; do
+    case "$part" in
+      ""|.) ;;
+      ..) if [ "${#stack[@]}" -gt 0 ]; then
+            unset "stack[$((${#stack[@]} - 1))]"
+          fi ;;
+      *) stack[${#stack[@]}]="$part" ;;
+    esac
+  done
+  for part in ${stack[@]+"${stack[@]}"}; do out="$out/$part"; done
+  NORMALISED="${out:-/}"
+}
+
 resolve_project() {
   _from="$SESSION_DIR"
   if [ -n "${1:-}" ]; then
     case "$1" in
-      /*) _dir="$(dirname "$1")" ;;
+      # Resolved as text first: a directory on the way, such as the missing
+      # one in `/x/missing/../project/src/app.ts`, need not exist for a Write
+      # to create the path, and the project is where the path points.
+      /*) normalise_path "$1"; _dir="$(dirname "$NORMALISED")" ;;
       # A relative path from the host is relative to the PROJECT, not to
       # wherever the hook happens to be running. Resolved against the
       # session, a relative path can leave the project and reach the
@@ -495,10 +520,54 @@ is_enforced_path() {
     /*) ;;
     *) abs="$PROJECT_DIR/$abs" ;;
   esac
+  # Judge where the path points, not how it is spelled: `/tmp/../<project>/x`,
+  # `//<project>/x` and `<project>/./x` all reach the project, and
+  # `<project>/../elsewhere/x` leaves it. The steps are resolved as text; a
+  # symbolic link is not followed. A path that differs from the project only
+  # in letter case is treated as inside it, because macOS and Windows file
+  # systems ignore case; on a file system that does not, that costs a visible
+  # refusal, never a missed one.
+  #
+  # A `..` after a part the hook cannot know - an unexpanded `$NAME`, a
+  # backtick, `~` or a brace list - would cancel that part as text, though
+  # the shell may expand it to several directories or to none. Such a path
+  # points somewhere unknowable, so it is judged inside the project, as the
+  # text comparison did before.
+  local proj inside=0 unknowable=0
+  normalise_path "$PROJECT_DIR"; proj="$NORMALISED"
   case "$abs" in
-    "$PROJECT_DIR"/*) ;;
-    *) return 1 ;;
+    *'$'*|*'`'*|*'~'*|*'{'*)
+      case "/$abs/" in
+        */../*) unknowable=1; inside=1 ;;
+      esac ;;
   esac
+  if [ "$unknowable" -eq 0 ]; then
+    normalise_path "$abs"; abs="$NORMALISED"
+  fi
+  case "$abs" in
+    "$proj"/*) inside=1 ;;
+  esac
+  if [ "$inside" -eq 0 ] && [ "${#abs}" -gt "${#proj}" ] \
+      && [ "${abs:${#proj}:1}" = "/" ] \
+      && [ "$(printf '%s' "${abs:0:${#proj}}" | tr '[:upper:]' '[:lower:]')" = \
+           "$(printf '%s' "$proj" | tr '[:upper:]' '[:lower:]')" ]; then
+    inside=1
+  fi
+  [ "$inside" -eq 1 ] || return 1
+  # From here every rule reads the resolved path, so a `..` step cannot
+  # borrow an exemption: `.compass/../src/app.py` is `src/app.py`. A target
+  # given as a relative path stays relative, and an absolute one absolute,
+  # as before.
+  if [ "$unknowable" -eq 1 ]; then
+    # Judged by its text, as written.
+    rel="${target#"$PROJECT_DIR"/}"
+  else
+    rel="${abs:$((${#proj} + 1))}"
+    case "$target" in
+      /*) target="$abs" ;;
+      *) target="$rel" ;;
+    esac
+  fi
 
   # Always exempt: Compass artifacts, docs, lockfiles, the obvious non-code.
   case "$target" in
@@ -514,11 +583,8 @@ is_enforced_path() {
   # path: matching `*test*` against an absolute path also matches every
   # ancestor directory, so a repository living under any path containing
   # "test" or "spec" - /Users/testuser/..., .../latest/... - would have
-  # red-before-green silently disabled for the entire tree.
-  rel="$target"
-  case "$target" in
-    "$PROJECT_DIR"/*) rel="${target#"$PROJECT_DIR"/}" ;;
-  esac
+  # red-before-green silently disabled for the entire tree. `rel` was set by
+  # the containment check above.
   base="$(basename "$target")"
   # Match anchored patterns, never `*test*`: a bare substring match would call
   # latest.py, inspector.py and protest.py tests, and silently skip both
@@ -682,14 +748,17 @@ PYEOF
 # which allows anything it does not recognise as production code. A token that
 # is not a path simply falls through.
 bash_write_targets() {
-  local cmd="$1"
+  local cmd="$1" continuation=$'\\\n'
   {
     # Redirects into a file: `> f`, `>> f`, `1> f`, and the `cat > f <<EOF`
     # heredoc form. `2>&1` and `>&2` duplicate a file descriptor rather than
-    # write a file, so `&` is excluded from the target.
-    printf '%s\n' "$cmd" \
-      | grep -oE '[0-9]?>>?[[:space:]]*[^&<>|;()[:space:]]+' \
-      | sed -E 's/^[0-9]?>>?[[:space:]]*//' || true
+    # write a file, so `&` is excluded from the target. A quoted target is
+    # taken whole, spaces included; the candidate loop removes the quotes.
+    # `>|` writes as `>` does, and a line continuation after the operator
+    # is joined first, so the target is not on a line of its own.
+    printf '%s\n' "${cmd//"$continuation"/ }" \
+      | grep -oE "[0-9]?>(>|\|)?[[:space:]]*(\"[^\"]*\"|'[^']*'|[^&<>|;()[:space:]]+)" \
+      | sed -E 's/^[0-9]?>(>|\|)?[[:space:]]*//' || true
 
     # In-place editors: hand over every argument and let the classifier
     # decide which of them is a production file.
@@ -703,17 +772,54 @@ bash_write_targets() {
     # same line names: in `python3 x.py | tee out.txt` the script is only run,
     # and in `cp a b && grep x src/app.ts` the source file is only read.
     #
-    # So the command is cut into simple commands at `;`, `&`, `|`, `(`, a
-    # backtick and line ends, and redirects and comments are removed. In each
-    # simple command, any word that names tee, cp or mv - `/bin/cp` and `\cp`
+    # So the command is cut into simple commands at `;`, `&`, `|`, `(` and
+    # line ends, and redirects and comments are removed. In each simple
+    # command, any word that names tee, cp or mv - `/bin/cp` and `\cp`
     # included - counts, wherever it stands, so a write behind a wrapper such
     # as `sudo`, `timeout 10`, `xargs` or `git` is still found. A word after
     # `tee` is a target; for `cp` and `mv` the last word is. This over-reports
     # (`grep -n tee src/app.ts`), as the hook did before; it must never miss a
     # write the earlier, broader rules caught.
+    #
+    # Before the cut, the command is flattened, so that nothing inside a
+    # command can split it: line continuations are joined, and each
+    # `$(...)`, `<(...)`, `>(...)` and backtick span becomes one placeholder
+    # word, so `cp $(mktemp) src/app.ts` keeps its destination. The text of
+    # each span is then judged as a command of its own, so a write inside
+    # one, such as `x=$(cp a src/app.ts)`, is still found.
     case "$cmd" in
       *tee*|*cp*|*mv*)
-        printf '%s\n' "$cmd" | tr ';&|(`' '\n\n\n\n\n' \
+        printf '%s\n' "$cmd" \
+          | awk '
+              { s = s $0 "\n" }
+              END {
+                gsub(/\\\n/, " ", s)
+                q[1] = s; n = 1
+                for (k = 1; k <= n; k++) {
+                  t = q[k]; out = ""
+                  while (match(t, /[$<>]\(|`/)) {
+                    out = out substr(t, 1, RSTART - 1) "_SPAN_"
+                    if (substr(t, RSTART, 1) == "`") {
+                      rest = substr(t, RSTART + 1)
+                      e = index(rest, "`")
+                      if (e == 0) { q[++n] = rest; t = "" }
+                      else { q[++n] = substr(rest, 1, e - 1); t = substr(rest, e + 1) }
+                    } else {
+                      d = 1; j = RSTART + 2; L = length(t)
+                      while (j <= L && d > 0) {
+                        ch = substr(t, j, 1)
+                        if (ch == "(") d++
+                        else if (ch == ")") d--
+                        j++
+                      }
+                      q[++n] = substr(t, RSTART + 2, (d == 0 ? j - 1 : j) - RSTART - 2)
+                      t = substr(t, j)
+                    }
+                  }
+                  print out t
+                }
+              }' \
+          | tr ';&|(' '\n\n\n\n' \
           | sed -E 's/(^|[[:space:]])#.*//; s/[0-9]*>>?[[:space:]]*[^[:space:]]*//g; s/<[[:space:]]*[^[:space:]]*//g; s/\)//g' \
           | awk '
               {
@@ -946,7 +1052,17 @@ if [ "${TOOL:-}" = "Bash" ]; then
   if [ -z "$DETECTED" ]; then
     while IFS= read -r candidate; do
       [ -z "$candidate" ] && continue
-      candidate="$(expand_command_variable "$candidate" "$COMMAND")"
+      # A quoted target names the same file as an unquoted one, so the quotes
+      # go before it is judged (`> "src/app.ts"`). Inside single quotes the
+      # shell expands nothing, so `'$S/x'` is a literal path and is not
+      # expanded.
+      case "$candidate" in
+        *\'*) candidate="${candidate//\'/}"
+              candidate="${candidate//\"/}" ;;
+        *) candidate="${candidate//\"/}"
+           candidate="$(expand_command_variable "$candidate" "$COMMAND")" ;;
+      esac
+      [ -z "$candidate" ] && continue
       if is_enforced_path "$candidate"; then
         DETECTED="$candidate"
         break

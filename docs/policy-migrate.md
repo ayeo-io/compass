@@ -528,6 +528,104 @@ A refusal prints no document: the reason is on stderr and the exit is 2.
 | An `M-*` code | The overlay does not merge, such as `M-MAP-REMOVE-ABSENT` or `M-REF-REMOVED` |
 | Any other lint code | A finding of `compass policy lint` on the file the command would write: `K-LOCK-REFUSED`, `C-LOOSENING`, `C-INCOMPARABLE`, `W-UNAPPROVED`, `W-NO-OWNER` and the rest of [the lint codes](policy-lint.md) |
 
+## Rewriting the configuration in the 6.0.0 words (`--words`)
+
+`compass policy migrate --words [DIR]` rewrites a project's own configuration
+files in the 6.0.0 words. 6.0.0 reads an old word in these files through the
+word mapping, with a lint advisory (`docs/policy-lint.md`), and 7.0.0 refuses
+it. The code is `cli/compass_pkg/config_words.py`. The decision to make it a
+mode of this verb is `governance/decisions/2026-10-16-the-word-rewrite-is-policy-migrate-words.md`.
+
+It reads two kinds of file in DIR, which defaults to the project root:
+
+| File | Read through | As |
+|---|---|---|
+| `compass.yml` | `word_map.map_layer` | `compass policy lint` reads a project or preset layer |
+| each `.yml` file under `compass-fixtures/` | `word_map.map_fixture` | `compass preset test` reads a fixture |
+
+A team preset is the same pair, so the command rewrites a preset where it
+stands. It rewrites nothing else: `compass issue migrate` rewrites issue
+manifests, and `--words` leaves copied `governance/` and `.compass/config.yml`
+to the legacy mode of this verb, which turns them into a `compass.yml`.
+
+**What changes.** Only the scalars the mapping changes are replaced, in the
+file's text, at the positions the YAML parser reports. Comments, key order,
+blank lines, flow or block style and quote characters stay. A word in a field
+the mapping does not name stays too: `full` as an approach name, a comment or
+a rationale. The new text is parsed again and must read as the mapping read
+the old text. A change the command cannot place - a word in a block scalar
+(`|` or `>`), or under an anchor used two ways - refuses the file and asks
+for a hand edit.
+
+**Dry run and `--apply`.** Without `--apply` the command prints a unified diff
+of each file (`a/<path>` and `b/<path>`, from the project root) and writes
+nothing. It also says when `--apply` would refuse. With `--apply` it writes
+each file in one step and names it. A run writes every file or none.
+
+**Refusals.** Each exits 2 and writes nothing:
+
+- DIR is outside the project, the first folder at or above the working folder
+  that holds `.compass` or `.git`;
+- `compass.yml` or the `compass-fixtures/` folder is a link, or a file resolves
+  outside the project;
+- a file is not valid YAML or not UTF-8 text;
+- a change cannot be placed;
+- on `--apply`, a file changed since it was read, or a new file cannot be
+  written. Every new file is written beside its target before the first one
+  replaces it, so nothing is half done;
+- on `--apply`, git cannot restore a file it would write: the file is not in
+  the HEAD commit with the bytes on disk, or is staged. This is the copy check
+  `compass issue migrate --apply` runs. Outside a git repository every file
+  counts as one git cannot restore, because nothing could undo the rewrite.
+  `--i-have-a-copy` writes anyway; it says you have a copy, it does not switch
+  the check off;
+- DIR or `--i-have-a-copy` is given without `--words`.
+
+A linked fixture is not followed, as in `compass preset test`; the output
+notes it.
+
+**The retired role dimension.** A condition that reads `role` has no
+mechanical rewrite (ADR-070), so the command lists it as a hand edit and
+leaves it:
+
+- a rule, check or gate `when`, `blocking_when` or `applies_when` that reads
+  `role`, in a `compass.yml` that declares no `role` dimension, with the
+  `M-WHEN-RETIRED` message `compass policy lint` gives;
+- a `set`, `replace` or `remove` of `dimensions.role`, `rules.role_rules` or
+  `rules.role_defaults`, with the replacement the merge refusal names.
+
+A fixture whose assessment records `role` keeps it, with a note that role is
+no longer read, as `compass preset test` reads it.
+
+**Exit codes.** 0 when the run finished and no hand edit is left; 1 when a
+hand edit is left (the words are still written on `--apply`); 2 for a refusal.
+
+**`--json`.** One document:
+
+```json
+{
+  "schema_version": 1,
+  "mode": "apply",
+  "folder": ".",
+  "files": [
+    {"path": "compass.yml",
+     "changes": [{"path": "approaches.regular.set.stages.refine",
+                  "old": "light", "new": "lightweight"}],
+     "diff": "--- a/compass.yml\n+++ b/compass.yml\n...",
+     "written": true}
+  ],
+  "hand_edits": [{"file": "compass.yml", "code": "M-WHEN-RETIRED",
+                  "path": "rules.extra.rules.X-1.when", "message": "..."}],
+  "notes": [{"file": "compass-fixtures/one.yml", "path": "assessment.role",
+             "message": "..."}],
+  "result": "hand-edit"
+}
+```
+
+`mode` is `dry-run` or `apply`. `result` is `nothing-to-change`, `dry-run`,
+`applied` or `hand-edit`. A change's `path` names the key, dotted, with `[n]`
+for a list position.
+
 ## What it does not do
 
 - It has no `--undo` and no `--adopt-defaults`.

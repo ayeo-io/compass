@@ -50,7 +50,7 @@ the table does not exist, and when a doc in this folder is not listed.
 - [artifact-freshness.md](artifact-freshness.md) - the capability that records the digest of a document when it is written, and refuses a stale one at land and at the entry of a stage that consumes it: what is recorded, when a document is stale, where it shows and the limits.
 - [issue-dependencies.md](issue-dependencies.md) - `depends_on` and `compass issue depends add|remove`: the entry shape, the nine `until` values, when the block counts at implement, what the hook reads and what it costs, the fail-safe cases, the worktree rule and what each reader shows.
 - [issue-configure.md](issue-configure.md) - `compass issue configure`: propose, preview, discard and recover a change to one issue's configuration, and how a reassess commits it.
-- [policy-migrate.md](policy-migrate.md) - `compass policy migrate`: how copied governance and the old settings file become a `compass.yml` overlay over the release the copy came from, what it keeps, when it refuses, its exit codes and its JSON shape.
+- [policy-migrate.md](policy-migrate.md) - `compass policy migrate`: how copied governance and the old settings file become a `compass.yml` overlay over the release the copy came from, what it keeps, when it refuses, its exit codes and its JSON shape; and `--words`, which rewrites a project's configuration in the 6.0.0 words.
 - [git-parents.md](git-parents.md) - a git parent in `extends:`: the pinned spelling, the fetch and cache, what Compass refuses and what an issue records.
 - [policy-test.md](policy-test.md) - `compass preset test` and `compass preset init`: the preset folder and fixture format, what the test checks, the exit codes and the JSON shape of both reports.
 - [policy-update.md](policy-update.md) - `compass policy update`: the major bump, the waiver re-check, the terminal re-approval, the exit codes and the JSON shape.
@@ -97,7 +97,7 @@ same commit.
 | `cli/compass_pkg/review_records.py`, `cli/compass_pkg/review_cmd.py`, `tests/fixtures/evidence-review-example.json` | `docs/judged-checks.md` |
 | `cli/compass_pkg/freshness.py` | `docs/artifact-freshness.md` |
 | `cli/compass_pkg/replay.py` | `docs/policy-diff.md` |
-| `cli/compass_pkg/policy_migrate.py`, `cli/compass_pkg/shipped_releases.py`, `scripts/generate-shipped-releases.py`, `governance/shipped-releases.yml`, `governance/shipped-releases.tar.xz` | `docs/policy-migrate.md` |
+| `cli/compass_pkg/policy_migrate.py`, `cli/compass_pkg/config_words.py`, `cli/compass_pkg/shipped_releases.py`, `scripts/generate-shipped-releases.py`, `governance/shipped-releases.yml`, `governance/shipped-releases.tar.xz` | `docs/policy-migrate.md` |
 | `cli/compass_pkg/parents.py`, `cli/compass_pkg/parent_states.py`, `cli/compass_pkg/chain_class.py` | `docs/git-parents.md` |
 | `cli/compass_pkg/preset_test.py`, `cli/compass_pkg/preset_init.py` | `docs/policy-test.md` |
 | `cli/compass_pkg/policy_update.py` | `docs/policy-update.md` |

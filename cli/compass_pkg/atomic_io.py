@@ -144,6 +144,12 @@ def load_yaml_strict(path):
             text = fh.read()
     except OSError as exc:
         raise StrictYamlError(f"{path}: cannot read: {exc}") from exc
+    return load_yaml_strict_text(text, path)
+
+
+def load_yaml_strict_text(text, path):
+    """`load_yaml_strict` over text already read from `path`, for a caller
+    that must parse the same text it will rewrite."""
     try:
         data = yaml.load(text, Loader=_StrictLoader)
     except StrictYamlError as exc:

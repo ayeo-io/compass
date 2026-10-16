@@ -130,6 +130,20 @@ def gen_dir(task_dir, n):
     return os.path.join(os.fspath(task_dir), DIRECTORY, str(n))
 
 
+def configure_command(task_dir, *flags):
+    """The `compass issue configure` command a refusal prints for the issue in
+    `task_dir`. It always names the issue: the pointer can name another issue,
+    and the command run as printed would act on that one instead."""
+    slug = os.path.basename(os.path.normpath(os.fspath(task_dir)))
+    return " ".join(("compass issue configure --issue", slug, *map(str, flags)))
+
+
+def evaluate_command(task_dir):
+    """`compass approach evaluate --write` for the issue in `task_dir`, named
+    for the same reason as in `configure_command`."""
+    return f"{FIX_ZERO} --issue {os.path.basename(os.path.normpath(os.fspath(task_dir)))}"
+
+
 def _dump(document):
     return yaml.safe_dump(document, sort_keys=False, default_flow_style=False)
 
@@ -270,7 +284,7 @@ def read_proposal(task_dir, n):
     path = os.path.join(gen_dir(task_dir, n), PROPOSED)
     if not os.path.isfile(path):
         return None
-    advice = f"Run `compass issue configure --discard {n}` to remove it."
+    advice = f"Run `{configure_command(task_dir, '--discard', n)}` to remove it."
     try:
         doc = load_yaml_strict(path)
     except StrictYamlError as exc:
@@ -299,10 +313,10 @@ def _leftover_advice(task_dir, target):
         return ""
     if found.state == "complete-unreferenced":
         return (f"holds a complete generation {target} that the manifest does not name. "
-                f"Run `compass issue configure --commit {target}` to adopt it or "
-                f"`compass issue configure --discard {target}` to remove it")
-    return (f"holds an {found.state} generation {target} ({found.detail}). Run `compass "
-            f"issue configure --discard {target}` to remove it")
+                f"Run `{configure_command(task_dir, '--commit', target)}` to adopt it or "
+                f"`{configure_command(task_dir, '--discard', target)}` to remove it")
+    return (f"holds an {found.state} generation {target} ({found.detail}). Run "
+            f"`{configure_command(task_dir, '--discard', target)}` to remove it")
 
 
 def write_proposal(task_dir, manifest, overlay):
@@ -363,8 +377,8 @@ def discard(task_dir, n=None):
             if len(above) > 1:
                 raise CompassError(
                     f"{slug} has leftover folders {', '.join(map(str, above))}; name the "
-                    f"one to remove, as in `compass issue configure --discard "
-                    f"{min(above)}`")
+                    f"one to remove, as in "
+                    f"`{configure_command(task_dir, '--discard', min(above))}`")
             n = next(iter(above))
         elif n <= current:
             which = "the generation in force" if n == current else "older than the one in force"
@@ -492,12 +506,9 @@ def unwritten_files(task_dir, target):
 
 
 def unwritten_advice(task_dir, target, others):
-    """What a person does about `others` in generation folder `target`. The
-    command names the issue: a person can be pointed at another issue, and
-    `--discard` without `--issue` would remove that issue's folder."""
-    slug = os.path.basename(os.path.normpath(os.fspath(task_dir)))
+    """What a person does about `others` in generation folder `target`."""
     return (f"Move {'it' if len(others) == 1 else 'them'} out of the folder, or run "
-            f"`compass issue configure --issue {slug} --discard {target}`, which removes "
+            f"`{configure_command(task_dir, '--discard', target)}`, which removes "
             f"the folder and everything in it")
 
 
@@ -516,10 +527,11 @@ def _prepare_target(task_dir, target):
     if os.path.isfile(os.path.join(folder, MARKER)) and is_whole(task_dir, target)[0]:
         raise CompassError(
             f"{folder} holds a complete generation {target} that the manifest does not "
-            f"name, so nothing was written. Run `compass issue configure --commit "
-            f"{target}` to adopt it (add `--reason \"...\"` to keep the reason of the "
-            f"interrupted reassess), or `compass issue configure --discard {target}` to "
-            f"remove it, then run the command again")
+            f"name, so nothing was written. Run "
+            f"`{configure_command(task_dir, '--commit', target)}` to adopt it (add "
+            f"`--reason \"...\"` to keep the reason of the interrupted reassess), or "
+            f"`{configure_command(task_dir, '--discard', target)}` to remove it, then "
+            f"run the command again")
     others = unwritten_files(task_dir, target)
     if others:
         raise CompassError(
@@ -551,17 +563,17 @@ def _check_adoption(task_dir, adopt, target, documents, held):
     stored, reason = _read_whole(task_dir, target)
     if stored is None:
         raise CompassError(
-            f"{folder} cannot be adopted: {reason}. Nothing was written. Run `compass "
-            f"issue configure --discard {target}` to remove it, or run `compass "
-            f"approach evaluate --write` to write the generation again")
+            f"{folder} cannot be adopted: {reason}. Nothing was written. Run "
+            f"`{configure_command(task_dir, '--discard', target)}` to remove it, or run "
+            f"`{evaluate_command(task_dir)}` to write the generation again")
     differing = [name for name in FILES
                  if digest(stored[name[:-4]]) != digest(documents[name])]
     if differing:
         raise CompassError(
             f"{folder} cannot be adopted: {', '.join(differing)} no longer match what "
             f"the project and the issue resolve to now. Nothing was written. Run "
-            f"`compass issue configure --discard {target}`, then `compass approach "
-            f"evaluate --write`")
+            f"`{configure_command(task_dir, '--discard', target)}`, then "
+            f"`{evaluate_command(task_dir)}`")
 
 
 def preflight(task_dir, resolution, manifest, invalidated=None, adopt=None):
@@ -650,8 +662,8 @@ def commit(task_dir, resolution, manifest, invalidated=None, render=None, *,
             if adopt is not None:
                 raise CompassError(
                     f"generation {n} already holds this configuration, so folder {adopt} "
-                    f"adds nothing; nothing was written. Run `compass issue configure "
-                    f"--discard {adopt}` to remove it")
+                    f"adds nothing; nothing was written. Run "
+                    f"`{configure_command(task_dir, '--discard', adopt)}` to remove it")
             same = dict(manifest)
             stamp(same, n, n)
             same = prepare_manifest_write(same, path)

@@ -679,6 +679,8 @@ def without_entries(manifest, entries):
 config_digest = generation.config_digest
 generation_number = generation.number
 FIX_ZERO = generation.FIX_ZERO
+configure_command = generation.configure_command
+evaluate_command = generation.evaluate_command
 
 
 def stored_documents(task_dir, manifest):

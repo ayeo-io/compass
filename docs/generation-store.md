@@ -87,9 +87,9 @@ The commit refuses, writing nothing, when:
 
 - generation n+1 already exists and is complete. The message gives the folder's
   path, then the two commands that resolve it: `compass issue configure
-  --commit n+1` to adopt it (with `--reason "..."` to keep the reason of the
-  interrupted reassess) and `compass issue configure --discard n+1` to remove
-  it.
+  --issue <slug> --commit n+1` to adopt it (with `--reason "..."` to keep the
+  reason of the interrupted reassess) and `compass issue configure --issue
+  <slug> --discard n+1` to remove it.
 - the next folder holds anything a commit does not write: a file other than
   the four files, the `complete` marker, `proposed.yml` and the temporary files
   an interrupted write of one of them leaves (`.<name>-` and the eight

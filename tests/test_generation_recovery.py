@@ -119,7 +119,7 @@ def test_cr_5_commit_refuses_when_the_project_changed_since_the_crash(
     assert code == 2, out + err
     text = out + err
     assert "cannot be adopted" in text and "resolved.yml" in text
-    assert "compass issue configure --discard 2" in text
+    assert "compass issue configure --issue feature --discard 2" in text
     assert _snapshot(root) == snapshot
     assert (task_dir / "manifest.yml").read_bytes() == before
 
@@ -293,8 +293,8 @@ def test_cr_6_a_complete_unreferenced_folder_is_adopted_or_discarded(
     root, task_dir, before = _leftover(tmp_path, monkeypatch, capsys)
     code, out, err = fx.reassess(root)
     assert code == 2, out + err
-    assert "compass issue configure --commit 2" in out + err
-    assert "compass issue configure --discard 2" in out + err
+    assert "compass issue configure --issue feature --commit 2" in out + err
+    assert "compass issue configure --issue feature --discard 2" in out + err
     assert (task_dir / "manifest.yml").read_bytes() == before
     code, out, err = fx.configure(root, "--discard")
     assert code == 0, out + err
@@ -345,7 +345,7 @@ def test_cr_7_a_proposal_built_on_another_config_is_refused_before_anything_prin
     snapshot = _snapshot(root)
     code, out, err = fx.reassess(root)
     assert code == 2, out + err
-    assert "stale" in out + err and "compass issue configure --discard" in out + err
+    assert "stale" in out + err and "compass issue configure --issue feature --discard" in out + err
     assert "FINAL APPROACH" not in out and "wrote the delivery approach" not in out
     assert out.strip() == ""
     assert _snapshot(root) == snapshot
@@ -393,7 +393,7 @@ def test_cr_7_reset_config_with_a_pending_proposal_is_refused(tmp_path):
     snapshot = _snapshot(root)
     code, out, err = fx.reassess(root, "--reset-config")
     assert code == 2, out + err
-    assert "--reset-config" in out + err and "compass issue configure --discard" in out + err
+    assert "--reset-config" in out + err and "compass issue configure --issue feature --discard" in out + err
     assert _snapshot(root) == snapshot
 
 

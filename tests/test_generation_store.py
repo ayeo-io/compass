@@ -521,6 +521,54 @@ def test_gck_3_files_a_commit_writes_are_still_overwritten(project):
     assert _load(folder / "resolved.yml")["schema"] == 1
 
 
+# --- GRN: a refusal's commands name the refused issue (generation-refusals-name-issue) ----
+
+def _printed_commands(message):
+    import re
+    return re.findall(r"`(compass (?:issue configure|approach evaluate)[^`]*)`", message)
+
+
+def test_grn_1_the_printed_command_acts_on_the_refused_issue(tmp_path, monkeypatch):
+    """A person can be pointed at another issue when a commit refuses. Each command the
+    refusal prints must act on the refused issue, never on the one the pointer names."""
+    import shlex
+    import shutil
+    from compass_pkg.core import CompassError
+    root, task_dir = _project(tmp_path)
+    _, other_dir = _project(tmp_path, slug="other")
+    for slug in (SLUG, "other"):
+        code, out, err = _run(root, "approach", "evaluate", "--issue", slug, "--write")
+        assert code == 0, out + err
+        shutil.copytree(_gen(task_dir.parent / slug, 1), _gen(task_dir.parent / slug, 2))
+    (root / ".compass" / "current-task").write_text("other\n", encoding="utf-8")
+    monkeypatch.chdir(root)
+    with pytest.raises(CompassError) as caught:
+        _commit(root, task_dir, delivery_approach="full")
+    commands = _printed_commands(str(caught.value))
+    assert [c for c in commands if "--commit" in c] and [c for c in commands if "--discard" in c]
+    for command in commands:
+        assert f"--issue {SLUG}" in command, command
+    other_before = _snapshot(_gen(other_dir, 2))
+    for command in sorted(commands, key=lambda c: "--discard" in c):
+        code, out, err = _run(root, *shlex.split(command)[1:])
+        assert "other" not in out + err, out + err
+        assert _snapshot(_gen(other_dir, 2)) == other_before
+    assert not _gen(task_dir, 2).exists()
+
+
+def test_grn_2_every_printed_configure_command_names_the_issue():
+    """Each refusal in these modules that prints `compass issue configure` names
+    `--issue`, so no new message can act on the issue the pointer names."""
+    import re
+    for name in ("generation", "issue_config_cmd"):
+        source = (PACKAGE / f"{name}.py").read_text(encoding="utf-8")
+        # Join the pieces of an implicitly concatenated string, so a command split
+        # across source lines reads as one.
+        joined = re.sub(r"\"\s*\n\s*f?\"", "", source)
+        bare = re.findall(r"issue configure --(?!issue)\S*", joined)
+        assert not bare, (name, bare)
+
+
 # --- GS-7: atomic writes -----------------------------------------------------------------
 
 def test_gs_7_every_file_goes_through_atomic_write_text(project, monkeypatch):
@@ -1155,10 +1203,10 @@ def test_cr_10_the_unreferenced_folder_message_gives_the_path_then_both_commands
     text = str(caught.value)
     folder = str(_gen(task_dir, 2))
     assert text.startswith(folder)
-    assert "compass issue configure --commit" in text
-    assert "compass issue configure --discard" in text
-    assert text.index("compass issue configure --commit") < text.index(
-        "compass issue configure --discard")
+    assert "compass issue configure --issue feature --commit" in text
+    assert "compass issue configure --issue feature --discard" in text
+    assert text.index("compass issue configure --issue feature --commit") < text.index(
+        "compass issue configure --issue feature --discard")
     assert "delete the folder" not in text and "delete" not in text.lower()
     assert "--reason" in text          # a reason given to the interrupted reassess is kept
 

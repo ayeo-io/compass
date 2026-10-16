@@ -4125,3 +4125,23 @@ Regular issues now owe a short intent with four sections: Problem, Desired outco
 - `IRL-29` release notes prints a name from the names key as its code
 - `IRL-30` The documented quick-fix commands land a fresh quick fix
 - `IRL-31` The merge with the named document sections keeps both features
+
+### migrate-archive-safety (completed 2026-10-16)
+
+- `MAS-1` A document in both places is a change once and an item for a person after that
+- `MAS-2` On the archive sample, each dry run lists what the next apply does
+- `MAS-3` A reported pair whose stem file is already at its round name is left untouched
+- `MAS-4` A reported pair whose stem file would be renamed is left untouched, and the rest of the issue migrates
+- `MAS-5` On the archive sample, the rollback signal for a pair survives two applies
+- `MAS-6` On the archive sample, one committed file under each root does not make the archive restorable
+- `MAS-7` A folder counts as restorable only when the HEAD commit holds every file the migrate can change, unchanged
+- `MAS-8` The refusal stays readable when many folders cannot be restored
+- `MAS-10` The upgrade guide and ADR-056 state the three rules
+- `MAS-9` No test reads or writes the real archive
+- `MAS-11` The copy check lives in its own module, so the migrate module stays within the size limit
+- `MAS-12` When git cannot be asked, the refusal's opening says so
+- `MAS-13` A git failure inside a repository refuses, so an uncommitted edit survives
+- `MAS-14` A registered file in a subfolder of an issue folder is judged
+- `MAS-15` A file is restorable only when its bytes on disk match the HEAD blob
+- `MAS-16` Inside a repository, a git that cannot be run refuses, so an uncommitted edit survives
+- `MAS-17` A registered file outside both roots is not judged

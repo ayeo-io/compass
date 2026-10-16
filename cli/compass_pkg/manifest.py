@@ -32,7 +32,7 @@ import re as _re
 
 import fnmatch
 import re as _re
-from compass_pkg import checkpoint_outcomes, issue_usage, release_line, status_words
+from compass_pkg import checkpoint_outcomes, documents_present, issue_usage, release_line, status_words
 from compass_pkg.terminal import say
 from compass_pkg.core import CompassError, find_compass_dir, find_governance, load_manifest, load_yaml, manifest_path, normalize_spine, now_iso, resolve_issue_dir, save_manifest
 from compass_pkg.issue_layout import docs_dir_for
@@ -312,7 +312,8 @@ def _derive_and_commit_living_spec(cwd, slug):
 #: The refusals a landing runs, in order, before it stages, renders, commits,
 #: derives or syncs anything. Each takes the manifest and the issue folder and
 #: returns its text or None; a later refusal is appended here, not branched in.
-LANDING_REFUSALS = [checkpoint_outcomes.landing_refusal, release_line.landing_refusal]
+LANDING_REFUSALS = [checkpoint_outcomes.landing_refusal, release_line.landing_refusal,
+                    documents_present.landing_refusal]
 
 
 def run_landing_refusals(task, task_dir):

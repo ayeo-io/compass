@@ -385,7 +385,9 @@ The assessment no longer reads a role. The claims gate and the intent-fidelity b
 - **A recorded role is not read.** A manifest that holds `assessment.role` evaluates and checks as before, without it.
 - **An issue with a stored 6.x generation keeps its role rules** until it is re-assessed. **A project on copied 6.x governance keeps them** until it runs `compass policy migrate`.
 - **An issue with no stored generation, in a project with a `compass.yml`, takes the new default at once.** A recorded role no longer routes it, and on the full approach it no longer owes `verify.claims`.
-- **`--justify role=` and `compass quick-fix start --role` are accepted and ignored.** Each prints a notice on standard error and records nothing.
+- **`--justify role=` and `compass quick-fix start --role` are accepted and ignored until 8.0.0.** Each prints a notice on standard error and records nothing. Evaluating an issue whose manifest records a role prints the same notice.
+- **A landing refuses an artifact rule the approach does not hold.** When a document is on disk whose artifact rule adds a gate or asks for a document and the last evaluation did not fire it, such as a `positioning.md` written after assess, `compass ship-commit` and `compass quick-fix finish` refuse with `artifact-rule-not-applied` and name the `compass approach evaluate --issue <slug> --write` that applies it.
+- **Assess drafts the intent before it writes the approach**, so RP-ART-002 fires on a regular or full issue (`approaches/assess-procedure.md`, step 3).
 - **`compass issue migrate` lists each recorded `assessment.role` as no longer read**, in the dry run and on `--apply`, and leaves the field in place.
 - **`compass preset test` reads a fixture that records a role without it**, and notes that it did.
 - **The classifier crosses the documents a condition names, as it crosses labels.** The grid JSON of `compass policy diff --json` and `compass policy migrate --json` gains `artifacts`. The cap of eight named labels is unchanged, and a grid names at most four documents.
@@ -397,7 +399,7 @@ The assessment no longer reads a role. The claims gate and the intent-fidelity b
 2. Stop passing `--justify role=` and `--role`. They do nothing now.
 3. If `compass policy lint` reports `M-WHEN-RETIRED`, key a rule on a document with `artifacts_any: [<kind>]`, or on a label. Key a check or gate on a label: only a rule reads the documents, and `M-WHEN-DOCUMENTS` refuses `artifacts_any` anywhere else.
 4. If a merge or `compass policy migrate` names a retired rule, make the same edit to its replacement (RP-ART-001 or RP-ART-002) in `compass.yml`.
-5. On an issue already assessed, re-assess after writing `positioning.md`, so `verify.claims` joins the gate set.
+5. On an issue already assessed, re-assess after writing `positioning.md`, so `verify.claims` joins the gate set. A landing refuses until you do.
 
 ### New keys and verbs
 
@@ -408,6 +410,7 @@ The assessment no longer reads a role. The claims gate and the intent-fidelity b
 | `artifact_rules` | `governance/routing-policy.yml` | The view's block for those rules |
 | `retired_rules` | `governance/legacy-views.yml` | Each retired rule id and its replacement |
 | `M-WHEN-RETIRED`, `M-WHEN-DOCUMENTS`, `M-RETIRED` | lint and migrate codes | A condition that reads `role`, a check or gate condition that reads `artifacts_any`, and an edited retired rule |
+| `artifact-rule-not-applied` | a landing refusal code | A document on disk earns an artifact rule, with a gate or a document, that the recorded approach does not hold |
 | `artifacts` | the classifier's grid JSON | The document kinds the grid crosses |
 
 ## Approving inside Claude Code, and delegated approvals

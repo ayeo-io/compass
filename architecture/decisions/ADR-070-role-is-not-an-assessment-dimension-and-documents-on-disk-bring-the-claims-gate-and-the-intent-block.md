@@ -35,7 +35,10 @@ Four earlier decisions bound the answer:
 4. **The full approach does not build in `verify.claims`.** The gate is owed only where a positioning document is.
 5. **A stored or copied 6.x policy keeps its role rules.** The evaluator's one pass for document rules reads the `artifact_rules` block and, where a stored generation or copied governance holds one, the `role_rules` block. When the policy in force declares no `role` dimension, the evaluator drops `role` from the readings before matching. An issue moves to the new rules at its next reassessment.
 6. **The classifier crosses documents as it crosses labels.** The grid gains a set axis of the document kinds the conditions name. The cap of eight named labels is unchanged, and the grid names at most four documents, so no layer that names eight labels today is refused. The classifier version is 7.
-7. **The 6.x inputs keep working.** `--justify role=` and `quick-fix start --role` are accepted, record nothing and say so on standard error. A preset fixture's `role` is ignored with a note. `compass issue migrate` lists a recorded `assessment.role` as no longer read and leaves it. `governance/legacy-views.yml` maps each retired rule id to its replacement, and `policy migrate` and the merge name the replacement when a project edited a retired rule. `policy lint` refuses a project rule that reads `role` unless the project declares that dimension itself.
+7. **The 6.x inputs keep working.** `--justify role=` and `quick-fix start --role` are accepted, record nothing and say so on standard error, until 8.0.0 (jed72's ruling). Evaluating a manifest that records a role says the same. A preset fixture's `role` is ignored with a note. `compass issue migrate` lists a recorded `assessment.role` as no longer read and leaves it. `governance/legacy-views.yml` maps each retired rule id to its replacement, and `policy migrate` and the merge name the replacement when a project edited a retired rule. `policy lint` refuses a project rule that reads `role` unless the project declares that dimension itself.
+
+8. **The assess procedure drafts the intent before the write.** Step 3 evaluates without `--write`; when the approach owes an intent, the intent is drafted and registered first, so the write reads it and RP-ART-002 fires.
+9. **A landing refuses a document whose rule the recorded approach does not hold.** `compass ship-commit` and `quick-fix finish` refuse with `artifact-rule-not-applied` an open issue whose documents now earn an artifact rule that adds a gate or asks for a document, which its last evaluation did not fire, and name the evaluation that applies it. A rule that only blocks a stage is left out: by the landing that stage is past.
 
 ## Alternatives considered
 
@@ -55,14 +58,13 @@ Four earlier decisions bound the answer:
 - An issue with a stored generation, and a project on copied governance, keep their routing on upgrade.
 
 **Negative:**
-- A document written after the last evaluation takes effect at the next one, so a positioning document added mid-flight needs a reassessment.
+- A document written after the last evaluation takes effect at the next one; a landing refuses until that evaluation runs.
 - An open issue with no stored generation, in a project with a `compass.yml`, takes the new default at once: a recorded role stops routing it.
 - The classifier grid is four times larger for the shipped default, which names two document kinds.
 
 **Neutral / follow-on:**
 - The rubric and docs still say "four dimensions". A separate issue rewords them as three scored dimensions, two switches and domain labels.
-- Deleting `--justify role=` and `quick-fix start --role` waits for the maintainer.
-- A ship-time check that refuses a positioned issue whose gate set lacks `verify.claims` can follow.
+- Deleting `--justify role=` and `quick-fix start --role` is ayeo-io/compass-delivery-record#178, for 8.0.0.
 
 ## References
 

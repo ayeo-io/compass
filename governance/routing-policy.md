@@ -79,7 +79,8 @@ When a document in the issue's directory makes a gate non-negotiable, that is
 a routing rule. The `artifacts_any` condition matches the documents the CLI
 finds for the issue. The CLI reads them at every evaluation and never writes
 them into the assessment. A document written after assess takes effect at the
-next evaluation, so re-assess the issue after writing one. A stored 6.x
+next evaluation, so re-assess the issue after writing one: until then a
+landing refuses with `artifact-rule-not-applied`. A stored 6.x
 generation keeps its `role_rules` until the issue is re-assessed, and a
 project's copied 6.x governance keeps them until `compass policy migrate` runs.
 

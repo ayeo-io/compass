@@ -750,11 +750,11 @@ def test_vr_d21_a_manifest_in_old_depth_words_is_backed_up_once_and_the_backup_i
 def test_vr_d22_a_save_in_old_words_prints_the_same_json_and_a_notice_on_stderr(tmp_path):
     old_root, _ = _project(tmp_path, "old", manifest={
         "assessment": {"risk": "contained", "familiarity": "greenfield", "size": "standard",
-                       "goal": "delivery", "role": "engineer", "labels": []},
+                       "goal": "delivery", "labels": []},
         "stages": {"define": "full"}})
     new_root, _ = _project(tmp_path, "new", manifest={
         "assessment": {"risk": "contained", "familiarity": "greenfield", "size": "medium",
-                       "goal": "delivery", "role": "engineer", "labels": []},
+                       "goal": "delivery", "labels": []},
         "stages": {"define": "thorough"}})
     old = _cli(old_root, "approach", "evaluate", "--issue", "t", "--write", "--json")
     new = _cli(new_root, "approach", "evaluate", "--issue", "t", "--write", "--json")

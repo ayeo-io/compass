@@ -12,7 +12,9 @@ present when the registry names a path that resolves to a file, or when its
 file is in the issue's documents folder or beside the manifest.
 """
 # DEPENDENCY: standard library (os); compass_pkg.core (resolve_artifact,
-# unregistered_document, FOUND). Imported by compass_pkg.routing.
+# unregistered_document, reading_matches, FOUND); effective, status_words and
+# refusals, read lazily by the landing refusal. Imported by compass_pkg.routing,
+# policy_lint, replay and manifest.
 from __future__ import annotations
 
 from compass_pkg.core import FOUND, resolve_artifact, unregistered_document
@@ -62,3 +64,46 @@ def with_presence(assessment, task_dir, policy):
     if KEY not in out and task_dir:
         out[KEY] = present(task_dir, policy)
     return out
+
+
+def unapplied_rules(task, task_dir):
+    """`[(rule id, kinds)]`: the artifact rules of the issue's stored configuration
+    that add a gate or ask for a document, whose documents are on disk now, and
+    that the last evaluation did not fire. A document written after the issue was
+    assessed is the usual cause; the next `compass approach evaluate --write`
+    applies the rule. A rule that only blocks a stage is left out: by the landing
+    that stage is past, and refusing would add a step and no check."""
+    from compass_pkg import effective, status_words
+    from compass_pkg.core import reading_matches
+    if not isinstance(task, dict) or status_words.is_closed(task) or "generation" not in task:
+        return []
+    try:
+        view = effective.view_or_legacy(task_dir, manifest=task)
+        policy = view.evaluator_policy() if view is not None else None
+    except Exception:                           # noqa: BLE001 - nothing readable, nothing owed
+        return []
+    rules = ((policy or {}).get("routing_guardrails") or {}).get("artifact_rules") or []
+    fired = {f.get("id") for f in task.get("policy_rules_fired") or [] if isinstance(f, dict)}
+    point = with_presence(task.get("assessment") or {}, task_dir, policy)
+    out = []
+    for rule in rules:
+        when = rule.get("when") or {}
+        owes = rule.get("gate") or rule.get("require_artifact")
+        if owes and kinds_named(when) and rule.get("id") not in fired \
+                and reading_matches(when, point):
+            out.append((rule.get("id"), sorted(set(kinds_named(when)) & set(point[KEY]))))
+    return out
+
+
+def landing_refusal(task, task_dir):
+    """The refusal text for an issue whose documents earned an artifact rule the
+    recorded approach does not hold, or None. An entry of `manifest.LANDING_REFUSALS`."""
+    import os
+    from compass_pkg import refusals
+    found = unapplied_rules(task, task_dir)
+    if not found:
+        return None
+    return refusals.render(
+        "artifact-rule-not-applied", slug=os.path.basename(os.path.normpath(str(task_dir))),
+        rules=", ".join(rule_id for rule_id, _ in found),
+        documents=", ".join(f"{kind}.md" for _, kinds in found for kind in kinds))

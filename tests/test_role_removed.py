@@ -541,3 +541,68 @@ def test_trc_c2_copied_6x_governance_keeps_its_role_rules_through_the_cli(tmp_pa
     result = json.loads(out)
     assert "RP-ROLE-002" in [f["id"] for f in result["policy_rules_fired"]]
     assert [b["phase"] for b in result["blocked_phases"]] == ["plan"]
+
+
+INTENT_TEXT = ("# Intent\n\n## Problem\n\nx\n\n## Desired outcome\n\n- INT-1: x\n\n"
+               "## Success signals\n\n- x\n\n## Non-goals\n\n- x\n")
+
+
+def test_trc_b2_the_assess_flow_records_the_intent_block(tmp_path):
+    """The assess procedure, step 3: evaluate without --write, draft and register
+    the intent the approach owes, then write. The recorded rules hold RP-ART-002,
+    and the intent keeps the depth the approach owes it."""
+    root, task_dir = _project(tmp_path)
+    code, out, err = _run(root, "approach", "evaluate", "--issue", "t", "--json")
+    assert code == 0, out + err
+    owed = {a["kind"]: a["depth"] for a in json.loads(out)["artifacts"]}
+    assert owed["intent"] == "lightweight"
+    rel = "docs/compass/2026-10-16-t/intent.md"
+    (root / rel).parent.mkdir(parents=True)
+    (root / rel).write_text(INTENT_TEXT, encoding="utf-8")
+    code, out, err = _run(root, "issue", "artifact", "set", "intent", "--issue", "t",
+                          "--status", "draft", "--path", rel)
+    assert code == 0, out + err
+    code, out, err = _run(root, "approach", "evaluate", "--issue", "t", "--write",
+                          *ALL_REASONS)
+    assert code == 0, out + err
+    data = _load(task_dir / "manifest.yml")
+    assert "RP-ART-002" in [f["id"] for f in data["policy_rules_fired"]]
+    intent = next(a for a in data["artifacts"] if a["kind"] == "intent")
+    assert intent["depth"] == "lightweight" and intent["path"] == rel
+    procedure = (ROOT / "approaches" / "assess-procedure.md").read_text(encoding="utf-8")
+    step3 = procedure.split("3. **Compute the delivery approach", 1)[1].split("\n4. ", 1)[0]
+    assert "without `--write`" in step3 and "before the write" in step3
+
+
+def test_trc_b7_ship_refuses_a_document_whose_rule_the_approach_does_not_hold(tmp_path):
+    """A positioning.md written after the issue was assessed: its rule did not fire
+    at the last evaluation, so the landing is refused until it is re-evaluated."""
+    root, task_dir = _project(tmp_path)
+    code, out, err = _run(root, "approach", "evaluate", "--issue", "t", "--write",
+                          *ALL_REASONS)
+    assert code == 0, out + err
+    _write_doc(root, "t", "positioning")
+    sys.path.insert(0, str(ROOT / "cli"))
+    from compass_pkg import documents_present
+    task = _load(task_dir / "manifest.yml")
+    text = documents_present.landing_refusal(task, str(task_dir))
+    assert text and "RP-ART-001" in text and "positioning.md" in text, text
+    assert "compass approach evaluate --issue t --write" in text
+    from compass_pkg import manifest
+    assert documents_present.landing_refusal in manifest.LANDING_REFUSALS
+    code, out, err = _run(root, "approach", "evaluate", "--issue", "t", "--write")
+    assert code == 0, out + err
+    assert documents_present.landing_refusal(_load(task_dir / "manifest.yml"),
+                                             str(task_dir)) is None
+
+
+def test_trc_c1_a_recorded_role_is_named_as_ignored_on_evaluation(tmp_path):
+    """Re-assessing a 6.x issue says on standard error that its recorded role
+    is no longer read, so the change in routing is not silent."""
+    root, _ = _project(tmp_path, assessment=_assess(role="product-owner"))
+    code, out, err = _run(root, "approach", "evaluate", "--issue", "t")
+    assert code == 0, out + err
+    assert NOT_READ in err and "assessment.role" in err, err
+    root2, _ = _project(tmp_path / "b")
+    code, out, err = _run(root2, "approach", "evaluate", "--issue", "t")
+    assert NOT_READ not in err, err

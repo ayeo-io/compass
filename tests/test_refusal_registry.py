@@ -77,6 +77,9 @@ FIXTURES = {
     # A 40-character slug, named twice, so the 60-word cap is checked where it is tightest.
     "release-line-missing": dict(slug="a" * 40),
     "release-line-heading": dict(slug="a" * 40),
+    # A 40-character slug, named twice, and both artifact rules with their documents.
+    "artifact-rule-not-applied": dict(slug="a" * 40, rules="RP-ART-001, RP-ART-002",
+                                      documents="positioning.md, intent.md"),
 }
 
 

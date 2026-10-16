@@ -195,6 +195,16 @@ REFUSALS: dict[str, dict[str, str]] = {
         "fix": "give it with --release-note \"<text written for a user>\", then "
                "run the command again.",
     },
+    # A landing of an issue whose documents earned an artifact rule its recorded
+    # approach does not hold (documents_present.py, ADR-070): a positioning.md
+    # written after the issue was assessed, so verify.claims is missing.
+    "artifact-rule-not-applied": {
+        "what": "landing of issue '{slug}'",
+        "why": "{documents} is on disk, so {rules} applies, but the recorded approach "
+               "was evaluated before the document was there.",
+        "fix": "run compass approach evaluate --issue {slug} --write, pass any gate it "
+               "adds, then ship again.",
+    },
     "release-line-heading": {
         "what": "the release line of issue '{slug}'",
         "why": "it starts with #, and the living spec reads a line such as "

@@ -19,6 +19,12 @@ code from a refusal you hit.
 **Why:** approval requests and the approval hook belong to Compass; an approval binds to the request a person was shown.
 **Fix:** ask for an approval with compass evidence request, then ask the person to type /compass:approve.
 
+### `artifact-rule-not-applied`
+
+**Blocked:** landing of issue '{slug}'
+**Why:** {documents} is on disk, so {rules} applies, but the recorded approach was evaluated before the document was there.
+**Fix:** run compass approach evaluate --issue {slug} --write, pass any gate it adds, then ship again.
+
 ### `bad-current-task`
 
 **Blocked:** this edit

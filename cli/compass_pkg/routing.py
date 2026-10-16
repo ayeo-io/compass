@@ -847,6 +847,9 @@ def cmd_route_evaluate(args):
     # `obligations` applies it for the classifier.
     # The documents on disk are read now, beside the assessment and never into it.
     from compass_pkg import documents_present
+    for dim in retired.DIMENSIONS:      # a 6.x manifest's role, which a 7.0.0 policy drops
+        if dim in readings and dim not in (policy.get("assessment_vocabulary") or {}):
+            sys.stderr.write(retired.notice(f"assessment.{dim}") + "\n")
     result = evaluate_route(documents_present.with_presence(readings, task_dir, policy),
                             policy, autonomy,
                             issue=view.evaluator_issue() if view is not None else None)
@@ -1091,6 +1094,9 @@ def cmd_route_evaluate(args):
             for kept in keep:
                 kept = dict(kept)
                 kept["reason"] = a["reason"]      # the rule that earned it
+                # A document registered before the write (an intent drafted so
+                # RP-ART-002 sees it) takes the depth the approach owes it.
+                kept.setdefault("depth", a["depth"])
                 merged.append(kept)
             if not keep:
                 merged.append(a)
